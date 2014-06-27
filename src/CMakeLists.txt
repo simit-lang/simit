@@ -13,7 +13,8 @@ set(HEADER_FILES
   Simit.h)
 
 add_library(Simit ${SIMIT_LIBRARY_TYPE}
-  Simit.cpp)
+  Simit.cpp
+  ${HEADER_FILES})
 
 target_link_libraries(Simit ${LIBS})
 
