@@ -1,5 +1,7 @@
+cmake_minimum_required(VERSION 2.8.3 FATAL_ERROR)
 project(Simit)
-cmake_minimum_required(VERSION 2.8.3)
+
+SET(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
