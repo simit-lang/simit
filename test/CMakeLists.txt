@@ -1,6 +1,5 @@
-include_directories ("${SIMIT_INCLUDE_DIR}")
-	
-set(TESTS tests)
+
+set(TESTS test)
 file(GLOB SOURCES *.cpp)
 add_executable(${TESTS} ${SOURCES})
 target_link_libraries(${TESTS} ${PROJECT_NAME})

@@ -11,8 +11,11 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 set(OPTIMIZE "-O3" CACHE STRING "Optimization level")
 
-set(SIMIT_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
-set(SIMIT_INCLUDE_DIR ${SIMIT_SRC_DIR})
+set(SIMIT_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/src)
+set(SIMIT_INCLUDE_DIR ${SIMIT_SOURCE_DIR})
+include_directories ("${SIMIT_INCLUDE_DIR}")
+set(SIMIT_GENERATED_SOURCE_DIR ${CMAKE_BINARY_DIR}/src)
+include_directories ("${SIMIT_GENERATED_SOURCE_DIR}")
 
 add_subdirectory(src)
 add_subdirectory(test)

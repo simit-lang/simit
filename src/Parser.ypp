@@ -1,0 +1,19 @@
+%{
+//#define YYSTYPE double
+
+#include "Frontend.h"
+%}
+
+%start input
+
+%%
+
+input:
+/* empty */
+
+%%
+
+void yyerror(const char *s) {
+	fprintf (stderr, "Error: %s\n", s);
+}
+
