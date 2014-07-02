@@ -1,19 +1,48 @@
 %{
-//#define YYSTYPE double
-
+#include "Logger.h"
 #include "Frontend.h"
+#include "IR.h"
+using namespace Simit;
+
+void yyerror(Simit::IRNode **irNode, const char *s) {
+  fprintf (stderr, "Error: %s\n", s);
+}
+
 %}
 
+%parse-param{Simit::IRNode **irNode}
 %start input
+
+%token UNKNOWN
+
+%token INT_LITERAL FLOAT_LITERAL
+%token ID
+
+%token PROC FUNC
+%token END
 
 %%
 
 input:
 /* empty */
+| input procedure
+| input function
+
+procedure:
+procedure_header body END
+
+procedure_header:
+PROC ID '(' ')'
+
+function:
+function_header body END
+
+function_header:
+FUNC ID '(' ')'
+
+body:
+
 
 %%
 
-void yyerror(const char *s) {
-	fprintf (stderr, "Error: %s\n", s);
-}
 

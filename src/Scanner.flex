@@ -4,22 +4,28 @@
 
 %{
 #include "Tokens.h"
+#include "Logger.h"
+#include <string>
 %}
 
-WHITESPACE            [ \t\n]
+WHITESPACE    [ \t\n]
 DIGIT         [0-9]
 LETTER        [a-zA-Z]
 ID            {LETTER}({LETTER}|{DIGIT})+
 
 %%
-{WHITESPACE}                   
-{DIGIT}+               { printf("Integer: %s\n", yytext); } 
-{DIGIT}+"."{DIGIT}+    { printf("Float:   %s\n", yytext); } 
-{ID}                   { printf("Ident:   %s\n", yytext); }
+"proc"                  { return PROC; }
+"func"                  { return FUNC; }
+"end"                   { return END; }
 
-.                      { printf("Unknown character [%c]\n", yytext[0]); /*return UNKNOWN;*/ }
+[\[\]\(\):,;]           { return yytext[0]; }
+
+{WHITESPACE}
+{DIGIT}+                { return INT_LITERAL; }
+{DIGIT}+"."{DIGIT}+     { return FLOAT_LITERAL; }
+{ID}                    { return ID; }
+
+.                       { log(std::string("Unknown character [")+yytext[0]+"]");
+                          return UNKNOWN;
+                        }
 %%
-
-int main() {
-	yylex();
-}

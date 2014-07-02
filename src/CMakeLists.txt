@@ -13,26 +13,32 @@ endif()
 
 # Frontend
 FIND_PACKAGE(BISON REQUIRED)
+SET(PARSER_INPUT ${SIMIT_SOURCE_DIR}/Parser.ypp)
 SET(PARSER Parser.cpp)
+SET(TOKENS ${SIMIT_GENERATED_SOURCE_DIR}/Tokens.h)
 IF(BISON_FOUND)
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${PARSER}
 		COMMAND ${BISON_EXECUTABLE}
-		        --defines=${SIMIT_GENERATED_SOURCE_DIR}/Tokens.h
+		        --defines=${TOKENS}
 		        --output=${PARSER}
-				  ${SIMIT_SOURCE_DIR}/Parser.ypp
+				  ${PARSER_INPUT}
+		MAIN_DEPENDENCY ${PARSER_INPUT}
 	COMMENT "Generating parser.cpp"
 	)
 ENDIF()
 
 FIND_PACKAGE(FLEX REQUIRED)
+SET(SCANNER_INPUT ${SIMIT_SOURCE_DIR}/Scanner.flex)
 SET(SCANNER Scanner.cpp)
 IF(FLEX_FOUND)
 	ADD_CUSTOM_COMMAND(
 		OUTPUT ${SCANNER}
 		COMMAND ${FLEX_EXECUTABLE}
 		        --outfile=${SCANNER}
-				  ${SIMIT_SOURCE_DIR}/Scanner.flex
+				  ${SCANNER_INPUT}
+		MAIN_DEPENDENCY ${SCANNER_INPUT}
+		DEPENDS ${TOKENS}
 		COMMENT "Generating scanner.cpp"
 	)
 ENDIF()
@@ -40,7 +46,7 @@ ENDIF()
 file(GLOB HEADERS *.h)
 file(GLOB SOURCES *.cpp)
 
-add_library(Simit ${SIMIT_LIBRARY_TYPE} ${SOURCES} ${PARSER} ${SCANNER} ${HEADERS})
+add_library(Simit ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES} ${SCANNER} ${PARSER} ${SCANNER_INPUT} ${PARSER_INPUT})
 
 target_link_libraries(Simit ${LIBS})
 
