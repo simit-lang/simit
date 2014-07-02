@@ -14,7 +14,6 @@ namespace Simit {
     
     int load(std::string programText);
     int load(std::string programText, std::string &errors);
-
     int load(std::ifstream programFile);
 
     int compile();
