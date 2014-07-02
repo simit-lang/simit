@@ -1,0 +1,68 @@
+#ifndef LOGGER_H
+#define LOGGER_H
+
+#include <string>
+#include <iostream>
+#include <fstream>
+#include <sstream>
+
+class Logger {
+public:
+  Logger(std::string logfilename) {
+    logfile.open(logfilename);
+  }
+
+  ~Logger() {
+    logfile.close();
+  }
+
+  void log(std::string msg) {
+    std::string indent;
+    for (uint i=0; i<indentLevel; ++i) {
+      indent += " ";
+    }
+
+    if (msg == "") {
+      logfile << std::endl;
+    }
+    else {
+      std::stringstream ss(msg);
+      std::string to;
+      while(std::getline(ss,to,'\n')) {
+        logfile << indent << to << std::endl;
+      }
+    }
+  }
+
+  void indent() {
+    indentLevel++;
+  }
+
+  void dedent() {
+    indentLevel--;
+  }
+
+private:
+  std::ofstream logfile;
+  uint indentLevel;
+};
+
+extern Logger logger;
+
+inline void log() {
+  logger.log("");
+}
+
+inline void log(std::string msg) {
+  logger.log(msg);
+}
+
+inline void logIndent() {
+  logger.indent();
+}
+
+inline void logDedent() {
+  logger.dedent();
+}
+
+#endif
