@@ -38,7 +38,6 @@ IF(FLEX_FOUND)
 		        --outfile=${SCANNER}
 				  ${SCANNER_INPUT}
 		MAIN_DEPENDENCY ${SCANNER_INPUT}
-		DEPENDS ${TOKENS}
 		COMMENT "Generating scanner.cpp"
 	)
 ENDIF()
