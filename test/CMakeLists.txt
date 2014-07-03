@@ -47,3 +47,6 @@ else()
 	endif()
 endif()
 
+set(SIMIT_TEST_INPUT_DIR ${SIMIT_TEST_DIR}/input)
+add_definitions(-DTEST_INPUT_DIR="${SIMIT_TEST_INPUT_DIR}")
+
