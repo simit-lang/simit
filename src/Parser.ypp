@@ -11,6 +11,7 @@
   void yyerror(Simit::IRNode **irNode, std::string *errors, const char *s);
 %}
 
+%require "3.0.0"
 %parse-param{Simit::IRNode **irNode}{std::string *errors}
 %start input
 
