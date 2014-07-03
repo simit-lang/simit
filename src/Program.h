@@ -12,15 +12,16 @@ namespace Simit {
     Program();
     virtual ~Program();
     
-    int load(std::string programText);
-    int load(std::string programText, std::string &errors);
-    int load(std::ifstream programFile);
+    int loadString(std::string program);
+    int loadString(std::string program, std::string &errors);
+
+    int loadFile(std::string filename);
+    int loadFile(std::string filename, std::string &errors);
 
     int compile();
     
   private:
     std::unique_ptr<Frontend> frontend;
-    std::list<std::string> programText;
   };
   
 }

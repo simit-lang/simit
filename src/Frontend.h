@@ -10,9 +10,10 @@ namespace Simit {
 }
 
 extern FILE *yyin;
-int yyparse(Simit::IRNode **irNode);
+int yyparse(Simit::IRNode **irNode, std::string *errors);
 int yylex (void);
-int yy_scan_string	(const char *str);
+struct yy_buffer_state *yy_scan_string(const char *);
+int yylex_destroy();
 void yyerror(Simit::IRNode **irNode, const char *s);
 
 namespace Simit {
@@ -22,10 +23,13 @@ namespace Simit {
     Frontend();
     ~Frontend();
 
-    IRNode *parse(const std::string &programString, std::string &errors);
-    int parse(const std::string &programString,
-              std::vector<std::shared_ptr<IRNode> > *irNodes,
-              std::string *errors);
+    int parseString(std::string program,
+                    std::vector<std::shared_ptr<IRNode> > &irNodes,
+                    std::string &errors);
+
+    int parseFile(std::string filename,
+                  std::vector<std::shared_ptr<IRNode> > &irNodes,
+                  std::string &errors);
 
   private:
 

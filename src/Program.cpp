@@ -10,22 +10,36 @@ Program::Program() : frontend(new Frontend()) {}
 
 Program::~Program() {}
 
-int Program::load(std::string programText) {
+void output_errors(string errors) {
+  cerr << "Errors: " << errors << endl;
+}
+
+int Program::loadString(string program) {
   string errors;
-  int status = load(programText, errors);
+  int status = loadString(program, errors);
   if (status != 0) {
-    cerr << errors;
+    output_errors(errors);
   }
   return status;
 }
 
-int Program::load(std::string programText, std::string &errors) {
-  std::vector<std::shared_ptr<IRNode> > irNodes;
-  return frontend->parse(programText, &irNodes, &errors);
+int Program::loadString(string program, string &errors) {
+  vector<shared_ptr<IRNode> > irNodes;
+  return frontend->parseString(program, irNodes, errors);
 }
 
-int Program::load(std::ifstream programFile) {
-  return 1;
+int Program::loadFile(std::string filename) {
+  string errors;
+  int status = loadFile(filename, errors);
+  if (status != 0) {
+    output_errors(errors);
+  }
+  return status;
+}
+
+int Program::loadFile(std::string filename, string &errors) {
+  vector<shared_ptr<IRNode> > irNodes;
+  return frontend->parseFile(filename, irNodes, errors);
 }
 
 int Program::compile() {

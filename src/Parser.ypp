@@ -1,48 +1,74 @@
 %{
-#include "Logger.h"
-#include "Frontend.h"
-#include "IR.h"
-using namespace Simit;
+  #include "Logger.h"
+  #include "Frontend.h"
+  #include "IR.h"
+  #include <stdlib.h>
+  #include <assert.h>
+  #include <iostream>
+  using namespace Simit;
+  using namespace std;
 
-void yyerror(Simit::IRNode **irNode, const char *s) {
-  fprintf (stderr, "Error: %s\n", s);
-}
-
+  void yyerror(Simit::IRNode **irNode, std::string *errors, const char *s);
 %}
 
-%parse-param{Simit::IRNode **irNode}
+%parse-param{Simit::IRNode **irNode}{std::string *errors}
 %start input
+
+%union {
+  int num;
+  double fnum;
+  const char *string;
+}
+%destructor { } <num> <fnum> <>
+%destructor { free((void*)($$)); } <string>
+%destructor { assert(0); /* Ensure we covered all the cases */ } <*>
 
 %token UNKNOWN
 
-%token INT_LITERAL FLOAT_LITERAL
-%token ID
+// Literals
+%token <num> INT_LITERAL
+%token <fnum> FLOAT_LITERAL
+%token <string> IDENT
 
-%token PROC FUNC
-%token END
+// Keywords
+%token STRUCT CONST EXTERN PROC FUNC
+%token TENSOR
+%token MAP TO WITH REDUCE
+%token WHILE IF ELIF ELSE END
+%token RARROW
 
 %%
 
-input:
-/* empty */
-| input procedure
-| input function
+input
+  : /* empty */
+  | input procedure
+  | input function
 
-procedure:
-procedure_header body END
+procedure
+  : PROC IDENT body END
 
-procedure_header:
-PROC ID '(' ')'
+function
+  : function_header body END
 
-function:
-function_header body END
+function_header
+  : FUNC IDENT '(' param_list ')' results
 
-function_header:
-FUNC ID '(' ')'
+results
+  : RARROW '(' param_list ')'
+
+param_list
+  : /* empty */
+  | param_decl ',' param_list
+
+param_decl
+  : IDENT type
+
+type:
 
 body:
 
-
 %%
 
-
+void yyerror(Simit::IRNode **irNode, std::string *errors, const char *s) {
+  *errors = string(s);
+}

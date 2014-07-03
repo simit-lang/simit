@@ -1,7 +1,9 @@
 Simit is a programming language designed to make it easier to write
 high-performance code to simulate sparse systems
 
-Building Simit
-==============
-
+DEPENDENCIES:
+============
+- GNU Bison 3.0.0 or later
+- Flex 2.7 or later
+- googletest 1.7 or later
 

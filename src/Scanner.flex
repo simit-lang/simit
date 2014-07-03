@@ -3,28 +3,42 @@
 %option noinput
 
 %{
-#include "Tokens.h"
-#include "Logger.h"
-#include <string>
+  #include "Frontend.h"
+  #include "Tokens.h"
+  #include "Logger.h"
+  #include <string>
+  #include <stdlib.h>
 %}
 
-WHITESPACE    [ \t\n]
-DIGIT         [0-9]
-LETTER        [a-zA-Z]
-ID            {LETTER}({LETTER}|{DIGIT})+
+whitespace    [ \t\n]
+digit         [0-9]
+letter        [a-zA-Z]
+ident         {letter}({letter}|{digit})+
 
 %%
-"proc"                  { return PROC; }
-"func"                  { return FUNC; }
-"end"                   { return END; }
+"struct"                { return STRUCT;    }
+"Tensor"                { return TENSOR;    }
+"const"                 { return CONST;     }
+"extern"                { return EXTERN;    }
+"proc"                  { return PROC;      }
+"func"                  { return FUNC;      }
+"map"                   { return MAP;       }
+"to"                    { return TO;        }
+"with"                  { return WITH;      }
+"reduce"                { return REDUCE;    }
+"while"                 { return WHILE;     }
+"if"                    { return IF;        }
+"elif"                  { return ELIF;      }
+"else"                  { return ELSE;      }
+"end"                   { return END;       }
+"->"                    { return RARROW;    }
+[\[\]\(\)\{\}:,;*+-/]   { return yytext[0]; }
 
-[\[\]\(\):,;]           { return yytext[0]; }
+{digit}+                { yylval.num  = atoi(yytext);   return INT_LITERAL; }
+{digit}+"."{digit}+     { yylval.fnum = atof(yytext);   return FLOAT_LITERAL; }
 
-{WHITESPACE}
-{DIGIT}+                { return INT_LITERAL; }
-{DIGIT}+"."{DIGIT}+     { return FLOAT_LITERAL; }
-{ID}                    { return ID; }
-
+{ident}                 { yylval.string = strdup(yytext); return IDENT; }
+{whitespace}
 .                       { log(std::string("Unknown character [")+yytext[0]+"]");
                           return UNKNOWN;
                         }
