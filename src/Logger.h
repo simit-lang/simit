@@ -17,10 +17,7 @@ public:
   }
 
   void log(std::string msg) {
-    std::string indent;
-    for (uint i=0; i<indentLevel; ++i) {
-      indent += " ";
-    }
+    std::string indent(indentLevel*2, ' ');
 
     if (msg == "") {
       logfile << std::endl;

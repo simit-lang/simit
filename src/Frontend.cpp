@@ -17,11 +17,9 @@ int Frontend::parseString(string program,
                           vector<shared_ptr<IRNode> > &irNodes,
                           string &errors) {
   log("Program: ");
-  if (program != "") {
-    logger.indent();
-    log(program);
-    logger.dedent();
-  }
+  logger.indent();
+  log(program);
+  logger.dedent();
 
   //  scanString(program);
   struct yy_buffer_state *bufferState;
@@ -51,7 +49,7 @@ int Frontend::parseFile(std::string filename,
     log("Unable to open file");
     return -1;
   }
-  while ( getline (file,line)) {
+  while (getline (file, line)) {
     log(line);
   }
   file.close();
