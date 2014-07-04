@@ -116,6 +116,7 @@ TEST_P(ProgramFileTest, inputFiles) {
   Program program;
   std::string errors;
   EXPECT_EQ(0, program.loadString(GetParam().source, errors));
+  cerr << errors << endl;
   log();
   logDedent();
 }
