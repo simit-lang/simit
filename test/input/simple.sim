@@ -3,3 +3,10 @@
 %%% empty_proc
 proc main
 end
+
+%%% comments
+% Single-line comment
+%{ Multi-
+line 
+comment %}
+

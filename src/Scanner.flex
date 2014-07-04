@@ -10,6 +10,8 @@
   #include <stdlib.h>
 %}
 
+%x COMMENT
+
 whitespace    [ \t\n]
 digit         [0-9]
 letter        [a-zA-Z]
@@ -32,13 +34,21 @@ ident         {letter}({letter}|{digit})+
 "else"                  { return ELSE;      }
 "end"                   { return END;       }
 "->"                    { return RARROW;    }
+
 [\[\]\(\)\{\}:,;*+-/]   { return yytext[0]; }
 
 {digit}+                { yylval.num  = atoi(yytext);   return INT_LITERAL; }
 {digit}+"."{digit}+     { yylval.fnum = atof(yytext);   return FLOAT_LITERAL; }
-
 {ident}                 { yylval.string = strdup(yytext); return IDENT; }
-{whitespace}
+{whitespace}            {}
+
+ /* Comments */
+"%{"                    { BEGIN(COMMENT); }
+<COMMENT>\n             {}
+<COMMENT>.              {}
+<COMMENT>"%}"           { BEGIN(INITIAL); }
+"%"[^{].*\n             {}
+
 .                       { log(std::string("Unknown character [")+yytext[0]+"]");
                           return UNKNOWN;
                         }

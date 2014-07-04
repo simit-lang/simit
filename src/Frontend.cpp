@@ -34,7 +34,7 @@ int Frontend::parseString(string program,
   }
   else {
     log("Parse error");
-    return -1;
+    return 1;
   }
 }
 
@@ -47,7 +47,7 @@ int Frontend::parseFile(std::string filename,
   ifstream file (filename);
   if (!file.is_open()) {
     log("Unable to open file");
-    return -1;
+    return 1;
   }
   while (getline (file, line)) {
     log(line);
@@ -66,6 +66,6 @@ int Frontend::parseFile(std::string filename,
   }
   else {
     log("Parse error");
-    return -1;
+    return 1;
   }
 }

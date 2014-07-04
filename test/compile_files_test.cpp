@@ -9,22 +9,27 @@ using namespace Simit;
 using namespace std;
 
 // Test each file in the input folder
-struct ProgramSource {
+class ProgramTest {
+public:
   string name;
   string source;
-};
-class ProgramFileTest : public testing::TestWithParam<ProgramSource> {};
 
-std::vector<std::string> split(const string &str, const char *delim) {
+  operator std::string() const { return name; };
+  std::ostream& operator<<(std::ostream& os) {return os<<std::string(*this);}
+};
+
+class ProgramFileTest : public testing::TestWithParam<ProgramTest> {};
+
+std::vector<std::string> split(const string &str, const string &delim) {
   std::vector<std::string> results;
   size_t prev = 0;
   size_t next = 0;
 
-  while ((next = str.find_first_of(delim, prev)) != std::string::npos) {
+  while ((next = str.find(delim, prev)) != std::string::npos) {
     if (next - prev != 0) {
       results.push_back(str.substr(prev, next - prev));
     }
-    prev = next + 1;
+    prev = next + 3;
   }
 
   if (prev < str.size()) {
@@ -46,8 +51,8 @@ std::string trim(const string &str, const string &whitespace = " \t")
   return str.substr(strBegin, strRange);
 }
 
-vector<ProgramSource> readTestsFromDisk(const std::string &dirname) {
-  vector<ProgramSource> testParams;
+vector<ProgramTest> readTestsFromDisk(const std::string &dirname) {
+  vector<ProgramTest> testParams;
   DIR *dir;
   struct dirent *ent;
   struct stat st;
@@ -55,6 +60,9 @@ vector<ProgramSource> readTestsFromDisk(const std::string &dirname) {
   while ((ent = readdir(dir)) != NULL) {
     const string fname = ent->d_name;
     const string fpath = dirname + "/" + fname;
+    if (fname[0] == '.') {
+      continue;
+    }
     if (stat(fpath.c_str(), &st) == -1) {
       continue;
     }
@@ -74,7 +82,7 @@ vector<ProgramSource> readTestsFromDisk(const std::string &dirname) {
       if(!std::getline(ss, header)) {
         continue;
       }
-      ProgramSource source;
+      ProgramTest source;
       source.name = fname + "::" + trim(header);
       source.source = string((std::istreambuf_iterator<char>(ss)),
                              (std::istreambuf_iterator<char>()));
