@@ -20,7 +20,7 @@
   double fnum;
   const char *string;
 }
-%destructor { } <num> <fnum> <>
+%destructor {} <num> <fnum> <>
 %destructor { free((void*)($$)); } <string>
 %destructor { assert(0); /* Ensure we covered all the cases */ } <*>
 
@@ -55,7 +55,8 @@ function_header
   : FUNC IDENT '(' param_list ')' results
 
 results
-  : RARROW '(' param_list ')'
+  : /* empty */
+  | RARROW '(' param_list ')'
 
 param_list
   : /* empty */

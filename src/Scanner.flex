@@ -15,7 +15,7 @@
 whitespace    [ \t\n]
 digit         [0-9]
 letter        [a-zA-Z]
-ident         {letter}({letter}|{digit})+
+ident         {letter}({letter}|{digit})*
 
 %%
 "struct"                { return STRUCT;    }

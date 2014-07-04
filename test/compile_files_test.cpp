@@ -8,17 +8,34 @@
 using namespace Simit;
 using namespace std;
 
+string indent(string str, int num) {
+  std::istringstream ss(str);
+  string indent(num*2, ' ');
+  string strIndented;
+  string line;
+
+  while(std::getline(ss, line)) {
+    strIndented += indent + line + "\n";
+  }
+  return strIndented;
+}
+
 // Test each file in the input folder
-class ProgramTest {
+class ProgramTestParam {
 public:
   string name;
   string source;
 
-  operator std::string() const { return name; };
-  std::ostream& operator<<(std::ostream& os) {return os<<std::string(*this);}
+  operator std::string() const {
+    return "\n" + indent(name + "\n", 1) + indent(source, 2);
+  };
+
+  friend ostream &operator<<(ostream &out, const ProgramTestParam &param) {
+    return out << string(param);
+  }
 };
 
-class ProgramFileTest : public testing::TestWithParam<ProgramTest> {};
+class ProgramFileTest : public testing::TestWithParam<ProgramTestParam> {};
 
 std::vector<std::string> split(const string &str, const string &delim) {
   std::vector<std::string> results;
@@ -39,7 +56,7 @@ std::vector<std::string> split(const string &str, const string &delim) {
   return results;
 }
 
-std::string trim(const string &str, const string &whitespace = " \t")
+std::string trim(const string &str, const string &whitespace = " \t\n")
 {
   const auto strBegin = str.find_first_not_of(whitespace);
   if (strBegin == string::npos)
@@ -51,8 +68,8 @@ std::string trim(const string &str, const string &whitespace = " \t")
   return str.substr(strBegin, strRange);
 }
 
-vector<ProgramTest> readTestsFromDisk(const std::string &dirname) {
-  vector<ProgramTest> testParams;
+vector<ProgramTestParam> readTestsFromDisk(const std::string &dirname) {
+  vector<ProgramTestParam> testParams;
   DIR *dir;
   struct dirent *ent;
   struct stat st;
@@ -82,11 +99,11 @@ vector<ProgramTest> readTestsFromDisk(const std::string &dirname) {
       if(!std::getline(ss, header)) {
         continue;
       }
-      ProgramTest source;
-      source.name = fname + "::" + trim(header);
-      source.source = string((std::istreambuf_iterator<char>(ss)),
-                             (std::istreambuf_iterator<char>()));
-      testParams.push_back(source);
+      ProgramTestParam testParam;
+      testParam.name = fname + "::" + trim(header);
+      testParam.source = trim(string((std::istreambuf_iterator<char>(ss)),
+                                (std::istreambuf_iterator<char>())));
+      testParams.push_back(testParam);
     }
   }
   closedir(dir);
