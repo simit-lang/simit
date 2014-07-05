@@ -56,8 +56,7 @@ std::vector<std::string> split(const string &str, const string &delim) {
   return results;
 }
 
-std::string trim(const string &str, const string &whitespace = " \t\n")
-{
+std::string trim(const string &str, const string &whitespace = " \t\n") {
   const auto strBegin = str.find_first_not_of(whitespace);
   if (strBegin == string::npos)
     return ""; // no content
@@ -99,6 +98,10 @@ vector<ProgramTestParam> readTestsFromDisk(const std::string &dirname) {
       if(!std::getline(ss, header)) {
         continue;
       }
+      if (header[0] == '-') {
+        continue;
+      }
+
       ProgramTestParam testParam;
       testParam.name = fname + "::" + trim(header);
       testParam.source = trim(string((std::istreambuf_iterator<char>(ss)),
