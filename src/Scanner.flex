@@ -34,7 +34,7 @@ ident         {letter}({letter}|{digit})*
 "if"                   { return IF;        }
 "elif"                 { return ELIF;      }
 "else"                 { return ELSE;      }
-"end"                  { return END;       }
+"end"                  { return BLOCKEND;  }
 "->"                   { return RARROW;    }
 
 "int"                  { return INT;       }

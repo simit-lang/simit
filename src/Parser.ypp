@@ -34,16 +34,29 @@
 // Literals
 %token <num> INT_LITERAL
 %token <fnum> FLOAT_LITERAL
-%token <string> IDENT
+%token <string> IDENT "identifier"
 
 // Keywords
-%token INT FLOAT
-%token STRUCT CONST EXTERN PROC FUNC
-%token TENSOR
-%token MAP TO WITH REDUCE
-%token WHILE IF ELIF ELSE END
-%token RARROW
+%token INT      "int"
+%token FLOAT    "float"
+%token STRUCT   "struct"
+%token CONST    "const"
+%token EXTERN   "extern"
+%token PROC     "proc"
+%token FUNC     "func"
+%token TENSOR   "Tensor"
+%token MAP      "map"
+%token TO       "to"
+%token WITH     "with"
+%token REDUCE   "reduce"
+%token WHILE    "while"
+%token IF       "if"
+%token ELIF     "elif"
+%token ELSE     "else"
+%token BLOCKEND "end"
+%token RARROW   "->"
 
+// End of file token
 %token END 0 "end of file"
 
 %%
@@ -54,10 +67,10 @@ input
   | input function
 
 procedure
-  : PROC IDENT body END
+  : PROC IDENT body BLOCKEND
 
 function
-  : function_header body END
+  : function_header body BLOCKEND
 
 function_header
   : FUNC IDENT '(' param_list ')' results
