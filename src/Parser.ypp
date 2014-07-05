@@ -12,6 +12,11 @@
 %}
 
 %require "3.0.0"
+
+%define parse.error verbose
+%define parse.lac full
+%locations
+
 %parse-param{Simit::IRNode **irNode}{std::string *errors}
 %start input
 
@@ -76,5 +81,6 @@ body:
 %%
 
 void yyerror(Simit::IRNode **irNode, std::string *errors, const char *s) {
-  *errors = string(s);
+  *errors = string(s) + " at " + to_string(yylloc.first_line) + ':' +
+            to_string(yylloc.first_column);
 }
