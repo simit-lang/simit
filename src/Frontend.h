@@ -11,10 +11,8 @@ namespace Simit {
 
 extern FILE *yyin;
 int yyparse(Simit::IRNode **irNode, std::string *errors);
-int yylex (void);
 struct yy_buffer_state *yy_scan_string(const char *);
 int yylex_destroy();
-void yyerror(Simit::IRNode **irNode, const char *s);
 
 namespace Simit {
 
@@ -34,7 +32,6 @@ namespace Simit {
   private:
 
   };
-
 }
 
 #endif

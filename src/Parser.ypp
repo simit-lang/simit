@@ -7,8 +7,6 @@
   #include <iostream>
   using namespace Simit;
   using namespace std;
-
-  void yyerror(Simit::IRNode **irNode, std::string *errors, const char *s);
 %}
 
 %require "3.0.0"
@@ -16,18 +14,23 @@
 %define parse.error verbose
 %define parse.lac full
 %locations
+%pure_parser
 
 %parse-param{Simit::IRNode **irNode}{std::string *errors}
 %start input
 
 %union {
-  int num;
+  int    num;
   double fnum;
-  const char *string;
+  const  char *string;
 }
-%destructor {} <num> <fnum> <>
 %destructor { free((void*)($$)); } <string>
-%destructor { assert(0); /* Ensure we covered all the cases */ } <*>
+
+%{
+  int yylex(YYSTYPE * val, YYLTYPE * loc);
+  void yyerror(YYLTYPE * loc, Simit::IRNode **irNode,
+               std::string *errors, const char *s);
+%}
 
 %token UNKNOWN
 
@@ -37,26 +40,41 @@
 %token <string> IDENT "identifier"
 
 // Keywords
-%token INT      "int"
-%token FLOAT    "float"
-%token STRUCT   "struct"
-%token CONST    "const"
-%token EXTERN   "extern"
-%token PROC     "proc"
-%token FUNC     "func"
-%token TENSOR   "Tensor"
-%token MAP      "map"
-%token TO       "to"
-%token WITH     "with"
-%token REDUCE   "reduce"
-%token WHILE    "while"
-%token IF       "if"
-%token ELIF     "elif"
-%token ELSE     "else"
-%token BLOCKEND "end"
-%token RARROW   "->"
+%token INT       "int"
+%token FLOAT     "float"
+%token STRUCT    "struct"
+%token CONST     "const"
+%token EXTERN    "extern"
+%token PROC      "proc"
+%token FUNC      "func"
+%token TENSOR    "Tensor"
+%token MAP       "map"
+%token TO        "to"
+%token WITH      "with"
+%token REDUCE    "reduce"
+%token WHILE     "while"
+%token IF        "if"
+%token ELIF      "elif"
+%token ELSE      "else"
+%token BLOCKEND  "end"
 
-// End of file token
+%token LP        "("
+%token RP        ")"
+%token LB        "["
+%token RB        "]"
+%token LC        "{"
+%token RC        "}"
+%token COMMA     ","
+%token COL       ":"
+%token SEMICOL   ";"
+%token PLUS      "+"
+%token MINUS     "-"
+%token STAR      "*"
+%token SLASH     "/"
+%token BACKSLASH "\\"
+%token RARROW    "->"
+
+// End of file
 %token END 0 "end of file"
 
 %%
@@ -73,19 +91,19 @@ function
   : function_header body BLOCKEND
 
 function_header
-  : FUNC IDENT '(' param_list ')' results
+  : FUNC IDENT "(" param_list ")" results
 
 results
   : /* empty */
-  | RARROW '(' param_list ')'
+  | RARROW "(" param_list ")"
 
 param_list
   : /* empty */
   | param_decl
-  | param_decl ',' param_list
+  | param_decl "," param_list
 
 param_decl
-  : IDENT ':' type
+  : IDENT ":" type
 
 type: TENSOR '(' INT ')'
 
@@ -93,7 +111,8 @@ body:
 
 %%
 
-void yyerror(Simit::IRNode **irNode, std::string *errors, const char *s) {
-  *errors = string(s) + " at " + to_string(yylloc.first_line) + ':' +
-            to_string(yylloc.first_column);
+void yyerror(YYLTYPE *loc, Simit::IRNode **irNode,
+             std::string *errors, const char *s) {
+  *errors = string(s) + " at " + to_string(loc->first_line) + ":" +
+            to_string(loc->first_column);
 }
