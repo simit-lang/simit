@@ -1,0 +1,9 @@
+%%%- dot3
+func dot(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+	c = +i a[i] * b[i]
+end
+
+%%%- dot
+func dot(a : Tensor[*](float), b : Tensor[*](float)) -> (c : Tensor[*](float))
+	c = +i a[i] * b[i]
+end

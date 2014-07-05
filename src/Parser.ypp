@@ -105,7 +105,27 @@ param_list
 param_decl
   : IDENT ":" type
 
-type: TENSOR '(' INT ')'
+type
+  : tensor_type
+
+tensor_type
+  : TENSOR shape  "(" scalar_type ")" { }
+
+shape
+  : /* empty */
+  | shape "[" dimension_list "]"
+
+dimension_list
+  : dimension
+  | dimension_list dimension
+
+dimension
+  : INT_LITERAL
+  | IDENT
+
+scalar_type
+  : INT
+  | FLOAT
 
 body:
 
