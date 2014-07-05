@@ -10,12 +10,11 @@
   #include <stdlib.h>
   using namespace std;
 
-int yycolumn = 1;
-
-#define YY_USER_ACTION yylloc->first_line = yylloc->last_line = yylineno; \
+  int yycolumn = 1;
+  #define YY_USER_ACTION                                                      \
+    yylloc->first_line = yylloc->last_line = yylineno;                        \
     yylloc->first_column = yycolumn; yylloc->last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
-
 %}
 %option bison-bridge
 %option bison-locations
@@ -45,7 +44,6 @@ ident         {letter}({letter}|{digit})*
 "else"                { return ELSE;      }
 "end"                 { return BLOCKEND;  }
 "->"                  { return RARROW;    }
-
 "int"                 { return INT;       }
 "float"               { return FLOAT;     }
 
@@ -58,29 +56,35 @@ ident         {letter}({letter}|{digit})*
 ","                   { return COMMA; }
 ":"                   { return COL; }
 ";"                   { return SEMICOL; }
+"="                   { return ASSIGN; }
 "+"                   { return PLUS; }
 "-"                   { return MINUS; }
 "*"                   { return STAR; }
 "/"                   { return SLASH; }
 "\\"                  { return BACKSLASH; }
 
-{digit}+              { yylval->num  = atoi(yytext);     return INT_LITERAL; }
-{digit}+"."{digit}+   { yylval->fnum = atof(yytext);     return FLOAT_LITERAL; }
-{ident}               { yylval->string = strdup(yytext); return IDENT; }
-[ \t]                 {}
-\n                    { yycolumn = 1; }
-
- /* Comments */
+ /* Multi-line comments */
 "%{"                  { BEGIN(MLCOMMENT); }
 <MLCOMMENT>\n         { yycolumn = 1; }
 <MLCOMMENT>.          {}
 <MLCOMMENT><<EOF>>    { /* TODO: REPORT ERROR */ return UNKNOWN; }
 <MLCOMMENT>"%}"       { BEGIN(INITIAL); }
 
+ /* Single-line comments */
 %[^{]                 { BEGIN(SLCOMMENT); }
 <SLCOMMENT>.          {}
-<SLCOMMENT>\n         { yycolumn = 1; BEGIN(INITIAL); }
+<SLCOMMENT>\n         { BEGIN(INITIAL); yycolumn = 1; }
 
+ /* Literals */
+{digit}+              { yylval->num  = atoi(yytext);     return INT_LITERAL; }
+{digit}+"."{digit}+   { yylval->fnum = atof(yytext);     return FLOAT_LITERAL; }
+{ident}               { yylval->string = strdup(yytext); return IDENT; }
+
+ /* Whitespace */
+[ \t]                 {}
+<INITIAL>\n           { yycolumn = 1; }
+
+ /* Unexpected (error) */
 .                     { /* TODO: REPORT ERROR */
                         log(string("Unknown character [")+yytext[0]+"]");
                         return UNKNOWN;
