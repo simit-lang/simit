@@ -37,6 +37,9 @@ ident         {letter}({letter}|{digit})*
 "end"                  { return END;       }
 "->"                   { return RARROW;    }
 
+"int"                  { return INT;       }
+"float"                { return FLOAT;     }
+
 [\[\]\(\)\{\}:,;*+-/]  { return yytext[0]; }
 
 {digit}+               { yylval.num  = atoi(yytext);     return INT_LITERAL; }

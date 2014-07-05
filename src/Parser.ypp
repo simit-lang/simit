@@ -32,11 +32,14 @@
 %token <string> IDENT
 
 // Keywords
+%token INT FLOAT
 %token STRUCT CONST EXTERN PROC FUNC
 %token TENSOR
 %token MAP TO WITH REDUCE
 %token WHILE IF ELIF ELSE END
 %token RARROW
+
+%token END 0 "end of file"
 
 %%
 
@@ -60,12 +63,13 @@ results
 
 param_list
   : /* empty */
+  | param_decl
   | param_decl ',' param_list
 
 param_decl
-  : IDENT type
+  : IDENT ':' type
 
-type:
+type: TENSOR '(' INT ')'
 
 body:
 

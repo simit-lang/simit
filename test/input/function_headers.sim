@@ -3,8 +3,8 @@ func f()
 end
 
 %%% scalar
-%func f(p : Tensor(int)) -> (r : Tensor(int))
-%end
+func f(p : Tensor(int)) -> (r : Tensor(int))
+end
 
 %%% scalars
 %func f(p1 : Tensor(int), p2 : Tensor(int)) -> (r1 : Tensor(int), r2 : Tensor(int))
