@@ -1,0 +1,20 @@
+%%% add
+func add(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+  c = a + b;
+end
+
+%%% sub
+func sub(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+  c = a * b;
+end
+
+%%% mul
+func mul(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+  c = a * b;
+end
+
+%%% div
+func div(a : Tensor[3](float), b : Tensor(float)) -> (c : Tensor[3](float))
+  c = a / b;
+end
+

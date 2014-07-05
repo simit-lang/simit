@@ -134,17 +134,21 @@ block_stmt
 
 stmt_list
   : /* empty */
-  | stmt_list stmt stmt_separator
-
-stmt_separator
-  : ";"
-  | NEWLINE
+  | stmt_list stmt
 
 stmt
-  : assignment_stmt
+  : expr_stmt
 
-assignment_stmt
-  : expr "=" expr "+" expr
+expr_stmt
+  : ";"
+  | expr ";"
+
+expr
+  : expr "=" expr
+  | expr "+" expr
+  | expr "-" expr
+  | expr "*" expr
+  | expr "/" expr
 
 expr
   : IDENT
