@@ -14,7 +14,7 @@
 %define parse.error verbose
 %define parse.lac full
 %locations
-%pure_parser
+%pure-parser
 
 %parse-param{Simit::IRNode **irNode}{std::string *errors}
 %start input
@@ -27,7 +27,7 @@
 %destructor { free((void*)($$)); } <string>
 
 %{
-  int yylex(YYSTYPE * val, YYLTYPE * loc);
+  #include "Scanner.h"
   void yyerror(YYLTYPE * loc, Simit::IRNode **irNode,
                std::string *errors, const char *s);
 %}
@@ -58,6 +58,7 @@
 %token ELSE      "else"
 %token BLOCKEND  "end"
 
+%token NEWLINE   "newline"
 %token LP        "("
 %token RP        ")"
 %token LB        "["
@@ -67,6 +68,7 @@
 %token COMMA     ","
 %token COL       ":"
 %token SEMICOL   ";"
+%token ASSIGN    "="
 %token PLUS      "+"
 %token MINUS     "-"
 %token STAR      "*"
@@ -85,10 +87,10 @@ input
   | input function
 
 procedure
-  : PROC IDENT body BLOCKEND
+  : PROC IDENT block_stmt
 
 function
-  : function_header body BLOCKEND
+  : function_header block_stmt
 
 function_header
   : FUNC IDENT "(" param_list ")" results
@@ -127,7 +129,25 @@ scalar_type
   : INT
   | FLOAT
 
-body:
+block_stmt
+  : stmt_list BLOCKEND
+
+stmt_list
+  : /* empty */
+  | stmt_list stmt stmt_separator
+
+stmt_separator
+  : ";"
+  | NEWLINE
+
+stmt
+  : assignment_stmt
+
+assignment_stmt
+  : expr "=" expr "+" expr
+
+expr
+  : IDENT
 
 %%
 
