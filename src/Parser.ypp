@@ -35,9 +35,15 @@
 %token UNKNOWN
 
 // Literals
-%token <num> INT_LITERAL
-%token <fnum> FLOAT_LITERAL
-%token <string> IDENT "identifier"
+%token <num>    INT_LITERAL    "int literal"
+%token <fnum>   FLOAT_LITERAL  "float literal"
+%token <string> STRING_LITERAL "string literal"
+%token <string> IDENT          "identifier"
+
+%left "-" "+"
+%left "*" "/"
+%left NEG     /* negation--unary minus */
+%right "^"    /* exponentiation        */
 
 // Keywords
 %token INT       "int"
@@ -68,11 +74,13 @@
 %token COMMA     ","
 %token COL       ":"
 %token SEMICOL   ";"
+
 %token ASSIGN    "="
 %token PLUS      "+"
 %token MINUS     "-"
 %token STAR      "*"
 %token SLASH     "/"
+%token EXP       "^"
 %token BACKSLASH "\\"
 %token RARROW    "->"
 
@@ -144,14 +152,36 @@ expr_stmt
   | expr ";"
 
 expr
-  : expr "=" expr
+  : IDENT
+  | FLOAT_LITERAL
+  | INT_LITERAL
+  | STRING_LITERAL
+  | expr "=" expr
   | expr "+" expr
   | expr "-" expr
   | expr "*" expr
   | expr "/" expr
+  | "-" expr %prec NEG
+  | expr "^" expr
+  | "(" expr ")"
+  | expr "[" expr "]"
+  | index_expression
 
-expr
-  : IDENT
+index_expression
+  : reduction_indices expr
+
+reduction_indices
+  : /* empty */
+  | reduction_indices reduction_index
+
+reduction_index
+  : reduction_op IDENT
+  | reduction_op "{" IDENT "}"
+  | IDENT "{" IDENT "}"
+
+reduction_op
+  : "+"
+  | "-"
 
 %%
 

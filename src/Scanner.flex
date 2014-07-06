@@ -61,7 +61,8 @@ ident         {letter}({letter}|{digit})*
 "-"                   { return MINUS; }
 "*"                   { return STAR; }
 "/"                   { return SLASH; }
-"\\"                  { return BACKSLASH; }
+"^"                   { return SLASH; }
+"\\"                  { return EXP; }
 
  /* Multi-line comments */
 "%{"                  { BEGIN(MLCOMMENT); }
