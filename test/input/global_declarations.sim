@@ -2,12 +2,19 @@
 struct Empty
 end
 
-%%% point-struct
+%%% springs
 struct Point
 	x : Tensor[3](float);
 	v : Tensor[3](float);
-	m : float;
 end
+
+struct Spring
+	m  : float;
+	l0 : float;
+end
+
+extern points Point{};
+extern springs Spring[points,points]{};
 
 %%% constants 
 const grav      : Tensor[3](float) = [0.0, 0.0, -9.81];

@@ -94,10 +94,11 @@ program
   | program program_element
 
 program_element
-  : const
-  | struct
+  : struct
   | procedure
   | function
+  | const
+  | extern
 
 const
   : "const" var_decl "=" tensor_literal ";"
@@ -114,6 +115,14 @@ literal_list
 scalar_literal
   : INT_LITERAL
   | FLOAT_LITERAL
+
+extern
+  : "extern" IDENT type "{" "}" ";"
+  | "extern" IDENT type "[" endpoints "]" "{" "}" ";"
+
+endpoints
+  : IDENT
+  | endpoints "," IDENT
 
 struct
   : "struct" IDENT struct_decl_block
@@ -154,7 +163,11 @@ var_decl
   : IDENT ":" type
 
 type
-  : tensor_type
+  : object_type
+  | tensor_type
+
+object_type
+  : IDENT
 
 tensor_type
   : scalar_type
