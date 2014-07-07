@@ -10,3 +10,8 @@ end
 line 
 comment %}
 
+%%% literals
+proc main
+  1; -1; 1e3; 1E3;
+  1.0; -1.0; 1.0e3; 1.0E3;
+end

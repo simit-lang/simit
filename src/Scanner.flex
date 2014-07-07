@@ -77,8 +77,11 @@ ident         {letter}({letter}|{digit})*
 <SLCOMMENT>\n         { BEGIN(INITIAL); yycolumn = 1; }
 
  /* Literals */
-{digit}+              { yylval->num  = atoi(yytext);     return INT_LITERAL; }
-{digit}+"."{digit}+   { yylval->fnum = atof(yytext);     return FLOAT_LITERAL; }
+-?([0-9]+|[0-9]+([eE][-+]?[0-9]+)?)         { yylval->num  = atoi(yytext);
+                                              return INT_LITERAL; }
+-?([0-9]+|[0-9]*\.[0-9]+([eE][-+]?[0-9]+)?) { yylval->fnum = atof(yytext);
+                                              return FLOAT_LITERAL; }
+
 {ident}               { yylval->string = strdup(yytext); return IDENT; }
 
  /* Whitespace */
@@ -89,6 +92,5 @@ ident         {letter}({letter}|{digit})*
  /* Unexpected (error) */
 .                     { /* TODO: REPORT ERROR */
                         log(string("Unknown character [")+yytext[0]+"]");
-                        return UNKNOWN;
-                      }
+                        return UNKNOWN; }
 %%
