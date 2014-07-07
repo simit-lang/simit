@@ -132,6 +132,7 @@ dimension_list
 dimension
   : INT_LITERAL
   | IDENT
+  | "*"
 
 scalar_type
   : INT
