@@ -83,7 +83,8 @@ ident         {letter}({letter}|{digit})*
 
  /* Whitespace */
 [ \t]                 {}
-<INITIAL>\n           { yycolumn = 1; }
+\n                    { yycolumn = 1; }
+<<EOF>>               { yycolumn = 1; yyterminate(); }
 
  /* Unexpected (error) */
 .                     { /* TODO: REPORT ERROR */
