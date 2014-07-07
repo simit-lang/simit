@@ -118,8 +118,11 @@ TEST_P(ProgramFileTest, inputFiles) {
   logIndent();
   Program program;
   std::string errors;
-  EXPECT_EQ(0, program.loadString(GetParam().source, errors));
-  cerr << errors << endl;
+  int status = program.loadString(GetParam().source, errors);
+  EXPECT_EQ(0, status);
+  if (status != 0) {
+    cerr << errors << endl;
+  }
   log();
   logDedent();
 }
