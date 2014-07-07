@@ -91,35 +91,54 @@
 
 input
   : /* empty */
+  | input struct
   | input procedure
   | input function
 
+struct
+  : "struct" IDENT struct_decl_block
+
+struct_decl_block
+  : /* empty */
+  | struct_decl_list BLOCKEND
+
+struct_decl_list
+  : /* empty */
+  | struct_decl_list field_decl
+
+field_decl
+  : var_decl  ";"
+
 procedure
-  : PROC IDENT block_stmt
+  : PROC IDENT stmt_block
 
 function
-  : function_header block_stmt
+  : function_header stmt_block
 
 function_header
-  : FUNC IDENT "(" param_list ")" results
+  : FUNC IDENT "(" params ")" results
+
+params
+ : /* empty */
+ | param_list
 
 results
   : /* empty */
   | RARROW "(" param_list ")"
 
 param_list
-  : /* empty */
-  | param_decl
-  | param_decl "," param_list
+  : var_decl
+  | param_list "," var_decl
 
-param_decl
+var_decl
   : IDENT ":" type
 
 type
   : tensor_type
 
 tensor_type
-  : TENSOR shape  "(" scalar_type ")" { }
+  : scalar_type
+  | TENSOR shape  "(" scalar_type ")" { }
 
 shape
   : /* empty */
@@ -127,7 +146,7 @@ shape
 
 dimension_list
   : dimension
-  | dimension_list dimension
+  | dimension_list "," dimension
 
 dimension
   : INT_LITERAL
@@ -138,7 +157,7 @@ scalar_type
   : INT
   | FLOAT
 
-block_stmt
+stmt_block
   : stmt_list BLOCKEND
 
 stmt_list

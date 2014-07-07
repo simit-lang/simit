@@ -1,0 +1,4 @@
+%%% solve 
+func div(A : Tensor[3,3](float), b : Tensor(float)) -> (c : Tensor[3](float))
+  c = a \ b;
+end
