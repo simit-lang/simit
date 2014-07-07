@@ -71,6 +71,7 @@
 %token LC        "{"
 %token RC        "}"
 %token COMMA     ","
+%token PERIOD    "."
 %token COL       ":"
 %token SEMICOL   ";"
 
@@ -217,8 +218,17 @@ expr
   | "-" expr %prec NEG
   | expr "^" expr
   | "(" expr ")"
-  | expr "[" expr "]"
+  | call_expr
+  | expr "." expr
   | index_expression
+
+call_expr
+  : expr "(" expr_list ")"
+  | expr "(" ")"
+
+expr_list
+  : expr
+  | expr_list "," expr
 
 index_expression
   : reduction_indices expr

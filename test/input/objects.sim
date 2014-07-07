@@ -1,0 +1,10 @@
+%%% field-access
+struct Point
+	x : Tensor[3](float);
+	v : Tensor[3](float);
+	m  : float;
+end
+
+func f(p : Point) -> (r : float)
+	r = p.m;
+end

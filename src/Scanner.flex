@@ -25,9 +25,13 @@
 
 digit         [0-9]
 letter        [a-zA-Z]
-ident         {letter}({letter}|{digit})*
+ident         ({letter}|_)({letter}|{digit}|_)*
+
+int_literal   -?({digit}+|{digit}+([eE][-+]?{digit}+)?)
+float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 
 %%
+ /* Keywords and symbols */
 "struct"              { return STRUCT;    }
 "Tensor"              { return TENSOR;    }
 "const"               { return CONST;     }
@@ -43,10 +47,10 @@ ident         {letter}({letter}|{digit})*
 "elif"                { return ELIF;      }
 "else"                { return ELSE;      }
 "end"                 { return BLOCKEND;  }
-"->"                  { return RARROW;    }
 "int"                 { return INT;       }
 "float"               { return FLOAT;     }
 
+"->"                  { return RARROW;    }
 "("                   { return LP; }
 ")"                   { return RP; }
 "["                   { return LB; }
@@ -76,13 +80,12 @@ ident         {letter}({letter}|{digit})*
 <SLCOMMENT>.          {}
 <SLCOMMENT>\n         { BEGIN(INITIAL); yycolumn = 1; }
 
- /* Literals */
--?([0-9]+|[0-9]+([eE][-+]?[0-9]+)?)         { yylval->num  = atoi(yytext);
-                                              return INT_LITERAL; }
--?([0-9]+|[0-9]*\.[0-9]+([eE][-+]?[0-9]+)?) { yylval->fnum = atof(yytext);
-                                              return FLOAT_LITERAL; }
-
+ /* Identifiers */
 {ident}               { yylval->string = strdup(yytext); return IDENT; }
+
+ /* Literals */
+{int_literal}         { yylval->num  = atoi(yytext); return INT_LITERAL; }
+{float_literal}       { yylval->fnum = atof(yytext); return FLOAT_LITERAL; }
 
  /* Whitespace */
 [ \t]                 {}
