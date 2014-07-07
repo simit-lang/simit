@@ -17,7 +17,6 @@
 %pure-parser
 
 %parse-param{Simit::IRNode **irNode}{std::string *errors}
-%start input
 
 %union {
   int    num;
@@ -87,13 +86,34 @@
 // End of file
 %token END 0 "end of file"
 
+%start program
 %%
 
-input
+program
   : /* empty */
-  | input struct
-  | input procedure
-  | input function
+  | program program_element
+
+program_element
+  : const
+  | struct
+  | procedure
+  | function
+
+const
+  : "const" var_decl "=" tensor_literal ";"
+
+tensor_literal
+  : scalar_literal
+  | "[" literal_list "]"
+
+literal_list
+  : scalar_literal
+  | literal_list "," scalar_literal
+  | literal_list ";" scalar_literal
+
+scalar_literal
+  : INT_LITERAL
+  | FLOAT_LITERAL
 
 struct
   : "struct" IDENT struct_decl_block

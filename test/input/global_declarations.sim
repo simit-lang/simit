@@ -1,0 +1,16 @@
+%%% empty-struct
+struct Empty
+end
+
+%%% point-struct
+struct Point
+	x : Tensor[3](float);
+	v : Tensor[3](float);
+	m : float;
+end
+
+%%% constants 
+const grav      : Tensor[3](float) = [0.0, 0.0, -9.81];
+const stiffness : float = 1e3;
+const h1        : float = 0.01;
+const h2        : float = [0.01];
