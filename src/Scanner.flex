@@ -1,6 +1,9 @@
 %option noyywrap
 %option nounput
 %option noinput
+%option bison-bridge
+%option bison-locations
+%option yylineno
 
 %{
   #include "Frontend.h"
@@ -16,9 +19,6 @@
     yylloc->first_column = yycolumn; yylloc->last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
 %}
-%option bison-bridge
-%option bison-locations
-%option yylineno
 
 %x SLCOMMENT
 %x MLCOMMENT

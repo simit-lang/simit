@@ -39,6 +39,7 @@
 %token <string> STRING_LITERAL "string literal"
 %token <string> IDENT          "identifier"
 
+%right "="
 %left "-" "+"
 %left "*" "/"
 %left "\\"    // solve
@@ -101,25 +102,11 @@ program_element
   : struct
   | procedure
   | function
-  | const
+  | const_stmt
   | extern
 
-const
-  : "const" var_decl "=" tensor_literal ";"
 
-tensor_literal
-  : scalar_literal
-  | "[" literal_list "]"
-
-literal_list
-  : scalar_literal
-  | literal_list "," scalar_literal
-  | literal_list ";" scalar_literal
-
-scalar_literal
-  : INT_LITERAL
-  | FLOAT_LITERAL
-
+// Externs
 extern
   : "extern" IDENT type "{" "}" ";"
   | "extern" IDENT type "[" endpoints "]" "{" "}" ";"
@@ -128,6 +115,8 @@ endpoints
   : IDENT
   | endpoints "," IDENT
 
+
+// Structs
 struct
   : "struct" IDENT struct_decl_block
 
@@ -142,6 +131,8 @@ struct_decl_list
 field_decl
   : var_decl  ";"
 
+
+// Procedures and functions
 procedure
   : PROC IDENT stmt_block
 
@@ -163,9 +154,8 @@ param_list
   : var_decl
   | param_list "," var_decl
 
-var_decl
-  : IDENT ":" type
 
+// Types
 type
   : object_type
   | tensor_type
@@ -194,6 +184,8 @@ scalar_type
   : INT
   | FLOAT
 
+
+// Statements
 stmt_block
   : stmt_list BLOCKEND
 
@@ -202,30 +194,47 @@ stmt_list
   | stmt_list stmt
 
 stmt
-  : expr_stmt
+  : const_stmt
+  | assign_stmt
+  | expr_stmt
+
+const_stmt
+  : "const" var_decl "=" tensor_literal ";"
+
+assign_stmt
+  : expr_list "=" expr_list ";"
+
+var_list
+  : IDENT
+  | IDENT "," var_list
 
 expr_stmt
   : ";"
   | expr ";"
 
+
+// Expressions
 expr
   : IDENT
   | FLOAT_LITERAL
   | INT_LITERAL
   | STRING_LITERAL
-  | expr "=" expr
   | expr "+" expr
   | expr "-" expr
   | expr "*" expr
   | expr "/" expr
-  | "-" expr  %prec NEG
+  |      "-" expr  %prec NEG
   | expr "'"
   | expr "^" expr
   | expr "\\" expr
   | "(" expr ")"
   | call_expr
-  | expr "." expr
-  | index_expression
+  | field_expr
+  | index_expr
+  | map_expr
+
+field_expr
+  : expr "." expr
 
 call_expr
   : expr "(" expr_list ")"
@@ -235,7 +244,22 @@ expr_list
   : expr
   | expr_list "," expr
 
-index_expression
+
+// Map expressions
+map_expr
+  : "map" IDENT "to" IDENT with reduce
+
+with
+  : /* empty */
+  | "with" IDENT
+
+reduce
+  : /* empty */
+  | "reduce" reduction_op
+
+
+// Index expressions
+index_expr
   : reduction_indices expr
 
 reduction_indices
@@ -250,6 +274,26 @@ reduction_index
 reduction_op
   : "+"
   | "-"
+
+
+// Variables
+var_decl
+  : IDENT ":" type
+
+
+// Literals
+tensor_literal
+  : scalar_literal
+  | "[" literal_list "]"
+
+literal_list
+  : scalar_literal
+  | literal_list "," scalar_literal
+  | literal_list ";" scalar_literal
+
+scalar_literal
+  : INT_LITERAL
+  | FLOAT_LITERAL
 
 %%
 

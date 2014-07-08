@@ -1,0 +1,19 @@
+%%% forall
+proc p
+  M = map myfunc to springs;
+end
+
+%%% with
+proc p
+  M = map myfunc to springs with points;
+end
+
+%%% reduce
+proc p
+  M = map myfunc to points reduce +;  
+end
+
+%%% springs
+proc p
+  M, fg = map distribute_masses to springs with points reduce +;
+end
