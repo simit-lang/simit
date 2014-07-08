@@ -1,3 +1,21 @@
+%%% empty-struct
+struct Empty
+end
+
+%%% springs
+struct Point
+	x : Tensor[3](float);
+	v : Tensor[3](float);
+end
+
+struct Spring
+	m  : float;
+	l0 : float;
+end
+
+extern points Point{};
+extern springs Spring[points,points]{};
+
 %%% field-access
 struct Point
 	x : Tensor[3](float);
