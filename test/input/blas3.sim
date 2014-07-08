@@ -1,4 +1,9 @@
 %%% neg
-func neg(A : Tensor[3,3](float)) -> (B : Tensor[3,3](float))
+func neg(A : Tensor[3,3](float)) -> (C : Tensor[3,3](float))
   C = -A;
+end
+
+%% transpose
+func neg(A : Tensor[3,3](float)) -> (C : Tensor[3,3](float))
+  C = A';
 end

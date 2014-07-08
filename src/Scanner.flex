@@ -49,24 +49,25 @@ float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 "end"                 { return BLOCKEND;  }
 "int"                 { return INT;       }
 "float"               { return FLOAT;     }
-
 "->"                  { return RARROW;    }
-"("                   { return LP; }
-")"                   { return RP; }
-"["                   { return LB; }
-"]"                   { return RB; }
-"{"                   { return LC; }
-"}"                   { return RC; }
-","                   { return COMMA; }
-":"                   { return COL; }
-";"                   { return SEMICOL; }
-"="                   { return ASSIGN; }
-"+"                   { return PLUS; }
-"-"                   { return MINUS; }
-"*"                   { return STAR; }
-"/"                   { return SLASH; }
-"^"                   { return SLASH; }
-"\\"                  { return EXP; }
+"("                   { return LP;        }
+")"                   { return RP;        }
+"["                   { return LB;        }
+"]"                   { return RB;        }
+"{"                   { return LC;        }
+"}"                   { return RC;        }
+","                   { return COMMA;     }
+"."                   { return PERIOD;    }
+":"                   { return COL;       }
+";"                   { return SEMICOL;   }
+"="                   { return ASSIGN;    }
+"+"                   { return PLUS;      }
+"-"                   { return MINUS;     }
+"*"                   { return STAR;      }
+"/"                   { return SLASH;     }
+"\\"                  { return BACKSLASH; }
+"^"                   { return EXP;       }
+"'"                   { return TRANSPOSE; }
 
  /* Multi-line comments */
 "%{"                  { BEGIN(MLCOMMENT); }
@@ -84,12 +85,12 @@ float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 {ident}               { yylval->string = strdup(yytext); return IDENT; }
 
  /* Literals */
-{int_literal}         { yylval->num  = atoi(yytext); return INT_LITERAL; }
+{int_literal}         { yylval->num  = atoi(yytext); return INT_LITERAL;   }
 {float_literal}       { yylval->fnum = atof(yytext); return FLOAT_LITERAL; }
 
  /* Whitespace */
 [ \t]                 {}
-\n                    { yycolumn = 1; }
+\n                    { yycolumn = 1;                }
 <<EOF>>               { yycolumn = 1; yyterminate(); }
 
  /* Unexpected (error) */

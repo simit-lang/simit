@@ -41,8 +41,10 @@
 
 %left "-" "+"
 %left "*" "/"
-%left NEG     /* negation--unary minus */
-%right "^"    /* exponentiation        */
+%left "\\"    // solve
+%left NEG     // negation
+%right "^"    // exponentiation
+%right "'"    // transpose
 
 // Keywords
 %token INT       "int"
@@ -81,6 +83,7 @@
 %token STAR      "*"
 %token SLASH     "/"
 %token EXP       "^"
+%token TRANSPOSE "'"
 %token BACKSLASH "\\"
 %token RARROW    "->"
 
@@ -215,8 +218,10 @@ expr
   | expr "-" expr
   | expr "*" expr
   | expr "/" expr
-  | "-" expr %prec NEG
+  | "-" expr  %prec NEG
+  | expr "'"
   | expr "^" expr
+  | expr "\\" expr
   | "(" expr ")"
   | call_expr
   | expr "." expr
