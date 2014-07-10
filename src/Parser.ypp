@@ -206,7 +206,7 @@ assign_stmt
 
 var_list
   : IDENT
-  | IDENT "," var_list
+  | var_list "," IDENT
 
 expr_stmt
   : ";"
@@ -228,6 +228,7 @@ expr
   | expr "^" expr
   | expr "\\" expr
   | "(" expr ")"
+  | expr ":" expr
   | call_expr
   | field_expr
   | index_expr
