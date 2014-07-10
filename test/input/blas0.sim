@@ -1,5 +1,5 @@
 %%% neg
 %! neg(1) -> -1;
-func neg(a : float) -> (c : float)
-  c = -a;
-end
+%func neg(a : float) -> (c : float)
+%  c = -a;
+%end

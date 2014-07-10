@@ -7,26 +7,28 @@
 using namespace Simit;
 using namespace std;
 
+extern FILE *yyin;
+int yyparse(Simit::Program *program);
+struct yy_buffer_state *yy_scan_string(const char *);
+int yylex_destroy();
+
 Frontend::Frontend() {
 }
 
 Frontend::~Frontend() {
 }
 
-int Frontend::parseString(string program,
-                          vector<shared_ptr<IRNode> > &irNodes,
-                          string &errors) {
+int Frontend::parseString(string programString, Program *program) {
   log("Program: ");
   logger.indent();
-  log(program);
+  log(programString);
   logger.dedent();
 
-  //  scanString(program);
   struct yy_buffer_state *bufferState;
-  bufferState = yy_scan_string(program.c_str());
+  bufferState = yy_scan_string(programString.c_str());
 
-  IRNode *irNode = NULL;
-  int status = yyparse(&irNode, &errors);
+  int status = yyparse(program);
+
   yylex_destroy();
   if (status == 0) {
     log("Parsed correctly");
@@ -38,9 +40,7 @@ int Frontend::parseString(string program,
   }
 }
 
-int Frontend::parseFile(std::string filename,
-                        std::vector<std::shared_ptr<IRNode> > &irNodes,
-                        std::string &errors) {
+int Frontend::parseFile(string filename, Program *program) {
   log("Program: ");
   logger.indent();
   string line;
@@ -57,8 +57,7 @@ int Frontend::parseFile(std::string filename,
 
   yyin = fopen(filename.c_str(), "r");
 
-  IRNode *irNode = NULL;
-  int status = yyparse(&irNode, &errors);
+  int status = yyparse(program);
   fclose(yyin);
   if (status == 0) {
     log("Parsed correctly");

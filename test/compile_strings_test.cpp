@@ -12,7 +12,7 @@ TEST(ProgramStringTest, test_name) {                           \
   logIndent();                                                 \
   Program program;                                             \
   std::string errors;                                          \
-  EXPECT_EQ(expected, program.loadString(programText, errors));\
+  EXPECT_EQ(expected, program.loadString(programText));        \
   log("");                                                     \
   logDedent();                                                 \
 }

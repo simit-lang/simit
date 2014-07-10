@@ -10,8 +10,7 @@ namespace Simit {
     IRNode() {}
     virtual ~IRNode() {}
 
-    virtual operator std::string() const { return "IRNode"; };
-    std::ostream& operator<<(std::ostream& os) {return os<<std::string(*this);}
+    virtual operator std::string() const = 0;
   };
 
   class Function {

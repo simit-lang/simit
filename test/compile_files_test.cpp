@@ -117,11 +117,10 @@ TEST_P(ProgramFileTest, inputFiles) {
   log(GetParam().name);
   logIndent();
   Program program;
-  std::string errors;
-  int status = program.loadString(GetParam().source, errors);
+  int status = program.loadString(GetParam().source);
   EXPECT_EQ(0, status);
   if (status != 0) {
-    cerr << errors << endl;
+    cerr << program.errors() << endl;
   }
   log();
   logDedent();

@@ -1,7 +1,8 @@
 %{
-  #include "Logger.h"
-  #include "Frontend.h"
   #include "IR.h"
+  #include "Test.h"
+  #include "Logger.h"
+  #include "Program.h"
   #include <stdlib.h>
   #include <assert.h>
   #include <iostream>
@@ -9,36 +10,34 @@
   using namespace std;
 %}
 
-%require "3.0.0"
+%require "3.0.2"
 
 %define parse.error verbose
 %define parse.lac full
 %locations
 %pure-parser
 
-%parse-param{Simit::IRNode **irNode}{std::string *errors}
+%parse-param{Simit::Program *program}
 
 %union {
   int    num;
   double fnum;
   const  char *string;
+
+  Simit::Test   *test;
+  Simit::IRNode *node;
 }
 %destructor { free((void*)($$)); } <string>
+%destructor { delete $$; } <test>
 
 %{
   #include "Scanner.h"
-  void yyerror(YYLTYPE * loc, Simit::IRNode **irNode,
-               std::string *errors, const char *s);
+  void yyerror(YYLTYPE * loc, Simit::Program *program, const char *s);
 %}
 
 %token UNKNOWN
 
 // Literals
-%token <num>    INT_LITERAL    "int literal"
-%token <fnum>   FLOAT_LITERAL  "float literal"
-%token <string> STRING_LITERAL "string literal"
-%token <string> IDENT          "identifier"
-
 %right    "="
 %nonassoc "\\"               // solve
 %left     "==" "!="
@@ -48,6 +47,11 @@
 %left     NEG                // negation
 %right    "^"                // exponentiation
 %right    "'"                // transpose
+
+%token <num>    INT_LITERAL    "int literal"
+%token <fnum>   FLOAT_LITERAL  "float literal"
+%token <string> STRING_LITERAL "string literal"
+%token <string> IDENT          "identifier"
 
 // Keywords
 %token INT       "int"
@@ -68,7 +72,7 @@
 %token ELSE      "else"
 %token BLOCKEND  "end"
 %token RETURN    "return"
-%token TEST      "test"
+%token TEST
 
 %token RARROW    "->"
 %token LP        "("
@@ -98,12 +102,15 @@
 %token LE        "<="
 %token GE        ">="
 
+//%type <node> program_element
+%type <test> test
+
+
 // End of file
 %token END 0 "end of file"
 
 %start program
 %%
-
 program
   : /* empty */
   | program program_element
@@ -114,7 +121,9 @@ program_element
   | function
   | const_stmt
   | extern
-  | test
+  | test {
+    program->addTest($1);
+  }
 
 
 // Externs
@@ -337,7 +346,9 @@ scalar_literal
 
 // Tests
 test
-  : "test" test_stmt_block
+  : TEST test_stmt_block {
+    $$ = new Simit::Test("MyTest");
+  }
 
 test_stmt_block
   : /* empty */
@@ -346,12 +357,10 @@ test_stmt_block
 test_stmt
   : stmt
   | expr "->" literal
-
-
 %%
 
-void yyerror(YYLTYPE *loc, Simit::IRNode **irNode,
-             std::string *errors, const char *s) {
-  *errors = string(s) + " at " + to_string(loc->first_line) + ":" +
-            to_string(loc->first_column);
+void yyerror(YYLTYPE * loc, Simit::Program *program, const char *s) {
+  string error = string(s) + " at " + to_string(loc->first_line) + ":" +
+                 to_string(loc->first_column);
+  program->addError(error);
 }

@@ -2,46 +2,52 @@
 #include "Frontend.h"
 #include "Logger.h"
 #include "IR.h"
+#include "Test.h"
 
 using namespace Simit;
 using namespace std;
 
 Program::Program() : frontend(new Frontend()) {}
 
-Program::~Program() {}
+Program::~Program() {
+  delete frontend;
+  for(vector<IRNode*>::iterator it = irNodes.begin();
+      it != irNodes.end(); ++it) {
+    cout << string(**it) << endl;
+    delete *it;
+  }
+
+  for(vector<Test*>::iterator it = tests.begin();
+      it != tests.end(); ++it) {
+    cout << string(**it) << endl;
+    delete *it;
+  }
+}
 
 void output_errors(string errors) {
   cerr << "Errors: " << errors << endl;
 }
 
-int Program::loadString(string program) {
-  string errors;
-  int status = loadString(program, errors);
-  if (status != 0) {
-    output_errors(errors);
-  }
-  return status;
-}
-
-int Program::loadString(string program, string &errors) {
-  vector<shared_ptr<IRNode> > irNodes;
-  return frontend->parseString(program, irNodes, errors);
+int Program::loadString(string programString) {
+  return frontend->parseString(programString, this);
 }
 
 int Program::loadFile(std::string filename) {
-  string errors;
-  int status = loadFile(filename, errors);
-  if (status != 0) {
-    output_errors(errors);
-  }
-  return status;
+  return frontend->parseFile(filename, this);
 }
 
-int Program::loadFile(std::string filename, string &errors) {
-  vector<shared_ptr<IRNode> > irNodes;
-  return frontend->parseFile(filename, irNodes, errors);
+string Program::errors() {
+  return errorString;
 }
 
 int Program::compile() {
   return 0;
+}
+
+void Program::addError(string errors) {
+  errorString += errors;
+}
+
+void Program::addTest(Test *test) {
+  tests.push_back(test);
 }
