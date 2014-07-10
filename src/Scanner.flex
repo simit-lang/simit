@@ -32,6 +32,8 @@ float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 
 %%
  /* Keywords and symbols */
+"int"                 { return INT;       }
+"float"               { return FLOAT;     }
 "struct"              { return STRUCT;    }
 "Tensor"              { return TENSOR;    }
 "const"               { return CONST;     }
@@ -47,8 +49,8 @@ float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 "elif"                { return ELIF;      }
 "else"                { return ELSE;      }
 "end"                 { return BLOCKEND;  }
-"int"                 { return INT;       }
-"float"               { return FLOAT;     }
+"return"              { return RETURN;    }
+
 "->"                  { return RARROW;    }
 "("                   { return LP;        }
 ")"                   { return RP;        }
@@ -56,10 +58,13 @@ float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 "]"                   { return RB;        }
 "{"                   { return LC;        }
 "}"                   { return RC;        }
+"<"                   { return LA;        }
+">"                   { return RA;        }
 ","                   { return COMMA;     }
 "."                   { return PERIOD;    }
 ":"                   { return COL;       }
 ";"                   { return SEMICOL;   }
+
 "="                   { return ASSIGN;    }
 "+"                   { return PLUS;      }
 "-"                   { return MINUS;     }
@@ -68,6 +73,12 @@ float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 "\\"                  { return BACKSLASH; }
 "^"                   { return EXP;       }
 "'"                   { return TRANSPOSE; }
+
+"=="                  { return EQ; }
+"!="                  { return NE; }
+"<="                  { return LE; }
+">="                  { return GE; }
+
 
  /* Multi-line comments */
 "%{"                  { BEGIN(MLCOMMENT); }

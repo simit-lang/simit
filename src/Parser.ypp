@@ -39,13 +39,15 @@
 %token <string> STRING_LITERAL "string literal"
 %token <string> IDENT          "identifier"
 
-%right "="
-%left "-" "+"
-%left "*" "/"
-%left "\\"    // solve
-%left NEG     // negation
-%right "^"    // exponentiation
-%right "'"    // transpose
+%right    "="
+%nonassoc "\\"               // solve
+%left     "==" "!="
+%left     "<" ">" "<=" ">="
+%left     "-" "+"
+%left     "*" "/"
+%left     NEG                // negation
+%right    "^"                // exponentiation
+%right    "'"                // transpose
 
 // Keywords
 %token INT       "int"
@@ -65,14 +67,17 @@
 %token ELIF      "elif"
 %token ELSE      "else"
 %token BLOCKEND  "end"
+%token RETURN    "return"
 
-%token NEWLINE   "newline"
+%token RARROW    "->"
 %token LP        "("
 %token RP        ")"
 %token LB        "["
 %token RB        "]"
 %token LC        "{"
 %token RC        "}"
+%token LA        "<"
+%token RA        ">"
 %token COMMA     ","
 %token PERIOD    "."
 %token COL       ":"
@@ -86,7 +91,11 @@
 %token EXP       "^"
 %token TRANSPOSE "'"
 %token BACKSLASH "\\"
-%token RARROW    "->"
+
+%token EQ        "=="
+%token NE        "!="
+%token LE        "<="
+%token GE        ">="
 
 // End of file
 %token END 0 "end of file"
@@ -134,10 +143,10 @@ field_decl
 
 // Procedures and functions
 procedure
-  : PROC IDENT stmt_block
+  : PROC IDENT stmt_block BLOCKEND
 
 function
-  : function_header stmt_block
+  : function_header stmt_block BLOCKEND
 
 function_header
   : FUNC IDENT "(" params ")" results
@@ -187,19 +196,33 @@ scalar_type
 
 // Statements
 stmt_block
-  : stmt_list BLOCKEND
-
-stmt_list
   : /* empty */
-  | stmt_list stmt
+  | stmt_block stmt
 
 stmt
   : const_stmt
+  | if_stmt
+  | return_stmt
   | assign_stmt
   | expr_stmt
 
 const_stmt
   : "const" var_decl "=" tensor_literal ";"
+
+if_stmt
+  : "if" expr stmt_block else_clauses BLOCKEND
+
+else_clauses
+  : /* empty */
+  | elif_clauses "else" stmt_block
+
+elif_clauses
+  : /* empty */
+  | elif_clauses "elif" expr stmt_block
+
+
+return_stmt
+  : "return" ";"
 
 assign_stmt
   : expr_list "=" expr_list ";"
@@ -219,6 +242,8 @@ expr
   | FLOAT_LITERAL
   | INT_LITERAL
   | STRING_LITERAL
+
+  | expr "\\" expr
   | expr "+" expr
   | expr "-" expr
   | expr "*" expr
@@ -226,7 +251,14 @@ expr
   |      "-" expr  %prec NEG
   | expr "'"
   | expr "^" expr
-  | expr "\\" expr
+
+  | expr "==" expr
+  | expr "!=" expr
+  | expr "<"  expr
+  | expr ">"  expr
+  | expr "<=" expr
+  | expr ">=" expr
+
   | "(" expr ")"
   | expr ":" expr
   | call_expr
@@ -238,8 +270,8 @@ field_expr
   : expr "." expr
 
 call_expr
-  : expr "(" expr_list ")"
-  | expr "(" ")"
+  : expr "(" ")"
+  | expr "(" expr_list ")"
 
 expr_list
   : expr
