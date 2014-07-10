@@ -1,4 +1,5 @@
 %%% neg
+%% neg([0, 1, 2]) -> [0, -1, -2]
 func neg(a : Tensor[3](float)) -> (c : Tensor[3](float))
   c = -a;
 end

@@ -16,7 +16,7 @@ proc main
   1.0; -1.0; 1.0e3; 1.0E3;
 end
 
-%%% slices
+%%% simple-slice
 func f(r : Rigid)
 	w = r.v(1:3);
 end

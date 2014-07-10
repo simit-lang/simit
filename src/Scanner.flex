@@ -22,6 +22,8 @@
 
 %x SLCOMMENT
 %x MLCOMMENT
+%s SLTEST
+%s MLTEST
 
 digit         [0-9]
 letter        [a-zA-Z]
@@ -74,11 +76,21 @@ float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 "^"                   { return EXP;       }
 "'"                   { return TRANSPOSE; }
 
-"=="                  { return EQ; }
-"!="                  { return NE; }
-"<="                  { return LE; }
-">="                  { return GE; }
+"=="                  { return EQ;        }
+"!="                  { return NE;        }
+"<="                  { return LE;        }
+">="                  { return GE;        }
 
+ /* Tests */
+"%!"                  { BEGIN(SLTEST); return TEST; }
+<SLTEST>\n            { BEGIN(INITIAL); }
+"%{!"                 { BEGIN(MLTEST); return TEST; }
+<MLTEST>"%}"          { BEGIN(INITIAL); }
+
+ /* Single-line comments */
+%[^{]                 { BEGIN(SLCOMMENT); }
+<SLCOMMENT>.          {}
+<SLCOMMENT>\n         { BEGIN(INITIAL); yycolumn = 1; }
 
  /* Multi-line comments */
 "%{"                  { BEGIN(MLCOMMENT); }
@@ -86,11 +98,6 @@ float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
 <MLCOMMENT>.          {}
 <MLCOMMENT><<EOF>>    { /* TODO: REPORT ERROR */ return UNKNOWN; }
 <MLCOMMENT>"%}"       { BEGIN(INITIAL); }
-
- /* Single-line comments */
-%[^{]                 { BEGIN(SLCOMMENT); }
-<SLCOMMENT>.          {}
-<SLCOMMENT>\n         { BEGIN(INITIAL); yycolumn = 1; }
 
  /* Identifiers */
 {ident}               { yylval->string = strdup(yytext); return IDENT; }

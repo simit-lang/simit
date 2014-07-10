@@ -6,6 +6,7 @@
 #include <fstream>
 #include <sstream>
 
+#ifdef LOGGING
 class Logger {
 public:
   Logger(std::string logfilename) {
@@ -43,6 +44,17 @@ private:
   std::ofstream logfile;
   uint indentLevel;
 };
+#else
+class Logger {
+public:
+  Logger(std::string logfilename) {}
+  ~Logger() {}
+  void log(std::string msg) {}
+  void indent() {}
+  void dedent() {}
+};
+#endif
+
 
 extern Logger logger;
 
