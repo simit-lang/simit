@@ -6,7 +6,7 @@ using namespace Simit;
 using namespace std;
 
 int main(int argc, const char* argv[]) {
-  if (argc < 2) {
+  if (argc != 2) {
     cerr << "Usage: SimitRun <simit-source>" << endl;
     return 1;
   }
@@ -21,10 +21,10 @@ int main(int argc, const char* argv[]) {
   Program program;
   if (program.loadFile(filename) != 0) {
     cerr << "Error: Could not parse program" << endl;
-    cerr << program.errors();
+    cerr << program.errors() << endl;
     return 3;
   }
 
-  cout << "Simit program checks" << endl;
+  cout << "Program checks" << endl;
   return 0;
 }
