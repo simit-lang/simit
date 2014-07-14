@@ -13,13 +13,11 @@ Program::~Program() {
   delete frontend;
   for(vector<IRNode*>::iterator it = irNodes.begin();
       it != irNodes.end(); ++it) {
-    cout << string(**it) << endl;
     delete *it;
   }
 
   for(vector<Test*>::iterator it = tests.begin();
       it != tests.end(); ++it) {
-    cout << string(**it) << endl;
     delete *it;
   }
 }

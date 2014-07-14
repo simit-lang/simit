@@ -109,6 +109,7 @@
 // End of file
 %token END 0 "end of file"
 
+
 %start program
 %%
 program
@@ -119,12 +120,11 @@ program_element
   : struct
   | procedure
   | function
-  | const_stmt
+  | stmt
   | extern
   | test {
     program->addTest($1);
   }
-
 
 // Externs
 extern
@@ -146,7 +146,7 @@ struct_decl_block
 
 struct_decl_list
   : /* empty */
-  | struct_decl_list field_decl
+  | field_decl struct_decl_list
 
 field_decl
   : var_decl  ";"
@@ -356,7 +356,7 @@ test_stmt_block
 
 test_stmt
   : stmt
-  | expr "->" literal
+  | expr "->" literal ";"
 %%
 
 void yyerror(YYLTYPE * loc, Simit::Program *program, const char *s) {
