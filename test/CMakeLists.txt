@@ -45,6 +45,8 @@ else()
 		target_link_libraries(${TESTS} ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest${SUFFIX})
 		target_link_libraries(${TESTS} ${binary_dir}/${CMAKE_FIND_LIBRARY_PREFIXES}gtest_main${SUFFIX})
 	endif()
+
+	add_dependencies(${TESTS} googletest)
 endif()
 
 set(SIMIT_TEST_INPUT_DIR ${SIMIT_TEST_DIR}/input)
