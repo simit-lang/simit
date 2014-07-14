@@ -3,7 +3,29 @@ high-performance code to simulate sparse systems
 
 DEPENDENCIES:
 ============
-- GNU Bison 3.0.0 or later
-- Flex 2.7 or later
-- googletest 1.7 or later
+- Cmake      2.8.3+  (http://www.cmake.org)
+- GNU Bison  3.0.0+  (http://www.gnu.org/software/bison/)
+- Flex       2.7+    (http://flex.sourceforge.net)
+- googletest 1.7+    (https://code.google.com/p/googletest/) OR
+  SVN                (https://subversion.apache.org) 
 
+BUILD:
+======
+To build Simit you must first install Cmake, GNU Bison and Flex.
+
+The following steps performs an out-of-tree build:
+% cd <simit-directory>
+% mkdir build
+% cd build
+% cmake ..
+% make -j4
+
+To run the test suite do:
+% ./bin/tests
+
+In it's default mode the build system checks out googletest using
+SVN on each build.  To avoid this you can download googletest
+yourself, build it, and set the GTEST_ROOT environment variable
+to the googletest root directory.  When cmake is run it looks
+for this environment variable and uses this version of googletest
+instead of downloading it.
