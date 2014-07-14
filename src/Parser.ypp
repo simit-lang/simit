@@ -10,8 +10,8 @@
   using namespace std;
 %}
 
-%require "3.0.2"
 
+%require "3.0.0"
 %define parse.error verbose
 %define parse.lac full
 %locations
