@@ -2,6 +2,7 @@ set(TESTS test)
 file(GLOB SOURCES *.cpp)
 add_executable(${TESTS} ${SOURCES})
 target_link_libraries(${TESTS} ${PROJECT_NAME})
+target_link_libraries(${TESTS} pthread)
 
 if(DEFINED ENV{GTEST_ROOT})
 	set(GTEST_INCLUDE_DIR $ENV{GTEST_ROOT}/include)
