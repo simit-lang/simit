@@ -1,0 +1,59 @@
+const grav      : Tensor[3](float) = [0.0, 0.0, -9.81];
+const stiffness : float = 1e3;
+const h         : float = 0.01;
+
+struct Point
+  x : Tensor[3](float);
+  v : Tensor[3](float);
+end
+
+struct Spring
+  m  : float;
+  l0 : float;
+end
+
+extern points Point{};
+extern springs Spring[points,points]{};
+
+func distribute_masses(s : Spring, p0 : Point, p1 : Point) ->
+    (M : Tensor[points,points][3,3](float), f : Tensor[points][3](float))
+  m = s.m;
+  M(p0, p0) = 0.5*m*eye(3);
+  M(p1, p1) = 0.5*m*eye(3);
+  f(p0) = 0.5*m*grav;
+  f(p1) = 0.5*m*grav;
+end
+
+func compute_stiffness(s : Spring, p0 : Point, p1 : Point) ->
+     (K : Tensor[points,points][3,3](float), f : Tensor[points][3](float))
+	dx = p1.x - p0.x;
+	l = norm(dx);
+	l0 = s.l0;
+	f0 = stiffness/(l0*l0)*(l-l0)*dx/l;
+	f1 = -f0;
+	f(p0) = f0;
+	f(p1) = f1;
+
+	k = stiffness / (l0*l0*l*l)*(dx*dx' + (l-l0)/l*(dx'*dx*eye(3) - dx*dx'));
+ 	K(p0, p0) =  k;
+	K(p0, p1) = -k;
+	K(p1, p0) = -k;
+	K(p1, p1) =  k;
+end
+
+proc main
+	x = points.x;
+	v = points.v;
+
+	M, fg = map distribute_masses to springs with points reduce +;
+	K, fs = map compute_stiffness to springs with points reduce +;
+	f = fs + fg;
+
+	p  = M*v + h*f;
+	Mk = M + h*h*K;
+	v  = Mk \ p;
+	x  = x + h*v;
+
+	points.x = x;
+	points.v = v;
+end
