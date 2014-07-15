@@ -46,20 +46,25 @@ namespace simit {
 
   class Shape {
   public:
+    Shape()  {}
+    Shape(const std::vector<Dimension*> &dimensions) : dimensions(dimensions) {}
+    ~Shape();
+
+    operator std::string() const;
+
   private:
-    std::vector<Dimension *> dimensions;
+    std::vector<Dimension*> dimensions;
   };
 
   class Dimension {
   public:
     enum Type {VARIABLE, ANONYMOUS, SET};
 
-    Dimension();
-    Dimension(unsigned int size);
-    ~Dimension();
+    Dimension()                  : type(VARIABLE)              {}
+    Dimension(unsigned int size) : type(ANONYMOUS), size(size) {}
+    ~Dimension() {}
 
     operator std::string() const;
-    friend std::ostream& operator<<(std::ostream &out, const Dimension *dim);
 
   private:
     Type type;
@@ -67,7 +72,6 @@ namespace simit {
       int size;
     };
   };
-  
 }
 
 #endif

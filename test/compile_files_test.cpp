@@ -14,7 +14,7 @@ string indent(string str, int num) {
   string strIndented;
   string line;
 
-  while(std::getline(ss, line)) {
+  while (std::getline(ss, line)) {
     strIndented += indent + line + "\n";
   }
   return strIndented;
@@ -27,7 +27,7 @@ public:
   string source;
 
   operator std::string() const {
-    return "\n" + indent(name + "\n", 1) + indent(source, 2);
+    return name;
   };
 
   friend ostream &operator<<(ostream &out, const ProgramTestParam &param) {
@@ -95,7 +95,7 @@ vector<ProgramTestParam> readTestsFromDisk(const std::string &dirname) {
     for (uint i=0; i<programs.size(); i++) {
       std::istringstream ss(programs[i]);
       string header;
-      if(!std::getline(ss, header)) {
+      if (!std::getline(ss, header)) {
         continue;
       }
       if (header[0] == '-') {

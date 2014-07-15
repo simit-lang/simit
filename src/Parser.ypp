@@ -31,16 +31,18 @@
 
   simit::IRNode                  *node;
   simit::TensorType              *tensortype;
-  simit::Dimension               *dimension;
+  simit::Shape                   *shape;
   std::vector<simit::Dimension*> *dimensions;
+  simit::Dimension               *dimension;
   simit::Test                    *test;
 }
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <test>
+// TODO: Define destructors for all pointer types
 
 %type <test> test
 //tensor_type
-//shape
+%type <shape>      shape
 %type <dimensions> dimensions
 %type <dimension>  dimension
 %type <tensortype> scalar_type
@@ -317,12 +319,15 @@ object_type
 
 tensor_type
   : scalar_type
-  | TENSOR shape  "(" scalar_type ")" { }
+  | TENSOR shapes "(" scalar_type ")" { }
+
+shapes
+  : /* empty */
+  | shapes shape
 
 shape
-  : /* empty */
-  | shape "[" dimensions "]" {
-
+  : "[" dimensions "]" {
+    $$ = new Shape(*$dimensions);
   }
 
 dimensions
