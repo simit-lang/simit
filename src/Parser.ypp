@@ -8,6 +8,7 @@
 }
 
 %code requires {
+  #include "Types.h"
   #include "IR.h"
   #include "Test.h"
   using namespace Simit;
@@ -26,13 +27,23 @@
   double fnum;
   const  char *string;
 
-  Simit::Test   *test;
-  Simit::IRNode *node;
+  Simit::IRNode     *node;
+
+  Simit::TensorType *tensortype;
+  Simit::Dimension  *dimension;
+
+  Simit::Test       *test;
 }
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <test>
 
 %type <test> test
+//tensor_type
+//shape
+//dimension_list
+%type <dimension> dimension
+%type <tensortype> scalar_type
+
 
 %code {
   #include "Scanner.h"
@@ -175,36 +186,6 @@ param_list
   | param_list "," var_decl
 
 
-// Types
-type
-  : object_type
-  | tensor_type
-
-object_type
-  : IDENT
-
-tensor_type
-  : scalar_type
-  | TENSOR shape  "(" scalar_type ")" { }
-
-shape
-  : /* empty */
-  | shape "[" dimension_list "]"
-
-dimension_list
-  : dimension
-  | dimension_list "," dimension
-
-dimension
-  : INT_LITERAL
-  | IDENT
-  | "*"
-
-scalar_type
-  : INT
-  | FLOAT
-
-
 // Statements
 stmt_block
   : /* empty */
@@ -324,6 +305,43 @@ reduction_op
 var_decl
   : IDENT ":" type
 
+
+// Types
+type
+  : object_type
+  | tensor_type
+
+object_type
+  : IDENT
+
+tensor_type
+  : scalar_type
+  | TENSOR shape  "(" scalar_type ")" { }
+
+shape
+  : /* empty */
+  | shape "[" dimension_list "]"
+
+dimension_list
+  : dimension {
+  }
+  | dimension_list "," dimension
+
+dimension
+  : INT_LITERAL {
+    $$ = new Dimension($INT_LITERAL);
+  }
+  | IDENT {
+    $$ = new Dimension(123456789);  // TODO: This needs to be a set dimension
+  }
+  | "*" {
+    $$ = new Dimension();
+  }
+
+scalar_type
+  : INT
+  | FLOAT
+  
 
 // Literals
 literal
