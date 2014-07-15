@@ -12,10 +12,19 @@ namespace simit {
 
   class Type {
   public:
+    Type() {}
+    virtual ~Type();
+
     virtual operator std::string() const = 0;
   };
 
-  class ElementType : public Type {};
+  class ElementType : public Type {
+  public:
+    ElementType() {}
+    virtual ~ElementType();
+
+    virtual operator std::string() const;
+  };
 
   class TensorType :public Type {
   public:

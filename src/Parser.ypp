@@ -1,19 +1,21 @@
 %code top{
-  #include "Logger.h"
-  #include "Program.h"
-  #include "Util.h"
   #include <stdlib.h>
   #include <assert.h>
   #include <iostream>
+
+  #include "Logger.h"
+  #include "Program.h"
+  #include "Util.h"
   using namespace std;
   using namespace simit;
 }
 
 %code requires {
+  #include <vector>
+
   #include "IR.h"
   #include "Test.h"
   #include "Types.h"
-  #include <vector>
 }
 
 %require "3.0.0"
@@ -32,6 +34,7 @@
   simit::IRNode                  *node;
 
   // Types
+  simit::ElementType             *element_type;
   simit::Type                    *type;
   simit::TensorType              *tensor_type;
   simit::ScalarType::Type         scalar_type;
@@ -47,13 +50,14 @@
 %destructor { delete $$; } <test>
 // TODO: Define destructors for all pointer types
 
-%type <type>        type
-%type <tensor_type> tensor_type
-%type <shapes>      shapes
-%type <shape>       shape
-%type <dimensions>  dimensions
-%type <dimension>   dimension
-%type <scalar_type> scalar_type
+%type <type>         type
+%type <element_type> element_type
+%type <tensor_type>  tensor_type
+%type <shapes>       shapes
+%type <shape>        shape
+%type <dimensions>   dimensions
+%type <dimension>    dimension
+%type <scalar_type>  scalar_type
 
 %type <test> test
 
@@ -153,17 +157,29 @@ program_element
 
 // Externs
 extern
-  : "extern" IDENT type "{" "}" ";"
-  | "extern" IDENT type "[" endpoints "]" "{" "}" ";"
+  : "extern" IDENT type "{" "}" ";" {
+    free((void*)$IDENT);
+    delete $type;
+  }
+  | "extern" IDENT type "[" endpoints "]" "{" "}" ";" {
+    free((void*)$IDENT);
+    delete $type;
+  }
 
 endpoints
-  : IDENT
-  | endpoints "," IDENT
+  : IDENT {
+    free((void*)$IDENT);
+  }
+  | endpoints "," IDENT {
+    free((void*)$IDENT);
+  }
 
 
 // Structs
 struct
-  : "struct" IDENT struct_decl_block
+  : "struct" IDENT struct_decl_block {
+    free((void*)$IDENT);
+  }
 
 struct_decl_block
   : /* empty */
@@ -179,13 +195,17 @@ field_decl
 
 // Procedures and functions
 procedure
-  : PROC IDENT stmt_block BLOCKEND
+  : PROC IDENT stmt_block BLOCKEND {
+    free((void*)$IDENT);
+  }
 
 function
   : function_header stmt_block BLOCKEND
 
 function_header
-  : FUNC IDENT "(" params ")" results
+  : FUNC IDENT "(" params ")" results {
+    free((void*)$IDENT);
+  }
 
 params
  : /* empty */
@@ -213,7 +233,7 @@ stmt
   | expr_stmt
 
 const_stmt
-  : "const" var_decl "=" literal ";"
+  : "const" var_decl "=" literal ";" {}
 
 if_stmt
   : "if" expr stmt_block else_clauses BLOCKEND
@@ -226,16 +246,11 @@ elif_clauses
   : /* empty */
   | elif_clauses "elif" expr stmt_block
 
-
 return_stmt
   : "return" ";"
 
 assign_stmt
   : expr_list "=" expr_list ";"
-
-var_list
-  : IDENT
-  | var_list "," IDENT
 
 expr_stmt
   : ";"
@@ -244,7 +259,9 @@ expr_stmt
 
 // Expressions
 expr
-  : IDENT
+  : IDENT {
+    free((void*)$IDENT);
+  }
   | FLOAT_LITERAL
   | INT_LITERAL
   | STRING_LITERAL
@@ -286,11 +303,16 @@ expr_list
 
 // Map expressions
 map_expr
-  : "map" IDENT "to" IDENT with reduce
+  : "map" IDENT[target] "to" IDENT[neighbor] with reduce {
+    free((void*)$target);
+    free((void*)$neighbor);
+  }
 
 with
   : /* empty */
-  | "with" IDENT
+  | "with" IDENT {
+    free((void*)$IDENT);
+  }
 
 reduce
   : /* empty */
@@ -306,9 +328,16 @@ reduction_indices
   | reduction_indices reduction_index
 
 reduction_index
-  : reduction_op IDENT
-  | reduction_op "{" IDENT "}"
-  | IDENT "{" IDENT "}"
+  : reduction_op IDENT {
+    free((void*)$IDENT);
+  }
+  | reduction_op "{" IDENT "}" {
+    free((void*)$IDENT);
+  }
+  | IDENT[rfunc] "{" IDENT[rval] "}" {
+    free((void*)$rfunc);
+    free((void*)$rval);
+  }
 
 reduction_op
   : "+"
@@ -317,16 +346,26 @@ reduction_op
 
 // Variables
 var_decl
-  : IDENT ":" type
+  : IDENT ":" type {
+    delete $type;
+    free((void*)$IDENT);
+  }
 
 
 // Types
 type
-  : object_type
-  | tensor_type
+  : element_type {
+    $$ = $1;
+  }
+  | tensor_type {
+    $$ = $1;
+  }
 
-object_type
-  : IDENT
+element_type
+  : IDENT {
+    $$ = new ElementType();
+    free((void*)$IDENT);
+  }
 
 tensor_type
   : scalar_type {
@@ -334,11 +373,11 @@ tensor_type
   }
   | TENSOR shapes "(" scalar_type ")" {
     $$ = new ScalarType($scalar_type);
-
     typedef vector<Shape*>::reverse_iterator shapes_rit_t;
     for (shapes_rit_t rit = $shapes->rbegin(); rit != $shapes->rend(); ++rit) {
       $$ = new NDTensorType(*rit, $$);
     }
+    delete $shapes;
   }
 
 shapes
@@ -353,6 +392,7 @@ shapes
 shape
   : "[" dimensions "]" {
     $$ = new Shape(*$dimensions);
+    delete $dimensions;
   }
 
 dimensions
@@ -370,6 +410,7 @@ dimension
     $$ = new Dimension($INT_LITERAL);
   }
   | IDENT {
+    free((void*)$IDENT);
     $$ = new Dimension(123456789);  // TODO: This needs to be a set dimension
   }
   | "*" {
@@ -394,8 +435,7 @@ literal
   | tensor_literal
 
 tensor_literal
-  : scalar_literal
-  | "[" literal_list "]"
+  : "[" literal_list "]"
 
 literal_list
   : scalar_literal

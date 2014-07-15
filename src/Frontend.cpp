@@ -1,8 +1,10 @@
 #include "Frontend.h"
+#include <assert.h>
+
 #include "IR.h"
 #include "Logger.h"
-
-#include <assert.h>
+#include "Tokens.h"
+#include "Scanner.h"
 
 using namespace simit;
 using namespace std;
@@ -56,6 +58,7 @@ int Frontend::parseFile(string filename, Program *program) {
 
   yyin = fopen(filename.c_str(), "r");
   int status = yyparse(program);
+  yylex_destroy();
   fclose(yyin);
 
   if (status == 0) {

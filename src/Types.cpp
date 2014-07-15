@@ -8,11 +8,23 @@
 using namespace std;
 
 namespace simit {
-  // TensorType
+  /* Type */
+  Type::~Type() {}
+
+
+  /* TensorType */
   TensorType::~TensorType() {}
 
 
-  // NDTensorType
+  /* ElementType */
+  ElementType::~ElementType() {}
+
+  ElementType::operator std::string() const {
+    return "ElementType";
+  }
+
+
+  /* NDTensorType */
   NDTensorType::~NDTensorType() {
     delete blockShape;
     delete blockType;
@@ -35,7 +47,7 @@ namespace simit {
   }
 
 
-  // ScalarType
+  /* ScalarType */
   ScalarType::~ScalarType() {}
 
   unique_ptr<std::list<Shape*> > ScalarType::getComponentShapes() const {
@@ -60,7 +72,7 @@ namespace simit {
   }
 
 
-  // Shape
+  /* Shape */
   Shape::~Shape() {
     for (auto dim : dimensions) {
       delete dim;
@@ -72,7 +84,7 @@ namespace simit {
   }
 
 
-  // Dimension
+  /* Dimension */
   Dimension::operator std::string() const {
     switch (type) {
       case VARIABLE:
