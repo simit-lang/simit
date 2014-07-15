@@ -5,7 +5,7 @@
 #include "Logger.h"
 #include <dirent.h>
 #include <errno.h>
-using namespace Simit;
+using namespace simit;
 using namespace std;
 
 string indent(string str, int num) {

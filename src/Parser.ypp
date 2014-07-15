@@ -6,7 +6,7 @@
   #include <assert.h>
   #include <iostream>
   using namespace std;
-  using namespace Simit;
+  using namespace simit;
 }
 
 %code requires {
@@ -22,20 +22,18 @@
 %locations
 %pure-parser
 
-%parse-param{Simit::Program *program}
+%parse-param{simit::Program *program}
 
 %union {
   int    num;
   double fnum;
   const  char *string;
 
-  Simit::IRNode     *node;
-
-  Simit::TensorType              *tensortype;
-  Simit::Dimension               *dimension;
-  std::vector<Simit::Dimension*> *dimensions;
-
-  Simit::Test       *test;
+  simit::IRNode                  *node;
+  simit::TensorType              *tensortype;
+  simit::Dimension               *dimension;
+  std::vector<simit::Dimension*> *dimensions;
+  simit::Test                    *test;
 }
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <test>
@@ -50,7 +48,7 @@
 
 %code {
   #include "Scanner.h"
-  void yyerror(YYLTYPE * loc, Simit::Program *program, const char *s);
+  void yyerror(YYLTYPE * loc, simit::Program *program, const char *s);
 }
 
 %token UNKNOWN
@@ -375,7 +373,7 @@ scalar_literal
 // Tests
 test
   : TEST test_stmt_block {
-    $$ = new Simit::Test("MyTest");
+    $$ = new simit::Test("MyTest");
   }
 
 test_stmt_block
@@ -387,7 +385,7 @@ test_stmt
   | expr "->" literal ";"
 %%
 
-void yyerror(YYLTYPE * loc, Simit::Program *program, const char *s) {
+void yyerror(YYLTYPE * loc, simit::Program *program, const char *s) {
   string error = string(s) + " at " + to_string(loc->first_line) + ":" +
                  to_string(loc->first_column);
   program->addError(error);

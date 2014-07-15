@@ -3,7 +3,7 @@
 #include <fstream>
 #include "Program.h"
 #include "Logger.h"
-using namespace Simit;
+using namespace simit;
 using namespace std;
 
 #define PROGRAM_STRING_TEST(test_name, programText, expected)  \

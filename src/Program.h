@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace Simit {
+namespace simit {
   class Frontend;
   class IRNode;
   class Test;
@@ -21,13 +21,13 @@ namespace Simit {
     int compile();
 
     void addError(std::string errors);
-    void addTest(Simit::Test *test);
+    void addTest(simit::Test *test);
   private:
     Frontend *frontend;
     std::vector<IRNode*> irNodes;
     std::string errorString;
 
-    std::vector<Simit::Test*> tests;
+    std::vector<simit::Test*> tests;
   };
   
 }

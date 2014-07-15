@@ -2,7 +2,7 @@
 #include <iostream>
 #include <assert.h>
 
-using namespace Simit;
+using namespace simit;
 using namespace std;
 
 
@@ -29,7 +29,7 @@ Dimension::operator std::string() const {
   return "";
 }
 
-namespace Simit {
+namespace simit {
   std::ostream& operator<<(std::ostream &out, const Dimension *dim) {
     return out << string(*dim);
   }

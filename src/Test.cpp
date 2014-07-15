@@ -1,4 +1,4 @@
 #include "Test.h"
 
-using namespace Simit;
+using namespace simit;
 

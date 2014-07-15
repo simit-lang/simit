@@ -3,7 +3,7 @@
 
 #include <string>
 
-namespace Simit {
+namespace simit {
   class Program;
 
   class Frontend {

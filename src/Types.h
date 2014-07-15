@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 
-namespace Simit {
+namespace simit {
   class Shape;
   class Dimension;
 

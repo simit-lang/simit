@@ -1,5 +1,5 @@
 #include "Program.h"
-using namespace Simit;
+using namespace simit;
 
 #include <iostream>
 #include <fstream>

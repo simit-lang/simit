@@ -4,7 +4,7 @@
 #include "IR.h"
 #include "Test.h"
 
-using namespace Simit;
+using namespace simit;
 using namespace std;
 
 Program::Program() : frontend(new Frontend()) {}

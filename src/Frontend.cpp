@@ -4,11 +4,11 @@
 
 #include <assert.h>
 
-using namespace Simit;
+using namespace simit;
 using namespace std;
 
 extern FILE *yyin;
-int yyparse(Simit::Program *program);
+int yyparse(simit::Program *program);
 struct yy_buffer_state *yy_scan_string(const char *);
 int yylex_destroy();
 

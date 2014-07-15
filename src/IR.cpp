@@ -1,6 +1,6 @@
 #include "IR.h"
 
-using namespace Simit;
+using namespace simit;
 
 Function::Function() {}
 
