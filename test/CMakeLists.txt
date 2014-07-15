@@ -1,4 +1,4 @@
-set(TESTS test)
+set(TESTS simit-test)
 file(GLOB SOURCES *.cpp)
 add_executable(${TESTS} ${SOURCES})
 target_link_libraries(${TESTS} ${PROJECT_NAME})

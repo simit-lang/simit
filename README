@@ -14,14 +14,14 @@ BUILD:
 To build Simit you must first install Cmake, GNU Bison and Flex.
 
 The following steps performs an out-of-tree build:
-% cd <simit-directory>
-% mkdir build
-% cd build
-% cmake ..
-% make -j4
+  cd <simit-directory>
+  mkdir build
+  cd build
+  cmake ..
+  make -j4
 
 To run the test suite do:
-% ./bin/tests
+  ./bin/simit-test
 
 In it's default mode the build system checks out googletest using
 SVN on each build.  To avoid this you can download googletest
