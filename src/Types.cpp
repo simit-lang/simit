@@ -29,8 +29,6 @@ Dimension::operator std::string() const {
   return "";
 }
 
-namespace simit {
-  std::ostream& operator<<(std::ostream &out, const Dimension *dim) {
-    return out << string(*dim);
-  }
+std::ostream& simit::operator<<(std::ostream &out, const Dimension *dim) {
+  return out << string(*dim);
 }
