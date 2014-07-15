@@ -28,3 +28,9 @@ Dimension::operator std::string() const {
   assert(false);
   return "";
 }
+
+namespace Simit {
+  std::ostream& operator<<(std::ostream &out, const Dimension *dim) {
+    return out << string(*dim);
+  }
+}
