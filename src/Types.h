@@ -59,6 +59,7 @@ namespace Simit {
     ~Dimension();
 
     operator std::string() const;
+    friend std::ostream& operator<<(std::ostream &out, const Dimension *dim);
 
   private:
     Type type;

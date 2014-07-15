@@ -1,17 +1,19 @@
 %code top{
   #include "Logger.h"
   #include "Program.h"
+  #include "Util.h"
   #include <stdlib.h>
   #include <assert.h>
   #include <iostream>
   using namespace std;
+  using namespace Simit;
 }
 
 %code requires {
-  #include "Types.h"
   #include "IR.h"
   #include "Test.h"
-  using namespace Simit;
+  #include "Types.h"
+  #include <vector>
 }
 
 %require "3.0.0"
@@ -29,8 +31,9 @@
 
   Simit::IRNode     *node;
 
-  Simit::TensorType *tensortype;
-  Simit::Dimension  *dimension;
+  Simit::TensorType              *tensortype;
+  Simit::Dimension               *dimension;
+  std::vector<Simit::Dimension*> *dimensions;
 
   Simit::Test       *test;
 }
@@ -40,8 +43,8 @@
 %type <test> test
 //tensor_type
 //shape
-//dimension_list
-%type <dimension> dimension
+%type <dimensions> dimensions
+%type <dimension>  dimension
 %type <tensortype> scalar_type
 
 
@@ -320,12 +323,19 @@ tensor_type
 
 shape
   : /* empty */
-  | shape "[" dimension_list "]"
+  | shape "[" dimensions "]" {
 
-dimension_list
-  : dimension {
   }
-  | dimension_list "," dimension
+
+dimensions
+  : dimension {
+    $$ = new vector<Dimension*>();
+    $$->push_back($dimension);
+  }
+  | dimensions "," dimension {
+    $$ = $1;
+    $$->push_back($dimension);
+  }
 
 dimension
   : INT_LITERAL {
