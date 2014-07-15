@@ -3,13 +3,17 @@ func f()
 end
 
 %%% scalar
-func f(p : Tensor(int)) -> (r : Tensor(int))
+func f(p : Tensor(int)) -> (r : int)
 end
 
 %%% scalars
 func f(p1 : Tensor(int), p2 : Tensor(int)) -> (r1 : Tensor(int), r2 : Tensor(int))
 end
 
-%%% 3vector
+%%% vector-3
 func f(p : Tensor[3](float)) -> (r : Tensor[3](float))
+end
+
+%%% matrix-3x4
+func f(p : Tensor[3,4](float)) -> (r : Tensor[3,4](float))
 end

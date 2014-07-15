@@ -30,22 +30,32 @@
   const  char *string;
 
   simit::IRNode                  *node;
-  simit::TensorType              *tensortype;
+
+  // Types
+  simit::Type                    *type;
+  simit::TensorType              *tensor_type;
+  simit::ScalarType::Type         scalar_type;
+  std::vector<simit::Shape*>     *shapes;
   simit::Shape                   *shape;
   std::vector<simit::Dimension*> *dimensions;
   simit::Dimension               *dimension;
+
+  // Tests
   simit::Test                    *test;
 }
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <test>
 // TODO: Define destructors for all pointer types
 
+%type <type>        type
+%type <tensor_type> tensor_type
+%type <shapes>      shapes
+%type <shape>       shape
+%type <dimensions>  dimensions
+%type <dimension>   dimension
+%type <scalar_type> scalar_type
+
 %type <test> test
-//tensor_type
-%type <shape>      shape
-%type <dimensions> dimensions
-%type <dimension>  dimension
-%type <tensortype> scalar_type
 
 
 %code {
@@ -74,6 +84,7 @@
 // Keywords
 %token INT       "int"
 %token FLOAT     "float"
+%token DOUBLE    "double"
 %token STRUCT    "struct"
 %token CONST     "const"
 %token EXTERN    "extern"
@@ -318,12 +329,26 @@ object_type
   : IDENT
 
 tensor_type
-  : scalar_type
-  | TENSOR shapes "(" scalar_type ")" { }
+  : scalar_type {
+    $$ = new ScalarType($scalar_type);
+  }
+  | TENSOR shapes "(" scalar_type ")" {
+    $$ = new ScalarType($scalar_type);
+
+    typedef vector<Shape*>::reverse_iterator shapes_rit_t;
+    for (shapes_rit_t rit = $shapes->rbegin(); rit != $shapes->rend(); ++rit) {
+      $$ = new NDTensorType(*rit, $$);
+    }
+  }
 
 shapes
-  : /* empty */
-  | shapes shape
+  : /* empty */ {
+    $$ = new vector<Shape*>();
+  }
+  | shapes shape {
+    $$ = $1;
+    $$->push_back($shape);
+  }
 
 shape
   : "[" dimensions "]" {
@@ -352,8 +377,15 @@ dimension
   }
 
 scalar_type
-  : INT
-  | FLOAT
+  : INT {
+    $$ = ScalarType::INT;
+  }
+  | FLOAT {
+    $$ = ScalarType::FLOAT;
+  }
+  | DOUBLE {
+    $$ = ScalarType::DOUBLE;
+  }
   
 
 // Literals

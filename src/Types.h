@@ -3,45 +3,57 @@
 
 #include <string>
 #include <vector>
+#include <list>
 
 namespace simit {
   class Shape;
   class Dimension;
+  class ScalarType;
 
   class Type {
   public:
     virtual operator std::string() const = 0;
-    friend std::ostream& operator<<(std::ostream &out, const Type &type);
   };
 
   class ElementType : public Type {};
 
   class TensorType :public Type {
   public:
-    TensorType();
+    TensorType() {}
     virtual ~TensorType();
 
+    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const = 0;
+    virtual ScalarType *getComponentType() const = 0;
   };
 
   class NDTensorType : public TensorType {
   public:
-    NDTensorType(TensorType *blockType, Shape *blockShape);
+    NDTensorType(Shape *blockShape, TensorType *blockType)
+        : blockShape(blockShape), blockType(blockType) {};
     virtual ~NDTensorType();
 
+    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const;
+    virtual ScalarType *getComponentType() const;
+    virtual operator std::string() const;
+
   private:
-    TensorType *blockType;
     Shape      *blockShape;
+    TensorType *blockType;
   };
 
   class ScalarType : public TensorType {
   public:
     enum Type {INT, FLOAT, DOUBLE};
 
-    ScalarType();
+    ScalarType(Type type) : type(type) {}
     virtual ~ScalarType();
 
+    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const;
+    virtual ScalarType *getComponentType() const;
+    virtual operator std::string() const;
+
   private:
-    ScalarType::Type scalarType;
+    ScalarType::Type type;
   };
 
   class Shape {

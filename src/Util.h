@@ -5,6 +5,11 @@
 #include <sstream>
 
 namespace util {
+  template <typename T>
+  std::ostream& operator<<(std::ostream &out, const T *dim) {
+    return out << std::string(*dim);
+  }
+
   template <typename Iterator>
   std::string join(Iterator begin, Iterator end, const std::string &separator) {
     std::ostringstream result;

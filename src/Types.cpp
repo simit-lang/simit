@@ -8,8 +8,55 @@
 using namespace std;
 
 namespace simit {
-  std::ostream& operator<<(std::ostream &out, const Dimension *dim) {
-    return out << string(*dim);
+  // TensorType
+  TensorType::~TensorType() {}
+
+
+  // NDTensorType
+  NDTensorType::~NDTensorType() {
+    delete blockShape;
+    delete blockType;
+  }
+
+  unique_ptr<std::list<Shape*> > NDTensorType::getComponentShapes() const {
+    auto blockComponentShape = blockType->getComponentShapes();
+    blockComponentShape->push_front(blockShape);
+    return blockComponentShape;
+  }
+
+  ScalarType *NDTensorType::getComponentType() const {
+    return blockType->getComponentType();
+  }
+
+  NDTensorType::operator std::string() const {
+    string componentTypeStr = string(*getComponentType());
+    string componentShapeStr = util::join(*getComponentShapes(), "");
+    return string("Tensor") + componentShapeStr + "(" + componentTypeStr + ")";
+  }
+
+
+  // ScalarType
+  ScalarType::~ScalarType() {}
+
+  unique_ptr<std::list<Shape*> > ScalarType::getComponentShapes() const {
+    return unique_ptr<list<Shape*> >(new list<Shape*>);
+  }
+
+  ScalarType *ScalarType::getComponentType() const {
+    return const_cast<ScalarType*>(this);
+  }
+
+  ScalarType::operator std::string() const {
+    switch (type) {
+      case INT:
+        return "int";
+      case FLOAT:
+        return "float";
+      case DOUBLE:
+        return "double";
+    }
+    assert(false);
+    return "";
   }
 
 
@@ -35,7 +82,6 @@ namespace simit {
       case SET:
         assert(false); // Not supported yet
     }
-
     assert(false);
     return "";
   }
