@@ -1,15 +1,17 @@
-%{
-  #include "IR.h"
-  #include "Test.h"
+%code top{
   #include "Logger.h"
   #include "Program.h"
   #include <stdlib.h>
   #include <assert.h>
   #include <iostream>
-  using namespace Simit;
   using namespace std;
-%}
+}
 
+%code requires {
+  #include "IR.h"
+  #include "Test.h"
+  using namespace Simit;
+}
 
 %require "3.0.0"
 %define parse.error verbose
@@ -30,10 +32,12 @@
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <test>
 
-%{
+%type <test> test
+
+%code {
   #include "Scanner.h"
   void yyerror(YYLTYPE * loc, Simit::Program *program, const char *s);
-%}
+}
 
 %token UNKNOWN
 
@@ -101,10 +105,6 @@
 %token NE        "!="
 %token LE        "<="
 %token GE        ">="
-
-//%type <node> program_element
-%type <test> test
-
 
 // End of file
 %token END 0 "end of file"
