@@ -6,12 +6,10 @@
 #include <list>
 
 namespace simit {
-  class Shape;
-  class Dimension;
   class ScalarType;
 
   class Type {
-  public:
+   public:
     Type() {}
     virtual ~Type();
 
@@ -20,7 +18,7 @@ namespace simit {
 
 
   class ElementType : public Type {
-  public:
+   public:
     ElementType() {}
     virtual ~ElementType();
 
@@ -28,63 +26,8 @@ namespace simit {
   };
 
 
-  class TensorType :public Type {
-  public:
-    TensorType() {}
-    virtual ~TensorType();
-
-    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const = 0;
-    virtual ScalarType *getComponentType() const = 0;
-  };
-
-
-  class NDTensorType : public TensorType {
-  public:
-    NDTensorType(Shape *blockShape, TensorType *blockType)
-        : blockShape(blockShape), blockType(blockType) {};
-    virtual ~NDTensorType();
-
-    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const;
-    virtual ScalarType *getComponentType() const;
-    virtual operator std::string() const;
-
-  private:
-    Shape      *blockShape;
-    TensorType *blockType;
-  };
-
-
-  class ScalarType : public TensorType {
-  public:
-    enum Type {INT, FLOAT};
-
-    ScalarType(Type type) : type(type) {}
-    virtual ~ScalarType();
-
-    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const;
-    virtual ScalarType *getComponentType() const;
-    virtual operator std::string() const;
-
-  private:
-    ScalarType::Type type;
-  };
-
-
-  class Shape {
-  public:
-    Shape()  {}
-    Shape(const std::vector<Dimension*> &dimensions) : dimensions(dimensions) {}
-    ~Shape();
-
-    operator std::string() const;
-
-  private:
-    std::vector<Dimension*> dimensions;
-  };
-
-
   class Dimension {
-  public:
+   public:
     enum Type {VARIABLE, ANONYMOUS, SET};
 
     Dimension()                  : type(VARIABLE)              {}
@@ -93,11 +36,73 @@ namespace simit {
 
     operator std::string() const;
 
-  private:
+   private:
     Type type;
     union {
       int size;
     };
+  };
+
+
+  class Shape {
+   public:
+    Shape()  {}
+    Shape(const std::vector<Dimension*> &dimensions) : dimensions(dimensions) {}
+    ~Shape();
+
+    unsigned int getOrder() const { return dimensions.size(); }
+    operator std::string() const;
+
+   private:
+    std::vector<Dimension*> dimensions;
+  };
+
+
+  class TensorType :public Type {
+   public:
+    TensorType() {}
+    virtual ~TensorType();
+
+    virtual unsigned int getOrder() const = 0;
+    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const = 0;
+
+    virtual ScalarType *getComponentType() const = 0;
+  };
+
+
+  class ScalarType : public TensorType {
+   public:
+    enum Type {INT, FLOAT};
+
+    ScalarType(Type type) : type(type) {}
+    virtual ~ScalarType();
+
+    virtual unsigned int getOrder() const { return 0; }
+    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const;
+    virtual ScalarType *getComponentType() const;
+
+    virtual operator std::string() const;
+
+   private:
+    ScalarType::Type type;
+  };
+
+
+  class NDTensorType : public TensorType {
+   public:
+    NDTensorType(Shape *blockShape, TensorType *blockType)
+        : blockShape(blockShape), blockType(blockType) {};
+    virtual ~NDTensorType();
+
+    virtual unsigned int getOrder() const { return blockShape->getOrder(); }
+    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const;
+    virtual ScalarType *getComponentType() const;
+
+    virtual operator std::string() const;
+
+   private:
+    Shape      *blockShape;
+    TensorType *blockType;
   };
 }
 
