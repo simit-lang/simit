@@ -64,8 +64,6 @@ namespace simit {
         return "int";
       case FLOAT:
         return "float";
-      case DOUBLE:
-        return "double";
     }
     assert(false);
     return "";

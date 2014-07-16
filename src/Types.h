@@ -18,6 +18,7 @@ namespace simit {
     virtual operator std::string() const = 0;
   };
 
+
   class ElementType : public Type {
   public:
     ElementType() {}
@@ -25,6 +26,7 @@ namespace simit {
 
     virtual operator std::string() const;
   };
+
 
   class TensorType :public Type {
   public:
@@ -34,6 +36,7 @@ namespace simit {
     virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const = 0;
     virtual ScalarType *getComponentType() const = 0;
   };
+
 
   class NDTensorType : public TensorType {
   public:
@@ -50,9 +53,10 @@ namespace simit {
     TensorType *blockType;
   };
 
+
   class ScalarType : public TensorType {
   public:
-    enum Type {INT, FLOAT, DOUBLE};
+    enum Type {INT, FLOAT};
 
     ScalarType(Type type) : type(type) {}
     virtual ~ScalarType();
@@ -65,6 +69,7 @@ namespace simit {
     ScalarType::Type type;
   };
 
+
   class Shape {
   public:
     Shape()  {}
@@ -76,6 +81,7 @@ namespace simit {
   private:
     std::vector<Dimension*> dimensions;
   };
+
 
   class Dimension {
   public:

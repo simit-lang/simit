@@ -1,5 +1,0 @@
-%%% constants 
-const grav      : Tensor[3](float) = [0.0, 0.0, -9.81];
-const stiffness : float = 1e3;
-const h1        : float = 0.01;
-const h2        : float = [0.01];

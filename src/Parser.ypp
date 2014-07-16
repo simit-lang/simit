@@ -27,15 +27,16 @@
 %parse-param{simit::Program *program}
 
 %union {
-  int    num;
-  double fnum;
-  const  char *string;
+  // Primitive literals
+  int                             num;
+  double                          fnum;
+  const char                     *string;
 
   simit::IRNode                  *node;
 
   // Types
-  simit::ElementType             *element_type;
   simit::Type                    *type;
+  simit::ElementType             *element_type;
   simit::TensorType              *tensor_type;
   simit::ScalarType::Type         scalar_type;
   std::vector<simit::Shape*>     *shapes;
@@ -47,8 +48,12 @@
   simit::Test                    *test;
 }
 %destructor { free((void*)($$)); } <string>
+%destructor { delete $$; } <value>
+%destructor { delete $$; } <dense_tensor_literal>
+%destructor { delete $$; } <type, element_type, tensor_type>
+%destructor { delete $$; } <shapes, shape, dimensions, dimension>
 %destructor { delete $$; } <test>
-// TODO: Define destructors for all pointer types
+
 
 %type <type>         type
 %type <element_type> element_type
@@ -88,7 +93,6 @@
 // Keywords
 %token INT       "int"
 %token FLOAT     "float"
-%token DOUBLE    "double"
 %token STRUCT    "struct"
 %token CONST     "const"
 %token EXTERN    "extern"
@@ -424,23 +428,42 @@ scalar_type
   | FLOAT {
     $$ = ScalarType::FLOAT;
   }
-  | DOUBLE {
-    $$ = ScalarType::DOUBLE;
-  }
-  
 
 // Literals
 literal
-  : scalar_literal
-  | tensor_literal
+  : tensor_literal
 
 tensor_literal
-  : "[" literal_list "]"
+  : dense_tensor_literal
+  | scalar_literal
 
-literal_list
-  : scalar_literal
-  | literal_list "," scalar_literal
-  | literal_list ";" scalar_literal
+dense_tensor_literal
+  : "[" float_dense_tensor_literal "]"
+  | "["   int_dense_tensor_literal "]"
+
+float_dense_tensor_literal
+  : float_dense_matrix_literal
+  | "[" float_dense_tensor_literal "]" "," "[" float_dense_matrix_literal "]"
+
+float_dense_vector_literal
+  : FLOAT_LITERAL
+  | float_dense_vector_literal "," FLOAT_LITERAL
+
+float_dense_matrix_literal
+  : float_dense_vector_literal
+  | float_dense_matrix_literal ";" float_dense_vector_literal
+
+int_dense_tensor_literal
+  : int_dense_matrix_literal
+  | "[" int_dense_tensor_literal "]" "," "[" int_dense_matrix_literal "]"
+
+int_dense_vector_literal
+  : INT_LITERAL
+  | int_dense_vector_literal "," INT_LITERAL
+
+int_dense_matrix_literal
+  : int_dense_vector_literal
+  | int_dense_matrix_literal ";" int_dense_vector_literal
 
 scalar_literal
   : INT_LITERAL
