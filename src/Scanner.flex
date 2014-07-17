@@ -7,11 +7,12 @@
 
 %{
   #include "Frontend.h"
-  #include "Tokens.h"
-  #include "Logger.h"
   #include <string>
   #include <stdlib.h>
+  #include "Tokens.h"
+  #include "Logger.h"
   using namespace std;
+  using namespace util;
 
   int yycolumn = 1;
   #define YY_USER_ACTION                                                      \

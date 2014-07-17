@@ -6,6 +6,7 @@
 #include <dirent.h>
 #include <errno.h>
 using namespace simit;
+using namespace util;
 using namespace std;
 
 string indent(string str, int num) {

@@ -7,6 +7,7 @@
 #include "Scanner.h"
 
 using namespace simit;
+using namespace util;
 using namespace std;
 
 extern FILE *yyin;

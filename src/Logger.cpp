@@ -1,3 +1,5 @@
 #include "Logger.h"
 
-Logger logger("log.txt");
+using namespace util;
+
+Logger util::logger("log.txt");

@@ -6,7 +6,10 @@
 #include <fstream>
 #include <sstream>
 
+namespace util {
+
 #ifdef LOGGING
+
 class Logger {
  public:
   Logger(std::string logfilename) {
@@ -74,4 +77,6 @@ inline void logDedent() {
   logger.dedent();
 }
 
+}
 #endif
+
