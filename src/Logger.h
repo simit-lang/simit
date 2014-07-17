@@ -8,7 +8,7 @@
 
 #ifdef LOGGING
 class Logger {
-public:
+ public:
   Logger(std::string logfilename) {
     logfile.open(logfilename);
   }
@@ -40,13 +40,13 @@ public:
     indentLevel--;
   }
 
-private:
+ private:
   std::ofstream logfile;
   uint indentLevel;
 };
 #else
 class Logger {
-public:
+ public:
   Logger(std::string logfilename) {}
   ~Logger() {}
   void log(std::string msg) {}

@@ -4,67 +4,68 @@
 #include <string>
 
 namespace simit {
-  class TensorType;
 
-  class IRNode {
-   public:
-    IRNode() {}
-    virtual ~IRNode() {}
+class TensorType;
 
-    virtual operator std::string() const = 0;
+class IRNode {
+ public:
+  IRNode() {}
+  virtual ~IRNode() {}
 
-    void setName(std::string name) { this->name = name; }
-    std::string getName()          { return this->name; }
+  virtual operator std::string() const = 0;
 
-   protected:
-    std::string name;
-  };
+  void setName(std::string name) { this->name = name; }
+  std::string getName()          { return this->name; }
 
-
-  class Value : public IRNode {
-   public:
-    Value() {}
-    virtual ~Value() {}
-  };
+ protected:
+  std::string name;
+};
 
 
-  class Tensor : public Value {
-   public:
-    Tensor(const TensorType *type) : type(type) {}
-    virtual ~Tensor();
-
-   protected:
-    const TensorType *type;
-  };
+class Value : public IRNode {
+ public:
+  Value() {}
+  virtual ~Value() {}
+};
 
 
-  class LiteralTensor : public Tensor {
-   public:
-    LiteralTensor(const TensorType *type) : Tensor(type) {}
-    virtual ~LiteralTensor() {}
-  };
+class Tensor : public Value {
+ public:
+  Tensor(const TensorType *type) : type(type) {}
+  virtual ~Tensor();
+
+ protected:
+  const TensorType *type;
+};
 
 
-  class DenseLiteralTensor : public LiteralTensor {
-   public:
-    DenseLiteralTensor(const TensorType *type, void *data);
-    virtual ~DenseLiteralTensor();
-
-    virtual operator std::string() const;
-
-   private:
-    void  *data;
-  };
+class LiteralTensor : public Tensor {
+ public:
+  LiteralTensor(const TensorType *type) : Tensor(type) {}
+  virtual ~LiteralTensor() {}
+};
 
 
-  class Function {
-   public:
-    Function();
-    virtual ~Function();
+class DenseLiteralTensor : public LiteralTensor {
+ public:
+  DenseLiteralTensor(const TensorType *type, void *data);
+  virtual ~DenseLiteralTensor();
 
-    virtual operator std::string() const;
-  };
-  
+  virtual operator std::string() const;
+
+ private:
+  void  *data;
+};
+
+
+class Function {
+ public:
+  Function();
+  virtual ~Function();
+
+  virtual operator std::string() const;
+};
+
 }
 
 #endif

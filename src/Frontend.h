@@ -4,19 +4,20 @@
 #include <string>
 
 namespace simit {
-  class Program;
 
-  class Frontend {
-  public:
-    Frontend();
-    ~Frontend();
+class Program;
 
-    int parseString(std::string programString, Program *program);
-    int parseFile(std::string filename, Program *program);
+class Frontend {
+ public:
+  Frontend();
+  ~Frontend();
 
-  private:
+  int parseString(std::string programString, Program *program);
+  int parseFile(std::string filename, Program *program);
 
-  };
+ private:
+
+};
 }
 
 #endif

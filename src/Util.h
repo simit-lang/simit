@@ -5,32 +5,34 @@
 #include <sstream>
 
 namespace util {
-  template <typename T>
-  std::ostream& operator<<(std::ostream &out, const T *dim) {
-    return out << std::string(*dim);
-  }
 
-  template <typename Iterator>
-  std::string join(Iterator begin, Iterator end, const std::string &separator) {
-    std::ostringstream result;
-    if (begin != end) {
-      result << *begin++;
-    }
-    while (begin != end) {
-      result << separator << *begin++;
-    }
-    return result.str();
-  }
+template <typename T>
+std::ostream& operator<<(std::ostream &out, const T *dim) {
+  return out << std::string(*dim);
+}
 
-  template <typename Collection>
-  std::string join(const Collection &collection, const std::string &separator) {
-    return join(collection.begin(), collection.end(), separator);
+template <typename Iterator>
+std::string join(Iterator begin, Iterator end, const std::string &separator) {
+  std::ostringstream result;
+  if (begin != end) {
+    result << *begin++;
   }
+  while (begin != end) {
+    result << separator << *begin++;
+  }
+  return result.str();
+}
 
-  template <typename Collection>
-  std::string rjoin(const Collection &collection, const std::string &separator) {
-    return join(collection.rbegin(), collection.rend(), separator);
-  }
+template <typename Collection>
+std::string join(const Collection &collection, const std::string &separator) {
+  return join(collection.begin(), collection.end(), separator);
+}
+
+template <typename Collection>
+std::string rjoin(const Collection &collection, const std::string &separator) {
+  return join(collection.rbegin(), collection.rend(), separator);
+}
+
 }
 
 #endif

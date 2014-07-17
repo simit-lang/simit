@@ -5,19 +5,19 @@
 
 namespace simit {
 
-  class Test {
-  public:
-    Test(std::string name) : name(name) {}
-    virtual ~Test() {}
+class Test {
+ public:
+  Test(std::string name) : name(name) {}
+  virtual ~Test() {}
 
-    virtual operator std::string() const {
-      return "Test " + name;
-    };
-
-  private:
-    std::string name;
+  virtual operator std::string() const {
+    return "Test " + name;
   };
-  
+
+ private:
+  std::string name;
+};
+
 }
 
 #endif
