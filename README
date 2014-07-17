@@ -1,5 +1,5 @@
 Simit is a programming language designed to make it easier to write
-high-performance code to simulate sparse systems
+high-performance code to simulate sparse systems.
 
 DEPENDENCIES:
 ============
@@ -9,8 +9,8 @@ DEPENDENCIES:
 - googletest 1.7+    (https://code.google.com/p/googletest/) OR
   SVN                (https://subversion.apache.org) 
 
-BUILD:
-======
+BUILDING SIMIT:
+===============
 To build Simit you must first install Cmake, GNU Bison and Flex.
 
 The following steps performs an out-of-tree build:
@@ -37,3 +37,10 @@ To check a simit program do:
 
 For example:
   ./build/bin/simit-check examples/springs.sim
+
+To build Simit's documentation do:
+  cd <simit-directory>
+  doxygen
+
+This will create a doc folder containing HTML documentation. Open
+doc/index.html in your browser.
