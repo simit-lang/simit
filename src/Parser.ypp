@@ -2,6 +2,7 @@
   #include <stdlib.h>
   #include <assert.h>
   #include <iostream>
+  #include <algorithm>
 
   #include "Logger.h"
   #include "Program.h"
@@ -28,48 +29,26 @@
 
 %union {
   // Primitive literals
-  int                             num;
-  double                          fnum;
-  const char                     *string;
+  int                               num;
+  double                            fnum;
+  const char                       *string;
 
-  simit::IRNode                  *node;
-
-  // Types
-  simit::Type                    *type;
-  simit::ElementType             *element_type;
-  simit::TensorType              *tensor_type;
-  simit::ScalarType::Type         scalar_type;
-  std::vector<simit::Shape*>     *shapes;
-  simit::Shape                   *shape;
-  std::vector<simit::Dimension*> *dimensions;
-  simit::Dimension               *dimension;
+  // Values
+  simit::Value                     *value;
 
   // Tests
-  simit::Test                    *test;
+  simit::Test                      *test;
 }
+%destructor {} <num> <fnum> <scalar_type>
 %destructor { free((void*)($$)); } <string>
-%destructor { delete $$; } <value>
-%destructor { delete $$; } <dense_tensor_literal>
-%destructor { delete $$; } <type, element_type, tensor_type>
-%destructor { delete $$; } <shapes, shape, dimensions, dimension>
-%destructor { delete $$; } <test>
-
-
-%type <type>         type
-%type <element_type> element_type
-%type <tensor_type>  tensor_type
-%type <shapes>       shapes
-%type <shape>        shape
-%type <dimensions>   dimensions
-%type <dimension>    dimension
-%type <scalar_type>  scalar_type
+%destructor { delete $$; } <*>
 
 %type <test> test
 
 
 %code {
   #include "Scanner.h"
-  void yyerror(YYLTYPE * loc, simit::Program *program, const char *s);
+  void yyerror(YYLTYPE * loc, simit::Program *program, const char *error);
 }
 
 %token UNKNOWN
@@ -237,7 +216,13 @@ stmt
   | expr_stmt
 
 const_stmt
-  : "const" var_decl "=" literal ";" {}
+  : "const" IDENT ":" type "=" literal ";" {
+    // TODO: Perform typecheck
+
+    $literal->setName($IDENT);
+    free((void*)$IDENT);
+    delete $type;
+  }
 
 if_stmt
   : "if" expr stmt_block else_clauses BLOCKEND
@@ -357,12 +342,32 @@ var_decl
 
 
 // Types
+%union {
+  simit::Type                      *type;
+  simit::ElementType               *element_type;
+  simit::TensorType                *tensor_type;
+  simit::TensorType::ComponentType  scalar_type;
+  std::vector<simit::Shape*>       *shapes;
+  simit::Shape                     *shape;
+  std::vector<simit::Dimension*>   *dimensions;
+  simit::Dimension                 *dimension;
+};
+
+%type <type>         type;
+%type <element_type> element_type;
+%type <tensor_type>  tensor_type;
+%type <shapes>       shapes;
+%type <shape>        shape;
+%type <dimensions>   dimensions;
+%type <dimension>    dimension;
+%type <scalar_type>  scalar_type;
+
 type
   : element_type {
-    $$ = $1;
+    $$ = $element_type;
   }
   | tensor_type {
-    $$ = $1;
+    $$ = $tensor_type;
   }
 
 element_type
@@ -429,7 +434,72 @@ scalar_type
     $$ = ScalarType::FLOAT;
   }
 
+
 // Literals
+%code requires {
+  #include <assert.h>
+  namespace {
+    template <typename T>
+    class TensorValues {
+     public:
+      TensorValues() : dimSizes(1) {};
+
+      void addValue(const T &val) {
+        values.push_back(val);
+        dimSizes[dimSizes.size()-1]++;
+      }
+      void addDimension() { dimSizes.push_back(1); }
+
+      bool dimensionsMatch(const TensorValues<T> &other, std::string *errors) {
+        assert(errors != NULL);
+        std::string mismatchError = "error, missmatched dimension sizes";
+        if (dimSizes.size()-1 != other.dimSizes.size()) {
+          *errors = mismatchError;
+          return false;
+        }
+
+        for (unsigned int i=0; i<dimSizes.size()-1; ++i) {
+          if (dimSizes[i] != other.dimSizes[i]) {
+            *errors = mismatchError;
+            return false;
+          }
+        }
+        return true;
+      }
+
+      void merge(const TensorValues<T> &other) {
+        values.insert(values.end(), other.values.begin(), other.values.end());
+        dimSizes[dimSizes.size()-1]++;
+      }
+
+      std::vector<unsigned int> dimSizes;
+      std::vector<T>            values;
+    };
+  }
+};
+
+%union {
+  simit::LiteralTensor      *literal_tensor;
+  simit::DenseLiteralTensor *dense_literal_tensor;
+  TensorValues<double>      *float_values;
+  TensorValues<int>         *int_values;
+};
+
+%type                <value> literal;
+%type       <literal_tensor> tensor_literal;
+%type <dense_literal_tensor> dense_tensor_literal;
+%type <dense_literal_tensor> scalar_literal;
+
+%type <float_values> float_dense_tensor_literal;
+%type <float_values> float_dense_ndtensor_literal;
+%type <float_values> float_dense_matrix_literal;
+%type <float_values> float_dense_vector_literal;
+
+%type <int_values> int_dense_tensor_literal;
+%type <int_values> int_dense_ndtensor_literal;
+%type <int_values> int_dense_matrix_literal;
+%type <int_values> int_dense_vector_literal;
+
 literal
   : tensor_literal
 
@@ -437,38 +507,133 @@ tensor_literal
   : dense_tensor_literal
   | scalar_literal
 
+%code {
+  Shape *dimSizesToShape(const vector<unsigned int> &dimSizes) {
+    auto dims = std::vector<Dimension*>();
+    for (auto rit=dimSizes.rbegin(); rit!=dimSizes.rend(); ++rit) {
+      dims.push_back(new Dimension(*rit));
+    }
+    return new Shape(dims);
+  }
+};
+
 dense_tensor_literal
-  : "[" float_dense_tensor_literal "]"
-  | "["   int_dense_tensor_literal "]"
+  : "[" float_dense_tensor_literal "]" {
+    Shape *shape = dimSizesToShape($2->dimSizes);
+    auto type = new NDTensorType(shape, new ScalarType(ScalarType::FLOAT));
+    $$ = new DenseLiteralTensor(type, $2->values.data());
+    delete $2;
+  }
+  | "[" int_dense_tensor_literal "]" {
+    Shape *shape = dimSizesToShape($2->dimSizes);
+    auto type = new NDTensorType(shape, new ScalarType(ScalarType::INT));
+    $$ = new DenseLiteralTensor(type, $2->values.data());
+    delete $2;
+  }
 
 float_dense_tensor_literal
   : float_dense_matrix_literal
-  | "[" float_dense_tensor_literal "]" "," "[" float_dense_matrix_literal "]"
+  | float_dense_ndtensor_literal
 
-float_dense_vector_literal
-  : FLOAT_LITERAL
-  | float_dense_vector_literal "," FLOAT_LITERAL
+float_dense_ndtensor_literal
+  : "[" float_dense_matrix_literal "]" {
+    $$ = $2;
+    $$->addDimension();
+  }
+  | float_dense_ndtensor_literal "," "[" float_dense_matrix_literal "]" {
+    string errors;
+    if(!$1->dimensionsMatch(*$4, &errors)) {
+      yyerror(&@2, program, errors.c_str());
+      YYERROR;
+    }
+
+    $$ = $1;
+    $1->merge(*$4);
+    delete $4;
+  }
 
 float_dense_matrix_literal
-  : float_dense_vector_literal
-  | float_dense_matrix_literal ";" float_dense_vector_literal
+  : float_dense_vector_literal {
+    $$ = $1;
+    $$->addDimension();
+  }
+  | float_dense_matrix_literal ";" float_dense_vector_literal {
+    string errors;
+    if(!$1->dimensionsMatch(*$3, &errors)) {
+      yyerror(&@2, program, errors.c_str());
+      YYERROR;
+    }
+
+    $$ = $1;
+    $1->merge(*$3);
+    delete $3;
+  }
+
+float_dense_vector_literal
+  : FLOAT_LITERAL {
+    $$ = new TensorValues<double>();
+    $$->addValue($1);
+  }
+  | float_dense_vector_literal "," FLOAT_LITERAL {
+    $$ = $1;
+    $$->addValue($3);
+  }
 
 int_dense_tensor_literal
   : int_dense_matrix_literal
-  | "[" int_dense_tensor_literal "]" "," "[" int_dense_matrix_literal "]"
+  | int_dense_ndtensor_literal
 
-int_dense_vector_literal
-  : INT_LITERAL
-  | int_dense_vector_literal "," INT_LITERAL
+int_dense_ndtensor_literal
+  : "[" int_dense_matrix_literal "]" {
+    $$ = $2;
+    $$->addDimension();
+  }
+  | int_dense_ndtensor_literal "," "[" int_dense_matrix_literal "]" {
+    string errors;
+    if(!$1->dimensionsMatch(*$4, &errors)) {
+      yyerror(&@2, program, errors.c_str());
+      YYERROR;
+    }
+
+    $$ = $1;
+    $1->merge(*$4);
+    delete $4;
+  }
 
 int_dense_matrix_literal
-  : int_dense_vector_literal
-  | int_dense_matrix_literal ";" int_dense_vector_literal
+  : int_dense_vector_literal {
+    $$ = $1;
+    $$->addDimension();
+  }
+  | int_dense_matrix_literal ";" int_dense_vector_literal {
+    string errors;
+    if(!$1->dimensionsMatch(*$3, &errors)) {
+      yyerror(&@2, program, errors.c_str());
+      YYERROR;
+    }
+
+    $$ = $1;
+    $1->merge(*$3);
+    delete $3;
+  }
+
+int_dense_vector_literal
+  : INT_LITERAL {
+    $$ = new TensorValues<int>();
+    $$->addValue($1);
+  }
+  | int_dense_vector_literal "," INT_LITERAL {
+    $$ = $1;
+    $$->addValue($3);
+  }
 
 scalar_literal
-  : INT_LITERAL
-  | FLOAT_LITERAL
-
+  : INT_LITERAL {
+    $$ = new DenseLiteralTensor(new ScalarType(ScalarType::INT), &$1);
+  }
+  | FLOAT_LITERAL {
+    $$ = new DenseLiteralTensor(new ScalarType(ScalarType::FLOAT), &$1);
+  }
 
 // Tests
 test
@@ -485,8 +650,8 @@ test_stmt
   | expr "->" literal ";"
 %%
 
-void yyerror(YYLTYPE * loc, simit::Program *program, const char *s) {
-  string error = string(s) + " at " + to_string(loc->first_line) + ":" +
-                 to_string(loc->first_column);
-  program->addError(error);
+void yyerror(YYLTYPE * loc, simit::Program *program, const char *error) {
+  string errorStr = string(error) + " at " + to_string(loc->first_line) + ":" +
+                    to_string(loc->first_column);
+  program->addError(errorStr);
 }

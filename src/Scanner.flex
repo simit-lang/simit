@@ -29,8 +29,8 @@ digit         [0-9]
 letter        [a-zA-Z]
 ident         ({letter}|_)({letter}|{digit}|_)*
 
-int_literal   -?({digit}+|{digit}+([eE][-+]?{digit}+)?)
-float_literal -?({digit}+|{digit}*\.{digit}+([eE][-+]?{digit}+)?)
+int_literal   -?({digit}+([eE][-+]?{digit}+)?)
+float_literal -?({digit}*\.{digit}+([eE][-+]?{digit}+)?)
 
 %%
  /* Keywords and symbols */

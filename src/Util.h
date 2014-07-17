@@ -26,6 +26,11 @@ namespace util {
   std::string join(const Collection &collection, const std::string &separator) {
     return join(collection.begin(), collection.end(), separator);
   }
+
+  template <typename Collection>
+  std::string rjoin(const Collection &collection, const std::string &separator) {
+    return join(collection.rbegin(), collection.rend(), separator);
+  }
 }
 
 #endif

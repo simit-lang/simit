@@ -6,7 +6,7 @@
 #include <list>
 
 namespace simit {
-  class ScalarType;
+  class Shape;
 
   class Type {
    public:
@@ -26,20 +26,56 @@ namespace simit {
   };
 
 
+  class TensorType :public Type {
+   public:
+    enum ComponentType {INT, FLOAT};
+    static std::size_t componentSize(ComponentType ct);
+    static std::string componentTypeString(ComponentType ct);
+
+    TensorType() {}
+    virtual ~TensorType();
+
+    virtual unsigned int getOrder() const = 0;
+    virtual unsigned int getSize() const = 0;
+
+    virtual std::unique_ptr<std::list<Shape*> > getShape() const = 0;
+    virtual ComponentType getComponentType() const = 0;
+  };
+
+
+  class ScalarType : public TensorType {
+   public:
+    ScalarType(ComponentType componentType) : componentType(componentType) {}
+    virtual ~ScalarType();
+
+    virtual unsigned int getOrder() const { return 0; }
+    virtual unsigned int getSize() const;
+
+    virtual std::unique_ptr<std::list<Shape*> > getShape() const;
+    virtual ComponentType getComponentType() const;
+
+    virtual operator std::string() const;
+
+   private:
+    ComponentType componentType;
+  };
+
+
   class Dimension {
    public:
-    enum Type {VARIABLE, ANONYMOUS, SET};
+    enum Type {VARIABLE, ANONYMOUS, /*SET*/};
 
     Dimension()                  : type(VARIABLE)              {}
     Dimension(unsigned int size) : type(ANONYMOUS), size(size) {}
     ~Dimension() {}
 
+    unsigned int getSize() const;
     operator std::string() const;
 
    private:
     Type type;
     union {
-      int size;
+      unsigned int size;
     };
   };
 
@@ -51,40 +87,12 @@ namespace simit {
     ~Shape();
 
     unsigned int getOrder() const { return dimensions.size(); }
+    unsigned int getSize() const;
+
     operator std::string() const;
 
    private:
     std::vector<Dimension*> dimensions;
-  };
-
-
-  class TensorType :public Type {
-   public:
-    TensorType() {}
-    virtual ~TensorType();
-
-    virtual unsigned int getOrder() const = 0;
-    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const = 0;
-
-    virtual ScalarType *getComponentType() const = 0;
-  };
-
-
-  class ScalarType : public TensorType {
-   public:
-    enum Type {INT, FLOAT};
-
-    ScalarType(Type type) : type(type) {}
-    virtual ~ScalarType();
-
-    virtual unsigned int getOrder() const { return 0; }
-    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const;
-    virtual ScalarType *getComponentType() const;
-
-    virtual operator std::string() const;
-
-   private:
-    ScalarType::Type type;
   };
 
 
@@ -95,8 +103,10 @@ namespace simit {
     virtual ~NDTensorType();
 
     virtual unsigned int getOrder() const { return blockShape->getOrder(); }
-    virtual std::unique_ptr<std::list<Shape*> > getComponentShapes() const;
-    virtual ScalarType *getComponentType() const;
+    virtual unsigned int getSize() const;
+
+    virtual std::unique_ptr<std::list<Shape*> > getShape() const;
+    virtual ComponentType getComponentType() const;
 
     virtual operator std::string() const;
 
