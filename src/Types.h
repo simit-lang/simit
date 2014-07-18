@@ -5,7 +5,7 @@
 #include <vector>
 #include <list>
 #include <iostream>
-
+#include <memory>
 
 namespace simit {
 
