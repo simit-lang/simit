@@ -102,10 +102,10 @@ class Shape {
   unsigned int getOrder() const { return dimensions.size(); }
   unsigned int getSize() const;
 
-  std::vector<Dimension *>::iterator begin() {
+  std::vector<Dimension *>::const_iterator begin() const {
     return dimensions.begin();
   }
-  std::vector<Dimension *>::iterator end() {
+  std::vector<Dimension *>::const_iterator end() const {
     return dimensions.end();
   }
 
