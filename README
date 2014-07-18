@@ -5,7 +5,7 @@ DEPENDENCIES:
 ============
 - Cmake      2.8.3+  (http://www.cmake.org)
 - GNU Bison  3.0.0+  (http://www.gnu.org/software/bison/)
-- Flex       2.7+    (http://flex.sourceforge.net)
+- Flex       2.5+    (http://flex.sourceforge.net)
 - googletest 1.7+    (https://code.google.com/p/googletest/) OR
   SVN                (https://subversion.apache.org) 
 
