@@ -60,7 +60,7 @@ int Frontend::parseFile(string filename, Program *program) {
   yyin = fopen(filename.c_str(), "r");
   int status = yyparse(program);
   yylex_destroy();
-  fclose(yyin);
+  //fclose(yyin);
 
   if (status == 0) {
     log("Parsed correctly");

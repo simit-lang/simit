@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include <string>
 #include <iostream>
-
+#include <string.h>
 #include "Types.h"
 #include "Util.h"
 
