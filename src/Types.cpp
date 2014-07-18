@@ -17,6 +17,10 @@ Type::~Type() {}
 /* ElementType */
 ElementType::~ElementType() {}
 
+bool ElementType::operator==(const Type& other) {
+  return false;  // TODO: Fix this
+}
+
 ElementType::operator std::string() const {
   return "ElementType";
 }
@@ -61,6 +65,11 @@ unique_ptr<std::list<Shape*> > ScalarType::getShapes() const {
 
 TensorType::ComponentType ScalarType::getComponentType() const {
   return componentType;
+}
+
+bool ScalarType::operator==(const Type& other) {
+  const ScalarType *otherPtr = dynamic_cast<const ScalarType *>(&other);
+  return otherPtr != NULL && componentType == otherPtr->componentType;
 }
 
 ScalarType::operator std::string() const {
@@ -149,6 +158,18 @@ unsigned int Shape::getSize() const {
   return shapeSize;
 }
 
+bool Shape::operator==(const Shape &other) const {
+  if (getOrder() != other.getOrder()) {
+    return false;
+  }
+  for (unsigned int i=0; i<getOrder(); ++i) {
+    if (*dimensions[i] != *other.dimensions[i]) {
+      return false;
+    }
+  }
+  return true;
+}
+
 Shape::operator std::string() const {
   return "[" + util::join(dimensions, ",") + "]";
 }
@@ -172,6 +193,13 @@ unique_ptr<std::list<Shape*> > NDTensorType::getShapes() const {
 
 TensorType::ComponentType NDTensorType::getComponentType() const {
   return blockType->getComponentType();
+}
+
+bool NDTensorType::operator==(const Type& other) {
+  const NDTensorType *otherPtr = dynamic_cast<const NDTensorType *>(&other);
+  return (otherPtr != NULL &&
+          *blockShape == *otherPtr->blockShape &&
+          *blockType == *otherPtr->blockType);
 }
 
 NDTensorType::operator std::string() const {

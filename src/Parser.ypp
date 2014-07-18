@@ -219,15 +219,21 @@ const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     // If $type is a matrix whose outer dimension is 1, and $tensor_literal is
     // a vector then we cast $tensor_literal to a 1xn matrix
+    bool casted = false;
     if ($tensor_type->getOrder() == 2 && $tensor_literal->getOrder() == 1) {
       $tensor_literal->cast($tensor_type);
-    }
-    else {
-      delete $tensor_type;
+      casted = true;
     }
 
-    // Typecheck: $type and $tensor_literal->getType() must be equivalent.
-    // TODO:
+    // Typecheck: value and literal types must be equivalent.
+    if (*$tensor_type != *$tensor_literal->getType()) {
+      yyerror(&@5, program, "error, value type does not match literal type");
+      YYERROR;
+    }
+
+    if (!casted) {
+      delete $tensor_type;
+    }
 
     $tensor_literal->setName($IDENT);
     free((void*)$IDENT);

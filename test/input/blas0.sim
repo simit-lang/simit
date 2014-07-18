@@ -1,6 +1,6 @@
 %%% neg
 %! c -> -1;
-const a : float = 1;
+const a : float = 1.0;
 c = -a;
 
 %%% neg-func

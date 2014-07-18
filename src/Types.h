@@ -16,6 +16,8 @@ class Type {
   Type() {}
   virtual ~Type();
 
+  virtual bool operator==(const Type& other) = 0;
+  bool operator!=(const Type& other) { return !(*this == other); }
   virtual operator std::string() const = 0;
 };
 
@@ -25,6 +27,7 @@ class ElementType : public Type {
   ElementType() {}
   virtual ~ElementType();
 
+  virtual bool operator==(const Type& other);
   virtual operator std::string() const;
 };
 
@@ -59,6 +62,7 @@ class ScalarType : public TensorType {
   virtual std::unique_ptr<std::list<Shape*> > getShapes() const;
   virtual ComponentType getComponentType() const;
 
+  virtual bool operator==(const Type& other);
   virtual operator std::string() const;
 
  private:
@@ -76,10 +80,10 @@ class Dimension {
   ~Dimension() {}
 
   unsigned int getSize() const;
-  operator std::string() const;
 
   bool operator==(const Dimension &other) const;
   bool operator!=(const Dimension &other) const { return !(*this == other); }
+  operator std::string() const;
 
  private:
   Type type;
@@ -105,6 +109,8 @@ class Shape {
     return dimensions.end();
   }
 
+  bool operator==(const Shape &other) const;
+  bool operator!=(const Shape &other) const { return !(*this == other); }
   operator std::string() const;
 
  private:
@@ -125,6 +131,7 @@ class NDTensorType : public TensorType {
   virtual std::unique_ptr<std::list<Shape*> > getShapes() const;
   virtual ComponentType getComponentType() const;
 
+  virtual bool operator==(const Type& other);
   virtual operator std::string() const;
 
  private:

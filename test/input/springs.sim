@@ -1,6 +1,6 @@
 %%% springs
 const grav      : Tensor[3](float) = [0.0, 0.0, -9.81];
-const stiffness : float = 1e3;
+const stiffness : float = 1.0e3;
 const h         : float = 0.01;
 
 struct Point
