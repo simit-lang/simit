@@ -10,6 +10,24 @@ using namespace simit;
 using namespace util;
 using namespace std;
 
+
+/* SymbolTable */
+void SymbolTable::addNode(IRNode *irNode) {
+  (*this)[irNode->getName()] = irNode;
+}
+
+IRNode *&SymbolTable::operator[](const std::string &name) {
+  for (auto scope : scopes) {
+    if (scope.find(name) != scope.end()) {
+      return scope[name];
+    }
+  }
+  cout << "Adding symbol: " << name << endl;
+  return scopes.front()[name];
+}
+
+
+/* Frontend */
 extern FILE *yyin;
 int yyparse(simit::Program *program);
 struct yy_buffer_state *yy_scan_string(const char *);
@@ -29,7 +47,7 @@ int Frontend::parseString(string programString, Program *program) {
 
   struct yy_buffer_state *bufferState;
   bufferState = yy_scan_string(programString.c_str());
-  int status = yyparse(program);
+  int status = yyparse(symbolTable, program);
   yylex_destroy();
 
   if (status == 0) {
@@ -58,7 +76,7 @@ int Frontend::parseFile(string filename, Program *program) {
   logger.dedent();
 
   yyin = fopen(filename.c_str(), "r");
-  int status = yyparse(program);
+  int status = yyparse(symbolTable, program);
   yylex_destroy();
   //fclose(yyin);
 

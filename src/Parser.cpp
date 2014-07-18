@@ -68,9 +68,13 @@
 
   #include "Logger.h"
   #include "Program.h"
+  #include "Frontend.h"
   #include "Util.h"
   using namespace std;
   using namespace simit;
+
+  #define REPORT_ERROR(msg, loc) \
+    yyerror(&loc, symtable, program, std::string(msg).c_str())
 
 
 
@@ -274,7 +278,7 @@ struct YYLTYPE
 
 
 
-int yyparse (simit::Program *program);
+int yyparse (simit::SymbolTable &symtable, simit::Program *program);
 
 #endif /* !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED  */
 
@@ -285,7 +289,14 @@ int yyparse (simit::Program *program);
 
 
   #include "Scanner.h"
-  void yyerror(YYLTYPE * loc, simit::Program *program, const char *error);
+  void yyerror(YYLTYPE * loc,
+               simit::SymbolTable &symtable,
+               simit::Program *program,
+               const char *error) {
+    string errorStr = string(error) + " at " + to_string(loc->first_line) + ":" +
+                    to_string(loc->first_column);
+    program->addError(errorStr);
+  }
 
 
   Shape *dimSizesToShape(const vector<unsigned int> &dimSizes) {
@@ -577,20 +588,20 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   127,   127,   129,   132,   133,   134,   135,   136,   137,
-     143,   147,   153,   156,   163,   167,   169,   171,   173,   176,
-     181,   186,   189,   193,   195,   197,   199,   202,   203,   207,
-     209,   212,   213,   214,   215,   216,   219,   245,   251,   253,
-     255,   257,   259,   262,   265,   268,   269,   274,   277,   278,
-     279,   281,   282,   283,   284,   285,   286,   287,   288,   290,
-     291,   292,   293,   294,   295,   297,   298,   299,   300,   301,
-     302,   305,   308,   309,   312,   313,   318,   323,   325,   329,
-     331,   336,   338,   340,   343,   346,   349,   355,   356,   361,
-     389,   392,   397,   403,   406,   416,   419,   425,   431,   435,
-     441,   444,   448,   453,   456,   527,   528,   530,   534,   535,
-     548,   554,   562,   569,   572,   576,   591,   595,   610,   614,
-     620,   627,   630,   634,   647,   651,   664,   668,   674,   677,
-     683,   687,   689,   692,   693
+       0,   139,   139,   141,   144,   145,   146,   147,   148,   149,
+     155,   159,   165,   168,   175,   179,   181,   183,   185,   188,
+     193,   198,   201,   205,   207,   209,   211,   214,   215,   219,
+     221,   224,   225,   226,   227,   228,   231,   255,   261,   263,
+     265,   267,   269,   272,   275,   278,   279,   284,   287,   288,
+     289,   291,   292,   293,   294,   295,   296,   297,   298,   300,
+     301,   302,   303,   304,   305,   307,   308,   309,   310,   311,
+     312,   315,   318,   319,   322,   323,   328,   333,   335,   339,
+     341,   346,   348,   350,   353,   356,   359,   365,   366,   371,
+     399,   402,   407,   413,   416,   426,   429,   435,   441,   445,
+     451,   454,   458,   463,   466,   537,   538,   540,   544,   545,
+     558,   564,   572,   579,   582,   586,   600,   604,   619,   623,
+     629,   636,   639,   643,   656,   660,   673,   677,   683,   686,
+     692,   696,   698,   701,   702
 };
 #endif
 
@@ -916,7 +927,7 @@ do                                                              \
     }                                                           \
   else                                                          \
     {                                                           \
-      yyerror (&yylloc, program, YY_("syntax error: cannot back up")); \
+      yyerror (&yylloc, symtable, program, YY_("syntax error: cannot back up")); \
       YYERROR;                                                  \
     }                                                           \
 while (0)
@@ -1018,7 +1029,7 @@ do {                                                                      \
     {                                                                     \
       YYFPRINTF (stderr, "%s ", Title);                                   \
       yy_symbol_print (stderr,                                            \
-                  Type, Value, Location, program); \
+                  Type, Value, Location, symtable, program); \
       YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
@@ -1029,11 +1040,12 @@ do {                                                                      \
 `----------------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::Program *program)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::SymbolTable &symtable, simit::Program *program)
 {
   FILE *yyo = yyoutput;
   YYUSE (yyo);
   YYUSE (yylocationp);
+  YYUSE (symtable);
   YYUSE (program);
   if (!yyvaluep)
     return;
@@ -1050,14 +1062,14 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
 `--------------------------------*/
 
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::Program *program)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::SymbolTable &symtable, simit::Program *program)
 {
   YYFPRINTF (yyoutput, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
   YY_LOCATION_PRINT (yyoutput, *yylocationp);
   YYFPRINTF (yyoutput, ": ");
-  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, program);
+  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, symtable, program);
   YYFPRINTF (yyoutput, ")");
 }
 
@@ -1090,7 +1102,7 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, simit::Program *program)
+yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, simit::SymbolTable &symtable, simit::Program *program)
 {
   unsigned long int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1104,7 +1116,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule
       yy_symbol_print (stderr,
                        yystos[yyssp[yyi + 1 - yynrhs]],
                        &(yyvsp[(yyi + 1) - (yynrhs)])
-                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , program);
+                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , symtable, program);
       YYFPRINTF (stderr, "\n");
     }
 }
@@ -1112,7 +1124,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule
 # define YY_REDUCE_PRINT(Rule)          \
 do {                                    \
   if (yydebug)                          \
-    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, program); \
+    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, symtable, program); \
 } while (0)
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
@@ -1608,10 +1620,11 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, simit::Program *program)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, simit::SymbolTable &symtable, simit::Program *program)
 {
   YYUSE (yyvaluep);
   YYUSE (yylocationp);
+  YYUSE (symtable);
   YYUSE (program);
   if (!yymsg)
     yymsg = "Deleting";
@@ -1785,7 +1798,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 `----------*/
 
 int
-yyparse (simit::Program *program)
+yyparse (simit::SymbolTable &symtable, simit::Program *program)
 {
 /* The lookahead symbol.  */
 int yychar;
@@ -2157,7 +2170,7 @@ yyreduce:
 
     // Typecheck: value and literal types must be equivalent.
     if (*(yyvsp[-3].tensor_type) != *(yyvsp[-1].literal_tensor)->getType()) {
-      yyerror(&(yylsp[-2]), program, "error, value type does not match literal type");
+      REPORT_ERROR("error, value type does not match literal type", (yylsp[-2]));
       delete (yyvsp[-1].literal_tensor);
       YYERROR;
     }
@@ -2165,9 +2178,7 @@ yyreduce:
     if (!casted) {
       delete (yyvsp[-3].tensor_type);
     }
-
-//    $$ = $tensor_literal;
-    delete (yyvsp[-1].literal_tensor);
+    symtable.addNode((yyvsp[-1].literal_tensor));
   }
 
     break;
@@ -2419,12 +2430,11 @@ yyreduce:
     {
     string errors;
     if(!(yyvsp[-4].float_values)->dimensionsMatch(*(yyvsp[-1].float_values), &errors)) {
-      yyerror(&(yylsp[-3]), program, errors.c_str());
+      REPORT_ERROR(errors, (yylsp[-3]));
       delete (yyvsp[-4].float_values);
       delete (yyvsp[-1].float_values);
       YYERROR;
     }
-
     (yyval.float_values) = (yyvsp[-4].float_values);
     (yyvsp[-4].float_values)->merge(*(yyvsp[-1].float_values));
     delete (yyvsp[-1].float_values);
@@ -2446,7 +2456,7 @@ yyreduce:
     {
     string errors;
     if(!(yyvsp[-2].float_values)->dimensionsMatch(*(yyvsp[0].float_values), &errors)) {
-      yyerror(&(yylsp[-1]), program, errors.c_str());
+      REPORT_ERROR(errors, (yylsp[-1]));
       delete (yyvsp[-2].float_values);
       delete (yyvsp[0].float_values);
       YYERROR;
@@ -2503,7 +2513,7 @@ yyreduce:
     {
     string errors;
     if(!(yyvsp[-4].int_values)->dimensionsMatch(*(yyvsp[-1].int_values), &errors)) {
-      yyerror(&(yylsp[-3]), program, errors.c_str());
+      REPORT_ERROR(errors, (yylsp[-3]));
       YYERROR;
     }
 
@@ -2528,7 +2538,7 @@ yyreduce:
     {
     string errors;
     if(!(yyvsp[-2].int_values)->dimensionsMatch(*(yyvsp[0].int_values), &errors)) {
-      yyerror(&(yylsp[-1]), program, errors.c_str());
+      REPORT_ERROR(errors, (yylsp[-1]));
       YYERROR;
     }
 
@@ -2644,7 +2654,7 @@ yyerrlab:
     {
       ++yynerrs;
 #if ! YYERROR_VERBOSE
-      yyerror (&yylloc, program, YY_("syntax error"));
+      yyerror (&yylloc, symtable, program, YY_("syntax error"));
 #else
 # define YYSYNTAX_ERROR yysyntax_error (&yymsg_alloc, &yymsg, \
                                         yyesa, &yyes, &yyes_capacity, \
@@ -2674,7 +2684,7 @@ yyerrlab:
                 yymsgp = yymsg;
               }
           }
-        yyerror (&yylloc, program, yymsgp);
+        yyerror (&yylloc, symtable, program, yymsgp);
         if (yysyntax_error_status == 2)
           goto yyexhaustedlab;
       }
@@ -2698,7 +2708,7 @@ yyerrlab:
       else
         {
           yydestruct ("Error: discarding",
-                      yytoken, &yylval, &yylloc, program);
+                      yytoken, &yylval, &yylloc, symtable, program);
           yychar = YYEMPTY;
         }
     }
@@ -2755,7 +2765,7 @@ yyerrlab1:
 
       yyerror_range[1] = *yylsp;
       yydestruct ("Error: popping",
-                  yystos[yystate], yyvsp, yylsp, program);
+                  yystos[yystate], yyvsp, yylsp, symtable, program);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -2801,7 +2811,7 @@ yyabortlab:
 | yyexhaustedlab -- memory exhaustion comes here.  |
 `-------------------------------------------------*/
 yyexhaustedlab:
-  yyerror (&yylloc, program, YY_("memory exhausted"));
+  yyerror (&yylloc, symtable, program, YY_("memory exhausted"));
   yyresult = 2;
   /* Fall through.  */
 #endif
@@ -2813,7 +2823,7 @@ yyreturn:
          user semantic actions for why this is necessary.  */
       yytoken = YYTRANSLATE (yychar);
       yydestruct ("Cleanup: discarding lookahead",
-                  yytoken, &yylval, &yylloc, program);
+                  yytoken, &yylval, &yylloc, symtable, program);
     }
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYABORT or YYACCEPT.  */
@@ -2822,7 +2832,7 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[*yyssp], yyvsp, yylsp, program);
+                  yystos[*yyssp], yyvsp, yylsp, symtable, program);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow
@@ -2840,8 +2850,3 @@ yyreturn:
 
 
 
-void yyerror(YYLTYPE * loc, simit::Program *program, const char *error) {
-  string errorStr = string(error) + " at " + to_string(loc->first_line) + ":" +
-                    to_string(loc->first_column);
-  program->addError(errorStr);
-}

@@ -11,11 +11,6 @@ Program::Program() : frontend(new Frontend()) {}
 
 Program::~Program() {
   delete frontend;
-  for (vector<IRNode*>::iterator it = irNodes.begin();
-      it != irNodes.end(); ++it) {
-    delete *it;
-  }
-
   for (vector<Test*>::iterator it = tests.begin();
       it != tests.end(); ++it) {
     delete *it;

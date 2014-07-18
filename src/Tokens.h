@@ -206,6 +206,6 @@ struct YYLTYPE
 
 
 
-int yyparse (simit::Program *program);
+int yyparse (simit::SymbolTable &symtable, simit::Program *program);
 
 #endif /* !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED  */

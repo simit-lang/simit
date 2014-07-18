@@ -6,9 +6,13 @@
 
   #include "Logger.h"
   #include "Program.h"
+  #include "Frontend.h"
   #include "Util.h"
   using namespace std;
   using namespace simit;
+
+  #define REPORT_ERROR(msg, loc) \
+    yyerror(&loc, symtable, program, std::string(msg).c_str())
 }
 
 %code requires {
@@ -25,6 +29,7 @@
 %locations
 %pure-parser
 
+%parse-param{simit::SymbolTable &symtable}
 %parse-param{simit::Program *program}
 
 %union {
@@ -48,7 +53,14 @@
 
 %code {
   #include "Scanner.h"
-  void yyerror(YYLTYPE * loc, simit::Program *program, const char *error);
+  void yyerror(YYLTYPE * loc,
+               simit::SymbolTable &symtable,
+               simit::Program *program,
+               const char *error) {
+    string errorStr = string(error) + " at " + to_string(loc->first_line) + ":" +
+                    to_string(loc->first_column);
+    program->addError(errorStr);
+  }
 }
 
 %token UNKNOWN
@@ -230,7 +242,7 @@ const_stmt
 
     // Typecheck: value and literal types must be equivalent.
     if (*$tensor_type != *$tensor_literal->getType()) {
-      yyerror(&@5, program, "error, value type does not match literal type");
+      REPORT_ERROR("error, value type does not match literal type", @5);
       delete $tensor_literal;
       YYERROR;
     }
@@ -238,9 +250,7 @@ const_stmt
     if (!casted) {
       delete $tensor_type;
     }
-
-//    $$ = $tensor_literal;
-    delete $tensor_literal;
+    symtable.addNode($tensor_literal);
   }
   | "const" IDENT ":" element_type "=" element_literal ";" {
     free((void*)$IDENT);
@@ -576,12 +586,11 @@ float_dense_ndtensor_literal
   | float_dense_ndtensor_literal "," "[" float_dense_matrix_literal "]" {
     string errors;
     if(!$1->dimensionsMatch(*$4, &errors)) {
-      yyerror(&@2, program, errors.c_str());
+      REPORT_ERROR(errors, @2);
       delete $1;
       delete $4;
       YYERROR;
     }
-
     $$ = $1;
     $1->merge(*$4);
     delete $4;
@@ -595,7 +604,7 @@ float_dense_matrix_literal
   | float_dense_matrix_literal ";" float_dense_vector_literal {
     string errors;
     if(!$1->dimensionsMatch(*$3, &errors)) {
-      yyerror(&@2, program, errors.c_str());
+      REPORT_ERROR(errors, @2);
       delete $1;
       delete $3;
       YYERROR;
@@ -634,7 +643,7 @@ int_dense_ndtensor_literal
   | int_dense_ndtensor_literal "," "[" int_dense_matrix_literal "]" {
     string errors;
     if(!$1->dimensionsMatch(*$4, &errors)) {
-      yyerror(&@2, program, errors.c_str());
+      REPORT_ERROR(errors, @2);
       YYERROR;
     }
 
@@ -651,7 +660,7 @@ int_dense_matrix_literal
   | int_dense_matrix_literal ";" int_dense_vector_literal {
     string errors;
     if(!$1->dimensionsMatch(*$3, &errors)) {
-      yyerror(&@2, program, errors.c_str());
+      REPORT_ERROR(errors, @2);
       YYERROR;
     }
 
@@ -695,8 +704,3 @@ test_stmt
   }
 %%
 
-void yyerror(YYLTYPE * loc, simit::Program *program, const char *error) {
-  string errorStr = string(error) + " at " + to_string(loc->first_line) + ":" +
-                    to_string(loc->first_column);
-  program->addError(errorStr);
-}

@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <set>
 
 namespace simit {
 
@@ -23,11 +24,13 @@ class Program {
 
   void addError(std::string errors);
   void addTest(simit::Test *test);
+
  private:
   Frontend *frontend;
-  std::vector<IRNode*> irNodes;
-  std::string errorString;
 
+  std::set<IRNode*> IRNodes;
+
+  std::string errorString;
   std::vector<simit::Test*> tests;
 };
 
