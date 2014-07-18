@@ -217,6 +217,9 @@ stmt
 
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
+    $tensor_literal->setName($IDENT);
+    free((void*)$IDENT);
+
     // If $type is a matrix whose outer dimension is 1, and $tensor_literal is
     // a vector then we cast $tensor_literal to a 1xn matrix
     bool casted = false;
@@ -228,6 +231,7 @@ const_stmt
     // Typecheck: value and literal types must be equivalent.
     if (*$tensor_type != *$tensor_literal->getType()) {
       yyerror(&@5, program, "error, value type does not match literal type");
+      delete $tensor_literal;
       YYERROR;
     }
 
@@ -235,8 +239,8 @@ const_stmt
       delete $tensor_type;
     }
 
-    $tensor_literal->setName($IDENT);
-    free((void*)$IDENT);
+//    $$ = $tensor_literal;
+    delete $tensor_literal;
   }
   | "const" IDENT ":" element_type "=" element_literal ";" {
     free((void*)$IDENT);
@@ -573,6 +577,8 @@ float_dense_ndtensor_literal
     string errors;
     if(!$1->dimensionsMatch(*$4, &errors)) {
       yyerror(&@2, program, errors.c_str());
+      delete $1;
+      delete $4;
       YYERROR;
     }
 
@@ -590,6 +596,8 @@ float_dense_matrix_literal
     string errors;
     if(!$1->dimensionsMatch(*$3, &errors)) {
       yyerror(&@2, program, errors.c_str());
+      delete $1;
+      delete $3;
       YYERROR;
     }
 
@@ -682,7 +690,9 @@ test_stmt_block
 
 test_stmt
   : stmt
-  | expr "->" literal ";"
+  | expr "->" literal ";" {
+    delete $literal;
+  }
 %%
 
 void yyerror(YYLTYPE * loc, simit::Program *program, const char *error) {
