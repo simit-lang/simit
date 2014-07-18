@@ -26,6 +26,7 @@ SHOW_FILES             = YES
 SHOW_NAMESPACES        = YES
 
 # Configuration options related to the input files
+INPUT                  = src misc/MainPage.h
 FILE_PATTERNS          = *.h
 RECURSIVE              = YES
 EXCLUDE                = build xcode test tmp
