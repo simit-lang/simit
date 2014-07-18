@@ -19,7 +19,7 @@
   #include "Types.h"
 }
 
-%require "3.0.0"
+%require "3.0"
 %define parse.error verbose
 %define parse.lac full
 %locations
