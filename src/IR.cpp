@@ -1,8 +1,11 @@
 #include "IR.h"
+
 #include <cstdlib>
 #include <string>
 #include <iostream>
+
 #include "Types.h"
+#include "Util.h"
 
 using namespace simit;
 using namespace std;
@@ -13,8 +16,17 @@ Tensor::~Tensor() {
 }
 
 
+/* LiteralTensor */
+void LiteralTensor::cast(TensorType *type) {
+  assert(this->type->getComponentType() == type->getComponentType() &&
+         this->type->getSize() == type->getSize());
+  delete this->type;
+  this->type = type;
+}
+
+
 /* DenseTensorLiteral */
-DenseLiteralTensor::DenseLiteralTensor(const TensorType *type, void *data)
+DenseLiteralTensor::DenseLiteralTensor(TensorType *type, void *data)
 : LiteralTensor(type) {
   auto componentSize = TensorType::componentSize(type->getComponentType());
   auto dataSize = type->getSize() * componentSize;
@@ -29,7 +41,7 @@ DenseLiteralTensor::~DenseLiteralTensor() {
 DenseLiteralTensor::operator std::string() const {
   string result;
   if (name != "") {
-    result += name + " : " + string(*type) + " = ";
+    result += name + " : " + string(*type);// + " = ";
   }
 
   // TODO: Add nicer value printing that prints matrices and tensors
@@ -65,7 +77,6 @@ DenseLiteralTensor::operator std::string() const {
       break;
     }
   }
-//  result += to_string(type->getOrder());
   return result;
 }
 

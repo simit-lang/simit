@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 #include <list>
+#include <iostream>
+
 
 namespace simit {
 
@@ -38,8 +40,9 @@ class TensorType :public Type {
 
   virtual unsigned int getOrder() const = 0;
   virtual unsigned int getSize() const = 0;
+  virtual bool isScalar() const = 0;
 
-  virtual std::unique_ptr<std::list<Shape*> > getShape() const = 0;
+  virtual std::unique_ptr<std::list<Shape*> > getShapes() const = 0;
   virtual ComponentType getComponentType() const = 0;
 };
 
@@ -51,8 +54,9 @@ class ScalarType : public TensorType {
 
   virtual unsigned int getOrder() const { return 0; }
   virtual unsigned int getSize() const;
+  virtual bool isScalar() const { return true; }
 
-  virtual std::unique_ptr<std::list<Shape*> > getShape() const;
+  virtual std::unique_ptr<std::list<Shape*> > getShapes() const;
   virtual ComponentType getComponentType() const;
 
   virtual operator std::string() const;
@@ -64,14 +68,18 @@ class ScalarType : public TensorType {
 
 class Dimension {
  public:
-  enum Type {VARIABLE, ANONYMOUS, /*SET*/};
+  enum Type {ANONYMOUS, /*SET,*/ VARIABLE};
 
-  Dimension()                  : type(VARIABLE)              {}
   Dimension(unsigned int size) : type(ANONYMOUS), size(size) {}
+  Dimension()                  : type(VARIABLE)              {}
+  Dimension(const Dimension& other);
   ~Dimension() {}
 
   unsigned int getSize() const;
   operator std::string() const;
+
+  bool operator==(const Dimension &other) const;
+  bool operator!=(const Dimension &other) const { return !(*this == other); }
 
  private:
   Type type;
@@ -90,6 +98,13 @@ class Shape {
   unsigned int getOrder() const { return dimensions.size(); }
   unsigned int getSize() const;
 
+  std::vector<Dimension *const>::iterator begin() const {
+    return dimensions.begin();
+  }
+  std::vector<Dimension *const>::iterator end() const {
+    return dimensions.end();
+  }
+
   operator std::string() const;
 
  private:
@@ -100,13 +115,14 @@ class Shape {
 class NDTensorType : public TensorType {
  public:
   NDTensorType(Shape *blockShape, TensorType *blockType)
-  : blockShape(blockShape), blockType(blockType) {};
+      : blockShape(blockShape), blockType(blockType) {};
   virtual ~NDTensorType();
 
   virtual unsigned int getOrder() const { return blockShape->getOrder(); }
   virtual unsigned int getSize() const;
+  virtual bool isScalar() const { return false; }
 
-  virtual std::unique_ptr<std::list<Shape*> > getShape() const;
+  virtual std::unique_ptr<std::list<Shape*> > getShapes() const;
   virtual ComponentType getComponentType() const;
 
   virtual operator std::string() const;

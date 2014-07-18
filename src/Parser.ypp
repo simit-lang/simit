@@ -216,12 +216,25 @@ stmt
   | expr_stmt
 
 const_stmt
-  : "const" IDENT ":" type "=" literal ";" {
-    // TODO: Perform typecheck
+  : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
+    // If $type is a matrix whose outer dimension is 1, and $tensor_literal is
+    // a vector then we cast $tensor_literal to a 1xn matrix
+    if ($tensor_type->getOrder() == 2 && $tensor_literal->getOrder() == 1) {
+      $tensor_literal->cast($tensor_type);
+    }
+    else {
+      delete $tensor_type;
+    }
 
-    $literal->setName($IDENT);
+    // Typecheck: $type and $tensor_literal->getType() must be equivalent.
+    // TODO:
+
+    $tensor_literal->setName($IDENT);
     free((void*)$IDENT);
-    delete $type;
+  }
+  | "const" IDENT ":" element_type "=" element_literal ";" {
+    free((void*)$IDENT);
+    delete $element_type;
   }
 
 if_stmt
@@ -501,7 +514,11 @@ scalar_type
 %type <int_values> int_dense_vector_literal;
 
 literal
-  : tensor_literal
+  : element_literal
+  | tensor_literal
+
+element_literal
+  :
 
 tensor_literal
   : dense_tensor_literal
@@ -532,7 +549,13 @@ dense_tensor_literal
   }
 
 float_dense_tensor_literal
-  : float_dense_matrix_literal
+  : float_dense_matrix_literal {
+    // If the matrix has only one column then we discard that dimension and
+    // treat it as a vector.
+    if ($1->dimSizes[$1->dimSizes.size()-1] == 1) {
+      $1->dimSizes.pop_back();
+    }
+  }
   | float_dense_ndtensor_literal
 
 float_dense_ndtensor_literal
@@ -580,7 +603,13 @@ float_dense_vector_literal
   }
 
 int_dense_tensor_literal
-  : int_dense_matrix_literal
+  : int_dense_matrix_literal {
+    // If the matrix has only one column then we discard that dimension and
+    // treat it as a vector.
+    if ($1->dimSizes[$1->dimSizes.size()-1] == 1) {
+      $1->dimSizes.pop_back();
+    }
+  }
   | int_dense_ndtensor_literal
 
 int_dense_ndtensor_literal

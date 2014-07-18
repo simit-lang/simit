@@ -1,21 +1,25 @@
-%%% int constants
-const s    : float = 1;
-const s2   : float = 1e3;
-const vec3 : Tensor[3](int)     =  [0, 1, 2];
-const mat2 : Tensor[2,2](int)   =  [0, 1; 2, 3];
-const ten2 : Tensor[2,2,2](int) = [[0, 1; 2, 3], [4, 5; 6, 7]];
-
-const vec1 : Tensor[1](int)     =  [0];
-const mat1 : Tensor[1,1](int)   =  [1];
-const ten1 : Tensor[1,1,1](int) = [[1]];
-
 %%% float constants 
-const s    : float = 0.01;
-const s2   : float = 1.0e3;
-const vec3 : Tensor[3](float)     =  [0.0, 1.0, 2.0];
-const mat2 : Tensor[2,2](float)   =  [0.0, 1.0; 2.0, 3.0];
-const ten2 : Tensor[2,2,2](float) = [[0.0, 1.0; 2.0, 3.0], [4.0, 5.0; 6.0, 7.0]];
+const s      : float = 0.011;
+const s2     : float = 1.0e3;
+const vec3   : Tensor[3](float)     =  [0.0, 1.0, 2.0];
+const mat22  : Tensor[2,2](float)   =  [0.0, 1.0; 2.0, 3.0];
+const ten222 : Tensor[2,2,2](float) = [[0.0, 1.0; 2.0, 3.0], [4.0, 5.0; 6.0, 7.0]];
 
-const vec1 : Tensor[1](int)     =  [1.0];
-const mat1 : Tensor[1,1](int)   =  [1.0];
-const ten1 : Tensor[1,1,1](int) = [[1.0]];
+const vec1   : Tensor[1](float)     =  [1.0];
+const mat11  : Tensor[1,1](float)   =  [1.0];
+const mat12  : Tensor[1,2](float)   =  [2.0, 3.0];
+const mat21  : Tensor[2,1](float)   =  [2.0; 3.0];
+const ten111 : Tensor[1,1,1](float) = [[1.0]];
+
+%%% int constants
+const s      : int = 11;
+const s2     : int = 1e3;
+const vec3   : Tensor[3](int)     =  [0, 1, 2];
+const mat22  : Tensor[2,2](int)   =  [0, 1; 2, 3];
+const ten222 : Tensor[2,2,2](int) = [[0, 1; 2, 3], [4, 5; 6, 7]];
+
+const vec1   : Tensor[1](int)     =  [1];
+const mat11  : Tensor[1,1](int)   =  [1];
+const mat12  : Tensor[1,2](int)   =  [2, 3];
+const mat21  : Tensor[2,1](int)   =  [2; 3];
+const ten111 : Tensor[1,1,1](int) = [[1]];

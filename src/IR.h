@@ -1,11 +1,12 @@
 #ifndef SIMIT_IR_H
 #define SIMIT_IR_H
 
+#include <assert.h>
 #include <string>
 
-namespace simit {
+#include "Types.h"
 
-class TensorType;
+namespace simit {
 
 class IRNode {
  public:
@@ -26,29 +27,36 @@ class Value : public IRNode {
  public:
   Value() {}
   virtual ~Value() {}
+
+  virtual Type *getType() = 0;
 };
 
 
 class Tensor : public Value {
  public:
-  Tensor(const TensorType *type) : type(type) {}
+  Tensor(TensorType *type) : type(type) {}
   virtual ~Tensor();
 
+  virtual unsigned int getOrder() { return type->getOrder(); };
+  virtual Type *getType() { return type; };
+
  protected:
-  const TensorType *type;
+  TensorType *type;
 };
 
 
 class LiteralTensor : public Tensor {
  public:
-  LiteralTensor(const TensorType *type) : Tensor(type) {}
+  LiteralTensor(TensorType *type) : Tensor(type) {}
   virtual ~LiteralTensor() {}
+
+  void cast(TensorType *type);
 };
 
 
 class DenseLiteralTensor : public LiteralTensor {
  public:
-  DenseLiteralTensor(const TensorType *type, void *data);
+  DenseLiteralTensor(TensorType *type, void *data);
   virtual ~DenseLiteralTensor();
 
   virtual operator std::string() const;
