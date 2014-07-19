@@ -5,21 +5,21 @@
   #include <algorithm>
 
   #include "Logger.h"
-  #include "Program.h"
   #include "Frontend.h"
   #include "Util.h"
+  #include "Errors.h"
+  #include "Test.h"
   using namespace std;
   using namespace simit;
 
   #define REPORT_ERROR(msg, loc) \
-    yyerror(&loc, symtable, program, std::string(msg).c_str())
+    yyerror(&loc, symtable, errors, tests, std::string(msg).c_str())
 }
 
 %code requires {
   #include <vector>
 
   #include "IR.h"
-  #include "Test.h"
   #include "Types.h"
 }
 
@@ -30,7 +30,8 @@
 %pure-parser
 
 %parse-param{simit::SymbolTable &symtable}
-%parse-param{simit::Program *program}
+%parse-param{std::list<std::shared_ptr<simit::Error>> &errors}
+%parse-param{std::list<std::shared_ptr<simit::Test>> &tests}
 
 %union {
   // Primitive literals
@@ -40,26 +41,23 @@
 
   // Values
   simit::Value                     *value;
-
-  // Tests
-  simit::Test                      *test;
 }
 %destructor {} <num> <fnum> <scalar_type>
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <*>
 
-%type <test> test
-
-
 %code {
   #include "Scanner.h"
-  void yyerror(YYLTYPE * loc,
-               simit::SymbolTable &symtable,
-               simit::Program *program,
-               const char *error) {
-    string errorStr = string(error) + " at " + to_string(loc->first_line) + ":" +
-                    to_string(loc->first_column);
-    program->addError(errorStr);
+  void yyerror(YYLTYPE                                  *loc,
+               simit::SymbolTable                       &symtable,
+               std::list<std::shared_ptr<simit::Error>> &errors,
+               std::list<std::shared_ptr<simit::Test>>  &tests,
+               const char                               *errorStr) {
+    errors.push_back(shared_ptr<Error>(new Error(loc->first_line,
+                                                 loc->first_column,
+                                                 loc->last_line,
+                                                 loc->last_column,
+                                                 errorStr)));
   }
 }
 
@@ -100,7 +98,7 @@
 %token ELSE      "else"
 %token BLOCKEND  "end"
 %token RETURN    "return"
-%token TEST
+%token TEST      "test"
 
 %token RARROW    "->"
 %token LP        "("
@@ -146,9 +144,7 @@ program_element
   | function
   | stmt
   | extern
-  | test {
-    program->addTest($1);
-  }
+  | test
 
 // Externs
 extern
@@ -584,9 +580,9 @@ float_dense_ndtensor_literal
     $$->addDimension();
   }
   | float_dense_ndtensor_literal "," "[" float_dense_matrix_literal "]" {
-    string errors;
-    if(!$1->dimensionsMatch(*$4, &errors)) {
-      REPORT_ERROR(errors, @2);
+    string errorStr;
+    if(!$1->dimensionsMatch(*$4, &errorStr)) {
+      REPORT_ERROR(errorStr, @2);
       delete $1;
       delete $4;
       YYERROR;
@@ -602,9 +598,9 @@ float_dense_matrix_literal
     $$->addDimension();
   }
   | float_dense_matrix_literal ";" float_dense_vector_literal {
-    string errors;
-    if(!$1->dimensionsMatch(*$3, &errors)) {
-      REPORT_ERROR(errors, @2);
+    string errorStr;
+    if(!$1->dimensionsMatch(*$3, &errorStr)) {
+      REPORT_ERROR(errorStr, @2);
       delete $1;
       delete $3;
       YYERROR;
@@ -641,9 +637,9 @@ int_dense_ndtensor_literal
     $$->addDimension();
   }
   | int_dense_ndtensor_literal "," "[" int_dense_matrix_literal "]" {
-    string errors;
-    if(!$1->dimensionsMatch(*$4, &errors)) {
-      REPORT_ERROR(errors, @2);
+    string errorStr;
+    if(!$1->dimensionsMatch(*$4, &errorStr)) {
+      REPORT_ERROR(errorStr, @2);
       YYERROR;
     }
 
@@ -658,9 +654,9 @@ int_dense_matrix_literal
     $$->addDimension();
   }
   | int_dense_matrix_literal ";" int_dense_vector_literal {
-    string errors;
-    if(!$1->dimensionsMatch(*$3, &errors)) {
-      REPORT_ERROR(errors, @2);
+    string errorStr;
+    if(!$1->dimensionsMatch(*$3, &errorStr)) {
+      REPORT_ERROR(errorStr, @2);
       YYERROR;
     }
 
@@ -690,7 +686,7 @@ scalar_literal
 // Tests
 test
   : TEST test_stmt_block {
-    $$ = new simit::Test("MyTest");
+    tests.push_back(shared_ptr<Test>(new simit::Test("MyTest")));
   }
 
 test_stmt_block

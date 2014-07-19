@@ -9,22 +9,22 @@ end
 
 %%% if-else
 func f(p : int) -> (r : int)
-	if p == 0
-		r = 0;
-	else
-		r = 42;
-	end
+  if p == 0
+    r = 0;
+  else
+    r = 42;
+  end
 end
 
 %%% if-elif-else
 func f(p : int) -> (r : int)
-	if p == 0
-		r = 0;
-	elif p == 1
-		r = 1;
-	elif p == 2
-		r = 2;
-	else
-		r = 42;
-	end
+  if p == 0
+    r = 0;
+  elif p == 1
+    r = 1;
+  elif p == 2
+    r = 2;
+  else
+    r = 42;
+  end
 end

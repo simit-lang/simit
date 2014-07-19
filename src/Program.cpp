@@ -3,44 +3,36 @@
 #include "Logger.h"
 #include "IR.h"
 #include "Test.h"
+#include "Util.h"
+#include "Errors.h"
 
 using namespace simit;
 using namespace std;
 
+
+/* Program */
 Program::Program() : frontend(new Frontend()) {}
 
 Program::~Program() {
   delete frontend;
-  for (vector<Test*>::iterator it = tests.begin();
-      it != tests.end(); ++it) {
-    delete *it;
-  }
-}
-
-void output_errors(string errors) {
-  cerr << "Errors: " << errors << endl;
 }
 
 int Program::loadString(string programString) {
-  return frontend->parseString(programString, this);
+  return frontend->parseString(programString);
 }
 
 int Program::loadFile(std::string filename) {
-  return frontend->parseFile(filename, this);
+  return frontend->parseFile(filename);
 }
 
-string Program::errors() {
-  return errorString;
+string Program::getErrorString() {
+  return util::join(frontend->getErrors(), "\n");
+}
+
+std::list<std::shared_ptr<simit::Error>> Program::getErrors() {
+  return frontend->getErrors();
 }
 
 int Program::compile() {
   return 0;
-}
-
-void Program::addError(string errors) {
-  errorString += errors;
-}
-
-void Program::addTest(Test *test) {
-  tests.push_back(test);
 }

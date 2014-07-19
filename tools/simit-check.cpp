@@ -21,7 +21,7 @@ int main(int argc, const char* argv[]) {
   Program program;
   if (program.loadFile(filename) != 0) {
     cerr << "Error: Could not parse program" << endl;
-    cerr << program.errors() << endl;
+    cerr << program.getErrorString() << endl;
     return 3;
   }
 

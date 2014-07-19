@@ -22,32 +22,26 @@ IRNode *&SymbolTable::operator[](const std::string &name) {
       return scope[name];
     }
   }
-  cout << "Adding symbol: " << name << endl;
   return scopes.front()[name];
 }
 
 
 /* Frontend */
-extern FILE *yyin;
-int yyparse(simit::Program *program);
-struct yy_buffer_state *yy_scan_string(const char *);
-int yylex_destroy();
-
 Frontend::Frontend() {
 }
 
 Frontend::~Frontend() {
 }
 
-int Frontend::parseString(string programString, Program *program) {
-  log("Program: ");
+int Frontend::parseString(string programString) {
+  log("Parsing program: ");
   logger.indent();
   log(programString);
   logger.dedent();
 
   struct yy_buffer_state *bufferState;
   bufferState = yy_scan_string(programString.c_str());
-  int status = yyparse(symbolTable, program);
+  int status = yyparse(symbolTable, errors, tests);
   yylex_destroy();
 
   if (status == 0) {
@@ -60,7 +54,7 @@ int Frontend::parseString(string programString, Program *program) {
   }
 }
 
-int Frontend::parseFile(string filename, Program *program) {
+int Frontend::parseFile(string filename) {
   log("Program: ");
   logger.indent();
   string line;
@@ -76,7 +70,7 @@ int Frontend::parseFile(string filename, Program *program) {
   logger.dedent();
 
   yyin = fopen(filename.c_str(), "r");
-  int status = yyparse(symbolTable, program);
+  int status = yyparse(symbolTable, errors, tests);
   fclose(yyin);
   yylex_destroy();
 

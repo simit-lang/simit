@@ -1,22 +1,31 @@
 #include "gtest/gtest.h"
-#include <iostream>
-#include <fstream>
-#include "Program.h"
-#include "Logger.h"
+
 #include <dirent.h>
 #include <errno.h>
+#include <iostream>
+#include <fstream>
+
+#include "Program.h"
+#include "Errors.h"
+#include "Logger.h"
+#include "Util.h"
+
 using namespace simit;
 using namespace util;
+using namespace testing;
 using namespace std;
 
 string indent(string str, int num) {
   std::istringstream ss(str);
-  string indent(num*2, ' ');
+  string indent(num, ' ');
   string strIndented;
   string line;
 
+  if (std::getline(ss, line)) {
+    strIndented += indent + line;
+  }
   while (std::getline(ss, line)) {
-    strIndented += indent + line + "\n";
+    strIndented += "\n" + indent + line;
   }
   return strIndented;
 }
@@ -25,10 +34,14 @@ string indent(string str, int num) {
 class ProgramTestParam {
 public:
   string name;
+  string path;
   string source;
+  unsigned int line;
+
+  bool failedIO = false;
 
   operator std::string() const {
-    return name;
+    return name + path + ":" + to_string(line);
   };
 
   friend ostream &operator<<(ostream &out, const ProgramTestParam &param) {
@@ -36,22 +49,25 @@ public:
   }
 };
 
-class ProgramFileTest : public testing::TestWithParam<ProgramTestParam> {};
+class simfile : public TestWithParam<ProgramTestParam> {};
 
-std::vector<std::string> split(const string &str, const string &delim) {
+std::vector<std::string> split(const string &str, const string &delim,
+                               bool keepDelim = false) {
   std::vector<std::string> results;
   size_t prev = 0;
   size_t next = 0;
 
   while ((next = str.find(delim, prev)) != std::string::npos) {
     if (next - prev != 0) {
-      results.push_back(str.substr(prev, next - prev));
+      string substr = ((keepDelim) ? delim : "") + str.substr(prev, next-prev);
+      results.push_back(substr);
     }
-    prev = next + 3;
+    prev = next + delim.size();
   }
 
   if (prev < str.size()) {
-    results.push_back(str.substr(prev));
+    string substr = ((keepDelim) ? delim : "") + str.substr(prev);
+    results.push_back(substr);
   }
 
   return results;
@@ -68,16 +84,80 @@ std::string trim(const string &str, const string &whitespace = " \t\n") {
   return str.substr(strBegin, strRange);
 }
 
-vector<ProgramTestParam> readTestsFromDisk(const std::string &dirname) {
+std::string loadText(const std::string &filepath) {
+  ifstream ifs(filepath);
+  return string((std::istreambuf_iterator<char>(ifs)),
+                (std::istreambuf_iterator<char>()));
+}
+
+vector<ProgramTestParam> readTestsFromFile(const std::string &dirpath,
+                                      const std::string &filename) {
+  string filepath = dirpath + "/" + filename;
+  string source = loadText(filepath);
+
+  vector<ProgramTestParam> testParams;
+  // Split the source into one source code for each program
+
+  const string testDelim = "%%%";
+  std::vector<std::string> programs;
+  if (source.substr(0, testDelim.size()) == testDelim) {
+    programs = split(source, testDelim, true);
+  }
+  else {
+    programs.push_back(source);
+  }
+
+  string testSuiteName = filename;
+  testSuiteName.erase(testSuiteName.end()-4, testSuiteName.end());
+
+  unsigned int line = 1;
+  for (uint i=0; i<programs.size(); i++) {
+    ProgramTestParam testParam;
+    testParam.path = filepath;
+    testParam.line = line;
+
+    std::istringstream ss(programs[i]);
+    string header;
+    if (!std::getline(ss, header)) {
+      testParam.name = filename;
+      testParam.failedIO = true;
+      testParams.push_back(testParam);
+      continue;
+    }
+
+    if (header.substr(0, testDelim.size()) == testDelim) {
+      header.erase(header.begin(), header.begin()+3);
+      if (header[0] == '-') {
+        continue;
+      }
+      testParam.name = testSuiteName + "::" + trim(header) + "  ";
+    }
+    else {
+      testParam.name = testSuiteName + "  ";
+    }
+
+    ss.str(programs[i]);
+    ss.clear();
+
+    testParam.source = string((std::istreambuf_iterator<char>(ss)),
+                              (std::istreambuf_iterator<char>()));
+    testParams.push_back(testParam);
+
+    line += std::count(testParam.source.begin(), testParam.source.end(), '\n');
+  }
+  return testParams;
+}
+
+vector<ProgramTestParam> readTestsFromDir(const std::string &dirpath) {
   vector<ProgramTestParam> testParams;
   DIR *dir;
   struct dirent *ent;
   struct stat st;
-  dir = opendir(dirname.c_str());
+  dir = opendir(dirpath.c_str());
   while ((ent = readdir(dir)) != NULL) {
-    const string fname = ent->d_name;
-    const string fpath = dirname + "/" + fname;
-    if (fname[0] == '.') {
+    const string filename = ent->d_name;
+    const string fpath = dirpath + "/" + filename;
+    if (filename[0] == '.') {
       continue;
     }
     if (stat(fpath.c_str(), &st) == -1) {
@@ -87,45 +167,45 @@ vector<ProgramTestParam> readTestsFromDisk(const std::string &dirname) {
       continue;
     }
 
-    std::ifstream ifs(fpath);
-    std::string source((std::istreambuf_iterator<char>(ifs)),
-                       (std::istreambuf_iterator<char>()   ) );
-
-    // Split the source into one source code for each program
-    std::vector<std::string> programs = split(source, "%%%");
-    for (uint i=0; i<programs.size(); i++) {
-      std::istringstream ss(programs[i]);
-      string header;
-      if (!std::getline(ss, header)) {
-        continue;
-      }
-      if (header[0] == '-') {
-        continue;
-      }
-
-      ProgramTestParam testParam;
-      testParam.name = fname + "::" + trim(header);
-      testParam.source = trim(string((std::istreambuf_iterator<char>(ss)),
-                                (std::istreambuf_iterator<char>())));
-      testParams.push_back(testParam);
-    }
+    auto fileTestParams = readTestsFromFile(dirpath, filename);
+    testParams.insert(testParams.end(),
+                      fileTestParams.begin(), fileTestParams.end());
   }
   closedir(dir);
   return testParams;
 }
 
-TEST_P(ProgramFileTest, inputFiles) {
-  log(GetParam().name);
-  logIndent();
+TEST_P(simfile, check) {
+  ASSERT_FALSE(GetParam().failedIO) << "failed to read file " + GetParam().path;
   Program program;
-  int status = program.loadString(GetParam().source);
-  EXPECT_EQ(0, status);
-  if (status != 0) {
-    cerr << program.errors() << endl;
+  if (program.loadString(GetParam().source) != 0) {
+    for (auto error : program.getErrors()) {
+      string errorFile = GetParam().path;
+      unsigned int errorLine = GetParam().line + error->getFirstLine() - 1;
+      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
+    }
   }
-  log();
-  logDedent();
 }
 
-INSTANTIATE_TEST_CASE_P(, ProgramFileTest,
-                        testing::ValuesIn(readTestsFromDisk(TEST_INPUT_DIR)));
+#define TEST_SIMTEST_FILE(path, name)                                         \
+  INSTANTIATE_TEST_CASE_P(name, simfile,                                      \
+                          ValuesIn(readTestsFromFile(path, string(#name)+".sim")));
+
+
+/* Examples */
+INSTANTIATE_TEST_CASE_P(examples, simfile,
+                        testing::ValuesIn(readTestsFromDir(EXAMPLES_DIR)));
+
+
+/* Tests */
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, blas0);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, blas1);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, blas2);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, blas3);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, index_notation);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, function_headers);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, objects);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, variables);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, map);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, controlflow);
+TEST_SIMTEST_FILE(TEST_INPUT_DIR, misc);

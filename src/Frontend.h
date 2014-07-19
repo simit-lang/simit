@@ -4,15 +4,18 @@
 #include <list>
 #include <map>
 #include <string>
+//#include <Program.h>
 
-#include <iostream>
-using namespace std;
+struct YYLTYPE;
 
 namespace simit {
 
-class Program;
 class IRNode;
+class Test;
+class Error;
 
+/** Keeps track of symbols and their associated IR nodes across a stack of
+  * scopes. */
 class SymbolTable {
  public:
   typedef std::map<std::string, IRNode*> SymbolMap;
@@ -26,7 +29,7 @@ class SymbolTable {
   /** Remove the top symbol scope. */
   void unscope() { scopes.pop_front(); }
 
-  /** Adds a symbol with the name of the irNode pointing at the irNode */
+  /** Adds a symbol with the name of the irNode pointing at the irNode. */
   void addNode(IRNode *irNode);
 
   /** Return the first symbol first match or add the symbol to the top scope. */
@@ -42,13 +45,20 @@ class Frontend {
   Frontend();
   ~Frontend();
 
-  int parseString(std::string programString, Program *program);
-  int parseFile(std::string filename, Program *program);
+  int parseString(std::string programString);
+  int parseFile(std::string filename);
+
+  std::list<std::shared_ptr<simit::Error>> getErrors() { return errors; }
+  std::list<std::shared_ptr<simit::Test>> getTests() { return tests; }
 
  private:
   SymbolTable symbolTable;
+
+  std::list<std::shared_ptr<Error>> errors;
+  std::list<std::shared_ptr<simit::Test>> tests;
 };
 
 }
 
 #endif
+

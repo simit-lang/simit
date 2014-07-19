@@ -2,14 +2,15 @@
 #define SIMIT_PROGRAM_H
 
 #include <string>
-#include <vector>
 #include <set>
+#include <list>
 
 namespace simit {
 
 class Frontend;
 class IRNode;
 class Test;
+class Error;
 
 class Program {
  public:
@@ -18,20 +19,15 @@ class Program {
 
   int loadString(std::string programString);
   int loadFile(std::string filename);
-  std::string errors();
+
+  std::string getErrorString();
+  std::list<std::shared_ptr<simit::Error>> getErrors();
 
   int compile();
-
-  void addError(std::string errors);
-  void addTest(simit::Test *test);
-
+  
  private:
   Frontend *frontend;
-
   std::set<IRNode*> IRNodes;
-
-  std::string errorString;
-  std::vector<simit::Test*> tests;
 };
 
 }

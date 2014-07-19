@@ -45,7 +45,6 @@ extern int yydebug;
   #include <vector>
 
   #include "IR.h"
-  #include "Test.h"
   #include "Types.h"
 
 
@@ -165,9 +164,6 @@ union YYSTYPE
   // Values
   simit::Value                     *value;
 
-  // Tests
-  simit::Test                      *test;
-
 
   simit::Type                      *type;
   simit::ElementType               *element_type;
@@ -206,6 +202,6 @@ struct YYLTYPE
 
 
 
-int yyparse (simit::SymbolTable &symtable, simit::Program *program);
+int yyparse (simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Error>> &errors, std::list<std::shared_ptr<simit::Test>> &tests);
 
 #endif /* !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED  */
