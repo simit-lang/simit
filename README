@@ -1,19 +1,13 @@
 Simit is a programming language designed to make it easier to write
 high-performance code to simulate sparse systems.
 
-DEPENDENCIES:
-============
-- Cmake      2.8.3+  (http://www.cmake.org)
-- GNU Bison  3.0.0+  (http://www.gnu.org/software/bison/)
-- Flex       2.5+    (http://flex.sourceforge.net)
-- googletest 1.7+    (https://code.google.com/p/googletest/) OR
-  SVN                (https://subversion.apache.org) 
-
 BUILDING SIMIT:
 ===============
-To build Simit you must first install Cmake, GNU Bison and Flex.
+To build Simit you must install:
+- Cmake 2.8.3+  (http://www.cmake.org)
+- SVN   1.5+    (https://subversion.apache.org)
 
-The following steps performs an out-of-tree build:
+To perform an out-of-tree build do:
   cd <simit-directory>
   mkdir build
   cd build
@@ -21,11 +15,11 @@ The following steps performs an out-of-tree build:
   make -j4
 
 In it's default mode the build system checks out googletest using
-SVN on each build.  To avoid this you can download googletest
-yourself, build it, and set the GTEST_ROOT environment variable
-to the googletest root directory.  When cmake is run it looks
-for this environment variable and uses this version of googletest
-instead of downloading it.
+SVN on each build. To avoid this you can download googletest 1.7+
+from https://code.google.com/p/googletest/, build it, and set the
+GTEST_ROOT environment variable to the googletest root directory.
+When cmake is run it looks for this environment variable and uses
+this version of googletest instead of downloading it.
 
 To run the test suite do:
   cd <simit-directory>
@@ -44,3 +38,12 @@ To build Simit's documentation do:
 
 This will create a doc folder containing HTML documentation. Open
 doc/index.html in your browser.
+
+FOR DEVELOPERS:
+===============
+In addition to CMake developers might want to install:
+- Flex       2.5+    (http://flex.sourceforge.net)
+- GNU Bison  3.0.0+  (http://www.gnu.org/software/bison/)
+
+Flex and Bison are used to generate the Simit scanner and parser
+and are needed if you want to change these.
