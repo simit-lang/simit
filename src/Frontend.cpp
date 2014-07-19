@@ -77,8 +77,8 @@ int Frontend::parseFile(string filename, Program *program) {
 
   yyin = fopen(filename.c_str(), "r");
   int status = yyparse(symbolTable, program);
+  fclose(yyin);
   yylex_destroy();
-  //fclose(yyin);
 
   if (status == 0) {
     log("Parsed correctly");
