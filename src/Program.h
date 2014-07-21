@@ -4,6 +4,7 @@
 #include <string>
 #include <set>
 #include <list>
+#include <memory>
 
 namespace simit {
 
@@ -12,10 +13,9 @@ class IRNode;
 class Test;
 class Error;
 
-/** Class that represents a Simit program. You can load Simit source code using
-  * the \ref loadString and \ref loadFile, register input sets using the
-  * \ref registerSet method, and compile the program using the \ref compile
-  * method.  */
+/** A Simit program. You can load Simit source code using the \ref loadString
+  * and \ref loadFile, register input sets using the \ref registerSet method,
+  * and compile the program using the \ref compile method.  */
 class Program {
  public:
   Program();
@@ -41,7 +41,7 @@ class Program {
 
   /** Get a list of errors that occurred when trying to add code to the
     * program. */
-  std::list<std::shared_ptr<simit::Error>> getErrors();
+  std::list<simit::Error> &getErrors();
 
   /** Get a string that describes errors that occurred when trying to add code
     * to the program. */

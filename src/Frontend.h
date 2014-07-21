@@ -4,6 +4,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <memory>
 //#include <Program.h>
 
 struct YYLTYPE;
@@ -40,8 +41,8 @@ class SymbolTable {
 };
 
 
-/** This class provides the ability to convert Simit-formated strings and files
-  * to the Simit Intermediate Representation (IR).
+/** Provides facilities to convert Simit-formated strings and files to the
+  * Simit Intermediate Representation (IR).
   *
   * Strings and files can be parsed using the \ref parseString and
   * \ref parseFile methods and the resulting IR can be retrieved using the
@@ -59,13 +60,13 @@ class Frontend {
     * errors through the \ref getErrors method. */
   int parseFile(std::string filename);
 
-  std::list<std::shared_ptr<simit::Error>> getErrors() { return errors; }
-  std::list<std::shared_ptr<simit::Test>> getTests() { return tests; }
+  std::list<simit::Error> &getErrors() { return errors; }
+  std::list<simit::Test> &getTests() { return tests; }
 
  private:
   SymbolTable symbolTable;
-  std::list<std::shared_ptr<Error>> errors;
-  std::list<std::shared_ptr<simit::Test>> tests;
+  std::list<Error> errors;
+  std::list<simit::Test> tests;
 };
 
 }

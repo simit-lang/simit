@@ -202,6 +202,6 @@ struct YYLTYPE
 
 
 
-int yyparse (simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Error>> &errors, std::list<std::shared_ptr<simit::Test>> &tests);
+int yyparse (simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests);
 
 #endif /* !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED  */

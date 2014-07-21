@@ -30,8 +30,8 @@
 %pure-parser
 
 %parse-param{simit::SymbolTable &symtable}
-%parse-param{std::list<std::shared_ptr<simit::Error>> &errors}
-%parse-param{std::list<std::shared_ptr<simit::Test>> &tests}
+%parse-param{std::list<simit::Error> &errors}
+%parse-param{std::list<simit::Test> &tests}
 
 %union {
   // Primitive literals
@@ -48,12 +48,10 @@
 
 %code {
   #include "Scanner.h"
-  void yyerror(YYLTYPE                                  *loc,
-               simit::SymbolTable                       &symtable,
-               std::list<std::shared_ptr<simit::Error>> &errors,
-               std::list<std::shared_ptr<simit::Test>>  &tests,
-               const char                               *errorStr) {
-    errors.push_back(shared_ptr<Error>(new Error(loc->first_line,
+  void yyerror(YYLTYPE *loc, simit::SymbolTable &symtable,
+               std::list<simit::Error> &errors, std::list<simit::Test>  &tests,
+               const char *errorStr) {
+    errors.push_back(unique_ptr<Error>(new Error(loc->first_line,
                                                  loc->first_column,
                                                  loc->last_line,
                                                  loc->last_column,
@@ -686,7 +684,7 @@ scalar_literal
 // Tests
 test
   : TEST test_stmt_block {
-    tests.push_back(shared_ptr<Test>(new simit::Test("MyTest")));
+    tests.push_back(unique_ptr<Test>(new simit::Test("MyTest")));
   }
 
 test_stmt_block

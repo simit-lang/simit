@@ -18,6 +18,10 @@ class Error {
   const std::string &getMsg() { return msg; }
 
   operator std::string() const;
+  friend std::ostream &operator<<(std::ostream &os, const Error &obj) {
+    return os << std::string(obj);
+  }
+
 
  private:
   int firstLine;

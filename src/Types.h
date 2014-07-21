@@ -84,7 +84,10 @@ class Dimension {
   bool operator==(const Dimension &other) const;
   bool operator!=(const Dimension &other) const { return !(*this == other); }
   operator std::string() const;
-
+  friend std::ostream &operator<<(std::ostream &os, const Dimension &obj) {
+    return os << std::string(obj);
+  }
+  
  private:
   Type type;
   union {
@@ -112,6 +115,9 @@ class Shape {
   bool operator==(const Shape &other) const;
   bool operator!=(const Shape &other) const { return !(*this == other); }
   operator std::string() const;
+  friend std::ostream &operator<<(std::ostream &os, const Shape &obj) {
+    return os << std::string(obj);
+  }
 
  private:
   std::vector<Dimension*> dimensions;

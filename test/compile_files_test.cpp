@@ -179,9 +179,9 @@ TEST_P(simfile, check) {
   ASSERT_FALSE(GetParam().failedIO) << "failed to read file " + GetParam().path;
   Program program;
   if (program.loadString(GetParam().source) != 0) {
-    for (auto error : program.getErrors()) {
+    for (auto &error : program.getErrors()) {
       string errorFile = GetParam().path;
-      unsigned int errorLine = GetParam().line + error->getFirstLine() - 1;
+      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
       ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
     }
   }
@@ -189,7 +189,8 @@ TEST_P(simfile, check) {
 
 #define TEST_SIMTEST_FILE(path, name)                                         \
   INSTANTIATE_TEST_CASE_P(name, simfile,                                      \
-                          ValuesIn(readTestsFromFile(path, string(#name)+".sim")));
+                          ValuesIn(readTestsFromFile(path,                    \
+                                                     string(#name)+".sim")));
 
 
 /* Examples */

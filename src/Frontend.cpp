@@ -17,7 +17,7 @@ void SymbolTable::addNode(IRNode *irNode) {
 }
 
 IRNode *&SymbolTable::operator[](const std::string &name) {
-  for (auto scope : scopes) {
+  for (auto &scope : scopes) {
     if (scope.find(name) != scope.end()) {
       return scope[name];
     }

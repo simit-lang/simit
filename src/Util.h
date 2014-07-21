@@ -8,12 +8,17 @@ namespace util {
 
 template <typename T>
 std::ostream& operator<<(std::ostream &out, const T *dim) {
-  return out << std::string(*dim);
+  return out << *dim;
 }
 
 template <typename T>
 std::ostream& operator<<(std::ostream &out, const std::shared_ptr<T> dim) {
-  return out << std::string(*dim);
+  return out << *dim;
+}
+
+template <typename T>
+std::ostream& operator<<(std::ostream &out, const std::unique_ptr<T> dim) {
+  return out << *dim;
 }
 
 template <typename Iterator>

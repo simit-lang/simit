@@ -29,7 +29,7 @@ string Program::getErrorString() {
   return util::join(frontend->getErrors(), "\n");
 }
 
-std::list<std::shared_ptr<simit::Error>> Program::getErrors() {
+std::list<simit::Error> &Program::getErrors() {
   return frontend->getErrors();
 }
 

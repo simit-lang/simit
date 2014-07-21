@@ -275,7 +275,7 @@ struct YYLTYPE
 
 
 
-int yyparse (simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Error>> &errors, std::list<std::shared_ptr<simit::Test>> &tests);
+int yyparse (simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests);
 
 #endif /* !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED  */
 
@@ -286,16 +286,12 @@ int yyparse (simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Erro
 
 
   #include "Scanner.h"
-  void yyerror(YYLTYPE                                  *loc,
-               simit::SymbolTable                       &symtable,
-               std::list<std::shared_ptr<simit::Error>> &errors,
-               std::list<std::shared_ptr<simit::Test>>  &tests,
-               const char                               *errorStr) {
-    errors.push_back(shared_ptr<Error>(new Error(loc->first_line,
-                                                 loc->first_column,
-                                                 loc->last_line,
-                                                 loc->last_column,
-                                                 errorStr)));
+  void yyerror(YYLTYPE *loc, simit::SymbolTable &symtable,
+               std::list<simit::Error> &errors, std::list<simit::Test>  &tests,
+               const char *errorStr) {
+    errors.push_back(Error(loc->first_line, loc->first_column,
+                           loc->last_line, loc->last_column,
+                           errorStr));
   }
 
 
@@ -588,20 +584,20 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   137,   137,   139,   142,   143,   144,   145,   146,   147,
-     151,   155,   161,   164,   171,   175,   177,   179,   181,   184,
-     189,   194,   197,   201,   203,   205,   207,   210,   211,   215,
-     217,   220,   221,   222,   223,   224,   227,   251,   257,   259,
-     261,   263,   265,   268,   271,   274,   275,   280,   283,   284,
-     285,   287,   288,   289,   290,   291,   292,   293,   294,   296,
-     297,   298,   299,   300,   301,   303,   304,   305,   306,   307,
-     308,   311,   314,   315,   318,   319,   324,   329,   331,   335,
-     337,   342,   344,   346,   349,   352,   355,   361,   362,   367,
-     395,   398,   403,   409,   412,   422,   425,   431,   437,   441,
-     447,   450,   454,   459,   462,   533,   534,   536,   540,   541,
-     554,   560,   568,   575,   578,   582,   596,   600,   615,   619,
-     625,   632,   635,   639,   652,   656,   669,   673,   679,   682,
-     688,   692,   694,   697,   698
+       0,   135,   135,   137,   140,   141,   142,   143,   144,   145,
+     149,   153,   159,   162,   169,   173,   175,   177,   179,   182,
+     187,   192,   195,   199,   201,   203,   205,   208,   209,   213,
+     215,   218,   219,   220,   221,   222,   225,   249,   255,   257,
+     259,   261,   263,   266,   269,   272,   273,   278,   281,   282,
+     283,   285,   286,   287,   288,   289,   290,   291,   292,   294,
+     295,   296,   297,   298,   299,   301,   302,   303,   304,   305,
+     306,   309,   312,   313,   316,   317,   322,   327,   329,   333,
+     335,   340,   342,   344,   347,   350,   353,   359,   360,   365,
+     393,   396,   401,   407,   410,   420,   423,   429,   435,   439,
+     445,   448,   452,   457,   460,   531,   532,   534,   538,   539,
+     552,   558,   566,   573,   576,   580,   594,   598,   613,   617,
+     623,   630,   633,   637,   650,   654,   667,   671,   677,   680,
+     686,   690,   692,   695,   696
 };
 #endif
 
@@ -1040,7 +1036,7 @@ do {                                                                      \
 `----------------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Error>> &errors, std::list<std::shared_ptr<simit::Test>> &tests)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
 {
   FILE *yyo = yyoutput;
   YYUSE (yyo);
@@ -1063,7 +1059,7 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
 `--------------------------------*/
 
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Error>> &errors, std::list<std::shared_ptr<simit::Test>> &tests)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
 {
   YYFPRINTF (yyoutput, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
@@ -1103,7 +1099,7 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Error>> &errors, std::list<std::shared_ptr<simit::Test>> &tests)
+yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
 {
   unsigned long int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1621,7 +1617,7 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Error>> &errors, std::list<std::shared_ptr<simit::Test>> &tests)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
 {
   YYUSE (yyvaluep);
   YYUSE (yylocationp);
@@ -1794,7 +1790,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 `----------*/
 
 int
-yyparse (simit::SymbolTable &symtable, std::list<std::shared_ptr<simit::Error>> &errors, std::list<std::shared_ptr<simit::Test>> &tests)
+yyparse (simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
 {
 /* The lookahead symbol.  */
 int yychar;
@@ -2574,7 +2570,7 @@ yyreduce:
   case 130:
 
     {
-    tests.push_back(shared_ptr<Test>(new simit::Test("MyTest")));
+    tests.push_back(simit::Test("MyTest"));
   }
 
     break;
