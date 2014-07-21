@@ -40,12 +40,23 @@ class SymbolTable {
 };
 
 
+/** This class provides the ability to convert Simit-formated strings and files
+  * to the Simit Intermediate Representation (IR).
+  *
+  * Strings and files can be parsed using the \ref parseString and
+  * \ref parseFile methods and the resulting IR can be retrieved using the
+  * \ref getIR method. If the parse methods return an error value information
+  * about the errors can be retrieved using the getErrors method.  */
 class Frontend {
  public:
-  Frontend();
-  ~Frontend();
-
+  /** Parses, typechecks and turns a given Simit-formated string into Simit IR.
+    * The resulting IR can be retrieved through the \ref getIR method and
+    * errors through the \ref getErrors method. */
   int parseString(std::string programString);
+
+  /** Parses, typechecks and turns a given Simit-formated file into Simit IR.
+    * The resulting IR can be retrieved through the \ref getIR method and
+    * errors through the \ref getErrors method. */
   int parseFile(std::string filename);
 
   std::list<std::shared_ptr<simit::Error>> getErrors() { return errors; }
@@ -53,7 +64,6 @@ class Frontend {
 
  private:
   SymbolTable symbolTable;
-
   std::list<std::shared_ptr<Error>> errors;
   std::list<std::shared_ptr<simit::Test>> tests;
 };

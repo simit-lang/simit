@@ -27,12 +27,6 @@ IRNode *&SymbolTable::operator[](const std::string &name) {
 
 
 /* Frontend */
-Frontend::Frontend() {
-}
-
-Frontend::~Frontend() {
-}
-
 int Frontend::parseString(string programString) {
   log("Parsing program: ");
   logger.indent();

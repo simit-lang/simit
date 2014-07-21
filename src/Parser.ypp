@@ -228,8 +228,8 @@ const_stmt
     $tensor_literal->setName($IDENT);
     free((void*)$IDENT);
 
-    // If $type is a matrix whose outer dimension is 1, and $tensor_literal is
-    // a vector then we cast $tensor_literal to a 1xn matrix
+    // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
+    // $tensor_literal to a 1xn matrix.
     bool casted = false;
     if ($tensor_type->getOrder() == 2 && $tensor_literal->getOrder() == 1) {
       $tensor_literal->cast($tensor_type);
@@ -699,4 +699,3 @@ test_stmt
     delete $literal;
   }
 %%
-

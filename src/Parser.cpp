@@ -2148,8 +2148,8 @@ yyreduce:
     (yyvsp[-1].literal_tensor)->setName((yyvsp[-5].string));
     free((void*)(yyvsp[-5].string));
 
-    // If $type is a matrix whose outer dimension is 1, and $tensor_literal is
-    // a vector then we cast $tensor_literal to a 1xn matrix
+    // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
+    // $tensor_literal to a 1xn matrix.
     bool casted = false;
     if ((yyvsp[-3].tensor_type)->getOrder() == 2 && (yyvsp[-1].literal_tensor)->getOrder() == 1) {
       (yyvsp[-1].literal_tensor)->cast((yyvsp[-3].tensor_type));
@@ -2835,6 +2835,5 @@ yyreturn:
 #endif
   return yyresult;
 }
-
 
 
