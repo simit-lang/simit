@@ -51,11 +51,9 @@
   void yyerror(YYLTYPE *loc, simit::SymbolTable &symtable,
                std::list<simit::Error> &errors, std::list<simit::Test>  &tests,
                const char *errorStr) {
-    errors.push_back(unique_ptr<Error>(new Error(loc->first_line,
-                                                 loc->first_column,
-                                                 loc->last_line,
-                                                 loc->last_column,
-                                                 errorStr)));
+    errors.push_back(Error(loc->first_line, loc->first_column,
+                           loc->last_line, loc->last_column,
+                           errorStr));
   }
 }
 
@@ -225,6 +223,8 @@ const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     $tensor_literal->setName($IDENT);
     free((void*)$IDENT);
+
+    cout << *$tensor_type << endl;
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
@@ -684,7 +684,7 @@ scalar_literal
 // Tests
 test
   : TEST test_stmt_block {
-    tests.push_back(unique_ptr<Test>(new simit::Test("MyTest")));
+    tests.push_back(simit::Test("MyTest"));
   }
 
 test_stmt_block

@@ -14,7 +14,7 @@ Error::~Error() {
 
 }
 
-Error::operator std::string() const {
+std::string Error::toString() const {
   string lineStr   = (firstLine == lastLine)
                      ? to_string(firstLine)
                      : to_string(firstLine) + "-" + to_string(lastLine);

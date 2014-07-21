@@ -21,7 +21,7 @@ bool ElementType::operator==(const Type& other) {
   return false;  // TODO: Fix this
 }
 
-ElementType::operator std::string() const {
+std::string ElementType::toString() const {
   return "ElementType";
 }
 
@@ -59,10 +59,6 @@ unsigned int ScalarType::getSize() const {
   return 1;
 }
 
-unique_ptr<std::list<Shape*> > ScalarType::getShapes() const {
-  return unique_ptr<list<Shape*> >(new list<Shape*>);
-}
-
 TensorType::ComponentType ScalarType::getComponentType() const {
   return componentType;
 }
@@ -72,7 +68,7 @@ bool ScalarType::operator==(const Type& other) {
   return otherPtr != NULL && componentType == otherPtr->componentType;
 }
 
-ScalarType::operator std::string() const {
+std::string ScalarType::toString() const {
   switch (componentType) {
     case INT:
       return "int";
@@ -185,12 +181,6 @@ unsigned int NDTensorType::getSize() const {
   return blockShape->getSize() * blockType->getSize();
 }
 
-unique_ptr<std::list<Shape*> > NDTensorType::getShapes() const {
-  auto subShape = blockType->getShapes();
-  subShape->push_front(blockShape);
-  return subShape;
-}
-
 TensorType::ComponentType NDTensorType::getComponentType() const {
   return blockType->getComponentType();
 }
@@ -202,8 +192,9 @@ bool NDTensorType::operator==(const Type& other) {
           *blockType == *otherPtr->blockType);
 }
 
-NDTensorType::operator std::string() const {
-  string componentTypeStr = componentTypeString(getComponentType());
-  string componentShapeStr = util::join(*getShapes(), "");
-  return string("Tensor") + componentShapeStr + "(" + componentTypeStr + ")";
+std::string NDTensorType::toString() const {
+  string blockTypeStr = (dynamic_cast<ScalarType*>(blockType) != NULL)
+                      ? "(" + blockType->toString() + ")"
+                      : blockType->toString().substr(string().size());
+  return string("Tensor") + string(*blockShape) + blockTypeStr;
 }

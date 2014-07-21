@@ -18,7 +18,11 @@ class Type {
 
   virtual bool operator==(const Type& other) = 0;
   bool operator!=(const Type& other) { return !(*this == other); }
-  virtual operator std::string() const = 0;
+
+  virtual std::string toString() const = 0;
+  friend std::ostream &operator<<(std::ostream &os, const Type &type) {
+    return os << type.toString();
+  }
 };
 
 
@@ -28,7 +32,7 @@ class ElementType : public Type {
   virtual ~ElementType();
 
   virtual bool operator==(const Type& other);
-  virtual operator std::string() const;
+  virtual std::string toString() const;
 };
 
 
@@ -45,7 +49,6 @@ class TensorType :public Type {
   virtual unsigned int getSize() const = 0;
   virtual bool isScalar() const = 0;
 
-  virtual std::unique_ptr<std::list<Shape*> > getShapes() const = 0;
   virtual ComponentType getComponentType() const = 0;
 };
 
@@ -59,11 +62,10 @@ class ScalarType : public TensorType {
   virtual unsigned int getSize() const;
   virtual bool isScalar() const { return true; }
 
-  virtual std::unique_ptr<std::list<Shape*> > getShapes() const;
   virtual ComponentType getComponentType() const;
 
   virtual bool operator==(const Type& other);
-  virtual operator std::string() const;
+  virtual std::string toString() const;
 
  private:
   ComponentType componentType;
@@ -134,11 +136,10 @@ class NDTensorType : public TensorType {
   virtual unsigned int getSize() const;
   virtual bool isScalar() const { return false; }
 
-  virtual std::unique_ptr<std::list<Shape*> > getShapes() const;
   virtual ComponentType getComponentType() const;
 
   virtual bool operator==(const Type& other);
-  virtual operator std::string() const;
+  virtual std::string toString() const;
 
  private:
   Shape      *blockShape;

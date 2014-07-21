@@ -6,6 +6,13 @@
 
 namespace util {
 
+template <class T>
+std::string toString(const T &val) {
+  std::stringstream sstream;
+  sstream << val;
+  return sstream.str();
+}
+
 template <typename T>
 std::ostream& operator<<(std::ostream &out, const T *dim) {
   return out << *dim;

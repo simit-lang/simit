@@ -17,9 +17,9 @@ class Error {
   int getLastColumn() { return lastColumn; }
   const std::string &getMsg() { return msg; }
 
-  operator std::string() const;
+  std::string toString() const;
   friend std::ostream &operator<<(std::ostream &os, const Error &obj) {
-    return os << std::string(obj);
+    return os << obj.toString();
   }
 
 

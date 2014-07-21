@@ -41,7 +41,7 @@ DenseLiteralTensor::~DenseLiteralTensor() {
 DenseLiteralTensor::operator std::string() const {
   string result;
   if (name != "") {
-    result += name + " : " + string(*type);// + " = ";
+    result += name + " : " + util::toString(*type);
   }
 
   // TODO: Add nicer value printing that prints matrices and tensors

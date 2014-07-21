@@ -584,10 +584,10 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   135,   135,   137,   140,   141,   142,   143,   144,   145,
-     149,   153,   159,   162,   169,   173,   175,   177,   179,   182,
-     187,   192,   195,   199,   201,   203,   205,   208,   209,   213,
-     215,   218,   219,   220,   221,   222,   225,   249,   255,   257,
+       0,   133,   133,   135,   138,   139,   140,   141,   142,   143,
+     147,   151,   157,   160,   167,   171,   173,   175,   177,   180,
+     185,   190,   193,   197,   199,   201,   203,   206,   207,   211,
+     213,   216,   217,   218,   219,   220,   223,   249,   255,   257,
      259,   261,   263,   266,   269,   272,   273,   278,   281,   282,
      283,   285,   286,   287,   288,   289,   290,   291,   292,   294,
      295,   296,   297,   298,   299,   301,   302,   303,   304,   305,
@@ -2143,6 +2143,8 @@ yyreduce:
     {
     (yyvsp[-1].literal_tensor)->setName((yyvsp[-5].string));
     free((void*)(yyvsp[-5].string));
+
+    cout << *(yyvsp[-3].tensor_type) << endl;
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
