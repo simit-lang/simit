@@ -157,12 +157,14 @@ union YYSTYPE
 
 
   // Primitive literals
-  int                               num;
-  double                            fnum;
-  const char                       *string;
+  int          num;
+  double      fnum;
+  const char *string;
 
   // Values
-  simit::Value                     *value;
+  simit::Value  *value;
+  simit::Tensor *tensor;
+
 
 
   simit::Type                      *type;

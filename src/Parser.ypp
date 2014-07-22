@@ -35,12 +35,14 @@
 
 %union {
   // Primitive literals
-  int                               num;
-  double                            fnum;
-  const char                       *string;
+  int          num;
+  double      fnum;
+  const char *string;
 
   // Values
-  simit::Value                     *value;
+  simit::Value  *value;
+  simit::Tensor *tensor;
+
 }
 %destructor {} <num> <fnum> <scalar_type>
 %destructor { free((void*)($$)); } <string>
@@ -224,8 +226,6 @@ const_stmt
     $tensor_literal->setName($IDENT);
     free((void*)$IDENT);
 
-    cout << *$tensor_type << endl;
-
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
     bool casted = false;
@@ -274,9 +274,34 @@ expr_stmt
 
 
 // Expressions
+%type<tensor> expr;
+%destructor {} <tensor>;  // TODO: Remove this line
+
 expr
   : IDENT {
+    string ident($IDENT);
     free((void*)$IDENT);
+    cout << "Read: " << ident << endl;
+
+    IRNode *node = symtable[ident];
+
+    // Semantic check
+    if (node == NULL) {
+    // TODO: Re-introduce this code once functions and parameters work
+//      string errorStr = string("error, ") + ident + " is not defined in scope";
+//      REPORT_ERROR(errorStr, @1);
+//      YYERROR;
+      YYACCEPT;
+    }
+
+    Tensor *tensor = dynamic_cast<Tensor*>(node);
+    if (tensor == NULL) {
+      string errorStr = "error, " + ident + " is not a tensor";
+      REPORT_ERROR(errorStr, @1);
+      YYERROR;
+    }
+
+    $$ = tensor;
   }
   | FLOAT_LITERAL
   | INT_LITERAL

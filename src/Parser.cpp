@@ -230,12 +230,14 @@ union YYSTYPE
 
 
   // Primitive literals
-  int                               num;
-  double                            fnum;
-  const char                       *string;
+  int          num;
+  double      fnum;
+  const char *string;
 
   // Values
-  simit::Value                     *value;
+  simit::Value  *value;
+  simit::Tensor *tensor;
+
 
 
   simit::Type                      *type;
@@ -584,20 +586,20 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   133,   133,   135,   138,   139,   140,   141,   142,   143,
-     147,   151,   157,   160,   167,   171,   173,   175,   177,   180,
-     185,   190,   193,   197,   199,   201,   203,   206,   207,   211,
-     213,   216,   217,   218,   219,   220,   223,   249,   255,   257,
-     259,   261,   263,   266,   269,   272,   273,   278,   281,   282,
-     283,   285,   286,   287,   288,   289,   290,   291,   292,   294,
-     295,   296,   297,   298,   299,   301,   302,   303,   304,   305,
-     306,   309,   312,   313,   316,   317,   322,   327,   329,   333,
-     335,   340,   342,   344,   347,   350,   353,   359,   360,   365,
-     393,   396,   401,   407,   410,   420,   423,   429,   435,   439,
-     445,   448,   452,   457,   460,   531,   532,   534,   538,   539,
-     552,   558,   566,   573,   576,   580,   594,   598,   613,   617,
-     623,   630,   633,   637,   650,   654,   667,   671,   677,   680,
-     686,   690,   692,   695,   696
+       0,   135,   135,   137,   140,   141,   142,   143,   144,   145,
+     149,   153,   159,   162,   169,   173,   175,   177,   179,   182,
+     187,   192,   195,   199,   201,   203,   205,   208,   209,   213,
+     215,   218,   219,   220,   221,   222,   225,   249,   255,   257,
+     259,   261,   263,   266,   269,   272,   273,   281,   306,   307,
+     308,   310,   311,   312,   313,   314,   315,   316,   317,   319,
+     320,   321,   322,   323,   324,   326,   327,   328,   329,   330,
+     331,   334,   337,   338,   341,   342,   347,   352,   354,   358,
+     360,   365,   367,   369,   372,   375,   378,   384,   385,   390,
+     418,   421,   426,   432,   435,   445,   448,   454,   460,   464,
+     470,   473,   477,   482,   485,   556,   557,   559,   563,   564,
+     577,   583,   591,   598,   601,   605,   619,   623,   638,   642,
+     648,   655,   658,   662,   675,   679,   692,   696,   702,   705,
+     711,   715,   717,   720,   721
 };
 #endif
 
@@ -1655,6 +1657,12 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
         break;
 
+    case 77: /* expr  */
+
+      {}
+
+        break;
+
     case 89: /* type  */
 
       { delete ((*yyvaluep).type); }
@@ -2144,8 +2152,6 @@ yyreduce:
     (yyvsp[-1].literal_tensor)->setName((yyvsp[-5].string));
     free((void*)(yyvsp[-5].string));
 
-    cout << *(yyvsp[-3].tensor_type) << endl;
-
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
     bool casted = false;
@@ -2181,7 +2187,29 @@ yyreduce:
   case 47:
 
     {
+    string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
+    cout << "Read: " << ident << endl;
+
+    IRNode *node = symtable[ident];
+
+    // Semantic check
+    if (node == NULL) {
+    // TODO: Re-introduce this code once functions and parameters work
+//      string errorStr = string("error, ") + ident + " is not defined in scope";
+//      REPORT_ERROR(errorStr, @1);
+//      YYERROR;
+      YYACCEPT;
+    }
+
+    Tensor *tensor = dynamic_cast<Tensor*>(node);
+    if (tensor == NULL) {
+      string errorStr = "error, " + ident + " is not a tensor";
+      REPORT_ERROR(errorStr, (yylsp[0]));
+      YYERROR;
+    }
+
+    (yyval.tensor) = tensor;
   }
 
     break;
