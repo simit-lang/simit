@@ -238,19 +238,20 @@ union YYSTYPE
   const char *string;
 
   // Values
-  simit::Value  *value;
-  simit::Tensor *tensor;
+  simit::Value  *Value;
+  simit::Tensor *Tensor;
+  simit::Store  *Store;
 
 
 
-  simit::Type                      *type;
-  simit::ElementType               *element_type;
-  simit::TensorType                *tensor_type;
-  simit::TensorType::ComponentType  scalar_type;
-  std::vector<simit::Shape*>       *shapes;
-  simit::Shape                     *shape;
-  std::vector<simit::Dimension*>   *dimensions;
-  simit::Dimension                 *dimension;
+  simit::Type                      *Type;
+  simit::ElementType               *ElementType;
+  simit::TensorType                *TensorType;
+  simit::TensorType::ComponentType  ComponentType;
+  std::vector<simit::Shape*>       *Shapes;
+  simit::Shape                     *Shape;
+  std::vector<simit::Dimension*>   *Dimensions;
+  simit::Dimension                 *Dimension;
 
 
   simit::LiteralTensor      *literal_tensor;
@@ -589,20 +590,20 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   138,   138,   140,   143,   144,   145,   146,   147,   148,
-     152,   156,   162,   165,   172,   176,   178,   180,   182,   185,
-     190,   195,   198,   202,   204,   206,   208,   211,   212,   216,
-     218,   221,   222,   223,   224,   225,   228,   249,   255,   257,
-     259,   261,   263,   266,   269,   272,   273,   281,   302,   303,
-     304,   306,   307,   308,   309,   310,   311,   314,   315,   316,
-     317,   318,   319,   320,   321,   322,   323,   324,   325,   326,
-     327,   330,   331,   334,   335,   340,   345,   347,   351,   353,
-     358,   360,   362,   365,   368,   371,   377,   378,   383,   391,
-     392,   395,   396,   401,   429,   432,   437,   443,   446,   457,
-     460,   466,   472,   476,   482,   485,   489,   494,   497,   568,
-     569,   571,   575,   576,   589,   595,   603,   610,   613,   617,
-     630,   634,   648,   652,   658,   665,   668,   672,   685,   689,
-     703,   707,   713,   716,   722,   726,   728,   731,   732
+       0,   139,   139,   141,   144,   145,   146,   147,   148,   149,
+     153,   157,   163,   166,   173,   177,   179,   181,   183,   186,
+     191,   196,   199,   203,   205,   207,   209,   212,   213,   217,
+     219,   222,   223,   224,   225,   226,   229,   250,   256,   258,
+     260,   262,   264,   267,   270,   273,   274,   282,   301,   302,
+     303,   305,   306,   307,   308,   309,   310,   313,   314,   315,
+     316,   317,   318,   319,   320,   321,   322,   323,   324,   325,
+     326,   329,   330,   333,   334,   339,   344,   346,   350,   352,
+     357,   359,   361,   364,   367,   370,   376,   377,   382,   387,
+     388,   391,   392,   397,   425,   428,   433,   439,   442,   453,
+     456,   462,   468,   472,   478,   481,   485,   490,   493,   564,
+     565,   567,   571,   572,   585,   591,   599,   606,   609,   613,
+     626,   630,   644,   648,   654,   661,   664,   668,   681,   685,
+     699,   703,   709,   712,   718,   722,   724,   727,   728
 };
 #endif
 
@@ -626,10 +627,10 @@ static const char *const yytname[] =
   "stmt", "const_stmt", "if_stmt", "else_clauses", "elif_clauses",
   "return_stmt", "assign_stmt", "expr_stmt", "expr", "call_expr",
   "expr_list", "map_expr", "with", "reduce", "index_expr",
-  "reduction_indices", "reduction_index", "reduction_op", "store_expr",
-  "store_expr_list", "var_decl", "type", "element_type", "tensor_type",
-  "shapes", "shape", "dimensions", "dimension", "scalar_type", "literal",
-  "element_literal", "tensor_literal", "dense_tensor_literal",
+  "reduction_indices", "reduction_index", "reduction_op", "lhs_expr",
+  "lhs_expr_list", "var_decl", "type", "element_type", "tensor_type",
+  "shapes", "shape", "dimensions", "dimension", "component_type",
+  "literal", "element_literal", "tensor_literal", "dense_tensor_literal",
   "float_dense_tensor_literal", "float_dense_ndtensor_literal",
   "float_dense_matrix_literal", "float_dense_vector_literal",
   "int_dense_tensor_literal", "int_dense_ndtensor_literal",
@@ -652,10 +653,10 @@ static const yytype_uint16 yytoknum[] =
 };
 # endif
 
-#define YYPACT_NINF -199
+#define YYPACT_NINF -198
 
 #define yypact_value_is_default(Yystate) \
-  (!!((Yystate) == (-199)))
+  (!!((Yystate) == (-198)))
 
 #define YYTABLE_NINF -89
 
@@ -666,31 +667,31 @@ static const yytype_uint16 yytoknum[] =
      STATE-NUM.  */
 static const yytype_int16 yypact[] =
 {
-    -199,    62,  -199,  -199,  -199,  -199,    57,     6,    11,   104,
-     114,   121,   143,   224,    50,  -199,   224,  -199,   224,  -199,
-    -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,
-    -199,   254,  -199,  -199,  -199,   192,  -199,   115,  -199,   224,
-     152,     9,   131,   153,  -199,   149,   162,  -199,   302,  -199,
-     102,   278,   -18,   142,   196,   224,   224,   224,   224,  -199,
-     224,   224,   224,   224,   224,  -199,   224,   224,   224,   224,
-     224,   150,  -199,   211,   302,  -199,    -2,   152,   224,   302,
-      41,   -11,  -199,   147,  -199,   156,   179,   151,   153,  -199,
-    -199,  -199,  -199,    -1,  -199,  -199,  -199,   167,   179,   180,
-      75,  -199,   230,  -199,  -199,  -199,  -199,  -199,    66,    94,
-      94,   302,   302,   204,   204,   -18,   -18,   -18,   326,   350,
-     350,    94,    94,   182,  -199,   186,  -199,   106,  -199,   224,
-     153,  -199,  -199,  -199,   154,   164,    82,   198,   174,  -199,
-     181,   175,  -199,   195,   190,   111,     7,  -199,   188,   189,
-    -199,   302,  -199,  -199,     7,   148,     2,  -199,  -199,    89,
-     184,   199,   179,   212,   216,  -199,   224,  -199,  -199,  -199,
-      30,   197,  -199,  -199,  -199,  -199,  -199,  -199,   205,   206,
-     208,  -199,  -199,  -199,    93,  -199,   214,   244,  -199,   226,
-    -199,  -199,  -199,   123,  -199,   302,   102,  -199,  -199,   171,
-     225,   219,   220,   227,   229,   234,   222,   247,  -199,  -199,
-    -199,  -199,  -199,     2,   251,  -199,   179,  -199,  -199,   102,
-     -16,    -7,  -199,   232,   280,   281,  -199,   257,   286,   290,
-    -199,   269,    69,  -199,  -199,   280,   227,  -199,   286,   247,
-    -199,  -199,  -199,    32,    53,  -199,  -199
+    -198,    62,  -198,  -198,  -198,  -198,    57,    64,    82,    85,
+      91,   105,   135,   224,    -1,  -198,   224,  -198,   224,  -198,
+    -198,  -198,  -198,  -198,  -198,  -198,  -198,  -198,  -198,  -198,
+    -198,   254,  -198,  -198,  -198,   192,  -198,    -5,  -198,   224,
+     144,     4,   118,   153,  -198,   131,   152,  -198,   302,  -198,
+     102,   278,    83,   142,   196,   224,   224,   224,   224,  -198,
+     224,   224,   224,   224,   224,  -198,   224,   224,   224,   224,
+     224,   145,  -198,   211,   302,  -198,    -2,   172,   224,   302,
+      -7,  -198,   147,  -198,   156,   175,   148,   153,  -198,  -198,
+    -198,  -198,   125,  -198,  -198,  -198,   167,   175,   179,    75,
+    -198,   230,  -198,  -198,  -198,  -198,  -198,    48,    94,    94,
+     302,   302,   204,   204,    83,    83,    83,   326,   350,   350,
+      94,    94,   182,  -198,   183,   -11,  -198,    24,  -198,   224,
+     153,  -198,  -198,  -198,   154,   164,   -10,   186,   174,  -198,
+     176,   177,  -198,   193,   190,   111,     9,  -198,   188,   189,
+    -198,   302,  -198,  -198,     9,   116,     2,  -198,  -198,    74,
+     180,   199,   175,   203,   216,  -198,   224,  -198,  -198,  -198,
+      28,   184,  -198,  -198,  -198,  -198,  -198,  -198,   197,   198,
+     215,  -198,  -198,  -198,   114,  -198,   213,   239,  -198,   223,
+    -198,  -198,  -198,   123,  -198,   302,   102,  -198,  -198,   171,
+     225,   218,   220,   219,   229,   226,   222,   227,  -198,  -198,
+    -198,  -198,  -198,     2,   237,  -198,   175,  -198,  -198,   102,
+     -16,   -15,  -198,   253,   279,   280,  -198,   256,   283,   286,
+    -198,   255,    66,  -198,  -198,   279,   219,  -198,   283,   227,
+    -198,  -198,  -198,   -12,    31,  -198,  -198
 };
 
   /* YYDEFACT[STATE-NUM] -- Default reduction number in state STATE-NUM.
@@ -706,11 +707,11 @@ static const yytype_uint8 yydefact[] =
      134,     0,    56,    81,    81,    81,    81,    81,    81,    46,
       81,    81,    81,    81,    81,    57,    81,    81,    81,    81,
       81,    47,    86,    81,    80,    82,     0,     0,    81,    73,
-       0,    88,    90,     0,    14,     0,    17,     0,     0,    96,
-     107,   108,    99,     0,    94,    95,    97,    81,    23,     0,
-      41,   137,     0,   136,    65,    21,    30,    71,     0,    61,
-      62,    68,    66,    52,    53,    54,    55,    58,    51,    59,
-      60,    63,    64,     0,    83,     0,    92,     0,    89,    81,
+       0,    90,     0,    14,     0,    17,     0,     0,    96,   107,
+     108,    99,     0,    94,    95,    97,    81,    23,     0,    41,
+     137,     0,   136,    65,    21,    30,    71,     0,    61,    62,
+      68,    66,    52,    53,    54,    55,    58,    51,    59,    60,
+      63,    64,     0,    83,     0,    88,    92,     0,    89,    81,
        0,    16,    18,    19,     0,     0,     0,     0,     0,    20,
        0,    24,    27,    76,     0,     0,   111,    72,     0,     0,
       44,    74,    93,   111,     0,     0,     0,   100,    12,     0,
@@ -728,25 +729,25 @@ static const yytype_uint8 yydefact[] =
   /* YYPGOTO[NTERM-NUM].  */
 static const yytype_int16 yypgoto[] =
 {
-    -199,  -199,  -199,  -199,  -199,  -199,  -199,   233,  -199,  -199,
-    -199,  -199,  -199,  -199,    95,   -40,     8,  -199,  -199,  -199,
-    -199,  -199,  -199,  -199,   -13,  -199,   -15,  -199,  -199,  -199,
-    -199,  -199,  -199,   117,   -25,  -199,   -96,   185,   245,   246,
-    -199,  -199,  -199,    99,   163,  -199,   183,   178,  -199,  -199,
-    -199,  -176,   118,  -199,  -199,  -198,   107,  -199,  -199,  -199,
-    -199
+    -198,  -198,  -198,  -198,  -198,  -198,  -198,   233,  -198,  -198,
+    -198,  -198,  -198,  -198,    93,   -40,     8,  -198,  -198,  -198,
+    -198,  -198,  -198,  -198,   -13,  -198,   -43,  -198,  -198,  -198,
+    -198,  -198,  -198,   117,   234,  -198,   -96,   185,   232,   245,
+    -198,  -198,  -198,    99,   178,  -198,   181,   202,  -198,  -198,
+    -198,  -197,   112,  -198,  -198,  -186,   107,  -198,  -198,  -198,
+    -198
 };
 
   /* YYDEFGOTO[NTERM-NUM].  */
 static const yytype_int16 yydefgoto[] =
 {
-      -1,     1,    19,    20,   159,    21,    84,    85,    86,    22,
-      23,    24,   140,   190,   141,    53,   106,    26,    27,   144,
+      -1,     1,    19,    20,   159,    21,    83,    84,    85,    22,
+      23,    24,   140,   190,   141,    53,   105,    26,    27,   144,
      145,    28,    29,    30,    31,    32,    80,    33,   164,   194,
-      34,    35,    75,    76,    36,    37,    87,    93,    94,    95,
-     136,   157,   184,   185,    96,   171,   172,   173,   174,   200,
+      34,    35,    75,    76,    36,    37,    86,    92,    93,    94,
+     136,   157,   184,   185,    95,   171,   172,   173,   174,   200,
      201,   202,   203,   204,   205,   206,   207,   175,    38,    50,
-     103
+     102
 };
 
   /* YYTABLE[YYPACT[STATE-NUM]] -- What to do in state STATE-NUM.  If
@@ -754,42 +755,42 @@ static const yytype_int16 yydefgoto[] =
      number is the opposite.  If YYTABLE_NINF, syntax error.  */
 static const yytype_int16 yytable[] =
 {
-      48,   221,   142,    51,    97,    52,   124,   181,   100,    25,
-     182,    54,   168,   169,    41,    82,   233,    83,    39,    42,
-      57,    58,    74,   220,   224,   234,    79,    40,    64,    65,
-     137,   125,   138,   228,   -17,   197,   198,   102,   170,   108,
-     244,    79,   109,   110,   111,   112,   183,   113,   114,   115,
-     116,   117,   126,   118,   119,   120,   121,   122,   101,   243,
-      52,   199,     2,   127,   245,    79,   191,     3,     4,     5,
-       6,   128,   224,     7,     8,     9,    10,    11,   129,    12,
-       3,     4,     5,     6,    13,   246,    39,     8,    14,    15,
-      49,    16,    12,   228,   -88,    40,   147,    13,   -88,   242,
-     -39,    14,    17,   129,    16,    18,   162,     3,     4,     5,
-       6,   155,    43,   156,     8,    17,   151,   -81,    18,    12,
-     142,   186,    44,    54,    13,   212,   187,   196,    14,    45,
-     213,    16,    57,    58,   166,   167,    60,    61,    62,    63,
-      64,    65,    17,   129,   -81,    18,   150,     3,     4,     5,
-       6,    46,    77,   195,     8,   219,    78,    90,    91,    12,
-      81,    89,    90,    91,    13,    72,   217,   105,    14,    92,
-      88,    16,     3,     4,     5,     6,   197,   198,    98,     8,
-      99,   131,    17,   123,    12,    18,   130,    83,   143,    13,
-     148,   133,   139,    14,   149,   153,    16,     3,     4,     5,
-      71,     3,     4,     5,    47,   154,   158,    17,   160,    12,
-      18,   161,   162,    12,   163,   165,     3,     4,     5,    47,
-     192,    16,   176,   177,   188,    16,   107,   189,    12,     3,
-       4,     5,    47,    54,    72,    73,   193,   208,   211,    18,
-      16,    12,    57,    58,   -87,   209,   210,   214,    62,    63,
-      64,    65,   215,    16,    18,   216,   223,   222,   146,    54,
-     224,   226,   228,   235,   225,    55,    56,    18,    57,    58,
-      59,   227,    60,    61,    62,    63,    64,    65,    66,    67,
-      68,    69,    70,    54,   229,   231,   198,   237,   238,    55,
-      56,   197,    57,    58,    59,   240,    60,    61,    62,    63,
-      64,    65,    66,    67,    68,    69,    70,    54,   104,   241,
-     218,   232,   230,    55,    56,   152,    57,    58,   180,   132,
+      48,   142,   220,    51,    96,    52,   123,   181,    99,    25,
+     182,   107,    82,   221,   168,   169,   233,   234,    39,   155,
+     245,   156,    74,   128,   224,   228,    79,    40,   224,   -17,
+     129,   124,    77,   197,   198,   127,    78,   101,   243,    49,
+     170,    79,   108,   109,   110,   111,   183,   112,   113,   114,
+     115,   116,   244,   117,   118,   119,   120,   121,   100,   199,
+      52,   129,     2,   246,   150,    79,   191,     3,     4,     5,
+       6,   228,    41,     7,     8,     9,    10,    11,   147,    12,
+       3,     4,     5,     6,    13,   129,    39,     8,    14,    15,
+      42,    16,    12,    43,   -88,    40,   242,    13,   -88,    44,
+     -39,    14,    17,   162,    16,    18,   186,     3,     4,     5,
+       6,   187,    54,    45,     8,    17,   151,   -81,    18,    12,
+     142,    57,    58,    54,    13,    89,    90,   196,    14,    64,
+      65,    16,    57,    58,   166,   167,    60,    61,    62,    63,
+      64,    65,    17,    46,   -81,    18,   212,     3,     4,     5,
+       6,   213,    81,   195,     8,   219,   137,    87,   138,    12,
+      97,    88,    89,    90,    13,    72,   217,   104,    14,    91,
+      98,    16,     3,     4,     5,     6,   197,   198,   122,     8,
+     125,   131,    17,    82,    12,    18,   130,   143,   133,    13,
+     148,   149,   139,    14,   158,   153,    16,     3,     4,     5,
+      71,     3,     4,     5,    47,   154,   161,    17,   160,    12,
+      18,   192,   163,    12,   162,   165,     3,     4,     5,    47,
+     188,    16,   176,   177,   208,    16,   106,   189,    12,     3,
+       4,     5,    47,    54,    72,    73,   193,   209,   210,    18,
+      16,    12,    57,    58,   -87,   211,   214,   215,    62,    63,
+      64,    65,   216,    16,    18,   223,   225,   222,   146,    54,
+     224,   226,   228,   227,   229,    55,    56,    18,    57,    58,
+      59,   231,    60,    61,    62,    63,    64,    65,    66,    67,
+      68,    69,    70,    54,   235,   198,   237,   238,   197,    55,
+      56,   240,    57,    58,    59,   241,    60,    61,    62,    63,
+      64,    65,    66,    67,    68,    69,    70,    54,   103,   232,
+     218,   126,   230,    55,    56,   152,    57,    58,   132,   134,
       60,    61,    62,    63,    64,    65,    66,    67,    68,    69,
-      70,    54,   179,   134,   135,   239,   178,    55,    56,     0,
-      57,    58,   236,     0,    60,    61,    62,    63,    64,    65,
-      66,    67,    68,    69,    70,    54,     0,     0,     0,     0,
+      70,    54,   135,   180,   178,   239,   236,    55,    56,     0,
+      57,    58,     0,     0,    60,    61,    62,    63,    64,    65,
+      66,    67,    68,    69,    70,    54,   179,     0,     0,     0,
        0,    55,    56,     0,    57,    58,     0,     0,    60,    61,
       62,    63,    64,    65,   -89,    67,    68,    69,    70,    54,
        0,     0,     0,     0,     0,    55,    56,     0,    57,    58,
@@ -799,42 +800,42 @@ static const yytype_int16 yytable[] =
 
 static const yytype_int16 yycheck[] =
 {
-      13,   199,    98,    16,    44,    18,     8,     5,    48,     1,
-       8,    29,     5,     6,     8,    40,    32,     8,    29,     8,
-      38,    39,    35,   199,    40,    32,    39,    38,    46,    47,
-      31,    33,    33,    40,    25,     5,     6,    50,    31,    54,
-     238,    54,    55,    56,    57,    58,    44,    60,    61,    62,
-      63,    64,    77,    66,    67,    68,    69,    70,    50,   235,
-      73,    31,     0,    78,    32,    78,   162,     5,     6,     7,
-       8,    30,    40,    11,    12,    13,    14,    15,    37,    17,
-       5,     6,     7,     8,    22,    32,    29,    12,    26,    27,
-      40,    29,    17,    40,    37,    38,    30,    22,    41,    30,
-      25,    26,    40,    37,    29,    43,    37,     5,     6,     7,
-       8,    29,     8,    31,    12,    40,   129,    42,    43,    17,
-     216,    32,     8,    29,    22,    32,    37,   167,    26,     8,
-      37,    29,    38,    39,    23,    24,    42,    43,    44,    45,
-      46,    47,    40,    37,    42,    43,    40,     5,     6,     7,
-       8,     8,    37,   166,    12,   195,    41,     9,    10,    17,
-       8,     8,     9,    10,    22,    42,    43,    25,    26,    16,
-      39,    29,     5,     6,     7,     8,     5,     6,    29,    12,
-      18,    25,    40,    33,    17,    43,    39,     8,     8,    22,
-       8,    40,    25,    26,     8,    41,    29,     5,     6,     7,
-       8,     5,     6,     7,     8,    41,     8,    40,    34,    17,
-      43,    30,    37,    17,    19,    25,     5,     6,     7,     8,
-       8,    29,    34,    34,    40,    29,    30,    28,    17,     5,
-       6,     7,     8,    29,    42,    43,    20,    40,    30,    43,
-      29,    17,    38,    39,    33,    40,    40,    33,    44,    45,
-      46,    47,     8,    29,    43,    29,    37,    32,    28,    29,
-      40,    32,    40,    31,    37,    35,    36,    43,    38,    39,
-      40,    37,    42,    43,    44,    45,    46,    47,    48,    49,
-      50,    51,    52,    29,    37,    34,     6,     6,    31,    35,
-      36,     5,    38,    39,    40,     5,    42,    43,    44,    45,
-      46,    47,    48,    49,    50,    51,    52,    29,    30,    40,
-     193,   216,   213,    35,    36,   130,    38,    39,   155,    86,
+      13,    97,   199,    16,    44,    18,     8,     5,    48,     1,
+       8,    54,     8,   199,     5,     6,    32,    32,    29,    29,
+      32,    31,    35,    30,    40,    40,    39,    38,    40,    25,
+      37,    33,    37,     5,     6,    78,    41,    50,   235,    40,
+      31,    54,    55,    56,    57,    58,    44,    60,    61,    62,
+      63,    64,   238,    66,    67,    68,    69,    70,    50,    31,
+      73,    37,     0,    32,    40,    78,   162,     5,     6,     7,
+       8,    40,     8,    11,    12,    13,    14,    15,    30,    17,
+       5,     6,     7,     8,    22,    37,    29,    12,    26,    27,
+       8,    29,    17,     8,    37,    38,    30,    22,    41,     8,
+      25,    26,    40,    37,    29,    43,    32,     5,     6,     7,
+       8,    37,    29,     8,    12,    40,   129,    42,    43,    17,
+     216,    38,    39,    29,    22,     9,    10,   167,    26,    46,
+      47,    29,    38,    39,    23,    24,    42,    43,    44,    45,
+      46,    47,    40,     8,    42,    43,    32,     5,     6,     7,
+       8,    37,     8,   166,    12,   195,    31,    39,    33,    17,
+      29,     8,     9,    10,    22,    42,    43,    25,    26,    16,
+      18,    29,     5,     6,     7,     8,     5,     6,    33,    12,
+       8,    25,    40,     8,    17,    43,    39,     8,    40,    22,
+       8,     8,    25,    26,     8,    41,    29,     5,     6,     7,
+       8,     5,     6,     7,     8,    41,    30,    40,    34,    17,
+      43,     8,    19,    17,    37,    25,     5,     6,     7,     8,
+      40,    29,    34,    34,    40,    29,    30,    28,    17,     5,
+       6,     7,     8,    29,    42,    43,    20,    40,    40,    43,
+      29,    17,    38,    39,    33,    30,    33,     8,    44,    45,
+      46,    47,    29,    29,    43,    37,    37,    32,    28,    29,
+      40,    32,    40,    37,    37,    35,    36,    43,    38,    39,
+      40,    34,    42,    43,    44,    45,    46,    47,    48,    49,
+      50,    51,    52,    29,    31,     6,     6,    31,     5,    35,
+      36,     5,    38,    39,    40,    40,    42,    43,    44,    45,
+      46,    47,    48,    49,    50,    51,    52,    29,    30,   216,
+     193,    77,   213,    35,    36,   130,    38,    39,    85,    87,
       42,    43,    44,    45,    46,    47,    48,    49,    50,    51,
-      52,    29,   154,    88,    88,   228,   153,    35,    36,    -1,
-      38,    39,   224,    -1,    42,    43,    44,    45,    46,    47,
-      48,    49,    50,    51,    52,    29,    -1,    -1,    -1,    -1,
+      52,    29,    87,   155,   153,   228,   224,    35,    36,    -1,
+      38,    39,    -1,    -1,    42,    43,    44,    45,    46,    47,
+      48,    49,    50,    51,    52,    29,   154,    -1,    -1,    -1,
       -1,    35,    36,    -1,    38,    39,    -1,    -1,    42,    43,
       44,    45,    46,    47,    48,    49,    50,    51,    52,    29,
       -1,    -1,    -1,    -1,    -1,    35,    36,    -1,    38,    39,
@@ -854,11 +855,11 @@ static const yytype_uint8 yystos[] =
      112,    77,    77,    68,    29,    35,    36,    38,    39,    40,
       42,    43,    44,    45,    46,    47,    48,    49,    50,    51,
       52,     8,    42,    43,    77,    85,    86,    37,    41,    77,
-      79,     8,    87,     8,    59,    60,    61,    89,    39,     8,
-       9,    10,    16,    90,    91,    92,    97,    68,    29,    18,
-      68,    69,    77,   113,    30,    25,    69,    30,    79,    77,
+      79,     8,     8,    59,    60,    61,    89,    39,     8,     9,
+      10,    16,    90,    91,    92,    97,    68,    29,    18,    68,
+      69,    77,   113,    30,    25,    69,    30,    79,    77,    77,
       77,    77,    77,    77,    77,    77,    77,    77,    77,    77,
-      77,    77,    77,    33,     8,    33,    87,    79,    30,    37,
+      77,    77,    33,     8,    33,     8,    87,    79,    30,    37,
       39,    25,    60,    40,    91,    92,    93,    31,    33,    25,
       65,    67,    89,     8,    72,    73,    28,    30,     8,     8,
       40,    77,    90,    41,    41,    29,    31,    94,     8,    57,
@@ -1677,47 +1678,47 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 90: /* type  */
 
-      { delete ((*yyvaluep).type); }
+      { delete ((*yyvaluep).Type); }
 
         break;
 
     case 91: /* element_type  */
 
-      { delete ((*yyvaluep).element_type); }
+      { delete ((*yyvaluep).ElementType); }
 
         break;
 
     case 92: /* tensor_type  */
 
-      { delete ((*yyvaluep).tensor_type); }
+      { delete ((*yyvaluep).TensorType); }
 
         break;
 
     case 93: /* shapes  */
 
-      { delete ((*yyvaluep).shapes); }
+      { delete ((*yyvaluep).Shapes); }
 
         break;
 
     case 94: /* shape  */
 
-      { delete ((*yyvaluep).shape); }
+      { delete ((*yyvaluep).Shape); }
 
         break;
 
     case 95: /* dimensions  */
 
-      { delete ((*yyvaluep).dimensions); }
+      { delete ((*yyvaluep).Dimensions); }
 
         break;
 
     case 96: /* dimension  */
 
-      { delete ((*yyvaluep).dimension); }
+      { delete ((*yyvaluep).Dimension); }
 
         break;
 
-    case 97: /* scalar_type  */
+    case 97: /* component_type  */
 
       {}
 
@@ -1725,7 +1726,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 98: /* literal  */
 
-      { delete ((*yyvaluep).value); }
+      { delete ((*yyvaluep).Value); }
 
         break;
 
@@ -2104,7 +2105,7 @@ yyreduce:
 
     {
     free((void*)(yyvsp[-4].string));
-    delete (yyvsp[-3].type);
+    delete (yyvsp[-3].Type);
   }
 
     break;
@@ -2113,7 +2114,7 @@ yyreduce:
 
     {
     free((void*)(yyvsp[-7].string));
-    delete (yyvsp[-6].type);
+    delete (yyvsp[-6].Type);
   }
 
     break;
@@ -2163,7 +2164,7 @@ yyreduce:
     {
     (yyvsp[-1].literal_tensor)->setName((yyvsp[-5].string));
     free((void*)(yyvsp[-5].string));
-    auto tensorType = unique_ptr<TensorType>((yyvsp[-3].tensor_type));
+    auto tensorType = unique_ptr<TensorType>((yyvsp[-3].TensorType));
     auto tensorLiteral = unique_ptr<LiteralTensor>((yyvsp[-1].literal_tensor));
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
@@ -2175,7 +2176,7 @@ yyreduce:
     // Typecheck: value and literal types must be equivalent.
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
-    if (*(yyvsp[-3].tensor_type) != *(tensorLiteral->getType())) {
+    if (*(yyvsp[-3].TensorType) != *(tensorLiteral->getType())) {
       REPORT_ERROR("error, value type does not match literal type", (yylsp[-2]));
     }
 
@@ -2188,7 +2189,7 @@ yyreduce:
 
     {
     free((void*)(yyvsp[-5].string));
-    delete (yyvsp[-3].element_type);
+    delete (yyvsp[-3].ElementType);
   }
 
     break;
@@ -2201,8 +2202,6 @@ yyreduce:
     cout << "Read:  " << ident << endl;
 
     IRNode *node = symtable[ident];
-
-    // Semantic check
     if (node == NULL) {
       // TODO: Re-introduce this code once functions and parameters work
       // REPORT_ERROR("error, " + ident + " is not defined in scope", @1);
@@ -2214,7 +2213,7 @@ yyreduce:
       REPORT_ERROR("error, " + ident + " is not a tensor", (yylsp[0]));
     }
 
-    (yyval.tensor) = tensor;
+    (yyval.Tensor) = tensor;
   }
 
     break;
@@ -2275,9 +2274,6 @@ yyreduce:
     string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
     cout << "Write: " << ident << endl;
-
-//    $$ = Store( );
-
   }
 
     break;
@@ -2285,7 +2281,7 @@ yyreduce:
   case 93:
 
     {
-    delete (yyvsp[0].type);
+    delete (yyvsp[0].Type);
     free((void*)(yyvsp[-2].string));
   }
 
@@ -2294,7 +2290,7 @@ yyreduce:
   case 94:
 
     {
-    (yyval.type) = (yyvsp[0].element_type);
+    (yyval.Type) = (yyvsp[0].ElementType);
   }
 
     break;
@@ -2302,7 +2298,7 @@ yyreduce:
   case 95:
 
     {
-    (yyval.type) = (yyvsp[0].tensor_type);
+    (yyval.Type) = (yyvsp[0].TensorType);
   }
 
     break;
@@ -2310,7 +2306,7 @@ yyreduce:
   case 96:
 
     {
-    (yyval.element_type) = new ElementType();
+    (yyval.ElementType) = new ElementType();
     free((void*)(yyvsp[0].string));
   }
 
@@ -2319,7 +2315,7 @@ yyreduce:
   case 97:
 
     {
-    (yyval.tensor_type) = new ScalarType((yyvsp[0].scalar_type));
+    (yyval.TensorType) = new ScalarType((yyvsp[0].ComponentType));
   }
 
     break;
@@ -2327,12 +2323,12 @@ yyreduce:
   case 98:
 
     {
-    auto shapes = unique_ptr<vector<Shape*>>((yyvsp[-3].shapes));
+    auto shapes = unique_ptr<vector<Shape*>>((yyvsp[-3].Shapes));
 
-    (yyval.tensor_type) = new ScalarType((yyvsp[-1].scalar_type));
+    (yyval.TensorType) = new ScalarType((yyvsp[-1].ComponentType));
     typedef vector<Shape*>::reverse_iterator shapes_rit_t;
-    for (shapes_rit_t rit = (yyvsp[-3].shapes)->rbegin(); rit != (yyvsp[-3].shapes)->rend(); ++rit) {
-      (yyval.tensor_type) = new NDTensorType(*rit, (yyval.tensor_type));
+    for (shapes_rit_t rit = (yyvsp[-3].Shapes)->rbegin(); rit != (yyvsp[-3].Shapes)->rend(); ++rit) {
+      (yyval.TensorType) = new NDTensorType(*rit, (yyval.TensorType));
     }
   }
 
@@ -2341,7 +2337,7 @@ yyreduce:
   case 99:
 
     {
-    (yyval.shapes) = new vector<Shape*>();
+    (yyval.Shapes) = new vector<Shape*>();
   }
 
     break;
@@ -2349,8 +2345,8 @@ yyreduce:
   case 100:
 
     {
-    (yyval.shapes) = (yyvsp[-1].shapes);
-    (yyval.shapes)->push_back((yyvsp[0].shape));
+    (yyval.Shapes) = (yyvsp[-1].Shapes);
+    (yyval.Shapes)->push_back((yyvsp[0].Shape));
   }
 
     break;
@@ -2358,8 +2354,8 @@ yyreduce:
   case 101:
 
     {
-    (yyval.shape) = new Shape(*(yyvsp[-1].dimensions));
-    delete (yyvsp[-1].dimensions);
+    (yyval.Shape) = new Shape(*(yyvsp[-1].Dimensions));
+    delete (yyvsp[-1].Dimensions);
   }
 
     break;
@@ -2367,8 +2363,8 @@ yyreduce:
   case 102:
 
     {
-    (yyval.dimensions) = new vector<Dimension*>();
-    (yyval.dimensions)->push_back((yyvsp[0].dimension));
+    (yyval.Dimensions) = new vector<Dimension*>();
+    (yyval.Dimensions)->push_back((yyvsp[0].Dimension));
   }
 
     break;
@@ -2376,8 +2372,8 @@ yyreduce:
   case 103:
 
     {
-    (yyval.dimensions) = (yyvsp[-2].dimensions);
-    (yyval.dimensions)->push_back((yyvsp[0].dimension));
+    (yyval.Dimensions) = (yyvsp[-2].Dimensions);
+    (yyval.Dimensions)->push_back((yyvsp[0].Dimension));
   }
 
     break;
@@ -2385,7 +2381,7 @@ yyreduce:
   case 104:
 
     {
-    (yyval.dimension) = new Dimension((yyvsp[0].num));
+    (yyval.Dimension) = new Dimension((yyvsp[0].num));
   }
 
     break;
@@ -2394,7 +2390,7 @@ yyreduce:
 
     {
     free((void*)(yyvsp[0].string));
-    (yyval.dimension) = new Dimension(123456789);  // TODO: This needs to be a set dimension
+    (yyval.Dimension) = new Dimension(123456789);  // TODO: This needs to be a set dimension
   }
 
     break;
@@ -2402,7 +2398,7 @@ yyreduce:
   case 106:
 
     {
-    (yyval.dimension) = new Dimension();
+    (yyval.Dimension) = new Dimension();
   }
 
     break;
@@ -2410,7 +2406,7 @@ yyreduce:
   case 107:
 
     {
-    (yyval.scalar_type) = ScalarType::INT;
+    (yyval.ComponentType) = ScalarType::INT;
   }
 
     break;
@@ -2418,7 +2414,7 @@ yyreduce:
   case 108:
 
     {
-    (yyval.scalar_type) = ScalarType::FLOAT;
+    (yyval.ComponentType) = ScalarType::FLOAT;
   }
 
     break;
@@ -2634,7 +2630,7 @@ yyreduce:
   case 138:
 
     {
-    delete (yyvsp[-1].value);
+    delete (yyvsp[-1].Value);
   }
 
     break;

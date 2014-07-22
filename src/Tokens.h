@@ -162,19 +162,20 @@ union YYSTYPE
   const char *string;
 
   // Values
-  simit::Value  *value;
-  simit::Tensor *tensor;
+  simit::Value  *Value;
+  simit::Tensor *Tensor;
+  simit::Store  *Store;
 
 
 
-  simit::Type                      *type;
-  simit::ElementType               *element_type;
-  simit::TensorType                *tensor_type;
-  simit::TensorType::ComponentType  scalar_type;
-  std::vector<simit::Shape*>       *shapes;
-  simit::Shape                     *shape;
-  std::vector<simit::Dimension*>   *dimensions;
-  simit::Dimension                 *dimension;
+  simit::Type                      *Type;
+  simit::ElementType               *ElementType;
+  simit::TensorType                *TensorType;
+  simit::TensorType::ComponentType  ComponentType;
+  std::vector<simit::Shape*>       *Shapes;
+  simit::Shape                     *Shape;
+  std::vector<simit::Dimension*>   *Dimensions;
+  simit::Dimension                 *Dimension;
 
 
   simit::LiteralTensor      *literal_tensor;

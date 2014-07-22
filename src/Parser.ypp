@@ -43,11 +43,12 @@
   const char *string;
 
   // Values
-  simit::Value  *value;
-  simit::Tensor *tensor;
+  simit::Value  *Value;
+  simit::Tensor *Tensor;
+  simit::Store  *Store;
 
 }
-%destructor {} <num> <fnum> <scalar_type>
+%destructor {} <num> <fnum> <ComponentType>
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <*>
 
@@ -266,7 +267,7 @@ return_stmt
   : "return" ";"
 
 assign_stmt
-  : write_expr_list "=" expr_list ";"
+  : lhs_expr_list "=" expr_list ";"
 
 expr_stmt
   : ";"
@@ -274,18 +275,15 @@ expr_stmt
 
 
 // Expressions
-%type<tensor> expr;
-%destructor {} <tensor>;  // TODO: Remove this line
+%type<Tensor> expr;
+%destructor {} <Tensor>;  // TODO: Remove this line
 
 expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
-    cout << "Read: " << ident << endl;
 
     IRNode *node = symtable[ident];
-
-    // Semantic check
     if (node == NULL) {
       // TODO: Re-introduce this code once functions and parameters work
       // REPORT_ERROR("error, " + ident + " is not defined in scope", @1);
@@ -378,18 +376,18 @@ reduction_op
   | "-"
 
 
-// Writes
-write_expr
+// Lhs expressions
+lhs_expr
   : IDENT {
-//    cout << "Write: " << $IDENT << endl;
+    string ident($IDENT);
     free((void*)$IDENT);
   }
   | IDENT "(" expr_list ")"
-  | IDENT "." write_expr
+  | IDENT "." IDENT
 
-write_expr_list
-  : write_expr
-  | write_expr_list "," write_expr
+lhs_expr_list
+  : lhs_expr
+  | lhs_expr_list "," lhs_expr
 
 
 // Variables
@@ -402,24 +400,24 @@ var_decl
 
 // Types
 %union {
-  simit::Type                      *type;
-  simit::ElementType               *element_type;
-  simit::TensorType                *tensor_type;
-  simit::TensorType::ComponentType  scalar_type;
-  std::vector<simit::Shape*>       *shapes;
-  simit::Shape                     *shape;
-  std::vector<simit::Dimension*>   *dimensions;
-  simit::Dimension                 *dimension;
+  simit::Type                      *Type;
+  simit::ElementType               *ElementType;
+  simit::TensorType                *TensorType;
+  simit::TensorType::ComponentType  ComponentType;
+  std::vector<simit::Shape*>       *Shapes;
+  simit::Shape                     *Shape;
+  std::vector<simit::Dimension*>   *Dimensions;
+  simit::Dimension                 *Dimension;
 };
 
-%type <type>         type;
-%type <element_type> element_type;
-%type <tensor_type>  tensor_type;
-%type <shapes>       shapes;
-%type <shape>        shape;
-%type <dimensions>   dimensions;
-%type <dimension>    dimension;
-%type <scalar_type>  scalar_type;
+%type <Type>           type;
+%type <ElementType>    element_type;
+%type <TensorType>     tensor_type;
+%type <Shapes>         shapes;
+%type <Shape>          shape;
+%type <Dimensions>     dimensions;
+%type <Dimension>      dimension;
+%type <ComponentType>  component_type;
 
 type
   : element_type {
@@ -436,13 +434,13 @@ element_type
   }
 
 tensor_type
-  : scalar_type {
-    $$ = new ScalarType($scalar_type);
+  : component_type {
+    $$ = new ScalarType($component_type);
   }
-  | TENSOR shapes "(" scalar_type ")" {
+  | TENSOR shapes "(" component_type ")" {
     auto shapes = unique_ptr<vector<Shape*>>($shapes);
 
-    $$ = new ScalarType($scalar_type);
+    $$ = new ScalarType($component_type);
     typedef vector<Shape*>::reverse_iterator shapes_rit_t;
     for (shapes_rit_t rit = $shapes->rbegin(); rit != $shapes->rend(); ++rit) {
       $$ = new NDTensorType(*rit, $$);
@@ -486,7 +484,7 @@ dimension
     $$ = new Dimension();
   }
 
-scalar_type
+component_type
   : INT {
     $$ = ScalarType::INT;
   }
@@ -545,7 +543,7 @@ scalar_type
   TensorValues<int>         *int_values;
 };
 
-%type                <value> literal;
+%type                <Value> literal;
 %type       <literal_tensor> tensor_literal;
 %type <dense_literal_tensor> dense_tensor_literal;
 %type <dense_literal_tensor> scalar_literal;
