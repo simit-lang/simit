@@ -21,5 +21,5 @@ std::string Error::toString() const {
   string columnStr = (firstColumn == lastColumn)
                      ? to_string(firstColumn)
                      : to_string(firstColumn) + "-" + to_string(lastColumn);
-  return msg + " at " + lineStr + ":" + columnStr;
+  return msg + ", at " + lineStr + ":" + columnStr;
 }

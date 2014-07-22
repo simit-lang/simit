@@ -266,7 +266,7 @@ return_stmt
   : "return" ";"
 
 assign_stmt
-  : expr_list "=" expr_list ";"
+  : write_expr_list "=" expr_list ";"
 
 expr_stmt
   : ";"
@@ -312,26 +312,23 @@ expr
   | expr "-" expr
   | expr "*" expr
   | expr "/" expr
-  |      "-" expr  %prec NEG
+  |      "-" expr  %prec NEG {
+
+  }
   | expr "'"
   | expr "^" expr
-
   | expr "==" expr
   | expr "!=" expr
   | expr "<"  expr
   | expr ">"  expr
   | expr "<=" expr
   | expr ">=" expr
-
   | "(" expr ")"
   | expr ":" expr
   | call_expr
-  | field_expr
+  | expr "." expr
   | index_expr
   | map_expr
-
-field_expr
-  : expr "." expr
 
 call_expr
   : expr "(" ")"
@@ -383,6 +380,20 @@ reduction_index
 reduction_op
   : "+"
   | "-"
+
+
+// Writes
+write_expr
+  : IDENT {
+//    cout << "Write: " << $IDENT << endl;
+    free((void*)$IDENT);
+  }
+  | IDENT "(" expr_list ")"
+  | IDENT "." write_expr
+
+write_expr_list
+  : write_expr
+  | write_expr_list "," write_expr
 
 
 // Variables
