@@ -66,12 +66,21 @@ class DenseLiteralTensor : public LiteralTensor {
 };
 
 
-class Function {
+class Function : public IRNode {
  public:
   Function();
   virtual ~Function();
 
   virtual operator std::string() const;
+};
+
+/** An instruction that stores a value to a tensor or an object */
+class Store : public Value {
+ public:
+  Store() {}
+  virtual ~Store() {}
+
+ private:
 };
 
 }
