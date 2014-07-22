@@ -74,8 +74,11 @@
   using namespace std;
   using namespace simit;
 
-  #define REPORT_ERROR(msg, loc) \
-    yyerror(&loc, symtable, errors, tests, std::string(msg).c_str())
+  #define REPORT_ERROR(msg, loc)                                        \
+    do {                                                                \
+      yyerror(&loc, symtable, errors, tests, std::string(msg).c_str()); \
+      YYERROR;                                                          \
+    } while (0)
 
 
 
@@ -586,19 +589,19 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   135,   135,   137,   140,   141,   142,   143,   144,   145,
-     149,   153,   159,   162,   169,   173,   175,   177,   179,   182,
-     187,   192,   195,   199,   201,   203,   205,   208,   209,   213,
-     215,   218,   219,   220,   221,   222,   225,   249,   255,   257,
-     259,   261,   263,   266,   269,   272,   273,   281,   306,   307,
-     308,   310,   311,   312,   313,   314,   315,   318,   319,   320,
-     321,   322,   323,   324,   325,   326,   327,   328,   329,   330,
-     331,   334,   335,   338,   339,   344,   349,   351,   355,   357,
-     362,   364,   366,   369,   372,   375,   381,   382,   387,   391,
-     392,   395,   396,   401,   429,   432,   437,   443,   446,   456,
-     459,   465,   471,   475,   481,   484,   488,   493,   496,   567,
-     568,   570,   574,   575,   588,   594,   602,   609,   612,   616,
-     630,   634,   649,   653,   659,   666,   669,   673,   686,   690,
+       0,   138,   138,   140,   143,   144,   145,   146,   147,   148,
+     152,   156,   162,   165,   172,   176,   178,   180,   182,   185,
+     190,   195,   198,   202,   204,   206,   208,   211,   212,   216,
+     218,   221,   222,   223,   224,   225,   228,   249,   255,   257,
+     259,   261,   263,   266,   269,   272,   273,   281,   302,   303,
+     304,   306,   307,   308,   309,   310,   311,   314,   315,   316,
+     317,   318,   319,   320,   321,   322,   323,   324,   325,   326,
+     327,   330,   331,   334,   335,   340,   345,   347,   351,   353,
+     358,   360,   362,   365,   368,   371,   377,   378,   383,   391,
+     392,   395,   396,   401,   429,   432,   437,   443,   446,   457,
+     460,   466,   472,   476,   482,   485,   489,   494,   497,   568,
+     569,   571,   575,   576,   589,   595,   603,   610,   613,   617,
+     630,   634,   648,   652,   658,   665,   668,   672,   685,   689,
      703,   707,   713,   716,   722,   726,   728,   731,   732
 };
 #endif
@@ -623,8 +626,8 @@ static const char *const yytname[] =
   "stmt", "const_stmt", "if_stmt", "else_clauses", "elif_clauses",
   "return_stmt", "assign_stmt", "expr_stmt", "expr", "call_expr",
   "expr_list", "map_expr", "with", "reduce", "index_expr",
-  "reduction_indices", "reduction_index", "reduction_op", "write_expr",
-  "write_expr_list", "var_decl", "type", "element_type", "tensor_type",
+  "reduction_indices", "reduction_index", "reduction_op", "store_expr",
+  "store_expr_list", "var_decl", "type", "element_type", "tensor_type",
   "shapes", "shape", "dimensions", "dimension", "scalar_type", "literal",
   "element_literal", "tensor_literal", "dense_tensor_literal",
   "float_dense_tensor_literal", "float_dense_ndtensor_literal",
@@ -2160,26 +2163,23 @@ yyreduce:
     {
     (yyvsp[-1].literal_tensor)->setName((yyvsp[-5].string));
     free((void*)(yyvsp[-5].string));
+    auto tensorType = unique_ptr<TensorType>((yyvsp[-3].tensor_type));
+    auto tensorLiteral = unique_ptr<LiteralTensor>((yyvsp[-1].literal_tensor));
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
-    bool casted = false;
-    if ((yyvsp[-3].tensor_type)->getOrder() == 2 && (yyvsp[-1].literal_tensor)->getOrder() == 1) {
-      (yyvsp[-1].literal_tensor)->cast((yyvsp[-3].tensor_type));
-      casted = true;
+    if (tensorType->getOrder() == 2 && tensorLiteral->getOrder() == 1) {
+      tensorLiteral->cast(tensorType.release());
     }
 
     // Typecheck: value and literal types must be equivalent.
-    if (*(yyvsp[-3].tensor_type) != *(yyvsp[-1].literal_tensor)->getType()) {
+    //            Note that the use of $tensor_type is deliberate as tensorType
+    //            can have been released.
+    if (*(yyvsp[-3].tensor_type) != *(tensorLiteral->getType())) {
       REPORT_ERROR("error, value type does not match literal type", (yylsp[-2]));
-      delete (yyvsp[-1].literal_tensor);
-      YYERROR;
     }
 
-    if (!casted) {
-      delete (yyvsp[-3].tensor_type);
-    }
-    symtable.addNode((yyvsp[-1].literal_tensor));
+    symtable.addNode(tensorLiteral.release());
   }
 
     break;
@@ -2198,24 +2198,20 @@ yyreduce:
     {
     string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
-    cout << "Read: " << ident << endl;
+    cout << "Read:  " << ident << endl;
 
     IRNode *node = symtable[ident];
 
     // Semantic check
     if (node == NULL) {
-    // TODO: Re-introduce this code once functions and parameters work
-//      string errorStr = string("error, ") + ident + " is not defined in scope";
-//      REPORT_ERROR(errorStr, @1);
-//      YYERROR;
+      // TODO: Re-introduce this code once functions and parameters work
+      // REPORT_ERROR("error, " + ident + " is not defined in scope", @1);
       YYACCEPT;
     }
 
     Tensor *tensor = dynamic_cast<Tensor*>(node);
     if (tensor == NULL) {
-      string errorStr = "error, " + ident + " is not a tensor";
-      REPORT_ERROR(errorStr, (yylsp[0]));
-      YYERROR;
+      REPORT_ERROR("error, " + ident + " is not a tensor", (yylsp[0]));
     }
 
     (yyval.tensor) = tensor;
@@ -2276,8 +2272,12 @@ yyreduce:
   case 88:
 
     {
-//    cout << "Write: " << $IDENT << endl;
+    string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
+    cout << "Write: " << ident << endl;
+
+//    $$ = Store( );
+
   }
 
     break;
@@ -2327,12 +2327,13 @@ yyreduce:
   case 98:
 
     {
+    auto shapes = unique_ptr<vector<Shape*>>((yyvsp[-3].shapes));
+
     (yyval.tensor_type) = new ScalarType((yyvsp[-1].scalar_type));
     typedef vector<Shape*>::reverse_iterator shapes_rit_t;
     for (shapes_rit_t rit = (yyvsp[-3].shapes)->rbegin(); rit != (yyvsp[-3].shapes)->rend(); ++rit) {
       (yyval.tensor_type) = new NDTensorType(*rit, (yyval.tensor_type));
     }
-    delete (yyvsp[-3].shapes);
   }
 
     break;
@@ -2425,10 +2426,10 @@ yyreduce:
   case 114:
 
     {
-    Shape *shape = dimSizesToShape((yyvsp[-1].float_values)->dimSizes);
+    auto values = unique_ptr<TensorValues<double>>((yyvsp[-1].float_values));
+    Shape *shape = dimSizesToShape(values->dimSizes);
     auto type = new NDTensorType(shape, new ScalarType(ScalarType::FLOAT));
-    (yyval.dense_literal_tensor) = new DenseLiteralTensor(type, (yyvsp[-1].float_values)->values.data());
-    delete (yyvsp[-1].float_values);
+    (yyval.dense_literal_tensor) = new DenseLiteralTensor(type, values->values.data());
   }
 
     break;
@@ -2436,10 +2437,10 @@ yyreduce:
   case 115:
 
     {
-    Shape *shape = dimSizesToShape((yyvsp[-1].int_values)->dimSizes);
+    auto values = unique_ptr<TensorValues<int>>((yyvsp[-1].int_values));
+    Shape *shape = dimSizesToShape(values->dimSizes);
     auto type = new NDTensorType(shape, new ScalarType(ScalarType::INT));
-    (yyval.dense_literal_tensor) = new DenseLiteralTensor(type, (yyvsp[-1].int_values)->values.data());
-    delete (yyvsp[-1].int_values);
+    (yyval.dense_literal_tensor) = new DenseLiteralTensor(type, values->values.data());
   }
 
     break;
@@ -2468,16 +2469,15 @@ yyreduce:
   case 119:
 
     {
+    auto  left = unique_ptr<TensorValues<double>>((yyvsp[-4].float_values));
+    auto right = unique_ptr<TensorValues<double>>((yyvsp[-1].float_values));
+
     string errorStr;
-    if(!(yyvsp[-4].float_values)->dimensionsMatch(*(yyvsp[-1].float_values), &errorStr)) {
+    if(!left->dimensionsMatch(*right, &errorStr)) {
       REPORT_ERROR(errorStr, (yylsp[-3]));
-      delete (yyvsp[-4].float_values);
-      delete (yyvsp[-1].float_values);
-      YYERROR;
     }
-    (yyval.float_values) = (yyvsp[-4].float_values);
-    (yyvsp[-4].float_values)->merge(*(yyvsp[-1].float_values));
-    delete (yyvsp[-1].float_values);
+    left->merge(*right);
+    (yyval.float_values) = left.release();
   }
 
     break;
@@ -2494,17 +2494,16 @@ yyreduce:
   case 121:
 
     {
+    auto  left = unique_ptr<TensorValues<double>>((yyvsp[-2].float_values));
+    auto right = unique_ptr<TensorValues<double>>((yyvsp[0].float_values));
+
     string errorStr;
-    if(!(yyvsp[-2].float_values)->dimensionsMatch(*(yyvsp[0].float_values), &errorStr)) {
+    if(!left->dimensionsMatch(*right, &errorStr)) {
       REPORT_ERROR(errorStr, (yylsp[-1]));
-      delete (yyvsp[-2].float_values);
-      delete (yyvsp[0].float_values);
-      YYERROR;
     }
 
-    (yyval.float_values) = (yyvsp[-2].float_values);
-    (yyvsp[-2].float_values)->merge(*(yyvsp[0].float_values));
-    delete (yyvsp[0].float_values);
+    left->merge(*right);
+    (yyval.float_values) = left.release();
   }
 
     break;
@@ -2551,15 +2550,15 @@ yyreduce:
   case 127:
 
     {
-    string errorStr;
-    if(!(yyvsp[-4].int_values)->dimensionsMatch(*(yyvsp[-1].int_values), &errorStr)) {
-      REPORT_ERROR(errorStr, (yylsp[-3]));
-      YYERROR;
-    }
+    auto  left = unique_ptr<TensorValues<int>>((yyvsp[-4].int_values));
+    auto right = unique_ptr<TensorValues<int>>((yyvsp[-1].int_values));
 
-    (yyval.int_values) = (yyvsp[-4].int_values);
-    (yyvsp[-4].int_values)->merge(*(yyvsp[-1].int_values));
-    delete (yyvsp[-1].int_values);
+    string errorStr;
+    if(!left->dimensionsMatch(*right, &errorStr)) {
+      REPORT_ERROR(errorStr, (yylsp[-3]));
+    }
+    left->merge(*right);
+    (yyval.int_values) = left.release();
   }
 
     break;
@@ -2576,15 +2575,16 @@ yyreduce:
   case 129:
 
     {
+    auto  left = unique_ptr<TensorValues<int>>((yyvsp[-2].int_values));
+    auto right = unique_ptr<TensorValues<int>>((yyvsp[0].int_values));
+
     string errorStr;
-    if(!(yyvsp[-2].int_values)->dimensionsMatch(*(yyvsp[0].int_values), &errorStr)) {
+    if(!left->dimensionsMatch(*right, &errorStr)) {
       REPORT_ERROR(errorStr, (yylsp[-1]));
-      YYERROR;
     }
 
-    (yyval.int_values) = (yyvsp[-2].int_values);
-    (yyvsp[-2].int_values)->merge(*(yyvsp[0].int_values));
-    delete (yyvsp[0].int_values);
+    left->merge(*right);
+    (yyval.int_values) = left.release();
   }
 
     break;
