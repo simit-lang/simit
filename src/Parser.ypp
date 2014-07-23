@@ -221,10 +221,13 @@ stmt
 
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
-    $tensor_literal->setName($IDENT);
-    free((void*)$IDENT);
     auto tensorType = unique_ptr<TensorType>($tensor_type);
-    auto tensorLiteral = unique_ptr<LiteralTensor>($tensor_literal);
+
+    auto tensorLiteral = shared_ptr<LiteralTensor>(*$tensor_literal);
+    delete $tensor_literal;
+
+    tensorLiteral->setName($IDENT);
+    free((void*)$IDENT);
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
@@ -239,7 +242,7 @@ const_stmt
       REPORT_ERROR("value type does not match literal type", @5);
     }
 
-    symtable.addNode(tensorLiteral.release());
+    symtable.addNode(tensorLiteral);
   }
   | "const" IDENT ":" element_type "=" element_literal ";" {
     free((void*)$IDENT);
@@ -262,8 +265,8 @@ return_stmt
 
 assign_stmt
   : lhs_expr_list "=" expr_list ";" {
-    auto lhsList = unique_ptr<list<Store*>>($lhs_expr_list);
-    auto rhsList = unique_ptr<list<Value*>>($expr_list);
+    auto lhsList = unique_ptr<list<shared_ptr<Store>>>($lhs_expr_list);
+    auto rhsList = unique_ptr<list<shared_ptr<Value>>>($expr_list);
 
     if (lhsList->size() > rhsList->size()) {
       // TODO: Add error back in
@@ -283,10 +286,9 @@ assign_stmt
       // TODO: Remove this
       if (rhs == NULL) continue;
 
-      if (dynamic_cast<VariableStore*>(lhs) != NULL) {
+      if (dynamic_pointer_cast<VariableStore>(lhs) != NULL) {
         rhs->setName(lhs->getName());
         symtable.addNode(rhs);
-        delete lhs;
       }
       else {
         // TODO: Implement
@@ -302,58 +304,96 @@ expr_stmt
 
 // Expressions
 %union {
-  // Values
-  simit::Value             *Value;
-  std::list<simit::Value*> *ValueList;
-  simit::Tensor            *Tensor;
-  simit::Store             *Store;
-  std::list<simit::Store*> *StoreList;
+  std::shared_ptr<simit::Value>            *Value;
+  std::list<std::shared_ptr<simit::Value>> *ValueList;
+  std::shared_ptr<simit::Tensor>           *Tensor;
+  std::shared_ptr<simit::Store>            *Store;
+  std::list<std::shared_ptr<simit::Store>> *StoreList;
 };
 
-%type<Tensor> expr;
+%type<Value> expr;
 expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
-    IRNode *node = symtable[ident];
+    std::shared_ptr<IRNode> &node = symtable[ident];
     if (node == NULL) {
       // TODO: Re-introduce this code once functions and parameters work
       // REPORT_ERROR(ident + " is not defined in scope", @1);
       YYACCEPT;
     }
 
-    Tensor *tensor = dynamic_cast<Tensor*>(node);
-    if (tensor == NULL) {
-      REPORT_ERROR(ident + " is not a tensor", @1);
+    shared_ptr<Value> value = dynamic_pointer_cast<Value>(node);
+    if (value == NULL) {
+      REPORT_ERROR(ident + " is not a value", @1);
     }
 
-    $$ = tensor;
+    $$ = new shared_ptr<Value>(value);
   }
-  | FLOAT_LITERAL
-  | INT_LITERAL
-  | STRING_LITERAL
-
-  | expr "\\" expr
-  | expr "+" expr
-  | expr "-" expr
-  | expr "*" expr
+  | FLOAT_LITERAL {
+    $$ = NULL;
+  }
+  | INT_LITERAL {
+    $$ = NULL;
+  }
+  | STRING_LITERAL {
+    $$ = NULL;
+  }
+  | expr "\\" expr {
+    $$ = NULL;
+  }
+  | expr "+" expr {
+    $$ = NULL;
+  }
+  | expr "-" expr {
+    $$ = NULL;
+  }
+  | expr "*" expr {
+    $$ = NULL;
+  }
   | expr "/" expr
   | "-" expr %prec NEG {
     $$ = $2;
   }
-  | expr "'"
-  | expr "^" expr
-  | expr "==" expr
-  | expr "!=" expr
-  | expr "<"  expr
-  | expr ">"  expr
-  | expr "<=" expr
-  | expr ">=" expr
-  | "(" expr ")"
-  | expr ":" expr
-  | call_expr
-  | expr "." expr
-  | index_expr
+  | expr "'" {
+    $$ = NULL;
+  }
+  | expr "^" expr {
+    $$ = NULL;
+  }
+  | expr "==" expr {
+    $$ = NULL;
+  }
+  | expr "!=" expr {
+    $$ = NULL;
+  }
+  | expr "<"  expr {
+    $$ = NULL;
+  }
+  | expr ">"  expr {
+    $$ = NULL;
+  }
+  | expr "<=" expr {
+    $$ = NULL;
+  }
+  | expr ">=" expr {
+    $$ = NULL;
+  }
+  | "(" expr ")" {
+    $$ = NULL;
+  }
+  | expr ":" expr {
+    $$ = NULL;
+  }
+  | call_expr {
+    $$ = NULL;
+  }
+  | expr "." expr {
+    $$ = NULL;
+  }
+  | index_expr {
+    $$ = NULL;
+  }
   | map_expr {
     $$ = NULL;
   }
@@ -365,12 +405,16 @@ call_expr
 %type <ValueList> expr_list;
 expr_list
   : expr {
-    $$ = new list<Value*>();
-    $$->push_back($expr);
+    if ($expr == NULL) YYACCEPT;  // TODO: Remove check
+    auto expr = unique_ptr<shared_ptr<Value>>($expr);
+    $$ = new list<shared_ptr<Value>>();
+    $$->push_back(*expr);
   }
   | expr_list "," expr {
+    if ($expr == NULL) YYACCEPT;  // TODO: Remove check
+    auto expr = unique_ptr<shared_ptr<Value>>($expr);
     $$ = $1;
-    $$->push_back($expr);
+    $$->push_back(*expr);
   }
 
 // Map expressions
@@ -422,7 +466,8 @@ lhs_expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
-    $$ = new VariableStore(ident);
+    auto variableStore = new VariableStore(ident);
+    $$ = new std::shared_ptr<Store>(variableStore);
   }
   | IDENT "(" expr_list ")"
   | IDENT "." IDENT
@@ -430,12 +475,17 @@ lhs_expr
 %type<StoreList> lhs_expr_list;
 lhs_expr_list
   : lhs_expr {
-    $$ = new list<Store*>();
-    $$->push_back($lhs_expr);
+    if ($lhs_expr == NULL) YYACCEPT;  // TODO: Remove check
+    auto lhs_expr = unique_ptr<shared_ptr<Store>>($lhs_expr);
+    $$ = new list<shared_ptr<Store>>();
+    $$->push_back(*lhs_expr);
+
   }
   | lhs_expr_list "," lhs_expr {
+    if ($lhs_expr == NULL) YYACCEPT;  // TODO: Remove check
+    auto lhs_expr = unique_ptr<shared_ptr<Store>>($lhs_expr);
     $$ = $1;
-    $$->push_back($lhs_expr);
+    $$->push_back(*lhs_expr);
   }
 
 // Variables
@@ -585,10 +635,10 @@ component_type
 };
 
 %union {
-  simit::LiteralTensor      *LiteralTensor;
-  simit::DenseLiteralTensor *DenseLiteralTensor;
-  TensorValues<double>      *TensorDoubleValues;
-  TensorValues<int>         *TensorIntValues;
+  std::shared_ptr<simit::LiteralTensor>      *LiteralTensor;
+  std::shared_ptr<simit::DenseLiteralTensor> *DenseLiteralTensor;
+  TensorValues<double>                       *TensorDoubleValues;
+  TensorValues<int>                          *TensorIntValues;
 };
 
 %type              <Value> literal;
@@ -632,13 +682,15 @@ dense_tensor_literal
     auto values = unique_ptr<TensorValues<double>>($2);
     Shape *shape = dimSizesToShape(values->dimSizes);
     auto type = new NDTensorType(shape, new ScalarType(ScalarType::FLOAT));
-    $$ = new DenseLiteralTensor(type, values->values.data());
+    auto literal = new DenseLiteralTensor(type, values->values.data());
+    $$ = new shared_ptr<DenseLiteralTensor>(literal);
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
     Shape *shape = dimSizesToShape(values->dimSizes);
     auto type = new NDTensorType(shape, new ScalarType(ScalarType::INT));
-    $$ = new DenseLiteralTensor(type, values->values.data());
+    auto literal = new DenseLiteralTensor(type, values->values.data());
+    $$ = new shared_ptr<DenseLiteralTensor>(literal);
   }
 
 float_dense_tensor_literal
@@ -753,15 +805,20 @@ int_dense_vector_literal
 
 scalar_literal
   : INT_LITERAL {
-    $$ = new DenseLiteralTensor(new ScalarType(ScalarType::INT), &$1);
+    auto scalarType = new ScalarType(ScalarType::INT);
+    auto literal = new DenseLiteralTensor(scalarType, &$1);
+    $$ = new shared_ptr<DenseLiteralTensor>(literal);
   }
   | FLOAT_LITERAL {
-    $$ = new DenseLiteralTensor(new ScalarType(ScalarType::FLOAT), &$1);
+    auto scalarType = new ScalarType(ScalarType::FLOAT);
+    auto literal = new DenseLiteralTensor(scalarType, &$1);
+    $$ = new shared_ptr<DenseLiteralTensor>(literal);
   }
 
 // Tests
 test
   : TEST test_stmt_block {
+
     tests.push_back(simit::Test("MyTest"));
   }
 
@@ -772,6 +829,9 @@ test_stmt_block
 test_stmt
   : stmt
   | expr "->" literal ";" {
+    auto expr = shared_ptr<Value>(*$expr);
+    auto literal = shared_ptr<Value>(*$literal);
+    delete $expr;
     delete $literal;
   }
 %%

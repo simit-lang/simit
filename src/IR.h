@@ -38,22 +38,23 @@ class Value : public IRNode {
 
 class Tensor : public Value {
  public:
-  Tensor(TensorType *type) : type(type) {}
-  virtual ~Tensor();
+  virtual unsigned int getOrder() { return getTensorType()->getOrder(); }
 
-  virtual unsigned int getOrder() { return type->getOrder(); };
-  virtual Type *getType() { return type; };
-
- protected:
-  TensorType *type;
+  virtual TensorType *getTensorType() = 0;
+  virtual Type *getType() { return getTensorType(); }
 };
 
 
 class LiteralTensor : public Tensor {
  public:
-  LiteralTensor(TensorType *type) : Tensor(type) {}
+  LiteralTensor(TensorType *type) : type(type) {}
+  virtual ~LiteralTensor() { delete type; }
 
   void cast(TensorType *type);
+  virtual TensorType *getTensorType() { return type; }
+
+ protected:
+  TensorType *type;
 };
 
 
@@ -74,7 +75,7 @@ class Function : public IRNode {
 };
 
 
-/** An instruction that stores a value to a tensor or an object */
+/** Instruction that stores a value to a tensor or an object. */
 class Store : public Value {
  public:
   Store(const std::string &name) : Value(name) {}
@@ -86,7 +87,7 @@ class Store : public Value {
 };
 
 
-/** An instructin that stores a value to a local bariable */
+/** Instruction that stores a value to a tensor or an object. */
 class VariableStore : public Store {
  public:
   VariableStore(const std::string &varName) : Store(varName) {}

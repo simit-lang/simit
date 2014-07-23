@@ -13,11 +13,11 @@ using namespace std;
 
 
 /* SymbolTable */
-void SymbolTable::addNode(IRNode *irNode) {
+void SymbolTable::addNode(const std::shared_ptr<IRNode> &irNode) {
   (*this)[irNode->getName()] = irNode;
 }
 
-IRNode *&SymbolTable::operator[](const std::string &name) {
+std::shared_ptr<IRNode> &SymbolTable::operator[](const std::string &name) {
   for (auto &scope : scopes) {
     if (scope.find(name) != scope.end()) {
       return scope[name];

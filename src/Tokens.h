@@ -162,12 +162,11 @@ union YYSTYPE
   const char *string;
 
 
-  // Values
-  simit::Value             *Value;
-  std::list<simit::Value*> *ValueList;
-  simit::Tensor            *Tensor;
-  simit::Store             *Store;
-  std::list<simit::Store*> *StoreList;
+  std::shared_ptr<simit::Value>            *Value;
+  std::list<std::shared_ptr<simit::Value>> *ValueList;
+  std::shared_ptr<simit::Tensor>           *Tensor;
+  std::shared_ptr<simit::Store>            *Store;
+  std::list<std::shared_ptr<simit::Store>> *StoreList;
 
 
   simit::Type                      *Type;
@@ -180,10 +179,10 @@ union YYSTYPE
   simit::Dimension                 *Dimension;
 
 
-  simit::LiteralTensor      *LiteralTensor;
-  simit::DenseLiteralTensor *DenseLiteralTensor;
-  TensorValues<double>      *TensorDoubleValues;
-  TensorValues<int>         *TensorIntValues;
+  std::shared_ptr<simit::LiteralTensor>      *LiteralTensor;
+  std::shared_ptr<simit::DenseLiteralTensor> *DenseLiteralTensor;
+  TensorValues<double>                       *TensorDoubleValues;
+  TensorValues<int>                          *TensorIntValues;
 
 
 };

@@ -10,12 +10,6 @@
 using namespace simit;
 using namespace std;
 
-/* Tensor */
-Tensor::~Tensor() {
-  delete type;
-}
-
-
 /* LiteralTensor */
 void LiteralTensor::cast(TensorType *type) {
   assert(this->type->getComponentType() == type->getComponentType() &&

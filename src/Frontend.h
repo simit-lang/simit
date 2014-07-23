@@ -19,7 +19,7 @@ class Error;
   * scopes. */
 class SymbolTable {
  public:
-  typedef std::map<std::string, IRNode*> SymbolMap;
+  typedef std::map<std::string, std::shared_ptr<IRNode>> SymbolMap;
 
   SymbolTable()  {   scope(); }
   ~SymbolTable() { unscope(); }
@@ -31,10 +31,10 @@ class SymbolTable {
   void unscope() { scopes.pop_front(); }
 
   /** Adds a symbol with the name of the irNode pointing at the irNode. */
-  void addNode(IRNode *irNode);
+  void addNode(const std::shared_ptr<IRNode> &irNode);
 
   /** Return the first symbol first match or add the symbol to the top scope. */
-  IRNode *&operator[](const std::string &name);
+  std::shared_ptr<IRNode> &operator[](const std::string &name);
 
   std::string toString() const;
   friend std::ostream &operator<<(std::ostream &os, const SymbolTable &table) {
