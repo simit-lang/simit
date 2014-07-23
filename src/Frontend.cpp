@@ -5,6 +5,7 @@
 #include "Logger.h"
 #include "Tokens.h"
 #include "Scanner.h"
+#include "Util.h"
 
 using namespace simit;
 using namespace util;
@@ -23,6 +24,18 @@ IRNode *&SymbolTable::operator[](const std::string &name) {
     }
   }
   return scopes.front()[name];
+}
+
+std::string SymbolTable::toString() const {
+  string result = "SymbolTable:\n";
+  for (auto scope : scopes) {
+    for (auto symPair : scope) {
+      result += util::indent(symPair.first + ":" +
+                             symPair.second->toString() + ", ", 1);
+    }
+    result += "\n";
+  }
+  return result;
 }
 
 
@@ -76,4 +89,5 @@ int Frontend::parseFile(string filename) {
     log("Parse error");
     return 1;
   }
+
 }

@@ -36,6 +36,18 @@ class SymbolTable {
   /** Return the first symbol first match or add the symbol to the top scope. */
   IRNode *&operator[](const std::string &name);
 
+  std::string toString() const;
+  friend std::ostream &operator<<(std::ostream &os, const SymbolTable &table) {
+    return os << table.toString();
+  }
+
+  std::list<SymbolMap>::const_iterator begin() const {
+    return scopes.begin();
+  }
+  std::list<SymbolMap>::const_iterator end() const {
+    return scopes.end();
+  }
+
  private:
   std::list<SymbolMap> scopes;
 };
