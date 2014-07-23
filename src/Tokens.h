@@ -63,7 +63,7 @@ extern int yydebug;
 
       bool dimensionsMatch(const TensorValues<T> &other, std::string *errors) {
         assert(errors != NULL);
-        std::string mismatchError = "error, missmatched dimension sizes";
+        std::string mismatchError = "missmatched dimension sizes";
         if (dimSizes.size()-1 != other.dimSizes.size()) {
           *errors = mismatchError;
           return false;
@@ -161,11 +161,13 @@ union YYSTYPE
   double      fnum;
   const char *string;
 
-  // Values
-  simit::Value  *Value;
-  simit::Tensor *Tensor;
-  simit::Store  *Store;
 
+  // Values
+  simit::Value             *Value;
+  std::list<simit::Value*> *ValueList;
+  simit::Tensor            *Tensor;
+  simit::Store             *Store;
+  std::list<simit::Store*> *StoreList;
 
 
   simit::Type                      *Type;
@@ -178,10 +180,10 @@ union YYSTYPE
   simit::Dimension                 *Dimension;
 
 
-  simit::LiteralTensor      *literal_tensor;
-  simit::DenseLiteralTensor *dense_literal_tensor;
-  TensorValues<double>      *float_values;
-  TensorValues<int>         *int_values;
+  simit::LiteralTensor      *LiteralTensor;
+  simit::DenseLiteralTensor *DenseLiteralTensor;
+  TensorValues<double>      *TensorDoubleValues;
+  TensorValues<int>         *TensorIntValues;
 
 
 };

@@ -107,18 +107,18 @@ class Shape {
   unsigned int getOrder() const { return dimensions.size(); }
   unsigned int getSize() const;
 
-  std::vector<Dimension *>::const_iterator begin() const {
-    return dimensions.begin();
-  }
-  std::vector<Dimension *>::const_iterator end() const {
-    return dimensions.end();
-  }
-
   bool operator==(const Shape &other) const;
   bool operator!=(const Shape &other) const { return !(*this == other); }
   operator std::string() const;
   friend std::ostream &operator<<(std::ostream &os, const Shape &obj) {
     return os << std::string(obj);
+  }
+
+  std::vector<Dimension *>::const_iterator begin() const {
+    return dimensions.begin();
+  }
+  std::vector<Dimension *>::const_iterator end() const {
+    return dimensions.end();
   }
 
  private:

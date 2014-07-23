@@ -15,21 +15,6 @@ using namespace util;
 using namespace testing;
 using namespace std;
 
-string indent(string str, int num) {
-  std::istringstream ss(str);
-  string indent(num, ' ');
-  string strIndented;
-  string line;
-
-  if (std::getline(ss, line)) {
-    strIndented += indent + line;
-  }
-  while (std::getline(ss, line)) {
-    strIndented += "\n" + indent + line;
-  }
-  return strIndented;
-}
-
 // Test each file in the input folder
 class ProgramTestParam {
 public:

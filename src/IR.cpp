@@ -38,13 +38,10 @@ DenseLiteralTensor::~DenseLiteralTensor() {
   free(data);
 }
 
-DenseLiteralTensor::operator std::string() const {
+std::string DenseLiteralTensor::toString() const {
   string result;
-  if (name != "") {
-    result += name + " : " + util::toString(*type);
-  }
 
-  // TODO: Add nicer value printing that prints matrices and tensors
+  // TODO: Add nicer value printing that prints matrices and tensors properly
   switch (type->getComponentType()) {
     case TensorType::INT: {
       int *idata = (int*)data;
@@ -81,11 +78,7 @@ DenseLiteralTensor::operator std::string() const {
 }
 
 
-/* Function */
-Function::Function() {}
-
-Function::~Function() {}
-
-Function::operator std::string() const {
-  return "Function";
+/* VariableStore */
+std::string VariableStore::toString() const {
+  return getName();
 }

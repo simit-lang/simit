@@ -139,7 +139,7 @@ extern int yydebug;
 
       bool dimensionsMatch(const TensorValues<T> &other, std::string *errors) {
         assert(errors != NULL);
-        std::string mismatchError = "error, missmatched dimension sizes";
+        std::string mismatchError = "missmatched dimension sizes";
         if (dimSizes.size()-1 != other.dimSizes.size()) {
           *errors = mismatchError;
           return false;
@@ -237,11 +237,13 @@ union YYSTYPE
   double      fnum;
   const char *string;
 
-  // Values
-  simit::Value  *Value;
-  simit::Tensor *Tensor;
-  simit::Store  *Store;
 
+  // Values
+  simit::Value             *Value;
+  std::list<simit::Value*> *ValueList;
+  simit::Tensor            *Tensor;
+  simit::Store             *Store;
+  std::list<simit::Store*> *StoreList;
 
 
   simit::Type                      *Type;
@@ -254,10 +256,10 @@ union YYSTYPE
   simit::Dimension                 *Dimension;
 
 
-  simit::LiteralTensor      *literal_tensor;
-  simit::DenseLiteralTensor *dense_literal_tensor;
-  TensorValues<double>      *float_values;
-  TensorValues<int>         *int_values;
+  simit::LiteralTensor      *LiteralTensor;
+  simit::DenseLiteralTensor *DenseLiteralTensor;
+  TensorValues<double>      *TensorDoubleValues;
+  TensorValues<int>         *TensorIntValues;
 
 
 };
@@ -590,20 +592,20 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   139,   139,   141,   144,   145,   146,   147,   148,   149,
-     153,   157,   163,   166,   173,   177,   179,   181,   183,   186,
-     191,   196,   199,   203,   205,   207,   209,   212,   213,   217,
-     219,   222,   223,   224,   225,   226,   229,   250,   256,   258,
-     260,   262,   264,   267,   270,   273,   274,   282,   301,   302,
-     303,   305,   306,   307,   308,   309,   310,   313,   314,   315,
-     316,   317,   318,   319,   320,   321,   322,   323,   324,   325,
-     326,   329,   330,   333,   334,   339,   344,   346,   350,   352,
-     357,   359,   361,   364,   367,   370,   376,   377,   382,   387,
-     388,   391,   392,   397,   425,   428,   433,   439,   442,   453,
-     456,   462,   468,   472,   478,   481,   485,   490,   493,   564,
-     565,   567,   571,   572,   585,   591,   599,   606,   609,   613,
-     626,   630,   644,   648,   654,   661,   664,   668,   681,   685,
-     699,   703,   709,   712,   718,   722,   724,   727,   728
+       0,   133,   133,   135,   138,   139,   140,   141,   142,   143,
+     147,   151,   157,   160,   167,   171,   173,   175,   177,   180,
+     185,   190,   193,   197,   199,   201,   203,   206,   207,   211,
+     213,   216,   217,   218,   219,   220,   223,   244,   250,   252,
+     254,   256,   258,   261,   264,   299,   300,   315,   332,   333,
+     334,   336,   337,   338,   339,   340,   341,   344,   345,   346,
+     347,   348,   349,   350,   351,   352,   353,   354,   355,   356,
+     357,   362,   363,   367,   371,   378,   383,   385,   389,   391,
+     396,   398,   400,   403,   406,   409,   415,   416,   422,   427,
+     428,   432,   436,   443,   471,   474,   479,   485,   488,   499,
+     502,   508,   514,   518,   524,   527,   531,   536,   539,   610,
+     611,   613,   617,   618,   631,   637,   645,   652,   655,   659,
+     672,   676,   690,   694,   700,   707,   710,   714,   727,   731,
+     745,   749,   755,   758,   764,   768,   770,   773,   774
 };
 #endif
 
@@ -1672,7 +1674,25 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 77: /* expr  */
 
-      {}
+      { delete ((*yyvaluep).Tensor); }
+
+        break;
+
+    case 79: /* expr_list  */
+
+      { delete ((*yyvaluep).ValueList); }
+
+        break;
+
+    case 87: /* lhs_expr  */
+
+      { delete ((*yyvaluep).Store); }
+
+        break;
+
+    case 88: /* lhs_expr_list  */
+
+      { delete ((*yyvaluep).StoreList); }
 
         break;
 
@@ -1732,67 +1752,67 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 100: /* tensor_literal  */
 
-      { delete ((*yyvaluep).literal_tensor); }
+      { delete ((*yyvaluep).LiteralTensor); }
 
         break;
 
     case 101: /* dense_tensor_literal  */
 
-      { delete ((*yyvaluep).dense_literal_tensor); }
+      { delete ((*yyvaluep).DenseLiteralTensor); }
 
         break;
 
     case 102: /* float_dense_tensor_literal  */
 
-      { delete ((*yyvaluep).float_values); }
+      { delete ((*yyvaluep).TensorDoubleValues); }
 
         break;
 
     case 103: /* float_dense_ndtensor_literal  */
 
-      { delete ((*yyvaluep).float_values); }
+      { delete ((*yyvaluep).TensorDoubleValues); }
 
         break;
 
     case 104: /* float_dense_matrix_literal  */
 
-      { delete ((*yyvaluep).float_values); }
+      { delete ((*yyvaluep).TensorDoubleValues); }
 
         break;
 
     case 105: /* float_dense_vector_literal  */
 
-      { delete ((*yyvaluep).float_values); }
+      { delete ((*yyvaluep).TensorDoubleValues); }
 
         break;
 
     case 106: /* int_dense_tensor_literal  */
 
-      { delete ((*yyvaluep).int_values); }
+      { delete ((*yyvaluep).TensorIntValues); }
 
         break;
 
     case 107: /* int_dense_ndtensor_literal  */
 
-      { delete ((*yyvaluep).int_values); }
+      { delete ((*yyvaluep).TensorIntValues); }
 
         break;
 
     case 108: /* int_dense_matrix_literal  */
 
-      { delete ((*yyvaluep).int_values); }
+      { delete ((*yyvaluep).TensorIntValues); }
 
         break;
 
     case 109: /* int_dense_vector_literal  */
 
-      { delete ((*yyvaluep).int_values); }
+      { delete ((*yyvaluep).TensorIntValues); }
 
         break;
 
     case 110: /* scalar_literal  */
 
-      { delete ((*yyvaluep).dense_literal_tensor); }
+      { delete ((*yyvaluep).DenseLiteralTensor); }
 
         break;
 
@@ -2162,10 +2182,10 @@ yyreduce:
   case 36:
 
     {
-    (yyvsp[-1].literal_tensor)->setName((yyvsp[-5].string));
+    (yyvsp[-1].LiteralTensor)->setName((yyvsp[-5].string));
     free((void*)(yyvsp[-5].string));
     auto tensorType = unique_ptr<TensorType>((yyvsp[-3].TensorType));
-    auto tensorLiteral = unique_ptr<LiteralTensor>((yyvsp[-1].literal_tensor));
+    auto tensorLiteral = unique_ptr<LiteralTensor>((yyvsp[-1].LiteralTensor));
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
@@ -2177,7 +2197,7 @@ yyreduce:
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
     if (*(yyvsp[-3].TensorType) != *(tensorLiteral->getType())) {
-      REPORT_ERROR("error, value type does not match literal type", (yylsp[-2]));
+      REPORT_ERROR("value type does not match literal type", (yylsp[-2]));
     }
 
     symtable.addNode(tensorLiteral.release());
@@ -2194,23 +2214,59 @@ yyreduce:
 
     break;
 
+  case 44:
+
+    {
+    auto lhsList = unique_ptr<list<Store*>>((yyvsp[-3].StoreList));
+    auto rhsList = unique_ptr<list<Value*>>((yyvsp[-1].ValueList));
+
+    if (lhsList->size() > rhsList->size()) {
+      // TODO: Add error back in
+      // REPORT_ERROR("too few expressions assigned to too many variables", @2);
+      YYACCEPT;
+    }
+    else if (lhsList->size() < rhsList->size()) {
+      REPORT_ERROR("too mant expressions assigned to too few variables", (yylsp[-2]));
+    }
+
+    auto lhsIter = lhsList->begin();
+    auto rhsIter = rhsList->begin();
+    for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
+      auto lhs = *lhsIter;
+      auto rhs = *rhsIter;
+
+      // TODO: Remove this
+      if (rhs == NULL) continue;
+
+      if (dynamic_cast<VariableStore*>(lhs) != NULL) {
+        rhs->setName(lhs->getName());
+        symtable.addNode(rhs);
+        delete lhs;
+      }
+      else {
+        // TODO: Implement
+        assert(false);
+      }
+    }
+  }
+
+    break;
+
   case 47:
 
     {
     string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
-    cout << "Read:  " << ident << endl;
-
     IRNode *node = symtable[ident];
     if (node == NULL) {
       // TODO: Re-introduce this code once functions and parameters work
-      // REPORT_ERROR("error, " + ident + " is not defined in scope", @1);
+      // REPORT_ERROR(ident + " is not defined in scope", @1);
       YYACCEPT;
     }
 
     Tensor *tensor = dynamic_cast<Tensor*>(node);
     if (tensor == NULL) {
-      REPORT_ERROR("error, " + ident + " is not a tensor", (yylsp[0]));
+      REPORT_ERROR(ident + " is not a tensor", (yylsp[0]));
     }
 
     (yyval.Tensor) = tensor;
@@ -2221,7 +2277,33 @@ yyreduce:
   case 56:
 
     {
+    (yyval.Tensor) = (yyvsp[0].Tensor);
+  }
 
+    break;
+
+  case 70:
+
+    {
+    (yyval.Tensor) = NULL;
+  }
+
+    break;
+
+  case 73:
+
+    {
+    (yyval.ValueList) = new list<Value*>();
+    (yyval.ValueList)->push_back((yyvsp[0].Tensor));
+  }
+
+    break;
+
+  case 74:
+
+    {
+    (yyval.ValueList) = (yyvsp[-2].ValueList);
+    (yyval.ValueList)->push_back((yyvsp[0].Tensor));
   }
 
     break;
@@ -2273,7 +2355,25 @@ yyreduce:
     {
     string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
-    cout << "Write: " << ident << endl;
+    (yyval.Store) = new VariableStore(ident);
+  }
+
+    break;
+
+  case 91:
+
+    {
+    (yyval.StoreList) = new list<Store*>();
+    (yyval.StoreList)->push_back((yyvsp[0].Store));
+  }
+
+    break;
+
+  case 92:
+
+    {
+    (yyval.StoreList) = (yyvsp[-2].StoreList);
+    (yyval.StoreList)->push_back((yyvsp[0].Store));
   }
 
     break;
@@ -2422,10 +2522,10 @@ yyreduce:
   case 114:
 
     {
-    auto values = unique_ptr<TensorValues<double>>((yyvsp[-1].float_values));
+    auto values = unique_ptr<TensorValues<double>>((yyvsp[-1].TensorDoubleValues));
     Shape *shape = dimSizesToShape(values->dimSizes);
     auto type = new NDTensorType(shape, new ScalarType(ScalarType::FLOAT));
-    (yyval.dense_literal_tensor) = new DenseLiteralTensor(type, values->values.data());
+    (yyval.DenseLiteralTensor) = new DenseLiteralTensor(type, values->values.data());
   }
 
     break;
@@ -2433,10 +2533,10 @@ yyreduce:
   case 115:
 
     {
-    auto values = unique_ptr<TensorValues<int>>((yyvsp[-1].int_values));
+    auto values = unique_ptr<TensorValues<int>>((yyvsp[-1].TensorIntValues));
     Shape *shape = dimSizesToShape(values->dimSizes);
     auto type = new NDTensorType(shape, new ScalarType(ScalarType::INT));
-    (yyval.dense_literal_tensor) = new DenseLiteralTensor(type, values->values.data());
+    (yyval.DenseLiteralTensor) = new DenseLiteralTensor(type, values->values.data());
   }
 
     break;
@@ -2446,8 +2546,8 @@ yyreduce:
     {
     // If the matrix has only one column then we discard that dimension and
     // treat it as a vector.
-    if ((yyvsp[0].float_values)->dimSizes[(yyvsp[0].float_values)->dimSizes.size()-1] == 1) {
-      (yyvsp[0].float_values)->dimSizes.pop_back();
+    if ((yyvsp[0].TensorDoubleValues)->dimSizes[(yyvsp[0].TensorDoubleValues)->dimSizes.size()-1] == 1) {
+      (yyvsp[0].TensorDoubleValues)->dimSizes.pop_back();
     }
   }
 
@@ -2456,8 +2556,8 @@ yyreduce:
   case 118:
 
     {
-    (yyval.float_values) = (yyvsp[-1].float_values);
-    (yyval.float_values)->addDimension();
+    (yyval.TensorDoubleValues) = (yyvsp[-1].TensorDoubleValues);
+    (yyval.TensorDoubleValues)->addDimension();
   }
 
     break;
@@ -2465,15 +2565,15 @@ yyreduce:
   case 119:
 
     {
-    auto  left = unique_ptr<TensorValues<double>>((yyvsp[-4].float_values));
-    auto right = unique_ptr<TensorValues<double>>((yyvsp[-1].float_values));
+    auto  left = unique_ptr<TensorValues<double>>((yyvsp[-4].TensorDoubleValues));
+    auto right = unique_ptr<TensorValues<double>>((yyvsp[-1].TensorDoubleValues));
 
     string errorStr;
     if(!left->dimensionsMatch(*right, &errorStr)) {
       REPORT_ERROR(errorStr, (yylsp[-3]));
     }
     left->merge(*right);
-    (yyval.float_values) = left.release();
+    (yyval.TensorDoubleValues) = left.release();
   }
 
     break;
@@ -2481,8 +2581,8 @@ yyreduce:
   case 120:
 
     {
-    (yyval.float_values) = (yyvsp[0].float_values);
-    (yyval.float_values)->addDimension();
+    (yyval.TensorDoubleValues) = (yyvsp[0].TensorDoubleValues);
+    (yyval.TensorDoubleValues)->addDimension();
   }
 
     break;
@@ -2490,8 +2590,8 @@ yyreduce:
   case 121:
 
     {
-    auto  left = unique_ptr<TensorValues<double>>((yyvsp[-2].float_values));
-    auto right = unique_ptr<TensorValues<double>>((yyvsp[0].float_values));
+    auto  left = unique_ptr<TensorValues<double>>((yyvsp[-2].TensorDoubleValues));
+    auto right = unique_ptr<TensorValues<double>>((yyvsp[0].TensorDoubleValues));
 
     string errorStr;
     if(!left->dimensionsMatch(*right, &errorStr)) {
@@ -2499,7 +2599,7 @@ yyreduce:
     }
 
     left->merge(*right);
-    (yyval.float_values) = left.release();
+    (yyval.TensorDoubleValues) = left.release();
   }
 
     break;
@@ -2507,8 +2607,8 @@ yyreduce:
   case 122:
 
     {
-    (yyval.float_values) = new TensorValues<double>();
-    (yyval.float_values)->addValue((yyvsp[0].fnum));
+    (yyval.TensorDoubleValues) = new TensorValues<double>();
+    (yyval.TensorDoubleValues)->addValue((yyvsp[0].fnum));
   }
 
     break;
@@ -2516,8 +2616,8 @@ yyreduce:
   case 123:
 
     {
-    (yyval.float_values) = (yyvsp[-2].float_values);
-    (yyval.float_values)->addValue((yyvsp[0].fnum));
+    (yyval.TensorDoubleValues) = (yyvsp[-2].TensorDoubleValues);
+    (yyval.TensorDoubleValues)->addValue((yyvsp[0].fnum));
   }
 
     break;
@@ -2527,8 +2627,8 @@ yyreduce:
     {
     // If the matrix has only one column then we discard that dimension and
     // treat it as a vector.
-    if ((yyvsp[0].int_values)->dimSizes[(yyvsp[0].int_values)->dimSizes.size()-1] == 1) {
-      (yyvsp[0].int_values)->dimSizes.pop_back();
+    if ((yyvsp[0].TensorIntValues)->dimSizes[(yyvsp[0].TensorIntValues)->dimSizes.size()-1] == 1) {
+      (yyvsp[0].TensorIntValues)->dimSizes.pop_back();
     }
   }
 
@@ -2537,8 +2637,8 @@ yyreduce:
   case 126:
 
     {
-    (yyval.int_values) = (yyvsp[-1].int_values);
-    (yyval.int_values)->addDimension();
+    (yyval.TensorIntValues) = (yyvsp[-1].TensorIntValues);
+    (yyval.TensorIntValues)->addDimension();
   }
 
     break;
@@ -2546,15 +2646,15 @@ yyreduce:
   case 127:
 
     {
-    auto  left = unique_ptr<TensorValues<int>>((yyvsp[-4].int_values));
-    auto right = unique_ptr<TensorValues<int>>((yyvsp[-1].int_values));
+    auto  left = unique_ptr<TensorValues<int>>((yyvsp[-4].TensorIntValues));
+    auto right = unique_ptr<TensorValues<int>>((yyvsp[-1].TensorIntValues));
 
     string errorStr;
     if(!left->dimensionsMatch(*right, &errorStr)) {
       REPORT_ERROR(errorStr, (yylsp[-3]));
     }
     left->merge(*right);
-    (yyval.int_values) = left.release();
+    (yyval.TensorIntValues) = left.release();
   }
 
     break;
@@ -2562,8 +2662,8 @@ yyreduce:
   case 128:
 
     {
-    (yyval.int_values) = (yyvsp[0].int_values);
-    (yyval.int_values)->addDimension();
+    (yyval.TensorIntValues) = (yyvsp[0].TensorIntValues);
+    (yyval.TensorIntValues)->addDimension();
   }
 
     break;
@@ -2571,8 +2671,8 @@ yyreduce:
   case 129:
 
     {
-    auto  left = unique_ptr<TensorValues<int>>((yyvsp[-2].int_values));
-    auto right = unique_ptr<TensorValues<int>>((yyvsp[0].int_values));
+    auto  left = unique_ptr<TensorValues<int>>((yyvsp[-2].TensorIntValues));
+    auto right = unique_ptr<TensorValues<int>>((yyvsp[0].TensorIntValues));
 
     string errorStr;
     if(!left->dimensionsMatch(*right, &errorStr)) {
@@ -2580,7 +2680,7 @@ yyreduce:
     }
 
     left->merge(*right);
-    (yyval.int_values) = left.release();
+    (yyval.TensorIntValues) = left.release();
   }
 
     break;
@@ -2588,8 +2688,8 @@ yyreduce:
   case 130:
 
     {
-    (yyval.int_values) = new TensorValues<int>();
-    (yyval.int_values)->addValue((yyvsp[0].num));
+    (yyval.TensorIntValues) = new TensorValues<int>();
+    (yyval.TensorIntValues)->addValue((yyvsp[0].num));
   }
 
     break;
@@ -2597,8 +2697,8 @@ yyreduce:
   case 131:
 
     {
-    (yyval.int_values) = (yyvsp[-2].int_values);
-    (yyval.int_values)->addValue((yyvsp[0].num));
+    (yyval.TensorIntValues) = (yyvsp[-2].TensorIntValues);
+    (yyval.TensorIntValues)->addValue((yyvsp[0].num));
   }
 
     break;
@@ -2606,7 +2706,7 @@ yyreduce:
   case 132:
 
     {
-    (yyval.dense_literal_tensor) = new DenseLiteralTensor(new ScalarType(ScalarType::INT), &(yyvsp[0].num));
+    (yyval.DenseLiteralTensor) = new DenseLiteralTensor(new ScalarType(ScalarType::INT), &(yyvsp[0].num));
   }
 
     break;
@@ -2614,7 +2714,7 @@ yyreduce:
   case 133:
 
     {
-    (yyval.dense_literal_tensor) = new DenseLiteralTensor(new ScalarType(ScalarType::FLOAT), &(yyvsp[0].fnum));
+    (yyval.DenseLiteralTensor) = new DenseLiteralTensor(new ScalarType(ScalarType::FLOAT), &(yyvsp[0].fnum));
   }
 
     break;

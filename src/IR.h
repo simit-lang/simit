@@ -11,12 +11,16 @@ namespace simit {
 class IRNode {
  public:
   IRNode() {}
+  IRNode(const std::string &name) : name(name) {}
   virtual ~IRNode() {}
 
-  virtual operator std::string() const = 0;
-
   void setName(std::string name) { this->name = name; }
-  std::string getName()          { return this->name; }
+  std::string getName() const    { return name; }
+
+  virtual std::string toString() const = 0;
+  friend std::ostream &operator<<(std::ostream &os, const IRNode &node) {
+    return os << node.toString();
+  }
 
  protected:
   std::string name;
@@ -26,7 +30,7 @@ class IRNode {
 class Value : public IRNode {
  public:
   Value() {}
-  virtual ~Value() {}
+  Value(const std::string &name) : IRNode(name) {}
 
   virtual Type *getType() = 0;
 };
@@ -48,7 +52,6 @@ class Tensor : public Value {
 class LiteralTensor : public Tensor {
  public:
   LiteralTensor(TensorType *type) : Tensor(type) {}
-  virtual ~LiteralTensor() {}
 
   void cast(TensorType *type);
 };
@@ -59,7 +62,7 @@ class DenseLiteralTensor : public LiteralTensor {
   DenseLiteralTensor(TensorType *type, void *data);
   virtual ~DenseLiteralTensor();
 
-  virtual operator std::string() const;
+  virtual std::string toString() const;
 
  private:
   void  *data;
@@ -68,19 +71,26 @@ class DenseLiteralTensor : public LiteralTensor {
 
 class Function : public IRNode {
  public:
-  Function();
-  virtual ~Function();
-
-  virtual operator std::string() const;
 };
+
 
 /** An instruction that stores a value to a tensor or an object */
 class Store : public Value {
  public:
-  Store() {}
-  virtual ~Store() {}
+  Store(const std::string &name) : Value(name) {}
+
+  virtual Type *getType() { return type; }
 
  private:
+  Type *type;
+};
+
+
+/** An instructin that stores a value to a local bariable */
+class VariableStore : public Store {
+ public:
+  VariableStore(const std::string &varName) : Store(varName) {}
+  virtual std::string toString() const;
 };
 
 }

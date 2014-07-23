@@ -41,12 +41,6 @@
   int          num;
   double      fnum;
   const char *string;
-
-  // Values
-  simit::Value  *Value;
-  simit::Tensor *Tensor;
-  simit::Store  *Store;
-
 }
 %destructor {} <num> <fnum> <ComponentType>
 %destructor { free((void*)($$)); } <string>
@@ -216,7 +210,7 @@ param_list
 // Statements
 stmt_block
   : /* empty */
-  | stmt_block stmt
+  | stmt_block stmt 
 
 stmt
   : const_stmt
@@ -242,7 +236,7 @@ const_stmt
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
     if (*$tensor_type != *(tensorLiteral->getType())) {
-      REPORT_ERROR("error, value type does not match literal type", @5);
+      REPORT_ERROR("value type does not match literal type", @5);
     }
 
     symtable.addNode(tensorLiteral.release());
@@ -267,7 +261,39 @@ return_stmt
   : "return" ";"
 
 assign_stmt
-  : lhs_expr_list "=" expr_list ";"
+  : lhs_expr_list "=" expr_list ";" {
+    auto lhsList = unique_ptr<list<Store*>>($lhs_expr_list);
+    auto rhsList = unique_ptr<list<Value*>>($expr_list);
+
+    if (lhsList->size() > rhsList->size()) {
+      // TODO: Add error back in
+      // REPORT_ERROR("too few expressions assigned to too many variables", @2);
+      YYACCEPT;
+    }
+    else if (lhsList->size() < rhsList->size()) {
+      REPORT_ERROR("too mant expressions assigned to too few variables", @2);
+    }
+
+    auto lhsIter = lhsList->begin();
+    auto rhsIter = rhsList->begin();
+    for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
+      auto lhs = *lhsIter;
+      auto rhs = *rhsIter;
+
+      // TODO: Remove this
+      if (rhs == NULL) continue;
+
+      if (dynamic_cast<VariableStore*>(lhs) != NULL) {
+        rhs->setName(lhs->getName());
+        symtable.addNode(rhs);
+        delete lhs;
+      }
+      else {
+        // TODO: Implement
+        assert(false);
+      }
+    }
+  }
 
 expr_stmt
   : ";"
@@ -275,24 +301,30 @@ expr_stmt
 
 
 // Expressions
-%type<Tensor> expr;
-%destructor {} <Tensor>;  // TODO: Remove this line
+%union {
+  // Values
+  simit::Value             *Value;
+  std::list<simit::Value*> *ValueList;
+  simit::Tensor            *Tensor;
+  simit::Store             *Store;
+  std::list<simit::Store*> *StoreList;
+};
 
+%type<Tensor> expr;
 expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
-
     IRNode *node = symtable[ident];
     if (node == NULL) {
       // TODO: Re-introduce this code once functions and parameters work
-      // REPORT_ERROR("error, " + ident + " is not defined in scope", @1);
+      // REPORT_ERROR(ident + " is not defined in scope", @1);
       YYACCEPT;
     }
 
     Tensor *tensor = dynamic_cast<Tensor*>(node);
     if (tensor == NULL) {
-      REPORT_ERROR("error, " + ident + " is not a tensor", @1);
+      REPORT_ERROR(ident + " is not a tensor", @1);
     }
 
     $$ = tensor;
@@ -306,8 +338,8 @@ expr
   | expr "-" expr
   | expr "*" expr
   | expr "/" expr
-  |      "-" expr  %prec NEG {
-
+  | "-" expr %prec NEG {
+    $$ = $2;
   }
   | expr "'"
   | expr "^" expr
@@ -322,16 +354,24 @@ expr
   | call_expr
   | expr "." expr
   | index_expr
-  | map_expr
+  | map_expr {
+    $$ = NULL;
+  }
 
 call_expr
   : expr "(" ")"
   | expr "(" expr_list ")"
 
+%type <ValueList> expr_list;
 expr_list
-  : expr
-  | expr_list "," expr
-
+  : expr {
+    $$ = new list<Value*>();
+    $$->push_back($expr);
+  }
+  | expr_list "," expr {
+    $$ = $1;
+    $$->push_back($expr);
+  }
 
 // Map expressions
 map_expr
@@ -377,18 +417,26 @@ reduction_op
 
 
 // Lhs expressions
+%type<Store> lhs_expr;
 lhs_expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
+    $$ = new VariableStore(ident);
   }
   | IDENT "(" expr_list ")"
   | IDENT "." IDENT
 
+%type<StoreList> lhs_expr_list;
 lhs_expr_list
-  : lhs_expr
-  | lhs_expr_list "," lhs_expr
-
+  : lhs_expr {
+    $$ = new list<Store*>();
+    $$->push_back($lhs_expr);
+  }
+  | lhs_expr_list "," lhs_expr {
+    $$ = $1;
+    $$->push_back($lhs_expr);
+  }
 
 // Variables
 var_decl
@@ -510,7 +558,7 @@ component_type
 
       bool dimensionsMatch(const TensorValues<T> &other, std::string *errors) {
         assert(errors != NULL);
-        std::string mismatchError = "error, missmatched dimension sizes";
+        std::string mismatchError = "missmatched dimension sizes";
         if (dimSizes.size()-1 != other.dimSizes.size()) {
           *errors = mismatchError;
           return false;
@@ -537,26 +585,26 @@ component_type
 };
 
 %union {
-  simit::LiteralTensor      *literal_tensor;
-  simit::DenseLiteralTensor *dense_literal_tensor;
-  TensorValues<double>      *float_values;
-  TensorValues<int>         *int_values;
+  simit::LiteralTensor      *LiteralTensor;
+  simit::DenseLiteralTensor *DenseLiteralTensor;
+  TensorValues<double>      *TensorDoubleValues;
+  TensorValues<int>         *TensorIntValues;
 };
 
-%type                <Value> literal;
-%type       <literal_tensor> tensor_literal;
-%type <dense_literal_tensor> dense_tensor_literal;
-%type <dense_literal_tensor> scalar_literal;
+%type              <Value> literal;
+%type      <LiteralTensor> tensor_literal;
+%type <DenseLiteralTensor> dense_tensor_literal;
+%type <DenseLiteralTensor> scalar_literal;
 
-%type <float_values> float_dense_tensor_literal;
-%type <float_values> float_dense_ndtensor_literal;
-%type <float_values> float_dense_matrix_literal;
-%type <float_values> float_dense_vector_literal;
+%type <TensorDoubleValues> float_dense_tensor_literal;
+%type <TensorDoubleValues> float_dense_ndtensor_literal;
+%type <TensorDoubleValues> float_dense_matrix_literal;
+%type <TensorDoubleValues> float_dense_vector_literal;
 
-%type <int_values> int_dense_tensor_literal;
-%type <int_values> int_dense_ndtensor_literal;
-%type <int_values> int_dense_matrix_literal;
-%type <int_values> int_dense_vector_literal;
+%type <TensorIntValues> int_dense_tensor_literal;
+%type <TensorIntValues> int_dense_ndtensor_literal;
+%type <TensorIntValues> int_dense_matrix_literal;
+%type <TensorIntValues> int_dense_vector_literal;
 
 literal
   : element_literal

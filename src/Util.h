@@ -50,6 +50,8 @@ std::string rjoin(const Collection &collection, const std::string &separator) {
   return join(collection.rbegin(), collection.rend(), separator);
 }
 
+std::string indent(std::string str, unsigned int num);
+
 }
 
 #endif
