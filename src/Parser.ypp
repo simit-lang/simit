@@ -406,15 +406,15 @@ call_expr
 expr_list
   : expr {
     if ($expr == NULL) YYACCEPT;  // TODO: Remove check
-    auto expr = unique_ptr<shared_ptr<Value>>($expr);
     $$ = new list<shared_ptr<Value>>();
-    $$->push_back(*expr);
+    $$->push_back(*$expr);
+    delete $expr;
   }
   | expr_list "," expr {
     if ($expr == NULL) YYACCEPT;  // TODO: Remove check
-    auto expr = unique_ptr<shared_ptr<Value>>($expr);
     $$ = $1;
-    $$->push_back(*expr);
+    $$->push_back(*$expr);
+    delete $expr;
   }
 
 // Map expressions
@@ -476,16 +476,16 @@ lhs_expr
 lhs_expr_list
   : lhs_expr {
     if ($lhs_expr == NULL) YYACCEPT;  // TODO: Remove check
-    auto lhs_expr = unique_ptr<shared_ptr<Store>>($lhs_expr);
     $$ = new list<shared_ptr<Store>>();
-    $$->push_back(*lhs_expr);
+    $$->push_back(*$lhs_expr);
+    delete $lhs_expr;
 
   }
   | lhs_expr_list "," lhs_expr {
     if ($lhs_expr == NULL) YYACCEPT;  // TODO: Remove check
-    auto lhs_expr = unique_ptr<shared_ptr<Store>>($lhs_expr);
     $$ = $1;
-    $$->push_back(*lhs_expr);
+    $$->push_back(*$lhs_expr);
+    delete $lhs_expr;
   }
 
 // Variables

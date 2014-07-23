@@ -596,15 +596,15 @@ static const yytype_uint16 yyrline[] =
      185,   190,   193,   197,   199,   201,   203,   206,   207,   211,
      213,   216,   217,   218,   219,   220,   223,   247,   253,   255,
      257,   259,   261,   264,   267,   301,   302,   316,   333,   336,
-     339,   342,   345,   348,   351,   354,   355,   359,   362,   365,
-     368,   371,   374,   377,   380,   383,   386,   389,   392,   395,
-     398,   403,   404,   408,   414,   423,   428,   430,   434,   436,
-     441,   443,   445,   448,   451,   454,   460,   461,   467,   473,
-     474,   478,   485,   494,   522,   525,   530,   536,   539,   550,
-     553,   559,   565,   569,   575,   578,   582,   587,   590,   661,
-     662,   664,   668,   669,   682,   689,   698,   705,   708,   712,
-     725,   729,   743,   747,   753,   760,   763,   767,   780,   784,
-     798,   802,   808,   813,   821,   826,   828,   831,   832
+     339,   342,   345,   348,   351,   354,   355,   358,   361,   364,
+     367,   370,   373,   376,   379,   382,   385,   388,   391,   394,
+     397,   402,   403,   407,   413,   422,   427,   429,   433,   435,
+     440,   442,   444,   447,   450,   453,   459,   460,   466,   472,
+     473,   477,   484,   493,   521,   524,   529,   535,   538,   549,
+     552,   558,   564,   568,   574,   577,   581,   586,   589,   660,
+     661,   663,   667,   668,   681,   688,   697,   704,   707,   711,
+     724,   728,   742,   746,   752,   759,   762,   766,   779,   783,
+     797,   801,   807,   812,   820,   825,   827,   830,   831
 };
 #endif
 
@@ -2334,7 +2334,6 @@ yyreduce:
   case 56:
 
     {
-//    list<Tensor*>
     (yyval.Value) = (yyvsp[0].Value);
   }
 
@@ -2456,9 +2455,9 @@ yyreduce:
 
     {
     if ((yyvsp[0].Value) == NULL) YYACCEPT;  // TODO: Remove check
-    auto expr = unique_ptr<shared_ptr<Value>>((yyvsp[0].Value));
     (yyval.ValueList) = new list<shared_ptr<Value>>();
-    (yyval.ValueList)->push_back(*expr);
+    (yyval.ValueList)->push_back(*(yyvsp[0].Value));
+    delete (yyvsp[0].Value);
   }
 
     break;
@@ -2467,9 +2466,9 @@ yyreduce:
 
     {
     if ((yyvsp[0].Value) == NULL) YYACCEPT;  // TODO: Remove check
-    auto expr = unique_ptr<shared_ptr<Value>>((yyvsp[0].Value));
     (yyval.ValueList) = (yyvsp[-2].ValueList);
-    (yyval.ValueList)->push_back(*expr);
+    (yyval.ValueList)->push_back(*(yyvsp[0].Value));
+    delete (yyvsp[0].Value);
   }
 
     break;
@@ -2531,9 +2530,9 @@ yyreduce:
 
     {
     if ((yyvsp[0].Store) == NULL) YYACCEPT;  // TODO: Remove check
-    auto lhs_expr = unique_ptr<shared_ptr<Store>>((yyvsp[0].Store));
     (yyval.StoreList) = new list<shared_ptr<Store>>();
-    (yyval.StoreList)->push_back(*lhs_expr);
+    (yyval.StoreList)->push_back(*(yyvsp[0].Store));
+    delete (yyvsp[0].Store);
 
   }
 
@@ -2543,9 +2542,9 @@ yyreduce:
 
     {
     if ((yyvsp[0].Store) == NULL) YYACCEPT;  // TODO: Remove check
-    auto lhs_expr = unique_ptr<shared_ptr<Store>>((yyvsp[0].Store));
     (yyval.StoreList) = (yyvsp[-2].StoreList);
-    (yyval.StoreList)->push_back(*lhs_expr);
+    (yyval.StoreList)->push_back(*(yyvsp[0].Store));
+    delete (yyvsp[0].Store);
   }
 
     break;
