@@ -8,6 +8,8 @@
 
 namespace simit {
 
+/** The base class of all nodes in the Simit Intermediate Representation
+  * (Simit IR) */
 class IRNode {
  public:
   IRNode() {}
@@ -27,6 +29,7 @@ class IRNode {
 };
 
 
+/** The base class of IR nodes that represent computed or loaded values. */
 class Value : public IRNode {
  public:
   Value() {}
@@ -36,6 +39,8 @@ class Value : public IRNode {
 };
 
 
+/** The base class of \ref Value nodes that represent a computer or loaded 
+  * tensor. */
 class Tensor : public Value {
  public:
   virtual unsigned int getOrder() { return getTensorType()->getOrder(); }
@@ -45,6 +50,7 @@ class Tensor : public Value {
 };
 
 
+/** Represents a  \ref Tensor that is loaded or defined as a constant. */
 class LiteralTensor : public Tensor {
  public:
   LiteralTensor(TensorType *type) : type(type) {}
@@ -58,6 +64,7 @@ class LiteralTensor : public Tensor {
 };
 
 
+/** Represents a dense \ref Tensor that is loaded or defined as a constant. */
 class DenseLiteralTensor : public LiteralTensor {
  public:
   DenseLiteralTensor(TensorType *type, void *data);
@@ -70,6 +77,19 @@ class DenseLiteralTensor : public LiteralTensor {
 };
 
 
+/** Instruction that combines one or more tensors. */
+class Merge : public Tensor {
+ public:
+  Merge(const std::list<Tensor*> &tensors) : tensors(tensors) {}
+
+  virtual TensorType *getTensorType() { return NULL; }
+
+ private:
+  std::list<Tensor*> tensors;
+};
+
+
+/** A Simit function. */
 class Function : public IRNode {
  public:
 };

@@ -11,6 +11,7 @@ namespace simit {
 
 class Shape;
 
+/** The type of a Simit \ref Value. */
 class Type {
  public:
   Type() {}
@@ -26,6 +27,7 @@ class Type {
 };
 
 
+/** The type of a set \ref Element. */
 class ElementType : public Type {
  public:
   ElementType() {}
@@ -36,6 +38,7 @@ class ElementType : public Type {
 };
 
 
+/** The type of a \ref Tensor. */
 class TensorType :public Type {
  public:
   enum ComponentType {INT, FLOAT};
@@ -53,6 +56,7 @@ class TensorType :public Type {
 };
 
 
+/** The type of a Scalar \ref Tensor. */
 class ScalarType : public TensorType {
  public:
   ScalarType(ComponentType componentType) : componentType(componentType) {}
@@ -72,6 +76,9 @@ class ScalarType : public TensorType {
 };
 
 
+/** Describes one of the dimensions of a \ref Tensor \ref Shape.  A dimension
+  * can be described by a range of integers, a set of objects, or have a
+  * variable size. */
 class Dimension {
  public:
   enum Type {ANONYMOUS, /*SET,*/ VARIABLE};
@@ -98,6 +105,7 @@ class Dimension {
 };
 
 
+/** Describes the shape of each \ref Dimension of a \ref Tensor. */
 class Shape {
  public:
   Shape()  {}
@@ -126,6 +134,7 @@ class Shape {
 };
 
 
+/** The type of a \ref Tensor of order 1 or higher. */
 class NDTensorType : public TensorType {
  public:
   NDTensorType(Shape *blockShape, TensorType *blockType)

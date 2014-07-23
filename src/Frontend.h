@@ -15,11 +15,11 @@ class IRNode;
 class Test;
 class Error;
 
-/** Keeps track of symbols and their associated IR nodes across a stack of
-  * scopes. */
+/** Tracks symbols and their associated IR nodes across a stack of scopes. */
 class SymbolTable {
  public:
   typedef std::map<std::string, std::shared_ptr<IRNode>> SymbolMap;
+  typedef std::list<SymbolMap>::const_iterator ScopeIterator;
 
   SymbolTable()  {   scope(); }
   ~SymbolTable() { unscope(); }
@@ -41,20 +41,18 @@ class SymbolTable {
     return os << table.toString();
   }
 
-  std::list<SymbolMap>::const_iterator begin() const {
-    return scopes.begin();
-  }
-  std::list<SymbolMap>::const_iterator end() const {
-    return scopes.end();
-  }
+  /** Iterator over symbol scopes. */
+  ScopeIterator begin() const { return scopes.begin(); }
+
+  /** Iterator over symbol scopes. */
+  ScopeIterator end() const { return scopes.end(); }
 
  private:
   std::list<SymbolMap> scopes;
 };
 
 
-/** Provides facilities to convert Simit-formated strings and files to the
-  * Simit Intermediate Representation (IR).
+/** Provides methods to convert Simit-formated strings and files to Simit IR.
   *
   * Strings and files can be parsed using the \ref parseString and
   * \ref parseFile methods and the resulting IR can be retrieved using the

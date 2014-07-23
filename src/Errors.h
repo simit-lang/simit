@@ -5,6 +5,7 @@
 
 namespace simit {
 
+/** Provides information about errors that occur while loading Simit code. */
 class Error {
  public:
   Error(int firstLine, int firstColumn, int lastLine, int lastColumn,
