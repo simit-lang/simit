@@ -94,6 +94,20 @@ class VariableStore : public Store {
   virtual std::string toString() const;
 };
 
+
+/** A Simit test case. Simit test cases can be declared in language comments
+  * and can subsequently be picked up by a test framework. */
+class Test : IRNode {
+ public:
+  Test(std::string name) : IRNode(name) {}
+  virtual ~Test() {}
+
+  virtual std::string toString() const { return "Test"; }
+
+ private:
+};
+
+
 }
 
 #endif

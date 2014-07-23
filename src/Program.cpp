@@ -2,7 +2,6 @@
 #include "Frontend.h"
 #include "Logger.h"
 #include "IR.h"
-#include "Test.h"
 #include "Util.h"
 #include "Errors.h"
 
