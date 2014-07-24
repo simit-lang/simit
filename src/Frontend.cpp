@@ -30,8 +30,10 @@ std::string SymbolTable::toString() const {
   string result = "SymbolTable:\n";
   for (auto scope : scopes) {
     for (auto symPair : scope) {
-      result += util::indent(symPair.first + ":" +
-                             symPair.second->toString() + ", ", 1);
+      string symString = (symPair.second == NULL)
+                           ? "NULL"
+                           : symPair.second->toString();
+      result += util::indent(symPair.first + ":" + symString + ", ", 1);
     }
     result += "\n";
   }
@@ -48,7 +50,7 @@ int Frontend::parseString(string programString) {
 
   struct yy_buffer_state *bufferState;
   bufferState = yy_scan_string(programString.c_str());
-  int status = yyparse(symbolTable, errors, tests);
+  int status = yyparse(symtable, errors, tests);
   yylex_destroy();
 
   if (status == 0) {
@@ -77,7 +79,7 @@ int Frontend::parseFile(string filename) {
   logger.dedent();
 
   yyin = fopen(filename.c_str(), "r");
-  int status = yyparse(symbolTable, errors, tests);
+  int status = yyparse(symtable, errors, tests);
   fclose(yyin);
   yylex_destroy();
 

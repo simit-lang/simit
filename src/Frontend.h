@@ -5,7 +5,6 @@
 #include <map>
 #include <string>
 #include <memory>
-//#include <Program.h>
 
 struct YYLTYPE;
 
@@ -74,7 +73,7 @@ class Frontend {
   std::list<simit::Test> &getTests() { return tests; }
 
  private:
-  SymbolTable symbolTable;
+  SymbolTable symtable;
   std::list<Error> errors;
   std::list<simit::Test> tests;
 };
