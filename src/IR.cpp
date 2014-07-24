@@ -104,13 +104,15 @@ std::string ReductionIndexVariable::toString() const {
 
 
 /* Merge */
-Merge *Merge::make(Operator op, const std::list<IndexedTensor> &operands) {
+Merge *Merge::make(Operator op,
+                   const std::list<IndexVariablePtr> &indexVariables,
+                   const std::list<IndexedTensor> &operands) {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
   assert(expectedNumOperands == operands.size());
   if (expectedNumOperands != operands.size()) {
     return NULL;
   }
-  return new Merge(op, operands);
+  return new Merge(op, indexVariables, operands);
 }
 
 TensorType *Merge::getTensorType() {
@@ -134,26 +136,30 @@ static std::string opString(Merge::Operator op) {
   return "";
 }
 
-std::string Merge::IndexedTensor::toString() const {
-  std::string indexVarString = (tensor->getOrder() == 0)
-                               ? ""
-                               : "(" + util::join(indexVariables, ",") + ")";
+static inline
+std::string indexVarString(const std::list<Merge::IndexVariablePtr> &idxVars) {
+  return (idxVars.size() != 0) ? "(" + util::join(idxVars, ",") + ")" : "";
+}
 
-  return tensor->getName() + indexVarString;
+std::string Merge::IndexedTensor::toString() const {
+  return tensor->getName() + indexVarString(indexVariables);
 }
 
 std::string Merge::toString() const {
   unsigned int numOperands = operands.size();
   auto iter = operands.begin();
+  std::string rhsString;
   if (numOperands == 1) {
-    return opString(op) + util::toString(*iter++);
+    rhsString = opString(op) + util::toString(*iter++);
   }
   else if (numOperands) {
-    return util::toString(*iter++) + opString(op) + util::toString(*iter++);
+    rhsString = util::toString(*iter++) + opString(op) + util::toString(*iter++);
   } else {
     assert(false);  // Not supported yet
     return "";
   }
+
+  return getName() + indexVarString(indexVariables) + "=" + rhsString;
 }
 
 

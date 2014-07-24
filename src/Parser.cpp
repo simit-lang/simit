@@ -2353,7 +2353,7 @@ yyreduce:
     std::list<Merge::IndexedTensor> operands;
     operands.push_front(Merge::IndexedTensor(expr, indexVars));
 
-    auto merge = Merge::make(Merge::NEG, operands);
+    auto merge = Merge::make(Merge::NEG, indexVars, operands);
     assert(merge != NULL);
     (yyval.Tensor) = new shared_ptr<Tensor>(merge);
   }

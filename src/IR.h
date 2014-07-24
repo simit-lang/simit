@@ -83,13 +83,13 @@ class IndexVariable {
   virtual ~IndexVariable() {}
 
   std::string getName() const { return name; }
+  virtual std::string toString() const = 0;
   friend std::ostream &operator<<(std::ostream &os, const IndexVariable &var) {
     return os << var.toString();
   }
 
  private:
   std::string name;
-  virtual std::string toString() const = 0;
 };
 
 
@@ -108,10 +108,10 @@ class ReductionIndexVariable : public IndexVariable {
 
   ReductionIndexVariable(Operator op, const std::string &name)
       : IndexVariable(name), op(op) {}
+  virtual std::string toString() const;
 
  private:
   Operator op;
-  virtual std::string toString() const;
 };
 
 
@@ -119,34 +119,38 @@ class ReductionIndexVariable : public IndexVariable {
   * through the \ref createMerge factory function. */
 class Merge : public Tensor {
  public:
+  using IndexVariablePtr = std::shared_ptr<IndexVariable>;
+
   struct IndexedTensor {
     std::shared_ptr<Tensor> tensor;
     std::list<std::shared_ptr<IndexVariable>> indexVariables;
-
     IndexedTensor(const std::shared_ptr<Tensor> &tensor,
-                  const std::list<std::shared_ptr<IndexVariable>> &indexVars)
+                  const std::list<Merge::IndexVariablePtr> &indexVars)
         : tensor(tensor), indexVariables(indexVars) {}
     friend std::ostream &operator<<(std::ostream &os, const IndexedTensor &o) {
       return os << o.toString();
     }
-
-   private:
     std::string toString() const;
+   private:
   };
 
   enum Operator { NEG, ADD, SUB, MUL, DIV };
 
-  static Merge *make(Operator op, const std::list<IndexedTensor> &operands);
+  static Merge *make(Operator op,
+                     const std::list<IndexVariablePtr> &indexVariables,
+                     const std::list<IndexedTensor> &operands);
 
   virtual TensorType *getTensorType();
   virtual std::string toString() const;
 
  private:
   Operator op;
+  std::list<IndexVariablePtr> indexVariables;
   std::list<IndexedTensor> operands;
 
-  Merge(Operator op, const std::list<IndexedTensor> &operands)
-      : op(op), operands(operands) { }
+  Merge(Operator op, const std::list<IndexVariablePtr> &indexVariables,
+        const std::list<IndexedTensor> &operands)
+      : op(op), indexVariables(indexVariables), operands(operands) { }
 };
 
 
