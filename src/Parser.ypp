@@ -310,7 +310,7 @@ expr_stmt
   std::list<std::shared_ptr<simit::Store>> *StoreList;
 };
 
-%type<Value> expr;
+%type<Tensor> expr;
 expr
   : IDENT {
     string ident($IDENT);
@@ -322,12 +322,12 @@ expr
       YYACCEPT;
     }
 
-    shared_ptr<Value> value = dynamic_pointer_cast<Value>(node);
-    if (value == NULL) {
-      REPORT_ERROR(ident + " is not a value", @1);
+    shared_ptr<Tensor> tensor = dynamic_pointer_cast<Tensor>(node);
+    if (tensor == NULL) {
+      REPORT_ERROR(ident + " is not a tensor", @1);
     }
 
-    $$ = new shared_ptr<Value>(value);
+    $$ = new shared_ptr<Tensor>(tensor);
   }
   | FLOAT_LITERAL {
     $$ = NULL;
@@ -350,9 +350,19 @@ expr
   | expr "*" expr {
     $$ = NULL;
   }
-  | expr "/" expr
+  | expr "/" expr {
+    $$ = NULL;
+  }
   | "-" expr %prec NEG {
-    $$ = $2;
+    auto expr = shared_ptr<Tensor>(*$2);
+    delete $2;
+
+    auto tensors = list<shared_ptr<Tensor>>();
+    tensors.push_front(expr);
+
+    auto merge = Merge::make(Merge::NEG, tensors);
+    assert(merge != NULL);
+    $$ = new shared_ptr<Tensor>(merge);
   }
   | expr "'" {
     $$ = NULL;
@@ -456,7 +466,7 @@ reduction_index
 
 reduction_op
   : "+"
-  | "-"
+  | "*"
 
 
 // Lhs expressions
