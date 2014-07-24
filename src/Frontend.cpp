@@ -53,6 +53,8 @@ int Frontend::parseString(string programString) {
   int status = yyparse(symtable, errors, tests);
   yylex_destroy();
 
+  cout << symtable << endl;
+
   if (status == 0) {
     log("Parsed correctly");
     return 0;

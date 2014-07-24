@@ -62,7 +62,7 @@
 
 
   #include <stdlib.h>
-  #include <assert.h>
+  #include <cassert>
   #include <iostream>
   #include <algorithm>
 
@@ -595,15 +595,15 @@ static const yytype_uint16 yyrline[] =
      184,   189,   192,   196,   198,   200,   202,   205,   206,   210,
      212,   215,   216,   217,   218,   219,   222,   246,   252,   254,
      256,   258,   260,   263,   266,   300,   301,   315,   332,   335,
-     338,   341,   344,   347,   350,   353,   356,   367,   370,   373,
-     376,   379,   382,   385,   388,   391,   394,   397,   400,   403,
-     406,   411,   412,   416,   422,   431,   436,   438,   442,   444,
-     449,   451,   453,   456,   459,   462,   468,   469,   475,   481,
-     482,   486,   493,   502,   530,   533,   538,   544,   547,   558,
-     561,   567,   573,   577,   583,   586,   590,   595,   598,   669,
-     670,   672,   676,   677,   690,   697,   706,   713,   716,   720,
-     733,   737,   751,   755,   761,   768,   771,   775,   788,   792,
-     806,   810,   816,   821,   829,   834,   836,   839,   840
+     338,   341,   344,   347,   350,   353,   356,   369,   372,   375,
+     378,   381,   384,   387,   390,   393,   396,   399,   402,   405,
+     408,   413,   414,   418,   424,   433,   438,   440,   444,   446,
+     451,   453,   455,   458,   461,   464,   470,   471,   477,   483,
+     484,   488,   495,   504,   532,   535,   540,   546,   549,   560,
+     563,   569,   575,   579,   585,   588,   592,   597,   600,   671,
+     672,   674,   678,   679,   692,   699,   708,   715,   718,   722,
+     735,   739,   753,   757,   763,   770,   773,   777,   790,   794,
+     808,   812,   818,   823,   831,   836,   838,   841,   842
 };
 #endif
 
@@ -2348,10 +2348,12 @@ yyreduce:
     auto expr = shared_ptr<Tensor>(*(yyvsp[0].Tensor));
     delete (yyvsp[0].Tensor);
 
-    auto tensors = list<shared_ptr<Tensor>>();
-    tensors.push_front(expr);
+    auto indexVars = makeFreeIndexVariables(expr->getOrder());
 
-    auto merge = Merge::make(Merge::NEG, tensors);
+    std::list<Merge::IndexedTensor> operands;
+    operands.push_front(Merge::IndexedTensor(expr, indexVars));
+
+    auto merge = Merge::make(Merge::NEG, operands);
     assert(merge != NULL);
     (yyval.Tensor) = new shared_ptr<Tensor>(merge);
   }

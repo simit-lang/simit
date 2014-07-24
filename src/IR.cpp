@@ -72,23 +72,41 @@ std::string DenseLiteralTensor::toString() const {
 }
 
 
-/* ReductionIndexVariable */
-std::string ReductionIndexVariable::opString() const {
-  switch (op) {
-    case ADD:
-      return "+";
-    case MUL:
-      return "*";
-  default:
-    assert(false);
-    break;
+/* FreeIndexVariable */
+std::list<std::shared_ptr<IndexVariable>> simit::makeFreeIndexVariables(int n) {
+  auto freeIndexVars = std::list<std::shared_ptr<IndexVariable>>();
+  for (int i=0; i<n; ++i) {
+    char name[2];
+    name[0] = 'i' + i;
+    name[1] = '\0';
+    auto freeIndexVar = new FreeIndexVariable(name);
+    freeIndexVars.push_back(std::shared_ptr<IndexVariable>(freeIndexVar));
   }
+  return freeIndexVars;
+}
+
+
+/* ReductionIndexVariable */
+static std::string opString(ReductionIndexVariable::Operator op) {
+  switch (op) {
+    case ReductionIndexVariable::ADD:
+      return "+";
+    case ReductionIndexVariable::MUL:
+      return "*";
+  }
+  assert(false);
+  return "";
+}
+
+std::string ReductionIndexVariable::toString() const {
+  return opString(op) + getName();
 }
 
 
 /* Merge */
-Merge *Merge::make(Operator op, const list<shared_ptr<Tensor>> &operands) {
+Merge *Merge::make(Operator op, const std::list<IndexedTensor> &operands) {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
+  assert(expectedNumOperands == operands.size());
   if (expectedNumOperands != operands.size()) {
     return NULL;
   }
@@ -99,35 +117,42 @@ TensorType *Merge::getTensorType() {
   return NULL;
 }
 
+static std::string opString(Merge::Operator op) {
+  switch (op) {
+    case Merge::NEG:
+      return "-";
+    case Merge::ADD:
+      return "+";
+    case Merge::SUB:
+      return "-";
+    case Merge::MUL:
+      return "*";
+    case Merge::DIV:
+      return "//";
+  }
+  assert(false);
+  return "";
+}
+
+std::string Merge::IndexedTensor::toString() const {
+  std::string indexVarString = (tensor->getOrder() == 0)
+                               ? ""
+                               : "(" + util::join(indexVariables, ",") + ")";
+
+  return tensor->getName() + indexVarString;
+}
+
 std::string Merge::toString() const {
   unsigned int numOperands = operands.size();
   auto iter = operands.begin();
   if (numOperands == 1) {
-    return opString() + (*iter++)->getName();
+    return opString(op) + util::toString(*iter++);
   }
   else if (numOperands) {
-    return (*iter++)->getName() + opString() + (*iter++)->getName();
+    return util::toString(*iter++) + opString(op) + util::toString(*iter++);
   } else {
     assert(false);  // Not supported yet
     return "";
-  }
-}
-
-std::string Merge::opString() const {
-  switch (op) {
-    case NEG:
-      return "-";
-    case ADD:
-      return "+";
-    case SUB:
-      return "-";
-    case MUL:
-      return "*";
-    case DIV:
-      return "//";
-  default:
-    assert(false);
-    break;
   }
 }
 
