@@ -72,6 +72,66 @@ std::string DenseLiteralTensor::toString() const {
 }
 
 
+/* ReductionIndexVariable */
+std::string ReductionIndexVariable::opString() const {
+  switch (op) {
+    case ADD:
+      return "+";
+    case MUL:
+      return "*";
+  default:
+    assert(false);
+    break;
+  }
+}
+
+
+/* Merge */
+Merge *Merge::make(Operator op, const list<shared_ptr<Tensor>> &operands) {
+  unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
+  if (expectedNumOperands != operands.size()) {
+    return NULL;
+  }
+  return new Merge(op, operands);
+}
+
+TensorType *Merge::getTensorType() {
+  return NULL;
+}
+
+std::string Merge::toString() const {
+  unsigned int numOperands = operands.size();
+  auto iter = operands.begin();
+  if (numOperands == 1) {
+    return opString() + (*iter++)->getName();
+  }
+  else if (numOperands) {
+    return (*iter++)->getName() + opString() + (*iter++)->getName();
+  } else {
+    assert(false);  // Not supported yet
+    return "";
+  }
+}
+
+std::string Merge::opString() const {
+  switch (op) {
+    case NEG:
+      return "-";
+    case ADD:
+      return "+";
+    case SUB:
+      return "-";
+    case MUL:
+      return "*";
+    case DIV:
+      return "//";
+  default:
+    assert(false);
+    break;
+  }
+}
+
+
 /* VariableStore */
 std::string VariableStore::toString() const {
   return getName();

@@ -39,7 +39,7 @@ class Value : public IRNode {
 };
 
 
-/** The base class of \ref Value nodes that represent a computer or loaded 
+/** The base class of \ref Value nodes that represent a computed or loaded
   * tensor. */
 class Tensor : public Value {
  public:
@@ -77,15 +77,56 @@ class DenseLiteralTensor : public LiteralTensor {
 };
 
 
-/** Instruction that combines one or more tensors. */
+class IndexVariable {
+ public:
+  IndexVariable(const std::string &name) : name(name) {}
+  virtual ~IndexVariable() {}
+  virtual std::string toString() = 0;
+  std::string getName() { return name; }
+ private:
+  std::string name;
+};
+
+
+class FreeIndexVariable : public IndexVariable {
+ public:
+  FreeIndexVariable(const std::string &name) : IndexVariable(name) {}
+  std::string toString() { return getName(); }
+};
+
+
+class ReductionIndexVariable : public IndexVariable {
+ public:
+  enum Operator {ADD, MUL};
+
+  ReductionIndexVariable(Operator op, const std::string &name)
+      : IndexVariable(name), op(op) {}
+  std::string toString() { return getName(); }
+ private:
+  Operator op;
+  std::string opString() const;
+};
+
+
+/** Instruction that combines one or more tensors.  Merge nodes must be created
+  * through the \ref createMerge factory function. */
 class Merge : public Tensor {
  public:
-  Merge(const std::list<Tensor*> &tensors) : tensors(tensors) {}
+  enum Operator { NEG, ADD, SUB, MUL, DIV };
 
-  virtual TensorType *getTensorType() { return NULL; }
+  static Merge *make(Operator op,
+                     const std::list<std::shared_ptr<Tensor>> &operands);
+
+  virtual TensorType *getTensorType();
+  virtual std::string toString() const;
 
  private:
-  std::list<Tensor*> tensors;
+  Operator op;
+  std::list<std::shared_ptr<Tensor>> operands;
+
+  Merge(Operator op, const std::list<std::shared_ptr<Tensor>> &operands)
+      : op(op), operands(operands) { }
+  std::string opString() const;
 };
 
 
