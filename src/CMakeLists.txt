@@ -45,6 +45,3 @@ file(GLOB HEADERS *.h)
 file(GLOB SOURCES *.cpp)
 
 add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES} ${SCANNER} ${PARSER} ${SCANNER_INPUT} ${PARSER_INPUT})
-
-target_link_libraries(${PROJECT_NAME} ${LIBS})
-
