@@ -1,11 +1,12 @@
-#include "Frontend.h"
+#include "frontend.h"
+
 #include <assert.h>
 
-#include "IR.h"
-#include "Logger.h"
-#include "Tokens.h"
-#include "Scanner.h"
-#include "Util.h"
+#include "ir.h"
+#include "logger.h"
+#include "tokens.h"
+#include "scanner.h"
+#include "util.h"
 
 using namespace simit;
 using namespace util;

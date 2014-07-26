@@ -66,10 +66,10 @@
   #include <iostream>
   #include <algorithm>
 
-  #include "Logger.h"
-  #include "Frontend.h"
-  #include "Util.h"
-  #include "Errors.h"
+  #include "logger.h"
+  #include "frontend.h"
+  #include "util.h"
+  #include "errors.h"
   using namespace std;
   using namespace simit;
 
@@ -104,7 +104,7 @@
 #endif
 
 /* In a future release of Bison, this section will be replaced
-   by #include "Tokens.h".  */
+   by #include "tokens.h".  */
 #ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED
 # define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED
 /* Debug traces.  */
@@ -119,11 +119,10 @@ extern int yydebug;
 
   #include <vector>
 
-  #include "IR.h"
-  #include "Types.h"
+  #include "ir.h"
+  #include "types.h"
 
 
-  #include <assert.h>
   namespace {
     template <typename T>
     class TensorValues {
@@ -291,7 +290,7 @@ int yyparse (simit::SymbolTable &symtable, std::list<simit::Error> &errors, std:
 /* Unqualified %code blocks.  */
 
 
-  #include "Scanner.h"
+  #include "scanner.h"
   void yyerror(YYLTYPE *loc, simit::SymbolTable &symtable,
                std::list<simit::Error> &errors, std::list<simit::Test>  &tests,
                const char *errorStr) {
@@ -600,10 +599,10 @@ static const yytype_uint16 yyrline[] =
      408,   413,   414,   418,   424,   433,   438,   440,   444,   446,
      451,   453,   455,   458,   461,   464,   470,   471,   477,   483,
      484,   488,   495,   504,   532,   535,   540,   546,   549,   560,
-     563,   569,   575,   579,   585,   588,   592,   597,   600,   671,
-     672,   674,   678,   679,   692,   699,   708,   715,   718,   722,
-     735,   739,   753,   757,   763,   770,   773,   777,   790,   794,
-     808,   812,   818,   823,   831,   836,   838,   841,   842
+     563,   569,   575,   579,   585,   588,   592,   597,   600,   670,
+     671,   673,   677,   678,   691,   698,   707,   714,   717,   721,
+     734,   738,   752,   756,   762,   769,   772,   776,   789,   793,
+     807,   811,   817,   822,   830,   835,   837,   840,   841
 };
 #endif
 

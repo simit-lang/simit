@@ -1,6 +1,5 @@
-#line 2 "/Users/fred/projects/sim/simit/src/Scanner.cpp"
 
-#line 4 "/Users/fred/projects/sim/simit/src/Scanner.cpp"
+#line 3 "/Users/fred/projects/sim/simit/src/scanner.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -560,9 +559,7 @@ int yy_flex_debug = 0;
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
 char *yytext;
-#line 1 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 #define YY_NO_INPUT 1
-#line 9 "/Users/fred/projects/sim/simit/src/Scanner.flex"
   #include "Frontend.h"
   #include <string>
   #include <stdlib.h>
@@ -576,11 +573,6 @@ char *yytext;
     yylloc->first_line = yylloc->last_line = yylineno;                        \
     yylloc->first_column = yycolumn; yylloc->last_column = yycolumn+yyleng-1; \
     yycolumn += yyleng;
-
-
-
-
-#line 584 "/Users/fred/projects/sim/simit/src/Scanner.cpp"
 
 #define INITIAL 0
 #define SLCOMMENT 1
@@ -778,10 +770,7 @@ YY_DECL
     
         YYLTYPE * yylloc;
     
-#line 36 "/Users/fred/projects/sim/simit/src/Scanner.flex"
-
  /* Keywords and symbols */
-#line 785 "/Users/fred/projects/sim/simit/src/Scanner.cpp"
 
     yylval = yylval_param;
 
@@ -880,335 +869,271 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 38 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return INT;       }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 39 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return FLOAT;     }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 40 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return STRUCT;    }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 41 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return TENSOR;    }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 42 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return CONST;     }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 43 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return EXTERN;    }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 44 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return PROC;      }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 45 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return FUNC;      }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 46 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return MAP;       }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 47 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return TO;        }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 48 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return WITH;      }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 49 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return REDUCE;    }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 50 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return WHILE;     }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 51 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return IF;        }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 52 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return ELIF;      }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 53 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return ELSE;      }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 54 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return BLOCKEND;  }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 55 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return RETURN;    }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 57 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return RARROW;    }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 58 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return LP;        }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 59 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return RP;        }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 60 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return LB;        }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 61 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return RB;        }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 62 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return LC;        }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 63 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return RC;        }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 64 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return LA;        }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 65 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return RA;        }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 66 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return COMMA;     }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 67 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return PERIOD;    }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 68 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return COL;       }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 69 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return SEMICOL;   }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 71 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return ASSIGN;    }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 72 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return PLUS;      }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 73 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return MINUS;     }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 74 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return STAR;      }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 75 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return SLASH;     }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 76 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return BACKSLASH; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 77 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return EXP;       }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 78 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return TRANSPOSE; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 80 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return EQ;        }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 81 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return NE;        }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 82 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return LE;        }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 83 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { return GE;        }
 	YY_BREAK
 /* Tests */
 case 44:
 YY_RULE_SETUP
-#line 86 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { BEGIN(SLTEST); return TEST; }
 	YY_BREAK
 case 45:
 /* rule 45 can match eol */
 YY_RULE_SETUP
-#line 87 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 88 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { BEGIN(MLTEST); return TEST; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 89 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 /* Single-line comments */
 case 48:
 /* rule 48 can match eol */
 YY_RULE_SETUP
-#line 92 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { BEGIN(SLCOMMENT); }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 93 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 {}
 	YY_BREAK
 case 50:
 /* rule 50 can match eol */
 YY_RULE_SETUP
-#line 94 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { BEGIN(INITIAL); yycolumn = 1; }
 	YY_BREAK
 /* Multi-line comments */
 case 51:
 YY_RULE_SETUP
-#line 97 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { BEGIN(MLCOMMENT); }
 	YY_BREAK
 case 52:
 /* rule 52 can match eol */
 YY_RULE_SETUP
-#line 98 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { yycolumn = 1; }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 99 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 {}
 	YY_BREAK
 case YY_STATE_EOF(MLCOMMENT):
-#line 100 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { /* TODO: REPORT ERROR */ return UNKNOWN; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 101 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 /* Identifiers */
 case 55:
 YY_RULE_SETUP
-#line 104 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { yylval->string = strdup(yytext); return IDENT; }
 	YY_BREAK
 /* Literals */
 case 56:
 YY_RULE_SETUP
-#line 107 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { yylval->num  = atoi(yytext); return INT_LITERAL;   }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 108 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { yylval->fnum = atof(yytext); return FLOAT_LITERAL; }
 	YY_BREAK
 /* Whitespace */
 case 58:
 YY_RULE_SETUP
-#line 111 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 {}
 	YY_BREAK
 case 59:
 /* rule 59 can match eol */
 YY_RULE_SETUP
-#line 112 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { yycolumn = 1;                }
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(SLCOMMENT):
 case YY_STATE_EOF(SLTEST):
 case YY_STATE_EOF(MLTEST):
-#line 113 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { yycolumn = 1; yyterminate(); }
 	YY_BREAK
 /* Unexpected (error) */
 case 60:
 YY_RULE_SETUP
-#line 116 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 { /* TODO: REPORT ERROR */
                         log(string("Unknown character [")+yytext[0]+"]");
                         return UNKNOWN; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 119 "/Users/fred/projects/sim/simit/src/Scanner.flex"
 ECHO;
 	YY_BREAK
-#line 1212 "/Users/fred/projects/sim/simit/src/Scanner.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -2173,8 +2098,4 @@ void yyfree (void * ptr )
 }
 
 #define YYTABLES_NAME "yytables"
-
-#line 119 "/Users/fred/projects/sim/simit/src/Scanner.flex"
-
-
 

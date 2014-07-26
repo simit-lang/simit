@@ -1,11 +1,12 @@
-#include "IR.h"
+#include "ir.h"
 
 #include <cstdlib>
 #include <string>
 #include <iostream>
 #include <string.h>
-#include "Types.h"
-#include "Util.h"
+
+#include "types.h"
+#include "util.h"
 
 using namespace simit;
 using namespace std;

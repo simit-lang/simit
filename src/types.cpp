@@ -1,10 +1,10 @@
-#include "Types.h"
+#include "types.h"
 
 #include <assert.h>
 #include <climits>
 #include <iostream>
 
-#include "Util.h"
+#include "util.h"
 
 using namespace simit;
 using namespace std;

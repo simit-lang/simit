@@ -1,9 +1,10 @@
-#include "Program.h"
-#include "Frontend.h"
-#include "Logger.h"
-#include "IR.h"
-#include "Util.h"
-#include "Errors.h"
+#include "program.h"
+
+#include "frontend.h"
+#include "logger.h"
+#include "ir.h"
+#include "util.h"
+#include "errors.h"
 
 using namespace simit;
 using namespace std;

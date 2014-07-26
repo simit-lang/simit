@@ -44,11 +44,10 @@ extern int yydebug;
 
   #include <vector>
 
-  #include "IR.h"
-  #include "Types.h"
+  #include "ir.h"
+  #include "types.h"
 
 
-  #include <assert.h>
   namespace {
     template <typename T>
     class TensorValues {

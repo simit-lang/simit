@@ -4,7 +4,7 @@
 #include <assert.h>
 #include <string>
 
-#include "Types.h"
+#include "types.h"
 
 namespace simit {
 

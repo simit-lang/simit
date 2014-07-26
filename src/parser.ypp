@@ -4,10 +4,10 @@
   #include <iostream>
   #include <algorithm>
 
-  #include "Logger.h"
-  #include "Frontend.h"
-  #include "Util.h"
-  #include "Errors.h"
+  #include "logger.h"
+  #include "frontend.h"
+  #include "util.h"
+  #include "errors.h"
   using namespace std;
   using namespace simit;
 
@@ -21,8 +21,8 @@
 %code requires {
   #include <vector>
 
-  #include "IR.h"
-  #include "Types.h"
+  #include "ir.h"
+  #include "types.h"
 }
 
 %require "3.0"
@@ -46,7 +46,7 @@
 %destructor { delete $$; } <*>
 
 %code {
-  #include "Scanner.h"
+  #include "scanner.h"
   void yyerror(YYLTYPE *loc, simit::SymbolTable &symtable,
                std::list<simit::Error> &errors, std::list<simit::Test>  &tests,
                const char *errorStr) {
@@ -604,7 +604,6 @@ component_type
 
 // Literals
 %code requires {
-  #include <assert.h>
   namespace {
     template <typename T>
     class TensorValues {

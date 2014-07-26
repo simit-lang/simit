@@ -1,4 +1,4 @@
-#include "Errors.h"
+#include "errors.h"
 
 using namespace simit;
 using namespace std;

@@ -2,9 +2,7 @@
 #define yyHEADER_H 1
 #define yyIN_HEADER 1
 
-#line 6 "/Users/fred/projects/sim/simit/src/Scanner.h"
-
-#line 8 "/Users/fred/projects/sim/simit/src/Scanner.h"
+#line 6 "/Users/fred/projects/sim/simit/src/scanner.h"
 
 #define  YY_INT_ALIGNED short int
 
@@ -328,9 +326,6 @@ extern int yylex \
 #undef YY_DECL
 #endif
 
-#line 119 "/Users/fred/projects/sim/simit/src/Scanner.flex"
-
-
-#line 335 "/Users/fred/projects/sim/simit/src/Scanner.h"
+#line 330 "/Users/fred/projects/sim/simit/src/scanner.h"
 #undef yyIN_HEADER
 #endif /* yyHEADER_H */
