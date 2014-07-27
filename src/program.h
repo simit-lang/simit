@@ -2,16 +2,15 @@
 #define SIMIT_PROGRAM_H
 
 #include <string>
-#include <set>
 #include <list>
-#include <memory>
 
 namespace simit {
+namespace internal {
+class Program;
+}
 
-class Frontend;
-class IRNode;
-class Test;
 class Error;
+class Test;
 
 /** A Simit program. You can load Simit source code using the \ref loadString
   * and \ref loadFile, register input sets using the \ref registerSet method,
@@ -47,11 +46,12 @@ class Program {
     * to the program. */
   std::string getErrorString();
 
+  /** Writes a human-readable string represeting the program to the stream. */
+  friend std::ostream &operator<<(std::ostream&, const Program&);
+
  private:
-  Frontend *frontend;
-  std::set<IRNode*> IRNodes;
+  internal::Program *impl;
 };
 
 }
-
 #endif
