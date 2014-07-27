@@ -6,11 +6,11 @@
 %option yylineno
 
 %{
-  #include "Frontend.h"
+  #include "frontend.h"
   #include <string>
   #include <stdlib.h>
-  #include "Tokens.h"
-  #include "Logger.h"
+  #include "tokens.h"
+  #include "logger.h"
   using namespace std;
   using namespace util;
 
