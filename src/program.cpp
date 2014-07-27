@@ -51,5 +51,3 @@ string Program::getErrorString() {
 std::list<Error> &Program::getErrors() {
   return impl->frontend->getErrors();
 }
-
-}
