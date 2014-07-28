@@ -15,7 +15,7 @@ namespace simit {
 namespace internal {
 class Program {
   friend class simit::Program;
-  Program() : frontend(new Frontend()), codegen(new LLVMCodeGen()) {}
+  Program() : frontend(new Frontend()) {}
   unique_ptr<Frontend> frontend;
   std::list<shared_ptr<IRNode>> sources;
 };
@@ -50,6 +50,4 @@ string Program::getErrorString() {
 
 std::list<Error> &Program::getErrors() {
   return impl->frontend->getErrors();
-}
-
 }
