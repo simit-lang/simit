@@ -47,6 +47,19 @@ extern int yydebug;
   #include "ir.h"
   #include "types.h"
 
+  namespace simit {
+  struct ParseParams {
+    ParseParams(simit::SymbolTable &symtable,
+                std::list<simit::Error> &errors, std::list<simit::Test> &tests)
+               : symtable(symtable), errors(errors), tests(tests) {}
+
+    simit::SymbolTable &symtable;
+    std::list<std::shared_ptr<simit::IRNode>> programNodes;
+    std::list<simit::Error> &errors;
+    std::list<simit::Test> &tests;
+  };
+  }
+
 
   namespace {
     template <typename T>
@@ -161,6 +174,9 @@ union YYSTYPE
   const char *string;
 
 
+  std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
+
+
   std::shared_ptr<simit::Value>            *Value;
   std::list<std::shared_ptr<simit::Value>> *ValueList;
   std::shared_ptr<simit::Tensor>           *Tensor;
@@ -205,6 +221,6 @@ struct YYLTYPE
 
 
 
-int yyparse (simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests);
+int yyparse (simit::ParseParams *ctx);
 
 #endif /* !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED  */

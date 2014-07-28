@@ -6,8 +6,6 @@
 #include <string>
 #include <memory>
 
-struct YYLTYPE;
-
 namespace simit {
 
 class IRNode;
@@ -29,16 +27,16 @@ class SymbolTable {
   /** Remove the top symbol scope. */
   void unscope() { scopes.pop_front(); }
 
+  /** Collapse all scopes into the top scope. */
+  void collapse();
+
   /** Adds a symbol with the name of the irNode pointing at the irNode. */
   void addNode(const std::shared_ptr<IRNode> &irNode);
 
   /** Return the first symbol first match or add the symbol to the top scope. */
   std::shared_ptr<IRNode> &operator[](const std::string &name);
 
-  std::string toString() const;
-  friend std::ostream &operator<<(std::ostream &os, const SymbolTable &table) {
-    return os << table.toString();
-  }
+  friend std::ostream &operator<<(std::ostream &os, const SymbolTable &table);
 
   /** Iterator over symbol scopes. */
   ScopeIterator begin() const { return scopes.begin(); }
@@ -60,22 +58,20 @@ class SymbolTable {
 class Frontend {
  public:
   /** Parses, typechecks and turns a given Simit-formated string into Simit IR.
-    * The resulting IR can be retrieved through the \ref getIR method and
-    * errors through the \ref getErrors method. */
-  int parseString(std::string programString);
+    */
+  int parseString(std::string programString,
+                  std::list<std::shared_ptr<IRNode>> &programNodes,
+                  std::list<simit::Error> &errors,
+                  std::list<simit::Test> &tests);
 
-  /** Parses, typechecks and turns a given Simit-formated file into Simit IR.
-    * The resulting IR can be retrieved through the \ref getIR method and
-    * errors through the \ref getErrors method. */
-  int parseFile(std::string filename);
-
-  std::list<simit::Error> &getErrors() { return errors; }
-  std::list<simit::Test> &getTests() { return tests; }
+  /** Parses, typechecks and turns a given Simit-formated file into Simit IR. */
+  int parseFile(std::string filename,
+                std::list<std::shared_ptr<IRNode>> &programNodes,
+                std::list<simit::Error> &errors,
+                std::list<simit::Test> &tests);
 
  private:
   SymbolTable symtable;
-  std::list<Error> errors;
-  std::list<simit::Test> tests;
 };
 
 }

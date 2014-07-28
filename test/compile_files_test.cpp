@@ -169,6 +169,16 @@ TEST_P(simfile, check) {
       unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
       ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
     }
+    FAIL();
+  }
+
+  if (program.compile() != 0) {
+    for (auto &error : program.getErrors()) {
+      string errorFile = GetParam().path;
+      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
+      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
+    }
+    FAIL();
   }
 }
 

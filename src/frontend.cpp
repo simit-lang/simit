@@ -27,23 +27,26 @@ std::shared_ptr<IRNode> &SymbolTable::operator[](const std::string &name) {
   return scopes.front()[name];
 }
 
-std::string SymbolTable::toString() const {
-  string result = "SymbolTable:\n";
-  for (auto scope : scopes) {
+std::ostream &simit::operator<<(std::ostream &os, const SymbolTable &table) {
+  os << "SymbolTable:\n";
+  for (auto scope : table.scopes) {
     for (auto symPair : scope) {
       string symString = (symPair.second == NULL)
                            ? "NULL"
                            : symPair.second->toString();
-      result += util::indent(symPair.first + ":" + symString + ", ", 1);
+      os << util::indent(symPair.first + ":" + symString + ", ", 1);
     }
-    result += "\n";
+    os << "\n";
   }
-  return result;
+  return os;
 }
 
 
 /* Frontend */
-int Frontend::parseString(string programString) {
+int Frontend::parseString(std::string programString,
+                          std::list<std::shared_ptr<IRNode>> &programNodes,
+                          std::list<simit::Error> &errors,
+                          std::list<simit::Test> &tests) {
   log("Parsing program: ");
   logger.indent();
   log(programString);
@@ -51,11 +54,16 @@ int Frontend::parseString(string programString) {
 
   struct yy_buffer_state *bufferState;
   bufferState = yy_scan_string(programString.c_str());
-  int status = yyparse(symtable, errors, tests);
+
+  auto ctx = ParseParams(symtable, errors, tests);
+  int status = yyparse(&ctx);
   yylex_destroy();
+
 
   if (status == 0) {
     log("Parsed correctly");
+    programNodes.insert(programNodes.end(),
+                        ctx.programNodes.begin(), ctx.programNodes.end());
     return 0;
   }
   else {
@@ -64,7 +72,10 @@ int Frontend::parseString(string programString) {
   }
 }
 
-int Frontend::parseFile(string filename) {
+int Frontend::parseFile(std::string filename,
+                        std::list<std::shared_ptr<IRNode>> &programNodes,
+                        std::list<simit::Error> &errors,
+                        std::list<simit::Test> &tests) {
   log("Program: ");
   logger.indent();
   string line;
@@ -80,12 +91,15 @@ int Frontend::parseFile(string filename) {
   logger.dedent();
 
   yyin = fopen(filename.c_str(), "r");
-  int status = yyparse(symtable, errors, tests);
+  auto ctx = ParseParams(symtable, errors, tests);
+  int status = yyparse(&ctx);
   fclose(yyin);
   yylex_destroy();
 
   if (status == 0) {
     log("Parsed correctly");
+    programNodes.insert(programNodes.end(),
+                        ctx.programNodes.begin(), ctx.programNodes.end());
     return 0;
   }
   else {

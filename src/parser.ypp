@@ -11,10 +11,10 @@
   using namespace std;
   using namespace simit;
 
-  #define REPORT_ERROR(msg, loc)                                        \
-    do {                                                                \
-      yyerror(&loc, symtable, errors, tests, std::string(msg).c_str()); \
-      YYERROR;                                                          \
+  #define REPORT_ERROR(msg, loc)                     \
+    do {                                             \
+      yyerror(&loc, ctx, std::string(msg).c_str());  \
+      YYERROR;                                       \
     } while (0)
 }
 
@@ -23,6 +23,19 @@
 
   #include "ir.h"
   #include "types.h"
+
+  namespace simit {
+  struct ParseParams {
+    ParseParams(simit::SymbolTable &symtable,
+                std::list<simit::Error> &errors, std::list<simit::Test> &tests)
+               : symtable(symtable), errors(errors), tests(tests) {}
+
+    simit::SymbolTable &symtable;
+    std::list<std::shared_ptr<simit::IRNode>> programNodes;
+    std::list<simit::Error> &errors;
+    std::list<simit::Test> &tests;
+  };
+  }
 }
 
 %require "3.0"
@@ -31,9 +44,8 @@
 %locations
 %pure-parser
 
-%parse-param{simit::SymbolTable &symtable}
-%parse-param{std::list<simit::Error> &errors}
-%parse-param{std::list<simit::Test> &tests}
+
+%parse-param{simit::ParseParams *ctx};
 
 %union {
   // Primitive literals
@@ -47,12 +59,10 @@
 
 %code {
   #include "scanner.h"
-  void yyerror(YYLTYPE *loc, simit::SymbolTable &symtable,
-               std::list<simit::Error> &errors, std::list<simit::Test>  &tests,
-               const char *errorStr) {
-    errors.push_back(Error(loc->first_line, loc->first_column,
-                           loc->last_line, loc->last_column,
-                           errorStr));
+  void yyerror(YYLTYPE *loc, ParseParams *ctx, const char *errorStr) {
+    ctx->errors.push_back(Error(loc->first_line, loc->first_column,
+                                loc->last_line, loc->last_column,
+                                errorStr));
   }
 }
 
@@ -133,13 +143,24 @@ program
   : /* empty */
   | program program_element
 
+%union {
+  std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
+};
+%type<IRNodes> program_element;
+// TODO: Move all of these actions to the program rule
 program_element
   : struct
   | procedure
   | function
-  | stmt
   | extern
-  | test
+  | stmt {
+    ctx->programNodes.insert(ctx->programNodes.end(), $1->begin(), $1->end());
+    delete $1;
+  }
+  | test {
+    ctx->programNodes.insert(ctx->programNodes.end(), $1->begin(), $1->end());
+    delete $1;
+  }
 
 // Externs
 extern
@@ -211,6 +232,13 @@ stmt_block
   : /* empty */
   | stmt_block stmt 
 
+%type<IRNodes> stmt;
+%type<IRNodes> const_stmt;
+%type<IRNodes> if_stmt;
+%type<IRNodes> return_stmt;
+%type<IRNodes> assign_stmt;
+%type<IRNodes> expr_stmt;
+
 stmt
   : const_stmt
   | if_stmt
@@ -241,7 +269,10 @@ const_stmt
       REPORT_ERROR("value type does not match literal type", @5);
     }
 
-    symtable.addNode(tensorLiteral);
+    ctx->symtable.addNode(tensorLiteral);
+
+    $$ = new list<shared_ptr<IRNode>>();
+    $$->push_back(tensorLiteral);
   }
   | "const" IDENT ":" element_type "=" element_literal ";" {
     free((void*)$IDENT);
@@ -276,6 +307,8 @@ assign_stmt
       REPORT_ERROR("too mant expressions assigned to too few variables", @2);
     }
 
+    $$ = new list<shared_ptr<IRNode>>();
+
     auto lhsIter = lhsList->begin();
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
@@ -287,7 +320,8 @@ assign_stmt
 
       if (dynamic_pointer_cast<VariableStore>(lhs) != NULL) {
         rhs->setName(lhs->getName());
-        symtable.addNode(rhs);
+        ctx->symtable.addNode(rhs);
+        $$->push_back(rhs);
       }
       else {
         // TODO: Implement
@@ -315,7 +349,7 @@ expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
-    std::shared_ptr<IRNode> &node = symtable[ident];
+    std::shared_ptr<IRNode> &node = ctx->symtable[ident];
     if (node == NULL) {
       // TODO: Re-introduce this code once functions and parameters work
       // REPORT_ERROR(ident + " is not defined in scope", @1);
@@ -826,10 +860,11 @@ scalar_literal
   }
 
 // Tests
+%type<IRNodes> test;
 test
   : TEST test_stmt_block {
-
-    tests.push_back(simit::Test("MyTest"));
+    $$ = new list<shared_ptr<IRNode>>();
+    $$->push_back(shared_ptr<IRNode>(new simit::Test("MyTest")));
   }
 
 test_stmt_block

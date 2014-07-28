@@ -73,10 +73,10 @@
   using namespace std;
   using namespace simit;
 
-  #define REPORT_ERROR(msg, loc)                                        \
-    do {                                                                \
-      yyerror(&loc, symtable, errors, tests, std::string(msg).c_str()); \
-      YYERROR;                                                          \
+  #define REPORT_ERROR(msg, loc)                     \
+    do {                                             \
+      yyerror(&loc, ctx, std::string(msg).c_str());  \
+      YYERROR;                                       \
     } while (0)
 
 
@@ -121,6 +121,19 @@ extern int yydebug;
 
   #include "ir.h"
   #include "types.h"
+
+  namespace simit {
+  struct ParseParams {
+    ParseParams(simit::SymbolTable &symtable,
+                std::list<simit::Error> &errors, std::list<simit::Test> &tests)
+               : symtable(symtable), errors(errors), tests(tests) {}
+
+    simit::SymbolTable &symtable;
+    std::list<std::shared_ptr<simit::IRNode>> programNodes;
+    std::list<simit::Error> &errors;
+    std::list<simit::Test> &tests;
+  };
+  }
 
 
   namespace {
@@ -236,6 +249,9 @@ union YYSTYPE
   const char *string;
 
 
+  std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
+
+
   std::shared_ptr<simit::Value>            *Value;
   std::list<std::shared_ptr<simit::Value>> *ValueList;
   std::shared_ptr<simit::Tensor>           *Tensor;
@@ -280,7 +296,7 @@ struct YYLTYPE
 
 
 
-int yyparse (simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests);
+int yyparse (simit::ParseParams *ctx);
 
 #endif /* !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_TOKENS_H_INCLUDED  */
 
@@ -291,12 +307,10 @@ int yyparse (simit::SymbolTable &symtable, std::list<simit::Error> &errors, std:
 
 
   #include "scanner.h"
-  void yyerror(YYLTYPE *loc, simit::SymbolTable &symtable,
-               std::list<simit::Error> &errors, std::list<simit::Test>  &tests,
-               const char *errorStr) {
-    errors.push_back(Error(loc->first_line, loc->first_column,
-                           loc->last_line, loc->last_column,
-                           errorStr));
+  void yyerror(YYLTYPE *loc, ParseParams *ctx, const char *errorStr) {
+    ctx->errors.push_back(Error(loc->first_line, loc->first_column,
+                                loc->last_line, loc->last_column,
+                                errorStr));
   }
 
 
@@ -589,20 +603,20 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   132,   132,   134,   137,   138,   139,   140,   141,   142,
-     146,   150,   156,   159,   166,   170,   172,   174,   176,   179,
-     184,   189,   192,   196,   198,   200,   202,   205,   206,   210,
-     212,   215,   216,   217,   218,   219,   222,   246,   252,   254,
-     256,   258,   260,   263,   266,   300,   301,   315,   332,   335,
-     338,   341,   344,   347,   350,   353,   356,   369,   372,   375,
-     378,   381,   384,   387,   390,   393,   396,   399,   402,   405,
-     408,   413,   414,   418,   424,   433,   438,   440,   444,   446,
-     451,   453,   455,   458,   461,   464,   470,   471,   477,   483,
-     484,   488,   495,   504,   532,   535,   540,   546,   549,   560,
-     563,   569,   575,   579,   585,   588,   592,   597,   600,   670,
-     671,   673,   677,   678,   691,   698,   707,   714,   717,   721,
-     734,   738,   752,   756,   762,   769,   772,   776,   789,   793,
-     807,   811,   817,   822,   830,   835,   837,   840,   841
+       0,   142,   142,   144,   152,   153,   154,   155,   156,   160,
+     167,   171,   177,   180,   187,   191,   193,   195,   197,   200,
+     205,   210,   213,   217,   219,   221,   223,   226,   227,   231,
+     233,   243,   244,   245,   246,   247,   250,   277,   283,   285,
+     287,   289,   291,   294,   297,   334,   335,   349,   366,   369,
+     372,   375,   378,   381,   384,   387,   390,   403,   406,   409,
+     412,   415,   418,   421,   424,   427,   430,   433,   436,   439,
+     442,   447,   448,   452,   458,   467,   472,   474,   478,   480,
+     485,   487,   489,   492,   495,   498,   504,   505,   511,   517,
+     518,   522,   529,   538,   566,   569,   574,   580,   583,   594,
+     597,   603,   609,   613,   619,   622,   626,   631,   634,   704,
+     705,   707,   711,   712,   725,   732,   741,   748,   751,   755,
+     768,   772,   786,   790,   796,   803,   806,   810,   823,   827,
+     841,   845,   851,   856,   865,   870,   872,   875,   876
 };
 #endif
 
@@ -700,7 +714,7 @@ static const yytype_uint8 yydefact[] =
 {
        2,    81,     1,    49,    48,    50,    47,     0,     0,     0,
        0,     0,     0,    81,     0,   135,    81,    45,    81,     3,
-       8,     4,     5,     6,    29,     7,    31,    32,    33,    34,
+       7,     4,     5,     6,    29,     8,    31,    32,    33,    34,
       35,     0,    67,    70,    69,     0,    91,     0,     9,    81,
        0,    15,     0,     0,    29,     0,     0,    47,    29,    43,
      134,     0,    56,    81,    81,    81,    81,    81,    81,    46,
@@ -941,7 +955,7 @@ do                                                              \
     }                                                           \
   else                                                          \
     {                                                           \
-      yyerror (&yylloc, symtable, errors, tests, YY_("syntax error: cannot back up")); \
+      yyerror (&yylloc, ctx, YY_("syntax error: cannot back up")); \
       YYERROR;                                                  \
     }                                                           \
 while (0)
@@ -1043,7 +1057,7 @@ do {                                                                      \
     {                                                                     \
       YYFPRINTF (stderr, "%s ", Title);                                   \
       yy_symbol_print (stderr,                                            \
-                  Type, Value, Location, symtable, errors, tests); \
+                  Type, Value, Location, ctx); \
       YYFPRINTF (stderr, "\n");                                           \
     }                                                                     \
 } while (0)
@@ -1054,14 +1068,12 @@ do {                                                                      \
 `----------------------------------------*/
 
 static void
-yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
+yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::ParseParams *ctx)
 {
   FILE *yyo = yyoutput;
   YYUSE (yyo);
   YYUSE (yylocationp);
-  YYUSE (symtable);
-  YYUSE (errors);
-  YYUSE (tests);
+  YYUSE (ctx);
   if (!yyvaluep)
     return;
 # ifdef YYPRINT
@@ -1077,14 +1089,14 @@ yy_symbol_value_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvalue
 `--------------------------------*/
 
 static void
-yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
+yy_symbol_print (FILE *yyoutput, int yytype, YYSTYPE const * const yyvaluep, YYLTYPE const * const yylocationp, simit::ParseParams *ctx)
 {
   YYFPRINTF (yyoutput, "%s %s (",
              yytype < YYNTOKENS ? "token" : "nterm", yytname[yytype]);
 
   YY_LOCATION_PRINT (yyoutput, *yylocationp);
   YYFPRINTF (yyoutput, ": ");
-  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, symtable, errors, tests);
+  yy_symbol_value_print (yyoutput, yytype, yyvaluep, yylocationp, ctx);
   YYFPRINTF (yyoutput, ")");
 }
 
@@ -1117,7 +1129,7 @@ do {                                                            \
 `------------------------------------------------*/
 
 static void
-yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
+yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule, simit::ParseParams *ctx)
 {
   unsigned long int yylno = yyrline[yyrule];
   int yynrhs = yyr2[yyrule];
@@ -1131,7 +1143,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule
       yy_symbol_print (stderr,
                        yystos[yyssp[yyi + 1 - yynrhs]],
                        &(yyvsp[(yyi + 1) - (yynrhs)])
-                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , symtable, errors, tests);
+                       , &(yylsp[(yyi + 1) - (yynrhs)])                       , ctx);
       YYFPRINTF (stderr, "\n");
     }
 }
@@ -1139,7 +1151,7 @@ yy_reduce_print (yytype_int16 *yyssp, YYSTYPE *yyvsp, YYLTYPE *yylsp, int yyrule
 # define YY_REDUCE_PRINT(Rule)          \
 do {                                    \
   if (yydebug)                          \
-    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, symtable, errors, tests); \
+    yy_reduce_print (yyssp, yyvsp, yylsp, Rule, ctx); \
 } while (0)
 
 /* Nonzero means print parse trace.  It is left uninitialized so that
@@ -1635,13 +1647,11 @@ yysyntax_error (YYSIZE_T *yymsg_alloc, char **yymsg,
 `-----------------------------------------------*/
 
 static void
-yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
+yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocationp, simit::ParseParams *ctx)
 {
   YYUSE (yyvaluep);
   YYUSE (yylocationp);
-  YYUSE (symtable);
-  YYUSE (errors);
-  YYUSE (tests);
+  YYUSE (ctx);
   if (!yymsg)
     yymsg = "Deleting";
   YY_SYMBOL_PRINT (yymsg, yytype, yyvaluep, yylocationp);
@@ -1670,6 +1680,48 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 8: /* "identifier"  */
 
       { free((void*)(((*yyvaluep).string))); }
+
+        break;
+
+    case 55: /* program_element  */
+
+      { delete ((*yyvaluep).IRNodes); }
+
+        break;
+
+    case 69: /* stmt  */
+
+      { delete ((*yyvaluep).IRNodes); }
+
+        break;
+
+    case 70: /* const_stmt  */
+
+      { delete ((*yyvaluep).IRNodes); }
+
+        break;
+
+    case 71: /* if_stmt  */
+
+      { delete ((*yyvaluep).IRNodes); }
+
+        break;
+
+    case 74: /* return_stmt  */
+
+      { delete ((*yyvaluep).IRNodes); }
+
+        break;
+
+    case 75: /* assign_stmt  */
+
+      { delete ((*yyvaluep).IRNodes); }
+
+        break;
+
+    case 76: /* expr_stmt  */
+
+      { delete ((*yyvaluep).IRNodes); }
 
         break;
 
@@ -1817,6 +1869,12 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
         break;
 
+    case 111: /* test  */
+
+      { delete ((*yyvaluep).IRNodes); }
+
+        break;
+
 
       default:
         break;
@@ -1832,7 +1890,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 `----------*/
 
 int
-yyparse (simit::SymbolTable &symtable, std::list<simit::Error> &errors, std::list<simit::Test> &tests)
+yyparse (simit::ParseParams *ctx)
 {
 /* The lookahead symbol.  */
 int yychar;
@@ -2122,7 +2180,25 @@ yyreduce:
     int yychar_backup = yychar;
     switch (yyn)
       {
-          case 10:
+          case 8:
+
+    {
+    ctx->programNodes.insert(ctx->programNodes.end(), (yyvsp[0].IRNodes)->begin(), (yyvsp[0].IRNodes)->end());
+    delete (yyvsp[0].IRNodes);
+  }
+
+    break;
+
+  case 9:
+
+    {
+    ctx->programNodes.insert(ctx->programNodes.end(), (yyvsp[0].IRNodes)->begin(), (yyvsp[0].IRNodes)->end());
+    delete (yyvsp[0].IRNodes);
+  }
+
+    break;
+
+  case 10:
 
     {
     free((void*)(yyvsp[-4].string));
@@ -2204,7 +2280,10 @@ yyreduce:
       REPORT_ERROR("value type does not match literal type", (yylsp[-2]));
     }
 
-    symtable.addNode(tensorLiteral);
+    ctx->symtable.addNode(tensorLiteral);
+
+    (yyval.IRNodes) = new list<shared_ptr<IRNode>>();
+    (yyval.IRNodes)->push_back(tensorLiteral);
   }
 
     break;
@@ -2233,6 +2312,8 @@ yyreduce:
       REPORT_ERROR("too mant expressions assigned to too few variables", (yylsp[-2]));
     }
 
+    (yyval.IRNodes) = new list<shared_ptr<IRNode>>();
+
     auto lhsIter = lhsList->begin();
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
@@ -2244,7 +2325,8 @@ yyreduce:
 
       if (dynamic_pointer_cast<VariableStore>(lhs) != NULL) {
         rhs->setName(lhs->getName());
-        symtable.addNode(rhs);
+        ctx->symtable.addNode(rhs);
+        (yyval.IRNodes)->push_back(rhs);
       }
       else {
         // TODO: Implement
@@ -2260,7 +2342,7 @@ yyreduce:
     {
     string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
-    std::shared_ptr<IRNode> &node = symtable[ident];
+    std::shared_ptr<IRNode> &node = ctx->symtable[ident];
     if (node == NULL) {
       // TODO: Re-introduce this code once functions and parameters work
       // REPORT_ERROR(ident + " is not defined in scope", @1);
@@ -2919,8 +3001,8 @@ yyreduce:
   case 134:
 
     {
-
-    tests.push_back(simit::Test("MyTest"));
+    (yyval.IRNodes) = new list<shared_ptr<IRNode>>();
+    (yyval.IRNodes)->push_back(shared_ptr<IRNode>(new simit::Test("MyTest")));
   }
 
     break;
@@ -2991,7 +3073,7 @@ yyerrlab:
     {
       ++yynerrs;
 #if ! YYERROR_VERBOSE
-      yyerror (&yylloc, symtable, errors, tests, YY_("syntax error"));
+      yyerror (&yylloc, ctx, YY_("syntax error"));
 #else
 # define YYSYNTAX_ERROR yysyntax_error (&yymsg_alloc, &yymsg, \
                                         yyesa, &yyes, &yyes_capacity, \
@@ -3021,7 +3103,7 @@ yyerrlab:
                 yymsgp = yymsg;
               }
           }
-        yyerror (&yylloc, symtable, errors, tests, yymsgp);
+        yyerror (&yylloc, ctx, yymsgp);
         if (yysyntax_error_status == 2)
           goto yyexhaustedlab;
       }
@@ -3045,7 +3127,7 @@ yyerrlab:
       else
         {
           yydestruct ("Error: discarding",
-                      yytoken, &yylval, &yylloc, symtable, errors, tests);
+                      yytoken, &yylval, &yylloc, ctx);
           yychar = YYEMPTY;
         }
     }
@@ -3102,7 +3184,7 @@ yyerrlab1:
 
       yyerror_range[1] = *yylsp;
       yydestruct ("Error: popping",
-                  yystos[yystate], yyvsp, yylsp, symtable, errors, tests);
+                  yystos[yystate], yyvsp, yylsp, ctx);
       YYPOPSTACK (1);
       yystate = *yyssp;
       YY_STACK_PRINT (yyss, yyssp);
@@ -3148,7 +3230,7 @@ yyabortlab:
 | yyexhaustedlab -- memory exhaustion comes here.  |
 `-------------------------------------------------*/
 yyexhaustedlab:
-  yyerror (&yylloc, symtable, errors, tests, YY_("memory exhausted"));
+  yyerror (&yylloc, ctx, YY_("memory exhausted"));
   yyresult = 2;
   /* Fall through.  */
 #endif
@@ -3160,7 +3242,7 @@ yyreturn:
          user semantic actions for why this is necessary.  */
       yytoken = YYTRANSLATE (yychar);
       yydestruct ("Cleanup: discarding lookahead",
-                  yytoken, &yylval, &yylloc, symtable, errors, tests);
+                  yytoken, &yylval, &yylloc, ctx);
     }
   /* Do not reclaim the symbols of the rule whose action triggered
      this YYABORT or YYACCEPT.  */
@@ -3169,7 +3251,7 @@ yyreturn:
   while (yyssp != yyss)
     {
       yydestruct ("Cleanup: popping",
-                  yystos[*yyssp], yyvsp, yylsp, symtable, errors, tests);
+                  yystos[*yyssp], yyvsp, yylsp, ctx);
       YYPOPSTACK (1);
     }
 #ifndef yyoverflow

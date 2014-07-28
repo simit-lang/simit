@@ -10,15 +10,18 @@ class Program;
 }
 
 class Error;
-class Test;
 
 /** A Simit program. You can load Simit source code using the \ref loadString
   * and \ref loadFile, register input sets using the \ref registerSet method,
   * and compile the program using the \ref compile method.  */
 class Program {
  public:
-  Program();
+    /** Create a new Simit program with the given name. */
+  Program(const std::string &name="");
   ~Program();
+
+  /** Get program name. */
+  std::string getName() const;
 
   /** Add the Simit code in the given string to the program.
     * \return 0 on success, and 1 if the Simit code has errors. If the code
@@ -37,6 +40,10 @@ class Program {
   /** Compile the program.
     * \return 0 on success, 1 if the program is incomplete. */
   int compile();
+
+  /** Run the program.
+    * \return 0 on success, 1 if the program could not be run. */
+  int run();
 
   /** Get a list of errors that occurred when trying to add code to the
     * program. */

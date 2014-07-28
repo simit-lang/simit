@@ -182,7 +182,7 @@ class VariableStore : public Store {
 
 /** A Simit test case. Simit test cases can be declared in language comments
   * and can subsequently be picked up by a test framework. */
-class Test : IRNode {
+class Test : public IRNode {
  public:
   Test(std::string name) : IRNode(name) {}
   virtual ~Test() {}
