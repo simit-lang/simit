@@ -1,4 +1,4 @@
-#include "Program.h"
+#include "program.h"
 using namespace simit;
 
 #include <iostream>

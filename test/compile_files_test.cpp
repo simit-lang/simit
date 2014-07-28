@@ -5,10 +5,10 @@
 #include <iostream>
 #include <fstream>
 
-#include "Program.h"
-#include "Errors.h"
-#include "Logger.h"
-#include "Util.h"
+#include "program.h"
+#include "errors.h"
+#include "logger.h"
+#include "util.h"
 
 using namespace simit;
 using namespace util;

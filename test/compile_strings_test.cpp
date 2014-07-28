@@ -1,8 +1,8 @@
 #include "gtest/gtest.h"
 #include <iostream>
 #include <fstream>
-#include "Program.h"
-#include "Logger.h"
+#include "program.h"
+#include "logger.h"
 using namespace simit;
 using namespace util;
 using namespace std;
