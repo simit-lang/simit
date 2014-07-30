@@ -1,10 +1,5 @@
-%%% neg
-const a : float = 1.0;
-c = -a;
-%! c -> -1;
-
 %%% neg-func
-%%! neg(1) -> -1;
+%%! neg(1.0) -> -1.0;
 func neg(a : float) -> (c : float)
   c = -a;
 end
