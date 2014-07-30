@@ -70,6 +70,6 @@ std::list<Error> &Program::getErrors() {
 }
 
 std::ostream &simit::operator<<(std::ostream &os, const Program &program) {
-  os << util::join(program.impl->programNodes, "\n");
+  os << util::join(program.impl->programNodes, "\n\n");
   return os;
 }

@@ -174,7 +174,11 @@ union YYSTYPE
   const char *string;
 
 
+  std::shared_ptr<simit::IRNode>            *IRNode;
   std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
+
+
+  simit::Function *Function;
 
 
   std::shared_ptr<simit::Formal>            *Formal;

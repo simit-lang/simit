@@ -11,6 +11,13 @@
 using namespace simit;
 using namespace std;
 
+
+/* IRNode */
+std::ostream &simit::operator<<(std::ostream &os, const IRNode &node) {
+  return os << node.toString();
+}
+
+
 /* LiteralTensor */
 void LiteralTensor::cast(TensorType *type) {
   assert(this->type->getComponentType() == type->getComponentType() &&
@@ -163,13 +170,32 @@ std::string Merge::toString() const {
     return "";
   }
 
-  return getName() + indexVarString(indexVariables) + "=" + rhsString;
+  return getName() + indexVarString(indexVariables) + " = " + rhsString;
 }
 
 
 /* VariableStore */
 std::string VariableStore::toString() const {
   return getName();
+}
+
+
+/* Function */
+void Function::addStatements(const std::list<std::shared_ptr<IRNode>> &stmts) {
+  body.insert(body.end(), stmts.begin(), stmts.end());
+}
+
+std::string Function::toString() const {
+  string argumentString = "(" + util::join(this->arguments, ", ") + ")";
+  string resultString = (results.size() == 0)
+                        ? ""
+                        : " -> (" + util::join(this->results, ", ") + ")";
+  string headerString = "func " + name + argumentString + resultString;
+
+  string bodyString = (body.size() > 0) ? "  " + util::join(body, "  \n") + "\n"
+                                        : "";
+
+  return headerString + "\n" + bodyString + "end";
 }
 
 

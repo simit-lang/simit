@@ -139,21 +139,21 @@
 
 %start program
 %%
-program
-  : /* empty */
-  | program program_element {
-    if ($program_element != NULL) {  // TODO: Remove this check
-      ctx->programNodes.insert(ctx->programNodes.end(), $2->begin(), $2->end());
-      delete $2;
-    }
-  }
 
 %union {
+  std::shared_ptr<simit::IRNode>            *IRNode;
   std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
 };
 
-%type<IRNodes> program_element;
-// TODO: Move all of these actions to the program rule
+program
+  : /* empty */
+  | program program_element {
+    if ($program_element == NULL) break;  // TODO: Remove this check
+    ctx->programNodes.push_back(*$program_element);
+    delete $program_element;
+  }
+
+%type<IRNode> program_element;
 program_element
   : struct {
     $$ = NULL;
@@ -162,13 +162,17 @@ program_element
     $$ = NULL;
   }
   | function {
-    $$ = NULL;
+    $$ = new shared_ptr<IRNode>($function);
   }
   | extern {
     $$ = NULL;
   }
-  | stmt
-  | test
+  | stmt {
+    $$ = NULL;
+  }
+  | test {
+    $$ = NULL;
+  }
 
 // Externs
 extern
@@ -209,28 +213,42 @@ field_decl
 
 
 // Procedures and functions
+%union {
+  simit::Function *Function;
+};
+
+%type <Function> procedure;
 procedure
   : PROC IDENT stmt_block BLOCKEND {
     free((void*)$IDENT);
   }
 
+%type <Function> function;
 function
   : function_header stmt_block BLOCKEND {
+    auto statements = unique_ptr<list<shared_ptr<IRNode>>>($stmt_block);
+    $$ = $function_header;
+    $$->addStatements(*statements);
     ctx->symtable.unscope();
   }
 
+%type <Function> function_header;
 function_header
-  : FUNC IDENT "(" params ")" results {
+  : FUNC IDENT "(" arguments ")" results {
     string ident($IDENT);
     free((void*)$IDENT);
+    auto arguments = unique_ptr<list<shared_ptr<Formal>>>($arguments);
+    auto results = unique_ptr<list<shared_ptr<Formal>>>($results);
+
+    $$ = new Function(ident, *arguments, *results);
 
     ctx->symtable.scope();
-    for (auto param : *$params) {
-//      ctx->symtable.addNode(param);
+    for (auto argument : *arguments) {
+      ctx->symtable.addNode(argument);
     }
 
-    for (auto result : *$results) {
-//      ctx->symtable.addNode(result);
+    for (auto result : *results) {
+      ctx->symtable.addNode(result);
     }
   }
 
@@ -239,12 +257,14 @@ function_header
   std::list<std::shared_ptr<simit::Formal>> *Formals;
 };
 
-%type <Formals> params;
-params
+%type <Formals> arguments;
+arguments
  : /* empty */ {
     $$ = new list<shared_ptr<Formal>>();
  }
- | formal_list
+ | formal_list {
+    $$ = $formal_list;
+ }
 
 %type <Formals> results;
 results
@@ -277,17 +297,19 @@ formal_list
   }
 
 // Statements
+%type<IRNodes> stmt_block;
 stmt_block
-  : /* empty */
-  | stmt_block stmt
+  : /* empty */ {
+    $$ = new list<shared_ptr<IRNode>>();
+  }
+  | stmt_block stmt {
+    $$ = $1;
+    if ($stmt == NULL) break;  // TODO: Remove check
+    $$->insert($$->end(), $stmt->begin(), $stmt->end());
+    delete $stmt;
+  }
 
 %type<IRNodes> stmt;
-%type<IRNodes> const_stmt;
-%type<IRNodes> if_stmt;
-%type<IRNodes> return_stmt;
-%type<IRNodes> assign_stmt;
-%type<IRNodes> expr_stmt;
-
 stmt
   : const_stmt
   | if_stmt
@@ -295,6 +317,7 @@ stmt
   | assign_stmt
   | expr_stmt
 
+%type<IRNodes> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     auto tensorType = unique_ptr<TensorType>($tensor_type);
@@ -326,10 +349,14 @@ const_stmt
   | "const" IDENT ":" element_type "=" element_literal ";" {
     free((void*)$IDENT);
     delete $element_type;
+    $$ = NULL;
   }
 
+%type<IRNodes> if_stmt;
 if_stmt
-  : "if" expr stmt_block else_clauses BLOCKEND
+  : "if" expr stmt_block else_clauses BLOCKEND {
+    $$ = NULL;
+  }
 
 else_clauses
   : /* empty */
@@ -339,13 +366,19 @@ elif_clauses
   : /* empty */
   | elif_clauses "elif" expr stmt_block
 
+%type<IRNodes> return_stmt;
 return_stmt
-  : "return" ";"
+  : "return" ";" {
+    $$ = NULL;
+  }
 
+%type<IRNodes> assign_stmt;
 assign_stmt
   : lhs_expr_list "=" expr_list ";" {
     auto lhsList = unique_ptr<list<shared_ptr<Store>>>($lhs_expr_list);
     auto rhsList = unique_ptr<list<shared_ptr<Tensor>>>($expr_list);
+
+    $$ = new list<shared_ptr<IRNode>>();
 
     if (lhsList->size() > rhsList->size()) {
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
@@ -354,8 +387,6 @@ assign_stmt
     else if (lhsList->size() < rhsList->size()) {
       REPORT_ERROR("too mant expressions assigned to too few variables", @2);
     }
-
-    $$ = new list<shared_ptr<IRNode>>();
 
     auto lhsIter = lhsList->begin();
     auto rhsIter = rhsList->begin();
@@ -378,9 +409,14 @@ assign_stmt
     }
   }
 
+%type<IRNodes> expr_stmt;
 expr_stmt
-  : ";"
-  | expr ";"
+  : ";" {
+    $$ = NULL;
+  }
+  | expr ";" {
+    $$ = NULL;
+  }
 
 
 // Expressions
@@ -742,7 +778,7 @@ component_type
   TensorValues<int>                          *TensorIntValues;
 };
 
-%type              <Tensor> literal;
+%type             <Tensor> literal;
 %type      <LiteralTensor> tensor_literal;
 %type <DenseLiteralTensor> dense_tensor_literal;
 %type <DenseLiteralTensor> scalar_literal;

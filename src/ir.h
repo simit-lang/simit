@@ -16,13 +16,12 @@ class IRNode {
   IRNode(const std::string &name) : name(name) {}
   virtual ~IRNode() {}
 
+  virtual std::string toString() const = 0;
+
   void setName(std::string name) { this->name = name; }
   std::string getName() const    { return name; }
 
-  virtual std::string toString() const = 0;
-  friend std::ostream &operator<<(std::ostream &os, const IRNode &node) {
-    return os << node.toString();
-  }
+  friend std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
  protected:
   std::string name;
@@ -68,19 +67,10 @@ class DenseLiteralTensor : public LiteralTensor {
 };
 
 
-class IndexVariable {
+class IndexVariable : public IRNode {
  public:
-  IndexVariable(const std::string &name) : name(name) {}
+  IndexVariable(const std::string &name) : IRNode(name) {}
   virtual ~IndexVariable() {}
-
-  std::string getName() const { return name; }
-  virtual std::string toString() const = 0;
-  friend std::ostream &operator<<(std::ostream &os, const IndexVariable &var) {
-    return os << var.toString();
-  }
-
- private:
-  std::string name;
 };
 
 
@@ -175,6 +165,21 @@ class Formal : public Tensor {
 /** A Simit function. */
 class Function : public IRNode {
  public:
+  typedef std::list<std::shared_ptr<simit::Formal>> FormalList;
+  typedef std::list<std::shared_ptr<simit::IRNode>> StatementList;
+
+  Function(const std::string &name, const FormalList &arguments,
+           const FormalList &results)
+      : IRNode(name), arguments(arguments), results(results) {}
+
+  void addStatements(const std::list<std::shared_ptr<IRNode>> &stmts);
+
+  virtual std::string toString() const;
+
+ private:
+  FormalList arguments;
+  FormalList results;
+  StatementList body;
 };
 
 

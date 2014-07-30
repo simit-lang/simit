@@ -249,7 +249,11 @@ union YYSTYPE
   const char *string;
 
 
+  std::shared_ptr<simit::IRNode>            *IRNode;
   std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
+
+
+  simit::Function *Function;
 
 
   std::shared_ptr<simit::Formal>            *Formal;
@@ -604,20 +608,20 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   142,   142,   144,   158,   161,   164,   167,   170,   171,
-     175,   179,   185,   188,   195,   199,   201,   203,   205,   208,
-     213,   218,   223,   244,   247,   251,   254,   260,   269,   274,
-     280,   282,   292,   293,   294,   295,   296,   299,   326,   332,
-     334,   336,   338,   340,   343,   346,   382,   383,   396,   414,
-     417,   420,   423,   426,   429,   432,   435,   438,   456,   459,
-     462,   465,   468,   471,   474,   477,   480,   483,   486,   489,
-     492,   495,   500,   501,   505,   511,   520,   525,   527,   531,
-     533,   538,   540,   542,   545,   548,   551,   557,   558,   564,
-     572,   575,   581,   588,   597,   623,   626,   631,   637,   640,
-     651,   654,   660,   666,   670,   676,   679,   683,   688,   691,
-     761,   762,   764,   768,   769,   782,   789,   798,   805,   808,
-     812,   825,   829,   843,   847,   853,   860,   863,   867,   880,
-     884,   898,   902,   908,   913,   922,   927,   929,   932,   933
+       0,   148,   148,   150,   158,   161,   164,   167,   170,   173,
+     179,   183,   189,   192,   199,   203,   205,   207,   209,   212,
+     222,   228,   237,   262,   265,   271,   274,   280,   289,   294,
+     302,   305,   314,   315,   316,   317,   318,   322,   349,   357,
+     361,   363,   365,   367,   371,   377,   414,   417,   432,   450,
+     453,   456,   459,   462,   465,   468,   471,   474,   492,   495,
+     498,   501,   504,   507,   510,   513,   516,   519,   522,   525,
+     528,   531,   536,   537,   541,   547,   556,   561,   563,   567,
+     569,   574,   576,   578,   581,   584,   587,   593,   594,   600,
+     608,   611,   617,   624,   633,   659,   662,   667,   673,   676,
+     687,   690,   696,   702,   706,   712,   715,   719,   724,   727,
+     797,   798,   800,   804,   805,   818,   825,   834,   841,   844,
+     848,   861,   865,   879,   883,   889,   896,   899,   903,   916,
+     920,   934,   938,   944,   949,   958,   963,   965,   968,   969
 };
 #endif
 
@@ -637,7 +641,7 @@ static const char *const yytname[] =
   "\"\\\\\"", "\"==\"", "\"!=\"", "\"<=\"", "\">=\"", "$accept", "program",
   "program_element", "extern", "endpoints", "struct", "struct_decl_block",
   "struct_decl_list", "field_decl", "procedure", "function",
-  "function_header", "params", "results", "formal_decl", "formal_list",
+  "function_header", "arguments", "results", "formal_decl", "formal_list",
   "stmt_block", "stmt", "const_stmt", "if_stmt", "else_clauses",
   "elif_clauses", "return_stmt", "assign_stmt", "expr_stmt", "expr",
   "call_expr", "expr_list", "map_expr", "with", "reduce", "index_expr",
@@ -1686,11 +1690,29 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 55: /* program_element  */
 
-      { delete ((*yyvaluep).IRNodes); }
+      { delete ((*yyvaluep).IRNode); }
 
         break;
 
-    case 65: /* params  */
+    case 62: /* procedure  */
+
+      { delete ((*yyvaluep).Function); }
+
+        break;
+
+    case 63: /* function  */
+
+      { delete ((*yyvaluep).Function); }
+
+        break;
+
+    case 64: /* function_header  */
+
+      { delete ((*yyvaluep).Function); }
+
+        break;
+
+    case 65: /* arguments  */
 
       { delete ((*yyvaluep).Formals); }
 
@@ -1711,6 +1733,12 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
     case 68: /* formal_list  */
 
       { delete ((*yyvaluep).Formals); }
+
+        break;
+
+    case 69: /* stmt_block  */
+
+      { delete ((*yyvaluep).IRNodes); }
 
         break;
 
@@ -2208,10 +2236,9 @@ yyreduce:
           case 3:
 
     {
-    if ((yyvsp[0].IRNodes) != NULL) {  // TODO: Remove this check
-      ctx->programNodes.insert(ctx->programNodes.end(), (yyvsp[0].IRNodes)->begin(), (yyvsp[0].IRNodes)->end());
-      delete (yyvsp[0].IRNodes);
-    }
+    if ((yyvsp[0].IRNode) == NULL) break;  // TODO: Remove this check
+    ctx->programNodes.push_back(*(yyvsp[0].IRNode));
+    delete (yyvsp[0].IRNode);
   }
 
     break;
@@ -2219,7 +2246,7 @@ yyreduce:
   case 4:
 
     {
-    (yyval.IRNodes) = NULL;
+    (yyval.IRNode) = NULL;
   }
 
     break;
@@ -2227,7 +2254,7 @@ yyreduce:
   case 5:
 
     {
-    (yyval.IRNodes) = NULL;
+    (yyval.IRNode) = NULL;
   }
 
     break;
@@ -2235,7 +2262,7 @@ yyreduce:
   case 6:
 
     {
-    (yyval.IRNodes) = NULL;
+    (yyval.IRNode) = new shared_ptr<IRNode>((yyvsp[0].Function));
   }
 
     break;
@@ -2243,7 +2270,23 @@ yyreduce:
   case 7:
 
     {
-    (yyval.IRNodes) = NULL;
+    (yyval.IRNode) = NULL;
+  }
+
+    break;
+
+  case 8:
+
+    {
+    (yyval.IRNode) = NULL;
+  }
+
+    break;
+
+  case 9:
+
+    {
+    (yyval.IRNode) = NULL;
   }
 
     break;
@@ -2301,6 +2344,9 @@ yyreduce:
   case 21:
 
     {
+    auto statements = unique_ptr<list<shared_ptr<IRNode>>>((yyvsp[-1].IRNodes));
+    (yyval.Function) = (yyvsp[-2].Function);
+    (yyval.Function)->addStatements(*statements);
     ctx->symtable.unscope();
   }
 
@@ -2311,14 +2357,18 @@ yyreduce:
     {
     string ident((yyvsp[-4].string));
     free((void*)(yyvsp[-4].string));
+    auto arguments = unique_ptr<list<shared_ptr<Formal>>>((yyvsp[-2].Formals));
+    auto results = unique_ptr<list<shared_ptr<Formal>>>((yyvsp[0].Formals));
+
+    (yyval.Function) = new Function(ident, *arguments, *results);
 
     ctx->symtable.scope();
-    for (auto param : *(yyvsp[-2].Formals)) {
-//      ctx->symtable.addNode(param);
+    for (auto argument : *arguments) {
+      ctx->symtable.addNode(argument);
     }
 
-    for (auto result : *(yyvsp[0].Formals)) {
-//      ctx->symtable.addNode(result);
+    for (auto result : *results) {
+      ctx->symtable.addNode(result);
     }
   }
 
@@ -2328,6 +2378,14 @@ yyreduce:
 
     {
     (yyval.Formals) = new list<shared_ptr<Formal>>();
+ }
+
+    break;
+
+  case 24:
+
+    {
+    (yyval.Formals) = (yyvsp[0].Formals);
  }
 
     break;
@@ -2378,6 +2436,25 @@ yyreduce:
 
     break;
 
+  case 30:
+
+    {
+    (yyval.IRNodes) = new list<shared_ptr<IRNode>>();
+  }
+
+    break;
+
+  case 31:
+
+    {
+    (yyval.IRNodes) = (yyvsp[-1].IRNodes);
+    if ((yyvsp[0].IRNodes) == NULL) break;  // TODO: Remove check
+    (yyval.IRNodes)->insert((yyval.IRNodes)->end(), (yyvsp[0].IRNodes)->begin(), (yyvsp[0].IRNodes)->end());
+    delete (yyvsp[0].IRNodes);
+  }
+
+    break;
+
   case 37:
 
     {
@@ -2415,6 +2492,23 @@ yyreduce:
     {
     free((void*)(yyvsp[-5].string));
     delete (yyvsp[-3].TensorType);
+    (yyval.IRNodes) = NULL;
+  }
+
+    break;
+
+  case 39:
+
+    {
+    (yyval.IRNodes) = NULL;
+  }
+
+    break;
+
+  case 44:
+
+    {
+    (yyval.IRNodes) = NULL;
   }
 
     break;
@@ -2425,6 +2519,8 @@ yyreduce:
     auto lhsList = unique_ptr<list<shared_ptr<Store>>>((yyvsp[-3].StoreList));
     auto rhsList = unique_ptr<list<shared_ptr<Tensor>>>((yyvsp[-1].TensorList));
 
+    (yyval.IRNodes) = new list<shared_ptr<IRNode>>();
+
     if (lhsList->size() > rhsList->size()) {
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
       break;
@@ -2432,8 +2528,6 @@ yyreduce:
     else if (lhsList->size() < rhsList->size()) {
       REPORT_ERROR("too mant expressions assigned to too few variables", (yylsp[-2]));
     }
-
-    (yyval.IRNodes) = new list<shared_ptr<IRNode>>();
 
     auto lhsIter = lhsList->begin();
     auto rhsIter = rhsList->begin();
@@ -2454,6 +2548,22 @@ yyreduce:
         assert(false);
       }
     }
+  }
+
+    break;
+
+  case 46:
+
+    {
+    (yyval.IRNodes) = NULL;
+  }
+
+    break;
+
+  case 47:
+
+    {
+    (yyval.IRNodes) = NULL;
   }
 
     break;
