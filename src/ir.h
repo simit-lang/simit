@@ -28,8 +28,8 @@ class IRNode {
 };
 
 
-/** The base class that represents computed and loaded tensors.  Note that
-  * scalars and objects are considered tensors of order 0. */
+/** The base class that represents all computed and loaded tensors.  Note that
+  * both scalars and elements are considered tensors of order 0. */
 class Tensor : public IRNode {
  public:
   Tensor(const TensorType *type) : Tensor("", type) {}
@@ -44,22 +44,14 @@ class Tensor : public IRNode {
 };
 
 
-/** Represents a  \ref Tensor that is loaded or defined as a constant. */
+/** Represents a \ref Tensor that is defined as a constant or loaded.  Note
+  * that it is only possible to define dense tensor literals.  */
 class LiteralTensor : public Tensor {
  public:
-  LiteralTensor(const TensorType *type) : Tensor(type) {}
-  virtual ~LiteralTensor() { delete type; }
+  LiteralTensor(TensorType *type, void *data);
+  virtual ~LiteralTensor();
 
   void cast(TensorType *type);
-};
-
-
-/** Represents a dense \ref Tensor that is loaded or defined as a constant. */
-class DenseLiteralTensor : public LiteralTensor {
- public:
-  DenseLiteralTensor(TensorType *type, void *data);
-  virtual ~DenseLiteralTensor();
-
   virtual std::string toString() const;
 
  private:
@@ -194,8 +186,6 @@ class Test : public IRNode {
 
  private:
 };
-
-
 }
 
 #endif

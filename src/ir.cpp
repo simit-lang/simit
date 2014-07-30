@@ -18,7 +18,19 @@ std::ostream &simit::operator<<(std::ostream &os, const IRNode &node) {
 }
 
 
-/* LiteralTensor */
+/* DenseTensorLiteral */
+LiteralTensor::LiteralTensor(TensorType *type, void *data)
+    : Tensor(type) {
+  auto componentSize = TensorType::componentSize(type->getComponentType());
+  auto dataSize = type->getSize() * componentSize;
+  this->data = malloc(dataSize);
+  memcpy(this->data, data, dataSize);
+}
+
+LiteralTensor::~LiteralTensor() {
+  free(data);
+}
+
 void LiteralTensor::cast(TensorType *type) {
   assert(this->type->getComponentType() == type->getComponentType() &&
          this->type->getSize() == type->getSize());
@@ -26,21 +38,7 @@ void LiteralTensor::cast(TensorType *type) {
   this->type = type;
 }
 
-
-/* DenseTensorLiteral */
-DenseLiteralTensor::DenseLiteralTensor(TensorType *type, void *data)
-: LiteralTensor(type) {
-  auto componentSize = TensorType::componentSize(type->getComponentType());
-  auto dataSize = type->getSize() * componentSize;
-  this->data = malloc(dataSize);
-  memcpy(this->data, data, dataSize);
-}
-
-DenseLiteralTensor::~DenseLiteralTensor() {
-  free(data);
-}
-
-std::string DenseLiteralTensor::toString() const {
+std::string LiteralTensor::toString() const {
   string result;
 
   // TODO: Add nicer value printing that prints matrices and tensors properly

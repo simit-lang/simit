@@ -200,7 +200,6 @@ union YYSTYPE
 
 
   std::shared_ptr<simit::LiteralTensor>      *LiteralTensor;
-  std::shared_ptr<simit::DenseLiteralTensor> *DenseLiteralTensor;
   TensorValues<double>                       *TensorDoubleValues;
   TensorValues<int>                          *TensorIntValues;
 

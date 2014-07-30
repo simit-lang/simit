@@ -275,7 +275,6 @@ union YYSTYPE
 
 
   std::shared_ptr<simit::LiteralTensor>      *LiteralTensor;
-  std::shared_ptr<simit::DenseLiteralTensor> *DenseLiteralTensor;
   TensorValues<double>                       *TensorDoubleValues;
   TensorValues<int>                          *TensorIntValues;
 
@@ -619,9 +618,9 @@ static const yytype_uint16 yyrline[] =
      569,   574,   576,   578,   581,   584,   587,   593,   594,   600,
      608,   611,   617,   624,   633,   659,   662,   667,   673,   676,
      687,   690,   696,   702,   706,   712,   715,   719,   724,   727,
-     797,   798,   800,   804,   805,   818,   825,   834,   841,   844,
-     848,   861,   865,   879,   883,   889,   896,   899,   903,   916,
-     920,   934,   938,   944,   949,   958,   963,   965,   968,   969
+     796,   797,   799,   803,   804,   817,   824,   833,   840,   843,
+     847,   860,   864,   878,   882,   888,   895,   898,   902,   915,
+     919,   933,   937,   943,   948,   957,   962,   964,   967,   968
 };
 #endif
 
@@ -1864,7 +1863,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 102: /* dense_tensor_literal  */
 
-      { delete ((*yyvaluep).DenseLiteralTensor); }
+      { delete ((*yyvaluep).LiteralTensor); }
 
         break;
 
@@ -1918,7 +1917,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 111: /* scalar_literal  */
 
-      { delete ((*yyvaluep).DenseLiteralTensor); }
+      { delete ((*yyvaluep).LiteralTensor); }
 
         break;
 
@@ -3053,8 +3052,8 @@ yyreduce:
     auto values = unique_ptr<TensorValues<double>>((yyvsp[-1].TensorDoubleValues));
     Shape *shape = dimSizesToShape(values->dimSizes);
     auto type = new NDTensorType(shape, new ScalarType(ScalarType::FLOAT));
-    auto literal = new DenseLiteralTensor(type, values->values.data());
-    (yyval.DenseLiteralTensor) = new shared_ptr<DenseLiteralTensor>(literal);
+    auto literal = new LiteralTensor(type, values->values.data());
+    (yyval.LiteralTensor) = new shared_ptr<LiteralTensor>(literal);
   }
 
     break;
@@ -3065,8 +3064,8 @@ yyreduce:
     auto values = unique_ptr<TensorValues<int>>((yyvsp[-1].TensorIntValues));
     Shape *shape = dimSizesToShape(values->dimSizes);
     auto type = new NDTensorType(shape, new ScalarType(ScalarType::INT));
-    auto literal = new DenseLiteralTensor(type, values->values.data());
-    (yyval.DenseLiteralTensor) = new shared_ptr<DenseLiteralTensor>(literal);
+    auto literal = new LiteralTensor(type, values->values.data());
+    (yyval.LiteralTensor) = new shared_ptr<LiteralTensor>(literal);
   }
 
     break;
@@ -3237,8 +3236,8 @@ yyreduce:
 
     {
     auto scalarType = new ScalarType(ScalarType::INT);
-    auto literal = new DenseLiteralTensor(scalarType, &(yyvsp[0].num));
-    (yyval.DenseLiteralTensor) = new shared_ptr<DenseLiteralTensor>(literal);
+    auto literal = new LiteralTensor(scalarType, &(yyvsp[0].num));
+    (yyval.LiteralTensor) = new shared_ptr<LiteralTensor>(literal);
   }
 
     break;
@@ -3247,8 +3246,8 @@ yyreduce:
 
     {
     auto scalarType = new ScalarType(ScalarType::FLOAT);
-    auto literal = new DenseLiteralTensor(scalarType, &(yyvsp[0].fnum));
-    (yyval.DenseLiteralTensor) = new shared_ptr<DenseLiteralTensor>(literal);
+    auto literal = new LiteralTensor(scalarType, &(yyvsp[0].fnum));
+    (yyval.LiteralTensor) = new shared_ptr<LiteralTensor>(literal);
   }
 
     break;
