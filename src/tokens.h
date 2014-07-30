@@ -187,7 +187,6 @@ union YYSTYPE
   std::list<std::shared_ptr<simit::Store>>  *StoreList;
 
 
-  simit::Type                      *Type;
   simit::TensorType                *TensorType;
   simit::TensorType::ComponentType  ComponentType;
   std::vector<simit::Shape*>       *Shapes;

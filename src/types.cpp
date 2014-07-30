@@ -10,10 +10,6 @@ using namespace simit;
 using namespace std;
 
 
-/* Type */
-Type::~Type() {}
-
-
 /* TensorType */
 std::size_t TensorType::componentSize(ComponentType ct) {
   switch (ct) {
@@ -44,6 +40,10 @@ std::string TensorType::componentTypeString(ComponentType ct) {
 
 TensorType::~TensorType() {}
 
+std::ostream &simit::operator<<(std::ostream &os, const TensorType &type) {
+  return os << type.toString();
+}
+
 
 /* ScalarType */
 ScalarType::~ScalarType() {}
@@ -56,7 +56,7 @@ TensorType::ComponentType ScalarType::getComponentType() const {
   return componentType;
 }
 
-bool ScalarType::operator==(const Type& other) {
+bool ScalarType::operator==(const TensorType& other) {
   const ScalarType *otherPtr = dynamic_cast<const ScalarType *>(&other);
   return otherPtr != NULL && componentType == otherPtr->componentType;
 }
@@ -171,7 +171,7 @@ TensorType::ComponentType NDTensorType::getComponentType() const {
   return blockType->getComponentType();
 }
 
-bool NDTensorType::operator==(const Type& other) {
+bool NDTensorType::operator==(const TensorType& other) {
   const NDTensorType *otherPtr = dynamic_cast<const NDTensorType *>(&other);
   return (otherPtr != NULL &&
           *blockShape == *otherPtr->blockShape &&

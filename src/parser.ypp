@@ -602,7 +602,6 @@ var_decl
 
 // Types
 %union {
-  simit::Type                      *Type;
   simit::TensorType                *TensorType;
   simit::TensorType::ComponentType  ComponentType;
   std::vector<simit::Shape*>       *Shapes;

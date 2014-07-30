@@ -11,24 +11,8 @@ namespace simit {
 
 class Shape;
 
-/** The type of a Simit \ref Value. */
-class Type {
- public:
-  Type() {}
-  virtual ~Type();
-
-  virtual bool operator==(const Type& other) = 0;
-  bool operator!=(const Type& other) { return !(*this == other); }
-
-  virtual std::string toString() const = 0;
-  friend std::ostream &operator<<(std::ostream &os, const Type &type) {
-    return os << type.toString();
-  }
-};
-
-
 /** The type of a Simit \ref Tensor. */
-class TensorType :public Type {
+class TensorType {
  public:
   enum ComponentType {INT, FLOAT, ELEMENT};
   static std::size_t componentSize(ComponentType ct);
@@ -41,6 +25,12 @@ class TensorType :public Type {
   virtual unsigned int getSize() const = 0;
   virtual bool isScalar() const = 0;
   virtual ComponentType getComponentType() const = 0;
+
+  virtual bool operator==(const TensorType& other) = 0;
+  bool operator!=(const TensorType& other) { return !(*this == other); }
+
+  virtual std::string toString() const = 0;
+  friend std::ostream &operator<<(std::ostream &os, const TensorType &type);
 };
 
 
@@ -55,7 +45,7 @@ class ScalarType : public TensorType {
   virtual bool isScalar() const { return true; }
   virtual ComponentType getComponentType() const;
 
-  virtual bool operator==(const Type& other);
+  virtual bool operator==(const TensorType& other);
   virtual std::string toString() const;
 
  private:
@@ -134,7 +124,7 @@ class NDTensorType : public TensorType {
 
   virtual ComponentType getComponentType() const;
 
-  virtual bool operator==(const Type& other);
+  virtual bool operator==(const TensorType& other);
   virtual std::string toString() const;
 
  private:
