@@ -14,18 +14,6 @@ using namespace std;
 Type::~Type() {}
 
 
-/* ElementType */
-ElementType::~ElementType() {}
-
-bool ElementType::operator==(const Type& other) {
-  return false;  // TODO: Fix this
-}
-
-std::string ElementType::toString() const {
-  return "ElementType";
-}
-
-
 /* TensorType */
 std::size_t TensorType::componentSize(ComponentType ct) {
   switch (ct) {
@@ -33,6 +21,9 @@ std::size_t TensorType::componentSize(ComponentType ct) {
       return sizeof(int);
     case TensorType::FLOAT:
       return sizeof(double);
+    case TensorType::ELEMENT:
+      assert(false && "currently unsupported");  // TODO
+      return INT_MAX;
   }
   assert(false);
   return 0;
@@ -44,6 +35,8 @@ std::string TensorType::componentTypeString(ComponentType ct) {
       return "int";
     case TensorType::FLOAT:
       return "float";
+    case TensorType::ELEMENT:
+      return "element";
   }
   assert(false);
   return "";
@@ -69,14 +62,7 @@ bool ScalarType::operator==(const Type& other) {
 }
 
 std::string ScalarType::toString() const {
-  switch (componentType) {
-    case INT:
-      return "int";
-    case FLOAT:
-      return "float";
-  }
-  assert(false);
-  return "";
+  return componentTypeString(componentType);
 }
 
 

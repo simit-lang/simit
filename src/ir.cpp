@@ -68,6 +68,9 @@ std::string DenseLiteralTensor::toString() const {
       }
       break;
     }
+    case TensorType::ELEMENT:
+      assert(false && "Unsupported (TODO)");
+      break;
   }
   return result;
 }

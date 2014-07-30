@@ -181,15 +181,13 @@ union YYSTYPE
   std::list<std::shared_ptr<simit::Formal>> *Formals;
 
 
-  std::shared_ptr<simit::Value>            *Value;
-  std::list<std::shared_ptr<simit::Value>> *ValueList;
-  std::shared_ptr<simit::Tensor>           *Tensor;
-  std::shared_ptr<simit::Store>            *Store;
-  std::list<std::shared_ptr<simit::Store>> *StoreList;
+  std::shared_ptr<simit::Tensor>            *Tensor;
+  std::list<std::shared_ptr<simit::Tensor>> *TensorList;
+  std::shared_ptr<simit::Store>             *Store;
+  std::list<std::shared_ptr<simit::Store>>  *StoreList;
 
 
   simit::Type                      *Type;
-  simit::ElementType               *ElementType;
   simit::TensorType                *TensorType;
   simit::TensorType::ComponentType  ComponentType;
   std::vector<simit::Shape*>       *Shapes;

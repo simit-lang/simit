@@ -256,15 +256,13 @@ union YYSTYPE
   std::list<std::shared_ptr<simit::Formal>> *Formals;
 
 
-  std::shared_ptr<simit::Value>            *Value;
-  std::list<std::shared_ptr<simit::Value>> *ValueList;
-  std::shared_ptr<simit::Tensor>           *Tensor;
-  std::shared_ptr<simit::Store>            *Store;
-  std::list<std::shared_ptr<simit::Store>> *StoreList;
+  std::shared_ptr<simit::Tensor>            *Tensor;
+  std::list<std::shared_ptr<simit::Tensor>> *TensorList;
+  std::shared_ptr<simit::Store>             *Store;
+  std::list<std::shared_ptr<simit::Store>>  *StoreList;
 
 
   simit::Type                      *Type;
-  simit::ElementType               *ElementType;
   simit::TensorType                *TensorType;
   simit::TensorType::ComponentType  ComponentType;
   std::vector<simit::Shape*>       *Shapes;
@@ -611,12 +609,12 @@ static const yytype_uint16 yyrline[] =
      175,   179,   185,   188,   195,   199,   201,   203,   205,   208,
      213,   218,   223,   244,   247,   251,   254,   260,   269,   274,
      280,   282,   292,   293,   294,   295,   296,   299,   326,   332,
-     334,   336,   338,   340,   343,   346,   382,   383,   397,   415,
-     418,   421,   424,   427,   430,   433,   436,   439,   457,   460,
-     463,   466,   469,   472,   475,   478,   481,   484,   487,   490,
-     493,   496,   501,   502,   506,   512,   521,   526,   528,   532,
-     534,   539,   541,   543,   546,   549,   552,   558,   559,   565,
-     571,   574,   580,   587,   596,   624,   627,   632,   638,   641,
+     334,   336,   338,   340,   343,   346,   382,   383,   396,   414,
+     417,   420,   423,   426,   429,   432,   435,   438,   456,   459,
+     462,   465,   468,   471,   474,   477,   480,   483,   486,   489,
+     492,   495,   500,   501,   505,   511,   520,   525,   527,   531,
+     533,   538,   540,   542,   545,   548,   551,   557,   558,   564,
+     572,   575,   581,   588,   597,   624,   627,   632,   638,   641,
      652,   655,   661,   667,   671,   677,   680,   684,   689,   692,
      762,   763,   765,   769,   770,   783,   790,   799,   806,   809,
      813,   826,   830,   844,   848,   854,   861,   864,   868,   881,
@@ -1761,7 +1759,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 80: /* expr_list  */
 
-      { delete ((*yyvaluep).ValueList); }
+      { delete ((*yyvaluep).TensorList); }
 
         break;
 
@@ -1779,13 +1777,13 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 91: /* type  */
 
-      { delete ((*yyvaluep).Type); }
+      { delete ((*yyvaluep).TensorType); }
 
         break;
 
     case 92: /* element_type  */
 
-      { delete ((*yyvaluep).ElementType); }
+      { delete ((*yyvaluep).TensorType); }
 
         break;
 
@@ -1827,7 +1825,7 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 99: /* literal  */
 
-      { delete ((*yyvaluep).Value); }
+      { delete ((*yyvaluep).Tensor); }
 
         break;
 
@@ -2255,7 +2253,7 @@ yyreduce:
 
     {
     free((void*)(yyvsp[-4].string));
-    delete (yyvsp[-3].Type);
+    delete (yyvsp[-3].TensorType);
   }
 
     break;
@@ -2264,7 +2262,7 @@ yyreduce:
 
     {
     free((void*)(yyvsp[-7].string));
-    delete (yyvsp[-6].Type);
+    delete (yyvsp[-6].TensorType);
   }
 
     break;
@@ -2356,7 +2354,7 @@ yyreduce:
     {
     string ident((yyvsp[-2].string));
     free((void*)(yyvsp[-2].string));
-    auto formal = new Formal(ident, (yyvsp[0].Type));
+    auto formal = new Formal(ident, (yyvsp[0].TensorType));
     (yyval.Formal) = new shared_ptr<Formal>(formal);
   }
 
@@ -2402,7 +2400,7 @@ yyreduce:
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
     if (*(yyvsp[-3].TensorType) != *(tensorLiteral->getType())) {
-      REPORT_ERROR("value type does not match literal type", (yylsp[-2]));
+      REPORT_ERROR("value and literal types do not match", (yylsp[-2]));
     }
 
     ctx->symtable.addNode(tensorLiteral);
@@ -2417,7 +2415,7 @@ yyreduce:
 
     {
     free((void*)(yyvsp[-5].string));
-    delete (yyvsp[-3].ElementType);
+    delete (yyvsp[-3].TensorType);
   }
 
     break;
@@ -2426,7 +2424,7 @@ yyreduce:
 
     {
     auto lhsList = unique_ptr<list<shared_ptr<Store>>>((yyvsp[-3].StoreList));
-    auto rhsList = unique_ptr<list<shared_ptr<Value>>>((yyvsp[-1].ValueList));
+    auto rhsList = unique_ptr<list<shared_ptr<Tensor>>>((yyvsp[-1].TensorList));
 
     if (lhsList->size() > rhsList->size()) {
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
@@ -2686,9 +2684,9 @@ yyreduce:
   case 74:
 
     {
-    (yyval.ValueList) = new list<shared_ptr<Value>>();
+    (yyval.TensorList) = new list<shared_ptr<Tensor>>();
     if ((yyvsp[0].Tensor) == NULL) break;  // TODO: Remove check
-    (yyval.ValueList)->push_back(*(yyvsp[0].Tensor));
+    (yyval.TensorList)->push_back(*(yyvsp[0].Tensor));
     delete (yyvsp[0].Tensor);
   }
 
@@ -2697,9 +2695,9 @@ yyreduce:
   case 75:
 
     {
-    (yyval.ValueList) = (yyvsp[-2].ValueList);
+    (yyval.TensorList) = (yyvsp[-2].TensorList);
     if ((yyvsp[0].Tensor) == NULL) break;  // TODO: Remove check
-    (yyval.ValueList)->push_back(*(yyvsp[0].Tensor));
+    (yyval.TensorList)->push_back(*(yyvsp[0].Tensor));
     delete (yyvsp[0].Tensor);
   }
 
@@ -2752,7 +2750,9 @@ yyreduce:
     {
     string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
-    auto variableStore = new VariableStore(ident);
+    // TODO: Stores probably do not need to be Tensor classes, but could be
+    // some parser-internal class...
+    auto variableStore = new VariableStore(ident, NULL);
     (yyval.Store) = new std::shared_ptr<Store>(variableStore);
   }
 
@@ -2800,7 +2800,7 @@ yyreduce:
   case 94:
 
     {
-    delete (yyvsp[0].Type);
+    delete (yyvsp[0].TensorType);
     free((void*)(yyvsp[-2].string));
   }
 
@@ -2809,7 +2809,7 @@ yyreduce:
   case 95:
 
     {
-    (yyval.Type) = (yyvsp[0].ElementType);
+    (yyval.TensorType) = (yyvsp[0].TensorType);
   }
 
     break;
@@ -2817,7 +2817,7 @@ yyreduce:
   case 96:
 
     {
-    (yyval.Type) = (yyvsp[0].TensorType);
+    (yyval.TensorType) = (yyvsp[0].TensorType);
   }
 
     break;
@@ -2825,7 +2825,7 @@ yyreduce:
   case 97:
 
     {
-    (yyval.ElementType) = new ElementType();
+    (yyval.TensorType) = new ScalarType(TensorType::ELEMENT);
     free((void*)(yyvsp[0].string));
   }
 
@@ -3156,10 +3156,10 @@ yyreduce:
   case 139:
 
     {
-    auto expr = shared_ptr<Value>(*(yyvsp[-3].Tensor));
-    auto literal = shared_ptr<Value>(*(yyvsp[-1].Value));
+    auto expr = shared_ptr<Tensor>(*(yyvsp[-3].Tensor));
+    auto literal = shared_ptr<Tensor>(*(yyvsp[-1].Tensor));
     delete (yyvsp[-3].Tensor);
-    delete (yyvsp[-1].Value);
+    delete (yyvsp[-1].Tensor);
   }
 
     break;

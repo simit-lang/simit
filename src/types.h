@@ -27,21 +27,10 @@ class Type {
 };
 
 
-/** The type of a set \ref Element. */
-class ElementType : public Type {
- public:
-  ElementType() {}
-  virtual ~ElementType();
-
-  virtual bool operator==(const Type& other);
-  virtual std::string toString() const;
-};
-
-
-/** The type of a \ref Tensor. */
+/** The type of a Simit \ref Tensor. */
 class TensorType :public Type {
  public:
-  enum ComponentType {INT, FLOAT};
+  enum ComponentType {INT, FLOAT, ELEMENT};
   static std::size_t componentSize(ComponentType ct);
   static std::string componentTypeString(ComponentType ct);
 
@@ -51,7 +40,6 @@ class TensorType :public Type {
   virtual unsigned int getOrder() const = 0;
   virtual unsigned int getSize() const = 0;
   virtual bool isScalar() const = 0;
-
   virtual ComponentType getComponentType() const = 0;
 };
 
@@ -65,7 +53,6 @@ class ScalarType : public TensorType {
   virtual unsigned int getOrder() const { return 0; }
   virtual unsigned int getSize() const;
   virtual bool isScalar() const { return true; }
-
   virtual ComponentType getComponentType() const;
 
   virtual bool operator==(const Type& other);

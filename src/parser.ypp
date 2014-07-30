@@ -315,7 +315,7 @@ const_stmt
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
     if (*$tensor_type != *(tensorLiteral->getType())) {
-      REPORT_ERROR("value type does not match literal type", @5);
+      REPORT_ERROR("value and literal types do not match", @5);
     }
 
     ctx->symtable.addNode(tensorLiteral);
@@ -345,7 +345,7 @@ return_stmt
 assign_stmt
   : lhs_expr_list "=" expr_list ";" {
     auto lhsList = unique_ptr<list<shared_ptr<Store>>>($lhs_expr_list);
-    auto rhsList = unique_ptr<list<shared_ptr<Value>>>($expr_list);
+    auto rhsList = unique_ptr<list<shared_ptr<Tensor>>>($expr_list);
 
     if (lhsList->size() > rhsList->size()) {
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
@@ -385,11 +385,10 @@ expr_stmt
 
 // Expressions
 %union {
-  std::shared_ptr<simit::Value>            *Value;
-  std::list<std::shared_ptr<simit::Value>> *ValueList;
-  std::shared_ptr<simit::Tensor>           *Tensor;
-  std::shared_ptr<simit::Store>            *Store;
-  std::list<std::shared_ptr<simit::Store>> *StoreList;
+  std::shared_ptr<simit::Tensor>            *Tensor;
+  std::list<std::shared_ptr<simit::Tensor>> *TensorList;
+  std::shared_ptr<simit::Store>             *Store;
+  std::list<std::shared_ptr<simit::Store>>  *StoreList;
 };
 
 %type<Tensor> expr;
@@ -501,10 +500,10 @@ call_expr
   : expr "(" ")"
   | expr "(" expr_list ")"
 
-%type <ValueList> expr_list;
+%type <TensorList> expr_list;
 expr_list
   : expr {
-    $$ = new list<shared_ptr<Value>>();
+    $$ = new list<shared_ptr<Tensor>>();
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
@@ -565,7 +564,9 @@ lhs_expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
-    auto variableStore = new VariableStore(ident);
+    // TODO: Stores probably do not need to be Tensor classes, but could be
+    // some parser-internal class...
+    auto variableStore = new VariableStore(ident, NULL);
     $$ = new std::shared_ptr<Store>(variableStore);
   }
   | IDENT "(" expr_list ")" {
@@ -602,7 +603,6 @@ var_decl
 // Types
 %union {
   simit::Type                      *Type;
-  simit::ElementType               *ElementType;
   simit::TensorType                *TensorType;
   simit::TensorType::ComponentType  ComponentType;
   std::vector<simit::Shape*>       *Shapes;
@@ -611,14 +611,14 @@ var_decl
   simit::Dimension                 *Dimension;
 };
 
-%type <Type>           type;
-%type <ElementType>    element_type;
+%type <TensorType>     type;
 %type <TensorType>     tensor_type;
 %type <Shapes>         shapes;
 %type <Shape>          shape;
 %type <Dimensions>     dimensions;
 %type <Dimension>      dimension;
 %type <ComponentType>  component_type;
+%type <TensorType>     element_type;
 
 type
   : element_type {
@@ -630,7 +630,7 @@ type
 
 element_type
   : IDENT {
-    $$ = new ElementType();
+    $$ = new ScalarType(TensorType::ELEMENT);
     free((void*)$IDENT);
   }
 
@@ -743,7 +743,7 @@ component_type
   TensorValues<int>                          *TensorIntValues;
 };
 
-%type              <Value> literal;
+%type              <Tensor> literal;
 %type      <LiteralTensor> tensor_literal;
 %type <DenseLiteralTensor> dense_tensor_literal;
 %type <DenseLiteralTensor> scalar_literal;
@@ -932,8 +932,8 @@ test_stmt_block
 test_stmt
   : stmt
   | expr "->" literal ";" {
-    auto expr = shared_ptr<Value>(*$expr);
-    auto literal = shared_ptr<Value>(*$literal);
+    auto expr = shared_ptr<Tensor>(*$expr);
+    auto literal = shared_ptr<Tensor>(*$literal);
     delete $expr;
     delete $literal;
   }

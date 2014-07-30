@@ -29,38 +29,29 @@ class IRNode {
 };
 
 
-/** The base class of IR nodes that represent computed or loaded values. */
-class Value : public IRNode {
+/** The base class that represents computed and loaded tensors.  Note that
+  * scalars and objects are considered tensors of order 0. */
+class Tensor : public IRNode {
  public:
-  Value() {}
-  Value(const std::string &name) : IRNode(name) {}
+  Tensor(const TensorType *type) : Tensor("", type) {}
+  Tensor(const std::string &name, const TensorType *type)
+      : IRNode(name), type(type) {}
 
-  virtual Type *getType() = 0;
-};
+  virtual const TensorType *getType() const { return type; }
+  virtual unsigned int getOrder() const { return type->getOrder(); }
 
-
-/** The base class of \ref Value nodes that represent a computed or loaded
-  * tensor. */
-class Tensor : public Value {
- public:
-  virtual unsigned int getOrder() { return getTensorType()->getOrder(); }
-
-  virtual TensorType *getTensorType() = 0;
-  virtual Type *getType() { return getTensorType(); }
+ protected:
+  const TensorType *type;
 };
 
 
 /** Represents a  \ref Tensor that is loaded or defined as a constant. */
 class LiteralTensor : public Tensor {
  public:
-  LiteralTensor(TensorType *type) : type(type) {}
+  LiteralTensor(const TensorType *type) : Tensor(type) {}
   virtual ~LiteralTensor() { delete type; }
 
   void cast(TensorType *type);
-  virtual TensorType *getTensorType() { return type; }
-
- protected:
-  TensorType *type;
 };
 
 
@@ -150,40 +141,34 @@ class Merge : public Tensor {
 
   Merge(Operator op, const std::list<IndexVariablePtr> &indexVariables,
         const std::list<IndexedTensor> &operands)
-      : op(op), indexVariables(indexVariables), operands(operands) { }
+      : Tensor(NULL), op(op), indexVariables(indexVariables),
+        operands(operands) { }
 };
 
 
 /** Instruction that stores a value to a tensor or an object. */
-class Store : public Value {
+class Store : public Tensor {
  public:
-  Store(const std::string &name) : Value(name) {}
-
-  virtual Type *getType() { return type; }
-
- private:
-  Type *type;
+  Store(const std::string &name, const TensorType *type)
+      : Tensor(name, type) {}
 };
 
 
 /** Instruction that stores a value to a tensor or an object. */
 class VariableStore : public Store {
  public:
-  VariableStore(const std::string &varName) : Store(varName) {}
+  VariableStore(const std::string &varName, const TensorType *type)
+      : Store(varName, type) {}
   virtual std::string toString() const;
 };
 
 
 /** A formal input or result argument of a function. */
-class Formal : public Value {
+class Formal : public Tensor {
  public:
-  Formal(const std::string &name, Type *type)
-      : Value(name), type(type) {}
-  virtual Type *getType() { return type; }
+  Formal(const std::string &name, const TensorType *type)
+      : Tensor(name, type) {}
   virtual std::string toString() const;
-
- private:
-  Type *type;
 };
 
 
