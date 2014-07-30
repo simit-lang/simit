@@ -40,13 +40,13 @@ std::string Program::getName() const {
   return impl->name;
 }
 
-int Program::loadString(string programString) {
+int Program::loadString(const string &programString) {
   int errorCode = impl->frontend->parseString(programString, impl->programNodes,
                                               impl->errors, impl->tests);
   return errorCode;
 }
 
-int Program::loadFile(std::string filename) {
+int Program::loadFile(const std::string &filename) {
   int errorCode = impl->frontend->parseFile(filename, impl->programNodes,
                                             impl->errors, impl->tests);
   return errorCode;

@@ -2,6 +2,7 @@
 #define SIMIT_PROGRAM_H
 
 #include <string>
+#include <ostream>
 #include <list>
 
 namespace simit {
@@ -28,14 +29,14 @@ class Program {
     *         has errors these can be retrieved through the \ref getErrors
     *         and \ref getErrorString methods.
     */
-  int loadString(std::string programString);
+  int loadString(const std::string &programString);
 
   /** Add the Simit code in the given file to the program.
     * \return 0 on success, 1 if the Simit code has errors, and 2 if the file
     *         could not be read. If the code has errors these can be retrieved 
     *         through the \ref getErrors and \ref getErrorString methods.
     */
-  int loadFile(std::string filename);
+  int loadFile(const std::string &filename);
 
   /** Compile the program.
     * \return 0 on success, 1 if the program is incomplete. */
