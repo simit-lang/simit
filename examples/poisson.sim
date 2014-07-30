@@ -27,30 +27,30 @@ func buildCotanMatrix(t : Triangle, p0 : Point, p1 : Point, p2 : Point) -> (L : 
 	sintheta = norm(cross(e0,e1));
 	costheta = dot(e0, e1);
 	weight = 0.5*costheta/sintheta;
-	L(p0, p2) += weight;
-	L(p2, p0) += weight;
-	L(p0, p0) -= weight;
-	L(p2, p2) -= weight;
+	L(p0, p2) = weight;
+	L(p2, p0) = weight;
+	L(p0, p0) = -weight;
+	L(p2, p2) = -weight;
 
 	e0 = p1 - p2;
 	e1 = p0 - p2;
 	sintheta = norm(cross(e0,e1));
 	costheta = dot(e0, e1);
 	weight = 0.5*costheta/sintheta;
-	L(p0, p1) += weight;
-	L(p1, p0) += weight;
-	L(p0, p0) -= weight;
-	L(p1, p1) -= weight;
+	L(p0, p1) = weight;
+	L(p1, p0) = weight;
+	L(p0, p0) = -weight;
+	L(p1, p1) = -weight;
 
 	e0 = p2 - p0;
 	e1 = p1 - p0;
 	sintheta = norm(cross(e0,e1));
 	costheta = dot(e0, e1);
 	weight = 0.5*costheta/sintheta;
-	L(p2, p1) += weight;
-	L(p1, p2) += weight;
-	L(p2, p2) -= weight;
-	L(p1, p1) -= weight;
+	L(p2, p1) = weight;
+	L(p1, p2) = weight;
+	L(p2, p2) = -weight;
+	L(p1, p1) = -weight;
 end
 
 proc main
