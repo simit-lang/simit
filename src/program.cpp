@@ -4,6 +4,7 @@
 
 #include "ir.h"
 #include "frontend.h"
+#include "codegen.h"
 #include "logger.h"
 #include "util.h"
 #include "errors.h"
@@ -16,9 +17,10 @@ namespace internal {
 class Program {
  public:
   Program(const std::string &name)
-      : name(name), frontend(new Frontend()) {}
+      : name(name), frontend(new Frontend()), codegen(new LLVMCodeGen()) {}
   const std::string &name;
   std::unique_ptr<Frontend> frontend;
+  std::unique_ptr<LLVMCodeGen> codegen;
   std::list<std::shared_ptr<IRNode>> programNodes;
   std::list<simit::Error> errors;
   std::list<simit::Test> tests;
@@ -51,6 +53,7 @@ int Program::loadFile(std::string filename) {
 }
 
 int Program::compile() {
+//  cout << (*this) << endl;
   return 0;
 }
 
