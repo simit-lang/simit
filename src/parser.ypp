@@ -141,26 +141,34 @@
 %%
 program
   : /* empty */
-  | program program_element
+  | program program_element {
+    if ($program_element != NULL) {  // TODO: Remove this check
+      ctx->programNodes.insert(ctx->programNodes.end(), $2->begin(), $2->end());
+      delete $2;
+    }
+  }
 
 %union {
   std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
 };
+
 %type<IRNodes> program_element;
 // TODO: Move all of these actions to the program rule
 program_element
-  : struct
-  | procedure
-  | function
-  | extern
-  | stmt {
-    ctx->programNodes.insert(ctx->programNodes.end(), $1->begin(), $1->end());
-    delete $1;
+  : struct {
+    $$ = NULL;
   }
-  | test {
-    ctx->programNodes.insert(ctx->programNodes.end(), $1->begin(), $1->end());
-    delete $1;
+  | procedure {
+    $$ = NULL;
   }
+  | function {
+    $$ = NULL;
+  }
+  | extern {
+    $$ = NULL;
+  }
+  | stmt
+  | test
 
 // Externs
 extern
@@ -207,30 +215,71 @@ procedure
   }
 
 function
-  : function_header stmt_block BLOCKEND
+  : function_header stmt_block BLOCKEND {
+    ctx->symtable.unscope();
+  }
 
 function_header
   : FUNC IDENT "(" params ")" results {
+    string ident($IDENT);
     free((void*)$IDENT);
+
+    ctx->symtable.scope();
+    for (auto param : *$params) {
+//      ctx->symtable.addNode(param);
+    }
+
+    for (auto result : *$results) {
+//      ctx->symtable.addNode(result);
+    }
   }
 
+%union {
+  std::shared_ptr<simit::Formal>            *Formal;
+  std::list<std::shared_ptr<simit::Formal>> *Formals;
+};
+
+%type <Formals> params;
 params
- : /* empty */
- | param_list
+ : /* empty */ {
+    $$ = new list<shared_ptr<Formal>>();
+ }
+ | formal_list
 
+%type <Formals> results;
 results
-  : /* empty */
-  | RARROW "(" param_list ")"
+  : /* empty */ {
+    $$ = new list<shared_ptr<Formal>>();
+  }
+  | RARROW "(" formal_list ")" {
+    $$ = $formal_list;
+  }
 
-param_list
-  : var_decl
-  | param_list "," var_decl
+%type <Formal> formal_decl;
+formal_decl
+  : IDENT ":" type {
+    string ident($IDENT);
+    free((void*)$IDENT);
+    auto formal = new Formal(ident, $type);
+    $$ = new shared_ptr<Formal>(formal);
+  }
 
+%type <Formals> formal_list;
+formal_list
+  : formal_decl {
+    $$ = new list<shared_ptr<Formal>>();
+    $$->push_back(*$formal_decl);
+    delete $formal_decl;
+  }
+  | formal_list "," formal_decl {
+    $$->push_back(*$formal_decl);
+    delete $formal_decl;
+  }
 
 // Statements
 stmt_block
   : /* empty */
-  | stmt_block stmt 
+  | stmt_block stmt
 
 %type<IRNodes> stmt;
 %type<IRNodes> const_stmt;
@@ -299,9 +348,8 @@ assign_stmt
     auto rhsList = unique_ptr<list<shared_ptr<Value>>>($expr_list);
 
     if (lhsList->size() > rhsList->size()) {
-      // TODO: Add error back in
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
-      YYACCEPT;
+      break;
     }
     else if (lhsList->size() < rhsList->size()) {
       REPORT_ERROR("too mant expressions assigned to too few variables", @2);
@@ -351,9 +399,10 @@ expr
     free((void*)$IDENT);
     std::shared_ptr<IRNode> &node = ctx->symtable[ident];
     if (node == NULL) {
-      // TODO: Re-introduce this code once functions and parameters work
+      // TODO: reintroduce error
       // REPORT_ERROR(ident + " is not defined in scope", @1);
-      YYACCEPT;
+      $$ = NULL;
+      break;
     }
 
     shared_ptr<Tensor> tensor = dynamic_pointer_cast<Tensor>(node);
@@ -388,6 +437,11 @@ expr
     $$ = NULL;
   }
   | "-" expr %prec NEG {
+    if ($2 == NULL) {
+      $$ = NULL;
+      break; // TODO: Remove check
+    }
+
     auto expr = shared_ptr<Tensor>(*$2);
     delete $2;
 
@@ -450,14 +504,14 @@ call_expr
 %type <ValueList> expr_list;
 expr_list
   : expr {
-    if ($expr == NULL) YYACCEPT;  // TODO: Remove check
     $$ = new list<shared_ptr<Value>>();
+    if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
   }
   | expr_list "," expr {
-    if ($expr == NULL) YYACCEPT;  // TODO: Remove check
     $$ = $1;
+    if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
   }
@@ -514,21 +568,25 @@ lhs_expr
     auto variableStore = new VariableStore(ident);
     $$ = new std::shared_ptr<Store>(variableStore);
   }
-  | IDENT "(" expr_list ")"
-  | IDENT "." IDENT
+  | IDENT "(" expr_list ")" {
+    $$ = NULL;
+  }
+  | IDENT "." IDENT {
+    $$ = NULL;
+  }
 
 %type<StoreList> lhs_expr_list;
 lhs_expr_list
   : lhs_expr {
-    if ($lhs_expr == NULL) YYACCEPT;  // TODO: Remove check
     $$ = new list<shared_ptr<Store>>();
+    if ($lhs_expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$lhs_expr);
     delete $lhs_expr;
 
   }
   | lhs_expr_list "," lhs_expr {
-    if ($lhs_expr == NULL) YYACCEPT;  // TODO: Remove check
     $$ = $1;
+    if ($lhs_expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$lhs_expr);
     delete $lhs_expr;
   }

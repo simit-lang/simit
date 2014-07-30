@@ -154,12 +154,6 @@ class Merge : public Tensor {
 };
 
 
-/** A Simit function. */
-class Function : public IRNode {
- public:
-};
-
-
 /** Instruction that stores a value to a tensor or an object. */
 class Store : public Value {
  public:
@@ -177,6 +171,25 @@ class VariableStore : public Store {
  public:
   VariableStore(const std::string &varName) : Store(varName) {}
   virtual std::string toString() const;
+};
+
+
+/** A formal input or result argument of a function. */
+class Formal : public Value {
+ public:
+  Formal(const std::string &name, Type *type)
+      : Value(name), type(type) {}
+  virtual Type *getType() { return type; }
+  virtual std::string toString() const;
+
+ private:
+  Type *type;
+};
+
+
+/** A Simit function. */
+class Function : public IRNode {
+ public:
 };
 
 

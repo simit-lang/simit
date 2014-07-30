@@ -54,11 +54,9 @@ int Frontend::parseString(std::string programString,
 
   struct yy_buffer_state *bufferState;
   bufferState = yy_scan_string(programString.c_str());
-
   auto ctx = ParseParams(symtable, errors, tests);
   int status = yyparse(&ctx);
   yylex_destroy();
-
 
   if (status == 0) {
     log("Parsed correctly");

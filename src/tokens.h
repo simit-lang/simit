@@ -177,6 +177,10 @@ union YYSTYPE
   std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
 
 
+  std::shared_ptr<simit::Formal>            *Formal;
+  std::list<std::shared_ptr<simit::Formal>> *Formals;
+
+
   std::shared_ptr<simit::Value>            *Value;
   std::list<std::shared_ptr<simit::Value>> *ValueList;
   std::shared_ptr<simit::Tensor>           *Tensor;

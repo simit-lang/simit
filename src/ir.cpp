@@ -168,3 +168,10 @@ std::string Merge::toString() const {
 std::string VariableStore::toString() const {
   return getName();
 }
+
+
+/* Formal */
+std::string Formal::toString() const {
+  return getName() + " : " + type->toString();
+}
+
