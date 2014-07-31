@@ -16,10 +16,10 @@ class IRNode {
   IRNode(const std::string &name) : name(name) {}
   virtual ~IRNode() {}
 
-  virtual std::string toString() const = 0;
-
   void setName(std::string name) { this->name = name; }
-  std::string getName() const    { return name; }
+
+  std::string getName() const { return name; }
+  virtual std::string toString() const = 0;
 
   friend std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
@@ -36,8 +36,8 @@ class Tensor : public IRNode {
   Tensor(const std::string &name, const TensorType *type)
       : IRNode(name), type(type) {}
 
-  virtual const TensorType *getType() const { return type; }
-  virtual unsigned int getOrder() const { return type->getOrder(); }
+  const TensorType *getType() const { return type; }
+  unsigned int getOrder() const { return type->getOrder(); }
 
  protected:
   const TensorType *type;
@@ -49,10 +49,11 @@ class Tensor : public IRNode {
 class LiteralTensor : public Tensor {
  public:
   LiteralTensor(TensorType *type, void *data);
-  virtual ~LiteralTensor();
+  ~LiteralTensor();
 
   void cast(TensorType *type);
-  virtual std::string toString() const;
+
+  std::string toString() const;
 
  private:
   void  *data;
@@ -62,14 +63,13 @@ class LiteralTensor : public Tensor {
 class IndexVariable : public IRNode {
  public:
   IndexVariable(const std::string &name) : IRNode(name) {}
-  virtual ~IndexVariable() {}
 };
 
 
 class FreeIndexVariable : public IndexVariable {
  public:
   FreeIndexVariable(const std::string &name) : IndexVariable(name) {}
-  virtual std::string toString() const { return getName(); }
+  std::string toString() const { return getName(); }
 };
 
 std::list<std::shared_ptr<IndexVariable>> makeFreeIndexVariables(int n);
@@ -81,7 +81,7 @@ class ReductionIndexVariable : public IndexVariable {
 
   ReductionIndexVariable(Operator op, const std::string &name)
       : IndexVariable(name), op(op) {}
-  virtual std::string toString() const;
+  std::string toString() const;
 
  private:
   Operator op;
@@ -113,8 +113,7 @@ class Merge : public Tensor {
                      const std::list<IndexVariablePtr> &indexVariables,
                      const std::list<IndexedTensor> &operands);
 
-  virtual TensorType *getTensorType();
-  virtual std::string toString() const;
+  std::string toString() const;
 
  private:
   Operator op;
@@ -141,7 +140,7 @@ class VariableStore : public Store {
  public:
   VariableStore(const std::string &varName, const TensorType *type)
       : Store(varName, type) {}
-  virtual std::string toString() const;
+  std::string toString() const;
 };
 
 
@@ -150,7 +149,7 @@ class Formal : public Tensor {
  public:
   Formal(const std::string &name, const TensorType *type)
       : Tensor(name, type) {}
-  virtual std::string toString() const;
+  std::string toString() const;
 };
 
 
@@ -166,7 +165,7 @@ class Function : public IRNode {
 
   void addStatements(const std::list<std::shared_ptr<IRNode>> &stmts);
 
-  virtual std::string toString() const;
+  std::string toString() const;
 
  private:
   FormalList arguments;

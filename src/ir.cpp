@@ -18,7 +18,7 @@ std::ostream &simit::operator<<(std::ostream &os, const IRNode &node) {
 }
 
 
-/* DenseTensorLiteral */
+/* LiteralTensor */
 LiteralTensor::LiteralTensor(TensorType *type, void *data)
     : Tensor(type) {
   auto componentSize = TensorType::componentSize(type->getComponentType());
@@ -122,10 +122,6 @@ Merge *Merge::make(Operator op,
     return NULL;
   }
   return new Merge(op, indexVariables, operands);
-}
-
-TensorType *Merge::getTensorType() {
-  return NULL;
 }
 
 static std::string opString(Merge::Operator op) {
