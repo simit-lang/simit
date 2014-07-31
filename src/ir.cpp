@@ -18,6 +18,11 @@ std::ostream &simit::operator<<(std::ostream &os, const IRNode &node) {
 }
 
 
+/* Tensor */
+std::string Tensor::toString() const {
+  return getName() + " : " + type->toString();
+}
+
 /* LiteralTensor */
 LiteralTensor::LiteralTensor(TensorType *type, void *data)
     : Tensor(type) {
@@ -195,6 +200,6 @@ std::string Function::toString() const {
 
 /* Formal */
 std::string Formal::toString() const {
-  return getName() + " : " + type->toString();
+  return Tensor::toString();
 }
 

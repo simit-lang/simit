@@ -38,6 +38,7 @@ class Tensor : public IRNode {
 
   const TensorType *getType() const { return type; }
   unsigned int getOrder() const { return type->getOrder(); }
+  virtual std::string toString() const = 0;
 
  protected:
   const TensorType *type;
