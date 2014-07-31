@@ -136,6 +136,16 @@ extern int yydebug;
   }
 
 
+namespace simit {
+namespace parser {
+  struct Formal {
+    std::string name;
+    TensorType *type;
+    Formal(const std::string &name, TensorType *type) : name(name), type(type){}
+  };
+}}
+
+
   namespace {
     template <typename T>
     class TensorValues {
@@ -256,8 +266,10 @@ union YYSTYPE
   simit::Function *Function;
 
 
-  std::shared_ptr<simit::Formal>            *Formal;
-  std::list<std::shared_ptr<simit::Formal>> *Formals;
+  simit::parser::Formal                       *Formal;
+  std::list<simit::parser::Formal*>           *Formals;
+  std::list<std::shared_ptr<simit::Argument>> *Arguments;
+  std::list<std::shared_ptr<simit::Result>>   *Results;
 
 
   std::shared_ptr<simit::Tensor>            *Tensor;
@@ -609,18 +621,18 @@ static const yytype_uint16 yyrline[] =
 {
        0,   148,   148,   150,   158,   161,   164,   167,   170,   173,
      179,   183,   189,   192,   199,   203,   205,   207,   209,   212,
-     222,   228,   237,   262,   265,   271,   274,   280,   289,   294,
-     302,   305,   314,   315,   316,   317,   318,   322,   349,   357,
-     361,   363,   365,   367,   371,   377,   414,   417,   432,   450,
-     453,   456,   459,   462,   465,   468,   471,   474,   492,   495,
-     498,   501,   504,   507,   510,   513,   516,   519,   522,   525,
-     528,   531,   536,   537,   541,   547,   556,   561,   563,   567,
-     569,   574,   576,   578,   581,   584,   587,   593,   594,   600,
-     608,   611,   617,   624,   633,   659,   662,   667,   673,   676,
-     687,   690,   696,   702,   706,   712,   715,   719,   724,   727,
-     796,   797,   799,   803,   804,   817,   824,   833,   840,   843,
-     847,   860,   864,   878,   882,   888,   895,   898,   902,   915,
-     919,   933,   937,   943,   948,   957,   962,   964,   967,   968
+     222,   228,   237,   281,   284,   295,   298,   309,   317,   321,
+     328,   331,   340,   341,   342,   343,   344,   348,   375,   383,
+     387,   389,   391,   393,   397,   403,   440,   443,   458,   476,
+     479,   482,   485,   488,   491,   494,   497,   500,   518,   521,
+     524,   527,   530,   533,   536,   539,   542,   545,   548,   551,
+     554,   557,   562,   563,   567,   573,   582,   587,   589,   593,
+     595,   600,   602,   604,   607,   610,   613,   619,   620,   626,
+     634,   637,   643,   650,   659,   685,   688,   693,   699,   702,
+     713,   716,   722,   728,   732,   738,   741,   745,   750,   753,
+     822,   823,   825,   829,   830,   843,   850,   859,   866,   869,
+     873,   886,   890,   904,   908,   914,   921,   924,   928,   941,
+     945,   959,   963,   969,   974,   983,   988,   990,   993,   994
 };
 #endif
 
@@ -1713,13 +1725,13 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 65: /* arguments  */
 
-      { delete ((*yyvaluep).Formals); }
+      { delete ((*yyvaluep).Arguments); }
 
         break;
 
     case 66: /* results  */
 
-      { delete ((*yyvaluep).Formals); }
+      { delete ((*yyvaluep).Results); }
 
         break;
 
@@ -1731,7 +1743,12 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
     case 68: /* formal_list  */
 
-      { delete ((*yyvaluep).Formals); }
+      {
+  for (auto formal : *((*yyvaluep).Formals)) {
+    delete formal;
+  }
+  delete ((*yyvaluep).Formals);
+}
 
         break;
 
@@ -2356,8 +2373,8 @@ yyreduce:
     {
     string ident((yyvsp[-4].string));
     free((void*)(yyvsp[-4].string));
-    auto arguments = unique_ptr<list<shared_ptr<Formal>>>((yyvsp[-2].Formals));
-    auto results = unique_ptr<list<shared_ptr<Formal>>>((yyvsp[0].Formals));
+    auto results = unique_ptr<list<shared_ptr<Result>>>((yyvsp[0].Results));
+    auto arguments = unique_ptr<list<shared_ptr<Argument>>>((yyvsp[-2].Arguments));
 
     (yyval.Function) = new Function(ident, *arguments, *results);
 
@@ -2376,15 +2393,20 @@ yyreduce:
   case 23:
 
     {
-    (yyval.Formals) = new list<shared_ptr<Formal>>();
- }
+    (yyval.Arguments) = new list<shared_ptr<Argument>>();
+  }
 
     break;
 
   case 24:
 
     {
-    (yyval.Formals) = (yyvsp[0].Formals);
+    (yyval.Arguments) = new list<shared_ptr<Argument>>();
+    for (auto formal : *(yyvsp[0].Formals)) {
+      auto result = new Argument(formal->name, formal->type);
+      (yyval.Arguments)->push_back(shared_ptr<Argument>(result));
+    }
+    delete (yyvsp[0].Formals);
  }
 
     break;
@@ -2392,7 +2414,7 @@ yyreduce:
   case 25:
 
     {
-    (yyval.Formals) = new list<shared_ptr<Formal>>();
+    (yyval.Results) = new list<shared_ptr<Result>>();
   }
 
     break;
@@ -2400,7 +2422,12 @@ yyreduce:
   case 26:
 
     {
-    (yyval.Formals) = (yyvsp[-1].Formals);
+    (yyval.Results) = new list<shared_ptr<Result>>();
+    for (auto formal : *(yyvsp[-1].Formals)) {
+      auto result = new Result(formal->name, formal->type);
+      (yyval.Results)->push_back(shared_ptr<Result>(result));
+    }
+    delete (yyvsp[-1].Formals);
   }
 
     break;
@@ -2410,8 +2437,7 @@ yyreduce:
     {
     string ident((yyvsp[-2].string));
     free((void*)(yyvsp[-2].string));
-    auto formal = new Formal(ident, (yyvsp[0].TensorType));
-    (yyval.Formal) = new shared_ptr<Formal>(formal);
+    (yyval.Formal) = new simit::parser::Formal(ident, (yyvsp[0].TensorType));
   }
 
     break;
@@ -2419,9 +2445,8 @@ yyreduce:
   case 28:
 
     {
-    (yyval.Formals) = new list<shared_ptr<Formal>>();
-    (yyval.Formals)->push_back(*(yyvsp[0].Formal));
-    delete (yyvsp[0].Formal);
+    (yyval.Formals) = new list<simit::parser::Formal*>();
+    (yyval.Formals)->push_back((yyvsp[0].Formal));
   }
 
     break;
@@ -2429,8 +2454,7 @@ yyreduce:
   case 29:
 
     {
-    (yyval.Formals)->push_back(*(yyvsp[0].Formal));
-    delete (yyvsp[0].Formal);
+    (yyval.Formals)->push_back((yyvsp[0].Formal));
   }
 
     break;

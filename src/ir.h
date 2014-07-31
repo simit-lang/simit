@@ -145,23 +145,29 @@ class VariableStore : public Store {
 };
 
 
-/** A formal input or result argument of a function. */
-class Formal : public Tensor {
+/** A formal argument to a function. */
+class Argument : public Tensor {
  public:
-  Formal(const std::string &name, const TensorType *type)
+  Argument(const std::string &name, const TensorType *type)
       : Tensor(name, type) {}
   std::string toString() const;
 };
 
 
+/** A formal result of a function. */
+class Result : public Tensor {
+ public:
+  Result(const std::string &name, const TensorType *type)
+      : Tensor(name, type) {}
+  std::string toString() const;
+};
+
 /** A Simit function. */
 class Function : public IRNode {
  public:
-  typedef std::list<std::shared_ptr<simit::Formal>> FormalList;
-  typedef std::list<std::shared_ptr<simit::IRNode>> StatementList;
-
-  Function(const std::string &name, const FormalList &arguments,
-           const FormalList &results)
+  Function(const std::string &name,
+           const std::list<std::shared_ptr<simit::Argument>> &arguments,
+           const std::list<std::shared_ptr<simit::Result>> &results)
       : IRNode(name), arguments(arguments), results(results) {}
 
   void addStatements(const std::list<std::shared_ptr<IRNode>> &stmts);
@@ -169,9 +175,9 @@ class Function : public IRNode {
   std::string toString() const;
 
  private:
-  FormalList arguments;
-  FormalList results;
-  StatementList body;
+  std::list<std::shared_ptr<simit::Argument>> arguments;
+  std::list<std::shared_ptr<simit::Result>> results;
+  std::list<std::shared_ptr<simit::IRNode>> body;
 };
 
 
@@ -180,9 +186,8 @@ class Function : public IRNode {
 class Test : public IRNode {
  public:
   Test(std::string name) : IRNode(name) {}
-  virtual ~Test() {}
 
-  virtual std::string toString() const { return "Test"; }
+  std::string toString() const { return "Test"; }
 
  private:
 };

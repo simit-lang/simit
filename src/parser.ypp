@@ -237,8 +237,8 @@ function_header
   : FUNC IDENT "(" arguments ")" results {
     string ident($IDENT);
     free((void*)$IDENT);
-    auto arguments = unique_ptr<list<shared_ptr<Formal>>>($arguments);
-    auto results = unique_ptr<list<shared_ptr<Formal>>>($results);
+    auto results = unique_ptr<list<shared_ptr<Result>>>($results);
+    auto arguments = unique_ptr<list<shared_ptr<Argument>>>($arguments);
 
     $$ = new Function(ident, *arguments, *results);
 
@@ -252,27 +252,56 @@ function_header
     }
   }
 
-%union {
-  std::shared_ptr<simit::Formal>            *Formal;
-  std::list<std::shared_ptr<simit::Formal>> *Formals;
+%code requires {
+namespace simit {
+namespace parser {
+  struct Formal {
+    std::string name;
+    TensorType *type;
+    Formal(const std::string &name, TensorType *type) : name(name), type(type){}
+  };
+}}
 };
 
-%type <Formals> arguments;
+%union {
+  simit::parser::Formal                       *Formal;
+  std::list<simit::parser::Formal*>           *Formals;
+  std::list<std::shared_ptr<simit::Argument>> *Arguments;
+  std::list<std::shared_ptr<simit::Result>>   *Results;
+};
+%destructor {
+  for (auto formal : *$$) {
+    delete formal;
+  }
+  delete $$;
+} <Formals>;
+
+%type <Arguments> arguments;
 arguments
- : /* empty */ {
-    $$ = new list<shared_ptr<Formal>>();
- }
- | formal_list {
-    $$ = $formal_list;
+  : /* empty */ {
+    $$ = new list<shared_ptr<Argument>>();
+  }
+  | formal_list {
+    $$ = new list<shared_ptr<Argument>>();
+    for (auto formal : *$formal_list) {
+      auto result = new Argument(formal->name, formal->type);
+      $$->push_back(shared_ptr<Argument>(result));
+    }
+    delete $formal_list;
  }
 
-%type <Formals> results;
+%type <Results> results;
 results
   : /* empty */ {
-    $$ = new list<shared_ptr<Formal>>();
+    $$ = new list<shared_ptr<Result>>();
   }
   | RARROW "(" formal_list ")" {
-    $$ = $formal_list;
+    $$ = new list<shared_ptr<Result>>();
+    for (auto formal : *$formal_list) {
+      auto result = new Result(formal->name, formal->type);
+      $$->push_back(shared_ptr<Result>(result));
+    }
+    delete $formal_list;
   }
 
 %type <Formal> formal_decl;
@@ -280,20 +309,17 @@ formal_decl
   : IDENT ":" type {
     string ident($IDENT);
     free((void*)$IDENT);
-    auto formal = new Formal(ident, $type);
-    $$ = new shared_ptr<Formal>(formal);
+    $$ = new simit::parser::Formal(ident, $type);
   }
 
 %type <Formals> formal_list;
 formal_list
   : formal_decl {
-    $$ = new list<shared_ptr<Formal>>();
-    $$->push_back(*$formal_decl);
-    delete $formal_decl;
+    $$ = new list<simit::parser::Formal*>();
+    $$->push_back($formal_decl);
   }
   | formal_list "," formal_decl {
-    $$->push_back(*$formal_decl);
-    delete $formal_decl;
+    $$->push_back($formal_decl);
   }
 
 // Statements

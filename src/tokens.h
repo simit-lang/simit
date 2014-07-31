@@ -61,6 +61,16 @@ extern int yydebug;
   }
 
 
+namespace simit {
+namespace parser {
+  struct Formal {
+    std::string name;
+    TensorType *type;
+    Formal(const std::string &name, TensorType *type) : name(name), type(type){}
+  };
+}}
+
+
   namespace {
     template <typename T>
     class TensorValues {
@@ -181,8 +191,10 @@ union YYSTYPE
   simit::Function *Function;
 
 
-  std::shared_ptr<simit::Formal>            *Formal;
-  std::list<std::shared_ptr<simit::Formal>> *Formals;
+  simit::parser::Formal                       *Formal;
+  std::list<simit::parser::Formal*>           *Formals;
+  std::list<std::shared_ptr<simit::Argument>> *Arguments;
+  std::list<std::shared_ptr<simit::Result>>   *Results;
 
 
   std::shared_ptr<simit::Tensor>            *Tensor;

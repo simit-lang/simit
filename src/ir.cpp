@@ -198,8 +198,12 @@ std::string Function::toString() const {
 }
 
 
-/* Formal */
-std::string Formal::toString() const {
+/* Argument */
+std::string Argument::toString() const {
   return Tensor::toString();
 }
 
+/* Result */
+std::string Result::toString() const {
+  return Tensor::toString();
+}
