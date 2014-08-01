@@ -5,8 +5,15 @@
 #include <string>
 
 #include "types.h"
+#include "irvisitors.h"
 
 namespace simit {
+
+namespace internal {
+class IndexVariable;
+class FreeIndexVariable;
+class ReductionIndexVariable;
+}
 
 /** The base class of all nodes in the Simit Intermediate Representation
   * (Simit IR) */
@@ -61,43 +68,15 @@ class LiteralTensor : public Tensor {
 };
 
 
-class IndexVariable : public IRNode {
- public:
-  IndexVariable(const std::string &name) : IRNode(name) {}
-};
-
-
-class FreeIndexVariable : public IndexVariable {
- public:
-  FreeIndexVariable(const std::string &name) : IndexVariable(name) {}
-  std::string toString() const { return getName(); }
-};
-
-std::list<std::shared_ptr<IndexVariable>> makeFreeIndexVariables(int n);
-
-
-class ReductionIndexVariable : public IndexVariable {
- public:
-  enum Operator {ADD, MUL};
-
-  ReductionIndexVariable(Operator op, const std::string &name)
-      : IndexVariable(name), op(op) {}
-  std::string toString() const;
-
- private:
-  Operator op;
-};
-
-
 /** Instruction that combines one or more tensors.  Merge nodes must be created
   * through the \ref createMerge factory function. */
 class Merge : public Tensor {
  public:
-  using IndexVariablePtr = std::shared_ptr<IndexVariable>;
+  using IndexVariablePtr = std::shared_ptr<internal::IndexVariable>;
 
   struct IndexedTensor {
     std::shared_ptr<Tensor> tensor;
-    std::list<std::shared_ptr<IndexVariable>> indexVariables;
+    std::list<IndexVariablePtr> indexVariables;
     IndexedTensor(const std::shared_ptr<Tensor> &tensor,
                   const std::list<Merge::IndexVariablePtr> &indexVars)
         : tensor(tensor), indexVariables(indexVars) {}

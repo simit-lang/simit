@@ -6,6 +6,7 @@
 #include <string.h>
 
 #include "types.h"
+#include "indexvariables.h"
 #include "util.h"
 
 using namespace simit;
@@ -83,37 +84,6 @@ std::string LiteralTensor::toString() const {
       break;
   }
   return result;
-}
-
-
-/* FreeIndexVariable */
-std::list<std::shared_ptr<IndexVariable>> simit::makeFreeIndexVariables(int n) {
-  auto freeIndexVars = std::list<std::shared_ptr<IndexVariable>>();
-  for (int i=0; i<n; ++i) {
-    char name[2];
-    name[0] = 'i' + i;
-    name[1] = '\0';
-    auto freeIndexVar = new FreeIndexVariable(name);
-    freeIndexVars.push_back(std::shared_ptr<IndexVariable>(freeIndexVar));
-  }
-  return freeIndexVars;
-}
-
-
-/* ReductionIndexVariable */
-static std::string opString(ReductionIndexVariable::Operator op) {
-  switch (op) {
-    case ReductionIndexVariable::ADD:
-      return "+";
-    case ReductionIndexVariable::MUL:
-      return "*";
-  }
-  assert(false);
-  return "";
-}
-
-std::string ReductionIndexVariable::toString() const {
-  return opString(op) + getName();
 }
 
 

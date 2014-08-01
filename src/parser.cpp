@@ -70,8 +70,10 @@
   #include "frontend.h"
   #include "util.h"
   #include "errors.h"
+  #include "indexvariables.h"
   using namespace std;
   using namespace simit;
+  using namespace simit::internal;
 
   #define REPORT_ERROR(msg, loc)                     \
     do {                                             \
@@ -2689,7 +2691,8 @@ yyreduce:
     auto expr = shared_ptr<Tensor>(*(yyvsp[0].Tensor));
     delete (yyvsp[0].Tensor);
 
-    auto indexVars = makeFreeIndexVariables(expr->getOrder());
+    IndexVariableFactory indexVariableFactory;
+    auto indexVars = indexVariableFactory.makeFreeVariables(expr->getOrder());
 
     std::list<Merge::IndexedTensor> operands;
     operands.push_front(Merge::IndexedTensor(expr, indexVars));
