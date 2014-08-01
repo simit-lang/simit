@@ -18,6 +18,9 @@ class IndexVariable {
   std::string name;
 };
 
+std::ostream &operator<<(std::ostream &os,
+                         const simit::internal::IndexVariable &var);
+
 
 class FreeIndexVariable : public IndexVariable {
  public:
@@ -25,6 +28,7 @@ class FreeIndexVariable : public IndexVariable {
 
   void print(std::ostream &os) const { os << getName(); };
 };
+
 
 class ReductionIndexVariable : public IndexVariable {
  public:
@@ -39,8 +43,6 @@ class ReductionIndexVariable : public IndexVariable {
   Operator op;
 };
 
-std::ostream &operator<<(std::ostream &os,
-                         const simit::internal::IndexVariable &var);
 
 class IndexVariableFactory {
  public:
@@ -58,7 +60,5 @@ class IndexVariableFactory {
 
 }
 }
-
-
 
 #endif
