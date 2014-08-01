@@ -117,6 +117,7 @@ class Store : public Tensor {
 
 
 /** Instruction that stores a value to a tensor or an object. */
+// TODO: Remove this class (move it into parser and don't inherit from tensor)
 class VariableStore : public Store {
  public:
   VariableStore(const std::string &varName, const TensorType *type)

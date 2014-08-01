@@ -72,6 +72,8 @@ class Frontend {
                 std::list<simit::Test> &tests);
 
  private:
+
+  // TODO: The symbol table should be a part of the program, not the frontend
   SymbolTable symtable;
 };
 

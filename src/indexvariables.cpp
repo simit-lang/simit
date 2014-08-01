@@ -6,7 +6,7 @@
 namespace simit {
 namespace internal {
 
-/* IndexVariable */
+/* class IndexVariable */
 std::ostream &operator<<(std::ostream &os,
                          const simit::internal::IndexVariable &var) {
   var.print(os);
@@ -14,7 +14,7 @@ std::ostream &operator<<(std::ostream &os,
 }
 
 
-/* ReductionIndexVariable */
+/* class ReductionIndexVariable */
 void ReductionIndexVariable::print(std::ostream &os) const {
   switch (op) {
     case ReductionIndexVariable::ADD:
@@ -31,6 +31,8 @@ void ReductionIndexVariable::print(std::ostream &os) const {
   os << getName();
 }
 
+
+/* class IndexVariableFactory */
 std::list<std::shared_ptr<IndexVariable>>
 IndexVariableFactory::makeFreeVariables(unsigned int n) {
   auto freeIndexVars = std::list<std::shared_ptr<IndexVariable>>();

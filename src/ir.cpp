@@ -13,19 +13,19 @@ using namespace simit;
 using namespace std;
 
 
-/* IRNode */
+/* class IRNode */
 std::ostream &simit::operator<<(std::ostream &os, const IRNode &node) {
   node.print(os);
   return os;
 }
 
 
-/* Tensor */
+/* class Tensor */
 void Tensor::print(std::ostream &os) const {
   os << getName() << " : " << type->toString();
 }
 
-/* LiteralTensor */
+/* class LiteralTensor */
 LiteralTensor::LiteralTensor(TensorType *type, void *data)
     : Tensor(type) {
   auto componentSize = TensorType::componentSize(type->getComponentType());
@@ -83,7 +83,7 @@ void LiteralTensor::print(std::ostream &os) const {
 }
 
 
-/* Merge */
+/* class Merge */
 Merge *Merge::make(Operator op,
                    const std::list<IndexVariablePtr> &indexVariables,
                    const std::list<IndexedTensor> &operands) {
@@ -137,13 +137,13 @@ void Merge::print(std::ostream &os) const {
 }
 
 
-/* VariableStore */
+/* class VariableStore */
 void VariableStore::print(std::ostream &os) const {
   os << getName();
 }
 
 
-/* Function */
+/* class Function */
 void Function::addStatements(const std::list<std::shared_ptr<IRNode>> &stmts) {
   body.insert(body.end(), stmts.begin(), stmts.end());
 }
@@ -161,7 +161,7 @@ void Function::print(std::ostream &os) const {
 }
 
 
-/* Argument */
+/* class Argument */
 void Argument::print(std::ostream &os) const {
   Tensor::print(os);
 }

@@ -20,8 +20,7 @@ class IndexVariable {
   std::string name;
 };
 
-std::ostream &operator<<(std::ostream &os,
-                         const simit::internal::IndexVariable &var);
+std::ostream &operator<<(std::ostream &os, const IndexVariable &var);
 
 
 /** A free index causes an operation to be performed for each location in the
