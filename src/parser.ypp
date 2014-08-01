@@ -31,9 +31,8 @@
     ParseParams(simit::SymbolTable &symtable,
                 std::list<simit::Error> &errors, std::list<simit::Test> &tests)
                : symtable(symtable), errors(errors), tests(tests) {}
-
     simit::SymbolTable &symtable;
-    std::list<std::shared_ptr<simit::IRNode>> programNodes;
+    std::list<simit::Function *> functions;
     std::list<simit::Error> &errors;
     std::list<simit::Test> &tests;
   };
@@ -149,11 +148,7 @@
 
 program
   : /* empty */
-  | program program_element {
-    if ($program_element == NULL) break;  // TODO: Remove this check
-    ctx->programNodes.push_back(*$program_element);
-    delete $program_element;
-  }
+  | program program_element
 
 %type<IRNode> program_element;
 program_element
@@ -164,7 +159,7 @@ program_element
     $$ = NULL;
   }
   | function {
-    $$ = new shared_ptr<IRNode>($function);
+    ctx->functions.push_back($function);
   }
   | extern {
     $$ = NULL;

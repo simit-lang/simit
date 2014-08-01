@@ -8,6 +8,7 @@
 
 namespace simit {
 
+class Function;
 class IRNode;
 class Test;
 class Error;
@@ -60,13 +61,13 @@ class Frontend {
   /** Parses, typechecks and turns a given Simit-formated string into Simit IR.
     */
   int parseString(std::string programString,
-                  std::list<std::shared_ptr<IRNode>> &programNodes,
+                  std::list<simit::Function *> &functions,
                   std::list<simit::Error> &errors,
                   std::list<simit::Test> &tests);
 
   /** Parses, typechecks and turns a given Simit-formated file into Simit IR. */
   int parseFile(std::string filename,
-                std::list<std::shared_ptr<IRNode>> &programNodes,
+                std::list<simit::Function *> &functions,
                 std::list<simit::Error> &errors,
                 std::list<simit::Test> &tests);
 

@@ -151,6 +151,19 @@ class Function : public IRNode {
 
   void addStatements(const std::list<std::shared_ptr<IRNode>> &stmts);
 
+
+  const std::list<std::shared_ptr<simit::Argument>> &getArguments() const {
+    return arguments;
+  }
+
+  const std::list<std::shared_ptr<simit::Result>> &getResults() const {
+    return results;
+  }
+
+  const std::list<std::shared_ptr<simit::IRNode>> &getBody() const {
+    return body;
+  }
+
   std::string toString() const;
 
  private:

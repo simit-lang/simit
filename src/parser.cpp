@@ -129,9 +129,8 @@ extern int yydebug;
     ParseParams(simit::SymbolTable &symtable,
                 std::list<simit::Error> &errors, std::list<simit::Test> &tests)
                : symtable(symtable), errors(errors), tests(tests) {}
-
     simit::SymbolTable &symtable;
-    std::list<std::shared_ptr<simit::IRNode>> programNodes;
+    std::list<simit::Function *> functions;
     std::list<simit::Error> &errors;
     std::list<simit::Test> &tests;
   };
@@ -621,20 +620,20 @@ static const yytype_uint8 yytranslate[] =
   /* YYRLINE[YYN] -- Source line where rule number YYN was defined.  */
 static const yytype_uint16 yyrline[] =
 {
-       0,   148,   148,   150,   158,   161,   164,   167,   170,   173,
-     179,   183,   189,   192,   199,   203,   205,   207,   209,   212,
-     222,   228,   237,   281,   284,   295,   298,   309,   317,   321,
-     328,   331,   340,   341,   342,   343,   344,   348,   375,   383,
-     387,   389,   391,   393,   397,   403,   440,   443,   458,   476,
-     479,   482,   485,   488,   491,   494,   497,   500,   518,   521,
-     524,   527,   530,   533,   536,   539,   542,   545,   548,   551,
-     554,   557,   562,   563,   567,   573,   582,   587,   589,   593,
-     595,   600,   602,   604,   607,   610,   613,   619,   620,   626,
-     634,   637,   643,   650,   659,   685,   688,   693,   699,   702,
-     713,   716,   722,   728,   732,   738,   741,   745,   750,   753,
-     822,   823,   825,   829,   830,   843,   850,   859,   866,   869,
-     873,   886,   890,   904,   908,   914,   921,   924,   928,   941,
-     945,   959,   963,   969,   974,   983,   988,   990,   993,   994
+       0,   149,   149,   151,   155,   158,   161,   164,   167,   170,
+     176,   180,   186,   189,   196,   200,   202,   204,   206,   209,
+     219,   225,   234,   278,   281,   292,   295,   306,   314,   318,
+     325,   328,   337,   338,   339,   340,   341,   345,   372,   380,
+     384,   386,   388,   390,   394,   400,   437,   440,   455,   473,
+     476,   479,   482,   485,   488,   491,   494,   497,   515,   518,
+     521,   524,   527,   530,   533,   536,   539,   542,   545,   548,
+     551,   554,   559,   560,   564,   570,   579,   584,   586,   590,
+     592,   597,   599,   601,   604,   607,   610,   616,   617,   623,
+     631,   634,   640,   647,   656,   682,   685,   690,   696,   699,
+     710,   713,   719,   725,   729,   735,   738,   742,   747,   750,
+     819,   820,   822,   826,   827,   840,   847,   856,   863,   866,
+     870,   883,   887,   901,   905,   911,   918,   921,   925,   938,
+     942,   956,   960,   966,   971,   980,   985,   987,   990,   991
 };
 #endif
 
@@ -2251,17 +2250,7 @@ yyreduce:
     int yychar_backup = yychar;
     switch (yyn)
       {
-          case 3:
-
-    {
-    if ((yyvsp[0].IRNode) == NULL) break;  // TODO: Remove this check
-    ctx->programNodes.push_back(*(yyvsp[0].IRNode));
-    delete (yyvsp[0].IRNode);
-  }
-
-    break;
-
-  case 4:
+          case 4:
 
     {
     (yyval.IRNode) = NULL;
@@ -2280,7 +2269,7 @@ yyreduce:
   case 6:
 
     {
-    (yyval.IRNode) = new shared_ptr<IRNode>((yyvsp[0].Function));
+    ctx->functions.push_back((yyvsp[0].Function));
   }
 
     break;

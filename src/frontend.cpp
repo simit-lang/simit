@@ -44,7 +44,7 @@ std::ostream &simit::operator<<(std::ostream &os, const SymbolTable &table) {
 
 /* Frontend */
 int Frontend::parseString(std::string programString,
-                          std::list<std::shared_ptr<IRNode>> &programNodes,
+                          std::list<simit::Function *> &functions,
                           std::list<simit::Error> &errors,
                           std::list<simit::Test> &tests) {
   log("Parsing program: ");
@@ -60,8 +60,8 @@ int Frontend::parseString(std::string programString,
 
   if (status == 0) {
     log("Parsed correctly");
-    programNodes.insert(programNodes.end(),
-                        ctx.programNodes.begin(), ctx.programNodes.end());
+    functions.insert(functions.end(),
+                     ctx.functions.begin(), ctx.functions.end());
     return 0;
   }
   else {
@@ -71,7 +71,7 @@ int Frontend::parseString(std::string programString,
 }
 
 int Frontend::parseFile(std::string filename,
-                        std::list<std::shared_ptr<IRNode>> &programNodes,
+                        std::list<simit::Function *> &functions,
                         std::list<simit::Error> &errors,
                         std::list<simit::Test> &tests) {
   log("Program: ");
@@ -96,8 +96,8 @@ int Frontend::parseFile(std::string filename,
 
   if (status == 0) {
     log("Parsed correctly");
-    programNodes.insert(programNodes.end(),
-                        ctx.programNodes.begin(), ctx.programNodes.end());
+    functions.insert(functions.end(),
+                     ctx.functions.begin(), ctx.functions.end());
     return 0;
   }
   else {

@@ -18,10 +18,18 @@ class Program {
  public:
   Program(const std::string &name)
       : name(name), frontend(new Frontend()), codegen(new LLVMCodeGen()) {}
+  ~Program() {
+    for (auto function : functions) {
+      delete function;
+    }
+  }
+
   const std::string &name;
   std::unique_ptr<Frontend> frontend;
   std::unique_ptr<LLVMCodeGen> codegen;
-  std::list<std::shared_ptr<IRNode>> programNodes;
+
+  std::list<Function*> functions;
+
   std::list<simit::Error> errors;
   std::list<simit::Test> tests;
 };
@@ -41,13 +49,13 @@ std::string Program::getName() const {
 }
 
 int Program::loadString(const string &programString) {
-  int errorCode = impl->frontend->parseString(programString, impl->programNodes,
+  int errorCode = impl->frontend->parseString(programString, impl->functions,
                                               impl->errors, impl->tests);
   return errorCode;
 }
 
 int Program::loadFile(const std::string &filename) {
-  int errorCode = impl->frontend->parseFile(filename, impl->programNodes,
+  int errorCode = impl->frontend->parseFile(filename, impl->functions,
                                             impl->errors, impl->tests);
   return errorCode;
 }
@@ -70,6 +78,6 @@ std::list<Error> &Program::getErrors() {
 }
 
 std::ostream &simit::operator<<(std::ostream &os, const Program &program) {
-  os << util::join(program.impl->programNodes, "\n\n");
+  os << util::join(program.impl->functions, "\n\n") << endl;
   return os;
 }

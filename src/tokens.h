@@ -52,9 +52,8 @@ extern int yydebug;
     ParseParams(simit::SymbolTable &symtable,
                 std::list<simit::Error> &errors, std::list<simit::Test> &tests)
                : symtable(symtable), errors(errors), tests(tests) {}
-
     simit::SymbolTable &symtable;
-    std::list<std::shared_ptr<simit::IRNode>> programNodes;
+    std::list<simit::Function *> functions;
     std::list<simit::Error> &errors;
     std::list<simit::Test> &tests;
   };
