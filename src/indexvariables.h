@@ -7,6 +7,8 @@
 namespace simit {
 namespace internal {
 
+
+/** Index variables describe the iteration domains of tensor operations.*/
 class IndexVariable {
  public:
   IndexVariable(const std::string &name) : name(name) {}
@@ -22,6 +24,8 @@ std::ostream &operator<<(std::ostream &os,
                          const simit::internal::IndexVariable &var);
 
 
+/** A free index causes an operation to be performed for each location in the
+  * iteration domain. */
 class FreeIndexVariable : public IndexVariable {
  public:
   FreeIndexVariable(const std::string &name) : IndexVariable(name) {}
@@ -30,6 +34,8 @@ class FreeIndexVariable : public IndexVariable {
 };
 
 
+/** A reduction index causes the values at each location in the iteration domain
+  * to be reduced by the given operation. */
 class ReductionIndexVariable : public IndexVariable {
  public:
   enum Operator {ADD, MUL};
@@ -44,6 +50,7 @@ class ReductionIndexVariable : public IndexVariable {
 };
 
 
+/** A factory for creating index variables with unique names. */
 class IndexVariableFactory {
  public:
   IndexVariableFactory() : nameID(0) {}
