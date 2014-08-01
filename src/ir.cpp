@@ -15,13 +15,14 @@ using namespace std;
 
 /* IRNode */
 std::ostream &simit::operator<<(std::ostream &os, const IRNode &node) {
-  return os << node.toString();
+  node.print(os);
+  return os;
 }
 
 
 /* Tensor */
-std::string Tensor::toString() const {
-  return getName() + " : " + type->toString();
+void Tensor::print(std::ostream &os) const {
+  os << getName() << " : " << type->toString();
 }
 
 /* LiteralTensor */
@@ -44,38 +45,34 @@ void LiteralTensor::cast(TensorType *type) {
   this->type = type;
 }
 
-std::string LiteralTensor::toString() const {
-  string result;
-
+void LiteralTensor::print(std::ostream &os) const {
   // TODO: Add nicer value printing that prints matrices and tensors properly
   switch (type->getComponentType()) {
     case TensorType::INT: {
       int *idata = (int*)data;
       if (type->getSize() == 1) {
-        result += to_string(idata[0]);
+        os << idata[0];
       }
       else {
-        result += "[";
-        result += to_string(idata[0]);
+        os << "[" << idata[0];
         for (unsigned int i=0; i<type->getSize(); ++i) {
-          result += ", " + to_string(idata[i]);
+          os << ", " << idata[i];
         }
-        result += "]";
+        os << "]";
       }
       break;
     }
     case TensorType::FLOAT: {
       double *fdata = (double*)data;
       if (type->getSize() == 1) {
-        result += to_string(fdata[0]);
+        os << fdata[0];
       }
       else {
-        result += "[";
-        result += to_string(fdata[0]);
+        os << "[" << fdata[0];
         for (unsigned int i=0; i<type->getSize(); ++i) {
-          result += ", " + to_string(fdata[i]);
+          os << ", " + to_string(fdata[i]);
         }
-        result += "]";
+        os << "]";
       }
       break;
     }
@@ -83,7 +80,6 @@ std::string LiteralTensor::toString() const {
       assert(false && "Unsupported (TODO)");
       break;
   }
-  return result;
 }
 
 
@@ -125,27 +121,25 @@ std::string Merge::IndexedTensor::toString() const {
   return tensor->getName() + indexVarString(indexVariables);
 }
 
-std::string Merge::toString() const {
+void Merge::print(std::ostream &os) const {
+  os << getName() << indexVarString(indexVariables) << " = ";
+
   unsigned int numOperands = operands.size();
   auto iter = operands.begin();
-  std::string rhsString;
   if (numOperands == 1) {
-    rhsString = opString(op) + util::toString(*iter++);
+    os << opString(op) + util::toString(*iter++);
   }
   else if (numOperands) {
-    rhsString = util::toString(*iter++) + opString(op) + util::toString(*iter++);
+    os << util::toString(*iter++) + opString(op) + util::toString(*iter++);
   } else {
-    assert(false);  // Not supported yet
-    return "";
+    assert(false && "Not supported yet");
   }
-
-  return getName() + indexVarString(indexVariables) + " = " + rhsString;
 }
 
 
 /* VariableStore */
-std::string VariableStore::toString() const {
-  return getName();
+void VariableStore::print(std::ostream &os) const {
+  os << getName();
 }
 
 
@@ -154,7 +148,7 @@ void Function::addStatements(const std::list<std::shared_ptr<IRNode>> &stmts) {
   body.insert(body.end(), stmts.begin(), stmts.end());
 }
 
-std::string Function::toString() const {
+void Function::print(std::ostream &os) const {
   string argumentString = "(" + util::join(this->arguments, ", ") + ")";
   string resultString = (results.size() == 0)
                         ? ""
@@ -163,17 +157,21 @@ std::string Function::toString() const {
 
   string bodyString = (body.size() > 0) ? "  " + util::join(body, "  \n") + "\n"
                                         : "";
-
-  return headerString + "\n" + bodyString + "end";
+  os << headerString << "\n" << bodyString << "end";
 }
 
 
 /* Argument */
-std::string Argument::toString() const {
-  return Tensor::toString();
+void Argument::print(std::ostream &os) const {
+  Tensor::print(os);
 }
 
-/* Result */
-std::string Result::toString() const {
-  return Tensor::toString();
+/* class Result */
+void Result::print(std::ostream &os) const {
+  Tensor::print(os);
+}
+
+/* class Test */
+void Test::print(std::ostream &os) const {
+  os << "Test";
 }

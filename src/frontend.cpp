@@ -33,7 +33,7 @@ std::ostream &simit::operator<<(std::ostream &os, const SymbolTable &table) {
     for (auto symPair : scope) {
       string symString = (symPair.second == NULL)
                            ? "NULL"
-                           : symPair.second->toString();
+                           : toString(symPair.second);
       os << util::indent(symPair.first + ":" + symString + ", ", 1);
     }
     os << "\n";

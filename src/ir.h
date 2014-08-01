@@ -26,13 +26,14 @@ class IRNode {
   void setName(std::string name) { this->name = name; }
 
   std::string getName() const { return name; }
-  virtual std::string toString() const = 0;
 
-  friend std::ostream &operator<<(std::ostream &os, const IRNode &node);
+  virtual void print(std::ostream &os) const = 0;
 
  protected:
   std::string name;
 };
+
+std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
 
 /** The base class that represents all computed and loaded tensors.  Note that
@@ -45,7 +46,7 @@ class Tensor : public IRNode {
 
   const TensorType *getType() const { return type; }
   unsigned int getOrder() const { return type->getOrder(); }
-  virtual std::string toString() const = 0;
+  void print(std::ostream &os) const = 0;
 
  protected:
   const TensorType *type;
@@ -61,7 +62,7 @@ class LiteralTensor : public Tensor {
 
   void cast(TensorType *type);
 
-  std::string toString() const;
+  void print(std::ostream &os) const;
 
  private:
   void  *data;
@@ -93,7 +94,7 @@ class Merge : public Tensor {
                      const std::list<IndexVariablePtr> &indexVariables,
                      const std::list<IndexedTensor> &operands);
 
-  std::string toString() const;
+  void print(std::ostream &os) const;
 
  private:
   Operator op;
@@ -120,7 +121,7 @@ class VariableStore : public Store {
  public:
   VariableStore(const std::string &varName, const TensorType *type)
       : Store(varName, type) {}
-  std::string toString() const;
+  void print(std::ostream &os) const;
 };
 
 
@@ -129,7 +130,7 @@ class Argument : public Tensor {
  public:
   Argument(const std::string &name, const TensorType *type)
       : Tensor(name, type) {}
-  std::string toString() const;
+  void print(std::ostream &os) const;
 };
 
 
@@ -138,7 +139,7 @@ class Result : public Tensor {
  public:
   Result(const std::string &name, const TensorType *type)
       : Tensor(name, type) {}
-  std::string toString() const;
+  void print(std::ostream &os) const;
 };
 
 /** A Simit function. */
@@ -164,7 +165,7 @@ class Function : public IRNode {
     return body;
   }
 
-  std::string toString() const;
+  void print(std::ostream &os) const;
 
  private:
   std::list<std::shared_ptr<simit::Argument>> arguments;
@@ -179,7 +180,7 @@ class Test : public IRNode {
  public:
   Test(std::string name) : IRNode(name) {}
 
-  std::string toString() const { return "Test"; }
+  void print(std::ostream &os) const;
 
  private:
 };
