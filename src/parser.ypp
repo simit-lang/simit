@@ -503,7 +503,8 @@ expr
     auto expr = shared_ptr<Tensor>(*$2);
     delete $2;
 
-    auto indexVars = FreeIndexVariable::makeVariables(expr->getOrder());
+    IndexVariableFactory indexVariableFactory;
+    auto indexVars = indexVariableFactory.makeFreeVariables(expr->getOrder());
 
     std::list<Merge::IndexedTensor> operands;
     operands.push_front(Merge::IndexedTensor(expr, indexVars));
