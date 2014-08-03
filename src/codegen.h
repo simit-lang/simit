@@ -1,7 +1,7 @@
 #ifndef SIMIT_CODEGEN_H
 #define SIMIT_CODEGEN_H
 
-#include "irvisitor.h"
+#include "irvisitors.h"
 
 namespace simit {
 

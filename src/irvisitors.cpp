@@ -1,4 +1,4 @@
-#include "irvisitor.h"
+#include "irvisitors.h"
 
 using namespace simit;
 
