@@ -62,7 +62,7 @@ int Program::loadFile(const std::string &filename) {
 
 int Program::compile() {
 //  for (auto function : impl->functions) {
-//    impl->codegen->compileToFunctionPointer(function);
+//    impl->codegen->compileToFunctionPointer(*function);
 //  }
 
   return 0;

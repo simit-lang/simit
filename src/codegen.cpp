@@ -55,27 +55,27 @@ static llvm::Type *llvmType(const simit::TensorType *type) {
   return llvmType;
 }
 
-llvm::Function *LLVMCodeGen::llvmFunctionPrototype(const Function *function) {
+llvm::Function *LLVMCodeGen::llvmFunctionPrototype(const Function &function) {
  vector<llvm::Type*> args;
-  for (auto &arg : function->getArguments()) {
+  for (auto &arg : function.getArguments()) {
     args.push_back(llvmType(arg->getType()));
   }
-  for (auto &result : function->getResults()) {
+  for (auto &result : function.getResults()) {
     args.push_back(llvmType(result->getType()));
   }
 
   llvm::FunctionType *ft = llvm::FunctionType::get(LLVM_VOID, args, false);
   llvm::Function *f = llvm::Function::Create(ft,
                                              llvm::Function::ExternalLinkage,
-                                             function->getName(),
+                                             function.getName(),
                                              module);
 
   auto ai = f->arg_begin();
-  for (auto &arg : function->getArguments()) {
+  for (auto &arg : function.getArguments()) {
     ai->setName(arg->getName());
     ++ai;
   }
-  for (auto &result : function->getResults()) {
+  for (auto &result : function.getResults()) {
     ai->setName(result->getName());
     ++ai;
   }
@@ -84,12 +84,15 @@ llvm::Function *LLVMCodeGen::llvmFunctionPrototype(const Function *function) {
   return f;
 }
 
-void LLVMCodeGen::compileToFunctionPointer(const Function *function) {
-  cout << *function << endl;
+void LLVMCodeGen::compileToFunctionPointer(const Function &function) {
+  cout << function << endl;
+//  llvm::Function *f = visit(function);
+//  f->dump();
+}
 
+void LLVMCodeGen::handle(const Function &function) {
+  cout << "heyo" << endl;
   llvm::Function *f = llvmFunctionPrototype(function);
-
   auto *entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
-
-  f->dump();
+//  return f;
 }

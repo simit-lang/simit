@@ -17,12 +17,15 @@ class LLVMCodeGen : public IRVisitor {
   LLVMCodeGen();
   virtual ~LLVMCodeGen();
 
-  virtual void compileToFunctionPointer(const Function *function);
+  virtual void compileToFunctionPointer(const Function &function);
+
+  void handle(const Function &function);
 
  private:
   llvm::Module *module;
+//  std::stack<llvm::Value*> values;
 
-  llvm::Function *llvmFunctionPrototype(const Function *function);
+  llvm::Function *llvmFunctionPrototype(const Function &function);
 };
 
 }
