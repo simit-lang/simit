@@ -26,7 +26,6 @@ class IRNode {
   void setName(std::string name) { this->name = name; }
 
   std::string getName() const { return name; }
-
   virtual void print(std::ostream &os) const = 0;
 
  protected:
@@ -44,9 +43,11 @@ class Tensor : public IRNode {
   Tensor(const std::string &name, const TensorType *type)
       : IRNode(name), type(type) {}
 
+  virtual void accept(IRVisitor *visitor) = 0;
+
   const TensorType *getType() const { return type; }
   unsigned int getOrder() const { return type->getOrder(); }
-  void print(std::ostream &os) const = 0;
+  virtual void print(std::ostream &os) const = 0;
 
  protected:
   const TensorType *type;
@@ -61,8 +62,9 @@ class LiteralTensor : public Tensor {
   ~LiteralTensor();
 
   void cast(TensorType *type);
+  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  void print(std::ostream &os) const;
+  virtual void print(std::ostream &os) const;
 
  private:
   void  *data;
@@ -94,6 +96,8 @@ class Merge : public Tensor {
                      const std::list<IndexVariablePtr> &indexVariables,
                      const std::list<IndexedTensor> &operands);
 
+  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+
   void print(std::ostream &os) const;
 
  private:
@@ -122,7 +126,11 @@ class VariableStore : public Store {
  public:
   VariableStore(const std::string &varName, const TensorType *type)
       : Store(varName, type) {}
+
+  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+
   void print(std::ostream &os) const;
+
 };
 
 
@@ -131,6 +139,9 @@ class Argument : public Tensor {
  public:
   Argument(const std::string &name, const TensorType *type)
       : Tensor(name, type) {}
+
+  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+
   void print(std::ostream &os) const;
 };
 
@@ -140,6 +151,9 @@ class Result : public Tensor {
  public:
   Result(const std::string &name, const TensorType *type)
       : Tensor(name, type) {}
+
+  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+
   void print(std::ostream &os) const;
 };
 
