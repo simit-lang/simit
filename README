@@ -3,15 +3,30 @@ high-performance code to simulate sparse systems.
 
 BUILDING SIMIT:
 ===============
-To build Simit you must first install Cmake 2.8.3 or later. See
-http://www.cmake.org.
+To build Simit you must install CMake 2.8.3 or later and LLVM 3.3
+or later. See http://www.cmake.org/cmake/resources/software.html
+for a copy of CMake. If your system does not have packages for LLVM
+you can download it at http://llvm.org/releases/download.html. You
+must then make sure llvm-config is available in your path.
 
-To perform an out-of-tree build do:
+If you want to build LLVM yourself you can check it out using SVN:
+  svn co https://llvm.org/svn/llvm-project/llvm/branches/release_33 llvm-3.3
+
+Then build it:
+  cd llvm-3.3
+  ./configure --disable-terminfo --enable-optimized --enable-assertions --enable-targets=x86
+  make -j8
+
+Then set the LLVM_CONFIG environment variable to point to llvm-config:
+  export LLVM_CONFIG=<path to llvm>/Release+Asserts/bin/llvm-config
+
+
+To perform an out-of-tree build of Simit do:
   cd <simit-directory>
   mkdir build
   cd build
   cmake ..
-  make -j4
+  make -j8
 
 To run the test suite do (all tests should pass):
   cd <simit-directory>
@@ -31,9 +46,10 @@ To build Simit's documentation do:
 This will create a doc directory containing HTML documentation.
 Open doc/index.html in your browser.
 
+
 FOR DEVELOPERS:
 ===============
-In addition to CMake developers might want to install:
+In addition to CMake and llvm developers might want to install:
 - Flex       2.5+    (http://flex.sourceforge.net)
 - GNU Bison  3.0.0+  (http://www.gnu.org/software/bison/)
 
