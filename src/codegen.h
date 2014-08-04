@@ -3,17 +3,26 @@
 
 #include "irvisitors.h"
 
+namespace llvm {
+class Module;
+class Function;
+}
+
 namespace simit {
+class Function;
 
 /** The base class of all classes that perform code generation using LLVM. */
-class LLVMCodeGen {// : public IRVisitor {
+class LLVMCodeGen : public IRVisitor {
  public:
-  LLVMCodeGen() {}
-  virtual ~LLVMCodeGen() {}
+  LLVMCodeGen();
+  virtual ~LLVMCodeGen();
 
-  virtual void compileToFunctionPointer();
+  virtual void compileToFunctionPointer(const Function *function);
 
  private:
+  llvm::Module *module;
+
+  llvm::Function *llvmFunctionPrototype(const Function *function);
 };
 
 }
