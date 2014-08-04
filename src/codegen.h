@@ -1,10 +1,13 @@
 #ifndef SIMIT_CODEGEN_H
 #define SIMIT_CODEGEN_H
 
+#include <stack>
+
 #include "irvisitors.h"
 
 namespace llvm {
 class Module;
+class Value;
 class Function;
 }
 
@@ -23,9 +26,10 @@ class LLVMCodeGen : public IRVisitor {
 
  private:
   llvm::Module *module;
-//  std::stack<llvm::Value*> values;
+  std::stack<llvm::Value*> results;
 
-  llvm::Function *llvmFunctionPrototype(const Function &function);
+  llvm::Function *codegen(const Function &function);
+  llvm::Function *llvmPrototype(const Function &function) const;
 };
 
 }
