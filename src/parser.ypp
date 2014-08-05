@@ -417,17 +417,15 @@ assign_stmt
       auto lhs = *lhsIter;
       auto rhs = *rhsIter;
 
-      // TODO: Remove this
-      if (rhs == NULL) continue;
+      if (rhs == NULL) continue;  // TODO: Remove this
 
-      if (dynamic_pointer_cast<VariableStore>(lhs) != NULL) {
-        rhs->setName(lhs->getName());
-        ctx->symtable.addNode(rhs);
-        $$->push_back(rhs);
-      }
-      else {
-        // TODO: Implement
-        assert(false);
+      auto lhsTensor = ctx->symtable[lhs->getName()];
+      if (lhsTensor != NULL) {
+        if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
+          rhs->setName(result->getName());  // TODO: Generate unique name
+          result->setValue(rhs);
+          $$->push_back(rhs);
+        }
       }
     }
   }
@@ -619,6 +617,22 @@ reduction_op
 
 
 // Lhs expressions
+%type<StoreList> lhs_expr_list;
+lhs_expr_list
+  : lhs_expr {
+    $$ = new list<shared_ptr<Store>>();
+    if ($lhs_expr == NULL) break;  // TODO: Remove check
+    $$->push_back(*$lhs_expr);
+    delete $lhs_expr;
+
+  }
+  | lhs_expr_list "," lhs_expr {
+    $$ = $1;
+    if ($lhs_expr == NULL) break;  // TODO: Remove check
+    $$->push_back(*$lhs_expr);
+    delete $lhs_expr;
+  }
+
 %type<Store> lhs_expr;
 lhs_expr
   : IDENT {
@@ -634,22 +648,6 @@ lhs_expr
   }
   | IDENT "." IDENT {
     $$ = NULL;
-  }
-
-%type<StoreList> lhs_expr_list;
-lhs_expr_list
-  : lhs_expr {
-    $$ = new list<shared_ptr<Store>>();
-    if ($lhs_expr == NULL) break;  // TODO: Remove check
-    $$->push_back(*$lhs_expr);
-    delete $lhs_expr;
-
-  }
-  | lhs_expr_list "," lhs_expr {
-    $$ = $1;
-    if ($lhs_expr == NULL) break;  // TODO: Remove check
-    $$->push_back(*$lhs_expr);
-    delete $lhs_expr;
   }
 
 // Variables

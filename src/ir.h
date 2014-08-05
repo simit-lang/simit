@@ -1,8 +1,9 @@
 #ifndef SIMIT_IR_H
 #define SIMIT_IR_H
 
-#include <assert.h>
+#include <cassert>
 #include <string>
+#include <list>
 
 #include "types.h"
 #include "irvisitors.h"
@@ -98,6 +99,11 @@ class Merge : public Tensor {
 
   virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
 
+  // TODO: Fix this interface by making IndexedTensor a class that is a part
+  //       of Merge's interface, or by returning the tensor operands put
+  //       together in a list, or by storing tensors and their indexvars
+  //       separately. We shoudln't return a struct.
+  const std::list<IndexedTensor> &getOperands() const { return operands; }
   void print(std::ostream &os) const;
 
  private:
@@ -152,9 +158,14 @@ class Result : public Tensor {
   Result(const std::string &name, const TensorType *type)
       : Tensor(name, type) {}
 
+  void setValue(const std::shared_ptr<Tensor> &value) { this->value = value; }
   virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
 
+  const std::shared_ptr<Tensor> &getValue() const { return value; }
   void print(std::ostream &os) const;
+
+ private:
+  std::shared_ptr<Tensor> value;
 };
 
 /** A Simit function. */

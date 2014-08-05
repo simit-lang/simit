@@ -153,11 +153,13 @@ void Function::print(std::ostream &os) const {
   string resultString = (results.size() == 0)
                         ? ""
                         : " -> (" + util::join(this->results, ", ") + ")";
-  string headerString = "func " + name + argumentString + resultString;
+  os << "func " << name << argumentString << resultString;
 
   string bodyString = (body.size() > 0) ? "  " + util::join(body, "  \n") + "\n"
                                         : "";
-  os << headerString << "\n" << bodyString << "end";
+  os << endl << bodyString;
+
+  os << "end";
 }
 
 

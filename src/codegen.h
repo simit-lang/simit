@@ -20,16 +20,21 @@ class LLVMCodeGen : public IRVisitor {
   LLVMCodeGen();
   virtual ~LLVMCodeGen();
 
-  virtual void compileToFunctionPointer(const Function &function);
+  virtual void compileToFunctionPointer(Function *function);
 
-  void handle(const Function &function);
+  void handle(Function *function);
+  void handle(Argument      *t);
+  void handle(Result        *t);
+  void handle(LiteralTensor *t);
+  void handle(Merge         *t);
+  void handle(VariableStore *t);
 
  private:
   llvm::Module *module;
   std::stack<llvm::Value*> results;
 
-  llvm::Function *codegen(const Function &function);
-  llvm::Function *llvmPrototype(const Function &function) const;
+  llvm::Function *codegen(Function *function);
+  llvm::Function *llvmPrototype(Function *function) const;
 };
 
 }

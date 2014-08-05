@@ -1,12 +1,19 @@
 #include "irvisitors.h"
 
+#include "ir.h"
+
 using namespace simit;
+
+#define CHECK_ABORT(func) do { func; if (isAborted()) return; } while(0)
 
 IRVisitor::~IRVisitor() {
 }
 
 void IRVisitor::visit(Function *f) {
-  handle(f);
+  CHECK_ABORT(handle(f));
+  for (auto &result : f->getResults()) {
+    CHECK_ABORT(result->accept(this));
+  }
 }
 
 void IRVisitor::visit(LiteralTensor *t) {
@@ -18,85 +25,22 @@ void IRVisitor::visit(Argument *t) {
 }
 
 void IRVisitor::visit(Result *t) {
-  handle(t);
+  if (t->getValue() == NULL) {  // TODO: Remove check
+    abort();
+    return;
+  }
+  CHECK_ABORT(t->getValue()->accept(this));
+  CHECK_ABORT(handle(t));
 }
 
 void IRVisitor::visit(Merge *t) {
-  handle(t);
+  for (auto &operand : t->getOperands()) {
+    CHECK_ABORT(operand.tensor->accept(this));
+  }
+  CHECK_ABORT(handle(t));
 }
 
 void IRVisitor::visit(VariableStore *t) {
-  handle(t);
-}
-
-void IRVisitor::handle(Function *function) {
-
-}
-
-void IRVisitor::handle(LiteralTensor *t) {
-
-}
-
-void IRVisitor::handle(Argument *t) {
-
-}
-
-void IRVisitor::handle(Result *t) {
-
-}
-
-void IRVisitor::handle(Merge *t) {
-
-}
-
-void IRVisitor::handle(VariableStore *t) {
-
-}
-
-void IRVisitor::visit(const Function &f) {
-  handle(f);
-}
-
-void IRVisitor::visit(const Argument &t) {
-  handle(t);
-}
-
-void IRVisitor::visit(const Result &t) {
-  handle(t);
-}
-
-void IRVisitor::visit(const LiteralTensor &t) {
-  handle(t);
-}
-
-void IRVisitor::visit(const Merge &t) {
-  handle(t);
-}
-
-void IRVisitor::visit(const VariableStore &t) {
-  handle(t);
-}
-
-void IRVisitor::handle(const Function &f) {
-
-}
-
-void IRVisitor::handle(const Argument &t) {
-
-}
-
-void IRVisitor::handle(const Result &t) {
-
-}
-
-void IRVisitor::handle(const LiteralTensor &t) {
-
-}
-
-void IRVisitor::handle(const Merge &t) {
-
-}
-
-void IRVisitor::handle(const VariableStore &t) {
-
+  // TODO: Implement visitation
+  CHECK_ABORT(handle(t));
 }

@@ -624,16 +624,16 @@ static const yytype_uint16 yyrline[] =
      176,   180,   186,   189,   196,   200,   202,   204,   206,   209,
      219,   225,   234,   278,   281,   292,   295,   306,   314,   318,
      325,   328,   337,   338,   339,   340,   341,   345,   372,   380,
-     384,   386,   388,   390,   394,   400,   437,   440,   455,   473,
-     476,   479,   482,   485,   488,   491,   494,   497,   516,   519,
-     522,   525,   528,   531,   534,   537,   540,   543,   546,   549,
-     552,   555,   560,   561,   565,   571,   580,   585,   587,   591,
-     593,   598,   600,   602,   605,   608,   611,   617,   618,   624,
-     632,   635,   641,   648,   657,   683,   686,   691,   697,   700,
-     711,   714,   720,   726,   730,   736,   739,   743,   748,   751,
-     820,   821,   823,   827,   828,   841,   848,   857,   864,   867,
-     871,   884,   888,   902,   906,   912,   919,   922,   926,   939,
-     943,   957,   961,   967,   972,   981,   986,   988,   991,   992
+     384,   386,   388,   390,   394,   400,   435,   438,   453,   471,
+     474,   477,   480,   483,   486,   489,   492,   495,   514,   517,
+     520,   523,   526,   529,   532,   535,   538,   541,   544,   547,
+     550,   553,   558,   559,   563,   569,   578,   583,   585,   589,
+     591,   596,   598,   600,   603,   606,   609,   615,   616,   622,
+     629,   638,   646,   649,   655,   681,   684,   689,   695,   698,
+     709,   712,   718,   724,   728,   734,   737,   741,   746,   749,
+     818,   819,   821,   825,   826,   839,   846,   855,   862,   865,
+     869,   882,   886,   900,   904,   910,   917,   920,   924,   937,
+     941,   955,   959,   965,   970,   979,   984,   986,   989,   990
 };
 #endif
 
@@ -657,10 +657,10 @@ static const char *const yytname[] =
   "stmt_block", "stmt", "const_stmt", "if_stmt", "else_clauses",
   "elif_clauses", "return_stmt", "assign_stmt", "expr_stmt", "expr",
   "call_expr", "expr_list", "map_expr", "with", "reduce", "index_expr",
-  "reduction_indices", "reduction_index", "reduction_op", "lhs_expr",
-  "lhs_expr_list", "var_decl", "type", "element_type", "tensor_type",
-  "shapes", "shape", "dimensions", "dimension", "component_type",
-  "literal", "element_literal", "tensor_literal", "dense_tensor_literal",
+  "reduction_indices", "reduction_index", "reduction_op", "lhs_expr_list",
+  "lhs_expr", "var_decl", "type", "element_type", "tensor_type", "shapes",
+  "shape", "dimensions", "dimension", "component_type", "literal",
+  "element_literal", "tensor_literal", "dense_tensor_literal",
   "float_dense_tensor_literal", "float_dense_ndtensor_literal",
   "float_dense_matrix_literal", "float_dense_vector_literal",
   "int_dense_tensor_literal", "int_dense_ndtensor_literal",
@@ -688,10 +688,10 @@ static const yytype_uint16 yytoknum[] =
 #define yypact_value_is_default(Yystate) \
   (!!((Yystate) == (-195)))
 
-#define YYTABLE_NINF -90
+#define YYTABLE_NINF -92
 
 #define yytable_value_is_error(Yytable_value) \
-  (!!((Yytable_value) == (-90)))
+  (!!((Yytable_value) == (-92)))
 
   /* YYPACT[STATE-NUM] -- Index in YYTABLE of the portion describing
      STATE-NUM.  */
@@ -700,7 +700,7 @@ static const yytype_int16 yypact[] =
     -195,    61,  -195,  -195,  -195,  -195,    48,    11,    62,    89,
      113,   140,   153,   248,    60,  -195,   248,  -195,   248,  -195,
     -195,  -195,  -195,  -195,  -195,  -195,  -195,  -195,  -195,  -195,
-    -195,   274,  -195,  -195,  -195,   136,  -195,    58,  -195,   248,
+    -195,   274,  -195,  -195,  -195,   136,    58,  -195,  -195,   248,
      154,    10,    99,   109,  -195,   120,   145,  -195,   322,  -195,
      128,   298,    67,   169,   244,   248,   248,   248,   248,  -195,
      248,   248,   248,   248,   248,  -195,   248,   248,   248,   248,
@@ -732,16 +732,16 @@ static const yytype_uint8 yydefact[] =
        2,    82,     1,    50,    49,    51,    48,     0,     0,     0,
        0,     0,     0,    82,     0,   136,    82,    46,    82,     3,
        7,     4,     5,     6,    30,     8,    32,    33,    34,    35,
-      36,     0,    68,    71,    70,     0,    92,     0,     9,    82,
+      36,     0,    68,    71,    70,     0,     0,    89,     9,    82,
        0,    15,     0,     0,    30,     0,     0,    48,    30,    44,
      135,     0,    57,    82,    82,    82,    82,    82,    82,    47,
       82,    82,    82,    82,    82,    58,    82,    82,    82,    82,
       82,    48,    87,    88,    81,    83,     0,     0,    82,    74,
-       0,    91,     0,    14,     0,    17,     0,     0,    97,   108,
+       0,    93,     0,    14,     0,    17,     0,     0,    97,   108,
      109,   100,     0,    95,    96,    98,    82,    23,     0,    42,
      138,     0,   137,    66,    21,    31,    72,     0,    62,    63,
       69,    67,    53,    54,    55,    56,    59,    52,    60,    61,
-      64,    65,     0,    84,     0,    89,    93,     0,    90,    82,
+      64,    65,     0,    84,     0,    91,    90,     0,    92,    82,
        0,    16,    18,    19,     0,     0,     0,     0,     0,    20,
        0,     0,    28,    24,    77,     0,     0,   112,    73,     0,
        0,    45,    75,    94,   112,     0,     0,     0,   101,    12,
@@ -762,7 +762,7 @@ static const yytype_int16 yypgoto[] =
     -195,  -195,  -195,  -195,  -195,  -195,  -195,   183,  -195,  -195,
     -195,  -195,  -195,  -195,   105,    51,   -42,     8,  -195,  -195,
     -195,  -195,  -195,  -195,  -195,   -13,  -195,     6,  -195,  -195,
-    -195,  -195,  -195,  -195,    75,   228,  -195,  -195,  -123,   217,
+    -195,  -195,  -195,  -195,    75,  -195,   228,  -195,  -123,   217,
      220,  -195,  -195,  -195,    56,   124,  -195,   152,   156,  -195,
     -195,  -195,  -185,    82,  -195,  -195,  -194,    85,  -195,  -195,
     -195,  -195
@@ -793,7 +793,7 @@ static const yytype_int16 yytable[] =
      115,   116,   245,   117,   118,   119,   120,   121,   100,   124,
      107,     2,    39,   168,   169,    79,     3,     4,     5,     6,
       42,    40,     7,     8,     9,    10,    11,    39,    12,   129,
-      89,    90,   151,    13,   127,   -89,    40,    14,    15,   -89,
+      89,    90,   151,    13,   127,   -91,    40,    14,    15,   -91,
       16,     3,     4,     5,     6,    77,    54,    43,     8,    78,
       49,    17,   236,    12,    18,    57,    58,   137,    13,   138,
      230,   -40,    14,    64,    65,    16,   152,    88,    89,    90,
@@ -824,7 +824,7 @@ static const yytype_int16 yytable[] =
       57,    58,     0,     0,    60,    61,    62,    63,    64,    65,
       66,    67,    68,    69,    70,    54,     0,     0,     0,     0,
        0,    55,    56,     0,    57,    58,     0,     0,    60,    61,
-      62,    63,    64,    65,   -90,    67,    68,    69,    70,    54,
+      62,    63,    64,    65,   -92,    67,    68,    69,    70,    54,
        0,     0,     0,     0,     0,    55,    56,     0,    57,    58,
        0,     0,    60,    61,    62,    63,    64,    65,     0,     0,
        0,    69,    70
@@ -893,7 +893,7 @@ static const yytype_uint8 yystos[] =
       10,    16,    91,    92,    93,    98,    69,    29,    18,    69,
       70,    78,   114,    30,    25,    70,    30,    80,    78,    78,
       78,    78,    78,    78,    78,    78,    78,    78,    78,    78,
-      78,    78,    33,     8,    33,     8,    88,    80,    30,    37,
+      78,    78,    33,     8,    33,     8,    89,    80,    30,    37,
       39,    25,    60,    40,    92,    93,    94,    31,    33,    25,
        8,    65,    67,    68,     8,    73,    74,    28,    30,     8,
        8,    40,    78,    91,    41,    41,    29,    31,    95,     8,
@@ -920,7 +920,7 @@ static const yytype_uint8 yyr1[] =
       78,    78,    78,    78,    78,    78,    78,    78,    78,    78,
       78,    78,    79,    79,    80,    80,    81,    82,    82,    83,
       83,    84,    85,    85,    86,    86,    86,    87,    87,    88,
-      88,    88,    89,    89,    90,    91,    91,    92,    93,    93,
+      88,    89,    89,    89,    90,    91,    91,    92,    93,    93,
       94,    94,    95,    96,    96,    97,    97,    97,    98,    98,
       99,    99,   100,   101,   101,   102,   102,   103,   103,   104,
      104,   105,   105,   106,   106,   107,   107,   108,   108,   109,
@@ -939,7 +939,7 @@ static const yytype_uint8 yyr2[] =
        3,     3,     3,     3,     3,     3,     3,     3,     1,     3,
        1,     1,     3,     4,     1,     3,     6,     0,     2,     0,
        2,     2,     0,     2,     2,     4,     4,     1,     1,     1,
-       4,     3,     1,     3,     3,     1,     1,     1,     1,     5,
+       3,     1,     4,     3,     3,     1,     1,     1,     1,     5,
        0,     2,     3,     1,     3,     1,     1,     1,     1,     1,
        1,     1,     0,     1,     1,     3,     3,     1,     1,     3,
        5,     1,     3,     1,     3,     1,     1,     3,     5,     1,
@@ -1807,15 +1807,15 @@ yydestruct (const char *yymsg, int yytype, YYSTYPE *yyvaluep, YYLTYPE *yylocatio
 
         break;
 
-    case 88: /* lhs_expr  */
+    case 88: /* lhs_expr_list  */
 
-      { delete ((*yyvaluep).Store); }
+      { delete ((*yyvaluep).StoreList); }
 
         break;
 
-    case 89: /* lhs_expr_list  */
+    case 89: /* lhs_expr  */
 
-      { delete ((*yyvaluep).StoreList); }
+      { delete ((*yyvaluep).Store); }
 
         break;
 
@@ -2549,17 +2549,15 @@ yyreduce:
       auto lhs = *lhsIter;
       auto rhs = *rhsIter;
 
-      // TODO: Remove this
-      if (rhs == NULL) continue;
+      if (rhs == NULL) continue;  // TODO: Remove this
 
-      if (dynamic_pointer_cast<VariableStore>(lhs) != NULL) {
-        rhs->setName(lhs->getName());
-        ctx->symtable.addNode(rhs);
-        (yyval.IRNodes)->push_back(rhs);
-      }
-      else {
-        // TODO: Implement
-        assert(false);
+      auto lhsTensor = ctx->symtable[lhs->getName()];
+      if (lhsTensor != NULL) {
+        if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
+          rhs->setName(result->getName());  // TODO: Generate unique name
+          result->setValue(rhs);
+          (yyval.IRNodes)->push_back(rhs);
+        }
       }
     }
   }
@@ -2872,6 +2870,29 @@ yyreduce:
   case 89:
 
     {
+    (yyval.StoreList) = new list<shared_ptr<Store>>();
+    if ((yyvsp[0].Store) == NULL) break;  // TODO: Remove check
+    (yyval.StoreList)->push_back(*(yyvsp[0].Store));
+    delete (yyvsp[0].Store);
+
+  }
+
+    break;
+
+  case 90:
+
+    {
+    (yyval.StoreList) = (yyvsp[-2].StoreList);
+    if ((yyvsp[0].Store) == NULL) break;  // TODO: Remove check
+    (yyval.StoreList)->push_back(*(yyvsp[0].Store));
+    delete (yyvsp[0].Store);
+  }
+
+    break;
+
+  case 91:
+
+    {
     string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
     // TODO: Stores probably do not need to be Tensor classes, but could be
@@ -2882,30 +2903,10 @@ yyreduce:
 
     break;
 
-  case 90:
-
-    {
-    (yyval.Store) = NULL;
-  }
-
-    break;
-
-  case 91:
-
-    {
-    (yyval.Store) = NULL;
-  }
-
-    break;
-
   case 92:
 
     {
-    (yyval.StoreList) = new list<shared_ptr<Store>>();
-    if ((yyvsp[0].Store) == NULL) break;  // TODO: Remove check
-    (yyval.StoreList)->push_back(*(yyvsp[0].Store));
-    delete (yyvsp[0].Store);
-
+    (yyval.Store) = NULL;
   }
 
     break;
@@ -2913,10 +2914,7 @@ yyreduce:
   case 93:
 
     {
-    (yyval.StoreList) = (yyvsp[-2].StoreList);
-    if ((yyvsp[0].Store) == NULL) break;  // TODO: Remove check
-    (yyval.StoreList)->push_back(*(yyvsp[0].Store));
-    delete (yyvsp[0].Store);
+    (yyval.Store) = NULL;
   }
 
     break;

@@ -28,7 +28,7 @@ LLVMCodeGen::~LLVMCodeGen() {
 
 }
 
-static llvm::Type *llvmType(const simit::TensorType *type) {
+static llvm::Type *toLLVMType(const simit::TensorType *type) {
   llvm::Type *llvmType = NULL;
 
   if (type->isScalar()) {
@@ -40,7 +40,7 @@ static llvm::Type *llvmType(const simit::TensorType *type) {
         llvmType = LLVM_DOUBLEPTR;
         break;
       case TensorType::ELEMENT:
-        assert(false && "TODO: not supported yet");
+        return NULL;  // TODO: not supported yet
         break;
       default:
         assert(false);
@@ -48,54 +48,86 @@ static llvm::Type *llvmType(const simit::TensorType *type) {
     }
   }
   else {
-    assert(false && "TODO: not supported yet");
+    return NULL;  // TODO: not supported yet
   }
 
   assert(llvmType != NULL);
   return llvmType;
 }
 
-void LLVMCodeGen::compileToFunctionPointer(const Function &function) {
-  cout << function << endl;
+void LLVMCodeGen::compileToFunctionPointer(Function *function) {
+  cout << *function << endl;
   llvm::Function *f = codegen(function);
+  if (f == NULL) return;
   f->dump();
 }
 
-void LLVMCodeGen::handle(const Function &function) {
+void LLVMCodeGen::handle(Function *function) {
   llvm::Function *f = llvmPrototype(function);
+  if (f == NULL) {  // TODO: Remove check
+    abort();
+    return;
+  }
   llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
   results.push(f);
 }
 
-llvm::Function *LLVMCodeGen::codegen(const Function &function) {
+void LLVMCodeGen::handle(Argument *t) {
+  cout << "Argument: " << *t << endl;
+}
+
+void LLVMCodeGen::handle(Result *t) {
+  cout << "Result:   " << *t << endl;
+}
+
+void LLVMCodeGen::handle(LiteralTensor *t) {
+  cout << "Literal:  " << *t << endl;
+}
+
+void LLVMCodeGen::handle(Merge *t) {
+  cout << "Merge   : " << *t << endl;
+}
+
+void LLVMCodeGen::handle(VariableStore *t) {
+  cout << "Store   : " << *t << endl;
+}
+
+llvm::Function *LLVMCodeGen::codegen(Function *function) {
   visit(function);
+  if (isAborted()) {
+    return NULL;
+  }
   llvm::Value *value = results.top();
   results.pop();
   assert(llvm::isa<llvm::Function>(value));
   return llvm::cast<llvm::Function>(value);
 }
 
-llvm::Function *LLVMCodeGen::llvmPrototype(const Function &function) const {
+llvm::Function *LLVMCodeGen::llvmPrototype(Function *function) const {
  vector<llvm::Type*> args;
-  for (auto &arg : function.getArguments()) {
-    args.push_back(llvmType(arg->getType()));
+  for (auto &arg : function->getArguments()) {
+    auto llvmType = toLLVMType(arg->getType());
+    if (llvmType == NULL) return NULL;  // TODO: Remove check
+    args.push_back(llvmType);
   }
-  for (auto &result : function.getResults()) {
-    args.push_back(llvmType(result->getType()));
+  for (auto &result : function->getResults()) {
+    auto llvmType = toLLVMType(result->getType());
+    if (llvmType == NULL) return NULL;  // TODO: Remove check
+    args.push_back(llvmType);
   }
 
   llvm::FunctionType *ft = llvm::FunctionType::get(LLVM_VOID, args, false);
   llvm::Function *f = llvm::Function::Create(ft,
                                              llvm::Function::ExternalLinkage,
-                                             function.getName(),
+                                             function->getName(),
                                              module);
 
   auto ai = f->arg_begin();
-  for (auto &arg : function.getArguments()) {
+  for (auto &arg : function->getArguments()) {
     ai->setName(arg->getName());
     ++ai;
   }
-  for (auto &result : function.getResults()) {
+  for (auto &result : function->getResults()) {
     ai->setName(result->getName());
     ++ai;
   }
