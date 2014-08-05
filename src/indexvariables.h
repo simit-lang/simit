@@ -3,7 +3,7 @@
 
 #include <string>
 #include <list>
-
+#include <memory>
 namespace simit {
 namespace internal {
 
