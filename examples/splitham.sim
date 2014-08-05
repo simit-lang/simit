@@ -1,5 +1,9 @@
 const grav : Tensor[3](float) = [0.0, 0.0, -9.81];
+const unitx : Tensor[3](float) = [1.0, 0.0, 0.0];
+const unity : Tensor[3](float) = [0.0, 1.0, 0.0];
+const unitz : Tensor[3](float) = [0.0, 0.0, 1.0];
 const h : float = 0.01;
+
 
 struct Rigid
 	Q : Tensor[3,3](float);
@@ -11,24 +15,25 @@ end
 
 extern rigids Rigid{};
 
-func rotationMatrix( angle : float, axis : Tensor[3](float)) -> (R : Tensor[3,3](float))
-	sin_axis  = sin(m_angle) * axis;
+func rotationMatrix( angle : float, unitaxis : Tensor[3](float)) -> (R : Tensor[3,3](float))
+		axis = -unitaxis;
+		sin_axis  = sin(angle) * axis;
   	c = cos(angle);
-	cos1_axis = (1-c) * axis;
-  	d = cos1_axis.x() * m_axis.y();
-  	R(1,2) = d- sin_axis(3);
+		cos1_axis = (1 - c) * axis;
+  	d = cos1_axis(1) * axis(2);
+  	R(1,2) = d - sin_axis(3);
   	R(2,1) = d + sin_axis(3);
 
-  	d= cos1_axis(1) * axis(3);
+  	d = cos1_axis(1) * axis(3);
   	R(1,3) = d + sin_axis(2);
   	R(3,1) = d - sin_axis(2);
 
   	d = cos1_axis(2) * axis(3);
   	R(2,3) = d - sin_axis(1);
   	R(3,2) = d + sin_axis(1);
-  	R(1,1) = cos1_axis(1)*axis(1);
-  	R(2,2) = cos1_axis(2)*axis(2);
-  	R(3,3) = cos1_axis(3)*axis(3);
+  	R(1,1) = cos1_axis(1) * axis(1);
+  	R(2,2) = cos1_axis(2) * axis(2);
+  	R(3,3) = cos1_axis(3) * axis(3);
 end
 
 func step_SH(r : Rigid) ->
@@ -40,19 +45,19 @@ func step_SH(r : Rigid) ->
 	pi= I*wlocal;
 	q(r) = r.q + h*r.v;
 	Q(r) = r.Q;
-	R = rotationMatrix(0.5*h*pi(3)/I(3), 3);
+	R = rotationMatrix(0.5*h*pi(3)/I(3), unity);
 	Q(r)  = Q(r) *R';
     	pi = R*pi;
-	R = rotationMatrix(0.5*h*pi(2)/I(2), 2);	
+	R = rotationMatrix(0.5*h*pi(2)/I(2), unity);
 	Q (r) = Q(r) *R';
    	pi = R*pi;
-	R = rotationMatrix(h*pi(1)/I(1), 1);
+	R = rotationMatrix(h*pi(1)/I(1), unitx);
 	Q(r)  = Q(r) *R';
   	pi = R*pi;
-	R = rotationMatrix(0.5*h*pi(2)/I(2), 2);	
+	R = rotationMatrix(0.5*h*pi(2)/I(2), unity);
 	Q(r)  = Q(r) *R';
    	pi= R*pi;
-	R = rotationMatrix(0.5*h*pi(2)/I(3), 3);	
+	R = rotationMatrix(0.5*h*pi(2)/I(3), unity);
 	Q(r)  = Q(r) *R';
     	pi = R*pi;
     	wlocal(1) = pi(1)/I(1);
