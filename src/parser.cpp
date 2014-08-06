@@ -273,10 +273,10 @@ union YYSTYPE
   std::list<std::shared_ptr<simit::Result>>   *Results;
 
 
-  std::shared_ptr<simit::Tensor>            *Tensor;
-  std::list<std::shared_ptr<simit::Tensor>> *TensorList;
-  std::shared_ptr<simit::Store>             *Store;
-  std::list<std::shared_ptr<simit::Store>>  *StoreList;
+  std::shared_ptr<simit::TensorNode>            *Tensor;
+  std::list<std::shared_ptr<simit::TensorNode>> *TensorList;
+  std::shared_ptr<simit::Store>                 *Store;
+  std::list<std::shared_ptr<simit::Store>>      *StoreList;
 
 
   simit::TensorType                *TensorType;
@@ -2531,7 +2531,7 @@ yyreduce:
 
     {
     auto lhsList = unique_ptr<list<shared_ptr<Store>>>((yyvsp[-3].StoreList));
-    auto rhsList = unique_ptr<list<shared_ptr<Tensor>>>((yyvsp[-1].TensorList));
+    auto rhsList = unique_ptr<list<shared_ptr<TensorNode>>>((yyvsp[-1].TensorList));
 
     (yyval.IRNodes) = new list<shared_ptr<IRNode>>();
 
@@ -2593,12 +2593,12 @@ yyreduce:
       break;
     }
 
-    shared_ptr<Tensor> tensor = dynamic_pointer_cast<Tensor>(node);
+    shared_ptr<TensorNode> tensor = dynamic_pointer_cast<TensorNode>(node);
     if (tensor == NULL) {
       REPORT_ERROR(ident + " is not a tensor", (yylsp[0]));
     }
 
-    (yyval.Tensor) = new shared_ptr<Tensor>(tensor);
+    (yyval.Tensor) = new shared_ptr<TensorNode>(tensor);
   }
 
     break;
@@ -2675,7 +2675,7 @@ yyreduce:
       break; // TODO: Remove check
     }
 
-    auto expr = shared_ptr<Tensor>(*(yyvsp[0].Tensor));
+    auto expr = shared_ptr<TensorNode>(*(yyvsp[0].Tensor));
     delete (yyvsp[0].Tensor);
 
     IndexVariableFactory indexVariableFactory;
@@ -2686,7 +2686,7 @@ yyreduce:
 
     auto merge = Merge::make(Merge::NEG, indexVars, operands);
     assert(merge != NULL);
-    (yyval.Tensor) = new shared_ptr<Tensor>(merge);
+    (yyval.Tensor) = new shared_ptr<TensorNode>(merge);
   }
 
     break;
@@ -2806,7 +2806,7 @@ yyreduce:
   case 74:
 
     {
-    (yyval.TensorList) = new list<shared_ptr<Tensor>>();
+    (yyval.TensorList) = new list<shared_ptr<TensorNode>>();
     if ((yyvsp[0].Tensor) == NULL) break;  // TODO: Remove check
     (yyval.TensorList)->push_back(*(yyvsp[0].Tensor));
     delete (yyvsp[0].Tensor);
@@ -2895,7 +2895,7 @@ yyreduce:
     {
     string ident((yyvsp[0].string));
     free((void*)(yyvsp[0].string));
-    // TODO: Stores probably do not need to be Tensor classes, but could be
+    // TODO: Stores probably do not need to be TensorNode classes, but could be
     // some parser-internal class...
     auto variableStore = new VariableStore(ident, NULL);
     (yyval.Store) = new std::shared_ptr<Store>(variableStore);
@@ -3278,8 +3278,8 @@ yyreduce:
   case 139:
 
     {
-    auto expr = shared_ptr<Tensor>(*(yyvsp[-3].Tensor));
-    auto literal = shared_ptr<Tensor>(*(yyvsp[-1].Tensor));
+    auto expr = shared_ptr<TensorNode>(*(yyvsp[-3].Tensor));
+    auto literal = shared_ptr<TensorNode>(*(yyvsp[-1].Tensor));
     delete (yyvsp[-3].Tensor);
     delete (yyvsp[-1].Tensor);
   }

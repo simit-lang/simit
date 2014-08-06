@@ -9,16 +9,17 @@
 #include "util.h"
 #include "errors.h"
 
-using namespace simit;
 using namespace std;
+using namespace simit;
+using namespace simit::internal;
 
 namespace simit {
 namespace internal {
-class Program {
+class ProgramContent {
  public:
-  Program(const std::string &name)
+  ProgramContent(const std::string &name)
       : name(name), frontend(new Frontend()), codegen(new LLVMCodeGen()) {}
-  ~Program() {
+  ~ProgramContent() {
     for (auto function : functions) {
       delete function;
     }
@@ -37,7 +38,7 @@ class Program {
 }
 
 /* Program */
-Program::Program(const std::string &name) : impl(new internal::Program(name)) {
+Program::Program(const std::string &name) : impl(new ProgramContent(name)) {
 }
 
 Program::~Program() {
