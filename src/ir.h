@@ -36,12 +36,12 @@ class IRNode {
 std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
 
-/** The base class that represents all computed and loaded tensors.  Note that
+/** The base IRNode that represents all computed and loaded tensors.  Note that
   * both scalars and elements are considered tensors of order 0. */
-class Tensor : public IRNode {
+class TensorNode : public IRNode {
  public:
-  Tensor(const TensorType *type) : Tensor("", type) {}
-  Tensor(const std::string &name, const TensorType *type)
+  TensorNode(const TensorType *type) : TensorNode("", type) {}
+  TensorNode(const std::string &name, const TensorType *type)
       : IRNode(name), type(type) {}
 
   virtual void accept(IRVisitor *visitor) = 0;
@@ -57,7 +57,7 @@ class Tensor : public IRNode {
 
 /** Represents a \ref Tensor that is defined as a constant or loaded.  Note
   * that it is only possible to define dense tensor literals.  */
-class LiteralTensor : public Tensor {
+class LiteralTensor : public TensorNode {
  public:
   LiteralTensor(TensorType *type, void *data);
   ~LiteralTensor();
@@ -74,14 +74,14 @@ class LiteralTensor : public Tensor {
 
 /** Instruction that combines one or more tensors.  Merge nodes must be created
   * through the \ref createMerge factory function. */
-class Merge : public Tensor {
+class Merge : public TensorNode {
  public:
   using IndexVariablePtr = std::shared_ptr<internal::IndexVariable>;
 
   struct IndexedTensor {
-    std::shared_ptr<Tensor> tensor;
+    std::shared_ptr<TensorNode> tensor;
     std::list<IndexVariablePtr> indexVariables;
-    IndexedTensor(const std::shared_ptr<Tensor> &tensor,
+    IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
                   const std::list<Merge::IndexVariablePtr> &indexVars)
         : tensor(tensor), indexVariables(indexVars) {}
     friend std::ostream &operator<<(std::ostream &os, const IndexedTensor &o) {
@@ -113,16 +113,16 @@ class Merge : public Tensor {
 
   Merge(Operator op, const std::list<IndexVariablePtr> &indexVariables,
         const std::list<IndexedTensor> &operands)
-      : Tensor(NULL), op(op), indexVariables(indexVariables),
+      : TensorNode(NULL), op(op), indexVariables(indexVariables),
         operands(operands) { }
 };
 
 
 /** Instruction that stores a value to a tensor or an object. */
-class Store : public Tensor {
+class Store : public TensorNode {
  public:
   Store(const std::string &name, const TensorType *type)
-      : Tensor(name, type) {}
+      : TensorNode(name, type) {}
 };
 
 
@@ -141,10 +141,10 @@ class VariableStore : public Store {
 
 
 /** A formal argument to a function. */
-class Argument : public Tensor {
+class Argument : public TensorNode {
  public:
   Argument(const std::string &name, const TensorType *type)
-      : Tensor(name, type) {}
+      : TensorNode(name, type) {}
 
   virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
 
@@ -153,19 +153,21 @@ class Argument : public Tensor {
 
 
 /** A formal result of a function. */
-class Result : public Tensor {
+class Result : public TensorNode {
  public:
   Result(const std::string &name, const TensorType *type)
-      : Tensor(name, type) {}
+      : TensorNode(name, type) {}
 
-  void setValue(const std::shared_ptr<Tensor> &value) { this->value = value; }
+  void setValue(const std::shared_ptr<TensorNode> &value) {
+    this->value = value;
+  }
   virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const std::shared_ptr<Tensor> &getValue() const { return value; }
+  const std::shared_ptr<TensorNode> &getValue() const { return value; }
   void print(std::ostream &os) const;
 
  private:
-  std::shared_ptr<Tensor> value;
+  std::shared_ptr<TensorNode> value;
 };
 
 /** A Simit function. */

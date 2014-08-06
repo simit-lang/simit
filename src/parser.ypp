@@ -399,7 +399,7 @@ return_stmt
 assign_stmt
   : lhs_expr_list "=" expr_list ";" {
     auto lhsList = unique_ptr<list<shared_ptr<Store>>>($lhs_expr_list);
-    auto rhsList = unique_ptr<list<shared_ptr<Tensor>>>($expr_list);
+    auto rhsList = unique_ptr<list<shared_ptr<TensorNode>>>($expr_list);
 
     $$ = new list<shared_ptr<IRNode>>();
 
@@ -442,10 +442,10 @@ expr_stmt
 
 // Expressions
 %union {
-  std::shared_ptr<simit::Tensor>            *Tensor;
-  std::list<std::shared_ptr<simit::Tensor>> *TensorList;
-  std::shared_ptr<simit::Store>             *Store;
-  std::list<std::shared_ptr<simit::Store>>  *StoreList;
+  std::shared_ptr<simit::TensorNode>            *Tensor;
+  std::list<std::shared_ptr<simit::TensorNode>> *TensorList;
+  std::shared_ptr<simit::Store>                 *Store;
+  std::list<std::shared_ptr<simit::Store>>      *StoreList;
 };
 
 %type<Tensor> expr;
@@ -461,12 +461,12 @@ expr
       break;
     }
 
-    shared_ptr<Tensor> tensor = dynamic_pointer_cast<Tensor>(node);
+    shared_ptr<TensorNode> tensor = dynamic_pointer_cast<TensorNode>(node);
     if (tensor == NULL) {
       REPORT_ERROR(ident + " is not a tensor", @1);
     }
 
-    $$ = new shared_ptr<Tensor>(tensor);
+    $$ = new shared_ptr<TensorNode>(tensor);
   }
   | FLOAT_LITERAL {
     $$ = NULL;
@@ -498,7 +498,7 @@ expr
       break; // TODO: Remove check
     }
 
-    auto expr = shared_ptr<Tensor>(*$2);
+    auto expr = shared_ptr<TensorNode>(*$2);
     delete $2;
 
     IndexVariableFactory indexVariableFactory;
@@ -509,7 +509,7 @@ expr
 
     auto merge = Merge::make(Merge::NEG, indexVars, operands);
     assert(merge != NULL);
-    $$ = new shared_ptr<Tensor>(merge);
+    $$ = new shared_ptr<TensorNode>(merge);
   }
   | expr "'" {
     $$ = NULL;
@@ -561,7 +561,7 @@ call_expr
 %type <TensorList> expr_list;
 expr_list
   : expr {
-    $$ = new list<shared_ptr<Tensor>>();
+    $$ = new list<shared_ptr<TensorNode>>();
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
@@ -638,7 +638,7 @@ lhs_expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
-    // TODO: Stores probably do not need to be Tensor classes, but could be
+    // TODO: Stores probably do not need to be TensorNode classes, but could be
     // some parser-internal class...
     auto variableStore = new VariableStore(ident, NULL);
     $$ = new std::shared_ptr<Store>(variableStore);
@@ -988,8 +988,8 @@ test_stmt_block
 test_stmt
   : stmt
   | expr "->" literal ";" {
-    auto expr = shared_ptr<Tensor>(*$expr);
-    auto literal = shared_ptr<Tensor>(*$literal);
+    auto expr = shared_ptr<TensorNode>(*$expr);
+    auto literal = shared_ptr<TensorNode>(*$literal);
     delete $expr;
     delete $literal;
   }

@@ -7,10 +7,12 @@
 
 namespace simit {
 namespace internal {
-class Program;
+class ProgramContent;
 }
 
 class Error;
+class Set;
+class Tensor;
 
 /** A Simit program. You can load Simit source code using the \ref loadString
   * and \ref loadFile, register input sets using the \ref registerSet method,
@@ -38,6 +40,17 @@ class Program {
     */
   int loadFile(const std::string &filename);
 
+  /** Binds the set to the given name and makes it available to Simit programs.
+    * Inside Simit programs the set can be accessed through extern declarations
+    * whose type match the set type and whose name match the given name. */
+  int bindSet(const simit::Set &set, const std::string &name);
+
+  /** Binds the Tensor to the given name and makes it available to Simit
+    * programs. Inside Simit programs the tensor can be accessed through extern
+    * declarations whose type match the tensor type and whose name match the
+    * given name. */
+  int bindTensor(const std::string &name, const simit::Tensor &tensor);
+
   /** Compile the program.
     * \return 0 on success, 1 if the program is incomplete. */
   int compile();
@@ -58,7 +71,7 @@ class Program {
   friend std::ostream &operator<<(std::ostream&, const Program&);
 
  private:
-  internal::Program *impl;
+  internal::ProgramContent *impl;
 };
 
 }

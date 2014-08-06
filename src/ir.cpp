@@ -20,14 +20,14 @@ std::ostream &simit::operator<<(std::ostream &os, const IRNode &node) {
 }
 
 
-/* class Tensor */
-void Tensor::print(std::ostream &os) const {
+/* class TensorNode */
+void TensorNode::print(std::ostream &os) const {
   os << getName() << " : " << type->toString();
 }
 
 /* class LiteralTensor */
 LiteralTensor::LiteralTensor(TensorType *type, void *data)
-    : Tensor(type) {
+    : TensorNode(type) {
   auto componentSize = TensorType::componentSize(type->getComponentType());
   auto dataSize = type->getSize() * componentSize;
   this->data = malloc(dataSize);
@@ -165,12 +165,12 @@ void Function::print(std::ostream &os) const {
 
 /* class Argument */
 void Argument::print(std::ostream &os) const {
-  Tensor::print(os);
+  TensorNode::print(os);
 }
 
 /* class Result */
 void Result::print(std::ostream &os) const {
-  Tensor::print(os);
+  TensorNode::print(os);
 }
 
 /* class Test */

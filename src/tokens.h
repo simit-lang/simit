@@ -196,10 +196,10 @@ union YYSTYPE
   std::list<std::shared_ptr<simit::Result>>   *Results;
 
 
-  std::shared_ptr<simit::Tensor>            *Tensor;
-  std::list<std::shared_ptr<simit::Tensor>> *TensorList;
-  std::shared_ptr<simit::Store>             *Store;
-  std::list<std::shared_ptr<simit::Store>>  *StoreList;
+  std::shared_ptr<simit::TensorNode>            *Tensor;
+  std::list<std::shared_ptr<simit::TensorNode>> *TensorList;
+  std::shared_ptr<simit::Store>                 *Store;
+  std::list<std::shared_ptr<simit::Store>>      *StoreList;
 
 
   simit::TensorType                *TensorType;
