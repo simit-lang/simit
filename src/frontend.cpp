@@ -2,13 +2,14 @@
 
 #include <assert.h>
 
+#include "scanner.h"
+#include "parser.h"
 #include "ir.h"
 #include "logger.h"
-#include "tokens.h"
-#include "scanner.h"
 #include "util.h"
 
 using namespace simit;
+using namespace simit::internal;
 using namespace util;
 using namespace std;
 
@@ -43,66 +44,32 @@ std::ostream &simit::operator<<(std::ostream &os, const SymbolTable &table) {
 
 
 /* Frontend */
+int Frontend::parseStream(std::istream &programStream,
+                          std::list<simit::Function *> *functions,
+                          std::list<simit::Error> *errors,
+                          std::list<simit::Test> *tests) {
+  Scanner scanner(&programStream);
+  auto ctx = ParseParams(&symtable, functions, errors, tests);
+  Parser parser(&scanner, &ctx);
+  return parser.parse();
+}
+
 int Frontend::parseString(std::string programString,
-                          std::list<simit::Function *> &functions,
-                          std::list<simit::Error> &errors,
-                          std::list<simit::Test> &tests) {
-  log("Parsing program: ");
-  logger.indent();
-  log(programString);
-  logger.dedent();
+                          std::list<simit::Function *> *functions,
+                          std::list<simit::Error> *errors,
+                          std::list<simit::Test> *tests) {
 
-  struct yy_buffer_state *bufferState;
-  bufferState = yy_scan_string(programString.c_str());
-  auto ctx = ParseParams(symtable, errors, tests);
-  int status = yyparse(&ctx);
-  yylex_destroy();
-
-  if (status == 0) {
-    log("Parsed correctly");
-    functions.insert(functions.end(),
-                     ctx.functions.begin(), ctx.functions.end());
-    return 0;
-  }
-  else {
-    log("Parse error");
-    return 1;
-  }
+  std::istringstream programStream(programString);
+  return parseStream(programStream, functions, errors, tests);
 }
 
 int Frontend::parseFile(std::string filename,
-                        std::list<simit::Function *> &functions,
-                        std::list<simit::Error> &errors,
-                        std::list<simit::Test> &tests) {
-  log("Program: ");
-  logger.indent();
-  string line;
-  ifstream file(filename);
-  if (!file.good()) {
-    log("Unable to open file");
-    return 1;
+                        std::list<simit::Function *> *functions,
+                        std::list<simit::Error> *errors,
+                        std::list<simit::Test> *tests) {
+  ifstream programStream(filename);
+  if (!programStream.good()) {
+    return 2;
   }
-  while (getline (file, line)) {
-    log(line);
-  }
-  file.close();
-  logger.dedent();
-
-  yyin = fopen(filename.c_str(), "r");
-  auto ctx = ParseParams(symtable, errors, tests);
-  int status = yyparse(&ctx);
-  fclose(yyin);
-  yylex_destroy();
-
-  if (status == 0) {
-    log("Parsed correctly");
-    functions.insert(functions.end(),
-                     ctx.functions.begin(), ctx.functions.end());
-    return 0;
-  }
-  else {
-    log("Parse error");
-    return 1;
-  }
-
+  return parseStream(programStream, functions, errors, tests);
 }

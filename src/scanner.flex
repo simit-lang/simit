@@ -1,24 +1,14 @@
-%option noyywrap
-%option nounput
-%option noinput
-%option bison-bridge
-%option bison-locations
-%option yylineno
+%option c++
+%option prefix="Simit"
+%option yywrap nounput noinput
 
 %{
-  #include "frontend.h"
-  #include <string>
-  #include <stdlib.h>
-  #include "tokens.h"
-  #include "logger.h"
-  using namespace std;
-  using namespace util;
+#include "scanner.h"
+#include <stdlib.h>
+#include "parser.h"
 
-  int yycolumn = 1;
-  #define YY_USER_ACTION                                                      \
-    yylloc->first_line = yylloc->last_line = yylineno;                        \
-    yylloc->first_column = yycolumn; yylloc->last_column = yycolumn+yyleng-1; \
-    yycolumn += yyleng;
+#define YY_USER_ACTION yylloc->columns(yyleng);
+#define yyterminate() return Parser::token::END
 %}
 
 %x SLCOMMENT
@@ -34,86 +24,115 @@ int_literal   -?({digit}+([eE][-+]?{digit}+)?)
 float_literal -?({digit}*\.{digit}+([eE][-+]?{digit}+)?)
 
 %%
+%{
+yylloc->step();
+using namespace simit::internal;
+%}
+
  /* Keywords and symbols */
-"int"                 { return INT;       }
-"float"               { return FLOAT;     }
-"struct"              { return STRUCT;    }
-"Tensor"              { return TENSOR;    }
-"const"               { return CONST;     }
-"extern"              { return EXTERN;    }
-"proc"                { return PROC;      }
-"func"                { return FUNC;      }
-"map"                 { return MAP;       }
-"to"                  { return TO;        }
-"with"                { return WITH;      }
-"reduce"              { return REDUCE;    }
-"while"               { return WHILE;     }
-"if"                  { return IF;        }
-"elif"                { return ELIF;      }
-"else"                { return ELSE;      }
-"end"                 { return BLOCKEND;  }
-"return"              { return RETURN;    }
+"int"                 { return Parser::token::INT;       }
+"float"               { return Parser::token::FLOAT;     }
+"struct"              { return Parser::token::STRUCT;    }
+"Tensor"              { return Parser::token::TENSOR;    }
+"const"               { return Parser::token::CONST;     }
+"extern"              { return Parser::token::EXTERN;    }
+"proc"                { return Parser::token::PROC;      }
+"func"                { return Parser::token::FUNC;      }
+"map"                 { return Parser::token::MAP;       }
+"to"                  { return Parser::token::TO;        }
+"with"                { return Parser::token::WITH;      }
+"reduce"              { return Parser::token::REDUCE;    }
+"while"               { return Parser::token::WHILE;     }
+"if"                  { return Parser::token::IF;        }
+"elif"                { return Parser::token::ELIF;      }
+"else"                { return Parser::token::ELSE;      }
+"end"                 { return Parser::token::BLOCKEND;  }
+"return"              { return Parser::token::RETURN;    }
 
-"->"                  { return RARROW;    }
-"("                   { return LP;        }
-")"                   { return RP;        }
-"["                   { return LB;        }
-"]"                   { return RB;        }
-"{"                   { return LC;        }
-"}"                   { return RC;        }
-"<"                   { return LA;        }
-">"                   { return RA;        }
-","                   { return COMMA;     }
-"."                   { return PERIOD;    }
-":"                   { return COL;       }
-";"                   { return SEMICOL;   }
+"->"                  { return Parser::token::RARROW;    }
+"("                   { return Parser::token::LP;        }
+")"                   { return Parser::token::RP;        }
+"["                   { return Parser::token::LB;        }
+"]"                   { return Parser::token::RB;        }
+"{"                   { return Parser::token::LC;        }
+"}"                   { return Parser::token::RC;        }
+"<"                   { return Parser::token::LA;        }
+">"                   { return Parser::token::RA;        }
+","                   { return Parser::token::COMMA;     }
+"."                   { return Parser::token::PERIOD;    }
+":"                   { return Parser::token::COL;       }
+";"                   { return Parser::token::SEMICOL;   }
 
-"="                   { return ASSIGN;    }
-"+"                   { return PLUS;      }
-"-"                   { return MINUS;     }
-"*"                   { return STAR;      }
-"/"                   { return SLASH;     }
-"\\"                  { return BACKSLASH; }
-"^"                   { return EXP;       }
-"'"                   { return TRANSPOSE; }
+"="                   { return Parser::token::ASSIGN;    }
+"+"                   { return Parser::token::PLUS;      }
+"-"                   { return Parser::token::MINUS;     }
+"*"                   { return Parser::token::STAR;      }
+"/"                   { return Parser::token::SLASH;     }
+"\\"                  { return Parser::token::BACKSLASH; }
+"^"                   { return Parser::token::EXP;       }
+"'"                   { return Parser::token::TRANSPOSE; }
 
-"=="                  { return EQ;        }
-"!="                  { return NE;        }
-"<="                  { return LE;        }
-">="                  { return GE;        }
+"=="                  { return Parser::token::EQ;        }
+"!="                  { return Parser::token::NE;        }
+"<="                  { return Parser::token::LE;        }
+">="                  { return Parser::token::GE;        }
 
  /* Tests */
-"%!"                  { BEGIN(SLTEST); return TEST; }
+"%!"                  { BEGIN(SLTEST); return Parser::token::TEST; }
 <SLTEST>\n            { BEGIN(INITIAL); }
-"%{!"                 { BEGIN(MLTEST); return TEST; }
+"%{!"                 { BEGIN(MLTEST); return Parser::token::TEST; }
 <MLTEST>"%}"          { BEGIN(INITIAL); }
 
  /* Single-line comments */
 %[^{]                 { BEGIN(SLCOMMENT); }
 <SLCOMMENT>.          {}
-<SLCOMMENT>\n         { BEGIN(INITIAL); yycolumn = 1; }
+<SLCOMMENT>\n         { BEGIN(INITIAL); yylloc->step(); }
 
  /* Multi-line comments */
 "%{"                  { BEGIN(MLCOMMENT); }
-<MLCOMMENT>\n         { yycolumn = 1; }
+<MLCOMMENT>\n         { yylloc->step(); }
 <MLCOMMENT>.          {}
-<MLCOMMENT><<EOF>>    { /* TODO: REPORT ERROR */ return UNKNOWN; }
+<MLCOMMENT><<EOF>>    { /*TODO: REPORT ERROR*/ return Parser::token::UNKNOWN; }
 <MLCOMMENT>"%}"       { BEGIN(INITIAL); }
 
  /* Identifiers */
-{ident}               { yylval->string = strdup(yytext); return IDENT; }
+{ident}               { yylval->string = strdup(yytext);
+                        return Parser::token::IDENT; }
 
  /* Literals */
-{int_literal}         { yylval->num  = atoi(yytext); return INT_LITERAL;   }
-{float_literal}       { yylval->fnum = atof(yytext); return FLOAT_LITERAL; }
+{int_literal}         { yylval->num  = atoi(yytext);
+                        return Parser::token::INT_LITERAL; }
+{float_literal}       { yylval->fnum = atof(yytext);
+                        return Parser::token::FLOAT_LITERAL; }
 
  /* Whitespace */
 [ \t]                 {}
-\n                    { yycolumn = 1;                }
-<<EOF>>               { yycolumn = 1; yyterminate(); }
+\n                    { yylloc->lines(yyleng); yylloc->step(); }
+<<EOF>>               { yylloc->step(); yyterminate(); }
 
  /* Unexpected (error) */
-.                     { /* TODO: REPORT ERROR */
-                        log(string("Unknown character [")+yytext[0]+"]");
-                        return UNKNOWN; }
+.                     { return Parser::token::UNKNOWN; }
 %%
+
+namespace simit { namespace internal {
+
+Scanner::Scanner(std::istream* in) : SimitFlexLexer(in) {
+}
+
+Scanner::~Scanner() {
+}
+
+}} // namespace simit::internal
+
+#ifdef yylex
+#undef yylex
+#endif
+
+int SimitFlexLexer::yylex() {
+    assert(false && "SimitFlexLexer::yylex() should never be called~");
+    return 0;
+}
+
+int SimitFlexLexer::yywrap() {
+    return 1;
+}

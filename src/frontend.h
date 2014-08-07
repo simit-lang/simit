@@ -58,18 +58,25 @@ class SymbolTable {
   * about the errors can be retrieved using the getErrors method.  */
 class Frontend {
  public:
+  /** Parses, typechecks and turns a given Simit-formated stream into Simit IR.
+    */
+  int parseStream(std::istream &programStream,
+                  std::list<simit::Function *> *functions,
+                  std::list<simit::Error> *errors,
+                  std::list<simit::Test> *tests);
+
   /** Parses, typechecks and turns a given Simit-formated string into Simit IR.
     */
   int parseString(std::string programString,
-                  std::list<simit::Function *> &functions,
-                  std::list<simit::Error> &errors,
-                  std::list<simit::Test> &tests);
+                  std::list<simit::Function *> *functions,
+                  std::list<simit::Error> *errors,
+                  std::list<simit::Test> *tests);
 
   /** Parses, typechecks and turns a given Simit-formated file into Simit IR. */
   int parseFile(std::string filename,
-                std::list<simit::Function *> &functions,
-                std::list<simit::Error> &errors,
-                std::list<simit::Test> &tests);
+                std::list<simit::Function *> *functions,
+                std::list<simit::Error> *errors,
+                std::list<simit::Test> *tests);
 
  private:
 

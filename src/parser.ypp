@@ -1,52 +1,76 @@
-%code top{
+%require "3.0"
+%language "C++"
+
+%defines
+%define api.namespace { simit::internal }
+%define parser_class_name { Parser }
+%define parse.error verbose
+%locations
+%no-lines
+
+%code requires {
+  namespace simit {
+  namespace internal {
+    class Scanner;
+  }}
+}
+
+%parse-param { Scanner *scanner }
+%parse-param { ParseParams *ctx };
+
+%code {
   #include <stdlib.h>
   #include <cassert>
   #include <iostream>
   #include <algorithm>
 
+  #include "scanner.h"
   #include "logger.h"
-  #include "frontend.h"
   #include "util.h"
-  #include "errors.h"
   #include "indexvariables.h"
   using namespace std;
   using namespace simit;
   using namespace simit::internal;
 
-  #define REPORT_ERROR(msg, loc)                     \
-    do {                                             \
-      yyerror(&loc, ctx, std::string(msg).c_str());  \
-      YYERROR;                                       \
+  #define REPORT_ERROR(msg, loc)  \
+    do {                          \
+      error(loc, msg);            \
+      YYERROR;                    \
     } while (0)
+
+  void Parser::error(const Parser::location_type &loc, const std::string &msg) {
+    ctx->errors.push_back(Error(loc.begin.line, loc.begin.column,
+                                loc.end.line, loc.end.column,
+                                msg));
+  }
+
+  #undef yylex
+  #define yylex scanner->lex
 }
 
 %code requires {
   #include <vector>
 
+  #include "frontend.h"
   #include "ir.h"
+  #include "errors.h"
   #include "types.h"
 
   namespace simit {
   struct ParseParams {
-    ParseParams(simit::SymbolTable &symtable,
-                std::list<simit::Error> &errors, std::list<simit::Test> &tests)
-               : symtable(symtable), errors(errors), tests(tests) {}
-    simit::SymbolTable &symtable;
-    std::list<simit::Function *> functions;
-    std::list<simit::Error> &errors;
-    std::list<simit::Test> &tests;
+    ParseParams(simit::SymbolTable *symtable,
+                std::list<simit::Function *> *functions,
+                std::list<simit::Error>      *errors,
+                std::list<simit::Test>       *tests)
+        : symtable(*symtable), functions(*functions), errors(*errors),
+          tests(*tests) {}
+    simit::SymbolTable           &symtable;
+    std::list<simit::Function *> &functions;
+    std::list<simit::Error>      &errors;
+    std::list<simit::Test>       &tests;
   };
   }
 }
-
-%require "3.0"
-%define parse.error verbose
-%define parse.lac full
-%locations
-%pure-parser
-
-
-%parse-param{simit::ParseParams *ctx};
 
 %union {
   // Primitive literals
@@ -58,15 +82,8 @@
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <*>
 
-%code {
-  #include "scanner.h"
-  void yyerror(YYLTYPE *loc, ParseParams *ctx, const char *errorStr) {
-    ctx->errors.push_back(Error(loc->first_line, loc->first_column,
-                                loc->last_line, loc->last_column,
-                                errorStr));
-  }
-}
 
+// Tokens
 %token UNKNOWN
 
 // Literals
@@ -135,8 +152,7 @@
 %token GE        ">="
 
 // End of file
-%token END 0 "end of file"
-
+%token END 0     "end of file"
 
 %start program
 %%

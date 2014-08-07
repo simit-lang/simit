@@ -50,14 +50,14 @@ std::string Program::getName() const {
 }
 
 int Program::loadString(const string &programString) {
-  int errorCode = impl->frontend->parseString(programString, impl->functions,
-                                              impl->errors, impl->tests);
+  int errorCode = impl->frontend->parseString(programString, &impl->functions,
+                                              &impl->errors, &impl->tests);
   return errorCode;
 }
 
 int Program::loadFile(const std::string &filename) {
-  int errorCode = impl->frontend->parseFile(filename, impl->functions,
-                                            impl->errors, impl->tests);
+  int errorCode = impl->frontend->parseFile(filename, &impl->functions,
+                                            &impl->errors, &impl->tests);
   return errorCode;
 }
 

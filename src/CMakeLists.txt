@@ -1,6 +1,6 @@
 # Frontend
 SET(PARSER ${SIMIT_GENERATED_SOURCE_DIR}/parser.cpp)
-SET(TOKENS ${SIMIT_GENERATED_SOURCE_DIR}/tokens.h)
+SET(TOKENS ${SIMIT_GENERATED_SOURCE_DIR}/parser.h)
 SET(SCANNER_HEADER ${SIMIT_GENERATED_SOURCE_DIR}/scanner.h)
 SET(SCANNER ${SIMIT_GENERATED_SOURCE_DIR}/scanner.cpp)
 
@@ -11,7 +11,6 @@ IF($ENV{SIMIT_BUILD_PARSER})
 		ADD_CUSTOM_COMMAND(
 			OUTPUT ${PARSER}
 			COMMAND ${BISON_EXECUTABLE}
-			        --no-lines
 			        --defines=${TOKENS}
 			        --output=${PARSER}
 					  ${PARSER_INPUT}
@@ -26,8 +25,6 @@ IF($ENV{SIMIT_BUILD_PARSER})
 		ADD_CUSTOM_COMMAND(
 			OUTPUT ${SCANNER}
 			COMMAND ${FLEX_EXECUTABLE}
-			        --noline
-			        --header-file=${SCANNER_HEADER}
 			        --outfile=${SCANNER}
 					  ${SCANNER_INPUT}
 			MAIN_DEPENDENCY ${SCANNER_INPUT}
