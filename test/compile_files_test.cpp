@@ -164,12 +164,12 @@ TEST_P(simfile, check) {
   ASSERT_FALSE(GetParam().failedIO) << "failed to read file " + GetParam().path;
   Program program;
   if (program.loadString(GetParam().source) != 0) {
+    assert(program.getErrors().size() > 0);
     for (auto &error : program.getErrors()) {
       string errorFile = GetParam().path;
       unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
       ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
     }
-    FAIL();
   }
 
   if (program.compile() != 0) {
