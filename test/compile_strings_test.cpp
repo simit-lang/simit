@@ -6,7 +6,6 @@
 #include "program.h"
 
 using namespace simit;
-using namespace util;
 using namespace std;
 
 #define PROGRAM_STRING_TEST(test_name, programText, expected)  \

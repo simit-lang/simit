@@ -9,7 +9,7 @@
 
 using namespace simit;
 using namespace simit::internal;
-using namespace util;
+using namespace simit::util;
 using namespace std;
 
 

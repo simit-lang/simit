@@ -10,7 +10,7 @@
 #include "util.h"
 
 using namespace simit;
-using namespace util;
+using namespace simit::util;
 using namespace testing;
 using namespace std;
 

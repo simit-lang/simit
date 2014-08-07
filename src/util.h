@@ -5,7 +5,7 @@
 #include <sstream>
 #include <memory>
 
-namespace util {
+namespace simit { namespace util {
 
 template <class T>
 std::string toString(const T &val) {
@@ -53,6 +53,6 @@ std::string rjoin(const Collection &collection, const std::string &separator) {
 
 std::string indent(std::string str, unsigned int num);
 
-}
+}} // namespace simit::util
 
 #endif

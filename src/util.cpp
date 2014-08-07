@@ -1,8 +1,8 @@
 #include "util.h"
 
-using namespace util;
+namespace simit { namespace util {
 
-std::string util::indent(std::string str, unsigned int num) {
+std::string indent(std::string str, unsigned int num) {
   std::istringstream ss(str);
   std::string indent(num, ' ');
   std::string strIndented;
@@ -16,3 +16,5 @@ std::string util::indent(std::string str, unsigned int num) {
   }
   return strIndented;
 }
+
+}} // namespace simit::util
