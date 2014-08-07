@@ -70,7 +70,7 @@ proc main
 	Q = rigids.Q;
 	w = rigids.w;
 	q = rigids.q;
-	Q, q, w = map step_SH to rigids +;
+	Q, q, w = map step_SH to rigids reduce +;
 	rigids.Q = Q;
 	rigids.w = w;
 	rigids.q = q;
