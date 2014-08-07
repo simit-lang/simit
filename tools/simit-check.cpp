@@ -8,21 +8,22 @@ using namespace std;
 int main(int argc, const char* argv[]) {
   if (argc != 2) {
     cerr << "Usage: SimitRun <simit-source>" << endl;
-    return 1;
+    return 3;
   }
 
+  Program program;
   const char *filename = argv[1];
-  ifstream simitFile(filename);
-  if (!simitFile.good()) {
+  int status = program.loadFile(filename);
+
+  if (status == 2) {
     cerr << "Error: Could not open file" << endl;
     return 2;
   }
 
-  Program program;
-  if (program.loadFile(filename) != 0) {
+  else if (status != 0) {
     cerr << "Error: Could not parse program" << endl;
     cerr << program.getErrorString() << endl;
-    return 3;
+    return 1;
   }
 
   cout << "Program checks" << endl;
