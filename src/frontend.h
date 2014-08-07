@@ -4,6 +4,7 @@
 #include <list>
 #include <map>
 #include <string>
+#include <fstream>
 #include <memory>
 
 namespace simit {

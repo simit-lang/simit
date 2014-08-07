@@ -7,7 +7,6 @@
 
 #include "program.h"
 #include "errors.h"
-#include "logger.h"
 #include "util.h"
 
 using namespace simit;

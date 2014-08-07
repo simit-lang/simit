@@ -25,7 +25,6 @@
   #include <algorithm>
 
   #include "scanner.h"
-  #include "logger.h"
   #include "util.h"
   #include "indexvariables.h"
   using namespace std;

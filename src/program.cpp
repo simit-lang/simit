@@ -5,7 +5,6 @@
 #include "ir.h"
 #include "frontend.h"
 #include "codegen.h"
-#include "logger.h"
 #include "util.h"
 #include "errors.h"
 

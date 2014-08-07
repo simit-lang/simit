@@ -5,7 +5,6 @@
 #include "scanner.h"
 #include "parser.h"
 #include "ir.h"
-#include "logger.h"
 #include "util.h"
 
 using namespace simit;
