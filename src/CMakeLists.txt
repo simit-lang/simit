@@ -1,45 +1,11 @@
-# Frontend
-SET(PARSER ${SIMIT_GENERATED_SOURCE_DIR}/parser.cpp)
-SET(TOKENS ${SIMIT_GENERATED_SOURCE_DIR}/parser.h)
-SET(SCANNER_HEADER ${SIMIT_GENERATED_SOURCE_DIR}/scanner.h)
-SET(SCANNER ${SIMIT_GENERATED_SOURCE_DIR}/scanner.cpp)
-
-IF($ENV{SIMIT_BUILD_PARSER})
-	FIND_PACKAGE(BISON REQUIRED)
-	SET(PARSER_INPUT ${SIMIT_SOURCE_DIR}/parser.ypp)
-	IF(BISON_FOUND)
-		ADD_CUSTOM_COMMAND(
-			OUTPUT ${PARSER}
-			COMMAND ${BISON_EXECUTABLE}
-			        --defines=${TOKENS}
-			        --output=${PARSER}
-					  ${PARSER_INPUT}
-			MAIN_DEPENDENCY ${PARSER_INPUT}
-		COMMENT "Generating parser.cpp"
-		)
-	ENDIF()
-
-	FIND_PACKAGE(FLEX REQUIRED)
-	SET(SCANNER_INPUT ${SIMIT_SOURCE_DIR}/scanner.flex)
-	IF(FLEX_FOUND)
-		ADD_CUSTOM_COMMAND(
-			OUTPUT ${SCANNER}
-			COMMAND ${FLEX_EXECUTABLE}
-			        --outfile=${SCANNER}
-					  ${SCANNER_INPUT}
-			MAIN_DEPENDENCY ${SCANNER_INPUT}
-			COMMENT "Generating scanner.cpp"
-		)
-	ENDIF()
-ENDIF()
-
+# Parser and scanner
+add_subdirectory(parser)
 
 # Simit
-file(GLOB HEADERS *.h)
-file(GLOB SOURCES *.cpp)
+file(GLOB HEADERS *.h parser/scanner.h parser/parser.h)
+file(GLOB SOURCES *.cpp parser/*.cpp parser/scanner.flex parser/parser.ypp)
 
-add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES} ${SCANNER} ${PARSER} ${SCANNER_INPUT} ${PARSER_INPUT})
-
+add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES})
 
 # LLVM
 if (DEFINED ENV{LLVM_CONFIG})

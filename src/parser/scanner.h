@@ -13,7 +13,7 @@
 #endif
 
 #ifndef __FLEX_LEXER_H
-#include "flexscanner.h"
+#include "scannerflex.h"
 #endif
 
 #include "parser.h"

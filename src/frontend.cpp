@@ -2,8 +2,8 @@
 
 #include <assert.h>
 
-#include "scanner.h"
-#include "parser.h"
+#include "parser/scanner.h"
+#include "parser/parser.h"
 #include "ir.h"
 #include "util.h"
 
