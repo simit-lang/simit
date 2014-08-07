@@ -8,6 +8,7 @@
 #include <memory>
 
 namespace simit {
+namespace internal {
 
 class Shape;
 
@@ -132,6 +133,6 @@ class NDTensorType : public TensorType {
   TensorType *blockType;
 };
 
-}
+}} // namespace simit::internal
 
 #endif

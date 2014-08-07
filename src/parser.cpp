@@ -1958,7 +1958,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.IRNodes) = new list<shared_ptr<IRNode>>();
-    (yylhs.value.IRNodes)->push_back(shared_ptr<IRNode>(new simit::Test("MyTest")));
+    (yylhs.value.IRNodes)->push_back(shared_ptr<IRNode>(new Test("MyTest")));
   }
 
     break;

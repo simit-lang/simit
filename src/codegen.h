@@ -12,6 +12,7 @@ class Function;
 }
 
 namespace simit {
+namespace internal {
 class Function;
 
 /** The base class of all classes that perform code generation using LLVM. */
@@ -37,5 +38,5 @@ class LLVMCodeGen : public IRVisitor {
   llvm::Function *llvmPrototype(Function *function) const;
 };
 
-}
+}} // namespace simit::internal
 #endif

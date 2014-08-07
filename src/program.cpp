@@ -29,9 +29,8 @@ class ProgramContent {
   std::unique_ptr<LLVMCodeGen> codegen;
 
   std::list<Function*> functions;
-
   std::list<simit::Error> errors;
-  std::list<simit::Test> tests;
+  std::list<Test> tests;
 };
 }
 }

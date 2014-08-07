@@ -9,7 +9,7 @@
 
 #include "ir.h"
 
-using namespace simit;
+using namespace simit::internal;
 using namespace std;
 
 #define LLVM_CONTEXT   llvm::getGlobalContext()
@@ -28,7 +28,7 @@ LLVMCodeGen::~LLVMCodeGen() {
 
 }
 
-static llvm::Type *toLLVMType(const simit::TensorType *type) {
+static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   llvm::Type *llvmType = NULL;
 
   if (type->isScalar()) {

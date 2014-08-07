@@ -6,6 +6,8 @@
 #include <list>
 
 namespace simit {
+namespace internal {
+
 class Tensor;
 class Function;
 class Argument;
@@ -55,5 +57,5 @@ class IRVisitor {
   bool aborted;
 };
 
-}
+}} // namespace simit::internal
 #endif

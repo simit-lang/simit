@@ -8,11 +8,12 @@
 #include <memory>
 
 namespace simit {
+class Error;
 
+namespace internal {
 class Function;
 class IRNode;
 class Test;
-class Error;
 
 /** Tracks symbols and their associated IR nodes across a stack of scopes. */
 class SymbolTable {
@@ -61,23 +62,23 @@ class Frontend {
  public:
   /** Parses, typechecks and turns a given Simit-formated stream into Simit IR.
     */
-  int parseStream(std::istream &programStream,
-                  std::list<simit::Function *> *functions,
-                  std::list<simit::Error> *errors,
-                  std::list<simit::Test> *tests);
+  int parseStream(std::istream         &programStream,
+                  std::list<Function*> *functions,
+                  std::list<Error>     *errors,
+                  std::list<Test>      *tests);
 
   /** Parses, typechecks and turns a given Simit-formated string into Simit IR.
     */
-  int parseString(std::string programString,
-                  std::list<simit::Function *> *functions,
-                  std::list<simit::Error> *errors,
-                  std::list<simit::Test> *tests);
+  int parseString(const std::string    &programString,
+                  std::list<Function*> *functions,
+                  std::list<Error>     *errors,
+                  std::list<Test>      *tests);
 
   /** Parses, typechecks and turns a given Simit-formated file into Simit IR. */
-  int parseFile(std::string filename,
-                std::list<simit::Function *> *functions,
-                std::list<simit::Error> *errors,
-                std::list<simit::Test> *tests);
+  int parseFile(const std::string    &filename,
+                std::list<Function*> *functions,
+                std::list<Error>     *errors,
+                std::list<Test>      *tests);
 
  private:
 
@@ -85,7 +86,7 @@ class Frontend {
   SymbolTable symtable;
 };
 
-}
+}} // namespace simit::internal
 
 #endif
 

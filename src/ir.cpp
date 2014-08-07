@@ -9,12 +9,12 @@
 #include "indexvariables.h"
 #include "util.h"
 
-using namespace simit;
+using namespace simit::internal;
 using namespace std;
 
 
 /* class IRNode */
-std::ostream &simit::operator<<(std::ostream &os, const IRNode &node) {
+std::ostream &simit::internal::operator<<(std::ostream &os, const IRNode &node) {
   node.print(os);
   return os;
 }
@@ -114,7 +114,7 @@ static std::string opString(Merge::Operator op) {
 
 static inline
 std::string indexVarString(const std::list<Merge::IndexVariablePtr> &idxVars) {
-  return (idxVars.size() != 0) ? "(" + util::join(idxVars, ",") + ")" : "";
+  return (idxVars.size()!=0) ? "(" + simit::util::join(idxVars,",") + ")" : "";
 }
 
 std::string Merge::IndexedTensor::toString() const {

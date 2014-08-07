@@ -4,9 +4,9 @@
 #include <string>
 #include <list>
 #include <memory>
+
 namespace simit {
 namespace internal {
-
 
 /** Index variables describe the iteration domains of tensor operations.*/
 class IndexVariable {

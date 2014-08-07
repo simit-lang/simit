@@ -9,12 +9,12 @@
 #include "irvisitors.h"
 
 namespace simit {
-
 namespace internal {
+
 class IndexVariable;
 class FreeIndexVariable;
 class ReductionIndexVariable;
-}
+
 
 /** The base class of all nodes in the Simit Intermediate Representation
   * (Simit IR) */
@@ -174,31 +174,31 @@ class Result : public TensorNode {
 class Function : public IRNode {
  public:
   Function(const std::string &name,
-           const std::list<std::shared_ptr<simit::Argument>> &arguments,
-           const std::list<std::shared_ptr<simit::Result>> &results)
+           const std::list<std::shared_ptr<Argument>> &arguments,
+           const std::list<std::shared_ptr<Result>> &results)
       : IRNode(name), arguments(arguments), results(results) {}
 
   void addStatements(const std::list<std::shared_ptr<IRNode>> &stmts);
 
 
-  const std::list<std::shared_ptr<simit::Argument>> &getArguments() const {
+  const std::list<std::shared_ptr<Argument>> &getArguments() const {
     return arguments;
   }
 
-  const std::list<std::shared_ptr<simit::Result>> &getResults() const {
+  const std::list<std::shared_ptr<Result>> &getResults() const {
     return results;
   }
 
-  const std::list<std::shared_ptr<simit::IRNode>> &getBody() const {
+  const std::list<std::shared_ptr<IRNode>> &getBody() const {
     return body;
   }
 
   void print(std::ostream &os) const;
 
  private:
-  std::list<std::shared_ptr<simit::Argument>> arguments;
-  std::list<std::shared_ptr<simit::Result>> results;
-  std::list<std::shared_ptr<simit::IRNode>> body;
+  std::list<std::shared_ptr<Argument>> arguments;
+  std::list<std::shared_ptr<Result>> results;
+  std::list<std::shared_ptr<IRNode>> body;
 };
 
 
@@ -212,6 +212,7 @@ class Test : public IRNode {
 
  private:
 };
-}
+
+}} // namespace simit::internal
 
 #endif

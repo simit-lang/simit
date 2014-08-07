@@ -57,16 +57,16 @@
 
   namespace simit { namespace internal {
   struct ParserParams {
-    ParserParams(simit::SymbolTable *symtable,
-                 std::list<simit::Function *> *functions,
-                 std::list<simit::Error>      *errors,
-                 std::list<simit::Test>       *tests)
+    ParserParams(SymbolTable             *symtable,
+                 std::list<Function *>   *functions,
+                 std::list<simit::Error> *errors,
+                 std::list<Test>         *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
-    simit::SymbolTable           &symtable;
-    std::list<simit::Function *> &functions;
-    std::list<simit::Error>      &errors;
-    std::list<simit::Test>       &tests;
+    SymbolTable             &symtable;
+    std::list<Function *>   &functions;
+    std::list<simit::Error> &errors;
+    std::list<Test>         &tests;
   };
   }}
 
@@ -74,8 +74,8 @@
   namespace {
   struct FormalData {
     std::string name;
-    simit::TensorType *type;
-    FormalData(const std::string &name, simit::TensorType *type)
+    simit::internal::TensorType *type;
+    FormalData(const std::string &name, simit::internal::TensorType *type)
         : name(name), type(type){}
   };
   }
@@ -213,36 +213,36 @@ namespace  simit { namespace internal  {
   const char *string;
 
 
-  std::shared_ptr<simit::IRNode>            *IRNode;
-  std::list<std::shared_ptr<simit::IRNode>> *IRNodes;
+  std::shared_ptr<simit::internal::IRNode>            *IRNode;
+  std::list<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
 
 
-  simit::Function *Function;
+  Function *Function;
 
 
-  FormalData                                  *Formal;
-  std::list<FormalData*>                      *Formals;
-  std::list<std::shared_ptr<simit::Argument>> *Arguments;
-  std::list<std::shared_ptr<simit::Result>>   *Results;
+  FormalData                           *Formal;
+  std::list<FormalData*>               *Formals;
+  std::list<std::shared_ptr<Argument>> *Arguments;
+  std::list<std::shared_ptr<Result>>   *Results;
 
 
-  std::shared_ptr<simit::TensorNode>            *Tensor;
-  std::list<std::shared_ptr<simit::TensorNode>> *TensorList;
-  std::shared_ptr<simit::Store>                 *Store;
-  std::list<std::shared_ptr<simit::Store>>      *StoreList;
+  std::shared_ptr<simit::internal::TensorNode>            *Tensor;
+  std::list<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
+  std::shared_ptr<simit::internal::Store>                 *Store;
+  std::list<std::shared_ptr<simit::internal::Store>>      *StoreList;
 
 
-  simit::TensorType                *TensorType;
-  simit::TensorType::ComponentType  ComponentType;
-  std::vector<simit::Shape*>       *Shapes;
-  simit::Shape                     *Shape;
-  std::vector<simit::Dimension*>   *Dimensions;
-  simit::Dimension                 *Dimension;
+  TensorType                *TensorType;
+  TensorType::ComponentType  ComponentType;
+  std::vector<Shape*>       *Shapes;
+  Shape                     *Shape;
+  std::vector<Dimension*>   *Dimensions;
+  Dimension                 *Dimension;
 
 
-  std::shared_ptr<simit::LiteralTensor>      *LiteralTensor;
-  TensorValues<double>                       *TensorDoubleValues;
-  TensorValues<int>                          *TensorIntValues;
+  std::shared_ptr<LiteralTensor> *LiteralTensor;
+  TensorValues<double>           *TensorDoubleValues;
+  TensorValues<int>              *TensorIntValues;
 
 
     };

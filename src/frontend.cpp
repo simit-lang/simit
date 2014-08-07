@@ -7,9 +7,7 @@
 #include "ir.h"
 #include "util.h"
 
-using namespace simit;
 using namespace simit::internal;
-using namespace simit::util;
 using namespace std;
 
 
@@ -27,14 +25,15 @@ std::shared_ptr<IRNode> &SymbolTable::operator[](const std::string &name) {
   return scopes.front()[name];
 }
 
-std::ostream &simit::operator<<(std::ostream &os, const SymbolTable &table) {
+std::ostream &simit::internal::operator<<(std::ostream &os,
+                                          const SymbolTable &table) {
   os << "SymbolTable:\n";
   for (auto scope : table.scopes) {
     for (auto symPair : scope) {
       string symString = (symPair.second == NULL)
                            ? "NULL"
-                           : toString(symPair.second);
-      os << util::indent(symPair.first + ":" + symString + ", ", 1);
+                           : simit::util::toString(symPair.second);
+      os << simit::util::indent(symPair.first + ":" + symString + ", ", 1);
     }
     os << "\n";
   }
@@ -43,29 +42,29 @@ std::ostream &simit::operator<<(std::ostream &os, const SymbolTable &table) {
 
 
 /* Frontend */
-int Frontend::parseStream(std::istream &programStream,
-                          std::list<simit::Function *> *functions,
+int Frontend::parseStream(std::istream            &programStream,
+                          std::list<Function *>   *functions,
                           std::list<simit::Error> *errors,
-                          std::list<simit::Test> *tests) {
+                          std::list<Test>         *tests) {
   Scanner scanner(&programStream);
   auto ctx = ParserParams(&symtable, functions, errors, tests);
   Parser parser(&scanner, &ctx);
   return parser.parse();
 }
 
-int Frontend::parseString(std::string programString,
-                          std::list<simit::Function *> *functions,
+int Frontend::parseString(const std::string       &programString,
+                          std::list<Function*>    *functions,
                           std::list<simit::Error> *errors,
-                          std::list<simit::Test> *tests) {
+                          std::list<Test>         *tests) {
 
   std::istringstream programStream(programString);
   return parseStream(programStream, functions, errors, tests);
 }
 
-int Frontend::parseFile(std::string filename,
-                        std::list<simit::Function *> *functions,
+int Frontend::parseFile(const std::string       &filename,
+                        std::list<Function*>    *functions,
                         std::list<simit::Error> *errors,
-                        std::list<simit::Test> *tests) {
+                        std::list<Test>         *tests) {
   ifstream programStream(filename);
   if (!programStream.good()) {
     return 2;

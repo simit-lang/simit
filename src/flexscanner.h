@@ -53,7 +53,8 @@
 #    define FLEX_STD std::
 #  endif
 
-namespace simit { namespace internal {
+namespace simit {
+namespace internal {
 
 extern "C++" {
 

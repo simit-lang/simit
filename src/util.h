@@ -5,7 +5,8 @@
 #include <sstream>
 #include <memory>
 
-namespace simit { namespace util {
+namespace simit {
+namespace util {
 
 template <class T>
 std::string toString(const T &val) {

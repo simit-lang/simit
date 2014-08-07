@@ -6,7 +6,7 @@
 
 #include "util.h"
 
-using namespace simit;
+using namespace simit::internal;
 using namespace std;
 
 
@@ -40,7 +40,8 @@ std::string TensorType::componentTypeString(ComponentType ct) {
 
 TensorType::~TensorType() {}
 
-std::ostream &simit::operator<<(std::ostream &os, const TensorType &type) {
+std::ostream &simit::internal::operator<<(std::ostream &os,
+                                          const TensorType &type) {
   return os << type.toString();
 }
 
