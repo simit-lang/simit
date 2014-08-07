@@ -55,12 +55,12 @@
   #include "errors.h"
   #include "types.h"
 
-  namespace simit {
-  struct ParseParams {
-    ParseParams(simit::SymbolTable *symtable,
-                std::list<simit::Function *> *functions,
-                std::list<simit::Error>      *errors,
-                std::list<simit::Test>       *tests)
+  namespace simit { namespace internal {
+  struct ParserParams {
+    ParserParams(simit::SymbolTable *symtable,
+                 std::list<simit::Function *> *functions,
+                 std::list<simit::Error>      *errors,
+                 std::list<simit::Test>       *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
     simit::SymbolTable           &symtable;
@@ -68,17 +68,17 @@
     std::list<simit::Error>      &errors;
     std::list<simit::Test>       &tests;
   };
-  }
+  }}
 
 
-namespace simit {
-namespace parser {
-  struct Formal {
+  namespace {
+  struct FormalData {
     std::string name;
-    TensorType *type;
-    Formal(const std::string &name, TensorType *type) : name(name), type(type){}
+    simit::TensorType *type;
+    FormalData(const std::string &name, simit::TensorType *type)
+        : name(name), type(type){}
   };
-}}
+  }
 
 
   namespace {
@@ -220,8 +220,8 @@ namespace  simit { namespace internal  {
   simit::Function *Function;
 
 
-  simit::parser::Formal                       *Formal;
-  std::list<simit::parser::Formal*>           *Formals;
+  FormalData                                  *Formal;
+  std::list<FormalData*>                      *Formals;
   std::list<std::shared_ptr<simit::Argument>> *Arguments;
   std::list<std::shared_ptr<simit::Result>>   *Results;
 
@@ -407,7 +407,7 @@ namespace  simit { namespace internal  {
 
 
     /// Build a parser object.
-     Parser  (Scanner *scanner_yyarg, ParseParams *ctx_yyarg);
+     Parser  (Scanner *scanner_yyarg, ParserParams *ctx_yyarg);
     virtual ~ Parser  ();
 
     /// Parse.
@@ -617,7 +617,7 @@ namespace  simit { namespace internal  {
 
     // User arguments.
     Scanner *scanner;
-    ParseParams *ctx;
+    ParserParams *ctx;
   };
 
 

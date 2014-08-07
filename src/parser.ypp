@@ -16,7 +16,7 @@
 }
 
 %parse-param { Scanner *scanner }
-%parse-param { ParseParams *ctx };
+%parse-param { ParserParams *ctx };
 
 %code {
   #include <stdlib.h>
@@ -29,7 +29,7 @@
   #include "util.h"
   #include "indexvariables.h"
   using namespace std;
-  using namespace simit;
+  using namespace simit;  // TODO: Remove
   using namespace simit::internal;
 
   #define REPORT_ERROR(msg, loc)  \
@@ -56,12 +56,12 @@
   #include "errors.h"
   #include "types.h"
 
-  namespace simit {
-  struct ParseParams {
-    ParseParams(simit::SymbolTable *symtable,
-                std::list<simit::Function *> *functions,
-                std::list<simit::Error>      *errors,
-                std::list<simit::Test>       *tests)
+  namespace simit { namespace internal {
+  struct ParserParams {
+    ParserParams(simit::SymbolTable *symtable,
+                 std::list<simit::Function *> *functions,
+                 std::list<simit::Error>      *errors,
+                 std::list<simit::Test>       *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
     simit::SymbolTable           &symtable;
@@ -69,7 +69,7 @@
     std::list<simit::Error>      &errors;
     std::list<simit::Test>       &tests;
   };
-  }
+  }}
 }
 
 %union {
@@ -266,19 +266,19 @@ function_header
   }
 
 %code requires {
-namespace simit {
-namespace parser {
-  struct Formal {
+  namespace {
+  struct FormalData {
     std::string name;
-    TensorType *type;
-    Formal(const std::string &name, TensorType *type) : name(name), type(type){}
+    simit::TensorType *type;
+    FormalData(const std::string &name, simit::TensorType *type)
+        : name(name), type(type){}
   };
-}}
+  }
 };
 
 %union {
-  simit::parser::Formal                       *Formal;
-  std::list<simit::parser::Formal*>           *Formals;
+  FormalData                                  *Formal;
+  std::list<FormalData*>                      *Formals;
   std::list<std::shared_ptr<simit::Argument>> *Arguments;
   std::list<std::shared_ptr<simit::Result>>   *Results;
 };
@@ -322,13 +322,13 @@ formal_decl
   : IDENT ":" type {
     string ident($IDENT);
     free((void*)$IDENT);
-    $$ = new simit::parser::Formal(ident, $type);
+    $$ = new FormalData(ident, $type);
   }
 
 %type <Formals> formal_list;
 formal_list
   : formal_decl {
-    $$ = new list<simit::parser::Formal*>();
+    $$ = new list<FormalData *>();
     $$->push_back($formal_decl);
   }
   | formal_list "," formal_decl {

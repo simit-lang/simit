@@ -49,7 +49,7 @@ int Frontend::parseStream(std::istream &programStream,
                           std::list<simit::Error> *errors,
                           std::list<simit::Test> *tests) {
   Scanner scanner(&programStream);
-  auto ctx = ParseParams(&symtable, functions, errors, tests);
+  auto ctx = ParserParams(&symtable, functions, errors, tests);
   Parser parser(&scanner, &ctx);
   return parser.parse();
 }

@@ -18,8 +18,7 @@
 
 #include "parser.h"
 
-namespace simit {
-namespace internal {
+namespace simit { namespace internal {
 
 class Scanner : public yyFlexLexer{
  public:

@@ -61,7 +61,7 @@
   #include "util.h"
   #include "indexvariables.h"
   using namespace std;
-  using namespace simit;
+  using namespace simit;  // TODO: Remove
   using namespace simit::internal;
 
   #define REPORT_ERROR(msg, loc)  \
@@ -215,7 +215,7 @@ namespace  simit { namespace internal  {
 
 
   /// Build a parser object.
-   Parser :: Parser  (Scanner *scanner_yyarg, ParseParams *ctx_yyarg)
+   Parser :: Parser  (Scanner *scanner_yyarg, ParserParams *ctx_yyarg)
     :
 #if YYDEBUG
       yydebug_ (false),
@@ -1117,7 +1117,7 @@ namespace  simit { namespace internal  {
     {
     string ident((yystack_[2].value.string));
     free((void*)(yystack_[2].value.string));
-    (yylhs.value.Formal) = new simit::parser::Formal(ident, (yystack_[0].value.TensorType));
+    (yylhs.value.Formal) = new FormalData(ident, (yystack_[0].value.TensorType));
   }
 
     break;
@@ -1125,7 +1125,7 @@ namespace  simit { namespace internal  {
   case 28:
 
     {
-    (yylhs.value.Formals) = new list<simit::parser::Formal*>();
+    (yylhs.value.Formals) = new list<FormalData *>();
     (yylhs.value.Formals)->push_back((yystack_[0].value.Formal));
   }
 

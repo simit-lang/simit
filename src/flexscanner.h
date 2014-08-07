@@ -53,6 +53,8 @@
 #    define FLEX_STD std::
 #  endif
 
+namespace simit { namespace internal {
+
 extern "C++" {
 
 struct yy_buffer_state;
@@ -201,5 +203,7 @@ protected:
 };
 
 }
+
+}} // namespce simit::internal
 
 #endif // yyFlexLexer || ! yyFlexLexerOnce
