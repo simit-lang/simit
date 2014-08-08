@@ -1366,8 +1366,8 @@ namespace  simit { namespace internal  {
     auto expr = shared_ptr<TensorNode>(*(yystack_[0].value.Tensor));
     delete (yystack_[0].value.Tensor);
 
-    IndexVariableFactory indexVariableFactory;
-    auto indexVars = indexVariableFactory.makeFreeVariables(expr->getOrder());
+    IndexVarFactory indexVarFactory;
+    auto indexVars = indexVarFactory.makeFreeVars(expr->getOrder());
 
     std::list<IndexExpr::IndexedTensor> operands;
     operands.push_front(IndexExpr::IndexedTensor(expr, indexVars));

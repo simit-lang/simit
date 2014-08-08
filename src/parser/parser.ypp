@@ -516,8 +516,8 @@ expr
     auto expr = shared_ptr<TensorNode>(*$2);
     delete $2;
 
-    IndexVariableFactory indexVariableFactory;
-    auto indexVars = indexVariableFactory.makeFreeVariables(expr->getOrder());
+    IndexVarFactory indexVarFactory;
+    auto indexVars = indexVarFactory.makeFreeVars(expr->getOrder());
 
     std::list<IndexExpr::IndexedTensor> operands;
     operands.push_front(IndexExpr::IndexedTensor(expr, indexVars));

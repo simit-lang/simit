@@ -11,9 +11,9 @@
 namespace simit {
 namespace internal {
 
-class IndexVariable;
-class FreeIndexVariable;
-class ReductionIndexVariable;
+class IndexVar;
+class FreeIndexVar;
+class ReductionIndexVar;
 
 
 /** The base class of all nodes in the Simit Intermediate Representation
@@ -79,27 +79,27 @@ class IndexExpr : public TensorNode {
  public:
   enum Operator { NEG, ADD, SUB, MUL, DIV };
 
-  using IndexVariablePtr = std::shared_ptr<internal::IndexVariable>;
+  using IndexVarPtr = std::shared_ptr<internal::IndexVar>;
   struct IndexedTensor {
     std::shared_ptr<TensorNode> tensor;
-    std::list<IndexVariablePtr> indexVariables;
+    std::list<IndexVarPtr> indexVars;
+
     IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
-                  const std::list<IndexExpr::IndexVariablePtr> &indexVars)
-        : tensor(tensor), indexVariables(indexVars) {}
+                  const std::list<IndexExpr::IndexVarPtr> &indexVars)
+        : tensor(tensor), indexVars(indexVars) {}
     friend std::ostream &operator<<(std::ostream &os, const IndexedTensor &o) {
       return os << o.toString();
     }
     std::string toString() const;
-   private:
   };
 
   IndexExpr(Operator op,
-            const std::list<IndexVariablePtr> &indexVariables,
+            const std::list<IndexVarPtr> &indexVars,
             const std::list<IndexedTensor> &operands);
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const std::list<IndexVariablePtr> &getDomain() const;
+  const std::list<IndexVarPtr> &getDomain() const;
 
   // TODO: Fix this interface by making IndexedTensor a class that is a part
   //       of Merge's interface, or by returning the tensor operands put
@@ -110,7 +110,7 @@ class IndexExpr : public TensorNode {
 
  private:
   Operator op;
-  std::list<IndexVariablePtr> indexVariables;
+  std::list<IndexVarPtr> indexVars;
   std::list<IndexedTensor> operands;
 };
 

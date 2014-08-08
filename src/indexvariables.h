@@ -9,9 +9,9 @@ namespace simit {
 namespace internal {
 
 /** Index variables describe the iteration domains of tensor operations.*/
-class IndexVariable {
+class IndexVar {
  public:
-  IndexVariable(const std::string &name) : name(name) {}
+  IndexVar(const std::string &name) : name(name) {}
 
   std::string getName() const { return name; }
   virtual void print(std::ostream &os) const = 0;
@@ -20,14 +20,14 @@ class IndexVariable {
   std::string name;
 };
 
-std::ostream &operator<<(std::ostream &os, const IndexVariable &var);
+std::ostream &operator<<(std::ostream &os, const IndexVar &var);
 
 
 /** A free index causes an operation to be performed for each location in the
   * iteration domain. */
-class FreeIndexVariable : public IndexVariable {
+class FreeIndexVar : public IndexVar {
  public:
-  FreeIndexVariable(const std::string &name) : IndexVariable(name) {}
+  FreeIndexVar(const std::string &name) : IndexVar(name) {}
 
   void print(std::ostream &os) const { os << getName(); };
 };
@@ -35,12 +35,12 @@ class FreeIndexVariable : public IndexVariable {
 
 /** A reduction index causes the values at each location in the iteration domain
   * to be reduced by the given operation. */
-class ReductionIndexVariable : public IndexVariable {
+class ReductionIndexVar : public IndexVar {
  public:
   enum Operator {ADD, MUL};
 
-  ReductionIndexVariable(Operator op, const std::string &name)
-      : IndexVariable(name), op(op) {}
+  ReductionIndexVar(Operator op, const std::string &name)
+      : IndexVar(name), op(op) {}
 
   void print(std::ostream &os) const;
 
@@ -50,14 +50,13 @@ class ReductionIndexVariable : public IndexVariable {
 
 
 /** A factory for creating index variables with unique names. */
-class IndexVariableFactory {
+class IndexVarFactory {
  public:
-  IndexVariableFactory() : nameID(0) {}
+  IndexVarFactory() : nameID(0) {}
 
-  std::list<std::shared_ptr<IndexVariable>> makeFreeVariables(unsigned int n);
+  std::list<std::shared_ptr<IndexVar>> makeFreeVars(unsigned int n);
 
-  std::shared_ptr<IndexVariable>
-  makeReductionVariable(ReductionIndexVariable::Operator op);
+  std::shared_ptr<IndexVar> makeReductionVar(ReductionIndexVar::Operator op);
 
  private:
   int nameID;

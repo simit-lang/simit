@@ -92,16 +92,18 @@ void LiteralTensor::print(std::ostream &os) const {
 
 /* class IndexExpr */
 IndexExpr::IndexExpr(Operator op,
-                     const std::list<IndexVariablePtr> &indexVariables,
+                     const std::list<IndexVarPtr> &indexVars,
                      const std::list<IndexedTensor> &operands)
-    : TensorNode(NULL), op(op), indexVariables(indexVariables),
+    : TensorNode(NULL), op(op), indexVars(indexVars),
       operands(operands) {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
   assert(expectedNumOperands == operands.size());
+
+
 }
 
-const std::list<IndexExpr::IndexVariablePtr> &IndexExpr::getDomain() const {
-  return indexVariables;
+const std::list<IndexExpr::IndexVarPtr> &IndexExpr::getDomain() const {
+  return indexVars;
 }
 
 static std::string opString(IndexExpr::Operator op) {
@@ -122,16 +124,16 @@ static std::string opString(IndexExpr::Operator op) {
 }
 
 static inline
-std::string indexVarString(const std::list<IndexExpr::IndexVariablePtr> &idxVars) {
+std::string indexVarString(const std::list<IndexExpr::IndexVarPtr> &idxVars) {
   return (idxVars.size()!=0) ? "(" + simit::util::join(idxVars,",") + ")" : "";
 }
 
 std::string IndexExpr::IndexedTensor::toString() const {
-  return tensor->getName() + indexVarString(indexVariables);
+  return tensor->getName() + indexVarString(indexVars);
 }
 
 void IndexExpr::print(std::ostream &os) const {
-  os << getName() << indexVarString(indexVariables) << " = ";
+  os << getName() << indexVarString(indexVars) << " = ";
 
   unsigned int numOperands = operands.size();
   auto iter = operands.begin();
