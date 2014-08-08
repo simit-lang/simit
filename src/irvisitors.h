@@ -13,7 +13,7 @@ class Function;
 class Argument;
 class Result;
 class LiteralTensor;
-class Merge;
+class IndexExpr;
 class VariableStore;
 
 /** Visitor where the iteration order is specified in the visitor instead of
@@ -30,19 +30,19 @@ class IRVisitor {
   IRVisitor() { reset(); }
   virtual ~IRVisitor();
 
-  virtual void visit(Function      *f);
-  virtual void visit(Argument      *t);
-  virtual void visit(Result        *t);
-  virtual void visit(LiteralTensor *t);
-  virtual void visit(Merge         *t);
-  virtual void visit(VariableStore *t);
+  virtual void visit(Function        *f);
+  virtual void visit(Argument        *t);
+  virtual void visit(Result          *t);
+  virtual void visit(LiteralTensor   *t);
+  virtual void visit(IndexExpr *t);
+  virtual void visit(VariableStore   *t);
 
-  virtual void handle(Function      *f) {};
-  virtual void handle(Argument      *t) {};
-  virtual void handle(Result        *t) {};
-  virtual void handle(LiteralTensor *t) {};
-  virtual void handle(Merge         *t) {};
-  virtual void handle(VariableStore *t) {};
+  virtual void handle(Function        *f) {};
+  virtual void handle(Argument        *t) {};
+  virtual void handle(Result          *t) {};
+  virtual void handle(LiteralTensor   *t) {};
+  virtual void handle(IndexExpr *t) {};
+  virtual void handle(VariableStore   *t) {};
 
  protected:
   void abort() { aborted = true; }

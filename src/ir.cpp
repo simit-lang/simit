@@ -83,29 +83,29 @@ void LiteralTensor::print(std::ostream &os) const {
 }
 
 
-/* class Merge */
-Merge *Merge::make(Operator op,
-                   const std::list<IndexVariablePtr> &indexVariables,
-                   const std::list<IndexedTensor> &operands) {
+/* class IndexExpr */
+IndexExpr *IndexExpr::make(Operator op,
+                           const std::list<IndexVariablePtr> &indexVariables,
+                           const std::list<IndexedTensor> &operands) {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
   assert(expectedNumOperands == operands.size());
   if (expectedNumOperands != operands.size()) {
     return NULL;
   }
-  return new Merge(op, indexVariables, operands);
+  return new IndexExpr(op, indexVariables, operands);
 }
 
-static std::string opString(Merge::Operator op) {
+static std::string opString(IndexExpr::Operator op) {
   switch (op) {
-    case Merge::NEG:
+    case IndexExpr::NEG:
       return "-";
-    case Merge::ADD:
+    case IndexExpr::ADD:
       return "+";
-    case Merge::SUB:
+    case IndexExpr::SUB:
       return "-";
-    case Merge::MUL:
+    case IndexExpr::MUL:
       return "*";
-    case Merge::DIV:
+    case IndexExpr::DIV:
       return "//";
   }
   assert(false);
@@ -113,15 +113,15 @@ static std::string opString(Merge::Operator op) {
 }
 
 static inline
-std::string indexVarString(const std::list<Merge::IndexVariablePtr> &idxVars) {
+std::string indexVarString(const std::list<IndexExpr::IndexVariablePtr> &idxVars) {
   return (idxVars.size()!=0) ? "(" + simit::util::join(idxVars,",") + ")" : "";
 }
 
-std::string Merge::IndexedTensor::toString() const {
+std::string IndexExpr::IndexedTensor::toString() const {
   return tensor->getName() + indexVarString(indexVariables);
 }
 
-void Merge::print(std::ostream &os) const {
+void IndexExpr::print(std::ostream &os) const {
   os << getName() << indexVarString(indexVariables) << " = ";
 
   unsigned int numOperands = operands.size();

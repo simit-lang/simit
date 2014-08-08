@@ -73,23 +73,23 @@ void LLVMCodeGen::handle(Function *function) {
 }
 
 void LLVMCodeGen::handle(Argument *t) {
-  cout << "Argument: " << *t << endl;
+  cout << "Argument:  " << *t << endl;
 }
 
 void LLVMCodeGen::handle(Result *t) {
-  cout << "Result:   " << *t << endl;
+  cout << "Result:    " << *t << endl;
 }
 
 void LLVMCodeGen::handle(LiteralTensor *t) {
-  cout << "Literal:  " << *t << endl;
+  cout << "Literal:   " << *t << endl;
 }
 
-void LLVMCodeGen::handle(Merge *t) {
-  cout << "Merge   : " << *t << endl;
+void LLVMCodeGen::handle(IndexExpr *t) {
+  cout << "IndexExpr: " << *t << endl;
 }
 
 void LLVMCodeGen::handle(VariableStore *t) {
-  cout << "Store   : " << *t << endl;
+  cout << "Store   :  " << *t << endl;
 }
 
 llvm::Function *LLVMCodeGen::codegen(Function *function) {

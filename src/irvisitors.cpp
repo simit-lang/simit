@@ -33,7 +33,7 @@ void IRVisitor::visit(Result *t) {
   CHECK_ABORT(handle(t));
 }
 
-void IRVisitor::visit(Merge *t) {
+void IRVisitor::visit(IndexExpr *t) {
   for (auto &operand : t->getOperands()) {
     CHECK_ABORT(operand.tensor->accept(this));
   }

@@ -1369,12 +1369,12 @@ namespace  simit { namespace internal  {
     IndexVariableFactory indexVariableFactory;
     auto indexVars = indexVariableFactory.makeFreeVariables(expr->getOrder());
 
-    std::list<Merge::IndexedTensor> operands;
-    operands.push_front(Merge::IndexedTensor(expr, indexVars));
+    std::list<IndexExpr::IndexedTensor> operands;
+    operands.push_front(IndexExpr::IndexedTensor(expr, indexVars));
 
-    auto merge = Merge::make(Merge::NEG, indexVars, operands);
-    assert(merge != NULL);
-    (yylhs.value.Tensor) = new shared_ptr<TensorNode>(merge);
+    auto indexExpr = IndexExpr::make(IndexExpr::NEG, indexVars, operands);
+    assert(indexExpr != NULL);
+    (yylhs.value.Tensor) = new shared_ptr<TensorNode>(indexExpr);
   }
 
     break;

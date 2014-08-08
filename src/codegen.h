@@ -27,7 +27,7 @@ class LLVMCodeGen : public IRVisitor {
   void handle(Argument      *t);
   void handle(Result        *t);
   void handle(LiteralTensor *t);
-  void handle(Merge         *t);
+  void handle(IndexExpr     *t);
   void handle(VariableStore *t);
 
  private:

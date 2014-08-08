@@ -74,15 +74,16 @@ class LiteralTensor : public TensorNode {
 
 /** Instruction that combines one or more tensors.  Merge nodes must be created
   * through the \ref createMerge factory function. */
-class Merge : public TensorNode {
+class IndexExpr : public TensorNode {
  public:
-  using IndexVariablePtr = std::shared_ptr<internal::IndexVariable>;
+  enum Operator { NEG, ADD, SUB, MUL, DIV };
 
+  using IndexVariablePtr = std::shared_ptr<internal::IndexVariable>;
   struct IndexedTensor {
     std::shared_ptr<TensorNode> tensor;
     std::list<IndexVariablePtr> indexVariables;
     IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
-                  const std::list<Merge::IndexVariablePtr> &indexVars)
+                  const std::list<IndexExpr::IndexVariablePtr> &indexVars)
         : tensor(tensor), indexVariables(indexVars) {}
     friend std::ostream &operator<<(std::ostream &os, const IndexedTensor &o) {
       return os << o.toString();
@@ -91,9 +92,7 @@ class Merge : public TensorNode {
    private:
   };
 
-  enum Operator { NEG, ADD, SUB, MUL, DIV };
-
-  static Merge *make(Operator op,
+  static IndexExpr *make(Operator op,
                      const std::list<IndexVariablePtr> &indexVariables,
                      const std::list<IndexedTensor> &operands);
 
@@ -111,7 +110,7 @@ class Merge : public TensorNode {
   std::list<IndexVariablePtr> indexVariables;
   std::list<IndexedTensor> operands;
 
-  Merge(Operator op, const std::list<IndexVariablePtr> &indexVariables,
+  IndexExpr(Operator op, const std::list<IndexVariablePtr> &indexVariables,
         const std::list<IndexedTensor> &operands)
       : TensorNode(NULL), op(op), indexVariables(indexVariables),
         operands(operands) { }
