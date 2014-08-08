@@ -14,6 +14,8 @@ using namespace std;
 
 
 /* class IRNode */
+IRNode::~IRNode() {}
+
 std::ostream &simit::internal::operator<<(std::ostream &os, const IRNode &node) {
   node.print(os);
   return os;
@@ -21,9 +23,14 @@ std::ostream &simit::internal::operator<<(std::ostream &os, const IRNode &node) 
 
 
 /* class TensorNode */
+TensorNode::~TensorNode() {
+  delete type;
+}
+
 void TensorNode::print(std::ostream &os) const {
   os << getName() << " : " << type->toString();
 }
+
 
 /* class LiteralTensor */
 LiteralTensor::LiteralTensor(TensorType *type, void *data)
@@ -84,15 +91,17 @@ void LiteralTensor::print(std::ostream &os) const {
 
 
 /* class IndexExpr */
-IndexExpr *IndexExpr::make(Operator op,
-                           const std::list<IndexVariablePtr> &indexVariables,
-                           const std::list<IndexedTensor> &operands) {
+IndexExpr::IndexExpr(Operator op,
+                     const std::list<IndexVariablePtr> &indexVariables,
+                     const std::list<IndexedTensor> &operands)
+    : TensorNode(NULL), op(op), indexVariables(indexVariables),
+      operands(operands) {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
   assert(expectedNumOperands == operands.size());
-  if (expectedNumOperands != operands.size()) {
-    return NULL;
-  }
-  return new IndexExpr(op, indexVariables, operands);
+}
+
+const std::list<IndexExpr::IndexVariablePtr> &IndexExpr::getDomain() const {
+  return indexVariables;
 }
 
 static std::string opString(IndexExpr::Operator op) {

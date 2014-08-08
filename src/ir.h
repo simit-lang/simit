@@ -22,7 +22,7 @@ class IRNode {
  public:
   IRNode() {}
   IRNode(const std::string &name) : name(name) {}
-  virtual ~IRNode() {}
+  virtual ~IRNode();
 
   void setName(std::string name) { this->name = name; }
 
@@ -43,6 +43,7 @@ class TensorNode : public IRNode {
   TensorNode(const TensorType *type) : TensorNode("", type) {}
   TensorNode(const std::string &name, const TensorType *type)
       : IRNode(name), type(type) {}
+  virtual ~TensorNode();
 
   virtual void accept(IRVisitor *visitor) = 0;
 
@@ -63,9 +64,9 @@ class LiteralTensor : public TensorNode {
   ~LiteralTensor();
 
   void cast(TensorType *type);
-  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  virtual void print(std::ostream &os) const;
+  void print(std::ostream &os) const;
 
  private:
   void  *data;
@@ -92,11 +93,13 @@ class IndexExpr : public TensorNode {
    private:
   };
 
-  static IndexExpr *make(Operator op,
-                     const std::list<IndexVariablePtr> &indexVariables,
-                     const std::list<IndexedTensor> &operands);
+  IndexExpr(Operator op,
+            const std::list<IndexVariablePtr> &indexVariables,
+            const std::list<IndexedTensor> &operands);
 
-  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+
+  const std::list<IndexVariablePtr> &getDomain() const;
 
   // TODO: Fix this interface by making IndexedTensor a class that is a part
   //       of Merge's interface, or by returning the tensor operands put
@@ -109,11 +112,6 @@ class IndexExpr : public TensorNode {
   Operator op;
   std::list<IndexVariablePtr> indexVariables;
   std::list<IndexedTensor> operands;
-
-  IndexExpr(Operator op, const std::list<IndexVariablePtr> &indexVariables,
-        const std::list<IndexedTensor> &operands)
-      : TensorNode(NULL), op(op), indexVariables(indexVariables),
-        operands(operands) { }
 };
 
 
@@ -132,7 +130,7 @@ class VariableStore : public Store {
   VariableStore(const std::string &varName, const TensorType *type)
       : Store(varName, type) {}
 
-  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   void print(std::ostream &os) const;
 
@@ -145,7 +143,7 @@ class Argument : public TensorNode {
   Argument(const std::string &name, const TensorType *type)
       : TensorNode(name, type) {}
 
-  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   void print(std::ostream &os) const;
 };
@@ -160,7 +158,7 @@ class Result : public TensorNode {
   void setValue(const std::shared_ptr<TensorNode> &value) {
     this->value = value;
   }
-  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   const std::shared_ptr<TensorNode> &getValue() const { return value; }
   void print(std::ostream &os) const;
