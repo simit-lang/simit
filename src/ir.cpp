@@ -91,15 +91,18 @@ void LiteralTensor::print(std::ostream &os) const {
 
 
 /* class IndexExpr */
-IndexExpr::IndexExpr(Operator op,
-                     const std::list<IndexVarPtr> &indexVars,
-                     const std::list<IndexedTensor> &operands)
-    : TensorNode(NULL), op(op), indexVars(indexVars),
-      operands(operands) {
+static TensorType *
+computeIndexExprType(const std::list<IndexExpr::IndexVarPtr> &indexVars,
+                     const std::list<IndexExpr::IndexedTensor> &operands) {
+  return NULL;
+}
+
+IndexExpr::IndexExpr(const std::list<IndexVarPtr> &indexVars,
+                     Operator op, const std::list<IndexedTensor> &operands)
+    : TensorNode(computeIndexExprType(indexVars, operands)),
+      indexVars(indexVars), op(op), operands(operands) {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
   assert(expectedNumOperands == operands.size());
-
-
 }
 
 const std::list<IndexExpr::IndexVarPtr> &IndexExpr::getDomain() const {

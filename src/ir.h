@@ -93,9 +93,8 @@ class IndexExpr : public TensorNode {
     std::string toString() const;
   };
 
-  IndexExpr(Operator op,
-            const std::list<IndexVarPtr> &indexVars,
-            const std::list<IndexedTensor> &operands);
+  IndexExpr(const std::list<IndexVarPtr> &indexVars,
+            Operator op, const std::list<IndexedTensor> &operands);
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
@@ -109,8 +108,8 @@ class IndexExpr : public TensorNode {
   void print(std::ostream &os) const;
 
  private:
-  Operator op;
   std::list<IndexVarPtr> indexVars;
+  Operator op;
   std::list<IndexedTensor> operands;
 };
 

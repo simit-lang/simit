@@ -8,6 +8,7 @@
 #include "llvm/IR/Module.h"
 
 #include "ir.h"
+#include "macros.h"
 
 using namespace simit::internal;
 using namespace std;
@@ -86,6 +87,16 @@ void LLVMCodeGen::handle(LiteralTensor *t) {
 
 void LLVMCodeGen::handle(IndexExpr *t) {
   cout << "IndexExpr: " << *t << endl;
+  auto domain = t->getDomain();
+  auto type = t->getType();
+  UNUSED(type);
+
+  if (domain.size() == 0) {
+  
+  }
+  else {
+//    NOT_SUPPORTED_YET;
+  }
 }
 
 void LLVMCodeGen::handle(VariableStore *t) {

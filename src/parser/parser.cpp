@@ -1372,7 +1372,7 @@ namespace  simit { namespace internal  {
     std::list<IndexExpr::IndexedTensor> operands;
     operands.push_front(IndexExpr::IndexedTensor(expr, indexVars));
 
-    auto indexExpr = new IndexExpr(IndexExpr::NEG, indexVars, operands);
+    auto indexExpr = new IndexExpr(indexVars, IndexExpr::NEG, operands);
     assert(indexExpr != NULL);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(indexExpr);
   }
