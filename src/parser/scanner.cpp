@@ -1,6 +1,6 @@
-#line 2 "/Users/fred/projects/sim/simit/src/scanner.cpp"
+#line 2 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
 
-#line 4 "/Users/fred/projects/sim/simit/src/scanner.cpp"
+#line 4 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -490,9 +490,9 @@ static yyconst flex_int16_t yy_chk[211] =
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 1 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 #define YY_NO_INPUT 1
-#line 6 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 6 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 #include "scanner.h"
 #include <stdlib.h>
 #include "parser.h"
@@ -503,7 +503,7 @@ static yyconst flex_int16_t yy_chk[211] =
 
 
 
-#line 507 "/Users/fred/projects/sim/simit/src/scanner.cpp"
+#line 507 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
 
 #define INITIAL 0
 #define SLCOMMENT 1
@@ -607,7 +607,7 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 26 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 26 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 
 
 yylloc->step();
@@ -615,7 +615,7 @@ using namespace simit::internal;
 
 
  /* Keywords and symbols */
-#line 619 "/Users/fred/projects/sim/simit/src/scanner.cpp"
+#line 619 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
 
 	if ( !(yy_init) )
 		{
@@ -700,336 +700,336 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 33 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 33 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::INT;       }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 34 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 34 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::FLOAT;     }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 35 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 35 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::STRUCT;    }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 36 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 36 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::TENSOR;    }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 37 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 37 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::CONST;     }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 38 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 38 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::EXTERN;    }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 39 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 39 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::PROC;      }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 40 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 40 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::FUNC;      }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 41 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 41 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::MAP;       }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 42 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 42 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::TO;        }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 43 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 43 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::WITH;      }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 44 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 44 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::REDUCE;    }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 45 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 45 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::WHILE;     }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 46 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 46 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::IF;        }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 47 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 47 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::ELIF;      }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 48 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 48 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::ELSE;      }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 49 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 49 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::BLOCKEND;  }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 50 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 50 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::RETURN;    }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 52 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 52 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::RARROW;    }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 53 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 53 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::LP;        }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 54 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 54 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::RP;        }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 55 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 55 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::LB;        }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 56 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 56 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::RB;        }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 57 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 57 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::LC;        }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 58 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 58 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::RC;        }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 59 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 59 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::LA;        }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 60 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 60 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::RA;        }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 61 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 61 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::COMMA;     }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 62 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 62 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::PERIOD;    }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 63 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 63 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::COL;       }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 64 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 64 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::SEMICOL;   }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 66 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 66 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::ASSIGN;    }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 67 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 67 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::PLUS;      }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 68 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 68 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::MINUS;     }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 69 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 69 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::STAR;      }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 70 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 70 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::SLASH;     }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 71 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 71 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::BACKSLASH; }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 72 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 72 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::EXP;       }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 73 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 73 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::TRANSPOSE; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 75 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 75 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::EQ;        }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 76 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 76 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::NE;        }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 77 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 77 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::LE;        }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 78 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 78 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::GE;        }
 	YY_BREAK
 /* Tests */
 case 44:
 YY_RULE_SETUP
-#line 81 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 81 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { BEGIN(SLTEST); return Parser::token::TEST; }
 	YY_BREAK
 case 45:
 /* rule 45 can match eol */
 YY_RULE_SETUP
-#line 82 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 82 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 case 46:
 YY_RULE_SETUP
-#line 83 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 83 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { BEGIN(MLTEST); return Parser::token::TEST; }
 	YY_BREAK
 case 47:
 YY_RULE_SETUP
-#line 84 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 84 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 /* Single-line comments */
 case 48:
 /* rule 48 can match eol */
 YY_RULE_SETUP
-#line 87 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 87 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { BEGIN(SLCOMMENT); }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 88 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 88 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 {}
 	YY_BREAK
 case 50:
 /* rule 50 can match eol */
 YY_RULE_SETUP
-#line 89 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 89 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { BEGIN(INITIAL); yylloc->step(); }
 	YY_BREAK
 /* Multi-line comments */
 case 51:
 YY_RULE_SETUP
-#line 92 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 92 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { BEGIN(MLCOMMENT); }
 	YY_BREAK
 case 52:
 /* rule 52 can match eol */
 YY_RULE_SETUP
-#line 93 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 93 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { yylloc->step(); }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP
-#line 94 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 94 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 {}
 	YY_BREAK
 case YY_STATE_EOF(MLCOMMENT):
-#line 95 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 95 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { /*TODO: REPORT ERROR*/ return Parser::token::UNKNOWN; }
 	YY_BREAK
 case 54:
 YY_RULE_SETUP
-#line 96 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 96 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 /* Identifiers */
 case 55:
 YY_RULE_SETUP
-#line 99 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 99 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { yylval->string = strdup(yytext);
                         return Parser::token::IDENT; }
 	YY_BREAK
 /* Literals */
 case 56:
 YY_RULE_SETUP
-#line 103 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 103 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { yylval->num  = atoi(yytext);
                         return Parser::token::INT_LITERAL; }
 	YY_BREAK
 case 57:
 YY_RULE_SETUP
-#line 105 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 105 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { yylval->fnum = atof(yytext);
                         return Parser::token::FLOAT_LITERAL; }
 	YY_BREAK
 /* Whitespace */
 case 58:
 YY_RULE_SETUP
-#line 109 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 109 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 {}
 	YY_BREAK
 case 59:
 /* rule 59 can match eol */
 YY_RULE_SETUP
-#line 110 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 110 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { yylloc->lines(yyleng); yylloc->step(); }
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(SLCOMMENT):
 case YY_STATE_EOF(SLTEST):
 case YY_STATE_EOF(MLTEST):
-#line 111 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 111 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { yylloc->step(); yyterminate(); }
 	YY_BREAK
 /* Unexpected (error) */
 case 60:
 YY_RULE_SETUP
-#line 114 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 114 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 { return Parser::token::UNKNOWN; }
 	YY_BREAK
 case 61:
 YY_RULE_SETUP
-#line 115 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 115 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 ECHO;
 	YY_BREAK
-#line 1033 "/Users/fred/projects/sim/simit/src/scanner.cpp"
+#line 1033 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1927,7 +1927,7 @@ void Simitfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 115 "/Users/fred/projects/sim/simit/src/scanner.flex"
+#line 115 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
 
 
 
