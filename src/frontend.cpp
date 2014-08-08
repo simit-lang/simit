@@ -10,7 +10,6 @@
 using namespace simit::internal;
 using namespace std;
 
-
 /* SymbolTable */
 void SymbolTable::addNode(const std::shared_ptr<IRNode> &irNode) {
   (*this)[irNode->getName()] = irNode;

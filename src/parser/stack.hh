@@ -31,12 +31,12 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /Users/fred/projects/sim/simit/src/stack.hh
+ ** \file /Users/fred/projects/sim/simit/src/parser/stack.hh
  ** Define the  simit::internal ::stack class.
  */
 
-#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_STACK_HH_INCLUDED
-# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_STACK_HH_INCLUDED
+#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_STACK_HH_INCLUDED
+# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_STACK_HH_INCLUDED
 
 # include <vector>
 
@@ -155,4 +155,4 @@ namespace  simit { namespace internal  {
 } } //  simit::internal 
 
 
-#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_STACK_HH_INCLUDED
+#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_STACK_HH_INCLUDED

@@ -31,14 +31,14 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /Users/fred/projects/sim/simit/src/parser.h
+ ** \file /Users/fred/projects/sim/simit/src/parser/parser.h
  ** Define the  simit::internal ::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
 
-#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_H_INCLUDED
-# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_H_INCLUDED
+#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
+# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
 // //                    "%code requires" blocks.
 
 
@@ -628,4 +628,4 @@ namespace  simit { namespace internal  {
 
 
 
-#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_H_INCLUDED
+#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED

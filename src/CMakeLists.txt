@@ -1,11 +1,44 @@
 # Parser and scanner
-add_subdirectory(parser)
+set(SIMIT_PARSER_SOURCE_DIR ${SIMIT_SOURCE_DIR}/parser)
+SET(PARSER_HEADER  ${SIMIT_PARSER_SOURCE_DIR}/parser.h)
+SET(PARSER         ${SIMIT_PARSER_SOURCE_DIR}/parser.cpp)
+SET(SCANNER_HEADER ${SIMIT_PARSER_SOURCE_DIR}/scanner.h)
+SET(SCANNER        ${SIMIT_PARSER_SOURCE_DIR}/scanner.cpp)
+
+IF($ENV{SIMIT_BUILD_PARSER})
+	FIND_PACKAGE(BISON REQUIRED)
+	SET(PARSER_INPUT ${SIMIT_PARSER_SOURCE_DIR}/parser.ypp)
+	IF(BISON_FOUND)
+		ADD_CUSTOM_COMMAND(
+			OUTPUT ${PARSER}
+			COMMAND ${BISON_EXECUTABLE}
+			        --defines=${PARSER_HEADER}
+			        --output=${PARSER}
+					  ${PARSER_INPUT}
+			MAIN_DEPENDENCY ${PARSER_INPUT}
+		COMMENT "Generating parser.cpp"
+		)
+	ENDIF()
+
+	FIND_PACKAGE(FLEX REQUIRED)
+	SET(SCANNER_INPUT ${SIMIT_PARSER_SOURCE_DIR}/scanner.flex)
+	IF(FLEX_FOUND)
+		ADD_CUSTOM_COMMAND(
+			OUTPUT ${SCANNER}
+			COMMAND ${FLEX_EXECUTABLE}
+			        --outfile=${SCANNER}
+					  ${SCANNER_INPUT}
+			MAIN_DEPENDENCY ${SCANNER_INPUT}
+			COMMENT "Generating scanner.cpp"
+		)
+	ENDIF()
+ENDIF()
 
 # Simit
-file(GLOB HEADERS *.h parser/scanner.h parser/parser.h)
-file(GLOB SOURCES *.cpp parser/*.cpp parser/scanner.flex parser/parser.ypp)
+file(GLOB HEADERS *.h ${SIMIT_PARSER_SOURCE_DIR}/parser.h ${SIMIT_PARSER_SOURCE_DIR}/scanner.h) 
+file(GLOB SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
 
-add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES})
+add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/parser.ypp ${SIMIT_PARSER_SOURCE_DIR}/scanner.flex)
 
 # LLVM
 if (DEFINED ENV{LLVM_CONFIG})
