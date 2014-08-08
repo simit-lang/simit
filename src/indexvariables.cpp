@@ -36,7 +36,7 @@ void ReductionIndexVariable::print(std::ostream &os) const {
 std::list<std::shared_ptr<IndexVariable>>
 IndexVariableFactory::makeFreeVariables(unsigned int n) {
   auto freeIndexVars = std::list<std::shared_ptr<IndexVariable>>();
-  for (int i=0; i<n; ++i) {
+  for (unsigned int i=0; i<n; ++i) {
     auto freeIndexVar = new FreeIndexVariable(makeName());
     freeIndexVars.push_back(std::shared_ptr<IndexVariable>(freeIndexVar));
   }
