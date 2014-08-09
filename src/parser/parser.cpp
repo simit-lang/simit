@@ -974,6 +974,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.IRNode) = NULL;
+    delete (yystack_[0].value.IRNodes);
   }
 
     break;
@@ -1032,6 +1033,7 @@ namespace  simit { namespace internal  {
 
     {
     free((void*)(yystack_[2].value.string));
+    delete (yystack_[1].value.IRNodes);
   }
 
     break;
@@ -1052,8 +1054,8 @@ namespace  simit { namespace internal  {
     {
     string ident((yystack_[4].value.string));
     free((void*)(yystack_[4].value.string));
-    auto results = unique_ptr<list<shared_ptr<Result>>>((yystack_[0].value.Results));
     auto arguments = unique_ptr<list<shared_ptr<Argument>>>((yystack_[2].value.Arguments));
+    auto results = unique_ptr<list<shared_ptr<Result>>>((yystack_[0].value.Results));
 
     (yylhs.value.Function) = new Function(ident, *arguments, *results);
 
@@ -1085,6 +1087,9 @@ namespace  simit { namespace internal  {
       auto result = new Argument(formal->name, formal->type);
       (yylhs.value.Arguments)->push_back(shared_ptr<Argument>(result));
     }
+    for (auto formal : *(yystack_[0].value.Formals)) {
+      delete formal;
+    }
     delete (yystack_[0].value.Formals);
  }
 
@@ -1094,6 +1099,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Results) = new list<shared_ptr<Result>>();
+    (yylhs.value.Results)->push_back(shared_ptr<Result>(new Result("asd", NULL)));
   }
 
     break;
@@ -1105,6 +1111,9 @@ namespace  simit { namespace internal  {
     for (auto formal : *(yystack_[1].value.Formals)) {
       auto result = new Result(formal->name, formal->type);
       (yylhs.value.Results)->push_back(shared_ptr<Result>(result));
+    }
+    for (auto formal : *(yystack_[1].value.Formals)) {
+      delete formal;
     }
     delete (yystack_[1].value.Formals);
   }
@@ -1203,6 +1212,25 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.IRNodes) = NULL;
+    delete (yystack_[3].value.Tensor);
+    delete (yystack_[2].value.IRNodes);
+  }
+
+    break;
+
+  case 41:
+
+    {
+    delete (yystack_[0].value.IRNodes);
+  }
+
+    break;
+
+  case 43:
+
+    {
+    delete (yystack_[1].value.Tensor);
+    delete (yystack_[0].value.IRNodes);
   }
 
     break;
@@ -1319,6 +1347,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1327,6 +1357,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1335,6 +1367,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1343,6 +1377,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1351,6 +1387,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1383,6 +1421,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[1].value.Tensor);
   }
 
     break;
@@ -1391,6 +1430,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1399,6 +1440,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1407,6 +1450,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1415,6 +1460,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1423,6 +1470,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1431,6 +1480,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1439,6 +1490,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1447,6 +1500,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[1].value.Tensor);
   }
 
     break;
@@ -1455,6 +1509,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1471,6 +1527,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1487,6 +1545,23 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+  }
+
+    break;
+
+  case 72:
+
+    {
+    delete (yystack_[2].value.Tensor);
+  }
+
+    break;
+
+  case 73:
+
+    {
+    delete (yystack_[3].value.Tensor);
+    delete (yystack_[1].value.TensorList);
   }
 
     break;
@@ -1516,6 +1591,8 @@ namespace  simit { namespace internal  {
   case 76:
 
     {
+    string function((yystack_[4].value.string));
+    string target((yystack_[2].value.string));
     free((void*)(yystack_[4].value.string));
     free((void*)(yystack_[2].value.string));
   }
@@ -1525,6 +1602,7 @@ namespace  simit { namespace internal  {
   case 78:
 
     {
+    string neighbor((yystack_[0].value.string));
     free((void*)(yystack_[0].value.string));
   }
 
@@ -1595,6 +1673,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Store) = NULL;
+    delete (yystack_[1].value.TensorList);
+    free((void*)(yystack_[3].value.string));
   }
 
     break;
@@ -1603,6 +1683,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Store) = NULL;
+    free((void*)(yystack_[2].value.string));
+    free((void*)(yystack_[0].value.string));
   }
 
     break;
@@ -1635,8 +1717,8 @@ namespace  simit { namespace internal  {
   case 97:
 
     {
-    (yylhs.value.TensorType) = new ScalarType(TensorType::ELEMENT);
     free((void*)(yystack_[0].value.string));
+    (yylhs.value.TensorType) = new ScalarType(TensorType::ELEMENT);
   }
 
     break;
@@ -2519,20 +2601,20 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   164,   164,   166,   170,   173,   176,   179,   182,   185,
-     191,   195,   201,   204,   211,   215,   217,   219,   221,   224,
-     234,   240,   249,   293,   296,   307,   310,   321,   329,   333,
-     340,   343,   352,   353,   354,   355,   356,   360,   387,   395,
-     399,   401,   403,   405,   409,   415,   450,   453,   468,   486,
-     489,   492,   495,   498,   501,   504,   507,   510,   529,   532,
-     535,   538,   541,   544,   547,   550,   553,   556,   559,   562,
-     565,   568,   573,   574,   578,   584,   593,   598,   600,   604,
-     606,   611,   613,   615,   618,   621,   624,   630,   631,   637,
-     644,   653,   661,   664,   670,   696,   699,   704,   710,   713,
-     724,   727,   733,   739,   743,   749,   752,   756,   761,   764,
-     833,   834,   836,   840,   841,   854,   861,   870,   877,   880,
-     884,   897,   901,   915,   919,   925,   932,   935,   939,   952,
-     956,   970,   974,   980,   985,   994,   999,  1001,  1004,  1005
+       0,   164,   164,   166,   170,   173,   176,   179,   182,   186,
+     192,   196,   202,   205,   212,   216,   218,   220,   222,   225,
+     235,   242,   251,   295,   298,   312,   316,   330,   338,   342,
+     349,   352,   361,   362,   363,   364,   365,   369,   396,   404,
+     410,   412,   416,   418,   425,   431,   466,   469,   484,   502,
+     505,   508,   511,   516,   521,   526,   531,   536,   555,   559,
+     564,   569,   574,   579,   584,   589,   594,   598,   603,   606,
+     611,   614,   619,   622,   629,   635,   644,   651,   653,   658,
+     660,   665,   667,   669,   672,   675,   678,   684,   685,   691,
+     698,   707,   715,   720,   728,   754,   757,   762,   768,   771,
+     782,   785,   791,   797,   801,   807,   810,   814,   819,   822,
+     891,   892,   894,   898,   899,   912,   919,   928,   935,   938,
+     942,   955,   959,   973,   977,   983,   990,   993,   997,  1010,
+    1014,  1028,  1032,  1038,  1043,  1052,  1057,  1059,  1062,  1063
   };
 
   // Print the state stack on the debug stream.

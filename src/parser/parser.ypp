@@ -181,6 +181,7 @@ program_element
   }
   | stmt {
     $$ = NULL;
+    delete $stmt;
   }
   | test {
     $$ = NULL;
@@ -233,6 +234,7 @@ field_decl
 procedure
   : PROC IDENT stmt_block BLOCKEND {
     free((void*)$IDENT);
+    delete $stmt_block;
   }
 
 %type <Function> function;
@@ -249,8 +251,8 @@ function_header
   : FUNC IDENT "(" arguments ")" results {
     string ident($IDENT);
     free((void*)$IDENT);
-    auto results = unique_ptr<list<shared_ptr<Result>>>($results);
     auto arguments = unique_ptr<list<shared_ptr<Argument>>>($arguments);
+    auto results = unique_ptr<list<shared_ptr<Result>>>($results);
 
     $$ = new Function(ident, *arguments, *results);
 
@@ -299,6 +301,9 @@ arguments
       auto result = new Argument(formal->name, formal->type);
       $$->push_back(shared_ptr<Argument>(result));
     }
+    for (auto formal : *$formal_list) {
+      delete formal;
+    }
     delete $formal_list;
  }
 
@@ -306,12 +311,16 @@ arguments
 results
   : /* empty */ {
     $$ = new list<shared_ptr<Result>>();
+    $$->push_back(shared_ptr<Result>(new Result("asd", NULL)));
   }
   | RARROW "(" formal_list ")" {
     $$ = new list<shared_ptr<Result>>();
     for (auto formal : *$formal_list) {
       auto result = new Result(formal->name, formal->type);
       $$->push_back(shared_ptr<Result>(result));
+    }
+    for (auto formal : *$formal_list) {
+      delete formal;
     }
     delete $formal_list;
   }
@@ -394,15 +403,22 @@ const_stmt
 if_stmt
   : "if" expr stmt_block else_clauses BLOCKEND {
     $$ = NULL;
+    delete $2;
+    delete $3;
   }
 
 else_clauses
   : /* empty */
-  | elif_clauses "else" stmt_block
+  | elif_clauses "else" stmt_block {
+    delete $3;
+  }
 
 elif_clauses
   : /* empty */
-  | elif_clauses "elif" expr stmt_block
+  | elif_clauses "elif" expr stmt_block {
+    delete $3;
+    delete $4;
+  }
 
 %type<IRNodes> return_stmt;
 return_stmt
@@ -494,18 +510,28 @@ expr
   }
   | expr "\\" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "+" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "-" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "*" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "/" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | "-" expr %prec NEG {
     if ($2 == NULL) {
@@ -528,39 +554,59 @@ expr
   }
   | expr "'" {
     $$ = NULL;
+    delete $1;
   }
   | expr "^" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "==" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "!=" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "<"  expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr ">"  expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "<=" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr ">=" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | "(" expr ")" {
     $$ = NULL;
+    delete $2;
   }
   | expr ":" expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | call_expr {
     $$ = NULL;
   }
   | expr "." expr {
     $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | index_expr {
     $$ = NULL;
@@ -570,8 +616,13 @@ expr
   }
 
 call_expr
-  : expr "(" ")"
-  | expr "(" expr_list ")"
+  : expr "(" ")" {
+    delete $1;
+  }
+  | expr "(" expr_list ")" {
+    delete $1;
+    delete $3;
+  }
 
 %type <TensorList> expr_list;
 expr_list
@@ -590,14 +641,17 @@ expr_list
 
 // Map expressions
 map_expr
-  : "map" IDENT[target] "to" IDENT[neighbor] with reduce {
-    free((void*)$target);
-    free((void*)$neighbor);
+  : "map" IDENT "to" IDENT with reduce {
+    string function($2);
+    string target($4);
+    free((void*)$2);
+    free((void*)$4);
   }
 
 with
   : /* empty */
   | "with" IDENT {
+    string neighbor($IDENT);
     free((void*)$IDENT);
   }
 
@@ -621,9 +675,9 @@ reduction_index
   | reduction_op "{" IDENT "}" {
     free((void*)$IDENT);
   }
-  | IDENT[rfunc] "{" IDENT[rval] "}" {
-    free((void*)$rfunc);
-    free((void*)$rval);
+  | IDENT "{" IDENT "}" {
+    free((void*)$1);
+    free((void*)$3);
   }
 
 reduction_op
@@ -660,9 +714,13 @@ lhs_expr
   }
   | IDENT "(" expr_list ")" {
     $$ = NULL;
+    delete $expr_list;
+    free((void*)$IDENT);
   }
   | IDENT "." IDENT {
     $$ = NULL;
+    free((void*)$1);
+    free((void*)$3);
   }
 
 // Variables
@@ -702,8 +760,8 @@ type
 
 element_type
   : IDENT {
-    $$ = new ScalarType(TensorType::ELEMENT);
     free((void*)$IDENT);
+    $$ = new ScalarType(TensorType::ELEMENT);
   }
 
 tensor_type
