@@ -33,7 +33,7 @@ public:
   }
 };
 
-class simfile : public TestWithParam<ProgramTestParam> {};
+class input : public TestWithParam<ProgramTestParam> {};
 
 std::vector<std::string> split(const string &str, const string &delim,
                                bool keepDelim = false) {
@@ -159,7 +159,7 @@ vector<ProgramTestParam> readTestsFromDir(const std::string &dirpath) {
   return testParams;
 }
 
-TEST_P(simfile, check) {
+TEST_P(input, check) {
   ASSERT_FALSE(GetParam().failedIO) << "failed to read file " + GetParam().path;
   Program program;
   if (program.loadString(GetParam().source) != 0) {
@@ -182,13 +182,13 @@ TEST_P(simfile, check) {
 }
 
 #define TEST_SIMTEST_FILE(path, name)                                         \
-  INSTANTIATE_TEST_CASE_P(name, simfile,                                      \
+  INSTANTIATE_TEST_CASE_P(name, input,                                        \
                           ValuesIn(readTestsFromFile(path,                    \
                                                      string(#name)+".sim")));
 
 
 /* Examples */
-INSTANTIATE_TEST_CASE_P(examples, simfile,
+INSTANTIATE_TEST_CASE_P(examples, input,
                         testing::ValuesIn(readTestsFromDir(EXAMPLES_DIR)));
 
 

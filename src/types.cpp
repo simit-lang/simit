@@ -5,9 +5,102 @@
 #include <iostream>
 
 #include "util.h"
+#include "macros.h"
 
 using namespace simit::internal;
 using namespace std;
+
+/* class IndexSet */
+int IndexSet::getSize() const {
+  int size = 0;
+  switch (type) {
+    case RANGE:
+      size = rangeSize;
+      break;
+    case SET:
+      NOT_SUPPORTED_YET;
+      break;
+    case VARIABLE:
+      NOT_SUPPORTED_YET;
+      break;
+    default:
+      assert(false);
+  }
+  return size;
+}
+
+std::ostream &IndexSet::print(std::ostream &os) const {
+  switch (type) {
+    case RANGE:
+      os << "[0-" << to_string(rangeSize-1) << "]";
+      break;
+    case SET:
+      NOT_SUPPORTED_YET;
+      break;
+    case VARIABLE:
+      os << "*";
+      break;
+    default:
+      assert(false);
+      break;
+  }
+  return os;
+}
+
+bool simit::internal::operator==(const IndexSet &left, const IndexSet &right) {
+   if (left.type != right.type) {
+    return false;
+  }
+
+  switch (left.type) {
+    case IndexSet::RANGE:
+      if (left.rangeSize != right.rangeSize) {
+        return false;
+      }
+      break;
+    case IndexSet::SET:
+      NOT_SUPPORTED_YET;
+      break;
+    case IndexSet::VARIABLE:
+      NOT_SUPPORTED_YET;
+      break;
+    default:
+      assert(false);
+      break;
+  }
+
+  return true;
+}
+
+
+/* class IndexSetProduct */
+int IndexSetProduct::getSize() const {
+  int size = 1;
+  for (auto &indexSet : getIndexSets()) {
+    size *= indexSet.getSize();
+  }
+  return size;
+}
+
+std::ostream &IndexSetProduct::print(std::ostream &os) const {
+  return os << util::join(getIndexSets(), " x ");
+}
+
+bool simit::internal::operator==(const IndexSetProduct &left,
+                                 const IndexSetProduct &right) {
+  if (left.getIndexSets().size() != right.getIndexSets().size()) {
+    return false;
+  }
+  auto leftIter = left.getIndexSets().begin();
+  auto rightIter = right.getIndexSets().begin();
+  auto leftEnd = left.getIndexSets().end();
+  for (; leftIter != leftEnd; ++leftIter, ++rightIter) {
+    if (*leftIter != *rightIter) {
+      return false;
+    }
+  }
+  return true;
+}
 
 
 /* TensorType */
