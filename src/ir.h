@@ -40,19 +40,19 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node);
   * both scalars and elements are considered tensors of order 0. */
 class TensorNode : public IRNode {
  public:
-  TensorNode(const TensorType *type) : TensorNode("", type) {}
-  TensorNode(const std::string &name, const TensorType *type)
+  TensorNode(const Type *type) : TensorNode("", type) {}
+  TensorNode(const std::string &name, const Type *type)
       : IRNode(name), type(type) {}
   virtual ~TensorNode();
 
   virtual void accept(IRVisitor *visitor) = 0;
 
-  const TensorType *getType() const { return type; }
+  const Type *getType() const { return type; }
   unsigned int getOrder() const { return type->getOrder(); }
   virtual void print(std::ostream &os) const = 0;
 
  protected:
-  const TensorType *type;
+  const Type *type;
 };
 
 
@@ -60,10 +60,10 @@ class TensorNode : public IRNode {
   * that it is only possible to define dense tensor literals.  */
 class LiteralTensor : public TensorNode {
  public:
-  LiteralTensor(TensorType *type, void *data);
+  LiteralTensor(Type *type, void *data);
   ~LiteralTensor();
 
-  void cast(TensorType *type);
+  void cast(Type *type);
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   void print(std::ostream &os) const;
@@ -117,7 +117,7 @@ class IndexExpr : public TensorNode {
 /** Instruction that stores a value to a tensor or an object. */
 class Store : public TensorNode {
  public:
-  Store(const std::string &name, const TensorType *type)
+  Store(const std::string &name, const Type *type)
       : TensorNode(name, type) {}
 };
 
@@ -126,20 +126,19 @@ class Store : public TensorNode {
 // TODO: Remove this class (move it into parser and don't inherit from tensor)
 class VariableStore : public Store {
  public:
-  VariableStore(const std::string &varName, const TensorType *type)
+  VariableStore(const std::string &varName, const Type *type)
       : Store(varName, type) {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   void print(std::ostream &os) const;
-
 };
 
 
 /** A formal argument to a function. */
 class Argument : public TensorNode {
  public:
-  Argument(const std::string &name, const TensorType *type)
+  Argument(const std::string &name, const Type *type)
       : TensorNode(name, type) {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
@@ -151,7 +150,7 @@ class Argument : public TensorNode {
 /** A formal result of a function. */
 class Result : public TensorNode {
  public:
-  Result(const std::string &name, const TensorType *type)
+  Result(const std::string &name, const Type *type)
       : TensorNode(name, type) {}
 
   void setValue(const std::shared_ptr<TensorNode> &value) {

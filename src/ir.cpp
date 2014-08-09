@@ -28,14 +28,14 @@ TensorNode::~TensorNode() {
 }
 
 void TensorNode::print(std::ostream &os) const {
-  os << getName() << " : " << type->toString();
+  os << getName() << " : " << *type;
 }
 
 
 /* class LiteralTensor */
-LiteralTensor::LiteralTensor(TensorType *type, void *data)
+LiteralTensor::LiteralTensor(Type *type, void *data)
     : TensorNode(type) {
-  auto componentSize = TensorType::componentSize(type->getComponentType());
+  auto componentSize = Type::componentSize(type->getComponentType());
   auto dataSize = type->getSize() * componentSize;
   this->data = malloc(dataSize);
   memcpy(this->data, data, dataSize);
@@ -45,7 +45,7 @@ LiteralTensor::~LiteralTensor() {
   free(data);
 }
 
-void LiteralTensor::cast(TensorType *type) {
+void LiteralTensor::cast(Type *type) {
   assert(this->type->getComponentType() == type->getComponentType() &&
          this->type->getSize() == type->getSize());
   delete this->type;
@@ -55,35 +55,35 @@ void LiteralTensor::cast(TensorType *type) {
 void LiteralTensor::print(std::ostream &os) const {
   // TODO: Add nicer value printing that prints matrices and tensors properly
   switch (type->getComponentType()) {
-    case TensorType::INT: {
+    case Type::INT: {
       int *idata = (int*)data;
       if (type->getSize() == 1) {
         os << idata[0];
       }
       else {
         os << "[" << idata[0];
-        for (unsigned int i=0; i<type->getSize(); ++i) {
+        for (int i=0; i<type->getSize(); ++i) {
           os << ", " << idata[i];
         }
         os << "]";
       }
       break;
     }
-    case TensorType::FLOAT: {
+    case Type::FLOAT: {
       double *fdata = (double*)data;
       if (type->getSize() == 1) {
         os << fdata[0];
       }
       else {
         os << "[" << fdata[0];
-        for (unsigned int i=0; i<type->getSize(); ++i) {
+        for (int i=0; i<type->getSize(); ++i) {
           os << ", " + to_string(fdata[i]);
         }
         os << "]";
       }
       break;
     }
-    case TensorType::ELEMENT:
+    case Type::ELEMENT:
       assert(false && "Unsupported (TODO)");
       break;
   }
@@ -91,7 +91,7 @@ void LiteralTensor::print(std::ostream &os) const {
 
 
 /* class IndexExpr */
-static TensorType *
+static Type *
 computeIndexExprType(const std::list<IndexExpr::IndexVarPtr> &indexVars,
                      const std::list<IndexExpr::IndexedTensor> &operands) {
   return NULL;

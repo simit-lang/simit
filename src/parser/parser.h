@@ -74,8 +74,8 @@
   namespace {
   struct FormalData {
     std::string name;
-    simit::internal::TensorType *type;
-    FormalData(const std::string &name, simit::internal::TensorType *type)
+    simit::internal::Type *type;
+    FormalData(const std::string &name, simit::internal::Type *type)
         : name(name), type(type){}
   };
   }
@@ -232,12 +232,12 @@ namespace  simit { namespace internal  {
   std::list<std::shared_ptr<simit::internal::Store>>      *StoreList;
 
 
-  TensorType                *TensorType;
-  TensorType::ComponentType  ComponentType;
-  std::vector<Shape*>       *Shapes;
-  Shape                     *Shape;
-  std::vector<Dimension*>   *Dimensions;
-  Dimension                 *Dimension;
+  Type                         *TensorType;
+  Type::ComponentType           ComponentType;
+
+  std::vector<IndexSetProduct> *IndexSetProducts;
+  std::vector<IndexSet>        *IndexSets;
+  IndexSet                     *IndexSet;
 
 
   std::shared_ptr<LiteralTensor> *LiteralTensor;
@@ -605,8 +605,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 422,     ///< Last index in yytable_.
-      yynnts_ = 62,  ///< Number of nonterminal symbols.
+      yylast_ = 426,     ///< Last index in yytable_.
+      yynnts_ = 61,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

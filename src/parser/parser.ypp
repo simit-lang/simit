@@ -45,6 +45,12 @@
 
   #undef yylex
   #define yylex scanner->lex
+
+  inline std::string convertAndFree(const char *str) {
+    std::string result = std::string(str);
+    free((void*)str);
+    return result;
+  }
 }
 
 %code requires {
@@ -270,8 +276,8 @@ function_header
   namespace {
   struct FormalData {
     std::string name;
-    simit::internal::TensorType *type;
-    FormalData(const std::string &name, simit::internal::TensorType *type)
+    simit::internal::Type *type;
+    FormalData(const std::string &name, simit::internal::Type *type)
         : name(name), type(type){}
   };
   }
@@ -367,7 +373,7 @@ stmt
 %type<IRNodes> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
-    auto tensorType = unique_ptr<TensorType>($tensor_type);
+    auto tensorType = unique_ptr<Type>($tensor_type);
 
     auto tensorLiteral = shared_ptr<LiteralTensor>(*$tensor_literal);
     delete $tensor_literal;
@@ -385,7 +391,10 @@ const_stmt
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
     if (*$tensor_type != *(tensorLiteral->getType())) {
-      REPORT_ERROR("value and literal types do not match", @5);
+      stringstream ss;
+      ss << "attempting to assign to a variable of type " << *$tensor_type
+         << " a literal of type " << *(tensorLiteral->getType());
+      REPORT_ERROR(ss.str(), @5);
     }
 
     ctx->symtable.addNode(tensorLiteral);
@@ -723,6 +732,7 @@ lhs_expr
     free((void*)$3);
   }
 
+
 // Variables
 var_decl
   : IDENT ":" type {
@@ -733,22 +743,24 @@ var_decl
 
 // Types
 %union {
-  TensorType                *TensorType;
-  TensorType::ComponentType  ComponentType;
-  std::vector<Shape*>       *Shapes;
-  Shape                     *Shape;
-  std::vector<Dimension*>   *Dimensions;
-  Dimension                 *Dimension;
+  Type                         *TensorType;
+  Type::ComponentType           ComponentType;
+
+  std::vector<IndexSetProduct> *IndexSetProducts;
+  std::vector<IndexSet>        *IndexSets;
+  IndexSet                     *IndexSet;
 };
 
-%type <TensorType>     type;
-%type <TensorType>     tensor_type;
-%type <Shapes>         shapes;
-%type <Shape>          shape;
-%type <Dimensions>     dimensions;
-%type <Dimension>      dimension;
-%type <ComponentType>  component_type;
-%type <TensorType>     element_type;
+%type <TensorType>       type;
+%type <TensorType>       tensor_type;
+
+%type <IndexSetProducts> nested_dimensions;
+
+%type <IndexSets>        dimensions;
+%type <IndexSet>         dimension;
+
+%type <ComponentType>    component_type;
+%type <TensorType>       element_type;
 
 type
   : element_type {
@@ -761,66 +773,89 @@ type
 element_type
   : IDENT {
     free((void*)$IDENT);
-    $$ = new ScalarType(TensorType::ELEMENT);
+    $$ = new Type(Type::ELEMENT);
   }
 
 tensor_type
   : component_type {
-    $$ = new ScalarType($component_type);
+    $$ = new Type($component_type);
   }
-  | TENSOR shapes "(" component_type ")" {
-    auto shapes = unique_ptr<vector<Shape*>>($shapes);
-
-    $$ = new ScalarType($component_type);
-    typedef vector<Shape*>::reverse_iterator shapes_rit_t;
-    for (shapes_rit_t rit = $shapes->rbegin(); rit != $shapes->rend(); ++rit) {
-      $$ = new NDTensorType(*rit, $$);
-    }
+  | TENSOR nested_dimensions "(" component_type ")" {
+    $$ = new Type($component_type, *$nested_dimensions);
+    delete $nested_dimensions;
   }
 
-shapes
+nested_dimensions
   : /* empty */ {
-    $$ = new vector<Shape*>();
+    $$ = new std::vector<IndexSetProduct>();
   }
-  | shapes shape {
+  | nested_dimensions "[" dimensions "]" {
     $$ = $1;
-    $$->push_back($shape);
-  }
 
-shape
-  : "[" dimensions "]" {
-    $$ = new Shape(*$dimensions);
-    delete $dimensions;
+    auto parentDims = $$;
+    auto childDims = unique_ptr<std::vector<IndexSet>>($dimensions);
+
+    // If there are no previous dimensions then create IndexSetProducts
+    if (parentDims->size() == 0) {
+      for (auto &dim : *childDims) {
+        UNUSED(dim);
+        parentDims->push_back(IndexSetProduct());
+      }
+    }
+
+    // Handle case where there are more child than parent dimensions
+    if (childDims->size() > parentDims->size()) {
+      for (size_t i=0; i < childDims->size() - parentDims->size(); ++i) {
+        size_t numNestings = (*parentDims)[0].getIndexSets().size();
+        std::vector<IndexSet> indexSets(numNestings, IndexSet(1));
+        parentDims->push_back(IndexSetProduct(indexSets));
+      }
+    }
+
+    // Handle case where there are more parent than child dimensions
+    if (parentDims->size() > childDims->size()) {
+      for (size_t i=0; i < parentDims->size() - childDims->size(); ++i) {
+        childDims->push_back(IndexSet(1));
+      }
+    }
+
+    // Multiply each dimension with the corresponding dimension in the shape.
+    assert(childDims->size() == parentDims->size());
+    for (size_t i=0; i<$$->size(); ++i) {
+      (*parentDims)[i] = (*parentDims)[i] * (*childDims)[i];
+    }
   }
 
 dimensions
   : dimension {
-    $$ = new vector<Dimension*>();
-    $$->push_back($dimension);
+    $$ = new std::vector<IndexSet>();
+    $$->push_back(*$dimension);
+    delete $dimension;
   }
   | dimensions "," dimension {
     $$ = $1;
-    $$->push_back($dimension);
+    $$->push_back(*$dimension);
+    delete $dimension;
   }
 
 dimension
   : INT_LITERAL {
-    $$ = new Dimension($INT_LITERAL);
+    $$ = new IndexSet($INT_LITERAL);
   }
   | IDENT {
-    free((void*)$IDENT);
-    $$ = new Dimension(123456789);  // TODO: This needs to be a set dimension
+    string ident = convertAndFree($IDENT);
+    $$ = new IndexSet(123456789);  // TODO: This needs to be a set dimension
   }
   | "*" {
-    $$ = new Dimension();
+    $$ = new IndexSet();
   }
 
 component_type
   : INT {
-    $$ = ScalarType::INT;
+    $$ = Type::INT;
   }
   | FLOAT {
-    $$ = ScalarType::FLOAT;
+    $$ = Type::FLOAT;
   }
 
 
@@ -898,28 +933,20 @@ tensor_literal
   : dense_tensor_literal
   | scalar_literal
 
-%code {
-  Shape *dimSizesToShape(const vector<unsigned int> &dimSizes) {
-    auto dims = std::vector<Dimension*>();
-    for (auto rit=dimSizes.rbegin(); rit!=dimSizes.rend(); ++rit) {
-      dims.push_back(new Dimension(*rit));
-    }
-    return new Shape(dims);
-  }
-};
-
 dense_tensor_literal
   : "[" float_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<double>>($2);
-    Shape *shape = dimSizesToShape(values->dimSizes);
-    auto type = new NDTensorType(shape, new ScalarType(ScalarType::FLOAT));
+    auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
+                                             values->dimSizes.rend());
+    auto type = new Type(Type::FLOAT, isps);
     auto literal = new LiteralTensor(type, values->values.data());
     $$ = new shared_ptr<LiteralTensor>(literal);
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
-    Shape *shape = dimSizesToShape(values->dimSizes);
-    auto type = new NDTensorType(shape, new ScalarType(ScalarType::INT));
+    auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
+                                             values->dimSizes.rend());
+    auto type = new Type(Type::INT, isps);
     auto literal = new LiteralTensor(type, values->values.data());
     $$ = new shared_ptr<LiteralTensor>(literal);
   }
@@ -1036,12 +1063,12 @@ int_dense_vector_literal
 
 scalar_literal
   : INT_LITERAL {
-    auto scalarType = new ScalarType(ScalarType::INT);
+    auto scalarType = new Type(Type::INT);
     auto literal = new LiteralTensor(scalarType, &$1);
     $$ = new shared_ptr<LiteralTensor>(literal);
   }
   | FLOAT_LITERAL {
-    auto scalarType = new ScalarType(ScalarType::FLOAT);
+    auto scalarType = new Type(Type::FLOAT);
     auto literal = new LiteralTensor(scalarType, &$1);
     $$ = new shared_ptr<LiteralTensor>(literal);
   }
