@@ -32,7 +32,7 @@ int IndexSet::getSize() const {
 std::ostream &IndexSet::print(std::ostream &os) const {
   switch (type) {
     case RANGE:
-      os << "[0-" << to_string(rangeSize-1) << "]";
+      os << to_string(rangeSize-1);
       break;
     case SET:
       NOT_SUPPORTED_YET;
@@ -101,6 +101,72 @@ bool simit::internal::operator==(const IndexSetProduct &left,
   }
   return true;
 }
+
+
+/* class Type */
+std::size_t Type::componentSize(ComponentType ct) {
+  switch (ct) {
+    case TensorType::INT:
+      return sizeof(int);
+    case TensorType::FLOAT:
+      return sizeof(double);
+    case TensorType::ELEMENT:
+      assert(false && "currently unsupported");  // TODO
+      return INT_MAX;
+  }
+  assert(false);
+  return 0;
+}
+
+std::string Type::componentTypeString(ComponentType ct) {
+  switch (ct) {
+    case TensorType::INT:
+      return "int";
+    case TensorType::FLOAT:
+      return "float";
+    case TensorType::ELEMENT:
+      return "element";
+  }
+  assert(false);
+  return "";
+}
+
+int Type::getSize() const {
+  int size = 1;
+  for (auto &dimension : getDimensions()) {
+    size *= dimension.getSize();
+  }
+  return size;
+}
+
+std::ostream &Type::print(std::ostream &os) const {
+  os << "[" << util::join(getDimensions(), "][") << "]";
+  os << "(" << componentTypeString(getComponentType()) << ")";
+  return os;
+}
+
+bool simit::internal::operator==(const Type& left, const Type& right) {
+  if (left.getComponentType() != right.getComponentType() ) {
+    return false;
+  }
+  if (left.getOrder() != right.getOrder()) {
+    return false;
+  }
+
+  auto leftIter = left.getDimensions().begin();
+  auto rightIter = right.getDimensions().begin();
+  auto leftEnd = left.getDimensions().end();
+  for (; leftIter != leftEnd; ++leftIter, ++rightIter) {
+    if (*leftIter != *rightIter) {
+      return false;
+    }
+  }
+
+  return true;
+};
+
+
+
 
 
 /* TensorType */

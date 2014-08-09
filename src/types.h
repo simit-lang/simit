@@ -50,6 +50,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &obj) {
 }
 
 
+/** The set product of one or more sets. */
 class IndexSetProduct {
  public:
   enum Type {RANGE, SET, VARIABLE};
@@ -76,6 +77,54 @@ static inline
 std::ostream &operator<<(std::ostream &os, const IndexSetProduct &obj) {
   return obj.print(os);
 }
+
+
+/** The type of a tensor (the type of its components and its shape). */
+class Type {
+ public:
+  enum ComponentType {INT, FLOAT, ELEMENT};
+  static std::size_t componentSize(ComponentType ct);
+  static std::string componentTypeString(ComponentType ct);
+
+  Type(ComponentType componentType,
+       const std::vector<IndexSetProduct> &dimensions)
+      : componentType(componentType), dimensions(dimensions) {}
+
+  /** Get the order of the tensor (the number of dimensions). */
+  int getOrder() const {
+    return dimensions.size();
+  }
+
+  /** Get the number of components in the tensor. */
+  int getSize() const;
+
+  ComponentType getComponentType() const {
+    return componentType;
+  }
+
+  const std::vector<IndexSetProduct> &getDimensions() const {
+    return dimensions;
+  }
+
+  std::ostream &print(std::ostream &os) const;
+
+ private:
+  ComponentType componentType;
+  std::vector<IndexSetProduct> dimensions;
+};
+
+bool operator==(const Type& left, const Type& right);
+
+static inline
+bool operator!=(const Type& left, const Type& right) {
+  return !(left == right);
+}
+
+static inline
+std::ostream &operator<<(std::ostream &os, const Type &obj) {
+  return obj.print(os);
+}
+
 
 
 class Shape;
