@@ -16,6 +16,20 @@ std::string toString(const T &val) {
   return sstream.str();
 }
 
+// Some << overloadings to let the join functions print out pointer collections.
+template <typename T>
+std::ostream& operator<<(std::ostream &out, const T *dim) {
+  return out << *dim;
+}
+template <typename T>
+std::ostream& operator<<(std::ostream &out, const std::shared_ptr<T> dim) {
+  return out << *dim;
+}
+template <typename T>
+std::ostream& operator<<(std::ostream &out, const std::unique_ptr<T> dim) {
+  return out << *dim;
+}
+
 /** Join the elements between begin and end in a sep-separated string. */
 template <typename Iterator>
 std::string join(Iterator begin, Iterator end, const std::string &sep) {
@@ -39,20 +53,6 @@ std::string join(const Collection &collection, const std::string &sep) {
 template <typename Collection>
 std::string rjoin(const Collection &collection, const std::string &sep) {
   return join(collection.rbegin(), collection.rend(), sep);
-}
-
-// Some << overloadings to let the join functions print out pointer collections.
-template <typename T>
-std::ostream& operator<<(std::ostream &out, const T *dim) {
-  return out << *dim;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream &out, const std::shared_ptr<T> dim) {
-  return out << *dim;
-}
-template <typename T>
-std::ostream& operator<<(std::ostream &out, const std::unique_ptr<T> dim) {
-  return out << *dim;
 }
 
 /** Indent each line in str by num spaces. */
