@@ -3,7 +3,7 @@ func neg(A : Tensor[3,3](float)) -> (C : Tensor[3,3](float))
   C = -A;
 end
 
-%% transpose
+%%% transpose
 func transpose(A : Tensor[3,3](float)) -> (C : Tensor[3,3](float))
   C = A';
 end
