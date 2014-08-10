@@ -7,8 +7,10 @@
 #include "util.h"
 #include "macros.h"
 
-using namespace simit::internal;
 using namespace std;
+
+namespace simit {
+namespace internal {
 
 /* class IndexSet */
 int IndexSet::getSize() const {
@@ -47,14 +49,13 @@ std::ostream &IndexSet::print(std::ostream &os) const {
   return os;
 }
 
-bool simit::internal::operator==(const IndexSet &left, const IndexSet &right) {
-   if (left.type != right.type) {
+bool operator==(const IndexSet &l, const IndexSet &r) {
+   if (l.type != r.type) {
     return false;
   }
-
-  switch (left.type) {
+  switch (l.type) {
     case IndexSet::RANGE:
-      if (left.rangeSize != right.rangeSize) {
+      if (l.rangeSize != r.rangeSize) {
         return false;
       }
       break;
@@ -68,8 +69,15 @@ bool simit::internal::operator==(const IndexSet &left, const IndexSet &right) {
       assert(false);
       break;
   }
-
   return true;
+}
+
+bool operator!=(const IndexSet &l, const IndexSet &r) {
+  return !(l == r);
+}
+
+std::ostream &operator<<(std::ostream &os, const IndexSet &o) {
+  return o.print(os);
 }
 
 
@@ -86,20 +94,33 @@ std::ostream &IndexSetProduct::print(std::ostream &os) const {
   return os << util::join(getIndexSets(), " x ");
 }
 
-bool simit::internal::operator==(const IndexSetProduct &left,
-                                 const IndexSetProduct &right) {
-  if (left.getIndexSets().size() != right.getIndexSets().size()) {
+bool operator==(const IndexSetProduct &l,
+                                 const IndexSetProduct &r) {
+  if (l.getIndexSets().size() != r.getIndexSets().size()) {
     return false;
   }
-  auto leftIter = left.getIndexSets().begin();
-  auto rightIter = right.getIndexSets().begin();
-  auto leftEnd = left.getIndexSets().end();
-  for (; leftIter != leftEnd; ++leftIter, ++rightIter) {
-    if (*leftIter != *rightIter) {
+  auto li = l.getIndexSets().begin();
+  auto ri = r.getIndexSets().begin();
+  for (; li != l.getIndexSets().end(); ++li, ++ri) {
+    if (*li != *ri) {
       return false;
     }
   }
   return true;
+}
+
+bool operator!=(const IndexSetProduct &l, const IndexSetProduct &r) {
+  return !(l == r);
+}
+
+IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r) {
+  std::vector<IndexSet> is = l.getIndexSets();
+  is.insert(is.end(), r.getIndexSets().begin(), r.getIndexSets().end());
+  return IndexSetProduct(is);
+}
+
+std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o) {
+  return o.print(os);
 }
 
 
@@ -140,28 +161,42 @@ int Type::getSize() const {
 }
 
 std::ostream &Type::print(std::ostream &os) const {
-  os << "Tensor";
-  os << "[" << util::join(getDimensions(), "][") << "]";
-  os << "(" << componentTypeString(getComponentType()) << ")";
+  if (getOrder() == 0) {
+    os << componentTypeString(getComponentType());
+  }
+  else {
+    os << "Tensor";
+    os << "[" << util::join(getDimensions(), "][") << "]";
+    os << "(" << componentTypeString(getComponentType()) << ")";
+  }
   return os;
 }
 
-bool simit::internal::operator==(const Type& left, const Type& right) {
-  if (left.getComponentType() != right.getComponentType() ) {
+bool operator==(const Type& l, const Type& r) {
+  if (l.getComponentType() != r.getComponentType() ) {
     return false;
   }
-  if (left.getOrder() != right.getOrder()) {
+  if (l.getOrder() != r.getOrder()) {
     return false;
   }
 
-  auto leftIter = left.getDimensions().begin();
-  auto rightIter = right.getDimensions().begin();
-  auto leftEnd = left.getDimensions().end();
-  for (; leftIter != leftEnd; ++leftIter, ++rightIter) {
-    if (*leftIter != *rightIter) {
+  auto li = l.getDimensions().begin();
+  auto ri = r.getDimensions().begin();
+  for (; li != l.getDimensions().end(); ++li, ++ri) {
+    if (*li != *ri) {
       return false;
     }
   }
 
   return true;
 };
+
+bool operator!=(const Type& l, const Type& r) {
+  return !(l == r);
+}
+
+std::ostream &operator<<(std::ostream &os, const Type &o) {
+  return o.print(os);
+}
+
+}} // namespace simit::internal
