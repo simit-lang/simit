@@ -29,18 +29,18 @@ LLVMCodeGen::~LLVMCodeGen() {
 
 }
 
-static llvm::Type *toLLVMType(const simit::internal::Type *type) {
+static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   llvm::Type *llvmType = NULL;
 
   if (type->getOrder() == 0) {
     switch (type->getComponentType()) {
-      case Type::INT:
+      case TensorType::INT:
         llvmType = LLVM_INTPTR;
         break;
-      case Type::FLOAT:
+      case TensorType::FLOAT:
         llvmType = LLVM_DOUBLEPTR;
         break;
-      case Type::ELEMENT:
+      case TensorType::ELEMENT:
         return NULL;  // TODO: not supported yet
         break;
       default:

@@ -74,7 +74,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
 
 
 /** The type of a tensor (the type of its components and its shape). */
-class Type {
+class TensorType {
  public:
   /** The types of supported tensor components. */
   enum ComponentType {INT, FLOAT, ELEMENT};
@@ -82,8 +82,8 @@ class Type {
   static std::size_t componentSize(ComponentType ct);
   static std::string componentTypeString(ComponentType ct);
 
-  Type(ComponentType componentType) : componentType(componentType) {}
-  Type(ComponentType componentType,
+  TensorType(ComponentType componentType) : componentType(componentType) {}
+  TensorType(ComponentType componentType,
        const std::vector<IndexSetProduct> &dimensions)
       : componentType(componentType), dimensions(dimensions) {}
 
@@ -106,9 +106,9 @@ class Type {
   std::vector<IndexSetProduct> dimensions;
 };
 
-bool operator==(const Type& l, const Type& r);
-bool operator!=(const Type& l, const Type& r);
-std::ostream &operator<<(std::ostream &os, const Type &o);
+bool operator==(const TensorType& l, const TensorType& r);
+bool operator!=(const TensorType& l, const TensorType& r);
+std::ostream &operator<<(std::ostream &os, const TensorType &o);
 
 }} // namespace simit::internal
 

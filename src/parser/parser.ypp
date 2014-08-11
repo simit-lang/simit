@@ -275,8 +275,8 @@ function_header
   namespace {
   struct FormalData {
     std::string name;
-    simit::internal::Type *type;
-    FormalData(const std::string &name, simit::internal::Type *type)
+    simit::internal::TensorType *type;
+    FormalData(const std::string &name, simit::internal::TensorType *type)
         : name(name), type(type){}
   };
   }
@@ -372,7 +372,7 @@ stmt
 %type<IRNodes> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
-    auto tensorType = unique_ptr<Type>($tensor_type);
+    auto tensorType = unique_ptr<TensorType>($tensor_type);
 
     auto tensorLiteral = shared_ptr<LiteralTensor>(*$tensor_literal);
     delete $tensor_literal;
@@ -747,8 +747,8 @@ var_decl
 
 // Types
 %union {
-  Type                         *TensorType;
-  Type::ComponentType           ComponentType;
+  TensorType                         *TensorType;
+  TensorType::ComponentType           ComponentType;
 
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;
@@ -777,15 +777,15 @@ type
 element_type
   : IDENT {
     free((void*)$IDENT);
-    $$ = new Type(Type::ELEMENT);
+    $$ = new TensorType(TensorType::ELEMENT);
   }
 
 tensor_type
   : component_type {
-    $$ = new Type($component_type);
+    $$ = new TensorType($component_type);
   }
   | TENSOR nested_dimensions "(" component_type ")" {
-    $$ = new Type($component_type, *$nested_dimensions);
+    $$ = new TensorType($component_type, *$nested_dimensions);
     delete $nested_dimensions;
   }
 
@@ -856,10 +856,10 @@ dimension
 
 component_type
   : INT {
-    $$ = Type::INT;
+    $$ = TensorType::INT;
   }
   | FLOAT {
-    $$ = Type::FLOAT;
+    $$ = TensorType::FLOAT;
   }
 
 
@@ -942,7 +942,7 @@ dense_tensor_literal
     auto values = unique_ptr<TensorValues<double>>($2);
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
-    auto type = new Type(Type::FLOAT, isps);
+    auto type = new TensorType(TensorType::FLOAT, isps);
     auto literal = new LiteralTensor(type, values->values.data());
     $$ = new shared_ptr<LiteralTensor>(literal);
   }
@@ -950,7 +950,7 @@ dense_tensor_literal
     auto values = unique_ptr<TensorValues<int>>($2);
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
-    auto type = new Type(Type::INT, isps);
+    auto type = new TensorType(TensorType::INT, isps);
     auto literal = new LiteralTensor(type, values->values.data());
     $$ = new shared_ptr<LiteralTensor>(literal);
   }
@@ -1067,12 +1067,12 @@ int_dense_vector_literal
 
 scalar_literal
   : INT_LITERAL {
-    auto scalarType = new Type(Type::INT);
+    auto scalarType = new TensorType(TensorType::INT);
     auto literal = new LiteralTensor(scalarType, &$1);
     $$ = new shared_ptr<LiteralTensor>(literal);
   }
   | FLOAT_LITERAL {
-    auto scalarType = new Type(Type::FLOAT);
+    auto scalarType = new TensorType(TensorType::FLOAT);
     auto literal = new LiteralTensor(scalarType, &$1);
     $$ = new shared_ptr<LiteralTensor>(literal);
   }
