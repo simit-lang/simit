@@ -5,8 +5,8 @@
 #include <iostream>
 #include <string.h>
 
-#include "types.h"
 #include "indexvariables.h"
+#include "types.h"
 #include "util.h"
 
 using namespace simit::internal;
@@ -92,20 +92,20 @@ void LiteralTensor::print(std::ostream &os) const {
 
 /* class IndexExpr */
 static Type *
-computeIndexExprType(const std::list<IndexExpr::IndexVarPtr> &indexVars,
-                     const std::list<IndexExpr::IndexedTensor> &operands) {
+computeIndexExprType(const std::vector<IndexExpr::IndexVarPtr> &indexVars,
+                     const std::vector<IndexExpr::IndexedTensor> &operands) {
   return NULL;
 }
 
-IndexExpr::IndexExpr(const std::list<IndexVarPtr> &indexVars,
-                     Operator op, const std::list<IndexedTensor> &operands)
+IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
+                     Operator op, const std::vector<IndexedTensor> &operands)
     : TensorNode(computeIndexExprType(indexVars, operands)),
       indexVars(indexVars), op(op), operands(operands) {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
   assert(expectedNumOperands == operands.size());
 }
 
-const std::list<IndexExpr::IndexVarPtr> &IndexExpr::getDomain() const {
+const std::vector<IndexExpr::IndexVarPtr> &IndexExpr::getDomain() const {
   return indexVars;
 }
 
@@ -127,7 +127,7 @@ static std::string opString(IndexExpr::Operator op) {
 }
 
 static inline
-std::string indexVarString(const std::list<IndexExpr::IndexVarPtr> &idxVars) {
+std::string indexVarString(const std::vector<IndexExpr::IndexVarPtr> &idxVars) {
   return (idxVars.size()!=0) ? "(" + simit::util::join(idxVars,",") + ")" : "";
 }
 
@@ -158,7 +158,7 @@ void VariableStore::print(std::ostream &os) const {
 
 
 /* class Function */
-void Function::addStatements(const std::list<std::shared_ptr<IRNode>> &stmts) {
+void Function::addStatements(const std::vector<std::shared_ptr<IRNode>> &stmts){
   body.insert(body.end(), stmts.begin(), stmts.end());
 }
 

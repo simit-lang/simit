@@ -28,9 +28,9 @@ class ProgramContent {
   std::unique_ptr<Frontend> frontend;
   std::unique_ptr<LLVMCodeGen> codegen;
 
-  std::list<Function*> functions;
-  std::list<simit::Error> errors;
-  std::list<Test> tests;
+  std::vector<Function*> functions;
+  std::vector<simit::Error> errors;
+  std::vector<Test> tests;
 };
 }
 }
@@ -74,7 +74,7 @@ string Program::getErrorString() {
   return util::join(impl->errors, "\n");
 }
 
-std::list<Error> &Program::getErrors() {
+std::vector<Error> &Program::getErrors() {
   return impl->errors;
 }
 

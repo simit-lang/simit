@@ -24,9 +24,9 @@
   #include <iostream>
   #include <algorithm>
 
+  #include "indexvariables.h"
   #include "scanner.h"
   #include "util.h"
-  #include "indexvariables.h"
   using namespace std;
   using namespace simit;  // TODO: Remove
   using namespace simit::internal;
@@ -63,16 +63,16 @@
 
   namespace simit { namespace internal {
   struct ParserParams {
-    ParserParams(SymbolTable             *symtable,
-                 std::list<Function *>   *functions,
-                 std::list<simit::Error> *errors,
-                 std::list<Test>         *tests)
+    ParserParams(SymbolTable               *symtable,
+                 std::vector<Function *>   *functions,
+                 std::vector<simit::Error> *errors,
+                 std::vector<Test>         *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
-    SymbolTable             &symtable;
-    std::list<Function *>   &functions;
-    std::list<simit::Error> &errors;
-    std::list<Test>         &tests;
+    SymbolTable               &symtable;
+    std::vector<Function *>   &functions;
+    std::vector<simit::Error> &errors;
+    std::vector<Test>         &tests;
   };
   }}
 }
@@ -164,7 +164,7 @@
 
 %union {
   std::shared_ptr<simit::internal::IRNode>            *IRNode;
-  std::list<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
+  std::vector<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
 };
 
 program
@@ -246,7 +246,7 @@ procedure
 %type <Function> function;
 function
   : function_header stmt_block BLOCKEND {
-    auto statements = unique_ptr<list<shared_ptr<IRNode>>>($stmt_block);
+    auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
     $$ = $function_header;
     $$->addStatements(*statements);
     ctx->symtable.unscope();
@@ -257,8 +257,8 @@ function_header
   : FUNC IDENT "(" arguments ")" results {
     string ident($IDENT);
     free((void*)$IDENT);
-    auto arguments = unique_ptr<list<shared_ptr<Argument>>>($arguments);
-    auto results = unique_ptr<list<shared_ptr<Result>>>($results);
+    auto arguments = unique_ptr<vector<shared_ptr<Argument>>>($arguments);
+    auto results = unique_ptr<vector<shared_ptr<Result>>>($results);
 
     $$ = new Function(ident, *arguments, *results);
 
@@ -284,10 +284,10 @@ function_header
 };
 
 %union {
-  FormalData                           *Formal;
-  std::list<FormalData*>               *Formals;
-  std::list<std::shared_ptr<Argument>> *Arguments;
-  std::list<std::shared_ptr<Result>>   *Results;
+  FormalData                             *Formal;
+  std::vector<FormalData*>               *Formals;
+  std::vector<std::shared_ptr<Argument>> *Arguments;
+  std::vector<std::shared_ptr<Result>>   *Results;
 };
 %destructor {
   for (auto formal : *$$) {
@@ -299,10 +299,10 @@ function_header
 %type <Arguments> arguments;
 arguments
   : /* empty */ {
-    $$ = new list<shared_ptr<Argument>>();
+    $$ = new vector<shared_ptr<Argument>>();
   }
   | formal_list {
-    $$ = new list<shared_ptr<Argument>>();
+    $$ = new vector<shared_ptr<Argument>>();
     for (auto formal : *$formal_list) {
       auto result = new Argument(formal->name, formal->type);
       $$->push_back(shared_ptr<Argument>(result));
@@ -316,11 +316,11 @@ arguments
 %type <Results> results;
 results
   : /* empty */ {
-    $$ = new list<shared_ptr<Result>>();
+    $$ = new vector<shared_ptr<Result>>();
     $$->push_back(shared_ptr<Result>(new Result("asd", NULL)));
   }
   | RARROW "(" formal_list ")" {
-    $$ = new list<shared_ptr<Result>>();
+    $$ = new vector<shared_ptr<Result>>();
     for (auto formal : *$formal_list) {
       auto result = new Result(formal->name, formal->type);
       $$->push_back(shared_ptr<Result>(result));
@@ -342,7 +342,7 @@ formal_decl
 %type <Formals> formal_list;
 formal_list
   : formal_decl {
-    $$ = new list<FormalData *>();
+    $$ = new vector<FormalData *>();
     $$->push_back($formal_decl);
   }
   | formal_list "," formal_decl {
@@ -353,7 +353,7 @@ formal_list
 %type<IRNodes> stmt_block;
 stmt_block
   : /* empty */ {
-    $$ = new list<shared_ptr<IRNode>>();
+    $$ = new vector<shared_ptr<IRNode>>();
   }
   | stmt_block stmt {
     $$ = $1;
@@ -399,7 +399,7 @@ const_stmt
 
     ctx->symtable.addNode(tensorLiteral);
 
-    $$ = new list<shared_ptr<IRNode>>();
+    $$ = new vector<shared_ptr<IRNode>>();
     $$->push_back(tensorLiteral);
   }
   | "const" IDENT ":" element_type "=" element_literal ";" {
@@ -438,10 +438,10 @@ return_stmt
 %type<IRNodes> assign_stmt;
 assign_stmt
   : lhs_expr_list "=" expr_list ";" {
-    auto lhsList = unique_ptr<list<shared_ptr<Store>>>($lhs_expr_list);
-    auto rhsList = unique_ptr<list<shared_ptr<TensorNode>>>($expr_list);
+    auto lhsList = unique_ptr<vector<shared_ptr<Store>>>($lhs_expr_list);
+    auto rhsList = unique_ptr<vector<shared_ptr<TensorNode>>>($expr_list);
 
-    $$ = new list<shared_ptr<IRNode>>();
+    $$ = new vector<shared_ptr<IRNode>>();
 
     if (lhsList->size() > rhsList->size()) {
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
@@ -482,10 +482,10 @@ expr_stmt
 
 // Expressions
 %union {
-  std::shared_ptr<simit::internal::TensorNode>            *Tensor;
-  std::list<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
-  std::shared_ptr<simit::internal::Store>                 *Store;
-  std::list<std::shared_ptr<simit::internal::Store>>      *StoreList;
+  std::shared_ptr<simit::internal::TensorNode>              *Tensor;
+  std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
+  std::shared_ptr<simit::internal::Store>                   *Store;
+  std::vector<std::shared_ptr<simit::internal::Store>>      *StoreList;
 };
 
 %type<Tensor> expr;
@@ -554,10 +554,11 @@ expr
     IndexVarFactory indexVarFactory;
     auto indexVars = indexVarFactory.makeFreeVars(expr->getOrder());
 
-    std::list<IndexExpr::IndexedTensor> operands;
-    operands.push_front(IndexExpr::IndexedTensor(expr, indexVars));
+    std::vector<IndexExpr::IndexedTensor> operands;
+    operands.push_back(IndexExpr::IndexedTensor(expr, indexVars));
 
     auto indexExpr = new IndexExpr(indexVars, IndexExpr::NEG, operands);
+
     assert(indexExpr != NULL);
     $$ = new shared_ptr<TensorNode>(indexExpr);
   }
@@ -636,7 +637,7 @@ call_expr
 %type <TensorList> expr_list;
 expr_list
   : expr {
-    $$ = new list<shared_ptr<TensorNode>>();
+    $$ = new vector<shared_ptr<TensorNode>>();
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
@@ -698,7 +699,7 @@ reduction_op
 %type<StoreList> lhs_expr_list;
 lhs_expr_list
   : lhs_expr {
-    $$ = new list<shared_ptr<Store>>();
+    $$ = new vector<shared_ptr<Store>>();
     if ($lhs_expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$lhs_expr);
     delete $lhs_expr;
@@ -1077,7 +1078,7 @@ scalar_literal
 %type<IRNodes> test;
 test
   : TEST test_stmt_block {
-    $$ = new list<shared_ptr<IRNode>>();
+    $$ = new vector<shared_ptr<IRNode>>();
     $$->push_back(shared_ptr<IRNode>(new Test("MyTest")));
   }
 

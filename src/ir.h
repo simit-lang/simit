@@ -82,10 +82,10 @@ class IndexExpr : public TensorNode {
   using IndexVarPtr = std::shared_ptr<internal::IndexVar>;
   struct IndexedTensor {
     std::shared_ptr<TensorNode> tensor;
-    std::list<IndexVarPtr> indexVars;
+    std::vector<IndexVarPtr> indexVars;
 
     IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
-                  const std::list<IndexExpr::IndexVarPtr> &indexVars)
+                  const std::vector<IndexExpr::IndexVarPtr> &indexVars)
         : tensor(tensor), indexVars(indexVars) {}
     friend std::ostream &operator<<(std::ostream &os, const IndexedTensor &o) {
       return os << o.toString();
@@ -93,24 +93,24 @@ class IndexExpr : public TensorNode {
     std::string toString() const;
   };
 
-  IndexExpr(const std::list<IndexVarPtr> &indexVars,
-            Operator op, const std::list<IndexedTensor> &operands);
+  IndexExpr(const std::vector<IndexVarPtr> &indexVars,
+            Operator op, const std::vector<IndexedTensor> &operands);
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const std::list<IndexVarPtr> &getDomain() const;
+  const std::vector<IndexVarPtr> &getDomain() const;
 
   // TODO: Fix this interface by making IndexedTensor a class that is a part
   //       of Merge's interface, or by returning the tensor operands put
   //       together in a list, or by storing tensors and their indexvars
   //       separately. We shoudln't return a struct.
-  const std::list<IndexedTensor> &getOperands() const { return operands; }
+  const std::vector<IndexedTensor> &getOperands() const { return operands; }
   void print(std::ostream &os) const;
 
  private:
-  std::list<IndexVarPtr> indexVars;
+  std::vector<IndexVarPtr> indexVars;
   Operator op;
-  std::list<IndexedTensor> operands;
+  std::vector<IndexedTensor> operands;
 };
 
 
@@ -169,31 +169,31 @@ class Result : public TensorNode {
 class Function : public IRNode {
  public:
   Function(const std::string &name,
-           const std::list<std::shared_ptr<Argument>> &arguments,
-           const std::list<std::shared_ptr<Result>> &results)
+           const std::vector<std::shared_ptr<Argument>> &arguments,
+           const std::vector<std::shared_ptr<Result>> &results)
       : IRNode(name), arguments(arguments), results(results) {}
 
-  void addStatements(const std::list<std::shared_ptr<IRNode>> &stmts);
+  void addStatements(const std::vector<std::shared_ptr<IRNode>> &stmts);
 
 
-  const std::list<std::shared_ptr<Argument>> &getArguments() const {
+  const std::vector<std::shared_ptr<Argument>> &getArguments() const {
     return arguments;
   }
 
-  const std::list<std::shared_ptr<Result>> &getResults() const {
+  const std::vector<std::shared_ptr<Result>> &getResults() const {
     return results;
   }
 
-  const std::list<std::shared_ptr<IRNode>> &getBody() const {
+  const std::vector<std::shared_ptr<IRNode>> &getBody() const {
     return body;
   }
 
   void print(std::ostream &os) const;
 
  private:
-  std::list<std::shared_ptr<Argument>> arguments;
-  std::list<std::shared_ptr<Result>> results;
-  std::list<std::shared_ptr<IRNode>> body;
+  std::vector<std::shared_ptr<Argument>> arguments;
+  std::vector<std::shared_ptr<Result>> results;
+  std::vector<std::shared_ptr<IRNode>> body;
 };
 
 

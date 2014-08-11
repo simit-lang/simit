@@ -7,8 +7,7 @@ namespace simit {
 namespace internal {
 
 /* class IndexVar */
-std::ostream &operator<<(std::ostream &os,
-                         const simit::internal::IndexVar &var) {
+std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
   var.print(os);
   return os;
 }
@@ -33,9 +32,9 @@ void ReductionIndexVar::print(std::ostream &os) const {
 
 
 /* class IndexVarFactory */
-std::list<std::shared_ptr<IndexVar>>
+std::vector<std::shared_ptr<IndexVar>>
 IndexVarFactory::makeFreeVars(unsigned int n) {
-  auto freeIndexVars = std::list<std::shared_ptr<IndexVar>>();
+  auto freeIndexVars = std::vector<std::shared_ptr<IndexVar>>();
   for (unsigned int i=0; i<n; ++i) {
     auto freeIndexVar = new FreeIndexVar(makeName());
     freeIndexVars.push_back(std::shared_ptr<IndexVar>(freeIndexVar));

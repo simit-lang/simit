@@ -41,29 +41,29 @@ std::ostream &simit::internal::operator<<(std::ostream &os,
 
 
 /* Frontend */
-int Frontend::parseStream(std::istream            &programStream,
-                          std::list<Function *>   *functions,
-                          std::list<simit::Error> *errors,
-                          std::list<Test>         *tests) {
+int Frontend::parseStream(std::istream              &programStream,
+                          std::vector<Function *>   *functions,
+                          std::vector<simit::Error> *errors,
+                          std::vector<Test>         *tests) {
   Scanner scanner(&programStream);
   auto ctx = ParserParams(&symtable, functions, errors, tests);
   Parser parser(&scanner, &ctx);
   return parser.parse();
 }
 
-int Frontend::parseString(const std::string       &programString,
-                          std::list<Function*>    *functions,
-                          std::list<simit::Error> *errors,
-                          std::list<Test>         *tests) {
+int Frontend::parseString(const std::string         &programString,
+                          std::vector<Function*>    *functions,
+                          std::vector<simit::Error> *errors,
+                          std::vector<Test>         *tests) {
 
   std::istringstream programStream(programString);
   return parseStream(programStream, functions, errors, tests);
 }
 
-int Frontend::parseFile(const std::string       &filename,
-                        std::list<Function*>    *functions,
-                        std::list<simit::Error> *errors,
-                        std::list<Test>         *tests) {
+int Frontend::parseFile(const std::string         &filename,
+                        std::vector<Function*>    *functions,
+                        std::vector<simit::Error> *errors,
+                        std::vector<Test>         *tests) {
   ifstream programStream(filename);
   if (!programStream.good()) {
     return 2;

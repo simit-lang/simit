@@ -3,7 +3,7 @@
 
 #include <string>
 #include <ostream>
-#include <list>
+#include <vector>
 
 namespace simit {
 namespace internal {
@@ -59,9 +59,9 @@ class Program {
     * \return 0 on success, 1 if the program could not be run. */
   int run();
 
-  /** Get a list of errors that occurred when trying to add code to the
+  /** Get a vector of errors that occurred when trying to add code to the
     * program. */
-  std::list<simit::Error> &getErrors();
+  std::vector<simit::Error> &getErrors();
 
   /** Get a string that describes errors that occurred when trying to add code
     * to the program. */

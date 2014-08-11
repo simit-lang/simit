@@ -56,9 +56,9 @@
   #include <iostream>
   #include <algorithm>
 
+  #include "indexvariables.h"
   #include "scanner.h"
   #include "util.h"
-  #include "indexvariables.h"
   using namespace std;
   using namespace simit;  // TODO: Remove
   using namespace simit::internal;
@@ -1031,7 +1031,7 @@ namespace  simit { namespace internal  {
   case 21:
 
     {
-    auto statements = unique_ptr<list<shared_ptr<IRNode>>>((yystack_[1].value.IRNodes));
+    auto statements = unique_ptr<vector<shared_ptr<IRNode>>>((yystack_[1].value.IRNodes));
     (yylhs.value.Function) = (yystack_[2].value.Function);
     (yylhs.value.Function)->addStatements(*statements);
     ctx->symtable.unscope();
@@ -1044,8 +1044,8 @@ namespace  simit { namespace internal  {
     {
     string ident((yystack_[4].value.string));
     free((void*)(yystack_[4].value.string));
-    auto arguments = unique_ptr<list<shared_ptr<Argument>>>((yystack_[2].value.Arguments));
-    auto results = unique_ptr<list<shared_ptr<Result>>>((yystack_[0].value.Results));
+    auto arguments = unique_ptr<vector<shared_ptr<Argument>>>((yystack_[2].value.Arguments));
+    auto results = unique_ptr<vector<shared_ptr<Result>>>((yystack_[0].value.Results));
 
     (yylhs.value.Function) = new Function(ident, *arguments, *results);
 
@@ -1064,7 +1064,7 @@ namespace  simit { namespace internal  {
   case 23:
 
     {
-    (yylhs.value.Arguments) = new list<shared_ptr<Argument>>();
+    (yylhs.value.Arguments) = new vector<shared_ptr<Argument>>();
   }
 
     break;
@@ -1072,7 +1072,7 @@ namespace  simit { namespace internal  {
   case 24:
 
     {
-    (yylhs.value.Arguments) = new list<shared_ptr<Argument>>();
+    (yylhs.value.Arguments) = new vector<shared_ptr<Argument>>();
     for (auto formal : *(yystack_[0].value.Formals)) {
       auto result = new Argument(formal->name, formal->type);
       (yylhs.value.Arguments)->push_back(shared_ptr<Argument>(result));
@@ -1088,7 +1088,7 @@ namespace  simit { namespace internal  {
   case 25:
 
     {
-    (yylhs.value.Results) = new list<shared_ptr<Result>>();
+    (yylhs.value.Results) = new vector<shared_ptr<Result>>();
     (yylhs.value.Results)->push_back(shared_ptr<Result>(new Result("asd", NULL)));
   }
 
@@ -1097,7 +1097,7 @@ namespace  simit { namespace internal  {
   case 26:
 
     {
-    (yylhs.value.Results) = new list<shared_ptr<Result>>();
+    (yylhs.value.Results) = new vector<shared_ptr<Result>>();
     for (auto formal : *(yystack_[1].value.Formals)) {
       auto result = new Result(formal->name, formal->type);
       (yylhs.value.Results)->push_back(shared_ptr<Result>(result));
@@ -1123,7 +1123,7 @@ namespace  simit { namespace internal  {
   case 28:
 
     {
-    (yylhs.value.Formals) = new list<FormalData *>();
+    (yylhs.value.Formals) = new vector<FormalData *>();
     (yylhs.value.Formals)->push_back((yystack_[0].value.Formal));
   }
 
@@ -1140,7 +1140,7 @@ namespace  simit { namespace internal  {
   case 30:
 
     {
-    (yylhs.value.IRNodes) = new list<shared_ptr<IRNode>>();
+    (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
   }
 
     break;
@@ -1185,7 +1185,7 @@ namespace  simit { namespace internal  {
 
     ctx->symtable.addNode(tensorLiteral);
 
-    (yylhs.value.IRNodes) = new list<shared_ptr<IRNode>>();
+    (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
     (yylhs.value.IRNodes)->push_back(tensorLiteral);
   }
 
@@ -1239,10 +1239,10 @@ namespace  simit { namespace internal  {
   case 45:
 
     {
-    auto lhsList = unique_ptr<list<shared_ptr<Store>>>((yystack_[3].value.StoreList));
-    auto rhsList = unique_ptr<list<shared_ptr<TensorNode>>>((yystack_[1].value.TensorList));
+    auto lhsList = unique_ptr<vector<shared_ptr<Store>>>((yystack_[3].value.StoreList));
+    auto rhsList = unique_ptr<vector<shared_ptr<TensorNode>>>((yystack_[1].value.TensorList));
 
-    (yylhs.value.IRNodes) = new list<shared_ptr<IRNode>>();
+    (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
 
     if (lhsList->size() > rhsList->size()) {
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
@@ -1400,10 +1400,11 @@ namespace  simit { namespace internal  {
     IndexVarFactory indexVarFactory;
     auto indexVars = indexVarFactory.makeFreeVars(expr->getOrder());
 
-    std::list<IndexExpr::IndexedTensor> operands;
-    operands.push_front(IndexExpr::IndexedTensor(expr, indexVars));
+    std::vector<IndexExpr::IndexedTensor> operands;
+    operands.push_back(IndexExpr::IndexedTensor(expr, indexVars));
 
     auto indexExpr = new IndexExpr(indexVars, IndexExpr::NEG, operands);
+
     assert(indexExpr != NULL);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(indexExpr);
   }
@@ -1562,7 +1563,7 @@ namespace  simit { namespace internal  {
   case 74:
 
     {
-    (yylhs.value.TensorList) = new list<shared_ptr<TensorNode>>();
+    (yylhs.value.TensorList) = new vector<shared_ptr<TensorNode>>();
     if ((yystack_[0].value.Tensor) == NULL) break;  // TODO: Remove check
     (yylhs.value.TensorList)->push_back(*(yystack_[0].value.Tensor));
     delete (yystack_[0].value.Tensor);
@@ -1629,7 +1630,7 @@ namespace  simit { namespace internal  {
   case 89:
 
     {
-    (yylhs.value.StoreList) = new list<shared_ptr<Store>>();
+    (yylhs.value.StoreList) = new vector<shared_ptr<Store>>();
     if ((yystack_[0].value.Store) == NULL) break;  // TODO: Remove check
     (yylhs.value.StoreList)->push_back(*(yystack_[0].value.Store));
     delete (yystack_[0].value.Store);
@@ -2054,7 +2055,7 @@ namespace  simit { namespace internal  {
   case 134:
 
     {
-    (yylhs.value.IRNodes) = new list<shared_ptr<IRNode>>();
+    (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
     (yylhs.value.IRNodes)->push_back(shared_ptr<IRNode>(new Test("MyTest")));
   }
 
@@ -2621,15 +2622,15 @@ namespace  simit { namespace internal  {
      241,   248,   257,   301,   304,   318,   322,   336,   344,   348,
      355,   358,   367,   368,   369,   370,   371,   375,   405,   413,
      419,   421,   425,   427,   434,   440,   475,   478,   493,   511,
-     514,   517,   520,   525,   530,   535,   540,   545,   564,   568,
-     573,   578,   583,   588,   593,   598,   603,   607,   612,   615,
-     620,   623,   628,   631,   638,   644,   653,   660,   662,   667,
-     669,   674,   676,   678,   681,   684,   687,   693,   694,   700,
-     707,   716,   724,   729,   738,   766,   769,   774,   780,   783,
-     789,   792,   830,   835,   842,   845,   849,   854,   857,   926,
-     927,   929,   933,   934,   937,   945,   955,   962,   965,   969,
-     982,   986,  1000,  1004,  1010,  1017,  1020,  1024,  1037,  1041,
-    1055,  1059,  1065,  1070,  1079,  1084,  1086,  1089,  1090
+     514,   517,   520,   525,   530,   535,   540,   545,   565,   569,
+     574,   579,   584,   589,   594,   599,   604,   608,   613,   616,
+     621,   624,   629,   632,   639,   645,   654,   661,   663,   668,
+     670,   675,   677,   679,   682,   685,   688,   694,   695,   701,
+     708,   717,   725,   730,   739,   767,   770,   775,   781,   784,
+     790,   793,   831,   836,   843,   846,   850,   855,   858,   927,
+     928,   930,   934,   935,   938,   946,   956,   963,   966,   970,
+     983,   987,  1001,  1005,  1011,  1018,  1021,  1025,  1038,  1042,
+    1056,  1060,  1066,  1071,  1080,  1085,  1087,  1090,  1091
   };
 
   // Print the state stack on the debug stream.

@@ -2,7 +2,7 @@
 #define SIMIT_INDEXVARIABLES_H
 
 #include <string>
-#include <list>
+#include <vector>
 #include <memory>
 
 namespace simit {
@@ -54,7 +54,7 @@ class IndexVarFactory {
  public:
   IndexVarFactory() : nameID(0) {}
 
-  std::list<std::shared_ptr<IndexVar>> makeFreeVars(unsigned int n);
+  std::vector<std::shared_ptr<IndexVar>> makeFreeVars(unsigned int n);
 
   std::shared_ptr<IndexVar> makeReductionVar(ReductionIndexVar::Operator op);
 
