@@ -24,7 +24,6 @@
   #include <iostream>
   #include <algorithm>
 
-  #include "indexvariables.h"
   #include "scanner.h"
   #include "util.h"
   using namespace std;

@@ -11,11 +11,6 @@
 namespace simit {
 namespace internal {
 
-class IndexVar;
-class FreeIndexVar;
-class ReductionIndexVar;
-
-
 /** The base class of all nodes in the Simit Intermediate Representation
   * (Simit IR) */
 class IRNode {
@@ -70,6 +65,54 @@ class LiteralTensor : public TensorNode {
 
  private:
   void  *data;
+};
+
+/** Index variables describe the iteration domains of tensor operations.*/
+
+/** An index variable describes iteration over an index set.  There are two
+  * types of index variables, free index variables and reduction index
+  * variables and both types are represented by the IndexVar class.
+  *
+  * Free index variables simply describe iteration across an index set and do
+  * not have a reduction operation.  Thus rop=FREE.
+  *
+  * Reduction variables have an associated reduction operation that is
+  * performed for each index in the index set.  Examples are SUM, which not
+  * surprisingly sums over the index variable (\sum_{i} in latex speak) and
+  * product which takes the product over the index variable (\prod_{i}).
+  */
+class IndexVar {
+ public:
+  enum ReductionOperator {FREE, SUM, PRODUCT};
+
+  IndexVar(const std::string &name, const IndexSetProduct &indexSet,
+           ReductionOperator rop = FREE)
+      : name(name), indexSet(indexSet) {}
+
+  std::string getName() const { return name; }
+  ReductionOperator getReductionOperator() const { return rop; }
+
+ private:
+  std::string name;
+  IndexSetProduct indexSet;
+  ReductionOperator rop;
+};
+
+
+std::ostream &operator<<(std::ostream &os, const IndexVar &var);
+
+
+/** A factory for creating index variables with unique names. */
+class IndexVarFactory {
+ public:
+  IndexVarFactory() : nameID(0) {}
+
+  std::vector<std::shared_ptr<IndexVar>> makeFreeVars(unsigned int n);
+  std::shared_ptr<IndexVar> makeReductionVar(IndexVar::ReductionOperator rop);
+
+ private:
+  int nameID;
+  std::string makeName();
 };
 
 

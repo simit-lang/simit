@@ -5,18 +5,18 @@
 #include <iostream>
 #include <string.h>
 
-#include "indexvariables.h"
 #include "types.h"
 #include "util.h"
 
-using namespace simit::internal;
 using namespace std;
 
+namespace simit {
+namespace internal {
 
 /* class IRNode */
 IRNode::~IRNode() {}
 
-std::ostream &simit::internal::operator<<(std::ostream &os, const IRNode &node) {
+std::ostream &operator<<(std::ostream &os, const IRNode &node){
   node.print(os);
   return os;
 }
@@ -87,6 +87,52 @@ void LiteralTensor::print(std::ostream &os) const {
       assert(false && "Unsupported (TODO)");
       break;
   }
+}
+
+
+/* class IndexVar */
+std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
+  switch (var.getReductionOperator()) {
+    case IndexVar::FREE:
+      break;
+    case IndexVar::SUM:
+      os << "+";
+      break;
+    case IndexVar::PRODUCT:
+      os << "*";
+      break;
+    default:
+      assert(false);
+      break;
+  }
+  return os << var.getName();
+}
+
+
+/* class IndexVarFactory */
+std::vector<std::shared_ptr<IndexVar>>
+IndexVarFactory::makeFreeVars(unsigned int n) {
+  auto freeIndexVars = std::vector<std::shared_ptr<IndexVar>>();
+  for (unsigned int i=0; i<n; ++i) {
+    auto freeIndexVar = new IndexVar(makeName(), IndexSetProduct());
+    freeIndexVars.push_back(std::shared_ptr<IndexVar>(freeIndexVar));
+  }
+  nameID += n;
+  return freeIndexVars;
+}
+
+std::shared_ptr<IndexVar>
+IndexVarFactory::makeReductionVar(IndexVar::ReductionOperator rop) {
+  auto reductionIndexVar = new IndexVar(makeName(), IndexSetProduct(), rop);
+  return std::shared_ptr<IndexVar>(reductionIndexVar);
+}
+
+std::string IndexVarFactory::makeName() {
+  char name[2];
+  name[0] = 'i' + nameID;
+  name[1] = '\0';
+  nameID++;
+  return std::string(name);
 }
 
 
@@ -191,3 +237,5 @@ void Result::print(std::ostream &os) const {
 void Test::print(std::ostream &os) const {
   os << "Test";
 }
+
+}} // namespace simit::internal
