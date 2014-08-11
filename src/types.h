@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "graph.h"
+#include "tensor.h"
 
 namespace simit {
 namespace internal {
@@ -76,14 +77,12 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
 /** The type of a tensor (the type of its components and its shape). */
 class TensorType {
  public:
-  /** The types of supported tensor components. */
-  enum ComponentType {INT, FLOAT, ELEMENT};
+  
+  static std::size_t componentSize(Type ct);
+  static std::string componentTypeString(Type ct);
 
-  static std::size_t componentSize(ComponentType ct);
-  static std::string componentTypeString(ComponentType ct);
-
-  TensorType(ComponentType componentType) : componentType(componentType) {}
-  TensorType(ComponentType componentType,
+  TensorType(Type componentType) : componentType(componentType) {}
+  TensorType(Type componentType,
        const std::vector<IndexSetProduct> &dimensions)
       : componentType(componentType), dimensions(dimensions) {}
 
@@ -94,7 +93,7 @@ class TensorType {
   int getSize() const;
 
   /** Get the type of the components in the vector. */
-  ComponentType getComponentType() const { return componentType; }
+  Type getComponentType() const { return componentType; }
 
   /** Get the index sets that form the dimensions of the tensor. */
   const std::vector<IndexSetProduct> &getDimensions() const {return dimensions;}
@@ -102,7 +101,7 @@ class TensorType {
   std::ostream &print(std::ostream &os) const;
 
  private:
-  ComponentType componentType;
+  Type componentType;
   std::vector<IndexSetProduct> dimensions;
 };
 

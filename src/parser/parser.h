@@ -233,7 +233,7 @@ namespace  simit { namespace internal  {
 
 
   TensorType                         *TensorType;
-  TensorType::ComponentType           ComponentType;
+  Type                               Type;
 
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;

@@ -55,7 +55,7 @@ void LiteralTensor::cast(TensorType *type) {
 void LiteralTensor::print(std::ostream &os) const {
   // TODO: Add nicer value printing that prints matrices and tensors properly
   switch (type->getComponentType()) {
-    case TensorType::INT: {
+    case Type::INT: {
       int *idata = (int*)data;
       if (type->getSize() == 1) {
         os << idata[0];
@@ -69,7 +69,7 @@ void LiteralTensor::print(std::ostream &os) const {
       }
       break;
     }
-    case TensorType::FLOAT: {
+    case Type::FLOAT: {
       double *fdata = (double*)data;
       if (type->getSize() == 1) {
         os << fdata[0];
@@ -83,7 +83,7 @@ void LiteralTensor::print(std::ostream &os) const {
       }
       break;
     }
-    case TensorType::ELEMENT:
+    case Type::ELEMENT:
       assert(false && "Unsupported (TODO)");
       break;
   }

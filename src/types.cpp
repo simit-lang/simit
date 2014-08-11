@@ -125,13 +125,13 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o) {
 
 
 /* class TensorType */
-std::size_t TensorType::componentSize(ComponentType ct) {
+std::size_t TensorType::componentSize(Type ct) {
   switch (ct) {
-    case TensorType::INT:
+    case Type::INT:
       return sizeof(int);
-    case TensorType::FLOAT:
+    case Type::FLOAT:
       return sizeof(double);
-    case TensorType::ELEMENT:
+    case Type::ELEMENT:
       assert(false && "currently unsupported");  // TODO
       return INT_MAX;
   }
@@ -139,13 +139,13 @@ std::size_t TensorType::componentSize(ComponentType ct) {
   return 0;
 }
 
-std::string TensorType::componentTypeString(ComponentType ct) {
+std::string TensorType::componentTypeString(Type ct) {
   switch (ct) {
-    case TensorType::INT:
+    case Type::INT:
       return "int";
-    case TensorType::FLOAT:
+    case Type::FLOAT:
       return "float";
-    case TensorType::ELEMENT:
+    case Type::ELEMENT:
       return "element";
   }
   assert(false);

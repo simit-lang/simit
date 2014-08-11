@@ -6,6 +6,7 @@
 
 using namespace std;
 using namespace simit::internal;
+using namespace simit;
 
 TEST(IndexSet, getSize) {
   ASSERT_EQ(IndexSet(4), 4);
@@ -71,7 +72,7 @@ TEST(Type, getSize) {
   indices1.push_back(IndexSet(7));
   dimensions.push_back(IndexSetProduct(indices1));
 
-  ASSERT_EQ(TensorType(TensorType::FLOAT, dimensions).getSize(), 210);
+  ASSERT_EQ(TensorType(Type::FLOAT, dimensions).getSize(), 210);
   // TODO: Add tests for SET, VARIABLE and combinations
 }
 
@@ -85,12 +86,12 @@ TEST(Type, eq) {
   idxs0.push_back(IndexSet(3));
   dims0.push_back(IndexSetProduct(idxs0));
   dims1.push_back(IndexSetProduct(idxs0));
-  ASSERT_EQ(TensorType(TensorType::FLOAT, dims0), TensorType(TensorType::FLOAT, dims1));
-  ASSERT_NE(TensorType(TensorType::FLOAT, dims0), TensorType(TensorType::INT, dims1));
+  ASSERT_EQ(TensorType(Type::FLOAT, dims0), TensorType(Type::FLOAT, dims1));
+  ASSERT_NE(TensorType(Type::FLOAT, dims0), TensorType(Type::INT, dims1));
 
   idxs1.push_back(IndexSet(3));
   idxs1.push_back(IndexSet(2));
   dims1.push_back(idxs1);
-  ASSERT_NE(TensorType(TensorType::FLOAT, dims0), TensorType(TensorType::FLOAT, dims1));
+  ASSERT_NE(TensorType(Type::FLOAT, dims0), TensorType(Type::FLOAT, dims1));
   // TODO: Add tests for SET, VARIABLE and combinations
 }

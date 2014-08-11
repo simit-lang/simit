@@ -9,8 +9,10 @@
 
 #include "ir.h"
 #include "macros.h"
+#include "tensor.h"
 
 using namespace simit::internal;
+using namespace simit;
 using namespace std;
 
 #define LLVM_CONTEXT   llvm::getGlobalContext()
@@ -34,13 +36,13 @@ static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
 
   if (type->getOrder() == 0) {
     switch (type->getComponentType()) {
-      case TensorType::INT:
+      case Type::INT:
         llvmType = LLVM_INTPTR;
         break;
-      case TensorType::FLOAT:
+      case Type::FLOAT:
         llvmType = LLVM_DOUBLEPTR;
         break;
-      case TensorType::ELEMENT:
+      case Type::ELEMENT:
         return NULL;  // TODO: not supported yet
         break;
       default:
