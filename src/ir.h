@@ -87,7 +87,7 @@ class IndexVar {
 
   IndexVar(const std::string &name, const IndexSetProduct &indexSet,
            ReductionOperator rop = FREE)
-      : name(name), indexSet(indexSet) {}
+      : name(name), indexSet(indexSet), rop(rop) {}
 
   std::string getName() const { return name; }
   ReductionOperator getReductionOperator() const { return rop; }
@@ -107,8 +107,9 @@ class IndexVarFactory {
  public:
   IndexVarFactory() : nameID(0) {}
 
-  std::vector<std::shared_ptr<IndexVar>> makeFreeVars(unsigned int n);
-  std::shared_ptr<IndexVar> makeReductionVar(IndexVar::ReductionOperator rop);
+  std::shared_ptr<IndexVar> makeFreeVar(const IndexSetProduct &indexSet);
+  std::shared_ptr<IndexVar> makeReductionVar(const IndexSetProduct &indexSet,
+                                             IndexVar::ReductionOperator rop);
 
  private:
   int nameID;

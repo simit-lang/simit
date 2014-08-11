@@ -542,16 +542,20 @@ expr
     delete $3;
   }
   | "-" expr %prec NEG {
-    if ($2 == NULL) {
+    if ($2 == NULL) {  // TODO: Remove check
       $$ = NULL;
-      break; // TODO: Remove check
+      break;
     }
 
     auto expr = shared_ptr<TensorNode>(*$2);
     delete $2;
 
     IndexVarFactory indexVarFactory;
-    auto indexVars = indexVarFactory.makeFreeVars(expr->getOrder());
+    std::vector<IndexExpr::IndexVarPtr> indexVars;
+    for (unsigned int i=0; i<expr->getOrder(); ++i) {
+      IndexSetProduct indexSet = expr->getType()->getDimensions()[0];
+      indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
+    }
 
     std::vector<IndexExpr::IndexedTensor> operands;
     operands.push_back(IndexExpr::IndexedTensor(expr, indexVars));

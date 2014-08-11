@@ -110,20 +110,16 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 
 
 /* class IndexVarFactory */
-std::vector<std::shared_ptr<IndexVar>>
-IndexVarFactory::makeFreeVars(unsigned int n) {
-  auto freeIndexVars = std::vector<std::shared_ptr<IndexVar>>();
-  for (unsigned int i=0; i<n; ++i) {
-    auto freeIndexVar = new IndexVar(makeName(), IndexSetProduct());
-    freeIndexVars.push_back(std::shared_ptr<IndexVar>(freeIndexVar));
-  }
-  nameID += n;
-  return freeIndexVars;
+std::shared_ptr<IndexVar>
+IndexVarFactory::makeFreeVar(const IndexSetProduct &indexSet) {
+  auto freeIndexVar = new IndexVar(makeName(), indexSet);
+  return std::shared_ptr<IndexVar>(freeIndexVar);
 }
 
 std::shared_ptr<IndexVar>
-IndexVarFactory::makeReductionVar(IndexVar::ReductionOperator rop) {
-  auto reductionIndexVar = new IndexVar(makeName(), IndexSetProduct(), rop);
+IndexVarFactory::makeReductionVar(const IndexSetProduct &indexSet,
+                                  IndexVar::ReductionOperator rop) {
+  auto reductionIndexVar = new IndexVar(makeName(), indexSet, rop);
   return std::shared_ptr<IndexVar>(reductionIndexVar);
 }
 
