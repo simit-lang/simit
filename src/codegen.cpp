@@ -9,8 +9,10 @@
 
 #include "ir.h"
 #include "macros.h"
+#include "tensor.h"
 
 using namespace simit::internal;
+using namespace simit;
 using namespace std;
 
 #define LLVM_CONTEXT   llvm::getGlobalContext()
@@ -29,7 +31,7 @@ LLVMCodeGen::~LLVMCodeGen() {
 
 }
 
-static llvm::Type *toLLVMType(const simit::internal::Type *type) {
+static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   llvm::Type *llvmType = NULL;
 
   if (type->getOrder() == 0) {

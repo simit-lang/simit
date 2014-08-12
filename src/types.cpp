@@ -124,8 +124,8 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o) {
 }
 
 
-/* class Type */
-std::size_t Type::componentSize(ComponentType ct) {
+/* class TensorType */
+std::size_t TensorType::componentSize(Type ct) {
   switch (ct) {
     case Type::INT:
       return sizeof(int);
@@ -139,7 +139,7 @@ std::size_t Type::componentSize(ComponentType ct) {
   return 0;
 }
 
-std::string Type::componentTypeString(ComponentType ct) {
+std::string TensorType::componentTypeString(Type ct) {
   switch (ct) {
     case Type::INT:
       return "int";
@@ -152,7 +152,7 @@ std::string Type::componentTypeString(ComponentType ct) {
   return "";
 }
 
-int Type::getSize() const {
+int TensorType::getSize() const {
   int size = 1;
   for (auto &dimension : getDimensions()) {
     size *= dimension.getSize();
@@ -160,7 +160,7 @@ int Type::getSize() const {
   return size;
 }
 
-std::ostream &Type::print(std::ostream &os) const {
+std::ostream &TensorType::print(std::ostream &os) const {
   if (getOrder() == 0) {
     os << componentTypeString(getComponentType());
   }
@@ -172,7 +172,7 @@ std::ostream &Type::print(std::ostream &os) const {
   return os;
 }
 
-bool operator==(const Type& l, const Type& r) {
+bool operator==(const TensorType& l, const TensorType& r) {
   if (l.getComponentType() != r.getComponentType() ) {
     return false;
   }
@@ -191,11 +191,11 @@ bool operator==(const Type& l, const Type& r) {
   return true;
 };
 
-bool operator!=(const Type& l, const Type& r) {
+bool operator!=(const TensorType& l, const TensorType& r) {
   return !(l == r);
 }
 
-std::ostream &operator<<(std::ostream &os, const Type &o) {
+std::ostream &operator<<(std::ostream &os, const TensorType &o) {
   return o.print(os);
 }
 

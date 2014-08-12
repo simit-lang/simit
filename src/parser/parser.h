@@ -31,14 +31,14 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /Users/fred/projects/sim/simit/src/parser/parser.h
+ ** \file parser.h
  ** Define the  simit::internal ::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
 
-#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
-# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
+#ifndef YY_YY_PARSER_H_INCLUDED
+# define YY_YY_PARSER_H_INCLUDED
 // //                    "%code requires" blocks.
 
 
@@ -74,8 +74,8 @@
   namespace {
   struct FormalData {
     std::string name;
-    simit::internal::Type *type;
-    FormalData(const std::string &name, simit::internal::Type *type)
+    simit::internal::TensorType *type;
+    FormalData(const std::string &name, simit::internal::TensorType *type)
         : name(name), type(type){}
   };
   }
@@ -232,8 +232,8 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<simit::internal::Store>>      *StoreList;
 
 
-  Type                         *TensorType;
-  Type::ComponentType           ComponentType;
+  TensorType                         *TensorType;
+  Type                               Type;
 
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;
@@ -628,4 +628,4 @@ namespace  simit { namespace internal  {
 
 
 
-#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
+#endif // !YY_YY_PARSER_H_INCLUDED

@@ -31,12 +31,12 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /Users/fred/projects/sim/simit/src/parser/position.hh
+ ** \file position.hh
  ** Define the  simit::internal ::position class.
  */
 
-#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_POSITION_HH_INCLUDED
-# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_POSITION_HH_INCLUDED
+#ifndef YY_YY_POSITION_HH_INCLUDED
+# define YY_YY_POSITION_HH_INCLUDED
 
 # include <algorithm> // std::max
 # include <iostream>
@@ -177,4 +177,4 @@ namespace  simit { namespace internal  {
 
 } } //  simit::internal 
 
-#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_POSITION_HH_INCLUDED
+#endif // !YY_YY_POSITION_HH_INCLUDED
