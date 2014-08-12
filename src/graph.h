@@ -17,6 +17,7 @@ class Set {
   * Invariant: items < capacity
   */
 class Field {
+  // TODO: use PIMPL
 public:
   Type type;                    // simit type of data
   
@@ -47,6 +48,9 @@ public:
   
   /** Remove an item, avoiding fragmentation. */
   void remove(const unsigned int idx);
+  
+  /** Get the number of items */
+  unsigned int size() { return items; }
   
 private:
   void* data;                   // buffer for the data

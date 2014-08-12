@@ -1,19 +1,13 @@
 #include "graph.h"
 
 namespace simit {
+
+/* Field */
   
 void Field::increaseCapacity() {
   data = (void*) realloc(data, capacity + capacityIncrement);
 }
 
-template <typename T>
-void Field::add(T val) {
-  if (items > capacity-1)
-    increaseCapacity();
-
-  set(items++, val);
-}
-  
 template <>
 void Field::set<int>(const unsigned int idx, int val) {
   assert((type == Type::INT) && "Setting a value with wrong type");
@@ -30,6 +24,22 @@ void Field::set<double>(const unsigned int idx, double val) {
   ((double*)data)[idx] = val;
 }
 
+template <>
+void Field::add<int>(int val) {
+  if (items > capacity-1)
+    increaseCapacity();
+  
+  set(items++, val);
+}
+
+template <>
+void Field::add<double>(double val) {
+  if (items > capacity-1)
+    increaseCapacity();
+  
+  set(items++, val);
+}
+
 void Field::remove(const unsigned int idx) {
   // Should this be ok?
   assert((idx < items) && "Removing a non-existent item");
@@ -43,7 +53,6 @@ void Field::remove(const unsigned int idx) {
     ((double*)data)[idx] = ((double*)data)[items-1];
 
   items--;
-  
 }
   
   
@@ -62,5 +71,7 @@ void Field::get<double>(const unsigned int idx, double* val) {
   
   *val = ((double*)data)[idx];
 }
+  
+/* end Field */
   
 }
