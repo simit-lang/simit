@@ -77,10 +77,6 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
 /** The type of a tensor (the type of its components and its shape). */
 class TensorType {
  public:
-  
-  static std::size_t componentSize(Type ct);
-  static std::string componentTypeString(Type ct);
-
   TensorType(Type componentType) : componentType(componentType) {}
   TensorType(Type componentType,
        const std::vector<IndexSetProduct> &dimensions)
@@ -99,6 +95,9 @@ class TensorType {
   const std::vector<IndexSetProduct> &getDimensions() const {return dimensions;}
 
   std::ostream &print(std::ostream &os) const;
+
+  static std::size_t componentSize(Type ct);
+  static std::string componentTypeString(Type ct);
 
  private:
   Type componentType;

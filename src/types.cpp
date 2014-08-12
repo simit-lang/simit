@@ -125,33 +125,6 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o) {
 
 
 /* class TensorType */
-std::size_t TensorType::componentSize(Type ct) {
-  switch (ct) {
-    case Type::INT:
-      return sizeof(int);
-    case Type::FLOAT:
-      return sizeof(double);
-    case Type::ELEMENT:
-      assert(false && "currently unsupported");  // TODO
-      return INT_MAX;
-  }
-  assert(false);
-  return 0;
-}
-
-std::string TensorType::componentTypeString(Type ct) {
-  switch (ct) {
-    case Type::INT:
-      return "int";
-    case Type::FLOAT:
-      return "float";
-    case Type::ELEMENT:
-      return "element";
-  }
-  assert(false);
-  return "";
-}
-
 int TensorType::getSize() const {
   int size = 1;
   for (auto &dimension : getDimensions()) {
@@ -197,6 +170,33 @@ bool operator!=(const TensorType& l, const TensorType& r) {
 
 std::ostream &operator<<(std::ostream &os, const TensorType &o) {
   return o.print(os);
+}
+
+std::size_t TensorType::componentSize(Type ct) {
+  switch (ct) {
+    case Type::INT:
+      return sizeof(int);
+    case Type::FLOAT:
+      return sizeof(double);
+    case Type::ELEMENT:
+      assert(false && "currently unsupported");  // TODO
+      return INT_MAX;
+  }
+  assert(false);
+  return 0;
+}
+
+std::string TensorType::componentTypeString(Type ct) {
+  switch (ct) {
+    case Type::INT:
+      return "int";
+    case Type::FLOAT:
+      return "float";
+    case Type::ELEMENT:
+      return "element";
+  }
+  assert(false);
+  return "";
 }
 
 }} // namespace simit::internal
