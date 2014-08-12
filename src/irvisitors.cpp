@@ -35,7 +35,7 @@ void IRVisitor::visit(Result *t) {
 
 void IRVisitor::visit(IndexExpr *t) {
   for (auto &operand : t->getOperands()) {
-    CHECK_ABORT(operand.tensor->accept(this));
+    CHECK_ABORT(operand.getTensor()->accept(this));
   }
   CHECK_ABORT(handle(t));
 }

@@ -83,19 +83,20 @@ class LiteralTensor : public TensorNode {
   */
 class IndexVar {
  public:
-  enum ReductionOperator {FREE, SUM, PRODUCT};
+  enum Operator {FREE, SUM, PRODUCT};
 
   IndexVar(const std::string &name, const IndexSetProduct &indexSet,
-           ReductionOperator rop = FREE)
-      : name(name), indexSet(indexSet), rop(rop) {}
+           Operator op)
+      : name(name), indexSet(indexSet), op(op) {}
 
   std::string getName() const { return name; }
-  ReductionOperator getReductionOperator() const { return rop; }
+  const IndexSetProduct &getIndexSet() const { return indexSet; }
+  Operator getOperator() const { return op; }
 
  private:
   std::string name;
   IndexSetProduct indexSet;
-  ReductionOperator rop;
+  Operator op;
 };
 
 
@@ -109,7 +110,7 @@ class IndexVarFactory {
 
   std::shared_ptr<IndexVar> makeFreeVar(const IndexSetProduct &indexSet);
   std::shared_ptr<IndexVar> makeReductionVar(const IndexSetProduct &indexSet,
-                                             IndexVar::ReductionOperator rop);
+                                             IndexVar::Operator op);
  private:
   int nameID;
   std::string makeName();
@@ -122,18 +123,18 @@ class IndexExpr : public TensorNode {
  public:
   enum Operator { NEG, ADD, SUB, MUL, DIV };
 
-  using IndexVarPtr = std::shared_ptr<internal::IndexVar>;
-  struct IndexedTensor {
-    std::shared_ptr<TensorNode> tensor;
-    std::vector<IndexVarPtr> indexVars;
+  typedef std::shared_ptr<internal::IndexVar> IndexVarPtr;
 
+  class IndexedTensor {
+   public:
     IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
-                  const std::vector<IndexExpr::IndexVarPtr> &indexVars)
-        : tensor(tensor), indexVars(indexVars) {}
-    friend std::ostream &operator<<(std::ostream &os, const IndexedTensor &o) {
-      return os << o.toString();
-    }
-    std::string toString() const;
+                  const std::vector<IndexExpr::IndexVarPtr> &indexVariables);
+    std::shared_ptr<TensorNode> getTensor() const { return tensor; };
+    std::vector<IndexVarPtr> getIndexVariables() const { return indexVariables;}
+
+   private:
+    std::shared_ptr<TensorNode> tensor;
+    std::vector<IndexVarPtr>    indexVariables;
   };
 
   IndexExpr(const std::vector<IndexVarPtr> &indexVars,
@@ -142,11 +143,6 @@ class IndexExpr : public TensorNode {
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   const std::vector<IndexVarPtr> &getDomain() const;
-
-  // TODO: Fix this interface by making IndexedTensor a class that is a part
-  //       of Merge's interface, or by returning the tensor operands put
-  //       together in a list, or by storing tensors and their indexvars
-  //       separately. We shoudln't return a struct.
   const std::vector<IndexedTensor> &getOperands() const { return operands; }
   void print(std::ostream &os) const;
 

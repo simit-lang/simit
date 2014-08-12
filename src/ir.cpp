@@ -92,7 +92,7 @@ void LiteralTensor::print(std::ostream &os) const {
 
 /* class IndexVar */
 std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
-  switch (var.getReductionOperator()) {
+  switch (var.getOperator()) {
     case IndexVar::FREE:
       break;
     case IndexVar::SUM:
@@ -112,14 +112,14 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 /* class IndexVarFactory */
 std::shared_ptr<IndexVar>
 IndexVarFactory::makeFreeVar(const IndexSetProduct &indexSet) {
-  auto freeIndexVar = new IndexVar(makeName(), indexSet);
+  auto freeIndexVar = new IndexVar(makeName(), indexSet, IndexVar::FREE);
   return std::shared_ptr<IndexVar>(freeIndexVar);
 }
 
 std::shared_ptr<IndexVar>
 IndexVarFactory::makeReductionVar(const IndexSetProduct &indexSet,
-                                  IndexVar::ReductionOperator rop) {
-  auto reductionIndexVar = new IndexVar(makeName(), indexSet, rop);
+                                  IndexVar::Operator op) {
+  auto reductionIndexVar = new IndexVar(makeName(), indexSet, op);
   return std::shared_ptr<IndexVar>(reductionIndexVar);
 }
 
@@ -136,13 +136,33 @@ std::string IndexVarFactory::makeName() {
 static TensorType *
 computeIndexExprType(const std::vector<IndexExpr::IndexVarPtr> &indexVars,
                      const std::vector<IndexExpr::IndexedTensor> &operands) {
+  cout << util::join(indexVars, ", ") << endl;
+
+  std::vector<IndexSetProduct> dimensions;
+  for (auto &iv : indexVars) {
+    dimensions.push_back(iv->getIndexSet());
+  }
+
   return NULL;
+}
+
+IndexExpr::IndexedTensor::IndexedTensor(
+    const std::shared_ptr<TensorNode> &t,
+    const std::vector<IndexExpr::IndexVarPtr> &ivs) {
+  assert(ivs.size() == t->getOrder());
+  auto titer = t->getType()->getDimensions().begin();
+  auto iviter = ivs.begin();
+  for (; iviter != ivs.end(); ++iviter, ++titer) {
+    assert((*iviter)->getIndexSet() == (*titer));
+  }
+  this->tensor = t;
+  this->indexVariables = ivs;
 }
 
 IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
                      Operator op, const std::vector<IndexedTensor> &operands)
     : TensorNode(computeIndexExprType(indexVars, operands)),
-      indexVars(indexVars), op(op), operands(operands) {
+      indexVars{indexVars}, op{op}, operands{operands} {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
   assert(expectedNumOperands == operands.size());
 }
@@ -173,20 +193,22 @@ std::string indexVarString(const std::vector<IndexExpr::IndexVarPtr> &idxVars) {
   return (idxVars.size()!=0) ? "(" + simit::util::join(idxVars,",") + ")" : "";
 }
 
-std::string IndexExpr::IndexedTensor::toString() const {
-  return tensor->getName() + indexVarString(indexVars);
+static inline
+std::string indexedTensorString(const IndexExpr::IndexedTensor &it) {
+  return it.getTensor()->getName() + indexVarString(it.getIndexVariables());
 }
 
 void IndexExpr::print(std::ostream &os) const {
   os << getName() << indexVarString(indexVars) << " = ";
 
   unsigned int numOperands = operands.size();
-  auto iter = operands.begin();
+  auto opit = operands.begin();
   if (numOperands == 1) {
-    os << opString(op) + util::toString(*iter++);
+    os << opString(op) + indexedTensorString(*opit++);
   }
-  else if (numOperands) {
-    os << util::toString(*iter++) + opString(op) + util::toString(*iter++);
+  else if (numOperands == 2) {
+    os << indexedTensorString(*opit++) << opString(op) <<
+          indexedTensorString(*opit++);
   } else {
     assert(false && "Not supported yet");
   }
