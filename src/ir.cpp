@@ -133,19 +133,6 @@ std::string IndexVarFactory::makeName() {
 
 
 /* class IndexExpr */
-static TensorType *
-computeIndexExprType(const std::vector<IndexExpr::IndexVarPtr> &indexVars,
-                     const std::vector<IndexExpr::IndexedTensor> &operands) {
-  cout << util::join(indexVars, ", ") << endl;
-
-  std::vector<IndexSetProduct> dimensions;
-  for (auto &iv : indexVars) {
-    dimensions.push_back(iv->getIndexSet());
-  }
-
-  return NULL;
-}
-
 IndexExpr::IndexedTensor::IndexedTensor(
     const std::shared_ptr<TensorNode> &t,
     const std::vector<IndexExpr::IndexVarPtr> &ivs) {
@@ -159,12 +146,28 @@ IndexExpr::IndexedTensor::IndexedTensor(
   this->indexVariables = ivs;
 }
 
+static TensorType *
+computeIndexExprType(const std::vector<IndexExpr::IndexVarPtr> &indexVars,
+                     const std::vector<IndexExpr::IndexedTensor> &operands) {
+  std::vector<IndexSetProduct> dimensions;
+  for (auto &iv : indexVars) {
+    dimensions.push_back(iv->getIndexSet());
+  }
+  Type ctype = operands[0].getTensor()->getType()->getComponentType();
+  return new TensorType(ctype, dimensions);
+}
+
 IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
                      Operator op, const std::vector<IndexedTensor> &operands)
     : TensorNode(computeIndexExprType(indexVars, operands)),
       indexVars{indexVars}, op{op}, operands{operands} {
   unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
   assert(expectedNumOperands == operands.size());
+  Type firstType = operands[0].getTensor()->getType()->getComponentType();
+  for (auto &operand : operands) {
+    Type componentType = operand.getTensor()->getType()->getComponentType();
+    assert(firstType == componentType && "All operands must have same ctype");
+  }
 }
 
 const std::vector<IndexExpr::IndexVarPtr> &IndexExpr::getDomain() const {
