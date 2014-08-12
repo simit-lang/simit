@@ -50,20 +50,22 @@
 
   #include <vector>
 
-  #include "frontend.h"
+  #include "symboltable.h"
   #include "ir.h"
   #include "errors.h"
   #include "types.h"
 
   namespace simit { namespace internal {
+  typedef SymbolTable<std::shared_ptr<IRNode>> ParserSymtableType;
+
   struct ParserParams {
-    ParserParams(SymbolTable               *symtable,
+    ParserParams(ParserSymtableType        *symtable,
                  std::vector<Function *>   *functions,
                  std::vector<simit::Error> *errors,
                  std::vector<Test>         *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
-    SymbolTable               &symtable;
+    ParserSymtableType        &symtable;
     std::vector<Function *>   &functions;
     std::vector<simit::Error> &errors;
     std::vector<Test>         &tests;

@@ -55,20 +55,22 @@
 %code requires {
   #include <vector>
 
-  #include "frontend.h"
+  #include "symboltable.h"
   #include "ir.h"
   #include "errors.h"
   #include "types.h"
 
   namespace simit { namespace internal {
+  typedef SymbolTable<std::string, std::shared_ptr<IRNode>> ParserSymtableType;
+
   struct ParserParams {
-    ParserParams(SymbolTable               *symtable,
+    ParserParams(ParserSymtableType        *symtable,
                  std::vector<Function *>   *functions,
                  std::vector<simit::Error> *errors,
                  std::vector<Test>         *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
-    SymbolTable               &symtable;
+    ParserSymtableType        &symtable;
     std::vector<Function *>   &functions;
     std::vector<simit::Error> &errors;
     std::vector<Test>         &tests;
@@ -263,11 +265,11 @@ function_header
 
     ctx->symtable.scope();
     for (auto argument : *arguments) {
-      ctx->symtable.addNode(argument);
+      ctx->symtable[argument->getName()] = argument;
     }
 
     for (auto result : *results) {
-      ctx->symtable.addNode(result);
+      ctx->symtable[result->getName()] = result;
     }
   }
 
@@ -396,7 +398,7 @@ const_stmt
       REPORT_ERROR(ss.str(), @5);
     }
 
-    ctx->symtable.addNode(tensorLiteral);
+    ctx->symtable[tensorLiteral->getName()] = tensorLiteral;
 
     $$ = new vector<shared_ptr<IRNode>>();
     $$->push_back(tensorLiteral);
