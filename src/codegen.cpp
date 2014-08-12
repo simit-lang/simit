@@ -5,7 +5,6 @@
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/Module.h"
 
 #include "ir.h"
 #include "macros.h"
@@ -23,12 +22,11 @@ using namespace std;
 #define LLVM_DOUBLE    llvm::Type::getDoubleTy(LLVM_CONTEXT)
 #define LLVM_DOUBLEPTR llvm::Type::getDoublePtrTy(LLVM_CONTEXT)
 
-LLVMCodeGen::LLVMCodeGen() {
-  module = new llvm::Module("Simit jit", llvm::getGlobalContext());
+LLVMCodeGen::LLVMCodeGen()
+    : module{"Simit JIT", LLVM_CONTEXT}, irBuilder{LLVM_CONTEXT} {
 }
 
 LLVMCodeGen::~LLVMCodeGen() {
-
 }
 
 static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
@@ -65,59 +63,8 @@ void LLVMCodeGen::compileToFunctionPointer(Function *function) {
   f->dump();
 }
 
-void LLVMCodeGen::handle(Function *function) {
-  llvm::Function *f = llvmPrototype(function);
-  if (f == NULL) {  // TODO: Remove check
-    abort();
-    return;
-  }
-  llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
-  results.push(f);
-}
-
-void LLVMCodeGen::handle(Argument *t) {
-  cout << "Argument:  " << *t << endl;
-}
-
-void LLVMCodeGen::handle(Result *t) {
-  cout << "Result:    " << *t << endl;
-}
-
-void LLVMCodeGen::handle(LiteralTensor *t) {
-  cout << "Literal:   " << *t << endl;
-}
-
-void LLVMCodeGen::handle(IndexExpr *t) {
-  cout << "IndexExpr: " << *t << endl;
-  auto domain = t->getDomain();
-  auto type = t->getType();
-  UNUSED(type);
-
-  if (domain.size() == 0) {
-  
-  }
-  else {
-//    NOT_SUPPORTED_YET;
-  }
-}
-
-void LLVMCodeGen::handle(VariableStore *t) {
-  cout << "Store   :  " << *t << endl;
-}
-
-llvm::Function *LLVMCodeGen::codegen(Function *function) {
-  visit(function);
-  if (isAborted()) {
-    return NULL;
-  }
-  llvm::Value *value = results.top();
-  results.pop();
-  assert(llvm::isa<llvm::Function>(value));
-  return llvm::cast<llvm::Function>(value);
-}
-
-llvm::Function *LLVMCodeGen::llvmPrototype(Function *function) const {
- vector<llvm::Type*> args;
+llvm::Function *createPrototype(Function *function, llvm::Module *module) {
+  vector<llvm::Type*> args;
   for (auto &arg : function->getArguments()) {
     auto llvmType = toLLVMType(arg->getType());
     if (llvmType == NULL) return NULL;  // TODO: Remove check
@@ -148,3 +95,63 @@ llvm::Function *LLVMCodeGen::llvmPrototype(Function *function) const {
 
   return f;
 }
+
+void LLVMCodeGen::handle(Function *function) {
+  llvm::Function *f = createPrototype(function, &module);
+  if (f == NULL) {  // TODO: Remove check
+    abort();
+    return;
+  }
+  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
+  irBuilder.SetInsertPoint(entry);
+
+  results.push(f);
+}
+
+void LLVMCodeGen::handle(Argument *t) {
+  cout << "Argument:  " << *t << endl;
+}
+
+void LLVMCodeGen::handle(Result *t) {
+  cout << "Result:    " << *t << endl;
+}
+
+void LLVMCodeGen::handle(LiteralTensor *t) {
+  cout << "Literal:   " << *t << endl;
+}
+
+llvm::Value *createScalarOp() {
+//  Builder.CreateFAdd(L, R, "addtmp");
+}
+
+void LLVMCodeGen::handle(IndexExpr *t) {
+  cout << "IndexExpr: " << *t << endl;
+  auto domain = t->getDomain();
+  auto type = t->getType();
+  auto op = t->getOperator();
+
+  cout << *type << endl;
+
+  if (domain.size() == 0) {
+
+  }
+  else {
+  
+  }
+}
+
+void LLVMCodeGen::handle(VariableStore *t) {
+  cout << "Store   :  " << *t << endl;
+}
+
+llvm::Function *LLVMCodeGen::codegen(Function *function) {
+  visit(function);
+  if (isAborted()) {
+    return NULL;
+  }
+  llvm::Value *value = results.top();
+  results.pop();
+  assert(llvm::isa<llvm::Function>(value));
+  return llvm::cast<llvm::Function>(value);
+}
+

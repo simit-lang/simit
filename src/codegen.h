@@ -1,9 +1,14 @@
 #ifndef SIMIT_CODEGEN_H
 #define SIMIT_CODEGEN_H
 
-#include <stack>
-
 #include "irvisitors.h"
+#include <stack>
+#include "symboltable.h"
+
+// TODO: pimpl to avoid leaking llvm include files
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Value.h"
 
 namespace llvm {
 class Module;
@@ -31,11 +36,12 @@ class LLVMCodeGen : public IRVisitor {
   void handle(VariableStore *t);
 
  private:
-  llvm::Module *module;
+  llvm::Module module;
+  llvm::IRBuilder<> irBuilder;
+  SymbolTable<llvm::Value*> symtable;
   std::stack<llvm::Value*> results;
 
   llvm::Function *codegen(Function *function);
-  llvm::Function *llvmPrototype(Function *function) const;
 };
 
 }} // namespace simit::internal

@@ -74,7 +74,7 @@ class LiteralTensor : public TensorNode {
   * variables and both types are represented by the IndexVar class.
   *
   * Free index variables simply describe iteration across an index set and do
-  * not have a reduction operation.  Thus rop=FREE.
+  * not have a reduction operation (op=FREE).
   *
   * Reduction variables have an associated reduction operation that is
   * performed for each index in the index set.  Examples are SUM, which not
@@ -98,7 +98,6 @@ class IndexVar {
   IndexSetProduct indexSet;
   Operator op;
 };
-
 
 std::ostream &operator<<(std::ostream &os, const IndexVar &var);
 
@@ -143,6 +142,7 @@ class IndexExpr : public TensorNode {
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   const std::vector<IndexVarPtr> &getDomain() const;
+  IndexExpr::Operator getOperator() const { return op; }
   const std::vector<IndexedTensor> &getOperands() const { return operands; }
   void print(std::ostream &os) const;
 
