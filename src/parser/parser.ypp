@@ -61,7 +61,7 @@
   #include "types.h"
 
   namespace simit { namespace internal {
-  typedef SymbolTable<std::string, std::shared_ptr<IRNode>> ParserSymtableType;
+  typedef SymbolTable<std::shared_ptr<IRNode>> ParserSymtableType;
 
   struct ParserParams {
     ParserParams(ParserSymtableType        *symtable,
