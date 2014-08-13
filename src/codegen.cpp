@@ -7,10 +7,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
-//#include "llvm/IR/Type.h"
-//#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Type.h"
 
 #include "llvm/Analysis/Verifier.h"
+#include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
 #include "irvisitors.h"
@@ -29,11 +29,22 @@ using namespace std;
 #define LLVM_DOUBLE    llvm::Type::getDoubleTy(LLVM_CONTEXT)
 #define LLVM_DOUBLEPTR llvm::Type::getDoublePtrTy(LLVM_CONTEXT)
 
+namespace {
+  /** Class whose constructor initializes LLVM at load time when exactly one
+    * instance is created. */
+  class LLVMInitializer {
+    static LLVMInitializer llvmInitializer;
+    LLVMInitializer() {
+      llvm::InitializeNativeTarget();
+    }
+  };
+  LLVMInitializer LLVMInitializer::llvmInitializer = LLVMInitializer();
+}
+
 namespace simit {
 namespace internal {
 
 typedef IndexExpr::IndexedTensor IndexedTensor;
-
 
 static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   llvm::Type *llvmType = NULL;
@@ -68,24 +79,27 @@ static inline llvm::ConstantInt* constant(int val) {
 
 class LLVMCodeGenImpl : public IRVisitor {
  public:
-  LLVMCodeGenImpl() : module{"Simit JIT", LLVM_CONTEXT},
-                      builder{LLVM_CONTEXT} {}
+  LLVMCodeGenImpl() : builder(LLVM_CONTEXT) {
+    module = new llvm::Module("Simit JIT", LLVM_CONTEXT);
+    llvm::EngineBuilder engineBuilder(module);
+    executionEngine = engineBuilder.create();
+  }
 
   BinaryFunction *compileToFunctionPointer(Function *function);
   llvm::Function *codegen(Function *function);
 
+ private:
+  llvm::Module          *module;
+  llvm::ExecutionEngine *executionEngine;
+  llvm::IRBuilder<>      builder;
+
+  SymbolTable<llvm::Value*> symtable;
+  std::stack<llvm::Value*>  resultStack;
+
   void handle(Function *function);
-  void handle(Argument      *t);
-  void handle(Result        *t);
   void handle(LiteralTensor *t);
   void handle(IndexExpr     *t);
   void handle(VariableStore *t);
-  
- private:
-  llvm::Module              module;
-  llvm::IRBuilder<>         builder;
-  SymbolTable<llvm::Value*> symtable;
-  std::stack<llvm::Value*>  results;
 
   llvm::Function *createFunctionPrototype(Function *function);
   llvm::Value *createScalarOp(const std::string &name, IndexExpr::Operator op,
@@ -97,9 +111,12 @@ BinaryFunction *LLVMCodeGenImpl::compileToFunctionPointer(Function *function) {
   if (f == NULL) return NULL;
 
   f->dump();
+
+  void *fvoidptr = executionEngine->getPointerToFunction(f);
   // Pack up the llvm::Function in a simit BinaryFunction object
   return NULL;
 }
+
 llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
   visit(function);
   if (isAborted()) {
@@ -107,18 +124,9 @@ llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
   }
   builder.CreateRetVoid();
 
-  llvm::Value *value = results.top();
-  results.pop();
+  llvm::Value *value = resultStack.top();
+  resultStack.pop();
   assert(llvm::isa<llvm::Function>(value));
-  return llvm::cast<llvm::Function>(value);
-}
-
-void LLVMCodeGenImpl::handle(Argument *t) {
-  cout << "Argument:  " << *t << endl;
-}
-
-void LLVMCodeGenImpl::handle(Result *t) {
-  cout << "Result:    " << *t << endl;
   llvm::Function *f = llvm::cast<llvm::Function>(value);
   verifyFunction(*f);
   return f;
@@ -175,7 +183,7 @@ llvm::Function *LLVMCodeGenImpl::createFunctionPrototype(Function *function) {
   llvm::Function *f = llvm::Function::Create(ft,
                                              llvm::Function::ExternalLinkage,
                                              function->getName(),
-                                             &module);
+                                             module);
   // Name arguments and results
   auto ai = f->arg_begin();
   for (auto &arg : function->getArguments()) {
@@ -201,7 +209,7 @@ void LLVMCodeGenImpl::handle(Function *function) {
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
   builder.SetInsertPoint(entry);
 
-  results.push(f);
+  resultStack.push(f);
 }
 
 llvm::Value *
