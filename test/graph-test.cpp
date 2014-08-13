@@ -46,3 +46,31 @@ TEST(FieldTests, Expansion) {
   foo.get(1025, &ret);
   ASSERT_EQ(ret, 1026.05);
 }
+
+//// Set tests
+
+TEST(SetTests, Utils) {
+  ASSERT_EQ(type_of<int>(), Type::INT);
+  ASSERT_EQ(type_of<double>(), Type::FLOAT);
+}
+
+TEST(SetTests, AddAndGetFromTwoFields) {
+  Set myset;
+  
+  myset.addField(Type::INT);
+  myset.addField(Type::FLOAT);
+  
+  ASSERT_EQ(myset.numFields(), (unsigned int)2);
+  ASSERT_EQ(myset.size(), (unsigned int)0);
+  
+  unsigned int i = myset.addItem();
+  myset.set(i, 0, 10);
+  myset.set(i, 1, 101.1);
+  
+  ASSERT_EQ(myset.size(), 1);
+  
+  double ret;
+  myset.get(0, 1, &ret);
+  ASSERT_EQ(ret, 101.1);
+  
+}

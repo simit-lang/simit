@@ -7,8 +7,10 @@ enum Type {INT, FLOAT, ELEMENT};
 
 /** Helper to convert from C++ type to Simit Type. */
 template <typename T>
-  Type type_of() { return Type::ELEMENT; }
+inline Type type_of() { return Type::ELEMENT; }
 
+template<>
+inline Type type_of<int>() { return Type::INT; }
 
 /// A tensor is a generalization of scalars, vectors and matrices. Tensors can
 /// be fields of \ref Set instances and can be bound to \ref Program instances.

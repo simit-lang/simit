@@ -56,5 +56,34 @@ void Field::get<double>(const unsigned int idx, double* val) {
 }
   
 /* end Field */
+
   
+/* Set */
+unsigned int Set::addItem() {
+  for (auto f : fields) {
+    if (f->type == Type::INT)
+      f->add(0);
+    else if (f->type == Type::FLOAT)
+      f->add(0.0);
+    else
+      f->add(0);
+  }
+  return items++;
+}
+
+//template<>
+//void Set::set<int>(unsigned int idx, unsigned int field, int val) {
+//  assert((fields[field]->type == Type::INT) && "Incorrect field type.");
+//  
+//  fields[field]->set(idx, val);
+//}
+//  
+//template<>
+//void Set::set<double>(unsigned int idx, unsigned int field, double val) {
+//  assert((fields[field]->type == Type::FLOAT) && "Incorrect field type.");
+//  
+//  fields[field]->set(idx, val);
+//}
+  
+/* end Set */
 }
