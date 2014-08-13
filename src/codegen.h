@@ -6,20 +6,43 @@ namespace internal {
 class Function;
 class LLVMCodeGenImpl;
 
+class BinaryFunction {
+ public:
+  BinaryFunction() {}
+  virtual ~BinaryFunction() {}
+
+  virtual void run() = 0;
+
+ private:
+  // Not implemented
+  BinaryFunction (const BinaryFunction& other);
+  BinaryFunction& operator= (BinaryFunction &other);
+};
+
+class CodeGen {
+ public:
+  CodeGen() {}
+  virtual ~CodeGen() {}
+
+  virtual BinaryFunction *compileToFunctionPointer(Function *function) = 0;
+
+ private:
+  // Not implemented
+  CodeGen (const CodeGen& other);
+  CodeGen& operator= (CodeGen &other);
+};
+
 /** The base class of all classes that perform code generation using LLVM. */
-class LLVMCodeGen {
+class LLVMCodeGen : public CodeGen {
  public:
   LLVMCodeGen();
   ~LLVMCodeGen();
 
-  void compileToFunctionPointer(Function *function);
+  BinaryFunction *compileToFunctionPointer(Function *function);
 
  private:
-  // Not implemented
-  LLVMCodeGen (const LLVMCodeGen& other);
-  LLVMCodeGen& operator= (LLVMCodeGen other);
-
-  /** Implementation class to avoid bleeding LLVM to the rest of the project. */
+  /** Implementation class to avoid bleeding LLVM to the rest of the project.
+    * It is easier to pimpl here than to forward declare the LLVM classes. */
   LLVMCodeGenImpl *impl;
 };
 

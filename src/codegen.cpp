@@ -71,6 +71,7 @@ class LLVMCodeGenImpl : public IRVisitor {
   LLVMCodeGenImpl() : module{"Simit JIT", LLVM_CONTEXT},
                       builder{LLVM_CONTEXT} {}
 
+  BinaryFunction *compileToFunctionPointer(Function *function);
   llvm::Function *codegen(Function *function);
 
   void handle(Function *function);
@@ -91,6 +92,14 @@ class LLVMCodeGenImpl : public IRVisitor {
                               const vector<IndexedTensor> &operands);
 };
 
+BinaryFunction *LLVMCodeGenImpl::compileToFunctionPointer(Function *function) {
+  llvm::Function *f = codegen(function);
+  if (f == NULL) return NULL;
+
+  f->dump();
+  // Pack up the llvm::Function in a simit BinaryFunction object
+  return NULL;
+}
 llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
   visit(function);
   if (isAborted()) {
@@ -110,6 +119,9 @@ void LLVMCodeGenImpl::handle(Argument *t) {
 
 void LLVMCodeGenImpl::handle(Result *t) {
   cout << "Result:    " << *t << endl;
+  llvm::Function *f = llvm::cast<llvm::Function>(value);
+  verifyFunction(*f);
+  return f;
 }
 
 void LLVMCodeGenImpl::handle(LiteralTensor *t) {
@@ -237,15 +249,9 @@ LLVMCodeGen::~LLVMCodeGen() {
   delete impl;
 }
 
-void LLVMCodeGen::compileToFunctionPointer(Function *function) {
+BinaryFunction *LLVMCodeGen::compileToFunctionPointer(Function *function) {
   cout << *function << endl;
-  llvm::Function *f = impl->codegen(function);
-  if (f == NULL) return;
-
-  f->dump();
-  verifyFunction(*f);
-
-  // Pack up the llvm::Function in a simit BinaryFunction object
+  return impl->compileToFunctionPointer(function);
 }
 
 }}  // namespace simit::internal
