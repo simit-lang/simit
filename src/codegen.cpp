@@ -7,8 +7,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
-#include "llvm/IR/Type.h"
-#include "llvm/IR/DerivedTypes.h"
+//#include "llvm/IR/Type.h"
+//#include "llvm/IR/DerivedTypes.h"
+
+#include "llvm/Analysis/Verifier.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
 #include "irvisitors.h"
@@ -94,6 +96,8 @@ llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
   if (isAborted()) {
     return NULL;
   }
+  builder.CreateRetVoid();
+
   llvm::Value *value = results.top();
   results.pop();
   assert(llvm::isa<llvm::Function>(value));
@@ -237,7 +241,11 @@ void LLVMCodeGen::compileToFunctionPointer(Function *function) {
   cout << *function << endl;
   llvm::Function *f = impl->codegen(function);
   if (f == NULL) return;
+
   f->dump();
+  verifyFunction(*f);
+
+  // Pack up the llvm::Function in a simit BinaryFunction object
 }
 
 }}  // namespace simit::internal
