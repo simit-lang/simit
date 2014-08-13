@@ -465,12 +465,7 @@ namespace  simit { namespace internal  {
       case 68: // formal_list
 
 
-        {
-  for (auto formal : *(yysym.value.Formals)) {
-    delete formal;
-  }
-  delete (yysym.value.Formals);
-}
+        { delete (yysym.value.Formals); }
 
         break;
 
@@ -540,14 +535,14 @@ namespace  simit { namespace internal  {
       case 88: // lhs_expr_list
 
 
-        { delete (yysym.value.StoreList); }
+        { delete (yysym.value.VarAccesses); }
 
         break;
 
       case 89: // lhs_expr
 
 
-        { delete (yysym.value.Store); }
+        { delete (yysym.value.VarAccess); }
 
         break;
 
@@ -1076,9 +1071,6 @@ namespace  simit { namespace internal  {
       auto result = new Argument(formal->name, formal->type);
       (yylhs.value.Arguments)->push_back(shared_ptr<Argument>(result));
     }
-    for (auto formal : *(yystack_[0].value.Formals)) {
-      delete formal;
-    }
     delete (yystack_[0].value.Formals);
  }
 
@@ -1101,9 +1093,6 @@ namespace  simit { namespace internal  {
       auto result = new Result(formal->name, formal->type);
       (yylhs.value.Results)->push_back(shared_ptr<Result>(result));
     }
-    for (auto formal : *(yystack_[1].value.Formals)) {
-      delete formal;
-    }
     delete (yystack_[1].value.Formals);
   }
 
@@ -1122,7 +1111,7 @@ namespace  simit { namespace internal  {
   case 28:
 
     {
-    (yylhs.value.Formals) = new vector<FormalData *>();
+    (yylhs.value.Formals) = new simit::util::OwnershipVector<FormalData *>();
     (yylhs.value.Formals)->push_back((yystack_[0].value.Formal));
   }
 

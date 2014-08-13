@@ -222,10 +222,10 @@ namespace  simit { namespace internal  {
   Function *Function;
 
 
-  FormalData                             *Formal;
-  std::vector<FormalData*>               *Formals;
-  std::vector<std::shared_ptr<Argument>> *Arguments;
-  std::vector<std::shared_ptr<Result>>   *Results;
+  FormalData                                *Formal;
+  simit::util::OwnershipVector<FormalData*> *Formals;
+  std::vector<std::shared_ptr<Argument>>    *Arguments;
+  std::vector<std::shared_ptr<Result>>      *Results;
 
 
   std::shared_ptr<simit::internal::TensorNode>              *Tensor;

@@ -285,17 +285,11 @@ function_header
 };
 
 %union {
-  FormalData                             *Formal;
-  std::vector<FormalData*>               *Formals;
-  std::vector<std::shared_ptr<Argument>> *Arguments;
-  std::vector<std::shared_ptr<Result>>   *Results;
+  FormalData                                *Formal;
+  simit::util::OwnershipVector<FormalData*> *Formals;
+  std::vector<std::shared_ptr<Argument>>    *Arguments;
+  std::vector<std::shared_ptr<Result>>      *Results;
 };
-%destructor {
-  for (auto formal : *$$) {
-    delete formal;
-  }
-  delete $$;
-} <Formals>;
 
 %type <Arguments> arguments;
 arguments
@@ -307,9 +301,6 @@ arguments
     for (auto formal : *$formal_list) {
       auto result = new Argument(formal->name, formal->type);
       $$->push_back(shared_ptr<Argument>(result));
-    }
-    for (auto formal : *$formal_list) {
-      delete formal;
     }
     delete $formal_list;
  }
@@ -326,9 +317,6 @@ results
       auto result = new Result(formal->name, formal->type);
       $$->push_back(shared_ptr<Result>(result));
     }
-    for (auto formal : *$formal_list) {
-      delete formal;
-    }
     delete $formal_list;
   }
 
@@ -343,7 +331,7 @@ formal_decl
 %type <Formals> formal_list;
 formal_list
   : formal_decl {
-    $$ = new vector<FormalData *>();
+    $$ = new simit::util::OwnershipVector<FormalData *>();
     $$->push_back($formal_decl);
   }
   | formal_list "," formal_decl {
