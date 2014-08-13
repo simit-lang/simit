@@ -220,7 +220,7 @@ void IndexExpr::print(std::ostream &os) const {
 
 /* class VariableStore */
 void VariableStore::print(std::ostream &os) const {
-  os << getName();
+  os << getName() << " = " << value->getName();
 }
 
 

@@ -427,12 +427,13 @@ return_stmt
 %type<IRNodes> assign_stmt;
 assign_stmt
   : lhs_expr_list "=" expr_list ";" {
-    auto lhsList = unique_ptr<vector<shared_ptr<Store>>>($lhs_expr_list);
+    auto lhsList = unique_ptr<VariableAccessVector>($lhs_expr_list);
     auto rhsList = unique_ptr<vector<shared_ptr<TensorNode>>>($expr_list);
 
     $$ = new vector<shared_ptr<IRNode>>();
 
     if (lhsList->size() > rhsList->size()) {
+      // TODO: Handle maps and then reintroduce this error
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
       break;
     }
@@ -448,12 +449,20 @@ assign_stmt
 
       if (rhs == NULL) continue;  // TODO: Remove this
 
-      auto lhsTensor = ctx->symtable[lhs->getName()];
-      if (lhsTensor != NULL) {
+      auto lhsTensor = ctx->symtable[lhs->name];
+      if (lhsTensor == NULL) {
+        NOT_SUPPORTED_YET;
+      }
+      else {
         if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
-          rhs->setName(result->getName());  // TODO: Generate unique name
-          result->setValue(rhs);
-          $$->push_back(rhs);
+          rhs->setName(result->getName() + "_val");
+          auto store = new VariableStore(result, rhs);
+          auto storePtr = std::shared_ptr<Store>(store);
+          result->setValue(storePtr);
+          $$->push_back(storePtr);
+        }
+        else {
+          NOT_SUPPORTED_YET;
         }
       }
     }
@@ -473,8 +482,7 @@ expr_stmt
 %union {
   std::shared_ptr<simit::internal::TensorNode>              *Tensor;
   std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
-  std::shared_ptr<simit::internal::Store>                   *Store;
-  std::vector<std::shared_ptr<simit::internal::Store>>      *StoreList;
+
 };
 
 %type<Tensor> expr;
@@ -689,41 +697,52 @@ reduction_op
 
 
 // Lhs expressions
-%type<StoreList> lhs_expr_list;
+%code requires {
+  namespace {
+  // This struct describe variable accesses.
+  struct VariableAccess {
+    std::string name;
+  };
+
+  typedef simit::util::OwnershipVector<VariableAccess*> VariableAccessVector;
+  }
+};
+
+%union {
+  VariableAccess       *VarAccess;
+  VariableAccessVector *VarAccesses;
+};
+
+%type<VarAccesses> lhs_expr_list;
 lhs_expr_list
   : lhs_expr {
-    $$ = new vector<shared_ptr<Store>>();
+    $$ = new VariableAccessVector();
     if ($lhs_expr == NULL) break;  // TODO: Remove check
-    $$->push_back(*$lhs_expr);
-    delete $lhs_expr;
-
+    $$->push_back($lhs_expr);
   }
   | lhs_expr_list "," lhs_expr {
     $$ = $1;
     if ($lhs_expr == NULL) break;  // TODO: Remove check
-    $$->push_back(*$lhs_expr);
-    delete $lhs_expr;
+    $$->push_back($lhs_expr);
   }
 
-%type<Store> lhs_expr;
+%type<VarAccess> lhs_expr;
 lhs_expr
   : IDENT {
-    string ident($IDENT);
-    free((void*)$IDENT);
-    // TODO: Stores probably do not need to be TensorNode classes, but could be
-    // some parser-internal class...
-    auto variableStore = new VariableStore(ident, NULL);
-    $$ = new std::shared_ptr<Store>(variableStore);
+    std::string name = convertAndFree($IDENT);
+    auto variableStore = new VariableAccess;
+    variableStore->name = name;
+    $$ = variableStore;
   }
   | IDENT "(" expr_list ")" {
+    std::string name = convertAndFree($IDENT);
     $$ = NULL;
     delete $expr_list;
-    free((void*)$IDENT);
   }
   | IDENT "." IDENT {
+    std::string name = convertAndFree($1);
+    std::string field = convertAndFree($3);
     $$ = NULL;
-    free((void*)$1);
-    free((void*)$3);
   }
 
 

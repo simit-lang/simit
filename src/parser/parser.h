@@ -84,6 +84,16 @@
 
 
   namespace {
+  // This struct describe variable accesses.
+  struct VariableAccess {
+    std::string name;
+  };
+
+  typedef simit::util::OwnershipVector<VariableAccess*> VariableAccessVector;
+  }
+
+
+  namespace {
     template <typename T>
     class TensorValues {
      public:
@@ -230,8 +240,11 @@ namespace  simit { namespace internal  {
 
   std::shared_ptr<simit::internal::TensorNode>              *Tensor;
   std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
-  std::shared_ptr<simit::internal::Store>                   *Store;
-  std::vector<std::shared_ptr<simit::internal::Store>>      *StoreList;
+
+
+
+  VariableAccess       *VarAccess;
+  VariableAccessVector *VarAccesses;
 
 
   TensorType                         *TensorType;

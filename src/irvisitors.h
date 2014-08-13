@@ -36,14 +36,14 @@ class IRVisitor {
   virtual void visit(Argument        *t);
   virtual void visit(Result          *t);
   virtual void visit(LiteralTensor   *t);
-  virtual void visit(IndexExpr *t);
+  virtual void visit(IndexExpr       *t);
   virtual void visit(VariableStore   *t);
 
   virtual void handle(Function        *f) { UNUSED(f); };
   virtual void handle(Argument        *t) { UNUSED(t); };
   virtual void handle(Result          *t) { UNUSED(t); };
   virtual void handle(LiteralTensor   *t) { UNUSED(t); };
-  virtual void handle(IndexExpr *t)       { UNUSED(t); };
+  virtual void handle(IndexExpr       *t) { UNUSED(t); };
   virtual void handle(VariableStore   *t) { UNUSED(t); };
 
  protected:

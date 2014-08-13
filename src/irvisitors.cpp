@@ -41,6 +41,6 @@ void IRVisitor::visit(IndexExpr *t) {
 }
 
 void IRVisitor::visit(VariableStore *t) {
-  // TODO: Implement visitation
+  CHECK_ABORT(t->getValue()->accept(this));
   CHECK_ABORT(handle(t));
 }

@@ -1227,12 +1227,13 @@ namespace  simit { namespace internal  {
   case 45:
 
     {
-    auto lhsList = unique_ptr<vector<shared_ptr<Store>>>((yystack_[3].value.StoreList));
+    auto lhsList = unique_ptr<VariableAccessVector>((yystack_[3].value.VarAccesses));
     auto rhsList = unique_ptr<vector<shared_ptr<TensorNode>>>((yystack_[1].value.TensorList));
 
     (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
 
     if (lhsList->size() > rhsList->size()) {
+      // TODO: Handle maps and then reintroduce this error
       // REPORT_ERROR("too few expressions assigned to too many variables", @2);
       break;
     }
@@ -1248,12 +1249,20 @@ namespace  simit { namespace internal  {
 
       if (rhs == NULL) continue;  // TODO: Remove this
 
-      auto lhsTensor = ctx->symtable[lhs->getName()];
-      if (lhsTensor != NULL) {
+      auto lhsTensor = ctx->symtable[lhs->name];
+      if (lhsTensor == NULL) {
+        NOT_SUPPORTED_YET;
+      }
+      else {
         if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
-          rhs->setName(result->getName());  // TODO: Generate unique name
-          result->setValue(rhs);
-          (yylhs.value.IRNodes)->push_back(rhs);
+          rhs->setName(result->getName() + "_val");
+          auto store = new VariableStore(result, rhs);
+          auto storePtr = std::shared_ptr<Store>(store);
+          result->setValue(storePtr);
+          (yylhs.value.IRNodes)->push_back(storePtr);
+        }
+        else {
+          NOT_SUPPORTED_YET;
         }
       }
     }
@@ -1622,11 +1631,9 @@ namespace  simit { namespace internal  {
   case 89:
 
     {
-    (yylhs.value.StoreList) = new vector<shared_ptr<Store>>();
-    if ((yystack_[0].value.Store) == NULL) break;  // TODO: Remove check
-    (yylhs.value.StoreList)->push_back(*(yystack_[0].value.Store));
-    delete (yystack_[0].value.Store);
-
+    (yylhs.value.VarAccesses) = new VariableAccessVector();
+    if ((yystack_[0].value.VarAccess) == NULL) break;  // TODO: Remove check
+    (yylhs.value.VarAccesses)->push_back((yystack_[0].value.VarAccess));
   }
 
     break;
@@ -1634,10 +1641,9 @@ namespace  simit { namespace internal  {
   case 90:
 
     {
-    (yylhs.value.StoreList) = (yystack_[2].value.StoreList);
-    if ((yystack_[0].value.Store) == NULL) break;  // TODO: Remove check
-    (yylhs.value.StoreList)->push_back(*(yystack_[0].value.Store));
-    delete (yystack_[0].value.Store);
+    (yylhs.value.VarAccesses) = (yystack_[2].value.VarAccesses);
+    if ((yystack_[0].value.VarAccess) == NULL) break;  // TODO: Remove check
+    (yylhs.value.VarAccesses)->push_back((yystack_[0].value.VarAccess));
   }
 
     break;
@@ -1645,12 +1651,10 @@ namespace  simit { namespace internal  {
   case 91:
 
     {
-    string ident((yystack_[0].value.string));
-    free((void*)(yystack_[0].value.string));
-    // TODO: Stores probably do not need to be TensorNode classes, but could be
-    // some parser-internal class...
-    auto variableStore = new VariableStore(ident, NULL);
-    (yylhs.value.Store) = new std::shared_ptr<Store>(variableStore);
+    std::string name = convertAndFree((yystack_[0].value.string));
+    auto variableStore = new VariableAccess;
+    variableStore->name = name;
+    (yylhs.value.VarAccess) = variableStore;
   }
 
     break;
@@ -1658,9 +1662,9 @@ namespace  simit { namespace internal  {
   case 92:
 
     {
-    (yylhs.value.Store) = NULL;
+    std::string name = convertAndFree((yystack_[3].value.string));
+    (yylhs.value.VarAccess) = NULL;
     delete (yystack_[1].value.TensorList);
-    free((void*)(yystack_[3].value.string));
   }
 
     break;
@@ -1668,9 +1672,9 @@ namespace  simit { namespace internal  {
   case 93:
 
     {
-    (yylhs.value.Store) = NULL;
-    free((void*)(yystack_[2].value.string));
-    free((void*)(yystack_[0].value.string));
+    std::string name = convertAndFree((yystack_[2].value.string));
+    std::string field = convertAndFree((yystack_[0].value.string));
+    (yylhs.value.VarAccess) = NULL;
   }
 
     break;
@@ -2611,18 +2615,18 @@ namespace  simit { namespace internal  {
   {
        0,   171,   171,   173,   177,   180,   183,   186,   189,   193,
      199,   203,   209,   212,   219,   223,   225,   227,   229,   232,
-     242,   249,   258,   302,   305,   319,   323,   337,   345,   349,
-     356,   359,   368,   369,   370,   371,   372,   376,   406,   414,
-     420,   422,   426,   428,   435,   441,   476,   479,   494,   512,
-     515,   518,   521,   526,   531,   536,   541,   546,   570,   574,
-     579,   584,   589,   594,   599,   604,   609,   613,   618,   621,
-     626,   629,   634,   637,   644,   650,   659,   666,   668,   673,
-     675,   680,   682,   684,   687,   690,   693,   699,   700,   706,
-     713,   722,   730,   735,   744,   772,   775,   780,   786,   789,
-     795,   798,   836,   841,   848,   851,   855,   860,   863,   932,
-     933,   935,   939,   940,   943,   951,   961,   968,   971,   975,
-     988,   992,  1006,  1010,  1016,  1023,  1026,  1030,  1043,  1047,
-    1061,  1065,  1071,  1076,  1085,  1090,  1092,  1095,  1096
+     242,   249,   258,   296,   299,   310,   314,   325,   333,   337,
+     344,   347,   356,   357,   358,   359,   360,   364,   394,   402,
+     408,   410,   414,   416,   423,   429,   473,   476,   490,   508,
+     511,   514,   517,   522,   527,   532,   537,   542,   566,   570,
+     575,   580,   585,   590,   595,   600,   605,   609,   614,   617,
+     622,   625,   630,   633,   640,   646,   655,   662,   664,   669,
+     671,   676,   678,   680,   683,   686,   689,   695,   696,   718,
+     723,   731,   737,   742,   751,   779,   782,   787,   793,   796,
+     802,   805,   843,   848,   855,   858,   862,   867,   870,   939,
+     940,   942,   946,   947,   950,   958,   968,   975,   978,   982,
+     995,   999,  1013,  1017,  1023,  1030,  1033,  1037,  1050,  1054,
+    1068,  1072,  1078,  1083,  1092,  1097,  1099,  1102,  1103
   };
 
   // Print the state stack on the debug stream.

@@ -67,8 +67,6 @@ class LiteralTensor : public TensorNode {
   void  *data;
 };
 
-/** Index variables describe the iteration domains of tensor operations.*/
-
 /** An index variable describes iteration over an index set.  There are two
   * types of index variables, free index variables and reduction index
   * variables and both types are represented by the IndexVar class.
@@ -165,12 +163,21 @@ class Store : public TensorNode {
 // TODO: Remove this class (move it into parser and don't inherit from tensor)
 class VariableStore : public Store {
  public:
-  VariableStore(const std::string &varName, const TensorType *type)
-      : Store(varName, type) {}
+  VariableStore(const std::shared_ptr<TensorNode> &target,
+                const std::shared_ptr<TensorNode> &value)
+      : Store(target->getName(), target->getType()),
+        target{target}, value{value} {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
+  std::shared_ptr<TensorNode> getTarget() const { return target; }
+  std::shared_ptr<TensorNode> getValue() const { return value; }
+
   void print(std::ostream &os) const;
+
+ private:
+  std::shared_ptr<TensorNode> target;
+  std::shared_ptr<TensorNode> value;
 };
 
 
@@ -192,16 +199,16 @@ class Result : public TensorNode {
   Result(const std::string &name, const TensorType *type)
       : TensorNode(name, type) {}
 
-  void setValue(const std::shared_ptr<TensorNode> &value) {
+  void setValue(const std::shared_ptr<Store> &value) {
     this->value = value;
   }
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const std::shared_ptr<TensorNode> &getValue() const { return value; }
+  const std::shared_ptr<Store> &getValue() const { return value; }
   void print(std::ostream &os) const;
 
  private:
-  std::shared_ptr<TensorNode> value;
+  std::shared_ptr<Store> value;
 };
 
 /** A Simit function. */

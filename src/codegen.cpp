@@ -32,30 +32,6 @@ namespace internal {
 
 typedef IndexExpr::IndexedTensor IndexedTensor;
 
-class LLVMCodeGenImpl : public IRVisitor {
- public:
-  LLVMCodeGenImpl() : module{"Simit JIT", LLVM_CONTEXT},
-                      builder{LLVM_CONTEXT} {}
-
-  llvm::Function *codegen(Function *function);
-
-  void handle(Function *function);
-  void handle(Argument      *t);
-  void handle(Result        *t);
-  void handle(LiteralTensor *t);
-  void handle(IndexExpr     *t);
-  void handle(VariableStore *t);
-  
- private:
-  llvm::Module              module;
-  llvm::IRBuilder<>         builder;
-  SymbolTable<llvm::Value*> symtable;
-  std::stack<llvm::Value*>  results;
-
-  llvm::Function *createFunctionPrototype(Function *function);
-  llvm::Value * createScalarOp(const std::string &name, IndexExpr::Operator op,
-                               const vector<IndexedTensor> &operands);
-};
 
 static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   llvm::Type *llvmType = NULL;
@@ -85,6 +61,86 @@ static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
 
 static inline llvm::ConstantInt* constant(int val) {
     return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, val, false));
+}
+
+
+class LLVMCodeGenImpl : public IRVisitor {
+ public:
+  LLVMCodeGenImpl() : module{"Simit JIT", LLVM_CONTEXT},
+                      builder{LLVM_CONTEXT} {}
+
+  llvm::Function *codegen(Function *function);
+
+  void handle(Function *function);
+  void handle(Argument      *t);
+  void handle(Result        *t);
+  void handle(LiteralTensor *t);
+  void handle(IndexExpr     *t);
+  void handle(VariableStore *t);
+  
+ private:
+  llvm::Module              module;
+  llvm::IRBuilder<>         builder;
+  SymbolTable<llvm::Value*> symtable;
+  std::stack<llvm::Value*>  results;
+
+  llvm::Function *createFunctionPrototype(Function *function);
+  llvm::Value *createScalarOp(const std::string &name, IndexExpr::Operator op,
+                              const vector<IndexedTensor> &operands);
+};
+
+llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
+  visit(function);
+  if (isAborted()) {
+    return NULL;
+  }
+  llvm::Value *value = results.top();
+  results.pop();
+  assert(llvm::isa<llvm::Function>(value));
+  return llvm::cast<llvm::Function>(value);
+}
+
+void LLVMCodeGenImpl::handle(Argument *t) {
+  cout << "Argument:  " << *t << endl;
+}
+
+void LLVMCodeGenImpl::handle(Result *t) {
+  cout << "Result:    " << *t << endl;
+}
+
+void LLVMCodeGenImpl::handle(LiteralTensor *t) {
+  cout << "Literal:   " << *t << endl;
+}
+
+void LLVMCodeGenImpl::handle(IndexExpr *t) {
+  cout << "IndexExpr: " << *t << endl;
+  llvm::Value *result = NULL;
+
+  auto domain = t->getDomain();
+  auto op = t->getOperator();
+  auto &operands = t->getOperands();
+
+  if (domain.size() == 0) {
+    result = createScalarOp(t->getName(), op, operands);
+  }
+  else {
+    NOT_SUPPORTED_YET;
+  }
+
+  assert(result != NULL);
+  symtable[t->getName()] = result;
+}
+
+void LLVMCodeGenImpl::handle(VariableStore *t) {
+  cout << "Store   :  " << *t << endl;
+
+  auto val = symtable[t->getValue()->getName()];
+  assert(val != NULL);
+
+  auto target = symtable[t->getTarget()->getName()];
+  assert(target != NULL);
+
+  builder.CreateStore(val, target);
 }
 
 llvm::Function *LLVMCodeGenImpl::createFunctionPrototype(Function *function) {
@@ -132,18 +188,6 @@ void LLVMCodeGenImpl::handle(Function *function) {
   results.push(f);
 }
 
-void LLVMCodeGenImpl::handle(Argument *t) {
-  cout << "Argument:  " << *t << endl;
-}
-
-void LLVMCodeGenImpl::handle(Result *t) {
-  cout << "Result:    " << *t << endl;
-}
-
-void LLVMCodeGenImpl::handle(LiteralTensor *t) {
-  cout << "Literal:   " << *t << endl;
-}
-
 llvm::Value *
 LLVMCodeGenImpl::createScalarOp(const std::string &name, IndexExpr::Operator op,
                                 const vector<IndexedTensor> &operands) {
@@ -152,11 +196,12 @@ LLVMCodeGenImpl::createScalarOp(const std::string &name, IndexExpr::Operator op,
     case IndexExpr::NEG: {
       assert (operands.size() == 1);
       auto operandName = operands[0].getTensor()->getName();
-      auto val = symtable[name];
+      auto val = symtable[operandName];
+      assert(val != NULL);
       auto type = val->getType();
       if (type->isPointerTy()) {
-        auto addr = builder.CreateGEP(val, constant(0), operandName + "addr");
-        val = builder.CreateLoad(addr, operandName + "val");
+        auto addr = builder.CreateGEP(val, constant(0), operandName + "_ptr");
+        val = builder.CreateLoad(addr, operandName + "_val");
       }
       value = builder.CreateFNeg(val, name);
       break;
@@ -179,38 +224,6 @@ LLVMCodeGenImpl::createScalarOp(const std::string &name, IndexExpr::Operator op,
   return value;
 }
 
-void LLVMCodeGenImpl::handle(IndexExpr *t) {
-  cout << "IndexExpr: " << *t << endl;
-  llvm::Value *result = NULL;
-
-  auto domain = t->getDomain();
-  auto op = t->getOperator();
-  auto &operands = t->getOperands();
-
-  if (domain.size() == 0) {
-    result = createScalarOp(t->getName(), op, operands);
-  }
-  else {
-
-  }
-
-  assert(result != NULL);
-}
-
-void LLVMCodeGenImpl::handle(VariableStore *t) {
-  cout << "Store   :  " << *t << endl;
-}
-
-llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
-  visit(function);
-  if (isAborted()) {
-    return NULL;
-  }
-  llvm::Value *value = results.top();
-  results.pop();
-  assert(llvm::isa<llvm::Function>(value));
-  return llvm::cast<llvm::Function>(value);
-}
 
 /* class LLVMCodeGen */
 LLVMCodeGen::LLVMCodeGen() : impl(new LLVMCodeGenImpl()) {
