@@ -1251,7 +1251,7 @@ namespace  simit { namespace internal  {
 
       auto lhsTensor = ctx->symtable[lhs->name];
       if (lhsTensor == NULL) {
-        NOT_SUPPORTED_YET;
+//        NOT_SUPPORTED_YET;
       }
       else {
         if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
