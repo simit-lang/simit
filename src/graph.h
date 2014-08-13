@@ -36,7 +36,12 @@ public:
   
   /** Add an item by adding a new field entry, setting it to the given value */
   template <typename T>
-  void add(T val);
+  void add(T val) {
+    if (items > capacity-1)
+      increaseCapacity();
+    
+    set(items++, val);
+  }
   
   /** Set the field of item idx to a new value */
   template <typename T>

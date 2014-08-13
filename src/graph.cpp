@@ -24,22 +24,6 @@ void Field::set<double>(const unsigned int idx, double val) {
   ((double*)data)[idx] = val;
 }
 
-template <>
-void Field::add<int>(int val) {
-  if (items > capacity-1)
-    increaseCapacity();
-  
-  set(items++, val);
-}
-
-template <>
-void Field::add<double>(double val) {
-  if (items > capacity-1)
-    increaseCapacity();
-  
-  set(items++, val);
-}
-
 void Field::remove(const unsigned int idx) {
   // Should this be ok?
   assert((idx < items) && "Removing a non-existent item");
@@ -54,7 +38,6 @@ void Field::remove(const unsigned int idx) {
 
   items--;
 }
-  
   
 template <>
 void Field::get<int>(const unsigned int idx, int* val) {

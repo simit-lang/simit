@@ -30,7 +30,7 @@ TEST(FieldTests, Remove) {
   
   int ret;
   foo.get(1, &ret);
-  ASSERT_EQ(foo.size(), 2);
+  ASSERT_EQ(foo.size(), (unsigned int)2);
   ASSERT_EQ(ret, 30);
 }
 
@@ -40,7 +40,7 @@ TEST(FieldTests, Expansion) {
   for (int i=0; i<1028; i++)
     foo.add(1.05 + i);
   
-  ASSERT_GT(foo.size(), 1025);
+  ASSERT_GT(foo.size(), (unsigned int)1025);
   
   double ret;
   foo.get(1025, &ret);
