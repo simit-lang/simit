@@ -1,5 +1,5 @@
 %%% neg-func
-%%! neg(1.0) -> -1.0;
+%! neg(1.0) == -1.0;
 func neg(a : float) -> (c : float)
   c = -a;
 end

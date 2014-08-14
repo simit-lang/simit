@@ -22,6 +22,9 @@ class ProgramContent {
     for (auto function : functions) {
       delete function;
     }
+    for (auto test : tests) {
+      delete test;
+    }
     delete frontend;
     delete codegen;
   }
@@ -29,7 +32,7 @@ class ProgramContent {
   const std::string &name;
   std::vector<Function*> functions;
   std::vector<simit::Error> errors;
-  std::vector<Test> tests;
+  std::vector<Test*> tests;
 
   Frontend *getFrontend() { return frontend; }
   CodeGen *getCodeGen() {
@@ -71,6 +74,13 @@ int Program::loadFile(const std::string &filename) {
 int Program::compile() {
 //  for (auto function : impl->functions) {
 //    impl->getCodeGen()->compileToFunctionPointer(function);
+//  }
+  return 0;
+}
+
+int Program::verify() {
+//  for (auto &test : impl->tests) {
+//    cout << *test << endl;
 //  }
   return 0;
 }

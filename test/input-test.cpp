@@ -75,7 +75,7 @@ std::string loadText(const std::string &filepath) {
 }
 
 vector<ProgramTestParam> readTestsFromFile(const std::string &dirpath,
-                                      const std::string &filename) {
+                                           const std::string &filename) {
   string filepath = dirpath + "/" + filename;
   string source = loadText(filepath);
 
@@ -177,7 +177,14 @@ TEST_P(input, check) {
       unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
       ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
     }
-    FAIL();
+  }
+
+  if (program.verify() != 0) {
+    for (auto &error : program.getErrors()) {
+      string errorFile = GetParam().path;
+      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
+      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
+    }
   }
 }
 

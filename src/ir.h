@@ -262,11 +262,15 @@ class Function : public IRNode {
   * and can subsequently be picked up by a test framework. */
 class Test : public IRNode {
  public:
-  Test(std::string name) : IRNode(name) {}
+  Test(const std::shared_ptr<Call> &call,
+       const std::shared_ptr<LiteralTensor> &literal)
+      : call(call), literal(literal) {}
 
   void print(std::ostream &os) const;
 
  private:
+  std::shared_ptr<Call> call;
+  std::shared_ptr<LiteralTensor> literal;
 };
 
 }} // namespace simit::internal

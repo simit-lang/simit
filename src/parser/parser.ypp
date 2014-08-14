@@ -67,13 +67,13 @@
     ParserParams(ParserSymtableType        *symtable,
                  std::vector<Function *>   *functions,
                  std::vector<simit::Error> *errors,
-                 std::vector<Test>         *tests)
+                 std::vector<Test*>        *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
     ParserSymtableType        &symtable;
     std::vector<Function *>   &functions;
     std::vector<simit::Error> &errors;
-    std::vector<Test>         &tests;
+    std::vector<Test*>        &tests;
   };
   }}
 }
@@ -127,7 +127,7 @@
 %token ELSE      "else"
 %token BLOCKEND  "end"
 %token RETURN    "return"
-%token TEST      "test"
+%token TEST      "%!"
 
 %token RARROW    "->"
 %token LP        "("
@@ -191,7 +191,7 @@ program_element
     delete $stmt;
   }
   | test {
-    $$ = NULL;
+    ctx->tests.push_back($test);
   }
 
 // Externs
@@ -1097,23 +1097,13 @@ scalar_literal
   }
 
 // Tests
-%type<IRNodes> test;
+%union { Test *Test; };
+%type <Test> test;
 test
-  : TEST test_stmt_block {
-    $$ = new vector<shared_ptr<IRNode>>();
-    $$->push_back(shared_ptr<IRNode>(new Test("MyTest")));
+  : "%!" call_expr "==" tensor_literal ";" {
+    $$ = new Test(*$call_expr, *$tensor_literal);
+    delete $call_expr;
+    delete $tensor_literal;
   }
 
-test_stmt_block
-  : /* empty */
-  | test_stmt_block test_stmt
-
-test_stmt
-  : stmt
-  | expr "->" literal ";" {
-    auto expr = shared_ptr<TensorNode>(*$expr);
-    auto literal = shared_ptr<TensorNode>(*$literal);
-    delete $expr;
-    delete $literal;
-  }
 %%

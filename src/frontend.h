@@ -28,20 +28,20 @@ class Frontend {
   int parseStream(std::istream           &programStream,
                   std::vector<Function*> *functions,
                   std::vector<Error>     *errors,
-                  std::vector<Test>      *tests);
+                  std::vector<Test*>     *tests);
 
   /** Parses, typechecks and turns a given Simit-formated string into Simit IR.
     */
   int parseString(const std::string      &programString,
                   std::vector<Function*> *functions,
                   std::vector<Error>     *errors,
-                  std::vector<Test>      *tests);
+                  std::vector<Test*>     *tests);
 
   /** Parses, typechecks and turns a given Simit-formated file into Simit IR. */
   int parseFile(const std::string      &filename,
                 std::vector<Function*> *functions,
                 std::vector<Error>     *errors,
-                std::vector<Test>      *tests);
+                std::vector<Test*>     *tests);
 
  private:
   SymbolTable<std::shared_ptr<IRNode>> symtable;

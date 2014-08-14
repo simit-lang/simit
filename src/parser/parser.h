@@ -62,13 +62,13 @@
     ParserParams(ParserSymtableType        *symtable,
                  std::vector<Function *>   *functions,
                  std::vector<simit::Error> *errors,
-                 std::vector<Test>         *tests)
+                 std::vector<Test*>        *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
     ParserSymtableType        &symtable;
     std::vector<Function *>   &functions;
     std::vector<simit::Error> &errors;
-    std::vector<Test>         &tests;
+    std::vector<Test*>        &tests;
   };
   }}
 
@@ -261,6 +261,8 @@ namespace  simit { namespace internal  {
   std::shared_ptr<LiteralTensor> *LiteralTensor;
   TensorValues<double>           *TensorDoubleValues;
   TensorValues<int>              *TensorIntValues;
+
+ Test *Test; 
 
 
     };

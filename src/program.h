@@ -55,6 +55,9 @@ class Program {
     * \return 0 on success, 1 if the program is incomplete. */
   int compile();
 
+  /** Verify the program by executing in-code comment tests. */
+  int verify();
+
   /** Run the program.
     * \return 0 on success, 1 if the program could not be run. */
   int run();

@@ -13,7 +13,7 @@ using namespace simit::internal;
 int Frontend::parseStream(std::istream              &programStream,
                           std::vector<Function *>   *functions,
                           std::vector<simit::Error> *errors,
-                          std::vector<Test>         *tests) {
+                          std::vector<Test*>        *tests) {
   Scanner scanner(&programStream);
   auto ctx = ParserParams(&symtable, functions, errors, tests);
   Parser parser(&scanner, &ctx);
@@ -23,7 +23,7 @@ int Frontend::parseStream(std::istream              &programStream,
 int Frontend::parseString(const std::string         &programString,
                           std::vector<Function*>    *functions,
                           std::vector<simit::Error> *errors,
-                          std::vector<Test>         *tests) {
+                          std::vector<Test*>        *tests) {
 
   std::istringstream programStream(programString);
   return parseStream(programStream, functions, errors, tests);
@@ -32,7 +32,7 @@ int Frontend::parseString(const std::string         &programString,
 int Frontend::parseFile(const std::string         &filename,
                         std::vector<Function*>    *functions,
                         std::vector<simit::Error> *errors,
-                        std::vector<Test>         *tests) {
+                        std::vector<Test*>        *tests) {
   std::ifstream programStream(filename);
   if (!programStream.good()) {
     return 2;
