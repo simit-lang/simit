@@ -364,7 +364,7 @@ const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     auto tensorType = unique_ptr<TensorType>($tensor_type);
 
-    auto tensorLiteral = shared_ptr<LiteralTensor>(*$tensor_literal);
+    auto tensorLiteral = shared_ptr<Literal>(*$tensor_literal);
     delete $tensor_literal;
 
     tensorLiteral->setName($IDENT);
@@ -925,15 +925,15 @@ component_type
 };
 
 %union {
-  std::shared_ptr<LiteralTensor> *LiteralTensor;
-  TensorValues<double>           *TensorDoubleValues;
-  TensorValues<int>              *TensorIntValues;
+  std::shared_ptr<Literal> *Literal;
+  TensorValues<double>     *TensorDoubleValues;
+  TensorValues<int>        *TensorIntValues;
 };
 
-%type        <Tensor> literal;
-%type <LiteralTensor> tensor_literal;
-%type <LiteralTensor> dense_tensor_literal;
-%type <LiteralTensor> scalar_literal;
+%type <Tensor>  literal;
+%type <Literal> tensor_literal;
+%type <Literal> dense_tensor_literal;
+%type <Literal> scalar_literal;
 
 %type <TensorDoubleValues> float_dense_tensor_literal;
 %type <TensorDoubleValues> float_dense_ndtensor_literal;
@@ -962,16 +962,16 @@ dense_tensor_literal
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(Type::FLOAT, isps);
-    auto literal = new LiteralTensor(type, values->values.data());
-    $$ = new shared_ptr<LiteralTensor>(literal);
+    auto literal = new Literal(type, values->values.data());
+    $$ = new shared_ptr<Literal>(literal);
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(Type::INT, isps);
-    auto literal = new LiteralTensor(type, values->values.data());
-    $$ = new shared_ptr<LiteralTensor>(literal);
+    auto literal = new Literal(type, values->values.data());
+    $$ = new shared_ptr<Literal>(literal);
   }
 
 float_dense_tensor_literal
@@ -1087,13 +1087,13 @@ int_dense_vector_literal
 scalar_literal
   : INT_LITERAL {
     auto scalarType = new TensorType(Type::INT);
-    auto literal = new LiteralTensor(scalarType, &$1);
-    $$ = new shared_ptr<LiteralTensor>(literal);
+    auto literal = new Literal(scalarType, &$1);
+    $$ = new shared_ptr<Literal>(literal);
   }
   | FLOAT_LITERAL {
     auto scalarType = new TensorType(Type::FLOAT);
-    auto literal = new LiteralTensor(scalarType, &$1);
-    $$ = new shared_ptr<LiteralTensor>(literal);
+    auto literal = new Literal(scalarType, &$1);
+    $$ = new shared_ptr<Literal>(literal);
   }
 
 // Tests

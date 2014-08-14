@@ -104,7 +104,7 @@ class LLVMCodeGenImpl : public IRVisitor {
   std::stack<llvm::Value*>  resultStack;
 
   void handle(Function *function);
-  void handle(LiteralTensor *t);
+  void handle(Literal *t);
   void handle(IndexExpr     *t);
   void handle(VariableStore *t);
 
@@ -148,7 +148,7 @@ llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
   return f;
 }
 
-void LLVMCodeGenImpl::handle(LiteralTensor *t) {
+void LLVMCodeGenImpl::handle(Literal *t) {
   cout << "Literal:   " << *t << endl;
 }
 

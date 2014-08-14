@@ -16,7 +16,7 @@ void IRVisitor::visit(Function *f) {
   }
 }
 
-void IRVisitor::visit(LiteralTensor *t) {
+void IRVisitor::visit(Literal *t) {
   CHECK_ABORT(handle(t));
 }
 

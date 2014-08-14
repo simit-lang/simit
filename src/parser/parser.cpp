@@ -605,14 +605,14 @@ namespace  simit { namespace internal  {
       case 99: // tensor_literal
 
 
-        { delete (yysym.value.LiteralTensor); }
+        { delete (yysym.value.Literal); }
 
         break;
 
       case 100: // dense_tensor_literal
 
 
-        { delete (yysym.value.LiteralTensor); }
+        { delete (yysym.value.Literal); }
 
         break;
 
@@ -675,7 +675,7 @@ namespace  simit { namespace internal  {
       case 109: // scalar_literal
 
 
-        { delete (yysym.value.LiteralTensor); }
+        { delete (yysym.value.Literal); }
 
         break;
 
@@ -1149,8 +1149,8 @@ namespace  simit { namespace internal  {
     {
     auto tensorType = unique_ptr<TensorType>((yystack_[3].value.TensorType));
 
-    auto tensorLiteral = shared_ptr<LiteralTensor>(*(yystack_[1].value.LiteralTensor));
-    delete (yystack_[1].value.LiteralTensor);
+    auto tensorLiteral = shared_ptr<Literal>(*(yystack_[1].value.Literal));
+    delete (yystack_[1].value.Literal);
 
     tensorLiteral->setName((yystack_[5].value.string));
     free((void*)(yystack_[5].value.string));
@@ -1853,8 +1853,8 @@ namespace  simit { namespace internal  {
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(Type::FLOAT, isps);
-    auto literal = new LiteralTensor(type, values->values.data());
-    (yylhs.value.LiteralTensor) = new shared_ptr<LiteralTensor>(literal);
+    auto literal = new Literal(type, values->values.data());
+    (yylhs.value.Literal) = new shared_ptr<Literal>(literal);
   }
 
     break;
@@ -1866,8 +1866,8 @@ namespace  simit { namespace internal  {
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(Type::INT, isps);
-    auto literal = new LiteralTensor(type, values->values.data());
-    (yylhs.value.LiteralTensor) = new shared_ptr<LiteralTensor>(literal);
+    auto literal = new Literal(type, values->values.data());
+    (yylhs.value.Literal) = new shared_ptr<Literal>(literal);
   }
 
     break;
@@ -2038,8 +2038,8 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarType = new TensorType(Type::INT);
-    auto literal = new LiteralTensor(scalarType, &(yystack_[0].value.num));
-    (yylhs.value.LiteralTensor) = new shared_ptr<LiteralTensor>(literal);
+    auto literal = new Literal(scalarType, &(yystack_[0].value.num));
+    (yylhs.value.Literal) = new shared_ptr<Literal>(literal);
   }
 
     break;
@@ -2048,8 +2048,8 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarType = new TensorType(Type::FLOAT);
-    auto literal = new LiteralTensor(scalarType, &(yystack_[0].value.fnum));
-    (yylhs.value.LiteralTensor) = new shared_ptr<LiteralTensor>(literal);
+    auto literal = new Literal(scalarType, &(yystack_[0].value.fnum));
+    (yylhs.value.Literal) = new shared_ptr<Literal>(literal);
   }
 
     break;
@@ -2057,9 +2057,9 @@ namespace  simit { namespace internal  {
   case 132:
 
     {
-    (yylhs.value.Test) = new Test(*(yystack_[3].value.Call), *(yystack_[1].value.LiteralTensor));
+    (yylhs.value.Test) = new Test(*(yystack_[3].value.Call), *(yystack_[1].value.Literal));
     delete (yystack_[3].value.Call);
-    delete (yystack_[1].value.LiteralTensor);
+    delete (yystack_[1].value.Literal);
   }
 
     break;

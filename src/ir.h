@@ -53,10 +53,10 @@ class TensorNode : public IRNode {
 
 /** Represents a \ref Tensor that is defined as a constant or loaded.  Note
   * that it is only possible to define dense tensor literals.  */
-class LiteralTensor : public TensorNode {
+class Literal : public TensorNode {
  public:
-  LiteralTensor(TensorType *type, void *data);
-  ~LiteralTensor();
+  Literal(TensorType *type, void *data);
+  ~Literal();
 
   void cast(TensorType *type);
   void accept(IRVisitor *visitor) { visitor->visit(this); };
@@ -263,14 +263,14 @@ class Function : public IRNode {
 class Test : public IRNode {
  public:
   Test(const std::shared_ptr<Call> &call,
-       const std::shared_ptr<LiteralTensor> &literal)
+       const std::shared_ptr<Literal> &literal)
       : call(call), literal(literal) {}
 
   void print(std::ostream &os) const;
 
  private:
   std::shared_ptr<Call> call;
-  std::shared_ptr<LiteralTensor> literal;
+  std::shared_ptr<Literal> literal;
 };
 
 }} // namespace simit::internal

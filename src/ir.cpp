@@ -32,8 +32,8 @@ void TensorNode::print(std::ostream &os) const {
 }
 
 
-/* class LiteralTensor */
-LiteralTensor::LiteralTensor(TensorType *type, void *data)
+/* class Literal */
+Literal::Literal(TensorType *type, void *data)
     : TensorNode(type) {
   auto componentSize = TensorType::componentSize(type->getComponentType());
   auto dataSize = type->getSize() * componentSize;
@@ -41,18 +41,18 @@ LiteralTensor::LiteralTensor(TensorType *type, void *data)
   memcpy(this->data, data, dataSize);
 }
 
-LiteralTensor::~LiteralTensor() {
+Literal::~Literal() {
   free(data);
 }
 
-void LiteralTensor::cast(TensorType *type) {
+void Literal::cast(TensorType *type) {
   assert(this->type->getComponentType() == type->getComponentType() &&
          this->type->getSize() == type->getSize());
   delete this->type;
   this->type = type;
 }
 
-void LiteralTensor::print(std::ostream &os) const {
+void Literal::print(std::ostream &os) const {
   // TODO: Add nicer value printing that prints matrices and tensors properly
   switch (type->getComponentType()) {
     case Type::INT: {

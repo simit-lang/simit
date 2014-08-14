@@ -258,9 +258,9 @@ namespace  simit { namespace internal  {
   IndexSet                     *IndexSet;
 
 
-  std::shared_ptr<LiteralTensor> *LiteralTensor;
-  TensorValues<double>           *TensorDoubleValues;
-  TensorValues<int>              *TensorIntValues;
+  std::shared_ptr<Literal> *Literal;
+  TensorValues<double>     *TensorDoubleValues;
+  TensorValues<int>        *TensorIntValues;
 
  Test *Test; 
 
@@ -625,8 +625,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 426,     ///< Last index in yytable_.
-      yynnts_ = 61,  ///< Number of nonterminal symbols.
+      yylast_ = 405,     ///< Last index in yytable_.
+      yynnts_ = 58,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
