@@ -17,20 +17,31 @@ namespace internal {
 class ProgramContent {
  public:
   ProgramContent(const std::string &name)
-      : name(name), frontend(new Frontend()), codegen(new LLVMCodeGen()) {}
+      : name(name), frontend(new Frontend()), codegen(NULL) {}
   ~ProgramContent() {
     for (auto function : functions) {
       delete function;
     }
+    delete frontend;
+    delete codegen;
   }
 
   const std::string &name;
-  std::unique_ptr<Frontend> frontend;
-  std::unique_ptr<LLVMCodeGen> codegen;
-
   std::vector<Function*> functions;
   std::vector<simit::Error> errors;
   std::vector<Test> tests;
+
+  Frontend *getFrontend() { return frontend; }
+  CodeGen *getCodeGen() {
+    if (codegen == NULL) {
+      codegen = new LLVMCodeGen();
+    }
+    return codegen;
+  }
+
+ private:
+  Frontend *frontend;
+  LLVMCodeGen *codegen;
 };
 }
 }
@@ -48,20 +59,18 @@ std::string Program::getName() const {
 }
 
 int Program::loadString(const string &programString) {
-  int errorCode = impl->frontend->parseString(programString, &impl->functions,
-                                              &impl->errors, &impl->tests);
-  return errorCode;
+  return impl->getFrontend()->parseString(programString, &impl->functions,
+                                          &impl->errors, &impl->tests);
 }
 
 int Program::loadFile(const std::string &filename) {
-  int errorCode = impl->frontend->parseFile(filename, &impl->functions,
-                                            &impl->errors, &impl->tests);
-  return errorCode;
+  return impl->getFrontend()->parseFile(filename, &impl->functions,
+                                        &impl->errors, &impl->tests);
 }
 
 int Program::compile() {
 //  for (auto function : impl->functions) {
-//    impl->codegen->compileToFunctionPointer(function);
+//    impl->getCodeGen()->compileToFunctionPointer(function);
 //  }
   return 0;
 }

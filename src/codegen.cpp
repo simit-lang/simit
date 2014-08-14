@@ -29,18 +29,6 @@ using namespace std;
 #define LLVM_DOUBLE    llvm::Type::getDoubleTy(LLVM_CONTEXT)
 #define LLVM_DOUBLEPTR llvm::Type::getDoublePtrTy(LLVM_CONTEXT)
 
-namespace {
-  /** Class whose constructor initializes LLVM at load time when exactly one
-    * instance is created. */
-  class LLVMInitializer {
-    static LLVMInitializer llvmInitializer;
-    LLVMInitializer() {
-      llvm::InitializeNativeTarget();
-    }
-  };
-  LLVMInitializer LLVMInitializer::llvmInitializer = LLVMInitializer();
-}
-
 namespace simit {
 namespace internal {
 
@@ -77,10 +65,27 @@ static inline llvm::ConstantInt* constant(int val) {
     return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, val, false));
 }
 
+class LLVMBinaryFunction {
+ public:
+
+  LLVMBinaryFunction(const FuncPtr &fptr) : fptr{fptr} {}
+
+  void run() {
+    UNUSED(fptr);
+  }
+
+ private:
+  FuncPtr fptr;
+};
 
 class LLVMCodeGenImpl : public IRVisitor {
  public:
   LLVMCodeGenImpl() : builder(LLVM_CONTEXT) {
+    if (!llvmInitialized) {
+      llvm::InitializeNativeTarget();
+      llvmInitialized = true;
+    }
+
     module = new llvm::Module("Simit JIT", LLVM_CONTEXT);
     llvm::EngineBuilder engineBuilder(module);
     executionEngine = engineBuilder.create();
@@ -93,6 +98,7 @@ class LLVMCodeGenImpl : public IRVisitor {
   llvm::Module          *module;
   llvm::ExecutionEngine *executionEngine;
   llvm::IRBuilder<>      builder;
+  static bool llvmInitialized;
 
   SymbolTable<llvm::Value*> symtable;
   std::stack<llvm::Value*>  resultStack;
@@ -106,6 +112,7 @@ class LLVMCodeGenImpl : public IRVisitor {
   llvm::Value *createScalarOp(const std::string &name, IndexExpr::Operator op,
                               const vector<IndexedTensor> &operands);
 };
+bool LLVMCodeGenImpl::llvmInitialized = false;
 
 BinaryFunction *LLVMCodeGenImpl::compileToFunctionPointer(Function *function) {
   llvm::Function *f = codegen(function);
@@ -113,6 +120,15 @@ BinaryFunction *LLVMCodeGenImpl::compileToFunctionPointer(Function *function) {
   f->dump();
 
   FuncPtr fptr = (FuncPtr)executionEngine->getPointerToFunction(f);
+  LLVMBinaryFunction *binFunc = new LLVMBinaryFunction(fptr);
+  UNUSED(binFunc);
+
+  double input = 1.0;
+  double output = 0.0;
+  fptr(&input, &output);
+
+  cout << input << "->" << output << endl;
+
   // Pack up the llvm::Function in a simit BinaryFunction object
   return NULL;
 }
