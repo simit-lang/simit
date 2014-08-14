@@ -1,9 +1,6 @@
 #ifndef __MYSCANNER_HPP__
 #define __MYSCANNER_HPP__
 
-//#undef  YY_DECL
-//#define YY_DECL int simit::internal::Scanner::yylex()
-
 #ifndef YY_DECL
 #define YY_DECL                                         \
     simit::internal::Parser::token_type                 \
@@ -23,25 +20,10 @@ namespace simit { namespace internal {
 class Scanner : public yyFlexLexer{
  public:
   Scanner(std::istream *arg_yyin = 0);
-  virtual ~Scanner();
+  ~Scanner();
 
-  virtual Parser::token_type lex(Parser::semantic_type* yylval,
-                                 Parser::location_type* yylloc);
-
-
-
-//  Scanner(std::istream *yyin) : yyFlexLexer(yyin), yylval(NULL){};
-
-//  int yylex(Parser::semantic_type *yylval, Parser::location_type *yylloc) {
-//    this->yylval = yylval;
-//    return( yylex() );
-//  }
-
-
- private:
-//  Parser::semantic_type *yylval;
-//  Parser::location_type *yylloc;
-//  int yylex();
+  Parser::token_type lex(Parser::semantic_type* yylval,
+                         Parser::location_type* yylloc);
 };
 
 }} // namespace simit::internal
