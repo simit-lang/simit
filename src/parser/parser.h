@@ -225,7 +225,7 @@ namespace  simit { namespace internal  {
   const char *string;
 
 
-  std::shared_ptr<simit::internal::IRNode>            *IRNode;
+  std::shared_ptr<simit::internal::IRNode>              *IRNode;
   std::vector<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
 
 
@@ -241,6 +241,9 @@ namespace  simit { namespace internal  {
   std::shared_ptr<simit::internal::TensorNode>              *Tensor;
   std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
 
+
+
+  std::shared_ptr<Call> *Call;
 
 
   VariableAccess       *VarAccess;

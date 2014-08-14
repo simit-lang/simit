@@ -16,6 +16,7 @@ class Argument;
 class Result;
 class LiteralTensor;
 class IndexExpr;
+class Call;
 class VariableStore;
 
 /** Visitor where the iteration order is specified in the visitor instead of
@@ -37,6 +38,7 @@ class IRVisitor {
   virtual void visit(Result          *t);
   virtual void visit(LiteralTensor   *t);
   virtual void visit(IndexExpr       *t);
+  virtual void visit(Call            *t);
   virtual void visit(VariableStore   *t);
 
   virtual void handle(Function        *f) { UNUSED(f); };
@@ -44,6 +46,7 @@ class IRVisitor {
   virtual void handle(Result          *t) { UNUSED(t); };
   virtual void handle(LiteralTensor   *t) { UNUSED(t); };
   virtual void handle(IndexExpr       *t) { UNUSED(t); };
+  virtual void handle(Call            *t) { UNUSED(t); }
   virtual void handle(VariableStore   *t) { UNUSED(t); };
 
  protected:

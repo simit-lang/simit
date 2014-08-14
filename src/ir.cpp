@@ -218,6 +218,12 @@ void IndexExpr::print(std::ostream &os) const {
 }
 
 
+/* class Call */
+void Call::print(std::ostream &os) const {
+  os << "Call" << endl;
+}
+
+
 /* class VariableStore */
 void VariableStore::print(std::ostream &os) const {
   os << getName() << " = " << value->getName();

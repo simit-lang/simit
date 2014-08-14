@@ -164,7 +164,7 @@
 %%
 
 %union {
-  std::shared_ptr<simit::internal::IRNode>            *IRNode;
+  std::shared_ptr<simit::internal::IRNode>              *IRNode;
   std::vector<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
 };
 
@@ -438,7 +438,7 @@ assign_stmt
       break;
     }
     else if (lhsList->size() < rhsList->size()) {
-      REPORT_ERROR("too mant expressions assigned to too few variables", @2);
+      REPORT_ERROR("too many expressions assigned to too few variables", @2);
     }
 
     auto lhsIter = lhsList->begin();
@@ -611,13 +611,13 @@ expr
     delete $1;
     delete $3;
   }
-  | call_expr {
-    $$ = NULL;
-  }
   | expr "." expr {
     $$ = NULL;
     delete $1;
     delete $3;
+  }
+  | call_expr {
+    $$ = NULL;
   }
   | index_expr {
     $$ = NULL;
@@ -626,13 +626,23 @@ expr
     $$ = NULL;
   }
 
+%union {
+  std::shared_ptr<Call> *Call;
+};
+%type<Call> call_expr;
 call_expr
   : expr "(" ")" {
     delete $1;
+    std::vector<std::shared_ptr<TensorNode>> args;
+    auto call = new Call(NULL, args);  // TODO: Fix
+    $$ = new std::shared_ptr<Call>(call);
   }
   | expr "(" expr_list ")" {
     delete $1;
     delete $3;
+    std::vector<std::shared_ptr<TensorNode>> args;
+    auto call = new Call(NULL, args);  // TODO: Fix
+    $$ = new std::shared_ptr<Call>(call);
   }
 
 %type <TensorList> expr_list;

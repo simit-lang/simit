@@ -525,6 +525,13 @@ namespace  simit { namespace internal  {
 
         break;
 
+      case 79: // call_expr
+
+
+        { delete (yysym.value.Call); }
+
+        break;
+
       case 80: // expr_list
 
 
@@ -1238,7 +1245,7 @@ namespace  simit { namespace internal  {
       break;
     }
     else if (lhsList->size() < rhsList->size()) {
-      REPORT_ERROR("too mant expressions assigned to too few variables", yystack_[2].location);
+      REPORT_ERROR("too many expressions assigned to too few variables", yystack_[2].location);
     }
 
     auto lhsIter = lhsList->begin();
@@ -1514,6 +1521,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
+    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1522,8 +1531,6 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.Tensor) = NULL;
-    delete (yystack_[2].value.Tensor);
-    delete (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1548,6 +1555,9 @@ namespace  simit { namespace internal  {
 
     {
     delete (yystack_[2].value.Tensor);
+    std::vector<std::shared_ptr<TensorNode>> args;
+    auto call = new Call(NULL, args);  // TODO: Fix
+    (yylhs.value.Call) = new std::shared_ptr<Call>(call);
   }
 
     break;
@@ -1557,6 +1567,9 @@ namespace  simit { namespace internal  {
     {
     delete (yystack_[3].value.Tensor);
     delete (yystack_[1].value.TensorList);
+    std::vector<std::shared_ptr<TensorNode>> args;
+    auto call = new Call(NULL, args);  // TODO: Fix
+    (yylhs.value.Call) = new std::shared_ptr<Call>(call);
   }
 
     break;
@@ -2364,7 +2377,7 @@ namespace  simit { namespace internal  {
        2,    82,     1,    50,    49,    51,    48,     0,     0,     0,
        0,     0,     0,    82,     0,   135,    82,    46,    82,     3,
        7,     4,     5,     6,    30,     8,    32,    33,    34,    35,
-      36,     0,    68,    71,    70,     0,     0,    89,     9,    82,
+      36,     0,    69,    71,    70,     0,     0,    89,     9,    82,
        0,    15,     0,     0,    30,     0,     0,    48,    30,    44,
      134,     0,    57,    82,    82,    82,    82,    82,    82,    47,
       82,    82,    82,    82,    82,    58,    82,    82,    82,    82,
@@ -2372,7 +2385,7 @@ namespace  simit { namespace internal  {
        0,    93,     0,    14,     0,    17,     0,     0,    97,   107,
      108,   100,     0,    95,    96,    98,    82,    23,     0,    42,
      137,     0,   136,    66,    21,    31,    72,     0,    62,    63,
-      69,    67,    53,    54,    55,    56,    59,    52,    60,    61,
+      68,    67,    53,    54,    55,    56,    59,    52,    60,    61,
       64,    65,     0,    84,     0,    91,    90,     0,    92,    82,
        0,    16,    18,    19,     0,     0,     0,     0,     0,    20,
        0,     0,    28,    24,    77,     0,     0,   111,    73,     0,
@@ -2566,7 +2579,7 @@ namespace  simit { namespace internal  {
        0,     2,     1,     1,     1,     1,     1,     7,     7,     5,
        0,     3,     0,     4,     2,     4,     1,     2,     1,     1,
        1,     1,     3,     3,     3,     3,     3,     2,     2,     3,
-       3,     3,     3,     3,     3,     3,     3,     3,     1,     3,
+       3,     3,     3,     3,     3,     3,     3,     3,     3,     1,
        1,     1,     3,     4,     1,     3,     6,     0,     2,     0,
        2,     2,     0,     2,     2,     4,     4,     1,     1,     1,
        3,     1,     4,     3,     3,     1,     1,     1,     1,     5,
@@ -2619,14 +2632,14 @@ namespace  simit { namespace internal  {
      344,   347,   356,   357,   358,   359,   360,   364,   394,   402,
      408,   410,   414,   416,   423,   429,   473,   476,   490,   508,
      511,   514,   517,   522,   527,   532,   537,   542,   566,   570,
-     575,   580,   585,   590,   595,   600,   605,   609,   614,   617,
-     622,   625,   630,   633,   640,   646,   655,   662,   664,   669,
-     671,   676,   678,   680,   683,   686,   689,   695,   696,   718,
-     723,   731,   737,   742,   751,   779,   782,   787,   793,   796,
-     802,   805,   843,   848,   855,   858,   862,   867,   870,   939,
-     940,   942,   946,   947,   950,   958,   968,   975,   978,   982,
-     995,   999,  1013,  1017,  1023,  1030,  1033,  1037,  1050,  1054,
-    1068,  1072,  1078,  1083,  1092,  1097,  1099,  1102,  1103
+     575,   580,   585,   590,   595,   600,   605,   609,   614,   619,
+     622,   625,   634,   640,   650,   656,   665,   672,   674,   679,
+     681,   686,   688,   690,   693,   696,   699,   705,   706,   728,
+     733,   741,   747,   752,   761,   789,   792,   797,   803,   806,
+     812,   815,   853,   858,   865,   868,   872,   877,   880,   949,
+     950,   952,   956,   957,   960,   968,   978,   985,   988,   992,
+    1005,  1009,  1023,  1027,  1033,  1040,  1043,  1047,  1060,  1064,
+    1078,  1082,  1088,  1093,  1102,  1107,  1109,  1112,  1113
   };
 
   // Print the state stack on the debug stream.

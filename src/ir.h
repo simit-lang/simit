@@ -151,6 +151,21 @@ class IndexExpr : public TensorNode {
 };
 
 
+class Call : public TensorNode {
+ public:
+  Call(const std::shared_ptr<Function> &callee,
+       const std::vector<std::shared_ptr<TensorNode>> &arguments)
+      : TensorNode("", NULL), callee(callee), arguments(arguments) {}
+
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void print(std::ostream &os) const;
+
+ private:
+  const std::shared_ptr<Function> &callee;
+  const std::vector<std::shared_ptr<TensorNode>> &arguments;
+};
+
+
 /** Instruction that stores a value to a tensor or an object. */
 class Store : public TensorNode {
  public:

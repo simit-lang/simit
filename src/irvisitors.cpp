@@ -17,11 +17,11 @@ void IRVisitor::visit(Function *f) {
 }
 
 void IRVisitor::visit(LiteralTensor *t) {
-  handle(t);
+  CHECK_ABORT(handle(t));
 }
 
 void IRVisitor::visit(Argument *t) {
-  handle(t);
+  CHECK_ABORT(handle(t));
 }
 
 void IRVisitor::visit(Result *t) {
@@ -37,6 +37,10 @@ void IRVisitor::visit(IndexExpr *t) {
   for (auto &operand : t->getOperands()) {
     CHECK_ABORT(operand.getTensor()->accept(this));
   }
+  CHECK_ABORT(handle(t));
+}
+
+void IRVisitor::visit(Call *t) {
   CHECK_ABORT(handle(t));
 }
 
