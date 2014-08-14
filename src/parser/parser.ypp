@@ -45,7 +45,7 @@
   #undef yylex
   #define yylex scanner->lex
 
-  inline std::string convertAndFree(const char *str) {
+  static inline std::string convertAndFree(const char *str) {
     std::string result = std::string(str);
     free((void*)str);
     return result;
@@ -631,17 +631,17 @@ expr
 };
 %type<Call> call_expr;
 call_expr
-  : expr "(" ")" {
-    delete $1;
+  : IDENT "(" ")" {
+    std::string name = convertAndFree($1);
     std::vector<std::shared_ptr<TensorNode>> args;
-    auto call = new Call(NULL, args);  // TODO: Fix
+    auto call = new Call(name, args);  // TODO: Fix
     $$ = new std::shared_ptr<Call>(call);
   }
-  | expr "(" expr_list ")" {
-    delete $1;
+  | IDENT "(" expr_list ")" {
+    std::string name = convertAndFree($1);
     delete $3;
     std::vector<std::shared_ptr<TensorNode>> args;
-    auto call = new Call(NULL, args);  // TODO: Fix
+    auto call = new Call(name, args);  // TODO: Fix
     $$ = new std::shared_ptr<Call>(call);
   }
 

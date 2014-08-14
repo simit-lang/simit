@@ -153,7 +153,7 @@ class IndexExpr : public TensorNode {
 
 class Call : public TensorNode {
  public:
-  Call(const std::shared_ptr<Function> &callee,
+  Call(const std::string &callee,
        const std::vector<std::shared_ptr<TensorNode>> &arguments)
       : TensorNode("", NULL), callee(callee), arguments(arguments) {}
 
@@ -161,8 +161,8 @@ class Call : public TensorNode {
   void print(std::ostream &os) const;
 
  private:
-  const std::shared_ptr<Function> &callee;
-  const std::vector<std::shared_ptr<TensorNode>> &arguments;
+  std::string callee;
+  std::vector<std::shared_ptr<TensorNode>> arguments;
 };
 
 
