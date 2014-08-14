@@ -220,7 +220,7 @@ void IndexExpr::print(std::ostream &os) const {
 
 // class Call
 void Call::print(std::ostream &os) const {
-  os << "Call" << endl;
+  os << callee << "(" << util::join(arguments, ", ") << ")";
 }
 
 
@@ -264,7 +264,7 @@ void Result::print(std::ostream &os) const {
 
 // class Test
 void Test::print(std::ostream &os) const {
-  os << "Test";
+  os << *call << " == " << *literal;
 }
 
 }} // namespace simit::internal

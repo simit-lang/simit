@@ -505,11 +505,8 @@ expr
 
     $$ = new shared_ptr<TensorNode>(tensor);
   }
-  | FLOAT_LITERAL {
-    $$ = NULL;
-  }
-  | INT_LITERAL {
-    $$ = NULL;
+  | literal {
+    $$ = $literal;
   }
   | STRING_LITERAL {
     $$ = NULL;
@@ -631,24 +628,26 @@ expr
 };
 %type<Call> call_expr;
 call_expr
-  : IDENT "(" ")" {
+  : IDENT "(" actual_list ")" {
     std::string name = convertAndFree($1);
-    std::vector<std::shared_ptr<TensorNode>> args;
-    auto call = new Call(name, args);  // TODO: Fix
+    auto call = new Call(name, *$actual_list);
+    delete $actual_list;
     $$ = new std::shared_ptr<Call>(call);
   }
-  | IDENT "(" expr_list ")" {
-    std::string name = convertAndFree($1);
-    delete $3;
-    std::vector<std::shared_ptr<TensorNode>> args;
-    auto call = new Call(name, args);  // TODO: Fix
-    $$ = new std::shared_ptr<Call>(call);
+
+%type <TensorList> actual_list;
+actual_list
+  : /* empty */ {
+    $$ = new vector<shared_ptr<TensorNode>>();
+  }
+  | expr_list {
+    $$ = $expr_list;
   }
 
 %type <TensorList> expr_list;
 expr_list
   : expr {
-    $$ = new vector<shared_ptr<TensorNode>>();
+    $$ = new std::vector<std::shared_ptr<TensorNode>>();
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
