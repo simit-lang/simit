@@ -32,7 +32,8 @@ class CodeGen {
   CodeGen& operator= (CodeGen &other);
 };
 
-/** The base class of all classes that perform code generation using LLVM. */
+
+/// The base class of all classes that perform code generation using LLVM.
 class LLVMCodeGen : public CodeGen {
  public:
   LLVMCodeGen();
@@ -41,8 +42,7 @@ class LLVMCodeGen : public CodeGen {
   BinaryFunction *compileToFunctionPointer(Function *function);
 
  private:
-  /** Implementation class to avoid bleeding LLVM to the rest of the project.
-    * It is easier to pimpl here than to forward declare the LLVM classes. */
+  /// Implementation class to avoid bleeding LLVM to the rest of the project.
   LLVMCodeGenImpl *impl;
 };
 

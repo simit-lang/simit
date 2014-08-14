@@ -5,7 +5,7 @@
 
 namespace simit {
 
-/** Provides information about errors that occur while loading Simit code. */
+/// Provides information about errors that occur while loading Simit code.
 class Error {
  public:
   Error(int firstLine, int firstColumn, int lastLine, int lastColumn,
@@ -22,7 +22,6 @@ class Error {
   friend std::ostream &operator<<(std::ostream &os, const Error &obj) {
     return os << obj.toString();
   }
-
 
  private:
   int firstLine;

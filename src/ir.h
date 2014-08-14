@@ -11,8 +11,8 @@
 namespace simit {
 namespace internal {
 
-/** The base class of all nodes in the Simit Intermediate Representation
-  * (Simit IR) */
+/// The base class of all nodes in the Simit Intermediate Representation
+/// (Simit IR)
 class IRNode {
  public:
   IRNode() {}
@@ -27,12 +27,11 @@ class IRNode {
  protected:
   std::string name;
 };
-
 std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
 
-/** The base IRNode that represents all computed and loaded tensors.  Note that
-  * both scalars and elements are considered tensors of order 0. */
+/// The base IRNode that represents all computed and loaded tensors.  Note that
+/// both scalars and elements are considered tensors of order 0.
 class TensorNode : public IRNode {
  public:
   TensorNode(const TensorType *type) : TensorNode("", type) {}
@@ -51,8 +50,8 @@ class TensorNode : public IRNode {
 };
 
 
-/** Represents a \ref Tensor that is defined as a constant or loaded.  Note
-  * that it is only possible to define dense tensor literals.  */
+/// Represents a \ref Tensor that is defined as a constant or loaded.  Note
+/// that it is only possible to define dense tensor literals.
 class Literal : public TensorNode {
  public:
   Literal(TensorType *type, void *data);
@@ -67,18 +66,18 @@ class Literal : public TensorNode {
   void  *data;
 };
 
-/** An index variable describes iteration over an index set.  There are two
-  * types of index variables, free index variables and reduction index
-  * variables and both types are represented by the IndexVar class.
-  *
-  * Free index variables simply describe iteration across an index set and do
-  * not have a reduction operation (op=FREE).
-  *
-  * Reduction variables have an associated reduction operation that is
-  * performed for each index in the index set.  Examples are SUM, which not
-  * surprisingly sums over the index variable (\sum_{i} in latex speak) and
-  * product which takes the product over the index variable (\prod_{i}).
-  */
+
+/// An index variable describes iteration over an index set.  There are two
+/// types of index variables, free index variables and reduction index
+/// variables and both types are represented by the IndexVar class.
+///
+/// Free index variables simply describe iteration across an index set and do
+/// not have a reduction operation (op=FREE).
+///
+/// Reduction variables have an associated reduction operation that is
+/// performed for each index in the index set.  Examples are SUM, which not
+/// surprisingly sums over the index variable (\sum_{i} in latex speak) and
+/// product which takes the product over the index variable (\prod_{i}).
 class IndexVar {
  public:
   enum Operator {FREE, SUM, PRODUCT};
@@ -96,11 +95,10 @@ class IndexVar {
   IndexSetProduct indexSet;
   Operator op;
 };
-
 std::ostream &operator<<(std::ostream &os, const IndexVar &var);
 
 
-/** A factory for creating index variables with unique names. */
+/// A factory for creating index variables with unique names.
 class IndexVarFactory {
  public:
   IndexVarFactory() : nameID(0) {}
@@ -114,8 +112,8 @@ class IndexVarFactory {
 };
 
 
-/** Instruction that combines one or more tensors.  Merge nodes must be created
-  * through the \ref createMerge factory function. */
+/// Expression that combines one or more tensors.  Merge nodes must be created
+/// through the \ref createMerge factory function.
 class IndexExpr : public TensorNode {
  public:
   enum Operator { NEG, ADD, SUB, MUL, DIV };
@@ -151,6 +149,7 @@ class IndexExpr : public TensorNode {
 };
 
 
+/// Calls a Simit function.
 class Call : public TensorNode {
  public:
   Call(const std::string &callee,
@@ -166,7 +165,7 @@ class Call : public TensorNode {
 };
 
 
-/** Instruction that stores a value to a tensor or an object. */
+/// Instruction that stores a value to a tensor or an object.
 class Store : public TensorNode {
  public:
   Store(const std::string &name, const TensorType *type)
@@ -174,8 +173,7 @@ class Store : public TensorNode {
 };
 
 
-/** Instruction that stores a value to a tensor or an object. */
-// TODO: Remove this class (move it into parser and don't inherit from tensor)
+/// Instruction that stores a value to a tensor or an object.
 class VariableStore : public Store {
  public:
   VariableStore(const std::shared_ptr<TensorNode> &target,
@@ -196,7 +194,7 @@ class VariableStore : public Store {
 };
 
 
-/** A formal argument to a function. */
+/// A formal argument to a function.
 class Argument : public TensorNode {
  public:
   Argument(const std::string &name, const TensorType *type)
@@ -208,7 +206,7 @@ class Argument : public TensorNode {
 };
 
 
-/** A formal result of a function. */
+/// A formal result of a function.
 class Result : public TensorNode {
  public:
   Result(const std::string &name, const TensorType *type)
@@ -226,7 +224,7 @@ class Result : public TensorNode {
   std::shared_ptr<Store> value;
 };
 
-/** A Simit function. */
+/// A Simit function.
 class Function : public IRNode {
  public:
   Function(const std::string &name,
@@ -258,8 +256,8 @@ class Function : public IRNode {
 };
 
 
-/** A Simit test case. Simit test cases can be declared in language comments
-  * and can subsequently be picked up by a test framework. */
+/// A Simit test case. Simit test cases can be declared in language comments
+/// and can subsequently be picked up by a test framework.
 class Test : public IRNode {
  public:
   Test(const std::shared_ptr<Call> &call,

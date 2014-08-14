@@ -13,24 +13,24 @@
 namespace simit {
 namespace internal {
 
-/** An index set is a set of labels into a set.  There are three types of index
-  * set distringuished by the type of set they index into: a range (RANGE), a 
-  * simit::Set (SET) or the set of all integers (VARIABLE). */
+/// An index set is a set of labels into a set.  There are three types of index
+/// set distringuished by the type of set they index into: a range (RANGE), a 
+/// simit::Set (SET) or the set of all integers (VARIABLE).
 class IndexSet {
  public:
-  /** The types of index sets that are supported. */
+  /// The types of index sets that are supported.
   enum Type {RANGE, SET, VARIABLE};
 
-  /** Create an index set consisting of the items in the given range. */
+  /// Create an index set consisting of the items in the given range.
   IndexSet(int rangeSize) : type(RANGE), rangeSize(rangeSize) {}
 
-  /** Create an index set over the given set. */
+  /// Create an index set over the given set.
   IndexSet(const simit::Set *set) : type(SET), set(set) {}
 
-  /** Create a variable-size index set. */
+  /// Create a variable-size index set.
   IndexSet() : type(VARIABLE) {}
 
-  /** Get the number of elements in the index set. */
+  /// Get the number of elements in the index set.
   int getSize() const;
 
   std::ostream &print(std::ostream &os) const;
@@ -49,17 +49,17 @@ bool operator!=(const IndexSet &l, const IndexSet &r);
 std::ostream &operator<<(std::ostream &os, const IndexSet &o);
 
 
-/** The set product of zero or more sets. */
+/// The set product of zero or more sets.
 class IndexSetProduct {
  public:
   IndexSetProduct() {}
   IndexSetProduct(const IndexSet &is) { indexSets.push_back(is); }
   IndexSetProduct(const std::vector<IndexSet> &iss) : indexSets(iss) {};
 
-  /** Get the number of elements in the product of the index sets. */
+  /// Get the number of elements in the product of the index sets.
   int getSize() const;
 
-  /** Get the index sets that are multiplied to get the index set product. */
+  /// Get the index sets that are multiplied to get the index set product.
   const std::vector<IndexSet> &getIndexSets() const {return indexSets; }
 
   std::ostream &print(std::ostream &os) const;
@@ -74,7 +74,7 @@ IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r);
 std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
 
 
-/** The type of a tensor (the type of its components and its shape). */
+/// The type of a tensor (the type of its components and its shape).
 class TensorType {
  public:
   TensorType(Type componentType) : componentType(componentType) {}
@@ -82,16 +82,16 @@ class TensorType {
        const std::vector<IndexSetProduct> &dimensions)
       : componentType(componentType), dimensions(dimensions) {}
 
-  /** Get the order of the tensor (the number of dimensions). */
+  /// Get the order of the tensor (the number of dimensions).
   int getOrder() const { return dimensions.size(); }
 
-  /** Get the number of components in the tensor. */
+  /// Get the number of components in the tensor.
   int getSize() const;
 
-  /** Get the type of the components in the vector. */
+  /// Get the type of the components in the vector.
   Type getComponentType() const { return componentType; }
 
-  /** Get the index sets that form the dimensions of the tensor. */
+  /// Get the index sets that form the dimensions of the tensor.
   const std::vector<IndexSetProduct> &getDimensions() const {return dimensions;}
 
   std::ostream &print(std::ostream &os) const;

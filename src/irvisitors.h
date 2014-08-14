@@ -19,15 +19,14 @@ class IndexExpr;
 class Call;
 class VariableStore;
 
-/** Visitor where the iteration order is specified in the visitor instead of
-  * the accept methods.  This design is chosen to allow different visitors to
-  * specify different traversal orders.  As a consequence the visit methods are
-  * called to start a traversal, while handle methods are called to perform
-  * actions on objects as specified by visitor subclasses.
-  *
-  * The default IRVisitor visits each tensor in a function once in forward order
-  * starting with arguments and literals and ending with the results.
-  */
+/// Visitor where the iteration order is specified in the visitor instead of
+/// the accept methods.  This design is chosen to allow different visitors to
+/// specify different traversal orders.  As a consequence the visit methods are
+/// called to start a traversal, while handle methods are called to perform
+/// actions on objects as specified by visitor subclasses.
+///
+/// The default IRVisitor visits each tensor in a function once in forward order
+/// starting with arguments and literals and ending with the results.
 class IRVisitor {
  public:
   IRVisitor() { reset(); }
