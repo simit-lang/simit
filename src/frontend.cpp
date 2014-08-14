@@ -9,7 +9,7 @@
 
 using namespace simit::internal;
 
-/* Frontend */
+// Frontend
 int Frontend::parseStream(std::istream              &programStream,
                           std::vector<Function *>   *functions,
                           std::vector<simit::Error> *errors,

@@ -3,7 +3,7 @@
 using namespace simit;
 using namespace std;
 
-/* Error */
+// Error
 Error::Error(int firstLine, int firstColumn, int lastLine, int lastColumn,
              std::string msg)
     : firstLine(firstLine), firstColumn(firstColumn),

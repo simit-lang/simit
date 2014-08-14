@@ -13,7 +13,7 @@ using namespace std;
 namespace simit {
 namespace internal {
 
-/* class IRNode */
+// class IRNode
 IRNode::~IRNode() {}
 
 std::ostream &operator<<(std::ostream &os, const IRNode &node){
@@ -22,7 +22,7 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node){
 }
 
 
-/* class TensorNode */
+// class TensorNode
 TensorNode::~TensorNode() {
   delete type;
 }
@@ -32,7 +32,7 @@ void TensorNode::print(std::ostream &os) const {
 }
 
 
-/* class Literal */
+// class Literal
 Literal::Literal(TensorType *type, void *data)
     : TensorNode(type) {
   auto componentSize = TensorType::componentSize(type->getComponentType());
@@ -90,7 +90,7 @@ void Literal::print(std::ostream &os) const {
 }
 
 
-/* class IndexVar */
+// class IndexVar
 std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
   switch (var.getOperator()) {
     case IndexVar::FREE:
@@ -109,7 +109,7 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 }
 
 
-/* class IndexVarFactory */
+// class IndexVarFactory
 std::shared_ptr<IndexVar>
 IndexVarFactory::makeFreeVar(const IndexSetProduct &indexSet) {
   auto freeIndexVar = new IndexVar(makeName(), indexSet, IndexVar::FREE);
@@ -132,7 +132,7 @@ std::string IndexVarFactory::makeName() {
 }
 
 
-/* class IndexExpr */
+// class IndexExpr
 IndexExpr::IndexedTensor::IndexedTensor(
     const std::shared_ptr<TensorNode> &t,
     const std::vector<IndexExpr::IndexVarPtr> &ivs) {
@@ -218,19 +218,19 @@ void IndexExpr::print(std::ostream &os) const {
 }
 
 
-/* class Call */
+// class Call
 void Call::print(std::ostream &os) const {
   os << "Call" << endl;
 }
 
 
-/* class VariableStore */
+// class VariableStore
 void VariableStore::print(std::ostream &os) const {
   os << getName() << " = " << value->getName();
 }
 
 
-/* class Function */
+// class Function
 void Function::addStatements(const std::vector<std::shared_ptr<IRNode>> &stmts){
   body.insert(body.end(), stmts.begin(), stmts.end());
 }
@@ -250,17 +250,19 @@ void Function::print(std::ostream &os) const {
 }
 
 
-/* class Argument */
+// class Argument
 void Argument::print(std::ostream &os) const {
   TensorNode::print(os);
 }
 
-/* class Result */
+
+// class Result
 void Result::print(std::ostream &os) const {
   TensorNode::print(os);
 }
 
-/* class Test */
+
+// class Test
 void Test::print(std::ostream &os) const {
   os << "Test";
 }

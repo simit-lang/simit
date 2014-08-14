@@ -6,6 +6,7 @@ using namespace simit::internal;
 
 #define CHECK_ABORT(func) do { func; if (isAborted()) return; } while(0)
 
+// class IRVisitor
 IRVisitor::~IRVisitor() {
 }
 

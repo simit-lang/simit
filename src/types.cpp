@@ -12,7 +12,7 @@ using namespace std;
 namespace simit {
 namespace internal {
 
-/* class IndexSet */
+// class IndexSet
 int IndexSet::getSize() const {
   int size = 0;
   switch (type) {
@@ -81,7 +81,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &o) {
 }
 
 
-/* class IndexSetProduct */
+// class IndexSetProduct
 int IndexSetProduct::getSize() const {
   int size = 1;
   for (auto &indexSet : getIndexSets()) {
@@ -124,7 +124,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o) {
 }
 
 
-/* class TensorType */
+// class TensorType
 int TensorType::getSize() const {
   int size = 1;
   for (auto &dimension : getDimensions()) {

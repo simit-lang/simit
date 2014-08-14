@@ -49,7 +49,8 @@ class ProgramContent {
 }
 }
 
-/* Program */
+
+// Program
 Program::Program(const std::string &name) : impl(new ProgramContent(name)) {
 }
 

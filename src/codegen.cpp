@@ -265,7 +265,7 @@ LLVMCodeGenImpl::createScalarOp(const std::string &name, IndexExpr::Operator op,
 }
 
 
-/* class LLVMCodeGen */
+// class LLVMCodeGen
 LLVMCodeGen::LLVMCodeGen() : impl(new LLVMCodeGenImpl()) {
 }
 
