@@ -44,6 +44,7 @@ namespace {
 namespace simit {
 namespace internal {
 
+typedef void (*FuncPtr)(...);
 typedef IndexExpr::IndexedTensor IndexedTensor;
 
 static llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
@@ -109,10 +110,9 @@ class LLVMCodeGenImpl : public IRVisitor {
 BinaryFunction *LLVMCodeGenImpl::compileToFunctionPointer(Function *function) {
   llvm::Function *f = codegen(function);
   if (f == NULL) return NULL;
-
   f->dump();
 
-  void *fvoidptr = executionEngine->getPointerToFunction(f);
+  FuncPtr fptr = (FuncPtr)executionEngine->getPointerToFunction(f);
   // Pack up the llvm::Function in a simit BinaryFunction object
   return NULL;
 }
