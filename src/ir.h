@@ -162,6 +162,11 @@ class Call : public TensorNode {
       : TensorNode("", NULL), callee(callee), arguments(arguments) {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
+
+  const std::string &getCallee() const { return callee; }
+  const std::vector<std::shared_ptr<TensorNode>> &getArguments() const {
+    return arguments;
+  }
   void print(std::ostream &os) const;
 
  private:
@@ -229,6 +234,7 @@ class Result : public TensorNode {
   std::shared_ptr<Store> value;
 };
 
+
 /// A Simit function.
 class Function : public IRNode {
  public:
@@ -268,6 +274,9 @@ class Test : public IRNode {
   Test(const std::shared_ptr<Call> &call,
        const std::shared_ptr<Literal> &literal)
       : call(call), literal(literal) {}
+
+  std::shared_ptr<Call> getCall() const { return call; }
+  std::shared_ptr<Literal> getLiteral() const { return literal; }
 
   void print(std::ostream &os) const;
 
