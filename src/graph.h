@@ -10,6 +10,23 @@ using namespace simit;
 
 
 namespace simit {
+/// An opaque handle for accessing Fields
+typedef int FieldHandle;
+
+class Set;
+  
+/// An opaque handle for accessing an Element
+struct ElementHandle {
+  int idx;              // index in the Set
+  const Set* set;             // set that this belongs to
+  
+  /// Get the value of a field of this element
+  template <typename T>
+  void get(const int idx, const int field, T* val);
+  
+  ElementHandle(const int idx, const Set* set) : idx(idx), set(set) { }
+};
+  
 namespace internal {
   /** A field on the members of the Set.
    *
@@ -37,7 +54,7 @@ namespace internal {
     
     /** Add an item by adding a new field entry, setting it to the given value */
     template <typename T>
-    unsigned int add(T val) {
+    int add(T val) {
       if (items > capacity-1)
         increaseCapacity();
       
@@ -47,24 +64,24 @@ namespace internal {
     
     /** Set the field of item idx to a new value */
     template <typename T>
-    void set(const unsigned int idx, T val);
+    void set(const int idx, T val);
     
     /** Get the value of a field of an item */
     template <typename T>
-    void get(const unsigned int idx, T* val);
+    void get(const int idx, T* val);
     
     /** Remove an item, avoiding fragmentation. */
-    void remove(const unsigned int idx);
+    void remove(const  int idx);
     
     /** Get the number of items */
-    unsigned int size() { return items; }
+    int size() { return items; }
     
   private:
     void* data;                   // buffer for the data
-    unsigned int capacity;        // current capacity
-    unsigned int items;           // current number of items
+    int capacity;        // current capacity
+    int items;           // current number of items
     
-    static const unsigned int capacityIncrement = 1024;
+    static const int capacityIncrement = 1024;
     
     void increaseCapacity();
     
@@ -91,7 +108,7 @@ class Set {
   
  private:
   vector<Field*> fields;          // fields of the items in the set
-  unsigned int items;             // number of items in the set
+  int items;             // number of items in the set
   
   // disable copy constructors
   Set(const Set& s);
@@ -106,44 +123,51 @@ class Set {
   }
   
   /** Get the number of fields in the Set */
-  unsigned int numFields() { return fields.size(); }
+  int numFields() { return fields.size(); }
   
   /** Return the number of items in the Set */
-  unsigned int size() { return items; }
+  int size() { return items; }
   
   /** Add a new field */
-  void addField(Type type) { fields.push_back(new Field(type)); }
+  FieldHandle addField(Type type) { fields.push_back(new Field(type)); return fields.size()-1; }
   
-  /** Add a new item, returning its index */
-  unsigned int addItem();
+  /** Add a new item, returning its handle */
+  ElementHandle addItem();
   
   /** Set a field on an item in the Set */
   template<typename T>
-  void set(unsigned int idx, unsigned int field, T val) {
+  void set(ElementHandle element, const FieldHandle field, T val) {
     assert((fields[field]->type == type_of<T>()) && "Incorrect field type.");
   
-    fields[field]->set(idx, val);
+    fields[field]->set(element.idx, val);
   }
   
   /** Get the value of a field on an item in the Set */
   template<typename T>
-  void get(unsigned int idx, unsigned int field, T* val) {
+  void get(ElementHandle element, const FieldHandle field, T* val) {
     assert((fields[field]->type == type_of<T>()) && "Incorrect field type.");
     
-    fields[field]->get(idx, val);
+    fields[field]->get(element.idx, val);
   }
   
   /** Remove an item from the Set */
-  void remove(unsigned int idx) {
+  void remove(const ElementHandle element) {
     for (auto f : fields)
-      f->remove(idx);
+      f->remove(element.idx);
     items--;
   }
   
   
 };
 
-  
+template <typename T>
+void ElementHandle::get(const int idx, const FieldHandle field, T* val) {
+  assert (set != nullptr);
+  set->get(idx, field, val);
+}
+
+
+
 
   
 }

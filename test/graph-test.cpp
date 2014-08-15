@@ -10,9 +10,9 @@ using namespace simit;
 
 TEST(FieldTests, AddAndGet) {
   Field foo(Type::INT);
-  ASSERT_EQ(foo.size(), (unsigned int) 0);
+  ASSERT_EQ(foo.size(),  0);
   foo.add<int>(40);
-  ASSERT_EQ(foo.size(), (unsigned int)1);
+  ASSERT_EQ(foo.size(), 1);
   
   int ret;
   foo.get(foo.size()-1, &ret);
@@ -30,7 +30,7 @@ TEST(FieldTests, Remove) {
   
   int ret;
   foo.get(1, &ret);
-  ASSERT_EQ(foo.size(), (unsigned int)2);
+  ASSERT_EQ(foo.size(), 2);
   ASSERT_EQ(ret, 30);
 }
 
@@ -40,7 +40,7 @@ TEST(FieldTests, Expansion) {
   for (int i=0; i<1028; i++)
     foo.add(1.05 + i);
   
-  ASSERT_GT(foo.size(), (unsigned int)1025);
+  ASSERT_GT(foo.size(), 1025);
   
   double ret;
   foo.get(1025, &ret);
@@ -57,20 +57,20 @@ TEST(SetTests, Utils) {
 TEST(SetTests, AddAndGetFromTwoFields) {
   Set myset;
   
-  myset.addField(Type::INT);
-  myset.addField(Type::FLOAT);
+  FieldHandle f1 = myset.addField(Type::INT);
+  FieldHandle f2 = myset.addField(Type::FLOAT);
   
-  ASSERT_EQ(myset.numFields(), (unsigned int)2);
-  ASSERT_EQ(myset.size(), (unsigned int)0);
+  ASSERT_EQ(myset.numFields(), 2);
+  ASSERT_EQ(myset.size(), 0);
   
-  unsigned int i = myset.addItem();
-  myset.set(i, 0, 10);
-  myset.set(i, 1, 101.1);
+  ElementHandle i = myset.addItem();
+  myset.set(i, f1, 10);
+  myset.set(i, f2, 101.1);
   
   ASSERT_EQ(myset.size(), 1);
   
   double ret;
-  myset.get(0, 1, &ret);
+  myset.get(i, f2, &ret);
   ASSERT_EQ(ret, 101.1);
   
 }

@@ -9,7 +9,7 @@ void Field::increaseCapacity() {
 }
 
 template <>
-void Field::set<int>(const unsigned int idx, int val) {
+void Field::set<int>(const int idx, int val) {
   assert((type == Type::INT) && "Setting a value with wrong type");
   assert((idx < items) && "Setting a value on a non-existent item");
 
@@ -17,14 +17,14 @@ void Field::set<int>(const unsigned int idx, int val) {
 }
   
 template <>
-void Field::set<double>(const unsigned int idx, double val) {
+void Field::set<double>(const int idx, double val) {
   assert((type == Type::FLOAT) && "Setting a value with wrong type");
   assert((idx < items) && "Setting a value on a non-existent item");
   
   ((double*)data)[idx] = val;
 }
 
-void Field::remove(const unsigned int idx) {
+void Field::remove(const int idx) {
   // Should this be ok?
   assert((idx < items) && "Removing a non-existent item");
   
@@ -40,7 +40,7 @@ void Field::remove(const unsigned int idx) {
 }
   
 template <>
-void Field::get<int>(const unsigned int idx, int* val) {
+void Field::get<int>(const int idx, int* val) {
   assert((type == Type::INT) && "Setting a value with wrong type");
   assert((idx < items) && "Setting a value on a non-existent item");
   
@@ -48,7 +48,7 @@ void Field::get<int>(const unsigned int idx, int* val) {
 }
   
 template <>
-void Field::get<double>(const unsigned int idx, double* val) {
+void Field::get<double>(const int idx, double* val) {
   assert((type == Type::FLOAT) && "Setting a value with wrong type");
   assert((idx < items) && "Setting a value on a non-existent item");
   
@@ -59,7 +59,7 @@ void Field::get<double>(const unsigned int idx, double* val) {
 
   
 /* Set */
-unsigned int Set::addItem() {
+ElementHandle Set::addItem() {
   for (auto f : fields) {
     if (f->type == Type::INT)
       f->add(0);
@@ -68,18 +68,18 @@ unsigned int Set::addItem() {
     else
       f->add(0);
   }
-  return items++;
+  return ElementHandle(items++, this);
 }
 
 //template<>
-//void Set::set<int>(unsigned int idx, unsigned int field, int val) {
+//void Set::set<int>(int idx, int field, int val) {
 //  assert((fields[field]->type == Type::INT) && "Incorrect field type.");
 //  
 //  fields[field]->set(idx, val);
 //}
 //  
 //template<>
-//void Set::set<double>(unsigned int idx, unsigned int field, double val) {
+//void Set::set<double>(int idx, int field, double val) {
 //  assert((fields[field]->type == Type::FLOAT) && "Incorrect field type.");
 //  
 //  fields[field]->set(idx, val);
