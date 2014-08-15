@@ -59,16 +59,16 @@
   typedef SymbolTable<std::shared_ptr<IRNode>> ParserSymtableType;
 
   struct ParserParams {
-    ParserParams(ParserSymtableType        *symtable,
-                 std::vector<Function *>   *functions,
-                 std::vector<simit::Error> *errors,
-                 std::vector<Test*>        *tests)
+    ParserParams(ParserSymtableType               *symtable,
+                 std::map<std::string, Function*> *functions,
+                 std::vector<simit::Error>        *errors,
+                 std::vector<Test*>               *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
-    ParserSymtableType        &symtable;
-    std::vector<Function *>   &functions;
-    std::vector<simit::Error> &errors;
-    std::vector<Test*>        &tests;
+    ParserSymtableType               &symtable;
+    std::map<std::string, Function*> &functions;
+    std::vector<simit::Error>        &errors;
+    std::vector<Test*>               &tests;
   };
   }}
 

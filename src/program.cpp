@@ -19,8 +19,8 @@ class ProgramContent {
   ProgramContent(const std::string &name)
       : name(name), frontend(new Frontend()), codegen(NULL) {}
   ~ProgramContent() {
-    for (auto function : functions) {
-      delete function;
+    for (auto &function : functions) {
+      delete function.second;
     }
     for (auto test : tests) {
       delete test;
@@ -30,7 +30,9 @@ class ProgramContent {
   }
 
   const std::string &name;
-  std::vector<Function*> functions;
+
+  std::map<std::string, Function*> functions;
+
   std::vector<simit::Error> errors;
   std::vector<Test*> tests;
 
@@ -46,8 +48,7 @@ class ProgramContent {
   Frontend *frontend;
   LLVMCodeGen *codegen;
 };
-}
-}
+}} // simit::internal
 
 
 // Program
@@ -99,6 +100,15 @@ std::vector<Error> &Program::getErrors() {
 }
 
 std::ostream &simit::operator<<(std::ostream &os, const Program &program) {
-  os << util::join(program.impl->functions, "\n\n") << endl;
-  return os;
+  auto begin = program.impl->functions.begin();
+  auto end = program.impl->functions.end();
+  if (begin != end) {
+    os << begin->second;
+    ++begin;
+  }
+  while (begin != end) {
+    os << ", " << begin->second;
+    ++begin;
+  }
+  return os << endl;
 }

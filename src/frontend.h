@@ -24,22 +24,22 @@ class Test;
 class Frontend {
  public:
   /// Parses, typechecks and turns a given Simit-formated stream into Simit IR.
-  int parseStream(std::istream           &programStream,
-                  std::vector<Function*> *functions,
-                  std::vector<Error>     *errors,
-                  std::vector<Test*>     *tests);
+  int parseStream(std::istream                      &programStream,
+                  std::map<std::string, Function *> *functions,
+                  std::vector<Error>                *errors,
+                  std::vector<Test*>                *tests);
 
   /// Parses, typechecks and turns a given Simit-formated string into Simit IR.
-  int parseString(const std::string      &programString,
-                  std::vector<Function*> *functions,
-                  std::vector<Error>     *errors,
-                  std::vector<Test*>     *tests);
+  int parseString(const std::string                &programString,
+                  std::map<std::string, Function*> *functions,
+                  std::vector<Error>               *errors,
+                  std::vector<Test*>               *tests);
 
   /// Parses, typechecks and turns a given Simit-formated file into Simit IR.
-  int parseFile(const std::string      &filename,
-                std::vector<Function*> *functions,
-                std::vector<Error>     *errors,
-                std::vector<Test*>     *tests);
+  int parseFile(const std::string                 &filename,
+                std::map<std::string, Function *> *functions,
+                std::vector<Error>                *errors,
+                std::vector<Test*>                *tests);
 
  private:
   SymbolTable<std::shared_ptr<IRNode>> symtable;

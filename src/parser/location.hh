@@ -31,12 +31,12 @@
 // version 2.2 of Bison.
 
 /**
- ** \file location.hh
+ ** \file /Users/fred/projects/sim/simit/src/parser/location.hh
  ** Define the  simit::internal ::location class.
  */
 
-#ifndef YY_YY_LOCATION_HH_INCLUDED
-# define YY_YY_LOCATION_HH_INCLUDED
+#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_LOCATION_HH_INCLUDED
+# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_LOCATION_HH_INCLUDED
 
 # include "position.hh"
 
@@ -184,4 +184,4 @@ namespace  simit { namespace internal  {
 
 } } //  simit::internal 
 
-#endif // !YY_YY_LOCATION_HH_INCLUDED
+#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_LOCATION_HH_INCLUDED

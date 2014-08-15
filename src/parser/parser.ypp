@@ -32,7 +32,7 @@
 
   #define REPORT_ERROR(msg, loc)  \
     do {                          \
-      error(loc, msg);            \
+      error((loc), (msg));        \
       YYERROR;                    \
     } while (0)
 
@@ -64,16 +64,16 @@
   typedef SymbolTable<std::shared_ptr<IRNode>> ParserSymtableType;
 
   struct ParserParams {
-    ParserParams(ParserSymtableType        *symtable,
-                 std::vector<Function *>   *functions,
-                 std::vector<simit::Error> *errors,
-                 std::vector<Test*>        *tests)
+    ParserParams(ParserSymtableType               *symtable,
+                 std::map<std::string, Function*> *functions,
+                 std::vector<simit::Error>        *errors,
+                 std::vector<Test*>               *tests)
         : symtable(*symtable), functions(*functions), errors(*errors),
           tests(*tests) {}
-    ParserSymtableType        &symtable;
-    std::vector<Function *>   &functions;
-    std::vector<simit::Error> &errors;
-    std::vector<Test*>        &tests;
+    ParserSymtableType               &symtable;
+    std::map<std::string, Function*> &functions;
+    std::vector<simit::Error>        &errors;
+    std::vector<Test*>               &tests;
   };
   }}
 }
@@ -181,7 +181,13 @@ program_element
     $$ = NULL;
   }
   | function {
-    ctx->functions.push_back($function);
+    std::unique_ptr<Function> function($function);
+
+    auto name = function->getName();
+    if (ctx->functions.find(name) != ctx->functions.end()) {
+      REPORT_ERROR("function redefinition (" + name + ")", @function);
+    }
+    ctx->functions[name] = function.release();
   }
   | extern {
     $$ = NULL;
