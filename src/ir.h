@@ -26,6 +26,11 @@ class IRNode {
 
  protected:
   std::string name;
+
+ private:
+  // Not implemented
+  IRNode (const IRNode& other);
+  IRNode& operator= (IRNode &other);
 };
 std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
@@ -178,7 +183,7 @@ class VariableStore : public Store {
  public:
   VariableStore(const std::shared_ptr<TensorNode> &target,
                 const std::shared_ptr<TensorNode> &value)
-      : Store(target->getName(), target->getType()),
+      : Store(target->getName(), new TensorType(*target->getType())),
         target{target}, value{value} {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
