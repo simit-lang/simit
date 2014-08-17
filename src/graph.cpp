@@ -71,19 +71,6 @@ ElementHandle Set::addItem() {
   return ElementHandle(items++, this);
 }
 
-//template<>
-//void Set::set<int>(int idx, int field, int val) {
-//  assert((fields[field]->type == Type::INT) && "Incorrect field type.");
-//  
-//  fields[field]->set(idx, val);
-//}
-//  
-//template<>
-//void Set::set<double>(int idx, int field, double val) {
-//  assert((fields[field]->type == Type::FLOAT) && "Incorrect field type.");
-//  
-//  fields[field]->set(idx, val);
-//}
   
 /* end Set */
 }

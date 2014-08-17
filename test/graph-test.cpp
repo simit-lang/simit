@@ -74,3 +74,42 @@ TEST(SetTests, AddAndGetFromTwoFields) {
   ASSERT_EQ(ret, 101.1);
   
 }
+
+//// Iterator tests
+TEST(ElementIteratorTests, TestElementIteratorLoop) {
+  Set myset;
+  
+  FieldHandle f1 = myset.addField(Type::INT);
+  FieldHandle f2 = myset.addField(Type::FLOAT);
+  
+  ASSERT_EQ(myset.numFields(), 2);
+  ASSERT_EQ(myset.size(), 0);
+  
+  for (int i=0; i<10; i++) {
+    auto el = myset.addItem();
+    myset.set(el, f1, 5+i);
+    myset.set(el, f2, 10.0+(double)i);
+  }
+  
+  int howmany=0;
+  for (Set::ElementIterator it=myset.begin(); it<myset.end(); it++) {
+    auto el = *it;
+    int val;
+    it->get(f1, &val);
+    ASSERT_TRUE((val>=5) && (val<15));
+    val = 0;
+    el.get(f1, &val);
+    ASSERT_TRUE((val>=5) && (val<15));
+    howmany++;
+    cout << howmany <<endl;
+  }
+  ASSERT_EQ(howmany, 10);
+  
+  howmany=0;
+  for (auto it : myset) {
+    ASSERT_TRUE(it.set != nullptr);
+    howmany++;
+    cout << howmany <<endl;
+  }
+  ASSERT_EQ(howmany, 10);
+}
