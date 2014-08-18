@@ -157,20 +157,18 @@ class IndexExpr : public TensorNode {
 /// Calls a Simit function.
 class Call : public TensorNode {
  public:
-  Call(const std::string &callee,
+  Call(const std::string &name,
        const std::vector<std::shared_ptr<TensorNode>> &arguments)
-      : TensorNode("", NULL), callee(callee), arguments(arguments) {}
+      : TensorNode(name, NULL), arguments(arguments) {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const std::string &getCallee() const { return callee; }
   const std::vector<std::shared_ptr<TensorNode>> &getArguments() const {
     return arguments;
   }
   void print(std::ostream &os) const;
 
  private:
-  std::string callee;
   std::vector<std::shared_ptr<TensorNode>> arguments;
 };
 
@@ -271,18 +269,21 @@ class Function : public IRNode {
 /// and can subsequently be picked up by a test framework.
 class Test : public IRNode {
  public:
-  Test(const std::shared_ptr<Call> &call,
-       const std::shared_ptr<Literal> &literal)
-      : call(call), literal(literal) {}
+  Test(const std::string &callee,
+       const std::vector<std::shared_ptr<Literal>> &arguments,
+       const std::vector<std::shared_ptr<Literal>> &expected)
+      : callee(callee), arguments(arguments), expected(expected) {}
 
-  std::shared_ptr<Call> getCall() const { return call; }
-  std::shared_ptr<Literal> getLiteral() const { return literal; }
+  std::string getCallee() { return callee; }
+  std::vector<std::shared_ptr<Literal>> getArguments() { return arguments; }
+  std::vector<std::shared_ptr<Literal>> getExpectedResults() { return expected;}
 
   void print(std::ostream &os) const;
 
  private:
-  std::shared_ptr<Call> call;
-  std::shared_ptr<Literal> literal;
+  std::string callee;
+  std::vector<std::shared_ptr<Literal>> arguments;
+  std::vector<std::shared_ptr<Literal>> expected;
 };
 
 }} // namespace simit::internal

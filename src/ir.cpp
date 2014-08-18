@@ -220,7 +220,7 @@ void IndexExpr::print(std::ostream &os) const {
 
 // class Call
 void Call::print(std::ostream &os) const {
-  os << callee << "(" << util::join(arguments, ", ") << ")";
+  os << getName() << "(" << util::join(arguments, ", ") << ")";
 }
 
 
@@ -264,7 +264,10 @@ void Result::print(std::ostream &os) const {
 
 // class Test
 void Test::print(std::ostream &os) const {
-  os << *call << " == " << *literal;
+  std::vector<std::shared_ptr<TensorNode>> args;
+  args.insert(args.end(), arguments.begin(), arguments.end());
+  Call call(callee, args);
+  os << call << " == " << util::join(expected, ", ");
 }
 
 }} // namespace simit::internal

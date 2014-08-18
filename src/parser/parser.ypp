@@ -509,9 +509,7 @@ expr
 
     $$ = new shared_ptr<TensorNode>(tensor);
   }
-  | literal {
-    $$ = $literal;
-  }
+  | literal
   | STRING_LITERAL {
     $$ = NULL;
   }
@@ -769,9 +767,8 @@ var_decl
 
 // Types
 %union {
-  TensorType                         *TensorType;
-  Type                               Type;
-
+  TensorType                   *TensorType;
+  Type                          Type;
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;
   IndexSet                     *IndexSet;
@@ -928,15 +925,15 @@ component_type
 };
 
 %union {
-  std::shared_ptr<Literal> *Literal;
+  std::shared_ptr<Literal> *TensorLiteral;
   TensorValues<double>     *TensorDoubleValues;
   TensorValues<int>        *TensorIntValues;
 };
 
-%type <Tensor>  literal;
-%type <Literal> tensor_literal;
-%type <Literal> dense_tensor_literal;
-%type <Literal> scalar_literal;
+%type <TensorLiteral> literal;
+%type <TensorLiteral> tensor_literal;
+%type <TensorLiteral> dense_tensor_literal;
+%type <TensorLiteral> scalar_literal;
 
 %type <TensorDoubleValues> float_dense_tensor_literal;
 %type <TensorDoubleValues> float_dense_ndtensor_literal;
@@ -1104,9 +1101,25 @@ scalar_literal
 %type <Test> test;
 test
   : "%!" call_expr "==" tensor_literal ";" {
-    $$ = new Test(*$call_expr, *$tensor_literal);
+    auto call = shared_ptr<Call>(*$call_expr);
+    auto expected = shared_ptr<Literal>(*$tensor_literal);
     delete $call_expr;
     delete $tensor_literal;
+
+    std::vector<std::shared_ptr<Literal>> literalArgs;
+    literalArgs.reserve(call->getArguments().size());
+    for (auto &arg : call->getArguments()) {
+      std::shared_ptr<Literal> litarg = dynamic_pointer_cast<Literal>(arg);
+      if (!litarg) {
+        REPORT_ERROR("function calls in tests must have literal arguments", @1);
+      }
+      literalArgs.push_back(litarg);
+    }
+    assert(literalArgs.size() == call->getArguments().size());
+
+    std::vector<std::shared_ptr<Literal>> expecteds;
+    expecteds.push_back(expected);
+    $$ = new Test(call->getName(), literalArgs, expecteds);
   }
 
 %%

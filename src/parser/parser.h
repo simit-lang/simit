@@ -250,15 +250,14 @@ namespace  simit { namespace internal  {
   VariableAccessVector *VarAccesses;
 
 
-  TensorType                         *TensorType;
-  Type                               Type;
-
+  TensorType                   *TensorType;
+  Type                          Type;
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;
   IndexSet                     *IndexSet;
 
 
-  std::shared_ptr<Literal> *Literal;
+  std::shared_ptr<Literal> *TensorLiteral;
   TensorValues<double>     *TensorDoubleValues;
   TensorValues<int>        *TensorIntValues;
 

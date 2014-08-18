@@ -612,21 +612,21 @@ namespace  simit { namespace internal  {
       case 99: // literal
 
 
-        { delete (yysym.value.Tensor); }
+        { delete (yysym.value.TensorLiteral); }
 
         break;
 
       case 101: // tensor_literal
 
 
-        { delete (yysym.value.Literal); }
+        { delete (yysym.value.TensorLiteral); }
 
         break;
 
       case 102: // dense_tensor_literal
 
 
-        { delete (yysym.value.Literal); }
+        { delete (yysym.value.TensorLiteral); }
 
         break;
 
@@ -689,7 +689,7 @@ namespace  simit { namespace internal  {
       case 111: // scalar_literal
 
 
-        { delete (yysym.value.Literal); }
+        { delete (yysym.value.TensorLiteral); }
 
         break;
 
@@ -1169,8 +1169,8 @@ namespace  simit { namespace internal  {
     {
     auto tensorType = unique_ptr<TensorType>((yystack_[3].value.TensorType));
 
-    auto tensorLiteral = shared_ptr<Literal>(*(yystack_[1].value.Literal));
-    delete (yystack_[1].value.Literal);
+    auto tensorLiteral = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
+    delete (yystack_[1].value.TensorLiteral);
 
     tensorLiteral->setName((yystack_[5].value.string));
     free((void*)(yystack_[5].value.string));
@@ -1323,14 +1323,6 @@ namespace  simit { namespace internal  {
     }
 
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(tensor);
-  }
-
-    break;
-
-  case 49:
-
-    {
-    (yylhs.value.Tensor) = (yystack_[0].value.Tensor);
   }
 
     break;
@@ -1868,7 +1860,7 @@ namespace  simit { namespace internal  {
                                              values->dimSizes.rend());
     auto type = new TensorType(Type::FLOAT, isps);
     auto literal = new Literal(type, values->values.data());
-    (yylhs.value.Literal) = new shared_ptr<Literal>(literal);
+    (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
     break;
@@ -1881,7 +1873,7 @@ namespace  simit { namespace internal  {
                                              values->dimSizes.rend());
     auto type = new TensorType(Type::INT, isps);
     auto literal = new Literal(type, values->values.data());
-    (yylhs.value.Literal) = new shared_ptr<Literal>(literal);
+    (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
     break;
@@ -2053,7 +2045,7 @@ namespace  simit { namespace internal  {
     {
     auto scalarType = new TensorType(Type::INT);
     auto literal = new Literal(scalarType, &(yystack_[0].value.num));
-    (yylhs.value.Literal) = new shared_ptr<Literal>(literal);
+    (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
     break;
@@ -2063,7 +2055,7 @@ namespace  simit { namespace internal  {
     {
     auto scalarType = new TensorType(Type::FLOAT);
     auto literal = new Literal(scalarType, &(yystack_[0].value.fnum));
-    (yylhs.value.Literal) = new shared_ptr<Literal>(literal);
+    (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
     break;
@@ -2071,9 +2063,25 @@ namespace  simit { namespace internal  {
   case 134:
 
     {
-    (yylhs.value.Test) = new Test(*(yystack_[3].value.Call), *(yystack_[1].value.Literal));
+    auto call = shared_ptr<Call>(*(yystack_[3].value.Call));
+    auto expected = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
     delete (yystack_[3].value.Call);
-    delete (yystack_[1].value.Literal);
+    delete (yystack_[1].value.TensorLiteral);
+
+    std::vector<std::shared_ptr<Literal>> literalArgs;
+    literalArgs.reserve(call->getArguments().size());
+    for (auto &arg : call->getArguments()) {
+      std::shared_ptr<Literal> litarg = dynamic_pointer_cast<Literal>(arg);
+      if (!litarg) {
+        REPORT_ERROR("function calls in tests must have literal arguments", yystack_[4].location);
+      }
+      literalArgs.push_back(litarg);
+    }
+    assert(literalArgs.size() == call->getArguments().size());
+
+    std::vector<std::shared_ptr<Literal>> expecteds;
+    expecteds.push_back(expected);
+    (yylhs.value.Test) = new Test(call->getName(), literalArgs, expecteds);
   }
 
     break;
@@ -2616,15 +2624,15 @@ namespace  simit { namespace internal  {
      248,   255,   264,   302,   305,   316,   320,   331,   339,   343,
      350,   353,   362,   363,   364,   365,   366,   370,   400,   408,
      414,   416,   420,   422,   429,   435,   476,   479,   493,   512,
-     515,   518,   523,   528,   533,   538,   543,   567,   571,   576,
-     581,   586,   591,   596,   601,   606,   610,   615,   620,   623,
-     626,   635,   644,   647,   653,   659,   668,   675,   677,   682,
-     684,   689,   691,   693,   696,   699,   702,   708,   709,   731,
-     736,   744,   750,   755,   764,   792,   795,   800,   806,   809,
-     815,   818,   856,   861,   868,   871,   875,   880,   883,   952,
-     953,   955,   959,   960,   963,   971,   981,   988,   991,   995,
-    1008,  1012,  1026,  1030,  1036,  1043,  1046,  1050,  1063,  1067,
-    1081,  1085,  1091,  1096,  1106
+     513,   516,   521,   526,   531,   536,   541,   565,   569,   574,
+     579,   584,   589,   594,   599,   604,   608,   613,   618,   621,
+     624,   633,   642,   645,   651,   657,   666,   673,   675,   680,
+     682,   687,   689,   691,   694,   697,   700,   706,   707,   729,
+     734,   742,   748,   753,   762,   789,   792,   797,   803,   806,
+     812,   815,   853,   858,   865,   868,   872,   877,   880,   949,
+     950,   952,   956,   957,   960,   968,   978,   985,   988,   992,
+    1005,  1009,  1023,  1027,  1033,  1040,  1043,  1047,  1060,  1064,
+    1078,  1082,  1088,  1093,  1103
   };
 
   // Print the state stack on the debug stream.
