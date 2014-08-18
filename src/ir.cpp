@@ -33,12 +33,18 @@ void TensorNode::print(std::ostream &os) const {
 
 
 // class Literal
-Literal::Literal(TensorType *type, void *data)
-    : TensorNode(type) {
-  auto componentSize = TensorType::componentSize(type->getComponentType());
-  auto dataSize = type->getSize() * componentSize;
+Literal::Literal(TensorType *type) : TensorNode(type) {
+  int componentSize = TensorType::componentSize(type->getComponentType());
+  this->dataSize = type->getSize() * componentSize;
   this->data = malloc(dataSize);
-  memcpy(this->data, data, dataSize);
+}
+
+Literal::Literal(TensorType *type, void *values) : Literal(type) {
+  memcpy(this->data, values, this->dataSize);
+}
+
+void Literal::clear() {
+  memset(data, 0, dataSize);
 }
 
 Literal::~Literal() {

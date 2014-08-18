@@ -59,16 +59,19 @@ class TensorNode : public IRNode {
 /// that it is only possible to define dense tensor literals.
 class Literal : public TensorNode {
  public:
-  Literal(TensorType *type, void *data);
+  Literal(TensorType *type);
+  Literal(TensorType *type, void *values);
   ~Literal();
 
   void cast(TensorType *type);
+  void clear();
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   void print(std::ostream &os) const;
 
  private:
   void  *data;
+  int dataSize;
 };
 
 
