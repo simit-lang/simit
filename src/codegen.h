@@ -33,18 +33,7 @@ class CodeGen {
 };
 
 
-/// The base class of all classes that perform code generation using LLVM.
-class LLVMCodeGen : public CodeGen {
- public:
-  LLVMCodeGen();
-  ~LLVMCodeGen();
 
-  BinaryFunction *compileToFunctionPointer(Function *function);
-
- private:
-  /// Implementation class to avoid bleeding LLVM to the rest of the project.
-  LLVMCodeGenImpl *impl;
-};
 
 }} // namespace simit::internal
 #endif

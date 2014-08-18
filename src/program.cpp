@@ -4,7 +4,7 @@
 
 #include "ir.h"
 #include "frontend.h"
-#include "codegen.h"
+#include "llvm_codegen.h"
 #include "util.h"
 #include "errors.h"
 
