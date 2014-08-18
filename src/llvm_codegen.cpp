@@ -45,8 +45,7 @@ llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
         return NULL;  // TODO: not supported yet
         break;
       default:
-        assert(false);
-        break;
+        UNREACHABLE_DEFAULT;
     }
   }
   else {
