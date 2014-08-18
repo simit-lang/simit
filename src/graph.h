@@ -131,6 +131,16 @@ class Set {
   /// Add a new field
   FieldHandle addField(Type type) { fields.push_back(new Field(type)); return fields.size()-1; }
   
+  /// Return the fields over this Set
+  vector<FieldHandle> getFields() {
+    vector<FieldHandle> fieldHandles;
+    for (int i=0; i<numFields(); i++) {
+      fieldHandles.push_back(i);
+    }
+    
+    return fieldHandles;
+  }
+  
   /// Add a new item, returning its handle
   ElementHandle addItem();
   
