@@ -1,6 +1,7 @@
 #ifndef SIMIT_SYMBOLTABLE_H
 #define SIMIT_SYMBOLTABLE_H
 
+#include <cassert>
 #include <string>
 #include <map>
 #include <list>
@@ -26,17 +27,30 @@ class SymbolTable {
   /// Remove the top symbol scope.
   void unscope() { scopes.pop_front(); }
 
-  /// Collapse all scopes into the top scope.
-  void collapse();
+  /// Return the first match
+  void insert(const std::string &symbol, const Value &value) {
+    scopes.front()[symbol] = value;
+  }
 
-  /// Return the first symbol first match or add the symbol to the top scope.
-  Value &operator[](const std::string &name) {
+  // True iff the symbol table contains the given symbol.
+  bool contains(const std::string &symbol) {
     for (auto &scope : scopes) {
-      if (scope.find(name) != scope.end()) {
-        return scope[name];
+      if (scope.find(symbol) != scope.end()) {
+        return true;
       }
     }
-    return scopes.front()[name];
+    return false;
+  }
+
+  /// Return the first match.  It is an error to call get if the symbol is not
+  /// in the symbol table.
+  Value &get(const std::string &symbol) {
+    for (auto &scope : scopes) {
+      if (scope.find(symbol) != scope.end()) {
+        return scope[symbol];
+      }
+    }
+    assert(false && "Attempting to get a symbol that is not in symbol table.");
   }
 
   /// Iterator over symbol scopes.
@@ -62,6 +76,13 @@ class SymbolTable {
  private:
   std::list<SymbolMap> scopes;
 };
+
+template <typename T>
+std::ostream &operator<<(std::ostream &os, const SymbolTable<T> &symtable) {
+  symtable.print(os);
+  return os;
+}
+
 
 }};
 

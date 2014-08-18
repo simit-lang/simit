@@ -1065,11 +1065,11 @@ namespace  simit { namespace internal  {
 
     ctx->symtable.scope();
     for (auto argument : *arguments) {
-      ctx->symtable[argument->getName()] = argument;
+      ctx->symtable.insert(argument->getName(), argument);
     }
 
     for (auto result : *results) {
-      ctx->symtable[result->getName()] = result;
+      ctx->symtable.insert(result->getName(), result);
     }
   }
 
@@ -1191,7 +1191,7 @@ namespace  simit { namespace internal  {
       REPORT_ERROR(ss.str(), yystack_[2].location);
     }
 
-    ctx->symtable[tensorLiteral->getName()] = tensorLiteral;
+    ctx->symtable.insert(tensorLiteral->getName(), tensorLiteral);
 
     (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
     (yylhs.value.IRNodes)->push_back(tensorLiteral);
@@ -1267,23 +1267,20 @@ namespace  simit { namespace internal  {
       auto lhs = *lhsIter;
       auto rhs = *rhsIter;
 
-      if (rhs == NULL) continue;  // TODO: Remove this
+      // TODO: Remove these checks
+      if (rhs == NULL) continue;
+      if (!ctx->symtable.contains(lhs->name)) continue;
 
-      auto lhsTensor = ctx->symtable[lhs->name];
-      if (lhsTensor == NULL) {
-//        NOT_SUPPORTED_YET;
+      auto lhsTensor = ctx->symtable.get(lhs->name);
+      if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
+        rhs->setName(result->getName() + "_val");
+        auto store = new VariableStore(result, rhs);
+        auto storePtr = std::shared_ptr<Store>(store);
+        result->setValue(storePtr);
+        (yylhs.value.IRNodes)->push_back(storePtr);
       }
       else {
-        if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
-          rhs->setName(result->getName() + "_val");
-          auto store = new VariableStore(result, rhs);
-          auto storePtr = std::shared_ptr<Store>(store);
-          result->setValue(storePtr);
-          (yylhs.value.IRNodes)->push_back(storePtr);
-        }
-        else {
-          NOT_SUPPORTED_YET;
-        }
+        NOT_SUPPORTED_YET;
       }
     }
   }
@@ -1311,13 +1308,14 @@ namespace  simit { namespace internal  {
     {
     string ident((yystack_[0].value.string));
     free((void*)(yystack_[0].value.string));
-    std::shared_ptr<IRNode> &node = ctx->symtable[ident];
-    if (node == NULL) {
+    if (!ctx->symtable.contains(ident)) {
       // TODO: reintroduce error
       // REPORT_ERROR(ident + " is not defined in scope", @1);
       (yylhs.value.Tensor) = NULL;
       break;
     }
+
+    std::shared_ptr<IRNode> &node = ctx->symtable.get(ident);
 
     shared_ptr<TensorNode> tensor = dynamic_pointer_cast<TensorNode>(node);
     if (tensor == NULL) {
@@ -2613,20 +2611,20 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   170,   170,   172,   176,   179,   182,   191,   194,   198,
-     204,   208,   214,   217,   224,   228,   230,   232,   234,   237,
-     247,   254,   263,   301,   304,   315,   319,   330,   338,   342,
-     349,   352,   361,   362,   363,   364,   365,   369,   399,   407,
-     413,   415,   419,   421,   428,   434,   478,   481,   495,   513,
-     516,   519,   524,   529,   534,   539,   544,   568,   572,   577,
-     582,   587,   592,   597,   602,   607,   611,   616,   621,   624,
-     627,   636,   645,   648,   654,   660,   669,   676,   678,   683,
-     685,   690,   692,   694,   697,   700,   703,   709,   710,   732,
-     737,   745,   751,   756,   765,   793,   796,   801,   807,   810,
-     816,   819,   857,   862,   869,   872,   876,   881,   884,   953,
-     954,   956,   960,   961,   964,   972,   982,   989,   992,   996,
-    1009,  1013,  1027,  1031,  1037,  1044,  1047,  1051,  1064,  1068,
-    1082,  1086,  1092,  1097,  1107
+       0,   171,   171,   173,   177,   180,   183,   192,   195,   199,
+     205,   209,   215,   218,   225,   229,   231,   233,   235,   238,
+     248,   255,   264,   302,   305,   316,   320,   331,   339,   343,
+     350,   353,   362,   363,   364,   365,   366,   370,   400,   408,
+     414,   416,   420,   422,   429,   435,   476,   479,   493,   512,
+     515,   518,   523,   528,   533,   538,   543,   567,   571,   576,
+     581,   586,   591,   596,   601,   606,   610,   615,   620,   623,
+     626,   635,   644,   647,   653,   659,   668,   675,   677,   682,
+     684,   689,   691,   693,   696,   699,   702,   708,   709,   731,
+     736,   744,   750,   755,   764,   792,   795,   800,   806,   809,
+     815,   818,   856,   861,   868,   871,   875,   880,   883,   952,
+     953,   955,   959,   960,   963,   971,   981,   988,   991,   995,
+    1008,  1012,  1026,  1030,  1036,  1043,  1046,  1050,  1063,  1067,
+    1081,  1085,  1091,  1096,  1106
   };
 
   // Print the state stack on the debug stream.

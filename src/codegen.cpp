@@ -168,17 +168,17 @@ void LLVMCodeGenImpl::handle(IndexExpr *t) {
   }
 
   assert(result != NULL);
-  symtable[t->getName()] = result;
+  symtable.insert(t->getName(), result);
 }
 
 void LLVMCodeGenImpl::handle(VariableStore *t) {
   cout << "Store   :  " << *t << endl;
 
-  auto val = symtable[t->getValue()->getName()];
-  assert(val != NULL);
+  assert(symtable.contains(t->getValue()->getName()));
+  auto val = symtable.get(t->getValue()->getName());
 
-  auto target = symtable[t->getTarget()->getName()];
-  assert(target != NULL);
+  assert(symtable.contains(t->getTarget()->getName()));
+  auto target = symtable.get(t->getTarget()->getName());
 
   builder.CreateStore(val, target);
 }
@@ -204,12 +204,12 @@ llvm::Function *LLVMCodeGenImpl::createFunctionPrototype(Function *function) {
   auto ai = f->arg_begin();
   for (auto &arg : function->getArguments()) {
     ai->setName(arg->getName());
-    symtable[arg->getName()] = ai;
+    symtable.insert(arg->getName(), ai);
     ++ai;
   }
   for (auto &result : function->getResults()) {
     ai->setName(result->getName());
-    symtable[result->getName()] = ai;
+    symtable.insert(result->getName(), ai);
     ++ai;
   }
   assert(ai == f->arg_end());
@@ -236,8 +236,8 @@ LLVMCodeGenImpl::createScalarOp(const std::string &name, IndexExpr::Operator op,
     case IndexExpr::NEG: {
       assert (operands.size() == 1);
       auto operandName = operands[0].getTensor()->getName();
-      auto val = symtable[operandName];
-      assert(val != NULL);
+      assert(symtable.contains(operandName));
+      auto val = symtable.get(operandName);
       auto type = val->getType();
       if (type->isPointerTy()) {
         auto addr = builder.CreateGEP(val, constant(0), operandName + "_ptr");

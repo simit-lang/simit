@@ -271,11 +271,11 @@ function_header
 
     ctx->symtable.scope();
     for (auto argument : *arguments) {
-      ctx->symtable[argument->getName()] = argument;
+      ctx->symtable.insert(argument->getName(), argument);
     }
 
     for (auto result : *results) {
-      ctx->symtable[result->getName()] = result;
+      ctx->symtable.insert(result->getName(), result);
     }
   }
 
@@ -392,7 +392,7 @@ const_stmt
       REPORT_ERROR(ss.str(), @5);
     }
 
-    ctx->symtable[tensorLiteral->getName()] = tensorLiteral;
+    ctx->symtable.insert(tensorLiteral->getName(), tensorLiteral);
 
     $$ = new vector<shared_ptr<IRNode>>();
     $$->push_back(tensorLiteral);
@@ -453,23 +453,20 @@ assign_stmt
       auto lhs = *lhsIter;
       auto rhs = *rhsIter;
 
-      if (rhs == NULL) continue;  // TODO: Remove this
+      // TODO: Remove these checks
+      if (rhs == NULL) continue;
+      if (!ctx->symtable.contains(lhs->name)) continue;
 
-      auto lhsTensor = ctx->symtable[lhs->name];
-      if (lhsTensor == NULL) {
-//        NOT_SUPPORTED_YET;
+      auto lhsTensor = ctx->symtable.get(lhs->name);
+      if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
+        rhs->setName(result->getName() + "_val");
+        auto store = new VariableStore(result, rhs);
+        auto storePtr = std::shared_ptr<Store>(store);
+        result->setValue(storePtr);
+        $$->push_back(storePtr);
       }
       else {
-        if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
-          rhs->setName(result->getName() + "_val");
-          auto store = new VariableStore(result, rhs);
-          auto storePtr = std::shared_ptr<Store>(store);
-          result->setValue(storePtr);
-          $$->push_back(storePtr);
-        }
-        else {
-          NOT_SUPPORTED_YET;
-        }
+        NOT_SUPPORTED_YET;
       }
     }
   }
@@ -496,13 +493,14 @@ expr
   : IDENT {
     string ident($IDENT);
     free((void*)$IDENT);
-    std::shared_ptr<IRNode> &node = ctx->symtable[ident];
-    if (node == NULL) {
+    if (!ctx->symtable.contains(ident)) {
       // TODO: reintroduce error
       // REPORT_ERROR(ident + " is not defined in scope", @1);
       $$ = NULL;
       break;
     }
+
+    std::shared_ptr<IRNode> &node = ctx->symtable.get(ident);
 
     shared_ptr<TensorNode> tensor = dynamic_pointer_cast<TensorNode>(node);
     if (tensor == NULL) {
