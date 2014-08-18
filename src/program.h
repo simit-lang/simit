@@ -73,6 +73,9 @@ class Program {
 
  private:
   internal::ProgramContent *impl;
+
+  Program(const Program&) = delete;
+  Program& operator=(const Program&) = delete;
 };
 
 }
