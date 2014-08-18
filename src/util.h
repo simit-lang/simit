@@ -33,7 +33,7 @@ std::ostream& operator<<(std::ostream &out, const std::unique_ptr<T> dim) {
 
 /// Join the elements between begin and end in a sep-separated string.
 template <typename Iterator>
-std::string join(Iterator begin, Iterator end, const std::string &sep) {
+std::string join(Iterator begin, Iterator end, const std::string &sep=", ") {
   std::ostringstream result;
   if (begin != end) {
     result << *begin++;
@@ -46,13 +46,13 @@ std::string join(Iterator begin, Iterator end, const std::string &sep) {
 
 /// Join the elements in the collection in a sep-separated string.
 template <typename Collection>
-std::string join(const Collection &collection, const std::string &sep) {
+std::string join(const Collection &collection, const std::string &sep=", ") {
   return join(collection.begin(), collection.end(), sep);
 }
 
 /// Reverse join the elements in the collection in a sep-separated string.
 template <typename Collection>
-std::string rjoin(const Collection &collection, const std::string &sep) {
+std::string rjoin(const Collection &collection, const std::string &sep=", ") {
   return join(collection.rbegin(), collection.rend(), sep);
 }
 
