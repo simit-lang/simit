@@ -84,6 +84,26 @@
   }
 
 
+shared_ptr<TensorNode> *binaryElwiseExpr(const shared_ptr<TensorNode> &l,
+                                         IndexExpr::Operator op,
+                                         const shared_ptr<TensorNode> &r) {
+  IndexVarFactory indexVarFactory;
+  std::vector<IndexExpr::IndexVarPtr> indexVars;
+  for (unsigned int i=0; i<l->getOrder(); ++i) {
+    IndexSetProduct indexSet = l->getType()->getDimensions()[i];
+    indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
+  }
+
+  std::vector<IndexExpr::IndexedTensor> operands;
+  operands.push_back(IndexExpr::IndexedTensor(l, indexVars));
+  operands.push_back(IndexExpr::IndexedTensor(r, indexVars));
+  auto indexExpr = new IndexExpr(indexVars, op, operands);
+
+  assert(indexExpr != NULL);
+  return new shared_ptr<TensorNode>(indexExpr);
+}
+
+
 
 
 #ifndef YY_
@@ -1338,9 +1358,27 @@ namespace  simit { namespace internal  {
   case 51:
 
     {
-    (yylhs.value.Tensor) = NULL;
-    delete (yystack_[2].value.Tensor);
+    if ((yystack_[0].value.Tensor) == NULL) {  // TODO: Remove check
+      (yylhs.value.Tensor) = NULL;
+      break;
+    }
+
+    auto expr = shared_ptr<TensorNode>(*(yystack_[0].value.Tensor));
     delete (yystack_[0].value.Tensor);
+
+    IndexVarFactory indexVarFactory;
+    std::vector<IndexExpr::IndexVarPtr> indexVars;
+    for (unsigned int i=0; i<expr->getOrder(); ++i) {
+      IndexSetProduct indexSet = expr->getType()->getDimensions()[i];
+      indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
+    }
+
+    std::vector<IndexExpr::IndexedTensor> operands;
+    operands.push_back(IndexExpr::IndexedTensor(expr, indexVars));
+    auto indexExpr = new IndexExpr(indexVars, IndexExpr::NEG, operands);
+
+    assert(indexExpr != NULL);
+    (yylhs.value.Tensor) = new shared_ptr<TensorNode>(indexExpr);
   }
 
     break;
@@ -1348,9 +1386,20 @@ namespace  simit { namespace internal  {
   case 52:
 
     {
-    (yylhs.value.Tensor) = NULL;
+    if ((yystack_[2].value.Tensor) == NULL || (yystack_[0].value.Tensor) == NULL) {  // TODO: Remove this check
+      (yylhs.value.Tensor) = NULL;
+      break;
+    }
+    auto l = shared_ptr<TensorNode>(*(yystack_[2].value.Tensor));
+    auto r = shared_ptr<TensorNode>(*(yystack_[0].value.Tensor));
     delete (yystack_[2].value.Tensor);
     delete (yystack_[0].value.Tensor);
+
+    if (*l->getType() != *r->getType()) {
+      REPORT_ERROR("operand types do not match", yystack_[1].location);
+    }
+
+    (yylhs.value.Tensor) = binaryElwiseExpr(l, IndexExpr::ADD, r);
   }
 
     break;
@@ -1358,9 +1407,20 @@ namespace  simit { namespace internal  {
   case 53:
 
     {
-    (yylhs.value.Tensor) = NULL;
+    if ((yystack_[2].value.Tensor) == NULL || (yystack_[0].value.Tensor) == NULL) {  // TODO: Remove this check
+      (yylhs.value.Tensor) = NULL;
+      break;
+    }
+    auto l = shared_ptr<TensorNode>(*(yystack_[2].value.Tensor));
+    auto r = shared_ptr<TensorNode>(*(yystack_[0].value.Tensor));
     delete (yystack_[2].value.Tensor);
     delete (yystack_[0].value.Tensor);
+
+    if (*l->getType() != *r->getType()) {
+      REPORT_ERROR("operand types do not match", yystack_[1].location);
+    }
+
+    (yylhs.value.Tensor) = binaryElwiseExpr(l, IndexExpr::SUB, r);
   }
 
     break;
@@ -1388,28 +1448,9 @@ namespace  simit { namespace internal  {
   case 56:
 
     {
-    if ((yystack_[0].value.Tensor) == NULL) {  // TODO: Remove check
-      (yylhs.value.Tensor) = NULL;
-      break;
-    }
-
-    auto expr = shared_ptr<TensorNode>(*(yystack_[0].value.Tensor));
+    (yylhs.value.Tensor) = NULL;
+    delete (yystack_[2].value.Tensor);
     delete (yystack_[0].value.Tensor);
-
-    IndexVarFactory indexVarFactory;
-    std::vector<IndexExpr::IndexVarPtr> indexVars;
-    for (unsigned int i=0; i<expr->getOrder(); ++i) {
-      IndexSetProduct indexSet = expr->getType()->getDimensions()[0];
-      indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
-    }
-
-    std::vector<IndexExpr::IndexedTensor> operands;
-    operands.push_back(IndexExpr::IndexedTensor(expr, indexVars));
-
-    auto indexExpr = new IndexExpr(indexVars, IndexExpr::NEG, operands);
-
-    assert(indexExpr != NULL);
-    (yylhs.value.Tensor) = new shared_ptr<TensorNode>(indexExpr);
   }
 
     break;
@@ -2386,14 +2427,14 @@ namespace  simit { namespace internal  {
      109,   110,   112,   113,     9,    82,     0,    15,     0,     0,
       30,     0,     0,    48,    30,    44,     0,     0,     0,   130,
      122,     0,     0,   117,   116,   120,     0,   125,   124,   128,
-      56,    82,    82,    82,    82,    82,    47,    82,    82,    82,
+      51,    82,    82,    82,    82,    82,    47,    82,    82,    82,
       82,    82,    57,    82,    82,    82,    82,    82,    48,    87,
       88,    81,    83,     0,     0,    82,    74,     0,     0,    93,
        0,    14,     0,    17,     0,     0,    97,   107,   108,   100,
        0,    95,    96,    98,    82,    23,     0,    82,    82,     0,
       65,     0,     0,   114,     0,     0,     0,   115,     0,     0,
        0,    21,    31,    61,    62,    67,    66,    52,    53,    54,
-      55,    58,    51,    59,    60,    63,    64,     0,    84,     0,
+      55,    58,    56,    59,    60,    63,    64,     0,    84,     0,
       91,    90,     0,    71,    92,    82,     0,    16,    18,    19,
        0,     0,     0,     0,     0,    20,     0,     0,    28,    24,
       77,    73,     0,     0,     0,   118,   126,     0,   121,   123,
@@ -2571,7 +2612,7 @@ namespace  simit { namespace internal  {
        4,     3,     6,     0,     1,     0,     4,     3,     1,     3,
        0,     2,     1,     1,     1,     1,     1,     7,     7,     5,
        0,     3,     0,     4,     2,     4,     1,     2,     1,     1,
-       1,     3,     3,     3,     3,     3,     2,     2,     3,     3,
+       1,     2,     3,     3,     3,     3,     3,     2,     3,     3,
        3,     3,     3,     3,     3,     3,     3,     3,     1,     1,
        1,     4,     0,     1,     1,     3,     6,     0,     2,     0,
        2,     2,     0,     2,     2,     4,     4,     1,     1,     1,
@@ -2623,16 +2664,16 @@ namespace  simit { namespace internal  {
      205,   209,   215,   218,   225,   229,   231,   233,   235,   238,
      248,   255,   264,   302,   305,   316,   320,   331,   339,   343,
      350,   353,   362,   363,   364,   365,   366,   370,   400,   408,
-     414,   416,   420,   422,   429,   435,   476,   479,   493,   512,
-     513,   516,   521,   526,   531,   536,   541,   565,   569,   574,
-     579,   584,   589,   594,   599,   604,   608,   613,   618,   621,
-     624,   633,   642,   645,   651,   657,   666,   673,   675,   680,
-     682,   687,   689,   691,   694,   697,   700,   706,   707,   729,
-     734,   742,   748,   753,   762,   789,   792,   797,   803,   806,
-     812,   815,   853,   858,   865,   868,   872,   877,   880,   949,
-     950,   952,   956,   957,   960,   968,   978,   985,   988,   992,
-    1005,  1009,  1023,  1027,  1033,  1040,  1043,  1047,  1060,  1064,
-    1078,  1082,  1088,  1093,  1103
+     414,   416,   420,   422,   429,   435,   476,   479,   513,   532,
+     533,   536,   560,   576,   592,   597,   602,   607,   611,   616,
+     621,   626,   631,   636,   641,   646,   650,   655,   660,   663,
+     666,   675,   684,   687,   693,   699,   708,   715,   717,   722,
+     724,   729,   731,   733,   736,   739,   742,   748,   749,   771,
+     776,   784,   790,   795,   804,   831,   834,   839,   845,   848,
+     854,   857,   895,   900,   907,   910,   914,   919,   922,   991,
+     992,   994,   998,   999,  1002,  1010,  1020,  1027,  1030,  1034,
+    1047,  1051,  1065,  1069,  1075,  1082,  1085,  1089,  1102,  1106,
+    1120,  1124,  1130,  1135,  1145
   };
 
   // Print the state stack on the debug stream.

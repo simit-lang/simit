@@ -92,6 +92,10 @@ int Program::verify() {
     LLVMCodeGen codegen;
     // get binary function with name test->call->callee from list of functions
     Function *func = impl->functions[test->getCallee()];
+    if (func == NULL) {
+      // TODO: Report error, attempting to call unknown function
+      return 1;
+    }
 
     if (compiled.find(func) == compiled.end()) {
        compiled[func] = codegen.compile(func);

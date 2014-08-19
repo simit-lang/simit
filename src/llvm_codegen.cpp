@@ -35,6 +35,8 @@ using namespace std;
 namespace {
 using namespace simit::internal;
 
+#define VALSUFFIX "_val"
+
 inline llvm::ConstantInt *constant(const int val) {
   return llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT), val);
 }
@@ -228,7 +230,6 @@ void LLVMCodeGen::handle(Function *function) {
                                       function->getResults(),
                                       llvm::Function::ExternalLinkage,
                                       module);
-  cout << "Function" << endl;
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
   builder->SetInsertPoint(entry);
   for (auto &arg : f->getArgumentList()) {
@@ -243,7 +244,6 @@ void LLVMCodeGen::handle(Function *function) {
 }
 
 void LLVMCodeGen::handle(IndexExpr *t) {
-  cout << "Index Expression" << endl;
   llvm::Value *result = NULL;
 
   auto domain = t->getDomain();
@@ -259,8 +259,6 @@ void LLVMCodeGen::handle(IndexExpr *t) {
 
   assert(result != NULL);
   symtable->insert(t->getName(), result);
-
-  cout << "End of Index Expression" << endl;
 }
 
 void LLVMCodeGen::handle(VariableStore *t) {
@@ -273,6 +271,45 @@ void LLVMCodeGen::handle(VariableStore *t) {
   assert(target != NULL);
 
   builder->CreateStore(val, target);
+}
+
+llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op, Type type) {
+  assert(type == Type::INT || type == Type::FLOAT);
+  switch (op) {
+    case IndexExpr::ADD:
+      switch (type) {
+        case Type::INT:
+          return llvm::Instruction::Add;
+        case Type::FLOAT:
+          return llvm::Instruction::FAdd;
+        default:
+          UNREACHABLE_DEFAULT;
+      }
+    case IndexExpr::SUB:
+      switch (type) {
+        case Type::INT:
+          return llvm::Instruction::Sub;
+        case Type::FLOAT:
+          return llvm::Instruction::FSub;
+        default:
+          UNREACHABLE_DEFAULT;
+      }
+    case IndexExpr::MUL:
+      switch (type) {
+        case Type::INT:
+          return llvm::Instruction::Mul;
+        case Type::FLOAT:
+          return llvm::Instruction::FMul;
+        default:
+          UNREACHABLE_DEFAULT;
+      }
+    case IndexExpr::DIV:
+      assert(type == Type::FLOAT);
+      return llvm::Instruction::FDiv;
+    case IndexExpr::NEG: // fallthrough
+    default:
+      UNREACHABLE_DEFAULT;
+  }
 }
 
 llvm::Value *
@@ -288,7 +325,7 @@ LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
       llvm::Value *val = symtable->get(operandName);
 
       if (val->getType()->isPointerTy()) {
-        val = builder->CreateLoad(val, operandName + "_val");
+        val = builder->CreateLoad(val, operandName + VALSUFFIX);
       }
 
       simit::Type ctype = operand.getTensor()->getType()->getComponentType();
@@ -304,18 +341,31 @@ LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
           UNREACHABLE_DEFAULT;
       }
     }
-    case IndexExpr::ADD:
-      NOT_SUPPORTED_YET;
-      break;
-    case IndexExpr::SUB:
-      NOT_SUPPORTED_YET;
-      break;
-    case IndexExpr::MUL:
-      NOT_SUPPORTED_YET;
-      break;
-    case IndexExpr::DIV:
-      NOT_SUPPORTED_YET;
-      break;
+    case IndexExpr::ADD: // fallthrough
+    case IndexExpr::SUB: // fallthrough
+    case IndexExpr::MUL: // fallthrough
+    case IndexExpr::DIV: {
+      assert (operands.size() == 2);
+      IndexExpr::IndexedTensor l = operands[0];
+      IndexExpr::IndexedTensor r = operands[1];
+      std::string lname = l.getTensor()->getName();
+      std::string rname = r.getTensor()->getName();
+
+      assert(symtable->contains(lname));
+      assert(symtable->contains(rname));
+      llvm::Value *lval = symtable->get(lname);
+      llvm::Value *rval = symtable->get(rname);
+
+      if (lval->getType()->isPointerTy()) {
+        lval = builder->CreateLoad(lval, lname + VALSUFFIX);
+      }
+      if (rval->getType()->isPointerTy()) {
+        rval = builder->CreateLoad(rval, rname + VALSUFFIX);
+      }
+
+      simit::Type ctype = l.getTensor()->getType()->getComponentType();
+      return builder->CreateBinOp(toLLVMBinaryOp(op, ctype), lval, rval, name);
+    }
     default:
       UNREACHABLE_DEFAULT;
   }

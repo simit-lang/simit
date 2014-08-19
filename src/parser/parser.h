@@ -242,7 +242,6 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
 
 
-
   std::shared_ptr<Call> *Call;
 
 

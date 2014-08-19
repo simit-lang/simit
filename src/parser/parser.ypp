@@ -482,10 +482,30 @@ expr_stmt
 
 
 // Expressions
+%code {
+shared_ptr<TensorNode> *binaryElwiseExpr(const shared_ptr<TensorNode> &l,
+                                         IndexExpr::Operator op,
+                                         const shared_ptr<TensorNode> &r) {
+  IndexVarFactory indexVarFactory;
+  std::vector<IndexExpr::IndexVarPtr> indexVars;
+  for (unsigned int i=0; i<l->getOrder(); ++i) {
+    IndexSetProduct indexSet = l->getType()->getDimensions()[i];
+    indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
+  }
+
+  std::vector<IndexExpr::IndexedTensor> operands;
+  operands.push_back(IndexExpr::IndexedTensor(l, indexVars));
+  operands.push_back(IndexExpr::IndexedTensor(r, indexVars));
+  auto indexExpr = new IndexExpr(indexVars, op, operands);
+
+  assert(indexExpr != NULL);
+  return new shared_ptr<TensorNode>(indexExpr);
+}
+};
+
 %union {
   std::shared_ptr<simit::internal::TensorNode>              *Tensor;
   std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
-
 };
 
 %type<Tensor> expr;
@@ -513,31 +533,6 @@ expr
   | STRING_LITERAL {
     $$ = NULL;
   }
-  | expr "\\" expr {
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | expr "+" expr {
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | expr "-" expr {
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | expr "*" expr {
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | expr "/" expr {
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
   | "-" expr %prec NEG {
     if ($2 == NULL) {  // TODO: Remove check
       $$ = NULL;
@@ -550,17 +545,64 @@ expr
     IndexVarFactory indexVarFactory;
     std::vector<IndexExpr::IndexVarPtr> indexVars;
     for (unsigned int i=0; i<expr->getOrder(); ++i) {
-      IndexSetProduct indexSet = expr->getType()->getDimensions()[0];
+      IndexSetProduct indexSet = expr->getType()->getDimensions()[i];
       indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
     }
 
     std::vector<IndexExpr::IndexedTensor> operands;
     operands.push_back(IndexExpr::IndexedTensor(expr, indexVars));
-
     auto indexExpr = new IndexExpr(indexVars, IndexExpr::NEG, operands);
 
     assert(indexExpr != NULL);
     $$ = new shared_ptr<TensorNode>(indexExpr);
+  }
+  // TODO: Combine binary cases
+  | expr "+" expr {
+    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
+      $$ = NULL;
+      break;
+    }
+    auto l = shared_ptr<TensorNode>(*$1);
+    auto r = shared_ptr<TensorNode>(*$3);
+    delete $1;
+    delete $3;
+
+    if (*l->getType() != *r->getType()) {
+      REPORT_ERROR("operand types do not match", @2);
+    }
+
+    $$ = binaryElwiseExpr(l, IndexExpr::ADD, r);
+  }
+  | expr "-" expr {
+    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
+      $$ = NULL;
+      break;
+    }
+    auto l = shared_ptr<TensorNode>(*$1);
+    auto r = shared_ptr<TensorNode>(*$3);
+    delete $1;
+    delete $3;
+
+    if (*l->getType() != *r->getType()) {
+      REPORT_ERROR("operand types do not match", @2);
+    }
+
+    $$ = binaryElwiseExpr(l, IndexExpr::SUB, r);
+  }
+  | expr "*" expr {
+    $$ = NULL;
+    delete $1;
+    delete $3;
+  }
+  | expr "/" expr {
+    $$ = NULL;
+    delete $1;
+    delete $3;
+  }
+  | expr "\\" expr {
+    $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | expr "'" {
     $$ = NULL;
