@@ -63,16 +63,19 @@ class Literal : public TensorNode {
   Literal(TensorType *type, void *values);
   ~Literal();
 
-  void cast(TensorType *type);
   void clear();
+  void cast(TensorType *type);
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
+  const void *getData() const { return data; }
   void print(std::ostream &os) const;
 
  private:
   void  *data;
   int dataSize;
 };
+bool operator==(const Literal& l, const Literal& r);
+bool operator!=(const Literal& l, const Literal& r);
 
 
 /// An index variable describes iteration over an index set.  There are two

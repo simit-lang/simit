@@ -1,6 +1,7 @@
 #include "ir.h"
 
 #include <cstdlib>
+#include <cstring>
 #include <string>
 #include <iostream>
 #include <string.h>
@@ -43,12 +44,12 @@ Literal::Literal(TensorType *type, void *values) : Literal(type) {
   memcpy(this->data, values, this->dataSize);
 }
 
-void Literal::clear() {
-  memset(data, 0, dataSize);
-}
-
 Literal::~Literal() {
   free(data);
+}
+
+void Literal::clear() {
+  memset(data, 0, dataSize);
 }
 
 void Literal::cast(TensorType *type) {
@@ -92,7 +93,27 @@ void Literal::print(std::ostream &os) const {
     case Type::ELEMENT:
       assert(false && "Unsupported (TODO)");
       break;
+    default:
+      UNREACHABLE_DEFAULT;
   }
+}
+
+bool operator==(const Literal& l, const Literal& r) {
+  if (*l.getType() != *r.getType()) {
+    return false;
+  }
+  assert(l.getType()->getSize() == r.getType()->getSize());
+  simit::Type ctype = l.getType()->getComponentType();
+  int byteSize = l.getType()->getSize() * TensorType::componentSize(ctype);
+
+  if (memcmp(l.getData(), r.getData(), byteSize) != 0) {
+    return false;
+  }
+  return true;
+}
+
+bool operator!=(const Literal& l, const Literal& r) {
+  return !(l == r);
 }
 
 
@@ -108,8 +129,7 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
       os << "*";
       break;
     default:
-      assert(false);
-      break;
+      UNREACHABLE_DEFAULT;
   }
   return os << var.getName();
 }
@@ -181,20 +201,22 @@ const std::vector<IndexExpr::IndexVarPtr> &IndexExpr::getDomain() const {
 }
 
 static std::string opString(IndexExpr::Operator op) {
+  std::string opstr;
   switch (op) {
     case IndexExpr::NEG:
-      return "-";
+      opstr = "-";
     case IndexExpr::ADD:
-      return "+";
+      opstr = "+";
     case IndexExpr::SUB:
-      return "-";
+      opstr = "-";
     case IndexExpr::MUL:
-      return "*";
+      opstr = "*";
     case IndexExpr::DIV:
-      return "//";
+      opstr = "//";
+    default:
+      UNREACHABLE_DEFAULT;
   }
-  assert(false);
-  return "";
+  return opstr;
 }
 
 static inline
@@ -247,12 +269,9 @@ void Function::print(std::ostream &os) const {
                         ? ""
                         : " -> (" + util::join(this->results, ", ") + ")";
   os << "func " << name << argumentString << resultString;
-
-  string bodyString = (body.size() > 0) ? "  " + util::join(body, "  \n") + "\n"
-                                        : "";
-  os << endl << bodyString;
-
-  os << "end";
+  string bodyString = (body.size() > 0)
+      ? "  " + util::join(body, "  \n") + "\n" : "";
+  os << endl << bodyString << "end";
 }
 
 
