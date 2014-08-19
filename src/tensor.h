@@ -6,7 +6,8 @@ namespace simit {
 enum Type {INT, FLOAT, ELEMENT};
 
 
-/** A tensor is a generalization of scalars, vectors and matrices. */
+/// A tensor is a generalization of scalars, vectors and matrices. Tensors can
+/// be fields of \ref Set instances and can be bound to \ref Program instances.
 class Tensor {
 
 };
