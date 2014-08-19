@@ -20,6 +20,12 @@ int main(int argc, const char* argv[]) {
     return 1;
   }
 
+  if (program.verify() != 0) {
+    cerr << "Error: Test failure" << endl;
+    cerr << program.getErrorString() << endl;
+    return 4;
+  }
+
   cout << "Program checks" << endl;
   return 0;
 }
