@@ -1,5 +1,6 @@
 #include "llvm_codegen.h"
 
+#include <cstdint>
 #include <iostream>
 #include <stack>
 
@@ -7,8 +8,10 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
 
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
@@ -30,23 +33,35 @@ using namespace std;
 #define LLVM_DOUBLEPTR llvm::Type::getDoublePtrTy(LLVM_CONTEXT)
 
 namespace {
+using namespace simit::internal;
+typedef IndexExpr::IndexedTensor IndexedTensor;
+
+inline llvm::ConstantInt *constant(const int val) {
+  return llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT), val);
+}
+
+llvm::Type *toLLVMType(const simit::Type &type) {
+  llvm::Type *llvmType;
+  switch (type) {
+    case simit::Type::INT:
+      llvmType = LLVM_INTPTR;
+      break;
+    case simit::Type::FLOAT:
+      llvmType = LLVM_DOUBLEPTR;
+      break;
+    case simit::Type::ELEMENT:
+      NOT_SUPPORTED_YET;
+      break;
+    default:
+      UNREACHABLE_DEFAULT;
+  }
+  return llvmType;
+}
 
 llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   llvm::Type *llvmType = NULL;
   if (type->getOrder() == 0) {
-    switch (type->getComponentType()) {
-      case simit::Type::INT:
-        llvmType = LLVM_INTPTR;
-        break;
-      case simit::Type::FLOAT:
-        llvmType = LLVM_DOUBLEPTR;
-        break;
-      case simit::Type::ELEMENT:
-        return NULL;  // TODO: not supported yet
-        break;
-      default:
-        UNREACHABLE_DEFAULT;
-    }
+    llvmType = toLLVMType(type->getComponentType());
   }
   else {
     return NULL;  // TODO: not supported yet
@@ -56,12 +71,63 @@ llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   return llvmType;
 }
 
-inline llvm::ConstantInt* constant(int val) {
-    return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, val, false));
+llvm::Constant *toLLVMPtr(const std::shared_ptr<Literal> &literal) {
+  llvm::Constant *c = (sizeof(void*) == 4)
+      ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT),
+                               (int)(intptr_t)literal->getData())
+      : llvm::ConstantInt::get(llvm::Type::getInt64Ty(LLVM_CONTEXT),
+                               (intptr_t)literal->getData());
+
+  // TODO: Do we have to free ctype?
+  llvm::Type *ctype = toLLVMType(literal->getType()->getComponentType());
+  llvm::Constant *cptr = llvm::ConstantExpr::getIntToPtr(c, ctype);
+  return cptr;
 }
 
-typedef simit::internal::IndexExpr::IndexedTensor IndexedTensor;
-typedef void (*FuncPtr)(...);
+template <class AT, class RT>
+llvm::FunctionType *createFunctionType(const vector<shared_ptr<AT>> &arguments,
+                                       const vector<shared_ptr<RT>> &results) {
+ // Create function harness
+  vector<llvm::Type*> args;
+  for (auto &arg : arguments) {
+    args.push_back(toLLVMType(arg->getType()));
+  }
+  for (auto &result : results) {
+    args.push_back(toLLVMType(result->getType()));
+  }
+
+  return llvm::FunctionType::get(LLVM_VOID, args, false);
+}
+
+template <class AT, class RT>
+llvm::Function *createPrototype(const string &name,
+                                const vector<shared_ptr<AT>> &arguments,
+                                const vector<shared_ptr<RT>> &results,
+                                llvm::GlobalValue::LinkageTypes linkage,
+                                llvm::Module *module) {
+  llvm::FunctionType *ft = createFunctionType(arguments, results);
+  llvm::Function *f = llvm::Function::Create(ft, linkage, name, module);
+  auto ai = f->arg_begin();
+  for (auto &arg : arguments) {
+    ai->setName(arg->getName());
+    ++ai;
+  }
+  for (auto &result : results) {
+    ai->setName(result->getName());
+    ++ai;
+  }
+  assert(ai == f->arg_end());
+  return f;
+}
+
+/// Creates an execution engine that takes ownership of the module.
+llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
+    llvm::EngineBuilder engineBuilder(module);
+    // TODO: Intialization
+    auto ee = engineBuilder.create();
+    assert(ee && "Could not create ExecutionEngine");
+    return ee;
+}
 
 }  // unnamed namespace
 
@@ -69,17 +135,55 @@ typedef void (*FuncPtr)(...);
 namespace simit {
 namespace internal {
 
-class LLVMBinaryFunction {
+class LLVMCompiledFunction : public CompiledFunction {
  public:
+  LLVMCompiledFunction(llvm::Function *f,
+                       const std::shared_ptr<llvm::ExecutionEngine> &fee)
+      : f(f), fee(fee), module("Harness Module", LLVM_CONTEXT) {
+    fee->addModule(&module);
+  }
 
-  LLVMBinaryFunction(const FuncPtr &fptr) : fptr{fptr} {}
+  ~LLVMCompiledFunction() {
+    fee->removeModule(&module);
+  }
 
-  void run() {
-    UNUSED(fptr);
+  virtual void bind(const std::vector<std::shared_ptr<Literal>> &arguments,
+                    const std::vector<std::shared_ptr<Literal>> &results) {
+    void *fptr = fee->getPointerToFunction(f);
+
+    if (arguments.size() == 0 and results.size() == 0) {
+      setRunPtr((RunPtrType)fptr);
+    }
+    else {
+      std::string name = string(f->getName()) + "_harness";
+      std::vector<std::shared_ptr<TensorNode>> noArgs;
+      llvm::Function *harness = createPrototype(name, noArgs, noArgs,
+                                                llvm::Function::InternalLinkage,
+                                                &module);
+      auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
+
+      llvm::SmallVector<llvm::Value*, 8> args;
+      for (auto &argument : arguments) {
+        args.push_back(toLLVMPtr(argument));
+      }
+      for (auto &result : results) {
+        args.push_back(toLLVMPtr(result));
+      }
+      llvm::CallInst *call = llvm::CallInst::Create(f, args, "", entry);
+      call->setCallingConv(f->getCallingConv());
+      call->setTailCall();
+
+      llvm::ReturnInst::Create(f->getContext(), entry);
+
+      setRunPtr((RunPtrType)fee->getPointerToFunction(harness));
+    }
   }
 
  private:
-  FuncPtr fptr;
+  llvm::Function *f;
+  std::shared_ptr<llvm::ExecutionEngine> fee;
+
+  llvm::Module module;
 };
 
 class LLVMCodeGenImpl : public IRVisitor {
@@ -89,20 +193,20 @@ class LLVMCodeGenImpl : public IRVisitor {
       llvm::InitializeNativeTarget();
       llvmInitialized = true;
     }
-
     module = new llvm::Module("Simit JIT", LLVM_CONTEXT);
-    llvm::EngineBuilder engineBuilder(module);
-    executionEngine = engineBuilder.create();
+    llvm::ExecutionEngine *ee = createExecutionEngine(module);
+    executionEngine = std::shared_ptr<llvm::ExecutionEngine>(ee);
   }
 
-  BinaryFunction *compileToFunctionPointer(Function *function);
+  CompiledFunction *compile(Function *function);
   llvm::Function *codegen(Function *function);
 
  private:
-  llvm::Module          *module;
-  llvm::ExecutionEngine *executionEngine;
-  llvm::IRBuilder<>      builder;
   static bool llvmInitialized;
+
+  llvm::Module                           *module;
+  std::shared_ptr<llvm::ExecutionEngine>  executionEngine;
+  llvm::IRBuilder<>                       builder;
 
   SymbolTable<llvm::Value*> symtable;
   std::stack<llvm::Value*>  resultStack;
@@ -112,29 +216,15 @@ class LLVMCodeGenImpl : public IRVisitor {
   void handle(IndexExpr     *t);
   void handle(VariableStore *t);
 
-  llvm::Function *createFunctionPrototype(Function *function);
   llvm::Value *createScalarOp(const std::string &name, IndexExpr::Operator op,
                               const vector<IndexedTensor> &operands);
 };
 bool LLVMCodeGenImpl::llvmInitialized = false;
 
-BinaryFunction *LLVMCodeGenImpl::compileToFunctionPointer(Function *function) {
+CompiledFunction *LLVMCodeGenImpl::compile(Function *function) {
   llvm::Function *f = codegen(function);
   if (f == NULL) return NULL;
-  f->dump();
-
-  FuncPtr fptr = (FuncPtr)executionEngine->getPointerToFunction(f);
-  LLVMBinaryFunction *binFunc = new LLVMBinaryFunction(fptr);
-  UNUSED(binFunc);
-
-  double input = 1.0;
-  double output = 0.0;
-  fptr(&input, &output);
-
-  cout << input << "->" << output << endl;
-
-  // Pack up the llvm::Function in a simit BinaryFunction object
-  return NULL;
+  return new LLVMCompiledFunction(f, executionEngine);
 }
 
 llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
@@ -153,11 +243,9 @@ llvm::Function *LLVMCodeGenImpl::codegen(Function *function) {
 }
 
 void LLVMCodeGenImpl::handle(Literal *t) {
-  cout << "Literal:   " << *t << endl;
 }
 
 void LLVMCodeGenImpl::handle(IndexExpr *t) {
-  cout << "IndexExpr: " << *t << endl;
   llvm::Value *result = NULL;
 
   auto domain = t->getDomain();
@@ -176,59 +264,33 @@ void LLVMCodeGenImpl::handle(IndexExpr *t) {
 }
 
 void LLVMCodeGenImpl::handle(VariableStore *t) {
-  cout << "Store   :  " << *t << endl;
-
   assert(symtable.contains(t->getValue()->getName()));
   auto val = symtable.get(t->getValue()->getName());
+  assert(val != NULL);
 
-  assert(symtable.contains(t->getTarget()->getName()));
+  assert(symtable.contains(t->getValue()->getName()));
   auto target = symtable.get(t->getTarget()->getName());
+  assert(target != NULL);
 
   builder.CreateStore(val, target);
 }
 
-llvm::Function *LLVMCodeGenImpl::createFunctionPrototype(Function *function) {
-  vector<llvm::Type*> args;
-  for (auto &arg : function->getArguments()) {
-    auto llvmType = toLLVMType(arg->getType());
-    if (llvmType == NULL) return NULL;  // TODO: Remove check
-    args.push_back(llvmType);
-  }
-  for (auto &result : function->getResults()) {
-    auto llvmType = toLLVMType(result->getType());
-    if (llvmType == NULL) return NULL;  // TODO: Remove check
-    args.push_back(llvmType);
-  }
-  llvm::FunctionType *ft = llvm::FunctionType::get(LLVM_VOID, args, false);
-  llvm::Function *f = llvm::Function::Create(ft,
-                                             llvm::Function::ExternalLinkage,
-                                             function->getName(),
-                                             module);
-  // Name arguments and results
-  auto ai = f->arg_begin();
-  for (auto &arg : function->getArguments()) {
-    ai->setName(arg->getName());
-    symtable.insert(arg->getName(), ai);
-    ++ai;
-  }
-  for (auto &result : function->getResults()) {
-    ai->setName(result->getName());
-    symtable.insert(result->getName(), ai);
-    ++ai;
-  }
-  assert(ai == f->arg_end());
-  return f;
-}
-
 void LLVMCodeGenImpl::handle(Function *function) {
-  llvm::Function *f = createFunctionPrototype(function);
+  llvm::Function *f = createPrototype(function->getName(),
+                                      function->getArguments(),
+                                      function->getResults(),
+                                      llvm::Function::ExternalLinkage,
+                                      module);
+  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
+  builder.SetInsertPoint(entry);
+  for (auto &arg : f->getArgumentList()) {
+    symtable.insert(arg.getName(), &arg);
+  }
+  
   if (f == NULL) {  // TODO: Remove check
     abort();
     return;
   }
-  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
-  builder.SetInsertPoint(entry);
-
   resultStack.push(f);
 }
 
@@ -242,6 +304,7 @@ LLVMCodeGenImpl::createScalarOp(const std::string &name, IndexExpr::Operator op,
       auto operandName = operands[0].getTensor()->getName();
       assert(symtable.contains(operandName));
       auto val = symtable.get(operandName);
+      assert(val != NULL);
       auto type = val->getType();
       if (type->isPointerTy()) {
         auto addr = builder.CreateGEP(val, constant(0), operandName + "_ptr");
@@ -277,9 +340,8 @@ LLVMCodeGen::~LLVMCodeGen() {
   delete impl;
 }
 
-BinaryFunction *LLVMCodeGen::compileToFunctionPointer(Function *function) {
-  cout << *function << endl;
-  return impl->compileToFunctionPointer(function);
+CompiledFunction *LLVMCodeGen::compile(Function *function) {
+  return impl->compile(function);
 }
 
 }}  // namespace simit::internal

@@ -7,6 +7,7 @@
 namespace simit {
 namespace internal {
 class Function;
+class LLVMCodeGenImpl;
 
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMCodeGen : public CodeGen {
@@ -14,7 +15,7 @@ class LLVMCodeGen : public CodeGen {
   LLVMCodeGen();
   ~LLVMCodeGen();
 
-  BinaryFunction *compileToFunctionPointer(Function *function);
+  CompiledFunction *compile(Function *function);
 
  private:
   /// Implementation class to avoid bleeding LLVM to the rest of the project.
