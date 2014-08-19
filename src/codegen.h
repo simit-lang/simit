@@ -22,16 +22,13 @@ class CompiledFunction : simit::util::Uncopyable {
   virtual void bind(const std::vector<std::shared_ptr<Literal>> &arguments,
                     const std::vector<std::shared_ptr<Literal>> &results) = 0;
 
-  inline void run() {
-    runPtr();
-  }
+  /// Execute the function with the currently bound argument and result tensors.
+  inline void run() { runPtr(); }
 
  protected:
   typedef void (*RunPtrType)();
-
   CompiledFunction(RunPtrType runptr=NULL) : runPtr(runptr) {}
   virtual ~CompiledFunction() {}
-
   inline void setRunPtr(RunPtrType runPtr) { this->runPtr = runPtr; }
 
  private:

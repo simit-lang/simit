@@ -37,6 +37,15 @@ using namespace simit::internal;
 
 #define VALSUFFIX "_val"
 
+/// Creates an execution engine that takes ownership of the module.
+llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
+    llvm::EngineBuilder engineBuilder(module);
+    // TODO: Intialization
+    auto ee = engineBuilder.create();
+    assert(ee && "Could not create ExecutionEngine");
+    return ee;
+}
+
 inline llvm::ConstantInt *constant(const int val) {
   return llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT), val);
 }
@@ -121,15 +130,49 @@ llvm::Function *createPrototype(const string &name,
   return f;
 }
 
-/// Creates an execution engine that takes ownership of the module.
-llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
-    llvm::EngineBuilder engineBuilder(module);
-    // TODO: Intialization
-    auto ee = engineBuilder.create();
-    assert(ee && "Could not create ExecutionEngine");
-    return ee;
+llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
+                                            simit::Type type) {
+  using namespace simit;
+  assert(type == Type::INT || type == Type::FLOAT);
+  switch (op) {
+    case IndexExpr::ADD:
+      switch (type) {
+        case Type::INT:
+          return llvm::Instruction::Add;
+        case Type::FLOAT:
+          return llvm::Instruction::FAdd;
+        default:
+          UNREACHABLE_DEFAULT;
+      }
+    case IndexExpr::SUB:
+      switch (type) {
+        case Type::INT:
+          return llvm::Instruction::Sub;
+        case Type::FLOAT:
+          return llvm::Instruction::FSub;
+        default:
+          UNREACHABLE_DEFAULT;
+      }
+    case IndexExpr::MUL:
+      switch (type) {
+        case Type::INT:
+          return llvm::Instruction::Mul;
+        case Type::FLOAT:
+          return llvm::Instruction::FMul;
+        default:
+          UNREACHABLE_DEFAULT;
+      }
+    case IndexExpr::DIV:
+      assert(type == Type::FLOAT);
+      return llvm::Instruction::FDiv;
+    case IndexExpr::NEG: // fallthrough
+    default:
+      UNREACHABLE_DEFAULT;
+  }
 }
 
+
+/// A Simit function that has been compiled with LLVM.
 class LLVMCompiledFunction : public CompiledFunction {
  public:
   LLVMCompiledFunction(llvm::Function *f,
@@ -173,7 +216,6 @@ class LLVMCompiledFunction : public CompiledFunction {
   std::shared_ptr<llvm::ExecutionEngine> fee;
   llvm::Module module;
 };
-
 }  // unnamed namespace
 
 
@@ -271,45 +313,6 @@ void LLVMCodeGen::handle(VariableStore *t) {
   assert(target != NULL);
 
   builder->CreateStore(val, target);
-}
-
-llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op, Type type) {
-  assert(type == Type::INT || type == Type::FLOAT);
-  switch (op) {
-    case IndexExpr::ADD:
-      switch (type) {
-        case Type::INT:
-          return llvm::Instruction::Add;
-        case Type::FLOAT:
-          return llvm::Instruction::FAdd;
-        default:
-          UNREACHABLE_DEFAULT;
-      }
-    case IndexExpr::SUB:
-      switch (type) {
-        case Type::INT:
-          return llvm::Instruction::Sub;
-        case Type::FLOAT:
-          return llvm::Instruction::FSub;
-        default:
-          UNREACHABLE_DEFAULT;
-      }
-    case IndexExpr::MUL:
-      switch (type) {
-        case Type::INT:
-          return llvm::Instruction::Mul;
-        case Type::FLOAT:
-          return llvm::Instruction::FMul;
-        default:
-          UNREACHABLE_DEFAULT;
-      }
-    case IndexExpr::DIV:
-      assert(type == Type::FLOAT);
-      return llvm::Instruction::FDiv;
-    case IndexExpr::NEG: // fallthrough
-    default:
-      UNREACHABLE_DEFAULT;
-  }
 }
 
 llvm::Value *
