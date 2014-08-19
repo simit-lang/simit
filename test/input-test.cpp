@@ -180,11 +180,12 @@ TEST_P(input, check) {
   }
 
   if (program.verify() != 0) {
-    for (auto &error : program.getErrors()) {
-      string errorFile = GetParam().path;
-      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
-      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
-    }
+    FAIL();  // TODO: Replace with below after verify error reporting works
+//    for (auto &error : program.getErrors()) {
+//      string errorFile = GetParam().path;
+//      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
+//      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
+//    }
   }
 }
 

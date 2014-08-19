@@ -1,6 +1,7 @@
 #include "program.h"
 
 #include <memory>
+#include <set>
 
 #include "ir.h"
 #include "frontend.h"
@@ -81,9 +82,48 @@ int Program::compile() {
 }
 
 int Program::verify() {
-//  for (auto &test : impl->tests) {
-//    cout << *test << endl;
-//  }
+  // For each test look up the called function. Grab the actual arguments and
+  // run the function with them as input.  Then compare the result to the
+  // expected literal.
+
+  std::map<Function*, CompiledFunction*> compiled;
+
+  for (auto &test : impl->tests) {
+    LLVMCodeGen codegen;
+    // get binary function with name test->call->callee from list of functions
+    Function *func = impl->functions[test->getCallee()];
+
+    if (compiled.find(func) == compiled.end()) {
+       compiled[func] = codegen.compile(func);
+    }
+    CompiledFunction *compiledFunc = compiled[func];
+
+    // run the function with test->call->arguments
+    auto arguments = test->getArguments();
+    assert(arguments.size() == func->getArguments().size());
+
+    std::vector<std::shared_ptr<Literal>> results;
+    for (auto &result : func->getResults()) {
+      Literal *resultLit = new Literal(new TensorType(*result->getType()));
+      resultLit->clear();
+      results.push_back(shared_ptr<Literal>(resultLit));
+    }
+
+    compiledFunc->bind(arguments, results);
+    compiledFunc->run();
+
+    // compare function result with test->literal
+    auto expectedResults = test->getExpectedResults();
+    assert(expectedResults.size() == results.size());
+    auto rit = results.begin();
+    auto eit = expectedResults.begin();
+    for (; rit != results.end(); ++rit, ++eit) {
+      if (**rit != **eit) {
+        // TODO: Report error
+        return 1;
+      }
+    }
+  }
   return 0;
 }
 
