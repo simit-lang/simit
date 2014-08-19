@@ -1,12 +1,11 @@
 %%% neg-float
-%! neg(0.0) == -0.0;
 %! neg(42.0) == -42.0;
-%! neg(-42.0) == 42.0;
+%! neg(0.0) == -0.0;
 func neg(a : float) -> (c : float)
   c = -a;
 end
 
-%%%- neg-int
+%%% neg-int
 %! neg(42) == -42;
 func neg(a : int) -> (c : int)
   c = -a;

@@ -217,6 +217,7 @@ llvm::Function *LLVMCodeGen::codegen(Function *function) {
   resultStack.pop();
   assert(llvm::isa<llvm::Function>(value));
   llvm::Function *f = llvm::cast<llvm::Function>(value);
+  f->dump();
   verifyFunction(*f);
   return f;
 }
@@ -277,21 +278,31 @@ void LLVMCodeGen::handle(VariableStore *t) {
 llvm::Value *
 LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
                             const vector<IndexExpr::IndexedTensor> &operands) {
-  llvm::Value *value = NULL;
   switch (op) {
     case IndexExpr::NEG: {
       assert (operands.size() == 1);
-      auto operandName = operands[0].getTensor()->getName();
+      IndexExpr::IndexedTensor operand = operands[0];
+      std::string operandName = operand.getTensor()->getName();
+
       assert(symtable->contains(operandName));
-      auto val = symtable->get(operandName);
-      assert(val != NULL);
-      auto type = val->getType();
-      if (type->isPointerTy()) {
-        auto addr = builder->CreateGEP(val, constant(0), operandName + "_ptr");
-        val = builder->CreateLoad(addr, operandName + "_val");
+      llvm::Value *val = symtable->get(operandName);
+
+      if (val->getType()->isPointerTy()) {
+        val = builder->CreateLoad(val, operandName + "_val");
       }
-      value = builder->CreateFNeg(val, name);
-      break;
+
+      simit::Type ctype = operand.getTensor()->getType()->getComponentType();
+      switch (ctype) {
+        case INT:
+          return builder->CreateNeg(val, name);
+        case FLOAT:
+          return builder->CreateFNeg(val, name);
+        case ELEMENT:
+          assert(false && "Cannot negate element");
+          break;
+        default:
+          UNREACHABLE_DEFAULT;
+      }
     }
     case IndexExpr::ADD:
       NOT_SUPPORTED_YET;
@@ -305,10 +316,11 @@ LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
     case IndexExpr::DIV:
       NOT_SUPPORTED_YET;
       break;
+    default:
+      UNREACHABLE_DEFAULT;
   }
 
-  assert(value != NULL);
-  return value;
+  return NULL;
 }
 
 }}  // namespace simit::internal
