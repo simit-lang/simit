@@ -1,7 +1,19 @@
-%%% neg-func
+%%% neg-float
 %! neg(0.0) == -0.0;
 %! neg(42.0) == -42.0;
 %! neg(-42.0) == 42.0;
 func neg(a : float) -> (c : float)
   c = -a;
+end
+
+%%%- neg-int
+%! neg(42) == -42;
+func neg(a : int) -> (c : int)
+  c = -a;
+end
+
+%%%- add
+%! add(2.0, 3.0) == 5.0;
+func neg(a : float, b : float) -> (c : float)
+  c = a + b;
 end

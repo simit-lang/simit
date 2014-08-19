@@ -20,3 +20,12 @@ end
 func f(r : Rigid)
 	w = r.v(1:3);
 end
+
+%%%- overload
+func neg(a : float) -> (c : float)
+ c = -a;
+end
+
+func neg(a : int) -> (c : int)
+ c = -a;
+end
