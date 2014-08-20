@@ -46,39 +46,17 @@ llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
     return ee;
 }
 
-inline llvm::ConstantInt *constant(const int val) {
-  return llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT), val);
-}
-
-llvm::Type *toLLVMType(const simit::Type &type) {
-  llvm::Type *llvmType;
-  switch (type) {
+llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
+  switch (type->getComponentType()) {
     case simit::Type::INT:
-      llvmType = LLVM_INTPTR;
-      break;
+      return LLVM_INTPTR;
     case simit::Type::FLOAT:
-      llvmType = LLVM_DOUBLEPTR;
-      break;
+      return LLVM_DOUBLEPTR;
     case simit::Type::ELEMENT:
       NOT_SUPPORTED_YET;
-      break;
     default:
       UNREACHABLE_DEFAULT;
   }
-  return llvmType;
-}
-
-llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
-  llvm::Type *llvmType = NULL;
-  if (type->getOrder() == 0) {
-    llvmType = toLLVMType(type->getComponentType());
-  }
-  else {
-    return NULL;  // TODO: not supported yet
-  }
-
-  assert(llvmType != NULL);
-  return llvmType;
 }
 
 llvm::Constant *toLLVMPtr(const std::shared_ptr<Literal> &literal) {
@@ -89,7 +67,7 @@ llvm::Constant *toLLVMPtr(const std::shared_ptr<Literal> &literal) {
                                (intptr_t)literal->getData());
 
   // TODO: Do we have to free ctype?
-  llvm::Type *ctype = toLLVMType(literal->getType()->getComponentType());
+  llvm::Type *ctype = toLLVMType(literal->getType());
   llvm::Constant *cptr = llvm::ConstantExpr::getIntToPtr(c, ctype);
   return cptr;
 }
@@ -97,7 +75,6 @@ llvm::Constant *toLLVMPtr(const std::shared_ptr<Literal> &literal) {
 template <class AT, class RT>
 llvm::FunctionType *createFunctionType(const vector<shared_ptr<AT>> &arguments,
                                        const vector<shared_ptr<RT>> &results) {
- // Create function harness
   vector<llvm::Type*> args;
   for (auto &arg : arguments) {
     args.push_back(toLLVMType(arg->getType()));
@@ -105,7 +82,6 @@ llvm::FunctionType *createFunctionType(const vector<shared_ptr<AT>> &arguments,
   for (auto &result : results) {
     args.push_back(toLLVMType(result->getType()));
   }
-
   return llvm::FunctionType::get(LLVM_VOID, args, false);
 }
 
