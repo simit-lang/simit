@@ -10,6 +10,9 @@ template <typename T>
 inline Type type_of() { return Type::ELEMENT; }
 
 template<>
+inline Type type_of<double>() { return Type::FLOAT; }
+  
+template<>
 inline Type type_of<int>() { return Type::INT; }
 
 /// A tensor is a generalization of scalars, vectors and matrices. Tensors can

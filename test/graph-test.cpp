@@ -5,47 +5,7 @@
 #include "graph.h"
 
 using namespace std;
-using namespace simit::internal;
 using namespace simit;
-
-TEST(FieldTests, AddAndGet) {
-  Field foo(Type::INT);
-  ASSERT_EQ(foo.size(),  0);
-  foo.add<int>(40);
-  ASSERT_EQ(foo.size(), 1);
-  
-  int ret;
-  foo.get(foo.size()-1, &ret);
-  ASSERT_EQ(ret, 40);
-}
-
-TEST(FieldTests, Remove) {
-  Field foo(Type::INT);
-  
-  foo.add(10);
-  foo.add(20);
-  foo.add(30);
-  
-  foo.remove(1);
-  
-  int ret;
-  foo.get(1, &ret);
-  ASSERT_EQ(foo.size(), 2);
-  ASSERT_EQ(ret, 30);
-}
-
-TEST(FieldTests, Expansion) {
-  Field foo(Type::FLOAT);
-  
-  for (int i=0; i<1028; i++)
-    foo.add(1.05 + i);
-  
-  ASSERT_GT(foo.size(), 1025);
-  
-  double ret;
-  foo.get(1025, &ret);
-  ASSERT_EQ(ret, 1026.05);
-}
 
 //// Set tests
 
@@ -57,10 +17,9 @@ TEST(SetTests, Utils) {
 TEST(SetTests, AddAndGetFromTwoFields) {
   Set myset;
   
-  FieldHandle f1 = myset.addField(Type::INT);
-  FieldHandle f2 = myset.addField(Type::FLOAT);
+  FieldHandle f1 = myset.addField(Type::INT, "intfld");
+  FieldHandle f2 = myset.addField(Type::FLOAT, "floatfld");
   
-  ASSERT_EQ(myset.numFields(), 2);
   ASSERT_EQ(myset.size(), 0);
   
   ElementHandle i = myset.addItem();
@@ -70,19 +29,60 @@ TEST(SetTests, AddAndGetFromTwoFields) {
   ASSERT_EQ(myset.size(), 1);
   
   double ret;
+  int ret2;
+  myset.get(i, f1, &ret2);
+  ASSERT_EQ(ret2, 10);
+  
+  
   myset.get(i, f2, &ret);
   ASSERT_EQ(ret, 101.1);
   
+}
+
+TEST(SetTests, IncreaseCapacity) {
+  Set myset;
+  
+  auto fld = myset.addField(Type::INT, "foo");
+  
+  for (int i=0; i<1029; i++) {
+    auto item = myset.addItem();
+    myset.set(item, fld, i);
+  }
+
+  int count = 0;
+  bool foundIt[1029];
+  for (auto b : foundIt)
+    b = false;
+  
+  for (auto it : myset) {
+    int val;
+    myset.get(it, fld, &val);
+    foundIt[val] = true;
+    count++;
+  }
+  
+  for (int i=0; i<1029; i++)
+    ASSERT_TRUE(foundIt[i]);
+  ASSERT_EQ(count, 1029);
+}
+
+TEST(SetTests, FieldAccesByName) {
+  Set myset;
+  
+  auto f1 = myset.addField(Type::FLOAT, "fltfld");
+  auto f2 = myset.addField(Type::FLOAT, "fltfld2");
+  
+  ASSERT_EQ(myset.getField("fltfld"), f1);
+  ASSERT_EQ(myset.getField("fltfld2"), f2);
 }
 
 //// Iterator tests
 TEST(ElementIteratorTests, TestElementIteratorLoop) {
   Set myset;
   
-  FieldHandle f1 = myset.addField(Type::INT);
-  FieldHandle f2 = myset.addField(Type::FLOAT);
-  
-  ASSERT_EQ(myset.numFields(), 2);
+  FieldHandle f1 = myset.addField(Type::INT, "intfld");
+  FieldHandle f2 = myset.addField(Type::FLOAT, "floatfld");
+
   ASSERT_EQ(myset.size(), 0);
   
   for (int i=0; i<10; i++) {
