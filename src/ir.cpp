@@ -204,19 +204,18 @@ static std::string opString(IndexExpr::Operator op) {
   std::string opstr;
   switch (op) {
     case IndexExpr::NEG:
-      opstr = "-";
+      return "-";
     case IndexExpr::ADD:
-      opstr = "+";
+      return "+";
     case IndexExpr::SUB:
-      opstr = "-";
+      return "-";
     case IndexExpr::MUL:
-      opstr = "*";
+      return "*";
     case IndexExpr::DIV:
-      opstr = "//";
+      return "//";
     default:
       UNREACHABLE_DEFAULT;
   }
-  return opstr;
 }
 
 static inline
@@ -263,15 +262,31 @@ void Function::addStatements(const std::vector<std::shared_ptr<IRNode>> &stmts){
   body.insert(body.end(), stmts.begin(), stmts.end());
 }
 
+namespace {
+class FunctionBodyPrinter : public IRVisitor {
+ public:
+  FunctionBodyPrinter(std::ostream &os) : IRVisitor(), os(os) {}
+
+  void handle(Function *f) { UNUSED(f); }
+  void handle(Argument *t) { UNUSED(t); }
+  void handle(Result *t)   { UNUSED(t); }
+
+  void handleDefault(IRNode *t) { os << "  " << *t << endl; }
+
+ private:
+  std::ostream &os;
+};
+
+} // unnamed namespace
+
 void Function::print(std::ostream &os) const {
   string argumentString = "(" + util::join(this->arguments, ", ") + ")";
   string resultString = (results.size() == 0)
-                        ? ""
-                        : " -> (" + util::join(this->results, ", ") + ")";
-  os << "func " << name << argumentString << resultString;
-  string bodyString = (body.size() > 0)
-      ? "  " + util::join(body, "  \n") + "\n" : "";
-  os << endl << bodyString << "end";
+      ? "" : " -> (" + util::join(this->results, ", ") + ")";
+  os << "func " << name << argumentString << resultString << endl;
+  FunctionBodyPrinter fp(os);
+  fp.visit((Function*)this);
+  os << "end";
 }
 
 
