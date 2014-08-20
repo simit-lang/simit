@@ -10,6 +10,8 @@
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Function.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Analysis/Verifier.h"
@@ -159,8 +161,8 @@ class LLVMCompiledFunction : public CompiledFunction {
 
   ~LLVMCompiledFunction() { fee->removeModule(&module); }
 
-  virtual void bind(const std::vector<std::shared_ptr<Literal>> &arguments,
-                    const std::vector<std::shared_ptr<Literal>> &results) {
+  void bind(const std::vector<std::shared_ptr<Literal>> &arguments,
+            const std::vector<std::shared_ptr<Literal>> &results) {
     void *fptr = fee->getPointerToFunction(f);
     if (arguments.size() == 0 and results.size() == 0) {
       setRunPtr((RunPtrType)fptr);
@@ -185,6 +187,13 @@ class LLVMCompiledFunction : public CompiledFunction {
       llvm::ReturnInst::Create(f->getContext(), entry);
       setRunPtr((RunPtrType)fee->getPointerToFunction(harness));
     }
+  }
+
+  void print(std::ostream &os) const {
+    std::string fstr;
+    llvm::raw_string_ostream rsos(fstr);
+    f->print(rsos);
+    cout << fstr << endl;
   }
 
  private:
@@ -237,7 +246,6 @@ llvm::Function *LLVMCodeGen::codegen(Function *function) {
   resultStack.pop();
   assert(llvm::isa<llvm::Function>(value));
   llvm::Function *f = llvm::cast<llvm::Function>(value);
-  f->dump();
   verifyFunction(*f);
   return f;
 }

@@ -15,6 +15,11 @@ class Function;
 
 class CompiledFunction : simit::util::Uncopyable {
  public:
+  typedef void (*RunPtrType)();
+
+  CompiledFunction(RunPtrType runptr=NULL) : runPtr(runptr) {}
+  virtual ~CompiledFunction() {}
+
   /// Binds the argument and results to the function.  The argument and result
   /// types must match the arguments and results expected by the function.
   /// Note that since this is a performance-sensitive low-level primitive,
@@ -25,15 +30,20 @@ class CompiledFunction : simit::util::Uncopyable {
   /// Execute the function with the currently bound argument and result tensors.
   inline void run() { runPtr(); }
 
+  virtual void print(std::ostream &os) const {};
+
  protected:
-  typedef void (*RunPtrType)();
-  CompiledFunction(RunPtrType runptr=NULL) : runPtr(runptr) {}
-  virtual ~CompiledFunction() {}
   inline void setRunPtr(RunPtrType runPtr) { this->runPtr = runPtr; }
 
  private:
   RunPtrType runPtr;
 };
+
+inline std::ostream &operator<<(std::ostream &os, const CompiledFunction &cf) {
+  cf.print(os);
+  return os;
+}
+
 
 /// Code generators are used to turn Simit IR into some other representation.
 /// Examples include LLVM IR, compiled machine code and Graphviz .dot files.
