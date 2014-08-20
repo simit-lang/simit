@@ -22,7 +22,7 @@ TEST(SetTests, AddAndGetFromTwoFields) {
   
   ASSERT_EQ(myset.size(), 0);
   
-  ElementHandle i = myset.addItem();
+  ElementHandle i = myset.addElement();
   myset.set(i, f1, 10);
   myset.set(i, f2, 101.1);
   
@@ -45,7 +45,7 @@ TEST(SetTests, IncreaseCapacity) {
   auto fld = myset.addField(Type::INT, "foo");
   
   for (int i=0; i<1029; i++) {
-    auto item = myset.addItem();
+    auto item = myset.addElement();
     myset.set(item, fld, i);
   }
 
@@ -86,7 +86,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
   ASSERT_EQ(myset.size(), 0);
   
   for (int i=0; i<10; i++) {
-    auto el = myset.addItem();
+    auto el = myset.addElement();
     myset.set(el, f1, 5+i);
     myset.set(el, f2, 10.0+(double)i);
   }

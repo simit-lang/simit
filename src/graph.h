@@ -29,7 +29,7 @@ class Set {
  private:
   // A field on the members of the Set.
   //
-  // Invariant: items < capacity
+  // Invariant: elements < capacity
   struct Field {
     Type type;                    // simit type of data
     size_t size_of_type;          // sizeof(type)
@@ -84,7 +84,7 @@ class Set {
       delete f;
   }
   
-  /// Return the number of items in the Set
+  /// Return the number of elements in the Set
   int size() { return elements; }
   
   /// Get a FieldHandle corresponding to the string fieldName
@@ -104,14 +104,14 @@ class Set {
     return field;
   }
     
-  /// Add a new item, returning its handle
-  ElementHandle addItem() {
+  /// Add a new element, returning its handle
+  ElementHandle addElement() {
     if (elements > capacity-1)
       increaseCapacity();
     return elements++;
   }
   
-  /// Set a field on an item in the Set
+  /// Set a field on an element in the Set
   template<typename T>
   void set(ElementHandle element, const FieldHandle field, T val) {
     assert((fields[field]->type == type_of<T>()) && "Incorrect field type.");
@@ -119,7 +119,7 @@ class Set {
     *((T*)(fields[field]->data) + element) = val;
   }
   
-  /// Get the value of a field on an item in the Set
+  /// Get the value of a field on an element in the Set
   template<typename T>
   void get(ElementHandle element, const FieldHandle field, T* val) const {
     assert((fields[field]->type == type_of<T>()) && "Incorrect field type.");
@@ -128,7 +128,7 @@ class Set {
     *val = *(data + element);
   }
   
-  /// Remove an item from the Set
+  /// Remove an element from the Set
   void remove(const ElementHandle element) {
     for (auto f : fields){
       if (f->type == Type::ELEMENT)
@@ -158,7 +158,7 @@ class Set {
     typedef ElementHandle& reference;
     typedef ElementHandle* pointer;
     
-    int cur_idx;    // current item index
+    int cur_idx;    // current element index
     Set* set;       // set we're iterating over
     
     ElementIterator(Set* set, int idx=0) : cur_idx(idx), set(set) { }
