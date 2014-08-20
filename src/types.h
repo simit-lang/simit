@@ -56,11 +56,11 @@ class IndexSetProduct {
   IndexSetProduct(const IndexSet &is) { indexSets.push_back(is); }
   IndexSetProduct(const std::vector<IndexSet> &iss) : indexSets(iss) {};
 
+  /// Get the index sets that are multiplied to get the index set product.
+  const std::vector<IndexSet> &getFactors() const {return indexSets; }
+
   /// Get the number of elements in the product of the index sets.
   int getSize() const;
-
-  /// Get the index sets that are multiplied to get the index set product.
-  const std::vector<IndexSet> &getIndexSets() const {return indexSets; }
 
   std::ostream &print(std::ostream &os) const;
   

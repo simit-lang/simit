@@ -1810,7 +1810,7 @@ namespace  simit { namespace internal  {
     // Handle case where there are more child than parent dimensions
     if (childDims->size() > parentDims->size()) {
       for (size_t i=0; i < childDims->size() - parentDims->size(); ++i) {
-        size_t numNestings = (*parentDims)[0].getIndexSets().size();
+        size_t numNestings = (*parentDims)[0].getFactors().size();
         std::vector<IndexSet> indexSets(numNestings, IndexSet(1));
         parentDims->push_back(IndexSetProduct(indexSets));
       }

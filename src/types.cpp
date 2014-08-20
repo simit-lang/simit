@@ -84,24 +84,24 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &o) {
 // class IndexSetProduct
 int IndexSetProduct::getSize() const {
   int size = 1;
-  for (auto &indexSet : getIndexSets()) {
+  for (auto &indexSet : getFactors()) {
     size *= indexSet.getSize();
   }
   return size;
 }
 
 std::ostream &IndexSetProduct::print(std::ostream &os) const {
-  return os << util::join(getIndexSets(), " x ");
+  return os << util::join(getFactors(), " x ");
 }
 
 bool operator==(const IndexSetProduct &l,
                                  const IndexSetProduct &r) {
-  if (l.getIndexSets().size() != r.getIndexSets().size()) {
+  if (l.getFactors().size() != r.getFactors().size()) {
     return false;
   }
-  auto li = l.getIndexSets().begin();
-  auto ri = r.getIndexSets().begin();
-  for (; li != l.getIndexSets().end(); ++li, ++ri) {
+  auto li = l.getFactors().begin();
+  auto ri = r.getFactors().begin();
+  for (; li != l.getFactors().end(); ++li, ++ri) {
     if (*li != *ri) {
       return false;
     }
@@ -114,8 +114,8 @@ bool operator!=(const IndexSetProduct &l, const IndexSetProduct &r) {
 }
 
 IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r) {
-  std::vector<IndexSet> is = l.getIndexSets();
-  is.insert(is.end(), r.getIndexSets().begin(), r.getIndexSets().end());
+  std::vector<IndexSet> is = l.getFactors();
+  is.insert(is.end(), r.getFactors().begin(), r.getFactors().end());
   return IndexSetProduct(is);
 }
 
