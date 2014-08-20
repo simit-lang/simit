@@ -2,15 +2,12 @@
 #define SIMIT_IR_VISITOR_H
 
 #include <set>
-#include <map>
-#include <list>
-
 #include "macros.h"
 
 namespace simit {
 namespace internal {
 
-class Tensor;
+class IRNode;
 class Function;
 class Argument;
 class Result;
@@ -40,13 +37,15 @@ class IRVisitor {
   virtual void visit(Call          *t);
   virtual void visit(VariableStore *t);
 
-  virtual void handle(Function      *f) { UNUSED(f); };
-  virtual void handle(Argument      *t) { UNUSED(t); };
-  virtual void handle(Result        *t) { UNUSED(t); };
-  virtual void handle(Literal       *t) { UNUSED(t); };
-  virtual void handle(IndexExpr     *t) { UNUSED(t); };
-  virtual void handle(Call          *t) { UNUSED(t); }
-  virtual void handle(VariableStore *t) { UNUSED(t); };
+  virtual void handle(Function      *f);
+  virtual void handle(Argument      *t);
+  virtual void handle(Result        *t);
+  virtual void handle(Literal       *t);
+  virtual void handle(IndexExpr     *t);
+  virtual void handle(Call          *t);
+  virtual void handle(VariableStore *t);
+
+  virtual void handleDefault(IRNode *t) { UNUSED(t); }
 
  protected:
   void abort() { aborted = true; }
@@ -57,7 +56,7 @@ class IRVisitor {
   }
 
  private:
-  std::set<Tensor*> visited;
+  std::set<IRNode*> visited;
   bool aborted;
 };
 
