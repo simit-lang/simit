@@ -95,10 +95,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
   for (Set::ElementIterator it=myset.begin(); it<myset.end(); it++) {
     auto el = *it;
     int val;
-    it->get(f1, &val);
-    ASSERT_TRUE((val>=5) && (val<15));
-    val = 0;
-    el.get(f1, &val);
+    myset.get(el, f1, &val);
     ASSERT_TRUE((val>=5) && (val<15));
     howmany++;
     cout << howmany <<endl;
@@ -107,7 +104,10 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
   
   howmany=0;
   for (auto it : myset) {
-    ASSERT_TRUE(it.set != nullptr);
+    auto el = it;
+    int val;
+    myset.get(el, f1, &val);
+    ASSERT_TRUE((val>=5) && (val<15));
     howmany++;
     cout << howmany <<endl;
   }

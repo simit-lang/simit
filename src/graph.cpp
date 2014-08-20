@@ -68,7 +68,7 @@ ElementHandle Set::addItem() {
     else
       f->add(0);
   }
-  return ElementHandle(items++, this);
+  return items++;
 }
 
   

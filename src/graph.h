@@ -18,16 +18,7 @@ typedef int FieldHandle;
 class Set;
   
 /// An opaque handle for accessing an Element
-struct ElementHandle {
-  const int idx;              // index in the Set
-  const Set* set;             // set that this belongs to
-  
-  /// Get the value of a field of this element
-  template <typename T>
-  void get(const int field, T* val);
-  
-  ElementHandle(const int idx, Set* set) : idx(idx), set(set) { }
-};
+typedef int ElementHandle;
   
 namespace internal {
 
@@ -129,7 +120,10 @@ class Set {
   int size() { return items; }
   
   /// Add a new field
-  FieldHandle addField(Type type) { fields.push_back(new Field(type)); return fields.size()-1; }
+  FieldHandle addField(Type type) {
+    fields.push_back(new Field(type));
+    return fields.size()-1;
+  }
   
   /// Return the fields over this Set
   vector<FieldHandle> getFields() {
@@ -149,7 +143,7 @@ class Set {
   void set(ElementHandle element, const FieldHandle field, T val) {
     assert((fields[field]->type == type_of<T>()) && "Incorrect field type.");
   
-    fields[field]->set(element.idx, val);
+    fields[field]->set(element, val);
   }
   
   /// Get the value of a field on an item in the Set
@@ -157,13 +151,13 @@ class Set {
   void get(ElementHandle element, const FieldHandle field, T* val) const {
     assert((fields[field]->type == type_of<T>()) && "Incorrect field type.");
     
-    fields[field]->get(element.idx, val);
+    fields[field]->get(element, val);
   }
   
   /// Remove an item from the Set
   void remove(const ElementHandle element) {
     for (auto f : fields)
-      f->remove(element.idx);
+      f->remove(element);
     items--;
   }
   
@@ -184,14 +178,15 @@ class Set {
     Set* set;       // set we're iterating over
     
     ElementIterator(Set* set, int idx=0) : cur_idx(idx), set(set) { }
-    ElementIterator(const ElementIterator& other) : cur_idx(other.cur_idx), set(other.set) { }
+    ElementIterator(const ElementIterator& other) : cur_idx(other.cur_idx),
+      set(other.set) { }
     
-    reference operator*() const {
-      return *(new ElementHandle(cur_idx, set));
+    reference operator*() {
+      return cur_idx;
     }
     
-    pointer operator->() const {
-      return new ElementHandle(cur_idx, set);
+    pointer operator->()  {
+      return &cur_idx;
     }
     
     ElementIterator& operator++() {
@@ -223,17 +218,10 @@ class Set {
 };
   
   
-inline bool operator<(const Set::ElementIterator& e1, const Set::ElementIterator& e2) {
+inline bool operator<(const Set::ElementIterator& e1,
+                      const Set::ElementIterator& e2) {
   assert(e1.set == e2.set);
   return e1.cur_idx < e2.cur_idx;
-}
-  
-
-
-template <typename T>
-void ElementHandle::get(const FieldHandle field, T* val) {
-  assert (set != nullptr);
-  set->get(*this, field, val);
 }
 
   
