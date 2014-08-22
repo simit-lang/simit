@@ -18,9 +18,10 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
-#include "macros.h"
 #include "ir.h"
+#include "storage.h"
 #include "symboltable.h"
+#include "macros.h"
 
 using namespace std;
 
@@ -162,8 +163,9 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
 class LLVMCompiledFunction : public CompiledFunction {
  public:
   LLVMCompiledFunction(llvm::Function *f,
-                       const std::shared_ptr<llvm::ExecutionEngine> &fee)
-      : f(f), fee(fee), module("Harness Module", LLVM_CONTEXT) {
+                       const std::shared_ptr<llvm::ExecutionEngine> &fee,
+                       const std::vector<std::shared_ptr<Storage>> &storage)
+      : f(f), fee(fee), storage(storage), module("Harness Module", LLVM_CONTEXT) {
     fee->addModule(&module);
   }
 
@@ -207,6 +209,7 @@ class LLVMCompiledFunction : public CompiledFunction {
  private:
   llvm::Function *f;
   std::shared_ptr<llvm::ExecutionEngine> fee;
+  std::vector<std::shared_ptr<Storage>> storage;
   llvm::Module module;
 };
 }  // unnamed namespace
@@ -238,12 +241,18 @@ LLVMCodeGen::~LLVMCodeGen() {
 }
 
 CompiledFunction *LLVMCodeGen::compile(Function *function) {
-  llvm::Function *f = codegen(function);
+  TemporaryAllocator talloc;
+  std::map<IRNode*, void*> temps = talloc.allocateTemporaries(function);
+
+  llvm::Function *f = codegen(function, temps);
   if (f == NULL) return NULL;
-  return new LLVMCompiledFunction(f, executionEngine);
+
+  return new LLVMCompiledFunction(f, executionEngine, talloc.getTemporaries());
 }
 
-llvm::Function *LLVMCodeGen::codegen(Function *function) {
+llvm::Function *LLVMCodeGen::codegen(Function *function,
+                                     const std::map<IRNode*, void*> &temps) {
+  // TODO: Add temporaries as pointer values to storageLocations
   visit(function);
   storageLocations.clear();
 

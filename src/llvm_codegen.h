@@ -48,10 +48,10 @@ class LLVMCodeGen : public CodeGen, IRVisitor {
   void handle(Function  *f);
   void handle(IndexExpr *t);
 
-  llvm::Function *codegen(Function *function);
 
   llvm::Value * createScalarOp(const std::string &name, IndexExpr::Operator op,
                          const std::vector<IndexExpr::IndexedTensor> &operands);
+  llvm::Function *codegen(Function *f, const std::map<IRNode*, void*> &temps);
 };
 
 }} // namespace simit::internal
