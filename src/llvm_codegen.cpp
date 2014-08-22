@@ -60,7 +60,7 @@ llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
     case simit::Type::ELEMENT:
       NOT_SUPPORTED_YET;
     default:
-      UNREACHABLE_DEFAULT;
+      UNREACHABLE;
   }
 }
 
@@ -128,7 +128,7 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
         case Type::FLOAT:
           return llvm::Instruction::FAdd;
         default:
-          UNREACHABLE_DEFAULT;
+          UNREACHABLE;
       }
     case IndexExpr::SUB:
       switch (type) {
@@ -137,7 +137,7 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
         case Type::FLOAT:
           return llvm::Instruction::FSub;
         default:
-          UNREACHABLE_DEFAULT;
+          UNREACHABLE;
       }
     case IndexExpr::MUL:
       switch (type) {
@@ -146,14 +146,14 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
         case Type::FLOAT:
           return llvm::Instruction::FMul;
         default:
-          UNREACHABLE_DEFAULT;
+          UNREACHABLE;
       }
     case IndexExpr::DIV:
       assert(type == Type::FLOAT);
       return llvm::Instruction::FDiv;
     case IndexExpr::NEG: // fallthrough
     default:
-      UNREACHABLE_DEFAULT;
+      UNREACHABLE;
   }
 }
 
@@ -314,7 +314,7 @@ LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
           assert(false && "Cannot negate element");
           break;
         default:
-          UNREACHABLE_DEFAULT;
+          UNREACHABLE;
       }
     }
     case IndexExpr::ADD: // fallthrough
@@ -343,7 +343,7 @@ LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
       return builder->CreateBinOp(toLLVMBinaryOp(op, ctype), lval, rval, name);
     }
     default:
-      UNREACHABLE_DEFAULT;
+      UNREACHABLE;
   }
 
   return NULL;

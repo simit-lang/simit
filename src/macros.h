@@ -3,7 +3,7 @@
 
 #define UNUSED(x) (void)(x)
 #define NOT_SUPPORTED_YET assert(false && "Not supported yet")
-#define UNREACHABLE_DEFAULT assert(false && "Reached unreachable default")
+#define UNREACHABLE assert(false && "Reached unreachable branch")
 
 
 #endif

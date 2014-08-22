@@ -94,7 +94,7 @@ void Literal::print(std::ostream &os) const {
       assert(false && "Unsupported (TODO)");
       break;
     default:
-      UNREACHABLE_DEFAULT;
+      UNREACHABLE;
   }
 }
 
@@ -129,7 +129,7 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
       os << "*";
       break;
     default:
-      UNREACHABLE_DEFAULT;
+      UNREACHABLE;
   }
   return os << var.getName();
 }
@@ -214,7 +214,7 @@ static std::string opString(IndexExpr::Operator op) {
     case IndexExpr::DIV:
       return "//";
     default:
-      UNREACHABLE_DEFAULT;
+      UNREACHABLE;
   }
 }
 
