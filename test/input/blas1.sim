@@ -1,10 +1,11 @@
 %%% neg
-%% neg([0.0, 1.0, 2.0]) == [-0.0, -1.0, -2.0];
+%! neg([0.0, 1.0, 2.0]) == [-0.0, -1.0, -2.0];
 func neg(a : Tensor[3](float)) -> (c : Tensor[3](float))
   c = -a;
 end
 
 %%% add
+%! add([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]) == [3.0, 5.0, 7.0];
 func add(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
   c = a + b;
 end

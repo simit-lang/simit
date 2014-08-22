@@ -78,6 +78,22 @@ llvm::Constant *toLLVMPtr(const std::shared_ptr<Literal> &literal) {
   return cptr;
 }
 
+simit::Type llvmToSimitType(const llvm::Type *type) {
+  if (type->isPointerTy()) {
+    type = type->getPointerElementType();
+  }
+
+  if (type->isDoubleTy()) {
+    return simit::FLOAT;
+  }
+  else if (type->isIntegerTy()) {
+    return simit::INT;
+  }
+  else {
+    UNREACHABLE;
+  }
+}
+
 template <class AT, class RT>
 llvm::FunctionType *createFunctionType(const vector<shared_ptr<AT>> &arguments,
                                        const vector<shared_ptr<RT>> &results) {
@@ -158,6 +174,129 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
   }
 }
 
+llvm::Value *createValueComputation(std::string name, simit::Type ctype,
+                                    IndexExpr::Operator op,
+                                    const vector<llvm::Value*> operands,
+                                    llvm::IRBuilder<> *builder) {
+  switch (op) {
+    case IndexExpr::NEG: {
+      assert (operands.size() == 1);
+      switch (ctype) {
+        case simit::Type::INT:
+          return builder->CreateNeg(operands[0], name);
+        case simit::Type::FLOAT:
+          return builder->CreateFNeg(operands[0], name);
+        default:
+          UNREACHABLE;
+      }
+      break;
+    }
+    case IndexExpr::ADD: // fallthrough
+    case IndexExpr::SUB: // fallthrough
+    case IndexExpr::MUL: // fallthrough
+    case IndexExpr::DIV: {
+      assert (operands.size() == 2);
+      return builder->CreateBinOp(toLLVMBinaryOp(op, ctype),
+                                  operands[0], operands[1], name);
+    }
+    default:
+      UNREACHABLE;
+  }
+}
+
+llvm::Value *createScalarComputation(llvm::Value *resultStorage,
+                                     IndexExpr::Operator op,
+                                     const vector<llvm::Value*> operands,
+                                     llvm::IRBuilder<> *builder) {
+  assert(operands.size() > 0);
+
+  simit::Type ctype = llvmToSimitType(resultStorage->getType());
+
+  std::vector<llvm::Value *> operandVals;
+  for (llvm::Value *operandPtr : operands) {
+    std::string operandName = operandPtr->getName();
+    llvm::Value *operandVal =
+        builder->CreateAlignedLoad(operandPtr, 8, operandName+VAL_SUFFIX);
+    operandVals.push_back(operandVal);
+  }
+
+  std::string resultValName = std::string(resultStorage->getName())+VAL_SUFFIX;
+  llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
+                                                  operandVals, builder);
+  builder->CreateAlignedStore(resultVal, resultStorage, 8);
+  return resultVal;
+}
+
+llvm::Value *createIndexComputation(const IndexExpr::IndexVarPtrVector &domain,
+                                    IndexExpr::Operator op,
+                                    const vector<llvm::Value*> operands,
+                                    llvm::Value *resultStorage,
+                                    llvm::IRBuilder<> *builder,
+                                    int currNest=0, int currIdxVar=0) {
+  assert(domain.size() > 0);
+  assert(operands.size() > 0);
+
+  simit::Type ctype = llvmToSimitType(resultStorage->getType());
+  size_t numNests = (domain.size() > 0)
+      ? domain[0]->getIndexSet().getFactors().size() : 0;
+
+  for (IndexExpr::IndexVarPtr idxVar : domain) {
+    assert(idxVar->getIndexSet().getFactors().size() == numNests);
+  }
+
+  const IndexSet &is = domain[currIdxVar]->getIndexSet().getFactors()[currNest];
+
+  // We generate loops where the outer loops iterate over blocks along each
+  // dimension and the inner loops over each block.
+  // OPT: This code should allow loop orders to be configurable
+  llvm::Function *f = builder->GetInsertBlock()->getParent();
+
+  // Loop Header
+  llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
+
+  llvm::BasicBlock *loopBodyStart =
+  llvm::BasicBlock::Create(LLVM_CONTEXT, "loop_body", f);
+  builder->CreateBr(loopBodyStart);
+  builder->SetInsertPoint(loopBodyStart);
+
+  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, "i");
+  i->addIncoming(builder->getInt32(0), entryBlock);
+
+  // Loop Body
+  std::vector<llvm::Value *> operandVals;
+  for (llvm::Value *operand : operands) {
+    std::string operandName = operand->getName();
+    llvm::Value *operandPtr =
+        builder->CreateInBoundsGEP(operand, i, operandName+PTR_SUFFIX);
+    llvm::Value *operandVal =
+        builder->CreateAlignedLoad(operandPtr, 8, operandName+VAL_SUFFIX);
+    operandVals.push_back(operandVal);
+  }
+
+  std::string resultValName = std::string(resultStorage->getName())+VAL_SUFFIX;
+  llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
+                                                  operandVals, builder);
+  llvm::Value *resultPtr =
+      builder->CreateInBoundsGEP(resultStorage, i,
+                                 resultStorage->getName() + PTR_SUFFIX);
+  builder->CreateAlignedStore(resultVal, resultPtr, 8);
+
+  // Loop Footer
+  llvm::Value* i_nxt = builder->CreateAdd(i, builder->getInt32(1), "i_nxt");
+  llvm::Value *numIter = builder->getInt32(is.getSize());
+  llvm::Value *exitCond = builder->CreateICmpEQ(i_nxt, numIter, "exitcond");
+  llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
+  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
+                                                       "loop_end", f);
+  builder->CreateCondBr(exitCond, loopEnd, loopBodyStart);
+  builder->SetInsertPoint(loopEnd);
+
+  // Add phi backedges for loop
+  i->addIncoming(i_nxt, loopBodyEnd);
+
+  return resultStorage;
+}
+
 
 /// A Simit function that has been compiled with LLVM.
 class LLVMCompiledFunction : public CompiledFunction {
@@ -203,7 +342,6 @@ class LLVMCompiledFunction : public CompiledFunction {
     std::string fstr;
     llvm::raw_string_ostream rsos(fstr);
     f->print(rsos);
-    cout << fstr << endl;
   }
 
  private:
@@ -293,87 +431,27 @@ void LLVMCodeGen::handle(Function *function) {
   resultStack.push(f);
 }
 
-llvm::Value *
-LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
-                            const vector<IndexExpr::IndexedTensor> &operands) {
-  for (auto &operand : operands) {
-    assert(operand.getTensor()->getOrder() == 0);
-  }
-
-  switch (op) {
-    case IndexExpr::NEG: {
-      assert (operands.size() == 1);
-      IndexExpr::IndexedTensor operand = operands[0];
-      std::string operandName = operand.getTensor()->getName();
-
-      assert(symtable->contains(operandName));
-      llvm::Value *val = symtable->get(operandName);
-
-      if (val->getType()->isPointerTy()) {
-        val = builder->CreateLoad(val, operandName + VAL_SUFFIX);
-      }
-
-      simit::Type ctype = operand.getTensor()->getType()->getComponentType();
-      switch (ctype) {
-        case INT:
-          return builder->CreateNeg(val, name);
-        case FLOAT:
-          return builder->CreateFNeg(val, name);
-        case ELEMENT:
-          assert(false && "Cannot negate element");
-          break;
-        default:
-          UNREACHABLE;
-      }
-    }
-    case IndexExpr::ADD: // fallthrough
-    case IndexExpr::SUB: // fallthrough
-    case IndexExpr::MUL: // fallthrough
-    case IndexExpr::DIV: {
-      assert (operands.size() == 2);
-      IndexExpr::IndexedTensor l = operands[0];
-      IndexExpr::IndexedTensor r = operands[1];
-      std::string lname = l.getTensor()->getName();
-      std::string rname = r.getTensor()->getName();
-
-      assert(symtable->contains(lname));
-      assert(symtable->contains(rname));
-      llvm::Value *lval = symtable->get(lname);
-      llvm::Value *rval = symtable->get(rname);
-
-      if (lval->getType()->isPointerTy()) {
-        lval = builder->CreateLoad(lval, lname + VAL_SUFFIX);
-      }
-      if (rval->getType()->isPointerTy()) {
-        rval = builder->CreateLoad(rval, rname + VAL_SUFFIX);
-      }
-
-      simit::Type ctype = l.getTensor()->getType()->getComponentType();
-      return builder->CreateBinOp(toLLVMBinaryOp(op, ctype), lval, rval, name);
-    }
-    default:
-      UNREACHABLE;
-  }
-
-  return NULL;
-}
-
 void LLVMCodeGen::handle(IndexExpr *t) {
   llvm::Value *result = NULL;
 
   const std::vector<IndexExpr::IndexVarPtr> &domain = t->getDomain();
   IndexExpr::Operator op = t->getOperator();
-  const std::vector<IndexExpr::IndexedTensor> &operands = t->getOperands();
+
+  std::vector<llvm::Value *> llvmOperands;
+  for (auto &operand : t->getOperands()) {
+    assert(symtable->contains(operand.getTensor()->getName()));
+    llvmOperands.push_back(symtable->get(operand.getTensor()->getName()));
+  }
+
+  llvm::Value *resultStorage = storageLocations[t];
+  assert(resultStorage);
 
   if (domain.size() == 0) {
-    llvm::Value *resultStorage = storageLocations[t];
-    assert(resultStorage);
-    result = createScalarOp(t->getName(), op, operands);
-    builder->CreateStore(result, resultStorage);
+    result = createScalarComputation(resultStorage, op, llvmOperands, builder);
   }
   else {
-    llvm::Value *resultStorage = storageLocations[t];
-    assert(resultStorage);
+    result = createIndexComputation(domain, op, llvmOperands,
+                                    resultStorage, builder);
   }
 
   assert(result != NULL);

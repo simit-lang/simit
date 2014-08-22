@@ -99,7 +99,7 @@ int Program::verify() {
 
     if (compiled.find(func) == compiled.end()) {
       compiled[func] = codegen.compile(func);
-      cout << *func << endl << *compiled[func];
+//      cout << *func << endl << *compiled[func];
     }
     CompiledFunction *compiledFunc = compiled[func];
 
