@@ -6,6 +6,7 @@
 
 #include <ostream>
 #include <stack>
+#include <map>
 #include <vector>
 
 namespace llvm {
@@ -42,10 +43,10 @@ class LLVMCodeGen : public CodeGen, IRVisitor {
 
   SymbolTable<llvm::Value*> *symtable;
   std::stack<llvm::Value*> resultStack;
+  std::map<IRNode*, llvm::Value*> storageLocations;
 
-  void handle(Function *function);
-  void handle(IndexExpr     *t);
-  void handle(VariableStore *t);
+  void handle(Function  *f);
+  void handle(IndexExpr *t);
 
   llvm::Function *codegen(Function *function);
 

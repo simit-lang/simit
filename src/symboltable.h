@@ -33,7 +33,7 @@ class SymbolTable {
   }
 
   // True iff the symbol table contains the given symbol.
-  bool contains(const std::string &symbol) {
+  bool contains(const std::string &symbol) const {
     for (auto &scope : scopes) {
       if (scope.find(symbol) != scope.end()) {
         return true;

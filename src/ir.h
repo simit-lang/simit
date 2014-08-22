@@ -130,17 +130,18 @@ class IndexExpr : public TensorNode {
   enum Operator { NEG, ADD, SUB, MUL, DIV };
 
   typedef std::shared_ptr<internal::IndexVar> IndexVarPtr;
+  typedef std::vector<IndexVarPtr> IndexVarPtrVector;
 
   class IndexedTensor {
    public:
     IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
                   const std::vector<IndexExpr::IndexVarPtr> &indexVariables);
     std::shared_ptr<TensorNode> getTensor() const { return tensor; };
-    std::vector<IndexVarPtr> getIndexVariables() const { return indexVariables;}
+    const IndexVarPtrVector &getIndexVariables() const { return indexVariables;}
 
    private:
     std::shared_ptr<TensorNode> tensor;
-    std::vector<IndexVarPtr>    indexVariables;
+    IndexVarPtrVector           indexVariables;
   };
 
   IndexExpr(const std::vector<IndexVarPtr> &indexVars,
@@ -148,13 +149,13 @@ class IndexExpr : public TensorNode {
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const std::vector<IndexVarPtr> &getDomain() const;
+  const IndexVarPtrVector &getDomain() const;
   IndexExpr::Operator getOperator() const { return op; }
   const std::vector<IndexedTensor> &getOperands() const { return operands; }
   void print(std::ostream &os) const;
 
  private:
-  std::vector<IndexVarPtr> indexVars;
+  IndexVarPtrVector indexVars;
   Operator op;
   std::vector<IndexedTensor> operands;
 };
@@ -226,16 +227,16 @@ class Result : public TensorNode {
   Result(const std::string &name, const TensorType *type)
       : TensorNode(name, type) {}
 
-  void setValue(const std::shared_ptr<Store> &value) {
+  void setValue(const std::shared_ptr<TensorNode> &value) {
     this->value = value;
   }
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const std::shared_ptr<Store> &getValue() const { return value; }
+  const std::shared_ptr<TensorNode> &getValue() const { return value; }
   void print(std::ostream &os) const;
 
  private:
-  std::shared_ptr<Store> value;
+  std::shared_ptr<TensorNode> value;
 };
 
 

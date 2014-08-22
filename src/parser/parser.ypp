@@ -450,8 +450,8 @@ assign_stmt
     auto lhsIter = lhsList->begin();
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
-      auto lhs = *lhsIter;
-      auto rhs = *rhsIter;
+      VariableAccess *lhs = *lhsIter;
+      std::shared_ptr<TensorNode> &rhs = *rhsIter;
 
       // TODO: Remove these checks
       if (rhs == NULL) continue;
@@ -459,11 +459,10 @@ assign_stmt
 
       auto lhsTensor = ctx->symtable.get(lhs->name);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
-        rhs->setName(result->getName() + "_val");
-        auto store = new VariableStore(result, rhs);
-        auto storePtr = std::shared_ptr<Store>(store);
-        result->setValue(storePtr);
-        $$->push_back(storePtr);
+        rhs->setName(result->getName() + "_val");  // TODO: Create unique name
+        result->setValue(rhs);
+        $$->push_back(rhs);
+
       }
       else {
         NOT_SUPPORTED_YET;

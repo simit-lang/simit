@@ -18,10 +18,8 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
-#include "irvisitors.h"
 #include "macros.h"
 #include "ir.h"
-#include "tensor.h"
 #include "symboltable.h"
 
 using namespace std;
@@ -34,10 +32,15 @@ using namespace std;
 #define LLVM_DOUBLE    llvm::Type::getDoubleTy(LLVM_CONTEXT)
 #define LLVM_DOUBLEPTR llvm::Type::getDoublePtrTy(LLVM_CONTEXT)
 
+#define LLVM_INT8      llvm::Type::getInt8Ty(LLVM_CONTEXT)
+#define LLVM_INT32     llvm::Type::getInt32Ty(LLVM_CONTEXT)
+#define LLVM_INT64     llvm::Type::getInt64Ty(LLVM_CONTEXT)
+
 namespace {
 using namespace simit::internal;
 
-#define VALSUFFIX "_val"
+#define VAL_SUFFIX "_val"
+#define PTR_SUFFIX "_ptr"
 
 /// Creates an execution engine that takes ownership of the module.
 llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
@@ -95,6 +98,11 @@ llvm::Function *createPrototype(const string &name,
                                 llvm::Module *module) {
   llvm::FunctionType *ft = createFunctionType(arguments, results);
   llvm::Function *f = llvm::Function::Create(ft, linkage, name, module);
+  f->setDoesNotThrow();
+  for (size_t i=0; i<f->getArgumentList().size(); ++i) {
+    f->setDoesNotCapture(i+1);
+  }
+
   auto ai = f->arg_begin();
   for (auto &arg : arguments) {
     ai->setName(arg->getName());
@@ -237,6 +245,8 @@ CompiledFunction *LLVMCodeGen::compile(Function *function) {
 
 llvm::Function *LLVMCodeGen::codegen(Function *function) {
   visit(function);
+  storageLocations.clear();
+
   if (isAborted()) {
     return NULL;
   }
@@ -261,6 +271,11 @@ void LLVMCodeGen::handle(Function *function) {
   for (auto &arg : f->getArgumentList()) {
     symtable->insert(arg.getName(), &arg);
   }
+
+  for (auto &result : function->getResults()) {
+    IRNode *resultValue = result->getValue().get();
+    storageLocations[resultValue] = symtable->get(result->getName());
+  }
   
   if (f == NULL) {  // TODO: Remove check
     abort();
@@ -269,39 +284,13 @@ void LLVMCodeGen::handle(Function *function) {
   resultStack.push(f);
 }
 
-void LLVMCodeGen::handle(IndexExpr *t) {
-  llvm::Value *result = NULL;
-
-  auto domain = t->getDomain();
-  auto op = t->getOperator();
-  auto &operands = t->getOperands();
-
-  if (domain.size() == 0) {
-    result = createScalarOp(t->getName(), op, operands);
-  }
-  else {
-    NOT_SUPPORTED_YET;
-  }
-
-  assert(result != NULL);
-  symtable->insert(t->getName(), result);
-}
-
-void LLVMCodeGen::handle(VariableStore *t) {
-  assert(symtable->contains(t->getValue()->getName()));
-  auto val = symtable->get(t->getValue()->getName());
-  assert(val != NULL);
-
-  assert(symtable->contains(t->getValue()->getName()));
-  auto target = symtable->get(t->getTarget()->getName());
-  assert(target != NULL);
-
-  builder->CreateStore(val, target);
-}
-
 llvm::Value *
 LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
                             const vector<IndexExpr::IndexedTensor> &operands) {
+  for (auto &operand : operands) {
+    assert(operand.getTensor()->getOrder() == 0);
+  }
+
   switch (op) {
     case IndexExpr::NEG: {
       assert (operands.size() == 1);
@@ -312,7 +301,7 @@ LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
       llvm::Value *val = symtable->get(operandName);
 
       if (val->getType()->isPointerTy()) {
-        val = builder->CreateLoad(val, operandName + VALSUFFIX);
+        val = builder->CreateLoad(val, operandName + VAL_SUFFIX);
       }
 
       simit::Type ctype = operand.getTensor()->getType()->getComponentType();
@@ -344,10 +333,10 @@ LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
       llvm::Value *rval = symtable->get(rname);
 
       if (lval->getType()->isPointerTy()) {
-        lval = builder->CreateLoad(lval, lname + VALSUFFIX);
+        lval = builder->CreateLoad(lval, lname + VAL_SUFFIX);
       }
       if (rval->getType()->isPointerTy()) {
-        rval = builder->CreateLoad(rval, rname + VALSUFFIX);
+        rval = builder->CreateLoad(rval, rname + VAL_SUFFIX);
       }
 
       simit::Type ctype = l.getTensor()->getType()->getComponentType();
@@ -358,6 +347,28 @@ LLVMCodeGen::createScalarOp(const std::string &name, IndexExpr::Operator op,
   }
 
   return NULL;
+}
+
+void LLVMCodeGen::handle(IndexExpr *t) {
+  llvm::Value *result = NULL;
+
+  const std::vector<IndexExpr::IndexVarPtr> &domain = t->getDomain();
+  IndexExpr::Operator op = t->getOperator();
+  const std::vector<IndexExpr::IndexedTensor> &operands = t->getOperands();
+
+  if (domain.size() == 0) {
+    llvm::Value *resultStorage = storageLocations[t];
+    assert(resultStorage);
+    result = createScalarOp(t->getName(), op, operands);
+    builder->CreateStore(result, resultStorage);
+  }
+  else {
+    llvm::Value *resultStorage = storageLocations[t];
+    assert(resultStorage);
+  }
+
+  assert(result != NULL);
+  symtable->insert(t->getName(), result);
 }
 
 }}  // namespace simit::internal
