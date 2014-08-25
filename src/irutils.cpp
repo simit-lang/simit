@@ -53,19 +53,16 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
 IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat) {
   assert(mat->getOrder() == 2);
   const std::vector<IndexSetProduct> &dims = mat->getType()->getDimensions();
-//  std::vector<IndexSetProduct> transposedDims(dims.rbegin(), dims.rend());
-//  TensorType *transposedType = new TensorType(type->getComponentType(),
-//                                              transposedDims);
 
   IndexVarFactory indexVarFactory;
   std::vector<IndexExpr::IndexVarPtr> indexVars;
-  indexVars.push_back(indexVarFactory.makeFreeVar(dims[0]));
   indexVars.push_back(indexVarFactory.makeFreeVar(dims[1]));
+  indexVars.push_back(indexVarFactory.makeFreeVar(dims[0]));
 
+  std::vector<IndexExpr::IndexVarPtr> operandIndexVars(indexVars.rbegin(),
+                                                       indexVars.rend());
   std::vector<IndexExpr::IndexedTensor> operands;
-  operands.push_back(IndexExpr::IndexedTensor(mat, indexVars));
-
-  std::reverse(indexVars.begin(), indexVars.end());
+  operands.push_back(IndexExpr::IndexedTensor(mat, operandIndexVars));
 
   return new IndexExpr(indexVars, IndexExpr::Operator::NONE, operands);
 }
