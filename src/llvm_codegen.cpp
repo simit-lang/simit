@@ -291,7 +291,7 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
   }
 
   const std::shared_ptr<IndexVar> &iv = domain[currIdxVar];
-  std::string ivName = iv->getName();
+  std::string idxName = iv->getName();
 
   const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
 
@@ -304,11 +304,11 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
   llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
 
   llvm::BasicBlock *loopBodyStart =
-  llvm::BasicBlock::Create(LLVM_CONTEXT, ivName + "_loop_body", f);
+  llvm::BasicBlock::Create(LLVM_CONTEXT, idxName+"_loop_body", f);
   builder->CreateBr(loopBodyStart);
   builder->SetInsertPoint(loopBodyStart);
 
-  llvm::PHINode *idx = builder->CreatePHI(LLVM_INT32, 2, ivName);
+  llvm::PHINode *idx = builder->CreatePHI(LLVM_INT32, 2, idxName);
   indices.push_back(idx);
   idx->addIncoming(builder->getInt32(0), entryBlock);
 
@@ -320,35 +320,38 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
   else {
     std::vector<llvm::Value *> operandVals;
     for (llvm::Value *operand : operands) {
+      std::string operandName = operand->getName();
+      std::string operandValName = operandName + VAL_SUFFIX;
+      std::string operandPtrName = operandName + PTR_SUFFIX;
+
       llvm::Value *opOffset = computeOffset(domain, indices, currNest, builder);
-      std::string opName = operand->getName();
-      llvm::Value *opPtr = builder->CreateInBoundsGEP(operand, opOffset,
-                                                      opName+PTR_SUFFIX);
-      llvm::Value *opVal = builder->CreateAlignedLoad(opPtr, 8,
-                                                      opName+VAL_SUFFIX);
-      operandVals.push_back(opVal);
+      llvm::Value *operandPtr = builder->CreateInBoundsGEP(operand, opOffset,
+                                                           operandPtrName);
+      llvm::Value *operandVal = builder->CreateAlignedLoad(operandPtr, 8,
+                                                           operandValName);
+      operandVals.push_back(operandVal);
     }
 
-    std::string resultValName = string(resultStorage->getName())+VAL_SUFFIX;
+    std::string resultValName = string(resultStorage->getName()) + VAL_SUFFIX;
+    std::string resultPtrName = string(resultStorage->getName()) + PTR_SUFFIX;
+
     llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
                                                     operandVals, builder);
-
     llvm::Value *resultOffset = computeOffset(domain,indices,currNest,builder);
-    llvm::Value *resultPtr =
-        builder->CreateInBoundsGEP(resultStorage, resultOffset,
-                                   resultStorage->getName() + PTR_SUFFIX);
+    llvm::Value *resultPtr = builder->CreateInBoundsGEP(resultStorage,
+                                                        resultOffset,
+                                                        resultPtrName);
     builder->CreateAlignedStore(resultVal, resultPtr, 8);
   }
 
   // Loop Footer
-  llvm::Value* i_nxt = builder->CreateAdd(idx, builder->getInt32(1),
-                                          ivName + "_nxt");
+  llvm::Constant *one = builder->getInt32(1);
+  llvm::Value* i_nxt = builder->CreateAdd(idx, one, idxName+"_nxt");
   llvm::Value *numIter = builder->getInt32(is.getSize());
-  llvm::Value *exitCond = builder->CreateICmpEQ(i_nxt, numIter,
-                                                ivName + "_cmp");
+  llvm::Value *exitCond = builder->CreateICmpEQ(i_nxt, numIter, idxName+"_cmp");
   llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
-                                                       ivName + "_loop_end", f);
+                                                       idxName+"_loop_end", f);
   builder->CreateCondBr(exitCond, loopEnd, loopBodyStart);
   builder->SetInsertPoint(loopEnd);
 
