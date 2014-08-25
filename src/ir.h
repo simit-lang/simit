@@ -109,25 +109,11 @@ class IndexVar {
 std::ostream &operator<<(std::ostream &os, const IndexVar &var);
 
 
-/// A factory for creating index variables with unique names.
-class IndexVarFactory {
- public:
-  IndexVarFactory() : nameID(0) {}
-
-  std::shared_ptr<IndexVar> makeFreeVar(const IndexSetProduct &indexSet);
-  std::shared_ptr<IndexVar> makeReductionVar(const IndexSetProduct &indexSet,
-                                             IndexVar::Operator op);
- private:
-  int nameID;
-  std::string makeName();
-};
-
-
 /// Expression that combines one or more tensors.  Merge nodes must be created
 /// through the \ref createMerge factory function.
 class IndexExpr : public TensorNode {
  public:
-  enum Operator { NEG, ADD, SUB, MUL, DIV };
+  enum Operator { NONE, NEG, ADD, SUB, MUL, DIV };
 
   typedef std::shared_ptr<internal::IndexVar> IndexVarPtr;
   typedef std::vector<IndexVarPtr> IndexVarPtrVector;

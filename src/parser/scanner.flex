@@ -86,11 +86,11 @@ using namespace simit::internal;
  /* Single-line comments */
 %[^{]                 { BEGIN(SLCOMMENT); }
 <SLCOMMENT>.          {}
-<SLCOMMENT>\n         { BEGIN(INITIAL); yylloc->step(); }
+<SLCOMMENT>\n         { BEGIN(INITIAL); yylloc->lines(yyleng); yylloc->step(); }
 
  /* Multi-line comments */
 "%{"                  { BEGIN(MLCOMMENT); }
-<MLCOMMENT>\n         { yylloc->step(); }
+<MLCOMMENT>\n         { yylloc->lines(yyleng); yylloc->step(); }
 <MLCOMMENT>.          {}
 <MLCOMMENT><<EOF>>    { /*TODO: REPORT ERROR*/ return Parser::token::UNKNOWN; }
 <MLCOMMENT>"%}"       { BEGIN(INITIAL); }

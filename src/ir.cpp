@@ -135,29 +135,6 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 }
 
 
-// class IndexVarFactory
-std::shared_ptr<IndexVar>
-IndexVarFactory::makeFreeVar(const IndexSetProduct &indexSet) {
-  auto freeIndexVar = new IndexVar(makeName(), indexSet, IndexVar::FREE);
-  return std::shared_ptr<IndexVar>(freeIndexVar);
-}
-
-std::shared_ptr<IndexVar>
-IndexVarFactory::makeReductionVar(const IndexSetProduct &indexSet,
-                                  IndexVar::Operator op) {
-  auto reductionIndexVar = new IndexVar(makeName(), indexSet, op);
-  return std::shared_ptr<IndexVar>(reductionIndexVar);
-}
-
-std::string IndexVarFactory::makeName() {
-  char name[2];
-  name[0] = 'i' + nameID;
-  name[1] = '\0';
-  nameID++;
-  return std::string(name);
-}
-
-
 // class IndexExpr
 IndexExpr::IndexedTensor::IndexedTensor(
     const std::shared_ptr<TensorNode> &t,
@@ -187,8 +164,7 @@ IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
                      Operator op, const std::vector<IndexedTensor> &operands)
     : TensorNode(computeIndexExprType(indexVars, operands)),
       indexVars{indexVars}, op{op}, operands{operands} {
-  unsigned int expectedNumOperands = (op == NEG) ? 1 : 2;
-  assert(expectedNumOperands == operands.size());
+  assert(operands.size() == (op == NONE || op == NEG) ? 1 : 2);
   Type firstType = operands[0].getTensor()->getType()->getComponentType();
   for (auto &operand : operands) {
     Type componentType = operand.getTensor()->getType()->getComponentType();
@@ -203,15 +179,17 @@ const std::vector<IndexExpr::IndexVarPtr> &IndexExpr::getDomain() const {
 static std::string opString(IndexExpr::Operator op) {
   std::string opstr;
   switch (op) {
-    case IndexExpr::NEG:
+    case IndexExpr::Operator::NONE:
+      return "";
+    case IndexExpr::Operator::NEG:
       return "-";
-    case IndexExpr::ADD:
+    case IndexExpr::Operator::ADD:
       return "+";
-    case IndexExpr::SUB:
+    case IndexExpr::Operator::SUB:
       return "-";
-    case IndexExpr::MUL:
+    case IndexExpr::Operator::MUL:
       return "*";
-    case IndexExpr::DIV:
+    case IndexExpr::Operator::DIV:
       return "//";
     default:
       UNREACHABLE;

@@ -25,6 +25,7 @@
   #include <algorithm>
 
   #include "scanner.h"
+  #include "irutils.h"
   #include "util.h"
   using namespace std;
   using namespace simit;  // TODO: Remove
@@ -481,27 +482,6 @@ expr_stmt
 
 
 // Expressions
-%code {
-shared_ptr<TensorNode> *binaryElwiseExpr(const shared_ptr<TensorNode> &l,
-                                         IndexExpr::Operator op,
-                                         const shared_ptr<TensorNode> &r) {
-  IndexVarFactory indexVarFactory;
-  std::vector<IndexExpr::IndexVarPtr> indexVars;
-  for (unsigned int i=0; i<l->getOrder(); ++i) {
-    IndexSetProduct indexSet = l->getType()->getDimensions()[i];
-    indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
-  }
-
-  std::vector<IndexExpr::IndexedTensor> operands;
-  operands.push_back(IndexExpr::IndexedTensor(l, indexVars));
-  operands.push_back(IndexExpr::IndexedTensor(r, indexVars));
-  auto indexExpr = new IndexExpr(indexVars, op, operands);
-
-  assert(indexExpr != NULL);
-  return new shared_ptr<TensorNode>(indexExpr);
-}
-};
-
 %union {
   std::shared_ptr<simit::internal::TensorNode>              *Tensor;
   std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
@@ -569,8 +549,7 @@ expr
     if (*l->getType() != *r->getType()) {
       REPORT_ERROR("operand types do not match", @2);
     }
-
-    $$ = binaryElwiseExpr(l, IndexExpr::ADD, r);
+    $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::ADD, r));
   }
   | expr "-" expr {
     if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
@@ -586,7 +565,7 @@ expr
       REPORT_ERROR("operand types do not match", @2);
     }
 
-    $$ = binaryElwiseExpr(l, IndexExpr::SUB, r);
+    $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::SUB, r));
   }
   | expr "*" expr {
     $$ = NULL;
@@ -604,8 +583,29 @@ expr
     delete $3;
   }
   | expr "'" {
-    $$ = NULL;
+    if ($1 == NULL) {  // TODO: Remove this check
+      $$ = NULL;
+      break;
+    }
+
+    auto expr = shared_ptr<TensorNode>(*$1);
     delete $1;
+
+    switch (expr->getType()->getOrder()) {
+      case 0:
+        NOT_SUPPORTED_YET;
+        break;
+      case 1:
+        NOT_SUPPORTED_YET;
+        break;
+      case 2:
+        $$ = new shared_ptr<TensorNode>(transposeMatrix(expr));
+        break;
+      default:
+        REPORT_ERROR("can't transpose >2-order tensors using the ' operator",
+                     @1);
+        $$ = NULL;
+    }
   }
   | expr "^" expr {
     $$ = NULL;

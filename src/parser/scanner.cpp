@@ -951,7 +951,7 @@ case 50:
 /* rule 50 can match eol */
 YY_RULE_SETUP
 #line 89 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
-{ BEGIN(INITIAL); yylloc->step(); }
+{ BEGIN(INITIAL); yylloc->lines(yyleng); yylloc->step(); }
 	YY_BREAK
 /* Multi-line comments */
 case 51:
@@ -963,7 +963,7 @@ case 52:
 /* rule 52 can match eol */
 YY_RULE_SETUP
 #line 93 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
-{ yylloc->step(); }
+{ yylloc->lines(yyleng); yylloc->step(); }
 	YY_BREAK
 case 53:
 YY_RULE_SETUP

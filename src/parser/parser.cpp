@@ -57,6 +57,7 @@
   #include <algorithm>
 
   #include "scanner.h"
+  #include "irutils.h"
   #include "util.h"
   using namespace std;
   using namespace simit;  // TODO: Remove
@@ -82,26 +83,6 @@
     free((void*)str);
     return result;
   }
-
-
-shared_ptr<TensorNode> *binaryElwiseExpr(const shared_ptr<TensorNode> &l,
-                                         IndexExpr::Operator op,
-                                         const shared_ptr<TensorNode> &r) {
-  IndexVarFactory indexVarFactory;
-  std::vector<IndexExpr::IndexVarPtr> indexVars;
-  for (unsigned int i=0; i<l->getOrder(); ++i) {
-    IndexSetProduct indexSet = l->getType()->getDimensions()[i];
-    indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
-  }
-
-  std::vector<IndexExpr::IndexedTensor> operands;
-  operands.push_back(IndexExpr::IndexedTensor(l, indexVars));
-  operands.push_back(IndexExpr::IndexedTensor(r, indexVars));
-  auto indexExpr = new IndexExpr(indexVars, op, operands);
-
-  assert(indexExpr != NULL);
-  return new shared_ptr<TensorNode>(indexExpr);
-}
 
 
 
@@ -1397,8 +1378,7 @@ namespace  simit { namespace internal  {
     if (*l->getType() != *r->getType()) {
       REPORT_ERROR("operand types do not match", yystack_[1].location);
     }
-
-    (yylhs.value.Tensor) = binaryElwiseExpr(l, IndexExpr::ADD, r);
+    (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::ADD, r));
   }
 
     break;
@@ -1419,7 +1399,7 @@ namespace  simit { namespace internal  {
       REPORT_ERROR("operand types do not match", yystack_[1].location);
     }
 
-    (yylhs.value.Tensor) = binaryElwiseExpr(l, IndexExpr::SUB, r);
+    (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::SUB, r));
   }
 
     break;
@@ -1457,8 +1437,29 @@ namespace  simit { namespace internal  {
   case 57:
 
     {
-    (yylhs.value.Tensor) = NULL;
+    if ((yystack_[1].value.Tensor) == NULL) {  // TODO: Remove this check
+      (yylhs.value.Tensor) = NULL;
+      break;
+    }
+
+    auto expr = shared_ptr<TensorNode>(*(yystack_[1].value.Tensor));
     delete (yystack_[1].value.Tensor);
+
+    switch (expr->getType()->getOrder()) {
+      case 0:
+        NOT_SUPPORTED_YET;
+        break;
+      case 1:
+        NOT_SUPPORTED_YET;
+        break;
+      case 2:
+        (yylhs.value.Tensor) = new shared_ptr<TensorNode>(transposeMatrix(expr));
+        break;
+      default:
+        REPORT_ERROR("can't transpose >2-order tensors using the ' operator",
+                     yystack_[1].location);
+        (yylhs.value.Tensor) = NULL;
+    }
   }
 
     break;
@@ -2659,12 +2660,12 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   171,   171,   173,   177,   180,   183,   192,   195,   199,
-     205,   209,   215,   218,   225,   229,   231,   233,   235,   238,
-     248,   255,   264,   302,   305,   316,   320,   331,   339,   343,
-     350,   353,   362,   363,   364,   365,   366,   370,   400,   408,
-     414,   416,   420,   422,   429,   435,   475,   478,   512,   531,
-     532,   535,   559,   575,   591,   596,   601,   606,   610,   615,
+       0,   172,   172,   174,   178,   181,   184,   193,   196,   200,
+     206,   210,   216,   219,   226,   230,   232,   234,   236,   239,
+     249,   256,   265,   303,   306,   317,   321,   332,   340,   344,
+     351,   354,   363,   364,   365,   366,   367,   371,   401,   409,
+     415,   417,   421,   423,   430,   436,   476,   479,   492,   511,
+     512,   515,   539,   554,   570,   575,   580,   585,   610,   615,
      620,   625,   630,   635,   640,   645,   649,   654,   659,   662,
      665,   674,   683,   686,   692,   698,   707,   714,   716,   721,
      723,   728,   730,   732,   735,   738,   741,   747,   748,   770,

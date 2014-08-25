@@ -169,7 +169,7 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
     case IndexExpr::DIV:
       assert(type == Type::FLOAT);
       return llvm::Instruction::FDiv;
-    case IndexExpr::NEG: // fallthrough
+    case IndexExpr::NEG: // fall-through
     default:
       UNREACHABLE;
   }
@@ -180,7 +180,10 @@ llvm::Value *createValueComputation(std::string name, simit::Type ctype,
                                     const vector<llvm::Value*> operands,
                                     llvm::IRBuilder<> *builder) {
   switch (op) {
-    case IndexExpr::NEG: {
+    case IndexExpr::Operator::NONE:
+      assert(operands.size() == 1);
+      return operands[0];
+    case IndexExpr::Operator::NEG: {
       assert (operands.size() == 1);
       switch (ctype) {
         case simit::Type::INT:
@@ -192,10 +195,10 @@ llvm::Value *createValueComputation(std::string name, simit::Type ctype,
       }
       break;
     }
-    case IndexExpr::ADD: // fallthrough
-    case IndexExpr::SUB: // fallthrough
-    case IndexExpr::MUL: // fallthrough
-    case IndexExpr::DIV: {
+    case IndexExpr::Operator::ADD: // fall-through
+    case IndexExpr::Operator::SUB: // fall-through
+    case IndexExpr::Operator::MUL: // fall-through
+    case IndexExpr::Operator::DIV: {
       assert (operands.size() == 2);
       return builder->CreateBinOp(toLLVMBinaryOp(op, ctype),
                                   operands[0], operands[1], name);
@@ -315,7 +318,7 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
   // Loop Body
   if (currIdxVar < domain.size()-1) {
     computeIndexExpr(resultStorage, domain, op, operands, builder,
-                           indices, currNest, ++currIdxVar);
+                     indices, currNest, ++currIdxVar);
   }
   else {
     std::vector<llvm::Value *> operandVals;
