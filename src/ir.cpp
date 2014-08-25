@@ -60,7 +60,11 @@ void Literal::cast(TensorType *type) {
 }
 
 void Literal::print(std::ostream &os) const {
-  // TODO: Add nicer value printing that prints matrices and tensors properly
+  for (auto &dim : type->getDimensions()) {
+    assert(dim.getFactors().size() == 1 && "literals can't be hierarchical");
+  }
+
+  // TODO: Fix value printing to print matrices and tensors properly
   switch (type->getComponentType()) {
     case Type::INT: {
       int *idata = (int*)data;
@@ -82,8 +86,8 @@ void Literal::print(std::ostream &os) const {
         os << fdata[0];
       }
       else {
-        os << "[" << fdata[0];
-        for (int i=0; i<type->getSize(); ++i) {
+        os << "[" << to_string(fdata[0]);
+        for (int i=1; i<type->getSize(); ++i) {
           os << ", " + to_string(fdata[i]);
         }
         os << "]";
@@ -96,6 +100,8 @@ void Literal::print(std::ostream &os) const {
     default:
       UNREACHABLE;
   }
+
+  os << " : " << *type;
 }
 
 bool operator==(const Literal& l, const Literal& r) {
@@ -136,9 +142,8 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 
 
 // class IndexExpr
-IndexExpr::IndexedTensor::IndexedTensor(
-    const std::shared_ptr<TensorNode> &t,
-    const std::vector<IndexExpr::IndexVarPtr> &ivs) {
+IndexExpr::IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &t,
+                                        const IndexVarPtrVector &ivs) {
   assert(ivs.size() == t->getOrder());
   auto titer = t->getType()->getDimensions().begin();
   auto iviter = ivs.begin();
@@ -149,26 +154,29 @@ IndexExpr::IndexedTensor::IndexedTensor(
   this->indexVariables = ivs;
 }
 
-static TensorType *
+namespace {
+TensorType *
 computeIndexExprType(const std::vector<IndexExpr::IndexVarPtr> &indexVars,
                      const std::vector<IndexExpr::IndexedTensor> &operands) {
+  Type ctype = operands[0].getTensor()->getType()->getComponentType();
   std::vector<IndexSetProduct> dimensions;
   for (auto &iv : indexVars) {
     dimensions.push_back(iv->getIndexSet());
   }
-  Type ctype = operands[0].getTensor()->getType()->getComponentType();
   return new TensorType(ctype, dimensions);
+}
 }
 
 IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
-                     Operator op, const std::vector<IndexedTensor> &operands)
+                     Operator op,
+                     const std::vector<IndexedTensor> &operands)
     : TensorNode(computeIndexExprType(indexVars, operands)),
       indexVars{indexVars}, op{op}, operands{operands} {
   assert(operands.size() == (op == NONE || op == NEG) ? 1 : 2);
   Type firstType = operands[0].getTensor()->getType()->getComponentType();
   for (auto &operand : operands) {
-    Type componentType = operand.getTensor()->getType()->getComponentType();
-    assert(firstType == componentType && "All operands must have same ctype");
+    assert(firstType == operand.getTensor()->getType()->getComponentType() &&
+           "Operand component types differ");
   }
 }
 

@@ -214,6 +214,7 @@ class Result : public TensorNode {
       : TensorNode(name, type) {}
 
   void setValue(const std::shared_ptr<TensorNode> &value) {
+    assert(*getType() == *value->getType() && "type missmatch");
     this->value = value;
   }
   void accept(IRVisitor *visitor) { visitor->visit(this); };

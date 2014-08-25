@@ -1275,6 +1275,14 @@ namespace  simit { namespace internal  {
       auto lhsTensor = ctx->symtable.get(lhs->name);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
         rhs->setName(result->getName() + "_val");  // TODO: Create unique name
+
+        if (*rhs->getType() != *result->getType()) {
+          std::stringstream errorStr;
+          errorStr << "types missmatch in assignment ("
+                   << *result->getType() << " != " << *rhs->getType() << ")";
+          REPORT_ERROR(errorStr.str(), yystack_[2].location);
+        }
+
         result->setValue(rhs);
         (yylhs.value.IRNodes)->push_back(rhs);
 
@@ -1456,8 +1464,7 @@ namespace  simit { namespace internal  {
         (yylhs.value.Tensor) = new shared_ptr<TensorNode>(transposeMatrix(expr));
         break;
       default:
-        REPORT_ERROR("can't transpose >2-order tensors using the ' operator",
-                     yystack_[1].location);
+        REPORT_ERROR("can't transpose >2-order tensors using '", yystack_[1].location);
         (yylhs.value.Tensor) = NULL;
     }
   }
@@ -2664,16 +2671,16 @@ namespace  simit { namespace internal  {
      206,   210,   216,   219,   226,   230,   232,   234,   236,   239,
      249,   256,   265,   303,   306,   317,   321,   332,   340,   344,
      351,   354,   363,   364,   365,   366,   367,   371,   401,   409,
-     415,   417,   421,   423,   430,   436,   476,   479,   492,   511,
-     512,   515,   539,   554,   570,   575,   580,   585,   610,   615,
-     620,   625,   630,   635,   640,   645,   649,   654,   659,   662,
-     665,   674,   683,   686,   692,   698,   707,   714,   716,   721,
-     723,   728,   730,   732,   735,   738,   741,   747,   748,   770,
-     775,   783,   789,   794,   803,   830,   833,   838,   844,   847,
-     853,   856,   894,   899,   906,   909,   913,   918,   921,   990,
-     991,   993,   997,   998,  1001,  1009,  1019,  1026,  1029,  1033,
-    1046,  1050,  1064,  1068,  1074,  1081,  1084,  1088,  1101,  1105,
-    1119,  1123,  1129,  1134,  1144
+     415,   417,   421,   423,   430,   436,   484,   487,   500,   519,
+     520,   523,   547,   562,   578,   583,   588,   593,   617,   622,
+     627,   632,   637,   642,   647,   652,   656,   661,   666,   669,
+     672,   681,   690,   693,   699,   705,   714,   721,   723,   728,
+     730,   735,   737,   739,   742,   745,   748,   754,   755,   777,
+     782,   790,   796,   801,   810,   837,   840,   845,   851,   854,
+     860,   863,   901,   906,   913,   916,   920,   925,   928,   997,
+     998,  1000,  1004,  1005,  1008,  1016,  1026,  1033,  1036,  1040,
+    1053,  1057,  1071,  1075,  1081,  1088,  1091,  1095,  1108,  1112,
+    1126,  1130,  1136,  1141,  1151
   };
 
   // Print the state stack on the debug stream.

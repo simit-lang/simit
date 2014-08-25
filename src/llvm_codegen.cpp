@@ -381,23 +381,37 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
 /// A Simit function that has been compiled with LLVM.
 class LLVMCompiledFunction : public CompiledFunction {
  public:
-  LLVMCompiledFunction(llvm::Function *f,
-                       const std::shared_ptr<llvm::ExecutionEngine> &fee,
+  LLVMCompiledFunction(simit::internal::Function *simitFunc,
+                       llvm::Function *llvmFunc,
+                       const std::shared_ptr<llvm::ExecutionEngine> &llvmFuncEE,
                        const std::vector<std::shared_ptr<Storage>> &storage)
-      : f(f), fee(fee), storage(storage), module("Harness", LLVM_CONTEXT) {
-    fee->addModule(&module);
+      : simitFunc(simitFunc), llvmFunc(llvmFunc), llvmFuncEE(llvmFuncEE),
+        storage(storage), module("Harness", LLVM_CONTEXT) {
+    llvmFuncEE->addModule(&module);
   }
 
-  ~LLVMCompiledFunction() { fee->removeModule(&module); }
+  ~LLVMCompiledFunction() { llvmFuncEE->removeModule(&module); }
 
   void bind(const std::vector<std::shared_ptr<Literal>> &arguments,
             const std::vector<std::shared_ptr<Literal>> &results) {
-    void *fptr = fee->getPointerToFunction(f);
+    // Typecheck:
+    auto &formalArguments = simitFunc->getArguments();
+    assert(arguments.size() == formalArguments.size());
+    for (size_t i=0; i<arguments.size(); ++i) {
+      assert(*arguments[i]->getType() == *formalArguments[i]->getType());
+    }
+    auto &formalResults  = simitFunc->getResults();
+    assert(results.size() == formalResults.size());
+    for (size_t i=0; i<results.size(); ++i) {
+      assert(*results[i]->getType() == *formalResults[i]->getType());
+    }
+
+    void *fptr = llvmFuncEE->getPointerToFunction(llvmFunc);
     if (arguments.size() == 0 and results.size() == 0) {
       setRunPtr((RunPtrType)fptr);
     }
     else {
-      std::string name = string(f->getName()) + "_harness";
+      std::string name = string(llvmFunc->getName()) + "_harness";
       std::vector<std::shared_ptr<TensorNode>> noArgs;
       llvm::Function *harness = createPrototype(name, noArgs, noArgs,
                                                 llvm::Function::InternalLinkage,
@@ -410,24 +424,25 @@ class LLVMCompiledFunction : public CompiledFunction {
       for (auto &result : results) {
         args.push_back(toLLVMPtr(result));
       }
-      llvm::CallInst *call = llvm::CallInst::Create(f, args, "", entry);
-      call->setCallingConv(f->getCallingConv());
+      llvm::CallInst *call = llvm::CallInst::Create(llvmFunc, args, "", entry);
+      call->setCallingConv(llvmFunc->getCallingConv());
       call->setTailCall();
-      llvm::ReturnInst::Create(f->getContext(), entry);
-      setRunPtr((RunPtrType)fee->getPointerToFunction(harness));
+      llvm::ReturnInst::Create(llvmFunc->getContext(), entry);
+      setRunPtr((RunPtrType)llvmFuncEE->getPointerToFunction(harness));
     }
   }
 
   void print(std::ostream &os) const {
     std::string fstr;
     llvm::raw_string_ostream rsos(fstr);
-    f->print(rsos);
+    llvmFunc->print(rsos);
     os << fstr;
   }
 
  private:
-  llvm::Function *f;
-  std::shared_ptr<llvm::ExecutionEngine> fee;
+  simit::internal::Function *simitFunc;
+  llvm::Function *llvmFunc;
+  std::shared_ptr<llvm::ExecutionEngine> llvmFuncEE;
   std::vector<std::shared_ptr<Storage>> storage;
   llvm::Module module;
 };
@@ -466,7 +481,8 @@ CompiledFunction *LLVMCodeGen::compile(Function *function) {
   llvm::Function *f = codegen(function, temps);
   if (f == NULL) return NULL;
 
-  return new LLVMCompiledFunction(f, executionEngine, talloc.getTemporaries());
+  return new LLVMCompiledFunction(function, f, executionEngine,
+                                  talloc.getTemporaries());
 }
 
 llvm::Function *LLVMCodeGen::codegen(Function *function,

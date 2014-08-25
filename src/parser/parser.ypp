@@ -15,7 +15,7 @@
   }}
 }
 
-%parse-param { Scanner *scanner }
+%parse-param { Scanner *scanner };
 %parse-param { ParserParams *ctx };
 
 %code {
@@ -461,6 +461,14 @@ assign_stmt
       auto lhsTensor = ctx->symtable.get(lhs->name);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
         rhs->setName(result->getName() + "_val");  // TODO: Create unique name
+
+        if (*rhs->getType() != *result->getType()) {
+          std::stringstream errorStr;
+          errorStr << "types missmatch in assignment ("
+                   << *result->getType() << " != " << *rhs->getType() << ")";
+          REPORT_ERROR(errorStr.str(), @2);
+        }
+
         result->setValue(rhs);
         $$->push_back(rhs);
 
@@ -602,8 +610,7 @@ expr
         $$ = new shared_ptr<TensorNode>(transposeMatrix(expr));
         break;
       default:
-        REPORT_ERROR("can't transpose >2-order tensors using the ' operator",
-                     @1);
+        REPORT_ERROR("can't transpose >2-order tensors using '", @1);
         $$ = NULL;
     }
   }

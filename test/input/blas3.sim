@@ -17,6 +17,7 @@ func sub(A : Tensor[2,3](float), B : Tensor[2,3](float)) -> (C : Tensor[2,3](flo
 end
 
 %%% transpose
-func transpose(A : Tensor[3,3](float)) -> (C : Tensor[3,3](float))
+%! transpose([0.0, 1.0, 2.0; 3.0, 4.0, 5.0]) == [0.0, 3.0; 1.0, 4.0; 2.0, 5.0];
+func transpose(A : Tensor[2,3](float)) -> (C : Tensor[3,2](float))
   C = A';
 end
