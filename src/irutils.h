@@ -21,9 +21,15 @@ class IndexVarFactory {
   std::string makeName();
 };
 
+IndexExpr *unaryElwiseExpr(IndexExpr::Operator op,
+                           const std::shared_ptr<TensorNode> &expr);
+
 IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
                             IndexExpr::Operator op,
                             const std::shared_ptr<TensorNode> &r);
+
+IndexExpr *elwiseExpr(IndexExpr::Operator op,
+                      std::vector<std::shared_ptr<TensorNode>> &operands);
 
 IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat);
 

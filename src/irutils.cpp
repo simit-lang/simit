@@ -34,20 +34,40 @@ std::string IndexVarFactory::makeName() {
 
 
 // Free functions
+IndexExpr *unaryElwiseExpr(IndexExpr::Operator op,
+                           const std::shared_ptr<TensorNode> &expr) {
+  assert(IndexExpr::numOperands(op) == 1);
+  std::vector<std::shared_ptr<TensorNode>> operands;
+  operands.push_back(expr);
+  return elwiseExpr(op, operands);
+}
+
 IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
                             IndexExpr::Operator op,
                             const std::shared_ptr<TensorNode> &r) {
+  assert(IndexExpr::numOperands(op) == 2);
+  std::vector<std::shared_ptr<TensorNode>> operands;
+  operands.push_back(l);
+  operands.push_back(r);
+  return elwiseExpr(op, operands);
+}
+
+IndexExpr *elwiseExpr(IndexExpr::Operator op,
+                      std::vector<std::shared_ptr<TensorNode>> &operands) {
+  assert((size_t)IndexExpr::numOperands(op) == operands.size());
+
   IndexVarFactory indexVarFactory;
   std::vector<IndexExpr::IndexVarPtr> indexVars;
-  for (unsigned int i=0; i<l->getOrder(); ++i) {
-    IndexSetProduct indexSet = l->getType()->getDimensions()[i];
+  for (unsigned int i=0; i<operands[0]->getOrder(); ++i) {
+    IndexSetProduct indexSet = operands[0]->getType()->getDimensions()[i];
     indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
   }
 
-  std::vector<IndexExpr::IndexedTensor> operands;
-  operands.push_back(IndexExpr::IndexedTensor(l, indexVars));
-  operands.push_back(IndexExpr::IndexedTensor(r, indexVars));
-  return new IndexExpr(indexVars, op, operands);
+  std::vector<IndexExpr::IndexedTensor> indexedOperands;
+  for (auto &operand : operands) {
+    indexedOperands.push_back(IndexExpr::IndexedTensor(operand, indexVars));
+  }
+  return new IndexExpr(indexVars, op, indexedOperands);
 }
 
 IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat) {

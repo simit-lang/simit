@@ -1354,19 +1354,7 @@ namespace  simit { namespace internal  {
     auto expr = shared_ptr<TensorNode>(*(yystack_[0].value.Tensor));
     delete (yystack_[0].value.Tensor);
 
-    IndexVarFactory indexVarFactory;
-    std::vector<IndexExpr::IndexVarPtr> indexVars;
-    for (unsigned int i=0; i<expr->getOrder(); ++i) {
-      IndexSetProduct indexSet = expr->getType()->getDimensions()[i];
-      indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
-    }
-
-    std::vector<IndexExpr::IndexedTensor> operands;
-    operands.push_back(IndexExpr::IndexedTensor(expr, indexVars));
-    auto indexExpr = new IndexExpr(indexVars, IndexExpr::NEG, operands);
-
-    assert(indexExpr != NULL);
-    (yylhs.value.Tensor) = new shared_ptr<TensorNode>(indexExpr);
+    (yylhs.value.Tensor) = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NEG, expr));
   }
 
     break;
@@ -2672,15 +2660,15 @@ namespace  simit { namespace internal  {
      249,   256,   265,   303,   306,   317,   321,   332,   340,   344,
      351,   354,   363,   364,   365,   366,   367,   371,   401,   409,
      415,   417,   421,   423,   430,   436,   484,   487,   500,   519,
-     520,   523,   547,   562,   578,   583,   588,   593,   617,   622,
-     627,   632,   637,   642,   647,   652,   656,   661,   666,   669,
-     672,   681,   690,   693,   699,   705,   714,   721,   723,   728,
-     730,   735,   737,   739,   742,   745,   748,   754,   755,   777,
-     782,   790,   796,   801,   810,   837,   840,   845,   851,   854,
-     860,   863,   901,   906,   913,   916,   920,   925,   928,   997,
-     998,  1000,  1004,  1005,  1008,  1016,  1026,  1033,  1036,  1040,
-    1053,  1057,  1071,  1075,  1081,  1088,  1091,  1095,  1108,  1112,
-    1126,  1130,  1136,  1141,  1151
+     520,   523,   534,   549,   565,   570,   575,   580,   604,   609,
+     614,   619,   624,   629,   634,   639,   643,   648,   653,   656,
+     659,   668,   677,   680,   686,   692,   701,   708,   710,   715,
+     717,   722,   724,   726,   729,   732,   735,   741,   742,   764,
+     769,   777,   783,   788,   797,   824,   827,   832,   838,   841,
+     847,   850,   888,   893,   900,   903,   907,   912,   915,   984,
+     985,   987,   991,   992,   995,  1003,  1013,  1020,  1023,  1027,
+    1040,  1044,  1058,  1062,  1068,  1075,  1078,  1082,  1095,  1099,
+    1113,  1117,  1123,  1128,  1138
   };
 
   // Print the state stack on the debug stream.

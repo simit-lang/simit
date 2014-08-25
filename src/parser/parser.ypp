@@ -529,21 +529,8 @@ expr
     auto expr = shared_ptr<TensorNode>(*$2);
     delete $2;
 
-    IndexVarFactory indexVarFactory;
-    std::vector<IndexExpr::IndexVarPtr> indexVars;
-    for (unsigned int i=0; i<expr->getOrder(); ++i) {
-      IndexSetProduct indexSet = expr->getType()->getDimensions()[i];
-      indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
-    }
-
-    std::vector<IndexExpr::IndexedTensor> operands;
-    operands.push_back(IndexExpr::IndexedTensor(expr, indexVars));
-    auto indexExpr = new IndexExpr(indexVars, IndexExpr::NEG, operands);
-
-    assert(indexExpr != NULL);
-    $$ = new shared_ptr<TensorNode>(indexExpr);
+    $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NEG, expr));
   }
-  // TODO: Combine binary cases
   | expr "+" expr {
     if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
       $$ = NULL;

@@ -114,6 +114,7 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var);
 class IndexExpr : public TensorNode {
  public:
   enum Operator { NONE, NEG, ADD, SUB, MUL, DIV };
+  static int numOperands(Operator op);
 
   typedef std::shared_ptr<internal::IndexVar> IndexVarPtr;
   typedef std::vector<IndexVarPtr> IndexVarPtrVector;

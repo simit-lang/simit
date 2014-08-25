@@ -142,6 +142,10 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 
 
 // class IndexExpr
+int IndexExpr::numOperands(Operator op) {
+  return (op == NONE || op == NEG) ? 1 : 2;
+}
+
 IndexExpr::IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &t,
                                         const IndexVarPtrVector &ivs) {
   assert(ivs.size() == t->getOrder());
@@ -172,7 +176,7 @@ IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
                      const std::vector<IndexedTensor> &operands)
     : TensorNode(computeIndexExprType(indexVars, operands)),
       indexVars{indexVars}, op{op}, operands{operands} {
-  assert(operands.size() == (op == NONE || op == NEG) ? 1 : 2);
+  assert(operands.size() == IndexExpr::numOperands(op));
   Type firstType = operands[0].getTensor()->getType()->getComponentType();
   for (auto &operand : operands) {
     assert(firstType == operand.getTensor()->getType()->getComponentType() &&
