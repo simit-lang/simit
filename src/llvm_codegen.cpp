@@ -40,8 +40,9 @@ using namespace std;
 namespace {
 using namespace simit::internal;
 
-#define VAL_SUFFIX "_val"
-#define PTR_SUFFIX "_ptr"
+const char *VAL_SUFFIX = "_val";
+const char *PTR_SUFFIX = "_ptr";
+const char *OFFSET_SUFFIX = "_ofs";
 
 /// Creates an execution engine that takes ownership of the module.
 llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
@@ -227,14 +228,59 @@ llvm::Value *createScalarComputation(llvm::Value *resultStorage,
   return resultVal;
 }
 
-llvm::Value *createIndexComputation(const IndexExpr::IndexVarPtrVector &domain,
-                                    IndexExpr::Operator op,
-                                    const vector<llvm::Value*> operands,
-                                    llvm::Value *resultStorage,
-                                    llvm::IRBuilder<> *builder,
-                                    int currNest=0, int currIdxVar=0) {
+// OPT: Offsets are currently recomputed for identical accesses to different
+//      tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
+llvm::Value *computeOffset(const IndexExpr::IndexVarPtrVector &domain,
+                           const std::vector<llvm::Value*> &indices,
+                           size_t currNest,
+                           llvm::IRBuilder<> *builder) {
+  llvm::Value *offset = NULL;
+  if (domain.size() == 1) {
+    offset = indices[0];
+  }
+  else {
+    int stride = 1;
+    for (size_t i=1; i<domain.size(); ++i) {
+      const std::shared_ptr<IndexVar> &iv = domain[i];
+      const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
+      stride *= is.getSize();
+    }
+
+    const std::shared_ptr<IndexVar> &iv_first = domain[0];
+    offset = builder->CreateMul(indices[0], builder->getInt32(stride),
+                                iv_first->getName()+OFFSET_SUFFIX,
+                                false, true);
+    for (size_t i=1; i<domain.size()-1; ++i) {
+      const std::shared_ptr<IndexVar> &iv = domain[i];
+      const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
+      stride = stride / is.getSize();
+      auto *iv_ofs = builder->CreateMul(indices[i], builder->getInt32(stride),
+                                        iv->getName()+OFFSET_SUFFIX,
+                                        false, true);
+      offset = builder->CreateAdd(offset, iv_ofs);
+
+    }
+
+    const std::shared_ptr<IndexVar> &iv_last = domain[domain.size()-1];
+    offset = builder->CreateAdd(offset, indices[domain.size()-1],
+                                iv_last->getName()+OFFSET_SUFFIX,
+                                false, true);
+  }
+
+  assert(offset);
+  return offset;
+}
+
+llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
+                              const IndexExpr::IndexVarPtrVector &domain,
+                              IndexExpr::Operator op,
+                              const vector<llvm::Value*> operands,
+                              llvm::IRBuilder<> *builder,
+                              std::vector<llvm::Value*> &indices,
+                              size_t currNest=0, size_t currIdxVar=0) {
   assert(domain.size() > 0);
   assert(operands.size() > 0);
+  assert(currIdxVar < domain.size());
 
   simit::Type ctype = llvmToSimitType(resultStorage->getType());
   size_t numNests = (domain.size() > 0)
@@ -244,7 +290,10 @@ llvm::Value *createIndexComputation(const IndexExpr::IndexVarPtrVector &domain,
     assert(idxVar->getIndexSet().getFactors().size() == numNests);
   }
 
-  const IndexSet &is = domain[currIdxVar]->getIndexSet().getFactors()[currNest];
+  const std::shared_ptr<IndexVar> &iv = domain[currIdxVar];
+  std::string ivName = iv->getName();
+
+  const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
 
   // We generate loops where the outer loops iterate over blocks along each
   // dimension and the inner loops over each block.
@@ -255,44 +304,56 @@ llvm::Value *createIndexComputation(const IndexExpr::IndexVarPtrVector &domain,
   llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
 
   llvm::BasicBlock *loopBodyStart =
-  llvm::BasicBlock::Create(LLVM_CONTEXT, "loop_body", f);
+  llvm::BasicBlock::Create(LLVM_CONTEXT, ivName + "_loop_body", f);
   builder->CreateBr(loopBodyStart);
   builder->SetInsertPoint(loopBodyStart);
 
-  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, "i");
-  i->addIncoming(builder->getInt32(0), entryBlock);
+  llvm::PHINode *idx = builder->CreatePHI(LLVM_INT32, 2, ivName);
+  indices.push_back(idx);
+  idx->addIncoming(builder->getInt32(0), entryBlock);
 
   // Loop Body
-  std::vector<llvm::Value *> operandVals;
-  for (llvm::Value *operand : operands) {
-    std::string operandName = operand->getName();
-    llvm::Value *operandPtr =
-        builder->CreateInBoundsGEP(operand, i, operandName+PTR_SUFFIX);
-    llvm::Value *operandVal =
-        builder->CreateAlignedLoad(operandPtr, 8, operandName+VAL_SUFFIX);
-    operandVals.push_back(operandVal);
+  if (currIdxVar < domain.size()-1) {
+    computeIndexExpr(resultStorage, domain, op, operands, builder,
+                           indices, currNest, ++currIdxVar);
+  }
+  else {
+    std::vector<llvm::Value *> operandVals;
+    for (llvm::Value *operand : operands) {
+      llvm::Value *opOffset = computeOffset(domain, indices, currNest, builder);
+      std::string opName = operand->getName();
+      llvm::Value *opPtr = builder->CreateInBoundsGEP(operand, opOffset,
+                                                      opName+PTR_SUFFIX);
+      llvm::Value *opVal = builder->CreateAlignedLoad(opPtr, 8,
+                                                      opName+VAL_SUFFIX);
+      operandVals.push_back(opVal);
+    }
+
+    std::string resultValName = string(resultStorage->getName())+VAL_SUFFIX;
+    llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
+                                                    operandVals, builder);
+
+    llvm::Value *resultOffset = computeOffset(domain,indices,currNest,builder);
+    llvm::Value *resultPtr =
+        builder->CreateInBoundsGEP(resultStorage, resultOffset,
+                                   resultStorage->getName() + PTR_SUFFIX);
+    builder->CreateAlignedStore(resultVal, resultPtr, 8);
   }
 
-  std::string resultValName = std::string(resultStorage->getName())+VAL_SUFFIX;
-  llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
-                                                  operandVals, builder);
-  llvm::Value *resultPtr =
-      builder->CreateInBoundsGEP(resultStorage, i,
-                                 resultStorage->getName() + PTR_SUFFIX);
-  builder->CreateAlignedStore(resultVal, resultPtr, 8);
-
   // Loop Footer
-  llvm::Value* i_nxt = builder->CreateAdd(i, builder->getInt32(1), "i_nxt");
+  llvm::Value* i_nxt = builder->CreateAdd(idx, builder->getInt32(1),
+                                          ivName + "_nxt");
   llvm::Value *numIter = builder->getInt32(is.getSize());
-  llvm::Value *exitCond = builder->CreateICmpEQ(i_nxt, numIter, "exitcond");
+  llvm::Value *exitCond = builder->CreateICmpEQ(i_nxt, numIter,
+                                                ivName + "_cmp");
   llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
-                                                       "loop_end", f);
+                                                       ivName + "_loop_end", f);
   builder->CreateCondBr(exitCond, loopEnd, loopBodyStart);
   builder->SetInsertPoint(loopEnd);
 
   // Add phi backedges for loop
-  i->addIncoming(i_nxt, loopBodyEnd);
+  idx->addIncoming(i_nxt, loopBodyEnd);
 
   return resultStorage;
 }
@@ -304,7 +365,7 @@ class LLVMCompiledFunction : public CompiledFunction {
   LLVMCompiledFunction(llvm::Function *f,
                        const std::shared_ptr<llvm::ExecutionEngine> &fee,
                        const std::vector<std::shared_ptr<Storage>> &storage)
-      : f(f), fee(fee), storage(storage), module("Harness Module", LLVM_CONTEXT) {
+      : f(f), fee(fee), storage(storage), module("Harness", LLVM_CONTEXT) {
     fee->addModule(&module);
   }
 
@@ -342,6 +403,7 @@ class LLVMCompiledFunction : public CompiledFunction {
     std::string fstr;
     llvm::raw_string_ostream rsos(fstr);
     f->print(rsos);
+    os << fstr;
   }
 
  private:
@@ -450,8 +512,9 @@ void LLVMCodeGen::handle(IndexExpr *t) {
     result = createScalarComputation(resultStorage, op, llvmOperands, builder);
   }
   else {
-    result = createIndexComputation(domain, op, llvmOperands,
-                                    resultStorage, builder);
+    std::vector<llvm::Value*> indices;
+    result = computeIndexExpr(resultStorage, domain, op, llvmOperands, builder,
+                              indices);
   }
 
   assert(result != NULL);

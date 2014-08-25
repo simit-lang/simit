@@ -1,6 +1,19 @@
 %%% neg
-func neg(A : Tensor[3,3](float)) -> (C : Tensor[3,3](float))
+%! neg([0.0, 1.0, 2.0; 3.0, 4.0, 5.0]) == [-0.0, -1.0, -2.0; -3.0, -4.0, -5.0];
+func neg(A : Tensor[2,3](float)) -> (C : Tensor[2,3](float))
   C = -A;
+end
+
+%%% add
+%! add([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], [6.0, 7.0, 8.0; 9.0, 10.0, 11.0]) == [6.0, 8.0, 10.0; 12.0, 14.0, 16.0];
+func add(A : Tensor[2,3](float), B : Tensor[2,3](float)) -> (C : Tensor[2,3](float))
+  C = A + B;
+end
+
+%%% sub
+%! sub([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], [2.0, 7.0, 3.0; 5.0, 1.0, 11.0]) == [-2.0, -6.0, -1.0; -2.0, 3.0, -6.0];
+func sub(A : Tensor[2,3](float), B : Tensor[2,3](float)) -> (C : Tensor[2,3](float))
+  C = A - B;
 end
 
 %%% transpose

@@ -11,8 +11,9 @@ func add(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
 end
 
 %%% sub
+%! sub([0.0, 1.0, 2.0], [3.0, 7.0, 1.0]) == [-3.0, -6.0, 1.0];
 func sub(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
-  c = a * b;
+  c = a - b;
 end
 
 %%% mul
