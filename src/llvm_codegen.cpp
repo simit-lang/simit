@@ -231,15 +231,18 @@ llvm::Value *createScalarComputation(llvm::Value *resultStorage,
   return resultVal;
 }
 
+typedef std::map<const IndexVar *, llvm::Value *> IndexVarMap;
+
 // OPT: Offsets are currently recomputed for identical accesses to different
 //      tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
 llvm::Value *computeOffset(const IndexExpr::IndexVarPtrVector &domain,
-                           const std::vector<llvm::Value*> &indices,
+                           IndexVarMap &indexMap,
                            size_t currNest,
                            llvm::IRBuilder<> *builder) {
+
   llvm::Value *offset = NULL;
   if (domain.size() == 1) {
-    offset = indices[0];
+    offset = indexMap[domain[0].get()];
   }
   else {
     int stride = 1;
@@ -250,14 +253,16 @@ llvm::Value *computeOffset(const IndexExpr::IndexVarPtrVector &domain,
     }
 
     const std::shared_ptr<IndexVar> &iv_first = domain[0];
-    offset = builder->CreateMul(indices[0], builder->getInt32(stride),
+    offset = builder->CreateMul(indexMap[domain[0].get()],
+                                builder->getInt32(stride),
                                 iv_first->getName()+OFFSET_SUFFIX,
                                 false, true);
     for (size_t i=1; i<domain.size()-1; ++i) {
       const std::shared_ptr<IndexVar> &iv = domain[i];
       const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
       stride = stride / is.getSize();
-      auto *iv_ofs = builder->CreateMul(indices[i], builder->getInt32(stride),
+      auto *iv_ofs = builder->CreateMul(indexMap[domain[i].get()],
+                                        builder->getInt32(stride),
                                         iv->getName()+OFFSET_SUFFIX,
                                         false, true);
       offset = builder->CreateAdd(offset, iv_ofs);
@@ -265,7 +270,7 @@ llvm::Value *computeOffset(const IndexExpr::IndexVarPtrVector &domain,
     }
 
     const std::shared_ptr<IndexVar> &iv_last = domain[domain.size()-1];
-    offset = builder->CreateAdd(offset, indices[domain.size()-1],
+    offset = builder->CreateAdd(offset, indexMap[domain[domain.size()-1].get()],
                                 iv_last->getName()+OFFSET_SUFFIX,
                                 false, true);
   }
@@ -274,12 +279,18 @@ llvm::Value *computeOffset(const IndexExpr::IndexVarPtrVector &domain,
   return offset;
 }
 
+typedef std::pair<const IndexExpr::IndexedTensor&, llvm::Value*> OperandPair;
+typedef std::vector<OperandPair> OperandPairVec;
+
+/// We generate loops where the outer loops iterate over blocks along each
+/// dimension and the inner loops over each block.
+/// OPT: This code should allow loop orders to be configurable
 llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
                               const IndexExpr::IndexVarPtrVector &domain,
                               IndexExpr::Operator op,
-                              const vector<llvm::Value*> operands,
+                              const OperandPairVec &operands,
                               llvm::IRBuilder<> *builder,
-                              std::vector<llvm::Value*> &indices,
+                              IndexVarMap &indexMap,
                               size_t currNest=0, size_t currIdxVar=0) {
   assert(domain.size() > 0);
   assert(operands.size() > 0);
@@ -295,12 +306,8 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
 
   const std::shared_ptr<IndexVar> &iv = domain[currIdxVar];
   std::string idxName = iv->getName();
-
   const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
 
-  // We generate loops where the outer loops iterate over blocks along each
-  // dimension and the inner loops over each block.
-  // OPT: This code should allow loop orders to be configurable
   llvm::Function *f = builder->GetInsertBlock()->getParent();
 
   // Loop Header
@@ -312,37 +319,43 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
   builder->SetInsertPoint(loopBodyStart);
 
   llvm::PHINode *idx = builder->CreatePHI(LLVM_INT32, 2, idxName);
-  indices.push_back(idx);
+  indexMap[iv.get()] = idx;
   idx->addIncoming(builder->getInt32(0), entryBlock);
 
   // Loop Body
   if (currIdxVar < domain.size()-1) {
     computeIndexExpr(resultStorage, domain, op, operands, builder,
-                     indices, currNest, ++currIdxVar);
+                     indexMap, currNest, ++currIdxVar);
   }
   else {
     std::vector<llvm::Value *> operandVals;
-    for (llvm::Value *operand : operands) {
-      std::string operandName = operand->getName();
+    for (auto &operandPair : operands) {
+      const IndexExpr::IndexedTensor &operand = operandPair.first;
+      llvm::Value *llvmOperand = operandPair.second;
+
+      std::string operandName = llvmOperand->getName();
       std::string operandValName = operandName + VAL_SUFFIX;
       std::string operandPtrName = operandName + PTR_SUFFIX;
 
-      llvm::Value *opOffset = computeOffset(domain, indices, currNest, builder);
-      llvm::Value *operandPtr = builder->CreateInBoundsGEP(operand, opOffset,
+      llvm::Value *operandOfs = computeOffset(operand.getIndexVariables(),
+                                              indexMap, currNest, builder);
+      llvm::Value *operandPtr = builder->CreateInBoundsGEP(llvmOperand,
+                                                           operandOfs,
                                                            operandPtrName);
       llvm::Value *operandVal = builder->CreateAlignedLoad(operandPtr, 8,
                                                            operandValName);
       operandVals.push_back(operandVal);
     }
 
-    std::string resultValName = string(resultStorage->getName()) + VAL_SUFFIX;
-    std::string resultPtrName = string(resultStorage->getName()) + PTR_SUFFIX;
+    std::string resultName = resultStorage->getName();
+    std::string resultValName = resultName + VAL_SUFFIX;
+    std::string resultPtrName = resultName + PTR_SUFFIX;
 
     llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
                                                     operandVals, builder);
-    llvm::Value *resultOffset = computeOffset(domain,indices,currNest,builder);
+    llvm::Value *resultOfs = computeOffset(domain, indexMap, currNest, builder);
     llvm::Value *resultPtr = builder->CreateInBoundsGEP(resultStorage,
-                                                        resultOffset,
+                                                        resultOfs,
                                                         resultPtrName);
     builder->CreateAlignedStore(resultVal, resultPtr, 8);
   }
@@ -503,11 +516,16 @@ void LLVMCodeGen::handle(IndexExpr *t) {
   llvm::Value *result = NULL;
 
   const std::vector<IndexExpr::IndexVarPtr> &domain = t->getDomain();
+
   IndexExpr::Operator op = t->getOperator();
 
-  std::vector<llvm::Value *> llvmOperands;
+  OperandPairVec operands;
+  std::vector<llvm::Value *> llvmOperands;  // TODO: Remove this
   for (auto &operand : t->getOperands()) {
     assert(symtable->contains(operand.getTensor()->getName()));
+    llvm::Value *llvmOperand = symtable->get(operand.getTensor()->getName());
+    operands.push_back(OperandPair(operand, llvmOperand));
+
     llvmOperands.push_back(symtable->get(operand.getTensor()->getName()));
   }
 
@@ -518,9 +536,9 @@ void LLVMCodeGen::handle(IndexExpr *t) {
     result = createScalarComputation(resultStorage, op, llvmOperands, builder);
   }
   else {
-    std::vector<llvm::Value*> indices;
-    result = computeIndexExpr(resultStorage, domain, op, llvmOperands, builder,
-                              indices);
+    IndexVarMap indexMap;
+    result = computeIndexExpr(resultStorage, domain, op, operands, builder,
+                              indexMap);
   }
 
   assert(result != NULL);
