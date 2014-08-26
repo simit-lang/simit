@@ -385,13 +385,15 @@ namespace  simit { namespace internal  {
         MINUS = 298,
         STAR = 299,
         SLASH = 300,
-        EXP = 301,
-        TRANSPOSE = 302,
-        BACKSLASH = 303,
-        EQ = 304,
-        NE = 305,
-        LE = 306,
-        GE = 307
+        DOTSTAR = 301,
+        DOTSLASH = 302,
+        EXP = 303,
+        TRANSPOSE = 304,
+        BACKSLASH = 305,
+        EQ = 306,
+        NE = 307,
+        LE = 308,
+        GE = 309
       };
     };
 
@@ -682,13 +684,13 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 380,     ///< Last index in yytable_.
+      yylast_ = 398,     ///< Last index in yytable_.
       yynnts_ = 60,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 53  ///< Number of tokens.
+      yyntokens_ = 55  ///< Number of tokens.
     };
 
 

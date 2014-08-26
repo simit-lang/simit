@@ -21,9 +21,16 @@ func mul(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
   c = a * b;
 end
 
-%%% div
-func div(a : Tensor[3](float), b : Tensor(float)) -> (c : Tensor[3](float))
-  c = a / b;
+%%% mul-elwise
+%! mulelwise([0.0, 1.0, 2.0], [3.0, 7.0, 1.0]) == [0.0, 7.0, 2.0];
+func mulelwise(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+  c = a .* b;
+end
+
+%%% div-elwise
+%! divelwise([0.0, 9.0, 8.0], [3.0, 3.0, 4.0]) == [0.0, 3.0, 2.0];
+func divelwise(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+  c = a ./ b;
 end
 
 %%% transpose-row2col

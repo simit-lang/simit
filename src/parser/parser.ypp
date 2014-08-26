@@ -53,6 +53,13 @@
     return result;
   }
 
+  template <typename T>
+  inline T convertAndDelete(T *obj) {
+    auto result = T(*obj);
+    delete obj;
+    return result;
+  }
+
   bool compare(const TensorType *l ,const TensorType *r, ParserContext *ctx) {
     if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
       return false;
@@ -243,6 +250,8 @@
 %token MINUS     "-"
 %token STAR      "*"
 %token SLASH     "/"
+%token DOTSTAR   ".*"
+%token DOTSLASH  "./"
 %token EXP       "^"
 %token TRANSPOSE "'"
 %token BACKSLASH "\\"
@@ -606,10 +615,7 @@ expr
       $$ = NULL;
       break;
     }
-
-    auto expr = shared_ptr<TensorNode>(*$2);
-    delete $2;
-
+    std::shared_ptr<TensorNode> expr = convertAndDelete($2);
     $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NEG, expr));
   }
   | expr "+" expr {
@@ -617,13 +623,10 @@ expr
       $$ = NULL;
       break;
     }
-    auto l = shared_ptr<TensorNode>(*$1);
-    auto r = shared_ptr<TensorNode>(*$3);
-    delete $1;
-    delete $3;
+    std::shared_ptr<TensorNode> l = convertAndDelete($1);
+    std::shared_ptr<TensorNode> r = convertAndDelete($3);
 
     CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
-
     $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::ADD, r));
   }
   | expr "-" expr {
@@ -631,15 +634,36 @@ expr
       $$ = NULL;
       break;
     }
-    auto l = shared_ptr<TensorNode>(*$1);
-    auto r = shared_ptr<TensorNode>(*$3);
-    delete $1;
-    delete $3;
+
+    std::shared_ptr<TensorNode> l = convertAndDelete($1);
+    std::shared_ptr<TensorNode> r = convertAndDelete($3);
 
     CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
-
     $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::SUB, r));
   }
+  | expr ".*" expr {
+    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
+      $$ = NULL;
+      break;
+    }
+    std::shared_ptr<TensorNode> l = convertAndDelete($1);
+    std::shared_ptr<TensorNode> r = convertAndDelete($3);
+
+    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
+    $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+  }
+  | expr "./" expr {
+    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
+      $$ = NULL;
+      break;
+    }
+    std::shared_ptr<TensorNode> l = convertAndDelete($1);
+    std::shared_ptr<TensorNode> r = convertAndDelete($3);
+
+    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
+    $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::DIV, r));
+  }
+
   | expr "*" expr {
     $$ = NULL;
     delete $1;

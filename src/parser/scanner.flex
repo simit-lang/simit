@@ -68,6 +68,8 @@ using namespace simit::internal;
 "-"                   { return Parser::token::MINUS;     }
 "*"                   { return Parser::token::STAR;      }
 "/"                   { return Parser::token::SLASH;     }
+".*"                  { return Parser::token::DOTSTAR;   }
+"./"                  { return Parser::token::DOTSLASH;  }
 "\\"                  { return Parser::token::BACKSLASH; }
 "^"                   { return Parser::token::EXP;       }
 "'"                   { return Parser::token::TRANSPOSE; }
