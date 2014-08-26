@@ -22,6 +22,8 @@
   #include <stdlib.h>
   #include <cassert>
   #include <iostream>
+  #include <map>
+  #include <set>
   #include <algorithm>
 
   #include "scanner.h"
@@ -38,19 +40,52 @@
     } while (0)
 
   void Parser::error(const Parser::location_type &loc, const std::string &msg) {
-    ctx->errors.push_back(Error(loc.begin.line, loc.begin.column,
-                                loc.end.line, loc.end.column,
-                                msg));
+    ctx->addError(Error(loc.begin.line, loc.begin.column,
+                        loc.end.line, loc.end.column, msg));
   }
 
   #undef yylex
   #define yylex scanner->lex
 
-  static inline std::string convertAndFree(const char *str) {
+  inline std::string convertAndFree(const char *str) {
     std::string result = std::string(str);
     free((void*)str);
     return result;
   }
+
+  bool compare(const TensorType *l ,const TensorType *r, ParserParams *ctx) {
+    if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
+      return false;
+    }
+    if (*l != *r) {
+      return false;
+    }
+    return true;
+  }
+
+  std::string tensorTypeString(const TensorType *tensorType, ParserParams *ctx){
+    std::stringstream ss;
+    ss << *tensorType;
+    std::string str = ss.str();
+    if (ctx->isColumnVector(tensorType)) {
+      str += "'";
+    }
+    return str;
+  }
+
+  #define CHECK_TYPE_EQUALITY(type1, type2, loc)        \
+    do {                                                \
+      auto t1 = type1;                                  \
+      auto t2 = type2;                                  \
+      if (!compare(t1, t2, ctx)) {                      \
+        std::stringstream errorStr;                     \
+        errorStr << "type missmatch ("                  \
+                 << tensorTypeString(t1, ctx) << " != " \
+                 << tensorTypeString(t2, ctx) << ")";   \
+          REPORT_ERROR(errorStr.str(), loc);            \
+        } \
+    } while (0)
+
 }
 
 %code requires {
@@ -61,20 +96,82 @@
   #include "errors.h"
   #include "types.h"
 
-  namespace simit { namespace internal {
+  namespace simit {
+  namespace internal {
+
   typedef SymbolTable<std::shared_ptr<IRNode>> ParserSymtableType;
 
-  struct ParserParams {
+  class ParserParams {
+   public:
     ParserParams(ParserSymtableType               *symtable,
+                 SymbolTable<bool>                *columnVectors,
                  std::map<std::string, Function*> *functions,
                  std::vector<simit::Error>        *errors,
                  std::vector<Test*>               *tests)
-        : symtable(*symtable), functions(*functions), errors(*errors),
-          tests(*tests) {}
-    ParserSymtableType               &symtable;
-    std::map<std::string, Function*> &functions;
-    std::vector<simit::Error>        &errors;
-    std::vector<Test*>               &tests;
+        : symtable(*symtable), columnVectors(*columnVectors),
+          functions(*functions), errors(*errors), tests(*tests) {}
+
+    void scope()   {
+      symtable.scope();
+      columnVectors.scope();
+    }
+
+    void unscope() {
+      symtable.unscope();
+      columnVectors.unscope();
+    }
+
+    void addTensorSymbol(const std::string &name,
+                         const std::shared_ptr<TensorNode> &tensor) {
+      symtable.insert(name, tensor);
+    }
+
+    bool hasSymbol(const std::string &name) {
+      return symtable.contains(name);
+    }
+
+    const std::shared_ptr<IRNode> &getSymbol(const std::string &name) {
+      return symtable.get(name);
+    }
+
+    void addFunction(Function *f) {
+      functions[f->getName()] = f;
+    }
+
+    bool containsFunction(const std::string &name) {
+      return functions.find(name) != functions.end();
+    }
+
+    bool isColumnVector(const std::string &name) {
+      assert(columnVectors.contains(name));
+      return columnVectors.get(name);
+    }
+
+    void toggleColumnVector(const TensorType *type) {
+      if (isColumnVector(type)) {
+        columnVectorTypes.erase(type);
+      }
+      else {
+        columnVectorTypes.insert(type);
+      }
+    }
+
+    bool isColumnVector(const TensorType *type) {
+      return columnVectorTypes.find(type) != columnVectorTypes.end();
+    }
+
+    void addError(const Error &error) { errors.push_back(error); }
+    void addTest(Test *test) { tests.push_back(test); }
+
+   private:
+    ParserSymtableType                &symtable;
+    SymbolTable<bool>                 &columnVectors;
+
+    std::set<const TensorType *>      columnVectorTypes;
+
+    std::map<std::string, Function *> &functions;
+    std::vector<simit::Error>         &errors;
+    std::vector<Test*>                &tests;
   };
   }}
 }
@@ -185,10 +282,10 @@ program_element
     std::unique_ptr<Function> function($function);
 
     auto name = function->getName();
-    if (ctx->functions.find(name) != ctx->functions.end()) {
+    if (ctx->containsFunction(name)) {
       REPORT_ERROR("function redefinition (" + name + ")", @function);
     }
-    ctx->functions[name] = function.release();
+    ctx->addFunction(function.release());
   }
   | extern {
     $$ = NULL;
@@ -198,33 +295,33 @@ program_element
     delete $stmt;
   }
   | test {
-    ctx->tests.push_back($test);
+    ctx->addTest($test);
   }
 
 // Externs
 extern
   : "extern" IDENT type "{" "}" ";" {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
     delete $type;
   }
   | "extern" IDENT type "[" endpoints "]" "{" "}" ";" {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
     delete $type;
   }
 
 endpoints
   : IDENT {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
   }
   | endpoints "," IDENT {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
   }
 
 
 // Structs
 struct
   : "struct" IDENT struct_decl_block {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
   }
 
 struct_decl_block
@@ -247,7 +344,7 @@ field_decl
 %type <Function> procedure;
 procedure
   : PROC IDENT stmt_block BLOCKEND {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
     delete $stmt_block;
   }
 
@@ -257,26 +354,25 @@ function
     auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
     $$ = $function_header;
     $$->addStatements(*statements);
-    ctx->symtable.unscope();
+    ctx->unscope();
   }
 
 %type <Function> function_header;
 function_header
   : FUNC IDENT "(" arguments ")" results {
-    string ident($IDENT);
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<shared_ptr<Argument>>>($arguments);
     auto results = unique_ptr<vector<shared_ptr<Result>>>($results);
 
     $$ = new Function(ident, *arguments, *results);
 
-    ctx->symtable.scope();
+    ctx->scope();
     for (auto argument : *arguments) {
-      ctx->symtable.insert(argument->getName(), argument);
+      ctx->addTensorSymbol(argument->getName(), argument);
     }
 
     for (auto result : *results) {
-      ctx->symtable.insert(result->getName(), result);
+      ctx->addTensorSymbol(result->getName(), result);
     }
   }
 
@@ -330,8 +426,7 @@ results
 %type <Formal> formal_decl;
 formal_decl
   : IDENT ":" type {
-    string ident($IDENT);
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
     $$ = new FormalData(ident, $type);
   }
 
@@ -369,13 +464,13 @@ stmt
 %type<IRNodes> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
+    std::string ident = convertAndFree($IDENT);
     auto tensorType = unique_ptr<TensorType>($tensor_type);
 
     auto tensorLiteral = shared_ptr<Literal>(*$tensor_literal);
     delete $tensor_literal;
 
-    tensorLiteral->setName($IDENT);
-    free((void*)$IDENT);
+    tensorLiteral->setName(ident);
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
@@ -386,20 +481,15 @@ const_stmt
     // Typecheck: value and literal types must be equivalent.
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
-    if (*$tensor_type != *(tensorLiteral->getType())) {
-      stringstream ss;
-      ss << "attempting to assign to a variable of type " << *$tensor_type
-         << " a literal of type " << *(tensorLiteral->getType());
-      REPORT_ERROR(ss.str(), @5);
-    }
+    CHECK_TYPE_EQUALITY($tensor_type, tensorLiteral->getType(), @2);
 
-    ctx->symtable.insert(tensorLiteral->getName(), tensorLiteral);
+    ctx->addTensorSymbol(tensorLiteral->getName(), tensorLiteral);
 
     $$ = new vector<shared_ptr<IRNode>>();
     $$->push_back(tensorLiteral);
   }
   | "const" IDENT ":" element_type "=" element_literal ";" {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
     delete $element_type;
     $$ = NULL;
   }
@@ -456,22 +546,17 @@ assign_stmt
 
       // TODO: Remove these checks
       if (rhs == NULL) continue;
-      if (!ctx->symtable.contains(lhs->name)) continue;
+      if (!ctx->hasSymbol(lhs->name)) continue;
 
-      auto lhsTensor = ctx->symtable.get(lhs->name);
+      assert(ctx->hasSymbol(lhs->name));
+      shared_ptr<IRNode> lhsTensor = ctx->getSymbol(lhs->name);
+      assert(dynamic_pointer_cast<TensorNode>(lhsTensor) != NULL);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
+        CHECK_TYPE_EQUALITY(result->getType(), rhs->getType(), @2);
+
         rhs->setName(result->getName() + "_val");  // TODO: Create unique name
-
-        if (*rhs->getType() != *result->getType()) {
-          std::stringstream errorStr;
-          errorStr << "types missmatch in assignment ("
-                   << *result->getType() << " != " << *rhs->getType() << ")";
-          REPORT_ERROR(errorStr.str(), @2);
-        }
-
         result->setValue(rhs);
         $$->push_back(rhs);
-
       }
       else {
         NOT_SUPPORTED_YET;
@@ -498,16 +583,15 @@ expr_stmt
 %type <Tensor> expr;
 expr
   : IDENT {
-    string ident($IDENT);
-    free((void*)$IDENT);
-    if (!ctx->symtable.contains(ident)) {
+    string ident = convertAndFree($IDENT);
+    if (!ctx->hasSymbol(ident)) {
       // TODO: reintroduce error
       // REPORT_ERROR(ident + " is not defined in scope", @1);
       $$ = NULL;
       break;
     }
 
-    std::shared_ptr<IRNode> &node = ctx->symtable.get(ident);
+    const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
 
     shared_ptr<TensorNode> tensor = dynamic_pointer_cast<TensorNode>(node);
     if (tensor == NULL) {
@@ -541,9 +625,8 @@ expr
     delete $1;
     delete $3;
 
-    if (*l->getType() != *r->getType()) {
-      REPORT_ERROR("operand types do not match", @2);
-    }
+    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
+
     $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::ADD, r));
   }
   | expr "-" expr {
@@ -556,9 +639,7 @@ expr
     delete $1;
     delete $3;
 
-    if (*l->getType() != *r->getType()) {
-      REPORT_ERROR("operand types do not match", @2);
-    }
+    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
 
     $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::SUB, r));
   }
@@ -591,7 +672,8 @@ expr
         $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NONE, expr));
         break;
       case 1:
-        NOT_SUPPORTED_YET;
+        ctx->toggleColumnVector(expr->getType());
+        $$ = new shared_ptr<TensorNode>(expr);
         break;
       case 2:
         $$ = new shared_ptr<TensorNode>(transposeMatrix(expr));
@@ -708,8 +790,7 @@ map_expr
 with
   : /* empty */
   | "with" IDENT {
-    string neighbor($IDENT);
-    free((void*)$IDENT);
+    std::string neighbor = convertAndFree($IDENT);
   }
 
 reduce
@@ -727,10 +808,10 @@ reduction_indices
 
 reduction_index
   : reduction_op IDENT {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
   }
   | reduction_op "{" IDENT "}" {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
   }
   | IDENT "{" IDENT "}" {
     free((void*)$1);
@@ -796,7 +877,7 @@ lhs_expr
 var_decl
   : IDENT ":" type {
     delete $type;
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
   }
 
 
@@ -830,7 +911,8 @@ type
 
 element_type
   : IDENT {
-    free((void*)$IDENT);
+    std::string ident = convertAndFree($IDENT);
+
     $$ = new TensorType(Type::ELEMENT);
   }
 
@@ -840,6 +922,11 @@ tensor_type
   }
   | TENSOR nested_dimensions "(" component_type ")" {
     $$ = new TensorType($component_type, *$nested_dimensions);
+    delete $nested_dimensions;
+  }
+  | TENSOR nested_dimensions "(" component_type ")" "'" {
+    $$ = new TensorType($component_type, *$nested_dimensions);
+    ctx->toggleColumnVector($$);
     delete $nested_dimensions;
   }
 

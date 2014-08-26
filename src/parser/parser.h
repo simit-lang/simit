@@ -55,20 +55,82 @@
   #include "errors.h"
   #include "types.h"
 
-  namespace simit { namespace internal {
+  namespace simit {
+  namespace internal {
+
   typedef SymbolTable<std::shared_ptr<IRNode>> ParserSymtableType;
 
-  struct ParserParams {
+  class ParserParams {
+   public:
     ParserParams(ParserSymtableType               *symtable,
+                 SymbolTable<bool>                *columnVectors,
                  std::map<std::string, Function*> *functions,
                  std::vector<simit::Error>        *errors,
                  std::vector<Test*>               *tests)
-        : symtable(*symtable), functions(*functions), errors(*errors),
-          tests(*tests) {}
-    ParserSymtableType               &symtable;
-    std::map<std::string, Function*> &functions;
-    std::vector<simit::Error>        &errors;
-    std::vector<Test*>               &tests;
+        : symtable(*symtable), columnVectors(*columnVectors),
+          functions(*functions), errors(*errors), tests(*tests) {}
+
+    void scope()   {
+      symtable.scope();
+      columnVectors.scope();
+    }
+
+    void unscope() {
+      symtable.unscope();
+      columnVectors.unscope();
+    }
+
+    void addTensorSymbol(const std::string &name,
+                         const std::shared_ptr<TensorNode> &tensor) {
+      symtable.insert(name, tensor);
+    }
+
+    bool hasSymbol(const std::string &name) {
+      return symtable.contains(name);
+    }
+
+    const std::shared_ptr<IRNode> &getSymbol(const std::string &name) {
+      return symtable.get(name);
+    }
+
+    void addFunction(Function *f) {
+      functions[f->getName()] = f;
+    }
+
+    bool containsFunction(const std::string &name) {
+      return functions.find(name) != functions.end();
+    }
+
+    bool isColumnVector(const std::string &name) {
+      assert(columnVectors.contains(name));
+      return columnVectors.get(name);
+    }
+
+    void toggleColumnVector(const TensorType *type) {
+      if (isColumnVector(type)) {
+        columnVectorTypes.erase(type);
+      }
+      else {
+        columnVectorTypes.insert(type);
+      }
+    }
+
+    bool isColumnVector(const TensorType *type) {
+      return columnVectorTypes.find(type) != columnVectorTypes.end();
+    }
+
+    void addError(const Error &error) { errors.push_back(error); }
+    void addTest(Test *test) { tests.push_back(test); }
+
+   private:
+    ParserSymtableType                &symtable;
+    SymbolTable<bool>                 &columnVectors;
+
+    std::set<const TensorType *>      columnVectorTypes;
+
+    std::map<std::string, Function *> &functions;
+    std::vector<simit::Error>         &errors;
+    std::vector<Test*>                &tests;
   };
   }}
 
@@ -508,7 +570,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const short int yycheck_[];
+  static const unsigned char yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.

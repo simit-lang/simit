@@ -125,6 +125,7 @@ int Program::verify() {
     for (; rit != results.end(); ++rit, ++eit) {
       if (**rit != **eit) {
         // TODO: Report error
+        cout << **rit << " != " << endl << **eit << endl;
         return 1;
       }
     }

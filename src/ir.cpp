@@ -176,7 +176,7 @@ IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
                      const std::vector<IndexedTensor> &operands)
     : TensorNode(computeIndexExprType(indexVars, operands)),
       indexVars{indexVars}, op{op}, operands{operands} {
-  assert(operands.size() == IndexExpr::numOperands(op));
+  assert(operands.size() == (size_t)IndexExpr::numOperands(op));
   Type firstType = operands[0].getTensor()->getType()->getComponentType();
   for (auto &operand : operands) {
     assert(firstType == operand.getTensor()->getType()->getComponentType() &&

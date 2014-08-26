@@ -26,3 +26,15 @@ func div(a : Tensor[3](float), b : Tensor(float)) -> (c : Tensor[3](float))
   c = a / b;
 end
 
+%%% transpose-row2col
+%%! row2col([0.0, 1.0, 2.0])  == [0.0, 1.0, 2.0]';
+func transpose(a : Tensor[3](float)) -> (c : Tensor[3](float)')
+  c = a';
+end
+
+%%% transpose-col2row
+%%! col2row([0.0, 1.0, 2.0]') == [0.0, 1.0, 2.0];
+func transpose(a : Tensor[3](float)') -> (c : Tensor[3](float))
+  c = a';
+end
+

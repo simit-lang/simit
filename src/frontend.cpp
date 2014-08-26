@@ -15,7 +15,8 @@ int Frontend::parseStream(std::istream                     &programStream,
                           std::vector<simit::Error>        *errors,
                           std::vector<Test*>               *tests) {
   Scanner scanner(&programStream);
-  auto ctx = ParserParams(&symtable, functions, errors, tests);
+  auto ctx = ParserParams(&symtable, &columnVectors,
+                          functions, errors, tests);
   Parser parser(&scanner, &ctx);
   return parser.parse();
 }

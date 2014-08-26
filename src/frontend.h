@@ -43,6 +43,7 @@ class Frontend {
 
  private:
   SymbolTable<std::shared_ptr<IRNode>> symtable;
+  SymbolTable<bool>                    columnVectors;
 };
 
 }} // namespace simit::internal
