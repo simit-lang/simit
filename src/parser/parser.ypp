@@ -665,9 +665,31 @@ expr
   }
 
   | expr "*" expr {
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
+      $$ = NULL;
+      break;
+    }
+
+    std::shared_ptr<TensorNode> l = convertAndDelete($1);
+    std::shared_ptr<TensorNode> r = convertAndDelete($3);
+
+    switch (l->getType()->getOrder()) {
+      case 0:
+        CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
+        $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+        break;
+      case 1:
+//        NOT_SUPPORTED_YET;
+        $$ = NULL;
+        break;
+      case 2:
+        $$ = NULL;
+//        NOT_SUPPORTED_YET;
+        break;
+      default:
+        REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
+        $$ = NULL;
+    }
   }
   | expr "/" expr {
     $$ = NULL;
@@ -704,7 +726,7 @@ expr
         $$ = new shared_ptr<TensorNode>(transposeMatrix(expr));
         break;
       default:
-        REPORT_ERROR("can't transpose >2-order tensors using '", @1);
+        REPORT_ERROR("cannot transpose >2-order tensors using '", @1);
         $$ = NULL;
     }
   }

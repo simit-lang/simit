@@ -1453,9 +1453,31 @@ namespace  simit { namespace internal  {
   case 56:
 
     {
-    (yylhs.value.Tensor) = NULL;
-    delete (yystack_[2].value.Tensor);
-    delete (yystack_[0].value.Tensor);
+    if ((yystack_[2].value.Tensor) == NULL || (yystack_[0].value.Tensor) == NULL) {  // TODO: Remove this check
+      (yylhs.value.Tensor) = NULL;
+      break;
+    }
+
+    std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
+    std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
+
+    switch (l->getType()->getOrder()) {
+      case 0:
+        CHECK_TYPE_EQUALITY(l->getType(), r->getType(), yystack_[1].location);
+        (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+        break;
+      case 1:
+//        NOT_SUPPORTED_YET;
+        (yylhs.value.Tensor) = NULL;
+        break;
+      case 2:
+        (yylhs.value.Tensor) = NULL;
+//        NOT_SUPPORTED_YET;
+        break;
+      default:
+        REPORT_ERROR("cannot multiply >2-order tensors using *", yystack_[1].location);
+        (yylhs.value.Tensor) = NULL;
+    }
   }
 
     break;
@@ -1507,7 +1529,7 @@ namespace  simit { namespace internal  {
         (yylhs.value.Tensor) = new shared_ptr<TensorNode>(transposeMatrix(expr));
         break;
       default:
-        REPORT_ERROR("can't transpose >2-order tensors using '", yystack_[1].location);
+        REPORT_ERROR("cannot transpose >2-order tensors using '", yystack_[1].location);
         (yylhs.value.Tensor) = NULL;
     }
   }
@@ -2741,15 +2763,15 @@ namespace  simit { namespace internal  {
      352,   359,   368,   405,   408,   419,   423,   434,   441,   445,
      452,   455,   464,   465,   466,   467,   468,   472,   497,   505,
      511,   513,   517,   519,   526,   532,   575,   578,   591,   609,
-     610,   613,   621,   632,   644,   655,   667,   672,   677,   682,
-     711,   716,   721,   726,   731,   736,   741,   746,   750,   755,
-     760,   763,   766,   775,   784,   787,   793,   799,   808,   815,
-     817,   821,   823,   828,   830,   832,   835,   838,   841,   847,
-     848,   870,   875,   883,   889,   894,   903,   930,   933,   938,
-     945,   948,   952,   959,   962,  1000,  1005,  1012,  1015,  1019,
-    1024,  1027,  1096,  1097,  1099,  1103,  1104,  1108,  1111,  1119,
-    1129,  1136,  1139,  1143,  1156,  1160,  1174,  1178,  1184,  1191,
-    1194,  1198,  1211,  1215,  1229,  1233,  1239,  1244,  1254
+     610,   613,   621,   632,   644,   655,   667,   694,   699,   704,
+     733,   738,   743,   748,   753,   758,   763,   768,   772,   777,
+     782,   785,   788,   797,   806,   809,   815,   821,   830,   837,
+     839,   843,   845,   850,   852,   854,   857,   860,   863,   869,
+     870,   892,   897,   905,   911,   916,   925,   952,   955,   960,
+     967,   970,   974,   981,   984,  1022,  1027,  1034,  1037,  1041,
+    1046,  1049,  1118,  1119,  1121,  1125,  1126,  1130,  1133,  1141,
+    1151,  1158,  1161,  1165,  1178,  1182,  1196,  1200,  1206,  1213,
+    1216,  1220,  1233,  1237,  1251,  1255,  1261,  1266,  1276
   };
 
   // Print the state stack on the debug stream.
