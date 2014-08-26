@@ -80,19 +80,25 @@
     return str;
   }
 
-  #define CHECK_TYPE_EQUALITY(type1, type2, loc)        \
-    do {                                                \
-      auto t1 = type1;                                  \
-      auto t2 = type2;                                  \
-      if (!compare(t1, t2, ctx)) {                      \
-        std::stringstream errorStr;                     \
-        errorStr << "type missmatch ("                  \
-                 << tensorTypeString(t1, ctx) << " != " \
-                 << tensorTypeString(t2, ctx) << ")";   \
-          REPORT_ERROR(errorStr.str(), loc);            \
+  #define CHECK_TYPE_EQUALITY(t1, t2, loc)               \
+    do {                                                 \
+      if (!compare(t1, t2, ctx)) {                       \
+        std::stringstream errorStr;                      \
+        errorStr << "type missmatch ("                   \
+                 << tensorTypeString(t1, ctx) << " != "  \
+                 << tensorTypeString(t2, ctx) << ")";    \
+          REPORT_ERROR(errorStr.str(), loc);             \
         } \
     } while (0)
 
+
+  #define BINARY_ELWISE_TYPE_CHECK(t1, t2, loc)        \
+    do {                                               \
+      if (t1->getOrder() > 0 && t2->getOrder() > 0) {  \
+        CHECK_TYPE_EQUALITY(t1, t2, loc);              \
+      }                                                \
+    }                                                  \
+    while (0)
 }
 
 %code requires {
@@ -626,7 +632,7 @@ expr
     std::shared_ptr<TensorNode> l = convertAndDelete($1);
     std::shared_ptr<TensorNode> r = convertAndDelete($3);
 
-    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), @2);
     $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::ADD, r));
   }
   | expr "-" expr {
@@ -638,7 +644,7 @@ expr
     std::shared_ptr<TensorNode> l = convertAndDelete($1);
     std::shared_ptr<TensorNode> r = convertAndDelete($3);
 
-    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), @2);
     $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::SUB, r));
   }
   | expr ".*" expr {
@@ -649,7 +655,7 @@ expr
     std::shared_ptr<TensorNode> l = convertAndDelete($1);
     std::shared_ptr<TensorNode> r = convertAndDelete($3);
 
-    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), @2);
     $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
   }
   | expr "./" expr {
@@ -660,7 +666,7 @@ expr
     std::shared_ptr<TensorNode> l = convertAndDelete($1);
     std::shared_ptr<TensorNode> r = convertAndDelete($3);
 
-    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), @2);
     $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::DIV, r));
   }
 
@@ -673,22 +679,24 @@ expr
     std::shared_ptr<TensorNode> l = convertAndDelete($1);
     std::shared_ptr<TensorNode> r = convertAndDelete($3);
 
-    switch (l->getType()->getOrder()) {
-      case 0:
-        CHECK_TYPE_EQUALITY(l->getType(), r->getType(), @2);
-        $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
-        break;
-      case 1:
-//        NOT_SUPPORTED_YET;
-        $$ = NULL;
-        break;
-      case 2:
-        $$ = NULL;
-//        NOT_SUPPORTED_YET;
-        break;
-      default:
-        REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
-        $$ = NULL;
+    bool scaleOp = (l->getType()->getOrder()==0 || r->getType()->getOrder()==0);
+
+    if (!scaleOp && (l->getType()->getOrder()>2 || r->getType()->getOrder()>2)){
+      REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
+      $$ = NULL;
+    }
+
+    // Scale
+    if (scaleOp) {
+      $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+    }
+    // Vector-Vector Multiplication
+    else if (l->getType()->getOrder() == 1 || r->getType()->getOrder() == 1) {
+      $$ = NULL;
+    }
+    // Matrix-Vector, Vector-Matrix and Matrix-Matrix Multiplcation
+    else {
+      $$ = NULL;
     }
   }
   | expr "/" expr {

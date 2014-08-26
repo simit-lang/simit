@@ -24,6 +24,10 @@ class IndexVarFactory {
 IndexExpr *unaryElwiseExpr(IndexExpr::Operator op,
                            const std::shared_ptr<TensorNode> &expr);
 
+/// Apply the operator element-wise to the l and r.  Generally this requires
+/// the types of each operand to be identical, but as a special case iff there
+/// are two operands an one of them is a scalar, then the operator is applied
+/// to the combinatio of that scalar and each element in the other operand.
 IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
                             IndexExpr::Operator op,
                             const std::shared_ptr<TensorNode> &r);

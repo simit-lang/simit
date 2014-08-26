@@ -239,7 +239,6 @@ llvm::Value *computeOffset(const IndexExpr::IndexVarPtrVector &domain,
                            IndexVarMap &indexMap,
                            size_t currNest,
                            llvm::IRBuilder<> *builder) {
-
   llvm::Value *offset = NULL;
   if (domain.size() == 1) {
     offset = indexMap[domain[0].get()];
@@ -337,11 +336,14 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
       std::string operandValName = operandName + VAL_SUFFIX;
       std::string operandPtrName = operandName + PTR_SUFFIX;
 
-      llvm::Value *operandOfs = computeOffset(operand.getIndexVariables(),
-                                              indexMap, currNest, builder);
-      llvm::Value *operandPtr = builder->CreateInBoundsGEP(llvmOperand,
-                                                           operandOfs,
-                                                           operandPtrName);
+      llvm::Value *operandPtr = llvmOperand;
+      if (operand.getTensor()->getType()->getOrder() > 0) {
+        llvm::Value *operandOfs = computeOffset(operand.getIndexVariables(),
+                                                indexMap, currNest, builder);
+        operandPtr = builder->CreateInBoundsGEP(operandPtr, operandOfs,
+                                                operandPtrName);
+      }
+
       llvm::Value *operandVal = builder->CreateAlignedLoad(operandPtr, 8,
                                                            operandValName);
       operandVals.push_back(operandVal);
@@ -532,7 +534,6 @@ void LLVMCodeGen::handle(IndexExpr *t) {
   llvm::Value *result = NULL;
 
   const std::vector<IndexExpr::IndexVarPtr> &domain = t->getDomain();
-
   IndexExpr::Operator op = t->getOperator();
 
   OperandPairVec operands;

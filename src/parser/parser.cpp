@@ -112,19 +112,25 @@
     return str;
   }
 
-  #define CHECK_TYPE_EQUALITY(type1, type2, loc)        \
-    do {                                                \
-      auto t1 = type1;                                  \
-      auto t2 = type2;                                  \
-      if (!compare(t1, t2, ctx)) {                      \
-        std::stringstream errorStr;                     \
-        errorStr << "type missmatch ("                  \
-                 << tensorTypeString(t1, ctx) << " != " \
-                 << tensorTypeString(t2, ctx) << ")";   \
-          REPORT_ERROR(errorStr.str(), loc);            \
+  #define CHECK_TYPE_EQUALITY(t1, t2, loc)               \
+    do {                                                 \
+      if (!compare(t1, t2, ctx)) {                       \
+        std::stringstream errorStr;                      \
+        errorStr << "type missmatch ("                   \
+                 << tensorTypeString(t1, ctx) << " != "  \
+                 << tensorTypeString(t2, ctx) << ")";    \
+          REPORT_ERROR(errorStr.str(), loc);             \
         } \
     } while (0)
 
+
+  #define BINARY_ELWISE_TYPE_CHECK(t1, t2, loc)        \
+    do {                                               \
+      if (t1->getOrder() > 0 && t2->getOrder() > 0) {  \
+        CHECK_TYPE_EQUALITY(t1, t2, loc);              \
+      }                                                \
+    }                                                  \
+    while (0)
 
 
 
@@ -1395,7 +1401,7 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), yystack_[1].location);
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::ADD, r));
   }
 
@@ -1412,7 +1418,7 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), yystack_[1].location);
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::SUB, r));
   }
 
@@ -1428,7 +1434,7 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), yystack_[1].location);
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
   }
 
@@ -1444,7 +1450,7 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    CHECK_TYPE_EQUALITY(l->getType(), r->getType(), yystack_[1].location);
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::DIV, r));
   }
 
@@ -1461,22 +1467,24 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    switch (l->getType()->getOrder()) {
-      case 0:
-        CHECK_TYPE_EQUALITY(l->getType(), r->getType(), yystack_[1].location);
-        (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
-        break;
-      case 1:
-//        NOT_SUPPORTED_YET;
-        (yylhs.value.Tensor) = NULL;
-        break;
-      case 2:
-        (yylhs.value.Tensor) = NULL;
-//        NOT_SUPPORTED_YET;
-        break;
-      default:
-        REPORT_ERROR("cannot multiply >2-order tensors using *", yystack_[1].location);
-        (yylhs.value.Tensor) = NULL;
+    bool scaleOp = (l->getType()->getOrder()==0 || r->getType()->getOrder()==0);
+
+    if (!scaleOp && (l->getType()->getOrder()>2 || r->getType()->getOrder()>2)){
+      REPORT_ERROR("cannot multiply >2-order tensors using *", yystack_[1].location);
+      (yylhs.value.Tensor) = NULL;
+    }
+
+    // Scale
+    if (scaleOp) {
+      (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+    }
+    // Vector-Vector Multiplication
+    else if (l->getType()->getOrder() == 1 || r->getType()->getOrder() == 1) {
+      (yylhs.value.Tensor) = NULL;
+    }
+    // Matrix-Vector, Vector-Matrix and Matrix-Matrix Multiplcation
+    else {
+      (yylhs.value.Tensor) = NULL;
     }
   }
 
@@ -2758,20 +2766,20 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   275,   275,   277,   281,   284,   287,   296,   299,   303,
-     309,   313,   319,   322,   329,   333,   335,   337,   339,   342,
-     352,   359,   368,   405,   408,   419,   423,   434,   441,   445,
-     452,   455,   464,   465,   466,   467,   468,   472,   497,   505,
-     511,   513,   517,   519,   526,   532,   575,   578,   591,   609,
-     610,   613,   621,   632,   644,   655,   667,   694,   699,   704,
-     733,   738,   743,   748,   753,   758,   763,   768,   772,   777,
-     782,   785,   788,   797,   806,   809,   815,   821,   830,   837,
-     839,   843,   845,   850,   852,   854,   857,   860,   863,   869,
-     870,   892,   897,   905,   911,   916,   925,   952,   955,   960,
-     967,   970,   974,   981,   984,  1022,  1027,  1034,  1037,  1041,
-    1046,  1049,  1118,  1119,  1121,  1125,  1126,  1130,  1133,  1141,
-    1151,  1158,  1161,  1165,  1178,  1182,  1196,  1200,  1206,  1213,
-    1216,  1220,  1233,  1237,  1251,  1255,  1261,  1266,  1276
+       0,   281,   281,   283,   287,   290,   293,   302,   305,   309,
+     315,   319,   325,   328,   335,   339,   341,   343,   345,   348,
+     358,   365,   374,   411,   414,   425,   429,   440,   447,   451,
+     458,   461,   470,   471,   472,   473,   474,   478,   503,   511,
+     517,   519,   523,   525,   532,   538,   581,   584,   597,   615,
+     616,   619,   627,   638,   650,   661,   673,   702,   707,   712,
+     741,   746,   751,   756,   761,   766,   771,   776,   780,   785,
+     790,   793,   796,   805,   814,   817,   823,   829,   838,   845,
+     847,   851,   853,   858,   860,   862,   865,   868,   871,   877,
+     878,   900,   905,   913,   919,   924,   933,   960,   963,   968,
+     975,   978,   982,   989,   992,  1030,  1035,  1042,  1045,  1049,
+    1054,  1057,  1126,  1127,  1129,  1133,  1134,  1138,  1141,  1149,
+    1159,  1166,  1169,  1173,  1186,  1190,  1204,  1208,  1214,  1221,
+    1224,  1228,  1241,  1245,  1259,  1263,  1269,  1274,  1284
   };
 
   // Print the state stack on the debug stream.

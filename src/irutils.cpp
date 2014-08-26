@@ -46,10 +46,32 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
                             IndexExpr::Operator op,
                             const std::shared_ptr<TensorNode> &r) {
   assert(IndexExpr::numOperands(op) == 2);
-  std::vector<std::shared_ptr<TensorNode>> operands;
-  operands.push_back(l);
-  operands.push_back(r);
-  return elwiseExpr(op, operands);
+
+  if (l->getType()->getOrder() == 0 || r->getType()->getOrder() == 0) {
+    auto scalar = (l->getType()->getOrder() == 0) ? l : r;
+    auto tensor = (l->getType()->getOrder() == 0) ? r : l;
+    assert(scalar->getType()->getOrder() == 0);
+
+    std::vector<IndexExpr::IndexVarPtr> scalarIndexVars;
+
+    IndexVarFactory indexVarFactory;
+    std::vector<IndexExpr::IndexVarPtr> tensorIndexVars;
+    for (unsigned int i=0; i<tensor->getOrder(); ++i) {
+      IndexSetProduct indexSet = tensor->getType()->getDimensions()[i];
+      tensorIndexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
+    }
+
+    std::vector<IndexExpr::IndexedTensor> indexedOperands;
+    indexedOperands.push_back(IndexExpr::IndexedTensor(scalar,scalarIndexVars));
+    indexedOperands.push_back(IndexExpr::IndexedTensor(tensor,tensorIndexVars));
+    return new IndexExpr(tensorIndexVars, op, indexedOperands);
+  }
+  else {
+    std::vector<std::shared_ptr<TensorNode>> operands;
+    operands.push_back(l);
+    operands.push_back(r);
+    return elwiseExpr(op, operands);
+  }
 }
 
 IndexExpr *elwiseExpr(IndexExpr::Operator op,
