@@ -1443,7 +1443,7 @@ namespace  simit { namespace internal  {
 
     switch (expr->getType()->getOrder()) {
       case 0:
-        NOT_SUPPORTED_YET;
+        (yylhs.value.Tensor) = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NONE, expr));
         break;
       case 1:
         NOT_SUPPORTED_YET;

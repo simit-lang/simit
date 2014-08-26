@@ -28,3 +28,9 @@ end
 func mul(a : float, b : float) -> (c : float)
   c = a * b;
 end
+
+%%% transpose
+%! transpose(42.0) == 42.0;
+func transpose(a : Tensor(float)) -> (c : Tensor(float))
+  c = a';
+end

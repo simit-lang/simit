@@ -495,7 +495,7 @@ expr_stmt
   std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
 };
 
-%type<Tensor> expr;
+%type <Tensor> expr;
 expr
   : IDENT {
     string ident($IDENT);
@@ -588,7 +588,7 @@ expr
 
     switch (expr->getType()->getOrder()) {
       case 0:
-        NOT_SUPPORTED_YET;
+        $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NONE, expr));
         break;
       case 1:
         NOT_SUPPORTED_YET;
