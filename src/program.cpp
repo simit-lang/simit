@@ -94,6 +94,7 @@ int Program::verify() {
     Function *func = impl->functions[test->getCallee()];
     if (func == NULL) {
       // TODO: Report error, attempting to call unknown function
+      cerr << "Error: attempting to call unknown function" << endl;
       return 1;
     }
 
@@ -125,7 +126,7 @@ int Program::verify() {
     for (; rit != results.end(); ++rit, ++eit) {
       if (**rit != **eit) {
         // TODO: Report error
-        cout << **rit << " != " << endl << **eit << endl;
+        cerr << **rit << " != " << endl << **eit << endl;
         return 1;
       }
     }

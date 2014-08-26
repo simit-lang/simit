@@ -669,11 +669,15 @@ expr
 
     switch (expr->getType()->getOrder()) {
       case 0:
+        // OPT: This might lead to redundant code to be removed in later pass
         $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NONE, expr));
         break;
       case 1:
-        ctx->toggleColumnVector(expr->getType());
-        $$ = new shared_ptr<TensorNode>(expr);
+        // OPT: This might lead to redundant code to be removed in later pass
+        $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        if (!ctx->isColumnVector(expr->getType())) {
+          ctx->toggleColumnVector((*$$)->getType());
+        }
         break;
       case 2:
         $$ = new shared_ptr<TensorNode>(transposeMatrix(expr));
@@ -1076,6 +1080,10 @@ element_literal
 
 tensor_literal
   : dense_tensor_literal
+  | dense_tensor_literal "'" {
+    $$ = $1;
+    ctx->toggleColumnVector((*$$)->getType());
+  }
   | scalar_literal
 
 dense_tensor_literal
