@@ -12,28 +12,28 @@ namespace simit {
 namespace internal {
 
 /// Tracks symbols and their associated IR nodes across a stack of scopes.
-template <typename Value>
-class SymbolTable {
+template <typename Key, typename Value>
+class ScopedMap {
  public:
-  typedef std::map<std::string, Value> SymbolMap;
-  typedef typename std::list<SymbolMap>::const_iterator ScopeIterator;
+  typedef std::map<Key, Value> Map;
+  typedef typename std::list<Map>::const_iterator Iterator;
 
-  SymbolTable()  {   scope(); }
-  ~SymbolTable() { unscope(); }
+  ScopedMap()  {   scope(); }
+  ~ScopedMap() { unscope(); }
 
   /// Add a new level of symbol scoping.
-  void scope()   { scopes.push_front(SymbolMap()); }
+  void scope()   { scopes.push_front(Map()); }
 
   /// Remove the top symbol scope.
   void unscope() { scopes.pop_front(); }
 
   /// Return the first match
-  void insert(const std::string &symbol, const Value &value) {
+  void insert(const Key &symbol, const Value &value) {
     scopes.front()[symbol] = value;
   }
 
   // True iff the symbol table contains the given symbol.
-  bool contains(const std::string &symbol) const {
+  bool contains(const Key &symbol) const {
     for (auto &scope : scopes) {
       if (scope.find(symbol) != scope.end()) {
         return true;
@@ -44,7 +44,7 @@ class SymbolTable {
 
   /// Return the first match.  It is an error to call get if the symbol is not
   /// in the symbol table.
-  Value &get(const std::string &symbol) {
+  Value &get(const Key &symbol) {
     for (auto &scope : scopes) {
       if (scope.find(symbol) != scope.end()) {
         return scope[symbol];
@@ -54,10 +54,10 @@ class SymbolTable {
   }
 
   /// Iterator over symbol scopes.
-  ScopeIterator begin() const { return scopes.begin(); }
+  Iterator begin() const { return scopes.begin(); }
 
   /// Iterator over symbol scopes.
-  ScopeIterator end() const { return scopes.end(); }
+  Iterator end() const { return scopes.end(); }
 
   /// Print symbol table to stream.
   void print(std::ostream &os) const {
@@ -74,16 +74,15 @@ class SymbolTable {
   }
 
  private:
-  std::list<SymbolMap> scopes;
+  std::list<Map> scopes;
 };
 
-template <typename T>
-std::ostream &operator<<(std::ostream &os, const SymbolTable<T> &symtable) {
+template <typename K, typename V>
+std::ostream &operator<<(std::ostream &os, const ScopedMap<K,V> &symtable) {
   symtable.print(os);
   return os;
 }
 
-
-}};
+}} // namespace simit::internal
 
 #endif

@@ -85,7 +85,7 @@
     return result;
   }
 
-  bool compare(const TensorType *l ,const TensorType *r, ParserParams *ctx) {
+  bool compare(const TensorType *l ,const TensorType *r, ParserContext *ctx) {
     if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
       return false;
     }
@@ -95,7 +95,7 @@
     return true;
   }
 
-  std::string tensorTypeString(const TensorType *tensorType, ParserParams *ctx){
+  std::string tensorTypeString(const TensorType *tensorType, ParserContext *ctx){
     std::stringstream ss;
     ss << *tensorType;
     std::string str = ss.str();
@@ -246,7 +246,7 @@ namespace  simit { namespace internal  {
 
 
   /// Build a parser object.
-   Parser :: Parser  (Scanner *scanner_yyarg, ParserParams *ctx_yyarg)
+   Parser :: Parser  (Scanner *scanner_yyarg, ParserContext *ctx_yyarg)
     :
 #if YYDEBUG
       yydebug_ (false),
@@ -2700,20 +2700,20 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   269,   269,   271,   275,   278,   281,   290,   293,   297,
-     303,   307,   313,   316,   323,   327,   329,   331,   333,   336,
-     346,   353,   362,   399,   402,   413,   417,   428,   435,   439,
-     446,   449,   458,   459,   460,   461,   462,   466,   491,   499,
-     505,   507,   511,   513,   520,   526,   569,   572,   585,   603,
-     604,   607,   618,   632,   646,   651,   656,   661,   690,   695,
-     700,   705,   710,   715,   720,   725,   729,   734,   739,   742,
-     745,   754,   763,   766,   772,   778,   787,   794,   796,   800,
-     802,   807,   809,   811,   814,   817,   820,   826,   827,   849,
-     854,   862,   868,   873,   882,   909,   912,   917,   924,   927,
-     931,   938,   941,   979,   984,   991,   994,   998,  1003,  1006,
-    1075,  1076,  1078,  1082,  1083,  1087,  1090,  1098,  1108,  1115,
-    1118,  1122,  1135,  1139,  1153,  1157,  1163,  1170,  1173,  1177,
-    1190,  1194,  1208,  1212,  1218,  1223,  1233
+       0,   266,   266,   268,   272,   275,   278,   287,   290,   294,
+     300,   304,   310,   313,   320,   324,   326,   328,   330,   333,
+     343,   350,   359,   396,   399,   410,   414,   425,   432,   436,
+     443,   446,   455,   456,   457,   458,   459,   463,   488,   496,
+     502,   504,   508,   510,   517,   523,   566,   569,   582,   600,
+     601,   604,   615,   629,   643,   648,   653,   658,   687,   692,
+     697,   702,   707,   712,   717,   722,   726,   731,   736,   739,
+     742,   751,   760,   763,   769,   775,   784,   791,   793,   797,
+     799,   804,   806,   808,   811,   814,   817,   823,   824,   846,
+     851,   859,   865,   870,   879,   906,   909,   914,   921,   924,
+     928,   935,   938,   976,   981,   988,   991,   995,  1000,  1003,
+    1072,  1073,  1075,  1079,  1080,  1084,  1087,  1095,  1105,  1112,
+    1115,  1119,  1132,  1136,  1150,  1154,  1160,  1167,  1170,  1174,
+    1187,  1191,  1205,  1209,  1215,  1220,  1230
   };
 
   // Print the state stack on the debug stream.

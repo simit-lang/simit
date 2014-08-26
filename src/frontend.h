@@ -5,7 +5,7 @@
 #include <string>
 #include <fstream>
 
-#include "symboltable.h"
+#include "scopedmap.h"
 
 namespace simit {
 class Error;
@@ -13,6 +13,7 @@ class Error;
 namespace internal {
 class Function;
 class IRNode;
+class TensorType;
 class Test;
 
 /// Provides methods to convert Simit-formated strings and files to Simit IR.
@@ -42,8 +43,8 @@ class Frontend {
                 std::vector<Test*>                *tests);
 
  private:
-  SymbolTable<std::shared_ptr<IRNode>> symtable;
-  SymbolTable<bool>                    columnVectors;
+  ScopedMap<std::string, std::shared_ptr<IRNode>> symtable;
+  ScopedMap<const TensorType*, bool>              columnVectors;
 };
 
 }} // namespace simit::internal

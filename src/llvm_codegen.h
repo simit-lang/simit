@@ -24,7 +24,7 @@ class Function;
 namespace simit {
 namespace internal {
 class Function;
-template <typename> class SymbolTable;
+template <typename, typename> class ScopedMap;
 
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMCodeGen : public CodeGen, IRVisitor {
@@ -41,7 +41,7 @@ class LLVMCodeGen : public CodeGen, IRVisitor {
   llvm::IRBuilder<true, llvm::ConstantFolder,
                   llvm::IRBuilderDefaultInserter<true> > *builder;
 
-  SymbolTable<llvm::Value*> *symtable;
+  ScopedMap<std::string, llvm::Value*> *symtable;
   std::stack<llvm::Value*> resultStack;
   std::map<IRNode*, llvm::Value*> storageLocations;
 

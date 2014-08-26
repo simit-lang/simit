@@ -20,7 +20,7 @@
 
 #include "ir.h"
 #include "storage.h"
-#include "symboltable.h"
+#include "scopedmap.h"
 #include "macros.h"
 
 using namespace std;
@@ -467,7 +467,7 @@ LLVMCodeGen::LLVMCodeGen() {
   executionEngine = std::shared_ptr<llvm::ExecutionEngine>(ee);
   builder = new llvm::IRBuilder<>(LLVM_CONTEXT);
 
-  symtable = new SymbolTable<llvm::Value*>();
+  symtable = new ScopedMap<std::string, llvm::Value*>();
 }
 
 LLVMCodeGen::~LLVMCodeGen() {

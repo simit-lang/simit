@@ -50,7 +50,7 @@
 
   #include <vector>
 
-  #include "symboltable.h"
+  #include "scopedmap.h"
   #include "ir.h"
   #include "errors.h"
   #include "types.h"
@@ -58,15 +58,15 @@
   namespace simit {
   namespace internal {
 
-  typedef SymbolTable<std::shared_ptr<IRNode>> ParserSymtableType;
+  typedef ScopedMap<std::string, std::shared_ptr<IRNode>> ParserSymtableType;
 
-  class ParserParams {
+  class ParserContext {
    public:
-    ParserParams(ParserSymtableType               *symtable,
-                 SymbolTable<bool>                *columnVectors,
-                 std::map<std::string, Function*> *functions,
-                 std::vector<simit::Error>        *errors,
-                 std::vector<Test*>               *tests)
+    ParserContext(ParserSymtableType                 *symtable,
+                  ScopedMap<const TensorType*, bool> *columnVectors,
+                  std::map<std::string, Function*>   *functions,
+                  std::vector<simit::Error>          *errors,
+                  std::vector<Test*>                 *tests)
         : symtable(*symtable), columnVectors(*columnVectors),
           functions(*functions), errors(*errors), tests(*tests) {}
 
@@ -101,36 +101,33 @@
       return functions.find(name) != functions.end();
     }
 
-    bool isColumnVector(const std::string &name) {
-      assert(columnVectors.contains(name));
-      return columnVectors.get(name);
-    }
-
     void toggleColumnVector(const TensorType *type) {
-      if (isColumnVector(type)) {
-        columnVectorTypes.erase(type);
+      if (columnVectors.contains(type)) {
+        bool &val = columnVectors.get(type);
+        val = !val;
       }
       else {
-        columnVectorTypes.insert(type);
+        columnVectors.insert(type, true);
       }
     }
 
     bool isColumnVector(const TensorType *type) {
-      return columnVectorTypes.find(type) != columnVectorTypes.end();
+      if (!columnVectors.contains(type)) {
+        return false;
+      }
+      return columnVectors.get(type);
     }
 
     void addError(const Error &error) { errors.push_back(error); }
     void addTest(Test *test) { tests.push_back(test); }
 
    private:
-    ParserSymtableType                &symtable;
-    SymbolTable<bool>                 &columnVectors;
+    ParserSymtableType                 &symtable;
+    ScopedMap<const TensorType*, bool> &columnVectors;
 
-    std::set<const TensorType *>      columnVectorTypes;
-
-    std::map<std::string, Function *> &functions;
-    std::vector<simit::Error>         &errors;
-    std::vector<Test*>                &tests;
+    std::map<std::string, Function *>  &functions;
+    std::vector<simit::Error>          &errors;
+    std::vector<Test*>                 &tests;
   };
   }}
 
@@ -487,7 +484,7 @@ namespace  simit { namespace internal  {
 
 
     /// Build a parser object.
-     Parser  (Scanner *scanner_yyarg, ParserParams *ctx_yyarg);
+     Parser  (Scanner *scanner_yyarg, ParserContext *ctx_yyarg);
     virtual ~ Parser  ();
 
     /// Parse.
@@ -697,7 +694,7 @@ namespace  simit { namespace internal  {
 
     // User arguments.
     Scanner *scanner;
-    ParserParams *ctx;
+    ParserContext *ctx;
   };
 
 

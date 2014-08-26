@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <sstream>
 
-#include "symboltable.h"
 #include "parser/scanner.h"
 #include "parser/parser.h"
 
@@ -15,8 +14,8 @@ int Frontend::parseStream(std::istream                     &programStream,
                           std::vector<simit::Error>        *errors,
                           std::vector<Test*>               *tests) {
   Scanner scanner(&programStream);
-  auto ctx = ParserParams(&symtable, &columnVectors,
-                          functions, errors, tests);
+  auto ctx = ParserContext(&symtable, &columnVectors,
+                           functions, errors, tests);
   Parser parser(&scanner, &ctx);
   return parser.parse();
 }
