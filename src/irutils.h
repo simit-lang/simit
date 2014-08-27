@@ -35,6 +35,12 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
 IndexExpr *elwiseExpr(IndexExpr::Operator op,
                       std::vector<std::shared_ptr<TensorNode>> &operands);
 
+IndexExpr *innerProduct(const std::shared_ptr<TensorNode> &l,
+                        const std::shared_ptr<TensorNode> &r);
+
+IndexExpr *outerProduct(const std::shared_ptr<TensorNode> &l,
+                        const std::shared_ptr<TensorNode> &r);
+
 IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat);
 
 }} // namespace simit::internal

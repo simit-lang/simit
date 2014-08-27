@@ -690,9 +690,22 @@ expr
     if (scaleOp) {
       $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
     }
-    // Vector-Vector Multiplication
+    // Vector-Vector Multiplication (inner and outer product)
     else if (l->getType()->getOrder() == 1 || r->getType()->getOrder() == 1) {
-      $$ = NULL;
+      // Inner product
+      if (!ctx->isColumnVector(l->getType())) {
+        if (!ctx->isColumnVector(r->getType())) {
+          REPORT_ERROR("cannot multiply two row vectors", @2);
+        }
+        $$ = new shared_ptr<TensorNode>(innerProduct(l, r));
+      }
+      // Outer product (l is a column vector)
+      else {
+        if (ctx->isColumnVector(r->getType())) {
+          REPORT_ERROR("cannot multiply two column vectors", @2);
+        }
+        $$ = new shared_ptr<TensorNode>(outerProduct(l, r));
+      }
     }
     // Matrix-Vector, Vector-Matrix and Matrix-Matrix Multiplcation
     else {

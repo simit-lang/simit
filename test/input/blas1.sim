@@ -35,8 +35,14 @@ func sub(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
 end
 
 %%%- inner-product
-%%! inner([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]') == 14.0; 
+%! inner([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]') == 14.0; 
 func inner(a : Tensor[3](float), b : Tensor[3](float)') -> (c : float)
+  c = a * b;
+end
+
+%%% outer-product
+%! outer([0.0, 2.0]', [3.0, 4.0]) == [0.0, 0.0; 6.0, 8.0];
+func outer(a : Tensor[2](float)', b : Tensor[2](float)) -> (c : Tensor[2,2](float))
   c = a * b;
 end
 

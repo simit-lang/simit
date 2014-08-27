@@ -1478,9 +1478,22 @@ namespace  simit { namespace internal  {
     if (scaleOp) {
       (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
     }
-    // Vector-Vector Multiplication
+    // Vector-Vector Multiplication (inner and outer product)
     else if (l->getType()->getOrder() == 1 || r->getType()->getOrder() == 1) {
-      (yylhs.value.Tensor) = NULL;
+      // Inner product
+      if (!ctx->isColumnVector(l->getType())) {
+        if (!ctx->isColumnVector(r->getType())) {
+          REPORT_ERROR("cannot multiply two row vectors", yystack_[1].location);
+        }
+        (yylhs.value.Tensor) = new shared_ptr<TensorNode>(innerProduct(l, r));
+      }
+      // Outer product (l is a column vector)
+      else {
+        if (ctx->isColumnVector(r->getType())) {
+          REPORT_ERROR("cannot multiply two column vectors", yystack_[1].location);
+        }
+        (yylhs.value.Tensor) = new shared_ptr<TensorNode>(outerProduct(l, r));
+      }
     }
     // Matrix-Vector, Vector-Matrix and Matrix-Matrix Multiplcation
     else {
@@ -2771,15 +2784,15 @@ namespace  simit { namespace internal  {
      358,   365,   374,   411,   414,   425,   429,   440,   447,   451,
      458,   461,   470,   471,   472,   473,   474,   478,   503,   511,
      517,   519,   523,   525,   532,   538,   581,   584,   597,   615,
-     616,   619,   627,   638,   650,   661,   673,   702,   707,   712,
-     741,   746,   751,   756,   761,   766,   771,   776,   780,   785,
-     790,   793,   796,   805,   814,   817,   823,   829,   838,   845,
-     847,   851,   853,   858,   860,   862,   865,   868,   871,   877,
-     878,   900,   905,   913,   919,   924,   933,   960,   963,   968,
-     975,   978,   982,   989,   992,  1030,  1035,  1042,  1045,  1049,
-    1054,  1057,  1126,  1127,  1129,  1133,  1134,  1138,  1141,  1149,
-    1159,  1166,  1169,  1173,  1186,  1190,  1204,  1208,  1214,  1221,
-    1224,  1228,  1241,  1245,  1259,  1263,  1269,  1274,  1284
+     616,   619,   627,   638,   650,   661,   673,   715,   720,   725,
+     754,   759,   764,   769,   774,   779,   784,   789,   793,   798,
+     803,   806,   809,   818,   827,   830,   836,   842,   851,   858,
+     860,   864,   866,   871,   873,   875,   878,   881,   884,   890,
+     891,   913,   918,   926,   932,   937,   946,   973,   976,   981,
+     988,   991,   995,  1002,  1005,  1043,  1048,  1055,  1058,  1062,
+    1067,  1070,  1139,  1140,  1142,  1146,  1147,  1151,  1154,  1162,
+    1172,  1179,  1182,  1186,  1199,  1203,  1217,  1221,  1227,  1234,
+    1237,  1241,  1254,  1258,  1272,  1276,  1282,  1287,  1297
   };
 
   // Print the state stack on the debug stream.

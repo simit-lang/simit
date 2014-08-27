@@ -92,6 +92,34 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
   return new IndexExpr(indexVars, op, indexedOperands);
 }
 
+IndexExpr *innerProduct(const std::shared_ptr<TensorNode> &l,
+                        const std::shared_ptr<TensorNode> &r) {
+  assert(*l->getType() == *r->getType());
+  return NULL;
+}
+
+IndexExpr *outerProduct(const std::shared_ptr<TensorNode> &l,
+                        const std::shared_ptr<TensorNode> &r) {
+  assert(*l->getType() == *r->getType());
+
+  IndexVarFactory indexVarFactory;
+  auto i = indexVarFactory.makeFreeVar(l->getType()->getDimensions()[0]);
+  auto j = indexVarFactory.makeFreeVar(l->getType()->getDimensions()[0]);
+
+  std::vector<IndexExpr::IndexVarPtr> iIdxVar;
+  std::vector<IndexExpr::IndexVarPtr> jIdxVar;
+  std::vector<IndexExpr::IndexVarPtr> idxVars;
+  iIdxVar.push_back(i);
+  idxVars.push_back(i);
+  jIdxVar.push_back(j);
+  idxVars.push_back(j);
+
+  std::vector<IndexExpr::IndexedTensor> indexedOperands;
+  indexedOperands.push_back(IndexExpr::IndexedTensor(l, iIdxVar));
+  indexedOperands.push_back(IndexExpr::IndexedTensor(r, jIdxVar));
+  return new IndexExpr(idxVars, IndexExpr::Operator::MUL, indexedOperands);
+}
+
 IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat) {
   assert(mat->getOrder() == 2);
   const std::vector<IndexSetProduct> &dims = mat->getType()->getDimensions();
