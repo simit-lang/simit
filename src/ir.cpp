@@ -178,8 +178,9 @@ int IndexExpr::numOperands(Operator op) {
 
 namespace {
 TensorType *
-computeIndexExprType(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
-                     const std::vector<IndexedTensor> &operands) {
+getIndexExprType(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
+                 const std::vector<IndexedTensor> &operands) {
+  assert(operands.size() > 0);
   Type ctype = operands[0].getTensor()->getType()->getComponentType();
   std::vector<IndexSetProduct> dimensions;
   for (auto &iv : indexVars) {
@@ -187,13 +188,37 @@ computeIndexExprType(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
   }
   return new TensorType(ctype, dimensions);
 }
+
+std::vector<std::shared_ptr<IndexVar>>
+getIndexDomain(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
+               const std::vector<IndexedTensor> &operands) {
+  std::vector<std::shared_ptr<IndexVar>> domain;
+  std::set<std::shared_ptr<IndexVar>> added;
+  for (auto &iv : indexVars) {
+    if (added.find(iv) == added.end()) {
+      added.insert(iv);
+      domain.push_back(iv);
+    }
+  }
+  for (auto &operand : operands) {
+    for (auto &iv : operand.getIndexVariables()) {
+      if (added.find(iv) == added.end()) {
+        assert(iv->getOperator()!=IndexVar::FREE && "freevars not used on lhs");
+        added.insert(iv);
+        domain.push_back(iv);
+      }
+    }
+  }
+  return domain;
+}
 }
 
 IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
-                     Operator op,
-                     const std::vector<IndexedTensor> &operands)
-    : TensorNode(computeIndexExprType(indexVars, operands)),
-      indexVars{indexVars}, op{op}, operands{operands} {
+                     Operator op, const std::vector<IndexedTensor> &operands)
+    : TensorNode(getIndexExprType(indexVars, operands)),
+      domain(getIndexDomain(indexVars, operands)),
+      indexVars(indexVars), op(op), operands(operands) {
+
   assert(operands.size() == (size_t)IndexExpr::numOperands(op));
   Type firstType = operands[0].getTensor()->getType()->getComponentType();
   for (auto &operand : operands) {
@@ -203,7 +228,7 @@ IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
 }
 
 const std::vector<std::shared_ptr<IndexVar>> &IndexExpr::getDomain() const {
-  return indexVars;
+  return domain;
 }
 
 static std::string opString(IndexExpr::Operator op) {

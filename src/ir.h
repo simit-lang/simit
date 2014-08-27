@@ -115,6 +115,7 @@ class IndexedTensor {
  public:
   IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
                 const std::vector<std::shared_ptr<IndexVar>> &indexVariables);
+
   std::shared_ptr<TensorNode> getTensor() const { return tensor; };
   const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {
     return indexVariables;
@@ -138,12 +139,26 @@ class IndexExpr : public TensorNode {
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
+  /// Get the domain of the index expression, which is the set index variables
+  /// used by any sub-expression.
   const std::vector<std::shared_ptr<IndexVar>> &getDomain() const;
+
+  /// Get the index variables used to assemble the result of this expression.
+  const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {
+    return indexVars;
+  }
+
+  /// Get the operator that is applied to the operands to compute the result of
+  /// this expression.
   IndexExpr::Operator getOperator() const { return op; }
+
+  /// Get the operands inputs to this index expressions.
   const std::vector<IndexedTensor> &getOperands() const { return operands; }
+
   void print(std::ostream &os) const;
 
  private:
+  std::vector<std::shared_ptr<IndexVar>> domain;
   std::vector<std::shared_ptr<IndexVar>> indexVars;
   Operator op;
   std::vector<IndexedTensor> operands;
