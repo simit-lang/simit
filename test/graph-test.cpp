@@ -10,8 +10,8 @@ using namespace simit;
 //// Set tests
 
 TEST(SetTests, Utils) {
-  ASSERT_EQ(type_of<int>(), Type::INT);
-  ASSERT_EQ(type_of<double>(), Type::FLOAT);
+  ASSERT_EQ(typeOf<int>(), Type::INT);
+  ASSERT_EQ(typeOf<double>(), Type::FLOAT);
 }
 
 TEST(SetTests, AddAndGetFromTwoFields) {
@@ -20,13 +20,13 @@ TEST(SetTests, AddAndGetFromTwoFields) {
   FieldHandle f1 = myset.addField(Type::INT, "intfld");
   FieldHandle f2 = myset.addField(Type::FLOAT, "floatfld");
   
-  ASSERT_EQ(myset.size(), 0);
+  ASSERT_EQ(myset.getSize(), 0);
   
   ElementHandle i = myset.addElement();
   myset.set(i, f1, 10);
   myset.set(i, f2, 101.1);
   
-  ASSERT_EQ(myset.size(), 1);
+  ASSERT_EQ(myset.getSize(), 1);
   
   double ret;
   int ret2;
@@ -83,7 +83,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
   FieldHandle f1 = myset.addField(Type::INT, "intfld");
   FieldHandle f2 = myset.addField(Type::FLOAT, "floatfld");
 
-  ASSERT_EQ(myset.size(), 0);
+  ASSERT_EQ(myset.getSize(), 0);
   
   for (int i=0; i<10; i++) {
     auto el = myset.addElement();

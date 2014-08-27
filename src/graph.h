@@ -8,9 +8,6 @@
 
 #include "tensor.h"
 
-using namespace std;
-using namespace simit;
-
 
 namespace simit {
 
@@ -24,8 +21,136 @@ typedef int ElementHandle;
 /// Sets are used to represent collections within C++,
 /// and can be passed as bound inputs to Simit programs.
 ///
-/// Invariant: fields[i].size() == size()
+/// invariant: fields[i].getSize() == getSize()
 class Set {
+  
+ public:
+  Set() : elements(0), capacity(capacityIncrement) { }
+  
+  ~Set() {
+    for (auto f: fields)
+      delete f;
+  }
+  
+  /// Return the number of elements in the Set
+  int getSize() { return elements; }
+  
+  /// Get a FieldHandle corresponding to the string fieldName
+  FieldHandle getField(std::string fieldName) {
+    return fieldNames[fieldName];
+  }
+  
+  /// Add a new field
+  FieldHandle addField(Type type, std::string fieldName) {
+    Field* f = new Field(type);
+    f->data = calloc(capacity, f->size_of_type);
+    fields.push_back(f);
+    
+    FieldHandle field = fields.size()-1;
+    fieldNames[fieldName] = field;
+    
+    return field;
+  }
+  
+  /// Add a new element, returning its handle
+  ElementHandle addElement() {
+    if (elements > capacity-1)
+      increaseCapacity();
+    return elements++;
+  }
+  
+  /// Set a field on an element in the Set
+  template<typename T>
+  void set(ElementHandle element, FieldHandle field, T val) {
+    assert((fields[field]->type == typeOf<T>()) && "Incorrect field type.");
+    
+    *((T*)(fields[field]->data) + element) = val;
+  }
+  
+  /// Get the value of a field on an element in the Set
+  template<typename T>
+  void get(ElementHandle element, FieldHandle field, T* val) {
+    assert((fields[field]->type == typeOf<T>()) && "Incorrect field type.");
+    
+    T* data = (T*)(fields[field]->data);
+    *val = *(data + element);
+  }
+  
+  /// Remove an element from the Set
+  void remove(ElementHandle element) {
+    for (auto f : fields){
+      if (f->type == Type::ELEMENT)
+        assert(false && "ELEMENT types not supported yet.");
+      if (f->type == Type::FLOAT) {
+        double* data = (double*)f->data;
+        data[element] = data[elements-1];
+      }
+      if (f->type == Type::INT) {
+        int* data = (int*)f->data;
+        data[element] = data[elements-1];
+      }
+    }
+    elements--;
+  }
+  
+  /// Iterator that iterates over the elements in a Set
+  ///
+  /// This iterator is an input_iterator, and thus can only be
+  /// dereferenced as an rvalue.  Furthermore, it can only return
+  /// const references to Elements.
+  class ElementIterator {
+   public:
+    // some typedefs to make interop with std easier
+    typedef std::input_iterator_tag iterator_category;
+    typedef ElementHandle value_type;
+    typedef ptrdiff_t difference_type;
+    typedef ElementHandle& reference;
+    typedef ElementHandle* pointer;
+    
+    ElementIterator(Set* set, int idx=0) : cur_idx(idx), set(set) { }
+    ElementIterator(const ElementIterator& other) : cur_idx(other.cur_idx),
+    set(other.set) { }
+    
+    friend inline bool operator<(const Set::ElementIterator& e1,
+                                 const Set::ElementIterator& e2);
+    
+    reference operator*() {
+      return cur_idx;
+    }
+    
+    pointer operator->()  {
+      return &cur_idx;
+    }
+    
+    ElementIterator& operator++() {
+      cur_idx++;
+      return *this;
+    }
+    
+    ElementIterator operator++(int) {
+      cur_idx++;
+      return *this;
+    }
+    
+    bool operator!=(const ElementIterator& other) {
+      return !(set==other.set) || !(cur_idx == other.cur_idx);
+    }
+    
+    bool operator==(const ElementIterator& other) {
+      return (set==other.set) && (cur_idx == other.cur_idx);
+    }
+    
+   private:
+    int cur_idx;    // current element index
+    Set* set;       // set we're iterating over
+  };
+  
+  /// Create an ElementIterator for this Set, set to the first element
+  ElementIterator begin() { return ElementIterator(this, 0); }
+  
+  /// Create an ElementIterator for terminating iteration over this Set
+  ElementIterator end() { return ElementIterator(this, getSize()); }
+  
  private:
   // A field on the members of the Set.
   //
@@ -55,8 +180,8 @@ class Set {
     Field& operator=(const Field& f);
   };
 
-  vector<Field*> fields;          // fields of the elements in the set
-  map<string, FieldHandle> fieldNames; // name to field lookups
+  std::vector<Field*> fields;          // fields of the elements in the set
+  std::map<std::string, FieldHandle> fieldNames; // name to field lookups
   int elements;                      // number of elements in the set
   int capacity;                   // current capacity of the set
   static const int capacityIncrement = 1024; // increment for capacity increases
@@ -75,128 +200,6 @@ class Set {
     }
     capacity += capacityIncrement;
   }
-  
- public:
-  Set() : elements(0), capacity(capacityIncrement) { }
-  
-  ~Set() {
-    for (auto f: fields)
-      delete f;
-  }
-  
-  /// Return the number of elements in the Set
-  int size() { return elements; }
-  
-  /// Get a FieldHandle corresponding to the string fieldName
-  FieldHandle getField(string fieldName) {
-    return fieldNames[fieldName];
-  }
-  
-  /// Add a new field
-  FieldHandle addField(Type type, string fieldName) {
-    Field* f = new Field(type);
-    f->data = calloc(capacity, f->size_of_type);
-    fields.push_back(f);
-    
-    FieldHandle field = fields.size()-1;
-    fieldNames[fieldName] = field;
-    
-    return field;
-  }
-    
-  /// Add a new element, returning its handle
-  ElementHandle addElement() {
-    if (elements > capacity-1)
-      increaseCapacity();
-    return elements++;
-  }
-  
-  /// Set a field on an element in the Set
-  template<typename T>
-  void set(ElementHandle element, const FieldHandle field, T val) {
-    assert((fields[field]->type == type_of<T>()) && "Incorrect field type.");
-  
-    *((T*)(fields[field]->data) + element) = val;
-  }
-  
-  /// Get the value of a field on an element in the Set
-  template<typename T>
-  void get(ElementHandle element, const FieldHandle field, T* val) const {
-    assert((fields[field]->type == type_of<T>()) && "Incorrect field type.");
-    
-    T* data = (T*)(fields[field]->data);
-    *val = *(data + element);
-  }
-  
-  /// Remove an element from the Set
-  void remove(const ElementHandle element) {
-    for (auto f : fields){
-      if (f->type == Type::ELEMENT)
-        assert(false && "ELEMENT types not supported yet.");
-      if (f->type == Type::FLOAT) {
-        double* data = (double*)f->data;
-        data[element] = data[elements-1];
-      }
-      if (f->type == Type::INT) {
-        int* data = (int*)f->data;
-        data[element] = data[elements-1];
-      }
-    }
-    elements--;
-  }
-  
-  /// Iterator that iterates over the elements in a Set
-  ///
-  /// This iterator is an input_iterator, and thus can only be
-  /// dereferenced as an rvalue.  Furthermore, it can only return
-  /// const references to Elements.
-  struct ElementIterator {
-    // some typedefs to make interop with std easier
-    typedef input_iterator_tag iterator_category;
-    typedef ElementHandle value_type;
-    typedef ptrdiff_t difference_type;
-    typedef ElementHandle& reference;
-    typedef ElementHandle* pointer;
-    
-    int cur_idx;    // current element index
-    Set* set;       // set we're iterating over
-    
-    ElementIterator(Set* set, int idx=0) : cur_idx(idx), set(set) { }
-    ElementIterator(const ElementIterator& other) : cur_idx(other.cur_idx),
-      set(other.set) { }
-    
-    reference operator*() {
-      return cur_idx;
-    }
-    
-    pointer operator->()  {
-      return &cur_idx;
-    }
-    
-    ElementIterator& operator++() {
-      cur_idx++;
-      return *this;
-    }
-    
-    ElementIterator operator++(int) {
-      cur_idx++;
-      return *this;
-    }
-    
-    bool operator!=(const ElementIterator& other) {
-      return !(set==other.set) || !(cur_idx == other.cur_idx);
-    }
-    
-    bool operator==(const ElementIterator& other) {
-      return (set==other.set) && (cur_idx == other.cur_idx);
-    }
-  };
-  
-  /// Create an ElementIterator for this Set, set to the first element
-  ElementIterator begin() { return ElementIterator(this, 0); }
-
-  /// Create an ElementIterator for terminating iteration over this Set
-  ElementIterator end() { return ElementIterator(this, size()); }
   
 
 };
