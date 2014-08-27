@@ -52,10 +52,10 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
     auto tensor = (l->getType()->getOrder() == 0) ? r : l;
     assert(scalar->getType()->getOrder() == 0);
 
-    std::vector<IndexExpr::IndexVarPtr> scalarIndexVars;
+    std::vector<std::shared_ptr<IndexVar>> scalarIndexVars;
 
     IndexVarFactory indexVarFactory;
-    std::vector<IndexExpr::IndexVarPtr> tensorIndexVars;
+    std::vector<std::shared_ptr<IndexVar>> tensorIndexVars;
     for (unsigned int i=0; i<tensor->getOrder(); ++i) {
       IndexSetProduct indexSet = tensor->getType()->getDimensions()[i];
       tensorIndexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
@@ -79,7 +79,7 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
   assert((size_t)IndexExpr::numOperands(op) == operands.size());
 
   IndexVarFactory indexVarFactory;
-  std::vector<IndexExpr::IndexVarPtr> indexVars;
+  std::vector<std::shared_ptr<IndexVar>> indexVars;
   for (unsigned int i=0; i<operands[0]->getOrder(); ++i) {
     IndexSetProduct indexSet = operands[0]->getType()->getDimensions()[i];
     indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
@@ -106,9 +106,9 @@ IndexExpr *outerProduct(const std::shared_ptr<TensorNode> &l,
   auto i = indexVarFactory.makeFreeVar(l->getType()->getDimensions()[0]);
   auto j = indexVarFactory.makeFreeVar(l->getType()->getDimensions()[0]);
 
-  std::vector<IndexExpr::IndexVarPtr> iIdxVar;
-  std::vector<IndexExpr::IndexVarPtr> jIdxVar;
-  std::vector<IndexExpr::IndexVarPtr> idxVars;
+  std::vector<std::shared_ptr<IndexVar>> iIdxVar;
+  std::vector<std::shared_ptr<IndexVar>> jIdxVar;
+  std::vector<std::shared_ptr<IndexVar>> idxVars;
   iIdxVar.push_back(i);
   idxVars.push_back(i);
   jIdxVar.push_back(j);
@@ -125,11 +125,11 @@ IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat) {
   const std::vector<IndexSetProduct> &dims = mat->getType()->getDimensions();
 
   IndexVarFactory indexVarFactory;
-  std::vector<IndexExpr::IndexVarPtr> indexVars;
+  std::vector<std::shared_ptr<IndexVar>> indexVars;
   indexVars.push_back(indexVarFactory.makeFreeVar(dims[1]));
   indexVars.push_back(indexVarFactory.makeFreeVar(dims[0]));
 
-  std::vector<IndexExpr::IndexVarPtr> operandIndexVars(indexVars.rbegin(),
+  std::vector<std::shared_ptr<IndexVar>> operandIndexVars(indexVars.rbegin(),
                                                        indexVars.rend());
   std::vector<IndexedTensor> operands;
   operands.push_back(IndexedTensor(mat, operandIndexVars));

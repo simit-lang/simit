@@ -189,7 +189,7 @@ computeIndexExprType(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
 }
 }
 
-IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
+IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
                      Operator op,
                      const std::vector<IndexedTensor> &operands)
     : TensorNode(computeIndexExprType(indexVars, operands)),
@@ -202,7 +202,7 @@ IndexExpr::IndexExpr(const std::vector<IndexVarPtr> &indexVars,
   }
 }
 
-const std::vector<IndexExpr::IndexVarPtr> &IndexExpr::getDomain() const {
+const std::vector<std::shared_ptr<IndexVar>> &IndexExpr::getDomain() const {
   return indexVars;
 }
 

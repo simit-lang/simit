@@ -235,7 +235,7 @@ typedef std::map<const IndexVar *, llvm::Value *> IndexVarMap;
 
 // OPT: Offsets are currently recomputed for identical accesses to different
 //      tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
-llvm::Value *computeOffset(const IndexExpr::IndexVarPtrVector &domain,
+llvm::Value *computeOffset(const std::vector<std::shared_ptr<IndexVar>> &domain,
                            IndexVarMap &indexMap,
                            size_t currNest,
                            llvm::IRBuilder<> *builder) {
@@ -285,7 +285,7 @@ typedef std::vector<OperandPair> OperandPairVec;
 /// dimension and the inner loops over each block.
 /// OPT: This code should allow loop orders to be configurable
 llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
-                              const IndexExpr::IndexVarPtrVector &domain,
+                              const std::vector<std::shared_ptr<IndexVar>> &domain,
                               IndexExpr::Operator op,
                               const OperandPairVec &operands,
                               llvm::IRBuilder<> *builder,
@@ -299,7 +299,7 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
   size_t numNests = (domain.size() > 0)
       ? domain[0]->getIndexSet().getFactors().size() : 0;
 
-  for (IndexExpr::IndexVarPtr idxVar : domain) {
+  for (std::shared_ptr<IndexVar> idxVar : domain) {
     assert(idxVar->getIndexSet().getFactors().size() == numNests);
   }
 
@@ -533,7 +533,7 @@ void LLVMCodeGen::handle(Function *function) {
 void LLVMCodeGen::handle(IndexExpr *t) {
   llvm::Value *result = NULL;
 
-  const std::vector<IndexExpr::IndexVarPtr> &domain = t->getDomain();
+  const std::vector<std::shared_ptr<IndexVar>> &domain = t->getDomain();
   IndexExpr::Operator op = t->getOperator();
 
   OperandPairVec operands;

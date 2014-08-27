@@ -133,21 +133,18 @@ class IndexExpr : public TensorNode {
   enum Operator { NONE, NEG, ADD, SUB, MUL, DIV };
   static int numOperands(Operator op);
 
-  typedef std::shared_ptr<IndexVar> IndexVarPtr;
-  typedef std::vector<IndexVarPtr> IndexVarPtrVector;
-
-  IndexExpr(const std::vector<IndexVarPtr> &indexVars,
+  IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
             Operator op, const std::vector<IndexedTensor> &operands);
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const IndexVarPtrVector &getDomain() const;
+  const std::vector<std::shared_ptr<IndexVar>> &getDomain() const;
   IndexExpr::Operator getOperator() const { return op; }
   const std::vector<IndexedTensor> &getOperands() const { return operands; }
   void print(std::ostream &os) const;
 
  private:
-  IndexVarPtrVector indexVars;
+  std::vector<std::shared_ptr<IndexVar>> indexVars;
   Operator op;
   std::vector<IndexedTensor> operands;
 };
