@@ -35,49 +35,11 @@ public:
 
 class input : public TestWithParam<ProgramTestParam> {};
 
-std::vector<std::string> split(const string &str, const string &delim,
-                               bool keepDelim = false) {
-  std::vector<std::string> results;
-  size_t prev = 0;
-  size_t next = 0;
-
-  while ((next = str.find(delim, prev)) != std::string::npos) {
-    if (next - prev != 0) {
-      string substr = ((keepDelim) ? delim : "") + str.substr(prev, next-prev);
-      results.push_back(substr);
-    }
-    prev = next + delim.size();
-  }
-
-  if (prev < str.size()) {
-    string substr = ((keepDelim) ? delim : "") + str.substr(prev);
-    results.push_back(substr);
-  }
-
-  return results;
-}
-
-std::string trim(const string &str, const string &whitespace = " \t\n") {
-  const auto strBegin = str.find_first_not_of(whitespace);
-  if (strBegin == string::npos)
-    return ""; // no content
-
-  const auto strEnd = str.find_last_not_of(whitespace);
-  const auto strRange = strEnd - strBegin + 1;
-
-  return str.substr(strBegin, strRange);
-}
-
-std::string loadText(const std::string &filepath) {
-  ifstream ifs(filepath);
-  return string((std::istreambuf_iterator<char>(ifs)),
-                (std::istreambuf_iterator<char>()));
-}
-
 vector<ProgramTestParam> readTestsFromFile(const std::string &dirpath,
                                            const std::string &filename) {
   string filepath = dirpath + "/" + filename;
-  string source = loadText(filepath);
+  std::string source;
+  loadText(filepath, &source);
 
   vector<ProgramTestParam> testParams;
   // Split the source into one source code for each program

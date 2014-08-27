@@ -59,6 +59,16 @@ std::string rjoin(const Collection &collection, const std::string &sep=", ") {
 /// Indent each line in str by num spaces.
 std::string indent(std::string str, unsigned int num);
 
+/// Split the string.
+std::vector<std::string> split(const std::string &str, const std::string &delim,
+                               bool keepDelim = false);
+
+// Load text from file, returning 0 if succesfull, false otherwise.
+int loadText(const std::string &file, std::string *text);
+
+// Trim whitespace from string
+std::string trim(const std::string &str, const std::string &ws = " \t\n");
+
 /// Vector that owns the pointers in it and deletes them on destruction.
 template <class T>
 class OwnershipVector {
