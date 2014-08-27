@@ -142,13 +142,9 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 }
 
 
-// class IndexExpr
-int IndexExpr::numOperands(Operator op) {
-  return (op == NONE || op == NEG) ? 1 : 2;
-}
-
-IndexExpr::IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &t,
-                                        const IndexVarPtrVector &ivs) {
+// class IndexedTensor
+IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &t,
+                             const std::vector<std::shared_ptr<IndexVar>> &ivs){
   assert(ivs.size() == t->getOrder());
   auto titer = t->getType()->getDimensions().begin();
   auto iviter = ivs.begin();
@@ -159,7 +155,7 @@ IndexExpr::IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &t,
   this->indexVariables = ivs;
 }
 
-std::ostream &operator<<(std::ostream &os, const IndexExpr::IndexedTensor &t) {
+std::ostream &operator<<(std::ostream &os, const IndexedTensor &t) {
   os << t.getTensor()->getName() << "(";
   auto it = t.getIndexVariables().begin();
   if (it != t.getIndexVariables().end()) {
@@ -174,10 +170,16 @@ std::ostream &operator<<(std::ostream &os, const IndexExpr::IndexedTensor &t) {
   return os;
 }
 
+
+// class IndexExpr
+int IndexExpr::numOperands(Operator op) {
+  return (op == NONE || op == NEG) ? 1 : 2;
+}
+
 namespace {
 TensorType *
-computeIndexExprType(const std::vector<IndexExpr::IndexVarPtr> &indexVars,
-                     const std::vector<IndexExpr::IndexedTensor> &operands) {
+computeIndexExprType(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
+                     const std::vector<IndexedTensor> &operands) {
   Type ctype = operands[0].getTensor()->getType()->getComponentType();
   std::vector<IndexSetProduct> dimensions;
   for (auto &iv : indexVars) {

@@ -111,6 +111,21 @@ class IndexVar {
 std::ostream &operator<<(std::ostream &os, const IndexVar &var);
 
 
+class IndexedTensor {
+ public:
+  IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
+                const std::vector<std::shared_ptr<IndexVar>> &indexVariables);
+  std::shared_ptr<TensorNode> getTensor() const { return tensor; };
+  const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {
+    return indexVariables;
+  }
+
+ private:
+  std::shared_ptr<TensorNode>            tensor;
+  std::vector<std::shared_ptr<IndexVar>> indexVariables;
+};
+
+
 /// Expression that combines one or more tensors.  Merge nodes must be created
 /// through the \ref createMerge factory function.
 class IndexExpr : public TensorNode {
@@ -118,20 +133,8 @@ class IndexExpr : public TensorNode {
   enum Operator { NONE, NEG, ADD, SUB, MUL, DIV };
   static int numOperands(Operator op);
 
-  typedef std::shared_ptr<internal::IndexVar> IndexVarPtr;
+  typedef std::shared_ptr<IndexVar> IndexVarPtr;
   typedef std::vector<IndexVarPtr> IndexVarPtrVector;
-
-  class IndexedTensor {
-   public:
-    IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
-                  const std::vector<IndexExpr::IndexVarPtr> &indexVariables);
-    std::shared_ptr<TensorNode> getTensor() const { return tensor; };
-    const IndexVarPtrVector &getIndexVariables() const { return indexVariables;}
-
-   private:
-    std::shared_ptr<TensorNode> tensor;
-    IndexVarPtrVector           indexVariables;
-  };
 
   IndexExpr(const std::vector<IndexVarPtr> &indexVars,
             Operator op, const std::vector<IndexedTensor> &operands);
@@ -149,7 +152,7 @@ class IndexExpr : public TensorNode {
   std::vector<IndexedTensor> operands;
 };
 
-std::ostream &operator<<(std::ostream &os, const IndexExpr::IndexedTensor &t);
+std::ostream &operator<<(std::ostream &os, const IndexedTensor &t);
 
 
 /// Calls a Simit function.

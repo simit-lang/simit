@@ -61,9 +61,9 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
       tensorIndexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
     }
 
-    std::vector<IndexExpr::IndexedTensor> indexedOperands;
-    indexedOperands.push_back(IndexExpr::IndexedTensor(scalar,scalarIndexVars));
-    indexedOperands.push_back(IndexExpr::IndexedTensor(tensor,tensorIndexVars));
+    std::vector<IndexedTensor> indexedOperands;
+    indexedOperands.push_back(IndexedTensor(scalar,scalarIndexVars));
+    indexedOperands.push_back(IndexedTensor(tensor,tensorIndexVars));
     return new IndexExpr(tensorIndexVars, op, indexedOperands);
   }
   else {
@@ -85,9 +85,9 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
     indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
   }
 
-  std::vector<IndexExpr::IndexedTensor> indexedOperands;
+  std::vector<IndexedTensor> indexedOperands;
   for (auto &operand : operands) {
-    indexedOperands.push_back(IndexExpr::IndexedTensor(operand, indexVars));
+    indexedOperands.push_back(IndexedTensor(operand, indexVars));
   }
   return new IndexExpr(indexVars, op, indexedOperands);
 }
@@ -114,9 +114,9 @@ IndexExpr *outerProduct(const std::shared_ptr<TensorNode> &l,
   jIdxVar.push_back(j);
   idxVars.push_back(j);
 
-  std::vector<IndexExpr::IndexedTensor> indexedOperands;
-  indexedOperands.push_back(IndexExpr::IndexedTensor(l, iIdxVar));
-  indexedOperands.push_back(IndexExpr::IndexedTensor(r, jIdxVar));
+  std::vector<IndexedTensor> indexedOperands;
+  indexedOperands.push_back(IndexedTensor(l, iIdxVar));
+  indexedOperands.push_back(IndexedTensor(r, jIdxVar));
   return new IndexExpr(idxVars, IndexExpr::Operator::MUL, indexedOperands);
 }
 
@@ -131,8 +131,8 @@ IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat) {
 
   std::vector<IndexExpr::IndexVarPtr> operandIndexVars(indexVars.rbegin(),
                                                        indexVars.rend());
-  std::vector<IndexExpr::IndexedTensor> operands;
-  operands.push_back(IndexExpr::IndexedTensor(mat, operandIndexVars));
+  std::vector<IndexedTensor> operands;
+  operands.push_back(IndexedTensor(mat, operandIndexVars));
 
   return new IndexExpr(indexVars, IndexExpr::Operator::NONE, operands);
 }

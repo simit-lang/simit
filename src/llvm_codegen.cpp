@@ -278,7 +278,7 @@ llvm::Value *computeOffset(const IndexExpr::IndexVarPtrVector &domain,
   return offset;
 }
 
-typedef std::pair<const IndexExpr::IndexedTensor&, llvm::Value*> OperandPair;
+typedef std::pair<const IndexedTensor&, llvm::Value*> OperandPair;
 typedef std::vector<OperandPair> OperandPairVec;
 
 /// We generate loops where the outer loops iterate over blocks along each
@@ -329,7 +329,7 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
   else {
     std::vector<llvm::Value *> operandVals;
     for (auto &operandPair : operands) {
-      const IndexExpr::IndexedTensor &operand = operandPair.first;
+      const IndexedTensor &operand = operandPair.first;
       llvm::Value *llvmOperand = operandPair.second;
 
       std::string operandName = llvmOperand->getName();
