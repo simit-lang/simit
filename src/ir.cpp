@@ -124,20 +124,21 @@ bool operator!=(const Literal& l, const Literal& r) {
 
 
 // class IndexVar
-std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
-  switch (var.getOperator()) {
+std::string IndexVar::getOperatorString() const {
+  switch (getOperator()) {
     case IndexVar::FREE:
-      break;
+      return "";
     case IndexVar::SUM:
-      os << "+";
-      break;
+      return "+";
     case IndexVar::PRODUCT:
-      os << "*";
-      break;
+      return "*";
     default:
       UNREACHABLE;
   }
-  return os << var.getName();
+}
+
+std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
+  return os << var.getOperatorString() << var.getName();
 }
 
 
@@ -156,6 +157,21 @@ IndexExpr::IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &t,
   }
   this->tensor = t;
   this->indexVariables = ivs;
+}
+
+std::ostream &operator<<(std::ostream &os, const IndexExpr::IndexedTensor &t) {
+  os << t.getTensor()->getName() << "(";
+  auto it = t.getIndexVariables().begin();
+  if (it != t.getIndexVariables().end()) {
+    os << (*it)->getName();
+    ++it;
+  }
+  while (it != t.getIndexVariables().end()) {
+    os << "" << (*it)->getName();
+    ++it;
+  }
+  os << ")";
+  return os;
 }
 
 namespace {
@@ -208,27 +224,29 @@ static std::string opString(IndexExpr::Operator op) {
   }
 }
 
-static inline
-std::string indexVarString(const std::vector<IndexExpr::IndexVarPtr> &idxVars) {
-  return (idxVars.size()!=0) ? "(" + simit::util::join(idxVars,",") + ")" : "";
-}
-
-static inline
-std::string indexedTensorString(const IndexExpr::IndexedTensor &it) {
-  return it.getTensor()->getName() + indexVarString(it.getIndexVariables());
-}
-
 void IndexExpr::print(std::ostream &os) const {
-  os << getName() << indexVarString(indexVars) << " = ";
+  std::string idxVarStr =
+      (indexVars.size()!=0) ? "(" + simit::util::join(indexVars,",") + ")" : "";
+  os << getName() << idxVarStr << " = ";
+
+  std::set<std::shared_ptr<IndexVar>> rvars;
+  for (auto &operand : operands) {
+    for (auto &iv : operand.getIndexVariables()) {
+      if (iv->getOperator() != IndexVar::Operator::FREE &&
+          rvars.find(iv) == rvars.end()) {
+        rvars.insert(iv);
+        os << *iv << " ";
+      }
+    }
+  }
 
   unsigned int numOperands = operands.size();
   auto opit = operands.begin();
   if (numOperands == 1) {
-    os << opString(op) + indexedTensorString(*opit++);
+    os << opString(op) << *opit++;
   }
   else if (numOperands == 2) {
-    os << indexedTensorString(*opit++) << opString(op) <<
-          indexedTensorString(*opit++);
+    os << *opit++ << opString(op) << *opit++;
   } else {
     assert(false && "Not supported yet");
   }

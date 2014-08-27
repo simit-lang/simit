@@ -97,9 +97,11 @@ class IndexVar {
            Operator op)
       : name(name), indexSet(indexSet), op(op) {}
 
-  std::string getName() const { return name; }
   const IndexSetProduct &getIndexSet() const { return indexSet; }
   Operator getOperator() const { return op; }
+
+  std::string getName() const { return name; }
+  std::string getOperatorString() const;
 
  private:
   std::string name;
@@ -146,6 +148,8 @@ class IndexExpr : public TensorNode {
   Operator op;
   std::vector<IndexedTensor> operands;
 };
+
+std::ostream &operator<<(std::ostream &os, const IndexExpr::IndexedTensor &t);
 
 
 /// Calls a Simit function.
