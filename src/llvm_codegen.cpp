@@ -235,47 +235,51 @@ typedef std::map<const IndexVar *, llvm::Value *> IndexVarMap;
 
 // OPT: Offsets are currently recomputed for identical accesses to different
 //      tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
-llvm::Value *computeOffset(const std::vector<std::shared_ptr<IndexVar>> &domain,
-                           IndexVarMap &indexMap,
-                           size_t currNest,
-                           llvm::IRBuilder<> *builder) {
-  llvm::Value *offset = NULL;
-  if (domain.size() == 1) {
-    offset = indexMap[domain[0].get()];
-  }
-  else {
-    int stride = 1;
-    for (size_t i=1; i<domain.size(); ++i) {
-      const std::shared_ptr<IndexVar> &iv = domain[i];
-      const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
-      stride *= is.getSize();
+llvm::Value *emitOffset(llvm::Value *ptr,
+                        const TensorNode *tensor,
+                        const std::vector<std::shared_ptr<IndexVar>> &idxVars,
+                        IndexVarMap &indexMap, size_t currNest,
+                        llvm::IRBuilder<> *builder) {
+  if (tensor->getType()->getOrder() > 0) {
+    llvm::Value *offset = NULL;
+    if (idxVars.size() == 1) {
+      offset = indexMap[idxVars[0].get()];
+    }
+    else {
+      int stride = 1;
+      for (size_t i=1; i<idxVars.size(); ++i) {
+        const std::shared_ptr<IndexVar> &iv = idxVars[i];
+        const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
+        stride *= is.getSize();
+      }
+
+      const std::shared_ptr<IndexVar> &iv_first = idxVars[0];
+      offset = builder->CreateMul(indexMap[idxVars[0].get()],
+                                  builder->getInt32(stride),
+                                  iv_first->getName()+OFFSET_SUFFIX,
+                                  false, true);
+      for (size_t i=1; i<idxVars.size()-1; ++i) {
+        const std::shared_ptr<IndexVar> &iv = idxVars[i];
+        const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
+        stride = stride / is.getSize();
+        auto *iv_ofs = builder->CreateMul(indexMap[idxVars[i].get()],
+                                          builder->getInt32(stride),
+                                          iv->getName()+OFFSET_SUFFIX,
+                                          false, true);
+        offset = builder->CreateAdd(offset, iv_ofs);
+      }
+
+      const std::shared_ptr<IndexVar> &iv_last = idxVars[idxVars.size()-1];
+      offset = builder->CreateAdd(offset,
+                                  indexMap[idxVars[idxVars.size()-1].get()],
+                                  iv_last->getName()+OFFSET_SUFFIX,
+                                  false, true);
     }
 
-    const std::shared_ptr<IndexVar> &iv_first = domain[0];
-    offset = builder->CreateMul(indexMap[domain[0].get()],
-                                builder->getInt32(stride),
-                                iv_first->getName()+OFFSET_SUFFIX,
-                                false, true);
-    for (size_t i=1; i<domain.size()-1; ++i) {
-      const std::shared_ptr<IndexVar> &iv = domain[i];
-      const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
-      stride = stride / is.getSize();
-      auto *iv_ofs = builder->CreateMul(indexMap[domain[i].get()],
-                                        builder->getInt32(stride),
-                                        iv->getName()+OFFSET_SUFFIX,
-                                        false, true);
-      offset = builder->CreateAdd(offset, iv_ofs);
-
-    }
-
-    const std::shared_ptr<IndexVar> &iv_last = domain[domain.size()-1];
-    offset = builder->CreateAdd(offset, indexMap[domain[domain.size()-1].get()],
-                                iv_last->getName()+OFFSET_SUFFIX,
-                                false, true);
+    std::string ptrName = string(ptr->getName()) + PTR_SUFFIX;
+    ptr = builder->CreateInBoundsGEP(ptr, offset, ptrName);
   }
-
-  assert(offset);
-  return offset;
+  return ptr;
 }
 
 typedef std::pair<const IndexedTensor&, llvm::Value*> OperandPair;
@@ -284,13 +288,16 @@ typedef std::vector<OperandPair> OperandPairVec;
 /// We generate loops where the outer loops iterate over blocks along each
 /// dimension and the inner loops over each block.
 /// OPT: This code should allow loop orders to be configurable
-llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
-                              const std::vector<std::shared_ptr<IndexVar>> &domain,
-                              IndexExpr::Operator op,
-                              const OperandPairVec &operands,
-                              llvm::IRBuilder<> *builder,
-                              IndexVarMap &indexMap,
-                              size_t currNest=0, size_t currIdxVar=0) {
+llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
+                           const std::vector<std::shared_ptr<IndexVar>> &domain,
+                           IndexExpr::Operator op,
+                           const OperandPairVec &operands,
+                           llvm::Value *resultStorage,
+                           llvm::IRBuilder<> *builder,
+                           IndexVarMap &indexMap,
+                           size_t currNest=0) {
+  size_t currIdxVar = indexMap.size();
+
   assert(domain.size() > 0);
   assert(operands.size() > 0);
   assert(currIdxVar < domain.size());
@@ -323,8 +330,8 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
 
   // Loop Body
   if (currIdxVar < domain.size()-1) {
-    computeIndexExpr(resultStorage, domain, op, operands, builder,
-                     indexMap, currNest, ++currIdxVar);
+    emitIndexExpr(indexExpr, domain, op, operands, resultStorage,
+                     builder, indexMap, currNest);
   }
   else {
     std::vector<llvm::Value *> operandVals;
@@ -336,14 +343,10 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
       std::string operandValName = operandName + VAL_SUFFIX;
       std::string operandPtrName = operandName + PTR_SUFFIX;
 
-      llvm::Value *operandPtr = llvmOperand;
-      if (operand.getTensor()->getType()->getOrder() > 0) {
-        llvm::Value *operandOfs = computeOffset(operand.getIndexVariables(),
-                                                indexMap, currNest, builder);
-        operandPtr = builder->CreateInBoundsGEP(operandPtr, operandOfs,
-                                                operandPtrName);
-      }
-
+      llvm::Value *operandPtr = emitOffset(llvmOperand,
+                                           operand.getTensor().get(),
+                                           operand.getIndexVariables(),
+                                           indexMap, currNest, builder);
       llvm::Value *operandVal = builder->CreateAlignedLoad(operandPtr, 8,
                                                            operandValName);
       operandVals.push_back(operandVal);
@@ -355,10 +358,9 @@ llvm::Value *computeIndexExpr(llvm::Value *resultStorage,
 
     llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
                                                     operandVals, builder);
-    llvm::Value *resultOfs = computeOffset(domain, indexMap, currNest, builder);
-    llvm::Value *resultPtr = builder->CreateInBoundsGEP(resultStorage,
-                                                        resultOfs,
-                                                        resultPtrName);
+    llvm::Value *resultPtr = emitOffset(resultStorage, indexExpr,
+                                        indexExpr->getIndexVariables(),
+                                        indexMap, currNest, builder);
     builder->CreateAlignedStore(resultVal, resultPtr, 8);
   }
 
@@ -533,7 +535,8 @@ void LLVMCodeGen::handle(Function *function) {
 void LLVMCodeGen::handle(IndexExpr *t) {
   llvm::Value *result = NULL;
 
-  const std::vector<std::shared_ptr<IndexVar>> &domain = t->getDomain();
+  auto &domain = t->getDomain();
+
   IndexExpr::Operator op = t->getOperator();
 
   OperandPairVec operands;
@@ -554,8 +557,8 @@ void LLVMCodeGen::handle(IndexExpr *t) {
   }
   else {
     IndexVarMap indexMap;
-    result = computeIndexExpr(resultStorage, domain, op, operands, builder,
-                              indexMap);
+    result = emitIndexExpr(t, domain, op, operands, resultStorage, builder,
+                           indexMap);
   }
 
   assert(result != NULL);
