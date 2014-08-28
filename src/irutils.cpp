@@ -95,7 +95,19 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
 IndexExpr *innerProduct(const std::shared_ptr<TensorNode> &l,
                         const std::shared_ptr<TensorNode> &r) {
   assert(*l->getType() == *r->getType());
-  return NULL;
+
+  IndexVarFactory indexVarFactory;
+  auto i = indexVarFactory.makeReductionVar(l->getType()->getDimensions()[0],
+                                            IndexVar::Operator::SUM);
+
+  std::vector<std::shared_ptr<IndexVar>> iIdxVar;
+  std::vector<std::shared_ptr<IndexVar>> idxVars;
+  iIdxVar.push_back(i);
+
+  std::vector<IndexedTensor> indexedOperands;
+  indexedOperands.push_back(IndexedTensor(l, iIdxVar));
+  indexedOperands.push_back(IndexedTensor(r, iIdxVar));
+  return new IndexExpr(idxVars, IndexExpr::Operator::MUL, indexedOperands);
 }
 
 IndexExpr *outerProduct(const std::shared_ptr<TensorNode> &l,
