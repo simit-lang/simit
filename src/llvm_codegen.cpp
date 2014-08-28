@@ -53,6 +53,23 @@ llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
     return ee;
 }
 
+llvm::Constant *getDouble(double val, llvm::LLVMContext &ctx = LLVM_CONTEXT){
+  return llvm::ConstantFP::get(ctx, llvm::APFloat(val));
+}
+
+llvm::Type *toLLVMType(const simit::Type type) {
+  switch (type) {
+    case simit::Type::INT:
+      return LLVM_INT;
+    case simit::Type::FLOAT:
+      return LLVM_DOUBLE;
+    case simit::Type::ELEMENT:
+      NOT_SUPPORTED_YET;
+    default:
+      UNREACHABLE;
+  }
+}
+
 llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   switch (type->getComponentType()) {
     case simit::Type::INT:
@@ -175,6 +192,20 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
   }
 }
 
+llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexVar::Operator op,
+                                            simit::Type type) {
+  switch (op) {
+    case IndexVar::Operator::FREE:
+      assert(false && "Free index variables do not have an operator");
+    case IndexVar::Operator::SUM:
+      return toLLVMBinaryOp(IndexExpr::Operator::ADD, type);
+    case IndexVar::Operator::PRODUCT:
+      return toLLVMBinaryOp(IndexExpr::Operator::MUL, type);
+    default:
+      UNREACHABLE;
+  }
+}
+
 llvm::Value *createValueComputation(std::string name, simit::Type ctype,
                                     IndexExpr::Operator op,
                                     const vector<llvm::Value*> operands,
@@ -233,13 +264,15 @@ llvm::Value *createScalarComputation(llvm::Value *resultStorage,
 
 typedef std::map<const IndexVar *, llvm::Value *> IndexVarMap;
 
-// OPT: Offsets are currently recomputed for identical accesses to different
-//      tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
+/// Emits code that offsets ptr to index into tensor using idxVars.  The
+/// indexMap is used to map the idxVars to llvm::Value loop indices.
 llvm::Value *emitOffset(llvm::Value *ptr,
                         const TensorNode *tensor,
                         const std::vector<std::shared_ptr<IndexVar>> &idxVars,
                         IndexVarMap &indexMap, size_t currNest,
                         llvm::IRBuilder<> *builder) {
+  // OPT: Offsets are currently recomputed for identical accesses to different
+  //      tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
   if (tensor->getType()->getOrder() > 0) {
     llvm::Value *offset = NULL;
     if (idxVars.size() == 1) {
@@ -277,6 +310,9 @@ llvm::Value *emitOffset(llvm::Value *ptr,
     }
 
     std::string ptrName = string(ptr->getName()) + PTR_SUFFIX;
+
+    // OPT: It might be faster to cast indices to i64 before GEP
+    //      (sext i32 %i to i64). LLVM seems to do this.
     ptr = builder->CreateInBoundsGEP(ptr, offset, ptrName);
   }
   return ptr;
@@ -285,9 +321,7 @@ llvm::Value *emitOffset(llvm::Value *ptr,
 typedef std::pair<const IndexedTensor&, llvm::Value*> OperandPair;
 typedef std::vector<OperandPair> OperandPairVec;
 
-/// We generate loops where the outer loops iterate over blocks along each
-/// dimension and the inner loops over each block.
-/// OPT: This code should allow loop orders to be configurable
+/// Emit code to compute an IndexExpr.
 llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
                            const std::vector<std::shared_ptr<IndexVar>> &domain,
                            IndexExpr::Operator op,
@@ -296,16 +330,25 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
                            llvm::IRBuilder<> *builder,
                            IndexVarMap &indexMap,
                            size_t currNest=0) {
+  // OPT: This code should allow loop orders to be configurable
+  // OPT: LLVM seems to convert doubles to integers for the purpose of passing
+  //      them around a reduction loop. Explore this. E.g.:
+  //        %conv = sitofp i32 %c_sum to double
+  //        %c_sum_nxt = fadd double %c_val, %conv
+  //        %conv3 = fptosi double %c_sum_nxt to i32) nad
+
   size_t currIdxVar = indexMap.size();
 
   assert(domain.size() > 0);
   assert(operands.size() > 0);
   assert(currIdxVar < domain.size());
 
-  simit::Type ctype = llvmToSimitType(resultStorage->getType());
+  std::string resultName = resultStorage->getName();
+  simit::Type resultCType = indexExpr->getType()->getComponentType();
+  assert(resultCType == llvmToSimitType(resultStorage->getType()));
+
   size_t numNests = (domain.size() > 0)
       ? domain[0]->getIndexSet().getFactors().size() : 0;
-
   for (std::shared_ptr<IndexVar> idxVar : domain) {
     assert(idxVar->getIndexSet().getFactors().size() == numNests);
   }
@@ -328,7 +371,19 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   indexMap[iv.get()] = idx;
   idx->addIncoming(builder->getInt32(0), entryBlock);
 
+  llvm::PHINode *reductionVal = NULL;
+  llvm::Value *reductionValNext = NULL;
+  if (iv->isReductionVariable()) {
+    // Emit value to hold the result of the reduction
+    std::string ropStr = IndexVar::operatorString(iv->getOperator());
+    std::string name = resultName + "_" + ropStr;
+    llvm::Type *type = toLLVMType(resultCType);
+    reductionVal = builder->CreatePHI(type, 1, name);
+    reductionVal->addIncoming(getDouble(0.0), entryBlock);
+  }
+
   // Loop Body
+  llvm::Value *resultPtr = NULL;
   if (currIdxVar < domain.size()-1) {
     emitIndexExpr(indexExpr, domain, op, operands, resultStorage,
                      builder, indexMap, currNest);
@@ -352,31 +407,49 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
       operandVals.push_back(operandVal);
     }
 
-    std::string resultName = resultStorage->getName();
     std::string resultValName = resultName + VAL_SUFFIX;
     std::string resultPtrName = resultName + PTR_SUFFIX;
 
-    llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
+    llvm::Value *resultVal = createValueComputation(resultValName,
+                                                    resultCType, op,
                                                     operandVals, builder);
-    llvm::Value *resultPtr = emitOffset(resultStorage, indexExpr,
-                                        indexExpr->getIndexVariables(),
-                                        indexMap, currNest, builder);
-    builder->CreateAlignedStore(resultVal, resultPtr, 8);
+    resultPtr = emitOffset(resultStorage, indexExpr,
+                           indexExpr->getIndexVariables(),
+                           indexMap, currNest, builder);
+
+    if (!iv->isReductionVariable()) {
+      builder->CreateAlignedStore(resultVal, resultPtr, 8);
+    }
+    else {
+      auto binOp = toLLVMBinaryOp(iv->getOperator(), resultCType);
+      std::string ropStr = IndexVar::operatorString(iv->getOperator());
+      std::string name = resultName + "_" + ropStr + "_nxt";
+      reductionValNext = builder->CreateBinOp(binOp, reductionVal, resultVal,
+                                              name);
+    }
   }
 
   // Loop Footer
-  llvm::Constant *one = builder->getInt32(1);
-  llvm::Value* i_nxt = builder->CreateAdd(idx, one, idxName+"_nxt");
-  llvm::Value *numIter = builder->getInt32(is.getSize());
-  llvm::Value *exitCond = builder->CreateICmpEQ(i_nxt, numIter, idxName+"_cmp");
   llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
+  if (iv->isReductionVariable()) {
+    assert(reductionVal && reductionValNext);
+    reductionVal->addIncoming(reductionValNext, loopBodyEnd);
+  }
+
+  llvm::Value* i_nxt = builder->CreateAdd(idx, builder->getInt32(1),
+                                          idxName+"_nxt", false, true);
+  idx->addIncoming(i_nxt, loopBodyEnd);
+  llvm::Value *numIter = builder->getInt32(is.getSize());
+  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, numIter, idxName+"_cmp");
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
                                                        idxName+"_loop_end", f);
-  builder->CreateCondBr(exitCond, loopEnd, loopBodyStart);
+  builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopEnd);
 
-  // Add phi backedges for loop
-  idx->addIncoming(i_nxt, loopBodyEnd);
+  if (iv->isReductionVariable()) {
+    assert(reductionValNext && resultPtr);
+    builder->CreateAlignedStore(reductionValNext, resultPtr, 8);
+  }
 
   return resultStorage;
 }

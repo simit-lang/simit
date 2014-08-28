@@ -92,6 +92,8 @@ bool operator!=(const Literal& l, const Literal& r);
 class IndexVar {
  public:
   enum Operator {FREE, SUM, PRODUCT};
+  static std::string operatorSymbol(Operator op);
+  static std::string operatorString(Operator op);
 
   IndexVar(const std::string &name, const IndexSetProduct &indexSet,
            Operator op)
@@ -100,8 +102,10 @@ class IndexVar {
   const IndexSetProduct &getIndexSet() const { return indexSet; }
   Operator getOperator() const { return op; }
 
+  bool isFreeVariable() { return (op != Operator::FREE); }
+  bool isReductionVariable() { return (op != Operator::FREE); }
+
   std::string getName() const { return name; }
-  std::string getOperatorString() const;
 
  private:
   std::string name;

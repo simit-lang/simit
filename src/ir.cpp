@@ -124,8 +124,21 @@ bool operator!=(const Literal& l, const Literal& r) {
 
 
 // class IndexVar
-std::string IndexVar::getOperatorString() const {
-  switch (getOperator()) {
+std::string IndexVar::operatorString(Operator op) {
+  switch (op) {
+    case IndexVar::FREE:
+      return "free";
+    case IndexVar::SUM:
+      return "sum";
+    case IndexVar::PRODUCT:
+      return "product";
+    default:
+      UNREACHABLE;
+  }
+}
+
+std::string IndexVar::operatorSymbol(Operator op) {
+  switch (op) {
     case IndexVar::FREE:
       return "";
     case IndexVar::SUM:
@@ -138,7 +151,7 @@ std::string IndexVar::getOperatorString() const {
 }
 
 std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
-  return os << var.getOperatorString() << var.getName();
+  return os << IndexVar::operatorSymbol(var.getOperator()) << var.getName();
 }
 
 
