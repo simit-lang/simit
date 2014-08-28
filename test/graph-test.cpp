@@ -98,7 +98,6 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
     myset.get(el, f1, &val);
     ASSERT_TRUE((val>=5) && (val<15));
     howmany++;
-    cout << howmany <<endl;
   }
   ASSERT_EQ(howmany, 10);
   
@@ -109,7 +108,6 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
     myset.get(el, f1, &val);
     ASSERT_TRUE((val>=5) && (val<15));
     howmany++;
-    cout << howmany <<endl;
   }
   ASSERT_EQ(howmany, 10);
 }
