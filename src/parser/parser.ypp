@@ -33,10 +33,29 @@
   using namespace simit;  // TODO: Remove
   using namespace simit::internal;
 
+  std::string tensorTypeString(const TensorType *tensorType, ParserContext *ctx){
+    std::stringstream ss;
+    ss << *tensorType;
+    std::string str = ss.str();
+    if (ctx->isColumnVector(tensorType)) {
+      str += "'";
+    }
+    return str;
+  }
+
   #define REPORT_ERROR(msg, loc)  \
     do {                          \
       error((loc), (msg));        \
       YYERROR;                    \
+    } while (0)
+
+  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)           \
+    do {                                               \
+      std::stringstream errorStr;                      \
+      errorStr << "type missmatch ("                   \
+               << tensorTypeString(t1, ctx) << " and "  \
+               << tensorTypeString(t2, ctx) << ")";    \
+      REPORT_ERROR(errorStr.str(), loc);               \
     } while (0)
 
   void Parser::error(const Parser::location_type &loc, const std::string &msg) {
@@ -70,25 +89,11 @@
     return true;
   }
 
-  std::string tensorTypeString(const TensorType *tensorType, ParserContext *ctx){
-    std::stringstream ss;
-    ss << *tensorType;
-    std::string str = ss.str();
-    if (ctx->isColumnVector(tensorType)) {
-      str += "'";
-    }
-    return str;
-  }
-
-  #define CHECK_TYPE_EQUALITY(t1, t2, loc)               \
-    do {                                                 \
-      if (!compare(t1, t2, ctx)) {                       \
-        std::stringstream errorStr;                      \
-        errorStr << "type missmatch ("                   \
-                 << tensorTypeString(t1, ctx) << " != "  \
-                 << tensorTypeString(t2, ctx) << ")";    \
-          REPORT_ERROR(errorStr.str(), loc);             \
-        } \
+  #define CHECK_TYPE_EQUALITY(t1, t2, loc)             \
+    do {                                               \
+      if (!compare(t1, t2, ctx)) {                     \
+        REPORT_TYPE_MISSMATCH(t1, t2, loc);            \
+      }                                                \
     } while (0)
 
 
@@ -565,8 +570,7 @@ assign_stmt
       assert(dynamic_pointer_cast<TensorNode>(lhsTensor) != NULL);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
         CHECK_TYPE_EQUALITY(result->getType(), rhs->getType(), @2);
-
-        rhs->setName(result->getName() + "_val");  // TODO: Create unique name
+        rhs->setName(result->getName());
         result->setValue(rhs);
         $$->push_back(rhs);
       }
@@ -679,23 +683,19 @@ expr
     std::shared_ptr<TensorNode> l = convertAndDelete($1);
     std::shared_ptr<TensorNode> r = convertAndDelete($3);
 
-    bool scaleOp = (l->getType()->getOrder()==0 || r->getType()->getOrder()==0);
-
-    if (!scaleOp && (l->getType()->getOrder()>2 || r->getType()->getOrder()>2)){
-      REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
-      $$ = NULL;
-    }
-
     // Scale
-    if (scaleOp) {
+    if (l->getType()->getOrder()==0 || r->getType()->getOrder()==0) {
       $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
-    else if (l->getType()->getOrder() == 1 || r->getType()->getOrder() == 1) {
+    else if (l->getType()->getOrder() == 1 && r->getType()->getOrder() == 1) {
       // Inner product
       if (!ctx->isColumnVector(l->getType())) {
         if (!ctx->isColumnVector(r->getType())) {
           REPORT_ERROR("cannot multiply two row vectors", @2);
+        }
+        if (*l->getType() != *r->getType()) {
+          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
         }
         $$ = new shared_ptr<TensorNode>(innerProduct(l, r));
       }
@@ -704,11 +704,35 @@ expr
         if (ctx->isColumnVector(r->getType())) {
           REPORT_ERROR("cannot multiply two column vectors", @2);
         }
+        if (*l->getType() != *r->getType()) {
+          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+        }
         $$ = new shared_ptr<TensorNode>(outerProduct(l, r));
       }
     }
-    // Matrix-Vector, Vector-Matrix and Matrix-Matrix Multiplcation
+    // Matrix-Vector
+    else if (l->getType()->getOrder() == 2 && r->getType()->getOrder() == 1) {
+      if (l->getType()->getDimensions()[1] != r->getType()->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+      }
+      $$ = new shared_ptr<TensorNode>(gemv(l, r));
+    }
+    // Vector-Matrix
+    else if (l->getType()->getOrder() == 1 && r->getType()->getOrder() == 2) {
+      if (l->getType()->getDimensions()[0] != r->getType()->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+      }
+      $$ = new shared_ptr<TensorNode>(gevm(l,r));
+    }
+    // Matrix-Matrix
+    else if (l->getType()->getOrder() == 2 && r->getType()->getOrder() == 2) {
+      if (l->getType()->getDimensions()[1] != r->getType()->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+      }
+      $$ = new shared_ptr<TensorNode>(gemm(l,r));
+    }
     else {
+      REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
       $$ = NULL;
     }
   }

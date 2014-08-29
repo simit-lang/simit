@@ -440,7 +440,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
                                           idxName+"_nxt", false, true);
   idx->addIncoming(i_nxt, loopBodyEnd);
   llvm::Value *numIter = builder->getInt32(is.getSize());
-  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, numIter, idxName+"_cmp");
+  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, numIter,idxName+"_cmp");
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
                                                        idxName+"_loop_end", f);
   builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);

@@ -2,3 +2,15 @@
 func solve(A : Tensor[3,3](float), b : Tensor(float)) -> (c : Tensor[3](float))
   c = a \ b;
 end
+
+%%% gemv
+%! gemv([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], [6.0, 7.0, 8.0]') == [23.0, 86.0]';
+func gemv(A : Tensor[2,3](float), b : Tensor[3](float)) -> (c : Tensor[2](float))
+  c = A * b;
+end
+
+%%% gevm
+%! gevm([6.0, 7.0], [0.0, 1.0, 2.0; 3.0, 4.0, 5.0]) == [21.0, 34.0, 47.0]';
+func gevm(a : Tensor[2](float), B : Tensor[2,3](float)) -> (c : Tensor[3](float))
+  c = a * B;
+end

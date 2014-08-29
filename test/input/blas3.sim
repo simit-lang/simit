@@ -21,3 +21,9 @@ end
 func transpose(A : Tensor[2,3](float)) -> (C : Tensor[3,2](float))
   C = A';
 end
+
+%%% gemm
+%! gemm([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], [7.0, 8.0, 9.0, 10.0; 11.0, 12.0, 13.0, 14.0; 15.0, 16.0, 17.0, 18.0]) == [41.0, 44.0, 47.0, 50.0; 140.0, 152.0, 164.0, 176.0];
+func gemm(A : Tensor[2,3](float), B : Tensor[3,4](float)) -> (C : Tensor[2,4](float))
+  C = A * B;
+end

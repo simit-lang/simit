@@ -41,6 +41,15 @@ IndexExpr *innerProduct(const std::shared_ptr<TensorNode> &l,
 IndexExpr *outerProduct(const std::shared_ptr<TensorNode> &l,
                         const std::shared_ptr<TensorNode> &r);
 
+IndexExpr *gemv(const std::shared_ptr<TensorNode> &l,
+                const std::shared_ptr<TensorNode> &r);
+
+IndexExpr *gevm(const std::shared_ptr<TensorNode> &l,
+                const std::shared_ptr<TensorNode> &r);
+
+IndexExpr *gemm(const std::shared_ptr<TensorNode> &l,
+                const std::shared_ptr<TensorNode> &r);
+
 IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat);
 
 }} // namespace simit::internal

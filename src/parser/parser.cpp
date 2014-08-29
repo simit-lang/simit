@@ -65,10 +65,29 @@
   using namespace simit;  // TODO: Remove
   using namespace simit::internal;
 
+  std::string tensorTypeString(const TensorType *tensorType, ParserContext *ctx){
+    std::stringstream ss;
+    ss << *tensorType;
+    std::string str = ss.str();
+    if (ctx->isColumnVector(tensorType)) {
+      str += "'";
+    }
+    return str;
+  }
+
   #define REPORT_ERROR(msg, loc)  \
     do {                          \
       error((loc), (msg));        \
       YYERROR;                    \
+    } while (0)
+
+  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)           \
+    do {                                               \
+      std::stringstream errorStr;                      \
+      errorStr << "type missmatch ("                   \
+               << tensorTypeString(t1, ctx) << " and "  \
+               << tensorTypeString(t2, ctx) << ")";    \
+      REPORT_ERROR(errorStr.str(), loc);               \
     } while (0)
 
   void Parser::error(const Parser::location_type &loc, const std::string &msg) {
@@ -102,25 +121,11 @@
     return true;
   }
 
-  std::string tensorTypeString(const TensorType *tensorType, ParserContext *ctx){
-    std::stringstream ss;
-    ss << *tensorType;
-    std::string str = ss.str();
-    if (ctx->isColumnVector(tensorType)) {
-      str += "'";
-    }
-    return str;
-  }
-
-  #define CHECK_TYPE_EQUALITY(t1, t2, loc)               \
-    do {                                                 \
-      if (!compare(t1, t2, ctx)) {                       \
-        std::stringstream errorStr;                      \
-        errorStr << "type missmatch ("                   \
-                 << tensorTypeString(t1, ctx) << " != "  \
-                 << tensorTypeString(t2, ctx) << ")";    \
-          REPORT_ERROR(errorStr.str(), loc);             \
-        } \
+  #define CHECK_TYPE_EQUALITY(t1, t2, loc)             \
+    do {                                               \
+      if (!compare(t1, t2, ctx)) {                     \
+        REPORT_TYPE_MISSMATCH(t1, t2, loc);            \
+      }                                                \
     } while (0)
 
 
@@ -1318,8 +1323,7 @@ namespace  simit { namespace internal  {
       assert(dynamic_pointer_cast<TensorNode>(lhsTensor) != NULL);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
         CHECK_TYPE_EQUALITY(result->getType(), rhs->getType(), yystack_[2].location);
-
-        rhs->setName(result->getName() + "_val");  // TODO: Create unique name
+        rhs->setName(result->getName());
         result->setValue(rhs);
         (yylhs.value.IRNodes)->push_back(rhs);
       }
@@ -1467,23 +1471,19 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    bool scaleOp = (l->getType()->getOrder()==0 || r->getType()->getOrder()==0);
-
-    if (!scaleOp && (l->getType()->getOrder()>2 || r->getType()->getOrder()>2)){
-      REPORT_ERROR("cannot multiply >2-order tensors using *", yystack_[1].location);
-      (yylhs.value.Tensor) = NULL;
-    }
-
     // Scale
-    if (scaleOp) {
+    if (l->getType()->getOrder()==0 || r->getType()->getOrder()==0) {
       (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
-    else if (l->getType()->getOrder() == 1 || r->getType()->getOrder() == 1) {
+    else if (l->getType()->getOrder() == 1 && r->getType()->getOrder() == 1) {
       // Inner product
       if (!ctx->isColumnVector(l->getType())) {
         if (!ctx->isColumnVector(r->getType())) {
           REPORT_ERROR("cannot multiply two row vectors", yystack_[1].location);
+        }
+        if (*l->getType() != *r->getType()) {
+          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
         }
         (yylhs.value.Tensor) = new shared_ptr<TensorNode>(innerProduct(l, r));
       }
@@ -1492,11 +1492,35 @@ namespace  simit { namespace internal  {
         if (ctx->isColumnVector(r->getType())) {
           REPORT_ERROR("cannot multiply two column vectors", yystack_[1].location);
         }
+        if (*l->getType() != *r->getType()) {
+          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        }
         (yylhs.value.Tensor) = new shared_ptr<TensorNode>(outerProduct(l, r));
       }
     }
-    // Matrix-Vector, Vector-Matrix and Matrix-Matrix Multiplcation
+    // Matrix-Vector
+    else if (l->getType()->getOrder() == 2 && r->getType()->getOrder() == 1) {
+      if (l->getType()->getDimensions()[1] != r->getType()->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+      }
+      (yylhs.value.Tensor) = new shared_ptr<TensorNode>(gemv(l, r));
+    }
+    // Vector-Matrix
+    else if (l->getType()->getOrder() == 1 && r->getType()->getOrder() == 2) {
+      if (l->getType()->getDimensions()[0] != r->getType()->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+      }
+      (yylhs.value.Tensor) = new shared_ptr<TensorNode>(gevm(l,r));
+    }
+    // Matrix-Matrix
+    else if (l->getType()->getOrder() == 2 && r->getType()->getOrder() == 2) {
+      if (l->getType()->getDimensions()[1] != r->getType()->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+      }
+      (yylhs.value.Tensor) = new shared_ptr<TensorNode>(gemm(l,r));
+    }
     else {
+      REPORT_ERROR("cannot multiply >2-order tensors using *", yystack_[1].location);
       (yylhs.value.Tensor) = NULL;
     }
   }
@@ -2779,20 +2803,20 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   281,   281,   283,   287,   290,   293,   302,   305,   309,
-     315,   319,   325,   328,   335,   339,   341,   343,   345,   348,
-     358,   365,   374,   411,   414,   425,   429,   440,   447,   451,
-     458,   461,   470,   471,   472,   473,   474,   478,   503,   511,
-     517,   519,   523,   525,   532,   538,   581,   584,   597,   615,
-     616,   619,   627,   638,   650,   661,   673,   715,   720,   725,
-     754,   759,   764,   769,   774,   779,   784,   789,   793,   798,
-     803,   806,   809,   818,   827,   830,   836,   842,   851,   858,
-     860,   864,   866,   871,   873,   875,   878,   881,   884,   890,
-     891,   913,   918,   926,   932,   937,   946,   973,   976,   981,
-     988,   991,   995,  1002,  1005,  1043,  1048,  1055,  1058,  1062,
-    1067,  1070,  1139,  1140,  1142,  1146,  1147,  1151,  1154,  1162,
-    1172,  1179,  1182,  1186,  1199,  1203,  1217,  1221,  1227,  1234,
-    1237,  1241,  1254,  1258,  1272,  1276,  1282,  1287,  1297
+       0,   286,   286,   288,   292,   295,   298,   307,   310,   314,
+     320,   324,   330,   333,   340,   344,   346,   348,   350,   353,
+     363,   370,   379,   416,   419,   430,   434,   445,   452,   456,
+     463,   466,   475,   476,   477,   478,   479,   483,   508,   516,
+     522,   524,   528,   530,   537,   543,   585,   588,   601,   619,
+     620,   623,   631,   642,   654,   665,   677,   739,   744,   749,
+     778,   783,   788,   793,   798,   803,   808,   813,   817,   822,
+     827,   830,   833,   842,   851,   854,   860,   866,   875,   882,
+     884,   888,   890,   895,   897,   899,   902,   905,   908,   914,
+     915,   937,   942,   950,   956,   961,   970,   997,  1000,  1005,
+    1012,  1015,  1019,  1026,  1029,  1067,  1072,  1079,  1082,  1086,
+    1091,  1094,  1163,  1164,  1166,  1170,  1171,  1175,  1178,  1186,
+    1196,  1203,  1206,  1210,  1223,  1227,  1241,  1245,  1251,  1258,
+    1261,  1265,  1278,  1282,  1296,  1300,  1306,  1311,  1321
   };
 
   // Print the state stack on the debug stream.

@@ -32,6 +32,21 @@ std::string IndexVarFactory::makeName() {
   return std::string(name);
 }
 
+std::vector<std::shared_ptr<IndexVar>>
+indexVars(const std::shared_ptr<IndexVar> &v1) {
+  std::vector<std::shared_ptr<IndexVar>> idxVars;
+  idxVars.push_back(v1);
+  return idxVars;
+}
+
+std::vector<std::shared_ptr<IndexVar>>
+indexVars(const std::shared_ptr<IndexVar> &v1,
+          const std::shared_ptr<IndexVar> &v2) {
+  std::vector<std::shared_ptr<IndexVar>> idxVars;
+  idxVars.push_back(v1);
+  idxVars.push_back(v2);
+  return idxVars;
+}
 
 // Free functions
 IndexExpr *unaryElwiseExpr(IndexExpr::Operator op,
@@ -94,42 +109,87 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
 
 IndexExpr *innerProduct(const std::shared_ptr<TensorNode> &l,
                         const std::shared_ptr<TensorNode> &r) {
+  assert(l->getType()->getOrder() == 1 && r->getType()->getOrder() == 1);
   assert(*l->getType() == *r->getType());
 
   IndexVarFactory indexVarFactory;
   auto i = indexVarFactory.makeReductionVar(l->getType()->getDimensions()[0],
                                             IndexVar::Operator::SUM);
 
-  std::vector<std::shared_ptr<IndexVar>> iIdxVar;
-  std::vector<std::shared_ptr<IndexVar>> idxVars;
-  iIdxVar.push_back(i);
+  std::vector<IndexedTensor> operands;
+  operands.push_back(IndexedTensor(l, indexVars(i)));
+  operands.push_back(IndexedTensor(r, indexVars(i)));
 
-  std::vector<IndexedTensor> indexedOperands;
-  indexedOperands.push_back(IndexedTensor(l, iIdxVar));
-  indexedOperands.push_back(IndexedTensor(r, iIdxVar));
-  return new IndexExpr(idxVars, IndexExpr::Operator::MUL, indexedOperands);
+  std::vector<std::shared_ptr<IndexVar>> none;
+  return new IndexExpr(none, IndexExpr::Operator::MUL, operands);
 }
 
 IndexExpr *outerProduct(const std::shared_ptr<TensorNode> &l,
                         const std::shared_ptr<TensorNode> &r) {
+  assert(l->getType()->getOrder() == 1 && r->getType()->getOrder() == 1);
   assert(*l->getType() == *r->getType());
 
   IndexVarFactory indexVarFactory;
   auto i = indexVarFactory.makeFreeVar(l->getType()->getDimensions()[0]);
   auto j = indexVarFactory.makeFreeVar(l->getType()->getDimensions()[0]);
 
-  std::vector<std::shared_ptr<IndexVar>> iIdxVar;
-  std::vector<std::shared_ptr<IndexVar>> jIdxVar;
-  std::vector<std::shared_ptr<IndexVar>> idxVars;
-  iIdxVar.push_back(i);
-  idxVars.push_back(i);
-  jIdxVar.push_back(j);
-  idxVars.push_back(j);
+  std::vector<IndexedTensor> operands;
+  operands.push_back(IndexedTensor(l, indexVars(i)));
+  operands.push_back(IndexedTensor(r, indexVars(j)));
 
-  std::vector<IndexedTensor> indexedOperands;
-  indexedOperands.push_back(IndexedTensor(l, iIdxVar));
-  indexedOperands.push_back(IndexedTensor(r, jIdxVar));
-  return new IndexExpr(idxVars, IndexExpr::Operator::MUL, indexedOperands);
+  return new IndexExpr(indexVars(i,j), IndexExpr::Operator::MUL, operands);
+}
+
+IndexExpr *gemv(const std::shared_ptr<TensorNode> &l,
+                const std::shared_ptr<TensorNode> &r) {
+  assert(l->getType()->getOrder() == 2 && r->getType()->getOrder() == 1);
+  assert(l->getType()->getDimensions()[1] == r->getType()->getDimensions()[0]);
+
+  IndexVarFactory indexVarFactory;
+  auto i = indexVarFactory.makeFreeVar(l->getType()->getDimensions()[0]);
+  auto j = indexVarFactory.makeReductionVar(l->getType()->getDimensions()[1],
+                                            IndexVar::Operator::SUM);
+
+  std::vector<IndexedTensor> operands;
+  operands.push_back(IndexedTensor(l, indexVars(i, j)));
+  operands.push_back(IndexedTensor(r, indexVars(j)));
+
+  return new IndexExpr(indexVars(i), IndexExpr::Operator::MUL, operands);
+}
+
+IndexExpr *gevm(const std::shared_ptr<TensorNode> &l,
+                const std::shared_ptr<TensorNode> &r) {
+  assert(l->getType()->getOrder() == 1 && r->getType()->getOrder() == 2);
+  assert(l->getType()->getDimensions()[0] == r->getType()->getDimensions()[0]);
+
+  IndexVarFactory indexVarFactory;
+  auto i = indexVarFactory.makeFreeVar(r->getType()->getDimensions()[1]);
+  auto j = indexVarFactory.makeReductionVar(r->getType()->getDimensions()[0],
+                                            IndexVar::Operator::SUM);
+
+  std::vector<IndexedTensor> operands;
+  operands.push_back(IndexedTensor(l, indexVars(j)));
+  operands.push_back(IndexedTensor(r, indexVars(j,i)));
+
+  return new IndexExpr(indexVars(i), IndexExpr::Operator::MUL, operands);
+}
+
+IndexExpr *gemm(const std::shared_ptr<TensorNode> &l,
+                const std::shared_ptr<TensorNode> &r) {
+  assert(l->getType()->getOrder() == 2 && r->getType()->getOrder() == 2);
+  assert(l->getType()->getDimensions()[1] == r->getType()->getDimensions()[0]);
+
+  IndexVarFactory indexVarFactory;
+  auto i = indexVarFactory.makeFreeVar(l->getType()->getDimensions()[0]);
+  auto j = indexVarFactory.makeFreeVar(r->getType()->getDimensions()[1]);
+  auto k = indexVarFactory.makeReductionVar(l->getType()->getDimensions()[1],
+                                            IndexVar::Operator::SUM);
+
+  std::vector<IndexedTensor> operands;
+  operands.push_back(IndexedTensor(l, indexVars(i,k)));
+  operands.push_back(IndexedTensor(r, indexVars(k,j)));
+
+  return new IndexExpr(indexVars(i,j), IndexExpr::Operator::MUL, operands);
 }
 
 IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat) {

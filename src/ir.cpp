@@ -156,16 +156,17 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 
 
 // class IndexedTensor
-IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &t,
-                             const std::vector<std::shared_ptr<IndexVar>> &ivs){
-  assert(ivs.size() == t->getOrder());
-  auto titer = t->getType()->getDimensions().begin();
-  auto iviter = ivs.begin();
-  for (; iviter != ivs.end(); ++iviter, ++titer) {
-    assert((*iviter)->getIndexSet() == (*titer));
+typedef std::vector<std::shared_ptr<IndexVar>> IndexVariables;
+IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
+                             const IndexVariables &indexVars){
+  assert(indexVars.size() == tensor->getOrder());
+  for (size_t i=0; i < indexVars.size(); ++i) {
+    assert(indexVars[i]->getIndexSet() == tensor->getType()->getDimensions()[i]
+           && "IndexVar domain does not match tensordimension");
   }
-  this->tensor = t;
-  this->indexVariables = ivs;
+
+  this->tensor = tensor;
+  this->indexVariables = indexVars;
 }
 
 std::ostream &operator<<(std::ostream &os, const IndexedTensor &t) {
@@ -176,7 +177,7 @@ std::ostream &operator<<(std::ostream &os, const IndexedTensor &t) {
     ++it;
   }
   while (it != t.getIndexVariables().end()) {
-    os << "" << (*it)->getName();
+    os << "," << (*it)->getName();
     ++it;
   }
   os << ")";
@@ -190,9 +191,8 @@ int IndexExpr::numOperands(Operator op) {
 }
 
 namespace {
-TensorType *
-getIndexExprType(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
-                 const std::vector<IndexedTensor> &operands) {
+TensorType *getIndexExprType(const vector<shared_ptr<IndexVar>> &indexVars,
+                             const vector<IndexedTensor> &operands) {
   assert(operands.size() > 0);
   Type ctype = operands[0].getTensor()->getType()->getComponentType();
   std::vector<IndexSetProduct> dimensions;
@@ -202,11 +202,11 @@ getIndexExprType(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
   return new TensorType(ctype, dimensions);
 }
 
-std::vector<std::shared_ptr<IndexVar>>
-getIndexDomain(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
-               const std::vector<IndexedTensor> &operands) {
-  std::vector<std::shared_ptr<IndexVar>> domain;
-  std::set<std::shared_ptr<IndexVar>> added;
+vector<shared_ptr<IndexVar>>
+getIndexDomain(const vector<shared_ptr<IndexVar>> &indexVars,
+               const vector<IndexedTensor> &operands) {
+  vector<shared_ptr<IndexVar>> domain;
+  set<shared_ptr<IndexVar>> added;
   for (auto &iv : indexVars) {
     if (added.find(iv) == added.end()) {
       added.insert(iv);
@@ -216,7 +216,8 @@ getIndexDomain(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
   for (auto &operand : operands) {
     for (auto &iv : operand.getIndexVariables()) {
       if (added.find(iv) == added.end()) {
-        assert(iv->getOperator()!=IndexVar::FREE && "freevars not used on lhs");
+        assert(iv->getOperator() != IndexVar::FREE
+               && "freevars not used on lhs");
         added.insert(iv);
         domain.push_back(iv);
       }
@@ -231,7 +232,12 @@ IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
     : TensorNode(getIndexExprType(indexVars, operands)),
       domain(getIndexDomain(indexVars, operands)),
       indexVars(indexVars), op(op), operands(operands) {
+  // Can't have reduction variables on rhs
+  for (auto &idxVar : indexVars) {
+    assert(idxVar->getOperator() == IndexVar::Operator::FREE);
+  }
 
+  // Typechecks
   assert(operands.size() == (size_t)IndexExpr::numOperands(op));
   Type firstType = operands[0].getTensor()->getType()->getComponentType();
   for (auto &operand : operands) {
