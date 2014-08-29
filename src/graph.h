@@ -194,7 +194,7 @@ class Set {
   void increaseCapacity() {
     for (auto f : fields) {
       // this strategy gets rid of the conditional
-      realloc(f->data, (capacity+capacityIncrement)*f->size_of_type);
+      f->data = realloc(f->data, (capacity+capacityIncrement)*f->size_of_type);
       memset((char*)(f->data)+capacity*f->size_of_type,
              0, capacityIncrement*f->size_of_type);
     }
