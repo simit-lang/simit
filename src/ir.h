@@ -96,9 +96,13 @@ class IndexVar {
   static std::string operatorSymbol(Operator op);
   static std::string operatorString(Operator op);
 
-  IndexVar(const std::string &name, const IndexSetProduct &indexSet,
-           Operator op)
+  IndexVar(const std::string &name) : name(name), op(FREE) {}
+
+  IndexVar(const std::string &name, const IndexSetProduct &indexSet,Operator op)
       : name(name), indexSet(indexSet), op(op) {}
+
+  void setIndexSet(IndexSetProduct indexSet) { this->indexSet = indexSet; }
+  void setOperator(IndexVar::Operator op) { this->op = op; }
 
   const IndexSetProduct &getIndexSet() const { return indexSet; }
   Operator getOperator() const { return op; }

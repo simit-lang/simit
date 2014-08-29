@@ -608,7 +608,7 @@ void LLVMCodeGen::handle(Function *function) {
 void LLVMCodeGen::handle(IndexExpr *t) {
   llvm::Value *result = NULL;
 
-  auto &domain = t->getDomain();
+  auto domain = t->getDomain();
 
   IndexExpr::Operator op = t->getOperator();
 
