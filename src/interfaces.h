@@ -1,3 +1,6 @@
+#ifndef SIMIT_INTERFACES_H
+#define SIMIT_INTERFACES_H
+
 namespace simit {
 namespace util {
 
@@ -13,3 +16,4 @@ class Uncopyable {
 };
 
 }}  // namespace simit::util
+#endif
