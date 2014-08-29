@@ -53,27 +53,26 @@ void Literal::clear() {
 }
 
 void Literal::cast(TensorType *type) {
-  assert(this->type->getComponentType() == type->getComponentType() &&
-         this->type->getSize() == type->getSize());
-  delete this->type;
-  this->type = type;
+  assert(this->getType()->getComponentType() == type->getComponentType() &&
+         this->getType()->getSize() == getType()->getSize());
+  setType(type);
 }
 
 void Literal::print(std::ostream &os) const {
-  for (auto &dim : type->getDimensions()) {
+  for (auto &dim : getType()->getDimensions()) {
     assert(dim.getFactors().size() == 1 && "literals can't be hierarchical");
   }
 
   // TODO: Fix value printing to print matrices and tensors properly
-  switch (type->getComponentType()) {
+  switch (getType()->getComponentType()) {
     case Type::INT: {
       int *idata = (int*)data;
-      if (type->getSize() == 1) {
+      if (getType()->getSize() == 1) {
         os << idata[0];
       }
       else {
         os << "[" << idata[0];
-        for (int i=0; i<type->getSize(); ++i) {
+        for (int i=0; i < getType()->getSize(); ++i) {
           os << ", " << idata[i];
         }
         os << "]";
@@ -82,12 +81,12 @@ void Literal::print(std::ostream &os) const {
     }
     case Type::FLOAT: {
       double *fdata = (double*)data;
-      if (type->getSize() == 1) {
+      if (getType()->getSize() == 1) {
         os << fdata[0];
       }
       else {
         os << "[" << to_string(fdata[0]);
-        for (int i=1; i<type->getSize(); ++i) {
+        for (int i=1; i < getType()->getSize(); ++i) {
           os << ", " + to_string(fdata[i]);
         }
         os << "]";
@@ -101,7 +100,7 @@ void Literal::print(std::ostream &os) const {
       UNREACHABLE;
   }
 
-  os << " : " << *type;
+  os << " : " << *getType();
 }
 
 bool operator==(const Literal& l, const Literal& r) {
@@ -190,21 +189,51 @@ int IndexExpr::numOperands(Operator op) {
   return (op == NONE || op == NEG) ? 1 : 2;
 }
 
-namespace {
-TensorType *getIndexExprType(const vector<shared_ptr<IndexVar>> &indexVars,
-                             const vector<IndexedTensor> &operands) {
-  assert(operands.size() > 0);
-  Type ctype = operands[0].getTensor()->getType()->getComponentType();
-  std::vector<IndexSetProduct> dimensions;
-  for (auto &iv : indexVars) {
-    dimensions.push_back(iv->getIndexSet());
+IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
+                     Operator op, const std::vector<IndexedTensor> &operands)
+    : TensorNode(NULL), indexVars(indexVars), op(op), operands(operands) {
+  initType();
+
+  // Can't have reduction variables on rhs
+  for (auto &idxVar : indexVars) {
+    assert(idxVar->getOperator() == IndexVar::Operator::FREE);
   }
-  return new TensorType(ctype, dimensions);
+
+  // Operand typechecks
+  assert(operands.size() == (size_t)IndexExpr::numOperands(op));
+  Type firstType = operands[0].getTensor()->getType()->getComponentType();
+  for (auto &operand : operands) {
+    assert(firstType == operand.getTensor()->getType()->getComponentType() &&
+           "Operand component types differ");
+  }
 }
 
-vector<shared_ptr<IndexVar>>
-getIndexDomain(const vector<shared_ptr<IndexVar>> &indexVars,
-               const vector<IndexedTensor> &operands) {
+IndexExpr::IndexExpr(IndexExpr::Operator op,
+                     const vector<IndexedTensor> &operands)
+    : IndexExpr(std::vector<std::shared_ptr<IndexVar>>(), op, operands) {
+
+}
+
+void IndexExpr::setIndexVariables(const vector<shared_ptr<IndexVar>> &ivs) {
+  this->indexVars = ivs;
+  initType();
+}
+
+void IndexExpr::setOperator(IndexExpr::Operator op) {
+  this->op = op;
+}
+
+void IndexExpr::setOperands(const std::vector<IndexedTensor> &operands) {
+  assert(operands.size() > 0);
+  bool reinit = (operands[0].getTensor()->getType()->getComponentType() !=
+                 this->operands[0].getTensor()->getType()->getComponentType());
+  this->operands = operands;
+  if (reinit) {
+    initType();
+  }
+}
+
+vector<shared_ptr<IndexVar>> IndexExpr::getDomain() const {
   vector<shared_ptr<IndexVar>> domain;
   set<shared_ptr<IndexVar>> added;
   for (auto &iv : indexVars) {
@@ -224,30 +253,7 @@ getIndexDomain(const vector<shared_ptr<IndexVar>> &indexVars,
     }
   }
   return domain;
-}
-}
 
-IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
-                     Operator op, const std::vector<IndexedTensor> &operands)
-    : TensorNode(getIndexExprType(indexVars, operands)),
-      domain(getIndexDomain(indexVars, operands)),
-      indexVars(indexVars), op(op), operands(operands) {
-  // Can't have reduction variables on rhs
-  for (auto &idxVar : indexVars) {
-    assert(idxVar->getOperator() == IndexVar::Operator::FREE);
-  }
-
-  // Typechecks
-  assert(operands.size() == (size_t)IndexExpr::numOperands(op));
-  Type firstType = operands[0].getTensor()->getType()->getComponentType();
-  for (auto &operand : operands) {
-    assert(firstType == operand.getTensor()->getType()->getComponentType() &&
-           "Operand component types differ");
-  }
-}
-
-const std::vector<std::shared_ptr<IndexVar>> &IndexExpr::getDomain() const {
-  return domain;
 }
 
 static std::string opString(IndexExpr::Operator op) {
@@ -298,6 +304,16 @@ void IndexExpr::print(std::ostream &os) const {
   }
 }
 
+void IndexExpr::initType() {
+  assert(operands.size() > 0);
+  Type ctype = operands[0].getTensor()->getType()->getComponentType();
+  std::vector<IndexSetProduct> dimensions;
+  for (auto &iv : indexVars) {
+    dimensions.push_back(iv->getIndexSet());
+  }
+  setType(new TensorType(ctype, dimensions));
+}
+
 
 // class Call
 void Call::print(std::ostream &os) const {
@@ -337,7 +353,7 @@ void Function::print(std::ostream &os) const {
   string argumentString = "(" + util::join(this->arguments, ", ") + ")";
   string resultString = (results.size() == 0)
       ? "" : " -> (" + util::join(this->results, ", ") + ")";
-  os << "func " << name << argumentString << resultString << endl;
+  os << "func " << getName() << argumentString << resultString << endl;
   FunctionBodyPrinter fp(os);
   fp.visit((Function*)this);
   os << "end";

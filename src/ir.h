@@ -5,6 +5,7 @@
 #include <string>
 #include <list>
 
+#include "interfaces.h"
 #include "types.h"
 #include "irvisitors.h"
 
@@ -13,7 +14,7 @@ namespace internal {
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
-class IRNode {
+class IRNode : simit::util::Uncopyable {
  public:
   IRNode() {}
   IRNode(const std::string &name) : name(name) {}
@@ -24,13 +25,8 @@ class IRNode {
   std::string getName() const { return name; }
   virtual void print(std::ostream &os) const = 0;
 
- protected:
-  std::string name;
-
  private:
-  // Not implemented
-  IRNode (const IRNode& other);
-  IRNode& operator= (IRNode &other);
+  std::string name;
 };
 std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
@@ -44,10 +40,15 @@ class TensorNode : public IRNode {
       : IRNode(name), type(type) {}
   virtual ~TensorNode();
 
-  virtual void accept(IRVisitor *visitor) = 0;
+  void setType(const TensorType *type) {
+    delete this->type;
+    this->type = type;
+  }
 
   const TensorType *getType() const { return type; }
   unsigned int getOrder() const { return type->getOrder(); }
+
+  virtual void accept(IRVisitor *visitor) = 0;
   virtual void print(std::ostream &os) const = 0;
 
  protected:
@@ -138,14 +139,18 @@ class IndexExpr : public TensorNode {
   enum Operator { NONE, NEG, ADD, SUB, MUL, DIV };
   static int numOperands(Operator op);
 
-  IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
-            Operator op, const std::vector<IndexedTensor> &operands);
+  IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &ivs,
+            IndexExpr::Operator op, const std::vector<IndexedTensor> &operands);
 
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  IndexExpr(IndexExpr::Operator op, const std::vector<IndexedTensor> &operands);
+
+  void setIndexVariables(const std::vector<std::shared_ptr<IndexVar>> &ivs);
+  void setOperator(IndexExpr::Operator op);
+  void setOperands(const std::vector<IndexedTensor> &operands);
 
   /// Get the domain of the index expression, which is the set index variables
   /// used by any sub-expression.
-  const std::vector<std::shared_ptr<IndexVar>> &getDomain() const;
+  std::vector<std::shared_ptr<IndexVar>> getDomain() const;
 
   /// Get the index variables used to assemble the result of this expression.
   const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {
@@ -159,13 +164,15 @@ class IndexExpr : public TensorNode {
   /// Get the operands inputs to this index expressions.
   const std::vector<IndexedTensor> &getOperands() const { return operands; }
 
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
   void print(std::ostream &os) const;
 
  private:
-  std::vector<std::shared_ptr<IndexVar>> domain;
   std::vector<std::shared_ptr<IndexVar>> indexVars;
   Operator op;
   std::vector<IndexedTensor> operands;
+
+  void initType();
 };
 
 std::ostream &operator<<(std::ostream &os, const IndexedTensor &t);
