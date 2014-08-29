@@ -67,7 +67,7 @@ int main(int argc, const char* argv[]) {
       }
     }
   }
-  if (emitSimit && emitLLVM) {
+  if (!emitSimit && !emitLLVM) {
     emitSimit = emitLLVM = true;
   }
 
