@@ -279,7 +279,7 @@ namespace  simit { namespace internal  {
     
 
   // Primitive literals
-  int          num;
+  int         num;
   double      fnum;
   const char *string;
 
@@ -302,6 +302,13 @@ namespace  simit { namespace internal  {
 
 
   std::shared_ptr<Call> *Call;
+
+
+  simit::internal::IndexExpr                               *IndexExpr;
+  simit::internal::IndexExpr::Operator                      IndexExprOperator;
+  simit::internal::IndexVar::Operator                       IndexVarOperator;
+  simit::internal::IndexedTensor                           *IndexedTensor;
+  simit::util::OwnershipVector<simit::internal::IndexVar*> *IndexVariables;
 
 
   VariableAccess       *VarAccess;
@@ -684,8 +691,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 398,     ///< Last index in yytable_.
-      yynnts_ = 60,  ///< Number of nonterminal symbols.
+      yylast_ = 430,     ///< Last index in yytable_.
+      yynnts_ = 64,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

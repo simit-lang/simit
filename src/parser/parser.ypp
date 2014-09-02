@@ -53,10 +53,18 @@
     do {                                               \
       std::stringstream errorStr;                      \
       errorStr << "type missmatch ("                   \
-               << tensorTypeString(t1, ctx) << " and "  \
+               << tensorTypeString(t1, ctx) << " and " \
                << tensorTypeString(t2, ctx) << ")";    \
       REPORT_ERROR(errorStr.str(), loc);               \
     } while (0)
+
+  #define REPORT_INDEX_VARIABLE_MISSMATCH(numIndexVars, order, loc) \
+    do {                                                            \
+      REPORT_ERROR("wrong number of index variables (" +            \
+                    to_string(numIndexVars) +                       \
+                    " index variables, but tensor order is " +      \
+                    to_string(order), loc);                          \
+      } while (0)
 
   void Parser::error(const Parser::location_type &loc, const std::string &msg) {
     ctx->addError(Error(loc.begin.line, loc.begin.column,
@@ -193,7 +201,7 @@
 
 %union {
   // Primitive literals
-  int          num;
+  int         num;
   double      fnum;
   const char *string;
 }
@@ -473,10 +481,10 @@ stmt_block
 %type<IRNodes> stmt;
 stmt
   : const_stmt
-  | if_stmt
   | return_stmt
   | assign_stmt
   | expr_stmt
+  | if_stmt
 
 %type<IRNodes> const_stmt;
 const_stmt
@@ -509,27 +517,6 @@ const_stmt
     std::string ident = convertAndFree($IDENT);
     delete $element_type;
     $$ = NULL;
-  }
-
-%type<IRNodes> if_stmt;
-if_stmt
-  : "if" expr stmt_block else_clauses BLOCKEND {
-    $$ = NULL;
-    delete $2;
-    delete $3;
-  }
-
-else_clauses
-  : /* empty */
-  | elif_clauses "else" stmt_block {
-    delete $3;
-  }
-
-elif_clauses
-  : /* empty */
-  | elif_clauses "elif" expr stmt_block {
-    delete $3;
-    delete $4;
   }
 
 %type<IRNodes> return_stmt;
@@ -582,11 +569,32 @@ assign_stmt
 
 %type<IRNodes> expr_stmt;
 expr_stmt
-  : ";" {
+  : expr ";" {
     $$ = NULL;
   }
-  | expr ";" {
+  | ";" {
     $$ = NULL;
+  }
+
+%type<IRNodes> if_stmt;
+if_stmt
+  : "if" expr stmt_block else_clauses BLOCKEND {
+    $$ = NULL;
+    delete $2;
+    delete $3;
+  }
+
+else_clauses
+  : /* empty */
+  | elif_clauses "else" stmt_block {
+    delete $3;
+  }
+
+elif_clauses
+  : /* empty */
+  | elif_clauses "elif" expr stmt_block {
+    delete $3;
+    delete $4;
   }
 
 
@@ -606,7 +614,6 @@ expr
       $$ = NULL;
       break;
     }
-
     const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
 
     shared_ptr<TensorNode> tensor = dynamic_pointer_cast<TensorNode>(node);
@@ -891,23 +898,122 @@ reduce
 
 
 // Index expressions
-index_expr
-  : reduction_indices expr
+%union {
+  simit::internal::IndexExpr                               *IndexExpr;
+  simit::internal::IndexExpr::Operator                      IndexExprOperator;
+  simit::internal::IndexVar::Operator                       IndexVarOperator;
+  simit::internal::IndexedTensor                           *IndexedTensor;
+  simit::util::OwnershipVector<simit::internal::IndexVar*> *IndexVariables;
+};
+%destructor {} <IndexExprOperator> <IndexVarOperator>;
 
-reduction_indices
+%type <IndexExpr> index_expr;
+index_expr
+  : reduction_vars index_expr_unary_operator indexed_tensor {
+    $$ = NULL;
+  }
+  | reduction_vars indexed_tensor index_expr_binary_operator indexed_tensor {
+//    cout << *$2 << " " << *$4 << endl;
+    $$ = NULL;
+  }
+
+%type <IndexExprOperator> index_expr_unary_operator;
+index_expr_unary_operator
+  : /* empty */ {
+    return IndexExpr::Operator::NONE;
+  }
+  | "-" {
+    return IndexExpr::Operator::NEG;
+  }
+
+%type <IndexExprOperator> index_expr_binary_operator;
+index_expr_binary_operator
+  : "+" {
+    return IndexExpr::Operator::ADD;
+  }
+  | "-" {
+    return IndexExpr::Operator::SUB;
+  }
+  | "*" {
+    return IndexExpr::Operator::MUL;
+  }
+  | "/" {
+    return IndexExpr::Operator::DIV;
+  }
+
+
+%type <IndexedTensor> indexed_tensor;
+indexed_tensor
+  :
+//  IDENT {
+//    string ident = convertAndFree($IDENT);
+//    if (!ctx->hasSymbol(ident)) {
+//      REPORT_ERROR(ident + " is not defined in scope", @1);
+//    }
+//
+//    const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
+//    auto tensor = dynamic_pointer_cast<TensorNode>(node);
+//    if (!tensor) {
+//      REPORT_ERROR(ident + " is not a tensor", @1);
+//    }
+//
+//    size_t order = tensor->getType()->getOrder();
+//    if (order != 0) {
+//      REPORT_INDEX_VARIABLE_MISSMATCH(0, order, @1);
+//    }
+//
+//    vector<shared_ptr<IndexVar>> indexVars;
+//    $$ = new IndexedTensor(tensor, indexVars);
+//  }
+//  |
+  IDENT "{" free_vars "}" {
+    vector<shared_ptr<IndexVar>> indexVars($free_vars->begin(),
+                                           $free_vars->end());
+    $free_vars->clear();
+    delete $free_vars;
+
+    string ident = convertAndFree($IDENT);
+    if (!ctx->hasSymbol(ident)) {
+      REPORT_ERROR(ident + " is not defined in scope", @1);
+    }
+
+    const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
+    auto tensor = dynamic_pointer_cast<TensorNode>(node);
+    if (!tensor) {
+      REPORT_ERROR(ident + " is not a tensor", @1);
+    }
+
+    size_t order = tensor->getType()->getOrder();
+    if (order != indexVars.size()) {
+      REPORT_INDEX_VARIABLE_MISSMATCH(indexVars.size(), order, @1);
+    }
+
+    for (size_t i=0; i<indexVars.size(); ++i) {
+      indexVars[i]->setIndexSet(tensor->getType()->getDimensions()[i]);
+    }
+    $$ = new IndexedTensor(tensor, indexVars);
+
+    cout << *$$ << endl;
+  }
+
+%type <IndexVariables> free_vars;
+free_vars
+  : IDENT {
+    $$ = new simit::util::OwnershipVector<simit::internal::IndexVar*>();
+    $$->push_back(new IndexVar(convertAndFree($IDENT)));
+  }
+  | free_vars "," IDENT {
+    $$ = $1;
+    $$->push_back(new IndexVar(convertAndFree($IDENT)));
+  }
+
+reduction_vars
   : /* empty */
-  | reduction_indices reduction_index
+  | reduction_vars reduction_index
 
 reduction_index
   : reduction_op IDENT {
     std::string ident = convertAndFree($IDENT);
-  }
-  | reduction_op "{" IDENT "}" {
-    std::string ident = convertAndFree($IDENT);
-  }
-  | IDENT "{" IDENT "}" {
-    free((void*)$1);
-    free((void*)$3);
   }
 
 reduction_op
@@ -953,14 +1059,17 @@ lhs_expr
     variableStore->name = name;
     $$ = variableStore;
   }
+  | IDENT "." IDENT {
+    std::string name = convertAndFree($1);
+    std::string field = convertAndFree($3);
+    $$ = NULL;
+  }
   | IDENT "(" expr_list ")" {
     std::string name = convertAndFree($IDENT);
     $$ = NULL;
     delete $expr_list;
   }
-  | IDENT "." IDENT {
-    std::string name = convertAndFree($1);
-    std::string field = convertAndFree($3);
+  | indexed_tensor {
     $$ = NULL;
   }
 

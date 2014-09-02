@@ -78,6 +78,8 @@ class OwnershipVector {
   ~OwnershipVector() { for (auto &obj : vec) { delete obj; } }
 
   void push_back(const T &val) { vec.push_back(val); }
+  void clear() { vec.clear(); }
+
   size_t size() const { return vec.size(); }
 
   iterator begin() { return vec.begin(); }

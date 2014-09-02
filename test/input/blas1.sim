@@ -17,14 +17,14 @@ func scaler(a : Tensor[3](float), b : float) -> (c : Tensor[3](float))
 end
 
 %%% add-scalar
-%! add_scalar(3.0, [0.0, 1.0, 4.0]) == [3.0, 4.0, 7.0];
-func add_scalar(a : float, b : Tensor[3](float)) -> (c : Tensor[3](float))
+%! add(3.0, [0.0, 1.0, 4.0]) == [3.0, 4.0, 7.0];
+func add(a : float, b : Tensor[3](float)) -> (c : Tensor[3](float))
   c = a+b;
 end
 
 %%% add
-%! add_vectors([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]) == [3.0, 5.0, 7.0];
-func add_vectors(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+%! add([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]) == [3.0, 5.0, 7.0];
+func add(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
   c = a + b;
 end
 

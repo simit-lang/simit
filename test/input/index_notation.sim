@@ -1,9 +1,16 @@
-%%% dot3
-func dot(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
-  c = +i a(i) * b(i);
+%%%- add
+%%! add([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]) == [3.0, 5.0, 7.0];
+func add(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+  c{i} = a{i} + b{i};
 end
 
-%%% dot
+%%%- inner-product
+%! inner([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]') == 14.0; 
+func inner(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+  c = +i a{i} * b{i};
+end
+
+%%%- dot-varsize
 func dot(a : Tensor[*](float), b : Tensor[*](float)) -> (c : Tensor[*](float))
-  c = +i a(i) * b(i);
+  c = +i a{i} * b{i};
 end
