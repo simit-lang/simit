@@ -457,18 +457,18 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
 
 
 /// A Simit function that has been compiled with LLVM.
-class LLVMCompiledFunction : public simit::Function {
+class LLVMFunction : public simit::Function {
  public:
-  LLVMCompiledFunction(simit::internal::Function *simitFunc,
-                       llvm::Function *llvmFunc,
-                       const std::shared_ptr<llvm::ExecutionEngine> &llvmFuncEE,
-                       const std::vector<std::shared_ptr<Storage>> &storage)
+  LLVMFunction(simit::internal::Function *simitFunc,
+               llvm::Function *llvmFunc,
+               const std::shared_ptr<llvm::ExecutionEngine> &llvmFuncEE,
+               const std::vector<std::shared_ptr<Storage>> &storage)
       : simitFunc(simitFunc), llvmFunc(llvmFunc), llvmFuncEE(llvmFuncEE),
         storage(storage), module("Harness", LLVM_CONTEXT) {
     llvmFuncEE->addModule(&module);
   }
 
-  ~LLVMCompiledFunction() { llvmFuncEE->removeModule(&module); }
+  ~LLVMFunction() { llvmFuncEE->removeModule(&module); }
 
   void bind(const std::vector<std::shared_ptr<Literal>> &arguments,
             const std::vector<std::shared_ptr<Literal>> &results) {
@@ -559,8 +559,7 @@ simit::Function *LLVMCodeGen::compile(Function *function) {
   llvm::Function *f = codegen(function, temps);
   if (f == NULL) return NULL;
 
-  return new LLVMCompiledFunction(function, f, executionEngine,
-                                  talloc.getTemporaries());
+  return new LLVMFunction(function,f, executionEngine, talloc.getTemporaries());
 }
 
 llvm::Function *LLVMCodeGen::codegen(Function *function,
