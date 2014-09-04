@@ -11,7 +11,6 @@ namespace simit {
 class Diagnostics;
 class Error;
 class Set;
-class Tensor;
 class Function;
 
 /// A Simit program. You can load Simit source code using the \ref loadString

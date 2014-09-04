@@ -8,7 +8,6 @@
 
 #include "tensor.h"
 
-
 namespace simit {
 
 /// An opaque handle for accessing Fields

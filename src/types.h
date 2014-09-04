@@ -7,10 +7,11 @@
 #include <iostream>
 #include <memory>
 
-#include "graph.h"
-#include "tensor.h"
+#include "tensor_components.h"
 
 namespace simit {
+class Set;
+
 namespace internal {
 
 /// An index set is a set of labels into a set.  There are three types of index

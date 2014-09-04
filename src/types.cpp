@@ -7,6 +7,8 @@
 #include "util.h"
 #include "macros.h"
 
+#include "graph.h"
+
 using namespace std;
 
 namespace simit {
