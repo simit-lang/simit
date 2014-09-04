@@ -1,6 +1,8 @@
 #ifndef SIMIT_TENSOR_H
 #define SIMIT_TENSOR_H
 
+#include <cassert>
+
 #include "tensor_components.h"
 
 // TODO: Remove
@@ -11,179 +13,125 @@ namespace simit {
 
 /// A tensor is a generalization of scalars, vectors and matrices. Tensors can
 /// be fields of \ref Set instances and can be bound to \ref Program instances.
-template <typename T, size_t order>
 class TensorBase {
  public:
-  inline Type getType() { typeOf<T>(); }
-
-  inline size_t getOrder() const { return order; }
-  inline size_t getDimension(size_t i) { assert(i < order); return dims[i]; }
-
-
- protected:
-  inline TensorBase() {}
-  inline TensorBase(size_t d0) : dims{d0} { init(); }
-  inline TensorBase(size_t d0, size_t d1) : dims{d0,d1} { init(); }
-  inline TensorBase(size_t d0, size_t d1, size_t d2) : dims{d0,d1,d2} { init();}
-
-  template<typename... Dims>
-  inline TensorBase(Dims... dims) { initDims(0u, dims...); init(); };
-
-  ~TensorBase() { free(data); }
-
-  inline T &get(size_t i) {
-    return static_cast<T*>(this->data)[i];
-  }
-
-  inline T &get(size_t i, size_t j) {
-    assert(i < this->dims[0] && j < this->dims[1]);
-    return static_cast<T*>(this->data)[i*this->dims[1] + j];
-  }
-
-  inline T &get(size_t i, size_t j, size_t k) {
-    assert(i < this->dims[0] && j < this->dims[1] && k < this->dims[2]);
-    return static_cast<T*>(this->data)[i*this->dims[1]*this->dims[2] +
-                                       j*this->dims[2] + k];
-  }
-
-  template<typename... Indices>
-  inline T &get(Indices... indices) {
-    return static_cast<T*>(this->data)[computeOffset(0, indices...)];
-  }
-
- private:
-  void *data;
-  Type type;
-  size_t dims[order];
-
-  void init() {
-    size_t numElements = 1;
-    for (size_t i=0; i<order; ++i) {
-      numElements *= dims[i];
-    }
-    data = malloc(numElements * sizeof(T));
-  }
-
-  template<typename... Dims>
-  void initDims(size_t i, size_t d, Dims... dims) {
-    this->dims[i] = d;
-    initDims(i+1, dims...);
-  }
-
-  template<typename... Dims>
-  void initDims(size_t i, size_t d) {
-    this->dims[i] = d;
-  }
-
-  template<typename... Indices>
-  inline size_t computeOffset(size_t i, size_t idx) {
-    assert(idx < dims[i]);
-    return i;
-  }
-
-  template<typename... Indices>
-  inline size_t computeOffset(size_t i, size_t idx, Indices... indices) {
-    assert(idx < dims[i]);
-    size_t stride = 1;
-    for (size_t j=i+1; j<order; ++j) {
-      stride *= dims[j];
-    }
-    return stride*idx + computeOffset(i+1, indices...);
-  }
-};
-
-
-template <typename T>
-class TensorBase<T, 0> {
- public:
-  inline size_t getOrder() const { return 0; }
-
- protected:
-  TensorBase() {}
-  ~TensorBase() {}
-
-  T val;
+  virtual Type getType() const = 0;
+  virtual size_t getOrder() const = 0;
+  virtual size_t getDimension(size_t i) const = 0;
 };
 
 template <typename T, size_t order>
-class Tensor : public TensorBase<T, order> {
+class Tensor : public TensorBase {
  public:
-  template<typename... Dims>
-  Tensor(Dims... dims) : TensorBase<T, order>(dims...) {}
+//  template<typename... Dims>
+//  Tensor(Dims... dims) : TensorBase<T>(dims...) {}
 
-  template<typename... Indices>
-  inline T &operator()(Indices... indices) {
-    return this->get(indices...);
-  }
+//  template<typename... Indices>
+//  inline T &operator()(Indices... indices) {
+//    return this->get(indices...);
+//  }
+//
+//  template<typename... Indices>
+//  inline const T &operator()(Indices... indices) const {
+//    return this->get(indices...);
+//  }
 
-  template<typename... Indices>
-  inline const T &operator()(Indices... indices) const {
-    return this->get(indices...);
-  }
-  
  private:
 
 };
 
+// Scalars
 template <typename T>
-class Tensor<T,0> : public TensorBase<T,0> {
+class Tensor<T,0> : public TensorBase {
  public:
-  explicit Tensor() {}
-  Tensor(T val) { this->val = val; }
+  inline explicit Tensor() {}
+  inline explicit Tensor(T val) : val(val) {}
 
-  inline void operator= (const T &val) { this->val = val; }
-  inline operator T() const { return this->val; }
-};
-
-template <typename T>
-class Tensor<T,1> : public TensorBase<T,1> {
- public:
-  explicit Tensor(size_t d0) : TensorBase<T,1>(d0) {}
-
-  inline T &operator()(size_t i) {
-    return this->get(i);
+  Type getType() const { return typeOf<T>(); }
+  size_t getOrder() const { return 0; }
+  size_t getDimension(size_t i) const {
+    assert(false && "scalars don't have dimensions");
   }
 
-  inline const T &operator()(size_t i) const {
-    return operator()(i);
-  }
-};
-
-template <typename T>
-class Tensor<T, 2> : public TensorBase<T,2> {
- public:
-  explicit Tensor(size_t d0, size_t d1) : TensorBase<T,2>(d0,d1) {}
-
-  inline T &operator()(size_t i, size_t j) {
-    return this->get(i,j);
+  inline Tensor<T,0> &operator= (T val) {
+    this->val = val;
+    return *this;
   }
 
-  inline const T &operator()(size_t i, size_t j) const {
-    return this->get(i,j);
-  }
-};
-
-template <typename T>
-class Tensor<T, 3> : public TensorBase<T, 3> {
- public:
-  explicit Tensor(size_t d0, size_t d1, size_t d2) : TensorBase<T,3>(d0,d1,d2){}
-
-  inline T &operator()(size_t i, size_t j, size_t k) {
-    return this->get(i,j,k);
+  inline operator T() const {
+    return this->val;
   }
 
-  inline const T &operator()(size_t i, size_t j, size_t k) const {
-    return this->get(i,j,k);
-  }
+ protected:
+  T val;
 };
 
 template <typename T>
 class Scalar : public Tensor<T, 0> {
  public:
-  Scalar() {}
-  Scalar(T val) : Tensor<T, 0>(val) {}
+  inline explicit Scalar() {}
+  inline explicit Scalar(T val) : Tensor<T, 0>(val) {}
 
-  inline void operator= (const T &val) { Tensor<T, 0>::operator=(val); }
+  inline Scalar<T> &operator= (T val) {
+    Tensor<T,0>::operator=(val);
+    return *this;
+  }
+};
+
+class Int : public Scalar<int> {
+ public:
+  inline explicit Int() {}
+  inline explicit Int(int val) : Scalar<int>(val) {}
+
+  inline Int &operator= (int val) {
+    Scalar<int>::operator=(val);
+    return *this;
+  }
+};
+
+class Double : public Scalar<double> {
+ public:
+  inline explicit Double() {}
+  inline explicit Double(double val) : Scalar<double>(val) {}
+
+  inline Double &operator= (double val) {
+    Scalar<double>::operator=(val);
+    return *this;
+  }
+};
+
+
+// Vectors
+template <typename T>
+class Tensor<T,1> : public TensorBase {
+ public:
+  inline explicit Tensor(size_t d0) : dim{d0}{
+    data = (double*)malloc(d0 * sizeof(T));
+  }
+
+  inline ~Tensor() {
+    free(data);
+  }
+
+  Type getType() const { return typeOf<T>(); }
+  size_t getOrder() const { return 1; }
+  size_t getDimension(size_t i) const {
+    assert(i == 0);
+    return dim;
+  }
+
+  inline T &operator()(size_t i) {
+    assert(i < dim);
+    return data[i];
+  }
+
+  inline const T &operator()(size_t i) const {
+    return operator()(i);
+  }
+
+ private:
+  size_t dim;
+  T *data;
 };
 
 template <typename T>
@@ -192,10 +140,77 @@ class Vector : public Tensor<T, 1> {
   explicit Vector(size_t d0) : Tensor<T, 1>(d0) {}
 };
 
+
+// Matrices
+template <typename T>
+class Tensor<T, 2> : public TensorBase {
+ public:
+  inline explicit Tensor(size_t d0, size_t d1) : dims{d0, d1} {
+    data = (double*)malloc(d0 * d1 * sizeof(T));
+  }
+
+  inline ~Tensor() {
+    free(data);
+  }
+
+  Type getType() const { return typeOf<T>(); }
+  size_t getOrder() const { return 2; }
+  size_t getDimension(size_t i) const {
+    assert(i < 2);
+    return dims[i];
+  }
+
+  inline T &operator()(size_t i, size_t j) {
+    assert(i < dims[0] && j < dims[1]);
+    return data[i*dims[1] + j];
+  }
+
+  inline const T &operator()(size_t i, size_t j) const {
+    return operator()(i,j);
+  }
+
+ private:
+  size_t dims[2];
+  T *data;
+};
+
 template <typename T>
 class Matrix : public Tensor<T, 2> {
  public:
   explicit Matrix(size_t d0, size_t d1) : Tensor<T, 2>(d0, d1) {}
+};
+
+
+template <typename T>
+class Tensor<T, 3> : public TensorBase {
+ public:
+  inline explicit Tensor(size_t d0, size_t d1, size_t d2) : dims{d0, d1, d2} {
+    data = (double*)malloc(d0 * d1 * d2 *sizeof(T));
+  }
+
+  inline ~Tensor() {
+    free(data);
+  }
+
+  Type getType() const { return typeOf<T>(); }
+  size_t getOrder() const { return 3; }
+  size_t getDimension(size_t i) const {
+    assert(i < 3);
+    return dims[i];
+  }
+
+  inline T &operator()(size_t i, size_t j, size_t k) {
+    assert(i < dims[0] && j < dims[1] && k < dims[2]);
+    return data[i*dims[1]*dims[2] + j*dims[2] + k];
+  }
+
+  inline const T &operator()(size_t i, size_t j, size_t k) const {
+    return operator()(i,j,k);
+  }
+
+ private:
+  size_t dims[3];
+  T *data;
 };
 
 
