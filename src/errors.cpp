@@ -1,9 +1,10 @@
 #include "errors.h"
 
-using namespace simit;
 using namespace std;
 
-// Error
+namespace simit {
+
+// class Error
 Error::Error(int firstLine, int firstColumn, int lastLine, int lastColumn,
              std::string msg)
     : firstLine(firstLine), firstColumn(firstColumn),
@@ -23,3 +24,10 @@ std::string Error::toString() const {
                      : to_string(firstColumn) + "-" + to_string(lastColumn);
   return "Error: " + msg + ", at " + lineStr + ":" + columnStr;
 }
+
+// class Diagnostics
+std::ostream &operator<<(std::ostream &os, const Diagnostics &f) {
+  return os << f.getMessage();
+}
+
+} // namespace simit

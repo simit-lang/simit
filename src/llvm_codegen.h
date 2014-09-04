@@ -32,7 +32,7 @@ class LLVMCodeGen : public CodeGen, IRVisitor {
   LLVMCodeGen();
   ~LLVMCodeGen();
 
-  CompiledFunction *compile(Function *function);
+  simit::Function *compile(Function *function);
 
  private:
   static bool llvmInitialized;

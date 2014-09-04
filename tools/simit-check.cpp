@@ -1,4 +1,5 @@
 #include "program.h"
+#include "errors.h"
 #include <iostream>
 using namespace std;
 
@@ -16,13 +17,13 @@ int main(int argc, const char* argv[]) {
   }
   else if (status != 0) {
     cerr << "Error parsing the program" << endl;
-    cerr << program.getErrorString() << endl;
+    cerr << program.getDiagnostics() << endl;
     return 1;
   }
 
   if (program.verify() != 0) {
     cerr << "Error while running test" << endl;
-    cerr << program.getErrorString() << endl;
+    cerr << program.getDiagnostics() << endl;
     return 4;
   }
 

@@ -19,6 +19,7 @@
 #include "llvm/ExecutionEngine/JIT.h"
 
 #include "ir.h"
+#include "function.h"
 #include "storage.h"
 #include "scopedmap.h"
 #include "macros.h"
@@ -456,7 +457,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
 
 
 /// A Simit function that has been compiled with LLVM.
-class LLVMCompiledFunction : public CompiledFunction {
+class LLVMCompiledFunction : public simit::Function {
  public:
   LLVMCompiledFunction(simit::internal::Function *simitFunc,
                        llvm::Function *llvmFunc,
@@ -551,7 +552,7 @@ LLVMCodeGen::~LLVMCodeGen() {
   delete symtable;
 }
 
-CompiledFunction *LLVMCodeGen::compile(Function *function) {
+simit::Function *LLVMCodeGen::compile(Function *function) {
   TemporaryAllocator talloc;
   std::map<IRNode*, void*> temps = talloc.allocateTemporaries(function);
 

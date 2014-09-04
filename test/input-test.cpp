@@ -8,6 +8,8 @@
 #include "program.h"
 #include "errors.h"
 #include "util.h"
+#include "frontend.h"
+#include "llvm_codegen.h"
 
 using namespace simit;
 using namespace simit::util;
@@ -123,31 +125,30 @@ vector<ProgramTestParam> readTestsFromDir(const std::string &dirpath) {
 
 TEST_P(input, check) {
   ASSERT_FALSE(GetParam().failedIO) << "failed to read file " + GetParam().path;
+
   Program program;
   if (program.loadString(GetParam().source) != 0) {
-    assert(program.getErrors().size() > 0);
-    for (auto &error : program.getErrors()) {
-      string errorFile = GetParam().path;
-      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
-      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
-    }
-  }
+    assert(program.hasErrors());
+    for (auto &diag : program.getDiagnostics()) {
+      ADD_FAILURE() << diag.getMessage();
 
-  if (program.compile() != 0) {
-    for (auto &error : program.getErrors()) {
-      string errorFile = GetParam().path;
-      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
-      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
-    }
-  }
-
-  if (program.verify() != 0) {
-    FAIL();  // TODO: Replace with below after verify error reporting works
-//    for (auto &error : program.getErrors()) {
+        // TODO: Add back line info
 //      string errorFile = GetParam().path;
 //      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
-//      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << program.getErrorString();
-//    }
+//      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
+    }
+  }
+  else {
+    if (program.verify() != 0) {
+      for (auto &diag : program.getDiagnostics()) {
+        ADD_FAILURE() << diag.getMessage();
+
+        // TODO: Add back line info
+//      string errorFile = GetParam().path;
+//      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
+//      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
+      }
+    }
   }
 }
 

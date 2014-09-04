@@ -1,24 +1,23 @@
 #include "program.h"
 
-#include <memory>
 #include <set>
 
 #include "ir.h"
 #include "frontend.h"
 #include "llvm_codegen.h"
+#include "function.h"
 #include "util.h"
 #include "errors.h"
 
 using namespace std;
-using namespace simit;
-using namespace simit::internal;
 
 namespace simit {
-namespace internal {
-class ProgramContent {
+
+// class ProgramContent
+class Program::ProgramContent {
  public:
   ProgramContent(const std::string &name)
-      : name(name), frontend(new Frontend()), codegen(NULL) {}
+      : name(name), frontend(new internal::Frontend()), codegen(NULL) {}
   ~ProgramContent() {
     for (auto &function : functions) {
       delete function.second;
@@ -32,28 +31,28 @@ class ProgramContent {
 
   const std::string &name;
 
-  std::map<std::string, Function*> functions;
+  std::map<std::string, internal::Function*> functions;
 
-  std::vector<simit::Error> errors;
-  std::vector<Test*> tests;
+  Diagnostics diagnostics;
+  std::vector<internal::Test*> tests;
 
-  Frontend *getFrontend() { return frontend; }
-  CodeGen *getCodeGen() {
+  internal::Frontend *getFrontend() { return frontend; }
+  internal::CodeGen *getCodeGen() {
     if (codegen == NULL) {
-      codegen = new LLVMCodeGen();
+      codegen = new internal::LLVMCodeGen();
     }
     return codegen;
   }
 
  private:
-  Frontend *frontend;
-  LLVMCodeGen *codegen;
+  internal::Frontend *frontend;
+  internal::LLVMCodeGen *codegen;
 };
-}} // simit::internal
 
 
-// Program
-Program::Program(const std::string &name) : impl(new ProgramContent(name)) {
+// class Program
+Program::Program(const std::string &name)
+    : impl(new ProgramContent(name)) {
 }
 
 Program::~Program() {
@@ -65,88 +64,50 @@ std::string Program::getName() const {
 }
 
 int Program::loadString(const string &programString) {
-  return impl->getFrontend()->parseString(programString, &impl->functions,
-                                          &impl->errors, &impl->tests);
+  std::vector<Error> errors;
+  int status = impl->getFrontend()->parseString(programString, &impl->functions,
+                                                &errors, &impl->tests);
+  for (auto &error : errors) {
+    impl->diagnostics.report() << error.toString();
+  }
+  return status;
 }
 
 int Program::loadFile(const std::string &filename) {
-  return impl->getFrontend()->parseFile(filename, &impl->functions,
-                                        &impl->errors, &impl->tests);
+  std::vector<Error> errors;
+  int status = impl->getFrontend()->parseFile(filename, &impl->functions,
+                                              &errors, &impl->tests);
+  for (auto &error : errors) {
+    impl->diagnostics.report() << error.toString();
+  }
+  return status;
 }
 
-int Program::compile() {
-//  for (auto function : impl->functions) {
-//    impl->getCodeGen()->compileToFunctionPointer(function);
-//  }
-  return 0;
+std::unique_ptr<Function> Program::compile(const std::string &function) {
+  internal::Function *func = impl->functions[function];
+  if (!func) {
+    impl->diagnostics.report() << "Attempting to compile unknown function ("
+                               << function << ")";
+    return NULL;
+  }
+
+  return std::unique_ptr<Function>(impl->getCodeGen()->compile(func));
 }
 
 int Program::verify() {
-  // For each test look up the called function. Grab the actual arguments and
-  // run the function with them as input.  Then compare the result to the
-  // expected literal.
-
-  std::map<Function*, CompiledFunction*> compiled;
-
-  for (auto &test : impl->tests) {
-    LLVMCodeGen codegen;
-    // get binary function with name test->call->callee from list of functions
-    Function *func = impl->functions[test->getCallee()];
-    if (func == NULL) {
-      // TODO: Report error, attempting to call unknown function
-      cerr << "Error: attempting to call unknown function" << endl;
-      return 1;
-    }
-
-    if (compiled.find(func) == compiled.end()) {
-      compiled[func] = codegen.compile(func);
-//      cout << *func << endl << *compiled[func];
-    }
-    CompiledFunction *compiledFunc = compiled[func];
-
-    // run the function with test->call->arguments
-    auto arguments = test->getArguments();
-    assert(arguments.size() == func->getArguments().size());
-
-    std::vector<std::shared_ptr<Literal>> results;
-    for (auto &result : func->getResults()) {
-      Literal *resultLit = new Literal(new TensorType(*result->getType()));
-      resultLit->clear();
-      results.push_back(shared_ptr<Literal>(resultLit));
-    }
-
-    compiledFunc->bind(arguments, results);
-    compiledFunc->run();
-
-    // compare function result with test->literal
-    auto expectedResults = test->getExpectedResults();
-    assert(expectedResults.size() == results.size());
-    auto rit = results.begin();
-    auto eit = expectedResults.begin();
-    for (; rit != results.end(); ++rit, ++eit) {
-      if (**rit != **eit) {
-        // TODO: Report error
-        cerr << **rit << " != " << endl << **eit << endl;
-        return 1;
-      }
-    }
-  }
-  return 0;
+  internal::LLVMCodeGen codegen;
+  return codegen.verify(impl->functions, impl->tests, &impl->diagnostics) != 0;
 }
 
-int Program::run() {
-  return 0;
+bool Program::hasErrors() const {
+  return impl->diagnostics.hasErrors();
 }
 
-string Program::getErrorString() {
-  return util::join(impl->errors, "\n");
+const Diagnostics &Program::getDiagnostics() const {
+  return impl->diagnostics;
 }
 
-std::vector<Error> &Program::getErrors() {
-  return impl->errors;
-}
-
-std::ostream &simit::operator<<(std::ostream &os, const Program &program) {
+std::ostream &operator<<(std::ostream &os, const Program &program) {
   auto begin = program.impl->functions.begin();
   auto end = program.impl->functions.end();
   if (begin != end) {
@@ -159,3 +120,5 @@ std::ostream &simit::operator<<(std::ostream &os, const Program &program) {
   }
   return os << endl;
 }
+
+} // namespace simit

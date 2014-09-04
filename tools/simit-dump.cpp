@@ -1,5 +1,6 @@
 #include <iostream>
 
+#include "function.h"
 #include "frontend.h"
 #include "llvm_codegen.h"
 #include "errors.h"
@@ -125,7 +126,8 @@ int main(int argc, const char* argv[]) {
       if (emitSimit) {
         cout << endl;
       }
-      cout << simit::util::trim(toString(*codegen.compile(func.second)));
+      std::string fstr = simit::util::toString(*codegen.compile(func.second));
+      cout << simit::util::trim(fstr);
     }
     cout << endl << endl;
   }

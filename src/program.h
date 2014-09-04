@@ -4,15 +4,15 @@
 #include <string>
 #include <ostream>
 #include <vector>
+#include <memory>
 
 namespace simit {
-namespace internal {
-class ProgramContent;
-}
 
+class Diagnostics;
 class Error;
 class Set;
 class Tensor;
+class Function;
 
 /// A Simit program. You can load Simit source code using the \ref loadString
 /// and \ref loadFile, register input sets using the \ref registerSet method,
@@ -38,44 +38,25 @@ class Program {
   ///         through the \ref getErrors and \ref getErrorString methods.
   int loadFile(const std::string &filename);
 
-  /// Binds the set to the given name and makes it available to Simit programs.
-  /// Inside Simit programs the set can be accessed through extern declarations
-  /// whose type match the set type and whose name match the given name.
-  int bindSet(const simit::Set &set, const std::string &name);
-
-  /// Binds the Tensor to the given name and makes it available to Simit
-  /// programs. Inside Simit programs the tensor can be accessed through extern
-  /// declarations whose type match the tensor type and whose name match the
-  /// given name. */
-  int bindTensor(const std::string &name, const simit::Tensor &tensor);
-
-  /// Compile the program.
-  /// \return 0 on success, 1 if the program is incomplete.
-  int compile();
+  /// Compile and return a runnable function or NULL if an error occurred.
+  std::unique_ptr<Function> compile(const std::string &function);
 
   /// Verify the program by executing in-code comment tests.
   int verify();
 
-  /// Run the program.
-  /// \return 0 on success, 1 if the program could not be run.
-  int run();
-
-  /// Get a vector of errors that occurred when trying to add code to the
-  /// program.
-  std::vector<simit::Error> &getErrors();
-
-  /// Get a string that describes errors that occurred when trying to add code
-  /// to the program.
-  std::string getErrorString();
+  bool hasErrors() const;
+  const Diagnostics &getDiagnostics() const;
 
   /// Writes a human-readable string represeting the program to the stream.
   friend std::ostream &operator<<(std::ostream&, const Program&);
 
  private:
-  internal::ProgramContent *impl;
+  class ProgramContent;
+  ProgramContent *impl;
 
-  Program(const Program&) = delete;
-  Program& operator=(const Program&) = delete;
+  // Uncopyable
+  Program(const Program&);
+  Program& operator=(const Program&);
 };
 
 }
