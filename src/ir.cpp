@@ -35,7 +35,7 @@ void TensorNode::print(std::ostream &os) const {
 
 // class Literal
 Literal::Literal(TensorType *type) : TensorNode(type) {
-  int componentSize = TensorType::componentSize(type->getComponentType());
+  int componentSize = simit::componentSize(type->getComponentType());
   this->dataSize = type->getSize() * componentSize;
   this->data = malloc(dataSize);
 }
@@ -109,7 +109,7 @@ bool operator==(const Literal& l, const Literal& r) {
   }
   assert(l.getType()->getSize() == r.getType()->getSize());
   simit::Type ctype = l.getType()->getComponentType();
-  int byteSize = l.getType()->getSize() * TensorType::componentSize(ctype);
+  int byteSize = l.getType()->getSize() * simit::componentSize(ctype);
 
   if (memcmp(l.getData(), r.getData(), byteSize) != 0) {
     return false;

@@ -97,9 +97,6 @@ class TensorType {
 
   std::ostream &print(std::ostream &os) const;
 
-  static std::size_t componentSize(Type ct);
-  static std::string componentTypeString(Type ct);
-
  private:
   Type componentType;
   std::vector<IndexSetProduct> dimensions;
