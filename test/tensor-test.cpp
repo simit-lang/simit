@@ -22,16 +22,67 @@ TEST(Tensor, scalar) {
 }
 
 TEST(Tensor, vector) {
-  Vector<double> vec(3);
-  ASSERT_EQ(FLOAT, vec.getType());
-  ASSERT_EQ(vec.getOrder(), 1u);
-  ASSERT_EQ(3u, vec.getDimension(0));
-  vec(0) = 3.0;
-  vec(1) = 2.0;
-  vec(2) = 7.0;
-  ASSERT_EQ(3.0, vec(0));
-  ASSERT_EQ(2.0, vec(1));
-  ASSERT_EQ(7.0, vec(2));
+  Vector<double,2> vec2Ref({10.0, 20.0});
+  Vector<double,3> vec3Ref({10.0, 20.0, 30.0});
+  Vector<double,4> vec4Ref({10.0, 20.0, 30.0, 40.0});
+
+  Vector<double,Dynamic> dvec2Ref(2, {10.0, 20.0});
+  Vector<double,Dynamic> dvec3Ref(3, {10.0, 20.0, 30.0});
+  Vector<double,Dynamic> dvec4Ref(4, {10.0, 20.0, 30.0, 40.0});
+
+  Vector<double,3> vec3({10.0, 20.0, 30.0});
+  ASSERT_EQ(FLOAT, vec3.getType());
+  ASSERT_EQ(vec3.getOrder(), 1u);
+  ASSERT_EQ(3u, vec3.getDimension(0));
+  ASSERT_EQ(10.0, vec3(0));
+  ASSERT_EQ(20.0, vec3(1));
+  ASSERT_EQ(30.0, vec3(2));
+  ASSERT_EQ(vec3Ref, vec3);
+  ASSERT_EQ(dvec3Ref, vec3);
+  ASSERT_NE(dvec2Ref, vec3);
+  ASSERT_NE(vec4Ref, vec3);
+  vec3(0) = 3.0;
+  vec3(1) = 2.0;
+  vec3(2) = 7.0;
+  ASSERT_EQ(3.0, vec3(0));
+  ASSERT_EQ(2.0, vec3(1));
+  ASSERT_EQ(7.0, vec3(2));
+  ASSERT_NE(vec3, vec3Ref);
+
+  Vector<double,Dynamic> dvec3(3, {10.0, 20.0, 30.0});
+  ASSERT_EQ(FLOAT, dvec3.getType());
+  ASSERT_EQ(dvec3.getOrder(), 1u);
+  ASSERT_EQ(3u, dvec3.getDimension(0));
+  ASSERT_EQ(10.0, dvec3(0));
+  ASSERT_EQ(20.0, dvec3(1));
+  ASSERT_EQ(30.0, dvec3(2));
+  ASSERT_EQ(dvec3Ref, dvec3);
+  ASSERT_NE(dvec4Ref, dvec3);
+  dvec3(0) = 3.0;
+  dvec3(1) = 2.0;
+  dvec3(2) = 7.0;
+  ASSERT_EQ(3.0, dvec3(0));
+  ASSERT_EQ(2.0, dvec3(1));
+  ASSERT_EQ(7.0, dvec3(2));
+  ASSERT_NE(dvec3, dvec3Ref);
+
+  Tensor<double,1> tvec3(3, {10.0, 20.0, 30.0});
+  ASSERT_EQ(FLOAT, tvec3.getType());
+  ASSERT_EQ(tvec3.getOrder(), 1u);
+  ASSERT_EQ(3u, tvec3.getDimension(0));
+  ASSERT_EQ(10.0, tvec3(0));
+  ASSERT_EQ(20.0, tvec3(1));
+  ASSERT_EQ(30.0, tvec3(2));
+  ASSERT_EQ(vec3Ref, tvec3);
+  ASSERT_EQ(dvec3Ref, tvec3);
+  ASSERT_NE(vec4Ref, tvec3);
+  ASSERT_NE(dvec4Ref, tvec3);
+  tvec3(0) = 3.0;
+  tvec3(1) = 2.0;
+  tvec3(2) = 7.0;
+  ASSERT_EQ(3.0, tvec3(0));
+  ASSERT_EQ(2.0, tvec3(1));
+  ASSERT_EQ(7.0, tvec3(2));
 }
 
 TEST(Tensor, matrix) {

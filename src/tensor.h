@@ -2,6 +2,7 @@
 #define SIMIT_TENSOR_H
 
 #include <cassert>
+#include <initializer_list>
 
 #include "tensor_components.h"
 
@@ -9,19 +10,16 @@
 #include <iostream>
 using namespace std;
 
+const int Dynamic = -1;
+
 namespace simit {
+
+// Tensors
 
 /// A tensor is a generalization of scalars, vectors and matrices. Tensors can
 /// be fields of \ref Set instances and can be bound to \ref Program instances.
-class TensorBase {
- public:
-  virtual Type getType() const = 0;
-  virtual size_t getOrder() const = 0;
-  virtual size_t getDimension(size_t i) const = 0;
-};
-
 template <typename T, size_t order>
-class Tensor : public TensorBase {
+class Tensor {
  public:
 //  template<typename... Dims>
 //  Tensor(Dims... dims) : TensorBase<T>(dims...) {}
@@ -35,14 +33,14 @@ class Tensor : public TensorBase {
 //  inline const T &operator()(Indices... indices) const {
 //    return this->get(indices...);
 //  }
-
  private:
 
 };
 
+
 // Scalars
 template <typename T>
-class Tensor<T,0> : public TensorBase {
+class Tensor<T,0> {
  public:
   inline explicit Tensor() {}
   inline explicit Tensor(T val) : val(val) {}
@@ -102,48 +100,126 @@ class Double : public Scalar<double> {
 
 
 // Vectors
-template <typename T>
-class Tensor<T,1> : public TensorBase {
+/// Curiously Recurring Template Pattern to reuse code.
+template <typename T,class Vector>
+class VectorBase {
  public:
-  inline explicit Tensor(size_t d0) : dim{d0}{
-    data = (double*)malloc(d0 * sizeof(T));
-  }
-
-  inline ~Tensor() {
-    free(data);
-  }
-
   Type getType() const { return typeOf<T>(); }
+
   size_t getOrder() const { return 1; }
   size_t getDimension(size_t i) const {
     assert(i == 0);
-    return dim;
+    return getSize();
+  }
+
+  size_t getSize() const {
+    return static_cast<const Vector*>(this)->getSize();
   }
 
   inline T &operator()(size_t i) {
-    assert(i < dim);
-    return data[i];
+    assert(i < getSize());
+    return static_cast<Vector*>(this)->data[i];
   }
 
   inline const T &operator()(size_t i) const {
-    return operator()(i);
+    return static_cast<const Vector*>(this)->data[i];
   }
 
+ protected:
+  inline void init(std::initializer_list<T> vals) {
+    assert(vals.size() == getSize());
+    size_t i = 0;
+    for (T val : vals) {
+      static_cast<Vector*>(this)->data[i++] = val;
+    }
+  }
+};
+
+template <typename T, int size>
+class Vector : public VectorBase<T,Vector<T,size>> {
+  friend class VectorBase<T,Vector<T,size>>;
+ public:
+  inline explicit Vector() : VectorBase<T,Vector<T,size>>() {
+    assert(size > 0);
+  }
+
+  inline explicit Vector(std::initializer_list<T> vals) {
+    assert(size > 0);
+    this->init(vals);
+  }
+
+  inline size_t getSize() const { return size; };
+
  private:
-  size_t dim;
+  T data[size];
+};
+
+template <typename T>
+class Vector<T,Dynamic> : public VectorBase<T,Vector<T,Dynamic>> {
+  friend class VectorBase<T,Vector<T,Dynamic>>;
+ public:
+  inline explicit Vector(size_t size)
+      : size{size}, data{(T*)malloc(size * sizeof(T))} {
+    assert(size > 0);
+  }
+
+  inline explicit Vector(size_t size, std::initializer_list<T> vals)
+      : Vector(size) {
+    assert(size > 0);
+    this->init(vals);
+  }
+
+  inline ~Vector() { free(data);}
+
+  inline size_t getSize() const { return size; };
+
+ private:
+  size_t size;
   T *data;
 };
 
 template <typename T>
-class Vector : public Tensor<T, 1> {
+class Tensor<T,1> : public Vector<T,Dynamic> {
  public:
-  explicit Vector(size_t d0) : Tensor<T, 1>(d0) {}
+  inline explicit Tensor(size_t size) : Vector<T,Dynamic>(size) {}
+  inline explicit Tensor(size_t size, std::initializer_list<T> vals)
+      : Vector<T,Dynamic>(size, vals) {}
 };
+
+template <class T1, int size1, class T2, int size2>
+bool operator==(const Vector<T1,size1> &t1, const Vector<T2,size2> &t2) {
+  if (t1.getSize() != t2.getSize()) {
+    return false;
+  }
+  for (size_t i=0; i<t1.getSize(); ++i) {
+    if (t1(i) != t2(i)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <class T1, int size1, class T2, int size2>
+bool operator!=(const Vector<T1,size1> &t1, const Vector<T2,size2> &t2) {
+  return !(t1 == t2);
+}
+
+template <class T, int size>
+std::ostream &operator<<(std::ostream &os, const Vector<T,size> &t) {
+  os << "[";
+  assert(t.getSize() > 0);
+  os << t(0);
+  for (size_t i=1; i<t.getSize(); i++) {
+    os << ", " << t(i);
+  }
+  os << "]";
+  return os;
+}
 
 
 // Matrices
 template <typename T>
-class Tensor<T, 2> : public TensorBase {
+class Tensor<T, 2> {
  public:
   inline explicit Tensor(size_t d0, size_t d1) : dims{d0, d1} {
     data = (double*)malloc(d0 * d1 * sizeof(T));
@@ -182,7 +258,7 @@ class Matrix : public Tensor<T, 2> {
 
 
 template <typename T>
-class Tensor<T, 3> : public TensorBase {
+class Tensor<T, 3> {
  public:
   inline explicit Tensor(size_t d0, size_t d1, size_t d2) : dims{d0, d1, d2} {
     data = (double*)malloc(d0 * d1 * d2 *sizeof(T));
