@@ -6,7 +6,20 @@ int main(int argc, char **argv) {
   // the tests using that argument surrounded by wildcards.
   std::string newArg;
   if (argc == 2 && !(argv[1][0] == '-' && argv[1][1] == '-')) {
-    newArg = std::string("--gtest_filter=*") + argv[1] + "*";
+    newArg = std::string("--gtest_filter=");
+
+    char *dotPtr = strchr(argv[1], '.');
+    if (!dotPtr) {
+      newArg += "*" + std::string(argv[1]) + "*";
+    }
+    else {
+      if (dotPtr[1] == '\0') {
+        newArg += std::string(argv[1]) + "*";
+      }
+      else {
+        newArg += std::string(argv[1]);
+      }
+    }
     argv[1] = (char*)newArg.c_str();
   }
 
