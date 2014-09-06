@@ -14,6 +14,50 @@ const int Dynamic = -1;
 
 namespace simit {
 
+// Tensor Types
+class TensorTypeBase {
+ public:
+  virtual ~TensorTypeBase() {}
+
+  virtual Type getComponentType() const = 0;
+
+  virtual size_t getOrder() const = 0;
+  virtual size_t getDimension(size_t i) const = 0;
+  virtual size_t getSize() const = 0;
+};
+
+template <typename T>
+class ScalarType : public TensorTypeBase {
+ public:
+  Type getComponentType() const { return typeOf<T>(); }
+
+  size_t getOrder() const { return 0; }
+
+  size_t getDimension(size_t i) const {
+    assert(false && "scalars have zero dimensions");
+  }
+
+  virtual size_t getSize() const { return 1; };
+};
+
+template <typename T>
+class VectorType : public TensorTypeBase {
+ public:
+  VectorType(size_t size) : size(size) {}
+
+  virtual Type getComponentType() const { return typeOf<T>(); }
+
+  virtual size_t getOrder() const { return 1; }
+  virtual size_t getDimension(size_t i) const {
+    assert(i == 0);
+    return size;
+  }
+
+  virtual size_t getSize() const { return size; };
+
+ private:
+  size_t size;
+};
 // Tensors
 
 /// A tensor is a generalization of scalars, vectors and matrices. Tensors can
