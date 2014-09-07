@@ -95,7 +95,7 @@ using namespace simit::internal;
 <MLCOMMENT>\n         { yylloc->lines(yyleng); yylloc->step(); }
 <MLCOMMENT>.          {}
 <MLCOMMENT><<EOF>>    { /*TODO: REPORT ERROR*/ return Parser::token::UNKNOWN; }
-<MLCOMMENT>"%}"       { BEGIN(INITIAL); }
+<MLCOMMENT>"}%"       { BEGIN(INITIAL); }
 
  /* Identifiers */
 {ident}               { yylval->string = strdup(yytext);
