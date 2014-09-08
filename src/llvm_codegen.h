@@ -7,6 +7,7 @@
 #include <ostream>
 #include <stack>
 #include <map>
+#include <memory>
 #include <vector>
 
 namespace llvm {
@@ -19,7 +20,7 @@ template<bool, typename, typename> class IRBuilder;
 class Value;
 class Instruction;
 class Function;
-};
+}
 
 namespace simit {
 namespace internal {

@@ -2,6 +2,8 @@
 #define SIMIT_GRAPH_H
 
 #include <cassert>
+#include <cstddef>
+#include <cstring>
 #include <vector>
 #include <string>
 #include <map>

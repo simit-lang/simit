@@ -164,7 +164,7 @@ bool operator==(const TensorType& l, const TensorType& r) {
   }
 
   return true;
-};
+}
 
 bool operator!=(const TensorType& l, const TensorType& r) {
   return !(l == r);

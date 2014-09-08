@@ -485,21 +485,21 @@ namespace  simit { namespace internal  {
       case 64: // procedure
 
 
-        { delete (yysym.value.Function); }
+        { delete (yysym.value.function); }
 
         break;
 
       case 65: // function
 
 
-        { delete (yysym.value.Function); }
+        { delete (yysym.value.function); }
 
         break;
 
       case 66: // function_header
 
 
-        { delete (yysym.value.Function); }
+        { delete (yysym.value.function); }
 
         break;
 
@@ -590,7 +590,7 @@ namespace  simit { namespace internal  {
       case 81: // call_expr
 
 
-        { delete (yysym.value.Call); }
+        { delete (yysym.value.call); }
 
         break;
 
@@ -660,21 +660,21 @@ namespace  simit { namespace internal  {
       case 98: // type
 
 
-        { delete (yysym.value.TensorType); }
+        { delete (yysym.value.tensorType); }
 
         break;
 
       case 99: // element_type
 
 
-        { delete (yysym.value.TensorType); }
+        { delete (yysym.value.tensorType); }
 
         break;
 
       case 100: // tensor_type
 
 
-        { delete (yysym.value.TensorType); }
+        { delete (yysym.value.tensorType); }
 
         break;
 
@@ -695,7 +695,7 @@ namespace  simit { namespace internal  {
       case 103: // dimension
 
 
-        { delete (yysym.value.IndexSet); }
+        { delete (yysym.value.indexSet); }
 
         break;
 
@@ -793,7 +793,7 @@ namespace  simit { namespace internal  {
       case 118: // test
 
 
-        { delete (yysym.value.Test); }
+        { delete (yysym.value.test); }
 
         break;
 
@@ -1052,7 +1052,7 @@ namespace  simit { namespace internal  {
   case 6:
 
     {
-    std::unique_ptr<Function> function((yystack_[0].value.Function));
+    std::unique_ptr<Function> function((yystack_[0].value.function));
 
     auto name = function->getName();
     if (ctx->containsFunction(name)) {
@@ -1083,7 +1083,7 @@ namespace  simit { namespace internal  {
   case 9:
 
     {
-    ctx->addTest((yystack_[0].value.Test));
+    ctx->addTest((yystack_[0].value.test));
   }
 
     break;
@@ -1092,7 +1092,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[4].value.string));
-    delete (yystack_[3].value.TensorType);
+    delete (yystack_[3].value.tensorType);
   }
 
     break;
@@ -1101,7 +1101,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[7].value.string));
-    delete (yystack_[6].value.TensorType);
+    delete (yystack_[6].value.tensorType);
   }
 
     break;
@@ -1143,8 +1143,8 @@ namespace  simit { namespace internal  {
 
     {
     auto statements = unique_ptr<vector<shared_ptr<IRNode>>>((yystack_[1].value.IRNodes));
-    (yylhs.value.Function) = (yystack_[2].value.Function);
-    (yylhs.value.Function)->addStatements(*statements);
+    (yylhs.value.function) = (yystack_[2].value.function);
+    (yylhs.value.function)->addStatements(*statements);
     ctx->unscope();
   }
 
@@ -1157,7 +1157,7 @@ namespace  simit { namespace internal  {
     auto arguments = unique_ptr<vector<shared_ptr<Argument>>>((yystack_[2].value.Arguments));
     auto results = unique_ptr<vector<shared_ptr<Result>>>((yystack_[0].value.Results));
 
-    (yylhs.value.Function) = new Function(ident, *arguments, *results);
+    (yylhs.value.function) = new Function(ident, *arguments, *results);
 
     ctx->scope();
     for (auto argument : *arguments) {
@@ -1218,7 +1218,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[2].value.string));
-    (yylhs.value.Formal) = new FormalData(ident, (yystack_[0].value.TensorType));
+    (yylhs.value.Formal) = new FormalData(ident, (yystack_[0].value.tensorType));
   }
 
     break;
@@ -1263,7 +1263,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[5].value.string));
-    auto tensorType = unique_ptr<TensorType>((yystack_[3].value.TensorType));
+    auto tensorType = unique_ptr<TensorType>((yystack_[3].value.tensorType));
 
     auto tensorLiteral = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
     delete (yystack_[1].value.TensorLiteral);
@@ -1279,7 +1279,7 @@ namespace  simit { namespace internal  {
     // Typecheck: value and literal types must be equivalent.
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
-    CHECK_TYPE_EQUALITY((yystack_[3].value.TensorType), tensorLiteral->getType(), yystack_[5].location);
+    CHECK_TYPE_EQUALITY((yystack_[3].value.tensorType), tensorLiteral->getType(), yystack_[5].location);
 
     ctx->addTensorSymbol(tensorLiteral->getName(), tensorLiteral);
 
@@ -1293,7 +1293,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[5].value.string));
-    delete (yystack_[3].value.TensorType);
+    delete (yystack_[3].value.tensorType);
     (yylhs.value.IRNodes) = NULL;
   }
 
@@ -1752,7 +1752,7 @@ namespace  simit { namespace internal  {
     std::string name = convertAndFree((yystack_[3].value.string));
     auto call = new Call(name, *(yystack_[1].value.TensorList));
     delete (yystack_[1].value.TensorList);
-    (yylhs.value.Call) = new std::shared_ptr<Call>(call);
+    (yylhs.value.call) = new std::shared_ptr<Call>(call);
   }
 
     break;
@@ -2001,7 +2001,7 @@ namespace  simit { namespace internal  {
   case 105:
 
     {
-    delete (yystack_[0].value.TensorType);
+    delete (yystack_[0].value.tensorType);
     std::string ident = convertAndFree((yystack_[2].value.string));
   }
 
@@ -2010,7 +2010,7 @@ namespace  simit { namespace internal  {
   case 106:
 
     {
-    (yylhs.value.TensorType) = (yystack_[0].value.TensorType);
+    (yylhs.value.tensorType) = (yystack_[0].value.tensorType);
   }
 
     break;
@@ -2018,7 +2018,7 @@ namespace  simit { namespace internal  {
   case 107:
 
     {
-    (yylhs.value.TensorType) = (yystack_[0].value.TensorType);
+    (yylhs.value.tensorType) = (yystack_[0].value.tensorType);
   }
 
     break;
@@ -2028,7 +2028,7 @@ namespace  simit { namespace internal  {
     {
     std::string ident = convertAndFree((yystack_[0].value.string));
 
-    (yylhs.value.TensorType) = new TensorType(Type::ELEMENT);
+    (yylhs.value.tensorType) = new TensorType(Type::ELEMENT);
   }
 
     break;
@@ -2036,7 +2036,7 @@ namespace  simit { namespace internal  {
   case 109:
 
     {
-    (yylhs.value.TensorType) = new TensorType((yystack_[0].value.Type));
+    (yylhs.value.tensorType) = new TensorType((yystack_[0].value.type));
   }
 
     break;
@@ -2044,7 +2044,7 @@ namespace  simit { namespace internal  {
   case 110:
 
     {
-    (yylhs.value.TensorType) = new TensorType((yystack_[1].value.Type), *(yystack_[3].value.IndexSetProducts));
+    (yylhs.value.tensorType) = new TensorType((yystack_[1].value.type), *(yystack_[3].value.IndexSetProducts));
     delete (yystack_[3].value.IndexSetProducts);
   }
 
@@ -2053,8 +2053,8 @@ namespace  simit { namespace internal  {
   case 111:
 
     {
-    (yylhs.value.TensorType) = new TensorType((yystack_[2].value.Type), *(yystack_[4].value.IndexSetProducts));
-    ctx->toggleColumnVector((yylhs.value.TensorType));
+    (yylhs.value.tensorType) = new TensorType((yystack_[2].value.type), *(yystack_[4].value.IndexSetProducts));
+    ctx->toggleColumnVector((yylhs.value.tensorType));
     delete (yystack_[4].value.IndexSetProducts);
   }
 
@@ -2113,8 +2113,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.IndexSets) = new std::vector<IndexSet>();
-    (yylhs.value.IndexSets)->push_back(*(yystack_[0].value.IndexSet));
-    delete (yystack_[0].value.IndexSet);
+    (yylhs.value.IndexSets)->push_back(*(yystack_[0].value.indexSet));
+    delete (yystack_[0].value.indexSet);
   }
 
     break;
@@ -2123,8 +2123,8 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.IndexSets) = (yystack_[2].value.IndexSets);
-    (yylhs.value.IndexSets)->push_back(*(yystack_[0].value.IndexSet));
-    delete (yystack_[0].value.IndexSet);
+    (yylhs.value.IndexSets)->push_back(*(yystack_[0].value.indexSet));
+    delete (yystack_[0].value.indexSet);
   }
 
     break;
@@ -2132,7 +2132,7 @@ namespace  simit { namespace internal  {
   case 116:
 
     {
-    (yylhs.value.IndexSet) = new IndexSet((yystack_[0].value.num));
+    (yylhs.value.indexSet) = new IndexSet((yystack_[0].value.num));
   }
 
     break;
@@ -2141,7 +2141,7 @@ namespace  simit { namespace internal  {
 
     {
     string ident = convertAndFree((yystack_[0].value.string));
-    (yylhs.value.IndexSet) = new IndexSet(123456789);  // TODO: This needs to be a set dimension
+    (yylhs.value.indexSet) = new IndexSet(123456789);  // TODO: This needs to be a set dimension
   }
 
     break;
@@ -2149,7 +2149,7 @@ namespace  simit { namespace internal  {
   case 118:
 
     {
-    (yylhs.value.IndexSet) = new IndexSet();
+    (yylhs.value.indexSet) = new IndexSet();
   }
 
     break;
@@ -2157,7 +2157,7 @@ namespace  simit { namespace internal  {
   case 119:
 
     {
-    (yylhs.value.Type) = Type::INT;
+    (yylhs.value.type) = Type::INT;
   }
 
     break;
@@ -2165,7 +2165,7 @@ namespace  simit { namespace internal  {
   case 120:
 
     {
-    (yylhs.value.Type) = Type::FLOAT;
+    (yylhs.value.type) = Type::FLOAT;
   }
 
     break;
@@ -2390,9 +2390,9 @@ namespace  simit { namespace internal  {
   case 147:
 
     {
-    auto call = shared_ptr<Call>(*(yystack_[3].value.Call));
+    auto call = shared_ptr<Call>(*(yystack_[3].value.call));
     auto expected = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
-    delete (yystack_[3].value.Call);
+    delete (yystack_[3].value.call);
     delete (yystack_[1].value.TensorLiteral);
 
     std::vector<std::shared_ptr<Literal>> literalArgs;
@@ -2408,7 +2408,7 @@ namespace  simit { namespace internal  {
 
     std::vector<std::shared_ptr<Literal>> expecteds;
     expecteds.push_back(expected);
-    (yylhs.value.Test) = new Test(call->getName(), literalArgs, expecteds);
+    (yylhs.value.test) = new Test(call->getName(), literalArgs, expecteds);
   }
 
     break;
@@ -2980,11 +2980,11 @@ namespace  simit { namespace internal  {
      834,   837,   840,   849,   858,   861,   867,   873,   882,   889,
      891,   895,   897,   912,   915,   922,   925,   931,   934,   937,
      940,   969,  1001,  1005,  1010,  1012,  1015,  1020,  1021,  1043,
-    1048,  1056,  1062,  1067,  1072,  1079,  1106,  1109,  1114,  1121,
-    1124,  1128,  1135,  1138,  1176,  1181,  1188,  1191,  1195,  1200,
-    1203,  1272,  1273,  1275,  1279,  1280,  1284,  1287,  1295,  1305,
-    1312,  1315,  1319,  1332,  1336,  1350,  1354,  1360,  1367,  1370,
-    1374,  1387,  1391,  1405,  1409,  1415,  1420,  1430
+    1048,  1056,  1062,  1067,  1072,  1079,  1107,  1110,  1115,  1122,
+    1125,  1129,  1136,  1139,  1177,  1182,  1189,  1192,  1196,  1201,
+    1204,  1273,  1274,  1276,  1280,  1281,  1285,  1288,  1296,  1306,
+    1313,  1316,  1320,  1333,  1337,  1351,  1355,  1361,  1368,  1371,
+    1375,  1388,  1392,  1406,  1410,  1416,  1421,  1431
   };
 
   // Print the state stack on the debug stream.

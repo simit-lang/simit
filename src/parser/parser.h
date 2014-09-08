@@ -31,14 +31,14 @@
 // version 2.2 of Bison.
 
 /**
- ** \file /Users/fred/projects/sim/simit/src/parser/parser.h
+ ** \file parser.h
  ** Define the  simit::internal ::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
 
-#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
-# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
+#ifndef YY_YY_PARSER_H_INCLUDED
+# define YY_YY_PARSER_H_INCLUDED
 // //                    "%code requires" blocks.
 
 
@@ -288,7 +288,7 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
 
 
-  Function *Function;
+  Function *function;
 
 
   FormalData                                *Formal;
@@ -301,7 +301,7 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
 
 
-  std::shared_ptr<Call> *Call;
+  std::shared_ptr<Call> *call;
 
 
   simit::internal::IndexExpr                               *IndexExpr;
@@ -315,18 +315,18 @@ namespace  simit { namespace internal  {
   VariableAccessVector *VarAccesses;
 
 
-  TensorType                   *TensorType;
-  Type                          Type;
+  TensorType                   *tensorType;
+  Type                          type;
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;
-  IndexSet                     *IndexSet;
+  IndexSet                     *indexSet;
 
 
   std::shared_ptr<Literal> *TensorLiteral;
   TensorValues<double>     *TensorDoubleValues;
   TensorValues<int>        *TensorIntValues;
 
- Test *Test; 
+ Test *test; 
 
 
     };
@@ -714,4 +714,4 @@ namespace  simit { namespace internal  {
 
 
 
-#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
+#endif // !YY_YY_PARSER_H_INCLUDED
