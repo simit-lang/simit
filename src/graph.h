@@ -14,9 +14,12 @@ namespace simit {
 
 // Forward declarations
 class Set;
-class FieldRefBase;
 template <typename T, int... dimensions> class FieldRef;
 template <typename T, int... dimensions> class TensorRef;
+
+namespace {
+class FieldRefBase;
+}
 
 
 /// A Simit element reference.  All Simit elements live in Simit sets and an
@@ -241,6 +244,8 @@ inline bool operator<(const Set::ElementIterator& e1,
 
 // Field References
 
+namespace {
+
 /// The base class of field references.
 class FieldRefBase {
  public:
@@ -329,6 +334,7 @@ class FieldRefBaseParameterized : public FieldRefBase {
 
   FieldRefBaseParameterized(void *fieldData) : FieldRefBase(fieldData) {}
 };
+} // unnamed namespace
 
 template <typename T, int... dimensions>
 class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
@@ -338,6 +344,7 @@ class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
   friend class Set;
 };
 
+/// @cond SPECIALIZATION
 template <typename T>
 class FieldRef<T> : public FieldRefBaseParameterized<T> {
  public:
@@ -349,7 +356,7 @@ class FieldRef<T> : public FieldRefBaseParameterized<T> {
   FieldRef(void *fieldData) : FieldRefBaseParameterized<T>(fieldData) {}
   friend class Set;
 };
-
+/// @endcond
 
 // Tensor References
 
