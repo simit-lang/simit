@@ -9,7 +9,7 @@
 #include <map>
 #include <set>
 
-#include "tensor.h"
+#include "tensor_components.h"
 #include "variadic.h"
 
 namespace simit {
