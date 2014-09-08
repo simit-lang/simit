@@ -155,7 +155,7 @@ TEST_P(input, check) {
 #define TEST_SIMTEST_FILE(path, name)                                         \
   INSTANTIATE_TEST_CASE_P(name, input,                                        \
                           ValuesIn(readTestsFromFile(path,                    \
-                                                     string(#name)+".sim")));
+                                                     string(#name)+".sim")))
 
 
 /* Examples */

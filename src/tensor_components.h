@@ -2,6 +2,7 @@
 #define SIMIT_TENSOR_COMPONENTS_H
 
 #include <cassert>
+#include <climits>
 #include <string>
 
 namespace simit {
