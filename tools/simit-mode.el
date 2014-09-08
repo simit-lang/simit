@@ -38,10 +38,8 @@ For detail, see `comment-dwim'."
 (setq simit-syntax-table
       (let ((synTable (make-syntax-table)))
 
-        ;; Simit comments
-        (modify-syntax-entry ?% "< 14" synTable)
-        (modify-syntax-entry ?{ ". 2b"   synTable)
-        (modify-syntax-entry ?} ". 3b"   synTable)
+        ;; Simit comments (only single line support at the moment)
+        (modify-syntax-entry ?% "<" synTable)
         (modify-syntax-entry ?\n ">"  synTable)
 
         synTable))
