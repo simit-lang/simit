@@ -106,7 +106,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
   ASSERT_EQ(howmany, 10);
 }
 
-TEST(Set, ScalarField) {
+TEST(Field, Scalar) {
   Set points;
   FieldRef<double> x = points.addField<double>("x");
 
@@ -127,7 +127,7 @@ TEST(Set, ScalarField) {
   ASSERT_DOUBLE_EQ(4.4, scalar4);
 }
 
-TEST(Set, VectorField) {
+TEST(Field, Vector) {
   Set points;
   FieldRef<double,3> x = points.addField<double,3>("x");
 
@@ -153,7 +153,7 @@ TEST(Set, VectorField) {
   ASSERT_DOUBLE_EQ(6.6, vec4(2));
 }
 
-TEST(Set, MatrixField) {
+TEST(Field, Matrix) {
   Set points;
   FieldRef<double,3,2> x = points.addField<double,3,2>("x");
 
@@ -178,7 +178,7 @@ TEST(Set, MatrixField) {
   ASSERT_DOUBLE_EQ(6.6, mat4(1,0));
 }
 
-TEST(Set, TensorField) {
+TEST(Field, Tensor) {
   Set points;
   FieldRef<double,2,3,4> x = points.addField<double,2,3,4>("x");
 
