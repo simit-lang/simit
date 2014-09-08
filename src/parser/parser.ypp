@@ -363,17 +363,17 @@ field_decl
 
 // Procedures and functions
 %union {
-  Function *Function;
+  Function *function;
 };
 
-%type <Function> procedure;
+%type <function> procedure;
 procedure
   : PROC IDENT stmt_block BLOCKEND {
     std::string ident = convertAndFree($IDENT);
     delete $stmt_block;
   }
 
-%type <Function> function;
+%type <function> function;
 function
   : function_header stmt_block BLOCKEND {
     auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
@@ -382,7 +382,7 @@ function
     ctx->unscope();
   }
 
-%type <Function> function_header;
+%type <function> function_header;
 function_header
   : FUNC IDENT "(" arguments ")" results {
     std::string ident = convertAndFree($IDENT);
@@ -842,9 +842,9 @@ expr
   }
 
 %union {
-  std::shared_ptr<Call> *Call;
+  std::shared_ptr<Call> *call;
 };
-%type<Call> call_expr;
+%type<call> call_expr;
 call_expr
   : IDENT "(" actual_list ")" {
     std::string name = convertAndFree($1);
@@ -1084,23 +1084,24 @@ var_decl
 
 // Types
 %union {
-  TensorType                   *TensorType;
-  Type                          Type;
+  TensorType                   *tensorType;
+  Type                          type;
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;
-  IndexSet                     *IndexSet;
+  IndexSet                     *indexSet;
 };
+%destructor {} <type>;
 
-%type <TensorType>       type;
-%type <TensorType>       tensor_type;
+%type <tensorType>       type;
+%type <tensorType>       tensor_type;
 
 %type <IndexSetProducts> nested_dimensions;
 
 %type <IndexSets>        dimensions;
-%type <IndexSet>         dimension;
+%type <indexSet>         dimension;
 
-%type <Type>    component_type;
-%type <TensorType>       element_type;
+%type <type>    component_type;
+%type <tensorType>       element_type;
 
 type
   : element_type {
@@ -1424,8 +1425,8 @@ scalar_literal
   }
 
 // Tests
-%union { Test *Test; };
-%type <Test> test;
+%union { Test *test; };
+%type <test> test;
 test
   : "%!" call_expr "==" tensor_literal ";" {
     auto call = shared_ptr<Call>(*$call_expr);

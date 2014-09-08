@@ -6,6 +6,8 @@ SET(SCANNER_HEADER ${SIMIT_PARSER_SOURCE_DIR}/scanner.h)
 SET(SCANNER        ${SIMIT_PARSER_SOURCE_DIR}/scanner.cpp)
 
 IF($ENV{SIMIT_BUILD_PARSER})
+   include_directories ("${SIMIT_PARSER_SOURCE_DIR}")
+
 	FIND_PACKAGE(BISON REQUIRED)
 	SET(PARSER_INPUT ${SIMIT_PARSER_SOURCE_DIR}/parser.ypp)
 	IF(BISON_FOUND)
@@ -58,6 +60,8 @@ endif()
 
 if (NOT ${LLVM_VERSION} MATCHES "^([3-9]|[0-9][0-9]+)\\.([3-9]|[0-9][0-9]+)(\\.[0-9]+)?(svn)?$")
   message(FATAL_ERROR "Need LLVM version 3.3 or higher. Found ${LLVM_CONFIG} version \"${LLVM_VERSION}\".")
+elseif (${LLVM_VERSION} MATCHES "^([3-9]|[0-9][0-9]+)\\.([5-9]|[0-9][0-9]+)(\\.[0-9]+)?(svn)?$")
+  set(LLVM_CONFIG_GT_45 1)
 endif()
 
 message("-- Found LLVM: ${LLVM_CONFIG} (found version \"${LLVM_VERSION}\")")
@@ -69,6 +73,11 @@ execute_process(COMMAND ${LLVM_CONFIG} --includedir OUTPUT_VARIABLE LLVM_INCLUDE
 include_directories("${LLVM_INCLUDES}")
 
 execute_process(COMMAND ${LLVM_CONFIG} --ldflags OUTPUT_VARIABLE LLVM_LDFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
+if (DEFINED LLVM_CONFIG_GT_45)
+  execute_process(COMMAND ${LLVM_CONFIG} --system-libs OUTPUT_VARIABLE LLVM_SYSTEM_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
+  set(LLVM_LDFLAGS ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBS})
+endif()
+
 set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS ${LLVM_LDFLAGS})
 
 set(LLVM_COMPONENTS core jit x86)

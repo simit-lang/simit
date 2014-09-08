@@ -1,6 +1,6 @@
-#line 2 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
+#line 2 "scanner.cpp"
 
-#line 4 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
+#line 4 "scanner.cpp"
 
 #define  YY_INT_ALIGNED short int
 
@@ -9,7 +9,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 35
+#define YY_FLEX_SUBMINOR_VERSION 39
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -51,7 +51,6 @@ typedef int16_t flex_int16_t;
 typedef uint16_t flex_uint16_t;
 typedef int32_t flex_int32_t;
 typedef uint32_t flex_uint32_t;
-typedef uint64_t flex_uint64_t;
 #else
 typedef signed char flex_int8_t;
 typedef short int flex_int16_t;
@@ -59,7 +58,6 @@ typedef int flex_int32_t;
 typedef unsigned char flex_uint8_t; 
 typedef unsigned short int flex_uint16_t;
 typedef unsigned int flex_uint32_t;
-#endif /* ! C99 */
 
 /* Limits of integral types. */
 #ifndef INT8_MIN
@@ -90,12 +88,15 @@ typedef unsigned int flex_uint32_t;
 #define UINT32_MAX             (4294967295U)
 #endif
 
+#endif /* ! C99 */
+
 #endif /* ! FLEXINT_H */
 
 /* begin standard C++ headers. */
 #include <iostream> 
 #include <errno.h>
 #include <cstdlib>
+#include <cstdio>
 #include <cstring>
 /* end standard C++ headers. */
 
@@ -153,7 +154,15 @@ typedef unsigned int flex_uint32_t;
 
 /* Size of default input buffer. */
 #ifndef YY_BUF_SIZE
+#ifdef __ia64__
+/* On IA-64, the buffer size is 16k, not 8k.
+ * Moreover, YY_BUF_SIZE is 2*YY_READ_BUF_SIZE in the general case.
+ * Ditto for the __ia64__ case accordingly.
+ */
+#define YY_BUF_SIZE 32768
+#else
 #define YY_BUF_SIZE 16384
+#endif /* __ia64__ */
 #endif
 
 /* The state buf must be large enough to hold one state per character in the main buffer.
@@ -177,6 +186,7 @@ extern yy_size_t yyleng;
 #define EOB_ACT_LAST_MATCH 2
 
     #define YY_LESS_LINENO(n)
+    #define YY_LINENO_REWIND_TO(ptr)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -317,7 +327,7 @@ typedef unsigned char YY_CHAR;
  */
 #define YY_DO_BEFORE_ACTION \
 	(yytext_ptr) = yy_bp; \
-	yyleng = (yy_size_t) (yy_cp - yy_bp); \
+	yyleng = (size_t) (yy_cp - yy_bp); \
 	(yy_hold_char) = *yy_cp; \
 	*yy_cp = '\0'; \
 	(yy_c_buf_p) = yy_cp;
@@ -395,20 +405,20 @@ static yyconst flex_int16_t yy_base[143] =
     {   0,
         0,    0,  160,  159,   46,   47,  158,  157,  154,  153,
       157,  164,  164,  164,  137,   49,  164,  164,  164,  164,
-      164,  164,   41,   48,  164,   45,  164,  164,  136,  135,
-      134,    0,  120,  164,  164,  164,  164,  112,   28,   29,
-       37,  121,  108,  116,  104,  107,   34,  164,  164,  164,
-      164,  164,  164,   97,  164,   51,  164,  164,  164,  140,
-      128,   63,  164,  164,  164,   57,   71,  164,  164,  164,
-        0,  104,  103,   45,  109,   96,   99,   99,    0,   93,
-       95,   95,   28,   92,    0,   97,   88,  164,  164,  164,
-       78,  115,  114,   86,   85,   93,   93,    0,   92,   94,
+      164,  164,   39,   42,  164,   45,  164,  164,  136,  135,
+      134,    0,  120,  164,  164,  164,  164,  112,   25,   26,
+       31,  121,  108,  116,  104,  107,   31,  164,  164,  164,
+      164,  164,  164,  140,  164,   51,  164,  164,  164,  140,
+      128,   59,  164,  164,  164,   53,   68,  164,  164,  164,
+        0,  104,  103,   44,  109,   96,   99,   99,    0,   93,
+       95,   95,   45,   92,    0,   97,   88,  164,  164,  164,
+       72,  115,  114,   86,   85,   93,   93,    0,   92,   94,
 
        92,    0,    0,   91,   76,   75,   74,   81,   82,  100,
        99,   74,   69,    0,    0,   70,   67,    0,    0,   79,
-       67,   77,   74,    0,   56,    0,   56,    0,   60,   53,
-       41,    0,    0,    0,    0,    0,    0,  164,   99,  101,
-      103,   80
+       67,   77,   74,    0,   56,    0,   55,    0,   60,   52,
+       46,    0,    0,    0,    0,    0,    0,  164,   99,  101,
+      103,   71
     } ;
 
 static yyconst flex_int16_t yy_def[143] =
@@ -438,11 +448,11 @@ static yyconst flex_int16_t yy_nxt[213] =
        32,   32,   33,   34,   35,   36,   37,   32,   32,   38,
        32,   39,   40,   32,   41,   32,   42,   32,   32,   43,
        44,   45,   46,   32,   47,   32,   48,   49,   53,   53,
-       54,   54,   59,   61,   59,   62,   64,   61,  105,   62,
-       63,   65,   66,   74,   77,   75,   67,   86,   87,   79,
-      106,   66,   78,   76,   80,   61,   67,   62,   91,   96,
-       92,   71,   92,  137,   67,   93,   97,  110,   91,  110,
-      136,  135,  111,  134,   67,   60,  133,   60,   89,   50,
+       64,   61,   59,   62,   59,   65,   66,   61,   63,   62,
+       74,   77,   75,   79,   86,   87,   67,   66,   80,   78,
+       76,   61,   71,   62,   91,  105,   67,   92,   96,   92,
+       67,  110,   93,  110,   91,   97,  111,  106,  137,  136,
+       67,  135,  134,   54,   54,   60,  133,   60,   89,   50,
 
        50,   52,   52,   58,   58,  132,  131,  130,  129,  128,
       127,  126,  125,  111,  111,  124,  123,  122,  121,  120,
@@ -466,11 +476,11 @@ static yyconst flex_int16_t yy_chk[213] =
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    5,    6,
-        5,    6,   16,   23,   56,   23,   24,   26,   83,   26,
-       23,   24,   24,   39,   40,   39,   26,   47,   47,   41,
-       83,   66,   40,   39,   41,   62,   26,   62,   66,   74,
-       67,  142,   67,  131,   62,   67,   74,   91,   66,   91,
-      130,  129,   91,  127,   62,   16,  125,   56,   56,  139,
+       24,   23,   16,   23,   56,   24,   24,   26,   23,   26,
+       39,   40,   39,   41,   47,   47,   26,   66,   41,   40,
+       39,   62,  142,   62,   66,   83,   26,   67,   74,   67,
+       62,   91,   67,   91,   66,   74,   91,   83,  131,  130,
+       62,  129,  127,    5,    6,   16,  125,   56,   56,  139,
 
       139,  140,  140,  141,  141,  123,  122,  121,  120,  117,
       116,  113,  112,  111,  110,  109,  108,  107,  106,  105,
@@ -494,9 +504,9 @@ static yyconst flex_int16_t yy_chk[213] =
 #define yymore() yymore_used_but_not_detected
 #define YY_MORE_ADJ 0
 #define YY_RESTORE_YY_MORE_OFFSET
-#line 1 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 1 "scanner.flex"
 #define YY_NO_INPUT 1
-#line 6 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 6 "scanner.flex"
 #include "scanner.h"
 #include <stdlib.h>
 #include "parser.h"
@@ -507,7 +517,7 @@ static yyconst flex_int16_t yy_chk[213] =
 
 
 
-#line 511 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
+#line 521 "scanner.cpp"
 
 #define INITIAL 0
 #define SLCOMMENT 1
@@ -541,7 +551,12 @@ static int yy_flex_strlen (yyconst char * );
 
 /* Amount of stuff to slurp up with each read. */
 #ifndef YY_READ_BUF_SIZE
+#ifdef __ia64__
+/* On IA-64, the buffer size is 16k, not 8k */
+#define YY_READ_BUF_SIZE 16384
+#else
 #define YY_READ_BUF_SIZE 8192
+#endif /* __ia64__ */
 #endif
 
 /* Copy whatever the last rule matched to the standard output. */
@@ -611,16 +626,6 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
-#line 26 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
-
-
-yylloc->step();
-using namespace simit::internal;
-
-
- /* Keywords and symbols */
-#line 623 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
-
 	if ( !(yy_init) )
 		{
 		(yy_init) = 1;
@@ -647,6 +652,17 @@ using namespace simit::internal;
 		yy_load_buffer_state(  );
 		}
 
+	{
+#line 26 "scanner.flex"
+
+
+yylloc->step();
+using namespace simit::internal;
+
+
+ /* Keywords and symbols */
+#line 665 "scanner.cpp"
+
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
 		yy_cp = (yy_c_buf_p);
@@ -663,7 +679,7 @@ using namespace simit::internal;
 yy_match:
 		do
 			{
-			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
+			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
 			if ( yy_accept[yy_current_state] )
 				{
 				(yy_last_accepting_state) = yy_current_state;
@@ -704,346 +720,346 @@ do_action:	/* This label is used only to access EOF actions. */
 
 case 1:
 YY_RULE_SETUP
-#line 33 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 33 "scanner.flex"
 { return Parser::token::INT;       }
 	YY_BREAK
 case 2:
 YY_RULE_SETUP
-#line 34 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 34 "scanner.flex"
 { return Parser::token::FLOAT;     }
 	YY_BREAK
 case 3:
 YY_RULE_SETUP
-#line 35 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 35 "scanner.flex"
 { return Parser::token::STRUCT;    }
 	YY_BREAK
 case 4:
 YY_RULE_SETUP
-#line 36 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 36 "scanner.flex"
 { return Parser::token::TENSOR;    }
 	YY_BREAK
 case 5:
 YY_RULE_SETUP
-#line 37 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 37 "scanner.flex"
 { return Parser::token::CONST;     }
 	YY_BREAK
 case 6:
 YY_RULE_SETUP
-#line 38 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 38 "scanner.flex"
 { return Parser::token::EXTERN;    }
 	YY_BREAK
 case 7:
 YY_RULE_SETUP
-#line 39 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 39 "scanner.flex"
 { return Parser::token::PROC;      }
 	YY_BREAK
 case 8:
 YY_RULE_SETUP
-#line 40 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 40 "scanner.flex"
 { return Parser::token::FUNC;      }
 	YY_BREAK
 case 9:
 YY_RULE_SETUP
-#line 41 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 41 "scanner.flex"
 { return Parser::token::MAP;       }
 	YY_BREAK
 case 10:
 YY_RULE_SETUP
-#line 42 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 42 "scanner.flex"
 { return Parser::token::TO;        }
 	YY_BREAK
 case 11:
 YY_RULE_SETUP
-#line 43 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 43 "scanner.flex"
 { return Parser::token::WITH;      }
 	YY_BREAK
 case 12:
 YY_RULE_SETUP
-#line 44 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 44 "scanner.flex"
 { return Parser::token::REDUCE;    }
 	YY_BREAK
 case 13:
 YY_RULE_SETUP
-#line 45 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 45 "scanner.flex"
 { return Parser::token::WHILE;     }
 	YY_BREAK
 case 14:
 YY_RULE_SETUP
-#line 46 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 46 "scanner.flex"
 { return Parser::token::IF;        }
 	YY_BREAK
 case 15:
 YY_RULE_SETUP
-#line 47 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 47 "scanner.flex"
 { return Parser::token::ELIF;      }
 	YY_BREAK
 case 16:
 YY_RULE_SETUP
-#line 48 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 48 "scanner.flex"
 { return Parser::token::ELSE;      }
 	YY_BREAK
 case 17:
 YY_RULE_SETUP
-#line 49 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 49 "scanner.flex"
 { return Parser::token::BLOCKEND;  }
 	YY_BREAK
 case 18:
 YY_RULE_SETUP
-#line 50 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 50 "scanner.flex"
 { return Parser::token::RETURN;    }
 	YY_BREAK
 case 19:
 YY_RULE_SETUP
-#line 52 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 52 "scanner.flex"
 { return Parser::token::RARROW;    }
 	YY_BREAK
 case 20:
 YY_RULE_SETUP
-#line 53 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 53 "scanner.flex"
 { return Parser::token::LP;        }
 	YY_BREAK
 case 21:
 YY_RULE_SETUP
-#line 54 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 54 "scanner.flex"
 { return Parser::token::RP;        }
 	YY_BREAK
 case 22:
 YY_RULE_SETUP
-#line 55 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 55 "scanner.flex"
 { return Parser::token::LB;        }
 	YY_BREAK
 case 23:
 YY_RULE_SETUP
-#line 56 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 56 "scanner.flex"
 { return Parser::token::RB;        }
 	YY_BREAK
 case 24:
 YY_RULE_SETUP
-#line 57 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 57 "scanner.flex"
 { return Parser::token::LC;        }
 	YY_BREAK
 case 25:
 YY_RULE_SETUP
-#line 58 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 58 "scanner.flex"
 { return Parser::token::RC;        }
 	YY_BREAK
 case 26:
 YY_RULE_SETUP
-#line 59 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 59 "scanner.flex"
 { return Parser::token::LA;        }
 	YY_BREAK
 case 27:
 YY_RULE_SETUP
-#line 60 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 60 "scanner.flex"
 { return Parser::token::RA;        }
 	YY_BREAK
 case 28:
 YY_RULE_SETUP
-#line 61 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 61 "scanner.flex"
 { return Parser::token::COMMA;     }
 	YY_BREAK
 case 29:
 YY_RULE_SETUP
-#line 62 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 62 "scanner.flex"
 { return Parser::token::PERIOD;    }
 	YY_BREAK
 case 30:
 YY_RULE_SETUP
-#line 63 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 63 "scanner.flex"
 { return Parser::token::COL;       }
 	YY_BREAK
 case 31:
 YY_RULE_SETUP
-#line 64 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 64 "scanner.flex"
 { return Parser::token::SEMICOL;   }
 	YY_BREAK
 case 32:
 YY_RULE_SETUP
-#line 66 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 66 "scanner.flex"
 { return Parser::token::ASSIGN;    }
 	YY_BREAK
 case 33:
 YY_RULE_SETUP
-#line 67 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 67 "scanner.flex"
 { return Parser::token::PLUS;      }
 	YY_BREAK
 case 34:
 YY_RULE_SETUP
-#line 68 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 68 "scanner.flex"
 { return Parser::token::MINUS;     }
 	YY_BREAK
 case 35:
 YY_RULE_SETUP
-#line 69 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 69 "scanner.flex"
 { return Parser::token::STAR;      }
 	YY_BREAK
 case 36:
 YY_RULE_SETUP
-#line 70 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 70 "scanner.flex"
 { return Parser::token::SLASH;     }
 	YY_BREAK
 case 37:
 YY_RULE_SETUP
-#line 71 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 71 "scanner.flex"
 { return Parser::token::DOTSTAR;   }
 	YY_BREAK
 case 38:
 YY_RULE_SETUP
-#line 72 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 72 "scanner.flex"
 { return Parser::token::DOTSLASH;  }
 	YY_BREAK
 case 39:
 YY_RULE_SETUP
-#line 73 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 73 "scanner.flex"
 { return Parser::token::BACKSLASH; }
 	YY_BREAK
 case 40:
 YY_RULE_SETUP
-#line 74 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 74 "scanner.flex"
 { return Parser::token::EXP;       }
 	YY_BREAK
 case 41:
 YY_RULE_SETUP
-#line 75 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 75 "scanner.flex"
 { return Parser::token::TRANSPOSE; }
 	YY_BREAK
 case 42:
 YY_RULE_SETUP
-#line 77 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 77 "scanner.flex"
 { return Parser::token::EQ;        }
 	YY_BREAK
 case 43:
 YY_RULE_SETUP
-#line 78 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 78 "scanner.flex"
 { return Parser::token::NE;        }
 	YY_BREAK
 case 44:
 YY_RULE_SETUP
-#line 79 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 79 "scanner.flex"
 { return Parser::token::LE;        }
 	YY_BREAK
 case 45:
 YY_RULE_SETUP
-#line 80 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 80 "scanner.flex"
 { return Parser::token::GE;        }
 	YY_BREAK
 /* Tests */
 case 46:
 YY_RULE_SETUP
-#line 83 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 83 "scanner.flex"
 { BEGIN(SLTEST); return Parser::token::TEST; }
 	YY_BREAK
 case 47:
 /* rule 47 can match eol */
 YY_RULE_SETUP
-#line 84 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 84 "scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 case 48:
 YY_RULE_SETUP
-#line 85 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 85 "scanner.flex"
 { BEGIN(MLTEST); return Parser::token::TEST; }
 	YY_BREAK
 case 49:
 YY_RULE_SETUP
-#line 86 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 86 "scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 /* Single-line comments */
 case 50:
 /* rule 50 can match eol */
 YY_RULE_SETUP
-#line 89 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 89 "scanner.flex"
 { BEGIN(SLCOMMENT); }
 	YY_BREAK
 case 51:
 YY_RULE_SETUP
-#line 90 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 90 "scanner.flex"
 {}
 	YY_BREAK
 case 52:
 /* rule 52 can match eol */
 YY_RULE_SETUP
-#line 91 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 91 "scanner.flex"
 { BEGIN(INITIAL); yylloc->lines(yyleng); yylloc->step(); }
 	YY_BREAK
 /* Multi-line comments */
 case 53:
 YY_RULE_SETUP
-#line 94 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 94 "scanner.flex"
 { BEGIN(MLCOMMENT); }
 	YY_BREAK
 case 54:
 /* rule 54 can match eol */
 YY_RULE_SETUP
-#line 95 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 95 "scanner.flex"
 { yylloc->lines(yyleng); yylloc->step(); }
 	YY_BREAK
 case 55:
 YY_RULE_SETUP
-#line 96 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 96 "scanner.flex"
 {}
 	YY_BREAK
 case YY_STATE_EOF(MLCOMMENT):
-#line 97 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 97 "scanner.flex"
 { /*TODO: REPORT ERROR*/ return Parser::token::UNKNOWN; }
 	YY_BREAK
 case 56:
 YY_RULE_SETUP
-#line 98 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 98 "scanner.flex"
 { BEGIN(INITIAL); }
 	YY_BREAK
 /* Identifiers */
 case 57:
 YY_RULE_SETUP
-#line 101 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 101 "scanner.flex"
 { yylval->string = strdup(yytext);
                         return Parser::token::IDENT; }
 	YY_BREAK
 /* Literals */
 case 58:
 YY_RULE_SETUP
-#line 105 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 105 "scanner.flex"
 { yylval->num  = atoi(yytext);
                         return Parser::token::INT_LITERAL; }
 	YY_BREAK
 case 59:
 YY_RULE_SETUP
-#line 107 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 107 "scanner.flex"
 { yylval->fnum = atof(yytext);
                         return Parser::token::FLOAT_LITERAL; }
 	YY_BREAK
 /* Whitespace */
 case 60:
 YY_RULE_SETUP
-#line 111 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 111 "scanner.flex"
 {}
 	YY_BREAK
 case 61:
 /* rule 61 can match eol */
 YY_RULE_SETUP
-#line 112 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 112 "scanner.flex"
 { yylloc->lines(yyleng); yylloc->step(); }
 	YY_BREAK
 case YY_STATE_EOF(INITIAL):
 case YY_STATE_EOF(SLCOMMENT):
 case YY_STATE_EOF(SLTEST):
 case YY_STATE_EOF(MLTEST):
-#line 113 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 113 "scanner.flex"
 { yylloc->step(); yyterminate(); }
 	YY_BREAK
 /* Unexpected (error) */
 case 62:
 YY_RULE_SETUP
-#line 116 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 116 "scanner.flex"
 { return Parser::token::UNKNOWN; }
 	YY_BREAK
 case 63:
 YY_RULE_SETUP
-#line 117 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 117 "scanner.flex"
 ECHO;
 	YY_BREAK
-#line 1047 "/Users/fred/projects/sim/simit/src/parser/scanner.cpp"
+#line 1063 "scanner.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1172,6 +1188,7 @@ ECHO;
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
+	} /* end of user's declarations */
 } /* end of yylex */
 
 /* The contents of this function are C++ specific, so the () macro is not used.
@@ -1229,9 +1246,9 @@ void yyFlexLexer::switch_streams( std::istream* new_in, std::ostream* new_out )
 }
 
 #ifdef YY_INTERACTIVE
-size_t yyFlexLexer::LexerInput( char* buf, size_t /* max_size */ )
+int yyFlexLexer::LexerInput( char* buf, int /* max_size */ )
 #else
-size_t yyFlexLexer::LexerInput( char* buf, size_t max_size )
+int yyFlexLexer::LexerInput( char* buf, int max_size )
 #endif
 {
 	if ( yyin->eof() || yyin->fail() )
@@ -1258,7 +1275,7 @@ size_t yyFlexLexer::LexerInput( char* buf, size_t max_size )
 #endif
 }
 
-void yyFlexLexer::LexerOutput( const char* buf, size_t size )
+void yyFlexLexer::LexerOutput( const char* buf, int size )
 {
 	(void) yyout->write( buf, size );
 }
@@ -1323,7 +1340,7 @@ int yyFlexLexer::yy_get_next_buffer()
 			{ /* Not enough room in the buffer - grow it. */
 
 			/* just a shorter name for the current buffer */
-			YY_BUFFER_STATE b = YY_CURRENT_BUFFER;
+			YY_BUFFER_STATE b = YY_CURRENT_BUFFER_LVALUE;
 
 			int yy_c_buf_p_offset =
 				(int) ((yy_c_buf_p) - b->yy_ch_buf);
@@ -1456,7 +1473,7 @@ int yyFlexLexer::yy_get_next_buffer()
 	yy_current_state = yy_nxt[yy_base[yy_current_state] + (unsigned int) yy_c];
 	yy_is_jam = (yy_current_state == 138);
 
-	return yy_is_jam ? 0 : yy_current_state;
+		return yy_is_jam ? 0 : yy_current_state;
 }
 
     void yyFlexLexer::yyunput( int c, register char* yy_bp)
@@ -1538,7 +1555,7 @@ int yyFlexLexer::yy_get_next_buffer()
 				case EOB_ACT_END_OF_FILE:
 					{
 					if ( yywrap(  ) )
-						return 0;
+						return EOF;
 
 					if ( ! (yy_did_buffer_switch_on_eof) )
 						YY_NEW_FILE;
@@ -1672,8 +1689,6 @@ int yyFlexLexer::yy_get_next_buffer()
 
 	Simitfree((void *) b  );
 }
-
-extern "C" int isatty (int );
 
 /* Initializes or reinitializes a buffer.
  * This function is sometimes called more than once on the same buffer,
@@ -1941,7 +1956,7 @@ void Simitfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 117 "/Users/fred/projects/sim/simit/src/parser/scanner.flex"
+#line 116 "scanner.flex"
 
 
 
