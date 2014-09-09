@@ -50,7 +50,7 @@ Open doc/index.html in your browser.
 FOR DEVELOPERS:
 ===============
 In addition to CMake and LLVM, developers might want to install:
-- Flex       2.5+    (http://flex.sourceforge.net)
+- Flex       2.5.37  (http://flex.sourceforge.net)
 - GNU Bison  3.0.0+  (http://www.gnu.org/software/bison/)
 
 Flex and Bison are used to generate the Simit scanner and parser
