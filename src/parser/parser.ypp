@@ -205,7 +205,7 @@
   double      fnum;
   const char *string;
 }
-%destructor {} <num> <fnum> <Type>
+%destructor {} <num> <fnum>
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <*>
 
@@ -324,6 +324,7 @@ program_element
   }
 
 // Externs
+// TODO: Remove externs
 extern
   : "extern" IDENT type "{" "}" ";" {
     std::string ident = convertAndFree($IDENT);
@@ -368,7 +369,7 @@ field_decl
 
 %type <function> procedure;
 procedure
-  : PROC IDENT stmt_block BLOCKEND {
+  : "proc" IDENT stmt_block BLOCKEND {
     std::string ident = convertAndFree($IDENT);
     delete $stmt_block;
   }
@@ -384,7 +385,7 @@ function
 
 %type <function> function_header;
 function_header
-  : FUNC IDENT "(" arguments ")" results {
+  : "func" IDENT arguments results {
     std::string ident = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<shared_ptr<Argument>>>($arguments);
     auto results = unique_ptr<vector<shared_ptr<Result>>>($results);
@@ -421,10 +422,10 @@ function_header
 
 %type <Arguments> arguments;
 arguments
-  : /* empty */ {
+  : "(" ")" {
     $$ = new vector<shared_ptr<Argument>>();
   }
-  | formal_list {
+  | "(" formal_list ")" {
     $$ = new vector<shared_ptr<Argument>>();
     for (auto formal : *$formal_list) {
       auto result = new Argument(formal->name, formal->type);
@@ -515,7 +516,6 @@ const_stmt
   }
   | "const" IDENT ":" element_type "=" element_literal ";" {
     std::string ident = convertAndFree($IDENT);
-    delete $element_type;
     $$ = NULL;
   }
 
@@ -1100,22 +1100,23 @@ var_decl
 %type <IndexSets>        dimensions;
 %type <indexSet>         dimension;
 
-%type <type>    component_type;
-%type <tensorType>       element_type;
+%type <type>             component_type;
 
 type
-  : element_type {
-    $$ = $element_type;
+  : set_type {
+  }
+  | element_type {
   }
   | tensor_type {
     $$ = $tensor_type;
   }
 
+set_type
+  : element_type "{" "}"
+
 element_type
   : IDENT {
     std::string ident = convertAndFree($IDENT);
-
-    $$ = new TensorType(Type::ELEMENT);
   }
 
 tensor_type
