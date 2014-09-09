@@ -9,7 +9,7 @@
 #define FLEX_SCANNER
 #define YY_FLEX_MAJOR_VERSION 2
 #define YY_FLEX_MINOR_VERSION 5
-#define YY_FLEX_SUBMINOR_VERSION 39
+#define YY_FLEX_SUBMINOR_VERSION 37
 #if YY_FLEX_SUBMINOR_VERSION > 0
 #define FLEX_BETA
 #endif
@@ -154,15 +154,7 @@ typedef unsigned int flex_uint32_t;
 
 /* Size of default input buffer. */
 #ifndef YY_BUF_SIZE
-#ifdef __ia64__
-/* On IA-64, the buffer size is 16k, not 8k.
- * Moreover, YY_BUF_SIZE is 2*YY_READ_BUF_SIZE in the general case.
- * Ditto for the __ia64__ case accordingly.
- */
-#define YY_BUF_SIZE 32768
-#else
 #define YY_BUF_SIZE 16384
-#endif /* __ia64__ */
 #endif
 
 /* The state buf must be large enough to hold one state per character in the main buffer.
@@ -186,7 +178,6 @@ extern yy_size_t yyleng;
 #define EOB_ACT_LAST_MATCH 2
 
     #define YY_LESS_LINENO(n)
-    #define YY_LINENO_REWIND_TO(ptr)
     
 /* Return all but the first "n" matched characters back to the input stream. */
 #define yyless(n) \
@@ -405,20 +396,20 @@ static yyconst flex_int16_t yy_base[143] =
     {   0,
         0,    0,  160,  159,   46,   47,  158,  157,  154,  153,
       157,  164,  164,  164,  137,   49,  164,  164,  164,  164,
-      164,  164,   39,   42,  164,   45,  164,  164,  136,  135,
-      134,    0,  120,  164,  164,  164,  164,  112,   25,   26,
-       31,  121,  108,  116,  104,  107,   31,  164,  164,  164,
-      164,  164,  164,  140,  164,   51,  164,  164,  164,  140,
-      128,   59,  164,  164,  164,   53,   68,  164,  164,  164,
-        0,  104,  103,   44,  109,   96,   99,   99,    0,   93,
-       95,   95,   45,   92,    0,   97,   88,  164,  164,  164,
-       72,  115,  114,   86,   85,   93,   93,    0,   92,   94,
+      164,  164,   41,   48,  164,   45,  164,  164,  136,  135,
+      134,    0,  120,  164,  164,  164,  164,  112,   28,   29,
+       37,  121,  108,  116,  104,  107,   34,  164,  164,  164,
+      164,  164,  164,   97,  164,   51,  164,  164,  164,  140,
+      128,   63,  164,  164,  164,   57,   71,  164,  164,  164,
+        0,  104,  103,   45,  109,   96,   99,   99,    0,   93,
+       95,   95,   28,   92,    0,   97,   88,  164,  164,  164,
+       78,  115,  114,   86,   85,   93,   93,    0,   92,   94,
 
        92,    0,    0,   91,   76,   75,   74,   81,   82,  100,
        99,   74,   69,    0,    0,   70,   67,    0,    0,   79,
-       67,   77,   74,    0,   56,    0,   55,    0,   60,   52,
-       46,    0,    0,    0,    0,    0,    0,  164,   99,  101,
-      103,   71
+       67,   77,   74,    0,   56,    0,   56,    0,   60,   53,
+       41,    0,    0,    0,    0,    0,    0,  164,   99,  101,
+      103,   80
     } ;
 
 static yyconst flex_int16_t yy_def[143] =
@@ -448,11 +439,11 @@ static yyconst flex_int16_t yy_nxt[213] =
        32,   32,   33,   34,   35,   36,   37,   32,   32,   38,
        32,   39,   40,   32,   41,   32,   42,   32,   32,   43,
        44,   45,   46,   32,   47,   32,   48,   49,   53,   53,
-       64,   61,   59,   62,   59,   65,   66,   61,   63,   62,
-       74,   77,   75,   79,   86,   87,   67,   66,   80,   78,
-       76,   61,   71,   62,   91,  105,   67,   92,   96,   92,
-       67,  110,   93,  110,   91,   97,  111,  106,  137,  136,
-       67,  135,  134,   54,   54,   60,  133,   60,   89,   50,
+       54,   54,   59,   61,   59,   62,   64,   61,  105,   62,
+       63,   65,   66,   74,   77,   75,   67,   86,   87,   79,
+      106,   66,   78,   76,   80,   61,   67,   62,   91,   96,
+       92,   71,   92,  137,   67,   93,   97,  110,   91,  110,
+      136,  135,  111,  134,   67,   60,  133,   60,   89,   50,
 
        50,   52,   52,   58,   58,  132,  131,  130,  129,  128,
       127,  126,  125,  111,  111,  124,  123,  122,  121,  120,
@@ -476,11 +467,11 @@ static yyconst flex_int16_t yy_chk[213] =
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    1,    1,
         1,    1,    1,    1,    1,    1,    1,    1,    5,    6,
-       24,   23,   16,   23,   56,   24,   24,   26,   23,   26,
-       39,   40,   39,   41,   47,   47,   26,   66,   41,   40,
-       39,   62,  142,   62,   66,   83,   26,   67,   74,   67,
-       62,   91,   67,   91,   66,   74,   91,   83,  131,  130,
-       62,  129,  127,    5,    6,   16,  125,   56,   56,  139,
+        5,    6,   16,   23,   56,   23,   24,   26,   83,   26,
+       23,   24,   24,   39,   40,   39,   26,   47,   47,   41,
+       83,   66,   40,   39,   41,   62,   26,   62,   66,   74,
+       67,  142,   67,  131,   62,   67,   74,   91,   66,   91,
+      130,  129,   91,  127,   62,   16,  125,   56,   56,  139,
 
       139,  140,  140,  141,  141,  123,  122,  121,  120,  117,
       116,  113,  112,  111,  110,  109,  108,  107,  106,  105,
@@ -517,7 +508,7 @@ static yyconst flex_int16_t yy_chk[213] =
 
 
 
-#line 521 "scanner.cpp"
+#line 512 "scanner.cpp"
 
 #define INITIAL 0
 #define SLCOMMENT 1
@@ -551,12 +542,7 @@ static int yy_flex_strlen (yyconst char * );
 
 /* Amount of stuff to slurp up with each read. */
 #ifndef YY_READ_BUF_SIZE
-#ifdef __ia64__
-/* On IA-64, the buffer size is 16k, not 8k */
-#define YY_READ_BUF_SIZE 16384
-#else
 #define YY_READ_BUF_SIZE 8192
-#endif /* __ia64__ */
 #endif
 
 /* Copy whatever the last rule matched to the standard output. */
@@ -626,6 +612,16 @@ YY_DECL
 	register char *yy_cp, *yy_bp;
 	register int yy_act;
     
+#line 26 "scanner.flex"
+
+
+yylloc->step();
+using namespace simit::internal;
+
+
+ /* Keywords and symbols */
+#line 624 "scanner.cpp"
+
 	if ( !(yy_init) )
 		{
 		(yy_init) = 1;
@@ -652,17 +648,6 @@ YY_DECL
 		yy_load_buffer_state(  );
 		}
 
-	{
-#line 26 "scanner.flex"
-
-
-yylloc->step();
-using namespace simit::internal;
-
-
- /* Keywords and symbols */
-#line 665 "scanner.cpp"
-
 	while ( 1 )		/* loops until end-of-file is reached */
 		{
 		yy_cp = (yy_c_buf_p);
@@ -679,7 +664,7 @@ using namespace simit::internal;
 yy_match:
 		do
 			{
-			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)] ;
+			register YY_CHAR yy_c = yy_ec[YY_SC_TO_UI(*yy_cp)];
 			if ( yy_accept[yy_current_state] )
 				{
 				(yy_last_accepting_state) = yy_current_state;
@@ -1059,7 +1044,7 @@ YY_RULE_SETUP
 #line 117 "scanner.flex"
 ECHO;
 	YY_BREAK
-#line 1063 "scanner.cpp"
+#line 1048 "scanner.cpp"
 
 	case YY_END_OF_BUFFER:
 		{
@@ -1188,7 +1173,6 @@ ECHO;
 			"fatal flex scanner internal error--no action found" );
 	} /* end of action switch */
 		} /* end of scanning one token */
-	} /* end of user's declarations */
 } /* end of yylex */
 
 /* The contents of this function are C++ specific, so the () macro is not used.
@@ -1956,7 +1940,7 @@ void Simitfree (void * ptr )
 
 #define YYTABLES_NAME "yytables"
 
-#line 116 "scanner.flex"
+#line 117 "scanner.flex"
 
 
 
