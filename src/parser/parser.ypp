@@ -326,11 +326,11 @@ program_element
 // Externs
 // TODO: Remove externs
 extern
-  : "extern" IDENT type "{" "}" ";" {
+  : "extern" IDENT type ";" {
     std::string ident = convertAndFree($IDENT);
     delete $type;
   }
-  | "extern" IDENT type "[" endpoints "]" "{" "}" ";" {
+  | "extern" IDENT type ";" {
     std::string ident = convertAndFree($IDENT);
     delete $type;
   }
@@ -1104,8 +1104,10 @@ var_decl
 
 type
   : set_type {
+    $$ = NULL;
   }
   | element_type {
+    $$ = NULL;
   }
   | tensor_type {
     $$ = $tensor_type;
@@ -1113,6 +1115,7 @@ type
 
 set_type
   : element_type "{" "}"
+  | element_type "[" endpoints "]" "{" "}"
 
 element_type
   : IDENT {

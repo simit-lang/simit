@@ -691,7 +691,7 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 439,     ///< Last index in yytable_.
+      yylast_ = 438,     ///< Last index in yytable_.
       yynnts_ = 65,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
