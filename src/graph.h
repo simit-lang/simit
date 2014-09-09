@@ -28,7 +28,7 @@ class FieldRefBase;
 /// ElementRef provides a reference to an element.
 class ElementRef {
  private:
-  explicit ElementRef(int ident) : ident(ident) {}
+  explicit inline ElementRef(int ident) : ident(ident) {}
   int ident;
 
   friend Set;
@@ -365,7 +365,6 @@ class FieldRef<T> : public FieldRefBaseParameterized<T> {
 template <typename T, int... dimensions>
 class TensorRef {
  public:
-
   static size_t getOrder() {
     return sizeof...(dimensions);
   }
@@ -401,7 +400,7 @@ class TensorRef {
   }
 
  private:
-  TensorRef(T *data) : data(data) {}
+  inline TensorRef(T *data) : data(data) {}
   T *data;
 
   friend class FieldRefBaseParameterized<T, dimensions...>;
