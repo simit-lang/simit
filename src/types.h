@@ -7,6 +7,7 @@
 #include <iostream>
 #include <memory>
 
+#include "interfaces.h"
 #include "tensor_components.h"
 
 namespace simit {
@@ -14,8 +15,7 @@ class Set;
 
 namespace internal {
 
-class Type {
-
+class Type : public simit::util::Printable {
 };
 
 // Tensor types
@@ -101,6 +101,8 @@ class TensorType : public Type {
   /// Get the index sets that form the dimensions of the tensor.
   const std::vector<IndexSetProduct> &getDimensions() const {return dimensions;}
 
+  void print(std::ostream &os) const;
+
  private:
   ComponentType componentType;
   std::vector<IndexSetProduct> dimensions;
@@ -108,7 +110,6 @@ class TensorType : public Type {
 
 bool operator==(const TensorType& l, const TensorType& r);
 bool operator!=(const TensorType& l, const TensorType& r);
-std::ostream &operator<<(std::ostream &os, const TensorType &o);
 
 
 // Element types
@@ -144,12 +145,12 @@ class ElementType : public Type {
   const std::string &getName() const { return name; }
   const std::vector<ElementField*> &getFields() const { return fields; }
 
+  void print(std::ostream &os) const;
+
  private:
   std::string name;
   std::vector<ElementField*> fields;
 };
-
-std::ostream &operator<<(std::ostream &os, const ElementType &elementType);
 
 }} // namespace simit::internal
 
