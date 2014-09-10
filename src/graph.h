@@ -85,17 +85,17 @@ class Set {
   void remove(ElementRef element) {
     for (auto f : fields){
       switch (f->type->getComponentType()) {
-        case Type::FLOAT: {
+        case ComponentType::FLOAT: {
           double* data = (double*)f->data;
           data[element.ident] = data[elements-1];
           break;
         }
-        case Type::INT: {
+        case ComponentType::INT: {
           int* data = (int*)f->data;
           data[element.ident] = data[elements-1];
           break;
         }
-        case Type::ELEMENT:
+        case ComponentType::ELEMENT:
           assert(false && "ELEMENT types not supported yet.");
           break;
         default:
@@ -177,13 +177,13 @@ class Set {
   struct FieldData {
     class TensorType {
     public:
-      TensorType(Type componentType, std::initializer_list<int> dimensions)
-      : componentType(componentType), dimensions(dimensions), size(1) {
+      TensorType(ComponentType componentType, std::initializer_list<int> dims)
+      : componentType(componentType), dimensions(dims), size(1) {
         for (auto dim : dimensions) {
           size *= dim;
         }
       }
-      Type getComponentType() const { return componentType; }
+      ComponentType getComponentType() const { return componentType; }
       size_t getOrder() const { return dimensions.size(); }
       size_t getDimension(size_t i) const {
         assert(i<getOrder());
@@ -191,7 +191,7 @@ class Set {
       }
       size_t getSize() const { return size; }
     public:
-      Type componentType;
+      ComponentType componentType;
       std::vector<int> dimensions;
       size_t size;
     };

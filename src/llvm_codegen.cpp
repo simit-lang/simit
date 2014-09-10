@@ -58,13 +58,13 @@ llvm::Constant *getDouble(double val, llvm::LLVMContext &ctx = LLVM_CONTEXT){
   return llvm::ConstantFP::get(ctx, llvm::APFloat(val));
 }
 
-llvm::Type *toLLVMType(const simit::Type type) {
+llvm::Type *toLLVMType(const simit::ComponentType type) {
   switch (type) {
-    case simit::Type::INT:
+    case simit::ComponentType::INT:
       return LLVM_INT;
-    case simit::Type::FLOAT:
+    case simit::ComponentType::FLOAT:
       return LLVM_DOUBLE;
-    case simit::Type::ELEMENT:
+    case simit::ComponentType::ELEMENT:
       NOT_SUPPORTED_YET;
     default:
       UNREACHABLE;
@@ -73,11 +73,11 @@ llvm::Type *toLLVMType(const simit::Type type) {
 
 llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
   switch (type->getComponentType()) {
-    case simit::Type::INT:
+    case simit::ComponentType::INT:
       return LLVM_INTPTR;
-    case simit::Type::FLOAT:
+    case simit::ComponentType::FLOAT:
       return LLVM_DOUBLEPTR;
-    case simit::Type::ELEMENT:
+    case simit::ComponentType::ELEMENT:
       NOT_SUPPORTED_YET;
     default:
       UNREACHABLE;
@@ -97,7 +97,7 @@ llvm::Constant *toLLVMPtr(const std::shared_ptr<Literal> &literal) {
   return cptr;
 }
 
-simit::Type llvmToSimitType(const llvm::Type *type) {
+simit::ComponentType llvmToSimitType(const llvm::Type *type) {
   if (type->isPointerTy()) {
     type = type->getPointerElementType();
   }
@@ -153,39 +153,39 @@ llvm::Function *createPrototype(const string &name,
 }
 
 llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
-                                            simit::Type type) {
+                                            simit::ComponentType type) {
   using namespace simit;
-  assert(type == Type::INT || type == Type::FLOAT);
+  assert(type == ComponentType::INT || type == ComponentType::FLOAT);
   switch (op) {
     case IndexExpr::ADD:
       switch (type) {
-        case Type::INT:
+        case ComponentType::INT:
           return llvm::Instruction::Add;
-        case Type::FLOAT:
+        case ComponentType::FLOAT:
           return llvm::Instruction::FAdd;
         default:
           UNREACHABLE;
       }
     case IndexExpr::SUB:
       switch (type) {
-        case Type::INT:
+        case ComponentType::INT:
           return llvm::Instruction::Sub;
-        case Type::FLOAT:
+        case ComponentType::FLOAT:
           return llvm::Instruction::FSub;
         default:
           UNREACHABLE;
       }
     case IndexExpr::MUL:
       switch (type) {
-        case Type::INT:
+        case ComponentType::INT:
           return llvm::Instruction::Mul;
-        case Type::FLOAT:
+        case ComponentType::FLOAT:
           return llvm::Instruction::FMul;
         default:
           UNREACHABLE;
       }
     case IndexExpr::DIV:
-      assert(type == Type::FLOAT);
+      assert(type == ComponentType::FLOAT);
       return llvm::Instruction::FDiv;
     case IndexExpr::NEG: // fall-through
     default:
@@ -194,7 +194,7 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
 }
 
 llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexVar::Operator op,
-                                            simit::Type type) {
+                                            simit::ComponentType type) {
   switch (op) {
     case IndexVar::Operator::FREE:
       assert(false && "Free index variables do not have an operator");
@@ -207,7 +207,8 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexVar::Operator op,
   }
 }
 
-llvm::Value *createValueComputation(std::string name, simit::Type ctype,
+llvm::Value *createValueComputation(std::string name,
+                                    simit::ComponentType ctype,
                                     IndexExpr::Operator op,
                                     const vector<llvm::Value*> operands,
                                     llvm::IRBuilder<> *builder) {
@@ -218,9 +219,9 @@ llvm::Value *createValueComputation(std::string name, simit::Type ctype,
     case IndexExpr::Operator::NEG: {
       assert (operands.size() == 1);
       switch (ctype) {
-        case simit::Type::INT:
+        case simit::ComponentType::INT:
           return builder->CreateNeg(operands[0], name);
-        case simit::Type::FLOAT:
+        case simit::ComponentType::FLOAT:
           return builder->CreateFNeg(operands[0], name);
         default:
           UNREACHABLE;
@@ -246,7 +247,7 @@ llvm::Value *createScalarComputation(llvm::Value *resultStorage,
                                      llvm::IRBuilder<> *builder) {
   assert(operands.size() > 0);
 
-  simit::Type ctype = llvmToSimitType(resultStorage->getType());
+  simit::ComponentType ctype = llvmToSimitType(resultStorage->getType());
 
   std::vector<llvm::Value *> operandVals;
   for (llvm::Value *operandPtr : operands) {
@@ -345,7 +346,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   assert(currIdxVar < domain.size());
 
   std::string resultName = resultStorage->getName();
-  simit::Type resultCType = indexExpr->getType()->getComponentType();
+  simit::ComponentType resultCType = indexExpr->getType()->getComponentType();
   assert(resultCType == llvmToSimitType(resultStorage->getType()));
 
   size_t numNests = (domain.size() > 0)

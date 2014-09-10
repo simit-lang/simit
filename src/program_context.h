@@ -63,6 +63,22 @@ public:
     return funcVector;
   }
 
+  void addElementType(ElementType *elemType) {
+    elementTypes[elemType->getName()] = elemType;
+  }
+
+  bool containsElementType(const std::string &name) {
+    return elementTypes.find(name) != elementTypes.end();
+  }
+
+  ElementType *getElementType(std::string name) {
+    return elementTypes[name];
+  }
+
+  void addTest(Test *test) { tests.push_back(test); }
+
+  const std::vector<Test*> &getTests() const { return tests; }
+
   void toggleColumnVector(const TensorType *type) {
     if (columnVectors.contains(type)) {
       bool &val = columnVectors.get(type);
@@ -80,18 +96,13 @@ public:
     return columnVectors.get(type);
   }
 
-  void addTest(Test *test) { tests.push_back(test); }
-
-  const std::vector<Test*> &getTests() const { return tests; }
-
 private:
+  std::map<std::string, Function *>   functions;
+  std::map<std::string, ElementType*> elementTypes;
+  std::vector<Test*>                  tests;
+
   ParserSymtableType                  symtable;
   ScopedMap<const TensorType*, bool>  columnVectors;
-
-  std::map<std::string, Function *>   functions;
-  //    std::map<std::string, ElementType*> &elementTypes;
-
-  std::vector<Test*>                  tests;
 };
 
 }} // namespace simit::internal

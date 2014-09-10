@@ -135,18 +135,6 @@ int TensorType::getSize() const {
   return size;
 }
 
-std::ostream &TensorType::print(std::ostream &os) const {
-  if (getOrder() == 0) {
-    os << componentTypeString(getComponentType());
-  }
-  else {
-    os << "Tensor";
-    os << "[" << util::join(getDimensions(), "][") << "]";
-    os << "(" << componentTypeString(getComponentType()) << ")";
-  }
-  return os;
-}
-
 bool operator==(const TensorType& l, const TensorType& r) {
   if (l.getComponentType() != r.getComponentType() ) {
     return false;
@@ -170,8 +158,38 @@ bool operator!=(const TensorType& l, const TensorType& r) {
   return !(l == r);
 }
 
-std::ostream &operator<<(std::ostream &os, const TensorType &o) {
-  return o.print(os);
+std::ostream &operator<<(std::ostream &os, const TensorType &tt) {
+  if (tt.getOrder() == 0) {
+    os << componentTypeString(tt.getComponentType());
+  }
+  else {
+    os << "Tensor";
+    os << "[" << util::join(tt.getDimensions(), "][") << "]";
+    os << "(" << componentTypeString(tt.getComponentType()) << ")";
+  }
+  return os;
 }
+
+
+// class ElementType
+std::ostream &operator<<(std::ostream &os, const ElementType &elementType) {
+  os << "struct " << elementType.getName();
+  if (elementType.getFields().size() > 0) {
+    os << endl << "  ";
+  }
+  for (ElementField *field : elementType.getFields()) {
+    os << *field << ";" << endl;
+  }
+  os << "end";
+  return os;
+}
+
+
+// class ElementField
+std::ostream &operator<<(std::ostream &os, const ElementField &field) {
+  os << field.getName() << " : " << *field.getType();
+  return os;
+}
+
 
 }} // namespace simit::internal

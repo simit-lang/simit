@@ -212,6 +212,11 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
 
 
+  ElementType                *elementType;
+  std::vector<ElementField*> *fields;
+  ElementField               *field;
+
+
   Function *function;
 
 
@@ -239,11 +244,13 @@ namespace  simit { namespace internal  {
   VariableAccessVector *VarAccesses;
 
 
+  Type                         *type;
+
   TensorType                   *tensorType;
-  Type                          type;
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;
   IndexSet                     *indexSet;
+  ComponentType                 componentType;
 
 
   std::shared_ptr<Literal> *TensorLiteral;
@@ -473,7 +480,7 @@ namespace  simit { namespace internal  {
     /// \param yyvalue   the value to check
     static bool yy_table_value_is_error_ (int yyvalue);
 
-    static const short int yypact_ninf_;
+    static const signed char yypact_ninf_;
     static const signed char yytable_ninf_;
 
     /// Convert a scanner token number \a t to a symbol number.
@@ -500,7 +507,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const short int yycheck_[];
+  static const unsigned char yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -615,8 +622,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 438,     ///< Last index in yytable_.
-      yynnts_ = 65,  ///< Number of nonterminal symbols.
+      yylast_ = 395,     ///< Last index in yytable_.
+      yynnts_ = 62,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

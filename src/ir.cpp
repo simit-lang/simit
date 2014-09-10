@@ -65,7 +65,7 @@ void Literal::print(std::ostream &os) const {
 
   // TODO: Fix value printing to print matrices and tensors properly
   switch (getType()->getComponentType()) {
-    case Type::INT: {
+    case ComponentType::INT: {
       int *idata = (int*)data;
       if (getType()->getSize() == 1) {
         os << idata[0];
@@ -79,7 +79,7 @@ void Literal::print(std::ostream &os) const {
       }
       break;
     }
-    case Type::FLOAT: {
+    case ComponentType::FLOAT: {
       double *fdata = (double*)data;
       if (getType()->getSize() == 1) {
         os << fdata[0];
@@ -93,7 +93,7 @@ void Literal::print(std::ostream &os) const {
       }
       break;
     }
-    case Type::ELEMENT:
+    case ComponentType::ELEMENT:
       assert(false && "Unsupported (TODO)");
       break;
     default:
@@ -108,7 +108,7 @@ bool operator==(const Literal& l, const Literal& r) {
     return false;
   }
   assert(l.getType()->getSize() == r.getType()->getSize());
-  simit::Type ctype = l.getType()->getComponentType();
+  simit::ComponentType ctype = l.getType()->getComponentType();
   int byteSize = l.getType()->getSize() * simit::componentSize(ctype);
 
   if (memcmp(l.getData(), r.getData(), byteSize) != 0) {
@@ -201,9 +201,9 @@ IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
 
   // Operand typechecks
   assert(operands.size() == (size_t)IndexExpr::numOperands(op));
-  Type firstType = operands[0].getTensor()->getType()->getComponentType();
+  ComponentType first = operands[0].getTensor()->getType()->getComponentType();
   for (auto &operand : operands) {
-    assert(firstType == operand.getTensor()->getType()->getComponentType() &&
+    assert(first == operand.getTensor()->getType()->getComponentType() &&
            "Operand component types differ");
   }
 }
@@ -306,7 +306,7 @@ void IndexExpr::print(std::ostream &os) const {
 
 void IndexExpr::initType() {
   assert(operands.size() > 0);
-  Type ctype = operands[0].getTensor()->getType()->getComponentType();
+  ComponentType ctype = operands[0].getTensor()->getType()->getComponentType();
   std::vector<IndexSetProduct> dimensions;
   for (auto &iv : indexVars) {
     dimensions.push_back(iv->getIndexSet());

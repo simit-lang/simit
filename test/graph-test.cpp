@@ -10,8 +10,8 @@ using namespace simit;
 //// Set tests
 
 TEST(SetTests, Utils) {
-  ASSERT_EQ(typeOf<int>(), Type::INT);
-  ASSERT_EQ(typeOf<double>(), Type::FLOAT);
+  ASSERT_EQ(typeOf<int>(), ComponentType::INT);
+  ASSERT_EQ(typeOf<double>(), ComponentType::FLOAT);
 }
 
 TEST(Set, AddAndGetFromTwoFields) {

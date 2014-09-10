@@ -220,8 +220,15 @@ program
 
 %type<IRNode> program_element;
 program_element
-  : struct {
+  : element_type_decl {
     $$ = NULL;
+    std::unique_ptr<ElementType> elementType($element_type_decl);
+
+    std::string name = elementType->getName();
+    if (ctx->containsElementType(name)) {
+      REPORT_ERROR("struct redefinition (" + name + ")", @element_type_decl);
+    }
+    ctx->addElementType(elementType.release());
   }
   | procedure {
     $$ = NULL;
@@ -229,7 +236,7 @@ program_element
   | function {
     std::unique_ptr<Function> function($function);
 
-    auto name = function->getName();
+    std::string name = function->getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("function redefinition (" + name + ")", @function);
     }
@@ -267,23 +274,37 @@ endpoints
   }
 
 
-// Structs
-struct
-  : "struct" IDENT struct_decl_block {
-    std::string ident = convertAndFree($IDENT);
+// Element Definitions
+%union {
+  ElementType                *elementType;
+  std::vector<ElementField*> *fields;
+  ElementField               *field;
+};
+
+%type <elementType> element_type_decl;
+element_type_decl
+  : "struct" IDENT field_decl_list "end" {
+    std::string name = convertAndFree($IDENT);
+    std::unique_ptr<std::vector<ElementField*>> fields($field_decl_list);
+    $$ = new ElementType(name, *fields);
   }
 
-struct_decl_block
-  : /* empty */
-  | struct_decl_list BLOCKEND
+%type <fields> field_decl_list;
+field_decl_list
+  : /* empty */ {
+    $$ = new std::vector<ElementField*>();
+  }
+  | field_decl_list field_decl {
+    $$ = $1;
+    $$->push_back($field_decl);
+  }
 
-struct_decl_list
-  : /* empty */
-  | field_decl struct_decl_list
-
+%type <field> field_decl;
 field_decl
-  : var_decl  ";"
-
+  : IDENT ":" tensor_type  ";" {
+    std::string name = convertAndFree($IDENT);
+    $$ = new ElementField(name, $tensor_type);
+  }
 
 // Procedures and functions
 %union {
@@ -372,13 +393,6 @@ results
     delete $formal_list;
   }
 
-%type <Formal> formal_decl;
-formal_decl
-  : IDENT ":" type {
-    std::string ident = convertAndFree($IDENT);
-    $$ = new FormalData(ident, $type);
-  }
-
 %type <Formals> formal_list;
 formal_list
   : formal_decl {
@@ -387,6 +401,13 @@ formal_list
   }
   | formal_list "," formal_decl {
     $$->push_back($formal_decl);
+  }
+
+%type <Formal> formal_decl;
+formal_decl
+  : IDENT ":" type {
+    std::string ident = convertAndFree($IDENT);
+    $$ = new FormalData(ident, $type);
   }
 
 // Statements
@@ -436,10 +457,6 @@ const_stmt
 
     $$ = new vector<shared_ptr<IRNode>>();
     $$->push_back(tensorLiteral);
-  }
-  | "const" IDENT ":" element_type "=" element_literal ";" {
-    std::string ident = convertAndFree($IDENT);
-    $$ = NULL;
   }
 
 %type<IRNodes> return_stmt;
@@ -836,7 +853,6 @@ index_expr
     $$ = NULL;
   }
   | reduction_vars indexed_tensor index_expr_binary_operator indexed_tensor {
-//    cout << *$2 << " " << *$4 << endl;
     $$ = NULL;
   }
 
@@ -915,8 +931,6 @@ indexed_tensor
       indexVars[i]->setIndexSet(tensor->getType()->getDimensions()[i]);
     }
     $$ = new IndexedTensor(tensor, indexVars);
-
-    cout << *$$ << endl;
   }
 
 %type <IndexVariables> free_vars;
@@ -997,40 +1011,35 @@ lhs_expr
   }
 
 
-// Variables
-var_decl
-  : IDENT ":" type {
-    delete $type;
-    std::string ident = convertAndFree($IDENT);
-  }
-
-
 // Types
 %union {
+  Type                         *type;
+
   TensorType                   *tensorType;
-  Type                          type;
   std::vector<IndexSetProduct> *IndexSetProducts;
   std::vector<IndexSet>        *IndexSets;
   IndexSet                     *indexSet;
+  ComponentType                 componentType;
 };
-%destructor {} <type>;
+%destructor {} <componentType>;
 
+//%type <type>             type;
 %type <tensorType>       type;
+
 %type <tensorType>       tensor_type;
-
 %type <IndexSetProducts> nested_dimensions;
-
 %type <IndexSets>        dimensions;
 %type <indexSet>         dimension;
+%type <componentType>    component_type;
 
-%type <type>             component_type;
+%type <elementType>      element_type;
 
 type
   : set_type {
     $$ = NULL;
   }
   | element_type {
-    $$ = NULL;
+//    $$ = $element_type;
   }
   | tensor_type {
     $$ = $tensor_type;
@@ -1042,7 +1051,8 @@ set_type
 
 element_type
   : IDENT {
-    std::string ident = convertAndFree($IDENT);
+    std::string name = convertAndFree($IDENT);
+    $$ = ctx->getElementType(name);
   }
 
 tensor_type
@@ -1126,10 +1136,10 @@ dimension
 
 component_type
   : INT {
-    $$ = Type::INT;
+    $$ = ComponentType::INT;
   }
   | FLOAT {
-    $$ = Type::FLOAT;
+    $$ = ComponentType::FLOAT;
   }
 
 
@@ -1197,11 +1207,7 @@ component_type
 %type <TensorIntValues> int_dense_vector_literal;
 
 literal
-  : element_literal
-  | tensor_literal
-
-element_literal
-  :
+  : tensor_literal
 
 tensor_literal
   : dense_tensor_literal
@@ -1216,7 +1222,7 @@ dense_tensor_literal
     auto values = unique_ptr<TensorValues<double>>($2);
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
-    auto type = new TensorType(Type::FLOAT, isps);
+    auto type = new TensorType(ComponentType::FLOAT, isps);
     auto literal = new Literal(type, values->values.data());
     $$ = new shared_ptr<Literal>(literal);
   }
@@ -1224,7 +1230,7 @@ dense_tensor_literal
     auto values = unique_ptr<TensorValues<int>>($2);
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
-    auto type = new TensorType(Type::INT, isps);
+    auto type = new TensorType(ComponentType::INT, isps);
     auto literal = new Literal(type, values->values.data());
     $$ = new shared_ptr<Literal>(literal);
   }
@@ -1341,12 +1347,12 @@ int_dense_vector_literal
 
 scalar_literal
   : INT_LITERAL {
-    auto scalarType = new TensorType(Type::INT);
+    auto scalarType = new TensorType(ComponentType::INT);
     auto literal = new Literal(scalarType, &$1);
     $$ = new shared_ptr<Literal>(literal);
   }
   | FLOAT_LITERAL {
-    auto scalarType = new TensorType(Type::FLOAT);
+    auto scalarType = new TensorType(ComponentType::FLOAT);
     auto literal = new Literal(scalarType, &$1);
     $$ = new shared_ptr<Literal>(literal);
   }

@@ -14,6 +14,12 @@ class Set;
 
 namespace internal {
 
+class Type {
+
+};
+
+// Tensor types
+
 /// An index set is a set of labels into a set.  There are three types of index
 /// set distringuished by the type of set they index into: a range (RANGE), a 
 /// simit::Set (SET) or the set of all integers (VARIABLE).
@@ -76,11 +82,11 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
 
 
 /// The type of a tensor (the type of its components and its shape).
-class TensorType {
+class TensorType : public Type {
  public:
-  TensorType(Type componentType) : componentType(componentType) {}
-  TensorType(Type componentType,
-       const std::vector<IndexSetProduct> &dimensions)
+  TensorType(ComponentType componentType) : componentType(componentType) {}
+  TensorType(ComponentType componentType,
+             const std::vector<IndexSetProduct> &dimensions)
       : componentType(componentType), dimensions(dimensions) {}
 
   /// Get the order of the tensor (the number of dimensions).
@@ -90,21 +96,60 @@ class TensorType {
   int getSize() const;
 
   /// Get the type of the components in the vector.
-  Type getComponentType() const { return componentType; }
+  ComponentType getComponentType() const { return componentType; }
 
   /// Get the index sets that form the dimensions of the tensor.
   const std::vector<IndexSetProduct> &getDimensions() const {return dimensions;}
 
-  std::ostream &print(std::ostream &os) const;
-
  private:
-  Type componentType;
+  ComponentType componentType;
   std::vector<IndexSetProduct> dimensions;
 };
 
 bool operator==(const TensorType& l, const TensorType& r);
 bool operator!=(const TensorType& l, const TensorType& r);
 std::ostream &operator<<(std::ostream &os, const TensorType &o);
+
+
+// Element types
+class ElementField {
+ public:
+  ElementField(const std::string &name, TensorType *type)
+      : name(name), type(type) {}
+
+  ~ElementField() { delete type; }
+
+  const std::string &getName() const { return name; }
+  const  TensorType *getType() const { return type; }
+
+ private:
+  std::string name;
+  TensorType *type;
+};
+
+std::ostream &operator<<(std::ostream &os, const ElementField &field);
+
+
+class ElementType : public Type {
+ public:
+  ElementType(const std::string &name, const std::vector<ElementField*> &fields)
+      : name(name), fields(fields) {}
+
+  ~ElementType() {
+    for (ElementField *field : fields) {
+      delete field;
+    }
+  }
+
+  const std::string &getName() const { return name; }
+  const std::vector<ElementField*> &getFields() const { return fields; }
+
+ private:
+  std::string name;
+  std::vector<ElementField*> fields;
+};
+
+std::ostream &operator<<(std::ostream &os, const ElementType &elementType);
 
 }} // namespace simit::internal
 
