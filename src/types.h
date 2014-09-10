@@ -24,7 +24,7 @@ class Type : public simit::util::Printable {
 /// set distringuished by the type of set they index into: a range (RANGE), a 
 /// simit::Set (SET) or the set of all integers (VARIABLE).
 class IndexSet {
- public:
+public:
   /// The types of index sets that are supported.
   enum Type {RANGE, SET, VARIABLE};
 
@@ -43,7 +43,7 @@ class IndexSet {
   std::ostream &print(std::ostream &os) const;
   friend bool operator==(const IndexSet &l, const IndexSet &r);
 
- private:
+private:
   Type type;
   union {
     int rangeSize;
@@ -58,7 +58,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &o);
 
 /// The set product of zero or more sets.
 class IndexSetProduct {
- public:
+public:
   IndexSetProduct() {}
   IndexSetProduct(const IndexSet &is) { indexSets.push_back(is); }
   IndexSetProduct(const std::vector<IndexSet> &iss) : indexSets(iss) {};
@@ -71,7 +71,7 @@ class IndexSetProduct {
 
   std::ostream &print(std::ostream &os) const;
   
- private:
+private:
   std::vector<IndexSet> indexSets;
 };
 
@@ -83,14 +83,14 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
 
 /// The type of a tensor (the type of its components and its shape).
 class TensorType : public Type {
- public:
+public:
   TensorType(ComponentType componentType) : componentType(componentType) {}
   TensorType(ComponentType componentType,
              const std::vector<IndexSetProduct> &dimensions)
       : componentType(componentType), dimensions(dimensions) {}
 
   /// Get the order of the tensor (the number of dimensions).
-  int getOrder() const { return dimensions.size(); }
+  size_t getOrder() const { return dimensions.size(); }
 
   /// Get the number of components in the tensor.
   int getSize() const;
@@ -103,7 +103,7 @@ class TensorType : public Type {
 
   void print(std::ostream &os) const;
 
- private:
+private:
   ComponentType componentType;
   std::vector<IndexSetProduct> dimensions;
 };
@@ -114,7 +114,7 @@ bool operator!=(const TensorType& l, const TensorType& r);
 
 // Element types
 class ElementField {
- public:
+public:
   ElementField(const std::string &name, TensorType *type)
       : name(name), type(type) {}
 
@@ -123,7 +123,7 @@ class ElementField {
   const std::string &getName() const { return name; }
   const  TensorType *getType() const { return type; }
 
- private:
+private:
   std::string name;
   TensorType *type;
 };
@@ -132,7 +132,7 @@ std::ostream &operator<<(std::ostream &os, const ElementField &field);
 
 
 class ElementType : public Type {
- public:
+public:
   ElementType(const std::string &name, const std::vector<ElementField*> &fields)
       : name(name), fields(fields) {}
 
@@ -147,7 +147,7 @@ class ElementType : public Type {
 
   void print(std::ostream &os) const;
 
- private:
+private:
   std::string name;
   std::vector<ElementField*> fields;
 };

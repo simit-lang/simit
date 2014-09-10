@@ -29,13 +29,13 @@ template <typename, typename> class ScopedMap;
 
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMCodeGen : public CodeGen, IRVisitor {
- public:
+public:
   LLVMCodeGen();
   ~LLVMCodeGen();
 
   simit::Function *compile(Function *function);
 
- private:
+private:
   static bool llvmInitialized;
   llvm::Module *module;
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;

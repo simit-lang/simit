@@ -12,26 +12,27 @@ namespace simit {
 namespace internal {
 
 class Storage {
- public:
+public:
   Storage(int size) : size(size) { data = malloc(size); }
   ~Storage() { free(data); }
 
   void *getData() { return data; }
   int getSize() const { return size; }
 
- private:
+private:
   void *data;
   int size;
 };
 
+
 class TemporaryAllocator : IRVisitor {
- public:
+public:
   TemporaryAllocator() {}
 
   std::map<IRNode*, void*> allocateTemporaries(Function *f);
   std::vector<std::shared_ptr<Storage>> getTemporaries() const {return storage;}
 
- private:
+private:
   std::vector<std::shared_ptr<Storage>> storage;
   std::map<IRNode*, void*> temps;
 };

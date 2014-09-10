@@ -10,7 +10,7 @@
 namespace simit {
 
 class Function {
- public:
+public:
   Function() : runPtr(NULL) {}
   virtual ~Function() {}
 
@@ -19,14 +19,14 @@ class Function {
                     const std::vector<std::shared_ptr<internal::Literal>> &results) = 0;
 
   inline void run() { runPtr(); }
-  
+
   virtual void print(std::ostream &os) const {};
 
- protected:
+protected:
   typedef void (*RunPtrType)();
   inline void setRunPtr(RunPtrType runPtr) { this->runPtr = runPtr; }
 
- private:
+private:
   RunPtrType runPtr;
 };
 

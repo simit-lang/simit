@@ -17,7 +17,7 @@ class ProgramContext;
 /// Code generators are used to turn Simit IR into some other representation.
 /// Examples include LLVM IR, compiled machine code and Graphviz .dot files.
 class CodeGen : simit::util::Uncopyable {
- public:
+public:
   CodeGen() {}
   virtual ~CodeGen() {}
 

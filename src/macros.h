@@ -5,5 +5,4 @@
 #define NOT_SUPPORTED_YET assert(false && "Not supported yet")
 #define UNREACHABLE assert(false && "Reached unreachable branch")
 
-
 #endif

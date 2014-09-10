@@ -14,7 +14,7 @@ namespace internal {
 /// Tracks symbols and their associated IR nodes across a stack of scopes.
 template <typename Key, typename Value>
 class ScopedMap {
- public:
+public:
   typedef std::map<Key, Value> Map;
   typedef typename std::list<Map>::const_iterator Iterator;
 
@@ -73,7 +73,7 @@ class ScopedMap {
     }
   }
 
- private:
+private:
   std::list<Map> scopes;
 };
 

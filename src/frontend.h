@@ -17,7 +17,7 @@ class ProgramContext;
 /// \ref getIR method. If the parse methods return an error value information
 /// about the errors can be retrieved using the getErrors method.
 class Frontend {
- public:
+public:
   /// Parses, typechecks and turns a given Simit-formated stream into Simit IR.
   int parseStream(std::istream &programStream, ProgramContext *ctx,
                   std::vector<Error> *errors);

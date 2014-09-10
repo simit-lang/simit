@@ -25,7 +25,7 @@ class VariableStore;
 /// The default IRVisitor visits each tensor in a function once in forward order
 /// starting with arguments and literals and ending with the results.
 class IRVisitor {
- public:
+public:
   IRVisitor() { reset(); }
   virtual ~IRVisitor();
 
@@ -47,7 +47,7 @@ class IRVisitor {
 
   virtual void handleDefault(IRNode *t) { UNUSED(t); }
 
- protected:
+protected:
   void abort() { aborted = true; }
   bool isAborted() { return aborted; }
   void reset() {
@@ -55,7 +55,7 @@ class IRVisitor {
     visited.clear();
   }
 
- private:
+private:
   std::set<IRNode*> visited;
   bool aborted;
 };

@@ -17,7 +17,7 @@ class Function;
 /// and \ref loadFile, register input sets using the \ref registerSet method,
 /// and compile the program using the \ref compile method.
 class Program {
- public:
+public:
   /// Create a new Simit program with the given name.
   Program(const std::string &name="");
   ~Program();
@@ -49,7 +49,7 @@ class Program {
   /// Writes a human-readable string represeting the program to the stream.
   friend std::ostream &operator<<(std::ostream&, const Program&);
 
- private:
+private:
   class ProgramContent;
   ProgramContent *impl;
 

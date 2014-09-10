@@ -15,7 +15,7 @@ namespace internal {
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
 class IRNode : simit::util::Uncopyable {
- public:
+public:
   IRNode() {}
   IRNode(const std::string &name) : name(name) {}
   virtual ~IRNode();
@@ -25,7 +25,7 @@ class IRNode : simit::util::Uncopyable {
   std::string getName() const { return name; }
   virtual void print(std::ostream &os) const = 0;
 
- private:
+private:
   std::string name;
 };
 std::ostream &operator<<(std::ostream &os, const IRNode &node);
@@ -34,7 +34,7 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node);
 /// The base IRNode that represents all computed and loaded tensors.  Note that
 /// both scalars and elements are considered tensors of order 0.
 class TensorNode : public IRNode {
- public:
+public:
   TensorNode(const TensorType *type) : TensorNode("", type) {}
   TensorNode(const std::string &name, const TensorType *type)
       : IRNode(name), type(type) {}
@@ -51,7 +51,7 @@ class TensorNode : public IRNode {
   virtual void accept(IRVisitor *visitor) = 0;
   virtual void print(std::ostream &os) const = 0;
 
- protected:
+protected:
   const TensorType *type;
 };
 
@@ -59,7 +59,7 @@ class TensorNode : public IRNode {
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
 /// that it is only possible to define dense tensor literals.
 class Literal : public TensorNode {
- public:
+public:
   Literal(TensorType *type);
   Literal(TensorType *type, void *values);
   ~Literal();
@@ -71,7 +71,7 @@ class Literal : public TensorNode {
   const void *getData() const { return data; }
   void print(std::ostream &os) const;
 
- private:
+private:
   void  *data;
   int dataSize;
 };
@@ -91,7 +91,7 @@ bool operator!=(const Literal& l, const Literal& r);
 /// surprisingly sums over the index variable (\sum_{i} in latex speak) and
 /// product which takes the product over the index variable (\prod_{i}).
 class IndexVar {
- public:
+public:
   enum Operator {FREE, SUM, PRODUCT};
   static std::string operatorSymbol(Operator op);
   static std::string operatorString(Operator op);
@@ -112,7 +112,7 @@ class IndexVar {
 
   std::string getName() const { return name; }
 
- private:
+private:
   std::string name;
   IndexSetProduct indexSet;
   Operator op;
@@ -121,7 +121,7 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var);
 
 
 class IndexedTensor {
- public:
+public:
   IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
                 const std::vector<std::shared_ptr<IndexVar>> &indexVariables);
 
@@ -130,7 +130,7 @@ class IndexedTensor {
     return indexVariables;
   }
 
- private:
+private:
   std::shared_ptr<TensorNode>            tensor;
   std::vector<std::shared_ptr<IndexVar>> indexVariables;
 };
@@ -139,7 +139,7 @@ class IndexedTensor {
 /// Expression that combines one or more tensors.  Merge nodes must be created
 /// through the \ref createMerge factory function.
 class IndexExpr : public TensorNode {
- public:
+public:
   enum Operator { NONE, NEG, ADD, SUB, MUL, DIV };
   static int numOperands(Operator op);
 
@@ -171,7 +171,7 @@ class IndexExpr : public TensorNode {
   void accept(IRVisitor *visitor) { visitor->visit(this); };
   void print(std::ostream &os) const;
 
- private:
+private:
   std::vector<std::shared_ptr<IndexVar>> indexVars;
   Operator op;
   std::vector<IndexedTensor> operands;
@@ -184,7 +184,7 @@ std::ostream &operator<<(std::ostream &os, const IndexedTensor &t);
 
 /// Calls a Simit function.
 class Call : public TensorNode {
- public:
+public:
   Call(const std::string &name,
        const std::vector<std::shared_ptr<TensorNode>> &arguments)
       : TensorNode(name, NULL), arguments(arguments) {}
@@ -196,14 +196,14 @@ class Call : public TensorNode {
   }
   void print(std::ostream &os) const;
 
- private:
+private:
   std::vector<std::shared_ptr<TensorNode>> arguments;
 };
 
 
 /// Instruction that stores a value to a tensor or an object.
 class Store : public TensorNode {
- public:
+public:
   Store(const std::string &name, const TensorType *type)
       : TensorNode(name, type) {}
 };
@@ -211,7 +211,7 @@ class Store : public TensorNode {
 
 /// Instruction that stores a value to a tensor or an object.
 class VariableStore : public Store {
- public:
+public:
   VariableStore(const std::shared_ptr<TensorNode> &target,
                 const std::shared_ptr<TensorNode> &value)
       : Store(target->getName(), new TensorType(*target->getType())),
@@ -224,7 +224,7 @@ class VariableStore : public Store {
 
   void print(std::ostream &os) const;
 
- private:
+private:
   std::shared_ptr<TensorNode> target;
   std::shared_ptr<TensorNode> value;
 };
@@ -232,7 +232,7 @@ class VariableStore : public Store {
 
 /// A formal argument to a function.
 class Argument : public TensorNode {
- public:
+public:
   Argument(const std::string &name, const TensorType *type)
       : TensorNode(name, type) {}
 
@@ -244,7 +244,7 @@ class Argument : public TensorNode {
 
 /// A formal result of a function.
 class Result : public TensorNode {
- public:
+public:
   Result(const std::string &name, const TensorType *type)
       : TensorNode(name, type) {}
 
@@ -257,14 +257,14 @@ class Result : public TensorNode {
   const std::shared_ptr<TensorNode> &getValue() const { return value; }
   void print(std::ostream &os) const;
 
- private:
+private:
   std::shared_ptr<TensorNode> value;
 };
 
 
 /// A Simit function.
 class Function : public IRNode {
- public:
+public:
   Function(const std::string &name,
            const std::vector<std::shared_ptr<Argument>> &arguments,
            const std::vector<std::shared_ptr<Result>> &results)
@@ -287,7 +287,7 @@ class Function : public IRNode {
 
   void print(std::ostream &os) const;
 
- private:
+private:
   std::vector<std::shared_ptr<Argument>> arguments;
   std::vector<std::shared_ptr<Result>> results;
   std::vector<std::shared_ptr<IRNode>> body;
@@ -297,7 +297,7 @@ class Function : public IRNode {
 /// A Simit test case. Simit test cases can be declared in language comments
 /// and can subsequently be picked up by a test framework.
 class Test : public IRNode {
- public:
+public:
   Test(const std::string &callee,
        const std::vector<std::shared_ptr<Literal>> &arguments,
        const std::vector<std::shared_ptr<Literal>> &expected)
@@ -309,7 +309,7 @@ class Test : public IRNode {
 
   void print(std::ostream &os) const;
 
- private:
+private:
   std::string callee;
   std::vector<std::shared_ptr<Literal>> arguments;
   std::vector<std::shared_ptr<Literal>> expected;

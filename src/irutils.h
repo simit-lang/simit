@@ -10,13 +10,13 @@ namespace internal {
 
 /// A factory for creating index variables with unique names.
 class IndexVarFactory {
- public:
+public:
   IndexVarFactory() : nameID(0) {}
 
   std::shared_ptr<IndexVar> makeFreeVar(const IndexSetProduct &indexSet);
   std::shared_ptr<IndexVar> makeReductionVar(const IndexSetProduct &indexSet,
                                              IndexVar::Operator op);
- private:
+private:
   int nameID;
   std::string makeName();
 };

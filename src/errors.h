@@ -9,7 +9,7 @@ namespace simit {
 
 /// Provides information about errors that occur while loading Simit code.
 class Error {
- public:
+public:
   Error(int firstLine, int firstColumn, int lastLine, int lastColumn,
         std::string msg);
   virtual ~Error();
@@ -25,7 +25,7 @@ class Error {
     return os << obj.toString();
   }
 
- private:
+private:
   int firstLine;
   int firstColumn;
   int lastLine;
@@ -35,7 +35,7 @@ class Error {
 };
 
 class Diagnostic {
- public:
+public:
   Diagnostic() {}
 
   Diagnostic &operator<<(const std::string &str) {
@@ -45,12 +45,12 @@ class Diagnostic {
 
   std::string getMessage() const { return msg; }
 
- private:
+private:
   std::string msg;
 };
 
 class Diagnostics {
- public:
+public:
   Diagnostics() {}
   ~Diagnostics() {}
 
@@ -80,7 +80,7 @@ class Diagnostics {
   std::vector<Diagnostic>::const_iterator begin() const { return diags.begin();}
   std::vector<Diagnostic>::const_iterator end() const { return diags.end(); }
 
- private:
+private:
   std::vector<Diagnostic> diags;
 };
 
