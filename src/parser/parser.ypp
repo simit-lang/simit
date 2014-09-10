@@ -774,9 +774,6 @@ expr
   | call_expr {
     $$ = NULL;
   }
-  | index_expr {
-    $$ = NULL;
-  }
   | map_expr {
     $$ = NULL;
   }
@@ -836,123 +833,6 @@ reduce
   : /* empty */
   | "reduce" reduction_op
 
-
-// Index expressions
-%union {
-  simit::internal::IndexExpr                               *IndexExpr;
-  simit::internal::IndexExpr::Operator                      IndexExprOperator;
-  simit::internal::IndexVar::Operator                       IndexVarOperator;
-  simit::internal::IndexedTensor                           *IndexedTensor;
-  simit::util::OwnershipVector<simit::internal::IndexVar*> *IndexVariables;
-};
-%destructor {} <IndexExprOperator> <IndexVarOperator>;
-
-%type <IndexExpr> index_expr;
-index_expr
-  : reduction_vars index_expr_unary_operator indexed_tensor {
-    $$ = NULL;
-  }
-  | reduction_vars indexed_tensor index_expr_binary_operator indexed_tensor {
-    $$ = NULL;
-  }
-
-%type <IndexExprOperator> index_expr_unary_operator;
-index_expr_unary_operator
-  : /* empty */ {
-    return IndexExpr::Operator::NONE;
-  }
-  | "-" {
-    return IndexExpr::Operator::NEG;
-  }
-
-%type <IndexExprOperator> index_expr_binary_operator;
-index_expr_binary_operator
-  : "+" {
-    return IndexExpr::Operator::ADD;
-  }
-  | "-" {
-    return IndexExpr::Operator::SUB;
-  }
-  | "*" {
-    return IndexExpr::Operator::MUL;
-  }
-  | "/" {
-    return IndexExpr::Operator::DIV;
-  }
-
-
-%type <IndexedTensor> indexed_tensor;
-indexed_tensor
-  :
-//  IDENT {
-//    string ident = convertAndFree($IDENT);
-//    if (!ctx->hasSymbol(ident)) {
-//      REPORT_ERROR(ident + " is not defined in scope", @1);
-//    }
-//
-//    const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
-//    auto tensor = dynamic_pointer_cast<TensorNode>(node);
-//    if (!tensor) {
-//      REPORT_ERROR(ident + " is not a tensor", @1);
-//    }
-//
-//    size_t order = tensor->getType()->getOrder();
-//    if (order != 0) {
-//      REPORT_INDEX_VARIABLE_MISSMATCH(0, order, @1);
-//    }
-//
-//    vector<shared_ptr<IndexVar>> indexVars;
-//    $$ = new IndexedTensor(tensor, indexVars);
-//  }
-//  |
-  IDENT "{" free_vars "}" {
-    vector<shared_ptr<IndexVar>> indexVars($free_vars->begin(),
-                                           $free_vars->end());
-    $free_vars->clear();
-    delete $free_vars;
-
-    string ident = convertAndFree($IDENT);
-    if (!ctx->hasSymbol(ident)) {
-      REPORT_ERROR(ident + " is not defined in scope", @1);
-    }
-
-    const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
-    auto tensor = dynamic_pointer_cast<TensorNode>(node);
-    if (!tensor) {
-      REPORT_ERROR(ident + " is not a tensor", @1);
-    }
-
-    size_t order = tensor->getType()->getOrder();
-    if (order != indexVars.size()) {
-      REPORT_INDEX_VARIABLE_MISSMATCH(indexVars.size(), order, @1);
-    }
-
-    for (size_t i=0; i<indexVars.size(); ++i) {
-      indexVars[i]->setIndexSet(tensor->getType()->getDimensions()[i]);
-    }
-    $$ = new IndexedTensor(tensor, indexVars);
-  }
-
-%type <IndexVariables> free_vars;
-free_vars
-  : IDENT {
-    $$ = new simit::util::OwnershipVector<simit::internal::IndexVar*>();
-    $$->push_back(new IndexVar(convertAndFree($IDENT)));
-  }
-  | free_vars "," IDENT {
-    $$ = $1;
-    $$->push_back(new IndexVar(convertAndFree($IDENT)));
-  }
-
-reduction_vars
-  : /* empty */
-  | reduction_vars reduction_index
-
-reduction_index
-  : reduction_op IDENT {
-    std::string ident = convertAndFree($IDENT);
-  }
-
 reduction_op
   : "+"
   | "*"
@@ -1005,9 +885,6 @@ lhs_expr
     std::string name = convertAndFree($IDENT);
     $$ = NULL;
     delete $expr_list;
-  }
-  | indexed_tensor {
-    $$ = NULL;
   }
 
 

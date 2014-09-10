@@ -233,13 +233,6 @@ namespace  simit { namespace internal  {
   std::shared_ptr<Call> *call;
 
 
-  simit::internal::IndexExpr                               *IndexExpr;
-  simit::internal::IndexExpr::Operator                      IndexExprOperator;
-  simit::internal::IndexVar::Operator                       IndexVarOperator;
-  simit::internal::IndexedTensor                           *IndexedTensor;
-  simit::util::OwnershipVector<simit::internal::IndexVar*> *IndexVariables;
-
-
   VariableAccess       *VarAccess;
   VariableAccessVector *VarAccesses;
 
@@ -507,7 +500,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const unsigned char yycheck_[];
+  static const short int yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -622,8 +615,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 395,     ///< Last index in yytable_.
-      yynnts_ = 62,  ///< Number of nonterminal symbols.
+      yylast_ = 351,     ///< Last index in yytable_.
+      yynnts_ = 55,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
