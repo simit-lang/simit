@@ -11,7 +11,7 @@
 #include "tensor_components.h"
 
 namespace simit {
-class Set;
+class SetBase;
 
 namespace internal {
 
@@ -34,7 +34,7 @@ public:
   IndexSet(int rangeSize) : type(RANGE), rangeSize(rangeSize) {}
 
   /// Create an index set over the given set.
-  IndexSet(const simit::Set *set) : type(SET), set(set) {}
+  IndexSet(const simit::SetBase *set) : type(SET), set(set) {}
 
   /// Create a variable-size index set.
   IndexSet() : type(VARIABLE) {}
@@ -49,7 +49,7 @@ private:
   Type type;
   union {
     int rangeSize;
-    const simit::Set *set;
+    const simit::SetBase *set;
   };
 };
 
