@@ -84,6 +84,7 @@ class Set {
   /// Remove an element from the Set
   void remove(ElementRef element) {
     for (auto f : fields){
+      assert(isValidComponentType(f->type->getComponentType()));
       switch (f->type->getComponentType()) {
         case ComponentType::FLOAT: {
           double* data = (double*)f->data;
@@ -95,11 +96,6 @@ class Set {
           data[element.ident] = data[elements-1];
           break;
         }
-        case ComponentType::ELEMENT:
-          assert(false && "ELEMENT types not supported yet.");
-          break;
-        default:
-          assert(false);
       }
     }
     elements--;

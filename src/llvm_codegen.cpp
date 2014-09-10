@@ -59,28 +59,22 @@ llvm::Constant *getDouble(double val, llvm::LLVMContext &ctx = LLVM_CONTEXT){
 }
 
 llvm::Type *toLLVMType(const simit::ComponentType type) {
+  assert(isValidComponentType(type));
   switch (type) {
     case simit::ComponentType::INT:
       return LLVM_INT;
     case simit::ComponentType::FLOAT:
       return LLVM_DOUBLE;
-    case simit::ComponentType::ELEMENT:
-      NOT_SUPPORTED_YET;
-    default:
-      UNREACHABLE;
   }
 }
 
 llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
+  assert(isValidComponentType(type->getComponentType()));
   switch (type->getComponentType()) {
     case simit::ComponentType::INT:
       return LLVM_INTPTR;
     case simit::ComponentType::FLOAT:
       return LLVM_DOUBLEPTR;
-    case simit::ComponentType::ELEMENT:
-      NOT_SUPPORTED_YET;
-    default:
-      UNREACHABLE;
   }
 }
 

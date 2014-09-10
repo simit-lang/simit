@@ -64,6 +64,7 @@ void Literal::print(std::ostream &os) const {
   }
 
   // TODO: Fix value printing to print matrices and tensors properly
+  assert(isValidComponentType(getType()->getComponentType()));
   switch (getType()->getComponentType()) {
     case ComponentType::INT: {
       int *idata = (int*)data;
@@ -93,11 +94,6 @@ void Literal::print(std::ostream &os) const {
       }
       break;
     }
-    case ComponentType::ELEMENT:
-      assert(false && "Unsupported (TODO)");
-      break;
-    default:
-      UNREACHABLE;
   }
 
   os << " : " << *getType();

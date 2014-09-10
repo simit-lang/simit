@@ -8,14 +8,20 @@
 namespace simit {
 
 /** The types of supported tensor components. */
-enum ComponentType {INT, FLOAT, ELEMENT};
-
+enum ComponentType {INT, FLOAT};
 
 /** Helper to convert from C++ type to Simit Type. */
-template<typename T> inline ComponentType typeOf        () { return ComponentType::ELEMENT; }
-template<>           inline ComponentType typeOf<double>() { return ComponentType::FLOAT; }
-template<>           inline ComponentType typeOf<int>   () { return ComponentType::INT; }
+template<typename T> inline ComponentType typeOf() {
+  assert(false && "Unsupported type");
+}
 
+template<> inline ComponentType typeOf<int>   () {return ComponentType::INT;  }
+template<> inline ComponentType typeOf<double>() {return ComponentType::FLOAT;}
+
+
+inline bool isValidComponentType(ComponentType componentType) {
+  return (ComponentType::INT || ComponentType::FLOAT);
+}
 
 inline std::size_t componentSize(ComponentType ct) {
   switch (ct) {
@@ -23,26 +29,21 @@ inline std::size_t componentSize(ComponentType ct) {
       return sizeof(int);
     case ComponentType::FLOAT:
       return sizeof(double);
-    case ComponentType::ELEMENT:
-      assert(false && "currently unsupported");  // TODO
-      return INT_MAX;
   }
   assert(false);
   return 0;
 }
 
 inline std::string componentTypeString(ComponentType ct) {
-    switch (ct) {
-      case ComponentType::INT:
-        return "int";
-      case ComponentType::FLOAT:
-        return "float";
-      case ComponentType::ELEMENT:
-        return "element";
-    }
-    assert(false);
-    return "";
+  switch (ct) {
+    case ComponentType::INT:
+      return "int";
+    case ComponentType::FLOAT:
+      return "float";
   }
+  assert(false);
+  return "";
+}
 
 } // namespace simit
 
