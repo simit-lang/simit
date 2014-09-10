@@ -254,17 +254,10 @@ TEST(EdgeSet, EdgeIteratorTest) {
 
   ElementRef e1 = edges.addElement({p0, p1, p3, p2});
   
-  for (int i=0; i<4; i++)
-    cout << x.get(els[i]) << endl;
-  
-  
-  
-  int count=0;
+   int count=0;
   for (auto iter=edges.endpoints_begin(e1);
        iter < edges.endpoints_end(e1);
-//       operator< <4>(iter, edges.endpoints_end(e1));
        iter++) {
-    cout << "field val is " << x.get(*iter) << endl;
     if (count==0)
       ASSERT_EQ(x.get(*iter), 1.1);
     if (count==1)

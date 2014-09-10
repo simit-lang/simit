@@ -253,7 +253,7 @@ class EndpointIteratorBase;
 template <int cardinality=0>
 class Set : public SetBase {
  public:
-  Set(initializer_list<SetBase*> eSets) :  SetBase(), edge_data(nullptr) {
+  Set(std::initializer_list<SetBase*> eSets) :  SetBase(), edge_data(nullptr) {
     assert(eSets.size() == cardinality &&
            "Wrong number of endpoint sets");
    
@@ -272,7 +272,7 @@ class Set : public SetBase {
   
   /// Add an edge.
   /// The endpoints refer to the respective Sets they come from.
-  ElementRef addElement(initializer_list<ElementRef> endpoints) {
+  ElementRef addElement(std::initializer_list<ElementRef> endpoints) {
     
     assert(endpoints.size() == cardinality &&
            "Wrong number of endpoints.");
@@ -290,8 +290,6 @@ class Set : public SetBase {
     
     i = 0;
     for (auto x : endpoints) {
-      cout << "Elements is " << elements << endl;
-      cout << "i is " << i << endl;
       edge_data[elements+(i++)] = x.ident;
     }
     
@@ -334,7 +332,7 @@ class Set : public SetBase {
 
  private:
   int* edge_data;                       // container for edges
-  vector<SetBase*> endpointSets;        // sets that the endpoints belong to
+  std::vector<SetBase*> endpointSets;        // sets that the endpoints belong to
   
   void increaseEdgeCapacity() {
     edge_data = (int*)realloc(edge_data,
@@ -358,7 +356,6 @@ public:
   
   EndpointIteratorBase(Set<cardinality>* set, ElementRef elem, int endpointN=0) :
   curElem(elem), retElem(-1), endpointNum(endpointN), set(set) {
-    cout << "endpoint is " << endpointNum << endl;
     retElem = set->getEndpoint(curElem, endpointNum);
   }
   EndpointIteratorBase(const EndpointIteratorBase& other) : curElem(other.curElem),
