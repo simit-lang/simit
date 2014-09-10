@@ -1286,26 +1286,26 @@ namespace  simit { namespace internal  {
     std::string ident = convertAndFree((yystack_[5].value.string));
     auto tensorType = unique_ptr<TensorType>((yystack_[3].value.tensorType));
 
-    auto tensorLiteral = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
+    auto literal = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
     delete (yystack_[1].value.TensorLiteral);
 
-    tensorLiteral->setName(ident);
+    literal->setName(ident);
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
-    if (tensorType->getOrder() == 2 && tensorLiteral->getOrder() == 1) {
-      tensorLiteral->cast(tensorType.release());
+    if (tensorType->getOrder() == 2 && literal->getType()->getOrder() == 1) {
+      literal->cast(tensorType.release());
     }
 
     // Typecheck: value and literal types must be equivalent.
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
-    CHECK_TYPE_EQUALITY((yystack_[3].value.tensorType), tensorLiteral->getType(), yystack_[5].location);
+    CHECK_TYPE_EQUALITY((yystack_[3].value.tensorType), literal->getType(), yystack_[5].location);
 
-    ctx->addTensorSymbol(tensorLiteral->getName(), tensorLiteral);
+    ctx->addTensorSymbol(literal->getName(), literal);
 
     (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
-    (yylhs.value.IRNodes)->push_back(tensorLiteral);
+    (yylhs.value.IRNodes)->push_back(literal);
   }
 
     break;

@@ -71,7 +71,7 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<TensorNode> &l,
 
     IndexVarFactory indexVarFactory;
     std::vector<std::shared_ptr<IndexVar>> tensorIndexVars;
-    for (unsigned int i=0; i<tensor->getOrder(); ++i) {
+    for (unsigned int i=0; i<tensor->getType()->getOrder(); ++i) {
       IndexSetProduct indexSet = tensor->getType()->getDimensions()[i];
       tensorIndexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
     }
@@ -95,7 +95,7 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
 
   IndexVarFactory indexVarFactory;
   std::vector<std::shared_ptr<IndexVar>> indexVars;
-  for (unsigned int i=0; i<operands[0]->getOrder(); ++i) {
+  for (unsigned int i=0; i<operands[0]->getType()->getOrder(); ++i) {
     IndexSetProduct indexSet = operands[0]->getType()->getDimensions()[i];
     indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
   }
@@ -193,7 +193,7 @@ IndexExpr *gemm(const std::shared_ptr<TensorNode> &l,
 }
 
 IndexExpr *transposeMatrix(const std::shared_ptr<TensorNode> &mat) {
-  assert(mat->getOrder() == 2);
+  assert(mat->getType()->getOrder() == 2);
   const std::vector<IndexSetProduct> &dims = mat->getType()->getDimensions();
 
   IndexVarFactory indexVarFactory;

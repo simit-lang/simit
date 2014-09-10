@@ -437,26 +437,26 @@ const_stmt
     std::string ident = convertAndFree($IDENT);
     auto tensorType = unique_ptr<TensorType>($tensor_type);
 
-    auto tensorLiteral = shared_ptr<Literal>(*$tensor_literal);
+    auto literal = shared_ptr<Literal>(*$tensor_literal);
     delete $tensor_literal;
 
-    tensorLiteral->setName(ident);
+    literal->setName(ident);
 
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
-    if (tensorType->getOrder() == 2 && tensorLiteral->getOrder() == 1) {
-      tensorLiteral->cast(tensorType.release());
+    if (tensorType->getOrder() == 2 && literal->getType()->getOrder() == 1) {
+      literal->cast(tensorType.release());
     }
 
     // Typecheck: value and literal types must be equivalent.
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
-    CHECK_TYPE_EQUALITY($tensor_type, tensorLiteral->getType(), @2);
+    CHECK_TYPE_EQUALITY($tensor_type, literal->getType(), @2);
 
-    ctx->addTensorSymbol(tensorLiteral->getName(), tensorLiteral);
+    ctx->addTensorSymbol(literal->getName(), literal);
 
     $$ = new vector<shared_ptr<IRNode>>();
-    $$->push_back(tensorLiteral);
+    $$->push_back(literal);
   }
 
 %type<IRNodes> return_stmt;

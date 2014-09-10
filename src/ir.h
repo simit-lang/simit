@@ -46,7 +46,6 @@ public:
   }
 
   const TensorType *getType() const { return type; }
-  unsigned int getOrder() const { return type->getOrder(); }
 
   virtual void accept(IRVisitor *visitor) = 0;
   virtual void print(std::ostream &os) const = 0;

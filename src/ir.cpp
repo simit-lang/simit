@@ -154,7 +154,7 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 typedef std::vector<std::shared_ptr<IndexVar>> IndexVariables;
 IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
                              const IndexVariables &indexVars){
-  assert(indexVars.size() == tensor->getOrder());
+  assert(indexVars.size() == tensor->getType()->getOrder());
   for (size_t i=0; i < indexVars.size(); ++i) {
     assert(indexVars[i]->getIndexSet() == tensor->getType()->getDimensions()[i]
            && "IndexVar domain does not match tensordimension");

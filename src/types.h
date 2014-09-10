@@ -15,8 +15,10 @@ class Set;
 
 namespace internal {
 
+/// A Simit type, which is either a Set or a Tensor.
 class Type : public simit::util::Printable {
 };
+
 
 // Tensor types
 
