@@ -45,91 +45,15 @@
   namespace simit {
   namespace internal {
     class Scanner;
+    class ProgramContext;
   }}
-
 
   #include <vector>
 
-  #include "scopedmap.h"
+  #include "util.h"
   #include "ir.h"
   #include "errors.h"
   #include "types.h"
-
-  namespace simit {
-  namespace internal {
-
-  typedef ScopedMap<std::string, std::shared_ptr<IRNode>> ParserSymtableType;
-
-  class ParserContext {
-   public:
-    ParserContext(ParserSymtableType                 *symtable,
-                  ScopedMap<const TensorType*, bool> *columnVectors,
-                  std::map<std::string, Function*>   *functions,
-                  std::vector<simit::Error>          *errors,
-                  std::vector<Test*>                 *tests)
-        : symtable(*symtable), columnVectors(*columnVectors),
-          functions(*functions), errors(*errors), tests(*tests) {}
-
-    void scope()   {
-      symtable.scope();
-      columnVectors.scope();
-    }
-
-    void unscope() {
-      symtable.unscope();
-      columnVectors.unscope();
-    }
-
-    void addTensorSymbol(const std::string &name,
-                         const std::shared_ptr<TensorNode> &tensor) {
-      symtable.insert(name, tensor);
-    }
-
-    bool hasSymbol(const std::string &name) {
-      return symtable.contains(name);
-    }
-
-    const std::shared_ptr<IRNode> &getSymbol(const std::string &name) {
-      return symtable.get(name);
-    }
-
-    void addFunction(Function *f) {
-      functions[f->getName()] = f;
-    }
-
-    bool containsFunction(const std::string &name) {
-      return functions.find(name) != functions.end();
-    }
-
-    void toggleColumnVector(const TensorType *type) {
-      if (columnVectors.contains(type)) {
-        bool &val = columnVectors.get(type);
-        val = !val;
-      }
-      else {
-        columnVectors.insert(type, true);
-      }
-    }
-
-    bool isColumnVector(const TensorType *type) {
-      if (!columnVectors.contains(type)) {
-        return false;
-      }
-      return columnVectors.get(type);
-    }
-
-    void addError(const Error &error) { errors.push_back(error); }
-    void addTest(Test *test) { tests.push_back(test); }
-
-   private:
-    ParserSymtableType                 &symtable;
-    ScopedMap<const TensorType*, bool> &columnVectors;
-
-    std::map<std::string, Function *>  &functions;
-    std::vector<simit::Error>          &errors;
-    std::vector<Test*>                 &tests;
-  };
-  }}
 
 
   namespace {
@@ -493,7 +417,7 @@ namespace  simit { namespace internal  {
 
 
     /// Build a parser object.
-     Parser  (Scanner *scanner_yyarg, ParserContext *ctx_yyarg);
+     Parser  (Scanner *scanner_yyarg, ProgramContext *ctx_yyarg, std::vector<Error> *errors_yyarg);
     virtual ~ Parser  ();
 
     /// Parse.
@@ -703,7 +627,8 @@ namespace  simit { namespace internal  {
 
     // User arguments.
     Scanner *scanner;
-    ParserContext *ctx;
+    ProgramContext *ctx;
+    std::vector<Error> *errors;
   };
 
 

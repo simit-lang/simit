@@ -4,6 +4,7 @@
 #include "function.h"
 #include "ir.h"
 #include "util.h"
+#include "program_context.h"
 
 using namespace std;
 using namespace simit::util;
@@ -11,16 +12,15 @@ using namespace simit::util;
 namespace simit {
 namespace internal {
 
-int CodeGen::verify(map<string, Function*> &functions,
-                     const std::vector<Test*> &tests, Diagnostics *diags) {
+int CodeGen::verify(ProgramContext &ctx, Diagnostics *diags) {
   // For each test look up the called function. Grab the actual arguments and
   // run the function with them as input.  Then compare the result to the
   // expected literal.
   std::map<Function*, simit::Function*> compiled;
 
-  for (auto &test : tests) {
+  for (auto &test : ctx.getTests()) {
     // get binary function with name test->call->callee from list of functions
-    Function *func = functions[test->getCallee()];
+    Function *func = ctx.getFunction(test->getCallee());
     if (func == NULL) {
       diags->report() << "Error: attempting to test unknown function";
       return 1;

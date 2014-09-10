@@ -5,16 +5,10 @@
 #include <string>
 #include <fstream>
 
-#include "scopedmap.h"
-
 namespace simit {
 class Error;
-
 namespace internal {
-class Function;
-class IRNode;
-class TensorType;
-class Test;
+class ProgramContext;
 
 /// Provides methods to convert Simit-formated strings and files to Simit IR.
 ///
@@ -25,26 +19,16 @@ class Test;
 class Frontend {
  public:
   /// Parses, typechecks and turns a given Simit-formated stream into Simit IR.
-  int parseStream(std::istream                      &programStream,
-                  std::map<std::string, Function *> *functions,
-                  std::vector<Error>                *errors,
-                  std::vector<Test*>                *tests);
+  int parseStream(std::istream &programStream, ProgramContext *ctx,
+                  std::vector<Error> *errors);
 
   /// Parses, typechecks and turns a given Simit-formated string into Simit IR.
-  int parseString(const std::string                &programString,
-                  std::map<std::string, Function*> *functions,
-                  std::vector<Error>               *errors,
-                  std::vector<Test*>               *tests);
+  int parseString(const std::string &programString, ProgramContext *ctx,
+                  std::vector<Error> *errors);
 
   /// Parses, typechecks and turns a given Simit-formated file into Simit IR.
-  int parseFile(const std::string                 &filename,
-                std::map<std::string, Function *> *functions,
-                std::vector<Error>                *errors,
-                std::vector<Test*>                *tests);
-
- private:
-  ScopedMap<std::string, std::shared_ptr<IRNode>> symtable;
-  ScopedMap<const TensorType*, bool>              columnVectors;
+  int parseFile(const std::string &filename, ProgramContext *ctx,
+                std::vector<Error> *errors);
 };
 
 }} // namespace simit::internal

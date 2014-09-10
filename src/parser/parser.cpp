@@ -58,14 +58,13 @@
   #include <set>
   #include <algorithm>
 
+  #include "program_context.h"
   #include "scanner.h"
   #include "irutils.h"
-  #include "util.h"
   using namespace std;
-  using namespace simit;  // TODO: Remove
   using namespace simit::internal;
 
-  std::string tensorTypeString(const TensorType *tensorType, ParserContext *ctx){
+  std::string tensorTypeString(const TensorType *tensorType, ProgramContext *ctx){
     std::stringstream ss;
     ss << *tensorType;
     std::string str = ss.str();
@@ -99,8 +98,8 @@
       } while (0)
 
   void Parser::error(const Parser::location_type &loc, const std::string &msg) {
-    ctx->addError(Error(loc.begin.line, loc.begin.column,
-                        loc.end.line, loc.end.column, msg));
+    errors->push_back(Error(loc.begin.line, loc.begin.column,
+                            loc.end.line, loc.end.column, msg));
   }
 
   #undef yylex
@@ -119,7 +118,7 @@
     return result;
   }
 
-  bool compare(const TensorType *l ,const TensorType *r, ParserContext *ctx) {
+  bool compare(const TensorType *l ,const TensorType *r, ProgramContext *ctx) {
     if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
       return false;
     }
@@ -272,14 +271,15 @@ namespace  simit { namespace internal  {
 
 
   /// Build a parser object.
-   Parser :: Parser  (Scanner *scanner_yyarg, ParserContext *ctx_yyarg)
+   Parser :: Parser  (Scanner *scanner_yyarg, ProgramContext *ctx_yyarg, std::vector<Error> *errors_yyarg)
     :
 #if YYDEBUG
       yydebug_ (false),
       yycdebug_ (&std::cerr),
 #endif
       scanner (scanner_yyarg),
-      ctx (ctx_yyarg)
+      ctx (ctx_yyarg),
+      errors (errors_yyarg)
   {}
 
    Parser ::~ Parser  ()
@@ -2970,22 +2970,22 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   294,   294,   296,   300,   303,   306,   315,   318,   322,
-     329,   333,   339,   342,   349,   353,   355,   357,   359,   362,
-     372,   379,   388,   425,   428,   439,   443,   454,   461,   465,
-     472,   475,   484,   485,   486,   487,   488,   492,   517,   524,
-     530,   572,   575,   581,   587,   589,   593,   595,   609,   626,
-     627,   630,   638,   649,   661,   672,   684,   746,   751,   756,
-     785,   790,   795,   800,   805,   810,   815,   820,   824,   829,
-     834,   837,   840,   849,   858,   861,   867,   873,   882,   889,
-     891,   895,   897,   912,   915,   922,   925,   931,   934,   937,
-     940,   969,  1001,  1005,  1010,  1012,  1015,  1020,  1021,  1043,
-    1048,  1056,  1062,  1067,  1072,  1079,  1106,  1109,  1112,  1117,
-    1118,  1121,  1126,  1129,  1133,  1140,  1143,  1181,  1186,  1193,
-    1196,  1200,  1205,  1208,  1277,  1278,  1280,  1284,  1285,  1289,
-    1292,  1300,  1310,  1317,  1320,  1324,  1337,  1341,  1355,  1359,
-    1365,  1372,  1375,  1379,  1392,  1396,  1410,  1414,  1420,  1425,
-    1435
+       0,   217,   217,   219,   223,   226,   229,   238,   241,   245,
+     252,   256,   262,   265,   272,   276,   278,   280,   282,   285,
+     295,   302,   311,   348,   351,   362,   366,   377,   384,   388,
+     395,   398,   407,   408,   409,   410,   411,   415,   440,   447,
+     453,   495,   498,   504,   510,   512,   516,   518,   532,   549,
+     550,   553,   561,   572,   584,   595,   607,   669,   674,   679,
+     708,   713,   718,   723,   728,   733,   738,   743,   747,   752,
+     757,   760,   763,   772,   781,   784,   790,   796,   805,   812,
+     814,   818,   820,   835,   838,   845,   848,   854,   857,   860,
+     863,   892,   924,   928,   933,   935,   938,   943,   944,   966,
+     971,   979,   985,   990,   995,  1002,  1029,  1032,  1035,  1040,
+    1041,  1044,  1049,  1052,  1056,  1063,  1066,  1104,  1109,  1116,
+    1119,  1123,  1128,  1131,  1200,  1201,  1203,  1207,  1208,  1212,
+    1215,  1223,  1233,  1240,  1243,  1247,  1260,  1264,  1278,  1282,
+    1288,  1295,  1298,  1302,  1315,  1319,  1333,  1337,  1343,  1348,
+    1358
   };
 
   // Print the state stack on the debug stream.

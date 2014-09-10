@@ -2,6 +2,7 @@
 
 #include "function.h"
 #include "frontend.h"
+#include "program_context.h"
 #include "llvm_codegen.h"
 #include "errors.h"
 #include "util.h"
@@ -103,11 +104,12 @@ int main(int argc, const char* argv[]) {
   }
 
   simit::internal::Frontend frontend;
-  std::map<std::string, simit::internal::Function *> functions;
-  std::vector<simit::Error> errors;
-  std::vector<simit::internal::Test*> tests;
 
-  status = frontend.parseString(source, &functions, &errors, &tests);
+  std::vector<simit::Error> errors;
+
+  simit::internal::ProgramContext ctx;
+
+  status = frontend.parseString(source, &ctx, &errors);
   if (status != 0) {
     cerr << "Error parsing the program" << endl;
     for (auto &error : errors) {
@@ -117,16 +119,16 @@ int main(int argc, const char* argv[]) {
   }
 
   simit::internal::LLVMCodeGen codegen;
-  for (auto &func : functions) {
+  for (simit::internal::Function *func : ctx.getFunctions()) {
     if (emitSimit) {
-      cout << *func.second << endl;
+      cout << *func << endl;
     }
 
     if (emitLLVM) {
       if (emitSimit) {
         cout << endl;
       }
-      std::string fstr = simit::util::toString(*codegen.compile(func.second));
+      std::string fstr = simit::util::toString(*codegen.compile(func));
       cout << simit::util::trim(fstr);
     }
     cout << endl << endl;

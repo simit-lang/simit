@@ -8,6 +8,7 @@
 #include "function.h"
 #include "util.h"
 #include "errors.h"
+#include "program_context.h"
 
 using namespace std;
 
@@ -19,22 +20,25 @@ class Program::ProgramContent {
   ProgramContent(const std::string &name)
       : name(name), frontend(new internal::Frontend()), codegen(NULL) {}
   ~ProgramContent() {
-    for (auto &function : functions) {
-      delete function.second;
-    }
-    for (auto test : tests) {
-      delete test;
-    }
+//    for (auto &function : functions) {
+//      delete function.second;
+//    }
+//    for (auto test : tests) {
+//      delete test;
+//    }
     delete frontend;
     delete codegen;
   }
 
   const std::string &name;
 
-  std::map<std::string, internal::Function*> functions;
+  internal::ProgramContext ctx;
+
+//  std::map<std::string, internal::Function*> functions;
+//  std::map<std::string, internal::ElementType*> elementTypes;
+//  std::vector<internal::Test*> tests;
 
   Diagnostics diagnostics;
-  std::vector<internal::Test*> tests;
 
   internal::Frontend *getFrontend() { return frontend; }
   internal::CodeGen *getCodeGen() {
@@ -65,8 +69,8 @@ std::string Program::getName() const {
 
 int Program::loadString(const string &programString) {
   std::vector<Error> errors;
-  int status = impl->getFrontend()->parseString(programString, &impl->functions,
-                                                &errors, &impl->tests);
+  int status = impl->getFrontend()->parseString(programString, &impl->ctx,
+                                                &errors);
   for (auto &error : errors) {
     impl->diagnostics.report() << error.toString();
   }
@@ -75,8 +79,7 @@ int Program::loadString(const string &programString) {
 
 int Program::loadFile(const std::string &filename) {
   std::vector<Error> errors;
-  int status = impl->getFrontend()->parseFile(filename, &impl->functions,
-                                              &errors, &impl->tests);
+  int status = impl->getFrontend()->parseFile(filename, &impl->ctx, &errors);
   for (auto &error : errors) {
     impl->diagnostics.report() << error.toString();
   }
@@ -84,7 +87,7 @@ int Program::loadFile(const std::string &filename) {
 }
 
 std::unique_ptr<Function> Program::compile(const std::string &function) {
-  internal::Function *func = impl->functions[function];
+  internal::Function *func = impl->ctx.getFunction(function);
   if (!func) {
     impl->diagnostics.report() << "Attempting to compile unknown function ("
                                << function << ")";
@@ -96,7 +99,7 @@ std::unique_ptr<Function> Program::compile(const std::string &function) {
 
 int Program::verify() {
   internal::LLVMCodeGen codegen;
-  return codegen.verify(impl->functions, impl->tests, &impl->diagnostics) != 0;
+  return codegen.verify(impl->ctx, &impl->diagnostics) != 0;
 }
 
 bool Program::hasErrors() const {
@@ -108,15 +111,13 @@ const Diagnostics &Program::getDiagnostics() const {
 }
 
 std::ostream &operator<<(std::ostream &os, const Program &program) {
-  auto begin = program.impl->functions.begin();
-  auto end = program.impl->functions.end();
-  if (begin != end) {
-    os << begin->second;
-    ++begin;
+  auto it = program.impl->ctx.getFunctions().begin();
+  auto end = program.impl->ctx.getFunctions().end();
+  if (it != end) {
+    os << *it++;
   }
-  while (begin != end) {
-    os << ", " << begin->second;
-    ++begin;
+  while (it != end) {
+    os << ", " << *it++;
   }
   return os << endl;
 }
