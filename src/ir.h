@@ -255,27 +255,28 @@ class Argument : public TensorNode {
 public:
   Argument(const std::string &name, const TensorType *type)
       : TensorNode(name, type) {}
+  virtual ~Argument() {};
 
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   void print(std::ostream &os) const;
 };
 
 
 /// A formal result of a function.
-class Result : public TensorNode {
+class Result : public Argument {
 public:
   Result(const std::string &name, const TensorType *type)
-      : TensorNode(name, type) {}
+      : Argument(name, type) {}
 
   void setValue(const std::shared_ptr<TensorNode> &value) {
     assert(*getType() == *value->getType() && "type missmatch");
     this->value = value;
   }
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   const std::shared_ptr<TensorNode> &getValue() const { return value; }
-  void print(std::ostream &os) const;
+
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
 
 private:
   std::shared_ptr<TensorNode> value;

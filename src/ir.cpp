@@ -358,13 +358,7 @@ void Function::print(std::ostream &os) const {
 
 // class Argument
 void Argument::print(std::ostream &os) const {
-  TensorNode::print(os);
-}
-
-
-// class Result
-void Result::print(std::ostream &os) const {
-  TensorNode::print(os);
+  os << getName() << " : " << *type;
 }
 
 
