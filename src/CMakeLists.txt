@@ -10,18 +10,32 @@ SET(SCANNER_HEADER scanner.h)
 SET(SCANNER        scanner.cpp)
 
 FIND_PACKAGE(BISON 3.0.0)
-IF(BISON_FOUND)
-  ADD_CUSTOM_COMMAND(
-    OUTPUT ${SIMIT_PARSER_SOURCE_DIR}/${PARSER}
-    COMMAND ${BISON_EXECUTABLE}
-            --defines=${PARSER_HEADER}
-            --output=${PARSER}
-            ${PARSER_INPUT}
-    MAIN_DEPENDENCY ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT}
-    WORKING_DIRECTORY ${SIMIT_PARSER_SOURCE_DIR}
-    COMMENT "Generating parser.cpp"
-  )
-ENDIF()
+if (BISON_FOUND)
+  if ($ENV{SIMIT_PARSER_DEBUG})
+    message("Warning: Parser files will have line directives absolute paths")
+    ADD_CUSTOM_COMMAND(
+      OUTPUT ${SIMIT_PARSER_SOURCE_DIR}/${PARSER}
+      COMMAND ${BISON_EXECUTABLE}
+              --defines=${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER}
+              --output=${SIMIT_PARSER_SOURCE_DIR}/${PARSER}
+              ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT}
+      MAIN_DEPENDENCY ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT}
+      COMMENT "Generating parser.cpp"
+    )
+  else()
+    ADD_CUSTOM_COMMAND(
+      OUTPUT ${SIMIT_PARSER_SOURCE_DIR}/${PARSER}
+      COMMAND ${BISON_EXECUTABLE}
+              --defines=${PARSER_HEADER}
+              --output=${PARSER}
+              --no-lines
+              ${PARSER_INPUT}
+      MAIN_DEPENDENCY ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT}
+      WORKING_DIRECTORY ${SIMIT_PARSER_SOURCE_DIR}
+      COMMENT "Generating parser.cpp"
+    )
+  endif()
+endif()
 
 FIND_PACKAGE(FLEX 2.5.37 EXACT)
 IF(FLEX_FOUND)
