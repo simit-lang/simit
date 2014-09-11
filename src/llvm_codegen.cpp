@@ -68,7 +68,7 @@ llvm::Type *toLLVMType(const simit::ComponentType type) {
   }
 }
 
-llvm::Type *toLLVMType(const simit::internal::TensorType *type) {
+llvm::Type *toLLVMType(const std::shared_ptr<const TensorType> &type){
   assert(isValidComponentType(type->getComponentType()));
   switch (type->getComponentType()) {
     case simit::ComponentType::INT:

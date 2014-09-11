@@ -59,8 +59,9 @@
   namespace {
   struct FormalData {
     std::string name;
-    simit::internal::TensorType *type;
-    FormalData(const std::string &name, simit::internal::TensorType *type)
+    std::shared_ptr<simit::internal::TensorType> type;
+    FormalData(const std::string &name,
+               const std::shared_ptr<simit::internal::TensorType> &type)
         : name(name), type(type){}
   };
   }

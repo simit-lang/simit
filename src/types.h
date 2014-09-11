@@ -16,7 +16,7 @@ class Set;
 namespace internal {
 
 /// A Simit type, which is either a Set or a Tensor.
-class Type : public simit::util::Printable {
+class Type : public simit::util::Printable, simit::util::Uncopyable {
 public:
   enum Kind { Set, Tensor };
   Type(Kind kind) {}

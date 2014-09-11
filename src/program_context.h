@@ -79,21 +79,21 @@ public:
 
   const std::vector<Test*> &getTests() const { return tests; }
 
-  void toggleColumnVector(const TensorType *type) {
-    if (columnVectors.contains(type)) {
-      bool &val = columnVectors.get(type);
+  void toggleColumnVector(const Type &type) {
+    if (columnVectors.contains(&type)) {
+      bool &val = columnVectors.get(&type);
       val = !val;
     }
     else {
-      columnVectors.insert(type, true);
+      columnVectors.insert(&type, true);
     }
   }
 
-  bool isColumnVector(const TensorType *type) {
-    if (!columnVectors.contains(type)) {
+  bool isColumnVector(const Type &type) {
+    if (!columnVectors.contains(&type)) {
       return false;
     }
-    return columnVectors.get(type);
+    return columnVectors.get(&type);
   }
 
 private:
@@ -102,7 +102,7 @@ private:
   std::vector<Test*>                  tests;
 
   ParserSymtableType                  symtable;
-  ScopedMap<const TensorType*, bool>  columnVectors;
+  ScopedMap<const Type*, bool>  columnVectors;
 };
 
 }} // namespace simit::internal

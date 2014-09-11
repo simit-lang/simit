@@ -37,8 +37,7 @@ int CodeGen::verify(ProgramContext &ctx, Diagnostics *diags) {
 
     std::vector<std::shared_ptr<internal::Literal>> results;
     for (auto &result : func->getResults()) {
-      internal::Literal *resultLit =
-        new internal::Literal(new internal::TensorType(*result->getType()));
+      internal::Literal *resultLit = new internal::Literal(result->getType());
       resultLit->clear();
       results.push_back(shared_ptr<internal::Literal>(resultLit));
     }

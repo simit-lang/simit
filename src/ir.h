@@ -54,25 +54,23 @@ private:
 
 /// The base IRNode that represents all computed and loaded tensors.  Note that
 /// both scalars and elements are considered tensors of order 0.
-class TensorNode : public IRNode {
+class TensorNode : public Expression {
 public:
-  TensorNode(const TensorType *type) : TensorNode("", type) {}
-  TensorNode(const std::string &name, const TensorType *type)
-      : IRNode(name), type(type) {}
+  TensorNode(const std::shared_ptr<TensorType> &type) : TensorNode("", type) {}
+
+  TensorNode(const std::string &name, const std::shared_ptr<TensorType> &type)
+      : Expression(name, type), type(type) {}
   virtual ~TensorNode();
 
-  void setType(const TensorType *type) {
-    delete this->type;
+  void setType(const std::shared_ptr<TensorType> &type) {
+    Expression::setType(type);
     this->type = type;
   }
 
-  const TensorType *getType() const { return type; }
+  const std::shared_ptr<TensorType> &getType() const { return type; }
 
-  virtual void accept(IRVisitor *visitor) = 0;
-  virtual void print(std::ostream &os) const = 0;
-
-protected:
-  const TensorType *type;
+private:
+  std::shared_ptr<TensorType> type;
 };
 
 
@@ -80,12 +78,12 @@ protected:
 /// that it is only possible to define dense tensor literals.
 class Literal : public TensorNode {
 public:
-  Literal(TensorType *type);
-  Literal(TensorType *type, void *values);
+  Literal(const std::shared_ptr<TensorType> &type);
+  Literal(const std::shared_ptr<TensorType> &type, void *values);
   ~Literal();
 
   void clear();
-  void cast(TensorType *type);
+  void cast(const std::shared_ptr<TensorType> &type);
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   const void *getData() const { return data; }
@@ -224,7 +222,7 @@ private:
 /// Instruction that stores a value to a tensor or an object.
 class Store : public TensorNode {
 public:
-  Store(const std::string &name, const TensorType *type)
+  Store(const std::string &name, const std::shared_ptr<TensorType> &type)
       : TensorNode(name, type) {}
 };
 
@@ -234,7 +232,7 @@ class VariableStore : public Store {
 public:
   VariableStore(const std::shared_ptr<TensorNode> &target,
                 const std::shared_ptr<TensorNode> &value)
-      : Store(target->getName(), new TensorType(*target->getType())),
+      : Store(target->getName(), target->getType()),
         target{target}, value{value} {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
@@ -253,7 +251,7 @@ private:
 /// A formal argument to a function.
 class Argument : public TensorNode {
 public:
-  Argument(const std::string &name, const TensorType *type)
+  Argument(const std::string &name, const std::shared_ptr<TensorType> &type)
       : TensorNode(name, type) {}
   virtual ~Argument() {};
 
@@ -266,7 +264,7 @@ public:
 /// A formal result of a function.
 class Result : public Argument {
 public:
-  Result(const std::string &name, const TensorType *type)
+  Result(const std::string &name, const std::shared_ptr<TensorType> &type)
       : Argument(name, type) {}
 
   void setValue(const std::shared_ptr<TensorNode> &value) {

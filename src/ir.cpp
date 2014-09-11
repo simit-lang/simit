@@ -25,22 +25,17 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node){
 
 // class TensorNode
 TensorNode::~TensorNode() {
-  delete type;
-}
-
-void TensorNode::print(std::ostream &os) const {
-  os << getName() << " : " << *type;
 }
 
 
 // class Literal
-Literal::Literal(TensorType *type) : TensorNode(type) {
+Literal::Literal(const std::shared_ptr<TensorType> &type) : TensorNode(type) {
   int componentSize = simit::componentSize(type->getComponentType());
   this->dataSize = type->getSize() * componentSize;
   this->data = malloc(dataSize);
 }
 
-Literal::Literal(TensorType *type, void *values) : Literal(type) {
+Literal::Literal(const std::shared_ptr<TensorType> &type, void *values) : Literal(type) {
   memcpy(this->data, values, this->dataSize);
 }
 
@@ -52,7 +47,7 @@ void Literal::clear() {
   memset(data, 0, dataSize);
 }
 
-void Literal::cast(TensorType *type) {
+void Literal::cast(const std::shared_ptr<TensorType> &type) {
   assert(this->getType()->getComponentType() == type->getComponentType() &&
          this->getType()->getSize() == getType()->getSize());
   setType(type);
@@ -307,7 +302,7 @@ void IndexExpr::initType() {
   for (auto &iv : indexVars) {
     dimensions.push_back(iv->getIndexSet());
   }
-  setType(new TensorType(ctype, dimensions));
+  setType(std::shared_ptr<TensorType>(new TensorType(ctype, dimensions)));
 }
 
 
@@ -358,7 +353,7 @@ void Function::print(std::ostream &os) const {
 
 // class Argument
 void Argument::print(std::ostream &os) const {
-  os << getName() << " : " << *type;
+  os << getName() << " : " << *getType();
 }
 
 

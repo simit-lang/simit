@@ -64,11 +64,11 @@
   using namespace std;
   using namespace simit::internal;
 
-  std::string tensorTypeString(const TensorType *tensorType, ProgramContext *ctx){
+  std::string typeString(const Type &type, ProgramContext *ctx) {
     std::stringstream ss;
-    ss << *tensorType;
+    ss << type;
     std::string str = ss.str();
-    if (ctx->isColumnVector(tensorType)) {
+    if (ctx->isColumnVector(type)) {
       str += "'";
     }
     return str;
@@ -84,8 +84,8 @@
     do {                                               \
       std::stringstream errorStr;                      \
       errorStr << "type missmatch ("                   \
-               << tensorTypeString(t1, ctx) << " and " \
-               << tensorTypeString(t2, ctx) << ")";    \
+               << typeString(t1, ctx) << " and "       \
+               << typeString(t2, ctx) << ")";          \
       REPORT_ERROR(errorStr.str(), loc);               \
     } while (0)
 
@@ -94,7 +94,7 @@
       REPORT_ERROR("wrong number of index variables (" +            \
                     to_string(numIndexVars) +                       \
                     " index variables, but tensor order is " +      \
-                    to_string(order), loc);                          \
+                    to_string(order), loc);                         \
       } while (0)
 
   void Parser::error(const Parser::location_type &loc, const std::string &msg) {
@@ -118,30 +118,30 @@
     return result;
   }
 
-  bool compare(const TensorType *l ,const TensorType *r, ProgramContext *ctx) {
+  bool compare(const TensorType &l, const TensorType &r, ProgramContext *ctx) {
     if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
       return false;
     }
-    if (*l != *r) {
+    if (l != r) {
       return false;
     }
     return true;
   }
 
-  #define CHECK_TYPE_EQUALITY(t1, t2, loc)             \
-    do {                                               \
-      if (!compare(t1, t2, ctx)) {                     \
-        REPORT_TYPE_MISSMATCH(t1, t2, loc);            \
-      }                                                \
+  #define CHECK_TYPE_EQUALITY(t1, t2, loc)              \
+    do {                                                \
+      if (!compare(t1, t2, ctx)) {                      \
+        REPORT_TYPE_MISSMATCH(t1, t2, loc);             \
+      }                                                 \
     } while (0)
 
 
-  #define BINARY_ELWISE_TYPE_CHECK(t1, t2, loc)        \
-    do {                                               \
-      if (t1->getOrder() > 0 && t2->getOrder() > 0) {  \
-        CHECK_TYPE_EQUALITY(t1, t2, loc);              \
-      }                                                \
-    }                                                  \
+  #define BINARY_ELWISE_TYPE_CHECK(t1, t2, loc)         \
+    do {                                                \
+      if ((t1).getOrder() > 0 && (t2).getOrder() > 0) { \
+        CHECK_TYPE_EQUALITY(t1, t2, loc);               \
+      }                                                 \
+    }                                                   \
     while (0)
 
 
@@ -1256,7 +1256,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[2].value.string));
-    (yylhs.value.Formal) = new FormalData(ident, (yystack_[0].value.tensorType));
+    (yylhs.value.Formal) = new FormalData(ident, std::shared_ptr<TensorType>((yystack_[0].value.tensorType)));
   }
 
     break;
@@ -1284,7 +1284,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[5].value.string));
-    auto tensorType = unique_ptr<TensorType>((yystack_[3].value.tensorType));
+    auto tensorType = std::shared_ptr<TensorType>((yystack_[3].value.tensorType));
 
     auto literal = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
     delete (yystack_[1].value.TensorLiteral);
@@ -1294,13 +1294,13 @@ namespace  simit { namespace internal  {
     // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
     // $tensor_literal to a 1xn matrix.
     if (tensorType->getOrder() == 2 && literal->getType()->getOrder() == 1) {
-      literal->cast(tensorType.release());
+      literal->cast(tensorType);
     }
 
     // Typecheck: value and literal types must be equivalent.
     //            Note that the use of $tensor_type is deliberate as tensorType
     //            can have been released.
-    CHECK_TYPE_EQUALITY((yystack_[3].value.tensorType), literal->getType(), yystack_[5].location);
+    CHECK_TYPE_EQUALITY(*tensorType, *literal->getType(), yystack_[5].location);
 
     ctx->addTensorSymbol(literal->getName(), literal);
 
@@ -1349,7 +1349,7 @@ namespace  simit { namespace internal  {
       shared_ptr<IRNode> lhsTensor = ctx->getSymbol(lhs->name);
       assert(dynamic_pointer_cast<TensorNode>(lhsTensor) != NULL);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
-        CHECK_TYPE_EQUALITY(result->getType(), rhs->getType(), yystack_[2].location);
+        CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), yystack_[2].location);
         rhs->setName(result->getName());
         result->setValue(rhs);
         (yylhs.value.IRNodes)->push_back(rhs);
@@ -1458,7 +1458,7 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
+    BINARY_ELWISE_TYPE_CHECK(*l->getType(), *r->getType(), yystack_[1].location);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::ADD, r));
   }
 
@@ -1475,7 +1475,7 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
+    BINARY_ELWISE_TYPE_CHECK(*l->getType(), *r->getType(), yystack_[1].location);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::SUB, r));
   }
 
@@ -1491,7 +1491,7 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
+    BINARY_ELWISE_TYPE_CHECK(*l->getType(), *r->getType(), yystack_[1].location);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
   }
 
@@ -1507,7 +1507,7 @@ namespace  simit { namespace internal  {
     std::shared_ptr<TensorNode> l = convertAndDelete((yystack_[2].value.Tensor));
     std::shared_ptr<TensorNode> r = convertAndDelete((yystack_[0].value.Tensor));
 
-    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
+    BINARY_ELWISE_TYPE_CHECK(*l->getType(), *r->getType(), yystack_[1].location);
     (yylhs.value.Tensor) = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::DIV, r));
   }
 
@@ -1531,22 +1531,22 @@ namespace  simit { namespace internal  {
     // Vector-Vector Multiplication (inner and outer product)
     else if (l->getType()->getOrder() == 1 && r->getType()->getOrder() == 1) {
       // Inner product
-      if (!ctx->isColumnVector(l->getType())) {
-        if (!ctx->isColumnVector(r->getType())) {
+      if (!ctx->isColumnVector(*l->getType())) {
+        if (!ctx->isColumnVector(*r->getType())) {
           REPORT_ERROR("cannot multiply two row vectors", yystack_[1].location);
         }
         if (*l->getType() != *r->getType()) {
-          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+          REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), yystack_[1].location);
         }
         (yylhs.value.Tensor) = new shared_ptr<TensorNode>(innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
-        if (ctx->isColumnVector(r->getType())) {
+        if (ctx->isColumnVector(*r->getType())) {
           REPORT_ERROR("cannot multiply two column vectors", yystack_[1].location);
         }
         if (*l->getType() != *r->getType()) {
-          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+          REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), yystack_[1].location);
         }
         (yylhs.value.Tensor) = new shared_ptr<TensorNode>(outerProduct(l, r));
       }
@@ -1554,21 +1554,21 @@ namespace  simit { namespace internal  {
     // Matrix-Vector
     else if (l->getType()->getOrder() == 2 && r->getType()->getOrder() == 1) {
       if (l->getType()->getDimensions()[1] != r->getType()->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), yystack_[1].location);
       }
       (yylhs.value.Tensor) = new shared_ptr<TensorNode>(gemv(l, r));
     }
     // Vector-Matrix
     else if (l->getType()->getOrder() == 1 && r->getType()->getOrder() == 2) {
       if (l->getType()->getDimensions()[0] != r->getType()->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), yystack_[1].location);
       }
       (yylhs.value.Tensor) = new shared_ptr<TensorNode>(gevm(l,r));
     }
     // Matrix-Matrix
     else if (l->getType()->getOrder() == 2 && r->getType()->getOrder() == 2) {
       if (l->getType()->getDimensions()[1] != r->getType()->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), yystack_[1].location);
       }
       (yylhs.value.Tensor) = new shared_ptr<TensorNode>(gemm(l,r));
     }
@@ -1619,8 +1619,8 @@ namespace  simit { namespace internal  {
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
         (yylhs.value.Tensor) = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NONE, expr));
-        if (!ctx->isColumnVector(expr->getType())) {
-          ctx->toggleColumnVector((*(yylhs.value.Tensor))->getType());
+        if (!ctx->isColumnVector(*expr->getType())) {
+          ctx->toggleColumnVector(*(*(yylhs.value.Tensor))->getType());
         }
         break;
       case 2:
@@ -1922,7 +1922,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.tensorType) = new TensorType((yystack_[2].value.componentType), *(yystack_[4].value.IndexSetProducts));
-    ctx->toggleColumnVector((yylhs.value.tensorType));
+    ctx->toggleColumnVector(*(yylhs.value.tensorType));
     delete (yystack_[4].value.IndexSetProducts);
   }
 
@@ -2042,7 +2042,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.TensorLiteral) = (yystack_[1].value.TensorLiteral);
-    ctx->toggleColumnVector((*(yylhs.value.TensorLiteral))->getType());
+    ctx->toggleColumnVector(*(*(yylhs.value.TensorLiteral))->getType());
   }
 
     break;
@@ -2054,7 +2054,8 @@ namespace  simit { namespace internal  {
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(ComponentType::FLOAT, isps);
-    auto literal = new Literal(type, values->values.data());
+    auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>
+                               values->values.data());
     (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
@@ -2067,7 +2068,8 @@ namespace  simit { namespace internal  {
     auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(ComponentType::INT, isps);
-    auto literal = new Literal(type, values->values.data());
+    auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>
+                               values->values.data());
     (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
@@ -2239,7 +2241,7 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarType = new TensorType(ComponentType::INT);
-    auto literal = new Literal(scalarType, &(yystack_[0].value.num));
+    auto literal = new Literal(std::shared_ptr<TensorType>(scalarType), &(yystack_[0].value.num));
     (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
@@ -2249,7 +2251,7 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarType = new TensorType(ComponentType::FLOAT);
-    auto literal = new Literal(scalarType, &(yystack_[0].value.fnum));
+    auto literal = new Literal(std::shared_ptr<TensorType>(scalarType), &(yystack_[0].value.fnum));
     (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
@@ -2806,17 +2808,17 @@ namespace  simit { namespace internal  {
   {
        0,   217,   217,   219,   223,   233,   236,   245,   248,   252,
      259,   263,   269,   272,   286,   294,   297,   304,   316,   323,
-     332,   369,   372,   383,   387,   398,   402,   408,   416,   419,
-     428,   429,   430,   431,   432,   436,   464,   470,   512,   515,
-     521,   527,   529,   533,   535,   549,   566,   567,   570,   578,
-     589,   601,   612,   624,   686,   691,   696,   725,   730,   735,
-     740,   745,   750,   755,   760,   764,   769,   774,   777,   786,
-     795,   798,   804,   810,   819,   826,   828,   832,   834,   837,
-     838,   860,   865,   873,   879,   884,   915,   918,   921,   926,
-     927,   930,   936,   939,   943,   950,   953,   991,   996,  1003,
-    1006,  1010,  1015,  1018,  1087,  1090,  1091,  1095,  1098,  1106,
-    1116,  1123,  1126,  1130,  1143,  1147,  1161,  1165,  1171,  1178,
-    1181,  1185,  1198,  1202,  1216,  1220,  1226,  1231,  1241
+     332,   370,   373,   384,   388,   399,   403,   409,   417,   420,
+     429,   430,   431,   432,   433,   437,   465,   471,   513,   516,
+     522,   528,   530,   534,   536,   550,   567,   568,   571,   579,
+     590,   602,   613,   625,   687,   692,   697,   726,   731,   736,
+     741,   746,   751,   756,   761,   765,   770,   775,   778,   787,
+     796,   799,   805,   811,   820,   827,   829,   833,   835,   838,
+     839,   861,   866,   874,   880,   885,   916,   919,   922,   927,
+     928,   931,   937,   940,   944,   951,   954,   992,   997,  1004,
+    1007,  1011,  1016,  1019,  1088,  1091,  1092,  1096,  1099,  1108,
+    1119,  1126,  1129,  1133,  1146,  1150,  1164,  1168,  1174,  1181,
+    1184,  1188,  1201,  1205,  1219,  1223,  1229,  1234,  1244
   };
 
   // Print the state stack on the debug stream.
