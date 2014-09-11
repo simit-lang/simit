@@ -545,6 +545,7 @@ LLVMCodeGen::LLVMCodeGen() {
 
 LLVMCodeGen::~LLVMCodeGen() {
   delete symtable;
+  delete builder;
 }
 
 simit::Function *LLVMCodeGen::compile(Function *function) {
