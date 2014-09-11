@@ -17,6 +17,14 @@ namespace internal {
 
 /// A Simit type, which is either a Set or a Tensor.
 class Type : public simit::util::Printable {
+public:
+  enum Kind { Set, Tensor };
+  Type(Kind kind) {}
+
+  Kind getKind() const { return kind; }
+
+private:
+  Kind kind;
 };
 
 
@@ -83,13 +91,16 @@ IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r);
 std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
 
 
-/// The type of a tensor (the type of its components and its shape).
+/// The type of a tensor (the type of its scalar components and its shape).
+/// Note that a scalar value in Simit is a tensor of size 0.
 class TensorType : public Type {
 public:
-  TensorType(ComponentType componentType) : componentType(componentType) {}
+  TensorType(ComponentType componentType)
+      : Type(Type::Tensor), componentType(componentType) {}
+
   TensorType(ComponentType componentType,
              const std::vector<IndexSetProduct> &dimensions)
-      : componentType(componentType), dimensions(dimensions) {}
+      : Type(Type::Tensor), componentType(componentType), dimensions(dimensions) {}
 
   /// Get the order of the tensor (the number of dimensions).
   size_t getOrder() const { return dimensions.size(); }
@@ -133,7 +144,7 @@ private:
 std::ostream &operator<<(std::ostream &os, const ElementField &field);
 
 
-class ElementType : public Type {
+class ElementType {
 public:
   ElementType(const std::string &name, const std::vector<ElementField*> &fields)
       : name(name), fields(fields) {}
