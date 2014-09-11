@@ -52,7 +52,7 @@ class SetBase {
   }
   
   /// Return the number of elements in the Set
-  int getSize() { return elements; }
+  int getSize() const { return elements; }
 
   /// Add a tensor field to the set.  Use the template parameters to specify the
   /// component type and dimension sizes of the tensors.  For example, define a
@@ -253,13 +253,13 @@ class EndpointIteratorBase;
 template <int cardinality=0>
 class Set : public SetBase {
  public:
-  Set(std::initializer_list<SetBase*> eSets) :  SetBase(), edge_data(nullptr) {
-    assert(eSets.size() == cardinality &&
+  template <typename ...T>
+  Set(const T& ... sets) :  SetBase(), edge_data(nullptr) {
+    assert(sizeof...(sets) == cardinality &&
            "Wrong number of endpoint sets");
    
-    for (auto x : eSets) {
-      endpointSets.push_back(x);
-    }
+    // TODO: this may not be the most efficient, but does it matter?
+    endpointSets = epsMaker(endpointSets, sets...);
     
     edge_data = (int*) calloc(sizeof(int), capacity);
   }
@@ -272,27 +272,16 @@ class Set : public SetBase {
   
   /// Add an edge.
   /// The endpoints refer to the respective Sets they come from.
-  ElementRef addElement(std::initializer_list<ElementRef> endpoints) {
+  template <typename ...T>
+  ElementRef addElement(T ... endpoints) {
     
-    assert(endpoints.size() == cardinality &&
+    assert(sizeof...(endpoints) == cardinality &&
            "Wrong number of endpoints.");
-    
-    // check to make sure each endpoint is valid in the corresponding set
-    // TODO: we may want to remove this for performance reasons
-    int i = 0;
-    for (auto x : endpoints) {
-      assert(endpointSets[i++]->getSize() > x.ident &&
-             "Invalid member of a set in addEdge");
-    }
     
     if (elements > capacity-1)
       increaseEdgeCapacity();
     
-    i = 0;
-    for (auto x : endpoints) {
-      edge_data[elements+(i++)] = x.ident;
-    }
-    
+    addHelper(0, endpoints...);
     return SetBase::addElement();
   }
   
@@ -331,8 +320,8 @@ class Set : public SetBase {
   }
 
  private:
-  int* edge_data;                       // container for edges
-  std::vector<SetBase*> endpointSets;        // sets that the endpoints belong to
+  int* edge_data;                           // container for edges
+  std::vector<const SetBase*> endpointSets; // sets that the endpoints belong to
   
   void increaseEdgeCapacity() {
     edge_data = (int*)realloc(edge_data,
@@ -340,6 +329,36 @@ class Set : public SetBase {
   }
   
   template <int c> friend class EndpointIteratorBase;
+  
+  // helper for constructing
+  template <typename F, typename ...T>
+  std::vector<const SetBase*> epsMaker(std::vector<const SetBase*> sofar,
+                                      const F& f, const T& ... sets) {
+    sofar.push_back(&f);
+    return epsMaker(sofar, sets...);
+  }
+  template <typename F>
+  std::vector<const SetBase*> epsMaker(std::vector<const SetBase*> sofar,
+                                      const F& f) {
+    sofar.push_back(&f);
+    return sofar;
+  }
+  
+  // helper for adding edges
+  template <typename F, typename ...T>
+  void addHelper(int which, F f, T ... endpoints) {
+    assert(endpointSets[which]->getSize() > f.ident &&
+      "Invalid member of set in addEdge");
+    edge_data[elements+which] = f.ident;
+    addHelper(which+1, endpoints...);
+  }
+  template <typename F>
+  void addHelper(int which, F f) {
+    assert(endpointSets[which]->getSize() > f.ident &&
+    "Invalid member of set in addEdge");
+    edge_data[elements+which] = f.ident;
+  }
+
 };
 
 namespace {

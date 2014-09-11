@@ -221,16 +221,29 @@ TEST(EdgeSet, CreateAndGetEdge) {
   TensorRef<double> scalar2 = x.get(p1);
   scalar2 = 3.1;
 
-  Set<2> edges({&points, &points});
+  Set<2> edges(points, points);
   FieldRef<int> y = edges.addField<int>("y");
   
-  ElementRef e = edges.addElement({p0, p1});
+  ElementRef e = edges.addElement(p0, p1);
   TensorRef<int> escalar = y.get(e);
   escalar = 54;
   
   ASSERT_DOUBLE_EQ(x.get(edges.getEndpoint(e,0)), 1.1);
   ASSERT_DOUBLE_EQ(x.get(edges.getEndpoint(e,1)), 3.1);
   ASSERT_EQ(y.get(e), 54);
+}
+
+TEST(EdgeSet, ConstructorTest) {
+  Set<> points;
+  points.addElement();
+  auto p0 = points.addElement();
+  
+  Set<1> points2(points);
+  auto p1 = points2.addElement(p0);
+  
+  Set<2> edges(points, points2);
+  edges.addElement(p0, p1);
+  ASSERT_DEATH(edges.addElement(p1, p0), "Assertion failed.*" );
 }
 
 TEST(EdgeSet, EdgeIteratorTest) {
@@ -242,7 +255,6 @@ TEST(EdgeSet, EdgeIteratorTest) {
   ElementRef p1 = points.addElement();
   ElementRef p2 = points.addElement();
   ElementRef p3 = points.addElement();
-  ElementRef els[] = {p0, p1, p3, p2};
   
   TensorRef<double> scalar1 = x.get(p0);
   scalar1 = 1.1;
@@ -250,9 +262,9 @@ TEST(EdgeSet, EdgeIteratorTest) {
   TensorRef<double> scalar2 = x.get(p1);
   scalar2 = 3.1;
   
-  Set<4> edges({&points, &points, &points, &points});
+  Set<4> edges(points, points, points, points);
 
-  ElementRef e1 = edges.addElement({p0, p1, p3, p2});
+  ElementRef e1 = edges.addElement(p0, p1, p3, p2);
   
    int count=0;
   for (auto iter=edges.endpoints_begin(e1);
