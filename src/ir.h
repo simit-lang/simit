@@ -31,6 +31,27 @@ private:
 std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
 
+class Expression : public IRNode {
+public:
+  Expression(const std::string &name, const std::shared_ptr<const Type> &type)
+      : IRNode(name), type(type) {}
+  virtual ~Expression() {}
+
+  void setType(const std::shared_ptr<const Type> &type) {
+    this->type.reset();
+    this->type = type;
+  }
+
+  std::shared_ptr<const Type> getType() const { return type; }
+
+  virtual void accept(IRVisitor *visitor) = 0;
+  virtual void print(std::ostream &os) const = 0;
+
+private:
+  std::shared_ptr<const Type> type;
+};
+
+
 /// The base IRNode that represents all computed and loaded tensors.  Note that
 /// both scalars and elements are considered tensors of order 0.
 class TensorNode : public IRNode {
