@@ -15,14 +15,16 @@
 namespace simit {
 
 // Forward declarations
-class Set;
+class SetBase;
 template <typename T, int... dimensions> class FieldRef;
 template <typename T, int... dimensions> class TensorRef;
 
 namespace {
 class FieldRefBase;
 }
-
+namespace {
+template <int cardinality> class EndpointIteratorBase;
+}
 
 /// A Simit element reference.  All Simit elements live in Simit sets and an
 /// ElementRef provides a reference to an element.
@@ -31,24 +33,26 @@ class ElementRef {
   explicit inline ElementRef(int ident) : ident(ident) {}
   int ident;
 
-  friend Set;
+  friend SetBase;
+  template <int cardinality> friend class Set;
+  template <int cardinality> friend class EndpointIteratorBase;
   friend FieldRefBase;
 };
 
-/// A Simit Set.
-/// Sets are used to represent collections within C++,
-/// and can be passed as bound inputs to Simit programs.
-class Set {
+// Base class for Sets
+// Sets are used to represent collections within C++,
+// and can be passed as bound inputs to Simit programs.
+class SetBase {
  public:
-  Set() : elements(0), capacity(capacityIncrement) { }
+  SetBase() : elements(0), capacity(capacityIncrement) { }
   
-  ~Set() {
+  ~SetBase() {
     for (auto f: fields)
       delete f;
   }
   
   /// Return the number of elements in the Set
-  int getSize() { return elements; }
+  int getSize() const { return elements; }
 
   /// Add a tensor field to the set.  Use the template parameters to specify the
   /// component type and dimension sizes of the tensors.  For example, define a
@@ -115,12 +119,12 @@ class Set {
     typedef ElementRef& reference;
     typedef ElementRef* pointer;
     
-    ElementIterator(Set* set, int idx=0) : curElem(idx), set(set) { }
+    ElementIterator(SetBase* set, int idx=0) : curElem(idx), set(set) { }
     ElementIterator(const ElementIterator& other) : curElem(other.curElem),
     set(other.set) { }
     
-    friend inline bool operator<(const Set::ElementIterator& e1,
-                                 const Set::ElementIterator& e2);
+    friend inline bool operator<(const SetBase::ElementIterator& e1,
+                                 const SetBase::ElementIterator& e2);
     
     reference operator*() {
       return curElem;
@@ -150,14 +154,14 @@ class Set {
 
    private:
     ElementRef curElem; // current element index
-    Set* set;           // set we're iterating over
+    SetBase* set;           // set we're iterating over
 
-    bool lessThan(const Set::ElementIterator &other) const {
+    bool lessThan(const SetBase::ElementIterator &other) const {
       return this->curElem.ident < other.curElem.ident;
     }
 
-    friend bool operator<(const Set::ElementIterator& e1,
-                          const Set::ElementIterator& e2);
+    friend bool operator<(const SetBase::ElementIterator& e1,
+                          const SetBase::ElementIterator& e2);
   };
   
   /// Create an ElementIterator for this Set, set to the first element
@@ -165,6 +169,11 @@ class Set {
   
   /// Create an ElementIterator for terminating iteration over this Set
   ElementIterator end() { return ElementIterator(this, getSize()); }
+  
+ protected:
+  int elements;                      // number of elements in the set
+  int capacity;                   // current capacity of the set
+  static const int capacityIncrement = 1024; // increment for capacity increases
   
  private:
   // A field on the members of the Set.
@@ -219,13 +228,10 @@ class Set {
 
   std::vector<FieldData*> fields;          // fields of the elements in the set
   std::map<std::string, int> fieldNames; // name to field lookups
-  int elements;                      // number of elements in the set
-  int capacity;                   // current capacity of the set
-  static const int capacityIncrement = 1024; // increment for capacity increases
   
   // disable copy constructors
-  Set(const Set& s);
-  Set& operator=(const Set& s);
+  SetBase(const SetBase& s);
+  SetBase& operator=(const SetBase& s);
 
   // increase capacity of all fields
   void increaseCapacity();
@@ -233,11 +239,208 @@ class Set {
   friend FieldRefBase;
 };
 
-inline bool operator<(const Set::ElementIterator& e1,
-                      const Set::ElementIterator& e2) {
+inline bool operator<(const SetBase::ElementIterator& e1,
+                      const SetBase::ElementIterator& e2) {
   assert(e1.set == e2.set);
   return e1.lessThan(e2);
 }
+
+namespace {
+template<int cardinality>
+class EndpointIteratorBase;
+}
+  
+template <int cardinality=0>
+class Set : public SetBase {
+ public:
+  template <typename ...T>
+  Set(const T& ... sets) :  SetBase(), edge_data(nullptr) {
+    assert(sizeof...(sets) == cardinality &&
+           "Wrong number of endpoint sets");
+   
+    // TODO: this may not be the most efficient, but does it matter?
+    endpointSets = epsMaker(endpointSets, sets...);
+    
+    edge_data = (int*) calloc(sizeof(int), capacity);
+  }
+  
+  Set() : SetBase() {
+    assert(cardinality == 0 &&
+           "Sets with cardinality>0 must provide sets for endpoints");
+  }
+  
+  ~Set() {
+    free(edge_data);
+  }
+  
+  /// Add an edge.
+  /// The endpoints refer to the respective Sets they come from.
+  template <typename ...T>
+  ElementRef addElement(T ... endpoints) {
+    
+    assert(sizeof...(endpoints) == cardinality &&
+           "Wrong number of endpoints.");
+    
+    if (elements > capacity-1)
+      increaseEdgeCapacity();
+    
+    addHelper(0, endpoints...);
+    return SetBase::addElement();
+  }
+  
+  ElementRef addElement() {
+    assert(cardinality == 0 &&
+           "Must provide endpoints for cardinality > 0");
+    return SetBase::addElement();
+  }
+  
+  /// Get an endpoint of an edge.
+  ElementRef getEndpoint(ElementRef edge, int endpointNum) {
+    // TODO: may want to use a pool of ElementRefs instead of creating
+    // new ones each time
+    return ElementRef(edge_data[edge.ident*cardinality+endpointNum]);
+  }
+  
+  /// Iterator that iterates over the endpoints of an edge
+  class EndpointIterator : public EndpointIteratorBase<cardinality> {
+   public:
+    EndpointIterator(Set<cardinality>* set, ElementRef elem,
+                     int endpointN=0) : EndpointIteratorBase<cardinality>(set,
+                                          elem, endpointN) { }
+    
+    EndpointIterator(const EndpointIterator& other) :
+      EndpointIteratorBase<cardinality>(other) { }
+  };
+  
+  /// Start iterator for endpoints of an edge
+  EndpointIterator endpoints_begin(ElementRef edge) {
+    return EndpointIterator(this, edge, 0);
+  }
+  
+  /// End iterator for endpoints of an edge
+  EndpointIterator endpoints_end(ElementRef edge) {
+    return EndpointIterator(this, edge, cardinality);
+  }
+
+ private:
+  int* edge_data;                           // container for edges
+  std::vector<const SetBase*> endpointSets; // sets that the endpoints belong to
+  
+  void increaseEdgeCapacity() {
+    edge_data = (int*)realloc(edge_data,
+                              capacity+capacityIncrement*sizeof(int));
+  }
+  
+  template <int c> friend class EndpointIteratorBase;
+  
+  // helper for constructing
+  template <typename F, typename ...T>
+  std::vector<const SetBase*> epsMaker(std::vector<const SetBase*> sofar,
+                                      const F& f, const T& ... sets) {
+    sofar.push_back(&f);
+    return epsMaker(sofar, sets...);
+  }
+  template <typename F>
+  std::vector<const SetBase*> epsMaker(std::vector<const SetBase*> sofar,
+                                      const F& f) {
+    sofar.push_back(&f);
+    return sofar;
+  }
+  
+  // helper for adding edges
+  template <typename F, typename ...T>
+  void addHelper(int which, F f, T ... endpoints) {
+    assert(endpointSets[which]->getSize() > f.ident &&
+      "Invalid member of set in addEdge");
+    edge_data[elements+which] = f.ident;
+    addHelper(which+1, endpoints...);
+  }
+  template <typename F>
+  void addHelper(int which, F f) {
+    assert(endpointSets[which]->getSize() > f.ident &&
+    "Invalid member of set in addEdge");
+    edge_data[elements+which] = f.ident;
+  }
+
+};
+
+namespace {
+// Base class for iterator that iterates over the endpoints in an edge
+template<int cardinality>
+class EndpointIteratorBase {
+public:
+  // some typedefs to make interop with std easier
+  typedef std::input_iterator_tag iterator_category;
+  typedef ElementRef value_type;
+  typedef ptrdiff_t difference_type;
+  typedef ElementRef& reference;
+  typedef ElementRef* pointer;
+  
+  EndpointIteratorBase(Set<cardinality>* set, ElementRef elem, int endpointN=0) :
+  curElem(elem), retElem(-1), endpointNum(endpointN), set(set) {
+    retElem = set->getEndpoint(curElem, endpointNum);
+  }
+  EndpointIteratorBase(const EndpointIteratorBase& other) : curElem(other.curElem),
+  retElem(other.retElem), endpointNum(other.endpointNum), set(other.set) { }
+  
+  reference operator*() {
+    return retElem;
+  }
+  
+  pointer operator->()  {
+    return &retElem;
+  }
+  
+  EndpointIteratorBase& operator++() {
+    endpointNum++;
+    if (endpointNum > cardinality-1)
+      retElem.ident = -1;   // return invalid element
+    else
+      retElem.ident = set->edge_data[curElem.ident*cardinality+endpointNum];
+    return *this;
+  }
+  
+  EndpointIteratorBase operator++(int) {
+    endpointNum++;
+    if (endpointNum > cardinality-1)
+      retElem.ident = -1;   // return invalid element
+    else
+      retElem.ident = set->edge_data[curElem.ident*cardinality+endpointNum];
+    return *this;
+  }
+  
+  bool operator!=(const EndpointIteratorBase& other) {
+    return !(set==other.set) || !(curElem.ident == other.curElem.ident) ||
+    !(endpointNum==other.endpointNum);
+  }
+  
+  bool operator==(const EndpointIteratorBase& other) {
+    return (set==other.set) && (curElem.ident == other.curElem.ident) &&
+    (endpointNum==other.endpointNum);
+  }
+  
+  bool lessThan(const EndpointIteratorBase &other) const {
+    assert(this->set == other.set &&
+           "Comparing EndpointIterators from two different Sets");
+    assert(this->curElem.ident == other.curElem.ident &&
+           "Comparing EndpointIterators over two different edges");
+    return this->endpointNum < other.endpointNum;
+  }
+  
+private:
+  ElementRef curElem;     // current element index
+  ElementRef retElem;     // element we're returning
+  int endpointNum;        // the current endpoint number
+  Set<cardinality>* set;           // set we're iterating over
+};
+  
+template <int c>
+  inline bool operator<(const EndpointIteratorBase<c>& e1,
+                      const EndpointIteratorBase<c>& e2) {
+  return e1.lessThan(e2);
+}
+
+}  // unnamed namespace
 
 
 // Field References
@@ -286,7 +489,7 @@ class FieldRefBase {
 
  protected:
   FieldRefBase(void *fieldData)
-      : fieldData(static_cast<Set::FieldData*>(fieldData)),
+      : fieldData(static_cast<SetBase::FieldData*>(fieldData)),
         data(this->fieldData->data) {
     this->fieldData->fieldReferences.insert(this);
   }
@@ -297,10 +500,10 @@ class FieldRefBase {
   }
 
  private:
-  Set::FieldData *fieldData;
+  SetBase::FieldData *fieldData;
   void *data;
 
-  friend Set;
+  friend SetBase;
 };
 
 template <typename T, int... dimensions>
@@ -332,6 +535,8 @@ class FieldRefBaseParameterized : public FieldRefBase {
 
   FieldRefBaseParameterized(void *fieldData) : FieldRefBase(fieldData) {}
 };
+
+
 } // unnamed namespace
 
 template <typename T, int... dimensions>
@@ -339,7 +544,7 @@ class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
  private:
   FieldRef(void *fieldData)
       : FieldRefBaseParameterized<T,dimensions...>(fieldData) {}
-  friend class Set;
+  friend class SetBase;
 };
 
 /// @cond SPECIALIZATION
@@ -352,7 +557,7 @@ class FieldRef<T> : public FieldRefBaseParameterized<T> {
 
  private:
   FieldRef(void *fieldData) : FieldRefBaseParameterized<T>(fieldData) {}
-  friend class Set;
+  friend class SetBase;
 };
 /// @endcond
 

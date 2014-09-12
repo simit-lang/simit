@@ -2,7 +2,8 @@
 
 namespace simit {
 
-void Set::increaseCapacity() {
+
+void SetBase::increaseCapacity() {
   for (auto f : fields) {
     int typeSize = f->sizeOfType;
     f->data = realloc(f->data, (capacity+capacityIncrement) * typeSize);
@@ -14,5 +15,6 @@ void Set::increaseCapacity() {
   }
   capacity += capacityIncrement;
 }
+
 
 } // namespace simit

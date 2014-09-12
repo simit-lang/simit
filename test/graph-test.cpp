@@ -15,7 +15,7 @@ TEST(SetTests, Utils) {
 }
 
 TEST(Set, AddAndGetFromTwoFields) {
-  Set myset;
+  Set<> myset;
   
   FieldRef<int> f1 = myset.addField<int>("intfld");
   FieldRef<double> f2 = myset.addField<double>("floatfld");
@@ -33,7 +33,7 @@ TEST(Set, AddAndGetFromTwoFields) {
 }
 
 TEST(Set, IncreaseCapacity) {
-  Set myset;
+  Set<> myset;
   
   auto fld = myset.addField<int>("foo");
   
@@ -59,7 +59,7 @@ TEST(Set, IncreaseCapacity) {
 }
 
 TEST(Set, FieldAccesByName) {
-  Set myset;
+  Set<> myset;
   
   auto f1 = myset.addField<double>("fltfld");
   auto f2 = myset.addField<int>("intfld");
@@ -74,7 +74,7 @@ TEST(Set, FieldAccesByName) {
 
 // Iterator tests
 TEST(ElementIteratorTests, TestElementIteratorLoop) {
-  Set myset;
+  Set<> myset;
   
   FieldRef<int> f1 = myset.addField<int>("intfld");
   FieldRef<double> f2 = myset.addField<double>("floatfld");
@@ -88,7 +88,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
   }
   
   int howmany=0;
-  for (Set::ElementIterator it=myset.begin(); it<myset.end(); it++) {
+  for (Set<>::ElementIterator it=myset.begin(); it<myset.end(); it++) {
     auto el = *it;
     int val = f1.get(el);
     ASSERT_TRUE((val>=5) && (val<15));
@@ -107,7 +107,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
 }
 
 TEST(Field, Scalar) {
-  Set points;
+  Set<> points;
   FieldRef<double> x = points.addField<double>("x");
 
   ElementRef p0 = points.addElement();
@@ -128,7 +128,7 @@ TEST(Field, Scalar) {
 }
 
 TEST(Field, Vector) {
-  Set points;
+  Set<> points;
   FieldRef<double,3> x = points.addField<double,3>("x");
 
   ElementRef p0 = points.addElement();
@@ -154,7 +154,7 @@ TEST(Field, Vector) {
 }
 
 TEST(Field, Matrix) {
-  Set points;
+  Set<> points;
   FieldRef<double,3,2> x = points.addField<double,3,2>("x");
 
   ElementRef p0 = points.addElement();
@@ -179,7 +179,7 @@ TEST(Field, Matrix) {
 }
 
 TEST(Field, Tensor) {
-  Set points;
+  Set<> points;
   FieldRef<double,2,3,4> x = points.addField<double,2,3,4>("x");
 
   ElementRef p0 = points.addElement();
@@ -205,4 +205,79 @@ TEST(Field, Tensor) {
   ASSERT_DOUBLE_EQ(4.4, t4(0,0,1));
   ASSERT_DOUBLE_EQ(5.5, t4(1,1,3));
   ASSERT_DOUBLE_EQ(6.6, t4(1,0,0));
+}
+
+TEST(EdgeSet, CreateAndGetEdge) {
+  Set<> points;
+
+  FieldRef<double> x = points.addField<double>("x");
+  
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  
+  TensorRef<double> scalar1 = x.get(p0);
+  scalar1 = 1.1;
+  
+  TensorRef<double> scalar2 = x.get(p1);
+  scalar2 = 3.1;
+
+  Set<2> edges(points, points);
+  FieldRef<int> y = edges.addField<int>("y");
+  
+  ElementRef e = edges.addElement(p0, p1);
+  TensorRef<int> escalar = y.get(e);
+  escalar = 54;
+  
+  ASSERT_DOUBLE_EQ(x.get(edges.getEndpoint(e,0)), 1.1);
+  ASSERT_DOUBLE_EQ(x.get(edges.getEndpoint(e,1)), 3.1);
+  ASSERT_EQ(y.get(e), 54);
+}
+
+TEST(EdgeSet, ConstructorTest) {
+  Set<> points;
+  points.addElement();
+  auto p0 = points.addElement();
+  
+  Set<1> points2(points);
+  auto p1 = points2.addElement(p0);
+  
+  Set<2> edges(points, points2);
+  edges.addElement(p0, p1);
+  ASSERT_DEATH(edges.addElement(p1, p0), "Assertion failed.*" );
+}
+
+TEST(EdgeSet, EdgeIteratorTest) {
+  Set<> points;
+  
+  FieldRef<double> x = points.addField<double>("x");
+  
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+  ElementRef p3 = points.addElement();
+  
+  TensorRef<double> scalar1 = x.get(p0);
+  scalar1 = 1.1;
+  
+  TensorRef<double> scalar2 = x.get(p1);
+  scalar2 = 3.1;
+  
+  Set<4> edges(points, points, points, points);
+
+  ElementRef e1 = edges.addElement(p0, p1, p3, p2);
+  
+   int count=0;
+  for (auto iter=edges.endpoints_begin(e1);
+       iter < edges.endpoints_end(e1);
+       iter++) {
+    if (count==0)
+      ASSERT_EQ(x.get(*iter), 1.1);
+    if (count==1)
+      ASSERT_EQ(x.get(*iter), 3.1);
+    count++;
+  }
+  
+  ASSERT_EQ(count, 4);
+    
+
 }
