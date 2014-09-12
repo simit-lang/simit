@@ -269,6 +269,9 @@ class Set : public SetBase {
            "Sets with cardinality>0 must provide sets for endpoints");
   }
   
+  ~Set() {
+    free(edge_data);
+  }
   
   /// Add an edge.
   /// The endpoints refer to the respective Sets they come from.
