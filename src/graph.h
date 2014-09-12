@@ -23,7 +23,9 @@ namespace {
 class FieldRefBase;
 }
 namespace {
+namespace hidden {
 template <int cardinality> class EndpointIteratorBase;
+}
 }
 
 /// A Simit element reference.  All Simit elements live in Simit sets and an
@@ -35,7 +37,7 @@ class ElementRef {
 
   friend SetBase;
   template <int cardinality> friend class Set;
-  template <int cardinality> friend class EndpointIteratorBase;
+  template <int cardinality> friend class hidden::EndpointIteratorBase;
   friend FieldRefBase;
 };
 
@@ -245,10 +247,6 @@ inline bool operator<(const SetBase::ElementIterator& e1,
   return e1.lessThan(e2);
 }
 
-namespace {
-template<int cardinality>
-class EndpointIteratorBase;
-}
   
 template <int cardinality=0>
 class Set : public SetBase {
@@ -302,14 +300,14 @@ class Set : public SetBase {
   }
   
   /// Iterator that iterates over the endpoints of an edge
-  class EndpointIterator : public EndpointIteratorBase<cardinality> {
+  class EndpointIterator : public hidden::EndpointIteratorBase<cardinality> {
    public:
     EndpointIterator(Set<cardinality>* set, ElementRef elem,
-                     int endpointN=0) : EndpointIteratorBase<cardinality>(set,
+                     int endpointN=0) : hidden::EndpointIteratorBase<cardinality>(set,
                                           elem, endpointN) { }
     
     EndpointIterator(const EndpointIterator& other) :
-      EndpointIteratorBase<cardinality>(other) { }
+      hidden::EndpointIteratorBase<cardinality>(other) { }
   };
   
   /// Start iterator for endpoints of an edge
@@ -331,7 +329,7 @@ class Set : public SetBase {
                               capacity+capacityIncrement*sizeof(int));
   }
   
-  template <int c> friend class EndpointIteratorBase;
+  template <int c> friend class hidden::EndpointIteratorBase;
   
   // helper for constructing
   template <typename F, typename ...T>
@@ -365,6 +363,7 @@ class Set : public SetBase {
 };
 
 namespace {
+namespace hidden {
 // Base class for iterator that iterates over the endpoints in an edge
 template<int cardinality>
 class EndpointIteratorBase {
@@ -439,7 +438,7 @@ template <int c>
                       const EndpointIteratorBase<c>& e2) {
   return e1.lessThan(e2);
 }
-
+}  // hidden namespace
 }  // unnamed namespace
 
 
