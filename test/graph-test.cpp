@@ -243,7 +243,7 @@ TEST(EdgeSet, ConstructorTest) {
   
   Set<2> edges(points, points2);
   edges.addElement(p0, p1);
-  ASSERT_DEATH(edges.addElement(p1, p0), "Assertion failed.*" );
+  ASSERT_DEATH(edges.addElement(p1, p0), "Assertion.*" );
 }
 
 TEST(EdgeSet, EdgeIteratorTest) {

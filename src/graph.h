@@ -262,7 +262,7 @@ class Set : public SetBase {
     edge_data = (int*) calloc(sizeof(int), capacity);
   }
   
-  Set() : SetBase() {
+  Set() : SetBase(), edge_data(nullptr) {
     assert(cardinality == 0 &&
            "Sets with cardinality>0 must provide sets for endpoints");
   }
