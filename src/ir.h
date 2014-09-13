@@ -14,7 +14,8 @@ namespace internal {
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
-class IRNode : simit::util::Uncopyable {
+class IRNode : public simit::interfaces::Printable,
+                      simit::interfaces::Uncopyable {
 public:
   IRNode() {}
   IRNode(const std::string &name) : name(name) {}
@@ -23,12 +24,10 @@ public:
   void setName(std::string name) { this->name = name; }
 
   std::string getName() const { return name; }
-  virtual void print(std::ostream &os) const = 0;
 
 private:
   std::string name;
 };
-std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
 
 class Expression : public IRNode {

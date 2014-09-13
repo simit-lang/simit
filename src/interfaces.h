@@ -4,7 +4,7 @@
 #include <ostream>
 
 namespace simit {
-namespace util {
+namespace interfaces {
 
 /// C++11 interface that prevents a class from being copied.
 class Uncopyable {

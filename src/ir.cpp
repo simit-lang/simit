@@ -18,12 +18,6 @@ namespace internal {
 // class IRNode
 IRNode::~IRNode() {}
 
-std::ostream &operator<<(std::ostream &os, const IRNode &node){
-  node.print(os);
-  return os;
-}
-
-
 // class Literal
 Literal::Literal(const std::shared_ptr<Type> &type) : Expression(type) {
   this->dataSize = type->getByteSize();
