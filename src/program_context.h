@@ -8,7 +8,6 @@
 
 #include "scopedmap.h"
 #include "ir.h"
-#include "errors.h"
 
 namespace simit {
 namespace internal {
@@ -29,9 +28,9 @@ public:
     columnVectors.unscope();
   }
 
-  void addTensorSymbol(const std::string &name,
-                       const std::shared_ptr<TensorNode> &tensor) {
-    symtable.insert(name, tensor);
+  void addSymbol(const std::string &name,
+                       const std::shared_ptr<Expression> &expression) {
+    symtable.insert(name, expression);
   }
 
   const std::shared_ptr<IRNode> &getSymbol(const std::string &name) {

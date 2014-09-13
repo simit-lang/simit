@@ -33,53 +33,34 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node);
 
 class Expression : public IRNode {
 public:
-  Expression(const std::string &name, const std::shared_ptr<const Type> &type)
+  Expression(const std::shared_ptr<Type> &type) : Expression("", type) {}
+
+  Expression(const std::string &name, const std::shared_ptr<Type> &type)
       : IRNode(name), type(type) {}
+
   virtual ~Expression() {}
 
-  void setType(const std::shared_ptr<const Type> &type) {
+  void setType(const std::shared_ptr<Type> &type) {
     this->type.reset();
     this->type = type;
   }
 
-  std::shared_ptr<const Type> getType() const { return type; }
+  const std::shared_ptr<Type> getType() const { return type; }
 
   virtual void accept(IRVisitor *visitor) = 0;
   virtual void print(std::ostream &os) const = 0;
 
 private:
-  std::shared_ptr<const Type> type;
-};
-
-
-/// The base IRNode that represents all computed and loaded tensors.  Note that
-/// both scalars and elements are considered tensors of order 0.
-class TensorNode : public Expression {
-public:
-  TensorNode(const std::shared_ptr<TensorType> &type) : TensorNode("", type) {}
-
-  TensorNode(const std::string &name, const std::shared_ptr<TensorType> &type)
-      : Expression(name, type), type(type) {}
-  virtual ~TensorNode();
-
-  void setType(const std::shared_ptr<TensorType> &type) {
-    Expression::setType(type);
-    this->type = type;
-  }
-
-  const std::shared_ptr<TensorType> &getType() const { return type; }
-
-private:
-  std::shared_ptr<TensorType> type;
+  std::shared_ptr<Type> type;
 };
 
 
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
 /// that it is only possible to define dense tensor literals.
-class Literal : public TensorNode {
+class Literal : public Expression {
 public:
-  Literal(const std::shared_ptr<TensorType> &type);
-  Literal(const std::shared_ptr<TensorType> &type, void *values);
+  Literal(const std::shared_ptr<Type> &type);
+  Literal(const std::shared_ptr<Type> &type, void *values);
   ~Literal();
 
   void clear();
@@ -140,23 +121,23 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var);
 
 class IndexedTensor {
 public:
-  IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
+  IndexedTensor(const std::shared_ptr<Expression> &tensor,
                 const std::vector<std::shared_ptr<IndexVar>> &indexVariables);
 
-  std::shared_ptr<TensorNode> getTensor() const { return tensor; };
+  std::shared_ptr<Expression> getTensor() const { return tensor; };
   const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {
     return indexVariables;
   }
 
 private:
-  std::shared_ptr<TensorNode>            tensor;
+  std::shared_ptr<Expression>            tensor;
   std::vector<std::shared_ptr<IndexVar>> indexVariables;
 };
 
 
 /// Expression that combines one or more tensors.  Merge nodes must be created
 /// through the \ref createMerge factory function.
-class IndexExpr : public TensorNode {
+class IndexExpr : public Expression {
 public:
   enum Operator { NONE, NEG, ADD, SUB, MUL, DIV };
   static int numOperands(Operator op);
@@ -201,58 +182,58 @@ std::ostream &operator<<(std::ostream &os, const IndexedTensor &t);
 
 
 /// Calls a Simit function.
-class Call : public TensorNode {
+class Call : public Expression {
 public:
   Call(const std::string &name,
-       const std::vector<std::shared_ptr<TensorNode>> &arguments)
-      : TensorNode(name, NULL), arguments(arguments) {}
+       const std::vector<std::shared_ptr<Expression>> &arguments)
+      : Expression(name, NULL), arguments(arguments) {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const std::vector<std::shared_ptr<TensorNode>> &getArguments() const {
+  const std::vector<std::shared_ptr<Expression>> &getArguments() const {
     return arguments;
   }
   void print(std::ostream &os) const;
 
 private:
-  std::vector<std::shared_ptr<TensorNode>> arguments;
+  std::vector<std::shared_ptr<Expression>> arguments;
 };
 
 
 /// Instruction that stores a value to a tensor or an object.
-class Store : public TensorNode {
+class Store : public Expression {
 public:
-  Store(const std::string &name, const std::shared_ptr<TensorType> &type)
-      : TensorNode(name, type) {}
+  Store(const std::string &name, const std::shared_ptr<Type> &type)
+      : Expression(name, type) {}
 };
 
 
 /// Instruction that stores a value to a tensor or an object.
 class VariableStore : public Store {
 public:
-  VariableStore(const std::shared_ptr<TensorNode> &target,
-                const std::shared_ptr<TensorNode> &value)
+  VariableStore(const std::shared_ptr<Expression> &target,
+                const std::shared_ptr<Expression> &value)
       : Store(target->getName(), target->getType()),
         target{target}, value{value} {}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  std::shared_ptr<TensorNode> getTarget() const { return target; }
-  std::shared_ptr<TensorNode> getValue() const { return value; }
+  std::shared_ptr<Expression> getTarget() const { return target; }
+  std::shared_ptr<Expression> getValue() const { return value; }
 
   void print(std::ostream &os) const;
 
 private:
-  std::shared_ptr<TensorNode> target;
-  std::shared_ptr<TensorNode> value;
+  std::shared_ptr<Expression> target;
+  std::shared_ptr<Expression> value;
 };
 
 
 /// A formal argument to a function.
-class Argument : public TensorNode {
+class Argument : public Expression {
 public:
-  Argument(const std::string &name, const std::shared_ptr<TensorType> &type)
-      : TensorNode(name, type) {}
+  Argument(const std::string &name, const std::shared_ptr<Type> &type)
+      : Expression(name, type) {}
   virtual ~Argument() {};
 
   virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
@@ -264,20 +245,20 @@ public:
 /// A formal result of a function.
 class Result : public Argument {
 public:
-  Result(const std::string &name, const std::shared_ptr<TensorType> &type)
+  Result(const std::string &name, const std::shared_ptr<Type> &type)
       : Argument(name, type) {}
 
-  void setValue(const std::shared_ptr<TensorNode> &value) {
+  void setValue(const std::shared_ptr<Expression> &value) {
     assert(*getType() == *value->getType() && "type missmatch");
     this->value = value;
   }
 
-  const std::shared_ptr<TensorNode> &getValue() const { return value; }
+  const std::shared_ptr<Expression> &getValue() const { return value; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
 private:
-  std::shared_ptr<TensorNode> value;
+  std::shared_ptr<Expression> value;
 };
 
 

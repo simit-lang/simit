@@ -8,10 +8,9 @@ using namespace std;
 using namespace simit::internal;
 using namespace simit;
 
-TEST(IndexSet, getSize) {
+TEST(IndexSet, constructor) {
   ASSERT_EQ(IndexSet(4), 4);
   ASSERT_EQ(IndexSet(42), 42);
-  // TODO: Add tests for SET and VARIABLE
 }
 
 TEST(IndexSet, eq) {
@@ -25,14 +24,14 @@ TEST(IndexSet, eq) {
 TEST(IndexSetProduct, getSize) {
   vector<IndexSet> indices;
   indices.push_back(IndexSet(1));
-  ASSERT_EQ(IndexSetProduct(indices).getSize(), 1);
+  ASSERT_EQ(IndexSetProduct(indices).getSize(), 1u);
 
   indices.clear();
   indices.push_back(IndexSet(3));
-  ASSERT_EQ(IndexSetProduct(indices).getSize(), 3);
+  ASSERT_EQ(IndexSetProduct(indices).getSize(), 3u);
 
   indices.push_back(IndexSet(4));
-  ASSERT_EQ(IndexSetProduct(indices).getSize(), 12);
+  ASSERT_EQ(IndexSetProduct(indices).getSize(), 12u);
   // TODO: Add tests for SET, VARIABLE and combinations
 }
 
@@ -72,7 +71,7 @@ TEST(Type, getSize) {
   indices1.push_back(IndexSet(7));
   dimensions.push_back(IndexSetProduct(indices1));
 
-  ASSERT_EQ(TensorType(FLOAT, dimensions).getSize(), 210);
+  ASSERT_EQ(TensorType(FLOAT, dimensions).getSize(), 210u);
   // TODO: Add tests for SET, VARIABLE and combinations
 }
 

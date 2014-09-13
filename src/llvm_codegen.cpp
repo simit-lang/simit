@@ -68,13 +68,20 @@ llvm::Type *toLLVMType(const simit::ComponentType type) {
   }
 }
 
-llvm::Type *toLLVMType(const std::shared_ptr<const TensorType> &type){
-  assert(isValidComponentType(type->getComponentType()));
-  switch (type->getComponentType()) {
-    case simit::ComponentType::INT:
-      return LLVM_INTPTR;
-    case simit::ComponentType::FLOAT:
-      return LLVM_DOUBLEPTR;
+llvm::Type *toLLVMType(const std::shared_ptr<Type> &type){
+  switch (type->getKind()) {
+    case Type::Tensor:
+      assert(isValidComponentType(tensorTypePtr(type)->getComponentType()));
+      switch (tensorTypePtr(type)->getComponentType()) {
+        case simit::ComponentType::INT:
+          return LLVM_INTPTR;
+        case simit::ComponentType::FLOAT:
+          return LLVM_DOUBLEPTR;
+      }
+      break;
+    case Type::Set:
+      NOT_SUPPORTED_YET;
+      break;
   }
 }
 
@@ -85,7 +92,6 @@ llvm::Constant *toLLVMPtr(const std::shared_ptr<Literal> &literal) {
       : llvm::ConstantInt::get(llvm::Type::getInt64Ty(LLVM_CONTEXT),
                                (intptr_t)literal->getData());
 
-  // TODO: Do we have to free ctype?
   llvm::Type *ctype = toLLVMType(literal->getType());
   llvm::Constant *cptr = llvm::ConstantExpr::getIntToPtr(c, ctype);
   return cptr;
@@ -262,14 +268,13 @@ typedef std::map<const IndexVar *, llvm::Value *> IndexVarMap;
 
 /// Emits code that offsets ptr to index into tensor using idxVars.  The
 /// indexMap is used to map the idxVars to llvm::Value loop indices.
-llvm::Value *emitOffset(llvm::Value *ptr,
-                        const TensorNode *tensor,
+llvm::Value *emitOffset(llvm::Value *ptr, TensorType *type,
                         const std::vector<std::shared_ptr<IndexVar>> &idxVars,
                         IndexVarMap &indexMap, size_t currNest,
                         llvm::IRBuilder<> *builder) {
   // OPT: Offsets are currently recomputed for identical accesses to different
   //      tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
-  if (tensor->getType()->getOrder() > 0) {
+  if (type->getOrder() > 0) {
     llvm::Value *offset = NULL;
     if (idxVars.size() == 1) {
       offset = indexMap[idxVars[0].get()];
@@ -340,7 +345,8 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   assert(currIdxVar < domain.size());
 
   std::string resultName = resultStorage->getName();
-  simit::ComponentType resultCType = indexExpr->getType()->getComponentType();
+  TensorType *resultType = tensorTypePtr(indexExpr->getType());
+  simit::ComponentType resultCType = resultType->getComponentType();
   assert(resultCType == llvmToSimitType(resultStorage->getType()));
 
   size_t numNests = (domain.size() > 0)
@@ -394,8 +400,10 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
       std::string operandValName = operandName + VAL_SUFFIX;
       std::string operandPtrName = operandName + PTR_SUFFIX;
 
-      llvm::Value *operandPtr = emitOffset(llvmOperand,
-                                           operand.getTensor().get(),
+      assert(operand.getTensor()->getType()->isTensor());
+      TensorType *operandType = tensorTypePtr(operand.getTensor()->getType());
+
+      llvm::Value *operandPtr = emitOffset(llvmOperand, operandType,
                                            operand.getIndexVariables(),
                                            indexMap, currNest, builder);
       llvm::Value *operandVal = builder->CreateAlignedLoad(operandPtr, 8,
@@ -409,7 +417,11 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
     llvm::Value *resultVal = createValueComputation(resultValName,
                                                     resultCType, op,
                                                     operandVals, builder);
-    resultPtr = emitOffset(resultStorage, indexExpr,
+
+    assert(indexExpr->getType()->isTensor());
+    TensorType *indexExprType = tensorTypePtr(indexExpr->getType());
+
+    resultPtr = emitOffset(resultStorage, indexExprType,
                            indexExpr->getIndexVariables(),
                            indexMap, currNest, builder);
 
@@ -485,7 +497,7 @@ class LLVMFunction : public simit::Function {
     }
     else {
       std::string name = string(llvmFunc->getName()) + "_harness";
-      std::vector<std::shared_ptr<TensorNode>> noArgs;
+      std::vector<std::shared_ptr<Expression>> noArgs;
       llvm::Function *harness = createPrototype(name, noArgs, noArgs,
                                                 llvm::Function::InternalLinkage,
                                                 &module);

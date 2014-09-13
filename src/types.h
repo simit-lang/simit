@@ -15,17 +15,29 @@ class SetBase;
 
 namespace internal {
 
+class TensorType;
+
+
 /// A Simit type, which is either a Set or a Tensor.
 class Type : public simit::util::Printable, simit::util::Uncopyable {
 public:
   enum Kind { Set, Tensor };
-  Type(Kind kind) {}
+  Type(Kind kind) : kind(kind) {}
+
+  virtual ~Type() {}
 
   Kind getKind() const { return kind; }
+  bool isTensor() const { return kind == Type::Tensor; }
+  bool isSet() const { return kind == Type::Set; }
+
+  virtual size_t getByteSize() const = 0;
 
 private:
   Kind kind;
 };
+
+bool operator==(const Type& l, const Type& r);
+bool operator!=(const Type& l, const Type& r);
 
 
 // Tensor types
@@ -48,7 +60,7 @@ public:
   IndexSet() : type(VARIABLE) {}
 
   /// Get the number of elements in the index set.
-  int getSize() const;
+  size_t getSize() const;
 
   std::ostream &print(std::ostream &os) const;
   friend bool operator==(const IndexSet &l, const IndexSet &r);
@@ -77,7 +89,7 @@ public:
   const std::vector<IndexSet> &getFactors() const {return indexSets; }
 
   /// Get the number of elements in the product of the index sets.
-  int getSize() const;
+  size_t getSize() const;
 
   std::ostream &print(std::ostream &os) const;
   
@@ -96,23 +108,28 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
 class TensorType : public Type {
 public:
   TensorType(ComponentType componentType)
-      : Type(Type::Tensor), componentType(componentType) {}
+      : Type(Type::Tensor), componentType(componentType) {
+    assert(getKind() == 1);
+  }
 
   TensorType(ComponentType componentType,
              const std::vector<IndexSetProduct> &dimensions)
-      : Type(Type::Tensor), componentType(componentType), dimensions(dimensions) {}
+      : Type(Type::Tensor), componentType(componentType),
+        dimensions(dimensions) {}
 
   /// Get the order of the tensor (the number of dimensions).
   size_t getOrder() const { return dimensions.size(); }
-
-  /// Get the number of components in the tensor.
-  int getSize() const;
 
   /// Get the type of the components in the vector.
   ComponentType getComponentType() const { return componentType; }
 
   /// Get the index sets that form the dimensions of the tensor.
   const std::vector<IndexSetProduct> &getDimensions() const {return dimensions;}
+
+  /// Get the number of components in the tensor.
+  size_t getSize() const;
+
+  size_t getByteSize() const;
 
   void print(std::ostream &os) const;
 
@@ -164,6 +181,15 @@ private:
   std::string name;
   std::vector<ElementField*> fields;
 };
+
+inline TensorType *tensorTypePtr(Type *type) {
+  assert(type->getKind() == Type::Kind::Tensor);
+  return static_cast<TensorType*>(type);
+}
+
+inline TensorType *tensorTypePtr(const std::shared_ptr<Type> &type) {
+  return tensorTypePtr(type.get());
+}
 
 }} // namespace simit::internal
 

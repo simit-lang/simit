@@ -14,8 +14,28 @@ using namespace std;
 namespace simit {
 namespace internal {
 
+// class Type
+bool operator==(const Type& l, const Type& r) {
+  if (l.getKind() != r.getKind()) {
+    return false;
+  }
+
+  switch (l.getKind()) {
+    case Type::Kind::Set:
+      NOT_SUPPORTED_YET;
+    case Type::Kind::Tensor:
+      return static_cast<const TensorType&>(l) ==
+             static_cast<const TensorType&>(r);
+  }
+}
+
+bool operator!=(const Type& l, const Type& r) {
+  return !(l == r);
+}
+
+
 // class IndexSet
-int IndexSet::getSize() const {
+size_t IndexSet::getSize() const {
   int size = 0;
   switch (type) {
     case RANGE:
@@ -84,7 +104,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &o) {
 
 
 // class IndexSetProduct
-int IndexSetProduct::getSize() const {
+size_t IndexSetProduct::getSize() const {
   int size = 1;
   for (auto &indexSet : getFactors()) {
     size *= indexSet.getSize();
@@ -127,12 +147,16 @@ std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o) {
 
 
 // class TensorType
-int TensorType::getSize() const {
+size_t TensorType::getSize() const {
   int size = 1;
   for (auto &dimension : getDimensions()) {
     size *= dimension.getSize();
   }
   return size;
+}
+
+size_t TensorType::getByteSize() const {
+  return getSize() * simit::componentSize(getComponentType());
 }
 
 void TensorType::print(std::ostream &os) const {

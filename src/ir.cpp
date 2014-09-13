@@ -8,6 +8,7 @@
 
 #include "types.h"
 #include "util.h"
+#include "macros.h"
 
 using namespace std;
 
@@ -23,19 +24,13 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node){
 }
 
 
-// class TensorNode
-TensorNode::~TensorNode() {
-}
-
-
 // class Literal
-Literal::Literal(const std::shared_ptr<TensorType> &type) : TensorNode(type) {
-  int componentSize = simit::componentSize(type->getComponentType());
-  this->dataSize = type->getSize() * componentSize;
+Literal::Literal(const std::shared_ptr<Type> &type) : Expression(type) {
+  this->dataSize = type->getByteSize();
   this->data = malloc(dataSize);
 }
 
-Literal::Literal(const std::shared_ptr<TensorType> &type, void *values) : Literal(type) {
+Literal::Literal(const std::shared_ptr<Type> &type, void *values) : Literal(type) {
   memcpy(this->data, values, this->dataSize);
 }
 
@@ -48,61 +43,67 @@ void Literal::clear() {
 }
 
 void Literal::cast(const std::shared_ptr<TensorType> &type) {
-  assert(this->getType()->getComponentType() == type->getComponentType() &&
-         this->getType()->getSize() == getType()->getSize());
+  assert(type->getKind() == Type::Kind::Tensor);
+  TensorType *litType = tensorTypePtr(this->getType());
+  assert(litType->getComponentType() == type->getComponentType() &&
+         litType->getSize() == type->getSize());
+
   setType(type);
 }
 
 void Literal::print(std::ostream &os) const {
-  for (auto &dim : getType()->getDimensions()) {
-    assert(dim.getFactors().size() == 1 && "literals can't be hierarchical");
-  }
-
   // TODO: Fix value printing to print matrices and tensors properly
-  assert(isValidComponentType(getType()->getComponentType()));
-  switch (getType()->getComponentType()) {
-    case ComponentType::INT: {
-      int *idata = (int*)data;
-      if (getType()->getSize() == 1) {
-        os << idata[0];
-      }
-      else {
-        os << "[" << idata[0];
-        for (int i=0; i < getType()->getSize(); ++i) {
-          os << ", " << idata[i];
-        }
-        os << "]";
-      }
+  switch (getType()->getKind()) {
+    case Type::Kind::Set:
+      NOT_SUPPORTED_YET;
       break;
-    }
-    case ComponentType::FLOAT: {
-      double *fdata = (double*)data;
-      if (getType()->getSize() == 1) {
-        os << fdata[0];
-      }
-      else {
-        os << "[" << to_string(fdata[0]);
-        for (int i=1; i < getType()->getSize(); ++i) {
-          os << ", " + to_string(fdata[i]);
+    case Type::Kind::Tensor: {
+      TensorType *ttype = tensorTypePtr(getType());
+      assert(isValidComponentType(ttype->getComponentType()));
+      switch (ttype->getComponentType()) {
+        case ComponentType::INT: { {
+          int *idata = (int*)data;
+          if (ttype->getSize() == 1) {
+            os << idata[0];
+          }
+          else {
+            os << "[" << idata[0];
+            for (size_t i=0; i < ttype->getSize(); ++i) {
+              os << ", " << idata[i];
+            }
+            os << "]";
+          }
+          break;
         }
-        os << "]";
+        case ComponentType::FLOAT: {
+          double *fdata = (double*)data;
+          if (ttype->getSize() == 1) {
+            os << fdata[0];
+          }
+          else {
+            os << "[" << to_string(fdata[0]);
+            for (size_t i=1; i < ttype->getSize(); ++i) {
+              os << ", " + to_string(fdata[i]);
+            }
+            os << "]";
+          }
+          break;
+        }
+        }
       }
-      break;
     }
+      
+      os << " : " << *getType();
   }
-
-  os << " : " << *getType();
 }
 
 bool operator==(const Literal& l, const Literal& r) {
   if (*l.getType() != *r.getType()) {
     return false;
   }
-  assert(l.getType()->getSize() == r.getType()->getSize());
-  simit::ComponentType ctype = l.getType()->getComponentType();
-  int byteSize = l.getType()->getSize() * simit::componentSize(ctype);
 
-  if (memcmp(l.getData(), r.getData(), byteSize) != 0) {
+  assert(l.getType()->getByteSize() == r.getType()->getByteSize());
+  if (memcmp(l.getData(), r.getData(), l.getType()->getByteSize()) != 0) {
     return false;
   }
   return true;
@@ -147,11 +148,14 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 
 // class IndexedTensor
 typedef std::vector<std::shared_ptr<IndexVar>> IndexVariables;
-IndexedTensor::IndexedTensor(const std::shared_ptr<TensorNode> &tensor,
+IndexedTensor::IndexedTensor(const std::shared_ptr<Expression> &tensor,
                              const IndexVariables &indexVars){
-  assert(indexVars.size() == tensor->getType()->getOrder());
+  assert(tensor->getType()->getKind() == Type::Kind::Tensor &&
+         "Only tensors can be indexed.");
+  TensorType *ttype = tensorTypePtr(tensor->getType());
+  assert(indexVars.size() == ttype->getOrder());
   for (size_t i=0; i < indexVars.size(); ++i) {
-    assert(indexVars[i]->getIndexSet() == tensor->getType()->getDimensions()[i]
+    assert(indexVars[i]->getIndexSet() == ttype->getDimensions()[i]
            && "IndexVar domain does not match tensordimension");
   }
 
@@ -182,7 +186,7 @@ int IndexExpr::numOperands(Operator op) {
 
 IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
                      Operator op, const std::vector<IndexedTensor> &operands)
-    : TensorNode(NULL), indexVars(indexVars), op(op), operands(operands) {
+    : Expression(NULL), indexVars(indexVars), op(op), operands(operands) {
   initType();
 
   // Can't have reduction variables on rhs
@@ -192,9 +196,15 @@ IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
 
   // Operand typechecks
   assert(operands.size() == (size_t)IndexExpr::numOperands(op));
-  ComponentType first = operands[0].getTensor()->getType()->getComponentType();
+  assert(operands[0].getTensor()->getType()->getKind() == Type::Kind::Tensor &&
+         "Only tensors can be indexed.");
+  TensorType *firstType = tensorTypePtr(operands[0].getTensor()->getType());
+  ComponentType first = firstType->getComponentType();
   for (auto &operand : operands) {
-    assert(first == operand.getTensor()->getType()->getComponentType() &&
+    assert(operand.getTensor()->getType()->getKind() == Type::Kind::Tensor &&
+           "Only tensors can be indexed.");
+  TensorType *ttype = tensorTypePtr(operand.getTensor()->getType());
+    assert(first == ttype->getComponentType() &&
            "Operand component types differ");
   }
 }
@@ -216,8 +226,10 @@ void IndexExpr::setOperator(IndexExpr::Operator op) {
 
 void IndexExpr::setOperands(const std::vector<IndexedTensor> &operands) {
   assert(operands.size() > 0);
-  bool reinit = (operands[0].getTensor()->getType()->getComponentType() !=
-                 this->operands[0].getTensor()->getType()->getComponentType());
+  TensorType *newType = tensorTypePtr(operands[0].getTensor()->getType());
+  TensorType *oldType = tensorTypePtr(this->operands[0].getTensor()->getType());
+
+  bool reinit = (newType->getComponentType() != oldType->getComponentType());
   this->operands = operands;
   if (reinit) {
     initType();
@@ -297,7 +309,8 @@ void IndexExpr::print(std::ostream &os) const {
 
 void IndexExpr::initType() {
   assert(operands.size() > 0);
-  ComponentType ctype = operands[0].getTensor()->getType()->getComponentType();
+  TensorType *ttype = tensorTypePtr(operands[0].getTensor()->getType());
+  ComponentType ctype = ttype->getComponentType();
   std::vector<IndexSetProduct> dimensions;
   for (auto &iv : indexVars) {
     dimensions.push_back(iv->getIndexSet());
@@ -359,7 +372,7 @@ void Argument::print(std::ostream &os) const {
 
 // class Test
 void Test::print(std::ostream &os) const {
-  std::vector<std::shared_ptr<TensorNode>> args;
+  std::vector<std::shared_ptr<Expression>> args;
   args.insert(args.end(), arguments.begin(), arguments.end());
   Call call(callee, args);
   os << call << " == " << util::join(expected, ", ");

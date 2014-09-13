@@ -6,7 +6,6 @@
 %define parser_class_name { Parser }
 %define parse.error verbose
 %locations
-%no-lines
 
 %code requires {
   namespace simit {
@@ -95,15 +94,33 @@
     return result;
   }
 
-  bool compare(const TensorType &l, const TensorType &r, ProgramContext *ctx) {
-    if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
+  bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
+    if (l.getKind() != r.getKind()) {
       return false;
     }
+
+    if (l.isTensor()) {
+      if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
+        return false;
+      }
+    }
+
     if (l != r) {
       return false;
     }
     return true;
   }
+
+  #define CHECK_IS_TENSOR(expr, loc)                    \
+    do {                                                \
+      if (!expr->getType()->isTensor()) {               \
+        std::stringstream errorStr;                     \
+        errorStr << "expected tensor";                  \
+        REPORT_ERROR(errorStr.str(), loc);              \
+      }                                                 \
+    } while (0)
+
+
 
   #define CHECK_TYPE_EQUALITY(t1, t2, loc)              \
     do {                                                \
@@ -113,10 +130,12 @@
     } while (0)
 
 
-  #define BINARY_ELWISE_TYPE_CHECK(t1, t2, loc)         \
+  #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)         \
     do {                                                \
-      if ((t1).getOrder() > 0 && (t2).getOrder() > 0) { \
-        CHECK_TYPE_EQUALITY(t1, t2, loc);               \
+      TensorType *ltt = tensorTypePtr(lt);              \
+      TensorType *rtt = tensorTypePtr(rt);              \
+      if (ltt->getOrder() > 0 && rtt->getOrder() > 0) { \
+        CHECK_TYPE_EQUALITY(*ltt, *rtt, loc);           \
       }                                                 \
     }                                                   \
     while (0)
@@ -338,11 +357,11 @@ function_header
 
     ctx->scope();
     for (auto argument : *arguments) {
-      ctx->addTensorSymbol(argument->getName(), argument);
+      ctx->addSymbol(argument->getName(), argument);
     }
 
     for (auto result : *results) {
-      ctx->addTensorSymbol(result->getName(), result);
+      ctx->addSymbol(result->getName(), result);
     }
   }
 
@@ -441,20 +460,22 @@ const_stmt
     auto literal = shared_ptr<Literal>(*$tensor_literal);
     delete $tensor_literal;
 
+    assert(literal->getType()->isTensor() && "Set literals not supported yet");
+    auto literalType = literal->getType();
+
     literal->setName(ident);
 
-    // If $type is a 1xn matrix and $tensor_literal is a vector then we cast
-    // $tensor_literal to a 1xn matrix.
-    if (tensorType->getOrder() == 2 && literal->getType()->getOrder() == 1) {
+    // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
+    // cast $tensor_literal to a 1xn matrix.
+    TensorType *literalTensorType = tensorTypePtr(literalType);
+    if (tensorType->getOrder() == 2 && literalTensorType->getOrder() == 1) {
       literal->cast(tensorType);
     }
 
     // Typecheck: value and literal types must be equivalent.
-    //            Note that the use of $tensor_type is deliberate as tensorType
-    //            can have been released.
     CHECK_TYPE_EQUALITY(*tensorType, *literal->getType(), @2);
 
-    ctx->addTensorSymbol(literal->getName(), literal);
+    ctx->addSymbol(literal->getName(), literal);
 
     $$ = new vector<shared_ptr<IRNode>>();
     $$->push_back(literal);
@@ -470,7 +491,7 @@ return_stmt
 assign_stmt
   : lhs_expr_list "=" expr_list ";" {
     auto lhsList = unique_ptr<VariableAccessVector>($lhs_expr_list);
-    auto rhsList = unique_ptr<vector<shared_ptr<TensorNode>>>($expr_list);
+    auto rhsList = unique_ptr<vector<shared_ptr<Expression>>>($expr_list);
 
     $$ = new vector<shared_ptr<IRNode>>();
 
@@ -487,7 +508,7 @@ assign_stmt
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
       VariableAccess *lhs = *lhsIter;
-      std::shared_ptr<TensorNode> &rhs = *rhsIter;
+      std::shared_ptr<Expression> &rhs = *rhsIter;
 
       // TODO: Remove these checks
       if (rhs == NULL) continue;
@@ -495,7 +516,7 @@ assign_stmt
 
       assert(ctx->hasSymbol(lhs->name));
       shared_ptr<IRNode> lhsTensor = ctx->getSymbol(lhs->name);
-      assert(dynamic_pointer_cast<TensorNode>(lhsTensor) != NULL);
+      assert(dynamic_pointer_cast<Expression>(lhsTensor) != NULL);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
         CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
         rhs->setName(result->getName());
@@ -541,11 +562,11 @@ elif_clauses
 
 // Expressions
 %union {
-  std::shared_ptr<simit::internal::TensorNode>              *Tensor;
-  std::vector<std::shared_ptr<simit::internal::TensorNode>> *TensorList;
+  std::shared_ptr<simit::internal::Expression>              *expression;
+  std::vector<std::shared_ptr<simit::internal::Expression>> *expressions;
 };
 
-%type <Tensor> expr;
+%type <expression> expr;
 expr
   : IDENT {
     string ident = convertAndFree($IDENT);
@@ -557,12 +578,12 @@ expr
     }
     const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
 
-    shared_ptr<TensorNode> tensor = dynamic_pointer_cast<TensorNode>(node);
+    shared_ptr<Expression> tensor = dynamic_pointer_cast<Expression>(node);
     if (tensor == NULL) {
       REPORT_ERROR(ident + " is not a tensor", @1);
     }
 
-    $$ = new shared_ptr<TensorNode>(tensor);
+    $$ = new shared_ptr<Expression>(tensor);
   }
   | literal
   | STRING_LITERAL {
@@ -573,70 +594,48 @@ expr
       $$ = NULL;
       break;
     }
-    std::shared_ptr<TensorNode> expr = convertAndDelete($2);
-    $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NEG, expr));
+
+    std::shared_ptr<Expression> expr = convertAndDelete($2);
+    CHECK_IS_TENSOR(expr, @2);
+
+    $$ = new shared_ptr<Expression>(unaryElwiseExpr(IndexExpr::NEG, expr));
   }
-  | expr "+" expr {
+  // + - .* ./
+  | expr elwise_binary_op expr {
     if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
       $$ = NULL;
       break;
     }
-    std::shared_ptr<TensorNode> l = convertAndDelete($1);
-    std::shared_ptr<TensorNode> r = convertAndDelete($3);
+    std::shared_ptr<Expression> l = convertAndDelete($1);
+    std::shared_ptr<Expression> r = convertAndDelete($3);
 
-    BINARY_ELWISE_TYPE_CHECK(*l->getType(), *r->getType(), @2);
-    $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::ADD, r));
+    CHECK_IS_TENSOR(l, @1);
+    CHECK_IS_TENSOR(r, @3);
+
+    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), @2);
+    $$ = new shared_ptr<Expression>(binaryElwiseExpr(l, $2, r));
   }
-  | expr "-" expr {
-    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
-      $$ = NULL;
-      break;
-    }
-
-    std::shared_ptr<TensorNode> l = convertAndDelete($1);
-    std::shared_ptr<TensorNode> r = convertAndDelete($3);
-
-    BINARY_ELWISE_TYPE_CHECK(*l->getType(), *r->getType(), @2);
-    $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::SUB, r));
-  }
-  | expr ".*" expr {
-    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
-      $$ = NULL;
-      break;
-    }
-    std::shared_ptr<TensorNode> l = convertAndDelete($1);
-    std::shared_ptr<TensorNode> r = convertAndDelete($3);
-
-    BINARY_ELWISE_TYPE_CHECK(*l->getType(), *r->getType(), @2);
-    $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
-  }
-  | expr "./" expr {
-    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
-      $$ = NULL;
-      break;
-    }
-    std::shared_ptr<TensorNode> l = convertAndDelete($1);
-    std::shared_ptr<TensorNode> r = convertAndDelete($3);
-
-    BINARY_ELWISE_TYPE_CHECK(*l->getType(), *r->getType(), @2);
-    $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::DIV, r));
-  }
-
   | expr "*" expr {
     if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
       $$ = NULL;
       break;
     }
 
-    std::shared_ptr<TensorNode> l = convertAndDelete($1);
-    std::shared_ptr<TensorNode> r = convertAndDelete($3);
+    std::shared_ptr<Expression> l = convertAndDelete($1);
+    std::shared_ptr<Expression> r = convertAndDelete($3);
+
+    CHECK_IS_TENSOR(l, @1);
+    CHECK_IS_TENSOR(r, @3);
+
+    TensorType *ltype = tensorTypePtr(l->getType());
+    TensorType *rtype = tensorTypePtr(r->getType());
 
     // Scale
-    if (l->getType()->getOrder()==0 || r->getType()->getOrder()==0) {
-      $$ = new shared_ptr<TensorNode>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+    if (ltype->getOrder()==0 || rtype->getOrder()==0) {
+      $$ = new shared_ptr<Expression>(binaryElwiseExpr(l, IndexExpr::MUL, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
-    else if (l->getType()->getOrder() == 1 && r->getType()->getOrder() == 1) {
+    else if (ltype->getOrder() == 1 && rtype->getOrder() == 1) {
       // Inner product
       if (!ctx->isColumnVector(*l->getType())) {
         if (!ctx->isColumnVector(*r->getType())) {
@@ -645,7 +644,7 @@ expr
         if (*l->getType() != *r->getType()) {
           REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
         }
-        $$ = new shared_ptr<TensorNode>(innerProduct(l, r));
+        $$ = new shared_ptr<Expression>(innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
@@ -655,29 +654,29 @@ expr
         if (*l->getType() != *r->getType()) {
           REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
         }
-        $$ = new shared_ptr<TensorNode>(outerProduct(l, r));
+        $$ = new shared_ptr<Expression>(outerProduct(l, r));
       }
     }
     // Matrix-Vector
-    else if (l->getType()->getOrder() == 2 && r->getType()->getOrder() == 1) {
-      if (l->getType()->getDimensions()[1] != r->getType()->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
+    else if (ltype->getOrder() == 2 && rtype->getOrder() == 1) {
+      if (ltype->getDimensions()[1] != rtype->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(*l->getType(), *rtype, @2);
       }
-      $$ = new shared_ptr<TensorNode>(gemv(l, r));
+      $$ = new shared_ptr<Expression>(gemv(l, r));
     }
     // Vector-Matrix
-    else if (l->getType()->getOrder() == 1 && r->getType()->getOrder() == 2) {
-      if (l->getType()->getDimensions()[0] != r->getType()->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
+    else if (ltype->getOrder() == 1 && rtype->getOrder() == 2) {
+      if (ltype->getDimensions()[0] != rtype->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(*ltype, *rtype, @2);
       }
-      $$ = new shared_ptr<TensorNode>(gevm(l,r));
+      $$ = new shared_ptr<Expression>(gevm(l,r));
     }
     // Matrix-Matrix
-    else if (l->getType()->getOrder() == 2 && r->getType()->getOrder() == 2) {
-      if (l->getType()->getDimensions()[1] != r->getType()->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
+    else if (ltype->getOrder() == 2 && rtype->getOrder() == 2) {
+      if (ltype->getDimensions()[1] != rtype->getDimensions()[0]){
+        REPORT_TYPE_MISSMATCH(*ltype, *rtype, @2);
       }
-      $$ = new shared_ptr<TensorNode>(gemm(l,r));
+      $$ = new shared_ptr<Expression>(gemm(l,r));
     }
     else {
       REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
@@ -700,23 +699,27 @@ expr
       break;
     }
 
-    auto expr = shared_ptr<TensorNode>(*$1);
+    auto expr = shared_ptr<Expression>(*$1);
     delete $1;
 
-    switch (expr->getType()->getOrder()) {
+    CHECK_IS_TENSOR(expr, @1);
+
+    TensorType *type = tensorTypePtr(expr->getType());
+
+    switch (type->getOrder()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        $$ = new shared_ptr<Expression>(unaryElwiseExpr(IndexExpr::NONE, expr));
         break;
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new shared_ptr<TensorNode>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        $$ = new shared_ptr<Expression>(unaryElwiseExpr(IndexExpr::NONE, expr));
         if (!ctx->isColumnVector(*expr->getType())) {
           ctx->toggleColumnVector(*(*$$)->getType());
         }
         break;
       case 2:
-        $$ = new shared_ptr<TensorNode>(transposeMatrix(expr));
+        $$ = new shared_ptr<Expression>(transposeMatrix(expr));
         break;
       default:
         REPORT_ERROR("cannot transpose >2-order tensors using '", @1);
@@ -780,6 +783,26 @@ expr
   }
 
 %union {
+  IndexExpr::Operator binop;
+};
+%destructor {} <binop>;
+
+%type <binop> elwise_binary_op;
+elwise_binary_op
+  : "+" {
+    $$ = IndexExpr::ADD;
+  }
+  | "-" {
+    $$ = IndexExpr::SUB;
+  }
+  | ".*" {
+    $$ = IndexExpr::MUL;
+  }
+  | "./" {
+    $$ = IndexExpr::DIV;
+  }
+
+%union {
   std::shared_ptr<Call> *call;
 };
 %type<call> call_expr;
@@ -791,19 +814,19 @@ call_expr
     $$ = new std::shared_ptr<Call>(call);
   }
 
-%type <TensorList> actual_list;
+%type <expressions> actual_list;
 actual_list
   : /* empty */ {
-    $$ = new vector<shared_ptr<TensorNode>>();
+    $$ = new vector<shared_ptr<Expression>>();
   }
   | expr_list {
     $$ = $expr_list;
   }
 
-%type <TensorList> expr_list;
+%type <expressions> expr_list;
 expr_list
   : expr {
-    $$ = new std::vector<std::shared_ptr<TensorNode>>();
+    $$ = new std::vector<std::shared_ptr<Expression>>();
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
