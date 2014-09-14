@@ -108,9 +108,8 @@ int main(int argc, const char* argv[]) {
 
   status = frontend.parseString(source, &ctx, &errors);
   if (status != 0) {
-    cerr << "Error parsing the program" << endl;
     for (auto &error : errors) {
-      cout << error << endl;
+      cerr << error << endl;
     }
     return 1;
   }

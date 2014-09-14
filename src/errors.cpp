@@ -19,9 +19,9 @@ std::string Error::toString() const {
   string lineStr   = (firstLine == lastLine)
                      ? to_string(firstLine)
                      : to_string(firstLine) + "-" + to_string(lastLine);
-  string columnStr = (firstColumn == lastColumn)
+  string columnStr = (firstColumn == lastColumn-1)
                      ? to_string(firstColumn)
-                     : to_string(firstColumn) + "-" + to_string(lastColumn);
+                     : to_string(firstColumn) + "-" + to_string(lastColumn-1);
   return "Error: " + msg + ", at " + lineStr + ":" + columnStr;
 }
 
