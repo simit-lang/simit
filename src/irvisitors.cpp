@@ -45,11 +45,6 @@ void IRVisitor::visit(Call *t) {
   CHECK_ABORT(handle(t));
 }
 
-void IRVisitor::visit(VariableStore *t) {
-  CHECK_ABORT(t->getValue()->accept(this));
-  CHECK_ABORT(handle(t));
-}
-
 void IRVisitor::handle(Function *f) {
   handleDefault(f);
 }
@@ -71,9 +66,5 @@ void IRVisitor::handle(IndexExpr *t) {
 }
 
 void IRVisitor::handle(Call *t) {
-  handleDefault(t);
-}
-
-void IRVisitor::handle(VariableStore *t) {
   handleDefault(t);
 }

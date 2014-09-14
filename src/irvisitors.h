@@ -14,7 +14,6 @@ class Result;
 class Literal;
 class IndexExpr;
 class Call;
-class VariableStore;
 
 /// Visitor where the iteration order is specified in the visitor instead of
 /// the accept methods.  This design is chosen to allow different visitors to
@@ -35,7 +34,7 @@ public:
   virtual void visit(Literal       *t);
   virtual void visit(IndexExpr     *t);
   virtual void visit(Call          *t);
-  virtual void visit(VariableStore *t);
+  
 
   virtual void handle(Function      *f);
   virtual void handle(Argument      *t);
@@ -43,7 +42,6 @@ public:
   virtual void handle(Literal       *t);
   virtual void handle(IndexExpr     *t);
   virtual void handle(Call          *t);
-  virtual void handle(VariableStore *t);
 
   virtual void handleDefault(IRNode *t) { UNUSED(t); }
 

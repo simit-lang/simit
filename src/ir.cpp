@@ -319,12 +319,6 @@ void Call::print(std::ostream &os) const {
 }
 
 
-// class VariableStore
-void VariableStore::print(std::ostream &os) const {
-  os << getName() << " = " << value->getName();
-}
-
-
 // class Function
 void Function::addStatements(const std::vector<std::shared_ptr<IRNode>> &stmts){
   body.insert(body.end(), stmts.begin(), stmts.end());

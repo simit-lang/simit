@@ -200,32 +200,41 @@ private:
 };
 
 
-/// Instruction that stores a value to a tensor or an object.
-class Store : public Expression {
-public:
-  Store(const std::string &name, const std::shared_ptr<Type> &type)
-      : Expression(name, type) {}
+/// Abstract class for expressions that read values from tensors and sets.
+class Read : public Expression {
+
+};
+
+
+/// An expression that reads a tensor from a set field.
+class FieldRead : public Read {
+
+};
+
+
+/// An expression that reads a tensor from a tensor location.
+class TensorRead : public Read {
+
 };
 
 
 /// Instruction that stores a value to a tensor or an object.
-class VariableStore : public Store {
+class Write : public Expression {
 public:
-  VariableStore(const std::shared_ptr<Expression> &target,
-                const std::shared_ptr<Expression> &value)
-      : Store(target->getName(), target->getType()),
-        target{target}, value{value} {}
+  Write(const std::string &name, const std::shared_ptr<Type> &type)
+      : Expression(name, type) {}
+};
 
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  std::shared_ptr<Expression> getTarget() const { return target; }
-  std::shared_ptr<Expression> getValue() const { return value; }
+/// An instruction that writes a tensor to a set field.
+class FieldWrite : public Write {
 
-private:
-  std::shared_ptr<Expression> target;
-  std::shared_ptr<Expression> value;
+};
 
-  void print(std::ostream &os) const;
+
+/// An instruction that writes a tensor to a tensor location.
+class TensorWrite : public Write {
+
 };
 
 
