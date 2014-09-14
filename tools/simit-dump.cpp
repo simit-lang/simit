@@ -18,7 +18,7 @@ void printUsage() {
 }
 
 int main(int argc, const char* argv[]) {
-  if (argc < 3) {
+  if (argc < 2) {
     printUsage();
     return 3;
   }
