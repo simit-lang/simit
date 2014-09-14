@@ -393,7 +393,8 @@ simit::Function *LLVMBackend::compile(Function *function) {
   llvm::Function *f = codegen(function, temps);
   if (f == NULL) return NULL;
 
-  return new LLVMFunction(function,f, executionEngine, talloc.getTemporaries());
+  return new LLVMFunction(*function, f, executionEngine,
+                          talloc.getTemporaries());
 }
 
 llvm::Function *LLVMBackend::codegen(Function *function,

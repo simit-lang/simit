@@ -303,8 +303,14 @@ public:
       : callee(callee), arguments(arguments), expected(expected) {}
 
   std::string getCallee() { return callee; }
-  std::vector<std::shared_ptr<Literal>> getArguments() { return arguments; }
-  std::vector<std::shared_ptr<Literal>> getExpectedResults() { return expected;}
+
+  const std::vector<std::shared_ptr<Literal>> &getActuals() {
+    return arguments;
+  }
+
+  const std::vector<std::shared_ptr<Literal>> &getExpectedResults() {
+    return expected;
+  }
 
   void print(std::ostream &os) const;
 

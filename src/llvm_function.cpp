@@ -15,12 +15,12 @@ using namespace std;
 namespace simit {
 namespace internal {
 
-LLVMFunction::LLVMFunction(simit::internal::Function *simitFunc,
+LLVMFunction::LLVMFunction(const simit::internal::Function &simitFunc,
                            llvm::Function *llvmFunc,
                            const shared_ptr<llvm::ExecutionEngine> &llvmFuncEE,
                            const std::vector<std::shared_ptr<Storage>> &storage)
-    : simitFunc(simitFunc), llvmFunc(llvmFunc), llvmFuncEE(llvmFuncEE),
-  storage(storage), module("Harness", LLVM_CONTEXT) {
+    : Function(simitFunc), llvmFunc(llvmFunc),
+      llvmFuncEE(llvmFuncEE), storage(storage), module("Harness", LLVM_CONTEXT) {
   llvmFuncEE->addModule(&module);
 }
 
@@ -28,23 +28,18 @@ LLVMFunction::~LLVMFunction() {
   llvmFuncEE->removeModule(&module);
 }
 
-void LLVMFunction::bind(const std::vector<std::shared_ptr<Literal>> &arguments,
-                        const std::vector<std::shared_ptr<Literal>> &results) {
-  // Typecheck:
-  auto &formalArguments = simitFunc->getArguments();
-  assert(arguments.size() == formalArguments.size());
-  for (size_t i=0; i<arguments.size(); ++i) {
-    assert(*arguments[i]->getType() == *formalArguments[i]->getType());
-  }
-  auto &formalResults  = simitFunc->getResults();
-  assert(results.size() == formalResults.size());
-  for (size_t i=0; i<results.size(); ++i) {
-    assert(*results[i]->getType() == *formalResults[i]->getType());
-  }
+void LLVMFunction::print(std::ostream &os) const {
+  std::string fstr;
+  llvm::raw_string_ostream rsos(fstr);
+  llvmFunc->print(rsos);
+  os << fstr;
+}
 
+simit::Function::FuncPtrType
+LLVMFunction::init(std::map<std::string, Actual> &actuals) {
   void *fptr = llvmFuncEE->getPointerToFunction(llvmFunc);
-  if (arguments.size() == 0 and results.size() == 0) {
-    setRunPtr((RunPtrType)fptr);
+  if (llvmFunc->getArgumentList().size() == 0) {
+    return (FuncPtrType)fptr;
   }
   else {
     std::string name = string(llvmFunc->getName()) + "_harness";
@@ -54,25 +49,26 @@ void LLVMFunction::bind(const std::vector<std::shared_ptr<Literal>> &arguments,
                                               &module);
     auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
     llvm::SmallVector<llvm::Value*, 8> args;
-    for (auto &argument : arguments) {
-      args.push_back(toLLVMPtr(argument));
-    }
-    for (auto &result : results) {
-      args.push_back(toLLVMPtr(result));
+
+    for (const llvm::Argument &arg : llvmFunc->getArgumentList()) {
+      std::string argName(arg.getName());
+      assert(actuals.find(argName) != actuals.end());
+      auto &actual = actuals[argName];
+      switch (actual.getType()->getKind()) {
+        case Type::Tensor:
+          args.push_back(toLLVMPtr(actual.getTensor()));
+          break;
+        case Type::Set:
+          NOT_SUPPORTED_YET;
+          break;
+      }
     }
     llvm::CallInst *call = llvm::CallInst::Create(llvmFunc, args, "", entry);
     call->setCallingConv(llvmFunc->getCallingConv());
     call->setTailCall();
     llvm::ReturnInst::Create(llvmFunc->getContext(), entry);
-    setRunPtr((RunPtrType)llvmFuncEE->getPointerToFunction(harness));
+    return (FuncPtrType)llvmFuncEE->getPointerToFunction(harness);
   }
-}
-
-void LLVMFunction::print(std::ostream &os) const {
-  std::string fstr;
-  llvm::raw_string_ostream rsos(fstr);
-  llvmFunc->print(rsos);
-  os << fstr;
 }
 
 }} // unnamed namespace

@@ -30,8 +30,7 @@ llvm::Type *toLLVMType(const simit::ComponentType type);
 
 llvm::Type *toLLVMType(const std::shared_ptr<simit::internal::Type> &type);
 
-llvm::Constant *
-toLLVMPtr(const std::shared_ptr<simit::internal::Literal> &literal);
+llvm::Constant *toLLVMPtr(const Literal *literal);
 
 simit::ComponentType llvmToSimitType(const llvm::Type *type);
 

@@ -34,7 +34,7 @@ llvm::Type *toLLVMType(const std::shared_ptr<Type> &type){
   }
 }
 
-llvm::Constant *toLLVMPtr(const std::shared_ptr<Literal> &literal) {
+llvm::Constant *toLLVMPtr(const simit::internal::Literal *literal) {
   llvm::Constant *c = (sizeof(void*) == 4)
       ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT),
                                (int)(intptr_t)literal->getData())

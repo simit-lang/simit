@@ -32,25 +32,33 @@ int Backend::verify(ProgramContext &ctx, Diagnostics *diags) {
     simit::Function *compiledFunc = compiled[func];
 
     // run the function with test->call->arguments
-    auto arguments = test->getArguments();
-    assert(arguments.size() == func->getArguments().size());
+    assert(test->getActuals().size() == func->getArguments().size());
 
-    std::vector<std::shared_ptr<internal::Literal>> results;
-    for (auto &result : func->getResults()) {
-      internal::Literal *resultLit = new internal::Literal(result->getType());
-      resultLit->clear();
-      results.push_back(shared_ptr<internal::Literal>(resultLit));
+    auto &formalArguments = func->getArguments();
+    auto &actualArguments = test->getActuals();
+    for (size_t i=0; i < actualArguments.size(); ++i) {
+      compiledFunc->bind(formalArguments[i]->getName(),
+                         actualArguments[i].get());
     }
 
-    compiledFunc->bind(arguments, results);
+    auto &formalResults = func->getResults();
+    std::vector<std::shared_ptr<internal::Literal>> actualResults;
+    for (auto &formalResult : formalResults) {
+      auto actualResultPtr = new internal::Literal(formalResult->getType());
+      auto actualResult = std::shared_ptr<internal::Literal>(actualResultPtr);
+      actualResult->clear();
+      actualResults.push_back(actualResult);
+      compiledFunc->bind(formalResult->getName(), actualResult.get());
+    }
+
     compiledFunc->run();
 
     // compare function result with test->literal
     auto expectedResults = test->getExpectedResults();
-    assert(expectedResults.size() == results.size());
-    auto rit = results.begin();
+    assert(expectedResults.size() == actualResults.size());
+    auto rit = actualResults.begin();
     auto eit = expectedResults.begin();
-    for (; rit != results.end(); ++rit, ++eit) {
+    for (; rit != actualResults.end(); ++rit, ++eit) {
       if (**rit != **eit) {
         // TODO: Report with line number of test
         diags->report() << "Test failure (" << toString(**rit) << " != "

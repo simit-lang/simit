@@ -3,34 +3,72 @@
 
 #include <cstdlib>
 #include <vector>
+#include <map>
+
+#include "interfaces.h"
 
 // TODO: Remove
 #include "ir.h"
 
 namespace simit {
+namespace internal {
+class Function;
+class Argument;
+class Literal;
+class Type;
+}
 
-class Function {
+// TODO: Replace with a simple tensor implementation
+//typedef std::shared_ptr<simit::internal::Literal> TensorPtr;
+typedef simit::internal::Literal Tensor;
+class SetBase;
+
+class Function : public simit::interfaces::Printable,
+                        simit::interfaces::Uncopyable {
 public:
-  Function() : runPtr(NULL) {}
-  virtual ~Function() {}
+  virtual ~Function();
 
-  // TODO: Change shared_ptr<simit::internal::Literal> to simit::Tensor*
-  virtual void bind(const std::vector<std::shared_ptr<internal::Literal>> &arguments,
-                    const std::vector<std::shared_ptr<internal::Literal>> &results) = 0;
+  void bind(const std::string &argName, Tensor *tensor);
+  void bind(const std::string &argName, SetBase *set);
 
-  inline void run() { runPtr(); }
-
-  virtual void print(std::ostream &os) const {};
+  inline void run() {
+    if (initRequired) {
+      funcPtr = init(actuals);
+      initRequired = false;
+    }
+    funcPtr();
+  }
 
 protected:
-  typedef void (*RunPtrType)();
-  inline void setRunPtr(RunPtrType runPtr) { this->runPtr = runPtr; }
+  typedef void (*FuncPtrType)();
+  class Actual {
+  public:
+    Actual(const std::shared_ptr<internal::Type> &type = NULL) : type(type) {
+      val.tensor = NULL;
+    }
+    void bind(Tensor *tensor) { val.tensor = tensor; }
+    void bind(SetBase *set) { val.set = set; }
+    bool isBound() const { return val.tensor != NULL; }
+    const internal::Type *getType() const { return type.get(); }
+    const Tensor *getTensor() { return val.tensor; }
+    const SetBase *getSet() { return val.set; }
+  private:
+    std::shared_ptr<internal::Type> type;
+    union {
+      SetBase *set;
+      Tensor  *tensor;
+    } val;
+  };
+  
+  Function(const simit::internal::Function &simitFunc);
 
 private:
-  RunPtrType runPtr;
-};
+  std::map<std::string, Actual> actuals;
 
-std::ostream &operator<<(std::ostream &os, const Function &f);
+  FuncPtrType funcPtr;
+  bool initRequired;
+  virtual FuncPtrType init(std::map<std::string, Actual> &actuals) = 0;
+};
 
 } // namespace simit
 #endif
