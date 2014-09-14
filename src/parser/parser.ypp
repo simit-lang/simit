@@ -579,10 +579,7 @@ expr
     $$ = NULL;
   }
   | "-" expr %prec NEG {
-    if ($2 == NULL) {  // TODO: Remove check
-      $$ = NULL;
-      break;
-    }
+    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> expr = convertAndDelete($2);
     CHECK_IS_TENSOR(expr, @2);
@@ -591,10 +588,8 @@ expr
   }
   // + - .* ./
   | expr elwise_binary_op expr {
-    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
-      $$ = NULL;
-      break;
-    }
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+
     std::shared_ptr<Expression> l = convertAndDelete($1);
     std::shared_ptr<Expression> r = convertAndDelete($3);
 
@@ -605,10 +600,7 @@ expr
     $$ = new shared_ptr<Expression>(binaryElwiseExpr(l, $2, r));
   }
   | expr "*" expr {
-    if ($1 == NULL || $3 == NULL) {  // TODO: Remove this check
-      $$ = NULL;
-      break;
-    }
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> l = convertAndDelete($1);
     std::shared_ptr<Expression> r = convertAndDelete($3);
@@ -673,20 +665,13 @@ expr
     }
   }
   | expr "/" expr {
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | expr "\\" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
   | expr "'" {
-    if ($1 == NULL) {  // TODO: Remove this check
-      $$ = NULL;
-      break;
-    }
+    if ($1 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
     auto expr = shared_ptr<Expression>(*$1);
     delete $1;
@@ -720,41 +705,54 @@ expr
     delete $1;
     delete $3;
   }
+  | expr "\\" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    $$ = NULL;
+    delete $1;
+    delete $3;
+  }
   | expr "==" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
   | expr "!=" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
   | expr "<"  expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
   | expr ">"  expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
   | expr "<=" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
   | expr ">=" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
   | "(" expr ")" {
-    $$ = NULL;
-    delete $2;
+    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    $$ = $2;
   }
   | expr ":" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
@@ -943,7 +941,9 @@ set_type
     $$ = new SetType(std::shared_ptr<ElementType>(*$element_type));
     delete $element_type;
   }
-  | element_type "[" endpoints "]" "{" "}"
+  | element_type "[" endpoints "]" "{" "}" {
+    $$ = NULL;
+  }
 
 element_type
   : IDENT {

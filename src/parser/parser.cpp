@@ -1457,10 +1457,7 @@ namespace  simit { namespace internal  {
   case 48:
 
     {
-    if ((yystack_[0].value.expression) == NULL) {  // TODO: Remove check
-      (yylhs.value.expression) = NULL;
-      break;
-    }
+    if ((yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> expr = convertAndDelete((yystack_[0].value.expression));
     CHECK_IS_TENSOR(expr, yystack_[0].location);
@@ -1473,10 +1470,8 @@ namespace  simit { namespace internal  {
   case 49:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) {  // TODO: Remove this check
-      (yylhs.value.expression) = NULL;
-      break;
-    }
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+
     std::shared_ptr<Expression> l = convertAndDelete((yystack_[2].value.expression));
     std::shared_ptr<Expression> r = convertAndDelete((yystack_[0].value.expression));
 
@@ -1492,10 +1487,7 @@ namespace  simit { namespace internal  {
   case 50:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) {  // TODO: Remove this check
-      (yylhs.value.expression) = NULL;
-      break;
-    }
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> l = convertAndDelete((yystack_[2].value.expression));
     std::shared_ptr<Expression> r = convertAndDelete((yystack_[0].value.expression));
@@ -1565,6 +1557,7 @@ namespace  simit { namespace internal  {
   case 51:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1575,20 +1568,7 @@ namespace  simit { namespace internal  {
   case 52:
 
     {
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
-  }
-
-    break;
-
-  case 53:
-
-    {
-    if ((yystack_[1].value.expression) == NULL) {  // TODO: Remove this check
-      (yylhs.value.expression) = NULL;
-      break;
-    }
+    if ((yystack_[1].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
 
     auto expr = shared_ptr<Expression>(*(yystack_[1].value.expression));
     delete (yystack_[1].value.expression);
@@ -1620,9 +1600,20 @@ namespace  simit { namespace internal  {
 
     break;
 
+  case 53:
+
+    {
+    (yylhs.value.expression) = NULL;
+    delete (yystack_[2].value.expression);
+    delete (yystack_[0].value.expression);
+  }
+
+    break;
+
   case 54:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1633,6 +1624,7 @@ namespace  simit { namespace internal  {
   case 55:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1643,6 +1635,7 @@ namespace  simit { namespace internal  {
   case 56:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1653,6 +1646,7 @@ namespace  simit { namespace internal  {
   case 57:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1663,6 +1657,7 @@ namespace  simit { namespace internal  {
   case 58:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1673,6 +1668,7 @@ namespace  simit { namespace internal  {
   case 59:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1683,6 +1679,7 @@ namespace  simit { namespace internal  {
   case 60:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1693,8 +1690,8 @@ namespace  simit { namespace internal  {
   case 61:
 
     {
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[1].value.expression);
+    if ((yystack_[1].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expression) = (yystack_[1].value.expression);
   }
 
     break;
@@ -1702,6 +1699,7 @@ namespace  simit { namespace internal  {
   case 62:
 
     {
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
     (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
@@ -1916,6 +1914,14 @@ namespace  simit { namespace internal  {
     {
     (yylhs.value.setType) = new SetType(std::shared_ptr<ElementType>(*(yystack_[2].value.elementType)));
     delete (yystack_[2].value.elementType);
+  }
+
+    break;
+
+  case 91:
+
+    {
+    (yylhs.value.setType) = NULL;
   }
 
     break;
@@ -2611,12 +2617,12 @@ namespace  simit { namespace internal  {
       45,    28,    36,     0,     0,     0,   125,   117,     0,     0,
      112,   111,   115,     0,   120,   119,   123,    48,     0,     0,
        0,     0,     0,    38,    66,    67,     0,     0,    68,    69,
-       0,    53,     0,     0,     0,     0,     0,     0,     0,     0,
+       0,    52,     0,     0,     0,     0,     0,     0,     0,     0,
      107,    73,     0,     0,    85,     0,     0,    92,   103,   104,
       96,     0,    87,    88,    89,    93,     0,     0,    23,     0,
       71,    43,     0,    61,     0,     0,   109,     0,     0,     0,
      110,     0,     0,     0,    19,    29,    57,    58,    63,    62,
-      50,    51,    54,    52,    55,    56,    59,    60,    49,    84,
+      50,    51,    53,    54,    55,    56,    59,    60,    49,    84,
       83,     0,    70,    86,     0,     0,    14,    16,     0,     0,
       10,     0,     0,    18,     0,    21,     0,    25,     0,    20,
       76,    72,     0,     0,     0,   113,   121,     0,   116,   118,
@@ -2784,7 +2790,7 @@ namespace  simit { namespace internal  {
        4,     2,     3,     0,     4,     1,     3,     3,     0,     2,
        1,     1,     1,     1,     1,     7,     2,     4,     2,     1,
        5,     0,     3,     0,     4,     1,     1,     1,     2,     3,
-       3,     3,     3,     2,     3,     3,     3,     3,     3,     3,
+       3,     3,     2,     3,     3,     3,     3,     3,     3,     3,
        3,     3,     3,     3,     1,     1,     1,     1,     1,     1,
        4,     0,     1,     1,     3,     6,     0,     2,     0,     2,
        1,     1,     1,     3,     1,     3,     4,     1,     1,     1,
@@ -2835,12 +2841,12 @@ namespace  simit { namespace internal  {
      269,   273,   279,   282,   296,   310,   313,   320,   332,   339,
      348,   386,   389,   400,   404,   415,   419,   425,   433,   436,
      445,   446,   447,   448,   449,   453,   483,   489,   530,   533,
-     539,   545,   547,   551,   553,   567,   577,   578,   581,   593,
-     607,   675,   680,   685,   718,   723,   728,   733,   738,   743,
-     748,   753,   757,   762,   767,   770,   781,   784,   787,   790,
-     799,   808,   811,   817,   823,   832,   839,   841,   845,   847,
-     850,   851,   873,   878,   886,   892,   897,   930,   933,   937,
-     942,   946,   949,   955,   958,   962,   969,   972,  1010,  1015,
+     539,   545,   547,   551,   553,   567,   577,   578,   581,   590,
+     602,   667,   673,   703,   708,   714,   720,   726,   732,   738,
+     744,   750,   754,   760,   765,   768,   779,   782,   785,   788,
+     797,   806,   809,   815,   821,   830,   837,   839,   843,   845,
+     848,   849,   871,   876,   884,   890,   895,   928,   931,   935,
+     940,   944,   949,   955,   958,   962,   969,   972,  1010,  1015,
     1022,  1025,  1029,  1034,  1037,  1106,  1109,  1110,  1114,  1117,
     1126,  1137,  1144,  1147,  1151,  1164,  1168,  1182,  1186,  1192,
     1199,  1202,  1206,  1219,  1223,  1237,  1241,  1247,  1252,  1262
