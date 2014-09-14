@@ -1046,21 +1046,6 @@ namespace  simit { namespace internal  {
         {
           switch (yyn)
             {
-  case 4:
-
-    {
-    (yylhs.value.IRNode) = NULL;
-    std::unique_ptr<ElementType> elementType((yystack_[0].value.elementType));
-
-    std::string name = elementType->getName();
-    if (ctx->containsElementType(name)) {
-      REPORT_ERROR("struct redefinition (" + name + ")", yystack_[0].location);
-    }
-    ctx->addElementType(elementType.release());
-  }
-
-    break;
-
   case 5:
 
     {
@@ -1147,7 +1132,13 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[2].value.string));
     std::unique_ptr<std::vector<ElementField*>> fields((yystack_[1].value.fields));
-    (yylhs.value.elementType) = new ElementType(name, *fields);
+
+    if (ctx->containsElementType(name)) {
+      REPORT_ERROR("struct redefinition (" + name + ")", yylhs.location);
+    }
+
+    ElementType *elementType = new ElementType(name, *fields);
+    ctx->addElementType(std::shared_ptr<ElementType>(elementType));
   }
 
     break;
@@ -1916,7 +1907,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[0].value.string));
-    (yylhs.value.elementType) = ctx->getElementType(name);
+    (yylhs.value.elementType) = new std::shared_ptr<ElementType>(ctx->getElementType(name));
   }
 
     break;
@@ -2823,19 +2814,19 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   236,   236,   238,   242,   252,   255,   264,   267,   271,
-     278,   282,   288,   291,   305,   313,   316,   323,   335,   342,
-     351,   389,   392,   403,   407,   418,   422,   428,   436,   439,
-     448,   449,   450,   451,   452,   456,   486,   492,   533,   536,
-     542,   548,   550,   554,   556,   570,   580,   581,   584,   596,
-     610,   678,   683,   688,   721,   726,   731,   736,   741,   746,
-     751,   756,   760,   765,   770,   773,   784,   787,   790,   793,
-     802,   811,   814,   820,   826,   835,   842,   844,   848,   850,
-     853,   854,   876,   881,   889,   895,   900,   930,   933,   936,
-     941,   942,   945,   951,   954,   958,   965,   968,  1006,  1011,
-    1018,  1021,  1025,  1030,  1033,  1102,  1105,  1106,  1110,  1113,
-    1122,  1133,  1140,  1143,  1147,  1160,  1164,  1178,  1182,  1188,
-    1195,  1198,  1202,  1215,  1219,  1233,  1237,  1243,  1248,  1258
+       0,   236,   236,   238,   242,   243,   246,   255,   258,   262,
+     269,   273,   279,   282,   296,   310,   313,   320,   332,   339,
+     348,   386,   389,   400,   404,   415,   419,   425,   433,   436,
+     445,   446,   447,   448,   449,   453,   483,   489,   530,   533,
+     539,   545,   547,   551,   553,   567,   577,   578,   581,   593,
+     607,   675,   680,   685,   718,   723,   728,   733,   738,   743,
+     748,   753,   757,   762,   767,   770,   781,   784,   787,   790,
+     799,   808,   811,   817,   823,   832,   839,   841,   845,   847,
+     850,   851,   873,   878,   886,   892,   897,   927,   930,   933,
+     938,   939,   942,   948,   951,   955,   962,   965,  1003,  1008,
+    1015,  1018,  1022,  1027,  1030,  1099,  1102,  1103,  1107,  1110,
+    1119,  1130,  1137,  1140,  1144,  1157,  1161,  1175,  1179,  1185,
+    1192,  1195,  1199,  1212,  1216,  1230,  1234,  1240,  1245,  1255
   };
 
   // Print the state stack on the debug stream.

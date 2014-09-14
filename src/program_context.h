@@ -60,7 +60,7 @@ public:
     return funcVector;
   }
 
-  void addElementType(ElementType *elemType) {
+  void addElementType(std::shared_ptr<ElementType> elemType) {
     elementTypes[elemType->getName()] = elemType;
   }
 
@@ -68,7 +68,7 @@ public:
     return elementTypes.find(name) != elementTypes.end();
   }
 
-  ElementType *getElementType(std::string name) {
+  std::shared_ptr<ElementType> getElementType(std::string name) {
     return elementTypes[name];
   }
 
@@ -94,12 +94,12 @@ public:
   }
 
 private:
-  std::map<std::string, Function *>   functions;
-  std::map<std::string, ElementType*> elementTypes;
-  std::vector<Test*>                  tests;
+  std::map<std::string, Function *>                   functions;
+  std::map<std::string, std::shared_ptr<ElementType>> elementTypes;
+  std::vector<Test*>                                  tests;
 
   ScopedMap<std::string, std::shared_ptr<Expression>> symtable;
-  ScopedMap<const Type*, bool> columnVectors;
+  ScopedMap<const Type*, bool>                        columnVectors;
 };
 
 }} // namespace simit::internal

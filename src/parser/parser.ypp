@@ -239,16 +239,7 @@ program
 
 %type<IRNode> program_element;
 program_element
-  : element_type_decl {
-    $$ = NULL;
-    std::unique_ptr<ElementType> elementType($element_type_decl);
-
-    std::string name = elementType->getName();
-    if (ctx->containsElementType(name)) {
-      REPORT_ERROR("struct redefinition (" + name + ")", @element_type_decl);
-    }
-    ctx->addElementType(elementType.release());
-  }
+  : element_type_decl
   | procedure {
     $$ = NULL;
   }
@@ -295,9 +286,9 @@ endpoints
 
 // Element Definitions
 %union {
-  ElementType                *elementType;
-  std::vector<ElementField*> *fields;
-  ElementField               *field;
+  std::shared_ptr<ElementType> *elementType;
+  std::vector<ElementField*>   *fields;
+  ElementField                 *field;
 };
 
 %type <elementType> element_type_decl;
@@ -305,7 +296,13 @@ element_type_decl
   : "struct" IDENT field_decl_list "end" {
     std::string name = convertAndFree($IDENT);
     std::unique_ptr<std::vector<ElementField*>> fields($field_decl_list);
-    $$ = new ElementType(name, *fields);
+
+    if (ctx->containsElementType(name)) {
+      REPORT_ERROR("struct redefinition (" + name + ")", @element_type_decl);
+    }
+
+    ElementType *elementType = new ElementType(name, *fields);
+    ctx->addElementType(std::shared_ptr<ElementType>(elementType));
   }
 
 %type <fields> field_decl_list;
@@ -944,7 +941,7 @@ set_type
 element_type
   : IDENT {
     std::string name = convertAndFree($IDENT);
-    $$ = ctx->getElementType(name);
+    $$ = new std::shared_ptr<ElementType>(ctx->getElementType(name));
   }
 
 tensor_type

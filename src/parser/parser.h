@@ -213,9 +213,9 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
 
 
-  ElementType                *elementType;
-  std::vector<ElementField*> *fields;
-  ElementField               *field;
+  std::shared_ptr<ElementType> *elementType;
+  std::vector<ElementField*>   *fields;
+  ElementField                 *field;
 
 
   Function *function;
