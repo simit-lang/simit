@@ -9,7 +9,7 @@
 #include "errors.h"
 #include "util.h"
 #include "frontend.h"
-#include "llvm_codegen.h"
+#include "llvm_backend.h"
 
 using namespace simit;
 using namespace simit::util;

@@ -1,4 +1,4 @@
-#include "codegen.h"
+#include "backend.h"
 
 #include "errors.h"
 #include "function.h"
@@ -12,7 +12,7 @@ using namespace simit::util;
 namespace simit {
 namespace internal {
 
-int CodeGen::verify(ProgramContext &ctx, Diagnostics *diags) {
+int Backend::verify(ProgramContext &ctx, Diagnostics *diags) {
   // For each test look up the called function. Grab the actual arguments and
   // run the function with them as input.  Then compare the result to the
   // expected literal.

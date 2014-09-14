@@ -3,7 +3,7 @@
 #include "function.h"
 #include "frontend.h"
 #include "program_context.h"
-#include "llvm_codegen.h"
+#include "llvm_backend.h"
 #include "errors.h"
 #include "util.h"
 
@@ -118,7 +118,7 @@ int main(int argc, const char* argv[]) {
     return 1;
   }
 
-  simit::internal::LLVMCodeGen codegen;
+  simit::internal::LLVMBackend backend;
   for (simit::internal::Function *func : ctx.getFunctions()) {
     if (emitSimit) {
       cout << *func << endl;
@@ -128,7 +128,7 @@ int main(int argc, const char* argv[]) {
       if (emitSimit) {
         cout << endl;
       }
-      std::string fstr = simit::util::toString(*codegen.compile(func));
+      std::string fstr = simit::util::toString(*backend.compile(func));
       cout << simit::util::trim(fstr);
     }
     cout << endl << endl;

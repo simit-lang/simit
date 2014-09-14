@@ -4,7 +4,7 @@
 
 #include "ir.h"
 #include "frontend.h"
-#include "llvm_codegen.h"
+#include "llvm_backend.h"
 #include "function.h"
 #include "util.h"
 #include "errors.h"
@@ -18,7 +18,7 @@ namespace simit {
 class Program::ProgramContent {
  public:
   ProgramContent(const std::string &name)
-      : name(name), frontend(new internal::Frontend()), codegen(NULL) {}
+      : name(name), frontend(new internal::Frontend()), backend(NULL) {}
   ~ProgramContent() {
 //    for (auto &function : functions) {
 //      delete function.second;
@@ -27,7 +27,7 @@ class Program::ProgramContent {
 //      delete test;
 //    }
     delete frontend;
-    delete codegen;
+    delete backend;
   }
 
   const std::string &name;
@@ -41,16 +41,17 @@ class Program::ProgramContent {
   Diagnostics diagnostics;
 
   internal::Frontend *getFrontend() { return frontend; }
-  internal::CodeGen *getCodeGen() {
-    if (codegen == NULL) {
-      codegen = new internal::LLVMCodeGen();
+
+  internal::Backend *getBackend() {
+    if (backend == NULL) {
+      backend = new internal::LLVMBackend();
     }
-    return codegen;
+    return backend;
   }
 
  private:
   internal::Frontend *frontend;
-  internal::LLVMCodeGen *codegen;
+  internal::LLVMBackend *backend;
 };
 
 
@@ -94,12 +95,11 @@ std::unique_ptr<Function> Program::compile(const std::string &function) {
     return NULL;
   }
 
-  return std::unique_ptr<Function>(impl->getCodeGen()->compile(func));
+  return std::unique_ptr<Function>(impl->getBackend()->compile(func));
 }
 
 int Program::verify() {
-  internal::LLVMCodeGen codegen;
-  return codegen.verify(impl->ctx, &impl->diagnostics) != 0;
+  return impl->getBackend()->verify(impl->ctx, &impl->diagnostics) != 0;
 }
 
 bool Program::hasErrors() const {

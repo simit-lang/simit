@@ -16,10 +16,10 @@ class ProgramContext;
 
 /// Code generators are used to turn Simit IR into some other representation.
 /// Examples include LLVM IR, compiled machine code and Graphviz .dot files.
-class CodeGen : simit::interfaces::Uncopyable {
+class Backend : simit::interfaces::Uncopyable {
 public:
-  CodeGen() {}
-  virtual ~CodeGen() {}
+  Backend() {}
+  virtual ~Backend() {}
 
   virtual simit::Function *compile(Function *function) = 0;
 

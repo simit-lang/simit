@@ -1,7 +1,7 @@
 #ifndef SIMIT_CODEGEN_LLVM_H
 #define SIMIT_CODEGEN_LLVM_H
 
-#include "codegen.h"
+#include "backend.h"
 #include "irvisitors.h"
 
 #include <ostream>
@@ -28,10 +28,10 @@ class Function;
 template <typename, typename> class ScopedMap;
 
 /// Code generator that uses LLVM to compile Simit IR.
-class LLVMCodeGen : public CodeGen, IRVisitor {
+class LLVMBackend : public Backend, IRVisitor {
 public:
-  LLVMCodeGen();
-  ~LLVMCodeGen();
+  LLVMBackend();
+  ~LLVMBackend();
 
   simit::Function *compile(Function *function);
 

@@ -1,4 +1,4 @@
-#include "llvm_codegen.h"
+#include "llvm_backend.h"
 
 #include <cstdint>
 #include <iostream>
@@ -538,10 +538,10 @@ namespace simit {
 namespace internal {
 
 
-// class LLVMCodeGen
-bool LLVMCodeGen::llvmInitialized = false;
+// class LLVMBackend
+bool LLVMBackend::llvmInitialized = false;
 
-LLVMCodeGen::LLVMCodeGen() {
+LLVMBackend::LLVMBackend() {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
@@ -555,12 +555,12 @@ LLVMCodeGen::LLVMCodeGen() {
   symtable = new ScopedMap<std::string, llvm::Value*>();
 }
 
-LLVMCodeGen::~LLVMCodeGen() {
+LLVMBackend::~LLVMBackend() {
   delete symtable;
   delete builder;
 }
 
-simit::Function *LLVMCodeGen::compile(Function *function) {
+simit::Function *LLVMBackend::compile(Function *function) {
   TemporaryAllocator talloc;
   std::map<IRNode*, void*> temps = talloc.allocateTemporaries(function);
 
@@ -570,7 +570,7 @@ simit::Function *LLVMCodeGen::compile(Function *function) {
   return new LLVMFunction(function,f, executionEngine, talloc.getTemporaries());
 }
 
-llvm::Function *LLVMCodeGen::codegen(Function *function,
+llvm::Function *LLVMBackend::codegen(Function *function,
                                      const std::map<IRNode*, void*> &temps) {
   // TODO: Add temporaries as pointer values to storageLocations
   visit(function);
@@ -589,7 +589,7 @@ llvm::Function *LLVMCodeGen::codegen(Function *function,
   return f;
 }
 
-void LLVMCodeGen::handle(Function *function) {
+void LLVMBackend::handle(Function *function) {
   llvm::Function *f = createPrototype(function->getName(),
                                       function->getArguments(),
                                       function->getResults(),
@@ -613,7 +613,7 @@ void LLVMCodeGen::handle(Function *function) {
   resultStack.push(f);
 }
 
-void LLVMCodeGen::handle(IndexExpr *t) {
+void LLVMBackend::handle(IndexExpr *t) {
   llvm::Value *result = NULL;
 
   auto domain = t->getDomain();
