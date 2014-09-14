@@ -231,7 +231,9 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<simit::internal::Expression>> *expressions;
 
 
-  IndexExpr::Operator binop;
+  IndexExpr::Operator                          binop;
+  std::shared_ptr<simit::internal::IndexExpr> *indexExpr;
+
 
 
   std::shared_ptr<Call> *call;
@@ -621,8 +623,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 338,     ///< Last index in yytable_.
-      yynnts_ = 56,  ///< Number of nonterminal symbols.
+      yylast_ = 334,     ///< Last index in yytable_.
+      yynnts_ = 60,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

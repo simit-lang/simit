@@ -574,20 +574,40 @@ expr
     }
     $$ = new shared_ptr<Expression>(ctx->getSymbol(ident));
   }
+  | "(" expr ")" {
+    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    $$ = $2;
+  }
   | literal
-  | STRING_LITERAL {
+  | linear_algebra_expr
+  | boolean_expr
+  | field_access_expr
+  | range_expr
+  | call_expr {
     $$ = NULL;
   }
-  | "-" expr %prec NEG {
+  | map_expr
+
+
+// Linear Algebra Expressions
+%union {
+  IndexExpr::Operator                          binop;
+  std::shared_ptr<simit::internal::IndexExpr> *indexExpr;
+
+};
+%destructor {} <binop>;
+
+%type <indexExpr> linear_algebra_expr;
+linear_algebra_expr
+  : "-" expr %prec NEG {
     if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> expr = convertAndDelete($2);
     CHECK_IS_TENSOR(expr, @2);
 
-    $$ = new shared_ptr<Expression>(unaryElwiseExpr(IndexExpr::NEG, expr));
+    $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NEG, expr));
   }
-  // + - .* ./
-  | expr elwise_binary_op expr {
+  | expr elwise_binary_op expr {  // + - .* ./
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> l = convertAndDelete($1);
@@ -597,7 +617,7 @@ expr
     CHECK_IS_TENSOR(r, @3);
 
     BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), @2);
-    $$ = new shared_ptr<Expression>(binaryElwiseExpr(l, $2, r));
+    $$ = new shared_ptr<IndexExpr>(binaryElwiseExpr(l, $2, r));
   }
   | expr "*" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
@@ -613,7 +633,7 @@ expr
 
     // Scale
     if (ltype->getOrder()==0 || rtype->getOrder()==0) {
-      $$ = new shared_ptr<Expression>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+      $$ = new shared_ptr<IndexExpr>(binaryElwiseExpr(l, IndexExpr::MUL, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->getOrder() == 1 && rtype->getOrder() == 1) {
@@ -625,7 +645,7 @@ expr
         if (*l->getType() != *r->getType()) {
           REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
         }
-        $$ = new shared_ptr<Expression>(innerProduct(l, r));
+        $$ = new shared_ptr<IndexExpr>(innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
@@ -635,7 +655,7 @@ expr
         if (*l->getType() != *r->getType()) {
           REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
         }
-        $$ = new shared_ptr<Expression>(outerProduct(l, r));
+        $$ = new shared_ptr<IndexExpr>(outerProduct(l, r));
       }
     }
     // Matrix-Vector
@@ -643,21 +663,21 @@ expr
       if (ltype->getDimensions()[1] != rtype->getDimensions()[0]){
         REPORT_TYPE_MISSMATCH(*l->getType(), *rtype, @2);
       }
-      $$ = new shared_ptr<Expression>(gemv(l, r));
+      $$ = new shared_ptr<IndexExpr>(gemv(l, r));
     }
     // Vector-Matrix
     else if (ltype->getOrder() == 1 && rtype->getOrder() == 2) {
       if (ltype->getDimensions()[0] != rtype->getDimensions()[0]){
         REPORT_TYPE_MISSMATCH(*ltype, *rtype, @2);
       }
-      $$ = new shared_ptr<Expression>(gevm(l,r));
+      $$ = new shared_ptr<IndexExpr>(gevm(l,r));
     }
     // Matrix-Matrix
     else if (ltype->getOrder() == 2 && rtype->getOrder() == 2) {
       if (ltype->getDimensions()[1] != rtype->getDimensions()[0]){
         REPORT_TYPE_MISSMATCH(*ltype, *rtype, @2);
       }
-      $$ = new shared_ptr<Expression>(gemm(l,r));
+      $$ = new shared_ptr<IndexExpr>(gemm(l,r));
     }
     else {
       REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
@@ -683,17 +703,17 @@ expr
     switch (type->getOrder()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new shared_ptr<Expression>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
         break;
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new shared_ptr<Expression>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
         if (!ctx->isColumnVector(*expr->getType())) {
           ctx->toggleColumnVector(*(*$$)->getType());
         }
         break;
       case 2:
-        $$ = new shared_ptr<Expression>(transposeMatrix(expr));
+        $$ = new shared_ptr<IndexExpr>(transposeMatrix(expr));
         break;
       default:
         REPORT_ERROR("cannot transpose >2-order tensors using '", @1);
@@ -705,13 +725,33 @@ expr
     delete $1;
     delete $3;
   }
-  | expr "\\" expr {
+  | expr "\\" expr {  // Solve
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
-  | expr "==" expr {
+
+%type <binop> elwise_binary_op;
+elwise_binary_op
+  : "+" {
+    $$ = IndexExpr::ADD;
+  }
+  | "-" {
+    $$ = IndexExpr::SUB;
+  }
+  | ".*" {
+    $$ = IndexExpr::MUL;
+  }
+  | "./" {
+    $$ = IndexExpr::DIV;
+  }
+
+
+// Boolean Expressions
+%type <expression> boolean_expr;
+boolean_expr
+  : expr "==" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
@@ -747,51 +787,34 @@ expr
     delete $1;
     delete $3;
   }
-  | "(" expr ")" {
-    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = $2;
+
+
+// Field Access Expressions
+%type <expression> field_access_expr;
+field_access_expr
+  : expr "." expr {
+    $$ = NULL;
+    delete $1;
+    delete $3;
   }
-  | expr ":" expr {
+
+
+// Range Expressions
+%type <expression> range_expr;
+range_expr
+  : expr ":" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = NULL;
     delete $1;
     delete $3;
   }
-  | expr "." expr {
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | call_expr {
-    $$ = NULL;
-  }
-  | map_expr {
-    $$ = NULL;
-  }
 
-%union {
-  IndexExpr::Operator binop;
-};
-%destructor {} <binop>;
 
-%type <binop> elwise_binary_op;
-elwise_binary_op
-  : "+" {
-    $$ = IndexExpr::ADD;
-  }
-  | "-" {
-    $$ = IndexExpr::SUB;
-  }
-  | ".*" {
-    $$ = IndexExpr::MUL;
-  }
-  | "./" {
-    $$ = IndexExpr::DIV;
-  }
-
+// Call Expressions
 %union {
   std::shared_ptr<Call> *call;
 };
+
 %type<call> call_expr;
 call_expr
   : IDENT "(" actual_list ")" {
@@ -825,13 +848,16 @@ expr_list
     delete $expr;
   }
 
-// Map expressions
+
+// Map Expressions
+%type <expression> map_expr;
 map_expr
   : "map" IDENT "to" IDENT with reduce {
     string function($2);
     string target($4);
     free((void*)$2);
     free((void*)$4);
+    $$ = NULL;
   }
 
 with
@@ -849,7 +875,7 @@ reduction_op
   | "*"
 
 
-// Lhs expressions
+// LHS Expressions
 %code requires {
   namespace {
   // This struct describe variable accesses.
