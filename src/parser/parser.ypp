@@ -515,8 +515,7 @@ assign_stmt
       if (!ctx->hasSymbol(lhs->name)) continue;
 
       assert(ctx->hasSymbol(lhs->name));
-      shared_ptr<IRNode> lhsTensor = ctx->getSymbol(lhs->name);
-      assert(dynamic_pointer_cast<Expression>(lhsTensor) != NULL);
+      shared_ptr<Expression> lhsTensor = ctx->getSymbol(lhs->name);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
         CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
         rhs->setName(result->getName());
@@ -576,14 +575,7 @@ expr
       $$ = NULL;
       break;
     }
-    const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
-
-    shared_ptr<Expression> tensor = dynamic_pointer_cast<Expression>(node);
-    if (tensor == NULL) {
-      REPORT_ERROR(ident + " is not a tensor", @1);
-    }
-
-    $$ = new shared_ptr<Expression>(tensor);
+    $$ = new shared_ptr<Expression>(ctx->getSymbol(ident));
   }
   | literal
   | STRING_LITERAL {

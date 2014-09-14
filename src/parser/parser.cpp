@@ -1375,8 +1375,7 @@ namespace  simit { namespace internal  {
       if (!ctx->hasSymbol(lhs->name)) continue;
 
       assert(ctx->hasSymbol(lhs->name));
-      shared_ptr<IRNode> lhsTensor = ctx->getSymbol(lhs->name);
-      assert(dynamic_pointer_cast<Expression>(lhsTensor) != NULL);
+      shared_ptr<Expression> lhsTensor = ctx->getSymbol(lhs->name);
       if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
         CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), yystack_[2].location);
         rhs->setName(result->getName());
@@ -1444,14 +1443,7 @@ namespace  simit { namespace internal  {
       (yylhs.value.expression) = NULL;
       break;
     }
-    const std::shared_ptr<IRNode> &node = ctx->getSymbol(ident);
-
-    shared_ptr<Expression> tensor = dynamic_pointer_cast<Expression>(node);
-    if (tensor == NULL) {
-      REPORT_ERROR(ident + " is not a tensor", yystack_[0].location);
-    }
-
-    (yylhs.value.expression) = new shared_ptr<Expression>(tensor);
+    (yylhs.value.expression) = new shared_ptr<Expression>(ctx->getSymbol(ident));
   }
 
     break;
@@ -2834,16 +2826,16 @@ namespace  simit { namespace internal  {
        0,   236,   236,   238,   242,   252,   255,   264,   267,   271,
      278,   282,   288,   291,   305,   313,   316,   323,   335,   342,
      351,   389,   392,   403,   407,   418,   422,   428,   436,   439,
-     448,   449,   450,   451,   452,   456,   486,   492,   534,   537,
-     543,   549,   551,   555,   557,   571,   588,   589,   592,   604,
-     618,   686,   691,   696,   729,   734,   739,   744,   749,   754,
-     759,   764,   768,   773,   778,   781,   792,   795,   798,   801,
-     810,   819,   822,   828,   834,   843,   850,   852,   856,   858,
-     861,   862,   884,   889,   897,   903,   908,   938,   941,   944,
-     949,   950,   953,   959,   962,   966,   973,   976,  1014,  1019,
-    1026,  1029,  1033,  1038,  1041,  1110,  1113,  1114,  1118,  1121,
-    1130,  1141,  1148,  1151,  1155,  1168,  1172,  1186,  1190,  1196,
-    1203,  1206,  1210,  1223,  1227,  1241,  1245,  1251,  1256,  1266
+     448,   449,   450,   451,   452,   456,   486,   492,   533,   536,
+     542,   548,   550,   554,   556,   570,   580,   581,   584,   596,
+     610,   678,   683,   688,   721,   726,   731,   736,   741,   746,
+     751,   756,   760,   765,   770,   773,   784,   787,   790,   793,
+     802,   811,   814,   820,   826,   835,   842,   844,   848,   850,
+     853,   854,   876,   881,   889,   895,   900,   930,   933,   936,
+     941,   942,   945,   951,   954,   958,   965,   968,  1006,  1011,
+    1018,  1021,  1025,  1030,  1033,  1102,  1105,  1106,  1110,  1113,
+    1122,  1133,  1140,  1143,  1147,  1160,  1164,  1178,  1182,  1188,
+    1195,  1198,  1202,  1215,  1219,  1233,  1237,  1243,  1248,  1258
   };
 
   // Print the state stack on the debug stream.

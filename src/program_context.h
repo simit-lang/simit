@@ -12,8 +12,6 @@
 namespace simit {
 namespace internal {
 
-typedef ScopedMap<std::string, std::shared_ptr<IRNode>> ParserSymtableType;
-
 class ProgramContext {
 public:
   ProgramContext() {}
@@ -29,11 +27,11 @@ public:
   }
 
   void addSymbol(const std::string &name,
-                       const std::shared_ptr<Expression> &expression) {
+                 const std::shared_ptr<Expression> &expression) {
     symtable.insert(name, expression);
   }
 
-  const std::shared_ptr<IRNode> &getSymbol(const std::string &name) {
+  const std::shared_ptr<Expression> &getSymbol(const std::string &name) {
     return symtable.get(name);
   }
 
@@ -100,8 +98,8 @@ private:
   std::map<std::string, ElementType*> elementTypes;
   std::vector<Test*>                  tests;
 
-  ParserSymtableType                  symtable;
-  ScopedMap<const Type*, bool>  columnVectors;
+  ScopedMap<std::string, std::shared_ptr<Expression>> symtable;
+  ScopedMap<const Type*, bool> columnVectors;
 };
 
 }} // namespace simit::internal
