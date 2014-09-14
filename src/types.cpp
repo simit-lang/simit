@@ -53,24 +53,6 @@ size_t IndexSet::getSize() const {
   return size;
 }
 
-std::ostream &IndexSet::print(std::ostream &os) const {
-  switch (type) {
-    case RANGE:
-      os << to_string(rangeSize);
-      break;
-    case SET:
-      NOT_SUPPORTED_YET;
-      break;
-    case VARIABLE:
-      os << "*";
-      break;
-    default:
-      assert(false);
-      break;
-  }
-  return os;
-}
-
 bool operator==(const IndexSet &l, const IndexSet &r) {
    if (l.type != r.type) {
     return false;
@@ -98,8 +80,22 @@ bool operator!=(const IndexSet &l, const IndexSet &r) {
   return !(l == r);
 }
 
-std::ostream &operator<<(std::ostream &os, const IndexSet &o) {
-  return o.print(os);
+std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
+  switch (is.type) {
+    case IndexSet::RANGE:
+      os << to_string(is.rangeSize);
+      break;
+    case IndexSet::SET:
+      NOT_SUPPORTED_YET;
+      break;
+    case IndexSet::VARIABLE:
+      os << "*";
+      break;
+    default:
+      assert(false);
+      break;
+  }
+  return os;
 }
 
 
@@ -110,10 +106,6 @@ size_t IndexSetProduct::getSize() const {
     size *= indexSet.getSize();
   }
   return size;
-}
-
-std::ostream &IndexSetProduct::print(std::ostream &os) const {
-  return os << util::join(getFactors(), " x ");
 }
 
 bool operator==(const IndexSetProduct &l,
@@ -141,8 +133,8 @@ IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r) {
   return IndexSetProduct(is);
 }
 
-std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o) {
-  return o.print(os);
+std::ostream &operator<<(std::ostream &os, const IndexSetProduct &isp) {
+  return os << util::join(isp.getFactors(), " x ");
 }
 
 
@@ -195,15 +187,16 @@ bool operator!=(const TensorType& l, const TensorType& r) {
 
 
 // class ElementType
-void ElementType::print(std::ostream &os) const {
-  os << "struct " << getName();
-  if (getFields().size() > 0) {
+std::ostream &operator<<(std::ostream &os, const ElementType &elementType) {
+  os << "struct " << elementType.getName();
+  if (elementType.getFields().size() > 0) {
     os << endl << "  ";
   }
-  for (ElementField *field : getFields()) {
+  for (ElementField *field : elementType.getFields()) {
     os << *field << ";" << endl;
   }
   os << "end";
+  return os;
 }
 
 

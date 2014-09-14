@@ -15,9 +15,6 @@ class SetBase;
 
 namespace internal {
 
-class TensorType;
-
-
 /// A Simit type, which is either a Set or a Tensor.
 class Type : public simit::interfaces::Printable, simit::interfaces::Uncopyable{
 public:
@@ -62,8 +59,8 @@ public:
   /// Get the number of elements in the index set.
   size_t getSize() const;
 
-  std::ostream &print(std::ostream &os) const;
   friend bool operator==(const IndexSet &l, const IndexSet &r);
+  friend std::ostream &operator<<(std::ostream &os, const IndexSet &is);
 
 private:
   Type type;
@@ -73,9 +70,7 @@ private:
   };
 };
 
-bool operator==(const IndexSet &l, const IndexSet &r);
 bool operator!=(const IndexSet &l, const IndexSet &r);
-std::ostream &operator<<(std::ostream &os, const IndexSet &o);
 
 
 /// The set product of zero or more sets.
@@ -91,8 +86,6 @@ public:
   /// Get the number of elements in the product of the index sets.
   size_t getSize() const;
 
-  std::ostream &print(std::ostream &os) const;
-  
 private:
   std::vector<IndexSet> indexSets;
 };
@@ -100,7 +93,7 @@ private:
 bool operator==(const IndexSetProduct &l, const IndexSetProduct &r);
 bool operator!=(const IndexSetProduct &l, const IndexSetProduct &r);
 IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r);
-std::ostream &operator<<(std::ostream &os, const IndexSetProduct &o);
+std::ostream &operator<<(std::ostream &os, const IndexSetProduct &isp);
 
 
 /// The type of a tensor (the type of its scalar components and its shape).
@@ -131,11 +124,11 @@ public:
 
   size_t getByteSize() const;
 
-  void print(std::ostream &os) const;
-
 private:
   ComponentType componentType;
   std::vector<IndexSetProduct> dimensions;
+
+  void print(std::ostream &os) const;
 };
 
 bool operator==(const TensorType& l, const TensorType& r);
@@ -175,13 +168,15 @@ public:
   const std::string &getName() const { return name; }
   const std::vector<ElementField*> &getFields() const { return fields; }
 
-  void print(std::ostream &os) const;
-
 private:
   std::string name;
   std::vector<ElementField*> fields;
 };
 
+std::ostream &operator<<(std::ostream &os, const ElementType &elementType);
+
+
+// Conversion functions
 inline TensorType *tensorTypePtr(Type *type) {
   assert(type->getKind() == Type::Kind::Tensor);
   return static_cast<TensorType*>(type);

@@ -253,6 +253,17 @@ vector<shared_ptr<IndexVar>> IndexExpr::getDomain() const {
 
 }
 
+void IndexExpr::initType() {
+  assert(operands.size() > 0);
+  TensorType *ttype = tensorTypePtr(operands[0].getTensor()->getType());
+  ComponentType ctype = ttype->getComponentType();
+  std::vector<IndexSetProduct> dimensions;
+  for (auto &iv : indexVars) {
+    dimensions.push_back(iv->getIndexSet());
+  }
+  setType(std::shared_ptr<TensorType>(new TensorType(ctype, dimensions)));
+}
+
 static std::string opString(IndexExpr::Operator op) {
   std::string opstr;
   switch (op) {
@@ -299,17 +310,6 @@ void IndexExpr::print(std::ostream &os) const {
   } else {
     assert(false && "Not supported yet");
   }
-}
-
-void IndexExpr::initType() {
-  assert(operands.size() > 0);
-  TensorType *ttype = tensorTypePtr(operands[0].getTensor()->getType());
-  ComponentType ctype = ttype->getComponentType();
-  std::vector<IndexSetProduct> dimensions;
-  for (auto &iv : indexVars) {
-    dimensions.push_back(iv->getIndexSet());
-  }
-  setType(std::shared_ptr<TensorType>(new TensorType(ctype, dimensions)));
 }
 
 

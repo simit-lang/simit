@@ -47,7 +47,6 @@ public:
   const std::shared_ptr<Type> getType() const { return type; }
 
   virtual void accept(IRVisitor *visitor) = 0;
-  virtual void print(std::ostream &os) const = 0;
 
 private:
   std::shared_ptr<Type> type;
@@ -67,11 +66,12 @@ public:
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   const void *getData() const { return data; }
-  void print(std::ostream &os) const;
 
 private:
   void  *data;
   int dataSize;
+
+  void print(std::ostream &os) const;
 };
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
@@ -167,7 +167,6 @@ public:
   const std::vector<IndexedTensor> &getOperands() const { return operands; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void print(std::ostream &os) const;
 
 private:
   std::vector<std::shared_ptr<IndexVar>> indexVars;
@@ -175,6 +174,7 @@ private:
   std::vector<IndexedTensor> operands;
 
   void initType();
+  void print(std::ostream &os) const;
 };
 
 std::ostream &operator<<(std::ostream &os, const IndexedTensor &t);
@@ -192,10 +192,11 @@ public:
   const std::vector<std::shared_ptr<Expression>> &getArguments() const {
     return arguments;
   }
-  void print(std::ostream &os) const;
 
 private:
   std::vector<std::shared_ptr<Expression>> arguments;
+
+  void print(std::ostream &os) const;
 };
 
 
@@ -220,11 +221,11 @@ public:
   std::shared_ptr<Expression> getTarget() const { return target; }
   std::shared_ptr<Expression> getValue() const { return value; }
 
-  void print(std::ostream &os) const;
-
 private:
   std::shared_ptr<Expression> target;
   std::shared_ptr<Expression> value;
+
+  void print(std::ostream &os) const;
 };
 
 
@@ -237,6 +238,7 @@ public:
 
   virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
 
+private:
   void print(std::ostream &os) const;
 };
 
@@ -284,12 +286,12 @@ public:
     return body;
   }
 
-  void print(std::ostream &os) const;
-
 private:
   std::vector<std::shared_ptr<Argument>> arguments;
   std::vector<std::shared_ptr<Result>> results;
   std::vector<std::shared_ptr<IRNode>> body;
+
+  void print(std::ostream &os) const;
 };
 
 
@@ -312,12 +314,12 @@ public:
     return expected;
   }
 
-  void print(std::ostream &os) const;
-
 private:
   std::string callee;
   std::vector<std::shared_ptr<Literal>> arguments;
   std::vector<std::shared_ptr<Literal>> expected;
+
+  void print(std::ostream &os) const;
 };
 
 }} // namespace simit::internal
