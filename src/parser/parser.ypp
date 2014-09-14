@@ -369,9 +369,9 @@ function_header
   namespace {
   struct FormalData {
     std::string name;
-    std::shared_ptr<simit::internal::TensorType> type;
+    std::shared_ptr<simit::internal::Type> type;
     FormalData(const std::string &name,
-               const std::shared_ptr<simit::internal::TensorType> &type)
+               const std::shared_ptr<simit::internal::Type> &type)
         : name(name), type(type){}
   };
   }
@@ -427,7 +427,7 @@ formal_list
 formal_decl
   : IDENT ":" type {
     std::string ident = convertAndFree($IDENT);
-    $$ = new FormalData(ident, std::shared_ptr<TensorType>($type));
+    $$ = new FormalData(ident, std::shared_ptr<Type>($type));
   }
 
 // Statements
@@ -924,8 +924,7 @@ lhs_expr
 };
 %destructor {} <componentType>;
 
-//%type <type>             type;
-%type <tensorType>       type;
+%type <type>             type;
 
 %type <tensorType>       tensor_type;
 %type <IndexSetProducts> nested_dimensions;

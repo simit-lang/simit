@@ -673,7 +673,7 @@ namespace  simit { namespace internal  {
       case 90: // type
 
 
-        { delete (yysym.value.tensorType); }
+        { delete (yysym.value.type); }
 
         break;
 
@@ -1112,7 +1112,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[2].value.string));
-    delete (yystack_[1].value.tensorType);
+    delete (yystack_[1].value.type);
   }
 
     break;
@@ -1121,7 +1121,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[2].value.string));
-    delete (yystack_[1].value.tensorType);
+    delete (yystack_[1].value.type);
   }
 
     break;
@@ -1283,7 +1283,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[2].value.string));
-    (yylhs.value.Formal) = new FormalData(ident, std::shared_ptr<TensorType>((yystack_[0].value.tensorType)));
+    (yylhs.value.Formal) = new FormalData(ident, std::shared_ptr<Type>((yystack_[0].value.type)));
   }
 
     break;
@@ -1899,7 +1899,7 @@ namespace  simit { namespace internal  {
   case 87:
 
     {
-    (yylhs.value.tensorType) = NULL;
+    (yylhs.value.type) = NULL;
   }
 
     break;
@@ -1915,7 +1915,7 @@ namespace  simit { namespace internal  {
   case 89:
 
     {
-    (yylhs.value.tensorType) = (yystack_[0].value.tensorType);
+    (yylhs.value.type) = (yystack_[0].value.tensorType);
   }
 
     break;
@@ -2839,11 +2839,11 @@ namespace  simit { namespace internal  {
      618,   686,   691,   696,   729,   734,   739,   744,   749,   754,
      759,   764,   768,   773,   778,   781,   792,   795,   798,   801,
      810,   819,   822,   828,   834,   843,   850,   852,   856,   858,
-     861,   862,   884,   889,   897,   903,   908,   939,   942,   945,
-     950,   951,   954,   960,   963,   967,   974,   977,  1015,  1020,
-    1027,  1030,  1034,  1039,  1042,  1111,  1114,  1115,  1119,  1122,
-    1131,  1142,  1149,  1152,  1156,  1169,  1173,  1187,  1191,  1197,
-    1204,  1207,  1211,  1224,  1228,  1242,  1246,  1252,  1257,  1267
+     861,   862,   884,   889,   897,   903,   908,   938,   941,   944,
+     949,   950,   953,   959,   962,   966,   973,   976,  1014,  1019,
+    1026,  1029,  1033,  1038,  1041,  1110,  1113,  1114,  1118,  1121,
+    1130,  1141,  1148,  1151,  1155,  1168,  1172,  1186,  1190,  1196,
+    1203,  1206,  1210,  1223,  1227,  1241,  1245,  1251,  1256,  1266
   };
 
   // Print the state stack on the debug stream.
