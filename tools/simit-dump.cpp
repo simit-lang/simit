@@ -86,11 +86,10 @@ int main(int argc, const char* argv[]) {
 
     source = "";
     for (auto &sec : sections) {
-
       std::istringstream ss(sec);
       std::string header;
       if (!std::getline(ss, header)) {
-        assert(false && "No text in string -- should not be possible here.");
+        assert(false && "No text in string");
       }
       header = simit::util::trim(header.substr(3, header.size()-1));
 
@@ -104,9 +103,7 @@ int main(int argc, const char* argv[]) {
   }
 
   simit::internal::Frontend frontend;
-
   std::vector<simit::Error> errors;
-
   simit::internal::ProgramContext ctx;
 
   status = frontend.parseString(source, &ctx, &errors);
@@ -131,7 +128,6 @@ int main(int argc, const char* argv[]) {
       std::string fstr = simit::util::toString(*backend.compile(func));
       cout << simit::util::trim(fstr);
     }
-    cout << endl << endl;
   }
   return 0;
 }
