@@ -186,6 +186,13 @@ bool operator!=(const TensorType& l, const TensorType& r) {
 }
 
 
+// class ElementField
+std::ostream &operator<<(std::ostream &os, const ElementField &field) {
+  os << field.getName() << " : " << *field.getType();
+  return os;
+}
+
+
 // class ElementType
 std::ostream &operator<<(std::ostream &os, const ElementType &elementType) {
   os << "struct " << elementType.getName();
@@ -200,11 +207,13 @@ std::ostream &operator<<(std::ostream &os, const ElementType &elementType) {
 }
 
 
-// class ElementField
-std::ostream &operator<<(std::ostream &os, const ElementField &field) {
-  os << field.getName() << " : " << *field.getType();
-  return os;
+// class SetType
+size_t SetType::getByteSize() const {
+  return 0;
 }
 
+void SetType::print(std::ostream &os) const {
+  os << elementType->getName() << "{}";
+}
 
 }} // namespace simit::internal

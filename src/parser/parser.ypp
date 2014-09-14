@@ -910,6 +910,8 @@ lhs_expr
   std::vector<IndexSet>        *IndexSets;
   IndexSet                     *indexSet;
   ComponentType                 componentType;
+
+  SetType                      *setType;
 };
 %destructor {} <componentType>;
 
@@ -921,21 +923,26 @@ lhs_expr
 %type <indexSet>         dimension;
 %type <componentType>    component_type;
 
+%type <setType>          set_type;
 %type <elementType>      element_type;
 
 type
   : set_type {
-    $$ = NULL;
+    $$ = $set_type;
   }
   | element_type {
-//    $$ = $element_type;
+    // If we define an element as a one-item set, then we don't need this rule.
+    $$ = NULL;
   }
   | tensor_type {
     $$ = $tensor_type;
   }
 
 set_type
-  : element_type "{" "}"
+  : element_type "{" "}" {
+    $$ = new SetType(std::shared_ptr<ElementType>(*$element_type));
+    delete $element_type;
+  }
   | element_type "[" endpoints "]" "{" "}"
 
 element_type

@@ -96,8 +96,8 @@ IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r);
 std::ostream &operator<<(std::ostream &os, const IndexSetProduct &isp);
 
 
-/// The type of a tensor (the type of its scalar components and its shape).
-/// Note that a scalar value in Simit is a tensor of size 0.
+/// The type of a tensor (the type of its components and its shape). Note that
+/// a scalar in Simit is a o-order tensor.
 class TensorType : public Type {
 public:
   TensorType(ComponentType componentType)
@@ -135,7 +135,7 @@ bool operator==(const TensorType& l, const TensorType& r);
 bool operator!=(const TensorType& l, const TensorType& r);
 
 
-// Element types
+// Set types
 class ElementField {
 public:
   ElementField(const std::string &name, TensorType *type)
@@ -174,6 +174,32 @@ private:
 };
 
 std::ostream &operator<<(std::ostream &os, const ElementType &elementType);
+
+
+/// The type of a Simit set (defined by the type of its elements and it's
+/// connectivity information).  Note that a single element in Simit is a set
+/// of size 1 without any connectivity.
+class SetType : public Type {
+public:
+  SetType(std::shared_ptr<ElementType> elementType)
+      : Type(Type::Set), elementType(elementType) {}
+
+  virtual ~SetType() {}
+
+  const std::shared_ptr<ElementType> &getElementType() const {
+    return elementType;
+  }
+
+  // TODO: Remove the getByteSize methods from the Type hierarchy since the
+  //       types of sets and variable-sized tensors don't have well-defined
+  //       sizes.
+  size_t getByteSize() const;
+
+private:
+  std::shared_ptr<ElementType> elementType;
+
+  void print(std::ostream &os) const;
+};
 
 
 // Conversion functions

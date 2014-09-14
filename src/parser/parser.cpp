@@ -677,6 +677,13 @@ namespace  simit { namespace internal  {
 
         break;
 
+      case 91: // set_type
+
+
+        { delete (yysym.value.setType); }
+
+        break;
+
       case 92: // element_type
 
 
@@ -1882,7 +1889,7 @@ namespace  simit { namespace internal  {
   case 87:
 
     {
-    (yylhs.value.type) = NULL;
+    (yylhs.value.type) = (yystack_[0].value.setType);
   }
 
     break;
@@ -1890,7 +1897,8 @@ namespace  simit { namespace internal  {
   case 88:
 
     {
-//    $$ = $element_type;
+    // If we define an element as a one-item set, then we don't need this rule.
+    (yylhs.value.type) = NULL;
   }
 
     break;
@@ -1899,6 +1907,15 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.type) = (yystack_[0].value.tensorType);
+  }
+
+    break;
+
+  case 90:
+
+    {
+    (yylhs.value.setType) = new SetType(std::shared_ptr<ElementType>(*(yystack_[2].value.elementType)));
+    delete (yystack_[2].value.elementType);
   }
 
     break;
@@ -2822,11 +2839,11 @@ namespace  simit { namespace internal  {
      607,   675,   680,   685,   718,   723,   728,   733,   738,   743,
      748,   753,   757,   762,   767,   770,   781,   784,   787,   790,
      799,   808,   811,   817,   823,   832,   839,   841,   845,   847,
-     850,   851,   873,   878,   886,   892,   897,   927,   930,   933,
-     938,   939,   942,   948,   951,   955,   962,   965,  1003,  1008,
-    1015,  1018,  1022,  1027,  1030,  1099,  1102,  1103,  1107,  1110,
-    1119,  1130,  1137,  1140,  1144,  1157,  1161,  1175,  1179,  1185,
-    1192,  1195,  1199,  1212,  1216,  1230,  1234,  1240,  1245,  1255
+     850,   851,   873,   878,   886,   892,   897,   930,   933,   937,
+     942,   946,   949,   955,   958,   962,   969,   972,  1010,  1015,
+    1022,  1025,  1029,  1034,  1037,  1106,  1109,  1110,  1114,  1117,
+    1126,  1137,  1144,  1147,  1151,  1164,  1168,  1182,  1186,  1192,
+    1199,  1202,  1206,  1219,  1223,  1237,  1241,  1247,  1252,  1262
   };
 
   // Print the state stack on the debug stream.

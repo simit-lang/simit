@@ -249,6 +249,8 @@ namespace  simit { namespace internal  {
   IndexSet                     *indexSet;
   ComponentType                 componentType;
 
+  SetType                      *setType;
+
 
   std::shared_ptr<Literal> *TensorLiteral;
   TensorValues<double>     *TensorDoubleValues;
