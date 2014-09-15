@@ -113,6 +113,7 @@
 
   #define CHECK_IS_TENSOR(expr, loc)                    \
     do {                                                \
+      assert(expr->getType());                          \
       if (!expr->getType()->isTensor()) {               \
         std::stringstream errorStr;                     \
         errorStr << "expected tensor";                  \
@@ -120,7 +121,15 @@
       }                                                 \
     } while (0)
 
-
+  #define CHECK_IS_SET(expr, loc)                       \
+    do {                                                \
+      assert(expr->getType());                          \
+      if (!expr->getType()->isSet()) {                  \
+        std::stringstream errorStr;                     \
+        errorStr << "expected element";                 \
+        REPORT_ERROR(errorStr.str(), loc);              \
+      }                                                 \
+    } while (0)
 
   #define CHECK_TYPE_EQUALITY(t1, t2, loc)              \
     do {                                                \
@@ -564,6 +573,20 @@ elif_clauses
 
 %type <expression> expr;
 expr
+  : ident_expr
+  | paren_expr
+  | literal_expr
+  | linear_algebra_expr
+  | boolean_expr
+  | field_access_expr
+  | range_expr
+  | call_or_tensor_read_expr
+  | map_expr
+
+
+// Ident Expression
+%type <expression> ident_expr;
+ident_expr
   : IDENT {
     string ident = convertAndFree($IDENT);
     if (!ctx->hasSymbol(ident)) {
@@ -574,19 +597,15 @@ expr
     }
     $$ = new shared_ptr<Expression>(ctx->getSymbol(ident));
   }
-  | "(" expr ")" {
+
+
+// Parenthesis Expression
+%type <expression> paren_expr;
+paren_expr
+  : "(" expr ")" {
     if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
     $$ = $2;
   }
-  | literal
-  | linear_algebra_expr
-  | boolean_expr
-  | field_access_expr
-  | range_expr
-  | call_expr {
-    $$ = NULL;
-  }
-  | map_expr
 
 
 // Linear Algebra Expressions
@@ -792,11 +811,27 @@ boolean_expr
 // Field Access Expressions
 %type <expression> field_access_expr;
 field_access_expr
-  : expr "." expr {
+  : set_expr "." field_expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    if ((*$1)->getType() == NULL) { $$ = NULL; break; } // TODO: Remove check
+
+    std::shared_ptr<Expression> set = convertAndDelete($1);
+
+    CHECK_IS_SET(set, @1);
+
     $$ = NULL;
-    delete $1;
-    delete $3;
   }
+
+%type <expression> set_expr;
+set_expr
+  : ident_expr
+  | paren_expr
+  | call_expr
+
+%type <expression> field_expr;
+field_expr
+  : IDENT
+  | IDENT "(" actual_list ")"
 
 
 // Range Expressions
@@ -810,10 +845,17 @@ range_expr
   }
 
 
-// Call Expressions
+// Call and Tensor Read Expressions
 %union {
-  std::shared_ptr<Call> *call;
+  std::shared_ptr<Call>       *call;
+  std::shared_ptr<TensorRead> *tensorRead;
 };
+
+%type <expression> call_or_tensor_read_expr;
+call_or_tensor_read_expr
+  : IDENT "(" actual_list ")" {
+    $$ = NULL;
+  }
 
 %type<call> call_expr;
 call_expr
@@ -822,6 +864,12 @@ call_expr
     auto call = new Call(name, *$actual_list);
     delete $actual_list;
     $$ = new std::shared_ptr<Call>(call);
+  }
+
+%type<tensorRead> tensor_read_expr;
+tensor_read_expr
+  : IDENT "(" actual_list ")" {
+    $$ = NULL;
   }
 
 %type <expressions> actual_list;
@@ -878,7 +926,6 @@ reduction_op
 // LHS Expressions
 %code requires {
   namespace {
-  // This struct describe variable accesses.
   struct VariableAccess {
     std::string name;
   };
@@ -1128,7 +1175,7 @@ component_type
 %type <TensorIntValues> int_dense_matrix_literal;
 %type <TensorIntValues> int_dense_vector_literal;
 
-literal
+literal_expr
   : tensor_literal
 
 tensor_literal

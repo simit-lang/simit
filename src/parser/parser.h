@@ -68,7 +68,6 @@
 
 
   namespace {
-  // This struct describe variable accesses.
   struct VariableAccess {
     std::string name;
   };
@@ -236,7 +235,8 @@ namespace  simit { namespace internal  {
 
 
 
-  std::shared_ptr<Call> *call;
+  std::shared_ptr<Call>       *call;
+  std::shared_ptr<TensorRead> *tensorRead;
 
 
   VariableAccess       *VarAccess;
@@ -508,7 +508,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const short int yycheck_[];
+  static const unsigned char yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -623,8 +623,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 334,     ///< Last index in yytable_.
-      yynnts_ = 60,  ///< Number of nonterminal symbols.
+      yylast_ = 336,     ///< Last index in yytable_.
+      yynnts_ = 65,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
