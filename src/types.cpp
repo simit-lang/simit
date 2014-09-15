@@ -22,7 +22,7 @@ bool operator==(const Type& l, const Type& r) {
 
   switch (l.getKind()) {
     case Type::Kind::Set:
-      NOT_SUPPORTED_YET;
+      return static_cast<const SetType&>(l) == static_cast<const SetType&>(r);
     case Type::Kind::Tensor:
       return static_cast<const TensorType&>(l) ==
              static_cast<const TensorType&>(r);
@@ -199,6 +199,19 @@ std::ostream &operator<<(std::ostream &os, const ElementType &elementType) {
   return os;
 }
 
+bool operator==(const ElementType &l, const ElementType &r) {
+  // Element type names are unique
+  if (l.getName() != r.getName()) {
+    return false;
+  }
+
+  return true;
+}
+
+bool operator!=(const ElementType &l, const ElementType &r) {
+  return !(l == r);
+}
+
 
 // class SetType
 size_t SetType::getByteSize() const {
@@ -207,6 +220,19 @@ size_t SetType::getByteSize() const {
 
 void SetType::print(std::ostream &os) const {
   os << elementType->getName() << "{}";
+}
+
+bool operator==(const SetType& l, const SetType& r) {
+  const std::shared_ptr<ElementType> &lElemType = l.getElementType();
+  const std::shared_ptr<ElementType> &rElemType = r.getElementType();
+  if (*lElemType != *rElemType) {
+    return false;
+  }
+  return true;
+}
+
+bool operator!=(const SetType& l, const SetType& r) {
+  return !(l == r);
 }
 
 }} // namespace simit::internal
