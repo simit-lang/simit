@@ -204,12 +204,21 @@ private:
 
 // Conversion functions
 inline TensorType *tensorTypePtr(Type *type) {
-  assert(type->getKind() == Type::Kind::Tensor);
+  assert(type->isTensor());
   return static_cast<TensorType*>(type);
 }
 
 inline TensorType *tensorTypePtr(const std::shared_ptr<Type> &type) {
   return tensorTypePtr(type.get());
+}
+
+inline SetType *setTypePtr(Type *type) {
+  assert(type->isSet());
+  return static_cast<SetType*>(type);
+}
+
+inline SetType *setTypePtr(const std::shared_ptr<Type> &type) {
+  return setTypePtr(type.get());
 }
 
 }} // namespace simit::internal
