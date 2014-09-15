@@ -158,17 +158,21 @@ IndexedTensor::IndexedTensor(const std::shared_ptr<Expression> &tensor,
 }
 
 std::ostream &operator<<(std::ostream &os, const IndexedTensor &t) {
-  os << t.getTensor()->getName() << "(";
-  auto it = t.getIndexVariables().begin();
-  if (it != t.getIndexVariables().end()) {
-    os << (*it)->getName();
-    ++it;
+  os << t.getTensor()->getName();
+
+  if (t.getIndexVariables().size() > 0) {
+    os << "(";
+    auto it = t.getIndexVariables().begin();
+    if (it != t.getIndexVariables().end()) {
+      os << (*it)->getName();
+      ++it;
+    }
+    while (it != t.getIndexVariables().end()) {
+      os << "," << (*it)->getName();
+      ++it;
+    }
+    os << ")";
   }
-  while (it != t.getIndexVariables().end()) {
-    os << "," << (*it)->getName();
-    ++it;
-  }
-  os << ")";
   return os;
 }
 
@@ -306,7 +310,7 @@ void IndexExpr::print(std::ostream &os) const {
     os << opString(op) << *opit++;
   }
   else if (numOperands == 2) {
-    os << *opit++ << " " << opString(op) << *opit++;
+    os << *opit++ << " " << opString(op) << " " << *opit++;
   } else {
     assert(false && "Not supported yet");
   }
