@@ -14,6 +14,10 @@ class Result;
 class Literal;
 class IndexExpr;
 class Call;
+class FieldRead;
+class TensorRead;
+class FieldWrite;
+class TensorWrite;
 
 /// Visitor where the iteration order is specified in the visitor instead of
 /// the accept methods.  This design is chosen to allow different visitors to
@@ -28,20 +32,21 @@ public:
   IRVisitor() { reset(); }
   virtual ~IRVisitor();
 
-  virtual void visit(Function      *f);
-  virtual void visit(Argument      *t);
-  virtual void visit(Result        *t);
-  virtual void visit(Literal       *t);
-  virtual void visit(IndexExpr     *t);
-  virtual void visit(Call          *t);
-  
+  virtual void visit(Function     *f);
+  virtual void visit(Argument     *t);
+  virtual void visit(Result       *t);
+  virtual void visit(Literal      *t);
+  virtual void visit(IndexExpr    *t);
+  virtual void visit(Call         *t);
+  virtual void visit(FieldRead    *t);
 
-  virtual void handle(Function      *f);
-  virtual void handle(Argument      *t);
-  virtual void handle(Result        *t);
-  virtual void handle(Literal       *t);
-  virtual void handle(IndexExpr     *t);
-  virtual void handle(Call          *t);
+  virtual void handle(Function    *f);
+  virtual void handle(Argument    *t);
+  virtual void handle(Result      *t);
+  virtual void handle(Literal     *t);
+  virtual void handle(IndexExpr   *t);
+  virtual void handle(Call        *t);
+  virtual void handle(FieldRead   *t);
 
   virtual void handleDefault(IRNode *t) { UNUSED(t); }
 

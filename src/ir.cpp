@@ -306,7 +306,7 @@ void IndexExpr::print(std::ostream &os) const {
     os << opString(op) << *opit++;
   }
   else if (numOperands == 2) {
-    os << *opit++ << opString(op) << *opit++;
+    os << *opit++ << " " << opString(op) << *opit++;
   } else {
     assert(false && "Not supported yet");
   }
@@ -316,6 +316,17 @@ void IndexExpr::print(std::ostream &os) const {
 // class Call
 void Call::print(std::ostream &os) const {
   os << getName() << "(" << util::join(arguments, ", ") << ")";
+}
+
+// class FieldRead
+void FieldRead::print(std::ostream &os) const {
+  os << getSet()->getName() << "." << getFieldName();
+}
+
+
+// class Argument
+void Argument::print(std::ostream &os) const {
+  os << getName() << " : " << *getType();
 }
 
 
@@ -349,12 +360,6 @@ void Function::print(std::ostream &os) const {
   FunctionBodyPrinter fp(os);
   fp.visit((Function*)this);
   os << "end";
-}
-
-
-// class Argument
-void Argument::print(std::ostream &os) const {
-  os << getName() << " : " << *getType();
 }
 
 

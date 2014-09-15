@@ -581,9 +581,9 @@ expr
   | literal_expr
   | linear_algebra_expr
   | boolean_expr
-  | field_access_expr
-  | range_expr
+  | field_read_expr
   | call_or_tensor_read_expr
+  | range_expr
   | map_expr
 
 
@@ -811,18 +811,23 @@ boolean_expr
   }
 
 
-// Field Access Expressions
-%type <expression> field_access_expr;
-field_access_expr
-  : set_expr "." field_expr {
+// Field Read Expressions
+%union {
+  std::shared_ptr<ir::FieldRead> *fieldRead;
+};
+
+%type <fieldRead> field_read_expr;
+field_read_expr
+  : set_expr "." IDENT {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     if ((*$1)->getType() == NULL) { $$ = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> set = convertAndDelete($1);
+    std::string fieldName = convertAndFree($IDENT);
 
     CHECK_IS_SET(set, @1);
-
-    $$ = NULL;
+    
+    $$ = new shared_ptr<FieldRead>(new FieldRead(set, fieldName));
   }
 
 %type <expression> set_expr;
@@ -830,22 +835,6 @@ set_expr
   : ident_expr
   | paren_expr
   | call_expr
-
-%type <expression> field_expr;
-field_expr
-  : IDENT
-  | IDENT "(" actual_list ")"
-
-
-// Range Expressions
-%type <expression> range_expr;
-range_expr
-  : expr ":" expr {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
 
 
 // Call and Tensor Read Expressions
@@ -857,6 +846,10 @@ range_expr
 %type <expression> call_or_tensor_read_expr;
 call_or_tensor_read_expr
   : IDENT "(" actual_list ")" {
+    std::string name = convertAndFree($1);
+    $$ = NULL;
+  }
+  | field_read_expr "(" actual_list ")" {
     $$ = NULL;
   }
 
@@ -867,12 +860,6 @@ call_expr
     auto call = new Call(name, *$actual_list);
     delete $actual_list;
     $$ = new std::shared_ptr<Call>(call);
-  }
-
-%type<tensorRead> tensor_read_expr;
-tensor_read_expr
-  : IDENT "(" actual_list ")" {
-    $$ = NULL;
   }
 
 %type <expressions> actual_list;
@@ -897,6 +884,17 @@ expr_list
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
+  }
+
+
+// Range Expressions
+%type <expression> range_expr;
+range_expr
+  : expr ":" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    $$ = NULL;
+    delete $1;
+    delete $3;
   }
 
 

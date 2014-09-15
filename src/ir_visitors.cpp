@@ -46,6 +46,11 @@ void IRVisitor::visit(Call *t) {
   CHECK_ABORT(handle(t));
 }
 
+void IRVisitor::visit(FieldRead *t) {
+  CHECK_ABORT(t->getSet()->accept(this));
+  CHECK_ABORT(handle(t));
+}
+
 void IRVisitor::handle(Function *f) {
   handleDefault(f);
 }
@@ -67,6 +72,10 @@ void IRVisitor::handle(IndexExpr *t) {
 }
 
 void IRVisitor::handle(Call *t) {
+  handleDefault(t);
+}
+
+void IRVisitor::handle(FieldRead *t) {
   handleDefault(t);
 }
 

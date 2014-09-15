@@ -235,6 +235,9 @@ namespace  simit { namespace internal  {
 
 
 
+  std::shared_ptr<ir::FieldRead> *fieldRead;
+
+
   std::shared_ptr<ir::Call>       *call;
   std::shared_ptr<ir::TensorRead> *tensorRead;
 
@@ -508,7 +511,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const unsigned char yycheck_[];
+  static const short int yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -623,8 +626,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 336,     ///< Last index in yytable_.
-      yynnts_ = 65,  ///< Number of nonterminal symbols.
+      yylast_ = 341,     ///< Last index in yytable_.
+      yynnts_ = 64,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
