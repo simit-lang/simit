@@ -7,10 +7,10 @@
 
 #include "interfaces.h"
 #include "types.h"
-#include "irvisitors.h"
+#include "ir_visitors.h"
 
 namespace simit {
-namespace internal {
+namespace ir {
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)

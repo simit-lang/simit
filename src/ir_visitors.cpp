@@ -1,8 +1,9 @@
-#include "irvisitors.h"
+#include "ir_visitors.h"
 
 #include "ir.h"
 
-using namespace simit::internal;
+namespace simit {
+namespace ir {
 
 #define CHECK_ABORT(func) do { func; if (isAborted()) return; } while(0)
 
@@ -68,3 +69,5 @@ void IRVisitor::handle(IndexExpr *t) {
 void IRVisitor::handle(Call *t) {
   handleDefault(t);
 }
+
+}} // namespace simit::ir

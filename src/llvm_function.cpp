@@ -15,7 +15,7 @@ using namespace std;
 namespace simit {
 namespace internal {
 
-LLVMFunction::LLVMFunction(const simit::internal::Function &simitFunc,
+LLVMFunction::LLVMFunction(const ir::Function &simitFunc,
                            llvm::Function *llvmFunc,
                            const shared_ptr<llvm::ExecutionEngine> &llvmFuncEE,
                            const std::vector<std::shared_ptr<Storage>> &storage)
@@ -43,7 +43,7 @@ LLVMFunction::init(std::map<std::string, Actual> &actuals) {
   }
   else {
     std::string name = string(llvmFunc->getName()) + "_harness";
-    std::vector<std::shared_ptr<Expression>> noArgs;
+    std::vector<std::shared_ptr<ir::Expression>> noArgs;
     llvm::Function *harness = createPrototype(name, noArgs, noArgs,
                                               llvm::Function::InternalLinkage,
                                               &module);
@@ -55,10 +55,10 @@ LLVMFunction::init(std::map<std::string, Actual> &actuals) {
       assert(actuals.find(argName) != actuals.end());
       auto &actual = actuals[argName];
       switch (actual.getType()->getKind()) {
-        case Type::Tensor:
+        case ir::Type::Tensor:
           args.push_back(toLLVMPtr(actual.getTensor()));
           break;
-        case Type::Set:
+        case ir::Type::Set:
           NOT_SUPPORTED_YET;
           break;
       }

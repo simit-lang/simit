@@ -17,9 +17,9 @@ llvm::Type *toLLVMType(const simit::ComponentType type) {
   }
 }
 
-llvm::Type *toLLVMType(const std::shared_ptr<Type> &type){
+llvm::Type *toLLVMType(const std::shared_ptr<simit::ir::Type> &type){
   switch (type->getKind()) {
-    case Type::Tensor:
+    case simit::ir::Type::Tensor:
       assert(isValidComponentType(tensorTypePtr(type)->getComponentType()));
       switch (tensorTypePtr(type)->getComponentType()) {
         case simit::ComponentType::INT:
@@ -28,13 +28,13 @@ llvm::Type *toLLVMType(const std::shared_ptr<Type> &type){
           return LLVM_DOUBLEPTR;
       }
       break;
-    case Type::Set:
+    case simit::ir::Type::Set:
       NOT_SUPPORTED_YET;
       break;
   }
 }
 
-llvm::Constant *toLLVMPtr(const simit::internal::Literal *literal) {
+llvm::Constant *toLLVMPtr(const simit::ir::Literal *literal) {
   llvm::Constant *c = (sizeof(void*) == 4)
       ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT),
                                (int)(intptr_t)literal->getData())

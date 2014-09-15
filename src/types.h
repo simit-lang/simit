@@ -13,7 +13,7 @@
 namespace simit {
 class SetBase;
 
-namespace internal {
+namespace ir {
 
 /// A Simit type, which is either a Set or a Tensor.
 class Type : public simit::interfaces::Printable, simit::interfaces::Uncopyable{

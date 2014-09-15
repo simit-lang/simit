@@ -5,7 +5,7 @@
 #include "macros.h"
 
 namespace simit {
-namespace internal {
+namespace ir {
 
 class IRNode;
 class Function;

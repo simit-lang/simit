@@ -11,7 +11,7 @@
 #include "ir.h"
 
 namespace simit {
-namespace internal {
+namespace ir {
 class Function;
 class Argument;
 class Literal;
@@ -20,7 +20,7 @@ class Type;
 
 // TODO: Replace with a simple tensor implementation
 //typedef std::shared_ptr<simit::internal::Literal> TensorPtr;
-typedef simit::internal::Literal Tensor;
+typedef simit::ir::Literal Tensor;
 class SetBase;
 
 class Function : public simit::interfaces::Printable,
@@ -43,24 +43,24 @@ protected:
   typedef void (*FuncPtrType)();
   class Actual {
   public:
-    Actual(const std::shared_ptr<internal::Type> &type = NULL) : type(type) {
+    Actual(const std::shared_ptr<ir::Type> &type = NULL) : type(type) {
       val.tensor = NULL;
     }
     void bind(Tensor *tensor) { val.tensor = tensor; }
     void bind(SetBase *set) { val.set = set; }
     bool isBound() const { return val.tensor != NULL; }
-    const internal::Type *getType() const { return type.get(); }
+    const ir::Type *getType() const { return type.get(); }
     const Tensor *getTensor() { return val.tensor; }
     const SetBase *getSet() { return val.set; }
   private:
-    std::shared_ptr<internal::Type> type;
+    std::shared_ptr<ir::Type> type;
     union {
       SetBase *set;
       Tensor  *tensor;
     } val;
   };
   
-  Function(const simit::internal::Function &simitFunc);
+  Function(const ir::Function &simitFunc);
 
 private:
   std::map<std::string, Actual> actuals;

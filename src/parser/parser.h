@@ -59,9 +59,9 @@
   namespace {
   struct FormalData {
     std::string name;
-    std::shared_ptr<simit::internal::Type> type;
+    std::shared_ptr<simit::ir::Type> type;
     FormalData(const std::string &name,
-               const std::shared_ptr<simit::internal::Type> &type)
+               const std::shared_ptr<simit::ir::Type> &type)
         : name(name), type(type){}
   };
   }
@@ -208,57 +208,57 @@ namespace  simit { namespace internal  {
   const char *string;
 
 
-  std::shared_ptr<simit::internal::IRNode>              *IRNode;
-  std::vector<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
+  std::shared_ptr<ir::IRNode>              *IRNode;
+  std::vector<std::shared_ptr<ir::IRNode>> *IRNodes;
 
 
-  std::shared_ptr<ElementType> *elementType;
-  std::vector<ElementField*>   *fields;
-  ElementField                 *field;
+  std::shared_ptr<ir::ElementType> *elementType;
+  std::vector<ir::ElementField*>   *fields;
+  ir::ElementField                 *field;
 
 
-  Function *function;
+  ir::Function *function;
 
 
-  FormalData                                *Formal;
-  simit::util::OwnershipVector<FormalData*> *Formals;
-  std::vector<std::shared_ptr<Argument>>    *Arguments;
-  std::vector<std::shared_ptr<Result>>      *Results;
+  FormalData                                 *Formal;
+  util::OwnershipVector<FormalData*>         *Formals;
+  std::vector<std::shared_ptr<ir::Argument>> *Arguments;
+  std::vector<std::shared_ptr<ir::Result>>   *Results;
 
 
-  std::shared_ptr<simit::internal::Expression>              *expression;
-  std::vector<std::shared_ptr<simit::internal::Expression>> *expressions;
+  std::shared_ptr<ir::Expression>              *expression;
+  std::vector<std::shared_ptr<ir::Expression>> *expressions;
 
 
-  IndexExpr::Operator                          binop;
-  std::shared_ptr<simit::internal::IndexExpr> *indexExpr;
+  ir::IndexExpr::Operator         binop;
+  std::shared_ptr<ir::IndexExpr> *indexExpr;
 
 
 
-  std::shared_ptr<Call>       *call;
-  std::shared_ptr<TensorRead> *tensorRead;
+  std::shared_ptr<ir::Call>       *call;
+  std::shared_ptr<ir::TensorRead> *tensorRead;
 
 
   VariableAccess       *VarAccess;
   VariableAccessVector *VarAccesses;
 
 
-  Type                         *type;
+  ir::Type                         *type;
 
-  TensorType                   *tensorType;
-  std::vector<IndexSetProduct> *IndexSetProducts;
-  std::vector<IndexSet>        *IndexSets;
-  IndexSet                     *indexSet;
-  ComponentType                 componentType;
+  ir::TensorType                   *tensorType;
+  std::vector<ir::IndexSetProduct> *IndexSetProducts;
+  std::vector<ir::IndexSet>        *IndexSets;
+  ir::IndexSet                     *indexSet;
+  ComponentType                     componentType;
 
-  SetType                      *setType;
+  ir::SetType                      *setType;
 
 
-  std::shared_ptr<Literal> *TensorLiteral;
-  TensorValues<double>     *TensorDoubleValues;
-  TensorValues<int>        *TensorIntValues;
+  std::shared_ptr<ir::Literal> *TensorLiteral;
+  TensorValues<double>         *TensorDoubleValues;
+  TensorValues<int>            *TensorIntValues;
 
- Test *test; 
+ ir::Test *test; 
 
 
     };

@@ -27,11 +27,11 @@ public:
   }
 
   void addSymbol(const std::string &name,
-                 const std::shared_ptr<Expression> &expression) {
+                 const std::shared_ptr<ir::Expression> &expression) {
     symtable.insert(name, expression);
   }
 
-  const std::shared_ptr<Expression> &getSymbol(const std::string &name) {
+  const std::shared_ptr<ir::Expression> &getSymbol(const std::string &name) {
     return symtable.get(name);
   }
 
@@ -39,7 +39,7 @@ public:
     return symtable.contains(name);
   }
 
-  void addFunction(Function *f) {
+  void addFunction(ir::Function *f) {
     functions[f->getName()] = f;
   }
 
@@ -47,12 +47,12 @@ public:
     return functions.find(name) != functions.end();
   }
 
-  Function *getFunction(const std::string &name) {
+  ir::Function *getFunction(const std::string &name) {
     return functions[name];
   }
 
-  std::vector<Function*> getFunctions() {
-    std::vector<Function*> funcVector(functions.size());
+  std::vector<ir::Function*> getFunctions() {
+    std::vector<ir::Function*> funcVector(functions.size());
     size_t i=0;
     for (auto &func : functions) {
       funcVector[i] = func.second;
@@ -60,7 +60,7 @@ public:
     return funcVector;
   }
 
-  void addElementType(std::shared_ptr<ElementType> elemType) {
+  void addElementType(std::shared_ptr<ir::ElementType> elemType) {
     elementTypes[elemType->getName()] = elemType;
   }
 
@@ -68,15 +68,15 @@ public:
     return elementTypes.find(name) != elementTypes.end();
   }
 
-  std::shared_ptr<ElementType> getElementType(std::string name) {
+  std::shared_ptr<ir::ElementType> getElementType(std::string name) {
     return elementTypes[name];
   }
 
-  void addTest(Test *test) { tests.push_back(test); }
+  void addTest(ir::Test *test) { tests.push_back(test); }
 
-  const std::vector<Test*> &getTests() const { return tests; }
+  const std::vector<ir::Test*> &getTests() const { return tests; }
 
-  void toggleColumnVector(const Type &type) {
+  void toggleColumnVector(const ir::Type &type) {
     if (columnVectors.contains(&type)) {
       bool &val = columnVectors.get(&type);
       val = !val;
@@ -86,7 +86,7 @@ public:
     }
   }
 
-  bool isColumnVector(const Type &type) {
+  bool isColumnVector(const ir::Type &type) {
     if (!columnVectors.contains(&type)) {
       return false;
     }
@@ -94,12 +94,12 @@ public:
   }
 
 private:
-  std::map<std::string, Function *>                   functions;
-  std::map<std::string, std::shared_ptr<ElementType>> elementTypes;
-  std::vector<Test*>                                  tests;
+  std::map<std::string, ir::Function *>                   functions;
+  std::map<std::string, std::shared_ptr<ir::ElementType>> elementTypes;
+  std::vector<ir::Test*>                                  tests;
 
-  ScopedMap<std::string, std::shared_ptr<Expression>> symtable;
-  ScopedMap<const Type*, bool>                        columnVectors;
+  ScopedMap<std::string, std::shared_ptr<ir::Expression>> symtable;
+  ScopedMap<const ir::Type*, bool>                        columnVectors;
 };
 
 }} // namespace simit::internal

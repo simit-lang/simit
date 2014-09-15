@@ -13,7 +13,7 @@
 using namespace std;
 
 namespace simit {
-namespace internal {
+namespace ir {
 
 // class IRNode
 IRNode::~IRNode() {}

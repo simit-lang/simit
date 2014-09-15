@@ -9,8 +9,7 @@ using namespace std;
 
 namespace simit {
 
-
-Function::Function(const simit::internal::Function &simitFunc)
+Function::Function(const simit::ir::Function &simitFunc)
     : funcPtr(NULL), initRequired(true) {
   for (auto &argument : simitFunc.getArguments()) {
     actuals[argument->getName()] = Actual(argument->getType());

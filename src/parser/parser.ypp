@@ -36,9 +36,10 @@
 
   #include "program_context.h"
   #include "scanner.h"
-  #include "irutils.h"
+  #include "ir_codegen.h"
   using namespace std;
   using namespace simit::internal;
+  using namespace simit::ir;
 
   std::string typeString(const Type &type, ProgramContext *ctx) {
     std::stringstream ss;
@@ -238,8 +239,8 @@
 %%
 
 %union {
-  std::shared_ptr<simit::internal::IRNode>              *IRNode;
-  std::vector<std::shared_ptr<simit::internal::IRNode>> *IRNodes;
+  std::shared_ptr<ir::IRNode>              *IRNode;
+  std::vector<std::shared_ptr<ir::IRNode>> *IRNodes;
 };
 
 program
@@ -295,9 +296,9 @@ endpoints
 
 // Element Definitions
 %union {
-  std::shared_ptr<ElementType> *elementType;
-  std::vector<ElementField*>   *fields;
-  ElementField                 *field;
+  std::shared_ptr<ir::ElementType> *elementType;
+  std::vector<ir::ElementField*>   *fields;
+  ir::ElementField                 *field;
 };
 
 %type <elementType> element_type_decl;
@@ -333,7 +334,7 @@ field_decl
 
 // Procedures and functions
 %union {
-  Function *function;
+  ir::Function *function;
 };
 
 %type <function> procedure;
@@ -375,19 +376,19 @@ function_header
   namespace {
   struct FormalData {
     std::string name;
-    std::shared_ptr<simit::internal::Type> type;
+    std::shared_ptr<simit::ir::Type> type;
     FormalData(const std::string &name,
-               const std::shared_ptr<simit::internal::Type> &type)
+               const std::shared_ptr<simit::ir::Type> &type)
         : name(name), type(type){}
   };
   }
 };
 
 %union {
-  FormalData                                *Formal;
-  simit::util::OwnershipVector<FormalData*> *Formals;
-  std::vector<std::shared_ptr<Argument>>    *Arguments;
-  std::vector<std::shared_ptr<Result>>      *Results;
+  FormalData                                 *Formal;
+  util::OwnershipVector<FormalData*>         *Formals;
+  std::vector<std::shared_ptr<ir::Argument>> *Arguments;
+  std::vector<std::shared_ptr<ir::Result>>   *Results;
 };
 
 %type <Arguments> arguments;
@@ -567,8 +568,8 @@ elif_clauses
 
 // Expressions
 %union {
-  std::shared_ptr<simit::internal::Expression>              *expression;
-  std::vector<std::shared_ptr<simit::internal::Expression>> *expressions;
+  std::shared_ptr<ir::Expression>              *expression;
+  std::vector<std::shared_ptr<ir::Expression>> *expressions;
 };
 
 %type <expression> expr;
@@ -610,8 +611,8 @@ paren_expr
 
 // Linear Algebra Expressions
 %union {
-  IndexExpr::Operator                          binop;
-  std::shared_ptr<simit::internal::IndexExpr> *indexExpr;
+  ir::IndexExpr::Operator         binop;
+  std::shared_ptr<ir::IndexExpr> *indexExpr;
 
 };
 %destructor {} <binop>;
@@ -847,8 +848,8 @@ range_expr
 
 // Call and Tensor Read Expressions
 %union {
-  std::shared_ptr<Call>       *call;
-  std::shared_ptr<TensorRead> *tensorRead;
+  std::shared_ptr<ir::Call>       *call;
+  std::shared_ptr<ir::TensorRead> *tensorRead;
 };
 
 %type <expression> call_or_tensor_read_expr;
@@ -974,15 +975,15 @@ lhs_expr
 
 // Types
 %union {
-  Type                         *type;
+  ir::Type                         *type;
 
-  TensorType                   *tensorType;
-  std::vector<IndexSetProduct> *IndexSetProducts;
-  std::vector<IndexSet>        *IndexSets;
-  IndexSet                     *indexSet;
-  ComponentType                 componentType;
+  ir::TensorType                   *tensorType;
+  std::vector<ir::IndexSetProduct> *IndexSetProducts;
+  std::vector<ir::IndexSet>        *IndexSets;
+  ir::IndexSet                     *indexSet;
+  ComponentType                     componentType;
 
-  SetType                      *setType;
+  ir::SetType                      *setType;
 };
 %destructor {} <componentType>;
 
@@ -1155,9 +1156,9 @@ component_type
 };
 
 %union {
-  std::shared_ptr<Literal> *TensorLiteral;
-  TensorValues<double>     *TensorDoubleValues;
-  TensorValues<int>        *TensorIntValues;
+  std::shared_ptr<ir::Literal> *TensorLiteral;
+  TensorValues<double>         *TensorDoubleValues;
+  TensorValues<int>            *TensorIntValues;
 };
 
 %type <TensorLiteral> literal;
@@ -1329,7 +1330,7 @@ scalar_literal
   }
 
 // Tests
-%union { Test *test; };
+%union { ir::Test *test; };
 %type <test> test;
 test
   : "%!" call_expr "==" tensor_literal ";" {

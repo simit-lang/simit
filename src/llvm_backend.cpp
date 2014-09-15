@@ -26,6 +26,7 @@
 #include "macros.h"
 
 using namespace std;
+using namespace simit::ir;
 using namespace simit::internal;
 
 namespace {
@@ -386,7 +387,7 @@ LLVMBackend::~LLVMBackend() {
   delete builder;
 }
 
-simit::Function *LLVMBackend::compile(Function *function) {
+simit::Function *LLVMBackend::compile(simit::ir::Function *function) {
   TemporaryAllocator talloc;
   std::map<IRNode*, void*> temps = talloc.allocateTemporaries(function);
 
@@ -397,7 +398,7 @@ simit::Function *LLVMBackend::compile(Function *function) {
                           talloc.getTemporaries());
 }
 
-llvm::Function *LLVMBackend::codegen(Function *function,
+llvm::Function *LLVMBackend::codegen(simit::ir::Function *function,
                                      const std::map<IRNode*, void*> &temps) {
   // TODO: Add temporaries as pointer values to storageLocations
   visit(function);
@@ -416,7 +417,7 @@ llvm::Function *LLVMBackend::codegen(Function *function,
   return f;
 }
 
-void LLVMBackend::handle(Function *function) {
+void LLVMBackend::handle(simit::ir::Function *function) {
   llvm::Function *f = createPrototype(function->getName(),
                                       function->getArguments(),
                                       function->getResults(),

@@ -12,7 +12,7 @@
 using namespace std;
 
 namespace simit {
-namespace internal {
+namespace ir {
 
 // class Type
 bool operator==(const Type& l, const Type& r) {

@@ -10,8 +10,11 @@ namespace simit {
 class Diagnostics;
 class Function;
 
-namespace internal {
+namespace ir {
 class Function;
+}
+
+namespace internal {
 class ProgramContext;
 
 /// Code generators are used to turn Simit IR into some other representation.
@@ -21,7 +24,7 @@ public:
   Backend() {}
   virtual ~Backend() {}
 
-  virtual simit::Function *compile(Function *function) = 0;
+  virtual simit::Function *compile(simit::ir::Function *function) = 0;
 
   int verify(ProgramContext &ctx, Diagnostics *diags);
 };

@@ -7,6 +7,7 @@
 #include "program_context.h"
 
 using namespace std;
+using namespace simit::ir;
 using namespace simit::util;
 
 namespace simit {
@@ -16,11 +17,11 @@ int Backend::verify(ProgramContext &ctx, Diagnostics *diags) {
   // For each test look up the called function. Grab the actual arguments and
   // run the function with them as input.  Then compare the result to the
   // expected literal.
-  std::map<Function*, simit::Function*> compiled;
+  std::map<ir::Function*, simit::Function*> compiled;
 
   for (auto &test : ctx.getTests()) {
     // get binary function with name test->call->callee from list of functions
-    Function *func = ctx.getFunction(test->getCallee());
+    ir::Function *func = ctx.getFunction(test->getCallee());
     if (func == NULL) {
       diags->report() << "Error: attempting to test unknown function";
       return 1;
@@ -42,10 +43,10 @@ int Backend::verify(ProgramContext &ctx, Diagnostics *diags) {
     }
 
     auto &formalResults = func->getResults();
-    std::vector<std::shared_ptr<internal::Literal>> actualResults;
+    std::vector<std::shared_ptr<ir::Literal>> actualResults;
     for (auto &formalResult : formalResults) {
-      auto actualResultPtr = new internal::Literal(formalResult->getType());
-      auto actualResult = std::shared_ptr<internal::Literal>(actualResultPtr);
+      auto actualResultPtr = new ir::Literal(formalResult->getType());
+      auto actualResult = std::shared_ptr<ir::Literal>(actualResultPtr);
       actualResult->clear();
       actualResults.push_back(actualResult);
       compiledFunc->bind(formalResult->getName(), actualResult.get());

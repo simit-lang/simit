@@ -1,4 +1,4 @@
-#include "irutils.h"
+#include "ir_codegen.h"
 
 #include <iostream>
 #include <memory>
@@ -8,7 +8,7 @@
 using namespace std;
 
 namespace simit {
-namespace internal {
+namespace ir {
 
 // class IndexVarFactory
 std::shared_ptr<IndexVar>

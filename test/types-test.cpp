@@ -5,7 +5,7 @@
 #include "types.h"
 
 using namespace std;
-using namespace simit::internal;
+using namespace simit::ir;
 using namespace simit;
 
 TEST(IndexSet, constructor) {

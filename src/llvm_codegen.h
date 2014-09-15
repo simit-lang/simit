@@ -28,9 +28,9 @@ namespace internal {
 
 llvm::Type *toLLVMType(const simit::ComponentType type);
 
-llvm::Type *toLLVMType(const std::shared_ptr<simit::internal::Type> &type);
+llvm::Type *toLLVMType(const std::shared_ptr<ir::Type> &type);
 
-llvm::Constant *toLLVMPtr(const Literal *literal);
+llvm::Constant *toLLVMPtr(const ir::Literal *literal);
 
 simit::ComponentType llvmToSimitType(const llvm::Type *type);
 

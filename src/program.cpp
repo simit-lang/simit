@@ -88,7 +88,7 @@ int Program::loadFile(const std::string &filename) {
 }
 
 std::unique_ptr<Function> Program::compile(const std::string &function) {
-  internal::Function *func = impl->ctx.getFunction(function);
+  ir::Function *func = impl->ctx.getFunction(function);
   if (!func) {
     impl->diagnostics.report() << "Attempting to compile unknown function ("
                                << function << ")";

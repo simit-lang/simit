@@ -1,7 +1,7 @@
 #ifndef SIMIT_STORAGE_H
 #define SIMIT_STORAGE_H
 
-#include "irvisitors.h"
+#include "ir_visitors.h"
 
 #include <cstdlib>
 #include <vector>
@@ -16,7 +16,7 @@ public:
   Storage(int size) : size(size) { data = malloc(size); }
   ~Storage() { free(data); }
 
-  void *getData() { return data; }
+  void *w() { return data; }
   int getSize() const { return size; }
 
 private:
@@ -25,16 +25,16 @@ private:
 };
 
 
-class TemporaryAllocator : IRVisitor {
+class TemporaryAllocator : ir::IRVisitor {
 public:
   TemporaryAllocator() {}
 
-  std::map<IRNode*, void*> allocateTemporaries(Function *f);
+  std::map<ir::IRNode*, void*> allocateTemporaries(ir::Function *f);
   std::vector<std::shared_ptr<Storage>> getTemporaries() const {return storage;}
 
 private:
   std::vector<std::shared_ptr<Storage>> storage;
-  std::map<IRNode*, void*> temps;
+  std::map<ir::IRNode*, void*>          temps;
 };
 
 }} // namespace simit::internal

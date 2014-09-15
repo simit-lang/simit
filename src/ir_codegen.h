@@ -8,7 +8,7 @@
 #include "errors.h"
 
 namespace simit {
-namespace internal {
+namespace ir {
 
 // TODO: Change error handling to use LocationDiagnostics, which is retrieved
 //       from Diagnostics using Diagnostics(location), e.g.
