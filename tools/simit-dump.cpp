@@ -115,7 +115,7 @@ int main(int argc, const char* argv[]) {
   }
 
   simit::internal::LLVMBackend backend;
-  for (simit::internal::Function *func : ctx.getFunctions()) {
+  for (simit::ir::Function *func : ctx.getFunctions()) {
     if (emitSimit) {
       cout << *func << endl;
     }
