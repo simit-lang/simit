@@ -186,21 +186,14 @@ bool operator!=(const TensorType& l, const TensorType& r) {
 }
 
 
-// class ElementField
-std::ostream &operator<<(std::ostream &os, const ElementField &field) {
-  os << field.getName() << " : " << *field.getType();
-  return os;
-}
-
-
 // class ElementType
 std::ostream &operator<<(std::ostream &os, const ElementType &elementType) {
   os << "struct " << elementType.getName();
   if (elementType.getFields().size() > 0) {
     os << endl << "  ";
   }
-  for (ElementField *field : elementType.getFields()) {
-    os << *field << ";" << endl;
+  for (auto &field : elementType.getFields()) {
+    os << field.first << " : " << *field.second << ";" << endl;
   }
   os << "end";
   return os;

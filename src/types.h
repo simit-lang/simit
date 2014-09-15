@@ -3,7 +3,7 @@
 
 #include <string>
 #include <vector>
-#include <list>
+#include <map>
 #include <iostream>
 #include <memory>
 
@@ -136,41 +136,19 @@ bool operator!=(const TensorType& l, const TensorType& r);
 
 
 // Set types
-class ElementField {
-public:
-  ElementField(const std::string &name, TensorType *type)
-      : name(name), type(type) {}
-
-  ~ElementField() { delete type; }
-
-  const std::string &getName() const { return name; }
-  const  TensorType *getType() const { return type; }
-
-private:
-  std::string name;
-  TensorType *type;
-};
-
-std::ostream &operator<<(std::ostream &os, const ElementField &field);
-
-
 class ElementType {
 public:
-  ElementType(const std::string &name, const std::vector<ElementField*> &fields)
+  typedef std::map<std::string,std::shared_ptr<TensorType>> FieldsMapType;
+
+  ElementType(const std::string &name, const FieldsMapType &fields)
       : name(name), fields(fields) {}
 
-  ~ElementType() {
-    for (ElementField *field : fields) {
-      delete field;
-    }
-  }
-
   const std::string &getName() const { return name; }
-  const std::vector<ElementField*> &getFields() const { return fields; }
+  const FieldsMapType &getFields() const { return fields; }
 
 private:
   std::string name;
-  std::vector<ElementField*> fields;
+  FieldsMapType fields;
 };
 
 std::ostream &operator<<(std::ostream &os, const ElementType &elementType);

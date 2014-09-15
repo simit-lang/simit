@@ -296,16 +296,16 @@ endpoints
 
 // Element Definitions
 %union {
-  std::shared_ptr<ir::ElementType> *elementType;
-  std::vector<ir::ElementField*>   *fields;
-  ir::ElementField                 *field;
+  std::shared_ptr<ir::ElementType>                       *elementType;
+  ir::ElementType::FieldsMapType                         *fields;
+  std::pair<std::string,std::shared_ptr<ir::TensorType>> *field;
 };
 
 %type <elementType> element_type_decl;
 element_type_decl
   : "struct" IDENT field_decl_list "end" {
     std::string name = convertAndFree($IDENT);
-    std::unique_ptr<std::vector<ElementField*>> fields($field_decl_list);
+    std::unique_ptr<ir::ElementType::FieldsMapType> fields($field_decl_list);
 
     if (ctx->containsElementType(name)) {
       REPORT_ERROR("struct redefinition (" + name + ")", @element_type_decl);
@@ -318,18 +318,20 @@ element_type_decl
 %type <fields> field_decl_list;
 field_decl_list
   : /* empty */ {
-    $$ = new std::vector<ElementField*>();
+    $$ = new ElementType::FieldsMapType();
   }
   | field_decl_list field_decl {
     $$ = $1;
-    $$->push_back($field_decl);
+    $$->insert(*$field_decl);
+    delete $field_decl;
   }
 
 %type <field> field_decl;
 field_decl
   : IDENT ":" tensor_type  ";" {
     std::string name = convertAndFree($IDENT);
-    $$ = new ElementField(name, $tensor_type);
+    std::shared_ptr<TensorType> tensorType($tensor_type);
+    $$ = new pair<string,shared_ptr<ir::TensorType>>(name, tensorType);
   }
 
 // Procedures and functions

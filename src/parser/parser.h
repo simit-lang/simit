@@ -212,9 +212,9 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<ir::IRNode>> *IRNodes;
 
 
-  std::shared_ptr<ir::ElementType> *elementType;
-  std::vector<ir::ElementField*>   *fields;
-  ir::ElementField                 *field;
+  std::shared_ptr<ir::ElementType>                       *elementType;
+  ir::ElementType::FieldsMapType                         *fields;
+  std::pair<std::string,std::shared_ptr<ir::TensorType>> *field;
 
 
   ir::Function *function;
