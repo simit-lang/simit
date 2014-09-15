@@ -200,6 +200,15 @@ private:
 };
 
 
+namespace {
+std::shared_ptr<Type>
+fieldType(const std::shared_ptr<Expression> &set, const std::string &fieldName){
+  assert(set->getType()->isSet());
+  SetType *setType = setTypePtr(set->getType());
+  return setType->getElementType()->getFields().at(fieldName);
+}}
+
+
 /// Abstract class for expressions that read values from tensors and sets.
 class Read : public Expression {
 protected:
@@ -208,23 +217,12 @@ protected:
 };
 
 
-namespace {
-std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &set,
-                                const std::string &fieldName) {
-  assert(set->getType()->isSet());
-  SetType *setType = setTypePtr(set->getType());
-  return setType->getElementType()->getFields().at(fieldName);
-}
-}
-
-/// An expression that reads a tensor from a set field.
+/// Expression that reads a tensor from a set field.
 class FieldRead : public Read {
 public:
   FieldRead(const std::shared_ptr<Expression> &set,const std::string &fieldName)
     : Read(set->getName()+"."+fieldName, fieldType(set, fieldName)),
       set(set), fieldName(fieldName) {}
-
-  ~FieldRead() {}
 
   const std::shared_ptr<Expression> &getSet() const { return set; }
   const std::string &getFieldName() const { return fieldName; }
@@ -239,7 +237,7 @@ private:
 };
 
 
-/// An expression that reads a tensor from a tensor location.
+/// Expression that reads a tensor from a tensor location.
 class TensorRead : public Read {
 
 };
@@ -247,19 +245,40 @@ class TensorRead : public Read {
 
 /// Instruction that stores a value to a tensor or an object.
 class Write : public Expression {
-public:
+protected:
   Write(const std::string &name, const std::shared_ptr<Type> &type)
       : Expression(name, type) {}
 };
 
 
-/// An instruction that writes a tensor to a set field.
+/// Instruction that writes a tensor to a set field.
 class FieldWrite : public Write {
+public:
+  FieldWrite(const std::shared_ptr<Expression> &set,const std::string &fieldName)
+    : Write(set->getName()+"."+fieldName, set->getType()),
+      set(set), fieldName(fieldName) {}
 
+  void setValue(const std::shared_ptr<Expression> &value) {
+    this->value = value;
+  }
+
+  const std::shared_ptr<Expression> &getSet() const { return set; }
+  const std::string &getFieldName() const { return fieldName; }
+
+  const std::shared_ptr<Expression> &getValue() { return value; }
+
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+
+private:
+  std::shared_ptr<Expression> set;
+  std::string fieldName;
+  std::shared_ptr<Expression> value;
+
+  void print(std::ostream &os) const;
 };
 
 
-/// An instruction that writes a tensor to a tensor location.
+/// Instruction that writes a tensor to a tensor location.
 class TensorWrite : public Write {
 
 };

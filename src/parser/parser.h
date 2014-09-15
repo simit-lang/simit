@@ -67,13 +67,38 @@
   }
 
 
-  namespace {
-  struct VariableAccess {
-    std::string name;
-  };
+  struct WriteInfo {
+    enum Kind { VARIABLE, FIELD, TENSOR };
+    Kind kind;
+    union {
+      std::string                             *variableName;
+      std::shared_ptr<simit::ir::FieldWrite>  *fieldWrite;
+      std::shared_ptr<simit::ir::TensorWrite> *tensorWrite;
+    };
+    WriteInfo(const std::string &variableName) : kind(VARIABLE) {
+      this->variableName = new std::string(variableName);
+    }
+    WriteInfo(std::shared_ptr<simit::ir::FieldWrite> *write) : kind(FIELD) {
+      this->fieldWrite = write;
+    }
+    WriteInfo(std::shared_ptr<simit::ir::TensorWrite> *write) : kind(TENSOR) {
+      this->tensorWrite = write;
+    }
 
-  typedef simit::util::OwnershipVector<VariableAccess*> VariableAccessVector;
-  }
+    ~WriteInfo() {
+      switch (kind) {
+        case Kind::VARIABLE:
+          delete variableName;
+          break;
+        case Kind::FIELD:
+          delete fieldWrite;
+          break;
+        case Kind::TENSOR:
+          delete tensorWrite;
+          break;
+      }
+    }
+  };
 
 
   namespace {
@@ -242,8 +267,10 @@ namespace  simit { namespace internal  {
   std::shared_ptr<ir::TensorRead> *tensorRead;
 
 
-  VariableAccess       *VarAccess;
-  VariableAccessVector *VarAccesses;
+  std::vector<WriteInfo*>          *writeinfos;
+  WriteInfo                        *writeinfo;
+  std::shared_ptr<ir::FieldWrite>  *fieldWrite;
+  std::shared_ptr<ir::TensorWrite> *tensorWrite;
 
 
   ir::Type                         *type;
@@ -626,8 +653,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 341,     ///< Last index in yytable_.
-      yynnts_ = 64,  ///< Number of nonterminal symbols.
+      yylast_ = 361,     ///< Last index in yytable_.
+      yynnts_ = 66,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

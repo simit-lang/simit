@@ -39,6 +39,7 @@ public:
   virtual void visit(IndexExpr    *t);
   virtual void visit(Call         *t);
   virtual void visit(FieldRead    *t);
+  virtual void visit(FieldWrite   *t);
 
   virtual void handle(Function    *f);
   virtual void handle(Argument    *t);
@@ -47,6 +48,7 @@ public:
   virtual void handle(IndexExpr   *t);
   virtual void handle(Call        *t);
   virtual void handle(FieldRead   *t);
+  virtual void handle(FieldWrite  *t);
 
   virtual void handleDefault(IRNode *t) { UNUSED(t); }
 

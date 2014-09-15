@@ -334,6 +334,7 @@ field_decl
     $$ = new pair<string,shared_ptr<ir::TensorType>>(name, tensorType);
   }
 
+
 // Procedures and functions
 %union {
   ir::Function *function;
@@ -498,8 +499,8 @@ return_stmt
 
 %type<IRNodes> assign_stmt;
 assign_stmt
-  : lhs_expr_list "=" expr_list ";" {
-    auto lhsList = unique_ptr<VariableAccessVector>($lhs_expr_list);
+  : write_expr_list "=" expr_list ";" {
+    auto lhsList = unique_ptr<vector<WriteInfo*>>($write_expr_list);
     auto rhsList = unique_ptr<vector<shared_ptr<Expression>>>($expr_list);
 
     $$ = new vector<shared_ptr<IRNode>>();
@@ -516,23 +517,45 @@ assign_stmt
     auto lhsIter = lhsList->begin();
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
-      VariableAccess *lhs = *lhsIter;
-      std::shared_ptr<Expression> &rhs = *rhsIter;
+      unique_ptr<WriteInfo> lhs(*lhsIter);
+      shared_ptr<Expression> &rhs = *rhsIter;
 
-      // TODO: Remove these checks
       if (rhs == NULL) continue;
-      if (!ctx->hasSymbol(lhs->name)) continue;
 
-      assert(ctx->hasSymbol(lhs->name));
-      shared_ptr<Expression> lhsTensor = ctx->getSymbol(lhs->name);
-      if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
-        CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
-        rhs->setName(result->getName());
-        result->setValue(rhs);
-        $$->push_back(rhs);
-      }
-      else {
-        NOT_SUPPORTED_YET;
+      switch (lhs->kind) {
+        case WriteInfo::Kind::VARIABLE: {
+          std::string variableName = *lhs->variableName;
+
+          // TODO: Remove check
+          if (!ctx->hasSymbol(variableName)) continue;
+
+          assert(ctx->hasSymbol(variableName));
+          shared_ptr<Expression> lhsTensor = ctx->getSymbol(variableName);
+          if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
+            CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
+            rhs->setName(result->getName());
+            result->setValue(rhs);
+            $$->push_back(rhs);
+          }
+          else {
+            NOT_SUPPORTED_YET;
+          }
+          break;
+        }
+        case WriteInfo::Kind::FIELD: {
+          std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
+          fieldWrite->setValue(rhs);
+
+          if (auto result = dynamic_pointer_cast<Result>(fieldWrite->getSet())){
+            result->setValue(fieldWrite);
+            $$->push_back(fieldWrite);
+          }
+
+          break;
+        }
+        case WriteInfo::Kind::TENSOR: {
+          break;
+        }
       }
     }
   }
@@ -818,7 +841,7 @@ boolean_expr
 
 %type <fieldRead> field_read_expr;
 field_read_expr
-  : set_expr "." IDENT {
+  : set_read_expr "." IDENT {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     if ((*$1)->getType() == NULL) { $$ = NULL; break; } // TODO: Remove check
 
@@ -830,8 +853,8 @@ field_read_expr
     $$ = new shared_ptr<FieldRead>(new FieldRead(set, fieldName));
   }
 
-%type <expression> set_expr;
-set_expr
+%type <expression> set_read_expr;
+set_read_expr
   : ident_expr
   | paren_expr
   | call_expr
@@ -924,52 +947,96 @@ reduction_op
   | "*"
 
 
-// LHS Expressions
+// Write Expressions
 %code requires {
-  namespace {
-  struct VariableAccess {
-    std::string name;
-  };
+  struct WriteInfo {
+    enum Kind { VARIABLE, FIELD, TENSOR };
+    Kind kind;
+    union {
+      std::string                             *variableName;
+      std::shared_ptr<simit::ir::FieldWrite>  *fieldWrite;
+      std::shared_ptr<simit::ir::TensorWrite> *tensorWrite;
+    };
+    WriteInfo(const std::string &variableName) : kind(VARIABLE) {
+      this->variableName = new std::string(variableName);
+    }
+    WriteInfo(std::shared_ptr<simit::ir::FieldWrite> *write) : kind(FIELD) {
+      this->fieldWrite = write;
+    }
+    WriteInfo(std::shared_ptr<simit::ir::TensorWrite> *write) : kind(TENSOR) {
+      this->tensorWrite = write;
+    }
 
-  typedef simit::util::OwnershipVector<VariableAccess*> VariableAccessVector;
-  }
+    ~WriteInfo() {
+      switch (kind) {
+        case Kind::VARIABLE:
+          delete variableName;
+          break;
+        case Kind::FIELD:
+          delete fieldWrite;
+          break;
+        case Kind::TENSOR:
+          delete tensorWrite;
+          break;
+      }
+    }
+  };
 };
 
 %union {
-  VariableAccess       *VarAccess;
-  VariableAccessVector *VarAccesses;
+  std::vector<WriteInfo*>          *writeinfos;
+  WriteInfo                        *writeinfo;
+  std::shared_ptr<ir::FieldWrite>  *fieldWrite;
+  std::shared_ptr<ir::TensorWrite> *tensorWrite;
 };
 
-%type<VarAccesses> lhs_expr_list;
-lhs_expr_list
-  : lhs_expr {
-    $$ = new VariableAccessVector();
-    if ($lhs_expr == NULL) break;  // TODO: Remove check
-    $$->push_back($lhs_expr);
+%type<writeinfos> write_expr_list;
+write_expr_list
+  : write_expr {
+    $$ = new vector<WriteInfo*>();
+    if ($write_expr == NULL) break;  // TODO: Remove check
+    $$->push_back($write_expr);
   }
-  | lhs_expr_list "," lhs_expr {
+  | write_expr_list "," write_expr {
     $$ = $1;
-    if ($lhs_expr == NULL) break;  // TODO: Remove check
-    $$->push_back($lhs_expr);
+    if ($write_expr == NULL) break;  // TODO: Remove check
+    $$->push_back($write_expr);
   }
 
-%type<VarAccess> lhs_expr;
-lhs_expr
+%type <writeinfo> write_expr;
+write_expr
   : IDENT {
     std::string name = convertAndFree($IDENT);
-    auto variableStore = new VariableAccess;
-    variableStore->name = name;
-    $$ = variableStore;
+    $$ = new WriteInfo(name);
   }
-  | IDENT "." IDENT {
+  | field_write_expr {
+    $$ = new WriteInfo($field_write_expr);
+  }
+  | tensor_write_expr {
+    $$ = NULL;
+  }
+
+%type <fieldWrite> field_write_expr;
+field_write_expr
+  : ident_expr "." IDENT {
+    if ($1 == NULL) { $$ = NULL; break; } // TODO: Remove check
+
+    shared_ptr<Expression> identExpr = convertAndDelete($ident_expr);
+    string fieldName = convertAndFree($IDENT);
+    $$ = new shared_ptr<FieldWrite>(new FieldWrite(identExpr, fieldName));
+  }
+  | paren_expr "." IDENT {
+    $$ = NULL;
+  }
+
+%type <tensorWrite> tensor_write_expr;
+tensor_write_expr
+  : IDENT "(" expr_list ")" {
     std::string name = convertAndFree($1);
-    std::string field = convertAndFree($3);
     $$ = NULL;
   }
-  | IDENT "(" expr_list ")" {
-    std::string name = convertAndFree($IDENT);
+  | field_write_expr "(" expr_list ")" {
     $$ = NULL;
-    delete $expr_list;
   }
 
 

@@ -322,9 +322,16 @@ void Call::print(std::ostream &os) const {
   os << getName() << "(" << util::join(arguments, ", ") << ")";
 }
 
+
 // class FieldRead
 void FieldRead::print(std::ostream &os) const {
-  os << getSet()->getName() << "." << getFieldName();
+  os << getName();
+}
+
+
+// class FieldWrite
+void FieldWrite::print(std::ostream &os) const {
+  os << getName();
 }
 
 
