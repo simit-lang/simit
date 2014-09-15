@@ -1,4 +1,4 @@
-# Doxyfile 1.8.7
+L
 
 # Project related configuration options
 PROJECT_NAME           = Simit
@@ -18,6 +18,10 @@ DISTRIBUTE_GROUP_DOC   = YES
 
 # Build related configuration options
 EXTRACT_ALL            = YES
+CLASS_DIAGRAMS         = YES
+HAVE_DOT               = YES
+UML_LOOK               = YES
+COLLABORATION_GRAPH    = NO
 GENERATE_TODOLIST      = YES
 GENERATE_TESTLIST      = YES
 GENERATE_BUGLIST       = NO
@@ -50,7 +54,7 @@ GENERATE_HTML          = YES
 HTML_OUTPUT            = . 
 HTML_FILE_EXTENSION    = .html
 HTML_TIMESTAMP         = NO
-HTML_DYNAMIC_SECTIONS  = NO
+HTML_DYNAMIC_SECTIONS  = YES 
 GENERATE_TREEVIEW      = YES
 SEARCHENGINE           = YES
 
