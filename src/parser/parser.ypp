@@ -366,12 +366,20 @@ function_header
     $$ = new Function(ident, *arguments, *results);
 
     ctx->scope();
+
+    std::set<std::string> argumentNames;
     for (auto argument : *arguments) {
-      ctx->addSymbol(argument->getName(), argument);
+      ctx->addSymbol(argument->getName(), argument, NULL);
+      argumentNames.insert(argument->getName());
     }
 
     for (auto result : *results) {
-      ctx->addSymbol(result->getName(), result, true);
+      std::shared_ptr<Expression> readExpr(NULL);
+      if (argumentNames.find(result->getName()) != argumentNames.end()) {
+        readExpr = ctx->getSymbol(result->getName()).getReadExpr();
+      }
+
+      ctx->addSymbol(result->getName(), readExpr, result);
     }
   }
 
@@ -527,10 +535,14 @@ assign_stmt
           std::string variableName = *lhs->variableName;
 
           // TODO: Remove check
-          if (!ctx->hasSymbol(variableName, true)) continue;
+          if (!ctx->hasSymbol(variableName)) continue;
 
-          assert(ctx->hasSymbol(variableName, true));
-          shared_ptr<Expression> lhsTensor = ctx->getSymbol(variableName, true);
+          assert(ctx->hasSymbol(variableName));
+
+          const RWExprPair &varExprPair = ctx->getSymbol(variableName);
+          assert(varExprPair.isWritable());
+
+          shared_ptr<Expression> lhsTensor = varExprPair.getWriteExpr();
           if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
             CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
             rhs->setName(result->getName());
@@ -610,7 +622,7 @@ expr
   | map_expr
 
 
-// Ident Expression
+// Read Ident Expression
 %type <expression> ident_expr;
 ident_expr
   : IDENT {
@@ -621,7 +633,13 @@ ident_expr
       $$ = NULL;
       break;
     }
-    $$ = new shared_ptr<Expression>(ctx->getSymbol(ident));
+
+    const RWExprPair &rwExpr = ctx->getSymbol(ident);
+    if (!rwExpr.isReadable()) {
+      REPORT_ERROR(ident + " is not readable", @1);
+    }
+
+    $$ = new shared_ptr<Expression>(rwExpr.getReadExpr());
   }
 
 
@@ -779,18 +797,10 @@ linear_algebra_expr
 
 %type <binop> elwise_binary_op;
 elwise_binary_op
-  : "+" {
-    $$ = IndexExpr::ADD;
-  }
-  | "-" {
-    $$ = IndexExpr::SUB;
-  }
-  | ".*" {
-    $$ = IndexExpr::MUL;
-  }
-  | "./" {
-    $$ = IndexExpr::DIV;
-  }
+  : "+"  { $$ = IndexExpr::ADD; }
+  | "-"  { $$ = IndexExpr::SUB; }
+  | ".*" { $$ = IndexExpr::MUL; }
+  | "./" { $$ = IndexExpr::DIV; }
 
 
 // Boolean Expressions
@@ -1024,13 +1034,18 @@ field_write_expr
     string setName = convertAndFree($1);
     string fieldName = convertAndFree($3);
 
-    if(!ctx->hasSymbol(setName, true)) { $$=NULL; break; } // TODO: Remove check
+    if(!ctx->hasSymbol(setName)) { $$=NULL; break; } // TODO: Remove check
 
-    if (!ctx->hasSymbol(setName, true)) {
+    if (!ctx->hasSymbol(setName)) {
       REPORT_ERROR(setName + " is not defined in scope", @1);
     }
-    auto setExpr = shared_ptr<Expression>(ctx->getSymbol(setName, true));
 
+    const RWExprPair &setExprPair = ctx->getSymbol(setName);
+    if (!setExprPair.isWritable()) {
+      REPORT_ERROR(setName + " is not writable", @1);
+    }
+
+    auto setExpr = shared_ptr<Expression>(setExprPair.getWriteExpr());
     $$ = new shared_ptr<FieldWrite>(new FieldWrite(setExpr, fieldName));
   }
   | paren_expr "." IDENT {

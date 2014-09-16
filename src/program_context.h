@@ -13,10 +13,27 @@
 namespace simit {
 namespace internal {
 
+class RWExprPair {
+public:
+  RWExprPair() : read(NULL), write(NULL) {}
+  RWExprPair(const std::shared_ptr<ir::Expression> &read,
+                          const std::shared_ptr<ir::Expression> &write)
+      : read(read), write(write) {}
+
+  bool isReadable() const { return read != NULL; }
+  bool isWritable() const { return write != NULL; }
+
+  const std::shared_ptr<ir::Expression> &getReadExpr() const { return read; }
+  const std::shared_ptr<ir::Expression> &getWriteExpr() const { return write; }
+
+private:
+  std::shared_ptr<ir::Expression> read;
+  std::shared_ptr<ir::Expression> write;
+};
+
+
 class ProgramContext {
 public:
-  typedef std::pair<std::string,bool> ExprSymbolName;
-
   ProgramContext() {}
 
   void scope()   {
@@ -30,31 +47,23 @@ public:
   }
 
   void addSymbol(const std::string &name,
-                 const std::shared_ptr<ir::Expression> &expression,
-                 bool isResult=false) {
-    assert(!exprSymtable.contains(ExprSymbolName(name,isResult)));
-
-    exprSymtable.insert(ExprSymbolName(name,isResult), expression);
+                 const std::shared_ptr<ir::Expression> &readWrite) {
+    addSymbol(name, readWrite, readWrite);
   }
 
-  const std::shared_ptr<ir::Expression> &getSymbol(const std::string &name,
-                                                   bool write=false) {
-    if (!write) {
-      return (exprSymtable.contains(ExprSymbolName(name,false)))
-             ? exprSymtable.get(ExprSymbolName(name,false))
-             : exprSymtable.get(ExprSymbolName(name,true));
-    }
-    else {
-      return (exprSymtable.contains(ExprSymbolName(name,true)))
-             ? exprSymtable.get(ExprSymbolName(name,true))
-             : exprSymtable.get(ExprSymbolName(name,false));
-      return exprSymtable.get(ExprSymbolName(name,write));
-    }
+  void addSymbol(const std::string &name,
+                 const std::shared_ptr<ir::Expression> &read,
+                 const std::shared_ptr<ir::Expression> &write) {
+    exprSymtable.insert(name, RWExprPair(read,write));
   }
 
-  bool hasSymbol(const std::string &name, bool write=false) {
-    return exprSymtable.contains(ExprSymbolName(name,true)) |
-           exprSymtable.contains(ExprSymbolName(name,false));
+  const RWExprPair &getSymbol(const std::string &name) {
+    assert(hasSymbol(name));
+    return exprSymtable.get(name);
+  }
+
+  bool hasSymbol(const std::string &name) {
+    return exprSymtable.contains(name);
   }
 
   void addFunction(ir::Function *f) {
@@ -116,8 +125,8 @@ private:
   std::map<std::string, std::shared_ptr<ir::ElementType>> elementTypes;
   std::vector<ir::Test*>                                  tests;
 
-  ScopedMap<ExprSymbolName, std::shared_ptr<ir::Expression>> exprSymtable;
-  ScopedMap<const ir::Type*, bool>                               columnVectors;
+  ScopedMap<std::string, RWExprPair> exprSymtable;
+  ScopedMap<const ir::Type*, bool>   columnVectors;
 };
 
 }} // namespace simit::internal

@@ -1288,12 +1288,20 @@ namespace  simit { namespace internal  {
     (yylhs.value.function) = new Function(ident, *arguments, *results);
 
     ctx->scope();
+
+    std::set<std::string> argumentNames;
     for (auto argument : *arguments) {
-      ctx->addSymbol(argument->getName(), argument);
+      ctx->addSymbol(argument->getName(), argument, NULL);
+      argumentNames.insert(argument->getName());
     }
 
     for (auto result : *results) {
-      ctx->addSymbol(result->getName(), result, true);
+      std::shared_ptr<Expression> readExpr(NULL);
+      if (argumentNames.find(result->getName()) != argumentNames.end()) {
+        readExpr = ctx->getSymbol(result->getName()).getReadExpr();
+      }
+
+      ctx->addSymbol(result->getName(), readExpr, result);
     }
   }
 
@@ -1457,10 +1465,14 @@ namespace  simit { namespace internal  {
           std::string variableName = *lhs->variableName;
 
           // TODO: Remove check
-          if (!ctx->hasSymbol(variableName, true)) continue;
+          if (!ctx->hasSymbol(variableName)) continue;
 
-          assert(ctx->hasSymbol(variableName, true));
-          shared_ptr<Expression> lhsTensor = ctx->getSymbol(variableName, true);
+          assert(ctx->hasSymbol(variableName));
+
+          const RWExprPair &varExprPair = ctx->getSymbol(variableName);
+          assert(varExprPair.isWritable());
+
+          shared_ptr<Expression> lhsTensor = varExprPair.getWriteExpr();
           if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
             CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), yystack_[2].location);
             rhs->setName(result->getName());
@@ -1545,7 +1557,13 @@ namespace  simit { namespace internal  {
       (yylhs.value.expression) = NULL;
       break;
     }
-    (yylhs.value.expression) = new shared_ptr<Expression>(ctx->getSymbol(ident));
+
+    const RWExprPair &rwExpr = ctx->getSymbol(ident);
+    if (!rwExpr.isReadable()) {
+      REPORT_ERROR(ident + " is not readable", yystack_[0].location);
+    }
+
+    (yylhs.value.expression) = new shared_ptr<Expression>(rwExpr.getReadExpr());
   }
 
     break;
@@ -1728,33 +1746,25 @@ namespace  simit { namespace internal  {
 
   case 63:
 
-    {
-    (yylhs.value.binop) = IndexExpr::ADD;
-  }
+    { (yylhs.value.binop) = IndexExpr::ADD; }
 
     break;
 
   case 64:
 
-    {
-    (yylhs.value.binop) = IndexExpr::SUB;
-  }
+    { (yylhs.value.binop) = IndexExpr::SUB; }
 
     break;
 
   case 65:
 
-    {
-    (yylhs.value.binop) = IndexExpr::MUL;
-  }
+    { (yylhs.value.binop) = IndexExpr::MUL; }
 
     break;
 
   case 66:
 
-    {
-    (yylhs.value.binop) = IndexExpr::DIV;
-  }
+    { (yylhs.value.binop) = IndexExpr::DIV; }
 
     break;
 
@@ -1990,13 +2000,18 @@ namespace  simit { namespace internal  {
     string setName = convertAndFree((yystack_[2].value.string));
     string fieldName = convertAndFree((yystack_[0].value.string));
 
-    if(!ctx->hasSymbol(setName, true)) { (yylhs.value.fieldWrite)=NULL; break; } // TODO: Remove check
+    if(!ctx->hasSymbol(setName)) { (yylhs.value.fieldWrite)=NULL; break; } // TODO: Remove check
 
-    if (!ctx->hasSymbol(setName, true)) {
+    if (!ctx->hasSymbol(setName)) {
       REPORT_ERROR(setName + " is not defined in scope", yystack_[2].location);
     }
-    auto setExpr = shared_ptr<Expression>(ctx->getSymbol(setName, true));
 
+    const RWExprPair &setExprPair = ctx->getSymbol(setName);
+    if (!setExprPair.isWritable()) {
+      REPORT_ERROR(setName + " is not writable", yystack_[2].location);
+    }
+
+    auto setExpr = shared_ptr<Expression>(setExprPair.getWriteExpr());
     (yylhs.value.fieldWrite) = new shared_ptr<FieldWrite>(new FieldWrite(setExpr, fieldName));
   }
 
@@ -3000,19 +3015,19 @@ namespace  simit { namespace internal  {
   {
        0,   246,   246,   248,   252,   253,   256,   265,   268,   272,
      279,   283,   289,   292,   306,   320,   323,   331,   345,   352,
-     361,   399,   402,   413,   417,   428,   432,   438,   446,   449,
-     458,   459,   460,   461,   462,   466,   496,   502,   565,   568,
-     574,   580,   582,   586,   588,   602,   603,   604,   605,   606,
-     607,   608,   609,   610,   616,   631,   647,   655,   667,   732,
-     738,   768,   773,   782,   785,   788,   791,   799,   805,   811,
-     817,   823,   829,   844,   858,   859,   860,   871,   875,   881,
-     890,   893,   899,   905,   916,   927,   935,   937,   941,   943,
-     946,   947,   995,  1000,  1008,  1012,  1015,  1021,  1036,  1042,
-    1046,  1077,  1080,  1084,  1089,  1093,  1098,  1104,  1107,  1111,
-    1118,  1121,  1159,  1164,  1171,  1174,  1178,  1183,  1186,  1255,
-    1258,  1259,  1263,  1266,  1275,  1286,  1293,  1296,  1300,  1313,
-    1317,  1331,  1335,  1341,  1348,  1351,  1355,  1368,  1372,  1386,
-    1390,  1396,  1401,  1411
+     361,   407,   410,   421,   425,   436,   440,   446,   454,   457,
+     466,   467,   468,   469,   470,   474,   504,   510,   577,   580,
+     586,   592,   594,   598,   600,   614,   615,   616,   617,   618,
+     619,   620,   621,   622,   628,   649,   665,   673,   685,   750,
+     756,   786,   791,   800,   801,   802,   803,   809,   815,   821,
+     827,   833,   839,   854,   868,   869,   870,   881,   885,   891,
+     900,   903,   909,   915,   926,   937,   945,   947,   951,   953,
+     956,   957,  1005,  1010,  1018,  1022,  1025,  1031,  1051,  1057,
+    1061,  1092,  1095,  1099,  1104,  1108,  1113,  1119,  1122,  1126,
+    1133,  1136,  1174,  1179,  1186,  1189,  1193,  1198,  1201,  1270,
+    1273,  1274,  1278,  1281,  1290,  1301,  1308,  1311,  1315,  1328,
+    1332,  1346,  1350,  1356,  1363,  1366,  1370,  1383,  1387,  1401,
+    1405,  1411,  1416,  1426
   };
 
   // Print the state stack on the debug stream.
