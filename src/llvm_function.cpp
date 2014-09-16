@@ -6,6 +6,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
+#include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm_codegen.h"
@@ -43,8 +44,9 @@ LLVMFunction::init(std::map<std::string, Actual> &actuals) {
   }
   else {
     std::string name = string(llvmFunc->getName()) + "_harness";
-    std::vector<std::shared_ptr<ir::Expression>> noArgs;
-    llvm::Function *harness = createPrototype(name, noArgs, noArgs,
+    std::vector<std::shared_ptr<ir::Argument>> noArgs;
+    std::vector<std::shared_ptr<ir::Result>> noResults;
+    llvm::Function *harness = createPrototype(name, noArgs, noResults,
                                               llvm::Function::InternalLinkage,
                                               &module);
     auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
@@ -56,7 +58,7 @@ LLVMFunction::init(std::map<std::string, Actual> &actuals) {
       auto &actual = actuals[argName];
       switch (actual.getType()->getKind()) {
         case ir::Type::Tensor:
-          args.push_back(toLLVMPtr(actual.getTensor()));
+          args.push_back(llvmPtr(actual.getTensor()));
           break;
         case ir::Type::Set:
           NOT_SUPPORTED_YET;

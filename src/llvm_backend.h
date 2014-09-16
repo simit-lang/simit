@@ -48,6 +48,7 @@ private:
 
   void handle(ir::Function  *f);
   void handle(ir::IndexExpr *t);
+  void handle(ir::FieldRead *t);
 
   llvm::Function *codegen(ir::Function *f,
                           const std::map<ir::IRNode*, void*> &temps);

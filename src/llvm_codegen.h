@@ -14,6 +14,7 @@
 #define LLVM_CONTEXT   llvm::getGlobalContext()
 
 #define LLVM_VOID      llvm::Type::getVoidTy(LLVM_CONTEXT)
+
 #define LLVM_INT       llvm::Type::getInt32Ty(LLVM_CONTEXT)
 #define LLVM_INTPTR    llvm::Type::getInt32PtrTy(LLVM_CONTEXT)
 #define LLVM_DOUBLE    llvm::Type::getDoubleTy(LLVM_CONTEXT)
@@ -26,53 +27,20 @@
 namespace simit {
 namespace internal {
 
-llvm::Type *toLLVMType(const simit::ComponentType type);
+llvm::Type *llvmType(const simit::ComponentType type);
 
-llvm::Type *toLLVMType(const std::shared_ptr<ir::Type> &type);
+llvm::Type *llvmType(const ir::TensorType *type);
 
-llvm::Constant *toLLVMPtr(const ir::Literal *literal);
+llvm::Constant *llvmPtr(const ir::Literal *literal);
 
-simit::ComponentType llvmToSimitType(const llvm::Type *type);
+simit::ComponentType simitType(const llvm::Type *type);
 
-// TODO: Do these need to be template functions?
-template <class AT, class RT>
-llvm::FunctionType *createFunctionType(const std::vector<std::shared_ptr<AT>> &arguments,
-                                       const std::vector<std::shared_ptr<RT>> &results) {
-  std::vector<llvm::Type*> args;
-  for (auto &arg : arguments) {
-    args.push_back(toLLVMType(arg->getType()));
-  }
-  for (auto &result : results) {
-    args.push_back(toLLVMType(result->getType()));
-  }
-  return llvm::FunctionType::get(LLVM_VOID, args, false);
-}
-
-template <class AT, class RT>
-llvm::Function *createPrototype(const std::string &name,
-                                const std::vector<std::shared_ptr<AT>> &arguments,
-                                const std::vector<std::shared_ptr<RT>> &results,
-                                llvm::GlobalValue::LinkageTypes linkage,
-                                llvm::Module *module) {
-  llvm::FunctionType *ft = createFunctionType(arguments, results);
-  llvm::Function *f = llvm::Function::Create(ft, linkage, name, module);
-  f->setDoesNotThrow();
-  for (size_t i=0; i<f->getArgumentList().size(); ++i) {
-    f->setDoesNotCapture(i+1);
-  }
-
-  auto ai = f->arg_begin();
-  for (auto &arg : arguments) {
-    ai->setName(arg->getName());
-    ++ai;
-  }
-  for (auto &result : results) {
-    ai->setName(result->getName());
-    ++ai;
-  }
-  assert(ai == f->arg_end());
-  return f;
-}
+llvm::Function *
+createPrototype(const std::string &name,
+                const std::vector<std::shared_ptr<ir::Argument>> &arguments,
+                const std::vector<std::shared_ptr<ir::Result>> &results,
+                llvm::GlobalValue::LinkageTypes linkage,
+                llvm::Module *module);
 
 }} // namespace simit::internal
 

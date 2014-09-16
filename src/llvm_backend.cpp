@@ -143,7 +143,7 @@ llvm::Value *createScalarComputation(llvm::Value *resultStorage,
                                      llvm::IRBuilder<> *builder) {
   assert(operands.size() > 0);
 
-  simit::ComponentType ctype = llvmToSimitType(resultStorage->getType());
+  simit::ComponentType ctype = simitType(resultStorage->getType());
 
   std::vector<llvm::Value *> operandVals;
   for (llvm::Value *operandPtr : operands) {
@@ -243,7 +243,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   std::string resultName = resultStorage->getName();
   TensorType *resultType = tensorTypePtr(indexExpr->getType());
   simit::ComponentType resultCType = resultType->getComponentType();
-  assert(resultCType == llvmToSimitType(resultStorage->getType()));
+  assert(resultCType == simitType(resultStorage->getType()));
 
   size_t numNests = (domain.size() > 0)
       ? domain[0]->getIndexSet().getFactors().size() : 0;
@@ -275,7 +275,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
     // Emit value to hold the result of the reduction
     std::string ropStr = IndexVar::operatorString(iv->getOperator());
     std::string name = resultName + "_" + ropStr;
-    llvm::Type *type = toLLVMType(resultCType);
+    llvm::Type *type = llvmType(resultCType);
     reductionVal = builder->CreatePHI(type, 1, name);
     reductionVal->addIncoming(getDouble(0.0), entryBlock);
   }
@@ -393,7 +393,6 @@ simit::Function *LLVMBackend::compile(simit::ir::Function *function) {
 
   llvm::Function *f = codegen(function, temps);
   if (f == NULL) return NULL;
-
   return new LLVMFunction(*function, f, executionEngine,
                           talloc.getTemporaries());
 }
@@ -413,7 +412,7 @@ llvm::Function *LLVMBackend::codegen(simit::ir::Function *function,
   resultStack.pop();
   assert(llvm::isa<llvm::Function>(value));
   llvm::Function *f = llvm::cast<llvm::Function>(value);
-  verifyFunction(*f);
+  assert(!verifyFunction(*f));
   return f;
 }
 
@@ -430,8 +429,16 @@ void LLVMBackend::handle(simit::ir::Function *function) {
   }
 
   for (auto &result : function->getResults()) {
-    IRNode *resultValue = result->getValue().get();
-    storageLocations[resultValue] = symtable->get(result->getName());
+    switch (result->getType()->getKind()) {
+      case ir::Type::Tensor: {
+        IRNode *resultValue = result->getValue().get();
+        storageLocations[resultValue] = symtable->get(result->getName());
+        break;
+      }
+      case ir::Type::Set:
+        NOT_SUPPORTED_YET;
+        break;
+    }
   }
   
   if (f == NULL) {  // TODO: Remove check
@@ -472,6 +479,10 @@ void LLVMBackend::handle(IndexExpr *t) {
 
   assert(result != NULL);
   symtable->insert(t->getName(), result);
+}
+
+void LLVMBackend::handle(ir::FieldRead *t) {
+  NOT_SUPPORTED_YET;
 }
 
 }}  // namespace simit::internal
