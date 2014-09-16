@@ -60,9 +60,10 @@ public:
   Iterator end() const { return scopes.end(); }
 
   /// Print symbol table to stream.
-  void print(std::ostream &os) const {
+  template <typename K, typename V>
+  friend std::ostream &operator<<(std::ostream &os, const ScopedMap<K,V> &st) {
     os << "SymbolTable:\n";
-    for (auto scope : scopes) {
+    for (auto scope : st.scopes) {
       for (auto symPair : scope) {
         std::string symString = (symPair.second == NULL)
                                 ? "NULL"
@@ -71,17 +72,12 @@ public:
       }
       os << "\n";
     }
+    return os;
   }
 
 private:
   std::list<Map> scopes;
 };
-
-template <typename K, typename V>
-std::ostream &operator<<(std::ostream &os, const ScopedMap<K,V> &symtable) {
-  symtable.print(os);
-  return os;
-}
 
 }} // namespace simit::internal
 

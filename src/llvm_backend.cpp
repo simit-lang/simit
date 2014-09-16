@@ -429,22 +429,11 @@ void LLVMBackend::handle(simit::ir::Function *function) {
   }
 
   for (auto &result : function->getResults()) {
-    switch (result->getType()->getKind()) {
-      case ir::Type::Tensor: {
-        IRNode *resultValue = result->getValue().get();
-        storageLocations[resultValue] = symtable->get(result->getName());
-        break;
-      }
-      case ir::Type::Set:
-        NOT_SUPPORTED_YET;
-        break;
-    }
+    IRNode *resultValue = result->getValue().get();
+    storageLocations[resultValue] = symtable->get(resultValue->getName());
   }
-  
-  if (f == NULL) {  // TODO: Remove check
-    abort();
-    return;
-  }
+
+  assert(f != NULL);
   resultStack.push(f);
 }
 
