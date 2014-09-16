@@ -371,7 +371,7 @@ function_header
     }
 
     for (auto result : *results) {
-      ctx->addSymbol(result->getName(), result);
+      ctx->addSymbol(result->getName(), result, true);
     }
   }
 
@@ -527,10 +527,10 @@ assign_stmt
           std::string variableName = *lhs->variableName;
 
           // TODO: Remove check
-          if (!ctx->hasSymbol(variableName)) continue;
+          if (!ctx->hasSymbol(variableName, true)) continue;
 
-          assert(ctx->hasSymbol(variableName));
-          shared_ptr<Expression> lhsTensor = ctx->getSymbol(variableName);
+          assert(ctx->hasSymbol(variableName, true));
+          shared_ptr<Expression> lhsTensor = ctx->getSymbol(variableName, true);
           if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
             CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
             rhs->setName(result->getName());
@@ -849,7 +849,7 @@ field_read_expr
     std::string fieldName = convertAndFree($IDENT);
 
     CHECK_IS_SET(set, @1);
-    
+
     $$ = new shared_ptr<FieldRead>(new FieldRead(set, fieldName));
   }
 
@@ -1018,12 +1018,20 @@ write_expr
 
 %type <fieldWrite> field_write_expr;
 field_write_expr
-  : ident_expr "." IDENT {
+  : IDENT "." IDENT {
     if ($1 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
-    shared_ptr<Expression> identExpr = convertAndDelete($ident_expr);
-    string fieldName = convertAndFree($IDENT);
-    $$ = new shared_ptr<FieldWrite>(new FieldWrite(identExpr, fieldName));
+    string setName = convertAndFree($1);
+    string fieldName = convertAndFree($3);
+
+    if(!ctx->hasSymbol(setName, true)) { $$=NULL; break; } // TODO: Remove check
+
+    if (!ctx->hasSymbol(setName, true)) {
+      REPORT_ERROR(setName + " is not defined in scope", @1);
+    }
+    auto setExpr = shared_ptr<Expression>(ctx->getSymbol(setName, true));
+
+    $$ = new shared_ptr<FieldWrite>(new FieldWrite(setExpr, fieldName));
   }
   | paren_expr "." IDENT {
     $$ = NULL;

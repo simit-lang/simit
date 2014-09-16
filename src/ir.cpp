@@ -331,7 +331,7 @@ void FieldRead::print(std::ostream &os) const {
 
 // class FieldWrite
 void FieldWrite::print(std::ostream &os) const {
-  os << getName();
+  os << *getValue();
 }
 
 
@@ -351,9 +351,11 @@ class FunctionBodyPrinter : public IRVisitor {
  public:
   FunctionBodyPrinter(std::ostream &os) : IRVisitor(), os(os) {}
 
-  void handle(Function *f) { UNUSED(f); }
-  void handle(Argument *t) { UNUSED(t); }
-  void handle(Result *t)   { UNUSED(t); }
+  void handle(Function *f)   { UNUSED(f); }
+  void handle(Argument *t)   { UNUSED(t); }
+  void handle(Result *t)     { UNUSED(t); }
+  void handle(FieldRead *t)  { UNUSED(t); }
+  void handle(FieldWrite *t) { UNUSED(t); }
 
   void handleDefault(IRNode *t) { os << "  " << *t << endl; }
 

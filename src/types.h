@@ -155,6 +155,7 @@ std::ostream &operator<<(std::ostream &os, const ElementType &elementType);
 bool operator==(const ElementType &l, const ElementType &r);
 bool operator!=(const ElementType &l, const ElementType &r);
 
+
 /// The type of a Simit set (defined by the type of its elements and it's
 /// connectivity information).  Note that a single element in Simit is a set
 /// of size 1 without any connectivity.

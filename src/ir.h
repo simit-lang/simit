@@ -259,13 +259,14 @@ public:
       set(set), fieldName(fieldName) {}
 
   void setValue(const std::shared_ptr<Expression> &value) {
+    value->setName(set->getName()+"."+fieldName);
     this->value = value;
   }
 
   const std::shared_ptr<Expression> &getSet() const { return set; }
   const std::string &getFieldName() const { return fieldName; }
 
-  const std::shared_ptr<Expression> &getValue() { return value; }
+  const std::shared_ptr<Expression> &getValue() const { return value; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
