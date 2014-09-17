@@ -65,5 +65,20 @@ private:
   bool aborted;
 };
 
+class IRBackwardVisitor : public IRVisitor {
+public:
+  virtual ~IRBackwardVisitor();
+
+  virtual void visit(Function     *f);
+  virtual void visit(Argument     *t);
+  virtual void visit(Result       *t);
+  virtual void visit(Literal      *t);
+  virtual void visit(IndexExpr    *t);
+  virtual void visit(Call         *t);
+  virtual void visit(FieldRead    *t);
+  virtual void visit(FieldWrite   *t);
+};
+
+
 }} // namespace simit::internal
 #endif

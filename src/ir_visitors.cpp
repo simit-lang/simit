@@ -56,7 +56,6 @@ void IRVisitor::visit(FieldWrite *t) {
   CHECK_ABORT(handle(t));
 }
 
-
 void IRVisitor::handle(Function *f) {
   handleDefault(f);
 }
@@ -88,5 +87,57 @@ void IRVisitor::handle(FieldRead *t) {
 void IRVisitor::handle(FieldWrite *t) {
   handleDefault(t);
 }
+
+
+// class IRBackwardVisitor
+IRBackwardVisitor::~IRBackwardVisitor() {
+  
+}
+
+void IRBackwardVisitor::visit(Function *f) {
+  CHECK_ABORT(handle(f));
+  for (auto &result : f->getResults()) {
+    CHECK_ABORT(result->accept(this));
+  }
+}
+
+void IRBackwardVisitor::visit(Literal *t) {
+  CHECK_ABORT(handle(t));
+}
+
+void IRBackwardVisitor::visit(Argument *t) {
+  CHECK_ABORT(handle(t));
+}
+
+void IRBackwardVisitor::visit(Result *t) {
+  if (t->getValue() == NULL) {  // TODO: Remove check
+    abort();
+    return;
+  }
+  CHECK_ABORT(handle(t));
+  CHECK_ABORT(t->getValue()->accept(this));
+}
+
+void IRBackwardVisitor::visit(IndexExpr *t) {
+  CHECK_ABORT(handle(t));
+  for (auto &operand : t->getOperands()) {
+    CHECK_ABORT(operand.getTensor()->accept(this));
+  }
+}
+
+void IRBackwardVisitor::visit(Call *t) {
+  CHECK_ABORT(handle(t));
+}
+
+void IRBackwardVisitor::visit(FieldRead *t) {
+  CHECK_ABORT(handle(t));
+  CHECK_ABORT(t->getSet()->accept(this));
+}
+
+void IRBackwardVisitor::visit(FieldWrite *t) {
+  CHECK_ABORT(handle(t));
+  CHECK_ABORT(t->getValue()->accept(this));
+}
+
 
 }} // namespace simit::ir

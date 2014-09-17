@@ -393,6 +393,7 @@ simit::Function *LLVMBackend::compile(simit::ir::Function *function) {
 
   llvm::Function *f = codegen(function, temps);
   if (f == NULL) return NULL;
+
   return new LLVMFunction(*function, f, executionEngine,
                           talloc.getTemporaries());
 }
@@ -416,6 +417,33 @@ llvm::Function *LLVMBackend::codegen(simit::ir::Function *function,
   return f;
 }
 
+namespace {
+class StorageLocationMapper : public IRBackwardVisitor {
+public:
+  StorageLocationMapper(map<ir::Expression*,llvm::Value*> *storageLocations,
+                        ScopedMap<std::string,llvm::Value*> *symtable)
+      : symtable(symtable), storageLocations(*storageLocations) {}
+
+  void map(ir::Function *f) {
+    visit(f);
+  }
+
+  void handle(ir::Result *result) {
+    Expression *resultValue = result->getValue().get();
+    storageLocations[resultValue] = symtable->get(resultValue->getName());
+  }
+
+  void handle(ir::FieldWrite *fieldWrite) {
+    Expression *writtenValue = fieldWrite->getValue().get();
+    storageLocations[writtenValue] = storageLocations[fieldWrite];
+  }
+
+private:
+  ScopedMap<std::string,llvm::Value*> *symtable;
+  std::map<ir::Expression*,llvm::Value*> &storageLocations;
+};
+}
+
 void LLVMBackend::handle(simit::ir::Function *function) {
   llvm::Function *f = createPrototype(function->getName(),
                                       function->getArguments(),
@@ -428,10 +456,7 @@ void LLVMBackend::handle(simit::ir::Function *function) {
     symtable->insert(arg.getName(), &arg);
   }
 
-  for (auto &result : function->getResults()) {
-    IRNode *resultValue = result->getValue().get();
-    storageLocations[resultValue] = symtable->get(resultValue->getName());
-  }
+  StorageLocationMapper(&storageLocations,symtable).map(function);
 
   assert(f != NULL);
   resultStack.push(f);
@@ -469,10 +494,6 @@ void LLVMBackend::handle(IndexExpr *t) {
 
   assert(result != NULL);
   symtable->insert(t->getName(), result);
-}
-
-void LLVMBackend::handle(ir::FieldRead *t) {
-  NOT_SUPPORTED_YET;
 }
 
 }}  // namespace simit::internal

@@ -23,9 +23,15 @@ class Function;
 }
 
 namespace simit {
+namespace ir {
+class IRNode;
+class Expression;
+}
+
 namespace internal {
-class Function;
+
 template <typename, typename> class ScopedMap;
+class Function;
 
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMBackend : public Backend, ir::IRVisitor {
@@ -44,11 +50,11 @@ private:
 
   ScopedMap<std::string, llvm::Value*> *symtable;
   std::stack<llvm::Value*> resultStack;
-  std::map<ir::IRNode*, llvm::Value*> storageLocations;
 
-  void handle(ir::Function  *f);
-  void handle(ir::IndexExpr *t);
-  void handle(ir::FieldRead *t);
+  std::map<ir::Expression*, llvm::Value*> storageLocations;
+
+  void handle(ir::Function   *f);
+  void handle(ir::IndexExpr  *t);
 
   llvm::Function *codegen(ir::Function *f,
                           const std::map<ir::IRNode*, void*> &temps);

@@ -16,7 +16,7 @@ public:
   Storage(int size) : size(size) { data = malloc(size); }
   ~Storage() { free(data); }
 
-  void *w() { return data; }
+  void *getData() { return data; }
   int getSize() const { return size; }
 
 private:
