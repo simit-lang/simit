@@ -12,9 +12,9 @@ using namespace std;
 void printUsage() {
   cerr << "Usage: simit-dump [options] <simit-source> " << endl << endl;
   cerr << "Options:"               << endl;
-  cerr << "--emit-simit"           << endl
-       << "--emit-llvm"            << endl
-       << "--section=<section>";
+  cerr << "-emit-simit"           << endl
+       << "-emit-llvm"            << endl
+       << "-section=<section>";
 }
 
 int main(int argc, const char* argv[]) {
@@ -31,13 +31,13 @@ int main(int argc, const char* argv[]) {
   // Parse Arguments
   for (int i=1; i < argc; ++i) {
     std::string arg = argv[i];
-    if (arg.substr(0,2) == "--") {
+    if (arg[0] == '-') {
       std::vector<std::string> keyValPair = simit::util::split(arg, "=");
       if (keyValPair.size() == 1) {
-        if (arg == "--emit-simit") {
+        if (arg == "-emit-simit") {
           emitSimit = true;
         }
-        else if (arg == "--emit-llvm") {
+        else if (arg == "-emit-llvm") {
           emitLLVM = true;
         }
         else {
@@ -46,7 +46,7 @@ int main(int argc, const char* argv[]) {
         }
       }
       else if (keyValPair.size() == 2) {
-        if (keyValPair[0] == "--section") {
+        if (keyValPair[0] == "-section") {
           section = keyValPair[1];
         }
         else {
@@ -125,7 +125,7 @@ int main(int argc, const char* argv[]) {
         cout << endl;
       }
       std::string fstr = simit::util::toString(*backend.compile(func));
-      cout << simit::util::trim(fstr);
+      cout << simit::util::trim(fstr) << endl;
     }
   }
   return 0;
