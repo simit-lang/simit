@@ -458,27 +458,27 @@ class FieldRefBase {
     this->fieldData->fieldReferences.erase(this);
   }
 
-  FieldRefBase (const FieldRefBase& other) {
+  FieldRefBase(const FieldRefBase& other) {
     data = other.data;
     fieldData = other.fieldData;
     this->fieldData->fieldReferences.insert(this);
   }
 
-  FieldRefBase (FieldRefBase&& other) {
+  FieldRefBase(FieldRefBase&& other) {
     std::swap (data, other.data);
     std::swap (fieldData, other.fieldData);
     this->fieldData->fieldReferences.erase(&other);
     this->fieldData->fieldReferences.insert(this);
   }
 
-  FieldRefBase& operator= (const FieldRefBase &other) {
+  FieldRefBase& operator=(const FieldRefBase &other) {
     data = other.data;
     fieldData = other.fieldData;
     this->fieldData->fieldReferences.insert(this);
     return *this;
   }
 
-  FieldRefBase& operator= (FieldRefBase&& other) {
+  FieldRefBase& operator=(FieldRefBase&& other) {
     std::swap(data, other.data);
     std::swap (fieldData, other.fieldData);
     this->fieldData->fieldReferences.erase(&other);

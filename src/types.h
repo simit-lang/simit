@@ -11,9 +11,9 @@
 #include "tensor_components.h"
 
 namespace simit {
-class SetBase;
-
 namespace ir {
+
+class SetType;
 
 /// A Simit type, which is either a Set or a Tensor.
 class Type : public simit::interfaces::Printable, simit::interfaces::Uncopyable{
@@ -41,7 +41,7 @@ bool operator!=(const Type& l, const Type& r);
 
 /// An index set is a set of labels into a set.  There are three types of index
 /// set distringuished by the type of set they index into: a range (RANGE), a 
-/// simit::Set (SET) or the set of all integers (VARIABLE).
+/// SetType (SET) or the set of all integers (VARIABLE).
 class IndexSet {
 public:
   /// The types of index sets that are supported.
@@ -51,7 +51,7 @@ public:
   IndexSet(int rangeSize) : type(RANGE), rangeSize(rangeSize) {}
 
   /// Create an index set over the given set.
-  IndexSet(const simit::SetBase *set) : type(SET), set(set) {}
+  IndexSet(const std::shared_ptr<SetType> &set): type(SET), set(set) {}
 
   /// Create a variable-size index set.
   IndexSet() : type(VARIABLE) {}
@@ -64,10 +64,9 @@ public:
 
 private:
   Type type;
-  union {
-    int rangeSize;
-    const simit::SetBase *set;
-  };
+
+  int rangeSize;
+  std::shared_ptr<SetType> set;
 };
 
 bool operator!=(const IndexSet &l, const IndexSet &r);

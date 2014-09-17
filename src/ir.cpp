@@ -324,6 +324,38 @@ void Call::print(std::ostream &os) const {
 
 
 // class FieldRead
+namespace {
+// The type of a set field is:
+// `Tensor[set][elementFieldDimensions](elemFieldComponentType)`.
+std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &setExpr,
+                                const std::string &fieldName){
+  assert(setExpr->getType()->isSet());
+
+  const shared_ptr<SetType> &setType =
+      static_pointer_cast<SetType>(setExpr->getType());
+  const shared_ptr<TensorType> &elemFieldType =
+      setType->getElementType()->getFields().at(fieldName);
+
+  std::vector<IndexSetProduct> dimensions;
+  if (elemFieldType->getOrder() == 0) {
+    IndexSet dim(setType);
+    dimensions.push_back(IndexSetProduct(dim));
+  }
+  else {
+    NOT_SUPPORTED_YET;
+  }
+
+  TensorType *fieldType = new TensorType(elemFieldType->getComponentType(),
+                                         dimensions);
+
+  return std::shared_ptr<TensorType>(fieldType);
+}}
+
+FieldRead::FieldRead(const std::shared_ptr<Expression> &set,
+                     const std::string &fieldName)
+    : Read(set->getName()+"."+fieldName, fieldType(set, fieldName)),
+      set(set), fieldName(fieldName) {}
+
 void FieldRead::print(std::ostream &os) const {
   os << getName();
 }

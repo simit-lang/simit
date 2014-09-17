@@ -200,15 +200,6 @@ private:
 };
 
 
-namespace {
-std::shared_ptr<Type>
-fieldType(const std::shared_ptr<Expression> &set, const std::string &fieldName){
-  assert(set->getType()->isSet());
-  SetType *setType = setTypePtr(set->getType());
-  return setType->getElementType()->getFields().at(fieldName);
-}}
-
-
 /// Abstract class for expressions that read values from tensors and sets.
 class Read : public Expression {
 protected:
@@ -220,9 +211,8 @@ protected:
 /// Expression that reads a tensor from a set field.
 class FieldRead : public Read {
 public:
-  FieldRead(const std::shared_ptr<Expression> &set,const std::string &fieldName)
-    : Read(set->getName()+"."+fieldName, fieldType(set, fieldName)),
-      set(set), fieldName(fieldName) {}
+  FieldRead(const std::shared_ptr<Expression> &set,
+            const std::string &fieldName);
 
   const std::shared_ptr<Expression> &getSet() const { return set; }
   const std::string &getFieldName() const { return fieldName; }

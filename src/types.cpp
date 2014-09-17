@@ -59,18 +59,11 @@ bool operator==(const IndexSet &l, const IndexSet &r) {
   }
   switch (l.type) {
     case IndexSet::RANGE:
-      if (l.rangeSize != r.rangeSize) {
-        return false;
-      }
-      break;
+      return l.rangeSize == r.rangeSize;
     case IndexSet::SET:
-      NOT_SUPPORTED_YET;
-      break;
+      return *l.set == *r.set;
     case IndexSet::VARIABLE:
       NOT_SUPPORTED_YET;
-      break;
-    default:
-      assert(false);
       break;
   }
   return true;
@@ -86,7 +79,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
       os << to_string(is.rangeSize);
       break;
     case IndexSet::SET:
-      NOT_SUPPORTED_YET;
+      os << *is.set;
       break;
     case IndexSet::VARIABLE:
       os << "*";
@@ -108,8 +101,7 @@ size_t IndexSetProduct::getSize() const {
   return size;
 }
 
-bool operator==(const IndexSetProduct &l,
-                                 const IndexSetProduct &r) {
+bool operator==(const IndexSetProduct &l, const IndexSetProduct &r) {
   if (l.getFactors().size() != r.getFactors().size()) {
     return false;
   }
