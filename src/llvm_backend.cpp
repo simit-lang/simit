@@ -137,13 +137,14 @@ llvm::Value *createValueComputation(std::string name,
   }
 }
 
-llvm::Value *createScalarComputation(llvm::Value *resultStorage,
-                                     IndexExpr::Operator op,
-                                     const vector<llvm::Value*> operands,
-                                     llvm::IRBuilder<> *builder) {
+llvm::Value *emitScalarComputation(IndexExpr *t,
+                                   IndexExpr::Operator op,
+                                   const vector<llvm::Value*> operands,
+                                   llvm::IRBuilder<> *builder) {
   assert(operands.size() > 0);
+  assert(t->getType()->isTensor());
 
-  simit::ComponentType ctype = simitType(resultStorage->getType());
+  simit::ComponentType ctype = tensorTypePtr(t->getType())->getComponentType();
 
   std::vector<llvm::Value *> operandVals;
   for (llvm::Value *operandPtr : operands) {
@@ -153,10 +154,9 @@ llvm::Value *createScalarComputation(llvm::Value *resultStorage,
     operandVals.push_back(operandVal);
   }
 
-  std::string resultValName = std::string(resultStorage->getName())+VAL_SUFFIX;
+  std::string resultValName = std::string(t->getName())+VAL_SUFFIX;
   llvm::Value *resultVal = createValueComputation(resultValName, ctype, op,
                                                   operandVals, builder);
-  builder->CreateAlignedStore(resultVal, resultStorage, 8);
   return resultVal;
 }
 
@@ -454,16 +454,17 @@ void LLVMBackend::handle(IndexExpr *t) {
     llvmOperands.push_back(symtable->get(operand.getTensor()->getName()));
   }
 
-  llvm::Value *resultStorage = storageLocations[t];
-  assert(resultStorage);
-
   if (domain.size() == 0) {
-    result = createScalarComputation(resultStorage, op, llvmOperands, builder);
+    result = emitScalarComputation(t, op, llvmOperands, builder);
+    if (storageLocations.find(t) != storageLocations.end()) {
+      builder->CreateAlignedStore(result, storageLocations[t], 8);
+    }
   }
   else {
+    assert(storageLocations.find(t) != storageLocations.end());
     IndexVarMap indexMap;
-    result = emitIndexExpr(t, domain, op, operands, resultStorage, builder,
-                           indexMap);
+    result = emitIndexExpr(t, domain, op, operands, storageLocations[t],
+                           builder, indexMap);
   }
 
   assert(result != NULL);
