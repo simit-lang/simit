@@ -65,6 +65,9 @@ private:
   bool aborted;
 };
 
+
+/// Visits each tensor in a function once in backward order starting with
+/// results and ending with the arguments and literals.
 class IRBackwardVisitor : public IRVisitor {
 public:
   virtual ~IRBackwardVisitor();

@@ -164,12 +164,12 @@ typedef std::map<const IndexVar *, llvm::Value *> IndexVarMap;
 
 /// Emits code that offsets ptr to index into tensor using idxVars.  The
 /// indexMap is used to map the idxVars to llvm::Value loop indices.
+/// \todo OPT: Offsets are currently recomputed for identical accesses to
+/// different tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
 llvm::Value *emitOffset(llvm::Value *ptr, TensorType *type,
                         const std::vector<std::shared_ptr<IndexVar>> &idxVars,
                         IndexVarMap &indexMap, size_t currNest,
                         llvm::IRBuilder<> *builder) {
-  // OPT: Offsets are currently recomputed for identical accesses to different
-  //      tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
   if (type->getOrder() > 0) {
     llvm::Value *offset = NULL;
     if (idxVars.size() == 1) {
@@ -219,21 +219,21 @@ typedef std::pair<const IndexedTensor&, llvm::Value*> OperandPair;
 typedef std::vector<OperandPair> OperandPairVec;
 
 /// Emit code to compute an IndexExpr.
+// OPT: This code should allow loop orders to be configurable
+// OPT: LLVM seems to convert doubles to integers for the purpose of passing
+//      them around a reduction loop. Explore this. E.g.:
+//        %conv = sitofp i32 %c_sum to double
+//        %c_sum_nxt = fadd double %c_val, %conv
+//        %conv3 = fptosi double %c_sum_nxt to i32) nad
 llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
                            const std::vector<std::shared_ptr<IndexVar>> &domain,
                            IndexExpr::Operator op,
                            const OperandPairVec &operands,
                            llvm::Value *resultStorage,
+                           const ScopedMap<std::string,llvm::Value*> &symtable,
                            llvm::IRBuilder<> *builder,
                            IndexVarMap &indexMap,
                            size_t currNest=0) {
-  // OPT: This code should allow loop orders to be configurable
-  // OPT: LLVM seems to convert doubles to integers for the purpose of passing
-  //      them around a reduction loop. Explore this. E.g.:
-  //        %conv = sitofp i32 %c_sum to double
-  //        %c_sum_nxt = fadd double %c_val, %conv
-  //        %conv3 = fptosi double %c_sum_nxt to i32) nad
-
   size_t currIdxVar = indexMap.size();
 
   assert(domain.size() > 0);
@@ -284,7 +284,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   llvm::Value *resultPtr = NULL;
   if (currIdxVar < domain.size()-1) {
     emitIndexExpr(indexExpr, domain, op, operands, resultStorage,
-                     builder, indexMap, currNest);
+                  symtable, builder, indexMap, currNest);
   }
   else {
     std::vector<llvm::Value *> operandVals;
@@ -343,7 +343,22 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   llvm::Value* i_nxt = builder->CreateAdd(idx, builder->getInt32(1),
                                           idxName+"_nxt", false, true);
   idx->addIncoming(i_nxt, loopBodyEnd);
-  llvm::Value *numIter = builder->getInt32(is.getSize());
+
+  llvm::Value *numIter = NULL;
+  switch (is.getKind()) {
+    case IndexSet::Range:
+      numIter = builder->getInt32(is.getRangeSize());
+      break;
+    case IndexSet::Set:
+      assert(symtable.contains(is.getSetName()));
+      numIter = symtable.get(is.getSetName());
+      break;
+    case IndexSet::Dynamic:
+      NOT_SUPPORTED_YET;
+      break;
+  }
+  assert(numIter);
+
   llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, numIter,idxName+"_cmp");
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
                                                        idxName+"_loop_end", f);
@@ -445,11 +460,11 @@ private:
 }
 
 void LLVMBackend::handle(simit::ir::Function *function) {
-  llvm::Function *f = createPrototype(function->getName(),
-                                      function->getArguments(),
-                                      function->getResults(),
-                                      llvm::Function::ExternalLinkage,
-                                      module);
+  llvm::Function *f = createFunction(function->getName(),
+                                     function->getArguments(),
+                                     function->getResults(),
+                                     llvm::Function::ExternalLinkage,
+                                     module);
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", f);
   builder->SetInsertPoint(entry);
   for (auto &arg : f->getArgumentList()) {
@@ -489,7 +504,7 @@ void LLVMBackend::handle(IndexExpr *t) {
     assert(storageLocations.find(t) != storageLocations.end());
     IndexVarMap indexMap;
     result = emitIndexExpr(t, domain, op, operands, storageLocations[t],
-                           builder, indexMap);
+                           *symtable, builder, indexMap);
   }
 
   assert(result != NULL);

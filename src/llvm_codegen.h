@@ -35,8 +35,9 @@ llvm::Constant *llvmPtr(const ir::Literal *literal);
 
 simit::ComponentType simitType(const llvm::Type *type);
 
+/// Creates an empy llvm function.
 llvm::Function *
-createPrototype(const std::string &name,
+createFunction(const std::string &name,
                 const std::vector<std::shared_ptr<ir::Argument>> &arguments,
                 const std::vector<std::shared_ptr<ir::Result>> &results,
                 llvm::GlobalValue::LinkageTypes linkage,

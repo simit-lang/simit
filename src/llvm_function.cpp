@@ -46,9 +46,9 @@ LLVMFunction::init(std::map<std::string, Actual> &actuals) {
     std::string name = string(llvmFunc->getName()) + "_harness";
     std::vector<std::shared_ptr<ir::Argument>> noArgs;
     std::vector<std::shared_ptr<ir::Result>> noResults;
-    llvm::Function *harness = createPrototype(name, noArgs, noResults,
-                                              llvm::Function::InternalLinkage,
-                                              &module);
+    llvm::Function *harness = createFunction(name, noArgs, noResults,
+                                             llvm::Function::InternalLinkage,
+                                             &module);
     auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
     llvm::SmallVector<llvm::Value*, 8> args;
 

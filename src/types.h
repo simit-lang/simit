@@ -40,33 +40,48 @@ bool operator!=(const Type& l, const Type& r);
 // Tensor types
 
 /// An index set is a set of labels into a set.  There are three types of index
-/// set distringuished by the type of set they index into: a range (RANGE), a 
-/// SetType (SET) or the set of all integers (VARIABLE).
+/// set distringuished by the type of set they index into: a range (Range), a 
+/// set name (Set) or the set of all integers (Dynamic).
 class IndexSet {
 public:
   /// The types of index sets that are supported.
-  enum Type {RANGE, SET, VARIABLE};
+  enum Kind {Range, Set, Dynamic};
 
   /// Create an index set consisting of the items in the given range.
-  IndexSet(int rangeSize) : type(RANGE), rangeSize(rangeSize) {}
+  IndexSet(int rangeSize) : kind(Range), rangeSize(rangeSize) {}
 
   /// Create an index set over the given set.
-  IndexSet(const std::shared_ptr<SetType> &set): type(SET), set(set) {}
+  IndexSet(const std::string &setName): kind(Set), setName(setName) {}
 
   /// Create a variable-size index set.
-  IndexSet() : type(VARIABLE) {}
+  IndexSet() : kind(Dynamic) {}
 
   /// Get the number of elements in the index set.
   size_t getSize() const;
+
+  /// Get the Kind of the index set (Range, Set or Dynamic)
+  Kind getKind() const { return kind; }
+
+  /// Returns the size of the indexset if kind is Range, otherwise undefined
+  int getRangeSize() const {
+    assert(kind==Range);
+    return rangeSize;
+  }
+
+  /// Returns the name of the indexset set if kind is Set, otherwise undefined
+  const std::string &getSetName() const {
+    assert(kind==Set);
+    return setName;
+  }
 
   friend bool operator==(const IndexSet &l, const IndexSet &r);
   friend std::ostream &operator<<(std::ostream &os, const IndexSet &is);
 
 private:
-  Type type;
+  Kind kind;
 
   int rangeSize;
-  std::shared_ptr<SetType> set;
+  std::string setName;
 };
 
 bool operator!=(const IndexSet &l, const IndexSet &r);

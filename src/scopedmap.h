@@ -47,7 +47,16 @@ public:
   Value &get(const Key &symbol) {
     for (auto &scope : scopes) {
       if (scope.find(symbol) != scope.end()) {
-        return scope[symbol];
+        return scope.at(symbol);
+      }
+    }
+    assert(false && "Attempting to get a symbol that is not in symbol table.");
+  }
+
+  const Value &get(const Key &symbol) const {
+    for (auto &scope : scopes) {
+      if (scope.find(symbol) != scope.end()) {
+        return scope.at(symbol);
       }
     }
     assert(false && "Attempting to get a symbol that is not in symbol table.");

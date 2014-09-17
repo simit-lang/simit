@@ -37,14 +37,14 @@ bool operator!=(const Type& l, const Type& r) {
 // class IndexSet
 size_t IndexSet::getSize() const {
   int size = 0;
-  switch (type) {
-    case RANGE:
+  switch (kind) {
+    case Range:
       size = rangeSize;
       break;
-    case SET:
+    case Set:
       NOT_SUPPORTED_YET;
       break;
-    case VARIABLE:
+    case Dynamic:
       NOT_SUPPORTED_YET;
       break;
     default:
@@ -54,15 +54,15 @@ size_t IndexSet::getSize() const {
 }
 
 bool operator==(const IndexSet &l, const IndexSet &r) {
-   if (l.type != r.type) {
+   if (l.kind != r.kind) {
     return false;
   }
-  switch (l.type) {
-    case IndexSet::RANGE:
+  switch (l.kind) {
+    case IndexSet::Range:
       return l.rangeSize == r.rangeSize;
-    case IndexSet::SET:
-      return *l.set == *r.set;
-    case IndexSet::VARIABLE:
+    case IndexSet::Set:
+      return l.setName == r.setName;
+    case IndexSet::Dynamic:
       NOT_SUPPORTED_YET;
       break;
   }
@@ -74,14 +74,14 @@ bool operator!=(const IndexSet &l, const IndexSet &r) {
 }
 
 std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
-  switch (is.type) {
-    case IndexSet::RANGE:
+  switch (is.kind) {
+    case IndexSet::Range:
       os << to_string(is.rangeSize);
       break;
-    case IndexSet::SET:
-      os << *is.set;
+    case IndexSet::Set:
+      os << is.setName;
       break;
-    case IndexSet::VARIABLE:
+    case IndexSet::Dynamic:
       os << "*";
       break;
     default:

@@ -338,7 +338,7 @@ std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &setExpr,
 
   std::vector<IndexSetProduct> dimensions;
   if (elemFieldType->getOrder() == 0) {
-    IndexSet dim(setType);
+    IndexSet dim(setExpr->getName());
     dimensions.push_back(IndexSetProduct(dim));
   }
   else {

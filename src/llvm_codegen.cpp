@@ -75,16 +75,16 @@ void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
       types->push_back(llvmType(tensorTypePtr(arg->getType())));
       break;
     case ir::Type::Set:
-      ir::SetType *type = setTypePtr(arg->getType());
+      names->push_back(arg->getName());
+      types->push_back(LLVM_INT32);
 
       // Emit one function argument per set field
+      ir::SetType *type = setTypePtr(arg->getType());
       for (auto &field : type->getElementType()->getFields()) {
         names->push_back(arg->getName() + "." + field.first);
         types->push_back(llvmType(field.second.get()));
       }
 
-      names->push_back("num_" + arg->getName());
-      types->push_back(LLVM_INT32);
       break;
   }
 }
@@ -93,7 +93,6 @@ void llvmArguments(const std::vector<std::shared_ptr<ir::Argument>> &arguments,
                    const std::vector<std::shared_ptr<ir::Result>> &results,
                    std::vector<std::string> *llvmArgNames,
                    std::vector<llvm::Type*> *llvmArgTypes) {
-
   // We don't need two llvm arguments for aliased simit argument/results
   std::set<std::string> argNames;
 
@@ -113,15 +112,14 @@ void llvmArguments(const std::vector<std::shared_ptr<ir::Argument>> &arguments,
 } // unnamed namespace
 
 
-llvm::Function *
-createPrototype(const std::string &name,
-                const std::vector<std::shared_ptr<ir::Argument>> &arguments,
-                const std::vector<std::shared_ptr<ir::Result>> &results,
-                llvm::GlobalValue::LinkageTypes linkage,
-                llvm::Module *module) {
-  std::vector<std::string> llvmArgNames;
-  std::vector<llvm::Type*> llvmArgTypes;
-  llvmArguments(arguments, results, &llvmArgNames, &llvmArgTypes);
+llvm::Function *createFunction(const std::string &name,
+                               const vector<shared_ptr<ir::Argument>> &args,
+                               const vector<shared_ptr<ir::Result>> &results,
+                               llvm::GlobalValue::LinkageTypes linkage,
+                               llvm::Module *module) {
+  vector<string>      llvmArgNames;
+  vector<llvm::Type*> llvmArgTypes;
+  llvmArguments(args, results, &llvmArgNames, &llvmArgTypes);
   assert(llvmArgNames.size() == llvmArgTypes.size());
 
   llvm::FunctionType *ft = llvm::FunctionType::get(LLVM_VOID, llvmArgTypes,
@@ -129,17 +127,15 @@ createPrototype(const std::string &name,
 
   llvm::Function *f = llvm::Function::Create(ft, linkage, name, module);
   f->setDoesNotThrow();
-  for (size_t i=0; i<f->getArgumentList().size(); ++i) {
-    f->setDoesNotCapture(i+1);
-  }
+  unsigned i = 0;
+  for (llvm::Argument &arg : f->getArgumentList()) {
+    arg.setName(llvmArgNames[i]);
 
-  llvm::Function::arg_iterator llvmArgIt = f->arg_begin();
-  for (auto &llvmArgName : llvmArgNames) {
-    llvmArgIt->setName(llvmArgName);
-    ++llvmArgIt;
+    if (arg.getType()->isPointerTy()) {
+      f->setDoesNotCapture(i+1);  // setDoesNotCapture(0) is return value
+    }
+    ++i;
   }
-
-  assert(llvmArgIt == f->arg_end());
 
   return f;
 }
