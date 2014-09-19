@@ -486,6 +486,13 @@ class FieldRefBase {
     return *this;
   }
 
+  // Return the field's data.  The data is a contigues sequence containing the
+  // tensor of each element in no particular order.  The tensors are currently
+  // laid out in row-major order, but this may change in the future.
+  inline void *getData() {
+    return static_cast<void*>(data);
+  }
+
  protected:
   FieldRefBase(void *fieldData)
       : fieldData(static_cast<SetBase::FieldData*>(fieldData)),
