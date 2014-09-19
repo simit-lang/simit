@@ -33,7 +33,7 @@ public:
 
   inline void run() {
     if (initRequired) {
-      funcPtr = init(actuals);
+      funcPtr = init(formals, actuals);
       initRequired = false;
     }
     funcPtr();
@@ -43,31 +43,34 @@ protected:
   typedef void (*FuncPtrType)();
   class Actual {
   public:
-    Actual(const std::shared_ptr<ir::Type> &type = NULL) : type(type) {
-      val.tensor = NULL;
-    }
-    void bind(Tensor *tensor) { val.tensor = tensor; }
-    void bind(SetBase *set) { val.set = set; }
-    bool isBound() const { return val.tensor != NULL; }
+    Actual(const std::shared_ptr<ir::Type> &type) : type(type), tensor(NULL) {}
+    Actual() : Actual(NULL) {}
+    void bind(Tensor *tensor) { this->tensor = tensor; }
+    void bind(SetBase *set) { this->set = set; }
+    bool isBound() const { return tensor != NULL; }
     const ir::Type *getType() const { return type.get(); }
-    const Tensor *getTensor() { return val.tensor; }
-    const SetBase *getSet() { return val.set; }
+    Tensor *getTensor() { assert(tensor); return tensor; }
+    SetBase *getSet() { assert(set); return set; }
   private:
     std::shared_ptr<ir::Type> type;
     union {
       SetBase *set;
       Tensor  *tensor;
-    } val;
+    };
   };
   
   Function(const ir::Function &simitFunc);
 
+  void *getFieldPtr(const SetBase *base, const std::string &fieldName);
+
 private:
+  std::vector<std::string> formals;
   std::map<std::string, Actual> actuals;
 
   FuncPtrType funcPtr;
   bool initRequired;
-  virtual FuncPtrType init(std::map<std::string, Actual> &actuals) = 0;
+  virtual FuncPtrType init(const std::vector<std::string> &formals,
+                           std::map<std::string, Actual> &actuals) = 0;
 };
 
 } // namespace simit

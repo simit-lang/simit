@@ -215,9 +215,7 @@ void SetType::print(std::ostream &os) const {
 }
 
 bool operator==(const SetType& l, const SetType& r) {
-  const std::shared_ptr<ElementType> &lElemType = l.getElementType();
-  const std::shared_ptr<ElementType> &rElemType = r.getElementType();
-  if (*lElemType != *rElemType) {
+  if (*l.getElementType() != *r.getElementType()) {
     return false;
   }
   return true;

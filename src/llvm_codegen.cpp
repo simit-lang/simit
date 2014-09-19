@@ -3,23 +3,23 @@
 #include <iostream>
 #include <utility>
 
-#include "llvm/IR/Constants.h"
-
 using namespace std;
 using namespace simit::internal;
 
 namespace simit {
 namespace internal {
 
-namespace {
-//llvm::ConstantInt* getInt32(int val) {
-//  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, val, false));
-//}
-} // unnamed namespace
+llvm::ConstantInt* getInt32(int val) {
+  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, val, true));
+}
 
-llvm::Type *llvmType(const simit::ComponentType type) {
-  assert(isValidComponentType(type));
-  switch (type) {
+llvm::ConstantInt* getUInt32(unsigned val) {
+  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, val, false));
+}
+
+llvm::Type *llvmType(const simit::ComponentType ctype) {
+  assert(isValidComponentType(ctype));
+  switch (ctype) {
     case simit::ComponentType::INT:
       return LLVM_INT;
     case simit::ComponentType::FLOAT:
@@ -37,16 +37,18 @@ llvm::Type *llvmType(const ir::TensorType *type){
   }
 }
 
-llvm::Constant *llvmPtr(const simit::ir::Literal *literal) {
-  assert(literal->getType()->isTensor());
+llvm::Constant *llvmPtr(ir::TensorType *type, void *data) {
   llvm::Constant *c = (sizeof(void*) == 4)
       ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT),
-                               (int)(intptr_t)literal->getData())
+                               (int)(intptr_t)data)
       : llvm::ConstantInt::get(llvm::Type::getInt64Ty(LLVM_CONTEXT),
-                               (intptr_t)literal->getData());
-  llvm::Type *ctype = llvmType(tensorTypePtr(literal->getType()));
-  llvm::Constant *cptr = llvm::ConstantExpr::getIntToPtr(c, ctype);
-  return cptr;
+                               (intptr_t)data);
+  return llvm::ConstantExpr::getIntToPtr(c, llvmType(type));
+}
+
+llvm::Constant *llvmPtr(simit::ir::Literal *literal) {
+  assert(literal->getType()->isTensor());
+  return llvmPtr(tensorTypePtr(literal->getType()), literal->getData());
 }
 
 simit::ComponentType simitType(const llvm::Type *type) {

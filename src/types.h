@@ -214,6 +214,11 @@ inline SetType *setTypePtr(Type *type) {
   return static_cast<SetType*>(type);
 }
 
+inline const SetType *setTypePtr(const Type *type) {
+  assert(type->isSet());
+  return static_cast<const SetType*>(type);
+}
+
 inline SetType *setTypePtr(const std::shared_ptr<Type> &type) {
   return setTypePtr(type.get());
 }

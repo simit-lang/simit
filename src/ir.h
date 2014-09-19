@@ -65,7 +65,8 @@ public:
   void cast(const std::shared_ptr<TensorType> &type);
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
-  const void *getData() const { return data; }
+  void *getData() { return data; }
+  const void *getConstData() const { return data; }
 
 private:
   void  *data;

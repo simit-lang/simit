@@ -10,6 +10,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm_codegen.h"
+#include "graph.h"
 
 using namespace std;
 
@@ -37,7 +38,8 @@ void LLVMFunction::print(std::ostream &os) const {
 }
 
 simit::Function::FuncPtrType
-LLVMFunction::init(std::map<std::string, Actual> &actuals) {
+LLVMFunction::init(const std::vector<std::string> &formals,
+                   std::map<std::string, Actual> &actuals) {
   void *fptr = llvmFuncEE->getPointerToFunction(llvmFunc);
   if (llvmFunc->getArgumentList().size() == 0) {
     return (FuncPtrType)fptr;
@@ -50,21 +52,28 @@ LLVMFunction::init(std::map<std::string, Actual> &actuals) {
                                              llvm::Function::InternalLinkage,
                                              &module);
     auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
-    llvm::SmallVector<llvm::Value*, 8> args;
 
-    for (const llvm::Argument &arg : llvmFunc->getArgumentList()) {
-      std::string argName(arg.getName());
-      assert(actuals.find(argName) != actuals.end());
-      auto &actual = actuals[argName];
+    llvm::SmallVector<llvm::Value*, 8> args;
+    for (const std::string &formal : formals) {
+      assert(actuals.find(formal) != actuals.end());
+      Actual &actual = actuals.at(formal);
       switch (actual.getType()->getKind()) {
         case ir::Type::Tensor:
           args.push_back(llvmPtr(actual.getTensor()));
           break;
         case ir::Type::Set:
-          NOT_SUPPORTED_YET;
+          const SetBase *set = actual.getSet();
+          args.push_back(getInt32(set->getSize()));
+          const ir::SetType *setType = setTypePtr(actual.getType());
+          for (auto &field : setType->getElementType()->getFields()) {
+            assert(field.second->isTensor());
+            ir::TensorType *tensorType = tensorTypePtr(field.second);
+            args.push_back(llvmPtr(tensorType, getFieldPtr(set,field.first)));
+          }
           break;
       }
     }
+
     llvm::CallInst *call = llvm::CallInst::Create(llvmFunc, args, "", entry);
     call->setCallingConv(llvmFunc->getCallingConv());
     call->setTailCall();

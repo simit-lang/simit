@@ -8,6 +8,7 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
+#include "llvm/IR/Constants.h"
 
 #include "ir.h"
 
@@ -27,21 +28,26 @@
 namespace simit {
 namespace internal {
 
+llvm::ConstantInt* getInt32(int val);
+llvm::ConstantInt* getUInt32(unsigned val);
+
 llvm::Type *llvmType(const simit::ComponentType type);
 
 llvm::Type *llvmType(const ir::TensorType *type);
 
-llvm::Constant *llvmPtr(const ir::Literal *literal);
+llvm::Constant *llvmPtr(ir::TensorType *type, void *data);
+
+llvm::Constant *llvmPtr(ir::Literal *literal);
 
 simit::ComponentType simitType(const llvm::Type *type);
 
 /// Creates an empy llvm function.
 llvm::Function *
 createFunction(const std::string &name,
-                const std::vector<std::shared_ptr<ir::Argument>> &arguments,
-                const std::vector<std::shared_ptr<ir::Result>> &results,
-                llvm::GlobalValue::LinkageTypes linkage,
-                llvm::Module *module);
+               const std::vector<std::shared_ptr<ir::Argument>> &arguments,
+               const std::vector<std::shared_ptr<ir::Result>> &results,
+               llvm::GlobalValue::LinkageTypes linkage,
+               llvm::Module *module);
 
 }} // namespace simit::internal
 

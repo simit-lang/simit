@@ -36,7 +36,8 @@ class LLVMFunction : public simit::Function {
   std::vector<std::shared_ptr<Storage>> storage;
   llvm::Module module;
 
-  FuncPtrType init(std::map<std::string, Actual> &actuals);
+  FuncPtrType init(const std::vector<std::string> &formals,
+                   std::map<std::string, Actual> &actuals);
 };
 
 

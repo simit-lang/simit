@@ -28,6 +28,8 @@ template <int cardinality> class EndpointIteratorBase;
 }
 }
 
+class Function;
+
 /// A Simit element reference.  All Simit elements live in Simit sets and an
 /// ElementRef provides a reference to an element.
 class ElementRef {
@@ -45,7 +47,7 @@ class ElementRef {
 // Sets are used to represent collections within C++,
 // and can be passed as bound inputs to Simit programs.
 class SetBase {
- public:
+public:
   SetBase() : elements(0), capacity(capacityIncrement) { }
   
   ~SetBase() {
@@ -154,7 +156,7 @@ class SetBase {
       return (set==other.set) && (curElem.ident == other.curElem.ident);
     }
 
-   private:
+  private:
     ElementRef curElem; // current element index
     SetBase* set;           // set we're iterating over
 
@@ -172,12 +174,12 @@ class SetBase {
   /// Create an ElementIterator for terminating iteration over this Set
   ElementIterator end() { return ElementIterator(this, getSize()); }
   
- protected:
+protected:
   int elements;                      // number of elements in the set
   int capacity;                   // current capacity of the set
   static const int capacityIncrement = 1024; // increment for capacity increases
   
- private:
+private:
   // A field on the members of the Set.
   //
   // Invariant: elements < capacity
@@ -197,7 +199,7 @@ class SetBase {
         return dimensions[i];
       }
       size_t getSize() const { return size; }
-    public:
+    private:
       ComponentType componentType;
       std::vector<int> dimensions;
       size_t size;
@@ -223,7 +225,7 @@ class SetBase {
     std::set<FieldRefBase*> fieldReferences;
     
     // disable copy constructors
-   private:
+  private:
     FieldData(const FieldData& f);
     FieldData& operator=(const FieldData& f);
   };
@@ -239,6 +241,7 @@ class SetBase {
   void increaseCapacity();
 
   friend FieldRefBase;
+  friend Function;
 };
 
 inline bool operator<(const SetBase::ElementIterator& e1,

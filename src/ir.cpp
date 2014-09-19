@@ -97,7 +97,8 @@ bool operator==(const Literal& l, const Literal& r) {
   }
 
   assert(l.getType()->getByteSize() == r.getType()->getByteSize());
-  if (memcmp(l.getData(), r.getData(), l.getType()->getByteSize()) != 0) {
+  if (memcmp(l.getConstData(), r.getConstData(), l.getType()->getByteSize())
+      != 0) {
     return false;
   }
   return true;
