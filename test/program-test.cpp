@@ -10,7 +10,6 @@
 using namespace std;
 using namespace simit;
 
-
 TEST(Program, addScalarFields) {
   Program program;
   std::string programText =
@@ -37,4 +36,41 @@ TEST(Program, addScalarFields) {
   ASSERT_EQ(42.0, x.get(p0));
   f->run();
   ASSERT_EQ(84.0, x.get(p0));
+}
+
+TEST(Program, addVectorFields) {
+  Program program;
+  std::string programText =
+      "struct Point                                         "
+      "  x : Tensor[3](float);                              "
+      "end                                                  "
+      "func addSets(points : Point{}) -> (points : Point{}) "
+      "  points.x = points.x + points.x;                    "
+      "end                                                  ";
+
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("addSets");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  Set<> points;
+  f->bind("points", &points);
+  FieldRef<double,3> x = points.addField<double,3>("x");
+
+  ElementRef p0 = points.addElement();
+  x.set(p0, {1.0, 2.0, 3.0});
+
+
+  TensorRef<double,3> vec1 = x.get(p0);
+  ASSERT_EQ(1.0, vec1(0));
+  ASSERT_EQ(2.0, vec1(1));
+  ASSERT_EQ(3.0, vec1(2));
+
+  f->run();
+
+  TensorRef<double,3> vec2 = x.get(p0);
+  ASSERT_EQ(2.0, vec2(0));
+  ASSERT_EQ(4.0, vec2(1));
+  ASSERT_EQ(6.0, vec2(2));
 }

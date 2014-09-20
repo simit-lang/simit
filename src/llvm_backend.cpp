@@ -253,7 +253,33 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
 
   const std::shared_ptr<IndexVar> &iv = domain[currIdxVar];
   std::string idxName = iv->getName();
-  const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
+
+  // Compute dimension size
+  const IndexSetProduct &dimension = iv->getIndexSet().getFactors();
+  llvm::Value *numIter = NULL;
+  for (const IndexSet &is : dimension.getFactors()) {
+    llvm::Value *isSize = NULL;
+    switch (is.getKind()) {
+      case IndexSet::Range:
+        isSize = builder->getInt32(is.getRangeSize());
+        break;
+      case IndexSet::Set:
+        assert(symtable.contains(is.getSetName()));
+        isSize = symtable.get(is.getSetName());
+        break;
+      case IndexSet::Dynamic:
+        NOT_SUPPORTED_YET;
+        break;
+    }
+    assert(isSize);
+    if (numIter == NULL) {
+      numIter = isSize;
+    }
+    else {
+      numIter = builder->CreateMul(numIter, isSize, idxName+"_num");
+    }
+  }
+  assert(numIter);
 
   llvm::Function *f = builder->GetInsertBlock()->getParent();
 
@@ -343,21 +369,6 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   llvm::Value* i_nxt = builder->CreateAdd(idx, builder->getInt32(1),
                                           idxName+"_nxt", false, true);
   idx->addIncoming(i_nxt, loopBodyEnd);
-
-  llvm::Value *numIter = NULL;
-  switch (is.getKind()) {
-    case IndexSet::Range:
-      numIter = builder->getInt32(is.getRangeSize());
-      break;
-    case IndexSet::Set:
-      assert(symtable.contains(is.getSetName()));
-      numIter = symtable.get(is.getSetName());
-      break;
-    case IndexSet::Dynamic:
-      NOT_SUPPORTED_YET;
-      break;
-  }
-  assert(numIter);
 
   llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, numIter,idxName+"_cmp");
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,

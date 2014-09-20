@@ -339,11 +339,19 @@ std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &setExpr,
 
   std::vector<IndexSetProduct> dimensions;
   if (elemFieldType->getOrder() == 0) {
-    IndexSet dim(setExpr->getName());
-    dimensions.push_back(IndexSetProduct(dim));
+    IndexSet setDim(setExpr->getName());
+    dimensions.push_back(IndexSetProduct(setDim));
   }
   else {
-    NOT_SUPPORTED_YET;
+    std::vector<IndexSet> dim;
+    dim.push_back(IndexSet(setExpr->getName()));
+
+    for (const IndexSetProduct &elemFieldDim : elemFieldType->getDimensions()) {
+      for (const IndexSet &indexSet : elemFieldDim.getFactors()) {
+        dim.push_back(indexSet);
+      }
+      dimensions.push_back(IndexSetProduct(dim));
+    }
   }
 
   TensorType *fieldType = new TensorType(elemFieldType->getComponentType(),
