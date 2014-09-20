@@ -1,0 +1,5 @@
+# GL
+target_link_libraries(${PROJECT_NAME} GL)
+target_link_libraries(${PROJECT_NAME} GLU)
+target_link_libraries(${PROJECT_NAME} glut)
+

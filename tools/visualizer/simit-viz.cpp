@@ -1,5 +1,5 @@
 #include "graph.h"
-#include "graph-viz/graph-viz.h"
+#include "visualizer/visualizer.h"
 
 using namespace simit;
 

@@ -1,4 +1,4 @@
-#include "graph-viz.h"
+#include "visualizer.h"
 
 #include <cassert>
 #include <iostream>
@@ -62,7 +62,7 @@ GLuint createGLProgram(const string& vertexShaderStr,
 void initDrawing() {
   int argc = 1;
   char* argv[1];
-  argv[0] = "graph_viz";
+  argv[0] = "visualizer";
   glutInit(&argc, argv);
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowSize(640, 480);
@@ -74,6 +74,33 @@ void initDrawing() {
 
 void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
                 float r, float g, float b, float a) {
+  RawDataFieldRef<double,3> xData(&coordField);
+
+  GLuint vbo;
+  glGenBuffers(1, &vbo);
+  glBindBuffer(GL_ARRAY_BUFFER, vbo);
+  glBufferData(GL_ARRAY_BUFFER, sizeof(GLdouble) * points.getSize() * 3,
+               (GLdouble*)xData.getDataPtr(), GL_STREAM_DRAW);
+
+  GLuint program = internal::createGLProgram(internal::kPointsVertexShader,
+                                             internal::kPointsFragmentShader);
+  GLint colorUniform = glGetUniformLocation(program, "color");
+  glUniform4f(colorUniform, r, g, b, a);
+  GLint posAttrib = glGetAttribLocation(program, "position");
+  glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
+  glEnableVertexAttribArray(posAttrib);
+
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  gluLookAt(0.0, 0.0, 1.0,
+            0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0);
+  glDrawArrays(GL_POINTS, 0, points.getSize());
+  glutSwapBuffers();
+  glDisableVertexAttribArray(posAttrib);
+}
+
+void drawEdges(const Set<2>& points, FieldRef<double,3> coordField,
+               float r, float g, float b, float a) {
   RawDataFieldRef<double,3> xData(&coordField);
 
   GLuint vbo;

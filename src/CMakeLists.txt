@@ -50,20 +50,11 @@ IF(FLEX_FOUND)
   )
 ENDIF()
 
-# Graph viz
-set(SIMIT_GRAPH_VIZ_SOURCE_DIR ${SIMIT_SOURCE_DIR}/graph-viz)
-add_definitions(-DGL_GLEXT_PROTOTYPES)
-
 # Simit
 file(GLOB HEADERS *.h ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_HEADER} ${SIMIT_GRAPH_VIZ_SOURCE_DIR}/*.h)
-file(GLOB SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp ${SIMIT_GRAPH_VIZ_SOURCE_DIR}/*.cpp)
+file(GLOB SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
 
 add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_INPUT})
-
-# GL
-target_link_libraries(${PROJECT_NAME} GL)
-target_link_libraries(${PROJECT_NAME} GLU)
-target_link_libraries(${PROJECT_NAME} glut)
 
 # LLVM
 if (DEFINED ENV{LLVM_CONFIG})
@@ -124,3 +115,5 @@ foreach(ldflag ${LLVM_LDFLAGS})
 	 target_link_libraries(${PROJECT_NAME} ${ldflag})
   endif()
 endforeach()
+
+add_subdirectory(visualizer)
