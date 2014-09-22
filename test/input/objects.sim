@@ -1,14 +1,14 @@
-%%% empty-struct
-struct Empty
+%%% empty-element
+element Empty
 end
 
 %%% springs
-struct Point
+element Point
 	x : Tensor[3](float);
 	v : Tensor[3](float);
 end
 
-struct Spring
+element Spring
 	m  : float;
 	l0 : float;
 end
@@ -17,7 +17,7 @@ extern points : Point{};
 extern springs : Spring[points,points]{};
 
 %%% field-access
-struct Point
+element Point
 	x : Tensor[3](float);
 	v : Tensor[3](float);
 	m  : float;

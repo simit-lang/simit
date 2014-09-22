@@ -13,7 +13,7 @@ using namespace simit;
 TEST(Program, addScalarFields) {
   Program program;
   std::string programText =
-      "struct Point                                         "
+      "element Point                                        "
       "  x : float;                                         "
       "end                                                  "
       "func addSets(points : Point{}) -> (points : Point{}) "
@@ -41,7 +41,7 @@ TEST(Program, addScalarFields) {
 TEST(Program, addVectorFields) {
   Program program;
   std::string programText =
-      "struct Point                                         "
+      "element Point                                        "
       "  x : Tensor[3](float);                              "
       "end                                                  "
       "func addSets(points : Point{}) -> (points : Point{}) "

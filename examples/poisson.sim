@@ -1,12 +1,12 @@
 const h : float = 0.01;
 
-struct Point
+element Point
 	x : Tensor[3](float);
 	v : Tensor[3](float);
 	f : float;
 end
 
-struct Triangle
+element Triangle
 end
 
 extern points : Point{};

@@ -2,12 +2,12 @@ const grav      : Tensor[3](float) = [0.0, 0.0, -9.81];
 const stiffness : float = 1.0e3;
 const h         : float = 0.01;
 
-struct Point
+element Point
   x : Tensor[3](float);
   v : Tensor[3](float);
 end
 
-struct Spring
+element Spring
   m  : float;
   l0 : float;
 end

@@ -184,7 +184,7 @@
 // Keywords
 %token INT       "int"
 %token FLOAT     "float"
-%token STRUCT    "struct"
+%token ELEMENT   "element"
 %token CONST     "const"
 %token EXTERN    "extern"
 %token PROC      "proc"
@@ -299,7 +299,7 @@ endpoints
 
 %type <elementType> element_type_decl;
 element_type_decl
-  : "struct" IDENT field_decl_list "end" {
+  : "element" IDENT field_decl_list "end" {
     std::string name = convertAndFree($IDENT);
     std::unique_ptr<ir::ElementType::FieldsMapType> fields($field_decl_list);
 

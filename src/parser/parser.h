@@ -319,7 +319,7 @@ namespace  simit { namespace internal  {
         IDENT = 263,
         INT = 264,
         FLOAT = 265,
-        STRUCT = 266,
+        ELEMENT = 266,
         CONST = 267,
         EXTERN = 268,
         PROC = 269,

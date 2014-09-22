@@ -5,7 +5,7 @@ const unitz : Tensor[3](float) = [0.0, 0.0, 1.0];
 const h : float = 0.01;
 
 
-struct Rigid
+element Rigid
 	Q : Tensor[3,3](float);
 	q : Tensor[3](float);
 	w : Tensor[3](float);

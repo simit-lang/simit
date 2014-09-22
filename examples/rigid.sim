@@ -1,7 +1,7 @@
 const grav : Tensor[3](float) = [0.0, 0.0, -9.81];
 const h : float = 0.01;
 
-struct Rigid
+element Rigid
 	x : Tensor[4,4](float);
 	v : Tensor[6](float);
 	m : Tensor[4](float);

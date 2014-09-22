@@ -2974,7 +2974,7 @@ namespace  simit { namespace internal  {
   {
   "\"end of file\"", "error", "$undefined", "UNKNOWN", "NEG",
   "\"int literal\"", "\"float literal\"", "\"string literal\"",
-  "\"identifier\"", "\"int\"", "\"float\"", "\"struct\"", "\"const\"",
+  "\"identifier\"", "\"int\"", "\"float\"", "\"element\"", "\"const\"",
   "\"extern\"", "\"proc\"", "\"func\"", "\"Tensor\"", "\"map\"", "\"to\"",
   "\"with\"", "\"reduce\"", "\"while\"", "\"if\"", "\"elif\"", "\"else\"",
   "\"end\"", "\"return\"", "\"%!\"", "\"->\"", "\"(\"", "\")\"", "\"[\"",
