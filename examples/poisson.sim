@@ -9,8 +9,8 @@ end
 struct Triangle
 end
 
-extern points Point{};
-extern triangles Triangle[points, points, points]{};
+extern points : Point{};
+extern triangles : Triangle[points, points, points]{};
 
 func buildMassMatrix(t : Triangle, p0 : Point, p1 : Point, p2 : Point) -> (M : Tensor[points, points](float))
 	e0 = p0.x - p1.x;

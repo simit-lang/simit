@@ -13,8 +13,8 @@ struct Spring
 	l0 : float;
 end
 
-extern points Point{};
-extern springs Spring[points,points]{};
+extern points : Point{};
+extern springs : Spring[points,points]{};
 
 %%% field-access
 struct Point

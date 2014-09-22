@@ -276,11 +276,7 @@ program_element
 // Externs
 // TODO: Remove externs
 extern
-  : "extern" IDENT type ";" {
-    std::string ident = convertAndFree($IDENT);
-    delete $type;
-  }
-  | "extern" IDENT type ";" {
+  : "extern" IDENT ":" type ";" {
     std::string ident = convertAndFree($IDENT);
     delete $type;
   }
