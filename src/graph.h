@@ -18,7 +18,6 @@ namespace simit {
 class SetBase;
 template <typename T, int... dimensions> class FieldRef;
 template <typename T, int... dimensions> class TensorRef;
-template <typename T, int... dimensions> class RawDataFieldRef;
 
 namespace {
 class FieldRefBase;
@@ -42,7 +41,6 @@ class ElementRef {
   template <int cardinality> friend class Set;
   template <int cardinality> friend class hidden::EndpointIteratorBase;
   friend FieldRefBase;
-  template <typename T, int... dimensions> friend class RawDataFieldRef;
 };
 
 // Base class for Sets
@@ -556,7 +554,6 @@ class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
   FieldRef(void *fieldData)
       : FieldRefBaseParameterized<T,dimensions...>(fieldData) {}
   friend class SetBase;
-  friend class RawDataFieldRef<T, dimensions...>;
 };
 
 /// @cond SPECIALIZATION
@@ -617,18 +614,6 @@ class TensorRef {
   T *data;
 
   friend class FieldRefBaseParameterized<T, dimensions...>;
-};
-
-template <typename T, int... dimensions>
-class RawDataFieldRef {
- public:
-  RawDataFieldRef(FieldRef<T, dimensions...>* fieldRef) : fieldRef(fieldRef) {}
-  T* getDataPtr() {
-    return fieldRef->getElemDataPtr(ElementRef(0));
-  }
-
- private:
-  FieldRef<T, dimensions...>* fieldRef;
 };
 
 } // namespace simit
