@@ -2,7 +2,11 @@
 
 #include <cassert>
 #include <cmath>
+#include <functional>
+#include <mutex>
+#include <pthread.h>
 #include <iostream>
+#include <queue>
 #include <string>
 
 #include <GL/gl.h>
@@ -88,6 +92,17 @@ void main() {                         \
 }                                               \
 ";
 
+// Current glut main loop thread. Should be joined before exiting.
+pthread_t glutThread;
+// Draw function, set by the latest draw call, so that we can redraw upon
+// POV rotation/pan. Default is to draw nothing.
+std::function<void(void)> drawFunc = [](){};
+// Lock the draw function, so we can change it or replace the data under it
+// without race conditions.
+std::mutex drawFuncLock;
+// Data references held by GL based on the previous call to draw*.
+std::queue<void*> heldReferences;
+
 GLuint createGLProgram(const string& vertexShaderStr,
                        const string& fragmentShaderStr) {
   GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
@@ -134,6 +149,33 @@ GLuint createGLProgram(const string& vertexShaderStr,
   return program;
 }
 
+void *handleWindowEvents(void *arg) {
+  // Let the glut main loop dispatch all events to registered handlers
+  glutMainLoop();
+  return arg;
+}
+
+void handleDraw() {
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  // TODO(gkanwar): Update perspective based on keys
+  gluLookAt(0.0, 0.0, 1.0,
+            0.0, 0.0, 0.0,
+            0.0, 1.0, 0.0);
+  // Assumes that the relevant VBO setup for the draw function has been
+  // set up before this draw function was set.
+  drawFuncLock.lock();
+  drawFunc();
+  drawFuncLock.unlock();
+  glutSwapBuffers();
+}
+
+void handleKeyboardEvent(unsigned char key, int x, int y) {
+  if (key == 'z') {
+    std::cout << "Resetting viewpoint" << std::endl;
+    // TODO(gkanwar): Implement this!
+  }
+}
+
 } // namespace simit::internal
 
 void initDrawing() {
@@ -145,17 +187,35 @@ void initDrawing() {
   glutInitWindowSize(640, 480);
   glutCreateWindow("Graph visualization");
 
+  glutDisplayFunc(internal::handleDraw);
+  glutKeyboardFunc(internal::handleKeyboardEvent);
+
   glShadeModel(GL_SMOOTH);
   glEnable(GL_DEPTH_TEST);
+
+  int ret;
+  ret = pthread_create(&internal::glutThread, NULL,
+                       internal::handleWindowEvents, NULL);
+  assert(!ret &&
+         "Could not create event handler thread");
 }
 
 void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
                 float r, float g, float b, float a) {
+  internal::drawFuncLock.lock();
+  while (!internal::heldReferences.empty()) {
+    delete internal::heldReferences.front();
+    internal::heldReferences.pop();
+  }
+  GLdouble* pointData = new GLdouble[points.getSize() * 3];
+  internal::heldReferences.push(pointData);
+  memcpy(pointData, coordField.getData(), sizeof(GLdouble)*points.getSize()*3);
+
   GLuint vbo;
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLdouble) * points.getSize() * 3,
-               (GLdouble*)coordField.getData(), GL_STREAM_DRAW);
+               pointData, GL_STREAM_DRAW);
 
   GLuint program = internal::createGLProgram(internal::kConstVertexShader,
                                              internal::kConstFragmentShader);
@@ -165,19 +225,25 @@ void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
 
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  gluLookAt(0.0, 0.0, 1.0,
-            0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0);
-  glDrawArrays(GL_POINTS, 0, points.getSize());
-  glutSwapBuffers();
-  glDisableVertexAttribArray(posAttrib);
+  // Set the draw func, to be repeatedly called
+  int arraySize = points.getSize();
+  internal::drawFunc = [arraySize](){
+    glDrawArrays(GL_POINTS, 0, arraySize);
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
 }
 
 void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
                float r, float g, float b, float a) {
-  // FIXME(gkanwar): Hack to copy edge data into a double array
+  internal::drawFuncLock.lock();
+  while (!internal::heldReferences.empty()) {
+    delete internal::heldReferences.front();
+    internal::heldReferences.pop();
+  }
   GLdouble* data = new GLdouble[edges.getSize() * 2 * 3];
+  internal::heldReferences.push(data);
   int index = 0;
   for (auto elem = edges.begin(); elem != edges.end(); ++elem) {
     std::cout << "Edge!" << std::endl;
@@ -209,25 +275,29 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
 
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  gluLookAt(0.0, 0.0, 1.0,
-            0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0);
-  std::cout << "Drawing " << edges.getSize() * 2 << std::endl;
-  for (int i = 0; i < edges.getSize(); i++) {
-    std::cout << data[i*2*3] << "," << data[i*2*3+1] << "," << data[i*2*3+2] << ":"
-              << data[i*2*3+3] << "," << data[i*2*3+4] << "," << data[i*2*3+5] << std::endl;
-  }
-  glDrawArrays(GL_LINES, 0, edges.getSize() * 2);
-  glutSwapBuffers();
-  glDisableVertexAttribArray(posAttrib);
+  // Set the draw func, to be repeatedly called
+  int arraySize = edges.getSize() * 2;
+  internal::drawFunc = [arraySize]() {
+    glDrawArrays(GL_LINES, 0, arraySize);
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
 }
 
 void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
                float r, float g, float b, float a) {
+  internal::drawFuncLock.lock();
   // FIXME(gkanwar): Hack to copy edge data into a double array
+  while (!internal::heldReferences.empty()) {
+    delete internal::heldReferences.front();
+    internal::heldReferences.pop();
+  }
   GLdouble* posData = new GLdouble[faces.getSize() * 3 * 3];
   GLfloat* normData = new GLfloat[faces.getSize() * 3 * 3];
+  internal::heldReferences.push(posData);
+  internal::heldReferences.push(normData);
+
   int index = 0;
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
     std::cout << "Edge!" << std::endl;
@@ -293,21 +363,13 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
   glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(normAttrib);
 
-  // GLfloat lightPos[3] = {0.0, 1.0, 1.0};
-  // glLightfv(GL_LIGHT0, GL_POSITION, lightPos);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  gluLookAt(0.0, 0.0, 1.0,
-            0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0);
-  std::cout << "Drawing " << faces.getSize() * 3 << std::endl;
-  for (int i = 0; i < faces.getSize(); i++) {
-    std::cout << posData[i*2*3] << "," << posData[i*2*3+1] << "," << posData[i*2*3+2] << ":"
-              << posData[i*2*3+3] << "," << posData[i*2*3+4] << "," << posData[i*2*3+5] << std::endl;
-  }
-  glDrawArrays(GL_TRIANGLES, 0, faces.getSize() * 3);
-  glutSwapBuffers();
-  glDisableVertexAttribArray(posAttrib);
-  glDisableVertexAttribArray(normAttrib);
+  int arraySize = faces.getSize() * 3;
+  internal::drawFunc = [arraySize]() {
+    glDrawArrays(GL_TRIANGLES, 0, arraySize);
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
 }
 
 } // namespace simit
