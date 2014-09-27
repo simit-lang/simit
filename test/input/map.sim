@@ -1,19 +1,39 @@
 %%% forall
-proc p
-  M = map myfunc to springs;
+element Point
+  a : float;
+  b : float;
+  c : float;
 end
 
-%%% with
-proc p
-  M = map myfunc to springs with points;
+extern points : Point{};
+
+func dist_mass(p : Point) -> (A : Tensor[points,points](float))
+  A(p,p) = p.a; 
 end
 
-%%% reduce
-proc p
-  M = map myfunc to points reduce +;  
+proc mul
+  A = map dist_mass to points reduce +;
+  points.c = A * points.b;
 end
 
-%%% springs
-proc p
-  M, fg = map distribute_masses to springs with points reduce +;
+%%%-
+element Spring
+  a : float;
+end
+
+element Point
+  b : float;
+  c : float;
+end
+
+extern points  : Point{};
+extern springs : Spring[points,points]{};
+
+func dist_mass(s : Spring, p : subsetof points{2}) -> (A : Tensor[points,points](float))
+  A(p(0), p(1)) = s.a;
+end
+
+proc mul
+  A = map dist_mass to springs with points reduce +;
+  points.c = A * points.b;
 end

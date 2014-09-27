@@ -10,6 +10,8 @@
 using namespace std;
 using namespace simit;
 
+/// \todo Turn these into a parameterized test suite
+
 TEST(Program, addScalarFields) {
   Program program;
   std::string programText =
@@ -61,7 +63,6 @@ TEST(Program, addVectorFields) {
   ElementRef p0 = points.addElement();
   x.set(p0, {1.0, 2.0, 3.0});
 
-
   TensorRef<double,3> vec1 = x.get(p0);
   ASSERT_EQ(1.0, vec1(0));
   ASSERT_EQ(2.0, vec1(1));
@@ -74,3 +75,36 @@ TEST(Program, addVectorFields) {
   ASSERT_EQ(4.0, vec2(1));
   ASSERT_EQ(6.0, vec2(2));
 }
+
+//TEST(Program, spmv) {
+//  Program program;
+//  std::string programText =
+//      "element Point                                                    "
+//      "  a : float;                                                     "
+//      "  b : float;                                                     "
+//      "end                                                              "
+//
+//      "extern points : Point{};                                         "
+//
+//      "func dist_mass(p : Point) -> (A : Tensor[points,points](float))  "
+//      "  A(p,p) = p.a;                                                  "
+//      "end                                                              "
+//
+//      "proc mul                                                         "
+//      "  A = map dist_mass to points reduce +;                          "
+//      "  points.b = M * points.b;                                       "
+//      "end;                                                             ";
+//
+//  int errorCode = program.loadString(programText);
+//  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+//
+//  std::unique_ptr<Function> f = program.compile("mul");
+//  if (!f) FAIL() << program.getDiagnostics().getMessage();
+//
+////  Set<> points;
+////  f->bind("points", &points);
+////  FieldRef<double,3> x = points.addField<double,3>("x");
+////
+////  ElementRef p0 = points.addElement();
+////  x.set(p0, {1.0, 2.0, 3.0});
+//}
