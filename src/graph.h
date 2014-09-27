@@ -9,6 +9,7 @@
 #include <map>
 #include <set>
 
+
 #include "tensor_components.h"
 #include "variadic.h"
 
@@ -28,6 +29,11 @@ template <int cardinality> class EndpointIteratorBase;
 }
 }
 
+namespace internal {
+class VertexToEdgeIndex;
+class VertexToEdgeMembershipIndex;
+}
+
 class Function;
 
 /// A Simit element reference.  All Simit elements live in Simit sets and an
@@ -41,7 +47,11 @@ class ElementRef {
   template <int cardinality> friend class Set;
   template <int cardinality> friend class hidden::EndpointIteratorBase;
   friend FieldRefBase;
+  friend class internal::VertexToEdgeIndex;
+  friend class internal::VertexToEdgeMembershipIndex;
 };
+
+
 
 // Base class for Sets
 // Sets are used to represent collections within C++,
@@ -333,6 +343,8 @@ class Set : public SetBase {
   }
   
   template <int c> friend class hidden::EndpointIteratorBase;
+  friend class internal::VertexToEdgeIndex;
+  friend class internal::VertexToEdgeMembershipIndex;
   
   // helper for constructing
   template <typename F, typename ...T>
@@ -364,6 +376,149 @@ class Set : public SetBase {
   }
 
 };
+
+namespace internal {
+
+/// A class for an index that maps from points to edges that contain that point
+/// differentiating between different endpoints
+class VertexToEdgeIndex {
+ public:
+  template <int cardinality=0>
+  VertexToEdgeIndex(Set<cardinality>& edgeSet) {
+    totalEdges = edgeSet.getSize();
+    for (auto es : edgeSet.endpointSets) {
+      endpointSets.push_back((SetBase*)es);
+      
+      // allocate array to contain how many edges each element is part of
+      // calloc sets them all to zero
+      numEdgesForVertex.push_back((int*)calloc(sizeof(int),es->getSize()));
+    
+      // allocate array to contain which edges each element is part of
+      whichEdgesForVertex.push_back((int**)calloc(sizeof(int*),es->getSize()));
+      for (int i=0; i<es->getSize(); i++)
+        whichEdgesForVertex[endpointSets.size()-1][i] = (int*)malloc(sizeof(int)*
+          totalEdges);
+    }
+    
+    for (auto e : edgeSet) {
+      for (int epi=0; epi<(int)(endpointSets.size()); epi++) {
+        auto ep = edgeSet.getEndpoint(e, epi);
+        //std::cout << "endpoint " << epi << " is ident " << ep.ident << std::endl;
+        whichEdgesForVertex[epi][ep.ident][numEdgesForVertex[epi][ep.ident]++] =
+          e.ident;
+      }
+    }
+  }
+  
+  int getNumEdgesForElement(ElementRef vertex, int whichEndpoint) {
+    return numEdgesForVertex[whichEndpoint][vertex.ident];
+  }
+  
+  int* getWhichEdgesForElement(ElementRef vertex, int whichEndpoint) {
+    return whichEdgesForVertex[whichEndpoint][vertex.ident];
+  }
+  
+  std::vector<int*> getNumEdges() { return numEdgesForVertex; }
+  
+  std::vector<int**> getWhichEdges() { return whichEdgesForVertex; }
+  
+  int getTotalEdges() { return totalEdges; }
+  
+  ~VertexToEdgeIndex() {
+    for (auto ne : numEdgesForVertex)
+      free(ne);
+    for (int w=0; w<(int)(endpointSets.size()); w++) {
+      for (int i=0; i<endpointSets[w]->getSize(); i++)
+        free(whichEdgesForVertex[w][i]);
+    free(whichEdgesForVertex[w]);
+    }
+  }
+ private:
+  
+  std::vector<SetBase*> endpointSets;       // the endpoint sets
+  std::vector<int*> numEdgesForVertex;      // number of edges the v belongs to
+  std::vector<int**> whichEdgesForVertex;   // which edges v belongs to
+  int totalEdges;
+  
+
+};
+
+/// A class for an index that maps from points to edges that contain that point
+/// with no differentiation by endpoint
+class VertexToEdgeMembershipIndex {
+ public:
+  template <int cardinality=0>
+  VertexToEdgeMembershipIndex(Set<cardinality>& edgeSet) {
+    totalEdges = edgeSet.getSize();
+    for (auto es : edgeSet.endpointSets) {
+      auto endpointSet = (SetBase*)es;
+      
+      endpointSets.push_back(endpointSet);
+      
+      // if we already have this set in the container, don't insert again.
+      // this case occurs if the edgeset is homogenous, for example.
+      if (numEdgesForVertex.count(endpointSet) > 0)
+        continue;
+
+      
+      // allocate array to contain how many edges each element is part of
+      // calloc sets them all to zero
+      numEdgesForVertex[endpointSet] = (int*)calloc(sizeof(int),es->getSize());
+    
+      // allocate array to contain which edges each element is part of
+      whichEdgesForVertex[endpointSet] = (int**)calloc(sizeof(int*),es->getSize());
+      for (int i=0; i<endpointSet->getSize(); i++)
+        whichEdgesForVertex[endpointSet][i] = (int*)malloc(sizeof(int)*
+          totalEdges);
+    }
+    
+    for (auto e : edgeSet) {
+      for (int epi=0; epi<(int)(endpointSets.size()); epi++) {
+        auto ep = edgeSet.getEndpoint(e, epi);
+        //std::cout << "endpoint " << epi << " is ident " << ep.ident << std::endl;
+        whichEdgesForVertex[endpointSets[epi]][ep.ident][numEdgesForVertex[endpointSets[epi]][ep.ident]++] =
+          e.ident;
+      }
+    }
+  }
+  
+  int getNumEdgesForElement(ElementRef vertex, const SetBase& whichSet) {
+    return numEdgesForVertex[&whichSet][vertex.ident];
+  }
+  
+  int* getWhichEdgesForElement(ElementRef vertex, const SetBase& whichSet) {
+    return whichEdgesForVertex[&whichSet][vertex.ident];
+  }
+  
+  std::map<const SetBase*,int*> getNumEdges() { return numEdgesForVertex; }
+  
+  std::map<const SetBase*,int**> getWhichEdges() { return whichEdgesForVertex; }
+  
+  int getTotalEdges() { return totalEdges; }
+  
+  ~VertexToEdgeMembershipIndex() {
+    for (auto ne : numEdgesForVertex) {
+      free(ne.second);
+    }
+    for (auto s : whichEdgesForVertex) {
+      for (int i=0; i<s.first->getSize(); i++)
+        free(s.second[i]);
+      free(s.second);
+    }
+  }
+  
+ private:
+  // the following use std::map, but could use std::unordered_map if we don't
+  // care about iterating over it in order
+  std::vector<SetBase*> endpointSets;       // the endpoint sets
+  std::map<const SetBase*,int*> numEdgesForVertex;      // number of edges the v belongs to
+  std::map<const SetBase*,int**> whichEdgesForVertex;   // which edges v belongs to
+  int totalEdges;
+  
+
+};
+
+} // internal
 
 namespace {
 namespace hidden {
