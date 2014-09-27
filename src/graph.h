@@ -353,14 +353,14 @@ class Set : public SetBase {
   void addHelper(int which, F f, T ... endpoints) {
     assert(endpointSets[which]->getSize() > f.ident &&
       "Invalid member of set in addEdge");
-    edge_data[elements+which] = f.ident;
+    edge_data[elements*cardinality+which] = f.ident;
     addHelper(which+1, endpoints...);
   }
   template <typename F>
   void addHelper(int which, F f) {
     assert(endpointSets[which]->getSize() > f.ident &&
     "Invalid member of set in addEdge");
-    edge_data[elements+which] = f.ident;
+    edge_data[elements*cardinality+which] = f.ident;
   }
 
 };
