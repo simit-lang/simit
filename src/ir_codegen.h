@@ -1,5 +1,5 @@
-#ifndef SIMIT_LA_H
-#define SIMIT_LA_H
+#ifndef SIMIT_IR_CODEGEN_H
+#define SIMIT_IR_CODEGEN_H
 
 #include <memory>
 

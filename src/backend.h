@@ -25,8 +25,6 @@ public:
   virtual ~Backend() {}
 
   virtual simit::Function *compile(simit::ir::Function *function) = 0;
-
-  int verify(ProgramContext &ctx, Diagnostics *diags);
 };
 
 }} // namespace simit::internal
