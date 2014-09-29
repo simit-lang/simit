@@ -20,10 +20,11 @@ namespace simit {
 namespace internal {
 
 const string& kConstVertexShader = "\
-attribute vec4 position;           \
-void main() {                      \
-  gl_Position = position;          \
-}                                  \
+attribute vec4 position;            \
+uniform mat4 transMat;              \
+void main() {                       \
+  gl_Position = position * transMat;\
+}                                   \
 ";
 const string& kConstFragmentShader = "\
 uniform vec4 color;                  \
@@ -34,13 +35,17 @@ void main() {                        \
 const string& kFlatVertexShader = "\
 attribute vec3 position;           \
 attribute vec3 normal;             \
+uniform mat4 transMat;             \
+uniform mat4 invTransMat;          \
 varying vec3 vert;                 \
 varying vec3 normalV;              \
 void main() {                      \
-  vert = position;                 \
-  normalV = normal;                \
-  gl_Position = vec4(position[0],  \
-    position[1], position[2], 1.0);\
+  gl_Position = vec4(position[0], position[1], position[2], 1.0)\
+      * transMat;                  \
+  vert = vec3(gl_Position[0], gl_Position[1], gl_Position[2]);\
+  vec4 normal4 = vec4(normal[0], normal[1], normal[2], 1.0)\
+      * invTransMat;\
+  normalV = vec3(normal4[0], normal4[1], normal4[2]);\
 }                                  \
 ";
 const string& kFlatFragmentShader = "\
@@ -48,7 +53,7 @@ uniform vec4 color;                  \
 varying vec3 vert;                   \
 varying vec3 normalV;                \
 void main() {                        \
-  vec3 Lpos = vec3(-0.2, 1.0, 1.0);   \
+  vec3 Lpos = vec3(-0.2, 1.0, 1.0);  \
   vec3 L = normalize(Lpos - vert);   \
   vec3 E = normalize(-vert);         \
   vec3 R = normalize(-reflect(L, normalV));\
@@ -102,6 +107,10 @@ std::function<void(void)> drawFunc = [](){};
 std::mutex drawFuncLock;
 // Data references held by GL based on the previous call to draw*.
 std::queue<void*> heldReferences;
+// Eye theta
+double eyeTheta = 0.0;
+// Current transformation matrix
+GLfloat transMat[16];
 
 GLuint createGLProgram(const string& vertexShaderStr,
                        const string& fragmentShaderStr) {
@@ -149,6 +158,170 @@ GLuint createGLProgram(const string& vertexShaderStr,
   return program;
 }
 
+// Writes 16 doubles into matrix, representing the 4x4 transformation
+// matrix associated with a rotation about the Y axis of theta (rad).
+void buildYRotMatrix(double theta, GLfloat matrix[16]) {
+  std::cout << "buildYRotMatrix: " << theta << std::endl;
+  GLfloat outMat[16] = {
+    (float)cos(theta), (float)-sin(theta), 0, 0,
+    (float)sin(theta), (float)cos(theta), 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  };
+  memcpy(matrix, outMat, sizeof(outMat));
+}
+
+// Invert a 4x4 matrix explicitly. Writes 16 doubles into inverse.
+// Code based on StackOverflow response based on MESA implementation:
+// http://stackoverflow.com/questions/1148309/inverting-a-4x4-matrix
+void invertMatrix(const GLfloat matrix[16], GLfloat inverse[16]) {
+  double inv[16], det;
+  int i;
+
+  inv[0] =
+      matrix[5]  * matrix[10] * matrix[15] - 
+      matrix[5]  * matrix[11] * matrix[14] - 
+      matrix[9]  * matrix[6]  * matrix[15] + 
+      matrix[9]  * matrix[7]  * matrix[14] +
+      matrix[13] * matrix[6]  * matrix[11] - 
+      matrix[13] * matrix[7]  * matrix[10];
+  inv[4] =
+      -matrix[4]  * matrix[10] * matrix[15] + 
+      matrix[4]  * matrix[11] * matrix[14] + 
+      matrix[8]  * matrix[6]  * matrix[15] - 
+      matrix[8]  * matrix[7]  * matrix[14] - 
+      matrix[12] * matrix[6]  * matrix[11] + 
+      matrix[12] * matrix[7]  * matrix[10];
+  inv[8] =
+      matrix[4]  * matrix[9] * matrix[15] - 
+      matrix[4]  * matrix[11] * matrix[13] - 
+      matrix[8]  * matrix[5] * matrix[15] + 
+      matrix[8]  * matrix[7] * matrix[13] + 
+      matrix[12] * matrix[5] * matrix[11] - 
+      matrix[12] * matrix[7] * matrix[9];
+  inv[12] =
+      -matrix[4]  * matrix[9] * matrix[14] + 
+      matrix[4]  * matrix[10] * matrix[13] +
+      matrix[8]  * matrix[5] * matrix[14] - 
+      matrix[8]  * matrix[6] * matrix[13] - 
+      matrix[12] * matrix[5] * matrix[10] + 
+      matrix[12] * matrix[6] * matrix[9];
+  inv[1] =
+      -matrix[1]  * matrix[10] * matrix[15] + 
+      matrix[1]  * matrix[11] * matrix[14] + 
+      matrix[9]  * matrix[2] * matrix[15] - 
+      matrix[9]  * matrix[3] * matrix[14] - 
+      matrix[13] * matrix[2] * matrix[11] + 
+      matrix[13] * matrix[3] * matrix[10];
+  inv[5] =
+      matrix[0]  * matrix[10] * matrix[15] - 
+      matrix[0]  * matrix[11] * matrix[14] - 
+      matrix[8]  * matrix[2] * matrix[15] + 
+      matrix[8]  * matrix[3] * matrix[14] + 
+      matrix[12] * matrix[2] * matrix[11] - 
+      matrix[12] * matrix[3] * matrix[10];
+  inv[9] =
+      -matrix[0]  * matrix[9] * matrix[15] + 
+      matrix[0]  * matrix[11] * matrix[13] + 
+      matrix[8]  * matrix[1] * matrix[15] - 
+      matrix[8]  * matrix[3] * matrix[13] - 
+      matrix[12] * matrix[1] * matrix[11] + 
+      matrix[12] * matrix[3] * matrix[9];
+  inv[13] =
+      matrix[0]  * matrix[9] * matrix[14] - 
+      matrix[0]  * matrix[10] * matrix[13] - 
+      matrix[8]  * matrix[1] * matrix[14] + 
+      matrix[8]  * matrix[2] * matrix[13] + 
+      matrix[12] * matrix[1] * matrix[10] - 
+      matrix[12] * matrix[2] * matrix[9];
+  inv[2] =
+      matrix[1]  * matrix[6] * matrix[15] - 
+      matrix[1]  * matrix[7] * matrix[14] - 
+      matrix[5]  * matrix[2] * matrix[15] + 
+      matrix[5]  * matrix[3] * matrix[14] + 
+      matrix[13] * matrix[2] * matrix[7] - 
+      matrix[13] * matrix[3] * matrix[6];
+  inv[6] =
+      -matrix[0]  * matrix[6] * matrix[15] + 
+      matrix[0]  * matrix[7] * matrix[14] + 
+      matrix[4]  * matrix[2] * matrix[15] - 
+      matrix[4]  * matrix[3] * matrix[14] - 
+      matrix[12] * matrix[2] * matrix[7] + 
+      matrix[12] * matrix[3] * matrix[6];
+  inv[10] =
+      matrix[0]  * matrix[5] * matrix[15] - 
+      matrix[0]  * matrix[7] * matrix[13] - 
+      matrix[4]  * matrix[1] * matrix[15] + 
+      matrix[4]  * matrix[3] * matrix[13] + 
+      matrix[12] * matrix[1] * matrix[7] - 
+      matrix[12] * matrix[3] * matrix[5];
+  inv[14] =
+      -matrix[0]  * matrix[5] * matrix[14] + 
+      matrix[0]  * matrix[6] * matrix[13] + 
+      matrix[4]  * matrix[1] * matrix[14] - 
+      matrix[4]  * matrix[2] * matrix[13] - 
+      matrix[12] * matrix[1] * matrix[6] + 
+      matrix[12] * matrix[2] * matrix[5];
+  inv[3] =
+      -matrix[1] * matrix[6] * matrix[11] + 
+      matrix[1] * matrix[7] * matrix[10] + 
+      matrix[5] * matrix[2] * matrix[11] - 
+      matrix[5] * matrix[3] * matrix[10] - 
+      matrix[9] * matrix[2] * matrix[7] + 
+      matrix[9] * matrix[3] * matrix[6];
+  inv[7] =
+      matrix[0] * matrix[6] * matrix[11] - 
+      matrix[0] * matrix[7] * matrix[10] - 
+      matrix[4] * matrix[2] * matrix[11] + 
+      matrix[4] * matrix[3] * matrix[10] + 
+      matrix[8] * matrix[2] * matrix[7] - 
+      matrix[8] * matrix[3] * matrix[6];
+  inv[11] =
+      -matrix[0] * matrix[5] * matrix[11] + 
+      matrix[0] * matrix[7] * matrix[9] + 
+      matrix[4] * matrix[1] * matrix[11] - 
+      matrix[4] * matrix[3] * matrix[9] - 
+      matrix[8] * matrix[1] * matrix[7] + 
+      matrix[8] * matrix[3] * matrix[5];
+  inv[15] =
+      matrix[0] * matrix[5] * matrix[10] - 
+      matrix[0] * matrix[6] * matrix[9] - 
+      matrix[4] * matrix[1] * matrix[10] + 
+      matrix[4] * matrix[2] * matrix[9] + 
+      matrix[8] * matrix[1] * matrix[6] - 
+      matrix[8] * matrix[2] * matrix[5];
+
+  det = matrix[0] * inv[0] +
+      matrix[1] * inv[4] +
+      matrix[2] * inv[8] +
+      matrix[3] * inv[12];
+
+  std::cout << "Invert: " << std::endl
+            << matrix[0] << ","
+            << matrix[1] << ","
+            << matrix[2] << ","
+            << matrix[3] << std::endl
+            << matrix[4] << ","
+            << matrix[5] << ","
+            << matrix[6] << ","
+            << matrix[7] << std::endl
+            << matrix[8] << ","
+            << matrix[9] << ","
+            << matrix[10] << ","
+            << matrix[11] << std::endl
+            << matrix[12] << ","
+            << matrix[13] << ","
+            << matrix[14] << ","
+            << matrix[15] << std::endl;
+  assert(det != 0 &&
+         "Non-invertible transformation matrix");
+
+  det = 1.0 / det;
+
+  for (i = 0; i < 16; i++)
+    inverse[i] = inv[i] * det;
+}
+
 void *handleWindowEvents(void *arg) {
   // Let the glut main loop dispatch all events to registered handlers
   glutMainLoop();
@@ -157,10 +330,8 @@ void *handleWindowEvents(void *arg) {
 
 void handleDraw() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  // TODO(gkanwar): Update perspective based on keys
-  gluLookAt(0.0, 0.0, 1.0,
-            0.0, 0.0, 0.0,
-            0.0, 1.0, 0.0);
+  // Update transformation matrix
+  buildYRotMatrix(eyeTheta, transMat);
   // Assumes that the relevant VBO setup for the draw function has been
   // set up before this draw function was set.
   drawFuncLock.lock();
@@ -176,6 +347,26 @@ void handleKeyboardEvent(unsigned char key, int x, int y) {
   }
 }
 
+void handleSpecialKeyEvent(int key, int x, int y) {
+  std::cout << "Special key!" << std::endl;
+  if (key == GLUT_KEY_RIGHT) {
+    std::cout << "Right" << std::endl;
+    eyeTheta += 0.1;
+    if (eyeTheta > 2*M_PI) {
+      eyeTheta -= 2*M_PI;
+    }
+    glutPostRedisplay();
+  } else if (key == GLUT_KEY_LEFT) {
+    std::cout << "Left" << std::endl;
+    eyeTheta -= 0.1;
+    if (eyeTheta < 0) {
+      eyeTheta += 2*M_PI;
+    }
+    glutPostRedisplay();
+  }
+  std::cout << "Eye theta: " << eyeTheta << std::endl;
+}
+
 } // namespace simit::internal
 
 void initDrawing() {
@@ -188,10 +379,14 @@ void initDrawing() {
   glutCreateWindow("Graph visualization");
 
   glutDisplayFunc(internal::handleDraw);
+  glutSpecialFunc(internal::handleSpecialKeyEvent);
   glutKeyboardFunc(internal::handleKeyboardEvent);
 
   glShadeModel(GL_SMOOTH);
   glEnable(GL_DEPTH_TEST);
+
+  // Initialize transformation matrix
+  // internal::buildYRotMatrix(internal::eyeTheta, internal::transMat);
 
   int ret;
   ret = pthread_create(&internal::glutThread, NULL,
@@ -221,6 +416,8 @@ void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
                                              internal::kConstFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
+  GLint transMatUniform = glGetUniformLocation(program, "transMat");
+  glUniformMatrix4fv(transMatUniform, 1, GL_FALSE, internal::transMat);
   GLint posAttrib = glGetAttribLocation(program, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
@@ -246,18 +443,18 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
   internal::heldReferences.push(data);
   int index = 0;
   for (auto elem = edges.begin(); elem != edges.end(); ++elem) {
-    std::cout << "Edge!" << std::endl;
+    // std::cout << "Edge!" << std::endl;
     for (auto endPoint = edges.endpoints_begin(*elem);
          endPoint != edges.endpoints_end(*elem); endPoint++) {
       assert(index < (edges.getSize() * 2 * 3) &&
              "Too many edges in set edge info.");
       TensorRef<double,3> point = coordField.get(*endPoint);
-      std::cout << "Endpoint: " << point(0) << "," << point(1) << "," << point(2) << std::endl;
+      // std::cout << "Endpoint: " << point(0) << "," << point(1) << "," << point(2) << std::endl;
       data[index] = point(0);
       data[index+1] = point(1);
       data[index+2] = point(2);
       index += 3;
-      std::cout << index << std::endl;
+      // std::cout << index << std::endl;
     }
   }
 
@@ -271,6 +468,8 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
                                              internal::kConstFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
+  GLint transMatUniform = glGetUniformLocation(program, "transMat");
+  glUniformMatrix4fv(transMatUniform, 1, GL_FALSE, internal::transMat);
   GLint posAttrib = glGetAttribLocation(program, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
@@ -300,18 +499,18 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
 
   int index = 0;
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
-    std::cout << "Edge!" << std::endl;
+    // std::cout << "Edge!" << std::endl;
     for (auto endPoint = faces.endpoints_begin(*elem);
          endPoint != faces.endpoints_end(*elem); endPoint++) {
       assert(index < (faces.getSize() * 3 * 3) &&
              "Too many faces in set edge info.");
       TensorRef<double,3> point = coordField.get(*endPoint);
-      std::cout << "Endpoint: " << point(0) << "," << point(1) << "," << point(2) << std::endl;
+      // std::cout << "Endpoint: " << point(0) << "," << point(1) << "," << point(2) << std::endl;
       posData[index] = point(0);
       posData[index+1] = point(1);
       posData[index+2] = point(2);
       index += 3;
-      std::cout << index << std::endl;
+      // std::cout << index << std::endl;
     }
     // Compute face normal, assuming right-hand convention
     float deltaAB[3] = {
@@ -354,6 +553,12 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
                                              internal::kFlatFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
+  GLint transMatUniform = glGetUniformLocation(program, "transMat");
+  glUniformMatrix4fv(transMatUniform, 1, GL_FALSE, internal::transMat);
+  GLint invTransMatUniform = glGetUniformLocation(program, "invTransMat");
+  GLfloat invTransMat[16];
+  internal::invertMatrix(internal::transMat, invTransMat);
+  glUniformMatrix4fv(invTransMatUniform, 1, GL_FALSE, invTransMat);
   GLint posAttrib = glGetAttribLocation(program, "position");
   glBindBuffer(GL_ARRAY_BUFFER, posVbo);
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
