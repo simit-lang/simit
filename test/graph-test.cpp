@@ -233,18 +233,18 @@ TEST(EdgeSet, CreateAndGetEdge) {
   ASSERT_EQ(y.get(e), 54);
 }
 
-TEST(EdgeSet, ConstructorTest) {
-  Set<> points;
-  points.addElement();
-  auto p0 = points.addElement();
-  
-  Set<1> points2(points);
-  auto p1 = points2.addElement(p0);
-  
-  Set<2> edges(points, points2);
-  edges.addElement(p0, p1);
-  ASSERT_DEATH(edges.addElement(p1, p0), "Assertion.*" );
-}
+//TEST(EdgeSet, ConstructorTest) {
+//  Set<> points;
+//  points.addElement();
+//  auto p0 = points.addElement();
+//  
+//  Set<1> points2(points);
+//  auto p1 = points2.addElement(p0);
+//  
+//  Set<2> edges(points, points2);
+//  edges.addElement(p0, p1);
+//  ASSERT_DEATH(edges.addElement(p1, p0), "Assertion.*" );
+//}
 
 TEST(EdgeSet, EdgeIteratorTest) {
   Set<> points;
