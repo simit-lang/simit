@@ -3,7 +3,9 @@
 #include <set>
 
 #include "ir.h"
+#include "sir.h"
 #include "frontend.h"
+#include "sir_codegen.h"
 #include "llvm_backend.h"
 #include "function.h"
 #include "util.h"
@@ -113,9 +115,13 @@ class Program::ProgramContent {
 
  private:
   internal::Frontend *frontend;
+  ir::SetIRCodeGen setIRCodeGen;
   internal::LLVMBackend *backend;
 
   Function *compile(ir::Function *simitFunc) {
+//    std::unique_ptr<ir::SetIRNode> setIR = setIRCodeGen.codegen(simitFunc);
+//    cout << *simitFunc << endl;
+//    cout << *setIR << endl;
     return getBackend()->compile(simitFunc);
   }
 };

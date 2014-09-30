@@ -179,7 +179,7 @@ llvm::Value *emitOffset(llvm::Value *ptr, TensorType *type,
       int stride = 1;
       for (size_t i=1; i<idxVars.size(); ++i) {
         const std::shared_ptr<IndexVar> &iv = idxVars[i];
-        const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
+        const IndexSet &is = iv->getDomain().getFactors()[currNest];
         stride *= is.getSize();
       }
 
@@ -190,7 +190,7 @@ llvm::Value *emitOffset(llvm::Value *ptr, TensorType *type,
                                   false, true);
       for (size_t i=1; i<idxVars.size()-1; ++i) {
         const std::shared_ptr<IndexVar> &iv = idxVars[i];
-        const IndexSet &is = iv->getIndexSet().getFactors()[currNest];
+        const IndexSet &is = iv->getDomain().getFactors()[currNest];
         stride = stride / is.getSize();
         auto *iv_ofs = builder->CreateMul(indexMap[idxVars[i].get()],
                                           builder->getInt32(stride),
@@ -246,16 +246,16 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   assert(resultCType == simitType(resultStorage->getType()));
 
   size_t numNests = (domain.size() > 0)
-      ? domain[0]->getIndexSet().getFactors().size() : 0;
+      ? domain[0]->getDomain().getFactors().size() : 0;
   for (std::shared_ptr<IndexVar> idxVar : domain) {
-    assert(idxVar->getIndexSet().getFactors().size() == numNests);
+    assert(idxVar->getDomain().getFactors().size() == numNests);
   }
 
   const std::shared_ptr<IndexVar> &iv = domain[currIdxVar];
   std::string idxName = iv->getName();
 
   // Compute dimension size
-  const IndexSetProduct &dimension = iv->getIndexSet().getFactors();
+  const IndexSetProduct &dimension = iv->getDomain().getFactors();
   llvm::Value *numIter = NULL;
   for (const IndexSet &is : dimension.getFactors()) {
     llvm::Value *isSize = NULL;

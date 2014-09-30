@@ -1,5 +1,9 @@
 #include <iostream>
 
+#include "ir.h"
+#include "sir.h"
+#include "sir_printer.h"
+#include "sir_codegen.h"
 #include "function.h"
 #include "frontend.h"
 #include "program_context.h"
@@ -115,9 +119,13 @@ int main(int argc, const char* argv[]) {
   }
 
   simit::internal::LLVMBackend backend;
+  simit::ir::SetIRCodeGen setIRCodeGen;
   for (simit::ir::Function *func : ctx.getFunctions()) {
+    std::unique_ptr<simit::ir::Stmt> stmt = setIRCodeGen.codegen(func);
+
     if (emitSimit) {
-      cout << *func << endl;
+      cout << *func << endl << endl;
+      cout << *stmt << endl;
     }
 
     if (emitLLVM) {

@@ -103,7 +103,7 @@ public:
   void setIndexSet(IndexSetProduct indexSet) { this->indexSet = indexSet; }
   void setOperator(IndexVar::Operator op) { this->op = op; }
 
-  const IndexSetProduct &getIndexSet() const { return indexSet; }
+  const IndexSetProduct &getDomain() const { return indexSet; }
   Operator getOperator() const { return op; }
 
   bool isFreeVariable() { return (op != Operator::FREE); }

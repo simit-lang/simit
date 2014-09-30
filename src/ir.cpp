@@ -150,7 +150,7 @@ IndexedTensor::IndexedTensor(const std::shared_ptr<Expression> &tensor,
   TensorType *ttype = tensorTypePtr(tensor->getType());
   assert(indexVars.size() == ttype->getOrder());
   for (size_t i=0; i < indexVars.size(); ++i) {
-    assert(indexVars[i]->getIndexSet() == ttype->getDimensions()[i]
+    assert(indexVars[i]->getDomain() == ttype->getDimensions()[i]
            && "IndexVar domain does not match tensordimension");
   }
 
@@ -264,7 +264,7 @@ void IndexExpr::initType() {
   ComponentType ctype = ttype->getComponentType();
   std::vector<IndexSetProduct> dimensions;
   for (auto &iv : indexVars) {
-    dimensions.push_back(iv->getIndexSet());
+    dimensions.push_back(iv->getDomain());
   }
   setType(std::shared_ptr<TensorType>(new TensorType(ctype, dimensions)));
 }
