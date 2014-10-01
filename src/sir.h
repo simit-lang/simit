@@ -227,7 +227,6 @@ struct Pass : public StmtNode {
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
 
-
 }} // namespace simit::ir
 
 #endif

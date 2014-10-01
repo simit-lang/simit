@@ -58,7 +58,26 @@ static Expr emitLoad(const Expression *tensor, const Domain &indexVariables,
       index = indexMap[indexVariables[0].get()];
       break;
     default:
-      assert(false && "Matrix and higher order tensor loads not supported");
+      assert(tensor->getType()->isTensor());
+      for (auto &iv : indexVariables) {
+        assert(iv->getDomain().getFactors().size() == 1 &&
+               "Loads from blocked tensors not currently supported");
+        assert(iv->getDomain().getFactors()[0].getKind() != IndexSet::Set &&
+               "Loads from set tensors not currently supported");
+      }
+
+      for (size_t i=0; i < indexVariables.size(); ++i) {
+        const IndexVar *iv = indexVariables[i].get();
+
+        Expr var = indexMap[iv];
+        for (size_t j=i+1; j < indexVariables.size(); ++j) {
+          const IndexVar *jv = indexVariables[j].get();
+          int dimsize = jv->getDomain().getFactors()[0].getRangeSize();
+          var = Mul::make(var, IntLiteral::make(dimsize));
+        }
+
+        index = (!index.defined()) ? var : Add::make(index, var);
+      }
   }
 
   Expr target = symtable->get(tensor->getName());
