@@ -5,9 +5,6 @@
 #include "ir.h"
 #include "sir.h"
 #include "scopedmap.h"
-//#include "util.h"
-
-#include "sir_printer.h"
 
 using namespace std;
 
@@ -32,16 +29,6 @@ std::unique_ptr<Stmt> SetIRCodeGen::codegen(simit::ir::Function *function){
   std::unique_ptr<Stmt> stmt(new Stmt(scopeStack->top()));
   scopeStack->pop();
   return stmt;
-}
-
-void SetIRCodeGen::handle(ir::Function *f) {
-  // TODO add all the arguments to the symbol table as Variables
-  for (auto &argument : f->getArguments()) {
-    symtable->insert(argument->getName(), Variable::make(argument->getName()));
-  }
-  for (auto &result : f->getResults()) {
-    symtable->insert(result->getName(), Variable::make(result->getName()));
-  }
 }
 
 typedef std::vector<std::shared_ptr<IndexVar>> Domain;
@@ -202,6 +189,19 @@ static void addToCurrentScope(const Stmt &stmt, std::stack<Stmt> *scopeStack) {
   block = (!block.defined()) ? stmt : Block::make(block, stmt);
   scopeStack->pop();
   scopeStack->push(block);
+}
+
+void SetIRCodeGen::handle(ir::Function *f) {
+  for (auto &argument : f->getArguments()) {
+    symtable->insert(argument->getName(), Variable::make(argument->getName()));
+  }
+  for (auto &result : f->getResults()) {
+    symtable->insert(result->getName(), Variable::make(result->getName()));
+  }
+}
+
+void SetIRCodeGen::handle(FieldRead *t) {
+  symtable->insert(t->getName(), Variable::make(t->getName()));
 }
 
 void SetIRCodeGen::handle(ir::IndexExpr *t) {

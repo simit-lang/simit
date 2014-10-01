@@ -74,9 +74,7 @@ public:
     os << "SymbolTable:\n";
     for (auto scope : st.scopes) {
       for (auto symPair : scope) {
-        std::string symString = (symPair.second == NULL)
-                                ? "NULL"
-                                : simit::util::toString(symPair.second);
+        std::string symString = simit::util::toString(symPair.second);
         os << simit::util::indent(symPair.first + ":" + symString + ", ", 1);
       }
       os << "\n";

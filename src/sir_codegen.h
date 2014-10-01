@@ -16,6 +16,9 @@ template <typename, typename> class ScopedMap;
 namespace ir {
 class Function;
 class IRNode;
+class IndexExpr;
+class FieldRead;
+
 struct Stmt;
 struct Expr;
 
@@ -32,8 +35,9 @@ private:
 
   std::stack<Stmt> *scopeStack;
 
-  void handle(Function *f);
-  void handle(IndexExpr *t);
+  void handle(Function *);
+  void handle(FieldRead *);
+  void handle(IndexExpr *);
 };
 
 }}
