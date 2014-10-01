@@ -4,6 +4,7 @@
 namespace simit {
 namespace ir {
 
+struct IntLiteral;
 struct Variable;
 struct Load;
 struct Neg;
@@ -14,10 +15,13 @@ struct Div;
 struct Block;
 struct Foreach;
 struct Store;
+struct StoreMatrix;
+struct Pass;
 
 class SetIRVisitor {
 public:
   virtual ~SetIRVisitor();
+  virtual void visit(IntLiteral *);
   virtual void visit(Variable *);
   virtual void visit(Load *);
   virtual void visit(Neg *);
@@ -28,11 +32,14 @@ public:
   virtual void visit(Block *);
   virtual void visit(Foreach *);
   virtual void visit(Store *);
+  virtual void visit(StoreMatrix *);
+  virtual void visit(Pass *);
 };
 
 class SetIRConstVisitor {
 public:
   virtual ~SetIRConstVisitor();
+  virtual void visit(const IntLiteral *);
   virtual void visit(const Variable *);
   virtual void visit(const Load *);
   virtual void visit(const Neg *);
@@ -43,6 +50,8 @@ public:
   virtual void visit(const Block *);
   virtual void visit(const Foreach *);
   virtual void visit(const Store *);
+  virtual void visit(const StoreMatrix *);
+  virtual void visit(const Pass *);
 };
 
 }} // namespace simit::ir

@@ -8,8 +8,10 @@ namespace ir {
 SetIRVisitor::~SetIRVisitor() {
 }
 
-void SetIRVisitor::visit(Variable *) {
+void SetIRVisitor::visit(IntLiteral *) {
+}
 
+void SetIRVisitor::visit(Variable *) {
 }
 
 void SetIRVisitor::visit(Load *op) {
@@ -41,8 +43,9 @@ void SetIRVisitor::visit(Div *op) {
 }
 
 void SetIRVisitor::visit(Block *op) {
-  for (auto &stmt : op->stmts) {
-    stmt.accept(this);
+  op->first.accept(this);
+  if (op->rest.defined()) {
+    op->rest.accept(this);
   }
 }
 
@@ -55,12 +58,23 @@ void SetIRVisitor::visit(Store *op) {
   op->value.accept(this);
 }
 
-void SetIRConstVisitor::visit(const Variable *) {
-
+void SetIRVisitor::visit(StoreMatrix *op) {
+  op->target.accept(this);
+  op->row.accept(this);
+  op->col.accept(this);
+  op->value.accept(this);
 }
 
+void SetIRVisitor::visit(Pass *) {
+}
 
 // class SetIRConstVisitor
+void SetIRConstVisitor::visit(const IntLiteral *) {
+}
+
+void SetIRConstVisitor::visit(const Variable *) {
+}
+
 SetIRConstVisitor::~SetIRConstVisitor() {
 }
 
@@ -93,8 +107,9 @@ void SetIRConstVisitor::visit(const Div *op) {
 }
 
 void SetIRConstVisitor::visit(const Block *op) {
-  for (auto &stmt : op->stmts) {
-    stmt.accept(this);
+  op->first.accept(this);
+  if (op->rest.defined()) {
+    op->rest.accept(this);
   }
 }
 
@@ -105,6 +120,16 @@ void SetIRConstVisitor::visit(const Foreach *op) {
 void SetIRConstVisitor::visit(const Store *op) {
   op->index.accept(this);
   op->value.accept(this);
+}
+
+void SetIRConstVisitor::visit(const StoreMatrix *op) {
+  op->target.accept(this);
+  op->row.accept(this);
+  op->col.accept(this);
+  op->value.accept(this);
+}
+
+void SetIRConstVisitor::visit(const Pass *) {
 }
 
 }} // namespace simit::ir

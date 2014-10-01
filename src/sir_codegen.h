@@ -14,9 +14,9 @@ template <typename, typename> class ScopedMap;
 
 namespace ir {
 class Function;
-
+class IRNode;
 struct Stmt;
-struct Block;
+struct Expr;
 
 /// Code Generator that lowers tensor ir to set ir.
 class SetIRCodeGen : public IRVisitor {
@@ -24,15 +24,15 @@ public:
   SetIRCodeGen();
   ~SetIRCodeGen();
 
-  std::unique_ptr<Stmt> codegen(simit::ir::Function *function);
+  std::unique_ptr<Stmt> codegen(Function *function);
 
 private:
-//  internal::ScopedMap<std::string, SetIRNode*> *symtable;
-  
-  std::stack<Block*> blockStack;
+  internal::ScopedMap<const IRNode*, Expr> *symtable;
 
-  void handle(ir::Function *f);
-  void handle(ir::IndexExpr *t);
+  std::stack<Stmt> *scopeStack;
+
+  void handle(Function *f);
+  void handle(IndexExpr *t);
 };
 
 }}

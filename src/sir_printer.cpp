@@ -37,14 +37,19 @@ void SetIRPrinter::print(const Stmt &stmt) {
   stmt.accept(this);
 }
 
+void SetIRPrinter::visit(const IntLiteral *op) {
+  os << op->val;
+}
+
 void SetIRPrinter::visit(const Variable *op) {
   os << op->name;
 }
 
 void SetIRPrinter::visit(const Load *op) {
-  os << op->name << "(";
+  print(op->target);
+  os << "[";
   print(op->index);
-  os << ")";
+  os << "]";
 }
 
 void SetIRPrinter::visit(const Neg *op) {
@@ -86,21 +91,36 @@ void SetIRPrinter::visit(const Div *op) {
 }
 
 void SetIRPrinter::visit(const Block *op) {
-  for (auto &stmt : op->stmts) {
-    indent();
-    print(stmt);
+  print(op->first);
+  if (op->rest.defined()) {
+    print(op->rest);
   }
 }
 
 void SetIRPrinter::visit(const Foreach *op) {
+  indent();
   os << "for " << op->name << " in " << op->domain << ":\n";
   ++indentation;
   print(op->body);
-  ++indentation;
+  --indentation;
 }
 
 void SetIRPrinter::visit(const Store *op) {
+  indent();
+  print(op->target);
+  os << "[";
+  print(op->index);
+  os << "] = ";
+  print(op->value);
+}
 
+void SetIRPrinter::visit(const StoreMatrix *op) {
+  indent();
+}
+
+void SetIRPrinter::visit(const Pass *op) {
+  indent();
+  os << "pass";
 }
 
 }} //namespace simit::ir

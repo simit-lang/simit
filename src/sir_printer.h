@@ -29,6 +29,7 @@ private:
 
   void indent();
 
+  void visit(const IntLiteral *);
   void visit(const Variable *);
   void visit(const Load *);
   void visit(const Neg *);
@@ -39,6 +40,8 @@ private:
   void visit(const Block *);
   void visit(const Foreach *);
   void visit(const Store *);
+  void visit(const StoreMatrix *);
+  void visit(const Pass *);
 };
 
 }} // namespace simit::ir

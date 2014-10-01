@@ -30,32 +30,56 @@ struct StmtNode : public SetIRNode {
 };
 
 struct Expr {
+  Expr() : expr(nullptr) {}
   Expr(ExprNode *expr) : expr(expr) {}
   std::shared_ptr<ExprNode> expr;
+  bool defined() const { return expr != nullptr; }
   void accept(SetIRVisitor *v) { expr->accept(v); }
   void accept(SetIRConstVisitor *v) const { expr->accept(v); }
 };
 
 struct Stmt {
+  Stmt() : stmt(nullptr) {}
   Stmt(StmtNode *stmt) : stmt(stmt) {}
   std::shared_ptr<StmtNode> stmt;
+  bool defined() const { return stmt != nullptr; }
   void accept(SetIRVisitor *v) { stmt->accept(v); }
   void accept(SetIRConstVisitor *v) const { stmt->accept(v); }
+};
+
+struct IntLiteral : public ExprNode {
+  int val;
+
+  static Expr make(int val) {
+    IntLiteral *node = new IntLiteral;
+    node->val = val;
+    return node;
+  }
+  void accept(SetIRVisitor *v) { v->visit(this); };
+  void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
 
 struct Variable : public ExprNode {
   std::string name;
 
-  Variable(const std::string &name) : name(name) {}
+  static Expr make(const std::string &name) {
+    Variable *node = new Variable;
+    node->name = name;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
 
 struct Load : public ExprNode {
-  std::string name;
-  Expr index;
+  Expr target, index;
 
-  Load(const std::string &name, const Expr &index) : name(name), index(index) {}
+  static Expr make(Expr target, Expr index) {
+    Load *node = new Load;
+    node->target = target;
+    node->index = index;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
@@ -63,7 +87,11 @@ struct Load : public ExprNode {
 struct Neg : public ExprNode {
   Expr a;
 
-  Neg(Expr a) : a(a) {}
+  static Expr make(Expr a) {
+    Neg *node = new Neg;
+    node->a = a;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
@@ -71,7 +99,12 @@ struct Neg : public ExprNode {
 struct Add : public ExprNode {
   Expr a, b;
 
-  Add(const Expr &a, const Expr &b) : a(a), b(b) {}
+  static Expr make(Expr a, Expr b) {
+    Add *node = new Add;
+    node->a = a;
+    node->b = b;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
@@ -79,7 +112,12 @@ struct Add : public ExprNode {
 struct Sub : public ExprNode {
   Expr a, b;
 
-  Sub(const Expr &a, const Expr &b) : a(a), b(b) {}
+  static Expr make(Expr a, Expr b) {
+    Sub *node = new Sub;
+    node->a = a;
+    node->b = b;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
@@ -87,7 +125,12 @@ struct Sub : public ExprNode {
 struct Mul : public ExprNode {
   Expr a, b;
 
-  Mul(const Expr &a, const Expr &b) : a(a), b(b) {}
+  static Expr make(Expr a, Expr b) {
+    Mul *node = new Mul;
+    node->a = a;
+    node->b = b;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
@@ -95,14 +138,34 @@ struct Mul : public ExprNode {
 struct Div : public ExprNode {
   Expr a, b;
 
-  Div(const Expr &a, const Expr &b) : a(a), b(b) {}
+  static Expr make(Expr a, Expr b) {
+    Div *node = new Div;
+    node->a = a;
+    node->b = b;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
 
 struct Block : public StmtNode {
-  std::vector<Stmt> stmts;
+  Stmt first, rest;
 
+  static Stmt make(Stmt first, Stmt rest) {
+    assert(first.defined() && "Empty block");
+    Block *node = new Block;
+    node->first = first;
+    node->rest = rest;
+    return node;
+  }
+  static Stmt make(std::vector<Stmt> stmts) {
+    assert(stmts.size() > 0 && "Empty block");
+    Stmt node;
+    for (size_t i=stmts.size(); i>0; --i) {
+      node = Block::make(stmts[i-1], node);
+    }
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
@@ -112,19 +175,54 @@ struct Foreach : public StmtNode {
   IndexSet domain;
   Stmt body;
 
-  Foreach(const std::string &name, const IndexSet &domain, const Stmt &body)
-      : name(name), domain(domain), body(body) {}
+  static Stmt make(const std::string &name, const IndexSet &domain,
+                   const Stmt &body) {
+    Foreach *node = new Foreach;
+    node->name = name;
+    node->domain = domain;
+    node->body = body;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
 
-/// Stores the value to the buffer with the given name at index.
+/// Stores a value to the buffer with the given name at index.
 struct Store : public StmtNode {
-  std::string name;
-  Expr index, value;
+  Expr target, index, value;
 
-  Store(const std::string &name, Expr &index, const Expr &value)
-      : name(name), index(index), value(value) {}
+  static Stmt make(Expr target, Expr index, Expr value) {
+    Store *node = new Store;
+    node->target = target;
+    node->index = index;
+    node->value = value;
+    return node;
+  }
+  void accept(SetIRVisitor *v) { v->visit(this); };
+  void accept(SetIRConstVisitor *v) const { v->visit(this); }
+};
+
+struct StoreMatrix : public StmtNode {
+  Expr target, row, col, value;
+
+  static Stmt make(Expr target, Expr row, Expr col, Expr value) {
+    StoreMatrix *node = new StoreMatrix;
+    node->target = target;
+    node->row = row;
+    node->col = col;
+    node->value = value;
+    return node;
+  }
+  void accept(SetIRVisitor *v) { v->visit(this); };
+  void accept(SetIRConstVisitor *v) const { v->visit(this); }
+};
+
+/// Empty statement that is convenient during code development.
+struct Pass : public StmtNode {
+  static Stmt make() {
+    Pass *node = new Pass;
+    return node;
+  }
   void accept(SetIRVisitor *v) { v->visit(this); };
   void accept(SetIRConstVisitor *v) const { v->visit(this); }
 };
