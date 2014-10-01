@@ -3,7 +3,7 @@
 
 using namespace simit;
 
-int main() {
+int main(int argc, char** argv) {
   Set<> points;
   Set<3> faces(points, points, points);
 
@@ -36,10 +36,11 @@ int main() {
   faces.addElement(p2, p5, p7);
   faces.addElement(p5, p4, p9);
   faces.addElement(p4, p3, p8);
+  
+  initDrawing(argc, argv);
 
-  initDrawing();
+  drawFaces(faces, x, 0.0, 0.0, 1.0, 1.0);
 
-  while (true) {
-    drawFaces(faces, x, 0.0, 0.0, 1.0, 1.0);
-  }
+  while(true) {}
+  exit(0);
 }

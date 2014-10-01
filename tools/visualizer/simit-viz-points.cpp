@@ -3,7 +3,7 @@
 
 using namespace simit;
 
-int main() {
+int main(int argc, char** argv) {
   Set<> points;
 
   FieldRef<double, 3> x = points.addField<double, 3>("x");
@@ -14,9 +14,10 @@ int main() {
     }
   }
 
-  initDrawing();
+  initDrawing(argc, argv);
 
-  while (true) {
-    drawPoints(points, x, 1.0, 0.0, 0.0, 1.0);
-  }
+  drawPoints(points, x, 1.0, 0.0, 0.0, 1.0);
+
+  while(true) {}
+  exit(0);
 }

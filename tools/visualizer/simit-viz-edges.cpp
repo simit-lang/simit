@@ -3,7 +3,7 @@
 
 using namespace simit;
 
-int main() {
+int main(int argc, char** argv) {
   Set<> points;
   Set<2> edges(points, points);
 
@@ -20,9 +20,10 @@ int main() {
   edges.addElement(p2, p3);
   edges.addElement(p3, p1);
 
-  initDrawing();
+  initDrawing(argc, argv);
 
-  while (true) {
-    drawEdges(edges, x, 0.0, 1.0, 0.0, 1.0);
-  }
+  drawEdges(edges, x, 0.0, 1.0, 0.0, 1.0);
+
+  while(true) {}
+  exit(0);
 }

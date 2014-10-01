@@ -22,6 +22,7 @@ namespace internal {
 const string& kConstVertexShader = "\
 attribute vec4 position;            \
 uniform mat4 transMat;              \
+uniform mat4 invTransMat;           \
 void main() {                       \
   gl_Position = position * transMat;\
 }                                   \
@@ -107,10 +108,21 @@ std::function<void(void)> drawFunc = [](){};
 std::mutex drawFuncLock;
 // Data references held by GL based on the previous call to draw*.
 std::queue<void*> heldReferences;
-// Eye theta
-double eyeTheta = 0.0;
-// Current transformation matrix
-GLfloat transMat[16];
+// Eye theta, phi. Theta is about Y axis, phi is about the axis in the XY plane
+// perpendicular to theta, i.e. theta is the azimuthal angle, and phi is the
+// polar angle. This locates the eye in the reference of the world coordinates.
+// double eyeTheta = 0.0, eyePhi = 0.0;
+// Transformation matrices positions
+GLint transMatPos, invTransMatPos;
+// Transformation matrices
+GLfloat transMat[16] = {1, 0, 0, 0,
+                        0, 1, 0, 0,
+                        0, 0, 1, 0,
+                        0, 0, 0, 1};
+GLfloat invTransMat[16] = {1, 0, 0, 0,
+                           0, 1, 0, 0,
+                           0, 0, 1, 0,
+                           0, 0, 0, 1};
 
 GLuint createGLProgram(const string& vertexShaderStr,
                        const string& fragmentShaderStr) {
@@ -160,15 +172,49 @@ GLuint createGLProgram(const string& vertexShaderStr,
 
 // Writes 16 doubles into matrix, representing the 4x4 transformation
 // matrix associated with a rotation about the Y axis of theta (rad).
-void buildYRotMatrix(double theta, GLfloat matrix[16]) {
-  std::cout << "buildYRotMatrix: " << theta << std::endl;
+void buildThetaRotMatrix(double theta, GLfloat matrix[16]) {
+  std::cout << "buildThetaRotMatrix: " << theta << std::endl;
   GLfloat outMat[16] = {
-    (float)cos(theta), (float)-sin(theta), 0, 0,
-    (float)sin(theta), (float)cos(theta), 0, 0,
-    0, 0, 1, 0,
+    (GLfloat)cos(theta), 0, (GLfloat)-sin(theta), 0,
+    0, 1, 0, 0,
+    (GLfloat)sin(theta), 0, (GLfloat)cos(theta), 0,
     0, 0, 0, 1
   };
   memcpy(matrix, outMat, sizeof(outMat));
+}
+
+// Writes 16 doubles into matrix, representing the 4x4 transformation
+// matrix associated with a rotation about the X axis of phi (rad).
+void buildPhiRotMatrix(double phi, GLfloat matrix[16]) {
+  std::cout << "buildPhiRotMatrix: " << phi << std::endl;
+  GLfloat outMat[16] = {
+    1, 0, 0, 0,
+    0, (GLfloat)cos(phi), (GLfloat)-sin(phi), 0,
+    0, (GLfloat)sin(phi), (GLfloat)cos(phi), 0,
+    0, 0, 0, 1
+  };
+  memcpy(matrix, outMat, sizeof(outMat));
+}
+
+// m1 * m2 = out
+void multiplyMatrix(const GLfloat m1[16], const GLfloat m2[16],
+                    GLfloat out[16]) {
+  out[0] = m1[0]*m2[0] + m1[1]*m2[4] + m1[2]*m2[8] + m1[3]*m2[12];
+  out[1] = m1[0]*m2[1] + m1[1]*m2[5] + m1[2]*m2[9] + m1[3]*m2[13];
+  out[2] = m1[0]*m2[2] + m1[1]*m2[6] + m1[2]*m2[10] + m1[3]*m2[14];
+  out[3] = m1[0]*m2[3] + m1[1]*m2[7] + m1[2]*m2[11] + m1[3]*m2[15];
+  out[4] = m1[4]*m2[0] + m1[5]*m2[4] + m1[6]*m2[8] + m1[7]*m2[12];
+  out[5] = m1[4]*m2[1] + m1[5]*m2[5] + m1[6]*m2[9] + m1[7]*m2[13];
+  out[6] = m1[4]*m2[2] + m1[5]*m2[6] + m1[6]*m2[10] + m1[7]*m2[14];
+  out[7] = m1[4]*m2[3] + m1[5]*m2[7] + m1[6]*m2[11] + m1[7]*m2[15];
+  out[8] = m1[8]*m2[0] + m1[9]*m2[4] + m1[10]*m2[8] + m1[11]*m2[12];
+  out[9] = m1[8]*m2[1] + m1[9]*m2[5] + m1[10]*m2[9] + m1[11]*m2[13];
+  out[10] = m1[8]*m2[2] + m1[9]*m2[6] + m1[10]*m2[10] + m1[11]*m2[14];
+  out[11] = m1[8]*m2[3] + m1[9]*m2[7] + m1[10]*m2[11] + m1[11]*m2[15];
+  out[12] = m1[12]*m2[0] + m1[13]*m2[4] + m1[14]*m2[8] + m1[15]*m2[12];
+  out[13] = m1[12]*m2[1] + m1[13]*m2[5] + m1[14]*m2[9] + m1[15]*m2[13];
+  out[14] = m1[12]*m2[2] + m1[13]*m2[6] + m1[14]*m2[10] + m1[15]*m2[14];
+  out[15] = m1[12]*m2[3] + m1[13]*m2[7] + m1[14]*m2[11] + m1[15]*m2[15];
 }
 
 // Invert a 4x4 matrix explicitly. Writes 16 doubles into inverse.
@@ -322,6 +368,32 @@ void invertMatrix(const GLfloat matrix[16], GLfloat inverse[16]) {
     inverse[i] = inv[i] * det;
 }
 
+void clearTransMat() {
+  GLfloat ident[16] = {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  };
+  drawFuncLock.lock();
+  memcpy(transMat, ident, sizeof(ident));
+  memcpy(invTransMat, ident, sizeof(ident));
+  drawFuncLock.unlock();
+}
+
+void applyTransMat(GLfloat newTrans[16]) {
+  GLfloat invNewTrans[16];
+  invertMatrix(newTrans, invNewTrans);
+  drawFuncLock.lock();
+  GLfloat oldTransMat[16];
+  GLfloat oldInvTransMat[16];
+  memcpy(oldTransMat, transMat, sizeof(transMat));
+  memcpy(oldInvTransMat, invTransMat, sizeof(invTransMat));
+  multiplyMatrix(newTrans, oldTransMat, transMat);
+  multiplyMatrix(oldInvTransMat, invNewTrans, invTransMat);
+  drawFuncLock.unlock();
+}
+
 void *handleWindowEvents(void *arg) {
   // Let the glut main loop dispatch all events to registered handlers
   glutMainLoop();
@@ -329,12 +401,14 @@ void *handleWindowEvents(void *arg) {
 }
 
 void handleDraw() {
+  std::cout << "Draw" << std::endl;
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  drawFuncLock.lock();
   // Update transformation matrix
-  buildYRotMatrix(eyeTheta, transMat);
+  glUniformMatrix4fv(transMatPos, 1, GL_FALSE, transMat);
+  glUniformMatrix4fv(invTransMatPos, 1, GL_FALSE, invTransMat);
   // Assumes that the relevant VBO setup for the draw function has been
   // set up before this draw function was set.
-  drawFuncLock.lock();
   drawFunc();
   drawFuncLock.unlock();
   glutSwapBuffers();
@@ -343,7 +417,8 @@ void handleDraw() {
 void handleKeyboardEvent(unsigned char key, int x, int y) {
   if (key == 'z') {
     std::cout << "Resetting viewpoint" << std::endl;
-    // TODO(gkanwar): Implement this!
+    internal::clearTransMat();
+    glutPostRedisplay();
   }
 }
 
@@ -351,29 +426,37 @@ void handleSpecialKeyEvent(int key, int x, int y) {
   std::cout << "Special key!" << std::endl;
   if (key == GLUT_KEY_RIGHT) {
     std::cout << "Right" << std::endl;
-    eyeTheta += 0.1;
-    if (eyeTheta > 2*M_PI) {
-      eyeTheta -= 2*M_PI;
-    }
+    GLfloat rightRotMat[16];
+    internal::buildThetaRotMatrix(0.1, rightRotMat);
+    internal::applyTransMat(rightRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_LEFT) {
     std::cout << "Left" << std::endl;
-    eyeTheta -= 0.1;
-    if (eyeTheta < 0) {
-      eyeTheta += 2*M_PI;
-    }
+    GLfloat leftRotMat[16];
+    internal::buildThetaRotMatrix(-0.1, leftRotMat);
+    internal::applyTransMat(leftRotMat);
+    glutPostRedisplay();
+  } else if (key == GLUT_KEY_UP) {
+    std::cout << "Up" << std::endl;
+    GLfloat upRotMat[16];
+    internal::buildPhiRotMatrix(0.1, upRotMat);
+    internal::applyTransMat(upRotMat);
+    glutPostRedisplay();
+  } else if (key == GLUT_KEY_DOWN) {
+    std::cout << "Down" << std::endl;
+    GLfloat downRotMat[16];
+    internal::buildPhiRotMatrix(-0.1, downRotMat);
+    internal::applyTransMat(downRotMat);
     glutPostRedisplay();
   }
-  std::cout << "Eye theta: " << eyeTheta << std::endl;
 }
 
 } // namespace simit::internal
 
-void initDrawing() {
-  int argc = 1;
-  char* argv[1];
-  argv[0] = "visualizer";
+void initDrawing(int argc, char** argv) {
+  std::cout << "initDrawing" << std::endl;
   glutInit(&argc, argv);
+  std::cout << "glutInit done" << std::endl;
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowSize(640, 480);
   glutCreateWindow("Graph visualization");
@@ -384,9 +467,6 @@ void initDrawing() {
 
   glShadeModel(GL_SMOOTH);
   glEnable(GL_DEPTH_TEST);
-
-  // Initialize transformation matrix
-  // internal::buildYRotMatrix(internal::eyeTheta, internal::transMat);
 
   int ret;
   ret = pthread_create(&internal::glutThread, NULL,
@@ -416,8 +496,8 @@ void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
                                              internal::kConstFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  GLint transMatUniform = glGetUniformLocation(program, "transMat");
-  glUniformMatrix4fv(transMatUniform, 1, GL_FALSE, internal::transMat);
+  internal::transMatPos = glGetUniformLocation(program, "transMat");
+  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
   GLint posAttrib = glGetAttribLocation(program, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
@@ -468,8 +548,8 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
                                              internal::kConstFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  GLint transMatUniform = glGetUniformLocation(program, "transMat");
-  glUniformMatrix4fv(transMatUniform, 1, GL_FALSE, internal::transMat);
+  internal::transMatPos = glGetUniformLocation(program, "transMat");
+  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
   GLint posAttrib = glGetAttribLocation(program, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
@@ -486,6 +566,7 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
 
 void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
                float r, float g, float b, float a) {
+  std::cout << "Draw faces" << std::endl;
   internal::drawFuncLock.lock();
   // FIXME(gkanwar): Hack to copy edge data into a double array
   while (!internal::heldReferences.empty()) {
@@ -553,12 +634,8 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
                                              internal::kFlatFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  GLint transMatUniform = glGetUniformLocation(program, "transMat");
-  glUniformMatrix4fv(transMatUniform, 1, GL_FALSE, internal::transMat);
-  GLint invTransMatUniform = glGetUniformLocation(program, "invTransMat");
-  GLfloat invTransMat[16];
-  internal::invertMatrix(internal::transMat, invTransMat);
-  glUniformMatrix4fv(invTransMatUniform, 1, GL_FALSE, invTransMat);
+  internal::transMatPos = glGetUniformLocation(program, "transMat");
+  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
   GLint posAttrib = glGetAttribLocation(program, "position");
   glBindBuffer(GL_ARRAY_BUFFER, posVbo);
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
