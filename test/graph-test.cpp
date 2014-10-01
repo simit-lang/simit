@@ -280,7 +280,7 @@ TEST(EdgeSet, EdgeIteratorTest) {
   ASSERT_EQ(count, 4);
 }
 
-TEST(EdgeSet, VertexToEdgeIndex) {
+TEST(EdgeSet, VertexToEdgeEndpointIndex) {
   Set<> points;
   auto p0 = points.addElement();
   auto p1 = points.addElement();
@@ -290,13 +290,8 @@ TEST(EdgeSet, VertexToEdgeIndex) {
   edges.addElement(p0, p1);
   edges.addElement(p0,p2);
   
-  internal::VertexToEdgeIndex* edgeindex = new internal::VertexToEdgeIndex(edges);
-//  cout << "Total Edges: " << edgeindex->getTotalEdges() << endl;
-//  for (auto d : edgeindex->getNumEdges()) {
-//    for (int i=0; i<3; i++)
-//      cout << d[i] << endl;
-//    cout << endl;
-//  }
+  internal::VertexToEdgeEndpointIndex* edgeindex =
+    new internal::VertexToEdgeEndpointIndex(edges);
 
   ASSERT_EQ(edgeindex->getTotalEdges(), 2);
   ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, 0), 2);
@@ -306,7 +301,7 @@ TEST(EdgeSet, VertexToEdgeIndex) {
   delete edgeindex;
 }
 
-TEST(EdgeSet, VertexToEdgeMembershipIndex) {
+TEST(EdgeSet, VertexToEdgeIndex) {
   Set<> points;
   auto p0 = points.addElement();
   auto p1 = points.addElement();
@@ -316,14 +311,8 @@ TEST(EdgeSet, VertexToEdgeMembershipIndex) {
   edges.addElement(p0, p1);
   edges.addElement(p2,p0);
   
-  internal::VertexToEdgeMembershipIndex* edgeindex =
-    new internal::VertexToEdgeMembershipIndex(edges);
-//  cout << "Total Edges: " << edgeindex->getTotalEdges() << endl;
-//  for (auto d : edgeindex->getNumEdges()) {
-//    for (int i=0; i<3; i++)
-//      cout << d[i] << endl;
-//    cout << endl;
-//  }
+  internal::VertexToEdgeIndex* edgeindex =
+    new internal::VertexToEdgeIndex(edges);
 
   ASSERT_EQ(edgeindex->getTotalEdges(), 2);
   ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, points), 2);

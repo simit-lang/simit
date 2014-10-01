@@ -30,8 +30,8 @@ template <int cardinality> class EndpointIteratorBase;
 }
 
 namespace internal {
+class VertexToEdgeEndpointIndex;
 class VertexToEdgeIndex;
-class VertexToEdgeMembershipIndex;
 }
 
 class Function;
@@ -47,8 +47,8 @@ class ElementRef {
   template <int cardinality> friend class Set;
   template <int cardinality> friend class hidden::EndpointIteratorBase;
   friend FieldRefBase;
+  friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
-  friend class internal::VertexToEdgeMembershipIndex;
 };
 
 
@@ -343,8 +343,8 @@ class Set : public SetBase {
   }
   
   template <int c> friend class hidden::EndpointIteratorBase;
+  friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
-  friend class internal::VertexToEdgeMembershipIndex;
   
   // helper for constructing
   template <typename F, typename ...T>
@@ -381,10 +381,10 @@ namespace internal {
 
 /// A class for an index that maps from points to edges that contain that point
 /// differentiating between different endpoints
-class VertexToEdgeIndex {
+class VertexToEdgeEndpointIndex {
  public:
   template <int cardinality=0>
-  VertexToEdgeIndex(Set<cardinality>& edgeSet) {
+  VertexToEdgeEndpointIndex(Set<cardinality>& edgeSet) {
     totalEdges = edgeSet.getSize();
     for (auto es : edgeSet.endpointSets) {
       endpointSets.push_back((SetBase*)es);
@@ -403,8 +403,7 @@ class VertexToEdgeIndex {
     for (auto e : edgeSet) {
       for (int epi=0; epi<(int)(endpointSets.size()); epi++) {
         auto ep = edgeSet.getEndpoint(e, epi);
-        //std::cout << "endpoint " << epi << " is ident " << ep.ident << std::endl;
-        whichEdgesForVertex[epi][ep.ident][numEdgesForVertex[epi][ep.ident]++] =
+          whichEdgesForVertex[epi][ep.ident][numEdgesForVertex[epi][ep.ident]++] =
           e.ident;
       }
     }
@@ -424,7 +423,7 @@ class VertexToEdgeIndex {
   
   int getTotalEdges() { return totalEdges; }
   
-  ~VertexToEdgeIndex() {
+  ~VertexToEdgeEndpointIndex() {
     for (auto ne : numEdgesForVertex)
       free(ne);
     for (int w=0; w<(int)(endpointSets.size()); w++) {
@@ -445,10 +444,10 @@ class VertexToEdgeIndex {
 
 /// A class for an index that maps from points to edges that contain that point
 /// with no differentiation by endpoint
-class VertexToEdgeMembershipIndex {
+class VertexToEdgeIndex {
  public:
   template <int cardinality=0>
-  VertexToEdgeMembershipIndex(Set<cardinality>& edgeSet) {
+  VertexToEdgeIndex(Set<cardinality>& edgeSet) {
     totalEdges = edgeSet.getSize();
     for (auto es : edgeSet.endpointSets) {
       auto endpointSet = (SetBase*)es;
@@ -463,20 +462,21 @@ class VertexToEdgeMembershipIndex {
       
       // allocate array to contain how many edges each element is part of
       // calloc sets them all to zero
-      numEdgesForVertex[endpointSet] = (int*)calloc(sizeof(int),es->getSize());
+      numEdgesForVertex[endpointSet] = (int*)calloc(sizeof(int), es->getSize());
     
       // allocate array to contain which edges each element is part of
-      whichEdgesForVertex[endpointSet] = (int**)calloc(sizeof(int*),es->getSize());
+      whichEdgesForVertex[endpointSet] = (int**)calloc(sizeof(int*),
+                                                       es->getSize());
       for (int i=0; i<endpointSet->getSize(); i++)
         whichEdgesForVertex[endpointSet][i] = (int*)malloc(sizeof(int)*
-          totalEdges);
+                                                           totalEdges);
     }
     
     for (auto e : edgeSet) {
       for (int epi=0; epi<(int)(endpointSets.size()); epi++) {
         auto ep = edgeSet.getEndpoint(e, epi);
-        //std::cout << "endpoint " << epi << " is ident " << ep.ident << std::endl;
-        whichEdgesForVertex[endpointSets[epi]][ep.ident][numEdgesForVertex[endpointSets[epi]][ep.ident]++] =
+        whichEdgesForVertex[endpointSets[epi]]
+          [ep.ident][numEdgesForVertex[endpointSets[epi]][ep.ident]++] =
           e.ident;
       }
     }
@@ -496,7 +496,7 @@ class VertexToEdgeMembershipIndex {
   
   int getTotalEdges() { return totalEdges; }
   
-  ~VertexToEdgeMembershipIndex() {
+  ~VertexToEdgeIndex() {
     for (auto ne : numEdgesForVertex) {
       free(ne.second);
     }
@@ -508,11 +508,10 @@ class VertexToEdgeMembershipIndex {
   }
   
  private:
-  // the following use std::map, but could use std::unordered_map if we don't
-  // care about iterating over it in order
-  std::vector<SetBase*> endpointSets;       // the endpoint sets
-  std::map<const SetBase*,int*> numEdgesForVertex;      // number of edges the v belongs to
-  std::map<const SetBase*,int**> whichEdgesForVertex;   // which edges v belongs to
+  std::vector<SetBase*> endpointSets;                 // the endpoint sets
+  std::map<const SetBase*,int*> numEdgesForVertex;    // number of edges the v
+                                                      // belongs to
+  std::map<const SetBase*,int**> whichEdgesForVertex; // which edges v belongs to
   int totalEdges;
   
 
