@@ -27,8 +27,6 @@ public:
   bool isTensor() const { return kind == Type::Tensor; }
   bool isSet() const { return kind == Type::Set; }
 
-  virtual size_t getByteSize() const = 0;
-
 private:
   Kind kind;
 };
@@ -56,15 +54,12 @@ public:
   /// Create a variable-size index set.
   IndexSet() : kind(Dynamic) {}
 
-  /// Get the number of elements in the index set.
-  size_t getSize() const;
-
   /// Get the Kind of the index set (Range, Set or Dynamic)
   Kind getKind() const { return kind; }
 
-  /// Returns the size of the indexset if kind is Range, otherwise undefined
-  int getRangeSize() const {
-    assert(kind==Range);
+  /// Returns the size of the index set if kind is Range, otherwise undefined
+  int getSize() const {
+    assert(kind == Range && "Only Range index sets have a statically known size");
     return rangeSize;
   }
 
@@ -97,7 +92,8 @@ public:
   /// Get the index sets that are multiplied to get the index set product.
   const std::vector<IndexSet> &getFactors() const {return indexSets; }
 
-  /// Get the number of elements in the product of the index sets.
+  /// Get the number of elements in the product of the index sets if all the
+  /// index sets are Range sets, otherwise undefined.
   size_t getSize() const;
 
 private:
@@ -133,10 +129,9 @@ public:
   /// Get the index sets that form the dimensions of the tensor.
   const std::vector<IndexSetProduct> &getDimensions() const {return dimensions;}
 
-  /// Get the number of components in the tensor.
+  /// Get the number of components in the tensor if all its dimensions are
+  /// composed of Range index sets, otherwise undefined.
   size_t getSize() const;
-
-  size_t getByteSize() const;
 
 private:
   ComponentType componentType;
@@ -183,11 +178,6 @@ public:
   const std::shared_ptr<ElementType> &getElementType() const {
     return elementType;
   }
-
-  // TODO: Remove the getByteSize methods from the Type hierarchy since the
-  //       types of sets and variable-sized tensors don't have well-defined
-  //       sizes.
-  size_t getByteSize() const;
 
 private:
   std::shared_ptr<ElementType> elementType;

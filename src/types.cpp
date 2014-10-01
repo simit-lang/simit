@@ -35,24 +35,6 @@ bool operator!=(const Type& l, const Type& r) {
 
 
 // class IndexSet
-size_t IndexSet::getSize() const {
-  int size = 0;
-  switch (kind) {
-    case Range:
-      size = rangeSize;
-      break;
-    case Set:
-      NOT_SUPPORTED_YET;
-      break;
-    case Dynamic:
-      NOT_SUPPORTED_YET;
-      break;
-    default:
-      assert(false);
-  }
-  return size;
-}
-
 bool operator==(const IndexSet &l, const IndexSet &r) {
    if (l.kind != r.kind) {
     return false;
@@ -139,10 +121,6 @@ size_t TensorType::getSize() const {
   return size;
 }
 
-size_t TensorType::getByteSize() const {
-  return getSize() * simit::componentSize(getComponentType());
-}
-
 void TensorType::print(std::ostream &os) const {
   if (getOrder() == 0) {
     os << componentTypeString(getComponentType());
@@ -206,10 +184,6 @@ bool operator!=(const ElementType &l, const ElementType &r) {
 
 
 // class SetType
-size_t SetType::getByteSize() const {
-  return 0;
-}
-
 void SetType::print(std::ostream &os) const {
   os << elementType->getName() << "{}";
 }

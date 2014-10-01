@@ -180,6 +180,9 @@ llvm::Value *emitOffset(llvm::Value *ptr, TensorType *type,
       for (size_t i=1; i<idxVars.size(); ++i) {
         const std::shared_ptr<IndexVar> &iv = idxVars[i];
         const IndexSet &is = iv->getDomain().getFactors()[currNest];
+
+        assert(is.getKind() == IndexSet::Range &&
+               "Only range offsets currently supported");
         stride *= is.getSize();
       }
 
@@ -191,6 +194,9 @@ llvm::Value *emitOffset(llvm::Value *ptr, TensorType *type,
       for (size_t i=1; i<idxVars.size()-1; ++i) {
         const std::shared_ptr<IndexVar> &iv = idxVars[i];
         const IndexSet &is = iv->getDomain().getFactors()[currNest];
+
+        assert(is.getKind() == IndexSet::Range &&
+               "Only range offsets currently supported");
         stride = stride / is.getSize();
         auto *iv_ofs = builder->CreateMul(indexMap[idxVars[i].get()],
                                           builder->getInt32(stride),
@@ -261,7 +267,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
     llvm::Value *isSize = NULL;
     switch (is.getKind()) {
       case IndexSet::Range:
-        isSize = builder->getInt32(is.getRangeSize());
+        isSize = builder->getInt32(is.getSize());
         break;
       case IndexSet::Set:
         assert(symtable.contains(is.getSetName()));

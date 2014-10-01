@@ -19,8 +19,13 @@ namespace ir {
 IRNode::~IRNode() {}
 
 // class Literal
+static size_t getTensorByteSize(TensorType *tensorType) {
+  return tensorType->getSize() * componentSize(tensorType->getComponentType());
+}
+
 Literal::Literal(const std::shared_ptr<Type> &type) : Expression(type) {
-  this->dataSize = type->getByteSize();
+  assert(type->isTensor());
+  this->dataSize = getTensorByteSize(tensorTypePtr(type));
   this->data = malloc(dataSize);
 }
 
@@ -92,13 +97,17 @@ void Literal::print(std::ostream &os) const {
 }
 
 bool operator==(const Literal& l, const Literal& r) {
+  assert(l.getType()->isTensor() && r.getType()->isTensor());
+
   if (*l.getType() != *r.getType()) {
     return false;
   }
 
-  assert(l.getType()->getByteSize() == r.getType()->getByteSize());
-  if (memcmp(l.getConstData(), r.getConstData(), l.getType()->getByteSize())
-      != 0) {
+  assert(getTensorByteSize(tensorTypePtr(l.getType())) ==
+         getTensorByteSize(tensorTypePtr(r.getType())));
+  size_t tensorDataSize = getTensorByteSize(tensorTypePtr(l.getType()));
+
+  if (memcmp(l.getConstData(), r.getConstData(), tensorDataSize) != 0) {
     return false;
   }
   return true;

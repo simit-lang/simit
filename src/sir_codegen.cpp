@@ -59,7 +59,7 @@ static Expr emitLoad(const Expression *tensor, const Domain &indexVariables,
         Expr var = indexMap[iv];
         for (size_t j=i+1; j < indexVariables.size(); ++j) {
           const IndexVar *jv = indexVariables[j].get();
-          int dimsize = jv->getDomain().getFactors()[0].getRangeSize();
+          int dimsize = jv->getDomain().getFactors()[0].getSize();
           var = Mul::make(var, IntLiteral::make(dimsize));
         }
 
