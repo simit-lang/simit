@@ -12,13 +12,13 @@ namespace ir {
 
 // class IndexVarFactory
 std::shared_ptr<IndexVar>
-IndexVarFactory::makeFreeVar(const IndexSetProduct &indexSet) {
+IndexVarFactory::makeFreeVar(const IndexDomain &indexSet) {
   auto freeIndexVar = new IndexVar(makeName(), indexSet, IndexVar::FREE);
   return std::shared_ptr<IndexVar>(freeIndexVar);
 }
 
 std::shared_ptr<IndexVar>
-IndexVarFactory::makeReductionVar(const IndexSetProduct &indexSet,
+IndexVarFactory::makeReductionVar(const IndexDomain &indexSet,
                                   IndexVar::Operator op) {
   auto reductionIndexVar = new IndexVar(makeName(), indexSet, op);
   return std::shared_ptr<IndexVar>(reductionIndexVar);
@@ -84,7 +84,7 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<Expression> &l,
     std::vector<std::shared_ptr<IndexVar>> tensorIndexVars;
     TensorType *tensorType = tensorTypePtr(tensor->getType());
     for (unsigned int i=0; i < tensorType->getOrder(); ++i) {
-      IndexSetProduct indexSet = tensorType->getDimensions()[i];
+      IndexDomain indexSet = tensorType->getDimensions()[i];
       tensorIndexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
     }
 
@@ -109,7 +109,7 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
   std::vector<std::shared_ptr<IndexVar>> indexVars;
   TensorType *ttype = tensorTypePtr(operands[0]->getType());
   for (unsigned int i=0; i < ttype->getOrder(); ++i) {
-    IndexSetProduct indexSet = ttype->getDimensions()[i];
+    IndexDomain indexSet = ttype->getDimensions()[i];
     indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
   }
 
@@ -224,7 +224,7 @@ IndexExpr *transposeMatrix(const std::shared_ptr<Expression> &mat) {
   TensorType *mattype = tensorTypePtr(mat->getType());
 
   assert(mattype->getOrder() == 2);
-  const std::vector<IndexSetProduct> &dims = mattype->getDimensions();
+  const std::vector<IndexDomain> &dims = mattype->getDimensions();
 
   IndexVarFactory indexVarFactory;
   std::vector<std::shared_ptr<IndexVar>> indexVars;

@@ -21,21 +21,21 @@ TEST(IndexSet, eq) {
   // TODO: Add tests for SET, VARIABLE and combinations
 }
 
-TEST(IndexSetProduct, getSize) {
+TEST(IndexDomain, getSize) {
   vector<IndexSet> indices;
   indices.push_back(IndexSet(1));
-  ASSERT_EQ(IndexSetProduct(indices).getSize(), 1u);
+  ASSERT_EQ(IndexDomain(indices).getSize(), 1u);
 
   indices.clear();
   indices.push_back(IndexSet(3));
-  ASSERT_EQ(IndexSetProduct(indices).getSize(), 3u);
+  ASSERT_EQ(IndexDomain(indices).getSize(), 3u);
 
   indices.push_back(IndexSet(4));
-  ASSERT_EQ(IndexSetProduct(indices).getSize(), 12u);
+  ASSERT_EQ(IndexDomain(indices).getSize(), 12u);
   // TODO: Add tests for SET, VARIABLE and combinations
 }
 
-TEST(IndexSetProduct, eq) {
+TEST(IndexDomain, eq) {
   vector<IndexSet> indices0;
   vector<IndexSet> indices1;
   vector<IndexSet> indices2;
@@ -44,16 +44,16 @@ TEST(IndexSetProduct, eq) {
   indices1.push_back(IndexSet(1));
   indices2.push_back(IndexSet(2));
 
-  ASSERT_EQ(IndexSetProduct(indices0), IndexSetProduct(indices1));
-  ASSERT_NE(IndexSetProduct(indices0), IndexSetProduct(indices2));
+  ASSERT_EQ(IndexDomain(indices0), IndexDomain(indices1));
+  ASSERT_NE(IndexDomain(indices0), IndexDomain(indices2));
 
   indices0.push_back(IndexSet(2));
   indices1.push_back(IndexSet(2));
-  ASSERT_EQ(IndexSetProduct(indices0), IndexSetProduct(indices1));
+  ASSERT_EQ(IndexDomain(indices0), IndexDomain(indices1));
 
   indices1.pop_back();
   indices1.push_back(IndexSet(3));
-  ASSERT_NE(IndexSetProduct(indices0), IndexSetProduct(indices1));
+  ASSERT_NE(IndexDomain(indices0), IndexDomain(indices1));
 
   // TODO: Add tests for SET, VARIABLE and combinations
 }
@@ -61,15 +61,15 @@ TEST(IndexSetProduct, eq) {
 TEST(Type, getSize) {
   vector<IndexSet> indices0;
   vector<IndexSet> indices1;
-  vector<IndexSetProduct> dimensions;
+  vector<IndexDomain> dimensions;
 
   indices0.push_back(IndexSet(2));
   indices0.push_back(IndexSet(3));
-  dimensions.push_back(IndexSetProduct(indices0));
+  dimensions.push_back(IndexDomain(indices0));
 
   indices1.push_back(IndexSet(5));
   indices1.push_back(IndexSet(7));
-  dimensions.push_back(IndexSetProduct(indices1));
+  dimensions.push_back(IndexDomain(indices1));
 
   ASSERT_EQ(TensorType(FLOAT, dimensions).getSize(), 210u);
   // TODO: Add tests for SET, VARIABLE and combinations
@@ -78,13 +78,13 @@ TEST(Type, getSize) {
 TEST(Type, eq) {
   vector<IndexSet> idxs0;
   vector<IndexSet> idxs1;
-  vector<IndexSetProduct> dims0;
-  vector<IndexSetProduct> dims1;
+  vector<IndexDomain> dims0;
+  vector<IndexDomain> dims1;
 
   idxs0.push_back(IndexSet(2));
   idxs0.push_back(IndexSet(3));
-  dims0.push_back(IndexSetProduct(idxs0));
-  dims1.push_back(IndexSetProduct(idxs0));
+  dims0.push_back(IndexDomain(idxs0));
+  dims1.push_back(IndexDomain(idxs0));
   ASSERT_EQ(TensorType(FLOAT, dims0), TensorType(FLOAT, dims1));
   ASSERT_NE(TensorType(FLOAT, dims0), TensorType(INT, dims1));
 

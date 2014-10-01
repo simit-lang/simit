@@ -271,7 +271,7 @@ void IndexExpr::initType() {
   assert(operands.size() > 0);
   TensorType *ttype = tensorTypePtr(operands[0].getTensor()->getType());
   ComponentType ctype = ttype->getComponentType();
-  std::vector<IndexSetProduct> dimensions;
+  std::vector<IndexDomain> dimensions;
   for (auto &iv : indexVars) {
     dimensions.push_back(iv->getDomain());
   }
@@ -346,20 +346,20 @@ std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &setExpr,
   const shared_ptr<TensorType> &elemFieldType =
       setType->getElementType()->getFields().at(fieldName);
 
-  std::vector<IndexSetProduct> dimensions;
+  std::vector<IndexDomain> dimensions;
   if (elemFieldType->getOrder() == 0) {
     IndexSet setDim(setExpr->getName());
-    dimensions.push_back(IndexSetProduct(setDim));
+    dimensions.push_back(IndexDomain(setDim));
   }
   else {
     std::vector<IndexSet> dim;
     dim.push_back(IndexSet(setExpr->getName()));
 
-    for (const IndexSetProduct &elemFieldDim : elemFieldType->getDimensions()) {
+    for (const IndexDomain &elemFieldDim : elemFieldType->getDimensions()) {
       for (const IndexSet &indexSet : elemFieldDim.getFactors()) {
         dim.push_back(indexSet);
       }
-      dimensions.push_back(IndexSetProduct(dim));
+      dimensions.push_back(IndexDomain(dim));
     }
   }
 

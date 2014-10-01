@@ -74,8 +74,8 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
 }
 
 
-// class IndexSetProduct
-size_t IndexSetProduct::getSize() const {
+// class IndexDomain
+size_t IndexDomain::getSize() const {
   int size = 1;
   for (auto &indexSet : getFactors()) {
     size *= indexSet.getSize();
@@ -83,7 +83,7 @@ size_t IndexSetProduct::getSize() const {
   return size;
 }
 
-bool operator==(const IndexSetProduct &l, const IndexSetProduct &r) {
+bool operator==(const IndexDomain &l, const IndexDomain &r) {
   if (l.getFactors().size() != r.getFactors().size()) {
     return false;
   }
@@ -97,17 +97,17 @@ bool operator==(const IndexSetProduct &l, const IndexSetProduct &r) {
   return true;
 }
 
-bool operator!=(const IndexSetProduct &l, const IndexSetProduct &r) {
+bool operator!=(const IndexDomain &l, const IndexDomain &r) {
   return !(l == r);
 }
 
-IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r) {
+IndexDomain operator*(const IndexDomain &l, const IndexDomain &r) {
   std::vector<IndexSet> is = l.getFactors();
   is.insert(is.end(), r.getFactors().begin(), r.getFactors().end());
-  return IndexSetProduct(is);
+  return IndexDomain(is);
 }
 
-std::ostream &operator<<(std::ostream &os, const IndexSetProduct &isp) {
+std::ostream &operator<<(std::ostream &os, const IndexDomain &isp) {
   return os << util::join(isp.getFactors(), " x ");
 }
 

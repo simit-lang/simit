@@ -64,13 +64,13 @@ void Function::bind(const std::string &argName, SetBase *set) {
     assert(setFieldType->getOrder() == argFieldType->getOrder() &&
            "set type does not match function argument type");
 
-    const vector<ir::IndexSetProduct> &argFieldTypeDims =
+    const vector<ir::IndexDomain> &argFieldTypeDims =
         argFieldType->getDimensions();
     for (size_t i=0; i<argFieldType->getOrder(); ++i) {
       assert(argFieldTypeDims[i].getFactors().size() == 1 &&
              "set type does not match function argument type");
 
-      size_t argFieldRange = argFieldTypeDims[i].getFactors()[0].getRangeSize();
+      size_t argFieldRange = argFieldTypeDims[i].getFactors()[0].getSize();
 
       assert(setFieldType->getDimension(i) == argFieldRange &&
              "set type does not match function argument type");

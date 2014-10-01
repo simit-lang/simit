@@ -276,7 +276,7 @@ namespace  simit { namespace internal  {
   ir::Type                         *type;
 
   ir::TensorType                   *tensorType;
-  std::vector<ir::IndexSetProduct> *IndexSetProducts;
+  std::vector<ir::IndexDomain>     *IndexDomains;
   std::vector<ir::IndexSet>        *IndexSets;
   ir::IndexSet                     *indexSet;
   ComponentType                     componentType;

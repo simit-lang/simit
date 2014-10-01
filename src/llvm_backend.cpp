@@ -261,7 +261,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   std::string idxName = iv->getName();
 
   // Compute dimension size
-  const IndexSetProduct &dimension = iv->getDomain().getFactors();
+  const IndexDomain &dimension = iv->getDomain().getFactors();
   llvm::Value *numIter = NULL;
   for (const IndexSet &is : dimension.getFactors()) {
     llvm::Value *isSize = NULL;

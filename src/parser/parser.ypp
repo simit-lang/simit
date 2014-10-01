@@ -1064,7 +1064,7 @@ tensor_write_expr
   ir::Type                         *type;
 
   ir::TensorType                   *tensorType;
-  std::vector<ir::IndexSetProduct> *IndexSetProducts;
+  std::vector<ir::IndexDomain>     *IndexDomains;
   std::vector<ir::IndexSet>        *IndexSets;
   ir::IndexSet                     *indexSet;
   ComponentType                     componentType;
@@ -1076,7 +1076,7 @@ tensor_write_expr
 %type <type>             type;
 
 %type <tensorType>       tensor_type;
-%type <IndexSetProducts> nested_dimensions;
+%type <IndexDomains> nested_dimensions;
 %type <IndexSets>        dimensions;
 %type <indexSet>         dimension;
 %type <componentType>    component_type;
@@ -1127,7 +1127,7 @@ tensor_type
 
 nested_dimensions
   : /* empty */ {
-    $$ = new std::vector<IndexSetProduct>();
+    $$ = new std::vector<IndexDomain>();
   }
   | nested_dimensions "[" dimensions "]" {
     $$ = $1;
@@ -1135,11 +1135,11 @@ nested_dimensions
     auto parentDims = $$;
     auto childDims = unique_ptr<std::vector<IndexSet>>($dimensions);
 
-    // If there are no previous dimensions then create IndexSetProducts
+    // If there are no previous dimensions then create IndexDomains
     if (parentDims->size() == 0) {
       for (auto &dim : *childDims) {
         UNUSED(dim);
-        parentDims->push_back(IndexSetProduct());
+        parentDims->push_back(IndexDomain());
       }
     }
 
@@ -1148,7 +1148,7 @@ nested_dimensions
       for (size_t i=0; i < childDims->size() - parentDims->size(); ++i) {
         size_t numNestings = (*parentDims)[0].getFactors().size();
         std::vector<IndexSet> indexSets(numNestings, IndexSet(1));
-        parentDims->push_back(IndexSetProduct(indexSets));
+        parentDims->push_back(IndexDomain(indexSets));
       }
     }
 
@@ -1276,7 +1276,7 @@ tensor_literal
 dense_tensor_literal
   : "[" float_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<double>>($2);
-    auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
+    auto isps = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(ComponentType::FLOAT, isps);
     auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>
@@ -1285,7 +1285,7 @@ dense_tensor_literal
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
-    auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
+    auto isps = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(ComponentType::INT, isps);
     auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>

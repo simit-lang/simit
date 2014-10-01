@@ -788,7 +788,7 @@ namespace  simit { namespace internal  {
       case 104: // nested_dimensions
 
 
-        { delete (yysym.value.IndexSetProducts); }
+        { delete (yysym.value.IndexDomains); }
 
         break;
 
@@ -2095,8 +2095,8 @@ namespace  simit { namespace internal  {
   case 107:
 
     {
-    (yylhs.value.tensorType) = new TensorType((yystack_[1].value.componentType), *(yystack_[3].value.IndexSetProducts));
-    delete (yystack_[3].value.IndexSetProducts);
+    (yylhs.value.tensorType) = new TensorType((yystack_[1].value.componentType), *(yystack_[3].value.IndexDomains));
+    delete (yystack_[3].value.IndexDomains);
   }
 
     break;
@@ -2104,9 +2104,9 @@ namespace  simit { namespace internal  {
   case 108:
 
     {
-    (yylhs.value.tensorType) = new TensorType((yystack_[2].value.componentType), *(yystack_[4].value.IndexSetProducts));
+    (yylhs.value.tensorType) = new TensorType((yystack_[2].value.componentType), *(yystack_[4].value.IndexDomains));
     ctx->toggleColumnVector(*(yylhs.value.tensorType));
-    delete (yystack_[4].value.IndexSetProducts);
+    delete (yystack_[4].value.IndexDomains);
   }
 
     break;
@@ -2114,7 +2114,7 @@ namespace  simit { namespace internal  {
   case 109:
 
     {
-    (yylhs.value.IndexSetProducts) = new std::vector<IndexSetProduct>();
+    (yylhs.value.IndexDomains) = new std::vector<IndexDomain>();
   }
 
     break;
@@ -2122,16 +2122,16 @@ namespace  simit { namespace internal  {
   case 110:
 
     {
-    (yylhs.value.IndexSetProducts) = (yystack_[3].value.IndexSetProducts);
+    (yylhs.value.IndexDomains) = (yystack_[3].value.IndexDomains);
 
-    auto parentDims = (yylhs.value.IndexSetProducts);
+    auto parentDims = (yylhs.value.IndexDomains);
     auto childDims = unique_ptr<std::vector<IndexSet>>((yystack_[1].value.IndexSets));
 
-    // If there are no previous dimensions then create IndexSetProducts
+    // If there are no previous dimensions then create IndexDomains
     if (parentDims->size() == 0) {
       for (auto &dim : *childDims) {
         UNUSED(dim);
-        parentDims->push_back(IndexSetProduct());
+        parentDims->push_back(IndexDomain());
       }
     }
 
@@ -2140,7 +2140,7 @@ namespace  simit { namespace internal  {
       for (size_t i=0; i < childDims->size() - parentDims->size(); ++i) {
         size_t numNestings = (*parentDims)[0].getFactors().size();
         std::vector<IndexSet> indexSets(numNestings, IndexSet(1));
-        parentDims->push_back(IndexSetProduct(indexSets));
+        parentDims->push_back(IndexDomain(indexSets));
       }
     }
 
@@ -2153,7 +2153,7 @@ namespace  simit { namespace internal  {
 
     // Multiply each dimension with the corresponding dimension in the shape.
     assert(childDims->size() == parentDims->size());
-    for (size_t i=0; i<(yylhs.value.IndexSetProducts)->size(); ++i) {
+    for (size_t i=0; i<(yylhs.value.IndexDomains)->size(); ++i) {
       (*parentDims)[i] = (*parentDims)[i] * (*childDims)[i];
     }
   }
@@ -2234,7 +2234,7 @@ namespace  simit { namespace internal  {
 
     {
     auto values = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
-    auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
+    auto isps = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(ComponentType::FLOAT, isps);
     auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>
@@ -2248,7 +2248,7 @@ namespace  simit { namespace internal  {
 
     {
     auto values = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
-    auto isps = std::vector<IndexSetProduct>(values->dimSizes.rbegin(),
+    auto isps = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
     auto type = new TensorType(ComponentType::INT, isps);
     auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>

@@ -82,12 +82,12 @@ private:
 bool operator!=(const IndexSet &l, const IndexSet &r);
 
 
-/// The set product of zero or more sets.
-class IndexSetProduct {
+/// An index domain is a set product of zero or more index sets.
+class IndexDomain {
 public:
-  IndexSetProduct() {}
-  IndexSetProduct(const IndexSet &is) { indexSets.push_back(is); }
-  IndexSetProduct(const std::vector<IndexSet> &iss) : indexSets(iss) {};
+  IndexDomain() {}
+  IndexDomain(const IndexSet &is) { indexSets.push_back(is); }
+  IndexDomain(const std::vector<IndexSet> &iss) : indexSets(iss) {};
 
   /// Get the index sets that are multiplied to get the index set product.
   const std::vector<IndexSet> &getFactors() const {return indexSets; }
@@ -100,10 +100,10 @@ private:
   std::vector<IndexSet> indexSets;
 };
 
-bool operator==(const IndexSetProduct &l, const IndexSetProduct &r);
-bool operator!=(const IndexSetProduct &l, const IndexSetProduct &r);
-IndexSetProduct operator*(const IndexSetProduct &l, const IndexSetProduct &r);
-std::ostream &operator<<(std::ostream &os, const IndexSetProduct &isp);
+bool operator==(const IndexDomain &l, const IndexDomain &r);
+bool operator!=(const IndexDomain &l, const IndexDomain &r);
+IndexDomain operator*(const IndexDomain &l, const IndexDomain &r);
+std::ostream &operator<<(std::ostream &os, const IndexDomain &isp);
 
 
 /// The type of a tensor (the type of its components and its shape). Note that
@@ -116,7 +116,7 @@ public:
   }
 
   TensorType(ComponentType componentType,
-             const std::vector<IndexSetProduct> &dimensions)
+             const std::vector<IndexDomain> &dimensions)
       : Type(Type::Tensor), componentType(componentType),
         dimensions(dimensions) {}
 
@@ -127,7 +127,7 @@ public:
   ComponentType getComponentType() const { return componentType; }
 
   /// Get the index sets that form the dimensions of the tensor.
-  const std::vector<IndexSetProduct> &getDimensions() const {return dimensions;}
+  const std::vector<IndexDomain> &getDimensions() const {return dimensions;}
 
   /// Get the number of components in the tensor if all its dimensions are
   /// composed of Range index sets, otherwise undefined.
@@ -135,7 +135,7 @@ public:
 
 private:
   ComponentType componentType;
-  std::vector<IndexSetProduct> dimensions;
+  std::vector<IndexDomain> dimensions;
 
   void print(std::ostream &os) const;
 };
