@@ -14,7 +14,7 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-typedef internal::ScopedMap<const IRNode*, Expr> SymbolTable;
+typedef internal::ScopedMap<std::string, Expr> SymbolTable;
 
 SetIRCodeGen::SetIRCodeGen()
 : symtable(new SymbolTable), scopeStack(new std::stack<Stmt>) {
@@ -37,48 +37,54 @@ std::unique_ptr<Stmt> SetIRCodeGen::codegen(simit::ir::Function *function){
 void SetIRCodeGen::handle(ir::Function *f) {
   // TODO add all the arguments to the symbol table as Variables
   for (auto &argument : f->getArguments()) {
-    symtable->insert(argument.get(), Variable::make(argument->getName()));
+    symtable->insert(argument->getName(), Variable::make(argument->getName()));
   }
   for (auto &result : f->getResults()) {
-    symtable->insert(result.get(), Variable::make(result->getName()));
+    symtable->insert(result->getName(), Variable::make(result->getName()));
   }
 }
 
 typedef std::vector<std::shared_ptr<IndexVar>> Domain;
 typedef std::map<const IndexVar *, Expr> IndexMap;
 
-static Expr emitLoad(const IndexedTensor &indexedTensor,
+static Expr emitLoad(const Expression *tensor, const Domain &indexVariables,
                      SymbolTable *symtable, IndexMap &indexMap){
   Expr index;
-  TensorType *type = tensorTypePtr(indexedTensor.getTensor()->getType());
-  switch (type->getOrder()) {
+  switch (indexVariables.size()) {
     case 0:
       index = IntLiteral::make(0);
       break;
     case 1:
-      index = indexMap[indexedTensor.getIndexVariables()[0].get()];
+      index = indexMap[indexVariables[0].get()];
       break;
     default:
       assert(false && "Matrix and higher order tensor loads not supported");
   }
 
-  Expr target = symtable->get(indexedTensor.getTensor().get());
+  Expr target = symtable->get(tensor->getName());
   return Load::make(target, index);
 }
 
-static Stmt emitStore(const IndexExpr *indexExpr, const Expr &val,
-                      SymbolTable *symtable, IndexMap &indexMap){
-  Expr target = Variable::make(indexExpr->getName());
-  symtable->insert(indexExpr, target);
+static Expr emitLoad(const IndexedTensor &indexedTensor,
+                     SymbolTable *symtable, IndexMap &indexMap){
+  return emitLoad(indexedTensor.getTensor().get(),
+                  indexedTensor.getIndexVariables(), symtable, indexMap);
+}
 
-  TensorType *type = tensorTypePtr(indexExpr->getType());
+static Stmt emitStore(const Expression *tensor, const Domain &indexVariables,
+                      const Expr &val,
+                      SymbolTable *symtable, IndexMap &indexMap){
+  Expr target = Variable::make(tensor->getName());
+  symtable->insert(tensor->getName(), target);
+
+  TensorType *type = tensorTypePtr(tensor->getType());
   switch (type->getOrder()) {
     case 0: {
       Expr index = IntLiteral::make(0);
       return Store::make(target, index, val);
     }
     case 1: {
-      Expr index = indexMap[indexExpr->getIndexVariables()[0].get()];
+      Expr index = indexMap[indexVariables[0].get()];
       return Store::make(target, index, val);
     }
     case 2:
@@ -90,43 +96,65 @@ static Stmt emitStore(const IndexExpr *indexExpr, const Expr &val,
 }
 
 static Stmt emitIndexComputation(const IndexExpr *indexExpr,
+                                 IndexVar::Operator reductionOperator,
                                  SymbolTable *symtable, IndexMap &indexMap) {
+  Expr val;
   switch (indexExpr->getOperator()) {
     case IndexExpr::NONE: {
       assert(indexExpr->getOperands().size() == 1);
-      Expr val = emitLoad(indexExpr->getOperands()[0], symtable, indexMap);
-      return emitStore(indexExpr, val, symtable, indexMap);
+      val = emitLoad(indexExpr->getOperands()[0], symtable, indexMap);
+      break;
     }
     case IndexExpr::NEG: {
       Expr a = emitLoad(indexExpr->getOperands()[0], symtable, indexMap);
-      Expr val = Neg::make(a);
-      return emitStore(indexExpr, val, symtable, indexMap);
+      val = Neg::make(a);
+      break;
     }
     case IndexExpr::ADD: {
       Expr a = emitLoad(indexExpr->getOperands()[0], symtable, indexMap);
       Expr b = emitLoad(indexExpr->getOperands()[1], symtable, indexMap);
-      Expr val = Add::make(a, b);;
-      return emitStore(indexExpr, val, symtable, indexMap);
+      val = Add::make(a, b);
+      break;
     }
     case IndexExpr::SUB: {
       Expr a = emitLoad(indexExpr->getOperands()[0], symtable, indexMap);
       Expr b = emitLoad(indexExpr->getOperands()[1], symtable, indexMap);
-      Expr val = Sub::make(a, b);;
-      return emitStore(indexExpr, val, symtable, indexMap);
+      val = Sub::make(a, b);
+      break;
     }
     case IndexExpr::MUL: {
       Expr a = emitLoad(indexExpr->getOperands()[0], symtable, indexMap);
       Expr b = emitLoad(indexExpr->getOperands()[1], symtable, indexMap);
-      Expr val = Mul::make(a, b);;
-      return emitStore(indexExpr, val, symtable, indexMap);
+      val = Mul::make(a, b);
+      break;
     }
     case IndexExpr::DIV: {
       Expr a = emitLoad(indexExpr->getOperands()[0], symtable, indexMap);
       Expr b = emitLoad(indexExpr->getOperands()[1], symtable, indexMap);
-      Expr val = Div::make(a, b);;
-      return emitStore(indexExpr, val, symtable, indexMap);
+      val = Div::make(a, b);
+      break;
     }
   }
+  assert(val.defined());
+
+  switch (reductionOperator) {
+    case IndexVar::FREE:  // Do nothing
+      break;
+    case IndexVar::SUM: {
+      Expr oldVal = emitLoad(indexExpr, indexExpr->getIndexVariables(),
+                             symtable, indexMap);
+      val = Add::make(oldVal, val);
+      break;
+    }
+    case IndexVar::PRODUCT:
+      Expr oldVal = emitLoad(indexExpr, indexExpr->getIndexVariables(),
+                             symtable, indexMap);
+      val = Mul::make(oldVal, val);
+    break;
+  }
+
+  return emitStore(indexExpr, indexExpr->getIndexVariables(), val,
+                   symtable, indexMap);
 }
 
 /// Lowers a Tensor IR Index Expression into a Set IR statement.
@@ -141,12 +169,11 @@ static Stmt emitIndexExpr(const IndexExpr *indexExpr,
 
   indexMap[indexVar.get()] = Variable::make(indexVar->getName());
 
-  cout << "currentIndexVar: " << currentIndexVar << endl;
-
   Stmt body = (currentIndexVar < domain.size()-1)
               ? emitIndexExpr(indexExpr, symtable, indexMap,
                               currentIndexVar+1, currentNesting)
-              : emitIndexComputation(indexExpr, symtable, indexMap);
+              : emitIndexComputation(indexExpr, indexVar->getOperator(),
+                                     symtable, indexMap);
 
   return Foreach::make(indexVar->getName(), loopDomain, body);
 }
@@ -161,8 +188,8 @@ static void addToCurrentScope(const Stmt &stmt, std::stack<Stmt> *scopeStack) {
 void SetIRCodeGen::handle(ir::IndexExpr *t) {
   IndexMap indexMap;
   Stmt indexExprStmt;
-  if (tensorTypePtr(t->getType())->getOrder() == 0) {
-    indexExprStmt = emitIndexComputation(t, symtable, indexMap);
+  if (t->getDomain().size() == 0) {
+    indexExprStmt = emitIndexComputation(t, IndexVar::FREE, symtable, indexMap);
   }
   else {
     indexExprStmt = emitIndexExpr(t, symtable, indexMap);

@@ -99,7 +99,14 @@ void SetIRPrinter::visit(const Block *op) {
 
 void SetIRPrinter::visit(const Foreach *op) {
   indent();
-  os << "for " << op->name << " in " << op->domain << ":\n";
+  os << "for " << op->name << " in ";
+  if (op->domain.getKind() == IndexSet::Range) {
+    os << "range(" << op->domain << ")";
+  }
+  else {
+    os << op->domain;
+  }
+  os << ":\n";
   ++indentation;
   print(op->body);
   --indentation;

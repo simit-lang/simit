@@ -76,7 +76,7 @@ bool operator!=(const IndexSet &l, const IndexSet &r) {
 std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
   switch (is.kind) {
     case IndexSet::Range:
-      os << "{0:" << to_string(is.rangeSize) << "}";
+      os << to_string(is.rangeSize);
       break;
     case IndexSet::Set:
       os << is.setName;

@@ -5,6 +5,7 @@
 
 #include <memory>
 #include <stack>
+#include <string>
 
 namespace simit {
 
@@ -27,7 +28,7 @@ public:
   std::unique_ptr<Stmt> codegen(Function *function);
 
 private:
-  internal::ScopedMap<const IRNode*, Expr> *symtable;
+  internal::ScopedMap<std::string, Expr> *symtable;
 
   std::stack<Stmt> *scopeStack;
 
