@@ -14,9 +14,11 @@
 using namespace std;
 
 void printUsage() {
-  cerr << "Usage: simit-dump [options] <simit-source> " << endl << endl;
-  cerr << "Options:"               << endl;
-  cerr << "-emit-simit"           << endl
+  cerr << "Usage: simit-dump [options] <simit-source> " << endl << endl
+       << "Options:"              << endl
+       << "-emit-simit"           << endl
+       << "  -emit-tensor-ir"     << endl
+       << "  -emit-set-ir"        << endl
        << "-emit-llvm"            << endl
        << "-section=<section>";
 }
@@ -27,7 +29,8 @@ int main(int argc, const char* argv[]) {
     return 3;
   }
 
-  bool emitSimit = false;
+  bool emitTensorIR = false;
+  bool emitSetIR = false;
   bool emitLLVM = false;
   std::string section;
   std::string sourceFile;
@@ -39,7 +42,13 @@ int main(int argc, const char* argv[]) {
       std::vector<std::string> keyValPair = simit::util::split(arg, "=");
       if (keyValPair.size() == 1) {
         if (arg == "-emit-simit") {
-          emitSimit = true;
+          emitTensorIR = emitSetIR = true;
+        }
+        else if (arg == "-emit-tensor-ir") {
+          emitTensorIR = true;
+        }
+        else if (arg == "-emit-set-ir") {
+          emitSetIR = true;
         }
         else if (arg == "-emit-llvm") {
           emitLLVM = true;
@@ -73,8 +82,8 @@ int main(int argc, const char* argv[]) {
       }
     }
   }
-  if (!emitSimit && !emitLLVM) {
-    emitSimit = emitLLVM = true;
+  if (!(emitTensorIR || emitSetIR || emitLLVM)) {
+    emitTensorIR = emitSetIR = emitLLVM = true;
   }
 
   std::string source;
@@ -121,15 +130,24 @@ int main(int argc, const char* argv[]) {
   simit::internal::LLVMBackend backend;
   simit::ir::SetIRCodeGen setIRCodeGen;
   for (simit::ir::Function *func : ctx.getFunctions()) {
-    std::unique_ptr<simit::ir::Stmt> stmt = setIRCodeGen.codegen(func);
+    bool somethingEmitted = false;
 
-    if (emitSimit) {
-      cout << *func << endl << endl;
+    if (emitTensorIR) {
+      cout << *func << endl;
+      somethingEmitted = true;
+    }
+
+    if (emitSetIR) {
+      if (somethingEmitted) {
+        cout << endl;
+      }
+      std::unique_ptr<simit::ir::Stmt> stmt = setIRCodeGen.codegen(func);
       cout << *stmt << endl;
+      somethingEmitted = true;
     }
 
     if (emitLLVM) {
-      if (emitSimit) {
+      if (somethingEmitted) {
         cout << endl;
       }
       std::string fstr = simit::util::toString(*backend.compile(func));
