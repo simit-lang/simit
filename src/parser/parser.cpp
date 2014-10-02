@@ -2154,7 +2154,7 @@ namespace  simit { namespace internal  {
     // Multiply each dimension with the corresponding dimension in the shape.
     assert(childDims->size() == parentDims->size());
     for (size_t i=0; i<(yylhs.value.IndexDomains)->size(); ++i) {
-      (*parentDims)[i] = (*parentDims)[i] * (*childDims)[i];
+      (*parentDims)[i] = (*parentDims)[i] * IndexDomain((*childDims)[i]);
     }
   }
 

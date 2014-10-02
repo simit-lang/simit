@@ -171,10 +171,9 @@ static Stmt emitIndexExpr(const IndexExpr *indexExpr,
                           unsigned currentNesting=0) {
   auto domain = indexExpr->getDomain();
   auto indexVar = domain[currentIndexVar];
-  auto loopDomain = indexVar->getDomain().getFactors()[currentNesting];
-
   indexMap[indexVar.get()] = Variable::make(indexVar->getName());
 
+  auto loopDomain = indexVar->getDomain();
   Stmt body = (currentIndexVar < domain.size()-1)
               ? emitIndexExpr(indexExpr, symtable, indexMap,
                               currentIndexVar+1, currentNesting)

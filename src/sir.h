@@ -172,10 +172,10 @@ struct Block : public StmtNode {
 
 struct Foreach : public StmtNode {
   std::string name;
-  IndexSet domain;
+  IndexDomain domain;
   Stmt body;
 
-  static Stmt make(const std::string &name, const IndexSet &domain,
+  static Stmt make(const std::string &name, const IndexDomain &domain,
                    const Stmt &body) {
     Foreach *node = new Foreach;
     node->name = name;

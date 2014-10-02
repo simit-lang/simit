@@ -85,9 +85,9 @@ bool operator!=(const IndexSet &l, const IndexSet &r);
 /// An index domain is a set product of zero or more index sets.
 class IndexDomain {
 public:
-  IndexDomain() {}
-  IndexDomain(const IndexSet &is) { indexSets.push_back(is); }
-  IndexDomain(const std::vector<IndexSet> &iss) : indexSets(iss) {};
+  explicit IndexDomain() {}
+  explicit IndexDomain(const IndexSet &is) { indexSets.push_back(is); }
+  explicit IndexDomain(const std::vector<IndexSet> &iss) : indexSets(iss) {};
 
   /// Get the index sets that are multiplied to get the index set product.
   const std::vector<IndexSet> &getFactors() const {return indexSets; }

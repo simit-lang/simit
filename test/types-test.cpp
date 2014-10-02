@@ -90,7 +90,7 @@ TEST(Type, eq) {
 
   idxs1.push_back(IndexSet(3));
   idxs1.push_back(IndexSet(2));
-  dims1.push_back(idxs1);
+  dims1.push_back(IndexDomain(idxs1));
   ASSERT_NE(TensorType(ComponentType::FLOAT, dims0), TensorType(ComponentType::FLOAT, dims1));
   // TODO: Add tests for SET, VARIABLE and combinations
 }
