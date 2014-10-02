@@ -1,10 +1,10 @@
-const grav      : Tensor[3](float) = [0.0, 0.0, -9.81];
+const grav      : tensor[3](float) = [0.0, 0.0, -9.81];
 const stiffness : float = 1.0e3;
 const h         : float = 0.01;
 
 element Point
-  x : Tensor[3](float);
-  v : Tensor[3](float);
+  x : tensor[3](float);
+  v : tensor[3](float);
 end
 
 element Spring
@@ -16,7 +16,7 @@ extern points : Point{};
 extern springs : Spring[points,points]{};
 
 func distribute_masses(s : Spring, p0 : Point, p1 : Point) ->
-    (M : Tensor[points,points][3,3](float), f : Tensor[points][3](float))
+    (M : tensor[points,points][3,3](float), f : tensor[points][3](float))
   m = s.m;
   M(p0, p0) = 0.5*m*eye(3);
   M(p1, p1) = 0.5*m*eye(3);
@@ -25,7 +25,7 @@ func distribute_masses(s : Spring, p0 : Point, p1 : Point) ->
 end
 
 func compute_stiffness(s : Spring, p0 : Point, p1 : Point) ->
-     (K : Tensor[points,points][3,3](float), f : Tensor[points][3](float))
+     (K : tensor[points,points][3,3](float), f : tensor[points][3](float))
 	dx = p1.x - p0.x;
 	l = norm(dx);
 	l0 = s.l0;

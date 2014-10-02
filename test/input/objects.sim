@@ -4,8 +4,8 @@ end
 
 %%% springs
 element Point
-	x : Tensor[3](float);
-	v : Tensor[3](float);
+	x : tensor[3](float);
+	v : tensor[3](float);
 end
 
 element Spring
@@ -18,8 +18,8 @@ extern springs : Spring[points,points]{};
 
 %%% field-access
 element Point
-	x : Tensor[3](float);
-	v : Tensor[3](float);
+	x : tensor[3](float);
+	v : tensor[3](float);
 	m  : float;
 end
 

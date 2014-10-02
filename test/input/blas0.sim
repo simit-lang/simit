@@ -31,6 +31,6 @@ end
 
 %%% transpose
 %! transpose(42.0) == 42.0;
-func transpose(a : Tensor(float)) -> (c : Tensor(float))
+func transpose(a : tensor(float)) -> (c : tensor(float))
   c = a';
 end

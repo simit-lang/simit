@@ -44,7 +44,7 @@ TEST(Program, addVectorFields) {
   Program program;
   std::string programText =
       "element Point                                        "
-      "  x : Tensor[3](float);                              "
+      "  x : tensor[3](float);                              "
       "end                                                  "
       "func addSets(points : Point{}) -> (points : Point{}) "
       "  points.x = points.x + points.x;                    "

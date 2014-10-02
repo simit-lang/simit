@@ -1,8 +1,8 @@
 const h : float = 0.01;
 
 element Point
-	x : Tensor[3](float);
-	v : Tensor[3](float);
+	x : tensor[3](float);
+	v : tensor[3](float);
 	f : float;
 end
 
@@ -12,7 +12,7 @@ end
 extern points : Point{};
 extern triangles : Triangle[points, points, points]{};
 
-func buildMassMatrix(t : Triangle, p0 : Point, p1 : Point, p2 : Point) -> (M : Tensor[points, points](float))
+func buildMassMatrix(t : Triangle, p0 : Point, p1 : Point, p2 : Point) -> (M : tensor[points, points](float))
 	e0 = p0.x - p1.x;
 	e1 = p2.x - p1.x;
 	area = 0.5*norm(cross(e0, e1));
@@ -21,7 +21,7 @@ func buildMassMatrix(t : Triangle, p0 : Point, p1 : Point, p2 : Point) -> (M : T
 	M(p2,p2) = 1.0/3.0 * area;
 end
 
-func buildCotanMatrix(t : Triangle, p0 : Point, p1 : Point, p2 : Point) -> (L : Tensor[points,points](float))	
+func buildCotanMatrix(t : Triangle, p0 : Point, p1 : Point, p2 : Point) -> (L : tensor[points,points](float))	
 	e0 = p0.x - p1.x;
 	e1 = p2.x - p1.x;
 	sintheta = norm(cross(e0,e1));

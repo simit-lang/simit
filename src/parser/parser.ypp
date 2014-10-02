@@ -184,12 +184,12 @@
 // Keywords
 %token INT       "int"
 %token FLOAT     "float"
+%token TENSOR    "tensor"
 %token ELEMENT   "element"
 %token CONST     "const"
 %token EXTERN    "extern"
 %token PROC      "proc"
 %token FUNC      "func"
-%token TENSOR    "Tensor"
 %token MAP       "map"
 %token TO        "to"
 %token WITH      "with"
@@ -1115,11 +1115,11 @@ tensor_type
   : component_type {
     $$ = new TensorType($component_type);
   }
-  | TENSOR nested_dimensions "(" component_type ")" {
+  | "tensor" nested_dimensions "(" component_type ")" {
     $$ = new TensorType($component_type, *$nested_dimensions);
     delete $nested_dimensions;
   }
-  | TENSOR nested_dimensions "(" component_type ")" "'" {
+  | "tensor" nested_dimensions "(" component_type ")" "'" {
     $$ = new TensorType($component_type, *$nested_dimensions);
     ctx->toggleColumnVector(*$$);
     delete $nested_dimensions;

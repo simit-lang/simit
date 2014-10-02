@@ -1,16 +1,16 @@
-const grav : Tensor[3](float) = [0.0, 0.0, -9.81];
+const grav : tensor[3](float) = [0.0, 0.0, -9.81];
 const h : float = 0.01;
 
 element Rigid
-	x : Tensor[4,4](float);
-	v : Tensor[6](float);
-	m : Tensor[4](float);
+	x : tensor[4,4](float);
+	v : tensor[6](float);
+	m : tensor[4](float);
 end
 
 extern rigids : Rigid{};
 
 func compute_mass_force(r : Rigid) ->
-		(M : Tensor[rigids,rigids][6,6](float), f : Tensor[rigids][6](float))
+		(M : tensor[rigids,rigids][6,6](float), f : tensor[rigids][6](float))
 	Mr = eye(6);
 	Mr(1,1) = r.m(1);
 	Mr(2,2) = r.m(2);
@@ -33,7 +33,7 @@ func compute_mass_force(r : Rigid) ->
 end
 
 func integrate_velocity(r : Rigid) ->
-		(x : Tensor[rigids][4,4](float))
+		(x : tensor[rigids][4,4](float))
 	E0 = x(r);
 	I = eye(3);
 	w = r.v(1:3);

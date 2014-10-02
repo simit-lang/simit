@@ -1,21 +1,21 @@
-const grav : Tensor[3](float) = [0.0, 0.0, -9.81];
-const unitx : Tensor[3](float) = [1.0, 0.0, 0.0];
-const unity : Tensor[3](float) = [0.0, 1.0, 0.0];
-const unitz : Tensor[3](float) = [0.0, 0.0, 1.0];
+const grav : tensor[3](float) = [0.0, 0.0, -9.81];
+const unitx : tensor[3](float) = [1.0, 0.0, 0.0];
+const unity : tensor[3](float) = [0.0, 1.0, 0.0];
+const unitz : tensor[3](float) = [0.0, 0.0, 1.0];
 const h : float = 0.01;
 
 
 element Rigid
-	Q : Tensor[3,3](float);
-	q : Tensor[3](float);
-	w : Tensor[3](float);
-	v : Tensor[3](float);
-	I : Tensor[3](float);
+	Q : tensor[3,3](float);
+	q : tensor[3](float);
+	w : tensor[3](float);
+	v : tensor[3](float);
+	I : tensor[3](float);
 end
 
 extern rigids : Rigid{};
 
-func rotationMatrix( angle : float, unitaxis : Tensor[3](float)) -> (R : Tensor[3,3](float))
+func rotationMatrix( angle : float, unitaxis : tensor[3](float)) -> (R : tensor[3,3](float))
 		axis = -unitaxis;
 		sin_axis  = sin(angle) * axis;
   	c = cos(angle);
@@ -37,9 +37,9 @@ func rotationMatrix( angle : float, unitaxis : Tensor[3](float)) -> (R : Tensor[
 end
 
 func step_SH(r : Rigid) ->
-		(Q : Tensor[rigids][3,3](float),
-		q : Tensor[rigids][3](float),
-		w : Tensor[rigids][3](float))
+		(Q : tensor[rigids][3,3](float),
+		q : tensor[rigids][3](float),
+		w : tensor[rigids][3](float))
 	wlocal = r.w;
 	I = r.I;
 	pi= I*wlocal;

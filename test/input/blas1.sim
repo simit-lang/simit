@@ -1,72 +1,72 @@
 %%% neg
 %! neg([0.0, 1.0, 2.0]) == [-0.0, -1.0, -2.0];
-func neg(a : Tensor[3](float)) -> (c : Tensor[3](float))
+func neg(a : tensor[3](float)) -> (c : tensor[3](float))
   c = -a;
 end
 
 %%% scale
 %! scale(3.0, [0.0, 1.0, 4.0]) == [0.0, 3.0, 12.0];
-func scale(a : float, b : Tensor[3](float)) -> (c : Tensor[3](float))
+func scale(a : float, b : tensor[3](float)) -> (c : tensor[3](float))
   c = a*b;
 end
 
 %%% scale-reverse
 %! scaler([0.0, 1.0, 4.0], 3.0) == [0.0, 3.0, 12.0];
-func scaler(a : Tensor[3](float), b : float) -> (c : Tensor[3](float))
+func scaler(a : tensor[3](float), b : float) -> (c : tensor[3](float))
   c = a*b;
 end
 
 %%% add-scalar
 %! add(3.0, [0.0, 1.0, 4.0]) == [3.0, 4.0, 7.0];
-func add(a : float, b : Tensor[3](float)) -> (c : Tensor[3](float))
+func add(a : float, b : tensor[3](float)) -> (c : tensor[3](float))
   c = a+b;
 end
 
 %%% add
 %! add([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]) == [3.0, 5.0, 7.0];
-func add(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+func add(a : tensor[3](float), b : tensor[3](float)) -> (c : tensor[3](float))
   c = a + b;
 end
 
 %%% sub
 %! sub([0.0, 1.0, 2.0], [3.0, 7.0, 1.0]) == [-3.0, -6.0, 1.0];
-func sub(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+func sub(a : tensor[3](float), b : tensor[3](float)) -> (c : tensor[3](float))
   c = a - b;
 end
 
 %%% inner-product
 %! inner([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]') == 14.0; 
-func inner(a : Tensor[3](float), b : Tensor[3](float)') -> (c : float)
+func inner(a : tensor[3](float), b : tensor[3](float)') -> (c : float)
   c = a * b;
 end
 
 %%% outer-product
 %! outer([0.0, 2.0]', [3.0, 4.0]) == [0.0, 0.0; 6.0, 8.0];
-func outer(a : Tensor[2](float)', b : Tensor[2](float)) -> (c : Tensor[2,2](float))
+func outer(a : tensor[2](float)', b : tensor[2](float)) -> (c : tensor[2,2](float))
   c = a * b;
 end
 
 %%% mul-elwise
 %! mulelwise([0.0, 1.0, 2.0], [3.0, 7.0, 1.0]) == [0.0, 7.0, 2.0];
-func mulelwise(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+func mulelwise(a : tensor[3](float), b : tensor[3](float)) -> (c : tensor[3](float))
   c = a .* b;
 end
 
 %%% div-elwise
 %! divelwise([0.0, 9.0, 8.0], [3.0, 3.0, 4.0]) == [0.0, 3.0, 2.0];
-func divelwise(a : Tensor[3](float), b : Tensor[3](float)) -> (c : Tensor[3](float))
+func divelwise(a : tensor[3](float), b : tensor[3](float)) -> (c : tensor[3](float))
   c = a ./ b;
 end
 
 %%% transpose-row2col
 %! row2col([0.0, 1.0, 2.0])  == [0.0, 1.0, 2.0]';
-func row2col(a : Tensor[3](float)) -> (c : Tensor[3](float)')
+func row2col(a : tensor[3](float)) -> (c : tensor[3](float)')
   c = a';
 end
 
 %%% transpose-col2row
 %! col2row([0.0, 1.0, 2.0]') == [0.0, 1.0, 2.0];
-func col2row(a : Tensor[3](float)') -> (c : Tensor[3](float))
+func col2row(a : tensor[3](float)') -> (c : tensor[3](float))
   c = a';
 end
 
