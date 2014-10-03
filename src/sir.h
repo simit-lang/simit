@@ -18,7 +18,7 @@ namespace ir {
 // - Edge endpoints
 // - Element edges
 
-struct SetIRNode : public interfaces::Uncopyable {
+struct SetIRNode : private interfaces::Uncopyable {
   virtual void accept(SetIRVisitor *visitor) = 0;
   virtual void accept(SetIRConstVisitor *visitor) const = 0;
 };

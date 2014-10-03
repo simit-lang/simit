@@ -62,6 +62,10 @@ LLVMFunction::init(const std::vector<std::string> &formals,
           args.push_back(llvmPtr(actual.getTensor()));
           break;
         }
+        case ir::Type::Element: {
+          NOT_SUPPORTED_YET;
+          break;
+        }
         case ir::Type::Set: {
           const SetBase *set = actual.getSet();
           args.push_back(getInt32(set->getSize()));
@@ -72,7 +76,7 @@ LLVMFunction::init(const std::vector<std::string> &formals,
             args.push_back(llvmPtr(tensorType, getFieldPtr(set,field.first)));
           }
         }
-        case ir::Type::Element: {
+        case ir::Type::Tuple: {
           NOT_SUPPORTED_YET;
           break;
         }

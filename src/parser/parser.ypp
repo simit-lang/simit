@@ -1061,7 +1061,10 @@ tensor_write_expr
   std::shared_ptr<ir::Type>        *type;
   std::shared_ptr<ir::ElementType> *elementType;
   std::shared_ptr<ir::SetType>     *setType;
+  std::shared_ptr<ir::TupleType>   *tupleType;
   std::shared_ptr<ir::TensorType>  *tensorType;
+
+  std::vector<std::shared_ptr<ir::ElementType>> *elementTypes;
 
   std::vector<ir::IndexDomain> *IndexDomains;
   std::vector<ir::IndexSet>    *IndexSets;
@@ -1084,7 +1087,7 @@ type
     $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($set_type);
   }
   | tuple_type {
-    $$ = NULL;
+    $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($tuple_type);
   }
   | tensor_type {
     $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($tensor_type);
@@ -1107,20 +1110,43 @@ set_type
     $$ = NULL;
   }
 
+%type <tupleType> tuple_type;
 tuple_type
-  : "(" tuple_element_type_list ")" {
+  : "(" tuple_element_types ")" {
+    $$ = new std::shared_ptr<TupleType>(new TupleType(*$tuple_element_types));
+    delete $tuple_element_types;
   }
 
-tuple_element_type_list
+%type <elementTypes> tuple_element_types;
+tuple_element_types
   : tuple_element_type {
+    $$ = $1;
   }
-  | tuple_element_type_list "," tuple_element_type {
+  | tuple_element_types "," tuple_element_type {
+    $$ = $1;
+    $$->insert($$->begin(), $3->begin(), $3->end());
+    delete $3;
   }
 
+%type <elementTypes> tuple_element_type;
 tuple_element_type
   : element_type {
+    $$ = new vector<shared_ptr<ElementType>>;
+    $$->push_back(*$element_type);
+    delete $element_type;
   }
   | element_type "*" INT_LITERAL {
+    auto elementType = convertAndDelete($element_type);
+
+    if ($INT_LITERAL<1) {
+      REPORT_ERROR("Must be 1 or greater", @3);
+    }
+
+    $$ = new vector<shared_ptr<ElementType>>;
+    for (int i=0; i < $INT_LITERAL; ++i) {
+      $$->push_back(elementType);
+    }
+    delete $element_type;
   }
 
 %type <tensorType> tensor_type;
@@ -1188,6 +1214,7 @@ dimensions
     delete $dimension;
   }
   | dimensions "," dimension {
+
     $$ = $1;
     $$->push_back(*$dimension);
     delete $dimension;

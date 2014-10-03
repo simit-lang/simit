@@ -66,6 +66,9 @@ bool operator==(const Type& l, const Type& r) {
       break;
     case Type::Set:
       return static_cast<const SetType&>(l) == static_cast<const SetType&>(r);
+    case ir::Type::Tuple:
+      NOT_SUPPORTED_YET;
+      break;
   }
 }
 
@@ -172,6 +175,12 @@ bool operator==(const ElementType &l, const ElementType &r) {
 
 bool operator!=(const ElementType &l, const ElementType &r) {
   return !(l == r);
+}
+
+
+// class TupleType
+void TupleType::print(std::ostream &os) const {
+  os << "(" << util::join(elementTypes, ",") << ")";
 }
 
 

@@ -89,11 +89,14 @@ void Literal::print(std::ostream &os) const {
       }
       os << " : " << *getType();
     }
+    case Type::Element:
+      NOT_SUPPORTED_YET;
     case Type::Set:
       NOT_SUPPORTED_YET;
       break;
-    case Type::Element:
+    case Type::Tuple:
       NOT_SUPPORTED_YET;
+      break;
   }
 }
 

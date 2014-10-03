@@ -72,14 +72,16 @@ void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
                   std::vector<std::string> *names,
                   std::vector<llvm::Type*> *types) {
   switch (arg->getType()->getKind()) {
-    case ir::Type::Tensor:
+    case ir::Type::Tensor: {
       names->push_back(arg->getName());
       types->push_back(llvmType(tensorTypePtr(arg->getType())));
       break;
-    case ir::Type::Element:
+    }
+    case ir::Type::Element: {
       NOT_SUPPORTED_YET;
       break;
-    case ir::Type::Set:
+    }
+    case ir::Type::Set: {
       names->push_back(arg->getName());
       types->push_back(LLVM_INT32);
 
@@ -89,8 +91,12 @@ void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
         names->push_back(arg->getName() + "." + field.first);
         types->push_back(llvmType(field.second.get()));
       }
-
       break;
+    }
+    case ir::Type::Tuple: {
+      NOT_SUPPORTED_YET;
+      break;
+    }
   }
 }
 

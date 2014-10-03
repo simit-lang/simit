@@ -768,6 +768,27 @@ namespace  simit { namespace internal  {
 
         break;
 
+      case 104: // tuple_type
+
+
+        { delete (yysym.value.tupleType); }
+
+        break;
+
+      case 105: // tuple_element_types
+
+
+        { delete (yysym.value.elementTypes); }
+
+        break;
+
+      case 106: // tuple_element_type
+
+
+        { delete (yysym.value.elementTypes); }
+
+        break;
+
       case 107: // tensor_type
 
 
@@ -2049,7 +2070,7 @@ namespace  simit { namespace internal  {
   case 102:
 
     {
-    (yylhs.value.type) = NULL;
+    (yylhs.value.type) = reinterpret_cast<std::shared_ptr<ir::Type>*>((yystack_[0].value.tupleType));
   }
 
     break;
@@ -2091,6 +2112,8 @@ namespace  simit { namespace internal  {
   case 107:
 
     {
+    (yylhs.value.tupleType) = new std::shared_ptr<TupleType>(new TupleType(*(yystack_[1].value.elementTypes)));
+    delete (yystack_[1].value.elementTypes);
   }
 
     break;
@@ -2098,6 +2121,7 @@ namespace  simit { namespace internal  {
   case 108:
 
     {
+    (yylhs.value.elementTypes) = (yystack_[0].value.elementTypes);
   }
 
     break;
@@ -2105,6 +2129,9 @@ namespace  simit { namespace internal  {
   case 109:
 
     {
+    (yylhs.value.elementTypes) = (yystack_[2].value.elementTypes);
+    (yylhs.value.elementTypes)->insert((yylhs.value.elementTypes)->begin(), (yystack_[0].value.elementTypes)->begin(), (yystack_[0].value.elementTypes)->end());
+    delete (yystack_[0].value.elementTypes);
   }
 
     break;
@@ -2112,6 +2139,9 @@ namespace  simit { namespace internal  {
   case 110:
 
     {
+    (yylhs.value.elementTypes) = new vector<shared_ptr<ElementType>>;
+    (yylhs.value.elementTypes)->push_back(*(yystack_[0].value.elementType));
+    delete (yystack_[0].value.elementType);
   }
 
     break;
@@ -2119,6 +2149,17 @@ namespace  simit { namespace internal  {
   case 111:
 
     {
+    auto elementType = convertAndDelete((yystack_[2].value.elementType));
+
+    if ((yystack_[0].value.num)<1) {
+      REPORT_ERROR("Must be 1 or greater", yystack_[0].location);
+    }
+
+    (yylhs.value.elementTypes) = new vector<shared_ptr<ElementType>>;
+    for (int i=0; i < (yystack_[0].value.num); ++i) {
+      (yylhs.value.elementTypes)->push_back(elementType);
+    }
+    delete (yystack_[2].value.elementType);
   }
 
     break;
@@ -2214,6 +2255,7 @@ namespace  simit { namespace internal  {
   case 118:
 
     {
+
     (yylhs.value.IndexSets) = (yystack_[2].value.IndexSets);
     (yylhs.value.IndexSets)->push_back(*(yystack_[0].value.indexSet));
     delete (yystack_[0].value.indexSet);
@@ -3038,9 +3080,9 @@ namespace  simit { namespace internal  {
   "call_expr", "actual_list", "expr_list", "range_expr", "map_expr",
   "with", "reduce", "reduction_op", "write_expr_list", "write_expr",
   "field_write_expr", "tensor_write_expr", "type", "element_type",
-  "set_type", "tuple_type", "tuple_element_type_list",
-  "tuple_element_type", "tensor_type", "nested_dimensions", "dimensions",
-  "dimension", "component_type", "literal_expr", "tensor_literal",
+  "set_type", "tuple_type", "tuple_element_types", "tuple_element_type",
+  "tensor_type", "nested_dimensions", "dimensions", "dimension",
+  "component_type", "literal_expr", "tensor_literal",
   "dense_tensor_literal", "float_dense_tensor_literal",
   "float_dense_ndtensor_literal", "float_dense_matrix_literal",
   "float_dense_vector_literal", "int_dense_tensor_literal",
@@ -3062,11 +3104,11 @@ namespace  simit { namespace internal  {
      820,   826,   841,   861,   862,   863,   874,   878,   884,   893,
      896,   902,   908,   919,   930,   938,   940,   944,   946,   949,
      950,   998,  1003,  1011,  1015,  1018,  1024,  1044,  1050,  1054,
-    1080,  1083,  1086,  1089,  1095,  1102,  1106,  1111,  1115,  1117,
-    1121,  1123,  1128,  1131,  1136,  1144,  1147,  1185,  1190,  1197,
-    1200,  1204,  1209,  1212,  1281,  1284,  1285,  1289,  1292,  1301,
-    1312,  1319,  1322,  1326,  1339,  1343,  1357,  1361,  1367,  1374,
-    1377,  1381,  1394,  1398,  1412,  1416,  1422,  1427,  1437
+    1083,  1086,  1089,  1092,  1098,  1105,  1109,  1115,  1122,  1125,
+    1133,  1138,  1154,  1157,  1162,  1170,  1173,  1211,  1216,  1224,
+    1227,  1231,  1236,  1239,  1308,  1311,  1312,  1316,  1319,  1328,
+    1339,  1346,  1349,  1353,  1366,  1370,  1384,  1388,  1394,  1401,
+    1404,  1408,  1421,  1425,  1439,  1443,  1449,  1454,  1464
   };
 
   // Print the state stack on the debug stream.

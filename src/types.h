@@ -85,7 +85,7 @@ std::ostream &operator<<(std::ostream &os, const IndexDomain &isp);
 /// A Simit type, which is either a Set or a Tensor.
 class Type : public simit::interfaces::Printable, simit::interfaces::Uncopyable{
 public:
-  enum Kind { Tensor, Element, Set };
+  enum Kind { Tensor, Element, Set, Tuple };
   Type(Kind kind) : kind(kind) {}
 
   virtual ~Type() {}
@@ -94,6 +94,7 @@ public:
   bool isTensor() const { return kind == Type::Tensor; }
   bool isElement() const { return kind == Type::Element; }
   bool isSet() const { return kind == Type::Set; }
+  bool isTuple() const { return kind == Type::Tuple; }
 
 private:
   Kind kind;
@@ -139,6 +140,7 @@ bool operator==(const TensorType& l, const TensorType& r);
 bool operator!=(const TensorType& l, const TensorType& r);
 
 
+/// A Simit Element type, which consist of zero or more tensor fields.
 class ElementType : public Type {
 public:
   typedef std::map<std::string, std::shared_ptr<TensorType>> FieldsMapType;
@@ -160,15 +162,29 @@ bool operator==(const ElementType &l, const ElementType &r);
 bool operator!=(const ElementType &l, const ElementType &r);
 
 
-/// The type of a Simit set (defined by the type of its elements and it's
-/// connectivity information).  Note that a single element in Simit is a set
-/// of size 1 without any connectivity.
+/// A Simit tuple type, which is defined by the types of its elements.
+class TupleType : public Type {
+public:
+  TupleType(std::vector<std::shared_ptr<ElementType>> elementTypes)
+      : Type(Type::Tuple), elementTypes(elementTypes) {}
+
+  const std::vector<std::shared_ptr<ElementType>> &getElementType() const {
+    return elementTypes;
+  }
+
+private:
+  std::vector<std::shared_ptr<ElementType>> elementTypes;
+
+  void print(std::ostream &os) const;
+};
+
+
+/// A Simit set type, which is defined by the type of its elements and it's
+/// connectivity information.
 class SetType : public Type {
 public:
   SetType(std::shared_ptr<ElementType> elementType)
       : Type(Type::Set), elementType(elementType) {}
-
-  virtual ~SetType() {}
 
   const std::shared_ptr<ElementType> &getElementType() const {
     return elementType;
