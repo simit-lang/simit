@@ -111,7 +111,7 @@ IndexDomain operator*(const IndexDomain &l, const IndexDomain &r) {
 }
 
 std::ostream &operator<<(std::ostream &os, const IndexDomain &isp) {
-  return os << util::join(isp.getFactors(), " x ");
+  return os << util::join(isp.getFactors(), "*");
 }
 
 
@@ -129,8 +129,8 @@ void TensorType::print(std::ostream &os) const {
     os << componentTypeString(getComponentType());
   }
   else {
-    os << "Tensor";
-    os << "[" << util::join(getDimensions(), "][") << "]";
+    os << "tensor";
+    os << "[" << util::join(getDimensions(), ", ") << "]";
     os << "(" << componentTypeString(getComponentType()) << ")";
   }
 }
