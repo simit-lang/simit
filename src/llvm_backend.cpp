@@ -456,7 +456,7 @@ public:
                         ScopedMap<std::string,llvm::Value*> *symtable)
       : symtable(symtable), storageLocations(*storageLocations) {}
 
-  void map(ir::Function *f) {
+  void mapFunc(ir::Function *f) {
     visit(f);
   }
 
@@ -488,7 +488,7 @@ void LLVMBackend::handle(simit::ir::Function *function) {
     symtable->insert(arg.getName(), &arg);
   }
 
-  StorageLocationMapper(&storageLocations,symtable).map(function);
+  StorageLocationMapper(&storageLocations,symtable).mapFunc(function);
 
   assert(f != NULL);
   resultStack.push(f);

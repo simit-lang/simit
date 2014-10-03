@@ -10,11 +10,11 @@ namespace simit {
 namespace internal {
 
 llvm::ConstantInt* getInt32(int val) {
-  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, val, true));
+  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, (uint64_t)val, true));
 }
 
 llvm::ConstantInt* getUInt32(unsigned val) {
-  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, val, false));
+  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, (uint64_t)val, false));
 }
 
 llvm::Type *llvmType(const simit::ComponentType ctype) {

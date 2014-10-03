@@ -69,8 +69,7 @@ public:
   Iterator end() const { return scopes.end(); }
 
   /// Print symbol table to stream.
-  template <typename K, typename V>
-  friend std::ostream &operator<<(std::ostream &os, const ScopedMap<K,V> &st) {
+  friend std::ostream &operator<<(std::ostream &os, const ScopedMap<Key,Value> &st) {
     os << "SymbolTable:\n";
     for (auto scope : st.scopes) {
       for (auto symPair : scope) {
