@@ -42,7 +42,7 @@ class Program::ProgramContent {
   }
 
   std::unique_ptr<Function> compile(const std::string &function) {
-    ir::Function *simitFunc = ctx.getFunction(function);
+    auto simitFunc = ctx.getFunction(function);
     if (!simitFunc) {
       diags.report() << "Attempting to compile unknown function ("
                      << function << ")";

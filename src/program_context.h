@@ -82,7 +82,7 @@ public:
     std::vector<ir::Function*> funcVector(functions.size());
     size_t i=0;
     for (auto &func : functions) {
-      funcVector[i] = func.second;
+      funcVector[i++] = func.second;
     }
     return funcVector;
   }

@@ -242,11 +242,15 @@ program
 program_element
   : element_type_decl
   | procedure {
-    $$ = NULL;
+    std::unique_ptr<Function> function($procedure);
+    std::string name = function->getName();
+    if (ctx->containsFunction(name)) {
+      REPORT_ERROR("procedure redefinition (" + name + ")", @procedure);
+    }
+    ctx->addFunction(function.release());
   }
   | function {
     std::unique_ptr<Function> function($function);
-
     std::string name = function->getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("function redefinition (" + name + ")", @function);
@@ -330,13 +334,22 @@ field_decl
 procedure
   : "proc" IDENT stmt_block BLOCKEND {
     std::string ident = convertAndFree($IDENT);
-    delete $stmt_block;
+    auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
+
+    auto arguments = vector<shared_ptr<Argument>>();
+    auto results = vector<shared_ptr<Result>>();
+    $$ = new Function(ident, arguments, results);
+
+    ctx->scope();
+    $$->addStatements(*statements);
+    ctx->unscope();
   }
 
 %type <function> function;
 function
-  : function_header stmt_block BLOCKEND {
+  : "func" function_header stmt_block BLOCKEND {
     auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
+    ctx->scope();
     $$ = $function_header;
     $$->addStatements(*statements);
     ctx->unscope();
@@ -344,15 +357,12 @@ function
 
 %type <function> function_header;
 function_header
-  : "func" IDENT arguments results {
+  : IDENT arguments results {
     std::string ident = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<shared_ptr<Argument>>>($arguments);
     auto results = unique_ptr<vector<shared_ptr<Result>>>($results);
 
     $$ = new Function(ident, *arguments, *results);
-
-    ctx->scope();
-
     std::set<std::string> argumentNames;
     for (auto argument : *arguments) {
       ctx->addSymbol(argument->getName(), argument, NULL);

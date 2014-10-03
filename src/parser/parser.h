@@ -541,7 +541,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const short int yycheck_[];
+  static const unsigned char yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -656,7 +656,7 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 365,     ///< Last index in yytable_.
+      yylast_ = 360,     ///< Last index in yytable_.
       yynnts_ = 69,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
