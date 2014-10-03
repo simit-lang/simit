@@ -20,6 +20,7 @@ void printUsage() {
        << "  -emit-tensor-ir"     << endl
        << "  -emit-set-ir"        << endl
        << "-emit-llvm"            << endl
+       << "-compile=<function>"   << endl
        << "-section=<section>";
 }
 
@@ -33,6 +34,7 @@ int main(int argc, const char* argv[]) {
   bool emitSetIR = false;
   bool emitLLVM = false;
   std::string section;
+  std::string function;
   std::string sourceFile;
 
   // Parse Arguments
@@ -62,6 +64,9 @@ int main(int argc, const char* argv[]) {
         if (keyValPair[0] == "-section") {
           section = keyValPair[1];
         }
+        else if (keyValPair[0] == "-compile") {
+          function = keyValPair[1];
+        }
         else {
           printUsage();
           return 3;
@@ -89,7 +94,7 @@ int main(int argc, const char* argv[]) {
   std::string source;
   int status = simit::util::loadText(sourceFile, &source);
   if (status != 0) {
-    cerr << "Error opening file" << endl;
+    cerr << "Error: Could not open file " << sourceFile << endl;
     return 2;
   }
 
@@ -111,7 +116,8 @@ int main(int argc, const char* argv[]) {
       }
     }
     if (source == "") {
-      cerr << "Could not find section " << section << " in " << sourceFile;
+      cerr << "Error: Could not find section " << section <<
+              " in " << sourceFile;
     }
   }
 
@@ -127,16 +133,38 @@ int main(int argc, const char* argv[]) {
     return 1;
   }
 
+  auto functions = ctx.getFunctions();
+  auto iter = functions.begin();
+
+  bool somethingEmitted = false;
+  if (emitTensorIR) {
+    if (iter != functions.end()) {
+      cout << *iter->second << endl;
+      ++iter;
+    }
+    for (; iter != functions.end(); ++iter) {
+      cout << endl << *iter->second << endl;
+    }
+    somethingEmitted = true;
+  }
+
   simit::internal::LLVMBackend backend;
   simit::ir::SetIRCodeGen setIRCodeGen;
-  for (simit::ir::Function *func : ctx.getFunctions()) {
-    bool somethingEmitted = false;
 
-    if (emitTensorIR) {
-      cout << *func << endl;
-      somethingEmitted = true;
+  simit::ir::Function *func = NULL;
+  if (functions.size() == 1) {
+    func = functions.begin()->second;
+  }
+  else if (function != "") {
+    func = functions[function];
+    if (func == nullptr) {
+      cerr << "Error: Could not find function " << function <<
+              " in " << sourceFile;
+      return 4;
     }
+  }
 
+  if (func != nullptr) {
     if (emitSetIR) {
       if (somethingEmitted) {
         cout << endl;
@@ -154,5 +182,13 @@ int main(int argc, const char* argv[]) {
       cout << simit::util::trim(fstr) << endl;
     }
   }
+  else {
+    if (emitSetIR || emitLLVM) {
+      cerr << "To dump Set and LLVM IR you must specify a function to compile "
+           << "using -compile=<function>";
+      return 5;
+    }
+  }
+
   return 0;
 }

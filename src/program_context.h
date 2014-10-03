@@ -78,13 +78,8 @@ public:
     return functions[name];
   }
 
-  std::vector<ir::Function*> getFunctions() {
-    std::vector<ir::Function*> funcVector(functions.size());
-    size_t i=0;
-    for (auto &func : functions) {
-      funcVector[i++] = func.second;
-    }
-    return funcVector;
+  std::map<std::string, ir::Function *> getFunctions() {
+    return functions;
   }
 
   void addElementType(std::shared_ptr<ir::ElementType> elemType) {

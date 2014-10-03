@@ -119,9 +119,6 @@ class Program::ProgramContent {
   internal::LLVMBackend *backend;
 
   Function *compile(ir::Function *simitFunc) {
-//    std::unique_ptr<ir::SetIRNode> setIR = setIRCodeGen.codegen(simitFunc);
-//    cout << *simitFunc << endl;
-//    cout << *setIR << endl;
     return getBackend()->compile(simitFunc);
   }
 };
@@ -179,12 +176,14 @@ std::ostream &operator<<(std::ostream &os, const Program &program) {
   auto it = program.impl->ctx.getFunctions().begin();
   auto end = program.impl->ctx.getFunctions().end();
   if (it != end) {
-    os << *it++;
+    os << it->second << endl;
+    ++it;
   }
   while (it != end) {
-    os << ", " << *it++;
+    os << endl << it->second << endl;
+    ++it;
   }
-  return os << endl;
+  return os;
 }
 
 } // namespace simit
