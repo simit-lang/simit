@@ -2233,7 +2233,7 @@ namespace  simit { namespace internal  {
 
     {
     string ident = convertAndFree((yystack_[0].value.string));
-    (yylhs.value.indexSet) = new IndexSet(123456789);  // TODO: This needs to be a set dimension
+    (yylhs.value.indexSet) = new IndexSet(ident);
   }
 
     break;

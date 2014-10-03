@@ -158,14 +158,7 @@ bool operator!=(const TensorType& l, const TensorType& r) {
 
 // class ElementType
 void ElementType::print(std::ostream &os) const {
-  os << "struct " << getName();
-  if (getFields().size() > 0) {
-    os << endl << "  ";
-  }
-  for (auto &field : getFields()) {
-    os << field.first << " : " << *field.second << ";" << endl;
-  }
-  os << "end";
+  os << getName();
 }
 
 bool operator==(const ElementType &l, const ElementType &r) {

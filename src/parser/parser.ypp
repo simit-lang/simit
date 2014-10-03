@@ -1199,7 +1199,7 @@ dimension
   }
   | IDENT {
     string ident = convertAndFree($IDENT);
-    $$ = new IndexSet(123456789);  // TODO: This needs to be a set dimension
+    $$ = new IndexSet(ident);
   }
   | "*" {
     $$ = new IndexSet();
