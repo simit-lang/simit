@@ -13,7 +13,7 @@ element Rigid
 	I : tensor[3](float);
 end
 
-extern rigids : Rigid{};
+extern rigids : set{Rigid};
 
 func rotationMatrix( angle : float, unitaxis : tensor[3](float)) -> (R : tensor[3,3](float))
 		axis = -unitaxis;

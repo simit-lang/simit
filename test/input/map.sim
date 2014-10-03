@@ -5,7 +5,7 @@ element Point
   c : float;
 end
 
-extern points : Point{};
+extern points : set{Point};
 
 func dist_mass(p : Point) -> (A : tensor[points,points](float))
   A(p,p) = p.a; 

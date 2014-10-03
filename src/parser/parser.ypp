@@ -186,6 +186,7 @@
 %token FLOAT     "float"
 %token TENSOR    "tensor"
 %token ELEMENT   "element"
+%token SET       "set"
 %token CONST     "const"
 %token EXTERN    "extern"
 %token PROC      "proc"
@@ -1097,11 +1098,11 @@ type
   }
 
 set_type
-  : element_type "{" "}" {
+  : "set" "{" element_type "}" {
     $$ = new SetType(std::shared_ptr<ElementType>(*$element_type));
     delete $element_type;
   }
-  | element_type "[" endpoints "]" "{" "}" {
+  | "set" "{" element_type "}" "(" endpoints ")" {
     $$ = NULL;
   }
 

@@ -7,7 +7,7 @@ element Rigid
 	m : tensor[4](float);
 end
 
-extern rigids : Rigid{};
+extern rigids : set{Rigid};
 
 func compute_mass_force(r : Rigid) ->
 		(M : tensor[rigids,rigids][6,6](float), f : tensor[rigids][6](float))

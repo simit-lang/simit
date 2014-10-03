@@ -15,12 +15,12 @@ using namespace simit;
 TEST(Program, addScalarFields) {
   Program program;
   std::string programText =
-      "element Point                                        "
-      "  x : float;                                         "
-      "end                                                  "
-      "func addSets(points : Point{}) -> (points : Point{}) "
-      "  points.x = points.x + points.x;                    "
-      "end                                                  ";
+      "element Point                                              "
+      "  x : float;                                               "
+      "end                                                        "
+      "func addSets(points : set{Point}) -> (points : set{Point}) "
+      "  points.x = points.x + points.x;                          "
+      "end                                                        ";
 
   int errorCode = program.loadString(programText);
   if (errorCode) FAIL() << program.getDiagnostics().getMessage();
@@ -43,12 +43,12 @@ TEST(Program, addScalarFields) {
 TEST(Program, addVectorFields) {
   Program program;
   std::string programText =
-      "element Point                                        "
-      "  x : tensor[3](float);                              "
-      "end                                                  "
-      "func addSets(points : Point{}) -> (points : Point{}) "
-      "  points.x = points.x + points.x;                    "
-      "end                                                  ";
+      "element Point                                              "
+      "  x : tensor[3](float);                                    "
+      "end                                                        "
+      "func addSets(points : set{Point}) -> (points : set{Point}) "
+      "  points.x = points.x + points.x;                          "
+      "end                                                        ";
 
   int errorCode = program.loadString(programText);
   if (errorCode) FAIL() << program.getDiagnostics().getMessage();

@@ -34,6 +34,7 @@ using namespace simit::internal;
 "float"               { return Parser::token::FLOAT;     }
 "tensor"              { return Parser::token::TENSOR;    }
 "element"             { return Parser::token::ELEMENT;   }
+"set"                 { return Parser::token::SET;       }
 "const"               { return Parser::token::CONST;     }
 "extern"              { return Parser::token::EXTERN;    }
 "proc"                { return Parser::token::PROC;      }
