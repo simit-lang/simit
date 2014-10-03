@@ -76,6 +76,9 @@ void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
       names->push_back(arg->getName());
       types->push_back(llvmType(tensorTypePtr(arg->getType())));
       break;
+    case ir::Type::Element:
+      NOT_SUPPORTED_YET;
+      break;
     case ir::Type::Set:
       names->push_back(arg->getName());
       types->push_back(LLVM_INT32);

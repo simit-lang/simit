@@ -209,19 +209,19 @@ protected:
 };
 
 
-/// Expression that reads a tensor from a set field.
+/// Expression that reads a tensor from an element or set field.
 class FieldRead : public Read {
 public:
-  FieldRead(const std::shared_ptr<Expression> &set,
+  FieldRead(const std::shared_ptr<Expression> &elementOrSet,
             const std::string &fieldName);
 
-  const std::shared_ptr<Expression> &getSet() const { return set; }
+  const std::shared_ptr<Expression> &getSet() const { return elementOrSet; }
   const std::string &getFieldName() const { return fieldName; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
 
 private:
-  std::shared_ptr<Expression> set;
+  std::shared_ptr<Expression> elementOrSet;
   std::string fieldName;
 
   void print(std::ostream &os) const;

@@ -13,30 +13,6 @@
 namespace simit {
 namespace ir {
 
-class SetType;
-
-/// A Simit type, which is either a Set or a Tensor.
-class Type : public simit::interfaces::Printable, simit::interfaces::Uncopyable{
-public:
-  enum Kind { Set, Tensor };
-  Type(Kind kind) : kind(kind) {}
-
-  virtual ~Type() {}
-
-  Kind getKind() const { return kind; }
-  bool isTensor() const { return kind == Type::Tensor; }
-  bool isSet() const { return kind == Type::Set; }
-
-private:
-  Kind kind;
-};
-
-bool operator==(const Type& l, const Type& r);
-bool operator!=(const Type& l, const Type& r);
-
-
-// Tensor types
-
 /// An index set is a set of labels into a set.  There are three types of index
 /// set distringuished by the type of set they index into: a range (Range), a 
 /// set name (Set) or the set of all integers (Dynamic).
@@ -106,14 +82,33 @@ IndexDomain operator*(const IndexDomain &l, const IndexDomain &r);
 std::ostream &operator<<(std::ostream &os, const IndexDomain &isp);
 
 
+/// A Simit type, which is either a Set or a Tensor.
+class Type : public simit::interfaces::Printable, simit::interfaces::Uncopyable{
+public:
+  enum Kind { Tensor, Element, Set };
+  Type(Kind kind) : kind(kind) {}
+
+  virtual ~Type() {}
+
+  Kind getKind() const { return kind; }
+  bool isTensor() const { return kind == Type::Tensor; }
+  bool isElement() const { return kind == Type::Element; }
+  bool isSet() const { return kind == Type::Set; }
+
+private:
+  Kind kind;
+};
+
+bool operator==(const Type& l, const Type& r);
+bool operator!=(const Type& l, const Type& r);
+
+
 /// The type of a tensor (the type of its components and its shape). Note that
 /// a scalar in Simit is a o-order tensor.
 class TensorType : public Type {
 public:
   TensorType(ComponentType componentType)
-      : Type(Type::Tensor), componentType(componentType) {
-    assert(getKind() == 1);
-  }
+      : Type(Type::Tensor), componentType(componentType) {}
 
   TensorType(ComponentType componentType,
              const std::vector<IndexDomain> &dimensions)
@@ -144,13 +139,12 @@ bool operator==(const TensorType& l, const TensorType& r);
 bool operator!=(const TensorType& l, const TensorType& r);
 
 
-// Set types
-class ElementType {
+class ElementType : public Type {
 public:
-  typedef std::map<std::string,std::shared_ptr<TensorType>> FieldsMapType;
+  typedef std::map<std::string, std::shared_ptr<TensorType>> FieldsMapType;
 
   ElementType(const std::string &name, const FieldsMapType &fields)
-      : name(name), fields(fields) {}
+      : Type(Type::Element), name(name), fields(fields) {}
 
   const std::string &getName() const { return name; }
   const FieldsMapType &getFields() const { return fields; }
@@ -158,9 +152,10 @@ public:
 private:
   std::string name;
   FieldsMapType fields;
+
+  void print(std::ostream &os) const;
 };
 
-std::ostream &operator<<(std::ostream &os, const ElementType &elementType);
 bool operator==(const ElementType &l, const ElementType &r);
 bool operator!=(const ElementType &l, const ElementType &r);
 

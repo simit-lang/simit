@@ -53,10 +53,7 @@ void Literal::cast(const std::shared_ptr<TensorType> &type) {
 void Literal::print(std::ostream &os) const {
   // TODO: Fix value printing to print matrices and tensors properly
   switch (getType()->getKind()) {
-    case Type::Kind::Set:
-      NOT_SUPPORTED_YET;
-      break;
-    case Type::Kind::Tensor: {
+    case Type::Tensor: {
       TensorType *ttype = tensorTypePtr(getType());
       assert(isValidComponentType(ttype->getComponentType()));
       switch (ttype->getComponentType()) {
@@ -90,9 +87,13 @@ void Literal::print(std::ostream &os) const {
         }
         }
       }
-    }
-      
       os << " : " << *getType();
+    }
+    case Type::Set:
+      NOT_SUPPORTED_YET;
+      break;
+    case Type::Element:
+      NOT_SUPPORTED_YET;
   }
 }
 
@@ -334,45 +335,49 @@ void Call::print(std::ostream &os) const {
 
 
 // class FieldRead
-namespace {
-// The type of a set field is:
-// `Tensor[set][elementFieldDimensions](elemFieldComponentType)`.
-std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &setExpr,
-                                const std::string &fieldName){
-  assert(setExpr->getType()->isSet());
+static std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &expr,
+                                       const std::string &fieldName){
+  assert(expr->getType()->isElement() || expr->getType()->isSet());
 
-  const shared_ptr<SetType> &setType =
-      static_pointer_cast<SetType>(setExpr->getType());
-  const shared_ptr<TensorType> &elemFieldType =
-      setType->getElementType()->getFields().at(fieldName);
-
-  std::vector<IndexDomain> dimensions;
-  if (elemFieldType->getOrder() == 0) {
-    IndexSet setDim(setExpr->getName());
-    dimensions.push_back(IndexDomain(setDim));
+  std::shared_ptr<TensorType> fieldType;
+  if (expr->getType()->isElement()) {
+    const auto &elemType = static_pointer_cast<ElementType>(expr->getType());
+    fieldType = shared_ptr<TensorType>(elemType->getFields().at(fieldName));
   }
-  else {
-    std::vector<IndexSet> dim;
-    dim.push_back(IndexSet(setExpr->getName()));
+  else if (expr->getType()->isSet()) {
+    const auto &setType = static_pointer_cast<SetType>(expr->getType());
+    auto elemFieldType = setType->getElementType()->getFields().at(fieldName);
 
-    for (const IndexDomain &elemFieldDim : elemFieldType->getDimensions()) {
-      for (const IndexSet &indexSet : elemFieldDim.getFactors()) {
-        dim.push_back(indexSet);
-      }
-      dimensions.push_back(IndexDomain(dim));
+    // The type of a set field is:
+    // `Tensor[set][elementFieldDimensions](elemFieldComponentType)`
+    std::vector<IndexDomain> dimensions;
+    if (elemFieldType->getOrder() == 0) {
+      IndexSet setDim(expr->getName());
+      dimensions.push_back(IndexDomain(setDim));
     }
-  }
+    else {
+      std::vector<IndexSet> dim;
+      dim.push_back(IndexSet(expr->getName()));
 
-  TensorType *fieldType = new TensorType(elemFieldType->getComponentType(),
-                                         dimensions);
+      for (const IndexDomain &elemFieldDim : elemFieldType->getDimensions()) {
+        for (const IndexSet &indexSet : elemFieldDim.getFactors()) {
+          dim.push_back(indexSet);
+        }
+        dimensions.push_back(IndexDomain(dim));
+      }
+    }
+    auto newFieldType = new TensorType(elemFieldType->getComponentType(),
+                                       dimensions);
+    fieldType = shared_ptr<TensorType>(newFieldType);
+  }
 
   return std::shared_ptr<TensorType>(fieldType);
-}}
+}
 
-FieldRead::FieldRead(const std::shared_ptr<Expression> &set,
+FieldRead::FieldRead(const std::shared_ptr<Expression> &elemOrSet,
                      const std::string &fieldName)
-    : Read(set->getName()+"."+fieldName, fieldType(set, fieldName)),
-      set(set), fieldName(fieldName) {}
+    : Read(elemOrSet->getName()+"."+fieldName, fieldType(elemOrSet, fieldName)),
+      elementOrSet(elemOrSet), fieldName(fieldName) {}
 
 void FieldRead::print(std::ostream &os) const {
   os << getName();

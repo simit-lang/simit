@@ -122,16 +122,6 @@
       }                                                 \
     } while (0)
 
-  #define CHECK_IS_SET(expr, loc)                       \
-    do {                                                \
-      assert(expr->getType());                          \
-      if (!expr->getType()->isSet()) {                  \
-        std::stringstream errorStr;                     \
-        errorStr << "expected element";                 \
-        REPORT_ERROR(errorStr.str(), loc);              \
-      }                                                 \
-    } while (0)
-
   #define CHECK_TYPE_EQUALITY(t1, t2, loc)              \
     do {                                                \
       if (!compare(t1, t2, ctx)) {                      \
@@ -293,7 +283,6 @@ endpoints
 
 // Element Definitions
 %union {
-  std::shared_ptr<ir::ElementType>                       *elementType;
   ir::ElementType::FieldsMapType                         *fields;
   std::pair<std::string,std::shared_ptr<ir::TensorType>> *field;
 };
@@ -327,7 +316,7 @@ field_decl_list
 field_decl
   : IDENT ":" tensor_type  ";" {
     std::string name = convertAndFree($IDENT);
-    std::shared_ptr<TensorType> tensorType($tensor_type);
+    std::shared_ptr<TensorType> tensorType = convertAndDelete($tensor_type);
     $$ = new pair<string,shared_ptr<ir::TensorType>>(name, tensorType);
   }
 
@@ -442,7 +431,8 @@ formal_list
 formal_decl
   : IDENT ":" type {
     std::string ident = convertAndFree($IDENT);
-    $$ = new FormalData(ident, std::shared_ptr<Type>($type));
+    std::shared_ptr<Type> type = convertAndDelete($type);
+    $$ = new FormalData(ident, type);
   }
 
 // Statements
@@ -470,7 +460,7 @@ stmt
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     std::string ident = convertAndFree($IDENT);
-    auto tensorType = std::shared_ptr<TensorType>($tensor_type);
+    std::shared_ptr<TensorType> tensorType = convertAndDelete($tensor_type);
 
     auto literal = shared_ptr<Literal>(*$tensor_literal);
     delete $tensor_literal;
@@ -852,12 +842,18 @@ field_read_expr
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     if ((*$1)->getType() == NULL) { $$ = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> set = convertAndDelete($1);
+    std::shared_ptr<Expression> elemOrSet = convertAndDelete($set_read_expr);
     std::string fieldName = convertAndFree($IDENT);
 
-    CHECK_IS_SET(set, @1);
+    auto type = elemOrSet->getType();
+    assert(type);
+    if (!(type->isElement() || type->isSet())) {
+      std::stringstream errorStr;
+      errorStr << "only elements and sets have fields";
+      REPORT_ERROR(errorStr.str(), @1);
+    }
 
-    $$ = new shared_ptr<FieldRead>(new FieldRead(set, fieldName));
+    $$ = new shared_ptr<FieldRead>(new FieldRead(elemOrSet, fieldName));
   }
 
 %type <expression> set_read_expr;
@@ -1062,48 +1058,50 @@ tensor_write_expr
 
 // Types
 %union {
-  ir::Type                         *type;
+  std::shared_ptr<ir::Type>        *type;
+  std::shared_ptr<ir::ElementType> *elementType;
+  std::shared_ptr<ir::SetType>     *setType;
+  std::shared_ptr<ir::TensorType>  *tensorType;
 
-  ir::TensorType                   *tensorType;
-  std::vector<ir::IndexDomain>     *IndexDomains;
-  std::vector<ir::IndexSet>        *IndexSets;
-  ir::IndexSet                     *indexSet;
-  ComponentType                     componentType;
-
-  ir::SetType                      *setType;
+  std::vector<ir::IndexDomain> *IndexDomains;
+  std::vector<ir::IndexSet>    *IndexSets;
+  ir::IndexSet                 *indexSet;
+  ComponentType                 componentType;
 };
 %destructor {} <componentType>;
 
-%type <type>             type;
+%type <IndexDomains>  nested_dimensions;
+%type <IndexSets>     dimensions;
+%type <indexSet>      dimension;
+%type <componentType> component_type;
 
-%type <tensorType>       tensor_type;
-%type <IndexDomains> nested_dimensions;
-%type <IndexSets>        dimensions;
-%type <indexSet>         dimension;
-%type <componentType>    component_type;
-
-%type <setType>          set_type;
-%type <elementType>      element_type;
-
+%type <type> type;
 type
-  : set_type {
-    $$ = $set_type;
+  : element_type {
+    $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($element_type);
+  }
+  | set_type {
+    $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($set_type);
   }
   | tuple_type {
     $$ = NULL;
   }
-  | element_type {
-    // If we define an element as a one-item set, then we don't need this rule.
-    $$ = NULL;
-  }
   | tensor_type {
-    $$ = $tensor_type;
+    $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($tensor_type);
   }
 
+%type <elementType> element_type;
+element_type
+  : IDENT {
+    std::string name = convertAndFree($IDENT);
+    $$ = new std::shared_ptr<ElementType>(ctx->getElementType(name));
+  }
+
+%type <setType> set_type;
 set_type
   : "set" "{" element_type "}" {
-    $$ = new SetType(std::shared_ptr<ElementType>(*$element_type));
-    delete $element_type;
+    std::shared_ptr<ElementType> elementType = convertAndDelete($element_type);
+    $$ = new std::shared_ptr<SetType>(new SetType(elementType));
   }
   | "set" "{" element_type "}" "(" endpoints ")" {
     $$ = NULL;
@@ -1125,23 +1123,20 @@ tuple_element_type
   | element_type "*" INT_LITERAL {
   }
 
-element_type
-  : IDENT {
-    std::string name = convertAndFree($IDENT);
-    $$ = new std::shared_ptr<ElementType>(ctx->getElementType(name));
-  }
-
+%type <tensorType> tensor_type;
 tensor_type
   : component_type {
-    $$ = new TensorType($component_type);
+    $$ = new std::shared_ptr<TensorType>(new TensorType($component_type));
   }
   | "tensor" nested_dimensions "(" component_type ")" {
-    $$ = new TensorType($component_type, *$nested_dimensions);
+    $$ = new std::shared_ptr<TensorType>(new TensorType($component_type,
+                                                        *$nested_dimensions));
     delete $nested_dimensions;
   }
   | "tensor" nested_dimensions "(" component_type ")" "'" {
-    $$ = new TensorType($component_type, *$nested_dimensions);
-    ctx->toggleColumnVector(*$$);
+    $$ = new std::shared_ptr<TensorType>(new TensorType($component_type,
+                                                        *$nested_dimensions));
+    ctx->toggleColumnVector(**$$);
     delete $nested_dimensions;
   }
 

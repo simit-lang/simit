@@ -58,10 +58,11 @@ LLVMFunction::init(const std::vector<std::string> &formals,
       assert(actuals.find(formal) != actuals.end());
       Actual &actual = actuals.at(formal);
       switch (actual.getType()->getKind()) {
-        case ir::Type::Tensor:
+        case ir::Type::Tensor: {
           args.push_back(llvmPtr(actual.getTensor()));
           break;
-        case ir::Type::Set:
+        }
+        case ir::Type::Set: {
           const SetBase *set = actual.getSet();
           args.push_back(getInt32(set->getSize()));
           const ir::SetType *setType = setTypePtr(actual.getType());
@@ -70,7 +71,11 @@ LLVMFunction::init(const std::vector<std::string> &formals,
             ir::TensorType *tensorType = tensorTypePtr(field.second);
             args.push_back(llvmPtr(tensorType, getFieldPtr(set,field.first)));
           }
+        }
+        case ir::Type::Element: {
+          NOT_SUPPORTED_YET;
           break;
+        }
       }
     }
 

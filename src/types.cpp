@@ -1,38 +1,15 @@
 #include "types.h"
 
 #include <assert.h>
-#include <climits>
 #include <iostream>
 
 #include "util.h"
 #include "macros.h"
 
-#include "graph.h"
-
 using namespace std;
 
 namespace simit {
 namespace ir {
-
-// class Type
-bool operator==(const Type& l, const Type& r) {
-  if (l.getKind() != r.getKind()) {
-    return false;
-  }
-
-  switch (l.getKind()) {
-    case Type::Kind::Set:
-      return static_cast<const SetType&>(l) == static_cast<const SetType&>(r);
-    case Type::Kind::Tensor:
-      return static_cast<const TensorType&>(l) ==
-             static_cast<const TensorType&>(r);
-  }
-}
-
-bool operator!=(const Type& l, const Type& r) {
-  return !(l == r);
-}
-
 
 // class IndexSet
 bool operator==(const IndexSet &l, const IndexSet &r) {
@@ -71,6 +48,29 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
       break;
   }
   return os;
+}
+
+
+// class Type
+bool operator==(const Type& l, const Type& r) {
+  if (l.getKind() != r.getKind()) {
+    return false;
+  }
+
+  switch (l.getKind()) {
+    case Type::Tensor:
+      return static_cast<const TensorType&>(l) ==
+      static_cast<const TensorType&>(r);
+    case Type::Element:
+      NOT_SUPPORTED_YET;
+      break;
+    case Type::Set:
+      return static_cast<const SetType&>(l) == static_cast<const SetType&>(r);
+  }
+}
+
+bool operator!=(const Type& l, const Type& r) {
+  return !(l == r);
 }
 
 
@@ -157,16 +157,15 @@ bool operator!=(const TensorType& l, const TensorType& r) {
 
 
 // class ElementType
-std::ostream &operator<<(std::ostream &os, const ElementType &elementType) {
-  os << "struct " << elementType.getName();
-  if (elementType.getFields().size() > 0) {
+void ElementType::print(std::ostream &os) const {
+  os << "struct " << getName();
+  if (getFields().size() > 0) {
     os << endl << "  ";
   }
-  for (auto &field : elementType.getFields()) {
+  for (auto &field : getFields()) {
     os << field.first << " : " << *field.second << ";" << endl;
   }
   os << "end";
-  return os;
 }
 
 bool operator==(const ElementType &l, const ElementType &r) {
