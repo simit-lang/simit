@@ -1089,6 +1089,9 @@ type
   : set_type {
     $$ = $set_type;
   }
+  | tuple_type {
+    $$ = NULL;
+  }
   | element_type {
     // If we define an element as a one-item set, then we don't need this rule.
     $$ = NULL;
@@ -1104,6 +1107,22 @@ set_type
   }
   | "set" "{" element_type "}" "(" endpoints ")" {
     $$ = NULL;
+  }
+
+tuple_type
+  : "(" tuple_element_type_list ")" {
+  }
+
+tuple_element_type_list
+  : tuple_element_type {
+  }
+  | tuple_element_type_list "," tuple_element_type {
+  }
+
+tuple_element_type
+  : element_type {
+  }
+  | element_type "*" INT_LITERAL {
   }
 
 element_type

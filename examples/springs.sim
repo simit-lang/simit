@@ -15,7 +15,7 @@ end
 extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
-func distribute_masses(s : Spring, p0 : Point, p1 : Point) ->
+func distribute_masses(s : Spring, ps : (Point,Point)) ->
     (M : tensor[points,points][3,3](float), f : tensor[points][3](float))
   m = s.m;
   M(p0, p0) = 0.5*m*eye(3);
