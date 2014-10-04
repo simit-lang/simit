@@ -332,7 +332,7 @@ field_decl
 
 %type <function> procedure;
 procedure
-  : "proc" IDENT stmt_block BLOCKEND {
+  : "proc" IDENT {ctx->scope();} stmt_block {ctx->unscope();} BLOCKEND {
     std::string ident = convertAndFree($IDENT);
     auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
 
@@ -340,24 +340,20 @@ procedure
     auto results = vector<shared_ptr<Result>>();
     $$ = new Function(ident, arguments, results);
 
-    ctx->scope();
     $$->addStatements(*statements);
-    ctx->unscope();
   }
 
 %type <function> function;
 function
-  : "func" function_header stmt_block BLOCKEND {
+  : {ctx->scope();} function_header stmt_block {ctx->unscope();} BLOCKEND{
     auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
-    ctx->scope();
     $$ = $function_header;
     $$->addStatements(*statements);
-    ctx->unscope();
   }
 
 %type <function> function_header;
 function_header
-  : IDENT arguments results {
+  : "func" IDENT arguments results {
     std::string ident = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<shared_ptr<Argument>>>($arguments);
     auto results = unique_ptr<vector<shared_ptr<Result>>>($results);
@@ -634,19 +630,19 @@ expr
 ident_expr
   : IDENT {
     string ident = convertAndFree($IDENT);
+
+    if (!ctx->hasSymbol(ident)) { $$=NULL; break; } // TODO: Remove check
+
     if (!ctx->hasSymbol(ident)) {
-      // TODO: reintroduce error
-      // REPORT_ERROR(ident + " is not defined in scope", @1);
-      $$ = NULL;
-      break;
+      REPORT_ERROR(ident + " is not defined in scope", @1);
     }
 
-    const RWExprPair &rwExpr = ctx->getSymbol(ident);
-    if (!rwExpr.isReadable()) {
+    const RWExprPair &rwExprPair = ctx->getSymbol(ident);
+    if (!rwExprPair.isReadable()) {
       REPORT_ERROR(ident + " is not readable", @1);
     }
 
-    $$ = new shared_ptr<Expression>(rwExpr.getReadExpr());
+    $$ = new shared_ptr<Expression>(rwExprPair.getReadExpr());
   }
 
 
@@ -1068,7 +1064,6 @@ tensor_write_expr
   : IDENT "(" expr_list ")" {
     std::string tensorName = convertAndFree($1);
     auto indices = unique_ptr<vector<shared_ptr<Expression>>>($expr_list);
-    cout << util::join(*indices) << endl;
 
     if(!ctx->hasSymbol(tensorName)) { $$=NULL; break; } // TODO: Remove check
 

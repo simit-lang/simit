@@ -75,6 +75,7 @@ LLVMFunction::init(const std::vector<std::string> &formals,
             ir::TensorType *tensorType = tensorTypePtr(field.second);
             args.push_back(llvmPtr(tensorType, getFieldPtr(set,field.first)));
           }
+          break;
         }
         case ir::Type::Tuple: {
           NOT_SUPPORTED_YET;

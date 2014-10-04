@@ -88,6 +88,7 @@ void Literal::print(std::ostream &os) const {
         }
       }
       os << " : " << *getType();
+      break;
     }
     case Type::Element:
       NOT_SUPPORTED_YET;
