@@ -209,7 +209,9 @@ protected:
 /// Instruction that stores a value to a tensor or an object.
 class Write : public Expression {
 protected:
-  Write(const std::shared_ptr<Type> &type) : Expression("", type) {}
+  // TODO: Writes should not have names so remove them
+  Write(const std::string &name, const std::shared_ptr<Type> &type)
+      : Expression(name, type) {}
 };
 
 
@@ -240,11 +242,12 @@ public:
   // TODO: Change from set to elemOrSet
   FieldWrite(const std::shared_ptr<Expression> &set,
              const std::string &fieldName)
-    : Write(NULL), set(set), fieldName(fieldName) {}
+    : Write(set->getName() + "." + fieldName, set->getType()),
+      set(set), fieldName(fieldName) {}
 
   void setValue(const std::shared_ptr<Expression> &value) {
     // TODO: check that value has correct type
-    value->setName(set->getName() + "." + fieldName);
+    value->setName(set->getName() + "." + fieldName); // TODO: remove this line
     this->value = value;
   }
 
@@ -291,7 +294,7 @@ class TensorWrite : public Write {
 public:
   TensorWrite(const std::shared_ptr<Expression> &tensor,
               const std::vector<std::shared_ptr<Expression>> &indices)
-      : Write(tensor->getType()), tensor(tensor), indices(indices) {}
+      : Write("", tensor->getType()), tensor(tensor), indices(indices) {}
 
   void setValue(const std::shared_ptr<Expression> &value) {
     // TODO: check that value has correct type
