@@ -1,4 +1,4 @@
-#include "sir_visitor.h"
+#include "sir_visitors.h"
 
 #include "sir.h"
 

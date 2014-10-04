@@ -1,9 +1,6 @@
 #include "sir_printer.h"
 
 #include "sir.h"
-#include <iostream>
-
-using namespace std;
 
 namespace simit {
 namespace ir {

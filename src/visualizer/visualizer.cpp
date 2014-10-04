@@ -179,7 +179,6 @@ GLuint createGLProgram(const string& vertexShaderStr,
 // Writes 16 doubles into matrix, representing the 4x4 transformation
 // matrix associated with a rotation about the Y axis of theta (rad).
 void buildThetaRotMatrix(double theta, GLfloat matrix[16]) {
-  std::cout << "buildThetaRotMatrix: " << theta << std::endl;
   GLfloat outMat[16] = {
     (GLfloat)cos(theta), 0, (GLfloat)-sin(theta), 0,
     0, 1, 0, 0,
@@ -192,7 +191,6 @@ void buildThetaRotMatrix(double theta, GLfloat matrix[16]) {
 // Writes 16 doubles into matrix, representing the 4x4 transformation
 // matrix associated with a rotation about the X axis of phi (rad).
 void buildPhiRotMatrix(double phi, GLfloat matrix[16]) {
-  std::cout << "buildPhiRotMatrix: " << phi << std::endl;
   GLfloat outMat[16] = {
     1, 0, 0, 0,
     0, (GLfloat)cos(phi), (GLfloat)-sin(phi), 0,
@@ -348,23 +346,6 @@ void invertMatrix(const GLfloat matrix[16], GLfloat inverse[16]) {
       matrix[2] * inv[8] +
       matrix[3] * inv[12];
 
-  std::cout << "Invert: " << std::endl
-            << matrix[0] << ","
-            << matrix[1] << ","
-            << matrix[2] << ","
-            << matrix[3] << std::endl
-            << matrix[4] << ","
-            << matrix[5] << ","
-            << matrix[6] << ","
-            << matrix[7] << std::endl
-            << matrix[8] << ","
-            << matrix[9] << ","
-            << matrix[10] << ","
-            << matrix[11] << std::endl
-            << matrix[12] << ","
-            << matrix[13] << ","
-            << matrix[14] << ","
-            << matrix[15] << std::endl;
   assert(det != 0 &&
          "Non-invertible transformation matrix");
 
@@ -407,7 +388,6 @@ void *handleWindowEvents(void *arg) {
 }
 
 void handleDraw() {
-  std::cout << "Draw" << std::endl;
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawFuncLock.lock();
   // Update transformation matrix
@@ -422,34 +402,28 @@ void handleDraw() {
 
 void handleKeyboardEvent(unsigned char key, int x, int y) {
   if (key == 'z') {
-    std::cout << "Resetting viewpoint" << std::endl;
     internal::clearTransMat();
     glutPostRedisplay();
   }
 }
 
 void handleSpecialKeyEvent(int key, int x, int y) {
-  std::cout << "Special key!" << std::endl;
   if (key == GLUT_KEY_RIGHT) {
-    std::cout << "Right" << std::endl;
     GLfloat rightRotMat[16];
     internal::buildThetaRotMatrix(0.1, rightRotMat);
     internal::applyTransMat(rightRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_LEFT) {
-    std::cout << "Left" << std::endl;
     GLfloat leftRotMat[16];
     internal::buildThetaRotMatrix(-0.1, leftRotMat);
     internal::applyTransMat(leftRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_UP) {
-    std::cout << "Up" << std::endl;
     GLfloat upRotMat[16];
     internal::buildPhiRotMatrix(0.1, upRotMat);
     internal::applyTransMat(upRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_DOWN) {
-    std::cout << "Down" << std::endl;
     GLfloat downRotMat[16];
     internal::buildPhiRotMatrix(-0.1, downRotMat);
     internal::applyTransMat(downRotMat);
@@ -460,9 +434,7 @@ void handleSpecialKeyEvent(int key, int x, int y) {
 } // namespace simit::internal
 
 void initDrawing(int argc, char** argv) {
-  std::cout << "initDrawing" << std::endl;
   glutInit(&argc, argv);
-  std::cout << "glutInit done" << std::endl;
   glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
   glutInitWindowSize(640, 480);
   glutCreateWindow("Graph visualization");
@@ -529,18 +501,15 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
   internal::heldReferences.push(data);
   int index = 0;
   for (auto elem = edges.begin(); elem != edges.end(); ++elem) {
-    // std::cout << "Edge!" << std::endl;
     for (auto endPoint = edges.endpoints_begin(*elem);
          endPoint != edges.endpoints_end(*elem); endPoint++) {
       assert(index < (edges.getSize() * 2 * 3) &&
              "Too many edges in set edge info.");
       TensorRef<double,3> point = coordField.get(*endPoint);
-      // std::cout << "Endpoint: " << point(0) << "," << point(1) << "," << point(2) << std::endl;
       data[index] = point(0);
       data[index+1] = point(1);
       data[index+2] = point(2);
       index += 3;
-      // std::cout << index << std::endl;
     }
   }
 
@@ -572,7 +541,6 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
 
 void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
                float r, float g, float b, float a) {
-  std::cout << "Draw faces" << std::endl;
   internal::drawFuncLock.lock();
   // FIXME(gkanwar): Hack to copy edge data into a double array
   while (!internal::heldReferences.empty()) {
@@ -586,18 +554,15 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
 
   int index = 0;
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
-    // std::cout << "Edge!" << std::endl;
     for (auto endPoint = faces.endpoints_begin(*elem);
          endPoint != faces.endpoints_end(*elem); endPoint++) {
       assert(index < (faces.getSize() * 3 * 3) &&
              "Too many faces in set edge info.");
       TensorRef<double,3> point = coordField.get(*endPoint);
-      // std::cout << "Endpoint: " << point(0) << "," << point(1) << "," << point(2) << std::endl;
       posData[index] = point(0);
       posData[index+1] = point(1);
       posData[index+2] = point(2);
       index += 3;
-      // std::cout << index << std::endl;
     }
     // Compute face normal, assuming right-hand convention
     float deltaAB[3] = {
