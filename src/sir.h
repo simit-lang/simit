@@ -7,7 +7,7 @@
 
 #include "interfaces.h"
 #include "types.h"
-#include "sir_visitor.h"
+#include "sir_visitors.h"
 
 namespace simit {
 namespace ir {

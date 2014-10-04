@@ -1,7 +1,7 @@
 #ifndef SIMIT_SIR_PRINTER_H
 #define SIMIT_SIR_PRINTER_H
 
-#include "sir_visitor.h"
+#include "sir_visitors.h"
 #include <ostream>
 
 namespace simit {
