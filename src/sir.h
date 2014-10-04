@@ -29,22 +29,26 @@ struct ExprNode : public SetIRNode {
 struct StmtNode : public SetIRNode {
 };
 
-struct Expr {
+class Expr {
+public:
   Expr() : expr(nullptr) {}
   Expr(ExprNode *expr) : expr(expr) {}
-  std::shared_ptr<ExprNode> expr;
   bool defined() const { return expr != nullptr; }
   void accept(SetIRVisitor *v) { expr->accept(v); }
   void accept(SetIRConstVisitor *v) const { expr->accept(v); }
+private:
+  std::shared_ptr<ExprNode> expr;
 };
 
-struct Stmt {
+class Stmt {
+public:
   Stmt() : stmt(nullptr) {}
   Stmt(StmtNode *stmt) : stmt(stmt) {}
-  std::shared_ptr<StmtNode> stmt;
   bool defined() const { return stmt != nullptr; }
   void accept(SetIRVisitor *v) { stmt->accept(v); }
   void accept(SetIRConstVisitor *v) const { stmt->accept(v); }
+private:
+  std::shared_ptr<StmtNode> stmt;
 };
 
 struct IntLiteral : public ExprNode {
