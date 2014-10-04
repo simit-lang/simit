@@ -34,22 +34,26 @@ func edgeVector(e : Edge) -> (vec : tensor[3](float))
   vec = e(1).x - e(0).x;
 end
 
-proc precomputeMatrix(f : Face, uv0 : Edge, uv1 : Edge, uv2: Edge)
-  A = 0.5 * norm( cross(uv2, uv1) );
-  tensor[3](Edge) uvs = {edgeVector(uv0), edgeVector(uv1), edgeVector(uv2)};
-  for(i = 0; i<3; i++)
+proc precomputeMatrix(f : Face, uvedges : (Edge*3))
+  tensor[3](tensor[3](float)) uvs = {edgeVector(uvedges(0)), edgeVector(uvedges(1)), edgeVector(uvedges(2))};
+  A = 0.5 * norm( cross(uvs(2), uvs(1)) );
+  for(i = 0; i<3;4 i++)
     j = (i+1)%3;
     k = (i+2)%3;
     for(l = i; l<3; l++)
       m = (i+1)%3;
       n = (i+2)%3;
-      f.precomputedStretchingMatrix(i,l) = f.precomputedStretchingMatrix(l,i) = dot(uvs(k), uvs(m)) * dot(uvs[j],uvs[n]) + dot(uvs[k], uvs[n])*dot(uvs[j],uvs[m]);
+      f.precomputedStretchingMatrix(i,l) = f.precomputedStretchingMatrix(l,i) = dot(uvs(k), uvs(m)) * dot(uvs(j),uvs(n)) + dot(uvs(k), uvs(n))*dot(uvs(j),uvs(m));
     end
   end
   f.precomputedStretchingMatrix /= (256.0 * A * A * A);
 end
 
-proc precomputeHingeQuantities(h : Hinge, p1 : Point, p2 : Point, q1 : Point, q2 : Point)
+proc precomputeHingeQuantities(h : Hinge, pts : (Edge*3) )
+  p1 = pts(0);
+  p2 = pts(1);
+  q1 = pts(2);
+  q2 = pts(3);
   theta = computeAngle(p1, p2, q1 q2);
   h.restDihedralAngle = theta;
   A1 = 0.5 * norm( cross(p2.x - p1.x, q1.x - p1.x) );
@@ -58,12 +62,45 @@ proc precomputeHingeQuantities(h : Hinge, p1 : Point, p2 : Point, q1 : Point, q2
   h.restPerpLength = 2.0*(A1+A2)/(3.0 * e0);
 end
 
-proc precomputeSquaredEdgeRestLength(e : Edge, p1 : Point, p2 : Point)
-  e.squaredRestLength = dot(p2.x-p1.x, p2.x-p1.x);
+proc precomputeSquaredEdgeRestLength(e : Edge, pts : (Point*2))
+  e.squaredRestLength = dot(pts(1).x-pts(0).x, pts(1).x-pts(0).x);
 end
 
 proc initializeClothPhysics
   map precomputeMatrix to faces with edges;
   map precomputeHingeQuantities to hinges with points;
   map precomputeSquaredEdgeRestLength to edges with points;
+end
+
+func dihedralAngleDerivatives(p1 : Point, p2 : Point, q1 : Point, q2 : Point) 
+	-> (del_p1_theta : tensor[3](float), del_p2_theta : tensor[3](float), del_q1_theta : tensor[3](float), del_q2_theta : tensor[3](float))
+  v11 = q2.x - p2.x;
+  v12 = q1.x - p1.x;
+  v21 = q2.x - p2.x;
+  v22 = q2.x - p1.x;
+  v = p2.x - p1.x;
+  
+  n1 = cross(v12, v);
+  n2 = cross(v, v22);
+  
+  n1norm2 = dot(n1, n1);
+  n2norm2 = dot(n2, n2);
+  vnorm = norm(v);
+  
+  if(vnorm < 1e-8 || n1norm2 < 1e-8 || n2norm2 < 1e-8)
+    del_p1_theta = {0,0,0};
+    del_p2_theta = {0,0,0};
+    del_q1_theta = {0,0,0};
+    del_q2_theta = {0,0,0};
+  else
+    del_q1_theta = n1 * vnorm/n1norm2;
+    del_q2_theta = n2 * vnorm/n2norm2;
+    F11 = n1 * dot(v11, v) / vnorm / n1norm2;
+    F12 = n2 * dot(v21, v) / vnorm / n2norm2;
+    F21 = n1 * dot(-v12, v) / vnorm / n1norm2;
+    F22 = n2 * dot(-v22, v) / vnorm / n2norm2;
+
+    del_p1_theta = F11 + F12;
+    del_p2_theta = F21 + F22;
+  end
 end
