@@ -1,0 +1,69 @@
+element Point
+  x : tensor[3](float);
+  v : tensor[3](float);
+end
+
+element Hinge
+  restBendingAngle : float;
+  restPerpLength: float;
+end
+
+element Edge
+  squaredRestLength : float;
+end
+  
+element Face  
+  precomputedStretchingMatrix : tensor[3,3](float);
+end
+
+extern points : set{Point};
+extern edges : set{Edge}(points, points};
+extern faces : set{Face}(edges, edges, edges);
+extern hinges: set{Hinge}(points, points, points, points);
+
+func computeAngle(p1 : Point, p2 : Point, q1 : Point, q2 : Point) -> (theta : float)
+  ev = p2.x = p1.x;
+  n1 = cross(ev, q1.x - p1.x);
+  n2 = (q2.x - p1.x, ev);
+  mag = norm(ev);
+  ev /= mag;
+  theta = atan2( dot( cross(n1, n2), ev ), dot(n1, n2) );
+end
+
+func edgeVector(e : Edge) -> (vec : tensor[3](float))
+  vec = e(1).x - e(0).x;
+end
+
+proc precomputeMatrix(f : Face, uv0 : Edge, uv1 : Edge, uv2: Edge)
+  A = 0.5 * norm( cross(uv2, uv1) );
+  tensor[3](Edge) uvs = {uv0, uv1, uv2};
+  for(i = 0; i<3; i++)
+    j = (i+1)%3;
+    k = (i+2)%3;
+    for(l = i; l<3; l++)
+      m = (i+1)%3;
+      n = (i+2)%3;
+      f.precomputedStretchingMatrix(i,l) = f.precomputedStretchingMatrix(l,i) = dot(uvs(k), uvs(m)) * dot(uvs[j],uvs[n]) + dot(uvs[k], uvs[n])*dot(uvs[j],uvs[m]);
+    end
+  end
+  f.precomputedStretchingMatrix /= (256.0 * A * A * A);
+end
+
+proc precomputeHingeQuantities(h : Hinge, p1 : Point, p2 : Point, q1 : Point, q2 : Point)
+  theta = computeAngle(p1, p2, q1 q2);
+  h.restDihedralAngle = theta;
+  A1 = 0.5 * norm( cross(p2.x - p1.x, q1.x - p1.x) );
+  A2 = 0.5 * norm( cross(p2.x - p1.x, q2.x - p1.x) );
+  e0 = norm(p2.x - p1.x);
+  h.restPerpLength = 2.0*(A1+A2)/(3.0 * e0);
+end
+
+proc precomputeSquaredEdgeRestLength(e : Edge, p1 : Point, p2 : Point)
+  e.squaredRestLength = dot(p2.x-p1.x, p2.x-p1.x);
+end
+
+proc initializeClothPhysics
+  map precomputeMatrix to faces with edges;
+  map precomputeHingeQuantities to hinges with points;
+  map precomputeSquaredEdgeRestLength to edges with points;
+end
