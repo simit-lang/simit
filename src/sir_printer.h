@@ -2,15 +2,27 @@
 #define SIMIT_SIR_PRINTER_H
 
 #include "sir_visitor.h"
-#include "sir.h"
-
 #include <ostream>
-#include <memory>
 
 namespace simit {
 namespace ir {
 
-struct SetIRNode;
+class Stmt;
+class Expr;
+
+struct IntLiteral;
+struct Variable;
+struct Load;
+struct Neg;
+struct Add;
+struct Sub;
+struct Mul;
+struct Div;
+struct Block;
+struct Foreach;
+struct Store;
+struct StoreMatrix;
+struct Pass;
 
 std::ostream &operator<<(std::ostream &os, const Stmt &stmt);
 std::ostream &operator<<(std::ostream &os, const Expr &expr);
