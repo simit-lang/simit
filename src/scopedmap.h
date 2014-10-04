@@ -72,9 +72,16 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const ScopedMap<Key,Value> &st) {
     os << "SymbolTable:\n";
     for (auto scope : st.scopes) {
-      for (auto symPair : scope) {
-        std::string symString = simit::util::toString(symPair.second);
-        os << simit::util::indent(symPair.first + ":" + symString + ", ", 1);
+      os << "- ";
+      auto it = scope.begin();
+      if (it != scope.end()) {
+        std::string symString = simit::util::toString(it->second);
+        os << it->first << ": " << symString << "\n";
+        ++it;
+      }
+      for (; it != scope.end(); ++it) {
+        std::string symString = simit::util::toString(it->second);
+        os << "  " << it->first << ": " << symString << "\n";
       }
       os << "\n";
     }

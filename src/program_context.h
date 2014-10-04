@@ -31,6 +31,24 @@ private:
   std::shared_ptr<ir::Expression> write;
 };
 
+inline std::ostream &operator<<(std::ostream &os, const RWExprPair &rwExpr) {
+  os << "(";
+  if (rwExpr.isReadable()) {
+    os << *rwExpr.getReadExpr();
+  }
+  else {
+    os << "none";
+  }
+  os << ", ";
+  if (rwExpr.isWritable()) {
+    os << *rwExpr.getWriteExpr();
+  }
+  else {
+    os << "none";
+  }
+  return os << ")";
+}
+
 
 class ProgramContext {
 public:
