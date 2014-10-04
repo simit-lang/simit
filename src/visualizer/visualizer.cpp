@@ -9,9 +9,15 @@
 #include <queue>
 #include <string>
 
+#ifdef OSX
+#include <OpenGL/gl.h>
+#include <OpenGL/glu.h>	
+#include <GLUT/glut.h>
+#else
 #include <GL/gl.h>
 #include <GL/glext.h>
 #include <GL/glut.h>
+#endif
 
 using namespace std;
 
@@ -107,7 +113,7 @@ std::function<void(void)> drawFunc = [](){};
 // without race conditions.
 std::mutex drawFuncLock;
 // Data references held by GL based on the previous call to draw*.
-std::queue<void*> heldReferences;
+std::queue<GLdouble*> heldReferences;
 // Eye theta, phi. Theta is about Y axis, phi is about the axis in the XY plane
 // perpendicular to theta, i.e. theta is the azimuthal angle, and phi is the
 // polar angle. This locates the eye in the reference of the world coordinates.
@@ -576,7 +582,7 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
   GLdouble* posData = new GLdouble[faces.getSize() * 3 * 3];
   GLfloat* normData = new GLfloat[faces.getSize() * 3 * 3];
   internal::heldReferences.push(posData);
-  internal::heldReferences.push(normData);
+  internal::heldReferences.push(reinterpret_cast<GLdouble*>(normData));
 
   int index = 0;
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
