@@ -56,6 +56,22 @@ void IRVisitor::visit(FieldWrite *t) {
   CHECK_ABORT(handle(t));
 }
 
+void IRVisitor::visit(TensorRead *t) {
+  CHECK_ABORT(t->getTensor()->accept(this));
+  for (auto &index : t->getIndices()) {
+    CHECK_ABORT(index->accept(this));
+  }
+  CHECK_ABORT(handle(t));
+}
+
+void IRVisitor::visit(TensorWrite *t) {
+  CHECK_ABORT(t->getValue()->accept(this));
+  for (auto &index : t->getIndices()) {
+    CHECK_ABORT(index->accept(this));
+  }
+  CHECK_ABORT(handle(t));
+}
+
 void IRVisitor::handle(Function *f) {
   handleDefault(f);
 }
@@ -85,6 +101,14 @@ void IRVisitor::handle(FieldRead *t) {
 }
 
 void IRVisitor::handle(FieldWrite *t) {
+  handleDefault(t);
+}
+
+void IRVisitor::handle(TensorRead *t) {
+  handleDefault(t);
+}
+
+void IRVisitor::handle(TensorWrite *t) {
   handleDefault(t);
 }
 
@@ -137,6 +161,22 @@ void IRBackwardVisitor::visit(FieldRead *t) {
 void IRBackwardVisitor::visit(FieldWrite *t) {
   CHECK_ABORT(handle(t));
   CHECK_ABORT(t->getValue()->accept(this));
+}
+
+void IRBackwardVisitor::visit(TensorRead *t) {
+  CHECK_ABORT(handle(t));
+  CHECK_ABORT(t->getTensor()->accept(this));
+  for (auto &index : t->getIndices()) {
+    CHECK_ABORT(index->accept(this));
+  }
+}
+
+void IRBackwardVisitor::visit(TensorWrite *t) {
+  CHECK_ABORT(handle(t));
+  CHECK_ABORT(t->getValue()->accept(this));
+  for (auto &index : t->getIndices()) {
+    CHECK_ABORT(index->accept(this));
+  }
 }
 
 

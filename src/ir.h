@@ -97,13 +97,10 @@ public:
 
   IndexVar(const std::string &name) : name(name), op(FREE) {}
 
-  IndexVar(const std::string &name, const IndexDomain &indexSet,Operator op)
-      : name(name), indexSet(indexSet), op(op) {}
+  IndexVar(const std::string &name, const IndexDomain &domain, Operator op)
+      : name(name), domain(domain), op(op) {}
 
-  void setIndexSet(IndexDomain indexSet) { this->indexSet = indexSet; }
-  void setOperator(IndexVar::Operator op) { this->op = op; }
-
-  const IndexDomain &getDomain() const { return indexSet; }
+  const IndexDomain &getDomain() const { return domain; }
   Operator getOperator() const { return op; }
 
   bool isFreeVariable() { return (op != Operator::FREE); }
@@ -113,7 +110,7 @@ public:
 
 private:
   std::string name;
-  IndexDomain indexSet;
+  IndexDomain domain;
   Operator op;
 };
 std::ostream &operator<<(std::ostream &os, const IndexVar &var);
@@ -209,6 +206,13 @@ protected:
 };
 
 
+/// Instruction that stores a value to a tensor or an object.
+class Write : public Expression {
+protected:
+  Write(const std::shared_ptr<Type> &type) : Expression("", type) {}
+};
+
+
 /// Expression that reads a tensor from an element or set field.
 class FieldRead : public Read {
 public:
@@ -228,29 +232,19 @@ private:
 };
 
 
-/// Expression that reads a tensor from a tensor location.
-class TensorRead : public Read {
-
-};
-
-
-/// Instruction that stores a value to a tensor or an object.
-class Write : public Expression {
-protected:
-  Write(const std::string &name, const std::shared_ptr<Type> &type)
-      : Expression(name, type) {}
-};
-
-
 /// Instruction that writes a tensor to a set field.
 class FieldWrite : public Write {
 public:
-  FieldWrite(const std::shared_ptr<Expression> &set,const std::string &fieldName)
-    : Write(set->getName()+"."+fieldName, set->getType()),
-      set(set), fieldName(fieldName) {}
+  // TODO: Look up type from the set and check that value has correct type in
+  //       setValue
+  // TODO: Change from set to elemOrSet
+  FieldWrite(const std::shared_ptr<Expression> &set,
+             const std::string &fieldName)
+    : Write(NULL), set(set), fieldName(fieldName) {}
 
   void setValue(const std::shared_ptr<Expression> &value) {
-    value->setName(set->getName()+"."+fieldName);
+    // TODO: check that value has correct type
+    value->setName(set->getName() + "." + fieldName);
     this->value = value;
   }
 
@@ -270,9 +264,54 @@ private:
 };
 
 
+/// Expression that reads a tensor from a tensor location.
+class TensorRead : public Read {
+public:
+  TensorRead(const std::shared_ptr<Expression> &tensor,
+             const std::vector<std::shared_ptr<Expression>> &indices)
+      : Read("", tensor->getType()), tensor(tensor), indices(indices) {}
+
+  const std::shared_ptr<Expression> &getTensor() { return tensor; }
+  const std::vector<std::shared_ptr<Expression>> &getIndices() const {
+    return indices;
+  }
+
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+
+private:
+  std::shared_ptr<Expression> tensor;
+  std::vector<std::shared_ptr<Expression>> indices;
+
+  void print(std::ostream &os) const;
+};
+
+
 /// Instruction that writes a tensor to a tensor location.
 class TensorWrite : public Write {
+public:
+  TensorWrite(const std::shared_ptr<Expression> &tensor,
+              const std::vector<std::shared_ptr<Expression>> &indices)
+      : Write(tensor->getType()), tensor(tensor), indices(indices) {}
 
+  void setValue(const std::shared_ptr<Expression> &value) {
+    // TODO: check that value has correct type
+    this->value = value;
+  }
+
+  const std::shared_ptr<Expression> &getTensor() { return tensor; }
+  const std::vector<std::shared_ptr<Expression>> &getIndices() const {
+    return indices;
+  }
+  const std::shared_ptr<Expression> &getValue() const { return value; }
+
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+
+private:
+  std::shared_ptr<Expression> tensor;
+  std::vector<std::shared_ptr<Expression>> indices;
+  std::shared_ptr<Expression> value;
+
+  void print(std::ostream &os) const;
 };
 
 

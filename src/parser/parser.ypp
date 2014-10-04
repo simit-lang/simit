@@ -555,7 +555,8 @@ assign_stmt
           std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
           fieldWrite->setValue(rhs);
 
-          if (auto result = dynamic_pointer_cast<Result>(fieldWrite->getSet())){
+          auto result = dynamic_pointer_cast<Result>(fieldWrite->getSet());
+          if (result) {
             result->setValue(fieldWrite);
             $$->push_back(fieldWrite);
           }
@@ -563,6 +564,15 @@ assign_stmt
           break;
         }
         case WriteInfo::Kind::TENSOR: {
+          std::shared_ptr<TensorWrite> tensorWrite(*lhs->tensorWrite);
+          tensorWrite->setValue(rhs);
+
+          auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
+          if (result){
+            result->setValue(tensorWrite);
+            $$->push_back(tensorWrite);
+          }
+
           break;
         }
       }
@@ -1026,14 +1036,12 @@ write_expr
     $$ = new WriteInfo($field_write_expr);
   }
   | tensor_write_expr {
-    $$ = NULL;
+    $$ = new WriteInfo($tensor_write_expr);
   }
 
 %type <fieldWrite> field_write_expr;
 field_write_expr
   : IDENT "." IDENT {
-    if ($1 == NULL) { $$ = NULL; break; } // TODO: Remove check
-
     string setName = convertAndFree($1);
     string fieldName = convertAndFree($3);
 
@@ -1058,8 +1066,23 @@ field_write_expr
 %type <tensorWrite> tensor_write_expr;
 tensor_write_expr
   : IDENT "(" expr_list ")" {
-    std::string name = convertAndFree($1);
-    $$ = NULL;
+    std::string tensorName = convertAndFree($1);
+    auto indices = unique_ptr<vector<shared_ptr<Expression>>>($expr_list);
+    cout << util::join(*indices) << endl;
+
+    if(!ctx->hasSymbol(tensorName)) { $$=NULL; break; } // TODO: Remove check
+
+    if (!ctx->hasSymbol(tensorName)) {
+      REPORT_ERROR(tensorName + " is not defined in scope", @1);
+    }
+
+    const RWExprPair &tensorExprPair = ctx->getSymbol(tensorName);
+    if (!tensorExprPair.isWritable()) {
+      REPORT_ERROR(tensorName + " is not writable", @1);
+    }
+
+    auto tensorExpr = shared_ptr<Expression>(tensorExprPair.getWriteExpr());
+    $$ = new shared_ptr<TensorWrite>(new TensorWrite(tensorExpr, *indices));
   }
   | field_write_expr "(" expr_list ")" {
     $$ = NULL;

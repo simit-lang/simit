@@ -1501,7 +1501,8 @@ namespace  simit { namespace internal  {
           std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
           fieldWrite->setValue(rhs);
 
-          if (auto result = dynamic_pointer_cast<Result>(fieldWrite->getSet())){
+          auto result = dynamic_pointer_cast<Result>(fieldWrite->getSet());
+          if (result) {
             result->setValue(fieldWrite);
             (yylhs.value.IRNodes)->push_back(fieldWrite);
           }
@@ -1509,6 +1510,15 @@ namespace  simit { namespace internal  {
           break;
         }
         case WriteInfo::Kind::TENSOR: {
+          std::shared_ptr<TensorWrite> tensorWrite(*lhs->tensorWrite);
+          tensorWrite->setValue(rhs);
+
+          auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
+          if (result){
+            result->setValue(tensorWrite);
+            (yylhs.value.IRNodes)->push_back(tensorWrite);
+          }
+
           break;
         }
       }
@@ -2006,7 +2016,7 @@ namespace  simit { namespace internal  {
   case 95:
 
     {
-    (yylhs.value.writeinfo) = NULL;
+    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.tensorWrite));
   }
 
     break;
@@ -2014,8 +2024,6 @@ namespace  simit { namespace internal  {
   case 96:
 
     {
-    if ((yystack_[2].value.string) == NULL) { (yylhs.value.fieldWrite) = NULL; break; } // TODO: Remove check
-
     string setName = convertAndFree((yystack_[2].value.string));
     string fieldName = convertAndFree((yystack_[0].value.string));
 
@@ -2047,8 +2055,23 @@ namespace  simit { namespace internal  {
   case 98:
 
     {
-    std::string name = convertAndFree((yystack_[3].value.string));
-    (yylhs.value.tensorWrite) = NULL;
+    std::string tensorName = convertAndFree((yystack_[3].value.string));
+    auto indices = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[1].value.expressions));
+    cout << util::join(*indices) << endl;
+
+    if(!ctx->hasSymbol(tensorName)) { (yylhs.value.tensorWrite)=NULL; break; } // TODO: Remove check
+
+    if (!ctx->hasSymbol(tensorName)) {
+      REPORT_ERROR(tensorName + " is not defined in scope", yystack_[3].location);
+    }
+
+    const RWExprPair &tensorExprPair = ctx->getSymbol(tensorName);
+    if (!tensorExprPair.isWritable()) {
+      REPORT_ERROR(tensorName + " is not writable", yystack_[3].location);
+    }
+
+    auto tensorExpr = shared_ptr<Expression>(tensorExprPair.getWriteExpr());
+    (yylhs.value.tensorWrite) = new shared_ptr<TensorWrite>(new TensorWrite(tensorExpr, *indices));
   }
 
     break;
@@ -3107,18 +3130,18 @@ namespace  simit { namespace internal  {
        0,   237,   237,   239,   243,   244,   252,   260,   263,   267,
      274,   280,   283,   296,   310,   313,   321,   335,   350,   360,
      403,   406,   417,   421,   432,   436,   442,   451,   454,   463,
-     464,   465,   466,   467,   471,   501,   507,   574,   577,   583,
-     589,   591,   595,   597,   611,   612,   613,   614,   615,   616,
-     617,   618,   619,   625,   646,   662,   670,   682,   747,   753,
-     783,   788,   797,   798,   799,   800,   806,   812,   818,   824,
-     830,   836,   851,   871,   872,   873,   884,   888,   894,   903,
-     906,   912,   918,   929,   940,   948,   950,   954,   956,   959,
-     960,  1008,  1013,  1021,  1025,  1028,  1034,  1054,  1060,  1064,
-    1093,  1096,  1099,  1102,  1108,  1115,  1119,  1125,  1132,  1135,
-    1143,  1148,  1164,  1167,  1172,  1180,  1183,  1221,  1226,  1234,
-    1237,  1241,  1246,  1249,  1318,  1321,  1322,  1326,  1329,  1338,
-    1349,  1356,  1359,  1363,  1376,  1380,  1394,  1398,  1404,  1411,
-    1414,  1418,  1431,  1435,  1449,  1453,  1459,  1464,  1474
+     464,   465,   466,   467,   471,   501,   507,   584,   587,   593,
+     599,   601,   605,   607,   621,   622,   623,   624,   625,   626,
+     627,   628,   629,   635,   656,   672,   680,   692,   757,   763,
+     793,   798,   807,   808,   809,   810,   816,   822,   828,   834,
+     840,   846,   861,   881,   882,   883,   894,   898,   904,   913,
+     916,   922,   928,   939,   950,   958,   960,   964,   966,   969,
+     970,  1018,  1023,  1031,  1035,  1038,  1044,  1062,  1068,  1087,
+    1116,  1119,  1122,  1125,  1131,  1138,  1142,  1148,  1155,  1158,
+    1166,  1171,  1187,  1190,  1195,  1203,  1206,  1244,  1249,  1257,
+    1260,  1264,  1269,  1272,  1341,  1344,  1345,  1349,  1352,  1361,
+    1372,  1379,  1382,  1386,  1399,  1403,  1417,  1421,  1427,  1434,
+    1437,  1441,  1454,  1458,  1472,  1476,  1482,  1487,  1497
   };
 
   // Print the state stack on the debug stream.

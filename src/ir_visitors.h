@@ -40,6 +40,8 @@ public:
   virtual void visit(Call         *t);
   virtual void visit(FieldRead    *t);
   virtual void visit(FieldWrite   *t);
+  virtual void visit(TensorRead   *t);
+  virtual void visit(TensorWrite  *t);
 
   virtual void handle(Function    *f);
   virtual void handle(Argument    *t);
@@ -49,6 +51,8 @@ public:
   virtual void handle(Call        *t);
   virtual void handle(FieldRead   *t);
   virtual void handle(FieldWrite  *t);
+  virtual void handle(TensorRead  *t);
+  virtual void handle(TensorWrite *t);
 
   virtual void handleDefault(IRNode *t) { UNUSED(t); }
 
@@ -80,6 +84,8 @@ public:
   virtual void visit(Call         *t);
   virtual void visit(FieldRead    *t);
   virtual void visit(FieldWrite   *t);
+  virtual void visit(TensorRead   *t);
+  virtual void visit(TensorWrite  *t);
 };
 
 

@@ -130,7 +130,7 @@ void TensorType::print(std::ostream &os) const {
   }
   else {
     os << "tensor";
-    os << "[" << util::join(getDimensions(), ", ") << "]";
+    os << "[" << util::join(getDimensions(), ",") << "]";
     os << "(" << componentTypeString(getComponentType()) << ")";
   }
 }

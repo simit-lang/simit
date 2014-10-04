@@ -389,7 +389,37 @@ void FieldRead::print(std::ostream &os) const {
 
 // class FieldWrite
 void FieldWrite::print(std::ostream &os) const {
-  os << *getValue();
+  os << set->getName() << "." << fieldName << " = " << getValue();
+}
+
+
+// class TensorRead
+void TensorRead::print(std::ostream &os) const {
+  os << tensor->getName() << "(";
+  auto it = indices.begin();
+  if (it != indices.end()) {
+    os << (*it)->getName();
+    ++it;
+  }
+  for (; it != indices.end(); ++it) {
+    os << "," << (*it)->getName();
+  }
+  os << ")";
+}
+
+
+// class TensorWrite
+void TensorWrite::print(std::ostream &os) const {
+  os << tensor->getName() << "(";
+  auto it = indices.begin();
+  if (it != indices.end()) {
+    os << (*it)->getName();
+    ++it;
+  }
+  for (; it != indices.end(); ++it) {
+    os << "," << (*it)->getName();
+  }
+  os << ")" << " = " << value->getName();
 }
 
 
