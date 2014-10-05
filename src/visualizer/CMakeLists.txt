@@ -1,6 +1,6 @@
 set(VIZ_PROJECT_NAME ${PROJECT_NAME}viz)
 
-find_package(OPENGL)
+find_package(OpenGL)
 find_package(GLUT) 
 
 if (NOT OPENGL_FOUND OR NOT GLUT_FOUND)
