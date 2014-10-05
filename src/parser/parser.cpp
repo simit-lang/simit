@@ -1509,7 +1509,7 @@ namespace  simit { namespace internal  {
           if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
             CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), yystack_[2].location);
             rhs->setName(result->getName());
-            result->setValue(rhs);
+            result->addValue(rhs);
             (yylhs.value.IRNodes)->push_back(rhs);
           }
           else {
@@ -1521,9 +1521,9 @@ namespace  simit { namespace internal  {
           std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
           fieldWrite->setValue(rhs);
 
-          auto result = dynamic_pointer_cast<Result>(fieldWrite->getSet());
+          auto result = dynamic_pointer_cast<Result>(fieldWrite->getTarget());
           if (result) {
-            result->setValue(fieldWrite);
+            result->addValue(fieldWrite);
             (yylhs.value.IRNodes)->push_back(fieldWrite);
           }
 
@@ -1535,7 +1535,7 @@ namespace  simit { namespace internal  {
 
           auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
           if (result){
-            result->setValue(tensorWrite);
+            result->addValue(tensorWrite);
             (yylhs.value.IRNodes)->push_back(tensorWrite);
           }
 

@@ -27,11 +27,9 @@ void IRVisitor::visit(Argument *t) {
 }
 
 void IRVisitor::visit(Result *t) {
-  if (t->getValue() == NULL) {  // TODO: Remove check
-    abort();
-    return;
+  for (auto &value : t->getValues()) {
+    CHECK_ABORT(value->accept(this));
   }
-  CHECK_ABORT(t->getValue()->accept(this));
   CHECK_ABORT(handle(t));
 }
 
@@ -47,7 +45,7 @@ void IRVisitor::visit(Call *t) {
 }
 
 void IRVisitor::visit(FieldRead *t) {
-  CHECK_ABORT(t->getSet()->accept(this));
+  CHECK_ABORT(t->getTarget()->accept(this));
   CHECK_ABORT(handle(t));
 }
 
@@ -112,6 +110,118 @@ void IRVisitor::handle(TensorWrite *t) {
   handleDefault(t);
 }
 
+void IRVisitor::handleDefault(IRNode *t) {
+  UNUSED(t);
+}
+
+
+// class IRConstVisitor
+IRConstVisitor::~IRConstVisitor() {
+}
+
+void IRConstVisitor::visit(const Function *f) {
+  CHECK_ABORT(handle(f));
+  for (auto &result : f->getResults()) {
+    CHECK_ABORT(result->accept(this));
+  }
+}
+
+void IRConstVisitor::visit(const Literal *t) {
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::visit(const Argument *t) {
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::visit(const Result *t) {
+  for (auto &value : t->getValues()) {
+    CHECK_ABORT(value->accept(this));
+  }
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::visit(const IndexExpr *t) {
+  for (auto &operand : t->getOperands()) {
+    CHECK_ABORT(operand.getTensor()->accept(this));
+  }
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::visit(const Call *t) {
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::visit(const FieldRead *t) {
+  CHECK_ABORT(t->getTarget()->accept(this));
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::visit(const FieldWrite *t) {
+  CHECK_ABORT(t->getValue()->accept(this));
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::visit(const TensorRead *t) {
+  CHECK_ABORT(t->getTensor()->accept(this));
+  for (auto &index : t->getIndices()) {
+    CHECK_ABORT(index->accept(this));
+  }
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::visit(const TensorWrite *t) {
+  CHECK_ABORT(t->getValue()->accept(this));
+  for (auto &index : t->getIndices()) {
+    CHECK_ABORT(index->accept(this));
+  }
+  CHECK_ABORT(handle(t));
+}
+
+void IRConstVisitor::handle(const Function *f) {
+  handleDefault(f);
+}
+
+void IRConstVisitor::handle(const Argument *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handle(const Result *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handle(const Literal *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handle(const IndexExpr *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handle(const Call *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handle(const FieldRead *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handle(const FieldWrite *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handle(const TensorRead *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handle(const TensorWrite *t) {
+  handleDefault(t);
+}
+
+void IRConstVisitor::handleDefault(const IRNode *t) {
+  UNUSED(t);
+}
+
 
 // class IRBackwardVisitor
 IRBackwardVisitor::~IRBackwardVisitor() {
@@ -134,12 +244,10 @@ void IRBackwardVisitor::visit(Argument *t) {
 }
 
 void IRBackwardVisitor::visit(Result *t) {
-  if (t->getValue() == NULL) {  // TODO: Remove check
-    abort();
-    return;
-  }
   CHECK_ABORT(handle(t));
-  CHECK_ABORT(t->getValue()->accept(this));
+  for (auto &value : t->getValues()) {
+    CHECK_ABORT(value->accept(this));
+  }
 }
 
 void IRBackwardVisitor::visit(IndexExpr *t) {
@@ -155,7 +263,7 @@ void IRBackwardVisitor::visit(Call *t) {
 
 void IRBackwardVisitor::visit(FieldRead *t) {
   CHECK_ABORT(handle(t));
-  CHECK_ABORT(t->getSet()->accept(this));
+  CHECK_ABORT(t->getTarget()->accept(this));
 }
 
 void IRBackwardVisitor::visit(FieldWrite *t) {

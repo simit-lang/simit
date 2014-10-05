@@ -18,6 +18,21 @@ class FieldRead;
 class TensorRead;
 class FieldWrite;
 class TensorWrite;
+class Test;
+
+namespace {
+class IRVisitorBase {
+public:
+  IRVisitorBase() { reset(); }
+  ~IRVisitorBase() {}
+protected:
+  void abort() { aborted = true; }
+  bool isAborted() { return aborted; }
+  void reset() { aborted = false; }
+private:
+  bool aborted;
+};
+}
 
 /// Visitor where the iteration order is specified in the visitor instead of
 /// the accept methods.  This design is chosen to allow different visitors to
@@ -27,46 +42,63 @@ class TensorWrite;
 ///
 /// The default IRVisitor visits each tensor in a function once in forward order
 /// starting with arguments and literals and ending with the results.
-class IRVisitor {
+class IRVisitor : protected IRVisitorBase {
 public:
-  IRVisitor() { reset(); }
   virtual ~IRVisitor();
 
-  virtual void visit(Function     *f);
-  virtual void visit(Argument     *t);
-  virtual void visit(Result       *t);
-  virtual void visit(Literal      *t);
-  virtual void visit(IndexExpr    *t);
-  virtual void visit(Call         *t);
-  virtual void visit(FieldRead    *t);
-  virtual void visit(FieldWrite   *t);
-  virtual void visit(TensorRead   *t);
-  virtual void visit(TensorWrite  *t);
+  virtual void visit(Function *);
+  virtual void visit(Argument *);
+  virtual void visit(Result *);
+  virtual void visit(Literal *);
+  virtual void visit(IndexExpr *);
+  virtual void visit(Call *);
+  virtual void visit(FieldRead *);
+  virtual void visit(FieldWrite *);
+  virtual void visit(TensorRead *);
+  virtual void visit(TensorWrite *);
 
-  virtual void handle(Function    *f);
-  virtual void handle(Argument    *t);
-  virtual void handle(Result      *t);
-  virtual void handle(Literal     *t);
-  virtual void handle(IndexExpr   *t);
-  virtual void handle(Call        *t);
-  virtual void handle(FieldRead   *t);
-  virtual void handle(FieldWrite  *t);
-  virtual void handle(TensorRead  *t);
-  virtual void handle(TensorWrite *t);
+  virtual void handle(Function *);
+  virtual void handle(Argument *);
+  virtual void handle(Result *);
+  virtual void handle(Literal *);
+  virtual void handle(IndexExpr *);
+  virtual void handle(Call *);
+  virtual void handle(FieldRead *);
+  virtual void handle(FieldWrite *);
+  virtual void handle(TensorRead *);
+  virtual void handle(TensorWrite *);
 
-  virtual void handleDefault(IRNode *t) { UNUSED(t); }
+  virtual void handleDefault(IRNode *);
+};
 
-protected:
-  void abort() { aborted = true; }
-  bool isAborted() { return aborted; }
-  void reset() {
-    aborted = false;
-    visited.clear();
-  }
 
-private:
-  std::set<IRNode*> visited;
-  bool aborted;
+class IRConstVisitor : private IRVisitorBase {
+public:
+  virtual ~IRConstVisitor();
+
+  virtual void visit(const Function *);
+  virtual void visit(const Argument *);
+  virtual void visit(const Result *);
+  virtual void visit(const Literal *);
+  virtual void visit(const IndexExpr *);
+  virtual void visit(const Call *);
+  virtual void visit(const FieldRead *);
+  virtual void visit(const FieldWrite *);
+  virtual void visit(const TensorRead *);
+  virtual void visit(const TensorWrite *);
+
+  virtual void handle(const Function *);
+  virtual void handle(const Argument *);
+  virtual void handle(const Result *);
+  virtual void handle(const Literal *);
+  virtual void handle(const IndexExpr *);
+  virtual void handle(const Call *);
+  virtual void handle(const FieldRead *);
+  virtual void handle(const FieldWrite *);
+  virtual void handle(const TensorRead *);
+  virtual void handle(const TensorWrite *);
+
+  virtual void handleDefault(const IRNode *);
 };
 
 
@@ -76,18 +108,17 @@ class IRBackwardVisitor : public IRVisitor {
 public:
   virtual ~IRBackwardVisitor();
 
-  virtual void visit(Function     *f);
-  virtual void visit(Argument     *t);
-  virtual void visit(Result       *t);
-  virtual void visit(Literal      *t);
-  virtual void visit(IndexExpr    *t);
-  virtual void visit(Call         *t);
-  virtual void visit(FieldRead    *t);
-  virtual void visit(FieldWrite   *t);
-  virtual void visit(TensorRead   *t);
-  virtual void visit(TensorWrite  *t);
+  virtual void visit(Function *);
+  virtual void visit(Argument *);
+  virtual void visit(Result *);
+  virtual void visit(Literal *);
+  virtual void visit(IndexExpr *);
+  virtual void visit(Call *);
+  virtual void visit(FieldRead *);
+  virtual void visit(FieldWrite *);
+  virtual void visit(TensorRead *);
+  virtual void visit(TensorWrite *);
 };
-
 
 }} // namespace simit::internal
 #endif

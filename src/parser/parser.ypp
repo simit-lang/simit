@@ -539,7 +539,7 @@ assign_stmt
           if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
             CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
             rhs->setName(result->getName());
-            result->setValue(rhs);
+            result->addValue(rhs);
             $$->push_back(rhs);
           }
           else {
@@ -551,9 +551,9 @@ assign_stmt
           std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
           fieldWrite->setValue(rhs);
 
-          auto result = dynamic_pointer_cast<Result>(fieldWrite->getSet());
+          auto result = dynamic_pointer_cast<Result>(fieldWrite->getTarget());
           if (result) {
-            result->setValue(fieldWrite);
+            result->addValue(fieldWrite);
             $$->push_back(fieldWrite);
           }
 
@@ -565,7 +565,7 @@ assign_stmt
 
           auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
           if (result){
-            result->setValue(tensorWrite);
+            result->addValue(tensorWrite);
             $$->push_back(tensorWrite);
           }
 

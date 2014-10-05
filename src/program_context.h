@@ -9,6 +9,7 @@
 
 #include "scopedmap.h"
 #include "ir.h"
+#include "ir_printer.h"
 
 namespace simit {
 namespace internal {

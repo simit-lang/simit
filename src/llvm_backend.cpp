@@ -20,6 +20,7 @@
 
 #include "llvm_codegen.h"
 #include "ir.h"
+#include "ir_printer.h"
 #include "llvm_function.h"
 #include "storage.h"
 #include "scopedmap.h"
@@ -461,8 +462,17 @@ public:
   }
 
   void handle(ir::Result *result) {
-    Expression *resultValue = result->getValue().get();
-    storageLocations[resultValue] = symtable->get(resultValue->getName());
+    Expression *resultValue = result->getValues()[0].get();
+
+    std::string name = resultValue->getName();
+
+    // FIXME: workaround for bad handling of field reads
+    if (name == "") {
+      auto field = dynamic_cast<FieldWrite*>(resultValue);
+      name = field->getTarget()->getName() + "." + field->getFieldName();
+    }
+
+    storageLocations[resultValue] = symtable->get(name);
   }
 
   void handle(ir::FieldWrite *fieldWrite) {
@@ -504,11 +514,19 @@ void LLVMBackend::handle(IndexExpr *t) {
   OperandPairVec operands;
   std::vector<llvm::Value *> llvmOperands;  // TODO: Remove this
   for (auto &operand : t->getOperands()) {
-    assert(symtable->contains(operand.getTensor()->getName()));
-    llvm::Value *llvmOperand = symtable->get(operand.getTensor()->getName());
+    std::string name = operand.getTensor()->getName();
+
+    // FIXME: workaround for bad handling of field reads
+    if (name == "") {
+      auto field = dynamic_cast<FieldRead*>(operand.getTensor().get());
+      name = field->getTarget()->getName() + "." + field->getFieldName();
+    }
+
+    assert(symtable->contains(name));
+    llvm::Value *llvmOperand = symtable->get(name);
     operands.push_back(OperandPair(operand, llvmOperand));
 
-    llvmOperands.push_back(symtable->get(operand.getTensor()->getName()));
+    llvmOperands.push_back(symtable->get(name));
   }
 
   if (domain.size() == 0) {

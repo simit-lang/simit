@@ -14,8 +14,7 @@ namespace ir {
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
-class IRNode : public simit::interfaces::Printable,
-                      simit::interfaces::Uncopyable {
+class IRNode : private simit::interfaces::Uncopyable {
 public:
   IRNode() {}
   IRNode(const std::string &name) : name(name) {}
@@ -47,6 +46,7 @@ public:
   const std::shared_ptr<Type> getType() const { return type; }
 
   virtual void accept(IRVisitor *visitor) = 0;
+  virtual void accept(IRConstVisitor *visitor) const = 0;
 
 private:
   std::shared_ptr<Type> type;
@@ -63,16 +63,16 @@ public:
 
   void clear();
   void cast(const std::shared_ptr<TensorType> &type);
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
 
   void *getData() { return data; }
   const void *getConstData() const { return data; }
 
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
+
 private:
   void  *data;
   int dataSize;
-
-  void print(std::ostream &os) const;
 };
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
@@ -121,7 +121,7 @@ public:
   IndexedTensor(const std::shared_ptr<Expression> &tensor,
                 const std::vector<std::shared_ptr<IndexVar>> &indexVariables);
 
-  std::shared_ptr<Expression> getTensor() const { return tensor; };
+  const std::shared_ptr<Expression> &getTensor() const { return tensor; };
   const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {
     return indexVariables;
   }
@@ -165,6 +165,7 @@ public:
   const std::vector<IndexedTensor> &getOperands() const { return operands; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
   std::vector<std::shared_ptr<IndexVar>> indexVars;
@@ -172,7 +173,6 @@ private:
   std::vector<IndexedTensor> operands;
 
   void initType();
-  void print(std::ostream &os) const;
 };
 
 std::ostream &operator<<(std::ostream &os, const IndexedTensor &t);
@@ -185,52 +185,47 @@ public:
        const std::vector<std::shared_ptr<Expression>> &arguments)
       : Expression(name, NULL), arguments(arguments) {}
 
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-
   const std::vector<std::shared_ptr<Expression>> &getArguments() const {
     return arguments;
   }
 
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
+
 private:
   std::vector<std::shared_ptr<Expression>> arguments;
-
-  void print(std::ostream &os) const;
 };
 
 
 /// Abstract class for expressions that read values from tensors and sets.
 class Read : public Expression {
 protected:
-  Read(const std::string &name, const std::shared_ptr<Type> &type)
-      : Expression(name, type) {}
+  Read(const std::shared_ptr<Type> &type) : Expression("", type) {}
 };
 
 
 /// Instruction that stores a value to a tensor or an object.
 class Write : public Expression {
 protected:
-  // TODO: Writes should not have names so remove them
-  Write(const std::string &name, const std::shared_ptr<Type> &type)
-      : Expression(name, type) {}
+  Write(const std::shared_ptr<Type> &type) : Expression("", type) {}
 };
 
 
 /// Expression that reads a tensor from an element or set field.
 class FieldRead : public Read {
 public:
-  FieldRead(const std::shared_ptr<Expression> &elementOrSet,
+  FieldRead(const std::shared_ptr<Expression> &target,
             const std::string &fieldName);
 
-  const std::shared_ptr<Expression> &getSet() const { return elementOrSet; }
+  const std::shared_ptr<Expression> &getTarget() const { return target; }
   const std::string &getFieldName() const { return fieldName; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
-  std::shared_ptr<Expression> elementOrSet;
+  std::shared_ptr<Expression> target;
   std::string fieldName;
-
-  void print(std::ostream &os) const;
 };
 
 
@@ -240,30 +235,28 @@ public:
   // TODO: Look up type from the set and check that value has correct type in
   //       setValue
   // TODO: Change from set to elemOrSet
-  FieldWrite(const std::shared_ptr<Expression> &set,
+  FieldWrite(const std::shared_ptr<Expression> &target,
              const std::string &fieldName)
-    : Write(set->getName() + "." + fieldName, set->getType()),
-      set(set), fieldName(fieldName) {}
+    : Write(target->getType()), target(target), fieldName(fieldName) {}
 
   void setValue(const std::shared_ptr<Expression> &value) {
     // TODO: check that value has correct type
-    value->setName(set->getName() + "." + fieldName); // TODO: remove this line
+    value->setName(target->getName() + "." + fieldName); // TODO: remove line
     this->value = value;
   }
 
-  const std::shared_ptr<Expression> &getSet() const { return set; }
+  const std::shared_ptr<Expression> &getTarget() const { return target; }
   const std::string &getFieldName() const { return fieldName; }
 
   const std::shared_ptr<Expression> &getValue() const { return value; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
-  std::shared_ptr<Expression> set;
+  std::shared_ptr<Expression> target;
   std::string fieldName;
   std::shared_ptr<Expression> value;
-
-  void print(std::ostream &os) const;
 };
 
 
@@ -272,20 +265,19 @@ class TensorRead : public Read {
 public:
   TensorRead(const std::shared_ptr<Expression> &tensor,
              const std::vector<std::shared_ptr<Expression>> &indices)
-      : Read("", tensor->getType()), tensor(tensor), indices(indices) {}
+      : Read(tensor->getType()), tensor(tensor), indices(indices) {}
 
-  const std::shared_ptr<Expression> &getTensor() { return tensor; }
+  const std::shared_ptr<Expression> &getTensor() const { return tensor; }
   const std::vector<std::shared_ptr<Expression>> &getIndices() const {
     return indices;
   }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
   std::shared_ptr<Expression> tensor;
   std::vector<std::shared_ptr<Expression>> indices;
-
-  void print(std::ostream &os) const;
 };
 
 
@@ -294,27 +286,26 @@ class TensorWrite : public Write {
 public:
   TensorWrite(const std::shared_ptr<Expression> &tensor,
               const std::vector<std::shared_ptr<Expression>> &indices)
-      : Write("", tensor->getType()), tensor(tensor), indices(indices) {}
+      : Write(tensor->getType()), tensor(tensor), indices(indices) {}
 
   void setValue(const std::shared_ptr<Expression> &value) {
     // TODO: check that value has correct type
     this->value = value;
   }
 
-  const std::shared_ptr<Expression> &getTensor() { return tensor; }
+  const std::shared_ptr<Expression> &getTensor() const { return tensor; }
   const std::vector<std::shared_ptr<Expression>> &getIndices() const {
     return indices;
   }
   const std::shared_ptr<Expression> &getValue() const { return value; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
   std::shared_ptr<Expression> tensor;
   std::vector<std::shared_ptr<Expression>> indices;
   std::shared_ptr<Expression> value;
-
-  void print(std::ostream &os) const;
 };
 
 
@@ -325,10 +316,8 @@ public:
       : Expression(name, type) {}
   virtual ~Argument() {};
 
-  virtual void accept(IRVisitor *visitor) { visitor->visit(this); };
-
-private:
-  void print(std::ostream &os) const;
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 };
 
 
@@ -338,17 +327,20 @@ public:
   Result(const std::string &name, const std::shared_ptr<Type> &type)
       : Argument(name, type) {}
 
-  void setValue(const std::shared_ptr<Expression> &value) {
+  void addValue(const std::shared_ptr<Expression> &value) {
     assert(*getType() == *value->getType() && "type missmatch");
-    this->value = value;
+    this->values.push_back(value);
   }
 
-  const std::shared_ptr<Expression> &getValue() const { return value; }
+  const std::vector<std::shared_ptr<Expression>> &getValues() const {
+    return values;
+  }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
-  std::shared_ptr<Expression> value;
+  std::vector<std::shared_ptr<Expression>> values;
 };
 
 
@@ -375,12 +367,13 @@ public:
     return body;
   }
 
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
+
 private:
   std::vector<std::shared_ptr<Argument>> arguments;
   std::vector<std::shared_ptr<Result>> results;
   std::vector<std::shared_ptr<IRNode>> body;
-
-  void print(std::ostream &os) const;
 };
 
 
@@ -389,27 +382,26 @@ private:
 class Test : public IRNode {
 public:
   Test(const std::string &callee,
-       const std::vector<std::shared_ptr<Literal>> &arguments,
+       const std::vector<std::shared_ptr<Literal>> &actuals,
        const std::vector<std::shared_ptr<Literal>> &expected)
-      : callee(callee), arguments(arguments), expected(expected) {}
+      : callee(callee), actuals(actuals), expected(expected) {}
 
-  std::string getCallee() { return callee; }
+  std::string getCallee() const { return callee; }
 
-  const std::vector<std::shared_ptr<Literal>> &getActuals() {
-    return arguments;
+  const std::vector<std::shared_ptr<Literal>> &getActuals() const {
+    return actuals;
   }
 
-  const std::vector<std::shared_ptr<Literal>> &getExpectedResults() {
+  const std::vector<std::shared_ptr<Literal>> &getExpectedResults() const {
     return expected;
   }
 
 private:
   std::string callee;
-  std::vector<std::shared_ptr<Literal>> arguments;
+  std::vector<std::shared_ptr<Literal>> actuals;
   std::vector<std::shared_ptr<Literal>> expected;
-
-  void print(std::ostream &os) const;
 };
+std::ostream &operator<<(std::ostream &os, const Test &);
 
 }} // namespace simit::internal
 

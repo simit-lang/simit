@@ -19,8 +19,8 @@ class IRNode;
 class IndexExpr;
 class FieldRead;
 
-struct Stmt;
-struct Expr;
+class Stmt;
+class Expr;
 
 /// Code Generator that lowers tensor ir to set ir.
 class SetIRCodeGen : public IRVisitor {

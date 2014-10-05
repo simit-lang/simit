@@ -9,6 +9,7 @@
 #include "types.h"
 #include "util.h"
 #include "macros.h"
+#include "ir_printer.h"
 
 using namespace std;
 
@@ -48,57 +49,6 @@ void Literal::cast(const std::shared_ptr<TensorType> &type) {
          litType->getSize() == type->getSize());
 
   setType(type);
-}
-
-void Literal::print(std::ostream &os) const {
-  // TODO: Fix value printing to print matrices and tensors properly
-  switch (getType()->getKind()) {
-    case Type::Tensor: {
-      TensorType *ttype = tensorTypePtr(getType());
-      assert(isValidComponentType(ttype->getComponentType()));
-      switch (ttype->getComponentType()) {
-        case ComponentType::INT: { {
-          int *idata = (int*)data;
-          if (ttype->getSize() == 1) {
-            os << idata[0];
-          }
-          else {
-            os << "[" << idata[0];
-            for (size_t i=0; i < ttype->getSize(); ++i) {
-              os << ", " << idata[i];
-            }
-            os << "]";
-          }
-          break;
-        }
-        case ComponentType::FLOAT: {
-          double *fdata = (double*)data;
-          if (ttype->getSize() == 1) {
-            os << fdata[0];
-          }
-          else {
-            os << "[" << to_string(fdata[0]);
-            for (size_t i=1; i < ttype->getSize(); ++i) {
-              os << ", " + to_string(fdata[i]);
-            }
-            os << "]";
-          }
-          break;
-        }
-        }
-      }
-      os << " : " << *getType();
-      break;
-    }
-    case Type::Element:
-      NOT_SUPPORTED_YET;
-    case Type::Set:
-      NOT_SUPPORTED_YET;
-      break;
-    case Type::Tuple:
-      NOT_SUPPORTED_YET;
-      break;
-  }
 }
 
 bool operator==(const Literal& l, const Literal& r) {
@@ -283,64 +233,10 @@ void IndexExpr::initType() {
   setType(std::shared_ptr<TensorType>(new TensorType(ctype, dimensions)));
 }
 
-static std::string opString(IndexExpr::Operator op) {
-  std::string opstr;
-  switch (op) {
-    case IndexExpr::Operator::NONE:
-      return "";
-    case IndexExpr::Operator::NEG:
-      return "-";
-    case IndexExpr::Operator::ADD:
-      return "+";
-    case IndexExpr::Operator::SUB:
-      return "-";
-    case IndexExpr::Operator::MUL:
-      return "*";
-    case IndexExpr::Operator::DIV:
-      return "//";
-    default:
-      UNREACHABLE;
-  }
-}
-
-void IndexExpr::print(std::ostream &os) const {
-  std::string idxVarStr =
-      (indexVars.size()!=0) ? "(" + simit::util::join(indexVars,",") + ")" : "";
-  os << getName() << idxVarStr << " = ";
-
-  std::set<std::shared_ptr<IndexVar>> rvars;
-  for (auto &operand : operands) {
-    for (auto &iv : operand.getIndexVariables()) {
-      if (iv->getOperator() != IndexVar::Operator::FREE &&
-          rvars.find(iv) == rvars.end()) {
-        rvars.insert(iv);
-        os << *iv << " ";
-      }
-    }
-  }
-
-  unsigned int numOperands = operands.size();
-  auto opit = operands.begin();
-  if (numOperands == 1) {
-    os << opString(op) << *opit++;
-  }
-  else if (numOperands == 2) {
-    os << *opit++ << " " << opString(op) << " " << *opit++;
-  } else {
-    assert(false && "Not supported yet");
-  }
-}
-
-
-// class Call
-void Call::print(std::ostream &os) const {
-  os << getName() << "(" << util::join(arguments, ", ") << ")";
-}
-
 
 // class FieldRead
 static std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &expr,
-                                       const std::string &fieldName){
+                                       const std::string &fieldName) {
   assert(expr->getType()->isElement() || expr->getType()->isSet());
 
   std::shared_ptr<TensorType> fieldType;
@@ -378,56 +274,10 @@ static std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &expr,
   return std::shared_ptr<TensorType>(fieldType);
 }
 
-FieldRead::FieldRead(const std::shared_ptr<Expression> &elemOrSet,
+FieldRead::FieldRead(const std::shared_ptr<Expression> &target,
                      const std::string &fieldName)
-    : Read(elemOrSet->getName()+"."+fieldName, fieldType(elemOrSet, fieldName)),
-      elementOrSet(elemOrSet), fieldName(fieldName) {}
-
-void FieldRead::print(std::ostream &os) const {
-  os << getName();
-}
-
-
-// class FieldWrite
-void FieldWrite::print(std::ostream &os) const {
-  os << set->getName() << "." << fieldName << " = " << getValue();
-}
-
-
-// class TensorRead
-void TensorRead::print(std::ostream &os) const {
-  os << tensor->getName() << "(";
-  auto it = indices.begin();
-  if (it != indices.end()) {
-    os << (*it)->getName();
-    ++it;
-  }
-  for (; it != indices.end(); ++it) {
-    os << "," << (*it)->getName();
-  }
-  os << ")";
-}
-
-
-// class TensorWrite
-void TensorWrite::print(std::ostream &os) const {
-  os << tensor->getName() << "(";
-  auto it = indices.begin();
-  if (it != indices.end()) {
-    os << (*it)->getName();
-    ++it;
-  }
-  for (; it != indices.end(); ++it) {
-    os << "," << (*it)->getName();
-  }
-  os << ")" << " = " << value->getName();
-}
-
-
-// class Argument
-void Argument::print(std::ostream &os) const {
-  os << getName() << " : " << *getType();
-}
+    : Read(fieldType(target, fieldName)),
+      target(target), fieldName(fieldName) {}
 
 
 // class Function
@@ -435,42 +285,14 @@ void Function::addStatements(const std::vector<std::shared_ptr<IRNode>> &stmts){
   body.insert(body.end(), stmts.begin(), stmts.end());
 }
 
-namespace {
-class FunctionBodyPrinter : public IRVisitor {
- public:
-  FunctionBodyPrinter(std::ostream &os) : IRVisitor(), os(os) {}
-
-  void handle(Function *f)   { UNUSED(f); }
-  void handle(Argument *t)   { UNUSED(t); }
-  void handle(Result *t)     { UNUSED(t); }
-  void handle(FieldRead *t)  { UNUSED(t); }
-  void handle(FieldWrite *t) { UNUSED(t); }
-
-  void handleDefault(IRNode *t) { os << "  " << *t << endl; }
-
- private:
-  std::ostream &os;
-};
-
-} // unnamed namespace
-
-void Function::print(std::ostream &os) const {
-  string argumentString = "(" + util::join(this->arguments, ", ") + ")";
-  string resultString = (results.size() == 0)
-      ? "" : " -> (" + util::join(this->results, ", ") + ")";
-  os << "func " << getName() << argumentString << resultString << endl;
-  FunctionBodyPrinter fp(os);
-  fp.visit((Function*)this);
-  os << "end";
-}
-
 
 // class Test
-void Test::print(std::ostream &os) const {
+std::ostream &operator<<(std::ostream &os, const Test &test) {
   std::vector<std::shared_ptr<Expression>> args;
-  args.insert(args.end(), arguments.begin(), arguments.end());
-  Call call(callee, args);
-  os << call << " == " << util::join(expected, ", ");
+  args.insert(args.end(), test.getActuals().begin(), test.getActuals().end());
+  Call call(test.getCallee(), args);
+  os << call << " == " << util::join(test.getExpectedResults(), ", ");
+  return os;
 }
 
 }} // namespace simit::internal

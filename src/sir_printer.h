@@ -36,11 +36,6 @@ public:
   void print(const Stmt &);
 
 private:
-  std::ostream &os;
-  unsigned indentation;
-
-  void indent();
-
   void visit(const IntLiteral *);
   void visit(const Variable *);
   void visit(const Load *);
@@ -54,6 +49,10 @@ private:
   void visit(const Store *);
   void visit(const StoreMatrix *);
   void visit(const Pass *);
+
+  std::ostream &os;
+  unsigned indentation;
+  void indent();
 };
 
 }} // namespace simit::ir
