@@ -1,6 +1,6 @@
-const stretchingStiffness : float;
-const bendingStiffness : float;
-const timeStep : float;
+const stretchingStiffness : float = 1.0e4;
+const bendingStiffness : float = 1.0e-4;
+const timeStep : float = 0.001;
 
 element Point
   x : tensor[3](float);
@@ -24,11 +24,11 @@ extern faces : set{Face}(points, points, points);
 extern hinges: set{Hinge}(points, points, points, points);
 
 func computeAngle(p1 : Point, p2 : Point, q1 : Point, q2 : Point) -> (theta : float)
-  ev = p2.x = p1.x;
+  ev = p2.x - p1.x;
   n1 = cross(ev, q1.x - p1.x);
-  n2 = (q2.x - p1.x, ev);
+  n2 = cross(q2.x - p1.x, ev);
   mag = norm(ev);
-  ev /= mag;
+  ev = ev/mag;
   theta = atan2( dot( cross(n1, n2), ev ), dot(n1, n2) );
 end
 
