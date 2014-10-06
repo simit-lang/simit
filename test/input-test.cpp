@@ -159,8 +159,8 @@ TEST_P(input, check) {
 
 
 /* Examples */
-INSTANTIATE_TEST_CASE_P(examples, input,
-                        testing::ValuesIn(readTestsFromDir(EXAMPLES_DIR)));
+//INSTANTIATE_TEST_CASE_P(examples, input,
+//                        testing::ValuesIn(readTestsFromDir(EXAMPLES_DIR)));
 
 
 /* Tests */

@@ -539,7 +539,7 @@ assign_stmt
           if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
             CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
             rhs->setName(result->getName());
-            result->setValue(rhs);
+            result->addValue(rhs);
             $$->push_back(rhs);
           }
           else {
@@ -551,9 +551,9 @@ assign_stmt
           std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
           fieldWrite->setValue(rhs);
 
-          auto result = dynamic_pointer_cast<Result>(fieldWrite->getSet());
+          auto result = dynamic_pointer_cast<Result>(fieldWrite->getTarget());
           if (result) {
-            result->setValue(fieldWrite);
+            result->addValue(fieldWrite);
             $$->push_back(fieldWrite);
           }
 
@@ -565,7 +565,7 @@ assign_stmt
 
           auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
           if (result){
-            result->setValue(tensorWrite);
+            result->addValue(tensorWrite);
             $$->push_back(tensorWrite);
           }
 
@@ -887,25 +887,42 @@ set_read_expr
 
 %type <expression> call_or_tensor_read_expr;
 call_or_tensor_read_expr
-  : IDENT "(" actual_list ")" {
+  : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
-    $$ = NULL;
+    auto indices =
+        unique_ptr<vector<shared_ptr<Expression>>>($expr_list_or_empty);
+
+    if (ctx->hasSymbol(name)) {
+      const RWExprPair &exprPair = ctx->getSymbol(name);
+      if (!exprPair.isReadable()) {
+        REPORT_ERROR(name + " is not readable", @1);
+      }
+
+      auto tensorExpr = exprPair.getReadExpr();
+      $$ = new shared_ptr<Expression>(new TensorRead(tensorExpr, *indices));
+    }
+    // TODO: elseif function
+    else {
+      REPORT_ERROR(name + " is not defined in scope", @1);
+    }
+
   }
-  | field_read_expr "(" actual_list ")" {
+  | field_read_expr "(" expr_list_or_empty ")" {
     $$ = NULL;
   }
 
 %type<call> call_expr;
 call_expr
-  : IDENT "(" actual_list ")" {
+  : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
-    auto call = new Call(name, *$actual_list);
-    delete $actual_list;
+    auto actuals =
+        unique_ptr<vector<shared_ptr<Expression>>>($expr_list_or_empty);
+    auto call = new Call(name, *actuals);
     $$ = new std::shared_ptr<Call>(call);
   }
 
-%type <expressions> actual_list;
-actual_list
+%type <expressions> expr_list_or_empty;
+expr_list_or_empty
   : /* empty */ {
     $$ = new vector<shared_ptr<Expression>>();
   }
@@ -1052,7 +1069,7 @@ field_write_expr
       REPORT_ERROR(setName + " is not writable", @1);
     }
 
-    auto setExpr = shared_ptr<Expression>(setExprPair.getWriteExpr());
+    auto setExpr = setExprPair.getWriteExpr();
     $$ = new shared_ptr<FieldWrite>(new FieldWrite(setExpr, fieldName));
   }
   | paren_expr "." IDENT {
@@ -1076,10 +1093,11 @@ tensor_write_expr
       REPORT_ERROR(tensorName + " is not writable", @1);
     }
 
-    auto tensorExpr = shared_ptr<Expression>(tensorExprPair.getWriteExpr());
+    auto tensorExpr = tensorExprPair.getWriteExpr();
     $$ = new shared_ptr<TensorWrite>(new TensorWrite(tensorExpr, *indices));
   }
   | field_write_expr "(" expr_list ")" {
+    // TODO
     $$ = NULL;
   }
 

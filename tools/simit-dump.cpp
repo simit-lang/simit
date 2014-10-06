@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "ir.h"
+#include "ir_printer.h"
 #include "sir.h"
 #include "sir_printer.h"
 #include "sir_codegen.h"
