@@ -6,6 +6,7 @@
 #include <ostream>
 #include <map>
 #include <set>
+#include <memory>
 
 namespace simit {
 namespace ir {
