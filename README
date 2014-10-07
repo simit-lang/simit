@@ -39,6 +39,10 @@ To check a Simit program do:
 For example:
   ./build/bin/simit-check examples/springs.sim
 
+To make the Simit bin directory part of your PATH:
+  cd <simit-directory>
+  export PATH="$PATH:`pwd`/build/bin"
+
 To build Simit's documentation do:
   cd <simit-directory>
   doxygen
