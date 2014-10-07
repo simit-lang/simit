@@ -364,7 +364,7 @@ function
 
 %type <function> function_header;
 function_header
-  : "func" IDENT arguments results {
+  : "func" IDENT "(" arguments ")" results {
     std::string ident = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<shared_ptr<Argument>>>($arguments);
     auto results = unique_ptr<vector<shared_ptr<Result>>>($results);
@@ -386,71 +386,75 @@ function_header
     }
   }
 
-%code requires {
-  namespace {
-  struct FormalData {
-    std::string name;
-    std::shared_ptr<simit::ir::Type> type;
-    FormalData(const std::string &name,
-               const std::shared_ptr<simit::ir::Type> &type)
-        : name(name), type(type){}
-  };
-  }
-};
 
 %union {
-  FormalData                                 *Formal;
-  util::OwnershipVector<FormalData*>         *Formals;
-  std::vector<std::shared_ptr<ir::Argument>> *Arguments;
-  std::vector<std::shared_ptr<ir::Result>>   *Results;
+  std::shared_ptr<ir::Argument>              *argument;
+  std::vector<std::shared_ptr<ir::Argument>> *arguments;
+
+  std::shared_ptr<ir::Result>                *result;
+  std::vector<std::shared_ptr<ir::Result>>   *results;
 };
 
-%type <Arguments> arguments;
+%type <arguments> arguments;
 arguments
-  : "(" ")" {
-    $$ = new vector<shared_ptr<Argument>>();
+  : /* empty */ {
+    $$ = new vector<shared_ptr<Argument>>;
   }
-  | "(" formal_list ")" {
-    $$ = new vector<shared_ptr<Argument>>();
-    for (auto formal : *$formal_list) {
-      auto result = new Argument(formal->name, formal->type);
-      $$->push_back(shared_ptr<Argument>(result));
-    }
-    delete $formal_list;
+  | argument_list {
+    $$ = $1;
  }
 
-%type <Results> results;
+%type <arguments> argument_list;
+argument_list
+  : argument_decl {
+    auto argument = convertAndDelete($argument_decl);
+    $$ = new vector<shared_ptr<Argument>>;
+    $$->push_back(argument);
+  }
+  | argument_list "," argument_decl {
+    auto argument = convertAndDelete($argument_decl);
+    $$ = $1;
+    $$->push_back(argument);
+  }
+
+%type <argument> argument_decl;
+argument_decl
+  : IDENT ":" type {
+    std::string name = convertAndFree($IDENT);
+    auto type = convertAndDelete($type);
+    $$ = new shared_ptr<Argument>(new Argument(name, type));
+  }
+
+%type <results> results;
 results
   : /* empty */ {
     $$ = new vector<shared_ptr<Result>>();
-    $$->push_back(shared_ptr<Result>(new Result("asd", NULL)));
   }
-  | RARROW "(" formal_list ")" {
-    $$ = new vector<shared_ptr<Result>>();
-    for (auto formal : *$formal_list) {
-      auto result = new Result(formal->name, formal->type);
-      $$->push_back(shared_ptr<Result>(result));
-    }
-    delete $formal_list;
+  | RARROW "(" result_list ")" {
+    $$ = $3;
   }
 
-%type <Formals> formal_list;
-formal_list
-  : formal_decl {
-    $$ = new simit::util::OwnershipVector<FormalData *>();
-    $$->push_back($formal_decl);
+%type <results> result_list;
+result_list
+  : result_decl {
+    auto result = convertAndDelete($result_decl);
+    $$ = new vector<shared_ptr<Result>>;
+    $$->push_back(result);
   }
-  | formal_list "," formal_decl {
-    $$->push_back($formal_decl);
+  | result_list "," result_decl {
+    auto result = convertAndDelete($result_decl);
+    $$ = $1;
+    $$->push_back(result);
   }
 
-%type <Formal> formal_decl;
-formal_decl
+%type <result> result_decl;
+result_decl
   : IDENT ":" type {
-    std::string ident = convertAndFree($IDENT);
-    std::shared_ptr<Type> type = convertAndDelete($type);
-    $$ = new FormalData(ident, type);
+    std::string name = convertAndFree($IDENT);
+    auto type = convertAndDelete($type);
+    $$ = new shared_ptr<Result>(new Result(name, type));
   }
+
 
 // Statements
 %type<IRNodes> stmt_block;

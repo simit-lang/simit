@@ -56,17 +56,6 @@
   #include "types.h"
 
 
-  namespace {
-  struct FormalData {
-    std::string name;
-    std::shared_ptr<simit::ir::Type> type;
-    FormalData(const std::string &name,
-               const std::shared_ptr<simit::ir::Type> &type)
-        : name(name), type(type){}
-  };
-  }
-
-
   struct WriteInfo {
     enum Kind { VARIABLE, FIELD, TENSOR };
     Kind kind;
@@ -244,10 +233,11 @@ namespace  simit { namespace internal  {
   ir::Function *function;
 
 
-  FormalData                                 *Formal;
-  util::OwnershipVector<FormalData*>         *Formals;
-  std::vector<std::shared_ptr<ir::Argument>> *Arguments;
-  std::vector<std::shared_ptr<ir::Result>>   *Results;
+  std::shared_ptr<ir::Argument>              *argument;
+  std::vector<std::shared_ptr<ir::Argument>> *arguments;
+
+  std::shared_ptr<ir::Result>                *result;
+  std::vector<std::shared_ptr<ir::Result>>   *results;
 
 
   std::shared_ptr<ir::Expression>              *expression;
@@ -541,7 +531,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const short int yycheck_[];
+  static const unsigned short int yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -656,8 +646,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 342,     ///< Last index in yytable_.
-      yynnts_ = 73,  ///< Number of nonterminal symbols.
+      yylast_ = 339,     ///< Last index in yytable_.
+      yynnts_ = 75,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
