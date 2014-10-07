@@ -264,8 +264,7 @@ private:
 class TensorRead : public Read {
 public:
   TensorRead(const std::shared_ptr<Expression> &tensor,
-             const std::vector<std::shared_ptr<Expression>> &indices)
-      : Read(tensor->getType()), tensor(tensor), indices(indices) {}
+             const std::vector<std::shared_ptr<Expression>> &indices);
 
   const std::shared_ptr<Expression> &getTensor() const { return tensor; }
   const std::vector<std::shared_ptr<Expression>> &getIndices() const {

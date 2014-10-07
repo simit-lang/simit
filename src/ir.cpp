@@ -235,8 +235,8 @@ void IndexExpr::initType() {
 
 
 // class FieldRead
-static std::shared_ptr<Type> fieldType(const std::shared_ptr<Expression> &expr,
-                                       const std::string &fieldName) {
+static std::shared_ptr<Type>
+fieldType(const std::shared_ptr<Expression> &expr,const std::string &fieldName){
   assert(expr->getType()->isElement() || expr->getType()->isSet());
 
   std::shared_ptr<TensorType> fieldType;
@@ -278,6 +278,45 @@ FieldRead::FieldRead(const std::shared_ptr<Expression> &target,
                      const std::string &fieldName)
     : Read(fieldType(target, fieldName)),
       target(target), fieldName(fieldName) {}
+
+
+// class TensorRead
+static std::shared_ptr<Type>
+blockType(const std::shared_ptr<Expression> &expr) {
+  assert(expr->getType()->isTensor());
+
+  TensorType *type = tensorTypePtr(expr->getType());
+  const std::vector<IndexDomain> &dimensions = type->getDimensions();
+  assert(dimensions.size() > 0);
+
+  std::vector<IndexDomain> blockDimensions;
+
+  size_t numNests = dimensions[0].getFactors().size();
+  for (auto &dim : dimensions) {
+    assert(dim.getFactors().size() == numNests &&
+           "All dimensions should have the same number of nestings");
+  }
+
+  TensorType *blockType = nullptr;
+  if (numNests) {
+    blockType = new TensorType(type->getComponentType());
+  }
+  else {
+    for (auto &dim : dimensions) {
+      const std::vector<IndexSet> &nests = dim.getFactors();
+      std::vector<IndexSet> blockNests(nests.begin()+1, nests.end());
+      blockDimensions.push_back(IndexDomain(blockNests));
+    }
+    blockType = new TensorType(type->getComponentType(), blockDimensions);
+  }
+  assert(blockType);
+
+  return std::shared_ptr<Type>(blockType);
+}
+
+TensorRead::TensorRead(const std::shared_ptr<Expression> &tensor,
+                       const std::vector<std::shared_ptr<Expression>> &indices)
+    : Read(blockType(tensor)), tensor(tensor), indices(indices) {}
 
 
 // class Function
