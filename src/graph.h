@@ -595,18 +595,18 @@ class TensorRef {
   }
 
   template <typename... Indices>
-  inline T &operator()(Indices... indices) {
+  inline T &operator()(Indices... index) {
     static_assert(sizeof...(dimensions) > 0,
                   "Access scalars directly, not through operator()");
-    static_assert(sizeof...(indices) == sizeof...(dimensions),
+    static_assert(sizeof...(index) == sizeof...(dimensions),
                   "Incorrect number of indices used to index tensor");
     auto dims = simit::util::seq<dimensions...>();
-    return data[simit::util::computeOffset(dims, indices...)];
+    return data[simit::util::computeOffset(dims, index...)];
   }
 
   template <typename... Indices>
-  inline const T &operator()(Indices... indices) const {
-    return operator()(indices...);
+  inline const T &operator()(Indices... index) const {
+    return const_cast<TensorRef<T,dimensions...>*>(this)->operator()(index...);
   }
 
  private:
