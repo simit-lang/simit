@@ -926,7 +926,9 @@ call_or_tensor_read_expr
       auto tensorExpr = exprPair.getReadExpr();
       $$ = new shared_ptr<Expression>(new TensorRead(tensorExpr, *indices));
     }
-    // TODO: elseif function
+    else if (ctx->containsFunction(name)) {
+      $$ = NULL;
+    }
     else {
       REPORT_ERROR(name + " is not defined in scope", @1);
     }
