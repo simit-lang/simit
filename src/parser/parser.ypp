@@ -932,7 +932,6 @@ call_or_tensor_read_expr
     else {
       REPORT_ERROR(name + " is not defined in scope", @1);
     }
-
   }
   | field_read_expr "(" expr_list_or_empty ")" {
     $$ = NULL;
@@ -1219,9 +1218,9 @@ tuple_element_types
 %type <elementTypes> tuple_element_type;
 tuple_element_type
   : element_type {
+    auto elementType = convertAndDelete($element_type);
     $$ = new vector<shared_ptr<ElementType>>;
-    $$->push_back(*$element_type);
-    delete $element_type;
+    $$->push_back(elementType);
   }
   | element_type "*" INT_LITERAL {
     auto elementType = convertAndDelete($element_type);
@@ -1234,7 +1233,6 @@ tuple_element_type
     for (int i=0; i < $INT_LITERAL; ++i) {
       $$->push_back(elementType);
     }
-    delete $element_type;
   }
 
 %type <tensorType> tensor_type;

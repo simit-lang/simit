@@ -1993,7 +1993,6 @@ namespace  simit { namespace internal  {
     else {
       REPORT_ERROR(name + " is not defined in scope", yystack_[3].location);
     }
-
   }
 
     break;
@@ -2305,9 +2304,9 @@ namespace  simit { namespace internal  {
   case 118:
 
     {
+    auto elementType = convertAndDelete((yystack_[0].value.elementType));
     (yylhs.value.elementTypes) = new vector<shared_ptr<ElementType>>;
-    (yylhs.value.elementTypes)->push_back(*(yystack_[0].value.elementType));
-    delete (yystack_[0].value.elementType);
+    (yylhs.value.elementTypes)->push_back(elementType);
   }
 
     break;
@@ -2325,7 +2324,6 @@ namespace  simit { namespace internal  {
     for (int i=0; i < (yystack_[0].value.num); ++i) {
       (yylhs.value.elementTypes)->push_back(elementType);
     }
-    delete (yystack_[2].value.elementType);
   }
 
     break;
@@ -3270,14 +3268,14 @@ namespace  simit { namespace internal  {
      642,   643,   644,   645,   646,   647,   648,   649,   650,   656,
      677,   693,   701,   713,   778,   784,   814,   819,   828,   829,
      830,   831,   837,   843,   849,   855,   861,   867,   882,   902,
-     903,   904,   915,   937,   943,   953,   956,   962,   968,   979,
-     990,   998,  1000,  1004,  1006,  1009,  1010,  1058,  1063,  1071,
-    1075,  1078,  1084,  1102,  1108,  1126,  1156,  1159,  1162,  1165,
-    1171,  1178,  1182,  1192,  1196,  1203,  1210,  1213,  1221,  1226,
-    1242,  1245,  1250,  1258,  1261,  1299,  1304,  1312,  1315,  1319,
-    1324,  1327,  1396,  1399,  1400,  1404,  1407,  1416,  1427,  1434,
-    1437,  1441,  1454,  1458,  1472,  1476,  1482,  1489,  1492,  1496,
-    1509,  1513,  1527,  1531,  1537,  1542,  1552
+     903,   904,   915,   936,   942,   952,   955,   961,   967,   978,
+     989,   997,   999,  1003,  1005,  1008,  1009,  1057,  1062,  1070,
+    1074,  1077,  1083,  1101,  1107,  1125,  1155,  1158,  1161,  1164,
+    1170,  1177,  1181,  1191,  1195,  1202,  1209,  1212,  1220,  1225,
+    1240,  1243,  1248,  1256,  1259,  1297,  1302,  1310,  1313,  1317,
+    1322,  1325,  1394,  1397,  1398,  1402,  1405,  1414,  1425,  1432,
+    1435,  1439,  1452,  1456,  1470,  1474,  1480,  1487,  1490,  1494,
+    1507,  1511,  1525,  1529,  1535,  1540,  1550
   };
 
   // Print the state stack on the debug stream.
