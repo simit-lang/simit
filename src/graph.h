@@ -8,6 +8,7 @@
 #include <string>
 #include <map>
 #include <set>
+#include <ostream>
 
 #include "tensor_components.h"
 #include "variadic.h"
@@ -615,6 +616,49 @@ class TensorRef {
 
   friend class FieldRefBaseParameterized<T, dimensions...>;
 };
+
+template <typename T, int... dims>
+std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
+  assert("General tensor operator<< not yet supported");
+  return os;
+}
+
+template <typename T, int size>
+std::ostream &operator<<(std::ostream &os, const TensorRef<T, size> &t) {
+  os << "[";
+  if (0 < size) {
+    os << t(0);
+  }
+
+  for (int i=1; i<size; ++i) {
+    os << ", " << t(i);
+  }
+  return os << "]";
+}
+
+template <typename T, int r, int c>
+std::ostream &operator<<(std::ostream &os, const TensorRef<T, r, c> &t) {
+  os << "[";
+  if (0 < r) {
+    if (0 < c) {
+      os << t(0,0);
+    }
+    for (int j=1; j<c; ++j) {
+      os << ", " << t(0,j);
+    }
+  }
+
+  for (int i=0; i<r; ++i) {
+    os << "; ";
+    if (0 < c) {
+      os << t(i,0);
+    }
+    for (int j=1; j<c; ++j) {
+      os << ", " << t(i,j);
+    }
+  }
+  return os << "]";
+}
 
 } // namespace simit
 
