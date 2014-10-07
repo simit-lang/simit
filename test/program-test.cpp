@@ -13,15 +13,19 @@ using namespace simit;
 /// \todo Turn these into a parameterized test suite
 
 TEST(Program, addScalarFields) {
-  Program program;
-  std::string programText =
-      "element Point                                              "
-      "  x : float;                                               "
-      "end                                                        "
-      "func addSets(points : set{Point}) -> (points : set{Point}) "
-      "  points.x = points.x + points.x;                          "
-      "end                                                        ";
+  std::string programText = R"(
+    element Point
+      x : float;
+    end
 
+    extern points : set{Point};
+
+    proc addSets
+      points.x = points.x + points.x;
+    end
+  )";
+
+  Program program;
   int errorCode = program.loadString(programText);
   if (errorCode) FAIL() << program.getDiagnostics().getMessage();
 
@@ -29,8 +33,8 @@ TEST(Program, addScalarFields) {
   if (!f) FAIL() << program.getDiagnostics().getMessage();
 
   Set<> points;
-  f->bind("points", &points);
   FieldRef<double> x = points.addField<double>("x");
+  f->bind("points", &points);
 
   ElementRef p0 = points.addElement();
   x.set(p0, 42.0);
@@ -41,15 +45,19 @@ TEST(Program, addScalarFields) {
 }
 
 TEST(Program, addVectorFields) {
-  Program program;
-  std::string programText =
-      "element Point                                              "
-      "  x : tensor[3](float);                                    "
-      "end                                                        "
-      "func addSets(points : set{Point}) -> (points : set{Point}) "
-      "  points.x = points.x + points.x;                          "
-      "end                                                        ";
+  std::string programText = R"(
+    element Point
+      x : tensor[3](float);
+    end
 
+    extern points : set{Point};
+
+    func addSets(points : set{Point}) -> (points : set{Point})
+      points.x = points.x + points.x;
+    end
+  )";
+
+  Program program;
   int errorCode = program.loadString(programText);
   if (errorCode) FAIL() << program.getDiagnostics().getMessage();
 
@@ -57,8 +65,8 @@ TEST(Program, addVectorFields) {
   if (!f) FAIL() << program.getDiagnostics().getMessage();
 
   Set<> points;
-  f->bind("points", &points);
   FieldRef<double,3> x = points.addField<double,3>("x");
+  f->bind("points", &points);
 
   ElementRef p0 = points.addElement();
   x.set(p0, {1.0, 2.0, 3.0});

@@ -280,19 +280,11 @@ program_element
   }
 
 // Externs
-// TODO: Remove externs
+%type <expression> extern;
 extern
-  : "extern" IDENT ":" type ";" {
-    std::string ident = convertAndFree($IDENT);
-    delete $type;
-  }
-
-endpoints
-  : IDENT {
-    std::string ident = convertAndFree($IDENT);
-  }
-  | endpoints "," IDENT {
-    std::string ident = convertAndFree($IDENT);
+  : "extern" argument_decl ";" {
+    auto externArgument = convertAndDelete($argument_decl);
+    ctx->addExtern(externArgument);
   }
 
 
@@ -343,15 +335,32 @@ field_decl
 
 %type <function> procedure;
 procedure
-  : "proc" IDENT {ctx->scope();} stmt_block {ctx->unscope();} BLOCKEND {
-    std::string ident = convertAndFree($IDENT);
+  : {ctx->scope();} procedure_header stmt_block {ctx->unscope();} BLOCKEND {
     auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
+    $$ = $procedure_header;
+    $$->addStatements(*statements);
+  }
 
+%type <function> procedure_header;
+procedure_header
+  : "proc" IDENT {
+    std::string name = convertAndFree($IDENT);
     auto arguments = vector<shared_ptr<Argument>>();
     auto results = vector<shared_ptr<Result>>();
-    $$ = new Function(ident, arguments, results);
 
-    $$->addStatements(*statements);
+    for (auto &extPair : ctx->getExterns()) {
+      auto ext = extPair.second;
+
+      // TODO: Replace extResult with mutable parameters
+      auto tmp = new Result(ext->getName(), ext->getType());
+      auto extResult = std::shared_ptr<Result>(tmp);
+      results.push_back(extResult);
+
+      arguments.push_back(ext);
+      ctx->addSymbol(ext->getName(), ext, extResult);
+    }
+
+    $$ = new Function(name, arguments, results);
   }
 
 %type <function> function;
@@ -365,11 +374,11 @@ function
 %type <function> function_header;
 function_header
   : "func" IDENT "(" arguments ")" results {
-    std::string ident = convertAndFree($IDENT);
+    std::string name = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<shared_ptr<Argument>>>($arguments);
     auto results = unique_ptr<vector<shared_ptr<Result>>>($results);
+    $$ = new Function(name, *arguments, *results);
 
-    $$ = new Function(ident, *arguments, *results);
     std::set<std::string> argumentNames;
     for (auto argument : *arguments) {
       ctx->addSymbol(argument->getName(), argument, NULL);
@@ -421,6 +430,7 @@ argument_list
 argument_decl
   : IDENT ":" type {
     std::string name = convertAndFree($IDENT);
+
     auto type = convertAndDelete($type);
     $$ = new shared_ptr<Argument>(new Argument(name, type));
   }
@@ -1168,7 +1178,22 @@ set_type
     $$ = new std::shared_ptr<SetType>(new SetType(elementType));
   }
   | "set" "{" element_type "}" "(" endpoints ")" {
-    $$ = NULL;
+    std::shared_ptr<ElementType> elementType = convertAndDelete($element_type);
+    auto eps = convertAndDelete($endpoints);
+
+    // TODO: Add endpoint information to set type
+    $$ = new std::shared_ptr<SetType>(new SetType(elementType));
+  }
+
+%type <expressions> endpoints;
+endpoints
+  : IDENT {
+    $$ = new vector<shared_ptr<Expression>>;
+    std::string ident = convertAndFree($IDENT);
+  }
+  | endpoints "," IDENT {
+    $$ = $1;
+    std::string ident = convertAndFree($IDENT);
   }
 
 %type <tupleType> tuple_type;

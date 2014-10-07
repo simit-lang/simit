@@ -107,8 +107,24 @@ public:
     return elementTypes.find(name) != elementTypes.end();
   }
 
-  std::shared_ptr<ir::ElementType> getElementType(std::string name) {
+  std::shared_ptr<ir::ElementType> getElementType(const std::string &name) {
     return elementTypes[name];
+  }
+
+  void addExtern(const std::shared_ptr<ir::Argument> &externArgument) {
+    externs[externArgument->getName()] = externArgument;
+  }
+
+  bool containsExtern(const std::string &name) {
+    return externs.find(name) != externs.end();
+  }
+
+  std::shared_ptr<ir::Argument> getExtern(const std::string &name) {
+    return externs[name];
+  }
+
+  const std::map<std::string, std::shared_ptr<ir::Argument>> &getExterns() {
+    return externs;
   }
 
   void addTest(ir::Test *test) { tests.push_back(test); }
@@ -117,10 +133,12 @@ public:
 
 private:
   std::map<std::string, ir::Function *>                   functions;
-  std::map<std::string, std::shared_ptr<ir::ElementType>> elementTypes;
-  std::vector<ir::Test*>                                  tests;
+  std::map<std::string, std::shared_ptr<ir::Argument>>    externs;
 
-  ScopedMap<std::string, RWExprPair> exprSymtable;
+  std::map<std::string, std::shared_ptr<ir::ElementType>> elementTypes;
+  ScopedMap<std::string, RWExprPair>                      exprSymtable;
+
+  std::vector<ir::Test*>                                  tests;
 };
 
 }} // namespace simit::internal
