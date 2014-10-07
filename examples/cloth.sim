@@ -1,3 +1,9 @@
+func cross(v1 : tensor[3](float), v2 : tensor[3](float)) -> (result : tensor[3](float))
+  result(0) = v1(1)*v2(2)-v1(2)*v2(1);
+  result(1) = v1(2)*v2(0)-v1(0)*v2(2);
+  result(2) = v1(0)*v2(1)-v1(1)*v2(0);
+end
+
 const stretchingStiffness : float = 1.0e4;
 const bendingStiffness : float = 1.0e-4;
 const timeStep : float = 0.001;
@@ -98,10 +104,10 @@ func dihedralAngleDerivatives(p1 : Point, p2 : Point, q1 : Point, q2 : Point)
   vnorm = norm(v);
   
   if(vnorm < 1e-8 || n1norm2 < 1e-8 || n2norm2 < 1e-8)
-    del_p1_theta = {0,0,0};
-    del_p2_theta = {0,0,0};
-    del_q1_theta = {0,0,0};
-    del_q2_theta = {0,0,0};
+    del_p1_theta = [0,0,0];
+    del_p2_theta = [0,0,0];
+    del_q1_theta = [0,0,0];
+    del_q2_theta = [0,0,0];
   else
     del_q1_theta = n1 * vnorm/n1norm2;
     del_q2_theta = n2 * vnorm/n2norm2;
