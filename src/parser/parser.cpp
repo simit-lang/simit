@@ -65,11 +65,11 @@
   using namespace simit::internal;
   using namespace simit::ir;
 
-  std::string typeString(const Type &type, ProgramContext *ctx) {
+  std::string typeString(const Type &type) {
     std::stringstream ss;
     ss << type;
     std::string str = ss.str();
-    if (ctx->isColumnVector(type)) {
+    if (type.isTensor() && tensorTypePtr(&type)->isColumnVector()) {
       str += "'";
     }
     return str;
@@ -81,13 +81,12 @@
       YYERROR;                    \
     } while (0)
 
-  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)           \
-    do {                                               \
-      std::stringstream errorStr;                      \
-      errorStr << "type missmatch ("                   \
-               << typeString(t1, ctx) << " and "       \
-               << typeString(t2, ctx) << ")";          \
-      REPORT_ERROR(errorStr.str(), loc);               \
+  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)                          \
+    do {                                                              \
+      std::stringstream errorStr;                                     \
+      errorStr << "type missmatch (" <<                               \
+                  typeString(t1) << " and " << typeString(t2) << ")"; \
+      REPORT_ERROR(errorStr.str(), loc);                              \
     } while (0)
 
   #define REPORT_INDEX_VARIABLE_MISSMATCH(numIndexVars, order, loc) \
@@ -119,13 +118,25 @@
     return result;
   }
 
+  void transposeVector(const std::shared_ptr<Expression> &vec) {
+    assert(vec->getType()->isTensor());
+    TensorType *ttype = tensorTypePtr(vec->getType());
+    assert(ttype->getOrder() == 1);
+
+    auto transposedVector = new TensorType(ttype->getComponentType(),
+                                           ttype->getDimensions(),
+                                           !ttype->isColumnVector());
+    vec->setType(std::shared_ptr<TensorType>(transposedVector));
+  }
+
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
     if (l.getKind() != r.getKind()) {
       return false;
     }
 
     if (l.isTensor()) {
-      if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
+      if (tensorTypePtr(&l)->isColumnVector() !=
+          tensorTypePtr(&r)->isColumnVector()) {
         return false;
       }
     }
@@ -156,8 +167,8 @@
 
   #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)         \
     do {                                                \
-      TensorType *ltt = tensorTypePtr(lt);              \
-      TensorType *rtt = tensorTypePtr(rt);              \
+      const TensorType *ltt = tensorTypePtr(lt);        \
+      const TensorType *rtt = tensorTypePtr(rt);        \
       if (ltt->getOrder() > 0 && rtt->getOrder() > 0) { \
         CHECK_TYPE_EQUALITY(*ltt, *rtt, loc);           \
       }                                                 \
@@ -1444,7 +1455,7 @@ namespace  simit { namespace internal  {
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
-    TensorType *literalTensorType = tensorTypePtr(literalType);
+    const TensorType *literalTensorType = tensorTypePtr(literalType);
     if (tensorType->getOrder() == 2 && literalTensorType->getOrder() == 1) {
       literal->cast(tensorType);
     }
@@ -1671,8 +1682,8 @@ namespace  simit { namespace internal  {
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->getOrder() == 1 && rtype->getOrder() == 1) {
       // Inner product
-      if (!ctx->isColumnVector(*l->getType())) {
-        if (!ctx->isColumnVector(*r->getType())) {
+      if (!ltype->isColumnVector()) {
+        if (!rtype->isColumnVector()) {
           REPORT_ERROR("cannot multiply two row vectors", yystack_[1].location);
         }
         if (*l->getType() != *r->getType()) {
@@ -1682,7 +1693,7 @@ namespace  simit { namespace internal  {
       }
       // Outer product (l is a column vector)
       else {
-        if (ctx->isColumnVector(*r->getType())) {
+        if (rtype->isColumnVector()) {
           REPORT_ERROR("cannot multiply two column vectors", yystack_[1].location);
         }
         if (*l->getType() != *r->getType()) {
@@ -1751,8 +1762,8 @@ namespace  simit { namespace internal  {
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
         (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
-        if (!ctx->isColumnVector(*expr->getType())) {
-          ctx->toggleColumnVector(*(*(yylhs.value.indexExpr))->getType());
+        if (!type->isColumnVector()) {
+          transposeVector(*(yylhs.value.indexExpr));
         }
         break;
       case 2:
@@ -2245,9 +2256,9 @@ namespace  simit { namespace internal  {
   case 117:
 
     {
+    auto nestedDims = unique_ptr<vector<IndexDomain>>((yystack_[3].value.IndexDomains));
     (yylhs.value.tensorType) = new std::shared_ptr<TensorType>(new TensorType((yystack_[1].value.componentType),
-                                                        *(yystack_[3].value.IndexDomains)));
-    delete (yystack_[3].value.IndexDomains);
+                                                        *nestedDims));
   }
 
     break;
@@ -2255,10 +2266,10 @@ namespace  simit { namespace internal  {
   case 118:
 
     {
+    auto nestedDims = unique_ptr<vector<IndexDomain>>((yystack_[4].value.IndexDomains));
     (yylhs.value.tensorType) = new std::shared_ptr<TensorType>(new TensorType((yystack_[2].value.componentType),
-                                                        *(yystack_[4].value.IndexDomains)));
-    ctx->toggleColumnVector(**(yylhs.value.tensorType));
-    delete (yystack_[4].value.IndexDomains);
+                                                        *nestedDims,
+                                                        true));
   }
 
     break;
@@ -2378,7 +2389,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.TensorLiteral) = (yystack_[1].value.TensorLiteral);
-    ctx->toggleColumnVector(*(*(yylhs.value.TensorLiteral))->getType());
+    transposeVector(*(yylhs.value.TensorLiteral));
   }
 
     break;
@@ -3164,22 +3175,22 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   237,   237,   239,   243,   244,   252,   260,   263,   267,
-     274,   280,   283,   296,   310,   313,   321,   335,   335,   335,
-     348,   348,   348,   356,   399,   402,   413,   417,   428,   432,
-     438,   447,   450,   459,   460,   461,   462,   463,   467,   497,
-     503,   580,   583,   589,   595,   597,   601,   603,   617,   618,
-     619,   620,   621,   622,   623,   624,   625,   631,   652,   668,
-     676,   688,   753,   759,   789,   794,   803,   804,   805,   806,
-     812,   818,   824,   830,   836,   842,   857,   877,   878,   879,
-     890,   910,   916,   926,   929,   935,   941,   952,   963,   971,
-     973,   977,   979,   982,   983,  1031,  1036,  1044,  1048,  1051,
-    1057,  1075,  1081,  1099,  1129,  1132,  1135,  1138,  1144,  1151,
-    1155,  1161,  1168,  1171,  1179,  1184,  1200,  1203,  1208,  1216,
-    1219,  1257,  1262,  1270,  1273,  1277,  1282,  1285,  1354,  1357,
-    1358,  1362,  1365,  1374,  1385,  1392,  1395,  1399,  1412,  1416,
-    1430,  1434,  1440,  1447,  1450,  1454,  1467,  1471,  1485,  1489,
-    1495,  1500,  1510
+       0,   248,   248,   250,   254,   255,   263,   271,   274,   278,
+     285,   291,   294,   307,   321,   324,   332,   346,   346,   346,
+     359,   359,   359,   367,   410,   413,   424,   428,   439,   443,
+     449,   458,   461,   470,   471,   472,   473,   474,   478,   508,
+     514,   591,   594,   600,   606,   608,   612,   614,   628,   629,
+     630,   631,   632,   633,   634,   635,   636,   642,   663,   679,
+     687,   699,   764,   770,   800,   805,   814,   815,   816,   817,
+     823,   829,   835,   841,   847,   853,   868,   888,   889,   890,
+     901,   921,   927,   937,   940,   946,   952,   963,   974,   982,
+     984,   988,   990,   993,   994,  1042,  1047,  1055,  1059,  1062,
+    1068,  1086,  1092,  1110,  1140,  1143,  1146,  1149,  1155,  1162,
+    1166,  1172,  1179,  1182,  1190,  1195,  1211,  1214,  1219,  1227,
+    1230,  1268,  1273,  1281,  1284,  1288,  1293,  1296,  1365,  1368,
+    1369,  1373,  1376,  1385,  1396,  1403,  1406,  1410,  1423,  1427,
+    1441,  1445,  1451,  1458,  1461,  1465,  1478,  1482,  1496,  1500,
+    1506,  1511,  1521
   };
 
   // Print the state stack on the debug stream.

@@ -41,11 +41,11 @@
   using namespace simit::internal;
   using namespace simit::ir;
 
-  std::string typeString(const Type &type, ProgramContext *ctx) {
+  std::string typeString(const Type &type) {
     std::stringstream ss;
     ss << type;
     std::string str = ss.str();
-    if (ctx->isColumnVector(type)) {
+    if (type.isTensor() && tensorTypePtr(&type)->isColumnVector()) {
       str += "'";
     }
     return str;
@@ -57,13 +57,12 @@
       YYERROR;                    \
     } while (0)
 
-  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)           \
-    do {                                               \
-      std::stringstream errorStr;                      \
-      errorStr << "type missmatch ("                   \
-               << typeString(t1, ctx) << " and "       \
-               << typeString(t2, ctx) << ")";          \
-      REPORT_ERROR(errorStr.str(), loc);               \
+  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)                          \
+    do {                                                              \
+      std::stringstream errorStr;                                     \
+      errorStr << "type missmatch (" <<                               \
+                  typeString(t1) << " and " << typeString(t2) << ")"; \
+      REPORT_ERROR(errorStr.str(), loc);                              \
     } while (0)
 
   #define REPORT_INDEX_VARIABLE_MISSMATCH(numIndexVars, order, loc) \
@@ -95,13 +94,25 @@
     return result;
   }
 
+  void transposeVector(const std::shared_ptr<Expression> &vec) {
+    assert(vec->getType()->isTensor());
+    TensorType *ttype = tensorTypePtr(vec->getType());
+    assert(ttype->getOrder() == 1);
+
+    auto transposedVector = new TensorType(ttype->getComponentType(),
+                                           ttype->getDimensions(),
+                                           !ttype->isColumnVector());
+    vec->setType(std::shared_ptr<TensorType>(transposedVector));
+  }
+
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
     if (l.getKind() != r.getKind()) {
       return false;
     }
 
     if (l.isTensor()) {
-      if (ctx->isColumnVector(l) != ctx->isColumnVector(r)) {
+      if (tensorTypePtr(&l)->isColumnVector() !=
+          tensorTypePtr(&r)->isColumnVector()) {
         return false;
       }
     }
@@ -132,8 +143,8 @@
 
   #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)         \
     do {                                                \
-      TensorType *ltt = tensorTypePtr(lt);              \
-      TensorType *rtt = tensorTypePtr(rt);              \
+      const TensorType *ltt = tensorTypePtr(lt);        \
+      const TensorType *rtt = tensorTypePtr(rt);        \
       if (ltt->getOrder() > 0 && rtt->getOrder() > 0) { \
         CHECK_TYPE_EQUALITY(*ltt, *rtt, loc);           \
       }                                                 \
@@ -478,7 +489,7 @@ const_stmt
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
-    TensorType *literalTensorType = tensorTypePtr(literalType);
+    const TensorType *literalTensorType = tensorTypePtr(literalType);
     if (tensorType->getOrder() == 2 && literalTensorType->getOrder() == 1) {
       literal->cast(tensorType);
     }
@@ -704,8 +715,8 @@ linear_algebra_expr
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->getOrder() == 1 && rtype->getOrder() == 1) {
       // Inner product
-      if (!ctx->isColumnVector(*l->getType())) {
-        if (!ctx->isColumnVector(*r->getType())) {
+      if (!ltype->isColumnVector()) {
+        if (!rtype->isColumnVector()) {
           REPORT_ERROR("cannot multiply two row vectors", @2);
         }
         if (*l->getType() != *r->getType()) {
@@ -715,7 +726,7 @@ linear_algebra_expr
       }
       // Outer product (l is a column vector)
       else {
-        if (ctx->isColumnVector(*r->getType())) {
+        if (rtype->isColumnVector()) {
           REPORT_ERROR("cannot multiply two column vectors", @2);
         }
         if (*l->getType() != *r->getType()) {
@@ -774,8 +785,8 @@ linear_algebra_expr
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
         $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
-        if (!ctx->isColumnVector(*expr->getType())) {
-          ctx->toggleColumnVector(*(*$$)->getType());
+        if (!type->isColumnVector()) {
+          transposeVector(*$$);
         }
         break;
       case 2:
@@ -1201,15 +1212,15 @@ tensor_type
     $$ = new std::shared_ptr<TensorType>(new TensorType($component_type));
   }
   | "tensor" nested_dimensions "(" component_type ")" {
+    auto nestedDims = unique_ptr<vector<IndexDomain>>($nested_dimensions);
     $$ = new std::shared_ptr<TensorType>(new TensorType($component_type,
-                                                        *$nested_dimensions));
-    delete $nested_dimensions;
+                                                        *nestedDims));
   }
   | "tensor" nested_dimensions "(" component_type ")" "'" {
+    auto nestedDims = unique_ptr<vector<IndexDomain>>($nested_dimensions);
     $$ = new std::shared_ptr<TensorType>(new TensorType($component_type,
-                                                        *$nested_dimensions));
-    ctx->toggleColumnVector(**$$);
-    delete $nested_dimensions;
+                                                        *nestedDims,
+                                                        true));
   }
 
 nested_dimensions
@@ -1357,7 +1368,7 @@ tensor_literal
   : dense_tensor_literal
   | dense_tensor_literal "'" {
     $$ = $1;
-    ctx->toggleColumnVector(*(*$$)->getType());
+    transposeVector(*$$);
   }
   | scalar_literal
 

@@ -57,12 +57,10 @@ public:
 
   void scope()   {
     exprSymtable.scope();
-    columnVectors.scope();
   }
 
   void unscope() {
     exprSymtable.unscope();
-    columnVectors.unscope();
   }
 
   void addSymbol(const std::string &name,
@@ -117,30 +115,12 @@ public:
 
   const std::vector<ir::Test*> &getTests() const { return tests; }
 
-  void toggleColumnVector(const ir::Type &type) {
-    if (columnVectors.contains(&type)) {
-      bool &val = columnVectors.get(&type);
-      val = !val;
-    }
-    else {
-      columnVectors.insert(&type, true);
-    }
-  }
-
-  bool isColumnVector(const ir::Type &type) {
-    if (!columnVectors.contains(&type)) {
-      return false;
-    }
-    return columnVectors.get(&type);
-  }
-
 private:
   std::map<std::string, ir::Function *>                   functions;
   std::map<std::string, std::shared_ptr<ir::ElementType>> elementTypes;
   std::vector<ir::Test*>                                  tests;
 
   ScopedMap<std::string, RWExprPair> exprSymtable;
-  ScopedMap<const ir::Type*, bool>   columnVectors;
 };
 
 }} // namespace simit::internal

@@ -109,12 +109,13 @@ bool operator!=(const Type& l, const Type& r);
 class TensorType : public Type {
 public:
   TensorType(ComponentType componentType)
-      : Type(Type::Tensor), componentType(componentType) {}
+      : Type(Type::Tensor), componentType(componentType), columnVector(false) {}
 
   TensorType(ComponentType componentType,
-             const std::vector<IndexDomain> &dimensions)
+             const std::vector<IndexDomain> &dimensions,
+             bool isColumnVector=false)
       : Type(Type::Tensor), componentType(componentType),
-        dimensions(dimensions) {}
+        dimensions(dimensions), columnVector(isColumnVector) {}
 
   /// Get the order of the tensor (the number of dimensions).
   size_t getOrder() const { return dimensions.size(); }
@@ -123,7 +124,13 @@ public:
   ComponentType getComponentType() const { return componentType; }
 
   /// Get the index sets that form the dimensions of the tensor.
-  const std::vector<IndexDomain> &getDimensions() const {return dimensions;}
+  const std::vector<IndexDomain> &getDimensions() const { return dimensions; }
+
+  /// Whether the tensor is a column vector or not.  Note that this information
+  /// is only provided for convenience for frontends based on linear algebra,
+  /// and will not be used or maintained by optimization passes.
+  bool isColumnVector() const { return columnVector; }
+  void toggleColumnVector() { columnVector = !columnVector; }
 
   /// Get the number of components in the tensor if all its dimensions are
   /// composed of Range index sets, otherwise undefined.
@@ -132,6 +139,7 @@ public:
 private:
   ComponentType componentType;
   std::vector<IndexDomain> dimensions;
+  bool columnVector;
 
   void print(std::ostream &os) const;
 };
@@ -201,6 +209,11 @@ bool operator!=(const SetType& l, const SetType& r);
 
 
 // Conversion functions
+inline const TensorType *tensorTypePtr(const Type *type) {
+  assert(type->isTensor());
+  return static_cast<const TensorType*>(type);
+}
+
 inline TensorType *tensorTypePtr(Type *type) {
   assert(type->isTensor());
   return static_cast<TensorType*>(type);
