@@ -284,7 +284,6 @@ FieldRead::FieldRead(const std::shared_ptr<Expression> &setOrElem,
 // class TensorRead
 static std::shared_ptr<Type>
 getBlockType(const std::shared_ptr<Expression> &expr) {
-  cout << *expr << endl;
   assert(expr->getType()->isTensor());
 
   TensorType *type = tensorTypePtr(expr->getType());
