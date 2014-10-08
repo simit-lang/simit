@@ -18,6 +18,8 @@ SetIRCodeGen::SetIRCodeGen()
 }
 
 SetIRCodeGen::~SetIRCodeGen() {
+  delete symtable;
+  delete scopeStack;
 }
 
 std::unique_ptr<Stmt> SetIRCodeGen::codegen(simit::ir::Function *function){

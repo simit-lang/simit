@@ -331,6 +331,12 @@ field_decl
 // Procedures and functions
 %union {
   ir::Function *function;
+
+  std::shared_ptr<ir::Argument>              *argument;
+  std::vector<std::shared_ptr<ir::Argument>> *arguments;
+
+  std::shared_ptr<ir::Result>                *result;
+  std::vector<std::shared_ptr<ir::Result>>   *results;
 };
 
 %type <function> procedure;
@@ -395,15 +401,6 @@ function_header
     }
   }
 
-
-%union {
-  std::shared_ptr<ir::Argument>              *argument;
-  std::vector<std::shared_ptr<ir::Argument>> *arguments;
-
-  std::shared_ptr<ir::Result>                *result;
-  std::vector<std::shared_ptr<ir::Result>>   *results;
-};
-
 %type <arguments> arguments;
 arguments
   : /* empty */ {
@@ -462,7 +459,8 @@ result_decl
   : IDENT ":" type {
     std::string name = convertAndFree($IDENT);
     auto type = convertAndDelete($type);
-    $$ = new shared_ptr<Result>(new Result(name, type));
+    auto result = new Result(name, type);
+    $$ = new shared_ptr<Result>(result);
   }
 
 
@@ -526,7 +524,7 @@ return_stmt
 %type<IRNodes> assign_stmt;
 assign_stmt
   : write_expr_list "=" expr_list ";" {
-    auto lhsList = unique_ptr<vector<WriteInfo*>>($write_expr_list);
+    auto lhsList = unique_ptr<vector<unique_ptr<WriteInfo>>>($write_expr_list);
     auto rhsList = unique_ptr<vector<shared_ptr<Expression>>>($expr_list);
 
     $$ = new vector<shared_ptr<IRNode>>();
@@ -543,8 +541,8 @@ assign_stmt
     auto lhsIter = lhsList->begin();
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
-      unique_ptr<WriteInfo> lhs(*lhsIter);
-      shared_ptr<Expression> &rhs = *rhsIter;
+      const unique_ptr<WriteInfo>  &lhs = *lhsIter;
+      const shared_ptr<Expression> &rhs = *rhsIter;
 
       if (rhs == NULL) continue;
 
@@ -1046,7 +1044,7 @@ reduction_op
 };
 
 %union {
-  std::vector<WriteInfo*>          *writeinfos;
+  std::vector<std::unique_ptr<WriteInfo>> *writeinfos;
   WriteInfo                        *writeinfo;
   std::shared_ptr<ir::FieldWrite>  *fieldWrite;
   std::shared_ptr<ir::TensorWrite> *tensorWrite;
@@ -1055,14 +1053,14 @@ reduction_op
 %type<writeinfos> write_expr_list;
 write_expr_list
   : write_expr {
-    $$ = new vector<WriteInfo*>();
+    $$ = new vector<unique_ptr<WriteInfo>>;
     if ($write_expr == NULL) break;  // TODO: Remove check
-    $$->push_back($write_expr);
+    $$->push_back(unique_ptr<WriteInfo>($write_expr));
   }
   | write_expr_list "," write_expr {
     $$ = $1;
     if ($write_expr == NULL) break;  // TODO: Remove check
-    $$->push_back($write_expr);
+    $$->push_back(unique_ptr<WriteInfo>($write_expr));
   }
 
 %type <writeinfo> write_expr;

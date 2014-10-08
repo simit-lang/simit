@@ -232,7 +232,6 @@ namespace  simit { namespace internal  {
 
   ir::Function *function;
 
-
   std::shared_ptr<ir::Argument>              *argument;
   std::vector<std::shared_ptr<ir::Argument>> *arguments;
 
@@ -256,7 +255,7 @@ namespace  simit { namespace internal  {
   std::shared_ptr<ir::TensorRead> *tensorRead;
 
 
-  std::vector<WriteInfo*>          *writeinfos;
+  std::vector<std::unique_ptr<WriteInfo>> *writeinfos;
   WriteInfo                        *writeinfo;
   std::shared_ptr<ir::FieldWrite>  *fieldWrite;
   std::shared_ptr<ir::TensorWrite> *tensorWrite;

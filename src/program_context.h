@@ -55,6 +55,15 @@ class ProgramContext {
 public:
   ProgramContext() {}
 
+  ~ProgramContext() {
+    for (auto &function : functions) {
+      delete function.second;
+    }
+    for (auto &test : tests) {
+      delete test;
+    }
+  }
+
   void scope()   {
     exprSymtable.scope();
   }

@@ -214,17 +214,17 @@ protected:
 /// Expression that reads a tensor from an element or set field.
 class FieldRead : public Read {
 public:
-  FieldRead(const std::shared_ptr<Expression> &target,
+  FieldRead(const std::shared_ptr<Expression> &setOrElem,
             const std::string &fieldName);
 
-  const std::shared_ptr<Expression> &getTarget() const { return target; }
+  const std::shared_ptr<Expression> &getTarget() const { return setOrElem; }
   const std::string &getFieldName() const { return fieldName; }
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
   void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
-  std::shared_ptr<Expression> target;
+  std::shared_ptr<Expression> setOrElem;
   std::string fieldName;
 };
 
@@ -235,17 +235,18 @@ public:
   // TODO: Look up type from the set and check that value has correct type in
   //       setValue
   // TODO: Change from set to elemOrSet
-  FieldWrite(const std::shared_ptr<Expression> &target,
+  FieldWrite(const std::shared_ptr<Expression> &setOrElem,
              const std::string &fieldName)
-    : Write(target->getType()), target(target), fieldName(fieldName) {}
+    : Write(setOrElem->getType()), setOrElem(setOrElem), fieldName(fieldName) {}
 
   void setValue(const std::shared_ptr<Expression> &value) {
     // TODO: check that value has correct type
-    value->setName(target->getName() + "." + fieldName); // TODO: remove line
+    auto setOrElemPtr = setOrElem.lock();
+    value->setName(setOrElemPtr->getName() + "." + fieldName); // TODO: remove line
     this->value = value;
   }
 
-  const std::shared_ptr<Expression> &getTarget() const { return target; }
+  std::shared_ptr<Expression> getTarget() const { return setOrElem.lock(); }
   const std::string &getFieldName() const { return fieldName; }
 
   const std::shared_ptr<Expression> &getValue() const { return value; }
@@ -254,7 +255,7 @@ public:
   void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
-  std::shared_ptr<Expression> target;
+  std::weak_ptr<Expression> setOrElem;
   std::string fieldName;
   std::shared_ptr<Expression> value;
 };
@@ -292,7 +293,7 @@ public:
     this->value = value;
   }
 
-  const std::shared_ptr<Expression> &getTensor() const { return tensor; }
+  std::shared_ptr<Expression> getTensor() const { return tensor.lock(); }
   const std::vector<std::shared_ptr<Expression>> &getIndices() const {
     return indices;
   }
@@ -302,7 +303,7 @@ public:
   void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
-  std::shared_ptr<Expression> tensor;
+  std::weak_ptr<Expression> tensor;
   std::vector<std::shared_ptr<Expression>> indices;
   std::shared_ptr<Expression> value;
 };

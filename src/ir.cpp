@@ -274,10 +274,10 @@ fieldType(const std::shared_ptr<Expression> &expr,const std::string &fieldName){
   return std::shared_ptr<TensorType>(fieldType);
 }
 
-FieldRead::FieldRead(const std::shared_ptr<Expression> &target,
+FieldRead::FieldRead(const std::shared_ptr<Expression> &setOrElem,
                      const std::string &fieldName)
-    : Read(fieldType(target, fieldName)),
-      target(target), fieldName(fieldName) {}
+    : Read(fieldType(setOrElem, fieldName)),
+      setOrElem(setOrElem), fieldName(fieldName) {}
 
 
 // class TensorRead

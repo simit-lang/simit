@@ -1469,7 +1469,8 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[2].value.string));
     auto type = convertAndDelete((yystack_[0].value.type));
-    (yylhs.value.result) = new shared_ptr<Result>(new Result(name, type));
+    auto result = new Result(name, type);
+    (yylhs.value.result) = new shared_ptr<Result>(result);
   }
 
     break;
@@ -1536,7 +1537,7 @@ namespace  simit { namespace internal  {
   case 42:
 
     {
-    auto lhsList = unique_ptr<vector<WriteInfo*>>((yystack_[3].value.writeinfos));
+    auto lhsList = unique_ptr<vector<unique_ptr<WriteInfo>>>((yystack_[3].value.writeinfos));
     auto rhsList = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[1].value.expressions));
 
     (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
@@ -1553,8 +1554,8 @@ namespace  simit { namespace internal  {
     auto lhsIter = lhsList->begin();
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
-      unique_ptr<WriteInfo> lhs(*lhsIter);
-      shared_ptr<Expression> &rhs = *rhsIter;
+      const unique_ptr<WriteInfo>  &lhs = *lhsIter;
+      const shared_ptr<Expression> &rhs = *rhsIter;
 
       if (rhs == NULL) continue;
 
@@ -2082,9 +2083,9 @@ namespace  simit { namespace internal  {
   case 97:
 
     {
-    (yylhs.value.writeinfos) = new vector<WriteInfo*>();
+    (yylhs.value.writeinfos) = new vector<unique_ptr<WriteInfo>>;
     if ((yystack_[0].value.writeinfo) == NULL) break;  // TODO: Remove check
-    (yylhs.value.writeinfos)->push_back((yystack_[0].value.writeinfo));
+    (yylhs.value.writeinfos)->push_back(unique_ptr<WriteInfo>((yystack_[0].value.writeinfo)));
   }
 
     break;
@@ -2094,7 +2095,7 @@ namespace  simit { namespace internal  {
     {
     (yylhs.value.writeinfos) = (yystack_[2].value.writeinfos);
     if ((yystack_[0].value.writeinfo) == NULL) break;  // TODO: Remove check
-    (yylhs.value.writeinfos)->push_back((yystack_[0].value.writeinfo));
+    (yylhs.value.writeinfos)->push_back(unique_ptr<WriteInfo>((yystack_[0].value.writeinfo)));
   }
 
     break;
@@ -3249,21 +3250,21 @@ namespace  simit { namespace internal  {
    Parser ::yyrline_[] =
   {
        0,   248,   248,   250,   254,   255,   263,   271,   274,   278,
-     285,   299,   313,   316,   324,   338,   338,   338,   346,   368,
-     368,   368,   376,   409,   412,   418,   423,   431,   440,   443,
-     449,   454,   462,   472,   475,   484,   485,   486,   487,   488,
-     492,   522,   528,   605,   608,   614,   620,   622,   626,   628,
-     642,   643,   644,   645,   646,   647,   648,   649,   650,   656,
-     677,   693,   701,   713,   778,   784,   814,   819,   828,   829,
-     830,   831,   837,   843,   849,   855,   861,   867,   882,   902,
-     903,   904,   915,   936,   942,   952,   955,   961,   967,   978,
-     989,   997,   999,  1003,  1005,  1008,  1009,  1057,  1062,  1070,
-    1074,  1077,  1083,  1101,  1107,  1125,  1149,  1152,  1155,  1158,
-    1164,  1171,  1175,  1185,  1189,  1196,  1203,  1206,  1214,  1219,
-    1234,  1237,  1240,  1280,  1290,  1295,  1303,  1306,  1310,  1316,
-    1319,  1388,  1391,  1392,  1396,  1399,  1408,  1419,  1426,  1429,
-    1433,  1446,  1450,  1464,  1468,  1474,  1481,  1484,  1488,  1501,
-    1505,  1519,  1523,  1529,  1534,  1544
+     285,   299,   313,   316,   324,   344,   344,   344,   352,   374,
+     374,   374,   382,   406,   409,   415,   420,   428,   437,   440,
+     446,   451,   459,   470,   473,   482,   483,   484,   485,   486,
+     490,   520,   526,   603,   606,   612,   618,   620,   624,   626,
+     640,   641,   642,   643,   644,   645,   646,   647,   648,   654,
+     675,   691,   699,   711,   776,   782,   812,   817,   826,   827,
+     828,   829,   835,   841,   847,   853,   859,   865,   880,   900,
+     901,   902,   913,   934,   940,   950,   953,   959,   965,   976,
+     987,   995,   997,  1001,  1003,  1006,  1007,  1055,  1060,  1068,
+    1072,  1075,  1081,  1099,  1105,  1123,  1147,  1150,  1153,  1156,
+    1162,  1169,  1173,  1183,  1187,  1194,  1201,  1204,  1212,  1217,
+    1232,  1235,  1238,  1278,  1288,  1293,  1301,  1304,  1308,  1314,
+    1317,  1386,  1389,  1390,  1394,  1397,  1406,  1417,  1424,  1427,
+    1431,  1444,  1448,  1462,  1466,  1472,  1479,  1482,  1486,  1499,
+    1503,  1517,  1521,  1527,  1532,  1542
   };
 
   // Print the state stack on the debug stream.
