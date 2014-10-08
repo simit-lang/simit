@@ -1138,17 +1138,11 @@ tensor_write_expr
 
   std::vector<std::shared_ptr<ir::ElementType>> *elementTypes;
 
-  std::vector<ir::IndexDomain> *IndexDomains;
-  std::vector<ir::IndexSet>    *IndexSets;
-  ir::IndexSet                 *indexSet;
-  ComponentType                 componentType;
+  std::vector<ir::IndexSet>        *indexSets;
+  ir::IndexSet                     *indexSet;
+  ComponentType                      componentType;
 };
 %destructor {} <componentType>;
-
-%type <IndexDomains>  nested_dimensions;
-%type <IndexSets>     dimensions;
-%type <indexSet>      dimension;
-%type <componentType> component_type;
 
 %type <type> type;
 type
@@ -1238,75 +1232,74 @@ tuple_element_type
 %type <tensorType> tensor_type;
 tensor_type
   : component_type {
-    $$ = new std::shared_ptr<TensorType>(new TensorType($component_type));
+    $$ = new shared_ptr<TensorType>(new TensorType($component_type));
   }
-  | "tensor" nested_dimensions "(" component_type ")" {
-    auto nestedDims = unique_ptr<vector<IndexDomain>>($nested_dimensions);
-    $$ = new std::shared_ptr<TensorType>(new TensorType($component_type,
-                                                        *nestedDims));
+  | "tensor" "(" tensor_type[block_type] ")" {
+    $$ = $block_type;
   }
-  | "tensor" nested_dimensions "(" component_type ")" "'" {
-    auto nestedDims = unique_ptr<vector<IndexDomain>>($nested_dimensions);
-    $$ = new std::shared_ptr<TensorType>(new TensorType($component_type,
-                                                        *nestedDims,
-                                                        true));
-  }
+  | "tensor" "[" index_sets "]" "(" tensor_type[block_type] ")" {
+    auto blockType = convertAndDelete($block_type);
+    auto componentType = blockType->getComponentType();
 
-nested_dimensions
-  : /* empty */ {
-    $$ = new std::vector<IndexDomain>();
-  }
-  | nested_dimensions "[" dimensions "]" {
-    $$ = $1;
+    auto outerDimensions = unique_ptr<vector<IndexSet>>($index_sets);
+    auto blockDimensions = blockType->getDimensions();
 
-    auto parentDims = $$;
-    auto childDims = unique_ptr<std::vector<IndexSet>>($dimensions);
+    vector<IndexDomain> dimensions;
+    if (blockType->getOrder() == 0) {
+      for (size_t i=0; i<outerDimensions->size(); ++i) {
+        dimensions.push_back(IndexDomain((*outerDimensions)[i]));
+      }
+    }
+    else {
+      // TODO: Handle the following cases where there there are more inner than
+      //       outer dimensions (e.g. a vector of matrixes) and where there are
+      //       more outer than inner dimensions (e.g. a matrix of vectors)
+      //       gracefully by padding with '1'-dimensions.
+      // TODO: Handle case where there are more block than outer dimensions
+      // TODO: Handle case where there are more outer than block dimensions
+      // TODO: Remove below error
+      if (blockType->getOrder() != outerDimensions->size()) {
+        REPORT_ERROR("Blocktype order (" + to_string(blockType->getOrder()) +
+                     ") differ from number of dimensions", @index_sets);
+      }
 
-    // If there are no previous dimensions then create IndexDomains
-    if (parentDims->size() == 0) {
-      for (auto &dim : *childDims) {
-        UNUSED(dim);
-        parentDims->push_back(IndexDomain());
+      assert(blockDimensions.size() == outerDimensions->size());
+      for (size_t i=0; i<outerDimensions->size(); ++i) {
+        vector<IndexSet> dimension;
+        dimension.push_back((*outerDimensions)[i]);
+        dimension.insert(dimension.begin(),
+                         blockDimensions[i].getFactors().begin(),
+                         blockDimensions[i].getFactors().end());
+
+        dimensions.push_back(IndexDomain(dimension));
       }
     }
 
-    // Handle case where there are more child than parent dimensions
-    if (childDims->size() > parentDims->size()) {
-      for (size_t i=0; i < childDims->size() - parentDims->size(); ++i) {
-        size_t numNestings = (*parentDims)[0].getFactors().size();
-        std::vector<IndexSet> indexSets(numNestings, IndexSet(1));
-        parentDims->push_back(IndexDomain(indexSets));
-      }
-    }
-
-    // Handle case where there are more parent than child dimensions
-    if (parentDims->size() > childDims->size()) {
-      for (size_t i=0; i < parentDims->size() - childDims->size(); ++i) {
-        childDims->push_back(IndexSet(1));
-      }
-    }
-
-    // Multiply each dimension with the corresponding dimension in the shape.
-    assert(childDims->size() == parentDims->size());
-    for (size_t i=0; i<$$->size(); ++i) {
-      (*parentDims)[i] = (*parentDims)[i] * IndexDomain((*childDims)[i]);
-    }
+    $$ = new shared_ptr<TensorType>(new TensorType(componentType, dimensions));
+  }
+  | tensor_type "'" {
+    auto tensorType = convertAndDelete($1);
+    auto dimensions = tensorType->getDimensions();
+    auto componentType = tensorType->getComponentType();
+    $$ = new shared_ptr<TensorType>(new TensorType(componentType, dimensions,
+                                                   true /* isColumnVector */));
   }
 
-dimensions
-  : dimension {
+%type <indexSets> index_sets;
+index_sets
+  : index_set {
     $$ = new std::vector<IndexSet>();
-    $$->push_back(*$dimension);
-    delete $dimension;
+    $$->push_back(*$index_set);
+    delete $index_set;
   }
-  | dimensions "," dimension {
-
+  | index_sets "," index_set {
     $$ = $1;
-    $$->push_back(*$dimension);
-    delete $dimension;
+    $$->push_back(*$index_set);
+    delete $index_set;
   }
 
-dimension
+%type <indexSet> index_set;
+index_set
   : INT_LITERAL {
     $$ = new IndexSet($INT_LITERAL);
   }
@@ -1318,6 +1311,7 @@ dimension
     $$ = new IndexSet();
   }
 
+%type <componentType> component_type;
 component_type
   : INT {
     $$ = ComponentType::INT;

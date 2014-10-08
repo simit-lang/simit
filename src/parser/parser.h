@@ -270,10 +270,9 @@ namespace  simit { namespace internal  {
 
   std::vector<std::shared_ptr<ir::ElementType>> *elementTypes;
 
-  std::vector<ir::IndexDomain> *IndexDomains;
-  std::vector<ir::IndexSet>    *IndexSets;
-  ir::IndexSet                 *indexSet;
-  ComponentType                 componentType;
+  std::vector<ir::IndexSet>        *indexSets;
+  ir::IndexSet                     *indexSet;
+  ComponentType                      componentType;
 
 
   std::shared_ptr<ir::Literal> *TensorLiteral;
@@ -531,7 +530,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const short int yycheck_[];
+  static const unsigned short int yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -646,8 +645,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 339,     ///< Last index in yytable_.
-      yynnts_ = 76,  ///< Number of nonterminal symbols.
+      yylast_ = 343,     ///< Last index in yytable_.
+      yynnts_ = 75,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

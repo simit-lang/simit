@@ -16,13 +16,11 @@ int main(int argc, const char* argv[]) {
     return 2;
   }
   else if (status != 0) {
-    cerr << "Error parsing the program" << endl;
     cerr << program.getDiagnostics() << endl;
     return 1;
   }
 
   if (program.verify() != 0) {
-    cerr << "Error while running test" << endl;
     cerr << program.getDiagnostics() << endl;
     return 4;
   }
