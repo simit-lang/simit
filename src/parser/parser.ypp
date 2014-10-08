@@ -935,7 +935,7 @@ call_or_paren_read_expr
       }
       else if (expr->getType()->isTuple()) {
         if (indices->size() != 1) {
-          REPORT_ERROR(" reading a tuple requires exactly one index", @3);
+          REPORT_ERROR("reading a tuple requires exactly one index", @3);
         }
 
         $$ = new shared_ptr<Expression>(new TupleRead(expr, (*indices)[0]));

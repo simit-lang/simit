@@ -1979,7 +1979,7 @@ namespace  simit { namespace internal  {
       }
       else if (expr->getType()->isTuple()) {
         if (indices->size() != 1) {
-          REPORT_ERROR(" reading a tuple requires exactly one index", yystack_[1].location);
+          REPORT_ERROR("reading a tuple requires exactly one index", yystack_[1].location);
         }
 
         (yylhs.value.expression) = new shared_ptr<Expression>(new TupleRead(expr, (*indices)[0]));

@@ -27,7 +27,7 @@ IRPrinter::IRPrinter(std::ostream &os, signed indent)
 }
 
 void IRPrinter::print(const Function &func) {
-  os << "func (";
+  os << "func " << func.getName() << "(";
   auto argIt = func.getArguments().begin();
   auto argEnd = func.getArguments().end();
   if (argIt != argEnd) {

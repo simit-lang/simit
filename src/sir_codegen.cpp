@@ -28,9 +28,14 @@ std::unique_ptr<Stmt> SetIRCodeGen::codegen(simit::ir::Function *function){
   visit(function);
 
   assert(scopeStack->size() == 1);
-  std::unique_ptr<Stmt> stmt(new Stmt(scopeStack->top()));
+
+  auto stmt = scopeStack->top();
+  if (!stmt.defined()) {
+    stmt = Pass::make();
+  }
+
   scopeStack->pop();
-  return stmt;
+  return std::unique_ptr<Stmt>(new Stmt(stmt));
 }
 
 typedef std::vector<std::shared_ptr<IndexVar>> Domain;
