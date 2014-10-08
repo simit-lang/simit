@@ -1187,40 +1187,15 @@ endpoints
 
 %type <tupleType> tuple_type;
 tuple_type
-  : "(" tuple_element_types ")" {
-    $$ = new std::shared_ptr<TupleType>(new TupleType(*$tuple_element_types));
-    delete $tuple_element_types;
-  }
-
-%type <elementTypes> tuple_element_types;
-tuple_element_types
-  : tuple_element_type {
-    $$ = $1;
-  }
-  | tuple_element_types "," tuple_element_type {
-    $$ = $1;
-    $$->insert($$->begin(), $3->begin(), $3->end());
-    delete $3;
-  }
-
-%type <elementTypes> tuple_element_type;
-tuple_element_type
-  : element_type {
-    auto elementType = convertAndDelete($element_type);
-    $$ = new vector<shared_ptr<ElementType>>;
-    $$->push_back(elementType);
-  }
-  | element_type "*" INT_LITERAL {
+  : "(" element_type "*" INT_LITERAL ")" {
     auto elementType = convertAndDelete($element_type);
 
     if ($INT_LITERAL<1) {
       REPORT_ERROR("Must be 1 or greater", @3);
     }
 
-    $$ = new vector<shared_ptr<ElementType>>;
-    for (int i=0; i < $INT_LITERAL; ++i) {
-      $$->push_back(elementType);
-    }
+    auto tupleType = new TupleType(elementType, $INT_LITERAL);
+    $$ = new std::shared_ptr<TupleType>(tupleType);
   }
 
 %type <tensorType> tensor_type;

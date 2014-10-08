@@ -173,15 +173,20 @@ bool operator!=(const ElementType &l, const ElementType &r);
 /// A Simit tuple type, which is defined by the types of its elements.
 class TupleType : public Type {
 public:
-  TupleType(std::vector<std::shared_ptr<ElementType>> elementTypes)
-      : Type(Type::Tuple), elementTypes(elementTypes) {}
+  TupleType(std::shared_ptr<ElementType> &elementType, size_t size)
+      : Type(Type::Tuple), elementType(elementType), size(size) {}
 
-  const std::vector<std::shared_ptr<ElementType>> &getElementType() const {
-    return elementTypes;
+  const std::shared_ptr<ElementType> &getElementType() const {
+    return elementType;
+  }
+
+  size_t getSize() const {
+    return size;
   }
 
 private:
-  std::vector<std::shared_ptr<ElementType>> elementTypes;
+  std::shared_ptr<ElementType> elementType;
+  size_t size;
 
   void print(std::ostream &os) const;
 };

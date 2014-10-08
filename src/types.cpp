@@ -180,7 +180,7 @@ bool operator!=(const ElementType &l, const ElementType &r) {
 
 // class TupleType
 void TupleType::print(std::ostream &os) const {
-  os << "(" << util::join(elementTypes, ",") << ")";
+  os << "(" << *elementType << "*" << size << ")";
 }
 
 
