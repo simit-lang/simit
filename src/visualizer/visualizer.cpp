@@ -164,9 +164,9 @@ GLuint createGLProgram(const string& vertexShaderStr,
 // matrix associated with a rotation about the Y axis of theta (rad).
 void buildThetaRotMatrix(double theta, GLfloat matrix[16]) {
   GLfloat outMat[16] = {
-    (GLfloat)cos(theta), 0, (GLfloat)-sin(theta), 0,
+    (GLfloat)cos(theta), 0, (GLfloat)sin(theta), 0,
     0, 1, 0, 0,
-    (GLfloat)sin(theta), 0, (GLfloat)cos(theta), 0,
+    (GLfloat)-sin(theta), 0, (GLfloat)cos(theta), 0,
     0, 0, 0, 1
   };
   memcpy(matrix, outMat, sizeof(outMat));
@@ -177,8 +177,8 @@ void buildThetaRotMatrix(double theta, GLfloat matrix[16]) {
 void buildPhiRotMatrix(double phi, GLfloat matrix[16]) {
   GLfloat outMat[16] = {
     1, 0, 0, 0,
-    0, (GLfloat)cos(phi), (GLfloat)-sin(phi), 0,
-    0, (GLfloat)sin(phi), (GLfloat)cos(phi), 0,
+    0, (GLfloat)cos(phi), (GLfloat)sin(phi), 0,
+    0, (GLfloat)-sin(phi), (GLfloat)cos(phi), 0,
     0, 0, 0, 1
   };
   memcpy(matrix, outMat, sizeof(outMat));
@@ -196,25 +196,37 @@ void buildZoomMatrix(double zoom, GLfloat matrix[16]) {
   memcpy(matrix, outMat, sizeof(outMat));
 }
 
+// Writes 16 doubles into matrix, representing the 4x4 transformation
+// matrix asscoatied wtih an x-y pan (relative to the current camera).
+void buildXYPanMatrix(double x, double y, GLfloat matrix[16]) {
+  GLfloat outMat[16] = {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    (GLfloat)x, (GLfloat)y, 0, 1
+  };
+  memcpy(matrix, outMat, sizeof(outMat));
+}
+
 // m1 * m2 = out
 void multiplyMatrix(const GLfloat m1[16], const GLfloat m2[16],
                     GLfloat out[16]) {
-  out[0] = m1[0]*m2[0] + m1[1]*m2[4] + m1[2]*m2[8] + m1[3]*m2[12];
-  out[1] = m1[0]*m2[1] + m1[1]*m2[5] + m1[2]*m2[9] + m1[3]*m2[13];
-  out[2] = m1[0]*m2[2] + m1[1]*m2[6] + m1[2]*m2[10] + m1[3]*m2[14];
-  out[3] = m1[0]*m2[3] + m1[1]*m2[7] + m1[2]*m2[11] + m1[3]*m2[15];
-  out[4] = m1[4]*m2[0] + m1[5]*m2[4] + m1[6]*m2[8] + m1[7]*m2[12];
-  out[5] = m1[4]*m2[1] + m1[5]*m2[5] + m1[6]*m2[9] + m1[7]*m2[13];
-  out[6] = m1[4]*m2[2] + m1[5]*m2[6] + m1[6]*m2[10] + m1[7]*m2[14];
-  out[7] = m1[4]*m2[3] + m1[5]*m2[7] + m1[6]*m2[11] + m1[7]*m2[15];
-  out[8] = m1[8]*m2[0] + m1[9]*m2[4] + m1[10]*m2[8] + m1[11]*m2[12];
-  out[9] = m1[8]*m2[1] + m1[9]*m2[5] + m1[10]*m2[9] + m1[11]*m2[13];
-  out[10] = m1[8]*m2[2] + m1[9]*m2[6] + m1[10]*m2[10] + m1[11]*m2[14];
-  out[11] = m1[8]*m2[3] + m1[9]*m2[7] + m1[10]*m2[11] + m1[11]*m2[15];
-  out[12] = m1[12]*m2[0] + m1[13]*m2[4] + m1[14]*m2[8] + m1[15]*m2[12];
-  out[13] = m1[12]*m2[1] + m1[13]*m2[5] + m1[14]*m2[9] + m1[15]*m2[13];
-  out[14] = m1[12]*m2[2] + m1[13]*m2[6] + m1[14]*m2[10] + m1[15]*m2[14];
-  out[15] = m1[12]*m2[3] + m1[13]*m2[7] + m1[14]*m2[11] + m1[15]*m2[15];
+  out[0] = m1[0]*m2[0] + m1[4]*m2[1] + m1[8]*m2[2] + m1[12]*m2[3];
+  out[1] = m1[1]*m2[0] + m1[5]*m2[1] + m1[9]*m2[2] + m1[13]*m2[3];
+  out[2] = m1[2]*m2[0] + m1[6]*m2[1] + m1[10]*m2[2] + m1[14]*m2[3];
+  out[3] = m1[3]*m2[0] + m1[7]*m2[1] + m1[11]*m2[2] + m1[15]*m2[3];
+  out[4] = m1[0]*m2[4] + m1[4]*m2[5] + m1[8]*m2[6] + m1[12]*m2[7];
+  out[5] = m1[1]*m2[4] + m1[5]*m2[5] + m1[9]*m2[6] + m1[13]*m2[7];
+  out[6] = m1[2]*m2[4] + m1[6]*m2[5] + m1[10]*m2[6] + m1[14]*m2[7];
+  out[7] = m1[3]*m2[4] + m1[7]*m2[5] + m1[11]*m2[6] + m1[15]*m2[7];
+  out[8] = m1[0]*m2[8] + m1[4]*m2[9] + m1[8]*m2[10] + m1[12]*m2[11];
+  out[9] = m1[1]*m2[8] + m1[5]*m2[9] + m1[9]*m2[10] + m1[13]*m2[11];
+  out[10] = m1[2]*m2[8] + m1[6]*m2[9] + m1[10]*m2[10] + m1[14]*m2[11];
+  out[11] = m1[3]*m2[8] + m1[7]*m2[9] + m1[11]*m2[10] + m1[15]*m2[11];
+  out[12] = m1[0]*m2[12] + m1[4]*m2[13] + m1[8]*m2[14] + m1[12]*m2[15];
+  out[13] = m1[1]*m2[12] + m1[5]*m2[13] + m1[9]*m2[14] + m1[13]*m2[15];
+  out[14] = m1[2]*m2[12] + m1[6]*m2[13] + m1[10]*m2[14] + m1[14]*m2[15];
+  out[15] = m1[3]*m2[12] + m1[7]*m2[13] + m1[11]*m2[14] + m1[15]*m2[15];
 }
 
 // Invert a 4x4 matrix explicitly. Writes 16 doubles into inverse.
@@ -422,8 +434,8 @@ void handleReshape(int width, int height) {
   GLfloat outMat[16] = {
     f/aspect, 0, 0, 0,
     0, f, 0, 0,
-    0, 0, -1, -0.2,
-    0, 0, -1, 2
+    0, 0, -1, -1,
+    0, 0, -0.2, 2
   };
   memcpy(projMat, outMat, sizeof(outMat));
 }
@@ -441,6 +453,26 @@ void handleKeyboardEvent(unsigned char key, int x, int y) {
     GLfloat zoomMat[16];
     internal::buildZoomMatrix(1/1.1, zoomMat);
     internal::applyVMat(zoomMat);
+    glutPostRedisplay();
+  } else if (key == 'w') { // pan up
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(0, 0.1, panMat);
+    internal::applyMMat(panMat);
+    glutPostRedisplay();
+  } else if (key == 's') { // pan down
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(0, -0.1, panMat);
+    internal::applyMMat(panMat);
+    glutPostRedisplay();
+  } else if (key == 'a') { // pan left
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(-0.1, 0, panMat);
+    internal::applyMMat(panMat);
+    glutPostRedisplay();
+  } else if (key == 'd') { // pan right
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(0.1, 0, panMat);
+    internal::applyMMat(panMat);
     glutPostRedisplay();
   }
 }
