@@ -278,6 +278,45 @@ TEST(EdgeSet, EdgeIteratorTest) {
   }
   
   ASSERT_EQ(count, 4);
-    
+}
 
+TEST(EdgeSet, VertexToEdgeEndpointIndex) {
+  Set<> points;
+  auto p0 = points.addElement();
+  auto p1 = points.addElement();
+  auto p2 = points.addElement();
+  
+  Set<2> edges(points, points);
+  edges.addElement(p0, p1);
+  edges.addElement(p0,p2);
+  
+  internal::VertexToEdgeEndpointIndex* edgeindex =
+    new internal::VertexToEdgeEndpointIndex(edges);
+
+  ASSERT_EQ(edgeindex->getTotalEdges(), 2);
+  ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, 0), 2);
+  ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, 1), 0);
+  ASSERT_EQ(edgeindex->getWhichEdgesForElement(p1, 1)[0], 0);
+  
+  delete edgeindex;
+}
+
+TEST(EdgeSet, VertexToEdgeIndex) {
+  Set<> points;
+  auto p0 = points.addElement();
+  auto p1 = points.addElement();
+  auto p2 = points.addElement();
+  
+  Set<2> edges(points, points);
+  edges.addElement(p0, p1);
+  edges.addElement(p2,p0);
+  
+  internal::VertexToEdgeIndex* edgeindex =
+    new internal::VertexToEdgeIndex(edges);
+
+  ASSERT_EQ(edgeindex->getTotalEdges(), 2);
+  ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, points), 2);
+  ASSERT_EQ(edgeindex->getWhichEdgesForElement(p1, points)[0], 0);
+  
+  delete edgeindex;
 }
