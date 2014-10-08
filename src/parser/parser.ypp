@@ -651,7 +651,7 @@ expr
   | linear_algebra_expr
   | boolean_expr
   | field_read_expr
-  | call_or_tensor_read_expr
+  | call_or_paren_read_expr
   | map_expr
 
 
@@ -915,8 +915,8 @@ set_read_expr
   std::shared_ptr<ir::TensorRead> *tensorRead;
 };
 
-%type <expression> call_or_tensor_read_expr;
-call_or_tensor_read_expr
+%type <expression> call_or_paren_read_expr;
+call_or_paren_read_expr
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
     auto indices =
@@ -928,8 +928,21 @@ call_or_tensor_read_expr
         REPORT_ERROR(name + " is not readable", @1);
       }
 
-      auto tensorExpr = exprPair.getReadExpr();
-      $$ = new shared_ptr<Expression>(new TensorRead(tensorExpr, *indices));
+      // The parenthesis read can read from a tensor or a tuple.
+      auto expr = exprPair.getReadExpr();
+      if (expr->getType()->isTensor()) {
+        $$ = new shared_ptr<Expression>(new TensorRead(expr, *indices));
+      }
+      else if (expr->getType()->isTuple()) {
+        if (indices->size() != 1) {
+          REPORT_ERROR(" reading a tuple requires exactly one index", @3);
+        }
+
+        $$ = new shared_ptr<Expression>(new TupleRead(expr, (*indices)[0]));
+      }
+      else {
+        REPORT_ERROR("can only access components in tensors and tuples", @1);
+      }
     }
     else if (ctx->containsFunction(name)) {
       $$ = NULL;

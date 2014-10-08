@@ -723,7 +723,7 @@ namespace  simit { namespace internal  {
 
         break;
 
-      case 97: // call_or_tensor_read_expr
+      case 97: // call_or_paren_read_expr
 
 
         { delete (yysym.value.expression); }
@@ -1972,8 +1972,21 @@ namespace  simit { namespace internal  {
         REPORT_ERROR(name + " is not readable", yystack_[3].location);
       }
 
-      auto tensorExpr = exprPair.getReadExpr();
-      (yylhs.value.expression) = new shared_ptr<Expression>(new TensorRead(tensorExpr, *indices));
+      // The parenthesis read can read from a tensor or a tuple.
+      auto expr = exprPair.getReadExpr();
+      if (expr->getType()->isTensor()) {
+        (yylhs.value.expression) = new shared_ptr<Expression>(new TensorRead(expr, *indices));
+      }
+      else if (expr->getType()->isTuple()) {
+        if (indices->size() != 1) {
+          REPORT_ERROR(" reading a tuple requires exactly one index", yystack_[1].location);
+        }
+
+        (yylhs.value.expression) = new shared_ptr<Expression>(new TupleRead(expr, (*indices)[0]));
+      }
+      else {
+        REPORT_ERROR("can only access components in tensors and tuples", yystack_[3].location);
+      }
     }
     else if (ctx->containsFunction(name)) {
       (yylhs.value.expression) = NULL;
@@ -3200,7 +3213,7 @@ namespace  simit { namespace internal  {
   "if_stmt", "else_clauses", "elif_clauses", "for_stmt", "expr",
   "ident_expr", "paren_expr", "linear_algebra_expr", "elwise_binary_op",
   "boolean_expr", "field_read_expr", "set_read_expr",
-  "call_or_tensor_read_expr", "call_expr", "expr_list_or_empty",
+  "call_or_paren_read_expr", "call_expr", "expr_list_or_empty",
   "expr_list", "map_expr", "with", "reduce", "reduction_op",
   "write_expr_list", "write_expr", "field_write_expr", "tensor_write_expr",
   "type", "element_type", "set_type", "endpoints", "tuple_type",
@@ -3225,14 +3238,14 @@ namespace  simit { namespace internal  {
      629,   636,   648,   649,   650,   651,   652,   653,   654,   655,
      661,   682,   698,   706,   718,   783,   789,   819,   824,   833,
      834,   835,   836,   842,   848,   854,   860,   866,   872,   887,
-     907,   908,   909,   920,   941,   947,   957,   960,   966,   972,
-     983,   991,   993,   997,   999,  1002,  1003,  1051,  1056,  1064,
-    1068,  1071,  1077,  1095,  1101,  1119,  1143,  1146,  1149,  1152,
-    1158,  1165,  1169,  1179,  1183,  1190,  1203,  1206,  1209,  1249,
-    1259,  1264,  1272,  1275,  1279,  1285,  1291,  1294,  1363,  1366,
-    1367,  1371,  1374,  1383,  1394,  1401,  1404,  1408,  1421,  1425,
-    1439,  1443,  1449,  1456,  1459,  1463,  1476,  1480,  1494,  1498,
-    1504,  1509,  1519
+     907,   908,   909,   920,   954,   960,   970,   973,   979,   985,
+     996,  1004,  1006,  1010,  1012,  1015,  1016,  1064,  1069,  1077,
+    1081,  1084,  1090,  1108,  1114,  1132,  1156,  1159,  1162,  1165,
+    1171,  1178,  1182,  1192,  1196,  1203,  1216,  1219,  1222,  1262,
+    1272,  1277,  1285,  1288,  1292,  1298,  1304,  1307,  1376,  1379,
+    1380,  1384,  1387,  1396,  1407,  1414,  1417,  1421,  1434,  1438,
+    1452,  1456,  1462,  1469,  1472,  1476,  1489,  1493,  1507,  1511,
+    1517,  1522,  1532
   };
 
   // Print the state stack on the debug stream.

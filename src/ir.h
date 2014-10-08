@@ -204,13 +204,6 @@ protected:
 };
 
 
-/// Instruction that stores a value to a tensor or an object.
-class Write : public Expression {
-protected:
-  Write(const std::shared_ptr<Type> &type) : Expression("", type) {}
-};
-
-
 /// Expression that reads a tensor from an element or set field.
 class FieldRead : public Read {
 public:
@@ -226,38 +219,6 @@ public:
 private:
   std::shared_ptr<Expression> setOrElem;
   std::string fieldName;
-};
-
-
-/// Instruction that writes a tensor to a set field.
-class FieldWrite : public Write {
-public:
-  // TODO: Look up type from the set and check that value has correct type in
-  //       setValue
-  // TODO: Change from set to elemOrSet
-  FieldWrite(const std::shared_ptr<Expression> &setOrElem,
-             const std::string &fieldName)
-    : Write(setOrElem->getType()), setOrElem(setOrElem), fieldName(fieldName) {}
-
-  void setValue(const std::shared_ptr<Expression> &value) {
-    // TODO: check that value has correct type
-    auto setOrElemPtr = setOrElem.lock();
-    value->setName(setOrElemPtr->getName() + "." + fieldName); // TODO: remove line
-    this->value = value;
-  }
-
-  std::shared_ptr<Expression> getTarget() const { return setOrElem.lock(); }
-  const std::string &getFieldName() const { return fieldName; }
-
-  const std::shared_ptr<Expression> &getValue() const { return value; }
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  std::weak_ptr<Expression> setOrElem;
-  std::string fieldName;
-  std::shared_ptr<Expression> value;
 };
 
 
@@ -278,6 +239,62 @@ public:
 private:
   std::shared_ptr<Expression> tensor;
   std::vector<std::shared_ptr<Expression>> indices;
+};
+
+
+class TupleRead : public Read {
+public:
+  TupleRead(const std::shared_ptr<Expression> &tuple,
+            const std::shared_ptr<Expression> &index);
+
+  const std::shared_ptr<Expression> &getTuple() const { return tuple; }
+  const std::shared_ptr<Expression> &getIndex() const { return index; }
+
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
+
+private:
+  std::shared_ptr<Expression> tuple;
+  std::shared_ptr<Expression> index;
+};
+
+
+/// Instruction that stores a value to a tensor or an object.
+class Write : public Expression {
+protected:
+  Write(const std::shared_ptr<Type> &type) : Expression("", type) {}
+};
+
+
+/// Instruction that writes a tensor to a set field.
+class FieldWrite : public Write {
+public:
+  // TODO: Look up type from the set and check that value has correct type in
+  //       setValue
+  // TODO: Change from set to elemOrSet
+  FieldWrite(const std::shared_ptr<Expression> &setOrElem,
+             const std::string &fieldName)
+    : Write(setOrElem->getType()), setOrElem(setOrElem), fieldName(fieldName) {}
+
+  void setValue(const std::shared_ptr<Expression> &value) {
+    // TODO: check that value has correct type
+    auto setOrElemPtr = setOrElem.lock();
+    value->setName(setOrElemPtr->getName() + "." + fieldName);//TODO:remove line
+    this->value = value;
+  }
+
+  std::shared_ptr<Expression> getTarget() const { return setOrElem.lock(); }
+  const std::string &getFieldName() const { return fieldName; }
+
+  const std::shared_ptr<Expression> &getValue() const { return value; }
+
+  void accept(IRVisitor *visitor) { visitor->visit(this); };
+  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
+
+private:
+  std::weak_ptr<Expression> setOrElem;
+  std::string fieldName;
+  std::shared_ptr<Expression> value;
 };
 
 

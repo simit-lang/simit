@@ -236,7 +236,8 @@ void IndexExpr::initType() {
 
 // class FieldRead
 static std::shared_ptr<Type>
-fieldType(const std::shared_ptr<Expression> &expr,const std::string &fieldName){
+getFieldType(const std::shared_ptr<Expression> &expr,
+             const std::string &fieldName){
   assert(expr->getType()->isElement() || expr->getType()->isSet());
 
   std::shared_ptr<TensorType> fieldType;
@@ -276,13 +277,14 @@ fieldType(const std::shared_ptr<Expression> &expr,const std::string &fieldName){
 
 FieldRead::FieldRead(const std::shared_ptr<Expression> &setOrElem,
                      const std::string &fieldName)
-    : Read(fieldType(setOrElem, fieldName)),
+    : Read(getFieldType(setOrElem, fieldName)),
       setOrElem(setOrElem), fieldName(fieldName) {}
 
 
 // class TensorRead
 static std::shared_ptr<Type>
-blockType(const std::shared_ptr<Expression> &expr) {
+getBlockType(const std::shared_ptr<Expression> &expr) {
+  cout << *expr << endl;
   assert(expr->getType()->isTensor());
 
   TensorType *type = tensorTypePtr(expr->getType());
@@ -316,11 +318,17 @@ blockType(const std::shared_ptr<Expression> &expr) {
 
 TensorRead::TensorRead(const std::shared_ptr<Expression> &tensor,
                        const std::vector<std::shared_ptr<Expression>> &indices)
-    : Read(blockType(tensor)), tensor(tensor), indices(indices) {}
+    : Read(getBlockType(tensor)), tensor(tensor), indices(indices) {}
+
+
+// class TupleRead
+TupleRead::TupleRead(const std::shared_ptr<Expression> &tuple,
+                     const std::shared_ptr<Expression> &index)
+    : Read(tuple->getType()), tuple(tuple), index(index) {}
 
 
 // class Function
-void Function::addStatements(const std::vector<std::shared_ptr<IRNode>> &stmts){
+void Function::addStatements(const vector<shared_ptr<IRNode>> &stmts) {
   body.insert(body.end(), stmts.begin(), stmts.end());
 }
 

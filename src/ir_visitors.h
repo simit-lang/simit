@@ -16,6 +16,7 @@ class IndexExpr;
 class Call;
 class FieldRead;
 class TensorRead;
+class TupleRead;
 class FieldWrite;
 class TensorWrite;
 class Test;
@@ -53,8 +54,9 @@ public:
   virtual void visit(IndexExpr *);
   virtual void visit(Call *);
   virtual void visit(FieldRead *);
-  virtual void visit(FieldWrite *);
   virtual void visit(TensorRead *);
+  virtual void visit(TupleRead *);
+  virtual void visit(FieldWrite *);
   virtual void visit(TensorWrite *);
 
   virtual void handle(Function *);
@@ -64,8 +66,9 @@ public:
   virtual void handle(IndexExpr *);
   virtual void handle(Call *);
   virtual void handle(FieldRead *);
-  virtual void handle(FieldWrite *);
   virtual void handle(TensorRead *);
+  virtual void handle(TupleRead *);
+  virtual void handle(FieldWrite *);
   virtual void handle(TensorWrite *);
 
   virtual void handleDefault(IRNode *);
@@ -84,6 +87,7 @@ public:
   virtual void visit(const Call *);
   virtual void visit(const FieldRead *);
   virtual void visit(const FieldWrite *);
+  virtual void visit(const TupleRead *);
   virtual void visit(const TensorRead *);
   virtual void visit(const TensorWrite *);
 
@@ -94,8 +98,9 @@ public:
   virtual void handle(const IndexExpr *);
   virtual void handle(const Call *);
   virtual void handle(const FieldRead *);
-  virtual void handle(const FieldWrite *);
   virtual void handle(const TensorRead *);
+  virtual void handle(const TupleRead *);
+  virtual void handle(const FieldWrite *);
   virtual void handle(const TensorWrite *);
 
   virtual void handleDefault(const IRNode *);
@@ -115,8 +120,9 @@ public:
   virtual void visit(IndexExpr *);
   virtual void visit(Call *);
   virtual void visit(FieldRead *);
-  virtual void visit(FieldWrite *);
   virtual void visit(TensorRead *);
+  virtual void visit(TupleRead *);
+  virtual void visit(FieldWrite *);
   virtual void visit(TensorWrite *);
 };
 
