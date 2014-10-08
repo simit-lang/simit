@@ -200,6 +200,8 @@
 %token IF        "if"
 %token ELIF      "elif"
 %token ELSE      "else"
+%token FOR       "for"
+%token IN        "in"
 %token BLOCKEND  "end"
 %token RETURN    "return"
 %token TEST      "%!"
@@ -484,6 +486,7 @@ stmt
   | assign_stmt
   | expr_stmt
   | if_stmt
+  | for_stmt
 
 %type<IRNodes> const_stmt;
 const_stmt
@@ -607,7 +610,7 @@ expr_stmt
     $$ = NULL;
   }
 
-%type<IRNodes> if_stmt;
+%type <IRNodes> if_stmt;
 if_stmt
   : "if" expr stmt_block else_clauses BLOCKEND {
     $$ = NULL;
@@ -628,6 +631,11 @@ elif_clauses
     delete $4;
   }
 
+%type <IRNodes> for_stmt;
+for_stmt
+  : "for" IDENT "in" index_set stmt_block BLOCKEND {
+    $$ = NULL;
+  }
 
 // Expressions
 %union {
@@ -644,7 +652,6 @@ expr
   | boolean_expr
   | field_read_expr
   | call_or_tensor_read_expr
-  | range_expr
   | map_expr
 
 
@@ -967,17 +974,6 @@ expr_list
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
-  }
-
-
-// Range Expressions
-%type <expression> range_expr;
-range_expr
-  : expr ":" expr {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
   }
 
 
@@ -1304,6 +1300,12 @@ index_set
   | IDENT {
     string ident = convertAndFree($IDENT);
     $$ = new IndexSet(ident);
+  }
+  | expr ":" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    $$ = NULL;
+    delete $1;
+    delete $3;
   }
   | "*" {
     $$ = new IndexSet();

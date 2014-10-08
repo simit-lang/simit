@@ -47,6 +47,8 @@ using namespace simit::internal;
 "if"                  { return Parser::token::IF;        }
 "elif"                { return Parser::token::ELIF;      }
 "else"                { return Parser::token::ELSE;      }
+"for"                 { return Parser::token::FOR;       }
+"in"                  { return Parser::token::IN;        }
 "end"                 { return Parser::token::BLOCKEND;  }
 "return"              { return Parser::token::RETURN;    }
 

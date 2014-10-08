@@ -324,36 +324,38 @@ namespace  simit { namespace internal  {
         IF = 278,
         ELIF = 279,
         ELSE = 280,
-        BLOCKEND = 281,
-        RETURN = 282,
-        TEST = 283,
-        RARROW = 284,
-        LP = 285,
-        RP = 286,
-        LB = 287,
-        RB = 288,
-        LC = 289,
-        RC = 290,
-        LA = 291,
-        RA = 292,
-        COMMA = 293,
-        PERIOD = 294,
-        COL = 295,
-        SEMICOL = 296,
-        ASSIGN = 297,
-        PLUS = 298,
-        MINUS = 299,
-        STAR = 300,
-        SLASH = 301,
-        DOTSTAR = 302,
-        DOTSLASH = 303,
-        EXP = 304,
-        TRANSPOSE = 305,
-        BACKSLASH = 306,
-        EQ = 307,
-        NE = 308,
-        LE = 309,
-        GE = 310
+        FOR = 281,
+        IN = 282,
+        BLOCKEND = 283,
+        RETURN = 284,
+        TEST = 285,
+        RARROW = 286,
+        LP = 287,
+        RP = 288,
+        LB = 289,
+        RB = 290,
+        LC = 291,
+        RC = 292,
+        LA = 293,
+        RA = 294,
+        COMMA = 295,
+        PERIOD = 296,
+        COL = 297,
+        SEMICOL = 298,
+        ASSIGN = 299,
+        PLUS = 300,
+        MINUS = 301,
+        STAR = 302,
+        SLASH = 303,
+        DOTSTAR = 304,
+        DOTSLASH = 305,
+        EXP = 306,
+        TRANSPOSE = 307,
+        BACKSLASH = 308,
+        EQ = 309,
+        NE = 310,
+        LE = 311,
+        GE = 312
       };
     };
 
@@ -503,7 +505,7 @@ namespace  simit { namespace internal  {
     static bool yy_table_value_is_error_ (int yyvalue);
 
     static const short int yypact_ninf_;
-    static const signed char yytable_ninf_;
+    static const short int yytable_ninf_;
 
     /// Convert a scanner token number \a t to a symbol number.
     static token_number_type yytranslate_ (int t);
@@ -529,7 +531,7 @@ namespace  simit { namespace internal  {
   // number is the opposite.  If YYTABLE_NINF, syntax error.
   static const short int yytable_[];
 
-  static const unsigned short int yycheck_[];
+  static const short int yycheck_[];
 
   // YYSTOS[STATE-NUM] -- The (internal number of the) accessing
   // symbol of state STATE-NUM.
@@ -644,13 +646,13 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 343,     ///< Last index in yytable_.
+      yylast_ = 425,     ///< Last index in yytable_.
       yynnts_ = 75,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 56  ///< Number of tokens.
+      yyntokens_ = 58  ///< Number of tokens.
     };
 
 
