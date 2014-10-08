@@ -27,10 +27,13 @@ namespace internal {
 
 const string& kConstVertexShader = "\
 attribute vec4 position;            \
-uniform mat4 transMat;              \
-uniform mat4 invTransMat;           \
+uniform mat4 mMat;                  \
+uniform mat4 invMMat;               \
+uniform mat4 vMat;                  \
+uniform mat4 invVMat;               \
+uniform mat4 projMat;               \
 void main() {                       \
-  gl_Position = position * transMat;\
+  gl_Position = projMat * vMat * mMat * position;\
 }                                   \
 ";
 const string& kConstFragmentShader = "\
@@ -42,17 +45,21 @@ void main() {                        \
 const string& kFlatVertexShader = "\
 attribute vec3 position;           \
 attribute vec3 normal;             \
-uniform mat4 transMat;             \
-uniform mat4 invTransMat;          \
+uniform mat4 mMat;                 \
+uniform mat4 invMMat;              \
+uniform mat4 vMat;                 \
+uniform mat4 invVMat;              \
+uniform mat4 projMat;              \
 varying vec3 vert;                 \
 varying vec3 normalV;              \
 void main() {                      \
-  gl_Position = vec4(position[0], position[1], position[2], 1.0)\
-      * transMat;                  \
-  vert = vec3(gl_Position[0], gl_Position[1], gl_Position[2]);\
+  vec4 vert4 = mMat *              \
+      vec4(position[0], position[1], position[2], 1.0);\
+  vert = vec3(vert4[0], vert4[1], vert4[2]);\
   vec4 normal4 = vec4(normal[0], normal[1], normal[2], 1.0)\
-      * invTransMat;\
+      * invMMat;\
   normalV = vec3(normal4[0], normal4[1], normal4[2]);\
+  gl_Position = projMat * vMat * vert4;\
 }                                  \
 ";
 const string& kFlatFragmentShader = "\
@@ -73,36 +80,6 @@ void main() {                        \
   gl_FragColor = color + Iamb + Idiff;\
 }                                    \
 ";
-const string& kPhongVertexShader = "                 \
-attribute vec4 position;                             \
-varying vec3 vert;                                   \
-varying vec3 normal;                                 \
-void main() {                                        \
-  vert = vec3(position[0], position[1], position[2]);\
-  normal = normalize(gl_NormalMatrix * gl_Normal);   \
-  gl_Position = position;                            \
-}                                                    \
-";
-const string& kPhongFragmentShader = "\
-uniform vec4 color;                   \
-varying vec3 vert;                    \
-varying vec3 normal;                  \
-void main() {                         \
-  vec3 L = normalize(gl_LightSource[0].position.xyz - vert);\
-  vec3 E = normalize(-vert);                    \
-  vec3 R = normalize(-reflect(L, normal));      \
-                                                \
-  vec4 Iamb = gl_FrontLightProduct[0].ambient;  \
-  vec4 Idiff = gl_FrontLightProduct[0].diffuse  \
-       * max(dot(normal,L), 0.0);               \
-  Idiff = clamp(Idiff, 0.0, 1.0);               \
-  vec4 Ispec = gl_FrontLightProduct[0].specular \
-       * pow(max(dot(R,E),0.0), 0.3);           \
-  Ispec = clamp(Ispec, 0.0, 1.0);               \
-                                                \
-  gl_FragColor = color + Iamb + Idiff + Ispec;  \
-}                                               \
-";
 
 // Current glut main loop thread. Should be joined before exiting.
 pthread_t glutThread;
@@ -114,21 +91,28 @@ std::function<void(void)> drawFunc = [](){};
 std::mutex drawFuncLock;
 // Data references held by GL based on the previous call to draw*.
 std::queue<GLdouble*> heldReferences;
-// Eye theta, phi. Theta is about Y axis, phi is about the axis in the XY plane
-// perpendicular to theta, i.e. theta is the azimuthal angle, and phi is the
-// polar angle. This locates the eye in the reference of the world coordinates.
-// double eyeTheta = 0.0, eyePhi = 0.0;
 // Transformation matrices positions
-GLint transMatPos, invTransMatPos;
+GLint mMatPos, invMMatPos, vMatPos, invVMatPos, projMatPos;
 // Transformation matrices
-GLfloat transMat[16] = {1, 0, 0, 0,
-                        0, 1, 0, 0,
-                        0, 0, 1, 0,
-                        0, 0, 0, 1};
-GLfloat invTransMat[16] = {1, 0, 0, 0,
-                           0, 1, 0, 0,
-                           0, 0, 1, 0,
-                           0, 0, 0, 1};
+GLfloat mMat[16] = {1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1};
+GLfloat invMMat[16] = {1, 0, 0, 0,
+                       0, 1, 0, 0,
+                       0, 0, 1, 0,
+                       0, 0, 0, 1};
+GLfloat vMat[16] = {1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1};
+GLfloat invVMat[16] = {1, 0, 0, 0,
+                       0, 1, 0, 0,
+                       0, 0, 1, 0,
+                       0, 0, 0, 1};
+// Projection matrix (set perspective)
+// Set by glutReshapeFunc before drawing occurs
+GLfloat projMat[16];
 
 GLuint createGLProgram(const string& vertexShaderStr,
                        const string& fragmentShaderStr) {
@@ -195,6 +179,18 @@ void buildPhiRotMatrix(double phi, GLfloat matrix[16]) {
     1, 0, 0, 0,
     0, (GLfloat)cos(phi), (GLfloat)-sin(phi), 0,
     0, (GLfloat)sin(phi), (GLfloat)cos(phi), 0,
+    0, 0, 0, 1
+  };
+  memcpy(matrix, outMat, sizeof(outMat));
+}
+
+// Writes 16 doubles into matrix, representing the 4x4 transformation
+// matrix associated with a z-directional zoom.
+void buildZoomMatrix(double zoom, GLfloat matrix[16]) {
+  GLfloat outMat[16] = {
+    (GLfloat)zoom, 0, 0, 0,
+    0, (GLfloat)zoom, 0, 0,
+    0, 0, 1, 0,
     0, 0, 0, 1
   };
   memcpy(matrix, outMat, sizeof(outMat));
@@ -363,21 +359,36 @@ void clearTransMat() {
     0, 0, 0, 1
   };
   drawFuncLock.lock();
-  memcpy(transMat, ident, sizeof(ident));
-  memcpy(invTransMat, ident, sizeof(ident));
+  memcpy(mMat, ident, sizeof(ident));
+  memcpy(invMMat, ident, sizeof(ident));
+  memcpy(vMat, ident, sizeof(ident));
+  memcpy(invVMat, ident, sizeof(ident));
   drawFuncLock.unlock();
 }
 
-void applyTransMat(GLfloat newTrans[16]) {
-  GLfloat invNewTrans[16];
-  invertMatrix(newTrans, invNewTrans);
+void applyVMat(GLfloat newV[16]) {
+  GLfloat invNewV[16];
+  invertMatrix(newV, invNewV);
   drawFuncLock.lock();
-  GLfloat oldTransMat[16];
-  GLfloat oldInvTransMat[16];
-  memcpy(oldTransMat, transMat, sizeof(transMat));
-  memcpy(oldInvTransMat, invTransMat, sizeof(invTransMat));
-  multiplyMatrix(newTrans, oldTransMat, transMat);
-  multiplyMatrix(oldInvTransMat, invNewTrans, invTransMat);
+  GLfloat oldVMat[16];
+  GLfloat oldInvVMat[16];
+  memcpy(oldVMat, vMat, sizeof(vMat));
+  memcpy(oldInvVMat, invVMat, sizeof(invVMat));
+  multiplyMatrix(newV, oldVMat, vMat);
+  multiplyMatrix(oldInvVMat, invNewV, invVMat);
+  drawFuncLock.unlock();
+}
+
+void applyMMat(GLfloat newM[16]) {
+  GLfloat invNewM[16];
+  invertMatrix(newM, invNewM);
+  drawFuncLock.lock();
+  GLfloat oldMMat[16];
+  GLfloat oldInvMMat[16];
+  memcpy(oldMMat, mMat, sizeof(mMat));
+  memcpy(oldInvMMat, invMMat, sizeof(invMMat));
+  multiplyMatrix(newM, oldMMat, mMat);
+  multiplyMatrix(oldInvMMat, invNewM, invMMat);
   drawFuncLock.unlock();
 }
 
@@ -391,8 +402,11 @@ void handleDraw() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawFuncLock.lock();
   // Update transformation matrix
-  glUniformMatrix4fv(transMatPos, 1, GL_FALSE, transMat);
-  glUniformMatrix4fv(invTransMatPos, 1, GL_FALSE, invTransMat);
+  glUniformMatrix4fv(mMatPos, 1, GL_FALSE, mMat);
+  glUniformMatrix4fv(invMMatPos, 1, GL_FALSE, invMMat);
+  glUniformMatrix4fv(vMatPos, 1, GL_FALSE, vMat);
+  glUniformMatrix4fv(invVMatPos, 1, GL_FALSE, invVMat);
+  glUniformMatrix4fv(projMatPos, 1, GL_FALSE, projMat);
   // Assumes that the relevant VBO setup for the draw function has been
   // set up before this draw function was set.
   drawFunc();
@@ -400,9 +414,33 @@ void handleDraw() {
   glutSwapBuffers();
 }
 
+void handleReshape(int width, int height) {
+  float aspect = width/(float)height;
+  float fovy = M_PI/3.0;  // 60deg fov
+  float f = 1/tan(fovy/2.0);
+
+  GLfloat outMat[16] = {
+    f/aspect, 0, 0, 0,
+    0, f, 0, 0,
+    0, 0, -1, -0.2,
+    0, 0, -1, 2
+  };
+  memcpy(projMat, outMat, sizeof(outMat));
+}
+
 void handleKeyboardEvent(unsigned char key, int x, int y) {
-  if (key == 'z') {
+  if (key == 'z') { // reset
     internal::clearTransMat();
+    glutPostRedisplay();
+  } else if (key == 'x') { // zoom out
+    GLfloat zoomMat[16];
+    internal::buildZoomMatrix(1.1, zoomMat);
+    internal::applyVMat(zoomMat);
+    glutPostRedisplay();
+  } else if (key == 'c') { // zoom in
+    GLfloat zoomMat[16];
+    internal::buildZoomMatrix(1/1.1, zoomMat);
+    internal::applyVMat(zoomMat);
     glutPostRedisplay();
   }
 }
@@ -410,23 +448,23 @@ void handleKeyboardEvent(unsigned char key, int x, int y) {
 void handleSpecialKeyEvent(int key, int x, int y) {
   if (key == GLUT_KEY_RIGHT) {
     GLfloat rightRotMat[16];
-    internal::buildThetaRotMatrix(0.1, rightRotMat);
-    internal::applyTransMat(rightRotMat);
+    internal::buildThetaRotMatrix(-0.1, rightRotMat);
+    internal::applyMMat(rightRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_LEFT) {
     GLfloat leftRotMat[16];
-    internal::buildThetaRotMatrix(-0.1, leftRotMat);
-    internal::applyTransMat(leftRotMat);
+    internal::buildThetaRotMatrix(0.1, leftRotMat);
+    internal::applyMMat(leftRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_UP) {
     GLfloat upRotMat[16];
-    internal::buildPhiRotMatrix(0.1, upRotMat);
-    internal::applyTransMat(upRotMat);
+    internal::buildPhiRotMatrix(-0.1, upRotMat);
+    internal::applyMMat(upRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_DOWN) {
     GLfloat downRotMat[16];
-    internal::buildPhiRotMatrix(-0.1, downRotMat);
-    internal::applyTransMat(downRotMat);
+    internal::buildPhiRotMatrix(0.1, downRotMat);
+    internal::applyMMat(downRotMat);
     glutPostRedisplay();
   }
 }
@@ -440,10 +478,10 @@ void initDrawing(int argc, char** argv) {
   glutCreateWindow("Graph visualization");
 
   glutDisplayFunc(internal::handleDraw);
+  glutReshapeFunc(internal::handleReshape);
   glutSpecialFunc(internal::handleSpecialKeyEvent);
   glutKeyboardFunc(internal::handleKeyboardEvent);
 
-  glShadeModel(GL_SMOOTH);
   glEnable(GL_DEPTH_TEST);
 
   int ret;
@@ -474,8 +512,11 @@ void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
                                              internal::kConstFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::transMatPos = glGetUniformLocation(program, "transMat");
-  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
+  internal::mMatPos = glGetUniformLocation(program, "mMat");
+  internal::invMMatPos = glGetUniformLocation(program, "invMMat");
+  internal::vMatPos = glGetUniformLocation(program, "vMat");
+  internal::invVMatPos = glGetUniformLocation(program, "invVMat");
+  internal::projMatPos = glGetUniformLocation(program, "projMat");
   GLint posAttrib = glGetAttribLocation(program, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
@@ -523,8 +564,11 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
                                              internal::kConstFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::transMatPos = glGetUniformLocation(program, "transMat");
-  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
+  internal::mMatPos = glGetUniformLocation(program, "mMat");
+  internal::invMMatPos = glGetUniformLocation(program, "invMMat");
+  internal::vMatPos = glGetUniformLocation(program, "vMat");
+  internal::invVMatPos = glGetUniformLocation(program, "invVMat");
+  internal::projMatPos = glGetUniformLocation(program, "projMat");
   GLint posAttrib = glGetAttribLocation(program, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
@@ -605,8 +649,11 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
                                              internal::kFlatFragmentShader);
   GLint colorUniform = glGetUniformLocation(program, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::transMatPos = glGetUniformLocation(program, "transMat");
-  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
+  internal::mMatPos = glGetUniformLocation(program, "mMat");
+  internal::invMMatPos = glGetUniformLocation(program, "invMMat");
+  internal::vMatPos = glGetUniformLocation(program, "vMat");
+  internal::invVMatPos = glGetUniformLocation(program, "invVMat");
+  internal::projMatPos = glGetUniformLocation(program, "projMat");
   GLint posAttrib = glGetAttribLocation(program, "position");
   glBindBuffer(GL_ARRAY_BUFFER, posVbo);
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
