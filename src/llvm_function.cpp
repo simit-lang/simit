@@ -57,7 +57,7 @@ LLVMFunction::init(const std::vector<std::string> &formals,
     for (const std::string &formal : formals) {
       assert(actuals.find(formal) != actuals.end());
       Actual &actual = actuals.at(formal);
-      switch (actual.getType()->getKind()) {
+      switch (actual.getType().getKind()) {
         case ir::Type::Tensor: {
           args.push_back(llvmPtr(actual.getTensor()));
           break;
@@ -69,15 +69,18 @@ LLVMFunction::init(const std::vector<std::string> &formals,
         case ir::Type::Set: {
           const SetBase *set = actual.getSet();
           args.push_back(getInt32(set->getSize()));
-          const ir::SetType *setType = setTypePtr(actual.getType());
-          for (auto &field : setType->getElementType()->getFields()) {
-            assert(field.second->isTensor());
-            ir::TensorType *tensorType = tensorTypePtr(field.second);
-            args.push_back(llvmPtr(tensorType, getFieldPtr(set,field.first)));
+          const ir::SetType *setType = actual.getType().toSet();
+          for (auto &field : setType->elementType.toElement()->fields) {
+            assert(field.second.isTensor());
+            args.push_back(llvmPtr(field.second, getFieldPtr(set,field.first)));
           }
           break;
         }
         case ir::Type::Tuple: {
+          NOT_SUPPORTED_YET;
+          break;
+        }
+        case ir::Type::Scalar: {
           NOT_SUPPORTED_YET;
           break;
         }

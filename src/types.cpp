@@ -1,74 +1,39 @@
 #include "types.h"
 
-#include <assert.h>
-#include <iostream>
+#include <ostream>
+#include <iostream>  // TODO: remove
 
-#include "util.h"
 #include "macros.h"
-
-using namespace std;
+#include "util.h"
 
 namespace simit {
 namespace ir {
 
-// class IndexSet
-bool operator==(const IndexSet &l, const IndexSet &r) {
-   if (l.kind != r.kind) {
-    return false;
+// class TensorType
+size_t TensorType::size() const {
+  int size = 1;
+  for (auto &dimension : dimensions) {
+    size *= dimension.getSize();
   }
-  switch (l.kind) {
-    case IndexSet::Range:
-      return l.rangeSize == r.rangeSize;
-    case IndexSet::Set:
-      return l.setName == r.setName;
-    case IndexSet::Dynamic:
-      NOT_SUPPORTED_YET;
-      break;
-  }
-  return true;
+  return size;
 }
 
-bool operator!=(const IndexSet &l, const IndexSet &r) {
-  return !(l == r);
-}
-
-std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
-  switch (is.kind) {
-    case IndexSet::Range:
-      os << to_string(is.rangeSize);
-      break;
-    case IndexSet::Set:
-      os << is.setName;
-      break;
-    case IndexSet::Dynamic:
-      os << "*";
-      break;
-    default:
-      assert(false);
-      break;
-  }
-  return os;
-}
-
-
-// class Type
 bool operator==(const Type& l, const Type& r) {
   if (l.getKind() != r.getKind()) {
     return false;
   }
 
   switch (l.getKind()) {
+    case Type::Scalar:
+      return *l.toScalar() == *r.toScalar();
     case Type::Tensor:
-      return static_cast<const TensorType&>(l) ==
-      static_cast<const TensorType&>(r);
+      return *l.toTensor() == *r.toTensor();
     case Type::Element:
-      NOT_SUPPORTED_YET;
-      break;
+      return *l.toElement() == *r.toElement();
     case Type::Set:
-      return static_cast<const SetType&>(l) == static_cast<const SetType&>(r);
-    case ir::Type::Tuple:
-      NOT_SUPPORTED_YET;
-      break;
+      return *l.toSet() == *r.toSet();
+    case Type::Tuple:
+      return *l.toTuple() == *r.toTuple();
   }
 }
 
@@ -76,128 +41,120 @@ bool operator!=(const Type& l, const Type& r) {
   return !(l == r);
 }
 
-
-// class IndexDomain
-size_t IndexDomain::getSize() const {
-  int size = 1;
-  for (auto &indexSet : getFactors()) {
-    size *= indexSet.getSize();
-  }
-  return size;
+bool operator==(const ScalarType &l, const ScalarType &r) {
+  return l.kind == r.kind;
 }
 
-bool operator==(const IndexDomain &l, const IndexDomain &r) {
-  if (l.getFactors().size() != r.getFactors().size()) {
+bool operator==(const TensorType &l, const TensorType &r) {
+  if (l.componentType != r.componentType) {
     return false;
   }
-  auto li = l.getFactors().begin();
-  auto ri = r.getFactors().begin();
-  for (; li != l.getFactors().end(); ++li, ++ri) {
-    if (*li != *ri) {
-      return false;
-    }
-  }
-  return true;
-}
-
-bool operator!=(const IndexDomain &l, const IndexDomain &r) {
-  return !(l == r);
-}
-
-IndexDomain operator*(const IndexDomain &l, const IndexDomain &r) {
-  std::vector<IndexSet> is = l.getFactors();
-  is.insert(is.end(), r.getFactors().begin(), r.getFactors().end());
-  return IndexDomain(is);
-}
-
-std::ostream &operator<<(std::ostream &os, const IndexDomain &isp) {
-  return os << util::join(isp.getFactors(), "*");
-}
-
-
-// class TensorType
-size_t TensorType::getSize() const {
-  int size = 1;
-  for (auto &dimension : getDimensions()) {
-    size *= dimension.getSize();
-  }
-  return size;
-}
-
-void TensorType::print(std::ostream &os) const {
-  if (getOrder() == 0) {
-    os << componentTypeString(getComponentType());
-  }
-  else {
-    os << "tensor";
-    os << "[" << util::join(getDimensions(), ",") << "]";
-    os << "(" << componentTypeString(getComponentType()) << ")";
-  }
-}
-
-bool operator==(const TensorType& l, const TensorType& r) {
-  if (l.getComponentType() != r.getComponentType() ) {
-    return false;
-  }
-  if (l.getOrder() != r.getOrder()) {
+  if (l.order() != r.order()) {
     return false;
   }
 
-  auto li = l.getDimensions().begin();
-  auto ri = r.getDimensions().begin();
-  for (; li != l.getDimensions().end(); ++li, ++ri) {
+  auto li = l.dimensions.begin();
+  auto ri = r.dimensions.begin();
+  for (; li != l.dimensions.end(); ++li, ++ri) {
     if (*li != *ri) {
       return false;
     }
   }
 
   return true;
-}
-
-bool operator!=(const TensorType& l, const TensorType& r) {
-  return !(l == r);
-}
-
-
-// class ElementType
-void ElementType::print(std::ostream &os) const {
-  os << getName();
 }
 
 bool operator==(const ElementType &l, const ElementType &r) {
   // Element type names are unique
-  if (l.getName() != r.getName()) {
-    return false;
-  }
+  return (l.name == r.name);
+}
 
-  return true;
+bool operator==(const SetType &l, const SetType &r) {
+  return l.elementType == r.elementType;
+}
+
+bool operator==(const TupleType &l, const TupleType &r) {
+  return l.elementType == r.elementType && l.size == r.size;
+}
+
+bool operator!=(const ScalarType &l, const ScalarType &r) {
+  return !(l == r);
+}
+
+bool operator!=(const TensorType &l, const TensorType &r) {
+  return !(l == r);
 }
 
 bool operator!=(const ElementType &l, const ElementType &r) {
   return !(l == r);
 }
 
-
-// class TupleType
-void TupleType::print(std::ostream &os) const {
-  os << "(" << *elementType << "*" << size << ")";
-}
-
-
-// class SetType
-void SetType::print(std::ostream &os) const {
-  os << elementType->getName() << "{}";
-}
-
-bool operator==(const SetType& l, const SetType& r) {
-  if (*l.getElementType() != *r.getElementType()) {
-    return false;
-  }
-  return true;
-}
-
-bool operator!=(const SetType& l, const SetType& r) {
+bool operator!=(const SetType &l, const SetType &r) {
   return !(l == r);
 }
 
-}} // namespace simit::internal
+bool operator!=(const TupleType &l, const TupleType &r) {
+  return !(l == r);
+}
+
+std::ostream &operator<<(std::ostream &os, const Type &type) {
+  switch (type.getKind()) {
+    case Type::Scalar:
+      return os << *type.toScalar();
+    case Type::Tensor:
+      return os << *type.toTensor();
+    case Type::Element:
+      return os << *type.toElement();
+    case Type::Set:
+      return os << *type.toSet();
+    case Type::Tuple:
+      return os << *type.toTuple();
+  }
+}
+
+std::ostream &operator<<(std::ostream &os, const ScalarType &type) {
+  switch (type.kind) {
+    case ScalarType::Int:
+      os << "int";
+      break;
+    case ScalarType::Float:
+      os << "float";
+      break;
+  }
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const TensorType &type) {
+  if (type.order() == 0) {
+    os << type.componentType;
+  }
+  else {
+    os << "Tensor";
+    os << "[" << util::join(type.dimensions, "][") << "]";
+    os << "(" << type.componentType << ")";
+  }
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const ElementType &type) {
+  os << "struct " << type.name;
+  if (type.fields.size() > 0) {
+    os << std::endl << "\n  ";
+  }
+  for (auto &field : type.fields) {
+    os << field.first << " : " << field.second << ";" << std::endl;
+  }
+  return os << "end";
+}
+
+std::ostream &operator<<(std::ostream &os, const SetType &type) {
+  return os << type.elementType.toElement()->name << "{}";
+}
+
+std::ostream &operator<<(std::ostream &os, const TupleType &type) {
+  return os << "(" << type.elementType.toElement()->name << "*" << type.size
+            << ")";
+}
+
+
+}} // namespace simit::ir

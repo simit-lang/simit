@@ -8,6 +8,7 @@
 #include <utility>
 
 #include "scopedmap.h"
+#include "types.h"
 #include "ir.h"
 #include "ir_printer.h"
 
@@ -108,15 +109,15 @@ public:
     return functions;
   }
 
-  void addElementType(std::shared_ptr<ir::ElementType> elemType) {
-    elementTypes[elemType->getName()] = elemType;
+  void addElementType(ir::Type elemType) {
+    elementTypes[elemType.toElement()->name] = elemType;
   }
 
   bool containsElementType(const std::string &name) {
     return elementTypes.find(name) != elementTypes.end();
   }
 
-  std::shared_ptr<ir::ElementType> getElementType(const std::string &name) {
+  ir::Type getElementType(const std::string &name) {
     return elementTypes[name];
   }
 
@@ -144,7 +145,7 @@ private:
   std::map<std::string, ir::Function *>                   functions;
   std::map<std::string, std::shared_ptr<ir::Argument>>    externs;
 
-  std::map<std::string, std::shared_ptr<ir::ElementType>> elementTypes;
+  std::map<std::string, ir::Type> elementTypes;
   ScopedMap<std::string, RWExprPair>                      exprSymtable;
 
   std::vector<ir::Test*>                                  tests;

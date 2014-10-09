@@ -31,15 +31,17 @@ namespace internal {
 llvm::ConstantInt* getInt32(int val);
 llvm::ConstantInt* getUInt32(unsigned val);
 
-llvm::Type *llvmType(const simit::ComponentType type);
+llvm::Type *llvmType(const ir::ScalarType *stype);
 
-llvm::Type *llvmType(const ir::TensorType *type);
+llvm::Type *llvmType(const ir::TensorType *ttype);
 
-llvm::Constant *llvmPtr(ir::TensorType *type, void *data);
+llvm::Type *llvmType(const ir::Type &type);
+
+llvm::Constant *llvmPtr(const ir::Type &type, void *data);
 
 llvm::Constant *llvmPtr(ir::Literal *literal);
 
-simit::ComponentType simitType(const llvm::Type *type);
+ir::Type simitType(const llvm::Type *type);
 
 /// Creates an empy llvm function.
 llvm::Function *

@@ -20,17 +20,17 @@ namespace ir {
 IRNode::~IRNode() {}
 
 // class Literal
-static size_t getTensorByteSize(TensorType *tensorType) {
-  return tensorType->getSize() * componentSize(tensorType->getComponentType());
+static size_t getTensorByteSize(const TensorType *tensorType) {
+  return tensorType->size() * tensorType->componentType.toScalar()->bytes();
 }
 
-Literal::Literal(const std::shared_ptr<Type> &type) : Expression(type) {
-  assert(type->isTensor());
-  this->dataSize = getTensorByteSize(tensorTypePtr(type));
+Literal::Literal(const Type &type) : Expression(type) {
+  assert(type.isTensor());
+  this->dataSize = getTensorByteSize(type.toTensor());
   this->data = malloc(dataSize);
 }
 
-Literal::Literal(const std::shared_ptr<Type> &type, void *values) : Literal(type) {
+Literal::Literal(const Type &type, void *values) : Literal(type) {
   memcpy(this->data, values, this->dataSize);
 }
 
@@ -42,25 +42,26 @@ void Literal::clear() {
   memset(data, 0, dataSize);
 }
 
-void Literal::cast(const std::shared_ptr<TensorType> &type) {
-  assert(type->getKind() == Type::Kind::Tensor);
-  TensorType *litType = tensorTypePtr(this->getType());
-  assert(litType->getComponentType() == type->getComponentType() &&
-         litType->getSize() == type->getSize());
+void Literal::cast(const Type &type) {
+  assert(type.isTensor());
+  const TensorType *newType = type.toTensor();
+  const TensorType *oldType = getType().toTensor();
+  assert(newType->componentType == oldType->componentType);
+  assert(newType->size() == oldType->size());
 
   setType(type);
 }
 
 bool operator==(const Literal& l, const Literal& r) {
-  assert(l.getType()->isTensor() && r.getType()->isTensor());
+  assert(l.getType().isTensor() && r.getType().isTensor());
 
-  if (*l.getType() != *r.getType()) {
+  if (l.getType() != r.getType()) {
     return false;
   }
 
-  assert(getTensorByteSize(tensorTypePtr(l.getType())) ==
-         getTensorByteSize(tensorTypePtr(r.getType())));
-  size_t tensorDataSize = getTensorByteSize(tensorTypePtr(l.getType()));
+  assert(getTensorByteSize(l.getType().toTensor()) ==
+         getTensorByteSize(r.getType().toTensor()));
+  size_t tensorDataSize = getTensorByteSize(l.getType().toTensor());
 
   if (memcmp(l.getConstData(), r.getConstData(), tensorDataSize) != 0) {
     return false;
@@ -109,12 +110,11 @@ std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
 typedef std::vector<std::shared_ptr<IndexVar>> IndexVariables;
 IndexedTensor::IndexedTensor(const std::shared_ptr<Expression> &tensor,
                              const IndexVariables &indexVars){
-  assert(tensor->getType()->getKind() == Type::Kind::Tensor &&
-         "Only tensors can be indexed.");
-  TensorType *ttype = tensorTypePtr(tensor->getType());
-  assert(indexVars.size() == ttype->getOrder());
+  assert(tensor->getType().isTensor() && "Only tensors can be indexed.");
+  const TensorType *ttype = tensor->getType().toTensor();
+  assert(indexVars.size() == ttype->order());
   for (size_t i=0; i < indexVars.size(); ++i) {
-    assert(indexVars[i]->getDomain() == ttype->getDimensions()[i]
+    assert(indexVars[i]->getDomain() == ttype->dimensions[i]
            && "IndexVar domain does not match tensordimension");
   }
 
@@ -149,7 +149,7 @@ int IndexExpr::numOperands(Operator op) {
 
 IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
                      Operator op, const std::vector<IndexedTensor> &operands)
-    : Expression(NULL), indexVars(indexVars), op(op), operands(operands) {
+    : Expression(Type()), indexVars(indexVars), op(op), operands(operands) {
   initType();
 
   // Can't have reduction variables on rhs
@@ -159,15 +159,16 @@ IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
 
   // Operand typechecks
   assert(operands.size() == (size_t)IndexExpr::numOperands(op));
-  assert(operands[0].getTensor()->getType()->getKind() == Type::Kind::Tensor &&
+  assert(operands[0].getTensor()->getType().isTensor() &&
          "Only tensors can be indexed.");
-  TensorType *firstType = tensorTypePtr(operands[0].getTensor()->getType());
-  ComponentType first = firstType->getComponentType();
+  const TensorType *firstType = operands[0].getTensor()->getType().toTensor();
+  Type first = firstType->componentType;
   for (auto &operand : operands) {
-    assert(operand.getTensor()->getType()->getKind() == Type::Kind::Tensor &&
+    assert(operand.getTensor()->getType().isTensor() &&
            "Only tensors can be indexed.");
-  TensorType *ttype = tensorTypePtr(operand.getTensor()->getType());
-    assert(first == ttype->getComponentType() &&
+
+    const TensorType *operandType = operand.getTensor()->getType().toTensor();
+    assert(first == operandType->componentType &&
            "Operand component types differ");
   }
 }
@@ -189,10 +190,10 @@ void IndexExpr::setOperator(IndexExpr::Operator op) {
 
 void IndexExpr::setOperands(const std::vector<IndexedTensor> &operands) {
   assert(operands.size() > 0);
-  TensorType *newType = tensorTypePtr(operands[0].getTensor()->getType());
-  TensorType *oldType = tensorTypePtr(this->operands[0].getTensor()->getType());
+  const TensorType *newType = operands[0].getTensor()->getType().toTensor();
+  const TensorType *oldType = this->operands[0].getTensor()->getType().toTensor();
 
-  bool reinit = (newType->getComponentType() != oldType->getComponentType());
+  bool reinit = (newType->componentType != oldType->componentType);
   this->operands = operands;
   if (reinit) {
     initType();
@@ -224,35 +225,36 @@ vector<shared_ptr<IndexVar>> IndexExpr::getDomain() const {
 
 void IndexExpr::initType() {
   assert(operands.size() > 0);
-  TensorType *ttype = tensorTypePtr(operands[0].getTensor()->getType());
-  ComponentType ctype = ttype->getComponentType();
+  const TensorType *ttype = operands[0].getTensor()->getType().toTensor();
+  Type ctype = ttype->componentType;
   std::vector<IndexDomain> dimensions;
   for (auto &iv : indexVars) {
     dimensions.push_back(iv->getDomain());
   }
-  setType(std::shared_ptr<TensorType>(new TensorType(ctype, dimensions)));
+  setType(TensorType::make(ctype, dimensions));
 }
 
 
 // class FieldRead
-static std::shared_ptr<Type>
-getFieldType(const std::shared_ptr<Expression> &expr,
-             const std::string &fieldName){
-  assert(expr->getType()->isElement() || expr->getType()->isSet());
+static Type getFieldType(const std::shared_ptr<Expression> &expr,
+                         const std::string &fieldName){
+  assert(expr->getType().isElement() || expr->getType().isSet());
 
-  std::shared_ptr<TensorType> fieldType;
-  if (expr->getType()->isElement()) {
-    const auto &elemType = static_pointer_cast<ElementType>(expr->getType());
-    fieldType = shared_ptr<TensorType>(elemType->getFields().at(fieldName));
+  Type fieldType;
+  if (expr->getType().isElement()) {
+    const ElementType *elemType = expr->getType().toElement();
+    fieldType = elemType->fields.at(fieldName);
   }
-  else if (expr->getType()->isSet()) {
-    const auto &setType = static_pointer_cast<SetType>(expr->getType());
-    auto elemFieldType = setType->getElementType()->getFields().at(fieldName);
+  else if (expr->getType().isSet()) {
+    const SetType *setType = expr->getType().toSet();
+    const ElementType *elemType = setType->elementType.toElement();
+
+    const TensorType *elemFieldType = elemType->fields.at(fieldName).toTensor();
 
     // The type of a set field is:
     // `Tensor[set][elementFieldDimensions](elemFieldComponentType)`
     std::vector<IndexDomain> dimensions;
-    if (elemFieldType->getOrder() == 0) {
+    if (elemFieldType->order() == 0) {
       IndexSet setDim(expr->getName());
       dimensions.push_back(IndexDomain(setDim));
     }
@@ -260,19 +262,17 @@ getFieldType(const std::shared_ptr<Expression> &expr,
       std::vector<IndexSet> dim;
       dim.push_back(IndexSet(expr->getName()));
 
-      for (const IndexDomain &elemFieldDim : elemFieldType->getDimensions()) {
+      for (const IndexDomain &elemFieldDim : elemFieldType->dimensions) {
         for (const IndexSet &indexSet : elemFieldDim.getFactors()) {
           dim.push_back(indexSet);
         }
         dimensions.push_back(IndexDomain(dim));
       }
     }
-    auto newFieldType = new TensorType(elemFieldType->getComponentType(),
-                                       dimensions);
-    fieldType = shared_ptr<TensorType>(newFieldType);
+    fieldType = TensorType::make(elemFieldType->componentType, dimensions);
   }
 
-  return std::shared_ptr<TensorType>(fieldType);
+  return fieldType;
 }
 
 FieldRead::FieldRead(const std::shared_ptr<Expression> &setOrElem,
@@ -282,12 +282,11 @@ FieldRead::FieldRead(const std::shared_ptr<Expression> &setOrElem,
 
 
 // class TensorRead
-static std::shared_ptr<Type>
-getBlockType(const std::shared_ptr<Expression> &expr) {
-  assert(expr->getType()->isTensor());
+static Type getBlockType(const std::shared_ptr<Expression> &expr) {
+  assert(expr->getType().isTensor());
 
-  TensorType *type = tensorTypePtr(expr->getType());
-  const std::vector<IndexDomain> &dimensions = type->getDimensions();
+  const TensorType *type = expr->getType().toTensor();
+  const std::vector<IndexDomain> &dimensions = type->dimensions;
   assert(dimensions.size() > 0);
 
   std::vector<IndexDomain> blockDimensions;
@@ -298,9 +297,9 @@ getBlockType(const std::shared_ptr<Expression> &expr) {
            "All dimensions should have the same number of nestings");
   }
 
-  TensorType *blockType = nullptr;
+  Type blockType;
   if (numNests) {
-    blockType = new TensorType(type->getComponentType());
+    blockType = TensorType::make(type->componentType);
   }
   else {
     for (auto &dim : dimensions) {
@@ -308,11 +307,11 @@ getBlockType(const std::shared_ptr<Expression> &expr) {
       std::vector<IndexSet> blockNests(nests.begin()+1, nests.end());
       blockDimensions.push_back(IndexDomain(blockNests));
     }
-    blockType = new TensorType(type->getComponentType(), blockDimensions);
+    blockType = TensorType::make(type->componentType, blockDimensions);
   }
-  assert(blockType);
+  assert(blockType.defined());
 
-  return std::shared_ptr<Type>(blockType);
+  return blockType;
 }
 
 TensorRead::TensorRead(const std::shared_ptr<Expression> &tensor,

@@ -226,8 +226,8 @@ namespace  simit { namespace internal  {
   std::vector<std::shared_ptr<ir::Expression>> *expressions;
 
 
-  ir::ElementType::FieldsMapType                         *fields;
-  std::pair<std::string,std::shared_ptr<ir::TensorType>> *field;
+  std::map<std::string, ir::Type> *fields;
+  std::pair<std::string, ir::Type> *field;
 
 
   ir::Function *function;
@@ -257,17 +257,10 @@ namespace  simit { namespace internal  {
   std::shared_ptr<ir::TensorWrite> *tensorWrite;
 
 
-  std::shared_ptr<ir::Type>        *type;
-  std::shared_ptr<ir::ElementType> *elementType;
-  std::shared_ptr<ir::SetType>     *setType;
-  std::shared_ptr<ir::TupleType>   *tupleType;
-  std::shared_ptr<ir::TensorType>  *tensorType;
+  ir::Type *type;
 
-  std::vector<std::shared_ptr<ir::ElementType>> *elementTypes;
-
-  std::vector<ir::IndexSet>        *indexSets;
-  ir::IndexSet                     *indexSet;
-  ComponentType                      componentType;
+  std::vector<ir::IndexSet> *indexSets;
+  ir::IndexSet              *indexSet;
 
 
   std::shared_ptr<ir::Literal> *TensorLiteral;

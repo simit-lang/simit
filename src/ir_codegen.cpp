@@ -62,13 +62,13 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<Expression> &l,
                             const std::shared_ptr<Expression> &r) {
   assert(IndexExpr::numOperands(op) == 2);
 
-  TensorType *ltype = tensorTypePtr(l->getType());
-  TensorType *rtype = tensorTypePtr(r->getType());
+  const TensorType *ltype = l->getType().toTensor();
+  const TensorType *rtype = r->getType().toTensor();
 
-  if (ltype->getOrder() == 0 || rtype->getOrder() == 0) {
+  if (ltype->order() == 0 || rtype->order() == 0) {
     std::shared_ptr<Expression> scalar;
     std::shared_ptr<Expression> tensor;
-    if (ltype->getOrder() == 0) {
+    if (ltype->order() == 0) {
       scalar = l;
       tensor = r;
     }
@@ -76,15 +76,15 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<Expression> &l,
       scalar = r;
       tensor = l;
     }
-    assert(tensorTypePtr(scalar->getType())->getOrder() == 0);
+    assert(scalar->getType().toTensor()->order() == 0);
 
     std::vector<std::shared_ptr<IndexVar>> scalarIndexVars;
 
     IndexVarFactory indexVarFactory;
     std::vector<std::shared_ptr<IndexVar>> tensorIndexVars;
-    TensorType *tensorType = tensorTypePtr(tensor->getType());
-    for (unsigned int i=0; i < tensorType->getOrder(); ++i) {
-      IndexDomain indexSet = tensorType->getDimensions()[i];
+    const TensorType *tensorType = tensor->getType().toTensor();
+    for (unsigned int i=0; i < tensorType->order(); ++i) {
+      IndexDomain indexSet = tensorType->dimensions[i];
       tensorIndexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
     }
 
@@ -107,9 +107,9 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
 
   IndexVarFactory indexVarFactory;
   std::vector<std::shared_ptr<IndexVar>> indexVars;
-  TensorType *ttype = tensorTypePtr(operands[0]->getType());
-  for (unsigned int i=0; i < ttype->getOrder(); ++i) {
-    IndexDomain indexSet = ttype->getDimensions()[i];
+  const TensorType *ttype = operands[0]->getType().toTensor();
+  for (unsigned int i=0; i < ttype->order(); ++i) {
+    IndexDomain indexSet = ttype->dimensions[i];
     indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
   }
 
@@ -122,14 +122,11 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
 
 IndexExpr *innerProduct(const std::shared_ptr<Expression> &l,
                         const std::shared_ptr<Expression> &r) {
-  TensorType *ltype = tensorTypePtr(l->getType());
-  TensorType *rtype = tensorTypePtr(r->getType());
-
-  assert(ltype->getOrder() == 1 && rtype->getOrder() == 1);
-  assert(*l->getType() == *r->getType());
+  assert(l->getType() == r->getType());
+  const TensorType *ltype = l->getType().toTensor();
 
   IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeReductionVar(ltype->getDimensions()[0],
+  auto i = indexVarFactory.makeReductionVar(ltype->dimensions[0],
                                             IndexVar::Operator::SUM);
 
   std::vector<IndexedTensor> operands;
@@ -142,15 +139,12 @@ IndexExpr *innerProduct(const std::shared_ptr<Expression> &l,
 
 IndexExpr *outerProduct(const std::shared_ptr<Expression> &l,
                         const std::shared_ptr<Expression> &r) {
-  TensorType *ltype = tensorTypePtr(l->getType());
-  TensorType *rtype = tensorTypePtr(r->getType());
-
-  assert(ltype->getOrder() == 1 && rtype->getOrder() == 1);
-  assert(*ltype == *r->getType());
+  assert(l->getType() == r->getType());
+  const TensorType *ltype = l->getType().toTensor();
 
   IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeFreeVar(ltype->getDimensions()[0]);
-  auto j = indexVarFactory.makeFreeVar(ltype->getDimensions()[0]);
+  auto i = indexVarFactory.makeFreeVar(ltype->dimensions[0]);
+  auto j = indexVarFactory.makeFreeVar(ltype->dimensions[0]);
 
   std::vector<IndexedTensor> operands;
   operands.push_back(IndexedTensor(l, indexVars(i)));
@@ -161,15 +155,15 @@ IndexExpr *outerProduct(const std::shared_ptr<Expression> &l,
 
 IndexExpr *gemv(const std::shared_ptr<Expression> &l,
                 const std::shared_ptr<Expression> &r) {
-  TensorType *ltype = tensorTypePtr(l->getType());
-  TensorType *rtype = tensorTypePtr(r->getType());
+  const TensorType *ltype = l->getType().toTensor();
+  const TensorType *rtype = r->getType().toTensor();
 
-  assert(ltype->getOrder() == 2 && rtype->getOrder() == 1);
-  assert(ltype->getDimensions()[1] == rtype->getDimensions()[0]);
+  assert(ltype->order() == 2 && rtype->order() == 1);
+  assert(ltype->dimensions[1] == rtype->dimensions[0]);
 
   IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeFreeVar(ltype->getDimensions()[0]);
-  auto j = indexVarFactory.makeReductionVar(ltype->getDimensions()[1],
+  auto i = indexVarFactory.makeFreeVar(ltype->dimensions[0]);
+  auto j = indexVarFactory.makeReductionVar(ltype->dimensions[1],
                                             IndexVar::Operator::SUM);
 
   std::vector<IndexedTensor> operands;
@@ -181,15 +175,15 @@ IndexExpr *gemv(const std::shared_ptr<Expression> &l,
 
 IndexExpr *gevm(const std::shared_ptr<Expression> &l,
                 const std::shared_ptr<Expression> &r) {
-  TensorType *ltype = tensorTypePtr(l->getType());
-  TensorType *rtype = tensorTypePtr(r->getType());
+  const TensorType *ltype = l->getType().toTensor();
+  const TensorType *rtype = r->getType().toTensor();
 
-  assert(ltype->getOrder() == 1 && rtype->getOrder() == 2);
-  assert(ltype->getDimensions()[0] == rtype->getDimensions()[0]);
+  assert(ltype->order() == 1 && rtype->order() == 2);
+  assert(ltype->dimensions[0] == rtype->dimensions[0]);
 
   IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeFreeVar(rtype->getDimensions()[1]);
-  auto j = indexVarFactory.makeReductionVar(rtype->getDimensions()[0],
+  auto i = indexVarFactory.makeFreeVar(rtype->dimensions[1]);
+  auto j = indexVarFactory.makeReductionVar(rtype->dimensions[0],
                                             IndexVar::Operator::SUM);
 
   std::vector<IndexedTensor> operands;
@@ -201,16 +195,16 @@ IndexExpr *gevm(const std::shared_ptr<Expression> &l,
 
 IndexExpr *gemm(const std::shared_ptr<Expression> &l,
                 const std::shared_ptr<Expression> &r) {
-  TensorType *ltype = tensorTypePtr(l->getType());
-  TensorType *rtype = tensorTypePtr(r->getType());
+  const TensorType *ltype = l->getType().toTensor();
+  const TensorType *rtype = r->getType().toTensor();
 
-  assert(ltype->getOrder() == 2 && rtype->getOrder() == 2);
-  assert(ltype->getDimensions()[1] == rtype->getDimensions()[0]);
+  assert(ltype->order() == 2 && rtype->order() == 2);
+  assert(ltype->dimensions[1] == rtype->dimensions[0]);
 
   IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeFreeVar(ltype->getDimensions()[0]);
-  auto j = indexVarFactory.makeFreeVar(rtype->getDimensions()[1]);
-  auto k = indexVarFactory.makeReductionVar(ltype->getDimensions()[1],
+  auto i = indexVarFactory.makeFreeVar(ltype->dimensions[0]);
+  auto j = indexVarFactory.makeFreeVar(rtype->dimensions[1]);
+  auto k = indexVarFactory.makeReductionVar(ltype->dimensions[1],
                                             IndexVar::Operator::SUM);
 
   std::vector<IndexedTensor> operands;
@@ -221,10 +215,10 @@ IndexExpr *gemm(const std::shared_ptr<Expression> &l,
 }
 
 IndexExpr *transposeMatrix(const std::shared_ptr<Expression> &mat) {
-  TensorType *mattype = tensorTypePtr(mat->getType());
+  const TensorType *mattype = mat->getType().toTensor();
 
-  assert(mattype->getOrder() == 2);
-  const std::vector<IndexDomain> &dims = mattype->getDimensions();
+  assert(mattype->order() == 2);
+  const std::vector<IndexDomain> &dims = mattype->dimensions;
 
   IndexVarFactory indexVarFactory;
   std::vector<std::shared_ptr<IndexVar>> indexVars;

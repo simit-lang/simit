@@ -34,7 +34,7 @@ void Function::bind(const std::string &argName, Tensor *tensor) {
          "no argument of this name in function");
 
   // Check that the tensor matches the argument type
-  assert(*tensor->getType() == *actuals[argName].getType() &&
+  assert(tensor->getType() == actuals[argName].getType() &&
          "tensor type does not match function argument type");
 
   actuals[argName].bind(tensor);
@@ -46,10 +46,10 @@ void Function::bind(const std::string &argName, SetBase *set) {
          "no argument of this name in function");
 
   // Check that the set matches the argument type
-  const ir::Type *argType = actuals[argName].getType();
-  assert(argType->isSet() && "argument is not a set");
-  const ir::SetType *argSetType = setTypePtr(argType);
-  auto &argFieldsMap = argSetType->getElementType()->getFields();
+  ir::Type argType = actuals[argName].getType();
+  assert(argType.isSet() && "argument is not a set");
+  const ir::SetType *argSetType = argType.toSet();
+  auto &argFieldsMap = argSetType->elementType.toElement()->fields;
 
   for (const std::pair<std::string,int> &field : set->fieldNames) {
     assert(argFieldsMap.find(field.first) != argFieldsMap.end());
@@ -57,16 +57,25 @@ void Function::bind(const std::string &argName, SetBase *set) {
     SetBase::FieldData *fieldData = set->fields[field.second];
 
     const SetBase::FieldData::TensorType *setFieldType = fieldData->type;
-    std::shared_ptr<ir::TensorType> argFieldType = argFieldsMap.at(field.first);
+    const ir::TensorType *argFieldType = argFieldsMap.at(field.first).toTensor();
 
-    assert(setFieldType->getComponentType()==argFieldType->getComponentType() &&
+    ir::Type setFieldTypeComponentType;
+    switch (setFieldType->getComponentType()) {
+      case ComponentType::INT:
+        setFieldTypeComponentType = ir::Int(32);
+        break;
+      case ComponentType::FLOAT:
+        setFieldTypeComponentType = ir::Float(32);
+        break;
+    }
+
+    assert(setFieldTypeComponentType == argFieldType->componentType &&
            "set type does not match function argument type");
-    assert(setFieldType->getOrder() == argFieldType->getOrder() &&
+    assert(setFieldType->getOrder() == argFieldType->order() &&
            "set type does not match function argument type");
 
-    const vector<ir::IndexDomain> &argFieldTypeDims =
-        argFieldType->getDimensions();
-    for (size_t i=0; i<argFieldType->getOrder(); ++i) {
+    const vector<ir::IndexDomain> &argFieldTypeDims = argFieldType->dimensions;
+    for (size_t i=0; i < argFieldType->order(); ++i) {
       assert(argFieldTypeDims[i].getFactors().size() == 1 &&
              "set type does not match function argument type");
 

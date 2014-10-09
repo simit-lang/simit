@@ -71,7 +71,7 @@ TEST(Type, getSize) {
   indices1.push_back(IndexSet(7));
   dimensions.push_back(IndexDomain(indices1));
 
-  ASSERT_EQ(TensorType(FLOAT, dimensions).getSize(), 210u);
+  ASSERT_EQ(TensorType::make(Float(64), dimensions).toTensor()->size(), 210u);
   // TODO: Add tests for SET, VARIABLE and combinations
 }
 
@@ -85,12 +85,15 @@ TEST(Type, eq) {
   idxs0.push_back(IndexSet(3));
   dims0.push_back(IndexDomain(idxs0));
   dims1.push_back(IndexDomain(idxs0));
-  ASSERT_EQ(TensorType(FLOAT, dims0), TensorType(FLOAT, dims1));
-  ASSERT_NE(TensorType(FLOAT, dims0), TensorType(INT, dims1));
+  ASSERT_EQ(TensorType::make(Float(64), dims0),
+            TensorType::make(Float(64), dims1));
+  ASSERT_NE(TensorType::make(Float(64), dims0),
+            TensorType::make(Int(32), dims1));
 
   idxs1.push_back(IndexSet(3));
   idxs1.push_back(IndexSet(2));
   dims1.push_back(IndexDomain(idxs1));
-  ASSERT_NE(TensorType(ComponentType::FLOAT, dims0), TensorType(ComponentType::FLOAT, dims1));
+  ASSERT_NE(TensorType::make(Float(64), dims0),
+            TensorType::make(Float(64), dims1));
   // TODO: Add tests for SET, VARIABLE and combinations
 }

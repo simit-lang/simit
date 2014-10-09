@@ -50,39 +50,38 @@ llvm::Constant *getDouble(double val, llvm::LLVMContext &ctx = LLVM_CONTEXT){
 }
 
 llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
-                                            simit::ComponentType type) {
+                                            const ScalarType *type) {
   using namespace simit;
-  assert(type == ComponentType::INT || type == ComponentType::FLOAT);
   switch (op) {
     case IndexExpr::ADD:
-      switch (type) {
-        case ComponentType::INT:
+      switch (type->kind) {
+        case ScalarType::Int:
           return llvm::Instruction::Add;
-        case ComponentType::FLOAT:
+        case ScalarType::Float:
           return llvm::Instruction::FAdd;
         default:
           UNREACHABLE;
       }
     case IndexExpr::SUB:
-      switch (type) {
-        case ComponentType::INT:
+      switch (type->kind) {
+        case ScalarType::Int:
           return llvm::Instruction::Sub;
-        case ComponentType::FLOAT:
+        case ScalarType::Float:
           return llvm::Instruction::FSub;
         default:
           UNREACHABLE;
       }
     case IndexExpr::MUL:
-      switch (type) {
-        case ComponentType::INT:
+      switch (type->kind) {
+        case ScalarType::Int:
           return llvm::Instruction::Mul;
-        case ComponentType::FLOAT:
+        case ScalarType::Float:
           return llvm::Instruction::FMul;
         default:
           UNREACHABLE;
       }
     case IndexExpr::DIV:
-      assert(type == ComponentType::FLOAT);
+      assert(type->isFloat());
       return llvm::Instruction::FDiv;
     case IndexExpr::NEG: // fall-through
     default:
@@ -91,7 +90,7 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
 }
 
 llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexVar::Operator op,
-                                            simit::ComponentType type) {
+                                            const ScalarType *type) {
   switch (op) {
     case IndexVar::Operator::FREE:
       assert(false && "Free index variables do not have an operator");
@@ -105,7 +104,7 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexVar::Operator op,
 }
 
 llvm::Value *createValueComputation(std::string name,
-                                    simit::ComponentType ctype,
+                                    const ScalarType *ctype,
                                     IndexExpr::Operator op,
                                     const vector<llvm::Value*> operands,
                                     llvm::IRBuilder<> *builder) {
@@ -115,10 +114,10 @@ llvm::Value *createValueComputation(std::string name,
       return operands[0];
     case IndexExpr::Operator::NEG: {
       assert (operands.size() == 1);
-      switch (ctype) {
-        case simit::ComponentType::INT:
+      switch (ctype->kind) {
+        case ScalarType::Int:
           return builder->CreateNeg(operands[0], name);
-        case simit::ComponentType::FLOAT:
+        case ScalarType::Float:
           return builder->CreateFNeg(operands[0], name);
         default:
           UNREACHABLE;
@@ -143,9 +142,9 @@ llvm::Value *emitScalarComputation(IndexExpr *t,
                                    const vector<llvm::Value*> operands,
                                    llvm::IRBuilder<> *builder) {
   assert(operands.size() > 0);
-  assert(t->getType()->isTensor());
+  assert(t->getType().isTensor());
 
-  simit::ComponentType ctype = tensorTypePtr(t->getType())->getComponentType();
+  const ScalarType *ctype = t->getType().toTensor()->componentType.toScalar();
 
   std::vector<llvm::Value *> operandVals;
   for (llvm::Value *operandPtr : operands) {
@@ -167,11 +166,14 @@ typedef std::map<const IndexVar *, llvm::Value *> IndexVarMap;
 /// indexMap is used to map the idxVars to llvm::Value loop indices.
 /// \todo OPT: Offsets are currently recomputed for identical accesses to
 /// different tensors in the emitted code (e.g. `C(i,j) = A(i,j)`).
-llvm::Value *emitOffset(llvm::Value *ptr, TensorType *type,
+llvm::Value *emitOffset(llvm::Value *ptr, const Type &type,
                         const std::vector<std::shared_ptr<IndexVar>> &idxVars,
                         IndexVarMap &indexMap, size_t currNest,
                         llvm::IRBuilder<> *builder) {
-  if (type->getOrder() > 0) {
+  assert(type.isTensor());
+  const TensorType *tensorType = type.toTensor();
+
+  if (tensorType->order() > 0) {
     llvm::Value *offset = NULL;
     if (idxVars.size() == 1) {
       offset = indexMap[idxVars[0].get()];
@@ -248,9 +250,10 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   assert(currIdxVar < domain.size());
 
   std::string resultName = resultStorage->getName();
-  TensorType *resultType = tensorTypePtr(indexExpr->getType());
-  simit::ComponentType resultCType = resultType->getComponentType();
-  assert(resultCType == simitType(resultStorage->getType()));
+  const TensorType *resultType = indexExpr->getType().toTensor();
+
+  assert(resultType->componentType == simitType(resultStorage->getType()));
+  const ScalarType *resultCType = resultType->componentType.toScalar();
 
   size_t numNests = (domain.size() > 0)
       ? domain[0]->getDomain().getFactors().size() : 0;
@@ -329,10 +332,8 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
       std::string operandValName = operandName + VAL_SUFFIX;
       std::string operandPtrName = operandName + PTR_SUFFIX;
 
-      assert(operand.getTensor()->getType()->isTensor());
-      TensorType *operandType = tensorTypePtr(operand.getTensor()->getType());
-
-      llvm::Value *operandPtr = emitOffset(llvmOperand, operandType,
+      llvm::Value *operandPtr = emitOffset(llvmOperand,
+                                           operand.getTensor()->getType(),
                                            operand.getIndexVariables(),
                                            indexMap, currNest, builder);
       llvm::Value *operandVal = builder->CreateAlignedLoad(operandPtr, 8,
@@ -347,10 +348,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
                                                     resultCType, op,
                                                     operandVals, builder);
 
-    assert(indexExpr->getType()->isTensor());
-    TensorType *indexExprType = tensorTypePtr(indexExpr->getType());
-
-    resultPtr = emitOffset(resultStorage, indexExprType,
+    resultPtr = emitOffset(resultStorage, indexExpr->getType(),
                            indexExpr->getIndexVariables(),
                            indexMap, currNest, builder);
 

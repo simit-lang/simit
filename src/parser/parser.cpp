@@ -69,7 +69,7 @@
     std::stringstream ss;
     ss << type;
     std::string str = ss.str();
-    if (type.isTensor() && tensorTypePtr(&type)->isColumnVector()) {
+    if (type.isTensor() && type.toTensor()->isColumnVector) {
       str += "'";
     }
     return str;
@@ -119,14 +119,14 @@
   }
 
   void transposeVector(const std::shared_ptr<Expression> &vec) {
-    assert(vec->getType()->isTensor());
-    TensorType *ttype = tensorTypePtr(vec->getType());
-    assert(ttype->getOrder() == 1);
+    assert(vec->getType().isTensor());
+    const TensorType *ttype = vec->getType().toTensor();
+    assert(ttype->order() == 1);
 
-    auto transposedVector = new TensorType(ttype->getComponentType(),
-                                           ttype->getDimensions(),
-                                           !ttype->isColumnVector());
-    vec->setType(std::shared_ptr<TensorType>(transposedVector));
+    Type transposedVector = TensorType::make(ttype->componentType,
+                                             ttype->dimensions,
+                                             !ttype->isColumnVector);
+    vec->setType(transposedVector);
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
@@ -135,8 +135,7 @@
     }
 
     if (l.isTensor()) {
-      if (tensorTypePtr(&l)->isColumnVector() !=
-          tensorTypePtr(&r)->isColumnVector()) {
+      if (l.toTensor()->isColumnVector != r.toTensor()->isColumnVector) {
         return false;
       }
     }
@@ -149,8 +148,7 @@
 
   #define CHECK_IS_TENSOR(expr, loc)                    \
     do {                                                \
-      assert(expr->getType());                          \
-      if (!expr->getType()->isTensor()) {               \
+      if (!expr->getType().isTensor()) {                \
         std::stringstream errorStr;                     \
         errorStr << "expected tensor";                  \
         REPORT_ERROR(errorStr.str(), loc);              \
@@ -165,14 +163,15 @@
     } while (0)
 
 
-  #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)         \
-    do {                                                \
-      const TensorType *ltt = tensorTypePtr(lt);        \
-      const TensorType *rtt = tensorTypePtr(rt);        \
-      if (ltt->getOrder() > 0 && rtt->getOrder() > 0) { \
-        CHECK_TYPE_EQUALITY(*ltt, *rtt, loc);           \
-      }                                                 \
-    }                                                   \
+  #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)   \
+    do {                                          \
+      assert(lt.isTensor() && rt.isTensor());     \
+      const TensorType *ltt = lt.toTensor();      \
+      const TensorType *rtt = rt.toTensor();      \
+      if (ltt->order() > 0 && rtt->order() > 0) { \
+        CHECK_TYPE_EQUALITY(lt, rt, loc);         \
+      }                                           \
+    }                                             \
     while (0)
 
 
@@ -523,7 +522,7 @@ namespace  simit { namespace internal  {
       case 62: // element_type_decl
 
 
-        { delete (yysym.value.elementType); }
+        { delete (yysym.value.type); }
 
         break;
 
@@ -796,14 +795,14 @@ namespace  simit { namespace internal  {
       case 110: // element_type
 
 
-        { delete (yysym.value.elementType); }
+        { delete (yysym.value.type); }
 
         break;
 
       case 111: // set_type
 
 
-        { delete (yysym.value.setType); }
+        { delete (yysym.value.type); }
 
         break;
 
@@ -817,14 +816,14 @@ namespace  simit { namespace internal  {
       case 113: // tuple_type
 
 
-        { delete (yysym.value.tupleType); }
+        { delete (yysym.value.type); }
 
         break;
 
       case 114: // tensor_type
 
 
-        { delete (yysym.value.tensorType); }
+        { delete (yysym.value.type); }
 
         break;
 
@@ -845,7 +844,7 @@ namespace  simit { namespace internal  {
       case 117: // component_type
 
 
-        {}
+        { delete (yysym.value.type); }
 
         break;
 
@@ -1232,15 +1231,14 @@ namespace  simit { namespace internal  {
   case 11:
 
     {
-    std::string name = convertAndFree((yystack_[2].value.string));
-    std::unique_ptr<ir::ElementType::FieldsMapType> fields((yystack_[1].value.fields));
+    string name = convertAndFree((yystack_[2].value.string));
+    unique_ptr<std::map<string,Type>> fields((yystack_[1].value.fields));
 
     if (ctx->containsElementType(name)) {
       REPORT_ERROR("struct redefinition (" + name + ")", yylhs.location);
     }
 
-    ElementType *elementType = new ElementType(name, *fields);
-    ctx->addElementType(std::shared_ptr<ElementType>(elementType));
+    ctx->addElementType(ElementType::make(name, *fields));
   }
 
     break;
@@ -1248,7 +1246,7 @@ namespace  simit { namespace internal  {
   case 12:
 
     {
-    (yylhs.value.fields) = new ElementType::FieldsMapType();
+    (yylhs.value.fields) = new map<string,Type>;
   }
 
     break;
@@ -1267,8 +1265,8 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[3].value.string));
-    std::shared_ptr<TensorType> tensorType = convertAndDelete((yystack_[1].value.tensorType));
-    (yylhs.value.field) = new pair<string,shared_ptr<ir::TensorType>>(name, tensorType);
+    auto tensorType = convertAndDelete((yystack_[1].value.type));
+    (yylhs.value.field) = new pair<string,Type>(name, tensorType);
   }
 
     break;
@@ -1484,25 +1482,27 @@ namespace  simit { namespace internal  {
 
     {
     std::string ident = convertAndFree((yystack_[5].value.string));
-    std::shared_ptr<TensorType> tensorType = convertAndDelete((yystack_[3].value.tensorType));
+    auto type = convertAndDelete((yystack_[3].value.type));
+    const TensorType *tensorType = type.toTensor();
 
     auto literal = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
     delete (yystack_[1].value.TensorLiteral);
 
-    assert(literal->getType()->isTensor() && "Set literals not supported yet");
+    assert(literal->getType().isTensor() &&
+           "Only tensor literals are currently supported");
     auto literalType = literal->getType();
 
     literal->setName(ident);
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
-    const TensorType *literalTensorType = tensorTypePtr(literalType);
-    if (tensorType->getOrder() == 2 && literalTensorType->getOrder() == 1) {
-      literal->cast(tensorType);
+    const TensorType *literalTensorType = literalType.toTensor();
+    if (tensorType->order() == 2 && literalTensorType->order() == 1) {
+      literal->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.
-    CHECK_TYPE_EQUALITY(*tensorType, *literal->getType(), yystack_[5].location);
+    CHECK_TYPE_EQUALITY(type, literal->getType(), yystack_[5].location);
 
     ctx->addSymbol(literal->getName(), literal);
     (yylhs.value.expression) = new shared_ptr<Expression>(literal);
@@ -1560,7 +1560,7 @@ namespace  simit { namespace internal  {
           shared_ptr<Expression> lhsTensor = varExprPair.getWriteExpr();
           auto result = dynamic_pointer_cast<Result>(lhsTensor);
           if (result) {
-            CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), yystack_[2].location);
+            CHECK_TYPE_EQUALITY(result->getType(), rhs->getType(), yystack_[2].location);
             rhs->setName(result->getName());
             result->addValue(rhs);
             (yylhs.value.expression) = new std::shared_ptr<Expression>(rhs);
@@ -1728,54 +1728,54 @@ namespace  simit { namespace internal  {
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
 
-    TensorType *ltype = tensorTypePtr(l->getType());
-    TensorType *rtype = tensorTypePtr(r->getType());
+    const TensorType *ltype = l->getType().toTensor();
+    const TensorType *rtype = r->getType().toTensor();
 
     // Scale
-    if (ltype->getOrder()==0 || rtype->getOrder()==0) {
+    if (ltype->order()==0 || rtype->order()==0) {
       (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(binaryElwiseExpr(l, IndexExpr::MUL, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
-    else if (ltype->getOrder() == 1 && rtype->getOrder() == 1) {
+    else if (ltype->order() == 1 && rtype->order() == 1) {
       // Inner product
-      if (!ltype->isColumnVector()) {
-        if (!rtype->isColumnVector()) {
+      if (!ltype->isColumnVector) {
+        if (!rtype->isColumnVector) {
           REPORT_ERROR("cannot multiply two row vectors", yystack_[1].location);
         }
-        if (*l->getType() != *r->getType()) {
-          REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), yystack_[1].location);
+        if (l->getType() != r->getType()) {
+          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
         }
         (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
-        if (rtype->isColumnVector()) {
+        if (rtype->isColumnVector) {
           REPORT_ERROR("cannot multiply two column vectors", yystack_[1].location);
         }
-        if (*l->getType() != *r->getType()) {
-          REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), yystack_[1].location);
+        if (l->getType() != r->getType()) {
+          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
         }
         (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(outerProduct(l, r));
       }
     }
     // Matrix-Vector
-    else if (ltype->getOrder() == 2 && rtype->getOrder() == 1) {
-      if (ltype->getDimensions()[1] != rtype->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*l->getType(), *rtype, yystack_[1].location);
+    else if (ltype->order() == 2 && rtype->order() == 1) {
+      if (ltype->dimensions[1] != rtype->dimensions[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
       }
       (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(gemv(l, r));
     }
     // Vector-Matrix
-    else if (ltype->getOrder() == 1 && rtype->getOrder() == 2) {
-      if (ltype->getDimensions()[0] != rtype->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*ltype, *rtype, yystack_[1].location);
+    else if (ltype->order() == 1 && rtype->order() == 2) {
+      if (ltype->dimensions[0] != rtype->dimensions[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
       }
       (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(gevm(l,r));
     }
     // Matrix-Matrix
-    else if (ltype->getOrder() == 2 && rtype->getOrder() == 2) {
-      if (ltype->getDimensions()[1] != rtype->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*ltype, *rtype, yystack_[1].location);
+    else if (ltype->order() == 2 && rtype->order() == 2) {
+      if (ltype->dimensions[1] != rtype->dimensions[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
       }
       (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(gemm(l,r));
     }
@@ -1808,9 +1808,9 @@ namespace  simit { namespace internal  {
 
     CHECK_IS_TENSOR(expr, yystack_[1].location);
 
-    TensorType *type = tensorTypePtr(expr->getType());
+    const TensorType *type = expr->getType().toTensor();
 
-    switch (type->getOrder()) {
+    switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
         (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
@@ -1818,7 +1818,7 @@ namespace  simit { namespace internal  {
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
         (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
-        if (!type->isColumnVector()) {
+        if (!type->isColumnVector) {
           transposeVector(*(yylhs.value.indexExpr));
         }
         break;
@@ -1948,14 +1948,13 @@ namespace  simit { namespace internal  {
 
     {
     if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.string) == NULL) { (yylhs.value.fieldRead) = NULL; break; } // TODO: Remove check
-    if ((*(yystack_[2].value.expression))->getType() == NULL) { (yylhs.value.fieldRead) = NULL; break; } // TODO: Remove check
+    if (!(*(yystack_[2].value.expression))->getType().defined()) { (yylhs.value.fieldRead) = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> elemOrSet = convertAndDelete((yystack_[2].value.expression));
     std::string fieldName = convertAndFree((yystack_[0].value.string));
 
-    auto type = elemOrSet->getType();
-    assert(type);
-    if (!(type->isElement() || type->isSet())) {
+    Type type = elemOrSet->getType();
+    if (!(type.isElement() || type.isSet())) {
       std::stringstream errorStr;
       errorStr << "only elements and sets have fields";
       REPORT_ERROR(errorStr.str(), yystack_[2].location);
@@ -1981,10 +1980,10 @@ namespace  simit { namespace internal  {
 
       // The parenthesis read can read from a tensor or a tuple.
       auto expr = exprPair.getReadExpr();
-      if (expr->getType()->isTensor()) {
+      if (expr->getType().isTensor()) {
         (yylhs.value.expression) = new shared_ptr<Expression>(new TensorRead(expr, *indices));
       }
-      else if (expr->getType()->isTuple()) {
+      else if (expr->getType().isTuple()) {
         if (indices->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", yystack_[1].location);
         }
@@ -2194,7 +2193,7 @@ namespace  simit { namespace internal  {
   case 106:
 
     {
-    (yylhs.value.type) = reinterpret_cast<std::shared_ptr<ir::Type>*>((yystack_[0].value.elementType));
+    (yylhs.value.type) = (yystack_[0].value.type);
   }
 
     break;
@@ -2202,7 +2201,7 @@ namespace  simit { namespace internal  {
   case 107:
 
     {
-    (yylhs.value.type) = reinterpret_cast<std::shared_ptr<ir::Type>*>((yystack_[0].value.setType));
+    (yylhs.value.type) = (yystack_[0].value.type);
   }
 
     break;
@@ -2210,7 +2209,7 @@ namespace  simit { namespace internal  {
   case 108:
 
     {
-    (yylhs.value.type) = reinterpret_cast<std::shared_ptr<ir::Type>*>((yystack_[0].value.tupleType));
+    (yylhs.value.type) = (yystack_[0].value.type);
   }
 
     break;
@@ -2218,7 +2217,7 @@ namespace  simit { namespace internal  {
   case 109:
 
     {
-    (yylhs.value.type) = reinterpret_cast<std::shared_ptr<ir::Type>*>((yystack_[0].value.tensorType));
+    (yylhs.value.type) = (yystack_[0].value.type);
   }
 
     break;
@@ -2227,7 +2226,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[0].value.string));
-    (yylhs.value.elementType) = new std::shared_ptr<ElementType>(ctx->getElementType(name));
+    (yylhs.value.type) = new Type(ctx->getElementType(name));
   }
 
     break;
@@ -2235,8 +2234,8 @@ namespace  simit { namespace internal  {
   case 111:
 
     {
-    std::shared_ptr<ElementType> elementType = convertAndDelete((yystack_[1].value.elementType));
-    (yylhs.value.setType) = new std::shared_ptr<SetType>(new SetType(elementType));
+    auto elementType = convertAndDelete((yystack_[1].value.type));
+    (yylhs.value.type) = new Type(SetType::make(elementType));
   }
 
     break;
@@ -2244,11 +2243,11 @@ namespace  simit { namespace internal  {
   case 112:
 
     {
-    std::shared_ptr<ElementType> elementType = convertAndDelete((yystack_[4].value.elementType));
+    auto elementType = convertAndDelete((yystack_[4].value.type));
     auto eps = convertAndDelete((yystack_[1].value.expressions));
 
     // TODO: Add endpoint information to set type
-    (yylhs.value.setType) = new std::shared_ptr<SetType>(new SetType(elementType));
+    (yylhs.value.type) = new Type(SetType::make(elementType));
   }
 
     break;
@@ -2274,14 +2273,13 @@ namespace  simit { namespace internal  {
   case 115:
 
     {
-    auto elementType = convertAndDelete((yystack_[3].value.elementType));
+    auto elementType = convertAndDelete((yystack_[3].value.type));
 
     if ((yystack_[1].value.num)<1) {
       REPORT_ERROR("Must be 1 or greater", yystack_[2].location);
     }
 
-    auto tupleType = new TupleType(elementType, (yystack_[1].value.num));
-    (yylhs.value.tupleType) = new std::shared_ptr<TupleType>(tupleType);
+    (yylhs.value.type) = new Type(TupleType::make(elementType, (yystack_[1].value.num)));
   }
 
     break;
@@ -2289,7 +2287,8 @@ namespace  simit { namespace internal  {
   case 116:
 
     {
-    (yylhs.value.tensorType) = new shared_ptr<TensorType>(new TensorType((yystack_[0].value.componentType)));
+    auto componentType = convertAndDelete((yystack_[0].value.type));
+    (yylhs.value.type) = new Type(TensorType::make(componentType));
   }
 
     break;
@@ -2297,7 +2296,7 @@ namespace  simit { namespace internal  {
   case 117:
 
     {
-    (yylhs.value.tensorType) = (yystack_[1].value.tensorType);
+    (yylhs.value.type) = (yystack_[1].value.type);
   }
 
     break;
@@ -2305,14 +2304,16 @@ namespace  simit { namespace internal  {
   case 118:
 
     {
-    auto blockType = convertAndDelete((yystack_[1].value.tensorType));
-    auto componentType = blockType->getComponentType();
+    auto blockTypePtr = convertAndDelete((yystack_[1].value.type));
+    const TensorType *blockType = blockTypePtr.toTensor();
+
+    auto componentType = blockType->componentType;
 
     auto outerDimensions = unique_ptr<vector<IndexSet>>((yystack_[4].value.indexSets));
-    auto blockDimensions = blockType->getDimensions();
+    auto blockDimensions = blockType->dimensions;
 
     vector<IndexDomain> dimensions;
-    if (blockType->getOrder() == 0) {
+    if (blockType->order() == 0) {
       for (size_t i=0; i<outerDimensions->size(); ++i) {
         dimensions.push_back(IndexDomain((*outerDimensions)[i]));
       }
@@ -2325,8 +2326,8 @@ namespace  simit { namespace internal  {
       // TODO: Handle case where there are more block than outer dimensions
       // TODO: Handle case where there are more outer than block dimensions
       // TODO: Remove below error
-      if (blockType->getOrder() != outerDimensions->size()) {
-        REPORT_ERROR("Blocktype order (" + to_string(blockType->getOrder()) +
+      if (blockType->order() != outerDimensions->size()) {
+        REPORT_ERROR("Blocktype order (" + to_string(blockType->order()) +
                      ") differ from number of dimensions", yystack_[4].location);
       }
 
@@ -2342,7 +2343,7 @@ namespace  simit { namespace internal  {
       }
     }
 
-    (yylhs.value.tensorType) = new shared_ptr<TensorType>(new TensorType(componentType, dimensions));
+    (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions));
   }
 
     break;
@@ -2350,11 +2351,11 @@ namespace  simit { namespace internal  {
   case 119:
 
     {
-    auto tensorType = convertAndDelete((yystack_[1].value.tensorType));
-    auto dimensions = tensorType->getDimensions();
-    auto componentType = tensorType->getComponentType();
-    (yylhs.value.tensorType) = new shared_ptr<TensorType>(new TensorType(componentType, dimensions,
-                                                   true /* isColumnVector */));
+    auto type = convertAndDelete((yystack_[1].value.type));
+    const TensorType *tensorType = type.toTensor();
+    auto dimensions = tensorType->dimensions;
+    auto componentType = tensorType->componentType;
+    (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions, true));
   }
 
     break;
@@ -2418,7 +2419,7 @@ namespace  simit { namespace internal  {
   case 126:
 
     {
-    (yylhs.value.componentType) = ComponentType::INT;
+    (yylhs.value.type) = new Type(Int(32));
   }
 
     break;
@@ -2426,7 +2427,7 @@ namespace  simit { namespace internal  {
   case 127:
 
     {
-    (yylhs.value.componentType) = ComponentType::FLOAT;
+    (yylhs.value.type) = new Type(Float(64));
   }
 
     break;
@@ -2444,11 +2445,10 @@ namespace  simit { namespace internal  {
 
     {
     auto values = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
-    auto isps = std::vector<IndexDomain>(values->dimSizes.rbegin(),
+    auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
-    auto type = new TensorType(ComponentType::FLOAT, isps);
-    auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>
-                               values->values.data());
+    Type type = TensorType::make(Float(64), idoms);
+    auto literal = new Literal(type, values->values.data());
     (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
@@ -2458,11 +2458,10 @@ namespace  simit { namespace internal  {
 
     {
     auto values = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
-    auto isps = std::vector<IndexDomain>(values->dimSizes.rbegin(),
+    auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
-    auto type = new TensorType(ComponentType::INT, isps);
-    auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>
-                               values->values.data());
+    Type type = TensorType::make(Int(32), idoms);
+    auto literal = new Literal(type, values->values.data());
     (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
@@ -2633,8 +2632,8 @@ namespace  simit { namespace internal  {
   case 150:
 
     {
-    auto scalarType = new TensorType(ComponentType::INT);
-    auto literal = new Literal(std::shared_ptr<TensorType>(scalarType), &(yystack_[0].value.num));
+    auto scalarTensorType = TensorType::make(Int(32));
+    auto literal = new Literal(scalarTensorType, &(yystack_[0].value.num));
     (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
@@ -2643,8 +2642,8 @@ namespace  simit { namespace internal  {
   case 151:
 
     {
-    auto scalarType = new TensorType(ComponentType::FLOAT);
-    auto literal = new Literal(std::shared_ptr<TensorType>(scalarType), &(yystack_[0].value.fnum));
+    auto scalarTensorType = TensorType::make(Float(64));
+    auto literal = new Literal(scalarTensorType, &(yystack_[0].value.fnum));
     (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
   }
 
@@ -3237,22 +3236,22 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   250,   250,   252,   256,   257,   265,   273,   276,   280,
-     287,   301,   315,   318,   326,   346,   346,   346,   354,   376,
-     376,   376,   384,   408,   411,   417,   422,   430,   439,   442,
-     448,   453,   461,   472,   475,   484,   485,   486,   487,   488,
-     489,   493,   521,   527,   613,   616,   622,   628,   630,   634,
+       0,   249,   249,   251,   255,   256,   264,   272,   275,   279,
+     286,   300,   313,   316,   324,   344,   344,   344,   352,   374,
+     374,   374,   382,   406,   409,   415,   420,   428,   437,   440,
+     446,   451,   459,   470,   473,   482,   483,   484,   485,   486,
+     487,   491,   521,   527,   613,   616,   622,   628,   630,   634,
      636,   643,   650,   651,   652,   653,   654,   655,   656,   657,
      663,   684,   700,   708,   720,   785,   791,   821,   826,   835,
      836,   837,   838,   844,   850,   856,   862,   868,   874,   889,
-     909,   910,   911,   922,   956,   962,   972,   975,   981,   987,
-     998,  1006,  1008,  1012,  1014,  1017,  1018,  1066,  1071,  1079,
-    1083,  1086,  1092,  1110,  1116,  1134,  1158,  1161,  1164,  1167,
-    1173,  1180,  1184,  1194,  1198,  1205,  1218,  1221,  1224,  1264,
-    1274,  1279,  1287,  1290,  1294,  1300,  1306,  1309,  1378,  1381,
-    1382,  1386,  1389,  1398,  1409,  1416,  1419,  1423,  1436,  1440,
-    1454,  1458,  1464,  1471,  1474,  1478,  1491,  1495,  1509,  1513,
-    1519,  1524,  1534
+     908,   909,   910,   921,   955,   961,   971,   974,   980,   986,
+     997,  1005,  1007,  1011,  1013,  1016,  1017,  1065,  1070,  1078,
+    1082,  1085,  1091,  1109,  1115,  1133,  1149,  1152,  1155,  1158,
+    1164,  1171,  1175,  1185,  1189,  1196,  1208,  1212,  1215,  1257,
+    1267,  1272,  1280,  1283,  1287,  1293,  1299,  1302,  1371,  1374,
+    1375,  1379,  1382,  1390,  1400,  1407,  1410,  1414,  1427,  1431,
+    1445,  1449,  1455,  1462,  1465,  1469,  1482,  1486,  1500,  1504,
+    1510,  1515,  1525
   };
 
   // Print the state stack on the debug stream.

@@ -45,7 +45,7 @@
     std::stringstream ss;
     ss << type;
     std::string str = ss.str();
-    if (type.isTensor() && tensorTypePtr(&type)->isColumnVector()) {
+    if (type.isTensor() && type.toTensor()->isColumnVector) {
       str += "'";
     }
     return str;
@@ -95,14 +95,14 @@
   }
 
   void transposeVector(const std::shared_ptr<Expression> &vec) {
-    assert(vec->getType()->isTensor());
-    TensorType *ttype = tensorTypePtr(vec->getType());
-    assert(ttype->getOrder() == 1);
+    assert(vec->getType().isTensor());
+    const TensorType *ttype = vec->getType().toTensor();
+    assert(ttype->order() == 1);
 
-    auto transposedVector = new TensorType(ttype->getComponentType(),
-                                           ttype->getDimensions(),
-                                           !ttype->isColumnVector());
-    vec->setType(std::shared_ptr<TensorType>(transposedVector));
+    Type transposedVector = TensorType::make(ttype->componentType,
+                                             ttype->dimensions,
+                                             !ttype->isColumnVector);
+    vec->setType(transposedVector);
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
@@ -111,8 +111,7 @@
     }
 
     if (l.isTensor()) {
-      if (tensorTypePtr(&l)->isColumnVector() !=
-          tensorTypePtr(&r)->isColumnVector()) {
+      if (l.toTensor()->isColumnVector != r.toTensor()->isColumnVector) {
         return false;
       }
     }
@@ -125,8 +124,7 @@
 
   #define CHECK_IS_TENSOR(expr, loc)                    \
     do {                                                \
-      assert(expr->getType());                          \
-      if (!expr->getType()->isTensor()) {               \
+      if (!expr->getType().isTensor()) {                \
         std::stringstream errorStr;                     \
         errorStr << "expected tensor";                  \
         REPORT_ERROR(errorStr.str(), loc);              \
@@ -141,14 +139,15 @@
     } while (0)
 
 
-  #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)         \
-    do {                                                \
-      const TensorType *ltt = tensorTypePtr(lt);        \
-      const TensorType *rtt = tensorTypePtr(rt);        \
-      if (ltt->getOrder() > 0 && rtt->getOrder() > 0) { \
-        CHECK_TYPE_EQUALITY(*ltt, *rtt, loc);           \
-      }                                                 \
-    }                                                   \
+  #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)   \
+    do {                                          \
+      assert(lt.isTensor() && rt.isTensor());     \
+      const TensorType *ltt = lt.toTensor();      \
+      const TensorType *rtt = rt.toTensor();      \
+      if (ltt->order() > 0 && rtt->order() > 0) { \
+        CHECK_TYPE_EQUALITY(lt, rt, loc);         \
+      }                                           \
+    }                                             \
     while (0)
 }
 
@@ -292,28 +291,27 @@ extern
 
 // Element Definitions
 %union {
-  ir::ElementType::FieldsMapType                         *fields;
-  std::pair<std::string,std::shared_ptr<ir::TensorType>> *field;
+  std::map<std::string, ir::Type> *fields;
+  std::pair<std::string, ir::Type> *field;
 };
 
-%type <elementType> element_type_decl;
+%type <type> element_type_decl;
 element_type_decl
   : "element" IDENT field_decl_list "end" {
-    std::string name = convertAndFree($IDENT);
-    std::unique_ptr<ir::ElementType::FieldsMapType> fields($field_decl_list);
+    string name = convertAndFree($IDENT);
+    unique_ptr<std::map<string,Type>> fields($field_decl_list);
 
     if (ctx->containsElementType(name)) {
       REPORT_ERROR("struct redefinition (" + name + ")", @element_type_decl);
     }
 
-    ElementType *elementType = new ElementType(name, *fields);
-    ctx->addElementType(std::shared_ptr<ElementType>(elementType));
+    ctx->addElementType(ElementType::make(name, *fields));
   }
 
 %type <fields> field_decl_list;
 field_decl_list
   : /* empty */ {
-    $$ = new ElementType::FieldsMapType();
+    $$ = new map<string,Type>;
   }
   | field_decl_list field_decl {
     $$ = $1;
@@ -325,8 +323,8 @@ field_decl_list
 field_decl
   : IDENT ":" tensor_type  ";" {
     std::string name = convertAndFree($IDENT);
-    std::shared_ptr<TensorType> tensorType = convertAndDelete($tensor_type);
-    $$ = new pair<string,shared_ptr<ir::TensorType>>(name, tensorType);
+    auto tensorType = convertAndDelete($tensor_type);
+    $$ = new pair<string,Type>(name, tensorType);
   }
 
 
@@ -492,25 +490,27 @@ stmt
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     std::string ident = convertAndFree($IDENT);
-    std::shared_ptr<TensorType> tensorType = convertAndDelete($tensor_type);
+    auto type = convertAndDelete($tensor_type);
+    const TensorType *tensorType = type.toTensor();
 
     auto literal = shared_ptr<Literal>(*$tensor_literal);
     delete $tensor_literal;
 
-    assert(literal->getType()->isTensor() && "Set literals not supported yet");
+    assert(literal->getType().isTensor() &&
+           "Only tensor literals are currently supported");
     auto literalType = literal->getType();
 
     literal->setName(ident);
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
-    const TensorType *literalTensorType = tensorTypePtr(literalType);
-    if (tensorType->getOrder() == 2 && literalTensorType->getOrder() == 1) {
-      literal->cast(tensorType);
+    const TensorType *literalTensorType = literalType.toTensor();
+    if (tensorType->order() == 2 && literalTensorType->order() == 1) {
+      literal->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.
-    CHECK_TYPE_EQUALITY(*tensorType, *literal->getType(), @2);
+    CHECK_TYPE_EQUALITY(type, literal->getType(), @2);
 
     ctx->addSymbol(literal->getName(), literal);
     $$ = new shared_ptr<Expression>(literal);
@@ -564,7 +564,7 @@ assign_stmt
           shared_ptr<Expression> lhsTensor = varExprPair.getWriteExpr();
           auto result = dynamic_pointer_cast<Result>(lhsTensor);
           if (result) {
-            CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
+            CHECK_TYPE_EQUALITY(result->getType(), rhs->getType(), @2);
             rhs->setName(result->getName());
             result->addValue(rhs);
             $$ = new std::shared_ptr<Expression>(rhs);
@@ -726,54 +726,54 @@ linear_algebra_expr
     CHECK_IS_TENSOR(l, @1);
     CHECK_IS_TENSOR(r, @3);
 
-    TensorType *ltype = tensorTypePtr(l->getType());
-    TensorType *rtype = tensorTypePtr(r->getType());
+    const TensorType *ltype = l->getType().toTensor();
+    const TensorType *rtype = r->getType().toTensor();
 
     // Scale
-    if (ltype->getOrder()==0 || rtype->getOrder()==0) {
+    if (ltype->order()==0 || rtype->order()==0) {
       $$ = new shared_ptr<IndexExpr>(binaryElwiseExpr(l, IndexExpr::MUL, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
-    else if (ltype->getOrder() == 1 && rtype->getOrder() == 1) {
+    else if (ltype->order() == 1 && rtype->order() == 1) {
       // Inner product
-      if (!ltype->isColumnVector()) {
-        if (!rtype->isColumnVector()) {
+      if (!ltype->isColumnVector) {
+        if (!rtype->isColumnVector) {
           REPORT_ERROR("cannot multiply two row vectors", @2);
         }
-        if (*l->getType() != *r->getType()) {
-          REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
+        if (l->getType() != r->getType()) {
+          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
         }
         $$ = new shared_ptr<IndexExpr>(innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
-        if (rtype->isColumnVector()) {
+        if (rtype->isColumnVector) {
           REPORT_ERROR("cannot multiply two column vectors", @2);
         }
-        if (*l->getType() != *r->getType()) {
-          REPORT_TYPE_MISSMATCH(*l->getType(), *r->getType(), @2);
+        if (l->getType() != r->getType()) {
+          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
         }
         $$ = new shared_ptr<IndexExpr>(outerProduct(l, r));
       }
     }
     // Matrix-Vector
-    else if (ltype->getOrder() == 2 && rtype->getOrder() == 1) {
-      if (ltype->getDimensions()[1] != rtype->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*l->getType(), *rtype, @2);
+    else if (ltype->order() == 2 && rtype->order() == 1) {
+      if (ltype->dimensions[1] != rtype->dimensions[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
       }
       $$ = new shared_ptr<IndexExpr>(gemv(l, r));
     }
     // Vector-Matrix
-    else if (ltype->getOrder() == 1 && rtype->getOrder() == 2) {
-      if (ltype->getDimensions()[0] != rtype->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*ltype, *rtype, @2);
+    else if (ltype->order() == 1 && rtype->order() == 2) {
+      if (ltype->dimensions[0] != rtype->dimensions[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
       }
       $$ = new shared_ptr<IndexExpr>(gevm(l,r));
     }
     // Matrix-Matrix
-    else if (ltype->getOrder() == 2 && rtype->getOrder() == 2) {
-      if (ltype->getDimensions()[1] != rtype->getDimensions()[0]){
-        REPORT_TYPE_MISSMATCH(*ltype, *rtype, @2);
+    else if (ltype->order() == 2 && rtype->order() == 2) {
+      if (ltype->dimensions[1] != rtype->dimensions[0]){
+        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
       }
       $$ = new shared_ptr<IndexExpr>(gemm(l,r));
     }
@@ -796,9 +796,9 @@ linear_algebra_expr
 
     CHECK_IS_TENSOR(expr, @1);
 
-    TensorType *type = tensorTypePtr(expr->getType());
+    const TensorType *type = expr->getType().toTensor();
 
-    switch (type->getOrder()) {
+    switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
         $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
@@ -806,7 +806,7 @@ linear_algebra_expr
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
         $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
-        if (!type->isColumnVector()) {
+        if (!type->isColumnVector) {
           transposeVector(*$$);
         }
         break;
@@ -888,14 +888,13 @@ boolean_expr
 field_read_expr
   : set_read_expr "." IDENT {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    if ((*$1)->getType() == NULL) { $$ = NULL; break; } // TODO: Remove check
+    if (!(*$1)->getType().defined()) { $$ = NULL; break; } // TODO: Remove check
 
     std::shared_ptr<Expression> elemOrSet = convertAndDelete($set_read_expr);
     std::string fieldName = convertAndFree($IDENT);
 
-    auto type = elemOrSet->getType();
-    assert(type);
-    if (!(type->isElement() || type->isSet())) {
+    Type type = elemOrSet->getType();
+    if (!(type.isElement() || type.isSet())) {
       std::stringstream errorStr;
       errorStr << "only elements and sets have fields";
       REPORT_ERROR(errorStr.str(), @1);
@@ -932,10 +931,10 @@ call_or_paren_read_expr
 
       // The parenthesis read can read from a tensor or a tuple.
       auto expr = exprPair.getReadExpr();
-      if (expr->getType()->isTensor()) {
+      if (expr->getType().isTensor()) {
         $$ = new shared_ptr<Expression>(new TensorRead(expr, *indices));
       }
-      else if (expr->getType()->isTuple()) {
+      else if (expr->getType().isTuple()) {
         if (indices->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", @3);
         }
@@ -1139,54 +1138,46 @@ tensor_write_expr
 
 // Types
 %union {
-  std::shared_ptr<ir::Type>        *type;
-  std::shared_ptr<ir::ElementType> *elementType;
-  std::shared_ptr<ir::SetType>     *setType;
-  std::shared_ptr<ir::TupleType>   *tupleType;
-  std::shared_ptr<ir::TensorType>  *tensorType;
+  ir::Type *type;
 
-  std::vector<std::shared_ptr<ir::ElementType>> *elementTypes;
-
-  std::vector<ir::IndexSet>        *indexSets;
-  ir::IndexSet                     *indexSet;
-  ComponentType                      componentType;
+  std::vector<ir::IndexSet> *indexSets;
+  ir::IndexSet              *indexSet;
 };
-%destructor {} <componentType>;
 
 %type <type> type;
 type
   : element_type {
-    $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($element_type);
+    $$ = $1;
   }
   | set_type {
-    $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($set_type);
+    $$ = $1;
   }
   | tuple_type {
-    $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($tuple_type);
+    $$ = $1;
   }
   | tensor_type {
-    $$ = reinterpret_cast<std::shared_ptr<ir::Type>*>($tensor_type);
+    $$ = $1;
   }
 
-%type <elementType> element_type;
+%type <type> element_type;
 element_type
   : IDENT {
     std::string name = convertAndFree($IDENT);
-    $$ = new std::shared_ptr<ElementType>(ctx->getElementType(name));
+    $$ = new Type(ctx->getElementType(name));
   }
 
-%type <setType> set_type;
+%type <type> set_type;
 set_type
   : "set" "{" element_type "}" {
-    std::shared_ptr<ElementType> elementType = convertAndDelete($element_type);
-    $$ = new std::shared_ptr<SetType>(new SetType(elementType));
+    auto elementType = convertAndDelete($element_type);
+    $$ = new Type(SetType::make(elementType));
   }
   | "set" "{" element_type "}" "(" endpoints ")" {
-    std::shared_ptr<ElementType> elementType = convertAndDelete($element_type);
+    auto elementType = convertAndDelete($element_type);
     auto eps = convertAndDelete($endpoints);
 
     // TODO: Add endpoint information to set type
-    $$ = new std::shared_ptr<SetType>(new SetType(elementType));
+    $$ = new Type(SetType::make(elementType));
   }
 
 %type <expressions> endpoints;
@@ -1200,7 +1191,7 @@ endpoints
     std::string ident = convertAndFree($IDENT);
   }
 
-%type <tupleType> tuple_type;
+%type <type> tuple_type;
 tuple_type
   : "(" element_type "*" INT_LITERAL ")" {
     auto elementType = convertAndDelete($element_type);
@@ -1209,27 +1200,29 @@ tuple_type
       REPORT_ERROR("Must be 1 or greater", @3);
     }
 
-    auto tupleType = new TupleType(elementType, $INT_LITERAL);
-    $$ = new std::shared_ptr<TupleType>(tupleType);
+    $$ = new Type(TupleType::make(elementType, $INT_LITERAL));
   }
 
-%type <tensorType> tensor_type;
+%type <type> tensor_type;
 tensor_type
   : component_type {
-    $$ = new shared_ptr<TensorType>(new TensorType($component_type));
+    auto componentType = convertAndDelete($component_type);
+    $$ = new Type(TensorType::make(componentType));
   }
   | "tensor" "(" tensor_type[block_type] ")" {
     $$ = $block_type;
   }
   | "tensor" "[" index_sets "]" "(" tensor_type[block_type] ")" {
-    auto blockType = convertAndDelete($block_type);
-    auto componentType = blockType->getComponentType();
+    auto blockTypePtr = convertAndDelete($block_type);
+    const TensorType *blockType = blockTypePtr.toTensor();
+
+    auto componentType = blockType->componentType;
 
     auto outerDimensions = unique_ptr<vector<IndexSet>>($index_sets);
-    auto blockDimensions = blockType->getDimensions();
+    auto blockDimensions = blockType->dimensions;
 
     vector<IndexDomain> dimensions;
-    if (blockType->getOrder() == 0) {
+    if (blockType->order() == 0) {
       for (size_t i=0; i<outerDimensions->size(); ++i) {
         dimensions.push_back(IndexDomain((*outerDimensions)[i]));
       }
@@ -1242,8 +1235,8 @@ tensor_type
       // TODO: Handle case where there are more block than outer dimensions
       // TODO: Handle case where there are more outer than block dimensions
       // TODO: Remove below error
-      if (blockType->getOrder() != outerDimensions->size()) {
-        REPORT_ERROR("Blocktype order (" + to_string(blockType->getOrder()) +
+      if (blockType->order() != outerDimensions->size()) {
+        REPORT_ERROR("Blocktype order (" + to_string(blockType->order()) +
                      ") differ from number of dimensions", @index_sets);
       }
 
@@ -1259,14 +1252,14 @@ tensor_type
       }
     }
 
-    $$ = new shared_ptr<TensorType>(new TensorType(componentType, dimensions));
+    $$ = new Type(TensorType::make(componentType, dimensions));
   }
   | tensor_type "'" {
-    auto tensorType = convertAndDelete($1);
-    auto dimensions = tensorType->getDimensions();
-    auto componentType = tensorType->getComponentType();
-    $$ = new shared_ptr<TensorType>(new TensorType(componentType, dimensions,
-                                                   true /* isColumnVector */));
+    auto type = convertAndDelete($1);
+    const TensorType *tensorType = type.toTensor();
+    auto dimensions = tensorType->dimensions;
+    auto componentType = tensorType->componentType;
+    $$ = new Type(TensorType::make(componentType, dimensions, true));
   }
 
 %type <indexSets> index_sets;
@@ -1301,13 +1294,13 @@ index_set
     $$ = new IndexSet();
   }
 
-%type <componentType> component_type;
+%type <type> component_type;
 component_type
   : INT {
-    $$ = ComponentType::INT;
+    $$ = new Type(Int(32));
   }
   | FLOAT {
-    $$ = ComponentType::FLOAT;
+    $$ = new Type(Float(64));
   }
 
 
@@ -1388,20 +1381,18 @@ tensor_literal
 dense_tensor_literal
   : "[" float_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<double>>($2);
-    auto isps = std::vector<IndexDomain>(values->dimSizes.rbegin(),
+    auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
-    auto type = new TensorType(ComponentType::FLOAT, isps);
-    auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>
-                               values->values.data());
+    Type type = TensorType::make(Float(64), idoms);
+    auto literal = new Literal(type, values->values.data());
     $$ = new shared_ptr<Literal>(literal);
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
-    auto isps = std::vector<IndexDomain>(values->dimSizes.rbegin(),
+    auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                              values->dimSizes.rend());
-    auto type = new TensorType(ComponentType::INT, isps);
-    auto literal = new Literal(shared_ptr<TensorType>(type), // TODO: <Type>
-                               values->values.data());
+    Type type = TensorType::make(Int(32), idoms);
+    auto literal = new Literal(type, values->values.data());
     $$ = new shared_ptr<Literal>(literal);
   }
 
@@ -1517,13 +1508,13 @@ int_dense_vector_literal
 
 scalar_literal
   : INT_LITERAL {
-    auto scalarType = new TensorType(ComponentType::INT);
-    auto literal = new Literal(std::shared_ptr<TensorType>(scalarType), &$1);
+    auto scalarTensorType = TensorType::make(Int(32));
+    auto literal = new Literal(scalarTensorType, &$1);
     $$ = new shared_ptr<Literal>(literal);
   }
   | FLOAT_LITERAL {
-    auto scalarType = new TensorType(ComponentType::FLOAT);
-    auto literal = new Literal(std::shared_ptr<TensorType>(scalarType), &$1);
+    auto scalarTensorType = TensorType::make(Float(64));
+    auto literal = new Literal(scalarTensorType, &$1);
     $$ = new shared_ptr<Literal>(literal);
   }
 

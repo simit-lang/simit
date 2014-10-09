@@ -17,27 +17,46 @@ llvm::ConstantInt* getUInt32(unsigned val) {
   return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, (uint64_t)val, false));
 }
 
-llvm::Type *llvmType(const simit::ComponentType ctype) {
-  assert(isValidComponentType(ctype));
-  switch (ctype) {
-    case simit::ComponentType::INT:
+llvm::Type *llvmType(const ir::ScalarType *stype) {
+  switch (stype->kind) {
+    case ir::ScalarType::Int:
       return LLVM_INT;
-    case simit::ComponentType::FLOAT:
+    case ir::ScalarType::Float:
       return LLVM_DOUBLE;
   }
 }
 
-llvm::Type *llvmType(const ir::TensorType *type){
-  assert(isValidComponentType(type->getComponentType()));
-  switch (type->getComponentType()) {
-    case simit::ComponentType::INT:
+llvm::Type *llvmType(const ir::TensorType *ttype) {
+  switch (ttype->componentType.toScalar()->kind) {
+    case ir::ScalarType::Int:
       return LLVM_INTPTR;
-    case simit::ComponentType::FLOAT:
+    case ir::ScalarType::Float:
       return LLVM_DOUBLEPTR;
   }
 }
 
-llvm::Constant *llvmPtr(ir::TensorType *type, void *data) {
+llvm::Type *llvmType(const ir::Type &type){
+  switch (type.getKind()) {
+    case ir::Type::Scalar:
+      return llvmType(type.toScalar());
+      break;
+    case ir::Type::Tensor:
+      return llvmType(type.toTensor());
+      break;
+    case ir::Type::Element:
+      NOT_SUPPORTED_YET;
+      break;
+    case ir::Type::Set:
+      NOT_SUPPORTED_YET;
+      break;
+    case ir::Type::Tuple:
+      NOT_SUPPORTED_YET;
+      break;
+      
+  }
+}
+
+llvm::Constant *llvmPtr(const ir::Type &type, void *data) {
   llvm::Constant *c = (sizeof(void*) == 4)
       ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT),
                                (int)(intptr_t)data)
@@ -47,20 +66,20 @@ llvm::Constant *llvmPtr(ir::TensorType *type, void *data) {
 }
 
 llvm::Constant *llvmPtr(simit::ir::Literal *literal) {
-  assert(literal->getType()->isTensor());
-  return llvmPtr(tensorTypePtr(literal->getType()), literal->getData());
+  assert(literal->getType().isTensor());
+  return llvmPtr(literal->getType(), literal->getData());
 }
 
-simit::ComponentType simitType(const llvm::Type *type) {
+ir::Type simitType(const llvm::Type *type) {
   if (type->isPointerTy()) {
     type = type->getPointerElementType();
   }
 
   if (type->isDoubleTy()) {
-    return simit::FLOAT;
+    return ir::Float(64);
   }
   else if (type->isIntegerTy()) {
-    return simit::INT;
+    return ir::Int(32);
   }
   else {
     UNREACHABLE;
@@ -71,10 +90,13 @@ namespace {
 void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
                   std::vector<std::string> *names,
                   std::vector<llvm::Type*> *types) {
-  switch (arg->getType()->getKind()) {
+  switch (arg->getType().getKind()) {
+    case ir::Type::Scalar:
+      NOT_SUPPORTED_YET;
+      break;
     case ir::Type::Tensor: {
       names->push_back(arg->getName());
-      types->push_back(llvmType(tensorTypePtr(arg->getType())));
+      types->push_back(llvmType(arg->getType()));
       break;
     }
     case ir::Type::Element: {
@@ -86,10 +108,10 @@ void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
       types->push_back(LLVM_INT32);
 
       // Emit one function argument per set field
-      ir::SetType *type = setTypePtr(arg->getType());
-      for (auto &field : type->getElementType()->getFields()) {
+      const ir::SetType *type = arg->getType().toSet();
+      for (auto &field : type->elementType.toElement()->fields) {
         names->push_back(arg->getName() + "." + field.first);
-        types->push_back(llvmType(field.second.get()));
+        types->push_back(llvmType(field.second));
       }
       break;
     }

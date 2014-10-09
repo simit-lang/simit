@@ -95,7 +95,7 @@ void IRPrinter::print(const IndexedTensor &indexedTensor) {
 
 void IRPrinter::handle(const Argument *op) {
   if(!printingFunctionBody) {
-    os << op->getName() << " : " << *op->getType();
+    os << op->getName() << " : " << op->getType();
     names.insert(op->getName());
   }
 }
@@ -113,33 +113,33 @@ void IRPrinter::handle(const Literal *op) {
   indent();
   // TODO: Fix value printing to print matrices and tensors properly
   os << getName(op) << " = ";
-  switch (op->getType()->getKind()) {
+  switch (op->getType().getKind()) {
     case Type::Tensor: {
-      TensorType *ttype = tensorTypePtr(op->getType());
-      assert(isValidComponentType(ttype->getComponentType()));
-      switch (ttype->getComponentType()) {
-        case ComponentType::INT: { {
+      const TensorType *ttype = op->getType().toTensor();
+      size_t tsize = ttype->size();
+      switch (ttype->componentType.toScalar()->kind) {
+        case ScalarType::Int: { {
           const int *idata = static_cast<const int*>(op->getConstData());
-          if (ttype->getSize() == 1) {
+          if (tsize == 1) {
             os << idata[0];
           }
           else {
             os << "[" << idata[0];
-            for (size_t i=0; i < ttype->getSize(); ++i) {
+            for (size_t i=0; i < tsize; ++i) {
               os << ", " << idata[i];
             }
             os << "]";
           }
           break;
         }
-        case ComponentType::FLOAT: {
+        case ScalarType::Float: {
           const double *fdata = static_cast<const double*>(op->getConstData());
-          if (ttype->getSize() == 1) {
+          if (tsize == 1) {
             os << fdata[0];
           }
           else {
             os << "[" << to_string(fdata[0]);
-            for (size_t i=1; i < ttype->getSize(); ++i) {
+            for (size_t i=1; i < tsize; ++i) {
               os << ", " + to_string(fdata[i]);
             }
             os << "]";
@@ -150,6 +150,9 @@ void IRPrinter::handle(const Literal *op) {
       }
       break;
     }
+    case Type::Scalar:
+      NOT_SUPPORTED_YET;
+      break;
     case Type::Element:
       NOT_SUPPORTED_YET;
     case Type::Set:

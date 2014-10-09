@@ -1,247 +1,186 @@
 #ifndef SIMIT_TYPES_H
 #define SIMIT_TYPES_H
 
+#include <cstddef>
+#include <memory>
 #include <string>
 #include <vector>
 #include <map>
-#include <iostream>
-#include <memory>
 
-#include "interfaces.h"
-#include "tensor_components.h"
+#include "domain.h"
 
 namespace simit {
 namespace ir {
 
-/// An index set is a set of labels into a set.  There are three types of index
-/// set distringuished by the type of set they index into: a range (Range), a 
-/// set name (Set) or the set of all integers (Dynamic).
-class IndexSet {
+struct TypeNode {};
+struct ScalarType;
+struct TensorType;
+struct ElementType;
+struct SetType;
+struct TupleType;
+
+class Type {
 public:
-  /// The types of index sets that are supported.
-  enum Kind {Range, Set, Dynamic};
+  enum Kind {Scalar, Tensor, Element, Set, Tuple};
+  Type() : ptr(nullptr) {}
+  Type(ScalarType *scalar);
+  Type(TensorType *tensor);
+  Type(ElementType *element);
+  Type(SetType *set);
+  Type(TupleType *tuple);
 
-  /// Create an index set consisting of the items in the given range.
-  IndexSet(int rangeSize) : kind(Range), rangeSize(rangeSize) {}
+  bool defined() const { return ptr != nullptr; }
 
-  /// Create an index set over the given set.
-  IndexSet(const std::string &setName): kind(Set), setName(setName) {}
-
-  /// Create a variable-size index set.
-  IndexSet() : kind(Dynamic) {}
-
-  /// Get the Kind of the index set (Range, Set or Dynamic)
   Kind getKind() const { return kind; }
 
-  /// Returns the size of the index set if kind is Range, otherwise undefined
-  int getSize() const {
-    assert(kind == Range && "Only Range index sets have a statically known size");
-    return rangeSize;
-  }
+  bool isScalar()  const { return kind==Scalar; }
+  bool isTensor()  const { return kind==Tensor; }
+  bool isElement() const { return kind==Element; }
+  bool isSet()     const { return kind==Set; }
+  bool isTuple()   const { return kind==Tuple; }
 
-  /// Returns the name of the indexset set if kind is Set, otherwise undefined
-  const std::string &getSetName() const {
-    assert(kind==Set);
-    return setName;
-  }
-
-  friend bool operator==(const IndexSet &l, const IndexSet &r);
-  friend std::ostream &operator<<(std::ostream &os, const IndexSet &is);
+  const ScalarType  *toScalar()  const { assert(isScalar());  return scalar; }
+  const TensorType  *toTensor()  const { assert(isTensor());  return tensor; }
+  const ElementType *toElement() const { assert(isElement()); return element; }
+  const SetType     *toSet()     const { assert(isSet());     return set; }
+  const TupleType   *toTuple()   const { assert(isTuple());   return tuple; }
 
 private:
   Kind kind;
+  union {
+    ScalarType  *scalar;
+    TensorType  *tensor;
+    ElementType *element;
+    SetType     *set;
+    TupleType   *tuple;
+  };
 
-  int rangeSize;
-  std::string setName;
+  std::shared_ptr<TypeNode> ptr;
 };
 
-bool operator!=(const IndexSet &l, const IndexSet &r);
-
-
-/// An index domain is a set product of zero or more index sets.
-class IndexDomain {
-public:
-  explicit IndexDomain() {}
-  explicit IndexDomain(const IndexSet &is) { indexSets.push_back(is); }
-  explicit IndexDomain(const std::vector<IndexSet> &iss) : indexSets(iss) {};
-
-  /// Get the index sets that are multiplied to get the index set product.
-  const std::vector<IndexSet> &getFactors() const {return indexSets; }
-
-  /// Get the number of elements in the product of the index sets if all the
-  /// index sets are Range sets, otherwise undefined.
-  size_t getSize() const;
-
-private:
-  std::vector<IndexSet> indexSets;
-};
-
-bool operator==(const IndexDomain &l, const IndexDomain &r);
-bool operator!=(const IndexDomain &l, const IndexDomain &r);
-IndexDomain operator*(const IndexDomain &l, const IndexDomain &r);
-std::ostream &operator<<(std::ostream &os, const IndexDomain &isp);
-
-
-/// A Simit type, which is either a Set or a Tensor.
-class Type : public simit::interfaces::Printable, simit::interfaces::Uncopyable{
-public:
-  enum Kind { Tensor, Element, Set, Tuple };
-  Type(Kind kind) : kind(kind) {}
-
-  virtual ~Type() {}
-
-  Kind getKind() const { return kind; }
-  bool isTensor() const { return kind == Type::Tensor; }
-  bool isElement() const { return kind == Type::Element; }
-  bool isSet() const { return kind == Type::Set; }
-  bool isTuple() const { return kind == Type::Tuple; }
-
-private:
+struct ScalarType : TypeNode {
+  enum Kind { Int, Float };
   Kind kind;
+
+  int bits;
+
+  int bytes() const { return (bits + 7) / 8; }
+
+  bool isInt () const { return kind == Int; }
+  bool isFloat() const { return kind == Float; }
+
+  static Type make(Kind kind, int bits) {
+    ScalarType *type = new ScalarType;
+    type->kind = kind;
+    type->bits = bits;
+    return type;
+  }
 };
 
-bool operator==(const Type& l, const Type& r);
-bool operator!=(const Type& l, const Type& r);
+inline Type Int(int bits) {
+  return ScalarType::make(ScalarType::Int, bits);
+}
 
+inline Type Float(int bits) {
+  return ScalarType::make(ScalarType::Float, bits);
+}
 
-/// The type of a tensor (the type of its components and its shape). Note that
-/// a scalar in Simit is a o-order tensor.
-class TensorType : public Type {
-public:
-  TensorType(ComponentType componentType)
-      : Type(Type::Tensor), componentType(componentType), columnVector(false) {}
-
-  TensorType(ComponentType componentType,
-             const std::vector<IndexDomain> &dimensions,
-             bool isColumnVector=false)
-      : Type(Type::Tensor), componentType(componentType),
-        dimensions(dimensions), columnVector(isColumnVector) {}
-
-  /// Get the order of the tensor (the number of dimensions).
-  size_t getOrder() const { return dimensions.size(); }
-
-  /// Get the type of the components in the vector.
-  ComponentType getComponentType() const { return componentType; }
-
-  /// Get the index sets that form the dimensions of the tensor.
-  const std::vector<IndexDomain> &getDimensions() const { return dimensions; }
-
-  /// Whether the tensor is a column vector or not.  Note that this information
-  /// is only provided for convenience for frontends based on linear algebra,
-  /// and will not be used or maintained by optimization passes.
-  bool isColumnVector() const { return columnVector; }
-  void toggleColumnVector() { columnVector = !columnVector; }
-
-  /// Get the number of components in the tensor if all its dimensions are
-  /// composed of Range index sets, otherwise undefined.
-  size_t getSize() const;
-
-private:
-  ComponentType componentType;
+struct TensorType : TypeNode {
+  Type componentType;
   std::vector<IndexDomain> dimensions;
-  bool columnVector;
+  bool isColumnVector;
 
-  void print(std::ostream &os) const;
+  size_t order() const { return dimensions.size(); }
+  size_t size() const;
+
+  static Type make(Type componentType) {
+    assert(componentType.isScalar());
+    std::vector<IndexDomain> dimensions;
+    return TensorType::make(componentType, dimensions);
+  }
+
+  static Type make(Type componentType, std::vector<IndexDomain> dimensions,
+                   bool isColumnVector = false) {
+    assert(componentType.isScalar());
+    TensorType *type = new TensorType;
+    type->componentType = componentType;
+    type->dimensions = dimensions;
+    type->isColumnVector = isColumnVector;
+    return type;
+  }
 };
 
-bool operator==(const TensorType& l, const TensorType& r);
-bool operator!=(const TensorType& l, const TensorType& r);
-
-
-/// A Simit Element type, which consist of zero or more tensor fields.
-class ElementType : public Type {
-public:
-  typedef std::map<std::string, std::shared_ptr<TensorType>> FieldsMapType;
-
-  ElementType(const std::string &name, const FieldsMapType &fields)
-      : Type(Type::Element), name(name), fields(fields) {}
-
-  const std::string &getName() const { return name; }
-  const FieldsMapType &getFields() const { return fields; }
-
-private:
+struct ElementType : TypeNode {
   std::string name;
-  FieldsMapType fields;
+  std::map<std::string,Type> fields;
 
-  void print(std::ostream &os) const;
+  static Type make(std::string name, std::map<std::string,Type> fields) {
+    ElementType *type = new ElementType;
+    type->name = name;
+    type->fields = fields;
+    return type;
+  }
 };
 
-bool operator==(const ElementType &l, const ElementType &r);
-bool operator!=(const ElementType &l, const ElementType &r);
+struct SetType : TypeNode {
+  Type elementType;
 
-
-/// A Simit tuple type, which is defined by the types of its elements.
-class TupleType : public Type {
-public:
-  TupleType(std::shared_ptr<ElementType> &elementType, size_t size)
-      : Type(Type::Tuple), elementType(elementType), size(size) {}
-
-  const std::shared_ptr<ElementType> &getElementType() const {
-    return elementType;
+  static Type make(Type elementType) {
+    assert(elementType.isElement());
+    SetType *type = new SetType;
+    type->elementType = elementType;
+    return type;
   }
+};
 
-  size_t getSize() const {
-    return size;
-  }
-
-private:
-  std::shared_ptr<ElementType> elementType;
+struct TupleType : TypeNode {
+  Type elementType;
   size_t size;
 
-  void print(std::ostream &os) const;
-};
-
-
-/// A Simit set type, which is defined by the type of its elements and it's
-/// connectivity information.
-class SetType : public Type {
-public:
-  SetType(std::shared_ptr<ElementType> elementType)
-      : Type(Type::Set), elementType(elementType) {}
-
-  const std::shared_ptr<ElementType> &getElementType() const {
-    return elementType;
+  static Type make(Type elementType, size_t size) {
+    assert(elementType.isElement());
+    TupleType *type = new TupleType;
+    type->elementType = elementType;
+    type->size = size;
+    return type;
   }
-
-private:
-  std::shared_ptr<ElementType> elementType;
-
-  void print(std::ostream &os) const;
 };
 
-bool operator==(const SetType& l, const SetType& r);
-bool operator!=(const SetType& l, const SetType& r);
 
+// Type functions
+inline Type::Type(ScalarType *scalar)
+    : kind(Scalar), scalar(scalar), ptr(scalar) {}
+inline Type::Type(TensorType *tensor)
+    : kind(Tensor), tensor(tensor), ptr(tensor) {}
+inline Type::Type(ElementType *element)
+    : kind(Element), element(element), ptr(element) {}
+inline Type::Type(SetType *set)
+    : kind(Set), set(set), ptr(set) {}
+inline Type::Type(TupleType *tuple)
+    : kind(Tuple), tuple(tuple), ptr(tuple) {}
 
-// Conversion functions
-inline const TensorType *tensorTypePtr(const Type *type) {
-  assert(type->isTensor());
-  return static_cast<const TensorType*>(type);
-}
+bool operator==(const Type &, const Type &);
+bool operator!=(const Type &, const Type &);
 
-inline TensorType *tensorTypePtr(Type *type) {
-  assert(type->isTensor());
-  return static_cast<TensorType*>(type);
-}
+bool operator==(const ScalarType &, const ScalarType &);
+bool operator==(const TensorType &, const TensorType &);
+bool operator==(const ElementType &, const ElementType &);
+bool operator==(const SetType &, const SetType &);
+bool operator==(const TupleType &, const TupleType &);
 
-inline TensorType *tensorTypePtr(const std::shared_ptr<Type> &type) {
-  return tensorTypePtr(type.get());
-}
+bool operator!=(const ScalarType &, const ScalarType &);
+bool operator!=(const TensorType &, const TensorType &);
+bool operator!=(const ElementType &, const ElementType &);
+bool operator!=(const SetType &, const SetType &);
+bool operator!=(const TupleType &, const TupleType &);
 
-inline SetType *setTypePtr(Type *type) {
-  assert(type->isSet());
-  return static_cast<SetType*>(type);
-}
+std::ostream &operator<<(std::ostream &os, const Type &);
+std::ostream &operator<<(std::ostream &os, const ScalarType &);
+std::ostream &operator<<(std::ostream &os, const TensorType &);
+std::ostream &operator<<(std::ostream &os, const ElementType &);
+std::ostream &operator<<(std::ostream &os, const SetType &);
+std::ostream &operator<<(std::ostream &os, const TupleType &);
 
-inline const SetType *setTypePtr(const Type *type) {
-  assert(type->isSet());
-  return static_cast<const SetType*>(type);
-}
-
-inline SetType *setTypePtr(const std::shared_ptr<Type> &type) {
-  return setTypePtr(type.get());
-}
-
-}} // namespace simit::internal
+}} // namespace simit::ir
 
 #endif

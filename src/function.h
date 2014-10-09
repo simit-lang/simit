@@ -9,13 +9,14 @@
 
 // TODO: Remove
 #include "ir.h"
+#include "types.h"
+
 
 namespace simit {
 namespace ir {
 class Function;
 class Argument;
 class Literal;
-class Type;
 }
 
 // TODO: Replace with a simple tensor implementation
@@ -43,16 +44,16 @@ protected:
   typedef void (*FuncPtrType)();
   class Actual {
   public:
-    Actual(const std::shared_ptr<ir::Type> &type) : type(type), tensor(NULL) {}
-    Actual() : Actual(NULL) {}
+    Actual(const ir::Type &type) : type(type), tensor(NULL) {}
+    Actual() : Actual(ir::Type()) {}
     void bind(Tensor *tensor) { this->tensor = tensor; }
     void bind(SetBase *set) { this->set = set; }
     bool isBound() const { return tensor != NULL; }
-    const ir::Type *getType() const { return type.get(); }
+    const ir::Type &getType() const { return type; }
     Tensor *getTensor() { assert(tensor); return tensor; }
     SetBase *getSet() { assert(set); return set; }
   private:
-    std::shared_ptr<ir::Type> type;
+    ir::Type type;
     union {
       SetBase *set;
       Tensor  *tensor;

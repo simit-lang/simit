@@ -52,7 +52,7 @@ static Expr emitLoad(const Expression *tensor, const Domain &indexVariables,
       index = indexMap[indexVariables[0].get()];
       break;
     default:
-      assert(tensor->getType()->isTensor());
+      assert(tensor->getType().isTensor());
       for (auto &iv : indexVariables) {
         assert(iv->getDomain().getFactors().size() == 1 &&
                "Loads from blocked tensors not currently supported");
@@ -90,8 +90,8 @@ static Stmt emitStore(const Expression *tensor, const Domain &indexVariables,
   Expr target = Variable::make(tensor->getName());
   symtable->insert(tensor->getName(), target);
 
-  TensorType *type = tensorTypePtr(tensor->getType());
-  switch (type->getOrder()) {
+  const TensorType *type = tensor->getType().toTensor();
+  switch (type->order()) {
     case 0: {
       Expr index = IntLiteral::make(0);
       return Store::make(target, index, val);

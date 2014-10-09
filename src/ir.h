@@ -31,25 +31,26 @@ private:
 
 class Expression : public IRNode {
 public:
-  Expression(const std::shared_ptr<Type> &type) : Expression("", type) {}
+  Expression(const Type &type) : Expression("", type) {}
 
-  Expression(const std::string &name, const std::shared_ptr<Type> &type)
+  Expression(const std::string &name, const Type &type)
       : IRNode(name), type(type) {}
 
   virtual ~Expression() {}
 
-  void setType(const std::shared_ptr<Type> &type) {
-    this->type.reset();
+  void setType(const Type &type) {
+    // TODO: Check if we need something like the following line
+//    this->type.reset();
     this->type = type;
   }
 
-  const std::shared_ptr<Type> getType() const { return type; }
+  const Type &getType() const { return type; }
 
   virtual void accept(IRVisitor *visitor) = 0;
   virtual void accept(IRConstVisitor *visitor) const = 0;
 
 private:
-  std::shared_ptr<Type> type;
+  Type type;
 };
 
 
@@ -57,12 +58,12 @@ private:
 /// that it is only possible to define dense tensor literals.
 class Literal : public Expression {
 public:
-  Literal(const std::shared_ptr<Type> &type);
-  Literal(const std::shared_ptr<Type> &type, void *values);
+  Literal(const Type &type);
+  Literal(const Type &type, void *values);
   ~Literal();
 
   void clear();
-  void cast(const std::shared_ptr<TensorType> &type);
+  void cast(const Type &type);
 
   void *getData() { return data; }
   const void *getConstData() const { return data; }
@@ -183,7 +184,7 @@ class Call : public Expression {
 public:
   Call(const std::string &name,
        const std::vector<std::shared_ptr<Expression>> &arguments)
-      : Expression(name, NULL), arguments(arguments) {}
+      : Expression(name, Type()), arguments(arguments) {}
 
   const std::vector<std::shared_ptr<Expression>> &getArguments() const {
     return arguments;
@@ -200,7 +201,7 @@ private:
 /// Abstract class for expressions that read values from tensors and sets.
 class Read : public Expression {
 protected:
-  Read(const std::shared_ptr<Type> &type) : Expression("", type) {}
+  Read(const Type &type) : Expression("", type) {}
 };
 
 
@@ -262,7 +263,7 @@ private:
 /// Instruction that stores a value to a tensor or an object.
 class Write : public Expression {
 protected:
-  Write(const std::shared_ptr<Type> &type) : Expression("", type) {}
+  Write(const Type &type) : Expression("", type) {}
 };
 
 
@@ -329,7 +330,7 @@ private:
 /// A formal argument to a function.
 class Argument : public Expression {
 public:
-  Argument(const std::string &name, const std::shared_ptr<Type> &type)
+  Argument(const std::string &name, const Type &type)
       : Expression(name, type) {}
   virtual ~Argument() {};
 
@@ -341,11 +342,11 @@ public:
 /// A formal result of a function.
 class Result : public Argument {
 public:
-  Result(const std::string &name, const std::shared_ptr<Type> &type)
+  Result(const std::string &name, const Type &type)
       : Argument(name, type) {}
 
   void addValue(const std::shared_ptr<Expression> &value) {
-    assert(*getType() == *value->getType() && "type missmatch");
+    assert(getType() == value->getType() && "type missmatch");
     this->values.push_back(value);
   }
 
