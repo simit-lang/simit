@@ -60,7 +60,11 @@ void IRPrinter::print(const Function &func) {
   os << "\n";
   ++indentation;
   printingFunctionBody = true;
-  func.accept(this);
+
+  for (auto &stmt : func.getBody()) {
+    stmt->accept(this);
+  }
+
   printingFunctionBody = false;
   --indentation;
   os << "end";
@@ -107,7 +111,7 @@ void IRPrinter::handle(const Result *op) {
 
 void IRPrinter::handle(const Literal *op) {
   indent();
- // TODO: Fix value printing to print matrices and tensors properly
+  // TODO: Fix value printing to print matrices and tensors properly
   os << getName(op) << " = ";
   switch (op->getType()->getKind()) {
     case Type::Tensor: {

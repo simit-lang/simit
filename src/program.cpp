@@ -52,8 +52,6 @@ class Program::ProgramContent {
   }
 
   int verify() {
-    //  return impl->getBackend()->verify(impl->ctx, &impl->diagnostics) != 0;
-
     // For each test look up the called function. Grab the actual arguments and
     // run the function with them as input.  Then compare the result to the
     // expected literal.
@@ -68,7 +66,6 @@ class Program::ProgramContent {
       }
 
       if (compiled.find(func) == compiled.end()) {
-//        compiled[func] = getBackend()->compile(func);
         compiled[func] = compile(func);
       }
       simit::Function *compiledFunc = compiled[func];

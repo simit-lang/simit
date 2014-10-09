@@ -369,7 +369,7 @@ public:
            const std::vector<std::shared_ptr<Result>> &results)
       : IRNode(name), arguments(arguments), results(results) {}
 
-  void addStatements(const std::vector<std::shared_ptr<IRNode>> &stmts);
+  void addStatements(const std::vector<std::shared_ptr<Expression>> &stmts);
 
 
   const std::vector<std::shared_ptr<Argument>> &getArguments() const {
@@ -380,7 +380,7 @@ public:
     return results;
   }
 
-  const std::vector<std::shared_ptr<IRNode>> &getBody() const {
+  const std::vector<std::shared_ptr<Expression>> &getBody() const {
     return body;
   }
 
@@ -390,7 +390,7 @@ public:
 private:
   std::vector<std::shared_ptr<Argument>> arguments;
   std::vector<std::shared_ptr<Result>> results;
-  std::vector<std::shared_ptr<IRNode>> body;
+  std::vector<std::shared_ptr<Expression>> body;
 };
 
 

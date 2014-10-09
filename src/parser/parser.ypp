@@ -243,15 +243,15 @@
 %%
 
 %union {
-  std::shared_ptr<ir::IRNode>              *IRNode;
-  std::vector<std::shared_ptr<ir::IRNode>> *IRNodes;
+  std::shared_ptr<ir::Expression>              *expression;
+  std::vector<std::shared_ptr<ir::Expression>> *expressions;
 };
 
 program
   : /* empty */
   | program program_element
 
-%type<IRNode> program_element;
+%type<expression> program_element;
 program_element
   : element_type_decl
   | procedure {
@@ -280,7 +280,6 @@ program_element
   | test {
     ctx->addTest($test);
   }
-
 
 // Externs
 %type <expression> extern;
@@ -345,7 +344,7 @@ field_decl
 %type <function> procedure;
 procedure
   : {ctx->scope();} procedure_header stmt_block {ctx->unscope();} BLOCKEND {
-    auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
+    auto statements = unique_ptr<vector<shared_ptr<Expression>>>($stmt_block);
     $$ = $procedure_header;
     $$->addStatements(*statements);
   }
@@ -375,7 +374,7 @@ procedure_header
 %type <function> function;
 function
   : {ctx->scope();} function_header stmt_block {ctx->unscope();} BLOCKEND{
-    auto statements = unique_ptr<vector<shared_ptr<IRNode>>>($stmt_block);
+    auto statements = unique_ptr<vector<shared_ptr<Expression>>>($stmt_block);
     $$ = $function_header;
     $$->addStatements(*statements);
   }
@@ -468,19 +467,19 @@ result_decl
 
 
 // Statements
-%type<IRNodes> stmt_block;
+%type<expressions> stmt_block;
 stmt_block
   : /* empty */ {
-    $$ = new vector<shared_ptr<IRNode>>();
+    $$ = new vector<shared_ptr<Expression>>();
   }
   | stmt_block stmt {
     $$ = $1;
     if ($stmt == NULL) break;  // TODO: Remove check
-    $$->insert($$->end(), $stmt->begin(), $stmt->end());
+    $$->push_back(*$stmt);
     delete $stmt;
   }
 
-%type<IRNodes> stmt;
+%type<expression> stmt;
 stmt
   : const_stmt
   | return_stmt
@@ -489,7 +488,7 @@ stmt
   | if_stmt
   | for_stmt
 
-%type<IRNodes> const_stmt;
+%type<expression> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     std::string ident = convertAndFree($IDENT);
@@ -514,24 +513,22 @@ const_stmt
     CHECK_TYPE_EQUALITY(*tensorType, *literal->getType(), @2);
 
     ctx->addSymbol(literal->getName(), literal);
-
-    $$ = new vector<shared_ptr<IRNode>>();
-    $$->push_back(literal);
+    $$ = new shared_ptr<Expression>(literal);
   }
 
-%type<IRNodes> return_stmt;
+%type<expression> return_stmt;
 return_stmt
   : "return" ";" {
     $$ = NULL;
   }
 
-%type<IRNodes> assign_stmt;
+%type<expression> assign_stmt;
 assign_stmt
   : write_expr_list "=" expr_list ";" {
+    $$ = NULL;  // TODO: Remove this
+
     auto lhsList = unique_ptr<vector<unique_ptr<WriteInfo>>>($write_expr_list);
     auto rhsList = unique_ptr<vector<shared_ptr<Expression>>>($expr_list);
-
-    $$ = new vector<shared_ptr<IRNode>>();
 
     if (lhsList->size() > rhsList->size()) {
       // TODO: Handle maps and then reintroduce this error
@@ -548,10 +545,12 @@ assign_stmt
       const unique_ptr<WriteInfo>  &lhs = *lhsIter;
       const shared_ptr<Expression> &rhs = *rhsIter;
 
-      if (rhs == NULL) continue;
+      if (rhs == NULL) continue;  // TODO: Remove check
 
+      assert(lhs->kind == WriteInfo::VARIABLE ||
+             lhs->kind == WriteInfo::FIELD || lhs->kind == WriteInfo::TENSOR);
       switch (lhs->kind) {
-        case WriteInfo::Kind::VARIABLE: {
+        case WriteInfo::VARIABLE: {
           std::string variableName = *lhs->variableName;
 
           // TODO: Remove check
@@ -563,37 +562,44 @@ assign_stmt
           assert(varExprPair.isWritable());
 
           shared_ptr<Expression> lhsTensor = varExprPair.getWriteExpr();
-          if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
+          auto result = dynamic_pointer_cast<Result>(lhsTensor);
+          if (result) {
             CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), @2);
             rhs->setName(result->getName());
             result->addValue(rhs);
-            $$->push_back(rhs);
+            $$ = new std::shared_ptr<Expression>(rhs);
           }
           else {
             NOT_SUPPORTED_YET;
           }
           break;
         }
-        case WriteInfo::Kind::FIELD: {
+        case WriteInfo::FIELD: {
           std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
           fieldWrite->setValue(rhs);
 
           auto result = dynamic_pointer_cast<Result>(fieldWrite->getTarget());
           if (result) {
             result->addValue(fieldWrite);
-            $$->push_back(fieldWrite);
+            $$ = new std::shared_ptr<Expression>(fieldWrite);
+          }
+          else {
+            NOT_SUPPORTED_YET;
           }
 
           break;
         }
-        case WriteInfo::Kind::TENSOR: {
+        case WriteInfo::TENSOR: {
           std::shared_ptr<TensorWrite> tensorWrite(*lhs->tensorWrite);
           tensorWrite->setValue(rhs);
 
           auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
           if (result){
             result->addValue(tensorWrite);
-            $$->push_back(tensorWrite);
+            $$ = new std::shared_ptr<Expression>(tensorWrite);
+          }
+          else {
+            NOT_SUPPORTED_YET;
           }
 
           break;
@@ -602,7 +608,7 @@ assign_stmt
     }
   }
 
-%type<IRNodes> expr_stmt;
+%type<expression> expr_stmt;
 expr_stmt
   : expr ";" {
     $$ = NULL;
@@ -611,7 +617,7 @@ expr_stmt
     $$ = NULL;
   }
 
-%type <IRNodes> if_stmt;
+%type <expression> if_stmt;
 if_stmt
   : "if" expr stmt_block else_clauses BLOCKEND {
     $$ = NULL;
@@ -632,18 +638,13 @@ elif_clauses
     delete $4;
   }
 
-%type <IRNodes> for_stmt;
+%type <expression> for_stmt;
 for_stmt
   : "for" IDENT "in" index_set stmt_block BLOCKEND {
     $$ = NULL;
   }
 
 // Expressions
-%union {
-  std::shared_ptr<ir::Expression>              *expression;
-  std::vector<std::shared_ptr<ir::Expression>> *expressions;
-};
-
 %type <expression> expr;
 expr
   : ident_expr

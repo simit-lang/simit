@@ -222,8 +222,8 @@ namespace  simit { namespace internal  {
   const char *string;
 
 
-  std::shared_ptr<ir::IRNode>              *IRNode;
-  std::vector<std::shared_ptr<ir::IRNode>> *IRNodes;
+  std::shared_ptr<ir::Expression>              *expression;
+  std::vector<std::shared_ptr<ir::Expression>> *expressions;
 
 
   ir::ElementType::FieldsMapType                         *fields;
@@ -237,10 +237,6 @@ namespace  simit { namespace internal  {
 
   std::shared_ptr<ir::Result>                *result;
   std::vector<std::shared_ptr<ir::Result>>   *results;
-
-
-  std::shared_ptr<ir::Expression>              *expression;
-  std::vector<std::shared_ptr<ir::Expression>> *expressions;
 
 
   ir::IndexExpr::Operator         binop;

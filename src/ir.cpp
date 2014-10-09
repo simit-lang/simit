@@ -327,7 +327,7 @@ TupleRead::TupleRead(const std::shared_ptr<Expression> &tuple,
 
 
 // class Function
-void Function::addStatements(const vector<shared_ptr<IRNode>> &stmts) {
+void Function::addStatements(const vector<shared_ptr<Expression>> &stmts) {
   body.insert(body.end(), stmts.begin(), stmts.end());
 }
 

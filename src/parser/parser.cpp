@@ -509,7 +509,7 @@ namespace  simit { namespace internal  {
       case 60: // program_element
 
 
-        { delete (yysym.value.IRNode); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -614,56 +614,56 @@ namespace  simit { namespace internal  {
       case 79: // stmt_block
 
 
-        { delete (yysym.value.IRNodes); }
+        { delete (yysym.value.expressions); }
 
         break;
 
       case 80: // stmt
 
 
-        { delete (yysym.value.IRNodes); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 81: // const_stmt
 
 
-        { delete (yysym.value.IRNodes); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 82: // return_stmt
 
 
-        { delete (yysym.value.IRNodes); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 83: // assign_stmt
 
 
-        { delete (yysym.value.IRNodes); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 84: // expr_stmt
 
 
-        { delete (yysym.value.IRNodes); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 85: // if_stmt
 
 
-        { delete (yysym.value.IRNodes); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 88: // for_stmt
 
 
-        { delete (yysym.value.IRNodes); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -1198,7 +1198,7 @@ namespace  simit { namespace internal  {
   case 7:
 
     {
-    (yylhs.value.IRNode) = NULL;
+    (yylhs.value.expression) = NULL;
   }
 
     break;
@@ -1206,8 +1206,8 @@ namespace  simit { namespace internal  {
   case 8:
 
     {
-    (yylhs.value.IRNode) = NULL;
-    delete (yystack_[0].value.IRNodes);
+    (yylhs.value.expression) = NULL;
+    delete (yystack_[0].value.expression);
   }
 
     break;
@@ -1288,7 +1288,7 @@ namespace  simit { namespace internal  {
   case 17:
 
     {
-    auto statements = unique_ptr<vector<shared_ptr<IRNode>>>((yystack_[2].value.IRNodes));
+    auto statements = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[2].value.expressions));
     (yylhs.value.function) = (yystack_[3].value.function);
     (yylhs.value.function)->addStatements(*statements);
   }
@@ -1334,7 +1334,7 @@ namespace  simit { namespace internal  {
   case 21:
 
     {
-    auto statements = unique_ptr<vector<shared_ptr<IRNode>>>((yystack_[2].value.IRNodes));
+    auto statements = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[2].value.expressions));
     (yylhs.value.function) = (yystack_[3].value.function);
     (yylhs.value.function)->addStatements(*statements);
   }
@@ -1464,7 +1464,7 @@ namespace  simit { namespace internal  {
   case 33:
 
     {
-    (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
+    (yylhs.value.expressions) = new vector<shared_ptr<Expression>>();
   }
 
     break;
@@ -1472,10 +1472,10 @@ namespace  simit { namespace internal  {
   case 34:
 
     {
-    (yylhs.value.IRNodes) = (yystack_[1].value.IRNodes);
-    if ((yystack_[0].value.IRNodes) == NULL) break;  // TODO: Remove check
-    (yylhs.value.IRNodes)->insert((yylhs.value.IRNodes)->end(), (yystack_[0].value.IRNodes)->begin(), (yystack_[0].value.IRNodes)->end());
-    delete (yystack_[0].value.IRNodes);
+    (yylhs.value.expressions) = (yystack_[1].value.expressions);
+    if ((yystack_[0].value.expression) == NULL) break;  // TODO: Remove check
+    (yylhs.value.expressions)->push_back(*(yystack_[0].value.expression));
+    delete (yystack_[0].value.expression);
   }
 
     break;
@@ -1505,9 +1505,7 @@ namespace  simit { namespace internal  {
     CHECK_TYPE_EQUALITY(*tensorType, *literal->getType(), yystack_[5].location);
 
     ctx->addSymbol(literal->getName(), literal);
-
-    (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
-    (yylhs.value.IRNodes)->push_back(literal);
+    (yylhs.value.expression) = new shared_ptr<Expression>(literal);
   }
 
     break;
@@ -1515,7 +1513,7 @@ namespace  simit { namespace internal  {
   case 42:
 
     {
-    (yylhs.value.IRNodes) = NULL;
+    (yylhs.value.expression) = NULL;
   }
 
     break;
@@ -1523,10 +1521,10 @@ namespace  simit { namespace internal  {
   case 43:
 
     {
+    (yylhs.value.expression) = NULL;  // TODO: Remove this
+
     auto lhsList = unique_ptr<vector<unique_ptr<WriteInfo>>>((yystack_[3].value.writeinfos));
     auto rhsList = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[1].value.expressions));
-
-    (yylhs.value.IRNodes) = new vector<shared_ptr<IRNode>>();
 
     if (lhsList->size() > rhsList->size()) {
       // TODO: Handle maps and then reintroduce this error
@@ -1543,10 +1541,12 @@ namespace  simit { namespace internal  {
       const unique_ptr<WriteInfo>  &lhs = *lhsIter;
       const shared_ptr<Expression> &rhs = *rhsIter;
 
-      if (rhs == NULL) continue;
+      if (rhs == NULL) continue;  // TODO: Remove check
 
+      assert(lhs->kind == WriteInfo::VARIABLE ||
+             lhs->kind == WriteInfo::FIELD || lhs->kind == WriteInfo::TENSOR);
       switch (lhs->kind) {
-        case WriteInfo::Kind::VARIABLE: {
+        case WriteInfo::VARIABLE: {
           std::string variableName = *lhs->variableName;
 
           // TODO: Remove check
@@ -1558,37 +1558,44 @@ namespace  simit { namespace internal  {
           assert(varExprPair.isWritable());
 
           shared_ptr<Expression> lhsTensor = varExprPair.getWriteExpr();
-          if (auto result = dynamic_pointer_cast<Result>(lhsTensor)) {
+          auto result = dynamic_pointer_cast<Result>(lhsTensor);
+          if (result) {
             CHECK_TYPE_EQUALITY(*result->getType(), *rhs->getType(), yystack_[2].location);
             rhs->setName(result->getName());
             result->addValue(rhs);
-            (yylhs.value.IRNodes)->push_back(rhs);
+            (yylhs.value.expression) = new std::shared_ptr<Expression>(rhs);
           }
           else {
             NOT_SUPPORTED_YET;
           }
           break;
         }
-        case WriteInfo::Kind::FIELD: {
+        case WriteInfo::FIELD: {
           std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
           fieldWrite->setValue(rhs);
 
           auto result = dynamic_pointer_cast<Result>(fieldWrite->getTarget());
           if (result) {
             result->addValue(fieldWrite);
-            (yylhs.value.IRNodes)->push_back(fieldWrite);
+            (yylhs.value.expression) = new std::shared_ptr<Expression>(fieldWrite);
+          }
+          else {
+            NOT_SUPPORTED_YET;
           }
 
           break;
         }
-        case WriteInfo::Kind::TENSOR: {
+        case WriteInfo::TENSOR: {
           std::shared_ptr<TensorWrite> tensorWrite(*lhs->tensorWrite);
           tensorWrite->setValue(rhs);
 
           auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
           if (result){
             result->addValue(tensorWrite);
-            (yylhs.value.IRNodes)->push_back(tensorWrite);
+            (yylhs.value.expression) = new std::shared_ptr<Expression>(tensorWrite);
+          }
+          else {
+            NOT_SUPPORTED_YET;
           }
 
           break;
@@ -1602,7 +1609,7 @@ namespace  simit { namespace internal  {
   case 44:
 
     {
-    (yylhs.value.IRNodes) = NULL;
+    (yylhs.value.expression) = NULL;
   }
 
     break;
@@ -1610,7 +1617,7 @@ namespace  simit { namespace internal  {
   case 45:
 
     {
-    (yylhs.value.IRNodes) = NULL;
+    (yylhs.value.expression) = NULL;
   }
 
     break;
@@ -1618,9 +1625,9 @@ namespace  simit { namespace internal  {
   case 46:
 
     {
-    (yylhs.value.IRNodes) = NULL;
+    (yylhs.value.expression) = NULL;
     delete (yystack_[3].value.expression);
-    delete (yystack_[2].value.IRNodes);
+    delete (yystack_[2].value.expressions);
   }
 
     break;
@@ -1628,7 +1635,7 @@ namespace  simit { namespace internal  {
   case 48:
 
     {
-    delete (yystack_[0].value.IRNodes);
+    delete (yystack_[0].value.expressions);
   }
 
     break;
@@ -1637,7 +1644,7 @@ namespace  simit { namespace internal  {
 
     {
     delete (yystack_[1].value.expression);
-    delete (yystack_[0].value.IRNodes);
+    delete (yystack_[0].value.expressions);
   }
 
     break;
@@ -1645,7 +1652,7 @@ namespace  simit { namespace internal  {
   case 51:
 
     {
-    (yylhs.value.IRNodes) = NULL;
+    (yylhs.value.expression) = NULL;
   }
 
     break;
@@ -3231,21 +3238,21 @@ namespace  simit { namespace internal  {
    Parser ::yyrline_[] =
   {
        0,   250,   250,   252,   256,   257,   265,   273,   276,   280,
-     288,   302,   316,   319,   327,   347,   347,   347,   355,   377,
-     377,   377,   385,   409,   412,   418,   423,   431,   440,   443,
-     449,   454,   462,   473,   476,   485,   486,   487,   488,   489,
-     490,   494,   524,   530,   607,   610,   616,   622,   624,   628,
-     630,   637,   649,   650,   651,   652,   653,   654,   655,   656,
-     662,   683,   699,   707,   719,   784,   790,   820,   825,   834,
-     835,   836,   837,   843,   849,   855,   861,   867,   873,   888,
-     908,   909,   910,   921,   955,   961,   971,   974,   980,   986,
-     997,  1005,  1007,  1011,  1013,  1016,  1017,  1065,  1070,  1078,
-    1082,  1085,  1091,  1109,  1115,  1133,  1157,  1160,  1163,  1166,
-    1172,  1179,  1183,  1193,  1197,  1204,  1217,  1220,  1223,  1263,
-    1273,  1278,  1286,  1289,  1293,  1299,  1305,  1308,  1377,  1380,
-    1381,  1385,  1388,  1397,  1408,  1415,  1418,  1422,  1435,  1439,
-    1453,  1457,  1463,  1470,  1473,  1477,  1490,  1494,  1508,  1512,
-    1518,  1523,  1533
+     287,   301,   315,   318,   326,   346,   346,   346,   354,   376,
+     376,   376,   384,   408,   411,   417,   422,   430,   439,   442,
+     448,   453,   461,   472,   475,   484,   485,   486,   487,   488,
+     489,   493,   521,   527,   613,   616,   622,   628,   630,   634,
+     636,   643,   650,   651,   652,   653,   654,   655,   656,   657,
+     663,   684,   700,   708,   720,   785,   791,   821,   826,   835,
+     836,   837,   838,   844,   850,   856,   862,   868,   874,   889,
+     909,   910,   911,   922,   956,   962,   972,   975,   981,   987,
+     998,  1006,  1008,  1012,  1014,  1017,  1018,  1066,  1071,  1079,
+    1083,  1086,  1092,  1110,  1116,  1134,  1158,  1161,  1164,  1167,
+    1173,  1180,  1184,  1194,  1198,  1205,  1218,  1221,  1224,  1264,
+    1274,  1279,  1287,  1290,  1294,  1300,  1306,  1309,  1378,  1381,
+    1382,  1386,  1389,  1398,  1409,  1416,  1419,  1423,  1436,  1440,
+    1454,  1458,  1464,  1471,  1474,  1478,  1491,  1495,  1509,  1513,
+    1519,  1524,  1534
   };
 
   // Print the state stack on the debug stream.
