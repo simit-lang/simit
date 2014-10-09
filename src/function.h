@@ -15,8 +15,7 @@
 namespace simit {
 namespace ir {
 class Function;
-class Argument;
-class Literal;
+struct Literal;
 }
 
 // TODO: Replace with a simple tensor implementation

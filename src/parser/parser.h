@@ -54,36 +54,31 @@
   #include "ir.h"
   #include "errors.h"
   #include "types.h"
+  #include "ir_codegen.h"
 
 
   struct WriteInfo {
-    enum Kind { VARIABLE, FIELD, TENSOR };
+    enum Kind { Variable, Field, Tensor };
     Kind kind;
     union {
-      std::string                             *variableName;
-      std::shared_ptr<simit::ir::FieldWrite>  *fieldWrite;
-      std::shared_ptr<simit::ir::TensorWrite> *tensorWrite;
+      std::string     *variableName;
+      simit::ir::Expr *write;
     };
-    WriteInfo(const std::string &variableName) : kind(VARIABLE) {
+
+    WriteInfo(const std::string &variableName) : kind(Variable) {
       this->variableName = new std::string(variableName);
     }
-    WriteInfo(std::shared_ptr<simit::ir::FieldWrite> *write) : kind(FIELD) {
-      this->fieldWrite = write;
-    }
-    WriteInfo(std::shared_ptr<simit::ir::TensorWrite> *write) : kind(TENSOR) {
-      this->tensorWrite = write;
-    }
+    WriteInfo(simit::ir::Expr *write, Kind kind)
+        : kind(kind), write(write) {}
 
     ~WriteInfo() {
       switch (kind) {
-        case Kind::VARIABLE:
+        case Variable:
           delete variableName;
           break;
-        case Kind::FIELD:
-          delete fieldWrite;
-          break;
-        case Kind::TENSOR:
-          delete tensorWrite;
+        case Field:  // fall-through
+        case Tensor:
+          delete write;
           break;
       }
     }
@@ -216,58 +211,32 @@ namespace  simit { namespace internal  {
     {
     
 
-  // Primitive literals
   int         num;
   double      fnum;
   const char *string;
 
-
-  std::shared_ptr<ir::Expression>              *expression;
-  std::vector<std::shared_ptr<ir::Expression>> *expressions;
-
-
-  std::map<std::string, ir::Type> *fields;
-  std::pair<std::string, ir::Type> *field;
-
-
   ir::Function *function;
 
-  std::shared_ptr<ir::Argument>              *argument;
-  std::vector<std::shared_ptr<ir::Argument>> *arguments;
+  ir::Type                         *type;
+  std::pair<std::string, ir::Type> *field;
+  std::map<std::string, ir::Type>  *fields;
+  std::vector<ir::IndexSet>        *indexSets;
+  ir::IndexSet                     *indexSet;
 
-  std::shared_ptr<ir::Result>                *result;
-  std::vector<std::shared_ptr<ir::Result>>   *results;
+  ir::Expr              *expression;
+  std::vector<ir::Expr> *expressions;
 
+  ir::BinaryOperator     binop;
+  TensorValues<double>  *TensorDoubleValues;
+  TensorValues<int>     *TensorIntValues;
 
-  ir::IndexExpr::Operator         binop;
-  std::shared_ptr<ir::IndexExpr> *indexExpr;
+  ir::Stmt              *stmt;
+  std::vector<ir::Stmt> *stmts;
 
-
-
-  std::shared_ptr<ir::FieldRead> *fieldRead;
-
-
-  std::shared_ptr<ir::Call>       *call;
-  std::shared_ptr<ir::TensorRead> *tensorRead;
-
-
+  WriteInfo                               *writeinfo;
   std::vector<std::unique_ptr<WriteInfo>> *writeinfos;
-  WriteInfo                        *writeinfo;
-  std::shared_ptr<ir::FieldWrite>  *fieldWrite;
-  std::shared_ptr<ir::TensorWrite> *tensorWrite;
 
-
-  ir::Type *type;
-
-  std::vector<ir::IndexSet> *indexSets;
-  ir::IndexSet              *indexSet;
-
-
-  std::shared_ptr<ir::Literal> *TensorLiteral;
-  TensorValues<double>         *TensorDoubleValues;
-  TensorValues<int>            *TensorIntValues;
-
- ir::Test *test; 
+  ir::Test *test;
 
 
     };
@@ -635,7 +604,7 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 414,     ///< Last index in yytable_.
+      yylast_ = 452,     ///< Last index in yytable_.
       yynnts_ = 72,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.

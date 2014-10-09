@@ -20,6 +20,7 @@
   #include "ir.h"
   #include "errors.h"
   #include "types.h"
+  #include "ir_codegen.h"
 }
 
 %parse-param { Scanner *scanner };
@@ -36,7 +37,6 @@
 
   #include "program_context.h"
   #include "scanner.h"
-  #include "ir_codegen.h"
   using namespace std;
   using namespace simit::internal;
   using namespace simit::ir;
@@ -94,15 +94,15 @@
     return result;
   }
 
-  void transposeVector(const std::shared_ptr<Expression> &vec) {
-    assert(vec->getType().isTensor());
-    const TensorType *ttype = vec->getType().toTensor();
+  void transposeVector(Expr vec) {
+    assert(vec.type().isTensor());
+    const TensorType *ttype = vec.type().toTensor();
     assert(ttype->order() == 1);
 
     Type transposedVector = TensorType::make(ttype->componentType,
                                              ttype->dimensions,
                                              !ttype->isColumnVector);
-    vec->setType(transposedVector);
+    vec.expr()->type = transposedVector;
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
@@ -124,7 +124,7 @@
 
   #define CHECK_IS_TENSOR(expr, loc)                    \
     do {                                                \
-      if (!expr->getType().isTensor()) {                \
+      if (!expr.type().isTensor()) {                \
         std::stringstream errorStr;                     \
         errorStr << "expected tensor";                  \
         REPORT_ERROR(errorStr.str(), loc);              \
@@ -152,12 +152,34 @@
 }
 
 %union {
-  // Primitive literals
   int         num;
   double      fnum;
   const char *string;
+
+  ir::Function *function;
+
+  ir::Type                         *type;
+  std::pair<std::string, ir::Type> *field;
+  std::map<std::string, ir::Type>  *fields;
+  std::vector<ir::IndexSet>        *indexSets;
+  ir::IndexSet                     *indexSet;
+
+  ir::Expr              *expression;
+  std::vector<ir::Expr> *expressions;
+
+  ir::BinaryOperator     binop;
+  TensorValues<double>  *TensorDoubleValues;
+  TensorValues<int>     *TensorIntValues;
+
+  ir::Stmt              *stmt;
+  std::vector<ir::Stmt> *stmts;
+
+  WriteInfo                               *writeinfo;
+  std::vector<std::unique_ptr<WriteInfo>> *writeinfos;
+
+  ir::Test *test;
 }
-%destructor {} <num> <fnum>
+%destructor {} <num> <fnum> <binop>
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <*>
 
@@ -241,11 +263,6 @@
 %start program
 %%
 
-%union {
-  std::shared_ptr<ir::Expression>              *expression;
-  std::vector<std::shared_ptr<ir::Expression>> *expressions;
-};
-
 program
   : /* empty */
   | program program_element
@@ -284,17 +301,12 @@ program_element
 %type <expression> extern;
 extern
   : "extern" argument_decl ";" {
-    auto externArgument = convertAndDelete($argument_decl);
-    ctx->addExtern(externArgument);
+    Expr externVariable = convertAndDelete($argument_decl);
+    ctx->addExtern(externVariable);
   }
 
 
 // Element Definitions
-%union {
-  std::map<std::string, ir::Type> *fields;
-  std::pair<std::string, ir::Type> *field;
-};
-
 %type <type> element_type_decl;
 element_type_decl
   : "element" IDENT field_decl_list "end" {
@@ -329,41 +341,35 @@ field_decl
 
 
 // Procedures and functions
-%union {
-  ir::Function *function;
-
-  std::shared_ptr<ir::Argument>              *argument;
-  std::vector<std::shared_ptr<ir::Argument>> *arguments;
-
-  std::shared_ptr<ir::Result>                *result;
-  std::vector<std::shared_ptr<ir::Result>>   *results;
-};
-
 %type <function> procedure;
 procedure
-  : {ctx->scope();} procedure_header stmt_block {ctx->unscope();} BLOCKEND {
-    auto statements = unique_ptr<vector<shared_ptr<Expression>>>($stmt_block);
+  : {ctx->scope();} procedure_header stmt_block BLOCKEND {ctx->unscope();} {
+    vector<Expr> body = convertAndDelete($stmt_block);
     $$ = $procedure_header;
-    $$->addStatements(*statements);
+
+    if (body.size() > 0) {
+      $$->setBody(body[0]);
+    }
+    else {
+      $$->setBody(Literal::make(TensorType::make(Int(32))));
+    }
   }
 
 %type <function> procedure_header;
 procedure_header
   : "proc" IDENT {
     std::string name = convertAndFree($IDENT);
-    auto arguments = vector<shared_ptr<Argument>>();
-    auto results = vector<shared_ptr<Result>>();
+    auto arguments = vector<Expr>();
+    auto results = vector<Expr>();
 
     for (auto &extPair : ctx->getExterns()) {
-      auto ext = extPair.second;
+      Expr ext = extPair.second;
 
       // TODO: Replace extResult with mutable parameters
-      auto tmp = new Result(ext->getName(), ext->getType());
-      auto extResult = std::shared_ptr<Result>(tmp);
-      results.push_back(extResult);
+      results.push_back(ext);
 
       arguments.push_back(ext);
-      ctx->addSymbol(ext->getName(), ext, extResult);
+      ctx->addSymbol(toVariable(ext)->name, ext, ext);
     }
 
     $$ = new Function(name, arguments, results);
@@ -371,50 +377,58 @@ procedure_header
 
 %type <function> function;
 function
-  : {ctx->scope();} function_header stmt_block {ctx->unscope();} BLOCKEND{
-    auto statements = unique_ptr<vector<shared_ptr<Expression>>>($stmt_block);
+  : {ctx->scope();} function_header stmt_block BLOCKEND {ctx->unscope();} {
+    vector<Expr> body = convertAndDelete($stmt_block);
     $$ = $function_header;
-    $$->addStatements(*statements);
+
+    if (body.size() > 0) {
+      $$->setBody(body[0]);
+    }
+    else {
+      $$->setBody(Literal::make(TensorType::make(Int(32))));
+    }
   }
 
 %type <function> function_header;
 function_header
   : "func" IDENT "(" arguments ")" results {
     std::string name = convertAndFree($IDENT);
-    auto arguments = unique_ptr<vector<shared_ptr<Argument>>>($arguments);
-    auto results = unique_ptr<vector<shared_ptr<Result>>>($results);
+    auto arguments = unique_ptr<vector<Expr>>($arguments);
+    auto results = unique_ptr<vector<Expr>>($results);
     $$ = new Function(name, *arguments, *results);
 
     std::set<std::string> argumentNames;
-    for (auto argument : *arguments) {
-      ctx->addSymbol(argument->getName(), argument, NULL);
-      argumentNames.insert(argument->getName());
+    for (Expr &argument : *arguments) {
+      std::string argumentName = toVariable(argument)->name;
+      ctx->addSymbol(argumentName, argument, Expr());
+      argumentNames.insert(argumentName);
     }
 
     for (auto result : *results) {
-      std::shared_ptr<Expression> readExpr(NULL);
-      if (argumentNames.find(result->getName()) != argumentNames.end()) {
-        readExpr = ctx->getSymbol(result->getName()).getReadExpr();
+      Expr readExpr;
+      std::string resultName = toVariable(result)->name;
+      if (argumentNames.find(resultName) != argumentNames.end()) {
+        readExpr = ctx->getSymbol(resultName).getReadExpr();
       }
 
-      ctx->addSymbol(result->getName(), readExpr, result);
+      ctx->addSymbol(resultName, readExpr, result);
     }
   }
 
-%type <arguments> arguments;
+%type <expressions> arguments;
 arguments
   : /* empty */ {
-    $$ = new vector<shared_ptr<Argument>>;
+    $$ = new vector<Expr>;
   }
   | argument_list {
     $$ = $1;
  }
 
-%type <arguments> argument_list;
+%type <expressions> argument_list;
 argument_list
   : argument_decl {
     auto argument = convertAndDelete($argument_decl);
-    $$ = new vector<shared_ptr<Argument>>;
+    $$ = new vector<Expr>;
     $$->push_back(argument);
   }
   | argument_list "," argument_decl {
@@ -423,29 +437,29 @@ argument_list
     $$->push_back(argument);
   }
 
-%type <argument> argument_decl;
+%type <expression> argument_decl;
 argument_decl
   : IDENT ":" type {
     std::string name = convertAndFree($IDENT);
 
     auto type = convertAndDelete($type);
-    $$ = new shared_ptr<Argument>(new Argument(name, type));
+    $$ = new Expr(Variable::make(name, type));
   }
 
-%type <results> results;
+%type <expressions> results;
 results
   : /* empty */ {
-    $$ = new vector<shared_ptr<Result>>();
+    $$ = new vector<Expr>();
   }
   | RARROW "(" result_list ")" {
     $$ = $3;
   }
 
-%type <results> result_list;
+%type <expressions> result_list;
 result_list
   : result_decl {
     auto result = convertAndDelete($result_decl);
-    $$ = new vector<shared_ptr<Result>>;
+    $$ = new vector<Expr>;
     $$->push_back(result);
   }
   | result_list "," result_decl {
@@ -454,13 +468,12 @@ result_list
     $$->push_back(result);
   }
 
-%type <result> result_decl;
+%type <expression> result_decl;
 result_decl
   : IDENT ":" type {
     std::string name = convertAndFree($IDENT);
     auto type = convertAndDelete($type);
-    auto result = new Result(name, type);
-    $$ = new shared_ptr<Result>(result);
+    $$ = new Expr(Variable::make(name, type));
   }
 
 
@@ -468,7 +481,7 @@ result_decl
 %type<expressions> stmt_block;
 stmt_block
   : /* empty */ {
-    $$ = new vector<shared_ptr<Expression>>();
+    $$ = new vector<Expr>();
   }
   | stmt_block stmt {
     $$ = $1;
@@ -488,31 +501,28 @@ stmt
 %type<expression> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
-    std::string ident = convertAndFree($IDENT);
+    std::string name = convertAndFree($IDENT);
     auto type = convertAndDelete($tensor_type);
     const TensorType *tensorType = type.toTensor();
 
-    auto literal = shared_ptr<Literal>(*$tensor_literal);
-    delete $tensor_literal;
+    Expr literal = convertAndDelete($tensor_literal);
 
-    assert(literal->getType().isTensor() &&
+    assert(literal.type().isTensor() &&
            "Only tensor literals are currently supported");
-    auto literalType = literal->getType();
-
-    literal->setName(ident);
+    auto literalType = literal.type();
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
     const TensorType *literalTensorType = literalType.toTensor();
     if (tensorType->order() == 2 && literalTensorType->order() == 1) {
-      literal->cast(type);
+      static_cast<Literal*>(literal.expr())->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.
-    CHECK_TYPE_EQUALITY(type, literal->getType(), @2);
+    CHECK_TYPE_EQUALITY(type, literal.type(), @2);
 
-    ctx->addSymbol(literal->getName(), literal);
-    $$ = new shared_ptr<Expression>(literal);
+    ctx->addSymbol(name, literal);
+    $$ = new Expr(literal);
   }
 
 %type<expression> assign_stmt;
@@ -521,7 +531,7 @@ assign_stmt
     $$ = NULL;  // TODO: Remove this
 
     auto lhsList = unique_ptr<vector<unique_ptr<WriteInfo>>>($write_expr_list);
-    auto rhsList = unique_ptr<vector<shared_ptr<Expression>>>($expr_list);
+    auto rhsList = unique_ptr<vector<Expr>>($expr_list);
 
     if (lhsList->size() > rhsList->size()) {
       // TODO: Handle maps and then reintroduce this error
@@ -536,14 +546,12 @@ assign_stmt
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
       const unique_ptr<WriteInfo>  &lhs = *lhsIter;
-      const shared_ptr<Expression> &rhs = *rhsIter;
+      Expr rhs = *rhsIter;
 
-      if (rhs == NULL) continue;  // TODO: Remove check
+      if (!rhs.defined()) continue;  // TODO: Remove check
 
-      assert(lhs->kind == WriteInfo::VARIABLE ||
-             lhs->kind == WriteInfo::FIELD || lhs->kind == WriteInfo::TENSOR);
       switch (lhs->kind) {
-        case WriteInfo::VARIABLE: {
+        case WriteInfo::Variable: {
           std::string variableName = *lhs->variableName;
 
           // TODO: Remove check
@@ -554,27 +562,26 @@ assign_stmt
           const RWExprPair &varExprPair = ctx->getSymbol(variableName);
           assert(varExprPair.isWritable());
 
-          shared_ptr<Expression> lhsTensor = varExprPair.getWriteExpr();
-          auto result = dynamic_pointer_cast<Result>(lhsTensor);
+          Expr lhsTensor = varExprPair.getWriteExpr();
+          auto result = dynamic_cast<Variable*>(lhsTensor.expr());
           if (result) {
-            CHECK_TYPE_EQUALITY(result->getType(), rhs->getType(), @2);
-            rhs->setName(result->getName());
-            result->addValue(rhs);
-            $$ = new std::shared_ptr<Expression>(rhs);
+            CHECK_TYPE_EQUALITY(result->type, rhs.type(), @2);
+            $$ = new Expr(rhs);
           }
           else {
             NOT_SUPPORTED_YET;
           }
           break;
         }
-        case WriteInfo::FIELD: {
-          std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
-          fieldWrite->setValue(rhs);
+        case WriteInfo::Field: {
+          Expr write(*lhs->write);
+          auto fieldWrite = static_cast<FieldWrite*>(write.expr());
 
-          auto result = dynamic_pointer_cast<Result>(fieldWrite->getTarget());
+          fieldWrite->value = rhs;
+
+          auto result = dynamic_cast<Variable*>(fieldWrite->elementOrSet.expr());
           if (result) {
-            result->addValue(fieldWrite);
-            $$ = new std::shared_ptr<Expression>(fieldWrite);
+            $$ = new Expr(write);
           }
           else {
             NOT_SUPPORTED_YET;
@@ -582,14 +589,15 @@ assign_stmt
 
           break;
         }
-        case WriteInfo::TENSOR: {
-          std::shared_ptr<TensorWrite> tensorWrite(*lhs->tensorWrite);
-          tensorWrite->setValue(rhs);
+        case WriteInfo::Tensor: {
+          Expr write(*lhs->write);
+          auto tensorWrite = static_cast<TensorWrite*>(write.expr());
 
-          auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
+          tensorWrite->value = rhs;
+
+          auto result = dynamic_cast<Variable*>(tensorWrite->tensor.expr());
           if (result){
-            result->addValue(tensorWrite);
-            $$ = new std::shared_ptr<Expression>(tensorWrite);
+            $$ = new Expr(write);
           }
           else {
             NOT_SUPPORTED_YET;
@@ -667,7 +675,7 @@ ident_expr
       REPORT_ERROR(ident + " is not readable", @1);
     }
 
-    $$ = new shared_ptr<Expression>(rwExprPair.getReadExpr());
+    $$ = new Expr(rwExprPair.getReadExpr());
   }
 
 
@@ -681,50 +689,43 @@ paren_expr
 
 
 // Linear Algebra Expressions
-%union {
-  ir::IndexExpr::Operator         binop;
-  std::shared_ptr<ir::IndexExpr> *indexExpr;
-
-};
-%destructor {} <binop>;
-
-%type <indexExpr> linear_algebra_expr;
+%type <expression> linear_algebra_expr;
 linear_algebra_expr
   : "-" expr %prec NEG {
     if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> expr = convertAndDelete($2);
+    Expr expr = convertAndDelete($2);
     CHECK_IS_TENSOR(expr, @2);
 
-    $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NEG, expr));
+    $$ = new Expr(unaryElwiseExpr(UnaryOperator::Neg, expr));
   }
   | expr elwise_binary_op expr {  // + - .* ./
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> l = convertAndDelete($1);
-    std::shared_ptr<Expression> r = convertAndDelete($3);
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
 
     CHECK_IS_TENSOR(l, @1);
     CHECK_IS_TENSOR(r, @3);
 
-    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), @2);
-    $$ = new shared_ptr<IndexExpr>(binaryElwiseExpr(l, $2, r));
+    BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), @2);
+    $$ = new Expr(binaryElwiseExpr(l, $2, r));
   }
   | expr "*" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> l = convertAndDelete($1);
-    std::shared_ptr<Expression> r = convertAndDelete($3);
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
 
     CHECK_IS_TENSOR(l, @1);
     CHECK_IS_TENSOR(r, @3);
 
-    const TensorType *ltype = l->getType().toTensor();
-    const TensorType *rtype = r->getType().toTensor();
+    const TensorType *ltype = l.type().toTensor();
+    const TensorType *rtype = r.type().toTensor();
 
     // Scale
     if (ltype->order()==0 || rtype->order()==0) {
-      $$ = new shared_ptr<IndexExpr>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+      $$ = new Expr(binaryElwiseExpr(l, BinaryOperator::Mul, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->order() == 1 && rtype->order() == 1) {
@@ -733,42 +734,42 @@ linear_algebra_expr
         if (!rtype->isColumnVector) {
           REPORT_ERROR("cannot multiply two row vectors", @2);
         }
-        if (l->getType() != r->getType()) {
-          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+        if (l.type() != r.type()) {
+          REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
         }
-        $$ = new shared_ptr<IndexExpr>(innerProduct(l, r));
+        $$ = new Expr(innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
         if (rtype->isColumnVector) {
           REPORT_ERROR("cannot multiply two column vectors", @2);
         }
-        if (l->getType() != r->getType()) {
-          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+        if (l.type() != r.type()) {
+          REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
         }
-        $$ = new shared_ptr<IndexExpr>(outerProduct(l, r));
+        $$ = new Expr(outerProduct(l, r));
       }
     }
     // Matrix-Vector
     else if (ltype->order() == 2 && rtype->order() == 1) {
       if (ltype->dimensions[1] != rtype->dimensions[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+        REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
-      $$ = new shared_ptr<IndexExpr>(gemv(l, r));
+      $$ = new Expr(gemv(l, r));
     }
     // Vector-Matrix
     else if (ltype->order() == 1 && rtype->order() == 2) {
       if (ltype->dimensions[0] != rtype->dimensions[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+        REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
-      $$ = new shared_ptr<IndexExpr>(gevm(l,r));
+      $$ = new Expr(gevm(l,r));
     }
     // Matrix-Matrix
     else if (ltype->order() == 2 && rtype->order() == 2) {
       if (ltype->dimensions[1] != rtype->dimensions[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), @2);
+        REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
-      $$ = new shared_ptr<IndexExpr>(gemm(l,r));
+      $$ = new Expr(gemm(l,r));
     }
     else {
       REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
@@ -784,27 +785,25 @@ linear_algebra_expr
   | expr "'" {
     if ($1 == NULL) { $$ = NULL; break; } // TODO: Remove check
 
-    auto expr = shared_ptr<Expression>(*$1);
-    delete $1;
+    Expr expr = convertAndDelete($1);
 
     CHECK_IS_TENSOR(expr, @1);
 
-    const TensorType *type = expr->getType().toTensor();
-
+    const TensorType *type = expr.type().toTensor();
     switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        $$ = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
         break;
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        $$ = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
         if (!type->isColumnVector) {
           transposeVector(*$$);
         }
         break;
       case 2:
-        $$ = new shared_ptr<IndexExpr>(transposeMatrix(expr));
+        $$ = new Expr(transposeMatrix(expr));
         break;
       default:
         REPORT_ERROR("cannot transpose >2-order tensors using '", @1);
@@ -825,10 +824,10 @@ linear_algebra_expr
 
 %type <binop> elwise_binary_op;
 elwise_binary_op
-  : "+"  { $$ = IndexExpr::ADD; }
-  | "-"  { $$ = IndexExpr::SUB; }
-  | ".*" { $$ = IndexExpr::MUL; }
-  | "./" { $$ = IndexExpr::DIV; }
+  : "+"  { $$ = BinaryOperator::Add; }
+  | "-"  { $$ = BinaryOperator::Sub; }
+  | ".*" { $$ = BinaryOperator::Mul; }
+  | "./" { $$ = BinaryOperator::Div; }
 
 
 // Boolean Expressions
@@ -873,27 +872,23 @@ boolean_expr
 
 
 // Field Read Expressions
-%union {
-  std::shared_ptr<ir::FieldRead> *fieldRead;
-};
-
-%type <fieldRead> field_read_expr;
+%type <expression> field_read_expr;
 field_read_expr
   : set_read_expr "." IDENT {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    if (!(*$1)->getType().defined()) { $$ = NULL; break; } // TODO: Remove check
+    if (!(*$1).type().defined()) { $$ = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> elemOrSet = convertAndDelete($set_read_expr);
+    Expr elemOrSet = convertAndDelete($set_read_expr);
     std::string fieldName = convertAndFree($IDENT);
 
-    Type type = elemOrSet->getType();
+    Type type = elemOrSet.type();
     if (!(type.isElement() || type.isSet())) {
       std::stringstream errorStr;
       errorStr << "only elements and sets have fields";
       REPORT_ERROR(errorStr.str(), @1);
     }
 
-    $$ = new shared_ptr<FieldRead>(new FieldRead(elemOrSet, fieldName));
+    $$ = new Expr(FieldRead::make(elemOrSet, fieldName));
   }
 
 %type <expression> set_read_expr;
@@ -904,17 +899,11 @@ set_read_expr
 
 
 // Call and Tensor Read Expressions
-%union {
-  std::shared_ptr<ir::Call>       *call;
-  std::shared_ptr<ir::TensorRead> *tensorRead;
-};
-
 %type <expression> call_or_paren_read_expr;
 call_or_paren_read_expr
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
-    auto indices =
-        unique_ptr<vector<shared_ptr<Expression>>>($expr_list_or_empty);
+    auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
 
     if (ctx->hasSymbol(name)) {
       const RWExprPair &exprPair = ctx->getSymbol(name);
@@ -924,15 +913,15 @@ call_or_paren_read_expr
 
       // The parenthesis read can read from a tensor or a tuple.
       auto expr = exprPair.getReadExpr();
-      if (expr->getType().isTensor()) {
-        $$ = new shared_ptr<Expression>(new TensorRead(expr, *indices));
+      if (expr.type().isTensor()) {
+        $$ = new Expr(TensorRead::make(expr, *indices));
       }
-      else if (expr->getType().isTuple()) {
+      else if (expr.type().isTuple()) {
         if (indices->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", @3);
         }
 
-        $$ = new shared_ptr<Expression>(new TupleRead(expr, (*indices)[0]));
+        $$ = new Expr(TupleRead::make(expr, (*indices)[0]));
       }
       else {
         REPORT_ERROR("can only access components in tensors and tuples", @1);
@@ -949,20 +938,18 @@ call_or_paren_read_expr
     $$ = NULL;
   }
 
-%type<call> call_expr;
+%type <expression> call_expr;
 call_expr
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
-    auto actuals =
-        unique_ptr<vector<shared_ptr<Expression>>>($expr_list_or_empty);
-    auto call = new Call(name, *actuals);
-    $$ = new std::shared_ptr<Call>(call);
+    auto actuals = unique_ptr<vector<Expr>>($expr_list_or_empty);
+    $$ = new Expr(Call::make(name, *actuals, Call::Internal));
   }
 
 %type <expressions> expr_list_or_empty;
 expr_list_or_empty
   : /* empty */ {
-    $$ = new vector<shared_ptr<Expression>>();
+    $$ = new vector<Expr>();
   }
   | expr_list {
     $$ = $expr_list;
@@ -971,7 +958,7 @@ expr_list_or_empty
 %type <expressions> expr_list;
 expr_list
   : expr {
-    $$ = new std::vector<std::shared_ptr<Expression>>();
+    $$ = new std::vector<Expr>();
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
@@ -1013,44 +1000,31 @@ reduction_op
 // Write Expressions
 %code requires {
   struct WriteInfo {
-    enum Kind { VARIABLE, FIELD, TENSOR };
+    enum Kind { Variable, Field, Tensor };
     Kind kind;
     union {
-      std::string                             *variableName;
-      std::shared_ptr<simit::ir::FieldWrite>  *fieldWrite;
-      std::shared_ptr<simit::ir::TensorWrite> *tensorWrite;
+      std::string     *variableName;
+      simit::ir::Expr *write;
     };
-    WriteInfo(const std::string &variableName) : kind(VARIABLE) {
+
+    WriteInfo(const std::string &variableName) : kind(Variable) {
       this->variableName = new std::string(variableName);
     }
-    WriteInfo(std::shared_ptr<simit::ir::FieldWrite> *write) : kind(FIELD) {
-      this->fieldWrite = write;
-    }
-    WriteInfo(std::shared_ptr<simit::ir::TensorWrite> *write) : kind(TENSOR) {
-      this->tensorWrite = write;
-    }
+    WriteInfo(simit::ir::Expr *write, Kind kind)
+        : kind(kind), write(write) {}
 
     ~WriteInfo() {
       switch (kind) {
-        case Kind::VARIABLE:
+        case Variable:
           delete variableName;
           break;
-        case Kind::FIELD:
-          delete fieldWrite;
-          break;
-        case Kind::TENSOR:
-          delete tensorWrite;
+        case Field:  // fall-through
+        case Tensor:
+          delete write;
           break;
       }
     }
   };
-};
-
-%union {
-  std::vector<std::unique_ptr<WriteInfo>> *writeinfos;
-  WriteInfo                        *writeinfo;
-  std::shared_ptr<ir::FieldWrite>  *fieldWrite;
-  std::shared_ptr<ir::TensorWrite> *tensorWrite;
 };
 
 %type<writeinfos> write_expr_list;
@@ -1073,13 +1047,13 @@ write_expr
     $$ = new WriteInfo(name);
   }
   | field_write_expr {
-    $$ = new WriteInfo($field_write_expr);
+    $$ = new WriteInfo($field_write_expr, WriteInfo::Field);
   }
   | tensor_write_expr {
-    $$ = new WriteInfo($tensor_write_expr);
+    $$ = new WriteInfo($tensor_write_expr, WriteInfo::Tensor);
   }
 
-%type <fieldWrite> field_write_expr;
+%type <expression> field_write_expr;
 field_write_expr
   : IDENT "." IDENT {
     string setName = convertAndFree($1);
@@ -1097,17 +1071,17 @@ field_write_expr
     }
 
     auto setExpr = setExprPair.getWriteExpr();
-    $$ = new shared_ptr<FieldWrite>(new FieldWrite(setExpr, fieldName));
+    $$ = new Expr(FieldWrite::make(setExpr, fieldName, Expr()));
   }
   | paren_expr "." IDENT {
     $$ = NULL;
   }
 
-%type <tensorWrite> tensor_write_expr;
+%type <expression> tensor_write_expr;
 tensor_write_expr
   : IDENT "(" expr_list ")" {
     std::string tensorName = convertAndFree($1);
-    auto indices = unique_ptr<vector<shared_ptr<Expression>>>($expr_list);
+    auto indices = unique_ptr<vector<Expr>>($expr_list);
 
     if(!ctx->hasSymbol(tensorName)) { $$=NULL; break; } // TODO: Remove check
 
@@ -1121,7 +1095,7 @@ tensor_write_expr
     }
 
     auto tensorExpr = tensorExprPair.getWriteExpr();
-    $$ = new shared_ptr<TensorWrite>(new TensorWrite(tensorExpr, *indices));
+    $$ = new Expr(TensorWrite::make(tensorExpr, *indices, Expr()));
   }
   | field_write_expr "(" expr_list ")" {
     // TODO
@@ -1130,13 +1104,6 @@ tensor_write_expr
 
 
 // Types
-%union {
-  ir::Type *type;
-
-  std::vector<ir::IndexSet> *indexSets;
-  ir::IndexSet              *indexSet;
-};
-
 %type <type> type;
 type
   : element_type {
@@ -1176,7 +1143,7 @@ set_type
 %type <expressions> endpoints;
 endpoints
   : IDENT {
-    $$ = new vector<shared_ptr<Expression>>;
+    $$ = new vector<Expr>;
     std::string ident = convertAndFree($IDENT);
   }
   | endpoints "," IDENT {
@@ -1274,8 +1241,17 @@ index_set
     $$ = new IndexSet($INT_LITERAL);
   }
   | IDENT {
-    string ident = convertAndFree($IDENT);
-    $$ = new IndexSet(ident);
+    std::string setName = convertAndFree($IDENT);
+
+    if (!ctx->containsExtern(setName)) {
+      REPORT_ERROR("the set has not been declared", @1);
+    }
+
+    Expr set = ctx->getExtern(setName);
+    if (!set.type().isSet()) {
+      REPORT_ERROR("an index set must be a set, a range or dynamic (*)", @1);
+    }
+    $$ = new IndexSet(set);
   }
   | expr ":" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
@@ -1339,30 +1315,12 @@ component_type
   }
 };
 
-%union {
-  std::shared_ptr<ir::Literal> *TensorLiteral;
-  TensorValues<double>         *TensorDoubleValues;
-  TensorValues<int>            *TensorIntValues;
-};
 
-%type <TensorLiteral> literal;
-%type <TensorLiteral> tensor_literal;
-%type <TensorLiteral> dense_tensor_literal;
-%type <TensorLiteral> scalar_literal;
-
-%type <TensorDoubleValues> float_dense_tensor_literal;
-%type <TensorDoubleValues> float_dense_ndtensor_literal;
-%type <TensorDoubleValues> float_dense_matrix_literal;
-%type <TensorDoubleValues> float_dense_vector_literal;
-
-%type <TensorIntValues> int_dense_tensor_literal;
-%type <TensorIntValues> int_dense_ndtensor_literal;
-%type <TensorIntValues> int_dense_matrix_literal;
-%type <TensorIntValues> int_dense_vector_literal;
-
+%type <expression> literal;
 literal_expr
   : tensor_literal
 
+%type <expression> tensor_literal;
 tensor_literal
   : dense_tensor_literal
   | dense_tensor_literal "'" {
@@ -1371,24 +1329,25 @@ tensor_literal
   }
   | scalar_literal
 
+%type <expression> dense_tensor_literal;
 dense_tensor_literal
   : "[" float_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<double>>($2);
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
     Type type = TensorType::make(Float(64), idoms);
-    auto literal = new Literal(type, values->values.data());
-    $$ = new shared_ptr<Literal>(literal);
+    $$ = new Expr(Literal::make(type, values->values.data()));
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
     Type type = TensorType::make(Int(32), idoms);
-    auto literal = new Literal(type, values->values.data());
-    $$ = new shared_ptr<Literal>(literal);
+    $$ = new Expr(Literal::make(type, values->values.data()));
   }
 
+
+%type <TensorDoubleValues> float_dense_tensor_literal;
 float_dense_tensor_literal
   : float_dense_matrix_literal {
     // If the matrix has only one column then we discard that dimension and
@@ -1399,6 +1358,7 @@ float_dense_tensor_literal
   }
   | float_dense_ndtensor_literal
 
+%type <TensorDoubleValues> float_dense_ndtensor_literal;
 float_dense_ndtensor_literal
   : "[" float_dense_matrix_literal "]" {
     $$ = $2;
@@ -1416,6 +1376,7 @@ float_dense_ndtensor_literal
     $$ = left.release();
   }
 
+%type <TensorDoubleValues> float_dense_matrix_literal;
 float_dense_matrix_literal
   : float_dense_vector_literal {
     $$ = $1;
@@ -1434,6 +1395,7 @@ float_dense_matrix_literal
     $$ = left.release();
   }
 
+%type <TensorDoubleValues> float_dense_vector_literal;
 float_dense_vector_literal
   : FLOAT_LITERAL {
     $$ = new TensorValues<double>();
@@ -1444,6 +1406,7 @@ float_dense_vector_literal
     $$->addValue($3);
   }
 
+%type <TensorIntValues> int_dense_tensor_literal;
 int_dense_tensor_literal
   : int_dense_matrix_literal {
     // If the matrix has only one column then we discard that dimension and
@@ -1454,6 +1417,7 @@ int_dense_tensor_literal
   }
   | int_dense_ndtensor_literal
 
+%type <TensorIntValues> int_dense_ndtensor_literal;
 int_dense_ndtensor_literal
   : "[" int_dense_matrix_literal "]" {
     $$ = $2;
@@ -1471,6 +1435,7 @@ int_dense_ndtensor_literal
     $$ = left.release();
   }
 
+%type <TensorIntValues> int_dense_matrix_literal;
 int_dense_matrix_literal
   : int_dense_vector_literal {
     $$ = $1;
@@ -1489,6 +1454,7 @@ int_dense_matrix_literal
     $$ = left.release();
   }
 
+%type <TensorIntValues> int_dense_vector_literal;
 int_dense_vector_literal
   : INT_LITERAL {
     $$ = new TensorValues<int>();
@@ -1499,42 +1465,39 @@ int_dense_vector_literal
     $$->addValue($3);
   }
 
+%type <expression> scalar_literal;
 scalar_literal
   : INT_LITERAL {
     auto scalarTensorType = TensorType::make(Int(32));
-    auto literal = new Literal(scalarTensorType, &$1);
-    $$ = new shared_ptr<Literal>(literal);
+    $$ = new Expr(Literal::make(scalarTensorType, &$1));
   }
   | FLOAT_LITERAL {
     auto scalarTensorType = TensorType::make(Float(64));
-    auto literal = new Literal(scalarTensorType, &$1);
-    $$ = new shared_ptr<Literal>(literal);
+    $$ = new Expr(Literal::make(scalarTensorType, &$1));
   }
 
+
 // Tests
-%union { ir::Test *test; };
 %type <test> test;
 test
-  : "%!" call_expr "==" tensor_literal ";" {
-    auto call = shared_ptr<Call>(*$call_expr);
-    auto expected = shared_ptr<Literal>(*$tensor_literal);
-    delete $call_expr;
-    delete $tensor_literal;
+  : "%!" IDENT "(" expr_list_or_empty ")" "==" tensor_literal ";" {
+    std::string name = convertAndFree($IDENT);
+    auto actuals =
+        unique_ptr<vector<Expr>>($expr_list_or_empty);
+    auto expected = convertAndDelete($tensor_literal);
 
-    std::vector<std::shared_ptr<Literal>> literalArgs;
-    literalArgs.reserve(call->getArguments().size());
-    for (auto &arg : call->getArguments()) {
-      std::shared_ptr<Literal> litarg = dynamic_pointer_cast<Literal>(arg);
-      if (!litarg) {
+    std::vector<Expr> literalArgs;
+    literalArgs.reserve(actuals->size());
+    for (auto &arg : *actuals) {
+      if (dynamic_cast<Literal*>(arg.expr()) == nullptr) {
         REPORT_ERROR("function calls in tests must have literal arguments", @1);
       }
-      literalArgs.push_back(litarg);
+      literalArgs.push_back(arg);
     }
-    assert(literalArgs.size() == call->getArguments().size());
 
-    std::vector<std::shared_ptr<Literal>> expecteds;
+    std::vector<Expr> expecteds;
     expecteds.push_back(expected);
-    $$ = new Test(call->getName(), literalArgs, expecteds);
+    $$ = new Test(name, literalArgs, expecteds);
   }
 
 %%

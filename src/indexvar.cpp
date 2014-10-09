@@ -4,7 +4,10 @@ namespace simit {
 namespace ir {
 
 std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
-  return os << var.getOperator() << var.getName();
+  if (var.isReductionVar()) {
+    os << var.getOperator();
+  }
+  return os << var.getName();
 }
 
 }} // namespace simit::ir

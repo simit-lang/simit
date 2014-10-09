@@ -10,6 +10,8 @@
 namespace simit {
 namespace ir {
 
+class Expr;
+
 /// An index set is a set of labels into a set.  There are three types of index
 /// set distringuished by the type of set they index into: a range (Range), a 
 /// set name (Set) or the set of all integers (Dynamic).
@@ -19,10 +21,10 @@ public:
   enum Kind {Range, Set, Dynamic};
 
   /// Create an index set consisting of the items in the given range.
-  IndexSet(signed rangeSize) : kind(Range), rangeSize(rangeSize), setName("") {}
+  IndexSet(signed rangeSize) : kind(Range), rangeSize(rangeSize), set(nullptr){}
 
   /// Create an index set over the given set.
-  IndexSet(std::string setName) : kind(Set), rangeSize(-1), setName(setName) {}
+  IndexSet(const Expr &set);
 
   /// Create a variable-size index set.
   IndexSet() : kind(Dynamic) {}
@@ -32,21 +34,18 @@ public:
 
   /// Returns the size of the index set if kind is Range, otherwise undefined
   int getSize() const {
-    assert(kind == Range && "Only Range index sets have a statically known size");
+    assert(kind == Range && "Only Range index sets have a static size");
     return rangeSize;
   }
 
-  /// Returns the name of the indexset set if kind is Set, otherwise undefined
-  std::string getSetName() const {
-    assert(kind==Set);
-    return setName;
-  }
+  /// Returns the a set if kind is Set, otherwise undefined
+  const Expr &getSet() const;
 
 private:
   Kind kind;
 
   int rangeSize;
-  std::string setName;
+  std::shared_ptr<Expr> set;
 };
 
 bool operator==(const IndexSet &l, const IndexSet &r);
@@ -55,6 +54,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is);
 
 
 /// An index domain is a set product of zero or more index sets.
+/// \todo Domain one of: a full set, edge endpoints, element edges
 class IndexDomain {
 public:
   explicit IndexDomain() {}
@@ -62,7 +62,7 @@ public:
   explicit IndexDomain(std::vector<IndexSet> iss) : indexSets(iss) {};
 
   /// Get the index sets that are multiplied to get the index set product.
-  const std::vector<IndexSet> getFactors() const {return indexSets; }
+  std::vector<IndexSet> getFactors() const {return indexSets; }
 
   /// Get the number of elements in the product of the index sets if all the
   /// index sets are Range sets, otherwise undefined.

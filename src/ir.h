@@ -5,9 +5,11 @@
 #include <string>
 #include <list>
 
+#include <iostream>
+#include "ir_printer.h"
+
 #include "interfaces.h"
 #include "types.h"
-#include "ir_visitors.h"
 #include "indexvar.h"
 
 namespace simit {
@@ -15,371 +17,469 @@ namespace ir {
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
-class IRNode : private simit::interfaces::Uncopyable {
-public:
-  IRNode() {}
-  IRNode(const std::string &name) : name(name) {}
-  virtual ~IRNode();
-
-  void setName(std::string name) { this->name = name; }
-
-  std::string getName() const { return name; }
-
-private:
-  std::string name;
-};
-
-
-class Expression : public IRNode {
-public:
-  Expression(const Type &type) : Expression("", type) {}
-
-  Expression(std::string name, Type type) : IRNode(name), type(type) {}
-
-  virtual ~Expression() {}
-
-  void setType(const Type &type) {
-    this->type = type;
-  }
-
-  const Type &getType() const { return type; }
-
+struct IRNode : private simit::interfaces::Uncopyable {
   virtual void accept(IRVisitor *visitor) = 0;
   virtual void accept(IRConstVisitor *visitor) const = 0;
+};
 
-private:
+struct ExprNodeBase : public IRNode {
+public:
   Type type;
 };
+
+struct StmtNodeBase : public IRNode {
+};
+
+template <typename T>
+struct ExprNode : public ExprNodeBase {
+  void accept(IRVisitor *v) { v->visit((T *)this); }
+  void accept(IRConstVisitor *v) const { v->visit((const T *)this); }
+};
+
+template <typename T>
+struct StmtNode : public StmtNodeBase {
+  void accept(IRVisitor *v) { v->visit((T *)this); }
+  void accept(IRConstVisitor *v) const { v->visit((const T *)this); }
+};
+
+class Expr {
+public:
+  explicit Expr() : exprPtr(nullptr) {}
+  explicit Expr(ExprNodeBase *expr) : exprPtr(expr) {assert(expr != nullptr);}
+
+  bool defined() const {return exprPtr != nullptr;}
+  Type type() const {return exprPtr->type;}
+
+  ExprNodeBase *expr() {return exprPtr.get();}
+  const ExprNodeBase *expr() const {return exprPtr.get();}
+
+  void accept(IRVisitor *v) {exprPtr->accept(v);}
+  void accept(IRConstVisitor *v) const {exprPtr->accept(v);}
+
+private:
+  std::shared_ptr<ExprNodeBase> exprPtr;
+};
+
+class Stmt {
+public:
+  explicit Stmt() : stmtPtr(nullptr) {}
+  explicit Stmt(StmtNodeBase *stmt) : stmtPtr(stmt) {assert(stmt != nullptr);}
+
+  bool defined() const { return stmtPtr != nullptr; }
+
+  StmtNodeBase *stmt() {return stmtPtr.get();}
+  const StmtNodeBase *stmt() const {return stmtPtr.get();}
+
+  void accept(IRVisitor *v) { stmtPtr->accept(v); }
+  void accept(IRConstVisitor *v) const { stmtPtr->accept(v); }
+
+private:
+  std::shared_ptr<StmtNodeBase> stmtPtr;
+};
+
+
+// Type compute functions
+Type fieldType(Expr setOrElement, std::string fieldName);
+Type blockType(Expr tensor);
+Type indexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
 
 
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
 /// that it is only possible to define dense tensor literals.
-class Literal : public Expression {
-public:
-  Literal(const Type &type);
-  Literal(const Type &type, void *values);
-  ~Literal();
+struct Literal : public ExprNode<Literal> {
+  void *data;
+  size_t size;
 
-  void clear();
-  void cast(const Type &type);
+  void cast(Type type);
 
-  void *getData() { return data; }
-  const void *getConstData() const { return data; }
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  void  *data;
-  int dataSize;
-};
-bool operator==(const Literal& l, const Literal& r);
-bool operator!=(const Literal& l, const Literal& r);
-
-
-class IndexedTensor {
-public:
-  IndexedTensor(const std::shared_ptr<Expression> &tensor,
-                std::vector<std::shared_ptr<IndexVar>> indexVariables);
-
-  const std::shared_ptr<Expression> &getTensor() const { return tensor; };
-  const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {
-    return indexVariables;
+  static Expr make(Type type) {
+    assert(type.isTensor() && "Only tensor literals currently supported");
+    Literal *node = new Literal;
+    node->type = type;
+    const TensorType *ttype = type.toTensor();
+    node->size = ttype->size() * ttype->componentType.toScalar()->bytes();
+    node->data = malloc(node->size);
+    return Expr(node);
   }
 
-private:
-  std::shared_ptr<Expression>            tensor;
-  std::vector<std::shared_ptr<IndexVar>> indexVariables;
-};
-
-
-/// Expression that combines one or more tensors.  Merge nodes must be created
-/// through the \ref createMerge factory function.
-class IndexExpr : public Expression {
-public:
-  enum Operator { NONE, NEG, ADD, SUB, MUL, DIV };
-  static int numOperands(Operator op);
-
-  IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &ivs,
-            IndexExpr::Operator op, const std::vector<IndexedTensor> &operands);
-
-  IndexExpr(IndexExpr::Operator op, const std::vector<IndexedTensor> &operands);
-
-  void setIndexVariables(const std::vector<std::shared_ptr<IndexVar>> &ivs);
-  void setOperator(IndexExpr::Operator op);
-  void setOperands(const std::vector<IndexedTensor> &operands);
-
-  /// Get the domain of the index expression, which is the set index variables
-  /// used by any sub-expression.
-  std::vector<std::shared_ptr<IndexVar>> getDomain() const;
-
-  /// Get the index variables used to assemble the result of this expression.
-  const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {
-    return indexVars;
+  static Expr make(Type type, void *values) {
+    assert(type.isTensor() && "Only tensor literals currently supported");
+    Literal *node = new Literal;
+    node->type = type;
+    const TensorType *ttype = type.toTensor();
+    node->size = ttype->size() * ttype->componentType.toScalar()->bytes();
+    node->data = malloc(node->size);
+    memcpy(node->data, values, node->size);
+    return Expr(node);
   }
 
-  /// Get the operator that is applied to the operands to compute the result of
-  /// this expression.
-  IndexExpr::Operator getOperator() const { return op; }
-
-  /// Get the operands inputs to this index expressions.
-  const std::vector<IndexedTensor> &getOperands() const { return operands; }
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  std::vector<std::shared_ptr<IndexVar>> indexVars;
-  Operator op;
-  std::vector<IndexedTensor> operands;
-
-  void initType();
+  ~Literal() {free(data);}
 };
 
-std::ostream &operator<<(std::ostream &os, const IndexedTensor &t);
+struct Variable : public ExprNode<Variable> {
+  std::string name;
 
-
-/// Calls a Simit function.
-class Call : public Expression {
-public:
-  Call(const std::string &name,
-       const std::vector<std::shared_ptr<Expression>> &arguments)
-      : Expression(name, Type()), arguments(arguments) {}
-
-  const std::vector<std::shared_ptr<Expression>> &getArguments() const {
-    return arguments;
+  static Expr make(std::string name, Type type) {
+    Variable *node = new Variable;
+    node->type = type;
+    node->name = name;
+    return Expr(node);
   }
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  std::vector<std::shared_ptr<Expression>> arguments;
 };
 
+struct Result : public ExprNode<Result> {
+  Stmt producer;
+  unsigned location;
 
-/// Abstract class for expressions that read values from tensors and sets.
-class Read : public Expression {
-protected:
-  Read(const Type &type) : Expression("", type) {}
+  static Expr make(Stmt producer, unsigned location) {
+    Result *node = new Result;
+//    node->type = TODO
+    node->producer = producer;
+    node->location = location;
+    return Expr(node);
+  }
 };
-
 
 /// Expression that reads a tensor from an element or set field.
-class FieldRead : public Read {
-public:
-  FieldRead(const std::shared_ptr<Expression> &setOrElem,
-            const std::string &fieldName);
-
-  const std::shared_ptr<Expression> &getTarget() const { return setOrElem; }
-  const std::string &getFieldName() const { return fieldName; }
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  std::shared_ptr<Expression> setOrElem;
+struct FieldRead : public ExprNode<FieldRead> {
+  Expr elementOrSet;
   std::string fieldName;
-};
 
+  static Expr make(Expr elementOrSet, std::string fieldName) {
+    assert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
+    FieldRead *node = new FieldRead;
+    node->type = fieldType(elementOrSet, fieldName);
+    node->elementOrSet = elementOrSet;
+    node->fieldName = fieldName;
+    return Expr(node);
+  }
+};
 
 /// Expression that reads a tensor from a tensor location.
-class TensorRead : public Read {
-public:
-  TensorRead(const std::shared_ptr<Expression> &tensor,
-             const std::vector<std::shared_ptr<Expression>> &indices);
+struct TensorRead : public ExprNode<TensorRead> {
+  Expr tensor;
+  std::vector<Expr> indices;
 
-  const std::shared_ptr<Expression> &getTensor() const { return tensor; }
-  const std::vector<std::shared_ptr<Expression>> &getIndices() const {
-    return indices;
+  static Expr make(Expr tensor, std::vector<Expr> indices) {
+    assert(tensor.type().isTensor());
+    TensorRead *node = new TensorRead;
+    node->type = blockType(tensor);
+    node->tensor = tensor;
+    node->indices = indices;
+    return Expr(node);
   }
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  std::shared_ptr<Expression> tensor;
-  std::vector<std::shared_ptr<Expression>> indices;
 };
 
+struct TupleRead : public ExprNode<TupleRead> {
+  Expr tuple, index;
 
-class TupleRead : public Read {
-public:
-  TupleRead(const std::shared_ptr<Expression> &tuple,
-            const std::shared_ptr<Expression> &index);
-
-  const std::shared_ptr<Expression> &getTuple() const { return tuple; }
-  const std::shared_ptr<Expression> &getIndex() const { return index; }
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  std::shared_ptr<Expression> tuple;
-  std::shared_ptr<Expression> index;
-};
-
-
-/// Instruction that stores a value to a tensor or an object.
-class Write : public Expression {
-protected:
-  Write(const Type &type) : Expression("", type) {}
-};
-
-
-/// Instruction that writes a tensor to a set field.
-class FieldWrite : public Write {
-public:
-  // TODO: Look up type from the set and check that value has correct type in
-  //       setValue
-  // TODO: Change from set to elemOrSet
-  FieldWrite(const std::shared_ptr<Expression> &setOrElem,
-             const std::string &fieldName)
-    : Write(setOrElem->getType()), setOrElem(setOrElem), fieldName(fieldName) {}
-
-  void setValue(const std::shared_ptr<Expression> &value) {
-    // TODO: check that value has correct type
-    auto setOrElemPtr = setOrElem.lock();
-    value->setName(setOrElemPtr->getName() + "." + fieldName);//TODO:remove line
-    this->value = value;
+  static Expr make(Expr tuple, Expr index) {
+    assert(tuple.type().isTensor());
+    TupleRead *node = new TupleRead;
+    // TODO: Compute type
+    node->tuple = tuple;
+    node->index = index;
+    return Expr(node);
   }
+};
 
-  std::shared_ptr<Expression> getTarget() const { return setOrElem.lock(); }
-  const std::string &getFieldName() const { return fieldName; }
+struct Map : public ExprNode<Map> {
+  std::string function;
+  Expr target, neighbors;
+  ReductionOperator reductionOp;
 
-  const std::shared_ptr<Expression> &getValue() const { return value; }
+  static Expr make(std::string function, Expr target, Expr neighbors,
+                   ReductionOperator reductionOp) {
+    assert(target.type().isSet() && neighbors.type().isSet());
+    Map *node = new Map;
+    node->function = function;
+    node->target = target;
+    node->neighbors = neighbors;
+    node->reductionOp = reductionOp;
+    return Expr(node);
+  }
+};
 
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
+struct IndexedTensor : public ExprNode<IndexedTensor> {
+  Expr tensor;
+  std::vector<IndexVar> indexVars;
 
-private:
-  std::weak_ptr<Expression> setOrElem;
+  static Expr make(Expr tensor, std::vector<IndexVar> indexVars) {
+    assert(tensor.type().isTensor() && "Only tensors can be indexed.");
+    assert(indexVars.size() == tensor.type().toTensor()->order());
+    for (size_t i=0; i < indexVars.size(); ++i) {
+      assert(indexVars[i].getDomain() == tensor.type().toTensor()->dimensions[i]
+             && "IndexVar domain does not match tensordimension");
+    }
+
+    IndexedTensor *node = new IndexedTensor;
+    node->type = tensor.type().toTensor()->componentType;
+    node->tensor = tensor;
+    node->indexVars = indexVars;
+    return Expr(node);
+  }
+};
+
+struct IndexExpr : public ExprNode<IndexExpr> {
+  std::vector<IndexVar> lhsIndexVars;
+  Expr expr;
+
+  std::vector<IndexVar> domain();
+
+  static Expr make(std::vector<IndexVar> lhsIndexVars, Expr expr) {
+    assert(expr.type().isScalar());
+    for (auto &idxVar : lhsIndexVars) {  // No reduction variables on lhs
+      assert(idxVar.isFreeVar());
+    }
+
+    IndexExpr *node = new IndexExpr;
+    node->type = indexExprType(lhsIndexVars, expr);
+    node->lhsIndexVars = lhsIndexVars;
+    node->expr = expr;
+    return Expr(node);
+  }
+};
+
+struct Call : public ExprNode<Call> {
+  enum Kind { Internal, Intrinsic };
+
+  std::string function;
+  std::vector<Expr> actuals;
+  Kind kind;
+
+  static Expr make(std::string function, std::vector<Expr> actuals, Kind kind) {
+    Call *node = new Call;
+//    node->type = TODO
+    node->function = function;
+    node->actuals = actuals;
+    node->kind = kind;
+    return Expr(node);
+  }
+};
+
+struct Neg : public ExprNode<Neg> {
+  Expr a;
+
+  static Expr make(Expr a) {
+    assert(a.type().isScalar());
+
+    Neg *node = new Neg;
+    node->type = a.type();
+    node->a = a;
+    return Expr(node);
+  }
+};
+
+struct Add : public ExprNode<Add> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    assert(a.type().isScalar());
+    assert(a.type() == b.type());
+
+    Add *node = new Add;
+    node->type = a.type();
+    node->a = a;
+    node->b = b;
+    return Expr(node);
+  }
+};
+
+struct Sub : public ExprNode<Sub> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    assert(a.type().isScalar());
+    assert(a.type() == b.type());
+
+    Sub *node = new Sub;
+    node->type = a.type();
+    node->a = a;
+    node->b = b;
+    return Expr(node);
+  }
+};
+
+struct Mul : public ExprNode<Mul> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    assert(a.type().isScalar());
+    assert(a.type() == b.type());
+
+    Mul *node = new Mul;
+    node->type = a.type();
+    node->a = a;
+    node->b = b;
+    return Expr(node);
+  }
+};
+
+struct Div : public ExprNode<Div> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    assert(a.type().isScalar());
+    assert(a.type() == b.type());
+
+    Div *node = new Div;
+    node->type = a.type();
+    node->a = a;
+    node->b = b;
+    return Expr(node);
+  }
+};
+
+
+// Statements
+struct AssignStmt : public StmtNode<AssignStmt> {
+  std::vector<std::string> lhs;
+  Expr rhs;
+
+  static Stmt make(std::vector<std::string> lhs, Expr rhs) {
+    AssignStmt *node = new AssignStmt;
+    node->lhs = lhs;
+    node->rhs = rhs;
+    return Stmt(node);
+  }
+};
+
+struct FieldWrite : public ExprNode<FieldWrite> {
+  Expr elementOrSet;
   std::string fieldName;
-  std::shared_ptr<Expression> value;
+  Expr value;
+
+  static Expr make(Expr elementOrSet, std::string fieldName, Expr value) {
+    FieldWrite *node = new FieldWrite;
+    node->elementOrSet = elementOrSet;
+    node->fieldName = fieldName;
+    node->value = value;
+    return Expr(node);
+  }
 };
 
+struct TensorWrite : public ExprNode<TensorWrite> {
+  Expr tensor;
+  std::vector<Expr> indices;
+  Expr value;
 
-/// Instruction that writes a tensor to a tensor location.
-class TensorWrite : public Write {
-public:
-  TensorWrite(const std::shared_ptr<Expression> &tensor,
-              const std::vector<std::shared_ptr<Expression>> &indices)
-      : Write(tensor->getType()), tensor(tensor), indices(indices) {}
-
-  void setValue(const std::shared_ptr<Expression> &value) {
-    // TODO: check that value has correct type
-    this->value = value;
+  static Expr make(Expr tensor, std::vector<Expr> indices, Expr value) {
+    TensorWrite *node = new TensorWrite;
+    node->tensor = tensor;
+    node->indices = indices;
+    node->value = value;
+    return Expr(node);
   }
-
-  std::shared_ptr<Expression> getTensor() const { return tensor.lock(); }
-  const std::vector<std::shared_ptr<Expression>> &getIndices() const {
-    return indices;
-  }
-  const std::shared_ptr<Expression> &getValue() const { return value; }
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  std::weak_ptr<Expression> tensor;
-  std::vector<std::shared_ptr<Expression>> indices;
-  std::shared_ptr<Expression> value;
 };
 
+struct For : public StmtNode<For> {
+  std::string name;
+  IndexDomain domain;
+  Stmt body;
 
-/// A formal argument to a function.
-class Argument : public Expression {
-public:
-  Argument(const std::string &name, const Type &type)
-      : Expression(name, type) {}
-  virtual ~Argument() {};
-
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
+  static Stmt make(std::string name, IndexDomain domain, Stmt body) {
+    For *node = new For;
+    node->name = name;
+    node->domain = domain;
+    node->body = body;
+    return Stmt(node);
+  }
 };
 
+struct IfThenElse : public StmtNode<IfThenElse> {
+  Expr condition;
+  Stmt thenBody, elseBody;
+};
 
-/// A formal result of a function.
-class Result : public Argument {
-public:
-  Result(const std::string &name, const Type &type)
-      : Argument(name, type) {}
+struct Block : public StmtNode<Block> {
+  Stmt first, rest;
 
-  void addValue(const std::shared_ptr<Expression> &value) {
-    assert(getType() == value->getType() && "type missmatch");
-    this->values.push_back(value);
+  static Stmt make(Stmt first, Stmt rest) {
+    assert(first.defined() && "Empty block");
+    Block *node = new Block;
+    node->first = first;
+    node->rest = rest;
+    return Stmt(node);
   }
 
-  const std::vector<std::shared_ptr<Expression>> &getValues() const {
-    return values;
+  static Stmt make(std::vector<Stmt> stmts) {
+    assert(stmts.size() > 0 && "Empty block");
+    Stmt node;
+    for (size_t i=stmts.size(); i>0; --i) {
+      node = Block::make(stmts[i-1], node);
+    }
+    return node;
   }
+};
 
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  std::vector<std::shared_ptr<Expression>> values;
+/// Empty statement that is convenient during code development.
+struct Pass : public StmtNode<Pass> {
+  static Stmt make() {
+    Pass *node = new Pass;
+    return Stmt(node);
+  }
 };
 
 
 /// A Simit function.
-class Function : public IRNode {
+class Function {
 public:
   Function(const std::string &name,
-           const std::vector<std::shared_ptr<Argument>> &arguments,
-           const std::vector<std::shared_ptr<Result>> &results)
-      : IRNode(name), arguments(arguments), results(results) {}
+           const std::vector<Expr> &arguments,
+           const std::vector<Expr> &results)
+      : name(name), arguments(arguments), results(results) {}
 
-  void addStatements(const std::vector<std::shared_ptr<Expression>> &stmts);
+  void setBody(Expr body) {this->body = body;}
 
-
-  const std::vector<std::shared_ptr<Argument>> &getArguments() const {
-    return arguments;
-  }
-
-  const std::vector<std::shared_ptr<Result>> &getResults() const {
-    return results;
-  }
-
-  const std::vector<std::shared_ptr<Expression>> &getBody() const {
-    return body;
-  }
+  std::string getName() const {return name;}
+  const std::vector<Expr> &getArguments() const {return arguments;}
+  const std::vector<Expr> &getResults() const {return results;}
+  Expr getBody() const {return body;}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
   void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
 
 private:
-  std::vector<std::shared_ptr<Argument>> arguments;
-  std::vector<std::shared_ptr<Result>> results;
-  std::vector<std::shared_ptr<Expression>> body;
+  std::string name;
+  std::vector<Expr> arguments;
+  std::vector<Expr> results;
+  Expr body;
 };
 
 
 /// A Simit test case. Simit test cases can be declared in language comments
 /// and can subsequently be picked up by a test framework.
-class Test : public IRNode {
+class Test {
 public:
   Test(const std::string &callee,
-       const std::vector<std::shared_ptr<Literal>> &actuals,
-       const std::vector<std::shared_ptr<Literal>> &expected)
+       const std::vector<Expr> &actuals,
+       const std::vector<Expr> &expected)
       : callee(callee), actuals(actuals), expected(expected) {}
 
   std::string getCallee() const { return callee; }
 
-  const std::vector<std::shared_ptr<Literal>> &getActuals() const {
+  std::vector<Expr> getActuals() const {
     return actuals;
   }
 
-  const std::vector<std::shared_ptr<Literal>> &getExpectedResults() const {
+  const std::vector<Expr> &getExpectedResults() const {
     return expected;
   }
 
 private:
   std::string callee;
-  std::vector<std::shared_ptr<Literal>> actuals;
-  std::vector<std::shared_ptr<Literal>> expected;
+  std::vector<Expr> actuals;
+  std::vector<Expr> expected;
 };
-std::ostream &operator<<(std::ostream &os, const Test &);
+
+bool operator==(const Expr &, const Expr &);
+bool operator!=(const Expr &, const Expr &);
+
+bool operator==(const Literal& l, const Literal& r);
+bool operator!=(const Literal& l, const Literal& r);
+
+inline Literal *toLiteral(Expr e) { return static_cast<Literal*>(e.expr()); }
+inline Variable *toVariable(Expr e) { return static_cast<Variable*>(e.expr()); }
 
 }} // namespace simit::internal
 

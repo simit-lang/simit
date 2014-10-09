@@ -21,8 +21,8 @@ LLVMFunction::LLVMFunction(const ir::Function &simitFunc,
                            llvm::Function *llvmFunc,
                            const shared_ptr<llvm::ExecutionEngine> &llvmFuncEE,
                            const std::vector<std::shared_ptr<Storage>> &storage)
-    : Function(simitFunc), llvmFunc(llvmFunc),
-      llvmFuncEE(llvmFuncEE), storage(storage), module("Harness", LLVM_CONTEXT) {
+    : Function(simitFunc), llvmFunc(llvmFunc), llvmFuncEE(llvmFuncEE),
+      storage(storage), module("Harness", LLVM_CONTEXT) {
   llvmFuncEE->addModule(&module);
 }
 
@@ -46,8 +46,8 @@ LLVMFunction::init(const std::vector<std::string> &formals,
   }
   else {
     std::string name = string(llvmFunc->getName()) + "_harness";
-    std::vector<std::shared_ptr<ir::Argument>> noArgs;
-    std::vector<std::shared_ptr<ir::Result>> noResults;
+    std::vector<ir::Expr> noArgs;
+    std::vector<ir::Expr> noResults;
     llvm::Function *harness = createFunction(name, noArgs, noResults,
                                              llvm::Function::InternalLinkage,
                                              &module);

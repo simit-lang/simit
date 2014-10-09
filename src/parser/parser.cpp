@@ -60,7 +60,6 @@
 
   #include "program_context.h"
   #include "scanner.h"
-  #include "ir_codegen.h"
   using namespace std;
   using namespace simit::internal;
   using namespace simit::ir;
@@ -118,15 +117,15 @@
     return result;
   }
 
-  void transposeVector(const std::shared_ptr<Expression> &vec) {
-    assert(vec->getType().isTensor());
-    const TensorType *ttype = vec->getType().toTensor();
+  void transposeVector(Expr vec) {
+    assert(vec.type().isTensor());
+    const TensorType *ttype = vec.type().toTensor();
     assert(ttype->order() == 1);
 
     Type transposedVector = TensorType::make(ttype->componentType,
                                              ttype->dimensions,
                                              !ttype->isColumnVector);
-    vec->setType(transposedVector);
+    vec.expr()->type = transposedVector;
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
@@ -148,7 +147,7 @@
 
   #define CHECK_IS_TENSOR(expr, loc)                    \
     do {                                                \
-      if (!expr->getType().isTensor()) {                \
+      if (!expr.type().isTensor()) {                \
         std::stringstream errorStr;                     \
         errorStr << "expected tensor";                  \
         REPORT_ERROR(errorStr.str(), loc);              \
@@ -571,42 +570,42 @@ namespace  simit { namespace internal  {
       case 73: // arguments
 
 
-        { delete (yysym.value.arguments); }
+        { delete (yysym.value.expressions); }
 
         break;
 
       case 74: // argument_list
 
 
-        { delete (yysym.value.arguments); }
+        { delete (yysym.value.expressions); }
 
         break;
 
       case 75: // argument_decl
 
 
-        { delete (yysym.value.argument); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 76: // results
 
 
-        { delete (yysym.value.results); }
+        { delete (yysym.value.expressions); }
 
         break;
 
       case 77: // result_list
 
 
-        { delete (yysym.value.results); }
+        { delete (yysym.value.expressions); }
 
         break;
 
       case 78: // result_decl
 
 
-        { delete (yysym.value.result); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -683,7 +682,7 @@ namespace  simit { namespace internal  {
       case 91: // linear_algebra_expr
 
 
-        { delete (yysym.value.indexExpr); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -704,7 +703,7 @@ namespace  simit { namespace internal  {
       case 94: // field_read_expr
 
 
-        { delete (yysym.value.fieldRead); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -725,7 +724,7 @@ namespace  simit { namespace internal  {
       case 97: // call_expr
 
 
-        { delete (yysym.value.call); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -767,14 +766,14 @@ namespace  simit { namespace internal  {
       case 106: // field_write_expr
 
 
-        { delete (yysym.value.fieldWrite); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 107: // tensor_write_expr
 
 
-        { delete (yysym.value.tensorWrite); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -844,14 +843,14 @@ namespace  simit { namespace internal  {
       case 118: // tensor_literal
 
 
-        { delete (yysym.value.TensorLiteral); }
+        { delete (yysym.value.expression); }
 
         break;
 
       case 119: // dense_tensor_literal
 
 
-        { delete (yysym.value.TensorLiteral); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -914,7 +913,7 @@ namespace  simit { namespace internal  {
       case 128: // scalar_literal
 
 
-        { delete (yysym.value.TensorLiteral); }
+        { delete (yysym.value.expression); }
 
         break;
 
@@ -1215,8 +1214,8 @@ namespace  simit { namespace internal  {
   case 10:
 
     {
-    auto externArgument = convertAndDelete((yystack_[1].value.argument));
-    ctx->addExtern(externArgument);
+    Expr externVariable = convertAndDelete((yystack_[1].value.expression));
+    ctx->addExtern(externVariable);
   }
 
     break;
@@ -1279,9 +1278,15 @@ namespace  simit { namespace internal  {
   case 17:
 
     {
-    auto statements = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[2].value.expressions));
+    vector<Expr> body = convertAndDelete((yystack_[2].value.expressions));
     (yylhs.value.function) = (yystack_[3].value.function);
-    (yylhs.value.function)->addStatements(*statements);
+
+    if (body.size() > 0) {
+      (yylhs.value.function)->setBody(body[0]);
+    }
+    else {
+      (yylhs.value.function)->setBody(Literal::make(TensorType::make(Int(32))));
+    }
   }
 
     break;
@@ -1290,19 +1295,17 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[0].value.string));
-    auto arguments = vector<shared_ptr<Argument>>();
-    auto results = vector<shared_ptr<Result>>();
+    auto arguments = vector<Expr>();
+    auto results = vector<Expr>();
 
     for (auto &extPair : ctx->getExterns()) {
-      auto ext = extPair.second;
+      Expr ext = extPair.second;
 
       // TODO: Replace extResult with mutable parameters
-      auto tmp = new Result(ext->getName(), ext->getType());
-      auto extResult = std::shared_ptr<Result>(tmp);
-      results.push_back(extResult);
+      results.push_back(ext);
 
       arguments.push_back(ext);
-      ctx->addSymbol(ext->getName(), ext, extResult);
+      ctx->addSymbol(toVariable(ext)->name, ext, ext);
     }
 
     (yylhs.value.function) = new Function(name, arguments, results);
@@ -1325,9 +1328,15 @@ namespace  simit { namespace internal  {
   case 21:
 
     {
-    auto statements = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[2].value.expressions));
+    vector<Expr> body = convertAndDelete((yystack_[2].value.expressions));
     (yylhs.value.function) = (yystack_[3].value.function);
-    (yylhs.value.function)->addStatements(*statements);
+
+    if (body.size() > 0) {
+      (yylhs.value.function)->setBody(body[0]);
+    }
+    else {
+      (yylhs.value.function)->setBody(Literal::make(TensorType::make(Int(32))));
+    }
   }
 
     break;
@@ -1336,23 +1345,25 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[4].value.string));
-    auto arguments = unique_ptr<vector<shared_ptr<Argument>>>((yystack_[2].value.arguments));
-    auto results = unique_ptr<vector<shared_ptr<Result>>>((yystack_[0].value.results));
+    auto arguments = unique_ptr<vector<Expr>>((yystack_[2].value.expressions));
+    auto results = unique_ptr<vector<Expr>>((yystack_[0].value.expressions));
     (yylhs.value.function) = new Function(name, *arguments, *results);
 
     std::set<std::string> argumentNames;
-    for (auto argument : *arguments) {
-      ctx->addSymbol(argument->getName(), argument, NULL);
-      argumentNames.insert(argument->getName());
+    for (Expr &argument : *arguments) {
+      std::string argumentName = toVariable(argument)->name;
+      ctx->addSymbol(argumentName, argument, Expr());
+      argumentNames.insert(argumentName);
     }
 
     for (auto result : *results) {
-      std::shared_ptr<Expression> readExpr(NULL);
-      if (argumentNames.find(result->getName()) != argumentNames.end()) {
-        readExpr = ctx->getSymbol(result->getName()).getReadExpr();
+      Expr readExpr;
+      std::string resultName = toVariable(result)->name;
+      if (argumentNames.find(resultName) != argumentNames.end()) {
+        readExpr = ctx->getSymbol(resultName).getReadExpr();
       }
 
-      ctx->addSymbol(result->getName(), readExpr, result);
+      ctx->addSymbol(resultName, readExpr, result);
     }
   }
 
@@ -1361,7 +1372,7 @@ namespace  simit { namespace internal  {
   case 23:
 
     {
-    (yylhs.value.arguments) = new vector<shared_ptr<Argument>>;
+    (yylhs.value.expressions) = new vector<Expr>;
   }
 
     break;
@@ -1369,7 +1380,7 @@ namespace  simit { namespace internal  {
   case 24:
 
     {
-    (yylhs.value.arguments) = (yystack_[0].value.arguments);
+    (yylhs.value.expressions) = (yystack_[0].value.expressions);
  }
 
     break;
@@ -1377,9 +1388,9 @@ namespace  simit { namespace internal  {
   case 25:
 
     {
-    auto argument = convertAndDelete((yystack_[0].value.argument));
-    (yylhs.value.arguments) = new vector<shared_ptr<Argument>>;
-    (yylhs.value.arguments)->push_back(argument);
+    auto argument = convertAndDelete((yystack_[0].value.expression));
+    (yylhs.value.expressions) = new vector<Expr>;
+    (yylhs.value.expressions)->push_back(argument);
   }
 
     break;
@@ -1387,9 +1398,9 @@ namespace  simit { namespace internal  {
   case 26:
 
     {
-    auto argument = convertAndDelete((yystack_[0].value.argument));
-    (yylhs.value.arguments) = (yystack_[2].value.arguments);
-    (yylhs.value.arguments)->push_back(argument);
+    auto argument = convertAndDelete((yystack_[0].value.expression));
+    (yylhs.value.expressions) = (yystack_[2].value.expressions);
+    (yylhs.value.expressions)->push_back(argument);
   }
 
     break;
@@ -1400,7 +1411,7 @@ namespace  simit { namespace internal  {
     std::string name = convertAndFree((yystack_[2].value.string));
 
     auto type = convertAndDelete((yystack_[0].value.type));
-    (yylhs.value.argument) = new shared_ptr<Argument>(new Argument(name, type));
+    (yylhs.value.expression) = new Expr(Variable::make(name, type));
   }
 
     break;
@@ -1408,7 +1419,7 @@ namespace  simit { namespace internal  {
   case 28:
 
     {
-    (yylhs.value.results) = new vector<shared_ptr<Result>>();
+    (yylhs.value.expressions) = new vector<Expr>();
   }
 
     break;
@@ -1416,7 +1427,7 @@ namespace  simit { namespace internal  {
   case 29:
 
     {
-    (yylhs.value.results) = (yystack_[1].value.results);
+    (yylhs.value.expressions) = (yystack_[1].value.expressions);
   }
 
     break;
@@ -1424,9 +1435,9 @@ namespace  simit { namespace internal  {
   case 30:
 
     {
-    auto result = convertAndDelete((yystack_[0].value.result));
-    (yylhs.value.results) = new vector<shared_ptr<Result>>;
-    (yylhs.value.results)->push_back(result);
+    auto result = convertAndDelete((yystack_[0].value.expression));
+    (yylhs.value.expressions) = new vector<Expr>;
+    (yylhs.value.expressions)->push_back(result);
   }
 
     break;
@@ -1434,9 +1445,9 @@ namespace  simit { namespace internal  {
   case 31:
 
     {
-    auto result = convertAndDelete((yystack_[0].value.result));
-    (yylhs.value.results) = (yystack_[2].value.results);
-    (yylhs.value.results)->push_back(result);
+    auto result = convertAndDelete((yystack_[0].value.expression));
+    (yylhs.value.expressions) = (yystack_[2].value.expressions);
+    (yylhs.value.expressions)->push_back(result);
   }
 
     break;
@@ -1446,8 +1457,7 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[2].value.string));
     auto type = convertAndDelete((yystack_[0].value.type));
-    auto result = new Result(name, type);
-    (yylhs.value.result) = new shared_ptr<Result>(result);
+    (yylhs.value.expression) = new Expr(Variable::make(name, type));
   }
 
     break;
@@ -1455,7 +1465,7 @@ namespace  simit { namespace internal  {
   case 33:
 
     {
-    (yylhs.value.expressions) = new vector<shared_ptr<Expression>>();
+    (yylhs.value.expressions) = new vector<Expr>();
   }
 
     break;
@@ -1474,31 +1484,28 @@ namespace  simit { namespace internal  {
   case 40:
 
     {
-    std::string ident = convertAndFree((yystack_[5].value.string));
+    std::string name = convertAndFree((yystack_[5].value.string));
     auto type = convertAndDelete((yystack_[3].value.type));
     const TensorType *tensorType = type.toTensor();
 
-    auto literal = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
-    delete (yystack_[1].value.TensorLiteral);
+    Expr literal = convertAndDelete((yystack_[1].value.expression));
 
-    assert(literal->getType().isTensor() &&
+    assert(literal.type().isTensor() &&
            "Only tensor literals are currently supported");
-    auto literalType = literal->getType();
-
-    literal->setName(ident);
+    auto literalType = literal.type();
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
     const TensorType *literalTensorType = literalType.toTensor();
     if (tensorType->order() == 2 && literalTensorType->order() == 1) {
-      literal->cast(type);
+      static_cast<Literal*>(literal.expr())->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.
-    CHECK_TYPE_EQUALITY(type, literal->getType(), yystack_[5].location);
+    CHECK_TYPE_EQUALITY(type, literal.type(), yystack_[5].location);
 
-    ctx->addSymbol(literal->getName(), literal);
-    (yylhs.value.expression) = new shared_ptr<Expression>(literal);
+    ctx->addSymbol(name, literal);
+    (yylhs.value.expression) = new Expr(literal);
   }
 
     break;
@@ -1509,7 +1516,7 @@ namespace  simit { namespace internal  {
     (yylhs.value.expression) = NULL;  // TODO: Remove this
 
     auto lhsList = unique_ptr<vector<unique_ptr<WriteInfo>>>((yystack_[3].value.writeinfos));
-    auto rhsList = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[1].value.expressions));
+    auto rhsList = unique_ptr<vector<Expr>>((yystack_[1].value.expressions));
 
     if (lhsList->size() > rhsList->size()) {
       // TODO: Handle maps and then reintroduce this error
@@ -1524,14 +1531,12 @@ namespace  simit { namespace internal  {
     auto rhsIter = rhsList->begin();
     for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
       const unique_ptr<WriteInfo>  &lhs = *lhsIter;
-      const shared_ptr<Expression> &rhs = *rhsIter;
+      Expr rhs = *rhsIter;
 
-      if (rhs == NULL) continue;  // TODO: Remove check
+      if (!rhs.defined()) continue;  // TODO: Remove check
 
-      assert(lhs->kind == WriteInfo::VARIABLE ||
-             lhs->kind == WriteInfo::FIELD || lhs->kind == WriteInfo::TENSOR);
       switch (lhs->kind) {
-        case WriteInfo::VARIABLE: {
+        case WriteInfo::Variable: {
           std::string variableName = *lhs->variableName;
 
           // TODO: Remove check
@@ -1542,27 +1547,26 @@ namespace  simit { namespace internal  {
           const RWExprPair &varExprPair = ctx->getSymbol(variableName);
           assert(varExprPair.isWritable());
 
-          shared_ptr<Expression> lhsTensor = varExprPair.getWriteExpr();
-          auto result = dynamic_pointer_cast<Result>(lhsTensor);
+          Expr lhsTensor = varExprPair.getWriteExpr();
+          auto result = dynamic_cast<Variable*>(lhsTensor.expr());
           if (result) {
-            CHECK_TYPE_EQUALITY(result->getType(), rhs->getType(), yystack_[2].location);
-            rhs->setName(result->getName());
-            result->addValue(rhs);
-            (yylhs.value.expression) = new std::shared_ptr<Expression>(rhs);
+            CHECK_TYPE_EQUALITY(result->type, rhs.type(), yystack_[2].location);
+            (yylhs.value.expression) = new Expr(rhs);
           }
           else {
             NOT_SUPPORTED_YET;
           }
           break;
         }
-        case WriteInfo::FIELD: {
-          std::shared_ptr<FieldWrite> fieldWrite(*lhs->fieldWrite);
-          fieldWrite->setValue(rhs);
+        case WriteInfo::Field: {
+          Expr write(*lhs->write);
+          auto fieldWrite = static_cast<FieldWrite*>(write.expr());
 
-          auto result = dynamic_pointer_cast<Result>(fieldWrite->getTarget());
+          fieldWrite->value = rhs;
+
+          auto result = dynamic_cast<Variable*>(fieldWrite->elementOrSet.expr());
           if (result) {
-            result->addValue(fieldWrite);
-            (yylhs.value.expression) = new std::shared_ptr<Expression>(fieldWrite);
+            (yylhs.value.expression) = new Expr(write);
           }
           else {
             NOT_SUPPORTED_YET;
@@ -1570,14 +1574,15 @@ namespace  simit { namespace internal  {
 
           break;
         }
-        case WriteInfo::TENSOR: {
-          std::shared_ptr<TensorWrite> tensorWrite(*lhs->tensorWrite);
-          tensorWrite->setValue(rhs);
+        case WriteInfo::Tensor: {
+          Expr write(*lhs->write);
+          auto tensorWrite = static_cast<TensorWrite*>(write.expr());
 
-          auto result = dynamic_pointer_cast<Result>(tensorWrite->getTensor());
+          tensorWrite->value = rhs;
+
+          auto result = dynamic_cast<Variable*>(tensorWrite->tensor.expr());
           if (result){
-            result->addValue(tensorWrite);
-            (yylhs.value.expression) = new std::shared_ptr<Expression>(tensorWrite);
+            (yylhs.value.expression) = new Expr(write);
           }
           else {
             NOT_SUPPORTED_YET;
@@ -1658,7 +1663,7 @@ namespace  simit { namespace internal  {
       REPORT_ERROR(ident + " is not readable", yystack_[0].location);
     }
 
-    (yylhs.value.expression) = new shared_ptr<Expression>(rwExprPair.getReadExpr());
+    (yylhs.value.expression) = new Expr(rwExprPair.getReadExpr());
   }
 
     break;
@@ -1675,12 +1680,12 @@ namespace  simit { namespace internal  {
   case 60:
 
     {
-    if ((yystack_[0].value.expression) == NULL) { (yylhs.value.indexExpr) = NULL; break; } // TODO: Remove check
+    if ((yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> expr = convertAndDelete((yystack_[0].value.expression));
+    Expr expr = convertAndDelete((yystack_[0].value.expression));
     CHECK_IS_TENSOR(expr, yystack_[0].location);
 
-    (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NEG, expr));
+    (yylhs.value.expression) = new Expr(unaryElwiseExpr(UnaryOperator::Neg, expr));
   }
 
     break;
@@ -1688,16 +1693,16 @@ namespace  simit { namespace internal  {
   case 61:
 
     {  // + - .* ./
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.indexExpr) = NULL; break; } // TODO: Remove check
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> l = convertAndDelete((yystack_[2].value.expression));
-    std::shared_ptr<Expression> r = convertAndDelete((yystack_[0].value.expression));
+    Expr l = convertAndDelete((yystack_[2].value.expression));
+    Expr r = convertAndDelete((yystack_[0].value.expression));
 
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
 
-    BINARY_ELWISE_TYPE_CHECK(l->getType(), r->getType(), yystack_[1].location);
-    (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(binaryElwiseExpr(l, (yystack_[1].value.binop), r));
+    BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), yystack_[1].location);
+    (yylhs.value.expression) = new Expr(binaryElwiseExpr(l, (yystack_[1].value.binop), r));
   }
 
     break;
@@ -1705,20 +1710,20 @@ namespace  simit { namespace internal  {
   case 62:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.indexExpr) = NULL; break; } // TODO: Remove check
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> l = convertAndDelete((yystack_[2].value.expression));
-    std::shared_ptr<Expression> r = convertAndDelete((yystack_[0].value.expression));
+    Expr l = convertAndDelete((yystack_[2].value.expression));
+    Expr r = convertAndDelete((yystack_[0].value.expression));
 
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
 
-    const TensorType *ltype = l->getType().toTensor();
-    const TensorType *rtype = r->getType().toTensor();
+    const TensorType *ltype = l.type().toTensor();
+    const TensorType *rtype = r.type().toTensor();
 
     // Scale
     if (ltype->order()==0 || rtype->order()==0) {
-      (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(binaryElwiseExpr(l, IndexExpr::MUL, r));
+      (yylhs.value.expression) = new Expr(binaryElwiseExpr(l, BinaryOperator::Mul, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->order() == 1 && rtype->order() == 1) {
@@ -1727,46 +1732,46 @@ namespace  simit { namespace internal  {
         if (!rtype->isColumnVector) {
           REPORT_ERROR("cannot multiply two row vectors", yystack_[1].location);
         }
-        if (l->getType() != r->getType()) {
-          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        if (l.type() != r.type()) {
+          REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
         }
-        (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(innerProduct(l, r));
+        (yylhs.value.expression) = new Expr(innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
         if (rtype->isColumnVector) {
           REPORT_ERROR("cannot multiply two column vectors", yystack_[1].location);
         }
-        if (l->getType() != r->getType()) {
-          REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        if (l.type() != r.type()) {
+          REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
         }
-        (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(outerProduct(l, r));
+        (yylhs.value.expression) = new Expr(outerProduct(l, r));
       }
     }
     // Matrix-Vector
     else if (ltype->order() == 2 && rtype->order() == 1) {
       if (ltype->dimensions[1] != rtype->dimensions[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
-      (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(gemv(l, r));
+      (yylhs.value.expression) = new Expr(gemv(l, r));
     }
     // Vector-Matrix
     else if (ltype->order() == 1 && rtype->order() == 2) {
       if (ltype->dimensions[0] != rtype->dimensions[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
-      (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(gevm(l,r));
+      (yylhs.value.expression) = new Expr(gevm(l,r));
     }
     // Matrix-Matrix
     else if (ltype->order() == 2 && rtype->order() == 2) {
       if (ltype->dimensions[1] != rtype->dimensions[0]){
-        REPORT_TYPE_MISSMATCH(l->getType(), r->getType(), yystack_[1].location);
+        REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
-      (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(gemm(l,r));
+      (yylhs.value.expression) = new Expr(gemm(l,r));
     }
     else {
       REPORT_ERROR("cannot multiply >2-order tensors using *", yystack_[1].location);
-      (yylhs.value.indexExpr) = NULL;
+      (yylhs.value.expression) = NULL;
     }
   }
 
@@ -1775,8 +1780,8 @@ namespace  simit { namespace internal  {
   case 63:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.indexExpr) = NULL; break; } // TODO: Remove check
-    (yylhs.value.indexExpr) = NULL;
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
   }
@@ -1786,33 +1791,31 @@ namespace  simit { namespace internal  {
   case 64:
 
     {
-    if ((yystack_[1].value.expression) == NULL) { (yylhs.value.indexExpr) = NULL; break; } // TODO: Remove check
+    if ((yystack_[1].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
 
-    auto expr = shared_ptr<Expression>(*(yystack_[1].value.expression));
-    delete (yystack_[1].value.expression);
+    Expr expr = convertAndDelete((yystack_[1].value.expression));
 
     CHECK_IS_TENSOR(expr, yystack_[1].location);
 
-    const TensorType *type = expr->getType().toTensor();
-
+    const TensorType *type = expr.type().toTensor();
     switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
-        (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        (yylhs.value.expression) = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
         break;
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
-        (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(unaryElwiseExpr(IndexExpr::NONE, expr));
+        (yylhs.value.expression) = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
         if (!type->isColumnVector) {
-          transposeVector(*(yylhs.value.indexExpr));
+          transposeVector(*(yylhs.value.expression));
         }
         break;
       case 2:
-        (yylhs.value.indexExpr) = new shared_ptr<IndexExpr>(transposeMatrix(expr));
+        (yylhs.value.expression) = new Expr(transposeMatrix(expr));
         break;
       default:
         REPORT_ERROR("cannot transpose >2-order tensors using '", yystack_[1].location);
-        (yylhs.value.indexExpr) = NULL;
+        (yylhs.value.expression) = NULL;
     }
   }
 
@@ -1821,7 +1824,7 @@ namespace  simit { namespace internal  {
   case 65:
 
     {
-    (yylhs.value.indexExpr) = NULL;
+    (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
   }
@@ -1831,8 +1834,8 @@ namespace  simit { namespace internal  {
   case 66:
 
     {  // Solve
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.indexExpr) = NULL; break; } // TODO: Remove check
-    (yylhs.value.indexExpr) = NULL;
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expression) = NULL;
     delete (yystack_[2].value.expression);
     delete (yystack_[0].value.expression);
   }
@@ -1841,25 +1844,25 @@ namespace  simit { namespace internal  {
 
   case 67:
 
-    { (yylhs.value.binop) = IndexExpr::ADD; }
+    { (yylhs.value.binop) = BinaryOperator::Add; }
 
     break;
 
   case 68:
 
-    { (yylhs.value.binop) = IndexExpr::SUB; }
+    { (yylhs.value.binop) = BinaryOperator::Sub; }
 
     break;
 
   case 69:
 
-    { (yylhs.value.binop) = IndexExpr::MUL; }
+    { (yylhs.value.binop) = BinaryOperator::Mul; }
 
     break;
 
   case 70:
 
-    { (yylhs.value.binop) = IndexExpr::DIV; }
+    { (yylhs.value.binop) = BinaryOperator::Div; }
 
     break;
 
@@ -1932,20 +1935,20 @@ namespace  simit { namespace internal  {
   case 77:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.string) == NULL) { (yylhs.value.fieldRead) = NULL; break; } // TODO: Remove check
-    if (!(*(yystack_[2].value.expression))->getType().defined()) { (yylhs.value.fieldRead) = NULL; break; } // TODO: Remove check
+    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.string) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    if (!(*(yystack_[2].value.expression)).type().defined()) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
 
-    std::shared_ptr<Expression> elemOrSet = convertAndDelete((yystack_[2].value.expression));
+    Expr elemOrSet = convertAndDelete((yystack_[2].value.expression));
     std::string fieldName = convertAndFree((yystack_[0].value.string));
 
-    Type type = elemOrSet->getType();
+    Type type = elemOrSet.type();
     if (!(type.isElement() || type.isSet())) {
       std::stringstream errorStr;
       errorStr << "only elements and sets have fields";
       REPORT_ERROR(errorStr.str(), yystack_[2].location);
     }
 
-    (yylhs.value.fieldRead) = new shared_ptr<FieldRead>(new FieldRead(elemOrSet, fieldName));
+    (yylhs.value.expression) = new Expr(FieldRead::make(elemOrSet, fieldName));
   }
 
     break;
@@ -1954,8 +1957,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[3].value.string));
-    auto indices =
-        unique_ptr<vector<shared_ptr<Expression>>>((yystack_[1].value.expressions));
+    auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.expressions));
 
     if (ctx->hasSymbol(name)) {
       const RWExprPair &exprPair = ctx->getSymbol(name);
@@ -1965,15 +1967,15 @@ namespace  simit { namespace internal  {
 
       // The parenthesis read can read from a tensor or a tuple.
       auto expr = exprPair.getReadExpr();
-      if (expr->getType().isTensor()) {
-        (yylhs.value.expression) = new shared_ptr<Expression>(new TensorRead(expr, *indices));
+      if (expr.type().isTensor()) {
+        (yylhs.value.expression) = new Expr(TensorRead::make(expr, *indices));
       }
-      else if (expr->getType().isTuple()) {
+      else if (expr.type().isTuple()) {
         if (indices->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", yystack_[1].location);
         }
 
-        (yylhs.value.expression) = new shared_ptr<Expression>(new TupleRead(expr, (*indices)[0]));
+        (yylhs.value.expression) = new Expr(TupleRead::make(expr, (*indices)[0]));
       }
       else {
         REPORT_ERROR("can only access components in tensors and tuples", yystack_[3].location);
@@ -2001,10 +2003,8 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[3].value.string));
-    auto actuals =
-        unique_ptr<vector<shared_ptr<Expression>>>((yystack_[1].value.expressions));
-    auto call = new Call(name, *actuals);
-    (yylhs.value.call) = new std::shared_ptr<Call>(call);
+    auto actuals = unique_ptr<vector<Expr>>((yystack_[1].value.expressions));
+    (yylhs.value.expression) = new Expr(Call::make(name, *actuals, Call::Internal));
   }
 
     break;
@@ -2012,7 +2012,7 @@ namespace  simit { namespace internal  {
   case 84:
 
     {
-    (yylhs.value.expressions) = new vector<shared_ptr<Expression>>();
+    (yylhs.value.expressions) = new vector<Expr>();
   }
 
     break;
@@ -2028,7 +2028,7 @@ namespace  simit { namespace internal  {
   case 86:
 
     {
-    (yylhs.value.expressions) = new std::vector<std::shared_ptr<Expression>>();
+    (yylhs.value.expressions) = new std::vector<Expr>();
     if ((yystack_[0].value.expression) == NULL) break;  // TODO: Remove check
     (yylhs.value.expressions)->push_back(*(yystack_[0].value.expression));
     delete (yystack_[0].value.expression);
@@ -2099,7 +2099,7 @@ namespace  simit { namespace internal  {
   case 98:
 
     {
-    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.fieldWrite));
+    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.expression), WriteInfo::Field);
   }
 
     break;
@@ -2107,7 +2107,7 @@ namespace  simit { namespace internal  {
   case 99:
 
     {
-    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.tensorWrite));
+    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.expression), WriteInfo::Tensor);
   }
 
     break;
@@ -2118,7 +2118,7 @@ namespace  simit { namespace internal  {
     string setName = convertAndFree((yystack_[2].value.string));
     string fieldName = convertAndFree((yystack_[0].value.string));
 
-    if(!ctx->hasSymbol(setName)) { (yylhs.value.fieldWrite)=NULL; break; } // TODO: Remove check
+    if(!ctx->hasSymbol(setName)) { (yylhs.value.expression)=NULL; break; } // TODO: Remove check
 
     if (!ctx->hasSymbol(setName)) {
       REPORT_ERROR(setName + " is not defined in scope", yystack_[2].location);
@@ -2130,7 +2130,7 @@ namespace  simit { namespace internal  {
     }
 
     auto setExpr = setExprPair.getWriteExpr();
-    (yylhs.value.fieldWrite) = new shared_ptr<FieldWrite>(new FieldWrite(setExpr, fieldName));
+    (yylhs.value.expression) = new Expr(FieldWrite::make(setExpr, fieldName, Expr()));
   }
 
     break;
@@ -2138,7 +2138,7 @@ namespace  simit { namespace internal  {
   case 101:
 
     {
-    (yylhs.value.fieldWrite) = NULL;
+    (yylhs.value.expression) = NULL;
   }
 
     break;
@@ -2147,9 +2147,9 @@ namespace  simit { namespace internal  {
 
     {
     std::string tensorName = convertAndFree((yystack_[3].value.string));
-    auto indices = unique_ptr<vector<shared_ptr<Expression>>>((yystack_[1].value.expressions));
+    auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.expressions));
 
-    if(!ctx->hasSymbol(tensorName)) { (yylhs.value.tensorWrite)=NULL; break; } // TODO: Remove check
+    if(!ctx->hasSymbol(tensorName)) { (yylhs.value.expression)=NULL; break; } // TODO: Remove check
 
     if (!ctx->hasSymbol(tensorName)) {
       REPORT_ERROR(tensorName + " is not defined in scope", yystack_[3].location);
@@ -2161,7 +2161,7 @@ namespace  simit { namespace internal  {
     }
 
     auto tensorExpr = tensorExprPair.getWriteExpr();
-    (yylhs.value.tensorWrite) = new shared_ptr<TensorWrite>(new TensorWrite(tensorExpr, *indices));
+    (yylhs.value.expression) = new Expr(TensorWrite::make(tensorExpr, *indices, Expr()));
   }
 
     break;
@@ -2170,7 +2170,7 @@ namespace  simit { namespace internal  {
 
     {
     // TODO
-    (yylhs.value.tensorWrite) = NULL;
+    (yylhs.value.expression) = NULL;
   }
 
     break;
@@ -2240,7 +2240,7 @@ namespace  simit { namespace internal  {
   case 111:
 
     {
-    (yylhs.value.expressions) = new vector<shared_ptr<Expression>>;
+    (yylhs.value.expressions) = new vector<Expr>;
     std::string ident = convertAndFree((yystack_[0].value.string));
   }
 
@@ -2376,8 +2376,17 @@ namespace  simit { namespace internal  {
   case 121:
 
     {
-    string ident = convertAndFree((yystack_[0].value.string));
-    (yylhs.value.indexSet) = new IndexSet(ident);
+    std::string setName = convertAndFree((yystack_[0].value.string));
+
+    if (!ctx->containsExtern(setName)) {
+      REPORT_ERROR("the set has not been declared", yystack_[0].location);
+    }
+
+    Expr set = ctx->getExtern(setName);
+    if (!set.type().isSet()) {
+      REPORT_ERROR("an index set must be a set, a range or dynamic (*)", yystack_[0].location);
+    }
+    (yylhs.value.indexSet) = new IndexSet(set);
   }
 
     break;
@@ -2420,8 +2429,8 @@ namespace  simit { namespace internal  {
   case 128:
 
     {
-    (yylhs.value.TensorLiteral) = (yystack_[1].value.TensorLiteral);
-    transposeVector(*(yylhs.value.TensorLiteral));
+    (yylhs.value.expression) = (yystack_[1].value.expression);
+    transposeVector(*(yylhs.value.expression));
   }
 
     break;
@@ -2433,8 +2442,7 @@ namespace  simit { namespace internal  {
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
     Type type = TensorType::make(Float(64), idoms);
-    auto literal = new Literal(type, values->values.data());
-    (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
+    (yylhs.value.expression) = new Expr(Literal::make(type, values->values.data()));
   }
 
     break;
@@ -2446,8 +2454,7 @@ namespace  simit { namespace internal  {
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
     Type type = TensorType::make(Int(32), idoms);
-    auto literal = new Literal(type, values->values.data());
-    (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
+    (yylhs.value.expression) = new Expr(Literal::make(type, values->values.data()));
   }
 
     break;
@@ -2618,8 +2625,7 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarTensorType = TensorType::make(Int(32));
-    auto literal = new Literal(scalarTensorType, &(yystack_[0].value.num));
-    (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
+    (yylhs.value.expression) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.num)));
   }
 
     break;
@@ -2628,8 +2634,7 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarTensorType = TensorType::make(Float(64));
-    auto literal = new Literal(scalarTensorType, &(yystack_[0].value.fnum));
-    (yylhs.value.TensorLiteral) = new shared_ptr<Literal>(literal);
+    (yylhs.value.expression) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.fnum)));
   }
 
     break;
@@ -2637,25 +2642,23 @@ namespace  simit { namespace internal  {
   case 150:
 
     {
-    auto call = shared_ptr<Call>(*(yystack_[3].value.call));
-    auto expected = shared_ptr<Literal>(*(yystack_[1].value.TensorLiteral));
-    delete (yystack_[3].value.call);
-    delete (yystack_[1].value.TensorLiteral);
+    std::string name = convertAndFree((yystack_[6].value.string));
+    auto actuals =
+        unique_ptr<vector<Expr>>((yystack_[4].value.expressions));
+    auto expected = convertAndDelete((yystack_[1].value.expression));
 
-    std::vector<std::shared_ptr<Literal>> literalArgs;
-    literalArgs.reserve(call->getArguments().size());
-    for (auto &arg : call->getArguments()) {
-      std::shared_ptr<Literal> litarg = dynamic_pointer_cast<Literal>(arg);
-      if (!litarg) {
-        REPORT_ERROR("function calls in tests must have literal arguments", yystack_[4].location);
+    std::vector<Expr> literalArgs;
+    literalArgs.reserve(actuals->size());
+    for (auto &arg : *actuals) {
+      if (dynamic_cast<Literal*>(arg.expr()) == nullptr) {
+        REPORT_ERROR("function calls in tests must have literal arguments", yystack_[7].location);
       }
-      literalArgs.push_back(litarg);
+      literalArgs.push_back(arg);
     }
-    assert(literalArgs.size() == call->getArguments().size());
 
-    std::vector<std::shared_ptr<Literal>> expecteds;
+    std::vector<Expr> expecteds;
     expecteds.push_back(expected);
-    (yylhs.value.test) = new Test(call->getName(), literalArgs, expecteds);
+    (yylhs.value.test) = new Test(name, literalArgs, expecteds);
   }
 
     break;
@@ -2916,41 +2919,41 @@ namespace  simit { namespace internal  {
   }
 
 
-  const short int  Parser ::yypact_ninf_ = -186;
+  const short int  Parser ::yypact_ninf_ = -187;
 
   const signed char  Parser ::yytable_ninf_ = -122;
 
   const short int
    Parser ::yypact_[] =
   {
-    -186,    13,  -186,  -186,  -186,    67,    12,    36,    70,    72,
-     219,    82,   107,   219,    17,  -186,   219,  -186,  -186,  -186,
-    -186,    10,  -186,    51,  -186,  -186,  -186,  -186,  -186,  -186,
-     277,   100,   105,  -186,  -186,   101,   125,  -186,  -186,  -186,
-      79,  -186,   124,  -186,  -186,  -186,   116,  -186,  -186,   219,
-     159,  -186,   127,   134,   135,   158,   150,   317,   142,   160,
-     154,   141,   239,  -186,  -186,   115,   153,   156,   161,   157,
-     171,   168,   164,   173,   167,   206,  -186,   213,  -186,   219,
-     219,  -186,  -186,  -186,   219,   219,  -186,  -186,   219,  -186,
-     219,   219,   219,   219,   219,   219,   214,   219,   218,     6,
-     219,   219,  -186,   317,   195,    84,  -186,     9,   149,   289,
-    -186,   222,   219,   147,    55,   219,    28,  -186,    29,    31,
-    -186,   199,   229,   230,  -186,   204,   234,   240,  -186,   197,
-     215,   197,   258,   258,   167,   167,   167,   337,   357,   357,
-     258,   258,   317,  -186,   223,   208,  -186,     0,   105,  -186,
-      95,    92,   205,  -186,   219,   210,  -186,  -186,  -186,  -186,
-      18,    25,  -186,  -186,   221,   247,  -186,  -186,  -186,  -186,
-     209,   238,  -186,   232,   139,   108,   236,  -186,   297,  -186,
-     233,   220,  -186,  -186,   229,   157,  -186,   234,   173,  -186,
-     241,    70,   245,  -186,   219,  -186,  -186,   317,   149,   149,
-      55,    28,  -186,   247,   227,   259,   254,  -186,   219,  -186,
-     219,   166,  -186,  -186,    61,    75,  -186,   248,   242,  -186,
-    -186,    84,     3,   -17,    60,  -186,   237,   246,   296,  -186,
-      20,  -186,   317,   197,   317,  -186,  -186,  -186,   280,    70,
-    -186,  -186,   281,    55,  -186,   282,   279,  -186,  -186,  -186,
-     197,   285,  -186,  -186,   149,  -186,   310,  -186,   311,    -4,
-    -186,   104,   295,   117,  -186,  -186,  -186,   330,   289,  -186,
-     311,  -186,  -186,  -186
+    -187,    12,  -187,  -187,  -187,    66,    23,    37,    48,    71,
+      31,    88,   121,    31,    17,  -187,    31,  -187,  -187,  -187,
+    -187,    93,  -187,   149,  -187,  -187,  -187,  -187,  -187,  -187,
+     307,   131,   136,  -187,  -187,   137,   139,  -187,  -187,  -187,
+     101,  -187,   163,  -187,  -187,  -187,   145,  -187,  -187,    31,
+     191,  -187,   159,   160,   162,   184,   174,   347,   167,   183,
+     179,   287,  -187,  -187,    61,   178,   175,   173,   177,   188,
+     185,   176,   187,   134,   218,  -187,   225,  -187,    31,    31,
+    -187,  -187,  -187,    31,    31,  -187,  -187,    31,  -187,    31,
+      31,    31,    31,    31,    31,   227,    31,   228,    11,    31,
+      31,  -187,   347,   204,    59,  -187,    13,   138,   106,  -187,
+     230,    31,   147,    54,    31,  -187,    33,    60,  -187,   211,
+     241,   245,  -187,   220,   247,   250,  -187,   186,   224,   216,
+     400,   400,   134,   134,   134,   367,   387,   387,   400,   400,
+     347,  -187,   231,   217,  -187,   -16,   136,  -187,   124,    85,
+     219,  -187,    31,   223,  -187,  -187,  -187,  -187,   144,    68,
+    -187,  -187,   232,   258,  -187,  -187,  -187,  -187,   222,   252,
+    -187,   248,   133,   128,   284,  -187,   327,  -187,   242,  -187,
+    -187,   241,   177,  -187,   247,   187,  -187,  -187,    48,  -187,
+    -187,    31,  -187,  -187,   347,   138,   138,    54,    27,  -187,
+     258,   233,   269,   261,  -187,    31,  -187,    31,   235,   239,
+      78,    87,  -187,   251,   246,  -187,  -187,    59,    21,   -18,
+     100,  -187,   244,   257,   280,  -187,   142,  -187,   347,   265,
+     347,  -187,    27,  -187,  -187,   264,    48,  -187,  -187,   268,
+      54,  -187,   271,   263,  -187,  -187,  -187,   265,   262,   272,
+    -187,  -187,   138,  -187,   293,  -187,  -187,   298,    -5,  -187,
+      91,   267,    99,  -187,  -187,  -187,   305,   106,  -187,   298,
+    -187,  -187,  -187
   };
 
   const unsigned char
@@ -2962,148 +2965,156 @@ namespace  simit { namespace internal  {
        0,    50,    51,    53,    54,    55,     0,    56,    80,    57,
        0,    95,    98,    99,    52,   126,   127,   129,     9,    84,
        0,    12,     0,     0,     0,     0,    58,    33,    51,     0,
-       0,     0,     0,   146,   138,     0,     0,   133,   132,   136,
-       0,   141,   140,   144,    60,     0,    33,     0,    33,     0,
-       0,    42,    67,    68,     0,     0,    69,    70,     0,    64,
-       0,     0,     0,     0,     0,     0,     0,    84,     0,     0,
-       0,     0,   128,    86,     0,     0,   100,     0,     0,     0,
-      10,     0,    84,    47,     0,    84,     0,    59,     0,     0,
-     130,     0,     0,     0,   131,     0,     0,     0,    18,    16,
-       0,    20,    73,    74,    62,    63,    65,    66,    71,    72,
-      75,    76,    61,   101,     0,    85,    77,    97,     0,    96,
-       0,     0,    81,   102,     0,     0,    11,    13,   124,   125,
-       0,     0,   114,   108,     0,     0,    27,   104,   105,   106,
-     107,    89,    34,     0,     0,   148,    58,   123,     0,    33,
-       0,     0,   134,   142,     0,   137,   139,     0,   145,   147,
-       0,    23,     0,    82,     0,    41,   103,    87,     0,     0,
-       0,     0,   117,     0,     0,     0,    91,    44,     0,    33,
-       0,     0,    83,   150,     0,     0,    17,     0,    24,    25,
-      21,     0,     0,     0,     0,   118,     0,     0,     0,    90,
-       0,    88,    33,    46,   122,    49,   135,   143,    28,     0,
-      14,   115,     0,     0,    40,   109,     0,    93,    94,    92,
-      48,     0,    22,    26,     0,   119,     0,   113,     0,     0,
-     111,     0,     0,     0,    30,   116,   110,     0,     0,    29,
-       0,   112,    32,    31
+       0,     0,   146,   138,     0,     0,   133,   132,   136,     0,
+     141,   140,   144,    60,     0,    33,     0,    33,     0,     0,
+      42,    67,    68,     0,     0,    69,    70,     0,    64,     0,
+       0,     0,     0,     0,     0,     0,    84,     0,     0,     0,
+       0,   128,    86,     0,     0,   100,     0,     0,     0,    10,
+       0,    84,    47,     0,    84,    59,     0,     0,   130,     0,
+       0,     0,   131,     0,     0,     0,    18,     0,     0,     0,
+      73,    74,    62,    63,    65,    66,    71,    72,    75,    76,
+      61,   101,     0,    85,    77,    97,     0,    96,     0,     0,
+      81,   102,     0,     0,    11,    13,   124,   125,     0,     0,
+     114,   108,     0,     0,    27,   104,   105,   106,   107,    89,
+      34,     0,     0,   148,    58,   123,     0,    33,     0,   134,
+     142,     0,   137,   139,     0,   145,   147,    16,    23,    20,
+      82,     0,    41,   103,    87,     0,     0,     0,     0,   117,
+       0,     0,     0,    91,    44,     0,    33,     0,     0,     0,
+       0,     0,    17,     0,    24,    25,    21,     0,     0,     0,
+       0,   118,     0,     0,     0,    90,     0,    88,    33,    46,
+     122,    49,     0,   135,   143,    28,     0,    14,   115,     0,
+       0,    40,   109,     0,    93,    94,    92,    48,     0,     0,
+      22,    26,     0,   119,     0,   113,   150,     0,     0,   111,
+       0,     0,     0,    30,   116,   110,     0,     0,    29,     0,
+     112,    32,    31
   };
 
   const short int
    Parser ::yypgoto_[] =
   {
-    -186,  -186,  -186,  -186,  -186,  -186,  -186,  -186,  -186,  -186,
-    -186,  -186,  -186,  -186,  -186,  -186,  -186,  -182,  -186,  -186,
-      71,   -70,   339,  -186,  -186,  -186,  -186,  -186,  -186,  -186,
-      -9,  -186,    -1,  -186,  -186,  -186,  -186,  -186,  -186,   345,
-     -73,   -47,  -186,  -186,  -186,  -186,  -186,   260,  -186,  -186,
-      90,  -154,  -186,  -186,  -186,  -105,  -186,  -185,  -186,  -186,
-    -104,  -186,  -186,  -186,   -55,   255,  -186,  -186,   -60,   235,
-    -186,  -186
+    -187,  -187,  -187,  -187,  -187,  -187,  -187,  -187,  -187,  -187,
+    -187,  -187,  -187,  -187,  -187,  -187,  -187,  -179,  -187,  -187,
+      45,   -69,   314,  -187,  -187,  -187,  -187,  -187,  -187,  -187,
+      -9,  -187,    -1,  -187,  -187,  -187,  -187,  -187,  -187,  -187,
+     -25,   -47,  -187,  -187,  -187,  -187,  -187,   249,  -187,  -187,
+      50,  -150,  -187,  -187,  -187,  -102,  -187,  -186,  -187,  -187,
+    -184,  -187,  -187,  -187,   -54,   201,  -187,  -187,   -61,   198,
+    -187,  -187
   };
 
   const short int
    Parser ::yydefgoto_[] =
   {
-      -1,     1,    17,    18,    19,   107,   157,    20,    21,   190,
-      76,    22,    23,   192,    78,   217,   218,    54,   252,   263,
-     264,   113,   172,    25,    26,    27,    28,   173,   174,    29,
-      30,    31,    58,    33,    95,    34,    35,    36,    37,    38,
-     104,   145,    39,   206,   231,   249,    40,    41,    42,    43,
-     166,   167,   168,   261,   169,   170,   224,   179,   162,    44,
-      45,    46,    66,    67,    68,    69,    70,    71,    72,    73,
+      -1,     1,    17,    18,    19,   106,   155,    20,    21,   212,
+      75,    22,    23,   216,    77,   213,   214,    54,   250,   262,
+     263,   112,   170,    25,    26,    27,    28,   171,   172,    29,
+      30,    31,    58,    33,    94,    34,    35,    36,    37,    38,
+     103,   143,    39,   203,   227,   246,    40,    41,    42,    43,
+     164,   165,   166,   260,   167,   168,   220,   177,   160,    44,
+      45,    46,    65,    66,    67,    68,    69,    70,    71,    72,
       47,    48
   };
 
   const short int
    Parser ::yytable_[] =
   {
-      32,    57,   105,   161,    62,   119,   129,    74,   131,   219,
-     118,   204,   181,     2,   147,   225,   241,   155,     3,     4,
-      51,     5,    63,    64,   144,     6,    75,     7,     8,   265,
-     -19,     9,   194,     3,     4,   202,    10,   156,    13,    11,
-     103,    50,   180,    12,    52,    13,   240,    14,   202,   227,
-     199,    65,   200,   150,   151,   202,    15,   253,   255,    16,
-     175,     4,    14,   176,   182,   247,   183,   248,    77,   201,
-     132,   133,   122,     9,   126,   134,   135,   202,    53,   136,
-      55,   137,   138,   139,   140,   141,   142,    13,   103,    14,
-      59,   103,   103,   222,   223,   242,   236,   226,   148,    49,
-     243,    16,   177,   103,   122,   178,   103,   -97,    50,   211,
-     237,   -97,    32,  -120,  -120,    60,  -120,   153,   126,    99,
-      63,    64,  -120,   100,   154,   196,  -120,   215,    32,   214,
-      32,  -120,   154,    97,  -120,   154,  -120,   266,   195,   233,
-    -120,   -78,  -120,  -120,   267,   197,    96,   221,  -120,   259,
-     269,  -120,     3,     4,  -120,     5,   101,   270,   158,   159,
-     160,     7,   250,   208,   209,     9,    98,   106,   102,   108,
-      10,     3,     4,    11,     5,   -45,   109,   111,   110,    13,
-       7,    14,   112,   -79,     9,   103,   115,   114,   120,    10,
-      15,   178,    11,    16,   235,   116,   121,   123,    13,   232,
-      14,   234,     3,     4,   122,     5,   124,   126,   125,    15,
-      32,     7,    16,   127,   128,     9,    86,    87,    88,    89,
-      10,   130,   143,    11,     3,     4,   146,    56,   152,    13,
-     171,    14,    32,   184,   178,    64,   186,     9,   187,    63,
-      15,  -121,  -121,    16,  -121,   189,   -83,   191,   154,    32,
-    -121,    13,   198,    14,  -121,   163,   193,   203,   205,  -121,
-     207,   202,  -121,   213,  -121,    16,   212,   229,   112,   216,
-    -121,  -121,   117,   220,   228,   230,  -121,    79,    80,  -121,
-     244,   238,   239,   245,    82,    83,    84,    85,    86,    87,
-      88,    89,    90,    91,    92,    93,    94,   163,   158,   159,
-     160,   246,   164,    82,    83,    84,    85,    86,    87,    88,
-      89,   251,   257,   254,   256,    79,    80,   258,   260,   262,
-      81,   165,    82,    83,    84,    85,    86,    87,    88,    89,
-      90,    91,    92,    93,    94,    79,    80,   268,   271,   210,
-      24,   273,    82,    83,    84,    85,    86,    87,    88,    89,
-      90,    91,    92,    93,    94,    79,    80,    61,   272,   149,
-       0,   188,    82,    83,    84,    85,    86,    87,    88,    89,
-      90,    91,    92,    93,    94,    79,    80,   185,     0,     0,
-       0,     0,    82,    83,    84,    85,    86,    87,    88,    89,
-    -122,    91,    92,    93,    94,    79,    80,     0,     0,     0,
-       0,     0,    82,    83,    84,    85,    86,    87,    88,    89,
-       0,     0,     0,    93,    94
+      32,    57,   104,   117,    61,   159,   127,    73,   129,   215,
+     116,   221,     2,   201,   222,   238,   191,     3,     4,   145,
+       5,   153,    62,    63,     6,    50,     7,     8,   264,   -19,
+       9,    51,     3,     4,   199,    10,     3,     4,    11,    56,
+     102,   154,    12,    13,    13,    52,    14,   199,   248,     9,
+     223,    64,   148,   149,   253,    15,    53,   251,    16,   173,
+       4,    14,   174,    13,   237,    14,    62,    63,   179,   130,
+     131,   142,     9,   199,   132,   133,   120,    16,   134,    55,
+     135,   136,   137,   138,   139,   140,    13,   102,    14,   178,
+     102,   102,   151,   218,   219,   180,    59,   146,    49,   152,
+      16,   175,   102,   124,   176,   102,   -97,    50,   208,    74,
+     -97,    32,   198,   233,   161,   156,   157,   158,   193,   162,
+     199,   120,   234,   211,   265,   152,    32,   210,    32,    60,
+     124,   266,   268,  -120,  -120,   239,  -120,   229,   163,   269,
+     240,    98,  -120,   194,   217,    99,  -120,   156,   157,   158,
+     258,  -120,     3,     4,  -120,     5,  -120,   205,   206,   247,
+    -120,     7,  -120,  -120,   152,     9,    76,   192,  -120,    96,
+      10,  -120,   -78,    11,  -120,   -45,   196,    95,   197,    13,
+      97,    14,   102,    85,    86,    87,    88,   244,   176,   245,
+      15,     3,     4,    16,     5,   100,   228,   101,   230,   105,
+       7,   107,   108,   110,     9,   109,   111,    32,   -79,    10,
+     113,   114,    11,   118,   187,   119,   120,   121,    13,   124,
+      14,     3,     4,   122,     5,   123,   126,   125,    32,    15,
+       7,   176,    16,   128,     9,   141,   144,   150,   169,    10,
+       3,     4,    11,     5,   189,   181,    32,    63,    13,     7,
+      14,   183,    62,     9,   184,   186,   188,   152,    10,    15,
+     -83,    11,    16,   231,   190,   195,   161,    13,   200,    14,
+       3,     4,   202,     5,   199,   209,   204,   225,    15,     7,
+     224,    16,   226,     9,   235,   243,   236,   241,    10,  -121,
+    -121,    11,  -121,   232,   242,   249,   255,    13,  -121,    14,
+     252,   259,  -121,   254,   257,   256,   261,  -121,    15,   267,
+    -121,    16,  -121,   270,   272,    24,   111,   271,  -121,  -121,
+     115,   182,   185,     0,  -121,    78,    79,  -121,     0,     0,
+       0,     0,    81,    82,    83,    84,    85,    86,    87,    88,
+      89,    90,    91,    92,    93,    78,    79,   147,     0,     0,
+      80,     0,    81,    82,    83,    84,    85,    86,    87,    88,
+      89,    90,    91,    92,    93,    78,    79,     0,     0,   207,
+       0,     0,    81,    82,    83,    84,    85,    86,    87,    88,
+      89,    90,    91,    92,    93,    78,    79,     0,     0,     0,
+       0,     0,    81,    82,    83,    84,    85,    86,    87,    88,
+      89,    90,    91,    92,    93,    78,    79,     0,     0,     0,
+       0,     0,    81,    82,    83,    84,    85,    86,    87,    88,
+    -122,    90,    91,    92,    93,    78,    79,     0,     0,     0,
+       0,     0,    81,    82,    83,    84,    85,    86,    87,    88,
+       0,     0,     0,    92,    93,    81,    82,    83,    84,    85,
+      86,    87,    88
   };
 
   const short int
    Parser ::yycheck_[] =
   {
-       1,    10,    49,   108,    13,    65,    76,    16,    78,   191,
-      65,   165,   116,     0,     8,   200,    33,     8,     5,     6,
-       8,     8,     5,     6,    97,    12,    16,    14,    15,    33,
-      17,    18,    32,     5,     6,    52,    23,    28,    32,    26,
-      49,    41,   115,    30,     8,    32,    43,    34,    52,   203,
-      32,    34,    34,   100,   101,    52,    43,   239,   243,    46,
-       5,     6,    34,     8,    35,    45,    35,    47,    17,    44,
-      79,    80,    43,    18,    43,    84,    85,    52,     8,    88,
-       8,    90,    91,    92,    93,    94,    95,    32,    97,    34,
-       8,   100,   101,   198,   199,    35,    35,   201,    99,    32,
-      40,    46,    47,   112,    43,   114,   115,    40,    41,   179,
-      35,    44,   113,     5,     6,     8,     8,    33,    43,    40,
-       5,     6,    14,    44,    40,    33,    18,   187,   129,   184,
-     131,    23,    40,    32,    26,    40,    28,    33,    43,   209,
-      32,    41,    34,    35,    40,   154,    41,   194,    40,   254,
-      33,    43,     5,     6,    46,     8,    32,    40,     9,    10,
-      11,    14,   232,    24,    25,    18,    41,     8,    52,    42,
-      23,     5,     6,    26,     8,    28,    42,    19,    43,    32,
-      14,    34,    32,    41,    18,   194,    32,    27,    35,    23,
-      43,   200,    26,    46,    28,    54,    40,    40,    32,   208,
-      34,   210,     5,     6,    43,     8,    35,    43,    40,    43,
-     211,    14,    46,    40,     8,    18,    49,    50,    51,    52,
-      23,     8,     8,    26,     5,     6,     8,     8,    33,    32,
-       8,    34,   233,    34,   243,     6,     6,    18,    34,     5,
-      43,     5,     6,    46,     8,     5,    41,    32,    40,   250,
-      14,    32,    42,    34,    18,     8,    33,    36,    20,    23,
-      28,    52,    26,    43,    28,    46,    33,     8,    32,    28,
-      34,    35,    33,    28,    47,    21,    40,    38,    39,    43,
-      43,    33,    40,    37,    45,    46,    47,    48,    49,    50,
-      51,    52,    53,    54,    55,    56,    57,     8,     9,    10,
-      11,     5,    13,    45,    46,    47,    48,    49,    50,    51,
-      52,    31,    33,    32,    32,    38,    39,    32,     8,     8,
-      43,    32,    45,    46,    47,    48,    49,    50,    51,    52,
-      53,    54,    55,    56,    57,    38,    39,    42,     8,    42,
-       1,   270,    45,    46,    47,    48,    49,    50,    51,    52,
-      53,    54,    55,    56,    57,    38,    39,    12,   268,    99,
-      -1,   126,    45,    46,    47,    48,    49,    50,    51,    52,
-      53,    54,    55,    56,    57,    38,    39,   122,    -1,    -1,
+       1,    10,    49,    64,    13,   107,    75,    16,    77,   188,
+      64,   197,     0,   163,   198,    33,    32,     5,     6,     8,
+       8,     8,     5,     6,    12,    41,    14,    15,    33,    17,
+      18,     8,     5,     6,    52,    23,     5,     6,    26,     8,
+      49,    28,    30,    32,    32,     8,    34,    52,   232,    18,
+     200,    34,    99,   100,   240,    43,     8,   236,    46,     5,
+       6,    34,     8,    32,    43,    34,     5,     6,    35,    78,
+      79,    96,    18,    52,    83,    84,    43,    46,    87,     8,
+      89,    90,    91,    92,    93,    94,    32,    96,    34,   114,
+      99,   100,    33,   195,   196,    35,     8,    98,    32,    40,
+      46,    47,   111,    43,   113,   114,    40,    41,   177,    16,
+      44,   112,    44,    35,     8,     9,    10,    11,    33,    13,
+      52,    43,    35,   184,    33,    40,   127,   181,   129,     8,
+      43,    40,    33,     5,     6,    35,     8,   206,    32,    40,
+      40,    40,    14,   152,   191,    44,    18,     9,    10,    11,
+     252,    23,     5,     6,    26,     8,    28,    24,    25,   228,
+      32,    14,    34,    35,    40,    18,    17,    43,    40,    32,
+      23,    43,    41,    26,    46,    28,    32,    41,    34,    32,
+      41,    34,   191,    49,    50,    51,    52,    45,   197,    47,
+      43,     5,     6,    46,     8,    32,   205,    52,   207,     8,
+      14,    42,    42,    19,    18,    43,    32,   208,    41,    23,
+      27,    32,    26,    35,    28,    40,    43,    40,    32,    43,
+      34,     5,     6,    35,     8,    40,     8,    40,   229,    43,
+      14,   240,    46,     8,    18,     8,     8,    33,     8,    23,
+       5,     6,    26,     8,    28,    34,   247,     6,    32,    14,
+      34,     6,     5,    18,    34,     5,    32,    40,    23,    43,
+      41,    26,    46,    28,    33,    42,     8,    32,    36,    34,
+       5,     6,    20,     8,    52,    33,    28,     8,    43,    14,
+      47,    46,    21,    18,    33,     5,    40,    43,    23,     5,
+       6,    26,     8,    54,    37,    31,    33,    32,    14,    34,
+      32,     8,    18,    32,    32,    43,     8,    23,    43,    42,
+      26,    46,    28,     8,   269,     1,    32,   267,    34,    35,
+      33,   120,   124,    -1,    40,    38,    39,    43,    -1,    -1,
+      -1,    -1,    45,    46,    47,    48,    49,    50,    51,    52,
+      53,    54,    55,    56,    57,    38,    39,    98,    -1,    -1,
+      43,    -1,    45,    46,    47,    48,    49,    50,    51,    52,
+      53,    54,    55,    56,    57,    38,    39,    -1,    -1,    42,
       -1,    -1,    45,    46,    47,    48,    49,    50,    51,    52,
       53,    54,    55,    56,    57,    38,    39,    -1,    -1,    -1,
       -1,    -1,    45,    46,    47,    48,    49,    50,    51,    52,
-      -1,    -1,    -1,    56,    57
+      53,    54,    55,    56,    57,    38,    39,    -1,    -1,    -1,
+      -1,    -1,    45,    46,    47,    48,    49,    50,    51,    52,
+      53,    54,    55,    56,    57,    38,    39,    -1,    -1,    -1,
+      -1,    -1,    45,    46,    47,    48,    49,    50,    51,    52,
+      -1,    -1,    -1,    56,    57,    45,    46,    47,    48,    49,
+      50,    51,    52
   };
 
   const unsigned char
@@ -3115,28 +3126,28 @@ namespace  simit { namespace internal  {
       88,    89,    90,    91,    93,    94,    95,    96,    97,   100,
      104,   105,   106,   107,   117,   118,   119,   128,   129,    32,
       41,     8,     8,     8,    75,     8,     8,    88,    90,     8,
-       8,    97,    88,     5,     6,    34,   120,   121,   122,   123,
-     124,   125,   126,   127,    88,    16,    68,    17,    72,    38,
-      39,    43,    45,    46,    47,    48,    49,    50,    51,    52,
-      53,    54,    55,    56,    57,    92,    41,    32,    41,    40,
-      44,    32,    52,    88,    98,    99,     8,    63,    42,    42,
-      43,    19,    32,    79,    27,    32,    54,    33,   122,   126,
-      35,    40,    43,    40,    35,    40,    43,    40,     8,    79,
-       8,    79,    88,    88,    88,    88,    88,    88,    88,    88,
-      88,    88,    88,     8,    98,    99,     8,     8,    90,   105,
-      99,    99,    33,    33,    40,     8,    28,    64,     9,    10,
-      11,   113,   116,     8,    13,    32,   108,   109,   110,   112,
-     113,     8,    80,    85,    86,     5,     8,    47,    88,   115,
-      98,   118,    35,    35,    34,   123,     6,    34,   127,     5,
-      67,    32,    71,    33,    32,    43,    33,    88,    42,    32,
-      34,    44,    52,    36,   109,    20,   101,    28,    24,    25,
-      42,    79,    33,    43,   122,   126,    28,    73,    74,    75,
-      28,    99,   113,   113,   114,   115,   118,   109,    47,     8,
-      21,   102,    88,    79,    88,    28,    35,    35,    33,    40,
-      43,    33,    35,    40,    43,    37,     5,    45,    47,   103,
-      79,    31,    76,    75,    32,   115,    32,    33,    32,   113,
-       8,   111,     8,    77,    78,    33,    33,    40,    42,    33,
-      40,     8,   108,    78
+       8,    88,     5,     6,    34,   120,   121,   122,   123,   124,
+     125,   126,   127,    88,    16,    68,    17,    72,    38,    39,
+      43,    45,    46,    47,    48,    49,    50,    51,    52,    53,
+      54,    55,    56,    57,    92,    41,    32,    41,    40,    44,
+      32,    52,    88,    98,    99,     8,    63,    42,    42,    43,
+      19,    32,    79,    27,    32,    33,   122,   126,    35,    40,
+      43,    40,    35,    40,    43,    40,     8,    79,     8,    79,
+      88,    88,    88,    88,    88,    88,    88,    88,    88,    88,
+      88,     8,    98,    99,     8,     8,    90,   105,    99,    99,
+      33,    33,    40,     8,    28,    64,     9,    10,    11,   113,
+     116,     8,    13,    32,   108,   109,   110,   112,   113,     8,
+      80,    85,    86,     5,     8,    47,    88,   115,    98,    35,
+      35,    34,   123,     6,    34,   127,     5,    28,    32,    28,
+      33,    32,    43,    33,    88,    42,    32,    34,    44,    52,
+      36,   109,    20,   101,    28,    24,    25,    42,    79,    33,
+     122,   126,    67,    73,    74,    75,    71,    99,   113,   113,
+     114,   115,   118,   109,    47,     8,    21,   102,    88,    79,
+      88,    28,    54,    35,    35,    33,    40,    43,    33,    35,
+      40,    43,    37,     5,    45,    47,   103,    79,   118,    31,
+      76,    75,    32,   115,    32,    33,    43,    32,   113,     8,
+     111,     8,    77,    78,    33,    33,    40,    42,    33,    40,
+       8,   108,    78
   };
 
   const unsigned char
@@ -3178,7 +3189,7 @@ namespace  simit { namespace internal  {
        1,     1,     3,     1,     1,     1,     1,     1,     2,     1,
        3,     3,     1,     1,     3,     5,     1,     3,     1,     3,
        1,     1,     3,     5,     1,     3,     1,     3,     1,     1,
-       5
+       8
   };
 
 
@@ -3222,22 +3233,22 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   249,   249,   251,   255,   256,   264,   272,   275,   279,
-     286,   300,   313,   316,   324,   344,   344,   344,   352,   374,
-     374,   374,   382,   406,   409,   415,   420,   428,   437,   440,
-     446,   451,   459,   470,   473,   482,   483,   484,   485,   486,
-     490,   520,   606,   609,   615,   621,   623,   627,   629,   636,
-     643,   644,   645,   646,   647,   648,   649,   650,   656,   677,
-     693,   701,   713,   778,   784,   814,   819,   828,   829,   830,
-     831,   837,   843,   849,   855,   861,   867,   882,   901,   902,
-     903,   914,   948,   954,   964,   967,   973,   979,   990,   998,
-    1000,  1004,  1006,  1009,  1010,  1058,  1063,  1071,  1075,  1078,
-    1084,  1102,  1108,  1126,  1142,  1145,  1148,  1151,  1157,  1164,
-    1168,  1178,  1182,  1189,  1201,  1205,  1208,  1250,  1260,  1265,
-    1273,  1276,  1280,  1286,  1292,  1295,  1364,  1367,  1368,  1372,
-    1375,  1383,  1393,  1400,  1403,  1407,  1420,  1424,  1438,  1442,
-    1448,  1455,  1458,  1462,  1475,  1479,  1493,  1497,  1503,  1508,
-    1518
+       0,   266,   266,   268,   272,   273,   281,   289,   292,   296,
+     303,   312,   325,   328,   336,   346,   346,   346,   360,   380,
+     380,   380,   394,   420,   423,   429,   434,   442,   451,   454,
+     460,   465,   473,   483,   486,   495,   496,   497,   498,   499,
+     503,   530,   614,   617,   623,   629,   631,   635,   637,   644,
+     651,   652,   653,   654,   655,   656,   657,   658,   664,   685,
+     694,   702,   714,   779,   785,   813,   818,   827,   828,   829,
+     830,   836,   842,   848,   854,   860,   866,   877,   896,   897,
+     898,   904,   937,   943,   951,   954,   960,   966,   977,   985,
+     987,   991,   993,   996,   997,  1032,  1037,  1045,  1049,  1052,
+    1058,  1076,  1082,  1100,  1109,  1112,  1115,  1118,  1124,  1131,
+    1135,  1145,  1149,  1156,  1168,  1172,  1175,  1217,  1227,  1232,
+    1240,  1243,  1256,  1262,  1268,  1271,  1321,  1325,  1326,  1330,
+    1334,  1341,  1352,  1359,  1363,  1367,  1381,  1385,  1400,  1404,
+    1411,  1418,  1422,  1426,  1440,  1444,  1459,  1463,  1470,  1474,
+    1483
   };
 
   // Print the state stack on the debug stream.

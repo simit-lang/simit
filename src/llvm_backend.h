@@ -2,7 +2,7 @@
 #define SIMIT_CODEGEN_LLVM_H
 
 #include "backend.h"
-#include "ir_visitors.h"
+#include "ir_visitor.h"
 
 #include <ostream>
 #include <stack>
@@ -23,11 +23,6 @@ class Function;
 }
 
 namespace simit {
-namespace ir {
-class IRNode;
-class Expression;
-}
-
 namespace internal {
 
 template <typename, typename> class ScopedMap;
@@ -49,15 +44,6 @@ private:
                   llvm::IRBuilderDefaultInserter<true> > *builder;
 
   ScopedMap<std::string, llvm::Value*> *symtable;
-  std::stack<llvm::Value*> resultStack;
-
-  std::map<ir::Expression*, llvm::Value*> storageLocations;
-
-  void handle(ir::Function   *f);
-  void handle(ir::IndexExpr  *t);
-
-  llvm::Function *codegen(ir::Function *f,
-                          const std::map<ir::IRNode*, void*> &temps);
 };
 
 }} // namespace simit::internal

@@ -44,12 +44,11 @@ llvm::Constant *llvmPtr(ir::Literal *literal);
 ir::Type simitType(const llvm::Type *type);
 
 /// Creates an empy llvm function.
-llvm::Function *
-createFunction(const std::string &name,
-               const std::vector<std::shared_ptr<ir::Argument>> &arguments,
-               const std::vector<std::shared_ptr<ir::Result>> &results,
-               llvm::GlobalValue::LinkageTypes linkage,
-               llvm::Module *module);
+llvm::Function *createFunction(const std::string &name,
+                               const std::vector<ir::Expr> &args,
+                               const std::vector<ir::Expr> &results,
+                               llvm::GlobalValue::LinkageTypes linkage,
+                               llvm::Module *module);
 
 }} // namespace simit::internal
 

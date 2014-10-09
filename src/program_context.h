@@ -17,33 +17,32 @@ namespace internal {
 
 class RWExprPair {
 public:
-  RWExprPair() : read(NULL), write(NULL) {}
-  RWExprPair(const std::shared_ptr<ir::Expression> &read,
-                          const std::shared_ptr<ir::Expression> &write)
+  RWExprPair() {}
+  RWExprPair(ir::Expr read, ir::Expr write)
       : read(read), write(write) {}
 
-  bool isReadable() const { return read != NULL; }
-  bool isWritable() const { return write != NULL; }
+  bool isReadable() const { return read.defined(); }
+  bool isWritable() const { return write.defined(); }
 
-  const std::shared_ptr<ir::Expression> &getReadExpr() const { return read; }
-  const std::shared_ptr<ir::Expression> &getWriteExpr() const { return write; }
+  ir::Expr getReadExpr() const { return read; }
+  ir::Expr getWriteExpr() const { return write; }
 
 private:
-  std::shared_ptr<ir::Expression> read;
-  std::shared_ptr<ir::Expression> write;
+  ir::Expr read;
+  ir::Expr write;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const RWExprPair &rwExpr) {
   os << "(";
   if (rwExpr.isReadable()) {
-    os << *rwExpr.getReadExpr();
+    os << rwExpr.getReadExpr();
   }
   else {
     os << "none";
   }
   os << ", ";
   if (rwExpr.isWritable()) {
-    os << *rwExpr.getWriteExpr();
+    os << rwExpr.getWriteExpr();
   }
   else {
     os << "none";
@@ -73,14 +72,11 @@ public:
     exprSymtable.unscope();
   }
 
-  void addSymbol(const std::string &name,
-                 const std::shared_ptr<ir::Expression> &readWrite) {
+  void addSymbol(const std::string &name, ir::Expr readWrite) {
     addSymbol(name, readWrite, readWrite);
   }
 
-  void addSymbol(const std::string &name,
-                 const std::shared_ptr<ir::Expression> &read,
-                 const std::shared_ptr<ir::Expression> &write) {
+  void addSymbol(const std::string &name, ir::Expr read, ir::Expr write) {
     exprSymtable.insert(name, RWExprPair(read,write));
   }
 
@@ -121,19 +117,19 @@ public:
     return elementTypes[name];
   }
 
-  void addExtern(const std::shared_ptr<ir::Argument> &externArgument) {
-    externs[externArgument->getName()] = externArgument;
+  void addExtern(ir::Expr externVariable) {
+    externs[toVariable(externVariable)->name] = externVariable;
   }
 
   bool containsExtern(const std::string &name) {
     return externs.find(name) != externs.end();
   }
 
-  std::shared_ptr<ir::Argument> getExtern(const std::string &name) {
+  ir::Expr getExtern(const std::string &name) {
     return externs[name];
   }
 
-  const std::map<std::string, std::shared_ptr<ir::Argument>> &getExterns() {
+  const std::map<std::string,ir::Expr> &getExterns() {
     return externs;
   }
 
@@ -142,13 +138,13 @@ public:
   const std::vector<ir::Test*> &getTests() const { return tests; }
 
 private:
-  std::map<std::string, ir::Function *>                   functions;
-  std::map<std::string, std::shared_ptr<ir::Argument>>    externs;
+  std::map<std::string, ir::Function *> functions;
+  std::map<std::string, ir::Expr>       externs;
 
-  std::map<std::string, ir::Type> elementTypes;
-  ScopedMap<std::string, RWExprPair>                      exprSymtable;
+  std::map<std::string, ir::Type>       elementTypes;
+  ScopedMap<std::string, RWExprPair>    exprSymtable;
 
-  std::vector<ir::Test*>                                  tests;
+  std::vector<ir::Test*>                tests;
 };
 
 }} // namespace simit::internal

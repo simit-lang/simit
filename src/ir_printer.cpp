@@ -14,112 +14,70 @@ std::ostream &operator<<(std::ostream &os, const Function &function) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const Expression &expression) {
+std::ostream &operator<<(std::ostream &os, const Expr &expr) {
   IRPrinter printer(os);
-  printer.print(expression);
+  printer.print(expr);
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const Stmt &Stmt) {
+  IRPrinter printer(os);
+  printer.print(Stmt);
   return os;
 }
 
 
 // class IRPrinter
-IRPrinter::IRPrinter(std::ostream &os, signed indent)
-    : os(os), indentation(0), printingFunctionBody(false), id(1) {
+IRPrinter::IRPrinter(std::ostream &os, signed indent) : os(os), indentation(0) {
 }
 
 void IRPrinter::print(const Function &func) {
   os << "func " << func.getName() << "(";
-  auto argIt = func.getArguments().begin();
-  auto argEnd = func.getArguments().end();
-  if (argIt != argEnd) {
-    handle(argIt->get());
-    ++argIt;
+  if (func.getArguments().size() > 0) {
+    print(func.getArguments()[0]);
   }
-  while (argIt != argEnd) {
-    os << ", ";
-    handle(argIt->get());
-    ++argIt;
+  for (size_t i=1; i < func.getArguments().size(); ++i) {
+    os << ",";
+    print(func.getArguments()[i]);
   }
   os << ")";
 
   if (func.getResults().size() > 0) {
     os << " -> (";
-    auto resIt = func.getResults().begin();
-    auto resEnd = func.getResults().end();
-    if (resIt != resEnd) {
-      handle(resIt->get());
-      ++resIt;
+    if (func.getResults().size() > 0) {
+      print(func.getResults()[0]);
     }
-    while (resIt != resEnd) {
-      os << ", ";
-      handle(resIt->get());
-      ++resIt;
+    for (size_t i=1; i < func.getResults().size(); ++i) {
+      os << ",";
+      print(func.getResults()[i]);
     }
     os << ")";
   }
 
   os << "\n";
   ++indentation;
-  printingFunctionBody = true;
-
-  for (auto &stmt : func.getBody()) {
-    stmt->accept(this);
-  }
-
-  printingFunctionBody = false;
+  print(func.getBody());
   --indentation;
   os << "end";
 }
 
-void IRPrinter::print(const Expression &expression) {
-  expression.accept(this);
+void IRPrinter::print(const Expr &expr) {
+  expr.accept(this);
 }
 
-void IRPrinter::print(const IndexedTensor &indexedTensor) {
-  os << getName(indexedTensor.getTensor());
-
-  if (indexedTensor.getIndexVariables().size() > 0) {
-    os << "(";
-    auto it = indexedTensor.getIndexVariables().begin();
-    auto end = indexedTensor.getIndexVariables().end();
-    if (it != end) {
-      os << (*it)->getName();
-      ++it;
-    }
-    while (it != end) {
-      os << "," << (*it)->getName();
-      ++it;
-    }
-    os << ")";
-  }
+void IRPrinter::print(const Stmt &stmt) {
+  stmt.accept(this);
 }
 
-void IRPrinter::handle(const Argument *op) {
-  if(!printingFunctionBody) {
-    os << op->getName() << " : " << op->getType();
-    names.insert(op->getName());
-  }
-}
-
-void IRPrinter::handle(const Result *op) {
-  handle(static_cast<const Argument*>(op));
-  if(!printingFunctionBody) {
-    for (auto &value : op->getValues()) {
-      nodeToName[value.get()] = op->getName();
-    }
-  }
-}
-
-void IRPrinter::handle(const Literal *op) {
-  indent();
+void IRPrinter::visit(const Literal *op) {
   // TODO: Fix value printing to print matrices and tensors properly
-  os << getName(op) << " = ";
-  switch (op->getType().getKind()) {
+  switch (op->type.getKind()) {
     case Type::Tensor: {
-      const TensorType *ttype = op->getType().toTensor();
+      const TensorType *ttype = op->type.toTensor();
       size_t tsize = ttype->size();
       switch (ttype->componentType.toScalar()->kind) {
         case ScalarType::Int: { {
-          const int *idata = static_cast<const int*>(op->getConstData());
+          const int *idata = static_cast<const int*>(op->data);
           if (tsize == 1) {
             os << idata[0];
           }
@@ -133,7 +91,7 @@ void IRPrinter::handle(const Literal *op) {
           break;
         }
         case ScalarType::Float: {
-          const double *fdata = static_cast<const double*>(op->getConstData());
+          const double *fdata = static_cast<const double*>(op->data);
           if (tsize == 1) {
             os << fdata[0];
           }
@@ -165,145 +123,153 @@ void IRPrinter::handle(const Literal *op) {
   os << "\n";
 }
 
-static std::string opString(IndexExpr::Operator op) {
-  std::string opstr;
-  switch (op) {
-    case IndexExpr::Operator::NONE:
-      return "";
-    case IndexExpr::Operator::NEG:
-      return "-";
-    case IndexExpr::Operator::ADD:
-      return "+";
-    case IndexExpr::Operator::SUB:
-      return "-";
-    case IndexExpr::Operator::MUL:
-      return "*";
-    case IndexExpr::Operator::DIV:
-      return "//";
-    default:
-      UNREACHABLE;
-  }
+void IRPrinter::visit(const Variable *op) {
+  os << op->name;
 }
 
-void IRPrinter::handle(const IndexExpr *op) {
-  indent();
-  os << getName(op);
-  if (op->getIndexVariables().size() != 0) {
-    os << "(" + simit::util::join(op->getIndexVariables(), ",") + ")";
-  }
-  os << " = ";
-
-  std::set<std::shared_ptr<IndexVar>> rvars;
-  for (auto &operand : op->getOperands()) {
-    for (auto &iv : operand.getIndexVariables()) {
-      if (iv->isReductionVar() && rvars.find(iv) == rvars.end()) {
-        rvars.insert(iv);
-        os << *iv << " ";
-      }
-    }
-  }
-
-  unsigned int numOperands = op->getOperands().size();
-  auto opIt = op->getOperands().begin();
-  if (numOperands == 1) {
-    os << opString(op->getOperator());
-    print(*opIt);
-    ++opIt;
-  }
-  else if (numOperands == 2) {
-    print(*opIt);
-    ++opIt;
-    os << " " << opString(op->getOperator()) << " ";
-    print(*opIt);
-    ++opIt;
-  } else {
-    assert(false && "Not supported yet");
-  }
-  os << "\n";
+void IRPrinter::visit(const Result *) {
+  os << "result";
 }
 
-void IRPrinter::handle(const Call *op) {
-  indent();
-  os << "Call";
-  os << "\n";
+void IRPrinter::visit(const FieldRead *op) {
+  print(op->elementOrSet);
+  os << "." << op->fieldName;
 }
 
-void IRPrinter::handle(const FieldRead *op) {
-  indent();
-  os << getName(op) << " = " <<
-        getName(op->getTarget()) << "." << op->getFieldName();
-  os << "\n";
-}
-
-void IRPrinter::handle(const FieldWrite *op) {
-  indent();
-  os << getName(op->getTarget()) << "." << op->getFieldName() << " = " <<
-        getName(op->getValue());
-  os << "\n";
-}
-
-void IRPrinter::handle(const TensorRead *op) {
-  indent();
-  os << getName(op) << " = ";
-  os << getName(op->getTensor()) << "(";
-  auto it = op->getIndices().begin();
-  auto end = op->getIndices().end();
-  if (it != end) {
-    os << getName(*it);
-    ++it;
+void IRPrinter::visit(const TensorRead *op) {
+  print(op->tensor);
+  os << "(";
+  auto indices = op->indices;
+  if (indices.size() > 0) {
+    print(indices[0]);
   }
-  for (; it != end; ++it) {
-    os << "," << getName(*it);
+  for (size_t i=1; i < indices.size(); ++i) {
+    os << ",";
+    print(indices[i]);
   }
   os << ")";
-  os << "\n";
 }
 
-void IRPrinter::handle(const TensorWrite *op) {
+void IRPrinter::visit(const TupleRead *op) {
+  print(op->tuple);
+  os << "(";
+  print(op->index);
+  os << ")";
+}
+
+void IRPrinter::visit(const Map *op) {
+  os << "map " << op->function;
+  os << " to ";
+  print(op->target);
+  os << " with ";
+  print(op->neighbors);
+  os << " reduce " << op->reductionOp;
+}
+
+void IRPrinter::visit(const IndexedTensor *op) {
+  print(op->tensor);
+  if (op->indexVars.size() > 0) {
+    os << "(" << util::join(op->indexVars,",") << ")";
+  }
+}
+
+void IRPrinter::visit(const IndexExpr *op) {
+  if (op->lhsIndexVars.size() != 0) {
+    os << "(" + simit::util::join(op->lhsIndexVars, ",") + ") ";
+  }
+  print(op->expr);
+}
+
+void IRPrinter::visit(const Call *op) {
+  os << "Call";
+}
+
+void IRPrinter::visit(const Neg *op) {
+  os << "-";
+  print(op->a);
+}
+
+void IRPrinter::visit(const Add *op) {
+  os << "(";
+  print(op->a);
+  os << " + ";
+  print(op->a);
+  os << ")";
+}
+
+void IRPrinter::visit(const Sub *op) {
+  os << "(";
+  print(op->a);
+  os << " - ";
+  print(op->a);
+  os << ")";
+}
+
+void IRPrinter::visit(const Mul *op) {
+  os << "(";
+  print(op->a);
+  os << " * ";
+  print(op->a);
+  os << ")";
+}
+
+void IRPrinter::visit(const Div *op) {
+  os << "(";
+  print(op->a);
+  os << " / ";
+  print(op->a);
+  os << ")";
+}
+
+void IRPrinter::visit(const AssignStmt *op) {
+  os << "assign";
+}
+
+void IRPrinter::visit(const FieldWrite *op) {
   indent();
-  os << getName(op) << "(";
-  auto it = op->getIndices().begin();
-  auto end = op->getIndices().end();
-  if (it != end) {
-    os << getName(*it);
-    ++it;
+  print(op->elementOrSet);
+  os << "." << op->fieldName << " = ";
+  print(op->value);
+  os << ";\n";
+}
+
+void IRPrinter::visit(const TensorWrite *op) {
+  indent();
+  print(op->tensor);
+  os << "(";
+  auto indices = op->indices;
+  if (indices.size() > 0) {
+    print(indices[0]);
   }
-  for (; it != end; ++it) {
-    os << "," << getName(*it);
+  for (size_t i=1; i < indices.size(); ++i) {
+    os << ",";
+    print(indices[i]);
   }
-  os << ")" << " = " << getName(op->getValue());
-  os << "\n";
+  os << ") = ";
+  print(op->value);
+  os << ";\n";
+}
+
+void IRPrinter::visit(const For *op) {
+  os << "for";
+}
+
+void IRPrinter::visit(const IfThenElse *op) {
+  os << "ifthenelse";
+}
+
+void IRPrinter::visit(const Block *op) {
+  os << "block";
+}
+
+void IRPrinter::visit(const Pass *op) {
+  os << "pass";
 }
 
 void IRPrinter::indent() {
   for (unsigned i=0; i<indentation; ++i) {
     os << "  ";
   }
-}
-
-std::string IRPrinter::getName(const Expression *expr) {
-  if (nodeToName.find(expr) != nodeToName.end()) {
-    return nodeToName.at(expr);
-  }
-
-  std::string name = expr->getName();
-  if (name == "") {
-    name = "tmp";
-  }
-
-  if (names.find(name) == names.end()) {
-    names.insert(name);
-  }
-  else {
-    name += to_string(id++);
-  }
-
-  nodeToName[expr] = name;
-  return name;
-}
-
-std::string IRPrinter::getName(const std::shared_ptr<Expression> &expr) {
-  return getName(expr.get());
 }
 
 }} //namespace simit::ir

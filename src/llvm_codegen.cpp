@@ -66,8 +66,8 @@ llvm::Constant *llvmPtr(const ir::Type &type, void *data) {
 }
 
 llvm::Constant *llvmPtr(simit::ir::Literal *literal) {
-  assert(literal->getType().isTensor());
-  return llvmPtr(literal->getType(), literal->getData());
+  assert(literal->type.isTensor());
+  return llvmPtr(literal->type, literal->data);
 }
 
 ir::Type simitType(const llvm::Type *type) {
@@ -87,16 +87,15 @@ ir::Type simitType(const llvm::Type *type) {
 }
 
 namespace {
-void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
-                  std::vector<std::string> *names,
+void llvmArgument(ir::Expr arg, std::vector<std::string> *names,
                   std::vector<llvm::Type*> *types) {
-  switch (arg->getType().getKind()) {
+  switch (arg.type().getKind()) {
     case ir::Type::Scalar:
       NOT_SUPPORTED_YET;
       break;
     case ir::Type::Tensor: {
-      names->push_back(arg->getName());
-      types->push_back(llvmType(arg->getType()));
+      names->push_back(toVariable(arg)->name);
+      types->push_back(llvmType(arg.type()));
       break;
     }
     case ir::Type::Element: {
@@ -104,13 +103,13 @@ void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
       break;
     }
     case ir::Type::Set: {
-      names->push_back(arg->getName());
+      names->push_back(toVariable(arg)->name);
       types->push_back(LLVM_INT32);
 
       // Emit one function argument per set field
-      const ir::SetType *type = arg->getType().toSet();
+      const ir::SetType *type = arg.type().toSet();
       for (auto &field : type->elementType.toElement()->fields) {
-        names->push_back(arg->getName() + "." + field.first);
+        names->push_back(toVariable(arg)->name + "." + field.first);
         types->push_back(llvmType(field.second));
       }
       break;
@@ -122,20 +121,20 @@ void llvmArgument(const std::shared_ptr<ir::Argument> &arg,
   }
 }
 
-void llvmArguments(const std::vector<std::shared_ptr<ir::Argument>> &arguments,
-                   const std::vector<std::shared_ptr<ir::Result>> &results,
+void llvmArguments(const std::vector<ir::Expr> &arguments,
+                   const std::vector<ir::Expr> &results,
                    std::vector<std::string> *llvmArgNames,
                    std::vector<llvm::Type*> *llvmArgTypes) {
   // We don't need two llvm arguments for aliased simit argument/results
   std::set<std::string> argNames;
 
   for (auto &arg : arguments) {
-    argNames.insert(arg->getName());
+    argNames.insert(toVariable(arg)->name);
     llvmArgument(arg, llvmArgNames, llvmArgTypes);
   }
 
   for (auto &res : results) {
-    if (argNames.find(res->getName()) != argNames.end()) {
+    if (argNames.find(toVariable(res)->name) != argNames.end()) {
       continue;
     }
     llvmArgument(res, llvmArgNames, llvmArgTypes);
@@ -146,8 +145,8 @@ void llvmArguments(const std::vector<std::shared_ptr<ir::Argument>> &arguments,
 
 
 llvm::Function *createFunction(const std::string &name,
-                               const vector<shared_ptr<ir::Argument>> &args,
-                               const vector<shared_ptr<ir::Result>> &results,
+                               const vector<ir::Expr> &args,
+                               const vector<ir::Expr> &results,
                                llvm::GlobalValue::LinkageTypes linkage,
                                llvm::Module *module) {
   vector<string>      llvmArgNames;

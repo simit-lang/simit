@@ -19,46 +19,36 @@ class IndexVarFactory {
 public:
   IndexVarFactory() : nameID(0) {}
 
-  std::shared_ptr<IndexVar> makeIndexVar(const IndexDomain &domain);
-
-  std::shared_ptr<IndexVar> makeIndexVar(const IndexDomain &domain,
-                                         ReductionOperator rop);
+  IndexVar makeIndexVar(const IndexDomain &domain);
+  IndexVar makeIndexVar(const IndexDomain &domain, ReductionOperator rop);
 
 private:
   int nameID;
   std::string makeName();
 };
 
-IndexExpr *unaryElwiseExpr(IndexExpr::Operator op,
-                           const std::shared_ptr<Expression> &expr);
+enum UnaryOperator { None, Neg };
+enum BinaryOperator { Add, Sub, Mul, Div };
+
+Expr unaryElwiseExpr(UnaryOperator op, Expr e);
 
 /// Apply the operator element-wise to the l and r.  Generally this requires
 /// the types of each operand to be identical, but as a special case iff there
 /// are two operands an one of them is a scalar, then the operator is applied
 /// to the combinatio of that scalar and each element in the other operand.
-IndexExpr *binaryElwiseExpr(const std::shared_ptr<Expression> &l,
-                            IndexExpr::Operator op,
-                            const std::shared_ptr<Expression> &r);
+Expr binaryElwiseExpr(Expr l, BinaryOperator op, Expr r);
 
-IndexExpr *elwiseExpr(IndexExpr::Operator op,
-                      std::vector<std::shared_ptr<Expression>> &operands);
+Expr innerProduct(Expr l, Expr r);
 
-IndexExpr *innerProduct(const std::shared_ptr<Expression> &l,
-                        const std::shared_ptr<Expression> &r);
+Expr outerProduct(Expr l, Expr r);
 
-IndexExpr *outerProduct(const std::shared_ptr<Expression> &l,
-                        const std::shared_ptr<Expression> &r);
+Expr gemv(Expr l, Expr r);
 
-IndexExpr *gemv(const std::shared_ptr<Expression> &l,
-                const std::shared_ptr<Expression> &r);
+Expr gevm(Expr l, Expr r);
 
-IndexExpr *gevm(const std::shared_ptr<Expression> &l,
-                const std::shared_ptr<Expression> &r);
+Expr gemm(Expr l, Expr r);
 
-IndexExpr *gemm(const std::shared_ptr<Expression> &l,
-                const std::shared_ptr<Expression> &r);
-
-IndexExpr *transposeMatrix(const std::shared_ptr<Expression> &mat);
+Expr transposeMatrix(Expr mat);
 
 }} // namespace simit::internal
 #endif

@@ -50,6 +50,8 @@ class Program::ProgramContent {
   }
 
   int verify() {
+    return 0; // TODO newir: Remove
+
     // For each test look up the called function. Grab the actual arguments and
     // run the function with them as input.  Then compare the result to the
     // expected literal.
@@ -71,21 +73,22 @@ class Program::ProgramContent {
       // run the function with test->call->arguments
       assert(test->getActuals().size() == func->getArguments().size());
 
-      auto &formalArguments = func->getArguments();
-      auto &actualArguments = test->getActuals();
-      for (size_t i=0; i < actualArguments.size(); ++i) {
-        compiledFunc->bind(formalArguments[i]->getName(),
-                           actualArguments[i].get());
+      auto formalArgs = func->getArguments();
+      auto actualArgs = test->getActuals();
+      for (size_t i=0; i < actualArgs.size(); ++i) {
+        auto formal = toVariable(formalArgs[i])->name;
+        auto actual = toLiteral(actualArgs[i]);
+        compiledFunc->bind(formal, actual);
       }
 
-      auto &formalResults = func->getResults();
-      std::vector<std::shared_ptr<ir::Literal>> actualResults;
+      auto formalResults = func->getResults();
+      std::vector<ir::Expr> actualResults;
       for (auto &formalResult : formalResults) {
-        auto actualResultPtr = new ir::Literal(formalResult->getType());
-        auto actualResult = std::shared_ptr<ir::Literal>(actualResultPtr);
-        actualResult->clear();
+        ir::Expr actualResult = ir::Literal::make(formalResult.type());
         actualResults.push_back(actualResult);
-        compiledFunc->bind(formalResult->getName(), actualResult.get());
+        auto formal = toVariable(formalResult)->name;
+        auto actual = toLiteral(actualResult);
+        compiledFunc->bind(formal, actual);
       }
 
       compiledFunc->run();
@@ -96,10 +99,11 @@ class Program::ProgramContent {
       auto rit = actualResults.begin();
       auto eit = expectedResults.begin();
       for (; rit != actualResults.end(); ++rit, ++eit) {
-        if (**rit != **eit) {
+        if (*static_cast<ir::Literal*>(rit->expr()) !=
+            *static_cast<ir::Literal*>(eit->expr())) {
           // TODO: Report with line number of test
-          diags.report() << "Test failure (" << util::toString(**rit)
-          << " != " << util::toString(**eit) << ")";
+          diags.report() << "Test failure (" << util::toString(*rit)
+                         << " != " << util::toString(*eit) << ")";
           return 2;
         }
       }
@@ -110,7 +114,7 @@ class Program::ProgramContent {
 
  private:
   internal::Frontend *frontend;
-  internal::LLVMBackend *backend;
+  internal::Backend *backend;
 
   Function *compile(ir::Function *simitFunc) {
     return getBackend()->compile(simitFunc);

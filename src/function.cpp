@@ -13,16 +13,18 @@ namespace simit {
 Function::Function(const simit::ir::Function &simitFunc)
     : funcPtr(NULL), initRequired(true) {
   for (auto &argument : simitFunc.getArguments()) {
-    formals.push_back(argument->getName());
-    actuals[argument->getName()] = Actual(argument->getType());
+    std::string argName = toVariable(argument)->name;
+    formals.push_back(argName);
+    actuals[argName] = Actual(argument.type());
   }
   for (auto &result : simitFunc.getResults()) {
     // Skip results that alias an argument
-    if (actuals.find(result->getName()) != actuals.end()) {
+    std::string name = toVariable(result)->name;
+    if (actuals.find(name) != actuals.end()) {
       continue;
     }
-    formals.push_back(result->getName());
-    actuals[result->getName()] = Actual(result->getType());
+    formals.push_back(name);
+    actuals[name] = Actual(result.type());
   }
 }
 
@@ -34,7 +36,7 @@ void Function::bind(const std::string &argName, Tensor *tensor) {
          "no argument of this name in function");
 
   // Check that the tensor matches the argument type
-  assert(tensor->getType() == actuals[argName].getType() &&
+  assert(tensor->type == actuals[argName].getType() &&
          "tensor type does not match function argument type");
 
   actuals[argName].bind(tensor);

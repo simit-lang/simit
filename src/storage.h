@@ -1,12 +1,17 @@
 #ifndef SIMIT_STORAGE_H
 #define SIMIT_STORAGE_H
 
-#include "ir_visitors.h"
+#include "ir_visitor.h"
 
 #include <cstdlib>
 #include <vector>
 #include <map>
 #include <memory>
+
+namespace simit {
+namespace ir {
+  struct IRNode;
+}}
 
 namespace simit {
 namespace internal {

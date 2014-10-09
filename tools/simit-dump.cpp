@@ -150,6 +150,8 @@ int main(int argc, const char* argv[]) {
     }
   }
 
+  return 0; // TODO newir: remove
+
   if (func != nullptr) {
     if (emitLLVM) {
       if (somethingEmitted) {

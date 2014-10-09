@@ -1,7 +1,7 @@
 #ifndef SIMIT_IR_PRINTER_H
 #define SIMIT_IR_PRINTER_H
 
-#include "ir_visitors.h"
+#include "ir_visitor.h"
 
 #include <ostream>
 #include <map>
@@ -11,11 +11,12 @@
 namespace simit {
 namespace ir {
 
-class Expression;
-class IndexedTensor;
+class Expr;
+class Stmt;
 
 std::ostream &operator<<(std::ostream &os, const Function &);
-std::ostream &operator<<(std::ostream &os, const Expression &);
+std::ostream &operator<<(std::ostream &os, const Expr &);
+std::ostream &operator<<(std::ostream &os, const Stmt &);
 
 class IRPrinter : public IRConstVisitor {
 public:
@@ -23,31 +24,38 @@ public:
   virtual ~IRPrinter() {}
 
   void print(const Function &);
-  void print(const Expression &);
-  void print(const IndexedTensor &);
+  void print(const Expr &);
+  void print(const Stmt &);
 
 private:
-  virtual void handle(const Argument *);
-  virtual void handle(const Result *);
-  virtual void handle(const Literal *);
-  virtual void handle(const IndexExpr *);
-  virtual void handle(const Call *);
-  virtual void handle(const FieldRead *);
-  virtual void handle(const FieldWrite *);
-  virtual void handle(const TensorRead *);
-  virtual void handle(const TensorWrite *);
+  virtual void visit(const Literal *);
+  virtual void visit(const Variable *);
+  virtual void visit(const Result *);
+  virtual void visit(const FieldRead *);
+  virtual void visit(const TupleRead *);
+  virtual void visit(const TensorRead *);
+  virtual void visit(const Map *);
+  virtual void visit(const IndexedTensor *);
+  virtual void visit(const IndexExpr *);
+  virtual void visit(const Call *);
+  virtual void visit(const Neg *);
+  virtual void visit(const Add *);
+  virtual void visit(const Sub *);
+  virtual void visit(const Mul *);
+  virtual void visit(const Div *);
+
+  virtual void visit(const AssignStmt *);
+  virtual void visit(const FieldWrite *);
+  virtual void visit(const TensorWrite *);
+  virtual void visit(const For *);
+  virtual void visit(const IfThenElse *);
+  virtual void visit(const Block *);
+  virtual void visit(const Pass *);
 
   void indent();
-  std::string getName(const Expression *);
-  std::string getName(const std::shared_ptr<Expression> &);
 
   std::ostream &os;
   unsigned indentation;
-  bool printingFunctionBody;
-
-  std::map<const IRNode *,std::string> nodeToName;
-  std::set<std::string> names;
-  signed id;
 };
 
 }} // namespace simit::ir

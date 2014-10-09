@@ -2,11 +2,21 @@
 
 #include "macros.h"
 #include "util.h"
+#include "ir.h"
+#include "ir_printer.h"
 
 namespace simit {
 namespace ir {
 
 // class IndexSet
+IndexSet::IndexSet(const Expr &set) : kind(Set), rangeSize(-1),
+                                      set(new Expr(set)) {}
+
+const Expr &IndexSet::getSet() const {
+  assert(kind==Set);
+  return *set;
+}
+
 bool operator==(const IndexSet &l, const IndexSet &r) {
    if (l.getKind() != r.getKind()) {
     return false;
@@ -15,7 +25,7 @@ bool operator==(const IndexSet &l, const IndexSet &r) {
     case IndexSet::Range:
       return l.getSize() == r.getSize();
     case IndexSet::Set:
-      return l.getSetName() == r.getSetName();
+      return l.getSet() == r.getSet();
     case IndexSet::Dynamic:
       return true;
       break;
@@ -32,7 +42,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
       os << std::to_string(is.getSize());
       break;
     case IndexSet::Set:
-      os << is.getSetName();
+      os << is.getSet();
       break;
     case IndexSet::Dynamic:
       os << "*";
