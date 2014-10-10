@@ -113,6 +113,11 @@ GLfloat invVMat[16] = {1, 0, 0, 0,
 // Projection matrix (set perspective)
 // Set by glutReshapeFunc before drawing occurs
 GLfloat projMat[16];
+// Mouse motion tracking
+int mouseState = 0; // 0 = no click, 1 = left, 2 = right
+int mx, my;
+// Screen size
+int screenWidth, screenHeight;
 
 GLuint createGLProgram(const string& vertexShaderStr,
                        const string& fragmentShaderStr) {
@@ -427,6 +432,8 @@ void handleDraw() {
 }
 
 void handleReshape(int width, int height) {
+  screenWidth = width;
+  screenHeight = height;
   float aspect = width/(float)height;
   float fovy = M_PI/3.0;  // 60deg fov
   float f = 1/tan(fovy/2.0);
@@ -501,6 +508,70 @@ void handleSpecialKeyEvent(int key, int x, int y) {
   }
 }
 
+void handleMouseEvent(int button, int state, int x, int y) {
+  if (state == GLUT_DOWN) {
+    if (button == GLUT_LEFT_BUTTON) {
+      mouseState = 1;
+      mx = x;
+      my = y;
+    }
+    else if (button == GLUT_RIGHT_BUTTON) {
+      mouseState = 2;
+      mx = x;
+      my = y;
+    }
+    else {
+      mouseState = 0;
+    }
+  }
+  else {
+    mouseState = 0;
+  }
+
+  // Special case for mouse wheel scrolling
+  if (state == GLUT_DOWN && button == 3) {  // scroll up
+    GLfloat zoomMat[16];
+    internal::buildZoomMatrix(1/1.1, zoomMat);
+    internal::applyVMat(zoomMat);
+    glutPostRedisplay();
+  } else if (state == GLUT_DOWN && button == 4) {  // scroll down
+    GLfloat zoomMat[16];
+    internal::buildZoomMatrix(1.1, zoomMat);
+    internal::applyVMat(zoomMat);
+    glutPostRedisplay();
+  }
+}
+
+void handleMotionEvent(int x, int y) {
+  const double MOUSE_PAN = 5.0;
+  const double MOUSE_ROT = M_PI;
+
+  int dx = x - mx;
+  int dy = y - my;
+  double scaledDx = dx / (double)screenWidth;
+  double scaledDy = -dy / (double)screenHeight;
+  mx = x;
+  my = y;
+
+  if (mouseState == 0) return;
+  if (mouseState == 1) {  // left-click drag
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(scaledDx*MOUSE_PAN,
+                               scaledDy*MOUSE_PAN, panMat);
+    internal::applyMMat(panMat);
+    glutPostRedisplay();
+  }
+  else if(mouseState == 2) {  // right-click drag
+    GLfloat rlMat[16];
+    GLfloat udMat[16];
+    internal::buildThetaRotMatrix(-scaledDx*MOUSE_ROT, rlMat);
+    internal::buildPhiRotMatrix(-scaledDy*MOUSE_ROT, udMat);
+    internal::applyMMat(rlMat);
+    internal::applyMMat(udMat);
+    glutPostRedisplay();
+  }
+}
+
 } // namespace simit::internal
 
 void initDrawing(int argc, char** argv) {
@@ -513,6 +584,8 @@ void initDrawing(int argc, char** argv) {
   glutReshapeFunc(internal::handleReshape);
   glutSpecialFunc(internal::handleSpecialKeyEvent);
   glutKeyboardFunc(internal::handleKeyboardEvent);
+  glutMouseFunc(internal::handleMouseEvent);
+  glutMotionFunc(internal::handleMotionEvent);
 
   glEnable(GL_DEPTH_TEST);
 
