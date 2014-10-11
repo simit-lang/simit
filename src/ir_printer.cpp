@@ -196,8 +196,7 @@ void IRPrinter::handle(const IndexExpr *op) {
   std::set<std::shared_ptr<IndexVar>> rvars;
   for (auto &operand : op->getOperands()) {
     for (auto &iv : operand.getIndexVariables()) {
-      if (iv->getOperator() != IndexVar::Operator::FREE &&
-          rvars.find(iv) == rvars.end()) {
+      if (iv->isReductionVar() && rvars.find(iv) == rvars.end()) {
         rvars.insert(iv);
         os << *iv << " ";
       }

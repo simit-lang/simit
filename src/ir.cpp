@@ -74,42 +74,9 @@ bool operator!=(const Literal& l, const Literal& r) {
 }
 
 
-// class IndexVar
-std::string IndexVar::operatorString(Operator op) {
-  switch (op) {
-    case IndexVar::FREE:
-      return "free";
-    case IndexVar::SUM:
-      return "sum";
-    case IndexVar::PRODUCT:
-      return "product";
-    default:
-      UNREACHABLE;
-  }
-}
-
-std::string IndexVar::operatorSymbol(Operator op) {
-  switch (op) {
-    case IndexVar::FREE:
-      return "";
-    case IndexVar::SUM:
-      return "+";
-    case IndexVar::PRODUCT:
-      return "*";
-    default:
-      UNREACHABLE;
-  }
-}
-
-std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
-  return os << IndexVar::operatorSymbol(var.getOperator()) << var.getName();
-}
-
-
 // class IndexedTensor
-typedef std::vector<std::shared_ptr<IndexVar>> IndexVariables;
-IndexedTensor::IndexedTensor(const std::shared_ptr<Expression> &tensor,
-                             const IndexVariables &indexVars){
+IndexedTensor::IndexedTensor(const shared_ptr<Expression> &tensor,
+                             vector<shared_ptr<IndexVar>> indexVars){
   assert(tensor->getType().isTensor() && "Only tensors can be indexed.");
   const TensorType *ttype = tensor->getType().toTensor();
   assert(indexVars.size() == ttype->order());
@@ -154,7 +121,7 @@ IndexExpr::IndexExpr(const std::vector<std::shared_ptr<IndexVar>> &indexVars,
 
   // Can't have reduction variables on rhs
   for (auto &idxVar : indexVars) {
-    assert(idxVar->getOperator() == IndexVar::Operator::FREE);
+    assert(idxVar->isFreeVar());
   }
 
   // Operand typechecks
@@ -212,8 +179,7 @@ vector<shared_ptr<IndexVar>> IndexExpr::getDomain() const {
   for (auto &operand : operands) {
     for (auto &iv : operand.getIndexVariables()) {
       if (added.find(iv) == added.end()) {
-        assert(iv->getOperator() != IndexVar::FREE
-               && "freevars not used on lhs");
+        assert(iv->isReductionVar() && "free variable not used on lhs");
         added.insert(iv);
         domain.push_back(iv);
       }

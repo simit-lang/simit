@@ -8,6 +8,7 @@
 #include "interfaces.h"
 #include "types.h"
 #include "ir_visitors.h"
+#include "indexvar.h"
 
 namespace simit {
 namespace ir {
@@ -33,14 +34,11 @@ class Expression : public IRNode {
 public:
   Expression(const Type &type) : Expression("", type) {}
 
-  Expression(const std::string &name, const Type &type)
-      : IRNode(name), type(type) {}
+  Expression(std::string name, Type type) : IRNode(name), type(type) {}
 
   virtual ~Expression() {}
 
   void setType(const Type &type) {
-    // TODO: Check if we need something like the following line
-//    this->type.reset();
     this->type = type;
   }
 
@@ -79,48 +77,10 @@ bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
 
 
-/// An index variable describes iteration over an index set.  There are two
-/// types of index variables, free index variables and reduction index
-/// variables and both types are represented by the IndexVar class.
-///
-/// Free index variables simply describe iteration across an index set and do
-/// not have a reduction operation (op=FREE).
-///
-/// Reduction variables have an associated reduction operation that is
-/// performed for each index in the index set.  Examples are SUM, which not
-/// surprisingly sums over the index variable (\sum_{i} in latex speak) and
-/// product which takes the product over the index variable (\prod_{i}).
-class IndexVar {
-public:
-  enum Operator {FREE, SUM, PRODUCT};
-  static std::string operatorSymbol(Operator op);
-  static std::string operatorString(Operator op);
-
-  IndexVar(const std::string &name) : name(name), op(FREE) {}
-
-  IndexVar(const std::string &name, const IndexDomain &domain, Operator op)
-      : name(name), domain(domain), op(op) {}
-
-  const IndexDomain &getDomain() const { return domain; }
-  Operator getOperator() const { return op; }
-
-  bool isFreeVariable() { return (op != Operator::FREE); }
-  bool isReductionVariable() { return (op != Operator::FREE); }
-
-  std::string getName() const { return name; }
-
-private:
-  std::string name;
-  IndexDomain domain;
-  Operator op;
-};
-std::ostream &operator<<(std::ostream &os, const IndexVar &var);
-
-
 class IndexedTensor {
 public:
   IndexedTensor(const std::shared_ptr<Expression> &tensor,
-                const std::vector<std::shared_ptr<IndexVar>> &indexVariables);
+                std::vector<std::shared_ptr<IndexVar>> indexVariables);
 
   const std::shared_ptr<Expression> &getTensor() const { return tensor; };
   const std::vector<std::shared_ptr<IndexVar>> &getIndexVariables() const {

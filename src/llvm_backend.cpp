@@ -89,15 +89,14 @@ llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexExpr::Operator op,
   }
 }
 
-llvm::Instruction::BinaryOps toLLVMBinaryOp(IndexVar::Operator op,
+llvm::Instruction::BinaryOps toLLVMBinaryOp(const IndexVar &indexVar,
                                             const ScalarType *type) {
-  switch (op) {
-    case IndexVar::Operator::FREE:
-      assert(false && "Free index variables do not have an operator");
-    case IndexVar::Operator::SUM:
+  assert(indexVar.isReductionVar() &&
+         "Free index variables do not have an operator");
+
+  switch (indexVar.getOperator().getKind()) {
+    case ReductionOperator::Sum:
       return toLLVMBinaryOp(IndexExpr::Operator::ADD, type);
-    case IndexVar::Operator::PRODUCT:
-      return toLLVMBinaryOp(IndexExpr::Operator::MUL, type);
     default:
       UNREACHABLE;
   }
@@ -183,7 +182,6 @@ llvm::Value *emitOffset(llvm::Value *ptr, const Type &type,
       for (size_t i=1; i<idxVars.size(); ++i) {
         const std::shared_ptr<IndexVar> &iv = idxVars[i];
         const IndexSet &is = iv->getDomain().getFactors()[currNest];
-
         assert(is.getKind() == IndexSet::Range &&
                "Only range offsets currently supported");
         stride *= is.getSize();
@@ -307,9 +305,9 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
 
   llvm::PHINode *reductionVal = NULL;
   llvm::Value *reductionValNext = NULL;
-  if (iv->isReductionVariable()) {
+  if (iv->isReductionVar()) {
     // Emit value to hold the result of the reduction
-    std::string ropStr = IndexVar::operatorString(iv->getOperator());
+    std::string ropStr = iv->getOperator().getName();
     std::string name = resultName + "_" + ropStr;
     llvm::Type *type = llvmType(resultCType);
     reductionVal = builder->CreatePHI(type, 1, name);
@@ -352,12 +350,12 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
                            indexExpr->getIndexVariables(),
                            indexMap, currNest, builder);
 
-    if (!iv->isReductionVariable()) {
+    if (!iv->isReductionVar()) {
       builder->CreateAlignedStore(resultVal, resultPtr, 8);
     }
     else {
-      auto binOp = toLLVMBinaryOp(iv->getOperator(), resultCType);
-      std::string ropStr = IndexVar::operatorString(iv->getOperator());
+      auto binOp = toLLVMBinaryOp(*iv, resultCType);
+      std::string ropStr = iv->getOperator().getName();
       std::string name = resultName + "_" + ropStr + "_nxt";
       reductionValNext = builder->CreateBinOp(binOp, reductionVal, resultVal,
                                               name);
@@ -366,7 +364,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
 
   // Loop Footer
   llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
-  if (iv->isReductionVariable()) {
+  if (iv->isReductionVar()) {
     assert(reductionVal && reductionValNext);
     reductionVal->addIncoming(reductionValNext, loopBodyEnd);
   }
@@ -381,7 +379,7 @@ llvm::Value *emitIndexExpr(const IndexExpr *indexExpr,
   builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopEnd);
 
-  if (iv->isReductionVariable()) {
+  if (iv->isReductionVar()) {
     assert(reductionValNext && resultPtr);
     builder->CreateAlignedStore(reductionValNext, resultPtr, 8);
   }

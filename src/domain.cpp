@@ -58,10 +58,8 @@ bool operator==(const IndexDomain &l, const IndexDomain &r) {
   if (l.getFactors().size() != r.getFactors().size()) {
     return false;
   }
-  auto li = l.getFactors().begin();
-  auto ri = r.getFactors().begin();
-  for (; li != l.getFactors().end(); ++li, ++ri) {
-    if (*li != *ri) {
+  for (size_t i=0; i < l.getFactors().size(); ++i) {
+    if (l.getFactors()[i] != r.getFactors()[i]) {
       return false;
     }
   }

@@ -11,16 +11,14 @@ namespace simit {
 namespace ir {
 
 // class IndexVarFactory
-std::shared_ptr<IndexVar>
-IndexVarFactory::makeFreeVar(const IndexDomain &indexSet) {
-  auto freeIndexVar = new IndexVar(makeName(), indexSet, IndexVar::FREE);
+shared_ptr<IndexVar> IndexVarFactory::makeIndexVar(const IndexDomain &domain) {
+  auto freeIndexVar = new IndexVar(makeName(), domain);
   return std::shared_ptr<IndexVar>(freeIndexVar);
 }
 
-std::shared_ptr<IndexVar>
-IndexVarFactory::makeReductionVar(const IndexDomain &indexSet,
-                                  IndexVar::Operator op) {
-  auto reductionIndexVar = new IndexVar(makeName(), indexSet, op);
+shared_ptr<IndexVar> IndexVarFactory::makeIndexVar(const IndexDomain &domain,
+                                                   ReductionOperator rop) {
+  auto reductionIndexVar = new IndexVar(makeName(), domain, rop);
   return std::shared_ptr<IndexVar>(reductionIndexVar);
 }
 
@@ -80,12 +78,12 @@ IndexExpr *binaryElwiseExpr(const std::shared_ptr<Expression> &l,
 
     std::vector<std::shared_ptr<IndexVar>> scalarIndexVars;
 
-    IndexVarFactory indexVarFactory;
+    IndexVarFactory factory;
     std::vector<std::shared_ptr<IndexVar>> tensorIndexVars;
     const TensorType *tensorType = tensor->getType().toTensor();
     for (unsigned int i=0; i < tensorType->order(); ++i) {
-      IndexDomain indexSet = tensorType->dimensions[i];
-      tensorIndexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
+      IndexDomain domain = tensorType->dimensions[i];
+      tensorIndexVars.push_back(factory.makeIndexVar(domain));
     }
 
     std::vector<IndexedTensor> indexedOperands;
@@ -105,12 +103,12 @@ IndexExpr *elwiseExpr(IndexExpr::Operator op,
                       std::vector<std::shared_ptr<Expression>> &operands) {
   assert((size_t)IndexExpr::numOperands(op) == operands.size());
 
-  IndexVarFactory indexVarFactory;
+  IndexVarFactory factory;
   std::vector<std::shared_ptr<IndexVar>> indexVars;
   const TensorType *ttype = operands[0]->getType().toTensor();
   for (unsigned int i=0; i < ttype->order(); ++i) {
-    IndexDomain indexSet = ttype->dimensions[i];
-    indexVars.push_back(indexVarFactory.makeFreeVar(indexSet));
+    IndexDomain domain = ttype->dimensions[i];
+    indexVars.push_back(factory.makeIndexVar(domain));
   }
 
   std::vector<IndexedTensor> indexedOperands;
@@ -125,9 +123,8 @@ IndexExpr *innerProduct(const std::shared_ptr<Expression> &l,
   assert(l->getType() == r->getType());
   const TensorType *ltype = l->getType().toTensor();
 
-  IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeReductionVar(ltype->dimensions[0],
-                                            IndexVar::Operator::SUM);
+  IndexVarFactory factory;
+  auto i = factory.makeIndexVar(ltype->dimensions[0], ReductionOperator::Sum);
 
   std::vector<IndexedTensor> operands;
   operands.push_back(IndexedTensor(l, indexVars(i)));
@@ -142,9 +139,9 @@ IndexExpr *outerProduct(const std::shared_ptr<Expression> &l,
   assert(l->getType() == r->getType());
   const TensorType *ltype = l->getType().toTensor();
 
-  IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeFreeVar(ltype->dimensions[0]);
-  auto j = indexVarFactory.makeFreeVar(ltype->dimensions[0]);
+  IndexVarFactory factory;
+  auto i = factory.makeIndexVar(ltype->dimensions[0]);
+  auto j = factory.makeIndexVar(ltype->dimensions[0]);
 
   std::vector<IndexedTensor> operands;
   operands.push_back(IndexedTensor(l, indexVars(i)));
@@ -161,10 +158,9 @@ IndexExpr *gemv(const std::shared_ptr<Expression> &l,
   assert(ltype->order() == 2 && rtype->order() == 1);
   assert(ltype->dimensions[1] == rtype->dimensions[0]);
 
-  IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeFreeVar(ltype->dimensions[0]);
-  auto j = indexVarFactory.makeReductionVar(ltype->dimensions[1],
-                                            IndexVar::Operator::SUM);
+  IndexVarFactory factory;
+  auto i = factory.makeIndexVar(ltype->dimensions[0]);
+  auto j = factory.makeIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
 
   std::vector<IndexedTensor> operands;
   operands.push_back(IndexedTensor(l, indexVars(i, j)));
@@ -181,10 +177,9 @@ IndexExpr *gevm(const std::shared_ptr<Expression> &l,
   assert(ltype->order() == 1 && rtype->order() == 2);
   assert(ltype->dimensions[0] == rtype->dimensions[0]);
 
-  IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeFreeVar(rtype->dimensions[1]);
-  auto j = indexVarFactory.makeReductionVar(rtype->dimensions[0],
-                                            IndexVar::Operator::SUM);
+  IndexVarFactory factory;
+  auto i = factory.makeIndexVar(rtype->dimensions[1]);
+  auto j = factory.makeIndexVar(rtype->dimensions[0], ReductionOperator::Sum);
 
   std::vector<IndexedTensor> operands;
   operands.push_back(IndexedTensor(l, indexVars(j)));
@@ -201,11 +196,10 @@ IndexExpr *gemm(const std::shared_ptr<Expression> &l,
   assert(ltype->order() == 2 && rtype->order() == 2);
   assert(ltype->dimensions[1] == rtype->dimensions[0]);
 
-  IndexVarFactory indexVarFactory;
-  auto i = indexVarFactory.makeFreeVar(ltype->dimensions[0]);
-  auto j = indexVarFactory.makeFreeVar(rtype->dimensions[1]);
-  auto k = indexVarFactory.makeReductionVar(ltype->dimensions[1],
-                                            IndexVar::Operator::SUM);
+  IndexVarFactory factory;
+  auto i = factory.makeIndexVar(ltype->dimensions[0]);
+  auto j = factory.makeIndexVar(rtype->dimensions[1]);
+  auto k = factory.makeIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
 
   std::vector<IndexedTensor> operands;
   operands.push_back(IndexedTensor(l, indexVars(i,k)));
@@ -220,10 +214,10 @@ IndexExpr *transposeMatrix(const std::shared_ptr<Expression> &mat) {
   assert(mattype->order() == 2);
   const std::vector<IndexDomain> &dims = mattype->dimensions;
 
-  IndexVarFactory indexVarFactory;
+  IndexVarFactory factory;
   std::vector<std::shared_ptr<IndexVar>> indexVars;
-  indexVars.push_back(indexVarFactory.makeFreeVar(dims[1]));
-  indexVars.push_back(indexVarFactory.makeFreeVar(dims[0]));
+  indexVars.push_back(factory.makeIndexVar(dims[1]));
+  indexVars.push_back(factory.makeIndexVar(dims[0]));
 
   std::vector<std::shared_ptr<IndexVar>> operandIndexVars(indexVars.rbegin(),
                                                        indexVars.rend());

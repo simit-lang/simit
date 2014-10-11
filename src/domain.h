@@ -19,10 +19,10 @@ public:
   enum Kind {Range, Set, Dynamic};
 
   /// Create an index set consisting of the items in the given range.
-  IndexSet(signed rangeSize) : kind(Range), rangeSize(rangeSize) {}
+  IndexSet(signed rangeSize) : kind(Range), rangeSize(rangeSize), setName("") {}
 
   /// Create an index set over the given set.
-  IndexSet(const std::string &setName): kind(Set), setName(setName) {}
+  IndexSet(std::string setName) : kind(Set), rangeSize(-1), setName(setName) {}
 
   /// Create a variable-size index set.
   IndexSet() : kind(Dynamic) {}
@@ -37,7 +37,7 @@ public:
   }
 
   /// Returns the name of the indexset set if kind is Set, otherwise undefined
-  const std::string &getSetName() const {
+  std::string getSetName() const {
     assert(kind==Set);
     return setName;
   }
@@ -58,11 +58,11 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is);
 class IndexDomain {
 public:
   explicit IndexDomain() {}
-  explicit IndexDomain(const IndexSet &is) { indexSets.push_back(is); }
-  explicit IndexDomain(const std::vector<IndexSet> &iss) : indexSets(iss) {};
+  explicit IndexDomain(IndexSet is) { indexSets.push_back(is); }
+  explicit IndexDomain(std::vector<IndexSet> iss) : indexSets(iss) {};
 
   /// Get the index sets that are multiplied to get the index set product.
-  const std::vector<IndexSet> &getFactors() const {return indexSets; }
+  const std::vector<IndexSet> getFactors() const {return indexSets; }
 
   /// Get the number of elements in the product of the index sets if all the
   /// index sets are Range sets, otherwise undefined.

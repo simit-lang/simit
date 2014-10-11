@@ -19,9 +19,11 @@ class IndexVarFactory {
 public:
   IndexVarFactory() : nameID(0) {}
 
-  std::shared_ptr<IndexVar> makeFreeVar(const IndexDomain &indexSet);
-  std::shared_ptr<IndexVar> makeReductionVar(const IndexDomain &indexSet,
-                                             IndexVar::Operator op);
+  std::shared_ptr<IndexVar> makeIndexVar(const IndexDomain &domain);
+
+  std::shared_ptr<IndexVar> makeIndexVar(const IndexDomain &domain,
+                                         ReductionOperator rop);
+
 private:
   int nameID;
   std::string makeName();

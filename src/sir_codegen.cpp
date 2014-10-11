@@ -109,7 +109,7 @@ static Stmt emitStore(const Expression *tensor, const Domain &indexVariables,
 }
 
 static Stmt emitIndexComputation(const IndexExpr *indexExpr,
-                                 IndexVar::Operator reductionOperator,
+                                 const std::shared_ptr<IndexVar> &indexVar,
                                  SymbolTable *symtable, IndexMap &indexMap) {
   Expr val;
   switch (indexExpr->getOperator()) {
@@ -150,20 +150,15 @@ static Stmt emitIndexComputation(const IndexExpr *indexExpr,
   }
   assert(val.defined());
 
-  switch (reductionOperator) {
-    case IndexVar::FREE:  // Do nothing
-      break;
-    case IndexVar::SUM: {
-      Expr oldVal = emitLoad(indexExpr, indexExpr->getIndexVariables(),
-                             symtable, indexMap);
-      val = Add::make(oldVal, val);
-      break;
+  if (indexVar) {
+    switch (indexVar->getOperator().getKind()) {
+      case ReductionOperator::Sum: {
+        Expr oldVal = emitLoad(indexExpr, indexExpr->getIndexVariables(),
+                               symtable, indexMap);
+        val = Add::make(oldVal, val);
+        break;
+      }
     }
-    case IndexVar::PRODUCT:
-      Expr oldVal = emitLoad(indexExpr, indexExpr->getIndexVariables(),
-                             symtable, indexMap);
-      val = Mul::make(oldVal, val);
-    break;
   }
 
   return emitStore(indexExpr, indexExpr->getIndexVariables(), val,
@@ -184,7 +179,7 @@ static Stmt emitIndexExpr(const IndexExpr *indexExpr,
   Stmt body = (currentIndexVar < domain.size()-1)
               ? emitIndexExpr(indexExpr, symtable, indexMap,
                               currentIndexVar+1, currentNesting)
-              : emitIndexComputation(indexExpr, indexVar->getOperator(),
+              : emitIndexComputation(indexExpr, indexVar,
                                      symtable, indexMap);
 
   return Foreach::make(indexVar->getName(), loopDomain, body);
@@ -214,7 +209,8 @@ void SetIRCodeGen::handle(ir::IndexExpr *t) {
   IndexMap indexMap;
   Stmt indexExprStmt;
   if (t->getDomain().size() == 0) {
-    indexExprStmt = emitIndexComputation(t, IndexVar::FREE, symtable, indexMap);
+    indexExprStmt = emitIndexComputation(t, shared_ptr<IndexVar>(nullptr),
+                                         symtable, indexMap);
   }
   else {
     indexExprStmt = emitIndexExpr(t, symtable, indexMap);
