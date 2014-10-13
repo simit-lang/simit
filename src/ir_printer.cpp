@@ -228,7 +228,10 @@ void IRPrinter::visit(const Div *op) {
 }
 
 void IRPrinter::visit(const AssignStmt *op) {
-  os << "assign";
+  indent();
+  os << util::join(op->lhs) << " = ";
+  print(op->rhs);
+  os << ";\n";
 }
 
 void IRPrinter::visit(const FieldWrite *op) {

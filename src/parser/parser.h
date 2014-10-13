@@ -57,34 +57,6 @@
   #include "ir_codegen.h"
 
 
-  struct WriteInfo {
-    enum Kind { Variable, Field, Tensor };
-    Kind kind;
-    union {
-      std::string     *variableName;
-      simit::ir::Expr *write;
-    };
-
-    WriteInfo(const std::string &variableName) : kind(Variable) {
-      this->variableName = new std::string(variableName);
-    }
-    WriteInfo(simit::ir::Expr *write, Kind kind)
-        : kind(kind), write(write) {}
-
-    ~WriteInfo() {
-      switch (kind) {
-        case Variable:
-          delete variableName;
-          break;
-        case Field:  // fall-through
-        case Tensor:
-          delete write;
-          break;
-      }
-    }
-  };
-
-
   namespace {
     template <typename T>
     class TensorValues {
@@ -223,18 +195,15 @@ namespace  simit { namespace internal  {
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
+  ir::Stmt              *stmt;
+  std::vector<ir::Stmt> *stmts;
   ir::Expr              *expr;
   std::vector<ir::Expr> *exprs;
-
   ir::BinaryOperator     binop;
   TensorValues<double>  *TensorDoubleValues;
   TensorValues<int>     *TensorIntValues;
 
-  ir::Stmt              *stmt;
-  std::vector<ir::Stmt> *stmts;
-
-  WriteInfo                               *writeinfo;
-  std::vector<std::unique_ptr<WriteInfo>> *writeinfos;
+  std::vector<std::string> *strings;
 
   ir::Test *test;
 
@@ -604,7 +573,7 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 452,     ///< Last index in yytable_.
+      yylast_ = 454,     ///< Last index in yytable_.
       yynnts_ = 72,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.

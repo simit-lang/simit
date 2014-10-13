@@ -344,31 +344,31 @@ struct AssignStmt : public StmtNode<AssignStmt> {
   }
 };
 
-struct FieldWrite : public ExprNode<FieldWrite> {
+struct FieldWrite : public StmtNode<FieldWrite> {
   Expr elementOrSet;
   std::string fieldName;
   Expr value;
 
-  static Expr make(Expr elementOrSet, std::string fieldName, Expr value) {
+  static Stmt make(Expr elementOrSet, std::string fieldName, Expr value) {
     FieldWrite *node = new FieldWrite;
     node->elementOrSet = elementOrSet;
     node->fieldName = fieldName;
     node->value = value;
-    return Expr(node);
+    return Stmt(node);
   }
 };
 
-struct TensorWrite : public ExprNode<TensorWrite> {
+struct TensorWrite : public StmtNode<TensorWrite> {
   Expr tensor;
   std::vector<Expr> indices;
   Expr value;
 
-  static Expr make(Expr tensor, std::vector<Expr> indices, Expr value) {
+  static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value) {
     TensorWrite *node = new TensorWrite;
     node->tensor = tensor;
     node->indices = indices;
     node->value = value;
-    return Expr(node);
+    return Stmt(node);
   }
 };
 
@@ -429,12 +429,12 @@ public:
            const std::vector<Expr> &results)
       : name(name), arguments(arguments), results(results) {}
 
-  void setBody(Expr body) {this->body = body;}
+  void setBody(Stmt body) {this->body = body;}
 
   std::string getName() const {return name;}
   const std::vector<Expr> &getArguments() const {return arguments;}
   const std::vector<Expr> &getResults() const {return results;}
-  Expr getBody() const {return body;}
+  Stmt getBody() const {return body;}
 
   void accept(IRVisitor *visitor) { visitor->visit(this); };
   void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
@@ -443,7 +443,7 @@ private:
   std::string name;
   std::vector<Expr> arguments;
   std::vector<Expr> results;
-  Expr body;
+  Stmt body;
 };
 
 

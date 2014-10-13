@@ -164,18 +164,15 @@
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
+  ir::Stmt              *stmt;
+  std::vector<ir::Stmt> *stmts;
   ir::Expr              *expr;
   std::vector<ir::Expr> *exprs;
-
   ir::BinaryOperator     binop;
   TensorValues<double>  *TensorDoubleValues;
   TensorValues<int>     *TensorIntValues;
 
-  ir::Stmt              *stmt;
-  std::vector<ir::Stmt> *stmts;
-
-  WriteInfo                               *writeinfo;
-  std::vector<std::unique_ptr<WriteInfo>> *writeinfos;
+  std::vector<std::string> *strings;
 
   ir::Test *test;
 }
@@ -344,15 +341,9 @@ field_decl
 %type <function> procedure;
 procedure
   : {ctx->scope();} procedure_header stmt_block BLOCKEND {ctx->unscope();} {
-    vector<Expr> body = convertAndDelete($stmt_block);
+    Stmt body = convertAndDelete($stmt_block);
     $$ = $procedure_header;
-
-    if (body.size() > 0) {
-      $$->setBody(body[0]);
-    }
-    else {
-      $$->setBody(Literal::make(TensorType::make(Int(32))));
-    }
+    $$->setBody(body);
   }
 
 %type <function> procedure_header;
@@ -378,15 +369,9 @@ procedure_header
 %type <function> function;
 function
   : {ctx->scope();} function_header stmt_block BLOCKEND {ctx->unscope();} {
-    vector<Expr> body = convertAndDelete($stmt_block);
+    Stmt body = convertAndDelete($stmt_block);
     $$ = $function_header;
-
-    if (body.size() > 0) {
-      $$->setBody(body[0]);
-    }
-    else {
-      $$->setBody(Literal::make(TensorType::make(Int(32))));
-    }
+    $$->setBody(body);
   }
 
 %type <function> function_header;
@@ -478,27 +463,156 @@ result_decl
 
 
 // Statements
-%type <exprs> stmt_block;
+%type <stmt> stmt_block;
 stmt_block
   : /* empty */ {
-    $$ = new vector<Expr>();
+    $$ = new Stmt(Pass::make());
   }
-  | stmt_block stmt {
-    $$ = $1;
-    if ($stmt == NULL) break;  // TODO: Remove check
-    $$->push_back(*$stmt);
-    delete $stmt;
+  | stmts {
+    vector<Stmt> stmts = convertAndDelete($stmts);
+    if (stmts.size() == 0) {$$ = new Stmt(Pass::make()); break;} // TODO: remove
+    $$ = new Stmt((stmts.size() == 1) ? stmts[0] : Block::make(stmts));
   }
 
-%type <expr> stmt;
+%type <stmts> stmts;
+stmts
+  : stmt {
+    $$ = new vector<Stmt>();
+    if ($stmt == NULL) break;  // TODO: Remove check
+    Stmt stmt = convertAndDelete($stmt);
+    $$->push_back(stmt);
+  }
+  | stmts stmt {
+    $$ = $1;
+    if ($stmt == NULL) break;  // TODO: Remove check
+    Stmt stmt = convertAndDelete($stmt);
+    $$->push_back(stmt);
+  }
+
+%type <stmt> stmt;
 stmt
-  : const_stmt
-  | assign_stmt
+  : assign_stmt
+  | field_write_stmt
+  | tensor_write_stmt
   | expr_stmt
   | if_stmt
   | for_stmt
+  | const_stmt
 
-%type <expr> const_stmt;
+%type <stmt> assign_stmt;
+assign_stmt
+  : value_name_list "=" expr ";" {
+    $$ = NULL;  // TODO: Remove this
+
+    vector<string> valueNames = convertAndDelete($value_name_list);
+    if ($expr == nullptr) { break; } // TODO: Remove check
+    Expr value = convertAndDelete($expr);
+
+    // TODO: Check valueNames.size() matches number of values produced by expr
+
+    $$ = new Stmt(AssignStmt::make(valueNames, value));
+  }
+
+%type <strings> value_name_list;
+value_name_list
+  : IDENT {
+    string valueName = convertAndFree($IDENT);
+    $$ = new vector<string>;
+    $$->push_back(valueName);
+  }
+  | value_name_list "," IDENT {
+    string valueName = convertAndFree($IDENT);
+    $$ = $1;
+    $$->push_back(valueName);
+  }
+
+%type <stmt> field_write_stmt;
+field_write_stmt
+  : IDENT "." IDENT "=" expr ";" {
+    string setName = convertAndFree($1);
+    string fieldName = convertAndFree($3);
+    if ($expr == nullptr) { $$ = nullptr; break; } // TODO: remove check
+    Expr value = convertAndDelete($expr);
+
+    if (!ctx->hasSymbol(setName)) {
+      REPORT_ERROR(setName + " is not defined in scope", @1);
+    }
+
+    const RWExprPair &setExprPair = ctx->getSymbol(setName);
+    if (!setExprPair.isWritable()) {
+      REPORT_ERROR(setName + " is not writable", @1);
+    }
+
+    auto setExpr = setExprPair.getWriteExpr();
+    $$ = new Stmt(FieldWrite::make(setExpr, fieldName, value));
+  }
+
+%type <stmt> tensor_write_stmt;
+tensor_write_stmt
+  : IDENT "(" expr_list ")" "=" expr ";" {
+    std::string tensorName = convertAndFree($1);
+    auto indices = unique_ptr<vector<Expr>>($expr_list);
+    if ($expr == nullptr) { $$ = nullptr; break; } // TODO: remove check
+    Expr value = convertAndDelete($expr);
+
+    if(!ctx->hasSymbol(tensorName)) { $$=NULL; break; } // TODO: Remove check
+
+    if (!ctx->hasSymbol(tensorName)) {
+      REPORT_ERROR(tensorName + " is not defined in scope", @1);
+    }
+
+    const RWExprPair &tensorExprPair = ctx->getSymbol(tensorName);
+    if (!tensorExprPair.isWritable()) {
+      REPORT_ERROR(tensorName + " is not writable", @1);
+    }
+
+    auto tensorExpr = tensorExprPair.getWriteExpr();
+    $$ = new Stmt(TensorWrite::make(tensorExpr, *indices, value));
+  }
+  | field_read_expr "(" expr_list ")" {
+    // TODO
+    $$ = NULL;
+  }
+
+
+
+%type <stmt> expr_stmt;
+expr_stmt
+  : expr ";" {
+    $$ = NULL;
+  }
+  | ";" {
+    $$ = NULL;
+  }
+
+%type <stmt> if_stmt;
+if_stmt
+  : "if" expr stmt_block else_clauses BLOCKEND {
+    $$ = NULL;
+    delete $2;
+    delete $3;
+  }
+
+else_clauses
+  : /* empty */
+  | elif_clauses "else" stmt_block {
+    delete $3;
+  }
+
+elif_clauses
+  : /* empty */
+  | elif_clauses "elif" expr stmt_block {
+    delete $3;
+    delete $4;
+  }
+
+%type <stmt> for_stmt;
+for_stmt
+  : "for" IDENT "in" index_set stmt_block BLOCKEND {
+    $$ = NULL;
+  }
+
+%type <stmt> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     std::string name = convertAndFree($IDENT);
@@ -522,127 +636,8 @@ const_stmt
     CHECK_TYPE_EQUALITY(type, literal.type(), @2);
 
     ctx->addSymbol(name, literal);
-    $$ = new Expr(literal);
-  }
 
-%type <expr> assign_stmt;
-assign_stmt
-  : write_expr_list "=" expr_list ";" {
-    $$ = NULL;  // TODO: Remove this
-
-    auto lhsList = unique_ptr<vector<unique_ptr<WriteInfo>>>($write_expr_list);
-    auto rhsList = unique_ptr<vector<Expr>>($expr_list);
-
-    if (lhsList->size() > rhsList->size()) {
-      // TODO: Handle maps and then reintroduce this error
-      // REPORT_ERROR("too few expressions assigned to too many variables", @2);
-      break;
-    }
-    else if (lhsList->size() < rhsList->size()) {
-      REPORT_ERROR("too many expressions assigned to too few variables", @2);
-    }
-
-    auto lhsIter = lhsList->begin();
-    auto rhsIter = rhsList->begin();
-    for (; lhsIter != lhsList->end(); ++lhsIter, ++rhsIter) {
-      const unique_ptr<WriteInfo>  &lhs = *lhsIter;
-      Expr rhs = *rhsIter;
-
-      if (!rhs.defined()) continue;  // TODO: Remove check
-
-      switch (lhs->kind) {
-        case WriteInfo::Variable: {
-          std::string variableName = *lhs->variableName;
-
-          // TODO: Remove check
-          if (!ctx->hasSymbol(variableName)) continue;
-
-          assert(ctx->hasSymbol(variableName));
-
-          const RWExprPair &varExprPair = ctx->getSymbol(variableName);
-          assert(varExprPair.isWritable());
-
-          Expr lhsTensor = varExprPair.getWriteExpr();
-          auto result = dynamic_cast<Variable*>(lhsTensor.expr());
-          if (result) {
-            CHECK_TYPE_EQUALITY(result->type, rhs.type(), @2);
-            $$ = new Expr(rhs);
-          }
-          else {
-            NOT_SUPPORTED_YET;
-          }
-          break;
-        }
-        case WriteInfo::Field: {
-          Expr write(*lhs->write);
-          auto fieldWrite = static_cast<FieldWrite*>(write.expr());
-
-          fieldWrite->value = rhs;
-
-          auto result = dynamic_cast<Variable*>(fieldWrite->elementOrSet.expr());
-          if (result) {
-            $$ = new Expr(write);
-          }
-          else {
-            NOT_SUPPORTED_YET;
-          }
-
-          break;
-        }
-        case WriteInfo::Tensor: {
-          Expr write(*lhs->write);
-          auto tensorWrite = static_cast<TensorWrite*>(write.expr());
-
-          tensorWrite->value = rhs;
-
-          auto result = dynamic_cast<Variable*>(tensorWrite->tensor.expr());
-          if (result){
-            $$ = new Expr(write);
-          }
-          else {
-            NOT_SUPPORTED_YET;
-          }
-
-          break;
-        }
-      }
-    }
-  }
-
-%type <expr> expr_stmt;
-expr_stmt
-  : expr ";" {
-    $$ = NULL;
-  }
-  | ";" {
-    $$ = NULL;
-  }
-
-%type <expr> if_stmt;
-if_stmt
-  : "if" expr stmt_block else_clauses BLOCKEND {
-    $$ = NULL;
-    delete $2;
-    delete $3;
-  }
-
-else_clauses
-  : /* empty */
-  | elif_clauses "else" stmt_block {
-    delete $3;
-  }
-
-elif_clauses
-  : /* empty */
-  | elif_clauses "elif" expr stmt_block {
-    delete $3;
-    delete $4;
-  }
-
-%type <expr> for_stmt;
-for_stmt
-  : "for" IDENT "in" index_set stmt_block BLOCKEND {
-    $$ = NULL;
+    $$ = nullptr; // TODO: return an assignstmt
   }
 
 // Expressions
@@ -995,112 +990,6 @@ reduce
 reduction_op
   : "+"
   | "*"
-
-
-// Write Expressions
-%code requires {
-  struct WriteInfo {
-    enum Kind { Variable, Field, Tensor };
-    Kind kind;
-    union {
-      std::string     *variableName;
-      simit::ir::Expr *write;
-    };
-
-    WriteInfo(const std::string &variableName) : kind(Variable) {
-      this->variableName = new std::string(variableName);
-    }
-    WriteInfo(simit::ir::Expr *write, Kind kind)
-        : kind(kind), write(write) {}
-
-    ~WriteInfo() {
-      switch (kind) {
-        case Variable:
-          delete variableName;
-          break;
-        case Field:  // fall-through
-        case Tensor:
-          delete write;
-          break;
-      }
-    }
-  };
-};
-
-%type<writeinfos> write_expr_list;
-write_expr_list
-  : write_expr {
-    $$ = new vector<unique_ptr<WriteInfo>>;
-    if ($write_expr == NULL) break;  // TODO: Remove check
-    $$->push_back(unique_ptr<WriteInfo>($write_expr));
-  }
-  | write_expr_list "," write_expr {
-    $$ = $1;
-    if ($write_expr == NULL) break;  // TODO: Remove check
-    $$->push_back(unique_ptr<WriteInfo>($write_expr));
-  }
-
-%type <writeinfo> write_expr;
-write_expr
-  : IDENT {
-    std::string name = convertAndFree($IDENT);
-    $$ = new WriteInfo(name);
-  }
-  | field_write_expr {
-    $$ = new WriteInfo($field_write_expr, WriteInfo::Field);
-  }
-  | tensor_write_expr {
-    $$ = new WriteInfo($tensor_write_expr, WriteInfo::Tensor);
-  }
-
-%type <expr> field_write_expr;
-field_write_expr
-  : IDENT "." IDENT {
-    string setName = convertAndFree($1);
-    string fieldName = convertAndFree($3);
-
-    if(!ctx->hasSymbol(setName)) { $$=NULL; break; } // TODO: Remove check
-
-    if (!ctx->hasSymbol(setName)) {
-      REPORT_ERROR(setName + " is not defined in scope", @1);
-    }
-
-    const RWExprPair &setExprPair = ctx->getSymbol(setName);
-    if (!setExprPair.isWritable()) {
-      REPORT_ERROR(setName + " is not writable", @1);
-    }
-
-    auto setExpr = setExprPair.getWriteExpr();
-    $$ = new Expr(FieldWrite::make(setExpr, fieldName, Expr()));
-  }
-  | paren_expr "." IDENT {
-    $$ = NULL;
-  }
-
-%type <expr> tensor_write_expr;
-tensor_write_expr
-  : IDENT "(" expr_list ")" {
-    std::string tensorName = convertAndFree($1);
-    auto indices = unique_ptr<vector<Expr>>($expr_list);
-
-    if(!ctx->hasSymbol(tensorName)) { $$=NULL; break; } // TODO: Remove check
-
-    if (!ctx->hasSymbol(tensorName)) {
-      REPORT_ERROR(tensorName + " is not defined in scope", @1);
-    }
-
-    const RWExprPair &tensorExprPair = ctx->getSymbol(tensorName);
-    if (!tensorExprPair.isWritable()) {
-      REPORT_ERROR(tensorName + " is not writable", @1);
-    }
-
-    auto tensorExpr = tensorExprPair.getWriteExpr();
-    $$ = new Expr(TensorWrite::make(tensorExpr, *indices, Expr()));
-  }
-  | field_write_expr "(" expr_list ")" {
-    // TODO
-    $$ = NULL;
-  }
 
 
 // Types
