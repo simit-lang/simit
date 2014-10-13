@@ -81,6 +81,11 @@ void main() {                        \
 }                                    \
 ";
 
+// GL programs generated using the shaders above, respectively.
+// Compilation and linking is performed in initDrawing().
+GLuint kConstProgram;
+GLuint kFlatProgram;
+
 // Current glut main loop thread. Should be joined before exiting.
 pthread_t glutThread;
 // Draw function, set by the latest draw call, so that we can redraw upon
@@ -155,14 +160,19 @@ GLuint createGLProgram(const string& vertexShaderStr,
     delete errorLog;
   }
 
-  // Make, link, and use the program
+  // Make and link the program
   GLuint program = glCreateProgram();
   glAttachShader(program, vertexShader);
   glAttachShader(program, fragmentShader);
   glLinkProgram(program);
-  glUseProgram(program);
 
   return program;
+}
+
+// Initializes the GL programs
+void initGLPrograms() {
+  kConstProgram = createGLProgram(kConstVertexShader, kConstFragmentShader);
+  kFlatProgram = createGLProgram(kFlatVertexShader, kFlatFragmentShader);
 }
 
 // Writes 16 doubles into matrix, representing the 4x4 transformation
@@ -409,6 +419,15 @@ void applyMMat(GLfloat newM[16]) {
   drawFuncLock.unlock();
 }
 
+void updateGLTransMat() {
+  // Update transformation matrix
+  glUniformMatrix4fv(mMatPos, 1, GL_FALSE, mMat);
+  glUniformMatrix4fv(invMMatPos, 1, GL_FALSE, invMMat);
+  glUniformMatrix4fv(vMatPos, 1, GL_FALSE, vMat);
+  glUniformMatrix4fv(invVMatPos, 1, GL_FALSE, invVMat);
+  glUniformMatrix4fv(projMatPos, 1, GL_FALSE, projMat);
+}
+
 void *handleWindowEvents(void *arg) {
   // Let the glut main loop dispatch all events to registered handlers
   glutMainLoop();
@@ -418,12 +437,6 @@ void *handleWindowEvents(void *arg) {
 void handleDraw() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawFuncLock.lock();
-  // Update transformation matrix
-  glUniformMatrix4fv(mMatPos, 1, GL_FALSE, mMat);
-  glUniformMatrix4fv(invMMatPos, 1, GL_FALSE, invMMat);
-  glUniformMatrix4fv(vMatPos, 1, GL_FALSE, vMat);
-  glUniformMatrix4fv(invVMatPos, 1, GL_FALSE, invVMat);
-  glUniformMatrix4fv(projMatPos, 1, GL_FALSE, projMat);
   // Assumes that the relevant VBO setup for the draw function has been
   // set up before this draw function was set.
   drawFunc();
@@ -572,40 +585,17 @@ void handleMotionEvent(int x, int y) {
   }
 }
 
-} // namespace simit::internal
-
-void initDrawing(int argc, char** argv) {
-  glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-  glutInitWindowSize(640, 480);
-  glutCreateWindow("Graph visualization");
-
-  glutDisplayFunc(internal::handleDraw);
-  glutReshapeFunc(internal::handleReshape);
-  glutSpecialFunc(internal::handleSpecialKeyEvent);
-  glutKeyboardFunc(internal::handleKeyboardEvent);
-  glutMouseFunc(internal::handleMouseEvent);
-  glutMotionFunc(internal::handleMotionEvent);
-
-  glEnable(GL_DEPTH_TEST);
-
-  int ret;
-  ret = pthread_create(&internal::glutThread, NULL,
-                       internal::handleWindowEvents, NULL);
-  assert(!ret &&
-         "Could not create event handler thread");
-}
-
-void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
-                float r, float g, float b, float a) {
-  internal::drawFuncLock.lock();
-  while (!internal::heldReferences.empty()) {
-    delete internal::heldReferences.front();
-    internal::heldReferences.pop();
+void bindPointsData(const Set<>& points, FieldRef<double,3> coordField,
+                    float r, float g, float b, float a) {
+  while (!heldReferences.empty()) {
+    delete heldReferences.front();
+    heldReferences.pop();
   }
   GLdouble* pointData = new GLdouble[points.getSize() * 3];
-  internal::heldReferences.push(pointData);
+  heldReferences.push(pointData);
   memcpy(pointData, coordField.getData(), sizeof(GLdouble)*points.getSize()*3);
+
+  glUseProgram(kConstProgram);
 
   GLuint vbo;
   glGenBuffers(1, &vbo);
@@ -613,38 +603,26 @@ void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLdouble) * points.getSize() * 3,
                pointData, GL_STREAM_DRAW);
 
-  GLuint program = internal::createGLProgram(internal::kConstVertexShader,
-                                             internal::kConstFragmentShader);
-  GLint colorUniform = glGetUniformLocation(program, "color");
+  GLint colorUniform = glGetUniformLocation(kConstProgram, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::mMatPos = glGetUniformLocation(program, "mMat");
-  internal::invMMatPos = glGetUniformLocation(program, "invMMat");
-  internal::vMatPos = glGetUniformLocation(program, "vMat");
-  internal::invVMatPos = glGetUniformLocation(program, "invVMat");
-  internal::projMatPos = glGetUniformLocation(program, "projMat");
-  GLint posAttrib = glGetAttribLocation(program, "position");
+  mMatPos = glGetUniformLocation(kConstProgram, "mMat");
+  invMMatPos = glGetUniformLocation(kConstProgram, "invMMat");
+  vMatPos = glGetUniformLocation(kConstProgram, "vMat");
+  invVMatPos = glGetUniformLocation(kConstProgram, "invVMat");
+  projMatPos = glGetUniformLocation(kConstProgram, "projMat");
+  GLint posAttrib = glGetAttribLocation(kConstProgram, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
-
-  // Set the draw func, to be repeatedly called
-  int arraySize = points.getSize();
-  internal::drawFunc = [arraySize](){
-    glDrawArrays(GL_POINTS, 0, arraySize);
-  };
-  internal::drawFuncLock.unlock();
-
-  glutPostRedisplay();
 }
 
-void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
-               float r, float g, float b, float a) {
-  internal::drawFuncLock.lock();
-  while (!internal::heldReferences.empty()) {
-    delete internal::heldReferences.front();
-    internal::heldReferences.pop();
+void bindEdgesData(Set<2>& edges, FieldRef<double,3> coordField,
+                   float r, float g, float b, float a) {
+  while (!heldReferences.empty()) {
+    delete heldReferences.front();
+    heldReferences.pop();
   }
   GLdouble* data = new GLdouble[edges.getSize() * 2 * 3];
-  internal::heldReferences.push(data);
+  heldReferences.push(data);
   int index = 0;
   for (auto elem = edges.begin(); elem != edges.end(); ++elem) {
     for (auto endPoint = edges.endpoints_begin(*elem);
@@ -659,47 +637,37 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
     }
   }
 
+  glUseProgram(kConstProgram);
+
   GLuint vbo;
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLdouble) * edges.getSize() * 2 * 3,
                data, GL_STREAM_DRAW);
 
-  GLuint program = internal::createGLProgram(internal::kConstVertexShader,
-                                             internal::kConstFragmentShader);
-  GLint colorUniform = glGetUniformLocation(program, "color");
+  GLint colorUniform = glGetUniformLocation(kConstProgram, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::mMatPos = glGetUniformLocation(program, "mMat");
-  internal::invMMatPos = glGetUniformLocation(program, "invMMat");
-  internal::vMatPos = glGetUniformLocation(program, "vMat");
-  internal::invVMatPos = glGetUniformLocation(program, "invVMat");
-  internal::projMatPos = glGetUniformLocation(program, "projMat");
-  GLint posAttrib = glGetAttribLocation(program, "position");
+  mMatPos = glGetUniformLocation(kConstProgram, "mMat");
+  invMMatPos = glGetUniformLocation(kConstProgram, "invMMat");
+  vMatPos = glGetUniformLocation(kConstProgram, "vMat");
+  invVMatPos = glGetUniformLocation(kConstProgram, "invVMat");
+  projMatPos = glGetUniformLocation(kConstProgram, "projMat");
+  GLint posAttrib = glGetAttribLocation(kConstProgram, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
-
-  // Set the draw func, to be repeatedly called
-  int arraySize = edges.getSize() * 2;
-  internal::drawFunc = [arraySize]() {
-    glDrawArrays(GL_LINES, 0, arraySize);
-  };
-  internal::drawFuncLock.unlock();
-
-  glutPostRedisplay();
 }
 
-void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
-               float r, float g, float b, float a) {
-  internal::drawFuncLock.lock();
+void bindFacesData(Set<3>& faces, FieldRef<double,3> coordField,
+                   float r, float g, float b, float a) {
   // FIXME(gkanwar): Hack to copy edge data into a double array
-  while (!internal::heldReferences.empty()) {
-    delete internal::heldReferences.front();
-    internal::heldReferences.pop();
+  while (!heldReferences.empty()) {
+    delete heldReferences.front();
+    heldReferences.pop();
   }
   GLdouble* posData = new GLdouble[faces.getSize() * 3 * 3];
   GLfloat* normData = new GLfloat[faces.getSize() * 3 * 3];
-  internal::heldReferences.push(posData);
-  internal::heldReferences.push(reinterpret_cast<GLdouble*>(normData));
+  heldReferences.push(posData);
+  heldReferences.push(reinterpret_cast<GLdouble*>(normData));
 
   int index = 0;
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
@@ -739,6 +707,8 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
         norm[2] / normMag;
   }
 
+  glUseProgram(kFlatProgram);
+
   GLuint posVbo;
   glGenBuffers(1, &posVbo);
   glBindBuffer(GL_ARRAY_BUFFER, posVbo);
@@ -750,31 +720,162 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * faces.getSize() * 3 * 3,
                normData, GL_STREAM_DRAW);
 
-  GLuint program = internal::createGLProgram(internal::kFlatVertexShader,
-                                             internal::kFlatFragmentShader);
-  GLint colorUniform = glGetUniformLocation(program, "color");
+  GLint colorUniform = glGetUniformLocation(kFlatProgram, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::mMatPos = glGetUniformLocation(program, "mMat");
-  internal::invMMatPos = glGetUniformLocation(program, "invMMat");
-  internal::vMatPos = glGetUniformLocation(program, "vMat");
-  internal::invVMatPos = glGetUniformLocation(program, "invVMat");
-  internal::projMatPos = glGetUniformLocation(program, "projMat");
-  GLint posAttrib = glGetAttribLocation(program, "position");
+  mMatPos = glGetUniformLocation(kFlatProgram, "mMat");
+  invMMatPos = glGetUniformLocation(kFlatProgram, "invMMat");
+  vMatPos = glGetUniformLocation(kFlatProgram, "vMat");
+  invVMatPos = glGetUniformLocation(kFlatProgram, "invVMat");
+  projMatPos = glGetUniformLocation(kFlatProgram, "projMat");
+  GLint posAttrib = glGetAttribLocation(kFlatProgram, "position");
   glBindBuffer(GL_ARRAY_BUFFER, posVbo);
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
-  GLint normAttrib = glGetAttribLocation(program, "normal");
+  GLint normAttrib = glGetAttribLocation(kFlatProgram, "normal");
   glBindBuffer(GL_ARRAY_BUFFER, normVbo);
   glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(normAttrib);
+}
+
+} // namespace simit::internal
+
+void initDrawing(int argc, char** argv) {
+  glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutInitWindowSize(640, 480);
+  glutCreateWindow("Graph visualization");
+
+  glutDisplayFunc(internal::handleDraw);
+  glutReshapeFunc(internal::handleReshape);
+  glutSpecialFunc(internal::handleSpecialKeyEvent);
+  glutKeyboardFunc(internal::handleKeyboardEvent);
+  glutMouseFunc(internal::handleMouseEvent);
+  glutMotionFunc(internal::handleMotionEvent);
+
+  glEnable(GL_DEPTH_TEST);
+
+  // Set up the GL programs
+  internal::initGLPrograms();
+
+  int ret;
+  ret = pthread_create(&internal::glutThread, NULL,
+                       internal::handleWindowEvents, NULL);
+  assert(!ret &&
+         "Could not create event handler thread");
+}
+
+void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
+                float r, float g, float b, float a) {
+  internal::bindPointsData(points, coordField, r, g, b, a);
+
+  // Set the draw func, to be repeatedly called
+  int arraySize = points.getSize();
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [arraySize](){
+    internal::updateGLTransMat();
+    glDrawArrays(GL_POINTS, 0, arraySize);
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+}
+
+void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
+               float r, float g, float b, float a) {
+  internal::bindEdgesData(edges, coordField, r, g, b, a);
+
+  // Set the draw func, to be repeatedly called
+  int arraySize = edges.getSize() * 2;
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [arraySize]() {
+    internal::updateGLTransMat();
+    glDrawArrays(GL_LINES, 0, arraySize);
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+}
+
+void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
+               float r, float g, float b, float a) {
+  internal::bindFacesData(faces, coordField, r, g, b, a);
 
   int arraySize = faces.getSize() * 3;
+  internal::drawFuncLock.lock();
   internal::drawFunc = [arraySize]() {
+    internal::updateGLTransMat();
     glDrawArrays(GL_TRIANGLES, 0, arraySize);
   };
   internal::drawFuncLock.unlock();
 
   glutPostRedisplay();
+}
+
+void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
+                        float r, float g, float b, float a,
+                        std::function<void()> animate) {
+  // Set the draw func, to be repeatedly called
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [&animate, &points, &coordField, r, g, b, a](){
+    animate();
+    internal::bindPointsData(points, coordField, r, g, b, a);
+    internal::updateGLTransMat();
+    glDrawArrays(GL_POINTS, 0, points.getSize());
+    glutPostRedisplay();
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+  pthread_join(internal::glutThread, NULL);
+}
+
+void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
+                       float r, float g, float b, float a,
+                       std::function<void()> animate) {
+  // Set the draw func, to be repeatedly called
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [&animate, &edges, &coordField, r, g, b, a](){
+    animate();
+    internal::bindEdgesData(edges, coordField, r, g, b, a);
+    internal::updateGLTransMat();
+    glDrawArrays(GL_LINES, 0, edges.getSize() * 2);
+    glutPostRedisplay();
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+  pthread_join(internal::glutThread, NULL);
+}
+
+void drawFacesBlocking(Set<3>& faces, FieldRef<double,3> coordField,
+                       float r, float g, float b, float a,
+                       std::function<void()> animate) {
+  // Set the draw func, to be repeatedly called
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [&animate, &faces, &coordField, r, g, b, a](){
+    internal::bindFacesData(faces, coordField, r, g, b, a);
+    internal::updateGLTransMat();
+    animate();
+    glDrawArrays(GL_TRIANGLES, 0, faces.getSize() * 3);
+    glutPostRedisplay();
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+  pthread_join(internal::glutThread, NULL);
+}
+
+void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
+                        float r, float g, float b, float a) {
+  drawPointsBlocking(points, coordField, r, g, b, a, [](){});
+}
+void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
+                       float r, float g, float b, float a) {
+  drawEdgesBlocking(edges, coordField, r, g, b, a, [](){});
+}
+void drawFacesBlocking(Set<3>& faces, FieldRef<double,3> coordField,
+                       float r, float g, float b, float a) {
+  drawFacesBlocking(faces, coordField, r, g, b, a, [](){});
 }
 
 } // namespace simit
