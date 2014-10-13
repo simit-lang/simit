@@ -25,84 +25,66 @@ namespace simit {
 
 namespace internal {
 
-const string& kConstVertexShader = "\
-attribute vec4 position;            \
-uniform mat4 transMat;              \
-uniform mat4 invTransMat;           \
-void main() {                       \
-  gl_Position = position * transMat;\
-}                                   \
-";
-const string& kConstFragmentShader = "\
-uniform vec4 color;                  \
-void main() {                        \
-  gl_FragColor = color;              \
-}                                    \
-";
-const string& kFlatVertexShader = "\
-attribute vec3 position;           \
-attribute vec3 normal;             \
-uniform mat4 transMat;             \
-uniform mat4 invTransMat;          \
-varying vec3 vert;                 \
-varying vec3 normalV;              \
-void main() {                      \
-  gl_Position = vec4(position[0], position[1], position[2], 1.0)\
-      * transMat;                  \
-  vert = vec3(gl_Position[0], gl_Position[1], gl_Position[2]);\
-  vec4 normal4 = vec4(normal[0], normal[1], normal[2], 1.0)\
-      * invTransMat;\
-  normalV = vec3(normal4[0], normal4[1], normal4[2]);\
-}                                  \
-";
-const string& kFlatFragmentShader = "\
-uniform vec4 color;                  \
-varying vec3 vert;                   \
-varying vec3 normalV;                \
-void main() {                        \
-  vec3 Lpos = vec3(-0.2, 1.0, 1.0);  \
-  vec3 L = normalize(Lpos - vert);   \
-  vec3 E = normalize(-vert);         \
-  vec3 R = normalize(-reflect(L, normalV));\
-                                     \
-  vec4 Iamb = vec4(0.2, 0.2, 0.2, 1.0);\
-  vec4 Idiff = vec4(0.2, 0.2, 0.2, 1.0)\
-    * max(dot(normalV,L), 0.0);\
-  Idiff = clamp(Idiff, 0.0, 1.0);    \
-                                     \
-  gl_FragColor = color + Iamb + Idiff;\
-}                                    \
-";
-const string& kPhongVertexShader = "                 \
-attribute vec4 position;                             \
-varying vec3 vert;                                   \
-varying vec3 normal;                                 \
-void main() {                                        \
-  vert = vec3(position[0], position[1], position[2]);\
-  normal = normalize(gl_NormalMatrix * gl_Normal);   \
-  gl_Position = position;                            \
-}                                                    \
-";
-const string& kPhongFragmentShader = "\
-uniform vec4 color;                   \
-varying vec3 vert;                    \
-varying vec3 normal;                  \
-void main() {                         \
-  vec3 L = normalize(gl_LightSource[0].position.xyz - vert);\
-  vec3 E = normalize(-vert);                    \
-  vec3 R = normalize(-reflect(L, normal));      \
-                                                \
-  vec4 Iamb = gl_FrontLightProduct[0].ambient;  \
-  vec4 Idiff = gl_FrontLightProduct[0].diffuse  \
-       * max(dot(normal,L), 0.0);               \
-  Idiff = clamp(Idiff, 0.0, 1.0);               \
-  vec4 Ispec = gl_FrontLightProduct[0].specular \
-       * pow(max(dot(R,E),0.0), 0.3);           \
-  Ispec = clamp(Ispec, 0.0, 1.0);               \
-                                                \
-  gl_FragColor = color + Iamb + Idiff + Ispec;  \
-}                                               \
-";
+const string& kConstVertexShader = R"(
+attribute vec4 position;
+uniform mat4 mMat;
+uniform mat4 invMMat;
+uniform mat4 vMat;
+uniform mat4 invVMat;
+uniform mat4 projMat;
+void main() {
+  gl_Position = projMat * vMat * mMat * position;
+}
+)";
+const string& kConstFragmentShader = R"(
+uniform vec4 color;
+void main() {
+  gl_FragColor = color;
+}
+)";
+const string& kFlatVertexShader = R"(
+attribute vec3 position;
+attribute vec3 normal;
+uniform mat4 mMat;
+uniform mat4 invMMat;
+uniform mat4 vMat;
+uniform mat4 invVMat;
+uniform mat4 projMat;
+varying vec3 vert;
+varying vec3 normalV;
+void main() {
+  vec4 vert4 = mMat *
+      vec4(position[0], position[1], position[2], 1.0);
+  vert = vec3(vert4[0], vert4[1], vert4[2]);
+  vec4 normal4 = vec4(normal[0], normal[1], normal[2], 1.0)
+      * invMMat;
+  normalV = vec3(normal4[0], normal4[1], normal4[2]);
+  gl_Position = projMat * vMat * vert4;
+}
+)";
+const string& kFlatFragmentShader = R"(
+uniform vec4 color;
+varying vec3 vert;
+varying vec3 normalV;
+void main() {
+  vec3 Lpos = vec3(-0.2, 1.0, 1.0);
+  vec3 L = normalize(Lpos - vert);
+  vec3 E = normalize(-vert);
+  vec3 R = normalize(-reflect(L, normalV));
+
+  vec4 Iamb = vec4(0.2, 0.2, 0.2, 1.0);
+  vec4 Idiff = vec4(0.2, 0.2, 0.2, 1.0)
+    * max(dot(normalV,L), 0.0);
+  Idiff = clamp(Idiff, 0.0, 1.0);
+
+  gl_FragColor = color + Iamb + Idiff;
+}
+)";
+
+// GL programs generated using the shaders above, respectively.
+// Compilation and linking is performed in initDrawing().
+GLuint kConstProgram;
+GLuint kFlatProgram;
 
 // Current glut main loop thread. Should be joined before exiting.
 pthread_t glutThread;
@@ -114,21 +96,33 @@ std::function<void(void)> drawFunc = [](){};
 std::mutex drawFuncLock;
 // Data references held by GL based on the previous call to draw*.
 std::queue<GLdouble*> heldReferences;
-// Eye theta, phi. Theta is about Y axis, phi is about the axis in the XY plane
-// perpendicular to theta, i.e. theta is the azimuthal angle, and phi is the
-// polar angle. This locates the eye in the reference of the world coordinates.
-// double eyeTheta = 0.0, eyePhi = 0.0;
 // Transformation matrices positions
-GLint transMatPos, invTransMatPos;
+GLint mMatPos, invMMatPos, vMatPos, invVMatPos, projMatPos;
 // Transformation matrices
-GLfloat transMat[16] = {1, 0, 0, 0,
-                        0, 1, 0, 0,
-                        0, 0, 1, 0,
-                        0, 0, 0, 1};
-GLfloat invTransMat[16] = {1, 0, 0, 0,
-                           0, 1, 0, 0,
-                           0, 0, 1, 0,
-                           0, 0, 0, 1};
+GLfloat mMat[16] = {1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1};
+GLfloat invMMat[16] = {1, 0, 0, 0,
+                       0, 1, 0, 0,
+                       0, 0, 1, 0,
+                       0, 0, 0, 1};
+GLfloat vMat[16] = {1, 0, 0, 0,
+                    0, 1, 0, 0,
+                    0, 0, 1, 0,
+                    0, 0, 0, 1};
+GLfloat invVMat[16] = {1, 0, 0, 0,
+                       0, 1, 0, 0,
+                       0, 0, 1, 0,
+                       0, 0, 0, 1};
+// Projection matrix (set perspective)
+// Set by glutReshapeFunc before drawing occurs
+GLfloat projMat[16];
+// Mouse motion tracking
+int mouseState = 0; // 0 = no click, 1 = left, 2 = right
+int mx, my;
+// Screen size
+int screenWidth, screenHeight;
 
 GLuint createGLProgram(const string& vertexShaderStr,
                        const string& fragmentShaderStr) {
@@ -166,23 +160,28 @@ GLuint createGLProgram(const string& vertexShaderStr,
     delete errorLog;
   }
 
-  // Make, link, and use the program
+  // Make and link the program
   GLuint program = glCreateProgram();
   glAttachShader(program, vertexShader);
   glAttachShader(program, fragmentShader);
   glLinkProgram(program);
-  glUseProgram(program);
 
   return program;
+}
+
+// Initializes the GL programs
+void initGLPrograms() {
+  kConstProgram = createGLProgram(kConstVertexShader, kConstFragmentShader);
+  kFlatProgram = createGLProgram(kFlatVertexShader, kFlatFragmentShader);
 }
 
 // Writes 16 doubles into matrix, representing the 4x4 transformation
 // matrix associated with a rotation about the Y axis of theta (rad).
 void buildThetaRotMatrix(double theta, GLfloat matrix[16]) {
   GLfloat outMat[16] = {
-    (GLfloat)cos(theta), 0, (GLfloat)-sin(theta), 0,
+    (GLfloat)cos(theta), 0, (GLfloat)sin(theta), 0,
     0, 1, 0, 0,
-    (GLfloat)sin(theta), 0, (GLfloat)cos(theta), 0,
+    (GLfloat)-sin(theta), 0, (GLfloat)cos(theta), 0,
     0, 0, 0, 1
   };
   memcpy(matrix, outMat, sizeof(outMat));
@@ -193,9 +192,33 @@ void buildThetaRotMatrix(double theta, GLfloat matrix[16]) {
 void buildPhiRotMatrix(double phi, GLfloat matrix[16]) {
   GLfloat outMat[16] = {
     1, 0, 0, 0,
-    0, (GLfloat)cos(phi), (GLfloat)-sin(phi), 0,
-    0, (GLfloat)sin(phi), (GLfloat)cos(phi), 0,
+    0, (GLfloat)cos(phi), (GLfloat)sin(phi), 0,
+    0, (GLfloat)-sin(phi), (GLfloat)cos(phi), 0,
     0, 0, 0, 1
+  };
+  memcpy(matrix, outMat, sizeof(outMat));
+}
+
+// Writes 16 doubles into matrix, representing the 4x4 transformation
+// matrix associated with a z-directional zoom.
+void buildZoomMatrix(double zoom, GLfloat matrix[16]) {
+  GLfloat outMat[16] = {
+    (GLfloat)zoom, 0, 0, 0,
+    0, (GLfloat)zoom, 0, 0,
+    0, 0, 1, 0,
+    0, 0, 0, 1
+  };
+  memcpy(matrix, outMat, sizeof(outMat));
+}
+
+// Writes 16 doubles into matrix, representing the 4x4 transformation
+// matrix asscoatied wtih an x-y pan (relative to the current camera).
+void buildXYPanMatrix(double x, double y, GLfloat matrix[16]) {
+  GLfloat outMat[16] = {
+    1, 0, 0, 0,
+    0, 1, 0, 0,
+    0, 0, 1, 0,
+    (GLfloat)x, (GLfloat)y, 0, 1
   };
   memcpy(matrix, outMat, sizeof(outMat));
 }
@@ -203,22 +226,22 @@ void buildPhiRotMatrix(double phi, GLfloat matrix[16]) {
 // m1 * m2 = out
 void multiplyMatrix(const GLfloat m1[16], const GLfloat m2[16],
                     GLfloat out[16]) {
-  out[0] = m1[0]*m2[0] + m1[1]*m2[4] + m1[2]*m2[8] + m1[3]*m2[12];
-  out[1] = m1[0]*m2[1] + m1[1]*m2[5] + m1[2]*m2[9] + m1[3]*m2[13];
-  out[2] = m1[0]*m2[2] + m1[1]*m2[6] + m1[2]*m2[10] + m1[3]*m2[14];
-  out[3] = m1[0]*m2[3] + m1[1]*m2[7] + m1[2]*m2[11] + m1[3]*m2[15];
-  out[4] = m1[4]*m2[0] + m1[5]*m2[4] + m1[6]*m2[8] + m1[7]*m2[12];
-  out[5] = m1[4]*m2[1] + m1[5]*m2[5] + m1[6]*m2[9] + m1[7]*m2[13];
-  out[6] = m1[4]*m2[2] + m1[5]*m2[6] + m1[6]*m2[10] + m1[7]*m2[14];
-  out[7] = m1[4]*m2[3] + m1[5]*m2[7] + m1[6]*m2[11] + m1[7]*m2[15];
-  out[8] = m1[8]*m2[0] + m1[9]*m2[4] + m1[10]*m2[8] + m1[11]*m2[12];
-  out[9] = m1[8]*m2[1] + m1[9]*m2[5] + m1[10]*m2[9] + m1[11]*m2[13];
-  out[10] = m1[8]*m2[2] + m1[9]*m2[6] + m1[10]*m2[10] + m1[11]*m2[14];
-  out[11] = m1[8]*m2[3] + m1[9]*m2[7] + m1[10]*m2[11] + m1[11]*m2[15];
-  out[12] = m1[12]*m2[0] + m1[13]*m2[4] + m1[14]*m2[8] + m1[15]*m2[12];
-  out[13] = m1[12]*m2[1] + m1[13]*m2[5] + m1[14]*m2[9] + m1[15]*m2[13];
-  out[14] = m1[12]*m2[2] + m1[13]*m2[6] + m1[14]*m2[10] + m1[15]*m2[14];
-  out[15] = m1[12]*m2[3] + m1[13]*m2[7] + m1[14]*m2[11] + m1[15]*m2[15];
+  out[0] = m1[0]*m2[0] + m1[4]*m2[1] + m1[8]*m2[2] + m1[12]*m2[3];
+  out[1] = m1[1]*m2[0] + m1[5]*m2[1] + m1[9]*m2[2] + m1[13]*m2[3];
+  out[2] = m1[2]*m2[0] + m1[6]*m2[1] + m1[10]*m2[2] + m1[14]*m2[3];
+  out[3] = m1[3]*m2[0] + m1[7]*m2[1] + m1[11]*m2[2] + m1[15]*m2[3];
+  out[4] = m1[0]*m2[4] + m1[4]*m2[5] + m1[8]*m2[6] + m1[12]*m2[7];
+  out[5] = m1[1]*m2[4] + m1[5]*m2[5] + m1[9]*m2[6] + m1[13]*m2[7];
+  out[6] = m1[2]*m2[4] + m1[6]*m2[5] + m1[10]*m2[6] + m1[14]*m2[7];
+  out[7] = m1[3]*m2[4] + m1[7]*m2[5] + m1[11]*m2[6] + m1[15]*m2[7];
+  out[8] = m1[0]*m2[8] + m1[4]*m2[9] + m1[8]*m2[10] + m1[12]*m2[11];
+  out[9] = m1[1]*m2[8] + m1[5]*m2[9] + m1[9]*m2[10] + m1[13]*m2[11];
+  out[10] = m1[2]*m2[8] + m1[6]*m2[9] + m1[10]*m2[10] + m1[14]*m2[11];
+  out[11] = m1[3]*m2[8] + m1[7]*m2[9] + m1[11]*m2[10] + m1[15]*m2[11];
+  out[12] = m1[0]*m2[12] + m1[4]*m2[13] + m1[8]*m2[14] + m1[12]*m2[15];
+  out[13] = m1[1]*m2[12] + m1[5]*m2[13] + m1[9]*m2[14] + m1[13]*m2[15];
+  out[14] = m1[2]*m2[12] + m1[6]*m2[13] + m1[10]*m2[14] + m1[14]*m2[15];
+  out[15] = m1[3]*m2[12] + m1[7]*m2[13] + m1[11]*m2[14] + m1[15]*m2[15];
 }
 
 // Invert a 4x4 matrix explicitly. Writes 16 doubles into inverse.
@@ -363,22 +386,46 @@ void clearTransMat() {
     0, 0, 0, 1
   };
   drawFuncLock.lock();
-  memcpy(transMat, ident, sizeof(ident));
-  memcpy(invTransMat, ident, sizeof(ident));
+  memcpy(mMat, ident, sizeof(ident));
+  memcpy(invMMat, ident, sizeof(ident));
+  memcpy(vMat, ident, sizeof(ident));
+  memcpy(invVMat, ident, sizeof(ident));
   drawFuncLock.unlock();
 }
 
-void applyTransMat(GLfloat newTrans[16]) {
-  GLfloat invNewTrans[16];
-  invertMatrix(newTrans, invNewTrans);
+void applyVMat(GLfloat newV[16]) {
+  GLfloat invNewV[16];
+  invertMatrix(newV, invNewV);
   drawFuncLock.lock();
-  GLfloat oldTransMat[16];
-  GLfloat oldInvTransMat[16];
-  memcpy(oldTransMat, transMat, sizeof(transMat));
-  memcpy(oldInvTransMat, invTransMat, sizeof(invTransMat));
-  multiplyMatrix(newTrans, oldTransMat, transMat);
-  multiplyMatrix(oldInvTransMat, invNewTrans, invTransMat);
+  GLfloat oldVMat[16];
+  GLfloat oldInvVMat[16];
+  memcpy(oldVMat, vMat, sizeof(vMat));
+  memcpy(oldInvVMat, invVMat, sizeof(invVMat));
+  multiplyMatrix(newV, oldVMat, vMat);
+  multiplyMatrix(oldInvVMat, invNewV, invVMat);
   drawFuncLock.unlock();
+}
+
+void applyMMat(GLfloat newM[16]) {
+  GLfloat invNewM[16];
+  invertMatrix(newM, invNewM);
+  drawFuncLock.lock();
+  GLfloat oldMMat[16];
+  GLfloat oldInvMMat[16];
+  memcpy(oldMMat, mMat, sizeof(mMat));
+  memcpy(oldInvMMat, invMMat, sizeof(invMMat));
+  multiplyMatrix(newM, oldMMat, mMat);
+  multiplyMatrix(oldInvMMat, invNewM, invMMat);
+  drawFuncLock.unlock();
+}
+
+void updateGLTransMat() {
+  // Update transformation matrix
+  glUniformMatrix4fv(mMatPos, 1, GL_FALSE, mMat);
+  glUniformMatrix4fv(invMMatPos, 1, GL_FALSE, invMMat);
+  glUniformMatrix4fv(vMatPos, 1, GL_FALSE, vMat);
+  glUniformMatrix4fv(invVMatPos, 1, GL_FALSE, invVMat);
+  glUniformMatrix4fv(projMatPos, 1, GL_FALSE, projMat);
 }
 
 void *handleWindowEvents(void *arg) {
@@ -390,9 +437,6 @@ void *handleWindowEvents(void *arg) {
 void handleDraw() {
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   drawFuncLock.lock();
-  // Update transformation matrix
-  glUniformMatrix4fv(transMatPos, 1, GL_FALSE, transMat);
-  glUniformMatrix4fv(invTransMatPos, 1, GL_FALSE, invTransMat);
   // Assumes that the relevant VBO setup for the draw function has been
   // set up before this draw function was set.
   drawFunc();
@@ -400,9 +444,55 @@ void handleDraw() {
   glutSwapBuffers();
 }
 
+void handleReshape(int width, int height) {
+  screenWidth = width;
+  screenHeight = height;
+  float aspect = width/(float)height;
+  float fovy = M_PI/3.0;  // 60deg fov
+  float f = 1/tan(fovy/2.0);
+
+  GLfloat outMat[16] = {
+    f/aspect, 0, 0, 0,
+    0, f, 0, 0,
+    0, 0, -1, -1,
+    0, 0, -0.2, 2
+  };
+  memcpy(projMat, outMat, sizeof(outMat));
+}
+
 void handleKeyboardEvent(unsigned char key, int x, int y) {
-  if (key == 'z') {
+  if (key == 'z') { // reset
     internal::clearTransMat();
+    glutPostRedisplay();
+  } else if (key == 'x') { // zoom out
+    GLfloat zoomMat[16];
+    internal::buildZoomMatrix(1.1, zoomMat);
+    internal::applyVMat(zoomMat);
+    glutPostRedisplay();
+  } else if (key == 'c') { // zoom in
+    GLfloat zoomMat[16];
+    internal::buildZoomMatrix(1/1.1, zoomMat);
+    internal::applyVMat(zoomMat);
+    glutPostRedisplay();
+  } else if (key == 'w') { // pan up
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(0, 0.1, panMat);
+    internal::applyMMat(panMat);
+    glutPostRedisplay();
+  } else if (key == 's') { // pan down
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(0, -0.1, panMat);
+    internal::applyMMat(panMat);
+    glutPostRedisplay();
+  } else if (key == 'a') { // pan left
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(-0.1, 0, panMat);
+    internal::applyMMat(panMat);
+    glutPostRedisplay();
+  } else if (key == 'd') { // pan right
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(0.1, 0, panMat);
+    internal::applyMMat(panMat);
     glutPostRedisplay();
   }
 }
@@ -410,59 +500,102 @@ void handleKeyboardEvent(unsigned char key, int x, int y) {
 void handleSpecialKeyEvent(int key, int x, int y) {
   if (key == GLUT_KEY_RIGHT) {
     GLfloat rightRotMat[16];
-    internal::buildThetaRotMatrix(0.1, rightRotMat);
-    internal::applyTransMat(rightRotMat);
+    internal::buildThetaRotMatrix(-0.1, rightRotMat);
+    internal::applyMMat(rightRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_LEFT) {
     GLfloat leftRotMat[16];
-    internal::buildThetaRotMatrix(-0.1, leftRotMat);
-    internal::applyTransMat(leftRotMat);
+    internal::buildThetaRotMatrix(0.1, leftRotMat);
+    internal::applyMMat(leftRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_UP) {
     GLfloat upRotMat[16];
-    internal::buildPhiRotMatrix(0.1, upRotMat);
-    internal::applyTransMat(upRotMat);
+    internal::buildPhiRotMatrix(-0.1, upRotMat);
+    internal::applyMMat(upRotMat);
     glutPostRedisplay();
   } else if (key == GLUT_KEY_DOWN) {
     GLfloat downRotMat[16];
-    internal::buildPhiRotMatrix(-0.1, downRotMat);
-    internal::applyTransMat(downRotMat);
+    internal::buildPhiRotMatrix(0.1, downRotMat);
+    internal::applyMMat(downRotMat);
     glutPostRedisplay();
   }
 }
 
-} // namespace simit::internal
+void handleMouseEvent(int button, int state, int x, int y) {
+  if (state == GLUT_DOWN) {
+    if (button == GLUT_LEFT_BUTTON) {
+      mouseState = 1;
+      mx = x;
+      my = y;
+    }
+    else if (button == GLUT_RIGHT_BUTTON) {
+      mouseState = 2;
+      mx = x;
+      my = y;
+    }
+    else {
+      mouseState = 0;
+    }
+  }
+  else {
+    mouseState = 0;
+  }
 
-void initDrawing(int argc, char** argv) {
-  glutInit(&argc, argv);
-  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
-  glutInitWindowSize(640, 480);
-  glutCreateWindow("Graph visualization");
-
-  glutDisplayFunc(internal::handleDraw);
-  glutSpecialFunc(internal::handleSpecialKeyEvent);
-  glutKeyboardFunc(internal::handleKeyboardEvent);
-
-  glShadeModel(GL_SMOOTH);
-  glEnable(GL_DEPTH_TEST);
-
-  int ret;
-  ret = pthread_create(&internal::glutThread, NULL,
-                       internal::handleWindowEvents, NULL);
-  assert(!ret &&
-         "Could not create event handler thread");
+  // Special case for mouse wheel scrolling
+  if (state == GLUT_DOWN && button == 3) {  // scroll up
+    GLfloat zoomMat[16];
+    internal::buildZoomMatrix(1/1.1, zoomMat);
+    internal::applyVMat(zoomMat);
+    glutPostRedisplay();
+  } else if (state == GLUT_DOWN && button == 4) {  // scroll down
+    GLfloat zoomMat[16];
+    internal::buildZoomMatrix(1.1, zoomMat);
+    internal::applyVMat(zoomMat);
+    glutPostRedisplay();
+  }
 }
 
-void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
-                float r, float g, float b, float a) {
-  internal::drawFuncLock.lock();
-  while (!internal::heldReferences.empty()) {
-    delete internal::heldReferences.front();
-    internal::heldReferences.pop();
+void handleMotionEvent(int x, int y) {
+  const double MOUSE_PAN = 5.0;
+  const double MOUSE_ROT = M_PI;
+
+  int dx = x - mx;
+  int dy = y - my;
+  double scaledDx = dx / (double)screenWidth;
+  double scaledDy = -dy / (double)screenHeight;
+  mx = x;
+  my = y;
+
+  if (mouseState == 0) return;
+  if (mouseState == 1) {  // left-click drag
+    GLfloat panMat[16];
+    internal::buildXYPanMatrix(scaledDx*MOUSE_PAN,
+                               scaledDy*MOUSE_PAN, panMat);
+    internal::applyMMat(panMat);
+    glutPostRedisplay();
+  }
+  else if(mouseState == 2) {  // right-click drag
+    GLfloat rlMat[16];
+    GLfloat udMat[16];
+    internal::buildThetaRotMatrix(-scaledDx*MOUSE_ROT, rlMat);
+    internal::buildPhiRotMatrix(-scaledDy*MOUSE_ROT, udMat);
+    internal::applyMMat(rlMat);
+    internal::applyMMat(udMat);
+    glutPostRedisplay();
+  }
+}
+
+void bindPointsData(const Set<>& points, FieldRef<double,3> coordField,
+                    float r, float g, float b, float a) {
+  while (!heldReferences.empty()) {
+    delete heldReferences.front();
+    heldReferences.pop();
   }
   GLdouble* pointData = new GLdouble[points.getSize() * 3];
-  internal::heldReferences.push(pointData);
+  heldReferences.push(pointData);
   memcpy(pointData, coordField.getData(), sizeof(GLdouble)*points.getSize()*3);
+
+  glUseProgram(kConstProgram);
 
   GLuint vbo;
   glGenBuffers(1, &vbo);
@@ -470,35 +603,26 @@ void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLdouble) * points.getSize() * 3,
                pointData, GL_STREAM_DRAW);
 
-  GLuint program = internal::createGLProgram(internal::kConstVertexShader,
-                                             internal::kConstFragmentShader);
-  GLint colorUniform = glGetUniformLocation(program, "color");
+  GLint colorUniform = glGetUniformLocation(kConstProgram, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::transMatPos = glGetUniformLocation(program, "transMat");
-  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
-  GLint posAttrib = glGetAttribLocation(program, "position");
+  mMatPos = glGetUniformLocation(kConstProgram, "mMat");
+  invMMatPos = glGetUniformLocation(kConstProgram, "invMMat");
+  vMatPos = glGetUniformLocation(kConstProgram, "vMat");
+  invVMatPos = glGetUniformLocation(kConstProgram, "invVMat");
+  projMatPos = glGetUniformLocation(kConstProgram, "projMat");
+  GLint posAttrib = glGetAttribLocation(kConstProgram, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
-
-  // Set the draw func, to be repeatedly called
-  int arraySize = points.getSize();
-  internal::drawFunc = [arraySize](){
-    glDrawArrays(GL_POINTS, 0, arraySize);
-  };
-  internal::drawFuncLock.unlock();
-
-  glutPostRedisplay();
 }
 
-void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
-               float r, float g, float b, float a) {
-  internal::drawFuncLock.lock();
-  while (!internal::heldReferences.empty()) {
-    delete internal::heldReferences.front();
-    internal::heldReferences.pop();
+void bindEdgesData(Set<2>& edges, FieldRef<double,3> coordField,
+                   float r, float g, float b, float a) {
+  while (!heldReferences.empty()) {
+    delete heldReferences.front();
+    heldReferences.pop();
   }
   GLdouble* data = new GLdouble[edges.getSize() * 2 * 3];
-  internal::heldReferences.push(data);
+  heldReferences.push(data);
   int index = 0;
   for (auto elem = edges.begin(); elem != edges.end(); ++elem) {
     for (auto endPoint = edges.endpoints_begin(*elem);
@@ -513,44 +637,37 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
     }
   }
 
+  glUseProgram(kConstProgram);
+
   GLuint vbo;
   glGenBuffers(1, &vbo);
   glBindBuffer(GL_ARRAY_BUFFER, vbo);
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLdouble) * edges.getSize() * 2 * 3,
                data, GL_STREAM_DRAW);
 
-  GLuint program = internal::createGLProgram(internal::kConstVertexShader,
-                                             internal::kConstFragmentShader);
-  GLint colorUniform = glGetUniformLocation(program, "color");
+  GLint colorUniform = glGetUniformLocation(kConstProgram, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::transMatPos = glGetUniformLocation(program, "transMat");
-  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
-  GLint posAttrib = glGetAttribLocation(program, "position");
+  mMatPos = glGetUniformLocation(kConstProgram, "mMat");
+  invMMatPos = glGetUniformLocation(kConstProgram, "invMMat");
+  vMatPos = glGetUniformLocation(kConstProgram, "vMat");
+  invVMatPos = glGetUniformLocation(kConstProgram, "invVMat");
+  projMatPos = glGetUniformLocation(kConstProgram, "projMat");
+  GLint posAttrib = glGetAttribLocation(kConstProgram, "position");
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
-
-  // Set the draw func, to be repeatedly called
-  int arraySize = edges.getSize() * 2;
-  internal::drawFunc = [arraySize]() {
-    glDrawArrays(GL_LINES, 0, arraySize);
-  };
-  internal::drawFuncLock.unlock();
-
-  glutPostRedisplay();
 }
 
-void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
-               float r, float g, float b, float a) {
-  internal::drawFuncLock.lock();
+void bindFacesData(Set<3>& faces, FieldRef<double,3> coordField,
+                   float r, float g, float b, float a) {
   // FIXME(gkanwar): Hack to copy edge data into a double array
-  while (!internal::heldReferences.empty()) {
-    delete internal::heldReferences.front();
-    internal::heldReferences.pop();
+  while (!heldReferences.empty()) {
+    delete heldReferences.front();
+    heldReferences.pop();
   }
   GLdouble* posData = new GLdouble[faces.getSize() * 3 * 3];
   GLfloat* normData = new GLfloat[faces.getSize() * 3 * 3];
-  internal::heldReferences.push(posData);
-  internal::heldReferences.push(reinterpret_cast<GLdouble*>(normData));
+  heldReferences.push(posData);
+  heldReferences.push(reinterpret_cast<GLdouble*>(normData));
 
   int index = 0;
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
@@ -590,6 +707,8 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
         norm[2] / normMag;
   }
 
+  glUseProgram(kFlatProgram);
+
   GLuint posVbo;
   glGenBuffers(1, &posVbo);
   glBindBuffer(GL_ARRAY_BUFFER, posVbo);
@@ -601,28 +720,162 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
   glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * faces.getSize() * 3 * 3,
                normData, GL_STREAM_DRAW);
 
-  GLuint program = internal::createGLProgram(internal::kFlatVertexShader,
-                                             internal::kFlatFragmentShader);
-  GLint colorUniform = glGetUniformLocation(program, "color");
+  GLint colorUniform = glGetUniformLocation(kFlatProgram, "color");
   glUniform4f(colorUniform, r, g, b, a);
-  internal::transMatPos = glGetUniformLocation(program, "transMat");
-  internal::invTransMatPos = glGetUniformLocation(program, "invTransMat");
-  GLint posAttrib = glGetAttribLocation(program, "position");
+  mMatPos = glGetUniformLocation(kFlatProgram, "mMat");
+  invMMatPos = glGetUniformLocation(kFlatProgram, "invMMat");
+  vMatPos = glGetUniformLocation(kFlatProgram, "vMat");
+  invVMatPos = glGetUniformLocation(kFlatProgram, "invVMat");
+  projMatPos = glGetUniformLocation(kFlatProgram, "projMat");
+  GLint posAttrib = glGetAttribLocation(kFlatProgram, "position");
   glBindBuffer(GL_ARRAY_BUFFER, posVbo);
   glVertexAttribPointer(posAttrib, 3, GL_DOUBLE, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(posAttrib);
-  GLint normAttrib = glGetAttribLocation(program, "normal");
+  GLint normAttrib = glGetAttribLocation(kFlatProgram, "normal");
   glBindBuffer(GL_ARRAY_BUFFER, normVbo);
   glVertexAttribPointer(normAttrib, 3, GL_FLOAT, GL_FALSE, 0, 0);
   glEnableVertexAttribArray(normAttrib);
+}
+
+} // namespace simit::internal
+
+void initDrawing(int argc, char** argv) {
+  glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+  glutInitWindowSize(640, 480);
+  glutCreateWindow("Graph visualization");
+
+  glutDisplayFunc(internal::handleDraw);
+  glutReshapeFunc(internal::handleReshape);
+  glutSpecialFunc(internal::handleSpecialKeyEvent);
+  glutKeyboardFunc(internal::handleKeyboardEvent);
+  glutMouseFunc(internal::handleMouseEvent);
+  glutMotionFunc(internal::handleMotionEvent);
+
+  glEnable(GL_DEPTH_TEST);
+
+  // Set up the GL programs
+  internal::initGLPrograms();
+
+  int ret;
+  ret = pthread_create(&internal::glutThread, NULL,
+                       internal::handleWindowEvents, NULL);
+  assert(!ret &&
+         "Could not create event handler thread");
+}
+
+void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
+                float r, float g, float b, float a) {
+  internal::bindPointsData(points, coordField, r, g, b, a);
+
+  // Set the draw func, to be repeatedly called
+  int arraySize = points.getSize();
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [arraySize](){
+    internal::updateGLTransMat();
+    glDrawArrays(GL_POINTS, 0, arraySize);
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+}
+
+void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
+               float r, float g, float b, float a) {
+  internal::bindEdgesData(edges, coordField, r, g, b, a);
+
+  // Set the draw func, to be repeatedly called
+  int arraySize = edges.getSize() * 2;
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [arraySize]() {
+    internal::updateGLTransMat();
+    glDrawArrays(GL_LINES, 0, arraySize);
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+}
+
+void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
+               float r, float g, float b, float a) {
+  internal::bindFacesData(faces, coordField, r, g, b, a);
 
   int arraySize = faces.getSize() * 3;
+  internal::drawFuncLock.lock();
   internal::drawFunc = [arraySize]() {
+    internal::updateGLTransMat();
     glDrawArrays(GL_TRIANGLES, 0, arraySize);
   };
   internal::drawFuncLock.unlock();
 
   glutPostRedisplay();
+}
+
+void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
+                        float r, float g, float b, float a,
+                        std::function<void()> animate) {
+  // Set the draw func, to be repeatedly called
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [&animate, &points, &coordField, r, g, b, a](){
+    animate();
+    internal::bindPointsData(points, coordField, r, g, b, a);
+    internal::updateGLTransMat();
+    glDrawArrays(GL_POINTS, 0, points.getSize());
+    glutPostRedisplay();
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+  pthread_join(internal::glutThread, NULL);
+}
+
+void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
+                       float r, float g, float b, float a,
+                       std::function<void()> animate) {
+  // Set the draw func, to be repeatedly called
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [&animate, &edges, &coordField, r, g, b, a](){
+    animate();
+    internal::bindEdgesData(edges, coordField, r, g, b, a);
+    internal::updateGLTransMat();
+    glDrawArrays(GL_LINES, 0, edges.getSize() * 2);
+    glutPostRedisplay();
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+  pthread_join(internal::glutThread, NULL);
+}
+
+void drawFacesBlocking(Set<3>& faces, FieldRef<double,3> coordField,
+                       float r, float g, float b, float a,
+                       std::function<void()> animate) {
+  // Set the draw func, to be repeatedly called
+  internal::drawFuncLock.lock();
+  internal::drawFunc = [&animate, &faces, &coordField, r, g, b, a](){
+    internal::bindFacesData(faces, coordField, r, g, b, a);
+    internal::updateGLTransMat();
+    animate();
+    glDrawArrays(GL_TRIANGLES, 0, faces.getSize() * 3);
+    glutPostRedisplay();
+  };
+  internal::drawFuncLock.unlock();
+
+  glutPostRedisplay();
+  pthread_join(internal::glutThread, NULL);
+}
+
+void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
+                        float r, float g, float b, float a) {
+  drawPointsBlocking(points, coordField, r, g, b, a, [](){});
+}
+void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
+                       float r, float g, float b, float a) {
+  drawEdgesBlocking(edges, coordField, r, g, b, a, [](){});
+}
+void drawFacesBlocking(Set<3>& faces, FieldRef<double,3> coordField,
+                       float r, float g, float b, float a) {
+  drawFacesBlocking(faces, coordField, r, g, b, a, [](){});
 }
 
 } // namespace simit
