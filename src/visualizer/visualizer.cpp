@@ -25,61 +25,61 @@ namespace simit {
 
 namespace internal {
 
-const string& kConstVertexShader = "\
-attribute vec4 position;            \
-uniform mat4 mMat;                  \
-uniform mat4 invMMat;               \
-uniform mat4 vMat;                  \
-uniform mat4 invVMat;               \
-uniform mat4 projMat;               \
-void main() {                       \
-  gl_Position = projMat * vMat * mMat * position;\
-}                                   \
-";
-const string& kConstFragmentShader = "\
-uniform vec4 color;                  \
-void main() {                        \
-  gl_FragColor = color;              \
-}                                    \
-";
-const string& kFlatVertexShader = "\
-attribute vec3 position;           \
-attribute vec3 normal;             \
-uniform mat4 mMat;                 \
-uniform mat4 invMMat;              \
-uniform mat4 vMat;                 \
-uniform mat4 invVMat;              \
-uniform mat4 projMat;              \
-varying vec3 vert;                 \
-varying vec3 normalV;              \
-void main() {                      \
-  vec4 vert4 = mMat *              \
-      vec4(position[0], position[1], position[2], 1.0);\
-  vert = vec3(vert4[0], vert4[1], vert4[2]);\
-  vec4 normal4 = vec4(normal[0], normal[1], normal[2], 1.0)\
-      * invMMat;\
-  normalV = vec3(normal4[0], normal4[1], normal4[2]);\
-  gl_Position = projMat * vMat * vert4;\
-}                                  \
-";
-const string& kFlatFragmentShader = "\
-uniform vec4 color;                  \
-varying vec3 vert;                   \
-varying vec3 normalV;                \
-void main() {                        \
-  vec3 Lpos = vec3(-0.2, 1.0, 1.0);  \
-  vec3 L = normalize(Lpos - vert);   \
-  vec3 E = normalize(-vert);         \
-  vec3 R = normalize(-reflect(L, normalV));\
-                                     \
-  vec4 Iamb = vec4(0.2, 0.2, 0.2, 1.0);\
-  vec4 Idiff = vec4(0.2, 0.2, 0.2, 1.0)\
-    * max(dot(normalV,L), 0.0);\
-  Idiff = clamp(Idiff, 0.0, 1.0);    \
-                                     \
-  gl_FragColor = color + Iamb + Idiff;\
-}                                    \
-";
+const string& kConstVertexShader = R"(
+attribute vec4 position;
+uniform mat4 mMat;
+uniform mat4 invMMat;
+uniform mat4 vMat;
+uniform mat4 invVMat;
+uniform mat4 projMat;
+void main() {
+  gl_Position = projMat * vMat * mMat * position;
+}
+)";
+const string& kConstFragmentShader = R"(
+uniform vec4 color;
+void main() {
+  gl_FragColor = color;
+}
+)";
+const string& kFlatVertexShader = R"(
+attribute vec3 position;
+attribute vec3 normal;
+uniform mat4 mMat;
+uniform mat4 invMMat;
+uniform mat4 vMat;
+uniform mat4 invVMat;
+uniform mat4 projMat;
+varying vec3 vert;
+varying vec3 normalV;
+void main() {
+  vec4 vert4 = mMat *
+      vec4(position[0], position[1], position[2], 1.0);
+  vert = vec3(vert4[0], vert4[1], vert4[2]);
+  vec4 normal4 = vec4(normal[0], normal[1], normal[2], 1.0)
+      * invMMat;
+  normalV = vec3(normal4[0], normal4[1], normal4[2]);
+  gl_Position = projMat * vMat * vert4;
+}
+)";
+const string& kFlatFragmentShader = R"(
+uniform vec4 color;
+varying vec3 vert;
+varying vec3 normalV;
+void main() {
+  vec3 Lpos = vec3(-0.2, 1.0, 1.0);
+  vec3 L = normalize(Lpos - vert);
+  vec3 E = normalize(-vert);
+  vec3 R = normalize(-reflect(L, normalV));
+
+  vec4 Iamb = vec4(0.2, 0.2, 0.2, 1.0);
+  vec4 Idiff = vec4(0.2, 0.2, 0.2, 1.0)
+    * max(dot(normalV,L), 0.0);
+  Idiff = clamp(Idiff, 0.0, 1.0);
+
+  gl_FragColor = color + Iamb + Idiff;
+}
+)";
 
 // GL programs generated using the shaders above, respectively.
 // Compilation and linking is performed in initDrawing().
