@@ -223,8 +223,8 @@ namespace  simit { namespace internal  {
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
-  ir::Expr              *expression;
-  std::vector<ir::Expr> *expressions;
+  ir::Expr              *expr;
+  std::vector<ir::Expr> *exprs;
 
   ir::BinaryOperator     binop;
   TensorValues<double>  *TensorDoubleValues;

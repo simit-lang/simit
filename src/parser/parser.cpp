@@ -507,14 +507,14 @@ namespace  simit { namespace internal  {
       case 60: // program_element
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 61: // extern
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
@@ -570,119 +570,119 @@ namespace  simit { namespace internal  {
       case 73: // arguments
 
 
-        { delete (yysym.value.expressions); }
+        { delete (yysym.value.exprs); }
 
         break;
 
       case 74: // argument_list
 
 
-        { delete (yysym.value.expressions); }
+        { delete (yysym.value.exprs); }
 
         break;
 
       case 75: // argument_decl
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 76: // results
 
 
-        { delete (yysym.value.expressions); }
+        { delete (yysym.value.exprs); }
 
         break;
 
       case 77: // result_list
 
 
-        { delete (yysym.value.expressions); }
+        { delete (yysym.value.exprs); }
 
         break;
 
       case 78: // result_decl
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 79: // stmt_block
 
 
-        { delete (yysym.value.expressions); }
+        { delete (yysym.value.exprs); }
 
         break;
 
       case 80: // stmt
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 81: // const_stmt
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 82: // assign_stmt
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 83: // expr_stmt
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 84: // if_stmt
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 87: // for_stmt
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 88: // expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 89: // ident_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 90: // paren_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 91: // linear_algebra_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
@@ -696,56 +696,56 @@ namespace  simit { namespace internal  {
       case 93: // boolean_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 94: // field_read_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 95: // set_read_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 96: // call_or_paren_read_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 97: // call_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 98: // expr_list_or_empty
 
 
-        { delete (yysym.value.expressions); }
+        { delete (yysym.value.exprs); }
 
         break;
 
       case 99: // expr_list
 
 
-        { delete (yysym.value.expressions); }
+        { delete (yysym.value.exprs); }
 
         break;
 
       case 100: // map_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
@@ -766,14 +766,14 @@ namespace  simit { namespace internal  {
       case 106: // field_write_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 107: // tensor_write_expr
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
@@ -801,7 +801,7 @@ namespace  simit { namespace internal  {
       case 111: // endpoints
 
 
-        { delete (yysym.value.expressions); }
+        { delete (yysym.value.exprs); }
 
         break;
 
@@ -843,14 +843,14 @@ namespace  simit { namespace internal  {
       case 118: // tensor_literal
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
       case 119: // dense_tensor_literal
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
@@ -913,7 +913,7 @@ namespace  simit { namespace internal  {
       case 128: // scalar_literal
 
 
-        { delete (yysym.value.expression); }
+        { delete (yysym.value.expr); }
 
         break;
 
@@ -1189,7 +1189,7 @@ namespace  simit { namespace internal  {
   case 7:
 
     {
-    (yylhs.value.expression) = NULL;
+    (yylhs.value.expr) = NULL;
   }
 
     break;
@@ -1197,8 +1197,8 @@ namespace  simit { namespace internal  {
   case 8:
 
     {
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[0].value.expression);
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1214,7 +1214,7 @@ namespace  simit { namespace internal  {
   case 10:
 
     {
-    Expr externVariable = convertAndDelete((yystack_[1].value.expression));
+    Expr externVariable = convertAndDelete((yystack_[1].value.expr));
     ctx->addExtern(externVariable);
   }
 
@@ -1278,7 +1278,7 @@ namespace  simit { namespace internal  {
   case 17:
 
     {
-    vector<Expr> body = convertAndDelete((yystack_[2].value.expressions));
+    vector<Expr> body = convertAndDelete((yystack_[2].value.exprs));
     (yylhs.value.function) = (yystack_[3].value.function);
 
     if (body.size() > 0) {
@@ -1328,7 +1328,7 @@ namespace  simit { namespace internal  {
   case 21:
 
     {
-    vector<Expr> body = convertAndDelete((yystack_[2].value.expressions));
+    vector<Expr> body = convertAndDelete((yystack_[2].value.exprs));
     (yylhs.value.function) = (yystack_[3].value.function);
 
     if (body.size() > 0) {
@@ -1345,8 +1345,8 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[4].value.string));
-    auto arguments = unique_ptr<vector<Expr>>((yystack_[2].value.expressions));
-    auto results = unique_ptr<vector<Expr>>((yystack_[0].value.expressions));
+    auto arguments = unique_ptr<vector<Expr>>((yystack_[2].value.exprs));
+    auto results = unique_ptr<vector<Expr>>((yystack_[0].value.exprs));
     (yylhs.value.function) = new Function(name, *arguments, *results);
 
     std::set<std::string> argumentNames;
@@ -1372,7 +1372,7 @@ namespace  simit { namespace internal  {
   case 23:
 
     {
-    (yylhs.value.expressions) = new vector<Expr>;
+    (yylhs.value.exprs) = new vector<Expr>;
   }
 
     break;
@@ -1380,7 +1380,7 @@ namespace  simit { namespace internal  {
   case 24:
 
     {
-    (yylhs.value.expressions) = (yystack_[0].value.expressions);
+    (yylhs.value.exprs) = (yystack_[0].value.exprs);
  }
 
     break;
@@ -1388,9 +1388,9 @@ namespace  simit { namespace internal  {
   case 25:
 
     {
-    auto argument = convertAndDelete((yystack_[0].value.expression));
-    (yylhs.value.expressions) = new vector<Expr>;
-    (yylhs.value.expressions)->push_back(argument);
+    auto argument = convertAndDelete((yystack_[0].value.expr));
+    (yylhs.value.exprs) = new vector<Expr>;
+    (yylhs.value.exprs)->push_back(argument);
   }
 
     break;
@@ -1398,9 +1398,9 @@ namespace  simit { namespace internal  {
   case 26:
 
     {
-    auto argument = convertAndDelete((yystack_[0].value.expression));
-    (yylhs.value.expressions) = (yystack_[2].value.expressions);
-    (yylhs.value.expressions)->push_back(argument);
+    auto argument = convertAndDelete((yystack_[0].value.expr));
+    (yylhs.value.exprs) = (yystack_[2].value.exprs);
+    (yylhs.value.exprs)->push_back(argument);
   }
 
     break;
@@ -1411,7 +1411,7 @@ namespace  simit { namespace internal  {
     std::string name = convertAndFree((yystack_[2].value.string));
 
     auto type = convertAndDelete((yystack_[0].value.type));
-    (yylhs.value.expression) = new Expr(Variable::make(name, type));
+    (yylhs.value.expr) = new Expr(Variable::make(name, type));
   }
 
     break;
@@ -1419,7 +1419,7 @@ namespace  simit { namespace internal  {
   case 28:
 
     {
-    (yylhs.value.expressions) = new vector<Expr>();
+    (yylhs.value.exprs) = new vector<Expr>();
   }
 
     break;
@@ -1427,7 +1427,7 @@ namespace  simit { namespace internal  {
   case 29:
 
     {
-    (yylhs.value.expressions) = (yystack_[1].value.expressions);
+    (yylhs.value.exprs) = (yystack_[1].value.exprs);
   }
 
     break;
@@ -1435,9 +1435,9 @@ namespace  simit { namespace internal  {
   case 30:
 
     {
-    auto result = convertAndDelete((yystack_[0].value.expression));
-    (yylhs.value.expressions) = new vector<Expr>;
-    (yylhs.value.expressions)->push_back(result);
+    auto result = convertAndDelete((yystack_[0].value.expr));
+    (yylhs.value.exprs) = new vector<Expr>;
+    (yylhs.value.exprs)->push_back(result);
   }
 
     break;
@@ -1445,9 +1445,9 @@ namespace  simit { namespace internal  {
   case 31:
 
     {
-    auto result = convertAndDelete((yystack_[0].value.expression));
-    (yylhs.value.expressions) = (yystack_[2].value.expressions);
-    (yylhs.value.expressions)->push_back(result);
+    auto result = convertAndDelete((yystack_[0].value.expr));
+    (yylhs.value.exprs) = (yystack_[2].value.exprs);
+    (yylhs.value.exprs)->push_back(result);
   }
 
     break;
@@ -1457,7 +1457,7 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[2].value.string));
     auto type = convertAndDelete((yystack_[0].value.type));
-    (yylhs.value.expression) = new Expr(Variable::make(name, type));
+    (yylhs.value.expr) = new Expr(Variable::make(name, type));
   }
 
     break;
@@ -1465,7 +1465,7 @@ namespace  simit { namespace internal  {
   case 33:
 
     {
-    (yylhs.value.expressions) = new vector<Expr>();
+    (yylhs.value.exprs) = new vector<Expr>();
   }
 
     break;
@@ -1473,10 +1473,10 @@ namespace  simit { namespace internal  {
   case 34:
 
     {
-    (yylhs.value.expressions) = (yystack_[1].value.expressions);
-    if ((yystack_[0].value.expression) == NULL) break;  // TODO: Remove check
-    (yylhs.value.expressions)->push_back(*(yystack_[0].value.expression));
-    delete (yystack_[0].value.expression);
+    (yylhs.value.exprs) = (yystack_[1].value.exprs);
+    if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
+    (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1488,7 +1488,7 @@ namespace  simit { namespace internal  {
     auto type = convertAndDelete((yystack_[3].value.type));
     const TensorType *tensorType = type.toTensor();
 
-    Expr literal = convertAndDelete((yystack_[1].value.expression));
+    Expr literal = convertAndDelete((yystack_[1].value.expr));
 
     assert(literal.type().isTensor() &&
            "Only tensor literals are currently supported");
@@ -1505,7 +1505,7 @@ namespace  simit { namespace internal  {
     CHECK_TYPE_EQUALITY(type, literal.type(), yystack_[5].location);
 
     ctx->addSymbol(name, literal);
-    (yylhs.value.expression) = new Expr(literal);
+    (yylhs.value.expr) = new Expr(literal);
   }
 
     break;
@@ -1513,10 +1513,10 @@ namespace  simit { namespace internal  {
   case 41:
 
     {
-    (yylhs.value.expression) = NULL;  // TODO: Remove this
+    (yylhs.value.expr) = NULL;  // TODO: Remove this
 
     auto lhsList = unique_ptr<vector<unique_ptr<WriteInfo>>>((yystack_[3].value.writeinfos));
-    auto rhsList = unique_ptr<vector<Expr>>((yystack_[1].value.expressions));
+    auto rhsList = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
 
     if (lhsList->size() > rhsList->size()) {
       // TODO: Handle maps and then reintroduce this error
@@ -1551,7 +1551,7 @@ namespace  simit { namespace internal  {
           auto result = dynamic_cast<Variable*>(lhsTensor.expr());
           if (result) {
             CHECK_TYPE_EQUALITY(result->type, rhs.type(), yystack_[2].location);
-            (yylhs.value.expression) = new Expr(rhs);
+            (yylhs.value.expr) = new Expr(rhs);
           }
           else {
             NOT_SUPPORTED_YET;
@@ -1566,7 +1566,7 @@ namespace  simit { namespace internal  {
 
           auto result = dynamic_cast<Variable*>(fieldWrite->elementOrSet.expr());
           if (result) {
-            (yylhs.value.expression) = new Expr(write);
+            (yylhs.value.expr) = new Expr(write);
           }
           else {
             NOT_SUPPORTED_YET;
@@ -1582,7 +1582,7 @@ namespace  simit { namespace internal  {
 
           auto result = dynamic_cast<Variable*>(tensorWrite->tensor.expr());
           if (result){
-            (yylhs.value.expression) = new Expr(write);
+            (yylhs.value.expr) = new Expr(write);
           }
           else {
             NOT_SUPPORTED_YET;
@@ -1599,7 +1599,7 @@ namespace  simit { namespace internal  {
   case 42:
 
     {
-    (yylhs.value.expression) = NULL;
+    (yylhs.value.expr) = NULL;
   }
 
     break;
@@ -1607,7 +1607,7 @@ namespace  simit { namespace internal  {
   case 43:
 
     {
-    (yylhs.value.expression) = NULL;
+    (yylhs.value.expr) = NULL;
   }
 
     break;
@@ -1615,9 +1615,9 @@ namespace  simit { namespace internal  {
   case 44:
 
     {
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[3].value.expression);
-    delete (yystack_[2].value.expressions);
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[3].value.expr);
+    delete (yystack_[2].value.exprs);
   }
 
     break;
@@ -1625,7 +1625,7 @@ namespace  simit { namespace internal  {
   case 46:
 
     {
-    delete (yystack_[0].value.expressions);
+    delete (yystack_[0].value.exprs);
   }
 
     break;
@@ -1633,8 +1633,8 @@ namespace  simit { namespace internal  {
   case 48:
 
     {
-    delete (yystack_[1].value.expression);
-    delete (yystack_[0].value.expressions);
+    delete (yystack_[1].value.expr);
+    delete (yystack_[0].value.exprs);
   }
 
     break;
@@ -1642,7 +1642,7 @@ namespace  simit { namespace internal  {
   case 49:
 
     {
-    (yylhs.value.expression) = NULL;
+    (yylhs.value.expr) = NULL;
   }
 
     break;
@@ -1652,7 +1652,7 @@ namespace  simit { namespace internal  {
     {
     string ident = convertAndFree((yystack_[0].value.string));
 
-    if (!ctx->hasSymbol(ident)) { (yylhs.value.expression)=NULL; break; } // TODO: Remove check
+    if (!ctx->hasSymbol(ident)) { (yylhs.value.expr)=NULL; break; } // TODO: Remove check
 
     if (!ctx->hasSymbol(ident)) {
       REPORT_ERROR(ident + " is not defined in scope", yystack_[0].location);
@@ -1663,7 +1663,7 @@ namespace  simit { namespace internal  {
       REPORT_ERROR(ident + " is not readable", yystack_[0].location);
     }
 
-    (yylhs.value.expression) = new Expr(rwExprPair.getReadExpr());
+    (yylhs.value.expr) = new Expr(rwExprPair.getReadExpr());
   }
 
     break;
@@ -1671,8 +1671,8 @@ namespace  simit { namespace internal  {
   case 59:
 
     {
-    if ((yystack_[1].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = (yystack_[1].value.expression);
+    if ((yystack_[1].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = (yystack_[1].value.expr);
   }
 
     break;
@@ -1680,12 +1680,12 @@ namespace  simit { namespace internal  {
   case 60:
 
     {
-    if ((yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    if ((yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
-    Expr expr = convertAndDelete((yystack_[0].value.expression));
+    Expr expr = convertAndDelete((yystack_[0].value.expr));
     CHECK_IS_TENSOR(expr, yystack_[0].location);
 
-    (yylhs.value.expression) = new Expr(unaryElwiseExpr(UnaryOperator::Neg, expr));
+    (yylhs.value.expr) = new Expr(unaryElwiseExpr(UnaryOperator::Neg, expr));
   }
 
     break;
@@ -1693,16 +1693,16 @@ namespace  simit { namespace internal  {
   case 61:
 
     {  // + - .* ./
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
-    Expr l = convertAndDelete((yystack_[2].value.expression));
-    Expr r = convertAndDelete((yystack_[0].value.expression));
+    Expr l = convertAndDelete((yystack_[2].value.expr));
+    Expr r = convertAndDelete((yystack_[0].value.expr));
 
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
 
     BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), yystack_[1].location);
-    (yylhs.value.expression) = new Expr(binaryElwiseExpr(l, (yystack_[1].value.binop), r));
+    (yylhs.value.expr) = new Expr(binaryElwiseExpr(l, (yystack_[1].value.binop), r));
   }
 
     break;
@@ -1710,10 +1710,10 @@ namespace  simit { namespace internal  {
   case 62:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
-    Expr l = convertAndDelete((yystack_[2].value.expression));
-    Expr r = convertAndDelete((yystack_[0].value.expression));
+    Expr l = convertAndDelete((yystack_[2].value.expr));
+    Expr r = convertAndDelete((yystack_[0].value.expr));
 
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
@@ -1723,7 +1723,7 @@ namespace  simit { namespace internal  {
 
     // Scale
     if (ltype->order()==0 || rtype->order()==0) {
-      (yylhs.value.expression) = new Expr(binaryElwiseExpr(l, BinaryOperator::Mul, r));
+      (yylhs.value.expr) = new Expr(binaryElwiseExpr(l, BinaryOperator::Mul, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->order() == 1 && rtype->order() == 1) {
@@ -1735,7 +1735,7 @@ namespace  simit { namespace internal  {
         if (l.type() != r.type()) {
           REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
         }
-        (yylhs.value.expression) = new Expr(innerProduct(l, r));
+        (yylhs.value.expr) = new Expr(innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
@@ -1745,7 +1745,7 @@ namespace  simit { namespace internal  {
         if (l.type() != r.type()) {
           REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
         }
-        (yylhs.value.expression) = new Expr(outerProduct(l, r));
+        (yylhs.value.expr) = new Expr(outerProduct(l, r));
       }
     }
     // Matrix-Vector
@@ -1753,25 +1753,25 @@ namespace  simit { namespace internal  {
       if (ltype->dimensions[1] != rtype->dimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
-      (yylhs.value.expression) = new Expr(gemv(l, r));
+      (yylhs.value.expr) = new Expr(gemv(l, r));
     }
     // Vector-Matrix
     else if (ltype->order() == 1 && rtype->order() == 2) {
       if (ltype->dimensions[0] != rtype->dimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
-      (yylhs.value.expression) = new Expr(gevm(l,r));
+      (yylhs.value.expr) = new Expr(gevm(l,r));
     }
     // Matrix-Matrix
     else if (ltype->order() == 2 && rtype->order() == 2) {
       if (ltype->dimensions[1] != rtype->dimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
-      (yylhs.value.expression) = new Expr(gemm(l,r));
+      (yylhs.value.expr) = new Expr(gemm(l,r));
     }
     else {
       REPORT_ERROR("cannot multiply >2-order tensors using *", yystack_[1].location);
-      (yylhs.value.expression) = NULL;
+      (yylhs.value.expr) = NULL;
     }
   }
 
@@ -1780,10 +1780,10 @@ namespace  simit { namespace internal  {
   case 63:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1791,9 +1791,9 @@ namespace  simit { namespace internal  {
   case 64:
 
     {
-    if ((yystack_[1].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    if ((yystack_[1].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
-    Expr expr = convertAndDelete((yystack_[1].value.expression));
+    Expr expr = convertAndDelete((yystack_[1].value.expr));
 
     CHECK_IS_TENSOR(expr, yystack_[1].location);
 
@@ -1801,21 +1801,21 @@ namespace  simit { namespace internal  {
     switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
-        (yylhs.value.expression) = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
+        (yylhs.value.expr) = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
         break;
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
-        (yylhs.value.expression) = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
+        (yylhs.value.expr) = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
         if (!type->isColumnVector) {
-          transposeVector(*(yylhs.value.expression));
+          transposeVector(*(yylhs.value.expr));
         }
         break;
       case 2:
-        (yylhs.value.expression) = new Expr(transposeMatrix(expr));
+        (yylhs.value.expr) = new Expr(transposeMatrix(expr));
         break;
       default:
         REPORT_ERROR("cannot transpose >2-order tensors using '", yystack_[1].location);
-        (yylhs.value.expression) = NULL;
+        (yylhs.value.expr) = NULL;
     }
   }
 
@@ -1824,9 +1824,9 @@ namespace  simit { namespace internal  {
   case 65:
 
     {
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1834,10 +1834,10 @@ namespace  simit { namespace internal  {
   case 66:
 
     {  // Solve
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1869,10 +1869,10 @@ namespace  simit { namespace internal  {
   case 71:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1880,10 +1880,10 @@ namespace  simit { namespace internal  {
   case 72:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1891,10 +1891,10 @@ namespace  simit { namespace internal  {
   case 73:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1902,10 +1902,10 @@ namespace  simit { namespace internal  {
   case 74:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1913,10 +1913,10 @@ namespace  simit { namespace internal  {
   case 75:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1924,10 +1924,10 @@ namespace  simit { namespace internal  {
   case 76:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expression) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -1935,10 +1935,10 @@ namespace  simit { namespace internal  {
   case 77:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.string) == NULL) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
-    if (!(*(yystack_[2].value.expression)).type().defined()) { (yylhs.value.expression) = NULL; break; } // TODO: Remove check
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.string) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    if (!(*(yystack_[2].value.expr)).type().defined()) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
-    Expr elemOrSet = convertAndDelete((yystack_[2].value.expression));
+    Expr elemOrSet = convertAndDelete((yystack_[2].value.expr));
     std::string fieldName = convertAndFree((yystack_[0].value.string));
 
     Type type = elemOrSet.type();
@@ -1948,7 +1948,7 @@ namespace  simit { namespace internal  {
       REPORT_ERROR(errorStr.str(), yystack_[2].location);
     }
 
-    (yylhs.value.expression) = new Expr(FieldRead::make(elemOrSet, fieldName));
+    (yylhs.value.expr) = new Expr(FieldRead::make(elemOrSet, fieldName));
   }
 
     break;
@@ -1957,7 +1957,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[3].value.string));
-    auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.expressions));
+    auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
 
     if (ctx->hasSymbol(name)) {
       const RWExprPair &exprPair = ctx->getSymbol(name);
@@ -1968,21 +1968,21 @@ namespace  simit { namespace internal  {
       // The parenthesis read can read from a tensor or a tuple.
       auto expr = exprPair.getReadExpr();
       if (expr.type().isTensor()) {
-        (yylhs.value.expression) = new Expr(TensorRead::make(expr, *indices));
+        (yylhs.value.expr) = new Expr(TensorRead::make(expr, *indices));
       }
       else if (expr.type().isTuple()) {
         if (indices->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", yystack_[1].location);
         }
 
-        (yylhs.value.expression) = new Expr(TupleRead::make(expr, (*indices)[0]));
+        (yylhs.value.expr) = new Expr(TupleRead::make(expr, (*indices)[0]));
       }
       else {
         REPORT_ERROR("can only access components in tensors and tuples", yystack_[3].location);
       }
     }
     else if (ctx->containsFunction(name)) {
-      (yylhs.value.expression) = NULL;
+      (yylhs.value.expr) = NULL;
     }
     else {
       REPORT_ERROR(name + " is not defined in scope", yystack_[3].location);
@@ -1994,7 +1994,7 @@ namespace  simit { namespace internal  {
   case 82:
 
     {
-    (yylhs.value.expression) = NULL;
+    (yylhs.value.expr) = NULL;
   }
 
     break;
@@ -2003,8 +2003,8 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[3].value.string));
-    auto actuals = unique_ptr<vector<Expr>>((yystack_[1].value.expressions));
-    (yylhs.value.expression) = new Expr(Call::make(name, *actuals, Call::Internal));
+    auto actuals = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
+    (yylhs.value.expr) = new Expr(Call::make(name, *actuals, Call::Internal));
   }
 
     break;
@@ -2012,7 +2012,7 @@ namespace  simit { namespace internal  {
   case 84:
 
     {
-    (yylhs.value.expressions) = new vector<Expr>();
+    (yylhs.value.exprs) = new vector<Expr>();
   }
 
     break;
@@ -2020,7 +2020,7 @@ namespace  simit { namespace internal  {
   case 85:
 
     {
-    (yylhs.value.expressions) = (yystack_[0].value.expressions);
+    (yylhs.value.exprs) = (yystack_[0].value.exprs);
   }
 
     break;
@@ -2028,10 +2028,10 @@ namespace  simit { namespace internal  {
   case 86:
 
     {
-    (yylhs.value.expressions) = new std::vector<Expr>();
-    if ((yystack_[0].value.expression) == NULL) break;  // TODO: Remove check
-    (yylhs.value.expressions)->push_back(*(yystack_[0].value.expression));
-    delete (yystack_[0].value.expression);
+    (yylhs.value.exprs) = new std::vector<Expr>();
+    if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
+    (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -2039,10 +2039,10 @@ namespace  simit { namespace internal  {
   case 87:
 
     {
-    (yylhs.value.expressions) = (yystack_[2].value.expressions);
-    if ((yystack_[0].value.expression) == NULL) break;  // TODO: Remove check
-    (yylhs.value.expressions)->push_back(*(yystack_[0].value.expression));
-    delete (yystack_[0].value.expression);
+    (yylhs.value.exprs) = (yystack_[2].value.exprs);
+    if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
+    (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -2054,7 +2054,7 @@ namespace  simit { namespace internal  {
     string target((yystack_[2].value.string));
     free((void*)(yystack_[4].value.string));
     free((void*)(yystack_[2].value.string));
-    (yylhs.value.expression) = NULL;
+    (yylhs.value.expr) = NULL;
   }
 
     break;
@@ -2099,7 +2099,7 @@ namespace  simit { namespace internal  {
   case 98:
 
     {
-    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.expression), WriteInfo::Field);
+    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.expr), WriteInfo::Field);
   }
 
     break;
@@ -2107,7 +2107,7 @@ namespace  simit { namespace internal  {
   case 99:
 
     {
-    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.expression), WriteInfo::Tensor);
+    (yylhs.value.writeinfo) = new WriteInfo((yystack_[0].value.expr), WriteInfo::Tensor);
   }
 
     break;
@@ -2118,7 +2118,7 @@ namespace  simit { namespace internal  {
     string setName = convertAndFree((yystack_[2].value.string));
     string fieldName = convertAndFree((yystack_[0].value.string));
 
-    if(!ctx->hasSymbol(setName)) { (yylhs.value.expression)=NULL; break; } // TODO: Remove check
+    if(!ctx->hasSymbol(setName)) { (yylhs.value.expr)=NULL; break; } // TODO: Remove check
 
     if (!ctx->hasSymbol(setName)) {
       REPORT_ERROR(setName + " is not defined in scope", yystack_[2].location);
@@ -2130,7 +2130,7 @@ namespace  simit { namespace internal  {
     }
 
     auto setExpr = setExprPair.getWriteExpr();
-    (yylhs.value.expression) = new Expr(FieldWrite::make(setExpr, fieldName, Expr()));
+    (yylhs.value.expr) = new Expr(FieldWrite::make(setExpr, fieldName, Expr()));
   }
 
     break;
@@ -2138,7 +2138,7 @@ namespace  simit { namespace internal  {
   case 101:
 
     {
-    (yylhs.value.expression) = NULL;
+    (yylhs.value.expr) = NULL;
   }
 
     break;
@@ -2147,9 +2147,9 @@ namespace  simit { namespace internal  {
 
     {
     std::string tensorName = convertAndFree((yystack_[3].value.string));
-    auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.expressions));
+    auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
 
-    if(!ctx->hasSymbol(tensorName)) { (yylhs.value.expression)=NULL; break; } // TODO: Remove check
+    if(!ctx->hasSymbol(tensorName)) { (yylhs.value.expr)=NULL; break; } // TODO: Remove check
 
     if (!ctx->hasSymbol(tensorName)) {
       REPORT_ERROR(tensorName + " is not defined in scope", yystack_[3].location);
@@ -2161,7 +2161,7 @@ namespace  simit { namespace internal  {
     }
 
     auto tensorExpr = tensorExprPair.getWriteExpr();
-    (yylhs.value.expression) = new Expr(TensorWrite::make(tensorExpr, *indices, Expr()));
+    (yylhs.value.expr) = new Expr(TensorWrite::make(tensorExpr, *indices, Expr()));
   }
 
     break;
@@ -2170,7 +2170,7 @@ namespace  simit { namespace internal  {
 
     {
     // TODO
-    (yylhs.value.expression) = NULL;
+    (yylhs.value.expr) = NULL;
   }
 
     break;
@@ -2229,7 +2229,7 @@ namespace  simit { namespace internal  {
 
     {
     auto elementType = convertAndDelete((yystack_[4].value.type));
-    auto eps = convertAndDelete((yystack_[1].value.expressions));
+    auto eps = convertAndDelete((yystack_[1].value.exprs));
 
     // TODO: Add endpoint information to set type
     (yylhs.value.type) = new Type(SetType::make(elementType));
@@ -2240,7 +2240,7 @@ namespace  simit { namespace internal  {
   case 111:
 
     {
-    (yylhs.value.expressions) = new vector<Expr>;
+    (yylhs.value.exprs) = new vector<Expr>;
     std::string ident = convertAndFree((yystack_[0].value.string));
   }
 
@@ -2249,7 +2249,7 @@ namespace  simit { namespace internal  {
   case 112:
 
     {
-    (yylhs.value.expressions) = (yystack_[2].value.expressions);
+    (yylhs.value.exprs) = (yystack_[2].value.exprs);
     std::string ident = convertAndFree((yystack_[0].value.string));
   }
 
@@ -2394,10 +2394,10 @@ namespace  simit { namespace internal  {
   case 122:
 
     {
-    if ((yystack_[2].value.expression) == NULL || (yystack_[0].value.expression) == NULL) { (yylhs.value.indexSet) = NULL; break; } // TODO: Remove check
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.indexSet) = NULL; break; } // TODO: Remove check
     (yylhs.value.indexSet) = NULL;
-    delete (yystack_[2].value.expression);
-    delete (yystack_[0].value.expression);
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
   }
 
     break;
@@ -2429,8 +2429,8 @@ namespace  simit { namespace internal  {
   case 128:
 
     {
-    (yylhs.value.expression) = (yystack_[1].value.expression);
-    transposeVector(*(yylhs.value.expression));
+    (yylhs.value.expr) = (yystack_[1].value.expr);
+    transposeVector(*(yylhs.value.expr));
   }
 
     break;
@@ -2442,7 +2442,7 @@ namespace  simit { namespace internal  {
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
     Type type = TensorType::make(Float(64), idoms);
-    (yylhs.value.expression) = new Expr(Literal::make(type, values->values.data()));
+    (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
 
     break;
@@ -2454,7 +2454,7 @@ namespace  simit { namespace internal  {
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
     Type type = TensorType::make(Int(32), idoms);
-    (yylhs.value.expression) = new Expr(Literal::make(type, values->values.data()));
+    (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
 
     break;
@@ -2625,7 +2625,7 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarTensorType = TensorType::make(Int(32));
-    (yylhs.value.expression) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.num)));
+    (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.num)));
   }
 
     break;
@@ -2634,7 +2634,7 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarTensorType = TensorType::make(Float(64));
-    (yylhs.value.expression) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.fnum)));
+    (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.fnum)));
   }
 
     break;
@@ -2644,8 +2644,8 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[6].value.string));
     auto actuals =
-        unique_ptr<vector<Expr>>((yystack_[4].value.expressions));
-    auto expected = convertAndDelete((yystack_[1].value.expression));
+        unique_ptr<vector<Expr>>((yystack_[4].value.exprs));
+    auto expected = convertAndDelete((yystack_[1].value.expr));
 
     std::vector<Expr> literalArgs;
     literalArgs.reserve(actuals->size());

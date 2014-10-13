@@ -164,8 +164,8 @@
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
-  ir::Expr              *expression;
-  std::vector<ir::Expr> *expressions;
+  ir::Expr              *expr;
+  std::vector<ir::Expr> *exprs;
 
   ir::BinaryOperator     binop;
   TensorValues<double>  *TensorDoubleValues;
@@ -267,7 +267,7 @@ program
   : /* empty */
   | program program_element
 
-%type<expression> program_element;
+%type <expr> program_element;
 program_element
   : element_type_decl
   | procedure {
@@ -298,7 +298,7 @@ program_element
   }
 
 // Externs
-%type <expression> extern;
+%type <expr> extern;
 extern
   : "extern" argument_decl ";" {
     Expr externVariable = convertAndDelete($argument_decl);
@@ -415,7 +415,7 @@ function_header
     }
   }
 
-%type <expressions> arguments;
+%type <exprs> arguments;
 arguments
   : /* empty */ {
     $$ = new vector<Expr>;
@@ -424,7 +424,7 @@ arguments
     $$ = $1;
  }
 
-%type <expressions> argument_list;
+%type <exprs> argument_list;
 argument_list
   : argument_decl {
     auto argument = convertAndDelete($argument_decl);
@@ -437,7 +437,7 @@ argument_list
     $$->push_back(argument);
   }
 
-%type <expression> argument_decl;
+%type <expr> argument_decl;
 argument_decl
   : IDENT ":" type {
     std::string name = convertAndFree($IDENT);
@@ -446,7 +446,7 @@ argument_decl
     $$ = new Expr(Variable::make(name, type));
   }
 
-%type <expressions> results;
+%type <exprs> results;
 results
   : /* empty */ {
     $$ = new vector<Expr>();
@@ -455,7 +455,7 @@ results
     $$ = $3;
   }
 
-%type <expressions> result_list;
+%type <exprs> result_list;
 result_list
   : result_decl {
     auto result = convertAndDelete($result_decl);
@@ -468,7 +468,7 @@ result_list
     $$->push_back(result);
   }
 
-%type <expression> result_decl;
+%type <expr> result_decl;
 result_decl
   : IDENT ":" type {
     std::string name = convertAndFree($IDENT);
@@ -478,7 +478,7 @@ result_decl
 
 
 // Statements
-%type<expressions> stmt_block;
+%type <exprs> stmt_block;
 stmt_block
   : /* empty */ {
     $$ = new vector<Expr>();
@@ -490,7 +490,7 @@ stmt_block
     delete $stmt;
   }
 
-%type<expression> stmt;
+%type <expr> stmt;
 stmt
   : const_stmt
   | assign_stmt
@@ -498,7 +498,7 @@ stmt
   | if_stmt
   | for_stmt
 
-%type<expression> const_stmt;
+%type <expr> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     std::string name = convertAndFree($IDENT);
@@ -525,7 +525,7 @@ const_stmt
     $$ = new Expr(literal);
   }
 
-%type<expression> assign_stmt;
+%type <expr> assign_stmt;
 assign_stmt
   : write_expr_list "=" expr_list ";" {
     $$ = NULL;  // TODO: Remove this
@@ -609,7 +609,7 @@ assign_stmt
     }
   }
 
-%type<expression> expr_stmt;
+%type <expr> expr_stmt;
 expr_stmt
   : expr ";" {
     $$ = NULL;
@@ -618,7 +618,7 @@ expr_stmt
     $$ = NULL;
   }
 
-%type <expression> if_stmt;
+%type <expr> if_stmt;
 if_stmt
   : "if" expr stmt_block else_clauses BLOCKEND {
     $$ = NULL;
@@ -639,14 +639,14 @@ elif_clauses
     delete $4;
   }
 
-%type <expression> for_stmt;
+%type <expr> for_stmt;
 for_stmt
   : "for" IDENT "in" index_set stmt_block BLOCKEND {
     $$ = NULL;
   }
 
 // Expressions
-%type <expression> expr;
+%type <expr> expr;
 expr
   : ident_expr
   | paren_expr
@@ -659,7 +659,7 @@ expr
 
 
 // Read Ident Expression
-%type <expression> ident_expr;
+%type <expr> ident_expr;
 ident_expr
   : IDENT {
     string ident = convertAndFree($IDENT);
@@ -680,7 +680,7 @@ ident_expr
 
 
 // Parenthesis Expression
-%type <expression> paren_expr;
+%type <expr> paren_expr;
 paren_expr
   : "(" expr ")" {
     if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
@@ -689,7 +689,7 @@ paren_expr
 
 
 // Linear Algebra Expressions
-%type <expression> linear_algebra_expr;
+%type <expr> linear_algebra_expr;
 linear_algebra_expr
   : "-" expr %prec NEG {
     if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
@@ -831,7 +831,7 @@ elwise_binary_op
 
 
 // Boolean Expressions
-%type <expression> boolean_expr;
+%type <expr> boolean_expr;
 boolean_expr
   : expr "==" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
@@ -872,7 +872,7 @@ boolean_expr
 
 
 // Field Read Expressions
-%type <expression> field_read_expr;
+%type <expr> field_read_expr;
 field_read_expr
   : set_read_expr "." IDENT {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
@@ -891,7 +891,7 @@ field_read_expr
     $$ = new Expr(FieldRead::make(elemOrSet, fieldName));
   }
 
-%type <expression> set_read_expr;
+%type <expr> set_read_expr;
 set_read_expr
   : ident_expr
   | paren_expr
@@ -899,7 +899,7 @@ set_read_expr
 
 
 // Call and Tensor Read Expressions
-%type <expression> call_or_paren_read_expr;
+%type <expr> call_or_paren_read_expr;
 call_or_paren_read_expr
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
@@ -938,7 +938,7 @@ call_or_paren_read_expr
     $$ = NULL;
   }
 
-%type <expression> call_expr;
+%type <expr> call_expr;
 call_expr
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
@@ -946,7 +946,7 @@ call_expr
     $$ = new Expr(Call::make(name, *actuals, Call::Internal));
   }
 
-%type <expressions> expr_list_or_empty;
+%type <exprs> expr_list_or_empty;
 expr_list_or_empty
   : /* empty */ {
     $$ = new vector<Expr>();
@@ -955,7 +955,7 @@ expr_list_or_empty
     $$ = $expr_list;
   }
 
-%type <expressions> expr_list;
+%type <exprs> expr_list;
 expr_list
   : expr {
     $$ = new std::vector<Expr>();
@@ -972,7 +972,7 @@ expr_list
 
 
 // Map Expressions
-%type <expression> map_expr;
+%type <expr> map_expr;
 map_expr
   : "map" IDENT "to" IDENT with reduce {
     string function($2);
@@ -1053,7 +1053,7 @@ write_expr
     $$ = new WriteInfo($tensor_write_expr, WriteInfo::Tensor);
   }
 
-%type <expression> field_write_expr;
+%type <expr> field_write_expr;
 field_write_expr
   : IDENT "." IDENT {
     string setName = convertAndFree($1);
@@ -1077,7 +1077,7 @@ field_write_expr
     $$ = NULL;
   }
 
-%type <expression> tensor_write_expr;
+%type <expr> tensor_write_expr;
 tensor_write_expr
   : IDENT "(" expr_list ")" {
     std::string tensorName = convertAndFree($1);
@@ -1140,7 +1140,7 @@ set_type
     $$ = new Type(SetType::make(elementType));
   }
 
-%type <expressions> endpoints;
+%type <exprs> endpoints;
 endpoints
   : IDENT {
     $$ = new vector<Expr>;
@@ -1316,11 +1316,11 @@ component_type
 };
 
 
-%type <expression> literal;
+%type <expr> literal;
 literal_expr
   : tensor_literal
 
-%type <expression> tensor_literal;
+%type <expr> tensor_literal;
 tensor_literal
   : dense_tensor_literal
   | dense_tensor_literal "'" {
@@ -1329,7 +1329,7 @@ tensor_literal
   }
   | scalar_literal
 
-%type <expression> dense_tensor_literal;
+%type <expr> dense_tensor_literal;
 dense_tensor_literal
   : "[" float_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<double>>($2);
@@ -1465,7 +1465,7 @@ int_dense_vector_literal
     $$->addValue($3);
   }
 
-%type <expression> scalar_literal;
+%type <expr> scalar_literal;
 scalar_literal
   : INT_LITERAL {
     auto scalarTensorType = TensorType::make(Int(32));
