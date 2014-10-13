@@ -2,9 +2,7 @@
 func f(p : int) -> (r : int)
   if p == 0
     r = 0;
-    return;
   end
-  r = 42;
 end
 
 %%% if-else

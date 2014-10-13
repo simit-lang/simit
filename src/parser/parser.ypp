@@ -480,7 +480,6 @@ stmt_block
 %type<expression> stmt;
 stmt
   : const_stmt
-  | return_stmt
   | assign_stmt
   | expr_stmt
   | if_stmt
@@ -514,12 +513,6 @@ const_stmt
 
     ctx->addSymbol(literal->getName(), literal);
     $$ = new shared_ptr<Expression>(literal);
-  }
-
-%type<expression> return_stmt;
-return_stmt
-  : "return" ";" {
-    $$ = NULL;
   }
 
 %type<expression> assign_stmt;
@@ -1382,7 +1375,7 @@ dense_tensor_literal
   : "[" float_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<double>>($2);
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
-                                             values->dimSizes.rend());
+                                          values->dimSizes.rend());
     Type type = TensorType::make(Float(64), idoms);
     auto literal = new Literal(type, values->values.data());
     $$ = new shared_ptr<Literal>(literal);
@@ -1390,7 +1383,7 @@ dense_tensor_literal
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
-                                             values->dimSizes.rend());
+                                          values->dimSizes.rend());
     Type type = TensorType::make(Int(32), idoms);
     auto literal = new Literal(type, values->values.data());
     $$ = new shared_ptr<Literal>(literal);
