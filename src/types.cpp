@@ -129,7 +129,7 @@ std::ostream &operator<<(std::ostream &os, const TensorType &type) {
     os << type.componentType;
   }
   else {
-    os << "Tensor";
+    os << "tensor";
     os << "[" << util::join(type.dimensions, "][") << "]";
     os << "(" << type.componentType << ")";
   }

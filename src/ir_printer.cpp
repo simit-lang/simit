@@ -34,22 +34,28 @@ IRPrinter::IRPrinter(std::ostream &os, signed indent) : os(os), indentation(0) {
 void IRPrinter::print(const Function &func) {
   os << "func " << func.getName() << "(";
   if (func.getArguments().size() > 0) {
-    print(func.getArguments()[0]);
+    Expr arg = func.getArguments()[0];
+    print(arg);
+    os << " : " << arg.type();
   }
   for (size_t i=1; i < func.getArguments().size(); ++i) {
-    os << ",";
-    print(func.getArguments()[i]);
+    Expr arg = func.getArguments()[i];
+    os << ", ";
+    print(arg);
+    os << " : " << arg.type();
   }
   os << ")";
 
   if (func.getResults().size() > 0) {
     os << " -> (";
-    if (func.getResults().size() > 0) {
-      print(func.getResults()[0]);
-    }
+    print(func.getResults()[0]);
+    os << " : " << func.getResults()[0].type();
+
     for (size_t i=1; i < func.getResults().size(); ++i) {
-      os << ",";
-      print(func.getResults()[i]);
+      Expr res = func.getResults()[i];
+      os << ", ";
+      print(res);
+      os << " : " << res.type();
     }
     os << ")";
   }
