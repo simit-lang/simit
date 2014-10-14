@@ -45,37 +45,8 @@ class IRVisitor {
 public:
   virtual ~IRVisitor();
 
-  virtual void visit(Function *);
-  virtual void visit(Literal *);
-  virtual void visit(Variable *);
-  virtual void visit(Result *);
-  virtual void visit(FieldRead *);
-  virtual void visit(TensorRead *);
-  virtual void visit(TupleRead *);
-  virtual void visit(Map *);
-  virtual void visit(IndexedTensor *);
-  virtual void visit(IndexExpr *);
-  virtual void visit(Call *);
-  virtual void visit(Neg *);
-  virtual void visit(Add *);
-  virtual void visit(Sub *);
-  virtual void visit(Mul *);
-  virtual void visit(Div *);
-
-  virtual void visit(AssignStmt *);
-  virtual void visit(FieldWrite *);
-  virtual void visit(TensorWrite *);
-  virtual void visit(For *);
-  virtual void visit(IfThenElse *);
-  virtual void visit(Block *);
-  virtual void visit(Pass *);
-};
-
-class IRConstVisitor {
-public:
-  virtual ~IRConstVisitor();
-
   virtual void visit(const Function *);
+
   virtual void visit(const Literal *);
   virtual void visit(const Variable *);
   virtual void visit(const Result *);

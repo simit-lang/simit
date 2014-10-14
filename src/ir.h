@@ -387,6 +387,14 @@ struct For : public StmtNode<For> {
 struct IfThenElse : public StmtNode<IfThenElse> {
   Expr condition;
   Stmt thenBody, elseBody;
+
+  static Stmt make(Expr condition, Stmt thenBody, Stmt elseBody) {
+    IfThenElse *node = new IfThenElse;
+    node->condition = condition;
+    node->thenBody = thenBody;
+    node->elseBody = elseBody;
+    return node;
+  }
 };
 
 struct Block : public StmtNode<Block> {

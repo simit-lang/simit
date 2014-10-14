@@ -1,40 +1,29 @@
-#ifndef SIMIT_IR_PRINTER_H
-#define SIMIT_IR_PRINTER_H
+#ifndef SIMIT_IR_MUTATOR_H
+#define SIMIT_IR_MUTATOR_H
 
-#include "ir_visitor.h"
-
-#include <ostream>
-#include <map>
-#include <set>
-#include <memory>
+#include "ir.h"
 
 namespace simit {
 namespace ir {
 
-class Function;
-class Expr;
-class Stmt;
-
-std::ostream &operator<<(std::ostream &os, const Function &);
-std::ostream &operator<<(std::ostream &os, const Expr &);
-std::ostream &operator<<(std::ostream &os, const Stmt &);
-
-class IRPrinter : public IRVisitor {
+class IRMutator : public IRVisitor {
 public:
-  IRPrinter(std::ostream &os, signed indent=0);
-  virtual ~IRPrinter() {}
+  virtual Expr mutate(Expr expr);
+  virtual Stmt mutate(Stmt stmt);
 
-  void print(const Function &);
-  void print(const Expr &);
-  void print(const Stmt &);
+protected:
+  /// visit methods that take Exprs assign to this to return their value.
+  Expr expr;
 
-private:
+  /// visit methods that take Stmts assign to this to return their value.
+  Stmt stmt;
+
   virtual void visit(const Literal *);
   virtual void visit(const Variable *);
   virtual void visit(const Result *);
   virtual void visit(const FieldRead *);
-  virtual void visit(const TupleRead *);
   virtual void visit(const TensorRead *);
+  virtual void visit(const TupleRead *);
   virtual void visit(const Map *);
   virtual void visit(const IndexedTensor *);
   virtual void visit(const IndexExpr *);
@@ -52,12 +41,8 @@ private:
   virtual void visit(const IfThenElse *);
   virtual void visit(const Block *);
   virtual void visit(const Pass *);
-
-  void indent();
-
-  std::ostream &os;
-  unsigned indentation;
 };
 
-}} // namespace simit::ir
+}}
+
 #endif
