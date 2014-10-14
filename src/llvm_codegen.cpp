@@ -98,7 +98,7 @@ void llvmArgument(ir::Expr arg, std::vector<std::string> *names,
   switch (arg.type().kind()) {
     case ir::Type::Scalar: // fall-through
     case ir::Type::Tensor: {
-      names->push_back(toVariable(arg)->name);
+      names->push_back(ir::to<ir::Variable>(arg)->name);
       types->push_back(llvmPtrType(arg.type()));
       break;
     }
@@ -107,13 +107,13 @@ void llvmArgument(ir::Expr arg, std::vector<std::string> *names,
       break;
     }
     case ir::Type::Set: {
-      names->push_back(toVariable(arg)->name);
+      names->push_back(ir::to<ir::Variable>(arg)->name);
       types->push_back(LLVM_INT32);
 
       // Emit one function argument per set field
       const ir::SetType *type = arg.type().toSet();
       for (auto &field : type->elementType.toElement()->fields) {
-        names->push_back(toVariable(arg)->name + "." + field.first);
+        names->push_back(ir::to<ir::Variable>(arg)->name + "." + field.first);
         types->push_back(llvmPtrType(field.second));
       }
       break;
@@ -133,12 +133,12 @@ void llvmArguments(const std::vector<ir::Expr> &arguments,
   std::set<std::string> argNames;
 
   for (auto &arg : arguments) {
-    argNames.insert(toVariable(arg)->name);
+    argNames.insert(ir::to<ir::Variable>(arg)->name);
     llvmArgument(arg, llvmArgNames, llvmArgTypes);
   }
 
   for (auto &res : results) {
-    if (argNames.find(toVariable(res)->name) != argNames.end()) {
+    if (argNames.find(ir::to<ir::Variable>(res)->name) != argNames.end()) {
       continue;
     }
     llvmArgument(res, llvmArgNames, llvmArgTypes);

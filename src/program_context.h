@@ -115,7 +115,7 @@ public:
   }
 
   void addExtern(ir::Expr externVariable) {
-    externs[toVariable(externVariable)->name] = externVariable;
+    externs[ir::to<ir::Variable>(externVariable)->name] = externVariable;
   }
 
   bool containsExtern(const std::string &name) {

@@ -1300,7 +1300,7 @@ namespace  simit { namespace internal  {
       results.push_back(ext);
 
       arguments.push_back(ext);
-      ctx->addSymbol(toVariable(ext)->name, ext, ext);
+      ctx->addSymbol(to<Variable>(ext)->name, ext, ext);
     }
 
     (yylhs.value.function) = new Func(name, arguments, results, Stmt());
@@ -1340,14 +1340,14 @@ namespace  simit { namespace internal  {
 
     std::set<std::string> argumentNames;
     for (Expr &argument : *arguments) {
-      std::string argumentName = toVariable(argument)->name;
+      std::string argumentName = to<Variable>(argument)->name;
       ctx->addSymbol(argumentName, argument, Expr());
       argumentNames.insert(argumentName);
     }
 
     for (auto result : *results) {
       Expr readExpr;
-      std::string resultName = toVariable(result)->name;
+      std::string resultName = to<Variable>(result)->name;
       if (argumentNames.find(resultName) != argumentNames.end()) {
         readExpr = ctx->getSymbol(resultName).getReadExpr();
       }
@@ -1652,7 +1652,7 @@ namespace  simit { namespace internal  {
     // cast $tensor_literal to a 1xn matrix.
     const TensorType *literalTensorType = literalType.toTensor();
     if (tensorType->order() == 2 && literalTensorType->order() == 1) {
-      const_cast<Literal*>(toLiteral(literal))->cast(type);
+      const_cast<Literal*>(to<Literal>(literal))->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.

@@ -516,15 +516,13 @@ bool operator!=(const Expr &, const Expr &);
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
 
-//
-inline const Literal *toLiteral(Expr e) {
-  return static_cast<const Literal*>(e.expr());
+template <typename E>
+inline const E* to(Expr e) {
+  assert(e.defined() && dynamic_cast<const E*>(e.expr()) != nullptr &&
+         "Wrong Expr type");
+  return static_cast<const E*>(e.expr());
 }
 
-inline const Variable *toVariable(Expr e) {
-  return static_cast<const Variable*>(e.expr());
-}
-
-}} // namespace simit::internal
+}} // namespace simit::ir
 
 #endif

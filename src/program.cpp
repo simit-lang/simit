@@ -76,7 +76,7 @@ class Program::ProgramContent {
       auto formalArgs = func.getArguments();
       auto actualArgs = test->getActuals();
       for (size_t i=0; i < actualArgs.size(); ++i) {
-        auto formal = toVariable(formalArgs[i])->name;
+        auto formal = ir::to<ir::Variable>(formalArgs[i])->name;
         auto actual = actualArgs[i];
         compiledFunc->bind(formal, &actual);
       }
@@ -86,7 +86,7 @@ class Program::ProgramContent {
       for (auto &formalResult : formalResults) {
         ir::Expr actualResult = ir::Literal::make(formalResult.type());
         actualResults.push_back(actualResult);
-        auto formal = toVariable(formalResult)->name;
+        auto formal = ir::to<ir::Variable>(formalResult)->name;
         auto actual = actualResult;
         compiledFunc->bind(formal, &actual);
       }
@@ -99,7 +99,7 @@ class Program::ProgramContent {
       auto rit = actualResults.begin();
       auto eit = expectedResults.begin();
       for (; rit != actualResults.end(); ++rit, ++eit) {
-        if (*toLiteral(*rit) != *toLiteral(*eit)) {
+        if (*ir::to<ir::Literal>(*rit) != *ir::to<ir::Literal>(*eit)) {
           // TODO: Report with line number of test
           diags.report() << "Test failure (" << util::toString(*rit)
                          << " != " << util::toString(*eit) << ")";
