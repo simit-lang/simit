@@ -14,8 +14,8 @@ namespace util {
 ///   mutable long ref;
 ///   X() : ref(0) {}
 ///
-///   void aquire(X *x) { ++x->ref; }
-///   void release(X *x) { if (--x->ref ==0) delete x; }
+///   friend void aquire(X *x) { ++x->ref; }
+///   friend void release(X *x) { if (--x->ref ==0) delete x; }
 /// };
 template <class T>
 class IntrusivePtr {
@@ -93,6 +93,26 @@ public:
   friend inline
   bool operator!=(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
     return p1.ptr != p2.ptr;
+  }
+
+  friend inline
+  bool operator<(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
+    return p1.ptr < p2.ptr;
+  }
+
+  friend inline
+  bool operator>(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
+    return p1.ptr > p2.ptr;
+  }
+
+  friend inline
+  bool operator<=(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
+    return p1.ptr <= p2.ptr;
+  }
+
+  friend inline
+  bool operator>=(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
+    return p1.ptr >= p2.ptr;
   }
 
 protected:
