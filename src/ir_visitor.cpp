@@ -9,7 +9,7 @@ namespace ir {
 IRVisitor::~IRVisitor() {
 }
 
-void IRVisitor::visit(const Function *op) {
+void IRVisitor::visit(const Func *op) {
   for (auto &argument : op->getArguments()) {
     argument.accept(this);
   }

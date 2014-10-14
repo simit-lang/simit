@@ -20,7 +20,7 @@ namespace internal {
 /// A Simit function that has been compiled with LLVM.
 class LLVMFunction : public simit::Function {
  public:
-  LLVMFunction(const simit::ir::Function &simitFunc,
+  LLVMFunction(const simit::ir::Func &simitFunc,
                llvm::Function *llvmFunc,
                const std::shared_ptr<llvm::ExecutionEngine> &llvmFuncEE,
                const std::vector<std::shared_ptr<Storage>> &storage);

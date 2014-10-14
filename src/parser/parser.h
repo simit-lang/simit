@@ -187,7 +187,7 @@ namespace  simit { namespace internal  {
   double      fnum;
   const char *string;
 
-  ir::Function *function;
+  ir::Func *function;
 
   ir::Type                         *type;
   std::pair<std::string, ir::Type> *field;

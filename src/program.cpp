@@ -55,11 +55,11 @@ class Program::ProgramContent {
     // For each test look up the called function. Grab the actual arguments and
     // run the function with them as input.  Then compare the result to the
     // expected literal.
-    std::map<ir::Function*, simit::Function*> compiled;
+    std::map<ir::Func*, simit::Function*> compiled;
 
     for (auto &test : ctx.getTests()) {
       // get binary function with name test->call->callee from list of functions
-      ir::Function *func = ctx.getFunction(test->getCallee());
+      ir::Func *func = ctx.getFunction(test->getCallee());
       if (func == NULL) {
         diags.report() << "Error: attempting to test unknown function";
         return 1;
@@ -68,7 +68,7 @@ class Program::ProgramContent {
       if (compiled.find(func) == compiled.end()) {
         compiled[func] = compile(func);
       }
-      simit::Function *compiledFunc = compiled[func];
+      Function *compiledFunc = compiled[func];
 
       // run the function with test->call->arguments
       assert(test->getActuals().size() == func->getArguments().size());
@@ -115,7 +115,7 @@ class Program::ProgramContent {
   internal::Frontend *frontend;
   internal::Backend *backend;
 
-  Function *compile(ir::Function *simitFunc) {
+  Function *compile(ir::Func *simitFunc) {
     return getBackend()->compile(simitFunc);
   }
 };

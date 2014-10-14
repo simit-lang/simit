@@ -427,15 +427,24 @@ struct Pass : public StmtNode<Pass> {
 };
 
 /// A Simit function
-class Function {
+class Func {
 public:
-  Function() : content(nullptr) {}
+  Func() : content(nullptr) {}
 
-  Function(const std::string &name, const std::vector<Expr> &arguments,
-           const std::vector<Expr> &results) : content(new Content){
+  Func(const std::string &name, const std::vector<Expr> &arguments,
+       const std::vector<Expr> &results, Stmt body) : content(new Content) {
     content->name = name;
     content->arguments = arguments;
     content->results = results;
+    content->body = body;
+  }
+
+  Func(const std::string &name, std::initializer_list<Expr> arguments,
+       std::initializer_list<Expr> results, Stmt body) : content(new Content) {
+    content->name = name;
+    content->arguments = arguments;
+    content->results = results;
+    content->body = body;
   }
 
   void setBody(Stmt body) {content->body = body;}
@@ -455,7 +464,7 @@ private:
     std::vector<Expr> results;
     Stmt body;
   };
-  std::shared_ptr<Function::Content> content;
+  std::shared_ptr<Func::Content> content;
 };
 
 /// A Simit test case. Simit test cases can be declared in language comments

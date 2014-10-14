@@ -11,7 +11,7 @@ class Diagnostics;
 class Function;
 
 namespace ir {
-class Function;
+class Func;
 }
 
 namespace internal {
@@ -24,7 +24,7 @@ public:
   Backend() {}
   virtual ~Backend() {}
 
-  virtual simit::Function *compile(simit::ir::Function *function) = 0;
+  virtual simit::Function *compile(simit::ir::Func *function) = 0;
 };
 
 }} // namespace simit::internal

@@ -7,7 +7,7 @@ namespace simit {
 namespace internal {
 
 std::map<IRNode*, void*>
-TemporaryAllocator::allocateTemporaries(Function *f) {
+TemporaryAllocator::allocateTemporaries(Func *f) {
   temps.clear();
 
   return temps;

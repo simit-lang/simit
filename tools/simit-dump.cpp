@@ -145,7 +145,7 @@ int main(int argc, const char* argv[]) {
   }
 
   if (compile) {
-    simit::ir::Function *func = NULL;
+    simit::ir::Func *func = NULL;
     if (function != "") {
       func = functions[function];
       if (func == nullptr) {

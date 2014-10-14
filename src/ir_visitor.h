@@ -7,7 +7,7 @@
 namespace simit {
 namespace ir {
 
-class Function;
+class Func;
 
 struct Literal;
 struct Variable;
@@ -45,7 +45,7 @@ class IRVisitor {
 public:
   virtual ~IRVisitor();
 
-  virtual void visit(const Function *);
+  virtual void visit(const Func *);
 
   virtual void visit(const Literal *);
   virtual void visit(const Variable *);

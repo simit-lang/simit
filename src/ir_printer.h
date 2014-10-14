@@ -11,11 +11,11 @@
 namespace simit {
 namespace ir {
 
-class Function;
+class Func;
 class Expr;
 class Stmt;
 
-std::ostream &operator<<(std::ostream &os, const Function &);
+std::ostream &operator<<(std::ostream &os, const Func &);
 std::ostream &operator<<(std::ostream &os, const Expr &);
 std::ostream &operator<<(std::ostream &os, const Stmt &);
 
@@ -24,7 +24,7 @@ public:
   IRPrinter(std::ostream &os, signed indent=0);
   virtual ~IRPrinter() {}
 
-  void print(const Function &);
+  void print(const Func &);
   void print(const Expr &);
   void print(const Stmt &);
 

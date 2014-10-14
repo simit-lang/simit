@@ -59,7 +59,7 @@ LLVMBackend::~LLVMBackend() {
   delete builder;
 }
 
-simit::Function *LLVMBackend::compile(simit::ir::Function *function) {
+simit::Function *LLVMBackend::compile(simit::ir::Func *function) {
   return NULL;
 }
 

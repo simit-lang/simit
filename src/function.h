@@ -14,7 +14,7 @@
 
 namespace simit {
 namespace ir {
-class Function;
+class Func;
 struct Literal;
 }
 
@@ -59,7 +59,7 @@ protected:
     };
   };
   
-  Function(const ir::Function &simitFunc);
+  Function(const ir::Func &simitFunc);
 
   void *getFieldPtr(const SetBase *base, const std::string &fieldName);
 

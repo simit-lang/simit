@@ -34,7 +34,7 @@ public:
   LLVMBackend();
   ~LLVMBackend();
 
-  simit::Function *compile(simit::ir::Function *function);
+  simit::Function *compile(simit::ir::Func *function);
 
 private:
   static bool llvmInitialized;

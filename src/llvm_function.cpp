@@ -17,7 +17,7 @@ using namespace std;
 namespace simit {
 namespace internal {
 
-LLVMFunction::LLVMFunction(const ir::Function &simitFunc,
+LLVMFunction::LLVMFunction(const ir::Func &simitFunc,
                            llvm::Function *llvmFunc,
                            const shared_ptr<llvm::ExecutionEngine> &llvmFuncEE,
                            const std::vector<std::shared_ptr<Storage>> &storage)

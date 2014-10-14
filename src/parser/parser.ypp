@@ -157,7 +157,7 @@
   double      fnum;
   const char *string;
 
-  ir::Function *function;
+  ir::Func *function;
 
   ir::Type                         *type;
   std::pair<std::string, ir::Type> *field;
@@ -269,7 +269,7 @@ program
 program_element
   : element_type_decl
   | procedure {
-    std::unique_ptr<Function> function($procedure);
+    std::unique_ptr<Func> function($procedure);
     std::string name = function->getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("procedure redefinition (" + name + ")", @procedure);
@@ -277,7 +277,7 @@ program_element
     ctx->addFunction(function.release());
   }
   | function {
-    std::unique_ptr<Function> function($function);
+    std::unique_ptr<Func> function($function);
     std::string name = function->getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("function redefinition (" + name + ")", @function);
@@ -364,7 +364,7 @@ procedure_header
       ctx->addSymbol(toVariable(ext)->name, ext, ext);
     }
 
-    $$ = new Function(name, arguments, results);
+    $$ = new Func(name, arguments, results, Stmt());
   }
 
 %type <function> function;
@@ -381,7 +381,7 @@ function_header
     std::string name = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<Expr>>($arguments);
     auto results = unique_ptr<vector<Expr>>($results);
-    $$ = new Function(name, *arguments, *results);
+    $$ = new Func(name, *arguments, *results, Stmt());
 
     std::set<std::string> argumentNames;
     for (Expr &argument : *arguments) {

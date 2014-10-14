@@ -34,7 +34,7 @@ class TemporaryAllocator : ir::IRVisitor {
 public:
   TemporaryAllocator() {}
 
-  std::map<ir::IRNode*, void*> allocateTemporaries(ir::Function *f);
+  std::map<ir::IRNode*, void*> allocateTemporaries(ir::Func *f);
   std::vector<std::shared_ptr<Storage>> getTemporaries() const {return storage;}
 
 private:

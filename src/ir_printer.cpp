@@ -8,7 +8,7 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-std::ostream &operator<<(std::ostream &os, const Function &function) {
+std::ostream &operator<<(std::ostream &os, const Func &function) {
   IRPrinter printer(os);
   printer.print(function);
   return os;
@@ -31,7 +31,7 @@ std::ostream &operator<<(std::ostream &os, const Stmt &Stmt) {
 IRPrinter::IRPrinter(std::ostream &os, signed indent) : os(os), indentation(0) {
 }
 
-void IRPrinter::print(const Function &func) {
+void IRPrinter::print(const Func &func) {
   os << "func " << func.getName() << "(";
   if (func.getArguments().size() > 0) {
     Expr arg = func.getArguments()[0];

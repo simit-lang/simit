@@ -89,7 +89,7 @@ public:
     return exprSymtable.contains(name);
   }
 
-  void addFunction(ir::Function *f) {
+  void addFunction(ir::Func *f) {
     functions[f->getName()] = f;
   }
 
@@ -97,11 +97,11 @@ public:
     return functions.find(name) != functions.end();
   }
 
-  ir::Function *getFunction(const std::string &name) {
+  ir::Func *getFunction(const std::string &name) {
     return functions[name];
   }
 
-  std::map<std::string, ir::Function *> getFunctions() {
+  std::map<std::string, ir::Func *> getFunctions() {
     return functions;
   }
 
@@ -138,7 +138,7 @@ public:
   const std::vector<ir::Test*> &getTests() const { return tests; }
 
 private:
-  std::map<std::string, ir::Function *> functions;
+  std::map<std::string, ir::Func *>     functions;
   std::map<std::string, ir::Expr>       externs;
 
   std::map<std::string, ir::Type>       elementTypes;

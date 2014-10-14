@@ -1164,7 +1164,7 @@ namespace  simit { namespace internal  {
   case 5:
 
     {
-    std::unique_ptr<Function> function((yystack_[0].value.function));
+    std::unique_ptr<Func> function((yystack_[0].value.function));
     std::string name = function->getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("procedure redefinition (" + name + ")", yystack_[0].location);
@@ -1177,7 +1177,7 @@ namespace  simit { namespace internal  {
   case 6:
 
     {
-    std::unique_ptr<Function> function((yystack_[0].value.function));
+    std::unique_ptr<Func> function((yystack_[0].value.function));
     std::string name = function->getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("function redefinition (" + name + ")", yystack_[0].location);
@@ -1303,7 +1303,7 @@ namespace  simit { namespace internal  {
       ctx->addSymbol(toVariable(ext)->name, ext, ext);
     }
 
-    (yylhs.value.function) = new Function(name, arguments, results);
+    (yylhs.value.function) = new Func(name, arguments, results, Stmt());
   }
 
     break;
@@ -1336,7 +1336,7 @@ namespace  simit { namespace internal  {
     std::string name = convertAndFree((yystack_[4].value.string));
     auto arguments = unique_ptr<vector<Expr>>((yystack_[2].value.exprs));
     auto results = unique_ptr<vector<Expr>>((yystack_[0].value.exprs));
-    (yylhs.value.function) = new Function(name, *arguments, *results);
+    (yylhs.value.function) = new Func(name, *arguments, *results, Stmt());
 
     std::set<std::string> argumentNames;
     for (Expr &argument : *arguments) {
