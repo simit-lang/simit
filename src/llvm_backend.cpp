@@ -23,7 +23,6 @@
 #include "ir.h"
 #include "ir_printer.h"
 #include "llvm_function.h"
-#include "storage.h"
 #include "macros.h"
 
 using namespace std;

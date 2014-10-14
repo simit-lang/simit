@@ -8,7 +8,6 @@
 
 #include "function.h"
 #include "ir.h"
-#include "storage.h"
 
 namespace llvm {
 class ExecutionEngine;
