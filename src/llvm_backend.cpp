@@ -66,7 +66,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmFunc->getArgumentList()) {
     // Load scalar arguments
     if (i++ < simitArgs.size()) {
-      if (simitArgs[i].type().isScalar()) {
+      if (simitArgs[i-1].type().isScalar()) {
         string valName = string(arg.getName()) + VAL_SUFFIX;
         llvm::Value *val = builder->CreateLoad(&arg, valName);
         symtable.insert(arg.getName(), val);
