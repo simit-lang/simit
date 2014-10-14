@@ -81,19 +81,34 @@ void IRPrinter::print(const Stmt &stmt) {
 
 void IRPrinter::visit(const Literal *op) {
   // TODO: Fix value printing to print matrices and tensors properly
-  switch (op->type.getKind()) {
+  switch (op->type.kind()) {
+    case Type::Scalar: // fall-through
     case Type::Tensor: {
-      const TensorType *ttype = op->type.toTensor();
-      size_t tsize = ttype->size();
-      switch (ttype->componentType.toScalar()->kind) {
+
+
+      size_t size;
+      ScalarType::Kind componentType;
+      if (op->type.kind() == Type::Scalar) {
+        const ScalarType *type = op->type.toScalar();
+        size = 1;
+        componentType = type->kind;
+      }
+      else {
+        assert(op->type.kind() == Type::Tensor);
+        const TensorType *type = op->type.toTensor();
+        size = type->size();
+        componentType = type->componentType.toScalar()->kind;
+      }
+
+      switch (componentType) {
         case ScalarType::Int: { {
           const int *idata = static_cast<const int*>(op->data);
-          if (tsize == 1) {
+          if (size == 1) {
             os << idata[0];
           }
           else {
             os << "[" << idata[0];
-            for (size_t i=0; i < tsize; ++i) {
+            for (size_t i=0; i < size; ++i) {
               os << ", " << idata[i];
             }
             os << "]";
@@ -102,12 +117,12 @@ void IRPrinter::visit(const Literal *op) {
         }
         case ScalarType::Float: {
           const double *fdata = static_cast<const double*>(op->data);
-          if (tsize == 1) {
+          if (size == 1) {
             os << fdata[0];
           }
           else {
             os << "[" << to_string(fdata[0]);
-            for (size_t i=1; i < tsize; ++i) {
+            for (size_t i=1; i < size; ++i) {
               os << ", " + to_string(fdata[i]);
             }
             os << "]";
@@ -118,9 +133,6 @@ void IRPrinter::visit(const Literal *op) {
       }
       break;
     }
-    case Type::Scalar:
-      NOT_SUPPORTED_YET;
-      break;
     case Type::Element:
       NOT_SUPPORTED_YET;
     case Type::Set:

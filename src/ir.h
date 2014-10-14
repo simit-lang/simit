@@ -91,24 +91,43 @@ struct Literal : public ExprNode<Literal> {
   void cast(Type type);
 
   static Expr make(Type type) {
-    assert(type.isTensor() && "Only tensor literals currently supported");
-    Literal *node = new Literal;
-    node->type = type;
-    const TensorType *ttype = type.toTensor();
-    node->size = ttype->size() * ttype->componentType.toScalar()->bytes();
-    node->data = malloc(node->size);
-    return node;
+    return Literal::make(type, nullptr);
   }
 
   static Expr make(Type type, void *values) {
-    assert(type.isTensor() && "Only tensor literals currently supported");
+    size_t size = 0;
+    switch (type.kind()) {
+      case Type::Scalar:
+        size = type.toScalar()->bytes();
+        break;
+      case Type::Tensor: {
+          const TensorType *ttype = type.toTensor();
+          size = ttype->size() * ttype->componentType.toScalar()->bytes();
+        break;
+      }
+      case Type::Element:
+      case Type::Set:
+      case Type::Tuple:
+        assert(false && "Only tensor and scalar literals currently supported");
+        break;
+    }
+
     Literal *node = new Literal;
     node->type = type;
-    const TensorType *ttype = type.toTensor();
-    node->size = ttype->size() * ttype->componentType.toScalar()->bytes();
+    node->size = size;
     node->data = malloc(node->size);
-    memcpy(node->data, values, node->size);
+    if (values != nullptr) {
+      memcpy(node->data, values, node->size);
+    }
+    else {
+      memset(node->data, 0, node->size);
+    }
     return node;
+  }
+
+  static Expr make(Type type, std::vector<double> values) {
+    assert(type.isScalar() || type.toTensor()->size() == values.size());
+    return Literal::make(type, values.data());
   }
 
   ~Literal() {free(data);}

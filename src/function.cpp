@@ -31,13 +31,15 @@ Function::Function(const simit::ir::Func &simitFunc)
 Function::~Function() {
 }
 
-void Function::bind(const std::string &argName, Tensor *tensor) {
+void Function::bind(const std::string &argName, ir::Expr *tensor) {
   assert(actuals.find(argName) != actuals.end() &&
          "no argument of this name in function");
 
   // Check that the tensor matches the argument type
-  assert(tensor->type == actuals[argName].getType() &&
+  assert(tensor->type() == actuals[argName].getType() &&
          "tensor type does not match function argument type");
+
+  assert(dynamic_cast<const ir::Literal*>(tensor->expr()) != nullptr);
 
   actuals[argName].bind(tensor);
   initRequired = true;

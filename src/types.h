@@ -31,13 +31,13 @@ public:
 
   bool defined() const { return ptr != nullptr; }
 
-  Kind getKind() const { return kind; }
+  Kind kind() const { return _kind; }
 
-  bool isScalar()  const { return kind==Scalar; }
-  bool isTensor()  const { return kind==Tensor; }
-  bool isElement() const { return kind==Element; }
-  bool isSet()     const { return kind==Set; }
-  bool isTuple()   const { return kind==Tuple; }
+  bool isScalar()  const { return _kind==Scalar; }
+  bool isTensor()  const { return _kind==Tensor; }
+  bool isElement() const { return _kind==Element; }
+  bool isSet()     const { return _kind==Set; }
+  bool isTuple()   const { return _kind==Tuple; }
 
   const ScalarType  *toScalar()  const { assert(isScalar());  return scalar; }
   const TensorType  *toTensor()  const { assert(isTensor());  return tensor; }
@@ -46,7 +46,7 @@ public:
   const TupleType   *toTuple()   const { assert(isTuple());   return tuple; }
 
 private:
-  Kind kind;
+  Kind _kind;
   union {
     ScalarType  *scalar;
     TensorType  *tensor;
@@ -54,7 +54,6 @@ private:
     SetType     *set;
     TupleType   *tuple;
   };
-
   std::shared_ptr<TypeNode> ptr;
 };
 
@@ -149,15 +148,15 @@ struct TupleType : TypeNode {
 
 // Type functions
 inline Type::Type(ScalarType *scalar)
-    : kind(Scalar), scalar(scalar), ptr(scalar) {}
+    : _kind(Scalar), scalar(scalar), ptr(scalar) {}
 inline Type::Type(TensorType *tensor)
-    : kind(Tensor), tensor(tensor), ptr(tensor) {}
+    : _kind(Tensor), tensor(tensor), ptr(tensor) {}
 inline Type::Type(ElementType *element)
-    : kind(Element), element(element), ptr(element) {}
+    : _kind(Element), element(element), ptr(element) {}
 inline Type::Type(SetType *set)
-    : kind(Set), set(set), ptr(set) {}
+    : _kind(Set), set(set), ptr(set) {}
 inline Type::Type(TupleType *tuple)
-    : kind(Tuple), tuple(tuple), ptr(tuple) {}
+    : _kind(Tuple), tuple(tuple), ptr(tuple) {}
 
 bool operator==(const Type &, const Type &);
 bool operator!=(const Type &, const Type &);

@@ -77,8 +77,8 @@ class Program::ProgramContent {
       auto actualArgs = test->getActuals();
       for (size_t i=0; i < actualArgs.size(); ++i) {
         auto formal = toVariable(formalArgs[i])->name;
-        auto actual = const_cast<ir::Literal*>(toLiteral(actualArgs[i]));
-        compiledFunc->bind(formal, actual);
+        auto actual = actualArgs[i];
+        compiledFunc->bind(formal, &actual);
       }
 
       auto formalResults = func->getResults();
@@ -87,8 +87,8 @@ class Program::ProgramContent {
         ir::Expr actualResult = ir::Literal::make(formalResult.type());
         actualResults.push_back(actualResult);
         auto formal = toVariable(formalResult)->name;
-        auto actual = const_cast<ir::Literal*>(toLiteral(actualResult));
-        compiledFunc->bind(formal, actual);
+        auto actual = actualResult;
+        compiledFunc->bind(formal, &actual);
       }
 
       compiledFunc->run();

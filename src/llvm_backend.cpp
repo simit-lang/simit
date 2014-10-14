@@ -19,11 +19,11 @@
 #include "llvm/ExecutionEngine/JIT.h"
 
 #include "llvm_codegen.h"
+#include "types.h"
 #include "ir.h"
 #include "ir_printer.h"
 #include "llvm_function.h"
 #include "storage.h"
-#include "scopedmap.h"
 #include "macros.h"
 
 using namespace std;
@@ -33,6 +33,9 @@ using namespace simit::internal;
 namespace simit {
 namespace internal {
 
+const std::string VAL_SUFFIX("_val");
+const std::string PTR_SUFFIX("_ptr");
+const std::string OFFSET_SUFFIX("_ofs");
 
 // class LLVMBackend
 bool LLVMBackend::llvmInitialized = false;
@@ -43,21 +46,182 @@ LLVMBackend::LLVMBackend() {
     llvmInitialized = true;
   }
 
-  module = new llvm::Module("Simit JIT", LLVM_CONTEXT);
-  llvm::EngineBuilder engineBuilder(module);
-  llvm::ExecutionEngine *ee = engineBuilder.create();
-  assert(ee && "Could not create ExecutionEngine");
-  executionEngine = std::shared_ptr<llvm::ExecutionEngine>(ee);
   builder = new llvm::IRBuilder<>(LLVM_CONTEXT);
 }
 
 LLVMBackend::~LLVMBackend() {
-  delete symtable;
   delete builder;
 }
 
-simit::Function *LLVMBackend::compile(simit::ir::Func func) {
-  return NULL;
+simit::Function *LLVMBackend::compile(Func func) {
+  module = new llvm::Module(func.getName(), LLVM_CONTEXT);
+
+  llvm::Function *llvmFunc = createFunction(func.getName(), func.getArguments(),
+                                            func.getResults(), module);
+  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
+  builder->SetInsertPoint(entry);
+
+  size_t i=0;
+  auto &simitArgs = func.getArguments();
+  for (auto &arg : llvmFunc->getArgumentList()) {
+    // Load scalar arguments
+    if (i++ < simitArgs.size()) {
+      if (simitArgs[i].type().isScalar()) {
+        string valName = string(arg.getName()) + VAL_SUFFIX;
+        llvm::Value *val = builder->CreateLoad(&arg, valName);
+        symtable.insert(arg.getName(), val);
+      }
+      else {
+        symtable.insert(arg.getName(), &arg);
+      }
+    }
+    // Result
+    else {
+      symtable.insert(arg.getName(), &arg);
+      results.insert(&arg);
+    }
+  }
+
+  compile(func.getBody());
+
+  builder->CreateRetVoid();
+
+  results.clear();
+  symtable.clear();
+  return new LLVMFunction(func, llvmFunc, module);
 }
+
+llvm::Value *LLVMBackend::compile(const Expr &expr) {
+  expr.accept(this);
+  llvm::Value *tmp = val;
+  val = nullptr;
+  return tmp;
+}
+
+void LLVMBackend::compile(const Stmt &stmt) {
+  stmt.accept(this);
+}
+
+void LLVMBackend::visit(const Literal *op) {
+  cout << "Literal" << endl;
+}
+
+void LLVMBackend::visit(const Variable *op) {
+  assert(symtable.contains(op->name));
+  val = symtable.get(op->name);
+}
+
+void LLVMBackend::visit(const Result *op) {
+  cout << "Result" << endl;
+}
+
+void LLVMBackend::visit(const FieldRead *op) {
+  cout << "FieldRead" << endl;
+}
+
+void LLVMBackend::visit(const TensorRead *op) {
+  cout << "TensorRead" << endl;
+}
+
+void LLVMBackend::visit(const TupleRead *op) {
+  cout << "TupleRead" << endl;
+}
+
+void LLVMBackend::visit(const Map *op) {
+  cout << "Map" << endl;
+}
+
+void LLVMBackend::visit(const IndexedTensor *op) {
+  cout << "IndexedTensor" << endl;
+}
+
+void LLVMBackend::visit(const IndexExpr *op) {
+  cout << "IndexExpr" << endl;
+}
+
+void LLVMBackend::visit(const Call *op) {
+  cout << "Call" << endl;
+}
+
+void LLVMBackend::visit(const Neg *op) {
+  cout << "Neg" << endl;
+}
+
+void LLVMBackend::visit(const Add *op) {
+  llvm::Value *a = compile(op->a);
+  llvm::Value *b = compile(op->b);
+
+  assert(op->type.isScalar());
+  switch (op->type.toScalar()->kind) {
+    case ScalarType::Int:
+      val = builder->CreateAdd(a, b);
+      break;
+    case ScalarType::Float:
+      val = builder->CreateFAdd(a, b);
+      break;
+  }
+}
+
+void LLVMBackend::visit(const Sub *op) {
+  cout << "Sub" << endl;
+}
+
+void LLVMBackend::visit(const Mul *op) {
+  cout << "Mul" << endl;
+}
+
+void LLVMBackend::visit(const Div *op) {
+  cout << "Div" << endl;
+}
+
+
+void LLVMBackend::visit(const AssignStmt *op) {
+  llvm::Value *rhs = compile(op->rhs);
+
+  for (const string &lhs : op->lhs) {
+    // Check if lhs already exist
+    if (symtable.contains(lhs)) {
+      llvm::Value *lhsVal = symtable.get(lhs);
+
+      // Check if the symbol is a function result
+      if (results.find(lhsVal) != results.end()) {
+        assert(op->rhs.type().isScalar());
+        builder->CreateStore(rhs, lhsVal);
+        rhs->setName(lhs + VAL_SUFFIX);
+      }
+      else {
+        rhs->setName(lhs);
+      }
+    }
+    else {
+      rhs->setName(lhs);
+    }
+  }
+}
+
+void LLVMBackend::visit(const FieldWrite *op) {
+  cout << "FieldWrite" << endl;
+}
+
+void LLVMBackend::visit(const TensorWrite *op) {
+  cout << "TensorWrite" << endl;
+}
+
+void LLVMBackend::visit(const For *op) {
+  cout << "For" << endl;
+}
+
+void LLVMBackend::visit(const IfThenElse *op) {
+  cout << "IfThenElse" << endl;
+}
+
+void LLVMBackend::visit(const Block *op) {
+  cout << "Block" << endl;
+}
+
+void LLVMBackend::visit(const Pass *op) {
+  cout << "Pass" << endl;
+}
+
 
 }}  // namespace simit::internal

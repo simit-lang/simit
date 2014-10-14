@@ -9,12 +9,14 @@ using namespace simit::internal;
 namespace simit {
 namespace internal {
 
-llvm::ConstantInt* getInt32(int val) {
-  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, (uint64_t)val, true));
+llvm::ConstantInt* llvmInt32(int val) {
+  return llvm::ConstantInt::get(LLVM_CONTEXT,
+                                llvm::APInt(32, (uint64_t)val, true));
 }
 
-llvm::ConstantInt* getUInt32(unsigned val) {
-  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(32, (uint64_t)val, false));
+llvm::ConstantInt* llvmUInt32(unsigned val) {
+  return llvm::ConstantInt::get(LLVM_CONTEXT,
+                                llvm::APInt(32,(uint64_t)val, false));
 }
 
 llvm::Type *llvmType(const ir::ScalarType *stype) {
@@ -26,8 +28,8 @@ llvm::Type *llvmType(const ir::ScalarType *stype) {
   }
 }
 
-llvm::Type *llvmType(const ir::TensorType *ttype) {
-  switch (ttype->componentType.toScalar()->kind) {
+llvm::Type *llvmPtrType(const ir::ScalarType *stype) {
+  switch (stype->kind) {
     case ir::ScalarType::Int:
       return LLVM_INTPTR;
     case ir::ScalarType::Float:
@@ -35,13 +37,17 @@ llvm::Type *llvmType(const ir::TensorType *ttype) {
   }
 }
 
-llvm::Type *llvmType(const ir::Type &type){
-  switch (type.getKind()) {
+llvm::Type *llvmPtrType(const ir::TensorType *ttype) {
+  return llvmPtrType(ttype->componentType.toScalar());
+}
+
+llvm::Type *llvmPtrType(const ir::Type &type){
+  switch (type.kind()) {
     case ir::Type::Scalar:
-      return llvmType(type.toScalar());
+      return llvmPtrType(type.toScalar());
       break;
     case ir::Type::Tensor:
-      return llvmType(type.toTensor());
+      return llvmPtrType(type.toTensor());
       break;
     case ir::Type::Element:
       NOT_SUPPORTED_YET;
@@ -62,11 +68,11 @@ llvm::Constant *llvmPtr(const ir::Type &type, void *data) {
                                (int)(intptr_t)data)
       : llvm::ConstantInt::get(llvm::Type::getInt64Ty(LLVM_CONTEXT),
                                (intptr_t)data);
-  return llvm::ConstantExpr::getIntToPtr(c, llvmType(type));
+  return llvm::ConstantExpr::getIntToPtr(c, llvmPtrType(type));
 }
 
 llvm::Constant *llvmPtr(simit::ir::Literal *literal) {
-  assert(literal->type.isTensor());
+  assert(literal->type.isTensor() || literal->type.isScalar());
   return llvmPtr(literal->type, literal->data);
 }
 
@@ -89,13 +95,11 @@ ir::Type simitType(const llvm::Type *type) {
 namespace {
 void llvmArgument(ir::Expr arg, std::vector<std::string> *names,
                   std::vector<llvm::Type*> *types) {
-  switch (arg.type().getKind()) {
-    case ir::Type::Scalar:
-      NOT_SUPPORTED_YET;
-      break;
+  switch (arg.type().kind()) {
+    case ir::Type::Scalar: // fall-through
     case ir::Type::Tensor: {
       names->push_back(toVariable(arg)->name);
-      types->push_back(llvmType(arg.type()));
+      types->push_back(llvmPtrType(arg.type()));
       break;
     }
     case ir::Type::Element: {
@@ -110,7 +114,7 @@ void llvmArgument(ir::Expr arg, std::vector<std::string> *names,
       const ir::SetType *type = arg.type().toSet();
       for (auto &field : type->elementType.toElement()->fields) {
         names->push_back(toVariable(arg)->name + "." + field.first);
-        types->push_back(llvmType(field.second));
+        types->push_back(llvmPtrType(field.second));
       }
       break;
     }
@@ -147,17 +151,16 @@ void llvmArguments(const std::vector<ir::Expr> &arguments,
 llvm::Function *createFunction(const std::string &name,
                                const vector<ir::Expr> &args,
                                const vector<ir::Expr> &results,
-                               llvm::GlobalValue::LinkageTypes linkage,
                                llvm::Module *module) {
   vector<string>      llvmArgNames;
   vector<llvm::Type*> llvmArgTypes;
   llvmArguments(args, results, &llvmArgNames, &llvmArgTypes);
   assert(llvmArgNames.size() == llvmArgTypes.size());
 
-  llvm::FunctionType *ft = llvm::FunctionType::get(LLVM_VOID, llvmArgTypes,
-                                                   false);
+  llvm::FunctionType *ft= llvm::FunctionType::get(LLVM_VOID,llvmArgTypes,false);
 
-  llvm::Function *f = llvm::Function::Create(ft, linkage, name, module);
+  llvm::Function *f= llvm::Function::Create(ft, llvm::Function::InternalLinkage,
+                                            name, module);
   f->setDoesNotThrow();
   unsigned i = 0;
   for (llvm::Argument &arg : f->getArgumentList()) {

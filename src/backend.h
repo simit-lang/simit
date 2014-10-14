@@ -24,6 +24,7 @@ public:
   Backend() {}
   virtual ~Backend() {}
 
+  // TODO: Change to simply return a Function object (not pointer)
   virtual simit::Function *compile(simit::ir::Func func) = 0;
 };
 

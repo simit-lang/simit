@@ -28,14 +28,16 @@
 namespace simit {
 namespace internal {
 
-llvm::ConstantInt* getInt32(int val);
-llvm::ConstantInt* getUInt32(unsigned val);
+llvm::ConstantInt* llvmInt32(int val);
+llvm::ConstantInt* llvmUInt32(unsigned val);
 
 llvm::Type *llvmType(const ir::ScalarType *stype);
 
-llvm::Type *llvmType(const ir::TensorType *ttype);
+llvm::Type *llvmPtrType(const ir::ScalarType *stype);
 
-llvm::Type *llvmType(const ir::Type &type);
+llvm::Type *llvmPtrType(const ir::TensorType *ttype);
+
+llvm::Type *llvmPtrType(const ir::Type &type);
 
 llvm::Constant *llvmPtr(const ir::Type &type, void *data);
 
@@ -47,7 +49,6 @@ ir::Type simitType(const llvm::Type *type);
 llvm::Function *createFunction(const std::string &name,
                                const std::vector<ir::Expr> &args,
                                const std::vector<ir::Expr> &results,
-                               llvm::GlobalValue::LinkageTypes linkage,
                                llvm::Module *module);
 
 }} // namespace simit::internal

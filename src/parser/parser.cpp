@@ -130,7 +130,7 @@
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
-    if (l.getKind() != r.getKind()) {
+    if (l.kind() != r.kind()) {
       return false;
     }
 

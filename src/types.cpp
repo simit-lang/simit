@@ -19,11 +19,11 @@ size_t TensorType::size() const {
 }
 
 bool operator==(const Type& l, const Type& r) {
-  if (l.getKind() != r.getKind()) {
+  if (l.kind() != r.kind()) {
     return false;
   }
 
-  switch (l.getKind()) {
+  switch (l.kind()) {
     case Type::Scalar:
       return *l.toScalar() == *r.toScalar();
     case Type::Tensor:
@@ -98,7 +98,7 @@ bool operator!=(const TupleType &l, const TupleType &r) {
 }
 
 std::ostream &operator<<(std::ostream &os, const Type &type) {
-  switch (type.getKind()) {
+  switch (type.kind()) {
     case Type::Scalar:
       return os << *type.toScalar();
     case Type::Tensor:

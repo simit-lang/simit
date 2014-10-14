@@ -21,6 +21,11 @@ public:
   ScopedMap()  {   scope(); }
   ~ScopedMap() { unscope(); }
 
+  void clear() {
+    assert(scopes.size() == 1);
+    scopes.front().clear();
+  }
+
   /// Add a new level of symbol scoping.
   void scope()   { scopes.push_front(Map()); }
 

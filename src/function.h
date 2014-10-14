@@ -19,8 +19,7 @@ struct Literal;
 }
 
 // TODO: Replace with a simple tensor implementation
-//typedef std::shared_ptr<simit::internal::Literal> TensorPtr;
-typedef simit::ir::Literal Tensor;
+typedef simit::ir::Expr Tensor;
 class SetBase;
 
 class Function : public simit::interfaces::Printable,
