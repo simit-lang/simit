@@ -24,7 +24,7 @@ public:
   IntrusivePtr() : ptr(nullptr) {}
 
   /// Allocate an IntrusivePtr with an object
-  IntrusivePtr(T *ptr) : ptr(ptr) {
+  IntrusivePtr(T *p) : ptr(p) {
     if (ptr) {
       aquire(ptr);
     }
@@ -44,6 +44,9 @@ public:
 
   /// Copy assignment operator
   IntrusivePtr& operator=(const IntrusivePtr &other) {
+    if (ptr) {
+      release(ptr);
+    }
     ptr = other.ptr;
     if (ptr) {
       aquire(ptr);
@@ -52,8 +55,11 @@ public:
   }
 
   /// Copy assignment operator for managed object
-  IntrusivePtr& operator=(T *ptr) {
-    this->ptr = ptr;
+  IntrusivePtr& operator=(T *p) {
+    if (ptr) {
+      release(ptr);
+    }
+    this->ptr = p;
     if (ptr) {
       aquire(ptr);
     }
@@ -61,6 +67,9 @@ public:
 
   /// Move assignment operator
   IntrusivePtr& operator=(IntrusivePtr &&other) {
+    if (ptr) {
+      release(ptr);
+    }
     ptr = other.ptr;
     other.ptr = nullptr;
     return *this;

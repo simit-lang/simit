@@ -17,9 +17,7 @@ template <typename T>
 std::vector<T> toVectorOf(Expr expr) {
   std::vector<T> vec;
   const Literal *lit = dynamic_cast<const Literal*>(expr.expr());
-  if (lit == nullptr) {
-    return vec;
-  }
+  assert(lit);
 
   assert(lit->type.isScalar() || lit->type.isTensor());
   size_t size = (lit->type.isScalar()) ? 1 : lit->type.toTensor()->size();
