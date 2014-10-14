@@ -58,18 +58,18 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
 // class IndexDomain
 size_t IndexDomain::getSize() const {
   int size = 1;
-  for (auto &indexSet : getFactors()) {
+  for (auto &indexSet : getIndexSets()) {
     size *= indexSet.getSize();
   }
   return size;
 }
 
 bool operator==(const IndexDomain &l, const IndexDomain &r) {
-  if (l.getFactors().size() != r.getFactors().size()) {
+  if (l.getIndexSets().size() != r.getIndexSets().size()) {
     return false;
   }
-  for (size_t i=0; i < l.getFactors().size(); ++i) {
-    if (l.getFactors()[i] != r.getFactors()[i]) {
+  for (size_t i=0; i < l.getIndexSets().size(); ++i) {
+    if (l.getIndexSets()[i] != r.getIndexSets()[i]) {
       return false;
     }
   }
@@ -81,13 +81,13 @@ bool operator!=(const IndexDomain &l, const IndexDomain &r) {
 }
 
 IndexDomain operator*(const IndexDomain &l, const IndexDomain &r) {
-  std::vector<IndexSet> is = l.getFactors();
-  is.insert(is.end(), r.getFactors().begin(), r.getFactors().end());
+  std::vector<IndexSet> is = l.getIndexSets();
+  is.insert(is.end(), r.getIndexSets().begin(), r.getIndexSets().end());
   return IndexDomain(is);
 }
 
 std::ostream &operator<<(std::ostream &os, const IndexDomain &isp) {
-  return os << util::join(isp.getFactors(), "*");
+  return os << util::join(isp.getIndexSets(), "*");
 }
 
 }} //namespace simit::ir

@@ -80,10 +80,10 @@ void Function::bind(const std::string &argName, SetBase *set) {
 
     const vector<ir::IndexDomain> &argFieldTypeDims = argFieldType->dimensions;
     for (size_t i=0; i < argFieldType->order(); ++i) {
-      assert(argFieldTypeDims[i].getFactors().size() == 1 &&
+      assert(argFieldTypeDims[i].getIndexSets().size() == 1 &&
              "set type does not match function argument type");
 
-      size_t argFieldRange = argFieldTypeDims[i].getFactors()[0].getSize();
+      size_t argFieldRange = argFieldTypeDims[i].getIndexSets()[0].getSize();
 
       assert(setFieldType->getDimension(i) == argFieldRange &&
              "set type does not match function argument type");

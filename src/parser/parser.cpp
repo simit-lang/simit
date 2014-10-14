@@ -2227,12 +2227,12 @@ namespace  simit { namespace internal  {
       }
 
       assert(blockDimensions.size() == outerDimensions->size());
-      for (size_t i=0; i<outerDimensions->size(); ++i) {
+      for (size_t i=0; i < outerDimensions->size(); ++i) {
         vector<IndexSet> dimension;
         dimension.push_back((*outerDimensions)[i]);
         dimension.insert(dimension.begin(),
-                         blockDimensions[i].getFactors().begin(),
-                         blockDimensions[i].getFactors().end());
+                         blockDimensions[i].getIndexSets().begin(),
+                         blockDimensions[i].getIndexSets().end());
 
         dimensions.push_back(IndexDomain(dimension));
       }

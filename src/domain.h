@@ -61,8 +61,8 @@ public:
   explicit IndexDomain(IndexSet is) { indexSets.push_back(is); }
   explicit IndexDomain(std::vector<IndexSet> iss) : indexSets(iss) {};
 
-  /// Get the index sets that are multiplied to get the index set product.
-  std::vector<IndexSet> getFactors() const {return indexSets; }
+  /// Get the index sets whose set product forms the domain.
+  const std::vector<IndexSet> &getIndexSets() const {return indexSets; }
 
   /// Get the number of elements in the product of the index sets if all the
   /// index sets are Range sets, otherwise undefined.

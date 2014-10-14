@@ -55,7 +55,7 @@ Type fieldType(Expr elementOrSet, std::string fieldName) {
       dim.push_back(IndexSet(elementOrSet));
 
       for (const IndexDomain &elemFieldDim : elemFieldType->dimensions) {
-        for (const IndexSet &indexSet : elemFieldDim.getFactors()) {
+        for (const IndexSet &indexSet : elemFieldDim.getIndexSets()) {
           dim.push_back(indexSet);
         }
         dimensions.push_back(IndexDomain(dim));
@@ -76,9 +76,9 @@ Type blockType(Expr tensor) {
 
   std::vector<IndexDomain> blockDimensions;
 
-  size_t numNests = dimensions[0].getFactors().size();
+  size_t numNests = dimensions[0].getIndexSets().size();
   for (auto &dim : dimensions) {
-    assert(dim.getFactors().size() == numNests &&
+    assert(dim.getIndexSets().size() == numNests &&
            "All dimensions should have the same number of nestings");
   }
 
@@ -88,7 +88,7 @@ Type blockType(Expr tensor) {
   }
   else {
     for (auto &dim : dimensions) {
-      const std::vector<IndexSet> &nests = dim.getFactors();
+      const std::vector<IndexSet> &nests = dim.getIndexSets();
       std::vector<IndexSet> blockNests(nests.begin()+1, nests.end());
       blockDimensions.push_back(IndexDomain(blockNests));
     }
