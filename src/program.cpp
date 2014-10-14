@@ -116,7 +116,7 @@ class Program::ProgramContent {
   internal::Backend *backend;
 
   Function *compile(ir::Func *simitFunc) {
-    return getBackend()->compile(simitFunc);
+    return getBackend()->compile(*simitFunc);
   }
 };
 

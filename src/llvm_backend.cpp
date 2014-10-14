@@ -44,14 +44,11 @@ LLVMBackend::LLVMBackend() {
   }
 
   module = new llvm::Module("Simit JIT", LLVM_CONTEXT);
-
   llvm::EngineBuilder engineBuilder(module);
   llvm::ExecutionEngine *ee = engineBuilder.create();
   assert(ee && "Could not create ExecutionEngine");
-
   executionEngine = std::shared_ptr<llvm::ExecutionEngine>(ee);
   builder = new llvm::IRBuilder<>(LLVM_CONTEXT);
-
 }
 
 LLVMBackend::~LLVMBackend() {
@@ -59,7 +56,7 @@ LLVMBackend::~LLVMBackend() {
   delete builder;
 }
 
-simit::Function *LLVMBackend::compile(simit::ir::Func *function) {
+simit::Function *LLVMBackend::compile(simit::ir::Func func) {
   return NULL;
 }
 

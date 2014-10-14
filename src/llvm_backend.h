@@ -26,7 +26,6 @@ namespace simit {
 namespace internal {
 
 template <typename, typename> class ScopedMap;
-class Function;
 
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMBackend : public Backend, ir::IRVisitor {
@@ -34,7 +33,7 @@ public:
   LLVMBackend();
   ~LLVMBackend();
 
-  simit::Function *compile(simit::ir::Func *function);
+  simit::Function *compile(simit::ir::Func func);
 
 private:
   static bool llvmInitialized;

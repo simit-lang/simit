@@ -5,10 +5,10 @@
 #include <map>
 
 #include "interfaces.h"
+#include "function.h"
 
 namespace simit {
 class Diagnostics;
-class Function;
 
 namespace ir {
 class Func;
@@ -24,7 +24,7 @@ public:
   Backend() {}
   virtual ~Backend() {}
 
-  virtual simit::Function *compile(simit::ir::Func *function) = 0;
+  virtual simit::Function *compile(simit::ir::Func func) = 0;
 };
 
 }} // namespace simit::internal
