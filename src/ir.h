@@ -8,6 +8,7 @@
 #include <iostream>
 #include "ir_printer.h"
 
+#include "intrusive_ptr.h"
 #include "interfaces.h"
 #include "types.h"
 #include "indexvar.h"
@@ -18,12 +19,24 @@ namespace ir {
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
 struct IRNode : private simit::interfaces::Uncopyable {
-  virtual void accept(IRVisitor *visitor) = 0;
-  virtual void accept(IRConstVisitor *visitor) const = 0;
+public:
+  IRNode() : ref(0) {}
+  virtual ~IRNode() {}
+  virtual void accept(IRVisitor *visitor) const = 0;
+
+private:
+  mutable long ref;
+  friend void aquire(const IRNode *node) {
+    ++node->ref;
+  }
+  friend void release(const IRNode *node) {
+    if (--node->ref == 0) {
+      delete node;
+    }
+  }
 };
 
 struct ExprNodeBase : public IRNode {
-public:
   Type type;
 };
 
@@ -32,54 +45,39 @@ struct StmtNodeBase : public IRNode {
 
 template <typename T>
 struct ExprNode : public ExprNodeBase {
-  void accept(IRVisitor *v) { v->visit((T *)this); }
-  void accept(IRConstVisitor *v) const { v->visit((const T *)this); }
+  void accept(IRVisitor *v) const { v->visit((const T *)this); }
 };
 
 template <typename T>
 struct StmtNode : public StmtNodeBase {
-  void accept(IRVisitor *v) { v->visit((T *)this); }
-  void accept(IRConstVisitor *v) const { v->visit((const T *)this); }
+  void accept(IRVisitor *v) const { v->visit((const T *)this); }
 };
 
-class Expr {
+class Expr : public util::IntrusivePtr<const ExprNodeBase> {
 public:
-  explicit Expr() : exprPtr(nullptr) {}
-  explicit Expr(ExprNodeBase *expr) : exprPtr(expr) {assert(expr != nullptr);}
+  Expr() : IntrusivePtr() {}
+  Expr(const ExprNodeBase *expr) : IntrusivePtr(expr) {}
 
-  bool defined() const {return exprPtr != nullptr;}
-  Type type() const {return exprPtr->type;}
+  Type type() const {return ptr->type;}
 
-  ExprNodeBase *expr() {return exprPtr.get();}
-  const ExprNodeBase *expr() const {return exprPtr.get();}
+  const ExprNodeBase *expr() const {return ptr;}
 
-  void accept(IRVisitor *v) {exprPtr->accept(v);}
-  void accept(IRConstVisitor *v) const {exprPtr->accept(v);}
-
-private:
-  std::shared_ptr<ExprNodeBase> exprPtr;
+  void accept(IRVisitor *v) const {ptr->accept(v);}
 };
 
-class Stmt {
+class Stmt : public util::IntrusivePtr<const StmtNodeBase> {
 public:
-  explicit Stmt() : stmtPtr(nullptr) {}
-  explicit Stmt(StmtNodeBase *stmt) : stmtPtr(stmt) {assert(stmt != nullptr);}
+  Stmt() : IntrusivePtr() {}
+  Stmt(const StmtNodeBase *stmt) : IntrusivePtr(stmt) {}
 
-  bool defined() const { return stmtPtr != nullptr; }
+  const StmtNodeBase *stmt() const {return ptr;}
 
-  StmtNodeBase *stmt() {return stmtPtr.get();}
-  const StmtNodeBase *stmt() const {return stmtPtr.get();}
-
-  void accept(IRVisitor *v) { stmtPtr->accept(v); }
-  void accept(IRConstVisitor *v) const { stmtPtr->accept(v); }
-
-private:
-  std::shared_ptr<StmtNodeBase> stmtPtr;
+  void accept(IRVisitor *v) const {ptr->accept(v);}
 };
 
 
 // Type compute functions
-Type fieldType(Expr setOrElement, std::string fieldName);
+Type fieldType(Expr elementOrSet, std::string fieldName);
 Type blockType(Expr tensor);
 Type indexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
 
@@ -99,7 +97,7 @@ struct Literal : public ExprNode<Literal> {
     const TensorType *ttype = type.toTensor();
     node->size = ttype->size() * ttype->componentType.toScalar()->bytes();
     node->data = malloc(node->size);
-    return Expr(node);
+    return node;
   }
 
   static Expr make(Type type, void *values) {
@@ -110,7 +108,7 @@ struct Literal : public ExprNode<Literal> {
     node->size = ttype->size() * ttype->componentType.toScalar()->bytes();
     node->data = malloc(node->size);
     memcpy(node->data, values, node->size);
-    return Expr(node);
+    return node;
   }
 
   ~Literal() {free(data);}
@@ -123,7 +121,7 @@ struct Variable : public ExprNode<Variable> {
     Variable *node = new Variable;
     node->type = type;
     node->name = name;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -136,7 +134,7 @@ struct Result : public ExprNode<Result> {
 //    node->type = TODO
     node->producer = producer;
     node->location = location;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -151,7 +149,7 @@ struct FieldRead : public ExprNode<FieldRead> {
     node->type = fieldType(elementOrSet, fieldName);
     node->elementOrSet = elementOrSet;
     node->fieldName = fieldName;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -166,7 +164,7 @@ struct TensorRead : public ExprNode<TensorRead> {
     node->type = blockType(tensor);
     node->tensor = tensor;
     node->indices = indices;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -179,7 +177,7 @@ struct TupleRead : public ExprNode<TupleRead> {
     // TODO: Compute type
     node->tuple = tuple;
     node->index = index;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -196,7 +194,7 @@ struct Map : public ExprNode<Map> {
     node->target = target;
     node->neighbors = neighbors;
     node->reductionOp = reductionOp;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -216,7 +214,7 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
     node->type = tensor.type().toTensor()->componentType;
     node->tensor = tensor;
     node->indexVars = indexVars;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -236,7 +234,7 @@ struct IndexExpr : public ExprNode<IndexExpr> {
     node->type = indexExprType(lhsIndexVars, expr);
     node->lhsIndexVars = lhsIndexVars;
     node->expr = expr;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -253,7 +251,7 @@ struct Call : public ExprNode<Call> {
     node->function = function;
     node->actuals = actuals;
     node->kind = kind;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -266,7 +264,7 @@ struct Neg : public ExprNode<Neg> {
     Neg *node = new Neg;
     node->type = a.type();
     node->a = a;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -281,7 +279,7 @@ struct Add : public ExprNode<Add> {
     node->type = a.type();
     node->a = a;
     node->b = b;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -296,7 +294,7 @@ struct Sub : public ExprNode<Sub> {
     node->type = a.type();
     node->a = a;
     node->b = b;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -311,7 +309,7 @@ struct Mul : public ExprNode<Mul> {
     node->type = a.type();
     node->a = a;
     node->b = b;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -326,7 +324,7 @@ struct Div : public ExprNode<Div> {
     node->type = a.type();
     node->a = a;
     node->b = b;
-    return Expr(node);
+    return node;
   }
 };
 
@@ -340,7 +338,7 @@ struct AssignStmt : public StmtNode<AssignStmt> {
     AssignStmt *node = new AssignStmt;
     node->lhs = lhs;
     node->rhs = rhs;
-    return Stmt(node);
+    return node;
   }
 };
 
@@ -354,7 +352,7 @@ struct FieldWrite : public StmtNode<FieldWrite> {
     node->elementOrSet = elementOrSet;
     node->fieldName = fieldName;
     node->value = value;
-    return Stmt(node);
+    return node;
   }
 };
 
@@ -368,7 +366,7 @@ struct TensorWrite : public StmtNode<TensorWrite> {
     node->tensor = tensor;
     node->indices = indices;
     node->value = value;
-    return Stmt(node);
+    return node;
   }
 };
 
@@ -382,7 +380,7 @@ struct For : public StmtNode<For> {
     node->name = name;
     node->domain = domain;
     node->body = body;
-    return Stmt(node);
+    return node;
   }
 };
 
@@ -399,7 +397,7 @@ struct Block : public StmtNode<Block> {
     Block *node = new Block;
     node->first = first;
     node->rest = rest;
-    return Stmt(node);
+    return node;
   }
 
   static Stmt make(std::vector<Stmt> stmts) {
@@ -416,7 +414,7 @@ struct Block : public StmtNode<Block> {
 struct Pass : public StmtNode<Pass> {
   static Stmt make() {
     Pass *node = new Pass;
-    return Stmt(node);
+    return node;
   }
 };
 

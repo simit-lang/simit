@@ -30,16 +30,16 @@ bool operator!=(const Expr &l, const Expr &r) {
 }
 
 // Type compute functions
-Type fieldType(Expr setOrElement, std::string fieldName) {
-  assert(setOrElement.type().isElement() || setOrElement.type().isSet());
+Type fieldType(Expr elementOrSet, std::string fieldName) {
+  assert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
 
   Type fieldType;
-  if (setOrElement.type().isElement()) {
-    const ElementType *elemType = setOrElement.type().toElement();
+  if (elementOrSet.type().isElement()) {
+    const ElementType *elemType = elementOrSet.type().toElement();
     fieldType = elemType->fields.at(fieldName);
   }
-  else if (setOrElement.type().isSet()) {
-    const SetType *setType = setOrElement.type().toSet();
+  else if (elementOrSet.type().isSet()) {
+    const SetType *setType = elementOrSet.type().toSet();
     const ElementType *elemType = setType->elementType.toElement();
 
     const TensorType *elemFieldType = elemType->fields.at(fieldName).toTensor();
@@ -48,11 +48,11 @@ Type fieldType(Expr setOrElement, std::string fieldName) {
     // `Tensor[set][elementFieldDimensions](elemFieldComponentType)`
     std::vector<IndexDomain> dimensions;
     if (elemFieldType->order() == 0) {
-      dimensions.push_back(IndexDomain(IndexSet(setOrElement)));
+      dimensions.push_back(IndexDomain(IndexSet(elementOrSet)));
     }
     else {
       std::vector<IndexSet> dim;
-      dim.push_back(IndexSet(setOrElement));
+      dim.push_back(IndexSet(elementOrSet));
 
       for (const IndexDomain &elemFieldDim : elemFieldType->dimensions) {
         for (const IndexSet &indexSet : elemFieldDim.getFactors()) {

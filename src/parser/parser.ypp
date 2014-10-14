@@ -102,7 +102,8 @@
     Type transposedVector = TensorType::make(ttype->componentType,
                                              ttype->dimensions,
                                              !ttype->isColumnVector);
-    vec.expr()->type = transposedVector;
+
+    const_cast<ExprNodeBase*>(vec.expr())->type = transposedVector;
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
@@ -629,7 +630,7 @@ const_stmt
     // cast $tensor_literal to a 1xn matrix.
     const TensorType *literalTensorType = literalType.toTensor();
     if (tensorType->order() == 2 && literalTensorType->order() == 1) {
-      static_cast<Literal*>(literal.expr())->cast(type);
+      const_cast<Literal*>(toLiteral(literal))->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.
@@ -1378,7 +1379,7 @@ test
     std::vector<Expr> literalArgs;
     literalArgs.reserve(actuals->size());
     for (auto &arg : *actuals) {
-      if (dynamic_cast<Literal*>(arg.expr()) == nullptr) {
+      if (dynamic_cast<const Literal*>(arg.expr()) == nullptr) {
         REPORT_ERROR("function calls in tests must have literal arguments", @1);
       }
       literalArgs.push_back(arg);

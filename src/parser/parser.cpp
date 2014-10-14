@@ -125,7 +125,8 @@
     Type transposedVector = TensorType::make(ttype->componentType,
                                              ttype->dimensions,
                                              !ttype->isColumnVector);
-    vec.expr()->type = transposedVector;
+
+    const_cast<ExprNodeBase*>(vec.expr())->type = transposedVector;
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
@@ -1651,7 +1652,7 @@ namespace  simit { namespace internal  {
     // cast $tensor_literal to a 1xn matrix.
     const TensorType *literalTensorType = literalType.toTensor();
     if (tensorType->order() == 2 && literalTensorType->order() == 1) {
-      static_cast<Literal*>(literal.expr())->cast(type);
+      const_cast<Literal*>(toLiteral(literal))->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.
@@ -2559,7 +2560,7 @@ namespace  simit { namespace internal  {
     std::vector<Expr> literalArgs;
     literalArgs.reserve(actuals->size());
     for (auto &arg : *actuals) {
-      if (dynamic_cast<Literal*>(arg.expr()) == nullptr) {
+      if (dynamic_cast<const Literal*>(arg.expr()) == nullptr) {
         REPORT_ERROR("function calls in tests must have literal arguments", yystack_[7].location);
       }
       literalArgs.push_back(arg);
@@ -3142,22 +3143,22 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   263,   263,   265,   269,   270,   278,   286,   289,   293,
-     300,   309,   322,   325,   333,   343,   343,   343,   351,   371,
-     371,   371,   379,   405,   408,   414,   419,   427,   436,   439,
-     445,   450,   458,   468,   471,   479,   485,   494,   495,   496,
-     497,   498,   499,   500,   504,   518,   523,   531,   552,   572,
-     581,   584,   590,   596,   598,   602,   604,   611,   617,   646,
-     647,   648,   649,   650,   651,   652,   653,   659,   680,   689,
-     697,   709,   774,   780,   808,   813,   822,   823,   824,   825,
-     831,   837,   843,   849,   855,   861,   872,   891,   892,   893,
-     899,   932,   938,   946,   949,   955,   961,   972,   980,   982,
-     986,   988,   991,   992,   998,  1001,  1004,  1007,  1013,  1020,
-    1024,  1034,  1038,  1045,  1057,  1061,  1064,  1106,  1116,  1121,
-    1129,  1132,  1145,  1151,  1157,  1160,  1210,  1214,  1215,  1219,
-    1223,  1230,  1241,  1248,  1252,  1256,  1270,  1274,  1289,  1293,
-    1300,  1307,  1311,  1315,  1329,  1333,  1348,  1352,  1359,  1363,
-    1372
+       0,   264,   264,   266,   270,   271,   279,   287,   290,   294,
+     301,   310,   323,   326,   334,   344,   344,   344,   352,   372,
+     372,   372,   380,   406,   409,   415,   420,   428,   437,   440,
+     446,   451,   459,   469,   472,   480,   486,   495,   496,   497,
+     498,   499,   500,   501,   505,   519,   524,   532,   553,   573,
+     582,   585,   591,   597,   599,   603,   605,   612,   618,   647,
+     648,   649,   650,   651,   652,   653,   654,   660,   681,   690,
+     698,   710,   775,   781,   809,   814,   823,   824,   825,   826,
+     832,   838,   844,   850,   856,   862,   873,   892,   893,   894,
+     900,   933,   939,   947,   950,   956,   962,   973,   981,   983,
+     987,   989,   992,   993,   999,  1002,  1005,  1008,  1014,  1021,
+    1025,  1035,  1039,  1046,  1058,  1062,  1065,  1107,  1117,  1122,
+    1130,  1133,  1146,  1152,  1158,  1161,  1211,  1215,  1216,  1220,
+    1224,  1231,  1242,  1249,  1253,  1257,  1271,  1275,  1290,  1294,
+    1301,  1308,  1312,  1316,  1330,  1334,  1349,  1353,  1360,  1364,
+    1373
   };
 
   // Print the state stack on the debug stream.
