@@ -55,7 +55,7 @@ void IRVisitor::visit(const IndexedTensor *op) {
 }
 
 void IRVisitor::visit(const IndexExpr *op) {
-  op->expr.accept(this);
+  op->rhs.accept(this);
 }
 
 void IRVisitor::visit(const Call *op) {

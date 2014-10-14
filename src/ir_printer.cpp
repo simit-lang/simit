@@ -199,7 +199,7 @@ void IRPrinter::visit(const IndexExpr *op) {
   if (op->lhsIndexVars.size() != 0) {
     os << "(" + simit::util::join(op->lhsIndexVars, ",") + ") ";
   }
-  print(op->expr);
+  print(op->rhs);
 }
 
 void IRPrinter::visit(const Call *op) {

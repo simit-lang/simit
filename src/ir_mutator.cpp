@@ -104,12 +104,12 @@ void IRMutator::visit(const IndexedTensor *op) {
 }
 
 void IRMutator::visit(const IndexExpr *op) {
-  Expr expr = mutate(op->expr);
-  if (expr == op->expr) {
+  Expr rhs = mutate(op->rhs);
+  if (rhs == op->rhs) {
     expr = op;
   }
   else {
-    expr = IndexExpr::make(op->lhsIndexVars, expr);
+    expr = IndexExpr::make(op->lhsIndexVars, rhs);
   }
 }
 

@@ -240,20 +240,20 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
 
 struct IndexExpr : public ExprNode<IndexExpr> {
   std::vector<IndexVar> lhsIndexVars;
-  Expr expr;
+  Expr rhs;
 
   std::vector<IndexVar> domain();
 
-  static Expr make(std::vector<IndexVar> lhsIndexVars, Expr expr) {
-    assert(expr.type().isScalar());
+  static Expr make(std::vector<IndexVar> lhsIndexVars, Expr rhs) {
+    assert(rhs.type().isScalar());
     for (auto &idxVar : lhsIndexVars) {  // No reduction variables on lhs
       assert(idxVar.isFreeVar());
     }
 
     IndexExpr *node = new IndexExpr;
-    node->type = indexExprType(lhsIndexVars, expr);
+    node->type = indexExprType(lhsIndexVars, rhs);
     node->lhsIndexVars = lhsIndexVars;
-    node->expr = expr;
+    node->rhs = rhs;
     return node;
   }
 };
