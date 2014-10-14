@@ -13,10 +13,11 @@ using namespace std;
 
 void printUsage() {
   cerr << "Usage: simit-dump [options] <simit-source> " << endl << endl
-       << "Options:"              << endl
-       << "-emit-simit"           << endl
-       << "-emit-llvm"            << endl
-       << "-compile=<function>"   << endl
+       << "Options:"            << endl
+       << "-emit-simit"         << endl
+       << "-emit-llvm"          << endl
+       << "-compile"            << endl
+       << "-compile=<function>" << endl
        << "-section=<section>";
 }
 
@@ -28,6 +29,8 @@ int main(int argc, const char* argv[]) {
 
   bool emitSimit = false;
   bool emitLLVM = false;
+  bool compile = false;
+
   std::string section;
   std::string function;
   std::string sourceFile;
@@ -44,6 +47,9 @@ int main(int argc, const char* argv[]) {
         else if (arg == "-emit-llvm") {
           emitLLVM = true;
         }
+        else if (arg == "-compile") {
+          compile = true;
+        }
         else {
           printUsage();
           return 3;
@@ -54,6 +60,7 @@ int main(int argc, const char* argv[]) {
           section = keyValPair[1];
         }
         else if (keyValPair[0] == "-compile") {
+          compile = true;
           function = keyValPair[1];
         }
         else {
@@ -137,37 +144,39 @@ int main(int argc, const char* argv[]) {
     somethingEmitted = true;
   }
 
-  simit::ir::Function *func = NULL;
-  if (functions.size() == 1) {
-    func = functions.begin()->second;
-  }
-  else if (function != "") {
-    func = functions[function];
-    if (func == nullptr) {
-      cerr << "Error: Could not find function " << function <<
-              " in " << sourceFile;
-      return 4;
-    }
-  }
-
-  return 0; // TODO newir: remove
-
-  if (func != nullptr) {
-    if (emitLLVM) {
-      if (somethingEmitted) {
-        cout << endl;
+  if (compile) {
+    simit::ir::Function *func = NULL;
+    if (function != "") {
+      func = functions[function];
+      if (func == nullptr) {
+        cerr << "Error: Could not find function " << function <<
+                " in " << sourceFile;
+        return 4;
       }
-      simit::internal::LLVMBackend backend;
-      std::string fstr = simit::util::toString(*backend.compile(func));
-      cout << simit::util::trim(fstr) << endl;
     }
-  }
-  else {
-    if (emitLLVM) {
-      cerr << "To dump Set and LLVM IR you must specify a function to compile "
-           << "using -compile=<function>";
-      return 5;
+    else if (functions.size() == 1) {
+      func = functions.begin()->second;
     }
+
+    if (func == nullptr) {
+      if (compile) {
+        cerr << "Error: choose which function to compile using "
+             << "-compile=<function>";
+        return 5;
+      }
+    }
+
+    // Lower while printing lowered results
+
+//    if (emitLLVM) {
+//      if (somethingEmitted) {
+//        cout << endl;
+//      }
+//      simit::internal::LLVMBackend backend;
+//      std::string fstr = simit::util::toString(*backend.compile(func));
+//      cout << simit::util::trim(fstr) << endl;
+//    }
+
   }
 
   return 0;
