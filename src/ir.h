@@ -474,8 +474,6 @@ public:
     ptr->body = body;
   }
 
-  void setBody(Stmt body) {ptr->body = body;}
-
   std::string getName() const {return ptr->name;}
   const std::vector<Expr> &getArguments() const {return ptr->arguments;}
   const std::vector<Expr> &getResults() const {return ptr->results;}

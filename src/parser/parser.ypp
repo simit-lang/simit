@@ -342,9 +342,9 @@ field_decl
 %type <function> procedure;
 procedure
   : {ctx->scope();} procedure_header stmt_block BLOCKEND {ctx->unscope();} {
+    Func func = convertAndDelete($procedure_header);
     Stmt body = convertAndDelete($stmt_block);
-    $$ = $procedure_header;
-    $$->setBody(body);
+    $$ = new Func(func.getName(), func.getArguments(), func.getResults(), body);
   }
 
 %type <function> procedure_header;
@@ -370,9 +370,9 @@ procedure_header
 %type <function> function;
 function
   : {ctx->scope();} function_header stmt_block BLOCKEND {ctx->unscope();} {
+    Func func = convertAndDelete($function_header);
     Stmt body = convertAndDelete($stmt_block);
-    $$ = $function_header;
-    $$->setBody(body);
+    $$ = new Func(func.getName(), func.getArguments(), func.getResults(), body);
   }
 
 %type <function> function_header;

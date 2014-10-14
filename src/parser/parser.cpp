@@ -1279,9 +1279,9 @@ namespace  simit { namespace internal  {
   case 17:
 
     {
+    Func func = convertAndDelete((yystack_[3].value.function));
     Stmt body = convertAndDelete((yystack_[2].value.stmt));
-    (yylhs.value.function) = (yystack_[3].value.function);
-    (yylhs.value.function)->setBody(body);
+    (yylhs.value.function) = new Func(func.getName(), func.getArguments(), func.getResults(), body);
   }
 
     break;
@@ -1323,9 +1323,9 @@ namespace  simit { namespace internal  {
   case 21:
 
     {
+    Func func = convertAndDelete((yystack_[3].value.function));
     Stmt body = convertAndDelete((yystack_[2].value.stmt));
-    (yylhs.value.function) = (yystack_[3].value.function);
-    (yylhs.value.function)->setBody(body);
+    (yylhs.value.function) = new Func(func.getName(), func.getArguments(), func.getResults(), body);
   }
 
     break;
