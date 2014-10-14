@@ -7,8 +7,6 @@
 namespace simit {
 namespace ir {
 
-class Func;
-
 struct Literal;
 struct Variable;
 struct Result;
@@ -33,6 +31,8 @@ struct IfThenElse;
 struct Block;
 struct Pass;
 
+class Func;
+
 /// Visitor where the iteration order is specified in the visitor instead of
 /// the accept methods.  This design is chosen to allow different visitors to
 /// specify different traversal orders.  As a consequence the visit methods are
@@ -44,8 +44,6 @@ struct Pass;
 class IRVisitor {
 public:
   virtual ~IRVisitor();
-
-  virtual void visit(const Func *);
 
   virtual void visit(const Literal *);
   virtual void visit(const Variable *);
@@ -70,6 +68,8 @@ public:
   virtual void visit(const IfThenElse *);
   virtual void visit(const Block *);
   virtual void visit(const Pass *);
+
+  virtual void visit(const Func *);
 };
 
 }} // namespace simit::internal

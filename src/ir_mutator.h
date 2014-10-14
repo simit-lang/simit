@@ -10,6 +10,7 @@ class IRMutator : public IRVisitor {
 public:
   virtual Expr mutate(Expr expr);
   virtual Stmt mutate(Stmt stmt);
+  virtual Func mutate(Func func);
 
 protected:
   /// visit methods that take Exprs assign to this to return their value.
@@ -17,6 +18,9 @@ protected:
 
   /// visit methods that take Stmts assign to this to return their value.
   Stmt stmt;
+
+  /// visit methods that take Func assign to this to return their value.
+  Func func;
 
   virtual void visit(const Literal *);
   virtual void visit(const Variable *);
@@ -41,6 +45,8 @@ protected:
   virtual void visit(const IfThenElse *);
   virtual void visit(const Block *);
   virtual void visit(const Pass *);
+
+  virtual void visit(const Func *);
 };
 
 }}

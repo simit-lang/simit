@@ -53,6 +53,8 @@ private:
   virtual void visit(const Block *);
   virtual void visit(const Pass *);
 
+  virtual void visit(const Func *);
+
   void indent();
 
   std::ostream &os;

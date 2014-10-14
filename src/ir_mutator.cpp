@@ -31,6 +31,20 @@ Stmt IRMutator::mutate(Stmt s) {
   return s;
 }
 
+Func IRMutator::mutate(Func f) {
+  if (f.defined()) {
+    f.accept(this);
+    f = func;
+  }
+  else {
+    f = Func();
+  }
+  expr = Expr();
+  stmt = Stmt();
+  func = Func();
+  return f;
+}
+
 void IRMutator::visit(const Literal *op) {
   expr = op;
 }
@@ -245,6 +259,35 @@ void IRMutator::visit(const Block *op) {
 
 void IRMutator::visit(const Pass *op) {
   stmt = op;
+}
+
+void IRMutator::visit(const Func *f) {
+  std::vector<Expr> arguments(f->getArguments().size());
+  std::vector<Expr> results(f->getResults().size());
+
+  bool argumentsSame = true;
+  for (size_t i=0; i < f->getArguments().size(); ++i) {
+    arguments[i] = mutate(f->getArguments()[i]);
+    if (arguments[i] != f->getArguments()[i]) {
+      argumentsSame = false;
+    }
+  }
+
+  for (size_t i=0; i < f->getResults().size(); ++i) {
+    results[i] = mutate(f->getResults()[i]);
+    if (results[i] != f->getResults()[i]) {
+      argumentsSame = false;
+    }
+  }
+
+  Stmt body = mutate(f->getBody());
+
+  if (body == f->getBody() && argumentsSame) {
+    func = *f;
+  }
+  else {
+    func = Func(f->getName(), arguments, results, body);
+  }
 }
 
 }} // namespace simit::ir

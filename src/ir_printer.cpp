@@ -32,39 +32,9 @@ IRPrinter::IRPrinter(std::ostream &os, signed indent) : os(os), indentation(0) {
 }
 
 void IRPrinter::print(const Func &func) {
-  os << "func " << func.getName() << "(";
-  if (func.getArguments().size() > 0) {
-    Expr arg = func.getArguments()[0];
-    print(arg);
-    os << " : " << arg.type();
+  if (func.defined()) {
+    func.accept(this);
   }
-  for (size_t i=1; i < func.getArguments().size(); ++i) {
-    Expr arg = func.getArguments()[i];
-    os << ", ";
-    print(arg);
-    os << " : " << arg.type();
-  }
-  os << ")";
-
-  if (func.getResults().size() > 0) {
-    os << " -> (";
-    print(func.getResults()[0]);
-    os << " : " << func.getResults()[0].type();
-
-    for (size_t i=1; i < func.getResults().size(); ++i) {
-      Expr res = func.getResults()[i];
-      os << ", ";
-      print(res);
-      os << " : " << res.type();
-    }
-    os << ")";
-  }
-
-  os << "\n";
-  ++indentation;
-  print(func.getBody());
-  --indentation;
-  os << "end";
 }
 
 void IRPrinter::print(const Expr &expr) {
@@ -293,6 +263,42 @@ void IRPrinter::visit(const Block *op) {
 void IRPrinter::visit(const Pass *op) {
   indent();
   os << "pass;\n";
+}
+
+void IRPrinter::visit(const Func *func) {
+  os << "func " << func->getName() << "(";
+  if (func->getArguments().size() > 0) {
+    Expr arg = func->getArguments()[0];
+    print(arg);
+    os << " : " << arg.type();
+  }
+  for (size_t i=1; i < func->getArguments().size(); ++i) {
+    Expr arg = func->getArguments()[i];
+    os << ", ";
+    print(arg);
+    os << " : " << arg.type();
+  }
+  os << ")";
+
+  if (func->getResults().size() > 0) {
+    os << " -> (";
+    print(func->getResults()[0]);
+    os << " : " << func->getResults()[0].type();
+
+    for (size_t i=1; i < func->getResults().size(); ++i) {
+      Expr res = func->getResults()[i];
+      os << ", ";
+      print(res);
+      os << " : " << res.type();
+    }
+    os << ")";
+  }
+
+  os << "\n";
+  ++indentation;
+  print(func->getBody());
+  --indentation;
+  os << "end";
 }
 
 void IRPrinter::indent() {

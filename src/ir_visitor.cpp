@@ -9,16 +9,6 @@ namespace ir {
 IRVisitor::~IRVisitor() {
 }
 
-void IRVisitor::visit(const Func *op) {
-  for (auto &argument : op->getArguments()) {
-    argument.accept(this);
-  }
-  for (auto &result : op->getResults()) {
-    result.accept(this);
-  }
-  op->getBody().accept(this);
-}
-
 void IRVisitor::visit(const Literal *op) {
 }
 
@@ -119,6 +109,16 @@ void IRVisitor::visit(const Block *op) {
 }
 
 void IRVisitor::visit(const Pass *op) {
+}
+
+void IRVisitor::visit(const Func *op) {
+  for (auto &argument : op->getArguments()) {
+    argument.accept(this);
+  }
+  for (auto &result : op->getResults()) {
+    result.accept(this);
+  }
+  op->getBody().accept(this);
 }
 
 }} // namespace simit::ir
