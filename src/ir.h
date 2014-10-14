@@ -418,32 +418,37 @@ struct Pass : public StmtNode<Pass> {
   }
 };
 
-
-/// A Simit function.
+/// A Simit function
 class Function {
 public:
-  Function(const std::string &name,
-           const std::vector<Expr> &arguments,
-           const std::vector<Expr> &results)
-      : name(name), arguments(arguments), results(results) {}
+  Function() : content(nullptr) {}
 
-  void setBody(Stmt body) {this->body = body;}
+  Function(const std::string &name, const std::vector<Expr> &arguments,
+           const std::vector<Expr> &results) : content(new Content){
+    content->name = name;
+    content->arguments = arguments;
+    content->results = results;
+  }
 
-  std::string getName() const {return name;}
-  const std::vector<Expr> &getArguments() const {return arguments;}
-  const std::vector<Expr> &getResults() const {return results;}
-  Stmt getBody() const {return body;}
+  void setBody(Stmt body) {content->body = body;}
 
-  void accept(IRVisitor *visitor) { visitor->visit(this); };
-  void accept(IRConstVisitor *visitor) const { visitor->visit(this); };
+  std::string getName() const {return content->name;}
+  const std::vector<Expr> &getArguments() const {return content->arguments;}
+  const std::vector<Expr> &getResults() const {return content->results;}
+  Stmt getBody() const {return content->body;}
+
+  void accept(IRVisitor *visitor) const { visitor->visit(this); };
 
 private:
-  std::string name;
-  std::vector<Expr> arguments;
-  std::vector<Expr> results;
-  Stmt body;
+  // Content struct to make it cheap to copy the function to pass it around.
+  struct Content {
+    std::string name;
+    std::vector<Expr> arguments;
+    std::vector<Expr> results;
+    Stmt body;
+  };
+  std::shared_ptr<Function::Content> content;
 };
-
 
 /// A Simit test case. Simit test cases can be declared in language comments
 /// and can subsequently be picked up by a test framework.
@@ -476,8 +481,14 @@ bool operator!=(const Expr &, const Expr &);
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
 
-inline Literal *toLiteral(Expr e) { return static_cast<Literal*>(e.expr()); }
-inline Variable *toVariable(Expr e) { return static_cast<Variable*>(e.expr()); }
+//
+inline const Literal *toLiteral(Expr e) {
+  return static_cast<const Literal*>(e.expr());
+}
+
+inline const Variable *toVariable(Expr e) {
+  return static_cast<const Variable*>(e.expr());
+}
 
 }} // namespace simit::internal
 
