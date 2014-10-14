@@ -56,9 +56,6 @@ public:
   ProgramContext() {}
 
   ~ProgramContext() {
-    for (auto &function : functions) {
-      delete function.second;
-    }
     for (auto &test : tests) {
       delete test;
     }
@@ -89,19 +86,19 @@ public:
     return exprSymtable.contains(name);
   }
 
-  void addFunction(ir::Func *f) {
-    functions[f->getName()] = f;
+  void addFunction(ir::Func f) {
+    functions[f.getName()] = f;
   }
 
   bool containsFunction(const std::string &name) const {
     return functions.find(name) != functions.end();
   }
 
-  ir::Func *getFunction(const std::string &name) {
+  ir::Func getFunction(const std::string &name) {
     return functions[name];
   }
 
-  std::map<std::string, ir::Func *> getFunctions() {
+  std::map<std::string, ir::Func> getFunctions() {
     return functions;
   }
 
@@ -138,13 +135,13 @@ public:
   const std::vector<ir::Test*> &getTests() const { return tests; }
 
 private:
-  std::map<std::string, ir::Func *>     functions;
-  std::map<std::string, ir::Expr>       externs;
+  std::map<std::string, ir::Func>    functions;
+  std::map<std::string, ir::Expr>    externs;
 
-  std::map<std::string, ir::Type>       elementTypes;
-  ScopedMap<std::string, RWExprPair>    exprSymtable;
+  std::map<std::string, ir::Type>    elementTypes;
+  ScopedMap<std::string, RWExprPair> exprSymtable;
 
-  std::vector<ir::Test*>                tests;
+  std::vector<ir::Test*>             tests;
 };
 
 }} // namespace simit::internal

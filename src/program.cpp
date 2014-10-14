@@ -40,8 +40,8 @@ class Program::ProgramContent {
   }
 
   std::unique_ptr<Function> compile(const std::string &function) {
-    auto simitFunc = ctx.getFunction(function);
-    if (!simitFunc) {
+    ir::Func simitFunc = ctx.getFunction(function);
+    if (!simitFunc.defined()) {
       diags.report() << "Attempting to compile unknown function ("
                      << function << ")";
       return NULL;
@@ -55,11 +55,11 @@ class Program::ProgramContent {
     // For each test look up the called function. Grab the actual arguments and
     // run the function with them as input.  Then compare the result to the
     // expected literal.
-    std::map<ir::Func*, simit::Function*> compiled;
+    std::map<ir::Func, simit::Function*> compiled;
 
     for (auto &test : ctx.getTests()) {
       // get binary function with name test->call->callee from list of functions
-      ir::Func *func = ctx.getFunction(test->getCallee());
+      ir::Func func = ctx.getFunction(test->getCallee());
       if (func == NULL) {
         diags.report() << "Error: attempting to test unknown function";
         return 1;
@@ -71,9 +71,9 @@ class Program::ProgramContent {
       Function *compiledFunc = compiled[func];
 
       // run the function with test->call->arguments
-      assert(test->getActuals().size() == func->getArguments().size());
+      assert(test->getActuals().size() == func.getArguments().size());
 
-      auto formalArgs = func->getArguments();
+      auto formalArgs = func.getArguments();
       auto actualArgs = test->getActuals();
       for (size_t i=0; i < actualArgs.size(); ++i) {
         auto formal = toVariable(formalArgs[i])->name;
@@ -81,7 +81,7 @@ class Program::ProgramContent {
         compiledFunc->bind(formal, &actual);
       }
 
-      auto formalResults = func->getResults();
+      auto formalResults = func.getResults();
       std::vector<ir::Expr> actualResults;
       for (auto &formalResult : formalResults) {
         ir::Expr actualResult = ir::Literal::make(formalResult.type());
@@ -115,8 +115,8 @@ class Program::ProgramContent {
   internal::Frontend *frontend;
   internal::Backend *backend;
 
-  Function *compile(ir::Func *simitFunc) {
-    return getBackend()->compile(*simitFunc);
+  Function *compile(ir::Func simitFunc) {
+    return getBackend()->compile(simitFunc);
   }
 };
 

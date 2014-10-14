@@ -135,17 +135,17 @@ int main(int argc, const char* argv[]) {
   bool somethingEmitted = false;
   if (emitSimit) {
     if (iter != functions.end()) {
-      cout << *iter->second << endl;
+      cout << iter->second << endl;
       ++iter;
     }
     for (; iter != functions.end(); ++iter) {
-      cout << endl << *iter->second << endl;
+      cout << endl << iter->second << endl;
     }
     somethingEmitted = true;
   }
 
   if (compile) {
-    simit::ir::Func *func = NULL;
+    simit::ir::Func func;
     if (function != "") {
       func = functions[function];
       if (func == nullptr) {
@@ -158,7 +158,7 @@ int main(int argc, const char* argv[]) {
       func = functions.begin()->second;
     }
 
-    if (func == nullptr) {
+    if (!func.defined()) {
       if (compile) {
         cerr << "Error: choose which function to compile using "
              << "-compile=<function>";

@@ -269,20 +269,20 @@ program
 program_element
   : element_type_decl
   | procedure {
-    std::unique_ptr<Func> function($procedure);
-    std::string name = function->getName();
+    Func func = convertAndDelete($procedure);
+    std::string name = func.getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("procedure redefinition (" + name + ")", @procedure);
     }
-    ctx->addFunction(function.release());
+    ctx->addFunction(func);
   }
   | function {
-    std::unique_ptr<Func> function($function);
-    std::string name = function->getName();
+    Func func = convertAndDelete($function);
+    std::string name = func.getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("function redefinition (" + name + ")", @function);
     }
-    ctx->addFunction(function.release());
+    ctx->addFunction(func);
   }
   | extern {
     $$ = NULL;

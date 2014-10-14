@@ -1164,12 +1164,12 @@ namespace  simit { namespace internal  {
   case 5:
 
     {
-    std::unique_ptr<Func> function((yystack_[0].value.function));
-    std::string name = function->getName();
+    Func func = convertAndDelete((yystack_[0].value.function));
+    std::string name = func.getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("procedure redefinition (" + name + ")", yystack_[0].location);
     }
-    ctx->addFunction(function.release());
+    ctx->addFunction(func);
   }
 
     break;
@@ -1177,12 +1177,12 @@ namespace  simit { namespace internal  {
   case 6:
 
     {
-    std::unique_ptr<Func> function((yystack_[0].value.function));
-    std::string name = function->getName();
+    Func func = convertAndDelete((yystack_[0].value.function));
+    std::string name = func.getName();
     if (ctx->containsFunction(name)) {
       REPORT_ERROR("function redefinition (" + name + ")", yystack_[0].location);
     }
-    ctx->addFunction(function.release());
+    ctx->addFunction(func);
   }
 
     break;

@@ -26,10 +26,11 @@ public:
 
 private:
   mutable long ref;
-  friend void aquire(const IRNode *node) {
+  friend inline void aquire(const IRNode *node) {
     ++node->ref;
   }
-  friend void release(const IRNode *node) {
+  
+  friend inline void release(const IRNode *node) {
     if (--node->ref == 0) {
       delete node;
     }
@@ -446,37 +447,43 @@ struct Pass : public StmtNode<Pass> {
 };
 
 /// A Simit function
-class Func {
+namespace {
+// Content struct to make it cheap to copy the function to pass it around.
+struct FuncContent {
+  std::string name;
+  std::vector<Expr> arguments;
+  std::vector<Expr> results;
+  Stmt body;
+
+  mutable long ref = 0;
+  friend inline void aquire(FuncContent *c) {++c->ref;}
+  friend inline void release(FuncContent *c) {if (--c->ref == 0) delete c;}
+};
+}
+
+class Func : public util::IntrusivePtr<FuncContent> {
 public:
-  Func() : content(nullptr) {}
+  Func() : IntrusivePtr() {}
 
   Func(const std::string &name, const std::vector<Expr> &arguments,
-       const std::vector<Expr> &results, Stmt body) : content(new Content) {
-    content->name = name;
-    content->arguments = arguments;
-    content->results = results;
-    content->body = body;
+       const std::vector<Expr> &results, Stmt body)
+      : IntrusivePtr(new FuncContent) {
+    ptr->name = name;
+    ptr->arguments = arguments;
+    ptr->results = results;
+    ptr->body = body;
   }
 
-  void setBody(Stmt body) {content->body = body;}
+  void setBody(Stmt body) {ptr->body = body;}
 
-  std::string getName() const {return content->name;}
-  const std::vector<Expr> &getArguments() const {return content->arguments;}
-  const std::vector<Expr> &getResults() const {return content->results;}
-  Stmt getBody() const {return content->body;}
+  std::string getName() const {return ptr->name;}
+  const std::vector<Expr> &getArguments() const {return ptr->arguments;}
+  const std::vector<Expr> &getResults() const {return ptr->results;}
+  Stmt getBody() const {return ptr->body;}
 
   void accept(IRVisitor *visitor) const { visitor->visit(this); };
-
-private:
-  // Content struct to make it cheap to copy the function to pass it around.
-  struct Content {
-    std::string name;
-    std::vector<Expr> arguments;
-    std::vector<Expr> results;
-    Stmt body;
-  };
-  std::shared_ptr<Func::Content> content;
 };
+
 
 /// A Simit test case. Simit test cases can be declared in language comments
 /// and can subsequently be picked up by a test framework.
