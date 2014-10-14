@@ -51,6 +51,14 @@ public:
     return *this;
   }
 
+  /// Copy assignment operator for managed object
+  IntrusivePtr& operator=(T *ptr) {
+    this->ptr = ptr;
+    if (ptr) {
+      aquire(ptr);
+    }
+  }
+
   /// Move assignment operator
   IntrusivePtr& operator=(IntrusivePtr &&other) {
     ptr = other.ptr;
