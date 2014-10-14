@@ -439,14 +439,6 @@ public:
     content->body = body;
   }
 
-  Func(const std::string &name, std::initializer_list<Expr> arguments,
-       std::initializer_list<Expr> results, Stmt body) : content(new Content) {
-    content->name = name;
-    content->arguments = arguments;
-    content->results = results;
-    content->body = body;
-  }
-
   void setBody(Stmt body) {content->body = body;}
 
   std::string getName() const {return content->name;}

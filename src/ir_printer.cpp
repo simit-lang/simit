@@ -68,11 +68,15 @@ void IRPrinter::print(const Func &func) {
 }
 
 void IRPrinter::print(const Expr &expr) {
-  expr.accept(this);
+  if (expr.defined()) {
+    expr.accept(this);
+  }
 }
 
 void IRPrinter::print(const Stmt &stmt) {
-  stmt.accept(this);
+  if (stmt.defined()) {
+    stmt.accept(this);
+  }
 }
 
 void IRPrinter::visit(const Literal *op) {
@@ -260,19 +264,23 @@ void IRPrinter::visit(const TensorWrite *op) {
 }
 
 void IRPrinter::visit(const For *op) {
-  os << "for";
+  indent();
+  os << "for;\n";
 }
 
 void IRPrinter::visit(const IfThenElse *op) {
-  os << "ifthenelse";
+  indent();
+  os << "ifthenelse;\n";
 }
 
 void IRPrinter::visit(const Block *op) {
-  os << "block";
+  indent();
+  os << "block;\n";
 }
 
 void IRPrinter::visit(const Pass *op) {
-  os << "pass";
+  indent();
+  os << "pass;\n";
 }
 
 void IRPrinter::indent() {
