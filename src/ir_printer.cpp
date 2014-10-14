@@ -199,7 +199,7 @@ void IRPrinter::visit(const Add *op) {
   os << "(";
   print(op->a);
   os << " + ";
-  print(op->a);
+  print(op->b);
   os << ")";
 }
 
@@ -207,7 +207,7 @@ void IRPrinter::visit(const Sub *op) {
   os << "(";
   print(op->a);
   os << " - ";
-  print(op->a);
+  print(op->b);
   os << ")";
 }
 
@@ -215,7 +215,7 @@ void IRPrinter::visit(const Mul *op) {
   os << "(";
   print(op->a);
   os << " * ";
-  print(op->a);
+  print(op->b);
   os << ")";
 }
 
@@ -223,7 +223,7 @@ void IRPrinter::visit(const Div *op) {
   os << "(";
   print(op->a);
   os << " / ";
-  print(op->a);
+  print(op->b);
   os << ")";
 }
 
