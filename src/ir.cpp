@@ -141,18 +141,36 @@ bool operator!=(const Literal& l, const Literal& r) {
 }
 
 // struct IndexExpr
-std::vector<IndexVar> IndexExpr::domain() {
-  std::vector<IndexVar> domain;
-  std::set<std::string> added;
-  for (auto &iv : lhsIndexVars) {
-    if (added.find(iv.getName()) == added.end()) {
-      added.insert(iv.getName());
-      domain.push_back(iv);
+class DomainGatherer : private IRVisitor {
+public:
+  vector<IndexVar> getDomain(const IndexExpr &indexExpr) {
+    domain.clear();
+    added.clear();
+    add(indexExpr.lhsIndexVars);
+    indexExpr.rhs.accept(this);
+    return domain;
+  }
+
+private:
+  vector<IndexVar> domain;
+  set<string> added;
+
+  void add(const vector<IndexVar> &indexVars) {
+    for (const IndexVar &ivar : indexVars) {
+      if (added.find(ivar.getName()) == added.end()) {
+        added.insert(ivar.getName());
+        domain.push_back(ivar);
+      }
     }
   }
 
-  // TODO: Visitor that adds reduction variables
-  return domain;
+  void visit(const IndexedTensor *op) {
+    add(op->indexVars);
+  }
+};
+
+std::vector<IndexVar> IndexExpr::domain() const {
+  return DomainGatherer().getDomain(*this);
 }
 
 }} // namespace simit::internal

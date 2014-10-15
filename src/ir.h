@@ -242,7 +242,7 @@ struct IndexExpr : public ExprNode<IndexExpr> {
   std::vector<IndexVar> lhsIndexVars;
   Expr rhs;
 
-  std::vector<IndexVar> domain();
+  std::vector<IndexVar> domain() const;
 
   static Expr make(std::vector<IndexVar> lhsIndexVars, Expr rhs) {
     assert(rhs.type().isScalar());
