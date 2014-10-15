@@ -1,6 +1,7 @@
 #include "gtest/gtest.h"
 
 #include <memory>
+#include <cmath>
 
 #include "ir.h"
 #include "ir_printer.h"
@@ -53,3 +54,135 @@ TEST(Codegen, add0) {
   vector<double> results = toVectorOf<double>(c);
   ASSERT_DOUBLE_EQ(results[0], 6.1);
 }
+
+TEST(Codegen, sin) {
+  Expr a = Variable::make("a", Float(64));
+  Expr c = Variable::make("c", Float(64));
+
+  Expr sin_a = Call::make("sin", {a}, Call::Intrinsic);
+  
+  Stmt body = AssignStmt::make({"c"}, sin_a);
+
+  Func func = Func("testsin", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  a = Literal::make(Float(64), {2.0});
+  c = Literal::make(Float(64));
+
+  function->bind("a", &a);
+  function->bind("c", &c);
+
+  function->run();
+
+  vector<double> results = toVectorOf<double>(c);
+  ASSERT_DOUBLE_EQ(results[0], sin(2.0));
+
+}
+
+TEST(Codegen, cos) {
+  Expr a = Variable::make("a", Float(64));
+  Expr c = Variable::make("c", Float(64));
+
+  Expr cos_a = Call::make("cos", {a}, Call::Intrinsic);
+  
+  Stmt body = AssignStmt::make({"c"}, cos_a);
+
+  Func func = Func("testcos", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  a = Literal::make(Float(64), {2.0});
+  c = Literal::make(Float(64));
+
+  function->bind("a", &a);
+  function->bind("c", &c);
+
+  function->run();
+
+  vector<double> results = toVectorOf<double>(c);
+  ASSERT_DOUBLE_EQ(results[0], cos(2.0));
+
+}
+
+TEST(Codegen, sqrt) {
+  Expr a = Variable::make("a", Float(64));
+  Expr c = Variable::make("c", Float(64));
+
+  Expr sqrt_a = Call::make("sqrt", {a}, Call::Intrinsic);
+  
+  Stmt body = AssignStmt::make({"c"}, sqrt_a);
+
+  Func func = Func("testsqrt", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  a = Literal::make(Float(64), {5.0});
+  c = Literal::make(Float(64));
+
+  function->bind("a", &a);
+  function->bind("c", &c);
+
+  function->run();
+
+  vector<double> results = toVectorOf<double>(c);
+  ASSERT_DOUBLE_EQ(results[0], sqrt(5.0));
+
+}
+
+TEST(Codegen, log) {
+  Expr a = Variable::make("a", Float(64));
+  Expr c = Variable::make("c", Float(64));
+
+  Expr log_a = Call::make("log", {a}, Call::Intrinsic);
+  
+  Stmt body = AssignStmt::make({"c"}, log_a);
+
+  Func func = Func("testlog", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  a = Literal::make(Float(64), {5.0});
+  c = Literal::make(Float(64));
+
+  function->bind("a", &a);
+  function->bind("c", &c);
+
+  function->run();
+
+  vector<double> results = toVectorOf<double>(c);
+  ASSERT_DOUBLE_EQ(results[0], log(5.0));
+
+}
+
+TEST(Codegen, exp) {
+  Expr a = Variable::make("a", Float(64));
+  Expr c = Variable::make("c", Float(64));
+
+  Expr exp_a = Call::make("exp", {a}, Call::Intrinsic);
+  
+  Stmt body = AssignStmt::make({"c"}, exp_a);
+
+  Func func = Func("testexp", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  a = Literal::make(Float(64), {5.0});
+  c = Literal::make(Float(64));
+
+  function->bind("a", &a);
+  function->bind("c", &c);
+
+  function->run();
+
+  vector<double> results = toVectorOf<double>(c);
+  ASSERT_DOUBLE_EQ(results[0], exp(5.0));
+
+}
+
+

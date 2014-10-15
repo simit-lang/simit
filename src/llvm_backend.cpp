@@ -9,6 +9,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Function.h"
 #include "llvm/Support/raw_ostream.h"
@@ -139,7 +140,45 @@ void LLVMBackend::visit(const IndexExpr *op) {
 }
 
 void LLVMBackend::visit(const Call *op) {
-  cout << "Call" << endl;
+  std::vector<llvm::Type*> argTypes;
+  std::vector<llvm::Value*> args;
+  llvm::Function *fun = nullptr;
+  
+  // compile arguments first
+  for (auto a: op->actuals) {
+    assert(a.type().isScalar());
+    switch (a.type().toScalar()->kind) {
+      case ScalarType::Float:
+        argTypes.push_back(LLVM_DOUBLE);
+        break;
+      case ScalarType::Int:
+        argTypes.push_back(LLVM_INT);
+        break;
+    }
+    args.push_back(compile(a));
+  }
+  
+  // these are intrinsic functions
+  if (op->function == "sin" && op->kind == Call::Intrinsic) {
+    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sin, argTypes);
+  }
+  if (op->function == "cos" && op->kind == Call::Intrinsic) {
+    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::cos, argTypes);
+  }
+  if (op->function == "sqrt" && op->kind == Call::Intrinsic) {
+    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt, argTypes);
+  }
+  if (op->function == "log" && op->kind == Call::Intrinsic) {
+    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::log, argTypes);
+  }
+  if (op->function == "exp" && op->kind == Call::Intrinsic) {
+    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::exp, argTypes);
+  }
+  
+  if (fun)
+    val = builder->CreateCall(fun, args);
+  else
+    assert(false && "Unsupported function call");
 }
 
 void LLVMBackend::visit(const Neg *op) {
@@ -184,7 +223,7 @@ void LLVMBackend::visit(const AssignStmt *op) {
 
       // Check if the symbol is a function result
       if (results.find(lhsVal) != results.end()) {
-        assert(op->rhs.type().isScalar());
+        //FIXME: assert(op->rhs.type().isScalar());
         builder->CreateStore(rhs, lhsVal);
         rhs->setName(lhs + VAL_SUFFIX);
       }
