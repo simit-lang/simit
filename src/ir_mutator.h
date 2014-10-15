@@ -22,31 +22,31 @@ protected:
   /// visit methods that take Func assign to this to return their value.
   Func func;
 
-  virtual void visit(const Literal *);
-  virtual void visit(const Variable *);
-  virtual void visit(const Result *);
-  virtual void visit(const FieldRead *);
-  virtual void visit(const TensorRead *);
-  virtual void visit(const TupleRead *);
-  virtual void visit(const Map *);
-  virtual void visit(const IndexedTensor *);
-  virtual void visit(const IndexExpr *);
-  virtual void visit(const Call *);
-  virtual void visit(const Neg *);
-  virtual void visit(const Add *);
-  virtual void visit(const Sub *);
-  virtual void visit(const Mul *);
-  virtual void visit(const Div *);
+  virtual void visit(const Literal *op);
+  virtual void visit(const Variable *op);
+  virtual void visit(const Result *op);
+  virtual void visit(const FieldRead *op);
+  virtual void visit(const TensorRead *op);
+  virtual void visit(const TupleRead *op);
+  virtual void visit(const Map *op);
+  virtual void visit(const IndexedTensor *op);
+  virtual void visit(const IndexExpr *op);
+  virtual void visit(const Call *op);
+  virtual void visit(const Neg *op);
+  virtual void visit(const Add *op);
+  virtual void visit(const Sub *op);
+  virtual void visit(const Mul *op);
+  virtual void visit(const Div *op);
 
-  virtual void visit(const AssignStmt *);
-  virtual void visit(const FieldWrite *);
-  virtual void visit(const TensorWrite *);
-  virtual void visit(const For *);
-  virtual void visit(const IfThenElse *);
-  virtual void visit(const Block *);
-  virtual void visit(const Pass *);
+  virtual void visit(const AssignStmt *op);
+  virtual void visit(const FieldWrite *op);
+  virtual void visit(const TensorWrite *op);
+  virtual void visit(const For *op);
+  virtual void visit(const IfThenElse *op);
+  virtual void visit(const Block *op);
+  virtual void visit(const Pass *op);
 
-  virtual void visit(const Func *);
+  virtual void visit(const Func *f);
 };
 
 }}
