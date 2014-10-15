@@ -26,6 +26,12 @@ std::ostream &operator<<(std::ostream &os, const Stmt &Stmt) {
   return os;
 }
 
+std::ostream &operator<<(std::ostream &os, const IRNode &node) {
+  IRPrinter printer(os);
+  printer.print(node);
+  return os;
+}
+
 
 // class IRPrinter
 IRPrinter::IRPrinter(std::ostream &os, signed indent) : os(os), indentation(0) {
@@ -47,6 +53,10 @@ void IRPrinter::print(const Stmt &stmt) {
   if (stmt.defined()) {
     stmt.accept(this);
   }
+}
+
+void IRPrinter::print(const IRNode &node) {
+  node.accept(this);
 }
 
 void IRPrinter::visit(const Literal *op) {

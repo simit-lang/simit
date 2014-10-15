@@ -14,10 +14,12 @@ namespace ir {
 class Func;
 class Expr;
 class Stmt;
+struct IRNode;
 
 std::ostream &operator<<(std::ostream &os, const Func &);
 std::ostream &operator<<(std::ostream &os, const Expr &);
 std::ostream &operator<<(std::ostream &os, const Stmt &);
+std::ostream &operator<<(std::ostream &os, const IRNode &);
 
 class IRPrinter : public IRVisitor {
 public:
@@ -27,6 +29,7 @@ public:
   void print(const Func &);
   void print(const Expr &);
   void print(const Stmt &);
+  void print(const IRNode &);
 
 private:
   virtual void visit(const Literal *);
