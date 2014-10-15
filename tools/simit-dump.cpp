@@ -2,6 +2,7 @@
 
 #include "ir.h"
 #include "ir_printer.h"
+#include "lower.h"
 #include "function.h"
 #include "frontend.h"
 #include "program_context.h"
@@ -167,6 +168,9 @@ int main(int argc, const char* argv[]) {
     }
 
     // Lower while printing lowered results
+    func = lowerIndexExpressions(func);
+    cout << endl << "-- After lowering Index Expressions:" << endl;
+    cout << func << endl;
 
 //    if (emitLLVM) {
 //      if (somethingEmitted) {
