@@ -174,6 +174,16 @@ void LLVMBackend::visit(const Call *op) {
   if (op->function == "exp" && op->kind == Call::Intrinsic) {
     fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::exp, argTypes);
   }
+  if (op->function == "atan2" && op->kind == Call::Intrinsic) {
+    // atan2 isn't an LLVM intrinsic
+    auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
+    fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("atan2", ftype));
+  }
+  
+  // if not an intrinsic function, try to find it in the module
+  if (!fun) {
+    fun = module->getFunction(op->function);
+  }
   
   if (fun)
     val = builder->CreateCall(fun, args);

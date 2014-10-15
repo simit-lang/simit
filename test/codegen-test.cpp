@@ -185,4 +185,34 @@ TEST(Codegen, exp) {
 
 }
 
+TEST(Codegen, atan2) {
+  Expr a = Variable::make("a", Float(64));
+  Expr b = Variable::make("b", Float(64));
+  Expr c = Variable::make("c", Float(64));
+
+  Expr atan2_ab = Call::make("atan2", {a,b}, Call::Intrinsic);
+  
+  Stmt body = AssignStmt::make({"c"}, atan2_ab);
+
+  Func func = Func("testatan2", {a,b}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  a = Literal::make(Float(64), {1.0});
+  b = Literal::make(Float(64), {2.0});
+  c = Literal::make(Float(64));
+
+  function->bind("a", &a);
+  function->bind("b", &b);
+  function->bind("c", &c);
+
+  function->run();
+
+  vector<double> results = toVectorOf<double>(c);
+  ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));
+
+}
+
+
 
