@@ -1,11 +1,25 @@
 #ifndef SIMIT_INDEXVAR_H
 #define SIMIT_INDEXVAR_H
 
+#include "intrusive_ptr.h"
 #include "domain.h"
 #include "reductions.h"
 
 namespace simit {
 namespace ir {
+
+namespace {
+  struct IndexVarContent {
+    std::string name;
+    IndexDomain domain;
+    bool reduction;
+    ReductionOperator rop;
+
+    mutable long ref = 0;
+    friend inline void aquire(IndexVarContent *c) {++c->ref;}
+    friend inline void release(IndexVarContent *c) {if (--c->ref==0) delete c;}
+  };
+}
 
 /// An index variable describes iteration over an index set.  There are two
 /// types of index variables, free index variables and reduction index
@@ -18,34 +32,35 @@ namespace ir {
 /// performed for each index in the index set.  Examples are SUM, which not
 /// surprisingly sums over the index variable (\sum_{i} in latex speak) and
 /// product which takes the product over the index variable (\prod_{i}).
-class IndexVar {
+class IndexVar : public util::IntrusivePtr<IndexVarContent> {
 public:
   /// Construct a free index variable.
   IndexVar(std::string name, IndexDomain domain)
-      : name(name), domain(domain), reduction(false) {}
+      : IntrusivePtr(new IndexVarContent) {
+    ptr->name = name;
+    ptr->domain = domain;
+    ptr->reduction = false;
+  }
 
   // Construct a reduction index variable.
   IndexVar(std::string name, IndexDomain domain, ReductionOperator rop)
-      : name(name), domain(domain), reduction(true), rop(rop) {}
+      : IntrusivePtr(new IndexVarContent) {
+    ptr->name = name;
+    ptr->domain = domain;
+    ptr->reduction = true;
+    ptr->rop = rop;
+  }
 
-  std::string getName() const { return name; }
+  std::string getName() const { return ptr->name; }
+  const IndexDomain &getDomain() const { return ptr->domain; }
 
-  const IndexDomain &getDomain() const { return domain; }
+  bool isFreeVar() const { return !ptr->reduction; }
+  bool isReductionVar() const { return ptr->reduction; }
 
-  bool isFreeVar() const { return !reduction; }
-  bool isReductionVar() const { return reduction; }
-
-  ReductionOperator getOperator() const { return rop; }
-
-private:
-  std::string name;
-  IndexDomain domain;
-
-  bool reduction;
-  ReductionOperator rop;
+  ReductionOperator getOperator() const { return ptr->rop; }
 };
 
-std::ostream &operator<<(std::ostream &os, const IndexVar &var);
+std::ostream &operator<<(std::ostream &os, const IndexVar &);
 
 }} // namespace simit::ir
 
