@@ -457,7 +457,7 @@ struct FuncContent {
 
   mutable long ref = 0;
   friend inline void aquire(FuncContent *c) {++c->ref;}
-  friend inline void release(FuncContent *c) {if (--c->ref == 0) delete c;}
+  friend inline void release(FuncContent *c) {if (--c->ref==0) delete c;}
 };
 }
 

@@ -267,7 +267,8 @@ void IRPrinter::visit(const IfThenElse *op) {
 
 void IRPrinter::visit(const Block *op) {
   indent();
-  os << "block;\n";
+  print(op->first);
+  print(op->rest);
 }
 
 void IRPrinter::visit(const Pass *op) {

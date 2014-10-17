@@ -1,12 +1,117 @@
 #include "lower.h"
 
 #include "ir_mutator.h"
+#include "sig.h"
+#include "util.h"
+
+using namespace std;
 
 namespace simit {
 namespace ir {
 
-Func lowerIndexExpressions(const Func &func) {
-  return Func();
-}
+class SIGBuilder : public IRVisitor {
+public:
+  SIG create(const IndexExpr *expr) {
+    return create(Expr(expr));
+  }
 
+private:
+  SIG igraph;
+
+  SIG create(Expr expr) {
+    expr.accept(this);
+    SIG result = igraph;
+    igraph = SIG();
+    return result;
+  }
+
+  void visit(const IndexedTensor *op) {
+    if (op->indexVars.size() == 1) {
+      igraph = SIG(op->indexVars[0]);
+    }
+    else if (op->indexVars.size() >= 2) {
+      const Variable *var = to<Variable>(op->tensor);
+      igraph = SIG(var->name, op->indexVars);
+    }
+  }
+
+  void visit(const Add *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    igraph = merge(ig1, ig2, SIG::Union);
+  }
+
+  void visit(const Sub *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    igraph = merge(ig1, ig2, SIG::Union);
+  }
+
+  void visit(const Mul *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    igraph = merge(ig1, ig2, SIG::Intersection);
+  }
+
+  void visit(const Div *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    igraph = merge(ig1, ig2, SIG::Intersection);
+  }
+};
+
+class IndexedTensorsToLoads : public IRMutator {
+  void visit(const IndexedTensor *op) {
+//    expr = TensorLoad()
+  }
+};
+
+class LoopBuilder : public SIGVisitor {
+public:
+  Stmt create(const SIG &g, const IndexExpr *indexExpr) {
+    apply(g);
+    Stmt result = stmt;
+    stmt = Stmt();
+    return result;
+  }
+
+private:
+  Stmt stmt;
+
+  void visit(const SIGVertex *v) {
+    SIGVisitor::visit(v);
+    if (!stmt.defined()) {
+      stmt = Pass::make();
+    }
+
+    stmt = Block::make(Pass::make(), stmt);
+  }
+
+  void visit(const SIGEdge *e) {
+    SIGVisitor::visit(e);
+    if (!stmt.defined()) {
+      stmt = Pass::make();
+    }
+
+    stmt = Block::make(Pass::make(), stmt);
+  }
+};
+
+class LowerIndexExpressions : public IRMutator {
+  void visit(const IndexExpr *op) {
+    Expr rhs = op->rhs;
+
+    SIG igraph = SIGBuilder().create(op);
+    Stmt stmt = LoopBuilder().create(igraph, op);
+
+    cout << igraph << endl;
+    cout << stmt << endl;
+
+    expr = op;
+  }
+};
+
+Func lowerIndexExpressions(Func func) {
+  return LowerIndexExpressions().mutate(func);
+}
 }}
