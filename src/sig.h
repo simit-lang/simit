@@ -41,7 +41,7 @@ class SIG {
 public:
   enum MergeOp { Union, Intersection };
 
-  explicit SIG() : content(new SIG::Content) {}
+  SIG() : content(new SIG::Content) {}
   explicit SIG(const IndexVar &iv);
   explicit SIG(std::string name, const std::vector<IndexVar> &ivs);
 
