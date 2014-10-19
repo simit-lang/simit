@@ -139,19 +139,41 @@ void SIGVisitor::apply(const SIG &sig, const IndexVar &first) {
 
 void SIGVisitor::visit(const SIGVertex *v) {
   visitedVertices.insert(v);
+  vertexPath.push_front(v);
   for (auto &e : v->connectors) {
     if (visitedEdges.find(e) == visitedEdges.end()) {
       visit(e);
     }
   }
+  vertexPath.pop_front();
 }
 
 void SIGVisitor::visit(const SIGEdge *e) {
   visitedEdges.insert(e);
+  edgePath.push_front(e);
   for (auto &v : e->endpoints) {
     if (visitedVertices.find(v) == visitedVertices.end()) {
       visit(v);
     }
+  }
+  edgePath.pop_front();
+}
+
+const SIGVertex *SIGVisitor::getPreviousVertex() {
+  if (vertexPath.size() > 0) {
+    return vertexPath.front();
+  }
+  else {
+    return nullptr;
+  }
+}
+
+const SIGEdge *SIGVisitor::getPreviousEdge() {
+  if (edgePath.size() > 0) {
+    return edgePath.front();
+  }
+  else {
+    return nullptr;
   }
 }
 

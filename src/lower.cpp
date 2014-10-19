@@ -80,11 +80,20 @@ private:
 
   void visit(const SIGVertex *v) {
     SIGVisitor::visit(v);
+
     if (!stmt.defined()) {
       stmt = Pass::make();
     }
 
-    stmt = Block::make(Pass::make(), stmt);
+    const SIGEdge *previous = getPreviousEdge();
+    if (previous == nullptr) {
+      const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
+      stmt = For::make(v->iv.getName(), domain, stmt);
+    }
+    else {
+      const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
+      stmt = For::make("derived", domain, stmt);
+    }
   }
 
   void visit(const SIGEdge *e) {
@@ -92,8 +101,7 @@ private:
     if (!stmt.defined()) {
       stmt = Pass::make();
     }
-
-    stmt = Block::make(Pass::make(), stmt);
+//    stmt = Block::make(Pass::make(), stmt);
   }
 };
 
