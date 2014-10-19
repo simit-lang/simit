@@ -40,7 +40,6 @@ private:
   virtual void visit(const TensorRead *);
   virtual void visit(const Map *);
   virtual void visit(const IndexedTensor *);
-  virtual void visit(const IndexExpr *);
   virtual void visit(const Call *);
   virtual void visit(const Neg *);
   virtual void visit(const Add *);
@@ -49,6 +48,7 @@ private:
   virtual void visit(const Div *);
 
   virtual void visit(const AssignStmt *);
+  virtual void visit(const IndexStmt *);
   virtual void visit(const FieldWrite *);
   virtual void visit(const TensorWrite *);
   virtual void visit(const For *);

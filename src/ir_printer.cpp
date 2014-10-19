@@ -122,7 +122,6 @@ void IRPrinter::visit(const Literal *op) {
       NOT_SUPPORTED_YET;
       break;
   }
-  os << "\n";
 }
 
 void IRPrinter::visit(const Variable *op) {
@@ -175,13 +174,6 @@ void IRPrinter::visit(const IndexedTensor *op) {
   }
 }
 
-void IRPrinter::visit(const IndexExpr *op) {
-  if (op->lhsIndexVars.size() != 0) {
-    os << "(" + simit::util::join(op->lhsIndexVars, ",") + ") ";
-  }
-  print(op->rhs);
-}
-
 void IRPrinter::visit(const Call *op) {
   os << "Call";
 }
@@ -225,9 +217,20 @@ void IRPrinter::visit(const Div *op) {
 
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
-  os << util::join(op->lhs) << " = ";
-  print(op->rhs);
-  os << ";\n";
+  os << op->name << " = ";
+  print(op->value);
+  os << ";";
+}
+
+void IRPrinter::visit(const IndexStmt *op) {
+  indent();
+  print(op->target);
+  if (op->targetIndexVars.size() != 0) {
+    os << "(" + simit::util::join(op->targetIndexVars, ",") + ")";
+  }
+  os << " = ";
+  print(op->value);
+  os << ";";
 }
 
 void IRPrinter::visit(const FieldWrite *op) {
@@ -235,7 +238,7 @@ void IRPrinter::visit(const FieldWrite *op) {
   print(op->elementOrSet);
   os << "." << op->fieldName << " = ";
   print(op->value);
-  os << ";\n";
+  os << ";";
 }
 
 void IRPrinter::visit(const TensorWrite *op) {
@@ -252,28 +255,30 @@ void IRPrinter::visit(const TensorWrite *op) {
   }
   os << ") = ";
   print(op->value);
-  os << ";\n";
+  os << ";";
 }
 
 void IRPrinter::visit(const For *op) {
   indent();
-  os << "for;\n";
+  os << "for;";
 }
 
 void IRPrinter::visit(const IfThenElse *op) {
   indent();
-  os << "ifthenelse;\n";
+  os << "ifthenelse;";
 }
 
 void IRPrinter::visit(const Block *op) {
-  indent();
   print(op->first);
-  print(op->rest);
+  if (op->rest.defined()) {
+    os << endl;
+    print(op->rest);
+  }
 }
 
 void IRPrinter::visit(const Pass *op) {
   indent();
-  os << "pass;\n";
+  os << "pass;";
 }
 
 void IRPrinter::visit(const Func *func) {
@@ -305,11 +310,11 @@ void IRPrinter::visit(const Func *func) {
     os << ")";
   }
 
-  os << "\n";
+  os << "" << endl;
   ++indentation;
   print(func->getBody());
   --indentation;
-  os << "end";
+  os << endl << "end";
 }
 
 void IRPrinter::indent() {

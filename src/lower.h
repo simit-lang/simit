@@ -7,6 +7,7 @@ namespace simit {
 namespace ir {
 
 Func lowerIndexExpressions(Func func);
+
 //Function lowerMaps(Func func);
 
 //Function lowerWrites(Func func);

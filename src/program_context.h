@@ -4,21 +4,22 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <list>
 #include <map>
 #include <utility>
 
 #include "scopedmap.h"
 #include "types.h"
 #include "ir.h"
-#include "ir_printer.h"
+#include "ir_builder.h"
 
 namespace simit {
 namespace internal {
 
-class RWExprPair {
+class Symbol {
 public:
-  RWExprPair() {}
-  RWExprPair(ir::Expr read, ir::Expr write)
+  Symbol() {}
+  Symbol(ir::Expr read, ir::Expr write)
       : read(read), write(write) {}
 
   bool isReadable() const { return read.defined(); }
@@ -32,17 +33,17 @@ private:
   ir::Expr write;
 };
 
-inline std::ostream &operator<<(std::ostream &os, const RWExprPair &rwExpr) {
+inline std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
   os << "(";
-  if (rwExpr.isReadable()) {
-    os << rwExpr.getReadExpr();
+  if (symbol.isReadable()) {
+    os << symbol.getReadExpr();
   }
   else {
     os << "none";
   }
   os << ", ";
-  if (rwExpr.isWritable()) {
-    os << rwExpr.getWriteExpr();
+  if (symbol.isWritable()) {
+    os << symbol.getWriteExpr();
   }
   else {
     os << "none";
@@ -54,19 +55,23 @@ inline std::ostream &operator<<(std::ostream &os, const RWExprPair &rwExpr) {
 class ProgramContext {
 public:
   ProgramContext() {}
-
   ~ProgramContext() {
     for (auto &test : tests) {
       delete test;
     }
   }
 
-  void scope()   {
+  void scope() {
     exprSymtable.scope();
+    statements.push_front(std::vector<ir::Stmt>());
+    builder.setInsertionPoint(&statements.front());
   }
 
   void unscope() {
     exprSymtable.unscope();
+    statements.pop_front();
+    builder.setInsertionPoint(statements.size() > 0
+                              ? &statements.front() : nullptr);
   }
 
   void addSymbol(const std::string &name, ir::Expr readWrite) {
@@ -74,10 +79,10 @@ public:
   }
 
   void addSymbol(const std::string &name, ir::Expr read, ir::Expr write) {
-    exprSymtable.insert(name, RWExprPair(read,write));
+    exprSymtable.insert(name, Symbol(read, write));
   }
 
-  const RWExprPair &getSymbol(const std::string &name) {
+  const Symbol &getSymbol(const std::string &name) {
     assert(hasSymbol(name));
     return exprSymtable.get(name);
   }
@@ -122,24 +127,30 @@ public:
     return externs.find(name) != externs.end();
   }
 
-  ir::Expr getExtern(const std::string &name) {
-    return externs[name];
-  }
+  ir::Expr getExtern(const std::string &name) {return externs[name];}
 
-  const std::map<std::string,ir::Expr> &getExterns() {
-    return externs;
-  }
+  const std::map<std::string,ir::Expr> &getExterns() {return externs;}
 
-  void addTest(ir::Test *test) { tests.push_back(test); }
+  void addTest(ir::Test *test) {tests.push_back(test);}
 
-  const std::vector<ir::Test*> &getTests() const { return tests; }
+  const std::vector<ir::Test*> &getTests() const {return tests;}
+
+  ir::IRBuilder *getBuilder() {return &builder;}
+
+  void addStatement(ir::Stmt stmt) {statements.front().push_back(stmt);}
+  
+  std::vector<ir::Stmt> *getStatements() {return &statements.front();}
 
 private:
+  ir::IRBuilder builder;
+
   std::map<std::string, ir::Func>    functions;
   std::map<std::string, ir::Expr>    externs;
 
   std::map<std::string, ir::Type>    elementTypes;
-  ScopedMap<std::string, RWExprPair> exprSymtable;
+  ScopedMap<std::string, Symbol>     exprSymtable;
+
+  std::list<std::vector<ir::Stmt>>   statements;
 
   std::vector<ir::Test*>             tests;
 };

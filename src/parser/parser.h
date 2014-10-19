@@ -54,7 +54,7 @@
   #include "ir.h"
   #include "errors.h"
   #include "types.h"
-  #include "ir_codegen.h"
+  #include "ir_builder.h"
 
 
   namespace {
@@ -195,17 +195,15 @@ namespace  simit { namespace internal  {
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
-  ir::Stmt              *stmt;
-  std::vector<ir::Stmt> *stmts;
-  ir::Expr              *expr;
-  std::vector<ir::Expr> *exprs;
-  ir::BinaryOperator     binop;
-  TensorValues<double>  *TensorDoubleValues;
-  TensorValues<int>     *TensorIntValues;
+  ir::Stmt                      *stmt;
+  std::vector<ir::Stmt>         *stmts;
+  ir::Expr                      *expr;
+  std::vector<ir::Expr>         *exprs;
+  ir::IRBuilder::BinaryOperator  binop;
+  TensorValues<double>          *TensorDoubleValues;
+  TensorValues<int>             *TensorIntValues;
 
   std::vector<std::string> *strings;
-
-  ir::Test *test;
 
 
     };
@@ -573,8 +571,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 454,     ///< Last index in yytable_.
-      yynnts_ = 72,  ///< Number of nonterminal symbols.
+      yylast_ = 473,     ///< Last index in yytable_.
+      yynnts_ = 71,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

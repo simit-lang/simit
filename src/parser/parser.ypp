@@ -20,7 +20,7 @@
   #include "ir.h"
   #include "errors.h"
   #include "types.h"
-  #include "ir_codegen.h"
+  #include "ir_builder.h"
 }
 
 %parse-param { Scanner *scanner };
@@ -37,6 +37,8 @@
 
   #include "program_context.h"
   #include "scanner.h"
+  #include "ir_mutator.h"
+
   using namespace std;
   using namespace simit::internal;
   using namespace simit::ir;
@@ -165,17 +167,15 @@
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
-  ir::Stmt              *stmt;
-  std::vector<ir::Stmt> *stmts;
-  ir::Expr              *expr;
-  std::vector<ir::Expr> *exprs;
-  ir::BinaryOperator     binop;
-  TensorValues<double>  *TensorDoubleValues;
-  TensorValues<int>     *TensorIntValues;
+  ir::Stmt                      *stmt;
+  std::vector<ir::Stmt>         *stmts;
+  ir::Expr                      *expr;
+  std::vector<ir::Expr>         *exprs;
+  ir::IRBuilder::BinaryOperator  binop;
+  TensorValues<double>          *TensorDoubleValues;
+  TensorValues<int>             *TensorIntValues;
 
   std::vector<std::string> *strings;
-
-  ir::Test *test;
 }
 %destructor {} <num> <fnum> <binop>
 %destructor { free((void*)($$)); } <string>
@@ -265,7 +265,6 @@ program
   : /* empty */
   | program program_element
 
-%type <expr> program_element;
 program_element
   : element_type_decl
   | procedure {
@@ -284,16 +283,9 @@ program_element
     }
     ctx->addFunction(func);
   }
-  | extern {
-    $$ = NULL;
-  }
-  | stmt {
-    $$ = NULL;
-    delete $stmt;
-  }
-  | test {
-    ctx->addTest($test);
-  }
+  | extern
+  | stmt
+  | test
 
 // Externs
 %type <expr> extern;
@@ -470,126 +462,119 @@ stmt_block
     $$ = new Stmt(Pass::make());
   }
   | stmts {
-    vector<Stmt> stmts = convertAndDelete($stmts);
+    vector<Stmt> stmts = *ctx->getStatements();
     if (stmts.size() == 0) {$$ = new Stmt(Pass::make()); break;} // TODO: remove
     $$ = new Stmt((stmts.size() == 1) ? stmts[0] : Block::make(stmts));
   }
 
-%type <stmts> stmts;
 stmts
-  : stmt {
-    $$ = new vector<Stmt>();
-    if ($stmt == NULL) break;  // TODO: Remove check
-    Stmt stmt = convertAndDelete($stmt);
-    $$->push_back(stmt);
-  }
-  | stmts stmt {
-    $$ = $1;
-    if ($stmt == NULL) break;  // TODO: Remove check
-    Stmt stmt = convertAndDelete($stmt);
-    $$->push_back(stmt);
-  }
+  : stmt
+  | stmts stmt
 
-%type <stmt> stmt;
 stmt
   : assign_stmt
   | field_write_stmt
   | tensor_write_stmt
-  | expr_stmt
   | if_stmt
   | for_stmt
   | const_stmt
+  | expr_stmt
 
-%type <stmt> assign_stmt;
+%code {
+class ReplaceTarget : public IRMutator {
+public:
+  ReplaceTarget(Expr var) : var(var){}
+
+  void visit(const IndexStmt *op) {
+    assert(op->target.type() == var.type());
+    stmt = IndexStmt::make(var, op->targetIndexVars, op->value);
+  }
+
+private:
+  Expr var;
+};
+};
+
 assign_stmt
-  : value_name_list "=" expr ";" {
-    $$ = NULL;  // TODO: Remove this
-
-    vector<string> valueNames = convertAndDelete($value_name_list);
+  : IDENT "=" expr ";" {
     if ($expr == nullptr) { break; } // TODO: Remove check
+
+    string name = convertAndFree($IDENT);
     Expr value = convertAndDelete($expr);
 
-    // TODO: Check valueNames.size() matches number of values produced by expr
+    if (isa<Variable>(value)) {
+      Expr variable;
+      if (ctx->hasSymbol(name)) {
+        Symbol symbol = ctx->getSymbol(name);
 
-    $$ = new Stmt(AssignStmt::make(valueNames, value));
+        if (!symbol.isWritable()) {
+          REPORT_ERROR(name + " is not writable", @1);
+        }
+
+        variable = symbol.getWriteExpr();
+      }
+      else {
+        variable = Variable::make(name, value.type());
+      }
+      assert(variable.defined());
+
+      std::vector<ir::Stmt> *stmts = ctx->getStatements();
+      Stmt stmt = (*stmts)[stmts->size()-1];
+      (*stmts)[stmts->size()-1] = ReplaceTarget(variable).mutate(stmt);
+    }
+    else {
+      ctx->addStatement(AssignStmt::make(name, value));
+    }
   }
 
-%type <strings> value_name_list;
-value_name_list
-  : IDENT {
-    string valueName = convertAndFree($IDENT);
-    $$ = new vector<string>;
-    $$->push_back(valueName);
-  }
-  | value_name_list "," IDENT {
-    string valueName = convertAndFree($IDENT);
-    $$ = $1;
-    $$->push_back(valueName);
-  }
-
-%type <stmt> field_write_stmt;
 field_write_stmt
   : IDENT "." IDENT "=" expr ";" {
     string setName = convertAndFree($1);
     string fieldName = convertAndFree($3);
-    if ($expr == nullptr) { $$ = nullptr; break; } // TODO: remove check
+    if ($expr == nullptr) break;  // TODO: remove check
     Expr value = convertAndDelete($expr);
 
     if (!ctx->hasSymbol(setName)) {
       REPORT_ERROR(setName + " is not defined in scope", @1);
     }
 
-    const RWExprPair &setExprPair = ctx->getSymbol(setName);
-    if (!setExprPair.isWritable()) {
+    const Symbol &setSymbol = ctx->getSymbol(setName);
+    if (!setSymbol.isWritable()) {
       REPORT_ERROR(setName + " is not writable", @1);
     }
 
-    auto setExpr = setExprPair.getWriteExpr();
-    $$ = new Stmt(FieldWrite::make(setExpr, fieldName, value));
+    auto setExpr = setSymbol.getWriteExpr();
+    ctx->addStatement(FieldWrite::make(setExpr, fieldName, value));
   }
 
-%type <stmt> tensor_write_stmt;
 tensor_write_stmt
   : IDENT "(" expr_list ")" "=" expr ";" {
     std::string tensorName = convertAndFree($1);
     auto indices = unique_ptr<vector<Expr>>($expr_list);
-    if ($expr == nullptr) { $$ = nullptr; break; } // TODO: remove check
+    if ($expr == nullptr) break;  // TODO: remove check
     Expr value = convertAndDelete($expr);
 
-    if(!ctx->hasSymbol(tensorName)) { $$=NULL; break; } // TODO: Remove check
+    if(!ctx->hasSymbol(tensorName)) break;  // TODO: Remove check
 
     if (!ctx->hasSymbol(tensorName)) {
       REPORT_ERROR(tensorName + " is not defined in scope", @1);
     }
 
-    const RWExprPair &tensorExprPair = ctx->getSymbol(tensorName);
-    if (!tensorExprPair.isWritable()) {
+    const Symbol &tensorSymbol = ctx->getSymbol(tensorName);
+    if (!tensorSymbol.isWritable()) {
       REPORT_ERROR(tensorName + " is not writable", @1);
     }
 
-    auto tensorExpr = tensorExprPair.getWriteExpr();
-    $$ = new Stmt(TensorWrite::make(tensorExpr, *indices, value));
+    auto tensorExpr = tensorSymbol.getWriteExpr();
+    ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
   | field_read_expr "(" expr_list ")" {
     // TODO
-    $$ = NULL;
   }
 
 
-
-%type <stmt> expr_stmt;
-expr_stmt
-  : expr ";" {
-    $$ = NULL;
-  }
-  | ";" {
-    $$ = NULL;
-  }
-
-%type <stmt> if_stmt;
 if_stmt
   : "if" expr stmt_block else_clauses BLOCKEND {
-    $$ = NULL;
     delete $2;
     delete $3;
   }
@@ -607,13 +592,9 @@ elif_clauses
     delete $4;
   }
 
-%type <stmt> for_stmt;
 for_stmt
-  : "for" IDENT "in" index_set stmt_block BLOCKEND {
-    $$ = NULL;
-  }
+  : "for" IDENT "in" index_set stmt_block BLOCKEND
 
-%type <stmt> const_stmt;
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     std::string name = convertAndFree($IDENT);
@@ -637,9 +618,17 @@ const_stmt
     CHECK_TYPE_EQUALITY(type, literal.type(), @2);
 
     ctx->addSymbol(name, literal);
-
-    $$ = nullptr; // TODO: return an assignstmt
   }
+
+%type <stmt> expr_stmt;
+expr_stmt
+  : expr ";" {
+    $$ = NULL;
+  }
+  | ";" {
+    $$ = NULL;
+  }
+
 
 // Expressions
 %type <expr> expr;
@@ -666,12 +655,12 @@ ident_expr
       REPORT_ERROR(ident + " is not defined in scope", @1);
     }
 
-    const RWExprPair &rwExprPair = ctx->getSymbol(ident);
-    if (!rwExprPair.isReadable()) {
+    const Symbol &symbol = ctx->getSymbol(ident);
+    if (!symbol.isReadable()) {
       REPORT_ERROR(ident + " is not readable", @1);
     }
 
-    $$ = new Expr(rwExprPair.getReadExpr());
+    $$ = new Expr(symbol.getReadExpr());
   }
 
 
@@ -693,7 +682,8 @@ linear_algebra_expr
     Expr expr = convertAndDelete($2);
     CHECK_IS_TENSOR(expr, @2);
 
-    $$ = new Expr(unaryElwiseExpr(UnaryOperator::Neg, expr));
+    IRBuilder::UnaryOperator op = IRBuilder::UnaryOperator::Neg;
+    $$ = new Expr(ctx->getBuilder()->unaryElwiseExpr(op, expr));
   }
   | expr elwise_binary_op expr {  // + - .* ./
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
@@ -705,10 +695,11 @@ linear_algebra_expr
     CHECK_IS_TENSOR(r, @3);
 
     BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), @2);
-    $$ = new Expr(binaryElwiseExpr(l, $2, r));
+    $$ = new Expr(ctx->getBuilder()->binaryElwiseExpr(l, $2, r));
   }
   | expr "*" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    IRBuilder *builder = ctx->getBuilder();
 
     Expr l = convertAndDelete($1);
     Expr r = convertAndDelete($3);
@@ -721,7 +712,8 @@ linear_algebra_expr
 
     // Scale
     if (ltype->order()==0 || rtype->order()==0) {
-      $$ = new Expr(binaryElwiseExpr(l, BinaryOperator::Mul, r));
+      IRBuilder::BinaryOperator mulOp = IRBuilder::BinaryOperator::Mul;
+      $$ = new Expr(builder->binaryElwiseExpr(l, mulOp, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->order() == 1 && rtype->order() == 1) {
@@ -733,7 +725,7 @@ linear_algebra_expr
         if (l.type() != r.type()) {
           REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
         }
-        $$ = new Expr(innerProduct(l, r));
+        $$ = new Expr(builder->innerProduct(l, r));
       }
       // Outer product (l is a column vector)
       else {
@@ -743,7 +735,7 @@ linear_algebra_expr
         if (l.type() != r.type()) {
           REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
         }
-        $$ = new Expr(outerProduct(l, r));
+        $$ = new Expr(builder->outerProduct(l, r));
       }
     }
     // Matrix-Vector
@@ -751,21 +743,21 @@ linear_algebra_expr
       if (ltype->dimensions[1] != rtype->dimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
-      $$ = new Expr(gemv(l, r));
+      $$ = new Expr(builder->gemv(l, r));
     }
     // Vector-Matrix
     else if (ltype->order() == 1 && rtype->order() == 2) {
       if (ltype->dimensions[0] != rtype->dimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
-      $$ = new Expr(gevm(l,r));
+      $$ = new Expr(builder->gevm(l,r));
     }
     // Matrix-Matrix
     else if (ltype->order() == 2 && rtype->order() == 2) {
       if (ltype->dimensions[1] != rtype->dimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
-      $$ = new Expr(gemm(l,r));
+      $$ = new Expr(builder->gemm(l,r));
     }
     else {
       REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
@@ -780,6 +772,8 @@ linear_algebra_expr
   }
   | expr "'" {
     if ($1 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    IRBuilder *builder = ctx->getBuilder();
+    IRBuilder::UnaryOperator noneOp = IRBuilder::UnaryOperator::None;
 
     Expr expr = convertAndDelete($1);
 
@@ -789,17 +783,17 @@ linear_algebra_expr
     switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
+        $$ = new Expr(builder->unaryElwiseExpr(noneOp, expr));
         break;
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new Expr(unaryElwiseExpr(UnaryOperator::None, expr));
+        $$ = new Expr(builder->unaryElwiseExpr(noneOp, expr));
         if (!type->isColumnVector) {
           transposeVector(*$$);
         }
         break;
       case 2:
-        $$ = new Expr(transposeMatrix(expr));
+        $$ = new Expr(builder->transposedMatrix(expr));
         break;
       default:
         REPORT_ERROR("cannot transpose >2-order tensors using '", @1);
@@ -820,10 +814,10 @@ linear_algebra_expr
 
 %type <binop> elwise_binary_op;
 elwise_binary_op
-  : "+"  { $$ = BinaryOperator::Add; }
-  | "-"  { $$ = BinaryOperator::Sub; }
-  | ".*" { $$ = BinaryOperator::Mul; }
-  | "./" { $$ = BinaryOperator::Div; }
+  : "+"  { $$ = IRBuilder::BinaryOperator::Add; }
+  | "-"  { $$ = IRBuilder::BinaryOperator::Sub; }
+  | ".*" { $$ = IRBuilder::BinaryOperator::Mul; }
+  | "./" { $$ = IRBuilder::BinaryOperator::Div; }
 
 
 // Boolean Expressions
@@ -902,13 +896,13 @@ call_or_paren_read_expr
     auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
 
     if (ctx->hasSymbol(name)) {
-      const RWExprPair &exprPair = ctx->getSymbol(name);
-      if (!exprPair.isReadable()) {
+      const Symbol &symbol = ctx->getSymbol(name);
+      if (!symbol.isReadable()) {
         REPORT_ERROR(name + " is not readable", @1);
       }
 
       // The parenthesis read can read from a tensor or a tuple.
-      auto expr = exprPair.getReadExpr();
+      auto expr = symbol.getReadExpr();
       if (expr.type().isTensor()) {
         $$ = new Expr(TensorRead::make(expr, *indices));
       }
@@ -1368,7 +1362,6 @@ scalar_literal
 
 
 // Tests
-%type <test> test;
 test
   : "%!" IDENT "(" expr_list_or_empty ")" "==" tensor_literal ";" {
     std::string name = convertAndFree($IDENT);
@@ -1387,7 +1380,7 @@ test
 
     std::vector<Expr> expecteds;
     expecteds.push_back(expected);
-    $$ = new Test(name, literalArgs, expecteds);
+    ctx->addTest(new Test(name, literalArgs, expecteds));
   }
 
 %%

@@ -11,8 +11,8 @@ namespace ir {
 
 class SIGBuilder : public IRVisitor {
 public:
-  SIG create(const IndexExpr *expr) {
-    return create(Expr(expr));
+  SIG create(const IndexStmt *indexStmt) {
+    return create(indexStmt->value);
   }
 
 private:
@@ -68,7 +68,7 @@ class IndexedTensorsToLoads : public IRMutator {
 
 class LoopBuilder : public SIGVisitor {
 public:
-  Stmt create(const SIG &g, const IndexExpr *indexExpr) {
+  Stmt create(const SIG &g, const IndexStmt *indexStmt) {
     apply(g);
     Stmt result = stmt;
     stmt = Stmt();
@@ -98,16 +98,10 @@ private:
 };
 
 class LowerIndexExpressions : public IRMutator {
-  void visit(const IndexExpr *op) {
-    Expr rhs = op->rhs;
-
+  void visit(const IndexStmt *op) {
     SIG igraph = SIGBuilder().create(op);
-    Stmt stmt = LoopBuilder().create(igraph, op);
-
-    cout << igraph << endl;
-    cout << stmt << endl;
-
-    expr = op;
+    Stmt loops = LoopBuilder().create(igraph, op);
+    stmt = loops;
   }
 };
 

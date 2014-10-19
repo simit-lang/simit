@@ -140,14 +140,14 @@ bool operator!=(const Literal& l, const Literal& r) {
   return !(l == r);
 }
 
-// struct IndexExpr
+// struct IndexStmt
 class DomainGatherer : private IRVisitor {
 public:
-  vector<IndexVar> getDomain(const IndexExpr &indexExpr) {
+  vector<IndexVar> getDomain(const IndexStmt &indexStmt) {
     domain.clear();
     added.clear();
-    add(indexExpr.lhsIndexVars);
-    indexExpr.rhs.accept(this);
+    add(indexStmt.targetIndexVars);
+    indexStmt.value.accept(this);
     return domain;
   }
 
@@ -169,7 +169,7 @@ private:
   }
 };
 
-std::vector<IndexVar> IndexExpr::domain() const {
+std::vector<IndexVar> IndexStmt::domain() const {
   return DomainGatherer().getDomain(*this);
 }
 

@@ -66,6 +66,17 @@ public:
   void accept(IRVisitor *v) const {ptr->accept(v);}
 };
 
+template <typename E>
+inline bool isa(Expr e) {
+  return e.defined() && dynamic_cast<const E*>(e.expr()) != nullptr;
+}
+
+template <typename E>
+inline const E* to(Expr e) {
+  assert(isa<E>(e) && "Wrong Expr type");
+  return static_cast<const E*>(e.expr());
+}
+
 class Stmt : public util::IntrusivePtr<const StmtNodeBase> {
 public:
   Stmt() : IntrusivePtr() {}
@@ -75,6 +86,17 @@ public:
 
   void accept(IRVisitor *v) const {ptr->accept(v);}
 };
+
+template <typename S>
+inline bool isa(Stmt s) {
+  return s.defined() && dynamic_cast<const S*>(s.stmt()) != nullptr;
+}
+
+template <typename S>
+inline const S* to(Stmt s) {
+  assert(isa<S>(s) && "Wrong Expr type");
+  return static_cast<const S*>(s.stmt());
+}
 
 
 // Type compute functions
@@ -238,26 +260,6 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
   }
 };
 
-struct IndexExpr : public ExprNode<IndexExpr> {
-  std::vector<IndexVar> lhsIndexVars;
-  Expr rhs;
-
-  std::vector<IndexVar> domain() const;
-
-  static Expr make(std::vector<IndexVar> lhsIndexVars, Expr rhs) {
-    assert(rhs.type().isScalar());
-    for (auto &idxVar : lhsIndexVars) {  // No reduction variables on lhs
-      assert(idxVar.isFreeVar());
-    }
-
-    IndexExpr *node = new IndexExpr;
-    node->type = indexExprType(lhsIndexVars, rhs);
-    node->lhsIndexVars = lhsIndexVars;
-    node->rhs = rhs;
-    return node;
-  }
-};
-
 struct Call : public ExprNode<Call> {
   enum Kind { Internal, Intrinsic };
 
@@ -351,13 +353,47 @@ struct Div : public ExprNode<Div> {
 
 // Statements
 struct AssignStmt : public StmtNode<AssignStmt> {
-  std::vector<std::string> lhs;
-  Expr rhs;
+  std::string name;
+  Expr value;
 
-  static Stmt make(std::vector<std::string> lhs, Expr rhs) {
+  static Stmt make(std::string name, Expr value) {
     AssignStmt *node = new AssignStmt;
-    node->lhs = lhs;
-    node->rhs = rhs;
+    node->name = name;
+    node->value = value;
+    return node;
+  }
+};
+
+struct IndexStmt : public StmtNode<IndexStmt> {
+  Expr target;
+  std::vector<IndexVar> targetIndexVars;
+  Expr value;
+
+  std::vector<IndexVar> domain() const;
+
+  static Expr makeTarget(std::string target,
+                         std::vector<IndexVar> targetIndexVars, Expr value) {
+    assert(value.type().isScalar());
+    for (auto &idxVar : targetIndexVars) {  // No reduction variables on lhs
+      assert(idxVar.isFreeVar());
+    }
+    return Variable::make(target, indexExprType(targetIndexVars, value));
+  }
+
+  static Stmt make(Expr target, std::vector<IndexVar> targetIndexVars,
+                   Expr value) {
+    assert(isa<Variable>(target));
+    assert(target.type().isTensor());
+    assert(value.type().isScalar());
+    for (auto &idxVar : targetIndexVars) {  // No reduction variables on lhs
+      assert(idxVar.isFreeVar());
+    }
+
+
+    IndexStmt *node = new IndexStmt;
+    node->target = target;
+    node->targetIndexVars = targetIndexVars;
+    node->value = value;
     return node;
   }
 };
@@ -513,13 +549,6 @@ bool operator!=(const Expr &, const Expr &);
 
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
-
-template <typename E>
-inline const E* to(Expr e) {
-  assert(e.defined() && dynamic_cast<const E*>(e.expr()) != nullptr &&
-         "Wrong Expr type");
-  return static_cast<const E*>(e.expr());
-}
 
 }} // namespace simit::ir
 

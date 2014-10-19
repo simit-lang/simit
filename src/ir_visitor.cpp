@@ -44,10 +44,6 @@ void IRVisitor::visit(const IndexedTensor *op) {
   op->tensor.accept(this);
 }
 
-void IRVisitor::visit(const IndexExpr *op) {
-  op->rhs.accept(this);
-}
-
 void IRVisitor::visit(const Call *op) {
   // TODO
 }
@@ -77,7 +73,12 @@ void IRVisitor::visit(const Div *op) {
 }
 
 void IRVisitor::visit(const AssignStmt *op) {
-  op->rhs.accept(this);
+  op->value.accept(this);
+}
+
+void IRVisitor::visit(const IndexStmt *op) {
+  op->target.accept(this);
+  op->value.accept(this);
 }
 
 void IRVisitor::visit(const FieldWrite *op) {

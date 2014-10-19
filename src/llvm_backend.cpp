@@ -135,10 +135,6 @@ void LLVMBackend::visit(const IndexedTensor *op) {
   cout << "IndexedTensor" << endl;
 }
 
-void LLVMBackend::visit(const IndexExpr *op) {
-  cout << "IndexExpr" << endl;
-}
-
 void LLVMBackend::visit(const Call *op) {
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
@@ -224,27 +220,29 @@ void LLVMBackend::visit(const Div *op) {
 
 
 void LLVMBackend::visit(const AssignStmt *op) {
-  llvm::Value *rhs = compile(op->rhs);
+  llvm::Value *value = compile(op->value);
+  string name = op->name;
 
-  for (const string &lhs : op->lhs) {
-    // Check if lhs already exist
-    if (symtable.contains(lhs)) {
-      llvm::Value *lhsVal = symtable.get(lhs);
+  // Check if lhs already exist
+  if (symtable.contains(name)) {
+    llvm::Value *nameNode = symtable.get(name);
 
-      // Check if the symbol is a function result
-      if (results.find(lhsVal) != results.end()) {
-        //FIXME: assert(op->rhs.type().isScalar());
-        builder->CreateStore(rhs, lhsVal);
-        rhs->setName(lhs + VAL_SUFFIX);
-      }
-      else {
-        rhs->setName(lhs);
-      }
+    // Check if the symbol is a function result
+    if (results.find(nameNode) != results.end()) {
+      builder->CreateStore(value, nameNode);
+      value->setName(name + VAL_SUFFIX);
     }
     else {
-      rhs->setName(lhs);
+      value->setName(name);
     }
   }
+  else {
+    value->setName(name);
+  }
+}
+
+void LLVMBackend::visit(const ir::IndexStmt *op) {
+  cout << "IndexStmt" << endl;
 }
 
 void LLVMBackend::visit(const FieldWrite *op) {
