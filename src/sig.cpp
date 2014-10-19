@@ -19,11 +19,11 @@ std::ostream &operator<<(std::ostream &os, const SIGEdge &e) {
 }
 
 SIG::SIG(const IndexVar &iv) : SIG() {
-
+  SIGVertex *v = new SIGVertex(iv);
+  content->vertices[iv] = unique_ptr<SIGVertex>(v);
 }
 
-SIG::SIG(string name, const vector<IndexVar> &ivs)
-    : SIG() {
+SIG::SIG(string name, const vector<IndexVar> &ivs) : SIG() {
   set<IndexVar> added;
   vector<SIGVertex*> endpoints;
 
