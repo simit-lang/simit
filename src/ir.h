@@ -4,6 +4,7 @@
 #include <cassert>
 #include <string>
 #include <list>
+#include <cstring>
 
 #include <iostream>
 #include "ir_printer.h"
