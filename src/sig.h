@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <list>
 #include <iostream>
 
 #include "types.h"
@@ -65,11 +66,17 @@ public:
   virtual void apply(const SIG &sig, const IndexVar &first);
 
 protected:
+  virtual void visit(const SIGVertex *v);
+  virtual void visit(const SIGEdge *e);
+
   std::set<const SIGVertex*> visitedVertices;
   std::set<const SIGEdge*> visitedEdges;
 
-  virtual void visit(const SIGVertex *v);
-  virtual void visit(const SIGEdge *e);
+  std::list<const SIGVertex*> vertexPath;
+  std::list<const SIGEdge*> edgePath;
+
+  const SIGVertex *getPreviousVertex();
+  const SIGEdge *getPreviousEdge();
 };
 
 }} // namespace

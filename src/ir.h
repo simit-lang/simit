@@ -426,12 +426,42 @@ struct TensorWrite : public StmtNode<TensorWrite> {
   }
 };
 
+struct E2V {
+
+};
+
+struct V2E {
+
+};
+
+class LoopDomain {
+public:
+  enum Kind { MinMax, Domain, V2E, E2V };
+
+  Kind getKind() {return kind;}
+
+  std::pair<Expr,Expr> getMinMax() {return minMax;}
+  IndexSet getDomain() {return domain;}
+  struct E2V getE2V() {return e2v;}
+  struct V2E getV2E() {return v2e;}
+
+private:
+  Kind kind;
+  union {
+    std::pair<Expr,Expr> minMax;
+    IndexSet domain;
+    struct E2V e2v;
+    struct V2E v2e;
+  };
+};
+
 struct For : public StmtNode<For> {
   std::string name;
-  IndexDomain domain;
+  IndexSet domain;
+
   Stmt body;
 
-  static Stmt make(std::string name, IndexDomain domain, Stmt body) {
+  static Stmt make(std::string name, IndexSet domain, Stmt body) {
     For *node = new For;
     node->name = name;
     node->domain = domain;

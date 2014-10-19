@@ -39,7 +39,7 @@ bool operator!=(const IndexSet &l, const IndexSet &r) {
 std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
   switch (is.getKind()) {
     case IndexSet::Range:
-      os << std::to_string(is.getSize());
+      os << "0:" << std::to_string(is.getSize());
       break;
     case IndexSet::Set:
       os << is.getSet();

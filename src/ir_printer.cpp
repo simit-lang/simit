@@ -260,7 +260,11 @@ void IRPrinter::visit(const TensorWrite *op) {
 
 void IRPrinter::visit(const For *op) {
   indent();
-  os << "for;";
+  os << "for " << op->name << " in " << op->domain << ":";
+  os << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
 }
 
 void IRPrinter::visit(const IfThenElse *op) {
@@ -310,11 +314,10 @@ void IRPrinter::visit(const Func *func) {
     os << ")";
   }
 
-  os << "" << endl;
+  os << ":" << endl;
   ++indentation;
   print(func->getBody());
   --indentation;
-  os << endl << "end";
 }
 
 void IRPrinter::indent() {
