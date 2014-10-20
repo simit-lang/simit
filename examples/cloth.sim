@@ -54,7 +54,7 @@ end
 
 func edgeVectors(pts : (Point*3)) -> (vec : tensor[3](tensor[3](float)))
   for i in 0:3
-    int j = (i+1)%3;
+    int j = mod((i+1),3);
     vec[i] = pts(j).x - pts(i).x;
   end
 end
@@ -63,11 +63,11 @@ func precomputeMatrix(f : Face, pts : (Point*3))
   tensor[3](tensor[3](float)) uvs = edgeVectors(pts);
   A = 0.5 * norm( cross(uvs(2), uvs(1)) );
   for i in 0:3
-    j = (i+1)%3;
-    k = (i+2)%3;
+    j = mod((i+1),3);
+    k = mod((i+2),3);
     for l in i:3
-      m = (i+1)%3;
-      n = (i+2)%3;
+      m = mod((i+1),3);
+      n = mod((i+2),3);
       f.precomputedStretchingMatrix(i,l) = f.precomputedStretchingMatrix(l,i) = dot(uvs(k), uvs(m)) * dot(uvs(j),uvs(n)) + dot(uvs(k), uvs(n))*dot(uvs(j),uvs(m));
     end
   end
@@ -144,8 +144,8 @@ func stretchingForce(f : Face, pts : (Point*3)) -> (force : tensor[points,3](flo
 
   s = curSquaredNorms - f.restLengths;
   for k in 0:3
-    k2 = (k+1)%3;
-    k3 = (k+2)%3;
+    k2 = mod((k+1),3);
+    k3 = mod((k+2),3);
     for l in 0:3
       for i in 0:3
         force.pts(k)(l) = -4.0 * (precomputedStretchingMatrix(i,k2) * s(i) * v(k2)(l)
