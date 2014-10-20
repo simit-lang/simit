@@ -215,9 +215,9 @@ struct TupleRead : public ExprNode<TupleRead> {
   Expr tuple, index;
 
   static Expr make(Expr tuple, Expr index) {
-    assert(tuple.type().isTensor());
+    assert(tuple.type().isTuple());
     TupleRead *node = new TupleRead;
-    // TODO: Compute type
+    node->type = tuple.type().toTuple()->elementType;
     node->tuple = tuple;
     node->index = index;
     return node;
@@ -247,6 +247,7 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
 
   static Expr make(Expr tensor, std::vector<IndexVar> indexVars) {
     assert(tensor.type().isTensor() && "Only tensors can be indexed.");
+    assert(isa<Variable>(tensor));
     assert(indexVars.size() == tensor.type().toTensor()->order());
     for (size_t i=0; i < indexVars.size(); ++i) {
       assert(indexVars[i].getDomain() == tensor.type().toTensor()->dimensions[i]

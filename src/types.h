@@ -87,6 +87,9 @@ inline Type Float(int bits) {
 struct TensorType : TypeNode {
   Type componentType;
   std::vector<IndexDomain> dimensions;
+
+  /// Marks whether the tensor type is a column vector.  This information is
+  /// not used by the Simit compiler, but is here to ease frontend development.
   bool isColumnVector;
 
   size_t order() const { return dimensions.size(); }
