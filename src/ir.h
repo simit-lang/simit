@@ -247,7 +247,6 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
 
   static Expr make(Expr tensor, std::vector<IndexVar> indexVars) {
     assert(tensor.type().isTensor() && "Only tensors can be indexed.");
-    assert(isa<Variable>(tensor));
     assert(indexVars.size() == tensor.type().toTensor()->order());
     for (size_t i=0; i < indexVars.size(); ++i) {
       assert(indexVars[i].getDomain() == tensor.type().toTensor()->dimensions[i]
