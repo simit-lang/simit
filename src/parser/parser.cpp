@@ -177,20 +177,6 @@
     while (0)
 
 
-class ReplaceTarget : public IRMutator {
-public:
-  ReplaceTarget(Expr var) : var(var){}
-
-  void visit(const IndexStmt *op) {
-    assert(op->target.type() == var.type());
-    stmt = IndexStmt::make(var, op->targetIndexVars, op->value);
-  }
-
-private:
-  Expr var;
-};
-
-
 
 
 #ifndef YY_
@@ -784,6 +770,13 @@ namespace  simit { namespace internal  {
 
 
         { delete (yysym.value.type); }
+
+        break;
+
+      case 116: // literal_expr
+
+
+        { delete (yysym.value.expr); }
 
         break;
 
@@ -1405,29 +1398,8 @@ namespace  simit { namespace internal  {
     string name = convertAndFree((yystack_[3].value.string));
     Expr value = convertAndDelete((yystack_[1].value.expr));
 
-    if (isa<Variable>(value)) {
-      Expr variable;
-      if (ctx->hasSymbol(name)) {
-        Symbol symbol = ctx->getSymbol(name);
-
-        if (!symbol.isWritable()) {
-          REPORT_ERROR(name + " is not writable", yystack_[3].location);
-        }
-
-        variable = symbol.getWriteExpr();
-      }
-      else {
-        variable = Variable::make(name, value.type());
-      }
-      assert(variable.defined());
-
-      std::vector<ir::Stmt> *stmts = ctx->getStatements();
-      Stmt stmt = (*stmts)[stmts->size()-1];
-      (*stmts)[stmts->size()-1] = ReplaceTarget(variable).mutate(stmt);
-    }
-    else {
-      ctx->addStatement(AssignStmt::make(name, value));
-    }
+    // TODO: Check valueNames.size() matches number of values produced by expr
+    ctx->addStatement(AssignStmt::make(name, value));
   }
 
     break;
@@ -3065,18 +3037,18 @@ namespace  simit { namespace internal  {
      295,   304,   317,   320,   328,   338,   338,   338,   346,   366,
      366,   366,   374,   400,   403,   409,   414,   422,   431,   434,
      440,   445,   453,   463,   466,   473,   474,   477,   478,   479,
-     480,   481,   482,   483,   501,   533,   553,   573,   579,   584,
-     586,   590,   592,   598,   601,   627,   630,   638,   639,   640,
-     641,   642,   643,   644,   645,   651,   672,   681,   690,   702,
-     769,   775,   805,   810,   819,   820,   821,   822,   828,   834,
-     840,   846,   852,   858,   869,   888,   889,   890,   896,   929,
-     935,   943,   946,   952,   958,   969,   977,   979,   983,   985,
-     988,   989,   995,   996,   997,   998,  1002,  1014,  1018,  1028,
-    1032,  1039,  1051,  1055,  1058,  1100,  1110,  1115,  1123,  1126,
-    1139,  1145,  1151,  1154,  1204,  1208,  1209,  1213,  1217,  1224,
-    1235,  1242,  1246,  1250,  1264,  1268,  1283,  1287,  1294,  1301,
-    1305,  1309,  1323,  1327,  1342,  1346,  1353,  1357,  1364,  1367,
-    1373,  1376,  1383
+     480,   481,   482,   483,   486,   497,   517,   537,   543,   548,
+     550,   554,   556,   562,   565,   591,   594,   602,   603,   604,
+     605,   606,   607,   608,   609,   615,   636,   645,   654,   666,
+     733,   739,   769,   774,   783,   784,   785,   786,   792,   798,
+     804,   810,   816,   822,   833,   852,   853,   854,   860,   893,
+     899,   907,   910,   916,   922,   933,   941,   943,   947,   949,
+     952,   953,   959,   960,   961,   962,   966,   978,   982,   992,
+     996,  1003,  1015,  1019,  1022,  1064,  1074,  1079,  1087,  1090,
+    1103,  1109,  1115,  1118,  1168,  1172,  1173,  1177,  1181,  1188,
+    1199,  1206,  1210,  1214,  1228,  1232,  1247,  1251,  1258,  1265,
+    1269,  1273,  1287,  1291,  1306,  1310,  1317,  1321,  1328,  1331,
+    1337,  1340,  1347
   };
 
   // Print the state stack on the debug stream.

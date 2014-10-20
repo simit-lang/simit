@@ -482,21 +482,6 @@ stmt
   | const_stmt
   | expr_stmt
 
-%code {
-class ReplaceTarget : public IRMutator {
-public:
-  ReplaceTarget(Expr var) : var(var){}
-
-  void visit(const IndexStmt *op) {
-    assert(op->target.type() == var.type());
-    stmt = IndexStmt::make(var, op->targetIndexVars, op->value);
-  }
-
-private:
-  Expr var;
-};
-};
-
 assign_stmt
   : IDENT "=" expr ";" {
     if ($expr == nullptr) { break; } // TODO: Remove check
@@ -504,29 +489,8 @@ assign_stmt
     string name = convertAndFree($IDENT);
     Expr value = convertAndDelete($expr);
 
-    if (isa<Variable>(value)) {
-      Expr variable;
-      if (ctx->hasSymbol(name)) {
-        Symbol symbol = ctx->getSymbol(name);
-
-        if (!symbol.isWritable()) {
-          REPORT_ERROR(name + " is not writable", @1);
-        }
-
-        variable = symbol.getWriteExpr();
-      }
-      else {
-        variable = Variable::make(name, value.type());
-      }
-      assert(variable.defined());
-
-      std::vector<ir::Stmt> *stmts = ctx->getStatements();
-      Stmt stmt = (*stmts)[stmts->size()-1];
-      (*stmts)[stmts->size()-1] = ReplaceTarget(variable).mutate(stmt);
-    }
-    else {
-      ctx->addStatement(AssignStmt::make(name, value));
-    }
+    // TODO: Check valueNames.size() matches number of values produced by expr
+    ctx->addStatement(AssignStmt::make(name, value));
   }
 
 field_write_stmt
@@ -1199,7 +1163,7 @@ component_type
 };
 
 
-%type <expr> literal;
+%type <expr> literal_expr;
 literal_expr
   : tensor_literal
 

@@ -84,10 +84,7 @@ Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
   }
   assert(val.defined());
 
-  Expr target = IndexStmt::makeTarget(names.getName(), indexVars, val);
-  Stmt indexStmt = IndexStmt::make(target, indexVars, val);
-  addStmt(indexStmt);
-  return target;
+  return IndexExpr::make(indexVars, val);
 }
 
 Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
@@ -146,10 +143,7 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
   }
   assert(val.defined());
 
-  Expr target = IndexStmt::makeTarget(names.getName(), indexVars, val);
-  Stmt indexStmt = IndexStmt::make(target, indexVars, val);
-  addStmt(indexStmt);
-  return target;
+  return IndexExpr::make(indexVars, val);
 }
 
 Expr IRBuilder::innerProduct(Expr l, Expr r) {
@@ -164,10 +158,7 @@ Expr IRBuilder::innerProduct(Expr l, Expr r) {
   Expr val = Mul::make(a, b);
 
   std::vector<IndexVar> none;
-  Expr target = IndexStmt::makeTarget(names.getName(), none, val);
-  Stmt indexStmt = IndexStmt::make(target, none, val);
-  addStmt(indexStmt);
-  return target;
+  return IndexExpr::make(none, val);
 }
 
 Expr IRBuilder::outerProduct(Expr l, Expr r) {
@@ -182,11 +173,7 @@ Expr IRBuilder::outerProduct(Expr l, Expr r) {
   Expr b = IndexedTensor::make(r, indexVars(j));
   Expr val = Mul::make(a, b);
 
-  auto targetIndexVars = indexVars(i,j);
-  Expr target = IndexStmt::makeTarget(names.getName(), targetIndexVars, val);
-  Stmt indexStmt = IndexStmt::make(target, targetIndexVars, val);
-  addStmt(indexStmt);
-  return target;
+  return IndexExpr::make(indexVars(i,j), val);
 }
 
 Expr IRBuilder::gemv(Expr l, Expr r) {
@@ -204,11 +191,7 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
   Expr b = IndexedTensor::make(r, indexVars(j));
   Expr val = Mul::make(a, b);
 
-  auto targetIndexVars = indexVars(i);
-  Expr target = IndexStmt::makeTarget(names.getName(), targetIndexVars, val);
-  Stmt indexStmt = IndexStmt::make(target, targetIndexVars, val);
-  addStmt(indexStmt);
-  return target;
+  return IndexExpr::make(indexVars(i), val);
 }
 
 Expr IRBuilder::gevm(Expr l, Expr r) {
@@ -226,11 +209,7 @@ Expr IRBuilder::gevm(Expr l, Expr r) {
   Expr b = IndexedTensor::make(r, indexVars(j,i));
   Expr val = Mul::make(a, b);
 
-  auto targetIndexVars = indexVars(i);
-  Expr target = IndexStmt::makeTarget(names.getName(), targetIndexVars, val);
-  Stmt indexStmt = IndexStmt::make(target, targetIndexVars, val);
-  addStmt(indexStmt);
-  return target;
+  return IndexExpr::make(indexVars(i), val);
 }
 
 Expr IRBuilder::gemm(Expr l, Expr r) {
@@ -249,11 +228,7 @@ Expr IRBuilder::gemm(Expr l, Expr r) {
   Expr b = IndexedTensor::make(r, indexVars(k,j));
   Expr val = Mul::make(a, b);
 
-  auto targetIndexVars = indexVars(i,j);
-  Expr target = IndexStmt::makeTarget(names.getName(), targetIndexVars, val);
-  Stmt indexStmt = IndexStmt::make(target, targetIndexVars, val);
-  addStmt(indexStmt);
-  return target;
+  return IndexExpr::make(indexVars(i,j), val);
 }
 
 Expr IRBuilder::transposedMatrix(Expr mat) {
@@ -269,11 +244,8 @@ Expr IRBuilder::transposedMatrix(Expr mat) {
 
   std::vector<IndexVar> operandIndexVars(indexVars.rbegin(), indexVars.rend());
   Expr val = IndexedTensor::make(mat, operandIndexVars);
-
-  Expr target = IndexStmt::makeTarget(names.getName(), indexVars, val);
-  Stmt indexStmt = IndexStmt::make(target, indexVars, val);
-  addStmt(indexStmt);
-  return target;
+  
+  return IndexExpr::make(indexVars, val);
 }
 
 }} // namespace simit::internal

@@ -15,6 +15,7 @@ struct TensorRead;
 struct TupleRead;
 struct Map;
 struct IndexedTensor;
+struct IndexExpr;
 struct Call;
 struct Neg;
 struct Add;
@@ -23,7 +24,6 @@ struct Mul;
 struct Div;
 
 struct AssignStmt;
-struct IndexStmt;
 struct FieldWrite;
 struct TensorWrite;
 struct For;
@@ -53,6 +53,7 @@ public:
   virtual void visit(const TupleRead *op);
   virtual void visit(const Map *op);
   virtual void visit(const IndexedTensor *op);
+  virtual void visit(const IndexExpr *op);
   virtual void visit(const Call *op);
   virtual void visit(const Neg *op);
   virtual void visit(const Add *op);
@@ -61,7 +62,6 @@ public:
   virtual void visit(const Div *op);
 
   virtual void visit(const AssignStmt *op);
-  virtual void visit(const IndexStmt *op);
   virtual void visit(const FieldWrite *op);
   virtual void visit(const TensorWrite *op);
   virtual void visit(const For *op);

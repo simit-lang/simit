@@ -117,6 +117,16 @@ void IRMutator::visit(const IndexedTensor *op) {
   }
 }
 
+void IRMutator::visit(const IndexExpr *op) {
+  Expr value = mutate(op->value);
+  if (value == op->value) {
+    expr = op;
+  }
+  else {
+    expr = IndexExpr::make(op->resultVars, value);
+  }
+}
+
 void IRMutator::visit(const Call *op) {
   std::vector<Expr> actuals(op->actuals.size());
   bool actualsSame = true;
@@ -180,17 +190,6 @@ void IRMutator::visit(const AssignStmt *op) {
   }
   else {
     stmt = AssignStmt::make(op->name, value);
-  }
-}
-
-void IRMutator::visit(const IndexStmt *op) {
-  Expr target = mutate(op->target);
-  Expr value = mutate(op->value);
-  if (target == op->target && value == op->value) {
-    stmt = op;
-  }
-  else {
-    stmt = IndexStmt::make(target, op->targetIndexVars, value);
   }
 }
 

@@ -11,8 +11,8 @@ namespace ir {
 
 class SIGBuilder : public IRVisitor {
 public:
-  SIG create(const IndexStmt *indexStmt) {
-    return create(indexStmt->value);
+  SIG create(const IndexExpr *expr) {
+    return create(Expr(expr));
   }
 
 private:
@@ -68,7 +68,7 @@ class IndexedTensorsToLoads : public IRMutator {
 
 class LoopBuilder : public SIGVisitor {
 public:
-  Stmt create(const SIG &g, const IndexStmt *indexStmt) {
+  Stmt create(const SIG &g, const IndexExpr *indexExpr) {
     apply(g);
     Stmt result = stmt;
     stmt = Stmt();
@@ -106,10 +106,44 @@ private:
 };
 
 class LowerIndexExpressions : public IRMutator {
-  void visit(const IndexStmt *op) {
+  void visit(const IndexExpr *op) {
     SIG igraph = SIGBuilder().create(op);
     Stmt loops = LoopBuilder().create(igraph, op);
+    cout << loops << endl;
     stmt = loops;
+  }
+
+  void visit(const AssignStmt *op) {
+    if (!op->value.type().isTensor()) {
+      IRMutator::visit(op);
+    }
+    else {
+      // By calling accept on op->value directly we bypass the mutate method
+      // and allow the visit method of the tensor type to return an stmt.
+      op->value.accept(this);
+    }
+  }
+
+  void visit(const FieldWrite *op) {
+    if (!op->value.type().isTensor()) {
+      IRMutator::visit(op);
+    }
+    else {
+      // By calling accept on op->value directly we bypass the mutate method
+      // and allow the visit method of the tensor type to return an stmt.
+      op->value.accept(this);
+    }
+  }
+
+  void visit(const TensorWrite *op) {
+    if (!op->value.type().isTensor()) {
+      IRMutator::visit(op);
+    }
+    else {
+      // By calling accept on op->value directly we bypass the mutate method
+      // and allow the visit method of the tensor type to return an stmt.
+      op->value.accept(this);
+    }
   }
 };
 

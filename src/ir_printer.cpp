@@ -174,6 +174,11 @@ void IRPrinter::visit(const IndexedTensor *op) {
   }
 }
 
+void IRPrinter::visit(const IndexExpr *op) {
+  os << "(" + simit::util::join(op->resultVars, ",") + ") ";
+  print(op->value);
+}
+
 void IRPrinter::visit(const Call *op) {
   os << "Call";
 }
@@ -218,17 +223,6 @@ void IRPrinter::visit(const Div *op) {
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
   os << op->name << " = ";
-  print(op->value);
-  os << ";";
-}
-
-void IRPrinter::visit(const IndexStmt *op) {
-  indent();
-  print(op->target);
-  if (op->targetIndexVars.size() != 0) {
-    os << "(" + simit::util::join(op->targetIndexVars, ",") + ")";
-  }
-  os << " = ";
   print(op->value);
   os << ";";
 }

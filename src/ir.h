@@ -261,6 +261,25 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
   }
 };
 
+struct IndexExpr : public ExprNode<IndexExpr> {
+  std::vector<IndexVar> resultVars;
+  Expr value;
+
+  std::vector<IndexVar> domain() const;
+
+  static Expr make(std::vector<IndexVar> resultVars, Expr value) {
+    assert(value.type().isScalar());
+    for (auto &idxVar : resultVars) {  // No reduction variables on lhs
+      assert(idxVar.isFreeVar());
+    }
+    IndexExpr *node = new IndexExpr;
+    node->type = indexExprType(resultVars, value);
+    node->resultVars = resultVars;
+    node->value = value;
+    return node;
+  }
+};
+
 struct Call : public ExprNode<Call> {
   enum Kind { Internal, Intrinsic };
 
@@ -360,40 +379,6 @@ struct AssignStmt : public StmtNode<AssignStmt> {
   static Stmt make(std::string name, Expr value) {
     AssignStmt *node = new AssignStmt;
     node->name = name;
-    node->value = value;
-    return node;
-  }
-};
-
-struct IndexStmt : public StmtNode<IndexStmt> {
-  Expr target;
-  std::vector<IndexVar> targetIndexVars;
-  Expr value;
-
-  std::vector<IndexVar> domain() const;
-
-  static Expr makeTarget(std::string target,
-                         std::vector<IndexVar> targetIndexVars, Expr value) {
-    assert(value.type().isScalar());
-    for (auto &idxVar : targetIndexVars) {  // No reduction variables on lhs
-      assert(idxVar.isFreeVar());
-    }
-    return Variable::make(target, indexExprType(targetIndexVars, value));
-  }
-
-  static Stmt make(Expr target, std::vector<IndexVar> targetIndexVars,
-                   Expr value) {
-    assert(isa<Variable>(target));
-    assert(target.type().isTensor());
-    assert(value.type().isScalar());
-    for (auto &idxVar : targetIndexVars) {  // No reduction variables on lhs
-      assert(idxVar.isFreeVar());
-    }
-
-
-    IndexStmt *node = new IndexStmt;
-    node->target = target;
-    node->targetIndexVars = targetIndexVars;
     node->value = value;
     return node;
   }

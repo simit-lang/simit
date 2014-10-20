@@ -65,7 +65,6 @@ private:
   virtual void visit(const ir::Div *);
 
   virtual void visit(const ir::AssignStmt *);
-  virtual void visit(const ir::IndexStmt *);
   virtual void visit(const ir::FieldWrite *);
   virtual void visit(const ir::TensorWrite *);
   virtual void visit(const ir::For *);

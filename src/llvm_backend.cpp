@@ -241,10 +241,6 @@ void LLVMBackend::visit(const AssignStmt *op) {
   }
 }
 
-void LLVMBackend::visit(const ir::IndexStmt *op) {
-  cout << "IndexStmt" << endl;
-}
-
 void LLVMBackend::visit(const FieldWrite *op) {
   cout << "FieldWrite" << endl;
 }
