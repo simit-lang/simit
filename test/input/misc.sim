@@ -29,3 +29,8 @@ end
 func neg(a : int) -> (c : int)
  c = -a;
 end
+
+%%% lit-expr
+func test()
+  a = 1+1-2;
+end

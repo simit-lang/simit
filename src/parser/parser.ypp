@@ -186,20 +186,21 @@
 %token UNKNOWN
 
 // Literals
-%right    "="
-%nonassoc "\\"               // solve
-%left     "==" "!="
-%left     "<" ">" "<=" ">="
-%left     "-" "+"
-%left     "*" "/"
-%left     NEG                // negation
-%right    "^"                // exponentiation
-%right    "'"                // transpose
-
 %token <num>    INT_LITERAL    "int literal"
 %token <fnum>   FLOAT_LITERAL  "float literal"
 %token <string> STRING_LITERAL "string literal"
 %token <string> IDENT          "identifier"
+
+// Precedence
+%nonassoc    "\\"               // solve
+%left        "==" "!="
+%left        "<" ">" "<=" ">="
+%left        "-" "+"
+%left        "*" "/"
+%precedence  NEG                // negation
+%right       "^"                // exponentiation
+%right       "'"                // transpose
+
 
 // Keywords
 %token INT       "int"
@@ -255,9 +256,10 @@
 %token LE        "<="
 %token GE        ">="
 
-// End of file
 %token END 0     "end of file"
 
+
+// Rules
 %start program
 %%
 
@@ -990,23 +992,20 @@ reduction_op
 // Types
 %type <type> type;
 type
-  : element_type {
-    $$ = $1;
-  }
-  | set_type {
-    $$ = $1;
-  }
-  | tuple_type {
-    $$ = $1;
-  }
-  | tensor_type {
-    $$ = $1;
-  }
+  : element_type
+  | set_type
+  | tuple_type
+  | tensor_type
 
 %type <type> element_type;
 element_type
   : IDENT {
     std::string name = convertAndFree($IDENT);
+
+    if (!ctx->containsElementType(name)) {
+      REPORT_ERROR("Undefined element type '" + name + "' used" , @1);
+    }
+
     $$ = new Type(ctx->getElementType(name));
   }
 
@@ -1281,11 +1280,11 @@ float_dense_matrix_literal
 
 %type <TensorDoubleValues> float_dense_vector_literal;
 float_dense_vector_literal
-  : FLOAT_LITERAL {
+  : signed_float_literal {
     $$ = new TensorValues<double>();
     $$->addValue($1);
   }
-  | float_dense_vector_literal "," FLOAT_LITERAL {
+  | float_dense_vector_literal "," signed_float_literal {
     $$ = $1;
     $$->addValue($3);
   }
@@ -1340,24 +1339,42 @@ int_dense_matrix_literal
 
 %type <TensorIntValues> int_dense_vector_literal;
 int_dense_vector_literal
-  : INT_LITERAL {
+  : signed_int_literal {
     $$ = new TensorValues<int>();
     $$->addValue($1);
   }
-  | int_dense_vector_literal "," INT_LITERAL {
+  | int_dense_vector_literal "," signed_int_literal {
     $$ = $1;
     $$->addValue($3);
   }
 
 %type <expr> scalar_literal;
 scalar_literal
-  : INT_LITERAL {
+  : signed_int_literal {
     auto scalarTensorType = TensorType::make(Int(32));
     $$ = new Expr(Literal::make(scalarTensorType, &$1));
   }
-  | FLOAT_LITERAL {
+  | signed_float_literal {
     auto scalarTensorType = TensorType::make(Float(64));
     $$ = new Expr(Literal::make(scalarTensorType, &$1));
+  }
+
+%type <num> signed_int_literal;
+signed_int_literal
+  : INT_LITERAL {
+    $$ = $INT_LITERAL;
+  }
+  | "-" INT_LITERAL {
+    $$ = -$INT_LITERAL;
+  }
+
+%type <fnum> signed_float_literal;
+signed_float_literal
+  : FLOAT_LITERAL {
+    $$ = $FLOAT_LITERAL;
+  }
+  | "-" FLOAT_LITERAL {
+    $$ = -$FLOAT_LITERAL;
   }
 
 

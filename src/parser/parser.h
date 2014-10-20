@@ -227,11 +227,11 @@ namespace  simit { namespace internal  {
       {
         END = 0,
         UNKNOWN = 258,
-        NEG = 259,
-        INT_LITERAL = 260,
-        FLOAT_LITERAL = 261,
-        STRING_LITERAL = 262,
-        IDENT = 263,
+        INT_LITERAL = 259,
+        FLOAT_LITERAL = 260,
+        STRING_LITERAL = 261,
+        IDENT = 262,
+        NEG = 263,
         INT = 264,
         FLOAT = 265,
         TENSOR = 266,
@@ -571,8 +571,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 473,     ///< Last index in yytable_.
-      yynnts_ = 71,  ///< Number of nonterminal symbols.
+      yylast_ = 512,     ///< Last index in yytable_.
+      yynnts_ = 73,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
