@@ -66,7 +66,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmFunc->getArgumentList()) {
     // Load scalar arguments
     if (i++ < simitArgs.size()) {
-      if (simitArgs[i-1].type().isScalar()) {
+      if (simitArgs[i-1].type.isScalar()) {
         string valName = string(arg.getName()) + VAL_SUFFIX;
         llvm::Value *val = builder->CreateLoad(&arg, valName);
         symtable.insert(arg.getName(), val);
@@ -106,9 +106,9 @@ void LLVMBackend::visit(const Literal *op) {
   cout << "Literal" << endl;
 }
 
-void LLVMBackend::visit(const Variable *op) {
-  assert(symtable.contains(op->name));
-  val = symtable.get(op->name);
+void LLVMBackend::visit(const VarExpr *op) {
+  assert(symtable.contains(op->var.name));
+  val = symtable.get(op->var.name);
 }
 
 void LLVMBackend::visit(const Result *op) {
@@ -221,7 +221,7 @@ void LLVMBackend::visit(const Div *op) {
 
 void LLVMBackend::visit(const AssignStmt *op) {
   llvm::Value *value = compile(op->value);
-  string name = op->name;
+  string name = op->var.name;
 
   // Check if lhs already exist
   if (symtable.contains(name)) {

@@ -124,8 +124,8 @@ void IRPrinter::visit(const Literal *op) {
   }
 }
 
-void IRPrinter::visit(const Variable *op) {
-  os << op->name;
+void IRPrinter::visit(const VarExpr *op) {
+  os << op->var;
 }
 
 void IRPrinter::visit(const Result *) {
@@ -222,7 +222,7 @@ void IRPrinter::visit(const Div *op) {
 
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
-  os << op->name << " = ";
+  os << op->var << " = ";
   print(op->value);
   os << ";";
 }
@@ -282,28 +282,23 @@ void IRPrinter::visit(const Pass *op) {
 void IRPrinter::visit(const Func *func) {
   os << "func " << func->getName() << "(";
   if (func->getArguments().size() > 0) {
-    Expr arg = func->getArguments()[0];
-    print(arg);
-    os << " : " << arg.type();
+    const Var &arg = func->getArguments()[0];
+    os << arg << " : " << arg.type;
   }
   for (size_t i=1; i < func->getArguments().size(); ++i) {
-    Expr arg = func->getArguments()[i];
-    os << ", ";
-    print(arg);
-    os << " : " << arg.type();
+    const Var &arg = func->getArguments()[i];
+    os << ", " << arg << " : " << arg.type;
   }
   os << ")";
 
   if (func->getResults().size() > 0) {
     os << " -> (";
-    print(func->getResults()[0]);
-    os << " : " << func->getResults()[0].type();
+    const Var &res = func->getResults()[0];
+    os << res << " : " << res;
 
     for (size_t i=1; i < func->getResults().size(); ++i) {
-      Expr res = func->getResults()[i];
-      os << ", ";
-      print(res);
-      os << " : " << res.type();
+      const Var &res = func->getResults()[i];
+      os << ", " << res << " : " << res.type;
     }
     os << ")";
   }

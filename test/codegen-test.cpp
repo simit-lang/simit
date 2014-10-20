@@ -29,187 +29,187 @@ std::vector<T> toVectorOf(Expr expr) {
 }
 
 TEST(Codegen, add0) {
-  Expr a = Variable::make("a", Float(64));
-  Expr b = Variable::make("b", Float(64));
-  Expr c = Variable::make("c", Float(64));
+  Var a("a", Float(64));
+  Var b("b", Float(64));
+  Var c("c", Float(64));
 
   Expr axb = Add::make(a,b);
-  Stmt body = AssignStmt::make({"c"}, axb);
+  Stmt body = AssignStmt::make(c, axb);
 
   Func func = Func("add0", {a,b}, {c}, body);
 
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  a = Literal::make(Float(64), {2.0});
-  b = Literal::make(Float(64), {4.1});
-  c = Literal::make(Float(64));
+  Expr aArg = Literal::make(Float(64), {2.0});
+  Expr bArg = Literal::make(Float(64), {4.1});
+  Expr cRes = Literal::make(Float(64));
 
-  function->bind("a", &a);
-  function->bind("b", &b);
-  function->bind("c", &c);
+  function->bind("a", &aArg);
+  function->bind("b", &bArg);
+  function->bind("c", &cRes);
 
   function->run();
 
-  vector<double> results = toVectorOf<double>(c);
+  vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], 6.1);
 }
 
 TEST(Codegen, sin) {
-  Expr a = Variable::make("a", Float(64));
-  Expr c = Variable::make("c", Float(64));
+  Var a("a", Float(64));
+  Var c("c", Float(64));
 
   Expr sin_a = Call::make("sin", {a}, Call::Intrinsic);
   
-  Stmt body = AssignStmt::make({"c"}, sin_a);
+  Stmt body = AssignStmt::make(c, sin_a);
 
   Func func = Func("testsin", {a}, {c}, body);
 
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  a = Literal::make(Float(64), {2.0});
-  c = Literal::make(Float(64));
+  Expr aArg = Literal::make(Float(64), {2.0});
+  Expr cRes = Literal::make(Float(64));
 
-  function->bind("a", &a);
-  function->bind("c", &c);
+  function->bind("a", &aArg);
+  function->bind("c", &cRes);
 
   function->run();
 
-  vector<double> results = toVectorOf<double>(c);
+  vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], sin(2.0));
 
 }
 
 TEST(Codegen, cos) {
-  Expr a = Variable::make("a", Float(64));
-  Expr c = Variable::make("c", Float(64));
+  Var a("a", Float(64));
+  Var c("c", Float(64));
 
   Expr cos_a = Call::make("cos", {a}, Call::Intrinsic);
   
-  Stmt body = AssignStmt::make({"c"}, cos_a);
+  Stmt body = AssignStmt::make(c, cos_a);
 
   Func func = Func("testcos", {a}, {c}, body);
 
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  a = Literal::make(Float(64), {2.0});
-  c = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(64), {2.0});
+  Expr cRes = Literal::make(Float(64));
 
-  function->bind("a", &a);
-  function->bind("c", &c);
+  function->bind("a", &aVar);
+  function->bind("c", &cRes);
 
   function->run();
 
-  vector<double> results = toVectorOf<double>(c);
+  vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], cos(2.0));
 
 }
 
 TEST(Codegen, sqrt) {
-  Expr a = Variable::make("a", Float(64));
-  Expr c = Variable::make("c", Float(64));
+  Var a("a", Float(64));
+  Var c("c", Float(64));
 
   Expr sqrt_a = Call::make("sqrt", {a}, Call::Intrinsic);
   
-  Stmt body = AssignStmt::make({"c"}, sqrt_a);
+  Stmt body = AssignStmt::make(c, sqrt_a);
 
   Func func = Func("testsqrt", {a}, {c}, body);
 
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  a = Literal::make(Float(64), {5.0});
-  c = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(64), {5.0});
+  Expr cRes = Literal::make(Float(64));
 
-  function->bind("a", &a);
-  function->bind("c", &c);
+  function->bind("a", &aVar);
+  function->bind("c", &cRes);
 
   function->run();
 
-  vector<double> results = toVectorOf<double>(c);
+  vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], sqrt(5.0));
 
 }
 
 TEST(Codegen, log) {
-  Expr a = Variable::make("a", Float(64));
-  Expr c = Variable::make("c", Float(64));
+  Var a("a", Float(64));
+  Var c("c", Float(64));
 
   Expr log_a = Call::make("log", {a}, Call::Intrinsic);
   
-  Stmt body = AssignStmt::make({"c"}, log_a);
+  Stmt body = AssignStmt::make(c, log_a);
 
   Func func = Func("testlog", {a}, {c}, body);
 
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  a = Literal::make(Float(64), {5.0});
-  c = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(64), {5.0});
+  Expr cRes = Literal::make(Float(64));
 
-  function->bind("a", &a);
-  function->bind("c", &c);
+  function->bind("a", &aVar);
+  function->bind("c", &cRes);
 
   function->run();
 
-  vector<double> results = toVectorOf<double>(c);
+  vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], log(5.0));
 
 }
 
 TEST(Codegen, exp) {
-  Expr a = Variable::make("a", Float(64));
-  Expr c = Variable::make("c", Float(64));
+  Var a("a", Float(64));
+  Var c("c", Float(64));
 
   Expr exp_a = Call::make("exp", {a}, Call::Intrinsic);
   
-  Stmt body = AssignStmt::make({"c"}, exp_a);
+  Stmt body = AssignStmt::make(c, exp_a);
 
   Func func = Func("testexp", {a}, {c}, body);
 
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  a = Literal::make(Float(64), {5.0});
-  c = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(64), {5.0});
+  Expr cRes = Literal::make(Float(64));
 
-  function->bind("a", &a);
-  function->bind("c", &c);
+  function->bind("a", &aVar);
+  function->bind("c", &cRes);
 
   function->run();
 
-  vector<double> results = toVectorOf<double>(c);
+  vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], exp(5.0));
 
 }
 
 TEST(Codegen, atan2) {
-  Expr a = Variable::make("a", Float(64));
-  Expr b = Variable::make("b", Float(64));
-  Expr c = Variable::make("c", Float(64));
+  Var a("a", Float(64));
+  Var b("b", Float(64));
+  Var c("c", Float(64));
 
   Expr atan2_ab = Call::make("atan2", {a,b}, Call::Intrinsic);
   
-  Stmt body = AssignStmt::make({"c"}, atan2_ab);
+  Stmt body = AssignStmt::make(c, atan2_ab);
 
   Func func = Func("testatan2", {a,b}, {c}, body);
 
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  a = Literal::make(Float(64), {1.0});
-  b = Literal::make(Float(64), {2.0});
-  c = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(64), {1.0});
+  Expr bVar = Literal::make(Float(64), {2.0});
+  Expr cRes = Literal::make(Float(64));
 
-  function->bind("a", &a);
-  function->bind("b", &b);
-  function->bind("c", &c);
+  function->bind("a", &aVar);
+  function->bind("b", &bVar);
+  function->bind("c", &cRes);
 
   function->run();
 
-  vector<double> results = toVectorOf<double>(c);
+  vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));
 
 }

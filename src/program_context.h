@@ -18,37 +18,35 @@ namespace internal {
 
 class Symbol {
 public:
-  Symbol() {}
-  Symbol(ir::Expr read, ir::Expr write)
-      : read(read), write(write) {}
+  enum Access { None, Read, Write, ReadWrite };
 
-  bool isReadable() const { return read.defined(); }
-  bool isWritable() const { return write.defined(); }
+  Symbol() : access(None) {}
+  Symbol(ir::Var var, Access access)
+      : var(var), expr(ir::VarExpr::make(var)), access(access) {}
 
-  ir::Expr getReadExpr() const { return read; }
-  ir::Expr getWriteExpr() const { return write; }
+  bool isReadable() const {return access ==  Read || access == ReadWrite;}
+  bool isWritable() const {return access ==  Write || access == ReadWrite;}
+
+  ir::Var getVar() const {return var;}
+  ir::Expr getExpr() const {return expr;}
 
 private:
-  ir::Expr read;
-  ir::Expr write;
+  ir::Var var;
+  ir::Expr expr;
+
+  Access access;
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
-  os << "(";
+  os << symbol.getVar() << "(";
+
   if (symbol.isReadable()) {
-    os << symbol.getReadExpr();
+    os << "r";
   }
-  else {
-    os << "none";
-  }
-  os << ", ";
   if (symbol.isWritable()) {
-    os << symbol.getWriteExpr();
+    os << "w";
   }
-  else {
-    os << "none";
-  }
-  return os << ")";
+  return os;
 }
 
 
@@ -74,12 +72,12 @@ public:
                               ? &statements.front() : nullptr);
   }
 
-  void addSymbol(const std::string &name, ir::Expr readWrite) {
-    addSymbol(name, readWrite, readWrite);
+  void addSymbol(ir::Var var) {
+    addSymbol(var.name, var, Symbol::ReadWrite);
   }
 
-  void addSymbol(const std::string &name, ir::Expr read, ir::Expr write) {
-    exprSymtable.insert(name, Symbol(read, write));
+  void addSymbol(const std::string &name, ir::Var var, Symbol::Access access) {
+    exprSymtable.insert(name, Symbol(var, access));
   }
 
   const Symbol &getSymbol(const std::string &name) {
@@ -119,17 +117,28 @@ public:
     return elementTypes[name];
   }
 
-  void addExtern(ir::Expr externVariable) {
-    externs[ir::to<ir::Variable>(externVariable)->name] = externVariable;
+  void addExtern(ir::Var externVariable) {
+    externs[externVariable.name] = externVariable;
   }
 
   bool containsExtern(const std::string &name) {
     return externs.find(name) != externs.end();
   }
 
-  ir::Expr getExtern(const std::string &name) {return externs[name];}
+  ir::Var getExtern(const std::string &name) {
+    return externs[name];
+  }
 
-  const std::map<std::string,ir::Expr> &getExterns() {return externs;}
+  ir::Var getExternExpr(const std::string &name) {return externs[name];}
+
+  const std::map<std::string,ir::Var> &getExterns() {return externs;}
+
+  void addConstant(ir::Var var, ir::Expr val) {
+    constants[var] = val;
+  }
+
+  ir::Expr getConstant(ir::Var var) {return constants[var];}
+
 
   void addTest(ir::Test *test) {tests.push_back(test);}
 
@@ -144,15 +153,17 @@ public:
 private:
   ir::IRBuilder builder;
 
-  std::map<std::string, ir::Func>    functions;
-  std::map<std::string, ir::Expr>    externs;
+  std::map<std::string, ir::Type>  elementTypes;
 
-  std::map<std::string, ir::Type>    elementTypes;
-  ScopedMap<std::string, Symbol>     exprSymtable;
+  std::map<std::string, ir::Var>   externs;
+  std::map<ir::Var,ir::Expr>       constants;
 
-  std::list<std::vector<ir::Stmt>>   statements;
+  std::map<std::string, ir::Func>  functions;
+  std::list<std::vector<ir::Stmt>> statements;
 
-  std::vector<ir::Test*>             tests;
+  ScopedMap<std::string, Symbol>   exprSymtable;
+
+  std::vector<ir::Test*>           tests;
 };
 
 }} // namespace simit::internal

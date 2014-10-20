@@ -50,7 +50,7 @@ private:
   void compile(const ir::Stmt &stmt);
 
   virtual void visit(const ir::Literal *);
-  virtual void visit(const ir::Variable *);
+  virtual void visit(const ir::VarExpr *);
   virtual void visit(const ir::Result *);
   virtual void visit(const ir::FieldRead *);
   virtual void visit(const ir::TensorRead *);

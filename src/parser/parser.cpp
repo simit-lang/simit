@@ -510,7 +510,7 @@ namespace  simit { namespace internal  {
       case 61: // extern
 
 
-        { delete (yysym.value.expr); }
+        { delete (yysym.value.var); }
 
         break;
 
@@ -566,42 +566,42 @@ namespace  simit { namespace internal  {
       case 73: // arguments
 
 
-        { delete (yysym.value.exprs); }
+        { delete (yysym.value.vars); }
 
         break;
 
       case 74: // argument_list
 
 
-        { delete (yysym.value.exprs); }
+        { delete (yysym.value.vars); }
 
         break;
 
       case 75: // argument_decl
 
 
-        { delete (yysym.value.expr); }
+        { delete (yysym.value.var); }
 
         break;
 
       case 76: // results
 
 
-        { delete (yysym.value.exprs); }
+        { delete (yysym.value.vars); }
 
         break;
 
       case 77: // result_list
 
 
-        { delete (yysym.value.exprs); }
+        { delete (yysym.value.vars); }
 
         break;
 
       case 78: // result_decl
 
 
-        { delete (yysym.value.expr); }
+        { delete (yysym.value.var); }
 
         break;
 
@@ -1136,8 +1136,9 @@ namespace  simit { namespace internal  {
   case 10:
 
     {
-    Expr externVariable = convertAndDelete((yystack_[1].value.expr));
-    ctx->addExtern(externVariable);
+    Var externVar = convertAndDelete((yystack_[1].value.var));
+    ctx->addExtern(externVar);
+    ctx->addSymbol(externVar);
   }
 
     break;
@@ -1211,17 +1212,17 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[0].value.string));
-    auto arguments = vector<Expr>();
-    auto results = vector<Expr>();
+    auto arguments = vector<Var>();
+    auto results = vector<Var>();
 
     for (auto &extPair : ctx->getExterns()) {
-      Expr ext = extPair.second;
+      Var ext = ctx->getExtern(extPair.first);
 
       // TODO: Replace extResult with mutable parameters
       results.push_back(ext);
-
       arguments.push_back(ext);
-      ctx->addSymbol(to<Variable>(ext)->name, ext, ext);
+
+      ctx->addSymbol(ext);
     }
 
     (yylhs.value.function) = new Func(name, arguments, results, Stmt());
@@ -1255,25 +1256,21 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[4].value.string));
-    auto arguments = unique_ptr<vector<Expr>>((yystack_[2].value.exprs));
-    auto results = unique_ptr<vector<Expr>>((yystack_[0].value.exprs));
+    auto arguments = unique_ptr<vector<Var>>((yystack_[2].value.vars));
+    auto results = unique_ptr<vector<Var>>((yystack_[0].value.vars));
     (yylhs.value.function) = new Func(name, *arguments, *results, Stmt());
 
-    std::set<std::string> argumentNames;
-    for (Expr &argument : *arguments) {
-      std::string argumentName = to<Variable>(argument)->name;
-      ctx->addSymbol(argumentName, argument, Expr());
-      argumentNames.insert(argumentName);
+    std::set<std::string> argNames;
+    for (Var &arg : *arguments) {
+      ctx->addSymbol(arg.name, arg, Symbol::Read);
+      argNames.insert(arg.name);
     }
 
-    for (auto result : *results) {
-      Expr readExpr;
-      std::string resultName = to<Variable>(result)->name;
-      if (argumentNames.find(resultName) != argumentNames.end()) {
-        readExpr = ctx->getSymbol(resultName).getReadExpr();
-      }
+    for (Var &res : *results) {
+      Symbol::Access access = (argNames.find(res.name) != argNames.end())
+                              ? Symbol::ReadWrite : Symbol::Write;
 
-      ctx->addSymbol(resultName, readExpr, result);
+      ctx->addSymbol(res.name, res, access);
     }
   }
 
@@ -1282,7 +1279,7 @@ namespace  simit { namespace internal  {
   case 23:
 
     {
-    (yylhs.value.exprs) = new vector<Expr>;
+    (yylhs.value.vars) = new vector<Var>;
   }
 
     break;
@@ -1290,7 +1287,7 @@ namespace  simit { namespace internal  {
   case 24:
 
     {
-    (yylhs.value.exprs) = (yystack_[0].value.exprs);
+    (yylhs.value.vars) = (yystack_[0].value.vars);
  }
 
     break;
@@ -1298,9 +1295,9 @@ namespace  simit { namespace internal  {
   case 25:
 
     {
-    auto argument = convertAndDelete((yystack_[0].value.expr));
-    (yylhs.value.exprs) = new vector<Expr>;
-    (yylhs.value.exprs)->push_back(argument);
+    auto argument = convertAndDelete((yystack_[0].value.var));
+    (yylhs.value.vars) = new vector<Var>;
+    (yylhs.value.vars)->push_back(argument);
   }
 
     break;
@@ -1308,9 +1305,9 @@ namespace  simit { namespace internal  {
   case 26:
 
     {
-    auto argument = convertAndDelete((yystack_[0].value.expr));
-    (yylhs.value.exprs) = (yystack_[2].value.exprs);
-    (yylhs.value.exprs)->push_back(argument);
+    auto argument = convertAndDelete((yystack_[0].value.var));
+    (yylhs.value.vars) = (yystack_[2].value.vars);
+    (yylhs.value.vars)->push_back(argument);
   }
 
     break;
@@ -1321,7 +1318,7 @@ namespace  simit { namespace internal  {
     std::string name = convertAndFree((yystack_[2].value.string));
 
     auto type = convertAndDelete((yystack_[0].value.type));
-    (yylhs.value.expr) = new Expr(Variable::make(name, type));
+    (yylhs.value.var) = new Var(name, type);
   }
 
     break;
@@ -1329,7 +1326,7 @@ namespace  simit { namespace internal  {
   case 28:
 
     {
-    (yylhs.value.exprs) = new vector<Expr>();
+    (yylhs.value.vars) = new vector<Var>;
   }
 
     break;
@@ -1337,7 +1334,7 @@ namespace  simit { namespace internal  {
   case 29:
 
     {
-    (yylhs.value.exprs) = (yystack_[1].value.exprs);
+    (yylhs.value.vars) = (yystack_[1].value.vars);
   }
 
     break;
@@ -1345,9 +1342,9 @@ namespace  simit { namespace internal  {
   case 30:
 
     {
-    auto result = convertAndDelete((yystack_[0].value.expr));
-    (yylhs.value.exprs) = new vector<Expr>;
-    (yylhs.value.exprs)->push_back(result);
+    auto result = convertAndDelete((yystack_[0].value.var));
+    (yylhs.value.vars) = new vector<Var>;
+    (yylhs.value.vars)->push_back(result);
   }
 
     break;
@@ -1355,9 +1352,9 @@ namespace  simit { namespace internal  {
   case 31:
 
     {
-    auto result = convertAndDelete((yystack_[0].value.expr));
-    (yylhs.value.exprs) = (yystack_[2].value.exprs);
-    (yylhs.value.exprs)->push_back(result);
+    auto result = convertAndDelete((yystack_[0].value.var));
+    (yylhs.value.vars) = (yystack_[2].value.vars);
+    (yylhs.value.vars)->push_back(result);
   }
 
     break;
@@ -1367,7 +1364,7 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[2].value.string));
     auto type = convertAndDelete((yystack_[0].value.type));
-    (yylhs.value.expr) = new Expr(Variable::make(name, type));
+    (yylhs.value.var) = new Var(name, type);
   }
 
     break;
@@ -1398,8 +1395,22 @@ namespace  simit { namespace internal  {
     string name = convertAndFree((yystack_[3].value.string));
     Expr value = convertAndDelete((yystack_[1].value.expr));
 
+    Var var;
+    if (ctx->hasSymbol(name)) {
+      Symbol symbol = ctx->getSymbol(name);
+
+      if (!symbol.isWritable()) {
+        REPORT_ERROR(name + " is not writable", yystack_[3].location);
+      }
+
+      var = symbol.getVar();
+    }
+    else {
+      var = Var(name, value.type());
+    }
+
     // TODO: Check valueNames.size() matches number of values produced by expr
-    ctx->addStatement(AssignStmt::make(name, value));
+    ctx->addStatement(AssignStmt::make(var, value));
   }
 
     break;
@@ -1421,7 +1432,7 @@ namespace  simit { namespace internal  {
       REPORT_ERROR(setName + " is not writable", yystack_[5].location);
     }
 
-    auto setExpr = setSymbol.getWriteExpr();
+    Expr setExpr = setSymbol.getExpr();
     ctx->addStatement(FieldWrite::make(setExpr, fieldName, value));
   }
 
@@ -1446,7 +1457,7 @@ namespace  simit { namespace internal  {
       REPORT_ERROR(tensorName + " is not writable", yystack_[6].location);
     }
 
-    auto tensorExpr = tensorSymbol.getWriteExpr();
+    Expr tensorExpr = tensorSymbol.getExpr();
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
 
@@ -1493,23 +1504,25 @@ namespace  simit { namespace internal  {
     auto type = convertAndDelete((yystack_[3].value.type));
     const TensorType *tensorType = type.toTensor();
 
-    Expr literal = convertAndDelete((yystack_[1].value.expr));
+    Expr literalExpr = convertAndDelete((yystack_[1].value.expr));
 
-    assert(literal.type().isTensor() &&
+    assert(literalExpr.type().isTensor() &&
            "Only tensor literals are currently supported");
-    auto literalType = literal.type();
+    auto litType = literalExpr.type();
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
-    const TensorType *literalTensorType = literalType.toTensor();
-    if (tensorType->order() == 2 && literalTensorType->order() == 1) {
-      const_cast<Literal*>(to<Literal>(literal))->cast(type);
+    const TensorType *litTensorType = litType.toTensor();
+    if (tensorType->order() == 2 && litTensorType->order() == 1) {
+      const_cast<Literal*>(to<Literal>(literalExpr))->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.
-    CHECK_TYPE_EQUALITY(type, literal.type(), yystack_[5].location);
+    CHECK_TYPE_EQUALITY(type, literalExpr.type(), yystack_[5].location);
 
-    ctx->addSymbol(name, literal);
+    Var var(name, type);
+    ctx->addConstant(var, literalExpr);
+    ctx->addSymbol(var);
   }
 
     break;
@@ -1546,7 +1559,8 @@ namespace  simit { namespace internal  {
       REPORT_ERROR(ident + " is not readable", yystack_[0].location);
     }
 
-    (yylhs.value.expr) = new Expr(symbol.getReadExpr());
+    Expr expr = symbol.getExpr();
+    (yylhs.value.expr) = new Expr(expr);
   }
 
     break;
@@ -1854,7 +1868,7 @@ namespace  simit { namespace internal  {
       }
 
       // The parenthesis read can read from a tensor or a tuple.
-      auto expr = symbol.getReadExpr();
+      auto expr = symbol.getExpr();
       if (expr.type().isTensor()) {
         (yylhs.value.expr) = new Expr(TensorRead::make(expr, *indices));
       }
@@ -2131,14 +2145,15 @@ namespace  simit { namespace internal  {
     {
     std::string setName = convertAndFree((yystack_[0].value.string));
 
-    if (!ctx->containsExtern(setName)) {
+    if (!ctx->hasSymbol(setName)) {
       REPORT_ERROR("the set has not been declared", yystack_[0].location);
     }
 
-    Expr set = ctx->getExtern(setName);
+    Expr set = ctx->getSymbol(setName).getExpr();
     if (!set.type().isSet()) {
       REPORT_ERROR("an index set must be a set, a range or dynamic (*)", yystack_[0].location);
     }
+
     (yylhs.value.indexSet) = new IndexSet(set);
   }
 
@@ -3033,22 +3048,22 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   266,   266,   268,   271,   272,   280,   288,   289,   290,
-     295,   304,   317,   320,   328,   338,   338,   338,   346,   366,
-     366,   366,   374,   400,   403,   409,   414,   422,   431,   434,
+       0,   269,   269,   271,   274,   275,   283,   291,   292,   293,
+     298,   308,   321,   324,   332,   342,   342,   342,   350,   370,
+     370,   370,   378,   400,   403,   409,   414,   422,   431,   434,
      440,   445,   453,   463,   466,   473,   474,   477,   478,   479,
-     480,   481,   482,   483,   486,   497,   517,   537,   543,   548,
-     550,   554,   556,   562,   565,   591,   594,   602,   603,   604,
-     605,   606,   607,   608,   609,   615,   636,   645,   654,   666,
-     733,   739,   769,   774,   783,   784,   785,   786,   792,   798,
-     804,   810,   816,   822,   833,   852,   853,   854,   860,   893,
-     899,   907,   910,   916,   922,   933,   941,   943,   947,   949,
-     952,   953,   959,   960,   961,   962,   966,   978,   982,   992,
-     996,  1003,  1015,  1019,  1022,  1064,  1074,  1079,  1087,  1090,
-    1103,  1109,  1115,  1118,  1168,  1172,  1173,  1177,  1181,  1188,
-    1199,  1206,  1210,  1214,  1228,  1232,  1247,  1251,  1258,  1265,
-    1269,  1273,  1287,  1291,  1306,  1310,  1317,  1321,  1328,  1331,
-    1337,  1340,  1347
+     480,   481,   482,   483,   486,   511,   531,   551,   557,   562,
+     564,   568,   570,   576,   579,   607,   610,   618,   619,   620,
+     621,   622,   623,   624,   625,   631,   653,   662,   671,   683,
+     750,   756,   786,   791,   800,   801,   802,   803,   809,   815,
+     821,   827,   833,   839,   850,   869,   870,   871,   877,   910,
+     916,   924,   927,   933,   939,   950,   958,   960,   964,   966,
+     969,   970,   976,   977,   978,   979,   983,   995,   999,  1009,
+    1013,  1020,  1032,  1036,  1039,  1081,  1091,  1096,  1104,  1107,
+    1121,  1127,  1133,  1136,  1186,  1190,  1191,  1195,  1199,  1206,
+    1217,  1224,  1228,  1232,  1246,  1250,  1265,  1269,  1276,  1283,
+    1287,  1291,  1305,  1309,  1324,  1328,  1335,  1339,  1346,  1349,
+    1355,  1358,  1365
   };
 
   // Print the state stack on the debug stream.

@@ -12,19 +12,17 @@ namespace simit {
 
 Function::Function(const simit::ir::Func &simitFunc)
     : funcPtr(NULL), initRequired(true) {
-  for (auto &argument : simitFunc.getArguments()) {
-    std::string argName = ir::to<ir::Variable>(argument)->name;
-    formals.push_back(argName);
-    actuals[argName] = Actual(argument.type());
+  for (auto &arg : simitFunc.getArguments()) {
+    formals.push_back(arg.name);
+    actuals[arg.name] = Actual(arg.type);
   }
-  for (auto &result : simitFunc.getResults()) {
+  for (auto &res : simitFunc.getResults()) {
     // Skip results that alias an argument
-    std::string name = ir::to<ir::Variable>(result)->name;
-    if (actuals.find(name) != actuals.end()) {
+    if (actuals.find(res.name) != actuals.end()) {
       continue;
     }
-    formals.push_back(name);
-    actuals[name] = Actual(result.type());
+    formals.push_back(res.name);
+    actuals[res.name] = Actual(res.type);
   }
 }
 

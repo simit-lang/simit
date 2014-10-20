@@ -76,7 +76,7 @@ class Program::ProgramContent {
       auto formalArgs = func.getArguments();
       auto actualArgs = test->getActuals();
       for (size_t i=0; i < actualArgs.size(); ++i) {
-        auto formal = ir::to<ir::Variable>(formalArgs[i])->name;
+        auto formal = formalArgs[i].name;
         auto actual = actualArgs[i];
         compiledFunc->bind(formal, &actual);
       }
@@ -84,9 +84,9 @@ class Program::ProgramContent {
       auto formalResults = func.getResults();
       std::vector<ir::Expr> actualResults;
       for (auto &formalResult : formalResults) {
-        ir::Expr actualResult = ir::Literal::make(formalResult.type());
+        ir::Expr actualResult = ir::Literal::make(formalResult.type);
         actualResults.push_back(actualResult);
-        auto formal = ir::to<ir::Variable>(formalResult)->name;
+        auto formal = formalResult.name;
         auto actual = actualResult;
         compiledFunc->bind(formal, &actual);
       }

@@ -49,7 +49,7 @@ void IRMutator::visit(const Literal *op) {
   expr = op;
 }
 
-void IRMutator::visit(const Variable *op) {
+void IRMutator::visit(const VarExpr *op) {
   expr = op;
 }
 
@@ -189,7 +189,7 @@ void IRMutator::visit(const AssignStmt *op) {
     stmt = op;
   }
   else {
-    stmt = AssignStmt::make(op->name, value);
+    stmt = AssignStmt::make(op->var, value);
   }
 }
 
@@ -262,31 +262,13 @@ void IRMutator::visit(const Pass *op) {
 }
 
 void IRMutator::visit(const Func *f) {
-  std::vector<Expr> arguments(f->getArguments().size());
-  std::vector<Expr> results(f->getResults().size());
-
-  bool argumentsSame = true;
-  for (size_t i=0; i < f->getArguments().size(); ++i) {
-    arguments[i] = mutate(f->getArguments()[i]);
-    if (arguments[i] != f->getArguments()[i]) {
-      argumentsSame = false;
-    }
-  }
-
-  for (size_t i=0; i < f->getResults().size(); ++i) {
-    results[i] = mutate(f->getResults()[i]);
-    if (results[i] != f->getResults()[i]) {
-      argumentsSame = false;
-    }
-  }
-
   Stmt body = mutate(f->getBody());
 
-  if (body == f->getBody() && argumentsSame) {
+  if (body == f->getBody()) {
     func = *f;
   }
   else {
-    func = Func(f->getName(), arguments, results, body);
+    func = Func(f->getName(), f->getArguments(), f->getResults(), body);
   }
 }
 

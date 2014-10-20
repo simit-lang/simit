@@ -195,6 +195,9 @@ namespace  simit { namespace internal  {
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
+  ir::Var                       *var;
+  std::vector<ir::Var>          *vars;
+
   ir::Stmt                      *stmt;
   std::vector<ir::Stmt>         *stmts;
   ir::Expr                      *expr;

@@ -17,6 +17,35 @@
 namespace simit {
 namespace ir {
 
+struct Var {
+  std::string name;
+  Type type;
+
+  Var() {}
+  Var(std::string name, Type type) : name(name), type(type) {}
+};
+
+inline std::ostream &operator<<(std::ostream &os, const Var &v) {
+  return os << v.name;
+}
+
+inline bool operator==(const Var &v1, const Var &v2) {
+  return v1.name == v2.name;
+}
+
+inline bool operator!=(const Var &v1, const Var &v2) {
+  return v1.name != v2.name;
+}
+
+inline bool operator<(const Var &v1, const Var &v2) {
+  return v1.name < v2.name;
+}
+
+inline bool operator>(const Var &v1, const Var &v2) {
+  return v1.name > v2.name;
+}
+
+
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
 struct IRNode : private simit::interfaces::Uncopyable {
@@ -59,6 +88,7 @@ class Expr : public util::IntrusivePtr<const ExprNodeBase> {
 public:
   Expr() : IntrusivePtr() {}
   Expr(const ExprNodeBase *expr) : IntrusivePtr(expr) {}
+  Expr(const Var &var);
 
   Type type() const {return ptr->type;}
 
@@ -145,7 +175,7 @@ struct Literal : public ExprNode<Literal> {
     }
     else {
       memset(node->data, 0, node->size);
-    }
+    } 
     return node;
   }
 
@@ -157,13 +187,13 @@ struct Literal : public ExprNode<Literal> {
   ~Literal() {free(data);}
 };
 
-struct Variable : public ExprNode<Variable> {
-  std::string name;
+struct VarExpr : public ExprNode<VarExpr> {
+  Var var;
 
-  static Expr make(std::string name, Type type) {
-    Variable *node = new Variable;
-    node->type = type;
-    node->name = name;
+  static Expr make(Var var) {
+    VarExpr *node = new VarExpr;
+    node->type = var.type;
+    node->var = var;
     return node;
   }
 };
@@ -373,12 +403,12 @@ struct Div : public ExprNode<Div> {
 
 // Statements
 struct AssignStmt : public StmtNode<AssignStmt> {
-  std::string name;
+  Var var;
   Expr value;
 
-  static Stmt make(std::string name, Expr value) {
+  static Stmt make(Var var, Expr value) {
     AssignStmt *node = new AssignStmt;
-    node->name = name;
+    node->var = var;
     node->value = value;
     return node;
   }
@@ -503,8 +533,8 @@ namespace {
 // Content struct to make it cheap to copy the function to pass it around.
 struct FuncContent {
   std::string name;
-  std::vector<Expr> arguments;
-  std::vector<Expr> results;
+  std::vector<Var> arguments;
+  std::vector<Var> results;
   Stmt body;
 
   mutable long ref = 0;
@@ -517,8 +547,8 @@ class Func : public util::IntrusivePtr<FuncContent> {
 public:
   Func() : IntrusivePtr() {}
 
-  Func(const std::string &name, const std::vector<Expr> &arguments,
-       const std::vector<Expr> &results, Stmt body)
+  Func(const std::string &name, const std::vector<Var> &arguments,
+       const std::vector<Var> &results, Stmt body)
       : IntrusivePtr(new FuncContent) {
     ptr->name = name;
     ptr->arguments = arguments;
@@ -527,8 +557,8 @@ public:
   }
 
   std::string getName() const {return ptr->name;}
-  const std::vector<Expr> &getArguments() const {return ptr->arguments;}
-  const std::vector<Expr> &getResults() const {return ptr->results;}
+  const std::vector<Var> &getArguments() const {return ptr->arguments;}
+  const std::vector<Var> &getResults() const {return ptr->results;}
   Stmt getBody() const {return ptr->body;}
 
   void accept(IRVisitor *visitor) const { visitor->visit(this); };

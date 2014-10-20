@@ -47,8 +47,8 @@ ir::Type simitType(const llvm::Type *type);
 
 /// Creates an empy llvm function.
 llvm::Function *createFunction(const std::string &name,
-                               const std::vector<ir::Expr> &args,
-                               const std::vector<ir::Expr> &results,
+                               const std::vector<ir::Var> &args,
+                               const std::vector<ir::Var> &results,
                                llvm::Module *module);
 
 }} // namespace simit::internal

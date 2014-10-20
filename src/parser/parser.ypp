@@ -167,6 +167,9 @@
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
+  ir::Var                       *var;
+  std::vector<ir::Var>          *vars;
+
   ir::Stmt                      *stmt;
   std::vector<ir::Stmt>         *stmts;
   ir::Expr                      *expr;
@@ -290,11 +293,12 @@ program_element
   | test
 
 // Externs
-%type <expr> extern;
+%type <var> extern;
 extern
   : "extern" argument_decl ";" {
-    Expr externVariable = convertAndDelete($argument_decl);
-    ctx->addExtern(externVariable);
+    Var externVar = convertAndDelete($argument_decl);
+    ctx->addExtern(externVar);
+    ctx->addSymbol(externVar);
   }
 
 
@@ -345,17 +349,17 @@ procedure
 procedure_header
   : "proc" IDENT {
     std::string name = convertAndFree($IDENT);
-    auto arguments = vector<Expr>();
-    auto results = vector<Expr>();
+    auto arguments = vector<Var>();
+    auto results = vector<Var>();
 
     for (auto &extPair : ctx->getExterns()) {
-      Expr ext = extPair.second;
+      Var ext = ctx->getExtern(extPair.first);
 
       // TODO: Replace extResult with mutable parameters
       results.push_back(ext);
-
       arguments.push_back(ext);
-      ctx->addSymbol(to<Variable>(ext)->name, ext, ext);
+
+      ctx->addSymbol(ext);
     }
 
     $$ = new Func(name, arguments, results, Stmt());
@@ -373,42 +377,38 @@ function
 function_header
   : "func" IDENT "(" arguments ")" results {
     std::string name = convertAndFree($IDENT);
-    auto arguments = unique_ptr<vector<Expr>>($arguments);
-    auto results = unique_ptr<vector<Expr>>($results);
+    auto arguments = unique_ptr<vector<Var>>($arguments);
+    auto results = unique_ptr<vector<Var>>($results);
     $$ = new Func(name, *arguments, *results, Stmt());
 
-    std::set<std::string> argumentNames;
-    for (Expr &argument : *arguments) {
-      std::string argumentName = to<Variable>(argument)->name;
-      ctx->addSymbol(argumentName, argument, Expr());
-      argumentNames.insert(argumentName);
+    std::set<std::string> argNames;
+    for (Var &arg : *arguments) {
+      ctx->addSymbol(arg.name, arg, Symbol::Read);
+      argNames.insert(arg.name);
     }
 
-    for (auto result : *results) {
-      Expr readExpr;
-      std::string resultName = to<Variable>(result)->name;
-      if (argumentNames.find(resultName) != argumentNames.end()) {
-        readExpr = ctx->getSymbol(resultName).getReadExpr();
-      }
+    for (Var &res : *results) {
+      Symbol::Access access = (argNames.find(res.name) != argNames.end())
+                              ? Symbol::ReadWrite : Symbol::Write;
 
-      ctx->addSymbol(resultName, readExpr, result);
+      ctx->addSymbol(res.name, res, access);
     }
   }
 
-%type <exprs> arguments;
+%type <vars> arguments;
 arguments
   : /* empty */ {
-    $$ = new vector<Expr>;
+    $$ = new vector<Var>;
   }
   | argument_list {
     $$ = $1;
  }
 
-%type <exprs> argument_list;
+%type <vars> argument_list;
 argument_list
   : argument_decl {
     auto argument = convertAndDelete($argument_decl);
-    $$ = new vector<Expr>;
+    $$ = new vector<Var>;
     $$->push_back(argument);
   }
   | argument_list "," argument_decl {
@@ -417,29 +417,29 @@ argument_list
     $$->push_back(argument);
   }
 
-%type <expr> argument_decl;
+%type <var> argument_decl;
 argument_decl
   : IDENT ":" type {
     std::string name = convertAndFree($IDENT);
 
     auto type = convertAndDelete($type);
-    $$ = new Expr(Variable::make(name, type));
+    $$ = new Var(name, type);
   }
 
-%type <exprs> results;
+%type <vars> results;
 results
   : /* empty */ {
-    $$ = new vector<Expr>();
+    $$ = new vector<Var>;
   }
   | RARROW "(" result_list ")" {
     $$ = $3;
   }
 
-%type <exprs> result_list;
+%type <vars> result_list;
 result_list
   : result_decl {
     auto result = convertAndDelete($result_decl);
-    $$ = new vector<Expr>;
+    $$ = new vector<Var>;
     $$->push_back(result);
   }
   | result_list "," result_decl {
@@ -448,12 +448,12 @@ result_list
     $$->push_back(result);
   }
 
-%type <expr> result_decl;
+%type <var> result_decl;
 result_decl
   : IDENT ":" type {
     std::string name = convertAndFree($IDENT);
     auto type = convertAndDelete($type);
-    $$ = new Expr(Variable::make(name, type));
+    $$ = new Var(name, type);
   }
 
 
@@ -489,8 +489,22 @@ assign_stmt
     string name = convertAndFree($IDENT);
     Expr value = convertAndDelete($expr);
 
+    Var var;
+    if (ctx->hasSymbol(name)) {
+      Symbol symbol = ctx->getSymbol(name);
+
+      if (!symbol.isWritable()) {
+        REPORT_ERROR(name + " is not writable", @1);
+      }
+
+      var = symbol.getVar();
+    }
+    else {
+      var = Var(name, value.type());
+    }
+
     // TODO: Check valueNames.size() matches number of values produced by expr
-    ctx->addStatement(AssignStmt::make(name, value));
+    ctx->addStatement(AssignStmt::make(var, value));
   }
 
 field_write_stmt
@@ -509,7 +523,7 @@ field_write_stmt
       REPORT_ERROR(setName + " is not writable", @1);
     }
 
-    auto setExpr = setSymbol.getWriteExpr();
+    Expr setExpr = setSymbol.getExpr();
     ctx->addStatement(FieldWrite::make(setExpr, fieldName, value));
   }
 
@@ -531,7 +545,7 @@ tensor_write_stmt
       REPORT_ERROR(tensorName + " is not writable", @1);
     }
 
-    auto tensorExpr = tensorSymbol.getWriteExpr();
+    Expr tensorExpr = tensorSymbol.getExpr();
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
   | field_read_expr "(" expr_list ")" {
@@ -567,23 +581,25 @@ const_stmt
     auto type = convertAndDelete($tensor_type);
     const TensorType *tensorType = type.toTensor();
 
-    Expr literal = convertAndDelete($tensor_literal);
+    Expr literalExpr = convertAndDelete($tensor_literal);
 
-    assert(literal.type().isTensor() &&
+    assert(literalExpr.type().isTensor() &&
            "Only tensor literals are currently supported");
-    auto literalType = literal.type();
+    auto litType = literalExpr.type();
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
-    const TensorType *literalTensorType = literalType.toTensor();
-    if (tensorType->order() == 2 && literalTensorType->order() == 1) {
-      const_cast<Literal*>(to<Literal>(literal))->cast(type);
+    const TensorType *litTensorType = litType.toTensor();
+    if (tensorType->order() == 2 && litTensorType->order() == 1) {
+      const_cast<Literal*>(to<Literal>(literalExpr))->cast(type);
     }
 
     // Typecheck: value and literal types must be equivalent.
-    CHECK_TYPE_EQUALITY(type, literal.type(), @2);
+    CHECK_TYPE_EQUALITY(type, literalExpr.type(), @2);
 
-    ctx->addSymbol(name, literal);
+    Var var(name, type);
+    ctx->addConstant(var, literalExpr);
+    ctx->addSymbol(var);
   }
 
 %type <stmt> expr_stmt;
@@ -626,7 +642,8 @@ ident_expr
       REPORT_ERROR(ident + " is not readable", @1);
     }
 
-    $$ = new Expr(symbol.getReadExpr());
+    Expr expr = symbol.getExpr();
+    $$ = new Expr(expr);
   }
 
 
@@ -868,7 +885,7 @@ call_or_paren_read_expr
       }
 
       // The parenthesis read can read from a tensor or a tuple.
-      auto expr = symbol.getReadExpr();
+      auto expr = symbol.getExpr();
       if (expr.type().isTensor()) {
         $$ = new Expr(TensorRead::make(expr, *indices));
       }
@@ -1090,14 +1107,15 @@ index_set
   | IDENT {
     std::string setName = convertAndFree($IDENT);
 
-    if (!ctx->containsExtern(setName)) {
+    if (!ctx->hasSymbol(setName)) {
       REPORT_ERROR("the set has not been declared", @1);
     }
 
-    Expr set = ctx->getExtern(setName);
+    Expr set = ctx->getSymbol(setName).getExpr();
     if (!set.type().isSet()) {
       REPORT_ERROR("an index set must be a set, a range or dynamic (*)", @1);
     }
+
     $$ = new IndexSet(set);
   }
   | expr ":" expr {

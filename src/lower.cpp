@@ -30,8 +30,12 @@ private:
       igraph = SIG(op->indexVars[0]);
     }
     else if (op->indexVars.size() >= 2) {
-      const Variable *var = to<Variable>(op->tensor);
-      igraph = SIG(var->name, op->indexVars);
+      // TODO: This does not have to be a variable
+      const VarExpr *varExpr = to<VarExpr>(op->tensor);
+
+      cout << op->tensor << endl;
+
+      igraph = SIG(varExpr->var.name, op->indexVars);
     }
   }
 

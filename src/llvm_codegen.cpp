@@ -93,13 +93,13 @@ ir::Type simitType(const llvm::Type *type) {
 }
 
 namespace {
-void llvmArgument(ir::Expr arg, std::vector<std::string> *names,
+void llvmArgument(ir::Var arg, std::vector<std::string> *names,
                   std::vector<llvm::Type*> *types) {
-  switch (arg.type().kind()) {
+  switch (arg.type.kind()) {
     case ir::Type::Scalar: // fall-through
     case ir::Type::Tensor: {
-      names->push_back(ir::to<ir::Variable>(arg)->name);
-      types->push_back(llvmPtrType(arg.type()));
+      names->push_back(arg.name);
+      types->push_back(llvmPtrType(arg.type));
       break;
     }
     case ir::Type::Element: {
@@ -107,13 +107,13 @@ void llvmArgument(ir::Expr arg, std::vector<std::string> *names,
       break;
     }
     case ir::Type::Set: {
-      names->push_back(ir::to<ir::Variable>(arg)->name);
+      names->push_back(arg.name);
       types->push_back(LLVM_INT32);
 
       // Emit one function argument per set field
-      const ir::SetType *type = arg.type().toSet();
+      const ir::SetType *type = arg.type.toSet();
       for (auto &field : type->elementType.toElement()->fields) {
-        names->push_back(ir::to<ir::Variable>(arg)->name + "." + field.first);
+        names->push_back(arg.name +"."+ field.first);
         types->push_back(llvmPtrType(field.second));
       }
       break;
@@ -125,20 +125,20 @@ void llvmArgument(ir::Expr arg, std::vector<std::string> *names,
   }
 }
 
-void llvmArguments(const std::vector<ir::Expr> &arguments,
-                   const std::vector<ir::Expr> &results,
+void llvmArguments(const std::vector<ir::Var> &arguments,
+                   const std::vector<ir::Var> &results,
                    std::vector<std::string> *llvmArgNames,
                    std::vector<llvm::Type*> *llvmArgTypes) {
   // We don't need two llvm arguments for aliased simit argument/results
   std::set<std::string> argNames;
 
   for (auto &arg : arguments) {
-    argNames.insert(ir::to<ir::Variable>(arg)->name);
+    argNames.insert(arg.name);
     llvmArgument(arg, llvmArgNames, llvmArgTypes);
   }
 
   for (auto &res : results) {
-    if (argNames.find(ir::to<ir::Variable>(res)->name) != argNames.end()) {
+    if (argNames.find(res.name) != argNames.end()) {
       continue;
     }
     llvmArgument(res, llvmArgNames, llvmArgTypes);
@@ -149,8 +149,8 @@ void llvmArguments(const std::vector<ir::Expr> &arguments,
 
 
 llvm::Function *createFunction(const std::string &name,
-                               const vector<ir::Expr> &args,
-                               const vector<ir::Expr> &results,
+                               const vector<ir::Var> &args,
+                               const vector<ir::Var> &results,
                                llvm::Module *module) {
   vector<string>      llvmArgNames;
   vector<llvm::Type*> llvmArgTypes;

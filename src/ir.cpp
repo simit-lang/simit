@@ -16,6 +16,9 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+// class Expr
+Expr::Expr(const Var &var) : Expr(VarExpr::make(var)) {}
+
 static size_t getTensorByteSize(const TensorType *tensorType) {
   return tensorType->size() * tensorType->componentType.toScalar()->bytes();
 }

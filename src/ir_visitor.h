@@ -8,7 +8,7 @@ namespace simit {
 namespace ir {
 
 struct Literal;
-struct Variable;
+struct VarExpr;
 struct Result;
 struct FieldRead;
 struct TensorRead;
@@ -46,7 +46,7 @@ public:
   virtual ~IRVisitor();
 
   virtual void visit(const Literal *op);
-  virtual void visit(const Variable *op);
+  virtual void visit(const VarExpr *op);
   virtual void visit(const Result *op);
   virtual void visit(const FieldRead *op);
   virtual void visit(const TensorRead *op);

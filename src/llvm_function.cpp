@@ -52,8 +52,8 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
   }
   else {
     std::string name = string(llvmFunc->getName()) + "_harness";
-    std::vector<ir::Expr> noArgs;
-    std::vector<ir::Expr> noResults;
+    std::vector<ir::Var> noArgs;
+    std::vector<ir::Var> noResults;
     llvm::Function *harness = createFunction(name, noArgs, noResults, module);
     auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
 

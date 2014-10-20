@@ -12,7 +12,7 @@ IRVisitor::~IRVisitor() {
 void IRVisitor::visit(const Literal *op) {
 }
 
-void IRVisitor::visit(const Variable *op) {
+void IRVisitor::visit(const VarExpr *op) {
 }
 
 void IRVisitor::visit(const Result *op) {
@@ -112,12 +112,6 @@ void IRVisitor::visit(const Pass *op) {
 }
 
 void IRVisitor::visit(const Func *op) {
-  for (auto &argument : op->getArguments()) {
-    argument.accept(this);
-  }
-  for (auto &result : op->getResults()) {
-    result.accept(this);
-  }
   op->getBody().accept(this);
 }
 
