@@ -164,8 +164,9 @@ void IRPrinter::visit(const IndexedTensor *op) {
 }
 
 void IRPrinter::visit(const IndexExpr *op) {
-  os << "(" + simit::util::join(op->resultVars, ",") + ") ";
+  os << "((" + simit::util::join(op->resultVars, ",") + ") ";
   print(op->value);
+  os << ")";
 }
 
 void IRPrinter::visit(const Call *op) {

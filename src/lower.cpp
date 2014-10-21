@@ -101,15 +101,19 @@ private:
     assert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
-    cout << *op << endl;
     Var var = op->var;
-
     Expr value = mutate(indexExpr);
+
     if (indexExpr->resultVars.size() == 0) {
       stmt = AssignStmt::make(var, value);
     }
     else {
-      NOT_SUPPORTED_YET;
+      Expr varExpr = VarExpr::make(var);
+      std::vector<Expr> indices;
+      for (IndexVar const& iv : indexExpr->resultVars) {
+        indices.push_back(lvs.getVar(iv));
+      }
+      stmt = TensorWrite::make(varExpr, indices, value);
     }
   }
 
@@ -225,7 +229,7 @@ private:
 
 Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
-  cout << ud << endl;
+//  cout << ud << endl;
   return LowerIndexExpressions(&ud).mutate(func);
 }
 }}
