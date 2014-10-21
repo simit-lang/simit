@@ -88,7 +88,7 @@ Type blockType(Expr tensor) {
   Type blockType;
   // TODO: The below test can't be right...
   if (numNests) {
-    blockType = type->componentType;
+    blockType = TensorType::make(type->componentType);
   }
   else {
     for (auto &dim : dimensions) {
