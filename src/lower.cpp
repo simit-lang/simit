@@ -97,17 +97,34 @@ public:
 private:
   const LoopVars &lvs;
 
-  void visit(const IndexExpr *op) {
-    expr = mutate(op->value);
+  void visit(const AssignStmt *op) {
+    assert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
+    const IndexExpr *indexExpr = to<IndexExpr>(op->value);
+
+    cout << *op << endl;
+    Var var = op->var;
+
+    Expr value = mutate(indexExpr);
+    if (indexExpr->resultVars.size() == 0) {
+      stmt = AssignStmt::make(var, value);
+    }
+    else {
+      NOT_SUPPORTED_YET;
+    }
   }
 
   void visit(const IndexedTensor *op) {
     if (isa<VarExpr>(op->tensor)) {
-      std::vector<Expr> indices;
-      for (IndexVar const& iv : op->indexVars) {
-        indices.push_back(lvs.getVar(iv));
+      if (op->indexVars.size() == 0) {
+        expr = op->tensor;
       }
-      expr = TensorRead::make(op->tensor, indices);
+      else {
+        std::vector<Expr> indices;
+        for (IndexVar const& iv : op->indexVars) {
+          indices.push_back(lvs.getVar(iv));
+        }
+        expr = TensorRead::make(op->tensor, indices);
+      }
     }
     else {
       op->tensor.accept(this);
@@ -115,6 +132,10 @@ private:
       expr = op;
       NOT_SUPPORTED_YET;
     }
+  }
+
+  void visit(const IndexExpr *op) {
+    expr = mutate(op->value);
   }
 };
 

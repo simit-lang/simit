@@ -160,9 +160,7 @@ void IRPrinter::visit(const Map *op) {
 
 void IRPrinter::visit(const IndexedTensor *op) {
   print(op->tensor);
-  if (op->indexVars.size() > 0) {
-    os << "(" << util::join(op->indexVars,",") << ")";
-  }
+  os << "(" << util::join(op->indexVars,",") << ")";
 }
 
 void IRPrinter::visit(const IndexExpr *op) {

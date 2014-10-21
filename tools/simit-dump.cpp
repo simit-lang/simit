@@ -169,8 +169,10 @@ int main(int argc, const char* argv[]) {
 
     // Lower while printing lowered results
     cout << endl;
+    cout << "-- Compiling " << function << endl;
+
     func = lowerIndexExpressions(func);
-    cout << endl << "-- After lowering Index Expressions:" << endl;
+    cout << "--- After lowering Index Expressions:" << endl;
     cout << func << endl;
 
 //    if (emitLLVM) {

@@ -70,6 +70,7 @@ Type fieldType(Expr elementOrSet, std::string fieldName) {
   return fieldType;
 }
 
+// TODO: The logic in this function is wacky and doesn't work with nests
 Type blockType(Expr tensor) {
   assert(tensor.type().isTensor());
 
@@ -88,7 +89,6 @@ Type blockType(Expr tensor) {
   }
 
   Type blockType;
-  // TODO: The below test can't be right...
   if (numNests) {
     blockType = TensorType::make(type->componentType);
   }

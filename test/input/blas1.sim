@@ -17,8 +17,8 @@ func scaler(a : tensor[3](float), b : float) -> (c : tensor[3](float))
 end
 
 %%% add-scalar
-%! add(3.0, [0.0, 1.0, 4.0]) == [3.0, 4.0, 7.0];
-func add(a : float, b : tensor[3](float)) -> (c : tensor[3](float))
+%! adds(3.0, [0.0, 1.0, 4.0]) == [3.0, 4.0, 7.0];
+func adds(a : float, b : tensor[3](float)) -> (c : tensor[3](float))
   c = a+b;
 end
 

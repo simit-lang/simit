@@ -6,8 +6,8 @@ func neg(a : float) -> (c : float)
 end
 
 %%% neg-int
-%! neg(42) == -42;
-func neg(a : int) -> (c : int)
+%! negi(42) == -42;
+func negi(a : int) -> (c : int)
   c = -a;
 end
 
