@@ -20,11 +20,9 @@ std::vector<T> toVectorOf(Expr expr) {
   const Literal *lit = dynamic_cast<const Literal*>(expr.expr());
   assert(lit);
 
-  assert(lit->type.isScalar() || lit->type.isTensor());
-  size_t size = (lit->type.isScalar()) ? 1 : lit->type.toTensor()->size();
-
+  assert(lit->type.isTensor());
   T *vals = static_cast<T*>(lit->data);
-  vec.assign(vals, vals + size);
+  vec.assign(vals, vals + lit->type.toTensor()->size());
   return vec;
 }
 

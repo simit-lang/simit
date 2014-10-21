@@ -66,7 +66,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmFunc->getArgumentList()) {
     // Load scalar arguments
     if (i++ < simitArgs.size()) {
-      if (simitArgs[i-1].type.isScalar()) {
+      if (isScalarTensor(simitArgs[i-1].type)) {
         string valName = string(arg.getName()) + VAL_SUFFIX;
         llvm::Value *val = builder->CreateLoad(&arg, valName);
         symtable.insert(arg.getName(), val);
@@ -142,18 +142,11 @@ void LLVMBackend::visit(const Call *op) {
   
   // compile arguments first
   for (auto a: op->actuals) {
-    assert(a.type().isScalar());
-    switch (a.type().toScalar()->kind) {
-      case ScalarType::Float:
-        argTypes.push_back(LLVM_DOUBLE);
-        break;
-      case ScalarType::Int:
-        argTypes.push_back(LLVM_INT);
-        break;
-    }
+    assert(isScalarTensor(a.type()));
+    argTypes.push_back(llvmType(a.type().toTensor()->componentType));
     args.push_back(compile(a));
   }
-  
+
   // these are intrinsic functions
   if (op->function == "sin" && op->kind == Call::Intrinsic) {
     fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sin, argTypes);
@@ -188,15 +181,18 @@ void LLVMBackend::visit(const Call *op) {
 }
 
 void LLVMBackend::visit(const Neg *op) {
+  assert(isScalarTensor(op->type));
+
   cout << "Neg" << endl;
 }
 
 void LLVMBackend::visit(const Add *op) {
+  assert(isScalarTensor(op->type));
+
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
 
-  assert(op->type.isScalar());
-  switch (op->type.toScalar()->kind) {
+  switch (op->type.toTensor()->componentType.kind) {
     case ScalarType::Int:
       val = builder->CreateAdd(a, b);
       break;
@@ -207,14 +203,20 @@ void LLVMBackend::visit(const Add *op) {
 }
 
 void LLVMBackend::visit(const Sub *op) {
+  assert(isScalarTensor(op->type));
+
   cout << "Sub" << endl;
 }
 
 void LLVMBackend::visit(const Mul *op) {
+  assert(isScalarTensor(op->type));
+
   cout << "Mul" << endl;
 }
 
 void LLVMBackend::visit(const Div *op) {
+  assert(isScalarTensor(op->type));
+
   cout << "Div" << endl;
 }
 

@@ -62,7 +62,6 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
       assert(actuals.find(formal) != actuals.end());
       Actual &actual = actuals.at(formal);
       switch (actual.getType().kind()) {
-        case ir::Type::Scalar: // fall-through
         case ir::Type::Tensor: {
           auto actualPtr = ir::to<ir::Literal>(actual.getTensor()->expr());
           args.push_back(llvmPtr(const_cast<ir::Literal*>(actualPtr)));

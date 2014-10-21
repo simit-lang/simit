@@ -24,8 +24,6 @@ bool operator==(const Type& l, const Type& r) {
   }
 
   switch (l.kind()) {
-    case Type::Scalar:
-      return *l.toScalar() == *r.toScalar();
     case Type::Tensor:
       return *l.toTensor() == *r.toTensor();
     case Type::Element:
@@ -99,8 +97,6 @@ bool operator!=(const TupleType &l, const TupleType &r) {
 
 std::ostream &operator<<(std::ostream &os, const Type &type) {
   switch (type.kind()) {
-    case Type::Scalar:
-      return os << *type.toScalar();
     case Type::Tensor:
       return os << *type.toTensor();
     case Type::Element:

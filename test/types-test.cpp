@@ -18,7 +18,6 @@ TEST(IndexSet, eq) {
   ASSERT_EQ(r0, r0);
   ASSERT_EQ(r0, IndexSet(4));
   ASSERT_NE(r0, IndexSet(8));
-  // TODO: Add tests for SET, VARIABLE and combinations
 }
 
 TEST(IndexDomain, getSize) {
@@ -32,7 +31,6 @@ TEST(IndexDomain, getSize) {
 
   indices.push_back(IndexSet(4));
   ASSERT_EQ(IndexDomain(indices).getSize(), 12u);
-  // TODO: Add tests for SET, VARIABLE and combinations
 }
 
 TEST(IndexDomain, eq) {
@@ -54,8 +52,6 @@ TEST(IndexDomain, eq) {
   indices1.pop_back();
   indices1.push_back(IndexSet(3));
   ASSERT_NE(IndexDomain(indices0), IndexDomain(indices1));
-
-  // TODO: Add tests for SET, VARIABLE and combinations
 }
 
 TEST(Type, getSize) {
@@ -71,8 +67,8 @@ TEST(Type, getSize) {
   indices1.push_back(IndexSet(7));
   dimensions.push_back(IndexDomain(indices1));
 
-  ASSERT_EQ(TensorType::make(Float(64), dimensions).toTensor()->size(), 210u);
-  // TODO: Add tests for SET, VARIABLE and combinations
+  Type type = TensorType::make(ScalarType(ScalarType::Float, 64), dimensions);
+  ASSERT_EQ(type.toTensor()->size(), 210u);
 }
 
 TEST(Type, eq) {
@@ -85,15 +81,14 @@ TEST(Type, eq) {
   idxs0.push_back(IndexSet(3));
   dims0.push_back(IndexDomain(idxs0));
   dims1.push_back(IndexDomain(idxs0));
-  ASSERT_EQ(TensorType::make(Float(64), dims0),
-            TensorType::make(Float(64), dims1));
-  ASSERT_NE(TensorType::make(Float(64), dims0),
-            TensorType::make(Int(32), dims1));
+  ASSERT_EQ(TensorType::make(ScalarType(ScalarType::Float, 64), dims0),
+            TensorType::make(ScalarType(ScalarType::Float, 64), dims1));
+  ASSERT_NE(TensorType::make(ScalarType(ScalarType::Float, 64), dims0),
+            TensorType::make(ScalarType(ScalarType::Int, 32), dims1));
 
   idxs1.push_back(IndexSet(3));
   idxs1.push_back(IndexSet(2));
   dims1.push_back(IndexDomain(idxs1));
-  ASSERT_NE(TensorType::make(Float(64), dims0),
-            TensorType::make(Float(64), dims1));
-  // TODO: Add tests for SET, VARIABLE and combinations
+  ASSERT_NE(TensorType::make(ScalarType(ScalarType::Float, 64), dims0),
+            TensorType::make(ScalarType(ScalarType::Float, 64), dims1));
 }

@@ -31,18 +31,18 @@
 // version 2.2 of Bison.
 
 /**
- ** \file stack.hh
+ ** \file /Users/fred/projects/sim/simit/src/parser/stack.hh
  ** Define the  simit::internal ::stack class.
  */
 
-#ifndef YY_YY_STACK_HH_INCLUDED
-# define YY_YY_STACK_HH_INCLUDED
+#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_STACK_HH_INCLUDED
+# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_STACK_HH_INCLUDED
 
 # include <vector>
 
-
+#line 5 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // stack.hh:133
 namespace  simit { namespace internal  {
-
+#line 46 "/Users/fred/projects/sim/simit/src/parser/stack.hh" // stack.hh:133
   template <class T, class S = std::vector<T> >
   class stack
   {
@@ -151,8 +151,8 @@ namespace  simit { namespace internal  {
     unsigned int range_;
   };
 
-
+#line 5 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // stack.hh:133
 } } //  simit::internal 
+#line 157 "/Users/fred/projects/sim/simit/src/parser/stack.hh" // stack.hh:133
 
-
-#endif // !YY_YY_STACK_HH_INCLUDED
+#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_STACK_HH_INCLUDED

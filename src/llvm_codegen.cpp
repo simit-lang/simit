@@ -19,8 +19,8 @@ llvm::ConstantInt* llvmUInt32(unsigned val) {
                                 llvm::APInt(32,(uint64_t)val, false));
 }
 
-llvm::Type *llvmType(const ir::ScalarType *stype) {
-  switch (stype->kind) {
+llvm::Type *llvmType(ir::ScalarType stype) {
+  switch (stype.kind) {
     case ir::ScalarType::Int:
       return LLVM_INT;
     case ir::ScalarType::Float:
@@ -28,8 +28,8 @@ llvm::Type *llvmType(const ir::ScalarType *stype) {
   }
 }
 
-llvm::Type *llvmPtrType(const ir::ScalarType *stype) {
-  switch (stype->kind) {
+llvm::Type *llvmPtrType(ir::ScalarType stype) {
+  switch (stype.kind) {
     case ir::ScalarType::Int:
       return LLVM_INTPTR;
     case ir::ScalarType::Float:
@@ -38,14 +38,11 @@ llvm::Type *llvmPtrType(const ir::ScalarType *stype) {
 }
 
 llvm::Type *llvmPtrType(const ir::TensorType *ttype) {
-  return llvmPtrType(ttype->componentType.toScalar());
+  return llvmPtrType(ttype->componentType);
 }
 
 llvm::Type *llvmPtrType(const ir::Type &type){
   switch (type.kind()) {
-    case ir::Type::Scalar:
-      return llvmPtrType(type.toScalar());
-      break;
     case ir::Type::Tensor:
       return llvmPtrType(type.toTensor());
       break;
@@ -72,7 +69,7 @@ llvm::Constant *llvmPtr(const ir::Type &type, void *data) {
 }
 
 llvm::Constant *llvmPtr(simit::ir::Literal *literal) {
-  assert(literal->type.isTensor() || literal->type.isScalar());
+  assert(literal->type.isTensor());
   return llvmPtr(literal->type, literal->data);
 }
 
@@ -96,7 +93,6 @@ namespace {
 void llvmArgument(ir::Var arg, std::vector<std::string> *names,
                   std::vector<llvm::Type*> *types) {
   switch (arg.type.kind()) {
-    case ir::Type::Scalar: // fall-through
     case ir::Type::Tensor: {
       names->push_back(arg.name);
       types->push_back(llvmPtrType(arg.type));

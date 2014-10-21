@@ -61,13 +61,13 @@ void Function::bind(const std::string &argName, SetBase *set) {
     const SetBase::FieldData::TensorType *setFieldType = fieldData->type;
     const ir::TensorType *argFieldType = argFieldsMap.at(field.first).toTensor();
 
-    ir::Type setFieldTypeComponentType;
+    ir::ScalarType setFieldTypeComponentType;
     switch (setFieldType->getComponentType()) {
       case ComponentType::INT:
-        setFieldTypeComponentType = ir::Int(32);
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Int, 32);
         break;
       case ComponentType::FLOAT:
-        setFieldTypeComponentType = ir::Float(32);
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float, 32);
         break;
     }
 

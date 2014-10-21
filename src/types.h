@@ -21,9 +21,8 @@ struct TupleType;
 
 class Type {
 public:
-  enum Kind {Scalar, Tensor, Element, Set, Tuple};
+  enum Kind {Tensor, Element, Set, Tuple};
   Type() : ptr(nullptr) {}
-  Type(ScalarType *scalar);
   Type(TensorType *tensor);
   Type(ElementType *element);
   Type(SetType *set);
@@ -33,13 +32,11 @@ public:
 
   Kind kind() const { return _kind; }
 
-  bool isScalar()  const { return _kind==Scalar; }
   bool isTensor()  const { return _kind==Tensor; }
   bool isElement() const { return _kind==Element; }
   bool isSet()     const { return _kind==Set; }
   bool isTuple()   const { return _kind==Tuple; }
 
-  const ScalarType  *toScalar()  const { assert(isScalar());  return scalar; }
   const TensorType  *toTensor()  const { assert(isTensor());  return tensor; }
   const ElementType *toElement() const { assert(isElement()); return element; }
   const SetType     *toSet()     const { assert(isSet());     return set; }
@@ -48,7 +45,6 @@ public:
 private:
   Kind _kind;
   union {
-    ScalarType  *scalar;
     TensorType  *tensor;
     ElementType *element;
     SetType     *set;
@@ -57,35 +53,23 @@ private:
   std::shared_ptr<TypeNode> ptr;
 };
 
-struct ScalarType : TypeNode {
-  enum Kind { Int, Float };
-  Kind kind;
+struct ScalarType {
+  enum Kind {Int, Float};
 
+  ScalarType() : kind(Int), bits(0) {}
+  ScalarType(Kind kind, int bits) : kind(kind), bits(bits) {}
+
+  Kind kind;
   int bits;
 
   int bytes() const { return (bits + 7) / 8; }
 
   bool isInt () const { return kind == Int; }
   bool isFloat() const { return kind == Float; }
-
-  static Type make(Kind kind, int bits) {
-    ScalarType *type = new ScalarType;
-    type->kind = kind;
-    type->bits = bits;
-    return type;
-  }
 };
 
-inline Type Int(int bits) {
-  return ScalarType::make(ScalarType::Int, bits);
-}
-
-inline Type Float(int bits) {
-  return ScalarType::make(ScalarType::Float, bits);
-}
-
 struct TensorType : TypeNode {
-  Type componentType;
+  ScalarType componentType;
   std::vector<IndexDomain> dimensions;
 
   /// Marks whether the tensor type is a column vector.  This information is
@@ -95,15 +79,13 @@ struct TensorType : TypeNode {
   size_t order() const { return dimensions.size(); }
   size_t size() const;
 
-  static Type make(Type componentType) {
-    assert(componentType.isScalar());
+  static Type make(ScalarType componentType) {
     std::vector<IndexDomain> dimensions;
     return TensorType::make(componentType, dimensions);
   }
 
-  static Type make(Type componentType, std::vector<IndexDomain> dimensions,
+  static Type make(ScalarType componentType, std::vector<IndexDomain> dimensions,
                    bool isColumnVector = false) {
-    assert(componentType.isScalar());
     TensorType *type = new TensorType;
     type->componentType = componentType;
     type->dimensions = dimensions;
@@ -111,6 +93,14 @@ struct TensorType : TypeNode {
     return type;
   }
 };
+
+inline Type Int(int bits) {
+  return TensorType::make(ScalarType(ScalarType::Int, bits));
+}
+
+inline Type Float(int bits) {
+  return TensorType::make(ScalarType(ScalarType::Float, bits));
+}
 
 struct ElementType : TypeNode {
   std::string name;
@@ -150,8 +140,6 @@ struct TupleType : TypeNode {
 
 
 // Type functions
-inline Type::Type(ScalarType *scalar)
-    : _kind(Scalar), scalar(scalar), ptr(scalar) {}
 inline Type::Type(TensorType *tensor)
     : _kind(Tensor), tensor(tensor), ptr(tensor) {}
 inline Type::Type(ElementType *element)
@@ -160,6 +148,10 @@ inline Type::Type(SetType *set)
     : _kind(Set), set(set), ptr(set) {}
 inline Type::Type(TupleType *tuple)
     : _kind(Tuple), tuple(tuple), ptr(tuple) {}
+
+inline bool isScalarTensor(Type type) {
+  return type.kind()==Type::Tensor && type.toTensor()->order() == 0;
+}
 
 bool operator==(const Type &, const Type &);
 bool operator!=(const Type &, const Type &);

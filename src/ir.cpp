@@ -20,7 +20,7 @@ namespace ir {
 Expr::Expr(const Var &var) : Expr(VarExpr::make(var)) {}
 
 static size_t getTensorByteSize(const TensorType *tensorType) {
-  return tensorType->size() * tensorType->componentType.toScalar()->bytes();
+  return tensorType->size() * tensorType->componentType.bytes();
 }
 
 // class Expr
@@ -75,7 +75,9 @@ Type blockType(Expr tensor) {
 
   const TensorType *type = tensor.type().toTensor();
   const std::vector<IndexDomain> &dimensions = type->dimensions;
-  assert(dimensions.size() > 0);
+  if (dimensions.size() == 0) {
+    return TensorType::make(type->componentType);
+  }
 
   std::vector<IndexDomain> blockDimensions;
 
@@ -104,12 +106,12 @@ Type blockType(Expr tensor) {
 }
 
 Type indexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
-  assert(expr.type().isScalar());
+  assert(isScalarTensor(expr.type()));
   std::vector<IndexDomain> dimensions;
   for (auto &indexVar : lhsIndexVars) {
     dimensions.push_back(indexVar.getDomain());
   }
-  return TensorType::make(expr.type(), dimensions);
+  return TensorType::make(expr.type().toTensor()->componentType, dimensions);
 }
 
 // struct Literal

@@ -62,23 +62,14 @@ void IRPrinter::print(const IRNode &node) {
 void IRPrinter::visit(const Literal *op) {
   // TODO: Fix value printing to print matrices and tensors properly
   switch (op->type.kind()) {
-    case Type::Scalar: // fall-through
     case Type::Tensor: {
-
-
       size_t size;
       ScalarType::Kind componentType;
-      if (op->type.kind() == Type::Scalar) {
-        const ScalarType *type = op->type.toScalar();
-        size = 1;
-        componentType = type->kind;
-      }
-      else {
-        assert(op->type.kind() == Type::Tensor);
-        const TensorType *type = op->type.toTensor();
-        size = type->size();
-        componentType = type->componentType.toScalar()->kind;
-      }
+
+      assert(op->type.kind() == Type::Tensor);
+      const TensorType *type = op->type.toTensor();
+      size = type->size();
+      componentType = type->componentType.kind;
 
       switch (componentType) {
         case ScalarType::Int: { {

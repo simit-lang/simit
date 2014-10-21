@@ -139,12 +139,9 @@ struct Literal : public ExprNode<Literal> {
   static Expr make(Type type, void *values) {
     size_t size = 0;
     switch (type.kind()) {
-      case Type::Scalar:
-        size = type.toScalar()->bytes();
-        break;
       case Type::Tensor: {
           const TensorType *ttype = type.toTensor();
-          size = ttype->size() * ttype->componentType.toScalar()->bytes();
+          size = ttype->size() * ttype->componentType.bytes();
         break;
       }
       case Type::Element:
@@ -168,7 +165,7 @@ struct Literal : public ExprNode<Literal> {
   }
 
   static Expr make(Type type, std::vector<double> values) {
-    assert(type.isScalar() || type.toTensor()->size() == values.size());
+    assert(isScalarTensor(type) || type.toTensor()->size() == values.size());
     return Literal::make(type, values.data());
   }
 
@@ -272,7 +269,7 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
     }
 
     IndexedTensor *node = new IndexedTensor;
-    node->type = tensor.type().toTensor()->componentType;
+    node->type = TensorType::make(tensor.type().toTensor()->componentType);
     node->tensor = tensor;
     node->indexVars = indexVars;
     return node;
@@ -286,7 +283,7 @@ struct IndexExpr : public ExprNode<IndexExpr> {
   std::vector<IndexVar> domain() const;
 
   static Expr make(std::vector<IndexVar> resultVars, Expr value) {
-    assert(value.type().isScalar());
+    assert(isScalarTensor(value.type()));
     for (auto &idxVar : resultVars) {  // No reduction variables on lhs
       assert(idxVar.isFreeVar());
     }
@@ -319,7 +316,7 @@ struct Neg : public ExprNode<Neg> {
   Expr a;
 
   static Expr make(Expr a) {
-    assert(a.type().isScalar());
+    assert(isScalarTensor(a.type()));
 
     Neg *node = new Neg;
     node->type = a.type();
@@ -332,7 +329,7 @@ struct Add : public ExprNode<Add> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(a.type().isScalar());
+    assert(isScalarTensor(a.type()));
     assert(a.type() == b.type());
 
     Add *node = new Add;
@@ -347,7 +344,7 @@ struct Sub : public ExprNode<Sub> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(a.type().isScalar());
+    assert(isScalarTensor(a.type()));
     assert(a.type() == b.type());
 
     Sub *node = new Sub;
@@ -362,7 +359,7 @@ struct Mul : public ExprNode<Mul> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(a.type().isScalar());
+    assert(isScalarTensor(a.type()));
     assert(a.type() == b.type());
 
     Mul *node = new Mul;
@@ -377,7 +374,7 @@ struct Div : public ExprNode<Div> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(a.type().isScalar());
+    assert(isScalarTensor(a.type()));
     assert(a.type() == b.type());
 
     Div *node = new Div;

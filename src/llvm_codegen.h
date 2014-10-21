@@ -31,9 +31,9 @@ namespace internal {
 llvm::ConstantInt* llvmInt32(int val);
 llvm::ConstantInt* llvmUInt32(unsigned val);
 
-llvm::Type *llvmType(const ir::ScalarType *stype);
+llvm::Type *llvmType(ir::ScalarType stype);
 
-llvm::Type *llvmPtrType(const ir::ScalarType *stype);
+llvm::Type *llvmPtrType(ir::ScalarType stype);
 
 llvm::Type *llvmPtrType(const ir::TensorType *ttype);
 

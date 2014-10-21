@@ -167,6 +167,8 @@
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
+  ir::ScalarType                *scalarType;
+
   ir::Var                       *var;
   std::vector<ir::Var>          *vars;
 
@@ -1128,13 +1130,13 @@ index_set
     $$ = new IndexSet();
   }
 
-%type <type> component_type;
+%type <scalarType> component_type;
 component_type
   : INT {
-    $$ = new Type(Int(32));
+    $$ = new ScalarType(ScalarType::Int, 32);
   }
   | FLOAT {
-    $$ = new Type(Float(64));
+    $$ = new ScalarType(ScalarType::Float, 64);
   }
 
 
@@ -1200,14 +1202,14 @@ dense_tensor_literal
     auto values = unique_ptr<TensorValues<double>>($2);
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
-    Type type = TensorType::make(Float(64), idoms);
+    Type type = TensorType::make(ScalarType(ScalarType::Float, 64), idoms);
     $$ = new Expr(Literal::make(type, values->values.data()));
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
-    Type type = TensorType::make(Int(32), idoms);
+    Type type = TensorType::make(ScalarType(ScalarType::Int, 32), idoms);
     $$ = new Expr(Literal::make(type, values->values.data()));
   }
 
@@ -1333,11 +1335,11 @@ int_dense_vector_literal
 %type <expr> scalar_literal;
 scalar_literal
   : signed_int_literal {
-    auto scalarTensorType = TensorType::make(Int(32));
+    auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Int, 32));
     $$ = new Expr(Literal::make(scalarTensorType, &$1));
   }
   | signed_float_literal {
-    auto scalarTensorType = TensorType::make(Float(64));
+    auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Float, 64));
     $$ = new Expr(Literal::make(scalarTensorType, &$1));
   }
 

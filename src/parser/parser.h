@@ -31,16 +31,16 @@
 // version 2.2 of Bison.
 
 /**
- ** \file parser.h
+ ** \file /Users/fred/projects/sim/simit/src/parser/parser.h
  ** Define the  simit::internal ::parser class.
  */
 
 // C++ LALR(1) parser skeleton written by Akim Demaille.
 
-#ifndef YY_YY_PARSER_H_INCLUDED
-# define YY_YY_PARSER_H_INCLUDED
+#ifndef YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
+# define YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
 // //                    "%code requires" blocks.
-
+#line 10 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:372
 
   namespace simit {
   namespace internal {
@@ -55,7 +55,7 @@
   #include "errors.h"
   #include "types.h"
   #include "ir_builder.h"
-
+#line 1144 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:372
 
   namespace {
     template <typename T>
@@ -96,7 +96,7 @@
     };
   }
 
-
+#line 100 "/Users/fred/projects/sim/simit/src/parser/parser.h" // lalr1.cc:372
 
 
 # include <vector>
@@ -165,9 +165,9 @@
 # define YYDEBUG 0
 #endif
 
-
+#line 5 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:372
 namespace  simit { namespace internal  {
-
+#line 171 "/Users/fred/projects/sim/simit/src/parser/parser.h" // lalr1.cc:372
 
 
 
@@ -181,7 +181,7 @@ namespace  simit { namespace internal  {
     /// Symbol semantic values.
     union semantic_type
     {
-    
+    #line 157 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:372
 
   int         num;
   double      fnum;
@@ -194,6 +194,8 @@ namespace  simit { namespace internal  {
   std::map<std::string, ir::Type>  *fields;
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
+
+  ir::ScalarType                *scalarType;
 
   ir::Var                       *var;
   std::vector<ir::Var>          *vars;
@@ -208,7 +210,7 @@ namespace  simit { namespace internal  {
 
   std::vector<std::string> *strings;
 
-
+#line 214 "/Users/fred/projects/sim/simit/src/parser/parser.h" // lalr1.cc:372
     };
 #else
     typedef YYSTYPE semantic_type;
@@ -591,11 +593,11 @@ namespace  simit { namespace internal  {
   };
 
 
-
+#line 5 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:372
 } } //  simit::internal 
+#line 599 "/Users/fred/projects/sim/simit/src/parser/parser.h" // lalr1.cc:372
 
 
 
 
-
-#endif // !YY_YY_PARSER_H_INCLUDED
+#endif // !YY_YY_USERS_FRED_PROJECTS_SIM_SIMIT_SRC_PARSER_PARSER_H_INCLUDED
