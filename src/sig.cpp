@@ -15,15 +15,10 @@ std::ostream &operator<<(std::ostream &os, const SIGVertex &v) {
 }
 
 std::ostream &operator<<(std::ostream &os, const SIGEdge &e) {
-  return os << e.name << " (" << util::join(e.endpoints) << ")";
+  return os << e.edgeSet << " (" << util::join(e.endpoints) << ")";
 }
 
-SIG::SIG(const IndexVar &iv) : SIG() {
-  SIGVertex *v = new SIGVertex(iv);
-  content->vertices[iv] = unique_ptr<SIGVertex>(v);
-}
-
-SIG::SIG(string name, const vector<IndexVar> &ivs) : SIG() {
+SIG::SIG(const std::vector<IndexVar> &ivs, Expr setExpr) : SIG() {
   set<IndexVar> added;
   vector<SIGVertex*> endpoints;
 
@@ -37,8 +32,10 @@ SIG::SIG(string name, const vector<IndexVar> &ivs) : SIG() {
     }
   }
 
-  SIGEdge *e = new SIGEdge(name, endpoints);
-  content->edges[name] = unique_ptr<SIGEdge>(e);
+  if (setExpr.defined()) {
+    SIGEdge *e = new SIGEdge(setExpr, endpoints);
+    content->edges[setExpr] = unique_ptr<SIGEdge>(e);
+  }
 }
 
 // This can be optimized by exploiting immutability to preserve substructures
@@ -57,30 +54,30 @@ SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
     merged.content->vertices[iv] = unique_ptr<SIGVertex>(newVertex);
   }
 
-  map<string, vector<SIGVertex*>> edges;
+  map<Expr,vector<SIGVertex*>> edges;
 
   for (auto &e : g1.content->edges) {
-    const std::string &name = e.first;
+    Expr edgeSet = e.first;
     vector<SIGVertex*> endpoints;
     for (SIGVertex *g1v : e.second->endpoints) {
       endpoints.push_back(merged.content->vertices[g1v->iv].get());
     }
-    edges[name] = endpoints;
+    edges[edgeSet] = endpoints;
   }
 
   for (auto &e : g2.content->edges) {
-    const std::string &name = e.first;
+    Expr edgeSet = e.first;
     vector<SIGVertex*> endpoints;
     for (SIGVertex *g1v : e.second->endpoints) {
       endpoints.push_back(merged.content->vertices[g1v->iv].get());
     }
 
-    if (edges.find(name) == edges.end()) {
-      edges[name] = endpoints;
+    if (edges.find(edgeSet) == edges.end()) {
+      edges[edgeSet] = endpoints;
     }
     else {
       // Vertex identification/contraction
-      vector<SIGVertex*> &currEps = edges[name];
+      vector<SIGVertex*> &currEps = edges[edgeSet];
       currEps.insert(currEps.begin(), endpoints.begin(), endpoints.end());
     }
   }
@@ -119,20 +116,30 @@ std::ostream &operator<<(std::ostream &os, const SIG &g) {
   return os;
 }
 
-void SIGVisitor::apply(const SIG &sig) {
-  for (auto &v : sig.content->vertices) {
-    if (visitedVertices.find(v.second.get()) == visitedVertices.end()) {
-      visit(v.second.get());
-    }
+bool freeBeforeReductionVars(SIGVertex *i, SIGVertex *j) {
+  if (i->iv.isFreeVar() && j->iv.isReductionVar()) {
+    return true;
+  }
+  else if (i->iv.isReductionVar() && j->iv.isFreeVar()) {
+    return false;
+  }
+  else {
+    return (i->iv.getName() < j->iv.getName());
   }
 }
 
-void SIGVisitor::apply(const SIG &sig, const IndexVar &first) {
-  assert(sig.content->vertices.find(first) != sig.content->vertices.end());
-  visit(sig.content->vertices[first].get());
+void SIGVisitor::apply(const SIG &sig) {
+  std::vector<SIGVertex*> iterationOrder;
   for (auto &v : sig.content->vertices) {
-    if (visitedVertices.find(v.second.get()) == visitedVertices.end()) {
-      visit(v.second.get());
+    iterationOrder.push_back(v.second.get());
+  }
+
+  sort(iterationOrder.begin(), iterationOrder.end(), freeBeforeReductionVars);
+
+  // Iterate backwards to allow codegen to be done inside out
+  for (auto it = iterationOrder.rbegin(); it != iterationOrder.rend(); ++it) {
+    if (visitedVertices.find(*it) == visitedVertices.end()) {
+      visit(*it);
     }
   }
 }
@@ -151,6 +158,8 @@ void SIGVisitor::visit(const SIGVertex *v) {
 void SIGVisitor::visit(const SIGEdge *e) {
   visitedEdges.insert(e);
   edgePath.push_front(e);
+
+
   for (auto &v : e->endpoints) {
     if (visitedVertices.find(v) == visitedVertices.end()) {
       visit(v);

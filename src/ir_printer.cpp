@@ -294,7 +294,7 @@ void IRPrinter::visit(const Func *func) {
   if (func->getResults().size() > 0) {
     os << " -> (";
     const Var &res = func->getResults()[0];
-    os << res << " : " << res;
+    os << res << " : " << res.type;
 
     for (size_t i=1; i < func->getResults().size(); ++i) {
       const Var &res = func->getResults()[i];

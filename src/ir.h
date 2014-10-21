@@ -28,22 +28,10 @@ struct Var {
 inline std::ostream &operator<<(std::ostream &os, const Var &v) {
   return os << v.name;
 }
-
-inline bool operator==(const Var &v1, const Var &v2) {
-  return v1.name == v2.name;
-}
-
-inline bool operator!=(const Var &v1, const Var &v2) {
-  return v1.name != v2.name;
-}
-
-inline bool operator<(const Var &v1, const Var &v2) {
-  return v1.name < v2.name;
-}
-
-inline bool operator>(const Var &v1, const Var &v2) {
-  return v1.name > v2.name;
-}
+inline bool operator==(const Var &l, const Var &r) {return l.name == r.name;}
+inline bool operator!=(const Var &l, const Var &r) {return l.name != r.name;}
+inline bool operator <(const Var &l, const Var &r) {return l.name < r.name;}
+inline bool operator >(const Var &l, const Var &r) {return l.name > r.name;}
 
 
 /// The base class of all nodes in the Simit Intermediate Representation
@@ -400,6 +388,14 @@ struct Div : public ExprNode<Div> {
   }
 };
 
+struct Load : public ExprNode<Div> {
+  Var buffer;
+  Expr index;
+
+//  static Expr make(Var buffer, )
+
+};
+
 
 // Statements
 struct AssignStmt : public StmtNode<AssignStmt> {
@@ -442,32 +438,42 @@ struct TensorWrite : public StmtNode<TensorWrite> {
   }
 };
 
-struct E2V {
-
-};
-
-struct V2E {
-
-};
-
 class LoopDomain {
 public:
-  enum Kind { MinMax, Domain, V2E, E2V };
+  enum Kind { MinMax, Domain, Endpoints, Edges };
+
+  LoopDomain(Expr min, Expr max)
+      : kind(MinMax), minMax(std::pair<Expr,Expr>(min,max)) {}
+
+  LoopDomain(IndexSet domain) : kind(Domain), domain(domain) {}
+
+  LoopDomain(Expr edgeSet, Kind kind) : kind (kind), edgeSet(edgeSet) {
+    assert(kind == Endpoints || kind == Edges);
+  }
 
   Kind getKind() {return kind;}
 
-  std::pair<Expr,Expr> getMinMax() {return minMax;}
-  IndexSet getDomain() {return domain;}
-  struct E2V getE2V() {return e2v;}
-  struct V2E getV2E() {return v2e;}
+  std::pair<Expr,Expr> getMinMax() {
+    assert(kind == MinMax);
+    return minMax;
+  }
+
+  IndexSet getDomain() {
+    assert(kind == Domain);
+    return domain;
+  }
+
+  Expr getEdgeSet() {
+    assert(kind == Endpoints || kind == Edges);
+    return edgeSet;
+  }
 
 private:
   Kind kind;
   union {
     std::pair<Expr,Expr> minMax;
     IndexSet domain;
-    struct E2V e2v;
-    struct V2E v2e;
+    Expr edgeSet;
   };
 };
 

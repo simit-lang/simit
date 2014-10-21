@@ -9,6 +9,7 @@
 
 #include "types.h"
 #include "indexvar.h"
+#include "ir.h"
 
 namespace simit {
 namespace ir {
@@ -25,11 +26,11 @@ struct SIGVertex {
 std::ostream &operator<<(std::ostream &os, const SIGVertex &);
 
 struct SIGEdge {
-  std::string name;
+  Expr edgeSet;
   std::vector<SIGVertex*> endpoints;
 
-  SIGEdge(const std::string &name, const std::vector<SIGVertex*> &endpoints)
-      : name(name), endpoints(endpoints) {
+  SIGEdge(Expr edgeSet, const std::vector<SIGVertex*> &endpoints)
+      : edgeSet(edgeSet), endpoints(endpoints) {
     for (auto v : endpoints) {
       v->connectors.push_back(this);
     }
@@ -37,20 +38,21 @@ struct SIGEdge {
 };
 std::ostream &operator<<(std::ostream &os, const SIGEdge &);
 
+
+/// Implementation of Sparse Iteration Graphs.
 class SIG {
 public:
   enum MergeOp { Union, Intersection };
 
   SIG() : content(new SIG::Content) {}
-  explicit SIG(const IndexVar &iv);
-  explicit SIG(std::string name, const std::vector<IndexVar> &ivs);
+  explicit SIG(const std::vector<IndexVar> &ivs, Expr setExpr=Expr());
 
   friend SIG merge(SIG&, SIG&, SIG::MergeOp);
 
 private:
   struct Content {
     std::map<IndexVar, std::unique_ptr<SIGVertex>> vertices;
-    std::map<std::string, std::unique_ptr<SIGEdge>> edges;
+    std::map<Expr, std::unique_ptr<SIGEdge>> edges;
   };
   std::shared_ptr<Content> content;
 
@@ -63,7 +65,6 @@ std::ostream &operator<<(std::ostream &os, const SIG &);
 class SIGVisitor {
 public:
   virtual void apply(const SIG &sig);
-  virtual void apply(const SIG &sig, const IndexVar &first);
 
 protected:
   virtual void visit(const SIGVertex *v);
