@@ -2181,7 +2181,7 @@ namespace  simit { namespace internal  {
   case 122:
 
     {
-    (yylhs.value.scalarType) = new ScalarType(ScalarType::Int, 32);
+    (yylhs.value.scalarType) = new ScalarType(ScalarType::Int);
   }
 
     break;
@@ -2189,7 +2189,7 @@ namespace  simit { namespace internal  {
   case 123:
 
     {
-    (yylhs.value.scalarType) = new ScalarType(ScalarType::Float, 64);
+    (yylhs.value.scalarType) = new ScalarType(ScalarType::Float);
   }
 
     break;
@@ -2209,7 +2209,7 @@ namespace  simit { namespace internal  {
     auto values = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
-    Type type = TensorType::make(ScalarType(ScalarType::Float, 64), idoms);
+    Type type = TensorType::make(ScalarType(ScalarType::Float), idoms);
     (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
 
@@ -2221,7 +2221,7 @@ namespace  simit { namespace internal  {
     auto values = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
-    Type type = TensorType::make(ScalarType(ScalarType::Int, 32), idoms);
+    Type type = TensorType::make(ScalarType(ScalarType::Int), idoms);
     (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
 
@@ -2392,7 +2392,7 @@ namespace  simit { namespace internal  {
   case 146:
 
     {
-    auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Int, 32));
+    auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Int));
     (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.num)));
   }
 
@@ -2401,7 +2401,7 @@ namespace  simit { namespace internal  {
   case 147:
 
     {
-    auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Float, 64));
+    auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Float));
     (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.fnum)));
   }
 

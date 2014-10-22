@@ -73,7 +73,7 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
         }
         case ir::Type::Set: {
           const SetBase *set = actual.getSet();
-          args.push_back(llvmInt32(set->getSize()));
+          args.push_back(llvmInt(set->getSize()));
           const ir::SetType *setType = actual.getType().toSet();
           for (auto &field : setType->elementType.toElement()->fields) {
             assert(field.second.isTensor());

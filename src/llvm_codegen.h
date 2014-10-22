@@ -28,8 +28,9 @@
 namespace simit {
 namespace internal {
 
-llvm::ConstantInt* llvmInt32(int val);
-llvm::ConstantInt* llvmUInt32(unsigned val);
+llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
+llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
+llvm::ConstantFP* llvmFP(double val, unsigned bits=64);
 
 llvm::Type *llvmType(ir::ScalarType stype);
 

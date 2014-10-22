@@ -64,10 +64,10 @@ void Function::bind(const std::string &argName, SetBase *set) {
     ir::ScalarType setFieldTypeComponentType;
     switch (setFieldType->getComponentType()) {
       case ComponentType::INT:
-        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Int, 32);
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Int);
         break;
       case ComponentType::FLOAT:
-        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float, 32);
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float);
         break;
     }
 

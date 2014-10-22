@@ -27,9 +27,9 @@ std::vector<T> toVectorOf(Expr expr) {
 }
 
 TEST(Codegen, add0) {
-  Var a("a", Float(64));
-  Var b("b", Float(64));
-  Var c("c", Float(64));
+  Var a("a", Float());
+  Var b("b", Float());
+  Var c("c", Float());
 
   Expr axb = Add::make(a,b);
   Stmt body = AssignStmt::make(c, axb);
@@ -39,9 +39,9 @@ TEST(Codegen, add0) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aArg = Literal::make(Float(64), {2.0});
-  Expr bArg = Literal::make(Float(64), {4.1});
-  Expr cRes = Literal::make(Float(64));
+  Expr aArg = Literal::make(Float(), {2.0});
+  Expr bArg = Literal::make(Float(), {4.1});
+  Expr cRes = Literal::make(Float());
 
   function->bind("a", &aArg);
   function->bind("b", &bArg);
@@ -54,8 +54,8 @@ TEST(Codegen, add0) {
 }
 
 TEST(Codegen, sin) {
-  Var a("a", Float(64));
-  Var c("c", Float(64));
+  Var a("a", Float());
+  Var c("c", Float());
 
   Expr sin_a = Call::make("sin", {a}, Call::Intrinsic);
   
@@ -66,8 +66,8 @@ TEST(Codegen, sin) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aArg = Literal::make(Float(64), {2.0});
-  Expr cRes = Literal::make(Float(64));
+  Expr aArg = Literal::make(Float(), {2.0});
+  Expr cRes = Literal::make(Float());
 
   function->bind("a", &aArg);
   function->bind("c", &cRes);
@@ -80,8 +80,8 @@ TEST(Codegen, sin) {
 }
 
 TEST(Codegen, cos) {
-  Var a("a", Float(64));
-  Var c("c", Float(64));
+  Var a("a", Float());
+  Var c("c", Float());
 
   Expr cos_a = Call::make("cos", {a}, Call::Intrinsic);
   
@@ -92,8 +92,8 @@ TEST(Codegen, cos) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(64), {2.0});
-  Expr cRes = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(), {2.0});
+  Expr cRes = Literal::make(Float());
 
   function->bind("a", &aVar);
   function->bind("c", &cRes);
@@ -106,8 +106,8 @@ TEST(Codegen, cos) {
 }
 
 TEST(Codegen, sqrt) {
-  Var a("a", Float(64));
-  Var c("c", Float(64));
+  Var a("a", Float());
+  Var c("c", Float());
 
   Expr sqrt_a = Call::make("sqrt", {a}, Call::Intrinsic);
   
@@ -118,8 +118,8 @@ TEST(Codegen, sqrt) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(64), {5.0});
-  Expr cRes = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(), {5.0});
+  Expr cRes = Literal::make(Float());
 
   function->bind("a", &aVar);
   function->bind("c", &cRes);
@@ -132,8 +132,8 @@ TEST(Codegen, sqrt) {
 }
 
 TEST(Codegen, log) {
-  Var a("a", Float(64));
-  Var c("c", Float(64));
+  Var a("a", Float());
+  Var c("c", Float());
 
   Expr log_a = Call::make("log", {a}, Call::Intrinsic);
   
@@ -144,8 +144,8 @@ TEST(Codegen, log) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(64), {5.0});
-  Expr cRes = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(), {5.0});
+  Expr cRes = Literal::make(Float());
 
   function->bind("a", &aVar);
   function->bind("c", &cRes);
@@ -158,8 +158,8 @@ TEST(Codegen, log) {
 }
 
 TEST(Codegen, exp) {
-  Var a("a", Float(64));
-  Var c("c", Float(64));
+  Var a("a", Float());
+  Var c("c", Float());
 
   Expr exp_a = Call::make("exp", {a}, Call::Intrinsic);
   
@@ -170,8 +170,8 @@ TEST(Codegen, exp) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(64), {5.0});
-  Expr cRes = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(), {5.0});
+  Expr cRes = Literal::make(Float());
 
   function->bind("a", &aVar);
   function->bind("c", &cRes);
@@ -184,9 +184,9 @@ TEST(Codegen, exp) {
 }
 
 TEST(Codegen, atan2) {
-  Var a("a", Float(64));
-  Var b("b", Float(64));
-  Var c("c", Float(64));
+  Var a("a", Float());
+  Var b("b", Float());
+  Var c("c", Float());
 
   Expr atan2_ab = Call::make("atan2", {a,b}, Call::Intrinsic);
   
@@ -197,9 +197,9 @@ TEST(Codegen, atan2) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(64), {1.0});
-  Expr bVar = Literal::make(Float(64), {2.0});
-  Expr cRes = Literal::make(Float(64));
+  Expr aVar = Literal::make(Float(), {1.0});
+  Expr bVar = Literal::make(Float(), {2.0});
+  Expr cRes = Literal::make(Float());
 
   function->bind("a", &aVar);
   function->bind("b", &bVar);

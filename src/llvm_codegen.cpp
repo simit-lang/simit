@@ -9,14 +9,16 @@ using namespace simit::internal;
 namespace simit {
 namespace internal {
 
-llvm::ConstantInt* llvmInt32(int val) {
-  return llvm::ConstantInt::get(LLVM_CONTEXT,
-                                llvm::APInt(32, (uint64_t)val, true));
+llvm::ConstantInt *llvmInt(long long int val, unsigned bits) {
+  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(bits, val, true));
 }
 
-llvm::ConstantInt* llvmUInt32(unsigned val) {
-  return llvm::ConstantInt::get(LLVM_CONTEXT,
-                                llvm::APInt(32,(uint64_t)val, false));
+llvm::ConstantInt *llvmUInt(long long unsigned int val, unsigned bits) {
+  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(bits, val, false));
+}
+
+llvm::ConstantFP *llvmFP(double val, unsigned bits) {
+  return llvm::ConstantFP::get(LLVM_CONTEXT, llvm::APFloat(val));
 }
 
 llvm::Type *llvmType(ir::ScalarType stype) {
@@ -79,10 +81,10 @@ ir::Type simitType(const llvm::Type *type) {
   }
 
   if (type->isDoubleTy()) {
-    return ir::Float(64);
+    return ir::Float();
   }
   else if (type->isIntegerTy()) {
-    return ir::Int(32);
+    return ir::Int();
   }
   else {
     UNREACHABLE;

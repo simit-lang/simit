@@ -67,7 +67,7 @@ TEST(Type, getSize) {
   indices1.push_back(IndexSet(7));
   dimensions.push_back(IndexDomain(indices1));
 
-  Type type = TensorType::make(ScalarType(ScalarType::Float, 64), dimensions);
+  Type type = TensorType::make(ScalarType(ScalarType::Float), dimensions);
   ASSERT_EQ(type.toTensor()->size(), 210u);
 }
 
@@ -81,14 +81,14 @@ TEST(Type, eq) {
   idxs0.push_back(IndexSet(3));
   dims0.push_back(IndexDomain(idxs0));
   dims1.push_back(IndexDomain(idxs0));
-  ASSERT_EQ(TensorType::make(ScalarType(ScalarType::Float, 64), dims0),
-            TensorType::make(ScalarType(ScalarType::Float, 64), dims1));
-  ASSERT_NE(TensorType::make(ScalarType(ScalarType::Float, 64), dims0),
-            TensorType::make(ScalarType(ScalarType::Int, 32), dims1));
+  ASSERT_EQ(TensorType::make(ScalarType(ScalarType::Float), dims0),
+            TensorType::make(ScalarType(ScalarType::Float), dims1));
+  ASSERT_NE(TensorType::make(ScalarType(ScalarType::Float), dims0),
+            TensorType::make(ScalarType(ScalarType::Int), dims1));
 
   idxs1.push_back(IndexSet(3));
   idxs1.push_back(IndexSet(2));
   dims1.push_back(IndexDomain(idxs1));
-  ASSERT_NE(TensorType::make(ScalarType(ScalarType::Float, 64), dims0),
-            TensorType::make(ScalarType(ScalarType::Float, 64), dims1));
+  ASSERT_NE(TensorType::make(ScalarType(ScalarType::Float), dims0),
+            TensorType::make(ScalarType(ScalarType::Float), dims1));
 }

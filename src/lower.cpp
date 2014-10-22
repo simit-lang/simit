@@ -27,7 +27,7 @@ private:
   map<Expr, Var> edgeLoopvars;
 
   void visit(const SIGVertex *v) {
-    vertexLoopvars[v->iv] = Var(v->iv.getName(), Int(32));
+    vertexLoopvars[v->iv] = Var(v->iv.getName(), Int());
   }
 };
 
@@ -202,7 +202,7 @@ private:
     else {
       // The vertex is constrained and loops over previous' endpoints.
       const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
-      stmt = For::make(Var("derived", Int(32)), domain, stmt);
+      stmt = For::make(Var("derived", Int()), domain, stmt);
       NOT_SUPPORTED_YET;
     }
   }

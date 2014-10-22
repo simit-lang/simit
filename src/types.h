@@ -56,13 +56,24 @@ private:
 struct ScalarType {
   enum Kind {Int, Float};
 
-  ScalarType() : kind(Int), bits(0) {}
-  ScalarType(Kind kind, int bits) : kind(kind), bits(bits) {}
+  ScalarType() : kind(Int) {}
+  explicit ScalarType(Kind kind) : kind(kind) {}
 
   Kind kind;
-  int bits;
 
-  int bytes() const { return (bits + 7) / 8; }
+  // TODO: Add variable bit sizes later
+//  unsigned bits;
+//  unsigned bytes() const { return (bits + 7) / 8; }
+
+  unsigned bytes() const {
+    if (isInt()) {
+      return 4;
+    }
+    else {
+      assert(isFloat());
+      return 8;
+    }
+  }
 
   bool isInt () const { return kind == Int; }
   bool isFloat() const { return kind == Float; }
@@ -94,12 +105,12 @@ struct TensorType : TypeNode {
   }
 };
 
-inline Type Int(int bits) {
-  return TensorType::make(ScalarType(ScalarType::Int, bits));
+inline Type Int() {
+  return TensorType::make(ScalarType(ScalarType::Int));
 }
 
-inline Type Float(int bits) {
-  return TensorType::make(ScalarType(ScalarType::Float, bits));
+inline Type Float() {
+  return TensorType::make(ScalarType(ScalarType::Float));
 }
 
 struct ElementType : TypeNode {
