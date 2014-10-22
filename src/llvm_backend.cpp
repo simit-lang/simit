@@ -104,6 +104,7 @@ void LLVMBackend::compile(const Stmt &stmt) {
 
 void LLVMBackend::visit(const Literal *op) {
   cout << "Literal" << endl;
+  NOT_SUPPORTED_YET;
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
@@ -116,23 +117,27 @@ void LLVMBackend::visit(const Result *op) {
 }
 
 void LLVMBackend::visit(const FieldRead *op) {
-  cout << "FieldRead" << endl;
+  assert(false && "No code generation for this type");
 }
 
 void LLVMBackend::visit(const TensorRead *op) {
-  cout << "TensorRead" << endl;
+  assert(false && "No code generation for this type");
 }
 
 void LLVMBackend::visit(const TupleRead *op) {
-  cout << "TupleRead" << endl;
+  assert(false && "No code generation for this type");
 }
 
 void LLVMBackend::visit(const Map *op) {
-  cout << "Map" << endl;
+  assert(false && "No code generation for this type");
 }
 
 void LLVMBackend::visit(const IndexedTensor *op) {
-  cout << "IndexedTensor" << endl;
+  assert(false && "No code generation for this type");
+}
+
+void LLVMBackend::visit(const IndexExpr *op) {
+  assert(false && "No code generation for this type");
 }
 
 void LLVMBackend::visit(const Call *op) {
@@ -182,8 +187,16 @@ void LLVMBackend::visit(const Call *op) {
 
 void LLVMBackend::visit(const Neg *op) {
   assert(isScalarTensor(op->type));
+  llvm::Value *a = compile(op->a);
 
-  cout << "Neg" << endl;
+  switch (op->type.toTensor()->componentType.kind) {
+    case ScalarType::Int:
+      val = builder->CreateNeg(a);
+      break;
+    case ScalarType::Float:
+      val = builder->CreateFNeg(a);
+      break;
+  }
 }
 
 void LLVMBackend::visit(const Add *op) {
@@ -205,19 +218,39 @@ void LLVMBackend::visit(const Add *op) {
 void LLVMBackend::visit(const Sub *op) {
   assert(isScalarTensor(op->type));
 
-  cout << "Sub" << endl;
+  llvm::Value *a = compile(op->a);
+  llvm::Value *b = compile(op->b);
+
+  switch (op->type.toTensor()->componentType.kind) {
+    case ScalarType::Int:
+      val = builder->CreateSub(a, b);
+      break;
+    case ScalarType::Float:
+      val = builder->CreateFSub(a, b);
+      break;
+  }
 }
 
 void LLVMBackend::visit(const Mul *op) {
   assert(isScalarTensor(op->type));
 
-  cout << "Mul" << endl;
+  llvm::Value *a = compile(op->a);
+  llvm::Value *b = compile(op->b);
+
+  switch (op->type.toTensor()->componentType.kind) {
+    case ScalarType::Int:
+      val = builder->CreateMul(a, b);
+      break;
+    case ScalarType::Float:
+      val = builder->CreateFMul(a, b);
+      break;
+  }
 }
 
 void LLVMBackend::visit(const Div *op) {
   assert(isScalarTensor(op->type));
-
   cout << "Div" << endl;
+  NOT_SUPPORTED_YET;
 }
 
 
@@ -244,11 +277,11 @@ void LLVMBackend::visit(const AssignStmt *op) {
 }
 
 void LLVMBackend::visit(const FieldWrite *op) {
-  cout << "FieldWrite" << endl;
+  assert(false && "No code generation for this type");
 }
 
 void LLVMBackend::visit(const TensorWrite *op) {
-  cout << "TensorWrite" << endl;
+  assert(false && "No code generation for this type");
 }
 
 void LLVMBackend::visit(const For *op) {

@@ -57,6 +57,7 @@ private:
   virtual void visit(const ir::TupleRead *);
   virtual void visit(const ir::Map *);
   virtual void visit(const ir::IndexedTensor *);
+  virtual void visit(const ir::IndexExpr *op);
   virtual void visit(const ir::Call *);
   virtual void visit(const ir::Neg *);
   virtual void visit(const ir::Add *);
