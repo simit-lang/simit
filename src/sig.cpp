@@ -1,5 +1,6 @@
 #include "sig.h"
 
+#include <algorithm>
 #include <iostream>
 #include <set>
 
