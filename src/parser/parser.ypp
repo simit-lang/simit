@@ -1366,8 +1366,7 @@ signed_float_literal
 test
   : "%!" IDENT "(" expr_list_or_empty ")" "==" tensor_literal ";" {
     std::string name = convertAndFree($IDENT);
-    auto actuals =
-        unique_ptr<vector<Expr>>($expr_list_or_empty);
+    auto actuals = unique_ptr<vector<Expr>>($expr_list_or_empty);
     auto expected = convertAndDelete($tensor_literal);
 
     std::vector<Expr> literalArgs;

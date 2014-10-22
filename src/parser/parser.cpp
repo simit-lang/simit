@@ -33,7 +33,7 @@
 
 // First part of user declarations.
 
-#line 37 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:399
+
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -47,9 +47,9 @@
 
 // User implementation prologue.
 
-#line 51 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:407
+
 // Unqualified %code blocks.
-#line 30 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:408
+
 
   #include <stdlib.h>
   #include <cassert>
@@ -176,7 +176,7 @@
     }                                             \
     while (0)
 
-#line 180 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:408
+
 
 
 #ifndef YY_
@@ -260,9 +260,9 @@
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-#line 5 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:474
+
 namespace  simit { namespace internal  {
-#line 266 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:474
+
 
   /* Return YYSTR after stripping away unnecessary quotes and
      backslashes, so that it's suitable for yyerror.  The heuristic is
@@ -481,394 +481,394 @@ namespace  simit { namespace internal  {
     {
             case 4: // "int literal"
 
-#line 185 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         {}
-#line 487 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 5: // "float literal"
 
-#line 185 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         {}
-#line 494 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 6: // "string literal"
 
-#line 186 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { free((void*)((yysym.value.string))); }
-#line 501 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 7: // "identifier"
 
-#line 186 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { free((void*)((yysym.value.string))); }
-#line 508 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 61: // extern
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.var); }
-#line 515 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 62: // element_type_decl
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.type); }
-#line 522 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 63: // field_decl_list
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.fields); }
-#line 529 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 64: // field_decl
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.field); }
-#line 536 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 65: // procedure
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.function); }
-#line 543 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 68: // procedure_header
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.function); }
-#line 550 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 69: // function
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.function); }
-#line 557 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 72: // function_header
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.function); }
-#line 564 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 73: // arguments
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.vars); }
-#line 571 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 74: // argument_list
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.vars); }
-#line 578 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 75: // argument_decl
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.var); }
-#line 585 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 76: // results
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.vars); }
-#line 592 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 77: // result_list
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.vars); }
-#line 599 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 78: // result_decl
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.var); }
-#line 606 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 79: // stmt_block
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.stmt); }
-#line 613 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 90: // expr_stmt
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.stmt); }
-#line 620 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 91: // expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 627 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 92: // ident_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 634 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 93: // paren_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 641 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 94: // linear_algebra_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 648 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 95: // elwise_binary_op
 
-#line 185 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         {}
-#line 655 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 96: // boolean_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 662 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 97: // field_read_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 669 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 98: // set_read_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 676 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 99: // call_or_paren_read_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 683 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 100: // call_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 690 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 101: // expr_list_or_empty
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.exprs); }
-#line 697 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 102: // expr_list
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.exprs); }
-#line 704 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 103: // map_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 711 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 107: // type
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.type); }
-#line 718 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 108: // element_type
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.type); }
-#line 725 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 109: // set_type
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.type); }
-#line 732 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 110: // endpoints
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.exprs); }
-#line 739 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 111: // tuple_type
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.type); }
-#line 746 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 112: // tensor_type
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.type); }
-#line 753 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 113: // index_sets
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.indexSets); }
-#line 760 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 114: // index_set
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.indexSet); }
-#line 767 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 115: // component_type
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.scalarType); }
-#line 774 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 116: // literal_expr
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 781 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 117: // tensor_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 788 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 118: // dense_tensor_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 795 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 119: // float_dense_tensor_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.TensorDoubleValues); }
-#line 802 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 120: // float_dense_ndtensor_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.TensorDoubleValues); }
-#line 809 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 121: // float_dense_matrix_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.TensorDoubleValues); }
-#line 816 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 122: // float_dense_vector_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.TensorDoubleValues); }
-#line 823 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 123: // int_dense_tensor_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.TensorIntValues); }
-#line 830 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 124: // int_dense_ndtensor_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.TensorIntValues); }
-#line 837 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 125: // int_dense_matrix_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.TensorIntValues); }
-#line 844 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 126: // int_dense_vector_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.TensorIntValues); }
-#line 851 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 127: // scalar_literal
 
-#line 187 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         { delete (yysym.value.expr); }
-#line 858 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 128: // signed_int_literal
 
-#line 185 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         {}
-#line 865 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
       case 129: // signed_float_literal
 
-#line 185 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:599
+
         {}
-#line 872 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:599
+
         break;
 
 
@@ -1108,7 +1108,7 @@ namespace  simit { namespace internal  {
           switch (yyn)
             {
   case 5:
-#line 277 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     Func func = convertAndDelete((yystack_[0].value.function));
     std::string name = func.getName();
@@ -1117,11 +1117,11 @@ namespace  simit { namespace internal  {
     }
     ctx->addFunction(func);
   }
-#line 1121 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 6:
-#line 285 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     Func func = convertAndDelete((yystack_[0].value.function));
     std::string name = func.getName();
@@ -1130,21 +1130,21 @@ namespace  simit { namespace internal  {
     }
     ctx->addFunction(func);
   }
-#line 1134 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 10:
-#line 300 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     Var externVar = convertAndDelete((yystack_[1].value.var));
     ctx->addExtern(externVar);
     ctx->addSymbol(externVar);
   }
-#line 1144 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 11:
-#line 310 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     string name = convertAndFree((yystack_[2].value.string));
     unique_ptr<std::map<string,Type>> fields((yystack_[1].value.fields));
@@ -1155,61 +1155,61 @@ namespace  simit { namespace internal  {
 
     ctx->addElementType(ElementType::make(name, *fields));
   }
-#line 1159 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 12:
-#line 323 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.fields) = new map<string,Type>;
   }
-#line 1167 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 13:
-#line 326 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.fields) = (yystack_[1].value.fields);
     (yylhs.value.fields)->insert(*(yystack_[0].value.field));
     delete (yystack_[0].value.field);
   }
-#line 1177 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 14:
-#line 334 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[3].value.string));
     auto tensorType = convertAndDelete((yystack_[1].value.type));
     (yylhs.value.field) = new pair<string,Type>(name, tensorType);
   }
-#line 1187 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 15:
-#line 344 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {ctx->scope();}
-#line 1193 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 16:
-#line 344 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {ctx->unscope();}
-#line 1199 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 17:
-#line 344 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     Func func = convertAndDelete((yystack_[3].value.function));
     Stmt body = convertAndDelete((yystack_[2].value.stmt));
     (yylhs.value.function) = new Func(func.getName(), func.getArguments(), func.getResults(), body);
   }
-#line 1209 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 18:
-#line 352 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[0].value.string));
     auto arguments = vector<Var>();
@@ -1227,33 +1227,33 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.function) = new Func(name, arguments, results, Stmt());
   }
-#line 1231 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 19:
-#line 372 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {ctx->scope();}
-#line 1237 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 20:
-#line 372 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {ctx->unscope();}
-#line 1243 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 21:
-#line 372 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     Func func = convertAndDelete((yystack_[3].value.function));
     Stmt body = convertAndDelete((yystack_[2].value.stmt));
     (yylhs.value.function) = new Func(func.getName(), func.getArguments(), func.getResults(), body);
   }
-#line 1253 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 22:
-#line 380 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[4].value.string));
     auto arguments = unique_ptr<vector<Var>>((yystack_[2].value.vars));
@@ -1273,122 +1273,122 @@ namespace  simit { namespace internal  {
       ctx->addSymbol(res.name, res, access);
     }
   }
-#line 1277 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 23:
-#line 402 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.vars) = new vector<Var>;
   }
-#line 1285 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 24:
-#line 405 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.vars) = (yystack_[0].value.vars);
  }
-#line 1293 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 25:
-#line 411 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto argument = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = new vector<Var>;
     (yylhs.value.vars)->push_back(argument);
   }
-#line 1303 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 26:
-#line 416 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto argument = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = (yystack_[2].value.vars);
     (yylhs.value.vars)->push_back(argument);
   }
-#line 1313 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 27:
-#line 424 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[2].value.string));
 
     auto type = convertAndDelete((yystack_[0].value.type));
     (yylhs.value.var) = new Var(name, type);
   }
-#line 1324 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 28:
-#line 433 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.vars) = new vector<Var>;
   }
-#line 1332 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 29:
-#line 436 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.vars) = (yystack_[1].value.vars);
   }
-#line 1340 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 30:
-#line 442 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto result = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = new vector<Var>;
     (yylhs.value.vars)->push_back(result);
   }
-#line 1350 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 31:
-#line 447 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto result = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = (yystack_[2].value.vars);
     (yylhs.value.vars)->push_back(result);
   }
-#line 1360 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 32:
-#line 455 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[2].value.string));
     auto type = convertAndDelete((yystack_[0].value.type));
     (yylhs.value.var) = new Var(name, type);
   }
-#line 1370 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 33:
-#line 465 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.stmt) = new Stmt(Pass::make());
   }
-#line 1378 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 34:
-#line 468 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     vector<Stmt> stmts = *ctx->getStatements();
     if (stmts.size() == 0) {(yylhs.value.stmt) = new Stmt(Pass::make()); break;} // TODO: remove
     (yylhs.value.stmt) = new Stmt((stmts.size() == 1) ? stmts[0] : Block::make(stmts));
   }
-#line 1388 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 44:
-#line 488 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[1].value.expr) == nullptr) { break; } // TODO: Remove check
 
@@ -1412,11 +1412,11 @@ namespace  simit { namespace internal  {
     // TODO: Check valueNames.size() matches number of values produced by expr
     ctx->addStatement(AssignStmt::make(var, value));
   }
-#line 1416 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 45:
-#line 513 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     string setName = convertAndFree((yystack_[5].value.string));
     string fieldName = convertAndFree((yystack_[3].value.string));
@@ -1435,11 +1435,11 @@ namespace  simit { namespace internal  {
     Expr setExpr = setSymbol.getExpr();
     ctx->addStatement(FieldWrite::make(setExpr, fieldName, value));
   }
-#line 1439 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 46:
-#line 533 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string tensorName = convertAndFree((yystack_[6].value.string));
     auto indices = unique_ptr<vector<Expr>>((yystack_[4].value.exprs));
@@ -1460,45 +1460,45 @@ namespace  simit { namespace internal  {
     Expr tensorExpr = tensorSymbol.getExpr();
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
-#line 1464 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 47:
-#line 553 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     // TODO
   }
-#line 1472 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 48:
-#line 559 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     delete (yystack_[3].value.expr);
     delete (yystack_[2].value.stmt);
   }
-#line 1481 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 50:
-#line 566 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     delete (yystack_[0].value.stmt);
   }
-#line 1489 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 52:
-#line 572 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     delete (yystack_[1].value.expr);
     delete (yystack_[0].value.stmt);
   }
-#line 1498 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 54:
-#line 581 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[5].value.string));
     auto type = convertAndDelete((yystack_[3].value.type));
@@ -1524,27 +1524,27 @@ namespace  simit { namespace internal  {
     ctx->addConstant(var, literalExpr);
     ctx->addSymbol(var);
   }
-#line 1528 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 55:
-#line 609 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.stmt) = NULL;
   }
-#line 1536 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 56:
-#line 612 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.stmt) = NULL;
   }
-#line 1544 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 65:
-#line 633 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     string ident = convertAndFree((yystack_[0].value.string));
 
@@ -1562,20 +1562,20 @@ namespace  simit { namespace internal  {
     Expr expr = symbol.getExpr();
     (yylhs.value.expr) = new Expr(expr);
   }
-#line 1566 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 66:
-#line 655 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[1].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = (yystack_[1].value.expr);
   }
-#line 1575 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 67:
-#line 664 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
@@ -1585,11 +1585,11 @@ namespace  simit { namespace internal  {
     IRBuilder::UnaryOperator op = IRBuilder::UnaryOperator::Neg;
     (yylhs.value.expr) = new Expr(ctx->getBuilder()->unaryElwiseExpr(op, expr));
   }
-#line 1589 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 68:
-#line 673 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {  // + - .* ./
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
@@ -1602,11 +1602,11 @@ namespace  simit { namespace internal  {
     BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), yystack_[1].location);
     (yylhs.value.expr) = new Expr(ctx->getBuilder()->binaryElwiseExpr(l, (yystack_[1].value.binop), r));
   }
-#line 1606 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 69:
-#line 685 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     IRBuilder *builder = ctx->getBuilder();
@@ -1674,22 +1674,22 @@ namespace  simit { namespace internal  {
       (yylhs.value.expr) = NULL;
     }
   }
-#line 1678 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 70:
-#line 752 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1689 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 71:
-#line 758 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[1].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     IRBuilder *builder = ctx->getBuilder();
@@ -1720,122 +1720,122 @@ namespace  simit { namespace internal  {
         (yylhs.value.expr) = NULL;
     }
   }
-#line 1724 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 72:
-#line 788 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1734 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 73:
-#line 793 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {  // Solve
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1745 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 74:
-#line 802 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     { (yylhs.value.binop) = IRBuilder::BinaryOperator::Add; }
-#line 1751 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 75:
-#line 803 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     { (yylhs.value.binop) = IRBuilder::BinaryOperator::Sub; }
-#line 1757 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 76:
-#line 804 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     { (yylhs.value.binop) = IRBuilder::BinaryOperator::Mul; }
-#line 1763 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 77:
-#line 805 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     { (yylhs.value.binop) = IRBuilder::BinaryOperator::Div; }
-#line 1769 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 78:
-#line 811 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1780 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 79:
-#line 817 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1791 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 80:
-#line 823 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1802 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 81:
-#line 829 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1813 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 82:
-#line 835 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1824 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 83:
-#line 841 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 1835 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 84:
-#line 852 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.string) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     if (!(*(yystack_[2].value.expr)).type().defined()) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
@@ -1852,11 +1852,11 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.expr) = new Expr(FieldRead::make(elemOrSet, fieldName));
   }
-#line 1856 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 88:
-#line 879 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[3].value.string));
     auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
@@ -1890,67 +1890,67 @@ namespace  simit { namespace internal  {
       REPORT_ERROR(name + " is not defined in scope", yystack_[3].location);
     }
   }
-#line 1894 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 89:
-#line 912 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.expr) = NULL;
   }
-#line 1902 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 90:
-#line 918 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[3].value.string));
     auto actuals = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
     (yylhs.value.expr) = new Expr(Call::make(name, *actuals, Call::Internal));
   }
-#line 1912 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 91:
-#line 926 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.exprs) = new vector<Expr>();
   }
-#line 1920 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 92:
-#line 929 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.exprs) = (yystack_[0].value.exprs);
   }
-#line 1928 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 93:
-#line 935 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.exprs) = new std::vector<Expr>();
     if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
     (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
     delete (yystack_[0].value.expr);
   }
-#line 1939 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 94:
-#line 941 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.exprs) = (yystack_[2].value.exprs);
     if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
     (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
     delete (yystack_[0].value.expr);
   }
-#line 1950 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 95:
-#line 952 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     string function((yystack_[4].value.string));
     string target((yystack_[2].value.string));
@@ -1958,19 +1958,19 @@ namespace  simit { namespace internal  {
     free((void*)(yystack_[2].value.string));
     (yylhs.value.expr) = NULL;
   }
-#line 1962 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 97:
-#line 962 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string neighbor = convertAndFree((yystack_[0].value.string));
   }
-#line 1970 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 106:
-#line 985 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[0].value.string));
 
@@ -1980,20 +1980,20 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.type) = new Type(ctx->getElementType(name));
   }
-#line 1984 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 107:
-#line 997 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto elementType = convertAndDelete((yystack_[1].value.type));
     (yylhs.value.type) = new Type(SetType::make(elementType));
   }
-#line 1993 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 108:
-#line 1001 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto elementType = convertAndDelete((yystack_[4].value.type));
     auto eps = convertAndDelete((yystack_[1].value.exprs));
@@ -2001,29 +2001,29 @@ namespace  simit { namespace internal  {
     // TODO: Add endpoint information to set type
     (yylhs.value.type) = new Type(SetType::make(elementType));
   }
-#line 2005 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 109:
-#line 1011 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.exprs) = new vector<Expr>;
     std::string ident = convertAndFree((yystack_[0].value.string));
   }
-#line 2014 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 110:
-#line 1015 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.exprs) = (yystack_[2].value.exprs);
     std::string ident = convertAndFree((yystack_[0].value.string));
   }
-#line 2023 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 111:
-#line 1022 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto elementType = convertAndDelete((yystack_[3].value.type));
 
@@ -2033,28 +2033,28 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.type) = new Type(TupleType::make(elementType, (yystack_[1].value.num)));
   }
-#line 2037 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 112:
-#line 1034 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto componentType = convertAndDelete((yystack_[0].value.scalarType));
     (yylhs.value.type) = new Type(TensorType::make(componentType));
   }
-#line 2046 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 113:
-#line 1038 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.type) = (yystack_[1].value.type);
   }
-#line 2054 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 114:
-#line 1041 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto blockTypePtr = convertAndDelete((yystack_[1].value.type));
     const TensorType *blockType = blockTypePtr.toTensor();
@@ -2097,11 +2097,11 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions));
   }
-#line 2101 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 115:
-#line 1083 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto type = convertAndDelete((yystack_[1].value.type));
     const TensorType *tensorType = type.toTensor();
@@ -2109,39 +2109,39 @@ namespace  simit { namespace internal  {
     auto componentType = tensorType->componentType;
     (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions, true));
   }
-#line 2113 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 116:
-#line 1093 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.indexSets) = new std::vector<IndexSet>();
     (yylhs.value.indexSets)->push_back(*(yystack_[0].value.indexSet));
     delete (yystack_[0].value.indexSet);
   }
-#line 2123 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 117:
-#line 1098 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.indexSets) = (yystack_[2].value.indexSets);
     (yylhs.value.indexSets)->push_back(*(yystack_[0].value.indexSet));
     delete (yystack_[0].value.indexSet);
   }
-#line 2133 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 118:
-#line 1106 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.indexSet) = new IndexSet((yystack_[0].value.num));
   }
-#line 2141 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 119:
-#line 1109 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string setName = convertAndFree((yystack_[0].value.string));
 
@@ -2156,55 +2156,55 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.indexSet) = new IndexSet(set);
   }
-#line 2160 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 120:
-#line 1123 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.indexSet) = NULL; break; } // TODO: Remove check
     (yylhs.value.indexSet) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-#line 2171 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 121:
-#line 1129 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.indexSet) = new IndexSet();
   }
-#line 2179 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 122:
-#line 1135 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.scalarType) = new ScalarType(ScalarType::Int, 32);
   }
-#line 2187 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 123:
-#line 1138 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.scalarType) = new ScalarType(ScalarType::Float, 64);
   }
-#line 2195 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 126:
-#line 1193 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.expr) = (yystack_[1].value.expr);
     transposeVector(*(yylhs.value.expr));
   }
-#line 2204 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 128:
-#line 1201 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto values = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
@@ -2212,11 +2212,11 @@ namespace  simit { namespace internal  {
     Type type = TensorType::make(ScalarType(ScalarType::Float, 64), idoms);
     (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
-#line 2216 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 129:
-#line 1208 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto values = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
@@ -2224,11 +2224,11 @@ namespace  simit { namespace internal  {
     Type type = TensorType::make(ScalarType(ScalarType::Int, 32), idoms);
     (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
-#line 2228 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 130:
-#line 1219 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     // If the matrix has only one column then we discard that dimension and
     // treat it as a vector.
@@ -2236,20 +2236,20 @@ namespace  simit { namespace internal  {
       (yystack_[0].value.TensorDoubleValues)->dimSizes.pop_back();
     }
   }
-#line 2240 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 132:
-#line 1230 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[1].value.TensorDoubleValues);
     (yylhs.value.TensorDoubleValues)->addDimension();
   }
-#line 2249 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 133:
-#line 1234 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto  left = unique_ptr<TensorValues<double>>((yystack_[4].value.TensorDoubleValues));
     auto right = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
@@ -2261,20 +2261,20 @@ namespace  simit { namespace internal  {
     left->merge(*right);
     (yylhs.value.TensorDoubleValues) = left.release();
   }
-#line 2265 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 134:
-#line 1248 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[0].value.TensorDoubleValues);
     (yylhs.value.TensorDoubleValues)->addDimension();
   }
-#line 2274 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 135:
-#line 1252 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto  left = unique_ptr<TensorValues<double>>((yystack_[2].value.TensorDoubleValues));
     auto right = unique_ptr<TensorValues<double>>((yystack_[0].value.TensorDoubleValues));
@@ -2287,29 +2287,29 @@ namespace  simit { namespace internal  {
     left->merge(*right);
     (yylhs.value.TensorDoubleValues) = left.release();
   }
-#line 2291 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 136:
-#line 1267 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.TensorDoubleValues) = new TensorValues<double>();
     (yylhs.value.TensorDoubleValues)->addValue((yystack_[0].value.fnum));
   }
-#line 2300 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 137:
-#line 1271 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[2].value.TensorDoubleValues);
     (yylhs.value.TensorDoubleValues)->addValue((yystack_[0].value.fnum));
   }
-#line 2309 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 138:
-#line 1278 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     // If the matrix has only one column then we discard that dimension and
     // treat it as a vector.
@@ -2317,20 +2317,20 @@ namespace  simit { namespace internal  {
       (yystack_[0].value.TensorIntValues)->dimSizes.pop_back();
     }
   }
-#line 2321 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 140:
-#line 1289 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.TensorIntValues) = (yystack_[1].value.TensorIntValues);
     (yylhs.value.TensorIntValues)->addDimension();
   }
-#line 2330 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 141:
-#line 1293 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto  left = unique_ptr<TensorValues<int>>((yystack_[4].value.TensorIntValues));
     auto right = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
@@ -2342,20 +2342,20 @@ namespace  simit { namespace internal  {
     left->merge(*right);
     (yylhs.value.TensorIntValues) = left.release();
   }
-#line 2346 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 142:
-#line 1307 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.TensorIntValues) = (yystack_[0].value.TensorIntValues);
     (yylhs.value.TensorIntValues)->addDimension();
   }
-#line 2355 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 143:
-#line 1311 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto  left = unique_ptr<TensorValues<int>>((yystack_[2].value.TensorIntValues));
     auto right = unique_ptr<TensorValues<int>>((yystack_[0].value.TensorIntValues));
@@ -2368,83 +2368,82 @@ namespace  simit { namespace internal  {
     left->merge(*right);
     (yylhs.value.TensorIntValues) = left.release();
   }
-#line 2372 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 144:
-#line 1326 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.TensorIntValues) = new TensorValues<int>();
     (yylhs.value.TensorIntValues)->addValue((yystack_[0].value.num));
   }
-#line 2381 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 145:
-#line 1330 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.TensorIntValues) = (yystack_[2].value.TensorIntValues);
     (yylhs.value.TensorIntValues)->addValue((yystack_[0].value.num));
   }
-#line 2390 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 146:
-#line 1337 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Int, 32));
     (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.num)));
   }
-#line 2399 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 147:
-#line 1341 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Float, 64));
     (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.fnum)));
   }
-#line 2408 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 148:
-#line 1348 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.num) = (yystack_[0].value.num);
   }
-#line 2416 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 149:
-#line 1351 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.num) = -(yystack_[0].value.num);
   }
-#line 2424 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 150:
-#line 1357 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.fnum) = (yystack_[0].value.fnum);
   }
-#line 2432 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 151:
-#line 1360 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     (yylhs.value.fnum) = -(yystack_[0].value.fnum);
   }
-#line 2440 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
   case 152:
-#line 1367 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:847
+
     {
     std::string name = convertAndFree((yystack_[6].value.string));
-    auto actuals =
-        unique_ptr<vector<Expr>>((yystack_[4].value.exprs));
+    auto actuals = unique_ptr<vector<Expr>>((yystack_[4].value.exprs));
     auto expected = convertAndDelete((yystack_[1].value.expr));
 
     std::vector<Expr> literalArgs;
@@ -2460,11 +2459,11 @@ namespace  simit { namespace internal  {
     expecteds.push_back(expected);
     ctx->addTest(new Test(name, literalArgs, expecteds));
   }
-#line 2464 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
     break;
 
 
-#line 2468 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:847
+
             default:
               break;
             }
@@ -3148,8 +3147,8 @@ namespace  simit { namespace internal  {
       return undef_token_;
   }
 
-#line 5 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:1155
+
 } } //  simit::internal 
-#line 3154 "/Users/fred/projects/sim/simit/src/parser/parser.cpp" // lalr1.cc:1155
-#line 1387 "/Users/fred/projects/sim/simit/src/parser/parser.ypp" // lalr1.cc:1156
+
+
 
