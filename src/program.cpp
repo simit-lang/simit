@@ -4,6 +4,7 @@
 
 #include "ir.h"
 #include "frontend.h"
+#include "lower.h"
 #include "llvm_backend.h"
 #include "function.h"
 #include "util.h"
@@ -50,8 +51,6 @@ class Program::ProgramContent {
   }
 
   int verify() {
-    return 0; // TODO newir: Remove
-
     // For each test look up the called function. Grab the actual arguments and
     // run the function with them as input.  Then compare the result to the
     // expected literal.
@@ -73,12 +72,10 @@ class Program::ProgramContent {
       // run the function with test->call->arguments
       assert(test->getActuals().size() == func.getArguments().size());
 
-      auto formalArgs = func.getArguments();
-      auto actualArgs = test->getActuals();
+      std::vector<ir::Var>  formalArgs = func.getArguments();
+      std::vector<ir::Expr> actualArgs = test->getActuals();
       for (size_t i=0; i < actualArgs.size(); ++i) {
-        auto formal = formalArgs[i].name;
-        auto actual = actualArgs[i];
-        compiledFunc->bind(formal, &actual);
+        compiledFunc->bind(formalArgs[i].name, &actualArgs[i]);
       }
 
       auto formalResults = func.getResults();
@@ -86,9 +83,7 @@ class Program::ProgramContent {
       for (auto &formalResult : formalResults) {
         ir::Expr actualResult = ir::Literal::make(formalResult.type);
         actualResults.push_back(actualResult);
-        auto formal = formalResult.name;
-        auto actual = actualResult;
-        compiledFunc->bind(formal, &actual);
+        compiledFunc->bind(formalResult.name, &actualResult);
       }
 
       compiledFunc->run();
@@ -115,8 +110,9 @@ class Program::ProgramContent {
   internal::Frontend *frontend;
   internal::Backend *backend;
 
-  Function *compile(ir::Func simitFunc) {
-    return getBackend()->compile(simitFunc);
+  Function *compile(ir::Func func) {
+    func = lowerIndexExpressions(func);
+    return getBackend()->compile(func);
   }
 };
 

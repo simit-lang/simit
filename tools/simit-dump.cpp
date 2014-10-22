@@ -168,22 +168,21 @@ int main(int argc, const char* argv[]) {
     }
 
     // Lower while printing lowered results
-    cout << endl;
-    cout << "-- Compiling " << function << endl;
+    cout << endl << endl;
+    cout << "--- Compiling " << function << " (inlined):" << endl;
+    cout << func << endl << endl;
 
     func = lowerIndexExpressions(func);
-    cout << "--- After lowering Index Expressions:" << endl;
+    cout << "--- Lowering Index Expressions:" << endl;
     cout << func << endl;
 
-//    if (emitLLVM) {
-//      if (somethingEmitted) {
-//        cout << endl;
-//      }
-//      simit::internal::LLVMBackend backend;
-//      std::string fstr = simit::util::toString(*backend.compile(func));
-//      cout << simit::util::trim(fstr) << endl;
-//    }
-
+    if (emitLLVM) {
+      cout << endl;
+      simit::internal::LLVMBackend backend;
+      std::string fstr = simit::util::toString(*backend.compile(func));
+      cout << "--- Emitting LLVM:" << endl;
+      cout << simit::util::trim(fstr) << endl;
+    }
   }
 
   return 0;
