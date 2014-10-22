@@ -108,9 +108,6 @@ void IRVisitor::visit(const Block *op) {
   op->rest.accept(this);
 }
 
-void IRVisitor::visit(const Pass *op) {
-}
-
 void IRVisitor::visit(const Func *op) {
   op->getBody().accept(this);
 }

@@ -463,11 +463,11 @@ result_decl
 %type <stmt> stmt_block;
 stmt_block
   : /* empty */ {
-    $$ = new Stmt(Pass::make());
+    $$ = new Stmt();
   }
   | stmts {
     vector<Stmt> stmts = *ctx->getStatements();
-    if (stmts.size() == 0) {$$ = new Stmt(Pass::make()); break;} // TODO: remove
+    if (stmts.size() == 0) {$$ = new Stmt(); break;} // TODO: remove
     $$ = new Stmt((stmts.size() == 1) ? stmts[0] : Block::make(stmts));
   }
 

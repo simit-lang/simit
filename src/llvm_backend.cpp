@@ -286,6 +286,7 @@ void LLVMBackend::visit(const TensorWrite *op) {
 
 void LLVMBackend::visit(const For *op) {
   cout << "For" << endl;
+
 }
 
 void LLVMBackend::visit(const IfThenElse *op) {
@@ -295,10 +296,5 @@ void LLVMBackend::visit(const IfThenElse *op) {
 void LLVMBackend::visit(const Block *op) {
   cout << "Block" << endl;
 }
-
-void LLVMBackend::visit(const Pass *op) {
-  cout << "Pass" << endl;
-}
-
 
 }}  // namespace simit::internal

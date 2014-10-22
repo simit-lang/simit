@@ -521,14 +521,6 @@ struct Block : public StmtNode<Block> {
   }
 };
 
-/// Empty statement that is convenient during code development.
-struct Pass : public StmtNode<Pass> {
-  static Stmt make() {
-    Pass *node = new Pass;
-    return node;
-  }
-};
-
 /// A Simit function
 namespace {
 // Content struct to make it cheap to copy the function to pass it around.

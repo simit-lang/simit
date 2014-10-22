@@ -257,10 +257,6 @@ void IRMutator::visit(const Block *op) {
   }
 }
 
-void IRMutator::visit(const Pass *op) {
-  stmt = op;
-}
-
 void IRMutator::visit(const Func *f) {
   Stmt body = mutate(f->getBody());
 
