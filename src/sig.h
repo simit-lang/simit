@@ -10,6 +10,7 @@
 #include "types.h"
 #include "indexvar.h"
 #include "ir.h"
+#include "usedef.h"
 
 namespace simit {
 namespace ir {
@@ -78,6 +79,66 @@ protected:
 
   const SIGVertex *getPreviousVertex();
   const SIGEdge *getPreviousEdge();
+};
+
+
+class SIGBuilder : public IRVisitor {
+public:
+  SIGBuilder(const UseDef *ud) : ud(ud) {}
+
+  SIG create(const IndexExpr *expr) {
+    return create(Expr(expr));
+  }
+
+private:
+  const UseDef *ud;
+  SIG sig;
+
+  SIG create(Expr expr) {
+    expr.accept(this);
+    SIG result = sig;
+    sig = SIG();
+    return result;
+  }
+
+  void visit(const IndexedTensor *op) {
+    if (op->indexVars.size() == 1) {
+      sig = SIG({op->indexVars[0]});
+    }
+    else if (op->indexVars.size() >= 2) {
+      // TODO: This does not have to be a variable
+      Expr edgeSet;
+      if (isa<VarExpr>(op->tensor)) {
+//        const VarExpr *varExpr = to<VarExpr>(op->tensor);
+      }
+
+      sig = SIG(op->indexVars, edgeSet);
+    }
+  }
+
+  void visit(const Add *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Union);
+  }
+
+  void visit(const Sub *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Union);
+  }
+
+  void visit(const Mul *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Intersection);
+  }
+
+  void visit(const Div *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Intersection);
+  }
 };
 
 }} // namespace
