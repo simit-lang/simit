@@ -1,5 +1,6 @@
 #include <gtest/gtest.h>
 #include <string>
+#include <iostream>
 
 int main(int argc, char **argv) {
   // If there is just one argument and it is not a gtest option, then filter
@@ -24,5 +25,8 @@ int main(int argc, char **argv) {
   }
 
   ::testing::InitGoogleTest(&argc, argv);
-  return RUN_ALL_TESTS();
+  int result = RUN_ALL_TESTS();
+  std::cout << "19 expected failures due to incomplete dense BLAS code "
+            << "generation" << std::endl;
+  return result;
 }

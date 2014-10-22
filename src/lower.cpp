@@ -71,6 +71,7 @@ private:
   }
 };
 
+
 class LoopVars : public SIGVisitor {
 public:
   LoopVars() {}
@@ -88,6 +89,7 @@ private:
     vertexLoopvars[v->iv] = Var(v->iv.getName(), Int(32));
   }
 };
+
 
 /// Specialize a statement containing an index expression to compute one value.
 class SpecializeIndexExprStmt : public IRMutator {
@@ -143,17 +145,39 @@ private:
   }
 };
 
+
+class GetReductionTmpName : public IRVisitor {
+public:
+  string get(const TensorWrite *op) {
+    op->tensor.accept(this);
+    for (auto &index : op->indices) {
+      index.accept(this);
+    }
+    return name;
+  }
+
+private:
+  std::string name;
+
+  void visit(const VarExpr *op) {
+    IRVisitor::visit(op);
+    name += op->var.name;
+  }
+};
+
 class ReduceOverVar : public IRMutator {
 public:
   ReduceOverVar(Stmt rstmt, Var rvar, ReductionOperator rop)
-      : rstmt(rstmt), rvar(rvar) {}
+      : rvar(rvar), rstmt(rstmt) {}
+
+  Var getTmpVar() {return tmpVar;}
 
 private:
+  Var rvar;
   Stmt rstmt;
   ReductionOperator rop;
 
-  Var rvar;
-  map<Var,Var> temps;
+  Var tmpVar;
 
   void visit(const AssignStmt *op) {
     if (op == rstmt) {
@@ -168,6 +192,23 @@ private:
       stmt = op;
     }
   }
+
+  void visit(const TensorWrite *op) {
+    if (op == rstmt) {
+      Expr tensor = op->tensor;
+      std::vector<Expr> indices = op->indices;
+
+      assert(tensor.type().isTensor());
+      switch (rop.getKind()) {
+        case ReductionOperator::Sum:
+          string tmpVarName = GetReductionTmpName().get(op);
+          ScalarType componentType = tensor.type().toTensor()->componentType;
+          tmpVar = Var(tmpVarName, TensorType::make(componentType));
+          stmt = AssignStmt::make(tmpVar, Add::make(tmpVar, op->value));
+          break;
+      }
+    }
+  }
 };
 
 
@@ -179,6 +220,7 @@ public:
     SIG sig = SIGBuilder(ud).create(indexExpr);
     lvs = LoopVars(sig);
 
+    componentType = indexExpr->type.toTensor()->componentType;
     body = SpecializeIndexExprStmt(lvs).mutate(indexStmt);
     stmt = body;
 
@@ -191,8 +233,10 @@ public:
 private:
   const UseDef *ud;
   LoopVars lvs;
-  Stmt stmt;
+  ScalarType componentType;
   Stmt body;
+
+  Stmt stmt;
 
   void visit(const SIGVertex *v) {
     SIGVisitor::visit(v);
@@ -207,7 +251,11 @@ private:
       }
       else {
         ReduceOverVar rov(body, lvs.getVar(v->iv), v->iv.getOperator());
-        stmt = For::make(lvs.getVar(v->iv), domain, rov.mutate(stmt));
+        Stmt loopBody = rov.mutate(stmt);
+        Var tmpVar = rov.getTmpVar();
+        Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.type, {0}));
+        Stmt loop = For::make(lvs.getVar(v->iv), domain, loopBody);
+        stmt = Block::make(alloc, loop);
       }
     }
     else {
@@ -223,6 +271,7 @@ private:
     // Emit loops
   }
 };
+
 
 class LowerIndexExpressions : public IRMutator {
 public:
