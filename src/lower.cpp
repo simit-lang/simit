@@ -4,6 +4,7 @@
 #include "ir_mutator.h"
 #include "usedef.h"
 #include "sig.h"
+#include "indexvar.h"
 #include "util.h"
 
 using namespace std;
@@ -72,11 +73,10 @@ private:
 
 class LoopVars : public SIGVisitor {
 public:
-  LoopVars(SIG const& sig) {
-    apply(sig);
-  }
+  LoopVars() {}
+  LoopVars(const SIG &sig) {apply(sig);}
 
-  Var const& getVar(IndexVar const& var) const {
+  const Var &getVar(const IndexVar &var) const {
     return vertexLoopvars.at(var);
   }
 
@@ -143,10 +143,45 @@ private:
   }
 };
 
+class ReduceOverVar : public IRMutator {
+public:
+  ReduceOverVar(Stmt rstmt, Var rvar, ReductionOperator rop)
+      : rstmt(rstmt), rvar(rvar) {}
+
+private:
+  Stmt rstmt;
+  ReductionOperator rop;
+
+  Var rvar;
+  map<Var,Var> temps;
+
+  void visit(const AssignStmt *op) {
+    if (op == rstmt) {
+      switch (rop.getKind()) {
+        case ReductionOperator::Sum:
+          Expr varExpr = VarExpr::make(op->var);
+          stmt = AssignStmt::make(op->var, Add::make(varExpr, op->value));
+          break;
+      }
+    }
+    else {
+      stmt = op;
+    }
+  }
+};
+
+
 class LoopBuilder : public SIGVisitor {
 public:
-  Stmt create(const IndexExpr *indexExpr, Stmt body, const SIG &sig) {
+  LoopBuilder(const UseDef *ud) : ud(ud) {}
+
+  Stmt create(const IndexExpr *indexExpr, Stmt indexStmt) {
+    SIG sig = SIGBuilder(ud).create(indexExpr);
+    lvs = LoopVars(sig);
+
+    body = SpecializeIndexExprStmt(lvs).mutate(indexStmt);
     stmt = body;
+
     apply(sig);
     Stmt result = stmt;
     stmt = Stmt();
@@ -154,19 +189,32 @@ public:
   }
 
 private:
+  const UseDef *ud;
+  LoopVars lvs;
   Stmt stmt;
+  Stmt body;
 
   void visit(const SIGVertex *v) {
     SIGVisitor::visit(v);
 
     const SIGEdge *previous = getPreviousEdge();
     if (previous == nullptr) {
+      // The vertex is unconstrained and loops over it's whole domain.
       const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
-      stmt = For::make(v->iv.getName(), domain, stmt);
+
+      if (v->iv.isFreeVar()) {
+        stmt = For::make(lvs.getVar(v->iv), domain, stmt);
+      }
+      else {
+        ReduceOverVar rov(body, lvs.getVar(v->iv), v->iv.getOperator());
+        stmt = For::make(lvs.getVar(v->iv), domain, rov.mutate(stmt));
+      }
     }
     else {
+      // The vertex is constrained and loops over previous' endpoints.
       const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
-      stmt = For::make("derived", domain, stmt);
+      stmt = For::make(Var("derived", Int(32)), domain, stmt);
+      NOT_SUPPORTED_YET;
     }
   }
 
@@ -184,10 +232,7 @@ private:
   const UseDef *ud;
 
   Stmt lower(const IndexExpr *indexExpr, Stmt stmt) {
-    SIG sig = SIGBuilder(ud).create(indexExpr);
-    LoopVars lvs(sig);
-    Stmt body = SpecializeIndexExprStmt(lvs).mutate(stmt);
-    return LoopBuilder().create(indexExpr, body, sig);
+    return LoopBuilder(ud).create(indexExpr, stmt);
   }
 
   void visit(const IndexExpr *op) {
@@ -205,25 +250,11 @@ private:
   }
 
   void visit(const FieldWrite *op) {
-    if (!op->value.type().isTensor()) {
-      IRMutator::visit(op);
-    }
-    else {
-      // By calling accept on op->value directly we bypass the mutate method
-      // and allow the visit method of the tensor type to return an stmt.
-      op->value.accept(this);
-    }
+    NOT_SUPPORTED_YET;
   }
 
   void visit(const TensorWrite *op) {
-    if (!op->value.type().isTensor()) {
-      IRMutator::visit(op);
-    }
-    else {
-      // By calling accept on op->value directly we bypass the mutate method
-      // and allow the visit method of the tensor type to return an stmt.
-      op->value.accept(this);
-    }
+    NOT_SUPPORTED_YET;
   }
 };
 

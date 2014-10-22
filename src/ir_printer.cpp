@@ -244,7 +244,7 @@ void IRPrinter::visit(const TensorWrite *op) {
 
 void IRPrinter::visit(const For *op) {
   indent();
-  os << "for " << op->name << " in " << op->domain << ":";
+  os << "for " << op->var << " in " << op->domain << ":";
   os << endl;
   ++indentation;
   print(op->body);

@@ -393,7 +393,6 @@ struct Load : public ExprNode<Div> {
 
 };
 
-
 // Statements
 struct AssignStmt : public StmtNode<AssignStmt> {
   Var var;
@@ -475,14 +474,13 @@ private:
 };
 
 struct For : public StmtNode<For> {
-  std::string name;
+  Var var;
   IndexSet domain;
-
   Stmt body;
 
-  static Stmt make(std::string name, IndexSet domain, Stmt body) {
+  static Stmt make(Var var, IndexSet domain, Stmt body) {
     For *node = new For;
-    node->name = name;
+    node->var = var;
     node->domain = domain;
     node->body = body;
     return node;

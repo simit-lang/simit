@@ -229,7 +229,7 @@ void IRMutator::visit(const For *op) {
     stmt = op;
   }
   else {
-    stmt = For::make(op->name, op->domain, body);
+    stmt = For::make(op->var, op->domain, body);
   }
 }
 
