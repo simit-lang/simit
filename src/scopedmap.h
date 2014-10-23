@@ -74,7 +74,8 @@ public:
   Iterator end() const { return scopes.end(); }
 
   /// Print symbol table to stream.
-  friend std::ostream &operator<<(std::ostream &os, const ScopedMap<Key,Value> &st) {
+  inline friend std::ostream &operator<<(std::ostream &os,
+                                         const ScopedMap<Key,Value> &st) {
     os << "SymbolTable:\n";
     for (auto scope : st.scopes) {
       os << "- ";
@@ -88,7 +89,6 @@ public:
         std::string symString = simit::util::toString(it->second);
         os << "  " << it->first << ": " << symString << "\n";
       }
-      os << "\n";
     }
     return os;
   }

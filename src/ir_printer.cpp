@@ -149,6 +149,13 @@ void IRPrinter::visit(const TupleRead *op) {
   os << ")";
 }
 
+void IRPrinter::visit(const Load *op) {
+  print(op->buffer);
+  os << "[";
+  print(op->index);
+  os << "]";
+}
+
 void IRPrinter::visit(const Map *op) {
   os << "map " << op->function;
   os << " to ";
@@ -238,6 +245,16 @@ void IRPrinter::visit(const TensorWrite *op) {
     print(indices[i]);
   }
   os << ") = ";
+  print(op->value);
+  os << ";";
+}
+
+void IRPrinter::visit(const Store *op) {
+  indent();
+  print(op->buffer);
+  os << "[";
+  print(op->index);
+  os << "] = ";
   print(op->value);
   os << ";";
 }

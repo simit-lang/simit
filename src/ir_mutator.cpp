@@ -96,6 +96,17 @@ void IRMutator::visit(const TupleRead *op) {
   }
 }
 
+void IRMutator::visit(const Load *op) {
+  Expr buffer = mutate(op->buffer);
+  Expr index = mutate(op->index);
+  if (buffer == op->buffer && index == op->index) {
+    expr = op;
+  }
+  else {
+    expr = Load::make(buffer, index);
+  }
+}
+
 void IRMutator::visit(const Map *op) {
   Expr target = mutate(op->target);
   Expr neighbors = mutate(op->neighbors);
@@ -206,7 +217,6 @@ void IRMutator::visit(const FieldWrite *op) {
 
 void IRMutator::visit(const TensorWrite *op) {
   Expr tensor = mutate(op->tensor);
-  Expr value = mutate(op->value);
   std::vector<Expr> indices(op->indices.size());
   bool indicesSame = true;
   for (size_t i=0; i < op->indices.size(); ++i) {
@@ -215,11 +225,24 @@ void IRMutator::visit(const TensorWrite *op) {
       indicesSame = false;
     }
   }
+  Expr value = mutate(op->value);
   if (tensor == op->tensor && indicesSame && value == op->value) {
     stmt = op;
   }
   else {
     stmt = TensorWrite::make(tensor, indices, value);
+  }
+}
+
+void IRMutator::visit(const Store *op) {
+  Expr buffer = mutate(op->buffer);
+  Expr index = mutate(op->index);
+  Expr value = mutate(op->value);
+  if (buffer == op->buffer && op->index == index && value == op->value) {
+    stmt = op;
+  }
+  else {
+    stmt = Store::make(buffer, index, value);
   }
 }
 

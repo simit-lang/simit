@@ -40,7 +40,7 @@ const std::string OFFSET_SUFFIX("_ofs");
 // class LLVMBackend
 bool LLVMBackend::llvmInitialized = false;
 
-LLVMBackend::LLVMBackend() {
+LLVMBackend::LLVMBackend() : val(nullptr) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
@@ -100,20 +100,7 @@ llvm::Value *LLVMBackend::compile(const Expr &expr) {
 
 void LLVMBackend::compile(const Stmt &stmt) {
   stmt.accept(this);
-}
-
-void LLVMBackend::visit(const Literal *op) {
-  cout << "Literal" << endl;
-  NOT_SUPPORTED_YET;
-}
-
-void LLVMBackend::visit(const VarExpr *op) {
-  assert(symtable.contains(op->var.name));
-  val = symtable.get(op->var.name);
-}
-
-void LLVMBackend::visit(const Result *op) {
-  cout << "Result" << endl;
+  val = nullptr;
 }
 
 void LLVMBackend::visit(const FieldRead *op) {
@@ -138,6 +125,66 @@ void LLVMBackend::visit(const IndexedTensor *op) {
 
 void LLVMBackend::visit(const IndexExpr *op) {
   assert(false && "No code generation for this type");
+}
+
+void LLVMBackend::visit(const FieldWrite *op) {
+  assert(false && "No code generation for this type");
+}
+
+void LLVMBackend::visit(const TensorWrite *op) {
+  assert(false && "No code generation for this type");
+}
+
+void LLVMBackend::visit(const Literal *op) {
+  assert(op->type.isTensor() && "Only tensor literals supported for now");
+  const TensorType *type = op->type.toTensor();
+
+  if (type->order() == 0) {
+    ScalarType ctype = type->componentType;
+    switch (ctype.kind) {
+      case ScalarType::Int: {
+        assert(ctype.bytes() == 4 && "Only 4-byte ints currently supported");
+        val = llvmInt(((int*)op->data)[0]);
+        break;
+      }
+      case ScalarType::Float: {
+        assert(ctype.bytes() == 8 && "Only 8-byte floats currently supported");
+        val = llvmFP(((double*)op->data)[0]);
+      }
+    }
+  }
+  else {
+    // Literal vectors, matrices tensors
+    NOT_SUPPORTED_YET;
+  }
+  assert(val);
+}
+
+void LLVMBackend::visit(const VarExpr *op) {
+  assert(symtable.contains(op->var.name));
+  val = symtable.get(op->var.name);
+
+  // Special case: check if the symbol is a scalar function result, in which
+  // case we must load the value since we pass in all results as pointers.
+  if (isScalarTensor(op->type) && results.find(val) != results.end()) {
+    string valName = string(val->getName()) + VAL_SUFFIX;
+    val = builder->CreateAlignedLoad(val, 8, valName);
+  }
+}
+
+void LLVMBackend::visit(const Result *op) {
+  cout << "Result" << endl;
+}
+
+void LLVMBackend::visit(const ir::Load *op) {
+  llvm::Value *buffer = compile(op->buffer);
+  llvm::Value *index = compile(op->index);
+
+  string locName = string(buffer->getName()) + PTR_SUFFIX;
+  llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
+
+  string valName = string(buffer->getName()) + VAL_SUFFIX;
+  val = builder->CreateAlignedLoad(bufferLoc, 8, valName);
 }
 
 void LLVMBackend::visit(const Call *op) {
@@ -258,11 +305,13 @@ void LLVMBackend::visit(const AssignStmt *op) {
   llvm::Value *value = compile(op->value);
   string name = op->var.name;
 
-  // Check if lhs already exist
+  // Check if lhs already exist (re-assigning to variable)
   if (symtable.contains(name)) {
     llvm::Value *nameNode = symtable.get(name);
 
-    // Check if the symbol is a function result
+    // Special case: check if the symbol is a function result, in which case
+    // it is an assignment of a scalar to a result.  Since we pass in all
+    // results as pointers we must store it to the variable ptr.
     if (results.find(nameNode) != results.end()) {
       builder->CreateStore(value, nameNode);
       value->setName(name + VAL_SUFFIX);
@@ -273,28 +322,73 @@ void LLVMBackend::visit(const AssignStmt *op) {
   }
   else {
     value->setName(name);
+    symtable.insert(name, value);
   }
 }
 
-void LLVMBackend::visit(const FieldWrite *op) {
-  assert(false && "No code generation for this type");
-}
+void LLVMBackend::visit(const ir::Store *op) {
+  llvm::Value *buffer = compile(op->buffer);
+  llvm::Value *index = compile(op->index);
+  llvm::Value *value = compile(op->value);
 
-void LLVMBackend::visit(const TensorWrite *op) {
-  assert(false && "No code generation for this type");
+  string locName = string(buffer->getName()) + PTR_SUFFIX;
+  llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
+  builder->CreateAlignedStore(value, bufferLoc, 8);
 }
 
 void LLVMBackend::visit(const For *op) {
-  cout << "For" << endl;
+  std::string iName = op->var.name;
+  IndexSet domain = op->domain;
 
+  llvm::Value *iMax;
+  if (domain.getKind() == IndexSet::Range) {
+    iMax = llvmInt(domain.getSize());
+  }
+  else {
+    NOT_SUPPORTED_YET;
+  }
+  assert(iMax);
+
+  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+
+  // Loop Header
+  llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
+
+  llvm::BasicBlock *loopBodyStart =
+      llvm::BasicBlock::Create(LLVM_CONTEXT, iName+"_loop_body", llvmFunc);
+  builder->CreateBr(loopBodyStart);
+  builder->SetInsertPoint(loopBodyStart);
+
+  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
+  i->addIncoming(builder->getInt32(0), entryBlock);
+
+  // Loop Body
+  symtable.scope();
+  symtable.insert(iName, i);
+  compile(op->body);
+  symtable.unscope();
+
+  // Loop Footer
+  llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
+  llvm::Value *i_nxt = builder->CreateAdd(i, builder->getInt32(1),
+                                          iName+"_nxt", false, true);
+  i->addIncoming(i_nxt, loopBodyEnd);
+
+  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, iMax, iName+"_cmp");
+  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
+                                                       iName+"_loop_end", llvmFunc);
+  builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
+  builder->SetInsertPoint(loopEnd);
 }
 
 void LLVMBackend::visit(const IfThenElse *op) {
   cout << "IfThenElse" << endl;
+  NOT_SUPPORTED_YET;
 }
 
 void LLVMBackend::visit(const Block *op) {
-  cout << "Block" << endl;
+  compile(op->first);
+  compile(op->rest);
 }
 
 }}  // namespace simit::internal

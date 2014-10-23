@@ -35,6 +35,11 @@ void IRVisitor::visit(const TupleRead *op) {
   op->index.accept(this);
 }
 
+void IRVisitor::visit(const Load *op) {
+  op->buffer.accept(this);
+  op->index.accept(this);
+}
+
 void IRVisitor::visit(const Map *op) {
   op->target.accept(this);
   op->neighbors.accept(this);
@@ -90,6 +95,12 @@ void IRVisitor::visit(const TensorWrite *op) {
   for (auto &index : op->indices) {
     index.accept(this);
   }
+  op->value.accept(this);
+}
+
+void IRVisitor::visit(const Store *op) {
+  op->buffer.accept(this);
+  op->index.accept(this);
   op->value.accept(this);
 }
 

@@ -21,6 +21,8 @@ struct Var {
   std::string name;
   Type type;
 
+  bool defined() {return type.defined();}
+
   Var() {}
   Var(std::string name, Type type) : name(name), type(type) {}
 };
@@ -137,6 +139,8 @@ struct Literal : public ExprNode<Literal> {
   }
 
   static Expr make(Type type, void *values) {
+    assert(type.isTensor() && "only tensor literals are supported for now");
+
     size_t size = 0;
     switch (type.kind()) {
       case Type::Tensor: {
@@ -218,6 +222,10 @@ struct TensorRead : public ExprNode<TensorRead> {
 
   static Expr make(Expr tensor, std::vector<Expr> indices) {
     assert(tensor.type().isTensor());
+    for (auto &index : indices) {
+      assert(isScalarTensor(index.type()));
+    }
+
     TensorRead *node = new TensorRead;
     node->type = blockType(tensor);
     node->tensor = tensor;
@@ -385,12 +393,23 @@ struct Div : public ExprNode<Div> {
   }
 };
 
-struct Load : public ExprNode<Div> {
-  Var buffer;
+struct Load : public ExprNode<Load> {
+  Expr buffer;
   Expr index;
 
-//  static Expr make(Var buffer, )
+  static Expr make(Expr buffer, Expr index) {
+    assert(isScalarTensor(index.type()));
 
+    // TODO: Create a buffer/array type and assert that buffer is that type.
+    //       Then get the component from the buffer.
+    ScalarType ctype = buffer.type().toTensor()->componentType;
+
+    Load  *node = new Load;
+    node->type = TensorType::make(ctype);
+    node->buffer = buffer;
+    node->index = index;
+    return node;
+  }
 };
 
 // Statements
@@ -429,6 +448,20 @@ struct TensorWrite : public StmtNode<TensorWrite> {
     TensorWrite *node = new TensorWrite;
     node->tensor = tensor;
     node->indices = indices;
+    node->value = value;
+    return node;
+  }
+};
+
+struct Store : public StmtNode<Store> {
+  Expr buffer;
+  Expr index;
+  Expr value;
+
+  static Stmt make(Expr buffer, Expr index, Expr value) {
+    Store *node = new Store;
+    node->buffer = buffer;
+    node->index = index;
     node->value = value;
     return node;
   }

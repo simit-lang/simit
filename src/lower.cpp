@@ -125,6 +125,7 @@ private:
       switch (rop.getKind()) {
         case ReductionOperator::Sum:
           Expr varExpr = VarExpr::make(op->var);
+          tmpVar = op->var;
           stmt = AssignStmt::make(op->var, Add::make(varExpr, op->value));
           break;
       }
@@ -142,8 +143,8 @@ private:
       assert(tensor.type().isTensor());
       switch (rop.getKind()) {
         case ReductionOperator::Sum:
-          string tmpVarName = GetReductionTmpName().get(op);
           ScalarType componentType = tensor.type().toTensor()->componentType;
+          string tmpVarName = GetReductionTmpName().get(op);
           tmpVar = Var(tmpVarName, TensorType::make(componentType));
           stmt = AssignStmt::make(tmpVar, Add::make(tmpVar, op->value));
           break;
@@ -194,6 +195,8 @@ private:
         ReduceOverVar rov(body, lvs.getVar(v->iv), v->iv.getOperator());
         Stmt loopBody = rov.mutate(stmt);
         Var tmpVar = rov.getTmpVar();
+        assert(tmpVar.defined());
+
         Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.type, {0}));
         Stmt loop = For::make(lvs.getVar(v->iv), domain, loopBody);
         stmt = Block::make(alloc, loop);
@@ -212,7 +215,6 @@ private:
     // Emit loops
   }
 };
-
 
 class LowerIndexExpressions : public IRMutator {
 public:
@@ -250,7 +252,64 @@ private:
 
 Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
-//  cout << ud << endl;
   return LowerIndexExpressions(&ud).mutate(func);
 }
+
+
+class LowerTensorAccesses : public IRMutator {
+  void visit(const TensorRead *op) {
+    assert(op->type.isTensor() && op->tensor.type().toTensor());
+
+    const TensorType *type = op->tensor.type().toTensor();
+    assert(type->order() == op->indices.size());
+
+    // TODO: Generalize to n-order tensors and remove assert (also there's no
+    //       need to have specialized code for vectors and matrices).
+    assert(type->order() <= 2);
+
+    if (type->order() == 1) {
+      Expr tensor = mutate(op->tensor);
+      Expr index = mutate(op->indices[0]);
+      expr = Load::make(tensor, index);
+    }
+    else if (type->order() == 2) {
+      expr = op;
+      NOT_SUPPORTED_YET;
+    }
+    else {
+      NOT_SUPPORTED_YET;
+    }
+  }
+
+  void visit(const TensorWrite *op) {
+    assert(op->tensor.type().toTensor());
+
+    const TensorType *type = op->tensor.type().toTensor();
+    assert(type->order() == op->indices.size());
+
+    // TODO: Generalize to n-order tensors and remove assert (also there's no
+    //       need to have specialized code for vectors and matrices).
+    assert(type->order() <= 2);
+
+    if (type->order() == 1) {
+      Expr tensor = mutate(op->tensor);
+      Expr index = mutate(op->indices[0]);
+      Expr value = mutate(op->value);
+      stmt = Store::make(tensor, index, value);
+    }
+    else if (type->order() == 2) {
+      IRMutator::visit(op);
+      NOT_SUPPORTED_YET;
+    }
+    else {
+      NOT_SUPPORTED_YET;
+    }
+  }
+};
+
+
+Func lowerTensorAccesses(Func func) {
+  return LowerTensorAccesses().mutate(func);
+}
+
 }}

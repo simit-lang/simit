@@ -174,6 +174,10 @@ int main(int argc, const char* argv[]) {
 
     func = lowerIndexExpressions(func);
     cout << "--- Lowering Index Expressions:" << endl;
+    cout << func << endl << endl;;
+
+    func = lowerTensorAccesses(func);
+    cout << "--- Lowering Tensor Reads and Writes:" << endl;
     cout << func << endl;
 
     if (emitLLVM) {

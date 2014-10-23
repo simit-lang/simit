@@ -36,8 +36,9 @@ private:
   virtual void visit(const VarExpr *);
   virtual void visit(const Result *);
   virtual void visit(const FieldRead *);
-  virtual void visit(const TupleRead *);
   virtual void visit(const TensorRead *);
+  virtual void visit(const TupleRead *);
+  virtual void visit(const Load *);
   virtual void visit(const Map *);
   virtual void visit(const IndexedTensor *);
   virtual void visit(const IndexExpr *);
@@ -51,6 +52,7 @@ private:
   virtual void visit(const AssignStmt *);
   virtual void visit(const FieldWrite *);
   virtual void visit(const TensorWrite *);
+  virtual void visit(const Store *);
   virtual void visit(const For *);
   virtual void visit(const IfThenElse *);
   virtual void visit(const Block *);
