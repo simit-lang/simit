@@ -10,7 +10,6 @@ Func lowerIndexExpressions(Func func);
 //Function lowerMaps(Func func);
 Func lowerTensorAccesses(Func func);
 
-//Function lowerLiterals(Func func);
 //Function lowerIntrinsics(Func func);
 
 }} // namespace simit::ir

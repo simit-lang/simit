@@ -296,8 +296,20 @@ void LLVMBackend::visit(const Mul *op) {
 
 void LLVMBackend::visit(const Div *op) {
   assert(isScalarTensor(op->type));
-  cout << "Div" << endl;
-  NOT_SUPPORTED_YET;
+
+  llvm::Value *a = compile(op->a);
+  llvm::Value *b = compile(op->b);
+
+  switch (op->type.toTensor()->componentType.kind) {
+    case ScalarType::Int:
+      // TODO: Figure out what's the deal with integer div. Cast to fp, div and
+      // truncate?
+      NOT_SUPPORTED_YET;
+      break;
+    case ScalarType::Float:
+      val = builder->CreateFDiv(a, b);
+      break;
+  }
 }
 
 

@@ -80,6 +80,9 @@ public:
   Expr(const ExprNodeBase *expr) : IntrusivePtr(expr) {}
   Expr(const Var &var);
 
+  Expr(int val);
+  Expr(double val);
+
   Type type() const {return ptr->type;}
 
   const ExprNodeBase *expr() const {return ptr;}

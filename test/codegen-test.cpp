@@ -39,8 +39,8 @@ TEST(Codegen, add0) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aArg = Literal::make(Float(), {2.0});
-  Expr bArg = Literal::make(Float(), {4.1});
+  Expr aArg = 2.0;
+  Expr bArg = 4.1;
   Expr cRes = Literal::make(Float());
 
   function->bind("a", &aArg);
@@ -66,8 +66,8 @@ TEST(Codegen, sin) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aArg = Literal::make(Float(), {2.0});
-  Expr cRes = Literal::make(Float());
+  Expr aArg = 2.0;
+  Expr cRes = 0.0;
 
   function->bind("a", &aArg);
   function->bind("c", &cRes);
@@ -92,8 +92,8 @@ TEST(Codegen, cos) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(), {2.0});
-  Expr cRes = Literal::make(Float());
+  Expr aVar = 2.0;
+  Expr cRes = 0.0;
 
   function->bind("a", &aVar);
   function->bind("c", &cRes);
@@ -118,8 +118,8 @@ TEST(Codegen, sqrt) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(), {5.0});
-  Expr cRes = Literal::make(Float());
+  Expr aVar = 5.0;
+  Expr cRes = 0.0;
 
   function->bind("a", &aVar);
   function->bind("c", &cRes);
@@ -144,8 +144,8 @@ TEST(Codegen, log) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(), {5.0});
-  Expr cRes = Literal::make(Float());
+  Expr aVar = 5.0;
+  Expr cRes = 0.0;
 
   function->bind("a", &aVar);
   function->bind("c", &cRes);
@@ -170,8 +170,8 @@ TEST(Codegen, exp) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(), {5.0});
-  Expr cRes = Literal::make(Float());
+  Expr aVar = 5.0;
+  Expr cRes = 0.0;
 
   function->bind("a", &aVar);
   function->bind("c", &cRes);
@@ -197,9 +197,9 @@ TEST(Codegen, atan2) {
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
 
-  Expr aVar = Literal::make(Float(), {1.0});
-  Expr bVar = Literal::make(Float(), {2.0});
-  Expr cRes = Literal::make(Float());
+  Expr aVar = 1.0;
+  Expr bVar = 2.0;
+  Expr cRes = 0.0;
 
   function->bind("a", &aVar);
   function->bind("b", &bVar);
@@ -211,6 +211,3 @@ TEST(Codegen, atan2) {
   ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));
 
 }
-
-
-

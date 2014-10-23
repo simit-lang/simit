@@ -106,22 +106,31 @@ private:
   }
 };
 
+
+/// Rewrites rstmt to reduce it's computed value into a temporary reduction
+/// variable using the rop ReductionOperation.
 class ReduceOverVar : public IRMutator {
 public:
-  ReduceOverVar(Stmt rstmt, Var rvar, ReductionOperator rop)
-      : rvar(rvar), rstmt(rstmt) {}
+  ReduceOverVar(Stmt rstmt, ReductionOperator rop) : rstmt(rstmt) {}
 
   Var getTmpVar() {return tmpVar;}
 
+  /// Retrieve a statement that writes the tmp variable to the original
+  /// location of the rewritten statement.  If result is !defined then the
+  /// reduction variable does not ned to be written back.
+  Stmt getTmpWriteStmt() {return tmpWriteStmt;}
+
 private:
-  Var rvar;
   Stmt rstmt;
   ReductionOperator rop;
 
   Var tmpVar;
+  Stmt tmpWriteStmt;
 
   void visit(const AssignStmt *op) {
     if (op == rstmt) {
+      assert(isScalarTensor(op->value.type()) &&
+             "assignment non-scalars should have been lowered by now");
       switch (rop.getKind()) {
         case ReductionOperator::Sum:
           Expr varExpr = VarExpr::make(op->var);
@@ -149,6 +158,7 @@ private:
           stmt = AssignStmt::make(tmpVar, Add::make(tmpVar, op->value));
           break;
       }
+      tmpWriteStmt = TensorWrite::make(tensor, indices, VarExpr::make(tmpVar));
     }
   }
 };
@@ -192,14 +202,21 @@ private:
         stmt = For::make(lvs.getVar(v->iv), domain, stmt);
       }
       else {
-        ReduceOverVar rov(body, lvs.getVar(v->iv), v->iv.getOperator());
+        ReduceOverVar rov(body, v->iv.getOperator());
         Stmt loopBody = rov.mutate(stmt);
         Var tmpVar = rov.getTmpVar();
         assert(tmpVar.defined());
 
         Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.type, {0}));
         Stmt loop = For::make(lvs.getVar(v->iv), domain, loopBody);
-        stmt = Block::make(alloc, loop);
+
+        Stmt tmpWriteStmt = rov.getTmpWriteStmt();
+        if (tmpWriteStmt.defined()) {
+          stmt = Block::make(alloc, Block::make(loop, tmpWriteStmt));
+        }
+        else {
+          stmt = Block::make(alloc, loop);
+        }
       }
     }
     else {
@@ -250,6 +267,7 @@ private:
   }
 };
 
+
 Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
   return LowerIndexExpressions(&ud).mutate(func);
@@ -273,8 +291,32 @@ class LowerTensorAccesses : public IRMutator {
       expr = Load::make(tensor, index);
     }
     else if (type->order() == 2) {
-      expr = op;
-      NOT_SUPPORTED_YET;
+      // TODO: Clearly we need something more sophisticated here (for sparse
+      // tensors or nested dense tensors).  For example, a tensor type could
+      // carry a 'TensorStorage' object and we could ask this TensorStorage to
+      // give us an Expr that computes an i,j location, or an Expr that gives us
+      // a row/column.
+      Expr tensor = mutate(op->tensor);
+
+      Expr i = mutate(op->indices[0]);
+      Expr j = mutate(op->indices[1]);
+
+      IndexDomain dim1 = type->dimensions[1];
+      Expr d1;
+      if (dim1.getIndexSets().size() == 1 &&
+          dim1.getIndexSets()[0].getKind() == IndexSet::Range) {
+        // TODO: Add support for unsigned ScalarTypes
+        assert(dim1.getSize() < (size_t)(-1));
+        int dimSize = static_cast<int>(dim1.getSize());
+        d1 = Literal::make(i.type(), &dimSize);
+      }
+      else {
+        NOT_SUPPORTED_YET;
+      }
+      assert(d1.defined());
+
+      Expr index = Add::make(Mul::make(i, d1), j);
+      expr = Load::make(tensor, index);
     }
     else {
       NOT_SUPPORTED_YET;
@@ -282,7 +324,7 @@ class LowerTensorAccesses : public IRMutator {
   }
 
   void visit(const TensorWrite *op) {
-    assert(op->tensor.type().toTensor());
+    assert(op->tensor.type().isTensor());
 
     const TensorType *type = op->tensor.type().toTensor();
     assert(type->order() == op->indices.size());
@@ -298,8 +340,33 @@ class LowerTensorAccesses : public IRMutator {
       stmt = Store::make(tensor, index, value);
     }
     else if (type->order() == 2) {
-      IRMutator::visit(op);
-      NOT_SUPPORTED_YET;
+      // TODO: Clearly we need something more sophisticated here (for sparse
+      // tensors or nested dense tensors).  For example, a tensor type could
+      // carry a 'TensorStorage' object and we could ask this TensorStorage to
+      // give us an Expr that computes an i,j location, or an Expr that gives us
+      // a row/column.
+      Expr tensor = mutate(op->tensor);
+
+      Expr i = mutate(op->indices[0]);
+      Expr j = mutate(op->indices[1]);
+
+      IndexDomain dim1 = type->dimensions[1];
+      Expr d1;
+      if (dim1.getIndexSets().size() == 1 &&
+          dim1.getIndexSets()[0].getKind() == IndexSet::Range) {
+        // TODO: Add support for unsigned ScalarTypes
+        assert(dim1.getSize() < (size_t)(-1));
+        int dimSize = static_cast<int>(dim1.getSize());
+        d1 = Literal::make(i.type(), &dimSize);
+      }
+      else {
+        NOT_SUPPORTED_YET;
+      }
+      assert(d1.defined());
+
+      Expr index = Add::make(Mul::make(i, d1), j);
+      Expr value = mutate(op->value);
+      stmt = Store::make(tensor, index, value);
     }
     else {
       NOT_SUPPORTED_YET;
