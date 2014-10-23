@@ -133,16 +133,21 @@ int main(int argc, const char* argv[]) {
   auto functions = ctx.getFunctions();
   auto iter = functions.begin();
 
-  bool somethingEmitted = false;
   if (emitSimit) {
-    if (iter != functions.end()) {
-      cout << iter->second << endl;
+    while (iter != functions.end()) {
+      if (iter->second.getKind() == simit::ir::Func::Internal) {
+        cout << iter->second << endl;
+        ++iter;
+        break;
+      }
       ++iter;
     }
-    for (; iter != functions.end(); ++iter) {
-      cout << endl << iter->second << endl;
+    while (iter != functions.end()) {
+      if (iter->second.getKind() == simit::ir::Func::Internal) {
+        cout << endl << iter->second << endl;
+      }
+      ++iter;
     }
-    somethingEmitted = true;
   }
 
   if (compile) {

@@ -156,6 +156,17 @@ public:
     ptr->body = body;
   }
 
+  Func(const std::string &name, const std::vector<Var> &arguments,
+       const std::vector<Var> &results, Kind kind)
+      : IntrusivePtr(new FuncContent) {
+    assert(kind != Internal);
+    ptr->kind = kind;
+    ptr->name = name;
+    ptr->arguments = arguments;
+    ptr->results = results;
+    ptr->body = Stmt();
+  }
+
   Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
   std::string getName() const {return ptr->name;}
   const std::vector<Var> &getArguments() const {return ptr->arguments;}
