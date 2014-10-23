@@ -61,32 +61,13 @@ simit::Function *LLVMBackend::compile(Func func) {
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
   builder->SetInsertPoint(entry);
 
-  size_t i=0;
-  auto &simitArgs = func.getArguments();
   for (auto &arg : llvmFunc->getArgumentList()) {
-    // Load scalar arguments
-    if (i++ < simitArgs.size()) {
-      if (isScalarTensor(simitArgs[i-1].type)) {
-        string valName = string(arg.getName()) + VAL_SUFFIX;
-        llvm::Value *val = builder->CreateLoad(&arg, valName);
-        symtable.insert(arg.getName(), val);
-      }
-      else {
-        symtable.insert(arg.getName(), &arg);
-      }
-    }
-    // Result
-    else {
-      symtable.insert(arg.getName(), &arg);
-      results.insert(&arg);
-    }
+    symtable.insert(arg.getName(), &arg);
   }
 
   compile(func.getBody());
-
   builder->CreateRetVoid();
 
-  results.clear();
   symtable.clear();
   return new LLVMFunction(func, llvmFunc, module);
 }
@@ -164,9 +145,10 @@ void LLVMBackend::visit(const VarExpr *op) {
   assert(symtable.contains(op->var.name));
   val = symtable.get(op->var.name);
 
-  // Special case: check if the symbol is a scalar function result, in which
-  // case we must load the value since we pass in all results as pointers.
-  if (isScalarTensor(op->type) && results.find(val) != results.end()) {
+  // Special case: check if the symbol is a scalar and the llvm value is a ptr,
+  // in which case we must load the value.  This case arises because we keep
+  // many scalars on the stack.  One exceptions to this are loop variables.
+  if (isScalarTensor(op->type) && val->getType()->isPointerTy()) {
     string valName = string(val->getName()) + VAL_SUFFIX;
     val = builder->CreateAlignedLoad(val, 8, valName);
   }
@@ -312,30 +294,25 @@ void LLVMBackend::visit(const Div *op) {
   }
 }
 
-
 void LLVMBackend::visit(const AssignStmt *op) {
+  assert(isScalarTensor(op->value.type()) &&
+         "assignment non-scalars should have been lowered by now");
+
   llvm::Value *value = compile(op->value);
-  string name = op->var.name;
+  string varName = op->var.name;
 
-  // Check if lhs already exist (re-assigning to variable)
-  if (symtable.contains(name)) {
-    llvm::Value *nameNode = symtable.get(name);
+  // Assigned for the first time
+  if (!symtable.contains(varName)) {
+    ScalarType type = op->value.type().toTensor()->componentType;
+    llvm::Value *var = builder->CreateAlloca(llvmType(type));
+    symtable.insert(varName, var);
+  }
+  assert(symtable.contains(varName));
 
-    // Special case: check if the symbol is a function result, in which case
-    // it is an assignment of a scalar to a result.  Since we pass in all
-    // results as pointers we must store it to the variable ptr.
-    if (results.find(nameNode) != results.end()) {
-      builder->CreateStore(value, nameNode);
-      value->setName(name + VAL_SUFFIX);
-    }
-    else {
-      value->setName(name);
-    }
-  }
-  else {
-    value->setName(name);
-    symtable.insert(name, value);
-  }
+  llvm::Value *var = symtable.get(varName);
+  assert(var->getType()->isPointerTy());
+  builder->CreateStore(value, var);
+  value->setName(varName + VAL_SUFFIX);
 }
 
 void LLVMBackend::visit(const ir::Store *op) {

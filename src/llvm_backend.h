@@ -40,10 +40,9 @@ private:
   llvm::IRBuilder<true, llvm::ConstantFolder,
                   llvm::IRBuilderDefaultInserter<true> > *builder;
 
-  std::set<llvm::Value*> results;
-  ScopedMap<std::string,llvm::Value*> symtable;
+  ScopedMap<std::string, llvm::Value*> symtable;
 
-  /// used to return variables from Expr functions
+  /// used to return variables from Expr visit functions
   llvm::Value *val;
 
   llvm::Value *compile(const ir::Expr &expr);
