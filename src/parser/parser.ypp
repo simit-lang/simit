@@ -918,7 +918,15 @@ call_expr
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
     auto actuals = unique_ptr<vector<Expr>>($expr_list_or_empty);
-    $$ = new Expr(Call::make(name, *actuals, Call::Internal));
+
+    if (!ctx->containsFunction(name)) {$$ = NULL; break;} // TODO: Remove check
+    
+    if (!ctx->containsFunction(name)) {
+      REPORT_ERROR("undefined function", @1);
+    }
+
+    Func func = ctx->getFunction(name);
+    $$ = new Expr(Call::make(func, *actuals));
   }
 
 %type <exprs> expr_list_or_empty;
@@ -986,7 +994,7 @@ element_type
     std::string name = convertAndFree($IDENT);
 
     if (!ctx->containsElementType(name)) {
-      REPORT_ERROR("Undefined element type '" + name + "' used" , @1);
+      REPORT_ERROR("undefined element type '" + name + "' used" , @1);
     }
 
     $$ = new Type(ctx->getElementType(name));

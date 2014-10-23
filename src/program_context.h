@@ -52,7 +52,11 @@ inline std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
 
 class ProgramContext {
 public:
-  ProgramContext() {}
+  ProgramContext() {
+    functions.insert(ir::Intrinsics::byName.begin(),
+                     ir::Intrinsics::byName.end());
+  }
+
   ~ProgramContext() {
     for (auto &test : tests) {
       delete test;

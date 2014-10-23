@@ -1906,7 +1906,15 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[3].value.string));
     auto actuals = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
-    (yylhs.value.expr) = new Expr(Call::make(name, *actuals, Call::Internal));
+
+    if (!ctx->containsFunction(name)) {(yylhs.value.expr) = NULL; break;} // TODO: Remove check
+    
+    if (!ctx->containsFunction(name)) {
+      REPORT_ERROR("undefined function", yystack_[3].location);
+    }
+
+    Func func = ctx->getFunction(name);
+    (yylhs.value.expr) = new Expr(Call::make(func, *actuals));
   }
 
     break;
@@ -1975,7 +1983,7 @@ namespace  simit { namespace internal  {
     std::string name = convertAndFree((yystack_[0].value.string));
 
     if (!ctx->containsElementType(name)) {
-      REPORT_ERROR("Undefined element type '" + name + "' used" , yystack_[0].location);
+      REPORT_ERROR("undefined element type '" + name + "' used" , yystack_[0].location);
     }
 
     (yylhs.value.type) = new Type(ctx->getElementType(name));
@@ -3056,13 +3064,13 @@ namespace  simit { namespace internal  {
      623,   624,   625,   626,   627,   633,   655,   664,   673,   685,
      752,   758,   788,   793,   802,   803,   804,   805,   811,   817,
      823,   829,   835,   841,   852,   871,   872,   873,   879,   912,
-     918,   926,   929,   935,   941,   952,   960,   962,   966,   968,
-     971,   972,   978,   979,   980,   981,   985,   997,  1001,  1011,
-    1015,  1022,  1034,  1038,  1041,  1083,  1093,  1098,  1106,  1109,
-    1123,  1129,  1135,  1138,  1188,  1192,  1193,  1197,  1201,  1208,
-    1219,  1226,  1230,  1234,  1248,  1252,  1267,  1271,  1278,  1285,
-    1289,  1293,  1307,  1311,  1326,  1330,  1337,  1341,  1348,  1351,
-    1357,  1360,  1367
+     918,   934,   937,   943,   949,   960,   968,   970,   974,   976,
+     979,   980,   986,   987,   988,   989,   993,  1005,  1009,  1019,
+    1023,  1030,  1042,  1046,  1049,  1091,  1101,  1106,  1114,  1117,
+    1131,  1137,  1143,  1146,  1196,  1200,  1201,  1205,  1209,  1216,
+    1227,  1234,  1238,  1242,  1256,  1260,  1275,  1279,  1286,  1293,
+    1297,  1301,  1315,  1319,  1334,  1338,  1345,  1349,  1356,  1359,
+    1365,  1368,  1375
   };
 
   // Print the state stack on the debug stream.

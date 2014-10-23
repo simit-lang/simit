@@ -57,8 +57,7 @@ TEST(Codegen, sin) {
   Var a("a", Float());
   Var c("c", Float());
 
-  Expr sin_a = Call::make("sin", {a}, Call::Intrinsic);
-  
+  Expr sin_a = Call::make(Intrinsics::sin, {a});
   Stmt body = AssignStmt::make(c, sin_a);
 
   Func func = Func("testsin", {a}, {c}, body);
@@ -83,8 +82,7 @@ TEST(Codegen, cos) {
   Var a("a", Float());
   Var c("c", Float());
 
-  Expr cos_a = Call::make("cos", {a}, Call::Intrinsic);
-  
+  Expr cos_a = Call::make(Intrinsics::cos, {a});
   Stmt body = AssignStmt::make(c, cos_a);
 
   Func func = Func("testcos", {a}, {c}, body);
@@ -109,8 +107,7 @@ TEST(Codegen, sqrt) {
   Var a("a", Float());
   Var c("c", Float());
 
-  Expr sqrt_a = Call::make("sqrt", {a}, Call::Intrinsic);
-  
+  Expr sqrt_a = Call::make(Intrinsics::sqrt, {a});
   Stmt body = AssignStmt::make(c, sqrt_a);
 
   Func func = Func("testsqrt", {a}, {c}, body);
@@ -135,8 +132,7 @@ TEST(Codegen, log) {
   Var a("a", Float());
   Var c("c", Float());
 
-  Expr log_a = Call::make("log", {a}, Call::Intrinsic);
-  
+  Expr log_a = Call::make(Intrinsics::log, {a});
   Stmt body = AssignStmt::make(c, log_a);
 
   Func func = Func("testlog", {a}, {c}, body);
@@ -161,8 +157,7 @@ TEST(Codegen, exp) {
   Var a("a", Float());
   Var c("c", Float());
 
-  Expr exp_a = Call::make("exp", {a}, Call::Intrinsic);
-  
+  Expr exp_a = Call::make(Intrinsics::exp, {a});
   Stmt body = AssignStmt::make(c, exp_a);
 
   Func func = Func("testexp", {a}, {c}, body);
@@ -188,8 +183,7 @@ TEST(Codegen, atan2) {
   Var b("b", Float());
   Var c("c", Float());
 
-  Expr atan2_ab = Call::make("atan2", {a,b}, Call::Intrinsic);
-  
+  Expr atan2_ab = Call::make(Intrinsics::atan2, {a,b});
   Stmt body = AssignStmt::make(c, atan2_ab);
 
   Func func = Func("testatan2", {a,b}, {c}, body);

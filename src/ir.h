@@ -123,6 +123,62 @@ inline const S* to(Stmt s) {
 }
 
 
+/// A Simit function
+namespace {
+// Content struct to make it cheap to copy the function to pass it around.
+struct FuncContent {
+  int kind;
+
+  std::string name;
+  std::vector<Var> arguments;
+  std::vector<Var> results;
+  Stmt body;
+
+  mutable long ref = 0;
+  friend inline void aquire(FuncContent *c) {++c->ref;}
+  friend inline void release(FuncContent *c) {if (--c->ref==0) delete c;}
+};
+}
+
+class Func : public util::IntrusivePtr<FuncContent> {
+public:
+  enum Kind { Internal=0, Intrinsic=1 };
+
+  Func() : IntrusivePtr() {}
+
+  Func(const std::string &name, const std::vector<Var> &arguments,
+       const std::vector<Var> &results, Stmt body)
+      : IntrusivePtr(new FuncContent) {
+    ptr->kind = Internal;
+    ptr->name = name;
+    ptr->arguments = arguments;
+    ptr->results = results;
+    ptr->body = body;
+  }
+
+  Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
+  std::string getName() const {return ptr->name;}
+  const std::vector<Var> &getArguments() const {return ptr->arguments;}
+  const std::vector<Var> &getResults() const {return ptr->results;}
+  Stmt getBody() const {return ptr->body;}
+
+  void accept(IRVisitor *visitor) const { visitor->visit(this); };
+};
+
+
+// Intrinsics:
+class Intrinsics {
+public:
+  static Func sin;
+  static Func cos;
+  static Func atan2;
+  static Func sqrt;
+  static Func log;
+  static Func exp;
+  static std::map<std::string, Func> byName;
+};
+
+
 // Type compute functions
 Type fieldType(Expr elementOrSet, std::string fieldName);
 Type blockType(Expr tensor);
@@ -307,18 +363,17 @@ struct IndexExpr : public ExprNode<IndexExpr> {
 };
 
 struct Call : public ExprNode<Call> {
-  enum Kind { Internal, Intrinsic };
-
-  std::string function;
+  Func function;
   std::vector<Expr> actuals;
-  Kind kind;
 
-  static Expr make(std::string function, std::vector<Expr> actuals, Kind kind) {
+  static Expr make(Func function, std::vector<Expr> actuals) {
+    assert(function.getResults().size() == 1 &&
+           "only calls of function with one results is currently supported.");
+
     Call *node = new Call;
-//    node->type = TODO
+    node->type = function.getResults()[0].type;
     node->function = function;
     node->actuals = actuals;
-    node->kind = kind;
     return node;
   }
 };
@@ -555,42 +610,6 @@ struct Block : public StmtNode<Block> {
     }
     return node;
   }
-};
-
-/// A Simit function
-namespace {
-// Content struct to make it cheap to copy the function to pass it around.
-struct FuncContent {
-  std::string name;
-  std::vector<Var> arguments;
-  std::vector<Var> results;
-  Stmt body;
-
-  mutable long ref = 0;
-  friend inline void aquire(FuncContent *c) {++c->ref;}
-  friend inline void release(FuncContent *c) {if (--c->ref==0) delete c;}
-};
-}
-
-class Func : public util::IntrusivePtr<FuncContent> {
-public:
-  Func() : IntrusivePtr() {}
-
-  Func(const std::string &name, const std::vector<Var> &arguments,
-       const std::vector<Var> &results, Stmt body)
-      : IntrusivePtr(new FuncContent) {
-    ptr->name = name;
-    ptr->arguments = arguments;
-    ptr->results = results;
-    ptr->body = body;
-  }
-
-  std::string getName() const {return ptr->name;}
-  const std::vector<Var> &getArguments() const {return ptr->arguments;}
-  const std::vector<Var> &getResults() const {return ptr->results;}
-  Stmt getBody() const {return ptr->body;}
-
-  void accept(IRVisitor *visitor) const { visitor->visit(this); };
 };
 
 

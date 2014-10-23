@@ -38,6 +38,28 @@ bool operator!=(const Expr &l, const Expr &r) {
   return !(l == r);
 }
 
+// class Intrinsics
+Func Intrinsics::sin =
+    Func("sin", {Var("x", Float())}, {Var("r", Float())}, Stmt());
+Func Intrinsics::cos =
+    Func("cos", {Var("x", Float())}, {Var("r", Float())}, Stmt());
+Func Intrinsics::atan2 =
+    Func("atan2", {Var("y", Float()), Var("x", Float())},
+                  {Var("r", Float())}, Stmt());
+Func Intrinsics::sqrt =
+    Func("sqrt", {Var("x", Float())}, {Var("r", Float())}, Stmt());
+Func Intrinsics::log =
+    Func("log", {Var("x", Float())}, {Var("r", Float())}, Stmt());
+Func Intrinsics::exp =
+    Func("exp", {Var("x", Float())}, {Var("r", Float())}, Stmt());
+
+std::map<std::string, Func> Intrinsics::byName = {{"sin",sin},
+                                                  {"cos",cos},
+                                                  {"atan2",atan2},
+                                                  {"sqrt",sqrt},
+                                                  {"log",log},
+                                                  {"exp",exp}};
+
 // Type compute functions
 Type fieldType(Expr elementOrSet, std::string fieldName) {
   assert(elementOrSet.type().isElement() || elementOrSet.type().isSet());

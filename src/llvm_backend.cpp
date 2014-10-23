@@ -200,30 +200,30 @@ void LLVMBackend::visit(const Call *op) {
   }
 
   // these are intrinsic functions
-  if (op->function == "sin" && op->kind == Call::Intrinsic) {
+  if (op->function == ir::Intrinsics::sin) {
     fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sin, argTypes);
   }
-  if (op->function == "cos" && op->kind == Call::Intrinsic) {
+  else if (op->function == ir::Intrinsics::cos) {
     fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::cos, argTypes);
   }
-  if (op->function == "sqrt" && op->kind == Call::Intrinsic) {
-    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt, argTypes);
-  }
-  if (op->function == "log" && op->kind == Call::Intrinsic) {
-    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::log, argTypes);
-  }
-  if (op->function == "exp" && op->kind == Call::Intrinsic) {
-    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::exp, argTypes);
-  }
-  if (op->function == "atan2" && op->kind == Call::Intrinsic) {
+  else if (op->function == ir::Intrinsics::atan2) {
     // atan2 isn't an LLVM intrinsic
     auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("atan2", ftype));
   }
+  else if (op->function == ir::Intrinsics::sqrt) {
+    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt, argTypes);
+  }
+  else if (op->function == ir::Intrinsics::log) {
+    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::log, argTypes);
+  }
+  else if (op->function == ir::Intrinsics::exp) {
+    fun = llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::exp, argTypes);
+  }
   
   // if not an intrinsic function, try to find it in the module
   if (!fun) {
-    fun = module->getFunction(op->function);
+    fun = module->getFunction(op->function.getName());
   }
   
   if (fun)

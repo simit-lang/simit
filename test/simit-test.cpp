@@ -26,7 +26,6 @@ int main(int argc, char **argv) {
 
   ::testing::InitGoogleTest(&argc, argv);
   int result = RUN_ALL_TESTS();
-  std::cout << "3 expected failures due to incomplete dense BLAS code "
-            << "generation" << std::endl;
+  std::cout << "3 expected failures" << std::endl;
   return result;
 }
