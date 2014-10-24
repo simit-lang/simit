@@ -28,7 +28,6 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                            llvm::Module *module)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       executionEngine(createExecutionEngine(module)) {
-  executionEngine->getPointerToFunction(llvmFunc);  // Compile function
 }
 
 LLVMFunction::~LLVMFunction() {
@@ -72,13 +71,21 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
           break;
         }
         case ir::Type::Set: {
-          const SetBase *set = actual.getSet();
-          args.push_back(llvmInt(set->getSize()));
           const ir::SetType *setType = actual.getType().toSet();
+          const SetBase *set = actual.getSet();
+
+          llvm::StructType *llvmSetType = createLLVMType(setType);
+
+          vector<llvm::Constant*> setData;
+          setData.push_back(llvmInt(set->getSize()));
           for (auto &field : setType->elementType.toElement()->fields) {
-            assert(field.second.isTensor());
-            args.push_back(llvmPtr(field.second, getFieldPtr(set,field.first)));
+            assert(field.second.type.isTensor());
+            setData.push_back(llvmPtr(field.second.type,
+                                      getFieldPtr(set,field.first)));
           }
+
+          llvm::Value *llvmSet= llvm::ConstantStruct::get(llvmSetType, setData);
+          args.push_back(llvmSet);
           break;
         }
         case ir::Type::Tuple: {

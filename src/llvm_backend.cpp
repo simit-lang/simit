@@ -33,9 +33,9 @@ using namespace simit::internal;
 namespace simit {
 namespace internal {
 
-const std::string VAL_SUFFIX("_val");
-const std::string PTR_SUFFIX("_ptr");
-const std::string OFFSET_SUFFIX("_ofs");
+const std::string VAL_SUFFIX(".val");
+const std::string PTR_SUFFIX(".ptr");
+const std::string LEN_SUFFIX(".len");
 
 // class LLVMBackend
 bool LLVMBackend::llvmInitialized = false;
@@ -85,7 +85,23 @@ void LLVMBackend::compile(const Stmt &stmt) {
 }
 
 void LLVMBackend::visit(const FieldRead *op) {
-  assert(false && "No code generation for this type");
+  Expr setOrElem = op->elementOrSet;
+  string fieldName = op->fieldName;
+  assert(setOrElem.type().isElement() || setOrElem.type().isSet());
+
+  const ElementType *elemType = nullptr;
+  if (setOrElem.type().isElement()) {
+    elemType = setOrElem.type().toElement();
+  }
+  else {
+    elemType = setOrElem.type().toSet()->elementType.toElement();
+  }
+
+  llvm::Value *setOrElemValue = compile(op->elementOrSet);
+
+  unsigned fieldLoc = elemType->fields.at(fieldName).location;
+  val = builder->CreateExtractValue(setOrElemValue, {fieldLoc},
+                                    setOrElemValue->getName()+"."+fieldName);
 }
 
 void LLVMBackend::visit(const TensorRead *op) {
@@ -109,7 +125,7 @@ void LLVMBackend::visit(const IndexExpr *op) {
 }
 
 void LLVMBackend::visit(const FieldWrite *op) {
-  assert(false && "No code generation for this type");
+  NOT_SUPPORTED_YET;
 }
 
 void LLVMBackend::visit(const TensorWrite *op) {
@@ -329,14 +345,22 @@ void LLVMBackend::visit(const For *op) {
   std::string iName = op->var.name;
   IndexSet domain = op->domain;
 
-  llvm::Value *iMax;
-  if (domain.getKind() == IndexSet::Range) {
-    iMax = llvmInt(domain.getSize());
+  llvm::Value *iNum;
+  switch (domain.getKind()) {
+    case IndexSet::Range:
+      iNum = llvmInt(domain.getSize());
+      break;
+    case IndexSet::Set: {
+      llvm::Value *setValue = compile(domain.getSet());
+      iNum = builder->CreateExtractValue(setValue, {0},
+                                         setValue->getName()+LEN_SUFFIX);
+      break;
+    }
+    case IndexSet::Dynamic:
+      NOT_SUPPORTED_YET;
+      break;
   }
-  else {
-    NOT_SUPPORTED_YET;
-  }
-  assert(iMax);
+  assert(iNum);
 
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
@@ -363,7 +387,7 @@ void LLVMBackend::visit(const For *op) {
                                           iName+"_nxt", false, true);
   i->addIncoming(i_nxt, loopBodyEnd);
 
-  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, iMax, iName+"_cmp");
+  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, iNum, iName+"_cmp");
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
                                                        iName+"_loop_end", llvmFunc);
   builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);

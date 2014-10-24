@@ -59,7 +59,8 @@ void Function::bind(const std::string &argName, SetBase *set) {
     SetBase::FieldData *fieldData = set->fields[field.second];
 
     const SetBase::FieldData::TensorType *setFieldType = fieldData->type;
-    const ir::TensorType *argFieldType = argFieldsMap.at(field.first).toTensor();
+    const ir::TensorType *argFieldType =
+        argFieldsMap.at(field.first).type.toTensor();
 
     ir::ScalarType setFieldTypeComponentType;
     switch (setFieldType->getComponentType()) {

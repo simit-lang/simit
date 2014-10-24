@@ -1147,7 +1147,7 @@ namespace  simit { namespace internal  {
 
     {
     string name = convertAndFree((yystack_[2].value.string));
-    unique_ptr<std::map<string,Type>> fields((yystack_[1].value.fields));
+    unique_ptr<std::map<string,Field>> fields((yystack_[1].value.fields));
 
     if (ctx->containsElementType(name)) {
       REPORT_ERROR("struct redefinition (" + name + ")", yylhs.location);
@@ -1161,7 +1161,7 @@ namespace  simit { namespace internal  {
   case 12:
 
     {
-    (yylhs.value.fields) = new map<string,Type>;
+    (yylhs.value.fields) = new map<string,Field>;
   }
 
     break;
@@ -1170,6 +1170,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.fields) = (yystack_[1].value.fields);
+    (yystack_[0].value.field)->second.location = (yylhs.value.fields)->size()+1;
     (yylhs.value.fields)->insert(*(yystack_[0].value.field));
     delete (yystack_[0].value.field);
   }
@@ -1181,7 +1182,7 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[3].value.string));
     auto tensorType = convertAndDelete((yystack_[1].value.type));
-    (yylhs.value.field) = new pair<string,Type>(name, tensorType);
+    (yylhs.value.field) = new pair<string,Field>(name, tensorType);
   }
 
     break;
@@ -1908,7 +1909,7 @@ namespace  simit { namespace internal  {
     auto actuals = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
 
     if (!ctx->containsFunction(name)) {(yylhs.value.expr) = NULL; break;} // TODO: Remove check
-    
+
     if (!ctx->containsFunction(name)) {
       REPORT_ERROR("undefined function", yystack_[3].location);
     }
@@ -3056,21 +3057,21 @@ namespace  simit { namespace internal  {
    Parser ::yyrline_[] =
   {
        0,   271,   271,   273,   276,   277,   285,   293,   294,   295,
-     300,   310,   323,   326,   334,   344,   344,   344,   352,   372,
-     372,   372,   380,   402,   405,   411,   416,   424,   433,   436,
-     442,   447,   455,   465,   468,   475,   476,   479,   480,   481,
-     482,   483,   484,   485,   488,   513,   533,   553,   559,   564,
-     566,   570,   572,   578,   581,   609,   612,   620,   621,   622,
-     623,   624,   625,   626,   627,   633,   655,   664,   673,   685,
-     752,   758,   788,   793,   802,   803,   804,   805,   811,   817,
-     823,   829,   835,   841,   852,   871,   872,   873,   879,   912,
-     918,   934,   937,   943,   949,   960,   968,   970,   974,   976,
-     979,   980,   986,   987,   988,   989,   993,  1005,  1009,  1019,
-    1023,  1030,  1042,  1046,  1049,  1091,  1101,  1106,  1114,  1117,
-    1131,  1137,  1143,  1146,  1196,  1200,  1201,  1205,  1209,  1216,
-    1227,  1234,  1238,  1242,  1256,  1260,  1275,  1279,  1286,  1293,
-    1297,  1301,  1315,  1319,  1334,  1338,  1345,  1349,  1356,  1359,
-    1365,  1368,  1375
+     300,   310,   323,   326,   335,   345,   345,   345,   353,   373,
+     373,   373,   381,   403,   406,   412,   417,   425,   434,   437,
+     443,   448,   456,   466,   469,   476,   477,   480,   481,   482,
+     483,   484,   485,   486,   489,   514,   534,   554,   560,   565,
+     567,   571,   573,   579,   582,   610,   613,   621,   622,   623,
+     624,   625,   626,   627,   628,   634,   656,   665,   674,   686,
+     753,   759,   789,   794,   803,   804,   805,   806,   812,   818,
+     824,   830,   836,   842,   853,   872,   873,   874,   880,   913,
+     919,   935,   938,   944,   950,   961,   969,   971,   975,   977,
+     980,   981,   987,   988,   989,   990,   994,  1006,  1010,  1020,
+    1024,  1031,  1043,  1047,  1050,  1092,  1102,  1107,  1115,  1118,
+    1132,  1138,  1144,  1147,  1197,  1201,  1202,  1206,  1210,  1217,
+    1228,  1235,  1239,  1243,  1257,  1261,  1276,  1280,  1287,  1294,
+    1298,  1302,  1316,  1320,  1335,  1339,  1346,  1350,  1357,  1360,
+    1366,  1369,  1376
   };
 
   // Print the state stack on the debug stream.

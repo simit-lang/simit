@@ -162,8 +162,8 @@
   ir::Func *function;
 
   ir::Type                         *type;
-  std::pair<std::string, ir::Type> *field;
-  std::map<std::string, ir::Type>  *fields;
+  std::pair<std::string,ir::Field> *field;
+  std::map<std::string,ir::Field>  *fields;
   std::vector<ir::IndexSet>        *indexSets;
   ir::IndexSet                     *indexSet;
 
@@ -309,7 +309,7 @@ extern
 element_type_decl
   : "element" IDENT field_decl_list "end" {
     string name = convertAndFree($IDENT);
-    unique_ptr<std::map<string,Type>> fields($field_decl_list);
+    unique_ptr<std::map<string,Field>> fields($field_decl_list);
 
     if (ctx->containsElementType(name)) {
       REPORT_ERROR("struct redefinition (" + name + ")", @element_type_decl);
@@ -321,10 +321,11 @@ element_type_decl
 %type <fields> field_decl_list;
 field_decl_list
   : /* empty */ {
-    $$ = new map<string,Type>;
+    $$ = new map<string,Field>;
   }
   | field_decl_list field_decl {
     $$ = $1;
+    $field_decl->second.location = $$->size()+1;
     $$->insert(*$field_decl);
     delete $field_decl;
   }
@@ -334,7 +335,7 @@ field_decl
   : IDENT ":" tensor_type  ";" {
     std::string name = convertAndFree($IDENT);
     auto tensorType = convertAndDelete($tensor_type);
-    $$ = new pair<string,Type>(name, tensorType);
+    $$ = new pair<string,Field>(name, tensorType);
   }
 
 
@@ -920,7 +921,7 @@ call_expr
     auto actuals = unique_ptr<vector<Expr>>($expr_list_or_empty);
 
     if (!ctx->containsFunction(name)) {$$ = NULL; break;} // TODO: Remove check
-    
+
     if (!ctx->containsFunction(name)) {
       REPORT_ERROR("undefined function", @1);
     }

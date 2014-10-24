@@ -34,7 +34,6 @@ class LLVMFunction : public simit::Function {
                    std::map<std::string, Actual> &actuals);
 };
 
-
 }}  // namespace simit::internal
 
 #endif

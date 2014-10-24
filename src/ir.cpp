@@ -67,13 +67,14 @@ Type fieldType(Expr elementOrSet, std::string fieldName) {
   Type fieldType;
   if (elementOrSet.type().isElement()) {
     const ElementType *elemType = elementOrSet.type().toElement();
-    fieldType = elemType->fields.at(fieldName);
+    fieldType = elemType->fields.at(fieldName).type;
   }
   else if (elementOrSet.type().isSet()) {
     const SetType *setType = elementOrSet.type().toSet();
     const ElementType *elemType = setType->elementType.toElement();
 
-    const TensorType *elemFieldType = elemType->fields.at(fieldName).toTensor();
+    const TensorType *elemFieldType =
+        elemType->fields.at(fieldName).type.toTensor();
 
     // The type of a set field is:
     // `Tensor[set][elementFieldDimensions](elemFieldComponentType)`

@@ -38,19 +38,23 @@ llvm::Type *llvmPtrType(ir::ScalarType stype);
 
 llvm::Type *llvmPtrType(const ir::TensorType *ttype);
 
-llvm::Type *llvmPtrType(const ir::Type &type);
-
 llvm::Constant *llvmPtr(const ir::Type &type, void *data);
 
 llvm::Constant *llvmPtr(ir::Literal *literal);
 
 ir::Type simitType(const llvm::Type *type);
 
+llvm::StructType *createLLVMType(const ir::SetType *);
+llvm::Type *createLLVMType(const ir::Type &);
+
 /// Creates an empy llvm function.
 llvm::Function *createFunction(const std::string &name,
-                               const std::vector<ir::Var> &args,
+                               const std::vector<ir::Var> &arguments,
                                const std::vector<ir::Var> &results,
                                llvm::Module *module);
+
+std::ostream &operator<<(std::ostream &os, const llvm::Value &);
+std::ostream &operator<<(std::ostream &os, const llvm::Type &);
 
 }} // namespace simit::internal
 

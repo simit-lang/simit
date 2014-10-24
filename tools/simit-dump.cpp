@@ -191,6 +191,8 @@ int main(int argc, const char* argv[]) {
       std::string fstr = simit::util::toString(*backend.compile(func));
       cout << "--- Emitting LLVM:" << endl;
       cout << simit::util::trim(fstr) << endl;
+
+      // NB: The LLVM code gets further optimized at init time (OSR, etc.)
     }
   }
 

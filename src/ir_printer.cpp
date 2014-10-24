@@ -167,11 +167,11 @@ void IRPrinter::visit(const Map *op) {
 
 void IRPrinter::visit(const IndexedTensor *op) {
   print(op->tensor);
-  os << "(" << util::join(op->indexVars,",") << ")";
+  os << "{" << util::join(op->indexVars,",") << "}";
 }
 
 void IRPrinter::visit(const IndexExpr *op) {
-  os << "((" + simit::util::join(op->resultVars, ",") + ") ";
+  os << "({" + simit::util::join(op->resultVars, ",") + "} ";
   print(op->value);
   os << ")";
 }

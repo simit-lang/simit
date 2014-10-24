@@ -29,8 +29,6 @@ TEST(Program, addScalarFields) {
   int errorCode = program.loadString(programText);
   if (errorCode) FAIL() << program.getDiagnostics().getMessage();
 
-  return;  // TODO newir: Remove
-
   std::unique_ptr<Function> f = program.compile("addSets");
   if (!f) FAIL() << program.getDiagnostics().getMessage();
 

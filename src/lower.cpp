@@ -60,24 +60,42 @@ private:
     }
   }
 
-  void visit(const IndexedTensor *op) {
-    if (isa<VarExpr>(op->tensor)) {
-      if (op->indexVars.size() == 0) {
-        expr = op->tensor;
-      }
-      else {
-        std::vector<Expr> indices;
-        for (IndexVar const& iv : op->indexVars) {
-          indices.push_back(lvs.getVar(iv));
-        }
-        expr = TensorRead::make(op->tensor, indices);
-      }
+  void visit(const FieldWrite *op) {
+    assert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
+    const IndexExpr *indexExpr = to<IndexExpr>(op->value);
+
+    Expr elementOrSet = mutate(op->elementOrSet);
+    std::string fieldName = op->fieldName;
+    Expr value = mutate(indexExpr);
+
+    if (indexExpr->resultVars.size() == 0) {
+      stmt = FieldWrite::make(elementOrSet, fieldName, value);
     }
     else {
-      op->tensor.accept(this);
-      // Flatten index expression. E.g. ((i) A(i,j) *  ((m) c(m)+b(m))(j)  )
-      expr = op;
+      std::vector<Expr> indices;
+      for (IndexVar const& iv : indexExpr->resultVars) {
+        indices.push_back(lvs.getVar(iv));
+      }
+      Expr field = FieldRead::make(elementOrSet, fieldName);
+      stmt = TensorWrite::make(field, indices, value);
+    }
+  }
+
+  void visit(const IndexedTensor *op) {
+    // TODO: Flatten IndexExpr. E.g. ((i) A(i,j) *  ((m) c(m)+b(m))(j) )
+    if (isa<IndexExpr>(op->tensor)) {
       NOT_SUPPORTED_YET;
+    }
+
+    if (op->indexVars.size() == 0) {
+      expr = op->tensor;
+    }
+    else {
+      std::vector<Expr> indices;
+      for (IndexVar const& iv : op->indexVars) {
+        indices.push_back(lvs.getVar(iv));
+      }
+      expr = TensorRead::make(op->tensor, indices);
     }
   }
 
@@ -259,7 +277,12 @@ private:
   }
 
   void visit(const FieldWrite *op) {
-    NOT_SUPPORTED_YET;
+    if (isa<IndexExpr>(op->value)) {
+      stmt = lower(to<IndexExpr>(op->value), op);
+    }
+    else {
+      IRMutator::visit(op);
+    }
   }
 
   void visit(const TensorWrite *op) {

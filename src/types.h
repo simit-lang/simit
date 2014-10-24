@@ -113,11 +113,22 @@ inline Type Float() {
   return TensorType::make(ScalarType(ScalarType::Float));
 }
 
+struct Field {
+  Field(Type type) : type(type), location(-1) {}
+
+  Type type;
+
+  /// The fields location in the element
+  unsigned location;
+};
+
 struct ElementType : TypeNode {
   std::string name;
-  std::map<std::string,Type> fields;
 
-  static Type make(std::string name, std::map<std::string,Type> fields) {
+  /// Maps field names to their types and locations in the element
+  std::map<std::string,Field> fields;
+
+  static Type make(std::string name, std::map<std::string,Field> fields) {
     ElementType *type = new ElementType;
     type->name = name;
     type->fields = fields;
