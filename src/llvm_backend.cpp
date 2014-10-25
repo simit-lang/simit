@@ -65,7 +65,10 @@ simit::Function *LLVMBackend::compile(Func func) {
     symtable.insert(arg.getName(), &arg);
   }
 
-  compile(func.getBody());
+  if (func.getBody().defined()) {
+    compile(func.getBody());
+  }
+
   builder->CreateRetVoid();
 
   symtable.clear();
