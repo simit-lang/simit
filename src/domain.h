@@ -58,7 +58,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is);
 /// \todo Domain one of: a full set, edge endpoints, element edges
 class IndexDomain {
 public:
-  explicit IndexDomain() {}
+  IndexDomain() {}
   explicit IndexDomain(IndexSet is) { indexSets.push_back(is); }
   explicit IndexDomain(std::vector<IndexSet> iss) : indexSets(iss) {};
 
