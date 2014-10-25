@@ -177,12 +177,13 @@
   ir::Expr                      *expr;
   std::vector<ir::Expr>         *exprs;
   ir::IRBuilder::BinaryOperator  binop;
+  ir::ReductionOperator::Kind    reductionop;
   TensorValues<double>          *TensorDoubleValues;
   TensorValues<int>             *TensorIntValues;
 
   std::vector<std::string> *strings;
 }
-%destructor {} <num> <fnum> <binop>
+%destructor {} <num> <fnum> <binop> <reductionop>
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <*>
 
@@ -917,16 +918,16 @@ call_or_paren_read_expr
 %type <expr> call_expr;
 call_expr
   : IDENT "(" expr_list_or_empty ")" {
-    std::string name = convertAndFree($1);
+    std::string funcName = convertAndFree($1);
     auto actuals = unique_ptr<vector<Expr>>($expr_list_or_empty);
 
-    if (!ctx->containsFunction(name)) {$$ = NULL; break;} // TODO: Remove check
+    if (!ctx->containsFunction(funcName)) {$$ = NULL; break;} // TODO: Remove check
 
-    if (!ctx->containsFunction(name)) {
-      REPORT_ERROR("undefined function", @1);
+    if (!ctx->containsFunction(funcName)) {
+      REPORT_ERROR("undefined function '" + funcName + "'", @1);
     }
+    Func func = ctx->getFunction(funcName);
 
-    Func func = ctx->getFunction(name);
     $$ = new Expr(Call::make(func, *actuals));
   }
 
@@ -959,26 +960,55 @@ expr_list
 %type <expr> map_expr;
 map_expr
   : "map" IDENT "to" IDENT with reduce {
-    string function($2);
-    string target($4);
-    free((void*)$2);
-    free((void*)$4);
-    $$ = NULL;
+    string funcName = convertAndFree($2);
+    string targetsName = convertAndFree($4);
+
+    Expr neighbor = convertAndDelete($5);
+    ReductionOperator reduction($6);
+
+    if (!ctx->containsFunction(funcName)) {
+      REPORT_ERROR("undefined function '" + funcName + "'", @2);
+    }
+    Func func = ctx->getFunction(funcName);
+
+    if (!ctx->hasSymbol(targetsName)) {
+      REPORT_ERROR("undefined set '" + targetsName + "'", @4);
+    }
+    Expr targets = ctx->getSymbol(targetsName).getExpr();
+
+    $$ = new Expr(Map::make(func, targets, neighbor, reduction));
   }
 
+%type <expr> with;
 with
-  : /* empty */
+  : /* empty */ {
+    $$ = new Expr();
+  }
   | "with" IDENT {
-    std::string neighbor = convertAndFree($IDENT);
+    std::string neighborsName = convertAndFree($IDENT);
+
+    if (!ctx->hasSymbol(neighborsName)) {
+      REPORT_ERROR("undefined set '" + neighborsName + "'", @2);
+    }
+    Expr neighbors = ctx->getSymbol(neighborsName).getExpr();
+
+    $$ = new Expr(neighbors);
   }
 
+%type <reductionop> reduce;
 reduce
-  : /* empty */
-  | "reduce" reduction_op
+  : /* empty */ {
+    $$ =  ReductionOperator::Undefined;
+  }
+  | "reduce" reduce_op {
+    $$ =  $reduce_op;
+  }
 
-reduction_op
-  : "+"
-  | "*"
+%type <reductionop> reduce_op;
+reduce_op
+  : "+" {
+    $$ = ReductionOperator::Sum;
+  }
 
 
 // Types
@@ -995,7 +1025,7 @@ element_type
     std::string name = convertAndFree($IDENT);
 
     if (!ctx->containsElementType(name)) {
-      REPORT_ERROR("undefined element type '" + name + "' used" , @1);
+      REPORT_ERROR("undefined element type '" + name + "'" , @1);
     }
 
     $$ = new Type(ctx->getElementType(name));

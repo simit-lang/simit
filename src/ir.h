@@ -318,13 +318,14 @@ struct TupleRead : public ExprNode<TupleRead> {
 };
 
 struct Map : public ExprNode<Map> {
-  std::string function;
+  Func function;
   Expr target, neighbors;
   ReductionOperator reductionOp;
 
-  static Expr make(std::string function, Expr target, Expr neighbors,
-                   ReductionOperator reductionOp) {
-    assert(target.type().isSet() && neighbors.type().isSet());
+  static Expr make(Func function, Expr target, Expr neighbors=Expr(),
+                   ReductionOperator reductionOp=ReductionOperator()) {
+    assert(target.type().isSet());
+    assert(!neighbors.defined() || neighbors.type().isSet());
     Map *node = new Map;
     node->function = function;
     node->target = target;

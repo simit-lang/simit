@@ -86,35 +86,45 @@ TEST(Program, addVectorFields) {
   ASSERT_EQ(6.0, vec2(2));
 }
 
-//TEST(Program, spmv) {
-//  Program program;
-//  std::string programText =
-//      "element Point                                                    "
-//      "  a : float;                                                     "
-//      "  b : float;                                                     "
-//      "end                                                              "
+TEST(Program, gemv) {
+  Program program;
+  std::string programText = R"(
+    element Point
+      b : float;
+      c : float;
+    end
+
+    element Spring
+      a : float;
+    end
+
+    extern points  : set{Point};
+    extern springs : set{Spring}(points,points);
+
+    func dist_mass(s : Spring, p : (Point*2)) ->
+        (A : tensor[points,points](float))
+      A(p(0),p(0)) = s.a;
+      A(p(0),p(1)) = s.a;
+      A(p(1),p(0)) = s.a;
+      A(p(1),p(1)) = s.a;
+    end
+
+    proc mul
+      A = map dist_a to springs with points reduce +;
+      points.c = A * points.b;
+    end;
+  )";
+
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("mul");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+//  Set<> points;
+//  f->bind("points", &points);
+//  FieldRef<double,3> x = points.addField<double,3>("x");
 //
-//      "extern points : Point{};                                         "
-//
-//      "func dist_mass(p : Point) -> (A : Tensor[points,points](float))  "
-//      "  A(p,p) = p.a;                                                  "
-//      "end                                                              "
-//
-//      "proc mul                                                         "
-//      "  A = map dist_mass to points reduce +;                          "
-//      "  points.b = M * points.b;                                       "
-//      "end;                                                             ";
-//
-//  int errorCode = program.loadString(programText);
-//  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
-//
-//  std::unique_ptr<Function> f = program.compile("mul");
-//  if (!f) FAIL() << program.getDiagnostics().getMessage();
-//
-////  Set<> points;
-////  f->bind("points", &points);
-////  FieldRef<double,3> x = points.addField<double,3>("x");
-////
-////  ElementRef p0 = points.addElement();
-////  x.set(p0, {1.0, 2.0, 3.0});
-//}
+//  ElementRef p0 = points.addElement();
+//  x.set(p0, {1.0, 2.0, 3.0});
+}

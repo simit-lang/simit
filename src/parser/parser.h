@@ -205,6 +205,7 @@ namespace  simit { namespace internal  {
   ir::Expr                      *expr;
   std::vector<ir::Expr>         *exprs;
   ir::IRBuilder::BinaryOperator  binop;
+  ir::ReductionOperator::Kind    reductionop;
   TensorValues<double>          *TensorDoubleValues;
   TensorValues<int>             *TensorIntValues;
 
@@ -576,7 +577,7 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 512,     ///< Last index in yytable_.
+      yylast_ = 507,     ///< Last index in yytable_.
       yynnts_ = 73,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.

@@ -8,6 +8,8 @@ std::string ReductionOperator::getName() {
   switch (kind) {
     case Sum:
       return "sum";
+    case Undefined:
+      return "";
   }
 }
 
@@ -15,6 +17,8 @@ std::ostream &operator<<(std::ostream &os, const ReductionOperator &rop) {
   switch (rop.getKind()) {
     case ReductionOperator::Sum:
       os << "+";
+      break;
+    case ReductionOperator::Undefined:
       break;
   }
   return os;

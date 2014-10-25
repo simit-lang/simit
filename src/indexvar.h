@@ -13,10 +13,11 @@ namespace ir {
 /// - Sum
 class ReductionOperator {
 public:
-  enum Kind { Sum };  // TODO: Add Poduct, Max, Min, and user-defined functions
+  // TODO: Add Poduct, Max, Min, and user-defined functions
+  enum Kind { Sum, Undefined };
 
   // Construct an undefiend reduction operator.
-  ReductionOperator() : kind(Sum) {}
+  ReductionOperator() : kind(Undefined) {}
 
   // Construct a reduction operator.
   ReductionOperator(Kind kind) : kind(kind) {}

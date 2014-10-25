@@ -408,7 +408,7 @@ void LLVMBackend::visit(const Block *op) {
 }
 
 void LLVMBackend::visit(const Pass *op) {
-  cout << "Pass" << endl;
+  // Nothing to do
 }
 
 

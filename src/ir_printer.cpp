@@ -157,12 +157,16 @@ void IRPrinter::visit(const Load *op) {
 }
 
 void IRPrinter::visit(const Map *op) {
-  os << "map " << op->function;
+  os << "map " << op->function.getName();
   os << " to ";
   print(op->target);
-  os << " with ";
-  print(op->neighbors);
-  os << " reduce " << op->reductionOp;
+  if (op->neighbors.defined()) {
+    os << " with ";
+    print(op->neighbors);
+  }
+  if (op->reductionOp.getKind() != ReductionOperator::Undefined) {
+    os << " reduce " << op->reductionOp;
+  }
 }
 
 void IRPrinter::visit(const IndexedTensor *op) {

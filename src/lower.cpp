@@ -129,7 +129,7 @@ private:
 /// variable using the rop ReductionOperation.
 class ReduceOverVar : public IRMutator {
 public:
-  ReduceOverVar(Stmt rstmt, ReductionOperator rop) : rstmt(rstmt) {}
+  ReduceOverVar(Stmt rstmt, ReductionOperator rop) : rstmt(rstmt), rop(rop) {}
 
   Var getTmpVar() {return tmpVar;}
 
@@ -150,10 +150,14 @@ private:
       assert(isScalarTensor(op->value.type()) &&
              "assignment non-scalars should have been lowered by now");
       switch (rop.getKind()) {
-        case ReductionOperator::Sum:
+        case ReductionOperator::Sum: {
           Expr varExpr = VarExpr::make(op->var);
           tmpVar = op->var;
           stmt = AssignStmt::make(op->var, Add::make(varExpr, op->value));
+          break;
+        }
+        case ReductionOperator::Undefined:
+          assert(false);
           break;
       }
     }
@@ -169,11 +173,15 @@ private:
 
       assert(tensor.type().isTensor());
       switch (rop.getKind()) {
-        case ReductionOperator::Sum:
+        case ReductionOperator::Sum: {
           ScalarType componentType = tensor.type().toTensor()->componentType;
           string tmpVarName = GetReductionTmpName().get(op);
           tmpVar = Var(tmpVarName, TensorType::make(componentType));
           stmt = AssignStmt::make(tmpVar, Add::make(tmpVar, op->value));
+          break;
+        }
+        case ReductionOperator::Undefined:
+          assert(false);
           break;
       }
       tmpWriteStmt = TensorWrite::make(tensor, indices, VarExpr::make(tmpVar));
