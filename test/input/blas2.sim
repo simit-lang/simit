@@ -11,6 +11,7 @@ func gevm(a : tensor[2](float), B : tensor[2,3](float)) -> (c : tensor[3](float)
 end
 
 %%% solve 
-func solve(A : tensor[3,3](float), b : tensor(float)) -> (c : tensor[3](float))
+%! solve([0.9649, 0.9572, 0.1419; 0.1576, 0.4854, 0.4218; 0.9706, 0.8003, 0.9157], [1.0, 2.0, 3.0]') == [-1.3461, 1.9583, 2.9914]';
+func solve(A : tensor[3,3](float), b : tensor[3](float)') -> (c : tensor[3](float)')
   c = a \ b;
 end
