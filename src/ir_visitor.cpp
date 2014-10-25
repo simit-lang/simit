@@ -40,11 +40,6 @@ void IRVisitor::visit(const Load *op) {
   op->index.accept(this);
 }
 
-void IRVisitor::visit(const Map *op) {
-  op->target.accept(this);
-  op->neighbors.accept(this);
-}
-
 void IRVisitor::visit(const IndexedTensor *op) {
   op->tensor.accept(this);
 }
@@ -83,6 +78,11 @@ void IRVisitor::visit(const Div *op) {
 
 void IRVisitor::visit(const AssignStmt *op) {
   op->value.accept(this);
+}
+
+void IRVisitor::visit(const Map *op) {
+  op->target.accept(this);
+  op->neighbors.accept(this);
 }
 
 void IRVisitor::visit(const FieldWrite *op) {

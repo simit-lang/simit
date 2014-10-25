@@ -107,17 +107,6 @@ void IRMutator::visit(const Load *op) {
   }
 }
 
-void IRMutator::visit(const Map *op) {
-  Expr target = mutate(op->target);
-  Expr neighbors = mutate(op->neighbors);
-  if (target == op->target && neighbors == op->neighbors) {
-    expr = op;
-  }
-  else {
-    expr = Map::make(op->function, target, neighbors, op->reductionOp);
-  }
-}
-
 void IRMutator::visit(const IndexedTensor *op) {
   Expr tensor = mutate(op->tensor);
   if (tensor == op->tensor) {
@@ -203,6 +192,18 @@ void IRMutator::visit(const AssignStmt *op) {
     stmt = AssignStmt::make(op->var, value);
   }
 }
+
+void IRMutator::visit(const Map *op) {
+  Expr target = mutate(op->target);
+  Expr neighbors = mutate(op->neighbors);
+  if (target == op->target && neighbors == op->neighbors) {
+    stmt = op;
+  }
+  else {
+    stmt = Map::make(op->vars, op->function, target, neighbors, op->reduction);
+  }
+}
+
 
 void IRMutator::visit(const FieldWrite *op) {
   Expr elementOrSet = mutate(op->elementOrSet);

@@ -54,7 +54,6 @@ public:
   virtual void visit(const TensorRead *op);
   virtual void visit(const TupleRead *op);
   virtual void visit(const Load *op);
-  virtual void visit(const Map *op);
   virtual void visit(const IndexedTensor *op);
   virtual void visit(const IndexExpr *op);
   virtual void visit(const Call *op);
@@ -65,6 +64,7 @@ public:
   virtual void visit(const Div *op);
 
   virtual void visit(const AssignStmt *op);
+  virtual void visit(const Map *op);
   virtual void visit(const FieldWrite *op);
   virtual void visit(const TensorWrite *op);
   virtual void visit(const Store *op);

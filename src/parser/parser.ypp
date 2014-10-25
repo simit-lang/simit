@@ -476,6 +476,7 @@ stmts
 
 stmt
   : assign_stmt
+  | map_stmt
   | field_write_stmt
   | tensor_write_stmt
   | if_stmt
@@ -484,29 +485,129 @@ stmt
   | expr_stmt
 
 assign_stmt
-  : IDENT "=" expr ";" {
+  // This rule must use idents instead of IDENT or else the parser cannot parse
+  // map statements...
+  : idents "=" expr ";" {
     if ($expr == nullptr) { break; } // TODO: Remove check
 
-    string name = convertAndFree($IDENT);
+    auto varNames = unique_ptr<vector<string>>($idents);
+    if (varNames->size() > 1) {
+      REPORT_ERROR("can only assign to one value in a non-map statement", @1);
+    }
+
+    string varName = (*varNames)[0];
     Expr value = convertAndDelete($expr);
 
     Var var;
-    if (ctx->hasSymbol(name)) {
-      Symbol symbol = ctx->getSymbol(name);
+    if (ctx->hasSymbol(varName)) {
+      Symbol symbol = ctx->getSymbol(varName);
 
       if (!symbol.isWritable()) {
-        REPORT_ERROR(name + " is not writable", @1);
+        REPORT_ERROR(varName + " is not writable", @1);
       }
 
       var = symbol.getVar();
     }
     else {
-      var = Var(name, value.type());
-      ctx->addSymbol(name, var, Symbol::ReadWrite);
+      var = Var(varName, value.type());
+      ctx->addSymbol(varName, var, Symbol::ReadWrite);
     }
 
-    // TODO: Check valueNames.size() matches number of values produced by expr
     ctx->addStatement(AssignStmt::make(var, value));
+  }
+
+// Map Statement
+map_stmt
+  : idents "=" "map" IDENT[func] "to" IDENT[target] with reduce {
+    auto varNames = unique_ptr<vector<string>>($idents);
+
+    string funcName = convertAndFree($func);
+    string targetsName = convertAndFree($target);
+
+    Expr neighbor = convertAndDelete($with);
+    ReductionOperator reduction($reduce);
+
+    if (!ctx->containsFunction(funcName)) {
+      REPORT_ERROR("undefined function '" + funcName + "'", @func);
+    }
+    Func func = ctx->getFunction(funcName);
+
+    if (varNames->size() != func.getResults().size()) {
+      REPORT_ERROR("the number of variables (" + to_string(varNames->size()) +
+                   ") does not match the number of results returned by " +
+                   func.getName() + " (" + to_string(func.getResults().size()) +
+                   ")", @1);
+    }
+
+    if (!ctx->hasSymbol(targetsName)) {
+      REPORT_ERROR("undefined set '" + targetsName + "'", @target);
+    }
+    Expr targets = ctx->getSymbol(targetsName).getExpr();
+
+    auto &results = func.getResults();
+    vector<Var> vars;
+    for (size_t i=0; i < results.size(); ++i) {
+      string varName = (*varNames)[i];
+      Var var;
+      if (ctx->hasSymbol(varName)) {
+        Symbol symbol = ctx->getSymbol(varName);
+
+        if (!symbol.isWritable()) {
+          REPORT_ERROR(varName + " is not writable", @1);
+        }
+
+        var = symbol.getVar();
+      }
+      else {
+        var = Var(varName, results[i].type);
+        ctx->addSymbol(varName, var, Symbol::ReadWrite);
+      }
+      vars.push_back(var);
+    }
+
+    ctx->addStatement(Map::make(vars, func, targets, neighbor, reduction));
+  }
+
+%type <strings> idents;
+idents
+  : IDENT {
+    $$ = new vector<string>;
+    $$->push_back(convertAndFree($IDENT));
+  }
+  | idents "," IDENT {
+    $$ = $1;
+    $$->push_back(convertAndFree($IDENT));
+  }
+
+%type <expr> with;
+with
+  : /* empty */ {
+    $$ = new Expr();
+  }
+  | "with" IDENT {
+    std::string neighborsName = convertAndFree($IDENT);
+
+    if (!ctx->hasSymbol(neighborsName)) {
+      REPORT_ERROR("undefined set '" + neighborsName + "'", @2);
+    }
+    Expr neighbors = ctx->getSymbol(neighborsName).getExpr();
+
+    $$ = new Expr(neighbors);
+  }
+
+%type <reductionop> reduce;
+reduce
+  : /* empty */ {
+    $$ =  ReductionOperator::Undefined;
+  }
+  | "reduce" reduce_op {
+    $$ =  $reduce_op;
+  }
+
+%type <reductionop> reduce_op;
+reduce_op
+  : "+" {
+    $$ = ReductionOperator::Sum;
   }
 
 field_write_stmt
@@ -624,7 +725,6 @@ expr
   | boolean_expr
   | field_read_expr
   | call_or_paren_read_expr
-  | map_expr
 
 
 // Read Ident Expression
@@ -951,61 +1051,6 @@ expr_list
     if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
-  }
-
-
-// Map Expressions
-%type <expr> map_expr;
-map_expr
-  : "map" IDENT "to" IDENT with reduce {
-    string funcName = convertAndFree($2);
-    string targetsName = convertAndFree($4);
-
-    Expr neighbor = convertAndDelete($5);
-    ReductionOperator reduction($6);
-
-    if (!ctx->containsFunction(funcName)) {
-      REPORT_ERROR("undefined function '" + funcName + "'", @2);
-    }
-    Func func = ctx->getFunction(funcName);
-
-    if (!ctx->hasSymbol(targetsName)) {
-      REPORT_ERROR("undefined set '" + targetsName + "'", @4);
-    }
-    Expr targets = ctx->getSymbol(targetsName).getExpr();
-
-    $$ = new Expr(Map::make(func, targets, neighbor, reduction));
-  }
-
-%type <expr> with;
-with
-  : /* empty */ {
-    $$ = new Expr();
-  }
-  | "with" IDENT {
-    std::string neighborsName = convertAndFree($IDENT);
-
-    if (!ctx->hasSymbol(neighborsName)) {
-      REPORT_ERROR("undefined set '" + neighborsName + "'", @2);
-    }
-    Expr neighbors = ctx->getSymbol(neighborsName).getExpr();
-
-    $$ = new Expr(neighbors);
-  }
-
-%type <reductionop> reduce;
-reduce
-  : /* empty */ {
-    $$ =  ReductionOperator::Undefined;
-  }
-  | "reduce" reduce_op {
-    $$ =  $reduce_op;
-  }
-
-%type <reductionop> reduce_op;
-reduce_op
-  : "+" {
-    $$ = ReductionOperator::Sum;
   }
 
 

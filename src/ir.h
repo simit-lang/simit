@@ -317,24 +317,6 @@ struct TupleRead : public ExprNode<TupleRead> {
   }
 };
 
-struct Map : public ExprNode<Map> {
-  Func function;
-  Expr target, neighbors;
-  ReductionOperator reductionOp;
-
-  static Expr make(Func function, Expr target, Expr neighbors=Expr(),
-                   ReductionOperator reductionOp=ReductionOperator()) {
-    assert(target.type().isSet());
-    assert(!neighbors.defined() || neighbors.type().isSet());
-    Map *node = new Map;
-    node->function = function;
-    node->target = target;
-    node->neighbors = neighbors;
-    node->reductionOp = reductionOp;
-    return node;
-  }
-};
-
 struct IndexedTensor : public ExprNode<IndexedTensor> {
   Expr tensor;
   std::vector<IndexVar> indexVars;
@@ -491,6 +473,28 @@ struct AssignStmt : public StmtNode<AssignStmt> {
     AssignStmt *node = new AssignStmt;
     node->var = var;
     node->value = value;
+    return node;
+  }
+};
+
+struct Map : public StmtNode<Map> {
+  std::vector<Var> vars;
+  Func function;
+  Expr target, neighbors;
+  ReductionOperator reduction;
+
+  static Stmt make(std::vector<Var> vars, Func function,
+                   Expr target, Expr neighbors=Expr(),
+                   ReductionOperator reduction=ReductionOperator()) {
+    assert(target.type().isSet());
+    assert(!neighbors.defined() || neighbors.type().isSet());
+    assert(vars.size() == function.getResults().size());
+    Map *node = new Map;
+    node->vars = vars;
+    node->function = function;
+    node->target = target;
+    node->neighbors = neighbors;
+    node->reduction = reduction;
     return node;
   }
 };
