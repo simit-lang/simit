@@ -1291,7 +1291,6 @@ namespace  simit { namespace internal  {
     for (Var &res : *results) {
       Symbol::Access access = (argNames.find(res.name) != argNames.end())
                               ? Symbol::ReadWrite : Symbol::Write;
-
       ctx->addSymbol(res.name, res, access);
     }
   }
@@ -1429,6 +1428,7 @@ namespace  simit { namespace internal  {
     }
     else {
       var = Var(name, value.type());
+      ctx->addSymbol(name, var, Symbol::ReadWrite);
     }
 
     // TODO: Check valueNames.size() matches number of values produced by expr
@@ -3125,9 +3125,9 @@ namespace  simit { namespace internal  {
   {
        0,   272,   272,   274,   277,   278,   286,   294,   295,   296,
      301,   311,   324,   327,   336,   346,   346,   346,   354,   374,
-     374,   374,   382,   404,   407,   413,   418,   426,   435,   438,
-     444,   449,   457,   467,   470,   477,   478,   481,   482,   483,
-     484,   485,   486,   487,   490,   515,   535,   555,   561,   566,
+     374,   374,   382,   403,   406,   412,   417,   425,   434,   437,
+     443,   448,   456,   466,   469,   476,   477,   480,   481,   482,
+     483,   484,   485,   486,   489,   515,   535,   555,   561,   566,
      568,   572,   574,   580,   583,   611,   614,   622,   623,   624,
      625,   626,   627,   628,   629,   635,   657,   666,   675,   687,
      754,   760,   790,   795,   804,   805,   806,   807,   813,   819,

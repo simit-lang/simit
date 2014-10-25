@@ -394,7 +394,6 @@ function_header
     for (Var &res : *results) {
       Symbol::Access access = (argNames.find(res.name) != argNames.end())
                               ? Symbol::ReadWrite : Symbol::Write;
-
       ctx->addSymbol(res.name, res, access);
     }
   }
@@ -505,6 +504,7 @@ assign_stmt
     }
     else {
       var = Var(name, value.type());
+      ctx->addSymbol(name, var, Symbol::ReadWrite);
     }
 
     // TODO: Check valueNames.size() matches number of values produced by expr
