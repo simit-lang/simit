@@ -65,9 +65,9 @@ simit::Function *LLVMBackend::compile(Func func) {
     symtable.insert(arg.getName(), &arg);
   }
 
-  if (func.getBody().defined()) {
-    compile(func.getBody());
-  }
+  assert(func.getBody().defined() &&
+         "Attempting to compile an undefined function");
+  compile(func.getBody());
 
   builder->CreateRetVoid();
 
@@ -406,5 +406,10 @@ void LLVMBackend::visit(const Block *op) {
   compile(op->first);
   compile(op->rest);
 }
+
+void LLVMBackend::visit(const Pass *op) {
+  cout << "Pass" << endl;
+}
+
 
 }}  // namespace simit::internal

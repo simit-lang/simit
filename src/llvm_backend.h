@@ -72,6 +72,7 @@ private:
   virtual void visit(const ir::For *);
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
+  virtual void visit(const ir::Pass *);
 };
 
 }} // namespace simit::internal

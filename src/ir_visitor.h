@@ -31,6 +31,7 @@ struct Store;
 struct For;
 struct IfThenElse;
 struct Block;
+struct Pass;
 
 class Func;
 
@@ -70,6 +71,7 @@ public:
   virtual void visit(const For *op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const Block *op);
+  virtual void visit(const Pass *op);
 
   virtual void visit(const Func *f);
 };

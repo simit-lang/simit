@@ -623,6 +623,13 @@ struct Block : public StmtNode<Block> {
   }
 };
 
+/// Empty statement that is convenient during code development.
+struct Pass : public StmtNode<Pass> {
+  static Stmt make() {
+    Pass *node = new Pass;
+    return node;
+  }
+};
 
 /// A Simit test case. Simit test cases can be declared in language comments
 /// and can subsequently be picked up by a test framework.

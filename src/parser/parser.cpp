@@ -1373,7 +1373,7 @@ namespace  simit { namespace internal  {
   case 33:
 
     {
-    (yylhs.value.stmt) = new Stmt();
+    (yylhs.value.stmt) = new Stmt(Pass::make());
   }
 
     break;
@@ -1382,7 +1382,7 @@ namespace  simit { namespace internal  {
 
     {
     vector<Stmt> stmts = *ctx->getStatements();
-    if (stmts.size() == 0) {(yylhs.value.stmt) = new Stmt(); break;} // TODO: remove
+    if (stmts.size() == 0) {(yylhs.value.stmt) = new Stmt(Pass::make()); break;} // TODO: remove
     (yylhs.value.stmt) = new Stmt((stmts.size() == 1) ? stmts[0] : Block::make(stmts));
   }
 
