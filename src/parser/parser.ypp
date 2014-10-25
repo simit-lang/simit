@@ -362,8 +362,6 @@ procedure_header
       // TODO: Replace extResult with mutable parameters
       results.push_back(ext);
       arguments.push_back(ext);
-
-      ctx->addSymbol(ext);
     }
 
     $$ = new Func(name, arguments, results, Stmt());
