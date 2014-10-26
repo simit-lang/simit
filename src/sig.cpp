@@ -16,10 +16,10 @@ std::ostream &operator<<(std::ostream &os, const SIGVertex &v) {
 }
 
 std::ostream &operator<<(std::ostream &os, const SIGEdge &e) {
-  return os << e.edgeSet << " (" << util::join(e.endpoints) << ")";
+  return os << e.tensor << "(" << util::join(e.endpoints) << ")";
 }
 
-SIG::SIG(const std::vector<IndexVar> &ivs, Expr setExpr) : SIG() {
+SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
   set<IndexVar> added;
   vector<SIGVertex*> endpoints;
 
@@ -33,9 +33,9 @@ SIG::SIG(const std::vector<IndexVar> &ivs, Expr setExpr) : SIG() {
     }
   }
 
-  if (setExpr.defined()) {
-    SIGEdge *e = new SIGEdge(setExpr, endpoints);
-    content->edges[setExpr] = unique_ptr<SIGEdge>(e);
+  if (tensor.defined()) {
+    SIGEdge *e = new SIGEdge(tensor, endpoints);
+    content->edges[tensor] = unique_ptr<SIGEdge>(e);
   }
 }
 
@@ -55,10 +55,10 @@ SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
     merged.content->vertices[iv] = unique_ptr<SIGVertex>(newVertex);
   }
 
-  map<Expr,vector<SIGVertex*>> edges;
+  map<Var,vector<SIGVertex*>> edges;
 
   for (auto &e : g1.content->edges) {
-    Expr edgeSet = e.first;
+    Var edgeSet = e.first;
     vector<SIGVertex*> endpoints;
     for (SIGVertex *g1v : e.second->endpoints) {
       endpoints.push_back(merged.content->vertices[g1v->iv].get());
@@ -67,7 +67,7 @@ SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
   }
 
   for (auto &e : g2.content->edges) {
-    Expr edgeSet = e.first;
+    Var edgeSet = e.first;
     vector<SIGVertex*> endpoints;
     for (SIGVertex *g1v : e.second->endpoints) {
       endpoints.push_back(merged.content->vertices[g1v->iv].get());
@@ -117,12 +117,12 @@ std::ostream &operator<<(std::ostream &os, const SIG &g) {
   return os;
 }
 
-bool freeBeforeReductionVars(SIGVertex *i, SIGVertex *j) {
+bool ReductionVarsBeforefree(SIGVertex *i, SIGVertex *j) {
   if (i->iv.isFreeVar() && j->iv.isReductionVar()) {
-    return true;
+    return false;
   }
   else if (i->iv.isReductionVar() && j->iv.isFreeVar()) {
-    return false;
+    return true;
   }
   else {
     return (i->iv.getName() < j->iv.getName());
@@ -135,55 +135,31 @@ void SIGVisitor::apply(const SIG &sig) {
     iterationOrder.push_back(v.second.get());
   }
 
-  sort(iterationOrder.begin(), iterationOrder.end(), freeBeforeReductionVars);
+  // Sort reduction variables before free vars because we do codegen bottom-up
+  sort(iterationOrder.begin(), iterationOrder.end(), ReductionVarsBeforefree);
 
-  // Iterate backwards to allow codegen to be done inside out
-  for (auto it = iterationOrder.rbegin(); it != iterationOrder.rend(); ++it) {
-    if (visitedVertices.find(*it) == visitedVertices.end()) {
-      visit(*it);
+  for (SIGVertex *v : iterationOrder) {
+    if (visitedVertices.find(v) == visitedVertices.end()) {
+      visit(v);
     }
   }
 }
 
 void SIGVisitor::visit(const SIGVertex *v) {
   visitedVertices.insert(v);
-  vertexPath.push_front(v);
   for (auto &e : v->connectors) {
     if (visitedEdges.find(e) == visitedEdges.end()) {
       visit(e);
     }
   }
-  vertexPath.pop_front();
 }
 
 void SIGVisitor::visit(const SIGEdge *e) {
   visitedEdges.insert(e);
-  edgePath.push_front(e);
-
-
   for (auto &v : e->endpoints) {
     if (visitedVertices.find(v) == visitedVertices.end()) {
       visit(v);
     }
-  }
-  edgePath.pop_front();
-}
-
-const SIGVertex *SIGVisitor::getPreviousVertex() {
-  if (vertexPath.size() > 0) {
-    return vertexPath.front();
-  }
-  else {
-    return nullptr;
-  }
-}
-
-const SIGEdge *SIGVisitor::getPreviousEdge() {
-  if (edgePath.size() > 0) {
-    return edgePath.front();
-  }
-  else {
-    return nullptr;
   }
 }
 

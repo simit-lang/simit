@@ -13,6 +13,10 @@ std::ostream &operator<<(std::ostream &os, const VarDef &vd) {
       os << "res";
       break;
     case VarDef::Assignment:
+      os << "assign";
+      break;
+    case VarDef::Map:
+      os << "map";
       break;
     case VarDef::Undefined:
       os << "undefined";

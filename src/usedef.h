@@ -11,21 +11,21 @@ namespace ir {
 /// assumes that each variable is only defined once (SSA).
 class VarDef {
 public:
-  enum Kind { Argument, Result, Assignment, Undefined };
+  enum Kind { Argument, Result, Assignment, Map, Undefined };
 
-  explicit VarDef(Kind kind=Undefined, Stmt stmt = Stmt())
-      : kind(kind), stmt(stmt) {}
+  explicit VarDef(Kind kind=Undefined, Stmt stmt = Stmt(), unsigned loc=0)
+      : kind(kind), stmt(stmt), loc(loc) {}
 
   Kind getKind() const {return kind;}
 
-  Expr getAssignedValue() const {
-    assert(kind == Assignment);
-    return to<AssignStmt>(stmt)->value;
-  }
+  Stmt getStmt() const {return stmt;}
+
+  unsigned getLoc() const {return loc;}
 
 private:
   Kind kind;
   Stmt stmt;
+  unsigned loc;
 };
 
 std::ostream &operator<<(std::ostream &os, const VarDef &vd);
@@ -35,9 +35,9 @@ class UseDef : public IRVisitor {
 public:
   class const_iterator {
   public:
-    const_iterator(std::map<const Var*,VarDef>::const_iterator it) : it(it) {}
+    const_iterator(std::map<Var,VarDef>::const_iterator it) : it(it) {}
     const_iterator& operator++() {++it; return *this;}
-    const Var &operator*() const {return *it->first;}
+    const Var &operator*() const {return it->first;}
 
     friend bool operator==(const const_iterator &l, const const_iterator &r) {
       return l.it == r.it;
@@ -48,29 +48,41 @@ public:
     }
 
   private:
-    std::map<const Var*,VarDef>::const_iterator it;
+    std::map<Var,VarDef>::const_iterator it;
   };
 
   UseDef(Func func) {
     for (const Var &arg : func.getArguments()) {
-      useDef[&arg] = VarDef(VarDef::Argument);
+      usedef[arg] = VarDef(VarDef::Argument);
     }
 
     for (const Var &result : func.getResults()) {
-      useDef[&result] = VarDef(VarDef::Result);
+      usedef[result] = VarDef(VarDef::Result);
     }
+
+    func.accept(this);
   }
 
   VarDef getDef(const Var &var) const {
-    assert(useDef.find(&var) != useDef.end());
-    return useDef.at(&var);
+    assert(usedef.find(var) != usedef.end());
+    return usedef.at(var);
   }
 
-  const_iterator begin() const {return const_iterator(useDef.begin());}
-  const_iterator end() const {return const_iterator(useDef.end());}
+  const_iterator begin() const {return const_iterator(usedef.begin());}
+  const_iterator end() const {return const_iterator(usedef.end());}
 
 private:
-  std::map<const Var*, VarDef> useDef;
+  std::map<Var,VarDef> usedef;
+
+  void visit(const AssignStmt *op) {
+    usedef[op->var] = VarDef(VarDef::Assignment, op);
+  }
+
+  void visit(const Map *op) {
+    for (size_t i=0; i<op->vars.size(); ++i) {
+      usedef[op->vars[i]] = VarDef(VarDef::Map, op, i);
+    }
+  }
 };
 
 std::ostream &operator<<(std::ostream &os, const UseDef &ud);

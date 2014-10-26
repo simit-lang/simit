@@ -27,11 +27,11 @@ struct SIGVertex {
 std::ostream &operator<<(std::ostream &os, const SIGVertex &);
 
 struct SIGEdge {
-  Expr edgeSet;
+  Var tensor;
   std::vector<SIGVertex*> endpoints;
 
-  SIGEdge(Expr edgeSet, const std::vector<SIGVertex*> &endpoints)
-      : edgeSet(edgeSet), endpoints(endpoints) {
+  SIGEdge(Var tensor, const std::vector<SIGVertex*> &endpoints)
+      : tensor(tensor), endpoints(endpoints) {
     for (auto v : endpoints) {
       v->connectors.push_back(this);
     }
@@ -46,14 +46,14 @@ public:
   enum MergeOp { Union, Intersection };
 
   SIG() : content(new SIG::Content) {}
-  explicit SIG(const std::vector<IndexVar> &ivs, Expr setExpr=Expr());
+  explicit SIG(const std::vector<IndexVar> &ivs, Var tensor=Var());
 
   friend SIG merge(SIG&, SIG&, SIG::MergeOp);
 
 private:
   struct Content {
     std::map<IndexVar, std::unique_ptr<SIGVertex>> vertices;
-    std::map<Expr, std::unique_ptr<SIGEdge>> edges;
+    std::map<Var, std::unique_ptr<SIGEdge>> edges;
   };
   std::shared_ptr<Content> content;
 
@@ -73,12 +73,6 @@ protected:
 
   std::set<const SIGVertex*> visitedVertices;
   std::set<const SIGEdge*> visitedEdges;
-
-  std::list<const SIGVertex*> vertexPath;
-  std::list<const SIGEdge*> edgePath;
-
-  const SIGVertex *getPreviousVertex();
-  const SIGEdge *getPreviousEdge();
 };
 
 
@@ -106,13 +100,18 @@ private:
       sig = SIG({op->indexVars[0]});
     }
     else if (op->indexVars.size() >= 2) {
-      // TODO: This does not have to be a variable
-      Expr edgeSet;
+      assert(!isa<IndexExpr>(op->tensor) &&
+             "IndexExprs should have been flattened by now");
+
+      Var tensorVar;
       if (isa<VarExpr>(op->tensor)) {
-//        const VarExpr *varExpr = to<VarExpr>(op->tensor);
+        const Var &var = to<VarExpr>(op->tensor)->var;
+        if (ud->getDef(var).getKind() == VarDef::Map) {
+          tensorVar = var;
+        }
       }
 
-      sig = SIG(op->indexVars, edgeSet);
+      sig = SIG(op->indexVars, tensorVar);
     }
   }
 

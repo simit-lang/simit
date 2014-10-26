@@ -116,7 +116,9 @@ void IRVisitor::visit(const IfThenElse *op) {
 
 void IRVisitor::visit(const Block *op) {
   op->first.accept(this);
-  op->rest.accept(this);
+  if (op->rest.defined()) {
+    op->rest.accept(this);
+  }
 }
 
 void IRVisitor::visit(const Pass *op) {

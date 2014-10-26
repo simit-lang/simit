@@ -543,14 +543,16 @@ struct Store : public StmtNode<Store> {
 
 class LoopDomain {
 public:
-  enum Kind { MinMax, Domain, Endpoints, Edges };
+  enum Kind { MinMax, Domain, Endpoints, Edges, Undefined };
 
-  LoopDomain(Expr min, Expr max)
+  LoopDomain() : kind(Undefined) {}
+
+  explicit LoopDomain(Expr min, Expr max)
       : kind(MinMax), minMax(std::pair<Expr,Expr>(min,max)) {}
 
-  LoopDomain(IndexSet domain) : kind(Domain), domain(domain) {}
+  explicit LoopDomain(IndexSet domain) : kind(Domain), domain(domain) {}
 
-  LoopDomain(Expr edgeSet, Kind kind) : kind (kind), edgeSet(edgeSet) {
+  explicit LoopDomain(Expr set, Kind kind) : kind (kind), set(set) {
     assert(kind == Endpoints || kind == Edges);
   }
 
@@ -566,18 +568,16 @@ public:
     return domain;
   }
 
-  Expr getEdgeSet() {
+  Expr getSet() {
     assert(kind == Endpoints || kind == Edges);
-    return edgeSet;
+    return set;
   }
 
 private:
   Kind kind;
-  union {
-    std::pair<Expr,Expr> minMax;
-    IndexSet domain;
-    Expr edgeSet;
-  };
+  std::pair<Expr,Expr> minMax;
+  IndexSet domain;
+  Expr set;
 };
 
 struct For : public StmtNode<For> {

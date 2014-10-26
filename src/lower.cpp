@@ -1,6 +1,7 @@
 #include "lower.h"
 
 #include "ir.h"
+#include "domain.h"
 #include "ir_mutator.h"
 #include "usedef.h"
 #include "sig.h"
@@ -18,16 +19,63 @@ public:
   LoopVars() {}
   LoopVars(const SIG &sig) {apply(sig);}
 
-  const Var &getVar(const IndexVar &var) const {
+  const pair<Var,LoopDomain> &getVar(const IndexVar &var) const {
     return vertexLoopvars.at(var);
   }
 
+  const pair<Var,LoopDomain> &getVar(const Var &tensor) const {
+    return edgeLoopvars.at(tensor);
+  }
+
 private:
-  map<IndexVar, Var> vertexLoopvars;
-  map<Expr, Var> edgeLoopvars;
+  map<IndexVar, pair<Var,LoopDomain>> vertexLoopvars;
+  map<Var, pair<Var,LoopDomain>> edgeLoopvars;
+
+  const SIGVertex *previousVertex = nullptr;
+  const SIGEdge *previousEdge = nullptr;
 
   void visit(const SIGVertex *v) {
-    vertexLoopvars[v->iv] = Var(v->iv.getName(), Int());
+    SIGVisitor::visit(v);
+    const SIGEdge *previousEdge = this->previousEdge;
+    this->previousEdge = nullptr;
+
+    Var lvar(v->iv.getName(), Int());
+
+    LoopDomain ldom;
+    if (previousEdge == nullptr) {
+      // The vertex is unconstrained and loops over it's whole domain.
+      const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
+      ldom = LoopDomain(domain);
+    }
+    else {
+      ldom = LoopDomain(IndexSet(42));
+    }
+    assert(ldom.getKind() != LoopDomain::Undefined);
+
+    vertexLoopvars[v->iv] = pair<Var,LoopDomain>(lvar,ldom);
+
+    this->previousVertex = v;
+  }
+
+  void visit(const SIGEdge *e) {
+    SIGVisitor::visit(e);
+    const SIGVertex *previousVertex = this->previousVertex;
+    this->previousVertex = nullptr;
+
+    if (previousVertex == nullptr) {
+      NOT_SUPPORTED_YET;
+    }
+    else {
+      std::string varName = "e";
+      for (SIGVertex *nbr : e->endpoints) {
+        varName += nbr->iv.getName();
+      }
+      Var lvar(varName, Int());
+      LoopDomain ldom(IndexSet(3));
+      edgeLoopvars[e->tensor] = pair<Var,LoopDomain>(lvar,ldom);
+    }
+
+    this->previousEdge = e;
   }
 };
 
@@ -54,7 +102,7 @@ private:
       Expr varExpr = VarExpr::make(var);
       std::vector<Expr> indices;
       for (IndexVar const& iv : indexExpr->resultVars) {
-        indices.push_back(lvs.getVar(iv));
+        indices.push_back(lvs.getVar(iv).first);
       }
       stmt = TensorWrite::make(varExpr, indices, value);
     }
@@ -74,7 +122,7 @@ private:
     else {
       std::vector<Expr> indices;
       for (IndexVar const& iv : indexExpr->resultVars) {
-        indices.push_back(lvs.getVar(iv));
+        indices.push_back(lvs.getVar(iv).first);
       }
       Expr field = FieldRead::make(elementOrSet, fieldName);
       stmt = TensorWrite::make(field, indices, value);
@@ -93,7 +141,7 @@ private:
     else {
       std::vector<Expr> indices;
       for (IndexVar const& iv : op->indexVars) {
-        indices.push_back(lvs.getVar(iv));
+        indices.push_back(lvs.getVar(iv).first);
       }
       expr = TensorRead::make(op->tensor, indices);
     }
@@ -217,45 +265,45 @@ private:
   Stmt stmt;
 
   void visit(const SIGVertex *v) {
-    SIGVisitor::visit(v);
+    pair<Var,LoopDomain> loopVar = lvs.getVar(v->iv);
+    Var lvar = loopVar.first;
 
-    const SIGEdge *previous = getPreviousEdge();
-    if (previous == nullptr) {
-      // The vertex is unconstrained and loops over it's whole domain.
-      const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
+    LoopDomain ldomain = loopVar.second;
 
-      if (v->iv.isFreeVar()) {
-        stmt = For::make(lvs.getVar(v->iv), domain, stmt);
-      }
-      else {
-        ReduceOverVar rov(body, v->iv.getOperator());
-        Stmt loopBody = rov.mutate(stmt);
-        Var tmpVar = rov.getTmpVar();
-        assert(tmpVar.defined());
+    IndexSet domain = ldomain.getDomain();
 
-        Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.type, {0}));
-        Stmt loop = For::make(lvs.getVar(v->iv), domain, loopBody);
-
-        Stmt tmpWriteStmt = rov.getTmpWriteStmt();
-        if (tmpWriteStmt.defined()) {
-          stmt = Block::make(alloc, Block::make(loop, tmpWriteStmt));
-        }
-        else {
-          stmt = Block::make(alloc, loop);
-        }
-      }
+    if (v->iv.isFreeVar()) {
+      stmt = For::make(lvar, domain, stmt);
     }
     else {
-      // The vertex is constrained and loops over previous' endpoints.
-      const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
-      stmt = For::make(Var("derived", Int()), domain, stmt);
-      NOT_SUPPORTED_YET;
+      ReduceOverVar rov(body, v->iv.getOperator());
+      Stmt loopBody = rov.mutate(stmt);
+      Var tmpVar = rov.getTmpVar();
+      assert(tmpVar.defined());
+
+      Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.type, {0}));
+      Stmt loop = For::make(lvar, domain, loopBody);
+
+      Stmt tmpWriteStmt = rov.getTmpWriteStmt();
+      if (tmpWriteStmt.defined()) {
+        stmt = Block::make(alloc, Block::make(loop, tmpWriteStmt));
+      }
+      else {
+        stmt = Block::make(alloc, loop);
+      }
     }
+
+    SIGVisitor::visit(v);
   }
 
   void visit(const SIGEdge *e) {
+    pair<Var,LoopDomain> llvar = lvs.getVar(e->tensor);
+    Var lvar = llvar.first;
+
+    IndexSet domain(3);
+    stmt = For::make(lvar, domain, stmt);
+
     SIGVisitor::visit(e);
-    // Emit loops
   }
 };
 
