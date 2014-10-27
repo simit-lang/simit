@@ -130,15 +130,26 @@ bool ReductionVarsBeforefree(SIGVertex *i, SIGVertex *j) {
 }
 
 void SIGVisitor::apply(const SIG &sig) {
-  std::vector<SIGVertex*> iterationOrder;
+  std::vector<SIGEdge*> edgeIterationOrder;
+  for (auto &e : sig.content->edges) {
+    edgeIterationOrder.push_back(e.second.get());
+  }
+
+  std::vector<SIGVertex*> vertexIterationOrder;
   for (auto &v : sig.content->vertices) {
-    iterationOrder.push_back(v.second.get());
+    vertexIterationOrder.push_back(v.second.get());
   }
 
   // Sort reduction variables before free vars because we do codegen bottom-up
-  sort(iterationOrder.begin(), iterationOrder.end(), ReductionVarsBeforefree);
+  sort(vertexIterationOrder.begin(), vertexIterationOrder.end(), ReductionVarsBeforefree);
 
-  for (SIGVertex *v : iterationOrder) {
+  for (SIGEdge *e : edgeIterationOrder) {
+    if (visitedEdges.find(e) == visitedEdges.end()) {
+      visit(e);
+    }
+  }
+
+  for (SIGVertex *v : vertexIterationOrder) {
     if (visitedVertices.find(v) == visitedVertices.end()) {
       visit(v);
     }

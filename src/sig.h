@@ -50,6 +50,8 @@ public:
 
   friend SIG merge(SIG&, SIG&, SIG::MergeOp);
 
+  bool isSparse() {return content->edges.size() > 0;}
+
 private:
   struct Content {
     std::map<IndexVar, std::unique_ptr<SIGVertex>> vertices;

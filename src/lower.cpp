@@ -37,73 +37,37 @@ private:
   map<IndexVar, pair<Var,ForDomain>> vertexLoopVars;
   map<Var, pair<Var,ForDomain>> edgeLoopVars;
 
-  Var prevLVar = Var();
-  Expr prevEdgeIndexSet;
-
-  bool startOfTraversal = true;
-
   void visit(const SIGVertex *v) {
-    bool startOfTraversal = this->startOfTraversal;
-    this->startOfTraversal = false;
-    SIGVisitor::visit(v);
-
     Var lvar(v->iv.getName(), Int());
 
-    ForDomain ldom;
-    if (!prevLVar.defined()) {
-      // The vertex is unconstrained and loops over it's whole domain.
-      ldom = v->iv.getDomain().getIndexSets()[0];
-    }
-    else {
-        ldom = ForDomain(prevEdgeIndexSet, prevLVar, ForDomain::Endpoints);
-    }
+    // The vertex is unconstrained and loops over it's whole domain.
+    ForDomain ldom = v->iv.getDomain().getIndexSets()[0];
 
     vertexLoopVars[v->iv] = pair<Var,ForDomain>(lvar,ldom);
-
-    this->prevLVar = (startOfTraversal) ? Var() : lvar;
-    this->startOfTraversal = startOfTraversal;
   }
 
   void visit(const SIGEdge *e) {
-    bool startOfTraversal = this->startOfTraversal;
-    this->startOfTraversal = false;
-    SIGVisitor::visit(e);
-
     std::string varName = "e";
     for (SIGVertex *nbr : e->endpoints) {
       varName += nbr->iv.getName();
     }
     Var lvar(varName, Int());
 
-    ForDomain ldom;
-    if (!prevLVar.defined()) {
-      NOT_SUPPORTED_YET;
-    }
-    else {
-      VarDef varDef = ud->getDef(e->tensor);
-      if (varDef.getKind() != VarDef::Map) {
-        prevLVar = Var();
-        return;
-      }
+    VarDef varDef = ud->getDef(e->tensor);
+    assert(varDef.getKind() == VarDef::Map);
 
-      const Map *mapStmt = to<Map>(varDef.getStmt());
-      ldom = ForDomain(mapStmt->target, prevLVar, ForDomain::Edges);
-
-      prevEdgeIndexSet = mapStmt->target;
-    }
+    const Map *mapStmt = to<Map>(varDef.getStmt());
+    ForDomain ldom = ForDomain(mapStmt->target);
 
     edgeLoopVars[e->tensor] = pair<Var,ForDomain>(lvar,ldom);
-
-    this->prevLVar = (startOfTraversal) ? Var() : lvar;
-    this->startOfTraversal = startOfTraversal;
   }
 };
 
 
 /// Specialize a statement containing an index expression to compute one value.
-class SpecializeIndexExprStmt : public IRMutator {
+class SpecializeDenseIndexExprStmt : public IRMutator {
 public:
-  SpecializeIndexExprStmt(const LoopVars &lvs) : lvs(lvs) {}
+  SpecializeDenseIndexExprStmt(const LoopVars &lvs) : lvs(lvs) {}
 
 private:
   const LoopVars &lvs;
@@ -274,7 +238,14 @@ public:
     lvs = LoopVars(sig, ud);
 
     componentType = indexExpr->type.toTensor()->componentType;
-    body = SpecializeIndexExprStmt(lvs).mutate(indexStmt);
+
+    if (sig.isSparse()) {
+      body = Pass::make();
+    }
+    else {
+      body = SpecializeDenseIndexExprStmt(lvs).mutate(indexStmt);
+    }
+
     stmt = body;
 
     apply(sig);
@@ -325,7 +296,9 @@ private:
     Var lvar = loopVar.first;
     ForDomain ldom = loopVar.second;
     stmt = For::make(lvar, ldom, stmt);
-    SIGVisitor::visit(e);
+    for (auto &v : e->endpoints) {
+      visitedVertices.insert(v);
+    }
   }
 };
 
