@@ -16,66 +16,92 @@ namespace ir {
 
 class LoopVars : public SIGVisitor {
 public:
-  LoopVars() {}
-  LoopVars(const SIG &sig) {apply(sig);}
+  LoopVars() : ud(nullptr) {}
+  LoopVars(const SIG &sig, const UseDef *ud) : ud(ud) {apply(sig);}
 
-  const pair<Var,LoopDomain> &getVar(const IndexVar &var) const {
-    return vertexLoopvars.at(var);
+  const pair<Var,IndexSet> &getVar(const IndexVar &var) const {
+    return vertexLoopVars.at(var);
   }
 
-  const pair<Var,LoopDomain> &getVar(const Var &tensor) const {
-    return edgeLoopvars.at(tensor);
+  const pair<Var,IndexSet> &getVar(const Var &tensor) const {
+    return edgeLoopVars.at(tensor);
+  }
+
+  bool hasVar(const Var &tensor) const {
+    return edgeLoopVars.find(tensor) != edgeLoopVars.end();
   }
 
 private:
-  map<IndexVar, pair<Var,LoopDomain>> vertexLoopvars;
-  map<Var, pair<Var,LoopDomain>> edgeLoopvars;
+  const UseDef *ud;
 
-  const SIGVertex *previousVertex = nullptr;
-  const SIGEdge *previousEdge = nullptr;
+  map<IndexVar, pair<Var,IndexSet>> vertexLoopVars;
+  map<Var, pair<Var,IndexSet>> edgeLoopVars;
+
+  Var previousLVar = Var();
+  Expr previousEdgeIndexDomain;
+
+  bool startOfTraversal = true;
 
   void visit(const SIGVertex *v) {
+    bool startOfTraversal = this->startOfTraversal;
+    this->startOfTraversal = false;
     SIGVisitor::visit(v);
-    const SIGEdge *previousEdge = this->previousEdge;
-    this->previousEdge = nullptr;
 
     Var lvar(v->iv.getName(), Int());
 
-    LoopDomain ldom;
-    if (previousEdge == nullptr) {
+    IndexSet ldom;
+    if (!previousLVar.defined()) {
       // The vertex is unconstrained and loops over it's whole domain.
-      const IndexSet &domain = v->iv.getDomain().getIndexSets()[0];
-      ldom = LoopDomain(domain);
+      ldom = v->iv.getDomain().getIndexSets()[0];
     }
     else {
-      ldom = LoopDomain(IndexSet(42));
+      Expr edgesIndex = FieldRead::make(previousEdgeIndexDomain, "edges");
+      Expr edges = Load::make(edgesIndex, VarExpr::make(previousLVar));
+
+      ldom = IndexSet(edges);
     }
-    assert(ldom.getKind() != LoopDomain::Undefined);
 
-    vertexLoopvars[v->iv] = pair<Var,LoopDomain>(lvar,ldom);
+    vertexLoopVars[v->iv] = pair<Var,IndexSet>(lvar,ldom);
 
-    this->previousVertex = v;
+    this->previousLVar = (startOfTraversal) ? Var() : lvar;
+    this->startOfTraversal = startOfTraversal;
   }
 
   void visit(const SIGEdge *e) {
+    bool startOfTraversal = this->startOfTraversal;
+    this->startOfTraversal = false;
     SIGVisitor::visit(e);
-    const SIGVertex *previousVertex = this->previousVertex;
-    this->previousVertex = nullptr;
 
-    if (previousVertex == nullptr) {
+    std::string varName = "e";
+    for (SIGVertex *nbr : e->endpoints) {
+      varName += nbr->iv.getName();
+    }
+    Var lvar(varName, Int());
+
+    IndexSet ldom;
+    if (!previousLVar.defined()) {
       NOT_SUPPORTED_YET;
     }
     else {
-      std::string varName = "e";
-      for (SIGVertex *nbr : e->endpoints) {
-        varName += nbr->iv.getName();
+      VarDef varDef = ud->getDef(e->tensor);
+      if (varDef.getKind() != VarDef::Map) {
+        previousLVar = Var();
+        return;
       }
-      Var lvar(varName, Int());
-      LoopDomain ldom(IndexSet(3));
-      edgeLoopvars[e->tensor] = pair<Var,LoopDomain>(lvar,ldom);
+
+      const Map *mapStmt = to<Map>(varDef.getStmt());
+
+      Expr endpointsIndex = FieldRead::make(mapStmt->target, "endpoints");
+      Expr endpoints = Load::make(endpointsIndex, VarExpr::make(previousLVar));
+
+      ldom = IndexSet(endpoints);
+      previousEdgeIndexDomain = mapStmt->target;
     }
 
-    this->previousEdge = e;
+    edgeLoopVars[e->tensor] = pair<Var,IndexSet>(lvar,ldom);
+
+    this->previousLVar = (startOfTraversal) ? Var() : lvar;
+    this->startOfTraversal = startOfTraversal;
   }
 };
 
@@ -139,11 +165,18 @@ private:
       expr = op->tensor;
     }
     else {
-      std::vector<Expr> indices;
-      for (IndexVar const& iv : op->indexVars) {
-        indices.push_back(lvs.getVar(iv).first);
+      // Check if the tensor inlined.
+      if (isa<VarExpr>(op->tensor) && lvs.hasVar(to<VarExpr>(op->tensor)->var)){
+        Var var = to<VarExpr>(op->tensor)->var;
+        expr = Load::make(op->tensor, lvs.getVar(var).first);
       }
-      expr = TensorRead::make(op->tensor, indices);
+      else {
+        std::vector<Expr> indices;
+        for (IndexVar const& iv : op->indexVars) {
+          indices.push_back(lvs.getVar(iv).first);
+        }
+        expr = TensorRead::make(op->tensor, indices);
+      }
     }
   }
 
@@ -244,7 +277,7 @@ public:
 
   Stmt create(const IndexExpr *indexExpr, Stmt indexStmt) {
     SIG sig = SIGBuilder(ud).create(indexExpr);
-    lvs = LoopVars(sig);
+    lvs = LoopVars(sig, ud);
 
     componentType = indexExpr->type.toTensor()->componentType;
     body = SpecializeIndexExprStmt(lvs).mutate(indexStmt);
@@ -265,15 +298,12 @@ private:
   Stmt stmt;
 
   void visit(const SIGVertex *v) {
-    pair<Var,LoopDomain> loopVar = lvs.getVar(v->iv);
+    pair<Var,IndexSet> loopVar = lvs.getVar(v->iv);
     Var lvar = loopVar.first;
-
-    LoopDomain ldomain = loopVar.second;
-
-    IndexSet domain = ldomain.getDomain();
+    IndexSet ldom = loopVar.second;
 
     if (v->iv.isFreeVar()) {
-      stmt = For::make(lvar, domain, stmt);
+      stmt = For::make(lvar, ldom, stmt);
     }
     else {
       ReduceOverVar rov(body, v->iv.getOperator());
@@ -282,7 +312,7 @@ private:
       assert(tmpVar.defined());
 
       Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.type, {0}));
-      Stmt loop = For::make(lvar, domain, loopBody);
+      Stmt loop = For::make(lvar, ldom, loopBody);
 
       Stmt tmpWriteStmt = rov.getTmpWriteStmt();
       if (tmpWriteStmt.defined()) {
@@ -297,11 +327,11 @@ private:
   }
 
   void visit(const SIGEdge *e) {
-    pair<Var,LoopDomain> llvar = lvs.getVar(e->tensor);
-    Var lvar = llvar.first;
+    pair<Var,IndexSet> loopVar = lvs.getVar(e->tensor);
+    Var lvar = loopVar.first;
+    IndexSet ldom = loopVar.second;
 
-    IndexSet domain(3);
-    stmt = For::make(lvar, domain, stmt);
+    stmt = For::make(lvar, ldom, stmt);
 
     SIGVisitor::visit(e);
   }

@@ -101,7 +101,7 @@ TEST(Program, gemv) {
     extern points  : set{Point};
     extern springs : set{Spring}(points,points);
 
-    func dist_mass(s : Spring, p : (Point*2)) ->
+    func dist_a(s : Spring, p : (Point*2)) ->
         (A : tensor[points,points](float))
       A(p(0),p(0)) = s.a;
       A(p(0),p(1)) = s.a;
@@ -118,8 +118,8 @@ TEST(Program, gemv) {
   int errorCode = program.loadString(programText);
   if (errorCode) FAIL() << program.getDiagnostics().getMessage();
 
-  std::unique_ptr<Function> f = program.compile("mul");
-  if (!f) FAIL() << program.getDiagnostics().getMessage();
+//  std::unique_ptr<Function> f = program.compile("mul");
+//  if (!f) FAIL() << program.getDiagnostics().getMessage();
 
 //  Set<> points;
 //  f->bind("points", &points);
