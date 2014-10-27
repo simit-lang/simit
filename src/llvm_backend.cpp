@@ -418,7 +418,9 @@ void LLVMBackend::visit(const IfThenElse *op) {
 
 void LLVMBackend::visit(const Block *op) {
   compile(op->first);
-  compile(op->rest);
+  if (op->rest.defined()) {
+    compile(op->rest);
+  }
 }
 
 void LLVMBackend::visit(const Pass *op) {
