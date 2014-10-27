@@ -268,8 +268,20 @@ void IRPrinter::visit(const Store *op) {
 
 void IRPrinter::visit(const For *op) {
   indent();
-  os << "for " << op->var << " in " << op->domain << ":";
-  os << endl;
+  os << "for " << op->var << " in ";
+  switch (op->domain.kind) {
+    case ForDomain::IndexSet:
+      os << op->domain.indexSet;
+      break;
+    case ForDomain::Endpoints:
+      os << op->domain.set << ".endpoints[" << op->domain.var << "]";
+      break;
+    case ForDomain::Edges:
+      os << op->domain.set << ".edges[" << op->domain.var << "]";
+      break;
+  }
+
+  os << ":" << endl;
   ++indentation;
   print(op->body);
   --indentation;

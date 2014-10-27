@@ -541,12 +541,30 @@ struct Store : public StmtNode<Store> {
   }
 };
 
+struct ForDomain {
+  enum Kind { IndexSet, Endpoints, Edges };
+  Kind kind;
+
+  /// An index set
+  class IndexSet indexSet;
+
+  /// A lookup in the index structures of an edge set
+  Expr set;
+  Var var;
+
+  ForDomain() {}
+  ForDomain(class IndexSet indexSet) : kind(IndexSet), indexSet(indexSet) {}
+  ForDomain(Expr set, Var var, Kind kind) : kind(kind), set(set), var(var) {
+    assert(kind==Edges || kind==Endpoints);
+  }
+};
+
 struct For : public StmtNode<For> {
   Var var;
-  IndexSet domain;
+  ForDomain domain;
   Stmt body;
 
-  static Stmt make(Var var, IndexSet domain, Stmt body) {
+  static Stmt make(Var var, ForDomain domain, Stmt body) {
     For *node = new For;
     node->var = var;
     node->domain = domain;

@@ -116,7 +116,7 @@ void LLVMBackend::visit(const TupleRead *op) {
 }
 
 void LLVMBackend::visit(const Map *op) {
-  assert(false && "No code generation for this type");
+//  assert(false && "No code generation for this type");
 }
 
 void LLVMBackend::visit(const IndexedTensor *op) {
@@ -346,24 +346,38 @@ void LLVMBackend::visit(const ir::Store *op) {
 
 void LLVMBackend::visit(const For *op) {
   std::string iName = op->var.name;
-  IndexSet domain = op->domain;
+  ForDomain domain = op->domain;
 
   llvm::Value *iNum;
-  switch (domain.getKind()) {
-    case IndexSet::Range:
-      iNum = llvmInt(domain.getSize());
-      break;
-    case IndexSet::Set: {
-      llvm::Value *setValue = compile(domain.getSet());
-      iNum = builder->CreateExtractValue(setValue, {0},
-                                         setValue->getName()+LEN_SUFFIX);
+  switch (domain.kind) {
+    case ForDomain::IndexSet: {
+      IndexSet is = domain.indexSet;
+      switch (is.getKind()) {
+        case IndexSet::Range:
+          iNum = llvmInt(is.getSize());
+          break;
+        case IndexSet::Set: {
+          std::cout << iName << std::endl;
+          llvm::Value *setValue = compile(is.getSet());
+          std::cout << *setValue << std::endl;
+          iNum = builder->CreateExtractValue(setValue, {0},
+                                             setValue->getName()+LEN_SUFFIX);
+          break;
+        }
+        case IndexSet::Dynamic:
+          NOT_SUPPORTED_YET;
+          break;
+      }
+      assert(iNum);
       break;
     }
-    case IndexSet::Dynamic:
+    case ForDomain::Endpoints:
+      NOT_SUPPORTED_YET;
+      break;
+    case ForDomain::Edges:
       NOT_SUPPORTED_YET;
       break;
   }
-  assert(iNum);
 
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 

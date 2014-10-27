@@ -19,11 +19,11 @@ public:
   LoopVars() : ud(nullptr) {}
   LoopVars(const SIG &sig, const UseDef *ud) : ud(ud) {apply(sig);}
 
-  const pair<Var,IndexSet> &getVar(const IndexVar &var) const {
+  const pair<Var,ForDomain> &getVar(const IndexVar &var) const {
     return vertexLoopVars.at(var);
   }
 
-  const pair<Var,IndexSet> &getVar(const Var &tensor) const {
+  const pair<Var,ForDomain> &getVar(const Var &tensor) const {
     return edgeLoopVars.at(tensor);
   }
 
@@ -34,11 +34,11 @@ public:
 private:
   const UseDef *ud;
 
-  map<IndexVar, pair<Var,IndexSet>> vertexLoopVars;
-  map<Var, pair<Var,IndexSet>> edgeLoopVars;
+  map<IndexVar, pair<Var,ForDomain>> vertexLoopVars;
+  map<Var, pair<Var,ForDomain>> edgeLoopVars;
 
-  Var previousLVar = Var();
-  Expr previousEdgeIndexDomain;
+  Var prevLVar = Var();
+  Expr prevEdgeIndexSet;
 
   bool startOfTraversal = true;
 
@@ -49,21 +49,18 @@ private:
 
     Var lvar(v->iv.getName(), Int());
 
-    IndexSet ldom;
-    if (!previousLVar.defined()) {
+    ForDomain ldom;
+    if (!prevLVar.defined()) {
       // The vertex is unconstrained and loops over it's whole domain.
       ldom = v->iv.getDomain().getIndexSets()[0];
     }
     else {
-      Expr edgesIndex = FieldRead::make(previousEdgeIndexDomain, "edges");
-      Expr edges = Load::make(edgesIndex, VarExpr::make(previousLVar));
-
-      ldom = IndexSet(edges);
+        ldom = ForDomain(prevEdgeIndexSet, prevLVar, ForDomain::Endpoints);
     }
 
-    vertexLoopVars[v->iv] = pair<Var,IndexSet>(lvar,ldom);
+    vertexLoopVars[v->iv] = pair<Var,ForDomain>(lvar,ldom);
 
-    this->previousLVar = (startOfTraversal) ? Var() : lvar;
+    this->prevLVar = (startOfTraversal) ? Var() : lvar;
     this->startOfTraversal = startOfTraversal;
   }
 
@@ -78,29 +75,26 @@ private:
     }
     Var lvar(varName, Int());
 
-    IndexSet ldom;
-    if (!previousLVar.defined()) {
+    ForDomain ldom;
+    if (!prevLVar.defined()) {
       NOT_SUPPORTED_YET;
     }
     else {
       VarDef varDef = ud->getDef(e->tensor);
       if (varDef.getKind() != VarDef::Map) {
-        previousLVar = Var();
+        prevLVar = Var();
         return;
       }
 
       const Map *mapStmt = to<Map>(varDef.getStmt());
+      ldom = ForDomain(mapStmt->target, prevLVar, ForDomain::Edges);
 
-      Expr endpointsIndex = FieldRead::make(mapStmt->target, "endpoints");
-      Expr endpoints = Load::make(endpointsIndex, VarExpr::make(previousLVar));
-
-      ldom = IndexSet(endpoints);
-      previousEdgeIndexDomain = mapStmt->target;
+      prevEdgeIndexSet = mapStmt->target;
     }
 
-    edgeLoopVars[e->tensor] = pair<Var,IndexSet>(lvar,ldom);
+    edgeLoopVars[e->tensor] = pair<Var,ForDomain>(lvar,ldom);
 
-    this->previousLVar = (startOfTraversal) ? Var() : lvar;
+    this->prevLVar = (startOfTraversal) ? Var() : lvar;
     this->startOfTraversal = startOfTraversal;
   }
 };
@@ -298,9 +292,9 @@ private:
   Stmt stmt;
 
   void visit(const SIGVertex *v) {
-    pair<Var,IndexSet> loopVar = lvs.getVar(v->iv);
+    pair<Var,ForDomain> loopVar = lvs.getVar(v->iv);
     Var lvar = loopVar.first;
-    IndexSet ldom = loopVar.second;
+    ForDomain ldom = loopVar.second;
 
     if (v->iv.isFreeVar()) {
       stmt = For::make(lvar, ldom, stmt);
@@ -327,12 +321,10 @@ private:
   }
 
   void visit(const SIGEdge *e) {
-    pair<Var,IndexSet> loopVar = lvs.getVar(e->tensor);
+    pair<Var,ForDomain> loopVar = lvs.getVar(e->tensor);
     Var lvar = loopVar.first;
-    IndexSet ldom = loopVar.second;
-
+    ForDomain ldom = loopVar.second;
     stmt = For::make(lvar, ldom, stmt);
-
     SIGVisitor::visit(e);
   }
 };
