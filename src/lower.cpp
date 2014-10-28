@@ -1,5 +1,7 @@
 #include "lower.h"
 
+#include <set>
+
 #include "ir.h"
 #include "domain.h"
 #include "ir_mutator.h"
@@ -64,13 +66,22 @@ private:
 };
 
 
-/// Specialize a statement containing an index expression to compute one value.
-class SpecializeDenseIndexExprStmt : public IRMutator {
+/// Specializes index expressions to compute one value at the location specified
+/// by the given loop variables
+class SpecializeIndexExprs : public IRMutator {
 public:
-  SpecializeDenseIndexExprStmt(const LoopVars &lvs) : lvs(lvs) {}
+  SpecializeIndexExprs(const LoopVars *lvs) : lvs(lvs) {}
 
 private:
-  const LoopVars &lvs;
+  const LoopVars *lvs;
+  map<Var,Expr> varExprs;
+
+  Expr getVarExpr(const Var &var) {
+    if (varExprs.find(var) == varExprs.end()) {
+      varExprs[var] = VarExpr::make(var);
+    }
+    return varExprs.at(var);
+  }
 
   void visit(const AssignStmt *op) {
     assert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
@@ -83,10 +94,10 @@ private:
       stmt = AssignStmt::make(var, value);
     }
     else {
-      Expr varExpr = VarExpr::make(var);
+      Expr varExpr = getVarExpr(var);
       std::vector<Expr> indices;
       for (IndexVar const& iv : indexExpr->resultVars) {
-        indices.push_back(lvs.getVar(iv).first);
+        indices.push_back(lvs->getVar(iv).first);
       }
       stmt = TensorWrite::make(varExpr, indices, value);
     }
@@ -106,7 +117,8 @@ private:
     else {
       std::vector<Expr> indices;
       for (IndexVar const& iv : indexExpr->resultVars) {
-        indices.push_back(lvs.getVar(iv).first);
+        Expr varExpr = getVarExpr(lvs->getVar(iv).first);
+        indices.push_back(varExpr);
       }
       Expr field = FieldRead::make(elementOrSet, fieldName);
       stmt = TensorWrite::make(field, indices, value);
@@ -123,18 +135,12 @@ private:
       expr = op->tensor;
     }
     else {
-      // Check if the tensor inlined.
-      if (isa<VarExpr>(op->tensor) && lvs.hasVar(to<VarExpr>(op->tensor)->var)){
-        Var var = to<VarExpr>(op->tensor)->var;
-        expr = Load::make(op->tensor, lvs.getVar(var).first);
+      std::vector<Expr> indices;
+      for (IndexVar const& iv : op->indexVars) {
+        Expr varExpr = getVarExpr(lvs->getVar(iv).first);
+        indices.push_back(varExpr);
       }
-      else {
-        std::vector<Expr> indices;
-        for (IndexVar const& iv : op->indexVars) {
-          indices.push_back(lvs.getVar(iv).first);
-        }
-        expr = TensorRead::make(op->tensor, indices);
-      }
+      expr = TensorRead::make(op->tensor, indices);
     }
   }
 
@@ -229,6 +235,147 @@ private:
 };
 
 
+
+/// Get the variables that are used to index a tensor in an Expr as well as
+/// the expression that indexes the tensors
+class GetTensorRead : public IRVisitor {
+public:
+   const TensorRead *get(Var tensorVar, Stmt stmt) {
+    this->tensorVar = tensorVar;
+    stmt.accept(this);
+    return tensorRead;
+  }
+
+private:
+  Var tensorVar;
+  const TensorRead *tensorRead;
+
+  void visit(const TensorRead *op) {
+    if (isa<VarExpr>(op->tensor)) {
+      if (to<VarExpr>(op->tensor)->var == this->tensorVar) {
+        tensorRead = op;
+      }
+    }
+  }
+};
+
+
+class Substitute : public IRMutator {
+public:
+  Substitute(map<Expr,Expr> substitutions) : substitutions(substitutions) {}
+
+  Stmt mutate(Stmt stmt) {
+    return IRMutator::mutate(stmt);
+  }
+
+  Expr mutate(Expr expr) {
+    if (substitutions.find(expr) != substitutions.end()) {
+      return substitutions.at(expr);
+    }
+    else {
+      return IRMutator::mutate(expr);
+    }
+  }
+
+private:
+  map<Expr,Expr> substitutions;
+};
+
+
+class InlineMappedFunctionInLoop : public IRMutator {
+public:
+  InlineMappedFunctionInLoop(Var lvar, Func func, Expr targets, Expr neighbors,
+                             Var resultActual, Stmt computeStmt) {
+    assert(func.getArguments().size() == 2 &&
+           "mapped functions must have exactly two arguments");
+
+    this->loopVar = lvar;
+
+    this->targetSet = targets;
+    this->neighborSet = neighbors;
+    this->resultActual = resultActual;
+
+    this->targetElement = func.getArguments()[0];
+    this->neighborElements = func.getArguments()[1];
+
+    this->results = set<Var>(func.getResults().begin(),func.getResults().end());
+
+    this->computeStmt = computeStmt;
+  }
+
+private:
+  set<Var> results;
+
+  Var targetElement;
+  Var neighborElements;
+  Var resultActual;
+
+  Expr loopVar;
+  Expr targetSet;
+  Expr neighborSet;
+
+  Stmt computeStmt;
+
+  // Turn argument field reads into loads from the buffer corresponding to that
+  // field
+  void visit(const FieldRead *op) {
+    // TODO: Handle the case where the target var was reassigned
+    //       tmp = s; ... = tmp.a;
+    if (isa<VarExpr>(op->elementOrSet)) {
+      if (to<VarExpr>(op->elementOrSet)->var == targetElement) {
+        Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
+        expr = Load::make(setFieldRead, loopVar);
+        return;
+      }
+    }
+    IRMutator::visit(op);
+  }
+
+  void visit(const TupleRead *op) {
+    // TODO: Handle the case where the target var was reassigned
+    //       tmp = p(0); ... = tmp.x;
+    if (isa<VarExpr>(op->tuple)) {
+      if (to<VarExpr>(op->tuple)->var == neighborElements) {
+        const TupleType *tupleType = op->tuple.type().toTuple();
+        int cardinality = tupleType->size;
+
+        Expr endpoints = IndexRead::make(targetSet, "endpoints");
+        Expr indexExpr = Add::make(Mul::make(loopVar, cardinality), op->index);
+        expr = Load::make(endpoints, indexExpr);
+        return;
+      }
+    }
+    IRMutator::visit(op);
+  }
+
+  void visit(const TensorWrite *op) {
+    if (isa<VarExpr>(op->tensor)) {
+      if (results.find(to<VarExpr>(op->tensor)->var) != results.end()) {
+        Expr tensor = op->tensor;
+        std::vector<Expr> indices;
+        for (auto &index : op->indices) {
+          indices.push_back(mutate(index));
+        }
+        Expr value = mutate(op->value);
+        const TensorRead *tensorRead = GetTensorRead().get(resultActual,
+                                                           computeStmt);
+        assert(tensorRead->indices.size() == indices.size());
+
+        map<Expr,Expr> substitutions;
+        substitutions[tensorRead] = value;
+        for (size_t i=0; i<indices.size(); ++i) {
+          substitutions[tensorRead->indices[i]] = indices[i];
+        }
+
+        stmt = Substitute(substitutions).mutate(computeStmt);
+        return;
+      }
+    }
+    IRMutator::visit(op);
+  }
+};
+
+
 class LoopBuilder : public SIGVisitor {
 public:
   LoopBuilder(const UseDef *ud) : ud(ud) {}
@@ -239,16 +386,12 @@ public:
 
     componentType = indexExpr->type.toTensor()->componentType;
 
-    if (sig.isSparse()) {
-      body = Pass::make();
-    }
-    else {
-      body = SpecializeDenseIndexExprStmt(lvs).mutate(indexStmt);
-    }
+    computeStmt = SpecializeIndexExprs(&lvs).mutate(indexStmt);
 
-    stmt = body;
-
+    stmt = computeStmt;
+    this->indexExpr = indexExpr;
     apply(sig);
+
     Stmt result = stmt;
     stmt = Stmt();
     return result;
@@ -258,7 +401,9 @@ private:
   const UseDef *ud;
   LoopVars lvs;
   ScalarType componentType;
-  Stmt body;
+  Stmt computeStmt;
+
+  const IndexExpr *indexExpr;
 
   Stmt stmt;
 
@@ -271,7 +416,7 @@ private:
       stmt = For::make(lvar, ldom, stmt);
     }
     else {
-      ReduceOverVar rov(body, v->iv.getOperator());
+      ReduceOverVar rov(computeStmt, v->iv.getOperator());
       Stmt loopBody = rov.mutate(stmt);
       Var tmpVar = rov.getTmpVar();
       assert(tmpVar.defined());
@@ -295,7 +440,21 @@ private:
     pair<Var,ForDomain> loopVar = lvs.getVar(e->tensor);
     Var lvar = loopVar.first;
     ForDomain ldom = loopVar.second;
-    stmt = For::make(lvar, ldom, stmt);
+
+    VarDef varDef = ud->getDef(e->tensor);
+    assert(varDef.getKind() == VarDef::Map);
+    const Map *map = to<Map>(varDef.getStmt());
+
+    // Inline the function into the loop
+    Func func = map->function;
+    Expr target = map->target;
+    Expr nbrs = map->neighbors;
+
+    InlineMappedFunctionInLoop rewriter(lvar, func, target, nbrs, e->tensor,
+                                        computeStmt);
+    Stmt loopBody = rewriter.mutate(func.getBody());
+
+    stmt = For::make(lvar, ldom, loopBody);
     for (auto &v : e->endpoints) {
       visitedVertices.insert(v);
     }

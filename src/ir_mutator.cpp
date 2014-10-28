@@ -96,6 +96,16 @@ void IRMutator::visit(const TupleRead *op) {
   }
 }
 
+void IRMutator::visit(const IndexRead *op) {
+  Expr edgeSet = mutate(op->edgeSet);
+  if (edgeSet == op->edgeSet) {
+    expr = op;
+  }
+  else {
+    expr = IndexRead::make(edgeSet, op->indexName);
+  }
+}
+
 void IRMutator::visit(const Load *op) {
   Expr buffer = mutate(op->buffer);
   Expr index = mutate(op->index);

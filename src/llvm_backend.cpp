@@ -115,6 +115,10 @@ void LLVMBackend::visit(const TupleRead *op) {
   assert(false && "No code generation for this type");
 }
 
+void LLVMBackend::visit(const ir::IndexRead *op) {
+  NOT_SUPPORTED_YET;
+}
+
 void LLVMBackend::visit(const Map *op) {
 //  assert(false && "No code generation for this type");
 }
@@ -357,9 +361,7 @@ void LLVMBackend::visit(const For *op) {
           iNum = llvmInt(is.getSize());
           break;
         case IndexSet::Set: {
-          std::cout << iName << std::endl;
           llvm::Value *setValue = compile(is.getSet());
-          std::cout << *setValue << std::endl;
           iNum = builder->CreateExtractValue(setValue, {0},
                                              setValue->getName()+LEN_SUFFIX);
           break;

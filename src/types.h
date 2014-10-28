@@ -149,9 +149,9 @@ struct SetType : TypeNode {
 
 struct TupleType : TypeNode {
   Type elementType;
-  size_t size;
+  int size;
 
-  static Type make(Type elementType, size_t size) {
+  static Type make(Type elementType, int size) {
     assert(elementType.isElement());
     TupleType *type = new TupleType;
     type->elementType = elementType;

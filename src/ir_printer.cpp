@@ -149,6 +149,11 @@ void IRPrinter::visit(const TupleRead *op) {
   os << ")";
 }
 
+void IRPrinter::visit(const IndexRead *op) {
+  print(op->edgeSet);
+  os << "." << op->indexName;
+}
+
 void IRPrinter::visit(const Load *op) {
   print(op->buffer);
   os << "[";

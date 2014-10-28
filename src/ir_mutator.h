@@ -28,6 +28,7 @@ protected:
   virtual void visit(const FieldRead *op);
   virtual void visit(const TensorRead *op);
   virtual void visit(const TupleRead *op);
+  virtual void visit(const IndexRead *op);
   virtual void visit(const Load *op);
   virtual void visit(const IndexedTensor *op);
   virtual void visit(const IndexExpr *op);

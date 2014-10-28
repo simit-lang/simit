@@ -317,6 +317,21 @@ struct TupleRead : public ExprNode<TupleRead> {
   }
 };
 
+struct IndexRead : public ExprNode<IndexRead> {
+  Expr edgeSet;
+  std::string indexName;
+
+  static Expr make(Expr edgeSet, std::string indexName) {
+    assert(edgeSet.type().isSet());
+    IndexRead *node = new IndexRead;
+    node->type = TensorType::make(ScalarType(ScalarType::Int),
+                                  {IndexDomain(IndexSet(edgeSet))});
+    node->edgeSet = edgeSet;
+    node->indexName = indexName;
+    return node;
+  }
+};
+
 struct IndexedTensor : public ExprNode<IndexedTensor> {
   Expr tensor;
   std::vector<IndexVar> indexVars;
