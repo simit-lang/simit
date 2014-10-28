@@ -1,15 +1,15 @@
 #include "types.h"
 
 #include <ostream>
-#include <iostream>  // TODO: remove
 
+#include "ir.h"
 #include "macros.h"
 #include "util.h"
 
 namespace simit {
 namespace ir {
 
-// class TensorType
+// struct TensorType
 size_t TensorType::size() const {
   int size = 1;
   for (auto &dimension : dimensions) {
@@ -18,6 +18,26 @@ size_t TensorType::size() const {
   return size;
 }
 
+
+// struct SetType
+Type SetType::make(Type elementType, const std::vector<Expr> &endpointSets) {
+  assert(elementType.isElement());
+  SetType *type = new SetType;
+  type->elementType = elementType;
+  for (auto &eps : endpointSets) {
+    type->endpointSets.push_back(new Expr(eps));
+  }
+  return type;
+}
+
+SetType::~SetType() {
+  for (auto &eps : endpointSets) {
+    delete eps;
+  }
+}
+
+
+// Free operator functions
 bool operator==(const Type& l, const Type& r) {
   if (l.kind() != r.kind()) {
     return false;
@@ -66,6 +86,7 @@ bool operator==(const ElementType &l, const ElementType &r) {
   // Element type names are unique
   return (l.name == r.name);
 }
+
 
 bool operator==(const SetType &l, const SetType &r) {
   return l.elementType == r.elementType;
@@ -146,7 +167,13 @@ std::ostream &operator<<(std::ostream &os, const ElementType &type) {
 }
 
 std::ostream &operator<<(std::ostream &os, const SetType &type) {
-  return os << type.elementType.toElement()->name << "{}";
+  os << "set{" << type.elementType.toElement()->name << "}";
+
+  if (type.endpointSets.size() > 0) {
+    os << "(" << util::join(type.endpointSets) << ")";
+  }
+
+  return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const TupleType &type) {

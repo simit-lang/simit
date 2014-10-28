@@ -2118,7 +2118,7 @@ namespace  simit { namespace internal  {
 
     {
     auto elementType = convertAndDelete((yystack_[1].value.type));
-    (yylhs.value.type) = new Type(SetType::make(elementType));
+    (yylhs.value.type) = new Type(SetType::make(elementType, {}));
   }
 
     break;
@@ -2127,10 +2127,10 @@ namespace  simit { namespace internal  {
 
     {
     auto elementType = convertAndDelete((yystack_[4].value.type));
-    auto eps = convertAndDelete((yystack_[1].value.exprs));
+    auto endpoints = convertAndDelete((yystack_[1].value.exprs));
 
     // TODO: Add endpoint information to set type
-    (yylhs.value.type) = new Type(SetType::make(elementType));
+    (yylhs.value.type) = new Type(SetType::make(elementType, endpoints));
   }
 
     break;
@@ -2139,7 +2139,12 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.exprs) = new vector<Expr>;
-    std::string ident = convertAndFree((yystack_[0].value.string));
+    std::string name = convertAndFree((yystack_[0].value.string));
+
+    if (!ctx->hasSymbol(name)) {
+      REPORT_ERROR("undefined set type '" + name + "'" , yystack_[0].location);
+    }
+    (yylhs.value.exprs)->push_back(ctx->getSymbol(name).getExpr());
   }
 
     break;
@@ -2148,7 +2153,12 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.exprs) = (yystack_[2].value.exprs);
-    std::string ident = convertAndFree((yystack_[0].value.string));
+    std::string name = convertAndFree((yystack_[0].value.string));
+
+    if (!ctx->hasSymbol(name)) {
+      REPORT_ERROR("undefined set type '" + name + "'" , yystack_[2].location);
+    }
+    (yylhs.value.exprs)->push_back(ctx->getSymbol(name).getExpr());
   }
 
     break;
@@ -3183,11 +3193,11 @@ namespace  simit { namespace internal  {
      888,   893,   902,   903,   904,   905,   911,   917,   923,   929,
      935,   941,   952,   971,   972,   973,   979,  1012,  1018,  1034,
     1037,  1043,  1049,  1060,  1061,  1062,  1063,  1067,  1079,  1083,
-    1093,  1097,  1104,  1116,  1120,  1123,  1165,  1175,  1180,  1188,
-    1191,  1205,  1211,  1217,  1220,  1270,  1274,  1275,  1279,  1283,
-    1290,  1301,  1308,  1312,  1316,  1330,  1334,  1349,  1353,  1360,
-    1367,  1371,  1375,  1389,  1393,  1408,  1412,  1419,  1423,  1430,
-    1433,  1439,  1442,  1449
+    1093,  1102,  1114,  1126,  1130,  1133,  1175,  1185,  1190,  1198,
+    1201,  1215,  1221,  1227,  1230,  1280,  1284,  1285,  1289,  1293,
+    1300,  1311,  1318,  1322,  1326,  1340,  1344,  1359,  1363,  1370,
+    1377,  1381,  1385,  1399,  1403,  1418,  1422,  1429,  1433,  1440,
+    1443,  1449,  1452,  1459
   };
 
   // Print the state stack on the debug stream.

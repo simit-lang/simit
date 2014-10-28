@@ -1078,25 +1078,35 @@ element_type
 set_type
   : "set" "{" element_type "}" {
     auto elementType = convertAndDelete($element_type);
-    $$ = new Type(SetType::make(elementType));
+    $$ = new Type(SetType::make(elementType, {}));
   }
   | "set" "{" element_type "}" "(" endpoints ")" {
     auto elementType = convertAndDelete($element_type);
-    auto eps = convertAndDelete($endpoints);
+    auto endpoints = convertAndDelete($endpoints);
 
     // TODO: Add endpoint information to set type
-    $$ = new Type(SetType::make(elementType));
+    $$ = new Type(SetType::make(elementType, endpoints));
   }
 
 %type <exprs> endpoints;
 endpoints
   : IDENT {
     $$ = new vector<Expr>;
-    std::string ident = convertAndFree($IDENT);
+    std::string name = convertAndFree($IDENT);
+
+    if (!ctx->hasSymbol(name)) {
+      REPORT_ERROR("undefined set type '" + name + "'" , @1);
+    }
+    $$->push_back(ctx->getSymbol(name).getExpr());
   }
   | endpoints "," IDENT {
     $$ = $1;
-    std::string ident = convertAndFree($IDENT);
+    std::string name = convertAndFree($IDENT);
+
+    if (!ctx->hasSymbol(name)) {
+      REPORT_ERROR("undefined set type '" + name + "'" , @1);
+    }
+    $$->push_back(ctx->getSymbol(name).getExpr());
   }
 
 %type <type> tuple_type;

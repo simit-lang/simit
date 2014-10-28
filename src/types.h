@@ -12,6 +12,8 @@
 namespace simit {
 namespace ir {
 
+class Expr;
+
 struct TypeNode {};
 struct ScalarType;
 struct TensorType;
@@ -136,15 +138,18 @@ struct ElementType : TypeNode {
   }
 };
 
+
+/// The type of a Simit set.  If the set is an edge set then the vector
+/// endpointSets contains the sets each endpoint of an edge comes from.
 struct SetType : TypeNode {
   Type elementType;
 
-  static Type make(Type elementType) {
-    assert(elementType.isElement());
-    SetType *type = new SetType;
-    type->elementType = elementType;
-    return type;
-  }
+  /// Endpoint sets.  These are stored as pointers to break an include cycle
+  /// between this file and ir.h.
+  std::vector<Expr*> endpointSets;
+
+  static Type make(Type elementType, const std::vector<Expr> &endpointSets);
+  ~SetType();
 };
 
 struct TupleType : TypeNode {
