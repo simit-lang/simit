@@ -111,8 +111,7 @@ class Program::ProgramContent {
   internal::Backend *backend;
 
   Function *compile(ir::Func func) {
-    func = lowerIndexExpressions(func);
-    func = lowerTensorAccesses(func);
+    func = lower(func);
     return getBackend()->compile(func);
   }
 };

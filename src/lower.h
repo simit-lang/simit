@@ -6,9 +6,11 @@
 namespace simit {
 namespace ir {
 
-Func lowerIndexExpressions(Func func);
-//Function lowerMaps(Func func);
+Func lower(Func func);
+
 Func insertTemporaries(Func func);
+Func lowerIndexExpressions(Func func);
+Func lowerMaps(Func func);
 Func lowerTensorAccesses(Func func);
 
 //Function lowerIntrinsics(Func func);

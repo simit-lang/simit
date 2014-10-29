@@ -16,6 +16,104 @@ namespace simit {
 namespace ir {
 
 
+Func lower(Func func) {
+  func = insertTemporaries(func);
+  func = lowerIndexExpressions(func);
+  func = lowerMaps(func);
+  func = lowerTensorAccesses(func);
+  return func;
+}
+
+
+class GetFieldRead : public IRVisitor {
+public:
+  GetFieldRead(Expr elementOrSet, std::string fieldName)
+      : elementOrSet(elementOrSet), fieldName(fieldName) {}
+
+  Expr check(Expr expr) {
+    expr.accept(this);
+    return fieldRead;
+  }
+
+private:
+  Expr elementOrSet;
+  std::string fieldName;
+
+  Expr fieldRead;
+
+  void visit(const FieldRead *op) {
+    if (op->elementOrSet == elementOrSet && op->fieldName == fieldName) {
+      fieldRead = op;
+    }
+    else {
+      IRVisitor::visit(op);
+    }
+  }
+};
+
+class IsFieldReduced : public IRVisitor {
+public:
+  IsFieldReduced(Expr fieldRead) : fieldRead(fieldRead) {}
+
+  bool check (Expr expr) {
+    expr.accept(this);
+    return fieldReductionFound;
+  }
+
+private:
+  Expr fieldRead;
+  bool fieldReductionFound = false;
+
+  void visit(const IndexedTensor *op) {
+    if (op->tensor == fieldRead) {
+      for (auto &iv : op->indexVars) {
+        if (iv.isReductionVar()) {
+          fieldReductionFound = true;
+          return;
+        }
+      }
+    }
+  }
+};
+
+class InsertTemporaries : public IRMutator {
+private:
+  int id=0;
+
+  void visit(const FieldWrite *op) {
+    Expr elemOrSet = op->elementOrSet;
+    std::string fieldName = op->fieldName;
+
+    // If the same field is read and written in the same statement and the
+    // values are combined/reduced (e.g. multiplied) then we must introduce a
+    // temporary to avoid read/write interference.
+    Expr fieldRead = GetFieldRead(elemOrSet, fieldName).check(op->value);
+    if (!fieldRead.defined()) {
+      stmt = op;
+      return;
+    }
+
+    bool valsCombined = IsFieldReduced(fieldRead).check(op->value);
+    if (!valsCombined) {
+      stmt = op;
+      return;
+    }
+
+    Type fieldType = getFieldType(elemOrSet, fieldName);
+
+    Var tmp("tmp" + to_string(id++), fieldType);
+
+    Stmt tmpAssignment = AssignStmt::make(tmp, op->value);
+    Stmt writeTmpToField = FieldWrite::make(elemOrSet, fieldName, tmp);
+    stmt = Block::make(tmpAssignment, writeTmpToField);
+  }
+};
+
+Func insertTemporaries(Func func) {
+  return InsertTemporaries().mutate(func);
+}
+
+
 class LoopVars : public SIGVisitor {
 public:
   LoopVars() : ud(nullptr) {}
@@ -560,93 +658,16 @@ Func lowerIndexExpressions(Func func) {
 }
 
 
-class GetFieldRead : public IRVisitor {
-public:
-  GetFieldRead(Expr elementOrSet, std::string fieldName)
-      : elementOrSet(elementOrSet), fieldName(fieldName) {}
-
-  Expr check(Expr expr) {
-    expr.accept(this);
-    return fieldRead;
-  }
-
+class LowerMaps : public IRMutator {
 private:
-  Expr elementOrSet;
-  std::string fieldName;
-
-  Expr fieldRead;
-
-  void visit(const FieldRead *op) {
-    if (op->elementOrSet == elementOrSet && op->fieldName == fieldName) {
-      fieldRead = op;
-    }
-    else {
-      IRVisitor::visit(op);
-    }
+  void visit(const Map *op) {
+    // \todo We should only drop the map statements if it's bound Vars have
+    // no uses (extend/invert UseDef to get DefUse info).
   }
 };
 
-class IsFieldReduced : public IRVisitor {
-public:
-  IsFieldReduced(Expr fieldRead) : fieldRead(fieldRead) {}
-
-  bool check (Expr expr) {
-    expr.accept(this);
-    return fieldReductionFound;
-  }
-
-private:
-  Expr fieldRead;
-  bool fieldReductionFound = false;
-
-  void visit(const IndexedTensor *op) {
-    if (op->tensor == fieldRead) {
-      for (auto &iv : op->indexVars) {
-        if (iv.isReductionVar()) {
-          fieldReductionFound = true;
-          return;
-        }
-      }
-    }
-  }
-};
-
-class InsertTemporaries : public IRMutator {
-
-private:
-  int id=0;
-
-  void visit(const FieldWrite *op) {
-    Expr elemOrSet = op->elementOrSet;
-    std::string fieldName = op->fieldName;
-
-    // If the same field is read and written in the same statement and the
-    // values are combined/reduced (e.g. multiplied) then we must introduce a
-    // temporary to avoid read/write interference.
-    Expr fieldRead = GetFieldRead(elemOrSet, fieldName).check(op->value);
-    if (!fieldRead.defined()) {
-      stmt = op;
-      return;
-    }
-
-    bool valsCombined = IsFieldReduced(fieldRead).check(op->value);
-    if (!valsCombined) {
-      stmt = op;
-      return;
-    }
-
-    Type fieldType = getFieldType(elemOrSet, fieldName);
-
-    Var tmp("tmp" + to_string(id++), fieldType);
-
-    Stmt tmpAssignment = AssignStmt::make(tmp, op->value);
-    Stmt writeTmpToField = FieldWrite::make(elemOrSet, fieldName, tmp);
-    stmt = Block::make(tmpAssignment, writeTmpToField);
-  }
-};
-
-Func insertTemporaries(Func func) {
-  return InsertTemporaries().mutate(func);
+Func lowerMaps(Func func) {
+  return LowerMaps().mutate(func);
 }
 
 
@@ -749,7 +770,6 @@ class LowerTensorAccesses : public IRMutator {
     }
   }
 };
-
 
 Func lowerTensorAccesses(Func func) {
   return LowerTensorAccesses().mutate(func);
