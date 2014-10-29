@@ -88,29 +88,7 @@ void LLVMBackend::compile(const Stmt &stmt) {
 }
 
 void LLVMBackend::visit(const FieldRead *op) {
-  Expr setOrElem = op->elementOrSet;
-  string fieldName = op->fieldName;
-  assert(setOrElem.type().isElement() || setOrElem.type().isSet());
-
-  const ElementType *elemType = nullptr;
-  int fieldsOffset = -1;
-  if (setOrElem.type().isElement()) {
-    elemType = setOrElem.type().toElement();
-    fieldsOffset = 0;
-  }
-  else {
-    const SetType *setType = setOrElem.type().toSet();
-    elemType = setType->elementType.toElement();
-    fieldsOffset = (setType->endpointSets.size() == 0) ? 1 : 2;
-  }
-  assert(fieldsOffset >= 0);
-
-  llvm::Value *setOrElemValue = compile(op->elementOrSet);
-
-
-  unsigned fieldLoc = fieldsOffset + elemType->fields.at(fieldName).location;
-  val = builder->CreateExtractValue(setOrElemValue, {fieldLoc},
-                                    setOrElemValue->getName()+"."+fieldName);
+  val = emitFieldRead(op->elementOrSet, op->fieldName);
 }
 
 void LLVMBackend::visit(const TensorRead *op) {
@@ -147,7 +125,40 @@ void LLVMBackend::visit(const IndexExpr *op) {
 }
 
 void LLVMBackend::visit(const FieldWrite *op) {
-  NOT_SUPPORTED_YET;
+  assert(op->value.type().isTensor());
+  assert(getFieldType(op->elementOrSet, op->fieldName).isTensor());
+  assert(op->elementOrSet.type().isSet()||op->elementOrSet.type().isElement());
+
+  Type fieldType = getFieldType(op->elementOrSet, op->fieldName);
+  Type valueType = op->value.type();
+
+  // Assigning a scalar to an n-order tensor
+  if (fieldType.toTensor()->order() > 0 && valueType.toTensor()->order() == 0) {
+    if (isa<Literal>(op->value)) {
+      const Literal *val = to<Literal>(op->value);
+      if (((double*)val->data)[0] == 0.0) {
+        // emit memset 0
+        llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
+
+        const TensorType *tensorFieldType = fieldType.toTensor();
+
+        llvm::Value *fieldLen = emitComputeLen(tensorFieldType);
+        unsigned elemSize = tensorFieldType->componentType.bytes();
+        llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(elemSize));
+
+        builder->CreateMemSet(fieldPtr, llvmInt(0,8), fieldSize, 8);
+      }
+      else {
+        NOT_SUPPORTED_YET;
+      }
+    }
+  }
+  else {
+    // emit memcpy
+    NOT_SUPPORTED_YET;
+  }
+
+//  NOT_SUPPORTED_YET;
 }
 
 void LLVMBackend::visit(const TensorWrite *op) {
@@ -370,22 +381,7 @@ void LLVMBackend::visit(const For *op) {
   llvm::Value *iNum;
   switch (domain.kind) {
     case ForDomain::IndexSet: {
-      IndexSet is = domain.indexSet;
-      switch (is.getKind()) {
-        case IndexSet::Range:
-          iNum = llvmInt(is.getSize());
-          break;
-        case IndexSet::Set: {
-          llvm::Value *setValue = compile(is.getSet());
-          iNum = builder->CreateExtractValue(setValue, {0},
-                                             setValue->getName()+LEN_SUFFIX);
-          break;
-        }
-        case IndexSet::Dynamic:
-          NOT_SUPPORTED_YET;
-          break;
-      }
-      assert(iNum);
+      iNum = emitComputeLen(domain.indexSet);
       break;
     }
     case ForDomain::Endpoints:
@@ -395,6 +391,7 @@ void LLVMBackend::visit(const For *op) {
       NOT_SUPPORTED_YET;
       break;
   }
+  assert(iNum);
 
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
@@ -444,5 +441,67 @@ void LLVMBackend::visit(const Pass *op) {
   // Nothing to do
 }
 
+llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
+                                        std::string fieldName) {
+  assert(elemOrSet.type().isElement() || elemOrSet.type().isSet());
+  const ElementType *elemType = nullptr;
+  int fieldsOffset = -1;
+  if (elemOrSet.type().isElement()) {
+    elemType = elemOrSet.type().toElement();
+    fieldsOffset = 0;
+  }
+  else {
+    const SetType *setType = elemOrSet.type().toSet();
+    elemType = setType->elementType.toElement();
+    fieldsOffset = (setType->endpointSets.size() == 0) ? 1 : 2;
+  }
+  assert(fieldsOffset >= 0);
+
+  llvm::Value *setOrElemValue = compile(elemOrSet);
+
+  unsigned fieldLoc = fieldsOffset + elemType->fields.at(fieldName).location;
+  return builder->CreateExtractValue(setOrElemValue, {fieldLoc},
+                                     setOrElemValue->getName()+"."+fieldName);
+}
+
+llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType) {
+  if (tensorType->order() == 0) {
+    return llvmInt(1);
+  }
+
+  auto it = tensorType->dimensions.begin();
+  llvm::Value *result = emitComputeLen(*it++);
+  for (; it != tensorType->dimensions.end(); ++it) {
+    result = builder->CreateMul(result, emitComputeLen(*it));
+  }
+  return result;
+}
+
+llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexSet &is) {
+  switch (is.getKind()) {
+    case IndexSet::Range:
+      return llvmInt(is.getSize());
+      break;
+    case IndexSet::Set: {
+      llvm::Value *setValue = compile(is.getSet());
+      return builder->CreateExtractValue(setValue, {0},
+                                         setValue->getName()+LEN_SUFFIX);
+    }
+    case IndexSet::Dynamic:
+      NOT_SUPPORTED_YET;
+      break;
+  }
+}
+
+llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
+  assert(dom.getIndexSets().size() > 0);
+
+  auto it = dom.getIndexSets().begin();
+  llvm::Value *result = emitComputeLen(*it++);
+  for (; it != dom.getIndexSets().end(); ++it) {
+    result = builder->CreateMul(result, emitComputeLen(*it));
+  }
+  return result;
+}
 
 }}  // namespace simit::internal

@@ -74,6 +74,18 @@ private:
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
+
+  /// Get a pointer to the given field
+  llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);
+
+  /// Get the number of components in the tensor
+  llvm::Value *emitComputeLen(const ir::TensorType *);
+
+  /// Get the number of elements in the index sets
+  llvm::Value *emitComputeLen(const ir::IndexSet &);
+
+  /// Get the number of elements in the index domain
+  llvm::Value *emitComputeLen(const ir::IndexDomain &);
 };
 
 }} // namespace simit::internal

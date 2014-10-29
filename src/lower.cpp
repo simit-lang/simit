@@ -538,15 +538,16 @@ private:
 
 class ReplaceRhsWithZero : public IRMutator {
   void visit(const AssignStmt *op) {
-    stmt = AssignStmt::make(op->var, 0);
+    stmt = AssignStmt::make(op->var, 0.0);
   }
 
   void visit(const FieldWrite *op) {
-    stmt = FieldWrite::make(op->elementOrSet, op->fieldName, 0);
+    // TODO: Value can't be a float if the field is an integer field
+    stmt = FieldWrite::make(op->elementOrSet, op->fieldName, 0.0);
   }
 
   void visit(const TensorWrite *op) {
-    stmt = TensorWrite::make(op->tensor, op->indices, 0);
+    stmt = TensorWrite::make(op->tensor, op->indices, 0.0);
   }
 };
 
