@@ -54,7 +54,8 @@ void Function::bind(const std::string &argName, SetBase *set) {
   auto &argFieldsMap = argSetType->elementType.toElement()->fields;
 
   for (const std::pair<std::string,int> &field : set->fieldNames) {
-    assert(argFieldsMap.find(field.first) != argFieldsMap.end());
+    assert(argFieldsMap.find(field.first) != argFieldsMap.end() &&
+           "Could not find field in set");
 
     SetBase::FieldData *fieldData = set->fields[field.second];
 
@@ -93,9 +94,14 @@ void Function::bind(const std::string &argName, SetBase *set) {
   initRequired = true;
 }
 
-void *Function::getFieldPtr(const SetBase *base, const std::string &fieldName) {
-  assert(base->fieldNames.find(fieldName) != base->fieldNames.end());
-  return base->fields[base->fieldNames.at(fieldName)]->data;
+void *Function::getFieldPtr(const SetBase *set, const std::string &fieldName) {
+  assert(set->fieldNames.find(fieldName) != set->fieldNames.end());
+  return set->fields[set->fieldNames.at(fieldName)]->data;
+}
+
+int *Function::getEndpointsPtr(const SetBase *set) {
+  assert(set->endpoints != nullptr);
+  return set->endpoints;
 }
 
 } // namespace simit

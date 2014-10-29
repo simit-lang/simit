@@ -59,7 +59,7 @@ class ElementRef {
 // and can be passed as bound inputs to Simit programs.
 class SetBase {
 public:
-  SetBase() : elements(0), capacity(capacityIncrement) { }
+  SetBase() : elements(0), capacity(capacityIncrement), endpoints(nullptr) { }
   
   ~SetBase() {
     for (auto f: fields)
@@ -68,6 +68,10 @@ public:
   
   /// Return the number of elements in the Set
   int getSize() const { return elements; }
+
+  /// Return the number of endpoints of the elements in the set.  Non-edge sets
+  /// have cardinality 0.
+  virtual int getCardinality() { return 0; }
 
   /// Add a tensor field to the set.  Use the template parameters to specify the
   /// component type and dimension sizes of the tensors.  For example, define a
@@ -126,7 +130,7 @@ public:
   /// dereferenced as an rvalue.  Furthermore, it can only return
   /// const references to Elements.
   class ElementIterator {
-   public:
+  public:
     // some typedefs to make interop with std easier
     typedef std::input_iterator_tag iterator_category;
     typedef ElementRef value_type;
@@ -188,9 +192,11 @@ public:
 protected:
   int elements;                      // number of elements in the set
   int capacity;                   // current capacity of the set
+  int* endpoints;                           // container for edges
   static const int capacityIncrement = 1024; // increment for capacity increases
-  
+
 private:
+
   // A field on the members of the Set.
   //
   // Invariant: elements < capacity
@@ -264,26 +270,28 @@ inline bool operator<(const SetBase::ElementIterator& e1,
   
 template <int cardinality=0>
 class Set : public SetBase {
- public:
+public:
   template <typename ...T>
-  Set(const T& ... sets) :  SetBase(), edge_data(nullptr) {
+  Set(const T& ... sets) : SetBase() {
     assert(sizeof...(sets) == cardinality &&
            "Wrong number of endpoint sets");
    
     // TODO: this may not be the most efficient, but does it matter?
     endpointSets = epsMaker(endpointSets, sets...);
     
-    edge_data = (int*) calloc(sizeof(int), capacity);
+    endpoints = (int*) calloc(sizeof(int), capacity);
   }
   
-  Set() : SetBase(), edge_data(nullptr) {
+  Set() : SetBase() {
     assert(cardinality == 0 &&
            "Sets with cardinality>0 must provide sets for endpoints");
   }
   
   ~Set() {
-    free(edge_data);
+    free(endpoints);
   }
+
+  int getCardinality() { return cardinality; }
   
   /// Add an edge.
   /// The endpoints refer to the respective Sets they come from.
@@ -310,18 +318,17 @@ class Set : public SetBase {
   ElementRef getEndpoint(ElementRef edge, int endpointNum) {
     // TODO: may want to use a pool of ElementRefs instead of creating
     // new ones each time
-    return ElementRef(edge_data[edge.ident*cardinality+endpointNum]);
+    return ElementRef(endpoints[edge.ident*cardinality+endpointNum]);
   }
   
   /// Iterator that iterates over the endpoints of an edge
   class EndpointIterator : public hidden::EndpointIteratorBase<cardinality> {
-   public:
-    EndpointIterator(Set<cardinality>* set, ElementRef elem,
-                     int endpointN=0) : hidden::EndpointIteratorBase<cardinality>(set,
-                                          elem, endpointN) { }
-    
+  public:
+    EndpointIterator(Set<cardinality>* set, ElementRef elem, int endpointN=0)
+        : hidden::EndpointIteratorBase<cardinality>(set, elem, endpointN) { }
+
     EndpointIterator(const EndpointIterator& other) :
-      hidden::EndpointIteratorBase<cardinality>(other) { }
+    hidden::EndpointIteratorBase<cardinality>(other) { }
   };
   
   /// Start iterator for endpoints of an edge
@@ -334,12 +341,11 @@ class Set : public SetBase {
     return EndpointIterator(this, edge, cardinality);
   }
 
- private:
-  int* edge_data;                           // container for edges
+private:
   std::vector<const SetBase*> endpointSets; // sets that the endpoints belong to
   
   void increaseEdgeCapacity() {
-    edge_data = (int*)realloc(edge_data,
+    endpoints = (int*)realloc(endpoints,
                               capacity+capacityIncrement*sizeof(int));
   }
   
@@ -363,17 +369,17 @@ class Set : public SetBase {
   
   // helper for adding edges
   template <typename F, typename ...T>
-  void addHelper(int which, F f, T ... endpoints) {
+  void addHelper(int which, F f, T ... eps) {
     assert(endpointSets[which]->getSize() > f.ident &&
       "Invalid member of set in addEdge");
-    edge_data[elements*cardinality+which] = f.ident;
-    addHelper(which+1, endpoints...);
+    endpoints[elements*cardinality+which] = f.ident;
+    addHelper(which+1, eps...);
   }
   template <typename F>
   void addHelper(int which, F f) {
     assert(endpointSets[which]->getSize() > f.ident &&
     "Invalid member of set in addEdge");
-    edge_data[elements*cardinality+which] = f.ident;
+    endpoints[elements*cardinality+which] = f.ident;
   }
 
 };
@@ -514,8 +520,6 @@ class VertexToEdgeIndex {
                                                       // belongs to
   std::map<const SetBase*,int**> whichEdgesForVertex; // which edges v belongs to
   int totalEdges;
-  
-
 };
 
 } // internal
@@ -553,7 +557,7 @@ public:
     if (endpointNum > cardinality-1)
       retElem.ident = -1;   // return invalid element
     else
-      retElem.ident = set->edge_data[curElem.ident*cardinality+endpointNum];
+      retElem.ident = set->endpoints[curElem.ident*cardinality+endpointNum];
     return *this;
   }
   
@@ -562,7 +566,7 @@ public:
     if (endpointNum > cardinality-1)
       retElem.ident = -1;   // return invalid element
     else
-      retElem.ident = set->edge_data[curElem.ident*cardinality+endpointNum];
+      retElem.ident = set->endpoints[curElem.ident*cardinality+endpointNum];
     return *this;
   }
   

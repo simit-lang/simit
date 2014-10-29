@@ -60,7 +60,8 @@ protected:
   
   Function(const ir::Func &simitFunc);
 
-  void *getFieldPtr(const SetBase *base, const std::string &fieldName);
+  void *getFieldPtr(const SetBase *set, const std::string &fieldName);
+  int *getEndpointsPtr(const SetBase *set);
 
 private:
   std::vector<std::string> formals;
