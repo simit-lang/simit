@@ -77,8 +77,16 @@ private:
 };
 
 class InsertTemporaries : public IRMutator {
+public:
+
+  vector<Var> getTemporaries() {
+    return tmps;
+  }
+
 private:
   int id=0;
+
+  vector<Var> tmps;
 
   void visit(const FieldWrite *op) {
     Expr elemOrSet = op->elementOrSet;
@@ -102,10 +110,29 @@ private:
     Type fieldType = getFieldType(elemOrSet, fieldName);
 
     Var tmp("tmp" + to_string(id++), fieldType);
+    tmps.push_back(tmp);
 
     Stmt tmpAssignment = AssignStmt::make(tmp, op->value);
     Stmt writeTmpToField = FieldWrite::make(elemOrSet, fieldName, tmp);
     stmt = Block::make(tmpAssignment, writeTmpToField);
+  }
+
+  void visit(const Func *f) {
+    Stmt body = mutate(f->getBody());
+
+    if (body == f->getBody()) {
+      func = *f;
+    }
+    else {
+      assert(body.defined());
+
+      std::vector<Var> arguments = f->getArguments();
+      for (auto &tmp : tmps) {
+        arguments.push_back(tmp);
+      }
+
+      func = Func(f->getName(), arguments, f->getResults(), body);
+    }
   }
 };
 
