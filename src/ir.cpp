@@ -61,7 +61,7 @@ std::map<std::string, Func> Intrinsics::byName = {{"sin",sin},
                                                   {"exp",exp}};
 
 // Type compute functions
-Type fieldType(Expr elementOrSet, std::string fieldName) {
+Type getFieldType(Expr elementOrSet, std::string fieldName) {
   assert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
 
   Type fieldType;
@@ -100,7 +100,7 @@ Type fieldType(Expr elementOrSet, std::string fieldName) {
 }
 
 // TODO: The logic in this function is wacky and doesn't work with nests
-Type blockType(Expr tensor) {
+Type getBlockType(Expr tensor) {
   assert(tensor.type().isTensor());
 
   const TensorType *type = tensor.type().toTensor();
@@ -134,7 +134,7 @@ Type blockType(Expr tensor) {
   return blockType;
 }
 
-Type indexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
+Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
   assert(isScalarTensor(expr.type()));
   std::vector<IndexDomain> dimensions;
   for (auto &indexVar : lhsIndexVars) {

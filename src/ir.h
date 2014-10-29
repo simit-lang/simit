@@ -191,9 +191,9 @@ public:
 
 
 // Type compute functions
-Type fieldType(Expr elementOrSet, std::string fieldName);
-Type blockType(Expr tensor);
-Type indexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
+Type getFieldType(Expr elementOrSet, std::string fieldName);
+Type getBlockType(Expr tensor);
+Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
 
 
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
@@ -278,7 +278,7 @@ struct FieldRead : public ExprNode<FieldRead> {
   static Expr make(Expr elementOrSet, std::string fieldName) {
     assert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
     FieldRead *node = new FieldRead;
-    node->type = fieldType(elementOrSet, fieldName);
+    node->type = getFieldType(elementOrSet, fieldName);
     node->elementOrSet = elementOrSet;
     node->fieldName = fieldName;
     return node;
@@ -297,7 +297,7 @@ struct TensorRead : public ExprNode<TensorRead> {
     }
 
     TensorRead *node = new TensorRead;
-    node->type = blockType(tensor);
+    node->type = getBlockType(tensor);
     node->tensor = tensor;
     node->indices = indices;
     return node;
@@ -366,7 +366,7 @@ struct IndexExpr : public ExprNode<IndexExpr> {
       assert(idxVar.isFreeVar());
     }
     IndexExpr *node = new IndexExpr;
-    node->type = indexExprType(resultVars, value);
+    node->type = getIndexExprType(resultVars, value);
     node->resultVars = resultVars;
     node->value = value;
     return node;

@@ -8,6 +8,7 @@ namespace ir {
 
 Func lowerIndexExpressions(Func func);
 //Function lowerMaps(Func func);
+Func insertTemporaries(Func func);
 Func lowerTensorAccesses(Func func);
 
 //Function lowerIntrinsics(Func func);
