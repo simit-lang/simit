@@ -287,7 +287,18 @@ void IRMutator::visit(const Block *op) {
     stmt = op;
   }
   else {
-    stmt = Block::make(first, rest);
+    if (first.defined() && rest.defined()) {
+      stmt = Block::make(first, rest);
+    }
+    else if (first.defined() && !rest.defined()) {
+      stmt = first;
+    }
+    else if (!first.defined() && rest.defined()) {
+      stmt = rest;
+    }
+    else {
+      stmt = Stmt();
+    }
   }
 }
 
@@ -302,6 +313,10 @@ void IRMutator::visit(const Func *f) {
     func = *f;
   }
   else {
+    if (!body.defined()) {
+      body = Pass::make();
+    }
+
     func = Func(f->getName(), f->getArguments(), f->getResults(), body);
   }
 }
