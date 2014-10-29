@@ -28,6 +28,7 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                            llvm::Module *module)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       executionEngine(createExecutionEngine(module)) {
+//  executionEngine->getPointerToFunction(llvmFunc);
 }
 
 LLVMFunction::~LLVMFunction() {
@@ -77,11 +78,20 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
           llvm::StructType *llvmSetType = createLLVMType(setType);
 
           vector<llvm::Constant*> setData;
+
+          // Set size
           setData.push_back(llvmInt(set->getSize()));
+
+          // Edge indices (if the set is an edge set)
+          if (setType->endpointSets.size() > 0) {
+            setData.push_back(llvmPtr(LLVM_INTPTR, getEndpointsPtr(set)));
+          }
+
+          // Fields
           for (auto &field : setType->elementType.toElement()->fields) {
             assert(field.second.type.isTensor());
             setData.push_back(llvmPtr(field.second.type,
-                                      getFieldPtr(set,field.first)));
+                                      getFieldPtr(set, field.first)));
           }
 
           llvm::Value *llvmSet= llvm::ConstantStruct::get(llvmSetType, setData);

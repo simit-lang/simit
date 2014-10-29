@@ -159,7 +159,7 @@ std::ostream &operator<<(std::ostream &os, const ElementType &type) {
 //    os << std::endl << "\n  ";
 //  }
 //  for (auto &field : type.fields) {
-//    os << field.first << " : " << field.second << ";" << std::endl;
+//    os << field.first << " : " << field.second.type << ";" << std::endl;
 //  }
 //  return os << "end";
   os << type.name;

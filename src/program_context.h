@@ -38,7 +38,7 @@ private:
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
-  os << symbol.getVar() << "(";
+  os << symbol.getVar() << " : ";
 
   if (symbol.isReadable()) {
     os << "r";

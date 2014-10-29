@@ -7,6 +7,8 @@
 #include "function.h"
 #include "errors.h"
 
+#include "visualizer/visualizer.h"
+
 using namespace std;
 using namespace simit;
 
@@ -68,7 +70,6 @@ TEST(Program, addVectorFields) {
 
   Set<> points;
   FieldRef<double,3> x = points.addField<double,3>("x");
-  f->bind("points", &points);
 
   ElementRef p0 = points.addElement();
   x.set(p0, {1.0, 2.0, 3.0});
@@ -78,6 +79,7 @@ TEST(Program, addVectorFields) {
   ASSERT_EQ(2.0, vec1(1));
   ASSERT_EQ(3.0, vec1(2));
 
+  f->bind("points", &points);
   f->run();
 
   TensorRef<double,3> vec2 = x.get(p0);
@@ -115,16 +117,47 @@ TEST(Program, gemv) {
     end;
   )";
 
+  // Points
+  Set<> points;
+  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<double> c = points.addField<double>("c");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> a = springs.addField<double>("a");
+
+  ElementRef s0 = springs.addElement(p0,p1);
+  ElementRef s1 = springs.addElement(p1,p2);
+
+  a.set(s0, 1.0);
+  a.set(s1, 2.0);
+
+  // Compile program and bind arguments
   int errorCode = program.loadString(programText);
   if (errorCode) FAIL() << program.getDiagnostics().getMessage();
 
-//  std::unique_ptr<Function> f = program.compile("mul");
-//  if (!f) FAIL() << program.getDiagnostics().getMessage();
+  std::unique_ptr<Function> f = program.compile("mul");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
 
-//  Set<> points;
-//  f->bind("points", &points);
-//  FieldRef<double,3> x = points.addField<double,3>("x");
-//
-//  ElementRef p0 = points.addElement();
-//  x.set(p0, {1.0, 2.0, 3.0});
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+  f->run();
+
+  // Check that inputs are preserved
+  ASSERT_EQ(1.0, b.get(p0));
+  ASSERT_EQ(2.0, b.get(p1));
+  ASSERT_EQ(3.0, b.get(p2));
+
+  // Check that outputs are correct
+  ASSERT_EQ(3.0, c.get(p0));
+  ASSERT_EQ(13.0, c.get(p1));
+  ASSERT_EQ(10.0, c.get(p2));
 }

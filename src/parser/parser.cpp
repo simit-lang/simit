@@ -1191,7 +1191,7 @@ namespace  simit { namespace internal  {
 
     {
     (yylhs.value.fields) = (yystack_[1].value.fields);
-    (yystack_[0].value.field)->second.location = (yylhs.value.fields)->size()+1;
+    (yystack_[0].value.field)->second.location = (yylhs.value.fields)->size();
     (yylhs.value.fields)->insert(*(yystack_[0].value.field));
     delete (yystack_[0].value.field);
   }

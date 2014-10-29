@@ -317,6 +317,8 @@ struct TupleRead : public ExprNode<TupleRead> {
   }
 };
 
+/// An IndexRead retrieves an index from an edge set.  An example of an index
+/// is the endpoints of the edges in the set.
 struct IndexRead : public ExprNode<IndexRead> {
   Expr edgeSet;
   std::string indexName;

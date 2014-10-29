@@ -93,16 +93,22 @@ void LLVMBackend::visit(const FieldRead *op) {
   assert(setOrElem.type().isElement() || setOrElem.type().isSet());
 
   const ElementType *elemType = nullptr;
+  int fieldsOffset = -1;
   if (setOrElem.type().isElement()) {
     elemType = setOrElem.type().toElement();
+    fieldsOffset = 0;
   }
   else {
-    elemType = setOrElem.type().toSet()->elementType.toElement();
+    const SetType *setType = setOrElem.type().toSet();
+    elemType = setType->elementType.toElement();
+    fieldsOffset = (setType->endpointSets.size() == 0) ? 1 : 2;
   }
+  assert(fieldsOffset >= 0);
 
   llvm::Value *setOrElemValue = compile(op->elementOrSet);
 
-  unsigned fieldLoc = elemType->fields.at(fieldName).location;
+
+  unsigned fieldLoc = fieldsOffset + elemType->fields.at(fieldName).location;
   val = builder->CreateExtractValue(setOrElemValue, {fieldLoc},
                                     setOrElemValue->getName()+"."+fieldName);
 }
@@ -116,7 +122,16 @@ void LLVMBackend::visit(const TupleRead *op) {
 }
 
 void LLVMBackend::visit(const ir::IndexRead *op) {
-  NOT_SUPPORTED_YET;
+  // For now we only support one, hard-coded, index namely endpoints.
+  // TODO: Add support for different indices (contained in the Set type).
+  assert(op->indexName == "endpoints");
+
+  assert(op->edgeSet.type().isSet());
+  assert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
+
+  llvm::Value *edgeSetValue = compile(op->edgeSet);
+  val = builder->CreateExtractValue(edgeSetValue, {1},
+                                    edgeSetValue->getName()+"."+op->indexName);
 }
 
 void LLVMBackend::visit(const Map *op) {

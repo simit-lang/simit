@@ -326,7 +326,7 @@ field_decl_list
   }
   | field_decl_list field_decl {
     $$ = $1;
-    $field_decl->second.location = $$->size()+1;
+    $field_decl->second.location = $$->size();
     $$->insert(*$field_decl);
     delete $field_decl;
   }

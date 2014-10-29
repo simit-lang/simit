@@ -173,23 +173,30 @@ int main(int argc, const char* argv[]) {
     }
 
     // Lower while printing lowered results
-    cout << endl << endl;
-    cout << "--- Compiling " << function << " (inlined):" << endl;
-    cout << func << endl << endl;
+    if (emitSimit) {
+      cout << endl << endl;
+      cout << "--- Compiling " << function << " (inlined):" << endl;
+      cout << func << endl << endl;
+    }
 
     func = lowerIndexExpressions(func);
-    cout << "--- Lowering Index Expressions:" << endl;
-    cout << func << endl << endl;;
+    if (emitSimit) {
+      cout << "--- Lowering Index Expressions:" << endl;
+      cout << func << endl << endl;;
+    }
 
     func = lowerTensorAccesses(func);
-    cout << "--- Lowering Tensor Reads and Writes:" << endl;
-    cout << func << endl;
+    if (emitSimit) {
+      cout << "--- Lowering Tensor Reads and Writes:" << endl;
+      cout << func << endl;
+    }
 
     if (emitLLVM) {
-      cout << endl;
       simit::internal::LLVMBackend backend;
       std::string fstr = simit::util::toString(*backend.compile(func));
-      cout << "--- Emitting LLVM:" << endl;
+      if (emitSimit) {
+        cout << endl << "--- Emitting LLVM:" << endl;
+      }
       cout << simit::util::trim(fstr) << endl;
 
       // NB: The LLVM code gets further optimized at init time (OSR, etc.)

@@ -282,6 +282,34 @@ private:
 };
 
 
+/// Turns tensor writes into compound assignments (e.g. +=, *=)
+/// \todo Generalize to include Assignments, FieldWrite, TupleWrite
+class MakeTensorWriteCompound : public IRMutator {
+public:
+  enum CompoundOperator { Add };
+
+  MakeTensorWriteCompound(CompoundOperator compoundOperator)
+      : compoundOperator(compoundOperator) {}
+
+private:
+  CompoundOperator compoundOperator;
+
+  void visit(const TensorWrite *op) {
+    Expr tensorRead = TensorRead::make(op->tensor, op->indices);
+
+    Expr value;
+    switch (compoundOperator) {
+      case Add:
+        value = Add::make(tensorRead, op->value);
+        break;
+    }
+    assert(value.defined());
+
+    stmt = TensorWrite::make(op->tensor, op->indices, value);
+  }
+};
+
+
 class InlineMappedFunctionInLoop : public IRMutator {
 public:
   InlineMappedFunctionInLoop(Var lvar, Func func, Expr targets, Expr neighbors,
@@ -368,6 +396,9 @@ private:
         }
 
         stmt = Substitute(substitutions).mutate(computeStmt);
+
+        MakeTensorWriteCompound mac(MakeTensorWriteCompound::Add);
+        stmt = mac.mutate(stmt);
         return;
       }
     }

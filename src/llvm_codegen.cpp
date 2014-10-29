@@ -42,17 +42,17 @@ llvm::Type *llvmPtrType(ScalarType stype) {
   }
 }
 
-llvm::Type *llvmPtrType(const TensorType *ttype) {
-  return llvmPtrType(ttype->componentType);
-}
-
-llvm::Constant *llvmPtr(const Type &type, void *data) {
+llvm::Constant *llvmPtr(llvm::Type *type, void *data) {
   llvm::Constant *c = (sizeof(void*) == 4)
       ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT),
                                (int)(intptr_t)data)
       : llvm::ConstantInt::get(llvm::Type::getInt64Ty(LLVM_CONTEXT),
                                (intptr_t)data);
-  return llvm::ConstantExpr::getIntToPtr(c, createLLVMType(type));
+  return llvm::ConstantExpr::getIntToPtr(c, type);
+}
+
+llvm::Constant *llvmPtr(const Type &type, void *data) {
+  return llvmPtr(createLLVMType(type), data);
 }
 
 llvm::Constant *llvmPtr(Literal *literal) {
@@ -76,11 +76,23 @@ Type simitType(const llvm::Type *type) {
   }
 }
 
+llvm::Type *createLLVMType(const TensorType *ttype) {
+  return llvmPtrType(ttype->componentType);
+}
+
 llvm::StructType *createLLVMType(const ir::SetType *setType) {
   const ElementType *elemType = setType->elementType.toElement();
-
   vector<llvm::Type*> llvmFieldTypes;
+
+  // Set size
   llvmFieldTypes.push_back(LLVM_INT);
+
+  // Edge indices (if the set is an edge set)
+  if (setType->endpointSets.size() > 0) {
+    llvmFieldTypes.push_back(LLVM_INTPTR);
+  }
+
+  // Fields
   for (std::pair<std::string,Field> field : elemType->fields) {
     llvmFieldTypes.push_back(createLLVMType(field.second.type));
   }
@@ -90,7 +102,7 @@ llvm::StructType *createLLVMType(const ir::SetType *setType) {
 llvm::Type *createLLVMType(const Type &type) {
   switch (type.kind()) {
     case Type::Tensor:
-      return llvmPtrType(type.toTensor());
+      return createLLVMType(type.toTensor());
     case Type::Element:
       NOT_SUPPORTED_YET;
       break;
@@ -137,7 +149,7 @@ llvm::Function *createFunction(const std::string &name,
     arg.setName(llvmArgNames[i]);
 
     if (arg.getType()->isPointerTy()) {
-      f->setDoesNotCapture(i+1);  // setDoesNotCapture(0) is the return value
+      f->setDoesNotCapture(i+1);  //  setDoesNotCapture(0) is the return value
     }
     ++i;
   }
@@ -149,14 +161,14 @@ std::ostream &operator<<(std::ostream &os, const llvm::Value &value) {
   std::string str;
   llvm::raw_string_ostream ss(str);
   value.print(ss);
-  return os << str;
+  return os << ss.str();
 }
 
 std::ostream &operator<<(std::ostream &os, const llvm::Type &type) {
   std::string str;
   llvm::raw_string_ostream ss(str);
   type.print(ss);
-  return os << str;
+  return os << ss.str();
 }
 
 }} // namespace simit::internal

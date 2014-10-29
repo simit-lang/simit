@@ -36,14 +36,14 @@ llvm::Type *llvmType(ir::ScalarType stype);
 
 llvm::Type *llvmPtrType(ir::ScalarType stype);
 
-llvm::Type *llvmPtrType(const ir::TensorType *ttype);
-
+llvm::Constant *llvmPtr(llvm::Type *type, void *data);
 llvm::Constant *llvmPtr(const ir::Type &type, void *data);
 
 llvm::Constant *llvmPtr(ir::Literal *literal);
 
 ir::Type simitType(const llvm::Type *type);
 
+llvm::Type *createLLVMType(const ir::TensorType *ttype);
 llvm::StructType *createLLVMType(const ir::SetType *);
 llvm::Type *createLLVMType(const ir::Type &);
 
