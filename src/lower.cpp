@@ -411,6 +411,20 @@ private:
 };
 
 
+class ReplaceRhsWithZero : public IRMutator {
+  void visit(const AssignStmt *op) {
+    stmt = AssignStmt::make(op->var, 0);
+  }
+
+  void visit(const FieldWrite *op) {
+    stmt = FieldWrite::make(op->elementOrSet, op->fieldName, 0);
+  }
+
+  void visit(const TensorWrite *op) {
+    stmt = TensorWrite::make(op->tensor, op->indices, 0);
+  }
+};
+
 class LoopBuilder : public SIGVisitor {
 public:
   LoopBuilder(const UseDef *ud) : ud(ud) {}
@@ -421,10 +435,10 @@ public:
 
     componentType = indexExpr->type.toTensor()->componentType;
 
+    initStmt = ReplaceRhsWithZero().mutate(indexStmt);
     computeStmt = SpecializeIndexExprs(&lvs).mutate(indexStmt);
 
     stmt = computeStmt;
-    this->indexExpr = indexExpr;
     apply(sig);
 
     Stmt result = stmt;
@@ -436,9 +450,8 @@ private:
   const UseDef *ud;
   LoopVars lvs;
   ScalarType componentType;
+  Stmt initStmt;
   Stmt computeStmt;
-
-  const IndexExpr *indexExpr;
 
   Stmt stmt;
 
@@ -488,8 +501,9 @@ private:
     InlineMappedFunctionInLoop rewriter(lvar, func, target, nbrs, e->tensor,
                                         computeStmt);
     Stmt loopBody = rewriter.mutate(func.getBody());
+    Stmt loop = For::make(lvar, ldom, loopBody);
+    stmt = Block::make(initStmt, loop);
 
-    stmt = For::make(lvar, ldom, loopBody);
     for (auto &v : e->endpoints) {
       visitedVertices.insert(v);
     }
