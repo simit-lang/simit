@@ -88,7 +88,7 @@ TEST(Program, addVectorFields) {
   ASSERT_EQ(6.0, vec2(2));
 }
 
-TEST(Program, gemv) {
+TEST(Program, gemv_oop) {
   Program program;
   std::string programText = R"(
     element Point
@@ -130,6 +130,9 @@ TEST(Program, gemv) {
   b.set(p1, 2.0);
   b.set(p2, 3.0);
 
+  // Taint c
+  c.set(p0, 42.0);
+
   // Springs
   Set<2> springs(points,points);
   FieldRef<double> a = springs.addField<double>("a");
@@ -151,6 +154,10 @@ TEST(Program, gemv) {
   f->bind("springs", &springs);
   f->run();
 
+  cout << "Actual [" << (double)c.get(p0) << "," << (double)c.get(p1) << ","
+       << (double)c.get(p2) << "]" << endl;
+  cout << "Expect [" << 3.0 << "," << 13.0 << "," << 10.0 << "]" << endl;
+
   // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(p0));
   ASSERT_EQ(2.0, b.get(p1));
@@ -160,4 +167,75 @@ TEST(Program, gemv) {
   ASSERT_EQ(3.0, c.get(p0));
   ASSERT_EQ(13.0, c.get(p1));
   ASSERT_EQ(10.0, c.get(p2));
+}
+
+TEST(Program, gemv_ip) {
+  Program program;
+  std::string programText = R"(
+    element Point
+      b : float;
+    end
+
+    element Spring
+      a : float;
+    end
+
+    extern points  : set{Point};
+    extern springs : set{Spring}(points,points);
+
+    func dist_a(s : Spring, p : (Point*2)) ->
+        (A : tensor[points,points](float))
+      A(p(0),p(0)) = s.a;
+      A(p(0),p(1)) = s.a;
+      A(p(1),p(0)) = s.a;
+      A(p(1),p(1)) = s.a;
+    end
+
+    proc mul
+      A = map dist_a to springs with points reduce +;
+      points.b = A * points.b;
+    end;
+  )";
+
+  // Points
+  Set<> points;
+  FieldRef<double> b = points.addField<double>("b");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> a = springs.addField<double>("a");
+
+  ElementRef s0 = springs.addElement(p0,p1);
+  ElementRef s1 = springs.addElement(p1,p2);
+
+  a.set(s0, 1.0);
+  a.set(s1, 2.0);
+
+  // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("mul");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+  f->run();
+
+  cout << "Actual [" << (double)b.get(p0) << "," << (double)b.get(p1) << ","
+       << (double)b.get(p2) << "]" << endl;
+  cout << "Expect [" << 3.0 << "," << 13.0 << "," << 10.0 << "]" << endl;
+
+  // Check that outputs are correct
+  ASSERT_EQ(3.0, b.get(p0));
+  ASSERT_EQ(13.0, b.get(p1));
+  ASSERT_EQ(10.0, b.get(p2));
 }
