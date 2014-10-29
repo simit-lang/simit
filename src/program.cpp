@@ -59,7 +59,7 @@ class Program::ProgramContent {
     for (auto &test : ctx.getTests()) {
       // get binary function with name test->call->callee from list of functions
       ir::Func func = ctx.getFunction(test->getCallee());
-      if (func == NULL) {
+      if (!func.defined()) {
         diags.report() << "Error: attempting to test unknown function";
         return 1;
       }

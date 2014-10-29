@@ -154,7 +154,7 @@ int main(int argc, const char* argv[]) {
     simit::ir::Func func;
     if (function != "") {
       func = functions[function];
-      if (func == nullptr) {
+      if (!func.defined()) {
         cerr << "Error: Could not find function " << function <<
                 " in " << sourceFile;
         return 4;

@@ -359,8 +359,7 @@ procedure_header
     for (auto &extPair : ctx->getExterns()) {
       Var ext = ctx->getExtern(extPair.first);
 
-      // TODO: Replace extResult with mutable parameters
-      results.push_back(ext);
+      // TODO: Make extResult a mutable parameter
       arguments.push_back(ext);
     }
 
