@@ -6,8 +6,13 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/DataLayout.h"
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
+
+#include "llvm/PassManager.h"
+#include "llvm/Analysis/Passes.h"
+#include "llvm/Transforms/Scalar.h"
 
 #include "llvm_codegen.h"
 #include "graph.h"
@@ -28,7 +33,23 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                            llvm::Module *module)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       executionEngine(createExecutionEngine(module)) {
-//  executionEngine->getPointerToFunction(llvmFunc);
+
+  llvm::FunctionPassManager fpm(module);
+  fpm.add(new llvm::DataLayout(*executionEngine->getDataLayout()));
+
+  // Basic optimizations
+  fpm.add(llvm::createBasicAliasAnalysisPass());
+  fpm.add(llvm::createInstructionCombiningPass());
+  fpm.add(llvm::createGVNPass());
+  fpm.add(llvm::createCFGSimplificationPass());
+  fpm.add(llvm::createPromoteMemoryToRegisterPass());
+
+  // Loop optimizations
+  fpm.add(llvm::createLICMPass());
+  fpm.add(llvm::createLoopStrengthReducePass());
+
+  fpm.doInitialization();
+  fpm.run(*llvmFunc);
 }
 
 LLVMFunction::~LLVMFunction() {
