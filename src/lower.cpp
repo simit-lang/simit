@@ -78,7 +78,6 @@ private:
 
 class InsertTemporaries : public IRMutator {
 public:
-
   vector<Var> getTemporaries() {
     return tmps;
   }
@@ -125,13 +124,8 @@ private:
     }
     else {
       assert(body.defined());
-
-      std::vector<Var> arguments = f->getArguments();
-      for (auto &tmp : tmps) {
-        arguments.push_back(tmp);
-      }
-
-      func = Func(f->getName(), arguments, f->getResults(), body);
+      func = Func(f->getName(), f->getArguments(), f->getResults(), body,
+                  f->getKind(), tmps);
     }
   }
 };
@@ -222,7 +216,8 @@ private:
       Expr varExpr = getVarExpr(var);
       std::vector<Expr> indices;
       for (IndexVar const& iv : indexExpr->resultVars) {
-        indices.push_back(lvs->getVar(iv).first);
+        Expr varExpr = getVarExpr(lvs->getVar(iv).first);
+        indices.push_back(varExpr);
       }
       stmt = TensorWrite::make(varExpr, indices, value);
     }
@@ -408,16 +403,20 @@ public:
 
 private:
   map<Expr,Expr> substitutions;
+
+  void visit(const VarExpr *op) {
+    expr = op;
+  }
 };
 
 
 /// Turns tensor writes into compound assignments (e.g. +=, *=)
 /// \todo Generalize to include Assignments, FieldWrite, TupleWrite
-class MakeTensorWriteCompound : public IRMutator {
+class MakeCompound : public IRMutator {
 public:
   enum CompoundOperator { Add };
 
-  MakeTensorWriteCompound(CompoundOperator compoundOperator)
+  MakeCompound(CompoundOperator compoundOperator)
       : compoundOperator(compoundOperator) {}
 
 private:
@@ -526,8 +525,8 @@ private:
 
         stmt = Substitute(substitutions).mutate(computeStmt);
 
-        MakeTensorWriteCompound mac(MakeTensorWriteCompound::Add);
-        stmt = mac.mutate(stmt);
+        ;
+        stmt = MakeCompound(MakeCompound::Add).mutate(stmt);
         return;
       }
     }

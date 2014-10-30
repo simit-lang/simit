@@ -317,7 +317,8 @@ void IRMutator::visit(const Func *f) {
       body = Pass::make();
     }
 
-    func = Func(f->getName(), f->getArguments(), f->getResults(), body);
+    func = Func(f->getName(), f->getArguments(), f->getResults(), body,
+                f->getKind(), f->getTemporaries());
   }
 }
 

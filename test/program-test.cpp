@@ -155,10 +155,6 @@ TEST(Program, gemv_oop) {
   f->bind("springs", &springs);
   f->run();
 
-  cout << "Actual [" << (double)c.get(p0) << "," << (double)c.get(p1) << ","
-       << (double)c.get(p2) << "]" << endl;
-  cout << "Expect [" << 3.0 << "," << 13.0 << "," << 10.0 << "]" << endl;
-
   // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(p0));
   ASSERT_EQ(2.0, b.get(p1));
@@ -171,7 +167,6 @@ TEST(Program, gemv_oop) {
 }
 
 TEST(Program, gemv_ip) {
-  return; // TODO: Remove
   Program program;
   std::string programText = R"(
     element Point
@@ -231,10 +226,6 @@ TEST(Program, gemv_ip) {
   f->bind("points", &points);
   f->bind("springs", &springs);
   f->run();
-
-  cout << "Actual [" << (double)b.get(p0) << "," << (double)b.get(p1) << ","
-       << (double)b.get(p2) << "]" << endl;
-  cout << "Expect [" << 3.0 << "," << 13.0 << "," << 10.0 << "]" << endl;
 
   // Check that outputs are correct
   ASSERT_EQ(3.0, b.get(p0));

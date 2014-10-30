@@ -30,8 +30,14 @@ class LLVMFunction : public simit::Function {
   llvm::Module          *module;
   llvm::ExecutionEngine *executionEngine;
 
+  bool requiresInitCall;
+  FuncPtrType deinit;
+
   FuncPtrType init(const std::vector<std::string> &formals,
                    std::map<std::string, Actual> &actuals);
+
+  FuncPtrType createHarness(const std::string &name,
+                            const llvm::SmallVector<llvm::Value*,8> &args);
 };
 
 }}  // namespace simit::internal

@@ -22,6 +22,7 @@
 #define LLVM_DOUBLEPTR llvm::Type::getDoublePtrTy(LLVM_CONTEXT)
 
 #define LLVM_INT8      llvm::Type::getInt8Ty(LLVM_CONTEXT)
+#define LLVM_INT8PTR   llvm::Type::getInt8PtrTy(LLVM_CONTEXT)
 #define LLVM_INT32     llvm::Type::getInt32Ty(LLVM_CONTEXT)
 #define LLVM_INT64     llvm::Type::getInt64Ty(LLVM_CONTEXT)
 
@@ -32,7 +33,7 @@ llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
 llvm::ConstantFP* llvmFP(double val, unsigned bits=64);
 
-llvm::Type *llvmType(ir::ScalarType stype);
+llvm::Type *createLLVMType(ir::ScalarType stype);
 
 llvm::Type *llvmPtrType(ir::ScalarType stype);
 

@@ -134,6 +134,8 @@ struct FuncContent {
   std::vector<Var> results;
   Stmt body;
 
+  std::vector<Var> temporaries;
+
   mutable long ref = 0;
   friend inline void aquire(FuncContent *c) {++c->ref;}
   friend inline void release(FuncContent *c) {if (--c->ref==0) delete c;}
@@ -147,24 +149,24 @@ public:
   Func() : IntrusivePtr() {}
 
   Func(const std::string &name, const std::vector<Var> &arguments,
-       const std::vector<Var> &results, Stmt body)
-      : IntrusivePtr(new FuncContent) {
-    ptr->kind = Internal;
-    ptr->name = name;
-    ptr->arguments = arguments;
-    ptr->results = results;
-    ptr->body = body;
-  }
-
-  Func(const std::string &name, const std::vector<Var> &arguments,
-       const std::vector<Var> &results, Kind kind)
-      : IntrusivePtr(new FuncContent) {
-    assert(kind != Internal);
+       const std::vector<Var> &results, Stmt body, Kind kind,
+       const std::vector<Var> &temporaries) : IntrusivePtr(new FuncContent) {
     ptr->kind = kind;
     ptr->name = name;
     ptr->arguments = arguments;
     ptr->results = results;
-    ptr->body = Stmt();
+    ptr->body = body;
+    ptr->temporaries = temporaries;
+  }
+
+  Func(const std::string &name, const std::vector<Var> &arguments,
+       const std::vector<Var> &results, Stmt body, Kind kind=Internal)
+      : Func(name, arguments, results, body, kind, std::vector<Var>()) {}
+
+  Func(const std::string &name, const std::vector<Var> &arguments,
+       const std::vector<Var> &results, Kind kind)
+      : Func(name, arguments, results, Stmt(), kind) {
+    assert(kind != Internal);
   }
 
   Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
@@ -172,6 +174,7 @@ public:
   const std::vector<Var> &getArguments() const {return ptr->arguments;}
   const std::vector<Var> &getResults() const {return ptr->results;}
   Stmt getBody() const {return ptr->body;}
+  const std::vector<Var> &getTemporaries() const {return ptr->temporaries;}
 
   void accept(IRVisitor *visitor) const { visitor->visit(this); };
 };

@@ -24,7 +24,7 @@ llvm::ConstantFP *llvmFP(double val, unsigned bits) {
   return llvm::ConstantFP::get(LLVM_CONTEXT, llvm::APFloat(val));
 }
 
-llvm::Type *llvmType(ScalarType stype) {
+llvm::Type *createLLVMType(ScalarType stype) {
   switch (stype.kind) {
     case ScalarType::Int:
       return LLVM_INT;
@@ -114,6 +114,27 @@ llvm::Type *createLLVMType(const Type &type) {
   }
 }
 
+static llvm::Function *createFunction(const std::string &name,
+                                      const std::vector<std::string> &argNames,
+                                      const std::vector<llvm::Type*> &argTypes,
+                                      llvm::Module *module) {
+  llvm::FunctionType *ft= llvm::FunctionType::get(LLVM_VOID,argTypes,false);
+  llvm::Function *f= llvm::Function::Create(ft, llvm::Function::InternalLinkage,
+                                            name, module);
+  f->setDoesNotThrow();
+  unsigned i = 0;
+  for (llvm::Argument &arg : f->getArgumentList()) {
+    arg.setName(argNames[i]);
+
+    if (arg.getType()->isPointerTy()) {
+      f->setDoesNotCapture(i+1);  //  setDoesNotCapture(0) is the return value
+    }
+    ++i;
+  }
+
+  return f;
+}
+
 llvm::Function *createFunction(const std::string &name,
                                const vector<Var> &arguments,
                                const vector<Var> &results,
@@ -139,22 +160,7 @@ llvm::Function *createFunction(const std::string &name,
 
   assert(llvmArgNames.size() == llvmArgTypes.size());
 
-  llvm::FunctionType *ft= llvm::FunctionType::get(LLVM_VOID,llvmArgTypes,false);
-
-  llvm::Function *f= llvm::Function::Create(ft, llvm::Function::InternalLinkage,
-                                            name, module);
-  f->setDoesNotThrow();
-  unsigned i = 0;
-  for (llvm::Argument &arg : f->getArgumentList()) {
-    arg.setName(llvmArgNames[i]);
-
-    if (arg.getType()->isPointerTy()) {
-      f->setDoesNotCapture(i+1);  //  setDoesNotCapture(0) is the return value
-    }
-    ++i;
-  }
-
-  return f;
+  return createFunction(name, llvmArgNames, llvmArgTypes, module);
 }
 
 std::ostream &operator<<(std::ostream &os, const llvm::Value &value) {

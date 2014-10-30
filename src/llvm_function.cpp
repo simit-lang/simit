@@ -50,9 +50,15 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
 
   fpm.doInitialization();
   fpm.run(*llvmFunc);
+
+  requiresInitCall = simitFunc.getTemporaries().size() > 0;
+  deinit = nullptr;
 }
 
 LLVMFunction::~LLVMFunction() {
+  if (deinit) {
+    deinit();
+  }
   executionEngine->removeModule(module);
   delete executionEngine;
   delete module;
@@ -62,22 +68,38 @@ void LLVMFunction::print(std::ostream &os) const {
   std::string fstr;
   llvm::raw_string_ostream rsos(fstr);
   llvmFunc->print(rsos);
-  os << fstr;
+  module->dump();
+  os << rsos.str();
+}
+
+LLVMFunction::FuncPtrType
+LLVMFunction::createHarness(const std::string &name,
+                            const llvm::SmallVector<llvm::Value*,8> &args) {
+  llvm::Function *llvmFunc = module->getFunction(name);
+  std::string harnessName = name + ".harness";
+  llvm::Function *harness = createFunction(harnessName, {}, {}, module);
+  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
+  llvm::CallInst *call = llvm::CallInst::Create(llvmFunc, args, "",entry);
+  call->setCallingConv(llvmFunc->getCallingConv());
+  llvm::ReturnInst::Create(module->getContext(), entry);
+  return ((FuncPtrType)executionEngine->getPointerToFunction(harness));
 }
 
 simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
                                                 map<string, Actual> &actuals) {
-  void *fptr = executionEngine->getPointerToFunction(llvmFunc);
   if (llvmFunc->getArgumentList().size() == 0) {
-    return (FuncPtrType)fptr;
+    if (requiresInitCall) {
+      std::string name = llvmFunc->getName();
+      llvm::Function *initFunc = module->getFunction(name+".init");
+      ((FuncPtrType)executionEngine->getPointerToFunction(initFunc))();
+
+      llvm::Function *deinitFunc = module->getFunction(name+".deinit");
+      deinit = ((FuncPtrType)executionEngine->getPointerToFunction(deinitFunc));
+    }
+
+    return (FuncPtrType)executionEngine->getPointerToFunction(llvmFunc);
   }
   else {
-    std::string name = string(llvmFunc->getName()) + "_harness";
-    std::vector<ir::Var> noArgs;
-    std::vector<ir::Var> noResults;
-    llvm::Function *harness = createFunction(name, noArgs, noResults, module);
-    auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
-
     llvm::SmallVector<llvm::Value*, 8> args;
     for (const std::string &formal : formals) {
       assert(actuals.find(formal) != actuals.end());
@@ -126,11 +148,14 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
       }
     }
 
-    llvm::CallInst *call = llvm::CallInst::Create(llvmFunc, args, "", entry);
-    call->setCallingConv(llvmFunc->getCallingConv());
-    call->setTailCall();
-    llvm::ReturnInst::Create(llvmFunc->getContext(), entry);
-    return (FuncPtrType)executionEngine->getPointerToFunction(harness);
+    // Init function
+    if (requiresInitCall) {
+      createHarness(string(llvmFunc->getName())+".init", args)();
+      deinit = createHarness(string(llvmFunc->getName())+".deinit", args);
+    }
+
+    // Compute function
+    return createHarness(llvmFunc->getName(), args);
   }
 }
 
