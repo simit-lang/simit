@@ -42,7 +42,7 @@ TEST(Program, addScalarFields) {
   x.set(p0, 42.0);
 
   ASSERT_EQ(42.0, x.get(p0));
-  f->run();
+  f->runSafe();
   ASSERT_EQ(84.0, x.get(p0));
 }
 
@@ -80,7 +80,7 @@ TEST(Program, addVectorFields) {
   ASSERT_EQ(3.0, vec1(2));
 
   f->bind("points", &points);
-  f->run();
+  f->runSafe();
 
   TensorRef<double,3> vec2 = x.get(p0);
   ASSERT_EQ(2.0, vec2(0));
@@ -153,7 +153,7 @@ TEST(Program, gemv_oop) {
 
   f->bind("points", &points);
   f->bind("springs", &springs);
-  f->run();
+  f->runSafe();
 
   // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(p0));
@@ -225,7 +225,7 @@ TEST(Program, gemv_ip) {
 
   f->bind("points", &points);
   f->bind("springs", &springs);
-  f->run();
+  f->runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(3.0, b.get(p0));

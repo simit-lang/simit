@@ -30,11 +30,20 @@ public:
   void bind(const std::string &argName, Tensor *tensor);
   void bind(const std::string &argName, SetBase *set);
 
-  inline void run() {
+  inline void init() {
+    funcPtr = init(formals, actuals);
+    initRequired = false;
+  }
+
+  inline void runSafe() {
     if (initRequired) {
-      funcPtr = init(formals, actuals);
-      initRequired = false;
+      init();
     }
+    funcPtr();
+  }
+
+  inline void run() {
+    assert(!initRequired);
     funcPtr();
   }
 

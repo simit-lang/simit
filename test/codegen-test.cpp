@@ -47,7 +47,7 @@ TEST(Codegen, add0) {
   function->bind("b", &bArg);
   function->bind("c", &cRes);
 
-  function->run();
+  function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], 6.1);
@@ -71,7 +71,7 @@ TEST(Codegen, sin) {
   function->bind("a", &aArg);
   function->bind("c", &cRes);
 
-  function->run();
+  function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], sin(2.0));
@@ -96,7 +96,7 @@ TEST(Codegen, cos) {
   function->bind("a", &aVar);
   function->bind("c", &cRes);
 
-  function->run();
+  function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], cos(2.0));
@@ -121,7 +121,7 @@ TEST(Codegen, sqrt) {
   function->bind("a", &aVar);
   function->bind("c", &cRes);
 
-  function->run();
+  function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], sqrt(5.0));
@@ -146,7 +146,7 @@ TEST(Codegen, log) {
   function->bind("a", &aVar);
   function->bind("c", &cRes);
 
-  function->run();
+  function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], log(5.0));
@@ -171,7 +171,7 @@ TEST(Codegen, exp) {
   function->bind("a", &aVar);
   function->bind("c", &cRes);
 
-  function->run();
+  function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], exp(5.0));
@@ -199,7 +199,7 @@ TEST(Codegen, atan2) {
   function->bind("b", &bVar);
   function->bind("c", &cRes);
 
-  function->run();
+  function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));

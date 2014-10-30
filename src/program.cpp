@@ -86,7 +86,7 @@ class Program::ProgramContent {
         compiledFunc->bind(formalResult.name, &actualResult);
       }
 
-      compiledFunc->run();
+      compiledFunc->runSafe();
 
       // compare function result with test->literal
       auto expectedResults = test->getExpectedResults();
