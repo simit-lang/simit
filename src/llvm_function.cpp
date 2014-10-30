@@ -68,7 +68,7 @@ void LLVMFunction::print(std::ostream &os) const {
   std::string fstr;
   llvm::raw_string_ostream rsos(fstr);
   llvmFunc->print(rsos);
-  module->dump();
+//  module->dump();
   os << rsos.str();
 }
 
