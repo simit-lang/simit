@@ -53,6 +53,8 @@ Func Intrinsics::log =
 Func Intrinsics::exp =
     Func("exp", {Var("x", Float())}, {Var("r", Float())}, Func::Intrinsic);
 
+Func Intrinsics::solve = Func("expr", {}, {Var("r", Float())}, Func::Intrinsic);
+
 std::map<std::string, Func> Intrinsics::byName = {{"sin",sin},
                                                   {"cos",cos},
                                                   {"atan2",atan2},

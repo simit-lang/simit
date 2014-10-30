@@ -189,6 +189,7 @@ public:
   static Func sqrt;
   static Func log;
   static Func exp;
+  static Func solve;
   static std::map<std::string, Func> byName;
 };
 

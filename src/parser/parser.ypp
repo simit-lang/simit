@@ -390,7 +390,7 @@ function_header
 
     for (Var &res : *results) {
       Symbol::Access access = (argNames.find(res.name) != argNames.end())
-                              ? Symbol::ReadWrite : Symbol::Write;
+                              ? Symbol::ReadWrite : Symbol::ReadWrite;
       ctx->addSymbol(res.name, res, access);
     }
   }
