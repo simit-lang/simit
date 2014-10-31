@@ -1,12 +1,12 @@
-#ifndef SIMIT_IR_MUTATOR_H
-#define SIMIT_IR_MUTATOR_H
+#ifndef SIMIT_IR_REWRITER_H
+#define SIMIT_IR_REWRITER_H
 
 #include "ir.h"
 
 namespace simit {
 namespace ir {
 
-class IRMutator : public IRVisitor {
+class IRRewriter : public IRVisitor {
 public:
   virtual Expr mutate(Expr expr);
   virtual Stmt mutate(Stmt stmt);

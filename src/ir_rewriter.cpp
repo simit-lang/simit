@@ -1,11 +1,11 @@
-#include "ir_mutator.h"
+#include "ir_rewriter.h"
 
 #include <vector>
 
 namespace simit {
 namespace ir {
 
-Expr IRMutator::mutate(Expr e) {
+Expr IRRewriter::mutate(Expr e) {
   if (e.defined()) {
     e.accept(this);
     e = expr;
@@ -18,7 +18,7 @@ Expr IRMutator::mutate(Expr e) {
   return e;
 }
 
-Stmt IRMutator::mutate(Stmt s) {
+Stmt IRRewriter::mutate(Stmt s) {
   if (s.defined()) {
     s.accept(this);
     s = stmt;
@@ -31,7 +31,7 @@ Stmt IRMutator::mutate(Stmt s) {
   return s;
 }
 
-Func IRMutator::mutate(Func f) {
+Func IRRewriter::mutate(Func f) {
   if (f.defined()) {
     f.accept(this);
     f = func;
@@ -45,19 +45,19 @@ Func IRMutator::mutate(Func f) {
   return f;
 }
 
-void IRMutator::visit(const Literal *op) {
+void IRRewriter::visit(const Literal *op) {
   expr = op;
 }
 
-void IRMutator::visit(const VarExpr *op) {
+void IRRewriter::visit(const VarExpr *op) {
   expr = op;
 }
 
-void IRMutator::visit(const Result *op) {
+void IRRewriter::visit(const Result *op) {
   expr = op;
 }
 
-void IRMutator::visit(const FieldRead *op) {
+void IRRewriter::visit(const FieldRead *op) {
   Expr elementOrSet = mutate(op->elementOrSet);
   if (elementOrSet == op->elementOrSet) {
     expr = op;
@@ -67,7 +67,7 @@ void IRMutator::visit(const FieldRead *op) {
   }
 }
 
-void IRMutator::visit(const TensorRead *op) {
+void IRRewriter::visit(const TensorRead *op) {
   Expr tensor = mutate(op->tensor);
   std::vector<Expr> indices(op->indices.size());
   bool indicesSame = true;
@@ -85,7 +85,7 @@ void IRMutator::visit(const TensorRead *op) {
   }
 }
 
-void IRMutator::visit(const TupleRead *op) {
+void IRRewriter::visit(const TupleRead *op) {
   Expr tuple = mutate(op->tuple);
   Expr index = mutate(op->index);
   if (tuple == op->tuple && index == op->index) {
@@ -96,7 +96,7 @@ void IRMutator::visit(const TupleRead *op) {
   }
 }
 
-void IRMutator::visit(const IndexRead *op) {
+void IRRewriter::visit(const IndexRead *op) {
   Expr edgeSet = mutate(op->edgeSet);
   if (edgeSet == op->edgeSet) {
     expr = op;
@@ -106,7 +106,7 @@ void IRMutator::visit(const IndexRead *op) {
   }
 }
 
-void IRMutator::visit(const Load *op) {
+void IRRewriter::visit(const Load *op) {
   Expr buffer = mutate(op->buffer);
   Expr index = mutate(op->index);
   if (buffer == op->buffer && index == op->index) {
@@ -117,7 +117,7 @@ void IRMutator::visit(const Load *op) {
   }
 }
 
-void IRMutator::visit(const IndexedTensor *op) {
+void IRRewriter::visit(const IndexedTensor *op) {
   Expr tensor = mutate(op->tensor);
   if (tensor == op->tensor) {
     expr = op;
@@ -127,7 +127,7 @@ void IRMutator::visit(const IndexedTensor *op) {
   }
 }
 
-void IRMutator::visit(const IndexExpr *op) {
+void IRRewriter::visit(const IndexExpr *op) {
   Expr value = mutate(op->value);
   if (value == op->value) {
     expr = op;
@@ -137,7 +137,7 @@ void IRMutator::visit(const IndexExpr *op) {
   }
 }
 
-void IRMutator::visit(const Call *op) {
+void IRRewriter::visit(const Call *op) {
   std::vector<Expr> actuals(op->actuals.size());
   bool actualsSame = true;
   for (size_t i=0; i < op->actuals.size(); ++i) {
@@ -154,7 +154,7 @@ void IRMutator::visit(const Call *op) {
   }
 }
 
-void IRMutator::visit(const Neg *op) {
+void IRRewriter::visit(const Neg *op) {
   Expr a = mutate(op->a);
   if (a == op->a) {
     expr = op;
@@ -165,7 +165,7 @@ void IRMutator::visit(const Neg *op) {
 }
 
 template <class T>
-Expr visitBinaryOp(const T *op, IRMutator &mut) {
+Expr visitBinaryOp(const T *op, IRRewriter &mut) {
   Expr a = mut.mutate(op->a);
   Expr b = mut.mutate(op->b);
   if (a == op->a && b == op->b) {
@@ -176,24 +176,24 @@ Expr visitBinaryOp(const T *op, IRMutator &mut) {
   }
 }
 
-void IRMutator::visit(const Add *op) {
+void IRRewriter::visit(const Add *op) {
   expr = visitBinaryOp(op, *this);
 }
 
-void IRMutator::visit(const Sub *op) {
+void IRRewriter::visit(const Sub *op) {
   expr = visitBinaryOp(op, *this);
 }
 
-void IRMutator::visit(const Mul *op) {
+void IRRewriter::visit(const Mul *op) {
   expr = visitBinaryOp(op, *this);
 }
 
-void IRMutator::visit(const Div *op) {
+void IRRewriter::visit(const Div *op) {
   expr = visitBinaryOp(op, *this);
 }
 
 
-void IRMutator::visit(const AssignStmt *op) {
+void IRRewriter::visit(const AssignStmt *op) {
   Expr value = mutate(op->value);
   if (value == op->value) {
     stmt = op;
@@ -203,7 +203,7 @@ void IRMutator::visit(const AssignStmt *op) {
   }
 }
 
-void IRMutator::visit(const Map *op) {
+void IRRewriter::visit(const Map *op) {
   Expr target = mutate(op->target);
   Expr neighbors = mutate(op->neighbors);
   if (target == op->target && neighbors == op->neighbors) {
@@ -215,7 +215,7 @@ void IRMutator::visit(const Map *op) {
 }
 
 
-void IRMutator::visit(const FieldWrite *op) {
+void IRRewriter::visit(const FieldWrite *op) {
   Expr elementOrSet = mutate(op->elementOrSet);
   Expr value = mutate(op->value);
   if (elementOrSet == op->elementOrSet && value == op->value) {
@@ -226,7 +226,7 @@ void IRMutator::visit(const FieldWrite *op) {
   }
 }
 
-void IRMutator::visit(const TensorWrite *op) {
+void IRRewriter::visit(const TensorWrite *op) {
   Expr tensor = mutate(op->tensor);
   std::vector<Expr> indices(op->indices.size());
   bool indicesSame = true;
@@ -245,7 +245,7 @@ void IRMutator::visit(const TensorWrite *op) {
   }
 }
 
-void IRMutator::visit(const Store *op) {
+void IRRewriter::visit(const Store *op) {
   Expr buffer = mutate(op->buffer);
   Expr index = mutate(op->index);
   Expr value = mutate(op->value);
@@ -257,7 +257,7 @@ void IRMutator::visit(const Store *op) {
   }
 }
 
-void IRMutator::visit(const For *op) {
+void IRRewriter::visit(const For *op) {
   Stmt body = mutate(op->body);
   if (body == op->body) {
     stmt = op;
@@ -267,7 +267,7 @@ void IRMutator::visit(const For *op) {
   }
 }
 
-void IRMutator::visit(const IfThenElse *op) {
+void IRRewriter::visit(const IfThenElse *op) {
   Expr condition = mutate(op->condition);
   Stmt thenBody = mutate(op->thenBody);
   Stmt elseBody = mutate(op->elseBody);
@@ -280,7 +280,7 @@ void IRMutator::visit(const IfThenElse *op) {
   }
 }
 
-void IRMutator::visit(const Block *op) {
+void IRRewriter::visit(const Block *op) {
   Stmt first = mutate(op->first);
   Stmt rest = mutate(op->rest);
   if (first == op->first && rest == op->rest) {
@@ -302,11 +302,11 @@ void IRMutator::visit(const Block *op) {
   }
 }
 
-void IRMutator::visit(const Pass *op) {
+void IRRewriter::visit(const Pass *op) {
   stmt = op;
 }
 
-void IRMutator::visit(const Func *f) {
+void IRRewriter::visit(const Func *f) {
   Stmt body = mutate(f->getBody());
 
   if (body == f->getBody()) {

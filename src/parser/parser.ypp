@@ -37,7 +37,6 @@
 
   #include "program_context.h"
   #include "scanner.h"
-  #include "ir_mutator.h"
 
   using namespace std;
   using namespace simit::internal;

@@ -4,7 +4,7 @@
 
 #include "ir.h"
 #include "domain.h"
-#include "ir_mutator.h"
+#include "ir_rewriter.h"
 #include "usedef.h"
 #include "sig.h"
 #include "indexvar.h"
@@ -76,7 +76,7 @@ private:
   }
 };
 
-class InsertTemporaries : public IRMutator {
+class InsertTemporaries : public IRRewriter {
 public:
   vector<Var> getTemporaries() {
     return tmps;
@@ -187,7 +187,7 @@ private:
 
 /// Specializes index expressions to compute one value at the location specified
 /// by the given loop variables
-class SpecializeIndexExprs : public IRMutator {
+class SpecializeIndexExprs : public IRRewriter {
 public:
   SpecializeIndexExprs(const LoopVars *lvs) : lvs(lvs) {}
 
@@ -292,7 +292,7 @@ private:
 
 /// Rewrites rstmt to reduce it's computed value into a temporary reduction
 /// variable using the rop ReductionOperation.
-class ReduceOverVar : public IRMutator {
+class ReduceOverVar : public IRRewriter {
 public:
   ReduceOverVar(Stmt rstmt, ReductionOperator rop) : rstmt(rstmt), rop(rop) {}
 
@@ -380,7 +380,7 @@ private:
 };
 
 
-class Substitute : public IRMutator {
+class Substitute : public IRRewriter {
 public:
   Substitute(Expr oldExpr, Expr newExpr) {
     substitutions.insert(pair<Expr,Expr>(oldExpr, newExpr));
@@ -389,7 +389,7 @@ public:
   Substitute(map<Expr,Expr> substitutions) : substitutions(substitutions) {}
 
   Stmt mutate(Stmt stmt) {
-    return IRMutator::mutate(stmt);
+    return IRRewriter::mutate(stmt);
   }
 
   Expr mutate(Expr expr) {
@@ -397,7 +397,7 @@ public:
       return substitutions.at(expr);
     }
     else {
-      return IRMutator::mutate(expr);
+      return IRRewriter::mutate(expr);
     }
   }
 
@@ -412,7 +412,7 @@ private:
 
 /// Turns tensor writes into compound assignments (e.g. +=, *=)
 /// \todo Generalize to include Assignments, FieldWrite, TupleWrite
-class MakeCompound : public IRMutator {
+class MakeCompound : public IRRewriter {
 public:
   enum CompoundOperator { Add };
 
@@ -438,7 +438,7 @@ private:
 };
 
 
-class InlineMappedFunctionInLoop : public IRMutator {
+class InlineMappedFunctionInLoop : public IRRewriter {
 public:
   InlineMappedFunctionInLoop(Var lvar, Func func, Expr targets, Expr neighbors,
                              Var resultActual, Stmt computeStmt) {
@@ -484,7 +484,7 @@ private:
         return;
       }
     }
-    IRMutator::visit(op);
+    IRRewriter::visit(op);
   }
 
   void visit(const TupleRead *op) {
@@ -501,7 +501,7 @@ private:
         return;
       }
     }
-    IRMutator::visit(op);
+    IRRewriter::visit(op);
   }
 
   void visit(const TensorWrite *op) {
@@ -530,12 +530,12 @@ private:
         return;
       }
     }
-    IRMutator::visit(op);
+    IRRewriter::visit(op);
   }
 };
 
 
-class ReplaceRhsWithZero : public IRMutator {
+class ReplaceRhsWithZero : public IRRewriter {
   void visit(const AssignStmt *op) {
     stmt = AssignStmt::make(op->var, 0.0);
   }
@@ -635,7 +635,7 @@ private:
   }
 };
 
-class LowerIndexExpressions : public IRMutator {
+class LowerIndexExpressions : public IRRewriter {
 public:
   LowerIndexExpressions(const UseDef *ud) : ud(ud) {}
 
@@ -656,7 +656,7 @@ private:
       stmt = lower(to<IndexExpr>(op->value), op);
     }
     else {
-      IRMutator::visit(op);
+      IRRewriter::visit(op);
     }
   }
 
@@ -665,7 +665,7 @@ private:
       stmt = lower(to<IndexExpr>(op->value), op);
     }
     else {
-      IRMutator::visit(op);
+      IRRewriter::visit(op);
     }
   }
 
@@ -674,7 +674,7 @@ private:
       stmt = lower(to<IndexExpr>(op->value), op);
     }
     else {
-      IRMutator::visit(op);
+      IRRewriter::visit(op);
     }
   }
 };
@@ -685,7 +685,7 @@ Func lowerIndexExpressions(Func func) {
 }
 
 
-class LowerMaps : public IRMutator {
+class LowerMaps : public IRRewriter {
 private:
   void visit(const Map *op) {
     // \todo We should only drop the map statements if it's bound Vars have
@@ -698,7 +698,7 @@ Func lowerMaps(Func func) {
 }
 
 
-class LowerTensorAccesses : public IRMutator {
+class LowerTensorAccesses : public IRRewriter {
   void visit(const TensorRead *op) {
     assert(op->type.isTensor() && op->tensor.type().toTensor());
 
