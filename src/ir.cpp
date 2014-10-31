@@ -112,20 +112,30 @@ Type getBlockType(Expr tensor) {
 
   size_t numNests = dimensions[0].getIndexSets().size();
   assert(numNests > 0);
-  for (auto &dim : dimensions) {
-    assert(dim.getIndexSets().size() == numNests &&
-           "All dimensions should have the same number of nestings");
-  }
 
   Type blockType;
   if (numNests == 1) {
     blockType = TensorType::make(type->componentType);
   }
   else {
+    unsigned maxNesting = 0;
     for (auto &dim : dimensions) {
-      const std::vector<IndexSet> &nests = dim.getIndexSets();
-      std::vector<IndexSet> blockNests(nests.begin()+1, nests.end());
-      blockDimensions.push_back(IndexDomain(blockNests));
+      if (dim.getIndexSets().size() > maxNesting) {
+        maxNesting = dim.getIndexSets().size();
+      }
+    }
+
+    for (auto &dim : dimensions) {
+      if (dim.getIndexSets().size() < maxNesting) {
+        const std::vector<IndexSet> &nests = dim.getIndexSets();
+        std::vector<IndexSet> blockNests(nests.begin(), nests.end());
+        blockDimensions.push_back(IndexDomain(blockNests));
+      }
+      else {
+        const std::vector<IndexSet> &nests = dim.getIndexSets();
+        std::vector<IndexSet> blockNests(nests.begin()+1, nests.end());
+        blockDimensions.push_back(IndexDomain(blockNests));
+      }
     }
     blockType = TensorType::make(type->componentType, blockDimensions);
   }
