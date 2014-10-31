@@ -40,9 +40,9 @@
 
 # include "position.hh"
 
-
+#line 5 "parser.ypp" // location.cc:332
 namespace  simit { namespace internal  {
-
+#line 46 "location.hh" // location.cc:332
   /// Abstract a location.
   class location
   {
@@ -181,7 +181,7 @@ namespace  simit { namespace internal  {
     return ostr;
   }
 
-
+#line 5 "parser.ypp" // location.cc:332
 } } //  simit::internal 
-
+#line 187 "location.hh" // location.cc:332
 #endif // !YY_YY_LOCATION_HH_INCLUDED

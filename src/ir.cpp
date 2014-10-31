@@ -60,7 +60,8 @@ std::map<std::string, Func> Intrinsics::byName = {{"sin",sin},
                                                   {"atan2",atan2},
                                                   {"sqrt",sqrt},
                                                   {"log",log},
-                                                  {"exp",exp}};
+                                                  {"exp",exp},
+                                                  {"solve",solve}};
 
 // Type compute functions
 Type getFieldType(Expr elementOrSet, std::string fieldName) {

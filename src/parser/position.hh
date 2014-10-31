@@ -50,9 +50,9 @@
 #  endif
 # endif
 
-
+#line 5 "parser.ypp" // location.cc:332
 namespace  simit { namespace internal  {
-
+#line 56 "position.hh" // location.cc:332
   /// Abstract a position.
   class position
   {
@@ -174,7 +174,7 @@ namespace  simit { namespace internal  {
     return ostr << pos.line << '.' << pos.column;
   }
 
-
+#line 5 "parser.ypp" // location.cc:332
 } } //  simit::internal 
-
+#line 180 "position.hh" // location.cc:332
 #endif // !YY_YY_POSITION_HH_INCLUDED

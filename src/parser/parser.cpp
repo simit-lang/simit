@@ -33,7 +33,7 @@
 
 // First part of user declarations.
 
-
+#line 37 "parser.cpp" // lalr1.cc:399
 
 # ifndef YY_NULLPTR
 #  if defined __cplusplus && 201103L <= __cplusplus
@@ -47,9 +47,9 @@
 
 // User implementation prologue.
 
-
+#line 51 "parser.cpp" // lalr1.cc:407
 // Unqualified %code blocks.
-
+#line 30 "parser.ypp" // lalr1.cc:408
 
   #include <stdlib.h>
   #include <cassert>
@@ -176,7 +176,7 @@
     }                                             \
     while (0)
 
-
+#line 180 "parser.cpp" // lalr1.cc:408
 
 
 #ifndef YY_
@@ -260,9 +260,9 @@
 #define YYERROR         goto yyerrorlab
 #define YYRECOVERING()  (!!yyerrstatus_)
 
-
+#line 5 "parser.ypp" // lalr1.cc:474
 namespace  simit { namespace internal  {
-
+#line 266 "parser.cpp" // lalr1.cc:474
 
   /* Return YYSTR after stripping away unnecessary quotes and
      backslashes, so that it's suitable for yyerror.  The heuristic is
@@ -481,415 +481,415 @@ namespace  simit { namespace internal  {
     {
             case 4: // "int literal"
 
-
+#line 186 "parser.ypp" // lalr1.cc:602
         {}
-
+#line 487 "parser.cpp" // lalr1.cc:602
         break;
 
       case 5: // "float literal"
 
-
+#line 186 "parser.ypp" // lalr1.cc:602
         {}
-
+#line 494 "parser.cpp" // lalr1.cc:602
         break;
 
       case 6: // "string literal"
 
-
+#line 187 "parser.ypp" // lalr1.cc:602
         { free((void*)((yysym.value.string))); }
-
+#line 501 "parser.cpp" // lalr1.cc:602
         break;
 
       case 7: // "identifier"
 
-
+#line 187 "parser.ypp" // lalr1.cc:602
         { free((void*)((yysym.value.string))); }
-
+#line 508 "parser.cpp" // lalr1.cc:602
         break;
 
       case 61: // extern
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.var); }
-
+#line 515 "parser.cpp" // lalr1.cc:602
         break;
 
       case 62: // element_type_decl
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.type); }
-
+#line 522 "parser.cpp" // lalr1.cc:602
         break;
 
       case 63: // field_decl_list
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.fields); }
-
+#line 529 "parser.cpp" // lalr1.cc:602
         break;
 
       case 64: // field_decl
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.field); }
-
+#line 536 "parser.cpp" // lalr1.cc:602
         break;
 
       case 65: // procedure
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.function); }
-
+#line 543 "parser.cpp" // lalr1.cc:602
         break;
 
       case 68: // procedure_header
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.function); }
-
+#line 550 "parser.cpp" // lalr1.cc:602
         break;
 
       case 69: // function
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.function); }
-
+#line 557 "parser.cpp" // lalr1.cc:602
         break;
 
       case 72: // function_header
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.function); }
-
+#line 564 "parser.cpp" // lalr1.cc:602
         break;
 
       case 73: // arguments
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.vars); }
-
+#line 571 "parser.cpp" // lalr1.cc:602
         break;
 
       case 74: // argument_list
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.vars); }
-
+#line 578 "parser.cpp" // lalr1.cc:602
         break;
 
       case 75: // argument_decl
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.var); }
-
+#line 585 "parser.cpp" // lalr1.cc:602
         break;
 
       case 76: // results
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.vars); }
-
+#line 592 "parser.cpp" // lalr1.cc:602
         break;
 
       case 77: // result_list
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.vars); }
-
+#line 599 "parser.cpp" // lalr1.cc:602
         break;
 
       case 78: // result_decl
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.var); }
-
+#line 606 "parser.cpp" // lalr1.cc:602
         break;
 
       case 79: // stmt_block
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.stmt); }
-
+#line 613 "parser.cpp" // lalr1.cc:602
         break;
 
       case 84: // idents
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.strings); }
-
+#line 620 "parser.cpp" // lalr1.cc:602
         break;
 
       case 85: // with
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 627 "parser.cpp" // lalr1.cc:602
         break;
 
       case 86: // reduce
 
-
+#line 186 "parser.ypp" // lalr1.cc:602
         {}
-
+#line 634 "parser.cpp" // lalr1.cc:602
         break;
 
       case 87: // reduce_op
 
-
+#line 186 "parser.ypp" // lalr1.cc:602
         {}
-
+#line 641 "parser.cpp" // lalr1.cc:602
         break;
 
       case 95: // expr_stmt
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.stmt); }
-
+#line 648 "parser.cpp" // lalr1.cc:602
         break;
 
       case 96: // expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 655 "parser.cpp" // lalr1.cc:602
         break;
 
       case 97: // ident_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 662 "parser.cpp" // lalr1.cc:602
         break;
 
       case 98: // paren_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 669 "parser.cpp" // lalr1.cc:602
         break;
 
       case 99: // linear_algebra_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 676 "parser.cpp" // lalr1.cc:602
         break;
 
       case 100: // elwise_binary_op
 
-
+#line 186 "parser.ypp" // lalr1.cc:602
         {}
-
+#line 683 "parser.cpp" // lalr1.cc:602
         break;
 
       case 101: // boolean_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 690 "parser.cpp" // lalr1.cc:602
         break;
 
       case 102: // field_read_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 697 "parser.cpp" // lalr1.cc:602
         break;
 
       case 103: // set_read_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 704 "parser.cpp" // lalr1.cc:602
         break;
 
       case 104: // call_or_paren_read_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 711 "parser.cpp" // lalr1.cc:602
         break;
 
       case 105: // call_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 718 "parser.cpp" // lalr1.cc:602
         break;
 
       case 106: // expr_list_or_empty
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.exprs); }
-
+#line 725 "parser.cpp" // lalr1.cc:602
         break;
 
       case 107: // expr_list
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.exprs); }
-
+#line 732 "parser.cpp" // lalr1.cc:602
         break;
 
       case 108: // type
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.type); }
-
+#line 739 "parser.cpp" // lalr1.cc:602
         break;
 
       case 109: // element_type
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.type); }
-
+#line 746 "parser.cpp" // lalr1.cc:602
         break;
 
       case 110: // set_type
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.type); }
-
+#line 753 "parser.cpp" // lalr1.cc:602
         break;
 
       case 111: // endpoints
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.exprs); }
-
+#line 760 "parser.cpp" // lalr1.cc:602
         break;
 
       case 112: // tuple_type
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.type); }
-
+#line 767 "parser.cpp" // lalr1.cc:602
         break;
 
       case 113: // tensor_type
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.type); }
-
+#line 774 "parser.cpp" // lalr1.cc:602
         break;
 
       case 114: // index_sets
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.indexSets); }
-
+#line 781 "parser.cpp" // lalr1.cc:602
         break;
 
       case 115: // index_set
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.indexSet); }
-
+#line 788 "parser.cpp" // lalr1.cc:602
         break;
 
       case 116: // component_type
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.scalarType); }
-
+#line 795 "parser.cpp" // lalr1.cc:602
         break;
 
       case 117: // literal_expr
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 802 "parser.cpp" // lalr1.cc:602
         break;
 
       case 118: // tensor_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 809 "parser.cpp" // lalr1.cc:602
         break;
 
       case 119: // dense_tensor_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 816 "parser.cpp" // lalr1.cc:602
         break;
 
       case 120: // float_dense_tensor_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.TensorDoubleValues); }
-
+#line 823 "parser.cpp" // lalr1.cc:602
         break;
 
       case 121: // float_dense_ndtensor_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.TensorDoubleValues); }
-
+#line 830 "parser.cpp" // lalr1.cc:602
         break;
 
       case 122: // float_dense_matrix_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.TensorDoubleValues); }
-
+#line 837 "parser.cpp" // lalr1.cc:602
         break;
 
       case 123: // float_dense_vector_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.TensorDoubleValues); }
-
+#line 844 "parser.cpp" // lalr1.cc:602
         break;
 
       case 124: // int_dense_tensor_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.TensorIntValues); }
-
+#line 851 "parser.cpp" // lalr1.cc:602
         break;
 
       case 125: // int_dense_ndtensor_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.TensorIntValues); }
-
+#line 858 "parser.cpp" // lalr1.cc:602
         break;
 
       case 126: // int_dense_matrix_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.TensorIntValues); }
-
+#line 865 "parser.cpp" // lalr1.cc:602
         break;
 
       case 127: // int_dense_vector_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.TensorIntValues); }
-
+#line 872 "parser.cpp" // lalr1.cc:602
         break;
 
       case 128: // scalar_literal
 
-
+#line 188 "parser.ypp" // lalr1.cc:602
         { delete (yysym.value.expr); }
-
+#line 879 "parser.cpp" // lalr1.cc:602
         break;
 
       case 129: // signed_int_literal
 
-
+#line 186 "parser.ypp" // lalr1.cc:602
         {}
-
+#line 886 "parser.cpp" // lalr1.cc:602
         break;
 
       case 130: // signed_float_literal
 
-
+#line 186 "parser.ypp" // lalr1.cc:602
         {}
-
+#line 893 "parser.cpp" // lalr1.cc:602
         break;
 
 
@@ -1129,7 +1129,7 @@ namespace  simit { namespace internal  {
           switch (yyn)
             {
   case 5:
-
+#line 278 "parser.ypp" // lalr1.cc:847
     {
     Func func = convertAndDelete((yystack_[0].value.function));
     std::string name = func.getName();
@@ -1138,11 +1138,11 @@ namespace  simit { namespace internal  {
     }
     ctx->addFunction(func);
   }
-
+#line 1142 "parser.cpp" // lalr1.cc:847
     break;
 
   case 6:
-
+#line 286 "parser.ypp" // lalr1.cc:847
     {
     Func func = convertAndDelete((yystack_[0].value.function));
     std::string name = func.getName();
@@ -1151,21 +1151,21 @@ namespace  simit { namespace internal  {
     }
     ctx->addFunction(func);
   }
-
+#line 1155 "parser.cpp" // lalr1.cc:847
     break;
 
   case 10:
-
+#line 301 "parser.ypp" // lalr1.cc:847
     {
     Var externVar = convertAndDelete((yystack_[1].value.var));
     ctx->addExtern(externVar);
     ctx->addSymbol(externVar);
   }
-
+#line 1165 "parser.cpp" // lalr1.cc:847
     break;
 
   case 11:
-
+#line 311 "parser.ypp" // lalr1.cc:847
     {
     string name = convertAndFree((yystack_[2].value.string));
     unique_ptr<std::map<string,Field>> fields((yystack_[1].value.fields));
@@ -1176,62 +1176,62 @@ namespace  simit { namespace internal  {
 
     ctx->addElementType(ElementType::make(name, *fields));
   }
-
+#line 1180 "parser.cpp" // lalr1.cc:847
     break;
 
   case 12:
-
+#line 324 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.fields) = new map<string,Field>;
   }
-
+#line 1188 "parser.cpp" // lalr1.cc:847
     break;
 
   case 13:
-
+#line 327 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.fields) = (yystack_[1].value.fields);
     (yystack_[0].value.field)->second.location = (yylhs.value.fields)->size();
     (yylhs.value.fields)->insert(*(yystack_[0].value.field));
     delete (yystack_[0].value.field);
   }
-
+#line 1199 "parser.cpp" // lalr1.cc:847
     break;
 
   case 14:
-
+#line 336 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[3].value.string));
     auto tensorType = convertAndDelete((yystack_[1].value.type));
     (yylhs.value.field) = new pair<string,Field>(name, tensorType);
   }
-
+#line 1209 "parser.cpp" // lalr1.cc:847
     break;
 
   case 15:
-
+#line 346 "parser.ypp" // lalr1.cc:847
     {ctx->scope();}
-
+#line 1215 "parser.cpp" // lalr1.cc:847
     break;
 
   case 16:
-
+#line 346 "parser.ypp" // lalr1.cc:847
     {ctx->unscope();}
-
+#line 1221 "parser.cpp" // lalr1.cc:847
     break;
 
   case 17:
-
+#line 346 "parser.ypp" // lalr1.cc:847
     {
     Func func = convertAndDelete((yystack_[3].value.function));
     Stmt body = convertAndDelete((yystack_[2].value.stmt));
     (yylhs.value.function) = new Func(func.getName(), func.getArguments(), func.getResults(), body);
   }
-
+#line 1231 "parser.cpp" // lalr1.cc:847
     break;
 
   case 18:
-
+#line 354 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[0].value.string));
     auto arguments = vector<Var>();
@@ -1246,33 +1246,33 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.function) = new Func(name, arguments, results, Stmt());
   }
-
+#line 1250 "parser.cpp" // lalr1.cc:847
     break;
 
   case 19:
-
+#line 371 "parser.ypp" // lalr1.cc:847
     {ctx->scope();}
-
+#line 1256 "parser.cpp" // lalr1.cc:847
     break;
 
   case 20:
-
+#line 371 "parser.ypp" // lalr1.cc:847
     {ctx->unscope();}
-
+#line 1262 "parser.cpp" // lalr1.cc:847
     break;
 
   case 21:
-
+#line 371 "parser.ypp" // lalr1.cc:847
     {
     Func func = convertAndDelete((yystack_[3].value.function));
     Stmt body = convertAndDelete((yystack_[2].value.stmt));
     (yylhs.value.function) = new Func(func.getName(), func.getArguments(), func.getResults(), body);
   }
-
+#line 1272 "parser.cpp" // lalr1.cc:847
     break;
 
   case 22:
-
+#line 379 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[4].value.string));
     auto arguments = unique_ptr<vector<Var>>((yystack_[2].value.vars));
@@ -1287,126 +1287,126 @@ namespace  simit { namespace internal  {
 
     for (Var &res : *results) {
       Symbol::Access access = (argNames.find(res.name) != argNames.end())
-                              ? Symbol::ReadWrite : Symbol::Write;
+                              ? Symbol::ReadWrite : Symbol::ReadWrite;
       ctx->addSymbol(res.name, res, access);
     }
   }
-
+#line 1295 "parser.cpp" // lalr1.cc:847
     break;
 
   case 23:
-
+#line 400 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.vars) = new vector<Var>;
   }
-
+#line 1303 "parser.cpp" // lalr1.cc:847
     break;
 
   case 24:
-
+#line 403 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.vars) = (yystack_[0].value.vars);
  }
-
+#line 1311 "parser.cpp" // lalr1.cc:847
     break;
 
   case 25:
-
+#line 409 "parser.ypp" // lalr1.cc:847
     {
     auto argument = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = new vector<Var>;
     (yylhs.value.vars)->push_back(argument);
   }
-
+#line 1321 "parser.cpp" // lalr1.cc:847
     break;
 
   case 26:
-
+#line 414 "parser.ypp" // lalr1.cc:847
     {
     auto argument = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = (yystack_[2].value.vars);
     (yylhs.value.vars)->push_back(argument);
   }
-
+#line 1331 "parser.cpp" // lalr1.cc:847
     break;
 
   case 27:
-
+#line 422 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[2].value.string));
 
     auto type = convertAndDelete((yystack_[0].value.type));
     (yylhs.value.var) = new Var(name, type);
   }
-
+#line 1342 "parser.cpp" // lalr1.cc:847
     break;
 
   case 28:
-
+#line 431 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.vars) = new vector<Var>;
   }
-
+#line 1350 "parser.cpp" // lalr1.cc:847
     break;
 
   case 29:
-
+#line 434 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.vars) = (yystack_[1].value.vars);
   }
-
+#line 1358 "parser.cpp" // lalr1.cc:847
     break;
 
   case 30:
-
+#line 440 "parser.ypp" // lalr1.cc:847
     {
     auto result = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = new vector<Var>;
     (yylhs.value.vars)->push_back(result);
   }
-
+#line 1368 "parser.cpp" // lalr1.cc:847
     break;
 
   case 31:
-
+#line 445 "parser.ypp" // lalr1.cc:847
     {
     auto result = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = (yystack_[2].value.vars);
     (yylhs.value.vars)->push_back(result);
   }
-
+#line 1378 "parser.cpp" // lalr1.cc:847
     break;
 
   case 32:
-
+#line 453 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[2].value.string));
     auto type = convertAndDelete((yystack_[0].value.type));
     (yylhs.value.var) = new Var(name, type);
   }
-
+#line 1388 "parser.cpp" // lalr1.cc:847
     break;
 
   case 33:
-
+#line 463 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.stmt) = new Stmt(Pass::make());
   }
-
+#line 1396 "parser.cpp" // lalr1.cc:847
     break;
 
   case 34:
-
+#line 466 "parser.ypp" // lalr1.cc:847
     {
     vector<Stmt> stmts = *ctx->getStatements();
     if (stmts.size() == 0) {(yylhs.value.stmt) = new Stmt(Pass::make()); break;} // TODO: remove
     (yylhs.value.stmt) = new Stmt((stmts.size() == 1) ? stmts[0] : Block::make(stmts));
   }
-
+#line 1406 "parser.cpp" // lalr1.cc:847
     break;
 
   case 45:
-
+#line 489 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[1].value.expr) == nullptr) { break; } // TODO: Remove check
 
@@ -1435,11 +1435,11 @@ namespace  simit { namespace internal  {
 
     ctx->addStatement(AssignStmt::make(var, value));
   }
-
+#line 1439 "parser.cpp" // lalr1.cc:847
     break;
 
   case 46:
-
+#line 520 "parser.ypp" // lalr1.cc:847
     {
     auto varNames = unique_ptr<vector<string>>((yystack_[7].value.strings));
 
@@ -1489,37 +1489,37 @@ namespace  simit { namespace internal  {
 
     ctx->addStatement(Map::make(vars, func, targets, neighbor, reduction));
   }
-
+#line 1493 "parser.cpp" // lalr1.cc:847
     break;
 
   case 47:
-
+#line 572 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.strings) = new vector<string>;
     (yylhs.value.strings)->push_back(convertAndFree((yystack_[0].value.string)));
   }
-
+#line 1502 "parser.cpp" // lalr1.cc:847
     break;
 
   case 48:
-
+#line 576 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.strings) = (yystack_[2].value.strings);
     (yylhs.value.strings)->push_back(convertAndFree((yystack_[0].value.string)));
   }
-
+#line 1511 "parser.cpp" // lalr1.cc:847
     break;
 
   case 49:
-
+#line 583 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.expr) = new Expr();
   }
-
+#line 1519 "parser.cpp" // lalr1.cc:847
     break;
 
   case 50:
-
+#line 586 "parser.ypp" // lalr1.cc:847
     {
     std::string neighborsName = convertAndFree((yystack_[0].value.string));
 
@@ -1530,35 +1530,35 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.expr) = new Expr(neighbors);
   }
-
+#line 1534 "parser.cpp" // lalr1.cc:847
     break;
 
   case 51:
-
+#line 599 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.reductionop) =  ReductionOperator::Undefined;
   }
-
+#line 1542 "parser.cpp" // lalr1.cc:847
     break;
 
   case 52:
-
+#line 602 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.reductionop) =  (yystack_[0].value.reductionop);
   }
-
+#line 1550 "parser.cpp" // lalr1.cc:847
     break;
 
   case 53:
-
+#line 608 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.reductionop) = ReductionOperator::Sum;
   }
-
+#line 1558 "parser.cpp" // lalr1.cc:847
     break;
 
   case 54:
-
+#line 613 "parser.ypp" // lalr1.cc:847
     {
     string setName = convertAndFree((yystack_[5].value.string));
     string fieldName = convertAndFree((yystack_[3].value.string));
@@ -1577,11 +1577,11 @@ namespace  simit { namespace internal  {
     Expr setExpr = setSymbol.getExpr();
     ctx->addStatement(FieldWrite::make(setExpr, fieldName, value));
   }
-
+#line 1581 "parser.cpp" // lalr1.cc:847
     break;
 
   case 55:
-
+#line 633 "parser.ypp" // lalr1.cc:847
     {
     std::string tensorName = convertAndFree((yystack_[6].value.string));
     auto indices = unique_ptr<vector<Expr>>((yystack_[4].value.exprs));
@@ -1602,45 +1602,45 @@ namespace  simit { namespace internal  {
     Expr tensorExpr = tensorSymbol.getExpr();
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
-
+#line 1606 "parser.cpp" // lalr1.cc:847
     break;
 
   case 56:
-
+#line 653 "parser.ypp" // lalr1.cc:847
     {
     // TODO
   }
-
+#line 1614 "parser.cpp" // lalr1.cc:847
     break;
 
   case 57:
-
+#line 659 "parser.ypp" // lalr1.cc:847
     {
     delete (yystack_[3].value.expr);
     delete (yystack_[2].value.stmt);
   }
-
+#line 1623 "parser.cpp" // lalr1.cc:847
     break;
 
   case 59:
-
+#line 666 "parser.ypp" // lalr1.cc:847
     {
     delete (yystack_[0].value.stmt);
   }
-
+#line 1631 "parser.cpp" // lalr1.cc:847
     break;
 
   case 61:
-
+#line 672 "parser.ypp" // lalr1.cc:847
     {
     delete (yystack_[1].value.expr);
     delete (yystack_[0].value.stmt);
   }
-
+#line 1640 "parser.cpp" // lalr1.cc:847
     break;
 
   case 63:
-
+#line 681 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[5].value.string));
     auto type = convertAndDelete((yystack_[3].value.type));
@@ -1666,27 +1666,27 @@ namespace  simit { namespace internal  {
     ctx->addConstant(var, literalExpr);
     ctx->addSymbol(var);
   }
-
+#line 1670 "parser.cpp" // lalr1.cc:847
     break;
 
   case 64:
-
+#line 709 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.stmt) = NULL;
   }
-
+#line 1678 "parser.cpp" // lalr1.cc:847
     break;
 
   case 65:
-
+#line 712 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.stmt) = NULL;
   }
-
+#line 1686 "parser.cpp" // lalr1.cc:847
     break;
 
   case 73:
-
+#line 732 "parser.ypp" // lalr1.cc:847
     {
     string ident = convertAndFree((yystack_[0].value.string));
 
@@ -1704,20 +1704,20 @@ namespace  simit { namespace internal  {
     Expr expr = symbol.getExpr();
     (yylhs.value.expr) = new Expr(expr);
   }
-
+#line 1708 "parser.cpp" // lalr1.cc:847
     break;
 
   case 74:
-
+#line 754 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[1].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = (yystack_[1].value.expr);
   }
-
+#line 1717 "parser.cpp" // lalr1.cc:847
     break;
 
   case 75:
-
+#line 763 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
@@ -1727,11 +1727,11 @@ namespace  simit { namespace internal  {
     IRBuilder::UnaryOperator op = IRBuilder::UnaryOperator::Neg;
     (yylhs.value.expr) = new Expr(ctx->getBuilder()->unaryElwiseExpr(op, expr));
   }
-
+#line 1731 "parser.cpp" // lalr1.cc:847
     break;
 
   case 76:
-
+#line 772 "parser.ypp" // lalr1.cc:847
     {  // + - .* ./
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
 
@@ -1744,11 +1744,11 @@ namespace  simit { namespace internal  {
     BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), yystack_[1].location);
     (yylhs.value.expr) = new Expr(ctx->getBuilder()->binaryElwiseExpr(l, (yystack_[1].value.binop), r));
   }
-
+#line 1748 "parser.cpp" // lalr1.cc:847
     break;
 
   case 77:
-
+#line 784 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     IRBuilder *builder = ctx->getBuilder();
@@ -1816,22 +1816,22 @@ namespace  simit { namespace internal  {
       (yylhs.value.expr) = NULL;
     }
   }
-
+#line 1820 "parser.cpp" // lalr1.cc:847
     break;
 
   case 78:
-
+#line 851 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1831 "parser.cpp" // lalr1.cc:847
     break;
 
   case 79:
-
+#line 857 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[1].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     IRBuilder *builder = ctx->getBuilder();
@@ -1862,122 +1862,122 @@ namespace  simit { namespace internal  {
         (yylhs.value.expr) = NULL;
     }
   }
-
+#line 1866 "parser.cpp" // lalr1.cc:847
     break;
 
   case 80:
-
+#line 887 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1876 "parser.cpp" // lalr1.cc:847
     break;
 
   case 81:
-
+#line 892 "parser.ypp" // lalr1.cc:847
     {  // Solve
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1887 "parser.cpp" // lalr1.cc:847
     break;
 
   case 82:
-
+#line 901 "parser.ypp" // lalr1.cc:847
     { (yylhs.value.binop) = IRBuilder::BinaryOperator::Add; }
-
+#line 1893 "parser.cpp" // lalr1.cc:847
     break;
 
   case 83:
-
+#line 902 "parser.ypp" // lalr1.cc:847
     { (yylhs.value.binop) = IRBuilder::BinaryOperator::Sub; }
-
+#line 1899 "parser.cpp" // lalr1.cc:847
     break;
 
   case 84:
-
+#line 903 "parser.ypp" // lalr1.cc:847
     { (yylhs.value.binop) = IRBuilder::BinaryOperator::Mul; }
-
+#line 1905 "parser.cpp" // lalr1.cc:847
     break;
 
   case 85:
-
+#line 904 "parser.ypp" // lalr1.cc:847
     { (yylhs.value.binop) = IRBuilder::BinaryOperator::Div; }
-
+#line 1911 "parser.cpp" // lalr1.cc:847
     break;
 
   case 86:
-
+#line 910 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1922 "parser.cpp" // lalr1.cc:847
     break;
 
   case 87:
-
+#line 916 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1933 "parser.cpp" // lalr1.cc:847
     break;
 
   case 88:
-
+#line 922 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1944 "parser.cpp" // lalr1.cc:847
     break;
 
   case 89:
-
+#line 928 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1955 "parser.cpp" // lalr1.cc:847
     break;
 
   case 90:
-
+#line 934 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1966 "parser.cpp" // lalr1.cc:847
     break;
 
   case 91:
-
+#line 940 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     (yylhs.value.expr) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 1977 "parser.cpp" // lalr1.cc:847
     break;
 
   case 92:
-
+#line 951 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.string) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     if (!(*(yystack_[2].value.expr)).type().defined()) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
@@ -1994,15 +1994,14 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.expr) = new Expr(FieldRead::make(elemOrSet, fieldName));
   }
-
+#line 1998 "parser.cpp" // lalr1.cc:847
     break;
 
   case 96:
-
+#line 978 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[3].value.string));
     auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
-
     if (ctx->hasSymbol(name)) {
       const Symbol &symbol = ctx->getSymbol(name);
       if (!symbol.isReadable()) {
@@ -2026,25 +2025,28 @@ namespace  simit { namespace internal  {
       }
     }
     else if (ctx->containsFunction(name)) {
-      (yylhs.value.expr) = NULL;
-    }
-    else {
-      REPORT_ERROR(name + " is not defined in scope", yystack_[3].location);
-    }
-  }
 
+      Func func = ctx->getFunction(name);
+
+      (yylhs.value.expr) = new Expr(Call::make(func, *indices));
+      }
+      else {
+        REPORT_ERROR(name + " is not defined in scope", yystack_[3].location);
+      }
+  }
+#line 2038 "parser.cpp" // lalr1.cc:847
     break;
 
   case 97:
-
+#line 1013 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.expr) = NULL;
   }
-
+#line 2046 "parser.cpp" // lalr1.cc:847
     break;
 
   case 98:
-
+#line 1019 "parser.ypp" // lalr1.cc:847
     {
     std::string funcName = convertAndFree((yystack_[3].value.string));
     auto actuals = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
@@ -2058,49 +2060,49 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.expr) = new Expr(Call::make(func, *actuals));
   }
-
+#line 2064 "parser.cpp" // lalr1.cc:847
     break;
 
   case 99:
-
+#line 1035 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.exprs) = new vector<Expr>();
   }
-
+#line 2072 "parser.cpp" // lalr1.cc:847
     break;
 
   case 100:
-
+#line 1038 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.exprs) = (yystack_[0].value.exprs);
   }
-
+#line 2080 "parser.cpp" // lalr1.cc:847
     break;
 
   case 101:
-
+#line 1044 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.exprs) = new std::vector<Expr>();
     if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
     (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
     delete (yystack_[0].value.expr);
   }
-
+#line 2091 "parser.cpp" // lalr1.cc:847
     break;
 
   case 102:
-
+#line 1050 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.exprs) = (yystack_[2].value.exprs);
     if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
     (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
     delete (yystack_[0].value.expr);
   }
-
+#line 2102 "parser.cpp" // lalr1.cc:847
     break;
 
   case 107:
-
+#line 1068 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[0].value.string));
 
@@ -2110,20 +2112,20 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.type) = new Type(ctx->getElementType(name));
   }
-
+#line 2116 "parser.cpp" // lalr1.cc:847
     break;
 
   case 108:
-
+#line 1080 "parser.ypp" // lalr1.cc:847
     {
     auto elementType = convertAndDelete((yystack_[1].value.type));
     (yylhs.value.type) = new Type(SetType::make(elementType, {}));
   }
-
+#line 2125 "parser.cpp" // lalr1.cc:847
     break;
 
   case 109:
-
+#line 1084 "parser.ypp" // lalr1.cc:847
     {
     auto elementType = convertAndDelete((yystack_[4].value.type));
     auto endpoints = convertAndDelete((yystack_[1].value.exprs));
@@ -2131,11 +2133,11 @@ namespace  simit { namespace internal  {
     // TODO: Add endpoint information to set type
     (yylhs.value.type) = new Type(SetType::make(elementType, endpoints));
   }
-
+#line 2137 "parser.cpp" // lalr1.cc:847
     break;
 
   case 110:
-
+#line 1094 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.exprs) = new vector<Expr>;
     std::string name = convertAndFree((yystack_[0].value.string));
@@ -2145,11 +2147,11 @@ namespace  simit { namespace internal  {
     }
     (yylhs.value.exprs)->push_back(ctx->getSymbol(name).getExpr());
   }
-
+#line 2151 "parser.cpp" // lalr1.cc:847
     break;
 
   case 111:
-
+#line 1103 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.exprs) = (yystack_[2].value.exprs);
     std::string name = convertAndFree((yystack_[0].value.string));
@@ -2159,11 +2161,11 @@ namespace  simit { namespace internal  {
     }
     (yylhs.value.exprs)->push_back(ctx->getSymbol(name).getExpr());
   }
-
+#line 2165 "parser.cpp" // lalr1.cc:847
     break;
 
   case 112:
-
+#line 1115 "parser.ypp" // lalr1.cc:847
     {
     auto elementType = convertAndDelete((yystack_[3].value.type));
 
@@ -2173,28 +2175,28 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.type) = new Type(TupleType::make(elementType, (yystack_[1].value.num)));
   }
-
+#line 2179 "parser.cpp" // lalr1.cc:847
     break;
 
   case 113:
-
+#line 1127 "parser.ypp" // lalr1.cc:847
     {
     auto componentType = convertAndDelete((yystack_[0].value.scalarType));
     (yylhs.value.type) = new Type(TensorType::make(componentType));
   }
-
+#line 2188 "parser.cpp" // lalr1.cc:847
     break;
 
   case 114:
-
+#line 1131 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.type) = (yystack_[1].value.type);
   }
-
+#line 2196 "parser.cpp" // lalr1.cc:847
     break;
 
   case 115:
-
+#line 1134 "parser.ypp" // lalr1.cc:847
     {
     auto blockTypePtr = convertAndDelete((yystack_[1].value.type));
     const TensorType *blockType = blockTypePtr.toTensor();
@@ -2237,11 +2239,11 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions));
   }
-
+#line 2243 "parser.cpp" // lalr1.cc:847
     break;
 
   case 116:
-
+#line 1176 "parser.ypp" // lalr1.cc:847
     {
     auto type = convertAndDelete((yystack_[1].value.type));
     const TensorType *tensorType = type.toTensor();
@@ -2249,39 +2251,39 @@ namespace  simit { namespace internal  {
     auto componentType = tensorType->componentType;
     (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions, true));
   }
-
+#line 2255 "parser.cpp" // lalr1.cc:847
     break;
 
   case 117:
-
+#line 1186 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.indexSets) = new std::vector<IndexSet>();
     (yylhs.value.indexSets)->push_back(*(yystack_[0].value.indexSet));
     delete (yystack_[0].value.indexSet);
   }
-
+#line 2265 "parser.cpp" // lalr1.cc:847
     break;
 
   case 118:
-
+#line 1191 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.indexSets) = (yystack_[2].value.indexSets);
     (yylhs.value.indexSets)->push_back(*(yystack_[0].value.indexSet));
     delete (yystack_[0].value.indexSet);
   }
-
+#line 2275 "parser.cpp" // lalr1.cc:847
     break;
 
   case 119:
-
+#line 1199 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.indexSet) = new IndexSet((yystack_[0].value.num));
   }
-
+#line 2283 "parser.cpp" // lalr1.cc:847
     break;
 
   case 120:
-
+#line 1202 "parser.ypp" // lalr1.cc:847
     {
     std::string setName = convertAndFree((yystack_[0].value.string));
 
@@ -2296,55 +2298,55 @@ namespace  simit { namespace internal  {
 
     (yylhs.value.indexSet) = new IndexSet(set);
   }
-
+#line 2302 "parser.cpp" // lalr1.cc:847
     break;
 
   case 121:
-
+#line 1216 "parser.ypp" // lalr1.cc:847
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.indexSet) = NULL; break; } // TODO: Remove check
     (yylhs.value.indexSet) = NULL;
     delete (yystack_[2].value.expr);
     delete (yystack_[0].value.expr);
   }
-
+#line 2313 "parser.cpp" // lalr1.cc:847
     break;
 
   case 122:
-
+#line 1222 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.indexSet) = new IndexSet();
   }
-
+#line 2321 "parser.cpp" // lalr1.cc:847
     break;
 
   case 123:
-
+#line 1228 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.scalarType) = new ScalarType(ScalarType::Int);
   }
-
+#line 2329 "parser.cpp" // lalr1.cc:847
     break;
 
   case 124:
-
+#line 1231 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.scalarType) = new ScalarType(ScalarType::Float);
   }
-
+#line 2337 "parser.cpp" // lalr1.cc:847
     break;
 
   case 127:
-
+#line 1286 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.expr) = (yystack_[1].value.expr);
     transposeVector(*(yylhs.value.expr));
   }
-
+#line 2346 "parser.cpp" // lalr1.cc:847
     break;
 
   case 129:
-
+#line 1294 "parser.ypp" // lalr1.cc:847
     {
     auto values = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
@@ -2352,11 +2354,11 @@ namespace  simit { namespace internal  {
     Type type = TensorType::make(ScalarType(ScalarType::Float), idoms);
     (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
-
+#line 2358 "parser.cpp" // lalr1.cc:847
     break;
 
   case 130:
-
+#line 1301 "parser.ypp" // lalr1.cc:847
     {
     auto values = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
@@ -2364,11 +2366,11 @@ namespace  simit { namespace internal  {
     Type type = TensorType::make(ScalarType(ScalarType::Int), idoms);
     (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
-
+#line 2370 "parser.cpp" // lalr1.cc:847
     break;
 
   case 131:
-
+#line 1312 "parser.ypp" // lalr1.cc:847
     {
     // If the matrix has only one column then we discard that dimension and
     // treat it as a vector.
@@ -2376,20 +2378,20 @@ namespace  simit { namespace internal  {
       (yystack_[0].value.TensorDoubleValues)->dimSizes.pop_back();
     }
   }
-
+#line 2382 "parser.cpp" // lalr1.cc:847
     break;
 
   case 133:
-
+#line 1323 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[1].value.TensorDoubleValues);
     (yylhs.value.TensorDoubleValues)->addDimension();
   }
-
+#line 2391 "parser.cpp" // lalr1.cc:847
     break;
 
   case 134:
-
+#line 1327 "parser.ypp" // lalr1.cc:847
     {
     auto  left = unique_ptr<TensorValues<double>>((yystack_[4].value.TensorDoubleValues));
     auto right = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
@@ -2401,20 +2403,20 @@ namespace  simit { namespace internal  {
     left->merge(*right);
     (yylhs.value.TensorDoubleValues) = left.release();
   }
-
+#line 2407 "parser.cpp" // lalr1.cc:847
     break;
 
   case 135:
-
+#line 1341 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[0].value.TensorDoubleValues);
     (yylhs.value.TensorDoubleValues)->addDimension();
   }
-
+#line 2416 "parser.cpp" // lalr1.cc:847
     break;
 
   case 136:
-
+#line 1345 "parser.ypp" // lalr1.cc:847
     {
     auto  left = unique_ptr<TensorValues<double>>((yystack_[2].value.TensorDoubleValues));
     auto right = unique_ptr<TensorValues<double>>((yystack_[0].value.TensorDoubleValues));
@@ -2427,29 +2429,29 @@ namespace  simit { namespace internal  {
     left->merge(*right);
     (yylhs.value.TensorDoubleValues) = left.release();
   }
-
+#line 2433 "parser.cpp" // lalr1.cc:847
     break;
 
   case 137:
-
+#line 1360 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.TensorDoubleValues) = new TensorValues<double>();
     (yylhs.value.TensorDoubleValues)->addValue((yystack_[0].value.fnum));
   }
-
+#line 2442 "parser.cpp" // lalr1.cc:847
     break;
 
   case 138:
-
+#line 1364 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[2].value.TensorDoubleValues);
     (yylhs.value.TensorDoubleValues)->addValue((yystack_[0].value.fnum));
   }
-
+#line 2451 "parser.cpp" // lalr1.cc:847
     break;
 
   case 139:
-
+#line 1371 "parser.ypp" // lalr1.cc:847
     {
     // If the matrix has only one column then we discard that dimension and
     // treat it as a vector.
@@ -2457,20 +2459,20 @@ namespace  simit { namespace internal  {
       (yystack_[0].value.TensorIntValues)->dimSizes.pop_back();
     }
   }
-
+#line 2463 "parser.cpp" // lalr1.cc:847
     break;
 
   case 141:
-
+#line 1382 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.TensorIntValues) = (yystack_[1].value.TensorIntValues);
     (yylhs.value.TensorIntValues)->addDimension();
   }
-
+#line 2472 "parser.cpp" // lalr1.cc:847
     break;
 
   case 142:
-
+#line 1386 "parser.ypp" // lalr1.cc:847
     {
     auto  left = unique_ptr<TensorValues<int>>((yystack_[4].value.TensorIntValues));
     auto right = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
@@ -2482,20 +2484,20 @@ namespace  simit { namespace internal  {
     left->merge(*right);
     (yylhs.value.TensorIntValues) = left.release();
   }
-
+#line 2488 "parser.cpp" // lalr1.cc:847
     break;
 
   case 143:
-
+#line 1400 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.TensorIntValues) = (yystack_[0].value.TensorIntValues);
     (yylhs.value.TensorIntValues)->addDimension();
   }
-
+#line 2497 "parser.cpp" // lalr1.cc:847
     break;
 
   case 144:
-
+#line 1404 "parser.ypp" // lalr1.cc:847
     {
     auto  left = unique_ptr<TensorValues<int>>((yystack_[2].value.TensorIntValues));
     auto right = unique_ptr<TensorValues<int>>((yystack_[0].value.TensorIntValues));
@@ -2508,79 +2510,79 @@ namespace  simit { namespace internal  {
     left->merge(*right);
     (yylhs.value.TensorIntValues) = left.release();
   }
-
+#line 2514 "parser.cpp" // lalr1.cc:847
     break;
 
   case 145:
-
+#line 1419 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.TensorIntValues) = new TensorValues<int>();
     (yylhs.value.TensorIntValues)->addValue((yystack_[0].value.num));
   }
-
+#line 2523 "parser.cpp" // lalr1.cc:847
     break;
 
   case 146:
-
+#line 1423 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.TensorIntValues) = (yystack_[2].value.TensorIntValues);
     (yylhs.value.TensorIntValues)->addValue((yystack_[0].value.num));
   }
-
+#line 2532 "parser.cpp" // lalr1.cc:847
     break;
 
   case 147:
-
+#line 1430 "parser.ypp" // lalr1.cc:847
     {
     auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Int));
     (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.num)));
   }
-
+#line 2541 "parser.cpp" // lalr1.cc:847
     break;
 
   case 148:
-
+#line 1434 "parser.ypp" // lalr1.cc:847
     {
     auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Float));
     (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.fnum)));
   }
-
+#line 2550 "parser.cpp" // lalr1.cc:847
     break;
 
   case 149:
-
+#line 1441 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.num) = (yystack_[0].value.num);
   }
-
+#line 2558 "parser.cpp" // lalr1.cc:847
     break;
 
   case 150:
-
+#line 1444 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.num) = -(yystack_[0].value.num);
   }
-
+#line 2566 "parser.cpp" // lalr1.cc:847
     break;
 
   case 151:
-
+#line 1450 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.fnum) = (yystack_[0].value.fnum);
   }
-
+#line 2574 "parser.cpp" // lalr1.cc:847
     break;
 
   case 152:
-
+#line 1453 "parser.ypp" // lalr1.cc:847
     {
     (yylhs.value.fnum) = -(yystack_[0].value.fnum);
   }
-
+#line 2582 "parser.cpp" // lalr1.cc:847
     break;
 
   case 153:
-
+#line 1460 "parser.ypp" // lalr1.cc:847
     {
     std::string name = convertAndFree((yystack_[6].value.string));
     auto actuals = unique_ptr<vector<Expr>>((yystack_[4].value.exprs));
@@ -2599,11 +2601,11 @@ namespace  simit { namespace internal  {
     expecteds.push_back(expected);
     ctx->addTest(new Test(name, literalArgs, expecteds));
   }
-
+#line 2605 "parser.cpp" // lalr1.cc:847
     break;
 
 
-
+#line 2609 "parser.cpp" // lalr1.cc:847
             default:
               break;
             }
@@ -3190,13 +3192,13 @@ namespace  simit { namespace internal  {
      670,   672,   678,   681,   709,   712,   720,   721,   722,   723,
      724,   725,   726,   732,   754,   763,   772,   784,   851,   857,
      887,   892,   901,   902,   903,   904,   910,   916,   922,   928,
-     934,   940,   951,   970,   971,   972,   978,  1011,  1017,  1033,
-    1036,  1042,  1048,  1059,  1060,  1061,  1062,  1066,  1078,  1082,
-    1092,  1101,  1113,  1125,  1129,  1132,  1174,  1184,  1189,  1197,
-    1200,  1214,  1220,  1226,  1229,  1279,  1283,  1284,  1288,  1292,
-    1299,  1310,  1317,  1321,  1325,  1339,  1343,  1358,  1362,  1369,
-    1376,  1380,  1384,  1398,  1402,  1417,  1421,  1428,  1432,  1439,
-    1442,  1448,  1451,  1458
+     934,   940,   951,   970,   971,   972,   978,  1013,  1019,  1035,
+    1038,  1044,  1050,  1061,  1062,  1063,  1064,  1068,  1080,  1084,
+    1094,  1103,  1115,  1127,  1131,  1134,  1176,  1186,  1191,  1199,
+    1202,  1216,  1222,  1228,  1231,  1281,  1285,  1286,  1290,  1294,
+    1301,  1312,  1319,  1323,  1327,  1341,  1345,  1360,  1364,  1371,
+    1378,  1382,  1386,  1400,  1404,  1419,  1423,  1430,  1434,  1441,
+    1444,  1450,  1453,  1460
   };
 
   // Print the state stack on the debug stream.
@@ -3281,8 +3283,8 @@ namespace  simit { namespace internal  {
       return undef_token_;
   }
 
-
+#line 5 "parser.ypp" // lalr1.cc:1155
 } } //  simit::internal 
-
-
+#line 3289 "parser.cpp" // lalr1.cc:1155
+#line 1479 "parser.ypp" // lalr1.cc:1156
 

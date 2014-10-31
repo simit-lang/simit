@@ -40,7 +40,7 @@
 #ifndef YY_YY_PARSER_H_INCLUDED
 # define YY_YY_PARSER_H_INCLUDED
 // //                    "%code requires" blocks.
-
+#line 10 "parser.ypp" // lalr1.cc:387
 
   namespace simit {
   namespace internal {
@@ -55,7 +55,7 @@
   #include "errors.h"
   #include "types.h"
   #include "ir_builder.h"
-
+#line 1237 "parser.ypp" // lalr1.cc:387
 
   namespace {
     template <typename T>
@@ -96,7 +96,7 @@
     };
   }
 
-
+#line 100 "parser.h" // lalr1.cc:387
 
 
 # include <vector>
@@ -165,9 +165,9 @@
 # define YYDEBUG 0
 #endif
 
-
+#line 5 "parser.ypp" // lalr1.cc:387
 namespace  simit { namespace internal  {
-
+#line 171 "parser.h" // lalr1.cc:387
 
 
 
@@ -181,7 +181,7 @@ namespace  simit { namespace internal  {
     /// Symbol semantic values.
     union semantic_type
     {
-    
+    #line 157 "parser.ypp" // lalr1.cc:387
 
   int         num;
   double      fnum;
@@ -211,7 +211,7 @@ namespace  simit { namespace internal  {
 
   std::vector<std::string> *strings;
 
-
+#line 215 "parser.h" // lalr1.cc:387
     };
 #else
     typedef YYSTYPE semantic_type;
@@ -594,9 +594,9 @@ namespace  simit { namespace internal  {
   };
 
 
-
+#line 5 "parser.ypp" // lalr1.cc:387
 } } //  simit::internal 
-
+#line 600 "parser.h" // lalr1.cc:387
 
 
 

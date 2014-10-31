@@ -40,9 +40,9 @@
 
 # include <vector>
 
-
+#line 5 "parser.ypp" // stack.hh:152
 namespace  simit { namespace internal  {
-
+#line 46 "stack.hh" // stack.hh:152
   template <class T, class S = std::vector<T> >
   class stack
   {
@@ -151,8 +151,8 @@ namespace  simit { namespace internal  {
     unsigned int range_;
   };
 
-
+#line 5 "parser.ypp" // stack.hh:152
 } } //  simit::internal 
-
+#line 157 "stack.hh" // stack.hh:152
 
 #endif // !YY_YY_STACK_HH_INCLUDED

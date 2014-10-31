@@ -25,6 +25,7 @@
 #include "ir_printer.h"
 #include "llvm_function.h"
 #include "macros.h"
+#include "runtime.h"
 
 using namespace std;
 using namespace simit::ir;
@@ -266,7 +267,8 @@ void LLVMBackend::visit(const Call *op) {
   
   // compile arguments first
   for (auto a: op->actuals) {
-    assert(isScalarTensor(a.type()));
+    //FIX: remove once solve() is no longer needed
+    //assert(isScalarTensor(a.type()));
     argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
     args.push_back(compile(a));
   }
@@ -291,6 +293,26 @@ void LLVMBackend::visit(const Call *op) {
   }
   else if (op->function == ir::Intrinsics::exp) {
     fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::exp,argTypes);
+  }
+  else if (op->function == ir::Intrinsics::solve) {
+    std::vector<llvm::Type*> argTypes2;
+    
+    // FIX: compile is making these be LLVM_DOUBLE, but I need
+    // LLVM_DOUBLEPTR
+
+    argTypes2.push_back(LLVM_DOUBLEPTR);
+    argTypes2.push_back(LLVM_DOUBLEPTR);
+    argTypes2.push_back(LLVM_DOUBLEPTR);
+    
+    argTypes2.push_back(LLVM_INT);
+    argTypes2.push_back(LLVM_INT);
+
+    args.push_back(emitComputeLen(op->actuals[0].type().toTensor()->dimensions[0]));
+    args.push_back(emitComputeLen(op->actuals[0].type().toTensor()->dimensions[1]));
+    
+    auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes2, false);
+    fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("cMatSolve",
+                                                                  ftype));
   }
   
   // if not an intrinsic function, try to find it in the module

@@ -117,3 +117,14 @@ foreach(ldflag ${LLVM_LDFLAGS})
 endforeach()
 
 add_subdirectory(visualizer)
+
+# EIGEN
+find_package( PkgConfig )
+pkg_check_modules( EIGEN3 REQUIRED eigen3 )
+
+if (NOT EIGEN3_FOUND)
+    message("Could not find Eigen3")
+else()
+    include_directories( ${EIGEN3_INCLUDE_DIRS} )
+endif()
+

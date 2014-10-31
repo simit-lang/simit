@@ -978,7 +978,6 @@ call_or_paren_read_expr
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($1);
     auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
-
     if (ctx->hasSymbol(name)) {
       const Symbol &symbol = ctx->getSymbol(name);
       if (!symbol.isReadable()) {
@@ -1002,11 +1001,14 @@ call_or_paren_read_expr
       }
     }
     else if (ctx->containsFunction(name)) {
-      $$ = NULL;
-    }
-    else {
-      REPORT_ERROR(name + " is not defined in scope", @1);
-    }
+
+      Func func = ctx->getFunction(name);
+
+      $$ = new Expr(Call::make(func, *indices));
+      }
+      else {
+        REPORT_ERROR(name + " is not defined in scope", @1);
+      }
   }
   | field_read_expr "(" expr_list_or_empty ")" {
     $$ = NULL;
