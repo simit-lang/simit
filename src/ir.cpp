@@ -102,7 +102,6 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
   return fieldType;
 }
 
-// TODO: The logic in this function is wacky and doesn't work with nests
 Type getBlockType(Expr tensor) {
   assert(tensor.type().isTensor());
 
@@ -115,13 +114,14 @@ Type getBlockType(Expr tensor) {
   std::vector<IndexDomain> blockDimensions;
 
   size_t numNests = dimensions[0].getIndexSets().size();
+  assert(numNests > 0);
   for (auto &dim : dimensions) {
     assert(dim.getIndexSets().size() == numNests &&
            "All dimensions should have the same number of nestings");
   }
 
   Type blockType;
-  if (numNests) {
+  if (numNests == 1) {
     blockType = TensorType::make(type->componentType);
   }
   else {
