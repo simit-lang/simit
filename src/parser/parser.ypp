@@ -484,7 +484,7 @@ stmt
 
 assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
-  // map statements...
+  // map statements...  This is too hacky and must be fixed.
   : idents "=" expr ";" {
     if ($expr == nullptr) { break; } // TODO: Remove check
 
@@ -509,6 +509,14 @@ assign_stmt
     else {
       var = Var(varName, value.type());
       ctx->addSymbol(varName, var, Symbol::ReadWrite);
+    }
+
+    // TODO: This should be dealt with inside the ident_expr rule
+    if (isa<VarExpr>(value) && value.type().isTensor()) {
+      // The statement assign a tensor to a tensor, so we change it to an
+      // assignment index expr
+      IRBuilder::UnaryOperator op = IRBuilder::UnaryOperator::None;
+      value = ctx->getBuilder()->unaryElwiseExpr(op, value);
     }
 
     ctx->addStatement(AssignStmt::make(var, value));
