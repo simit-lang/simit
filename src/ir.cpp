@@ -80,25 +80,22 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
         elemType->fields.at(fieldName).type.toTensor();
 
     // The type of a set field is:
-    // `Tensor[set][elementFieldDimensions](elemFieldComponentType)`
+    // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))`
     std::vector<IndexDomain> dimensions;
     if (elemFieldType->order() == 0) {
       dimensions.push_back(IndexDomain(IndexSet(elementOrSet)));
     }
     else {
-      std::vector<IndexSet> dim;
-      dim.push_back(IndexSet(elementOrSet));
+      unsigned order = elemFieldType->order();
+      dimensions = vector<IndexDomain>(order);
+      dimensions[0] = IndexDomain(IndexSet(elementOrSet));
 
-      for (const IndexDomain &elemFieldDim : elemFieldType->dimensions) {
-        for (const IndexSet &indexSet : elemFieldDim.getIndexSets()) {
-          dim.push_back(indexSet);
-        }
-        dimensions.push_back(IndexDomain(dim));
+      for (size_t i=0; i < order; ++i) {
+        dimensions[i] = dimensions[i] * elemFieldType->dimensions[i];
       }
     }
     fieldType = TensorType::make(elemFieldType->componentType, dimensions);
   }
-
   return fieldType;
 }
 
