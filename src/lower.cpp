@@ -9,6 +9,7 @@
 #include "sig.h"
 #include "indexvar.h"
 #include "util.h"
+#include "ir_builder.h"
 
 using namespace std;
 
@@ -184,9 +185,30 @@ private:
   }
 };
 
+/// Retrieves the IndexVars that are used in an expression.
+class GetFreeIndexVars : private IRVisitor {
+public:
+  std::vector<IndexVar> get(Expr expr) {
+    expr.accept(this);
+    return indexVars;
+  }
 
-/// Specializes index expressions to compute one value at the location specified
-/// by the given loop variables
+private:
+  set<IndexVar> added;
+  vector<IndexVar> indexVars;
+
+  void visit(const IndexedTensor *op) {
+    for (auto &iv : op->indexVars) {
+      if (iv.isFreeVar() && added.find(iv) == added.end()) {
+        added.insert(iv);
+        indexVars.push_back(iv);
+      }
+    }
+  }
+};
+
+/// Specializes index expressions to compute one value/block at the location
+/// specified by the given loop variables
 class SpecializeIndexExprs : public IRRewriter {
 public:
   SpecializeIndexExprs(const LoopVars *lvs) : lvs(lvs) {}
@@ -194,6 +216,8 @@ public:
 private:
   const LoopVars *lvs;
   map<Var,Expr> varExprs;
+
+  vector<IndexVar> indexVars;
 
   Expr getVarExpr(const Var &var) {
     if (varExprs.find(var) == varExprs.end()) {
@@ -207,7 +231,12 @@ private:
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
     Var var = op->var;
+
     Expr value = mutate(indexExpr);
+    std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
+    if (indexVars.size() > 0) {
+      NOT_SUPPORTED_YET;
+    }
 
     if (indexExpr->resultVars.size() == 0) {
       stmt = AssignStmt::make(var, value);
@@ -229,7 +258,15 @@ private:
 
     Expr elementOrSet = mutate(op->elementOrSet);
     std::string fieldName = op->fieldName;
+
     Expr value = mutate(indexExpr);
+    std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
+    // TODO: Simplify by emitting empty IndexedTensors for scalar
+    //       expressions (in visit(IndexedTensor)). Then we can remove the test
+    //       and always turn value into an IndexExpr
+    if (indexVars.size() > 0) {
+      value = IndexExpr::make(indexVars, value);
+    }
 
     if (indexExpr->resultVars.size() == 0) {
       stmt = FieldWrite::make(elementOrSet, fieldName, value);
@@ -256,11 +293,26 @@ private:
     }
     else {
       std::vector<Expr> indices;
-      for (IndexVar const& iv : op->indexVars) {
+      for (const IndexVar &iv : op->indexVars) {
         Expr varExpr = getVarExpr(lvs->getVar(iv).first);
         indices.push_back(varExpr);
       }
       expr = TensorRead::make(op->tensor, indices);
+
+      if (expr.type().toTensor()->order() > 0) {
+        for (size_t i=indexVars.size(); i < op->indexVars.size(); ++i) {
+          const IndexVar &iv = op->indexVars[i];
+          vector<IndexSet> indexSets(iv.getDomain().getIndexSets().begin()+1,
+                                     iv.getDomain().getIndexSets().end());
+          IndexVar niv = IndexVar(iv.getName(), IndexDomain(indexSets),
+                                  iv.getOperator());
+          indexVars.push_back(niv);
+        }
+
+        vector<IndexVar> ivs(indexVars.begin(),
+                             indexVars.begin()+op->indexVars.size());
+        expr = IndexedTensor::make(expr, ivs);
+      }
     }
   }
 
@@ -480,7 +532,7 @@ private:
     if (isa<VarExpr>(op->elementOrSet)) {
       if (to<VarExpr>(op->elementOrSet)->var == targetElement) {
         Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
-        expr = Load::make(setFieldRead, loopVar);
+        expr = TensorRead::make(setFieldRead, {loopVar});
         return;
       }
     }
@@ -525,7 +577,6 @@ private:
 
         stmt = Substitute(substitutions).mutate(computeStmt);
 
-        ;
         stmt = MakeCompound(MakeCompound::Add).mutate(stmt);
         return;
       }
@@ -561,7 +612,10 @@ public:
     componentType = indexExpr->type.toTensor()->componentType;
 
     initStmt = ReplaceRhsWithZero().mutate(indexStmt);
+
+//    std::cout << "--- " << indexStmt << std::endl;
     computeStmt = SpecializeIndexExprs(&lvs).mutate(indexStmt);
+//    std::cout << "--- " << computeStmt << std::endl << std::endl;
 
     stmt = computeStmt;
     apply(sig);
