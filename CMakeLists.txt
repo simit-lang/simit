@@ -34,6 +34,8 @@ include_directories ("${SIMIT_INCLUDE_DIR}")
 set(SIMIT_GENERATED_SOURCE_DIR ${SIMIT_SOURCE_DIR})
 include_directories ("${SIMIT_GENERATED_SOURCE_DIR}")
 
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/misc)
+
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(tools)
