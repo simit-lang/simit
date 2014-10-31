@@ -515,8 +515,7 @@ assign_stmt
     if (isa<VarExpr>(value) && value.type().isTensor()) {
       // The statement assign a tensor to a tensor, so we change it to an
       // assignment index expr
-      IRBuilder::UnaryOperator op = IRBuilder::UnaryOperator::None;
-      value = ctx->getBuilder()->unaryElwiseExpr(op, value);
+      value = ctx->getBuilder()->unaryElwiseExpr(IRBuilder::None, value);
     }
 
     ctx->addStatement(AssignStmt::make(var, value));
@@ -773,8 +772,7 @@ linear_algebra_expr
     Expr expr = convertAndDelete($2);
     CHECK_IS_TENSOR(expr, @2);
 
-    IRBuilder::UnaryOperator op = IRBuilder::UnaryOperator::Neg;
-    $$ = new Expr(ctx->getBuilder()->unaryElwiseExpr(op, expr));
+    $$ = new Expr(ctx->getBuilder()->unaryElwiseExpr(IRBuilder::Neg, expr));
   }
   | expr elwise_binary_op expr {  // + - .* ./
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
@@ -803,8 +801,7 @@ linear_algebra_expr
 
     // Scale
     if (ltype->order()==0 || rtype->order()==0) {
-      IRBuilder::BinaryOperator mulOp = IRBuilder::BinaryOperator::Mul;
-      $$ = new Expr(builder->binaryElwiseExpr(l, mulOp, r));
+      $$ = new Expr(builder->binaryElwiseExpr(l, IRBuilder::Mul, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->order() == 1 && rtype->order() == 1) {
@@ -864,8 +861,6 @@ linear_algebra_expr
   | expr "'" {
     if ($1 == NULL) { $$ = NULL; break; } // TODO: Remove check
     IRBuilder *builder = ctx->getBuilder();
-    IRBuilder::UnaryOperator noneOp = IRBuilder::UnaryOperator::None;
-
     Expr expr = convertAndDelete($1);
 
     CHECK_IS_TENSOR(expr, @1);
@@ -874,11 +869,11 @@ linear_algebra_expr
     switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new Expr(builder->unaryElwiseExpr(noneOp, expr));
+        $$ = new Expr(builder->unaryElwiseExpr(IRBuilder::None, expr));
         break;
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
-        $$ = new Expr(builder->unaryElwiseExpr(noneOp, expr));
+        $$ = new Expr(builder->unaryElwiseExpr(IRBuilder::None, expr));
         if (!type->isColumnVector) {
           transposeVector(*$$);
         }
@@ -905,10 +900,10 @@ linear_algebra_expr
 
 %type <binop> elwise_binary_op;
 elwise_binary_op
-  : "+"  { $$ = IRBuilder::BinaryOperator::Add; }
-  | "-"  { $$ = IRBuilder::BinaryOperator::Sub; }
-  | ".*" { $$ = IRBuilder::BinaryOperator::Mul; }
-  | "./" { $$ = IRBuilder::BinaryOperator::Div; }
+  : "+"  { $$ = IRBuilder::Add; }
+  | "-"  { $$ = IRBuilder::Sub; }
+  | ".*" { $$ = IRBuilder::Mul; }
+  | "./" { $$ = IRBuilder::Div; }
 
 
 // Boolean Expressions

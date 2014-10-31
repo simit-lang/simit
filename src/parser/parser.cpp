@@ -1436,8 +1436,7 @@ namespace  simit { namespace internal  {
     if (isa<VarExpr>(value) && value.type().isTensor()) {
       // The statement assign a tensor to a tensor, so we change it to an
       // assignment index expr
-      IRBuilder::UnaryOperator op = IRBuilder::UnaryOperator::None;
-      value = ctx->getBuilder()->unaryElwiseExpr(op, value);
+      value = ctx->getBuilder()->unaryElwiseExpr(IRBuilder::None, value);
     }
 
     ctx->addStatement(AssignStmt::make(var, value));
@@ -1731,8 +1730,7 @@ namespace  simit { namespace internal  {
     Expr expr = convertAndDelete((yystack_[0].value.expr));
     CHECK_IS_TENSOR(expr, yystack_[0].location);
 
-    IRBuilder::UnaryOperator op = IRBuilder::UnaryOperator::Neg;
-    (yylhs.value.expr) = new Expr(ctx->getBuilder()->unaryElwiseExpr(op, expr));
+    (yylhs.value.expr) = new Expr(ctx->getBuilder()->unaryElwiseExpr(IRBuilder::Neg, expr));
   }
 
     break;
@@ -1771,8 +1769,7 @@ namespace  simit { namespace internal  {
 
     // Scale
     if (ltype->order()==0 || rtype->order()==0) {
-      IRBuilder::BinaryOperator mulOp = IRBuilder::BinaryOperator::Mul;
-      (yylhs.value.expr) = new Expr(builder->binaryElwiseExpr(l, mulOp, r));
+      (yylhs.value.expr) = new Expr(builder->binaryElwiseExpr(l, IRBuilder::Mul, r));
     }
     // Vector-Vector Multiplication (inner and outer product)
     else if (ltype->order() == 1 && rtype->order() == 1) {
@@ -1842,8 +1839,6 @@ namespace  simit { namespace internal  {
     {
     if ((yystack_[1].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
     IRBuilder *builder = ctx->getBuilder();
-    IRBuilder::UnaryOperator noneOp = IRBuilder::UnaryOperator::None;
-
     Expr expr = convertAndDelete((yystack_[1].value.expr));
 
     CHECK_IS_TENSOR(expr, yystack_[1].location);
@@ -1852,11 +1847,11 @@ namespace  simit { namespace internal  {
     switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
-        (yylhs.value.expr) = new Expr(builder->unaryElwiseExpr(noneOp, expr));
+        (yylhs.value.expr) = new Expr(builder->unaryElwiseExpr(IRBuilder::None, expr));
         break;
       case 1:
         // OPT: This might lead to redundant code to be removed in later pass
-        (yylhs.value.expr) = new Expr(builder->unaryElwiseExpr(noneOp, expr));
+        (yylhs.value.expr) = new Expr(builder->unaryElwiseExpr(IRBuilder::None, expr));
         if (!type->isColumnVector) {
           transposeVector(*(yylhs.value.expr));
         }
@@ -1895,25 +1890,25 @@ namespace  simit { namespace internal  {
 
   case 82:
 
-    { (yylhs.value.binop) = IRBuilder::BinaryOperator::Add; }
+    { (yylhs.value.binop) = IRBuilder::Add; }
 
     break;
 
   case 83:
 
-    { (yylhs.value.binop) = IRBuilder::BinaryOperator::Sub; }
+    { (yylhs.value.binop) = IRBuilder::Sub; }
 
     break;
 
   case 84:
 
-    { (yylhs.value.binop) = IRBuilder::BinaryOperator::Mul; }
+    { (yylhs.value.binop) = IRBuilder::Mul; }
 
     break;
 
   case 85:
 
-    { (yylhs.value.binop) = IRBuilder::BinaryOperator::Div; }
+    { (yylhs.value.binop) = IRBuilder::Div; }
 
     break;
 
@@ -3194,18 +3189,18 @@ namespace  simit { namespace internal  {
      300,   310,   323,   326,   335,   345,   345,   345,   353,   370,
      370,   370,   378,   399,   402,   408,   413,   421,   430,   433,
      439,   444,   452,   462,   465,   472,   473,   476,   477,   478,
-     479,   480,   481,   482,   483,   488,   527,   579,   583,   590,
-     593,   606,   609,   615,   620,   640,   660,   666,   671,   673,
-     677,   679,   685,   688,   716,   719,   727,   728,   729,   730,
-     731,   732,   733,   739,   761,   770,   779,   791,   858,   864,
-     894,   899,   908,   909,   910,   911,   917,   923,   929,   935,
-     941,   947,   958,   977,   978,   979,   985,  1020,  1026,  1042,
-    1045,  1051,  1057,  1068,  1069,  1070,  1071,  1075,  1087,  1091,
-    1101,  1110,  1122,  1134,  1138,  1141,  1183,  1193,  1198,  1206,
-    1209,  1223,  1229,  1235,  1238,  1288,  1292,  1293,  1297,  1301,
-    1308,  1319,  1326,  1330,  1334,  1348,  1352,  1367,  1371,  1378,
-    1385,  1389,  1393,  1407,  1411,  1426,  1430,  1437,  1441,  1448,
-    1451,  1457,  1460,  1467
+     479,   480,   481,   482,   483,   488,   526,   578,   582,   589,
+     592,   605,   608,   614,   619,   639,   659,   665,   670,   672,
+     676,   678,   684,   687,   715,   718,   726,   727,   728,   729,
+     730,   731,   732,   738,   760,   769,   777,   789,   855,   861,
+     889,   894,   903,   904,   905,   906,   912,   918,   924,   930,
+     936,   942,   953,   972,   973,   974,   980,  1015,  1021,  1037,
+    1040,  1046,  1052,  1063,  1064,  1065,  1066,  1070,  1082,  1086,
+    1096,  1105,  1117,  1129,  1133,  1136,  1178,  1188,  1193,  1201,
+    1204,  1218,  1224,  1230,  1233,  1283,  1287,  1288,  1292,  1296,
+    1303,  1314,  1321,  1325,  1329,  1343,  1347,  1362,  1366,  1373,
+    1380,  1384,  1388,  1402,  1406,  1421,  1425,  1432,  1436,  1443,
+    1446,  1452,  1455,  1462
   };
 
   // Print the state stack on the debug stream.
