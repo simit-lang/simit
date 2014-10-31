@@ -38,7 +38,6 @@ namespace {
   struct IndexVarContent {
     std::string name;
     IndexDomain domain;
-    bool reduction;
     ReductionOperator rop;
 
     mutable long ref = 0;
@@ -65,7 +64,7 @@ public:
       : IntrusivePtr(new IndexVarContent) {
     ptr->name = name;
     ptr->domain = domain;
-    ptr->reduction = false;
+    ptr->rop = ReductionOperator::Undefined;
   }
 
   // Construct a reduction index variable.
@@ -73,15 +72,16 @@ public:
       : IntrusivePtr(new IndexVarContent) {
     ptr->name = name;
     ptr->domain = domain;
-    ptr->reduction = true;
     ptr->rop = rop;
   }
 
   std::string getName() const { return ptr->name; }
   const IndexDomain &getDomain() const { return ptr->domain; }
 
-  bool isFreeVar() const { return !ptr->reduction; }
-  bool isReductionVar() const { return ptr->reduction; }
+  bool isFreeVar() const { return  !isReductionVar(); }
+  bool isReductionVar() const {
+    return ptr->rop.getKind() != ReductionOperator::Undefined;
+  }
 
   ReductionOperator getOperator() const { return ptr->rop; }
 };
