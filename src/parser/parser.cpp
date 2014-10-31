@@ -2229,7 +2229,7 @@ namespace  simit { namespace internal  {
       for (size_t i=0; i < outerDimensions->size(); ++i) {
         vector<IndexSet> dimension;
         dimension.push_back((*outerDimensions)[i]);
-        dimension.insert(dimension.begin(),
+        dimension.insert(dimension.end(),
                          blockDimensions[i].getIndexSets().begin(),
                          blockDimensions[i].getIndexSets().end());
 
