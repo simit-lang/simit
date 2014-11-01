@@ -297,6 +297,78 @@ TEST(Program, gemv_nw) {
   ASSERT_EQ(0.0, c.get(p2));
 }
 
+
+
+TEST(Program, gemv_assemble_from_points) {
+  Program program;
+  std::string programText = R"(
+    element Point
+      a : float;
+      b : float;
+      c : float;
+    end
+
+    element Spring
+    end
+
+    extern points  : set{Point};
+    extern springs : set{Spring}(points,points);
+
+    func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
+      A(p(0),p(0)) = p(0).a;
+    end
+
+    proc gemv
+      A = map dist_a to springs with points reduce +;
+      points.c = A * points.b;
+    end
+  )";
+
+  // Points
+  Set<> points;
+  FieldRef<double> a = points.addField<double>("a");
+  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<double> c = points.addField<double>("c");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  a.set(p0, 1.0);
+  a.set(p1, 2.0);
+  a.set(p2, 3.0);
+
+  c.set(p0, 42.0);
+
+  // Springs
+  Set<2> springs(points,points);
+
+  springs.addElement(p0,p1);
+  springs.addElement(p1,p2);
+
+  // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("gemv");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(1.0, c.get(p0));
+  ASSERT_EQ(4.0, c.get(p1));
+  ASSERT_EQ(0.0, c.get(p2));
+}
+
+
+
 TEST(Program, gemv_blocked) {
   Program program;
   std::string programText = R"(

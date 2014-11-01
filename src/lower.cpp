@@ -534,6 +534,8 @@ private:
 };
 
 
+// TODO: The if-based pattern matching in the visit rules is a total hack and
+//       has to be rewritten.
 class InlineMappedFunction : public IRRewriter {
 public:
   InlineMappedFunction(Var lvar, Func func, Expr targets, Expr neighbors,
@@ -568,36 +570,45 @@ private:
 
   Stmt computeStmt;
 
-  // Turn argument field reads into loads from the buffer corresponding to that
-  // field
+  /// Turn argument field reads into loads from the buffer corresponding to that
+  /// field
   void visit(const FieldRead *op) {
     // TODO: Handle the case where the target var was reassigned
     //       tmp = s; ... = tmp.a;
-    if (isa<VarExpr>(op->elementOrSet)) {
-      if (to<VarExpr>(op->elementOrSet)->var == targetElement) {
-        Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
-        expr = TensorRead::make(setFieldRead, {loopVar});
-        return;
-      }
+    if (isa<VarExpr>(op->elementOrSet) &&
+        to<VarExpr>(op->elementOrSet)->var == targetElement) {
+      Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
+      expr = TensorRead::make(setFieldRead, {loopVar});
     }
-    IRRewriter::visit(op);
+    else if(isa<TupleRead>(op->elementOrSet) &&
+            isa<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple) &&
+            to<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple)->var ==neighborElements) {
+      Expr setFieldRead = FieldRead::make(neighborSet, op->fieldName);
+      expr = setFieldRead;
+
+      Expr index = mutate(op->elementOrSet);
+      expr = TensorRead::make(setFieldRead, {index});
+    }
+    else {
+      NOT_SUPPORTED_YET;
+    }
   }
 
   void visit(const TupleRead *op) {
     // TODO: Handle the case where the target var was reassigned
     //       tmp = p(0); ... = tmp.x;
-    if (isa<VarExpr>(op->tuple)) {
-      if (to<VarExpr>(op->tuple)->var == neighborElements) {
-        const TupleType *tupleType = op->tuple.type().toTuple();
-        int cardinality = tupleType->size;
+    if (isa<VarExpr>(op->tuple) &&
+        to<VarExpr>(op->tuple)->var == neighborElements) {
+      const TupleType *tupleType = op->tuple.type().toTuple();
+      int cardinality = tupleType->size;
 
-        Expr endpoints = IndexRead::make(targetSet, "endpoints");
-        Expr indexExpr = Add::make(Mul::make(loopVar, cardinality), op->index);
-        expr = Load::make(endpoints, indexExpr);
-        return;
-      }
+      Expr endpoints = IndexRead::make(targetSet, "endpoints");
+      Expr indexExpr = Add::make(Mul::make(loopVar, cardinality), op->index);
+      expr = Load::make(endpoints, indexExpr);
     }
-    IRRewriter::visit(op);
+    else {
+      IRRewriter::visit(op);
+    }
   }
 
   void visit(const TensorWrite *op) {
