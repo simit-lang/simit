@@ -7,8 +7,6 @@
 #include "function.h"
 #include "errors.h"
 
-#include "visualizer/visualizer.h"
-
 using namespace std;
 using namespace simit;
 
@@ -249,8 +247,7 @@ TEST(Program, gemv_nw) {
     extern points  : set{Point};
     extern springs : set{Spring}(points,points);
 
-    func dist_a(s : Spring, p : (Point*2)) ->
-        (A : tensor[points,points](float))
+    func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
       A(p(0),p(0)) = s.a;
     end
 
@@ -298,6 +295,88 @@ TEST(Program, gemv_nw) {
   ASSERT_EQ(1.0, c.get(p0));
   ASSERT_EQ(4.0, c.get(p1));
   ASSERT_EQ(0.0, c.get(p2));
+}
+
+TEST(Program, gemv_blocked) {
+  Program program;
+  std::string programText = R"(
+    element Point
+      b : tensor[2](float);
+      c : tensor[2](float);
+    end
+
+    element Spring
+      a : tensor[2,2](float);
+    end
+
+    extern points  : set{Point};
+    extern springs : set{Spring}(points,points);
+
+    func dist_a(s : Spring, p : (Point*2)) ->
+        (M : tensor[points,points](tensor[2,2](float)))
+      M(p(0),p(0)) = s.a;
+      M(p(0),p(1)) = s.a;
+      M(p(1),p(0)) = s.a;
+      M(p(1),p(1)) = s.a;
+    end
+
+    proc gemv
+      A = map dist_a to springs with points reduce +;
+      points.c = A * points.b;
+    end
+  )";
+
+  // Points
+  Set<> points;
+  FieldRef<double,2> b = points.addField<double,2>("b");
+  FieldRef<double,2> c = points.addField<double,2>("c");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  b.set(p0, {1.0, 2.0});
+  b.set(p1, {3.0, 4.0});
+  b.set(p2, {5.0, 6.0});
+
+  // Taint c
+  c.set(p0, {42.0, 42.0});
+  c.set(p2, {42.0, 42.0});
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double,2,2> a = springs.addField<double,2,2>("a");
+
+  ElementRef s0 = springs.addElement(p0,p1);
+  ElementRef s1 = springs.addElement(p1,p2);
+
+  a.set(s0, {1.0, 2.0, 3.0, 4.0});
+  a.set(s1, {5.0, 6.0, 7.0, 8.0});
+
+  // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("gemv");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+  f->runSafe();
+
+  // Check that outputs are correct
+  // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
+  TensorRef<double,2> c0 = c.get(p0);
+  ASSERT_EQ(16.0, c0(0));
+  ASSERT_EQ(36.0, c0(1));
+
+  TensorRef<double,2> c1 = c.get(p1);
+  ASSERT_EQ(116.0, c1(0));
+  ASSERT_EQ(172.0, c1(1));
+
+  TensorRef<double,2> c2 = c.get(p2);
+  ASSERT_EQ(100.0, c2(0));
+  ASSERT_EQ(136.0, c2(1));
 }
 
 TEST(Program, gemv_blocked_nw) {
@@ -377,96 +456,6 @@ TEST(Program, gemv_blocked_nw) {
   TensorRef<double,2> c2 = c.get(p2);
   ASSERT_EQ(0.0, c2(0));
   ASSERT_EQ(0.0, c2(1));
-}
-
-TEST(Program, gemv_blocked) {
-  Program program;
-  std::string programText = R"(
-    element Point
-      b : tensor[2](float);
-      c : tensor[2](float);
-    end
-
-    element Spring
-      a : tensor[2,2](float);
-    end
-
-    extern points  : set{Point};
-    extern springs : set{Spring}(points,points);
-
-    func dist_a(s : Spring, p : (Point*2)) ->
-        (M : tensor[points,points](tensor[2,2](float)))
-      M(p(0),p(0)) = s.a;
-      M(p(0),p(1)) = s.a;
-      M(p(1),p(0)) = s.a;
-      M(p(1),p(1)) = s.a;
-    end
-
-    proc gemv
-      A = map dist_a to springs with points reduce +;
-      points.c = A * points.b;
-    end
-  )";
-
-  // Points
-  Set<> points;
-  FieldRef<double,2> b = points.addField<double,2>("b");
-  FieldRef<double,2> c = points.addField<double,2>("c");
-
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
-
-  b.set(p0, {1.0, 2.0});
-  b.set(p1, {3.0, 4.0});
-  b.set(p2, {5.0, 6.0});
-
-  // Taint c
-  c.set(p0, {42.0, 42.0});
-  c.set(p2, {42.0, 42.0});
-
-  // Springs
-  Set<2> springs(points,points);
-  FieldRef<double,2,2> a = springs.addField<double,2,2>("a");
-
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
-
-  a.set(s0, {1.0, 2.0, 3.0, 4.0});
-  a.set(s1, {5.0, 6.0, 7.0, 8.0});
-
-  // Compile program and bind arguments
-  int errorCode = program.loadString(programText);
-  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
-
-  std::unique_ptr<Function> f = program.compile("gemv");
-  if (!f) FAIL() << program.getDiagnostics().getMessage();
-
-  f->bind("points", &points);
-  f->bind("springs", &springs);
-  f->runSafe();
-
-  std::cout << b.get(p0) << std::endl;
-  std::cout << b.get(p1) << std::endl;
-  std::cout << b.get(p2) << std::endl;
-
-  std::cout << c.get(p0) << std::endl;
-  std::cout << c.get(p1) << std::endl;
-  std::cout << c.get(p2) << std::endl;
-
-  // Check that outputs are correct
-  // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
-  TensorRef<double,2> c0 = c.get(p0);
-  ASSERT_EQ(16.0, c0(0));
-  ASSERT_EQ(36.0, c0(1));
-
-  TensorRef<double,2> c1 = c.get(p1);
-  ASSERT_EQ(116.0, c1(0));
-  ASSERT_EQ(172.0, c1(1));
-
-  TensorRef<double,2> c2 = c.get(p2);
-  ASSERT_EQ(100.0, c2(0));
-  ASSERT_EQ(136.0, c2(1));
 }
 
 TEST(Program, gemv_inplace) {
