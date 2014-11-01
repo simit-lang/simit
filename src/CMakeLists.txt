@@ -119,13 +119,10 @@ endforeach()
 add_subdirectory(visualizer)
 
 # EIGEN
-#find_package( PkgConfig )
-#pkg_check_modules( EIGEN3 REQUIRED eigen3 )
 find_package(Eigen3 REQUIRED)
-
 if (NOT EIGEN3_FOUND)
     message("Could not find Eigen3")
 else()
-    include_directories( ${EIGEN3_INCLUDE_DIRS} )
+    include_directories( ${EIGEN3_INCLUDE_DIR} )
 endif()
 
