@@ -106,6 +106,10 @@ void IRRewriter::visit(const IndexRead *op) {
   }
 }
 
+void IRRewriter::visit(const Length *op) {
+  expr = op;
+}
+
 void IRRewriter::visit(const Load *op) {
   Expr buffer = mutate(op->buffer);
   Expr index = mutate(op->index);

@@ -217,7 +217,7 @@ private:
   const LoopVars *lvs;
   map<Var,Expr> varExprs;
 
-  vector<IndexVar> indexVars;
+  map<string,IndexVar> indexVars;
 
   Expr getVarExpr(const Var &var) {
     if (varExprs.find(var) == varExprs.end()) {
@@ -231,11 +231,14 @@ private:
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
     Var var = op->var;
-
     Expr value = mutate(indexExpr);
+
     std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
+    // TODO: Simplify by emitting empty IndexedTensors for scalar
+    //       expressions (in visit(IndexedTensor)). Then we can remove the test
+    //       and always turn value into an IndexExpr
     if (indexVars.size() > 0) {
-      NOT_SUPPORTED_YET;
+      value = IndexExpr::make(indexVars, value);
     }
 
     if (indexExpr->resultVars.size() == 0) {
@@ -258,8 +261,8 @@ private:
 
     Expr elementOrSet = mutate(op->elementOrSet);
     std::string fieldName = op->fieldName;
-
     Expr value = mutate(indexExpr);
+
     std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
     // TODO: Simplify by emitting empty IndexedTensors for scalar
     //       expressions (in visit(IndexedTensor)). Then we can remove the test
@@ -282,6 +285,22 @@ private:
     }
   }
 
+  void visit(const TensorWrite *op) {
+    assert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
+    const IndexExpr *indexExpr = to<IndexExpr>(op->value);
+
+    Expr value = mutate(op->value);
+
+    std::vector<Expr> indices;
+    for (IndexVar const& iv : indexExpr->resultVars) {
+      Expr varExpr = getVarExpr(lvs->getVar(iv).first);
+      indices.push_back(varExpr);
+    }
+    Expr tensor = TensorRead::make(op->tensor, op->indices);
+
+    stmt = TensorWrite::make(tensor, indices, value);
+  }
+
   void visit(const IndexedTensor *op) {
     // TODO: Flatten IndexExpr. E.g. ((i) A(i,j) *  ((m) c(m)+b(m))(j) )
     if (isa<IndexExpr>(op->tensor)) {
@@ -300,23 +319,25 @@ private:
       expr = TensorRead::make(op->tensor, indices);
 
       if (expr.type().toTensor()->order() > 0) {
-        for (size_t i=indexVars.size(); i < op->indexVars.size(); ++i) {
-          const IndexVar &iv = op->indexVars[i];
-          vector<IndexSet> indexSets(iv.getDomain().getIndexSets().begin()+1,
-                                     iv.getDomain().getIndexSets().end());
-          IndexVar niv = IndexVar(iv.getName(), IndexDomain(indexSets),
-                                  iv.getOperator());
-          indexVars.push_back(niv);
+        vector<IndexVar> ivs;
+        for (auto &iv : op->indexVars) {
+          if (indexVars.find(iv.getName()) == indexVars.end()) {
+            vector<IndexSet> indexSets(iv.getDomain().getIndexSets().begin()+1,
+                                       iv.getDomain().getIndexSets().end());
+            IndexVar blockiv = IndexVar(iv.getName(), IndexDomain(indexSets),
+                                        iv.getOperator());
+            indexVars.insert(pair<string,IndexVar>(blockiv.getName(), blockiv));
+          }
+          ivs.push_back(indexVars.at(iv.getName()));
         }
 
-        vector<IndexVar> ivs(indexVars.begin(),
-                             indexVars.begin()+op->indexVars.size());
         expr = IndexedTensor::make(expr, ivs);
       }
     }
   }
 
   void visit(const IndexExpr *op) {
+    indexVars.clear();
     expr = mutate(op->value);
   }
 };
@@ -341,6 +362,56 @@ private:
   }
 };
 
+/// Turns tensor writes into compound assignments (e.g. +=, *=)
+/// \todo Generalize to include Assignments, FieldWrite, TupleWrite
+class MakeCompound : public IRRewriter {
+public:
+  enum CompoundOperator { Add };
+
+  MakeCompound(CompoundOperator compoundOperator)
+      : compoundOperator(compoundOperator) {}
+
+  Stmt mutate(Stmt stmt) {return IRRewriter::mutate(stmt);}
+
+private:
+  CompoundOperator compoundOperator;
+  Expr lhsExpr;
+
+  Expr mutate(Expr e) {
+    assert(lhsExpr.defined());
+
+    if (e.defined()) {
+      if (!isScalarTensor(e.type())) {
+//        e = IRRewriter::mutate(e);
+      }
+      else {
+        switch (compoundOperator) {
+          case Add:
+            e = Add::make(lhsExpr, e);
+            break;
+        }
+      }
+    }
+    else {
+      e = Expr();
+    }
+    expr = Expr();
+    stmt = Stmt();
+    return e;
+  }
+
+  void visit(const TensorWrite *op) {
+    lhsExpr = TensorRead::make(op->tensor, op->indices);
+
+    vector<IndexVar> indexVars = GetFreeIndexVars().get(op->value);
+    if (indexVars.size()) {
+      lhsExpr = IndexedTensor::make(lhsExpr, indexVars);
+    }
+
+    Expr value = mutate(op->value);
+    stmt = TensorWrite::make(op->tensor, op->indices, value);
+  }
+};
 
 /// Rewrites rstmt to reduce it's computed value into a temporary reduction
 /// variable using the rop ReductionOperation.
@@ -401,11 +472,12 @@ private:
           assert(false);
           break;
       }
+
       tmpWriteStmt = TensorWrite::make(tensor, indices, VarExpr::make(tmpVar));
+      tmpWriteStmt = MakeCompound(MakeCompound::Add).mutate(tmpWriteStmt);
     }
   }
 };
-
 
 
 /// Get the variables that are used to index a tensor in an Expr as well as
@@ -462,38 +534,10 @@ private:
 };
 
 
-/// Turns tensor writes into compound assignments (e.g. +=, *=)
-/// \todo Generalize to include Assignments, FieldWrite, TupleWrite
-class MakeCompound : public IRRewriter {
+class InlineMappedFunction : public IRRewriter {
 public:
-  enum CompoundOperator { Add };
-
-  MakeCompound(CompoundOperator compoundOperator)
-      : compoundOperator(compoundOperator) {}
-
-private:
-  CompoundOperator compoundOperator;
-
-  void visit(const TensorWrite *op) {
-    Expr tensorRead = TensorRead::make(op->tensor, op->indices);
-
-    Expr value;
-    switch (compoundOperator) {
-      case Add:
-        value = Add::make(tensorRead, op->value);
-        break;
-    }
-    assert(value.defined());
-
-    stmt = TensorWrite::make(op->tensor, op->indices, value);
-  }
-};
-
-
-class InlineMappedFunctionInLoop : public IRRewriter {
-public:
-  InlineMappedFunctionInLoop(Var lvar, Func func, Expr targets, Expr neighbors,
-                             Var resultActual, Stmt computeStmt) {
+  InlineMappedFunction(Var lvar, Func func, Expr targets, Expr neighbors,
+                       Var resultActual, Stmt computeStmt) {
     assert(func.getArguments().size() == 2 &&
            "mapped functions must have exactly two arguments");
 
@@ -576,7 +620,6 @@ private:
         }
 
         stmt = Substitute(substitutions).mutate(computeStmt);
-
         stmt = MakeCompound(MakeCompound::Add).mutate(stmt);
         return;
       }
@@ -601,23 +644,83 @@ class ReplaceRhsWithZero : public IRRewriter {
   }
 };
 
+/// Retrieves the index expression computed in a given Stmt.  If no index
+/// expressions are computed in the Stmt an undefined Expr is returned.
+class GetIndexExpr : private IRVisitor {
+public:
+  const IndexExpr *get(Stmt stmt) {
+    stmt.accept(this);
+    return indexExpr;
+  }
+
+private:
+  const IndexExpr *indexExpr;
+
+  void visit(const IndexExpr *op) {
+    indexExpr = op;
+  }
+};
+
+class LowerIndexExpressions : public IRRewriter {
+public:
+  LowerIndexExpressions(const UseDef *ud) : ud(ud) {}
+
+private:
+  const UseDef *ud;
+
+  /// Lower the index statement.  Defined after the LoopBuilder due to a
+  /// circular dependency.
+  Stmt lower(Stmt stmt);
+
+  void visit(const AssignStmt *op) {
+    if (isa<IndexExpr>(op->value)) {
+      stmt = lower(op);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const FieldWrite *op) {
+    if (isa<IndexExpr>(op->value)) {
+      stmt = lower(op);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const TensorWrite *op) {
+    if (isa<IndexExpr>(op->value)) {
+      stmt = lower(op);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const IndexExpr *op) {
+    assert(false &&
+           "IndexExprs must be assigned to a var/field/tensor before lowering");
+  }
+};
+
 class LoopBuilder : public SIGVisitor {
 public:
   LoopBuilder(const UseDef *ud) : ud(ud) {}
 
-  Stmt create(const IndexExpr *indexExpr, Stmt indexStmt) {
+  Stmt create(Stmt computeStmt) {
+    const IndexExpr *indexExpr = GetIndexExpr().get(computeStmt);
+
     SIG sig = SIGBuilder(ud).create(indexExpr);
     lvs = LoopVars(sig, ud);
 
     componentType = indexExpr->type.toTensor()->componentType;
 
-    initStmt = ReplaceRhsWithZero().mutate(indexStmt);
+    initStmt = ReplaceRhsWithZero().mutate(computeStmt);
+    computeBlockStmt = SpecializeIndexExprs(&lvs).mutate(computeStmt);
 
-//    std::cout << "--- " << indexStmt << std::endl;
-    computeStmt = SpecializeIndexExprs(&lvs).mutate(indexStmt);
-//    std::cout << "--- " << computeStmt << std::endl << std::endl;
-
-    stmt = computeStmt;
+    stmt = computeBlockStmt;
     apply(sig);
 
     Stmt result = stmt;
@@ -630,7 +733,7 @@ private:
   LoopVars lvs;
   ScalarType componentType;
   Stmt initStmt;
-  Stmt computeStmt;
+  Stmt computeBlockStmt;
 
   Stmt stmt;
 
@@ -643,8 +746,10 @@ private:
       stmt = For::make(lvar, ldom, stmt);
     }
     else {
-      ReduceOverVar rov(computeStmt, v->iv.getOperator());
+      ReduceOverVar rov(computeBlockStmt, v->iv.getOperator());
+
       Stmt loopBody = rov.mutate(stmt);
+
       Var tmpVar = rov.getTmpVar();
       assert(tmpVar.defined());
 
@@ -677,9 +782,14 @@ private:
     Expr target = map->target;
     Expr nbrs = map->neighbors;
 
-    InlineMappedFunctionInLoop rewriter(lvar, func, target, nbrs, e->tensor,
-                                        computeStmt);
-    Stmt loopBody = rewriter.mutate(func.getBody());
+    // Inline the mapped function in the IndexExpr loop nests
+    Stmt loopBody = InlineMappedFunction(lvar, func, target, nbrs, e->tensor,
+                                         computeBlockStmt).mutate(func.getBody());
+
+    // TODO: We should knock out redundant subexpressions in the loopBody before
+    //       lowering the index expressions there
+    loopBody = LowerIndexExpressions(ud).mutate(loopBody);
+
     Stmt loop = For::make(lvar, ldom, loopBody);
     stmt = Block::make(initStmt, loop);
 
@@ -689,49 +799,9 @@ private:
   }
 };
 
-class LowerIndexExpressions : public IRRewriter {
-public:
-  LowerIndexExpressions(const UseDef *ud) : ud(ud) {}
-
-private:
-  const UseDef *ud;
-
-  Stmt lower(const IndexExpr *indexExpr, Stmt stmt) {
-    return LoopBuilder(ud).create(indexExpr, stmt);
-  }
-
-  void visit(const IndexExpr *op) {
-    assert(false &&
-           "IndexExprs must be assigned to a var/field/tensor before lowering");
-  }
-
-  void visit(const AssignStmt *op) {
-    if (isa<IndexExpr>(op->value)) {
-      stmt = lower(to<IndexExpr>(op->value), op);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
-
-  void visit(const FieldWrite *op) {
-    if (isa<IndexExpr>(op->value)) {
-      stmt = lower(to<IndexExpr>(op->value), op);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
-
-  void visit(const TensorWrite *op) {
-    if (isa<IndexExpr>(op->value)) {
-      stmt = lower(to<IndexExpr>(op->value), op);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
-};
+Stmt LowerIndexExpressions::lower(Stmt stmt) {
+  return LoopBuilder(ud).create(stmt);
+}
 
 Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
@@ -751,31 +821,86 @@ Func lowerMaps(Func func) {
   return LowerMaps().mutate(func);
 }
 
+Expr createLengthComputation(const IndexSet &indexSet) {
+  return Length::make(indexSet);
+}
+
+Expr createLengthComputation(const IndexDomain &dimensions) {
+  assert(dimensions.getIndexSets().size() > 0);
+  const vector<IndexSet> &indexSets = dimensions.getIndexSets();
+  Expr len = createLengthComputation(indexSets[0]);
+  for (size_t i=1; i < indexSets.size(); ++i) {
+    len = Mul::make(len, createLengthComputation(indexSets[i]));
+  }
+  return len;
+}
+
+Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
+  assert(dimensions.size() > 0);
+  Expr len = createLengthComputation(dimensions[0]);
+  for (size_t i=1; i < dimensions.size(); ++i) {
+    len = Mul::make(len, createLengthComputation(dimensions[i]));
+  }
+  return len;
+}
+
+Expr createLoadExpr(Expr tensor, Expr index) {
+  // If the tensor is a load then we hada  nested tensor read. Since we can't
+  // have nested loads we must flatten them.
+  if (isa<Load>(tensor)) {
+    const Load *load = to<Load>(tensor);
+    assert(load->buffer.type().isTensor());
+
+    Type blockType = load->buffer.type().toTensor()->blockType();
+    Expr len  = createLengthComputation(blockType.toTensor()->dimensions);
+
+    index = Add::make(Mul::make(load->index, len), index);
+    return Load::make(load->buffer, index);
+  }
+  else {
+    return Load::make(tensor, index);
+  }
+}
+
+Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
+  // If the tensor is a load then we hada  nested tensor read. Since we can't
+  // have nested loads we must flatten them.
+  if (isa<Load>(tensor)) {
+    const Load *load = to<Load>(tensor);
+    assert(load->buffer.type().isTensor());
+
+    Type blockType = load->buffer.type().toTensor()->blockType();
+    Expr len  = createLengthComputation(blockType.toTensor()->dimensions);
+
+    index = Add::make(Mul::make(load->index, len), index);
+    return Store::make(load->buffer, index, value);
+  }
+  else {
+    return Store::make(tensor, index, value);
+  }
+}
 
 class LowerTensorAccesses : public IRRewriter {
   void visit(const TensorRead *op) {
     assert(op->type.isTensor() && op->tensor.type().toTensor());
 
     const TensorType *type = op->tensor.type().toTensor();
-    assert(type->order() == op->indices.size());
 
     // TODO: Generalize to n-order tensors and remove assert (also there's no
     //       need to have specialized code for vectors and matrices).
-    assert(type->order() <= 2);
+    assert(op->indices.size() <= 2);
 
-    if (type->order() == 1) {
-      Expr tensor = mutate(op->tensor);
-      Expr index = mutate(op->indices[0]);
-      expr = Load::make(tensor, index);
+    Expr tensor = mutate(op->tensor);
+    Expr index;
+    if (op->indices.size() == 1) {
+      index = mutate(op->indices[0]);
     }
-    else if (type->order() == 2) {
+    else if (op->indices.size() == 2) {
       // TODO: Clearly we need something more sophisticated here (for sparse
       // tensors or nested dense tensors).  For example, a tensor type could
       // carry a 'TensorStorage' object and we could ask this TensorStorage to
       // give us an Expr that computes an i,j location, or an Expr that gives us
       // a row/column.
-      Expr tensor = mutate(op->tensor);
-
       Expr i = mutate(op->indices[0]);
       Expr j = mutate(op->indices[1]);
 
@@ -793,38 +918,38 @@ class LowerTensorAccesses : public IRRewriter {
       }
       assert(d1.defined());
 
-      Expr index = Add::make(Mul::make(i, d1), j);
-      expr = Load::make(tensor, index);
+      index = Add::make(Mul::make(i, d1), j);
     }
     else {
       NOT_SUPPORTED_YET;
     }
+    assert(index.defined());
+
+    expr = createLoadExpr(tensor, index);
   }
 
   void visit(const TensorWrite *op) {
     assert(op->tensor.type().isTensor());
 
     const TensorType *type = op->tensor.type().toTensor();
-    assert(type->order() == op->indices.size());
 
     // TODO: Generalize to n-order tensors and remove assert (also there's no
     //       need to have specialized code for vectors and matrices).
-    assert(type->order() <= 2);
+    assert(op->indices.size() <= 2);
 
-    if (type->order() == 1) {
-      Expr tensor = mutate(op->tensor);
-      Expr index = mutate(op->indices[0]);
-      Expr value = mutate(op->value);
-      stmt = Store::make(tensor, index, value);
+    Expr tensor = mutate(op->tensor);
+    Expr value = mutate(op->value);
+
+    Expr index;
+    if (op->indices.size() == 1) {
+      index = mutate(op->indices[0]);
     }
-    else if (type->order() == 2) {
+    else if (op->indices.size() == 2) {
       // TODO: Clearly we need something more sophisticated here (for sparse
       // tensors or nested dense tensors).  For example, a tensor type could
       // carry a 'TensorStorage' object and we could ask this TensorStorage to
       // give us an Expr that computes an i,j location, or an Expr that gives us
       // a row/column.
-      Expr tensor = mutate(op->tensor);
-
       Expr i = mutate(op->indices[0]);
       Expr j = mutate(op->indices[1]);
 
@@ -842,13 +967,14 @@ class LowerTensorAccesses : public IRRewriter {
       }
       assert(d1.defined());
 
-      Expr index = Add::make(Mul::make(i, d1), j);
-      Expr value = mutate(op->value);
-      stmt = Store::make(tensor, index, value);
+      index = Add::make(Mul::make(i, d1), j);
     }
     else {
       NOT_SUPPORTED_YET;
     }
+    assert(index.defined());
+
+    stmt = createStoreStmt(tensor, index, value);
   }
 };
 

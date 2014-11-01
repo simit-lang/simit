@@ -41,17 +41,26 @@ void IRPrinter::print(const Func &func) {
   if (func.defined()) {
     func.accept(this);
   }
+  else {
+    os << "Func()";
+  }
 }
 
 void IRPrinter::print(const Expr &expr) {
   if (expr.defined()) {
     expr.accept(this);
   }
+  else {
+    os << "Expr()";
+  }
 }
 
 void IRPrinter::print(const Stmt &stmt) {
   if (stmt.defined()) {
     stmt.accept(this);
+  }
+  else {
+    os << "Stmt()";
   }
 }
 
@@ -152,6 +161,10 @@ void IRPrinter::visit(const TupleRead *op) {
 void IRPrinter::visit(const IndexRead *op) {
   print(op->edgeSet);
   os << "." << op->indexName;
+}
+
+void IRPrinter::visit(const Length *op) {
+  os << op->indexSet;
 }
 
 void IRPrinter::visit(const Load *op) {

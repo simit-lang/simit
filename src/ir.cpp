@@ -101,47 +101,7 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
 
 Type getBlockType(Expr tensor) {
   assert(tensor.type().isTensor());
-
-  const TensorType *type = tensor.type().toTensor();
-  const std::vector<IndexDomain> &dimensions = type->dimensions;
-  if (dimensions.size() == 0) {
-    return TensorType::make(type->componentType);
-  }
-
-  std::vector<IndexDomain> blockDimensions;
-
-  size_t numNests = dimensions[0].getIndexSets().size();
-  assert(numNests > 0);
-
-  Type blockType;
-  if (numNests == 1) {
-    blockType = TensorType::make(type->componentType);
-  }
-  else {
-    unsigned maxNesting = 0;
-    for (auto &dim : dimensions) {
-      if (dim.getIndexSets().size() > maxNesting) {
-        maxNesting = dim.getIndexSets().size();
-      }
-    }
-
-    for (auto &dim : dimensions) {
-      if (dim.getIndexSets().size() < maxNesting) {
-        const std::vector<IndexSet> &nests = dim.getIndexSets();
-        std::vector<IndexSet> blockNests(nests.begin(), nests.end());
-        blockDimensions.push_back(IndexDomain(blockNests));
-      }
-      else {
-        const std::vector<IndexSet> &nests = dim.getIndexSets();
-        std::vector<IndexSet> blockNests(nests.begin()+1, nests.end());
-        blockDimensions.push_back(IndexDomain(blockNests));
-      }
-    }
-    blockType = TensorType::make(type->componentType, blockDimensions);
-  }
-  assert(blockType.defined());
-
-  return blockType;
+  return tensor.type().toTensor()->blockType();
 }
 
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {

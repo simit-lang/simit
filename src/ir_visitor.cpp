@@ -39,6 +39,9 @@ void IRVisitor::visit(const IndexRead *op) {
   op->edgeSet.accept(this);
 }
 
+void IRVisitor::visit(const Length *op) {
+}
+
 void IRVisitor::visit(const Load *op) {
   op->buffer.accept(this);
   op->index.accept(this);

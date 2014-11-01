@@ -10,6 +10,67 @@ namespace simit {
 namespace ir {
 
 // struct TensorType
+std::vector<IndexSet> TensorType::outerDimensions() const {
+  unsigned maxNest = 0;
+  for (auto &dim : dimensions) {
+    if (dim.getIndexSets().size() > maxNest) {
+      maxNest = dim.getIndexSets().size();
+    }
+  }
+
+  std::vector<IndexSet> outerDimensions;
+  for (auto &dim : dimensions) {
+    if (dim.getIndexSets().size() == maxNest) {
+      outerDimensions.push_back(dim.getIndexSets()[0]);
+    }
+  }
+
+  return outerDimensions;
+}
+
+
+Type TensorType::blockType() const {
+  // TODO (grab blocktype computation in ir.h/ir.cpp)
+  if (dimensions.size() == 0) {
+    return TensorType::make(componentType);
+  }
+
+  std::vector<IndexDomain> blockDimensions;
+
+  size_t numNests = dimensions[0].getIndexSets().size();
+  assert(numNests > 0);
+
+  Type blockType;
+  if (numNests == 1) {
+    blockType = TensorType::make(componentType);
+  }
+  else {
+    unsigned maxNesting = 0;
+    for (auto &dim : dimensions) {
+      if (dim.getIndexSets().size() > maxNesting) {
+        maxNesting = dim.getIndexSets().size();
+      }
+    }
+
+    for (auto &dim : dimensions) {
+      if (dim.getIndexSets().size() < maxNesting) {
+        const std::vector<IndexSet> &nests = dim.getIndexSets();
+        std::vector<IndexSet> blockNests(nests.begin(), nests.end());
+        blockDimensions.push_back(IndexDomain(blockNests));
+      }
+      else {
+        const std::vector<IndexSet> &nests = dim.getIndexSets();
+        std::vector<IndexSet> blockNests(nests.begin()+1, nests.end());
+        blockDimensions.push_back(IndexDomain(blockNests));
+      }
+    }
+    blockType = TensorType::make(componentType, blockDimensions);
+  }
+  assert(blockType.defined());
+
+  return blockType;
+}
+
 size_t TensorType::size() const {
   int size = 1;
   for (auto &dimension : dimensions) {

@@ -49,7 +49,7 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
   fpm.add(llvm::createLoopStrengthReducePass());
 
   fpm.doInitialization();
-  fpm.run(*llvmFunc);
+//  fpm.run(*llvmFunc);
 
   requiresInitCall = simitFunc.getTemporaries().size() > 0;
   deinit = nullptr;

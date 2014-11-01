@@ -191,6 +191,10 @@ void LLVMBackend::visit(const ir::IndexRead *op) {
                                     edgeSetValue->getName()+"."+op->indexName);
 }
 
+void LLVMBackend::visit(const ir::Length *op) {
+  val = emitComputeLen(op->indexSet);
+}
+
 void LLVMBackend::visit(const Map *op) {
 //  assert(false && "No code generation for this type");
 }

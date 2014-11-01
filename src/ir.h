@@ -329,11 +329,26 @@ struct IndexRead : public ExprNode<IndexRead> {
 
   static Expr make(Expr edgeSet, std::string indexName) {
     assert(edgeSet.type().isSet());
+    assert(indexName == "endpoints" &&
+           "Only endpoints index supported for now");
+
     IndexRead *node = new IndexRead;
     node->type = TensorType::make(ScalarType(ScalarType::Int),
                                   {IndexDomain(IndexSet(edgeSet))});
     node->edgeSet = edgeSet;
     node->indexName = indexName;
+    return node;
+  }
+};
+
+/// TODO: Consider merging Length and IndexRead into e.g. PropertyRead.
+struct Length : public ExprNode<Length> {
+  IndexSet indexSet;
+
+  static Expr make(IndexSet indexSet) {
+    Length *node = new Length;
+    node->type = TensorType::make(ScalarType(ScalarType::Int));
+    node->indexSet = indexSet;
     return node;
   }
 };

@@ -14,6 +14,7 @@ struct FieldRead;
 struct TensorRead;
 struct TupleRead;
 struct IndexRead;
+struct Length;
 struct Map;
 struct IndexedTensor;
 struct IndexExpr;
@@ -55,6 +56,7 @@ public:
   virtual void visit(const TensorRead *op);
   virtual void visit(const TupleRead *op);
   virtual void visit(const IndexRead *op);
+  virtual void visit(const Length *op);
   virtual void visit(const Load *op);
   virtual void visit(const IndexedTensor *op);
   virtual void visit(const IndexExpr *op);

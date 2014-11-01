@@ -81,6 +81,10 @@ struct ScalarType {
   bool isFloat() const { return kind == Float; }
 };
 
+// TODO: Change the implementation of TensorType store a blockType plus outer
+//       dimensions.  With the current scheme we cannot distinguish between a
+//       vector of matrices and a matrix of vectors, both of which must be
+//       permitted.
 struct TensorType : TypeNode {
   ScalarType componentType;
   std::vector<IndexDomain> dimensions;
@@ -88,6 +92,14 @@ struct TensorType : TypeNode {
   /// Marks whether the tensor type is a column vector.  This information is
   /// not used by the Simit compiler, but is here to ease frontend development.
   bool isColumnVector;
+
+  /// Returns the dimensions of a tensor where each block is a component.  These
+  /// dimensions are not nested.  Note also that it is allowed for a tensor to
+  /// have fewer outer than inner dimensions (e.g. a vector of matrices).
+  std::vector<IndexSet> outerDimensions() const;
+
+  /// Returns the type of the blocks in this tensor.
+  Type blockType() const;
 
   size_t order() const { return dimensions.size(); }
   size_t size() const;
