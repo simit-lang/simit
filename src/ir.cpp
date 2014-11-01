@@ -70,12 +70,14 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
   Type fieldType;
   if (elementOrSet.type().isElement()) {
     const ElementType *elemType = elementOrSet.type().toElement();
+    assert(elemType->fields.find(fieldName) != elemType->fields.end());
     fieldType = elemType->fields.at(fieldName).type;
   }
   else if (elementOrSet.type().isSet()) {
     const SetType *setType = elementOrSet.type().toSet();
     const ElementType *elemType = setType->elementType.toElement();
 
+    assert(elemType->fields.find(fieldName) != elemType->fields.end());
     const TensorType *elemFieldType =
         elemType->fields.at(fieldName).type.toTensor();
 

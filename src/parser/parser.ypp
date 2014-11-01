@@ -738,8 +738,6 @@ ident_expr
   : IDENT {
     string ident = convertAndFree($IDENT);
 
-    if (!ctx->hasSymbol(ident)) { $$=NULL; break; } // TODO: Remove check
-
     if (!ctx->hasSymbol(ident)) {
       REPORT_ERROR(ident + " is not defined in scope", @1);
     }
@@ -950,18 +948,33 @@ boolean_expr
 // Field Read Expressions
 %type <expr> field_read_expr;
 field_read_expr
-  : set_read_expr "." IDENT {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    if (!(*$1).type().defined()) { $$ = NULL; break; } // TODO: Remove check
+  : set_read_expr "." IDENT[fieldName] {
+    assert($set_read_expr);
+    assert($set_read_expr->type().defined());
 
     Expr elemOrSet = convertAndDelete($set_read_expr);
-    std::string fieldName = convertAndFree($IDENT);
+    std::string fieldName = convertAndFree($fieldName);
 
     Type type = elemOrSet.type();
     if (!(type.isElement() || type.isSet())) {
       std::stringstream errorStr;
       errorStr << "only elements and sets have fields";
       REPORT_ERROR(errorStr.str(), @1);
+    }
+
+    const ElementType *elemType = nullptr;
+    if (elemOrSet.type().isElement()) {
+      elemType = elemOrSet.type().toElement();
+    }
+    else if (elemOrSet.type().isSet()) {
+      const SetType *setType = elemOrSet.type().toSet();
+      elemType = setType->elementType.toElement();
+    }
+    assert(elemType);
+
+    if (elemType->fields.find(fieldName) == elemType->fields.end()) {
+      REPORT_ERROR("undefined field '" + toString(elemOrSet)+"."+fieldName+ "'",
+                   @fieldName);
     }
 
     $$ = new Expr(FieldRead::make(elemOrSet, fieldName));
@@ -971,15 +984,16 @@ field_read_expr
 set_read_expr
   : ident_expr
   | paren_expr
-  | call_expr
+  | call_or_paren_read_expr
 
 
 // Call and Tensor Read Expressions
 %type <expr> call_or_paren_read_expr;
 call_or_paren_read_expr
   : IDENT "(" expr_list_or_empty ")" {
-    std::string name = convertAndFree($1);
+    std::string name = convertAndFree($IDENT);
     auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
+
     if (ctx->hasSymbol(name)) {
       const Symbol &symbol = ctx->getSymbol(name);
       if (!symbol.isReadable()) {
@@ -1003,14 +1017,12 @@ call_or_paren_read_expr
       }
     }
     else if (ctx->containsFunction(name)) {
-
       Func func = ctx->getFunction(name);
-
       $$ = new Expr(Call::make(func, *indices));
-      }
-      else {
-        REPORT_ERROR(name + " is not defined in scope", @1);
-      }
+    }
+    else {
+      REPORT_ERROR(name + " is not defined in scope", @1);
+    }
   }
   | field_read_expr "(" expr_list_or_empty ")" {
     $$ = NULL;
