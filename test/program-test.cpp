@@ -13,7 +13,7 @@ using namespace simit;
 // TODO: Create a more effective test suite the same way as how dense LA is
 //       tested, using parameterized tests, sparse literals and code assertions
 
-TEST(Program, addScalarFields) {
+TEST(Program, add) {
   std::string programText = R"(
     element Point
       x : float;
@@ -45,7 +45,7 @@ TEST(Program, addScalarFields) {
   ASSERT_EQ(84.0, x.get(p0));
 }
 
-TEST(Program, addVectorFields) {
+TEST(Program, add_blocked) {
   std::string programText = R"(
     element Point
       x : tensor[3](float);
@@ -297,8 +297,6 @@ TEST(Program, gemv_nw) {
   ASSERT_EQ(0.0, c.get(p2));
 }
 
-
-
 TEST(Program, gemv_assemble_from_points) {
   Program program;
   std::string programText = R"(
@@ -366,8 +364,6 @@ TEST(Program, gemv_assemble_from_points) {
   ASSERT_EQ(4.0, c.get(p1));
   ASSERT_EQ(0.0, c.get(p2));
 }
-
-
 
 TEST(Program, gemv_blocked) {
   Program program;
@@ -528,6 +524,88 @@ TEST(Program, gemv_blocked_nw) {
   TensorRef<double,2> c2 = c.get(p2);
   ASSERT_EQ(0.0, c2(0));
   ASSERT_EQ(0.0, c2(1));
+}
+
+TEST(Program, gemv_blocked_computed) {
+  Program program;
+  std::string programText = R"(
+    element Point
+      b : tensor[2](float);
+      c : tensor[2](float);
+      x : tensor[2](float);
+    end
+
+    element Spring
+    end
+
+    extern points  : set{Point};
+    extern springs : set{Spring}(points,points);
+
+    func dist_a(s : Spring, p : (Point*2)) ->
+        (M : tensor[points,points](tensor[2,2](float)))
+      M(p(0),p(0)) = p(0).x' * p(1).x;
+      M(p(0),p(1)) = p(0).x' * p(1).x;
+      M(p(1),p(0)) = p(0).x' * p(1).x;
+      M(p(1),p(1)) = p(0).x' * p(1).x;
+    end
+
+    proc gemv
+      A = map dist_a to springs with points reduce +;
+      points.c = A * points.b;
+    end
+  )";
+
+  // Points
+  Set<> points;
+  FieldRef<double,2> b = points.addField<double,2>("b");
+  FieldRef<double,2> c = points.addField<double,2>("c");
+  FieldRef<double,2> x = points.addField<double,2>("x");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  b.set(p0, {1.0, 2.0});
+  b.set(p1, {3.0, 4.0});
+  b.set(p2, {5.0, 6.0});
+
+  x.set(p0, {1.0, 2.0});
+  x.set(p1, {3.0, 4.0});
+  x.set(p2, {5.0, 6.0});
+
+  // Taint c
+  c.set(p0, {42.0, 42.0});
+  c.set(p2, {42.0, 42.0});
+
+  // Springs
+  Set<2> springs(points,points);
+  springs.addElement(p0,p1);
+  springs.addElement(p1,p2);
+
+  // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("gemv");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+  f->runSafe();
+
+  // Check that outputs are correct
+  // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
+  TensorRef<double,2> c0 = c.get(p0);
+  ASSERT_EQ(36.0, c0(0));
+  ASSERT_EQ(72.0, c0(1));
+
+  TensorRef<double,2> c1 = c.get(p1);
+  ASSERT_EQ(336.0, c1(0));
+  ASSERT_EQ(472.0, c1(1));
+
+  TensorRef<double,2> c2 = c.get(p2);
+  ASSERT_EQ(300.0, c2(0));
+  ASSERT_EQ(400.0, c2(1));
 }
 
 TEST(Program, gemv_inplace) {

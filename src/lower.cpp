@@ -804,9 +804,9 @@ public:
     componentType = indexExpr->type.toTensor()->componentType;
 
     initStmt = ReplaceRhsWithZero().mutate(computeStmt);
-    computeBlockStmt = SpecializeIndexExprs(&lvs).mutate(computeStmt);
+    blockComputeStmt = SpecializeIndexExprs(&lvs).mutate(computeStmt);
 
-    stmt = computeBlockStmt;
+    stmt = blockComputeStmt;
     apply(sig);
 
     Stmt result = stmt;
@@ -819,7 +819,7 @@ private:
   LoopVars lvs;
   ScalarType componentType;
   Stmt initStmt;
-  Stmt computeBlockStmt;
+  Stmt blockComputeStmt;
 
   Stmt stmt;
 
@@ -832,7 +832,7 @@ private:
       stmt = For::make(lvar, ldom, stmt);
     }
     else {
-      ReduceOverVar rov(computeBlockStmt, v->iv.getOperator());
+      ReduceOverVar rov(blockComputeStmt, v->iv.getOperator());
 
       Stmt loopBody = rov.mutate(stmt);
 
@@ -869,11 +869,13 @@ private:
     Expr nbrs = map->neighbors;
 
     // Inline the mapped function in the IndexExpr loop nests
+    Stmt funcBody = func.getBody();
     Stmt loopBody = InlineMappedFunction(lvar, func, target, nbrs, e->tensor,
-                                         computeBlockStmt).mutate(func.getBody());
+                                         blockComputeStmt).mutate(funcBody);
 
     // TODO: We should knock out redundant subexpressions in the loopBody before
     //       lowering the index expressions there
+    loopBody = flattenIndexExpressions(loopBody);
     loopBody = LowerIndexExpressions(ud).mutate(loopBody);
 
     Stmt loop = For::make(lvar, ldom, loopBody);
