@@ -17,11 +17,10 @@ extern springs : set{Spring}(points,points);
 
 func distribute_masses(s : Spring, p : (Point*2)) ->
     (M : tensor[points,points](tensor[3,3](float)), f : tensor[points](tensor[3](float)))
-  m = s.m;
-  M(p(0), p(0)) = 0.5*m*eye(3);
-  M(p(1), p(1)) = 0.5*m*eye(3);
-  f(p(0)) = 0.5*m*grav;
-  f(p(1)) = 0.5*m*grav;
+  M(p(0), p(0)) = 0.5*s.m*eye(3);
+  M(p(1), p(1)) = 0.5*s.m*eye(3);
+  f(p(0)) = 0.5*s.m*grav;
+  f(p(1)) = 0.5*s.m*grav;
 end
 
 func compute_stiffness(s : Spring, ps : (Point*2)) ->
