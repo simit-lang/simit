@@ -185,6 +185,12 @@ int main(int argc, const char* argv[]) {
       cout << func << endl << endl;;
     }
 
+    func = flattenIndexExpressions(func);
+    if (emitSimit) {
+      cout << "--- Flatten Index Expressions:" << endl;
+      cout << func << endl << endl;;
+    }
+
     func = lowerIndexExpressions(func);
     func = lowerMaps(func);
     if (emitSimit) {

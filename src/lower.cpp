@@ -19,6 +19,7 @@ namespace ir {
 
 Func lower(Func func) {
   func = insertTemporaries(func);
+  func = flattenIndexExpressions(func);
   func = lowerIndexExpressions(func);
   func = lowerMaps(func);
   func = lowerTensorAccesses(func);
@@ -133,6 +134,53 @@ private:
 
 Func insertTemporaries(Func func) {
   return InsertTemporaries().mutate(func);
+}
+
+
+class SubstituteIndexVars : public IRRewriter {
+public:
+  SubstituteIndexVars(map<IndexVar,IndexVar> subs) : subs(subs) {}
+
+private:
+  map<IndexVar,IndexVar> subs;
+
+  void visit(const IndexedTensor *op) {
+    vector<IndexVar> indexVars;
+    for (auto &iv : op->indexVars) {
+      indexVars.push_back((subs.find(iv)!=subs.end()) ? subs.at(iv) : iv);
+    }
+    expr = IndexedTensor::make(op->tensor, indexVars);
+  }
+};
+
+/// Flattens nested IndexExprs.
+/// E.g. ({i,j} (({i} a{i}){i} * a{j})) -> ({i,j} (a{i} * a{j}))
+class FlattenIndexExpressions : public IRRewriter {
+private:
+  void visit(const IndexedTensor *op) {
+    // IndexExprs that are nested inside another IndexExpr must necessarily
+    // produce a tensor and therefore be indexed through an IndexedTensor expr.
+    if (isa<IndexExpr>(op->tensor)) {
+      Expr tensor = mutate(op->tensor);
+      const IndexExpr *indexExpr = to<IndexExpr>(tensor);
+      assert(indexExpr->resultVars.size() == op->indexVars.size());
+
+      map<IndexVar,IndexVar> substitutions;
+      for (size_t i=0; i < indexExpr->resultVars.size(); ++i) {
+        pair<IndexVar,IndexVar> sub(indexExpr->resultVars[i], op->indexVars[i]);
+        substitutions.insert(sub);
+      }
+
+      expr = SubstituteIndexVars(substitutions).mutate(indexExpr->value);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+};
+
+Func flattenIndexExpressions(Func func) {
+  return FlattenIndexExpressions().mutate(func);
 }
 
 
@@ -302,10 +350,8 @@ private:
   }
 
   void visit(const IndexedTensor *op) {
-    // TODO: Flatten IndexExpr. E.g. ((i) A(i,j) *  ((m) c(m)+b(m))(j) )
-    if (isa<IndexExpr>(op->tensor)) {
-      NOT_SUPPORTED_YET;
-    }
+    assert(!isa<IndexExpr>(op->tensor) &&
+           "index expressions should have been lowered by now");
 
     if (op->indexVars.size() == 0) {
       expr = op->tensor;
