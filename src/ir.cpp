@@ -24,10 +24,10 @@ static size_t getTensorByteSize(const TensorType *tensorType) {
 }
 
 // class Expr
-Expr::Expr(int val) : IntrusivePtr(Literal::make(Int(), &val)) {
+Expr::Expr(int val) : IntrusivePtr(Literal::make(Int, &val)) {
 }
 
-Expr::Expr(double val) : IntrusivePtr(Literal::make(Float(), &val)) {
+Expr::Expr(double val) : IntrusivePtr(Literal::make(Float, &val)) {
 }
 
 bool operator==(const Expr &l, const Expr &r) {
@@ -40,20 +40,20 @@ bool operator!=(const Expr &l, const Expr &r) {
 
 // class Intrinsics
 Func Intrinsics::sin =
-    Func("sin", {Var("x", Float())}, {Var("r", Float())}, Func::Intrinsic);
+    Func("sin", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
 Func Intrinsics::cos =
-    Func("cos", {Var("x", Float())}, {Var("r", Float())}, Func::Intrinsic);
+    Func("cos", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
 Func Intrinsics::atan2 =
-    Func("atan2", {Var("y", Float()), Var("x", Float())},
-                  {Var("r", Float())}, Func::Intrinsic);
+    Func("atan2", {Var("y", Float), Var("x", Float)},
+                  {Var("r", Float)}, Func::Intrinsic);
 Func Intrinsics::sqrt =
-    Func("sqrt", {Var("x", Float())}, {Var("r", Float())}, Func::Intrinsic);
+    Func("sqrt", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
 Func Intrinsics::log =
-    Func("log", {Var("x", Float())}, {Var("r", Float())}, Func::Intrinsic);
+    Func("log", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
 Func Intrinsics::exp =
-    Func("exp", {Var("x", Float())}, {Var("r", Float())}, Func::Intrinsic);
+    Func("exp", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
 
-Func Intrinsics::solve = Func("expr", {}, {Var("r", Float())}, Func::Intrinsic);
+Func Intrinsics::solve = Func("expr", {}, {Var("r", Float)}, Func::Intrinsic);
 
 std::map<std::string, Func> Intrinsics::byName = {{"sin",sin},
                                                   {"cos",cos},

@@ -66,10 +66,10 @@ Type simitType(const llvm::Type *type) {
   }
 
   if (type->isDoubleTy()) {
-    return Float();
+    return Float;
   }
   else if (type->isIntegerTy()) {
-    return Int();
+    return Int;
   }
   else {
     UNREACHABLE;

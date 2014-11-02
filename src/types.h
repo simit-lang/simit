@@ -62,7 +62,7 @@ struct ScalarType {
   enum Kind {Int, Float};
 
   ScalarType() : kind(Int) {}
-  explicit ScalarType(Kind kind) : kind(kind) {}
+  ScalarType(Kind kind) : kind(kind) {}
 
   Kind kind;
 
@@ -121,14 +121,6 @@ struct TensorType : TypeNode {
     return type;
   }
 };
-
-inline Type Int() {
-  return TensorType::make(ScalarType(ScalarType::Int));
-}
-
-inline Type Float() {
-  return TensorType::make(ScalarType(ScalarType::Float));
-}
 
 struct Field {
   Field(std::string name, Type type) : name(name), type(type) {}
@@ -231,6 +223,18 @@ std::ostream &operator<<(std::ostream &os, const TensorType &);
 std::ostream &operator<<(std::ostream &os, const ElementType &);
 std::ostream &operator<<(std::ostream &os, const SetType &);
 std::ostream &operator<<(std::ostream &os, const TupleType &);
+
+// Common types
+const Type Int = TensorType::make(ScalarType(ScalarType::Int));
+const Type Float = TensorType::make(ScalarType(ScalarType::Float));
+
+const Type vec3f = TensorType::make(ScalarType::Float,
+                                    {IndexDomain(IndexSet(3))});
+                                    
+const Type mat3f = TensorType::make(ScalarType::Float,
+                                    {IndexDomain(IndexSet(3)),
+                                     IndexDomain(IndexSet(3))});
+
 
 }} // namespace simit::ir
 

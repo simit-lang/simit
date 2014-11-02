@@ -27,9 +27,9 @@ std::vector<T> toVectorOf(Expr expr) {
 }
 
 TEST(Codegen, add0) {
-  Var a("a", Float());
-  Var b("b", Float());
-  Var c("c", Float());
+  Var a("a", Float);
+  Var b("b", Float);
+  Var c("c", Float);
 
   Expr axb = Add::make(a,b);
   Stmt body = AssignStmt::make(c, axb);
@@ -41,7 +41,7 @@ TEST(Codegen, add0) {
 
   Expr aArg = 2.0;
   Expr bArg = 4.1;
-  Expr cRes = Literal::make(Float());
+  Expr cRes = Literal::make(Float);
 
   function->bind("a", &aArg);
   function->bind("b", &bArg);
@@ -54,8 +54,8 @@ TEST(Codegen, add0) {
 }
 
 TEST(Codegen, sin) {
-  Var a("a", Float());
-  Var c("c", Float());
+  Var a("a", Float);
+  Var c("c", Float);
 
   Expr sin_a = Call::make(Intrinsics::sin, {a});
   Stmt body = AssignStmt::make(c, sin_a);
@@ -79,8 +79,8 @@ TEST(Codegen, sin) {
 }
 
 TEST(Codegen, cos) {
-  Var a("a", Float());
-  Var c("c", Float());
+  Var a("a", Float);
+  Var c("c", Float);
 
   Expr cos_a = Call::make(Intrinsics::cos, {a});
   Stmt body = AssignStmt::make(c, cos_a);
@@ -104,8 +104,8 @@ TEST(Codegen, cos) {
 }
 
 TEST(Codegen, sqrt) {
-  Var a("a", Float());
-  Var c("c", Float());
+  Var a("a", Float);
+  Var c("c", Float);
 
   Expr sqrt_a = Call::make(Intrinsics::sqrt, {a});
   Stmt body = AssignStmt::make(c, sqrt_a);
@@ -129,8 +129,8 @@ TEST(Codegen, sqrt) {
 }
 
 TEST(Codegen, log) {
-  Var a("a", Float());
-  Var c("c", Float());
+  Var a("a", Float);
+  Var c("c", Float);
 
   Expr log_a = Call::make(Intrinsics::log, {a});
   Stmt body = AssignStmt::make(c, log_a);
@@ -154,8 +154,8 @@ TEST(Codegen, log) {
 }
 
 TEST(Codegen, exp) {
-  Var a("a", Float());
-  Var c("c", Float());
+  Var a("a", Float);
+  Var c("c", Float);
 
   Expr exp_a = Call::make(Intrinsics::exp, {a});
   Stmt body = AssignStmt::make(c, exp_a);
@@ -179,9 +179,9 @@ TEST(Codegen, exp) {
 }
 
 TEST(Codegen, atan2) {
-  Var a("a", Float());
-  Var b("b", Float());
-  Var c("c", Float());
+  Var a("a", Float);
+  Var b("b", Float);
+  Var c("c", Float);
 
   Expr atan2_ab = Call::make(Intrinsics::atan2, {a,b});
   Stmt body = AssignStmt::make(c, atan2_ab);

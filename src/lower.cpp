@@ -238,7 +238,7 @@ private:
   map<Var, pair<Var,ForDomain>> edgeLoopVars;
 
   void visit(const SIGVertex *v) {
-    Var lvar(v->iv.getName(), Int());
+    Var lvar(v->iv.getName(), Int);
 
     // The vertex is unconstrained and loops over it's whole domain.
     ForDomain ldom = v->iv.getDomain().getIndexSets()[0];
@@ -251,7 +251,7 @@ private:
     for (SIGVertex *nbr : e->endpoints) {
       varName += nbr->iv.getName();
     }
-    Var lvar(varName, Int());
+    Var lvar(varName, Int);
 
     VarDef varDef = ud->getDef(e->tensor);
     assert(varDef.getKind() == VarDef::Map);
