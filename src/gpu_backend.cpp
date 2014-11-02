@@ -143,13 +143,13 @@ void GPUBackend::visit(const ir::Add *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Sub *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Mul *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Div *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::AssignStmt *op) {
   LLVMBackend::visit(op);

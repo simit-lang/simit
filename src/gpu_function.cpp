@@ -135,22 +135,19 @@ const ir::Literal& GPUFunction::getArgData(Actual& actual) {
 }
 
 void GPUFunction::pushArg(const ir::Literal& literal, CUdeviceptr &devBuffer) {
-  std::cout << "Pushing size: " << literal.size << std::endl;
   std::cout << "[";
   char* data = reinterpret_cast<char*>(literal.data);
   for (int i = 0; i < literal.size; ++i) {
     if (i != 0) std::cout << ",";
     std::cout << std::hex << (int) data[i];
   }
-  std::cout << std::endl;
-  std::cout << "cuDevBuffer: " << devBuffer << std::endl;
+  std::cout << "]" << std::endl;
   checkCudaErrors(cuMemcpyHtoD(devBuffer, literal.data, literal.size));
 }
 
 void GPUFunction::pullArg(const ir::Literal& literal, CUdeviceptr &devBuffer) {
-  std::cout << "cuDevBuffer: " << devBuffer << std::endl;
   checkCudaErrors(cuMemcpyDtoH(literal.data, devBuffer, literal.size));
-  std::cout << "Pulled: [" << std::endl;
+  std::cout << "Pulled: [";
   for (int i = 0; i < literal.size; ++i) {
     if (i != 0) std::cout << ",";
     std::cout << std::hex << (int) ((char*)literal.data)[i];
@@ -243,7 +240,6 @@ simit::Function::FuncType GPUFunction::init(
 
   return [this, function, &formals, &actuals,
           cudaModule, context](){
-    std::cout << "Lambda start" << std::endl << std::flush;
     // Push data to GPU
     std::map<std::string, CUdeviceptr> kernelParams;
     int width = 1;
@@ -272,8 +268,6 @@ simit::Function::FuncType GPUFunction::init(
 	      << gridSizeY << ","
 	      << gridSizeZ << ")" << std::endl;
 
-    std::cout << "Kernel params size: " << kernelParams.size()
-              << std::endl << std::flush;
     void **kernelParamsArr = new void*[kernelParams.size()];
     int i = 0; 
     for (const std::string& formal : formals) {
@@ -284,22 +278,14 @@ simit::Function::FuncType GPUFunction::init(
                                    blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
                                    kernelParamsArr, NULL));
 
-    std::cout << "Pull result data back" << std::endl << std::flush;
     // TODO(gkanwar): Don't pull back input args
     for (const std::string &formal : formals) {
-      std::cout << "Result " << formal << std::endl << std::flush;
       assert(actuals.find(formal) != actuals.end());
       Actual &actual = actuals.at(formal);
-      std::cout << "Found actual for " << formal << std::endl << std::flush;
       const ir::Literal &literal = getArgData(actual);
-      std::cout << "Found literal for " << formal << std::endl << std::flush;
-      std::cout << "Does the formal exist in the kernel params? "
-                << (kernelParams.find(formal) != kernelParams.end()) << std::endl << std::flush;
       CUdeviceptr &devPtr = kernelParams[formal];
-      std::cout << "Pulling " << formal << ", literal data: " << literal.data << std::endl << std::flush;
       pullArg(literal, devPtr);
     }
-    std::cout << "Done" << std::endl << std::flush;
 
     // Clean up
     for (auto kv : kernelParams) {
