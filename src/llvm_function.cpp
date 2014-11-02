@@ -132,9 +132,8 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
 
           // Fields
           for (auto &field : setType->elementType.toElement()->fields) {
-            assert(field.second.type.isTensor());
-            setData.push_back(llvmPtr(field.second.type,
-                                      getFieldPtr(set, field.first)));
+            assert(field.type.isTensor());
+            setData.push_back(llvmPtr(field.type, getFieldPtr(set,field.name)));
           }
 
           llvm::Value *llvmSet= llvm::ConstantStruct::get(llvmSetType, setData);

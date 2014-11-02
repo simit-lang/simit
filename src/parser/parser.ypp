@@ -160,11 +160,11 @@
 
   ir::Func *function;
 
-  ir::Type                         *type;
-  std::pair<std::string,ir::Field> *field;
-  std::map<std::string,ir::Field>  *fields;
-  std::vector<ir::IndexSet>        *indexSets;
-  ir::IndexSet                     *indexSet;
+  ir::Type                      *type;
+  ir::Field                     *field;
+  std::vector<ir::Field>        *fields;
+  std::vector<ir::IndexSet>     *indexSets;
+  ir::IndexSet                  *indexSet;
 
   ir::ScalarType                *scalarType;
 
@@ -309,7 +309,7 @@ extern
 element_type_decl
   : "element" IDENT field_decl_list "end" {
     string name = convertAndFree($IDENT);
-    unique_ptr<std::map<string,Field>> fields($field_decl_list);
+    unique_ptr<vector<Field>> fields($field_decl_list);
 
     if (ctx->containsElementType(name)) {
       REPORT_ERROR("struct redefinition (" + name + ")", @element_type_decl);
@@ -321,12 +321,11 @@ element_type_decl
 %type <fields> field_decl_list;
 field_decl_list
   : /* empty */ {
-    $$ = new map<string,Field>;
+    $$ = new vector<Field>;
   }
   | field_decl_list field_decl {
     $$ = $1;
-    $field_decl->second.location = $$->size();
-    $$->insert(*$field_decl);
+    $$->push_back(*$field_decl);
     delete $field_decl;
   }
 
@@ -335,7 +334,7 @@ field_decl
   : IDENT ":" tensor_type  ";" {
     std::string name = convertAndFree($IDENT);
     auto tensorType = convertAndDelete($tensor_type);
-    $$ = new pair<string,Field>(name, tensorType);
+    $$ = new Field(name, tensorType);
   }
 
 
@@ -972,7 +971,7 @@ field_read_expr
     }
     assert(elemType);
 
-    if (elemType->fields.find(fieldName) == elemType->fields.end()) {
+    if (!elemType->hasField(fieldName)) {
       REPORT_ERROR("undefined field '" + toString(elemOrSet)+"."+fieldName+ "'",
                    @fieldName);
     }

@@ -51,17 +51,18 @@ void Function::bind(const std::string &argName, SetBase *set) {
   ir::Type argType = actuals[argName].getType();
   assert(argType.isSet() && "argument is not a set");
   const ir::SetType *argSetType = argType.toSet();
-  auto &argFieldsMap = argSetType->elementType.toElement()->fields;
+//  auto &argFieldsMap = argSetType->elementType.toElement()->fields;
+  const ir::ElementType *elemType = argSetType->elementType.toElement();
 
-  for (const std::pair<std::string,int> &field : set->fieldNames) {
-    assert(argFieldsMap.find(field.first) != argFieldsMap.end() &&
-           "Could not find field in set");
+  // Type check
+  for (size_t i=0; i < set->fields.size(); ++i) {
+    SetBase::FieldData *fieldData = set->fields[i];
+    assert(elemType->hasField(fieldData->name) && "Field not found in set");
 
-    SetBase::FieldData *fieldData = set->fields[field.second];
 
     const SetBase::FieldData::TensorType *setFieldType = fieldData->type;
-    const ir::TensorType *argFieldType =
-        argFieldsMap.at(field.first).type.toTensor();
+    const ir::TensorType *elemFieldType =
+        elemType->field(fieldData->name).type.toTensor();
 
     ir::ScalarType setFieldTypeComponentType;
     switch (setFieldType->getComponentType()) {
@@ -73,13 +74,13 @@ void Function::bind(const std::string &argName, SetBase *set) {
         break;
     }
 
-    assert(setFieldTypeComponentType == argFieldType->componentType &&
+    assert(setFieldTypeComponentType == elemFieldType->componentType &&
            "set type does not match function argument type");
-    assert(setFieldType->getOrder() == argFieldType->order() &&
+    assert(setFieldType->getOrder() == elemFieldType->order() &&
            "set type does not match function argument type");
 
-    const vector<ir::IndexDomain> &argFieldTypeDims = argFieldType->dimensions;
-    for (size_t i=0; i < argFieldType->order(); ++i) {
+    const vector<ir::IndexDomain> &argFieldTypeDims = elemFieldType->dimensions;
+    for (size_t i=0; i < elemFieldType->order(); ++i) {
       assert(argFieldTypeDims[i].getIndexSets().size() == 1 &&
              "set type does not match function argument type");
 

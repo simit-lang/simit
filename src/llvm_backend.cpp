@@ -603,7 +603,8 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
 
   llvm::Value *setOrElemValue = compile(elemOrSet);
 
-  unsigned fieldLoc = fieldsOffset + elemType->fields.at(fieldName).location;
+  assert(elemType->hasField(fieldName));
+  unsigned fieldLoc = fieldsOffset + elemType->fieldNames.at(fieldName);
   return builder->CreateExtractValue(setOrElemValue, {fieldLoc},
                                      setOrElemValue->getName()+"."+fieldName);
 }

@@ -189,11 +189,11 @@ namespace  simit { namespace internal  {
 
   ir::Func *function;
 
-  ir::Type                         *type;
-  std::pair<std::string,ir::Field> *field;
-  std::map<std::string,ir::Field>  *fields;
-  std::vector<ir::IndexSet>        *indexSets;
-  ir::IndexSet                     *indexSet;
+  ir::Type                      *type;
+  ir::Field                     *field;
+  std::vector<ir::Field>        *fields;
+  std::vector<ir::IndexSet>     *indexSets;
+  ir::IndexSet                  *indexSet;
 
   ir::ScalarType                *scalarType;
 

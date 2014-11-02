@@ -303,9 +303,9 @@ TEST(Program, gemv_assemble_from_points) {
   Program program;
   std::string programText = R"(
     element Point
-      a : float;
       b : float;
       c : float;
+      a : float;
     end
 
     element Spring

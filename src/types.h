@@ -6,8 +6,11 @@
 #include <string>
 #include <vector>
 #include <map>
+#include <iostream>
 
 #include "domain.h"
+
+// TODO: Change types to encapsulated classes.
 
 namespace simit {
 namespace ir {
@@ -128,24 +131,37 @@ inline Type Float() {
 }
 
 struct Field {
-  Field(Type type) : type(type), location(-1) {}
+  Field(std::string name, Type type) : name(name), type(type) {}
 
+  std::string name;
   Type type;
-
-  /// The fields location in the element
-  unsigned location;
 };
 
 struct ElementType : TypeNode {
   std::string name;
 
   /// Maps field names to their types and locations in the element
-  std::map<std::string,Field> fields;
+  std::vector<Field> fields;
 
-  static Type make(std::string name, std::map<std::string,Field> fields) {
+  /// Lookup data structure, use the field method to access fields by names.
+  std::map<std::string,unsigned> fieldNames;
+
+  bool hasField(std::string fieldName) const {
+    return fieldNames.find(fieldName) != fieldNames.end();
+  }
+
+  const Field &field(const std::string &fieldName) const {
+    assert(hasField(fieldName) && "Undefined field");
+    return fields[fieldNames.at(fieldName)];
+  }
+
+  static Type make(std::string name, std::vector<Field> fields) {
     ElementType *type = new ElementType;
     type->name = name;
     type->fields = fields;
+    for (size_t i=0; i < fields.size(); ++i) {
+      type->fieldNames[fields[i].name] = i;
+    }
     return type;
   }
 };
@@ -159,6 +175,8 @@ struct SetType : TypeNode {
   /// Endpoint sets.  These are stored as pointers to break an include cycle
   /// between this file and ir.h.
   std::vector<Expr*> endpointSets;
+
+  // TODO: Add method to retrieve a set field (compute from elementType fields)
 
   static Type make(Type elementType, const std::vector<Expr> &endpointSets);
   ~SetType();

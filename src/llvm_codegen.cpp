@@ -93,8 +93,8 @@ llvm::StructType *createLLVMType(const ir::SetType *setType) {
   }
 
   // Fields
-  for (std::pair<std::string,Field> field : elemType->fields) {
-    llvmFieldTypes.push_back(createLLVMType(field.second.type));
+  for (const Field &field : elemType->fields) {
+    llvmFieldTypes.push_back(createLLVMType(field.type));
   }
   return llvm::StructType::get(LLVM_CONTEXT, llvmFieldTypes);
 }

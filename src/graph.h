@@ -81,7 +81,7 @@ public:
   FieldRef<T, dimensions...> addField(const std::string &name) {
     FieldData::TensorType *type =
         new FieldData::TensorType(typeOf<T>(), {dimensions...});
-    FieldData *fieldData = new FieldData(type);
+    FieldData *fieldData = new FieldData(name, type);
     fieldData->data = calloc(capacity, fieldData->sizeOfType);
     fields.push_back(fieldData);
     fieldNames[name] = fields.size()-1;
@@ -222,10 +222,12 @@ private:
       size_t size;
     };
 
+    std::string name;
     const TensorType *type;
     size_t sizeOfType;
     
-    FieldData(const TensorType *type) : type(type), data(nullptr) {
+    FieldData(const std::string &name, const TensorType *type)
+        : name(name), type(type), data(nullptr) {
       sizeOfType = componentSize(type->getComponentType()) * type->getSize();
     }
 
