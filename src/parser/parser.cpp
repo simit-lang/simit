@@ -1746,7 +1746,7 @@ namespace  simit { namespace internal  {
   case 77:
 
     {
-    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    assert((yystack_[2].value.expr) && (yystack_[0].value.expr));
     IRBuilder *builder = ctx->getBuilder();
 
     Expr l = convertAndDelete((yystack_[2].value.expr));
@@ -1787,6 +1787,7 @@ namespace  simit { namespace internal  {
     }
     // Matrix-Vector
     else if (ltype->order() == 2 && rtype->order() == 1) {
+      // TODO: Figure out how column vectors should be handled here
       if (ltype->dimensions[1] != rtype->dimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
@@ -1794,7 +1795,8 @@ namespace  simit { namespace internal  {
     }
     // Vector-Matrix
     else if (ltype->order() == 1 && rtype->order() == 2) {
-      if (ltype->dimensions[0] != rtype->dimensions[0]){
+      // TODO: Figure out how column vectors should be handled here
+      if (ltype->dimensions[0] != rtype->dimensions[0]) {
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
       (yylhs.value.expr) = new Expr(builder->gevm(l,r));
@@ -3177,15 +3179,15 @@ namespace  simit { namespace internal  {
      478,   479,   480,   481,   482,   487,   526,   578,   582,   589,
      592,   605,   608,   614,   619,   639,   659,   665,   670,   672,
      676,   678,   684,   687,   715,   718,   726,   727,   728,   729,
-     730,   731,   732,   738,   758,   767,   775,   787,   853,   859,
-     887,   892,   901,   902,   903,   904,   910,   916,   922,   928,
-     934,   940,   951,   985,   986,   987,   993,  1027,  1049,  1052,
-    1058,  1064,  1075,  1076,  1077,  1078,  1082,  1094,  1098,  1108,
-    1117,  1129,  1141,  1145,  1148,  1190,  1200,  1205,  1213,  1216,
-    1230,  1236,  1242,  1245,  1295,  1299,  1300,  1304,  1308,  1315,
-    1326,  1333,  1337,  1341,  1355,  1359,  1374,  1378,  1385,  1392,
-    1396,  1400,  1414,  1418,  1433,  1437,  1444,  1448,  1455,  1458,
-    1464,  1467,  1474
+     730,   731,   732,   738,   758,   767,   775,   787,   855,   861,
+     889,   894,   903,   904,   905,   906,   912,   918,   924,   930,
+     936,   942,   953,   987,   988,   989,   995,  1029,  1051,  1054,
+    1060,  1066,  1077,  1078,  1079,  1080,  1084,  1096,  1100,  1110,
+    1119,  1131,  1143,  1147,  1150,  1192,  1202,  1207,  1215,  1218,
+    1232,  1238,  1244,  1247,  1297,  1301,  1302,  1306,  1310,  1317,
+    1328,  1335,  1339,  1343,  1357,  1361,  1376,  1380,  1387,  1394,
+    1398,  1402,  1416,  1420,  1435,  1439,  1446,  1450,  1457,  1460,
+    1466,  1469,  1476
   };
 
   // Print the state stack on the debug stream.

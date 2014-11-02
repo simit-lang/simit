@@ -785,7 +785,7 @@ linear_algebra_expr
     $$ = new Expr(ctx->getBuilder()->binaryElwiseExpr(l, $2, r));
   }
   | expr "*" expr {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    assert($1 && $3);
     IRBuilder *builder = ctx->getBuilder();
 
     Expr l = convertAndDelete($1);
@@ -826,6 +826,7 @@ linear_algebra_expr
     }
     // Matrix-Vector
     else if (ltype->order() == 2 && rtype->order() == 1) {
+      // TODO: Figure out how column vectors should be handled here
       if (ltype->dimensions[1] != rtype->dimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
@@ -833,7 +834,8 @@ linear_algebra_expr
     }
     // Vector-Matrix
     else if (ltype->order() == 1 && rtype->order() == 2) {
-      if (ltype->dimensions[0] != rtype->dimensions[0]){
+      // TODO: Figure out how column vectors should be handled here
+      if (ltype->dimensions[0] != rtype->dimensions[0]) {
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
       $$ = new Expr(builder->gevm(l,r));

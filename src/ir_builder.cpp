@@ -170,6 +170,7 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
 
   assert(ltype->order() == 2 && rtype->order() == 1);
   assert(ltype->dimensions[1] == rtype->dimensions[0]);
+//  assert(rtype->isColumnVector);
 
   IndexVarFactory factory;
   auto i = factory.createIndexVar(ltype->dimensions[0]);
@@ -179,7 +180,12 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
   Expr b = IndexedTensor::make(r, {j});
   Expr val = Mul::make(a, b);
 
-  return IndexExpr::make({i}, val);
+  Expr gemv = IndexExpr::make({i}, val);
+
+  // This is a hack and we should find another solution.
+  const_cast<TensorType*>(gemv.type().toTensor())->isColumnVector = true;
+
+  return gemv;
 }
 
 Expr IRBuilder::gevm(Expr l, Expr r) {
