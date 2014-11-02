@@ -16,7 +16,6 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-
 Func lower(Func func) {
   func = insertTemporaries(func);
   func = flattenIndexExpressions(func);
@@ -24,6 +23,38 @@ Func lower(Func func) {
   func = lowerMaps(func);
   func = lowerTensorAccesses(func);
   return func;
+}
+
+
+static Func replaceBody(Func func, Stmt body) {
+  return Func(func.getName(), func.getArguments(),
+              func.getResults(), body, func.getKind(), func.getTemporaries());
+}
+
+static Stmt flattenIndexExpressions(Stmt stmt);
+static Stmt lowerIndexExpressions(Stmt stmt, UseDef ud);
+static Stmt lowerMaps(Stmt stmt);
+static Stmt lowerTensorAccesses(Stmt stmt);
+
+Func flattenIndexExpressions(Func func) {
+  Stmt body = flattenIndexExpressions(func.getBody());
+  return replaceBody(func, body);
+}
+
+Func lowerIndexExpressions(Func func) {
+  UseDef ud(func);
+  Stmt body = lowerIndexExpressions(func.getBody(), ud);
+  return replaceBody(func, body);
+}
+
+Func lowerMaps(Func func) {
+  Stmt body = lowerMaps(func.getBody());
+  return replaceBody(func, body);
+}
+
+Func lowerTensorAccesses(Func func) {
+  Stmt body = lowerTensorAccesses(func.getBody());
+  return replaceBody(func, body);
 }
 
 
@@ -179,10 +210,9 @@ private:
   }
 };
 
-Func flattenIndexExpressions(Func func) {
-  return FlattenIndexExpressions().mutate(func);
+static Stmt flattenIndexExpressions(Stmt stmt) {
+  return FlattenIndexExpressions().mutate(stmt);
 }
-
 
 class LoopVars : public SIGVisitor {
 public:
@@ -860,9 +890,8 @@ Stmt LowerIndexExpressions::lower(Stmt stmt) {
   return LoopBuilder(ud).create(stmt);
 }
 
-Func lowerIndexExpressions(Func func) {
-  UseDef ud(func);
-  return LowerIndexExpressions(&ud).mutate(func);
+static Stmt lowerIndexExpressions(Stmt stmt, UseDef ud) {
+  return LowerIndexExpressions(&ud).mutate(stmt);
 }
 
 
@@ -874,9 +903,10 @@ private:
   }
 };
 
-Func lowerMaps(Func func) {
-  return LowerMaps().mutate(func);
+static Stmt lowerMaps(Stmt stmt) {
+  return LowerMaps().mutate(stmt);
 }
+
 
 Expr createLengthComputation(const IndexSet &indexSet) {
   return Length::make(indexSet);
@@ -1035,8 +1065,8 @@ class LowerTensorAccesses : public IRRewriter {
   }
 };
 
-Func lowerTensorAccesses(Func func) {
-  return LowerTensorAccesses().mutate(func);
+static Stmt lowerTensorAccesses(Stmt stmt) {
+  return LowerTensorAccesses().mutate(stmt);
 }
 
 }}
