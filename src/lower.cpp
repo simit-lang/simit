@@ -31,11 +31,6 @@ static Func replaceBody(Func func, Stmt body) {
               func.getResults(), body, func.getKind(), func.getTemporaries());
 }
 
-static Stmt flattenIndexExpressions(Stmt stmt);
-static Stmt lowerIndexExpressions(Stmt stmt, UseDef ud);
-static Stmt lowerMaps(Stmt stmt);
-static Stmt lowerTensorAccesses(Stmt stmt);
-
 Func flattenIndexExpressions(Func func) {
   Stmt body = flattenIndexExpressions(func.getBody());
   return replaceBody(func, body);
@@ -210,7 +205,11 @@ private:
   }
 };
 
-static Stmt flattenIndexExpressions(Stmt stmt) {
+Expr flattenIndexExpressions(Expr expr) {
+  return FlattenIndexExpressions().mutate(expr);
+}
+
+Stmt flattenIndexExpressions(Stmt stmt) {
   return FlattenIndexExpressions().mutate(stmt);
 }
 
@@ -890,7 +889,7 @@ Stmt LowerIndexExpressions::lower(Stmt stmt) {
   return LoopBuilder(ud).create(stmt);
 }
 
-static Stmt lowerIndexExpressions(Stmt stmt, UseDef ud) {
+Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud) {
   return LowerIndexExpressions(&ud).mutate(stmt);
 }
 
@@ -903,7 +902,7 @@ private:
   }
 };
 
-static Stmt lowerMaps(Stmt stmt) {
+Stmt lowerMaps(Stmt stmt) {
   return LowerMaps().mutate(stmt);
 }
 
@@ -1065,7 +1064,7 @@ class LowerTensorAccesses : public IRRewriter {
   }
 };
 
-static Stmt lowerTensorAccesses(Stmt stmt) {
+Stmt lowerTensorAccesses(Stmt stmt) {
   return LowerTensorAccesses().mutate(stmt);
 }
 
