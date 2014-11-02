@@ -29,6 +29,7 @@ std::string UniqueNameGenerator::getName(const std::string &suggestion) {
   }
 }
 
+
 // class IndexVarFactory
 IndexVar IndexVarFactory::createIndexVar(const IndexDomain &domain) {
   return IndexVar(makeName(), domain);
@@ -45,19 +46,6 @@ std::string IndexVarFactory::makeName() {
   name[1] = '\0';
   nameID++;
   return std::string(name);
-}
-
-std::vector<IndexVar> indexVars(const IndexVar &v1) {
-  std::vector<IndexVar> idxVars;
-  idxVars.push_back(v1);
-  return idxVars;
-}
-
-std::vector<IndexVar> indexVars(const IndexVar &v1, const IndexVar &v2) {
-  std::vector<IndexVar> idxVars;
-  idxVars.push_back(v1);
-  idxVars.push_back(v2);
-  return idxVars;
 }
 
 
@@ -153,8 +141,8 @@ Expr IRBuilder::innerProduct(Expr l, Expr r) {
   IndexVarFactory factory;
   auto i = factory.createIndexVar(ltype->dimensions[0], ReductionOperator::Sum);
 
-  Expr a = IndexedTensor::make(l, indexVars(i));
-  Expr b = IndexedTensor::make(r, indexVars(i));
+  Expr a = IndexedTensor::make(l, {i});
+  Expr b = IndexedTensor::make(r, {i});
   Expr val = Mul::make(a, b);
 
   std::vector<IndexVar> none;
@@ -169,11 +157,11 @@ Expr IRBuilder::outerProduct(Expr l, Expr r) {
   auto i = factory.createIndexVar(ltype->dimensions[0]);
   auto j = factory.createIndexVar(ltype->dimensions[0]);
 
-  Expr a = IndexedTensor::make(l, indexVars(i));
-  Expr b = IndexedTensor::make(r, indexVars(j));
+  Expr a = IndexedTensor::make(l, {i});
+  Expr b = IndexedTensor::make(r, {j});
   Expr val = Mul::make(a, b);
 
-  return IndexExpr::make(indexVars(i,j), val);
+  return IndexExpr::make({i,j}, val);
 }
 
 Expr IRBuilder::gemv(Expr l, Expr r) {
@@ -187,11 +175,11 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
   auto i = factory.createIndexVar(ltype->dimensions[0]);
   auto j = factory.createIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
 
-  Expr a = IndexedTensor::make(l, indexVars(i, j));
-  Expr b = IndexedTensor::make(r, indexVars(j));
+  Expr a = IndexedTensor::make(l, {i, j});
+  Expr b = IndexedTensor::make(r, {j});
   Expr val = Mul::make(a, b);
 
-  return IndexExpr::make(indexVars(i), val);
+  return IndexExpr::make({i}, val);
 }
 
 Expr IRBuilder::gevm(Expr l, Expr r) {
@@ -205,11 +193,11 @@ Expr IRBuilder::gevm(Expr l, Expr r) {
   auto i = factory.createIndexVar(rtype->dimensions[1]);
   auto j = factory.createIndexVar(rtype->dimensions[0], ReductionOperator::Sum);
 
-  Expr a = IndexedTensor::make(l, indexVars(j));
-  Expr b = IndexedTensor::make(r, indexVars(j,i));
+  Expr a = IndexedTensor::make(l, {j});
+  Expr b = IndexedTensor::make(r, {j,i});
   Expr val = Mul::make(a, b);
 
-  return IndexExpr::make(indexVars(i), val);
+  return IndexExpr::make({i}, val);
 }
 
 Expr IRBuilder::gemm(Expr l, Expr r) {
@@ -224,11 +212,11 @@ Expr IRBuilder::gemm(Expr l, Expr r) {
   auto j = factory.createIndexVar(rtype->dimensions[1]);
   auto k = factory.createIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
 
-  Expr a = IndexedTensor::make(l, indexVars(i,k));
-  Expr b = IndexedTensor::make(r, indexVars(k,j));
+  Expr a = IndexedTensor::make(l, {i,k});
+  Expr b = IndexedTensor::make(r, {k,j});
   Expr val = Mul::make(a, b);
 
-  return IndexExpr::make(indexVars(i,j), val);
+  return IndexExpr::make({i,j}, val);
 }
 
 Expr IRBuilder::transposedMatrix(Expr mat) {
