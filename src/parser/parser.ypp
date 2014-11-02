@@ -681,7 +681,23 @@ elif_clauses
   }
 
 for_stmt
-  : "for" IDENT "in" index_set stmt_block BLOCKEND
+  : for_stmt_header stmt_block for_stmt_footer
+
+for_stmt_header
+  : "for" IDENT "in" index_set {
+    string varName = convertAndFree($IDENT);
+    Var var(varName, Int);
+    ctx->scope();
+
+    // If we need to write to loop variables, then that should be added as a
+    // separate loop structure (that can't be vectorized easily)
+    ctx->addSymbol(varName, var, Symbol::Read);
+  }
+
+for_stmt_footer
+  : BLOCKEND {
+    ctx->unscope();
+  }
 
 const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {

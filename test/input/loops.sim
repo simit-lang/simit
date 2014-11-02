@@ -1,4 +1,4 @@
-%%%- assemble
+%%% assemble
 element Point
   x : tensor[3](float);
 end
