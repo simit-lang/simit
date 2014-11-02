@@ -485,23 +485,24 @@ assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
   // map statements...  This is too hacky and must be fixed.
   : idents "=" expr ";" {
-    if ($expr == nullptr) { break; } // TODO: Remove check
-
-    auto varNames = unique_ptr<vector<string>>($idents);
-    if (varNames->size() > 1) {
-      REPORT_ERROR("can only assign to one value in a non-map statement", @1);
-    }
-
-    string varName = (*varNames)[0];
+    auto varNames = convertAndDelete($idents);
     Expr value = convertAndDelete($expr);
+
+    if (varNames.size() > 1) {
+      REPORT_ERROR("can only assign to one value in a non-map statement",
+                   @idents);
+    }
+    string varName = varNames[0];
 
     Var var;
     if (ctx->hasSymbol(varName)) {
       Symbol symbol = ctx->getSymbol(varName);
 
       if (!symbol.isWritable()) {
-        REPORT_ERROR(varName + " is not writable", @1);
+        REPORT_ERROR(varName + " is not writable", @idents);
       }
+
+      CHECK_TYPE_EQUALITY(symbol.getVar().type, value.type(), @expr);
 
       var = symbol.getVar();
     }
