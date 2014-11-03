@@ -301,20 +301,18 @@ void LLVMBackend::visit(const Call *op) {
   else if (op->func == ir::Intrinsics::norm) {
     assert(args.size() == 1);
     llvm::Value *x = args[0];
-
-    // TODO: Use fmad to compute below
+    llvm::Function *fmad= llvm::Intrinsic::getDeclaration(module,
+                                                          llvm::Intrinsic::fma,
+                                                          {LLVM_DOUBLE});
 
     llvm::Value *x0 = loadFromArray(x, llvmInt(0));
-    llvm::Value *x0pow = builder->CreateFMul(x0, x0);
+    llvm::Value *xpowsum = builder->CreateFMul(x0, x0);
 
     llvm::Value *x1 = loadFromArray(x, llvmInt(1));
-    llvm::Value *x1pow = builder->CreateFMul(x1, x1);
+    xpowsum = builder->CreateCall3(fmad, x1, x1, xpowsum);
 
     llvm::Value *x2 = loadFromArray(x, llvmInt(2));
-    llvm::Value *x2pow = builder->CreateFMul(x2, x2);
-
-    llvm::Value *xpowsum = builder->CreateFAdd(x0pow, x1pow);
-    xpowsum = builder->CreateFAdd(xpowsum, x2pow);
+    xpowsum = builder->CreateCall3(fmad, x2, x2, xpowsum);
 
     llvm::Function *sqrt= llvm::Intrinsic::getDeclaration(module,
                                                           llvm::Intrinsic::sqrt,
