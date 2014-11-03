@@ -278,27 +278,51 @@ void LLVMBackend::visit(const Call *op) {
   }
 
   // these are intrinsic functions
-  if (op->function == ir::Intrinsics::sin) {
+  if (op->func == ir::Intrinsics::sin) {
     fun= llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sin,argTypes);
   }
-  else if (op->function == ir::Intrinsics::cos) {
+  else if (op->func == ir::Intrinsics::cos) {
     fun= llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::cos,argTypes);
   }
-  else if (op->function == ir::Intrinsics::atan2) {
+  else if (op->func == ir::Intrinsics::atan2) {
     // atan2 isn't an LLVM intrinsic
     auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
     fun= llvm::cast<llvm::Function>(module->getOrInsertFunction("atan2",ftype));
   }
-  else if (op->function == ir::Intrinsics::sqrt) {
+  else if (op->func == ir::Intrinsics::sqrt) {
     fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::sqrt,argTypes);
   }
-  else if (op->function == ir::Intrinsics::log) {
+  else if (op->func == ir::Intrinsics::log) {
     fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::log,argTypes);
   }
-  else if (op->function == ir::Intrinsics::exp) {
+  else if (op->func == ir::Intrinsics::exp) {
     fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::exp,argTypes);
   }
-  else if (op->function == ir::Intrinsics::solve) {
+  else if (op->func == ir::Intrinsics::norm) {
+    assert(args.size() == 1);
+    llvm::Value *x = args[0];
+
+    // TODO: Use fmad to compute below
+
+    llvm::Value *x0 = loadFromArray(x, llvmInt(0));
+    llvm::Value *x0pow = builder->CreateFMul(x0, x0);
+
+    llvm::Value *x1 = loadFromArray(x, llvmInt(1));
+    llvm::Value *x1pow = builder->CreateFMul(x1, x1);
+
+    llvm::Value *x2 = loadFromArray(x, llvmInt(2));
+    llvm::Value *x2pow = builder->CreateFMul(x2, x2);
+
+    llvm::Value *xpowsum = builder->CreateFAdd(x0pow, x1pow);
+    xpowsum = builder->CreateFAdd(xpowsum, x2pow);
+
+    llvm::Function *sqrt= llvm::Intrinsic::getDeclaration(module,
+                                                          llvm::Intrinsic::sqrt,
+                                                          {LLVM_DOUBLE});
+    val = builder->CreateCall(sqrt, xpowsum);
+    return;
+  }
+  else if (op->func == ir::Intrinsics::solve) {
     std::vector<llvm::Type*> argTypes2;
     
     // FIX: compile is making these be LLVM_DOUBLE, but I need
@@ -318,16 +342,13 @@ void LLVMBackend::visit(const Call *op) {
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("cMatSolve",
                                                                   ftype));
   }
-  
-  // if not an intrinsic function, try to find it in the module
-  if (!fun) {
-    fun = module->getFunction(op->function.getName());
+  else {
+    // if not an intrinsic function, try to find it in the module
+    fun = module->getFunction(op->func.getName());
   }
-  
-  if (fun)
-    val = builder->CreateCall(fun, args);
-  else
-    assert(false && "Unsupported function call");
+  assert(fun && "Unsupported function call");
+
+  val = builder->CreateCall(fun, args);
 }
 
 void LLVMBackend::visit(const Neg *op) {
@@ -647,6 +668,11 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
     result = builder->CreateMul(result, emitComputeLen(*it));
   }
   return result;
+}
+
+llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index){
+  llvm::Value *loc = builder->CreateGEP(array, index);
+  return builder->CreateLoad(loc);
 }
 
 }}  // namespace simit::internal

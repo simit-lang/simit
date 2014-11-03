@@ -87,6 +87,8 @@ private:
 
   /// Get the number of elements in the index domain
   llvm::Value *emitComputeLen(const ir::IndexDomain &);
+
+  llvm::Value *loadFromArray(llvm::Value *array, llvm::Value *index);
 };
 
 }} // namespace simit::internal

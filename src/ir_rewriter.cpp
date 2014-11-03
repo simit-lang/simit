@@ -154,7 +154,7 @@ void IRRewriter::visit(const Call *op) {
     expr = op;
   }
   else {
-    expr = Call::make(op->function, actuals);
+    expr = Call::make(op->func, actuals);
   }
 }
 

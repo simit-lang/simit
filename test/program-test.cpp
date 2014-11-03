@@ -12,6 +12,8 @@ using namespace simit;
 
 // TODO: Create a more effective test suite the same way as how dense LA is
 //       tested, using parameterized tests, sparse literals and code assertions
+//       This test suite should just test Program class performance, and not
+//       different code generation kernels.
 
 TEST(Program, add) {
   std::string programText = R"(
@@ -622,8 +624,7 @@ TEST(Program, gemv_inplace) {
     extern points  : set{Point};
     extern springs : set{Spring}(points,points);
 
-    func dist_a(s : Spring, p : (Point*2)) ->
-        (A : tensor[points,points](float))
+    func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
       A(p(0),p(0)) = s.a;
       A(p(0),p(1)) = s.a;
       A(p(1),p(0)) = s.a;

@@ -186,7 +186,7 @@ void IRPrinter::visit(const IndexExpr *op) {
 }
 
 void IRPrinter::visit(const Call *op) {
-  os << "Call";
+  os << op->func.getName() << "(" << util::join(op->func.getArguments()) << ")";
 }
 
 void IRPrinter::visit(const Neg *op) {

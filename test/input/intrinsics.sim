@@ -1,0 +1,5 @@
+%%% norm 
+%! donorm([1.0, 2.0, 3.0]) == 3.74166;
+func donorm(a : tensor[3](float)) -> (c : float)
+  c = norm(a);
+end

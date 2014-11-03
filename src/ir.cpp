@@ -1,5 +1,6 @@
 #include "ir.h"
 
+#include <cmath>
 #include <cstdlib>
 #include <cstring>
 #include <string>
@@ -39,21 +40,46 @@ bool operator!=(const Expr &l, const Expr &r) {
 }
 
 // class Intrinsics
-Func Intrinsics::sin =
-    Func("sin", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
-Func Intrinsics::cos =
-    Func("cos", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
-Func Intrinsics::atan2 =
-    Func("atan2", {Var("y", Float), Var("x", Float)},
-                  {Var("r", Float)}, Func::Intrinsic);
-Func Intrinsics::sqrt =
-    Func("sqrt", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
-Func Intrinsics::log =
-    Func("log", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
-Func Intrinsics::exp =
-    Func("exp", {Var("x", Float)}, {Var("r", Float)}, Func::Intrinsic);
+Func Intrinsics::sin = Func("sin",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
 
-Func Intrinsics::solve = Func("expr", {}, {Var("r", Float)}, Func::Intrinsic);
+Func Intrinsics::cos = Func("cos",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+
+Func Intrinsics::atan2 = Func("atan2",
+                              {Var("y", Float), Var("x", Float)},
+                              {Var("r", Float)},
+                              Func::Intrinsic);
+
+Func Intrinsics::sqrt = Func("sqrt",
+                             {Var("x", Float)},
+                             {Var("r", Float)},
+                             Func::Intrinsic);
+
+Func Intrinsics::log = Func("log",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+
+Func Intrinsics::exp = Func("exp",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+
+// TODO: Generalize to norm
+Func Intrinsics::norm = Func("norm",
+                             {Var("x", vec3f)},
+                             {Var("r", Float)},
+                             Func::Intrinsic);
+
+Func Intrinsics::solve = Func("expr",
+                              {},
+                              {Var("r", Float)},
+                              Func::Intrinsic);
 
 std::map<std::string, Func> Intrinsics::byName = {{"sin",sin},
                                                   {"cos",cos},
@@ -61,6 +87,7 @@ std::map<std::string, Func> Intrinsics::byName = {{"sin",sin},
                                                   {"sqrt",sqrt},
                                                   {"log",log},
                                                   {"exp",exp},
+                                                  {"norm",norm},
                                                   {"solve",solve}};
 
 // Type compute functions

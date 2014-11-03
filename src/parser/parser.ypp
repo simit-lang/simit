@@ -1027,7 +1027,6 @@ call_or_paren_read_expr
         if (indices->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", @3);
         }
-
         $$ = new Expr(TupleRead::make(expr, (*indices)[0]));
       }
       else {

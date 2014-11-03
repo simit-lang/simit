@@ -189,6 +189,7 @@ public:
   static Func sqrt;
   static Func log;
   static Func exp;
+  static Func norm;
   static Func solve;
   static std::map<std::string, Func> byName;
 };
@@ -393,16 +394,16 @@ struct IndexExpr : public ExprNode<IndexExpr> {
 };
 
 struct Call : public ExprNode<Call> {
-  Func function;
+  Func func;
   std::vector<Expr> actuals;
 
-  static Expr make(Func function, std::vector<Expr> actuals) {
-    assert(function.getResults().size() == 1 &&
+  static Expr make(Func func, std::vector<Expr> actuals) {
+    assert(func.getResults().size() == 1 &&
            "only calls of function with one results is currently supported.");
 
     Call *node = new Call;
-    node->type = function.getResults()[0].type;
-    node->function = function;
+    node->type = func.getResults()[0].type;
+    node->func = func;
     node->actuals = actuals;
     return node;
   }
