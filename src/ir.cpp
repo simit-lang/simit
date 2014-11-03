@@ -76,7 +76,7 @@ Func Intrinsics::norm = Func("norm",
                              {Var("r", Float)},
                              Func::Intrinsic);
 
-Func Intrinsics::solve = Func("expr",
+Func Intrinsics::solve = Func("solve",
                               {},
                               {Var("r", Float)},
                               Func::Intrinsic);

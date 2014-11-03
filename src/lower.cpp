@@ -437,7 +437,7 @@ private:
 
     if (e.defined()) {
       if (!isScalarTensor(e.type())) {
-//        e = IRRewriter::mutate(e);
+        e = IRRewriter::mutate(e);
       }
       else {
         switch (compoundOperator) {
@@ -588,6 +588,31 @@ private:
   }
 };
 
+/// Retrieves the IndexVars that are used in an expression.
+class HasReduction : private IRVisitor {
+public:
+  bool check(Stmt stmt) {
+    stmt.accept(this);
+    return hasReduction;
+  }
+
+  bool check(Expr expr) {
+    expr.accept(this);
+    return hasReduction;
+  }
+
+private:
+  bool hasReduction = false;
+
+  void visit(const IndexedTensor *op) {
+    for (auto &iv : op->indexVars) {
+      if (iv.isReductionVar()) {
+        hasReduction = true;
+        return;
+      }
+    }
+  }
+};
 
 // TODO: The if-based pattern matching in the visit rules is a total hack and
 //       has to be rewritten.
@@ -686,7 +711,12 @@ private:
         }
 
         stmt = Substitute(substitutions).mutate(computeStmt);
-        stmt = MakeCompound(MakeCompound::Add).mutate(stmt);
+
+        stmt = flattenIndexExpressions(stmt);
+        bool hasReduction = HasReduction().check(stmt);
+        if (!hasReduction) {
+          stmt = MakeCompound(MakeCompound::Add).mutate(stmt);
+        }
         return;
       }
     }
@@ -856,7 +886,9 @@ private:
     // TODO: We should knock out redundant subexpressions in the loopBody before
     //       lowering the index expressions there
     loopBody = flattenIndexExpressions(loopBody);
-    loopBody = LowerIndexExpressions(ud).mutate(loopBody);
+
+    UseDef fud(func);
+    loopBody = LowerIndexExpressions(&fud).mutate(loopBody);
 
     Stmt loop = For::make(lvar, ldom, loopBody);
     stmt = Block::make(initStmt, loop);

@@ -675,3 +675,95 @@ TEST(Program, gemv_inplace) {
   ASSERT_EQ(13.0, b.get(p1));
   ASSERT_EQ(10.0, b.get(p2));
 }
+
+// TODO: fs inplace on x
+TEST(Program, fs) {
+  Program program;
+  std::string programText = R"(
+    element Point
+      a : tensor[3](float);
+      b : tensor[3](float);
+      x : tensor[3](float);
+    end
+
+    element Spring
+      l0 : float;
+    end
+
+    extern points  : set{Point};
+    extern springs : set{Spring}(points,points);
+
+    func compute_fs(s : Spring, p : (Point*2)) ->
+        (f : tensor[points](tensor[3](float)))
+      stiffness = 1.0e3;
+      dx = p(1).x - p(0).x;
+      l = norm(dx);
+      f(p(0)) = stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l;
+      f(p(1)) = -(stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l);
+    end
+
+    proc fs
+      f = map compute_fs to springs with points reduce +;
+      points.b = f + points.a;
+    end
+  )";
+
+  // Points
+  Set<> points;
+  FieldRef<double,3> a = points.addField<double,3>("a");
+  FieldRef<double,3> b = points.addField<double,3>("b");
+  FieldRef<double,3> x = points.addField<double,3>("x");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  a.set(p0, {0, 0, 0});
+  a.set(p1, {0, 0, 0});
+  a.set(p2, {0, 0, 0});
+
+  x.set(p0, {5.0, 2.0, 6.0});
+  x.set(p1, {6.0, 5.0, 2.0});
+  x.set(p2, {7.0, 8.0, 4.0});
+
+  // Taint c
+  b.set(p0, {42.0, 42.0, 42.0});
+  b.set(p2, {42.0, 42.0, 42.0});
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> l0 = springs.addField<double>("l0");
+
+  ElementRef s0 = springs.addElement(p0,p1);
+  ElementRef s1 = springs.addElement(p1,p2);
+
+  l0.set(s0, 1.0);
+  l0.set(s1, 2.0);
+
+  // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("fs");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+  f->runSafe();
+
+  // Check outputs
+  TensorRef<double,3> c0 = b.get(p0);
+  ASSERT_DOUBLE_EQ(803.883864861816,  c0(0));
+  ASSERT_DOUBLE_EQ(2411.6515945854476,  c0(1));
+  ASSERT_DOUBLE_EQ(-3215.5354594472637, c0(2));
+
+  TensorRef<double,3> c1 = b.get(p1);
+  ASSERT_DOUBLE_EQ(-687.514485818028, c1(0));
+  ASSERT_DOUBLE_EQ(-2062.5434574540841, c1(1));
+  ASSERT_DOUBLE_EQ(3448.27421753484,  c1(2));
+
+  TensorRef<double,3> c2 = b.get(p2);
+  ASSERT_DOUBLE_EQ(-116.36937904378782, c2(0));
+  ASSERT_DOUBLE_EQ(-349.10813713136343, c2(1));
+  ASSERT_DOUBLE_EQ(-232.73875808757563, c2(2));
+}

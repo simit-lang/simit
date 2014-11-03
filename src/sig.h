@@ -98,23 +98,18 @@ private:
   }
 
   void visit(const IndexedTensor *op) {
-    if (op->indexVars.size() == 1) {
-      sig = SIG({op->indexVars[0]});
-    }
-    else if (op->indexVars.size() >= 2) {
-      assert(!isa<IndexExpr>(op->tensor) &&
-             "IndexExprs should have been flattened by now");
+    assert(!isa<IndexExpr>(op->tensor) &&
+           "IndexExprs should have been flattened by now");
 
-      Var tensorVar;
-      if (isa<VarExpr>(op->tensor)) {
-        const Var &var = to<VarExpr>(op->tensor)->var;
-        if (ud->getDef(var).getKind() == VarDef::Map) {
-          tensorVar = var;
-        }
+    Var tensorVar;
+    if (isa<VarExpr>(op->tensor)) {
+      const Var &var = to<VarExpr>(op->tensor)->var;
+      if (ud->getDef(var).getKind() == VarDef::Map) {
+        tensorVar = var;
       }
-
-      sig = SIG(op->indexVars, tensorVar);
     }
+
+    sig = SIG(op->indexVars, tensorVar);
   }
 
   void visit(const Add *op) {
