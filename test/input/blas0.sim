@@ -29,7 +29,7 @@ func mul(a : float, b : float) -> (c : float)
   c = a * b;
 end
 
-%%%- div
+%%% div
 %! div(6.0, 2.0) == 3.0;
 func div(a : float, b : float) -> (c : float)
   c = a / b;

@@ -1841,10 +1841,24 @@ namespace  simit { namespace internal  {
   case 80:
 
     {
-    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
-    (yylhs.value.expr) = NULL;
-    delete (yystack_[2].value.expr);
-    delete (yystack_[0].value.expr);
+    assert((yystack_[2].value.expr) && (yystack_[0].value.expr));
+    IRBuilder *builder = ctx->getBuilder();
+
+    Expr l = convertAndDelete((yystack_[2].value.expr));
+    Expr r = convertAndDelete((yystack_[0].value.expr));
+
+    CHECK_IS_TENSOR(l, yystack_[2].location);
+    CHECK_IS_TENSOR(r, yystack_[0].location);
+
+    const TensorType *ltype = l.type().toTensor();
+    const TensorType *rtype = r.type().toTensor();
+
+    if (ltype->order()==0 || rtype->order()==0) {
+      (yylhs.value.expr) = new Expr(builder->binaryElwiseExpr(l, IRBuilder::Div, r));
+    }
+    else {
+      REPORT_ERROR("division not supported for these tensor types" , yystack_[2].location);
+    }
   }
 
     break;
@@ -3206,14 +3220,14 @@ namespace  simit { namespace internal  {
      592,   605,   608,   614,   619,   639,   659,   665,   670,   672,
      676,   678,   684,   687,   698,   703,   731,   734,   742,   743,
      744,   745,   746,   747,   748,   754,   774,   783,   791,   803,
-     871,   877,   905,   910,   919,   920,   921,   922,   928,   934,
-     940,   946,   952,   958,   969,  1003,  1004,  1005,  1011,  1044,
-    1066,  1069,  1075,  1081,  1092,  1093,  1094,  1095,  1099,  1111,
-    1115,  1125,  1134,  1146,  1158,  1162,  1165,  1207,  1217,  1222,
-    1230,  1233,  1247,  1253,  1259,  1262,  1312,  1316,  1317,  1321,
-    1325,  1332,  1343,  1350,  1354,  1358,  1372,  1376,  1391,  1395,
-    1402,  1409,  1413,  1417,  1431,  1435,  1450,  1454,  1461,  1465,
-    1472,  1475,  1481,  1484,  1491
+     871,   891,   919,   924,   933,   934,   935,   936,   942,   948,
+     954,   960,   966,   972,   983,  1017,  1018,  1019,  1025,  1058,
+    1080,  1083,  1089,  1095,  1106,  1107,  1108,  1109,  1113,  1125,
+    1129,  1139,  1148,  1160,  1172,  1176,  1179,  1221,  1231,  1236,
+    1244,  1247,  1261,  1267,  1273,  1276,  1326,  1330,  1331,  1335,
+    1339,  1346,  1357,  1364,  1368,  1372,  1386,  1390,  1405,  1409,
+    1416,  1423,  1427,  1431,  1445,  1449,  1464,  1468,  1475,  1479,
+    1486,  1489,  1495,  1498,  1505
   };
 
   // Print the state stack on the debug stream.
