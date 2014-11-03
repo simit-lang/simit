@@ -24,6 +24,7 @@
 #include "ir.h"
 #include "ir_printer.h"
 #include "llvm_function.h"
+#include "gather_buffers.h"
 #include "macros.h"
 #include "runtime.h"
 
@@ -59,23 +60,22 @@ simit::Function *LLVMBackend::compile(Func func) {
 
   module = new llvm::Module(func.getName(), LLVM_CONTEXT);
 
-  vector<llvm::Value*> tmps;
-
-  // Add temporaries to the global namespace
-  for (auto &tmp : func.getTemporaries()) {
-    assert(tmp.type.isTensor());
-    llvm::Type *ctype = createLLVMType(tmp.type.toTensor()->componentType);
+  // Gather the buffers the func uses locally
+  vector<llvm::Value*> bufferValues;
+  vector<Var> buffers = gatherLocalBuffers(func);
+  for (auto &buffer : buffers) {
+    assert(buffer.type.isTensor());
+    llvm::Type *ctype = createLLVMType(buffer.type.toTensor()->componentType);
     llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
 
-    llvm::GlobalVariable* llvmTmp =
+    llvm::GlobalVariable* bufferValue =
         new llvm::GlobalVariable(*module, globalType,
                                  false, llvm::GlobalValue::InternalLinkage,
                                  llvm::ConstantPointerNull::get(globalType),
-                                 tmp.name);
-    llvmTmp->setAlignment(8);
-    tmps.push_back(llvmTmp);
+                                 buffer.name);
+    bufferValue->setAlignment(8);
+    bufferValues.push_back(bufferValue);
   }
-
 
   // Create compute function
   llvm::Function *llvmFunc = createFunction(func.getName(), func.getArguments(),
@@ -85,7 +85,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmFunc->getArgumentList()) {
     symtable.insert(arg.getName(), &arg);
   }
-  for (auto &tmp : tmps) {
+  for (auto &tmp : bufferValues) {
     llvm::Value *llvmTmp = builder->CreateLoad(tmp, tmp->getName());
     symtable.insert(llvmTmp->getName(), llvmTmp);
   }
@@ -116,8 +116,8 @@ simit::Function *LLVMBackend::compile(Func func) {
     symtable.insert(arg.getName(), &arg);
   }
 
-  for (size_t i=0; i < func.getTemporaries().size(); ++i) {
-    Type type = func.getTemporaries()[i].type;
+  for (size_t i=0; i < buffers.size(); ++i) {
+    Type type = buffers[i].type;
     llvm::Type *llvmType = createLLVMType(type);
 
     assert(type.isTensor());
@@ -128,7 +128,7 @@ simit::Function *LLVMBackend::compile(Func func) {
     llvm::Value *mem = builder->CreateCall(malloc, size);
 
     mem = builder->CreateCast(llvm::Instruction::CastOps::BitCast,mem,llvmType);
-    builder->CreateStore(mem, tmps[i]);
+    builder->CreateStore(mem, bufferValues[i]);
   }
   builder->CreateRetVoid();
   symtable.clear();
@@ -142,8 +142,8 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmDeinitFunc->getArgumentList()) {
     symtable.insert(arg.getName(), &arg);
   }
-  for (size_t i=0; i < func.getTemporaries().size(); ++i) {
-    llvm::Value *tmpPtr = builder->CreateLoad(tmps[i]);
+  for (size_t i=0; i < buffers.size(); ++i) {
+    llvm::Value *tmpPtr = builder->CreateLoad(bufferValues[i]);
     tmpPtr = builder->CreateCast(llvm::Instruction::CastOps::BitCast,
                                  tmpPtr, LLVM_INT8PTR);
     builder->CreateCall(free, tmpPtr);
@@ -151,7 +151,8 @@ simit::Function *LLVMBackend::compile(Func func) {
   builder->CreateRetVoid();
   symtable.clear();
 
-  return new LLVMFunction(func, llvmFunc, module);
+  bool requiresInit = buffers.size() > 0;
+  return new LLVMFunction(func, llvmFunc, requiresInit, module);
 }
 
 llvm::Value *LLVMBackend::compile(const Expr &expr) {
@@ -304,7 +305,6 @@ void LLVMBackend::visit(const Call *op) {
     llvm::Function *fmad= llvm::Intrinsic::getDeclaration(module,
                                                           llvm::Intrinsic::fma,
                                                           {LLVM_DOUBLE});
-
     llvm::Value *x0 = loadFromArray(x, llvmInt(0));
     llvm::Value *xpowsum = builder->CreateFMul(x0, x0);
 

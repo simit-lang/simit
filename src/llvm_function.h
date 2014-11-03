@@ -19,7 +19,8 @@ namespace internal {
 /// A Simit function that has been compiled with LLVM.
 class LLVMFunction : public simit::Function {
  public:
-  LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc, llvm::Module *mod);
+  LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
+               bool requiresInit, llvm::Module *mod);
 
   ~LLVMFunction();
 
@@ -30,7 +31,7 @@ class LLVMFunction : public simit::Function {
   llvm::Module          *module;
   llvm::ExecutionEngine *executionEngine;
 
-  bool requiresInitCall;
+  bool requiresInit;
   FuncPtrType deinit;
 
   FuncPtrType init(const std::vector<std::string> &formals,
@@ -38,6 +39,9 @@ class LLVMFunction : public simit::Function {
 
   FuncPtrType createHarness(const std::string &name,
                             const llvm::SmallVector<llvm::Value*,8> &args);
+
+  llvm::Function *getInitFunc() const;
+  llvm::Function *getDeinitFunc() const;
 };
 
 }}  // namespace simit::internal

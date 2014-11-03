@@ -25,34 +25,6 @@ Func lower(Func func) {
   return func;
 }
 
-
-static Func replaceBody(Func func, Stmt body) {
-  return Func(func.getName(), func.getArguments(),
-              func.getResults(), body, func.getKind(), func.getTemporaries());
-}
-
-Func flattenIndexExpressions(Func func) {
-  Stmt body = flattenIndexExpressions(func.getBody());
-  return replaceBody(func, body);
-}
-
-Func lowerIndexExpressions(Func func) {
-  UseDef ud(func);
-  Stmt body = lowerIndexExpressions(func.getBody(), ud);
-  return replaceBody(func, body);
-}
-
-Func lowerMaps(Func func) {
-  Stmt body = lowerMaps(func.getBody());
-  return replaceBody(func, body);
-}
-
-Func lowerTensorAccesses(Func func) {
-  Stmt body = lowerTensorAccesses(func.getBody());
-  return replaceBody(func, body);
-}
-
-
 class GetFieldRead : public IRVisitor {
 public:
   GetFieldRead(Expr elementOrSet, std::string fieldName)
@@ -79,6 +51,7 @@ private:
   }
 };
 
+
 class IsFieldReduced : public IRVisitor {
 public:
   IsFieldReduced(Expr fieldRead) : fieldRead(fieldRead) {}
@@ -104,16 +77,10 @@ private:
   }
 };
 
+
+// TODO: Change to
 class InsertTemporaries : public IRRewriter {
-public:
-  vector<Var> getTemporaries() {
-    return tmps;
-  }
-
-private:
   int id=0;
-
-  vector<Var> tmps;
 
   void visit(const FieldWrite *op) {
     Expr elemOrSet = op->elementOrSet;
@@ -137,29 +104,42 @@ private:
     Type fieldType = getFieldType(elemOrSet, fieldName);
 
     Var tmp("tmp" + to_string(id++), fieldType);
-    tmps.push_back(tmp);
 
     Stmt tmpAssignment = AssignStmt::make(tmp, op->value);
     Stmt writeTmpToField = FieldWrite::make(elemOrSet, fieldName, tmp);
     stmt = Block::make(tmpAssignment, writeTmpToField);
   }
-
-  void visit(const Func *f) {
-    Stmt body = mutate(f->getBody());
-
-    if (body == f->getBody()) {
-      func = *f;
-    }
-    else {
-      assert(body.defined());
-      func = Func(f->getName(), f->getArguments(), f->getResults(), body,
-                  f->getKind(), tmps);
-    }
-  }
 };
 
 Func insertTemporaries(Func func) {
   return InsertTemporaries().mutate(func);
+}
+
+
+static Func replaceBody(Func func, Stmt body) {
+  return Func(func.getName(), func.getArguments(), func.getResults(), body,
+              func.getKind());
+}
+
+Func flattenIndexExpressions(Func func) {
+  Stmt body = flattenIndexExpressions(func.getBody());
+  return replaceBody(func, body);
+}
+
+Func lowerIndexExpressions(Func func) {
+  UseDef ud(func);
+  Stmt body = lowerIndexExpressions(func.getBody(), ud);
+  return replaceBody(func, body);
+}
+
+Func lowerMaps(Func func) {
+  Stmt body = lowerMaps(func.getBody());
+  return replaceBody(func, body);
+}
+
+Func lowerTensorAccesses(Func func) {
+  Stmt body = lowerTensorAccesses(func.getBody());
+  return replaceBody(func, body);
 }
 
 

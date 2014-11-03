@@ -322,7 +322,7 @@ void IRRewriter::visit(const Func *f) {
     }
 
     func = Func(f->getName(), f->getArguments(), f->getResults(), body,
-                f->getKind(), f->getTemporaries());
+                f->getKind());
   }
 }
 

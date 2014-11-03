@@ -11,16 +11,12 @@ class UseDef;
 Func lower(Func func);
 
 Func insertTemporaries(Func func);
-
 Func flattenIndexExpressions(Func func);
 Func lowerIndexExpressions(Func func);
 Func lowerMaps(Func func);
 Func lowerTensorAccesses(Func func);
 
-//Function lowerIntrinsics(Func func);
-
 Expr flattenIndexExpressions(Expr expr);
-
 Stmt flattenIndexExpressions(Stmt stmt);
 Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud);
 Stmt lowerMaps(Stmt stmt);
