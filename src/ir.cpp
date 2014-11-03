@@ -132,10 +132,28 @@ bool operator==(const Literal& l, const Literal& r) {
 
   assert(getTensorByteSize(l.type.toTensor()) ==
          getTensorByteSize(r.type.toTensor()));
-  size_t tensorDataSize = getTensorByteSize(l.type.toTensor());
 
-  if (memcmp(l.data, r.data, tensorDataSize) != 0) {
-    return false;
+  switch (l.type.toTensor()->componentType.kind) {
+    case ScalarType::Int: {
+      size_t tensorDataSize = getTensorByteSize(l.type.toTensor());
+      if (memcmp(l.data, r.data, tensorDataSize) != 0) {
+        return false;
+      }
+      break;
+    }
+    case ScalarType::Float: {
+      // Rather large epsilon, but works for testing...
+      const double EPSILON = 0.001;
+
+      double *ldata = static_cast<double*>(l.data);
+      double *rdata = static_cast<double*>(r.data);
+      for (size_t i=0; i < l.type.toTensor()->size(); ++i) {
+        if (fabs(ldata[i] - rdata[i]) > EPSILON) {
+          return false;
+        }
+      }
+      break;
+    }
   }
   return true;
 }
