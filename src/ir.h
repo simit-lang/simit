@@ -300,7 +300,7 @@ struct TensorRead : public ExprNode<TensorRead> {
   static Expr make(Expr tensor, std::vector<Expr> indices) {
     assert(tensor.type().isTensor());
     for (auto &index : indices) {
-      assert(isScalar(index.type()));
+      assert(isScalar(index.type()) || index.type().isElement());
     }
 
     TensorRead *node = new TensorRead;
