@@ -64,15 +64,16 @@ simit::Function *LLVMBackend::compile(Func func) {
   vector<llvm::Value*> bufferValues;
   vector<Var> buffers = gatherLocalBuffers(func);
   for (auto &buffer : buffers) {
-    assert(buffer.type.isTensor());
-    llvm::Type *ctype = createLLVMType(buffer.type.toTensor()->componentType);
+    assert(buffer.getType().isTensor());
+    llvm::Type *ctype =
+        createLLVMType(buffer.getType().toTensor()->componentType);
     llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
 
     llvm::GlobalVariable* bufferValue =
         new llvm::GlobalVariable(*module, globalType,
                                  false, llvm::GlobalValue::InternalLinkage,
                                  llvm::ConstantPointerNull::get(globalType),
-                                 buffer.name);
+                                 buffer.getName());
     bufferValue->setAlignment(8);
     bufferValues.push_back(bufferValue);
   }
@@ -117,7 +118,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   }
 
   for (size_t i=0; i < buffers.size(); ++i) {
-    Type type = buffers[i].type;
+    Type type = buffers[i].getType();
     llvm::Type *llvmType = createLLVMType(type);
 
     assert(type.isTensor());
@@ -237,8 +238,8 @@ void LLVMBackend::visit(const Literal *op) {
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
-  assert(symtable.contains(op->var.name));
-  val = symtable.get(op->var.name);
+  assert(symtable.contains(op->var.getName()));
+  val = symtable.get(op->var.getName());
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
   // in which case we must load the value.  This case arises because we keep
@@ -435,10 +436,10 @@ void LLVMBackend::visit(const AssignStmt *op) {
 //  assert(isScalar(op->value.type()) &&
 //         "assignment non-scalars should have been lowered by now");
 
-  assert(op->var.type.isTensor() && op->value.type().isTensor());
+  assert(op->var.getType().isTensor() && op->value.type().isTensor());
 
   llvm::Value *value = compile(op->value);
-  string varName = op->var.name;
+  string varName = op->var.getName();
 
   // Assigned for the first time
   if (!symtable.contains(varName)) {
@@ -451,7 +452,7 @@ void LLVMBackend::visit(const AssignStmt *op) {
   llvm::Value *varPtr = symtable.get(varName);
   assert(varPtr->getType()->isPointerTy());
 
-  const TensorType *varType = op->var.type.toTensor();
+  const TensorType *varType = op->var.getType().toTensor();
   const TensorType *valType = op->value.type().toTensor();
 
   // Assigning a scalar to a scalar
@@ -541,7 +542,7 @@ void LLVMBackend::visit(const ir::Store *op) {
 }
 
 void LLVMBackend::visit(const For *op) {
-  std::string iName = op->var.name;
+  std::string iName = op->var.getName();
   ForDomain domain = op->domain;
 
   llvm::Value *iNum;

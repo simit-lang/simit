@@ -1272,14 +1272,14 @@ namespace  simit { namespace internal  {
 
     std::set<std::string> argNames;
     for (Var &arg : *arguments) {
-      ctx->addSymbol(arg.name, arg, Symbol::Read);
-      argNames.insert(arg.name);
+      ctx->addSymbol(arg.getName(), arg, Symbol::Read);
+      argNames.insert(arg.getName());
     }
 
     for (Var &res : *results) {
-      Symbol::Access access = (argNames.find(res.name) != argNames.end())
+      Symbol::Access access = (argNames.find(res.getName()) != argNames.end())
                               ? Symbol::ReadWrite : Symbol::ReadWrite;
-      ctx->addSymbol(res.name, res, access);
+      ctx->addSymbol(res.getName(), res, access);
     }
   }
 
@@ -1416,7 +1416,7 @@ namespace  simit { namespace internal  {
         REPORT_ERROR(varName + " is not writable", yystack_[3].location);
       }
 
-      CHECK_TYPE_EQUALITY(symbol.getVar().type, value.type(), yystack_[1].location);
+      CHECK_TYPE_EQUALITY(symbol.getVar().getType(), value.type(), yystack_[1].location);
 
       var = symbol.getVar();
     }
@@ -1480,7 +1480,7 @@ namespace  simit { namespace internal  {
         var = symbol.getVar();
       }
       else {
-        var = Var(varName, results[i].type);
+        var = Var(varName, results[i].getType());
         ctx->addSymbol(varName, var, Symbol::ReadWrite);
       }
       vars.push_back(var);

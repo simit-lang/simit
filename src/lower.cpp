@@ -288,6 +288,7 @@ private:
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
     Var var = op->var;
+
     Expr value = mutate(indexExpr);
 
     std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
@@ -303,6 +304,7 @@ private:
     }
     else {
       Expr varExpr = getVarExpr(var);
+
       std::vector<Expr> indices;
       for (IndexVar const& iv : indexExpr->resultVars) {
         Expr varExpr = getVarExpr(lvs->getVar(iv).first);
@@ -417,7 +419,7 @@ private:
 
   void visit(const VarExpr *op) {
     IRVisitor::visit(op);
-    name += op->var.name;
+    name += op->var.getName();
   }
 };
 
@@ -853,7 +855,7 @@ private:
       Var tmpVar = rov.getTmpVar();
       assert(tmpVar.defined());
 
-      Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.type, {0}));
+      Stmt alloc = AssignStmt::make(tmpVar,Literal::make(tmpVar.getType(),{0}));
       Stmt loop = For::make(lvar, ldom, loopBody);
 
       Stmt tmpWriteStmt = rov.getTmpWriteStmt();

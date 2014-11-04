@@ -77,7 +77,7 @@ public:
   }
 
   void addSymbol(ir::Var var) {
-    addSymbol(var.name, var, Symbol::ReadWrite);
+    addSymbol(var.getName(), var, Symbol::ReadWrite);
   }
 
   void addSymbol(const std::string &name, ir::Var var, Symbol::Access access) {
@@ -122,7 +122,7 @@ public:
   }
 
   void addExtern(ir::Var externVariable) {
-    externs[externVariable.name] = externVariable;
+    externs[externVariable.getName()] = externVariable;
   }
 
   bool containsExtern(const std::string &name) {

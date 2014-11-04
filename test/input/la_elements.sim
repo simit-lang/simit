@@ -24,11 +24,17 @@ func eye(m : float) -> (M : tensor[3,3](float))
   M = 0.5 * m * eye;
 end
 
-
 %%% fs
 %! fs([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [8.2742, 4.9645, 1.6548];
 func fs(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, s : float) -> (f : tensor[3](float))
   dx = x1 - x0;
   l = norm(dx);
   f = s / (l0*l0)*(l-l0)*dx / l;
+end
+
+%%% gemm
+%! gemm([1.0, 2.0, 3.0]) == [1.0, 2.0, 3.0; 2.0, 4.0, 6.0; 3.0, 6.0, 9.0]; 
+func gemm(x : tensor[3](float)) -> (k : tensor[3,3](float))
+  eye = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  k  = x'*x*eye;
 end

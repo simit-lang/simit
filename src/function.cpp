@@ -13,16 +13,16 @@ namespace simit {
 Function::Function(const simit::ir::Func &simitFunc)
     : funcPtr(NULL), initRequired(true) {
   for (auto &arg : simitFunc.getArguments()) {
-    formals.push_back(arg.name);
-    actuals[arg.name] = Actual(arg.type);
+    formals.push_back(arg.getName());
+    actuals[arg.getName()] = Actual(arg.getType());
   }
   for (auto &res : simitFunc.getResults()) {
     // Skip results that alias an argument
-    if (actuals.find(res.name) != actuals.end()) {
+    if (actuals.find(res.getName()) != actuals.end()) {
       continue;
     }
-    formals.push_back(res.name);
-    actuals[res.name] = Actual(res.type);
+    formals.push_back(res.getName());
+    actuals[res.getName()] = Actual(res.getType());
   }
 }
 

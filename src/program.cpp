@@ -75,15 +75,15 @@ class Program::ProgramContent {
       std::vector<ir::Var>  formalArgs = func.getArguments();
       std::vector<ir::Expr> actualArgs = test->getActuals();
       for (size_t i=0; i < actualArgs.size(); ++i) {
-        compiledFunc->bind(formalArgs[i].name, &actualArgs[i]);
+        compiledFunc->bind(formalArgs[i].getName(), &actualArgs[i]);
       }
 
       auto formalResults = func.getResults();
       std::vector<ir::Expr> actualResults;
       for (auto &formalResult : formalResults) {
-        ir::Expr actualResult = ir::Literal::make(formalResult.type);
+        ir::Expr actualResult = ir::Literal::make(formalResult.getType());
         actualResults.push_back(actualResult);
-        compiledFunc->bind(formalResult.name, &actualResult);
+        compiledFunc->bind(formalResult.getName(), &actualResult);
       }
 
       compiledFunc->runSafe();

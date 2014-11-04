@@ -146,16 +146,16 @@ llvm::Function *createFunction(const std::string &name,
   std::set<std::string> argNames;
   
   for (auto &arg : arguments) {
-    argNames.insert(arg.name);
-    llvmArgNames.push_back(arg.name);
-    llvmArgTypes.push_back(createLLVMType(arg.type));
+    argNames.insert(arg.getName());
+    llvmArgNames.push_back(arg.getName());
+    llvmArgTypes.push_back(createLLVMType(arg.getType()));
   }
   for (auto &res : results) {
-    if (argNames.find(res.name) != argNames.end()) {
+    if (argNames.find(res.getName()) != argNames.end()) {
       continue;
     }
-    llvmArgNames.push_back(res.name);
-    llvmArgTypes.push_back(createLLVMType(res.type));
+    llvmArgNames.push_back(res.getName());
+    llvmArgTypes.push_back(createLLVMType(res.getType()));
   }
 
   assert(llvmArgNames.size() == llvmArgTypes.size());

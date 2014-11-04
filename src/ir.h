@@ -17,23 +17,32 @@
 namespace simit {
 namespace ir {
 
-struct Var {
+namespace {
+struct VarContent {
   std::string name;
   Type type;
 
-  bool defined() {return type.defined();}
+  mutable long ref = 0;
+  friend inline void aquire(VarContent *c) {++c->ref;}
+  friend inline void release(VarContent *c) {if (--c->ref==0) delete c;}
+};
+}
 
-  Var() {}
-  Var(std::string name, Type type) : name(name), type(type) {}
+class Var : public util::IntrusivePtr<VarContent> {
+public:
+  Var() : IntrusivePtr() {}
+  Var(std::string name, Type type) : IntrusivePtr(new VarContent) {
+    ptr->name = name;
+    ptr->type = type;
+  }
+
+  const std::string &getName() const {return ptr->name;}
+  const Type &getType() const {return ptr->type;}
 };
 
 inline std::ostream &operator<<(std::ostream &os, const Var &v) {
-  return os << v.name;
+  return os << v.getName();
 }
-inline bool operator==(const Var &l, const Var &r) {return l.name == r.name;}
-inline bool operator!=(const Var &l, const Var &r) {return l.name != r.name;}
-inline bool operator <(const Var &l, const Var &r) {return l.name < r.name;}
-inline bool operator >(const Var &l, const Var &r) {return l.name > r.name;}
 
 
 /// The base class of all nodes in the Simit Intermediate Representation
@@ -249,7 +258,7 @@ struct VarExpr : public ExprNode<VarExpr> {
 
   static Expr make(Var var) {
     VarExpr *node = new VarExpr;
-    node->type = var.type;
+    node->type = var.getType();
     node->var = var;
     return node;
   }
@@ -395,7 +404,7 @@ struct Call : public ExprNode<Call> {
            "only calls of function with one results is currently supported.");
 
     Call *node = new Call;
-    node->type = func.getResults()[0].type;
+    node->type = func.getResults()[0].getType();
     node->func = func;
     node->actuals = actuals;
     return node;
