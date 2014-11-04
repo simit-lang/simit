@@ -201,6 +201,32 @@ private:
   }
 };
 
+/// Retrieves the IndexVars that are used in an expression.
+class HasReduction : private IRVisitor {
+public:
+  bool check(Stmt stmt) {
+    stmt.accept(this);
+    return hasReduction;
+  }
+
+  bool check(Expr expr) {
+    expr.accept(this);
+    return hasReduction;
+  }
+
+private:
+  bool hasReduction = false;
+
+  void visit(const IndexedTensor *op) {
+    for (auto &iv : op->indexVars) {
+      if (iv.isReductionVar()) {
+        hasReduction = true;
+        return;
+      }
+    }
+  }
+};
+
 std::vector<IndexVar> getFreeVars(Expr expr) {
   return GetFreeIndexVars().get(expr);
 }
@@ -542,7 +568,9 @@ public:
   MakeCompound(CompoundOperator compoundOperator)
       : compoundOperator(compoundOperator) {}
 
-  Stmt mutate(Stmt stmt) {return IRRewriter::mutate(stmt);}
+  Stmt mutate(Stmt stmt) {
+    return IRRewriter::mutate(stmt);
+  }
 
 private:
   CompoundOperator compoundOperator;
@@ -645,7 +673,9 @@ private:
       }
 
       tmpWriteStmt = TensorWrite::make(tensor, indices, VarExpr::make(tmpVar));
-      tmpWriteStmt = MakeCompound(MakeCompound::Add).mutate(tmpWriteStmt);
+      if (isa<TensorRead>(tensor)) {
+        tmpWriteStmt = MakeCompound(MakeCompound::Add).mutate(tmpWriteStmt);
+      }
     }
   }
 };
@@ -701,32 +731,6 @@ private:
 
   void visit(const VarExpr *op) {
     expr = op;
-  }
-};
-
-/// Retrieves the IndexVars that are used in an expression.
-class HasReduction : private IRVisitor {
-public:
-  bool check(Stmt stmt) {
-    stmt.accept(this);
-    return hasReduction;
-  }
-
-  bool check(Expr expr) {
-    expr.accept(this);
-    return hasReduction;
-  }
-
-private:
-  bool hasReduction = false;
-
-  void visit(const IndexedTensor *op) {
-    for (auto &iv : op->indexVars) {
-      if (iv.isReductionVar()) {
-        hasReduction = true;
-        return;
-      }
-    }
   }
 };
 
