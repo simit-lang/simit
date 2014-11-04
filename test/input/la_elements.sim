@@ -46,4 +46,11 @@ func gemm_sub_dot(dx : tensor[3](float)) -> (k : tensor[3,3](float))
   k = dx'*dx*eye - dx*dx';
 end
 
+%%% stiffness
+%! stiffness([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [2.0272, 1.5544, 1.0816; 1.5544, 1.2707, 0.9870; 1.0816, 0.9870, 0.8924];
+func stiffness(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, s : float) -> (k : tensor[3,3](float))
+  eye = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  dx = x1 - x0;
+  l = norm(dx);
+  k = s / (l0*l0*l*l)*(dx*dx' + (l-l0)/l*(dx'*dx*eye - dx*dx'));
 end
