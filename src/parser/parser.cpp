@@ -135,11 +135,11 @@
       return false;
     }
 
-    if (l.isTensor()) {
-      if (l.toTensor()->isColumnVector != r.toTensor()->isColumnVector) {
-        return false;
-      }
-    }
+//    if (l.isTensor()) {
+//      if (l.toTensor()->isColumnVector != r.toTensor()->isColumnVector) {
+//        return false;
+//      }
+//    }
 
     if (l != r) {
       return false;
