@@ -799,7 +799,12 @@ linear_algebra_expr
     CHECK_IS_TENSOR(l, @1);
     CHECK_IS_TENSOR(r, @3);
 
-    CHECK_TYPE_EQUALITY(l.type(), r.type(), @2);
+    const TensorType *ltype = l.type().toTensor();
+    const TensorType *rtype = r.type().toTensor();
+
+    if (ltype->order()>0&&rtype->order()>0 && !compare(l.type(),r.type(),ctx)) {
+        REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
+    }
 
     BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), @2);
     $$ = new Expr(ctx->getBuilder()->binaryElwiseExpr(l, $2, r));
