@@ -40,7 +40,7 @@ llvm::Type *llvmPtrType(ir::ScalarType stype);
 llvm::Constant *llvmPtr(llvm::Type *type, void *data);
 llvm::Constant *llvmPtr(const ir::Type &type, void *data);
 
-llvm::Constant *llvmPtr(ir::Literal *literal);
+llvm::Constant *llvmPtr(const ir::Literal *literal);
 
 ir::Type simitType(const llvm::Type *type);
 

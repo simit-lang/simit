@@ -231,8 +231,7 @@ void LLVMBackend::visit(const Literal *op) {
     }
   }
   else {
-    // Literal vectors, matrices tensors
-    NOT_SUPPORTED_YET;
+    val = llvmPtr(op);
   }
   assert(val);
 }
@@ -473,6 +472,10 @@ void LLVMBackend::visit(const AssignStmt *op) {
     else {
       NOT_SUPPORTED_YET;
     }
+  }
+  else if (isa<Literal>(op->value)) {
+    value->setName(varName);
+    symtable.insert(varName, value);
   }
   else {
     assert(false);
