@@ -16,6 +16,13 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+/// Static namegen (hacky: fix later)
+string tmpNameGen() {
+  static int i = 0;
+  return "tmp" + to_string(i++);
+}
+
+
 Func lower(Func func) {
   func = insertTemporaries(func);
   func = flattenIndexExpressions(func);
@@ -284,24 +291,17 @@ private:
     return s;
   }
 
-  // TODO: Do this for all binary operations
-  void visit(const Sub *op) {
-    assert(isa<IndexedTensor>(op->a) && isa<IndexedTensor>(op->b));
-
-    Expr a = mutate(op->a);
-    Expr b = mutate(op->b);
-
+  pair<Expr,Expr> splitInterferringExprs(Expr a, Expr b) {
     std::vector<IndexVar> arvars = getReductionVars(a);
     std::vector<IndexVar> brvars = getReductionVars(b);
     if (arvars.size() > 0 && !overlaps(arvars, brvars)) {
-
       vector<IndexVar> afvars = getFreeVars(a);
       vector<IndexDomain> adims;
       for (auto &afvar : afvars) {
         adims.push_back(afvar.getDomain());
       }
       Type atype = TensorType::make(a.type().toTensor()->componentType, adims);
-      Var atmp("atmp", atype);
+      Var atmp(tmpNameGen(), atype);
       Expr aiexpr = IndexExpr::make(afvars, a);
       Stmt astmt = AssignStmt::make(atmp, aiexpr);
       stmts.push_back(astmt);
@@ -312,7 +312,7 @@ private:
         bdims.push_back(bfvar.getDomain());
       }
       Type btype = TensorType::make(a.type().toTensor()->componentType, bdims);
-      Var btmp("btmp", btype);
+      Var btmp(tmpNameGen(), btype);
       Expr biexpr = IndexExpr::make(bfvars, b);
       Stmt bstmt = AssignStmt::make(btmp, biexpr);
       stmts.push_back(bstmt);
@@ -320,9 +320,31 @@ private:
       a = IndexedTensor::make(VarExpr::make(atmp), afvars);
       b = IndexedTensor::make(VarExpr::make(btmp), bfvars);
     }
-
-    expr = Sub::make(a, b);
+    return pair<Expr,Expr>(a,b);
   }
+
+  void visit(const Sub *op) {
+    assert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
+    assert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
+    Expr a = mutate(op->a);
+    Expr b = mutate(op->b);
+
+    pair<Expr,Expr> ab = splitInterferringExprs(a, b);
+    expr = Sub::make(ab.first, ab.second);
+  }
+
+  // TODO: Add .* amd ./ too
+  void visit(const Add *op) {
+    assert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
+    assert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
+
+    Expr a = mutate(op->a);
+    Expr b = mutate(op->b);
+
+    pair<Expr,Expr> ab = splitInterferringExprs(a, b);
+    expr = Add::make(ab.first, ab.second);
+  }
+
 
   void visit(const IndexedTensor *op) {
     // IndexExprs that are nested inside another IndexExpr must necessarily
