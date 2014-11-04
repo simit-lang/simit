@@ -194,7 +194,7 @@ int main(int argc, const char* argv[]) {
     func = lowerIndexExpressions(func);
     func = lowerMaps(func);
     if (emitSimit) {
-      cout << "--- Lower Index Expressions and Maps:" << endl;
+      cout << "--- Lower Index Expressions:" << endl;
       cout << func << endl << endl;;
     }
 

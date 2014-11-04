@@ -176,13 +176,18 @@ void IRPrinter::visit(const Load *op) {
 
 void IRPrinter::visit(const IndexedTensor *op) {
   print(op->tensor);
-  os << "{" << util::join(op->indexVars,",") << "}";
+  if (op->indexVars.size() > 0) {
+    os << "(" << util::join(op->indexVars,",") << ")";
+  }
 }
 
 void IRPrinter::visit(const IndexExpr *op) {
-  os << "({" + simit::util::join(op->resultVars, ",") + "} ";
+  os << "{";
+  if (op->resultVars.size() > 0) {
+    os << "\u2200" + simit::util::join(op->resultVars, ",") + " ";
+  }
   print(op->value);
-  os << ")";
+  os << "}";
 }
 
 void IRPrinter::visit(const Call *op) {
