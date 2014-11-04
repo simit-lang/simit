@@ -799,6 +799,8 @@ linear_algebra_expr
     CHECK_IS_TENSOR(l, @1);
     CHECK_IS_TENSOR(r, @3);
 
+    CHECK_TYPE_EQUALITY(l.type(), r.type(), @2);
+
     BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), @2);
     $$ = new Expr(ctx->getBuilder()->binaryElwiseExpr(l, $2, r));
   }
@@ -1201,12 +1203,12 @@ tensor_type
       // TODO: Handle case where there are more block than outer dimensions
       // TODO: Handle case where there are more outer than block dimensions
       // TODO: Remove below error
-      if (blockType->order() != outerDimensions->size()) {
-        REPORT_ERROR("Blocktype order (" + to_string(blockType->order()) +
-                     ") differ from number of dimensions", @index_sets);
-      }
+//      if (blockType->order() != outerDimensions->size()) {
+//        REPORT_ERROR("Blocktype order (" + to_string(blockType->order()) +
+//                     ") differ from number of dimensions", @index_sets);
+//      }
 
-      assert(blockDimensions.size() == outerDimensions->size());
+//      assert(blockDimensions.size() == outerDimensions->size());
       for (size_t i=0; i < outerDimensions->size(); ++i) {
         vector<IndexSet> dimension;
         dimension.push_back((*outerDimensions)[i]);

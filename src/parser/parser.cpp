@@ -1761,6 +1761,8 @@ namespace  simit { namespace internal  {
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
 
+    CHECK_TYPE_EQUALITY(l.type(), r.type(), yystack_[1].location);
+
     BINARY_ELWISE_TYPE_CHECK(l.type(), r.type(), yystack_[1].location);
     (yylhs.value.expr) = new Expr(ctx->getBuilder()->binaryElwiseExpr(l, (yystack_[1].value.binop), r));
   }
@@ -2248,12 +2250,12 @@ namespace  simit { namespace internal  {
       // TODO: Handle case where there are more block than outer dimensions
       // TODO: Handle case where there are more outer than block dimensions
       // TODO: Remove below error
-      if (blockType->order() != outerDimensions->size()) {
-        REPORT_ERROR("Blocktype order (" + to_string(blockType->order()) +
-                     ") differ from number of dimensions", yystack_[4].location);
-      }
+//      if (blockType->order() != outerDimensions->size()) {
+//        REPORT_ERROR("Blocktype order (" + to_string(blockType->order()) +
+//                     ") differ from number of dimensions", @index_sets);
+//      }
 
-      assert(blockDimensions.size() == outerDimensions->size());
+//      assert(blockDimensions.size() == outerDimensions->size());
       for (size_t i=0; i < outerDimensions->size(); ++i) {
         vector<IndexSet> dimension;
         dimension.push_back((*outerDimensions)[i]);
@@ -3221,15 +3223,15 @@ namespace  simit { namespace internal  {
      478,   479,   480,   481,   482,   487,   528,   580,   584,   591,
      594,   607,   610,   616,   621,   641,   661,   667,   672,   674,
      678,   680,   686,   689,   700,   705,   733,   736,   744,   745,
-     746,   747,   748,   749,   750,   756,   776,   785,   793,   805,
-     873,   893,   921,   926,   935,   936,   937,   938,   944,   950,
-     956,   962,   968,   974,   985,  1019,  1020,  1021,  1027,  1060,
-    1082,  1085,  1091,  1097,  1108,  1109,  1110,  1111,  1115,  1127,
-    1131,  1141,  1150,  1162,  1174,  1178,  1181,  1223,  1233,  1238,
-    1246,  1249,  1263,  1269,  1275,  1278,  1328,  1332,  1333,  1337,
-    1341,  1348,  1359,  1366,  1370,  1374,  1388,  1392,  1407,  1411,
-    1418,  1425,  1429,  1433,  1447,  1451,  1466,  1470,  1477,  1481,
-    1488,  1491,  1497,  1500,  1507
+     746,   747,   748,   749,   750,   756,   776,   785,   793,   807,
+     875,   895,   923,   928,   937,   938,   939,   940,   946,   952,
+     958,   964,   970,   976,   987,  1021,  1022,  1023,  1029,  1062,
+    1084,  1087,  1093,  1099,  1110,  1111,  1112,  1113,  1117,  1129,
+    1133,  1143,  1152,  1164,  1176,  1180,  1183,  1225,  1235,  1240,
+    1248,  1251,  1265,  1271,  1277,  1280,  1330,  1334,  1335,  1339,
+    1343,  1350,  1361,  1368,  1372,  1376,  1390,  1394,  1409,  1413,
+    1420,  1427,  1431,  1435,  1449,  1453,  1468,  1472,  1479,  1483,
+    1490,  1493,  1499,  1502,  1509
   };
 
   // Print the state stack on the debug stream.

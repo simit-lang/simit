@@ -19,8 +19,8 @@ func rotationMatrix( angle : float, unitaxis : tensor[3](float)) -> (R : tensor[
 		axis = -unitaxis;
 		sin_axis  = sin(angle) * axis;
   	c = cos(angle);
-		cos1_axis = (1 - c) * axis;
-  	d = cos1_axis(1) * axis(2);
+		cos1_axis = (1.0 - c) * axis;
+  	d = cos1_axis(1.0) * axis(2.0);
   	R(1,2) = d - sin_axis(3);
   	R(2,1) = d + sin_axis(3);
 
@@ -37,12 +37,12 @@ func rotationMatrix( angle : float, unitaxis : tensor[3](float)) -> (R : tensor[
 end
 
 func step_SH(r : Rigid) ->
-		(Q : tensor[rigids][3,3](float),
-		q : tensor[rigids][3](float),
-		w : tensor[rigids][3](float))
+		(Q : tensor[rigids](tensor[3,3](float)),
+		q : tensor[rigids](tensor[3](float)),
+		w : tensor[rigids](tensor[3](float)))
 	wlocal = r.w;
 	I = r.I;
-	pi= I*wlocal;
+	pi= I'*wlocal;
 	q(r) = r.q + h*r.v;
 	Q(r) = r.Q;
 	R = rotationMatrix(0.5*h*pi(3)/I(3), unitz);
