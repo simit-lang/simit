@@ -159,10 +159,145 @@ private:
   }
 };
 
+class GetFreeIndexVars : private IRVisitor {
+public:
+  std::vector<IndexVar> get(Expr expr) {
+    expr.accept(this);
+    return indexVars;
+  }
+
+private:
+  set<IndexVar> added;
+  vector<IndexVar> indexVars;
+
+  void visit(const IndexedTensor *op) {
+    for (auto &iv : op->indexVars) {
+      if (iv.isFreeVar() && added.find(iv) == added.end()) {
+        added.insert(iv);
+        indexVars.push_back(iv);
+      }
+    }
+  }
+};
+
+class GetReductionIndexVars : private IRVisitor {
+public:
+  std::vector<IndexVar> get(Expr expr) {
+    expr.accept(this);
+    return indexVars;
+  }
+
+private:
+  set<IndexVar> added;
+  vector<IndexVar> indexVars;
+
+  void visit(const IndexedTensor *op) {
+    for (auto &iv : op->indexVars) {
+      if (iv.isReductionVar() && added.find(iv) == added.end()) {
+        added.insert(iv);
+        indexVars.push_back(iv);
+      }
+    }
+  }
+};
+
+std::vector<IndexVar> getFreeVars(Expr expr) {
+  return GetFreeIndexVars().get(expr);
+}
+
+std::vector<IndexVar> getReductionVars(Expr expr) {
+  return GetReductionIndexVars().get(expr);
+}
+
+bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs){
+  set<IndexVar> aset(as.begin(), as.end());
+  for (auto &b : bs) {
+    if (aset.find(b) != aset.end()) {
+      return true;
+    }
+  }
+  return false;
+}
+
 /// Flattens nested IndexExprs.
 /// E.g. ({i,j} (({i} a{i}){i} * a{j})) -> ({i,j} (a{i} * a{j}))
-class FlattenIndexExpressions : public IRRewriter {
+class FlattenIndexExpressions : private IRRewriter {
+public:
+  Stmt flatten(Stmt stmt) {
+    return mutate(stmt);
+  }
+
 private:
+  std::vector<Stmt> stmts;
+
+  Expr mutate(Expr e) {
+    if (e.defined()) {
+      e.accept(this);
+      e = expr;
+    }
+    else {
+      e = Expr();
+    }
+    expr = Expr();
+    stmt = Stmt();
+    return e;
+  }
+
+  Stmt mutate(Stmt s) {
+    if (s.defined()) {
+      s.accept(this);
+      stmts.push_back(stmt);
+      s = (stmts.size() > 0) ? Block::make(stmts) : stmt;
+      stmts.clear();
+    }
+    else {
+      s = Stmt();
+    }
+    expr = Expr();
+    stmt = Stmt();
+    return s;
+  }
+
+  // TODO: Do this for all binary operations
+  void visit(const Sub *op) {
+    assert(isa<IndexedTensor>(op->a) && isa<IndexedTensor>(op->b));
+
+    Expr a = mutate(op->a);
+    Expr b = mutate(op->b);
+
+    std::vector<IndexVar> arvars = getReductionVars(a);
+    std::vector<IndexVar> brvars = getReductionVars(b);
+    if (arvars.size() > 0 && !overlaps(arvars, brvars)) {
+
+      vector<IndexVar> afvars = getFreeVars(a);
+      vector<IndexDomain> adims;
+      for (auto &afvar : afvars) {
+        adims.push_back(afvar.getDomain());
+      }
+      Type atype = TensorType::make(a.type().toTensor()->componentType, adims);
+      Var atmp("atmp", atype);
+      Expr aiexpr = IndexExpr::make(afvars, a);
+      Stmt astmt = AssignStmt::make(atmp, aiexpr);
+      stmts.push_back(astmt);
+
+      vector<IndexVar> bfvars = getFreeVars(b);
+      vector<IndexDomain> bdims;
+      for (auto &bfvar : bfvars) {
+        bdims.push_back(bfvar.getDomain());
+      }
+      Type btype = TensorType::make(a.type().toTensor()->componentType, bdims);
+      Var btmp("btmp", btype);
+      Expr biexpr = IndexExpr::make(bfvars, b);
+      Stmt bstmt = AssignStmt::make(btmp, biexpr);
+      stmts.push_back(bstmt);
+
+      a = IndexedTensor::make(VarExpr::make(atmp), afvars);
+      b = IndexedTensor::make(VarExpr::make(btmp), bfvars);
+    }
+
+    expr = Sub::make(a, b);
+  }
+
   void visit(const IndexedTensor *op) {
     // IndexExprs that are nested inside another IndexExpr must necessarily
     // produce a tensor and therefore be indexed through an IndexedTensor expr.
@@ -185,12 +320,8 @@ private:
   }
 };
 
-Expr flattenIndexExpressions(Expr expr) {
-  return FlattenIndexExpressions().mutate(expr);
-}
-
 Stmt flattenIndexExpressions(Stmt stmt) {
-  return FlattenIndexExpressions().mutate(stmt);
+  return FlattenIndexExpressions().flatten(stmt);
 }
 
 class LoopVars : public SIGVisitor {
@@ -242,27 +373,6 @@ private:
   }
 };
 
-/// Retrieves the IndexVars that are used in an expression.
-class GetFreeIndexVars : private IRVisitor {
-public:
-  std::vector<IndexVar> get(Expr expr) {
-    expr.accept(this);
-    return indexVars;
-  }
-
-private:
-  set<IndexVar> added;
-  vector<IndexVar> indexVars;
-
-  void visit(const IndexedTensor *op) {
-    for (auto &iv : op->indexVars) {
-      if (iv.isFreeVar() && added.find(iv) == added.end()) {
-        added.insert(iv);
-        indexVars.push_back(iv);
-      }
-    }
-  }
-};
 
 /// Specializes index expressions to compute one value/block at the location
 /// specified by the given loop variables
@@ -849,7 +959,6 @@ private:
     }
     else {
       ReduceOverVar rov(blockComputeStmt, v->iv.getOperator());
-
       Stmt loopBody = rov.mutate(stmt);
 
       Var tmpVar = rov.getTmpVar();

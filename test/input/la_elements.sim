@@ -34,7 +34,16 @@ end
 
 %%% gemm
 %! gemm([1.0, 2.0, 3.0]) == [1.0, 2.0, 3.0; 2.0, 4.0, 6.0; 3.0, 6.0, 9.0]; 
-func gemm(x : tensor[3](float)) -> (k : tensor[3,3](float))
+func gemm(dx : tensor[3](float)) -> (k : tensor[3,3](float))
   eye = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  k  = x'*x*eye;
+  k  = dx'*dx*eye;
+end
+
+%%% gemm_sub_dot
+%! gemm_sub_dot([1.0, 2.0, 3.0]) == [-13.0, -12.0, -11.0; -12.0, -10.0, -8.0; -11.0, -8.0, -5.0];
+func gemm_sub_dot(dx : tensor[3](float)) -> (k : tensor[3,3](float))
+  eye = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  k = dx'*dx*eye - dx*dx';
+end
+
 end
