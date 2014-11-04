@@ -1,5 +1,7 @@
 const grav : tensor[3](float) = [0.0, 0.0, -9.81];
 const h : float = 0.01;
+const eye3 : tensor[3,3](float) = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+const eye6 : tensor[6,6](float) = [1.0, 0.0, 0.0, 0.0, 0.0, 0.0; 0.0, 1.0, 0.0, 0.0, 0.0, 0.0; 0.0, 0.0, 1.0, 0.0, 0.0, 0.0; 0.0, 0.0, 0.0, 1.0, 0.0, 0.0; 0.0, 0.0, 0.0, 0.0, 1.0, 0.0; 0.0, 0.0, 0.0, 0.0, 0.0, 1.0];
 
 element Rigid
 	x : tensor[4,4](float);
@@ -10,8 +12,8 @@ end
 extern rigids : set{Rigid};
 
 func compute_mass_force(r : Rigid) ->
-		(M : tensor[rigids,rigids][6,6](float), f : tensor[rigids][6](float))
-	Mr = eye(6);
+		(M : tensor[rigids,rigids](tensor[6,6](float)), f : tensor[rigids](tensor[6](float)))
+	Mr = eye6;
 	Mr(1,1) = r.m(1);
 	Mr(2,2) = r.m(2);
 	Mr(3,3) = r.m(3);
