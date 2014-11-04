@@ -348,14 +348,18 @@ private:
 
     Expr value = mutate(op->value);
 
-    std::vector<Expr> indices;
-    for (IndexVar const& iv : indexExpr->resultVars) {
-      Expr varExpr = getVarExpr(lvs->getVar(iv).first);
-      indices.push_back(varExpr);
+    if (isScalar(op->value.type())) {
+      stmt = TensorWrite::make(op->tensor, op->indices, value);
     }
-    Expr tensor = TensorRead::make(op->tensor, op->indices);
-
-    stmt = TensorWrite::make(tensor, indices, value);
+    else {
+      std::vector<Expr> indices;
+      for (IndexVar const& iv : indexExpr->resultVars) {
+        Expr varExpr = getVarExpr(lvs->getVar(iv).first);
+        indices.push_back(varExpr);
+      }
+      Expr tensor = TensorRead::make(op->tensor, op->indices);
+      stmt = TensorWrite::make(tensor, indices, value);
+    }
   }
 
   void visit(const IndexedTensor *op) {
@@ -436,7 +440,7 @@ private:
     assert(lhsExpr.defined());
 
     if (e.defined()) {
-      if (!isScalarTensor(e.type())) {
+      if (!isScalar(e.type())) {
         e = IRRewriter::mutate(e);
       }
       else {
@@ -490,7 +494,7 @@ private:
 
   void visit(const AssignStmt *op) {
     if (op == rstmt) {
-      assert(isScalarTensor(op->value.type()) &&
+      assert(isScalar(op->value.type()) &&
              "assignment non-scalars should have been lowered by now");
       switch (rop.getKind()) {
         case ReductionOperator::Sum: {

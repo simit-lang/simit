@@ -237,7 +237,7 @@ struct Literal : public ExprNode<Literal> {
   }
 
   static Expr make(Type type, std::vector<double> values) {
-    assert(isScalarTensor(type) || type.toTensor()->size() == values.size());
+    assert(isScalar(type) || type.toTensor()->size() == values.size());
     return Literal::make(type, values.data());
   }
 
@@ -291,7 +291,7 @@ struct TensorRead : public ExprNode<TensorRead> {
   static Expr make(Expr tensor, std::vector<Expr> indices) {
     assert(tensor.type().isTensor());
     for (auto &index : indices) {
-      assert(isScalarTensor(index.type()));
+      assert(isScalar(index.type()));
     }
 
     TensorRead *node = new TensorRead;
@@ -374,7 +374,7 @@ struct IndexExpr : public ExprNode<IndexExpr> {
   std::vector<IndexVar> domain() const;
 
   static Expr make(std::vector<IndexVar> resultVars, Expr value) {
-    assert(isScalarTensor(value.type()));
+    assert(isScalar(value.type()));
     for (auto &idxVar : resultVars) {  // No reduction variables on lhs
       assert(idxVar.isFreeVar());
     }
@@ -406,7 +406,7 @@ struct Neg : public ExprNode<Neg> {
   Expr a;
 
   static Expr make(Expr a) {
-    assert(isScalarTensor(a.type()));
+    assert(isScalar(a.type()));
 
     Neg *node = new Neg;
     node->type = a.type();
@@ -419,7 +419,7 @@ struct Add : public ExprNode<Add> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(isScalarTensor(a.type()));
+    assert(isScalar(a.type()));
     assert(a.type() == b.type());
 
     Add *node = new Add;
@@ -434,7 +434,7 @@ struct Sub : public ExprNode<Sub> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(isScalarTensor(a.type()));
+    assert(isScalar(a.type()));
     assert(a.type() == b.type());
 
     Sub *node = new Sub;
@@ -449,7 +449,7 @@ struct Mul : public ExprNode<Mul> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(isScalarTensor(a.type()));
+    assert(isScalar(a.type()));
     assert(a.type() == b.type());
 
     Mul *node = new Mul;
@@ -464,7 +464,7 @@ struct Div : public ExprNode<Div> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(isScalarTensor(a.type()));
+    assert(isScalar(a.type()));
     assert(a.type() == b.type());
 
     Div *node = new Div;
@@ -480,7 +480,7 @@ struct Load : public ExprNode<Load> {
   Expr index;
 
   static Expr make(Expr buffer, Expr index) {
-    assert(isScalarTensor(index.type()));
+    assert(isScalar(index.type()));
 
     // TODO: Create a buffer/array type and assert that buffer is that type.
     //       Then get the component from the buffer.

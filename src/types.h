@@ -198,7 +198,7 @@ inline Type::Type(SetType *set)
 inline Type::Type(TupleType *tuple)
     : _kind(Tuple), tuple(tuple), ptr(tuple) {}
 
-inline bool isScalarTensor(Type type) {
+inline bool isScalar(Type type) {
   return type.kind()==Type::Tensor && type.toTensor()->order() == 0;
 }
 

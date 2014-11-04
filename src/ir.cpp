@@ -131,7 +131,7 @@ Type getBlockType(Expr tensor) {
 }
 
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
-  assert(isScalarTensor(expr.type()));
+  assert(isScalar(expr.type()));
   std::vector<IndexDomain> dimensions;
   for (auto &indexVar : lhsIndexVars) {
     dimensions.push_back(indexVar.getDomain());

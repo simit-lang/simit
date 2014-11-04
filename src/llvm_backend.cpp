@@ -244,14 +244,14 @@ void LLVMBackend::visit(const VarExpr *op) {
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
   // in which case we must load the value.  This case arises because we keep
   // many scalars on the stack.  One exceptions to this are loop variables.
-  if (isScalarTensor(op->type) && val->getType()->isPointerTy()) {
+  if (isScalar(op->type) && val->getType()->isPointerTy()) {
     string valName = string(val->getName()) + VAL_SUFFIX;
     val = builder->CreateAlignedLoad(val, 8, valName);
   }
 }
 
 void LLVMBackend::visit(const Result *op) {
-  cout << "Result" << endl;
+  // TODO: Is this node still needed?
 }
 
 void LLVMBackend::visit(const ir::Load *op) {
@@ -273,7 +273,7 @@ void LLVMBackend::visit(const Call *op) {
   // compile arguments first
   for (auto a: op->actuals) {
     //FIX: remove once solve() is no longer needed
-    //assert(isScalarTensor(a.type()));
+    //assert(isScalar(a.type()));
     argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
     args.push_back(compile(a));
   }
@@ -350,7 +350,7 @@ void LLVMBackend::visit(const Call *op) {
 }
 
 void LLVMBackend::visit(const Neg *op) {
-  assert(isScalarTensor(op->type));
+  assert(isScalar(op->type));
   llvm::Value *a = compile(op->a);
 
   switch (op->type.toTensor()->componentType.kind) {
@@ -364,7 +364,7 @@ void LLVMBackend::visit(const Neg *op) {
 }
 
 void LLVMBackend::visit(const Add *op) {
-  assert(isScalarTensor(op->type));
+  assert(isScalar(op->type));
 
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
@@ -380,7 +380,7 @@ void LLVMBackend::visit(const Add *op) {
 }
 
 void LLVMBackend::visit(const Sub *op) {
-  assert(isScalarTensor(op->type));
+  assert(isScalar(op->type));
 
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
@@ -396,7 +396,7 @@ void LLVMBackend::visit(const Sub *op) {
 }
 
 void LLVMBackend::visit(const Mul *op) {
-  assert(isScalarTensor(op->type));
+  assert(isScalar(op->type));
 
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
@@ -412,7 +412,7 @@ void LLVMBackend::visit(const Mul *op) {
 }
 
 void LLVMBackend::visit(const Div *op) {
-  assert(isScalarTensor(op->type));
+  assert(isScalar(op->type));
 
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
@@ -433,7 +433,7 @@ void LLVMBackend::visit(const AssignStmt *op) {
   /// \todo assignment of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only assign scalars to scalars
   ///       in the backend
-//  assert(isScalarTensor(op->value.type()) &&
+//  assert(isScalar(op->value.type()) &&
 //         "assignment non-scalars should have been lowered by now");
 
   assert(op->var.type.isTensor() && op->value.type().isTensor());
@@ -483,7 +483,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
   /// \todo field writes of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only write scalars to scalars
   ///       in the backend
-//  assert(isScalarTensor(op->value.type()) &&
+//  assert(isScalar(op->value.type()) &&
 //         "assignment non-scalars should have been lowered by now");
 
   assert(op->value.type().isTensor());
@@ -589,7 +589,6 @@ void LLVMBackend::visit(const For *op) {
 }
 
 void LLVMBackend::visit(const IfThenElse *op) {
-  cout << "IfThenElse" << endl;
   NOT_SUPPORTED_YET;
 }
 
