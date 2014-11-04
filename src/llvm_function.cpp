@@ -65,21 +65,7 @@ LLVMFunction::~LLVMFunction() {
 void LLVMFunction::print(std::ostream &os) const {
   std::string fstr;
   llvm::raw_string_ostream rsos(fstr);
-  for (auto &global : module->getGlobalList()) {
-    global.print(rsos);
-    rsos << "\n";
-  }
-
-  if (requiresInit) {
-    getInitFunc()->print(rsos);
-  }
-
-  llvmFunc->print(rsos);
-
-  if (requiresInit) {
-    getDeinitFunc()->print(rsos);
-  }
-
+  module->print(rsos, nullptr);
   os << rsos.str();
 }
 
