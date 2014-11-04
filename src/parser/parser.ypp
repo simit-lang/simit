@@ -485,6 +485,8 @@ assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
   // map statements...  This is too hacky and must be fixed.
   : idents "=" expr ";" {
+    if ($expr == nullptr) {break;} // TODO: Remove check
+
     auto varNames = convertAndDelete($idents);
     Expr value = convertAndDelete($expr);
 
