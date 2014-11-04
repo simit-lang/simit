@@ -66,6 +66,7 @@ public:
 private:
   UniqueNameGenerator names;
   std::vector<ir::Stmt> *stmts = nullptr;
+  IndexVarFactory factory;
 
   void addStmt(Stmt stmt) {assert(stmts != nullptr); stmts->push_back(stmt);}
 };

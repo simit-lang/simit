@@ -45,6 +45,9 @@ std::string IndexVarFactory::makeName() {
   name[0] = 'i' + nameID;
   name[1] = '\0';
   nameID++;
+  if (nameID == 18) {
+    nameID = 0;
+  }
   return std::string(name);
 }
 
@@ -52,7 +55,6 @@ std::string IndexVarFactory::makeName() {
 // class IRBuilder
 Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
   std::vector<IndexVar> indexVars;
-  IndexVarFactory factory;
   const TensorType *tensorType = e.type().toTensor();
   for (unsigned int i=0; i < tensorType->order(); ++i) {
     IndexDomain domain = tensorType->dimensions[i];
@@ -82,7 +84,6 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
   Expr tensor = (ltype->order() > 0) ? l : r;
 
   std::vector<IndexVar> indexVars;
-  IndexVarFactory factory;
   const TensorType *tensorType = tensor.type().toTensor();
   for (unsigned int i=0; i < tensorType->order(); ++i) {
     IndexDomain domain = tensorType->dimensions[i];
@@ -138,7 +139,6 @@ Expr IRBuilder::innerProduct(Expr l, Expr r) {
   assert(l.type() == r.type());
   const TensorType *ltype = l.type().toTensor();
 
-  IndexVarFactory factory;
   auto i = factory.createIndexVar(ltype->dimensions[0], ReductionOperator::Sum);
 
   Expr a = IndexedTensor::make(l, {i});
@@ -153,7 +153,6 @@ Expr IRBuilder::outerProduct(Expr l, Expr r) {
   assert(l.type() == r.type());
   const TensorType *ltype = l.type().toTensor();
 
-  IndexVarFactory factory;
   auto i = factory.createIndexVar(ltype->dimensions[0]);
   auto j = factory.createIndexVar(ltype->dimensions[0]);
 
@@ -172,7 +171,6 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
   assert(ltype->dimensions[1] == rtype->dimensions[0]);
 //  assert(rtype->isColumnVector);
 
-  IndexVarFactory factory;
   auto i = factory.createIndexVar(ltype->dimensions[0]);
   auto j = factory.createIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
 
@@ -195,7 +193,6 @@ Expr IRBuilder::gevm(Expr l, Expr r) {
   assert(ltype->order() == 1 && rtype->order() == 2);
   assert(ltype->dimensions[0] == rtype->dimensions[0]);
 
-  IndexVarFactory factory;
   auto i = factory.createIndexVar(rtype->dimensions[1]);
   auto j = factory.createIndexVar(rtype->dimensions[0], ReductionOperator::Sum);
 
@@ -213,7 +210,6 @@ Expr IRBuilder::gemm(Expr l, Expr r) {
   assert(ltype->order() == 2 && rtype->order() == 2);
   assert(ltype->dimensions[1] == rtype->dimensions[0]);
 
-  IndexVarFactory factory;
   auto i = factory.createIndexVar(ltype->dimensions[0]);
   auto j = factory.createIndexVar(rtype->dimensions[1]);
   auto k = factory.createIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
@@ -231,7 +227,6 @@ Expr IRBuilder::transposedMatrix(Expr mat) {
   assert(mattype->order() == 2);
   const std::vector<IndexDomain> &dims = mattype->dimensions;
 
-  IndexVarFactory factory;
   std::vector<IndexVar> indexVars;
   indexVars.push_back(factory.createIndexVar(dims[1]));
   indexVars.push_back(factory.createIndexVar(dims[0]));
