@@ -177,7 +177,7 @@ void IRPrinter::visit(const Load *op) {
 void IRPrinter::visit(const IndexedTensor *op) {
   print(op->tensor);
   if (op->indexVars.size() > 0) {
-    os << "(" << util::join(op->indexVars,",") << ")";
+    os << "{" << util::join(op->indexVars,",") << "}";
   }
 }
 

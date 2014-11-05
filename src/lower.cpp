@@ -982,6 +982,9 @@ public:
     loopBody = RemoveIndexExprs(&loopVars).mutate(computeStmt);
     std::vector<const SIGEdge *> edges = sig.getEdges();
 
+    if (edges.size() == 0 && indexExpr->type.toTensor()->dimensions.size()) {
+      loopBody = LowerIndexExpressions(ud).mutate(loopBody);
+    }
 
     if (edges.size() > 1) {
       NOT_SUPPORTED_YET;
@@ -1163,6 +1166,7 @@ Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
 }
 
 class LowerTensorAccesses : public IRRewriter {
+
   void visit(const TensorRead *op) {
     assert(op->type.isTensor() && op->tensor.type().toTensor());
 
