@@ -868,3 +868,146 @@ TEST(Program, compute_spring_force) {
   ASSERT_DOUBLE_EQ(-461.3248654051871, f2(1));
   ASSERT_DOUBLE_EQ(-480.9448654051871, f2(2));
 }
+
+TEST(Program, esprings) {
+  Program program;
+  std::string programText = R"(
+    element Point
+      x : tensor[3](float);
+      v : tensor[3](float);
+
+      t0 : tensor[3](float);
+      t1 : tensor[3](float);
+      t2 : tensor[3](float);
+      t3 : tensor[3](float);
+      t4 : tensor[3](float);
+      t5 : tensor[3](float);
+      t6 : tensor[3](float);
+      t7 : tensor[3](float);
+    end
+
+    element Spring
+      m  : float;
+      l0 : float;
+    end
+
+    extern points  : set{Point};
+    extern springs : set{Spring}(points,points);
+
+    func distribute_masses(s : Spring, p : (Point*2)) ->
+        (M : tensor[points](tensor[3](float)))
+      eye = [1.0, 1.0, 1.0];
+      M(p(0)) = 0.5*s.m*eye;
+      M(p(1)) = 0.5*s.m*eye;
+    end
+
+    func distribute_gravity(s : Spring, p : (Point*2)) ->
+        (f : tensor[points](tensor[3](float)))
+      grav = [0.0, 0.0, -9.81];
+      f(p(0)) = 0.5*s.m*grav;
+      f(p(1)) = 0.5*s.m*grav;
+    end
+
+    func compute_stiffness(s : Spring, p : (Point*2)) ->
+        (f : tensor[points](tensor[3](float)))
+      stiffness = 1.0e3;
+      dx = p(1).x - p(0).x;
+      l = norm(dx);
+      f(p(0)) = stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l;
+      f(p(1)) = -(stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l);
+    end
+
+    proc main
+      h = 0.01;
+
+      fg = map distribute_gravity to springs with points reduce +;
+      M = map distribute_masses to springs with points reduce +;
+      fs = map compute_stiffness to springs with points reduce +;
+
+      % f = fs + fg
+      points.t0 = --fs;
+      points.t1 = --fg;
+      points.t2 = points.t0 + points.t1;
+
+      % p = M*v + h*f;
+      points.t3 = --M;
+      points.t4 = points.t3 .* points.v;
+      points.t5 = h * points.t2;
+      points.t6 = points.t4 + points.t5;
+
+      % v = p / diag(M)
+      points.v = points.t6 ./ points.t3;
+
+      % x = x + hv
+      points.t7 = h * points.v;
+      points.x  = points.x + points.t7;
+    end
+  )";
+
+  // Points
+  Set<> points;
+  FieldRef<double,3> x = points.addField<double,3>("x");
+  FieldRef<double,3> v = points.addField<double,3>("v");
+
+  FieldRef<double,3> t0 = points.addField<double,3>("t0");
+  FieldRef<double,3> t1 = points.addField<double,3>("t1");
+  FieldRef<double,3> t2 = points.addField<double,3>("t2");
+  FieldRef<double,3> t3 = points.addField<double,3>("t3");
+  FieldRef<double,3> t4 = points.addField<double,3>("t4");
+  FieldRef<double,3> t5 = points.addField<double,3>("t5");
+  FieldRef<double,3> t6 = points.addField<double,3>("t6");
+  FieldRef<double,3> t7 = points.addField<double,3>("t7");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  x.set(p0, {1.0, 2.0, 3.0});
+  x.set(p1, {4.0, 5.0, 6.0});
+  x.set(p2, {7.0, 8.0, 9.0});
+
+  v.set(p0, {1.0, 2.0, 3.0});
+  v.set(p1, {4.0, 5.0, 6.0});
+  v.set(p2, {7.0, 8.0, 9.0});
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> l0 = springs.addField<double>("l0");
+  FieldRef<double> m = springs.addField<double>("m");
+
+  ElementRef s0 = springs.addElement(p0,p1);
+  ElementRef s1 = springs.addElement(p1,p2);
+
+  l0.set(s0, 1.0);
+  l0.set(s1, 2.0);
+
+  m.set(s0, 2.0);
+  m.set(s1, 3.0);
+
+  // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> func = program.compile("main");
+  if (!func) FAIL() << program.getDiagnostics().getMessage();
+
+  func->bind("points", &points);
+  func->bind("springs", &springs);
+  func->runSafe();
+
+  // Check outputs
+  TensorRef<double,3> x0 = x.get(p0);
+  ASSERT_DOUBLE_EQ(1.2522649730810373, x0(0));
+  ASSERT_DOUBLE_EQ(2.2622649730810376, x0(1));
+  ASSERT_DOUBLE_EQ(3.2712839730810375, x0(2));
+
+  TensorRef<double,3> x1 = x.get(p1);
+  ASSERT_DOUBLE_EQ(3.9615470053837925, x1(0));
+  ASSERT_DOUBLE_EQ(4.9715470053837922, x1(1));
+  ASSERT_DOUBLE_EQ(5.9805660053837926, x1(2));
+
+  TensorRef<double,3> x2 = x.get(p2);
+  ASSERT_DOUBLE_EQ(7.0392450089729879, x2(0));
+  ASSERT_DOUBLE_EQ(8.0492450089729868, x2(1));
+  ASSERT_DOUBLE_EQ(9.0582640089729871, x2(2));
+}
