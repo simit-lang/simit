@@ -767,3 +767,104 @@ TEST(Program, fs) {
   ASSERT_DOUBLE_EQ(-349.10813713136343, c2(1));
   ASSERT_DOUBLE_EQ(-232.73875808757563, c2(2));
 }
+
+
+TEST(Program, compute_spring_force) {
+  Program program;
+  std::string programText = R"(
+    element Point
+      x : tensor[3](float);
+      v : tensor[3](float);
+      f : tensor[3](float);
+
+      tmp0 : tensor[3](float);
+    end
+
+    element Spring
+      m  : float;
+      l0 : float;
+    end
+
+    extern points  : set{Point};
+    extern springs : set{Spring}(points,points);
+
+    func distribute_masses(s : Spring, p : (Point*2)) ->
+        (f : tensor[points](tensor[3](float)))
+      grav = [0.0, 0.0, -9.81];
+      f(p(0)) = 0.5*s.m*grav;
+      f(p(1)) = 0.5*s.m*grav;
+    end
+
+    func compute_stiffness(s : Spring, p : (Point*2)) ->
+        (f : tensor[points](tensor[3](float)))
+      stiffness = 1.0e3;
+      dx = p(1).x - p(0).x;
+      l = norm(dx);
+      f(p(0)) = stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l;
+      f(p(1)) = -(stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l);
+    end
+
+    proc main
+      fg = map distribute_masses to springs with points reduce +;
+      fs = map compute_stiffness to springs with points reduce +;
+      points.tmp0 = -(-fg);
+      points.f = --fs + points.tmp0;
+    end
+  )";
+
+  // Points
+  Set<> points;
+  FieldRef<double,3> x = points.addField<double,3>("x");
+  FieldRef<double,3> v = points.addField<double,3>("v");
+  FieldRef<double,3> f = points.addField<double,3>("f");
+  FieldRef<double,3> tmp0 = points.addField<double,3>("tmp0");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  x.set(p0, {1.0, 2.0, 3.0});
+  x.set(p1, {4.0, 5.0, 6.0});
+  x.set(p2, {7.0, 8.0, 9.0});
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> l0 = springs.addField<double>("l0");
+  FieldRef<double> m = springs.addField<double>("m");
+
+  ElementRef s0 = springs.addElement(p0,p1);
+  ElementRef s1 = springs.addElement(p1,p2);
+
+  l0.set(s0, 1.0);
+  l0.set(s1, 2.0);
+
+  m.set(s0, 3.0);
+  m.set(s1, 4.0);
+
+  // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> func = program.compile("main");
+  if (!func) FAIL() << program.getDiagnostics().getMessage();
+
+  func->bind("points", &points);
+  func->bind("springs", &springs);
+  func->runSafe();
+
+  // Check outputs
+  TensorRef<double,3> f0 = f.get(p0);
+  ASSERT_DOUBLE_EQ(2422.649730810374,  f0(0));
+  ASSERT_DOUBLE_EQ(2422.649730810374,  f0(1));
+  ASSERT_DOUBLE_EQ(2407.9347308103738, f0(2));
+
+  TensorRef<double,3> f1 = f.get(p1);
+  ASSERT_DOUBLE_EQ(-1961.3248654051868, f1(0));
+  ASSERT_DOUBLE_EQ(-1961.3248654051868, f1(1));
+  ASSERT_DOUBLE_EQ(-2029.9948654051868, f1(2));
+
+  TensorRef<double,3> f2 = f.get(p2);
+  ASSERT_DOUBLE_EQ(-461.3248654051871, f2(0));
+  ASSERT_DOUBLE_EQ(-461.3248654051871, f2(1));
+  ASSERT_DOUBLE_EQ(-480.9448654051871, f2(2));
+}
