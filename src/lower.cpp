@@ -399,7 +399,10 @@ private:
   map<Var, pair<Var,ForDomain>> edgeLoopVars;
 
   void visit(const SIGVertex *v) {
-    Var lvar(v->iv.getName(), Int);
+    static int i=0;  // hack workaround for esprings
+    std::string name= (i==0) ? v->iv.getName() : v->iv.getName()+to_string(i++);
+
+    Var lvar(v->iv.getName() + to_string(i++), Int);
 
     // The vertex is unconstrained and loops over it's whole domain.
     ForDomain ldom = v->iv.getDomain().getIndexSets()[0];
