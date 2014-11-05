@@ -1035,13 +1035,6 @@ call_or_paren_read_expr
     std::string name = convertAndFree($IDENT);
     auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
 
-    // TODO: Temporary hack to allow elwise division by diag in esprings.sim.
-    if (name == "divByDiag") {
-      // TODO: Add divByDiag codegen
-      $$ = NULL;
-      break;
-    }
-
     if (ctx->hasSymbol(name)) {
       const Symbol &symbol = ctx->getSymbol(name);
       if (!symbol.isReadable()) {
