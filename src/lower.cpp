@@ -372,6 +372,7 @@ Stmt flattenIndexExpressions(Stmt stmt) {
   return FlattenIndexExpressions().flatten(stmt);
 }
 
+
 class LoopVars : public SIGVisitor {
 public:
   LoopVars() : ud(nullptr) {}
@@ -388,6 +389,8 @@ public:
   bool hasVar(const Var &tensor) const {
     return edgeLoopVars.find(tensor) != edgeLoopVars.end();
   }
+
+  friend std::ostream &operator<<(std::ostream &os, const LoopVars &lvs);
 
 private:
   const UseDef *ud;
@@ -421,12 +424,22 @@ private:
   }
 };
 
+inline std::ostream &operator<<(std::ostream &os, const LoopVars &lvs) {
+  for (auto &vlv : lvs.vertexLoopVars) {
+    os << vlv.second.first << ",";
+  }
+  for (auto &elv : lvs.edgeLoopVars) {
+    os << elv.second.first << ",";
+  }
+  return os;
+}
+
 
 /// Specializes index expressions to compute one value/block at the location
 /// specified by the given loop variables
-class SpecializeIndexExprs : public IRRewriter {
+class RemoveIndexExprs : public IRRewriter {
 public:
-  SpecializeIndexExprs(const LoopVars *lvs) : lvs(lvs) {}
+  RemoveIndexExprs(const LoopVars *lvs) : lvs(lvs) {}
 
 private:
   const LoopVars *lvs;
@@ -758,25 +771,33 @@ private:
 
 // TODO: The if-based pattern matching in the visit rules is a total hack and
 //       has to be rewritten.
-class InlineMappedFunction : public IRRewriter {
+class InlineMappedFunction : private IRRewriter {
 public:
-  InlineMappedFunction(Var lvar, Func func, Expr targets, Expr neighbors,
-                       Var resultActual, Stmt computeStmt) {
-    assert(func.getArguments().size() == 2 &&
+  InlineMappedFunction(Var lvar, Var resultActual, const Map *map,
+                       Stmt computeStmt) {
+    Func mapFunc = map->function;
+    assert(mapFunc.getArguments().size() == 2 &&
            "mapped functions must have exactly two arguments");
 
     this->loopVar = lvar;
 
-    this->targetSet = targets;
-    this->neighborSet = neighbors;
+    this->targetSet = map->target;
+    this->neighborSet = map->neighbors;
+
     this->resultActual = resultActual;
 
-    this->targetElement = func.getArguments()[0];
-    this->neighborElements = func.getArguments()[1];
+    this->targetElement = mapFunc.getArguments()[0];
+    this->neighborElements = mapFunc.getArguments()[1];
 
-    this->results = set<Var>(func.getResults().begin(),func.getResults().end());
+    this->results = set<Var>(mapFunc.getResults().begin(),
+                             mapFunc.getResults().end());
 
     this->computeStmt = computeStmt;
+  }
+
+  Stmt rewrite(Stmt s) {
+    s = mutate(s);
+    return s;
   }
 
 private:
@@ -791,6 +812,7 @@ private:
   Expr neighborSet;
 
   Stmt computeStmt;
+  map<Expr,Expr> substitutions;
 
   /// Turn argument field reads into loads from the buffer corresponding to that
   /// field
@@ -951,32 +973,66 @@ public:
     const IndexExpr *indexExpr = GetIndexExpr().get(computeStmt);
 
     SIG sig = SIGBuilder(ud).create(indexExpr);
-    lvs = LoopVars(sig, ud);
+    loopVars = LoopVars(sig, ud);
 
-    componentType = indexExpr->type.toTensor()->componentType;
+    initToZeroStmt = ReplaceRhsWithZero().mutate(computeStmt);
 
-    initStmt = ReplaceRhsWithZero().mutate(computeStmt);
-    blockComputeStmt = SpecializeIndexExprs(&lvs).mutate(computeStmt);
 
-    stmt = blockComputeStmt;
+    // Create the loop body from the IndexExpr computeStmt
+    loopBody = RemoveIndexExprs(&loopVars).mutate(computeStmt);
+    std::vector<const SIGEdge *> edges = sig.getEdges();
+
+
+    if (edges.size() > 1) {
+      NOT_SUPPORTED_YET;
+    }
+
+    std::map<Var,const Map*> vars2maps;
+    for (auto &e : edges) {
+      VarDef varDef = ud->getDef(e->tensor);
+      assert(varDef.getKind() == VarDef::Map);
+
+      Var lvar = loopVars.getVar(e->tensor).first;
+      const Map *map = to<Map>(varDef.getStmt());
+
+      vars2maps[e->tensor] = map;
+
+      Func func = map->function;
+
+      // Inline the mapped function in the IndexExpr loop nests
+      Stmt funcBody = func.getBody();
+
+      loopBody = InlineMappedFunction(lvar, e->tensor, map,
+                                      loopBody).rewrite(funcBody);
+
+      // TODO: We should knock out redundant subexpressions in the loopBody
+      //       before lowering the index expressions there
+      loopBody = flattenIndexExpressions(loopBody);
+
+      UseDef fud(func);
+      loopBody = LowerIndexExpressions(&fud).mutate(loopBody);
+    }
+
+    stmt = loopBody;
     apply(sig);
-
     Stmt result = stmt;
     stmt = Stmt();
+
     return result;
   }
 
 private:
   const UseDef *ud;
-  LoopVars lvs;
-  ScalarType componentType;
-  Stmt initStmt;
-  Stmt blockComputeStmt;
+  LoopVars loopVars;
+  Stmt initToZeroStmt;
+  Stmt loopBody;
 
   Stmt stmt;
 
+  std::vector<const SIGEdge *> edges;
+
   void visit(const SIGVertex *v) {
-    pair<Var,ForDomain> loopVar = lvs.getVar(v->iv);
+    pair<Var,ForDomain> loopVar = loopVars.getVar(v->iv);
     Var lvar = loopVar.first;
     ForDomain ldom = loopVar.second;
 
@@ -984,7 +1040,7 @@ private:
       stmt = For::make(lvar, ldom, stmt);
     }
     else {
-      ReduceOverVar rov(blockComputeStmt, v->iv.getOperator());
+      ReduceOverVar rov(loopBody, v->iv.getOperator());
       Stmt loopBody = rov.mutate(stmt);
 
       Var tmpVar = rov.getTmpVar();
@@ -1006,33 +1062,18 @@ private:
   }
 
   void visit(const SIGEdge *e) {
-    pair<Var,ForDomain> loopVar = lvs.getVar(e->tensor);
+    edges.push_back(e);
+
+    pair<Var,ForDomain> loopVar = loopVars.getVar(e->tensor);
+
     Var lvar = loopVar.first;
     ForDomain ldom = loopVar.second;
 
     VarDef varDef = ud->getDef(e->tensor);
     assert(varDef.getKind() == VarDef::Map);
-    const Map *map = to<Map>(varDef.getStmt());
-
-    // Inline the function into the loop
-    Func func = map->function;
-    Expr target = map->target;
-    Expr nbrs = map->neighbors;
-
-    // Inline the mapped function in the IndexExpr loop nests
-    Stmt funcBody = func.getBody();
-    Stmt loopBody = InlineMappedFunction(lvar, func, target, nbrs, e->tensor,
-                                         blockComputeStmt).mutate(funcBody);
-
-    // TODO: We should knock out redundant subexpressions in the loopBody before
-    //       lowering the index expressions there
-    loopBody = flattenIndexExpressions(loopBody);
-
-    UseDef fud(func);
-    loopBody = LowerIndexExpressions(&fud).mutate(loopBody);
 
     Stmt loop = For::make(lvar, ldom, loopBody);
-    stmt = Block::make(initStmt, loop);
+    stmt = Block::make(initToZeroStmt, loop);
 
     for (auto &v : e->endpoints) {
       visitedVertices.insert(v);

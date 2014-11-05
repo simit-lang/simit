@@ -50,7 +50,15 @@ public:
 
   friend SIG merge(SIG&, SIG&, SIG::MergeOp);
 
-  bool isSparse() {return content->edges.size() > 0;}
+  bool isSparse() const {return content->edges.size() > 0;}
+
+  std::vector<const SIGEdge *> getEdges() const {
+    std::vector<const SIGEdge *> edges;
+    for (auto &edge : content->edges) {
+      edges.push_back(edge.second.get());
+    }
+    return edges;
+  }
 
 private:
   struct Content {
