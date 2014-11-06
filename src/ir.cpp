@@ -40,6 +40,11 @@ bool operator!=(const Expr &l, const Expr &r) {
 }
 
 // class Intrinsics
+Func Intrinsics::mod = Func("mod",
+                            {Var("x", Float), Var("y", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+
 Func Intrinsics::sin = Func("sin",
                             {Var("x", Float)},
                             {Var("r", Float)},
@@ -81,7 +86,8 @@ Func Intrinsics::solve = Func("solve",
                               {Var("r", Float)},
                               Func::Intrinsic);
 
-std::map<std::string, Func> Intrinsics::byName = {{"sin",sin},
+std::map<std::string, Func> Intrinsics::byName = {{"mod",mod},
+                                                  {"sin",sin},
                                                   {"cos",cos},
                                                   {"atan2",atan2},
                                                   {"sqrt",sqrt},

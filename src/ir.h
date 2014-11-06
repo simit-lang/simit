@@ -185,6 +185,7 @@ public:
 // Intrinsics:
 class Intrinsics {
 public:
+  static Func mod;
   static Func sin;
   static Func cos;
   static Func atan2;
