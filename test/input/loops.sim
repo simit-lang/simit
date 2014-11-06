@@ -3,10 +3,6 @@ element Point
   x : tensor[3](float);
 end
 
-func mod(a : int, m : int) -> (b : int)
-
-end
-
 func edgeVectors(pts : (Point*3)) -> (vec : tensor[3](tensor[3](float)))
   for i in 0:3
     j = mod((i+1), 3);
