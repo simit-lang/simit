@@ -768,7 +768,7 @@ void initDrawing(int argc, char** argv) {
 }
 
 void initDrawing() {
-  char* argv[] = { "simit-viz", NULL };
+  char* argv[] = {const_cast<char*>("simit-viz"), 0};
   int argc = 1;
   initDrawing(argc, argv);
 }
