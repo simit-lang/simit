@@ -9,6 +9,8 @@
 namespace simit {
 
 void initDrawing(int argc, char** argv);
+void initDrawing();
+
 // Non-blocking functions (window is only displayed as long as
 // program continues executing)
 void drawPoints(const Set<>& points, FieldRef<double,3> coordField,

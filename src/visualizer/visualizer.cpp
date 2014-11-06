@@ -22,8 +22,9 @@
 using namespace std;
 
 namespace simit {
-
 namespace internal {
+
+bool kInitialized = false;
 
 const string& kConstVertexShader = R"(
 attribute vec4 position;
@@ -762,10 +763,22 @@ void initDrawing(int argc, char** argv) {
                        internal::handleWindowEvents, NULL);
   assert(!ret &&
          "Could not create event handler thread");
+
+  internal::kInitialized = true;
+}
+
+void initDrawing() {
+  char* argv[] = { "simit-viz", NULL };
+  int argc = 1;
+  initDrawing(argc, argv);
 }
 
 void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
                 float r, float g, float b, float a) {
+  if (!internal::kInitialized) {
+    initDrawing();
+  }
+
   internal::bindPointsData(points, coordField, r, g, b, a);
 
   // Set the draw func, to be repeatedly called
@@ -782,6 +795,10 @@ void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
 
 void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
                float r, float g, float b, float a) {
+  if (!internal::kInitialized) {
+    initDrawing();
+  }
+
   internal::bindEdgesData(edges, coordField, r, g, b, a);
 
   // Set the draw func, to be repeatedly called
@@ -798,6 +815,10 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
 
 void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
                float r, float g, float b, float a) {
+  if (!internal::kInitialized) {
+    initDrawing();
+  }
+
   internal::bindFacesData(faces, coordField, r, g, b, a);
 
   int arraySize = faces.getSize() * 3;
@@ -814,6 +835,10 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
 void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
                         float r, float g, float b, float a,
                         std::function<void()> animate) {
+  if (!internal::kInitialized) {
+    initDrawing();
+  }
+
   // Set the draw func, to be repeatedly called
   internal::drawFuncLock.lock();
   internal::drawFunc = [&animate, &points, &coordField, r, g, b, a](){
@@ -832,6 +857,10 @@ void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
 void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
                        float r, float g, float b, float a,
                        std::function<void()> animate) {
+  if (!internal::kInitialized) {
+    initDrawing();
+  }
+
   // Set the draw func, to be repeatedly called
   internal::drawFuncLock.lock();
   internal::drawFunc = [&animate, &edges, &coordField, r, g, b, a](){
@@ -850,6 +879,10 @@ void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
 void drawFacesBlocking(Set<3>& faces, FieldRef<double,3> coordField,
                        float r, float g, float b, float a,
                        std::function<void()> animate) {
+  if (!internal::kInitialized) {
+    initDrawing();
+  }
+
   // Set the draw func, to be repeatedly called
   internal::drawFuncLock.lock();
   internal::drawFunc = [&animate, &faces, &coordField, r, g, b, a](){
