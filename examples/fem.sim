@@ -80,7 +80,8 @@ end
 
 func compute_intforce(e : Hex, ps : (Point*8)) ->
      (f : tensor[points](tensor[3](float)))
-  for ii in 8  %iter over vertices  
+  for ii in 8  %iter over vertices
+    f(ii) = 0;
     for jj in 8 %iter over quadrature points
       F = defGrad(jj, ps);
       P = PK1(e, F);
@@ -90,9 +91,16 @@ func compute_intforce(e : Hex, ps : (Point*8)) ->
   end
 end
 
+func compute_stiffness(e: Hex, ps:(Point*8)) 
+  -> (K:tensor[points,points](tensor[24,24](float)))
+
+end
 
 proc main
+	dt = 0.00001;
 	x = points.x;
 	f = map compute_intforce to elts with points reduce +;
+	K = map compute_stiffness to elts with points reduce +;
+	x = x + dt * f;
 	points.x = x;
 end
