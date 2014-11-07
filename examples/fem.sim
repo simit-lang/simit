@@ -6,6 +6,7 @@ element Hex
   mu: float;
   lambda: float;
 end
+
 const eye3      : tensor[3,3](float) = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
 const quadrature : tensor[8,3](float)=
 [-0.57735, -0.57735, -0.57735;
@@ -16,8 +17,8 @@ const quadrature : tensor[8,3](float)=
   0.57735, -0.57735,  0.57735;
   0.57735,  0.57735, -0.57735;
   0.57735,  0.57735,  0.57735];
-
-const qw : tensor[8,3](float)=
+  
+const sw : tensor[8,3](float)=
 [-1.0, -1.0, -1.0;
  -1.0, -1.0,  1.0;
  -1.0,  1.0, -1.0;
@@ -28,51 +29,70 @@ const qw : tensor[8,3](float)=
   1.0,  1.0,  1.0];
   
 const eleSize: float=0.1;
-  
+const X0 : tensor[8,3](float)=
+[
+  0.0, 0.0, 0.0;
+  0.0, 0.0, 0.1;
+  0.0, 0.1, 0.0;
+  0.0, 0.1, 0.1;
+  0.1, 0.0, 0.0;
+  0.1, 0.0, 0.1;
+  0.1, 0.1, 0.0;
+  0.1, 0.1, 0.1
+];
 extern points :set{Point};
 extern elts : set{Hex}(points,points);
 extern fe : tensor[points](tensor[3](float));
 
+func trace(M:tensor[3,3](float)) -> (t:float)
+  t = M(0,0) + M(1,1) + M(2,2);
+end
+
+%stvk
 func PK1 (e : Hex, F:tensor[3,3](float)) -> (P:tensor[3,3](float))
-  J = 1.0; %%%log(det(F));
-  FT = F; %.inverse()';
-  P = e.mu * (F - FT) + e.lambda * J * FT;
+  E = 0.5 * (F*F' - eye3);
+  P = F*(2.0*e.mu*E + e.lambda*trace(E)*eye3);
 end
 
 func dPdx (e : Hex, F:tensor[3,3](float), dF:tensor[3,3](float))
    -> (dP:tensor[3,3](float))
-  J = 1.0; %log(det(F));
-  Finv = F;%F.inverse();
-  FinvT = Finv';
-  dP = e.mu*dF;
-  c1 = e.mu-e.lambda * J;
-  dP = dP+c1 * FinvT*dF'*FinvT;
-  dP = dP+e.lambda*FinvT; %trace(Finv*dF)*
+  E = 0.5 * (F*F' - eye3);
+  dE = 0.5 * (dF*F'+F'*dF);
+  dP = dF*(2.0*e.mu*E + e.lambda * trace(E)*eye3) + F*(2.0*e.mu*dE + e.lambda*trace(dE)*eye3);
 end
 
-func shapeFunGrad (p : tensor[3](float), i:int) -> (g:tensor[3](float))
-  g(i,0) = (0.25/eleSize) * qw(i,0) * (1.0 + qw(i,1) * p(1)) * (1.0 + qw(i,2) * p(2));
-  g(i,1) = (0.25/eleSize) * qw(i,1) * (1.0 + qw(i,0) * p(0)) * (1.0 + qw(i,2) * p(2));
-  g(i,2) = (0.25/eleSize) * qw(i,2) * (1.0 + qw(i,0) * p(0)) * (1.0 + qw(i,1) * p(1));
+func shapeFunGrad (i:int, kk:int) -> (g:tensor[3](float))
+  p = quadrature(kk);
+  g(0) = (0.25/eleSize) * sw(i,0) * (1.0 + sw(i,1) * p(1)) * (1.0 + sw(i,2) * p(2));
+  g(1) = (0.25/eleSize) * sw(i,1) * (1.0 + sw(i,0) * p(0)) * (1.0 + sw(i,2) * p(2));
+  g(2) = (0.25/eleSize) * sw(i,2) * (1.0 + sw(i,0) * p(0)) * (1.0 + sw(i,1) * p(1));
 end
 
-func defGrad(p : tensor[3](float), ps : (Point*8)) -> (F : tensor[3,3](float))
+
+func defGrad(kk:int, ps : (Point*8)) -> (F : tensor[3,3](float))
   F = eye3;
+  for ii in 8
+    gradN = shapeFunGrad(ii, kk);
+    u = ps(ii).x - X0(ii);
+    F = F + u * gradN';
+  end
 end
 
 func compute_intforce(e : Hex, ps : (Point*8)) ->
      (f : tensor[points](tensor[3](float)))
-  F = defGrad(quadrature, ps);
-  P = PK1(e, F);
-  for p1 in ps
-    N = shapeFunGrad(p);
-    f[p1] = qw * P * N;
+  for ii in 8  %iter over vertices  
+    for jj in 8 %iter over quadrature points
+      F = defGrad(jj, ps);
+      P = PK1(e, F);
+      N = shapeFunGrad(ii,jj);
+      f(ii) = f(ii) - 0.125 * P * N;
+    end
   end
 end
 
 
 proc main
 	x = points.x;
-
+	f = map compute_intforce to elts with points reduce +;
 	points.x = x;
 end
