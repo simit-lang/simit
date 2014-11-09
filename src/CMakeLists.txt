@@ -83,6 +83,8 @@ message("-- Found LLVM: ${LLVM_CONFIG} (found version \"${LLVM_VERSION}\")")
 execute_process(COMMAND ${LLVM_CONFIG} --cppflags OUTPUT_VARIABLE LLVM_CPPFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_FLAGS ${LLVM_CPPFLAGS})
 
+set_source_files_properties( dis.cpp PROPERTIES COMPILE_FLAGS -fno-rtti )
+
 execute_process(COMMAND ${LLVM_CONFIG} --includedir OUTPUT_VARIABLE LLVM_INCLUDES OUTPUT_STRIP_TRAILING_WHITESPACE)
 include_directories("${LLVM_INCLUDES}")
 
