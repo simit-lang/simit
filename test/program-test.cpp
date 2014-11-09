@@ -869,79 +869,72 @@ TEST(Program, compute_spring_force) {
   ASSERT_DOUBLE_EQ(-480.9448654051871, f2(2));
 }
 
-TEST(Program, esprings) {
+TEST(Program, esprings_simplified) {
   Program program;
   std::string programText = R"(
-    element Point
-      x : tensor[3](float);
-      v : tensor[3](float);
+element Point
+  x : tensor[3](float);
+  v : tensor[3](float);
 
-      t0 : tensor[3](float);
-      t1 : tensor[3](float);
-      t2 : tensor[3](float);
-      t3 : tensor[3](float);
-      t4 : tensor[3](float);
-      t5 : tensor[3](float);
-      t6 : tensor[3](float);
-      t7 : tensor[3](float);
-    end
+  fs : tensor[3](float);
+  fg : tensor[3](float);
+  M : tensor[3](float);
+  p : tensor[3](float);
+end
 
-    element Spring
-      m  : float;
-      l0 : float;
-    end
+element Spring
+  m  : float;
+  l0 : float;
+end
 
-    extern points  : set{Point};
-    extern springs : set{Spring}(points,points);
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
 
-    func distribute_masses(s : Spring, p : (Point*2)) ->
-        (M : tensor[points](tensor[3](float)))
-      eye = [1.0, 1.0, 1.0];
-      M(p(0)) = 0.5*s.m*eye;
-      M(p(1)) = 0.5*s.m*eye;
-    end
+func distribute_masses(s : Spring, p : (Point*2)) ->
+    (M : tensor[points](tensor[3](float)))
+  eye = [1.0, 1.0, 1.0];
+  M(p(0)) = 0.5*s.m*eye;
+  M(p(1)) = 0.5*s.m*eye;
+end
 
-    func distribute_gravity(s : Spring, p : (Point*2)) ->
-        (f : tensor[points](tensor[3](float)))
-      grav = [0.0, 0.0, -9.81];
-      f(p(0)) = 0.5*s.m*grav;
-      f(p(1)) = 0.5*s.m*grav;
-    end
+func distribute_gravity(s : Spring, p : (Point*2)) ->
+    (f : tensor[points](tensor[3](float)))
+  grav = [0.0, 0.0, -9.81];
+  halfm = 0.5*s.m*grav;
+  f(p(0)) = halfm;
+  f(p(1)) = halfm;
+end
 
-    func compute_stiffness(s : Spring, p : (Point*2)) ->
-        (f : tensor[points](tensor[3](float)))
-      stiffness = 1.0e3;
-      dx = p(1).x - p(0).x;
-      l = norm(dx);
-      f(p(0)) = stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l;
-      f(p(1)) = -(stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l);
-    end
+func compute_stiffness(s : Spring, p : (Point*2)) ->
+    (f : tensor[points](tensor[3](float)))
+  stiffness = 1.0e3;
+  dx = p(1).x - p(0).x;
+  l = norm(dx);
+  f0 = stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l;
+  f(p(0)) = f0;
+  f(p(1)) = -f0;
+end
 
-    proc main
-      h = 0.01;
+proc main
+  h = 0.01;
 
-      fg = map distribute_gravity to springs with points reduce +;
-      M = map distribute_masses to springs with points reduce +;
-      fs = map compute_stiffness to springs with points reduce +;
+  fg = map distribute_gravity to springs with points reduce +;
+  M = map distribute_masses to springs with points reduce +;
+  fs = map compute_stiffness to springs with points reduce +;
 
-      % f = fs + fg
-      points.t0 = --fs;
-      points.t1 = --fg;
-      points.t2 = points.t0 + points.t1;
+  points.fs = --fs;
+  points.fg = --fg;
+  points.M = --M;
 
-      % p = M*v + h*f;
-      points.t3 = --M;
-      points.t4 = points.t3 .* points.v;
-      points.t5 = h * points.t2;
-      points.t6 = points.t4 + points.t5;
+  % p = M*v + h*(fs + fg);
+  points.p = (points.M .* points.v) + (h * (points.fs + points.fg));
 
-      % v = p / diag(M)
-      points.v = points.t6 ./ points.t3;
+  % v = p / diag(M)
+  points.v = points.p ./ points.M;
 
-      % x = x + hv
-      points.t7 = h * points.v;
-      points.x  = points.x + points.t7;
-    end
+  % x = x + hv
+  points.x  = points.x + (h * points.v);
+end
   )";
 
   // Points
@@ -949,14 +942,10 @@ TEST(Program, esprings) {
   FieldRef<double,3> x = points.addField<double,3>("x");
   FieldRef<double,3> v = points.addField<double,3>("v");
 
-  FieldRef<double,3> t0 = points.addField<double,3>("t0");
-  FieldRef<double,3> t1 = points.addField<double,3>("t1");
-  FieldRef<double,3> t2 = points.addField<double,3>("t2");
-  FieldRef<double,3> t3 = points.addField<double,3>("t3");
-  FieldRef<double,3> t4 = points.addField<double,3>("t4");
-  FieldRef<double,3> t5 = points.addField<double,3>("t5");
-  FieldRef<double,3> t6 = points.addField<double,3>("t6");
-  FieldRef<double,3> t7 = points.addField<double,3>("t7");
+  FieldRef<double,3> fs = points.addField<double,3>("fs");
+  FieldRef<double,3> fg = points.addField<double,3>("fg");
+  FieldRef<double,3> M = points.addField<double,3>("M");
+  FieldRef<double,3> p = points.addField<double,3>("p");
 
   ElementRef p0 = points.addElement();
   ElementRef p1 = points.addElement();
