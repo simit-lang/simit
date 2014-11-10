@@ -121,10 +121,13 @@ endforeach()
 add_subdirectory(visualizer)
 
 # EIGEN
-find_package(Eigen3 REQUIRED)
-if (NOT EIGEN3_FOUND)
+if (DEFINED ENV{EIGEN3_INCLUDE_DIR})
+  set(EIGEN3_INCLUDE_DIR $ENV{EIGEN3_INCLUDE_DIR})
+else ()
+  find_package(Eigen3 REQUIRED)
+  if (NOT EIGEN3_FOUND)
     message("Could not find Eigen3")
-else()
-    include_directories( ${EIGEN3_INCLUDE_DIR} )
+  endif()
 endif()
 
+include_directories( ${EIGEN3_INCLUDE_DIR} )
