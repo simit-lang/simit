@@ -2,7 +2,22 @@
 #include <string>
 #include <iostream>
 
+// These are just extern declared from llvm/Support/CommandLine.h since that's
+// not currently in the build for simit-test and I'm lazy.
+namespace llvm {
+namespace cl {
+extern
+void ParseCommandLineOptions(int argc, const char * const *argv,
+                             const char *Overview = nullptr);
+extern
+void ParseEnvironmentOptions(const char *progName, const char *envvar,
+                             const char *Overview = nullptr);
+}}
+
 int main(int argc, char **argv) {
+  // Get optional LLVM opt-style arguments from the SIMIT_LLVM_DEBUG_ARGS
+  // environment variable:
+  llvm::cl::ParseEnvironmentOptions("simit-test", "SIMIT_LLVM_DEBUG_ARGS");
   // If there is just one argument and it is not a gtest option, then filter
   // the tests using that argument surrounded by wildcards.
   size_t lastArgLen = strlen(argv[argc-1]);
