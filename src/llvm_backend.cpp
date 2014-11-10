@@ -302,22 +302,22 @@ void LLVMBackend::visit(const Call *op) {
   else if (op->func == ir::Intrinsics::norm) {
     assert(args.size() == 1);
     llvm::Value *x = args[0];
-    llvm::Function *fmad= llvm::Intrinsic::getDeclaration(module,
-                                                          llvm::Intrinsic::fma,
-                                                          {LLVM_DOUBLE});
+
     llvm::Value *x0 = loadFromArray(x, llvmInt(0));
-    llvm::Value *xpowsum = builder->CreateFMul(x0, x0);
+    llvm::Value *sum = builder->CreateFMul(x0, x0);
 
     llvm::Value *x1 = loadFromArray(x, llvmInt(1));
-    xpowsum = builder->CreateCall3(fmad, x1, x1, xpowsum);
+    llvm::Value *x1pow = builder->CreateFMul(x1, x1);
+    sum = builder->CreateFAdd(sum, x1pow);
 
     llvm::Value *x2 = loadFromArray(x, llvmInt(2));
-    xpowsum = builder->CreateCall3(fmad, x2, x2, xpowsum);
+    llvm::Value *x2pow = builder->CreateFMul(x2, x2);
+    sum = builder->CreateFAdd(sum, x2pow);
 
     llvm::Function *sqrt= llvm::Intrinsic::getDeclaration(module,
                                                           llvm::Intrinsic::sqrt,
                                                           {LLVM_DOUBLE});
-    val = builder->CreateCall(sqrt, xpowsum);
+    val = builder->CreateCall(sqrt, sum);
     return;
   }
   else if (op->func == ir::Intrinsics::solve) {
