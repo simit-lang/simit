@@ -12,7 +12,19 @@
 
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Vectorize.h"
+#include "llvm/Transforms/IPO.h"
+
+#include "llvm/Support/Host.h"
+#include "llvm/Support/TargetRegistry.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Target/TargetMachine.h"
+#include "llvm/Target/TargetOptions.h"
+#include "llvm/Target/TargetLibraryInfo.h"
+#include "llvm/IR/DataLayout.h"
+#include "llvm/Target/TargetSubtargetInfo.h"
 
 #include "llvm_codegen.h"
 #include "graph.h"
@@ -37,9 +49,29 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
       requiresInit(requiresInit), deinit(nullptr),
       disassembler(new DisassemblerJITEventListener()) {
 
-  llvm::FunctionPassManager fpm(module);
-  fpm.add(new llvm::DataLayout(*executionEngine->getDataLayout()));
+  string err;
+  llvm::TargetOptions options;
+  options.UnsafeFPMath = true;
+  options.LessPreciseFPMADOption = true;
+  auto target = llvm::TargetRegistry::getClosestTargetForJIT(err);
+  auto targetmachine = target->createTargetMachine(llvm::sys::getDefaultTargetTriple(), llvm::sys::getHostCPUName(), "", options);
+  const llvm::DataLayout *datalayout = targetmachine->getDataLayout();
+  
+  module->setTargetTriple(targetmachine->getTargetTriple());
+  module->setDataLayout(datalayout->getStringRepresentation());
 
+  llvm::PassManager mpm;
+  llvm::TargetLibraryInfo *TLI = new llvm::TargetLibraryInfo(llvm::Triple(module->getTargetTriple()));
+  mpm.add(TLI);
+  mpm.add(new llvm::DataLayout(*datalayout));
+  targetmachine->addAnalysisPasses(mpm);
+  
+  llvm::FunctionPassManager fpm(module);
+  
+  fpm.add(new llvm::DataLayout(*datalayout));
+  targetmachine->addAnalysisPasses(fpm);
+
+#if 0
   // Basic optimizations
   fpm.add(llvm::createBasicAliasAnalysisPass());
   fpm.add(llvm::createInstructionCombiningPass());
@@ -50,12 +82,92 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
   // Loop optimizations
   fpm.add(llvm::createLICMPass());
   fpm.add(llvm::createLoopStrengthReducePass());
+#else
+  llvm::PassManagerBuilder Builder;
+  Builder.OptLevel = 3;
+  Builder.BBVectorize = Builder.LoopVectorize = true;
+  Builder.populateFunctionPassManager(fpm);
 
+  // This causes segfaults on mpm.run(*module) for unknown reasons:
+  // Builder.populateModulePassManager(mpm);
+  // Manually building a near-equivalent pass list, instead:
+  {
+    // mpm.add(llvm::createCFLAliasAnalysisPass());
+    mpm.add(llvm::createTypeBasedAliasAnalysisPass());
+    // mpm.add(llvm::createScopedNoAliasAAPass());
+    mpm.add(llvm::createBasicAliasAnalysisPass());
+    
+    // causes segfault?!:
+    // mpm.add(llvm::createIPSCCPPass());              // IP SCCP
+    // mpm.add(llvm::createGlobalOptimizerPass());     // Optimize out global vars
+    mpm.add(llvm::createDeadArgEliminationPass());  // Dead argument elimination
+    mpm.add(llvm::createInstructionCombiningPass());// Clean up after IPCP & DAE
+    mpm.add(llvm::createCFGSimplificationPass());   // Clean up after IPCP & DAE
+    
+    // this breaks vectorization?!
+    // mpm.add(llvm::createPruneEHPass());             // Remove dead EH info
+    // mpm.add(llvm::createFunctionAttrsPass());       // Set readonly/readnone attrs
+    // mpm.add(llvm::createArgumentPromotionPass());   // Scalarize uninlined fn args
+    // mpm.add(llvm::createScalarReplAggregatesPass(-1, false));
+    
+    mpm.add(llvm::createEarlyCSEPass());              // Catch trivial redundancies
+    mpm.add(llvm::createJumpThreadingPass());         // Thread jumps.
+    mpm.add(llvm::createCorrelatedValuePropagationPass()); // Propagate conditionals
+    mpm.add(llvm::createCFGSimplificationPass());     // Merge & remove BBs
+    mpm.add(llvm::createInstructionCombiningPass());  // Combine silly seq's
+    
+    mpm.add(llvm::createTailCallEliminationPass()); // Eliminate tail calls
+    mpm.add(llvm::createCFGSimplificationPass());     // Merge & remove BBs
+    mpm.add(llvm::createReassociatePass());           // Reassociate expressions
+    mpm.add(llvm::createLoopRotatePass());            // Rotate Loop
+    mpm.add(llvm::createLICMPass());                  // Hoist loop invariants
+    mpm.add(llvm::createLoopUnswitchPass());
+    mpm.add(llvm::createInstructionCombiningPass());
+    mpm.add(llvm::createIndVarSimplifyPass());        // Canonicalize indvars
+    mpm.add(llvm::createLoopIdiomPass());             // Recognize idioms like memset.
+    mpm.add(llvm::createLoopDeletionPass());          // Delete dead loops
+    
+    mpm.add(llvm::createLoopUnrollPass());    // Unroll small loops
+    
+    // mpm.add(llvm::createMergedLoadStoreMotionPass()); // Merge ld/st in diamonds
+    mpm.add(llvm::createGVNPass());  // Remove redundancies
+    mpm.add(llvm::createMemCpyOptPass());             // Remove memcpy / form memset
+    mpm.add(llvm::createSCCPPass());                  // Constant prop with SCCP
+    
+    mpm.add(llvm::createInstructionCombiningPass());
+    mpm.add(llvm::createJumpThreadingPass());         // Thread jumps
+    mpm.add(llvm::createCorrelatedValuePropagationPass());
+    mpm.add(llvm::createDeadStoreEliminationPass());  // Delete dead stores
+    
+    mpm.add(llvm::createLoopRerollPass());
+
+    // mpm.add(llvm::createLoadCombinePass());
+    mpm.add(llvm::createAggressiveDCEPass());         // Delete dead instructions
+    mpm.add(llvm::createCFGSimplificationPass()); // Merge & remove BBs
+    mpm.add(llvm::createInstructionCombiningPass());  // Clean up after everything.
+    
+    mpm.add(llvm::createBarrierNoopPass());
+    mpm.add(llvm::createLoopVectorizePass());
+    mpm.add(llvm::createInstructionCombiningPass());
+    
+    mpm.add(llvm::createSLPVectorizerPass());   // Vectorize parallel scalar chains.
+    mpm.add(llvm::createBBVectorizePass());
+    mpm.add(llvm::createInstructionCombiningPass());
+    mpm.add(llvm::createGVNPass()); // Remove redundancies
+  }
+#endif
+  
   fpm.doInitialization();
   fpm.run(*llvmFunc);
+  fpm.doFinalization();
   
+  mpm.run(*module);
+
   if (getenv("SIMIT_LOG_ASM")) {
     executionEngine->RegisterJITEventListener(disassembler);
+  }
+  if (getenv("SIMIT_LOG_LLVM")) {
+    print(std::cerr);
   }
 }
 
