@@ -16,7 +16,6 @@
 
 #include "llvm_codegen.h"
 #include "graph.h"
-#include "dis.h"
 
 using namespace std;
 
@@ -52,10 +51,6 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
 
   fpm.doInitialization();
   fpm.run(*llvmFunc);
-  
-  // TODO: leaks
-  llvm::JITEventListener* disassembler = new DisassemblerJITEventListener();
-  executionEngine->RegisterJITEventListener(disassembler);
 }
 
 LLVMFunction::~LLVMFunction() {
