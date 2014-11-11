@@ -30,7 +30,6 @@ class LLVMFunction : public simit::Function {
   llvm::Function        *llvmFunc;
   llvm::Module          *module;
   llvm::ExecutionEngine *executionEngine;
-  llvm::JITEventListener *disassembler;
 
   bool requiresInit;
   FuncPtrType deinit;

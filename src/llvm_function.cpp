@@ -34,8 +34,7 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                            bool requiresInit, llvm::Module *module)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       executionEngine(createExecutionEngine(module)),
-      requiresInit(requiresInit), deinit(nullptr),
-      disassembler(new DisassemblerJITEventListener()) {
+      requiresInit(requiresInit), deinit(nullptr) {
 
   llvm::FunctionPassManager fpm(module);
   fpm.add(new llvm::DataLayout(*executionEngine->getDataLayout()));
@@ -54,9 +53,9 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
   fpm.doInitialization();
   fpm.run(*llvmFunc);
   
-  if (getenv("SIMIT_LOG_ASM")) {
-    executionEngine->RegisterJITEventListener(disassembler);
-  }
+  // TODO: leaks
+  llvm::JITEventListener* disassembler = new DisassemblerJITEventListener();
+  executionEngine->RegisterJITEventListener(disassembler);
 }
 
 LLVMFunction::~LLVMFunction() {
@@ -66,7 +65,6 @@ LLVMFunction::~LLVMFunction() {
   executionEngine->removeModule(module);
   delete executionEngine;
   delete module;
-  delete disassembler;
 }
 
 void LLVMFunction::print(std::ostream &os) const {
