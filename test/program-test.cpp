@@ -98,7 +98,7 @@ TEST(Program, dot) {
 
     extern points : set{Point};
 
-    proc addSets
+    proc dot
       s = points.x * points.x';
       points.z = s + points.z;
     end
@@ -108,7 +108,7 @@ TEST(Program, dot) {
   int errorCode = program.loadString(programText);
   if (errorCode) FAIL() << program.getDiagnostics().getMessage();
 
-  std::unique_ptr<Function> f = program.compile("addSets");
+  std::unique_ptr<Function> f = program.compile("dot");
   if (!f) FAIL() << program.getDiagnostics().getMessage();
 
   Set<> points;
@@ -127,6 +127,46 @@ TEST(Program, dot) {
   f->runSafe();
   ASSERT_EQ(14.0, z.get(p0));
 }
+
+TEST(Program, dot_blocked) {
+  std::string programText = R"(
+    element Point
+      x : tensor[3](float);
+      z : float;
+    end
+
+    extern points : set{Point};
+
+    proc dot
+      s = points.x * points.x';
+      points.z = s + points.z;
+    end
+  )";
+
+  Program program;
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("dot");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  Set<> points;
+  FieldRef<double,3> x = points.addField<double,3>("x");
+  FieldRef<double> z = points.addField<double>("z");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+  x.set(p0, {1.0,2.0,3.0});
+  x.set(p1, {4.0,5.0,6.0});
+  x.set(p2, {7.0,8.0,9.0});
+
+  f->bind("points", &points);
+
+  f->runSafe();
+  ASSERT_EQ(285.0, (double)z.get(p0));
+}
+
 
 TEST(Program, gemv) {
   Program program;

@@ -466,10 +466,12 @@ private:
     Expr value = mutate(indexExpr);
 
     std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
+    std::vector<IndexVar> rindexVars = GetReductionIndexVars().get(value);
+
     // TODO: Simplify by emitting empty IndexedTensors for scalar
     //       expressions (in visit(IndexedTensor)). Then we can remove the test
     //       and always turn value into an IndexExpr
-    if (indexVars.size() > 0) {
+    if (indexVars.size() > 0 || rindexVars.size() > 0) {
       value = IndexExpr::make(indexVars, value);
     }
 
@@ -497,10 +499,12 @@ private:
     Expr value = mutate(indexExpr);
 
     std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
+    std::vector<IndexVar> rindexVars = GetReductionIndexVars().get(value);
+
     // TODO: Simplify by emitting empty IndexedTensors for scalar
     //       expressions (in visit(IndexedTensor)). Then we can remove the test
     //       and always turn value into an IndexExpr
-    if (indexVars.size() > 0) {
+    if (indexVars.size() > 0 || rindexVars.size() > 0) {
       value = IndexExpr::make(indexVars, value);
     }
 
@@ -671,7 +675,13 @@ private:
   Stmt tmpWriteStmt;
 
   void visit(const AssignStmt *op) {
+//    std::cout << "::: " << *op << std::endl;
+//    std::cout << "### " << rstmt << std::endl;
+
     if (op == rstmt) {
+
+//      std::cout << "here" << std::endl;
+
       assert(isScalar(op->value.type()) &&
              "assignment non-scalars should have been lowered by now");
       switch (rop.getKind()) {
@@ -980,14 +990,21 @@ public:
 
     initToZeroStmt = ReplaceRhsWithZero().mutate(computeStmt);
 
+//    std::cout << "-- before" << std::endl;
+//    std::cout << computeStmt << std::endl;
 
     // Create the loop body from the IndexExpr computeStmt
     loopBody = RemoveIndexExprs(&loopVars).mutate(computeStmt);
     std::vector<const SIGEdge *> edges = sig.getEdges();
 
-    if (edges.size() == 0 && indexExpr->type.toTensor()->dimensions.size()) {
+//    cout << indexExpr->type.toTensor()->dimensions.size() << endl;
+
+    if (edges.size() == 0) { //&& indexExpr->type.toTensor()->dimensions.size()) {
       loopBody = LowerIndexExpressions(ud).mutate(loopBody);
     }
+
+//    std::cout << loopBody << std::endl;
+//    std::cout << "-- after" << std::endl << std::endl;
 
     if (edges.size() > 1) {
       NOT_SUPPORTED_YET;
@@ -1046,10 +1063,21 @@ private:
       stmt = For::make(lvar, ldom, stmt);
     }
     else {
+//      std::cout << "--------------------------" << std::endl;
+//      std::cout << stmt << std::endl;
+//      cout << "--- ReduceOverVar "  << endl;
+//      std::cout << loopBody << std::endl;
+//      std::cout << stmt << std::endl;
+//      std::cout << "--------------------------" << std::endl;
+
+
       ReduceOverVar rov(loopBody, v->iv.getOperator());
       Stmt loopBody = rov.mutate(stmt);
 
+//      std::cout << loopBody << std::endl;
+
       Var tmpVar = rov.getTmpVar();
+
       assert(tmpVar.defined());
 
       Stmt alloc = AssignStmt::make(tmpVar,Literal::make(tmpVar.getType(),{0}));
@@ -1087,8 +1115,131 @@ private:
   }
 };
 
+//class IsNestedDotProduct : public IRVisitor {
+//public:
+//  bool check(Stmt stmt) {
+//    stmt.accept(this);
+//    return isNestedDotProduct;
+//  }
+//
+//private:
+//  bool isNestedDotProduct = true;
+//  int
+//
+//  pviate
+//
+//};
+
+bool isNestedDotProductAssign(Stmt stmt) {
+  if (!isa<AssignStmt>(stmt)) {
+    return false;
+  }
+
+  const AssignStmt *assign = to<AssignStmt>(stmt);
+  Expr value = assign->value;
+
+  if (!isa<IndexExpr>(value)) {
+    return false;
+  }
+
+  const IndexExpr *iexpr = to<IndexExpr>(value);
+  if (!isScalar(iexpr->type)) {
+    return false;
+  }
+
+  if (!isa<Mul>(iexpr->value)) {
+    return false;
+  }
+
+  const Mul *mul = to<Mul>(iexpr->value);
+  if (!mul->a.type().isTensor() || !mul->b.type().isTensor()) {
+    return false;
+  }
+
+  if (!isa<IndexedTensor>(mul->a) || !isa<IndexedTensor>(mul->b)) {
+    return false;
+  }
+
+  const IndexedTensor *ait = to<IndexedTensor>(mul->a);
+  const IndexedTensor *bit = to<IndexedTensor>(mul->b);
+
+  const TensorType *atype = ait->tensor.type().toTensor();
+  const TensorType *btype = bit->tensor.type().toTensor();
+
+  if (atype->order() != 1 || btype->order() != 1) {
+    return false;
+  }
+
+  if (atype->dimensions[0].getIndexSets().size() != 2 ||
+      btype->dimensions[0].getIndexSets().size() != 2) {
+    return false;
+  }
+
+  return true;
+}
+
+
+
+class LowerNestedDot : public IRRewriter {
+public:
+  Var lv1;
+  Var lv2;
+  vector<Expr> operands;
+
+private:
+  void visit(const AssignStmt *op) {
+    if (isa<IndexExpr>(op->value)) {
+      Stmt stmts;
+      Var rvar = op->var;
+
+      Stmt alloc = AssignStmt::make(rvar,Literal::make(rvar.getType(),{0}));
+
+      lv1 = Var("lv1", Int);
+      lv2 = Var("lv2", Int);
+
+      Expr value = mutate(op->value);
+
+      value = Add::make(VarExpr::make(rvar), value);
+
+      Stmt body = AssignStmt::make(rvar, value);
+
+      IndexDomain dims = operands[0].type().toTensor()->dimensions[0];
+      auto iss = dims.getIndexSets();
+      assert(iss.size() == 2);
+
+      Stmt loop = For::make(lv2, ForDomain(iss[1]), body);
+      loop = For::make(lv1, ForDomain(iss[0]), loop);
+
+      stmt = stmts = Block::make(alloc, loop);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const IndexExpr *op) {
+    expr = mutate(op->value);
+  }
+
+  void visit(const IndexedTensor *op) {
+    Expr tensor = op->tensor;
+    operands.push_back(tensor);
+
+    Expr tread = TensorRead::make(tensor, {VarExpr::make(lv1)});
+    tread = TensorRead::make(tread, {VarExpr::make(lv2)});
+
+    expr = tread;
+  }
+};
+
 Stmt LowerIndexExpressions::lower(Stmt stmt) {
-  return LoopBuilder(ud).create(stmt);
+  if (isNestedDotProductAssign(stmt)) {
+    Stmt tmp = LowerNestedDot().mutate(stmt);
+    return tmp;
+  }
+  else {
+    return LoopBuilder(ud).create(stmt);
+  }
 }
 
 Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud) {
