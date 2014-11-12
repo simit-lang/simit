@@ -89,6 +89,45 @@ TEST(Program, add_blocked) {
   ASSERT_EQ(6.0, vec2(2));
 }
 
+TEST(Program, dot) {
+  std::string programText = R"(
+    element Point
+      x : float;
+      z : float;
+    end
+
+    extern points : set{Point};
+
+    proc addSets
+      s = points.x * points.x';
+      points.z = s + points.z;
+    end
+  )";
+
+  Program program;
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("addSets");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  Set<> points;
+  FieldRef<double> x = points.addField<double>("x");
+  FieldRef<double> z = points.addField<double>("z");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+  x.set(p0, 1.0);
+  x.set(p1, 2.0);
+  x.set(p2, 3.0);
+
+  f->bind("points", &points);
+
+  f->runSafe();
+  ASSERT_EQ(14.0, z.get(p0));
+}
+
 TEST(Program, gemv) {
   Program program;
   std::string programText = R"(

@@ -48,8 +48,8 @@ end
 
 %%% inner-product
 %! inner([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]') == 14.0; 
-func inner(a : tensor[3](float), b : tensor[3](float)') -> (c : float)
-  c = a * b;
+func inner(a : tensor[3](float), b : tensor[3](float)) -> (c : float)
+  c = a * b';
 end
 
 %%% outer-product
