@@ -20,8 +20,8 @@ end
 %%% eye
 %! eye(5.5) == [2.75, 0.0, 0.0; 0.0, 2.75, 0.0; 0.0, 0.0, 2.75];
 func eye(m : float) -> (M : tensor[3,3](float))
-  eye = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  M = 0.5 * m * eye;
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  M = 0.5 * m * I;
 end
 
 %%% fs
@@ -35,24 +35,15 @@ end
 %%% gemm
 %! gemm([1.0, 2.0, 3.0]) == [1.0, 2.0, 3.0; 2.0, 4.0, 6.0; 3.0, 6.0, 9.0]; 
 func gemm(dx : tensor[3](float)) -> (k : tensor[3,3](float))
-  eye = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  k  = dx'*dx*eye;
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  k  = dx'*dx*I;
 end
 
 %%% gemm_sub_dot
 %! gemm_sub_dot([1.0, 2.0, 3.0]) == [-13.0, -12.0, -11.0; -12.0, -10.0, -8.0; -11.0, -8.0, -5.0];
 func gemm_sub_dot(dx : tensor[3](float)) -> (k : tensor[3,3](float))
-  eye = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  k = dx'*dx*eye - dx*dx';
-end
-
-%%% stiffness
-%! stiffness([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [2.0272, 1.5544, 1.0816; 1.5544, 1.2707, 0.9870; 1.0816, 0.9870, 0.8924];
-func stiffness(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
-  eye = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  dx = x1 - x0;
-  l = norm(dx);
-  K = k / (l0*l0*l*l)*(dx*dx' + (l-l0)/l*(dx'*dx*eye - dx*dx'));
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  k = dx'*dx*I - dx*dx';
 end
 
 %%% spring_force
@@ -62,4 +53,46 @@ func spring_force(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float) -> (
   dx = x1 - x0;
   l = norm(dx);
   f = stiffness/(l0*l0)*(l-l0)*dx/l;
+end
+
+%%% stiffness
+%! stiffness([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [2.0272, 1.5544, 1.0816; 1.5544, 1.2707, 0.9870; 1.0816, 0.9870, 0.8924];
+func stiffness(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  dx = x1 - x0;
+  l = norm(dx);
+  K = k / (l0*l0*l*l)*(dx*dx' + (l-l0)/l*(dx'*dx*I - dx*dx'));
+end
+
+%%% stiffness2
+%! stiffness2([1.0, 0.0, 0.0], [2.0, 0.0, 0.0], 0.9, 10.0) == [0.12346, 0.0, 0.0; 0.0, 0.012346, 0.0; 0.0, 0.0, 0.012346];
+func stiffness2(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  h = 1e-1;
+  dx = x1 - x0;
+  l = norm(dx);
+  dxtdx = dx*dx';
+  dxdxt = dx'*dx;
+
+  t0 = dxtdx * I;
+  t1 = (t0 - dxdxt);
+  t2 = (l-l0)/l;
+  t3 = t2*t1;
+  t4 = dxdxt + t3;
+  t5 = h*h*k/(l0*l0*l*l);
+
+  K = t5 * t4;
+end
+
+%%% stiffness3
+%! stiffness3([1.0, 0.0, 0.0], [2.0, 0.0, 0.0], 0.9, 10.0) == [0.12346, 0.0, 0.0; 0.0, 0.012346, 0.0; 0.0, 0.0, 0.012346];
+func stiffness3(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  h = 1e-1;
+  dx = x1 - x0;
+  l = norm(dx);
+  dxtdx = dx*dx';
+  dxdxt = dx'*dx;
+
+  K = h*h*k/(l0*l0*l*l)*(dxdxt + (l-l0)/l*(dxtdx*I - dxdxt));
 end
