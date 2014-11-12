@@ -281,7 +281,7 @@ public:
     // TODO: this may not be the most efficient, but does it matter?
     endpointSets = epsMaker(endpointSets, sets...);
     
-    endpoints = (int*) calloc(sizeof(int), capacity);
+    endpoints = (int*) calloc(sizeof(int), capacity*cardinality);
   }
   
   Set() : SetBase() {
@@ -348,7 +348,7 @@ private:
   
   void increaseEdgeCapacity() {
     endpoints = (int*)realloc(endpoints,
-                              capacity+capacityIncrement*sizeof(int));
+                              (capacity+capacityIncrement)*cardinality*sizeof(int));
   }
   
   template <int c> friend class hidden::EndpointIteratorBase;
