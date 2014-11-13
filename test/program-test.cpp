@@ -1220,7 +1220,7 @@ end
 
 #define VX(ii,jj) ( (jj)*(sx+1) + (ii))
 
-TEST(Program, fem) {
+TEST(Program, fem2d) {
   Program program;
   std::string programText = R"(
 element Trig
@@ -1242,19 +1242,29 @@ extern trigs : set{Trig}(verts, verts);
 
 func distribute_masses(t : Trig, v : (Vert*3)) ->
     (M : tensor[verts](tensor[2](float)))
-  eye1 = [1.0, 1.0];
-  M(v(0)) = (1.0/3.0)*t.m*eye1;
-  M(v(1)) = (1.0/3.0)*t.m*eye1;
-  M(v(2)) = (1.0/3.0)*t.m*eye1;
-end
+  % Eigen match
+%  thirdm = (1.0/3.0)*t.m;
+%  thirdmvec = [0.0, 0.0];
+%  thirdmvec(0) = thirdm;
+%  thirdmvec(1) = thirdm;
+%  M(v(0)) = thirdmvec;
+%  M(v(1)) = thirdmvec;
+%  M(v(2)) = thirdmvec;
 
+  % Matlab match
+  me = 0.01;
+  mevec = [0.0, 0.0];
+  mevec(0) = me/3.0;
+  mevec(1) = me/3.0;
 
-func trace2(m: tensor[2,2](float)) -> (v : float)
-  v = m(0,0) + m(1,1);
+  M(v(0)) = mevec;
+  M(v(1)) = mevec;
+  M(v(2)) = mevec;
 end
 
 func compute_force(t : Trig, v : (Vert*3)) ->
     (f : tensor[verts](tensor[2](float)))
+  % Note to match eigen code instead of matlab replace these with t.m and t.l
   mu = 10.0;
   lambda = 100.0;
 
@@ -1319,13 +1329,19 @@ proc main
   h = 0.0002;
   verts.x  = verts.x + h*verts.v;
 
-%  M = map distribute_masses to trigs with verts reduce +;
-  f = map compute_force to trigs with verts reduce +;
+  Mm = map distribute_masses to trigs with verts reduce +;
+  fm = map compute_force to trigs with verts reduce +;
 
-  verts.print = --f;
+  f = --fm;
+  M = --Mm;
+  verts.v = f ./ M;
 
+  % Eigen match
+%  verts.print = --M;
 %  v = 0.99*v + h*f./M;
 %  verts.v = v;
+
+  % Matlab match
 end
   )";
 
@@ -1375,8 +1391,8 @@ end
   }
 
   std::cout << "Initial position" << std::endl;
-  for (auto &v : verts) {
-    std::cout << x.get(v) << std::endl;
+  for (auto &vert : verts) {
+    std::cout << v.get(vert) << std::endl;
   }
   std::cout << std::endl;
 
@@ -1392,12 +1408,12 @@ end
   func->runSafe();
 
   std::cout << "Print:" << std::endl;
-  for (auto &v : verts) {
-    std::cout << print.get(v) << std::endl;
+  for (auto &vert : verts) {
+    std::cout << print.get(vert) << std::endl;
   }
   std::cout << std::endl;
   std::cout << "Final position" << std::endl;
-  for (auto &v : verts) {
-    std::cout << x.get(v) << std::endl;
+  for (auto &vert : verts) {
+    std::cout << v.get(vert) << std::endl;
   }
 }
