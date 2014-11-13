@@ -789,7 +789,7 @@ public:
   InlineMappedFunction(Var lvar, Var resultActual, const Map *map,
                        Stmt computeStmt) {
     Func mapFunc = map->function;
-    assert(mapFunc.getArguments().size() == 2 &&
+    assert(mapFunc.getArguments().size()==1||mapFunc.getArguments().size()==2 &&
            "mapped functions must have exactly two arguments");
 
     this->loopVar = lvar;

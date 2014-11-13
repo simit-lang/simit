@@ -1216,3 +1216,50 @@ end
   ASSERT_DOUBLE_EQ(1.1, (double)b.get(v2));
   ASSERT_DOUBLE_EQ(0.1, (double)b.get(v3));
 }
+
+TEST(Program, map_one_set) {
+  Program program;
+  std::string programText = R"(
+element Point
+  a : float;
+end
+
+extern points  : set{Point};
+
+func doubleField(p : Point) -> (f : tensor[points](float))
+  f(p) = p.a + p.a;
+end
+
+proc main
+  f = map doubleField to points;
+  points.a = --f;
+end
+  )";
+
+  // Points
+  Set<> points;
+  FieldRef<double> a = points.addField<double>("a");
+
+  ElementRef p0 = points.addElement();
+  ElementRef p1 = points.addElement();
+  ElementRef p2 = points.addElement();
+
+  a.set(p0, 1.0);
+  a.set(p1, 2.0);
+  a.set(p2, 3.0);
+
+  // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> f = program.compile("fs");
+  if (!f) FAIL() << program.getDiagnostics().getMessage();
+
+  f->bind("points", &points);
+  f->runSafe();
+
+  // Check outputs
+  ASSERT_DOUBLE_EQ(2, (double)a.get(p0));
+  ASSERT_DOUBLE_EQ(4, (double)a.get(p1));
+  ASSERT_DOUBLE_EQ(6, (double)a.get(p2));
+}
