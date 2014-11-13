@@ -1305,24 +1305,22 @@ func compute_force(t : Trig, v : (Vert*3)) ->
   J = F(0,0) * F(1,1) - F(0,1) * F(1,0);
   stress = (P*F')./J;
 
-  n0 = [0.0, 0.0];
-  n0(0) = e0(1);
-  n0(1) = -e0(0);
-  fe0 = stress*n0;
+  n = [0.0, 0.0];
+  n(0) = e0(1);
+  n(1) = -e0(0);
+  fe0 = stress*n;
 
-  n1 = [0.0, 0.0];
-  n1(0) = e2(1);
-  n1(1) = -e2(0);
-  fe1 = stress*n1;
+  n(0) = e2(1);
+  n(1) = -e2(0);
+  fe1 = stress*n;
 
-  n2 = [0.0, 0.0];
-  n2(0) = -e1(1);
-  n2(1) = e1(0);
-  fe2 = stress*n2;
+  n(0) = -e1(1);
+  n(1) = e1(0);
+  fe2 = stress*n;
 
-  f(v(1)) = -0.5*fe0 - 0.5*fe1;
-  f(v(0)) = -0.5*fe0 - 0.5*fe2;
-  f(v(2)) = -0.5*fe1 - 0.5*fe2;
+  f(v(1)) = -0.5*(fe0 + fe1);
+  f(v(0)) = -0.5*(fe0 + fe2);
+  f(v(2)) = -0.5*(fe1 + fe2);
 end
 
 proc main
@@ -1332,9 +1330,8 @@ proc main
   Mm = map distribute_masses to trigs with verts reduce +;
   fm = map compute_force to trigs with verts reduce +;
 
-  f = --fm;
   M = --Mm;
-  verts.v = f ./ M;
+  verts.v = fm ./ M;
 
   % Eigen match
 %  verts.print = --M;
@@ -1407,11 +1404,6 @@ end
   func->bind("trigs", &trigs);
   func->runSafe();
 
-  std::cout << "Print:" << std::endl;
-  for (auto &vert : verts) {
-    std::cout << print.get(vert) << std::endl;
-  }
-  std::cout << std::endl;
   std::cout << "Final position" << std::endl;
   for (auto &vert : verts) {
     std::cout << v.get(vert) << std::endl;
