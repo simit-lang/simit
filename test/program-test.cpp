@@ -1155,3 +1155,64 @@ end
   ASSERT_DOUBLE_EQ(0.959075182791508, x8(1));
   ASSERT_DOUBLE_EQ(0.905120182791508, x8(2));
 }
+
+TEST(Program, triangle) {
+  Program program;
+  std::string programText = R"(
+element Trig
+  a : float;
+end
+
+element Vert
+  b : float;
+end
+
+extern verts : set{Vert};
+extern trigs : set{Trig}(verts, verts);
+
+func dist(t : Trig, v : (Vert*3)) -> ( R : tensor[verts](float))
+  R(v(0)) = t.a;
+  R(v(1)) = t.a;
+  R(v(2)) = t.a;
+end
+
+proc main
+  R = map dist to trigs with verts reduce +;
+  verts.b = --R;
+end
+  )";
+
+  simit::Set<> verts;
+  simit::FieldRef<double> b = verts.addField<double>("b");
+
+  ElementRef v0 = verts.addElement();
+  ElementRef v1 = verts.addElement();
+  ElementRef v2 = verts.addElement();
+  ElementRef v3 = verts.addElement();
+
+  simit::Set<3> trigs(verts,verts,verts);
+  simit::FieldRef<double> a = trigs.addField<double>("a");
+
+  ElementRef t0 = trigs.addElement(v0,v1,v2);
+  ElementRef t1 = trigs.addElement(v0,v2,v3);
+
+  a.set(t0, 1.0);
+  a.set(t1, 0.1);
+
+ // Compile program and bind arguments
+  int errorCode = program.loadString(programText);
+  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+
+  std::unique_ptr<Function> func = program.compile("main");
+  if (!func) FAIL() << program.getDiagnostics().getMessage();
+
+  func->bind("verts", &verts);
+  func->bind("trigs", &trigs);
+  func->runSafe();
+
+  // Check outputs
+  ASSERT_DOUBLE_EQ(1.1, (double)b.get(v0));
+  ASSERT_DOUBLE_EQ(1.0, (double)b.get(v1));
+  ASSERT_DOUBLE_EQ(1.1, (double)b.get(v2));
+  ASSERT_DOUBLE_EQ(0.1, (double)b.get(v3));
+}
