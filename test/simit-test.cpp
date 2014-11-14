@@ -49,14 +49,14 @@ int main(int argc, char **argv) {
   // Handle leftover flags
   for (int i = 0; i < argc; ++i) {
     std::string arg = argv[i];
-    if (arg[0] == '-') {
+    if (arg.substr(0,2) == "--") {
       std::vector<std::string> keyValPair = simit::util::split(arg, "=");
       if (keyValPair.size() == 1) {
         std::cerr << "Unrecognized arg: " << arg << std::endl;
         return 1;
       }
       else if (keyValPair.size() == 2) {
-        if (keyValPair[0] == "-backend") {
+        if (keyValPair[0] == "--backend") {
           if (std::find(simit::VALID_BACKENDS.begin(),
                         simit::VALID_BACKENDS.end(),
                         keyValPair[1]) != simit::VALID_BACKENDS.end()) {
