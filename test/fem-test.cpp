@@ -180,11 +180,11 @@ end
     }
   }
 
-  std::cout << "Initial position" << std::endl;
-  for (auto &vert : verts) {
-    std::cout << v.get(vert) << std::endl;
-  }
-  std::cout << std::endl;
+//  std::cout << "Initial position" << std::endl;
+//  for (auto &vert : verts) {
+//    std::cout << v.get(vert) << std::endl;
+//  }
+//  std::cout << std::endl;
 
   // Compile program and bind arguments
   int errorCode = program.loadString(programText);
@@ -197,8 +197,8 @@ end
   func->bind("trigs", &trigs);
   func->runSafe();
 
-  std::cout << "Final position" << std::endl;
-  for (auto &vert : verts) {
-    std::cout << v.get(vert) << std::endl;
-  }
+//  std::cout << "Final position" << std::endl;
+//  for (auto &vert : verts) {
+//    std::cout << v.get(vert) << std::endl;
+//  }
 }

@@ -1282,7 +1282,7 @@ end
   ASSERT_DOUBLE_EQ(0.1, (double)b.get(v3));
 }
 
-TEST(Program, map_one_set) {
+TEST(DISABLED_Program, map_one_set) {
   Program program;
   std::string programText = R"(
 element Point
