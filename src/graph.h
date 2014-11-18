@@ -81,7 +81,7 @@ public:
   FieldRef<T, dimensions...> addField(const std::string &name) {
     FieldData::TensorType *type =
         new FieldData::TensorType(typeOf<T>(), {dimensions...});
-    FieldData *fieldData = new FieldData(name, type);
+    FieldData *fieldData = new FieldData(name, type, this);
     fieldData->data = calloc(capacity, fieldData->sizeOfType);
     fields.push_back(fieldData);
     fieldNames[name] = fields.size()-1;
@@ -204,7 +204,7 @@ private:
     class TensorType {
     public:
       TensorType(ComponentType componentType, std::initializer_list<int> dims)
-      : componentType(componentType), dimensions(dims), size(1) {
+          : componentType(componentType), dimensions(dims), size(1) {
         for (auto dim : dimensions) {
           size *= dim;
         }
@@ -225,9 +225,10 @@ private:
     std::string name;
     const TensorType *type;
     size_t sizeOfType;
+    SetBase *set;  // Set this field is a member of. Used for printing, etc.
     
-    FieldData(const std::string &name, const TensorType *type)
-        : name(name), type(type), data(nullptr) {
+    FieldData(const std::string &name, const TensorType *type, SetBase *set)
+        : name(name), type(type), set(set), data(nullptr) {
       sizeOfType = componentSize(type->getComponentType()) * type->getSize();
     }
 
@@ -612,7 +613,7 @@ namespace {
 
 /// The base class of field references.
 class FieldRefBase {
- public:
+public:
    /// Rule of five methods for copying and moving the field reference.  Note
    /// that there is quite a bit of machinery to maintain a fieldReferences
    /// set of live field references in Set::FieldData.  This is because the
@@ -657,7 +658,7 @@ class FieldRefBase {
     return static_cast<void*>(data);
   }
 
- protected:
+protected:
   FieldRefBase(void *fieldData)
       : fieldData(static_cast<SetBase::FieldData*>(fieldData)),
         data(this->fieldData->data) {
@@ -665,12 +666,13 @@ class FieldRefBase {
   }
 
   template <typename T>
-  inline T *getElemDataPtr(ElementRef element, size_t elementFieldSize) {
+  inline T *getElemDataPtr(ElementRef element, size_t elementFieldSize) const {
     return &static_cast<T*>(data)[element.ident * elementFieldSize];
   }
 
- private:
   SetBase::FieldData *fieldData;
+
+private:
   void *data;
 
   friend SetBase;
@@ -698,7 +700,7 @@ class FieldRefBaseParameterized : public FieldRefBase {
   }
 
  protected:
-  inline T *getElemDataPtr(ElementRef element) {
+  inline T *getElemDataPtr(ElementRef element) const {
     size_t elementFieldSize = TensorRef<T,dimensions...>::getSize();
     return FieldRefBase::getElemDataPtr<T>(element, elementFieldSize);
   }
@@ -715,6 +717,23 @@ class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
   FieldRef(void *fieldData)
       : FieldRefBaseParameterized<T,dimensions...>(fieldData) {}
   friend class SetBase;
+
+  friend std::ostream &operator<<(std::ostream &os,
+                                  const FieldRef<T, dimensions...> &field) {
+    os << "[";
+    auto it = field.fieldData->set->begin();
+    auto end = field.fieldData->set->end();
+    if (it != end) {
+      os << field.get(*it);
+      ++it;
+    }
+
+    while (it++ != end) {
+      os << ", " << field.get(*it);
+    }
+
+    return os << "]";
+  }
 };
 
 /// @cond SPECIALIZATION
