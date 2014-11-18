@@ -9,6 +9,16 @@ file(GLOB SOURCES *.cpp)
 add_executable(${TESTS} ${SOURCES})
 target_link_libraries(${TESTS} gtest)
 target_link_libraries(${TESTS} pthread)
+
+if ($ENV{SIMIT_TEST_VIZ})
+  find_package(OpenGL)
+  find_package(GLUT) 
+  if (OPENGL_FOUND AND GLUT_FOUND)
+    target_link_libraries(${TESTS} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} )
+    target_link_libraries(${TESTS} ${PROJECT_NAME}viz)
+  endif ()
+endif ()
+
 target_link_libraries(${TESTS} ${PROJECT_NAME})
 
 set(SIMIT_TEST_INPUT_DIR ${SIMIT_TEST_DIR}/input)
