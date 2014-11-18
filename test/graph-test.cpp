@@ -317,6 +317,42 @@ TEST(EdgeSet, VertexToEdgeIndex) {
   ASSERT_EQ(edgeindex->getTotalEdges(), 2);
   ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, points), 2);
   ASSERT_EQ(edgeindex->getWhichEdgesForElement(p1, points)[0], 0);
-  
+
   delete edgeindex;
+}
+
+TEST(GraphGenerator, createBox) {
+  Set<> points;
+  Set<2> edges(points, points);
+  simit::FieldRef<double,3> X = points.addField<double,3>("x");
+
+  Box box = createBox(&points, &edges, 3, 3, 3);
+
+  for(unsigned x = 0; x < box.numX()-1; ++x) {
+    for(unsigned y = 0; y < box.numY(); ++y) {
+      for(unsigned z = 0; z < box.numZ(); ++z) {
+        ASSERT_TRUE(box.getEdge(box(x,y,z), box(x+1,y,z)).defined());
+      }
+    }
+  }
+
+  // y edges
+  for(unsigned x = 0; x < box.numX(); ++x) {
+    for(unsigned y = 0; y < box.numY()-1; ++y) {
+      for(unsigned z = 0; z < box.numZ(); ++z) {
+        ASSERT_TRUE(box.getEdge(box(x,y,z), box(x,y+1,z)).defined());
+      }
+    }
+  }
+
+  // z edges
+  for(unsigned x = 0; x < box.numX(); ++x) {
+    for(unsigned y = 0; y < box.numY(); ++y) {
+      for(unsigned z = 0; z < box.numZ()-1; ++z) {
+        ASSERT_TRUE(box.getEdge(box(x,y,z), box(x,y,z+1)).defined());
+      }
+    }
+  }
+
+  ASSERT_EQ(box.getEdges().size(), 54u);
 }

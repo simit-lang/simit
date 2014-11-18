@@ -217,6 +217,37 @@ public:
   /// Create an ElementIterator for terminating iteration over this Set
   ElementIterator end() const { return ElementIterator(this, getSize()); }
 
+  friend std::ostream &operator<<(std::ostream &os, const SetBase &set) {
+    os << "{";
+    auto it = set.begin();
+    auto end = set.end();
+    if (it != end) {
+      os << it->ident;
+      if (set.getCardinality() > 0) {
+        os << ":(";
+        os << set.endpoints[0];
+        for (int i=1; i<set.getCardinality(); ++i) {
+          os << "," << set.endpoints[i];
+        }
+        os << ")";
+      }
+      ++it;
+    }
+    while (it != end) {
+      os << ", " << it->ident;
+      if (set.getCardinality() > 0) {
+        os << ":(";
+        os << set.endpoints[it->ident + 0];
+        for (int i=1; i<set.getCardinality(); ++i) {
+          os << "," << set.endpoints[it->ident + i];
+        }
+        os << ")";
+      }
+      ++it;
+    }
+    return os << "}";
+  }
+
 protected:
   int elements;                      // number of elements in the set
   int capacity;                   // current capacity of the set
@@ -867,6 +898,51 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, r, c> &t) {
   }
   return os << "]";
 }
+
+class Box {
+public:
+  typedef std::pair<ElementRef,ElementRef> Coord;
+
+  Box(unsigned nX, unsigned nY, unsigned nZ, std::vector<ElementRef> refs,
+      std::map<Box::Coord, ElementRef> coords2edges)
+      : nX(nX), nY(nY), nZ(nZ), refs(refs), coords2edges(coords2edges) {
+    assert(refs.size() == nX*nY*nZ);
+  }
+
+  unsigned numX() const {return nX;}
+  unsigned numY() const {return nY;}
+  unsigned numZ() const {return nZ;}
+
+  ElementRef operator()(unsigned x, unsigned y, unsigned z) {
+    return refs[z*nY*nX + y*nX + x];
+  }
+
+  ElementRef getEdge(ElementRef p1, ElementRef p2) const {
+    Coord coord(p1,p2);
+    if (coords2edges.find(coord) == coords2edges.end()) {
+      return ElementRef();
+    }
+    return coords2edges.at(coord);
+  }
+
+  std::vector<ElementRef> getEdges() {
+    std::vector<ElementRef> edges;
+    for (auto &coord2edge : coords2edges) {
+      edges.push_back(coord2edge.second);
+    }
+    return edges;
+  }
+
+private:
+  unsigned nX, nY, nZ;
+  std::vector<ElementRef> refs;
+  std::map<Coord, ElementRef> coords2edges;
+};
+
+// Graph generators
+Box createBox(Set<> *elements, Set<2> *edges,
+              unsigned numX, unsigned numY, unsigned numZ);
+
 
 } // namespace simit
 

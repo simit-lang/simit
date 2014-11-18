@@ -1,7 +1,10 @@
 #include "graph.h"
 
-namespace simit {
+#include <iostream>
 
+using namespace std;
+
+namespace simit {
 
 void SetBase::increaseCapacity() {
   for (auto f : fields) {
@@ -16,5 +19,60 @@ void SetBase::increaseCapacity() {
   capacity += capacityIncrement;
 }
 
+#define node0(x,y,z)  x*numY*numZ + y*numZ + z      // node at x,y,z
+#define node1X(x,y,z) (x+1)*numY*numZ + y*numZ + z  // x's neighbor
+#define node1Y(x,y,z) x*numY*numZ + (y+1)*numZ + z  // y's neighbor
+#define node1Z(x,y,z) x*numY*numZ + y*numZ + (z+1)  // z's neighbor
+
+Box createBox(Set<> *elements, Set<2> *edges,
+              unsigned numX, unsigned numY, unsigned numZ) {
+  vector<ElementRef> points(numX*numY*numZ);
+
+  for(unsigned x = 0; x < numX; ++x) {
+    for(unsigned y = 0; y < numY; ++y) {
+      for(unsigned z = 0; z < numZ; ++z) {
+        points[node0(x,y,z)] = elements->addElement();
+      }
+    }
+  }
+
+
+  map<Box::Coord, ElementRef> coords2edges;
+
+  // x edges
+  for(unsigned x = 0; x < numX-1; ++x) {
+    for(unsigned y = 0; y < numY; ++y) {
+      for(unsigned z = 0; z < numZ; ++z) {
+        Box::Coord coord(points[node0(x,y,z)], points[node1X(x,y,z)]);
+        simit::ElementRef edge = edges->addElement(coord.first, coord.second);
+        coords2edges[coord] = edge;
+      }
+    }
+  }
+
+  // y edges
+  for(unsigned x = 0; x < numX; ++x) {
+    for(unsigned y = 0; y < numY - 1; ++y) {
+      for(unsigned z = 0; z < numZ; ++z) {
+        Box::Coord coord(points[node0(x,y,z)], points[node1Y(x,y,z)]);
+        simit::ElementRef edge = edges->addElement(coord.first, coord.second);
+        coords2edges[coord] = edge;
+      }
+    }
+  }
+
+  // z edges
+  for(unsigned x = 0; x < numX; ++x) {
+    for(unsigned y = 0; y < numY; ++y) {
+      for(unsigned z = 0; z < numZ-1; ++z) {
+        Box::Coord coord(points[node0(x,y,z)], points[node1Z(x,y,z)]);
+        simit::ElementRef edge = edges->addElement(coord.first, coord.second);
+        coords2edges[coord] = edge;
+      }
+    }
+  }
+
+  return Box(numX, numY, numZ, points, coords2edges);
+}
 
 } // namespace simit
