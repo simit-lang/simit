@@ -40,7 +40,36 @@ class Function;
 /// A Simit element reference.  All Simit elements live in Simit sets and an
 /// ElementRef provides a reference to an element.
 class ElementRef {
- private:
+public:
+  inline ElementRef() : ident(-1) {}
+
+  bool defined() const {return ident != -1;}
+
+  friend inline bool operator==(const ElementRef& e1, const ElementRef& e2) {
+    return e1.ident == e2.ident;
+  }
+
+  friend inline bool operator!=(const ElementRef& e1, const ElementRef& e2) {
+    return e1.ident != e2.ident;
+  }
+
+  friend inline bool operator<(const ElementRef& e1, const ElementRef& e2) {
+    return e1.ident < e2.ident;
+  }
+
+  friend inline bool operator>(const ElementRef& e1, const ElementRef& e2) {
+    return e1.ident > e2.ident;
+  }
+
+  friend inline bool operator<=(const ElementRef& e1, const ElementRef& e2) {
+    return e1.ident <= e2.ident;
+  }
+
+  friend inline bool operator>=(const ElementRef& e1, const ElementRef& e2) {
+    return e1.ident >= e2.ident;
+  }
+
+private:
   explicit inline ElementRef(int ident) : ident(ident) {}
   int ident;
 
@@ -51,7 +80,6 @@ class ElementRef {
   friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
 };
-
 
 
 // Base class for Sets
@@ -71,7 +99,7 @@ public:
 
   /// Return the number of endpoints of the elements in the set.  Non-edge sets
   /// have cardinality 0.
-  virtual int getCardinality() { return 0; }
+  virtual int getCardinality() const { return 0; }
 
   /// Add a tensor field to the set.  Use the template parameters to specify the
   /// component type and dimension sizes of the tensors.  For example, define a
@@ -138,7 +166,7 @@ public:
     typedef ElementRef& reference;
     typedef ElementRef* pointer;
     
-    ElementIterator(SetBase* set, int idx=0) : curElem(idx), set(set) { }
+    ElementIterator(const SetBase* set, int idx=0) : curElem(idx), set(set) { }
     ElementIterator(const ElementIterator& other) : curElem(other.curElem),
     set(other.set) { }
     
@@ -173,7 +201,7 @@ public:
 
   private:
     ElementRef curElem; // current element index
-    SetBase* set;           // set we're iterating over
+    const SetBase* set; // set we're iterating over
 
     bool lessThan(const SetBase::ElementIterator &other) const {
       return this->curElem.ident < other.curElem.ident;
@@ -184,11 +212,11 @@ public:
   };
   
   /// Create an ElementIterator for this Set, set to the first element
-  ElementIterator begin() { return ElementIterator(this, 0); }
+  ElementIterator begin() const { return ElementIterator(this, 0); }
   
   /// Create an ElementIterator for terminating iteration over this Set
-  ElementIterator end() { return ElementIterator(this, getSize()); }
-  
+  ElementIterator end() const { return ElementIterator(this, getSize()); }
+
 protected:
   int elements;                      // number of elements in the set
   int capacity;                   // current capacity of the set
@@ -294,7 +322,7 @@ public:
     free(endpoints);
   }
 
-  int getCardinality() { return cardinality; }
+  int getCardinality() const { return cardinality; }
   
   /// Add an edge.
   /// The endpoints refer to the respective Sets they come from.
@@ -728,8 +756,9 @@ class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
       ++it;
     }
 
-    while (it++ != end) {
+    while (it != end) {
       os << ", " << field.get(*it);
+      ++it;
     }
 
     return os << "]";
