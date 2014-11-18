@@ -122,7 +122,7 @@ void GPUBackend::visit(const ir::TensorWrite *op) {
 }
 
 void GPUBackend::visit(const ir::Literal *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::VarExpr *op) {
   LLVMBackend::visit(op);
@@ -131,7 +131,7 @@ void GPUBackend::visit(const ir::Result *op) {
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::Load *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Call *op) {
   ASSERT(false && "No code generation for this type");
@@ -158,16 +158,17 @@ void GPUBackend::visit(const ir::FieldWrite *op) {
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::Store *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::For *op) {
-  ASSERT(false && "No code generation for this type");
+  // TODO(gkanwar): Some for domains should perhaps be handled differently
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::IfThenElse *op) {
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::Block *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Pass *op) {
   ASSERT(false && "No code generation for this type");
