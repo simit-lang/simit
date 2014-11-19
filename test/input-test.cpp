@@ -35,8 +35,6 @@ public:
   }
 };
 
-class input : public TestWithParam<ProgramTestParam> {};
-
 vector<ProgramTestParam> readTestsFromFile(const std::string &dirpath,
                                            const std::string &filename) {
   string filepath = dirpath + "/" + filename;
@@ -123,18 +121,18 @@ vector<ProgramTestParam> readTestsFromDir(const std::string &dirpath) {
   return testParams;
 }
 
-TEST_P(input, check) {
-  ASSERT_FALSE(GetParam().failedIO) << "failed to read file " + GetParam().path;
+void runTest(ProgramTestParam param) {
+  ASSERT_FALSE(param.failedIO) << "failed to read file " + param.path;
 
   Program program;
-  if (program.loadString(GetParam().source) != 0) {
+  if (program.loadString(param.source) != 0) {
     assert(program.hasErrors());
     for (auto &diag : program.getDiagnostics()) {
       ADD_FAILURE() << diag.getMessage();
 
         // TODO: Add back line info
-//      string errorFile = GetParam().path;
-//      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
+//      string errorFile = param.path;
+//      unsigned int errorLine = param.line + error.getFirstLine() - 1;
 //      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
     }
   }
@@ -144,19 +142,26 @@ TEST_P(input, check) {
         ADD_FAILURE() << diag.getMessage();
 
         // TODO: Add back line info
-//      string errorFile = GetParam().path;
-//      unsigned int errorLine = GetParam().line + error.getFirstLine() - 1;
+//      string errorFile = param.path;
+//      unsigned int errorLine = param.line + error.getFirstLine() - 1;
 //      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
       }
     }
   }
 }
 
-#define TEST_SIMTEST_FILE(path, name)                                         \
-  INSTANTIATE_TEST_CASE_P(name, input,                                        \
-                          ValuesIn(readTestsFromFile(path,                    \
-                                                     string(#name)+".sim")))
+#define SIM_TEST_SUITE(name) \
+  class name : public TestWithParam<ProgramTestParam> {}; \
+  TEST_P(name, inputs) {                                  \
+    runTest(GetParam());                                  \
+  }                                                       \
 
+#define SIM_TEST(suite, name)                                                \
+  std::string path();                                                        \
+  INSTANTIATE_TEST_CASE_P(name, suite,                                       \
+                          ValuesIn(readTestsFromFile(string(TEST_INPUT_DIR)+ \
+                                                       "/"+string(#suite),   \
+                                                     string(#name)+".sim")))
 
 /* Examples */
 //INSTANTIATE_TEST_CASE_P(examples, input,
@@ -164,17 +169,22 @@ TEST_P(input, check) {
 
 
 /* Tests */
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, blas0);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, blas1);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, blas2);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, blas3);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, la_elements);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, intrinsics);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, index_notation);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, function_headers);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, objects);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, variables);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, map);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, controlflow);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, misc);
-TEST_SIMTEST_FILE(TEST_INPUT_DIR, loops);
+SIM_TEST_SUITE(elements);
+SIM_TEST(elements, blas0);
+SIM_TEST(elements, blas1);
+SIM_TEST(elements, blas2);
+SIM_TEST(elements, blas3);
+SIM_TEST(elements, la);
+SIM_TEST(elements, intrinsics);
+SIM_TEST(elements, index_notation);
+
+SIM_TEST_SUITE(declarations);
+SIM_TEST(declarations, function_headers);
+SIM_TEST(declarations, objects);
+SIM_TEST(declarations, variables);
+SIM_TEST(declarations, misc);
+
+SIM_TEST_SUITE(controlflow);
+SIM_TEST(controlflow, map);
+SIM_TEST(controlflow, if_stmt);
+SIM_TEST(controlflow, loops);
