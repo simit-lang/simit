@@ -19,6 +19,14 @@ void SetBase::increaseCapacity() {
   capacity += capacityIncrement;
 }
 
+
+// Graph generators
+void createElements(Set<> *elements, unsigned num) {
+  for (size_t i=0; i < num; ++i) {
+    elements->addElement();
+  }
+}
+
 #define node0(x,y,z)  x*numY*numZ + y*numZ + z      // node at x,y,z
 #define node1X(x,y,z) (x+1)*numY*numZ + y*numZ + z  // x's neighbor
 #define node1Y(x,y,z) x*numY*numZ + (y+1)*numZ + z  // y's neighbor

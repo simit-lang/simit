@@ -899,6 +899,9 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, r, c> &t) {
   return os << "]";
 }
 
+// Graph generators
+void createElements(Set<> *elements, unsigned num);
+
 class Box {
 public:
   typedef std::pair<ElementRef,ElementRef> Coord;
@@ -939,7 +942,6 @@ private:
   std::map<Coord, ElementRef> coords2edges;
 };
 
-// Graph generators
 Box createBox(Set<> *elements, Set<2> *edges,
               unsigned numX, unsigned numY, unsigned numZ);
 
