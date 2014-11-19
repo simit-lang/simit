@@ -97,6 +97,14 @@
   }
 
 
+  struct System {
+    //simit::Set<> *elements = nullptr;
+    //simit::Set<2> edges;
+    //simit::Set<3> triangles; // connects three elements
+    //simit::Set<3> faces;     // connects three edges
+  };
+
+
 
 
 # include <vector>
@@ -210,6 +218,9 @@ namespace  simit { namespace internal  {
   TensorValues<int>             *TensorIntValues;
 
   std::vector<std::string> *strings;
+
+
+  System *system;
 
 
     };
@@ -577,8 +588,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 492,     ///< Last index in yytable_.
-      yynnts_ = 75,  ///< Number of nonterminal symbols.
+      yylast_ = 488,     ///< Last index in yytable_.
+      yynnts_ = 77,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

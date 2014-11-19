@@ -1,0 +1,11 @@
+%%% field_add
+%! points=3: points.x=[1.0, 2.0, 3.0] -> [-1.0, -2.0, -3.0]
+element Point
+  x : float;
+end
+
+extern points : set{Point};
+
+proc test
+  points.x = -points.x;
+end

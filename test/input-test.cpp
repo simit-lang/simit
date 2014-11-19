@@ -135,6 +135,7 @@ void runTest(ProgramTestParam param) {
 //      unsigned int errorLine = param.line + error.getFirstLine() - 1;
 //      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
     }
+    FAIL();
   }
   else {
     if (program.verify() != 0) {
@@ -146,6 +147,7 @@ void runTest(ProgramTestParam param) {
 //      unsigned int errorLine = param.line + error.getFirstLine() - 1;
 //      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
       }
+      FAIL();
     }
   }
 }
@@ -177,6 +179,9 @@ SIM_TEST(elements, blas3);
 SIM_TEST(elements, la);
 SIM_TEST(elements, intrinsics);
 SIM_TEST(elements, index_notation);
+
+//SIM_TEST_SUITE(systems);
+//SIM_TEST(systems, fields);
 
 SIM_TEST_SUITE(declarations);
 SIM_TEST(declarations, function_headers);

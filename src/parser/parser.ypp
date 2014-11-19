@@ -1508,9 +1508,9 @@ signed_float_literal
     $$ = -$FLOAT_LITERAL;
   }
 
-
 // Tests
 test
+  // Test element literal functions
   : "%!" IDENT "(" expr_list_or_empty ")" "==" tensor_literal ";" {
     std::string name = convertAndFree($IDENT);
     auto actuals = unique_ptr<vector<Expr>>($expr_list_or_empty);
@@ -1529,5 +1529,40 @@ test
     expecteds.push_back(expected);
     ctx->addTest(new FunctionTest(name, literalArgs, expecteds));
   }
+  // Test systems (see github issue #66)
+  | "%!" IDENT "=" system_generator ":" extern_assert {
+    std::string setName = convertAndFree($IDENT);
+    unique_ptr<System> system($system_generator);
+
+    //std::map<std::string, simit::SetBase*> externs;
+    //externs[setName] = system->elements;
+    //ctx->addTest(new ProcedureTest("test", externs));
+  }
+
+%code requires {
+  struct System {
+    //simit::Set<> *elements = nullptr;
+    //simit::Set<2> edges;
+    //simit::Set<3> triangles; // connects three elements
+    //simit::Set<3> faces;     // connects three edges
+  };
+};
+
+%union {
+  System *system;
+};
+
+%type <system> system_generator;
+system_generator
+  : IDENT
+  | INT_LITERAL[numElems] {
+    System *sys = new System;
+    //sys->elements = new simit::Set<>;
+    //createElements(sys->elements, $numElems);
+    $$ = sys;
+  }
+
+extern_assert
+  : IDENT[set] "." IDENT[field] "=" tensor_literal "->" tensor_literal
 
 %%

@@ -59,7 +59,8 @@ class Program::ProgramContent {
 
     for (auto &test : ctx.getTests()) {
       if (functions.find(test->getCallee()) == functions.end()) {
-        diags.report() << "Error: attempting to test unknown function";
+        diags.report() << "Error: attempting to test unknown function "
+                       << "'" << test->getCallee() << "'";
         return 1;
       }
       ir::Func func = functions.at(test->getCallee());
