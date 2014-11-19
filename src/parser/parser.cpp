@@ -2634,7 +2634,7 @@ namespace  simit { namespace internal  {
 
     std::vector<Expr> expecteds;
     expecteds.push_back(expected);
-    ctx->addTest(new Test(name, literalArgs, expecteds));
+    ctx->addTest(new FunctionTest(name, literalArgs, expecteds));
   }
 
     break;

@@ -13,6 +13,8 @@
 #include "ir.h"
 #include "ir_builder.h"
 
+#include "test.h"
+
 namespace simit {
 namespace internal {
 
@@ -105,7 +107,7 @@ public:
     return functions[name];
   }
 
-  std::map<std::string, ir::Func> getFunctions() {
+  const std::map<std::string, ir::Func> &getFunctions() {
     return functions;
   }
 
@@ -144,9 +146,9 @@ public:
   ir::Expr getConstant(ir::Var var) {return constants[var];}
 
 
-  void addTest(ir::Test *test) {tests.push_back(test);}
+  void addTest(Test *test) {tests.push_back(test);}
 
-  const std::vector<ir::Test*> &getTests() const {return tests;}
+  const std::vector<Test*> &getTests() const {return tests;}
 
   ir::IRBuilder *getBuilder() {return &builder;}
 
@@ -167,7 +169,7 @@ private:
 
   ScopedMap<std::string, Symbol>   exprSymtable;
 
-  std::vector<ir::Test*>           tests;
+  std::vector<Test*>           tests;
 };
 
 }} // namespace simit::internal

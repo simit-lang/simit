@@ -54,52 +54,31 @@ class Program::ProgramContent {
     // For each test look up the called function. Grab the actual arguments and
     // run the function with them as input.  Then compare the result to the
     // expected literal.
+    const std::map<std::string, ir::Func> &functions = ctx.getFunctions();
     std::map<ir::Func, simit::Function*> compiled;
 
     for (auto &test : ctx.getTests()) {
-      // get binary function with name test->call->callee from list of functions
-      ir::Func func = ctx.getFunction(test->getCallee());
-      if (!func.defined()) {
+      if (functions.find(test->getCallee()) == functions.end()) {
         diags.report() << "Error: attempting to test unknown function";
         return 1;
       }
+      ir::Func func = functions.at(test->getCallee());
 
       if (compiled.find(func) == compiled.end()) {
         compiled[func] = compile(func);
       }
-      Function *compiledFunc = compiled[func];
+    }
 
-      // run the function with test->call->arguments
-      assert(test->getActuals().size() == func.getArguments().size());
+    for (auto &test : ctx.getTests()) {
+      assert(functions.find(test->getCallee()) != functions.end());
+      ir::Func func = functions.at(test->getCallee());
 
-      std::vector<ir::Var>  formalArgs = func.getArguments();
-      std::vector<ir::Expr> actualArgs = test->getActuals();
-      for (size_t i=0; i < actualArgs.size(); ++i) {
-        compiledFunc->bind(formalArgs[i].getName(), &actualArgs[i]);
-      }
+      assert(compiled.find(func) != compiled.end());
+      Function *compiledFunc = compiled.at(func);
 
-      auto formalResults = func.getResults();
-      std::vector<ir::Expr> actualResults;
-      for (auto &formalResult : formalResults) {
-        ir::Expr actualResult = ir::Literal::make(formalResult.getType());
-        actualResults.push_back(actualResult);
-        compiledFunc->bind(formalResult.getName(), &actualResult);
-      }
-
-      compiledFunc->runSafe();
-
-      // compare function result with test->literal
-      auto expectedResults = test->getExpectedResults();
-      assert(expectedResults.size() == actualResults.size());
-      auto rit = actualResults.begin();
-      auto eit = expectedResults.begin();
-      for (; rit != actualResults.end(); ++rit, ++eit) {
-        if (*ir::to<ir::Literal>(*rit) != *ir::to<ir::Literal>(*eit)) {
-          // TODO: Report with line number of test
-          diags.report() << "Test failure (" << util::toString(*rit)
-                         << " != " << util::toString(*eit) << ")";
-          return 2;
-        }
+      bool evaluates = test->evaluate(func, compiledFunc, &diags);
+      if (!evaluates) {
+        return 2;
       }
     }
     

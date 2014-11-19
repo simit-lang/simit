@@ -228,4 +228,4 @@ std::vector<IndexVar> IndexExpr::domain() const {
   return DomainGatherer().getDomain(*this);
 }
 
-}} // namespace simit::internal
+}} // namespace simit::ir

@@ -655,31 +655,8 @@ struct Pass : public StmtNode<Pass> {
   }
 };
 
-/// A Simit test case. Simit test cases can be declared in language comments
-/// and can subsequently be picked up by a test framework.
-class Test {
-public:
-  Test(const std::string &callee,
-       const std::vector<Expr> &actuals,
-       const std::vector<Expr> &expected)
-      : callee(callee), actuals(actuals), expected(expected) {}
 
-  std::string getCallee() const { return callee; }
-
-  std::vector<Expr> getActuals() const {
-    return actuals;
-  }
-
-  const std::vector<Expr> &getExpectedResults() const {
-    return expected;
-  }
-
-private:
-  std::string callee;
-  std::vector<Expr> actuals;
-  std::vector<Expr> expected;
-};
-
+// Operators
 bool operator==(const Expr &, const Expr &);
 bool operator!=(const Expr &, const Expr &);
 
