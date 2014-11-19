@@ -119,6 +119,10 @@ public:
   /// Get a Field corresponding to the string fieldName
   template <typename T, int... dimensions>
   FieldRef<T, dimensions...> getField(std::string fieldName) {
+    // need to check if the field actually exists because maps just add an entry
+    // if none exists
+    assert(fieldNames.find(fieldName) != fieldNames.end() &&
+      "Invalid field name in getField()");
     FieldData *fieldData = fields[fieldNames[fieldName]];
     assert(typeOf<T>() == fieldData->type->getComponentType() &&
            "Incorrect field type.");
