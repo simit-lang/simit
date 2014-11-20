@@ -6,7 +6,7 @@
 #include "graph.h"
 #include "program.h"
 #include "function.h"
-#include "errors.h"
+#include "error.h"
 
 using namespace std;
 using namespace simit;

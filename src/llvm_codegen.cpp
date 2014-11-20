@@ -71,9 +71,9 @@ Type simitType(const llvm::Type *type) {
   else if (type->isIntegerTy()) {
     return Int;
   }
-  else {
-    UNREACHABLE;
-  }
+
+  unreachable;
+  return Type();
 }
 
 llvm::Type *createLLVMType(const TensorType *ttype) {
@@ -104,14 +104,16 @@ llvm::Type *createLLVMType(const Type &type) {
     case Type::Tensor:
       return createLLVMType(type.toTensor());
     case Type::Element:
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
       break;
     case Type::Set:
       return createLLVMType(type.toSet());
     case Type::Tuple:
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
       break;
   }
+  unreachable;
+  return nullptr;
 }
 
 static llvm::Function *createFunction(const std::string &name,

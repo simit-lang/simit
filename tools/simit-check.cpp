@@ -1,6 +1,6 @@
 #include "program.h"
-#include "errors.h"
 #include <iostream>
+#include "error.h"
 using namespace std;
 
 int main(int argc, const char* argv[]) {

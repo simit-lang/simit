@@ -8,7 +8,7 @@
 #include "llvm_backend.h"
 #include "function.h"
 #include "util.h"
-#include "errors.h"
+#include "error.h"
 #include "program_context.h"
 
 using namespace std;
@@ -71,10 +71,10 @@ class Program::ProgramContent {
     }
 
     for (auto &test : ctx.getTests()) {
-      assert(functions.find(test->getCallee()) != functions.end());
+      iassert(functions.find(test->getCallee()) != functions.end());
       ir::Func func = functions.at(test->getCallee());
 
-      assert(compiled.find(func) != compiled.end());
+      iassert(compiled.find(func) != compiled.end());
       Function *compiledFunc = compiled.at(func);
 
       bool evaluates = test->evaluate(func, compiledFunc, &diags);
@@ -111,7 +111,7 @@ std::string Program::getName() const {
 }
 
 int Program::loadString(const string &programString) {
-  std::vector<Error> errors;
+  std::vector<ParseError> errors;
   int status = impl->getFrontend()->parseString(programString, &impl->ctx,
                                                 &errors);
   for (auto &error : errors) {
@@ -121,7 +121,7 @@ int Program::loadString(const string &programString) {
 }
 
 int Program::loadFile(const std::string &filename) {
-  std::vector<Error> errors;
+  std::vector<ParseError> errors;
   int status = impl->getFrontend()->parseFile(filename, &impl->ctx, &errors);
   for (auto &error : errors) {
     impl->diags.report() << error.toString();

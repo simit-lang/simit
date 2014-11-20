@@ -46,7 +46,7 @@ public:
   bool evaluate(const ir::Func &func, simit::Function *compiledFunc,
                 Diagnostics *diags) const {
     // run the function with test->call->arguments
-    assert(actuals.size() == func.getArguments().size());
+    iassert(actuals.size() == func.getArguments().size());
 
     std::vector<ir::Var>  formalArgs = func.getArguments();
     std::vector<ir::Expr> actualArgs = actuals;
@@ -66,7 +66,7 @@ public:
 
     // compare function result with test->literal
     auto expectedResults = expected;
-    assert(expectedResults.size() == actualResults.size());
+    iassert(expectedResults.size() == actualResults.size());
     auto rit = actualResults.begin();
     auto eit = expectedResults.begin();
     for (; rit != actualResults.end(); ++rit, ++eit) {

@@ -92,7 +92,7 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
           break;
         }
         case ir::Type::Element: {
-          NOT_SUPPORTED_YET;
+          not_supported_yet;
           break;
         }
         case ir::Type::Set: {
@@ -122,7 +122,7 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
           break;
         }
         case ir::Type::Tuple: {
-          NOT_SUPPORTED_YET;
+          not_supported_yet;
           break;
         }
       }

@@ -52,7 +52,7 @@
 
   #include "util.h"
   #include "ir.h"
-  #include "errors.h"
+  #include "error.h"
   #include "types.h"
   #include "ir_builder.h"
 
@@ -70,7 +70,7 @@
       void addDimension() { dimSizes.push_back(1); }
 
       bool dimensionsMatch(const TensorValues<T> &other, std::string *errors) {
-        assert(errors != NULL);
+        iassert(errors != NULL);
         std::string mismatchError = "missmatched dimension sizes";
         if (dimSizes.size()-1 != other.dimSizes.size()) {
           *errors = mismatchError;
@@ -390,7 +390,7 @@ namespace  simit { namespace internal  {
 
 
     /// Build a parser object.
-     Parser  (Scanner *scanner_yyarg, ProgramContext *ctx_yyarg, std::vector<Error> *errors_yyarg);
+     Parser  (Scanner *scanner_yyarg, ProgramContext *ctx_yyarg, std::vector<ParseError> *errors_yyarg);
     virtual ~ Parser  ();
 
     /// Parse.
@@ -601,7 +601,7 @@ namespace  simit { namespace internal  {
     // User arguments.
     Scanner *scanner;
     ProgramContext *ctx;
-    std::vector<Error> *errors;
+    std::vector<ParseError> *errors;
   };
 
 

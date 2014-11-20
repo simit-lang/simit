@@ -30,26 +30,26 @@ Function::~Function() {
 }
 
 void Function::bind(const std::string &argName, ir::Expr *tensor) {
-  assert(actuals.find(argName) != actuals.end() &&
-         "no argument of this name in function");
+  uassert(actuals.find(argName) != actuals.end())
+      << "no argument of this name in function";
 
   // Check that the tensor matches the argument type
-  assert(tensor->type() == actuals[argName].getType() &&
-         "tensor type does not match function argument type");
+  uassert(tensor->type() == actuals[argName].getType())
+      << "tensor type does not match function argument type";
 
-  assert(dynamic_cast<const ir::Literal*>(tensor->expr()) != nullptr);
+  uassert(dynamic_cast<const ir::Literal*>(tensor->expr()) != nullptr);
 
   actuals[argName].bind(tensor);
   initRequired = true;
 }
 
 void Function::bind(const std::string &argName, SetBase *set) {
-  assert(actuals.find(argName) != actuals.end() &&
-         "no argument of this name in function");
+  uassert(actuals.find(argName) != actuals.end())
+      << "No argument of this name in function";
 
   // Check that the set matches the argument type
   ir::Type argType = actuals[argName].getType();
-  assert(argType.isSet() && "argument is not a set");
+  uassert(argType.isSet()) << "Argument is not a set";
   const ir::SetType *argSetType = argType.toSet();
 //  auto &argFieldsMap = argSetType->elementType.toElement()->fields;
   const ir::ElementType *elemType = argSetType->elementType.toElement();
@@ -57,7 +57,7 @@ void Function::bind(const std::string &argName, SetBase *set) {
   // Type check
   for (size_t i=0; i < set->fields.size(); ++i) {
     SetBase::FieldData *fieldData = set->fields[i];
-    assert(elemType->hasField(fieldData->name) && "Field not found in set");
+    uassert(elemType->hasField(fieldData->name)) << "Field not found in set";
 
     const SetBase::FieldData::TensorType *setFieldType = fieldData->type;
     const ir::TensorType *elemFieldType =
@@ -73,20 +73,20 @@ void Function::bind(const std::string &argName, SetBase *set) {
         break;
     }
 
-    assert(setFieldTypeComponentType == elemFieldType->componentType &&
-           "set type does not match function argument type");
-    assert(setFieldType->getOrder() == elemFieldType->order() &&
-           "set type does not match function argument type");
+    uassert(setFieldTypeComponentType == elemFieldType->componentType)
+        << "Set type does not match function argument type";
+    uassert(setFieldType->getOrder() == elemFieldType->order())
+        << "Set type does not match function argument type";
 
     const vector<ir::IndexDomain> &argFieldTypeDims = elemFieldType->dimensions;
     for (size_t i=0; i < elemFieldType->order(); ++i) {
-      assert(argFieldTypeDims[i].getIndexSets().size() == 1 &&
-             "set type does not match function argument type");
+      uassert(argFieldTypeDims[i].getIndexSets().size() == 1)
+          << "Set type does not match function argument type";
 
       size_t argFieldRange = argFieldTypeDims[i].getIndexSets()[0].getSize();
 
-      assert(setFieldType->getDimension(i) == argFieldRange &&
-             "set type does not match function argument type");
+      uassert(setFieldType->getDimension(i) == argFieldRange)
+          << "Set type does not match function argument type";
     }
   }
 
@@ -95,12 +95,12 @@ void Function::bind(const std::string &argName, SetBase *set) {
 }
 
 void *Function::getFieldPtr(const SetBase *set, const std::string &fieldName) {
-  assert(set->fieldNames.find(fieldName) != set->fieldNames.end());
+  iassert(set->fieldNames.find(fieldName) != set->fieldNames.end());
   return set->fields[set->fieldNames.at(fieldName)]->data;
 }
 
 int *Function::getEndpointsPtr(const SetBase *set) {
-  assert(set->endpoints != nullptr);
+  iassert(set->endpoints != nullptr);
   return set->endpoints;
 }
 

@@ -38,7 +38,7 @@ Type TensorType::blockType() const {
   std::vector<IndexDomain> blockDimensions;
 
   size_t numNests = dimensions[0].getIndexSets().size();
-  assert(numNests > 0);
+  iassert(numNests > 0);
 
   Type blockType;
   if (numNests == 1) {
@@ -66,7 +66,7 @@ Type TensorType::blockType() const {
     }
     blockType = TensorType::make(componentType, blockDimensions);
   }
-  assert(blockType.defined());
+  iassert(blockType.defined());
 
   return blockType;
 }
@@ -82,7 +82,7 @@ size_t TensorType::size() const {
 
 // struct SetType
 Type SetType::make(Type elementType, const std::vector<Expr> &endpointSets) {
-  assert(elementType.isElement());
+  iassert(elementType.isElement());
   SetType *type = new SetType;
   type->elementType = elementType;
   for (auto &eps : endpointSets) {

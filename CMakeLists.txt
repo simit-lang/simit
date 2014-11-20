@@ -3,6 +3,26 @@ project(simit)
 
 SET(CMAKE_CONFIGURATION_TYPES "Release;Debug;MinSizeRel;RelWithDebInfo")
 
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Debug" CACHE STRING
+    "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
+    FORCE)
+endif(NOT CMAKE_BUILD_TYPE)
+
+if (CMAKE_BUILD_TYPE MATCHES Debug)
+  message("Debug Build")
+elseif (CMAKE_BUILD_TYPE MATCHES RelWithDebInfo)
+  message("Release Build with Debug Information")
+elseif (CMAKE_BUILD_TYPE MATCHES Release)
+  message("Release Build")
+elseif (CMAKE_BUILD_TYPE MATCHES MinSizeRel)
+  message("Release Build with Minimal Size") 
+endif ()
+
+if ($ENV{SIMIT_WITHOUT_ASSERTS})
+  add_definitions(-DWITHOUT_INTERNAL_ASSERTS)
+endif ()
+
 if (SIMIT_SHARED_LIBRARY)
   set(SIMIT_LIBRARY_TYPE SHARED)
 else()

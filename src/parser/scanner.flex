@@ -134,7 +134,7 @@ Scanner::~Scanner() {
 #endif
 
 int SimitFlexLexer::yylex() {
-    assert(false && "SimitFlexLexer::yylex() should never be called~");
+    iassert(false) << "SimitFlexLexer::yylex() should never be called~";
     return 0;
 }
 

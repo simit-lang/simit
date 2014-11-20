@@ -43,7 +43,7 @@ public:
   }
 
   inline void run() {
-    assert(!initRequired);
+    iassert(!initRequired);
     funcPtr();
   }
 
@@ -57,8 +57,8 @@ protected:
     void bind(SetBase *set) { this->set = set; }
     bool isBound() const { return tensor != NULL; }
     const ir::Type &getType() const { return type; }
-    Tensor *getTensor() { assert(tensor); return tensor; }
-    SetBase *getSet() { assert(set); return set; }
+    Tensor *getTensor() { iassert(tensor); return tensor; }
+    SetBase *getSet() { iassert(set); return set; }
   private:
     ir::Type type;
     union {

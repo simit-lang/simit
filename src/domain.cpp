@@ -13,7 +13,7 @@ IndexSet::IndexSet(const Expr &set) : kind(Set), rangeSize(-1),
                                       set(new Expr(set)) {}
 
 const Expr &IndexSet::getSet() const {
-  assert(kind==Set);
+  iassert(kind==Set);
   return *set;
 }
 
@@ -48,7 +48,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
       os << "*";
       break;
     default:
-      assert(false);
+      ierror;
       break;
   }
   return os;

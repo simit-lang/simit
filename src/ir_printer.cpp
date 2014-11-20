@@ -75,7 +75,7 @@ void IRPrinter::visit(const Literal *op) {
       size_t size;
       ScalarType::Kind componentType;
 
-      assert(op->type.kind() == Type::Tensor);
+      iassert(op->type.kind() == Type::Tensor);
       const TensorType *type = op->type.toTensor();
       size = type->size();
       componentType = type->componentType.kind;
@@ -114,12 +114,12 @@ void IRPrinter::visit(const Literal *op) {
       break;
     }
     case Type::Element:
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
     case Type::Set:
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
       break;
     case Type::Tuple:
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
       break;
   }
 }

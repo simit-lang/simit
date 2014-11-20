@@ -4,7 +4,7 @@
 #include <memory>
 
 #include "ir.h"
-#include "errors.h"
+#include "error.h"
 
 namespace simit {
 namespace ir {
@@ -68,7 +68,7 @@ private:
   std::vector<ir::Stmt> *stmts = nullptr;
   IndexVarFactory factory;
 
-  void addStmt(Stmt stmt) {assert(stmts != nullptr); stmts->push_back(stmt);}
+  void addStmt(Stmt stmt) {iassert(stmts != nullptr); stmts->push_back(stmt);}
 };
 
 }} // namespace simit::internal

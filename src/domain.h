@@ -2,11 +2,12 @@
 #define SIMIT_DOMAIN_H
 
 #include <cstddef>
-#include <cassert>
 #include <string>
 #include <vector>
 #include <ostream>
 #include <memory>
+
+#include "error.h"
 
 namespace simit {
 namespace ir {
@@ -35,7 +36,7 @@ public:
 
   /// Returns the size of the index set if kind is Range, otherwise undefined
   int getSize() const {
-    assert(kind == Range && "Only Range index sets have a static size");
+    iassert(kind == Range) << "Only Range index sets have a static size";
     return rangeSize;
   }
 

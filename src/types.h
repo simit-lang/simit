@@ -42,10 +42,10 @@ public:
   bool isSet()     const { return _kind==Set; }
   bool isTuple()   const { return _kind==Tuple; }
 
-  const TensorType  *toTensor()  const { assert(isTensor());  return tensor; }
-  const ElementType *toElement() const { assert(isElement()); return element; }
-  const SetType     *toSet()     const { assert(isSet());     return set; }
-  const TupleType   *toTuple()   const { assert(isTuple());   return tuple; }
+  const TensorType  *toTensor()  const {iassert(isTensor());  return tensor;}
+  const ElementType *toElement() const {iassert(isElement()); return element;}
+  const SetType     *toSet()     const {iassert(isSet());     return set;}
+  const TupleType   *toTuple()   const {iassert(isTuple());   return tuple;}
 
 private:
   Kind _kind;
@@ -75,7 +75,7 @@ struct ScalarType {
       return 4;
     }
     else {
-      assert(isFloat());
+      iassert(isFloat());
       return 8;
     }
   }
@@ -143,7 +143,7 @@ struct ElementType : TypeNode {
   }
 
   const Field &field(const std::string &fieldName) const {
-    assert(hasField(fieldName) && "Undefined field");
+    iassert(hasField(fieldName) && "Undefined field");
     return fields[fieldNames.at(fieldName)];
   }
 
@@ -179,7 +179,7 @@ struct TupleType : TypeNode {
   int size;
 
   static Type make(Type elementType, int size) {
-    assert(elementType.isElement());
+    iassert(elementType.isElement());
     TupleType *type = new TupleType;
     type->elementType = elementType;
     type->size = size;

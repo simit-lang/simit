@@ -6,7 +6,7 @@
 #include <fstream>
 
 #include "program.h"
-#include "errors.h"
+#include "error.h"
 #include "util.h"
 #include "frontend.h"
 #include "llvm_backend.h"

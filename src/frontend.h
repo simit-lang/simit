@@ -6,7 +6,7 @@
 #include <fstream>
 
 namespace simit {
-class Error;
+class ParseError;
 namespace internal {
 class ProgramContext;
 
@@ -20,15 +20,15 @@ class Frontend {
 public:
   /// Parses, typechecks and turns a given Simit-formated stream into Simit IR.
   int parseStream(std::istream &programStream, ProgramContext *ctx,
-                  std::vector<Error> *errors);
+                  std::vector<ParseError> *errors);
 
   /// Parses, typechecks and turns a given Simit-formated string into Simit IR.
   int parseString(const std::string &programString, ProgramContext *ctx,
-                  std::vector<Error> *errors);
+                  std::vector<ParseError> *errors);
 
   /// Parses, typechecks and turns a given Simit-formated file into Simit IR.
   int parseFile(const std::string &filename, ProgramContext *ctx,
-                std::vector<Error> *errors);
+                std::vector<ParseError> *errors);
 };
 
 }} // namespace simit::internal

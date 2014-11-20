@@ -1,9 +1,10 @@
 #ifndef SIMIT_TENSOR_COMPONENTS_H
 #define SIMIT_TENSOR_COMPONENTS_H
 
-#include <cassert>
 #include <climits>
 #include <string>
+
+#include "error.h"
 
 namespace simit {
 
@@ -12,7 +13,7 @@ enum ComponentType {INT, FLOAT};
 
 /** Helper to convert from C++ type to Simit Type. */
 template<typename T> inline ComponentType typeOf() {
-  assert(false && "Unsupported type");
+  iassert(false) << "Unsupported type";
 }
 
 template<> inline ComponentType typeOf<int>   () {return ComponentType::INT;  }
@@ -30,7 +31,7 @@ inline std::size_t componentSize(ComponentType ct) {
     case ComponentType::FLOAT:
       return sizeof(double);
   }
-  assert(false);
+  unreachable;
   return 0;
 }
 
@@ -41,7 +42,7 @@ inline std::string componentTypeString(ComponentType ct) {
     case ComponentType::FLOAT:
       return "float";
   }
-  assert(false);
+  unreachable;
   return "";
 }
 

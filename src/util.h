@@ -69,30 +69,6 @@ int loadText(const std::string &file, std::string *text);
 // Trim whitespace from string
 std::string trim(const std::string &str, const std::string &ws = " \t\n");
 
-
-/// Vector that owns the pointers in it and deletes them on destruction.
-template <class T>
-class OwnershipVector {
-public:
-  typedef typename std::vector<T>::iterator iterator;
-
-  ~OwnershipVector() { for (auto &obj : vec) { delete obj; } }
-
-  void push_back(const T &val) { vec.push_back(val); }
-  void clear() { vec.clear(); }
-
-  size_t size() const { return vec.size(); }
-
-  iterator begin() { return vec.begin(); }
-  iterator end() { return vec.end(); }
-
-  T &operator[](size_t n) { return vec[n]; }
-  const T &operator[](size_t n) const { return vec[n]; }
-
-private:
-  std::vector<T> vec;
-};
-
 }} // namespace simit::util
 
 #endif

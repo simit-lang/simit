@@ -64,7 +64,7 @@ public:
   }
 
   VarDef getDef(const Var &var) const {
-    assert(usedef.find(var) != usedef.end());
+    iassert(usedef.find(var) != usedef.end());
     return usedef.at(var);
   }
 

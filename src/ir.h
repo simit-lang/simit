@@ -1,7 +1,6 @@
 #ifndef SIMIT_IR_H
 #define SIMIT_IR_H
 
-#include <cassert>
 #include <string>
 #include <list>
 #include <cstring>
@@ -13,6 +12,7 @@
 #include "interfaces.h"
 #include "types.h"
 #include "indexvar.h"
+#include "error.h"
 
 namespace simit {
 namespace ir {
@@ -106,7 +106,7 @@ inline bool isa(Expr e) {
 
 template <typename E>
 inline const E* to(Expr e) {
-  assert(isa<E>(e) && "Wrong Expr type");
+  iassert(isa<E>(e)) << "Wrong Expr type";
   return static_cast<const E*>(e.expr());
 }
 
@@ -127,7 +127,7 @@ inline bool isa(Stmt s) {
 
 template <typename S>
 inline const S* to(Stmt s) {
-  assert(isa<S>(s) && "Wrong Expr type");
+  iassert(isa<S>(s)) << "Wrong Expr type";
   return static_cast<const S*>(s.stmt());
 }
 
@@ -169,7 +169,7 @@ public:
   Func(const std::string &name, const std::vector<Var> &arguments,
        const std::vector<Var> &results, Kind kind)
       : Func(name, arguments, results, Stmt(), kind) {
-    assert(kind != Internal);
+    iassert(kind != Internal);
   }
 
   Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
@@ -217,7 +217,7 @@ struct Literal : public ExprNode<Literal> {
   }
 
   static Expr make(Type type, void *values) {
-    assert(type.isTensor() && "only tensor literals are supported for now");
+    iassert(type.isTensor()) << "only tensor literals are supported for now";
 
     size_t size = 0;
     switch (type.kind()) {
@@ -229,7 +229,7 @@ struct Literal : public ExprNode<Literal> {
       case Type::Element:
       case Type::Set:
       case Type::Tuple:
-        assert(false && "Only tensor and scalar literals currently supported");
+        iassert(false) << "Only tensor and scalar literals currently supported";
         break;
     }
 
@@ -247,7 +247,7 @@ struct Literal : public ExprNode<Literal> {
   }
 
   static Expr make(Type type, std::vector<double> values) {
-    assert(isScalar(type) || type.toTensor()->size() == values.size());
+    iassert(isScalar(type) || type.toTensor()->size() == values.size());
     return Literal::make(type, values.data());
   }
 
@@ -284,7 +284,7 @@ struct FieldRead : public ExprNode<FieldRead> {
   std::string fieldName;
 
   static Expr make(Expr elementOrSet, std::string fieldName) {
-    assert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
+    iassert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
     FieldRead *node = new FieldRead;
     node->type = getFieldType(elementOrSet, fieldName);
     node->elementOrSet = elementOrSet;
@@ -299,9 +299,9 @@ struct TensorRead : public ExprNode<TensorRead> {
   std::vector<Expr> indices;
 
   static Expr make(Expr tensor, std::vector<Expr> indices) {
-    assert(tensor.type().isTensor());
+    iassert(tensor.type().isTensor());
     for (auto &index : indices) {
-      assert(isScalar(index.type()) || index.type().isElement());
+      iassert(isScalar(index.type()) || index.type().isElement());
     }
 
     TensorRead *node = new TensorRead;
@@ -316,7 +316,7 @@ struct TupleRead : public ExprNode<TupleRead> {
   Expr tuple, index;
 
   static Expr make(Expr tuple, Expr index) {
-    assert(tuple.type().isTuple());
+    iassert(tuple.type().isTuple());
     TupleRead *node = new TupleRead;
     node->type = tuple.type().toTuple()->elementType;
     node->tuple = tuple;
@@ -332,9 +332,9 @@ struct IndexRead : public ExprNode<IndexRead> {
   std::string indexName;
 
   static Expr make(Expr edgeSet, std::string indexName) {
-    assert(edgeSet.type().isSet());
-    assert(indexName == "endpoints" &&
-           "Only endpoints index supported for now");
+    iassert(edgeSet.type().isSet());
+    iassert(indexName == "endpoints")
+        << "Only endpoints index supported for now";
 
     IndexRead *node = new IndexRead;
     node->type = TensorType::make(ScalarType(ScalarType::Int),
@@ -362,10 +362,10 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
   std::vector<IndexVar> indexVars;
 
   static Expr make(Expr tensor, std::vector<IndexVar> indexVars) {
-    assert(tensor.type().isTensor() && "Only tensors can be indexed.");
-    assert(indexVars.size() == tensor.type().toTensor()->order());
+    iassert(tensor.type().isTensor()) << "Only tensors can be indexed.";
+    iassert(indexVars.size() == tensor.type().toTensor()->order());
     for (size_t i=0; i < indexVars.size(); ++i) {
-      assert(indexVars[i].getDomain() == tensor.type().toTensor()->dimensions[i]
+      iassert(indexVars[i].getDomain() == tensor.type().toTensor()->dimensions[i]
              && "IndexVar domain does not match tensordimension");
     }
 
@@ -384,9 +384,9 @@ struct IndexExpr : public ExprNode<IndexExpr> {
   std::vector<IndexVar> domain() const;
 
   static Expr make(std::vector<IndexVar> resultVars, Expr value) {
-    assert(isScalar(value.type()));
+    iassert(isScalar(value.type()));
     for (auto &idxVar : resultVars) {  // No reduction variables on lhs
-      assert(idxVar.isFreeVar());
+      iassert(idxVar.isFreeVar());
     }
     IndexExpr *node = new IndexExpr;
     node->type = getIndexExprType(resultVars, value);
@@ -401,8 +401,8 @@ struct Call : public ExprNode<Call> {
   std::vector<Expr> actuals;
 
   static Expr make(Func func, std::vector<Expr> actuals) {
-    assert(func.getResults().size() == 1 &&
-           "only calls of function with one results is currently supported.");
+    iassert(func.getResults().size() == 1)
+        << "only calls of function with one results is currently supported.";
 
     Call *node = new Call;
     node->type = func.getResults()[0].getType();
@@ -416,7 +416,7 @@ struct Neg : public ExprNode<Neg> {
   Expr a;
 
   static Expr make(Expr a) {
-    assert(isScalar(a.type()));
+    iassert(isScalar(a.type()));
 
     Neg *node = new Neg;
     node->type = a.type();
@@ -429,8 +429,8 @@ struct Add : public ExprNode<Add> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(isScalar(a.type()));
-    assert(a.type() == b.type());
+    iassert(isScalar(a.type()));
+    iassert(a.type() == b.type());
 
     Add *node = new Add;
     node->type = a.type();
@@ -444,8 +444,8 @@ struct Sub : public ExprNode<Sub> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(isScalar(a.type()));
-    assert(a.type() == b.type());
+    iassert(isScalar(a.type()));
+    iassert(a.type() == b.type());
 
     Sub *node = new Sub;
     node->type = a.type();
@@ -459,8 +459,8 @@ struct Mul : public ExprNode<Mul> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(isScalar(a.type()));
-    assert(a.type() == b.type());
+    iassert(isScalar(a.type()));
+    iassert(a.type() == b.type());
 
     Mul *node = new Mul;
     node->type = a.type();
@@ -474,8 +474,8 @@ struct Div : public ExprNode<Div> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    assert(isScalar(a.type()));
-    assert(a.type() == b.type());
+    iassert(isScalar(a.type()));
+    iassert(a.type() == b.type());
 
     Div *node = new Div;
     node->type = a.type();
@@ -490,7 +490,7 @@ struct Load : public ExprNode<Load> {
   Expr index;
 
   static Expr make(Expr buffer, Expr index) {
-    assert(isScalar(index.type()));
+    iassert(isScalar(index.type()));
 
     // TODO: Create a buffer/array type and assert that buffer is that type.
     //       Then get the component from the buffer.
@@ -526,9 +526,9 @@ struct Map : public StmtNode<Map> {
   static Stmt make(std::vector<Var> vars, Func function,
                    Expr target, Expr neighbors=Expr(),
                    ReductionOperator reduction=ReductionOperator()) {
-    assert(target.type().isSet());
-    assert(!neighbors.defined() || neighbors.type().isSet());
-    assert(vars.size() == function.getResults().size());
+    iassert(target.type().isSet());
+    iassert(!neighbors.defined() || neighbors.type().isSet());
+    iassert(vars.size() == function.getResults().size());
     Map *node = new Map;
     node->vars = vars;
     node->function = function;
@@ -595,7 +595,7 @@ struct ForDomain {
   ForDomain() {}
   ForDomain(class IndexSet indexSet) : kind(IndexSet), indexSet(indexSet) {}
   ForDomain(Expr set, Var var, Kind kind) : kind(kind), set(set), var(var) {
-    assert(kind==Edges || kind==Endpoints);
+    iassert(kind==Edges || kind==Endpoints);
   }
 };
 
@@ -630,7 +630,7 @@ struct Block : public StmtNode<Block> {
   Stmt first, rest;
 
   static Stmt make(Stmt first, Stmt rest) {
-    assert(first.defined() && "Empty block");
+    iassert(first.defined()) << "Empty block";
     Block *node = new Block;
     node->first = first;
     node->rest = rest;
@@ -638,7 +638,7 @@ struct Block : public StmtNode<Block> {
   }
 
   static Stmt make(std::vector<Stmt> stmts) {
-    assert(stmts.size() > 0 && "Empty block");
+    iassert(stmts.size() > 0) << "Empty block";
     Stmt node;
     for (size_t i=stmts.size(); i>0; --i) {
       node = Block::make(stmts[i-1], node);

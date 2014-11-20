@@ -56,7 +56,7 @@ LLVMBackend::~LLVMBackend() {
 }
 
 simit::Function *LLVMBackend::compile(Func func) {
-  assert(func.getBody().defined() && "cannot compile an undefined function");
+  iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
   module = new llvm::Module(func.getName(), LLVM_CONTEXT);
 
@@ -64,7 +64,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   vector<llvm::Value*> bufferValues;
   vector<Var> buffers = gatherLocalBuffers(func);
   for (auto &buffer : buffers) {
-    assert(buffer.getType().isTensor());
+    iassert(buffer.getType().isTensor());
     llvm::Type *ctype =
         createLLVMType(buffer.getType().toTensor()->componentType);
     llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
@@ -121,7 +121,7 @@ simit::Function *LLVMBackend::compile(Func func) {
     Type type = buffers[i].getType();
     llvm::Type *llvmType = createLLVMType(type);
 
-    assert(type.isTensor());
+    iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
     llvm::Value *len = emitComputeLen(ttype);
     unsigned compSize = ttype->componentType.bytes();
@@ -173,20 +173,20 @@ void LLVMBackend::visit(const FieldRead *op) {
 }
 
 void LLVMBackend::visit(const TensorRead *op) {
-  assert(false && "No code generation for this type");
+  ierror << "No code generation for this type";
 }
 
 void LLVMBackend::visit(const TupleRead *op) {
-  assert(false && "No code generation for this type");
+  ierror << "No code generation for this type";
 }
 
 void LLVMBackend::visit(const ir::IndexRead *op) {
   // For now we only support one, hard-coded, index namely endpoints.
   // TODO: Add support for different indices (contained in the Set type).
-  assert(op->indexName == "endpoints");
+  iassert(op->indexName == "endpoints");
 
-  assert(op->edgeSet.type().isSet());
-  assert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
+  iassert(op->edgeSet.type().isSet());
+  iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
 
   llvm::Value *edgeSetValue = compile(op->edgeSet);
   val = builder->CreateExtractValue(edgeSetValue, {1},
@@ -198,35 +198,35 @@ void LLVMBackend::visit(const ir::Length *op) {
 }
 
 void LLVMBackend::visit(const Map *op) {
-//  assert(false && "No code generation for this type");
+//  ierror << "No code generation for this type";
 }
 
 void LLVMBackend::visit(const IndexedTensor *op) {
-  assert(false && "No code generation for this type");
+  ierror << "No code generation for this type";
 }
 
 void LLVMBackend::visit(const IndexExpr *op) {
-  assert(false && "No code generation for this type");
+  ierror << "No code generation for this type";
 }
 
 void LLVMBackend::visit(const TensorWrite *op) {
-  assert(false && "No code generation for this type");
+  ierror << "No code generation for this type";
 }
 
 void LLVMBackend::visit(const Literal *op) {
-  assert(op->type.isTensor() && "Only tensor literals supported for now");
+  iassert(op->type.isTensor()) << "Only tensor literals supported for now";
   const TensorType *type = op->type.toTensor();
 
   if (type->order() == 0) {
     ScalarType ctype = type->componentType;
     switch (ctype.kind) {
       case ScalarType::Int: {
-        assert(ctype.bytes() == 4 && "Only 4-byte ints currently supported");
+        iassert(ctype.bytes() == 4) << "Only 4-byte ints currently supported";
         val = llvmInt(((int*)op->data)[0]);
         break;
       }
       case ScalarType::Float: {
-        assert(ctype.bytes() == 8 && "Only 8-byte floats currently supported");
+        iassert(ctype.bytes() == 8) << "Only 8-byte floats currently supported";
         val = llvmFP(((double*)op->data)[0]);
       }
     }
@@ -234,11 +234,11 @@ void LLVMBackend::visit(const Literal *op) {
   else {
     val = llvmPtr(op);
   }
-  assert(val);
+  iassert(val);
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
-  assert(symtable.contains(op->var.getName()));
+  iassert(symtable.contains(op->var.getName()));
   val = symtable.get(op->var.getName());
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
@@ -273,7 +273,7 @@ void LLVMBackend::visit(const Call *op) {
   // compile arguments first
   for (auto a: op->actuals) {
     //FIX: remove once solve() is no longer needed
-    //assert(isScalar(a.type()));
+    //iassert(isScalar(a.type()));
     argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
     args.push_back(compile(a));
   }
@@ -300,7 +300,7 @@ void LLVMBackend::visit(const Call *op) {
     fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::exp,argTypes);
   }
   else if (op->func == ir::Intrinsics::norm) {
-    assert(args.size() == 1);
+    iassert(args.size() == 1);
     llvm::Value *x = args[0];
 
     llvm::Value *x0 = loadFromArray(x, llvmInt(0));
@@ -344,13 +344,13 @@ void LLVMBackend::visit(const Call *op) {
     // if not an intrinsic function, try to find it in the module
     fun = module->getFunction(op->func.getName());
   }
-  assert(fun && "Unsupported function call");
+  iassert(fun) << "Unsupported function call";
 
   val = builder->CreateCall(fun, args);
 }
 
 void LLVMBackend::visit(const Neg *op) {
-  assert(isScalar(op->type));
+  iassert(isScalar(op->type));
   llvm::Value *a = compile(op->a);
 
   switch (op->type.toTensor()->componentType.kind) {
@@ -364,7 +364,7 @@ void LLVMBackend::visit(const Neg *op) {
 }
 
 void LLVMBackend::visit(const Add *op) {
-  assert(isScalar(op->type));
+  iassert(isScalar(op->type));
 
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
@@ -380,7 +380,7 @@ void LLVMBackend::visit(const Add *op) {
 }
 
 void LLVMBackend::visit(const Sub *op) {
-  assert(isScalar(op->type));
+  iassert(isScalar(op->type));
 
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
@@ -396,7 +396,7 @@ void LLVMBackend::visit(const Sub *op) {
 }
 
 void LLVMBackend::visit(const Mul *op) {
-  assert(isScalar(op->type));
+  iassert(isScalar(op->type));
 
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
@@ -412,7 +412,7 @@ void LLVMBackend::visit(const Mul *op) {
 }
 
 void LLVMBackend::visit(const Div *op) {
-  assert(isScalar(op->type));
+  iassert(isScalar(op->type));
 
   llvm::Value *a = compile(op->a);
   llvm::Value *b = compile(op->b);
@@ -421,7 +421,7 @@ void LLVMBackend::visit(const Div *op) {
     case ScalarType::Int:
       // TODO: Figure out what's the deal with integer div. Cast to fp, div and
       // truncate?
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
       break;
     case ScalarType::Float:
       val = builder->CreateFDiv(a, b);
@@ -433,10 +433,10 @@ void LLVMBackend::visit(const AssignStmt *op) {
   /// \todo assignment of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only assign scalars to scalars
   ///       in the backend
-//  assert(isScalar(op->value.type()) &&
+//  iassert(isScalar(op->value.type()) &&
 //         "assignment non-scalars should have been lowered by now");
 
-  assert(op->var.getType().isTensor() && op->value.type().isTensor());
+  iassert(op->var.getType().isTensor() && op->value.type().isTensor());
 
   llvm::Value *value = compile(op->value);
   string varName = op->var.getName();
@@ -447,10 +447,10 @@ void LLVMBackend::visit(const AssignStmt *op) {
     llvm::Value *var = builder->CreateAlloca(createLLVMType(type));
     symtable.insert(varName, var);
   }
-  assert(symtable.contains(varName));
+  iassert(symtable.contains(varName));
 
   llvm::Value *varPtr = symtable.get(varName);
-  assert(varPtr->getType()->isPointerTy());
+  iassert(varPtr->getType()->isPointerTy());
 
   const TensorType *varType = op->var.getType().toTensor();
   const TensorType *valType = op->value.type().toTensor();
@@ -471,7 +471,7 @@ void LLVMBackend::visit(const AssignStmt *op) {
       builder->CreateMemSet(varPtr, llvmInt(0,8), varSize, compSize);
     }
     else {
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
     }
   }
   else if (isa<Literal>(op->value)) {
@@ -479,7 +479,7 @@ void LLVMBackend::visit(const AssignStmt *op) {
     symtable.insert(varName, value);
   }
   else {
-    assert(false);
+    ierror;
   }
 }
 
@@ -487,12 +487,12 @@ void LLVMBackend::visit(const FieldWrite *op) {
   /// \todo field writes of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only write scalars to scalars
   ///       in the backend
-//  assert(isScalar(op->value.type()) &&
-//         "assignment non-scalars should have been lowered by now");
+//  iassert(isScalar(op->value.type()))
+//      << "assignment non-scalars should have been lowered by now";
 
-  assert(op->value.type().isTensor());
-  assert(getFieldType(op->elementOrSet, op->fieldName).isTensor());
-  assert(op->elementOrSet.type().isSet()||op->elementOrSet.type().isElement());
+  iassert(op->value.type().isTensor());
+  iassert(getFieldType(op->elementOrSet, op->fieldName).isTensor());
+  iassert(op->elementOrSet.type().isSet()||op->elementOrSet.type().isElement());
 
   Type fieldType = getFieldType(op->elementOrSet, op->fieldName);
   Type valueType = op->value.type();
@@ -513,7 +513,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
       builder->CreateMemSet(fieldPtr, llvmInt(0,8), fieldSize, compSize);
     }
     else {
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
     }
   }
   else {
@@ -545,20 +545,20 @@ void LLVMBackend::visit(const For *op) {
   std::string iName = op->var.getName();
   ForDomain domain = op->domain;
 
-  llvm::Value *iNum;
+  llvm::Value *iNum = nullptr;
   switch (domain.kind) {
     case ForDomain::IndexSet: {
       iNum = emitComputeLen(domain.indexSet);
       break;
     }
     case ForDomain::Endpoints:
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
       break;
     case ForDomain::Edges:
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
       break;
   }
-  assert(iNum);
+  iassert(iNum);
 
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
@@ -593,7 +593,7 @@ void LLVMBackend::visit(const For *op) {
 }
 
 void LLVMBackend::visit(const IfThenElse *op) {
-  NOT_SUPPORTED_YET;
+  not_supported_yet;
 }
 
 void LLVMBackend::visit(const Block *op) {
@@ -655,9 +655,11 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexSet &is) {
                                          setValue->getName()+LEN_SUFFIX);
     }
     case IndexSet::Dynamic:
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
       break;
   }
+  unreachable;
+  return nullptr;
 }
 
 llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {

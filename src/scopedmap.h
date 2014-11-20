@@ -1,11 +1,11 @@
 #ifndef SIMIT_SYMBOLTABLE_H
 #define SIMIT_SYMBOLTABLE_H
 
-#include <cassert>
 #include <string>
 #include <map>
 #include <list>
 
+#include "error.h"
 #include "util.h"
 
 namespace simit {
@@ -22,7 +22,7 @@ public:
   ~ScopedMap() { unscope(); }
 
   void clear() {
-    assert(scopes.size() == 1);
+    iassert(scopes.size() == 1);
     scopes.front().clear();
   }
 
@@ -55,7 +55,8 @@ public:
         return scope.at(symbol);
       }
     }
-    assert(false && "Attempting to get a symbol that is not in symbol table.");
+    iassert(false) << "Attempting to get a symbol that is not in symbol table.";
+    return scopes.begin()->begin()->second;
   }
 
   const Value &get(const Key &symbol) const {
@@ -64,7 +65,7 @@ public:
         return scope.at(symbol);
       }
     }
-    assert(false && "Attempting to get a symbol that is not in symbol table.");
+    iassert(false) << "Attempting to get a symbol that is not in symbol table.";
   }
 
   /// Iterator over symbol scopes.

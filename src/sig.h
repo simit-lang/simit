@@ -106,8 +106,8 @@ private:
   }
 
   void visit(const IndexedTensor *op) {
-    assert(!isa<IndexExpr>(op->tensor) &&
-           "IndexExprs should have been flattened by now");
+    iassert(!isa<IndexExpr>(op->tensor))
+        << "IndexExprs should have been flattened by now";
 
     Var tensorVar;
     if (isa<VarExpr>(op->tensor)) {

@@ -87,7 +87,7 @@ public:
   }
 
   const Symbol &getSymbol(const std::string &name) {
-    assert(hasSymbol(name));
+    iassert(hasSymbol(name));
     return exprSymtable.get(name);
   }
 

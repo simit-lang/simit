@@ -7,7 +7,7 @@
 #include "frontend.h"
 #include "program_context.h"
 #include "llvm_backend.h"
-#include "errors.h"
+#include "error.h"
 #include "util.h"
 
 using namespace std;
@@ -104,7 +104,7 @@ int main(int argc, const char* argv[]) {
       std::istringstream ss(sec);
       std::string header;
       if (!std::getline(ss, header)) {
-        assert(false && "No text in string");
+        ierror << "No text in string";
       }
       header = simit::util::trim(header.substr(3, header.size()-1));
 
@@ -119,7 +119,7 @@ int main(int argc, const char* argv[]) {
   }
 
   simit::internal::Frontend frontend;
-  std::vector<simit::Error> errors;
+  std::vector<simit::ParseError> errors;
   simit::internal::ProgramContext ctx;
 
   status = frontend.parseString(source, &ctx, &errors);

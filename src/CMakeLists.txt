@@ -2,6 +2,8 @@
 set(SIMIT_PARSER_SOURCE_DIR ${SIMIT_SOURCE_DIR}/parser)
 include_directories ("${SIMIT_PARSER_SOURCE_DIR}")
 
+#add_definitions(-DWITH_EXCEPTIONS)
+
 SET(PARSER_INPUT   parser.ypp)
 SET(PARSER_HEADER  parser.h)
 SET(PARSER         parser.cpp)
@@ -12,7 +14,7 @@ SET(SCANNER        scanner.cpp)
 FIND_PACKAGE(BISON 3.0.0)
 if (BISON_FOUND)
   if ($ENV{SIMIT_PARSER_DEBUG})
-    message("Warning: Parser files will have line directives absolute paths")
+    message("Warning: Parser files will have line directive absolute paths")
     ADD_CUSTOM_COMMAND(
       OUTPUT ${SIMIT_PARSER_SOURCE_DIR}/${PARSER}
       COMMAND ${BISON_EXECUTABLE}

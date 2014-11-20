@@ -10,6 +10,7 @@
 #include "indexvar.h"
 #include "util.h"
 #include "ir_builder.h"
+#include "error.h"
 
 using namespace std;
 
@@ -324,8 +325,8 @@ private:
   }
 
   void visit(const Sub *op) {
-    assert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
-    assert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
+    iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
+    iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
     Expr a = mutate(op->a);
     Expr b = mutate(op->b);
 
@@ -335,8 +336,8 @@ private:
 
   // TODO: Add .* amd ./ too
   void visit(const Add *op) {
-    assert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
-    assert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
+    iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
+    iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
 
     Expr a = mutate(op->a);
     Expr b = mutate(op->b);
@@ -352,7 +353,7 @@ private:
     if (isa<IndexExpr>(op->tensor)) {
       Expr tensor = mutate(op->tensor);
       const IndexExpr *indexExpr = to<IndexExpr>(tensor);
-      assert(indexExpr->resultVars.size() == op->indexVars.size());
+      iassert(indexExpr->resultVars.size() == op->indexVars.size());
 
       map<IndexVar,IndexVar> substitutions;
       for (size_t i=0; i < indexExpr->resultVars.size(); ++i) {
@@ -418,7 +419,7 @@ private:
     Var lvar(varName, Int);
 
     VarDef varDef = ud->getDef(e->tensor);
-    assert(varDef.getKind() == VarDef::Map);
+    iassert(varDef.getKind() == VarDef::Map);
 
     const Map *mapStmt = to<Map>(varDef.getStmt());
     ForDomain ldom = ForDomain(mapStmt->target);
@@ -458,7 +459,7 @@ private:
   }
 
   void visit(const AssignStmt *op) {
-    assert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
+    iassert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
     Var var = op->var;
@@ -491,7 +492,7 @@ private:
   }
 
   void visit(const FieldWrite *op) {
-    assert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
+    iassert(isa<IndexExpr>(op->value)) << "Can only specialize IndexExpr stmts";
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
     Expr elementOrSet = mutate(op->elementOrSet);
@@ -523,7 +524,7 @@ private:
   }
 
   void visit(const TensorWrite *op) {
-    assert(isa<IndexExpr>(op->value) && "Can only specialize IndexExpr stmts");
+    iassert(isa<IndexExpr>(op->value)) << "Can only specialize IndexExpr stmts";
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
     Expr value = mutate(op->value);
@@ -543,8 +544,8 @@ private:
   }
 
   void visit(const IndexedTensor *op) {
-    assert(!isa<IndexExpr>(op->tensor) &&
-           "index expressions should have been lowered by now");
+    iassert(!isa<IndexExpr>(op->tensor))
+        << "index expressions should have been lowered by now";
 
     if (op->indexVars.size() == 0) {
       expr = op->tensor;
@@ -619,7 +620,7 @@ private:
   Expr lhsExpr;
 
   Expr mutate(Expr e) {
-    assert(lhsExpr.defined());
+    iassert(lhsExpr.defined());
 
     if (e.defined()) {
       if (!isScalar(e.type())) {
@@ -682,8 +683,8 @@ private:
 
 //      std::cout << "here" << std::endl;
 
-      assert(isScalar(op->value.type()) &&
-             "assignment non-scalars should have been lowered by now");
+      iassert(isScalar(op->value.type()))
+          << "assignment non-scalars should have been lowered by now";
       switch (rop.getKind()) {
         case ReductionOperator::Sum: {
           Expr varExpr = VarExpr::make(op->var);
@@ -692,7 +693,7 @@ private:
           break;
         }
         case ReductionOperator::Undefined:
-          assert(false);
+          ierror;
           break;
       }
     }
@@ -706,7 +707,7 @@ private:
       Expr tensor = op->tensor;
       std::vector<Expr> indices = op->indices;
 
-      assert(tensor.type().isTensor());
+      iassert(tensor.type().isTensor());
       switch (rop.getKind()) {
         case ReductionOperator::Sum: {
           ScalarType componentType = tensor.type().toTensor()->componentType;
@@ -716,7 +717,7 @@ private:
           break;
         }
         case ReductionOperator::Undefined:
-          assert(false);
+          ierror;
           break;
       }
 
@@ -789,8 +790,8 @@ public:
   InlineMappedFunction(Var lvar, Var resultActual, const Map *map,
                        Stmt computeStmt) {
     Func mapFunc = map->function;
-    assert(mapFunc.getArguments().size()==1||mapFunc.getArguments().size()==2 &&
-           "mapped functions must have exactly two arguments");
+    iassert(mapFunc.getArguments().size()==1||mapFunc.getArguments().size()==2)
+        << "mapped functions must have exactly two arguments";
 
     this->loopVar = lvar;
 
@@ -847,7 +848,7 @@ private:
       expr = TensorRead::make(setFieldRead, {index});
     }
     else {
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
     }
   }
 
@@ -879,7 +880,7 @@ private:
         Expr value = mutate(op->value);
         const TensorRead *tensorRead = GetTensorRead().get(resultActual,
                                                            computeStmt);
-        assert(tensorRead->indices.size() == indices.size());
+        iassert(tensorRead->indices.size() == indices.size());
 
         map<Expr,Expr> substitutions;
         substitutions[tensorRead] = value;
@@ -973,8 +974,7 @@ private:
   }
 
   void visit(const IndexExpr *op) {
-    assert(false &&
-           "IndexExprs must be assigned to a var/field/tensor before lowering");
+    ierror << "IndexExprs must be assigned to var/field/tensor before lowering";
   }
 };
 
@@ -1007,13 +1007,13 @@ public:
 //    std::cout << "-- after" << std::endl << std::endl;
 
     if (edges.size() > 1) {
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
     }
 
     std::map<Var,const Map*> vars2maps;
     for (auto &e : edges) {
       VarDef varDef = ud->getDef(e->tensor);
-      assert(varDef.getKind() == VarDef::Map);
+      iassert(varDef.getKind() == VarDef::Map);
 
       Var lvar = loopVars.getVar(e->tensor).first;
       const Map *map = to<Map>(varDef.getStmt());
@@ -1078,7 +1078,7 @@ private:
 
       Var tmpVar = rov.getTmpVar();
 
-      assert(tmpVar.defined());
+      iassert(tmpVar.defined());
 
       Stmt alloc = AssignStmt::make(tmpVar,Literal::make(tmpVar.getType(),{0}));
       Stmt loop = For::make(lvar, ldom, loopBody);
@@ -1104,7 +1104,7 @@ private:
     ForDomain ldom = loopVar.second;
 
     VarDef varDef = ud->getDef(e->tensor);
-    assert(varDef.getKind() == VarDef::Map);
+    iassert(varDef.getKind() == VarDef::Map);
 
     Stmt loop = For::make(lvar, ldom, loopBody);
     stmt = Block::make(initToZeroStmt, loop);
@@ -1205,7 +1205,7 @@ private:
 
       IndexDomain dims = operands[0].type().toTensor()->dimensions[0];
       auto iss = dims.getIndexSets();
-      assert(iss.size() == 2);
+      iassert(iss.size() == 2);
 
       Stmt loop = For::make(lv2, ForDomain(iss[1]), body);
       loop = For::make(lv1, ForDomain(iss[0]), loop);
@@ -1265,7 +1265,7 @@ Expr createLengthComputation(const IndexSet &indexSet) {
 }
 
 Expr createLengthComputation(const IndexDomain &dimensions) {
-  assert(dimensions.getIndexSets().size() > 0);
+  iassert(dimensions.getIndexSets().size() > 0);
   const vector<IndexSet> &indexSets = dimensions.getIndexSets();
   Expr len = createLengthComputation(indexSets[0]);
   for (size_t i=1; i < indexSets.size(); ++i) {
@@ -1275,7 +1275,7 @@ Expr createLengthComputation(const IndexDomain &dimensions) {
 }
 
 Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
-  assert(dimensions.size() > 0);
+  iassert(dimensions.size() > 0);
   Expr len = createLengthComputation(dimensions[0]);
   for (size_t i=1; i < dimensions.size(); ++i) {
     len = Mul::make(len, createLengthComputation(dimensions[i]));
@@ -1288,7 +1288,7 @@ Expr createLoadExpr(Expr tensor, Expr index) {
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
     const Load *load = to<Load>(tensor);
-    assert(load->buffer.type().isTensor());
+    iassert(load->buffer.type().isTensor());
 
     Type blockType = load->buffer.type().toTensor()->blockType();
     Expr len  = createLengthComputation(blockType.toTensor()->dimensions);
@@ -1306,7 +1306,7 @@ Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
     const Load *load = to<Load>(tensor);
-    assert(load->buffer.type().isTensor());
+    iassert(load->buffer.type().isTensor());
 
     Type blockType = load->buffer.type().toTensor()->blockType();
     Expr len  = createLengthComputation(blockType.toTensor()->dimensions);
@@ -1322,13 +1322,13 @@ Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
 class LowerTensorAccesses : public IRRewriter {
 
   void visit(const TensorRead *op) {
-    assert(op->type.isTensor() && op->tensor.type().toTensor());
+    iassert(op->type.isTensor() && op->tensor.type().toTensor());
 
     const TensorType *type = op->tensor.type().toTensor();
 
     // TODO: Generalize to n-order tensors and remove assert (also there's no
     //       need to have specialized code for vectors and matrices).
-    assert(op->indices.size() <= 2);
+    iassert(op->indices.size() <= 2);
 
     Expr tensor = mutate(op->tensor);
     Expr index;
@@ -1349,33 +1349,33 @@ class LowerTensorAccesses : public IRRewriter {
       if (dim1.getIndexSets().size() == 1 &&
           dim1.getIndexSets()[0].getKind() == IndexSet::Range) {
         // TODO: Add support for unsigned ScalarTypes
-        assert(dim1.getSize() < (size_t)(-1));
+        iassert(dim1.getSize() < (size_t)(-1));
         int dimSize = static_cast<int>(dim1.getSize());
         d1 = Literal::make(i.type(), &dimSize);
       }
       else {
-        NOT_SUPPORTED_YET;
+        not_supported_yet;
       }
-      assert(d1.defined());
+      iassert(d1.defined());
 
       index = Add::make(Mul::make(i, d1), j);
     }
     else {
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
     }
-    assert(index.defined());
+    iassert(index.defined());
 
     expr = createLoadExpr(tensor, index);
   }
 
   void visit(const TensorWrite *op) {
-    assert(op->tensor.type().isTensor());
+    iassert(op->tensor.type().isTensor());
 
     const TensorType *type = op->tensor.type().toTensor();
 
     // TODO: Generalize to n-order tensors and remove assert (also there's no
     //       need to have specialized code for vectors and matrices).
-    assert(op->indices.size() <= 2);
+    iassert(op->indices.size() <= 2);
 
     Expr tensor = mutate(op->tensor);
     Expr value = mutate(op->value);
@@ -1398,21 +1398,21 @@ class LowerTensorAccesses : public IRRewriter {
       if (dim1.getIndexSets().size() == 1 &&
           dim1.getIndexSets()[0].getKind() == IndexSet::Range) {
         // TODO: Add support for unsigned ScalarTypes
-        assert(dim1.getSize() < (size_t)(-1));
+        iassert(dim1.getSize() < (size_t)(-1));
         int dimSize = static_cast<int>(dim1.getSize());
         d1 = Literal::make(i.type(), &dimSize);
       }
       else {
-        NOT_SUPPORTED_YET;
+        not_supported_yet;
       }
-      assert(d1.defined());
+      iassert(d1.defined());
 
       index = Add::make(Mul::make(i, d1), j);
     }
     else {
-      NOT_SUPPORTED_YET;
+      not_supported_yet;
     }
-    assert(index.defined());
+    iassert(index.defined());
 
     stmt = createStoreStmt(tensor, index, value);
   }

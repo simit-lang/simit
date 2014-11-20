@@ -72,7 +72,7 @@ Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
       val = Neg::make(a);
       break;
   }
-  assert(val.defined());
+  iassert(val.defined());
 
   return IndexExpr::make(indexVars, val);
 }
@@ -109,11 +109,11 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
     b = IndexedTensor::make(r, *rIndexVars);
   }
   else {
-    assert(l.type() == r.type());
+    iassert(l.type() == r.type());
     a = IndexedTensor::make(l, indexVars);
     b = IndexedTensor::make(r, indexVars);
   }
-  assert(a.defined() && b.defined());
+  iassert(a.defined() && b.defined());
 
   Expr val;
   switch (op) {
@@ -130,13 +130,13 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
       val = Div::make(a, b);
       break;
   }
-  assert(val.defined());
+  iassert(val.defined());
 
   return IndexExpr::make(indexVars, val);
 }
 
 Expr IRBuilder::innerProduct(Expr l, Expr r) {
-  assert(l.type() == r.type());
+  iassert(l.type() == r.type());
   const TensorType *ltype = l.type().toTensor();
 
   auto i = factory.createIndexVar(ltype->dimensions[0], ReductionOperator::Sum);
@@ -150,7 +150,7 @@ Expr IRBuilder::innerProduct(Expr l, Expr r) {
 }
 
 Expr IRBuilder::outerProduct(Expr l, Expr r) {
-  assert(l.type() == r.type());
+  iassert(l.type() == r.type());
   const TensorType *ltype = l.type().toTensor();
 
   auto i = factory.createIndexVar(ltype->dimensions[0]);
@@ -167,9 +167,9 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
   const TensorType *ltype = l.type().toTensor();
   const TensorType *rtype = r.type().toTensor();
 
-  assert(ltype->order() == 2 && rtype->order() == 1);
-  assert(ltype->dimensions[1] == rtype->dimensions[0]);
-//  assert(rtype->isColumnVector);
+  iassert(ltype->order() == 2 && rtype->order() == 1);
+  iassert(ltype->dimensions[1] == rtype->dimensions[0]);
+//  iassert(rtype->isColumnVector);
 
   auto i = factory.createIndexVar(ltype->dimensions[0]);
   auto j = factory.createIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
@@ -190,8 +190,8 @@ Expr IRBuilder::gevm(Expr l, Expr r) {
   const TensorType *ltype = l.type().toTensor();
   const TensorType *rtype = r.type().toTensor();
 
-  assert(ltype->order() == 1 && rtype->order() == 2);
-  assert(ltype->dimensions[0] == rtype->dimensions[0]);
+  iassert(ltype->order() == 1 && rtype->order() == 2);
+  iassert(ltype->dimensions[0] == rtype->dimensions[0]);
 
   auto i = factory.createIndexVar(rtype->dimensions[1]);
   auto j = factory.createIndexVar(rtype->dimensions[0], ReductionOperator::Sum);
@@ -207,8 +207,8 @@ Expr IRBuilder::gemm(Expr l, Expr r) {
   const TensorType *ltype = l.type().toTensor();
   const TensorType *rtype = r.type().toTensor();
 
-  assert(ltype->order() == 2 && rtype->order() == 2);
-  assert(ltype->dimensions[1] == rtype->dimensions[0]);
+  iassert(ltype->order() == 2 && rtype->order() == 2);
+  iassert(ltype->dimensions[1] == rtype->dimensions[0]);
 
   auto i = factory.createIndexVar(ltype->dimensions[0]);
   auto j = factory.createIndexVar(rtype->dimensions[1]);
@@ -224,7 +224,7 @@ Expr IRBuilder::gemm(Expr l, Expr r) {
 Expr IRBuilder::transposedMatrix(Expr mat) {
   const TensorType *mattype = mat.type().toTensor();
 
-  assert(mattype->order() == 2);
+  iassert(mattype->order() == 2);
   const std::vector<IndexDomain> &dims = mattype->dimensions;
 
   std::vector<IndexVar> indexVars;

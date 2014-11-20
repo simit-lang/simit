@@ -1,7 +1,6 @@
 #ifndef SIMIT_GRAPH_H
 #define SIMIT_GRAPH_H
 
-#include <cassert>
 #include <cstddef>
 #include <cstring>
 #include <vector>
@@ -10,9 +9,9 @@
 #include <set>
 #include <ostream>
 
-
 #include "tensor_components.h"
 #include "variadic.h"
+#include "error.h"
 
 namespace simit {
 
@@ -139,7 +138,7 @@ public:
   /// Remove an element from the Set
   void remove(ElementRef element) {
     for (auto f : fields){
-      assert(isValidComponentType(f->type->getComponentType()));
+      iassert(isValidComponentType(f->type->getComponentType()));
       switch (f->type->getComponentType()) {
         case ComponentType::FLOAT: {
           double* data = (double*)f->data;
@@ -275,7 +274,7 @@ private:
       ComponentType getComponentType() const { return componentType; }
       size_t getOrder() const { return dimensions.size(); }
       size_t getDimension(size_t i) const {
-        assert(i<getOrder());
+        iassert(i<getOrder());
         return dimensions[i];
       }
       size_t getSize() const { return size; }
@@ -329,7 +328,7 @@ private:
 
 inline bool operator<(const SetBase::ElementIterator& e1,
                       const SetBase::ElementIterator& e2) {
-  assert(e1.set == e2.set);
+  iassert(e1.set == e2.set);
   return e1.lessThan(e2);
 }
 
@@ -339,9 +338,9 @@ class Set : public SetBase {
 public:
   template <typename ...T>
   Set(const T& ... sets) : SetBase() {
-    assert(sizeof...(sets) == cardinality &&
-           "Wrong number of endpoint sets");
-   
+    static_assert(sizeof...(sets) == cardinality,
+                  "Wrong number of endpoint sets");
+
     // TODO: this may not be the most efficient, but does it matter?
     endpointSets = epsMaker(endpointSets, sets...);
     
@@ -349,8 +348,8 @@ public:
   }
   
   Set() : SetBase() {
-    assert(cardinality == 0 &&
-           "Sets with cardinality>0 must provide sets for endpoints");
+    iassert(cardinality == 0)
+        << "Sets with cardinality>0 must provide sets for endpoints";
   }
   
   ~Set() {
@@ -364,8 +363,7 @@ public:
   template <typename ...T>
   ElementRef addElement(T ... endpoints) {
     
-    assert(sizeof...(endpoints) == cardinality &&
-           "Wrong number of endpoints.");
+    iassert(sizeof...(endpoints) == cardinality) <<"Wrong number of endpoints.";
     
     if (elements > capacity-1)
       increaseEdgeCapacity();
@@ -375,8 +373,7 @@ public:
   }
   
   ElementRef addElement() {
-    assert(cardinality == 0 &&
-           "Must provide endpoints for cardinality > 0");
+    iassert(cardinality == 0) << "Must provide endpoints for cardinality > 0";
     return SetBase::addElement();
   }
   
@@ -411,8 +408,8 @@ private:
   std::vector<const SetBase*> endpointSets; // sets that the endpoints belong to
   
   void increaseEdgeCapacity() {
-    endpoints = (int*)realloc(endpoints,
-                              (capacity+capacityIncrement)*cardinality*sizeof(int));
+    size_t newSize = (capacity+capacityIncrement)*cardinality*sizeof(int);
+    endpoints = (int*)realloc(endpoints, newSize);
   }
   
   template <int c> friend class hidden::EndpointIteratorBase;
@@ -436,18 +433,17 @@ private:
   // helper for adding edges
   template <typename F, typename ...T>
   void addHelper(int which, F f, T ... eps) {
-    assert(endpointSets[which]->getSize() > f.ident &&
-      "Invalid member of set in addEdge");
+    uassert(endpointSets[which]->getSize() > f.ident)
+        << "Invalid member of set in addEdge";
     endpoints[elements*cardinality+which] = f.ident;
     addHelper(which+1, eps...);
   }
   template <typename F>
   void addHelper(int which, F f) {
-    assert(endpointSets[which]->getSize() > f.ident &&
-    "Invalid member of set in addEdge");
+    uassert(endpointSets[which]->getSize() > f.ident)
+        << "Invalid member of set in addEdge";
     endpoints[elements*cardinality+which] = f.ident;
   }
-
 };
 
 namespace internal {
@@ -862,7 +858,7 @@ class TensorRef {
 
 template <typename T, int... dims>
 std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
-  assert("General tensor operator<< not yet supported");
+  ierror << "General tensor operator<< not yet supported";
   return os;
 }
 
@@ -913,7 +909,7 @@ public:
   Box(unsigned nX, unsigned nY, unsigned nZ, std::vector<ElementRef> refs,
       std::map<Box::Coord, ElementRef> coords2edges)
       : nX(nX), nY(nY), nZ(nZ), refs(refs), coords2edges(coords2edges) {
-    assert(refs.size() == nX*nY*nZ);
+    iassert(refs.size() == nX*nY*nZ);
   }
 
   unsigned numX() const {return nX;}

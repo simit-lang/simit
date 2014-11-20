@@ -98,7 +98,7 @@ std::map<std::string, Func> Intrinsics::byName = {{"mod",mod},
 
 // Type compute functions
 Type getFieldType(Expr elementOrSet, std::string fieldName) {
-  assert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
+  iassert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
 
   Type fieldType;
   if (elementOrSet.type().isElement()) {
@@ -132,12 +132,12 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
 }
 
 Type getBlockType(Expr tensor) {
-  assert(tensor.type().isTensor());
+  iassert(tensor.type().isTensor());
   return tensor.type().toTensor()->blockType();
 }
 
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
-  assert(isScalar(expr.type()));
+  iassert(isScalar(expr.type()));
   std::vector<IndexDomain> dimensions;
   for (auto &indexVar : lhsIndexVars) {
     dimensions.push_back(indexVar.getDomain());
@@ -147,24 +147,24 @@ Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
 
 // struct Literal
 void Literal::cast(Type type) {
-  assert(type.isTensor());
+  iassert(type.isTensor());
   const TensorType *newType = type.toTensor();
   const TensorType *oldType = this->type.toTensor();
-  assert(newType->componentType == oldType->componentType);
-  assert(newType->size() == oldType->size());
+  iassert(newType->componentType == oldType->componentType);
+  iassert(newType->size() == oldType->size());
 
   this->type = type;
 }
 
 bool operator==(const Literal& l, const Literal& r) {
-  assert(l.type.isTensor() && r.type.isTensor());
+  iassert(l.type.isTensor() && r.type.isTensor());
 
   if (l.type != r.type) {
     return false;
   }
 
-  assert(getTensorByteSize(l.type.toTensor()) ==
-         getTensorByteSize(r.type.toTensor()));
+  iassert(getTensorByteSize(l.type.toTensor()) ==
+          getTensorByteSize(r.type.toTensor()));
 
   switch (l.type.toTensor()->componentType.kind) {
     case ScalarType::Int: {

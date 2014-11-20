@@ -18,18 +18,17 @@
 
   #include "util.h"
   #include "ir.h"
-  #include "errors.h"
+  #include "error.h"
   #include "types.h"
   #include "ir_builder.h"
 }
 
 %parse-param { Scanner *scanner };
 %parse-param { ProgramContext *ctx };
-%parse-param { std::vector<Error> *errors };
+%parse-param { std::vector<ParseError> *errors };
 
 %code {
   #include <stdlib.h>
-  #include <cassert>
   #include <iostream>
   #include <map>
   #include <set>
@@ -74,8 +73,9 @@
                     to_string(order), loc);                         \
       } while (0)
 
-  void Parser::error(const Parser::location_type &loc, const std::string &msg) {
-    errors->push_back(Error(loc.begin.line, loc.begin.column,
+  void Parser::error(const Parser::location_type &loc,
+                           const std::string &msg) {
+    errors->push_back(ParseError(loc.begin.line, loc.begin.column,
                             loc.end.line, loc.end.column, msg));
   }
 
@@ -96,9 +96,9 @@
   }
 
   void transposeVector(Expr vec) {
-    assert(vec.type().isTensor());
+    iassert(vec.type().isTensor());
     const TensorType *ttype = vec.type().toTensor();
-    assert(ttype->order() == 1);
+    iassert(ttype->order() == 1);
 
     Type transposedVector = TensorType::make(ttype->componentType,
                                              ttype->dimensions,
@@ -143,7 +143,7 @@
 
   #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)   \
     do {                                          \
-      assert(lt.isTensor() && rt.isTensor());     \
+      iassert(lt.isTensor() && rt.isTensor());    \
       const TensorType *ltt = lt.toTensor();      \
       const TensorType *rtt = rt.toTensor();      \
       if (ltt->order() > 0 && rtt->order() > 0) { \
@@ -709,8 +709,8 @@ const_stmt
 
     Expr literalExpr = convertAndDelete($tensor_literal);
 
-    assert(literalExpr.type().isTensor() &&
-           "Only tensor literals are currently supported");
+    iassert(literalExpr.type().isTensor())
+        << "Only tensor literals are currently supported";
     auto litType = literalExpr.type();
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
@@ -810,7 +810,7 @@ linear_algebra_expr
     $$ = new Expr(ctx->getBuilder()->binaryElwiseExpr(l, $2, r));
   }
   | expr "*" expr {
-    assert($1 && $3);
+    iassert($1 && $3);
     IRBuilder *builder = ctx->getBuilder();
 
     Expr l = convertAndDelete($1);
@@ -878,7 +878,7 @@ linear_algebra_expr
     }
   }
   | expr "/" expr {
-    assert($1 && $3);
+    iassert($1 && $3);
     IRBuilder *builder = ctx->getBuilder();
 
     Expr l = convertAndDelete($1);
@@ -990,8 +990,8 @@ boolean_expr
 %type <expr> field_read_expr;
 field_read_expr
   : set_read_expr "." IDENT[fieldName] {
-    assert($set_read_expr);
-    assert($set_read_expr->type().defined());
+    iassert($set_read_expr);
+    iassert($set_read_expr->type().defined());
 
     Expr elemOrSet = convertAndDelete($set_read_expr);
     std::string fieldName = convertAndFree($fieldName);
@@ -1011,7 +1011,7 @@ field_read_expr
       const SetType *setType = elemOrSet.type().toSet();
       elemType = setType->elementType.toElement();
     }
-    assert(elemType);
+    iassert(elemType);
 
     if (!elemType->hasField(fieldName)) {
       REPORT_ERROR("undefined field '" + toString(elemOrSet)+"."+fieldName+ "'",
@@ -1213,7 +1213,7 @@ tensor_type
 //                     ") differ from number of dimensions", @index_sets);
 //      }
 
-//      assert(blockDimensions.size() == outerDimensions->size());
+//      iassert(blockDimensions.size() == outerDimensions->size());
       for (size_t i=0; i < outerDimensions->size(); ++i) {
         vector<IndexSet> dimension;
         dimension.push_back((*outerDimensions)[i]);
@@ -1302,7 +1302,7 @@ component_type
       void addDimension() { dimSizes.push_back(1); }
 
       bool dimensionsMatch(const TensorValues<T> &other, std::string *errors) {
-        assert(errors != NULL);
+        iassert(errors != NULL);
         std::string mismatchError = "missmatched dimension sizes";
         if (dimSizes.size()-1 != other.dimSizes.size()) {
           *errors = mismatchError;

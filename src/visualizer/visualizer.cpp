@@ -1,6 +1,5 @@
 #include "visualizer.h"
 
-#include <cassert>
 #include <cmath>
 #include <functional>
 #include <mutex>
@@ -144,8 +143,7 @@ GLuint createGLProgram(const string& vertexShaderStr,
     char* errorLog = new char[logSize];
     glGetShaderInfoLog(vertexShader, logSize, &logSize, &errorLog[0]);
     std::cerr << errorLog << std::endl;
-    assert(false &&
-           "Vertex shader failed to compile");
+    ierror << "Vertex shader failed to compile";
     delete errorLog;
   }
   glCompileShader(fragmentShader);
@@ -156,8 +154,7 @@ GLuint createGLProgram(const string& vertexShaderStr,
     char* errorLog = new char[logSize];
     glGetShaderInfoLog(fragmentShader, logSize, &logSize, &errorLog[0]);
     std::cerr << errorLog << std::endl;
-    assert(false &&
-           "Fragment shader failed to compile");
+    ierror << "Fragment shader failed to compile";
     delete errorLog;
   }
 
@@ -370,8 +367,7 @@ void invertMatrix(const GLfloat matrix[16], GLfloat inverse[16]) {
       matrix[2] * inv[8] +
       matrix[3] * inv[12];
 
-  assert(det != 0 &&
-         "Non-invertible transformation matrix");
+  iassert(det != 0) << "Non-invertible transformation matrix";
 
   det = 1.0 / det;
 
@@ -628,8 +624,8 @@ void bindEdgesData(Set<2>& edges, FieldRef<double,3> coordField,
   for (auto elem = edges.begin(); elem != edges.end(); ++elem) {
     for (auto endPoint = edges.endpoints_begin(*elem);
          endPoint != edges.endpoints_end(*elem); endPoint++) {
-      assert(index < (edges.getSize() * 2 * 3) &&
-             "Too many edges in set edge info.");
+      iassert(index < (edges.getSize() * 2 * 3))
+          << "Too many edges in set edge info.";
       TensorRef<double,3> point = coordField.get(*endPoint);
       data[index] = point(0);
       data[index+1] = point(1);
@@ -674,8 +670,8 @@ void bindFacesData(Set<3>& faces, FieldRef<double,3> coordField,
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
     for (auto endPoint = faces.endpoints_begin(*elem);
          endPoint != faces.endpoints_end(*elem); endPoint++) {
-      assert(index < (faces.getSize() * 3 * 3) &&
-             "Too many faces in set edge info.");
+      iassert(index < (faces.getSize() * 3 * 3))
+          << "Too many faces in set edge info.";
       TensorRef<double,3> point = coordField.get(*endPoint);
       posData[index] = point(0);
       posData[index+1] = point(1);
@@ -761,8 +757,7 @@ void initDrawing(int argc, char** argv) {
   int ret;
   ret = pthread_create(&internal::glutThread, NULL,
                        internal::handleWindowEvents, NULL);
-  assert(!ret &&
-         "Could not create event handler thread");
+  iassert(!ret) << "Could not create event handler thread";
 
   internal::kInitialized = true;
 }

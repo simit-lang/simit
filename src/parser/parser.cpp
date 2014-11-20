@@ -52,7 +52,6 @@
 
 
   #include <stdlib.h>
-  #include <cassert>
   #include <iostream>
   #include <map>
   #include <set>
@@ -97,8 +96,9 @@
                     to_string(order), loc);                         \
       } while (0)
 
-  void Parser::error(const Parser::location_type &loc, const std::string &msg) {
-    errors->push_back(Error(loc.begin.line, loc.begin.column,
+  void Parser::error(const Parser::location_type &loc,
+                           const std::string &msg) {
+    errors->push_back(ParseError(loc.begin.line, loc.begin.column,
                             loc.end.line, loc.end.column, msg));
   }
 
@@ -119,9 +119,9 @@
   }
 
   void transposeVector(Expr vec) {
-    assert(vec.type().isTensor());
+    iassert(vec.type().isTensor());
     const TensorType *ttype = vec.type().toTensor();
-    assert(ttype->order() == 1);
+    iassert(ttype->order() == 1);
 
     Type transposedVector = TensorType::make(ttype->componentType,
                                              ttype->dimensions,
@@ -166,7 +166,7 @@
 
   #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)   \
     do {                                          \
-      assert(lt.isTensor() && rt.isTensor());     \
+      iassert(lt.isTensor() && rt.isTensor());    \
       const TensorType *ltt = lt.toTensor();      \
       const TensorType *rtt = rt.toTensor();      \
       if (ltt->order() > 0 && rtt->order() > 0) { \
@@ -302,7 +302,7 @@ namespace  simit { namespace internal  {
 
 
   /// Build a parser object.
-   Parser :: Parser  (Scanner *scanner_yyarg, ProgramContext *ctx_yyarg, std::vector<Error> *errors_yyarg)
+   Parser :: Parser  (Scanner *scanner_yyarg, ProgramContext *ctx_yyarg, std::vector<ParseError> *errors_yyarg)
     :
 #if YYDEBUG
       yydebug_ (false),
@@ -1678,8 +1678,8 @@ namespace  simit { namespace internal  {
 
     Expr literalExpr = convertAndDelete((yystack_[1].value.expr));
 
-    assert(literalExpr.type().isTensor() &&
-           "Only tensor literals are currently supported");
+    iassert(literalExpr.type().isTensor())
+        << "Only tensor literals are currently supported";
     auto litType = literalExpr.type();
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
@@ -1784,7 +1784,7 @@ namespace  simit { namespace internal  {
   case 79:
 
     {
-    assert((yystack_[2].value.expr) && (yystack_[0].value.expr));
+    iassert((yystack_[2].value.expr) && (yystack_[0].value.expr));
     IRBuilder *builder = ctx->getBuilder();
 
     Expr l = convertAndDelete((yystack_[2].value.expr));
@@ -1857,7 +1857,7 @@ namespace  simit { namespace internal  {
   case 80:
 
     {
-    assert((yystack_[2].value.expr) && (yystack_[0].value.expr));
+    iassert((yystack_[2].value.expr) && (yystack_[0].value.expr));
     IRBuilder *builder = ctx->getBuilder();
 
     Expr l = convertAndDelete((yystack_[2].value.expr));
@@ -2026,8 +2026,8 @@ namespace  simit { namespace internal  {
   case 94:
 
     {
-    assert((yystack_[2].value.expr));
-    assert((yystack_[2].value.expr)->type().defined());
+    iassert((yystack_[2].value.expr));
+    iassert((yystack_[2].value.expr)->type().defined());
 
     Expr elemOrSet = convertAndDelete((yystack_[2].value.expr));
     std::string fieldName = convertAndFree((yystack_[0].value.string));
@@ -2047,7 +2047,7 @@ namespace  simit { namespace internal  {
       const SetType *setType = elemOrSet.type().toSet();
       elemType = setType->elementType.toElement();
     }
-    assert(elemType);
+    iassert(elemType);
 
     if (!elemType->hasField(fieldName)) {
       REPORT_ERROR("undefined field '" + toString(elemOrSet)+"."+fieldName+ "'",
@@ -2267,7 +2267,7 @@ namespace  simit { namespace internal  {
 //                     ") differ from number of dimensions", @index_sets);
 //      }
 
-//      assert(blockDimensions.size() == outerDimensions->size());
+//      iassert(blockDimensions.size() == outerDimensions->size());
       for (size_t i=0; i < outerDimensions->size(); ++i) {
         vector<IndexSet> dimension;
         dimension.push_back((*outerDimensions)[i]);
