@@ -72,7 +72,7 @@ private:
   explicit inline ElementRef(int ident) : ident(ident) {}
   int ident;
 
-  friend SetBase;
+  friend class SetBase;
   template <int cardinality> friend class Set;
   template <int cardinality> friend class hidden::EndpointIteratorBase;
   friend FieldRefBase;
@@ -220,35 +220,39 @@ public:
   /// Create an ElementIterator for terminating iteration over this Set
   ElementIterator end() const { return ElementIterator(this, getSize()); }
 
-  friend std::ostream &operator<<(std::ostream &os, const SetBase &set) {
+  std::ostream &streamOut(std::ostream &os) const {
     os << "{";
-    auto it = set.begin();
-    auto end = set.end();
-    if (it != end) {
+    auto it = begin();
+    auto it_end = end();
+    if (it != it_end) {
       os << it->ident;
-      if (set.getCardinality() > 0) {
+      if (getCardinality() > 0) {
         os << ":(";
-        os << set.endpoints[0];
-        for (int i=1; i<set.getCardinality(); ++i) {
-          os << "," << set.endpoints[i];
+        os << endpoints[0];
+        for (int i=1; i<getCardinality(); ++i) {
+          os << "," << endpoints[i];
         }
         os << ")";
       }
       ++it;
     }
-    while (it != end) {
+    while (it != it_end) {
       os << ", " << it->ident;
-      if (set.getCardinality() > 0) {
+      if (getCardinality() > 0) {
         os << ":(";
-        os << set.endpoints[it->ident + 0];
-        for (int i=1; i<set.getCardinality(); ++i) {
-          os << "," << set.endpoints[it->ident + i];
+        os << endpoints[it->ident + 0];
+        for (int i=1; i<getCardinality(); ++i) {
+          os << "," << endpoints[it->ident + i];
         }
         os << ")";
       }
       ++it;
     }
     return os << "}";
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, const SetBase &set) {
+    return set.streamOut(os);
   }
 
 protected:
@@ -643,10 +647,8 @@ public:
   }
   
   bool lessThan(const EndpointIteratorBase &other) const {
-    assert(this->set == other.set &&
-           "Comparing EndpointIterators from two different Sets");
-    assert(this->curElem.ident == other.curElem.ident &&
-           "Comparing EndpointIterators over two different edges");
+    iassert(this->set == other.set) << "Comparing EndpointIterators from two different Sets";
+    iassert(this->curElem.ident == other.curElem.ident) << "Comparing EndpointIterators over two different edges";
     return this->endpointNum < other.endpointNum;
   }
   
@@ -750,7 +752,7 @@ class FieldRefBaseParameterized : public FieldRefBase {
 
   void set(ElementRef element, std::initializer_list<T> values) {
     size_t tensorSize = TensorRef<T,dimensions...>::getSize();
-    assert(values.size() == tensorSize && "Incorrect number of init values");
+    iassert(values.size() == tensorSize) << "Incorrect number of init values";
     T *elemData = this->getElemDataPtr(element);
     size_t i=0;
     for (T val : values) {
