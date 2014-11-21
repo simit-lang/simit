@@ -26,27 +26,24 @@ namespace simit {
 namespace internal {
 
 /// Code generator that uses LLVM to compile Simit IR.
-class LLVMBackend : public Backend, ir::IRVisitor {
+class LLVMBackend : public Backend, public ir::IRVisitor {
 public:
   LLVMBackend();
   ~LLVMBackend();
 
   simit::Function *compile(simit::ir::Func func);
 
-private:
-  static bool llvmInitialized;
-
-  llvm::Module *module;
-  llvm::IRBuilder<true, llvm::ConstantFolder,
-                  llvm::IRBuilderDefaultInserter<true> > *builder;
-
+protected:
   ScopedMap<std::string, llvm::Value*> symtable;
 
   /// used to return variables from Expr visit functions
   llvm::Value *val;
 
-  llvm::Value *compile(const ir::Expr &expr);
-  void compile(const ir::Stmt &stmt);
+  std::unique_ptr<llvm::IRBuilder<
+    true, llvm::ConstantFolder, llvm::IRBuilderDefaultInserter<true>>> builder;
+
+  virtual llvm::Value *compile(const ir::Expr &expr);
+  virtual void compile(const ir::Stmt &stmt);
 
   virtual void visit(const ir::FieldRead *);
   virtual void visit(const ir::TensorRead *);
@@ -74,6 +71,11 @@ private:
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
+
+private:
+  static bool llvmInitialized;
+
+  llvm::Module *module;
 
   /// Get a pointer to the given field
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);

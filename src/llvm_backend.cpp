@@ -47,12 +47,10 @@ LLVMBackend::LLVMBackend() : val(nullptr) {
     llvmInitialized = true;
   }
 
-  builder = new llvm::IRBuilder<>(LLVM_CONTEXT);
+  builder.reset(new llvm::IRBuilder<>(LLVM_CONTEXT));
 }
 
-LLVMBackend::~LLVMBackend() {
-  delete builder;
-}
+LLVMBackend::~LLVMBackend() {}
 
 simit::Function *LLVMBackend::compile(Func func) {
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
