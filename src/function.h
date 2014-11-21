@@ -49,6 +49,7 @@ public:
 
 protected:
   typedef void (*FuncPtrType)();
+  typedef std::function<void()> FuncType;
   class Actual {
   public:
     Actual(const ir::Type &type) : type(type), tensor(NULL) {}
@@ -76,10 +77,10 @@ private:
   std::vector<std::string> formals;
   std::map<std::string, Actual> actuals;
 
-  FuncPtrType funcPtr;
+  FuncType funcPtr;
   bool initRequired;
-  virtual FuncPtrType init(const std::vector<std::string> &formals,
-                           std::map<std::string, Actual> &actuals) = 0;
+  virtual FuncType init(const std::vector<std::string> &formals,
+                        std::map<std::string, Actual> &actuals) = 0;
 };
 
 } // namespace simit

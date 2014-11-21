@@ -69,16 +69,17 @@ void LLVMFunction::print(std::ostream &os) const {
   os << rsos.str();
 }
 
-simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
-                                                map<string, Actual> &actuals) {
+simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
+                                             map<string, Actual> &actuals) {
   if (llvmFunc->getArgumentList().size() == 0) {
     if (requiresInit) {
       llvm::Function *initFunc = getInitFunc();
       llvm::Function *deinitFunc = getDeinitFunc();
       ((FuncPtrType)executionEngine->getPointerToFunction(initFunc))();
-      deinit = ((FuncPtrType)executionEngine->getPointerToFunction(deinitFunc));
+      deinit = FuncType((FuncPtrType)executionEngine
+                        ->getPointerToFunction(deinitFunc));
     }
-    return (FuncPtrType)executionEngine->getPointerToFunction(llvmFunc);
+    return FuncType((FuncPtrType)executionEngine->getPointerToFunction(llvmFunc));
   }
   else {
     llvm::SmallVector<llvm::Value*, 8> args;
@@ -139,7 +140,7 @@ simit::Function::FuncPtrType LLVMFunction::init(const vector<string> &formals,
   }
 }
 
-LLVMFunction::FuncPtrType
+LLVMFunction::FuncType
 LLVMFunction::createHarness(const std::string &name,
                             const llvm::SmallVector<llvm::Value*,8> &args) {
   llvm::Function *llvmFunc = module->getFunction(name);
