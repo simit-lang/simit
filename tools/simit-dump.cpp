@@ -89,6 +89,9 @@ int main(int argc, const char* argv[]) {
   }
   if (!(emitSimit || emitLLVM)) {
     emitSimit = emitLLVM = true;
+  if (sourceFile == "") {
+    printUsage();
+    return 3;
   }
 
   std::string source;
