@@ -8,6 +8,7 @@
 #include "function.h"
 #include "frontend.h"
 #include "program_context.h"
+#include "gpu_backend.h"
 #include "llvm_backend.h"
 #include "error.h"
 #include "util.h"
@@ -20,6 +21,7 @@ void printUsage() {
        << "Options:"            << endl
        << "-emit-simit"         << endl
        << "-emit-llvm"          << endl
+       << "-emit-gpu=<file>"    << endl
        << "-compile"            << endl
        << "-compile=<function>" << endl
        << "-section=<section>";
@@ -33,11 +35,13 @@ int main(int argc, const char* argv[]) {
 
   bool emitSimit = false;
   bool emitLLVM = false;
+  bool emitGPU = false;
   bool compile = false;
 
   std::string section;
   std::string function;
   std::string sourceFile;
+  std::string gpuOutFile;
 
   // Parse Arguments
   for (int i=1; i < argc; ++i) {
@@ -51,6 +55,9 @@ int main(int argc, const char* argv[]) {
         else if (arg == "-emit-llvm") {
           emitLLVM = true;
         }
+        else if (arg == "-emit-gpu") {
+          emitGPU = true;
+        }
         else if (arg == "-compile") {
           compile = true;
         }
@@ -62,6 +69,10 @@ int main(int argc, const char* argv[]) {
       else if (keyValPair.size() == 2) {
         if (keyValPair[0] == "-section") {
           section = keyValPair[1];
+        }
+        else if (keyValPair[0] == "-emit-gpu") {
+          emitGPU = true;
+          gpuOutFile = keyValPair[1];
         }
         else if (keyValPair[0] == "-compile") {
           compile = true;
@@ -87,12 +98,15 @@ int main(int argc, const char* argv[]) {
       }
     }
   }
-  if (!(emitSimit || emitLLVM)) {
-    emitSimit = emitLLVM = true;
-  }
   if (sourceFile == "") {
     printUsage();
     return 3;
+  }
+  if (!(emitSimit || emitLLVM || emitGPU)) {
+    emitSimit = emitLLVM = emitGPU = true;
+  }
+  if (emitGPU && gpuOutFile == "") {
+    gpuOutFile = sourceFile + ".out";
   }
 
   std::string source;
@@ -222,6 +236,15 @@ int main(int argc, const char* argv[]) {
       cout << simit::util::trim(fstr) << endl;
 
       // NB: The LLVM code gets further optimized at init time (OSR, etc.)
+    }
+
+    if (emitGPU) {
+      simit::internal::GPUBackend backend;
+      std::string fstr = simit::util::toString(*backend.compile(func));
+      if (emitSimit) {
+        cout << endl << "--- Emitting GPU:" << endl;
+      }
+      cout << simit::util::trim(fstr) << endl;
     }
   }
 
