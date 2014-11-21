@@ -118,6 +118,10 @@ foreach(ldflag ${LLVM_LDFLAGS})
   endif()
 endforeach()
 
+# CUDA
+target_link_libraries(${PROJECT_NAME} "-lcuda")
+target_link_libraries(${PROJECT_NAME} "-lnvvm")
+
 add_subdirectory(visualizer)
 
 # EIGEN

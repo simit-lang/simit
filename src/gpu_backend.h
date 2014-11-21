@@ -4,6 +4,10 @@
 #include "backend.h"
 #include "ir_visitor.h"
 
+namespace llvm {
+class IRBuilderBase;
+}
+
 namespace simit {
 namespace internal {
 
@@ -37,6 +41,8 @@ private:
   // virtual void visit(const ir::IfThenElse *);
   // virtual void visit(const ir::Block *);
   // virtual void visit(const ir::Pass *);
+
+  std::unique_ptr<llvm::IRBuilderBase> builder;
 };
 
 }

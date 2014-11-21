@@ -5,6 +5,9 @@
 #include <map>
 #include <vector>
 
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Function.h"
+
 #include "function.h"
 
 namespace simit {
@@ -12,14 +15,17 @@ namespace internal {
 
 class GPUFunction : public simit::Function {
  public:
-  GPUFunction(ir::Func simitFunc);
+  GPUFunction(simit::ir::Func simitFunc, llvm::Function *llvmFunc, llvm::Module *llvmModule);
   ~GPUFunction();
 
   void print(std::ostream &os) const;
 
  private:
-  FuncPtrType init(const std::vector<std::string> &formals,
+  FuncType init(const std::vector<std::string> &formals,
                    std::map<std::string, Actual> &actuals);
+
+  std::unique_ptr<llvm::Function> llvmFunc;
+  std::unique_ptr<llvm::Module> llvmModule;
 };
 
 }
