@@ -1,3 +1,6 @@
+#ifndef SIMIT_GPU_BACKEND_H
+#define SIMIT_GPU_BACKEND_H
+
 #include "backend.h"
 #include "ir_visitor.h"
 
@@ -38,3 +41,5 @@ private:
 
 }
 }
+
+#endif // SIMIT_GPU_BACKEND_H
