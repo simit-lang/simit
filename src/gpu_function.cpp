@@ -43,6 +43,8 @@ std::string utostr(uint num) {
 std::string generatePtx(const std::string &module,
                         int devMajor, int devMinor,
                         const char *moduleName) {
+  std::cout << "DEBUG: generatePtx" << std::endl
+	    << module << std::endl;
   nvvmProgram compileUnit;
   nvvmResult res;
 
@@ -216,12 +218,19 @@ simit::Function::FuncType GPUFunction::init(
 
   return [&function, &kernelParams, &cudaModule, &context, &width, &height](){
     // TODO(gkanwar): For now, fixed block sizes
-    unsigned blockSizeX = 16;
+    unsigned blockSizeX = 1;
     unsigned blockSizeY = 1;
     unsigned blockSizeZ = 1;
-    unsigned gridSizeX = width/16;
+    unsigned gridSizeX = width/1;
     unsigned gridSizeY = height;
     unsigned gridSizeZ = 1;
+    std::cout << "Launching CUDA kernel with block size ("
+	      << blockSizeX << ","
+	      << blockSizeY << ","
+	      << blockSizeZ << ") and grid size ("
+	      << gridSizeX << ","
+	      << gridSizeY << ","
+	      << gridSizeZ << ")" << std::endl;
 
     void **kernelParamsArr = new void*[kernelParams.size()];
     for (int i = 0; i < kernelParams.size(); ++i) {

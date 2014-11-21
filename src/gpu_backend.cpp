@@ -69,6 +69,17 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
 
   irFunc.getBody().accept(this);
 
+  // NVVM kernel should always return void
+  builder->CreateRetVoid();
+
+  // Kernel metadata
+  llvm::Value *mdVals[] = {
+    func, llvm::MDString::get(LLVM_CONTEXT, "kernel"), llvmInt(1)
+  };
+  llvm::MDNode *kernelMD = llvm::MDNode::get(LLVM_CONTEXT, mdVals);
+  llvm::NamedMDNode *nvvmAnnot = mod->getOrInsertNamedMetadata("nvvm.annotations");
+  nvvmAnnot->addOperand(kernelMD);
+
   return new GPUFunction(irFunc, func, mod);
 }
 

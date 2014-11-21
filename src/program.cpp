@@ -5,6 +5,7 @@
 #include "ir.h"
 #include "frontend.h"
 #include "lower.h"
+#include "gpu_backend.h"
 #include "llvm_backend.h"
 #include "function.h"
 #include "util.h"
@@ -35,7 +36,8 @@ class Program::ProgramContent {
 
   internal::Backend *getBackend() {
     if (backend == NULL) {
-      backend = new internal::LLVMBackend();
+      // backend = new internal::LLVMBackend();
+      backend = new internal::GPUBackend();
     }
     return backend;
   }
