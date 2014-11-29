@@ -8,6 +8,7 @@
 #include <map>
 #include <set>
 #include <ostream>
+#include <assert.h>
 
 #include "tensor_components.h"
 #include "variadic.h"
