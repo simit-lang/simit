@@ -3,26 +3,23 @@
 #include <set>
 
 #include "ir.h"
-#include "domain.h"
+#include "temps.h"
+#include "flatten.h"
 #include "ir_rewriter.h"
+#include "domain.h"
 #include "usedef.h"
 #include "sig.h"
 #include "indexvar.h"
 #include "util.h"
 #include "ir_builder.h"
 #include "error.h"
+#include "ir_queries.h"
+#include "substitute.h"
 
 using namespace std;
 
 namespace simit {
 namespace ir {
-
-/// Static namegen (hacky: fix later)
-string tmpNameGen() {
-  static int i = 0;
-  return "tmp" + to_string(i++);
-}
-
 
 Func lower(Func func) {
   func = insertTemporaries(func);
@@ -33,183 +30,23 @@ Func lower(Func func) {
   return func;
 }
 
-class GetFieldRead : public IRVisitor {
-public:
-  GetFieldRead(Expr elementOrSet, std::string fieldName)
-      : elementOrSet(elementOrSet), fieldName(fieldName) {}
-
-  Expr check(Expr expr) {
-    expr.accept(this);
-    return fieldRead;
-  }
-
-private:
-  Expr elementOrSet;
-  std::string fieldName;
-
-  Expr fieldRead;
-
-  void visit(const FieldRead *op) {
-    if (op->elementOrSet == elementOrSet && op->fieldName == fieldName) {
-      fieldRead = op;
-    }
-    else {
-      IRVisitor::visit(op);
-    }
-  }
-};
-
-
-class IsFieldReduced : public IRVisitor {
-public:
-  IsFieldReduced(Expr fieldRead) : fieldRead(fieldRead) {}
-
-  bool check (Expr expr) {
-    expr.accept(this);
-    return fieldReductionFound;
-  }
-
-private:
-  Expr fieldRead;
-  bool fieldReductionFound = false;
-
-  void visit(const IndexedTensor *op) {
-    if (op->tensor == fieldRead) {
-      for (auto &iv : op->indexVars) {
-        if (iv.isReductionVar()) {
-          fieldReductionFound = true;
-          return;
-        }
-      }
-    }
-  }
-};
-
-
-// TODO: Change to
-class InsertTemporaries : public IRRewriter {
-  int id=0;
-
-  void visit(const FieldWrite *op) {
-    Expr elemOrSet = op->elementOrSet;
-    std::string fieldName = op->fieldName;
-
-    // If the same field is read and written in the same statement and the
-    // values are combined/reduced (e.g. multiplied) then we must introduce a
-    // temporary to avoid read/write interference.
-    Expr fieldRead = GetFieldRead(elemOrSet, fieldName).check(op->value);
-    if (!fieldRead.defined()) {
-      stmt = op;
-      return;
-    }
-
-    bool valsCombined = IsFieldReduced(fieldRead).check(op->value);
-    if (!valsCombined) {
-      stmt = op;
-      return;
-    }
-
-    Type fieldType = getFieldType(elemOrSet, fieldName);
-
-    Var tmp("tmp" + to_string(id++), fieldType);
-
-    Stmt tmpAssignment = AssignStmt::make(tmp, op->value);
-    Stmt writeTmpToField = FieldWrite::make(elemOrSet, fieldName, tmp);
-    stmt = Block::make(tmpAssignment, writeTmpToField);
-  }
-};
-
-Func insertTemporaries(Func func) {
-  return InsertTemporaries().mutate(func);
-}
-
-
-static Func replaceBody(Func func, Stmt body) {
-  return Func(func.getName(), func.getArguments(), func.getResults(), body,
-              func.getKind());
-}
-
-Func flattenIndexExpressions(Func func) {
-  Stmt body = flattenIndexExpressions(func.getBody());
-  return replaceBody(func, body);
-}
-
 Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
   Stmt body = lowerIndexExpressions(func.getBody(), ud);
-  return replaceBody(func, body);
+  return Func(func, body);
 }
 
 Func lowerMaps(Func func) {
   Stmt body = lowerMaps(func.getBody());
-  return replaceBody(func, body);
+  return Func(func, body);
 }
 
 Func lowerTensorAccesses(Func func) {
   Stmt body = lowerTensorAccesses(func.getBody());
-  return replaceBody(func, body);
+  return Func(func, body);
 }
 
 
-class SubstituteIndexVars : public IRRewriter {
-public:
-  SubstituteIndexVars(map<IndexVar,IndexVar> subs) : subs(subs) {}
-
-private:
-  map<IndexVar,IndexVar> subs;
-
-  void visit(const IndexedTensor *op) {
-    vector<IndexVar> indexVars;
-    for (auto &iv : op->indexVars) {
-      indexVars.push_back((subs.find(iv)!=subs.end()) ? subs.at(iv) : iv);
-    }
-    expr = IndexedTensor::make(op->tensor, indexVars);
-  }
-};
-
-class GetFreeIndexVars : private IRVisitor {
-public:
-  std::vector<IndexVar> get(Expr expr) {
-    expr.accept(this);
-    return indexVars;
-  }
-
-private:
-  set<IndexVar> added;
-  vector<IndexVar> indexVars;
-
-  void visit(const IndexedTensor *op) {
-    for (auto &iv : op->indexVars) {
-      if (iv.isFreeVar() && added.find(iv) == added.end()) {
-        added.insert(iv);
-        indexVars.push_back(iv);
-      }
-    }
-  }
-};
-
-class GetReductionIndexVars : private IRVisitor {
-public:
-  std::vector<IndexVar> get(Expr expr) {
-    expr.accept(this);
-    return indexVars;
-  }
-
-private:
-  set<IndexVar> added;
-  vector<IndexVar> indexVars;
-
-  void visit(const IndexedTensor *op) {
-    for (auto &iv : op->indexVars) {
-      if (iv.isReductionVar() && added.find(iv) == added.end()) {
-        added.insert(iv);
-        indexVars.push_back(iv);
-      }
-    }
-  }
-};
-
-/// Retrieves the IndexVars that are used in an expression.
 class HasReduction : private IRVisitor {
 public:
   bool check(Stmt stmt) {
@@ -234,144 +71,6 @@ private:
     }
   }
 };
-
-std::vector<IndexVar> getFreeVars(Expr expr) {
-  return GetFreeIndexVars().get(expr);
-}
-
-std::vector<IndexVar> getReductionVars(Expr expr) {
-  return GetReductionIndexVars().get(expr);
-}
-
-bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs){
-  set<IndexVar> aset(as.begin(), as.end());
-  for (auto &b : bs) {
-    if (aset.find(b) != aset.end()) {
-      return true;
-    }
-  }
-  return false;
-}
-
-/// Flattens nested IndexExprs.
-/// E.g. ({i,j} (({i} a{i}){i} * a{j})) -> ({i,j} (a{i} * a{j}))
-class FlattenIndexExpressions : private IRRewriter {
-public:
-  Stmt flatten(Stmt stmt) {
-    return mutate(stmt);
-  }
-
-private:
-  std::vector<Stmt> stmts;
-
-  Expr mutate(Expr e) {
-    if (e.defined()) {
-      e.accept(this);
-      e = expr;
-    }
-    else {
-      e = Expr();
-    }
-    expr = Expr();
-    stmt = Stmt();
-    return e;
-  }
-
-  Stmt mutate(Stmt s) {
-    if (s.defined()) {
-      s.accept(this);
-      stmts.push_back(stmt);
-      s = (stmts.size() > 0) ? Block::make(stmts) : stmt;
-      stmts.clear();
-    }
-    else {
-      s = Stmt();
-    }
-    expr = Expr();
-    stmt = Stmt();
-    return s;
-  }
-
-  pair<Expr,Expr> splitInterferringExprs(Expr a, Expr b) {
-    std::vector<IndexVar> arvars = getReductionVars(a);
-    std::vector<IndexVar> brvars = getReductionVars(b);
-    if (arvars.size() > 0 && !overlaps(arvars, brvars)) {
-      vector<IndexVar> afvars = getFreeVars(a);
-      vector<IndexDomain> adims;
-      for (auto &afvar : afvars) {
-        adims.push_back(afvar.getDomain());
-      }
-      Type atype = TensorType::make(a.type().toTensor()->componentType, adims);
-      Var atmp(tmpNameGen(), atype);
-      Expr aiexpr = IndexExpr::make(afvars, a);
-      Stmt astmt = AssignStmt::make(atmp, aiexpr);
-      stmts.push_back(astmt);
-
-      vector<IndexVar> bfvars = getFreeVars(b);
-      vector<IndexDomain> bdims;
-      for (auto &bfvar : bfvars) {
-        bdims.push_back(bfvar.getDomain());
-      }
-      Type btype = TensorType::make(a.type().toTensor()->componentType, bdims);
-      Var btmp(tmpNameGen(), btype);
-      Expr biexpr = IndexExpr::make(bfvars, b);
-      Stmt bstmt = AssignStmt::make(btmp, biexpr);
-      stmts.push_back(bstmt);
-
-      a = IndexedTensor::make(VarExpr::make(atmp), afvars);
-      b = IndexedTensor::make(VarExpr::make(btmp), bfvars);
-    }
-    return pair<Expr,Expr>(a,b);
-  }
-
-  void visit(const Sub *op) {
-    iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
-    iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
-    Expr a = mutate(op->a);
-    Expr b = mutate(op->b);
-
-    pair<Expr,Expr> ab = splitInterferringExprs(a, b);
-    expr = Sub::make(ab.first, ab.second);
-  }
-
-  // TODO: Add .* amd ./ too
-  void visit(const Add *op) {
-    iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
-    iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
-
-    Expr a = mutate(op->a);
-    Expr b = mutate(op->b);
-
-    pair<Expr,Expr> ab = splitInterferringExprs(a, b);
-    expr = Add::make(ab.first, ab.second);
-  }
-
-
-  void visit(const IndexedTensor *op) {
-    // IndexExprs that are nested inside another IndexExpr must necessarily
-    // produce a tensor and therefore be indexed through an IndexedTensor expr.
-    if (isa<IndexExpr>(op->tensor)) {
-      Expr tensor = mutate(op->tensor);
-      const IndexExpr *indexExpr = to<IndexExpr>(tensor);
-      iassert(indexExpr->resultVars.size() == op->indexVars.size());
-
-      map<IndexVar,IndexVar> substitutions;
-      for (size_t i=0; i < indexExpr->resultVars.size(); ++i) {
-        pair<IndexVar,IndexVar> sub(indexExpr->resultVars[i], op->indexVars[i]);
-        substitutions.insert(sub);
-      }
-
-      expr = SubstituteIndexVars(substitutions).mutate(indexExpr->value);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
-};
-
-Stmt flattenIndexExpressions(Stmt stmt) {
-  return FlattenIndexExpressions().flatten(stmt);
-}
 
 
 class LoopVars : public SIGVisitor {
@@ -466,8 +165,8 @@ private:
 
     Expr value = mutate(indexExpr);
 
-    std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
-    std::vector<IndexVar> rindexVars = GetReductionIndexVars().get(value);
+    std::vector<IndexVar> indexVars = getFreeVars(value);
+    std::vector<IndexVar> rindexVars = getReductionVars(value);
 
     // TODO: Simplify by emitting empty IndexedTensors for scalar
     //       expressions (in visit(IndexedTensor)). Then we can remove the test
@@ -499,8 +198,8 @@ private:
     std::string fieldName = op->fieldName;
     Expr value = mutate(indexExpr);
 
-    std::vector<IndexVar> indexVars = GetFreeIndexVars().get(value);
-    std::vector<IndexVar> rindexVars = GetReductionIndexVars().get(value);
+    std::vector<IndexVar> indexVars = getFreeVars(value);
+    std::vector<IndexVar> rindexVars = getReductionVars(value);
 
     // TODO: Simplify by emitting empty IndexedTensors for scalar
     //       expressions (in visit(IndexedTensor)). Then we can remove the test
@@ -645,7 +344,7 @@ private:
   void visit(const TensorWrite *op) {
     lhsExpr = TensorRead::make(op->tensor, op->indices);
 
-    vector<IndexVar> indexVars = GetFreeIndexVars().get(op->value);
+    vector<IndexVar> indexVars = getFreeVars(op->value);
     if (indexVars.size()) {
       lhsExpr = IndexedTensor::make(lhsExpr, indexVars);
     }
@@ -750,36 +449,6 @@ private:
         tensorRead = op;
       }
     }
-  }
-};
-
-
-class Substitute : public IRRewriter {
-public:
-  Substitute(Expr oldExpr, Expr newExpr) {
-    substitutions.insert(pair<Expr,Expr>(oldExpr, newExpr));
-  }
-
-  Substitute(map<Expr,Expr> substitutions) : substitutions(substitutions) {}
-
-  Stmt mutate(Stmt stmt) {
-    return IRRewriter::mutate(stmt);
-  }
-
-  Expr mutate(Expr expr) {
-    if (substitutions.find(expr) != substitutions.end()) {
-      return substitutions.at(expr);
-    }
-    else {
-      return IRRewriter::mutate(expr);
-    }
-  }
-
-private:
-  map<Expr,Expr> substitutions;
-
-  void visit(const VarExpr *op) {
-    expr = op;
   }
 };
 
@@ -888,7 +557,7 @@ private:
           substitutions[tensorRead->indices[i]] = indices[i];
         }
 
-        stmt = Substitute(substitutions).mutate(computeStmt);
+        stmt = substitute(substitutions, computeStmt);
 
         stmt = flattenIndexExpressions(stmt);
         bool hasReduction = HasReduction().check(stmt);

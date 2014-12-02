@@ -3,6 +3,8 @@
 #include "ir.h"
 #include "ir_printer.h"
 #include "lower.h"
+#include "temps.h"
+#include "flatten.h"
 #include "function.h"
 #include "frontend.h"
 #include "program_context.h"

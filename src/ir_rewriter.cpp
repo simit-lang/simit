@@ -326,4 +326,10 @@ void IRRewriter::visit(const Func *f) {
   }
 }
 
+
+// Utility 
+
+Expr substitute(std::map<IndexVar,IndexVar> substitutions, Expr expr);
+Expr substitute(std::map<IndexVar,IndexVar> substitutions, Stmt stmt);
+
 }} // namespace simit::ir

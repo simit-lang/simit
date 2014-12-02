@@ -1,0 +1,157 @@
+#include "flatten.h"
+
+#include <string>
+#include <vector>
+
+#include "ir.h"
+#include "ir_rewriter.h"
+#include "ir_queries.h"
+#include "substitute.h"
+
+using namespace std;
+
+namespace simit {
+namespace ir {
+
+/// Static namegen (hacky: fix later)
+std::string tmpNameGen() {
+  static int i = 0;
+  return "tmp" + std::to_string(i++);
+}
+
+bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs){
+  set<IndexVar> aset(as.begin(), as.end());
+  for (auto &b : bs) {
+    if (aset.find(b) != aset.end()) {
+      return true;
+    }
+  }
+  return false;
+}
+
+/// Flattens nested IndexExprs.
+/// E.g. ({i,j} (({i} a{i}){i} * a{j})) -> ({i,j} (a{i} * a{j}))
+class FlattenIndexExpressions : private IRRewriter {
+public:
+  Stmt flatten(Stmt stmt) {
+    return mutate(stmt);
+  }
+
+private:
+  std::vector<Stmt> stmts;
+
+  Expr mutate(Expr e) {
+    if (e.defined()) {
+      e.accept(this);
+      e = expr;
+    }
+    else {
+      e = Expr();
+    }
+    expr = Expr();
+    stmt = Stmt();
+    return e;
+  }
+
+  Stmt mutate(Stmt s) {
+    if (s.defined()) {
+      s.accept(this);
+      stmts.push_back(stmt);
+      s = (stmts.size() > 0) ? Block::make(stmts) : stmt;
+      stmts.clear();
+    }
+    else {
+      s = Stmt();
+    }
+    expr = Expr();
+    stmt = Stmt();
+    return s;
+  }
+
+  std::pair<Expr,Expr> splitInterferringExprs(Expr a, Expr b) {
+    std::vector<IndexVar> arvars = getReductionVars(a);
+    std::vector<IndexVar> brvars = getReductionVars(b);
+    if (arvars.size() > 0 && !overlaps(arvars, brvars)) {
+      std::vector<IndexVar> afvars = getFreeVars(a);
+      std::vector<IndexDomain> adims;
+      for (auto &afvar : afvars) {
+        adims.push_back(afvar.getDomain());
+      }
+      Type atype = TensorType::make(a.type().toTensor()->componentType, adims);
+      Var atmp(tmpNameGen(), atype);
+      Expr aiexpr = IndexExpr::make(afvars, a);
+      Stmt astmt = AssignStmt::make(atmp, aiexpr);
+      stmts.push_back(astmt);
+
+      vector<IndexVar> bfvars = getFreeVars(b);
+      vector<IndexDomain> bdims;
+      for (auto &bfvar : bfvars) {
+        bdims.push_back(bfvar.getDomain());
+      }
+      Type btype = TensorType::make(a.type().toTensor()->componentType, bdims);
+      Var btmp(tmpNameGen(), btype);
+      Expr biexpr = IndexExpr::make(bfvars, b);
+      Stmt bstmt = AssignStmt::make(btmp, biexpr);
+      stmts.push_back(bstmt);
+
+      a = IndexedTensor::make(VarExpr::make(atmp), afvars);
+      b = IndexedTensor::make(VarExpr::make(btmp), bfvars);
+    }
+    return pair<Expr,Expr>(a,b);
+  }
+
+  void visit(const Sub *op) {
+    iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
+    iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
+    Expr a = mutate(op->a);
+    Expr b = mutate(op->b);
+
+    pair<Expr,Expr> ab = splitInterferringExprs(a, b);
+    expr = Sub::make(ab.first, ab.second);
+  }
+
+  // TODO: Add .* amd ./ too
+  void visit(const Add *op) {
+    iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
+    iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
+
+    Expr a = mutate(op->a);
+    Expr b = mutate(op->b);
+
+    pair<Expr,Expr> ab = splitInterferringExprs(a, b);
+    expr = Add::make(ab.first, ab.second);
+  }
+
+
+  void visit(const IndexedTensor *op) {
+    // IndexExprs that are nested inside another IndexExpr must necessarily
+    // produce a tensor and therefore be indexed through an IndexedTensor expr.
+    if (isa<IndexExpr>(op->tensor)) {
+      Expr tensor = mutate(op->tensor);
+      const IndexExpr *indexExpr = to<IndexExpr>(tensor);
+      iassert(indexExpr->resultVars.size() == op->indexVars.size());
+
+      map<IndexVar,IndexVar> substitutions;
+      for (size_t i=0; i < indexExpr->resultVars.size(); ++i) {
+        pair<IndexVar,IndexVar> sub(indexExpr->resultVars[i], op->indexVars[i]);
+        substitutions.insert(sub);
+      }
+
+      expr = substitute(substitutions, indexExpr->value);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+};
+
+Stmt flattenIndexExpressions(Stmt stmt) {
+  return FlattenIndexExpressions().flatten(stmt);
+}
+
+Func flattenIndexExpressions(Func func) {
+  Stmt body = flattenIndexExpressions(func.getBody());
+  return Func(func, body);
+}
+
+}} // namespace simit::ir

@@ -166,11 +166,18 @@ public:
     ptr->results = results;
     ptr->body = body;
   }
+
   Func(const std::string &name, const std::vector<Var> &arguments,
        const std::vector<Var> &results, Kind kind)
       : Func(name, arguments, results, Stmt(), kind) {
     iassert(kind != Internal);
   }
+
+  /// Creates a new func with the same prototype as the given func, but with
+  /// the new body
+  Func(const Func &func, Stmt body)
+      : Func(func.getName(), func.getArguments(), func.getResults(), body,
+             func.getKind()) {}
 
   Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
   std::string getName() const {return ptr->name;}
