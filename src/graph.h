@@ -8,7 +8,6 @@
 #include <map>
 #include <set>
 #include <ostream>
-#include <assert.h>
 
 #include "tensor_components.h"
 #include "variadic.h"
@@ -121,11 +120,11 @@ public:
   FieldRef<T, dimensions...> getField(std::string fieldName) {
     // need to check if the field actually exists because maps just add an entry
     // if none exists
-    assert(fieldNames.find(fieldName) != fieldNames.end() &&
-      "Invalid field name in getField()");
+    uassert(fieldNames.find(fieldName) != fieldNames.end())
+        << "Invalid field name in getField()";
     FieldData *fieldData = fields[fieldNames[fieldName]];
-    assert(typeOf<T>() == fieldData->type->getComponentType() &&
-           "Incorrect field type.");
+    uassert(typeOf<T>() == fieldData->type->getComponentType())
+        << "Incorrect field type.";
     return FieldRef<T, dimensions...>(fieldData);
   }
 
