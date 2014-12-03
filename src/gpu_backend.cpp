@@ -45,6 +45,9 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   for (const simit::ir::Var &arg : irFunc.getArguments()) {
     paramTys.push_back(createLLVMType(arg.getType()));
   }
+  for (const simit::ir::Var &res : irFunc.getResults()) {
+    paramTys.push_back(createLLVMType(res.getType()));
+  }
 
   llvm::FunctionType *funcTy = llvm::FunctionType::get(
       LLVM_VOID, paramTys, false);
@@ -53,12 +56,15 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
 
   // Pass 2: Name LLVM arguments, insert into symtable
   auto arg = func->arg_begin();
-  auto irArg = irFunc.getArguments().begin();
-  while (arg != func->arg_end()) {
-    arg->setName(irArg->getName());
+  for (auto &irArg : irFunc.getArguments()) {
+    arg->setName(irArg.getName());
     symtable.insert(arg->getName(), &(*arg));
     arg++;
-    irArg++;
+  }
+  for (auto &irRes : irFunc.getResults()) {
+    arg->setName(irRes.getName());
+    symtable.insert(arg->getName(), &(*arg));
+    arg++;
   }
 
   // TODO(gkanwar): Deal with temps?

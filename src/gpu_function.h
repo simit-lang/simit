@@ -4,6 +4,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include "cuda.h"
 
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
@@ -15,14 +16,19 @@ namespace internal {
 
 class GPUFunction : public simit::Function {
  public:
-  GPUFunction(simit::ir::Func simitFunc, llvm::Function *llvmFunc, llvm::Module *llvmModule);
+  GPUFunction(simit::ir::Func simitFunc,
+              llvm::Function *llvmFunc, llvm::Module *llvmModule);
   ~GPUFunction();
 
   void print(std::ostream &os) const;
 
  private:
   FuncType init(const std::vector<std::string> &formals,
-                   std::map<std::string, Actual> &actuals);
+                std::map<std::string, Actual> &actuals);
+  CUdeviceptr allocArg(const ir::Type& var);
+  const ir::Literal& getArgData(Actual& actual);
+  void pushArg(const ir::Type& type, const ir::Literal& literal,
+               std::vector<void*> kernelParams);
 
   std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> llvmModule;

@@ -1,6 +1,8 @@
 #include "gpu_function.h"
 
 #include <sstream>
+#include "cuda.h"
+#include "nvvm.h"
 
 #include "cuda.h"
 #include "nvvm.h"
@@ -10,6 +12,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include "error.h"
+#include "ir.h"
 
 namespace simit {
 namespace internal {
@@ -90,6 +93,64 @@ GPUFunction::GPUFunction(simit::ir::Func simitFunc,
                          llvm::Function *llvmFunc, llvm::Module *llvmModule)
     : Function(simitFunc), llvmFunc(llvmFunc), llvmModule(llvmModule) {}
 GPUFunction::~GPUFunction() {}
+
+// Allocate the given argument on the device
+CUdeviceptr GPUFunction::allocArg(const ir::Type& type) {
+  switch (type.kind()) {
+    case ir::Type::Tensor: {
+      const ir::TensorType *ttype = type.toTensor();
+      std::cout << "Tensor type, size: "
+                << ttype->size() * ttype->componentType.bytes() << std::endl;
+      CUdeviceptr devBuffer;
+      checkCudaErrors(cuMemAlloc(
+          &devBuffer, ttype->size() * ttype->componentType.bytes()));
+      return devBuffer;
+    }
+    case ir::Type::Element:
+    case ir::Type::Set:
+    case ir::Type::Tuple: {
+      std::cout << "ERROR ERROR ERROR!" << std::endl;
+      exit(1);
+      not_supported_yet;
+      break;
+    }
+  }
+}
+
+// Get argument data as a Literal
+const ir::Literal& GPUFunction::getArgData(Actual& actual) {
+  switch (actual.getType().kind()) {
+    case ir::Type::Tensor: {
+      return *(ir::to<ir::Literal>(actual.getTensor()->expr()));
+    }
+    case ir::Type::Element:
+    case ir::Type::Set:
+    case ir::Type::Tuple: {
+      std::cout << "ERROR ERROR ERROR!" << std::endl;
+      exit(1);
+      not_supported_yet;
+      break;
+    }
+  }
+}
+
+// Allocate the given actual as a device buffer, copy memory to device
+// and push the resulting kernel param
+void GPUFunction::pushArg(const ir::Type& type, const ir::Literal& literal,
+                          std::vector<void*> kernelParams) {
+  CUdeviceptr devBuffer = allocArg(type);
+  std::cout << "Pushing size: " << literal.size << std::endl;
+  std::cout << "[";
+  char* data = reinterpret_cast<char*>(literal.data);
+  for (int i = 0; i < literal.size; ++i) {
+    if (i != 0) std::cout << ",";
+    std::cout << (int)data[i];
+  }
+  std::cout << std::endl;
+  std::cout << "cuDevBuffer: " << devBuffer << std::endl;
+  checkCudaErrors(cuMemcpyHtoD(devBuffer, literal.data, literal.size));
+  kernelParams.push_back(&devBuffer);
+}
 
 void GPUFunction::print(std::ostream &os) const {
   std::string fstr;
@@ -175,45 +236,13 @@ simit::Function::FuncType GPUFunction::init(
     
   // Push data to GPU
   std::vector<void*> kernelParams;
-  iassert(formals.size() == llvmFunc->arg_size());
   int width = 1;
   int height = 1;
-  auto formal = formals.begin();
-  auto arg = llvmFunc->arg_begin();
-  while (formal != formals.end()) {
-    iassert (arg != llvmFunc->arg_end());
-    iassert(actuals.find(*formal) != actuals.end());
-    iassert(*formal == arg->getName());
-
-    Actual &actual = actuals.at(*formal);
-    switch (actual.getType().kind()) {
-      case ir::Type::Tensor: {
-        auto actualPtr = ir::to<ir::Literal>(actual.getTensor()->expr());
-        CUdeviceptr devBuffer;
-        checkCudaErrors(cuMemAlloc(&devBuffer, actualPtr->size));
-        checkCudaErrors(cuMemcpyHtoD(devBuffer, actualPtr->data, actualPtr->size));
-        kernelParams.push_back(&devBuffer);
-        // Computation size
-        width = actual.getTensor()->type().toTensor()->size();
-        break;
-      }
-      case ir::Type::Element: {
-        not_supported_yet;
-        break;
-      }
-      case ir::Type::Set: {
-        // TODO(gkanwar)
-        ierror;
-        break;
-      }
-      case ir::Type::Tuple: {
-        not_supported_yet;
-        break;
-      }
-    }
-
-    ++formal;
-    ++arg;
+  for (const std::string& formal : formals) {
+    assert(actuals.find(formal) != actuals.end());
+    Actual &actual = actuals.at(formal);
+    const ir::Literal &literal = getArgData(actual);
+    pushArg(actual.getType(), literal, kernelParams);
   }
 
   return [&function, &kernelParams, &cudaModule, &context, &width, &height](){
