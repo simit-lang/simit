@@ -737,5 +737,4 @@ Func lowerIndexExpressions(Func func, const TensorStorages &tensorStorages) {
   return Func(func, body);
 }
 
-
 }}
