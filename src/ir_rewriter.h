@@ -8,9 +8,9 @@ namespace ir {
 
 class IRRewriter : public IRVisitor {
 public:
-  virtual Expr mutate(Expr expr);
-  virtual Stmt mutate(Stmt stmt);
-  virtual Func mutate(Func func);
+  virtual Expr rewrite(Expr expr);
+  virtual Stmt rewrite(Stmt stmt);
+  virtual Func rewrite(Func func);
 
 protected:
   /// visit methods that take Exprs assign to this to return their value.

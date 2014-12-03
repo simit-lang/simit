@@ -16,16 +16,16 @@ public:
 
   Substitute(map<Expr,Expr> substitutions) : substitutions(substitutions) {}
 
-  Stmt mutate(Stmt stmt) {
-    return IRRewriter::mutate(stmt);
+  Stmt rewrite(Stmt stmt) {
+    return IRRewriter::rewrite(stmt);
   }
 
-  Expr mutate(Expr expr) {
+  Expr rewrite(Expr expr) {
     if (substitutions.find(expr) != substitutions.end()) {
       return substitutions.at(expr);
     }
     else {
-      return IRRewriter::mutate(expr);
+      return IRRewriter::rewrite(expr);
     }
   }
 
@@ -38,19 +38,19 @@ private:
 };
 
 Expr substitute(std::map<Expr,Expr> substitutions, Expr expr) {
-  return Substitute(substitutions).mutate(expr);
+  return Substitute(substitutions).rewrite(expr);
 }
 
 Stmt substitute(std::map<Expr,Expr> substitutions, Stmt stmt) {
-  return Substitute(substitutions).mutate(stmt);
+  return Substitute(substitutions).rewrite(stmt);
 }
 
 Expr substitute(Expr oldExpr, Expr newExpr, Expr expr) {
-  return Substitute(oldExpr, newExpr).mutate(expr);
+  return Substitute(oldExpr, newExpr).rewrite(expr);
 }
 
 Stmt substitute(Expr oldExpr, Expr newExpr, Stmt stmt) {
-  return Substitute(oldExpr, newExpr).mutate(stmt);
+  return Substitute(oldExpr, newExpr).rewrite(stmt);
 }
 
 
@@ -71,11 +71,11 @@ private:
 };
 
 Expr substitute(std::map<IndexVar,IndexVar> substitutions, Expr expr) {
-  return SubstituteIndexVars(substitutions).mutate(expr);
+  return SubstituteIndexVars(substitutions).rewrite(expr);
 }
 
 Stmt substitute(std::map<IndexVar,IndexVar> substitutions, Stmt stmt) {
-  return SubstituteIndexVars(substitutions).mutate(stmt);
+  return SubstituteIndexVars(substitutions).rewrite(stmt);
 }
 
 }}

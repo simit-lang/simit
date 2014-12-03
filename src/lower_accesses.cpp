@@ -78,10 +78,10 @@ class LowerTensorAccesses : public IRRewriter {
     //       need to have specialized code for vectors and matrices).
     iassert(op->indices.size() <= 2);
 
-    Expr tensor = mutate(op->tensor);
+    Expr tensor = rewrite(op->tensor);
     Expr index;
     if (op->indices.size() == 1) {
-      index = mutate(op->indices[0]);
+      index = rewrite(op->indices[0]);
     }
     else if (op->indices.size() == 2) {
       // TODO: Clearly we need something more sophisticated here (for sparse
@@ -89,8 +89,8 @@ class LowerTensorAccesses : public IRRewriter {
       // carry a 'TensorStorage' object and we could ask this TensorStorage to
       // give us an Expr that computes an i,j location, or an Expr that gives us
       // a row/column.
-      Expr i = mutate(op->indices[0]);
-      Expr j = mutate(op->indices[1]);
+      Expr i = rewrite(op->indices[0]);
+      Expr j = rewrite(op->indices[1]);
 
       IndexDomain dim1 = type->dimensions[1];
       Expr d1;
@@ -125,12 +125,12 @@ class LowerTensorAccesses : public IRRewriter {
     //       need to have specialized code for vectors and matrices).
     iassert(op->indices.size() <= 2);
 
-    Expr tensor = mutate(op->tensor);
-    Expr value = mutate(op->value);
+    Expr tensor = rewrite(op->tensor);
+    Expr value = rewrite(op->value);
 
     Expr index;
     if (op->indices.size() == 1) {
-      index = mutate(op->indices[0]);
+      index = rewrite(op->indices[0]);
     }
     else if (op->indices.size() == 2) {
       // TODO: Clearly we need something more sophisticated here (for sparse
@@ -138,8 +138,8 @@ class LowerTensorAccesses : public IRRewriter {
       // carry a 'TensorStorage' object and we could ask this TensorStorage to
       // give us an Expr that computes an i,j location, or an Expr that gives us
       // a row/column.
-      Expr i = mutate(op->indices[0]);
-      Expr j = mutate(op->indices[1]);
+      Expr i = rewrite(op->indices[0]);
+      Expr j = rewrite(op->indices[1]);
 
       IndexDomain dim1 = type->dimensions[1];
       Expr d1;
@@ -167,7 +167,7 @@ class LowerTensorAccesses : public IRRewriter {
 };
 
 Stmt lowerTensorAccesses(Stmt stmt) {
-  return LowerTensorAccesses().mutate(stmt);
+  return LowerTensorAccesses().rewrite(stmt);
 }
 
 Func lowerTensorAccesses(Func func) {

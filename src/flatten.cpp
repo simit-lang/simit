@@ -34,13 +34,13 @@ bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs){
 class FlattenIndexExpressions : private IRRewriter {
 public:
   Stmt flatten(Stmt stmt) {
-    return mutate(stmt);
+    return rewrite(stmt);
   }
 
 private:
   std::vector<Stmt> stmts;
 
-  Expr mutate(Expr e) {
+  Expr rewrite(Expr e) {
     if (e.defined()) {
       e.accept(this);
       e = expr;
@@ -53,7 +53,7 @@ private:
     return e;
   }
 
-  Stmt mutate(Stmt s) {
+  Stmt rewrite(Stmt s) {
     if (s.defined()) {
       s.accept(this);
       stmts.push_back(stmt);
@@ -103,8 +103,8 @@ private:
   void visit(const Sub *op) {
     iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
     iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
-    Expr a = mutate(op->a);
-    Expr b = mutate(op->b);
+    Expr a = rewrite(op->a);
+    Expr b = rewrite(op->b);
 
     pair<Expr,Expr> ab = splitInterferringExprs(a, b);
     expr = Sub::make(ab.first, ab.second);
@@ -115,8 +115,8 @@ private:
     iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
     iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
 
-    Expr a = mutate(op->a);
-    Expr b = mutate(op->b);
+    Expr a = rewrite(op->a);
+    Expr b = rewrite(op->b);
 
     pair<Expr,Expr> ab = splitInterferringExprs(a, b);
     expr = Add::make(ab.first, ab.second);
@@ -127,7 +127,7 @@ private:
     // IndexExprs that are nested inside another IndexExpr must necessarily
     // produce a tensor and therefore be indexed through an IndexedTensor expr.
     if (isa<IndexExpr>(op->tensor)) {
-      Expr tensor = mutate(op->tensor);
+      Expr tensor = rewrite(op->tensor);
       const IndexExpr *indexExpr = to<IndexExpr>(tensor);
       iassert(indexExpr->resultVars.size() == op->indexVars.size());
 
