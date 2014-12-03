@@ -10,6 +10,8 @@ namespace ir {
 class TensorStorage {
 public:
   enum Kind {
+    Undefined,
+
     /// The tensor is stored in dense row major order.
     DenseRowMajor,
 
@@ -26,22 +28,42 @@ public:
     /// A system tensor that is split in one dimension with one slice stored on
     /// each element of the set of that dimension.
     /// For now we will assume it was split along the first dimension.
-    SystemReduced
+    SystemReduced,
 
     /// A system tensor whose contributions are stored on the target set that it
     /// was assembled from. That is, the tensor is stored prior to the map
     /// reduction, and any expression that uses the tensor must reduce it.
-    //SystemUnreduced
+    SystemUnreduced
   };
 
+  TensorStorage() : kind(Undefined) {}
   TensorStorage(Kind kind) : kind(kind) {}
 
   /// Retrieve the tensor storage kind.
   Kind getKind() const { return kind; }
 
+  /// True if the tensor is stored on a system, false otherwise.
+  bool isSystem() const {
+    return kind==SystemNone || kind==SystemReduced || kind==SystemUnreduced;
+  }
+
+  void setSystemStorageSet(Expr systemStorageSet) {
+    this->systemStorageSet = systemStorageSet;
+  }
+
+  Expr getSystemTargetSet() const {
+    iassert(!isSystem() || systemStorageSet.defined())
+        << "System storages require the target set be provided";
+    return systemStorageSet;
+  }
+
+
 private:
   Kind kind;
 
+  /// The target set that was used to assemble the system if the tensor is
+  /// stored on a system, false otherwise.
+  Expr systemStorageSet;
 };
 std::ostream &operator<<(std::ostream &os, const TensorStorage &);
 
