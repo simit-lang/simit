@@ -188,7 +188,7 @@ simit::Function::FuncType GPUFunction::init(
   checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));
   std::cout << "Device Compute Capability: "
             << devMajor << "." << devMinor << std::endl;
-  iassert(devMajor < 2) << "ERROR: Device 0 is not SM 2.0 or greater";
+  iassert(devMajor >= 2) << "ERROR: Device 0 is not SM 2.0 or greater";
 
   // Export IR to string
   std::string moduleStr;
