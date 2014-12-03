@@ -25,40 +25,6 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud);
-
-Func lowerIndexExpressions(Func func) {
-  UseDef ud(func);
-  Stmt body = lowerIndexExpressions(func.getBody(), ud);
-  return Func(func, body);
-}
-
-class HasReduction : private IRVisitor {
-public:
-  bool check(Stmt stmt) {
-    stmt.accept(this);
-    return hasReduction;
-  }
-
-  bool check(Expr expr) {
-    expr.accept(this);
-    return hasReduction;
-  }
-
-private:
-  bool hasReduction = false;
-
-  void visit(const IndexedTensor *op) {
-    for (auto &iv : op->indexVars) {
-      if (iv.isReductionVar()) {
-        hasReduction = true;
-        return;
-      }
-    }
-  }
-};
-
-
 class LoopVars : public SIGVisitor {
 public:
   LoopVars() : ud(nullptr) {}
@@ -546,7 +512,7 @@ private:
         stmt = substitute(substitutions, computeStmt);
 
         stmt = flattenIndexExpressions(stmt);
-        bool hasReduction = HasReduction().check(stmt);
+        bool hasReduction = containsReduction(stmt);
         if (!hasReduction) {
           stmt = MakeCompound(MakeCompound::Add).mutate(stmt);
         }
@@ -900,5 +866,12 @@ Stmt LowerIndexExpressions::lower(Stmt stmt) {
 Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud) {
   return LowerIndexExpressions(&ud).mutate(stmt);
 }
+
+Func lowerIndexExpressions(Func func, const TensorStorages &tensorStorages) {
+  UseDef ud(func);
+  Stmt body = lowerIndexExpressions(func.getBody(), ud);
+  return Func(func, body);
+}
+
 
 }}

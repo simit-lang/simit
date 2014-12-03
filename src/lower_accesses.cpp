@@ -170,8 +170,6 @@ Stmt lowerTensorAccesses(Stmt stmt) {
   return LowerTensorAccesses().mutate(stmt);
 }
 
-Stmt lowerTensorAccesses(Stmt stmt);
-
 Func lowerTensorAccesses(Func func) {
   Stmt body = lowerTensorAccesses(func.getBody());
   return Func(func, body);

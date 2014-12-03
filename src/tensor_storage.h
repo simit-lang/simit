@@ -45,8 +45,10 @@ private:
 };
 std::ostream &operator<<(std::ostream &os, const TensorStorage &);
 
+typedef std::map<Var,TensorStorage> TensorStorages;
+
 /// Retrieve a storage descriptor for each tensor used in 'func'.
-std::map<Var,TensorStorage> getTensorStorage(Func func);
+TensorStorages getTensorStorages(Func func);
 
 }}
 

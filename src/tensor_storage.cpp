@@ -48,7 +48,7 @@ public:
   }
 
 private:
-  std::map<Var,TensorStorage> storages;
+  TensorStorages storages;
 
   void visit(const AssignStmt *op) {
     Var var = op->var;
@@ -70,7 +70,7 @@ private:
   }
 };
 
-std::map<Var,TensorStorage> getTensorStorage(Func func) {
+TensorStorages getTensorStorages(Func func) {
   std::map<Var,TensorStorage> descriptors = GetTensorStorages().get(func);
   return descriptors;
 }

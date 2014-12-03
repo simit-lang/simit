@@ -36,6 +36,8 @@ struct Block;
 struct Pass;
 
 class Func;
+class Stmt;
+class Expr;
 
 /// Visitor where the iteration order is specified in the visitor instead of
 /// the accept methods.  This design is chosen to allow different visitors to
@@ -78,6 +80,23 @@ public:
   virtual void visit(const Pass *op);
 
   virtual void visit(const Func *f);
+};
+
+
+/// Query class to make it easier to write visitors to answer a yes/no question.
+class IRQuery : public IRVisitor {
+public:
+  IRQuery(bool init) : init(init) {}
+  IRQuery() : IRQuery(false) {}
+
+  bool query(const Expr &expr);
+  bool query(const Stmt &stmt);
+
+protected:
+  bool result;
+
+private:
+  bool init;
 };
 
 }} // namespace simit::internal

@@ -135,4 +135,18 @@ void IRVisitor::visit(const Func *op) {
   op->getBody().accept(this);
 }
 
+
+// IRQuery
+bool IRQuery::query(const Expr &expr) {
+  result = init;
+  expr.accept(this);
+  return result;
+}
+
+bool IRQuery::query(const Stmt &stmt) {
+  result = init;
+  stmt.accept(this);
+  return result;
+}
+
 }} // namespace simit::ir

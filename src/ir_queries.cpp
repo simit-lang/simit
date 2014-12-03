@@ -29,6 +29,10 @@ private:
   }
 };
 
+std::vector<IndexVar> getFreeVars(Expr expr) {
+  return GetFreeIndexVars().get(expr);
+}
+
 class GetReductionIndexVars : private IRVisitor {
 public:
   std::vector<IndexVar> get(Expr expr) {
@@ -50,12 +54,27 @@ private:
   }
 };
 
-std::vector<IndexVar> getFreeVars(Expr expr) {
-  return GetFreeIndexVars().get(expr);
-}
-
 std::vector<IndexVar> getReductionVars(Expr expr) {
   return GetReductionIndexVars().get(expr);
+}
+
+class ContainsReduction : public IRQuery {
+  void visit(const IndexedTensor *op) {
+    for (auto &iv : op->indexVars) {
+      if (iv.isReductionVar()) {
+        result = true;
+        return;
+      }
+    }
+  }
+};
+
+bool containsReduction(Expr expr) {
+  return ContainsReduction().query(expr);
+}
+
+bool containsReduction(Stmt stmt) {
+  return ContainsReduction().query(stmt);
 }
 
 }}

@@ -10,6 +10,9 @@ namespace ir {
 std::vector<IndexVar> getFreeVars(Expr expr);
 std::vector<IndexVar> getReductionVars(Expr expr);
 
+bool containsReduction(Expr expr);
+bool containsReduction(Stmt stmt);
+
 }}
 
 #endif
