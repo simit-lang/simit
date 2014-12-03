@@ -41,13 +41,12 @@ const std::string LEN_SUFFIX(".len");
 // class LLVMBackend
 bool LLVMBackend::llvmInitialized = false;
 
-LLVMBackend::LLVMBackend() : val(nullptr) {
+LLVMBackend::LLVMBackend() : val(nullptr),
+                             builder(new llvm::IRBuilder<>(LLVM_CONTEXT)) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
   }
-
-  builder.reset(new llvm::IRBuilder<>(LLVM_CONTEXT));
 }
 
 LLVMBackend::~LLVMBackend() {}
