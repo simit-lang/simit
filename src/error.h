@@ -92,6 +92,8 @@ std::ostream &operator<<(std::ostream &os, const Diagnostics &f);
 namespace internal {
 
 struct ErrorReport {
+  enum Kind { User, Internal, Temporary };
+
   std::ostringstream *msg;
   const char *file;
   const char *func;
@@ -100,37 +102,47 @@ struct ErrorReport {
   bool condition;
   const char *conditionString;
 
-  bool user;
+  Kind kind;
   bool warning;
 
   ErrorReport(const char *file, const char *func, int line, bool condition,
-              const char *conditionString, bool user, bool warning)
+              const char *conditionString, Kind kind, bool warning)
       : msg(NULL), file(file), func(func), line(line), condition(condition),
-        conditionString(conditionString), user(user), warning(warning) {
+        conditionString(conditionString), kind(kind), warning(warning) {
     if (condition) {
       return;
     }
     msg = new std::ostringstream;
 
-    if (user) {
-      if (warning) {
-        (*msg) << "Warning";
-      } else {
-        (*msg) << "Error";
-      }
-      (*msg) << " in " << func << " in file " << file << ":" << line << "\n";
-    } else {
-      (*msg) << "Internal ";
-      if (warning) {
-        (*msg) << "warning";
-      } else {
-        (*msg) << "error";
-      }
-      (*msg) << " at " << file << ":" << line << "\n";
-//      (*msg) << " Report this error to the developers\n";
-      if (conditionString) {
-        (*msg) << " Condition failed: " << conditionString << "\n";
-      }
+    switch (kind) {
+      case User:
+        if (warning) {
+          (*msg) << "Warning";
+        } else {
+          (*msg) << "Error";
+        }
+        (*msg) << " in " << func << " in file " << file << ":" << line << "\n";
+        break;
+      case Internal:
+        (*msg) << "Internal ";
+        if (warning) {
+          (*msg) << "warning";
+        } else {
+          (*msg) << "error";
+        }
+        (*msg) << " at " << file << ":" << line << "\n";
+        if (conditionString) {
+          (*msg) << " Condition failed: " << conditionString << "\n";
+        }
+        break;
+      case Temporary:
+        (*msg) << "Temporary assumption broken";
+        (*msg) << " at " << file << ":" << line << "\n";
+        (*msg) << " This needs to be be fixed by developers.";
+        if (conditionString) {
+          (*msg) << " Condition failed: " << conditionString << "\n";
+        }
+        break;
     }
   }
 
@@ -154,8 +166,15 @@ struct ErrorReport {
 };
 
 #ifndef WITHOUT_INTERNAL_ASSERTS
-#define iassert(c) simit::internal::ErrorReport(__FILE__, nullptr, __LINE__, c,     #c,      false, false)
-#define ierror     simit::internal::ErrorReport(__FILE__, nullptr, __LINE__, false, nullptr, false, false)
+#define iassert(c) simit::internal::ErrorReport(__FILE__, nullptr, __LINE__,  \
+    c,     #c,      simit::internal::ErrorReport::Internal, false)
+#define ierror     simit::internal::ErrorReport(__FILE__, nullptr, __LINE__,  \
+    false, nullptr, simit::internal::ErrorReport::Internal, false)
+
+#define tassert(c) simit::internal::ErrorReport(__FILE__, nullptr, __LINE__,  \
+    c,     #c,      simit::internal::ErrorReport::Temporary, false)
+#define terror     simit::internal::ErrorReport(__FILE__, nullptr, __LINE__,  \
+    false, nullptr, simit::internal::ErrorReport::Temporary, false)
 
 #define unreachable ierror << "reached unreachable location"
 #define not_supported_yet ierror << "Not supported yet, but planned for the future"
@@ -167,9 +186,12 @@ struct ErrorReport {
 #define not_supported_yet
 #endif
 
-#define uassert(c) simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, c,     #c,      true, false)
-#define uerror     simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, nullptr, true, false)
-#define uwarning   simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, nullptr, true, true)
+#define uassert(c) simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__,\
+    c,     #c,      simit::internal::ErrorReport::User, false)
+#define uerror     simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__,\
+    false, nullptr, simit::internal::ErrorReport::User, false)
+#define uwarning   simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__,\
+    false, nullptr, simit::internal::ErrorReport::User, true)
 }
 
 }
