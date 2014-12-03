@@ -108,6 +108,9 @@ void GPUBackend::visit(const ir::TupleRead *op) {
 void GPUBackend::visit(const ir::IndexRead *op) {
   ASSERT(false && "No code generation for this type");
 }
+void GPUBackend::visit(const ir::Length *op) {
+  not_supported_yet;
+}
 void GPUBackend::visit(const ir::Map *op) {
   ASSERT(false && "No code generation for this type");
 }
@@ -126,9 +129,6 @@ void GPUBackend::visit(const ir::Literal *op) {
 }
 void GPUBackend::visit(const ir::VarExpr *op) {
   LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Result *op) {
-  ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::Load *op) {
   LLVMBackend::visit(op);
