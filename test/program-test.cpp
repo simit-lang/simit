@@ -128,7 +128,7 @@ TEST(Program, dot) {
   ASSERT_EQ(14.0, z.get(p0));
 }
 
-TEST(Program, dot_blocked) {
+TEST(Program, DISABLED_dot_blocked) {
   std::string programText = R"(
     element Point
       x : tensor[3](float);

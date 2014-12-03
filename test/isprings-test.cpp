@@ -10,7 +10,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(isprings, isprings) {
+TEST(isprings, DISABLED_isprings) {
   Program program;
   std::string programText = R"(
 element Point

@@ -601,6 +601,9 @@ public:
     const IndexExpr *indexExpr = GetIndexExpr().get(computeStmt);
 
     SIG sig = SIGBuilder(ud).create(indexExpr);
+//    std::cout << *indexExpr << std::endl;
+//    std::cout << sig << std::endl;
+
     loopVars = LoopVars(sig, ud);
 
     initToZeroStmt = ReplaceRhsWithZero().mutate(computeStmt);
@@ -712,116 +715,8 @@ private:
   }
 };
 
-bool isNestedDotProductAssign(Stmt stmt) {
-  if (!isa<AssignStmt>(stmt)) {
-    return false;
-  }
-
-  const AssignStmt *assign = to<AssignStmt>(stmt);
-  Expr value = assign->value;
-
-  if (!isa<IndexExpr>(value)) {
-    return false;
-  }
-
-  const IndexExpr *iexpr = to<IndexExpr>(value);
-  if (!isScalar(iexpr->type)) {
-    return false;
-  }
-
-  if (!isa<Mul>(iexpr->value)) {
-    return false;
-  }
-
-  const Mul *mul = to<Mul>(iexpr->value);
-  if (!mul->a.type().isTensor() || !mul->b.type().isTensor()) {
-    return false;
-  }
-
-  if (!isa<IndexedTensor>(mul->a) || !isa<IndexedTensor>(mul->b)) {
-    return false;
-  }
-
-  const IndexedTensor *ait = to<IndexedTensor>(mul->a);
-  const IndexedTensor *bit = to<IndexedTensor>(mul->b);
-
-  const TensorType *atype = ait->tensor.type().toTensor();
-  const TensorType *btype = bit->tensor.type().toTensor();
-
-  if (atype->order() != 1 || btype->order() != 1) {
-    return false;
-  }
-
-  if (atype->dimensions[0].getIndexSets().size() != 2 ||
-      btype->dimensions[0].getIndexSets().size() != 2) {
-    return false;
-  }
-
-  return true;
-}
-
-
-
-class LowerNestedDot : public IRRewriter {
-public:
-  Var lv1;
-  Var lv2;
-  vector<Expr> operands;
-
-private:
-  void visit(const AssignStmt *op) {
-    if (isa<IndexExpr>(op->value)) {
-      Stmt stmts;
-      Var rvar = op->var;
-
-      Stmt alloc = AssignStmt::make(rvar,Literal::make(rvar.getType(),{0}));
-
-      lv1 = Var("lv1", Int);
-      lv2 = Var("lv2", Int);
-
-      Expr value = mutate(op->value);
-
-      value = Add::make(VarExpr::make(rvar), value);
-
-      Stmt body = AssignStmt::make(rvar, value);
-
-      IndexDomain dims = operands[0].type().toTensor()->dimensions[0];
-      auto iss = dims.getIndexSets();
-      iassert(iss.size() == 2);
-
-      Stmt loop = For::make(lv2, ForDomain(iss[1]), body);
-      loop = For::make(lv1, ForDomain(iss[0]), loop);
-
-      stmt = stmts = Block::make(alloc, loop);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
-
-  void visit(const IndexExpr *op) {
-    expr = mutate(op->value);
-  }
-
-  void visit(const IndexedTensor *op) {
-    Expr tensor = op->tensor;
-    operands.push_back(tensor);
-
-    Expr tread = TensorRead::make(tensor, {VarExpr::make(lv1)});
-    tread = TensorRead::make(tread, {VarExpr::make(lv2)});
-
-    expr = tread;
-  }
-};
-
 Stmt LowerIndexExpressions::lower(Stmt stmt) {
-  if (isNestedDotProductAssign(stmt)) {
-    Stmt tmp = LowerNestedDot().mutate(stmt);
-    return tmp;
-  }
-  else {
-    return LoopBuilder(ud).create(stmt);
-  }
+  return LoopBuilder(ud).create(stmt);
 }
 
 Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud) {
