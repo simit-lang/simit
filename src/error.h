@@ -127,7 +127,7 @@ struct ErrorReport {
         (*msg) << "error";
       }
       (*msg) << " at " << file << ":" << line << "\n";
-      (*msg) << " Report this error to the developers\n";
+//      (*msg) << " Report this error to the developers\n";
       if (conditionString) {
         (*msg) << " Condition failed: " << conditionString << "\n";
       }

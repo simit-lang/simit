@@ -202,15 +202,15 @@ void LLVMBackend::visit(const Map *op) {
 }
 
 void LLVMBackend::visit(const IndexedTensor *op) {
-  ierror << "No code generation for this type";
+  ierror << "No code generation for this expr: " << util::toString(*op);
 }
 
 void LLVMBackend::visit(const IndexExpr *op) {
-  ierror << "No code generation for this type";
+  ierror << "No code generation for this expr: " << util::toString(*op);
 }
 
 void LLVMBackend::visit(const TensorWrite *op) {
-  ierror << "No code generation for this type";
+  ierror << "No code generation for this expr: " << util::toString(*op);
 }
 
 void LLVMBackend::visit(const Literal *op) {
