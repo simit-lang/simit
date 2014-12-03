@@ -156,7 +156,7 @@ void runTest(ProgramTestParam param) {
   class name : public TestWithParam<ProgramTestParam> {}; \
   TEST_P(name, inputs) {                                  \
     runTest(GetParam());                                  \
-  }                                                       \
+  }
 
 #define SIM_TEST(suite, name)                                                \
   std::string path();                                                        \
@@ -171,7 +171,7 @@ void runTest(ProgramTestParam param) {
 
 
 /* Tests */
-SIM_TEST_SUITE(elements);
+SIM_TEST_SUITE(elements)
 SIM_TEST(elements, blas0);
 SIM_TEST(elements, blas1);
 SIM_TEST(elements, blas2);
@@ -180,16 +180,16 @@ SIM_TEST(elements, la);
 SIM_TEST(elements, intrinsics);
 SIM_TEST(elements, index_notation);
 
-//SIM_TEST_SUITE(systems);
+//SIM_TEST_SUITE(systems)
 //SIM_TEST(systems, fields);
 
-SIM_TEST_SUITE(declarations);
+SIM_TEST_SUITE(declarations)
 SIM_TEST(declarations, function_headers);
 SIM_TEST(declarations, objects);
 SIM_TEST(declarations, variables);
 SIM_TEST(declarations, misc);
 
-SIM_TEST_SUITE(controlflow);
+SIM_TEST_SUITE(controlflow)
 SIM_TEST(controlflow, map);
 SIM_TEST(controlflow, if_stmt);
 SIM_TEST(controlflow, loops);

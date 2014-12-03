@@ -32,12 +32,12 @@ class LLVMFunction : public simit::Function {
   llvm::ExecutionEngine *executionEngine;
 
   bool requiresInit;
-  FuncPtrType deinit;
+  FuncType deinit;
 
-  FuncPtrType init(const std::vector<std::string> &formals,
+  FuncType init(const std::vector<std::string> &formals,
                    std::map<std::string, Actual> &actuals);
 
-  FuncPtrType createHarness(const std::string &name,
+  FuncType createHarness(const std::string &name,
                             const llvm::SmallVector<llvm::Value*,8> &args);
 
   llvm::Function *getInitFunc() const;

@@ -26,7 +26,6 @@
 #include "llvm_function.h"
 #include "gather_buffers.h"
 #include "macros.h"
-//#include "runtime.h"
 
 using namespace std;
 using namespace simit::ir;
@@ -42,18 +41,15 @@ const std::string LEN_SUFFIX(".len");
 // class LLVMBackend
 bool LLVMBackend::llvmInitialized = false;
 
-LLVMBackend::LLVMBackend() : val(nullptr) {
+LLVMBackend::LLVMBackend() : val(nullptr),
+                             builder(new llvm::IRBuilder<>(LLVM_CONTEXT)) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
   }
-
-  builder = new llvm::IRBuilder<>(LLVM_CONTEXT);
 }
 
-LLVMBackend::~LLVMBackend() {
-  delete builder;
-}
+LLVMBackend::~LLVMBackend() {}
 
 simit::Function *LLVMBackend::compile(Func func) {
   iassert(func.getBody().defined()) << "cannot compile an undefined function";

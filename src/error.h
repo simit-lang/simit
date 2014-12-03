@@ -167,12 +167,12 @@ struct ErrorReport {
 
 #ifndef WITHOUT_INTERNAL_ASSERTS
 #define iassert(c) simit::internal::ErrorReport(__FILE__, nullptr, __LINE__,  \
-    c,     #c,      simit::internal::ErrorReport::Internal, false)
+    (c),   #c,      simit::internal::ErrorReport::Internal, false)
 #define ierror     simit::internal::ErrorReport(__FILE__, nullptr, __LINE__,  \
     false, nullptr, simit::internal::ErrorReport::Internal, false)
 
 #define tassert(c) simit::internal::ErrorReport(__FILE__, nullptr, __LINE__,  \
-    c,     #c,      simit::internal::ErrorReport::Temporary, false)
+    (c),   #c,      simit::internal::ErrorReport::Temporary, false)
 #define terror     simit::internal::ErrorReport(__FILE__, nullptr, __LINE__,  \
     false, nullptr, simit::internal::ErrorReport::Temporary, false)
 
@@ -187,7 +187,7 @@ struct ErrorReport {
 #endif
 
 #define uassert(c) simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__,\
-    c,     #c,      simit::internal::ErrorReport::User, false)
+    (c),   #c,      simit::internal::ErrorReport::User, false)
 #define uerror     simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__,\
     false, nullptr, simit::internal::ErrorReport::User, false)
 #define uwarning   simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__,\
