@@ -16,6 +16,9 @@ using namespace std;
 
 namespace simit {
 
+const std::vector<std::string> VALID_BACKENDS = {"llvm", "gpu"};
+std::string kBackend = "llvm";
+
 // class ProgramContent
 class Program::ProgramContent {
  public:
@@ -36,8 +39,15 @@ class Program::ProgramContent {
 
   internal::Backend *getBackend() {
     if (backend == NULL) {
-      // backend = new internal::LLVMBackend();
-      backend = new internal::GPUBackend();
+      if (kBackend == "llvm") {
+	backend = new internal::LLVMBackend();
+      }
+      else if (kBackend == "gpu") {
+	backend = new internal::GPUBackend();
+      }
+      else {
+	ierror << "Invalid backend choice";
+      }
     }
     return backend;
   }
