@@ -25,11 +25,16 @@ class GPUFunction : public simit::Function {
  private:
   FuncType init(const std::vector<std::string> &formals,
                 std::map<std::string, Actual> &actuals);
+  // Allocate the given argument as a device buffer
   CUdeviceptr allocArg(const ir::Type& var);
+  // Get argument data as a Literal
   const ir::Literal& getArgData(Actual& actual);
-  void pushArg(const ir::Type& type, const ir::Literal& literal,
-               std::vector<void*> kernelParams);
+  // Copy literal memory to device buffer
+  void pushArg(const ir::Literal& literal, CUdeviceptr &devBuffer);
+  // Copy device buffer into literal data block
+  void pullArg(const ir::Literal& literal, CUdeviceptr &devBuffer);
 
+  std::unique_ptr<ir::Func> simitFunc;
   std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> llvmModule;
 };

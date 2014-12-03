@@ -94,7 +94,6 @@ GPUFunction::GPUFunction(simit::ir::Func simitFunc,
     : Function(simitFunc), llvmFunc(llvmFunc), llvmModule(llvmModule) {}
 GPUFunction::~GPUFunction() {}
 
-// Allocate the given argument on the device
 CUdeviceptr GPUFunction::allocArg(const ir::Type& type) {
   switch (type.kind()) {
     case ir::Type::Tensor: {
@@ -117,7 +116,6 @@ CUdeviceptr GPUFunction::allocArg(const ir::Type& type) {
   }
 }
 
-// Get argument data as a Literal
 const ir::Literal& GPUFunction::getArgData(Actual& actual) {
   switch (actual.getType().kind()) {
     case ir::Type::Tensor: {
@@ -134,11 +132,7 @@ const ir::Literal& GPUFunction::getArgData(Actual& actual) {
   }
 }
 
-// Allocate the given actual as a device buffer, copy memory to device
-// and push the resulting kernel param
-void GPUFunction::pushArg(const ir::Type& type, const ir::Literal& literal,
-                          std::vector<void*> kernelParams) {
-  CUdeviceptr devBuffer = allocArg(type);
+void GPUFunction::pushArg(const ir::Literal& literal, CUdeviceptr &devBuffer) {
   std::cout << "Pushing size: " << literal.size << std::endl;
   std::cout << "[";
   char* data = reinterpret_cast<char*>(literal.data);
@@ -149,7 +143,10 @@ void GPUFunction::pushArg(const ir::Type& type, const ir::Literal& literal,
   std::cout << std::endl;
   std::cout << "cuDevBuffer: " << devBuffer << std::endl;
   checkCudaErrors(cuMemcpyHtoD(devBuffer, literal.data, literal.size));
-  kernelParams.push_back(&devBuffer);
+}
+
+void GPUFunction::pullArg(const ir::Literal& literal, CUdeviceptr &devBuffer) {
+  checkCudaErrors(cuMemcpyDtoH(literal.data, devBuffer, literal.size));
 }
 
 void GPUFunction::print(std::ostream &os) const {
@@ -234,18 +231,23 @@ simit::Function::FuncType GPUFunction::init(
   checkCudaErrors(cuLinkDestroy(linker));
   checkCudaErrors(cuModuleGetFunction(&function, cudaModule, "kernel"));
     
-  // Push data to GPU
-  std::vector<void*> kernelParams;
-  int width = 1;
-  int height = 1;
-  for (const std::string& formal : formals) {
-    assert(actuals.find(formal) != actuals.end());
-    Actual &actual = actuals.at(formal);
-    const ir::Literal &literal = getArgData(actual);
-    pushArg(actual.getType(), literal, kernelParams);
-  }
 
-  return [&function, &kernelParams, &cudaModule, &context, &width, &height](){
+  return [this, function, &formals, &actuals,
+          cudaModule, context](){
+    std::cout << "Lambda start" << std::endl << std::flush;
+    // Push data to GPU
+    std::map<std::string, CUdeviceptr> kernelParams;
+    int width = 1;
+    int height = 1;
+    for (const std::string& formal : formals) {
+      assert(actuals.find(formal) != actuals.end());
+      Actual &actual = actuals.at(formal);
+      const ir::Literal &literal = getArgData(actual);
+      CUdeviceptr devBuffer = allocArg(actual.getType());
+      pushArg(literal, devBuffer);
+      kernelParams[formal] = devBuffer;
+    }
+
     // TODO(gkanwar): For now, fixed block sizes
     unsigned blockSizeX = 1;
     unsigned blockSizeY = 1;
@@ -261,19 +263,41 @@ simit::Function::FuncType GPUFunction::init(
 	      << gridSizeY << ","
 	      << gridSizeZ << ")" << std::endl;
 
+    std::cout << "Kernel params size: " << kernelParams.size()
+              << std::endl << std::flush;
     void **kernelParamsArr = new void*[kernelParams.size()];
-    for (int i = 0; i < kernelParams.size(); ++i) {
-      kernelParamsArr[i] = kernelParams[i];
+    int i = 0; 
+    for (auto kv : kernelParams) {
+      kernelParamsArr[i] = reinterpret_cast<void*>(&(kv.second));
+      ++i;
     }
-    checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ, blockSizeX, blockSizeY, blockSizeZ, 0, NULL, kernelParamsArr, NULL));
-    // TODO(gkanwar): Get data back
+    checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
+                                   blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
+                                   kernelParamsArr, NULL));
+
+    std::cout << "Pull result data back" << std::endl << std::flush;
+    // TODO(gkanwar): Don't pull back input args
+    for (const std::string &formal : formals) {
+      std::cout << "Result " << formal << std::endl << std::flush;
+      assert(actuals.find(formal) != actuals.end());
+      Actual &actual = actuals.at(formal);
+      std::cout << "Found actual for " << formal << std::endl << std::flush;
+      const ir::Literal &literal = getArgData(actual);
+      std::cout << "Found literal for " << formal << std::endl << std::flush;
+      std::cout << "Does the formal exist in the kernel params? "
+                << (kernelParams.find(formal) != kernelParams.end()) << std::endl << std::flush;
+      CUdeviceptr &devPtr = kernelParams[formal];
+      std::cout << "Pulling " << formal << ", literal data: " << literal.data << std::endl << std::flush;
+      pullArg(literal, devPtr);
+    }
+    std::cout << "Done" << std::endl << std::flush;
 
     // Clean up
-    for (void *devPtr : kernelParams) {
-      checkCudaErrors(cuMemFree(*reinterpret_cast<CUdeviceptr*>(devPtr)));
-      checkCudaErrors(cuModuleUnload(cudaModule));
-      checkCudaErrors(cuCtxDestroy(context));
+    for (auto kv : kernelParams) {
+      checkCudaErrors(cuMemFree(kv.second));
     }
+    // checkCudaErrors(cuCtxDestroy(context));
+    checkCudaErrors(cuModuleUnload(cudaModule));
   };
 }
 
