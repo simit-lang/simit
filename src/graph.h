@@ -220,6 +220,17 @@ public:
   /// Create an ElementIterator for terminating iteration over this Set
   ElementIterator end() const { return ElementIterator(this, getSize()); }
 
+  friend std::ostream &operator<<(std::ostream &os, const SetBase &set) {
+    return set.streamOut(os);
+  }
+
+protected:
+  int elements;                      // number of elements in the set
+  int capacity;                   // current capacity of the set
+  int* endpoints;                           // container for edges
+  static const int capacityIncrement = 1024; // increment for capacity increases
+
+private:
   std::ostream &streamOut(std::ostream &os) const {
     os << "{";
     auto it = begin();
@@ -250,18 +261,6 @@ public:
     }
     return os << "}";
   }
-
-  friend std::ostream &operator<<(std::ostream &os, const SetBase &set) {
-    return set.streamOut(os);
-  }
-
-protected:
-  int elements;                      // number of elements in the set
-  int capacity;                   // current capacity of the set
-  int* endpoints;                           // container for edges
-  static const int capacityIncrement = 1024; // increment for capacity increases
-
-private:
 
   // A field on the members of the Set.
   //
