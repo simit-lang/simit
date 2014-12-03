@@ -84,6 +84,8 @@ std::string generatePtx(const std::string &module,
   checkNVVMCall(nvvmGetCompiledResult(compileUnit, ptx));
   checkNVVMCall(nvvmDestroyProgram(&compileUnit));
 
+  std::cout << "Ptx code: " << std::endl << std::string(ptx) << std::endl;
+
   return std::string(ptx);
 }
 
@@ -138,7 +140,7 @@ void GPUFunction::pushArg(const ir::Literal& literal, CUdeviceptr &devBuffer) {
   char* data = reinterpret_cast<char*>(literal.data);
   for (int i = 0; i < literal.size; ++i) {
     if (i != 0) std::cout << ",";
-    std::cout << (int)data[i];
+    std::cout << std::hex << (int) data[i];
   }
   std::cout << std::endl;
   std::cout << "cuDevBuffer: " << devBuffer << std::endl;
@@ -146,7 +148,14 @@ void GPUFunction::pushArg(const ir::Literal& literal, CUdeviceptr &devBuffer) {
 }
 
 void GPUFunction::pullArg(const ir::Literal& literal, CUdeviceptr &devBuffer) {
+  std::cout << "cuDevBuffer: " << devBuffer << std::endl;
   checkCudaErrors(cuMemcpyDtoH(literal.data, devBuffer, literal.size));
+  std::cout << "Pulled: [" << std::endl;
+  for (int i = 0; i < literal.size; ++i) {
+    if (i != 0) std::cout << ",";
+    std::cout << std::hex << (int) ((char*)literal.data)[i];
+  }
+  std::cout << "]" << std::endl;
 }
 
 void GPUFunction::print(std::ostream &os) const {
@@ -267,8 +276,8 @@ simit::Function::FuncType GPUFunction::init(
               << std::endl << std::flush;
     void **kernelParamsArr = new void*[kernelParams.size()];
     int i = 0; 
-    for (auto kv : kernelParams) {
-      kernelParamsArr[i] = reinterpret_cast<void*>(&(kv.second));
+    for (const std::string& formal : formals) {
+      kernelParamsArr[i] = reinterpret_cast<void*>(&(kernelParams[formal]));
       ++i;
     }
     checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
