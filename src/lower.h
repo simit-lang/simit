@@ -6,17 +6,11 @@
 namespace simit {
 namespace ir {
 
-class UseDef;
-
 Func lower(Func func);
 
 Func lowerIndexExpressions(Func func);
 Func lowerMaps(Func func);
 Func lowerTensorAccesses(Func func);
-
-Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud);
-Stmt lowerMaps(Stmt stmt);
-Stmt lowerTensorAccesses(Stmt stmt);
 
 }} // namespace simit::ir
 

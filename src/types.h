@@ -202,6 +202,19 @@ inline bool isScalar(Type type) {
   return type.kind()==Type::Tensor && type.toTensor()->order() == 0;
 }
 
+/// An element tensor type is one whose dimensions are not sets
+inline bool isElementTensorType(const TensorType *type) {
+  bool isElementType = true;
+  for (auto &dim : type->dimensions) {
+    for (auto &is : dim.getIndexSets()) {
+      if (is.getKind() == IndexSet::Set) {
+        isElementType = false;
+      }
+    }
+  }
+  return isElementType;
+}
+
 bool operator==(const Type &, const Type &);
 bool operator!=(const Type &, const Type &);
 

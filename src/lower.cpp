@@ -15,6 +15,7 @@
 #include "error.h"
 #include "ir_queries.h"
 #include "substitute.h"
+#include "tensor_storage.h"
 
 using namespace std;
 
@@ -24,11 +25,16 @@ namespace ir {
 Func lower(Func func) {
   func = insertTemporaries(func);
   func = flattenIndexExpressions(func);
+
   func = lowerIndexExpressions(func);
   func = lowerMaps(func);
   func = lowerTensorAccesses(func);
   return func;
 }
+
+Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud);
+Stmt lowerMaps(Stmt stmt);
+Stmt lowerTensorAccesses(Stmt stmt);
 
 Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
@@ -929,6 +935,8 @@ Stmt lowerMaps(Stmt stmt) {
 }
 
 
+
+// lowerTensorAccesses
 Expr createLengthComputation(const IndexSet &indexSet) {
   return Length::make(indexSet);
 }
