@@ -34,7 +34,6 @@ public:
 private:
   virtual void visit(const Literal *);
   virtual void visit(const VarExpr *);
-  virtual void visit(const Result *);
   virtual void visit(const FieldRead *);
   virtual void visit(const TensorRead *);
   virtual void visit(const TupleRead *);

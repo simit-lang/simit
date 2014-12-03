@@ -272,19 +272,6 @@ struct VarExpr : public ExprNode<VarExpr> {
   }
 };
 
-struct Result : public ExprNode<Result> {
-  Stmt producer;
-  unsigned location;
-
-  static Expr make(Stmt producer, unsigned location) {
-    Result *node = new Result;
-//    node->type = TODO
-    node->producer = producer;
-    node->location = location;
-    return node;
-  }
-};
-
 /// Expression that reads a tensor from an element or set field.
 struct FieldRead : public ExprNode<FieldRead> {
   Expr elementOrSet;

@@ -24,7 +24,6 @@ protected:
 
   virtual void visit(const Literal *op);
   virtual void visit(const VarExpr *op);
-  virtual void visit(const Result *op);
   virtual void visit(const FieldRead *op);
   virtual void visit(const TensorRead *op);
   virtual void visit(const TupleRead *op);

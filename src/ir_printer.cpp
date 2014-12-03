@@ -128,10 +128,6 @@ void IRPrinter::visit(const VarExpr *op) {
   os << op->var;
 }
 
-void IRPrinter::visit(const Result *) {
-  os << "result";
-}
-
 void IRPrinter::visit(const FieldRead *op) {
   print(op->elementOrSet);
   os << "." << op->fieldName;

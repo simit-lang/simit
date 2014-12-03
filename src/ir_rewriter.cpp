@@ -53,10 +53,6 @@ void IRRewriter::visit(const VarExpr *op) {
   expr = op;
 }
 
-void IRRewriter::visit(const Result *op) {
-  expr = op;
-}
-
 void IRRewriter::visit(const FieldRead *op) {
   Expr elementOrSet = mutate(op->elementOrSet);
   if (elementOrSet == op->elementOrSet) {

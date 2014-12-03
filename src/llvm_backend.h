@@ -60,7 +60,6 @@ private:
 
   virtual void visit(const ir::Literal *);
   virtual void visit(const ir::VarExpr *);
-  virtual void visit(const ir::Result *);
   virtual void visit(const ir::Load *);
   virtual void visit(const ir::Call *);
   virtual void visit(const ir::Neg *);

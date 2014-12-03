@@ -15,10 +15,6 @@ void IRVisitor::visit(const Literal *op) {
 void IRVisitor::visit(const VarExpr *op) {
 }
 
-void IRVisitor::visit(const Result *op) {
-  op->producer.accept(this);
-}
-
 void IRVisitor::visit(const FieldRead *op) {
   op->elementOrSet.accept(this);
 }

@@ -250,10 +250,6 @@ void LLVMBackend::visit(const VarExpr *op) {
   }
 }
 
-void LLVMBackend::visit(const Result *op) {
-  // TODO: Is this node still needed?
-}
-
 void LLVMBackend::visit(const ir::Load *op) {
   llvm::Value *buffer = compile(op->buffer);
   llvm::Value *index = compile(op->index);
