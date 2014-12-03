@@ -16,7 +16,7 @@ private:
 };
 
 Stmt lowerAssemblies(Stmt stmt) {
-  return LowerAssemblies().mutate(stmt);
+  return LowerAssemblies().rewrite(stmt);
 }
 
 Func lowerAssemblies(Func func) {

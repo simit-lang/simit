@@ -93,7 +93,7 @@ class InsertTemporaries : public IRRewriter {
 };
 
 Func insertTemporaries(Func func) {
-  return InsertTemporaries().mutate(func);
+  return InsertTemporaries().rewrite(func);
 }
 
 }}

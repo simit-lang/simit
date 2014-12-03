@@ -115,7 +115,7 @@ private:
 
     Var var = op->var;
 
-    Expr value = mutate(indexExpr);
+    Expr value = rewrite(indexExpr);
 
     std::vector<IndexVar> indexVars = getFreeVars(value);
     std::vector<IndexVar> rindexVars = getReductionVars(value);
@@ -146,9 +146,9 @@ private:
     iassert(isa<IndexExpr>(op->value)) << "Can only specialize IndexExpr stmts";
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
-    Expr elementOrSet = mutate(op->elementOrSet);
+    Expr elementOrSet = rewrite(op->elementOrSet);
     std::string fieldName = op->fieldName;
-    Expr value = mutate(indexExpr);
+    Expr value = rewrite(indexExpr);
 
     std::vector<IndexVar> indexVars = getFreeVars(value);
     std::vector<IndexVar> rindexVars = getReductionVars(value);
@@ -178,7 +178,7 @@ private:
     iassert(isa<IndexExpr>(op->value)) << "Can only specialize IndexExpr stmts";
     const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
-    Expr value = mutate(op->value);
+    Expr value = rewrite(op->value);
 
     if (isScalar(op->value.type())) {
       stmt = TensorWrite::make(op->tensor, op->indices, value);
@@ -229,7 +229,7 @@ private:
 
   void visit(const IndexExpr *op) {
     indexVars.clear();
-    expr = mutate(op->value);
+    expr = rewrite(op->value);
   }
 };
 
@@ -262,20 +262,20 @@ public:
   MakeCompound(CompoundOperator compoundOperator)
       : compoundOperator(compoundOperator) {}
 
-  Stmt mutate(Stmt stmt) {
-    return IRRewriter::mutate(stmt);
+  Stmt rewrite(Stmt stmt) {
+    return IRRewriter::rewrite(stmt);
   }
 
 private:
   CompoundOperator compoundOperator;
   Expr lhsExpr;
 
-  Expr mutate(Expr e) {
+  Expr rewrite(Expr e) {
     iassert(lhsExpr.defined());
 
     if (e.defined()) {
       if (!isScalar(e.type())) {
-        e = IRRewriter::mutate(e);
+        e = IRRewriter::rewrite(e);
       }
       else {
         switch (compoundOperator) {
@@ -301,7 +301,7 @@ private:
       lhsExpr = IndexedTensor::make(lhsExpr, indexVars);
     }
 
-    Expr value = mutate(op->value);
+    Expr value = rewrite(op->value);
     stmt = TensorWrite::make(op->tensor, op->indices, value);
   }
 };
@@ -368,7 +368,7 @@ private:
 
       tmpWriteStmt = TensorWrite::make(tensor, indices, VarExpr::make(tmpVar));
       if (isa<TensorRead>(tensor)) {
-        tmpWriteStmt = MakeCompound(MakeCompound::Add).mutate(tmpWriteStmt);
+        tmpWriteStmt = MakeCompound(MakeCompound::Add).rewrite(tmpWriteStmt);
       }
     }
   }
@@ -425,7 +425,7 @@ public:
   }
 
   Stmt rewrite(Stmt s) {
-    s = mutate(s);
+    s = IRRewriter::rewrite(s);
     return s;
   }
 
@@ -459,7 +459,7 @@ private:
       Expr setFieldRead = FieldRead::make(neighborSet, op->fieldName);
       expr = setFieldRead;
 
-      Expr index = mutate(op->elementOrSet);
+      Expr index = IRRewriter::rewrite(op->elementOrSet);
       expr = TensorRead::make(setFieldRead, {index});
     }
     else {
@@ -490,9 +490,9 @@ private:
         Expr tensor = op->tensor;
         std::vector<Expr> indices;
         for (auto &index : op->indices) {
-          indices.push_back(mutate(index));
+          indices.push_back(IRRewriter::rewrite(index));
         }
-        Expr value = mutate(op->value);
+        Expr value = IRRewriter::rewrite(op->value);
         const TensorRead *tensorRead = GetTensorRead().get(resultActual,
                                                            computeStmt);
         iassert(tensorRead->indices.size() == indices.size());
@@ -508,7 +508,7 @@ private:
         stmt = flattenIndexExpressions(stmt);
         bool hasReduction = containsReduction(stmt);
         if (!hasReduction) {
-          stmt = MakeCompound(MakeCompound::Add).mutate(stmt);
+          stmt = MakeCompound(MakeCompound::Add).rewrite(stmt);
         }
         return;
       }
@@ -606,14 +606,14 @@ public:
 
     loopVars = LoopVars(sig, ud);
 
-    initToZeroStmt = ReplaceRhsWithZero().mutate(computeStmt);
+    initToZeroStmt = ReplaceRhsWithZero().rewrite(computeStmt);
 
     // Create the loop body from the IndexExpr computeStmt
-    loopBody = RemoveIndexExprs(&loopVars).mutate(computeStmt);
+    loopBody = RemoveIndexExprs(&loopVars).rewrite(computeStmt);
     std::vector<const SIGEdge *> edges = sig.getEdges();
 
     if (edges.size() == 0) { //&& indexExpr->type.toTensor()->dimensions.size()) {
-      loopBody = LowerIndexExpressions(ud).mutate(loopBody);
+      loopBody = LowerIndexExpressions(ud).rewrite(loopBody);
     }
 
     if (edges.size() > 1) {
@@ -643,7 +643,7 @@ public:
       loopBody = flattenIndexExpressions(loopBody);
 
       UseDef fud(func);
-      loopBody = LowerIndexExpressions(&fud).mutate(loopBody);
+      loopBody = LowerIndexExpressions(&fud).rewrite(loopBody);
     }
 
     stmt = loopBody;
@@ -674,7 +674,7 @@ private:
     }
     else {
       ReduceOverVar rov(loopBody, v->iv.getOperator());
-      Stmt loopBody = rov.mutate(stmt);
+      Stmt loopBody = rov.rewrite(stmt);
 
       Var tmpVar = rov.getTmpVar();
 
@@ -720,7 +720,7 @@ Stmt LowerIndexExpressions::lower(Stmt stmt) {
 }
 
 Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud) {
-  return LowerIndexExpressions(&ud).mutate(stmt);
+  return LowerIndexExpressions(&ud).rewrite(stmt);
 }
 
 Func lowerIndexExpressions(Func func, const TensorStorages &tensorStorages) {
