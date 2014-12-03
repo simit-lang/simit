@@ -8,8 +8,8 @@ namespace ir {
 
 Func lower(Func func);
 
+Func lowerAssemblies(Func func);
 Func lowerIndexExpressions(Func func);
-Func lowerMaps(Func func);
 Func lowerTensorAccesses(Func func);
 
 }} // namespace simit::ir
