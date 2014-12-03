@@ -327,13 +327,7 @@ private:
   Stmt tmpWriteStmt;
 
   void visit(const AssignStmt *op) {
-//    std::cout << "::: " << *op << std::endl;
-//    std::cout << "### " << rstmt << std::endl;
-
     if (op == rstmt) {
-
-//      std::cout << "here" << std::endl;
-
       iassert(isScalar(op->value.type()))
           << "assignment non-scalars should have been lowered by now";
       switch (rop.getKind()) {
@@ -611,21 +605,13 @@ public:
 
     initToZeroStmt = ReplaceRhsWithZero().mutate(computeStmt);
 
-//    std::cout << "-- before" << std::endl;
-//    std::cout << computeStmt << std::endl;
-
     // Create the loop body from the IndexExpr computeStmt
     loopBody = RemoveIndexExprs(&loopVars).mutate(computeStmt);
     std::vector<const SIGEdge *> edges = sig.getEdges();
 
-//    cout << indexExpr->type.toTensor()->dimensions.size() << endl;
-
     if (edges.size() == 0) { //&& indexExpr->type.toTensor()->dimensions.size()) {
       loopBody = LowerIndexExpressions(ud).mutate(loopBody);
     }
-
-//    std::cout << loopBody << std::endl;
-//    std::cout << "-- after" << std::endl << std::endl;
 
     if (edges.size() > 1) {
       not_supported_yet;
@@ -684,18 +670,8 @@ private:
       stmt = For::make(lvar, ldom, stmt);
     }
     else {
-//      std::cout << "--------------------------" << std::endl;
-//      std::cout << stmt << std::endl;
-//      cout << "--- ReduceOverVar "  << endl;
-//      std::cout << loopBody << std::endl;
-//      std::cout << stmt << std::endl;
-//      std::cout << "--------------------------" << std::endl;
-
-
       ReduceOverVar rov(loopBody, v->iv.getOperator());
       Stmt loopBody = rov.mutate(stmt);
-
-//      std::cout << loopBody << std::endl;
 
       Var tmpVar = rov.getTmpVar();
 
@@ -735,21 +711,6 @@ private:
     }
   }
 };
-
-//class IsNestedDotProduct : public IRVisitor {
-//public:
-//  bool check(Stmt stmt) {
-//    stmt.accept(this);
-//    return isNestedDotProduct;
-//  }
-//
-//private:
-//  bool isNestedDotProduct = true;
-//  int
-//
-//  pviate
-//
-//};
 
 bool isNestedDotProductAssign(Stmt stmt) {
   if (!isa<AssignStmt>(stmt)) {
