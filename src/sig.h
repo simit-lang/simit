@@ -24,7 +24,7 @@ struct SIGVertex {
 
   SIGVertex(const IndexVar &iv) : iv(iv) {}
 };
-std::ostream &operator<<(std::ostream &os, const SIGVertex &);
+
 
 struct SIGEdge {
   Var tensor;
@@ -37,7 +37,6 @@ struct SIGEdge {
     }
   }
 };
-std::ostream &operator<<(std::ostream &os, const SIGEdge &);
 
 
 /// Implementation of Sparse Iteration Graphs.
@@ -70,9 +69,8 @@ private:
   friend SIGVisitor;
 };
 
-std::ostream &operator<<(std::ostream &os, const SIG &);
 
-
+/// Visitor class for Sparse Iteration Graphs.
 class SIGVisitor {
 public:
   virtual void apply(const SIG &sig);
@@ -86,6 +84,7 @@ protected:
 };
 
 
+/// Class that builds a Sparse Iteration Graph from an expression.
 class SIGBuilder : public IRVisitor {
 public:
   SIGBuilder(const UseDef *ud) : ud(ud) {}
@@ -113,6 +112,7 @@ private:
     if (isa<VarExpr>(op->tensor)) {
       const Var &var = to<VarExpr>(op->tensor)->var;
       if (ud->getDef(var).getKind() == VarDef::Map) {
+        std::cout << "here" << std::endl;
         tensorVar = var;
       }
     }
@@ -144,6 +144,11 @@ private:
     sig = merge(ig1, ig2, SIG::Intersection);
   }
 };
+
+
+std::ostream &operator<<(std::ostream &os, const SIGVertex &);
+std::ostream &operator<<(std::ostream &os, const SIGEdge &);
+std::ostream &operator<<(std::ostream &os, const SIG &);
 
 }} // namespace
 #endif

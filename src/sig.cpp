@@ -11,14 +11,6 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-std::ostream &operator<<(std::ostream &os, const SIGVertex &v) {
-  return os << v.iv;
-}
-
-std::ostream &operator<<(std::ostream &os, const SIGEdge &e) {
-  return os << e.tensor << "(" << util::join(e.endpoints) << ")";
-}
-
 SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
   set<IndexVar> added;
   vector<SIGVertex*> endpoints;
@@ -91,32 +83,6 @@ SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
   return merged;
 }
 
-class SIGPrinter : public SIGVisitor {
-public:
-  SIGPrinter(std::ostream &os) : os(os) {}
-  void print(const SIG &g) {
-    apply(g);
-  }
-
-private:
-  std::ostream &os;
-
-  void visit(const SIGVertex *v) {
-    os << "Vert: " << *v << endl;
-    SIGVisitor::visit(v);
-  }
-
-  void visit(const SIGEdge *e) {
-    os << "Edge: " << *e << endl;
-    SIGVisitor::visit(e);
-  }
-};
-
-std::ostream &operator<<(std::ostream &os, const SIG &g) {
-  SIGPrinter(os).print(g);
-  return os;
-}
-
 bool ReductionVarsBeforefree(SIGVertex *i, SIGVertex *j) {
   if (i->iv.isFreeVar() && j->iv.isReductionVar()) {
     return false;
@@ -172,6 +138,41 @@ void SIGVisitor::visit(const SIGEdge *e) {
       visit(v);
     }
   }
+}
+
+std::ostream &operator<<(std::ostream &os, const SIGVertex &v) {
+  return os << v.iv;
+}
+
+std::ostream &operator<<(std::ostream &os, const SIGEdge &e) {
+  return os << e.tensor << "(" << util::join(e.endpoints) << ")";
+}
+
+class SIGPrinter : public SIGVisitor {
+public:
+  SIGPrinter(std::ostream &os) : os(os) {}
+  void print(const SIG &g) {
+    apply(g);
+  }
+
+private:
+  std::ostream &os;
+
+  void visit(const SIGVertex *v) {
+    os << *v << ", ";
+    SIGVisitor::visit(v);
+  }
+
+  void visit(const SIGEdge *e) {
+    os << *e << ", ";
+    SIGVisitor::visit(e);
+  }
+};
+
+std::ostream &operator<<(std::ostream &os, const SIG &g) {
+  os << "SIG: ";
+  SIGPrinter(os).print(g);
+  return os;
 }
 
 }} // namespace simit::ir
