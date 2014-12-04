@@ -70,7 +70,8 @@ private:
     Var lvar(varName, Int);
 
     VarDef varDef = ud->getDef(e->tensor);
-    iassert(varDef.getKind() == VarDef::Map);
+    iassert(varDef.getKind() == VarDef::Map)
+        << "SIG Edge variable" << e->tensor << "not defined in a map";
 
     const Map *mapStmt = to<Map>(varDef.getStmt());
     ForDomain ldom = ForDomain(mapStmt->target);
@@ -552,10 +553,12 @@ private:
 
 class LowerIndexExpressions : public IRRewriter {
 public:
-  LowerIndexExpressions(const UseDef *ud) : ud(ud) {}
+  LowerIndexExpressions(const UseDef *ud, const TensorStorages &tensorStorages)
+      : usedef(ud), tensorStorages(tensorStorages) {}
 
 private:
-  const UseDef *ud;
+  const UseDef *usedef;
+  TensorStorages tensorStorages;
 
   /// Lower the index statement.  Defined after the LoopBuilder due to a
   /// circular dependency.
@@ -595,16 +598,22 @@ private:
 
 class LoopBuilder : public SIGVisitor {
 public:
-  LoopBuilder(const UseDef *ud) : ud(ud) {}
+  LoopBuilder(const UseDef *ud, const TensorStorages &tensorStorages)
+      : usedef(ud), tensorStorages(tensorStorages) {}
 
   Stmt create(Stmt computeStmt) {
     const IndexExpr *indexExpr = GetIndexExpr().get(computeStmt);
 
-    SIG sig = SIGBuilder(ud).create(indexExpr);
+//    std::cout << *usedef << std::endl;
+//    for (auto &storage : tensorStorages) {
+//      std::cout << storage.first << ": " << storage.second << std::endl;
+//    }
+
+    SIG sig = SIGBuilder(tensorStorages).create(indexExpr);
 //    std::cout << *indexExpr << std::endl;
 //    std::cout << sig << std::endl;
 
-    loopVars = LoopVars(sig, ud);
+    loopVars = LoopVars(sig, usedef);
 
     initToZeroStmt = ReplaceRhsWithZero().rewrite(computeStmt);
 
@@ -613,7 +622,7 @@ public:
     std::vector<const SIGEdge *> edges = sig.getEdges();
 
     if (edges.size() == 0) { //&& indexExpr->type.toTensor()->dimensions.size()) {
-      loopBody = LowerIndexExpressions(ud).rewrite(loopBody);
+      loopBody = LowerIndexExpressions(usedef, tensorStorages).rewrite(loopBody);
     }
 
     if (edges.size() > 1) {
@@ -622,7 +631,7 @@ public:
 
     std::map<Var,const Map*> vars2maps;
     for (auto &e : edges) {
-      VarDef varDef = ud->getDef(e->tensor);
+      VarDef varDef = usedef->getDef(e->tensor);
       iassert(varDef.getKind() == VarDef::Map);
 
       Var lvar = loopVars.getVar(e->tensor).first;
@@ -643,7 +652,8 @@ public:
       loopBody = flattenIndexExpressions(loopBody);
 
       UseDef fud(func);
-      loopBody = LowerIndexExpressions(&fud).rewrite(loopBody);
+      TensorStorages storageDescriptors = getTensorStorages(func);
+      loopBody = LowerIndexExpressions(&fud, storageDescriptors).rewrite(loopBody);
     }
 
     stmt = loopBody;
@@ -655,7 +665,9 @@ public:
   }
 
 private:
-  const UseDef *ud;
+  const UseDef *usedef;
+  TensorStorages tensorStorages;
+
   LoopVars loopVars;
   Stmt initToZeroStmt;
   Stmt loopBody;
@@ -703,7 +715,7 @@ private:
     Var lvar = loopVar.first;
     ForDomain ldom = loopVar.second;
 
-    VarDef varDef = ud->getDef(e->tensor);
+    VarDef varDef = usedef->getDef(e->tensor);
     iassert(varDef.getKind() == VarDef::Map);
 
     Stmt loop = For::make(lvar, ldom, loopBody);
@@ -716,16 +728,12 @@ private:
 };
 
 Stmt LowerIndexExpressions::lower(Stmt stmt) {
-  return LoopBuilder(ud).create(stmt);
-}
-
-Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud) {
-  return LowerIndexExpressions(&ud).rewrite(stmt);
+  return LoopBuilder(usedef, tensorStorages).create(stmt);
 }
 
 Func lowerIndexExpressions(Func func, const TensorStorages &tensorStorages) {
   UseDef ud(func);
-  Stmt body = lowerIndexExpressions(func.getBody(), ud);
+  Stmt body = LowerIndexExpressions(&ud, tensorStorages).rewrite(func.getBody());
   return Func(func, body);
 }
 

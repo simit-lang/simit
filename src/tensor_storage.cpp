@@ -44,6 +44,11 @@ public:
     return storages;
   }
 
+  std::map<Var,TensorStorage> get(Stmt stmt) {
+    stmt.accept(this);
+    return storages;
+  }
+
 private:
   TensorStorages storages;
 
@@ -59,12 +64,11 @@ private:
   void visit(const Map *op) {
     for (auto &var : op->vars) {
       Type type = var.getType();
-      if (type.isTensor() && !isScalar(type) &&
-          storages.find(var) == storages.end()) {
-        TensorStorage storage = determineStorage(var);
-        if (storage.getKind() == TensorStorage::SystemNone ||
-            storage.getKind() == TensorStorage::SystemUnreduced) {
-          storage.setSystemStorageSet(op->target);
+      if (type.isTensor() && !isScalar(type)) {
+        if (storages.find(var) == storages.end()) {
+          // For now we'll store all assembled tensors as system reduced
+          TensorStorage storage = TensorStorage(TensorStorage::SystemReduced);
+          storages.insert(std::pair<Var,TensorStorage>(var, storage));
         }
       }
     }
@@ -78,7 +82,7 @@ private:
     const TensorType *ttype = type.toTensor();
 
     TensorStorage storage;
-    if (isElementTensorType(ttype)) {
+    if (isElementTensorType(ttype) || ttype->order() <= 1) {
       storage = TensorStorage(TensorStorage::DenseRowMajor);
     }
     else {
@@ -93,6 +97,11 @@ private:
 
 TensorStorages getTensorStorages(Func func) {
   std::map<Var,TensorStorage> descriptors = GetTensorStorages().get(func);
+  return descriptors;
+}
+
+TensorStorages getTensorStorages(Stmt stmt) {
+  std::map<Var,TensorStorage> descriptors = GetTensorStorages().get(stmt);
   return descriptors;
 }
 
