@@ -11,6 +11,7 @@
 #include "indexvar.h"
 #include "ir.h"
 #include "usedef.h"
+#include "tensor_storage.h"
 
 namespace simit {
 namespace ir {
@@ -87,14 +88,16 @@ protected:
 /// Class that builds a Sparse Iteration Graph from an expression.
 class SIGBuilder : public IRVisitor {
 public:
-  SIGBuilder(const UseDef *ud) : ud(ud) {}
+  SIGBuilder(const TensorStorages &storageDescriptors)
+      : storageDescriptors(storageDescriptors) {}
 
   SIG create(const IndexExpr *expr) {
     return create(Expr(expr));
   }
 
 private:
-  const UseDef *ud;
+  TensorStorages storageDescriptors;
+
   SIG sig;
 
   SIG create(Expr expr) {
@@ -105,14 +108,17 @@ private:
   }
 
   void visit(const IndexedTensor *op) {
+
     iassert(!isa<IndexExpr>(op->tensor))
         << "IndexExprs should have been flattened by now";
 
     Var tensorVar;
-    if (isa<VarExpr>(op->tensor)) {
+    if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
       const Var &var = to<VarExpr>(op->tensor)->var;
-      if (ud->getDef(var).getKind() == VarDef::Map) {
-        std::cout << "here" << std::endl;
+      iassert(storageDescriptors.find(var) != storageDescriptors.end())
+          << "No storage descriptor found for" << var << "in"
+          << util::toString(*op);
+      if (storageDescriptors.at(var).isSystem()) {
         tensorVar = var;
       }
     }
