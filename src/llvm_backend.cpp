@@ -234,7 +234,9 @@ void LLVMBackend::visit(const Literal *op) {
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
-  iassert(symtable.contains(op->var.getName()));
+  iassert(symtable.contains(op->var.getName()))
+      << op->var << "not found in symbol table";
+
   val = symtable.get(op->var.getName());
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,

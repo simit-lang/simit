@@ -72,6 +72,9 @@ typedef std::map<Var,TensorStorage> TensorStorages;
 /// Retrieve a storage descriptor for each tensor used in 'func'.
 TensorStorages getTensorStorages(Func func);
 
+/// Retrieve a storage descriptor for each tensor used in 'stmt'
+TensorStorages getTensorStorages(Stmt stmt);
+
 }}
 
 #endif
