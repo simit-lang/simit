@@ -1,0 +1,9 @@
+element Point
+  x : float;
+end
+
+extern points : set{Point};
+
+proc main 
+  points.x = points.x + points.x;
+end

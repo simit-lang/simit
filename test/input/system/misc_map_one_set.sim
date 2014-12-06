@@ -1,0 +1,15 @@
+element Point
+  a : float;
+end
+
+extern points  : set{Point};
+
+func doubleField(p : Point) -> (f : tensor[points](float))
+  f(p) = p.a + p.a;
+end
+
+proc main
+  f = map doubleField to points;
+  points.a = --f;
+end
+
