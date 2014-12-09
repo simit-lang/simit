@@ -188,11 +188,11 @@ bool operator==(const Literal& l, const Literal& r) {
       break;
     }
     case ScalarType::Boolean: {
-      //FIXME: this is a problem, because a boolean's size is not measurable in
-      // bytes.  this comparison will memcmp() too much data.
-      size_t tensorDataSize = getTensorByteSize(l.type.toTensor());
-      if (memcmp(l.data, r.data, tensorDataSize) != 0) {
-        return false;
+      bool *ldata = static_cast<bool*>(l.data);
+      bool *rdata = static_cast<bool*>(r.data);
+      for (size_t i=0; i < l.type.toTensor()->size(); ++i) {
+        if (ldata[i] != rdata[i])
+          return false;
       }
       break;
     }
