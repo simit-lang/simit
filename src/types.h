@@ -75,7 +75,7 @@ struct ScalarType {
       return 4;
     }
     else if (isBoolean()) {
-      return 1; // FIXME: booleans are 1 bit, not 1 byte.
+      return (unsigned int)sizeof(bool);
     }
     else {
       iassert(isFloat());
