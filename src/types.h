@@ -59,7 +59,7 @@ private:
 };
 
 struct ScalarType {
-  enum Kind {Int, Float};
+  enum Kind {Int, Float, Boolean};
 
   ScalarType() : kind(Int) {}
   ScalarType(Kind kind) : kind(kind) {}
@@ -74,6 +74,9 @@ struct ScalarType {
     if (isInt()) {
       return 4;
     }
+    else if (isBoolean()) {
+      return (unsigned int)sizeof(bool);
+    }
     else {
       iassert(isFloat());
       return 8;
@@ -82,6 +85,7 @@ struct ScalarType {
 
   bool isInt () const { return kind == Int; }
   bool isFloat() const { return kind == Float; }
+  bool isBoolean() const { return kind == Boolean; }
 };
 
 // TODO: Change the implementation of TensorType store a blockType plus outer
@@ -240,6 +244,7 @@ std::ostream &operator<<(std::ostream &os, const TupleType &);
 // Common types
 const Type Int = TensorType::make(ScalarType(ScalarType::Int));
 const Type Float = TensorType::make(ScalarType(ScalarType::Float));
+const Type Boolean = TensorType::make(ScalarType(ScalarType::Boolean));
 
 const Type vec3f = TensorType::make(ScalarType::Float,
                                     {IndexDomain(IndexSet(3))});

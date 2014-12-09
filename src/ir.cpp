@@ -187,6 +187,16 @@ bool operator==(const Literal& l, const Literal& r) {
       }
       break;
     }
+    case ScalarType::Boolean: {
+      bool *ldata = static_cast<bool*>(l.data);
+      bool *rdata = static_cast<bool*>(r.data);
+      for (size_t i=0; i < l.type.toTensor()->size(); ++i) {
+        if (ldata[i] != rdata[i])
+          return false;
+      }
+      break;
+    }
+
   }
   return true;
 }

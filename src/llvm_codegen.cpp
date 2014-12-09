@@ -30,6 +30,8 @@ llvm::Type *createLLVMType(ScalarType stype) {
       return LLVM_INT;
     case ScalarType::Float:
       return LLVM_DOUBLE;
+    case ScalarType::Boolean:
+      return LLVM_BOOL;
   }
 }
 
@@ -39,6 +41,8 @@ llvm::Type *llvmPtrType(ScalarType stype) {
       return LLVM_INTPTR;
     case ScalarType::Float:
       return LLVM_DOUBLEPTR;
+    case ScalarType::Boolean:
+      return LLVM_BOOL;
   }
 }
 

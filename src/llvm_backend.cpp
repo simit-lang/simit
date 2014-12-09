@@ -224,7 +224,11 @@ void LLVMBackend::visit(const Literal *op) {
       case ScalarType::Float: {
         iassert(ctype.bytes() == 8) << "Only 8-byte floats currently supported";
         val = llvmFP(((double*)op->data)[0]);
+        break;
       }
+      case ScalarType::Boolean:
+        not_supported_yet;
+        break;
     }
   }
   else {
@@ -352,6 +356,8 @@ void LLVMBackend::visit(const Neg *op) {
     case ScalarType::Float:
       val = builder->CreateFNeg(a);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot negate a boolean value.";
   }
 }
 
@@ -368,6 +374,8 @@ void LLVMBackend::visit(const Add *op) {
     case ScalarType::Float:
       val = builder->CreateFAdd(a, b);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot add boolean values.";
   }
 }
 
@@ -384,6 +392,8 @@ void LLVMBackend::visit(const Sub *op) {
     case ScalarType::Float:
       val = builder->CreateFSub(a, b);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot subtract boolean values.";
   }
 }
 
@@ -400,6 +410,8 @@ void LLVMBackend::visit(const Mul *op) {
     case ScalarType::Float:
       val = builder->CreateFMul(a, b);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot multiply boolean values.";
   }
 }
 
@@ -418,6 +430,8 @@ void LLVMBackend::visit(const Div *op) {
     case ScalarType::Float:
       val = builder->CreateFDiv(a, b);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot divide boolean values.";
   }
 }
 

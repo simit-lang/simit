@@ -81,7 +81,7 @@ void IRPrinter::visit(const Literal *op) {
       componentType = type->componentType.kind;
 
       switch (componentType) {
-        case ScalarType::Int: { {
+        case ScalarType::Int:  {
           const int *idata = static_cast<const int*>(op->data);
           if (size == 1) {
             os << idata[0];
@@ -109,10 +109,25 @@ void IRPrinter::visit(const Literal *op) {
           }
           break;
         }
+        case ScalarType::Boolean: {
+          const bool *fdata = static_cast<const bool*>(op->data);
+          if (size == 1) {
+            os << fdata[0];
+          }
+          else {
+            os << "[" << to_string(fdata[0]);
+            for (size_t i=1; i < size; ++i) {
+              os << ", " + to_string(fdata[i]);
+            }
+            os << "]";
+          }
+          break;
+        }
+
         }
       }
       break;
-    }
+    
     case Type::Element:
       not_supported_yet;
     case Type::Set:

@@ -198,6 +198,9 @@ std::ostream &operator<<(std::ostream &os, const ScalarType &type) {
     case ScalarType::Float:
       os << "float";
       break;
+    case ScalarType::Boolean:
+      os << "boolean";
+      break;
   }
   return os;
 }
