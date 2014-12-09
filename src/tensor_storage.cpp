@@ -87,7 +87,6 @@ private:
     }
     else {
       storage = TensorStorage(TensorStorage::SystemReduced);
-//    storage.setSystemStorageSet(<#simit::ir::Expr systemStorageSet#>)
     }
 
     storages.insert(std::pair<Var,TensorStorage>(var, storage));

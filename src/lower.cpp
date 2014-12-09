@@ -15,13 +15,13 @@ Func lower(Func func) {
   func = insertTemporaries(func);
   func = flattenIndexExpressions(func);
 
-  TensorStorages storageDescriptors = getTensorStorages(func);
-//  for (auto &storage : storageDescriptors) {
+  TensorStorages tensorStorages = getTensorStorages(func);
+//  for (auto &storage : tensorStorages) {
 //    std::cout << storage.first << ": " << storage.second << std::endl;
 //  }
 
-//  func = lowerAssemblies(func);
-  func = lowerIndexExpressions(func, storageDescriptors);
+  func = lowerAssemblies(func, tensorStorages);
+  func = lowerIndexExpressions(func, tensorStorages);
   func = lowerTensorAccesses(func);
   return func;
 }

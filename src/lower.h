@@ -3,7 +3,6 @@
 
 #include "ir.h"
 
-
 namespace simit {
 namespace ir {
 
@@ -12,7 +11,10 @@ typedef std::map<Var,TensorStorage> TensorStorages;
 
 Func lower(Func func);
 
-Func lowerAssemblies(Func func);
+/// Lower tensor assemblies to loops that stores the resulting tensors as
+/// specified by the 'TensorStorages' descriptors.
+Func lowerAssemblies(Func func, const TensorStorages &tensorStorages);
+
 Func lowerIndexExpressions(Func func, const TensorStorages &tensorStorages);
 Func lowerTensorAccesses(Func func);
 

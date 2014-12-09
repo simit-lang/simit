@@ -182,34 +182,34 @@ int main(int argc, const char* argv[]) {
     // Lower while printing lowered results
     if (emitSimit) {
       cout << endl << endl;
-      cout << "--- Compile " << function << ":" << endl;
+      cout << "--- Compile " << function << endl;
       cout << func << endl << endl;
     }
 
     func = insertTemporaries(func);
-    if (emitSimit) {
-      cout << "--- Insert Temporaries:" << endl;
-      cout << func << endl << endl;;
-    }
-
     func = flattenIndexExpressions(func);
     if (emitSimit) {
-      cout << "--- Flatten Index Expressions:" << endl;
+      cout << "--- Insert Temporaries and Flatten Index Expressions" << endl;
+      cout << func << endl << endl;;
+    }
+    
+    simit::ir::TensorStorages tensorStorages = getTensorStorages(func);
+
+    func = lowerAssemblies(func, tensorStorages);
+    if (emitSimit) {
+      cout << "--- Lower Maps" << endl;
       cout << func << endl << endl;;
     }
 
-    simit::ir::TensorStorages storageDescriptors = getTensorStorages(func);
-
-    func = lowerIndexExpressions(func, storageDescriptors);
-    func = lowerAssemblies(func);
+    func = lowerIndexExpressions(func, tensorStorages);
     if (emitSimit) {
-      cout << "--- Lower Index Expressions:" << endl;
+      cout << "--- Lower Index Expressions" << endl;
       cout << func << endl << endl;;
     }
 
     func = lowerTensorAccesses(func);
     if (emitSimit) {
-      cout << "--- Lower Tensor Reads and Writes:" << endl;
+      cout << "--- Lower Tensor Reads and Writes" << endl;
       cout << func << endl;
     }
 
@@ -217,7 +217,7 @@ int main(int argc, const char* argv[]) {
       simit::internal::LLVMBackend backend;
       std::string fstr = simit::util::toString(*backend.compile(func));
       if (emitSimit) {
-        cout << endl << "--- Emitting LLVM:" << endl;
+        cout << endl << "--- Emitting LLVM" << endl;
       }
       cout << simit::util::trim(fstr) << endl;
 
