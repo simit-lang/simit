@@ -32,6 +32,7 @@ template <int cardinality> class EndpointIteratorBase;
 namespace internal {
 class VertexToEdgeEndpointIndex;
 class VertexToEdgeIndex;
+class NeighborIndex;
 }
 
 class Function;
@@ -78,6 +79,7 @@ private:
   friend FieldRefBase;
   friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
+  friend class internal::NeighborIndex;
 };
 
 
@@ -418,6 +420,7 @@ private:
   template <int c> friend class hidden::EndpointIteratorBase;
   friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
+  friend class internal::NeighborIndex;
   
   // helper for constructing
   template <typename F, typename ...T>
@@ -585,6 +588,75 @@ class VertexToEdgeIndex {
                                                       // belongs to
   std::map<const SetBase*,int**> whichEdgesForVertex; // which edges v belongs to
   int totalEdges;
+};
+
+//neighbor indices for each vertex. Does not work for Heterogeneous graphs.
+class NeighborIndex {
+ public:
+  template <int cardinality=0>
+  NeighborIndex(Set<cardinality>& edgeSet) {
+    VertexToEdgeIndex VToE(edgeSet);
+    //number of vertices per edge
+    unsigned int edgeSize = (int)edgeSet.endpointSets.size();
+    std::vector< std::vector< int> > edgeToVertex(edgeSet.getSize());
+    for(auto e : edgeSet){
+      edgeToVertex[e.ident].resize(cardinality,0);
+      for (int epi=0; epi<edgeSize; epi++) {
+	auto ep = edgeSet.getEndpoint(e, epi);
+	edgeToVertex[e.ident][epi] = ep.ident;
+      }
+    }
+    
+    SetBase* vSet = edgeSet.endpointSets[0];
+    startIndex = (int*)malloc(vSet.getSize());
+    startIndex[0] = 0;
+    for(auto v : *vSet){
+      int * edgeNeighbors = VToE.getWhichEdgesForElement(v, *vSet);
+      int   nEdgeNeighbor = VToE.getNumEdgesForElement  (v, *vSet);
+      std::vector<int> nbr;
+      for(int ii = 0; ii<nEdgeNeighbor; ii++){
+        int eIdx = edgeNeighbors[ii];
+	for(int jj = 0; jj<edgeSize; jj++){
+	  int nbrIdx = edgeToVertex[eIdx][jj];
+	  addNoCollision(nbrIdx, nbr);
+	  neighbors.insert(b.end(), nbr.begin(), nbr.end());
+	  startIndex[v.ident+1] = neighbors.size();
+	}
+      }
+    }
+  }
+  
+  int getNumNeighbors(ElementRef vertex) {
+    return startIndex[vertex.ident+1] - startIndex[vertex.ident];
+  }
+  
+  int* getNeighbors(ElementRef vertex) {
+    return neighbors+startIndex[vertex.ident];
+  }
+  
+  int* getStartIndices() { return startIndex; }
+  
+  int* getNeighborIndices() { return neighbors; }
+  
+  ~NeighborIndex() {
+    free(startIndex);
+  }
+  
+ private:
+  // start index into neighbors array for vertex.
+  // the last index is total size of neighbors array, which is also the number of non-zeros
+  // in a vertex x vertex matrix.
+  int* startIndex;    
+  std::vector<int> neighbors; // which edges v belongs to
+  void addNoCollision(int x, const std::vector<int> & a){
+    for(unsigned int ii=0 ;ii<a.size();ii++){
+      if(a[ii]==x){
+	return;
+      }
+    }
+    a.push_back[x];
+  }
+  
 };
 
 } // internal
