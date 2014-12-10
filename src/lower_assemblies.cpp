@@ -27,7 +27,6 @@ inline bool hasSameStorage(std::vector<Var> vars,
 }
 
 
-
 class LowerAssemblies : public IRRewriter {
 public:
   LowerAssemblies(const TensorStorages &storages)
@@ -37,8 +36,6 @@ private:
   TensorStorages storages;
 
   void visit(const Map *op) {
-    // \todo We should only drop the map statements if it's bound Vars have
-    // no uses (extend/invert UseDef to get DefUse info).
     stmt = op;
     return;
 
@@ -49,20 +46,25 @@ private:
 
     if (op->vars.size() == 0
         || storages.at(op->vars[0]).getKind() != TensorStorage::SystemNone) {
-      Func kernel = op->function;
-      Stmt body = kernel.getBody();
+      TensorStorage::Kind storage = storages.at(op->vars[0]).getKind();
 
-      Var targetVar = kernel.getArguments()[0];
-      Var neighborsVar = kernel.getArguments()[1];
+      if (storage == TensorStorage::SystemReduced) {
+        Func kernel = op->function;
+        Stmt body = kernel.getBody();
 
-      Var loopVar(targetVar.getName(), Int);
-      ForDomain domain(op->target);
+        Var targetVar = kernel.getArguments()[0];
+        Var neighborsVar = kernel.getArguments()[1];
 
-      body = InlineMappedFunction(op,loopVar).rewrite(body);
+        Var loopVar(targetVar.getName(), Int);
+        ForDomain domain(op->target);
 
-      Stmt loweredMap = For::make(loopVar, domain, body);
-
-      stmt = Block::make(op, loweredMap);
+        body = InlineMappedFunction(op,loopVar).rewrite(body);
+        Stmt loweredMap = For::make(loopVar, domain, body);
+        stmt = Block::make(op, loweredMap);
+      }
+      else {
+        terror << "Unsupported tensor storage lowering";
+      }
     }
     else {
       stmt = op;
