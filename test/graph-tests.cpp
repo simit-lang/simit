@@ -321,6 +321,26 @@ TEST(EdgeSet, VertexToEdgeIndex) {
   delete edgeindex;
 }
 
+TEST(EdgeSet, NeighborIndex) {
+  Set<> points;
+  auto p0 = points.addElement();
+  auto p1 = points.addElement();
+  auto p2 = points.addElement();
+  auto p3 = points.addElement();
+  
+  Set<3> edges(points, points, points);
+  edges.addElement(p0, p1, p2);
+  edges.addElement(p1, p2, p3);
+  
+  internal::NeighborIndex* nIndex =
+    new internal::NeighborIndex(edges);
+  ASSERT_EQ(nIndex->getNumNeighbors(p0), 3);
+  ASSERT_EQ(nIndex->getNumNeighbors(p1), 4);
+  ASSERT_EQ(nIndex->getNeighbors(p1)[0], 0);
+
+  delete nIndex ;
+}
+
 TEST(GraphGenerator, createBox) {
   Set<> points;
   Set<2> edges(points, points);

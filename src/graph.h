@@ -602,12 +602,12 @@ class NeighborIndex {
     for(auto e : edgeSet){
       edgeToVertex[e.ident].resize(cardinality,0);
       for (int epi=0; epi<edgeSize; epi++) {
-	auto ep = edgeSet.getEndpoint(e, epi);
-	edgeToVertex[e.ident][epi] = ep.ident;
+        auto ep = edgeSet.getEndpoint(e, epi);
+        edgeToVertex[e.ident][epi] = ep.ident;
       }
     }
     
-    SetBase* vSet = edgeSet.endpointSets[0];
+    const SetBase* vSet = edgeSet.endpointSets[0];
     startIndex = (int*)malloc(sizeof(int) * vSet->getSize());
     startIndex[0] = 0;
     for(auto v : *vSet){
@@ -616,13 +616,13 @@ class NeighborIndex {
       std::vector<int> nbr;
       for(int ii = 0; ii<nEdgeNeighbor; ii++){
         int eIdx = edgeNeighbors[ii];
-	for(int jj = 0; jj<edgeSize; jj++){
-	  int nbrIdx = edgeToVertex[eIdx][jj];
-	  addNoCollision(nbrIdx, nbr);
-	  neighbors.insert(neighbors.end(), nbr.begin(), nbr.end());
-	  startIndex[v.ident+1] = neighbors.size();
-	}
+        for(int jj = 0; jj<edgeSize; jj++){
+          int nbrIdx = edgeToVertex[eIdx][jj];
+          addNoCollision(nbrIdx, nbr);
+        }
       }
+      neighbors.insert(neighbors.end(), nbr.begin(), nbr.end());
+      startIndex[v.ident+1] = neighbors.size();
     }
   }
   
@@ -651,7 +651,7 @@ class NeighborIndex {
   void addNoCollision(int x, std::vector<int> & a){
     for(unsigned int ii=0 ;ii<a.size();ii++){
       if(a[ii]==x){
-	return;
+        return;
       }
     }
     a.push_back(x);
