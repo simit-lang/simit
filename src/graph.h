@@ -608,7 +608,7 @@ class NeighborIndex {
     }
     
     SetBase* vSet = edgeSet.endpointSets[0];
-    startIndex = (int*)malloc(vSet.getSize());
+    startIndex = (int*)malloc(sizeof(int) * vSet->getSize());
     startIndex[0] = 0;
     for(auto v : *vSet){
       int * edgeNeighbors = VToE.getWhichEdgesForElement(v, *vSet);
@@ -619,7 +619,7 @@ class NeighborIndex {
 	for(int jj = 0; jj<edgeSize; jj++){
 	  int nbrIdx = edgeToVertex[eIdx][jj];
 	  addNoCollision(nbrIdx, nbr);
-	  neighbors.insert(b.end(), nbr.begin(), nbr.end());
+	  neighbors.insert(neighbors.end(), nbr.begin(), nbr.end());
 	  startIndex[v.ident+1] = neighbors.size();
 	}
       }
@@ -631,12 +631,12 @@ class NeighborIndex {
   }
   
   int* getNeighbors(ElementRef vertex) {
-    return neighbors+startIndex[vertex.ident];
+    return &neighbors[startIndex[vertex.ident]];
   }
   
   int* getStartIndices() { return startIndex; }
   
-  int* getNeighborIndices() { return neighbors; }
+  int* getNeighborIndices() { return &neighbors[0]; }
   
   ~NeighborIndex() {
     free(startIndex);
@@ -646,15 +646,15 @@ class NeighborIndex {
   // start index into neighbors array for vertex.
   // the last index is total size of neighbors array, which is also the number of non-zeros
   // in a vertex x vertex matrix.
-  int* startIndex;    
+  int* startIndex;
   std::vector<int> neighbors; // which edges v belongs to
-  void addNoCollision(int x, const std::vector<int> & a){
+  void addNoCollision(int x, std::vector<int> & a){
     for(unsigned int ii=0 ;ii<a.size();ii++){
       if(a[ii]==x){
 	return;
       }
     }
-    a.push_back[x];
+    a.push_back(x);
   }
   
 };
