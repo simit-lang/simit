@@ -575,6 +575,24 @@ struct Store : public StmtNode<Store> {
   }
 };
 
+/// A `for` over a range.
+struct ForRange : public StmtNode<ForRange> {
+  Var var;
+  Expr start;
+  Expr end;
+  Stmt body;
+  
+  static Stmt make(Var var, Expr start, Expr end, Stmt body) {
+    ForRange *node = new ForRange;
+    node->var = var;
+    node->start = start;
+    node->end = end;
+    node->body = body;
+    return node;
+  }
+
+};
+
 struct ForDomain {
   enum Kind { IndexSet, Endpoints, Edges };
   Kind kind;

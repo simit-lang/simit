@@ -107,6 +107,12 @@ void IRVisitor::visit(const Store *op) {
   op->value.accept(this);
 }
 
+void IRVisitor::visit(const ForRange *op) {
+  op->start.accept(this);
+  op->end.accept(this);
+  op->body.accept(this);
+}
+
 void IRVisitor::visit(const For *op) {
   op->body.accept(this);
 }

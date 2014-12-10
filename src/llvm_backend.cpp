@@ -600,6 +600,10 @@ void LLVMBackend::visit(const For *op) {
   builder->SetInsertPoint(loopEnd);
 }
 
+void LLVMBackend::visit(const ir::ForRange *op) {
+  not_supported_yet;
+}
+
 void LLVMBackend::visit(const IfThenElse *op) {
   not_supported_yet;
 }
