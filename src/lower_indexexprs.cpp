@@ -17,6 +17,7 @@
 #include "ir_queries.h"
 #include "substitute.h"
 #include "tensor_storage.h"
+#include "inline.h"
 
 #include "flatten.h"
 
@@ -401,23 +402,24 @@ private:
 
 // TODO: The if-based pattern matching in the visit rules is a total hack and
 //       has to be rewritten.
-class InlineMappedFunction : private IRRewriter {
+class FuseMappedFunction : public InlineMappedFunction {
 public:
-  InlineMappedFunction(Var lvar, Var resultActual, const Map *map,
-                       Stmt computeStmt) {
+  FuseMappedFunction(Var lvar, Var resultActual, const Map *map,
+                     Stmt computeStmt)
+      : InlineMappedFunction(map, lvar) {
     Func mapFunc = map->function;
-    iassert(mapFunc.getArguments().size()==1||mapFunc.getArguments().size()==2)
-        << "mapped functions must have exactly two arguments";
+//    iassert(mapFunc.getArguments().size()==1||mapFunc.getArguments().size()==2)
+//        << "mapped functions must have exactly two arguments";
 
-    this->loopVar = lvar;
+//    this->loopVar = lvar;
 
-    this->targetSet = map->target;
-    this->neighborSet = map->neighbors;
+//    this->targetSet = map->target;
+//    this->neighborSet = map->neighbors;
 
     this->resultActual = resultActual;
 
-    this->targetElement = mapFunc.getArguments()[0];
-    this->neighborElements = mapFunc.getArguments()[1];
+//    this->targetElement = mapFunc.getArguments()[0];
+//    this->neighborElements = mapFunc.getArguments()[1];
 
     this->results = set<Var>(mapFunc.getResults().begin(),
                              mapFunc.getResults().end());
@@ -425,65 +427,17 @@ public:
     this->computeStmt = computeStmt;
   }
 
-  Stmt rewrite(Stmt s) {
-    s = IRRewriter::rewrite(s);
-    return s;
-  }
+  virtual ~FuseMappedFunction() {}
 
 private:
+  // Tell compiler we aren't overriding visit by mistake
+  using InlineMappedFunction::visit;
+
   set<Var> results;
-
-  Var targetElement;
-  Var neighborElements;
   Var resultActual;
-
-  Expr loopVar;
-  Expr targetSet;
-  Expr neighborSet;
 
   Stmt computeStmt;
   map<Expr,Expr> substitutions;
-
-  /// Turn argument field reads into loads from the buffer corresponding to that
-  /// field
-  void visit(const FieldRead *op) {
-    // TODO: Handle the case where the target var was reassigned
-    //       tmp = s; ... = tmp.a;
-    if (isa<VarExpr>(op->elementOrSet) &&
-        to<VarExpr>(op->elementOrSet)->var == targetElement) {
-      Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
-      expr = TensorRead::make(setFieldRead, {loopVar});
-    }
-    else if(isa<TupleRead>(op->elementOrSet) &&
-            isa<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple) &&
-            to<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple)->var ==neighborElements) {
-      Expr setFieldRead = FieldRead::make(neighborSet, op->fieldName);
-      expr = setFieldRead;
-
-      Expr index = IRRewriter::rewrite(op->elementOrSet);
-      expr = TensorRead::make(setFieldRead, {index});
-    }
-    else {
-      not_supported_yet;
-    }
-  }
-
-  void visit(const TupleRead *op) {
-    // TODO: Handle the case where the target var was reassigned
-    //       tmp = p(0); ... = tmp.x;
-    if (isa<VarExpr>(op->tuple) &&
-        to<VarExpr>(op->tuple)->var == neighborElements) {
-      const TupleType *tupleType = op->tuple.type().toTuple();
-      int cardinality = tupleType->size;
-
-      Expr endpoints = IndexRead::make(targetSet, "endpoints");
-      Expr indexExpr = Add::make(Mul::make(loopVar, cardinality), op->index);
-      expr = Load::make(endpoints, indexExpr);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
 
   void visit(const TensorWrite *op) {
     if (isa<VarExpr>(op->tensor)) {
@@ -644,7 +598,7 @@ public:
       // Inline the mapped function in the IndexExpr loop nests
       Stmt funcBody = func.getBody();
 
-      loopBody = InlineMappedFunction(lvar, e->tensor, map,
+      loopBody = FuseMappedFunction(lvar, e->tensor, map,
                                       loopBody).rewrite(funcBody);
 
       // TODO: We should knock out redundant subexpressions in the loopBody

@@ -2,6 +2,7 @@
 
 #include "ir_rewriter.h"
 #include "tensor_storage.h"
+#include "inline.h"
 
 using namespace std;
 
@@ -25,6 +26,8 @@ inline bool hasSameStorage(std::vector<Var> vars,
   return true;
 }
 
+
+
 class LowerAssemblies : public IRRewriter {
 public:
   LowerAssemblies(const TensorStorages &storages)
@@ -37,6 +40,7 @@ private:
     // \todo We should only drop the map statements if it's bound Vars have
     // no uses (extend/invert UseDef to get DefUse info).
     stmt = op;
+    return;
 
     iassert(hasStorage(op->vars, storages))
         << "Every assembled tensor should have a storage descriptor";
@@ -45,7 +49,19 @@ private:
 
     if (op->vars.size() == 0
         || storages.at(op->vars[0]).getKind() != TensorStorage::SystemNone) {
-      Stmt loweredMap = Pass::make();
+      Func kernel = op->function;
+      Stmt body = kernel.getBody();
+
+      Var targetVar = kernel.getArguments()[0];
+      Var neighborsVar = kernel.getArguments()[1];
+
+      Var loopVar(targetVar.getName(), Int);
+      ForDomain domain(op->target);
+
+      body = InlineMappedFunction(op,loopVar).rewrite(body);
+
+      Stmt loweredMap = For::make(loopVar, domain, body);
+
       stmt = Block::make(op, loweredMap);
     }
     else {
