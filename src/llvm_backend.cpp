@@ -601,7 +601,6 @@ void LLVMBackend::visit(const For *op) {
 }
 
 void LLVMBackend::visit(const ir::ForRange *op) {
-  not_supported_yet;
   std::string iName = op->var.getName();
   
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();

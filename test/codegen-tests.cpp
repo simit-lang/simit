@@ -215,7 +215,7 @@ TEST(Codegen, forloop) {
   
   Stmt loop = ForRange::make(i, start, end, body);
   
-  Func func = Func("testloop", {}, {out}, body);
+  Func func = Func("testloop", {}, {out}, loop);
 
   LLVMBackend backend;
   unique_ptr<Function> function(backend.compile(func));
