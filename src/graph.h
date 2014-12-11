@@ -601,7 +601,7 @@ class NeighborIndex {
     std::vector< std::vector< int> > edgeToVertex(edgeSet.getSize());
     for(auto e : edgeSet){
       edgeToVertex[e.ident].resize(cardinality,0);
-      for (int epi=0; epi<edgeSize; epi++) {
+      for (unsigned epi=0; epi<edgeSize; epi++) {
         auto ep = edgeSet.getEndpoint(e, epi);
         edgeToVertex[e.ident][epi] = ep.ident;
       }
@@ -616,7 +616,7 @@ class NeighborIndex {
       std::vector<int> nbr;
       for(int ii = 0; ii<nEdgeNeighbor; ii++){
         int eIdx = edgeNeighbors[ii];
-        for(int jj = 0; jj<edgeSize; jj++){
+        for(unsigned jj = 0; jj<edgeSize; jj++){
           int nbrIdx = edgeToVertex[eIdx][jj];
           addNoCollision(nbrIdx, nbr);
         }
