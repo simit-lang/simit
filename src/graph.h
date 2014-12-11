@@ -635,17 +635,17 @@ class NeighborIndex {
     }
   }
   
-  int getNumNeighbors(ElementRef vertex) {
+  int getNumNeighbors(ElementRef vertex) const {
     return startIndex[vertex.ident+1] - startIndex[vertex.ident];
   }
   
-  int* getNeighbors(ElementRef vertex) {
+  const int* getNeighbors(ElementRef vertex) const {
     return &neighbors[startIndex[vertex.ident]];
   }
   
-  int* getStartIndices() { return startIndex; }
+  const int* getStartIndices() const { return startIndex; }
   
-  int* getNeighborIndices() { return &neighbors[0]; }
+  const int* getNeighborIndices() const { return &neighbors[0]; }
   
   ~NeighborIndex() {
     free(startIndex);
