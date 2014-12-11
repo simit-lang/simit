@@ -29,5 +29,4 @@ double cMatSolve(double* bufferA, double* bufferX,
 extern "C" {
 
 }
-
 #endif

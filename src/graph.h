@@ -157,14 +157,13 @@ public:
     elements--;
   }
 
-  const int *getEndpointsData() const {
-    return endpoints;
-  }
-
   const void *getFieldData(const std::string &fieldName) const {
     iassert(fieldNames.find(fieldName) != fieldNames.end());
     return fields[fieldNames.at(fieldName)]->data;
   }
+
+  /// Get an array containing, for each edge in a set, the elements it connects.
+  const int *getEndpointsData() const {return endpoints;}
 
   /// Iterator that iterates over the elements in a Set
   ///
