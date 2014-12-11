@@ -46,7 +46,7 @@ llvm::Type *llvmPtrType(ScalarType stype) {
   }
 }
 
-llvm::Constant *llvmPtr(llvm::Type *type, void *data) {
+llvm::Constant *llvmPtr(llvm::Type *type, const void *data) {
   llvm::Constant *c = (sizeof(void*) == 4)
       ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CONTEXT),
                                (int)(intptr_t)data)
@@ -55,7 +55,7 @@ llvm::Constant *llvmPtr(llvm::Type *type, void *data) {
   return llvm::ConstantExpr::getIntToPtr(c, type);
 }
 
-llvm::Constant *llvmPtr(const Type &type, void *data) {
+llvm::Constant *llvmPtr(const Type &type, const void *data) {
   return llvmPtr(createLLVMType(type), data);
 }
 

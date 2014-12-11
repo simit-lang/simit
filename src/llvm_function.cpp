@@ -109,13 +109,13 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
 
           // Edge indices (if the set is an edge set)
           if (setType->endpointSets.size() > 0) {
-            setData.push_back(llvmPtr(LLVM_INTPTR, getEndpointsPtr(set)));
+            setData.push_back(llvmPtr(LLVM_INTPTR, set->getEndpointsData()));
           }
 
           // Fields
           for (auto &field : setType->elementType.toElement()->fields) {
             assert(field.type.isTensor());
-            setData.push_back(llvmPtr(field.type, getFieldPtr(set,field.name)));
+            setData.push_back(llvmPtr(field.type, set->getFieldData(field.name)));
           }
 
           llvm::Value *llvmSet= llvm::ConstantStruct::get(llvmSetType, setData);

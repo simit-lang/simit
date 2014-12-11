@@ -41,8 +41,8 @@ llvm::Type *createLLVMType(ir::ScalarType stype);
 
 llvm::Type *llvmPtrType(ir::ScalarType stype);
 
-llvm::Constant *llvmPtr(llvm::Type *type, void *data);
-llvm::Constant *llvmPtr(const ir::Type &type, void *data);
+llvm::Constant *llvmPtr(llvm::Type *type, const void *data);
+llvm::Constant *llvmPtr(const ir::Type &type, const void *data);
 
 llvm::Constant *llvmPtr(const ir::Literal *literal);
 

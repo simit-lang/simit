@@ -94,14 +94,4 @@ void Function::bind(const std::string &argName, SetBase *set) {
   initRequired = true;
 }
 
-void *Function::getFieldPtr(const SetBase *set, const std::string &fieldName) {
-  iassert(set->fieldNames.find(fieldName) != set->fieldNames.end());
-  return set->fields[set->fieldNames.at(fieldName)]->data;
-}
-
-int *Function::getEndpointsPtr(const SetBase *set) {
-  iassert(set->endpoints != nullptr);
-  return set->endpoints;
-}
-
 } // namespace simit

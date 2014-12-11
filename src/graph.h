@@ -157,6 +157,15 @@ public:
     elements--;
   }
 
+  const int *getEndpointsData() const {
+    return endpoints;
+  }
+
+  const void *getFieldData(const std::string &fieldName) const {
+    iassert(fieldNames.find(fieldName) != fieldNames.end());
+    return fields[fieldNames.at(fieldName)]->data;
+  }
+
   /// Iterator that iterates over the elements in a Set
   ///
   /// This iterator is an input_iterator, and thus can only be
@@ -643,11 +652,14 @@ class NeighborIndex {
   }
   
  private:
-  // start index into neighbors array for vertex.
-  // the last index is total size of neighbors array, which is also the number of non-zeros
-  // in a vertex x vertex matrix.
+  /// start index into neighbors array for vertex.
+  /// the last index is total size of neighbors array, which is also the number
+  /// of non-zeros in a vertex x vertex matrix.
   int* startIndex;
-  std::vector<int> neighbors; // which edges v belongs to
+
+  /// which edges v belongs to
+  std::vector<int> neighbors;
+
   void addNoCollision(int x, std::vector<int> & a){
     for(unsigned int ii=0 ;ii<a.size();ii++){
       if(a[ii]==x){
