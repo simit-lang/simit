@@ -1,6 +1,7 @@
 #ifndef SIMIT_RUNTIME_H
 #define SIMIT_RUNTIME_H
 
+#ifdef EIGEN
 #include <Eigen/Core>
 #include <Eigen/Dense>
 
@@ -22,6 +23,11 @@ double cMatSolve(double* bufferA, double* bufferX,
   
   return 1.0;
 }
+}
+#endif
+
+extern "C" {
+
 }
 
 #endif

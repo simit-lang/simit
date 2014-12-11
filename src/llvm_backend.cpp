@@ -26,6 +26,7 @@
 #include "llvm_function.h"
 #include "gather_buffers.h"
 #include "macros.h"
+#include "runtime.h"
 
 using namespace std;
 using namespace simit::ir;
