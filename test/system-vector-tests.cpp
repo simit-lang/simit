@@ -12,7 +12,7 @@ TEST(System, vector_add) {
   Set<> points;
   FieldRef<double> x = points.addField<double>("x");
 
-  ElementRef p0 = points.addElement();
+  ElementRef p0 = points.add();
   x.set(p0, 42.0);
 
   std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
@@ -28,7 +28,7 @@ TEST(System, vector_add_blocked) {
   Set<> points;
   FieldRef<double,3> x = points.addField<double,3>("x");
 
-  ElementRef p0 = points.addElement();
+  ElementRef p0 = points.add();
   x.set(p0, {1.0, 2.0, 3.0});
 
   std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
@@ -48,9 +48,9 @@ TEST(System, vector_dot) {
   FieldRef<double> x = points.addField<double>("x");
   FieldRef<double> z = points.addField<double>("z");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
   x.set(p0, 1.0);
   x.set(p1, 2.0);
   x.set(p2, 3.0);
@@ -68,9 +68,9 @@ TEST(System, DISABLED_vector_dot_blocked) {
   FieldRef<double,3> x = points.addField<double,3>("x");
   FieldRef<double> z = points.addField<double>("z");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
   x.set(p0, {1.0,2.0,3.0});
   x.set(p1, {4.0,5.0,6.0});
   x.set(p2, {7.0,8.0,9.0});

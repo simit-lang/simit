@@ -86,14 +86,14 @@ end
   FieldRef<double,3> M = points.addField<double,3>("M");
   FieldRef<double,3> p = points.addField<double,3>("p");
 
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
-  ElementRef p3 = points.addElement();
-  ElementRef p4 = points.addElement();
-  ElementRef p5 = points.addElement();
-  ElementRef p6 = points.addElement();
-  ElementRef p7 = points.addElement();
-  ElementRef p8 = points.addElement();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+  ElementRef p3 = points.add();
+  ElementRef p4 = points.add();
+  ElementRef p5 = points.add();
+  ElementRef p6 = points.add();
+  ElementRef p7 = points.add();
+  ElementRef p8 = points.add();
 
   x.set(p1, {0.0, 0.0, 0.0});
   x.set(p2, {1.0, 0.0, 0.0});
@@ -119,20 +119,20 @@ end
   FieldRef<double> m = springs.addField<double>("m");
 
   // x springs
-  ElementRef s1 = springs.addElement(p1,p2);
-  ElementRef s2 = springs.addElement(p3,p4);
-  ElementRef s3 = springs.addElement(p5,p6);
-  ElementRef s4 = springs.addElement(p7,p8);
+  ElementRef s1 = springs.add(p1,p2);
+  ElementRef s2 = springs.add(p3,p4);
+  ElementRef s3 = springs.add(p5,p6);
+  ElementRef s4 = springs.add(p7,p8);
 
-  ElementRef s5 = springs.addElement(p1,p3);
-  ElementRef s6 = springs.addElement(p2,p4);
-  ElementRef s7 = springs.addElement(p5,p7);
-  ElementRef s8 = springs.addElement(p6,p8);
+  ElementRef s5 = springs.add(p1,p3);
+  ElementRef s6 = springs.add(p2,p4);
+  ElementRef s7 = springs.add(p5,p7);
+  ElementRef s8 = springs.add(p6,p8);
 
-  ElementRef s9 = springs.addElement(p1,p5);
-  ElementRef s10 = springs.addElement(p2,p6);
-  ElementRef s11 = springs.addElement(p3,p7);
-  ElementRef s12 = springs.addElement(p4,p8);
+  ElementRef s9 = springs.add(p1,p5);
+  ElementRef s10 = springs.add(p2,p6);
+  ElementRef s11 = springs.add(p3,p7);
+  ElementRef s12 = springs.add(p4,p8);
 
   m.set(s1, 0.0282735);
   m.set(s2, 0.0282735);

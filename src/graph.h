@@ -134,10 +134,10 @@ public:
     return FieldRef<T, dimensions...>(fieldData);
   }
 
-  /// Add a new edge element, returning its handle.
+  /// Add a new element or edge, returning its handle.
   /// The endpoints refer to the respective Sets they come from.
-  template <typename ...T>
-  ElementRef addElement(T ... endpoints) {
+  template <typename ...Endpoints>
+  ElementRef add(Endpoints... endpoints) {
     iassert(sizeof...(endpoints) == cardinality) <<"Wrong number of endpoints.";
     if (numElements > capacity-1)
       increaseEdgeCapacity();

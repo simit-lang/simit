@@ -79,7 +79,7 @@ end
 
   //input layer
   for(int ii = 0; ii<l0; ii++){
-    nodeRefs.push_back(nodes.addElement());
+    nodeRefs.push_back(nodes.add());
   }
   inv.set(nodeRefs[0], 0.1);
   inv.set(nodeRefs[1], 0.421512737531634);
@@ -87,7 +87,7 @@ end
 
 
   //input bias node
-  simit::ElementRef n = nodes.addElement();
+  simit::ElementRef n = nodes.add();
   nodeRefs.push_back(n);
   inv.set(n, 1.0);
 
@@ -95,7 +95,7 @@ end
   vector<simit::ElementRef> middleLayer;
   int nInput = l0+1;
   for(int ii = 0; ii<l1; ii++){
-    nodeRefs.push_back(nodes.addElement());
+    nodeRefs.push_back(nodes.add());
   }
 
   //edges
@@ -107,7 +107,7 @@ end
         break;
       }
       int outputIdx = ii + nInput;
-      simit::ElementRef edge = edges.addElement(nodeRefs[inputIdx], nodeRefs[outputIdx]);
+      simit::ElementRef edge = edges.add(nodeRefs[inputIdx], nodeRefs[outputIdx]);
       edgeRefs.push_back(edge);
       //has to initialize with some random weights
       double rw = (ii*4.0+jj)/(4.0*l1)+0.01;

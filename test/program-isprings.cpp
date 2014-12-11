@@ -139,9 +139,9 @@ end
   simit::FieldRef<double> k = springs.addField<double>("k");
 
   // Build a 3-chain
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   x.set(p0, {0.0, 0.0, 0.0});
   x.set(p1, {1.0, 0.0, 0.0});
@@ -163,8 +163,8 @@ end
   ones.set(p1, {1.0, 1.0, 1.0});
   ones.set(p2, {1.0, 1.0, 1.0});
 
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
 
   // Initialize springs
   double rho = 1.0;

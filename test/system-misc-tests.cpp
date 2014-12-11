@@ -12,16 +12,16 @@ TEST(System, misc_triangle) {
   simit::Set<> verts;
   simit::FieldRef<double> b = verts.addField<double>("b");
 
-  ElementRef v0 = verts.addElement();
-  ElementRef v1 = verts.addElement();
-  ElementRef v2 = verts.addElement();
-  ElementRef v3 = verts.addElement();
+  ElementRef v0 = verts.add();
+  ElementRef v1 = verts.add();
+  ElementRef v2 = verts.add();
+  ElementRef v3 = verts.add();
 
   simit::Set<3> trigs(verts,verts,verts);
   simit::FieldRef<double> a = trigs.addField<double>("a");
 
-  ElementRef t0 = trigs.addElement(v0,v1,v2);
-  ElementRef t1 = trigs.addElement(v0,v2,v3);
+  ElementRef t0 = trigs.add(v0,v1,v2);
+  ElementRef t1 = trigs.add(v0,v2,v3);
 
   a.set(t0, 1.0);
   a.set(t1, 0.1);
@@ -47,9 +47,9 @@ TEST(DISABLED_System, misc_map_one_set) {
   Set<> points;
   FieldRef<double> a = points.addField<double>("a");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   a.set(p0, 1.0);
   a.set(p1, 2.0);

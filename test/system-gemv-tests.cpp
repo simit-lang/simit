@@ -14,9 +14,9 @@ TEST(System, gemv) {
   FieldRef<double> b = points.addField<double>("b");
   FieldRef<double> c = points.addField<double>("c");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -30,8 +30,8 @@ TEST(System, gemv) {
   Set<2> springs(points,points);
   FieldRef<double> a = springs.addField<double>("a");
 
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
 
   a.set(s0, 1.0);
   a.set(s1, 2.0);
@@ -62,9 +62,9 @@ TEST(System, gemv_diagonal) {
   FieldRef<double> b = points.addField<double>("b");
   FieldRef<double> c = points.addField<double>("c");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -74,8 +74,8 @@ TEST(System, gemv_diagonal) {
   Set<2> springs(points,points);
   FieldRef<double> a = springs.addField<double>("a");
 
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
 
   a.set(s0, 1.0);
   a.set(s1, 2.0);
@@ -101,9 +101,9 @@ TEST(System, gemv_nw) {
   FieldRef<double> b = points.addField<double>("b");
   FieldRef<double> c = points.addField<double>("c");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -113,8 +113,8 @@ TEST(System, gemv_nw) {
   Set<2> springs(points,points);
   FieldRef<double> a = springs.addField<double>("a");
 
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
 
   a.set(s0, 1.0);
   a.set(s1, 2.0);
@@ -140,9 +140,9 @@ TEST(System, gemv_sw) {
   FieldRef<double> b = points.addField<double>("b");
   FieldRef<double> c = points.addField<double>("c");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -152,8 +152,8 @@ TEST(System, gemv_sw) {
   Set<2> springs(points,points);
   FieldRef<double> a = springs.addField<double>("a");
 
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
 
   a.set(s0, 1.0);
   a.set(s1, 2.0);
@@ -180,9 +180,9 @@ TEST(System, gemv_assemble_from_points) {
   FieldRef<double> b = points.addField<double>("b");
   FieldRef<double> c = points.addField<double>("c");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -197,8 +197,8 @@ TEST(System, gemv_assemble_from_points) {
   // Springs
   Set<2> springs(points,points);
 
-  springs.addElement(p0,p1);
-  springs.addElement(p1,p2);
+  springs.add(p0,p1);
+  springs.add(p1,p2);
 
   // Compile program and bind arguments
   std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
@@ -221,9 +221,9 @@ TEST(System, gemv_blocked) {
   FieldRef<double,2> b = points.addField<double,2>("b");
   FieldRef<double,2> c = points.addField<double,2>("c");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, {1.0, 2.0});
   b.set(p1, {3.0, 4.0});
@@ -237,8 +237,8 @@ TEST(System, gemv_blocked) {
   Set<2> springs(points,points);
   FieldRef<double,2,2> a = springs.addField<double,2,2>("a");
 
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
 
   a.set(s0, {1.0, 2.0, 3.0, 4.0});
   a.set(s1, {5.0, 6.0, 7.0, 8.0});
@@ -273,9 +273,9 @@ TEST(System, gemv_blocked_nw) {
   FieldRef<double,2> b = points.addField<double,2>("b");
   FieldRef<double,2> c = points.addField<double,2>("c");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, {1.0, 2.0});
   b.set(p1, {3.0, 4.0});
@@ -289,8 +289,8 @@ TEST(System, gemv_blocked_nw) {
   Set<2> springs(points,points);
   FieldRef<double,2,2> a = springs.addField<double,2,2>("a");
 
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
 
   a.set(s0, {1.0, 2.0, 3.0, 4.0});
   a.set(s1, {5.0, 6.0, 7.0, 8.0});
@@ -326,9 +326,9 @@ TEST(System, gemv_blocked_computed) {
   FieldRef<double,2> c = points.addField<double,2>("c");
   FieldRef<double,2> x = points.addField<double,2>("x");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, {1.0, 2.0});
   b.set(p1, {3.0, 4.0});
@@ -344,8 +344,8 @@ TEST(System, gemv_blocked_computed) {
 
   // Springs
   Set<2> springs(points,points);
-  springs.addElement(p0,p1);
-  springs.addElement(p1,p2);
+  springs.add(p0,p1);
+  springs.add(p1,p2);
 
   // Compile program and bind arguments
   std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
@@ -376,9 +376,9 @@ TEST(System, gemv_inplace) {
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -388,8 +388,8 @@ TEST(System, gemv_inplace) {
   Set<2> springs(points,points);
   FieldRef<double> a = springs.addField<double>("a");
 
-  ElementRef s0 = springs.addElement(p0,p1);
-  ElementRef s1 = springs.addElement(p1,p2);
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
 
   a.set(s0, 1.0);
   a.set(s1, 2.0);
