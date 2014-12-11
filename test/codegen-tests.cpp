@@ -205,3 +205,29 @@ TEST(Codegen, atan2) {
   ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));
 
 }
+
+TEST(Codegen, forloop) {
+  Var i("i", Int);
+  Var out("out", Int);
+  Expr start = Expr(1);
+  Expr end = Expr(4);
+  Stmt body = AssignStmt::make(out, i);
+  
+  Stmt loop = ForRange::make(i, start, end, body);
+  
+  Func func = Func("testloop", {}, {out}, loop);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr outVar = 0;
+  Expr iVar = 0;
+  
+  function->bind("out", &outVar);
+  
+  function->runSafe();
+  
+  vector<int> results = toVectorOf<int>(outVar);
+  ASSERT_EQ(results[0], 3);
+
+}

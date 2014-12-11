@@ -257,6 +257,18 @@ void IRRewriter::visit(const Store *op) {
   }
 }
 
+void IRRewriter::visit(const ForRange *op) {
+  Expr start = rewrite(op->start);
+  Expr end = rewrite(op->end);
+  Stmt body = rewrite(op->body);
+  
+  if (body == op->body && start == op->start && end == op->end)
+    stmt = op;
+  else
+    stmt = ForRange::make(op->var, op->start, op->end, op->body);
+
+}
+
 void IRRewriter::visit(const For *op) {
   Stmt body = rewrite(op->body);
   if (body == op->body) {

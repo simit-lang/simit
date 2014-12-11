@@ -600,6 +600,44 @@ void LLVMBackend::visit(const For *op) {
   builder->SetInsertPoint(loopEnd);
 }
 
+void LLVMBackend::visit(const ir::ForRange *op) {
+  std::string iName = op->var.getName();
+  
+  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+  
+  // Loop Header
+  llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
+  
+  llvm::BasicBlock *loopBodyStart =
+    llvm::BasicBlock::Create(LLVM_CONTEXT, iName+"_loop_body", llvmFunc);
+  builder->CreateBr(loopBodyStart);
+  builder->SetInsertPoint(loopBodyStart);
+  
+  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
+  i->addIncoming(compile(op->start), entryBlock);
+  
+  // Loop Body
+  symtable.scope();
+  symtable.insert(iName, i);
+  compile(op->body);
+  symtable.unscope();
+  
+  // Loop Footer
+  llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
+  llvm::Value *i_nxt = builder->CreateAdd(i, builder->getInt32(1),
+                                          iName+"_nxt", false, true);
+  i->addIncoming(i_nxt, loopBodyEnd);
+
+  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, compile(op->end),
+                                                 iName+"_cmp");
+  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
+                                                       iName+"_loop_end",
+                                                       llvmFunc);
+  builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
+  builder->SetInsertPoint(loopEnd);
+
+}
+
 void LLVMBackend::visit(const IfThenElse *op) {
   not_supported_yet;
 }
