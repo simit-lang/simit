@@ -39,8 +39,8 @@ protected:
   /// used to return variables from Expr visit functions
   llvm::Value *val;
 
-  std::unique_ptr<llvm::IRBuilder<
-    true, llvm::ConstantFolder, llvm::IRBuilderDefaultInserter<true>>> builder;
+  std::unique_ptr<llvm::IRBuilder<true, llvm::ConstantFolder,
+                  llvm::IRBuilderDefaultInserter<true>>> builder;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void compile(const ir::Stmt &stmt);
@@ -75,7 +75,6 @@ protected:
 
 private:
   static bool llvmInitialized;
-
   llvm::Module *module;
 
   /// Get a pointer to the given field

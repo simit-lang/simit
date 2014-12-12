@@ -16,6 +16,9 @@ Func lower(Func func);
 Func lowerAssemblies(Func func, const TensorStorages &tensorStorages);
 
 Func lowerIndexExpressions(Func func, const TensorStorages &tensorStorages);
+
+/// Lower tensor reads and writes to loads and stores. Loads are lowered based
+/// on the storage scheme of the 
 Func lowerTensorAccesses(Func func);
 
 }} // namespace simit::ir

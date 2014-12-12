@@ -14,13 +14,29 @@ namespace internal {
 // TODO: GatherBuffers must take scopes into account
 class GatherLocalBuffers : public IRVisitor {
 public:
-  vector<Var> getBuffers() const {
+  vector<Var> getBuffers(const Func &func) {
+    buffers.clear();
+    found.clear();
+    func.accept(this);
     return buffers;
   }
 
 private:
   vector<Var> buffers;
   set<Var> found;
+
+  // Function parameters are allocated by caller, so add them to the found set
+  void visit(const Func *f) {
+    for (auto &arg : f->getArguments()) {
+      found.insert(arg);
+    }
+
+    for (auto &res : f->getResults()) {
+      found.insert(res);
+    }
+
+    IRVisitor::visit(f);
+  }
 
   void visit(const Store *op) {
     if (isa<VarExpr>(op->buffer)) {
@@ -32,27 +48,10 @@ private:
       }
     }
   }
-
-  void visit(const Func *f) {
-    buffers.clear();
-    found.clear();
-
-    for (auto &arg : f->getArguments()) {
-      found.insert(arg);
-    }
-
-    for (auto &res : f->getResults()) {
-      found.insert(res);
-    }
-
-    f->getBody().accept(this);
-  }
 };
 
 vector<Var> gatherLocalBuffers(Func func) {
-  GatherLocalBuffers gatherBuffers;
-  func.accept(&gatherBuffers);
-  return gatherBuffers.getBuffers();
+  return GatherLocalBuffers().getBuffers(func);
 }
 
 }}

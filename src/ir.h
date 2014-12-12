@@ -134,7 +134,6 @@ inline const S* to(Stmt s) {
 
 /// A Simit function
 namespace {
-// Content struct to make it cheap to copy the function to pass it around.
 struct FuncContent {
   int kind;
 

@@ -8,11 +8,11 @@ namespace simit {
 namespace ir {
 
 // lowerTensorAccesses
-Expr createLengthComputation(const IndexSet &indexSet) {
+static Expr createLengthComputation(const IndexSet &indexSet) {
   return Length::make(indexSet);
 }
 
-Expr createLengthComputation(const IndexDomain &dimensions) {
+static Expr createLengthComputation(const IndexDomain &dimensions) {
   iassert(dimensions.getIndexSets().size() > 0);
   const vector<IndexSet> &indexSets = dimensions.getIndexSets();
   Expr len = createLengthComputation(indexSets[0]);
@@ -22,7 +22,7 @@ Expr createLengthComputation(const IndexDomain &dimensions) {
   return len;
 }
 
-Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
+static Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
   iassert(dimensions.size() > 0);
   Expr len = createLengthComputation(dimensions[0]);
   for (size_t i=1; i < dimensions.size(); ++i) {
@@ -31,8 +31,8 @@ Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
   return len;
 }
 
-Expr createLoadExpr(Expr tensor, Expr index) {
-  // If the tensor is a load then we hada  nested tensor read. Since we can't
+static Expr createLoadExpr(Expr tensor, Expr index) {
+  // If the tensor is a load then we had a nested tensor read. Since we can't
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
     const Load *load = to<Load>(tensor);
@@ -49,7 +49,7 @@ Expr createLoadExpr(Expr tensor, Expr index) {
   }
 }
 
-Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
+static Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
   // If the tensor is a load then we hada  nested tensor read. Since we can't
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {

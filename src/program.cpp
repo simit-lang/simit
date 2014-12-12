@@ -24,10 +24,9 @@ static Function *compile(ir::Func func, internal::Backend *backend) {
 // class ProgramContent
 struct Program::ProgramContent {
   internal::ProgramContext ctx;
-  Diagnostics diags;
-
   internal::Frontend *frontend;
   internal::Backend *backend;
+  Diagnostics diags;
 };
 
 
