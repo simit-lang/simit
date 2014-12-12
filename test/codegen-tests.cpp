@@ -17,7 +17,7 @@ using namespace simit::internal;
 template <typename T>
 std::vector<T> toVectorOf(Expr expr) {
   std::vector<T> vec;
-  const Literal *lit = dynamic_cast<const Literal*>(expr.expr());
+  const Literal *lit = to<Literal>(expr);
   assert(lit);
 
   assert(lit->type.isTensor());

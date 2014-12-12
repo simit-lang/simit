@@ -4,6 +4,12 @@
 namespace simit {
 namespace util {
 
+/// Forward declare aquire and release methods
+/// @{
+template<typename T> void aquire(const T *);
+template<typename T> void release(const T *);
+/// @}
+
 /// This class provides an intrusive pointer, which is a pointer that stores its
 /// reference count in the managed class.  The managed class must therefore have
 /// a reference count field and provide two functions 'aquire' and 'release'

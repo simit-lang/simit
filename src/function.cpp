@@ -37,7 +37,7 @@ void Function::bind(const std::string &argName, ir::Expr *tensor) {
   uassert(tensor->type() == actuals[argName].getType())
       << "tensor type does not match function argument type";
 
-  uassert(dynamic_cast<const ir::Literal*>(tensor->expr()) != nullptr);
+  uassert(ir::to<ir::Literal>(*tensor) != nullptr);
 
   actuals[argName].bind(tensor);
   initRequired = true;

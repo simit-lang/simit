@@ -55,11 +55,11 @@ public:
 
 private:
   mutable long ref;
-  friend inline void aquire(const IRNode *node) {
+  friend void aquire(const IRNode *node) {
     ++node->ref;
   }
   
-  friend inline void release(const IRNode *node) {
+  friend void release(const IRNode *node) {
     if (--node->ref == 0) {
       delete node;
     }
@@ -83,52 +83,59 @@ struct StmtNode : public StmtNodeBase {
   void accept(IRVisitor *v) const { v->visit((const T *)this); }
 };
 
-class Expr : public util::IntrusivePtr<const ExprNodeBase> {
+struct IRHandle : util::IntrusivePtr<const IRNode> {
+  IRHandle() : util::IntrusivePtr<const IRNode>() {}
+  IRHandle(const IRNode *n) : util::IntrusivePtr<const IRNode>(n) {}
+};
+
+class Expr : public IRHandle {
 public:
-  Expr() : IntrusivePtr() {}
-  Expr(const ExprNodeBase *expr) : IntrusivePtr(expr) {}
+  Expr() : IRHandle() {}
+  Expr(const ExprNodeBase *expr) : IRHandle(expr) {}
   Expr(const Var &var);
 
   Expr(int val);
   Expr(double val);
 
-  Type type() const {return ptr->type;}
-
-  const ExprNodeBase *expr() const {return ptr;}
+  Type type() const {return static_cast<const ExprNodeBase*>(ptr)->type;}
 
   void accept(IRVisitor *v) const {ptr->accept(v);}
+
+  template <typename E> friend bool isa(Expr);
+  template <typename E> friend const E* to(Expr);
 };
 
 template <typename E>
 inline bool isa(Expr e) {
-  return e.defined() && dynamic_cast<const E*>(e.expr()) != nullptr;
+  return e.defined() && dynamic_cast<const E*>(e.ptr) != nullptr;
 }
 
 template <typename E>
 inline const E* to(Expr e) {
   iassert(isa<E>(e)) << "Wrong Expr type";
-  return static_cast<const E*>(e.expr());
+  return static_cast<const E*>(e.ptr);
 }
 
-class Stmt : public util::IntrusivePtr<const StmtNodeBase> {
+class Stmt : public IRHandle {
 public:
-  Stmt() : IntrusivePtr() {}
-  Stmt(const StmtNodeBase *stmt) : IntrusivePtr(stmt) {}
-
-  const StmtNodeBase *stmt() const {return ptr;}
+  Stmt() : IRHandle() {}
+  Stmt(const StmtNodeBase *stmt) : IRHandle(stmt) {}
 
   void accept(IRVisitor *v) const {ptr->accept(v);}
+
+  template <typename S> friend bool isa(Stmt);
+  template <typename S> friend const S* to(Stmt);
 };
 
 template <typename S>
 inline bool isa(Stmt s) {
-  return s.defined() && dynamic_cast<const S*>(s.stmt()) != nullptr;
+  return s.defined() && dynamic_cast<const S*>(s.ptr) != nullptr;
 }
 
 template <typename S>
 inline const S* to(Stmt s) {
   iassert(isa<S>(s)) << "Wrong Expr type";
-  return static_cast<const S*>(s.stmt());
+  return static_cast<const S*>(s.ptr);
 }
 
 
@@ -668,9 +675,6 @@ struct Pass : public StmtNode<Pass> {
 
 
 // Operators
-bool operator==(const Expr &, const Expr &);
-bool operator!=(const Expr &, const Expr &);
-
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
 

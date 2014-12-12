@@ -25,18 +25,10 @@ static size_t getTensorByteSize(const TensorType *tensorType) {
 }
 
 // class Expr
-Expr::Expr(int val) : IntrusivePtr(Literal::make(Int, &val)) {
+Expr::Expr(int val) : IRHandle(Literal::make(Int, &val)) {
 }
 
-Expr::Expr(double val) : IntrusivePtr(Literal::make(Float, &val)) {
-}
-
-bool operator==(const Expr &l, const Expr &r) {
-  return l.expr() == r.expr();
-}
-
-bool operator!=(const Expr &l, const Expr &r) {
-  return !(l == r);
+Expr::Expr(double val) : IRHandle(Literal::make(Float, &val)) {
 }
 
 // class Intrinsics
