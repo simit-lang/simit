@@ -229,12 +229,12 @@ struct Literal : public ExprNode<Literal> {
     size_t size = 0;
     switch (type.kind()) {
       case Type::Tensor: {
-          const TensorType *ttype = type.toTensor();
-          size = ttype->size() * ttype->componentType.bytes();
+        const TensorType *ttype = type.toTensor();
+        size = ttype->size() * ttype->componentType.bytes();
         break;
       }
-      case Type::Element:
       case Type::Set:
+      case Type::Element:
       case Type::Tuple:
         iassert(false) << "Only tensor and scalar literals currently supported";
         break;

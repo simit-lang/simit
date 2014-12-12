@@ -29,10 +29,16 @@ class GPUFunction : public simit::Function {
   CUdeviceptr allocArg(const ir::Type& var);
   // Get argument data as a Literal
   const ir::Literal& getArgData(Actual& actual);
+
+  // Struct for tracking arguments being pushed and pulled to/from GPU
+  struct GPUArgHandle {
+    std::map<std::string, CUdeviceptr*> devBufferFields;
+  };
+
   // Copy literal memory to device buffer
-  void pushArg(const ir::Literal& literal, CUdeviceptr &devBuffer);
+  GPUArgHandle pushArg(Actual& actual);
   // Copy device buffer into literal data block
-  void pullArg(const ir::Literal& literal, CUdeviceptr &devBuffer);
+  void pullArg(Actual& actual, GPUArgHandle &handle);
 
   std::unique_ptr<ir::Func> simitFunc;
   std::unique_ptr<llvm::Function> llvmFunc;

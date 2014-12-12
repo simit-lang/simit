@@ -43,7 +43,17 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   std::vector<llvm::Type*> paramTys;
   // Pass 1: Build param type list
   for (const simit::ir::Var &arg : irFunc.getArguments()) {
-    paramTys.push_back(createLLVMType(arg.getType()));
+    if (arg.getType().isSet()) {
+      // Set arguments get expanded into their fields, because this is
+      // how set data is pushed to the GPU.
+      for (auto field : arg.getType().toSet()
+               ->elementType.toElement()->fields) {
+        paramTys.push_back(createLLVMType(field.type));
+      }
+    }
+    else {
+      paramTys.push_back(createLLVMType(arg.getType()));
+    }
   }
   for (const simit::ir::Var &res : irFunc.getResults()) {
     paramTys.push_back(createLLVMType(res.getType()));
@@ -57,9 +67,22 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   // Pass 2: Name LLVM arguments, insert into symtable
   auto arg = func->arg_begin();
   for (auto &irArg : irFunc.getArguments()) {
-    arg->setName(irArg.getName());
-    symtable.insert(arg->getName(), &(*arg));
-    arg++;
+    if (irArg.getType().isSet()) {
+      for (auto field : irArg.getType().toSet()
+               ->elementType.toElement()->fields) {
+        // XXX: Is '$' a safe character to use here, in that it cannot
+        // be used normally for a symbol name?
+        auto name = irArg.getName() + "$" + field.name;
+        arg->setName(name);
+        symtable.insert(arg->getName(), &(*arg));
+        arg++;
+      }
+    }
+    else {
+      arg->setName(irArg.getName());
+      symtable.insert(arg->getName(), &(*arg));
+      arg++;
+    }
   }
   for (auto &irRes : irFunc.getResults()) {
     arg->setName(irRes.getName());

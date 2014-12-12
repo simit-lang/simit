@@ -128,6 +128,16 @@ public:
     return FieldRef<T, dimensions...>(fieldData);
   }
 
+  /// Get a raw pointer to field data
+  void *getFieldRawData(std::string fieldName) {
+    // need to check if the field actually exists because maps just add an entry
+    // if none exists
+    uassert(fieldNames.find(fieldName) != fieldNames.end())
+        << "Invalid field name in getField()";
+    FieldData *fieldData = fields[fieldNames[fieldName]];
+    return fieldData->data;
+  }
+
   /// Add a new element, returning its handle
   ElementRef addElement() {
     if (elements > capacity-1)
