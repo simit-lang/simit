@@ -42,6 +42,22 @@ TEST(VertexToEdgeIndex, chain) {
   ASSERT_EQ(edgeindex.getWhichEdgesForElement(p1, points)[0], 0);
 }
 
+TEST(NeighborIndex, chain) {
+  Set<> points;
+  auto p0 = points.add();
+  auto p1 = points.add();
+  auto p2 = points.add();
+
+  Set<2> edges(points, points);
+  edges.add(p0, p1);
+  edges.add(p1, p2);
+
+  internal::NeighborIndex nIndex(edges);
+  ASSERT_EQ(2, nIndex.getNumNeighbors(p0));
+  ASSERT_EQ(3, nIndex.getNumNeighbors(p1));
+  ASSERT_EQ(nIndex.getNeighbors(p1)[0], 0);
+}
+
 TEST(NeighborIndex, triangles) {
   Set<> points;
   auto p0 = points.add();
