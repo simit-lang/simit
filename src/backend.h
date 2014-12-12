@@ -4,7 +4,7 @@
 #include <vector>
 #include <map>
 
-#include "interfaces.h"
+#include "uncopyable.h"
 #include "function.h"
 
 namespace simit {

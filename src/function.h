@@ -5,7 +5,8 @@
 #include <vector>
 #include <map>
 
-#include "interfaces.h"
+#include "printable.h"
+#include "uncopyable.h"
 
 // TODO: Remove
 #include "ir.h"

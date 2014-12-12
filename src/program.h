@@ -6,6 +6,8 @@
 #include <vector>
 #include <memory>
 
+#include "uncopyable.h"
+
 namespace simit {
 
 class Diagnostics;
@@ -14,7 +16,7 @@ class Function;
 /// A Simit program. You can load Simit source code using the \ref loadString
 /// and \ref loadFile, register input sets using the \ref registerSet method,
 /// and compile the program using the \ref compile method.
-class Program {
+class Program : private interfaces::Uncopyable {
 public:
   /// Create a new Simit program with the given name.
   Program(const std::string &name="");
@@ -50,10 +52,6 @@ public:
 private:
   class ProgramContent;
   ProgramContent *impl;
-
-  // Uncopyable
-  Program(const Program&);
-  Program& operator=(const Program&);
 };
 
 }

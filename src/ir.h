@@ -9,7 +9,7 @@
 #include "ir_printer.h"
 
 #include "intrusive_ptr.h"
-#include "interfaces.h"
+#include "uncopyable.h"
 #include "types.h"
 #include "indexvar.h"
 #include "error.h"
