@@ -1,6 +1,7 @@
 #include "graph.h"
 
 #include <iostream>
+#include "indices.h"
 
 using namespace std;
 

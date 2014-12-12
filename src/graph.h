@@ -64,13 +64,16 @@ public:
     return e1.ident >= e2.ident;
   }
 
+  friend std::ostream &operator<<(std::ostream &os, const ElementRef& er) {
+    return os << er.ident;
+  }
+
 private:
   explicit inline ElementRef(int ident) : ident(ident) {}
   int ident;
 
   friend class SetBase;
-  template <int> friend class Set;
-  friend FieldRefBase;
+  friend class FieldRefBase;
   friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
   friend class internal::NeighborIndex;
@@ -83,13 +86,13 @@ private:
 class SetBase {
 public:
   SetBase() :  numElements(0), cardinality(0),
-            endpoints(nullptr), capacity(capacityIncrement) {}
+               endpoints(nullptr), capacity(capacityIncrement) {}
 
   template <typename ...T>
-  SetBase(const T& ...sets) : numElements(0), cardinality(sizeof...(sets)),
-                              endpoints(nullptr), capacity(capacityIncrement) {
-    endpointSets = epsMaker(endpointSets, sets...);
-    endpoints = (int*) calloc(sizeof(int), capacity*cardinality);
+  SetBase(const T& ...sets) : SetBase() {
+    this->cardinality  = sizeof...(sets);
+    this->endpointSets = epsMaker(endpointSets, sets...);
+    this->endpoints    = (int*) calloc(sizeof(int), capacity*cardinality);
   }
 
   ~SetBase() {
@@ -333,12 +336,12 @@ public:
   }
 
 private:
-  int numElements;                          // number of elements in the set
-  int cardinality;                          // number of element endpoints
-  std::vector<const SetBase*> endpointSets; // sets that the endpoints belong to
-  int* endpoints;                           // the endpoints of edge elements
+  int numElements;                           // number of elements in the set
+  int cardinality;                           // number of element endpoints
+  std::vector<const SetBase*> endpointSets;  // the sets the endpoints belong to
+  int* endpoints;                            // the endpoints of edge elements
 
-  int capacity;                   // current capacity of the set
+  int capacity;                              // current capacity of the set
   static const int capacityIncrement = 1024; // increment for capacity increases
 
   std::ostream &streamOut(std::ostream &os) const {
@@ -484,216 +487,7 @@ public:
 };
 
 
-namespace internal {
-
-/// A class for an index that maps from points to edges that contain that point
-/// differentiating between different endpoints
-class VertexToEdgeEndpointIndex {
- public:
-  template <int cardinality=0>
-  VertexToEdgeEndpointIndex(const Set<cardinality> &edgeSet) {
-    totalEdges = edgeSet.getSize();
-    for (int i=0; i<edgeSet.getCardinality(); ++i) {
-      auto es = edgeSet.getEndpointSet(i);
-      endpointSets.push_back(es);
-      
-      // allocate array to contain how many edges each element is part of
-      // calloc sets them all to zero
-      numEdgesForVertex.push_back((int*)calloc(sizeof(int),es->getSize()));
-    
-      // allocate array to contain which edges each element is part of
-      whichEdgesForVertex.push_back((int**)calloc(sizeof(int*),es->getSize()));
-      for (int i=0; i<es->getSize(); i++)
-        whichEdgesForVertex[endpointSets.size()-1][i] = (int*)malloc(sizeof(int)*
-          totalEdges);
-    }
-    
-    for (auto e : edgeSet) {
-      for (int epi=0; epi<(int)(endpointSets.size()); epi++) {
-        auto ep = edgeSet.getEndpoint(e, epi);
-          whichEdgesForVertex[epi][ep.ident][numEdgesForVertex[epi][ep.ident]++] =
-          e.ident;
-      }
-    }
-  }
-  
-  int getNumEdgesForElement(ElementRef vertex, int whichEndpoint) {
-    return numEdgesForVertex[whichEndpoint][vertex.ident];
-  }
-  
-  int* getWhichEdgesForElement(ElementRef vertex, int whichEndpoint) {
-    return whichEdgesForVertex[whichEndpoint][vertex.ident];
-  }
-  
-  std::vector<int*> getNumEdges() { return numEdgesForVertex; }
-  
-  std::vector<int**> getWhichEdges() { return whichEdgesForVertex; }
-  
-  int getTotalEdges() { return totalEdges; }
-  
-  ~VertexToEdgeEndpointIndex() {
-    for (auto ne : numEdgesForVertex)
-      free(ne);
-    for (int w=0; w<(int)(endpointSets.size()); w++) {
-      for (int i=0; i<endpointSets[w]->getSize(); i++)
-        free(whichEdgesForVertex[w][i]);
-    free(whichEdgesForVertex[w]);
-    }
-  }
- private:
-  std::vector<const SetBase*> endpointSets;       // the endpoint sets
-  std::vector<int*> numEdgesForVertex;      // number of edges the v belongs to
-  std::vector<int**> whichEdgesForVertex;   // which edges v belongs to
-  int totalEdges;
-};
-
-/// A class for an index that maps from points to edges that contain that point
-/// with no differentiation by endpoint
-class VertexToEdgeIndex {
- public:
-  template <int cardinality=0>
-  VertexToEdgeIndex(Set<cardinality>& edgeSet) {
-    totalEdges = edgeSet.getSize();
-    for (int i=0; i<edgeSet.getCardinality(); ++i) {
-      auto es = edgeSet.getEndpointSet(i);
-
-      endpointSets.push_back(es);
-      
-      // if we already have this set in the container, don't insert again.
-      // this case occurs if the edgeset is homogenous, for example.
-      if (numEdgesForVertex.count(es) > 0)
-        continue;
-
-      // allocate array to contain how many edges each element is part of
-      // calloc sets them all to zero
-      numEdgesForVertex[es] = (int*)calloc(sizeof(int), es->getSize());
-    
-      // allocate array to contain which edges each element is part of
-      whichEdgesForVertex[es] = (int**)calloc(sizeof(int*), es->getSize());
-      for (int i=0; i<es->getSize(); i++)
-        whichEdgesForVertex[es][i] = (int*)malloc(sizeof(int)*
-                                                           totalEdges);
-    }
-    
-    for (auto e : edgeSet) {
-      for (int epi=0; epi<(int)(endpointSets.size()); epi++) {
-        auto ep = edgeSet.getEndpoint(e, epi);
-        whichEdgesForVertex[endpointSets[epi]]
-          [ep.ident][numEdgesForVertex[endpointSets[epi]][ep.ident]++] =
-          e.ident;
-      }
-    }
-  }
-  
-  int getNumEdgesForElement(ElementRef vertex, const SetBase& whichSet) {
-    return numEdgesForVertex[&whichSet][vertex.ident];
-  }
-  
-  int* getWhichEdgesForElement(ElementRef vertex, const SetBase& whichSet) {
-    return whichEdgesForVertex[&whichSet][vertex.ident];
-  }
-  
-  std::map<const SetBase*,int*> getNumEdges() { return numEdgesForVertex; }
-  
-  std::map<const SetBase*,int**> getWhichEdges() { return whichEdgesForVertex; }
-  
-  int getTotalEdges() { return totalEdges; }
-  
-  ~VertexToEdgeIndex() {
-    for (auto ne : numEdgesForVertex) {
-      free(ne.second);
-    }
-    for (auto s : whichEdgesForVertex) {
-      for (int i=0; i<s.first->getSize(); i++)
-        free(s.second[i]);
-      free(s.second);
-    }
-  }
-  
- private:
-  std::vector<const SetBase*> endpointSets;           // the endpoint sets
-  std::map<const SetBase*,int*> numEdgesForVertex;    // number of edges the v
-                                                      // belongs to
-  std::map<const SetBase*,int**> whichEdgesForVertex; // which edges v belongs to
-  int totalEdges;
-};
-
-//neighbor indices for each vertex. Does not work for Heterogeneous graphs.
-class NeighborIndex {
- public:
-  template <int cardinality=0>
-  NeighborIndex(Set<cardinality>& edgeSet) {
-    VertexToEdgeIndex VToE(edgeSet);
-    //number of vertices per edge
-    unsigned edgeSize = edgeSet.getCardinality();
-    std::vector< std::vector< int> > edgeToVertex(edgeSet.getSize());
-    for(auto e : edgeSet){
-      edgeToVertex[e.ident].resize(cardinality,0);
-      for (unsigned epi=0; epi<edgeSize; epi++) {
-        auto ep = edgeSet.getEndpoint(e, epi);
-        edgeToVertex[e.ident][epi] = ep.ident;
-      }
-    }
-    
-    const SetBase* vSet = edgeSet.getEndpointSet(0);
-    startIndex = (int*)malloc(sizeof(int) * vSet->getSize());
-    startIndex[0] = 0;
-    for(auto v : *vSet){
-      int * edgeNeighbors = VToE.getWhichEdgesForElement(v, *vSet);
-      int   nEdgeNeighbor = VToE.getNumEdgesForElement  (v, *vSet);
-      std::vector<int> nbr;
-      for(int ii = 0; ii<nEdgeNeighbor; ii++){
-        int eIdx = edgeNeighbors[ii];
-        for(unsigned jj = 0; jj<edgeSize; jj++){
-          int nbrIdx = edgeToVertex[eIdx][jj];
-          addNoCollision(nbrIdx, nbr);
-        }
-      }
-      neighbors.insert(neighbors.end(), nbr.begin(), nbr.end());
-      startIndex[v.ident+1] = neighbors.size();
-    }
-  }
-  
-  int getNumNeighbors(ElementRef vertex) const {
-    return startIndex[vertex.ident+1] - startIndex[vertex.ident];
-  }
-  
-  const int* getNeighbors(ElementRef vertex) const {
-    return &neighbors[startIndex[vertex.ident]];
-  }
-  
-  const int* getStartIndices() const { return startIndex; }
-  
-  const int* getNeighborIndices() const { return &neighbors[0]; }
-  
-  ~NeighborIndex() {
-    free(startIndex);
-  }
-  
- private:
-  /// start index into neighbors array for vertex.
-  /// the last index is total size of neighbors array, which is also the number
-  /// of non-zeros in a vertex x vertex matrix.
-  int* startIndex;
-
-  /// which edges v belongs to
-  std::vector<int> neighbors;
-
-  void addNoCollision(int x, std::vector<int> & a){
-    for(unsigned int ii=0 ;ii<a.size();ii++){
-      if(a[ii]==x){
-        return;
-      }
-    }
-    a.push_back(x);
-  }
-  
-};
-
-} // internal
-
 // Field References
-
 namespace {
 
 /// The base class of field references.
