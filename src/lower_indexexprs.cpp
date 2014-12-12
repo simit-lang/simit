@@ -606,7 +606,7 @@ public:
       loopBody = flattenIndexExpressions(loopBody);
 
       UseDef fud(func);
-      Storage storage = getTensorStorages(func);
+      Storage storage = getStorage(func);
       loopBody = LowerIndexExpressions(&fud, storage).rewrite(loopBody);
     }
 

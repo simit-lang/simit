@@ -193,7 +193,7 @@ int main(int argc, const char* argv[]) {
       cout << func << endl << endl;;
     }
     
-    simit::ir::Storage storage = getTensorStorages(func);
+    simit::ir::Storage storage = getStorage(func);
 
     func = lowerAssemblies(func, storage);
     if (emitSimit) {

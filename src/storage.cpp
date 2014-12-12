@@ -95,7 +95,7 @@ const TensorStorage &Storage::get(const Var &tensor) const {
 
 
 // Free functions
-class GetTensorStorages : public IRVisitor {
+class GetStorage : public IRVisitor {
 public:
   Storage get(Func func) {
     for (auto &arg : func.getArguments())
@@ -157,13 +157,12 @@ private:
   }
 };
 
-Storage getTensorStorages(const Func &func) {
-  return GetTensorStorages().get(func);
+Storage getStorage(const Func &func) {
+  return GetStorage().get(func);
 }
 
-Storage getTensorStorages(const Stmt &stmt) {
-  return GetTensorStorages().get(stmt);
+Storage getStorage(const Stmt &stmt) {
+  return GetStorage().get(stmt);
 }
-
 
 }}

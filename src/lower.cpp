@@ -15,7 +15,7 @@ Func lower(Func func) {
   func = insertTemporaries(func);
   func = flattenIndexExpressions(func);
 
-  Storage tensorStorages = getTensorStorages(func);
+  Storage tensorStorages = getStorage(func);
 //  for (auto &storage : tensorStorages) {
 //    std::cout << storage.first << ": " << storage.second << std::endl;
 //  }

@@ -86,10 +86,10 @@ private:
 };
 
 /// Retrieve a storage descriptor for each tensor used in 'func'.
-Storage getTensorStorages(const Func &func);
+Storage getStorage(const Func &func);
 
 /// Retrieve a storage descriptor for each tensor used in 'stmt'
-Storage getTensorStorages(const Stmt &stmt);
+Storage getStorage(const Stmt &stmt);
 
 }}
 
