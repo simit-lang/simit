@@ -18,12 +18,9 @@ class Function;
 /// and compile the program using the \ref compile method.
 class Program : private interfaces::Uncopyable {
 public:
-  /// Create a new Simit program with the given name.
-  Program(const std::string &name="");
+  /// Create a new Simit program.
+  Program();
   ~Program();
-
-  /// Get program name.
-  std::string getName() const;
 
   /// Add the Simit code in the given string to the program.
   /// \return 0 on success, and 1 if the Simit code has errors. If the code
@@ -50,8 +47,8 @@ public:
   friend std::ostream &operator<<(std::ostream&, const Program&);
 
 private:
-  class ProgramContent;
-  ProgramContent *impl;
+  struct ProgramContent;
+  ProgramContent *content;
 };
 
 }
