@@ -105,7 +105,7 @@ NeighborIndex::NeighborIndex(const SetBase &edgeSet) {
   }
 
   const SetBase* vSet = edgeSet.getEndpointSet(0);
-  startIndex = (int*)malloc(sizeof(int) * vSet->getSize());
+  startIndex = (int*)malloc(sizeof(int) * (vSet->getSize()+1));
   startIndex[0] = 0;
   for(auto v : *vSet){
     int * edgeNeighbors = VToE.getWhichEdgesForElement(v, *vSet);
