@@ -178,16 +178,26 @@ void LLVMBackend::visit(const TupleRead *op) {
 }
 
 void LLVMBackend::visit(const ir::IndexRead *op) {
-  // For now we only support one, hard-coded, index namely endpoints.
+  // For now we only support the two hard-coded indices endpoints and neighbors
   // TODO: Add support for different indices (contained in the Set type).
-  iassert(op->indexName == "endpoints");
 
-  iassert(op->edgeSet.type().isSet());
-  iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
+  if (op->indexName == "endpoints") {
+    iassert(op->edgeSet.type().isSet());
+    iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
 
-  llvm::Value *edgeSetValue = compile(op->edgeSet);
-  val = builder->CreateExtractValue(edgeSetValue, {1},
-                                    edgeSetValue->getName()+"."+op->indexName);
+    llvm::Value *edgeSetValue = compile(op->edgeSet);
+    val = builder->CreateExtractValue(edgeSetValue, {1},
+                                      edgeSetValue->getName()+"."+op->indexName);
+  }
+  else if (op->indexName == "neighbors.summary") {
+    not_supported_yet;
+  }
+  else if (op->indexName == "neighbors.data") {
+
+  }
+  else {
+    ierror;
+  }
 }
 
 void LLVMBackend::visit(const ir::Length *op) {
@@ -666,7 +676,10 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
   else {
     const SetType *setType = elemOrSet.type().toSet();
     elemType = setType->elementType.toElement();
-    fieldsOffset = (setType->endpointSets.size() == 0) ? 1 : 2;
+    fieldsOffset = 1; // jump over set size
+    if (setType->endpointSets.size() > 0) {
+      fieldsOffset += NUM_EDGE_INDEX_ELEMENTS; // jump over index pointers
+    }
   }
   assert(fieldsOffset >= 0);
 

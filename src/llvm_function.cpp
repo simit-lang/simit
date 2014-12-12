@@ -16,6 +16,7 @@
 
 #include "llvm_codegen.h"
 #include "graph.h"
+#include "indices.h"
 
 using namespace std;
 
@@ -76,8 +77,8 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
       llvm::Function *initFunc = getInitFunc();
       llvm::Function *deinitFunc = getDeinitFunc();
       ((FuncPtrType)executionEngine->getPointerToFunction(initFunc))();
-      deinit = FuncType((FuncPtrType)executionEngine
-                        ->getPointerToFunction(deinitFunc));
+      auto fptr = executionEngine->getPointerToFunction(deinitFunc);
+      deinit = FuncType((FuncPtrType)fptr);
     }
     return FuncType((FuncPtrType)executionEngine->getPointerToFunction(llvmFunc));
   }
@@ -109,7 +110,17 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
 
           // Edge indices (if the set is an edge set)
           if (setType->endpointSets.size() > 0) {
+
+            // Endpoints index
             setData.push_back(llvmPtr(LLVM_INTPTR, set->getEndpointsData()));
+
+            // Edges index
+            // TODO
+
+            // Neighbor index
+            const internal::NeighborIndex *neighbors = set->getNeighborIndex();
+            setData.push_back(llvmPtr(LLVM_INTPTR,neighbors->getStartIndex()));
+            setData.push_back(llvmPtr(LLVM_INTPTR,neighbors->getNeighborIndex()));
           }
 
           // Fields

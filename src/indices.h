@@ -77,14 +77,15 @@ class NeighborIndex {
   int getNumNeighbors(ElementRef vertex) const {
     return startIndex[vertex.ident+1] - startIndex[vertex.ident];
   }
-  
-  const int* getNeighbors(ElementRef vertex) const {
-    return &neighbors[startIndex[vertex.ident]];
+
+  // Get a pointer to the neighbors of the given element.
+  const int* getNeighbors(ElementRef element) const {
+    return &neighbors[startIndex[element.ident]];
   }
+
+  const int* getStartIndex() const { return startIndex; }
   
-  const int* getStartIndices() const { return startIndex; }
-  
-  const int* getNeighborIndices() const { return &neighbors[0]; }
+  const int* getNeighborIndex() const { return &neighbors[0]; }
   
  private:
   /// start index into neighbors array for vertex.

@@ -31,6 +31,9 @@
 namespace simit {
 namespace internal {
 
+/// The number of index struct elements that are compiled into an edge struct.
+extern const int NUM_EDGE_INDEX_ELEMENTS;
+
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
 llvm::ConstantFP* llvmFP(double val, unsigned bits=64);

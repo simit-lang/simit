@@ -84,6 +84,10 @@ llvm::Type *createLLVMType(const TensorType *ttype) {
   return llvmPtrType(ttype->componentType);
 }
 
+/// One for endpoints, two for neighbor index
+extern const int NUM_EDGE_INDEX_ELEMENTS = 3;
+
+// TODO: replace anonymous struct with one struct per element and set type
 llvm::StructType *createLLVMType(const ir::SetType *setType) {
   const ElementType *elemType = setType->elementType.toElement();
   vector<llvm::Type*> llvmFieldTypes;
@@ -93,6 +97,11 @@ llvm::StructType *createLLVMType(const ir::SetType *setType) {
 
   // Edge indices (if the set is an edge set)
   if (setType->endpointSets.size() > 0) {
+    // Endpoints
+    llvmFieldTypes.push_back(LLVM_INTPTR);
+
+    // Neighbor Index
+    llvmFieldTypes.push_back(LLVM_INTPTR);
     llvmFieldTypes.push_back(LLVM_INTPTR);
   }
 
