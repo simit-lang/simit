@@ -49,12 +49,12 @@ inline std::ostream &operator<<(std::ostream &os, const Var &v) {
 /// (Simit IR)
 struct IRNode : private simit::interfaces::Uncopyable {
 public:
-  IRNode() : ref(0) {}
+  IRNode() {}
   virtual ~IRNode() {}
   virtual void accept(IRVisitor *visitor) const = 0;
 
 private:
-  mutable long ref;
+  mutable long ref = 0;
   friend void aquire(const IRNode *node) {
     ++node->ref;
   }

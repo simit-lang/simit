@@ -1,12 +1,20 @@
-#ifndef SIMIT_TENSOR_STORAGE_H
-#define SIMIT_TENSOR_STORAGE_H
+#ifndef SIMIT_STORAGE_H
+#define SIMIT_STORAGE_H
 
-#include "ir.h"
+#include <map>
+#include <memory>
+
+#include "intrusive_ptr.h"
 
 namespace simit {
 namespace ir {
 
-/// Describes the storage arrangement of a tensor.
+class Func;
+class Var;
+class Expr;
+class Stmt;
+
+/// The storage arrangement of a tensor (e.g. dense or stored on a set).
 class TensorStorage {
 public:
   enum Kind {
@@ -36,44 +44,52 @@ public:
     SystemUnreduced
   };
 
-  TensorStorage() : kind(Undefined) {}
-  TensorStorage(Kind kind) : kind(kind) {}
+  TensorStorage();
+  TensorStorage(Kind kind);
 
   /// Retrieve the tensor storage kind.
-  Kind getKind() const { return kind; }
+  Kind getKind() const;
 
   /// True if the tensor is stored on a system, false otherwise.
-  bool isSystem() const {
-    return kind==SystemNone || kind==SystemReduced || kind==SystemUnreduced;
-  }
+  bool isSystem() const;
 
-  void setSystemStorageSet(Expr systemStorageSet) {
-    this->systemStorageSet = systemStorageSet;
-  }
+  void setSystemStorageSet(const Expr &systemStorageSet);
 
-  Expr getSystemTargetSet() const {
-    iassert(!isSystem() || systemStorageSet.defined())
-        << "System storages require the target set be provided";
-    return systemStorageSet;
-  }
-
+  const Expr &getSystemTargetSet() const;
 
 private:
-  Kind kind;
-
-  /// The target set that was used to assemble the system if the tensor is
-  /// stored on a system, false otherwise.
-  Expr systemStorageSet;
+  struct Content;
+  std::shared_ptr<Content> content;
 };
 std::ostream &operator<<(std::ostream &os, const TensorStorage &);
 
-typedef std::map<Var,TensorStorage> TensorStorages;
+/// The storage of a set of tensors.
+class Storage {
+public:
+  Storage();
+
+  /// Add storage for a tensor variable.
+  void add(const Var &tensor, TensorStorage tensorStorage);
+
+  /// True if the tensor has a storage descriptor, false otherwise.
+  bool hasStorage(const Var &tensor) const;
+
+  /// Retrieve the storage of a tensor variable to modify it.
+  TensorStorage &get(const Var &tensor);
+
+  /// Retrieve the storage of a tensor variable to inspect it.
+  const TensorStorage &get(const Var &tensor) const;
+
+private:
+  struct Content;
+  std::shared_ptr<Content> content;
+};
 
 /// Retrieve a storage descriptor for each tensor used in 'func'.
-TensorStorages getTensorStorages(Func func);
+Storage getTensorStorages(const Func &func);
 
 /// Retrieve a storage descriptor for each tensor used in 'stmt'
-TensorStorages getTensorStorages(Stmt stmt);
+Storage getTensorStorages(const Stmt &stmt);
 
 }}
 

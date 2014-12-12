@@ -1,7 +1,7 @@
 #include "lower.h"
 
 #include "ir_rewriter.h"
-#include "tensor_storage.h"
+#include "storage.h"
 #include "inline.h"
 
 using namespace std;
@@ -9,19 +9,18 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-inline bool hasStorage(std::vector<Var> vars, const TensorStorages &storages) {
+inline bool hasStorage(std::vector<Var> vars, const Storage &storage) {
   for (auto &var : vars) {
-    if (storages.find(var) == storages.end()) return false;
+    if (!storage.hasStorage(var)) return false;
   }
   return true;
 }
 
-inline bool hasSameStorage(std::vector<Var> vars,
-                           const TensorStorages &storages) {
+inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
   if (vars.size() == 0) return true;
-  TensorStorage::Kind storage = storages.at(vars[0]).getKind();
+  TensorStorage::Kind firstStorage = storage.get(vars[0]).getKind();
   for (auto &var : vars) {
-    if (storages.at(var).getKind() != storage) return false;
+    if (storage.get(var).getKind() != firstStorage) return false;
   }
   return true;
 }
@@ -29,26 +28,25 @@ inline bool hasSameStorage(std::vector<Var> vars,
 
 class LowerAssemblies : public IRRewriter {
 public:
-  LowerAssemblies(const TensorStorages &storages)
-      : storages(storages) {}
+  LowerAssemblies(const Storage &storage) : storage(storage) {}
 
 private:
-  TensorStorages storages;
+  Storage storage;
 
   void visit(const Map *op) {
     stmt = op;
     return;
 
-    iassert(hasStorage(op->vars, storages))
+    iassert(hasStorage(op->vars, storage))
         << "Every assembled tensor should have a storage descriptor";
-    tassert(hasSameStorage(op->vars, storages))
+    tassert(hasSameStorage(op->vars, storage))
         << "All assembled tensors in the same Map must have the same storage.";
 
     if (op->vars.size() == 0
-        || storages.at(op->vars[0]).getKind() != TensorStorage::SystemNone) {
-      TensorStorage::Kind storage = storages.at(op->vars[0]).getKind();
+        || storage.get(op->vars[0]).getKind() != TensorStorage::SystemNone) {
+      TensorStorage::Kind tensorStorage = storage.get(op->vars[0]).getKind();
 
-      if (storage == TensorStorage::SystemReduced) {
+      if (tensorStorage == TensorStorage::SystemReduced) {
         Func kernel = op->function;
         Stmt body = kernel.getBody();
 
@@ -72,8 +70,8 @@ private:
   }
 };
 
-Func lowerAssemblies(Func func, const TensorStorages &tensorStorages) {
-  Stmt body = LowerAssemblies(tensorStorages).rewrite(func.getBody());
+Func lowerAssemblies(Func func, const Storage &storage) {
+  Stmt body = LowerAssemblies(storage).rewrite(func.getBody());
   return Func(func, body);
 }
 

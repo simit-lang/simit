@@ -11,7 +11,7 @@
 #include "llvm_backend.h"
 #include "error.h"
 #include "util.h"
-#include "tensor_storage.h"
+#include "storage.h"
 
 using namespace std;
 
@@ -193,15 +193,15 @@ int main(int argc, const char* argv[]) {
       cout << func << endl << endl;;
     }
     
-    simit::ir::TensorStorages tensorStorages = getTensorStorages(func);
+    simit::ir::Storage storage = getTensorStorages(func);
 
-    func = lowerAssemblies(func, tensorStorages);
+    func = lowerAssemblies(func, storage);
     if (emitSimit) {
       cout << "--- Lower Maps" << endl;
       cout << func << endl << endl;;
     }
 
-    func = lowerIndexExpressions(func, tensorStorages);
+    func = lowerIndexExpressions(func, storage);
     if (emitSimit) {
       cout << "--- Lower Index Expressions" << endl;
       cout << func << endl << endl;;

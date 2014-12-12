@@ -17,15 +17,15 @@ template<typename T> void release(const T *);
 ///
 /// For example:
 /// struct X {
-///   mutable long ref;
-///   X() : ref(0) {}
-///
-///   friend void aquire(X *x) { ++x->ref; }
-///   friend void release(X *x) { if (--x->ref ==0) delete x; }
+///   mutable long ref = 0;
+///   friend void aquire(const X *x) { ++x->ref; }
+///   friend void release(const X *x) { if (--x->ref ==0) delete x; }
 /// };
 template <class T>
 class IntrusivePtr {
 public:
+  T *ptr;
+
   /// Allocate an undefined IntrusivePtr
   IntrusivePtr() : ptr(nullptr) {}
 
@@ -120,9 +120,6 @@ public:
   bool operator>=(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
     return p1.ptr >= p2.ptr;
   }
-
-protected:
-  T *ptr;
 };
 
 }} // namespace simit::util

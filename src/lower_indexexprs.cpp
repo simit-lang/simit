@@ -16,7 +16,7 @@
 #include "error.h"
 #include "ir_queries.h"
 #include "substitute.h"
-#include "tensor_storage.h"
+#include "storage.h"
 #include "inline.h"
 
 #include "flatten.h"
@@ -507,12 +507,12 @@ private:
 
 class LowerIndexExpressions : public IRRewriter {
 public:
-  LowerIndexExpressions(const UseDef *ud, const TensorStorages &tensorStorages)
-      : usedef(ud), tensorStorages(tensorStorages) {}
+  LowerIndexExpressions(const UseDef *ud, const Storage &storage)
+      : usedef(ud), storage(storage) {}
 
 private:
   const UseDef *usedef;
-  TensorStorages tensorStorages;
+  Storage storage;
 
   /// Lower the index statement.  Defined after the LoopBuilder due to a
   /// circular dependency.
@@ -552,8 +552,8 @@ private:
 
 class LoopBuilder : public SIGVisitor {
 public:
-  LoopBuilder(const UseDef *ud, const TensorStorages &tensorStorages)
-      : usedef(ud), tensorStorages(tensorStorages) {}
+  LoopBuilder(const UseDef *ud, const Storage &storage)
+      : usedef(ud), storage(storage) {}
 
   Stmt create(Stmt computeStmt) {
     const IndexExpr *indexExpr = GetIndexExpr().get(computeStmt);
@@ -563,7 +563,7 @@ public:
 //      std::cout << storage.first << ": " << storage.second << std::endl;
 //    }
 
-    SIG sig = SIGBuilder(tensorStorages).create(indexExpr);
+    SIG sig = SIGBuilder(storage).create(indexExpr);
 //    std::cout << *indexExpr << std::endl;
 //    std::cout << sig << std::endl;
 
@@ -576,7 +576,7 @@ public:
     std::vector<const SIGEdge *> edges = sig.getEdges();
 
     if (edges.size() == 0) { //&& indexExpr->type.toTensor()->dimensions.size()) {
-      loopBody = LowerIndexExpressions(usedef, tensorStorages).rewrite(loopBody);
+      loopBody = LowerIndexExpressions(usedef, storage).rewrite(loopBody);
     }
 
     if (edges.size() > 1) {
@@ -606,8 +606,8 @@ public:
       loopBody = flattenIndexExpressions(loopBody);
 
       UseDef fud(func);
-      TensorStorages storageDescriptors = getTensorStorages(func);
-      loopBody = LowerIndexExpressions(&fud, storageDescriptors).rewrite(loopBody);
+      Storage storage = getTensorStorages(func);
+      loopBody = LowerIndexExpressions(&fud, storage).rewrite(loopBody);
     }
 
     stmt = loopBody;
@@ -620,7 +620,7 @@ public:
 
 private:
   const UseDef *usedef;
-  TensorStorages tensorStorages;
+  Storage storage;
 
   LoopVars loopVars;
   Stmt initToZeroStmt;
@@ -682,12 +682,12 @@ private:
 };
 
 Stmt LowerIndexExpressions::lower(Stmt stmt) {
-  return LoopBuilder(usedef, tensorStorages).create(stmt);
+  return LoopBuilder(usedef, storage).create(stmt);
 }
 
-Func lowerIndexExpressions(Func func, const TensorStorages &tensorStorages) {
+Func lowerIndexExpressions(Func func, const Storage &storage) {
   UseDef ud(func);
-  Stmt body = LowerIndexExpressions(&ud, tensorStorages).rewrite(func.getBody());
+  Stmt body = LowerIndexExpressions(&ud, storage).rewrite(func.getBody());
   return Func(func, body);
 }
 

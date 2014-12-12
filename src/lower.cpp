@@ -4,7 +4,7 @@
 
 #include "temps.h"
 #include "flatten.h"
-#include "tensor_storage.h"
+#include "storage.h"
 
 using namespace std;
 
@@ -15,7 +15,7 @@ Func lower(Func func) {
   func = insertTemporaries(func);
   func = flattenIndexExpressions(func);
 
-  TensorStorages tensorStorages = getTensorStorages(func);
+  Storage tensorStorages = getTensorStorages(func);
 //  for (auto &storage : tensorStorages) {
 //    std::cout << storage.first << ": " << storage.second << std::endl;
 //  }
