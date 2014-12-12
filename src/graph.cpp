@@ -20,6 +20,16 @@ void SetBase::increaseCapacity() {
   capacity += capacityIncrement;
 }
 
+const internal::NeighborIndex *SetBase::getNeighborIndex() const {
+  iassert(getCardinality() == 2) <<"neighbors index only supported for 2-edges";
+  if (getCardinality() >= 2 && neighbors == nullptr) {
+    // Cast to non-const since adding a neighbor index does not change the 
+    this->neighbors = new internal::NeighborIndex(*this);
+  }
+  std::cout << this->neighbors << std::endl;
+  return this->neighbors;
+}
+
 
 // Graph generators
 void createElements(Set<> *elements, unsigned num) {

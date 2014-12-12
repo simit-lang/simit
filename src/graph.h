@@ -86,7 +86,8 @@ private:
 class SetBase {
 public:
   SetBase() :  numElements(0), cardinality(0),
-               endpoints(nullptr), capacity(capacityIncrement) {}
+               endpoints(nullptr), capacity(capacityIncrement),
+               neighbors(nullptr) {}
 
   template <typename ...T>
   SetBase(const T& ...sets) : SetBase() {
@@ -331,6 +332,11 @@ public:
   /// Get an array containing, for each edge in a set, the elements it connects.
   const int *getEndpointsData() const {return endpoints;}
 
+  /// If this set is an edge set with cardinality 2 then return an index that
+  /// for each element in the first connected set contains it's neighbors in the
+  /// second connceted set. Otherwise, return nullptr.
+  const internal::NeighborIndex *getNeighborIndex() const;
+
   friend std::ostream &operator<<(std::ostream &os, const SetBase &set) {
     return set.streamOut(os);
   }
@@ -343,6 +349,8 @@ private:
 
   int capacity;                              // current capacity of the set
   static const int capacityIncrement = 1024; // increment for capacity increases
+
+  mutable internal::NeighborIndex *neighbors;// neighbor index (lazily created)
 
   std::ostream &streamOut(std::ostream &os) const {
     os << "{";
