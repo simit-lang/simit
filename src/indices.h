@@ -67,7 +67,8 @@ class VertexToEdgeIndex {
 };
 
 
-/// Maps elements to their neighbors. Does not work for Heterogeneous graphs.
+/// Maps elements to their neighbors through an edge set. Note that an element
+/// is its own neighbor. This index does not work for heterogeneous graphs.
 class NeighborIndex {
  public:
   NeighborIndex(const SetBase &edgeSet);

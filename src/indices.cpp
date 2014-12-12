@@ -95,26 +95,18 @@ NeighborIndex::NeighborIndex(const SetBase &edgeSet) {
   //number of vertices per edge
   unsigned cardinality = edgeSet.getCardinality();
 
-  std::vector<std::vector<int>> edgeToVertex(edgeSet.getSize());
-  for(auto e : edgeSet){
-    edgeToVertex[e.ident].resize(cardinality, 0);
-    for (unsigned epi=0; epi<cardinality; epi++) {
-      auto ep = edgeSet.getEndpoint(e, epi);
-      edgeToVertex[e.ident][epi] = ep.ident;
-    }
-  }
-
   const SetBase* vSet = edgeSet.getEndpointSet(0);
   startIndex = (int*)malloc(sizeof(int) * (vSet->getSize()+1));
   startIndex[0] = 0;
   for(auto v : *vSet){
     int * edgeNeighbors = VToE.getWhichEdgesForElement(v, *vSet);
     int   nEdgeNeighbor = VToE.getNumEdgesForElement  (v, *vSet);
+
     std::vector<int> nbr;
     for(int ii = 0; ii<nEdgeNeighbor; ii++){
       int eIdx = edgeNeighbors[ii];
       for(unsigned jj = 0; jj<cardinality; jj++){
-        int nbrIdx = edgeToVertex[eIdx][jj];
+        int nbrIdx = edgeSet.getEndpoint(ElementRef(eIdx), jj).ident;
         addNoCollision(nbrIdx, nbr);
       }
     }
