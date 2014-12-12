@@ -236,6 +236,21 @@ public:
     return endpointSets[loc];
   }
 
+  /// A set is homogeneous of all it's endpoints come from the same set,
+  /// otherwise it is heterogeneous.
+  bool isHomogeneous() const {
+    if (cardinality > 0) {
+      const SetBase *firstEndpointSet = getEndpointSet(0);
+      for (int i=1; i < cardinality; ++i) {
+        // Endpointsets are the same if their pointers point at the same set
+        if (getEndpointSet(i) != firstEndpointSet) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
   /// Get an endpoint of an edge
   ElementRef getEndpoint(ElementRef edge, int endpointNum) const {
     return ElementRef(endpoints[edge.ident*cardinality+endpointNum]);
