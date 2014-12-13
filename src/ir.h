@@ -572,6 +572,7 @@ struct FieldWrite : public StmtNode<FieldWrite> {
 };
 
 struct TensorWrite : public StmtNode<TensorWrite> {
+  // TODO: Consider whether to make tensor a Var
   Expr tensor;
   std::vector<Expr> indices;
   Expr value;

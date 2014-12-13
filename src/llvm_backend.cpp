@@ -24,7 +24,6 @@
 #include "ir.h"
 #include "ir_printer.h"
 #include "llvm_function.h"
-#include "gather_buffers.h"
 #include "macros.h"
 #include "runtime.h"
 
@@ -44,6 +43,10 @@ bool LLVMBackend::llvmInitialized = false;
 
 LLVMBackend::LLVMBackend() : val(nullptr),
                              builder(new llvm::IRBuilder<>(LLVM_CONTEXT)) {
+
+  // For now we'll assume fields are always dense row major
+  this->fieldStorage = TensorStorage::DenseRowMajor;
+
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
@@ -55,24 +58,24 @@ LLVMBackend::~LLVMBackend() {}
 simit::Function *LLVMBackend::compile(Func func) {
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
-  module = new llvm::Module(func.getName(), LLVM_CONTEXT);
+  this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
+  this->storage = func.getStorage();
+//  std::cout << this->storage << std::endl;
 
-  // Gather the buffers the func uses locally
-  vector<llvm::Value*> bufferValues;
-  vector<Var> buffers = gatherLocalBuffers(func);
-  for (auto &buffer : buffers) {
-    iassert(buffer.getType().isTensor());
-    llvm::Type *ctype =
-        createLLVMType(buffer.getType().toTensor()->componentType);
+  // Create global buffer variables
+  map<Var, llvm::Value*> buffers;
+  for (auto &var : storage) {
+    iassert(var.getType().isTensor());
+    llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
     llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
 
-    llvm::GlobalVariable* bufferValue =
+    llvm::GlobalVariable* buffer =
         new llvm::GlobalVariable(*module, globalType,
                                  false, llvm::GlobalValue::InternalLinkage,
                                  llvm::ConstantPointerNull::get(globalType),
-                                 buffer.getName());
-    bufferValue->setAlignment(8);
-    bufferValues.push_back(bufferValue);
+                                 var.getName());
+    buffer->setAlignment(8);
+    buffers.insert(pair<Var,llvm::Value*>(var,buffer));
   }
 
   // Create compute function
@@ -83,8 +86,9 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmFunc->getArgumentList()) {
     symtable.insert(arg.getName(), &arg);
   }
-  for (auto &tmp : bufferValues) {
-    llvm::Value *llvmTmp = builder->CreateLoad(tmp, tmp->getName());
+  for (auto &var : storage) {
+    llvm::Value *buffer = buffers[var];
+    llvm::Value *llvmTmp = builder->CreateLoad(buffer, buffer->getName());
     symtable.insert(llvmTmp->getName(), llvmTmp);
   }
   compile(func.getBody());
@@ -114,19 +118,19 @@ simit::Function *LLVMBackend::compile(Func func) {
     symtable.insert(arg.getName(), &arg);
   }
 
-  for (size_t i=0; i < buffers.size(); ++i) {
-    Type type = buffers[i].getType();
+  for (auto &var : storage) {
+    Type type = var.getType();
     llvm::Type *llvmType = createLLVMType(type);
 
     iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
-    llvm::Value *len = emitComputeLen(ttype);
+    llvm::Value *len = emitComputeLen(ttype, storage.get(var));
     unsigned compSize = ttype->componentType.bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(compSize));
     llvm::Value *mem = builder->CreateCall(malloc, size);
 
     mem = builder->CreateCast(llvm::Instruction::CastOps::BitCast,mem,llvmType);
-    builder->CreateStore(mem, bufferValues[i]);
+    builder->CreateStore(mem, buffers[var]);
   }
   builder->CreateRetVoid();
   symtable.clear();
@@ -140,8 +144,8 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmDeinitFunc->getArgumentList()) {
     symtable.insert(arg.getName(), &arg);
   }
-  for (size_t i=0; i < buffers.size(); ++i) {
-    llvm::Value *tmpPtr = builder->CreateLoad(bufferValues[i]);
+  for (auto &var : storage) {
+    llvm::Value *tmpPtr = builder->CreateLoad(buffers[var]);
     tmpPtr = builder->CreateCast(llvm::Instruction::CastOps::BitCast,
                                  tmpPtr, LLVM_INT8PTR);
     builder->CreateCall(free, tmpPtr);
@@ -471,7 +475,8 @@ void LLVMBackend::visit(const AssignStmt *op) {
   llvm::Value *varPtr = symtable.get(varName);
   iassert(varPtr->getType()->isPointerTy());
 
-  const TensorType *varType = op->var.getType().toTensor();
+  Var var = op->var;
+  const TensorType *varType = var.getType().toTensor();
   const TensorType *valType = op->value.type().toTensor();
 
   // Assigning a scalar to a scalar
@@ -484,7 +489,7 @@ void LLVMBackend::visit(const AssignStmt *op) {
     if (isa<Literal>(op->value) &&
         ((double*)to<Literal>(op->value)->data)[0] == 0.0) {
       // emit memset 0
-      llvm::Value *varLen = emitComputeLen(varType);
+      llvm::Value *varLen = emitComputeLen(varType, storage.get(var));
       unsigned compSize = varType->componentType.bytes();
       llvm::Value *varSize = builder->CreateMul(varLen, llvmInt(compSize));
       builder->CreateMemSet(varPtr, llvmInt(0,8), varSize, compSize);
@@ -525,7 +530,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
 
       const TensorType *tensorFieldType = fieldType.toTensor();
 
-      llvm::Value *fieldLen = emitComputeLen(tensorFieldType);
+      llvm::Value *fieldLen = emitComputeLen(tensorFieldType, fieldStorage);
       unsigned compSize = tensorFieldType->componentType.bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
@@ -542,7 +547,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
 
     const TensorType *tensorFieldType = fieldType.toTensor();
 
-    llvm::Value *fieldLen = emitComputeLen(tensorFieldType);
+    llvm::Value *fieldLen = emitComputeLen(tensorFieldType, fieldStorage);
     unsigned elemSize = tensorFieldType->componentType.bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 
@@ -691,16 +696,42 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
                                      setOrElemValue->getName()+"."+fieldName);
 }
 
-llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType) {
+llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
+                                         const TensorStorage &tensorStorage) {
   if (tensorType->order() == 0) {
     return llvmInt(1);
   }
 
-  auto it = tensorType->dimensions.begin();
-  llvm::Value *result = emitComputeLen(*it++);
-  for (; it != tensorType->dimensions.end(); ++it) {
-    result = builder->CreateMul(result, emitComputeLen(*it));
+  llvm::Value *result = nullptr;
+  switch (tensorStorage.getKind()) {
+    case TensorStorage::DenseRowMajor: {
+      auto it = tensorType->dimensions.begin();
+      result = emitComputeLen(*it++);
+      for (; it != tensorType->dimensions.end(); ++it) {
+        result = builder->CreateMul(result, emitComputeLen(*it));
+      }
+      break;
+    }
+    case TensorStorage::SystemReduced: {
+//      std::cout << "Compute lenght of system reduced tensor" << std::endl;
+//      not_supported_yet;
+
+      // TODO: Remove
+      result = emitComputeLen(tensorType, TensorStorage::DenseRowMajor);
+      break;
+    }
+    case TensorStorage::SystemUnreduced: {
+      not_supported_yet;
+      break;
+    }
+    case TensorStorage::SystemNone:
+      ierror << "Attempting to compute size of tensor without storage";
+      break;
+    case TensorStorage::Undefined:
+      ierror << "Attempting to compute size of tensor with undefined storage";
+      break;
   }
+  iassert(result != nullptr);
   return result;
 }
 

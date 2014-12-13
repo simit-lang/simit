@@ -36,6 +36,9 @@ public:
 protected:
   ScopedMap<std::string, llvm::Value*> symtable;
 
+  ir::Storage storage;
+  ir::TensorStorage fieldStorage;
+
   /// used to return variables from Expr visit functions
   llvm::Value *val;
 
@@ -81,13 +84,13 @@ private:
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);
 
   /// Get the number of components in the tensor
-  llvm::Value *emitComputeLen(const ir::TensorType *);
+  llvm::Value *emitComputeLen(const ir::TensorType*, const ir::TensorStorage &);
 
   /// Get the number of elements in the index sets
-  llvm::Value *emitComputeLen(const ir::IndexSet &);
+  llvm::Value *emitComputeLen(const ir::IndexSet&);
 
   /// Get the number of elements in the index domain
-  llvm::Value *emitComputeLen(const ir::IndexDomain &);
+  llvm::Value *emitComputeLen(const ir::IndexDomain&);
 
   llvm::Value *loadFromArray(llvm::Value *array, llvm::Value *index);
 };

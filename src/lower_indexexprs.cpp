@@ -689,7 +689,9 @@ Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
   const Storage &storage = func.getStorage();
   Stmt body = LowerIndexExpressions(&ud, storage).rewrite(func.getBody());
-  return Func(func, body);
+  Func result = Func(func, body);
+  result.setStorage(simit::ir::getStorage(result));
+  return result;
 }
 
 }}

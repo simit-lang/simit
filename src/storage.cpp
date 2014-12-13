@@ -13,7 +13,7 @@ struct TensorStorage::Content {
   Kind kind;
 
   /// The target set that was used to assemble the system if the tensor is
-  /// stored on a system, false otherwise.
+  /// stored on a system, undefined otherwise.
   Expr systemStorageSet;
 
   Content(Kind kind) : kind(kind) {}
@@ -29,7 +29,6 @@ TensorStorage::Kind TensorStorage::getKind() const {
   return content->kind;
 }
 
-/// True if the tensor is stored on a system, false otherwise.
 bool TensorStorage::isSystem() const {
   return content->kind==SystemNone || content->kind==SystemReduced ||
          content->kind==SystemUnreduced;
@@ -178,14 +177,23 @@ private:
     }
   }
 
+  void visit(const TensorWrite *op) {
+    if (isa<VarExpr>(op->tensor)) {
+      const Var &var = to<VarExpr>(op->tensor)->var;
+      Type type = var.getType();
+      if (type.isTensor() && !isScalar(type) && !storage.hasStorage(var)) {
+//        std::cout << *op << std::endl;
+        determineStorage(var);
+      }
+    }
+  }
+
   void visit(const Map *op) {
     for (auto &var : op->vars) {
       Type type = var.getType();
-      if (type.isTensor() && !isScalar(type)) {
-        if (!storage.hasStorage(var)) {
-          // For now we'll store all assembled tensors as system reduced
-          storage.add(var, TensorStorage(TensorStorage::SystemReduced));
-        }
+      if (type.isTensor() && !isScalar(type) && !storage.hasStorage(var)) {
+        // For now we'll store all assembled tensors as system reduced
+        storage.add(var, TensorStorage(TensorStorage::SystemReduced));
       }
     }
   }

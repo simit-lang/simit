@@ -29,10 +29,6 @@ public:
     /// The matrix is stored sparsely using the compressed sparse row layout.
     // SparseMatrixCSR,
 
-    /// A system tensor that is never stored. Any index expressions that use
-    /// this tensor must be fused with the tensor assembly.
-    SystemNone,
-
     /// A system tensor that is split in one dimension with one slice stored on
     /// each element of the set of that dimension.
     /// For now we will assume it was split along the first dimension.
@@ -41,7 +37,11 @@ public:
     /// A system tensor whose contributions are stored on the target set that it
     /// was assembled from. That is, the tensor is stored prior to the map
     /// reduction, and any expression that uses the tensor must reduce it.
-    SystemUnreduced
+    SystemUnreduced,
+
+    /// A system tensor that is never stored. Any index expressions that use
+    /// this tensor must be fused with the tensor assembly.
+    SystemNone
   };
 
   TensorStorage();
