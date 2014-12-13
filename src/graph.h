@@ -191,9 +191,6 @@ public:
     ElementIterator(const ElementIterator& other) : curElem(other.curElem),
     set(other.set) { }
     
-    friend inline bool operator<(const SetBase::ElementIterator& e1,
-                                 const SetBase::ElementIterator& e2);
-    
     reference operator*() {return curElem;}
     pointer operator->() {return &curElem;}
     
