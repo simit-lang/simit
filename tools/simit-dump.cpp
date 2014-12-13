@@ -190,18 +190,22 @@ int main(int argc, const char* argv[]) {
     func = flattenIndexExpressions(func);
     if (emitSimit) {
       cout << "--- Insert Temporaries and Flatten Index Expressions" << endl;
-      cout << func << endl << endl;;
+      cout << func << endl << endl;
+    }
+
+    func.setStorage(getStorage(func));
+    if (emitSimit) {
+      cout << "--- Tensor storage" << endl;
+      cout << func.getStorage() << endl << endl;
     }
     
-    simit::ir::Storage storage = getStorage(func);
-
-    func = lowerAssemblies(func, storage);
+    func = lowerAssemblies(func);
     if (emitSimit) {
       cout << "--- Lower Maps" << endl;
       cout << func << endl << endl;;
     }
 
-    func = lowerIndexExpressions(func, storage);
+    func = lowerIndexExpressions(func);
     if (emitSimit) {
       cout << "--- Lower Index Expressions" << endl;
       cout << func << endl << endl;;

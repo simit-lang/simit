@@ -685,8 +685,9 @@ Stmt LowerIndexExpressions::lower(Stmt stmt) {
   return LoopBuilder(usedef, storage).create(stmt);
 }
 
-Func lowerIndexExpressions(Func func, const Storage &storage) {
+Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
+  const Storage &storage = func.getStorage();
   Stmt body = LowerIndexExpressions(&ud, storage).rewrite(func.getBody());
   return Func(func, body);
 }

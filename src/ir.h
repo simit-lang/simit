@@ -13,6 +13,7 @@
 #include "types.h"
 #include "indexvar.h"
 #include "error.h"
+#include "storage.h"
 
 namespace simit {
 namespace ir {
@@ -142,14 +143,13 @@ inline const S* to(Stmt s) {
 /// A Simit function
 namespace {
 struct FuncContent {
-  int kind;
-
   std::string name;
   std::vector<Var> arguments;
   std::vector<Var> results;
+  int kind;
   Stmt body;
 
-  std::vector<Var> temporaries;
+  Storage storage;
 
   mutable long ref = 0;
   friend inline void aquire(FuncContent *c) {++c->ref;}
@@ -157,12 +157,23 @@ struct FuncContent {
 };
 }
 
+/// A description of a Simit function, which can be passed to the backend
+/// to get a runnable Function.
 class Func : public util::IntrusivePtr<FuncContent> {
 public:
   enum Kind { Internal=0, Intrinsic=1 };
 
+  /// Create an undefined Function
   Func() : IntrusivePtr() {}
 
+  /// Create a function declaration.
+  Func(const std::string &name, const std::vector<Var> &arguments,
+       const std::vector<Var> &results, Kind kind)
+      : Func(name, arguments, results, Stmt(), kind) {
+    iassert(kind != Internal);
+  }
+
+  /// Create a function definition.
   Func(const std::string &name, const std::vector<Var> &arguments,
        const std::vector<Var> &results, Stmt body, Kind kind=Internal)
       : IntrusivePtr(new FuncContent) {
@@ -173,23 +184,30 @@ public:
     ptr->body = body;
   }
 
-  Func(const std::string &name, const std::vector<Var> &arguments,
-       const std::vector<Var> &results, Kind kind)
-      : Func(name, arguments, results, Stmt(), kind) {
-    iassert(kind != Internal);
-  }
-
   /// Creates a new func with the same prototype as the given func, but with
   /// the new body
   Func(const Func &func, Stmt body)
       : Func(func.getName(), func.getArguments(), func.getResults(), body,
-             func.getKind()) {}
+             func.getKind()) {
+    setStorage(func.getStorage());
+  }
 
-  Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
   std::string getName() const {return ptr->name;}
   const std::vector<Var> &getArguments() const {return ptr->arguments;}
   const std::vector<Var> &getResults() const {return ptr->results;}
   Stmt getBody() const {return ptr->body;}
+
+  /// Get the function kind, which can be Internal, Intrinsic or External.
+  Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
+
+  /// Set the storage descriptor for the function's local variables.
+  void setStorage(const Storage &storage) {ptr->storage = storage;}
+
+  /// Retrieve a storage descriptor for the function's local variables
+  Storage &getStorage() {return ptr->storage;}
+
+  /// Retrieve a storage descriptor for the function's local variables
+  const Storage &getStorage() const {return ptr->storage;}
 
   void accept(IRVisitor *visitor) const { visitor->visit(this); };
 };

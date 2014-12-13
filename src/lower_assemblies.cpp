@@ -70,8 +70,8 @@ private:
   }
 };
 
-Func lowerAssemblies(Func func, const Storage &storage) {
-  Stmt body = LowerAssemblies(storage).rewrite(func.getBody());
+Func lowerAssemblies(Func func) {
+  Stmt body = LowerAssemblies(func.getStorage()).rewrite(func.getBody());
   return Func(func, body);
 }
 

@@ -46,7 +46,6 @@ const Expr &TensorStorage::getSystemTargetSet() const {
 }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
-  os << "TensorStorage(";
   switch (ts.getKind()) {
     case TensorStorage::Undefined:
       os << "Undefined";
@@ -64,7 +63,7 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
       os << "System Unreduced";
       break;
   }
-  return os << ")";
+  return os;
 }
 
 

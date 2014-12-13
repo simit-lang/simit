@@ -10,12 +10,18 @@
 #include "util.h"
 #include "error.h"
 #include "program_context.h"
+#include "storage.h"
+#include "temps.h"
+#include "flatten.h"
 
 using namespace std;
 
 namespace simit {
 
 static Function *compile(ir::Func func, internal::Backend *backend) {
+  func = insertTemporaries(func);
+  func = flattenIndexExpressions(func);
+  func.setStorage(getStorage(func));
   func = lower(func);
   return backend->compile(func);
 }
