@@ -93,6 +93,59 @@ const TensorStorage &Storage::get(const Var &tensor) const {
   return const_cast<Storage*>(this)->get(tensor);
 }
 
+struct Storage::Iterator::Content {
+  std::map<Var,TensorStorage>::iterator it;
+};
+
+Storage::Iterator::Iterator(Storage::Iterator::Content *content)
+    : content(content) {
+}
+
+Storage::Iterator::~Iterator() {
+  delete content;
+}
+
+const Var &Storage::Iterator::operator*() {
+  return content->it->first;
+}
+
+const Var *Storage::Iterator::operator->() {
+  return &content->it->first;
+}
+
+Storage::Iterator& Storage::Iterator::operator++() {
+  content->it++;
+  return *this;
+}
+
+bool operator!=(const Storage::Iterator &l, const Storage::Iterator &r) {
+  return l.content->it != r.content->it;
+}
+
+std::ostream &operator<<(std::ostream &os, const Storage &storage) {
+  Storage::Iterator it = storage.begin();
+  Storage::Iterator end = storage.end();
+  if (it != end) {
+    os << *it << " : " << storage.get(*it);
+    ++it;
+  }
+  for (; it != end; ++it) {
+    os << std::endl << *it << " : " << storage.get(*it);
+  }
+  return os;
+}
+
+Storage::Iterator Storage::begin() const {
+  auto content = new Storage::Iterator::Content;
+  content->it = this->content->storage.begin();
+  return Storage::Iterator(content);
+}
+
+Storage::Iterator Storage::end() const {
+  auto content = new Storage::Iterator::Content;
+  content->it = this->content->storage.end();
+  return Storage::Iterator(content);
+}
 
 // Free functions
 class GetStorage : public IRVisitor {
@@ -159,10 +212,6 @@ private:
 
 Storage getStorage(const Func &func) {
   return GetStorage().get(func);
-}
-
-Storage getStorage(const Stmt &stmt) {
-  return GetStorage().get(stmt);
 }
 
 }}

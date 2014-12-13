@@ -61,7 +61,7 @@ private:
   struct Content;
   std::shared_ptr<Content> content;
 };
-std::ostream &operator<<(std::ostream &os, const TensorStorage &);
+std::ostream &operator<<(std::ostream&, const TensorStorage&);
 
 /// The storage of a set of tensors.
 class Storage {
@@ -80,16 +80,34 @@ public:
   /// Retrieve the storage of a tensor variable to inspect it.
   const TensorStorage &get(const Var &tensor) const;
 
+  /// Iterator over storage Vars in this Storage descriptor.
+  class Iterator {
+  public:
+    struct Content;
+    Iterator(Content *content);
+    ~Iterator();
+    const Var &operator*();
+    const Var *operator->();
+    Iterator& operator++();
+    friend bool operator!=(const Iterator&, const Iterator&);
+  private:
+    Content *content;
+  };
+
+  /// Get an iterator pointing to the first Var in this Storage.
+  Iterator begin() const;
+
+  /// Get an iterator pointing to the last Var in this Storage.
+  Iterator end() const;
+
 private:
   struct Content;
   std::shared_ptr<Content> content;
 };
+std::ostream &operator<<(std::ostream&, const Storage&);
 
 /// Retrieve a storage descriptor for each tensor used in 'func'.
 Storage getStorage(const Func &func);
-
-/// Retrieve a storage descriptor for each tensor used in 'stmt'
-Storage getStorage(const Stmt &stmt);
 
 }}
 

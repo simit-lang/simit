@@ -189,7 +189,7 @@ public:
     
     ElementIterator(const SetBase* set, int idx=0) : curElem(idx), set(set) { }
     ElementIterator(const ElementIterator& other) : curElem(other.curElem),
-    set(other.set) { }
+                                                    set(other.set) {}
     
     reference operator*() {return curElem;}
     pointer operator->() {return &curElem;}
