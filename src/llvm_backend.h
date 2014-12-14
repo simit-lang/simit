@@ -45,6 +45,7 @@ protected:
   /// used to return variables from Expr visit functions
   llvm::Value *val;
 
+  llvm::Module *module;
   std::unique_ptr<LLVMIRBuilder> builder;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
@@ -78,10 +79,6 @@ protected:
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
 
-private:
-  static bool llvmInitialized;
-  llvm::Module *module;
-
   /// Get a pointer to the given field
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);
 
@@ -97,6 +94,9 @@ private:
   llvm::Value *loadFromArray(llvm::Value *array, llvm::Value *index);
 
   void llvmPrintf(std::string format, std::initializer_list<llvm::Value*> args);
+
+private:
+  static bool llvmInitialized;
 };
 
 }} // namespace simit::internal
