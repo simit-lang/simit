@@ -110,7 +110,6 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
 
           // Edge indices (if the set is an edge set)
           if (setType->endpointSets.size() > 0) {
-
             // Endpoints index
             setData.push_back(llvmPtr(LLVM_INTPTR, set->getEndpointsData()));
 
@@ -118,9 +117,9 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
             // TODO
 
             // Neighbor index
-            const internal::NeighborIndex *neighbors = set->getNeighborIndex();
-            setData.push_back(llvmPtr(LLVM_INTPTR,neighbors->getStartIndex()));
-            setData.push_back(llvmPtr(LLVM_INTPTR,neighbors->getNeighborIndex()));
+            const internal::NeighborIndex *nbrs = set->getNeighborIndex();
+            setData.push_back(llvmPtr(LLVM_INTPTR,nbrs->getStartIndex()));
+            setData.push_back(llvmPtr(LLVM_INTPTR,nbrs->getNeighborIndex()));
           }
 
           // Fields

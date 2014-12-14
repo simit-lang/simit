@@ -14,6 +14,7 @@ struct TensorStorage::Content {
 
   /// The target set that was used to assemble the system if the tensor is
   /// stored on a system, undefined otherwise.
+  Expr systemTargeteSet;
   Expr systemStorageSet;
 
   Content(Kind kind) : kind(kind) {}
@@ -25,6 +26,13 @@ TensorStorage::TensorStorage() : TensorStorage(Undefined) {
 TensorStorage::TensorStorage(Kind kind) : content(new Content(kind)) {
 }
 
+TensorStorage::TensorStorage(Kind kind, const Expr &targetSet,
+                             const Expr &storageSet) : TensorStorage(kind) {
+  iassert(kind==SystemReduced);
+  content->systemTargeteSet = targetSet;
+  content->systemStorageSet = storageSet;
+}
+
 TensorStorage::Kind TensorStorage::getKind() const {
   return content->kind;
 }
@@ -34,13 +42,13 @@ bool TensorStorage::isSystem() const {
          content->kind==SystemUnreduced;
 }
 
-void TensorStorage::setSystemStorageSet(const Expr &systemStorageSet) {
-  content->systemStorageSet = systemStorageSet;
+const Expr &TensorStorage::getSystemTargetSet() const {
+  iassert(isSystem()) << "System storages require the target set be provided";
+  return content->systemTargeteSet;
 }
 
-const Expr &TensorStorage::getSystemTargetSet() const {
-  iassert(!isSystem() || content->systemStorageSet.defined())
-      << "System storages require the target set be provided";
+const Expr &TensorStorage::getSystemStorageSet() const {
+  iassert(isSystem()) << "System storages require the storage set be provided";
   return content->systemStorageSet;
 }
 
@@ -193,7 +201,23 @@ private:
       Type type = var.getType();
       if (type.isTensor() && !isScalar(type) && !storage.hasStorage(var)) {
         // For now we'll store all assembled tensors as system reduced
-        storage.add(var, TensorStorage(TensorStorage::SystemReduced));
+        TensorStorage tensorStorage(TensorStorage::SystemReduced, op->target,
+                                    op->neighbors);
+        storage.add(var, tensorStorage);
+
+//        if (isa<VarExpr>(op->target)) {
+//          Var targetVar = to<VarExpr>(op->target)->var;
+//          iassert(targetVar.getType().isSet());
+//          targetVar.getType().toSet()->se
+//          const SetBase *target =
+
+//          TensorStorage tensorStorage(TensorStorage::SystemReduced,
+//                                    op->target, op->neighbors);
+//          storage.add(var, tensorStorage);
+//        }
+//        else {
+//          not_supported_yet;
+//        }
       }
     }
   }

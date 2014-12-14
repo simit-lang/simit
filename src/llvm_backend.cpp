@@ -710,15 +710,30 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
       for (; it != tensorType->dimensions.end(); ++it) {
         result = builder->CreateMul(result, emitComputeLen(*it));
       }
-      break;
+      return result;
     }
     case TensorStorage::SystemReduced: {
-//      std::cout << "Compute lenght of system reduced tensor" << std::endl;
-//      not_supported_yet;
+      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
+      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
 
-      // TODO: Remove
-      result = emitComputeLen(tensorType, TensorStorage::DenseRowMajor);
-      break;
+      // Retrieve the size of the neighbor index, which is stored in the last
+      // element of neighbor start index.
+      llvm::Value *setSize =
+          builder->CreateExtractValue(storageSet, {0},
+                                      storageSet->getName()+LEN_SUFFIX);
+      llvm::Value *neighborStartIndex =
+          builder->CreateExtractValue(targetSet, {2}, "neighbors.start");
+      llvm::Value *neighborIndexSizeLoc =
+          builder->CreateInBoundsGEP(neighborStartIndex, setSize,
+                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
+      llvm::Value *neighborIndexSize =
+          builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
+                                     "neighbors"+LEN_SUFFIX);
+
+      // Multiply by block size
+      // TODO
+
+      return neighborIndexSize;
     }
     case TensorStorage::SystemUnreduced: {
       not_supported_yet;
@@ -731,7 +746,18 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
       ierror << "Attempting to compute size of tensor with undefined storage";
       break;
   }
-  iassert(result != nullptr);
+  ierror;
+  return nullptr;
+}
+
+llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
+  assert(dom.getIndexSets().size() > 0);
+
+  auto it = dom.getIndexSets().begin();
+  llvm::Value *result = emitComputeLen(*it++);
+  for (; it != dom.getIndexSets().end(); ++it) {
+    result = builder->CreateMul(result, emitComputeLen(*it));
+  }
   return result;
 }
 
@@ -751,17 +777,6 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexSet &is) {
   }
   unreachable;
   return nullptr;
-}
-
-llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
-  assert(dom.getIndexSets().size() > 0);
-
-  auto it = dom.getIndexSets().begin();
-  llvm::Value *result = emitComputeLen(*it++);
-  for (; it != dom.getIndexSets().end(); ++it) {
-    result = builder->CreateMul(result, emitComputeLen(*it));
-  }
-  return result;
 }
 
 llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index){

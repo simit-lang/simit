@@ -183,7 +183,6 @@ int main(int argc, const char* argv[]) {
     if (emitSimit) {
       cout << endl << endl;
       cout << "--- Compile " << function << endl;
-      cout << func << endl << endl;
     }
 
     func = insertTemporaries(func);

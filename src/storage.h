@@ -11,8 +11,8 @@ namespace ir {
 
 class Func;
 class Var;
-class Expr;
 class Stmt;
+class Expr;
 
 /// The storage arrangement of a tensor (e.g. dense or stored on a set).
 class TensorStorage {
@@ -47,15 +47,19 @@ public:
   TensorStorage();
   TensorStorage(Kind kind);
 
+  /// Create a system tensor storage descriptor. The 'targetSet' argument is the
+  /// the set that the system tensor was created by mapping over. The
+  /// 'storageSet' is the set the tensor is stored on.
+  TensorStorage(Kind kind, const Expr &targetSet, const Expr &storageSet);
+
   /// Retrieve the tensor storage kind.
   Kind getKind() const;
 
   /// True if the tensor is stored on a system, false otherwise.
   bool isSystem() const;
 
-  void setSystemStorageSet(const Expr &systemStorageSet);
-
   const Expr &getSystemTargetSet() const;
+  const Expr &getSystemStorageSet() const;
 
 private:
   struct Content;

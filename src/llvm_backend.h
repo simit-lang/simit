@@ -88,11 +88,11 @@ private:
   /// Get the number of components in the tensor
   llvm::Value *emitComputeLen(const ir::TensorType*, const ir::TensorStorage &);
 
-  /// Get the number of elements in the index sets
-  llvm::Value *emitComputeLen(const ir::IndexSet&);
-
   /// Get the number of elements in the index domain
   llvm::Value *emitComputeLen(const ir::IndexDomain&);
+
+  /// Get the number of elements in the index sets
+  llvm::Value *emitComputeLen(const ir::IndexSet&);
 
   llvm::Value *loadFromArray(llvm::Value *array, llvm::Value *index);
 
