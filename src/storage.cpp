@@ -204,20 +204,6 @@ private:
         TensorStorage tensorStorage(TensorStorage::SystemReduced, op->target,
                                     op->neighbors);
         storage.add(var, tensorStorage);
-
-//        if (isa<VarExpr>(op->target)) {
-//          Var targetVar = to<VarExpr>(op->target)->var;
-//          iassert(targetVar.getType().isSet());
-//          targetVar.getType().toSet()->se
-//          const SetBase *target =
-
-//          TensorStorage tensorStorage(TensorStorage::SystemReduced,
-//                                    op->target, op->neighbors);
-//          storage.add(var, tensorStorage);
-//        }
-//        else {
-//          not_supported_yet;
-//        }
       }
     }
   }
