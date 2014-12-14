@@ -22,6 +22,9 @@ class Instruction;
 class Function;
 }
 
+typedef llvm::IRBuilder<true, llvm::ConstantFolder,
+                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
+
 namespace simit {
 namespace internal {
 
@@ -42,8 +45,7 @@ protected:
   /// used to return variables from Expr visit functions
   llvm::Value *val;
 
-  std::unique_ptr<llvm::IRBuilder<true, llvm::ConstantFolder,
-                  llvm::IRBuilderDefaultInserter<true>>> builder;
+  std::unique_ptr<LLVMIRBuilder> builder;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void compile(const ir::Stmt &stmt);
@@ -93,6 +95,8 @@ private:
   llvm::Value *emitComputeLen(const ir::IndexDomain&);
 
   llvm::Value *loadFromArray(llvm::Value *array, llvm::Value *index);
+
+  void llvmPrintf(std::string format, std::initializer_list<llvm::Value*> args);
 };
 
 }} // namespace simit::internal

@@ -9,6 +9,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 
 #include "ir.h"
 
@@ -28,6 +29,9 @@
 #define LLVM_INT32     llvm::Type::getInt32Ty(LLVM_CONTEXT)
 #define LLVM_INT64     llvm::Type::getInt64Ty(LLVM_CONTEXT)
 
+typedef llvm::IRBuilder<true, llvm::ConstantFolder,
+                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
+
 namespace simit {
 namespace internal {
 
@@ -39,6 +43,9 @@ llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
 llvm::ConstantFP* llvmFP(double val, unsigned bits=64);
 // use llvm::ConstantInt::getTrue() or llvm::ConstantInt::getFalse() for boolean
 // literals
+
+void print(const std::string &format, std::initializer_list<llvm::Value*> args,
+           LLVMIRBuilder *builder, llvm::Module *module);
 
 llvm::Type *createLLVMType(ir::ScalarType stype);
 

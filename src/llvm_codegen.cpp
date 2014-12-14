@@ -3,6 +3,9 @@
 #include <iostream>
 #include <utility>
 
+#include "llvm/IR/Module.h"
+#include "llvm/IR/IRBuilder.h"
+
 #include "llvm/Support/raw_ostream.h"
 
 using namespace std;
@@ -22,6 +25,45 @@ llvm::ConstantInt *llvmUInt(long long unsigned int val, unsigned bits) {
 
 llvm::ConstantFP *llvmFP(double val, unsigned bits) {
   return llvm::ConstantFP::get(LLVM_CONTEXT, llvm::APFloat(val));
+}
+
+void print(const std::string &format, std::initializer_list<llvm::Value*> args,
+           LLVMIRBuilder *builder, llvm::Module *module) {
+  auto int32Type = llvm::IntegerType::getInt32Ty(LLVM_CONTEXT);
+  llvm::Function *printfFunc = module->getFunction("printf");
+  if (printfFunc == nullptr) {
+    std::vector<llvm::Type*> printfArgTypes;
+    printfArgTypes.push_back(llvm::Type::getInt8PtrTy(LLVM_CONTEXT));
+    llvm::FunctionType* printfType = llvm::FunctionType::get(int32Type,
+                                                             printfArgTypes,
+                                                             true);
+    printfFunc = llvm::Function::Create(printfType,
+                                        llvm::Function::ExternalLinkage,
+                                        llvm::Twine("printf"), module);
+    printfFunc->setCallingConv(llvm::CallingConv::C);
+  }
+
+  auto formatValue = llvm::ConstantDataArray::getString(LLVM_CONTEXT, format);
+
+  auto intType = llvm::IntegerType::get(LLVM_CONTEXT,8);
+  auto formatStrType = llvm::ArrayType::get(intType, format.size()+1);
+
+  llvm::GlobalVariable *formatStr =
+      new llvm::GlobalVariable(*module, formatStrType, true,
+                               llvm::GlobalValue::PrivateLinkage, formatValue,
+                               ".str");
+  llvm::Constant *zero = llvm::Constant::getNullValue(int32Type);
+
+  std::vector<llvm::Constant*> idx;
+  idx.push_back(zero);
+  idx.push_back(zero);
+  llvm::Constant *str = llvm::ConstantExpr::getGetElementPtr(formatStr, idx);
+
+  std::vector<llvm::Value*> printfArgs;
+  printfArgs.push_back(str);
+  printfArgs.insert(printfArgs.end(), args.begin(), args.end());
+
+  builder->CreateCall(printfFunc, printfArgs);
 }
 
 llvm::Type *createLLVMType(ScalarType stype) {

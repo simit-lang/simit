@@ -769,4 +769,9 @@ llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index){
   return builder->CreateLoad(loc);
 }
 
+void LLVMBackend::llvmPrintf(std::string format,
+                             std::initializer_list<llvm::Value*> args) {
+  print(format, args, builder.get(), module);
+}
+
 }}  // namespace simit::internal
