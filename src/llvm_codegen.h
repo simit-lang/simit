@@ -35,17 +35,17 @@ typedef llvm::IRBuilder<true, llvm::ConstantFolder,
 namespace simit {
 namespace internal {
 
-/// The number of index struct elements that are compiled into an edge struct.
-extern const int NUM_EDGE_INDEX_ELEMENTS;
-
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
 llvm::ConstantFP* llvmFP(double val, unsigned bits=64);
 // use llvm::ConstantInt::getTrue() or llvm::ConstantInt::getFalse() for boolean
 // literals
 
-void print(const std::string &format, std::initializer_list<llvm::Value*> args,
-           LLVMIRBuilder *builder, llvm::Module *module);
+
+// Simit-specific utilities
+
+/// The number of index struct elements that are compiled into an edge struct.
+extern const int NUM_EDGE_INDEX_ELEMENTS;
 
 llvm::Type *createLLVMType(ir::ScalarType stype);
 

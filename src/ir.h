@@ -161,7 +161,7 @@ struct FuncContent {
 /// to get a runnable Function.
 class Func : public util::IntrusivePtr<FuncContent> {
 public:
-  enum Kind { Internal=0, Intrinsic=1 };
+  enum Kind { Internal, External, Intrinsic };
 
   /// Create an undefined Function
   Func() : IntrusivePtr() {}

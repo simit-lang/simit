@@ -60,7 +60,6 @@ simit::Function *LLVMBackend::compile(Func func) {
 
   this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
   this->storage = func.getStorage();
-//  std::cout << this->storage << std::endl;
 
   // Create global buffer variables
   map<Var, llvm::Value*> buffers;
@@ -334,21 +333,15 @@ void LLVMBackend::visit(const Call *op) {
     return;
   }
   else if (op->func == ir::Intrinsics::solve) {
-    std::vector<llvm::Type*> argTypes2;
-    
     // FIX: compile is making these be LLVM_DOUBLE, but I need
     // LLVM_DOUBLEPTR
+    std::vector<llvm::Type*> argTypes2 =
+        {LLVM_DOUBLEPTR, LLVM_DOUBLEPTR, LLVM_DOUBLEPTR, LLVM_INT, LLVM_INT};
 
-    argTypes2.push_back(LLVM_DOUBLEPTR);
-    argTypes2.push_back(LLVM_DOUBLEPTR);
-    argTypes2.push_back(LLVM_DOUBLEPTR);
-    
-    argTypes2.push_back(LLVM_INT);
-    argTypes2.push_back(LLVM_INT);
+    auto type = op->actuals[0].type().toTensor();
+    args.push_back(emitComputeLen(type->dimensions[0]));
+    args.push_back(emitComputeLen(type->dimensions[1]));
 
-    args.push_back(emitComputeLen(op->actuals[0].type().toTensor()->dimensions[0]));
-    args.push_back(emitComputeLen(op->actuals[0].type().toTensor()->dimensions[1]));
-    
     auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes2, false);
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("cMatSolve",
                                                                   ftype));
@@ -784,9 +777,71 @@ llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index){
   return builder->CreateLoad(loc);
 }
 
-void LLVMBackend::llvmPrintf(std::string format,
-                             std::initializer_list<llvm::Value*> args) {
-  print(format, args, builder.get(), module);
+llvm::Value *LLVMBackend::emitCall(string name,
+                                   initializer_list<llvm::Value*> args,
+                                   llvm::Type *returnType) {
+  std::vector<llvm::Type*> argTypes;
+  for (auto &arg : args) {
+    argTypes.push_back(arg->getType());
+  }
+
+  llvm::FunctionType *ftype =
+      llvm::FunctionType::get(returnType, argTypes, false);
+
+  llvm::Function *fun =
+      llvm::cast<llvm::Function>(module->getOrInsertFunction(name, ftype));
+  iassert(fun != nullptr)
+      << "could not find" << fun << "with the given signature";
+
+  return builder->CreateCall(fun, std::vector<llvm::Value*>(args));
+}
+
+void LLVMBackend::emitCall(std::string name,
+                           initializer_list<llvm::Value*> args) {
+  emitCall(name, args, LLVM_VOID);
+}
+
+void LLVMBackend::emitPrintf(std::string format) {
+  emitPrintf(format, {});
+}
+
+void LLVMBackend::emitPrintf(string format,
+                             initializer_list<llvm::Value*> args) {
+  auto int32Type = llvm::IntegerType::getInt32Ty(LLVM_CONTEXT);
+  llvm::Function *printfFunc = module->getFunction("printf");
+  if (printfFunc == nullptr) {
+    std::vector<llvm::Type*> printfArgTypes;
+    printfArgTypes.push_back(llvm::Type::getInt8PtrTy(LLVM_CONTEXT));
+    llvm::FunctionType* printfType = llvm::FunctionType::get(int32Type,
+                                                             printfArgTypes,
+                                                             true);
+    printfFunc = llvm::Function::Create(printfType,
+                                        llvm::Function::ExternalLinkage,
+                                        llvm::Twine("printf"), module);
+    printfFunc->setCallingConv(llvm::CallingConv::C);
+  }
+
+  auto formatValue = llvm::ConstantDataArray::getString(LLVM_CONTEXT, format);
+
+  auto intType = llvm::IntegerType::get(LLVM_CONTEXT,8);
+  auto formatStrType = llvm::ArrayType::get(intType, format.size()+1);
+
+  llvm::GlobalVariable *formatStr =
+      new llvm::GlobalVariable(*module, formatStrType, true,
+                               llvm::GlobalValue::PrivateLinkage, formatValue,
+                               ".str");
+  llvm::Constant *zero = llvm::Constant::getNullValue(int32Type);
+
+  std::vector<llvm::Constant*> idx;
+  idx.push_back(zero);
+  idx.push_back(zero);
+  llvm::Constant *str = llvm::ConstantExpr::getGetElementPtr(formatStr, idx);
+
+  std::vector<llvm::Value*> printfArgs;
+  printfArgs.push_back(str);
+  printfArgs.insert(printfArgs.end(), args.begin(), args.end());
+
+  builder->CreateCall(printfFunc, printfArgs);
 }
 
 }}  // namespace simit::internal

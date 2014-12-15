@@ -17,6 +17,7 @@ class ExecutionEngine;
 class ConstantFolder;
 template<bool> class IRBuilderDefaultInserter;
 template<bool, typename, typename> class IRBuilder;
+class Type;
 class Value;
 class Instruction;
 class Function;
@@ -93,7 +94,15 @@ protected:
 
   llvm::Value *loadFromArray(llvm::Value *array, llvm::Value *index);
 
-  void llvmPrintf(std::string format, std::initializer_list<llvm::Value*> args);
+  llvm::Value *emitCall(std::string name,
+                        std::initializer_list<llvm::Value*> args,
+                        llvm::Type *returnType);
+
+  /// Emit a call to a void funciton.
+  void emitCall(std::string name, std::initializer_list<llvm::Value*> args);
+
+  void emitPrintf(std::string format);
+  void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
 
 private:
   static bool llvmInitialized;
