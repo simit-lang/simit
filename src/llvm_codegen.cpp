@@ -135,11 +135,18 @@ llvm::Type *createLLVMType(const Type &type) {
 static llvm::Function *createFunction(const std::string &name,
                                       const std::vector<std::string> &argNames,
                                       const std::vector<llvm::Type*> &argTypes,
-                                      llvm::Module *module) {
+                                      llvm::Module *module,
+                                      bool externalLinkage,
+                                      bool doesNotThrow) {
   llvm::FunctionType *ft= llvm::FunctionType::get(LLVM_VOID,argTypes,false);
-  llvm::Function *f= llvm::Function::Create(ft, llvm::Function::InternalLinkage,
-                                            name, module);
-  f->setDoesNotThrow();
+  llvm::Function *f= llvm::Function::Create(
+      ft,
+      externalLinkage ? llvm::Function::ExternalLinkage
+      : llvm::Function::InternalLinkage,
+      name, module);
+  if (doesNotThrow) {
+    f->setDoesNotThrow();
+  }
   unsigned i = 0;
   for (llvm::Argument &arg : f->getArgumentList()) {
     arg.setName(argNames[i]);
@@ -157,6 +164,15 @@ llvm::Function *createFunction(const std::string &name,
                                const vector<Var> &arguments,
                                const vector<Var> &results,
                                llvm::Module *module) {
+  return createFunction(name, arguments, results, module, false, true);
+}
+
+llvm::Function *createFunction(const std::string &name,
+                               const vector<Var> &arguments,
+                               const vector<Var> &results,
+                               llvm::Module *module,
+                               bool externalLinkage,
+                               bool doesNotThrow) {
   vector<string>      llvmArgNames;
   vector<llvm::Type*> llvmArgTypes;
 
@@ -178,7 +194,8 @@ llvm::Function *createFunction(const std::string &name,
 
   assert(llvmArgNames.size() == llvmArgTypes.size());
 
-  return createFunction(name, llvmArgNames, llvmArgTypes, module);
+  return createFunction(name, llvmArgNames, llvmArgTypes,
+                        module, externalLinkage, doesNotThrow);
 }
 
 std::ostream &operator<<(std::ostream &os, const llvm::Value &value) {
