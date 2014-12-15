@@ -53,6 +53,12 @@ llvm::Function *createFunction(const std::string &name,
                                const std::vector<ir::Var> &arguments,
                                const std::vector<ir::Var> &results,
                                llvm::Module *module);
+llvm::Function *createFunction(const std::string &name,
+                               const std::vector<ir::Var> &arguments,
+                               const std::vector<ir::Var> &results,
+                               llvm::Module *module,
+                               bool externalLinkage,
+                               bool doesNotThrow);
 
 std::ostream &operator<<(std::ostream &os, const llvm::Value &);
 std::ostream &operator<<(std::ostream &os, const llvm::Type &);
