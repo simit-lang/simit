@@ -68,29 +68,31 @@ static Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
 }
 
 class LowerTensorAccesses : public IRRewriter {
+public:
+  LowerTensorAccesses(const Storage &storage) : storage(storage) {}
 
-  void visit(const TensorRead *op) {
-    iassert(op->type.isTensor() && op->tensor.type().toTensor());
+private:
+  Storage storage;
 
-    const TensorType *type = op->tensor.type().toTensor();
+  Expr flattenIndices(Expr tensor, std::vector<Expr> indices) {
+    Expr index;
 
     // TODO: Generalize to n-order tensors and remove assert (also there's no
     //       need to have specialized code for vectors and matrices).
-    iassert(op->indices.size() <= 2);
+    iassert(indices.size() <= 2);
+    const TensorType *type = tensor.type().toTensor();
 
-    Expr tensor = rewrite(op->tensor);
-    Expr index;
-    if (op->indices.size() == 1) {
-      index = rewrite(op->indices[0]);
+    if (indices.size() == 1) {
+      index = rewrite(indices[0]);
     }
-    else if (op->indices.size() == 2) {
+    else if (indices.size() == 2) {
       // TODO: Clearly we need something more sophisticated here (for sparse
       // tensors or nested dense tensors).  For example, a tensor type could
       // carry a 'TensorStorage' object and we could ask this TensorStorage to
       // give us an Expr that computes an i,j location, or an Expr that gives us
       // a row/column.
-      Expr i = rewrite(op->indices[0]);
-      Expr j = rewrite(op->indices[1]);
+      Expr i = rewrite(indices[0]);
+      Expr j = rewrite(indices[1]);
 
       IndexDomain dim1 = type->dimensions[1];
       Expr d1;
@@ -112,66 +114,30 @@ class LowerTensorAccesses : public IRRewriter {
       not_supported_yet;
     }
     iassert(index.defined());
+
+    return index;
+  }
+
+  void visit(const TensorRead *op) {
+    iassert(op->type.isTensor() && op->tensor.type().toTensor());
+    Expr tensor = rewrite(op->tensor);
+    Expr index = flattenIndices(op->tensor, op->indices);
 
     expr = createLoadExpr(tensor, index);
   }
 
   void visit(const TensorWrite *op) {
     iassert(op->tensor.type().isTensor());
-
-    const TensorType *type = op->tensor.type().toTensor();
-
-    // TODO: Generalize to n-order tensors and remove assert (also there's no
-    //       need to have specialized code for vectors and matrices).
-    iassert(op->indices.size() <= 2);
-
     Expr tensor = rewrite(op->tensor);
     Expr value = rewrite(op->value);
-
-    Expr index;
-    if (op->indices.size() == 1) {
-      index = rewrite(op->indices[0]);
-    }
-    else if (op->indices.size() == 2) {
-      // TODO: Clearly we need something more sophisticated here (for sparse
-      // tensors or nested dense tensors).  For example, a tensor type could
-      // carry a 'TensorStorage' object and we could ask this TensorStorage to
-      // give us an Expr that computes an i,j location, or an Expr that gives us
-      // a row/column.
-      Expr i = rewrite(op->indices[0]);
-      Expr j = rewrite(op->indices[1]);
-
-      IndexDomain dim1 = type->dimensions[1];
-      Expr d1;
-      if (dim1.getIndexSets().size() == 1 &&
-          dim1.getIndexSets()[0].getKind() == IndexSet::Range) {
-        // TODO: Add support for unsigned ScalarTypes
-        iassert(dim1.getSize() < (size_t)(-1));
-        int dimSize = static_cast<int>(dim1.getSize());
-        d1 = Literal::make(i.type(), &dimSize);
-      }
-      else {
-        not_supported_yet;
-      }
-      iassert(d1.defined());
-
-      index = Add::make(Mul::make(i, d1), j);
-    }
-    else {
-      not_supported_yet;
-    }
-    iassert(index.defined());
+    Expr index = flattenIndices(op->tensor, op->indices);
 
     stmt = createStoreStmt(tensor, index, value);
   }
 };
 
-Stmt lowerTensorAccesses(Stmt stmt) {
-  return LowerTensorAccesses().rewrite(stmt);
-}
-
 Func lowerTensorAccesses(Func func) {
-  Stmt body = lowerTensorAccesses(func.getBody());
+  Stmt body = LowerTensorAccesses(func.getStorage()).rewrite(func.getBody());
   return Func(func, body);
 }
 
