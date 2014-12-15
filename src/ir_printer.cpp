@@ -32,6 +32,10 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node) {
   return os;
 }
 
+std::ostream &operator<<(std::ostream &os, const Var &v) {
+  return os << v.getName();
+}
+
 
 // class IRPrinter
 IRPrinter::IRPrinter(std::ostream &os, signed indent) : os(os), indentation(0) {
@@ -202,7 +206,7 @@ void IRPrinter::visit(const IndexExpr *op) {
 }
 
 void IRPrinter::visit(const Call *op) {
-  os << op->func.getName() << "(" << util::join(op->func.getArguments()) << ")";
+  os << op->func.getName() << "(" << util::join(op->actuals) << ")";
 }
 
 void IRPrinter::visit(const Neg *op) {

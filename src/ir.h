@@ -41,10 +41,6 @@ public:
   const Type &getType() const {return ptr->type;}
 };
 
-inline std::ostream &operator<<(std::ostream &os, const Var &v) {
-  return os << v.getName();
-}
-
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
