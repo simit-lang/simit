@@ -14,6 +14,7 @@
 #include "error.h"
 #include "graph.h"
 #include "ir.h"
+#include "llvm_codegen.h"
 
 namespace simit {
 namespace internal {
@@ -97,10 +98,11 @@ GPUFunction::GPUFunction(simit::ir::Func simitFunc,
     : Function(simitFunc), llvmFunc(llvmFunc), llvmModule(llvmModule) {}
 GPUFunction::~GPUFunction() {}
 
-GPUFunction::GPUArgHandle GPUFunction::pushArg(Actual& actual) {
+llvm::Value *GPUFunction::pushArg(
+    Actual& actual,
+    std::map<void*, std::pair<CUdeviceptr*, size_t>> &pushedBufs) {
   switch (actual.getType().kind()) {
     case ir::Type::Tensor: {
-      GPUFunction::GPUArgHandle handle;
       CUdeviceptr *devBuffer = new CUdeviceptr();
       const ir::TensorType *ttype = actual.getType().toTensor();
       std::cout << "Tensor type, size: "
@@ -117,60 +119,58 @@ GPUFunction::GPUArgHandle GPUFunction::pushArg(Actual& actual) {
       std::cout << "]" << std::endl;
       checkCudaErrors(cuMemcpyHtoD(*devBuffer, literal.data, literal.size));
       std::cout << "Stored in: " << *devBuffer << std::endl;
-      handle.devBufferFields["main"] = devBuffer;
-      return handle;
+      pushedBufs[literal.data] = std::make_pair(devBuffer, literal.size);
+      return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer));
     }
     case ir::Type::Element: ierror << "Element arg not supported";
     case ir::Type::Set: {
-      GPUFunction::GPUArgHandle handle;
       SetBase *set = actual.getSet();
-      ir::Type etype = actual.getType().toSet()->elementType;
+      const ir::SetType *setType = actual.getType().toSet();
+
+      llvm::StructType *llvmSetType = createLLVMType(setType);
+      std::vector<llvm::Constant*> setData;
+
+      // Set size
+      setData.push_back(llvmInt(set->getSize()));
+
+      // Edge indices
+      if (setType->endpointSets.size() > 0) {
+        int *endpoints = getEndpointsPtr(set);
+        CUdeviceptr *devBuffer = new CUdeviceptr();
+        size_t size = set->getSize() * set->getCardinality() * sizeof(int);
+        checkCudaErrors(cuMemAlloc(devBuffer, size));
+        checkCudaErrors(cuMemcpyHtoD(*devBuffer, endpoints, size));
+        pushedBufs[endpoints] = std::make_pair(devBuffer, size);
+        setData.push_back(llvmPtr(LLVM_INTPTR, reinterpret_cast<void*>(*devBuffer)));
+      }
+
+      // Fields
+      ir::Type etype = setType->elementType;
       iassert(etype.isElement()) << "Set element type must be ElementType.";
+
       for (auto field : etype.toElement()->fields) {
         CUdeviceptr *devBuffer = new CUdeviceptr();
         ir::Type ftype = field.type;
         iassert(ftype.isTensor()) << "Element field must be tensor type";
         const ir::TensorType *ttype = ftype.toTensor();
-        void *fieldData = set->getFieldRawData(field.name);
+        void *fieldData = getFieldPtr(set, field.name);
         size_t size = set->getSize() * ttype->size() * ttype->componentType.bytes();
         checkCudaErrors(cuMemAlloc(devBuffer, size));
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
-        handle.devBufferFields[field.name] = devBuffer;
+        pushedBufs[fieldData] = std::make_pair(devBuffer, size);
+        setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer)));
       }
+
+      return llvm::ConstantStruct::get(llvmSetType, setData);
     }
     case ir::Type::Tuple: ierror << "Tuple arg not supported";
   }
 }
 
-void GPUFunction::pullArg(Actual& actual,
-                          GPUFunction::GPUArgHandle &handle) {
-  if (actual.getType().isSet()) {
-    for (auto &kv : handle.devBufferFields) {
-      ir::Type etype = actual.getType().toSet()->elementType;
-      iassert(etype.isElement()) << "Set element must be ElementType";
-      void *fieldData = actual.getSet()->getFieldRawData(kv.first);
-      const ir::Type &ftype = etype.toElement()->field(kv.first).type;
-      iassert(ftype.isTensor()) << "Element field must be tensor type";
-      const ir::TensorType *ttype = ftype.toTensor();
-      checkCudaErrors(cuMemcpyDtoH(
-          fieldData, *kv.second,
-          actual.getSet()->getSize() * ttype->size() * ttype->componentType.bytes()));
-    }
-  }
-  else {
-    iassert(actual.getType().isTensor())
-        << "Only tensor or set arguments supported.";
-    const ir::Literal &literal = *(ir::to<ir::Literal>(
-        actual.getTensor()->expr()));
-    checkCudaErrors(cuMemcpyDtoH(
-        literal.data, *(handle.devBufferFields["main"]), literal.size));
-  }
-  // std::cout << "Pulled: [";
-  // for (int i = 0; i < literal.size; ++i) {
-  //   if (i != 0) std::cout << ",";
-  //   std::cout << std::hex << (int) ((char*)literal.data)[i];
-  // }
-  // std::cout << "]" << std::endl;
+void GPUFunction::pullArgAndFree(void *hostPtr,
+                                 CUdeviceptr *devBuffer, size_t size) {
+  checkCudaErrors(cuMemcpyDtoH(hostPtr, *devBuffer, size));
+  checkCudaErrors(cuMemFree(*devBuffer));
 }
 
 void GPUFunction::print(std::ostream &os) const {
@@ -179,6 +179,30 @@ void GPUFunction::print(std::ostream &os) const {
   llvmFunc->print(rsos);
   os << fstr;
   // TODO(gkanwar): Print out CUDA data setup aspects as well
+}
+
+llvm::Function *GPUFunction::createHarness(
+    const llvm::SmallVector<llvm::Value*, 8> &args) {
+  const std::string harnessName = "kernel";
+  llvm::Function *harness = createFunction(harnessName, {}, {},
+                                           llvmModule.get(), true, false);
+
+  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
+  llvm::CallInst *call = llvm::CallInst::Create(
+      llvmFunc.get(), args, "", entry);
+  call->setCallingConv(llvmFunc->getCallingConv());
+  llvm::ReturnInst::Create(LLVM_CONTEXT, entry);
+
+  // Kernel metadata
+  llvm::Value *mdVals[] = {
+    harness, llvm::MDString::get(LLVM_CONTEXT, harnessName), llvmInt(1)
+  };
+  llvm::MDNode *kernelMD = llvm::MDNode::get(LLVM_CONTEXT, mdVals);
+  llvm::NamedMDNode *nvvmAnnot = llvmModule
+      ->getOrInsertNamedMetadata("nvvm.annotations");
+  nvvmAnnot->addOperand(kernelMD);
+
+  return harness;
 }
 
 simit::Function::FuncType GPUFunction::init(
@@ -208,6 +232,39 @@ simit::Function::FuncType GPUFunction::init(
             << devMajor << "." << devMinor << std::endl;
   iassert(devMajor >= 2) << "ERROR: Device 0 is not SM 2.0 or greater";
 
+  // Create driver context
+  checkCudaErrors(cuCtxCreate(&context, 0, device));
+
+  // Push data and build harness
+  llvm::SmallVector<llvm::Value*, 8> args;
+  std::map<void*, std::pair<CUdeviceptr*, size_t> > pushedBufs;
+  int width = 1;
+  int height = 1;
+  int numSets = 0;
+  for (const std::string& formal : formals) {
+    assert(actuals.find(formal) != actuals.end());
+    Actual &actual = actuals.at(formal);
+    args.push_back(pushArg(actual, pushedBufs));
+    // Divide sets over blocks of threads
+    if (actual.getType().isSet()) {
+      numSets++;
+      width = actual.getSet()->getSize();
+    }
+  }
+  // TODO(gkanwar): Support arbitrary number of set args
+  if (numSets > 1) {
+    not_supported_yet;
+  }
+  // TODO(gkanwar): For now, fixed block sizes
+  unsigned blockSizeX = 1;
+  unsigned blockSizeY = 1;
+  unsigned blockSizeZ = 1;
+  unsigned gridSizeX = width/1;
+  unsigned gridSizeY = height;
+  unsigned gridSizeZ = 1;
+  // Create harness as the kernel to be run
+  createHarness(args);
+
   // Export IR to string
   std::string moduleStr;
   llvm::raw_string_ostream str(moduleStr);
@@ -216,9 +273,6 @@ simit::Function::FuncType GPUFunction::init(
   // Generate PTX
   std::string ptx = generatePtx(moduleStr, devMajor, devMinor,
                                 llvmModule->getModuleIdentifier().c_str());
-
-  // Create driver context
-  checkCudaErrors(cuCtxCreate(&context, 0, device));
 
   // JIT linker and final CUBIN
   char linkerInfo[1024];
@@ -254,41 +308,12 @@ simit::Function::FuncType GPUFunction::init(
   checkCudaErrors(cuModuleLoadDataEx(&cudaModule, cubin, 0, 0, 0));
   checkCudaErrors(cuLinkDestroy(linker));
   checkCudaErrors(cuModuleGetFunction(&function, cudaModule, "kernel"));
-    
+                               
 
-  return [this, function, &formals, &actuals,
-          cudaModule, context](){
+  return [this, function, cudaModule, context, pushedBufs,
+          blockSizeX, blockSizeY, blockSizeZ,
+          gridSizeX, gridSizeY, gridSizeZ](){
     // Push data to GPU
-    std::map<std::string, GPUFunction::GPUArgHandle> kernelParams;
-    int width = 1;
-    int height = 1;
-    int numSets = 0;
-    int numArgs = 0;
-    for (const std::string& formal : formals) {
-      assert(actuals.find(formal) != actuals.end());
-      Actual &actual = actuals.at(formal);
-      // const ir::Literal &literal = getArgData(actual);
-      GPUFunction::GPUArgHandle argHandle = pushArg(actual);
-      numArgs += argHandle.devBufferFields.size();
-      kernelParams[formal] = argHandle;
-      // Divide sets over blocks of threads
-      if (actual.getType().isSet()) {
-        numSets++;
-        width = actual.getSet()->getSize();
-      }
-    }
-    // TODO(gkanwar): Support arbitrary number of set args
-    if (numSets > 1) {
-      not_supported_yet;
-    }
-
-    // TODO(gkanwar): For now, fixed block sizes
-    unsigned blockSizeX = 1;
-    unsigned blockSizeY = 1;
-    unsigned blockSizeZ = 1;
-    unsigned gridSizeX = width/1;
-    unsigned gridSizeY = height;
-    unsigned gridSizeZ = 1;
     std::cout << "Launching CUDA kernel with block size ("
 	      << blockSizeX << ","
 	      << blockSizeY << ","
@@ -297,42 +322,39 @@ simit::Function::FuncType GPUFunction::init(
 	      << gridSizeY << ","
 	      << gridSizeZ << ")" << std::endl;
 
-    void **kernelParamsArr = new void*[numArgs];
-    int i = 0; 
-    for (const std::string& formal : formals) {
-      GPUFunction::GPUArgHandle &handle = kernelParams[formal];
-      if (actuals.at(formal).getType().isSet()) {
-        for (auto &kv : handle.devBufferFields) {
-          kernelParamsArr[i++] = reinterpret_cast<void*>(kv.second);
-        }
-      }
-      else {
-        kernelParamsArr[i++] = reinterpret_cast<void*>(
-            handle.devBufferFields["main"]);
-      }
-    }
-    for (i = 0; i < numArgs; ++i) {
-        std::cout << "Kernel param loc: "
-                  << kernelParamsArr[i] << std::endl;
-    }
+    void **kernelParamsArr = new void*[0];
+    // int i = 0; 
+    // for (const std::string& formal : formals) {
+    //   GPUFunction::GPUArgHandle &handle = kernelParams[formal];
+    //   if (actuals.at(formal).getType().isSet()) {
+    //     for (auto &kv : handle.devBufferFields) {
+    //       kernelParamsArr[i++] = reinterpret_cast<void*>(kv.second);
+    //     }
+    //   }
+    //   else {
+    //     kernelParamsArr[i++] = reinterpret_cast<void*>(
+    //         handle.devBufferFields["main"]);
+    //   }
+    // }
+    // for (i = 0; i < numArgs; ++i) {
+    //     std::cout << "Kernel param loc: "
+    //               << kernelParamsArr[i] << std::endl;
+    // }
     checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
                                    blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
                                    kernelParamsArr, NULL));
 
-    // Pull args back to CPU
-    for (const std::string &formal : formals) {
-      assert(actuals.find(formal) != actuals.end());
-      Actual &actual = actuals.at(formal);
-      GPUFunction::GPUArgHandle &handle = kernelParams[formal];
-      pullArg(actual, handle);
+    // Pull args back to CPU, clean up device buffers
+    for (auto &kv : pushedBufs) {
+      pullArgAndFree(kv.first, kv.second.first, kv.second.second);
     }
 
     // Clean up
-    for (auto kv : kernelParams) {
-      for (auto kv2 : kv.second.devBufferFields) {
-        checkCudaErrors(cuMemFree(*kv2.second));
-      }
-    }
+    // for (auto kv : kernelParams) {
+    //   for (auto kv2 : kv.second.devBufferFields) {
+    //     checkCudaErrors(cuMemFree(*kv2.second));
+    //   }
+    // }
     // checkCudaErrors(cuCtxDestroy(context));
     checkCudaErrors(cuModuleUnload(cudaModule));
   };

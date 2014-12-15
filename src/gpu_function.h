@@ -35,10 +35,14 @@ class GPUFunction : public simit::Function {
     std::map<std::string, CUdeviceptr*> devBufferFields;
   };
 
-  // Copy literal memory to device buffer
-  GPUArgHandle pushArg(Actual& actual);
-  // Copy device buffer into literal data block
-  void pullArg(Actual& actual, GPUArgHandle &handle);
+  // Copy argument memory into device and build an llvm value to point to it
+  llvm::Value *pushArg(
+      Actual& actual,
+      std::map<void*, std::pair<CUdeviceptr*, size_t>> &pushedBufs);
+  // Copy device buffer into host data block and free the device buffer
+  void pullArgAndFree(void *hostPtr, CUdeviceptr *devBuffer, size_t size);
+  // Create the harness function which sets up args for the main function
+  llvm::Function *createHarness(const llvm::SmallVector<llvm::Value*, 8> &args);
 
   std::unique_ptr<ir::Func> simitFunc;
   std::unique_ptr<llvm::Function> llvmFunc;

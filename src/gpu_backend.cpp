@@ -40,49 +40,15 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
                        "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
                        "v64:64:64-v128:128:128-n16:32:64");
 
-  std::vector<llvm::Type*> paramTys;
-  // Pass 1: Build param type list
-  for (const simit::ir::Var &arg : irFunc.getArguments()) {
-    if (arg.getType().isSet()) {
-      // Set arguments get expanded into their fields, because this is
-      // how set data is pushed to the GPU.
-      for (auto field : arg.getType().toSet()
-               ->elementType.toElement()->fields) {
-        paramTys.push_back(createLLVMType(field.type));
-      }
-    }
-    else {
-      paramTys.push_back(createLLVMType(arg.getType()));
-    }
-  }
-  for (const simit::ir::Var &res : irFunc.getResults()) {
-    paramTys.push_back(createLLVMType(res.getType()));
-  }
+  llvm::Function *func = createFunction("kernel.main", irFunc.getArguments(),
+                                        irFunc.getResults(), mod, false, false);
 
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(
-      LLVM_VOID, paramTys, false);
-  llvm::Function *func = llvm::Function::Create(
-      funcTy, llvm::GlobalValue::ExternalLinkage, "kernel", mod);
-
-  // Pass 2: Name LLVM arguments, insert into symtable
+  // Name LLVM arguments, insert into symtable
   auto arg = func->arg_begin();
   for (auto &irArg : irFunc.getArguments()) {
-    if (irArg.getType().isSet()) {
-      for (auto field : irArg.getType().toSet()
-               ->elementType.toElement()->fields) {
-        // XXX: Is '$' a safe character to use here, in that it cannot
-        // be used normally for a symbol name?
-        auto name = irArg.getName() + "$" + field.name;
-        arg->setName(name);
-        symtable.insert(arg->getName(), &(*arg));
-        arg++;
-      }
-    }
-    else {
-      arg->setName(irArg.getName());
-      symtable.insert(arg->getName(), &(*arg));
-      arg++;
-    }
+    arg->setName(irArg.getName());
+    symtable.insert(arg->getName(), &(*arg));
+    arg++;
   }
   for (auto &irRes : irFunc.getResults()) {
     arg->setName(irRes.getName());
@@ -100,14 +66,6 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
 
   // NVVM kernel should always return void
   builder->CreateRetVoid();
-
-  // Kernel metadata
-  llvm::Value *mdVals[] = {
-    func, llvm::MDString::get(LLVM_CONTEXT, "kernel"), llvmInt(1)
-  };
-  llvm::MDNode *kernelMD = llvm::MDNode::get(LLVM_CONTEXT, mdVals);
-  llvm::NamedMDNode *nvvmAnnot = mod->getOrInsertNamedMetadata("nvvm.annotations");
-  nvvmAnnot->addOperand(kernelMD);
 
   return new GPUFunction(irFunc, func, mod);
 }
