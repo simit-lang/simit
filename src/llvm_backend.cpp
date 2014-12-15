@@ -346,6 +346,10 @@ void LLVMBackend::visit(const Call *op) {
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("cMatSolve",
                                                                   ftype));
   }
+  else if (op->func == ir::Intrinsics::loc) {
+    val = emitCall("loc", {llvmInt(0), llvmInt(0)}, LLVM_INT);
+    return;
+  }
   else {
     // if not an intrinsic function, try to find it in the module
     fun = module->getFunction(op->func.getName());
@@ -794,11 +798,6 @@ llvm::Value *LLVMBackend::emitCall(string name,
       << "could not find" << fun << "with the given signature";
 
   return builder->CreateCall(fun, std::vector<llvm::Value*>(args));
-}
-
-void LLVMBackend::emitCall(std::string name,
-                           initializer_list<llvm::Value*> args) {
-  emitCall(name, args, LLVM_VOID);
 }
 
 void LLVMBackend::emitPrintf(std::string format) {

@@ -67,7 +67,7 @@ Func Intrinsics::exp = Func("exp",
                             {Var("r", Float)},
                             Func::Intrinsic);
 
-// TODO: Generalize to norm
+// TODO: Generalize to norm with n parameters
 Func Intrinsics::norm = Func("norm",
                              {Var("x", vec3f)},
                              {Var("r", Float)},
@@ -77,6 +77,11 @@ Func Intrinsics::solve = Func("solve",
                               {},
                               {Var("r", Float)},
                               Func::Intrinsic);
+
+Func Intrinsics::loc = Func("loc",
+                            {},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
 
 std::map<std::string, Func> Intrinsics::byName = {{"mod",mod},
                                                   {"sin",sin},

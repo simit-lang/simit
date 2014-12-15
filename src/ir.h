@@ -209,7 +209,7 @@ public:
 };
 
 
-// Intrinsics:
+/// Intrinsic functions
 class Intrinsics {
 public:
   static Func mod;
@@ -221,6 +221,7 @@ public:
   static Func exp;
   static Func norm;
   static Func solve;
+  static Func loc;
   static std::map<std::string, Func> byName;
 };
 

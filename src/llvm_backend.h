@@ -98,9 +98,6 @@ protected:
                         std::initializer_list<llvm::Value*> args,
                         llvm::Type *returnType);
 
-  /// Emit a call to a void funciton.
-  void emitCall(std::string name, std::initializer_list<llvm::Value*> args);
-
   void emitPrintf(std::string format);
   void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
 
