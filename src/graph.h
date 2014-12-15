@@ -17,12 +17,9 @@ namespace simit {
 
 // Forward declarations
 class SetBase;
+class FieldRefBase;
 template <typename T, int... dimensions> class FieldRef;
 template <typename T, int... dimensions> class TensorRef;
-
-namespace {
-class FieldRefBase;
-}
 
 namespace internal {
 class VertexToEdgeEndpointIndex;
@@ -204,17 +201,17 @@ public:
       return *this;
     }
     
-    friend bool operator!=(const ElementIterator& l, const ElementIterator& r) {
-      return !(l.set==r.set) || !(l.curElem.ident == r.curElem.ident);
+    bool operator!=(const ElementIterator& other) {
+      return !(set==other.set) || !(curElem.ident == other.curElem.ident);
     }
     
-    friend bool operator==(const ElementIterator& l, const ElementIterator& r) {
-      return (l.set==r.set) && (l.curElem.ident == r.curElem.ident);
+    bool operator==(const ElementIterator& other) {
+      return (set==other.set) && (curElem.ident == other.curElem.ident);
     }
 
-    friend bool operator<(const ElementIterator& l, const ElementIterator& r) {
-      iassert(l.set == r.set);
-      return l.curElem.ident < r.curElem.ident;
+    bool operator<(const ElementIterator& other) {
+      iassert(set == other.set);
+      return curElem.ident < other.curElem.ident;
     }
 
   private:
@@ -508,7 +505,6 @@ public:
 
 
 // Field References
-namespace {
 
 /// The base class of field references.
 class FieldRefBase {
@@ -606,9 +602,6 @@ class FieldRefBaseParameterized : public FieldRefBase {
 
   FieldRefBaseParameterized(void *fieldData) : FieldRefBase(fieldData) {}
 };
-
-
-} // unnamed namespace
 
 template <typename T, int... dimensions>
 class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
