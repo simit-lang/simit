@@ -14,6 +14,8 @@ public:
   virtual ~InlineMappedFunction() {}
 
 protected:
+  std::map<Var,Var> resultToMapVar;
+
   Expr targetLoopVar;
 
   Expr targetSet;
@@ -27,6 +29,9 @@ protected:
 
   /// Replace neighbor tuple read with reads from target endpoints
   virtual void visit(const TupleRead *op);
+
+  /// Replace function formal results with map actual results
+  virtual void visit(const VarExpr *op);
 };
 
 }}

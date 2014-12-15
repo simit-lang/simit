@@ -9,6 +9,11 @@ InlineMappedFunction::InlineMappedFunction(const Map *map, Var targetLoopVar)
   iassert(func.getArguments().size() == 1 || func.getArguments().size() == 2)
       << "mapped functions must have exactly two arguments";
 
+  iassert(map->vars.size() == func.getResults().size());
+  for (size_t i=0; i < func.getResults().size(); ++i) {
+    resultToMapVar[func.getResults()[i]] = map->vars[i];
+  }
+
   this->targetSet = map->target;
   this->neighborSet = map->neighbors;
 
@@ -40,7 +45,7 @@ void InlineMappedFunction::visit(const FieldRead *op) {
 
 void InlineMappedFunction::visit(const TupleRead *op) {
   iassert(isa<VarExpr>(op->tuple))
-  << "This code assumes no expressions return a tuple";
+      << "This code assumes no expressions return a tuple";
 
   if (to<VarExpr>(op->tuple)->var == neighbors) {
     const TupleType *tupleType = op->tuple.type().toTuple();
@@ -53,6 +58,15 @@ void InlineMappedFunction::visit(const TupleRead *op) {
   }
   else {
     ierror << "Assumes tuples are only used for neighbor lists";
+  }
+}
+
+void InlineMappedFunction::visit(const VarExpr *op) {
+  if (resultToMapVar.find(op->var) != resultToMapVar.end()) {
+    expr = resultToMapVar[op->var];
+  }
+  else {
+    expr = op;
   }
 }
 
