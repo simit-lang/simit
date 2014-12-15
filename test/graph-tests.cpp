@@ -22,7 +22,7 @@ TEST(Set, AddAndGetFromTwoFields) {
   
   ASSERT_EQ(myset.getSize(), 0);
   
-  ElementRef i = myset.addElement();
+  ElementRef i = myset.add();
   f1.set(i, 10);
   f2.set(i, 101.1);
 
@@ -38,7 +38,7 @@ TEST(Set, IncreaseCapacity) {
   auto fld = myset.addField<int>("foo");
   
   for (int i=0; i<1029; i++) {
-    ElementRef item = myset.addElement();
+    ElementRef item = myset.add();
     fld.set(item, i);
   }
 
@@ -64,7 +64,7 @@ TEST(Set, FieldAccesByName) {
   auto f1 = myset.addField<double>("fltfld");
   auto f2 = myset.addField<int>("intfld");
 
-  ElementRef i = myset.addElement();
+  ElementRef i = myset.add();
   f1.set(i, 42.0);
   f2.set(i, 10);
 
@@ -82,7 +82,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
   ASSERT_EQ(myset.getSize(), 0);
   
   for (int i=0; i<10; i++) {
-    auto el = myset.addElement();
+    auto el = myset.add();
     f1.set(el, 5+i);
     f2.set(el, 10.0+(double)i);
   }
@@ -110,8 +110,8 @@ TEST(Field, Scalar) {
   Set<> points;
   FieldRef<double> x = points.addField<double>("x");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
 
   TensorRef<double> scalar1 = x.get(p0);
   ASSERT_DOUBLE_EQ(0u, scalar1.getOrder());
@@ -131,8 +131,8 @@ TEST(Field, Vector) {
   Set<> points;
   FieldRef<double,3> x = points.addField<double,3>("x");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
 
   TensorRef<double,3> vec1 = x.get(p0);
   ASSERT_DOUBLE_EQ(1u, vec1.getOrder());
@@ -157,8 +157,8 @@ TEST(Field, Matrix) {
   Set<> points;
   FieldRef<double,3,2> x = points.addField<double,3,2>("x");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
 
   x.set(p0, {0.0, 1.1, 2.2, 0.0, 0.0, 3.3});
 
@@ -182,8 +182,8 @@ TEST(Field, Tensor) {
   Set<> points;
   FieldRef<double,2,3,4> x = points.addField<double,2,3,4>("x");
 
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
 
   TensorRef<double,2,3,4> t1 = x.get(p0);
   ASSERT_DOUBLE_EQ(3u, t1.getOrder());
@@ -212,8 +212,8 @@ TEST(EdgeSet, CreateAndGetEdge) {
 
   FieldRef<double> x = points.addField<double>("x");
   
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
   
   TensorRef<double> scalar1 = x.get(p0);
   scalar1 = 1.1;
@@ -224,7 +224,7 @@ TEST(EdgeSet, CreateAndGetEdge) {
   Set<2> edges(points, points);
   FieldRef<int> y = edges.addField<int>("y");
   
-  ElementRef e = edges.addElement(p0, p1);
+  ElementRef e = edges.add(p0, p1);
   TensorRef<int> escalar = y.get(e);
   escalar = 54;
   
@@ -235,15 +235,15 @@ TEST(EdgeSet, CreateAndGetEdge) {
 
 //TEST(EdgeSet, ConstructorTest) {
 //  Set<> points;
-//  points.addElement();
-//  auto p0 = points.addElement();
+//  points.add();
+//  auto p0 = points.add();
 //  
 //  Set<1> points2(points);
-//  auto p1 = points2.addElement(p0);
+//  auto p1 = points2.add(p0);
 //  
 //  Set<2> edges(points, points2);
-//  edges.addElement(p0, p1);
-//  ASSERT_DEATH(edges.addElement(p1, p0), "Assertion.*" );
+//  edges.add(p0, p1);
+//  ASSERT_DEATH(edges.add(p1, p0), "Assertion.*" );
 //}
 
 TEST(EdgeSet, EdgeIteratorTest) {
@@ -251,10 +251,10 @@ TEST(EdgeSet, EdgeIteratorTest) {
   
   FieldRef<double> x = points.addField<double>("x");
   
-  ElementRef p0 = points.addElement();
-  ElementRef p1 = points.addElement();
-  ElementRef p2 = points.addElement();
-  ElementRef p3 = points.addElement();
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+  ElementRef p3 = points.add();
   
   TensorRef<double> scalar1 = x.get(p0);
   scalar1 = 1.1;
@@ -264,7 +264,7 @@ TEST(EdgeSet, EdgeIteratorTest) {
   
   Set<4> edges(points, points, points, points);
 
-  ElementRef e1 = edges.addElement(p0, p1, p3, p2);
+  ElementRef e1 = edges.add(p0, p1, p3, p2);
   
    int count=0;
   for (auto iter=edges.endpoints_begin(e1);
@@ -278,47 +278,6 @@ TEST(EdgeSet, EdgeIteratorTest) {
   }
   
   ASSERT_EQ(count, 4);
-}
-
-TEST(EdgeSet, VertexToEdgeEndpointIndex) {
-  Set<> points;
-  auto p0 = points.addElement();
-  auto p1 = points.addElement();
-  auto p2 = points.addElement();
-  
-  Set<2> edges(points, points);
-  edges.addElement(p0, p1);
-  edges.addElement(p0,p2);
-  
-  internal::VertexToEdgeEndpointIndex* edgeindex =
-    new internal::VertexToEdgeEndpointIndex(edges);
-
-  ASSERT_EQ(edgeindex->getTotalEdges(), 2);
-  ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, 0), 2);
-  ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, 1), 0);
-  ASSERT_EQ(edgeindex->getWhichEdgesForElement(p1, 1)[0], 0);
-  
-  delete edgeindex;
-}
-
-TEST(EdgeSet, VertexToEdgeIndex) {
-  Set<> points;
-  auto p0 = points.addElement();
-  auto p1 = points.addElement();
-  auto p2 = points.addElement();
-  
-  Set<2> edges(points, points);
-  edges.addElement(p0, p1);
-  edges.addElement(p2,p0);
-  
-  internal::VertexToEdgeIndex* edgeindex =
-    new internal::VertexToEdgeIndex(edges);
-
-  ASSERT_EQ(edgeindex->getTotalEdges(), 2);
-  ASSERT_EQ(edgeindex->getNumEdgesForElement(p0, points), 2);
-  ASSERT_EQ(edgeindex->getWhichEdgesForElement(p1, points)[0], 0);
-
-  delete edgeindex;
 }
 
 TEST(GraphGenerator, createBox) {

@@ -17,10 +17,14 @@ class ExecutionEngine;
 class ConstantFolder;
 template<bool> class IRBuilderDefaultInserter;
 template<bool, typename, typename> class IRBuilder;
+class Type;
 class Value;
 class Instruction;
 class Function;
 }
+
+typedef llvm::IRBuilder<true, llvm::ConstantFolder,
+                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
 namespace simit {
 namespace internal {
@@ -36,11 +40,14 @@ public:
 protected:
   ScopedMap<std::string, llvm::Value*> symtable;
 
+  ir::Storage storage;
+  ir::TensorStorage fieldStorage;
+
   /// used to return variables from Expr visit functions
   llvm::Value *val;
 
-  std::unique_ptr<llvm::IRBuilder<
-    true, llvm::ConstantFolder, llvm::IRBuilderDefaultInserter<true>>> builder;
+  llvm::Module *module;
+  std::unique_ptr<LLVMIRBuilder> builder;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void compile(const ir::Stmt &stmt);
@@ -67,29 +74,35 @@ protected:
   virtual void visit(const ir::AssignStmt *);
   virtual void visit(const ir::FieldWrite *);
   virtual void visit(const ir::Store *);
+  virtual void visit(const ir::ForRange *);
   virtual void visit(const ir::For *);
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
 
-private:
-  static bool llvmInitialized;
-
-  llvm::Module *module;
-
   /// Get a pointer to the given field
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);
 
   /// Get the number of components in the tensor
-  llvm::Value *emitComputeLen(const ir::TensorType *);
-
-  /// Get the number of elements in the index sets
-  llvm::Value *emitComputeLen(const ir::IndexSet &);
+  llvm::Value *emitComputeLen(const ir::TensorType*, const ir::TensorStorage &);
 
   /// Get the number of elements in the index domain
-  llvm::Value *emitComputeLen(const ir::IndexDomain &);
+  llvm::Value *emitComputeLen(const ir::IndexDomain&);
+
+  /// Get the number of elements in the index sets
+  llvm::Value *emitComputeLen(const ir::IndexSet&);
 
   llvm::Value *loadFromArray(llvm::Value *array, llvm::Value *index);
+
+  llvm::Value *emitCall(std::string name,
+                        std::initializer_list<llvm::Value*> args,
+                        llvm::Type *returnType);
+
+  void emitPrintf(std::string format);
+  void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
+
+private:
+  static bool llvmInitialized;
 };
 
 }} // namespace simit::internal

@@ -9,10 +9,11 @@
 #include "ir_printer.h"
 
 #include "intrusive_ptr.h"
-#include "interfaces.h"
+#include "uncopyable.h"
 #include "types.h"
 #include "indexvar.h"
 #include "error.h"
+#include "storage.h"
 
 namespace simit {
 namespace ir {
@@ -40,26 +41,22 @@ public:
   const Type &getType() const {return ptr->type;}
 };
 
-inline std::ostream &operator<<(std::ostream &os, const Var &v) {
-  return os << v.getName();
-}
-
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
 struct IRNode : private simit::interfaces::Uncopyable {
 public:
-  IRNode() : ref(0) {}
+  IRNode() {}
   virtual ~IRNode() {}
   virtual void accept(IRVisitor *visitor) const = 0;
 
 private:
-  mutable long ref;
-  friend inline void aquire(const IRNode *node) {
+  mutable long ref = 0;
+  friend void aquire(const IRNode *node) {
     ++node->ref;
   }
   
-  friend inline void release(const IRNode *node) {
+  friend void release(const IRNode *node) {
     if (--node->ref == 0) {
       delete node;
     }
@@ -83,67 +80,72 @@ struct StmtNode : public StmtNodeBase {
   void accept(IRVisitor *v) const { v->visit((const T *)this); }
 };
 
-class Expr : public util::IntrusivePtr<const ExprNodeBase> {
+struct IRHandle : util::IntrusivePtr<const IRNode> {
+  IRHandle() : util::IntrusivePtr<const IRNode>() {}
+  IRHandle(const IRNode *n) : util::IntrusivePtr<const IRNode>(n) {}
+};
+
+class Expr : public IRHandle {
 public:
-  Expr() : IntrusivePtr() {}
-  Expr(const ExprNodeBase *expr) : IntrusivePtr(expr) {}
+  Expr() : IRHandle() {}
+  Expr(const ExprNodeBase *expr) : IRHandle(expr) {}
   Expr(const Var &var);
 
   Expr(int val);
   Expr(double val);
 
-  Type type() const {return ptr->type;}
-
-  const ExprNodeBase *expr() const {return ptr;}
+  Type type() const {return static_cast<const ExprNodeBase*>(ptr)->type;}
 
   void accept(IRVisitor *v) const {ptr->accept(v);}
+
+  template <typename E> friend bool isa(Expr);
+  template <typename E> friend const E* to(Expr);
 };
 
 template <typename E>
 inline bool isa(Expr e) {
-  return e.defined() && dynamic_cast<const E*>(e.expr()) != nullptr;
+  return e.defined() && dynamic_cast<const E*>(e.ptr) != nullptr;
 }
 
 template <typename E>
 inline const E* to(Expr e) {
   iassert(isa<E>(e)) << "Wrong Expr type";
-  return static_cast<const E*>(e.expr());
+  return static_cast<const E*>(e.ptr);
 }
 
-class Stmt : public util::IntrusivePtr<const StmtNodeBase> {
+class Stmt : public IRHandle {
 public:
-  Stmt() : IntrusivePtr() {}
-  Stmt(const StmtNodeBase *stmt) : IntrusivePtr(stmt) {}
-
-  const StmtNodeBase *stmt() const {return ptr;}
+  Stmt() : IRHandle() {}
+  Stmt(const StmtNodeBase *stmt) : IRHandle(stmt) {}
 
   void accept(IRVisitor *v) const {ptr->accept(v);}
+
+  template <typename S> friend bool isa(Stmt);
+  template <typename S> friend const S* to(Stmt);
 };
 
 template <typename S>
 inline bool isa(Stmt s) {
-  return s.defined() && dynamic_cast<const S*>(s.stmt()) != nullptr;
+  return s.defined() && dynamic_cast<const S*>(s.ptr) != nullptr;
 }
 
 template <typename S>
 inline const S* to(Stmt s) {
   iassert(isa<S>(s)) << "Wrong Expr type";
-  return static_cast<const S*>(s.stmt());
+  return static_cast<const S*>(s.ptr);
 }
 
 
 /// A Simit function
 namespace {
-// Content struct to make it cheap to copy the function to pass it around.
 struct FuncContent {
-  int kind;
-
   std::string name;
   std::vector<Var> arguments;
   std::vector<Var> results;
+  int kind;
   Stmt body;
 
-  std::vector<Var> temporaries;
+  Storage storage;
 
   mutable long ref = 0;
   friend inline void aquire(FuncContent *c) {++c->ref;}
@@ -151,12 +153,23 @@ struct FuncContent {
 };
 }
 
+/// A description of a Simit function, which can be passed to the backend
+/// to get a runnable Function.
 class Func : public util::IntrusivePtr<FuncContent> {
 public:
-  enum Kind { Internal=0, Intrinsic=1 };
+  enum Kind { Internal, External, Intrinsic };
 
+  /// Create an undefined Function
   Func() : IntrusivePtr() {}
 
+  /// Create a function declaration.
+  Func(const std::string &name, const std::vector<Var> &arguments,
+       const std::vector<Var> &results, Kind kind)
+      : Func(name, arguments, results, Stmt(), kind) {
+    iassert(kind != Internal);
+  }
+
+  /// Create a function definition.
   Func(const std::string &name, const std::vector<Var> &arguments,
        const std::vector<Var> &results, Stmt body, Kind kind=Internal)
       : IntrusivePtr(new FuncContent) {
@@ -167,29 +180,36 @@ public:
     ptr->body = body;
   }
 
-  Func(const std::string &name, const std::vector<Var> &arguments,
-       const std::vector<Var> &results, Kind kind)
-      : Func(name, arguments, results, Stmt(), kind) {
-    iassert(kind != Internal);
-  }
-
   /// Creates a new func with the same prototype as the given func, but with
   /// the new body
   Func(const Func &func, Stmt body)
       : Func(func.getName(), func.getArguments(), func.getResults(), body,
-             func.getKind()) {}
+             func.getKind()) {
+    setStorage(func.getStorage());
+  }
 
-  Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
   std::string getName() const {return ptr->name;}
   const std::vector<Var> &getArguments() const {return ptr->arguments;}
   const std::vector<Var> &getResults() const {return ptr->results;}
   Stmt getBody() const {return ptr->body;}
 
+  /// Get the function kind, which can be Internal, Intrinsic or External.
+  Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
+
+  /// Set the storage descriptor for the function's local variables.
+  void setStorage(const Storage &storage) {ptr->storage = storage;}
+
+  /// Retrieve a storage descriptor for the function's local variables
+  Storage &getStorage() {return ptr->storage;}
+
+  /// Retrieve a storage descriptor for the function's local variables
+  const Storage &getStorage() const {return ptr->storage;}
+
   void accept(IRVisitor *visitor) const { visitor->visit(this); };
 };
 
 
-// Intrinsics:
+/// Intrinsic functions
 class Intrinsics {
 public:
   static Func mod;
@@ -201,6 +221,7 @@ public:
   static Func exp;
   static Func norm;
   static Func solve;
+  static Func loc;
   static std::map<std::string, Func> byName;
 };
 
@@ -548,6 +569,7 @@ struct FieldWrite : public StmtNode<FieldWrite> {
 };
 
 struct TensorWrite : public StmtNode<TensorWrite> {
+  // TODO: Consider whether to make tensor a Var
   Expr tensor;
   std::vector<Expr> indices;
   Expr value;
@@ -573,6 +595,24 @@ struct Store : public StmtNode<Store> {
     node->value = value;
     return node;
   }
+};
+
+/// A `for` over a range.
+struct ForRange : public StmtNode<ForRange> {
+  Var var;
+  Expr start;
+  Expr end;
+  Stmt body;
+  
+  static Stmt make(Var var, Expr start, Expr end, Stmt body) {
+    ForRange *node = new ForRange;
+    node->var = var;
+    node->start = start;
+    node->end = end;
+    node->body = body;
+    return node;
+  }
+
 };
 
 struct ForDomain {
@@ -651,9 +691,6 @@ struct Pass : public StmtNode<Pass> {
 
 
 // Operators
-bool operator==(const Expr &, const Expr &);
-bool operator!=(const Expr &, const Expr &);
-
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
 

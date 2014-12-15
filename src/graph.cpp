@@ -1,6 +1,7 @@
 #include "graph.h"
 
 #include <iostream>
+#include "indices.h"
 
 using namespace std;
 
@@ -19,11 +20,22 @@ void SetBase::increaseCapacity() {
   capacity += capacityIncrement;
 }
 
+const internal::NeighborIndex *SetBase::getNeighborIndex() const {
+  tassert(isHomogeneous())
+      << "neighbor indices are currently only supported for homogeneous sets";
+
+  if (getCardinality() >= 2 && neighbors == nullptr) {
+    // Cast to non-const since adding a neighbor index does not change the 
+    this->neighbors = new internal::NeighborIndex(*this);
+  }
+  return this->neighbors;
+}
+
 
 // Graph generators
 void createElements(Set<> *elements, unsigned num) {
   for (size_t i=0; i < num; ++i) {
-    elements->addElement();
+    elements->add();
   }
 }
 
@@ -39,7 +51,7 @@ Box createBox(Set<> *elements, Set<2> *edges,
   for(unsigned x = 0; x < numX; ++x) {
     for(unsigned y = 0; y < numY; ++y) {
       for(unsigned z = 0; z < numZ; ++z) {
-        points[node0(x,y,z)] = elements->addElement();
+        points[node0(x,y,z)] = elements->add();
       }
     }
   }
@@ -52,7 +64,7 @@ Box createBox(Set<> *elements, Set<2> *edges,
     for(unsigned y = 0; y < numY; ++y) {
       for(unsigned z = 0; z < numZ; ++z) {
         Box::Coord coord(points[node0(x,y,z)], points[node1X(x,y,z)]);
-        simit::ElementRef edge = edges->addElement(coord.first, coord.second);
+        simit::ElementRef edge = edges->add(coord.first, coord.second);
         coords2edges[coord] = edge;
       }
     }
@@ -63,7 +75,7 @@ Box createBox(Set<> *elements, Set<2> *edges,
     for(unsigned y = 0; y < numY - 1; ++y) {
       for(unsigned z = 0; z < numZ; ++z) {
         Box::Coord coord(points[node0(x,y,z)], points[node1Y(x,y,z)]);
-        simit::ElementRef edge = edges->addElement(coord.first, coord.second);
+        simit::ElementRef edge = edges->add(coord.first, coord.second);
         coords2edges[coord] = edge;
       }
     }
@@ -74,7 +86,7 @@ Box createBox(Set<> *elements, Set<2> *edges,
     for(unsigned y = 0; y < numY; ++y) {
       for(unsigned z = 0; z < numZ-1; ++z) {
         Box::Coord coord(points[node0(x,y,z)], points[node1Z(x,y,z)]);
-        simit::ElementRef edge = edges->addElement(coord.first, coord.second);
+        simit::ElementRef edge = edges->add(coord.first, coord.second);
         coords2edges[coord] = edge;
       }
     }

@@ -24,8 +24,8 @@
 #include "ir.h"
 #include "ir_printer.h"
 #include "llvm_function.h"
-#include "gather_buffers.h"
 #include "macros.h"
+#include "runtime.h"
 
 using namespace std;
 using namespace simit::ir;
@@ -43,6 +43,10 @@ bool LLVMBackend::llvmInitialized = false;
 
 LLVMBackend::LLVMBackend() : val(nullptr),
                              builder(new llvm::IRBuilder<>(LLVM_CONTEXT)) {
+
+  // For now we'll assume fields are always dense row major
+  this->fieldStorage = TensorStorage::DenseRowMajor;
+
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
@@ -54,24 +58,23 @@ LLVMBackend::~LLVMBackend() {}
 simit::Function *LLVMBackend::compile(Func func) {
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
-  module = new llvm::Module(func.getName(), LLVM_CONTEXT);
+  this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
+  this->storage = func.getStorage();
 
-  // Gather the buffers the func uses locally
-  vector<llvm::Value*> bufferValues;
-  vector<Var> buffers = gatherLocalBuffers(func);
-  for (auto &buffer : buffers) {
-    iassert(buffer.getType().isTensor());
-    llvm::Type *ctype =
-        createLLVMType(buffer.getType().toTensor()->componentType);
+  // Create global buffer variables
+  map<Var, llvm::Value*> buffers;
+  for (auto &var : storage) {
+    iassert(var.getType().isTensor());
+    llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
     llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
 
-    llvm::GlobalVariable* bufferValue =
+    llvm::GlobalVariable* buffer =
         new llvm::GlobalVariable(*module, globalType,
                                  false, llvm::GlobalValue::InternalLinkage,
                                  llvm::ConstantPointerNull::get(globalType),
-                                 buffer.getName());
-    bufferValue->setAlignment(8);
-    bufferValues.push_back(bufferValue);
+                                 var.getName());
+    buffer->setAlignment(8);
+    buffers.insert(pair<Var,llvm::Value*>(var,buffer));
   }
 
   // Create compute function
@@ -82,8 +85,9 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmFunc->getArgumentList()) {
     symtable.insert(arg.getName(), &arg);
   }
-  for (auto &tmp : bufferValues) {
-    llvm::Value *llvmTmp = builder->CreateLoad(tmp, tmp->getName());
+  for (auto &var : storage) {
+    llvm::Value *buffer = buffers[var];
+    llvm::Value *llvmTmp = builder->CreateLoad(buffer, buffer->getName());
     symtable.insert(llvmTmp->getName(), llvmTmp);
   }
   compile(func.getBody());
@@ -113,19 +117,19 @@ simit::Function *LLVMBackend::compile(Func func) {
     symtable.insert(arg.getName(), &arg);
   }
 
-  for (size_t i=0; i < buffers.size(); ++i) {
-    Type type = buffers[i].getType();
+  for (auto &var : storage) {
+    Type type = var.getType();
     llvm::Type *llvmType = createLLVMType(type);
 
     iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
-    llvm::Value *len = emitComputeLen(ttype);
+    llvm::Value *len = emitComputeLen(ttype, storage.get(var));
     unsigned compSize = ttype->componentType.bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(compSize));
     llvm::Value *mem = builder->CreateCall(malloc, size);
 
     mem = builder->CreateCast(llvm::Instruction::CastOps::BitCast,mem,llvmType);
-    builder->CreateStore(mem, bufferValues[i]);
+    builder->CreateStore(mem, buffers[var]);
   }
   builder->CreateRetVoid();
   symtable.clear();
@@ -139,8 +143,8 @@ simit::Function *LLVMBackend::compile(Func func) {
   for (auto &arg : llvmDeinitFunc->getArgumentList()) {
     symtable.insert(arg.getName(), &arg);
   }
-  for (size_t i=0; i < buffers.size(); ++i) {
-    llvm::Value *tmpPtr = builder->CreateLoad(bufferValues[i]);
+  for (auto &var : storage) {
+    llvm::Value *tmpPtr = builder->CreateLoad(buffers[var]);
     tmpPtr = builder->CreateCast(llvm::Instruction::CastOps::BitCast,
                                  tmpPtr, LLVM_INT8PTR);
     builder->CreateCall(free, tmpPtr);
@@ -177,16 +181,26 @@ void LLVMBackend::visit(const TupleRead *op) {
 }
 
 void LLVMBackend::visit(const ir::IndexRead *op) {
-  // For now we only support one, hard-coded, index namely endpoints.
+  // For now we only support the two hard-coded indices endpoints and neighbors
   // TODO: Add support for different indices (contained in the Set type).
-  iassert(op->indexName == "endpoints");
 
-  iassert(op->edgeSet.type().isSet());
-  iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
+  if (op->indexName == "endpoints") {
+    iassert(op->edgeSet.type().isSet());
+    iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
 
-  llvm::Value *edgeSetValue = compile(op->edgeSet);
-  val = builder->CreateExtractValue(edgeSetValue, {1},
-                                    edgeSetValue->getName()+"."+op->indexName);
+    llvm::Value *edgeSetValue = compile(op->edgeSet);
+    val = builder->CreateExtractValue(edgeSetValue, {1},
+                                      edgeSetValue->getName()+"."+op->indexName);
+  }
+  else if (op->indexName == "neighbors.summary") {
+    not_supported_yet;
+  }
+  else if (op->indexName == "neighbors.data") {
+
+  }
+  else {
+    ierror;
+  }
 }
 
 void LLVMBackend::visit(const ir::Length *op) {
@@ -224,7 +238,11 @@ void LLVMBackend::visit(const Literal *op) {
       case ScalarType::Float: {
         iassert(ctype.bytes() == 8) << "Only 8-byte floats currently supported";
         val = llvmFP(((double*)op->data)[0]);
+        break;
       }
+      case ScalarType::Boolean:
+        not_supported_yet;
+        break;
     }
   }
   else {
@@ -234,7 +252,9 @@ void LLVMBackend::visit(const Literal *op) {
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
-  iassert(symtable.contains(op->var.getName()));
+  iassert(symtable.contains(op->var.getName()))
+      << op->var << "not found in symbol table";
+
   val = symtable.get(op->var.getName());
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
@@ -313,24 +333,22 @@ void LLVMBackend::visit(const Call *op) {
     return;
   }
   else if (op->func == ir::Intrinsics::solve) {
-    std::vector<llvm::Type*> argTypes2;
-    
     // FIX: compile is making these be LLVM_DOUBLE, but I need
     // LLVM_DOUBLEPTR
+    std::vector<llvm::Type*> argTypes2 =
+        {LLVM_DOUBLEPTR, LLVM_DOUBLEPTR, LLVM_DOUBLEPTR, LLVM_INT, LLVM_INT};
 
-    argTypes2.push_back(LLVM_DOUBLEPTR);
-    argTypes2.push_back(LLVM_DOUBLEPTR);
-    argTypes2.push_back(LLVM_DOUBLEPTR);
-    
-    argTypes2.push_back(LLVM_INT);
-    argTypes2.push_back(LLVM_INT);
+    auto type = op->actuals[0].type().toTensor();
+    args.push_back(emitComputeLen(type->dimensions[0]));
+    args.push_back(emitComputeLen(type->dimensions[1]));
 
-    args.push_back(emitComputeLen(op->actuals[0].type().toTensor()->dimensions[0]));
-    args.push_back(emitComputeLen(op->actuals[0].type().toTensor()->dimensions[1]));
-    
     auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes2, false);
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("cMatSolve",
                                                                   ftype));
+  }
+  else if (op->func == ir::Intrinsics::loc) {
+    val = emitCall("loc", {llvmInt(0), llvmInt(0)}, LLVM_INT);
+    return;
   }
   else {
     // if not an intrinsic function, try to find it in the module
@@ -352,6 +370,8 @@ void LLVMBackend::visit(const Neg *op) {
     case ScalarType::Float:
       val = builder->CreateFNeg(a);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot negate a boolean value.";
   }
 }
 
@@ -368,6 +388,8 @@ void LLVMBackend::visit(const Add *op) {
     case ScalarType::Float:
       val = builder->CreateFAdd(a, b);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot add boolean values.";
   }
 }
 
@@ -384,6 +406,8 @@ void LLVMBackend::visit(const Sub *op) {
     case ScalarType::Float:
       val = builder->CreateFSub(a, b);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot subtract boolean values.";
   }
 }
 
@@ -400,6 +424,8 @@ void LLVMBackend::visit(const Mul *op) {
     case ScalarType::Float:
       val = builder->CreateFMul(a, b);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot multiply boolean values.";
   }
 }
 
@@ -418,6 +444,8 @@ void LLVMBackend::visit(const Div *op) {
     case ScalarType::Float:
       val = builder->CreateFDiv(a, b);
       break;
+    case ScalarType::Boolean:
+      iassert(false) << "Cannot divide boolean values.";
   }
 }
 
@@ -444,7 +472,8 @@ void LLVMBackend::visit(const AssignStmt *op) {
   llvm::Value *varPtr = symtable.get(varName);
   iassert(varPtr->getType()->isPointerTy());
 
-  const TensorType *varType = op->var.getType().toTensor();
+  Var var = op->var;
+  const TensorType *varType = var.getType().toTensor();
   const TensorType *valType = op->value.type().toTensor();
 
   // Assigning a scalar to a scalar
@@ -457,7 +486,7 @@ void LLVMBackend::visit(const AssignStmt *op) {
     if (isa<Literal>(op->value) &&
         ((double*)to<Literal>(op->value)->data)[0] == 0.0) {
       // emit memset 0
-      llvm::Value *varLen = emitComputeLen(varType);
+      llvm::Value *varLen = emitComputeLen(varType, storage.get(var));
       unsigned compSize = varType->componentType.bytes();
       llvm::Value *varSize = builder->CreateMul(varLen, llvmInt(compSize));
       builder->CreateMemSet(varPtr, llvmInt(0,8), varSize, compSize);
@@ -498,7 +527,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
 
       const TensorType *tensorFieldType = fieldType.toTensor();
 
-      llvm::Value *fieldLen = emitComputeLen(tensorFieldType);
+      llvm::Value *fieldLen = emitComputeLen(tensorFieldType, fieldStorage);
       unsigned compSize = tensorFieldType->componentType.bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
@@ -515,7 +544,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
 
     const TensorType *tensorFieldType = fieldType.toTensor();
 
-    llvm::Value *fieldLen = emitComputeLen(tensorFieldType);
+    llvm::Value *fieldLen = emitComputeLen(tensorFieldType, fieldStorage);
     unsigned elemSize = tensorFieldType->componentType.bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 
@@ -584,6 +613,44 @@ void LLVMBackend::visit(const For *op) {
   builder->SetInsertPoint(loopEnd);
 }
 
+void LLVMBackend::visit(const ir::ForRange *op) {
+  std::string iName = op->var.getName();
+  
+  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+  
+  // Loop Header
+  llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
+  
+  llvm::BasicBlock *loopBodyStart =
+    llvm::BasicBlock::Create(LLVM_CONTEXT, iName+"_loop_body", llvmFunc);
+  builder->CreateBr(loopBodyStart);
+  builder->SetInsertPoint(loopBodyStart);
+  
+  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
+  i->addIncoming(compile(op->start), entryBlock);
+  
+  // Loop Body
+  symtable.scope();
+  symtable.insert(iName, i);
+  compile(op->body);
+  symtable.unscope();
+  
+  // Loop Footer
+  llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
+  llvm::Value *i_nxt = builder->CreateAdd(i, builder->getInt32(1),
+                                          iName+"_nxt", false, true);
+  i->addIncoming(i_nxt, loopBodyEnd);
+
+  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, compile(op->end),
+                                                 iName+"_cmp");
+  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
+                                                       iName+"_loop_end",
+                                                       llvmFunc);
+  builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
+  builder->SetInsertPoint(loopEnd);
+
+}
+
 void LLVMBackend::visit(const IfThenElse *op) {
   not_supported_yet;
 }
@@ -611,7 +678,10 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
   else {
     const SetType *setType = elemOrSet.type().toSet();
     elemType = setType->elementType.toElement();
-    fieldsOffset = (setType->endpointSets.size() == 0) ? 1 : 2;
+    fieldsOffset = 1; // jump over set size
+    if (setType->endpointSets.size() > 0) {
+      fieldsOffset += NUM_EDGE_INDEX_ELEMENTS; // jump over index pointers
+    }
   }
   assert(fieldsOffset >= 0);
 
@@ -623,14 +693,66 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
                                      setOrElemValue->getName()+"."+fieldName);
 }
 
-llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType) {
+llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
+                                         const TensorStorage &tensorStorage) {
   if (tensorType->order() == 0) {
     return llvmInt(1);
   }
 
-  auto it = tensorType->dimensions.begin();
+  llvm::Value *result = nullptr;
+  switch (tensorStorage.getKind()) {
+    case TensorStorage::DenseRowMajor: {
+      auto it = tensorType->dimensions.begin();
+      result = emitComputeLen(*it++);
+      for (; it != tensorType->dimensions.end(); ++it) {
+        result = builder->CreateMul(result, emitComputeLen(*it));
+      }
+      return result;
+    }
+    case TensorStorage::SystemReduced: {
+      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
+      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
+
+      // Retrieve the size of the neighbor index, which is stored in the last
+      // element of neighbor start index.
+      llvm::Value *setSize =
+          builder->CreateExtractValue(storageSet, {0},
+                                      storageSet->getName()+LEN_SUFFIX);
+      llvm::Value *neighborStartIndex =
+          builder->CreateExtractValue(targetSet, {2}, "neighbors.start");
+      llvm::Value *neighborIndexSizeLoc =
+          builder->CreateInBoundsGEP(neighborStartIndex, setSize,
+                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
+      llvm::Value *neighborIndexSize =
+          builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
+                                     "neighbors"+LEN_SUFFIX);
+
+      // Multiply by block size
+      // TODO
+
+      return neighborIndexSize;
+    }
+    case TensorStorage::SystemUnreduced: {
+      not_supported_yet;
+      break;
+    }
+    case TensorStorage::SystemNone:
+      ierror << "Attempting to compute size of tensor without storage";
+      break;
+    case TensorStorage::Undefined:
+      ierror << "Attempting to compute size of tensor with undefined storage";
+      break;
+  }
+  ierror;
+  return nullptr;
+}
+
+llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
+  assert(dom.getIndexSets().size() > 0);
+
+  auto it = dom.getIndexSets().begin();
   llvm::Value *result = emitComputeLen(*it++);
-  for (; it != tensorType->dimensions.end(); ++it) {
+  for (; it != dom.getIndexSets().end(); ++it) {
     result = builder->CreateMul(result, emitComputeLen(*it));
   }
   return result;
@@ -654,20 +776,71 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexSet &is) {
   return nullptr;
 }
 
-llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
-  assert(dom.getIndexSets().size() > 0);
-
-  auto it = dom.getIndexSets().begin();
-  llvm::Value *result = emitComputeLen(*it++);
-  for (; it != dom.getIndexSets().end(); ++it) {
-    result = builder->CreateMul(result, emitComputeLen(*it));
-  }
-  return result;
-}
-
 llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index){
   llvm::Value *loc = builder->CreateGEP(array, index);
   return builder->CreateLoad(loc);
+}
+
+llvm::Value *LLVMBackend::emitCall(string name,
+                                   initializer_list<llvm::Value*> args,
+                                   llvm::Type *returnType) {
+  std::vector<llvm::Type*> argTypes;
+  for (auto &arg : args) {
+    argTypes.push_back(arg->getType());
+  }
+
+  llvm::FunctionType *ftype =
+      llvm::FunctionType::get(returnType, argTypes, false);
+
+  llvm::Function *fun =
+      llvm::cast<llvm::Function>(module->getOrInsertFunction(name, ftype));
+  iassert(fun != nullptr)
+      << "could not find" << fun << "with the given signature";
+
+  return builder->CreateCall(fun, std::vector<llvm::Value*>(args));
+}
+
+void LLVMBackend::emitPrintf(std::string format) {
+  emitPrintf(format, {});
+}
+
+void LLVMBackend::emitPrintf(string format,
+                             initializer_list<llvm::Value*> args) {
+  auto int32Type = llvm::IntegerType::getInt32Ty(LLVM_CONTEXT);
+  llvm::Function *printfFunc = module->getFunction("printf");
+  if (printfFunc == nullptr) {
+    std::vector<llvm::Type*> printfArgTypes;
+    printfArgTypes.push_back(llvm::Type::getInt8PtrTy(LLVM_CONTEXT));
+    llvm::FunctionType* printfType = llvm::FunctionType::get(int32Type,
+                                                             printfArgTypes,
+                                                             true);
+    printfFunc = llvm::Function::Create(printfType,
+                                        llvm::Function::ExternalLinkage,
+                                        llvm::Twine("printf"), module);
+    printfFunc->setCallingConv(llvm::CallingConv::C);
+  }
+
+  auto formatValue = llvm::ConstantDataArray::getString(LLVM_CONTEXT, format);
+
+  auto intType = llvm::IntegerType::get(LLVM_CONTEXT,8);
+  auto formatStrType = llvm::ArrayType::get(intType, format.size()+1);
+
+  llvm::GlobalVariable *formatStr =
+      new llvm::GlobalVariable(*module, formatStrType, true,
+                               llvm::GlobalValue::PrivateLinkage, formatValue,
+                               ".str");
+  llvm::Constant *zero = llvm::Constant::getNullValue(int32Type);
+
+  std::vector<llvm::Constant*> idx;
+  idx.push_back(zero);
+  idx.push_back(zero);
+  llvm::Constant *str = llvm::ConstantExpr::getGetElementPtr(formatStr, idx);
+
+  std::vector<llvm::Value*> printfArgs;
+  printfArgs.push_back(str);
+  printfArgs.insert(printfArgs.end(), args.begin(), args.end());
+
+  builder->CreateCall(printfFunc, printfArgs);
 }
 
 }}  // namespace simit::internal

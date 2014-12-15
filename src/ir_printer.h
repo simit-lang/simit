@@ -11,6 +11,7 @@
 namespace simit {
 namespace ir {
 
+class Var;
 class Func;
 class Expr;
 class Stmt;
@@ -20,6 +21,7 @@ std::ostream &operator<<(std::ostream &os, const Func &);
 std::ostream &operator<<(std::ostream &os, const Expr &);
 std::ostream &operator<<(std::ostream &os, const Stmt &);
 std::ostream &operator<<(std::ostream &os, const IRNode &);
+std::ostream &operator<<(std::ostream &os, const Var &v);
 
 class IRPrinter : public IRVisitor {
 public:

@@ -17,7 +17,7 @@ using namespace simit::internal;
 template <typename T>
 std::vector<T> toVectorOf(Expr expr) {
   std::vector<T> vec;
-  const Literal *lit = dynamic_cast<const Literal*>(expr.expr());
+  const Literal *lit = to<Literal>(expr);
   assert(lit);
 
   assert(lit->type.isTensor());
@@ -203,5 +203,31 @@ TEST(Codegen, atan2) {
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));
+
+}
+
+TEST(Codegen, forloop) {
+  Var i("i", Int);
+  Var out("out", Int);
+  Expr start = Expr(1);
+  Expr end = Expr(4);
+  Stmt body = AssignStmt::make(out, i);
+  
+  Stmt loop = ForRange::make(i, start, end, body);
+  
+  Func func = Func("testloop", {}, {out}, loop);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr outVar = 0;
+  Expr iVar = 0;
+  
+  function->bind("out", &outVar);
+  
+  function->runSafe();
+  
+  vector<int> results = toVectorOf<int>(outVar);
+  ASSERT_EQ(results[0], 3);
 
 }

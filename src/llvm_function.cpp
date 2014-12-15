@@ -16,6 +16,7 @@
 
 #include "llvm_codegen.h"
 #include "graph.h"
+#include "indices.h"
 
 using namespace std;
 
@@ -76,8 +77,8 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
       llvm::Function *initFunc = getInitFunc();
       llvm::Function *deinitFunc = getDeinitFunc();
       ((FuncPtrType)executionEngine->getPointerToFunction(initFunc))();
-      deinit = FuncType((FuncPtrType)executionEngine
-                        ->getPointerToFunction(deinitFunc));
+      auto fptr = executionEngine->getPointerToFunction(deinitFunc);
+      deinit = FuncType((FuncPtrType)fptr);
     }
     return FuncType((FuncPtrType)executionEngine->getPointerToFunction(llvmFunc));
   }
@@ -88,7 +89,7 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
       Actual &actual = actuals.at(formal);
       switch (actual.getType().kind()) {
         case ir::Type::Tensor: {
-          auto actualPtr = ir::to<ir::Literal>(actual.getTensor()->expr());
+          auto actualPtr = ir::to<ir::Literal>(*actual.getTensor());
           args.push_back(llvmPtr(const_cast<ir::Literal*>(actualPtr)));
           break;
         }
@@ -98,7 +99,7 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
         }
         case ir::Type::Set: {
           const ir::SetType *setType = actual.getType().toSet();
-          const SetBase *set = actual.getSet();
+          SetBase *set = actual.getSet();
 
           llvm::StructType *llvmSetType = createLLVMType(setType);
 
@@ -109,13 +110,22 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
 
           // Edge indices (if the set is an edge set)
           if (setType->endpointSets.size() > 0) {
-            setData.push_back(llvmPtr(LLVM_INTPTR, getEndpointsPtr(set)));
+            // Endpoints index
+            setData.push_back(llvmPtr(LLVM_INTPTR, set->getEndpointsData()));
+
+            // Edges index
+            // TODO
+
+            // Neighbor index
+            const internal::NeighborIndex *nbrs = set->getNeighborIndex();
+            setData.push_back(llvmPtr(LLVM_INTPTR,nbrs->getStartIndex()));
+            setData.push_back(llvmPtr(LLVM_INTPTR,nbrs->getNeighborIndex()));
           }
 
           // Fields
           for (auto &field : setType->elementType.toElement()->fields) {
             assert(field.type.isTensor());
-            setData.push_back(llvmPtr(field.type, getFieldPtr(set,field.name)));
+            setData.push_back(llvmPtr(field.type, set->getFieldData(field.name)));
           }
 
           llvm::Value *llvmSet= llvm::ConstantStruct::get(llvmSetType, setData);

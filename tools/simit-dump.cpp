@@ -12,7 +12,7 @@
 #include "llvm_backend.h"
 #include "error.h"
 #include "util.h"
-#include "tensor_storage.h"
+#include "storage.h"
 
 using namespace std;
 
@@ -196,34 +196,37 @@ int main(int argc, const char* argv[]) {
     // Lower while printing lowered results
     if (emitSimit) {
       cout << endl << endl;
-      cout << "--- Compile " << function << ":" << endl;
-      cout << func << endl << endl;
+      cout << "--- Compile " << function << endl;
     }
 
     func = insertTemporaries(func);
-    if (emitSimit) {
-      cout << "--- Insert Temporaries:" << endl;
-      cout << func << endl << endl;;
-    }
-
     func = flattenIndexExpressions(func);
     if (emitSimit) {
-      cout << "--- Flatten Index Expressions:" << endl;
+      cout << "--- Insert Temporaries and Flatten Index Expressions" << endl;
+      cout << func << endl << endl;
+    }
+
+    func.setStorage(getStorage(func));
+    if (emitSimit) {
+      cout << "--- Tensor storage" << endl;
+      cout << func.getStorage() << endl << endl;
+    }
+    
+    func = lowerAssemblies(func);
+    if (emitSimit) {
+      cout << "--- Lower Maps" << endl;
       cout << func << endl << endl;;
     }
 
-    simit::ir::TensorStorages storageDescriptors = getTensorStorages(func);
-
-    func = lowerIndexExpressions(func, storageDescriptors);
-    func = lowerAssemblies(func);
+    func = lowerIndexExpressions(func);
     if (emitSimit) {
-      cout << "--- Lower Index Expressions:" << endl;
+      cout << "--- Lower Index Expressions" << endl;
       cout << func << endl << endl;;
     }
 
     func = lowerTensorAccesses(func);
     if (emitSimit) {
-      cout << "--- Lower Tensor Reads and Writes:" << endl;
+      cout << "--- Lower Tensor Reads and Writes" << endl;
       cout << func << endl;
     }
 
@@ -231,7 +234,7 @@ int main(int argc, const char* argv[]) {
       simit::internal::LLVMBackend backend;
       std::string fstr = simit::util::toString(*backend.compile(func));
       if (emitSimit) {
-        cout << endl << "--- Emitting LLVM:" << endl;
+        cout << endl << "--- Emitting LLVM" << endl;
       }
       cout << simit::util::trim(fstr) << endl;
 

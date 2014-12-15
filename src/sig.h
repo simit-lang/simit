@@ -11,6 +11,7 @@
 #include "indexvar.h"
 #include "ir.h"
 #include "usedef.h"
+#include "storage.h"
 
 namespace simit {
 namespace ir {
@@ -24,7 +25,7 @@ struct SIGVertex {
 
   SIGVertex(const IndexVar &iv) : iv(iv) {}
 };
-std::ostream &operator<<(std::ostream &os, const SIGVertex &);
+
 
 struct SIGEdge {
   Var tensor;
@@ -37,7 +38,6 @@ struct SIGEdge {
     }
   }
 };
-std::ostream &operator<<(std::ostream &os, const SIGEdge &);
 
 
 /// Implementation of Sparse Iteration Graphs.
@@ -70,9 +70,8 @@ private:
   friend SIGVisitor;
 };
 
-std::ostream &operator<<(std::ostream &os, const SIG &);
 
-
+/// Visitor class for Sparse Iteration Graphs.
 class SIGVisitor {
 public:
   virtual void apply(const SIG &sig);
@@ -86,16 +85,18 @@ protected:
 };
 
 
+/// Class that builds a Sparse Iteration Graph from an expression.
 class SIGBuilder : public IRVisitor {
 public:
-  SIGBuilder(const UseDef *ud) : ud(ud) {}
+  SIGBuilder(const Storage &storage) : storage(storage) {}
 
   SIG create(const IndexExpr *expr) {
     return create(Expr(expr));
   }
 
 private:
-  const UseDef *ud;
+  Storage storage;
+
   SIG sig;
 
   SIG create(Expr expr) {
@@ -106,13 +107,16 @@ private:
   }
 
   void visit(const IndexedTensor *op) {
+
     iassert(!isa<IndexExpr>(op->tensor))
         << "IndexExprs should have been flattened by now";
 
     Var tensorVar;
-    if (isa<VarExpr>(op->tensor)) {
+    if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
       const Var &var = to<VarExpr>(op->tensor)->var;
-      if (ud->getDef(var).getKind() == VarDef::Map) {
+      iassert(storage.hasStorage(var)) << "No storage descriptor found for"
+                                       << var << "in" << util::toString(*op);
+      if (storage.get(var).isSystem()) {
         tensorVar = var;
       }
     }
@@ -144,6 +148,11 @@ private:
     sig = merge(ig1, ig2, SIG::Intersection);
   }
 };
+
+
+std::ostream &operator<<(std::ostream &os, const SIGVertex &);
+std::ostream &operator<<(std::ostream &os, const SIGEdge &);
+std::ostream &operator<<(std::ostream &os, const SIG &);
 
 }} // namespace
 #endif

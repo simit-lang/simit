@@ -44,6 +44,7 @@ protected:
   virtual void visit(const FieldWrite *op);
   virtual void visit(const TensorWrite *op);
   virtual void visit(const Store *op);
+  virtual void visit(const ForRange *op);
   virtual void visit(const For *op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const Block *op);

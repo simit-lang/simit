@@ -16,7 +16,8 @@
 #include "error.h"
 #include "ir_queries.h"
 #include "substitute.h"
-#include "tensor_storage.h"
+#include "storage.h"
+#include "inline.h"
 
 #include "flatten.h"
 
@@ -70,7 +71,8 @@ private:
     Var lvar(varName, Int);
 
     VarDef varDef = ud->getDef(e->tensor);
-    iassert(varDef.getKind() == VarDef::Map);
+    iassert(varDef.getKind() == VarDef::Map)
+        << "SIG Edge variable" << e->tensor << "not defined in a map";
 
     const Map *mapStmt = to<Map>(varDef.getStmt());
     ForDomain ldom = ForDomain(mapStmt->target);
@@ -400,23 +402,24 @@ private:
 
 // TODO: The if-based pattern matching in the visit rules is a total hack and
 //       has to be rewritten.
-class InlineMappedFunction : private IRRewriter {
+class FuseMappedFunction : public InlineMappedFunction {
 public:
-  InlineMappedFunction(Var lvar, Var resultActual, const Map *map,
-                       Stmt computeStmt) {
+  FuseMappedFunction(Var lvar, Var resultActual, const Map *map,
+                     Stmt computeStmt)
+      : InlineMappedFunction(map, lvar) {
     Func mapFunc = map->function;
-    iassert(mapFunc.getArguments().size()==1||mapFunc.getArguments().size()==2)
-        << "mapped functions must have exactly two arguments";
+//    iassert(mapFunc.getArguments().size()==1||mapFunc.getArguments().size()==2)
+//        << "mapped functions must have exactly two arguments";
 
-    this->loopVar = lvar;
+//    this->loopVar = lvar;
 
-    this->targetSet = map->target;
-    this->neighborSet = map->neighbors;
+//    this->targetSet = map->target;
+//    this->neighborSet = map->neighbors;
 
     this->resultActual = resultActual;
 
-    this->targetElement = mapFunc.getArguments()[0];
-    this->neighborElements = mapFunc.getArguments()[1];
+//    this->targetElement = mapFunc.getArguments()[0];
+//    this->neighborElements = mapFunc.getArguments()[1];
 
     this->results = set<Var>(mapFunc.getResults().begin(),
                              mapFunc.getResults().end());
@@ -424,65 +427,17 @@ public:
     this->computeStmt = computeStmt;
   }
 
-  Stmt rewrite(Stmt s) {
-    s = IRRewriter::rewrite(s);
-    return s;
-  }
+  virtual ~FuseMappedFunction() {}
 
 private:
+  // Tell compiler we aren't overriding visit by mistake
+  using InlineMappedFunction::visit;
+
   set<Var> results;
-
-  Var targetElement;
-  Var neighborElements;
   Var resultActual;
-
-  Expr loopVar;
-  Expr targetSet;
-  Expr neighborSet;
 
   Stmt computeStmt;
   map<Expr,Expr> substitutions;
-
-  /// Turn argument field reads into loads from the buffer corresponding to that
-  /// field
-  void visit(const FieldRead *op) {
-    // TODO: Handle the case where the target var was reassigned
-    //       tmp = s; ... = tmp.a;
-    if (isa<VarExpr>(op->elementOrSet) &&
-        to<VarExpr>(op->elementOrSet)->var == targetElement) {
-      Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
-      expr = TensorRead::make(setFieldRead, {loopVar});
-    }
-    else if(isa<TupleRead>(op->elementOrSet) &&
-            isa<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple) &&
-            to<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple)->var ==neighborElements) {
-      Expr setFieldRead = FieldRead::make(neighborSet, op->fieldName);
-      expr = setFieldRead;
-
-      Expr index = IRRewriter::rewrite(op->elementOrSet);
-      expr = TensorRead::make(setFieldRead, {index});
-    }
-    else {
-      not_supported_yet;
-    }
-  }
-
-  void visit(const TupleRead *op) {
-    // TODO: Handle the case where the target var was reassigned
-    //       tmp = p(0); ... = tmp.x;
-    if (isa<VarExpr>(op->tuple) &&
-        to<VarExpr>(op->tuple)->var == neighborElements) {
-      const TupleType *tupleType = op->tuple.type().toTuple();
-      int cardinality = tupleType->size;
-
-      Expr endpoints = IndexRead::make(targetSet, "endpoints");
-      Expr indexExpr = Add::make(Mul::make(loopVar, cardinality), op->index);
-      expr = Load::make(endpoints, indexExpr);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
 
   void visit(const TensorWrite *op) {
     if (isa<VarExpr>(op->tensor)) {
@@ -552,10 +507,12 @@ private:
 
 class LowerIndexExpressions : public IRRewriter {
 public:
-  LowerIndexExpressions(const UseDef *ud) : ud(ud) {}
+  LowerIndexExpressions(const UseDef *ud, const Storage &storage)
+      : usedef(ud), storage(storage) {}
 
 private:
-  const UseDef *ud;
+  const UseDef *usedef;
+  Storage storage;
 
   /// Lower the index statement.  Defined after the LoopBuilder due to a
   /// circular dependency.
@@ -595,13 +552,22 @@ private:
 
 class LoopBuilder : public SIGVisitor {
 public:
-  LoopBuilder(const UseDef *ud) : ud(ud) {}
+  LoopBuilder(const UseDef *ud, const Storage &storage)
+      : usedef(ud), storage(storage) {}
 
   Stmt create(Stmt computeStmt) {
     const IndexExpr *indexExpr = GetIndexExpr().get(computeStmt);
 
-    SIG sig = SIGBuilder(ud).create(indexExpr);
-    loopVars = LoopVars(sig, ud);
+//    std::cout << *usedef << std::endl;
+//    for (auto &storage : tensorStorages) {
+//      std::cout << storage.first << ": " << storage.second << std::endl;
+//    }
+
+    SIG sig = SIGBuilder(storage).create(indexExpr);
+//    std::cout << *indexExpr << std::endl;
+//    std::cout << sig << std::endl;
+
+    loopVars = LoopVars(sig, usedef);
 
     initToZeroStmt = ReplaceRhsWithZero().rewrite(computeStmt);
 
@@ -610,7 +576,7 @@ public:
     std::vector<const SIGEdge *> edges = sig.getEdges();
 
     if (edges.size() == 0) { //&& indexExpr->type.toTensor()->dimensions.size()) {
-      loopBody = LowerIndexExpressions(ud).rewrite(loopBody);
+      loopBody = LowerIndexExpressions(usedef, storage).rewrite(loopBody);
     }
 
     if (edges.size() > 1) {
@@ -619,7 +585,7 @@ public:
 
     std::map<Var,const Map*> vars2maps;
     for (auto &e : edges) {
-      VarDef varDef = ud->getDef(e->tensor);
+      VarDef varDef = usedef->getDef(e->tensor);
       iassert(varDef.getKind() == VarDef::Map);
 
       Var lvar = loopVars.getVar(e->tensor).first;
@@ -632,7 +598,7 @@ public:
       // Inline the mapped function in the IndexExpr loop nests
       Stmt funcBody = func.getBody();
 
-      loopBody = InlineMappedFunction(lvar, e->tensor, map,
+      loopBody = FuseMappedFunction(lvar, e->tensor, map,
                                       loopBody).rewrite(funcBody);
 
       // TODO: We should knock out redundant subexpressions in the loopBody
@@ -640,7 +606,8 @@ public:
       loopBody = flattenIndexExpressions(loopBody);
 
       UseDef fud(func);
-      loopBody = LowerIndexExpressions(&fud).rewrite(loopBody);
+      Storage storage = getStorage(func);
+      loopBody = LowerIndexExpressions(&fud, storage).rewrite(loopBody);
     }
 
     stmt = loopBody;
@@ -652,7 +619,9 @@ public:
   }
 
 private:
-  const UseDef *ud;
+  const UseDef *usedef;
+  Storage storage;
+
   LoopVars loopVars;
   Stmt initToZeroStmt;
   Stmt loopBody;
@@ -700,7 +669,7 @@ private:
     Var lvar = loopVar.first;
     ForDomain ldom = loopVar.second;
 
-    VarDef varDef = ud->getDef(e->tensor);
+    VarDef varDef = usedef->getDef(e->tensor);
     iassert(varDef.getKind() == VarDef::Map);
 
     Stmt loop = For::make(lvar, ldom, loopBody);
@@ -712,127 +681,17 @@ private:
   }
 };
 
-bool isNestedDotProductAssign(Stmt stmt) {
-  if (!isa<AssignStmt>(stmt)) {
-    return false;
-  }
-
-  const AssignStmt *assign = to<AssignStmt>(stmt);
-  Expr value = assign->value;
-
-  if (!isa<IndexExpr>(value)) {
-    return false;
-  }
-
-  const IndexExpr *iexpr = to<IndexExpr>(value);
-  if (!isScalar(iexpr->type)) {
-    return false;
-  }
-
-  if (!isa<Mul>(iexpr->value)) {
-    return false;
-  }
-
-  const Mul *mul = to<Mul>(iexpr->value);
-  if (!mul->a.type().isTensor() || !mul->b.type().isTensor()) {
-    return false;
-  }
-
-  if (!isa<IndexedTensor>(mul->a) || !isa<IndexedTensor>(mul->b)) {
-    return false;
-  }
-
-  const IndexedTensor *ait = to<IndexedTensor>(mul->a);
-  const IndexedTensor *bit = to<IndexedTensor>(mul->b);
-
-  const TensorType *atype = ait->tensor.type().toTensor();
-  const TensorType *btype = bit->tensor.type().toTensor();
-
-  if (atype->order() != 1 || btype->order() != 1) {
-    return false;
-  }
-
-  if (atype->dimensions[0].getIndexSets().size() != 2 ||
-      btype->dimensions[0].getIndexSets().size() != 2) {
-    return false;
-  }
-
-  return true;
-}
-
-
-
-class LowerNestedDot : public IRRewriter {
-public:
-  Var lv1;
-  Var lv2;
-  vector<Expr> operands;
-
-private:
-  void visit(const AssignStmt *op) {
-    if (isa<IndexExpr>(op->value)) {
-      Stmt stmts;
-      Var rvar = op->var;
-
-      Stmt alloc = AssignStmt::make(rvar,Literal::make(rvar.getType(),{0}));
-
-      lv1 = Var("lv1", Int);
-      lv2 = Var("lv2", Int);
-
-      Expr value = rewrite(op->value);
-
-      value = Add::make(VarExpr::make(rvar), value);
-
-      Stmt body = AssignStmt::make(rvar, value);
-
-      IndexDomain dims = operands[0].type().toTensor()->dimensions[0];
-      auto iss = dims.getIndexSets();
-      iassert(iss.size() == 2);
-
-      Stmt loop = For::make(lv2, ForDomain(iss[1]), body);
-      loop = For::make(lv1, ForDomain(iss[0]), loop);
-
-      stmt = stmts = Block::make(alloc, loop);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
-
-  void visit(const IndexExpr *op) {
-    expr = rewrite(op->value);
-  }
-
-  void visit(const IndexedTensor *op) {
-    Expr tensor = op->tensor;
-    operands.push_back(tensor);
-
-    Expr tread = TensorRead::make(tensor, {VarExpr::make(lv1)});
-    tread = TensorRead::make(tread, {VarExpr::make(lv2)});
-
-    expr = tread;
-  }
-};
-
 Stmt LowerIndexExpressions::lower(Stmt stmt) {
-  if (isNestedDotProductAssign(stmt)) {
-    Stmt tmp = LowerNestedDot().rewrite(stmt);
-    return tmp;
-  }
-  else {
-    return LoopBuilder(ud).create(stmt);
-  }
+  return LoopBuilder(usedef, storage).create(stmt);
 }
 
-Stmt lowerIndexExpressions(Stmt stmt, const UseDef &ud) {
-  return LowerIndexExpressions(&ud).rewrite(stmt);
-}
-
-Func lowerIndexExpressions(Func func, const TensorStorages &tensorStorages) {
+Func lowerIndexExpressions(Func func) {
   UseDef ud(func);
-  Stmt body = lowerIndexExpressions(func.getBody(), ud);
-  return Func(func, body);
+  const Storage &storage = func.getStorage();
+  Stmt body = LowerIndexExpressions(&ud, storage).rewrite(func.getBody());
+  Func result = Func(func, body);
+  result.setStorage(simit::ir::getStorage(result));
+  return result;
 }
-
 
 }}

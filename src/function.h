@@ -5,7 +5,8 @@
 #include <vector>
 #include <map>
 
-#include "interfaces.h"
+#include "printable.h"
+#include "uncopyable.h"
 
 // TODO: Remove
 #include "ir.h"
@@ -69,9 +70,6 @@ protected:
   };
   
   Function(const ir::Func &simitFunc);
-
-  void *getFieldPtr(const SetBase *set, const std::string &fieldName);
-  int *getEndpointsPtr(const SetBase *set);
 
 private:
   std::vector<std::string> formals;

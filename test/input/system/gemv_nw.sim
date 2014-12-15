@@ -1,0 +1,21 @@
+element Point
+  b : float;
+  c : float;
+end
+
+element Spring
+  a : float;
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+func dist_a(s : Spring, p : (Point*2)) -> (Ar : tensor[points,points](float))
+  Ar(p(0),p(0)) = s.a;
+end
+
+proc main 
+  A = map dist_a to springs with points reduce +;
+  points.c = A * points.b;
+end;
+

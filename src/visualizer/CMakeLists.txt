@@ -1,7 +1,7 @@
 set(VIZ_PROJECT_NAME ${PROJECT_NAME}viz)
 
 find_package(OpenGL)
-find_package(GLUT) 
+find_package(GLUT)
 
 if (NOT OPENGL_FOUND OR NOT GLUT_FOUND)
   message("Could not find OpenGL or GLUT so simviz will not be built")

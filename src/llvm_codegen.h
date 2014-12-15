@@ -9,6 +9,7 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 
 #include "ir.h"
 
@@ -20,11 +21,16 @@
 #define LLVM_INTPTR    llvm::Type::getInt32PtrTy(LLVM_CONTEXT)
 #define LLVM_DOUBLE    llvm::Type::getDoubleTy(LLVM_CONTEXT)
 #define LLVM_DOUBLEPTR llvm::Type::getDoublePtrTy(LLVM_CONTEXT)
+#define LLVM_BOOL      llvm::Type::getInt1Ty(LLVM_CONTEXT)
+#define LLVM_BOOLPTR   llvm::Type::getInt1PtrTy(LLVM_CONTEXT)
 
 #define LLVM_INT8      llvm::Type::getInt8Ty(LLVM_CONTEXT)
 #define LLVM_INT8PTR   llvm::Type::getInt8PtrTy(LLVM_CONTEXT)
 #define LLVM_INT32     llvm::Type::getInt32Ty(LLVM_CONTEXT)
 #define LLVM_INT64     llvm::Type::getInt64Ty(LLVM_CONTEXT)
+
+typedef llvm::IRBuilder<true, llvm::ConstantFolder,
+                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
 namespace simit {
 namespace internal {
@@ -32,13 +38,21 @@ namespace internal {
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
 llvm::ConstantFP* llvmFP(double val, unsigned bits=64);
+// use llvm::ConstantInt::getTrue() or llvm::ConstantInt::getFalse() for boolean
+// literals
+
+
+// Simit-specific utilities
+
+/// The number of index struct elements that are compiled into an edge struct.
+extern const int NUM_EDGE_INDEX_ELEMENTS;
 
 llvm::Type *createLLVMType(ir::ScalarType stype);
 
 llvm::Type *llvmPtrType(ir::ScalarType stype);
 
-llvm::Constant *llvmPtr(llvm::Type *type, void *data);
-llvm::Constant *llvmPtr(const ir::Type &type, void *data);
+llvm::Constant *llvmPtr(llvm::Type *type, const void *data);
+llvm::Constant *llvmPtr(const ir::Type &type, const void *data);
 
 llvm::Constant *llvmPtr(const ir::Literal *literal);
 

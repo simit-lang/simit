@@ -11,6 +11,9 @@
 #include "util.h"
 #include "error.h"
 #include "program_context.h"
+#include "storage.h"
+#include "temps.h"
+#include "flatten.h"
 
 using namespace std;
 
@@ -19,147 +22,119 @@ namespace simit {
 const std::vector<std::string> VALID_BACKENDS = {"llvm", "gpu"};
 std::string kBackend = "llvm";
 
+static Function *compile(ir::Func func, internal::Backend *backend) {
+  func = insertTemporaries(func);
+  func = flattenIndexExpressions(func);
+  func.setStorage(getStorage(func));
+  func = lower(func);
+  return backend->compile(func);
+}
+
+
 // class ProgramContent
-class Program::ProgramContent {
- public:
-  ProgramContent(const std::string &name)
-      : name(name), frontend(new internal::Frontend()), backend(NULL) {}
-
-  ~ProgramContent() {
-    delete frontend;
-    delete backend;
-  }
-
-  const std::string &name;
-
+struct Program::ProgramContent {
   internal::ProgramContext ctx;
-  Diagnostics diags;
-
-  internal::Frontend *getFrontend() { return frontend; }
-
-  internal::Backend *getBackend() {
-    if (backend == NULL) {
-      if (kBackend == "llvm") {
-	backend = new internal::LLVMBackend();
-      }
-      else if (kBackend == "gpu") {
-	backend = new internal::GPUBackend();
-      }
-      else {
-	ierror << "Invalid backend choice";
-      }
-    }
-    return backend;
-  }
-
-  std::unique_ptr<Function> compile(const std::string &function) {
-    ir::Func simitFunc = ctx.getFunction(function);
-    if (!simitFunc.defined()) {
-      diags.report() << "Attempting to compile unknown function ("
-                     << function << ")";
-      return NULL;
-    }
-    return std::unique_ptr<Function>(compile(simitFunc));
-  }
-
-  int verify() {
-    // For each test look up the called function. Grab the actual arguments and
-    // run the function with them as input.  Then compare the result to the
-    // expected literal.
-    const std::map<std::string, ir::Func> &functions = ctx.getFunctions();
-    std::map<ir::Func, simit::Function*> compiled;
-
-    for (auto &test : ctx.getTests()) {
-      if (functions.find(test->getCallee()) == functions.end()) {
-        diags.report() << "Error: attempting to test unknown function "
-                       << "'" << test->getCallee() << "'";
-        return 1;
-      }
-      ir::Func func = functions.at(test->getCallee());
-
-      if (compiled.find(func) == compiled.end()) {
-        compiled[func] = compile(func);
-      }
-    }
-
-    for (auto &test : ctx.getTests()) {
-      iassert(functions.find(test->getCallee()) != functions.end());
-      ir::Func func = functions.at(test->getCallee());
-
-      iassert(compiled.find(func) != compiled.end());
-      Function *compiledFunc = compiled.at(func);
-
-      bool evaluates = test->evaluate(func, compiledFunc, &diags);
-      if (!evaluates) {
-        return 2;
-      }
-    }
-    
-    return 0;
-  }
-
- private:
   internal::Frontend *frontend;
   internal::Backend *backend;
-
-  Function *compile(ir::Func func) {
-    func = lower(func);
-    return getBackend()->compile(func);
-  }
+  Diagnostics diags;
 };
 
-
 // class Program
-Program::Program(const std::string &name)
-    : impl(new ProgramContent(name)) {
+Program::Program() : content(new ProgramContent) {
+  content->frontend = new internal::Frontend();
+  if (kBackend == "llvm") {
+    content->backend  = new internal::LLVMBackend();
+  }
+  else if (kBackend == "gpu") {
+    content->backend = new internal::GPUBackend();
+  }
+  else {
+    ierror << "Invalid backend choice";
+  }
 }
 
 Program::~Program() {
-  delete impl;
-}
-
-std::string Program::getName() const {
-  return impl->name;
+  delete content->frontend;
+  delete content->backend;
+  delete content;
 }
 
 int Program::loadString(const string &programString) {
   std::vector<ParseError> errors;
-  int status = impl->getFrontend()->parseString(programString, &impl->ctx,
-                                                &errors);
+  int status = content->frontend->parseString(programString, &content->ctx,
+                                                   &errors);
   for (auto &error : errors) {
-    impl->diags.report() << error.toString();
+    content->diags.report() << error.toString();
   }
   return status;
 }
 
 int Program::loadFile(const std::string &filename) {
   std::vector<ParseError> errors;
-  int status = impl->getFrontend()->parseFile(filename, &impl->ctx, &errors);
+  int status = content->frontend->parseFile(filename, &content->ctx, &errors);
   for (auto &error : errors) {
-    impl->diags.report() << error.toString();
+    content->diags.report() << error.toString();
   }
   return status;
 }
 
 std::unique_ptr<Function> Program::compile(const std::string &function) {
-  return impl->compile(function);
+  ir::Func simitFunc = content->ctx.getFunction(function);
+  if (!simitFunc.defined()) {
+    content->diags.report() << "Attempting to compile an unknown function ("
+                            << function << ")";
+    return NULL;
+  }
+  return std::unique_ptr<Function>(simit::compile(simitFunc, content->backend));
 }
 
 int Program::verify() {
-  return impl->verify();
+    // For each test look up the called function. Grab the actual arguments and
+    // run the function with them as input.  Then compare the result to the
+    // expected literal.
+    const std::map<string, ir::Func> &functions = content->ctx.getFunctions();
+    std::map<ir::Func, simit::Function*> compiled;
+
+    for (auto &test : content->ctx.getTests()) {
+      if (functions.find(test->getCallee()) == functions.end()) {
+        content->diags.report() << "Error: attempting to test unknown function "
+                       << "'" << test->getCallee() << "'";
+        return 1;
+      }
+      ir::Func func = functions.at(test->getCallee());
+
+      if (compiled.find(func) == compiled.end()) {
+        compiled[func] = simit::compile(func, content->backend);
+      }
+    }
+
+    for (auto &test : content->ctx.getTests()) {
+      iassert(functions.find(test->getCallee()) != functions.end());
+      ir::Func func = functions.at(test->getCallee());
+
+      iassert(compiled.find(func) != compiled.end());
+      Function *compiledFunc = compiled.at(func);
+
+      bool evaluates = test->evaluate(func, compiledFunc, &content->diags);
+      if (!evaluates) {
+        return 2;
+      }
+    }
+    
+    return 0;
 }
 
 bool Program::hasErrors() const {
-  return impl->diags.hasErrors();
+  return content->diags.hasErrors();
 }
 
 const Diagnostics &Program::getDiagnostics() const {
-  return impl->diags;
+  return content->diags;
 }
 
 std::ostream &operator<<(std::ostream &os, const Program &program) {
-  auto it = program.impl->ctx.getFunctions().begin();
-  auto end = program.impl->ctx.getFunctions().end();
+  auto it = program.content->ctx.getFunctions().begin();
+  auto end = program.content->ctx.getFunctions().end();
   if (it != end) {
     os << it->second << endl;
     ++it;

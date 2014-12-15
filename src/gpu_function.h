@@ -31,16 +31,22 @@ class GPUFunction : public simit::Function {
   const ir::Literal& getArgData(Actual& actual);
 
   // Struct for tracking arguments being pushed and pulled to/from GPU
-  struct GPUArgHandle {
-    std::map<std::string, CUdeviceptr*> devBufferFields;
+  struct DeviceDataHandle {
+    CUdeviceptr *devBuffer;
+    size_t size;
+    bool shouldPull;
+
+    DeviceDataHandle(CUdeviceptr *devBuffer, size_t size) :
+        devBuffer(devBuffer), size(size), shouldPull(true) {}
+    DeviceDataHandle(CUdeviceptr *devBuffer, size_t size, bool shouldPull) :
+        devBuffer(devBuffer), size(size), shouldPull(shouldPull) {}
   };
 
   // Copy argument memory into device and build an llvm value to point to it
-  llvm::Value *pushArg(
-      Actual& actual,
-      std::map<void*, std::pair<CUdeviceptr*, size_t>> &pushedBufs);
+  llvm::Value *pushArg(Actual& actual,
+                       std::map<void*, DeviceDataHandle> &pushedBufs);
   // Copy device buffer into host data block and free the device buffer
-  void pullArgAndFree(void *hostPtr, CUdeviceptr *devBuffer, size_t size);
+  void pullArgAndFree(void *hostPtr, DeviceDataHandle handle);
   // Create the harness function which sets up args for the main function
   llvm::Function *createHarness(const llvm::SmallVector<llvm::Value*, 8> &args);
 

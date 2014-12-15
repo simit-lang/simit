@@ -13,6 +13,7 @@
 
 #include "error.h"
 #include "graph.h"
+#include "indices.h"
 #include "ir.h"
 #include "llvm_codegen.h"
 
@@ -100,26 +101,27 @@ GPUFunction::~GPUFunction() {}
 
 llvm::Value *GPUFunction::pushArg(
     Actual& actual,
-    std::map<void*, std::pair<CUdeviceptr*, size_t>> &pushedBufs) {
+    std::map<void*, DeviceDataHandle> &pushedBufs) {
   switch (actual.getType().kind()) {
     case ir::Type::Tensor: {
       CUdeviceptr *devBuffer = new CUdeviceptr();
       const ir::TensorType *ttype = actual.getType().toTensor();
-      std::cout << "Tensor type, size: "
-                << ttype->size() * ttype->componentType.bytes() << std::endl;
+      // std::cout << "Tensor type, size: "
+      //           << ttype->size() * ttype->componentType.bytes() << std::endl;
       checkCudaErrors(cuMemAlloc(
           devBuffer, ttype->size() * ttype->componentType.bytes()));
-      const ir::Literal &literal = *(ir::to<ir::Literal>(actual.getTensor()->expr()));
-      std::cout << "[";
-      char* data = reinterpret_cast<char*>(literal.data);
-      for (int i = 0; i < literal.size; ++i) {
-        if (i != 0) std::cout << ",";
-        std::cout << std::hex << (int) data[i];
-      }
-      std::cout << "]" << std::endl;
+      const ir::Literal &literal = *(ir::to<ir::Literal>(*actual.getTensor()));
+      // std::cout << "[";
+      // char* data = reinterpret_cast<char*>(literal.data);
+      // for (int i = 0; i < literal.size; ++i) {
+      //   if (i != 0) std::cout << ",";
+      //   std::cout << std::hex << (int) data[i];
+      // }
+      // std::cout << "]" << std::endl;
       checkCudaErrors(cuMemcpyHtoD(*devBuffer, literal.data, literal.size));
-      std::cout << "Stored in: " << *devBuffer << std::endl;
-      pushedBufs[literal.data] = std::make_pair(devBuffer, literal.size);
+      // std::cout << "Stored in: " << *devBuffer << std::endl;
+      pushedBufs.emplace(literal.data,
+                         DeviceDataHandle(devBuffer, literal.size));
       return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer));
     }
     case ir::Type::Element: ierror << "Element arg not supported";
@@ -135,13 +137,48 @@ llvm::Value *GPUFunction::pushArg(
 
       // Edge indices
       if (setType->endpointSets.size() > 0) {
-        int *endpoints = getEndpointsPtr(set);
-        CUdeviceptr *devBuffer = new CUdeviceptr();
+        // Endpoints index
+        int *endpoints = set->getEndpointsData();
+        CUdeviceptr *endpointBuffer = new CUdeviceptr();
         size_t size = set->getSize() * set->getCardinality() * sizeof(int);
-        checkCudaErrors(cuMemAlloc(devBuffer, size));
-        checkCudaErrors(cuMemcpyHtoD(*devBuffer, endpoints, size));
-        pushedBufs[endpoints] = std::make_pair(devBuffer, size);
-        setData.push_back(llvmPtr(LLVM_INTPTR, reinterpret_cast<void*>(*devBuffer)));
+        checkCudaErrors(cuMemAlloc(endpointBuffer, size));
+        checkCudaErrors(cuMemcpyHtoD(*endpointBuffer, endpoints, size));
+        pushedBufs.emplace(endpoints,
+                           DeviceDataHandle(endpointBuffer, size, false));
+        setData.push_back(llvmPtr(LLVM_INTPTR,
+                                  reinterpret_cast<void*>(*endpointBuffer)));
+
+        // Edges index
+        // TODO
+
+        // Neighbor index
+        const internal::NeighborIndex *nbrs = set->getNeighborIndex();
+        const int *startIndex = nbrs->getStartIndex();
+        size_t startSize = set->getSize() * sizeof(int);
+        const int *nbrIndex = nbrs->getNeighborIndex();
+        size_t nbrSize = nbrs->getSize() * sizeof(int);
+        CUdeviceptr *startBuffer = new CUdeviceptr();
+        CUdeviceptr *nbrBuffer = new CUdeviceptr();
+
+        checkCudaErrors(cuMemAlloc(startBuffer, startSize));
+        checkCudaErrors(cuMemcpyHtoD(*startBuffer, startIndex, startSize));
+        // Pushed bufs expects non-const pointers, because some are written two.
+        // Because we specify shouldPull=false in DeviceDataHandle, this will
+        // not be written, but must be casted anyway.
+        pushedBufs.emplace(const_cast<int*>(startIndex),
+                           DeviceDataHandle(startBuffer, startSize, false));
+        setData.push_back(llvmPtr(LLVM_INTPTR,
+                                  reinterpret_cast<void*>(*startBuffer)));
+
+        checkCudaErrors(cuMemAlloc(nbrBuffer, nbrSize));
+        checkCudaErrors(cuMemcpyHtoD(*nbrBuffer, nbrIndex, nbrSize));
+        // Pushed bufs expects non-const pointers, because some are written two.
+        // Because we specify shouldPull=false in DeviceDataHandle, this will
+        // not be written, but must be casted anyway.
+        pushedBufs.emplace(const_cast<int*>(nbrIndex),
+                           DeviceDataHandle(nbrBuffer, nbrSize, false));
+        setData.push_back(llvmPtr(LLVM_INTPTR,
+                                  reinterpret_cast<void*>(*nbrBuffer)));
       }
 
       // Fields
@@ -153,11 +190,11 @@ llvm::Value *GPUFunction::pushArg(
         ir::Type ftype = field.type;
         iassert(ftype.isTensor()) << "Element field must be tensor type";
         const ir::TensorType *ttype = ftype.toTensor();
-        void *fieldData = getFieldPtr(set, field.name);
+        void *fieldData = set->getFieldData(field.name);
         size_t size = set->getSize() * ttype->size() * ttype->componentType.bytes();
         checkCudaErrors(cuMemAlloc(devBuffer, size));
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
-        pushedBufs[fieldData] = std::make_pair(devBuffer, size);
+        pushedBufs.emplace(fieldData, DeviceDataHandle(devBuffer, size));
         setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer)));
       }
 
@@ -167,10 +204,11 @@ llvm::Value *GPUFunction::pushArg(
   }
 }
 
-void GPUFunction::pullArgAndFree(void *hostPtr,
-                                 CUdeviceptr *devBuffer, size_t size) {
-  checkCudaErrors(cuMemcpyDtoH(hostPtr, *devBuffer, size));
-  checkCudaErrors(cuMemFree(*devBuffer));
+void GPUFunction::pullArgAndFree(void *hostPtr, DeviceDataHandle handle) {
+  if (handle.shouldPull) {
+    checkCudaErrors(cuMemcpyDtoH(hostPtr, *handle.devBuffer, handle.size));
+  }
+  checkCudaErrors(cuMemFree(*handle.devBuffer));
 }
 
 void GPUFunction::print(std::ostream &os) const {
@@ -237,7 +275,7 @@ simit::Function::FuncType GPUFunction::init(
 
   // Push data and build harness
   llvm::SmallVector<llvm::Value*, 8> args;
-  std::map<void*, std::pair<CUdeviceptr*, size_t> > pushedBufs;
+  std::map<void*, DeviceDataHandle> pushedBufs;
   int width = 1;
   int height = 1;
   int numSets = 0;
@@ -346,7 +384,7 @@ simit::Function::FuncType GPUFunction::init(
 
     // Pull args back to CPU, clean up device buffers
     for (auto &kv : pushedBufs) {
-      pullArgAndFree(kv.first, kv.second.first, kv.second.second);
+      pullArgAndFree(kv.first, kv.second);
     }
 
     // Clean up

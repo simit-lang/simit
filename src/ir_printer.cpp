@@ -32,6 +32,10 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node) {
   return os;
 }
 
+std::ostream &operator<<(std::ostream &os, const Var &v) {
+  return os << v.getName();
+}
+
 
 // class IRPrinter
 IRPrinter::IRPrinter(std::ostream &os, signed indent) : os(os), indentation(0) {
@@ -81,7 +85,7 @@ void IRPrinter::visit(const Literal *op) {
       componentType = type->componentType.kind;
 
       switch (componentType) {
-        case ScalarType::Int: { {
+        case ScalarType::Int:  {
           const int *idata = static_cast<const int*>(op->data);
           if (size == 1) {
             os << idata[0];
@@ -109,10 +113,25 @@ void IRPrinter::visit(const Literal *op) {
           }
           break;
         }
+        case ScalarType::Boolean: {
+          const bool *fdata = static_cast<const bool*>(op->data);
+          if (size == 1) {
+            os << fdata[0];
+          }
+          else {
+            os << "[" << to_string(fdata[0]);
+            for (size_t i=1; i < size; ++i) {
+              os << ", " + to_string(fdata[i]);
+            }
+            os << "]";
+          }
+          break;
+        }
+
         }
       }
       break;
-    }
+    
     case Type::Element:
       not_supported_yet;
     case Type::Set:
@@ -187,7 +206,7 @@ void IRPrinter::visit(const IndexExpr *op) {
 }
 
 void IRPrinter::visit(const Call *op) {
-  os << op->func.getName() << "(" << util::join(op->func.getArguments()) << ")";
+  os << op->func.getName() << "(" << util::join(op->actuals) << ")";
 }
 
 void IRPrinter::visit(const Neg *op) {

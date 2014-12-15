@@ -25,18 +25,10 @@ static size_t getTensorByteSize(const TensorType *tensorType) {
 }
 
 // class Expr
-Expr::Expr(int val) : IntrusivePtr(Literal::make(Int, &val)) {
+Expr::Expr(int val) : IRHandle(Literal::make(Int, &val)) {
 }
 
-Expr::Expr(double val) : IntrusivePtr(Literal::make(Float, &val)) {
-}
-
-bool operator==(const Expr &l, const Expr &r) {
-  return l.expr() == r.expr();
-}
-
-bool operator!=(const Expr &l, const Expr &r) {
-  return !(l == r);
+Expr::Expr(double val) : IRHandle(Literal::make(Float, &val)) {
 }
 
 // class Intrinsics
@@ -75,7 +67,7 @@ Func Intrinsics::exp = Func("exp",
                             {Var("r", Float)},
                             Func::Intrinsic);
 
-// TODO: Generalize to norm
+// TODO: Generalize to norm with n parameters
 Func Intrinsics::norm = Func("norm",
                              {Var("x", vec3f)},
                              {Var("r", Float)},
@@ -85,6 +77,11 @@ Func Intrinsics::solve = Func("solve",
                               {},
                               {Var("r", Float)},
                               Func::Intrinsic);
+
+Func Intrinsics::loc = Func("loc",
+                            {},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
 
 std::map<std::string, Func> Intrinsics::byName = {{"mod",mod},
                                                   {"sin",sin},
@@ -187,6 +184,16 @@ bool operator==(const Literal& l, const Literal& r) {
       }
       break;
     }
+    case ScalarType::Boolean: {
+      bool *ldata = static_cast<bool*>(l.data);
+      bool *rdata = static_cast<bool*>(r.data);
+      for (size_t i=0; i < l.type.toTensor()->size(); ++i) {
+        if (ldata[i] != rdata[i])
+          return false;
+      }
+      break;
+    }
+
   }
   return true;
 }

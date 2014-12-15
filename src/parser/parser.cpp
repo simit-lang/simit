@@ -127,7 +127,7 @@
                                              ttype->dimensions,
                                              !ttype->isColumnVector);
 
-    const_cast<ExprNodeBase*>(vec.expr())->type = transposedVector;
+    const_cast<ExprNodeBase*>(to<ExprNodeBase>(vec))->type = transposedVector;
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
@@ -2633,7 +2633,7 @@ namespace  simit { namespace internal  {
     std::vector<Expr> literalArgs;
     literalArgs.reserve(actuals->size());
     for (auto &arg : *actuals) {
-      if (dynamic_cast<const Literal*>(arg.expr()) == nullptr) {
+      if (!isa<Literal>(arg)) {
         REPORT_ERROR("function calls in tests must have literal arguments", yystack_[7].location);
       }
       literalArgs.push_back(arg);

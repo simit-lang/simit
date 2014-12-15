@@ -1,22 +1,10 @@
-#ifndef SIMIT_INTERFACES_H
-#define SIMIT_INTERFACES_H
+#ifndef SIMIT_PRINTABLE_H
+#define SIMIT_PRINTABLE_H
 
 #include <ostream>
 
 namespace simit {
 namespace interfaces {
-
-/// C++11 interface that prevents a class from being copied.
-class Uncopyable {
-protected:
-  Uncopyable() = default;
-  ~Uncopyable() = default;
-
-private:
-  Uncopyable(const Uncopyable&) = delete;
-  Uncopyable& operator=(const Uncopyable&) = delete;
-};
-
 
 class Printable {
 public:
@@ -31,5 +19,5 @@ inline std::ostream &operator<<(std::ostream &os, const Printable &printable) {
   return os;
 }
 
-}}  // namespace simit::util
+}}
 #endif
