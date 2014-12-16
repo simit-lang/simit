@@ -25,6 +25,7 @@ class FieldRefBase;
 }
 
 namespace internal {
+class ElementIterator;
 class VertexToEdgeEndpointIndex;
 class VertexToEdgeIndex;
 class NeighborIndex;
@@ -73,10 +74,63 @@ private:
   int ident;
 
   friend class SetBase;
+  friend class internal::ElementIterator;
   friend class FieldRefBase;
   friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
   friend class internal::NeighborIndex;
+};
+
+
+namespace internal {
+/// Iterator that iterates over the elements in a Set
+///
+/// This iterator is an input_iterator, and thus can only be
+/// dereferenced as an rvalue.  Furthermore, it can only return
+/// const references to Elements.
+class ElementIterator {
+public:
+  // some typedefs to make interop with std easier
+  typedef std::input_iterator_tag iterator_category;
+  typedef ElementRef value_type;
+  typedef ptrdiff_t difference_type;
+  typedef ElementRef& reference;
+  typedef ElementRef* pointer;
+
+  ElementIterator(const SetBase* set, int idx=0) : curElem(idx), set(set) { }
+  ElementIterator(const ElementIterator& other) : curElem(other.curElem),
+  set(other.set) {}
+
+  reference operator*() {return curElem;}
+  pointer operator->() {return &curElem;}
+
+  ElementIterator& operator++() {
+    curElem.ident++;
+    return *this;
+  }
+
+  ElementIterator operator++(int) {
+    curElem.ident++;
+    return *this;
+  }
+
+  friend bool operator!=(const ElementIterator& l, const ElementIterator& r) {
+    return !(l.set==r.set) || !(l.curElem.ident == r.curElem.ident);
+  }
+
+  friend bool operator==(const ElementIterator& l, const ElementIterator& r) {
+    return (l.set==r.set) && (l.curElem.ident == r.curElem.ident);
+  }
+
+  friend bool operator<(const ElementIterator& l, const ElementIterator& r) {
+    iassert(l.set == r.set);
+    return l.curElem.ident < r.curElem.ident;
+  }
+
+private:
+  ElementRef curElem; // current element index
+  const SetBase* set; // set we're iterating over
+};
 };
 
 
@@ -85,6 +139,8 @@ private:
 // and can be passed as bound inputs to Simit programs.
 class SetBase {
 public:
+  typedef internal::ElementIterator ElementIterator;
+
   SetBase() :  numElements(0), cardinality(0),
                endpoints(nullptr), capacity(capacityIncrement),
                neighbors(nullptr) {}
@@ -173,55 +229,6 @@ public:
     numElements--;
   }
 
-  /// Iterator that iterates over the elements in a Set
-  ///
-  /// This iterator is an input_iterator, and thus can only be
-  /// dereferenced as an rvalue.  Furthermore, it can only return
-  /// const references to Elements.
-  class ElementIterator {
-  public:
-    // some typedefs to make interop with std easier
-    typedef std::input_iterator_tag iterator_category;
-    typedef ElementRef value_type;
-    typedef ptrdiff_t difference_type;
-    typedef ElementRef& reference;
-    typedef ElementRef* pointer;
-    
-    ElementIterator(const SetBase* set, int idx=0) : curElem(idx), set(set) { }
-    ElementIterator(const ElementIterator& other) : curElem(other.curElem),
-                                                    set(other.set) {}
-    
-    reference operator*() {return curElem;}
-    pointer operator->() {return &curElem;}
-    
-    ElementIterator& operator++() {
-      curElem.ident++;
-      return *this;
-    }
-    
-    ElementIterator operator++(int) {
-      curElem.ident++;
-      return *this;
-    }
-    
-    friend bool operator!=(const ElementIterator& l, const ElementIterator& r) {
-      return !(l.set==r.set) || !(l.curElem.ident == r.curElem.ident);
-    }
-    
-    friend bool operator==(const ElementIterator& l, const ElementIterator& r) {
-      return (l.set==r.set) && (l.curElem.ident == r.curElem.ident);
-    }
-
-    friend bool operator<(const ElementIterator& l, const ElementIterator& r) {
-      iassert(l.set == r.set);
-      return l.curElem.ident < r.curElem.ident;
-    }
-
-  private:
-    ElementRef curElem; // current element index
-    const SetBase* set; // set we're iterating over
-  };
-
   /// Create an ElementIterator for this Set, set to the first element
   ElementIterator begin() const { return ElementIterator(this, 0); }
   
@@ -309,8 +316,10 @@ public:
     }
 
     bool lessThan(const EndpointIterator &other) const {
-      iassert(this->set == other.set) << "Comparing EndpointIterators from two different Sets";
-      iassert(this->curElem.ident == other.curElem.ident) << "Comparing EndpointIterators over two different edges";
+      iassert(this->set == other.set)
+          << "Comparing EndpointIterators from two different Sets";
+      iassert(this->curElem.ident == other.curElem.ident)
+          << "Comparing EndpointIterators over two different edges";
       return this->endpointNum < other.endpointNum;
     }
 
