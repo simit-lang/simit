@@ -98,6 +98,10 @@ protected:
                         std::initializer_list<llvm::Value*> args,
                         llvm::Type *returnType);
 
+  llvm::Value *emitCall(std::string name,
+                        std::vector<llvm::Value*> args,
+                        llvm::Type *returnType);
+
   void emitPrintf(std::string format);
   void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
 

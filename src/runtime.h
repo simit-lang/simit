@@ -26,11 +26,11 @@ double cMatSolve(double* bufferA, double* bufferX, double* bufferC,
 extern "C" {
 
 int loc(int v0, int v1) {
-  printf("(%d, %d)\n", v0, v1);
+  printf("(%d, %d)", v0, v1);
 //  int l = neighbors_summary[v0];
 //  while(neighbors[l] != v1) l++;
 //  return l;
-  return 0;
+  return v0+v1;
 }
 
 }

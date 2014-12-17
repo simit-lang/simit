@@ -347,7 +347,8 @@ void LLVMBackend::visit(const Call *op) {
                                                                   ftype));
   }
   else if (op->func == ir::Intrinsics::loc) {
-    val = emitCall("loc", {llvmInt(0), llvmInt(0)}, LLVM_INT);
+    val = emitCall("loc", args, LLVM_INT);
+    emitPrintf(" -> %d\n", {val});
     return;
   }
   else {
@@ -783,6 +784,12 @@ llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index){
 
 llvm::Value *LLVMBackend::emitCall(string name,
                                    initializer_list<llvm::Value*> args,
+                                   llvm::Type *returnType) {
+  return emitCall(name, vector<llvm::Value*>(args), returnType);
+}
+
+llvm::Value *LLVMBackend::emitCall(std::string name,
+                                   std::vector<llvm::Value*> args,
                                    llvm::Type *returnType) {
   std::vector<llvm::Type*> argTypes;
   for (auto &arg : args) {
