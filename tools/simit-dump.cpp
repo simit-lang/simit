@@ -198,7 +198,7 @@ int main(int argc, const char* argv[]) {
       cout << func.getStorage() << endl << endl;
     }
     
-    func = lowerAssemblies(func);
+    func = lowerMaps(func);
     if (emitSimit) {
       cout << "--- Lower Maps" << endl;
       cout << func << endl << endl;;

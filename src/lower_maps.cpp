@@ -26,9 +26,9 @@ inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
 }
 
 
-class LowerAssemblies : public IRRewriter {
+class LowerMaps : public IRRewriter {
 public:
-  LowerAssemblies(const Storage &storage) : storage(storage) {}
+  LowerMaps(const Storage &storage) : storage(storage) {}
 
 private:
   Storage storage;
@@ -70,8 +70,8 @@ private:
   }
 };
 
-Func lowerAssemblies(Func func) {
-  Stmt body = LowerAssemblies(func.getStorage()).rewrite(func.getBody());
+Func lowerMaps(Func func) {
+  Stmt body = LowerMaps(func.getStorage()).rewrite(func.getBody());
   return Func(func, body);
 }
 
