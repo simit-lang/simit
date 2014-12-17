@@ -57,8 +57,7 @@ private:
         ForDomain domain(op->target);
 
         body = InlineMappedFunction(op,loopVar).rewrite(body);
-        Stmt loweredMap = For::make(loopVar, domain, body);
-        stmt = Block::make(op, loweredMap);
+        stmt = For::make(loopVar, domain, body);
       }
       else {
         terror << "Unsupported tensor storage lowering";
