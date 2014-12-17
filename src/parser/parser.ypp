@@ -682,6 +682,7 @@ elif_clauses
     delete $4;
   }
 
+%type <stmt> for_stmt;
 for_stmt
   : for_stmt_header index_set stmt_block for_stmt_footer{    
     if($2->getKind()==IndexSet::Set){
