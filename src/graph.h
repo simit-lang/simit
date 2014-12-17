@@ -17,12 +17,9 @@ namespace simit {
 
 // Forward declarations
 class SetBase;
+class FieldRefBase;
 template <typename T, int... dimensions> class FieldRef;
 template <typename T, int... dimensions> class TensorRef;
-
-namespace {
-class FieldRefBase;
-}
 
 namespace internal {
 class VertexToEdgeEndpointIndex;
@@ -511,7 +508,6 @@ public:
 
 
 // Field References
-namespace {
 
 /// The base class of field references.
 class FieldRefBase {
@@ -609,9 +605,6 @@ class FieldRefBaseParameterized : public FieldRefBase {
 
   FieldRefBaseParameterized(void *fieldData) : FieldRefBase(fieldData) {}
 };
-
-
-} // unnamed namespace
 
 template <typename T, int... dimensions>
 class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
