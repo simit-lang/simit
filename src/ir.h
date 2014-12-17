@@ -343,19 +343,19 @@ struct TupleRead : public ExprNode<TupleRead> {
 /// An IndexRead retrieves an index from an edge set.  An example of an index
 /// is the endpoints of the edges in the set.
 struct IndexRead : public ExprNode<IndexRead> {
-  Expr edgeSet;
-  std::string indexName;
+  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2 };
 
-  static Expr make(Expr edgeSet, std::string indexName) {
+  Expr edgeSet;
+  Kind kind;
+
+  static Expr make(Expr edgeSet, Kind kind) {
     iassert(edgeSet.type().isSet());
-    iassert(indexName == "endpoints")
-        << "Only endpoints index supported for now";
 
     IndexRead *node = new IndexRead;
     node->type = TensorType::make(ScalarType(ScalarType::Int),
                                   {IndexDomain(IndexSet(edgeSet))});
     node->edgeSet = edgeSet;
-    node->indexName = indexName;
+    node->kind = kind;
     return node;
   }
 };

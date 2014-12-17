@@ -79,9 +79,9 @@ private:
     //       need to have specialized code for vectors and matrices).
     iassert(indices.size() <= 2);
 
-    TensorStorage::Kind tensorStorage = TensorStorage::Undefined;
+    TensorStorage tensorStorage;
     if (isa<VarExpr>(tensor)) {
-      tensorStorage = storage.get(to<VarExpr>(tensor)->var).getKind();
+      tensorStorage = storage.get(to<VarExpr>(tensor)->var);
     }
     else {
       // Fields are always dense row major
@@ -89,7 +89,7 @@ private:
     }
 
     Expr index;
-    switch (tensorStorage) {
+    switch (tensorStorage.getKind()) {
       case TensorStorage::DenseRowMajor: {
         const TensorType *type = tensor.type().toTensor();
         if (indices.size() == 1) {
@@ -122,7 +122,12 @@ private:
         iassert(indices.size() == 2);
         Expr i = rewrite(indices[0]);
         Expr j = rewrite(indices[1]);
-        index = Call::make(Intrinsics::loc, {i,j});
+
+        Expr edgeSet = tensorStorage.getSystemTargetSet();
+        Expr nbrs_start = IndexRead::make(edgeSet, IndexRead::NeighborsStart);
+        Expr nbrs = IndexRead::make(edgeSet, IndexRead::Neighbors);
+
+        index = Call::make(Intrinsics::loc, {i, j, nbrs_start, nbrs});
         break;
       }
       case TensorStorage::SystemUnreduced:

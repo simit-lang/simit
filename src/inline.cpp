@@ -51,7 +51,7 @@ void InlineMappedFunction::visit(const TupleRead *op) {
     const TupleType *tupleType = op->tuple.type().toTuple();
     int cardinality = tupleType->size;
 
-    Expr endpoints = IndexRead::make(targetSet, "endpoints");
+    Expr endpoints = IndexRead::make(targetSet, IndexRead::Endpoints);
     Expr indexExpr = Add::make(Mul::make(targetLoopVar, cardinality),
                                op->index);
     expr = Load::make(endpoints, indexExpr);

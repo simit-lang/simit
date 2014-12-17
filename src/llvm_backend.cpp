@@ -181,26 +181,14 @@ void LLVMBackend::visit(const TupleRead *op) {
 }
 
 void LLVMBackend::visit(const ir::IndexRead *op) {
-  // For now we only support the two hard-coded indices endpoints and neighbors
   // TODO: Add support for different indices (contained in the Set type).
+  int indexLoc = 1 + op->kind;
 
-  if (op->indexName == "endpoints") {
-    iassert(op->edgeSet.type().isSet());
-    iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
+  iassert(op->edgeSet.type().isSet());
+  iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
 
-    llvm::Value *edgeSetValue = compile(op->edgeSet);
-    val = builder->CreateExtractValue(edgeSetValue, {1},
-                                      edgeSetValue->getName()+"."+op->indexName);
-  }
-  else if (op->indexName == "neighbors.summary") {
-    not_supported_yet;
-  }
-  else if (op->indexName == "neighbors.data") {
-
-  }
-  else {
-    ierror;
-  }
+  llvm::Value *edgesValue = compile(op->edgeSet);
+  val = builder->CreateExtractValue(edgesValue, {indexLoc}, util::toString(op));
 }
 
 void LLVMBackend::visit(const ir::Length *op) {
@@ -344,11 +332,10 @@ void LLVMBackend::visit(const Call *op) {
 
     auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes2, false);
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("cMatSolve",
-                                                                  ftype));
+                                                                 ftype));
   }
   else if (op->func == ir::Intrinsics::loc) {
     val = emitCall("loc", args, LLVM_INT);
-    emitPrintf(" -> %d\n", {val});
     return;
   }
   else {

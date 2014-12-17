@@ -175,7 +175,18 @@ void IRPrinter::visit(const TupleRead *op) {
 
 void IRPrinter::visit(const IndexRead *op) {
   print(op->edgeSet);
-  os << "." << op->indexName;
+  os << ".";
+  switch (op->kind) {
+    case IndexRead::Endpoints:
+      os << "endpoints";
+      break;
+    case IndexRead::NeighborsStart:
+      os << "neighbors.start";
+      break;
+    case IndexRead::Neighbors:
+      os << "neighbors";
+      break;
+  }
 }
 
 void IRPrinter::visit(const Length *op) {

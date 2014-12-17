@@ -98,7 +98,7 @@ void IRRewriter::visit(const IndexRead *op) {
     expr = op;
   }
   else {
-    expr = IndexRead::make(edgeSet, op->indexName);
+    expr = IndexRead::make(edgeSet, op->kind);
   }
 }
 
