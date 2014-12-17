@@ -328,9 +328,7 @@ void IRRewriter::visit(const Func *f) {
     if (!body.defined()) {
       body = Pass::make();
     }
-
-    func = Func(f->getName(), f->getArguments(), f->getResults(), body,
-                f->getKind());
+    func = Func(*f, body);
   }
 }
 
