@@ -682,18 +682,23 @@ elif_clauses
     delete $4;
   }
 
+%type <stmt> for_stmt;
 for_stmt
-  : for_stmt_header stmt_block for_stmt_footer
-
-for_stmt_header
-  : "for" IDENT "in" index_set {
+  : "for" IDENT "in" index_set stmt_block for_stmt_footer{
     string varName = convertAndFree($IDENT);
     Var var(varName, Int);
+    
     ctx->scope();
 
     // If we need to write to loop variables, then that should be added as a
     // separate loop structure (that can't be vectorized easily)
     ctx->addSymbol(varName, var, Symbol::Read);
+    
+    if($4->getKind()==IndexSet::Set){
+      $$ = new Stmt(For::make(var,ForDomain(*$4), *$5));
+      delete $5;
+      delete $4;
+    }
   }
 
 for_stmt_footer
