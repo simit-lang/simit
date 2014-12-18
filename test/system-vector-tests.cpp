@@ -21,7 +21,7 @@ TEST(System, vector_add) {
 
   f->runSafe();
 
-  ASSERT_EQ(84.0, x.get(p0));
+  ASSERT_EQ(84.0, (int)(x.get(p0)));
 }
 
 TEST(System, vector_add_blocked) {

@@ -6,6 +6,7 @@
 
 #include "error.h"
 #include "gpu_function.h"
+#include "ir.h"
 #include "llvm_codegen.h"
 #include "types.h"
 
@@ -28,20 +29,21 @@ GPUBackend::GPUBackend() {}
 GPUBackend::~GPUBackend() {}
 
 simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
-  llvm::Module *mod = new llvm::Module("nvvm-module", LLVM_CONTEXT);
+  this->module = new llvm::Module("nvvm-module", LLVM_CONTEXT);
 
   // Set appropriate data layout
   if (sizeof(void*) == 8)
-    mod->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-                       "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
-                       "v64:64:64-v128:128:128-n16:32:64");
+    module->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
+                          "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
+                          "v64:64:64-v128:128:128-n16:32:64");
   else
-    mod->setDataLayout("e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-                       "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
-                       "v64:64:64-v128:128:128-n16:32:64");
+    module->setDataLayout("e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
+                          "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
+                          "v64:64:64-v128:128:128-n16:32:64");
 
   llvm::Function *func = createFunction("kernel.main", irFunc.getArguments(),
-                                        irFunc.getResults(), mod, false, false);
+                                        irFunc.getResults(), module,
+                                        false, false);
 
   // Name LLVM arguments, insert into symtable
   auto arg = func->arg_begin();
@@ -67,7 +69,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   // NVVM kernel should always return void
   builder->CreateRetVoid();
 
-  return new GPUFunction(irFunc, func, mod);
+  return new GPUFunction(irFunc, func, module);
 }
 
 llvm::Value *GPUBackend::compile(const ir::Expr &expr) {
@@ -78,7 +80,7 @@ llvm::Value *GPUBackend::compile(const ir::Expr &expr) {
 }
 
 void GPUBackend::visit(const ir::FieldRead *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::TensorRead *op) {
   ASSERT(false && "No code generation for this type");
@@ -141,9 +143,53 @@ void GPUBackend::visit(const ir::FieldWrite *op) {
 void GPUBackend::visit(const ir::Store *op) {
   LLVMBackend::visit(op);
 }
-void GPUBackend::visit(const ir::For *op) {
+void GPUBackend::visit(const ir::ForRange *op) {
   // TODO(gkanwar): Some for domains should perhaps be handled differently
   LLVMBackend::visit(op);
+}
+void GPUBackend::visit(const ir::For *op) {
+  std::string iName = op->var.getName();
+  ir::ForDomain domain = op->domain;
+  
+  // Only supports sharding over index set
+  bool sharded = true;
+  llvm::Value *index;
+  if (iName == xVar) {
+    index = getTidX();
+  }
+  else if (iName == yVar) {
+    index = getTidY();
+  }
+  else if (iName == zVar) {
+    index = getTidZ();
+  }
+  else {
+    if (xVar.empty()) {
+      xVar = iName;
+      index = getTidX();
+    }
+    else if (yVar.empty()) {
+      yVar = iName;
+      index = getTidY();
+    }
+    else if (zVar.empty()) {
+      zVar = iName;
+      index = getTidZ();
+    }
+    else {
+      sharded = false;
+    }
+  }
+
+  if (sharded) {
+    symtable.scope();
+    symtable.insert(iName, index);
+    LLVMBackend::compile(op->body);
+    symtable.unscope();
+  }
+  else {
+    LLVMBackend::visit(op);
+  }
 }
 void GPUBackend::visit(const ir::IfThenElse *op) {
   ASSERT(false && "No code generation for this type");
@@ -153,6 +199,36 @@ void GPUBackend::visit(const ir::Block *op) {
 }
 void GPUBackend::visit(const ir::Pass *op) {
   ASSERT(false && "No code generation for this type");
+}
+
+llvm::Value *GPUBackend::getTidX() {
+  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
+  llvm::Function *func = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.x", funcTy));
+  // Attribute groups disallowed in NVVM
+  func->removeFnAttr(llvm::Attribute::ReadNone);
+  func->removeFnAttr(llvm::Attribute::NoUnwind);
+  return builder->CreateCall(func);
+}
+
+llvm::Value *GPUBackend::getTidY() {
+  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
+  llvm::Function *func = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.y", funcTy));
+  // Attribute groups disallowed in NVVM
+  func->removeFnAttr(llvm::Attribute::ReadNone);
+  func->removeFnAttr(llvm::Attribute::NoUnwind);
+  return builder->CreateCall(func);
+}
+
+llvm::Value *GPUBackend::getTidZ() {
+  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
+  llvm::Function *func = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.z", funcTy));
+  // Attribute groups disallowed in NVVM
+  func->removeFnAttr(llvm::Attribute::ReadNone);
+  func->removeFnAttr(llvm::Attribute::NoUnwind);
+  return builder->CreateCall(func);
 }
 
 }

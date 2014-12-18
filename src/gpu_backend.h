@@ -20,7 +20,11 @@ public:
   simit::Function *compile(simit::ir::Func func);
 
 private:
-  /// used to return variables from Expr visit functions
+  // Used to track which dimensions of the GPU computation have been
+  // parallelized across blocks
+  std::string xVar;
+  std::string yVar;
+  std::string zVar;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void visit(const ir::FieldRead *);
@@ -45,10 +49,16 @@ private:
   virtual void visit(const ir::AssignStmt *);
   virtual void visit(const ir::FieldWrite *);
   virtual void visit(const ir::Store *);
+  virtual void visit(const ir::ForRange *);
   virtual void visit(const ir::For *);
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
+
+  // Emits calls to nvvm intrinsics to read thread ids
+  llvm::Value *getTidX();
+  llvm::Value *getTidY();
+  llvm::Value *getTidZ();
 };
 
 }

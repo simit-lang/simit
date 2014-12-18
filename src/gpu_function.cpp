@@ -97,7 +97,11 @@ std::string generatePtx(const std::string &module,
 GPUFunction::GPUFunction(simit::ir::Func simitFunc,
                          llvm::Function *llvmFunc, llvm::Module *llvmModule)
     : Function(simitFunc), llvmFunc(llvmFunc), llvmModule(llvmModule) {}
-GPUFunction::~GPUFunction() {}
+GPUFunction::~GPUFunction() {
+  // llvmFunc will be destroyed when the harness funtion object is destroyed
+  // because it was claimed by a CallInst
+  llvmFunc.release();
+}
 
 llvm::Value *GPUFunction::pushArg(
     Actual& actual,
@@ -226,6 +230,8 @@ llvm::Function *GPUFunction::createHarness(
                                            llvmModule.get(), true, false);
 
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
+  // Note: CallInst takes ownership of llvmFunc. This is resolved in
+  // the destructor
   llvm::CallInst *call = llvm::CallInst::Create(
       llvmFunc.get(), args, "", entry);
   call->setCallingConv(llvmFunc->getCallingConv());
