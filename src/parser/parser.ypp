@@ -683,37 +683,34 @@ elif_clauses
   }
 
 for_stmt
-  : "for" IDENT "in" index_set stmt_block for_stmt_footer{
-    string varName = convertAndFree($IDENT);
-    Var var(varName, Int);
-    
-    ctx->scope();
-
-    // If we need to write to loop variables, then that should be added as a
-    // separate loop structure (that can't be vectorized easily)
-    ctx->addSymbol(varName, var, Symbol::Read);
-    
-    if($4->getKind()==IndexSet::Set){
-      ctx->addStatement(For::make(var,ForDomain(*$4), *$5));
-      delete $5;
-      delete $4;
+  : for_stmt_header index_set stmt_block for_stmt_footer{    
+    if($2->getKind()==IndexSet::Set){
+      ctx->addStatement(For::make(*$1,ForDomain(*$2), *$3));
     }
+    delete $1;
+    delete $2;
+    delete $3;
   }
-  | "for" IDENT "in" expr ":" expr stmt_block for_stmt_footer {
-    string varName = convertAndFree($IDENT);
-    Var var(varName, Int);
-    
-    ctx->scope();
-
-    // If we need to write to loop variables, then that should be added as a
-    // separate loop structure (that can't be vectorized easily)
-    ctx->addSymbol(varName, var, Symbol::Read);
-    
-    ctx->addStatement(ForRange::make(var, *$4, *$6, *$7));
+  | for_stmt_header expr ":" expr stmt_block for_stmt_footer {    
+    ctx->addStatement(ForRange::make(*$1, *$2, *$4, *$5));
+    delete $1;
+    delete $2;
     delete $4;
-    delete $6;
-    delete $7;
+    delete $5;
   }
+
+%type <var> for_stmt_header;
+for_stmt_header 
+ : "for" IDENT "in" {
+ string varName = convertAndFree($IDENT);
+ Var * var = new Var(varName, Int);     
+ ctx->scope();
+ // If we need to write to loop variables, then that should be added as a
+ // separate loop structure (that can't be vectorized easily)
+ ctx->addSymbol(varName, *var, Symbol::Read);
+
+ $$=var;
+ }
   
 for_stmt_footer
   : BLOCKEND {
