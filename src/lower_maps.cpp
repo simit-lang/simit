@@ -43,17 +43,7 @@ private:
     if (tensorStorage != TensorStorage::SystemNone || op->vars.size() == 0) {
       if (tensorStorage == TensorStorage::SystemReduced ||
           tensorStorage == TensorStorage::DenseRowMajor) {
-        Func kernel = op->function;
-        Stmt body = kernel.getBody();
-
-        Var targetVar = kernel.getArguments()[0];
-        Var neighborsVar = kernel.getArguments()[1];
-
-        Var loopVar(targetVar.getName(), Int);
-        ForDomain domain(op->target);
-
-        body = InlineMappedFunction(op,loopVar).rewrite(body);
-        stmt = For::make(loopVar, domain, body);
+        stmt = inlineMap(op);
       }
       else {
         ierror << "Unsupported tensor storage lowering";

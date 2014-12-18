@@ -11,7 +11,7 @@ namespace ir {
 class InlineMappedFunction : public IRRewriter {
 public:
   InlineMappedFunction(const Map *map, Var targetLoopVar);
-  virtual ~InlineMappedFunction() {}
+  virtual ~InlineMappedFunction();
 
 protected:
   std::map<Var,Var> resultToMapVar;
@@ -27,12 +27,19 @@ protected:
   /// Replace element field reads with set field reads
   virtual void visit(const FieldRead *op);
 
-  /// Replace neighbor tuple read with reads from target endpoints
+  /// Replace neighbor tuple reads with reads from target endpoints
   virtual void visit(const TupleRead *op);
 
   /// Replace function formal results with map actual results
   virtual void visit(const VarExpr *op);
 };
+
+/// Inlines the mapped function with respect to the given loop variable over
+/// the target set.
+Stmt inlineMappedFunction(const Map *map, Var loopVar);
+
+/// Inlines the map, returning a loop with the same effect.
+Stmt inlineMap(const Map *map);
 
 }}
 

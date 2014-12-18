@@ -21,6 +21,9 @@ InlineMappedFunction::InlineMappedFunction(const Map *map, Var targetLoopVar)
   this->neighbors = func.getArguments()[1];
 }
 
+InlineMappedFunction::~InlineMappedFunction() {
+}
+
 void InlineMappedFunction::visit(const FieldRead *op) {
   if (isa<VarExpr>(op->elementOrSet) &&
       to<VarExpr>(op->elementOrSet)->var == target) {
@@ -68,6 +71,24 @@ void InlineMappedFunction::visit(const VarExpr *op) {
   else {
     expr = op;
   }
+}
+
+Stmt inlineMappedFunction(const Map *map, Var loopVar) {
+  Func kernel = map->function;
+  Stmt body = kernel.getBody();
+  return InlineMappedFunction(map, loopVar).rewrite(body);
+}
+
+Stmt inlineMap(const Map *map) {
+  Func kernel = map->function;
+  Var targetVar = kernel.getArguments()[0];
+  Var neighborsVar = kernel.getArguments()[1];
+
+  Var loopVar(targetVar.getName(), Int);
+  ForDomain domain(map->target);
+
+  Stmt body = inlineMappedFunction(map, loopVar);
+  return For::make(loopVar, domain, body);
 }
 
 }}
