@@ -182,7 +182,7 @@ void LLVMBackend::visit(const TupleRead *op) {
 
 void LLVMBackend::visit(const ir::IndexRead *op) {
   // TODO: Add support for different indices (contained in the Set type).
-  int indexLoc = 1 + op->kind;
+  unsigned int indexLoc = 1 + op->kind;
 
   iassert(op->edgeSet.type().isSet());
   iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
