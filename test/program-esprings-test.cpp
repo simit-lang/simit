@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(Program, esprings) {
+TEST(Program, DISABLED_esprings) {
   Program program;
   std::string programText = R"(
 element Point

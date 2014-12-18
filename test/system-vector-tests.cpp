@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, vector_add) {
+TEST(System, DISABLED_vector_add) {
   Set<> points;
   FieldRef<double> x = points.addField<double>("x");
 
@@ -24,7 +24,7 @@ TEST(System, vector_add) {
   ASSERT_EQ(84.0, x.get(p0));
 }
 
-TEST(System, vector_add_blocked) {
+TEST(System, DISABLED_vector_add_blocked) {
   Set<> points;
   FieldRef<double,3> x = points.addField<double,3>("x");
 
@@ -43,7 +43,7 @@ TEST(System, vector_add_blocked) {
   ASSERT_EQ(6.0, vec2(2));
 }
 
-TEST(System, vector_dot) {
+TEST(System, DISABLED_vector_dot) {
   Set<> points;
   FieldRef<double> x = points.addField<double>("x");
   FieldRef<double> z = points.addField<double>("z");
