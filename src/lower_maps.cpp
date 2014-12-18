@@ -34,19 +34,15 @@ private:
   Storage storage;
 
   void visit(const Map *op) {
-    stmt = op;
-    return;
-
     iassert(hasStorage(op->vars, storage))
         << "Every assembled tensor should have a storage descriptor";
     tassert(hasSameStorage(op->vars, storage))
         << "All assembled tensors in the same Map must have the same storage.";
 
-    if (op->vars.size() == 0
-        || storage.get(op->vars[0]).getKind() != TensorStorage::SystemNone) {
-      TensorStorage::Kind tensorStorage = storage.get(op->vars[0]).getKind();
-
-      if (tensorStorage == TensorStorage::SystemReduced) {
+    TensorStorage::Kind tensorStorage = storage.get(op->vars[0]).getKind();
+    if (tensorStorage != TensorStorage::SystemNone || op->vars.size() == 0) {
+      if (tensorStorage == TensorStorage::SystemReduced ||
+          tensorStorage == TensorStorage::DenseRowMajor) {
         Func kernel = op->function;
         Stmt body = kernel.getBody();
 
@@ -60,7 +56,7 @@ private:
         stmt = For::make(loopVar, domain, body);
       }
       else {
-        terror << "Unsupported tensor storage lowering";
+        ierror << "Unsupported tensor storage lowering";
       }
     }
     else {
