@@ -683,7 +683,6 @@ elif_clauses
   }
 
 for_stmt
-<<<<<<< HEAD
   : for_stmt_header index_set stmt_block for_stmt_footer{    
     if($2->getKind()==IndexSet::Set){
       ctx->addStatement(For::make(*$1,ForDomain(*$2), *$3));
