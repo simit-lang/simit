@@ -694,7 +694,7 @@ for_stmt
     ctx->addSymbol(varName, var, Symbol::Read);
     
     if($4->getKind()==IndexSet::Set){
-      ctx->addStatement(For::make(var,ForDomain(*$4), *$5)));
+      ctx->addStatement(For::make(var,ForDomain(*$4), *$5));
       delete $5;
       delete $4;
     }
@@ -709,7 +709,7 @@ for_stmt
     // separate loop structure (that can't be vectorized easily)
     ctx->addSymbol(varName, var, Symbol::Read);
     
-    ctx->addStatement(ForRange::make(var, *$4, *$6, *$7)));
+    ctx->addStatement(ForRange::make(var, *$4, *$6, *$7));
     delete $4;
     delete $6;
     delete $7;
