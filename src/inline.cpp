@@ -1,10 +1,14 @@
 #include "inline.h"
 
+#include <vector>
+
+using namespace std;
+
 namespace simit {
 namespace ir {
 
-InlineMappedFunction::InlineMappedFunction(const Map *map, Var targetLoopVar)
-    : targetLoopVar(targetLoopVar) {
+Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
+  this->targetLoopVar = targetLoopVar;
   Func func = map->function;
   iassert(func.getArguments().size() == 1 || func.getArguments().size() == 2)
       << "mapped functions must have exactly two arguments";
@@ -19,12 +23,15 @@ InlineMappedFunction::InlineMappedFunction(const Map *map, Var targetLoopVar)
 
   this->target = func.getArguments()[0];
   this->neighbors = func.getArguments()[1];
+
+  return rewrite(func.getBody());
 }
 
-InlineMappedFunction::~InlineMappedFunction() {
+bool MapFunctionRewriter::isResult(Var var) {
+  return resultToMapVar.find(var) != resultToMapVar.end();
 }
 
-void InlineMappedFunction::visit(const FieldRead *op) {
+void MapFunctionRewriter::visit(const FieldRead *op) {
   if (isa<VarExpr>(op->elementOrSet) &&
       to<VarExpr>(op->elementOrSet)->var == target) {
     Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
@@ -46,7 +53,7 @@ void InlineMappedFunction::visit(const FieldRead *op) {
   }
 }
 
-void InlineMappedFunction::visit(const TupleRead *op) {
+void MapFunctionRewriter::visit(const TupleRead *op) {
   iassert(isa<VarExpr>(op->tuple))
       << "This code assumes no expressions return a tuple";
 
@@ -64,8 +71,8 @@ void InlineMappedFunction::visit(const TupleRead *op) {
   }
 }
 
-void InlineMappedFunction::visit(const VarExpr *op) {
-  if (resultToMapVar.find(op->var) != resultToMapVar.end()) {
+void MapFunctionRewriter::visit(const VarExpr *op) {
+  if (isResult(op->var)) {
     expr = resultToMapVar[op->var];
   }
   else {
@@ -73,13 +80,13 @@ void InlineMappedFunction::visit(const VarExpr *op) {
   }
 }
 
-Stmt inlineMappedFunction(const Map *map, Var loopVar) {
-  Func kernel = map->function;
-  Stmt body = kernel.getBody();
-  return InlineMappedFunction(map, loopVar).rewrite(body);
+Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
+//  rewriter.init(map, lv);
+//  return rewriter.rewrite(map->function.getBody());
+  return rewriter.inlineMapFunc(map, lv);
 }
 
-Stmt inlineMap(const Map *map) {
+Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   Func kernel = map->function;
   Var targetVar = kernel.getArguments()[0];
   Var neighborsVar = kernel.getArguments()[1];
@@ -87,8 +94,18 @@ Stmt inlineMap(const Map *map) {
   Var loopVar(targetVar.getName(), Int);
   ForDomain domain(map->target);
 
-  Stmt body = inlineMappedFunction(map, loopVar);
-  return For::make(loopVar, domain, body);
+  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter);
+  Stmt inlinedMap = For::make(loopVar, domain, inlinedMapFunc);
+
+  for (auto &var : map->vars) {
+    iassert(var.getType().isTensor());
+    const TensorType *type = var.getType().toTensor();
+    Expr zero = Literal::make(TensorType::make(type->componentType), {0});
+    Stmt init = AssignStmt::make(var, zero);
+    inlinedMap = Block::make(init, inlinedMap);
+  }
+
+  return inlinedMap;
 }
 
 }}

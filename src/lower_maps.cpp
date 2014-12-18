@@ -1,7 +1,8 @@
 #include "lower.h"
 
-#include "ir_rewriter.h"
 #include "storage.h"
+#include "ir_rewriter.h"
+#include "ir_codegen.h"
 #include "inline.h"
 
 using namespace std;
@@ -25,6 +26,15 @@ inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
   return true;
 }
 
+class LowerMapFunctionRewriter : public MapFunctionRewriter {
+  using MapFunctionRewriter::visit;
+  virtual void visit(const TensorWrite *op) {
+    IRRewriter::visit(op);
+    if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
+      stmt = makeCompound(stmt, CompoundOperator::Add);
+    }
+  }
+};
 
 class LowerMaps : public IRRewriter {
 public:
@@ -43,7 +53,8 @@ private:
     if (tensorStorage != TensorStorage::SystemNone || op->vars.size() == 0) {
       if (tensorStorage == TensorStorage::SystemReduced ||
           tensorStorage == TensorStorage::DenseRowMajor) {
-        stmt = inlineMap(op);
+        LowerMapFunctionRewriter mapFunctionRewriter;
+        stmt = inlineMap(op, mapFunctionRewriter);
       }
       else {
         ierror << "Unsupported tensor storage lowering";
