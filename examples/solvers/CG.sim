@@ -1,4 +1,4 @@
-func conjugateGradients(A : tensor[,](float), b : tensor[](float), xguess : tensor[](float), tol : float, maxiters : int)
+func conjugateGradients(A : tensor[,](float), b : tensor[](float), xguess : tensor[](float), tol : float, maxiters : int) -> (x : tensor[](float))
 {
 	r = b - A*xguess;
 	p = r;
