@@ -682,7 +682,6 @@ elif_clauses
     delete $4;
   }
 
-%type <stmt> for_stmt;
 for_stmt
   : "for" IDENT "in" index_set stmt_block for_stmt_footer{
     string varName = convertAndFree($IDENT);
@@ -695,12 +694,27 @@ for_stmt
     ctx->addSymbol(varName, var, Symbol::Read);
     
     if($4->getKind()==IndexSet::Set){
-      $$ = new Stmt(For::make(var,ForDomain(*$4), *$5));
+      ctx->addStatement(For::make(var,ForDomain(*$4), *$5)));
       delete $5;
       delete $4;
     }
   }
+  | "for" IDENT "in" expr ":" expr stmt_block for_stmt_footer {
+    string varName = convertAndFree($IDENT);
+    Var var(varName, Int);
+    
+    ctx->scope();
 
+    // If we need to write to loop variables, then that should be added as a
+    // separate loop structure (that can't be vectorized easily)
+    ctx->addSymbol(varName, var, Symbol::Read);
+    
+    ctx->addStatement(ForRange::make(var, *$4, *$6, *$7)));
+    delete $4;
+    delete $6;
+    delete $7;
+  }
+  
 for_stmt_footer
   : BLOCKEND {
     ctx->unscope();
@@ -1271,12 +1285,6 @@ index_set
     }
 
     $$ = new IndexSet(set);
-  }
-  | expr ":" expr {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
   }
   | "*" {
     $$ = new IndexSet();
