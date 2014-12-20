@@ -30,7 +30,23 @@ public:
   const Type &getType() const {return ptr->type;}
 };
 
+
+/// A Simit loop variable, consisting of a variable and its iteration domain.
+class LoopVar {
+public:
+  LoopVar(Var var, const ForDomain &domain);
+  ~LoopVar();
+
+  const Var &var() const;
+  const ForDomain &domain() const;
+
+private:
+  struct Content;
+  Content *content;
+};
+
 std::ostream &operator<<(std::ostream &os, const Var &);
+std::ostream &operator<<(std::ostream &os, const LoopVar &);
 
 }}
 

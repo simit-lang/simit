@@ -11,6 +11,7 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+// class SIG
 SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
   set<IndexVar> added;
   vector<SIGVertex*> endpoints;
@@ -31,8 +32,16 @@ SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
   }
 }
 
-// This can be optimized by exploiting immutability to preserve substructures
+std::vector<const SIGEdge *> SIG::getEdges() const {
+  std::vector<const SIGEdge *> edges;
+  for (auto &edge : content->edges) {
+    edges.push_back(edge.second.get());
+  }
+  return edges;
+}
+
 SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
+  // This can be optimized by exploiting immutability to preserve substructures
   SIG merged = SIG();
 
   for (auto &v : g1.content->vertices) {
@@ -140,6 +149,75 @@ void SIGVisitor::visit(const SIGEdge *e) {
   }
 }
 
+
+/// Class that builds a Sparse Iteration Graph from an expression.
+class SIGBuilder : public IRVisitor {
+public:
+  SIGBuilder(const Storage &storage) : storage(storage) {}
+
+  SIG create(Stmt stmt) {
+    stmt.accept(this);
+    SIG result = sig;
+    sig = SIG();
+    return result;
+  }
+
+private:
+  Storage storage;
+  SIG sig;
+
+  SIG create(Expr expr) {
+    expr.accept(this);
+    SIG result = sig;
+    sig = SIG();
+    return result;
+  }
+
+  void visit(const IndexedTensor *op) {
+    iassert(!isa<IndexExpr>(op->tensor))
+        << "IndexExprs should have been flattened by now";
+
+    Var tensorVar;
+    if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
+      const Var &var = to<VarExpr>(op->tensor)->var;
+      iassert(storage.hasStorage(var)) << "No storage descriptor found for"
+                                       << var << "in" << util::toString(*op);
+      if (storage.get(var).isSystem()) {
+        tensorVar = var;
+      }
+    }
+    sig = SIG(op->indexVars, tensorVar);
+  }
+
+  void visit(const Add *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Union);
+  }
+
+  void visit(const Sub *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Union);
+  }
+
+  void visit(const Mul *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Intersection);
+  }
+
+  void visit(const Div *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Intersection);
+  }
+};
+
+SIG createSIG(Stmt stmt, const Storage &storage) {
+  return SIGBuilder(storage).create(stmt);
+}
+
 std::ostream &operator<<(std::ostream &os, const SIGVertex &v) {
   return os << v.iv;
 }
@@ -173,6 +251,10 @@ std::ostream &operator<<(std::ostream &os, const SIG &g) {
   os << "SIG: ";
   SIGPrinter(os).print(g);
   return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const LoopVars &lvs) {
+  return os << util::join(lvs);
 }
 
 }} // namespace simit::ir

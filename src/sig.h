@@ -12,6 +12,7 @@
 #include "ir.h"
 #include "usedef.h"
 #include "storage.h"
+#include "ir_builder.h"
 
 namespace simit {
 namespace ir {
@@ -19,6 +20,7 @@ namespace ir {
 struct SIGEdge;
 class SIGVisitor;
 
+/// A vertex in a sparse iteration graph represents index variables.
 struct SIGVertex {
   IndexVar iv;
   std::vector<SIGEdge*> connectors;
@@ -26,7 +28,10 @@ struct SIGVertex {
   SIGVertex(const IndexVar &iv) : iv(iv) {}
 };
 
-
+/// An edge in a sparse iteration graph represents restrictions on the iteration
+/// domain of two or more index variables. These restrictions make the iteration
+/// space sparse and occur when two or more iteration variables are connected
+/// by a sparse matrix.
 struct SIGEdge {
   Var tensor;
   std::vector<SIGVertex*> endpoints;
@@ -39,7 +44,6 @@ struct SIGEdge {
   }
 };
 
-
 /// Implementation of Sparse Iteration Graphs.
 class SIG {
 public:
@@ -48,17 +52,10 @@ public:
   SIG() : content(new SIG::Content) {}
   explicit SIG(const std::vector<IndexVar> &ivs, Var tensor=Var());
 
-  friend SIG merge(SIG&, SIG&, SIG::MergeOp);
-
   bool isSparse() const {return content->edges.size() > 0;}
+  std::vector<const SIGEdge *> getEdges() const;
 
-  std::vector<const SIGEdge *> getEdges() const {
-    std::vector<const SIGEdge *> edges;
-    for (auto &edge : content->edges) {
-      edges.push_back(edge.second.get());
-    }
-    return edges;
-  }
+  friend SIG merge(SIG&, SIG&, SIG::MergeOp);
 
 private:
   struct Content {
@@ -69,7 +66,6 @@ private:
 
   friend SIGVisitor;
 };
-
 
 /// Visitor class for Sparse Iteration Graphs.
 class SIGVisitor {
@@ -84,75 +80,57 @@ protected:
   std::set<const SIGEdge*> visitedEdges;
 };
 
+/// Create a Sparse Iteration Graph for the given statement
+SIG createSIG(Stmt stmt, const Storage &storage);
 
-/// Class that builds a Sparse Iteration Graph from an expression.
-class SIGBuilder : public IRVisitor {
+/// Container for the loop variables created from a Sparse Iteration Graph (SIG)
+class LoopVars {
 public:
-  SIGBuilder(const Storage &storage) : storage(storage) {}
-
-  SIG create(const IndexExpr *expr) {
-    return create(Expr(expr));
+  static LoopVars create(const SIG &sig) {
+    class LoopVarsBuilder : private SIGVisitor {
+    public:
+      LoopVars build(const SIG &sig) {
+        loopVars.clear();
+        apply(sig);
+        return loopVars;
+      }
+    private:
+      std::map<IndexVar,LoopVar> loopVars;
+      UniqueNameGenerator names;
+      void visit(const SIGVertex *v) {
+        Var var(names.getName(v->iv.getName()), Int);
+        ForDomain domain = v->iv.getDomain().getIndexSets()[0];
+        LoopVar lvar(var, domain);
+        loopVars.insert(std::pair<IndexVar,LoopVar>(v->iv, lvar));
+      }
+    };
+    return LoopVarsBuilder().build(sig);
   }
+
+  class Iterator : public std::iterator<std::forward_iterator_tag, int> {
+  public:
+    Iterator(std::map<IndexVar,LoopVar>::const_iterator it) : it(it) {}
+    Iterator& operator++() { ++it; return *this;}
+    Iterator operator++(int) {Iterator tmp(*this); operator++(); return tmp;}
+    bool operator!=(const Iterator& rhs) {return it != rhs.it;}
+    const LoopVar& operator*() {return (*it).second; }
+  private:
+    std::map<IndexVar,LoopVar>::const_iterator it;
+  };
+
+  Iterator begin() const { return Iterator(loopVars.begin()); }
+  Iterator end() const { return Iterator(loopVars.end()); }
 
 private:
-  Storage storage;
-
-  SIG sig;
-
-  SIG create(Expr expr) {
-    expr.accept(this);
-    SIG result = sig;
-    sig = SIG();
-    return result;
-  }
-
-  void visit(const IndexedTensor *op) {
-
-    iassert(!isa<IndexExpr>(op->tensor))
-        << "IndexExprs should have been flattened by now";
-
-    Var tensorVar;
-    if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
-      const Var &var = to<VarExpr>(op->tensor)->var;
-      iassert(storage.hasStorage(var)) << "No storage descriptor found for"
-                                       << var << "in" << util::toString(*op);
-      if (storage.get(var).isSystem()) {
-        tensorVar = var;
-      }
-    }
-
-    sig = SIG(op->indexVars, tensorVar);
-  }
-
-  void visit(const Add *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Union);
-  }
-
-  void visit(const Sub *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Union);
-  }
-
-  void visit(const Mul *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Intersection);
-  }
-
-  void visit(const Div *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Intersection);
-  }
+  std::map<IndexVar,LoopVar> loopVars;
+  LoopVars(std::map<IndexVar,LoopVar> loopVars) : loopVars(loopVars) {}
 };
 
 
 std::ostream &operator<<(std::ostream &os, const SIGVertex &);
 std::ostream &operator<<(std::ostream &os, const SIGEdge &);
 std::ostream &operator<<(std::ostream &os, const SIG &);
+std::ostream &operator<<(std::ostream &os, const LoopVars &lvs);
 
 }} // namespace
 #endif
