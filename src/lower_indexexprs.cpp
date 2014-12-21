@@ -16,6 +16,8 @@ Stmt lower(Stmt stmt, const Storage &storage) {
   class SpecializeIndexExpression : private IRRewriter {
   public:
     SpecializeIndexExpression(const LoopVars &loopVars) : loopVars(loopVars) {}
+
+    /// Specialize 'stmt'.
     Stmt specialize(Stmt stmt) { return this->rewrite(stmt); }
 
   private:
@@ -33,7 +35,11 @@ Stmt lower(Stmt stmt, const Storage &storage) {
         stmt = AssignStmt::make(var, value);
       }
       else {
-        stmt = op;
+        std::vector<Expr> indices;
+        for (IndexVar const& iv : indexExpr->resultVars) {
+          indices.push_back(loopVars.getLoopVar(iv).getVar());
+        }
+        stmt = TensorWrite::make(var, indices, value);
       }
     }
 
@@ -47,7 +53,25 @@ Stmt lower(Stmt stmt, const Storage &storage) {
 
     /// Replace indexed tensors with tensor reads
     void visit(const IndexedTensor *op) {
-      expr = op->tensor;
+      iassert(!isa<IndexExpr>(op->tensor))
+          << "index expressions should have been flattened by now";
+
+      if (op->indexVars.size() == 0) {
+        expr = op->tensor;
+      }
+      else {
+        std::vector<Expr> indices;
+        for (const IndexVar &indexVar : op->indexVars) {
+          Expr varExpr = loopVars.getLoopVar(indexVar).getVar();
+          indices.push_back(varExpr);
+        }
+        expr = TensorRead::make(op->tensor, indices);
+
+        // If the tensor expression was a non-scalar tensor, then ...
+        if (expr.type().toTensor()->order() > 0) {
+          not_supported_yet; // See in old code
+        }
+      }
     }
 
     /// Removes index expression
@@ -58,15 +82,21 @@ Stmt lower(Stmt stmt, const Storage &storage) {
 
   SIG sig = createSIG(stmt, storage);
   LoopVars loopVars = LoopVars::create(sig);
-//  std::cout << loopVars << std::endl;
 
   // Create compute kernel (loop body)
   Stmt kernel = SpecializeIndexExpression(loopVars).specialize(stmt);
 
   // Create loops
   Stmt loopNest = kernel;
+  for (auto &loopVar : loopVars) {
+    if (!loopVar.hasReduction()) {
+      loopNest = For::make(loopVar.getVar(), loopVar.getDomain(), loopNest);
+    }
+    else {
+      not_supported_yet;
+    }
+  }
 
-//  std::cout << loopNest << std::endl;
   return loopNest;
 }
 
