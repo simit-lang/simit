@@ -226,25 +226,30 @@ LoopVars LoopVars::create(const SIG &sig) {
     LoopVars build(const SIG &sig) {
       vertexLoopVars.clear();
       apply(sig);
-      return vertexLoopVars;
+      return LoopVars(loopVars, vertexLoopVars);
     }
 
   private:
     std::map<IndexVar,LoopVar> vertexLoopVars;
+    std::vector<LoopVar> loopVars;
     UniqueNameGenerator names;
 
     void visit(const SIGVertex *v) {
       Var var(names.getName(v->iv.getName()), Int);
       ForDomain domain = v->iv.getDomain().getIndexSets()[0];
-      LoopVar lvar(var, domain);
+      ReductionOperator rop = v->iv.getOperator();
+      LoopVar lvar(var, domain, rop);
+
+      loopVars.push_back(lvar);
       vertexLoopVars.insert(std::pair<IndexVar,LoopVar>(v->iv, lvar));
     }
   };
   return LoopVarsBuilder().build(sig);
 }
 
-LoopVars::LoopVars(std::map<IndexVar,LoopVar> vertexLoopVars)
-  : vertexLoopVars(vertexLoopVars) {
+LoopVars::LoopVars(const std::vector<LoopVar> &loopVars,
+                   const std::map<IndexVar,LoopVar> &vertexLoopVars)
+    : loopVars(loopVars), vertexLoopVars(vertexLoopVars) {
 }
 
 

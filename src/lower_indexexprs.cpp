@@ -2,6 +2,7 @@
 
 #include "ir.h"
 #include "ir_rewriter.h"
+#include "ir_codegen.h"
 #include "ir_printer.h"
 #include "sig.h"
 
@@ -10,9 +11,11 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-Stmt lower(Stmt stmt, const Storage &storage) {
-  /// Specializes index expressions to compute the value/block for the loop
-  /// iteration given by the map from index variables to loop variables.
+
+/// Specializes a statement containing an index expression to compute the
+/// value/block for the loop iteration given by the map from index variables
+/// to loop variables.
+Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
   class SpecializeIndexExpression : private IRRewriter {
   public:
     SpecializeIndexExpression(const LoopVars &loopVars) : loopVars(loopVars) {}
@@ -80,31 +83,141 @@ Stmt lower(Stmt stmt, const Storage &storage) {
     }
   };
 
+  return SpecializeIndexExpression(loopVars).specialize(stmt);
+}
+
+/// Rewrite 'loopNest' to reduce the result of the 'kernel' into a temporary
+/// variable using the 'reductionOperator'.
+Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
+  class ReduceRewriter : public IRRewriter {
+  public:
+    ReduceRewriter(Stmt rstmt, ReductionOperator rop) : rstmt(rstmt), rop(rop){}
+
+    Var getTmpVar() {return tmpVar;}
+
+    /// Retrieve a statement that writes the tmp variable to the original
+    /// location of the rewritten statement.  If result is !defined then the
+    /// reduction variable does not ned to be written back.
+    Stmt getTmpWriteStmt() {return tmpWriteStmt;}
+
+  private:
+    Stmt rstmt;
+    ReductionOperator rop;
+
+    Var tmpVar;
+    Stmt tmpWriteStmt;
+
+    void visit(const AssignStmt *op) {
+      if (op == rstmt) {
+        iassert(isScalar(op->value.type()))
+        << "assignment non-scalars should have been lowered by now";
+        switch (rop.getKind()) {
+          case ReductionOperator::Sum: {
+            Expr varExpr = VarExpr::make(op->var);
+            tmpVar = op->var;
+            stmt = AssignStmt::make(op->var, Add::make(varExpr, op->value));
+            break;
+          }
+          case ReductionOperator::Undefined:
+            ierror;
+            break;
+        }
+      }
+      else {
+        stmt = op;
+      }
+    }
+
+    void visit(const TensorWrite *op) {
+      if (op == rstmt) {
+        Expr tensor = op->tensor;
+        std::vector<Expr> indices = op->indices;
+
+        iassert(tensor.type().isTensor());
+        switch (rop.getKind()) {
+          case ReductionOperator::Sum: {
+            ScalarType componentType = tensor.type().toTensor()->componentType;
+            string tmpVarName = getReductionTmpName(op);
+
+            tmpVar = Var(tmpVarName, TensorType::make(componentType));
+            stmt = AssignStmt::make(tmpVar, Add::make(tmpVar, op->value));
+            break;
+          }
+          case ReductionOperator::Undefined:
+            ierror;
+            break;
+        }
+
+        tmpWriteStmt = TensorWrite::make(tensor, indices, VarExpr::make(tmpVar));
+        if (isa<TensorRead>(tensor)) {
+          tmpWriteStmt = makeCompound(tmpWriteStmt, CompoundOperator::Add);
+        }
+      }
+    }
+
+    std::string getReductionTmpName(const TensorWrite *tensorWrite) {
+      class GetReductionTmpName : public IRVisitor {
+      public:
+        string get(const TensorWrite *op) {
+          op->tensor.accept(this);
+          for (auto &index : op->indices) {
+            index.accept(this);
+          }
+          return name;
+        }
+
+      private:
+        std::string name;
+        void visit(const VarExpr *op) {
+          IRVisitor::visit(op);
+          name += op->var.getName();
+        }
+      };
+
+      return GetReductionTmpName().get(tensorWrite);
+    }
+  };
+
+  ReduceRewriter reduceRewriter(kernel, reductionOperator);
+  loopNest = reduceRewriter.rewrite(loopNest);
+
+  Var tmpVar = reduceRewriter.getTmpVar();
+  Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.getType(), {0}));
+  Stmt tmpWriteStmt = reduceRewriter.getTmpWriteStmt();
+  if (tmpWriteStmt.defined()) {
+    loopNest = Block::make(alloc, Block::make(loopNest, tmpWriteStmt));
+  }
+  else {
+    loopNest = Block::make(alloc, loopNest);
+  }
+
+  return loopNest;
+}
+
+/// Lowers the given 'stmt' containing an index expression.
+Stmt lower(Stmt stmt, const Storage &storage) {
   SIG sig = createSIG(stmt, storage);
   LoopVars loopVars = LoopVars::create(sig);
 
   // Create compute kernel (loop body)
-  Stmt kernel = SpecializeIndexExpression(loopVars).specialize(stmt);
+  Stmt kernel = specialize(stmt, loopVars);
 
   // Create loops
   Stmt loopNest = kernel;
   for (auto &loopVar : loopVars) {
-    if (!loopVar.hasReduction()) {
-      loopNest = For::make(loopVar.getVar(), loopVar.getDomain(), loopNest);
-    }
-    else {
-      not_supported_yet;
+    loopNest = For::make(loopVar.getVar(), loopVar.getDomain(), loopNest);
+
+    if (loopVar.hasReduction()) {
+      loopNest = reduce(loopNest, kernel, loopVar.getReductionOperator());
     }
   }
 
   return loopNest;
 }
 
-/// Lower the index expressions in the fiven function.
+/// Lower the index expressions in 'func'.
 Func lowerIndexExpressions(Func func) {
-  /// Visits every index expression and calls 'lower' to rewrite them to
-  /// equivalent compute statements
-  class LowerIndexExpressions : private IRRewriter {
+  class LowerIndexExpressionsRewriter : private IRRewriter {
   public:
     Func lower(Func func) {
       storage = &func.getStorage();
@@ -135,7 +248,7 @@ Func lowerIndexExpressions(Func func) {
     }
   };
 
-  return LowerIndexExpressions().lower(func);
+  return LowerIndexExpressionsRewriter().lower(func);
 }
 
 }}

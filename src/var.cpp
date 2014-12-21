@@ -27,10 +27,9 @@ LoopVar::LoopVar(Var var, const ForDomain &domain) : content(new Content) {
   content->reductionOperator = ReductionOperator::Undefined;
 }
 
-LoopVar::LoopVar(Var var, const ForDomain &domain, const ReductionOperator &ro){
-  content->var = var;
-  content->domain = domain;
-  content->reductionOperator = ro;
+LoopVar::LoopVar(Var var, const ForDomain &domain, const ReductionOperator &rop)
+    : LoopVar(var, domain) {
+  content->reductionOperator = rop;
 }
 
 const Var &LoopVar::getVar() const {
