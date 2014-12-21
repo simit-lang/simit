@@ -86,25 +86,14 @@ SIG createSIG(Stmt stmt, const Storage &storage);
 /// Container for the loop variables created from a Sparse Iteration Graph (SIG)
 class LoopVars {
 public:
-  static LoopVars create(const SIG &sig) {
-    class LoopVarsBuilder : private SIGVisitor {
-    public:
-      LoopVars build(const SIG &sig) {
-        loopVars.clear();
-        apply(sig);
-        return loopVars;
-      }
-    private:
-      std::map<IndexVar,LoopVar> loopVars;
-      UniqueNameGenerator names;
-      void visit(const SIGVertex *v) {
-        Var var(names.getName(v->iv.getName()), Int);
-        ForDomain domain = v->iv.getDomain().getIndexSets()[0];
-        LoopVar lvar(var, domain);
-        loopVars.insert(std::pair<IndexVar,LoopVar>(v->iv, lvar));
-      }
-    };
-    return LoopVarsBuilder().build(sig);
+  static LoopVars create(const SIG &sig);
+
+  const LoopVar &getLoopVar(const IndexVar &var) const {
+    return vertexLoopVars.at(var);
+  }
+
+  bool contains(const IndexVar &var) const {
+    return vertexLoopVars.find(var) != vertexLoopVars.end();
   }
 
   class Iterator : public std::iterator<std::forward_iterator_tag, int> {
@@ -118,12 +107,12 @@ public:
     std::map<IndexVar,LoopVar>::const_iterator it;
   };
 
-  Iterator begin() const { return Iterator(loopVars.begin()); }
-  Iterator end() const { return Iterator(loopVars.end()); }
+  Iterator begin() const { return Iterator(vertexLoopVars.begin()); }
+  Iterator end() const { return Iterator(vertexLoopVars.end()); }
 
 private:
-  std::map<IndexVar,LoopVar> loopVars;
-  LoopVars(std::map<IndexVar,LoopVar> loopVars) : loopVars(loopVars) {}
+  std::map<IndexVar,LoopVar> vertexLoopVars;
+  LoopVars(std::map<IndexVar,LoopVar> vertexLoopVars);
 };
 
 

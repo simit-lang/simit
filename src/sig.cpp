@@ -218,6 +218,37 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
   return SIGBuilder(storage).create(stmt);
 }
 
+
+// class LoopVars
+LoopVars LoopVars::create(const SIG &sig) {
+  class LoopVarsBuilder : private SIGVisitor {
+  public:
+    LoopVars build(const SIG &sig) {
+      vertexLoopVars.clear();
+      apply(sig);
+      return vertexLoopVars;
+    }
+
+  private:
+    std::map<IndexVar,LoopVar> vertexLoopVars;
+    UniqueNameGenerator names;
+
+    void visit(const SIGVertex *v) {
+      Var var(names.getName(v->iv.getName()), Int);
+      ForDomain domain = v->iv.getDomain().getIndexSets()[0];
+      LoopVar lvar(var, domain);
+      vertexLoopVars.insert(std::pair<IndexVar,LoopVar>(v->iv, lvar));
+    }
+  };
+  return LoopVarsBuilder().build(sig);
+}
+
+LoopVars::LoopVars(std::map<IndexVar,LoopVar> vertexLoopVars)
+  : vertexLoopVars(vertexLoopVars) {
+}
+
+
+// Free functions
 std::ostream &operator<<(std::ostream &os, const SIGVertex &v) {
   return os << v.iv;
 }
