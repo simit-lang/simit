@@ -34,7 +34,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Var var = op->var;
       Expr value = rewrite(indexExpr);
 
-      if (isScalar(var.getType())) {
+      if (isScalar(op->value.type())) {
         stmt = AssignStmt::make(var, value);
       }
       else {
@@ -47,11 +47,43 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     }
 
     void visit(const FieldWrite *op) {
-      not_supported_yet;
+      iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
+      const IndexExpr *indexExpr = to<IndexExpr>(op->value);
+
+      Expr elementOrSet = rewrite(op->elementOrSet);
+      std::string fieldName = op->fieldName;
+      Expr value = rewrite(indexExpr);
+
+      if (isScalar(op->value.type())) {
+        stmt = FieldWrite::make(elementOrSet, fieldName, value);
+      }
+      else {
+        std::vector<Expr> indices;
+        for (IndexVar const& iv : indexExpr->resultVars) {
+          indices.push_back(loopVars.getLoopVar(iv).getVar());
+        }
+        Expr field = FieldRead::make(elementOrSet, fieldName);
+        stmt = TensorWrite::make(field, indices, value);
+      }
     }
 
     void visit(const TensorWrite *op) {
-      not_supported_yet;
+      iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
+      const IndexExpr *indexExpr = to<IndexExpr>(op->value);
+
+      Expr value = rewrite(op->value);
+
+      if (isScalar(op->value.type())) {
+        stmt = TensorWrite::make(op->tensor, op->indices, value);
+      }
+      else {
+        std::vector<Expr> indices;
+        for (IndexVar const& iv : indexExpr->resultVars) {
+          indices.push_back(loopVars.getLoopVar(iv).getVar());
+        }
+        Expr tensor = TensorRead::make(op->tensor, op->indices);
+        stmt = TensorWrite::make(tensor, indices, value);
+      }
     }
 
     /// Replace indexed tensors with tensor reads
