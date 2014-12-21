@@ -1,7 +1,9 @@
 #include "var.h"
 
 #include <ostream>
+
 #include "ir.h"
+#include "reduction.h"
 
 namespace simit {
 namespace ir {
@@ -16,23 +18,35 @@ Var::Var(std::string name, const Type &type) : IntrusivePtr(new VarContent) {
 struct LoopVar::Content {
   Var var;
   ForDomain domain;
+  ReductionOperator reductionOperator;
 };
 
 LoopVar::LoopVar(Var var, const ForDomain &domain) : content(new Content) {
   content->var = var;
   content->domain = domain;
+  content->reductionOperator = ReductionOperator::Undefined;
 }
 
-LoopVar::~LoopVar() {
-  delete content;
+LoopVar::LoopVar(Var var, const ForDomain &domain, const ReductionOperator &ro){
+  content->var = var;
+  content->domain = domain;
+  content->reductionOperator = ro;
 }
 
-const Var &LoopVar::var() const {
+const Var &LoopVar::getVar() const {
   return content->var;
 }
 
-const ForDomain &LoopVar::domain() const {
+const ForDomain &LoopVar::getDomain() const {
   return content->domain;
+}
+
+bool LoopVar::hasReduction() const {
+  return content->reductionOperator != ReductionOperator::Undefined;
+}
+
+ReductionOperator LoopVar::getReductionOperator() const {
+  return content->reductionOperator;
 }
 
 // Free functions
@@ -41,7 +55,7 @@ std::ostream &operator<<(std::ostream &os, const Var &v) {
 }
 
 std::ostream &operator<<(std::ostream &os, const LoopVar &lv) {
-  return os << lv.var() << " in " << lv.domain();
+  return os << lv.getVar() << lv.getReductionOperator() << " in " << lv.getDomain();
 }
 
 }}

@@ -7,6 +7,7 @@
 namespace simit {
 namespace ir {
 
+class ReductionOperator;
 struct ForDomain;
 
 namespace {
@@ -35,14 +36,17 @@ public:
 class LoopVar {
 public:
   LoopVar(Var var, const ForDomain &domain);
-  ~LoopVar();
+  LoopVar(Var var, const ForDomain &domain, const ReductionOperator &rop);
 
-  const Var &var() const;
-  const ForDomain &domain() const;
+  const Var &getVar() const;
+  const ForDomain &getDomain() const;
+
+  bool hasReduction() const;
+  ReductionOperator getReductionOperator() const;
 
 private:
   struct Content;
-  Content *content;
+  std::shared_ptr<Content> content;
 };
 
 std::ostream &operator<<(std::ostream &os, const Var &);
