@@ -24,6 +24,16 @@ struct Add;
 struct Sub;
 struct Mul;
 struct Div;
+struct Eq;
+struct Ne;
+struct Gt;
+struct Lt;
+struct Ge;
+struct Le;
+struct And;
+struct Or;
+struct Not;
+struct Xor;
 
 struct AssignStmt;
 struct FieldWrite;
@@ -67,6 +77,17 @@ public:
   virtual void visit(const Sub *op);
   virtual void visit(const Mul *op);
   virtual void visit(const Div *op);
+
+  virtual void visit(const Eq *op);
+  virtual void visit(const Ne *op);
+  virtual void visit(const Gt *op);
+  virtual void visit(const Lt *op);
+  virtual void visit(const Ge *op);
+  virtual void visit(const Le *op);
+  virtual void visit(const And *op);
+  virtual void visit(const Or *op);
+  virtual void visit(const Not *op);
+  virtual void visit(const Xor *op);
 
   virtual void visit(const AssignStmt *op);
   virtual void visit(const Map *op);

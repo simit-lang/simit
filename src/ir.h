@@ -476,6 +476,148 @@ struct Div : public ExprNode<Div> {
   }
 };
 
+struct Eq : public ExprNode<Eq> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Eq *node = new Eq;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Ne : public ExprNode<Ne> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Ne *node = new Ne;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Gt : public ExprNode<Gt> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Gt *node = new Gt;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Lt : public ExprNode<Lt> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Lt *node = new Lt;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Ge : public ExprNode<Ge> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Ge *node = new Ge;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Le : public ExprNode<Le> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Le *node = new Le;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct And : public ExprNode<And> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(isBoolean(a.type()));
+    iassert(isBoolean(b.type()));
+
+    And *node = new And;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Or : public ExprNode<Or> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(isBoolean(a.type()));
+    iassert(isBoolean(b.type()));
+
+    Or *node = new Or;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Not : public ExprNode<Not> {
+  Expr a;
+
+  static Expr make(Expr a) {
+    iassert(isBoolean(a.type()));
+
+    Not *node = new Not;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    return node;
+  }
+};
+
+struct Xor : public ExprNode<Xor> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(isBoolean(a.type()));
+    iassert(isBoolean(b.type()));
+
+    Xor *node = new Xor;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
 struct Load : public ExprNode<Load> {
   Expr buffer;
   Expr index;
