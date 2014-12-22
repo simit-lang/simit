@@ -87,10 +87,13 @@ SIG createSIG(Stmt stmt, const Storage &storage);
 class LoopVars {
 public:
   typedef std::vector<LoopVar>::const_iterator Iterator;
+  typedef std::vector<LoopVar>::const_reverse_iterator ReverseIterator;
 
   static LoopVars create(const SIG &sig);
 
-  const LoopVar &getLoopVar(const IndexVar &var) const {
+  /// Get the loop variables that correspond to the given index variable. There
+  /// are one loop variable per block level in the indexvar domain.
+  const std::vector<LoopVar> &getLoopVars(const IndexVar &var) const {
     return vertexLoopVars.at(var);
   }
 
@@ -98,14 +101,19 @@ public:
     return vertexLoopVars.find(var) != vertexLoopVars.end();
   }
 
-  Iterator begin() const { return Iterator(loopVars.begin()); }
-  Iterator end() const { return Iterator(loopVars.end()); }
+  Iterator begin() const { return loopVars.begin(); }
+  Iterator end() const { return loopVars.end(); }
+
+  ReverseIterator rbegin() const { return loopVars.rbegin(); }
+  ReverseIterator rend() const { return loopVars.rend(); }
 
 private:
   std::vector<LoopVar> loopVars;
-  std::map<IndexVar,LoopVar> vertexLoopVars;
 
-  LoopVars(const std::vector<LoopVar> &, const std::map<IndexVar,LoopVar> &);
+  std::map<IndexVar,std::vector<LoopVar>> vertexLoopVars;
+
+  LoopVars(const std::vector<LoopVar> &,
+           const std::map<IndexVar,std::vector<LoopVar>> &);
 };
 
 

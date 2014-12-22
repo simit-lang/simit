@@ -49,8 +49,10 @@ public:
     ptr->rop = rop;
   }
 
-  std::string getName() const { return ptr->name; }
-  const IndexDomain &getDomain() const { return ptr->domain; }
+  std::string getName() const {return ptr->name;}
+  const IndexDomain &getDomain() const {return ptr->domain;}
+
+  size_t getNumBlockLevels() const {return ptr->domain.getNumBlockLevels();}
 
   bool isFreeVar() const { return  !isReductionVar(); }
   bool isReductionVar() const {

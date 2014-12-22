@@ -32,14 +32,6 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     /// Loop variables used to compute index (created from the SIG)
     LoopVars const& loopVars;
 
-    Stmt tensorWrite(Expr tensor, vector<IndexVar> indexVars, Expr value){
-      std::vector<Expr> indexExprs;
-      for (const IndexVar &iv : indexVars) {
-        indexExprs.push_back(loopVars.getLoopVar(iv).getVar());
-      }
-      return TensorWrite::make(tensor, indexExprs, value);
-    }
-
     void visit(const AssignStmt *op) {
       iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
       const IndexExpr *indexExpr = to<IndexExpr>(op->value);
@@ -92,27 +84,59 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       iassert(!isa<IndexExpr>(op->tensor))
           << "index expressions should have been flattened by now";
 
-      if (op->indexVars.size() == 0) {
-        expr = op->tensor;
-      }
-      else {
-        std::vector<Expr> indices;
-        for (const IndexVar &indexVar : op->indexVars) {
-          Expr varExpr = loopVars.getLoopVar(indexVar).getVar();
-          indices.push_back(varExpr);
-        }
-        expr = TensorRead::make(op->tensor, indices);
+      expr = op->tensor;
 
-        // If the tensor expression was a non-scalar tensor, then ...
-        if (expr.type().toTensor()->order() > 0) {
-          not_supported_yet; // See in old code
-        }
+      // Add tensor reads until the type of expr is a scalar. This can require
+      // multiple reads if the indexed tensor was blocked.
+      while (!isScalar(expr.type())) {
+        expr = tensorRead(expr, op->indexVars);
       }
     }
 
     /// Removes index expression
     void visit(const IndexExpr *op) {
       expr = rewrite(op->value);
+    }
+
+    size_t numBlockLevels(vector<IndexVar> indexVars) {
+      size_t blockLevels = 0;
+      for (auto &indexVar : indexVars) {
+        if (blockLevels < indexVar.getNumBlockLevels()) {
+          blockLevels = indexVar.getNumBlockLevels();
+        }
+      }
+      return blockLevels;
+    }
+
+    Expr tensorRead(Expr tensor, vector<IndexVar> indexVars, size_t blockLvls) {
+      for (size_t i=0; i < blockLvls; ++i) {
+        std::vector<Expr> indexExprs;
+        for (const IndexVar &indexVar : indexVars) {
+          if (i < indexVar.getNumBlockLevels()) {
+            indexExprs.push_back(loopVars.getLoopVars(indexVar)[i].getVar());
+          }
+        }
+        tensor = TensorRead::make(tensor, indexExprs);
+      }
+      return tensor;
+    }
+
+    Expr tensorRead(Expr tensor, vector<IndexVar> indexVars) {
+      return tensorRead(tensor, indexVars, numBlockLevels(indexVars));
+    }
+
+    Stmt tensorWrite(Expr tensor, vector<IndexVar> indexVars, Expr value) {
+      size_t blockLevels = numBlockLevels(indexVars);
+      if (blockLevels > 1) {
+        tensor = tensorRead(tensor, indexVars, blockLevels-1);
+      }
+
+      std::vector<Expr> indexExprs;
+      for (const IndexVar &iv : indexVars) {
+        size_t lastLevel = iv.getNumBlockLevels()-1;
+        indexExprs.push_back(loopVars.getLoopVars(iv)[lastLevel].getVar());
+      }
+      return TensorWrite::make(tensor, indexExprs, value);
     }
   };
 
@@ -235,13 +259,13 @@ Stmt lower(Stmt stmt, const Storage &storage) {
   // Create compute kernel (loop body)
   Stmt kernel = specialize(stmt, loopVars);
 
-  // Create loops
+  // Create loops (since we create the loops inside out, we must iterate over
+  // the loop vars in reverse order)
   Stmt loopNest = kernel;
-  for (auto &loopVar : loopVars) {
-    loopNest = For::make(loopVar.getVar(), loopVar.getDomain(), loopNest);
-
-    if (loopVar.hasReduction()) {
-      loopNest = reduce(loopNest, kernel, loopVar.getReductionOperator());
+  for (auto loopVar=loopVars.rbegin(); loopVar!=loopVars.rend(); ++loopVar){
+    loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
+    if (loopVar->hasReduction()) {
+      loopNest = reduce(loopNest, kernel, loopVar->getReductionOperator());
     }
   }
 

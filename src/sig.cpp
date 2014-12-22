@@ -93,15 +93,7 @@ SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
 }
 
 bool ReductionVarsBeforefree(SIGVertex *i, SIGVertex *j) {
-  if (i->iv.isFreeVar() && j->iv.isReductionVar()) {
-    return false;
-  }
-  else if (i->iv.isReductionVar() && j->iv.isFreeVar()) {
-    return true;
-  }
-  else {
-    return (i->iv.getName() < j->iv.getName());
-  }
+  return (i->iv.isFreeVar() && j->iv.isReductionVar()) ? true : false;
 }
 
 void SIGVisitor::apply(const SIG &sig) {
@@ -218,6 +210,29 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
   return SIGBuilder(storage).create(stmt);
 }
 
+/// Get the number of block levels of the index variables in SIG
+size_t getNumBlockLevels(const SIG &sig) {
+  class GetNumBlockLevelsVisitor : public SIGVisitor {
+  public:
+    size_t get(const SIG &sig) {
+      numBlockLevels = 0;
+      apply(sig);
+      return numBlockLevels;
+    }
+
+  private:
+    size_t numBlockLevels;
+
+    void visit(const SIGVertex *v) {
+      size_t ivNumBlockLevels = v->iv.getNumBlockLevels();
+      if (numBlockLevels < ivNumBlockLevels) {
+        numBlockLevels = ivNumBlockLevels;
+      }
+    }
+  };
+  return GetNumBlockLevelsVisitor().get(sig);
+}
+
 
 // class LoopVars
 LoopVars LoopVars::create(const SIG &sig) {
@@ -225,30 +240,56 @@ LoopVars LoopVars::create(const SIG &sig) {
   public:
     LoopVars build(const SIG &sig) {
       vertexLoopVars.clear();
-      apply(sig);
+
+      // We create one set of loop nests per block level in the SIG.
+      numBlockLevels = getNumBlockLevels(sig);
+      for (currBlockLevel=0; currBlockLevel<numBlockLevels; ++currBlockLevel) {
+        apply(sig);
+      }
+
       return LoopVars(loopVars, vertexLoopVars);
     }
 
   private:
-    std::map<IndexVar,LoopVar> vertexLoopVars;
+    std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
     std::vector<LoopVar> loopVars;
-    UniqueNameGenerator names;
+    UniqueNameGenerator nameGenerator;
+
+    /// We create one loop variable per block level per index variable. The loop
+    /// variables are ordered by block level. This variable keeps track of which
+    /// block level we are currently creating loop variables for.
+    size_t currBlockLevel;
+
+    /// The number of block levels in the index variables in the SIG.
+    size_t numBlockLevels;
 
     void visit(const SIGVertex *v) {
-      Var var(names.getName(v->iv.getName()), Int);
-      ForDomain domain = v->iv.getDomain().getIndexSets()[0];
-      ReductionOperator rop = v->iv.getOperator();
-      LoopVar lvar(var, domain, rop);
+      const IndexVar &indexVar = v->iv;
 
-      loopVars.push_back(lvar);
-      vertexLoopVars.insert(std::pair<IndexVar,LoopVar>(v->iv, lvar));
+      if (currBlockLevel < indexVar.getNumBlockLevels()) {
+        Var var(nameGenerator.getName(indexVar.getName()), Int);
+        ForDomain domain = indexVar.getDomain().getIndexSets()[currBlockLevel];
+        ReductionOperator rop = indexVar.getOperator();
+        addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
+      }
     }
-  };
+
+    void addVertexLoopVar(const IndexVar &indexVar, const LoopVar &loopVar) {
+      loopVars.push_back(loopVar);
+
+      // Add entry for the indexVar
+      if (vertexLoopVars.find(indexVar) == vertexLoopVars.end()) {
+        vertexLoopVars[indexVar] = std::vector<LoopVar>();
+      }
+      vertexLoopVars[indexVar].push_back(loopVar);
+    }
+  }; // class LoopVarsBuilder
+
   return LoopVarsBuilder().build(sig);
 }
 
-LoopVars::LoopVars(const std::vector<LoopVar> &loopVars,
-                   const std::map<IndexVar,LoopVar> &vertexLoopVars)
+LoopVars::LoopVars(const vector<LoopVar> &loopVars,
+                   const map<IndexVar,vector<LoopVar>> &vertexLoopVars)
     : loopVars(loopVars), vertexLoopVars(vertexLoopVars) {
 }
 
