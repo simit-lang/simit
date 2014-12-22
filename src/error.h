@@ -138,7 +138,6 @@ struct ErrorReport {
       case Temporary:
         (*msg) << "Temporary assumption broken";
         (*msg) << " at " << file << ":" << line << "\n";
-        (*msg) << " This needs to be be fixed by developers.";
         if (conditionString) {
           (*msg) << " Condition failed: " << conditionString << "\n";
         }

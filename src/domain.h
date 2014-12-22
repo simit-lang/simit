@@ -66,6 +66,8 @@ public:
   /// Get the index sets whose set product forms the domain.
   const std::vector<IndexSet> &getIndexSets() const {return indexSets; }
 
+  size_t getNumBlockLevels() const {return indexSets.size();}
+
   /// Get the number of elements in the product of the index sets if all the
   /// index sets are Range sets, otherwise undefined.
   size_t getSize() const;

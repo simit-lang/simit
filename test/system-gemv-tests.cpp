@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, gemv) {
+TEST(System, DISABLED_gemv) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -56,7 +56,7 @@ TEST(System, gemv) {
   ASSERT_EQ(10.0, c.get(p2));
 }
 
-TEST(System, gemv_diagonal) {
+TEST(System, DISABLED_gemv_diagonal) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -95,7 +95,7 @@ TEST(System, gemv_diagonal) {
   ASSERT_EQ(6.0, c.get(p2));
 }
 
-TEST(System, gemv_nw) {
+TEST(System, DISABLED_gemv_nw) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -134,7 +134,7 @@ TEST(System, gemv_nw) {
   ASSERT_EQ(0.0, c.get(p2));
 }
 
-TEST(System, gemv_sw) {
+TEST(System, DISABLED_gemv_sw) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -173,7 +173,7 @@ TEST(System, gemv_sw) {
   ASSERT_EQ(4.0, c.get(p2));
 }
 
-TEST(System, gemv_assemble_from_points) {
+TEST(System, DISABLED_gemv_assemble_from_points) {
   // Points
   Set<> points;
   FieldRef<double> a = points.addField<double>("a");
@@ -215,7 +215,7 @@ TEST(System, gemv_assemble_from_points) {
   ASSERT_EQ(0.0, c.get(p2));
 }
 
-TEST(System, gemv_blocked) {
+TEST(System, DISABLED_gemv_blocked) {
   // Points
   Set<> points;
   FieldRef<double,2> b = points.addField<double,2>("b");
@@ -267,7 +267,7 @@ TEST(System, gemv_blocked) {
   ASSERT_EQ(136.0, c2(1));
 }
 
-TEST(System, gemv_blocked_nw) {
+TEST(System, DISABLED_gemv_blocked_nw) {
   // Points
   Set<> points;
   FieldRef<double,2> b = points.addField<double,2>("b");
@@ -319,7 +319,7 @@ TEST(System, gemv_blocked_nw) {
   ASSERT_EQ(0.0, c2(1));
 }
 
-TEST(System, gemv_blocked_computed) {
+TEST(System, DISABLED_gemv_blocked_computed) {
   // Points
   Set<> points;
   FieldRef<double,2> b = points.addField<double,2>("b");
@@ -371,7 +371,7 @@ TEST(System, gemv_blocked_computed) {
   ASSERT_EQ(400.0, c2(1));
 }
 
-TEST(System, gemv_inplace) {
+TEST(System, DISABLED_gemv_inplace) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");

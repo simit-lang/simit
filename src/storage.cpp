@@ -190,7 +190,6 @@ private:
       const Var &var = to<VarExpr>(op->tensor)->var;
       Type type = var.getType();
       if (type.isTensor() && !isScalar(type) && !storage.hasStorage(var)) {
-//        std::cout << *op << std::endl;
         determineStorage(var);
       }
     }
@@ -200,9 +199,18 @@ private:
     for (auto &var : op->vars) {
       Type type = var.getType();
       if (type.isTensor() && !isScalar(type) && !storage.hasStorage(var)) {
-        // For now we'll store all assembled tensors as system reduced
-        TensorStorage tensorStorage(TensorStorage::SystemReduced, op->target,
-                                    op->neighbors);
+        // For now we'll store all assembled vectors as dense and other tensors
+        // as system reduced
+        TensorStorage tensorStorage;
+        auto tensorType = type.toTensor();
+        if (tensorType->order() == 1) {
+          tensorStorage = TensorStorage(TensorStorage::DenseRowMajor);
+        }
+        else {
+          tensorStorage = TensorStorage(TensorStorage::SystemReduced,
+                                        op->target, op->neighbors);
+        }
+        iassert(tensorStorage.getKind() != TensorStorage::Undefined);
         storage.add(var, tensorStorage);
       }
     }

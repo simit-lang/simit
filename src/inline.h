@@ -7,11 +7,12 @@
 namespace simit {
 namespace ir {
 
-/// Inline mapped function w.r.t. a loop variable over the target set
-class InlineMappedFunction : public IRRewriter {
+/// Rewrites a mapped function body to compute on sets w.r.t. a loop variable,
+/// instead of arguments.
+class MapFunctionRewriter : protected IRRewriter {
 public:
-  InlineMappedFunction(const Map *map, Var targetLoopVar);
-  virtual ~InlineMappedFunction() {}
+  virtual ~MapFunctionRewriter() {}
+  Stmt inlineMapFunc(const Map *map, Var targetLoopVar);
 
 protected:
   std::map<Var,Var> resultToMapVar;
@@ -24,15 +25,25 @@ protected:
   Var target;
   Var neighbors;
 
+  /// Check if the given variable is a result variable
+  bool isResult(Var var);
+
   /// Replace element field reads with set field reads
   virtual void visit(const FieldRead *op);
 
-  /// Replace neighbor tuple read with reads from target endpoints
+  /// Replace neighbor tuple reads with reads from target endpoints
   virtual void visit(const TupleRead *op);
 
   /// Replace function formal results with map actual results
   virtual void visit(const VarExpr *op);
 };
+
+/// Inlines the mapped function with respect to the given loop variable over
+/// the target set, using the given rewriter.
+Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter);
+
+/// Inlines the map returning a loop, using the given rewriter.
+Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter);
 
 }}
 

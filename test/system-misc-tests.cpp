@@ -21,7 +21,7 @@ TEST(System, misc_triangle) {
   simit::FieldRef<double> a = trigs.addField<double>("a");
 
   ElementRef t0 = trigs.add(v0,v1,v2);
-  ElementRef t1 = trigs.add(v0,v2,v3);
+  ElementRef t1 = trigs.add(v1,v2,v3);
 
   a.set(t0, 1.0);
   a.set(t1, 0.1);
@@ -36,10 +36,10 @@ TEST(System, misc_triangle) {
   f->runSafe();
 
   // Check outputs
-  ASSERT_DOUBLE_EQ(1.1, (double)b.get(v0));
-  ASSERT_DOUBLE_EQ(1.0, (double)b.get(v1));
-  ASSERT_DOUBLE_EQ(1.1, (double)b.get(v2));
-  ASSERT_DOUBLE_EQ(0.1, (double)b.get(v3));
+  ASSERT_DOUBLE_EQ(1.0, b.get(v0));
+  ASSERT_DOUBLE_EQ(1.1, b.get(v1));
+  ASSERT_DOUBLE_EQ(1.1, b.get(v2));
+  ASSERT_DOUBLE_EQ(0.1, b.get(v3));
 }
 
 TEST(DISABLED_System, misc_map_one_set) {
@@ -63,7 +63,7 @@ TEST(DISABLED_System, misc_map_one_set) {
   f->runSafe();
 
   // Check outputs
-  ASSERT_DOUBLE_EQ(2, (double)a.get(p0));
-  ASSERT_DOUBLE_EQ(4, (double)a.get(p1));
-  ASSERT_DOUBLE_EQ(6, (double)a.get(p2));
+  ASSERT_DOUBLE_EQ(2, a.get(p0));
+  ASSERT_DOUBLE_EQ(4, a.get(p1));
+  ASSERT_DOUBLE_EQ(6, a.get(p2));
 }

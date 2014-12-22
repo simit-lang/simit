@@ -33,6 +33,7 @@ std::vector<IndexVar> getFreeVars(Expr expr) {
   return GetFreeIndexVars().get(expr);
 }
 
+
 class GetReductionIndexVars : private IRVisitor {
 public:
   std::vector<IndexVar> get(Expr expr) {
@@ -58,6 +59,7 @@ std::vector<IndexVar> getReductionVars(Expr expr) {
   return GetReductionIndexVars().get(expr);
 }
 
+// containsReduction
 class ContainsReduction : public IRQuery {
   void visit(const IndexedTensor *op) {
     for (auto &iv : op->indexVars) {
@@ -75,6 +77,35 @@ bool containsReduction(Expr expr) {
 
 bool containsReduction(Stmt stmt) {
   return ContainsReduction().query(stmt);
+}
+
+
+// isFlattened
+class CheckIsFlattened : private IRVisitor {
+public:
+  bool check(Stmt stmt) {
+    isFlattened = true;
+    indexExprFound = false;
+    stmt.accept(this);
+    return isFlattened;
+  }
+
+private:
+  bool indexExprFound;
+  bool isFlattened;
+
+  void visit(const IndexExpr *op) {
+    if (!indexExprFound) {
+      indexExprFound = true;
+    }
+    else {
+      isFlattened = false;
+    }
+  }
+};
+
+bool isFlattened(Stmt stmt) {
+  return CheckIsFlattened().check(stmt);
 }
 
 }}
