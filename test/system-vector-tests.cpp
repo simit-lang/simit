@@ -68,7 +68,7 @@ TEST(System, vector_dot) {
   ASSERT_EQ(14.0, z.get(p0));
 }
 
-TEST(System, DISABLED_vector_dot_blocked) {
+TEST(System, vector_dot_blocked) {
   Set<> points;
   FieldRef<double,3> x = points.addField<double,3>("x");
   FieldRef<double> z = points.addField<double>("z");

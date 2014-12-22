@@ -269,7 +269,12 @@ LoopVars LoopVars::create(const SIG &sig) {
       if (currBlockLevel < indexVar.getNumBlockLevels()) {
         Var var(nameGenerator.getName(indexVar.getName()), Int);
         ForDomain domain = indexVar.getDomain().getIndexSets()[currBlockLevel];
-        ReductionOperator rop = indexVar.getOperator();
+
+        // We only need to reduce w.r.t. to the outer loop variable variable.
+        ReductionOperator rop = (currBlockLevel==0)
+                                ? indexVar.getOperator()
+                                : ReductionOperator::Undefined;
+                                
         addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
       }
     }
