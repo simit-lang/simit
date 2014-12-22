@@ -166,19 +166,8 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
     void visit(const AssignStmt *op) {
       if (op == rstmt) {
-        iassert(isScalar(op->value.type()))
-        << "assignment non-scalars should have been lowered by now";
-        switch (rop.getKind()) {
-          case ReductionOperator::Sum: {
-            Expr varExpr = VarExpr::make(op->var);
-            tmpVar = op->var;
-            stmt = AssignStmt::make(op->var, Add::make(varExpr, op->value));
-            break;
-          }
-          case ReductionOperator::Undefined:
-            ierror;
-            break;
-        }
+        tmpVar = op->var;
+        stmt = compoundAssign(tmpVar, rop, op->value);
       }
       else {
         stmt = op;
@@ -187,51 +176,73 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
     void visit(const TensorWrite *op) {
       if (op == rstmt) {
-        Expr tensor = op->tensor;
-        std::vector<Expr> indices = op->indices;
+        iassert(op->value.type().isTensor());
+        ScalarType componentType = op->value.type().toTensor()->componentType;
+        string tmpVarName = getReductionTmpName(op);
+        tmpVar = Var(tmpVarName, TensorType::make(componentType));
+        stmt = compoundAssign(tmpVar, rop, op->value);
 
-        iassert(tensor.type().isTensor());
-        switch (rop.getKind()) {
-          case ReductionOperator::Sum: {
-            ScalarType componentType = tensor.type().toTensor()->componentType;
-            string tmpVarName = getReductionTmpName(op);
-
-            tmpVar = Var(tmpVarName, TensorType::make(componentType));
-            stmt = AssignStmt::make(tmpVar, Add::make(tmpVar, op->value));
-            break;
-          }
-          case ReductionOperator::Undefined:
-            ierror;
-            break;
-        }
-
-        tmpWriteStmt = TensorWrite::make(tensor, indices, VarExpr::make(tmpVar));
-        if (isa<TensorRead>(tensor)) {
+        tmpWriteStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
+        if (isa<TensorRead>(op->tensor)) {
           tmpWriteStmt = makeCompound(tmpWriteStmt, CompoundOperator::Add);
         }
       }
+      else {
+        stmt = op;
+      }
     }
 
-    std::string getReductionTmpName(const TensorWrite *tensorWrite) {
-      class GetReductionTmpName : public IRVisitor {
+    void visit(const FieldWrite *op) {
+      if (op == rstmt) {
+        iassert(op->value.type().isTensor());
+        ScalarType componentType = op->value.type().toTensor()->componentType;
+        string tmpVarName = getReductionTmpName(op);
+        tmpVar = Var(tmpVarName, TensorType::make(componentType));
+        stmt = compoundAssign(tmpVar, rop, op->value);
+
+        tmpWriteStmt = FieldWrite::make(op->elementOrSet,op->fieldName, tmpVar);
+      }
+      else {
+        stmt = op;
+      }
+    }
+
+    static Stmt compoundAssign(Var var, ReductionOperator op, Expr value) {
+      switch (op.getKind()) {
+        case ReductionOperator::Sum:
+          return AssignStmt::make(var, Add::make(var, value));
+        case ReductionOperator::Undefined:
+          ierror;
+          return Stmt();
+      }
+    }
+
+    std::string getReductionTmpName(Stmt stmt) {
+      class GetReductionTmpNameVisitor : public IRVisitor {
       public:
-        string get(const TensorWrite *op) {
-          op->tensor.accept(this);
-          for (auto &index : op->indices) {
-            index.accept(this);
-          }
+        string get(Stmt stmt) {
+          stmt.accept(this);
           return name;
         }
 
       private:
         std::string name;
+        void visit(const TensorWrite *op) {
+          op->tensor.accept(this);
+          for (auto &index : op->indices) {
+            index.accept(this);
+          }
+        }
+        void visit(const FieldWrite *op) {
+          op->elementOrSet.accept(this);
+          name += "_" + op->fieldName;
+        }
         void visit(const VarExpr *op) {
-          IRVisitor::visit(op);
           name += op->var.getName();
         }
-      };
+      }; // class GetReductionTmpNameVisitor
 
-      return GetReductionTmpName().get(tensorWrite);
+      return GetReductionTmpNameVisitor().get(stmt);
     }
   };
 
@@ -239,13 +250,14 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
   loopNest = reduceRewriter.rewrite(loopNest);
 
   Var tmpVar = reduceRewriter.getTmpVar();
+  iassert(tmpVar.defined());
+
   Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.getType(), {0}));
+  loopNest = Block::make(alloc, loopNest);
+
   Stmt tmpWriteStmt = reduceRewriter.getTmpWriteStmt();
   if (tmpWriteStmt.defined()) {
-    loopNest = Block::make(alloc, Block::make(loopNest, tmpWriteStmt));
-  }
-  else {
-    loopNest = Block::make(alloc, loopNest);
+    loopNest = Block::make(loopNest, tmpWriteStmt);
   }
 
   return loopNest;

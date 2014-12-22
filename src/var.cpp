@@ -49,8 +49,8 @@ ReductionOperator LoopVar::getReductionOperator() const {
 }
 
 // Free functions
-std::ostream &operator<<(std::ostream &os, const Var &v) {
-  return os << v.getName();
+std::ostream &operator<<(std::ostream &os, const Var &var) {
+  return os << ((var.defined()) ? var.getName() : "undefined var");
 }
 
 std::ostream &operator<<(std::ostream &os, const LoopVar &lv) {

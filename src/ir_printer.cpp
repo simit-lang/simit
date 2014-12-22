@@ -75,6 +75,7 @@ void IRPrinter::print(const Stmt &stmt) {
     stmt.accept(this);
   }
   else {
+    indent();
     os << "Stmt()";
   }
 }
