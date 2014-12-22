@@ -1,5 +1,12 @@
-func conjugateGradients(A : tensor[,](float), b : tensor[](float), xguess : tensor[](float), tol : float, maxiters : int) -> (x : tensor[](float))
-{
+element Point
+  x : tensor[3](float);
+  v : tensor[3](float);
+  m : float;
+end
+
+extern points : set{Point};
+
+func conjugateGradients(A : tensor[points,points](float), b : tensor[points](float), xguess : tensor[points](float), tol : float, maxiters : int) -> (x : tensor[points](float))
 	r = b - A*xguess;
 	p = r;
 	iter = 0;
@@ -17,4 +24,4 @@ func conjugateGradients(A : tensor[,](float), b : tensor[](float), xguess : tens
 		iter++;
 	end
 	return xguess;
-}
+end
