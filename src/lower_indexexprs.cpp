@@ -32,6 +32,14 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     /// Loop variables used to compute index (created from the SIG)
     LoopVars const& loopVars;
 
+    Stmt tensorWrite(Expr tensor, vector<IndexVar> indexVars, Expr value){
+      std::vector<Expr> indexExprs;
+      for (const IndexVar &iv : indexVars) {
+        indexExprs.push_back(loopVars.getLoopVar(iv).getVar());
+      }
+      return TensorWrite::make(tensor, indexExprs, value);
+    }
+
     void visit(const AssignStmt *op) {
       iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
       const IndexExpr *indexExpr = to<IndexExpr>(op->value);
@@ -43,11 +51,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         stmt = AssignStmt::make(var, value);
       }
       else {
-        std::vector<Expr> indices;
-        for (IndexVar const& iv : indexExpr->resultVars) {
-          indices.push_back(loopVars.getLoopVar(iv).getVar());
-        }
-        stmt = TensorWrite::make(var, indices, value);
+        stmt = tensorWrite(var, indexExpr->resultVars, value);
       }
     }
 
@@ -63,12 +67,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         stmt = FieldWrite::make(elementOrSet, fieldName, value);
       }
       else {
-        std::vector<Expr> indices;
-        for (IndexVar const& iv : indexExpr->resultVars) {
-          indices.push_back(loopVars.getLoopVar(iv).getVar());
-        }
         Expr field = FieldRead::make(elementOrSet, fieldName);
-        stmt = TensorWrite::make(field, indices, value);
+        stmt = tensorWrite(field, indexExpr->resultVars, value);
       }
     }
 
@@ -82,12 +82,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         stmt = TensorWrite::make(op->tensor, op->indices, value);
       }
       else {
-        std::vector<Expr> indices;
-        for (IndexVar const& iv : indexExpr->resultVars) {
-          indices.push_back(loopVars.getLoopVar(iv).getVar());
-        }
         Expr tensor = TensorRead::make(op->tensor, op->indices);
-        stmt = TensorWrite::make(tensor, indices, value);
+        stmt = tensorWrite(tensor, indexExpr->resultVars, value);
       }
     }
 
