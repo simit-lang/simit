@@ -955,62 +955,62 @@ elwise_binary_op
 boolean_expr
   : expr "==" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Eq::make(l, r));
   }
   | expr "!=" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Ne::make(l, r));
   }
-  | expr "<"  expr {
+  | expr ">" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Gt::make(l, r));
   }
-  | expr ">"  expr {
+  | expr "<" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | expr "<=" expr {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Lt::make(l, r));
   }
   | expr ">=" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Ge::make(l, r));
+  }
+  | expr "<=" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Le::make(l, r));
   }
   | expr "and" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(And::make(l, r));
   }
   | expr "or" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Or::make(l, r));
   }
   | "not" expr {
     if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $2;
+    Expr r = convertAndDelete($2);
+    $$ = new Expr(Not::make(r));
   }
   | expr "xor" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Xor::make(l, r));
   }
 
 
