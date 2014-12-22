@@ -257,6 +257,31 @@ void IRPrinter::visit(const Div *op) {
   os << ")";
 }
 
+#define PRINT_VISIT_BINARY_OP(type, symbol, op) \
+  void IRPrinter::visit(const type *op) {\
+  os << "(";\
+  print(op->a);\
+  os << " " << #symbol << " ";\
+  print(op->b);\
+  os << ")";\
+}
+
+PRINT_VISIT_BINARY_OP(Eq, ==, op)
+PRINT_VISIT_BINARY_OP(Ne, !=, op)
+PRINT_VISIT_BINARY_OP(Gt, >, op)
+PRINT_VISIT_BINARY_OP(Lt, <, op)
+PRINT_VISIT_BINARY_OP(Ge, >=, op)
+PRINT_VISIT_BINARY_OP(Le, <=, op)
+PRINT_VISIT_BINARY_OP(And, and, op)
+PRINT_VISIT_BINARY_OP(Or, or, op)
+PRINT_VISIT_BINARY_OP(Xor, xor, op)
+
+void IRPrinter::visit(const Not *op) {
+  os << "(not ";
+  print(op->a);
+  os << ")";
+}
+
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
   os << op->var << " = ";
@@ -338,7 +363,16 @@ void IRPrinter::visit(const For *op) {
 
 void IRPrinter::visit(const IfThenElse *op) {
   indent();
-  os << "ifthenelse;";
+  os << "if ";
+  print(op->condition);
+  os << endl;
+  ++indentation;
+  print(op->thenBody);
+  --indentation;
+  os << "else" << endl;
+  ++indentation;
+  print(op->elseBody);
+  --indentation;
 }
 
 void IRPrinter::visit(const Block *op) {

@@ -506,385 +506,385 @@ namespace  simit { namespace internal  {
 
         break;
 
-      case 61: // extern
+      case 67: // extern
 
 
         { delete (yysym.value.var); }
 
         break;
 
-      case 62: // element_type_decl
+      case 68: // element_type_decl
 
 
         { delete (yysym.value.type); }
 
         break;
 
-      case 63: // field_decl_list
+      case 69: // field_decl_list
 
 
         { delete (yysym.value.fields); }
 
         break;
 
-      case 64: // field_decl
+      case 70: // field_decl
 
 
         { delete (yysym.value.field); }
 
         break;
 
-      case 65: // procedure
+      case 71: // procedure
 
 
         { delete (yysym.value.function); }
 
         break;
 
-      case 68: // procedure_header
+      case 74: // procedure_header
 
 
         { delete (yysym.value.function); }
 
         break;
 
-      case 69: // function
+      case 75: // function
 
 
         { delete (yysym.value.function); }
 
         break;
 
-      case 72: // function_header
+      case 78: // function_header
 
 
         { delete (yysym.value.function); }
 
         break;
 
-      case 73: // arguments
+      case 79: // arguments
 
 
         { delete (yysym.value.vars); }
 
         break;
 
-      case 74: // argument_list
+      case 80: // argument_list
 
 
         { delete (yysym.value.vars); }
 
         break;
 
-      case 75: // argument_decl
+      case 81: // argument_decl
 
 
         { delete (yysym.value.var); }
 
         break;
 
-      case 76: // results
+      case 82: // results
 
 
         { delete (yysym.value.vars); }
 
         break;
 
-      case 77: // result_list
+      case 83: // result_list
 
 
         { delete (yysym.value.vars); }
 
         break;
 
-      case 78: // result_decl
+      case 84: // result_decl
 
 
         { delete (yysym.value.var); }
 
         break;
 
-      case 79: // stmt_block
+      case 85: // stmt_block
 
 
         { delete (yysym.value.stmt); }
 
         break;
 
-      case 84: // idents
+      case 90: // idents
 
 
         { delete (yysym.value.strings); }
 
         break;
 
-      case 85: // with
+      case 91: // with
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 86: // reduce
+      case 92: // reduce
 
 
         {}
 
         break;
 
-      case 87: // reduce_op
+      case 93: // reduce_op
 
 
         {}
 
         break;
 
-      case 97: // expr_stmt
+      case 103: // expr_stmt
 
 
         { delete (yysym.value.stmt); }
 
         break;
 
-      case 98: // expr
+      case 104: // expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 99: // ident_expr
+      case 105: // ident_expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 100: // paren_expr
+      case 106: // paren_expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 101: // linear_algebra_expr
+      case 107: // linear_algebra_expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 102: // elwise_binary_op
+      case 108: // elwise_binary_op
 
 
         {}
 
         break;
 
-      case 103: // boolean_expr
+      case 109: // boolean_expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 104: // field_read_expr
+      case 110: // field_read_expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 105: // set_read_expr
+      case 111: // set_read_expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 106: // call_or_paren_read_expr
+      case 112: // call_or_paren_read_expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 107: // expr_list_or_empty
+      case 113: // expr_list_or_empty
 
 
         { delete (yysym.value.exprs); }
 
         break;
 
-      case 108: // expr_list
+      case 114: // expr_list
 
 
         { delete (yysym.value.exprs); }
 
         break;
 
-      case 109: // type
+      case 115: // type
 
 
         { delete (yysym.value.type); }
 
         break;
 
-      case 110: // element_type
+      case 116: // element_type
 
 
         { delete (yysym.value.type); }
 
         break;
 
-      case 111: // set_type
+      case 117: // set_type
 
 
         { delete (yysym.value.type); }
 
         break;
 
-      case 112: // endpoints
+      case 118: // endpoints
 
 
         { delete (yysym.value.exprs); }
 
         break;
 
-      case 113: // tuple_type
+      case 119: // tuple_type
 
 
         { delete (yysym.value.type); }
 
         break;
 
-      case 114: // tensor_type
+      case 120: // tensor_type
 
 
         { delete (yysym.value.type); }
 
         break;
 
-      case 115: // index_sets
+      case 121: // index_sets
 
 
         { delete (yysym.value.indexSets); }
 
         break;
 
-      case 116: // index_set
+      case 122: // index_set
 
 
         { delete (yysym.value.indexSet); }
 
         break;
 
-      case 117: // component_type
+      case 123: // component_type
 
 
         { delete (yysym.value.scalarType); }
 
         break;
 
-      case 118: // literal_expr
+      case 124: // literal_expr
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 119: // tensor_literal
+      case 125: // tensor_literal
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 120: // dense_tensor_literal
+      case 126: // dense_tensor_literal
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 121: // float_dense_tensor_literal
+      case 127: // float_dense_tensor_literal
 
 
         { delete (yysym.value.TensorDoubleValues); }
 
         break;
 
-      case 122: // float_dense_ndtensor_literal
+      case 128: // float_dense_ndtensor_literal
 
 
         { delete (yysym.value.TensorDoubleValues); }
 
         break;
 
-      case 123: // float_dense_matrix_literal
+      case 129: // float_dense_matrix_literal
 
 
         { delete (yysym.value.TensorDoubleValues); }
 
         break;
 
-      case 124: // float_dense_vector_literal
+      case 130: // float_dense_vector_literal
 
 
         { delete (yysym.value.TensorDoubleValues); }
 
         break;
 
-      case 125: // int_dense_tensor_literal
+      case 131: // int_dense_tensor_literal
 
 
         { delete (yysym.value.TensorIntValues); }
 
         break;
 
-      case 126: // int_dense_ndtensor_literal
+      case 132: // int_dense_ndtensor_literal
 
 
         { delete (yysym.value.TensorIntValues); }
 
         break;
 
-      case 127: // int_dense_matrix_literal
+      case 133: // int_dense_matrix_literal
 
 
         { delete (yysym.value.TensorIntValues); }
 
         break;
 
-      case 128: // int_dense_vector_literal
+      case 134: // int_dense_vector_literal
 
 
         { delete (yysym.value.TensorIntValues); }
 
         break;
 
-      case 129: // scalar_literal
+      case 135: // scalar_literal
 
 
         { delete (yysym.value.expr); }
 
         break;
 
-      case 130: // signed_int_literal
+      case 136: // signed_int_literal
 
 
         {}
 
         break;
 
-      case 131: // signed_float_literal
+      case 137: // signed_float_literal
 
 
         {}
 
         break;
 
-      case 133: // system_generator
+      case 139: // system_generator
 
 
         { delete (yysym.value.system); }
@@ -2026,6 +2026,49 @@ namespace  simit { namespace internal  {
   case 94:
 
     {
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
+  }
+
+    break;
+
+  case 95:
+
+    {
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
+  }
+
+    break;
+
+  case 96:
+
+    {
+    if ((yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[0].value.expr);
+  }
+
+    break;
+
+  case 97:
+
+    {
+    if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.expr) = NULL; break; } // TODO: Remove check
+    (yylhs.value.expr) = NULL;
+    delete (yystack_[2].value.expr);
+    delete (yystack_[0].value.expr);
+  }
+
+    break;
+
+  case 98:
+
+    {
     iassert((yystack_[2].value.expr));
     iassert((yystack_[2].value.expr)->type().defined());
 
@@ -2059,7 +2102,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 98:
+  case 102:
 
     {
     std::string name = convertAndFree((yystack_[3].value.string));
@@ -2097,7 +2140,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 99:
+  case 103:
 
     {
     (yylhs.value.expr) = NULL;
@@ -2105,7 +2148,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 100:
+  case 104:
 
     {
     (yylhs.value.exprs) = new vector<Expr>();
@@ -2113,7 +2156,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 101:
+  case 105:
 
     {
     (yylhs.value.exprs) = (yystack_[0].value.exprs);
@@ -2121,7 +2164,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 102:
+  case 106:
 
     {
     (yylhs.value.exprs) = new std::vector<Expr>();
@@ -2132,7 +2175,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 103:
+  case 107:
 
     {
     (yylhs.value.exprs) = (yystack_[2].value.exprs);
@@ -2143,7 +2186,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 108:
+  case 112:
 
     {
     std::string name = convertAndFree((yystack_[0].value.string));
@@ -2157,7 +2200,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 109:
+  case 113:
 
     {
     auto elementType = convertAndDelete((yystack_[1].value.type));
@@ -2166,7 +2209,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 110:
+  case 114:
 
     {
     auto elementType = convertAndDelete((yystack_[4].value.type));
@@ -2178,7 +2221,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 111:
+  case 115:
 
     {
     (yylhs.value.exprs) = new vector<Expr>;
@@ -2192,7 +2235,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 112:
+  case 116:
 
     {
     (yylhs.value.exprs) = (yystack_[2].value.exprs);
@@ -2206,7 +2249,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 113:
+  case 117:
 
     {
     auto elementType = convertAndDelete((yystack_[3].value.type));
@@ -2220,7 +2263,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 114:
+  case 118:
 
     {
     auto componentType = convertAndDelete((yystack_[0].value.scalarType));
@@ -2229,7 +2272,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 115:
+  case 119:
 
     {
     (yylhs.value.type) = (yystack_[1].value.type);
@@ -2237,7 +2280,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 116:
+  case 120:
 
     {
     auto blockTypePtr = convertAndDelete((yystack_[1].value.type));
@@ -2284,7 +2327,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 117:
+  case 121:
 
     {
     auto type = convertAndDelete((yystack_[1].value.type));
@@ -2296,7 +2339,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 118:
+  case 122:
 
     {
     (yylhs.value.indexSets) = new std::vector<IndexSet>();
@@ -2306,7 +2349,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 119:
+  case 123:
 
     {
     (yylhs.value.indexSets) = (yystack_[2].value.indexSets);
@@ -2316,7 +2359,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 120:
+  case 124:
 
     {
     (yylhs.value.indexSet) = new IndexSet((yystack_[0].value.num));
@@ -2324,7 +2367,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 121:
+  case 125:
 
     {
     std::string setName = convertAndFree((yystack_[0].value.string));
@@ -2343,7 +2386,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 122:
+  case 126:
 
     {
     if ((yystack_[2].value.expr) == NULL || (yystack_[0].value.expr) == NULL) { (yylhs.value.indexSet) = NULL; break; } // TODO: Remove check
@@ -2354,7 +2397,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 123:
+  case 127:
 
     {
     (yylhs.value.indexSet) = new IndexSet();
@@ -2362,7 +2405,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 124:
+  case 128:
 
     {
     (yylhs.value.scalarType) = new ScalarType(ScalarType::Int);
@@ -2370,7 +2413,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 125:
+  case 129:
 
     {
     (yylhs.value.scalarType) = new ScalarType(ScalarType::Float);
@@ -2378,7 +2421,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 128:
+  case 132:
 
     {
     (yylhs.value.expr) = (yystack_[1].value.expr);
@@ -2387,7 +2430,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 130:
+  case 134:
 
     {
     auto values = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
@@ -2399,7 +2442,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 131:
+  case 135:
 
     {
     auto values = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
@@ -2411,7 +2454,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 132:
+  case 136:
 
     {
     // If the matrix has only one column then we discard that dimension and
@@ -2423,7 +2466,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 134:
+  case 138:
 
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[1].value.TensorDoubleValues);
@@ -2432,7 +2475,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 135:
+  case 139:
 
     {
     auto  left = unique_ptr<TensorValues<double>>((yystack_[4].value.TensorDoubleValues));
@@ -2448,7 +2491,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 136:
+  case 140:
 
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[0].value.TensorDoubleValues);
@@ -2457,7 +2500,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 137:
+  case 141:
 
     {
     auto  left = unique_ptr<TensorValues<double>>((yystack_[2].value.TensorDoubleValues));
@@ -2474,7 +2517,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 138:
+  case 142:
 
     {
     (yylhs.value.TensorDoubleValues) = new TensorValues<double>();
@@ -2483,7 +2526,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 139:
+  case 143:
 
     {
     (yylhs.value.TensorDoubleValues) = (yystack_[2].value.TensorDoubleValues);
@@ -2492,7 +2535,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 140:
+  case 144:
 
     {
     // If the matrix has only one column then we discard that dimension and
@@ -2504,7 +2547,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 142:
+  case 146:
 
     {
     (yylhs.value.TensorIntValues) = (yystack_[1].value.TensorIntValues);
@@ -2513,7 +2556,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 143:
+  case 147:
 
     {
     auto  left = unique_ptr<TensorValues<int>>((yystack_[4].value.TensorIntValues));
@@ -2529,7 +2572,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 144:
+  case 148:
 
     {
     (yylhs.value.TensorIntValues) = (yystack_[0].value.TensorIntValues);
@@ -2538,7 +2581,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 145:
+  case 149:
 
     {
     auto  left = unique_ptr<TensorValues<int>>((yystack_[2].value.TensorIntValues));
@@ -2555,7 +2598,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 146:
+  case 150:
 
     {
     (yylhs.value.TensorIntValues) = new TensorValues<int>();
@@ -2564,7 +2607,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 147:
+  case 151:
 
     {
     (yylhs.value.TensorIntValues) = (yystack_[2].value.TensorIntValues);
@@ -2573,7 +2616,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 148:
+  case 152:
 
     {
     auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Int));
@@ -2582,7 +2625,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 149:
+  case 153:
 
     {
     auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Float));
@@ -2591,7 +2634,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 150:
+  case 154:
 
     {
     (yylhs.value.num) = (yystack_[0].value.num);
@@ -2599,7 +2642,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 151:
+  case 155:
 
     {
     (yylhs.value.num) = -(yystack_[0].value.num);
@@ -2607,7 +2650,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 152:
+  case 156:
 
     {
     (yylhs.value.fnum) = (yystack_[0].value.fnum);
@@ -2615,7 +2658,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 153:
+  case 157:
 
     {
     (yylhs.value.fnum) = -(yystack_[0].value.fnum);
@@ -2623,7 +2666,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 154:
+  case 158:
 
     {
     std::string name = convertAndFree((yystack_[6].value.string));
@@ -2646,7 +2689,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 155:
+  case 159:
 
     {
     std::string setName = convertAndFree((yystack_[4].value.string));
@@ -2659,7 +2702,7 @@ namespace  simit { namespace internal  {
 
     break;
 
-  case 157:
+  case 161:
 
     {
     System *sys = new System;
@@ -2926,268 +2969,288 @@ namespace  simit { namespace internal  {
   }
 
 
-  const short int  Parser ::yypact_ninf_ = -197;
+  const short int  Parser ::yypact_ninf_ = -199;
 
-  const signed char  Parser ::yytable_ninf_ = -122;
+  const signed char  Parser ::yytable_ninf_ = -126;
 
   const short int
    Parser ::yypact_[] =
   {
-    -197,   130,  -197,  -197,  -197,   125,    18,    28,    30,   167,
-      72,    99,   167,   109,  -197,   243,  -197,  -197,  -197,  -197,
-      -1,  -197,   101,  -197,  -197,  -197,    56,  -197,  -197,  -197,
-    -197,   220,  -197,  -197,   283,   145,   147,  -197,  -197,   171,
-     163,   165,  -197,  -197,   159,  -197,  -197,  -197,  -197,   167,
-     208,  -197,   174,   180,   192,   191,    13,   196,   214,   -18,
-     263,    29,   127,   207,   209,   210,   211,   224,   221,   219,
-     228,  -197,  -197,  -197,  -197,   187,   262,   220,   264,   220,
-     266,   226,   242,   220,  -197,   167,   167,  -197,  -197,  -197,
-     167,   167,  -197,  -197,   167,  -197,   167,   167,   167,   167,
-     167,   167,   167,   269,  -197,   383,   245,    62,   235,     3,
-     246,   185,  -197,   167,   173,   252,   167,    94,   167,   175,
-    -197,     6,    84,  -197,  -197,  -197,   247,     8,     8,  -197,
-     248,     4,     4,  -197,   256,   253,   259,  -197,   284,   303,
-    -197,  -197,  -197,   436,   436,   187,   187,   187,   403,   423,
-     423,   436,   436,   383,   257,    96,  -197,  -197,   249,   167,
-     167,   255,  -197,  -197,  -197,  -197,   136,    81,  -197,  -197,
-     268,   291,  -197,  -197,  -197,  -197,   254,   265,   271,   124,
-     186,   260,  -197,   323,  -197,   274,  -197,  -197,   281,  -197,
-    -197,     8,   319,   211,  -197,     4,   321,   228,  -197,  -197,
-      30,  -197,   308,  -197,  -197,  -197,   167,   383,   343,   246,
-     246,    94,   112,  -197,   291,   296,  -197,   167,   220,   167,
-     290,   338,   140,   146,  -197,   314,   324,  -197,  -197,   356,
-     363,  -197,    60,   -14,    80,  -197,   340,   329,   380,    13,
-    -197,   383,   112,   326,  -197,  -197,  -197,   354,    30,   367,
-    -197,  -197,  -197,   371,    94,  -197,   372,   374,  -197,   362,
-     416,   392,  -197,  -197,   418,   405,   246,  -197,   420,  -197,
-    -197,   399,   437,  -197,   400,  -197,    -4,  -197,   119,   112,
-     404,   121,  -197,  -197,  -197,  -197,  -197,   440,   432,   185,
-    -197,   437,  -197,   112,  -197,  -197,  -197
+    -199,   111,  -199,  -199,  -199,   137,    42,    47,    56,   179,
+     114,   126,   179,    31,  -199,   293,   179,  -199,  -199,  -199,
+    -199,    57,  -199,    15,  -199,  -199,  -199,    64,  -199,  -199,
+    -199,  -199,   273,  -199,  -199,   333,    41,    94,  -199,  -199,
+     112,   109,   119,  -199,  -199,   110,  -199,  -199,  -199,  -199,
+     179,   157,  -199,   131,   133,   147,   169,   453,   142,   171,
+     164,     7,   309,    25,    13,   174,   166,   161,   172,   180,
+     183,   185,   184,  -199,  -199,  -199,  -199,   279,   453,   219,
+     273,   223,   273,   224,    16,   206,   273,  -199,   179,   179,
+    -199,  -199,  -199,   179,   179,  -199,  -199,   179,  -199,   179,
+     179,   179,   179,   179,   179,   179,   179,   179,   179,   229,
+    -199,   453,   204,    84,   196,     9,   235,   129,  -199,   179,
+     231,   179,   148,   179,    98,  -199,    35,    66,  -199,  -199,
+    -199,   218,    26,    26,  -199,   232,    20,    20,  -199,   241,
+     225,   242,  -199,   265,   357,  -199,  -199,  -199,   263,   263,
+     279,   279,   279,   477,   501,   501,   263,   263,   453,   453,
+     453,   453,   240,   159,  -199,  -199,   237,   179,   179,   234,
+    -199,  -199,  -199,  -199,    88,    75,  -199,  -199,   243,   275,
+    -199,  -199,  -199,  -199,   238,   249,   267,    18,   215,   228,
+    -199,   381,  -199,   258,  -199,  -199,   251,  -199,  -199,    26,
+     296,   172,  -199,    20,   298,   184,  -199,  -199,    56,  -199,
+     285,  -199,  -199,  -199,   179,   453,   405,   235,   235,   148,
+      40,  -199,   275,   270,  -199,   179,   273,   179,   264,   316,
+     144,   154,  -199,   299,   286,  -199,  -199,   327,   429,  -199,
+       4,   -14,    29,  -199,   292,   304,   332,   260,  -199,   453,
+      40,   302,  -199,  -199,  -199,   313,    56,   325,  -199,  -199,
+    -199,   314,   148,  -199,   317,   318,  -199,   307,   345,   337,
+    -199,  -199,   366,   353,   235,  -199,   368,  -199,  -199,   349,
+     370,  -199,   352,  -199,    -6,  -199,   167,    40,   356,   181,
+    -199,  -199,  -199,  -199,  -199,   392,   386,   129,  -199,   370,
+    -199,    40,  -199,  -199,  -199
   };
 
   const unsigned char
    Parser ::yydefact_[] =
   {
-       2,    15,     1,   150,   152,    75,     0,     0,     0,     0,
-       0,     0,     0,     0,    67,     0,     3,     7,     4,     5,
-       0,     6,     0,     8,    37,    38,     0,    39,    40,    41,
-      42,    33,    43,    44,     0,    68,    69,    71,    72,    73,
-       0,    74,    70,   126,   127,   129,   148,   149,     9,   100,
-       0,    12,     0,     0,     0,    75,    33,    73,     0,     0,
-       0,     0,     0,     0,   133,   132,   136,     0,   141,   140,
-     144,   146,   138,   150,   152,    77,     0,    33,     0,    33,
-       0,     0,     0,    34,    35,     0,     0,    66,    84,    85,
-       0,     0,    86,    87,     0,    81,     0,     0,     0,     0,
-       0,     0,   100,     0,   128,   102,     0,     0,     0,     0,
-       0,     0,    10,   100,    85,    60,   100,     0,   100,     0,
-      76,     0,     0,   151,   153,   130,     0,     0,     0,   131,
-       0,     0,     0,    18,     0,     0,     0,    48,     0,     0,
-      64,    62,    36,    90,    91,    79,    80,    82,    83,    88,
-      89,    92,    93,    78,     0,     0,    94,    98,     0,     0,
-       0,     0,    11,    13,   124,   125,     0,     0,   114,   108,
-       0,     0,    27,   104,   105,   106,   107,   101,     0,     0,
-     150,    75,   123,     0,    63,     0,   157,   156,     0,   134,
-     142,     0,     0,   137,   139,     0,     0,   145,   147,    16,
-      23,    20,     0,    45,    99,    56,     0,   103,     0,     0,
-       0,     0,     0,   117,     0,     0,    57,     0,    33,     0,
-       0,     0,     0,     0,    17,     0,    24,    25,    21,     0,
-       0,    54,     0,     0,     0,   118,     0,     0,     0,    33,
-      59,   122,     0,     0,   155,   135,   143,    28,     0,    49,
-      55,    14,   115,     0,     0,    65,   109,     0,    61,     0,
-       0,     0,    22,    26,     0,    51,     0,   119,     0,   113,
-     154,     0,     0,    50,     0,    46,     0,   111,     0,     0,
-       0,     0,    30,    53,    52,   116,   110,     0,     0,     0,
-      29,     0,   112,     0,    32,    31,   158
+       2,    15,     1,   154,   156,    75,     0,     0,     0,     0,
+       0,     0,     0,     0,    67,     0,     0,     3,     7,     4,
+       5,     0,     6,     0,     8,    37,    38,     0,    39,    40,
+      41,    42,    33,    43,    44,     0,    68,    69,    71,    72,
+      73,     0,    74,    70,   130,   131,   133,   152,   153,     9,
+     104,     0,    12,     0,     0,     0,    75,     0,    72,    73,
+       0,     0,     0,     0,     0,     0,   137,   136,   140,     0,
+     145,   144,   148,   150,   142,   154,   156,    77,    96,     0,
+      33,     0,    33,     0,     0,     0,    34,    35,     0,     0,
+      66,    84,    85,     0,     0,    86,    87,     0,    81,     0,
+       0,     0,     0,     0,     0,     0,     0,     0,   104,     0,
+     132,   106,     0,     0,     0,     0,     0,     0,    10,   104,
+      60,   104,     0,   104,     0,    76,     0,     0,   155,   157,
+     134,     0,     0,     0,   135,     0,     0,     0,    18,     0,
+       0,     0,    48,     0,     0,    64,    62,    36,    90,    91,
+      79,    80,    82,    83,    88,    89,    92,    93,    94,    95,
+      97,    78,     0,     0,    98,   102,     0,     0,     0,     0,
+      11,    13,   128,   129,     0,     0,   118,   112,     0,     0,
+      27,   108,   109,   110,   111,   105,     0,     0,   154,    75,
+     127,     0,    63,     0,   161,   160,     0,   138,   146,     0,
+       0,   141,   143,     0,     0,   149,   151,    16,    23,    20,
+       0,    45,   103,    56,     0,   107,     0,     0,     0,     0,
+       0,   121,     0,     0,    57,     0,    33,     0,     0,     0,
+       0,     0,    17,     0,    24,    25,    21,     0,     0,    54,
+       0,     0,     0,   122,     0,     0,     0,    72,    59,   126,
+       0,     0,   159,   139,   147,    28,     0,    49,    55,    14,
+     119,     0,     0,    65,   113,     0,    61,     0,     0,     0,
+      22,    26,     0,    51,     0,   123,     0,   117,   158,     0,
+       0,    50,     0,    46,     0,   115,     0,     0,     0,     0,
+      30,    53,    52,   120,   114,     0,     0,     0,    29,     0,
+     116,     0,    32,    31,   162
   };
 
   const short int
    Parser ::yypgoto_[] =
   {
-    -197,  -197,  -197,  -197,  -197,  -197,  -197,  -197,  -197,  -197,
-    -197,  -197,  -197,  -197,  -197,  -197,  -197,  -177,  -197,  -197,
-     176,   -55,  -197,    11,  -197,  -197,  -197,  -197,  -197,  -197,
-    -197,  -197,  -197,  -197,  -197,  -197,  -197,  -197,  -197,  -197,
-      -9,  -197,  -197,  -197,  -197,  -197,     1,  -197,  -197,   -74,
-     -28,   177,  -141,  -197,  -197,  -197,   -99,  -197,  -168,  -197,
-    -197,  -196,  -197,  -197,  -197,   -52,   337,  -197,  -197,   -57,
-     334,  -197,    -8,    -6,  -197,  -197,  -197
+    -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,
+    -199,  -199,  -199,  -199,  -199,  -199,  -199,  -195,  -199,  -199,
+     102,   -54,  -199,    14,  -199,  -199,  -199,  -199,  -199,  -199,
+    -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,  -199,
+      -9,  -199,  -199,  -199,  -199,    -8,     1,  -199,  -199,   -68,
+     -41,   124,  -165,  -199,  -199,  -199,  -111,  -199,  -194,  -199,
+    -199,  -198,  -199,  -199,  -199,   -51,   290,  -199,  -199,   -52,
+     288,  -199,    -5,    -3,  -199,  -199,  -199
   };
 
   const short int
    Parser ::yydefgoto_[] =
   {
-      -1,     1,    16,    17,    18,   109,   163,    19,    20,   224,
-      77,    21,    22,   228,    79,   225,   226,    54,   262,   281,
-     282,    82,    83,    84,    24,    25,    26,   265,   275,   284,
-      27,    28,    29,   178,   179,    30,    31,   141,    32,    33,
-      34,    35,    36,    37,   101,    38,    57,    40,    41,   106,
-     177,   172,   173,   174,   278,   175,   176,   234,   184,   168,
-      42,    43,    44,    63,    64,    65,    66,    67,    68,    69,
-      70,    45,    46,    47,    48,   188,   244
+      -1,     1,    17,    18,    19,   115,   171,    20,    21,   232,
+      80,    22,    23,   236,    82,   233,   234,    55,   270,   289,
+     290,    85,    86,    87,    25,    26,    27,   273,   283,   292,
+      28,    29,    30,   186,   187,    31,    32,   146,    33,    34,
+      35,    36,    37,    38,   107,    39,    59,    41,    42,   112,
+     185,   180,   181,   182,   286,   183,   184,   242,   192,   176,
+      43,    44,    45,    65,    66,    67,    68,    69,    70,    71,
+      72,    46,    47,    48,    49,   196,   252
   };
 
   const short int
    Parser ::yytable_[] =
   {
-      56,   115,    39,    60,   122,    71,    75,    72,     3,   121,
-     161,   167,    23,     4,   118,    76,   236,     3,     4,   252,
-       5,   107,   134,   227,   136,    51,   119,     7,   154,   285,
-     215,   162,    39,     3,     4,    52,     9,    53,   213,    10,
-     105,   189,   154,   235,   185,    12,   259,    13,   213,   127,
-     196,    85,    86,    71,   192,    72,    14,    39,    88,   114,
-      90,    91,    92,    93,    94,    95,    96,    97,    98,    99,
-     100,   263,   139,   237,   155,    62,   143,   144,    39,    58,
-      39,   145,   146,   288,    39,   147,   267,   148,   149,   150,
-     151,   152,   153,   105,   142,   158,    80,   296,   180,     4,
-      81,   181,   159,   251,   105,    75,    59,   105,   183,   105,
-     232,   233,   213,     3,     4,   253,     3,     4,    78,   190,
-     254,    72,   194,    71,   198,   212,    12,   131,    13,   205,
-       2,   123,   124,   213,     3,     4,   159,     5,   223,   222,
-      15,   182,     6,    61,     7,     8,    13,   -19,   217,   218,
-     207,   208,   286,     9,   290,    62,    10,    49,    62,   287,
-      11,   291,    12,   240,    13,   -47,    50,   276,   210,   -47,
-     211,     3,     4,    14,    55,   245,    15,    73,    74,   186,
-      55,   246,   187,   127,   258,    72,   -95,    71,   -96,   131,
-    -120,  -120,   169,  -120,   164,   165,   166,   230,   170,    12,
-    -120,    13,   183,   102,   103,    12,   -97,    13,   239,  -120,
-     241,   104,  -120,    15,  -120,   108,   110,   171,  -120,    39,
-    -120,  -120,   111,   113,     3,     4,  -120,     5,   116,  -120,
-       3,     4,  -120,    55,     7,   112,    92,    93,    94,    95,
-      39,   117,   125,     9,   138,   183,    10,    73,    74,   126,
-      55,   128,    12,   127,    13,   164,   165,   166,    12,   129,
-      13,   130,   131,    14,  -121,  -121,    15,  -121,   132,   133,
-     140,   135,    15,   137,  -121,    12,   156,    13,   157,   160,
-     -58,   191,   195,  -121,   199,   200,  -121,   201,  -121,    15,
-     204,   202,   113,   206,  -121,  -121,   120,   209,   169,   216,
-    -121,    85,    86,  -121,   214,   159,   213,   220,    88,    89,
-      90,    91,    92,    93,    94,    95,    96,    97,    98,    99,
-     100,    85,    86,   221,   124,   123,    87,   229,    88,    89,
-      90,    91,    92,    93,    94,    95,    96,    97,    98,    99,
-     100,    85,    86,   238,   242,   243,   203,   247,    88,    89,
-      90,    91,    92,    93,    94,    95,    96,    97,    98,    99,
-     100,    85,    86,   249,   248,   219,   256,   260,    88,    89,
-      90,    91,    92,    93,    94,    95,    96,    97,    98,    99,
-     100,    85,    86,   255,   257,   261,   231,   264,    88,    89,
-      90,    91,    92,    93,    94,    95,    96,    97,    98,    99,
-     100,    85,    86,   266,   268,   270,   250,   269,    88,    89,
-      90,    91,    92,    93,    94,    95,    96,    97,    98,    99,
-     100,    85,    86,   271,   272,   273,   274,   277,    88,    89,
-      90,    91,    92,    93,    94,    95,    96,    97,    98,    99,
-     100,    85,    86,   279,   280,   283,   289,   292,    88,    89,
-      90,    91,    92,    93,    94,    95,  -122,    97,    98,    99,
-     100,    85,    86,   293,   193,   197,   294,   295,    88,    89,
-      90,    91,    92,    93,    94,    95,     0,     0,     0,    99,
-     100,    88,    89,    90,    91,    92,    93,    94,    95
+      57,    58,    40,    62,   120,   175,    77,    78,    73,   113,
+      74,   127,   126,   235,   223,    24,   169,   128,   129,   260,
+       3,     4,   244,    56,     3,   243,   139,   293,   141,     3,
+       4,     4,    81,    40,   143,     3,     4,   170,   221,   123,
+     162,   111,   225,   226,     3,     4,   221,   259,    12,    52,
+      13,   124,   267,   162,    53,   193,   221,   245,    73,    40,
+      74,   271,    15,    54,   261,    63,   204,   163,   275,   262,
+     197,    64,   200,    79,    13,   144,    16,    64,   132,   148,
+     149,    40,   -99,    40,   150,   151,    64,    40,   152,   296,
+     153,   154,   155,   156,   157,   158,   159,   160,   161,   111,
+     147,   198,   194,   304,    83,   195,   240,   241,    84,   136,
+     111,     2,   111,   191,   111,     3,     4,   166,     5,   220,
+     218,    60,   219,     6,   167,     7,     8,   221,   -19,    74,
+     202,    73,   206,    61,     9,  -100,   177,    10,   172,   173,
+     174,    11,   178,    12,   108,    13,     3,     4,   230,     5,
+     109,   231,   188,     4,    14,   189,     7,    15,   215,   216,
+    -101,   179,   110,   284,   114,     9,   -33,   -33,    10,    50,
+     -33,    16,   248,   116,    12,   117,    13,   -47,    51,   253,
+      12,   -47,    13,     3,     4,    14,    56,   132,    15,   254,
+     118,   122,   213,   266,    15,   190,    74,   136,    73,   167,
+     294,   119,    16,   121,   132,   238,   131,   295,    16,   130,
+     191,    12,   133,    13,   298,   134,    57,   247,   249,  -124,
+    -124,   299,  -124,   135,   137,    15,   138,    40,   136,  -124,
+     140,   142,  -125,  -125,   145,  -125,   164,   165,  -124,    16,
+     168,  -124,  -125,  -124,   172,   173,   174,  -124,    40,  -124,
+    -124,  -125,   199,   191,  -125,  -124,  -125,   208,  -124,   -58,
+     119,  -124,  -125,  -125,     3,     4,   203,     5,  -125,   207,
+     209,  -125,   210,   212,     7,  -124,   217,     3,     4,   222,
+       5,   214,   177,     9,   -33,   -33,    10,     7,  -125,   167,
+     221,   228,    12,   229,    13,   224,     9,    75,    76,    10,
+      56,   129,   128,    14,   237,    12,    15,    13,    91,    92,
+      93,    94,    95,    96,    97,    98,    14,   246,   250,    15,
+      16,   104,   105,   251,   106,    12,   256,    13,    95,    96,
+      97,    98,   255,    16,   257,   263,   265,   104,   105,    15,
+     106,   264,   125,   268,   269,   272,   274,    88,    89,   276,
+     278,   277,   279,    16,    91,    92,    93,    94,    95,    96,
+      97,    98,    99,   100,   101,   102,   103,   104,   105,   280,
+     106,    88,    89,   281,   282,   285,    90,   288,    91,    92,
+      93,    94,    95,    96,    97,    98,    99,   100,   101,   102,
+     103,   104,   105,   287,   106,    88,    89,   291,   297,   300,
+     211,   303,    91,    92,    93,    94,    95,    96,    97,    98,
+      99,   100,   101,   102,   103,   104,   105,   301,   106,    88,
+      89,   302,   201,   227,   205,     0,    91,    92,    93,    94,
+      95,    96,    97,    98,    99,   100,   101,   102,   103,   104,
+     105,     0,   106,    88,    89,     0,     0,     0,   239,     0,
+      91,    92,    93,    94,    95,    96,    97,    98,    99,   100,
+     101,   102,   103,   104,   105,     0,   106,    88,    89,     0,
+       0,     0,   258,     0,    91,    92,    93,    94,    95,    96,
+      97,    98,    99,   100,   101,   102,   103,   104,   105,     0,
+     106,    88,    89,     0,     0,     0,     0,     0,    91,    92,
+      93,    94,    95,    96,    97,    98,    99,   100,   101,   102,
+     103,   104,   105,     0,   106,    88,    89,     0,     0,     0,
+       0,     0,    91,    92,    93,    94,    95,    96,    97,    98,
+    -126,   100,   101,   102,   103,   104,   105,     0,   106,    88,
+      89,     0,     0,     0,     0,     0,    91,    92,    93,    94,
+      95,    96,    97,    98,     0,     0,     0,   102,   103,   104,
+     105,     0,   106
   };
 
   const short int
    Parser ::yycheck_[] =
   {
-       9,    56,     1,    12,    61,    13,    15,    13,     4,    61,
-       7,   110,     1,     5,    32,    16,   212,     4,     5,    33,
-       7,    49,    77,   200,    79,     7,    44,    14,   102,    33,
-     171,    28,    31,     4,     5,     7,    23,     7,    52,    26,
-      49,    35,   116,   211,   118,    32,   242,    34,    52,    43,
-      46,    38,    39,    61,    46,    61,    43,    56,    45,    46,
+       9,     9,     1,    12,    58,   116,    15,    16,    13,    50,
+      13,    63,    63,   208,   179,     1,     7,     4,     5,    33,
+       4,     5,   220,     7,     4,   219,    80,    33,    82,     4,
+       5,     5,    17,    32,    18,     4,     5,    28,    52,    32,
+     108,    50,    24,    25,     4,     5,    52,    43,    32,     7,
+      34,    44,   250,   121,     7,   123,    52,   222,    63,    58,
+      63,   256,    46,     7,    35,    34,    46,   108,   262,    40,
+      35,    46,    46,    16,    34,    84,    60,    46,    43,    88,
+      89,    80,    41,    82,    93,    94,    46,    86,    97,   287,
+      99,   100,   101,   102,   103,   104,   105,   106,   107,   108,
+      86,    35,     4,   301,    40,     7,   217,   218,    44,    43,
+     119,     0,   121,   122,   123,     4,     5,    33,     7,    44,
+      32,     7,    34,    12,    40,    14,    15,    52,    17,   132,
+     133,   136,   137,     7,    23,    41,     7,    26,     9,    10,
+      11,    30,    13,    32,    32,    34,     4,     5,   199,     7,
+      41,   203,     4,     5,    43,     7,    14,    46,   167,   168,
+      41,    32,    52,   274,     7,    23,    24,    25,    26,    32,
+      28,    60,   226,    42,    32,    42,    34,    40,    41,    35,
+      32,    44,    34,     4,     5,    43,     7,    43,    46,    35,
+      43,    27,    33,   247,    46,    47,   199,    43,   203,    40,
+      33,    32,    60,    32,    43,   214,    40,    40,    60,    35,
+     219,    32,    40,    34,    33,    35,   225,   225,   227,     4,
+       5,    40,     7,    40,    40,    46,     7,   226,    43,    14,
+       7,     7,     4,     5,    28,     7,     7,    33,    23,    60,
+      44,    26,    14,    28,     9,    10,    11,    32,   247,    34,
+      35,    23,    34,   262,    26,    40,    28,    32,    43,    28,
+      32,    46,    34,    35,     4,     5,    34,     7,    40,    28,
+      28,    43,     7,    33,    14,    60,    42,     4,     5,    36,
+       7,    44,     7,    23,    24,    25,    26,    14,    60,    40,
+      52,    33,    32,    42,    34,    28,    23,     4,     5,    26,
+       7,     5,     4,    43,    19,    32,    46,    34,    45,    46,
+      47,    48,    49,    50,    51,    52,    43,    47,    54,    46,
+      60,    58,    59,     7,    61,    32,    40,    34,    49,    50,
+      51,    52,    33,    60,     7,    43,     4,    58,    59,    46,
+      61,    37,    33,    41,    31,    20,    32,    38,    39,    32,
+      43,    33,     7,    60,    45,    46,    47,    48,    49,    50,
+      51,    52,    53,    54,    55,    56,    57,    58,    59,    32,
+      61,    38,    39,     7,    21,     7,    43,     7,    45,    46,
       47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,   248,    81,   214,   102,    46,    85,    86,    77,     7,
-      79,    90,    91,   279,    83,    94,   254,    96,    97,    98,
-      99,   100,   101,   102,    83,    33,    40,   293,     4,     5,
-      44,     7,    40,    43,   113,   114,     7,   116,   117,   118,
-     209,   210,    52,     4,     5,    35,     4,     5,    17,    35,
-      40,   127,   128,   131,   132,    44,    32,    43,    34,    33,
-       0,     4,     5,    52,     4,     5,    40,     7,   195,   191,
-      46,    47,    12,    34,    14,    15,    34,    17,    24,    25,
-     159,   160,    33,    23,    33,    46,    26,    32,    46,    40,
-      30,    40,    32,   218,    34,    40,    41,   266,    32,    44,
-      34,     4,     5,    43,     7,    35,    46,     4,     5,     4,
-       7,    35,     7,    43,   239,   191,    41,   195,    41,    43,
-       4,     5,     7,     7,     9,    10,    11,   206,    13,    32,
-      14,    34,   211,    32,    41,    32,    41,    34,   217,    23,
-     219,    52,    26,    46,    28,     7,    42,    32,    32,   218,
-      34,    35,    42,    32,     4,     5,    40,     7,    32,    43,
-       4,     5,    46,     7,    14,    43,    49,    50,    51,    52,
-     239,    27,    35,    23,    18,   254,    26,     4,     5,    40,
-       7,    40,    32,    43,    34,     9,    10,    11,    32,    35,
-      34,    40,    43,    43,     4,     5,    46,     7,    40,     7,
-      28,     7,    46,     7,    14,    32,     7,    34,    33,    44,
-      28,    34,    34,    23,    28,    32,    26,    28,    28,    46,
-      33,     7,    32,    44,    34,    35,    33,    42,     7,    28,
-      40,    38,    39,    43,    36,    40,    52,    33,    45,    46,
+      57,    58,    59,    44,    61,    38,    39,    45,    42,     7,
+      43,   299,    45,    46,    47,    48,    49,    50,    51,    52,
+      53,    54,    55,    56,    57,    58,    59,    31,    61,    38,
+      39,   297,   132,    42,   136,    -1,    45,    46,    47,    48,
+      49,    50,    51,    52,    53,    54,    55,    56,    57,    58,
+      59,    -1,    61,    38,    39,    -1,    -1,    -1,    43,    -1,
+      45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
+      55,    56,    57,    58,    59,    -1,    61,    38,    39,    -1,
+      -1,    -1,    43,    -1,    45,    46,    47,    48,    49,    50,
+      51,    52,    53,    54,    55,    56,    57,    58,    59,    -1,
+      61,    38,    39,    -1,    -1,    -1,    -1,    -1,    45,    46,
       47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,    38,    39,    42,     5,     4,    43,    19,    45,    46,
-      47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,    38,    39,    47,    54,     7,    43,    33,    45,    46,
-      47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,    38,    39,     7,    40,    42,    37,    41,    45,    46,
-      47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,    38,    39,    43,     4,    31,    43,    20,    45,    46,
-      47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,    38,    39,    32,    32,    43,    43,    33,    45,    46,
-      47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,    38,    39,     7,    32,     7,    21,     7,    45,    46,
-      47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,    38,    39,    44,     7,    45,    42,     7,    45,    46,
-      47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,    38,    39,    31,   127,   131,   289,   291,    45,    46,
-      47,    48,    49,    50,    51,    52,    -1,    -1,    -1,    56,
-      57,    45,    46,    47,    48,    49,    50,    51,    52
+      57,    58,    59,    -1,    61,    38,    39,    -1,    -1,    -1,
+      -1,    -1,    45,    46,    47,    48,    49,    50,    51,    52,
+      53,    54,    55,    56,    57,    58,    59,    -1,    61,    38,
+      39,    -1,    -1,    -1,    -1,    -1,    45,    46,    47,    48,
+      49,    50,    51,    52,    -1,    -1,    -1,    56,    57,    58,
+      59,    -1,    61
   };
 
   const unsigned char
    Parser ::yystos_[] =
   {
-       0,    59,     0,     4,     5,     7,    12,    14,    15,    23,
-      26,    30,    32,    34,    43,    46,    60,    61,    62,    65,
-      66,    69,    70,    81,    82,    83,    84,    88,    89,    90,
-      93,    94,    96,    97,    98,    99,   100,   101,   103,   104,
-     105,   106,   118,   119,   120,   129,   130,   131,   132,    32,
-      41,     7,     7,     7,    75,     7,    98,   104,     7,     7,
-      98,    34,    46,   121,   122,   123,   124,   125,   126,   127,
-     128,   130,   131,     4,     5,    98,    16,    68,    17,    72,
-      40,    44,    79,    80,    81,    38,    39,    43,    45,    46,
-      47,    48,    49,    50,    51,    52,    53,    54,    55,    56,
-      57,   102,    32,    41,    52,    98,   107,   108,     7,    63,
-      42,    42,    43,    32,    46,    79,    32,    27,    32,    44,
-      33,   123,   127,     4,     5,    35,    40,    43,    40,    35,
-      40,    43,    40,     7,    79,     7,    79,     7,    18,    98,
-      28,    95,    81,    98,    98,    98,    98,    98,    98,    98,
-      98,    98,    98,    98,   107,   108,     7,    33,    33,    40,
-      44,     7,    28,    64,     9,    10,    11,   114,   117,     7,
-      13,    32,   109,   110,   111,   113,   114,   108,    91,    92,
-       4,     7,    47,    98,   116,   107,     4,     7,   133,    35,
-      35,    34,    46,   124,   131,    34,    46,   128,   130,    28,
-      32,    28,     7,    43,    33,    33,    44,    98,    98,    42,
-      32,    34,    44,    52,    36,   110,    28,    24,    25,    42,
-      33,    42,   123,   127,    67,    73,    74,    75,    71,    19,
-      98,    43,   114,   114,   115,   116,   119,   110,    47,    98,
-      79,    98,    54,     7,   134,    35,    35,    33,    40,     7,
-      43,    43,    33,    35,    40,    43,    37,     4,    79,   119,
-      41,    31,    76,    75,    20,    85,    32,   116,    32,    33,
-      43,     7,    32,     7,    21,    86,   114,     7,   112,    44,
-       7,    77,    78,    45,    87,    33,    33,    40,   119,    42,
-      33,    40,     7,    31,   109,    78,   119
+       0,    65,     0,     4,     5,     7,    12,    14,    15,    23,
+      26,    30,    32,    34,    43,    46,    60,    66,    67,    68,
+      71,    72,    75,    76,    87,    88,    89,    90,    94,    95,
+      96,    99,   100,   102,   103,   104,   105,   106,   107,   109,
+     110,   111,   112,   124,   125,   126,   135,   136,   137,   138,
+      32,    41,     7,     7,     7,    81,     7,   104,   109,   110,
+       7,     7,   104,    34,    46,   127,   128,   129,   130,   131,
+     132,   133,   134,   136,   137,     4,     5,   104,   104,    16,
+      74,    17,    78,    40,    44,    85,    86,    87,    38,    39,
+      43,    45,    46,    47,    48,    49,    50,    51,    52,    53,
+      54,    55,    56,    57,    58,    59,    61,   108,    32,    41,
+      52,   104,   113,   114,     7,    69,    42,    42,    43,    32,
+      85,    32,    27,    32,    44,    33,   129,   133,     4,     5,
+      35,    40,    43,    40,    35,    40,    43,    40,     7,    85,
+       7,    85,     7,    18,   104,    28,   101,    87,   104,   104,
+     104,   104,   104,   104,   104,   104,   104,   104,   104,   104,
+     104,   104,   113,   114,     7,    33,    33,    40,    44,     7,
+      28,    70,     9,    10,    11,   120,   123,     7,    13,    32,
+     115,   116,   117,   119,   120,   114,    97,    98,     4,     7,
+      47,   104,   122,   113,     4,     7,   139,    35,    35,    34,
+      46,   130,   137,    34,    46,   134,   136,    28,    32,    28,
+       7,    43,    33,    33,    44,   104,   104,    42,    32,    34,
+      44,    52,    36,   116,    28,    24,    25,    42,    33,    42,
+     129,   133,    73,    79,    80,    81,    77,    19,   104,    43,
+     120,   120,   121,   122,   125,   116,    47,   109,    85,   104,
+      54,     7,   140,    35,    35,    33,    40,     7,    43,    43,
+      33,    35,    40,    43,    37,     4,    85,   125,    41,    31,
+      82,    81,    20,    91,    32,   122,    32,    33,    43,     7,
+      32,     7,    21,    92,   120,     7,   118,    44,     7,    83,
+      84,    45,    93,    33,    33,    40,   125,    42,    33,    40,
+       7,    31,   115,    84,   125
   };
 
   const unsigned char
    Parser ::yyr1_[] =
   {
-       0,    58,    59,    59,    60,    60,    60,    60,    60,    60,
-      61,    62,    63,    63,    64,    66,    67,    65,    68,    70,
-      71,    69,    72,    73,    73,    74,    74,    75,    76,    76,
-      77,    77,    78,    79,    79,    80,    80,    81,    81,    81,
-      81,    81,    81,    81,    81,    82,    83,    84,    84,    85,
-      85,    86,    86,    87,    88,    89,    89,    90,    91,    91,
-      92,    92,    93,    94,    95,    96,    97,    97,    98,    98,
-      98,    98,    98,    98,    98,    99,   100,   101,   101,   101,
-     101,   101,   101,   101,   102,   102,   102,   102,   103,   103,
-     103,   103,   103,   103,   104,   105,   105,   105,   106,   106,
-     107,   107,   108,   108,   109,   109,   109,   109,   110,   111,
-     111,   112,   112,   113,   114,   114,   114,   114,   115,   115,
-     116,   116,   116,   116,   117,   117,   118,   119,   119,   119,
-     120,   120,   121,   121,   122,   122,   123,   123,   124,   124,
-     125,   125,   126,   126,   127,   127,   128,   128,   129,   129,
-     130,   130,   131,   131,   132,   132,   133,   133,   134
+       0,    64,    65,    65,    66,    66,    66,    66,    66,    66,
+      67,    68,    69,    69,    70,    72,    73,    71,    74,    76,
+      77,    75,    78,    79,    79,    80,    80,    81,    82,    82,
+      83,    83,    84,    85,    85,    86,    86,    87,    87,    87,
+      87,    87,    87,    87,    87,    88,    89,    90,    90,    91,
+      91,    92,    92,    93,    94,    95,    95,    96,    97,    97,
+      98,    98,    99,   100,   101,   102,   103,   103,   104,   104,
+     104,   104,   104,   104,   104,   105,   106,   107,   107,   107,
+     107,   107,   107,   107,   108,   108,   108,   108,   109,   109,
+     109,   109,   109,   109,   109,   109,   109,   109,   110,   111,
+     111,   111,   112,   112,   113,   113,   114,   114,   115,   115,
+     115,   115,   116,   117,   117,   118,   118,   119,   120,   120,
+     120,   120,   121,   121,   122,   122,   122,   122,   123,   123,
+     124,   125,   125,   125,   126,   126,   127,   127,   128,   128,
+     129,   129,   130,   130,   131,   131,   132,   132,   133,   133,
+     134,   134,   135,   135,   136,   136,   137,   137,   138,   138,
+     139,   139,   140
   };
 
   const unsigned char
@@ -3202,13 +3265,14 @@ namespace  simit { namespace internal  {
        0,     4,     3,     4,     1,     7,     2,     1,     1,     1,
        1,     1,     1,     1,     1,     1,     3,     2,     3,     3,
        3,     2,     3,     3,     1,     1,     1,     1,     3,     3,
-       3,     3,     3,     3,     3,     1,     1,     1,     4,     4,
-       0,     1,     1,     3,     1,     1,     1,     1,     1,     4,
-       7,     1,     3,     5,     1,     4,     7,     2,     1,     3,
-       1,     1,     3,     1,     1,     1,     1,     1,     2,     1,
-       3,     3,     1,     1,     3,     5,     1,     3,     1,     3,
-       1,     1,     3,     5,     1,     3,     1,     3,     1,     1,
-       1,     2,     1,     2,     8,     6,     1,     1,     7
+       3,     3,     3,     3,     3,     3,     2,     3,     3,     1,
+       1,     1,     4,     4,     0,     1,     1,     3,     1,     1,
+       1,     1,     1,     4,     7,     1,     3,     5,     1,     4,
+       7,     2,     1,     3,     1,     1,     3,     1,     1,     1,
+       1,     1,     2,     1,     3,     3,     1,     1,     3,     5,
+       1,     3,     1,     3,     1,     1,     3,     5,     1,     3,
+       1,     3,     1,     1,     1,     2,     1,     2,     8,     6,
+       1,     1,     7
   };
 
 
@@ -3227,7 +3291,8 @@ namespace  simit { namespace internal  {
   "\"(\"", "\")\"", "\"[\"", "\"]\"", "\"{\"", "\"}\"", "\"<\"", "\">\"",
   "\",\"", "\".\"", "\":\"", "\";\"", "\"=\"", "\"+\"", "\"-\"", "\"*\"",
   "\"/\"", "\".*\"", "\"./\"", "\"^\"", "\"'\"", "\"\\\\\"", "\"==\"",
-  "\"!=\"", "\"<=\"", "\">=\"", "$accept", "program", "program_element",
+  "\"!=\"", "\"<=\"", "\">=\"", "\"and\"", "\"or\"", "\"not\"", "\"xor\"",
+  "\"true\"", "\"false\"", "$accept", "program", "program_element",
   "extern", "element_type_decl", "field_decl_list", "field_decl",
   "procedure", "$@1", "$@2", "procedure_header", "function", "$@3", "$@4",
   "function_header", "arguments", "argument_list", "argument_decl",
@@ -3253,22 +3318,23 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   271,   271,   273,   276,   277,   285,   293,   294,   295,
-     300,   310,   323,   326,   334,   344,   344,   344,   352,   369,
-     369,   369,   377,   398,   401,   407,   412,   420,   429,   432,
-     438,   443,   451,   461,   464,   471,   472,   475,   476,   477,
-     478,   479,   480,   481,   482,   487,   528,   580,   584,   591,
-     594,   607,   610,   616,   621,   641,   661,   667,   672,   674,
-     678,   680,   686,   689,   700,   705,   733,   736,   744,   745,
-     746,   747,   748,   749,   750,   756,   776,   785,   793,   812,
-     880,   900,   928,   933,   942,   943,   944,   945,   951,   957,
-     963,   969,   975,   981,   992,  1026,  1027,  1028,  1034,  1067,
-    1089,  1092,  1098,  1104,  1115,  1116,  1117,  1118,  1122,  1134,
-    1138,  1148,  1157,  1169,  1181,  1185,  1188,  1230,  1240,  1245,
-    1253,  1256,  1270,  1276,  1282,  1285,  1335,  1339,  1340,  1344,
-    1348,  1355,  1366,  1373,  1377,  1381,  1395,  1399,  1414,  1418,
-    1425,  1432,  1436,  1440,  1454,  1458,  1473,  1477,  1484,  1488,
-    1495,  1498,  1504,  1507,  1514,  1533,  1557,  1558,  1566
+       0,   276,   276,   278,   281,   282,   290,   298,   299,   300,
+     305,   315,   328,   331,   339,   349,   349,   349,   357,   374,
+     374,   374,   382,   403,   406,   412,   417,   425,   434,   437,
+     443,   448,   456,   466,   469,   476,   477,   480,   481,   482,
+     483,   484,   485,   486,   487,   492,   533,   585,   589,   596,
+     599,   612,   615,   621,   626,   646,   666,   672,   677,   679,
+     683,   685,   691,   694,   705,   710,   738,   741,   749,   750,
+     751,   752,   753,   754,   755,   761,   781,   790,   798,   817,
+     885,   905,   933,   938,   947,   948,   949,   950,   956,   962,
+     968,   974,   980,   986,   992,   998,  1004,  1009,  1020,  1054,
+    1055,  1056,  1062,  1095,  1117,  1120,  1126,  1132,  1143,  1144,
+    1145,  1146,  1150,  1162,  1166,  1176,  1185,  1197,  1209,  1213,
+    1216,  1258,  1268,  1273,  1281,  1284,  1298,  1304,  1310,  1313,
+    1363,  1367,  1368,  1372,  1376,  1383,  1394,  1401,  1405,  1409,
+    1423,  1427,  1442,  1446,  1453,  1460,  1464,  1468,  1482,  1486,
+    1501,  1505,  1512,  1516,  1523,  1526,  1532,  1535,  1542,  1561,
+    1585,  1586,  1594
   };
 
   // Print the state stack on the debug stream.
@@ -3340,9 +3406,9 @@ namespace  simit { namespace internal  {
       25,    26,    27,    28,    29,    30,    31,    32,    33,    34,
       35,    36,    37,    38,    39,    40,    41,    42,    43,    44,
       45,    46,    47,    48,    49,    50,    51,    52,    53,    54,
-      55,    56,    57
+      55,    56,    57,    58,    59,    60,    61,    62,    63
     };
-    const unsigned int user_token_number_max_ = 312;
+    const unsigned int user_token_number_max_ = 318;
     const token_number_type undef_token_ = 2;
 
     if (static_cast<int>(t) <= yyeof_)

@@ -81,6 +81,12 @@ using namespace simit::internal;
 "!="                  { return Parser::token::NE;        }
 "<="                  { return Parser::token::LE;        }
 ">="                  { return Parser::token::GE;        }
+"and"                 { return Parser::token::AND;       }
+"or"                  { return Parser::token::OR;        }
+"not"                 { return Parser::token::NOT;       }
+"xor"                 { return Parser::token::XOR;       }
+"true"                { return Parser::token::TRUE;      }
+"false"               { return Parser::token::FALSE;     }
 
  /* Tests */
 "%!"                  { BEGIN(SLTEST); return Parser::token::TEST; }

@@ -297,7 +297,13 @@ namespace  simit { namespace internal  {
         EQ = 309,
         NE = 310,
         LE = 311,
-        GE = 312
+        GE = 312,
+        AND = 313,
+        OR = 314,
+        NOT = 315,
+        XOR = 316,
+        TRUE = 317,
+        FALSE = 318
       };
     };
 
@@ -588,13 +594,13 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 488,     ///< Last index in yytable_.
+      yylast_ = 562,     ///< Last index in yytable_.
       yynnts_ = 77,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 58  ///< Number of tokens.
+      yyntokens_ = 64  ///< Number of tokens.
     };
 
 
