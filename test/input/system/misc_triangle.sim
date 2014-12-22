@@ -17,6 +17,6 @@ end
 
 proc main
   R = map dist to trigs with verts reduce +;
-  verts.b = --R;
+  verts.b = R;
 end
 

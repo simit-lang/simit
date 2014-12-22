@@ -188,7 +188,7 @@ void LLVMBackend::visit(const ir::IndexRead *op) {
   iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
 
   llvm::Value *edgesValue = compile(op->edgeSet);
-  val = builder->CreateExtractValue(edgesValue, {indexLoc}, util::toString(op));
+  val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(*op));
 }
 
 void LLVMBackend::visit(const ir::Length *op) {

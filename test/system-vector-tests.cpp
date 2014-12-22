@@ -29,7 +29,10 @@ TEST(System, vector_add_blocked) {
   FieldRef<double,3> x = points.addField<double,3>("x");
 
   ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+
   x.set(p0, {1.0, 2.0, 3.0});
+  x.set(p1, {4.0, 5.0, 6.0});
 
   std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
   if (!f) FAIL();
@@ -37,10 +40,12 @@ TEST(System, vector_add_blocked) {
 
   f->runSafe();
 
-  TensorRef<double,3> vec2 = x.get(p0);
-  ASSERT_EQ(2.0, vec2(0));
-  ASSERT_EQ(4.0, vec2(1));
-  ASSERT_EQ(6.0, vec2(2));
+  ASSERT_EQ(2.0, x.get(p0)(0));
+  ASSERT_EQ(4.0, x.get(p0)(1));
+  ASSERT_EQ(6.0, x.get(p0)(2));
+  ASSERT_EQ(8.0, x.get(p1)(0));
+  ASSERT_EQ(10.0, x.get(p1)(1));
+  ASSERT_EQ(12.0, x.get(p1)(2));
 }
 
 TEST(System, vector_dot) {

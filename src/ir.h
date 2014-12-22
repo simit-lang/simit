@@ -4,43 +4,19 @@
 #include <string>
 #include <list>
 #include <cstring>
-
 #include <iostream>
-#include "ir_printer.h"
 
+#include "var.h"
+#include "types.h"
+#include "ir_printer.h"
 #include "intrusive_ptr.h"
 #include "uncopyable.h"
-#include "types.h"
 #include "indexvar.h"
 #include "error.h"
 #include "storage.h"
 
 namespace simit {
 namespace ir {
-
-namespace {
-struct VarContent {
-  std::string name;
-  Type type;
-
-  mutable long ref = 0;
-  friend inline void aquire(VarContent *c) {++c->ref;}
-  friend inline void release(VarContent *c) {if (--c->ref==0) delete c;}
-};
-}
-
-class Var : public util::IntrusivePtr<VarContent> {
-public:
-  Var() : IntrusivePtr() {}
-  Var(std::string name, Type type) : IntrusivePtr(new VarContent) {
-    ptr->name = name;
-    ptr->type = type;
-  }
-
-  const std::string &getName() const {return ptr->name;}
-  const Type &getType() const {return ptr->type;}
-};
-
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
