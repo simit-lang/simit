@@ -1,6 +1,7 @@
 #include "lower.h"
 
 #include "ir.h"
+#include "ir_queries.h"
 #include "ir_rewriter.h"
 #include "ir_codegen.h"
 #include "ir_printer.h"
@@ -21,7 +22,11 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
     SpecializeIndexExpression(const LoopVars &loopVars) : loopVars(loopVars) {}
 
     /// Specialize 'stmt'.
-    Stmt specialize(Stmt stmt) { return this->rewrite(stmt); }
+    Stmt specialize(Stmt stmt) {
+      iassert(isFlattened(stmt))
+          << "Index expressions must be flattened before specializing";
+      return this->rewrite(stmt);
+    }
 
   private:
     /// Loop variables used to compute index (created from the SIG)
