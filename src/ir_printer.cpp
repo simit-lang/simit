@@ -327,6 +327,15 @@ void IRPrinter::visit(const Store *op) {
   os << ";";
 }
 
+void IRPrinter::visit(const ForRange *op) {
+  indent();
+  os << "for " << op->var << " in " << op->start << ":" << op->end;
+  os << ":" << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
+}
+
 void IRPrinter::visit(const For *op) {
   indent();
   os << "for " << op->var << " in " << op->domain;
