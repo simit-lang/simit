@@ -260,9 +260,14 @@
 %token NE        "!="
 %token LE        "<="
 %token GE        ">="
+%token AND       "and"
+%token OR        "or"
+%token NOT       "not"
+%token XOR       "xor"
+%token TRUE      "true"
+%token FALSE     "false"
 
 %token END 0     "end of file"
-
 
 // Rules
 %start program
@@ -477,6 +482,7 @@ stmt
   | field_write_stmt
   | tensor_write_stmt
   | if_stmt
+  | while_stmt
   | for_stmt
   | const_stmt
   | expr_stmt
@@ -662,25 +668,66 @@ tensor_write_stmt
     // TODO
   }
 
+while_stmt
+  : while_stmt_header while_body while_end {
+    Expr cond = convertAndDelete($1);
+    Stmt body = convertAndDelete($2);
+    
+    ctx->addStatement(While::make(cond, body));
 
+  }
+
+%type <expr> while_stmt_header;
+while_stmt_header
+  : "while" boolean_expr {
+    ctx->scope();
+    $$ = new Expr(convertAndDelete($2));
+  }
+
+%type <stmt> while_body;
+while_body
+  : stmt_block {
+
+    $$ = new Stmt(convertAndDelete($1));
+  }
+
+while_end
+  : BLOCKEND {
+    ctx->unscope();
+  }
 if_stmt
-  : "if" expr stmt_block else_clauses BLOCKEND {
-    delete $2;
-    delete $3;
+  : "if" boolean_expr if_body else_clauses BLOCKEND {
+   
+    Expr cond = convertAndDelete($2);
+    ctx->scope();
+    Stmt trueStmt = convertAndDelete($3);
+    Stmt elseStmt = convertAndDelete($4);
+    ctx->addStatement(IfThenElse::make(cond, trueStmt, elseStmt));
   }
 
+%type <stmt> if_body;
+if_body
+  : stmt_block {
+    ctx->scope();
+    $$ = new Stmt(convertAndDelete($1));
+  }
+
+%type <stmt> else_clauses;
 else_clauses
-  : /* empty */
-  | elif_clauses "else" stmt_block {
-    delete $3;
+  : /* empty */ {
+    $$ = new Stmt(Pass::make());
+  }
+  | "else" stmt_block {
+    ctx->unscope();
+    $$ = new Stmt(convertAndDelete($2));
   }
 
-elif_clauses
-  : /* empty */
-  | elif_clauses "elif" expr stmt_block {
-    delete $3;
-    delete $4;
-  }
+//elif_clauses
+//  : /* empty */
+//  | elif_clauses "elif" boolean_expr stmt_block {
+//    delete $3;
+//    delete $4;
+//  }
 
 for_stmt
   : for_stmt_header stmt_block for_stmt_footer
@@ -950,39 +997,62 @@ elwise_binary_op
 boolean_expr
   : expr "==" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Eq::make(l, r));
   }
   | expr "!=" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Ne::make(l, r));
   }
-  | expr "<"  expr {
+  | expr ">" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Gt::make(l, r));
   }
-  | expr ">"  expr {
+  | expr "<" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | expr "<=" expr {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Lt::make(l, r));
   }
   | expr ">=" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Ge::make(l, r));
+  }
+  | expr "<=" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Le::make(l, r));
+  }
+  | expr "and" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(And::make(l, r));
+  }
+  | expr "or" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Or::make(l, r));
+  }
+  | "not" expr {
+    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr r = convertAndDelete($2);
+    $$ = new Expr(Not::make(r));
+  }
+  | expr "xor" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Xor::make(l, r));
   }
 
 

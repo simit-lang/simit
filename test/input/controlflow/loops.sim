@@ -9,3 +9,12 @@ func edgeVectors(pts : (Point*3)) -> (vec : tensor[3](tensor[3](float)))
     vec(i) = pts(j).x - pts(i).x;
   end
 end
+
+%%% while
+%! f(5) == 10;
+func f(p : int) -> (r : int)
+  r = 0;
+  while r < 10 
+    r = r + 2;
+  end
+end

@@ -297,7 +297,13 @@ namespace  simit { namespace internal  {
         EQ = 309,
         NE = 310,
         LE = 311,
-        GE = 312
+        GE = 312,
+        AND = 313,
+        OR = 314,
+        NOT = 315,
+        XOR = 316,
+        TRUE = 317,
+        FALSE = 318
       };
     };
 
@@ -447,7 +453,7 @@ namespace  simit { namespace internal  {
     static bool yy_table_value_is_error_ (int yyvalue);
 
     static const short int yypact_ninf_;
-    static const signed char yytable_ninf_;
+    static const short int yytable_ninf_;
 
     /// Convert a scanner token number \a t to a symbol number.
     static token_number_type yytranslate_ (int t);
@@ -588,13 +594,13 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 488,     ///< Last index in yytable_.
-      yynnts_ = 77,  ///< Number of nonterminal symbols.
+      yylast_ = 597,     ///< Last index in yytable_.
+      yynnts_ = 81,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 58  ///< Number of tokens.
+      yyntokens_ = 64  ///< Number of tokens.
     };
 
 

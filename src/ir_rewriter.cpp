@@ -192,6 +192,51 @@ void IRRewriter::visit(const Div *op) {
   expr = visitBinaryOp(op, *this);
 }
 
+void IRRewriter::visit(const Eq *op) {
+  expr = visitBinaryOp(op, *this);
+}
+
+void IRRewriter::visit(const Ne *op) {
+  expr = visitBinaryOp(op, *this);
+}
+
+void IRRewriter::visit(const Gt *op) {
+  expr = visitBinaryOp(op, *this);
+}
+
+void IRRewriter::visit(const Lt *op) {
+  expr = visitBinaryOp(op, *this);
+}
+
+void IRRewriter::visit(const Ge *op) {
+  expr = visitBinaryOp(op, *this);
+}
+
+void IRRewriter::visit(const Le *op) {
+  expr = visitBinaryOp(op, *this);
+}
+
+void IRRewriter::visit(const And *op) {
+  expr = visitBinaryOp(op, *this);
+}
+
+void IRRewriter::visit(const Or *op) {
+  expr = visitBinaryOp(op, *this);
+}
+
+void IRRewriter::visit(const Not *op) {
+  Expr a = rewrite(op->a);
+  if (a == op->a) {
+    expr = op;
+  }
+  else {
+    expr = Not::make(a);
+  }
+}
+
+void IRRewriter::visit(const Xor *op) {
+  expr = visitBinaryOp(op, *this);
+}
 
 void IRRewriter::visit(const AssignStmt *op) {
   Expr value = rewrite(op->value);
@@ -276,6 +321,18 @@ void IRRewriter::visit(const For *op) {
   }
   else {
     stmt = For::make(op->var, op->domain, body);
+  }
+}
+
+void IRRewriter::visit(const While *op) {
+  Expr condition = rewrite(op->condition);
+  Stmt body = rewrite(op->body);
+  
+  if (condition == op->condition && body == op->body) {
+    stmt = op;
+  }
+  else {
+    stmt = While::make(condition, body);
   }
 }
 
