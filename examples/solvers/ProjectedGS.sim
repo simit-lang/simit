@@ -1,0 +1,24 @@
+element Point
+  x : tensor[3](float);
+  v : tensor[3](float);
+  m : float;
+end
+
+extern points : set{Point};
+
+func PGSiter(A : tensor[points, points](float), xguess : inout tensor[points](float), b : tensor[points](float), p : Point)
+	diag = A(p,p);
+	sigma = dot(A(p,:), xguess);
+	update = (b(p) + diag*xguess(p) - sigma)/diag;
+	xguess(p) = max(update,0);
+end
+
+func projectedGaussSeidel(A : tensor[points,points](float), b : tensor[points](float), xguess : tensor[points](float), tol : float, maxiters : int) -> (x : tensor[points](float))
+	r = b - A*xguess;
+	iter = 0;
+	while( norm(r) < tol && iter < maxiters)
+		map PGSiter(A,xguess,b) to points;		
+		r = b - A*xguess;		
+	end
+	return xguess;
+end

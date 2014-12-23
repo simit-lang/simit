@@ -1,19 +1,8 @@
-%%% if-neq
-%! f(0) == 3;
-%! f(1) == 1;
-func f(p : int) -> (r : int)
-  if p != 0
-    r = 1;
-  else
-    r = 3;
-  end
-end
-
 %%% if
-%! f(0) == 0;
+%! f(0) == 1;
 func f(p : int) -> (r : int)
   if p == 0
-    r = 0;
+    r = 1;
   end
 end
 
@@ -25,6 +14,31 @@ func f(p : int) -> (r : int)
     r = 0;
   else
     r = 42;
+  end
+end
+
+%%% if-neq
+%! f(0) == 3;
+%! f(1) == 1;
+func f(p : int) -> (r : int)
+  if p != 0
+    r = 1;
+  else
+    r = 3;
+  end
+end
+
+%%% if-elif
+%! f(1) == 1;
+%! f(2) == 2;
+%! f(3) == 3;
+func f(p : int) -> (r : int)
+  if p == 1
+    r = 1;
+  elif p == 2
+    r = 2;
+  elif p == 3
+    r = 3;
   end
 end
 
@@ -42,5 +56,68 @@ func f(p : int) -> (r : int)
     r = 2;
   else
     r = 42;
+  end
+end
+
+%%% if-nested
+%! f(2, 3) == 1;
+%! f(2, 0) == 2;
+%! f(3, 4) == 3;
+%! f(3, 3) == 4;
+func f(a : int, b : int) -> (r : int)
+  if a == 2
+    if b == 3
+      r = 1
+    else
+      r = 2
+    end
+  else
+    if b == 4
+      r = 3
+    else
+      r = 4
+    end
+  end
+end
+
+%%% elif-nested
+%! f(2, 3) == 1;
+%! f(2, 4) == 2;
+%! f(2, 0) == 3;
+%! f(3, 4) == 4;
+%! f(3, 7) == 5;
+%! f(3, 5) == 6;
+%! f(4, 5) == 7;
+func f(a : int, b : int) -> (r : int)
+  if a == 2
+    if b == 3
+      r = 1
+    elif b == 4
+      r = 2
+    else
+      r = 3
+    end
+  elif a == 3
+    if b == 4
+      r = 4
+    elif b == 7
+      r = 5
+    else
+      r = 6
+    end
+  else
+    r = 7
+  end
+end
+
+%%% if-or
+%! f(2) == 4;
+%! f(3) == 4;
+%! f(1) == 1;
+func f(p : int) -> (r : int)
+  if (p == 2) or (p == 3)
+    r = 4;
+  else
+    r = 1;
   end
 end

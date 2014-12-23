@@ -324,6 +324,18 @@ void IRRewriter::visit(const For *op) {
   }
 }
 
+void IRRewriter::visit(const While *op) {
+  Expr condition = rewrite(op->condition);
+  Stmt body = rewrite(op->body);
+  
+  if (condition == op->condition && body == op->body) {
+    stmt = op;
+  }
+  else {
+    stmt = While::make(condition, body);
+  }
+}
+
 void IRRewriter::visit(const IfThenElse *op) {
   Expr condition = rewrite(op->condition);
   Stmt thenBody = rewrite(op->thenBody);

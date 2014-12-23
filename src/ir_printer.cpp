@@ -32,8 +32,19 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const Var &v) {
-  return os << v.getName();
+std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
+  switch (d.kind) {
+    case ForDomain::IndexSet:
+      os << d.indexSet;
+      break;
+    case ForDomain::Endpoints:
+      os << d.set << ".endpoints[" << d.var << "]";
+      break;
+    case ForDomain::Edges:
+      os << d.set << ".edges[" << d.var << "]";
+      break;
+  }
+  return os;
 }
 
 
@@ -64,6 +75,7 @@ void IRPrinter::print(const Stmt &stmt) {
     stmt.accept(this);
   }
   else {
+    indent();
     os << "Stmt()";
   }
 }
@@ -342,20 +354,18 @@ void IRPrinter::visit(const Store *op) {
 
 void IRPrinter::visit(const For *op) {
   indent();
-  os << "for " << op->var << " in ";
-  switch (op->domain.kind) {
-    case ForDomain::IndexSet:
-      os << op->domain.indexSet;
-      break;
-    case ForDomain::Endpoints:
-      os << op->domain.set << ".endpoints[" << op->domain.var << "]";
-      break;
-    case ForDomain::Edges:
-      os << op->domain.set << ".edges[" << op->domain.var << "]";
-      break;
-  }
-
+  os << "for " << op->var << " in " << op->domain;
   os << ":" << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
+}
+
+void IRPrinter::visit(const While *op) {
+  indent();
+  os << "while";
+  print(op->condition);
+  os << endl;
   ++indentation;
   print(op->body);
   --indentation;

@@ -482,6 +482,7 @@ stmt
   | field_write_stmt
   | tensor_write_stmt
   | if_stmt
+  | while_stmt
   | for_stmt
   | const_stmt
   | expr_stmt
@@ -667,24 +668,72 @@ tensor_write_stmt
     // TODO
   }
 
+while_stmt
+  : while_stmt_header while_body while_end {
+    Expr cond = convertAndDelete($1);
+    Stmt body = convertAndDelete($2);
+    
+    ctx->addStatement(While::make(cond, body));
 
+  }
+
+%type <expr> while_stmt_header;
+while_stmt_header
+  : "while" boolean_expr {
+    ctx->scope();
+    $$ = new Expr(convertAndDelete($2));
+  }
+
+%type <stmt> while_body;
+while_body
+  : stmt_block {
+
+    $$ = new Stmt(convertAndDelete($1));
+  }
+
+while_end
+  : BLOCKEND {
+    ctx->unscope();
+  }
+
+%type <stmt> if_stmt;
 if_stmt
-  : "if" boolean_expr stmt_block else_clauses BLOCKEND {
-    delete $2;
-    delete $3;
+  : "if" boolean_expr if_body else_clauses BLOCKEND {
+    Expr cond = convertAndDelete($2);
+    ctx->scope();
+    Stmt trueStmt = convertAndDelete($3);
+    ctx->unscope();
+    Stmt elseStmt = convertAndDelete($4);
+    Stmt *result = new Stmt(IfThenElse::make(cond, trueStmt, elseStmt));
+    ctx->addStatement(*result);
+    $$ = result;
   }
 
+%type <stmt> if_body;
+if_body
+  : stmt_block {
+    $$ = new Stmt(convertAndDelete($1));
+  }
+
+%type <stmt> else_clauses;
 else_clauses
-  : /* empty */
-  | elif_clauses "else" stmt_block {
-    delete $3;
+  : /* empty */ {
+    $$ = new Stmt(Pass::make());
   }
-
-elif_clauses
-  : /* empty */
-  | elif_clauses "elif" boolean_expr stmt_block {
-    delete $3;
-    delete $4;
+  | "else" stmt_block {
+    ctx->scope();
+    $$ = new Stmt(convertAndDelete($2));
+    ctx->unscope();
+  }
+  | "elif" boolean_expr if_body else_clauses {
+    Expr cond = convertAndDelete($2);
+    ctx->scope();
+    Stmt trueStmt = convertAndDelete($3);
+    ctx->unscope();
+    Stmt elseStmt = convertAndDelete($4);
+    Stmt *result = new Stmt(IfThenElse::make(cond, trueStmt, elseStmt));
+    ctx->addStatement(*result);
+    $$ = result;
   }
 
 for_stmt
@@ -1012,7 +1061,6 @@ boolean_expr
     Expr r = convertAndDelete($3);
     $$ = new Expr(Xor::make(l, r));
   }
-
 
 // Field Read Expressions
 %type <expr> field_read_expr;

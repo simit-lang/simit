@@ -166,6 +166,11 @@ void IRVisitor::visit(const For *op) {
   op->body.accept(this);
 }
 
+void IRVisitor::visit(const While *op) {
+  op->condition.accept(this);
+  op->body.accept(this);
+}
+
 void IRVisitor::visit(const IfThenElse *op) {
   op->condition.accept(this);
   op->thenBody.accept(this);

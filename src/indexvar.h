@@ -3,36 +3,10 @@
 
 #include "intrusive_ptr.h"
 #include "domain.h"
+#include "reduction.h"
 
 namespace simit {
 namespace ir {
-
-/// A Simit reduction operator can be used with index expressions or maps.
-/// Since reductions happen over unordered sets, the reduction operators must
-/// be both associative and commutative. Supported reduction operators are:
-/// - Sum
-class ReductionOperator {
-public:
-  // TODO: Add Poduct, Max, Min, and user-defined functions
-  enum Kind { Sum, Undefined };
-
-  // Construct an undefiend reduction operator.
-  ReductionOperator() : kind(Undefined) {}
-
-  // Construct a reduction operator.
-  ReductionOperator(Kind kind) : kind(kind) {}
-  
-  Kind getKind() const {return kind;}
-
-  /// Returns the name of the reduction variable (e.g. sum).
-  std::string getName();
-
-private:
-  Kind kind;
-};
-
-std::ostream &operator<<(std::ostream &os, const ReductionOperator &);
-
 
 namespace {
   struct IndexVarContent {
@@ -75,8 +49,10 @@ public:
     ptr->rop = rop;
   }
 
-  std::string getName() const { return ptr->name; }
-  const IndexDomain &getDomain() const { return ptr->domain; }
+  std::string getName() const {return ptr->name;}
+  const IndexDomain &getDomain() const {return ptr->domain;}
+
+  size_t getNumBlockLevels() const {return ptr->domain.getNumBlockLevels();}
 
   bool isFreeVar() const { return  !isReductionVar(); }
   bool isReductionVar() const {

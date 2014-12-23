@@ -188,7 +188,7 @@ void LLVMBackend::visit(const ir::IndexRead *op) {
   iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
 
   llvm::Value *edgesValue = compile(op->edgeSet);
-  val = builder->CreateExtractValue(edgesValue, {indexLoc}, util::toString(op));
+  val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(*op));
 }
 
 void LLVMBackend::visit(const ir::Length *op) {
@@ -732,17 +732,33 @@ void LLVMBackend::visit(const ir::IfThenElse *op) {
    llvmFunc->getBasicBlockList().push_back(exitBlock);
    builder->SetInsertPoint(exitBlock);
 
-  // llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, "ifThenElse");
-  // i->addIncoming(thenValue, thenBlock);
-  // i->addIncoming(elseValue, elseBlock);
+}
+
+void LLVMBackend::visit(const While *op) {
+  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+
+  llvm::Value *cond = compile(op->condition);
+  llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
 
 
-   IRPrinter printer(std::cout);
-   printer.print(op);
+  llvm::BasicBlock *bodyBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "body", llvmFunc);
+  llvm::BasicBlock *checkBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "check");
+  llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "exit");
+  builder->CreateCondBr(condEval, bodyBlock, exitBlock);
 
-   printer.print(op->thenBody);
-   printer.print(op->elseBody);
-
+  builder->SetInsertPoint(bodyBlock);
+  compile(op->body);
+  builder->CreateBr(checkBlock);
+  bodyBlock = builder->GetInsertBlock();
+  
+  llvmFunc->getBasicBlockList().push_back(checkBlock);
+  builder->SetInsertPoint(checkBlock);
+  llvm::Value *cond2 = compile(op->condition);
+  llvm::Value *condEval2 = builder->CreateICmpEQ(builder->getTrue(), cond2);
+  builder->CreateCondBr(condEval2, bodyBlock, exitBlock);
+  
+  llvmFunc->getBasicBlockList().push_back(exitBlock);
+  builder->SetInsertPoint(exitBlock);
 
 }
 

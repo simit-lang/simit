@@ -694,7 +694,8 @@ class TensorRef {
 
 template <typename T, int... dims>
 std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
-  ierror << "General tensor operator<< not yet supported";
+  static_assert(sizeof...(dims) <= 2,
+                "TensorRef operator<< only currently supported for order <= 2");
   return os;
 }
 
