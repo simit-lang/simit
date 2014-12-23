@@ -7,6 +7,7 @@
 #include "util.h"
 
 using namespace std;
+using namespace simit::util;
 
 namespace simit {
 namespace ir {
@@ -167,7 +168,7 @@ private:
 
   void visit(const IndexedTensor *op) {
     iassert(!isa<IndexExpr>(op->tensor))
-        << "IndexExprs should have been flattened by now";
+        << "IndexExprs should have been flattened by now:" << toString(*op);
 
     Var tensorVar;
     if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {

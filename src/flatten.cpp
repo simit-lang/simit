@@ -41,16 +41,7 @@ private:
   std::vector<Stmt> stmts;
 
   Expr rewrite(Expr e) {
-    if (e.defined()) {
-      e.accept(this);
-      e = expr;
-    }
-    else {
-      e = Expr();
-    }
-    expr = Expr();
-    stmt = Stmt();
-    return e;
+    return IRRewriter::rewrite(e);
   }
 
   Stmt rewrite(Stmt s) {
@@ -68,7 +59,7 @@ private:
     return s;
   }
 
-  std::pair<Expr,Expr> splitInterferringExprs(Expr a, Expr b) {
+  std::pair<Expr,Expr> materializeInterferringExprs(Expr a, Expr b) {
     std::vector<IndexVar> arvars = getReductionVars(a);
     std::vector<IndexVar> brvars = getReductionVars(b);
     if (arvars.size() > 0 && !overlaps(arvars, brvars)) {
@@ -106,7 +97,7 @@ private:
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
-    pair<Expr,Expr> ab = splitInterferringExprs(a, b);
+    pair<Expr,Expr> ab = materializeInterferringExprs(a, b);
     expr = Sub::make(ab.first, ab.second);
   }
 
@@ -118,16 +109,16 @@ private:
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
-    pair<Expr,Expr> ab = splitInterferringExprs(a, b);
+    pair<Expr,Expr> ab = materializeInterferringExprs(a, b);
     expr = Add::make(ab.first, ab.second);
   }
-
 
   void visit(const IndexedTensor *op) {
     // IndexExprs that are nested inside another IndexExpr must necessarily
     // produce a tensor and therefore be indexed through an IndexedTensor expr.
-    if (isa<IndexExpr>(op->tensor)) {
-      Expr tensor = rewrite(op->tensor);
+    Expr tensor = rewrite(op->tensor);
+
+    if (isa<IndexExpr>(tensor)) {
       const IndexExpr *indexExpr = to<IndexExpr>(tensor);
       iassert(indexExpr->resultVars.size() == op->indexVars.size());
 
@@ -136,7 +127,6 @@ private:
         pair<IndexVar,IndexVar> sub(indexExpr->resultVars[i], op->indexVars[i]);
         substitutions.insert(sub);
       }
-
       expr = substitute(substitutions, indexExpr->value);
     }
     else {

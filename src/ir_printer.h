@@ -67,6 +67,7 @@ private:
   virtual void visit(const FieldWrite *);
   virtual void visit(const TensorWrite *);
   virtual void visit(const Store *);
+  virtual void visit(const ForRange *);
   virtual void visit(const For *);
   virtual void visit(const While *);
   virtual void visit(const IfThenElse *);

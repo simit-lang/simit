@@ -307,11 +307,12 @@ void IRRewriter::visit(const ForRange *op) {
   Expr end = rewrite(op->end);
   Stmt body = rewrite(op->body);
   
-  if (body == op->body && start == op->start && end == op->end)
+  if (body == op->body && start == op->start && end == op->end) {
     stmt = op;
-  else
-    stmt = ForRange::make(op->var, op->start, op->end, op->body);
-
+  }
+  else {
+    stmt = ForRange::make(op->var, start, end, body);
+  }
 }
 
 void IRRewriter::visit(const For *op) {
