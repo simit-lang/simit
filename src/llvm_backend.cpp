@@ -746,6 +746,10 @@ void LLVMBackend::visit(const ir::IfThenElse *op) {
 
 }
 
+void LLVMBackend::visit(const While *op) {
+  not_supported_yet;
+}
+
 void LLVMBackend::visit(const Block *op) {
   compile(op->first);
   if (op->rest.defined()) {

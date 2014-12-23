@@ -733,6 +733,19 @@ struct ForRange : public StmtNode<ForRange> {
 
 };
 
+/// A `while` loop.
+struct While : public StmtNode<While> {
+  Expr condition;
+  Stmt body;
+  
+  static Stmt make(Expr condition, Stmt body) {
+    While *node = new While;
+    node->condition = condition;
+    node->body = body;
+    return node;
+  }
+
+};
 struct ForDomain {
   enum Kind { IndexSet, Endpoints, Edges };
   Kind kind;

@@ -361,6 +361,16 @@ void IRPrinter::visit(const For *op) {
   --indentation;
 }
 
+void IRPrinter::visit(const While *op) {
+  indent();
+  os << "while";
+  print(op->condition);
+  os << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
+}
+
 void IRPrinter::visit(const IfThenElse *op) {
   indent();
   os << "if ";

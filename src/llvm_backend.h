@@ -88,6 +88,7 @@ protected:
   virtual void visit(const ir::Store *);
   virtual void visit(const ir::ForRange *);
   virtual void visit(const ir::For *);
+  virtual void visit(const ir::While *);
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);

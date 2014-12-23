@@ -57,6 +57,7 @@ protected:
   virtual void visit(const Store *op);
   virtual void visit(const ForRange *op);
   virtual void visit(const For *op);
+  virtual void visit(const While *op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const Block *op);
   virtual void visit(const Pass *op);
