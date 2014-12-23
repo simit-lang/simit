@@ -58,6 +58,24 @@ file(GLOB SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
 
 add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_INPUT})
 
+# GPU Backend
+find_package(CUDA QUIET)
+if (CUDA_FOUND)
+  message("-- Found CUDA")
+  add_definitions(-DGPU)
+  target_link_libraries(${PROJECT_NAME} "-lcuda")
+  target_link_libraries(${PROJECT_NAME} "-lnvvm")
+
+  set(SIMIT_GPU_SOURCE_DIR ${SIMIT_SOURCE_DIR}/gpu_backend)
+  file(GLOB SOURCES *.cpp ${SIMIT_GPU_SOURCE_DIR}/*.cpp)
+  file(GLOB HEADERS *.h ${SIMIT_GPU_SOURCE_DIR}/*.h)
+else ()
+  message("-- Could NOT find CUDA. Building without gpu-backend")
+endif ()
+
+# Visualizer
+add_subdirectory(visualizer)
+
 # LLVM
 if (DEFINED ENV{LLVM_CONFIG})
   set(LLVM_CONFIG $ENV{LLVM_CONFIG})
@@ -117,12 +135,6 @@ foreach(ldflag ${LLVM_LDFLAGS})
 	 target_link_libraries(${PROJECT_NAME} ${ldflag})
   endif()
 endforeach()
-
-# CUDA
-target_link_libraries(${PROJECT_NAME} "-lcuda")
-target_link_libraries(${PROJECT_NAME} "-lnvvm")
-
-add_subdirectory(visualizer)
 
 # EIGEN
 if (DEFINED ENV{EIGEN3_INCLUDE_DIR})

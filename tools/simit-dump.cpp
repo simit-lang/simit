@@ -8,11 +8,14 @@
 #include "function.h"
 #include "frontend.h"
 #include "program_context.h"
-#include "gpu_backend.h"
 #include "llvm_backend.h"
 #include "error.h"
 #include "util.h"
 #include "storage.h"
+
+#ifdef GPU
+#include "gpu_backend.h"
+#endif
 
 using namespace std;
 
@@ -241,6 +244,7 @@ int main(int argc, const char* argv[]) {
       // NB: The LLVM code gets further optimized at init time (OSR, etc.)
     }
 
+#ifdef GPU
     if (emitGPU) {
       simit::internal::GPUBackend backend;
       std::string fstr = simit::util::toString(*backend.compile(func));
@@ -249,6 +253,7 @@ int main(int argc, const char* argv[]) {
       }
       cout << simit::util::trim(fstr) << endl;
     }
+#endif
   }
 
   return 0;

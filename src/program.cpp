@@ -5,7 +5,6 @@
 #include "ir.h"
 #include "frontend.h"
 #include "lower.h"
-#include "gpu_backend.h"
 #include "llvm_backend.h"
 #include "function.h"
 #include "util.h"
@@ -15,11 +14,20 @@
 #include "temps.h"
 #include "flatten.h"
 
+#ifdef GPU
+#include "gpu_backend.h"
+#endif
+
 using namespace std;
 
 namespace simit {
 
-const std::vector<std::string> VALID_BACKENDS = {"llvm", "gpu"};
+const std::vector<std::string> VALID_BACKENDS = {
+  "llvm",
+#ifdef GPU
+  "gpu",
+#endif
+};
 std::string kBackend = "llvm";
 
 static Function *compile(ir::Func func, internal::Backend *backend) {
@@ -45,9 +53,11 @@ Program::Program() : content(new ProgramContent) {
   if (kBackend == "llvm") {
     content->backend  = new internal::LLVMBackend();
   }
+#ifdef GPU
   else if (kBackend == "gpu") {
     content->backend = new internal::GPUBackend();
   }
+#endif
   else {
     ierror << "Invalid backend choice";
   }
