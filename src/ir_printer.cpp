@@ -84,6 +84,13 @@ void IRPrinter::print(const IRNode &node) {
   node.accept(this);
 }
 
+static inline string bool_to_string(bool value) {
+  if (value)
+    return "true";
+  else
+    return "false";
+}
+
 void IRPrinter::visit(const Literal *op) {
   // TODO: Fix value printing to print matrices and tensors properly
   switch (op->type.kind()) {
@@ -126,14 +133,14 @@ void IRPrinter::visit(const Literal *op) {
           break;
         }
         case ScalarType::Boolean: {
-          const bool *fdata = static_cast<const bool*>(op->data);
+          const bool *bdata = static_cast<const bool*>(op->data);
           if (size == 1) {
-            os << fdata[0];
+            os << bool_to_string(bdata[0]);
           }
           else {
-            os << "[" << to_string(fdata[0]);
+            os << "[" + bool_to_string(bdata[0]);
             for (size_t i=1; i < size; ++i) {
-              os << ", " + to_string(fdata[i]);
+              os << ", " + bool_to_string(bdata[i]);
             }
             os << "]";
           }

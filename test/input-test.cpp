@@ -193,3 +193,4 @@ SIM_TEST_SUITE(controlflow)
 SIM_TEST(controlflow, map);
 SIM_TEST(controlflow, if_stmt);
 SIM_TEST(controlflow, loops);
+SIM_TEST(controlflow, boolean);

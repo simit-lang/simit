@@ -695,20 +695,23 @@ while_end
   : BLOCKEND {
     ctx->unscope();
   }
+
+%type <stmt> if_stmt;
 if_stmt
   : "if" boolean_expr if_body else_clauses BLOCKEND {
-   
     Expr cond = convertAndDelete($2);
     ctx->scope();
     Stmt trueStmt = convertAndDelete($3);
+    ctx->unscope();
     Stmt elseStmt = convertAndDelete($4);
-    ctx->addStatement(IfThenElse::make(cond, trueStmt, elseStmt));
+    Stmt *result = new Stmt(IfThenElse::make(cond, trueStmt, elseStmt));
+    ctx->addStatement(*result);
+    $$ = result;
   }
 
 %type <stmt> if_body;
 if_body
   : stmt_block {
-    ctx->scope();
     $$ = new Stmt(convertAndDelete($1));
   }
 
@@ -718,16 +721,20 @@ else_clauses
     $$ = new Stmt(Pass::make());
   }
   | "else" stmt_block {
-    ctx->unscope();
+    ctx->scope();
     $$ = new Stmt(convertAndDelete($2));
+    ctx->unscope();
   }
-
-//elif_clauses
-//  : /* empty */
-//  | elif_clauses "elif" boolean_expr stmt_block {
-//    delete $3;
-//    delete $4;
-//  }
+  | "elif" boolean_expr if_body else_clauses {
+    Expr cond = convertAndDelete($2);
+    ctx->scope();
+    Stmt trueStmt = convertAndDelete($3);
+    ctx->unscope();
+    Stmt elseStmt = convertAndDelete($4);
+    Stmt *result = new Stmt(IfThenElse::make(cond, trueStmt, elseStmt));
+    ctx->addStatement(*result);
+    $$ = result;
+  }
 
 for_stmt
   : for_stmt_header index_set stmt_block for_stmt_footer{    
@@ -1070,7 +1077,14 @@ boolean_expr
     Expr r = convertAndDelete($3);
     $$ = new Expr(Xor::make(l, r));
   }
-
+  | "true" {
+    bool val = true;
+    $$ = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+  }
+  | "false" {
+    bool val = false;
+    $$ = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+  }
 
 // Field Read Expressions
 %type <expr> field_read_expr;
