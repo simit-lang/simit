@@ -228,9 +228,12 @@ void LLVMBackend::visit(const Literal *op) {
         val = llvmFP(((double*)op->data)[0]);
         break;
       }
-      case ScalarType::Boolean:
-        not_supported_yet;
+      case ScalarType::Boolean: {
+        iassert(ctype.bytes() == sizeof(bool));
+        bool data = ((bool*)op->data)[0];
+        val = llvm::ConstantInt::get(LLVM_BOOL, llvm::APInt(1, data, false));
         break;
+      }
     }
   }
   else {

@@ -1061,6 +1061,14 @@ boolean_expr
     Expr r = convertAndDelete($3);
     $$ = new Expr(Xor::make(l, r));
   }
+  | "true" {
+    bool val = true;
+    $$ = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+  }
+  | "false" {
+    bool val = false;
+    $$ = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+  }
 
 // Field Read Expressions
 %type <expr> field_read_expr;
