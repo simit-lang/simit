@@ -61,10 +61,8 @@ find_package(CUDA)
 if (CUDA_FOUND)
   add_definitions(-DGPU)
   
-  message(${CUDA_LIBRARIES})
-
-  #target_link_libraries(${PROJECT_NAME} "-lcuda")
-  #target_link_libraries(${PROJECT_NAME} "-lnvvm")
+  target_link_libraries(${PROJECT_NAME} "-lcuda")
+  target_link_libraries(${PROJECT_NAME} "-lnvvm")
 
   include_directories(${CUDA_INCLUDE_DIRS})
   include_directories("${CUDA_TOOLKIT_ROOT_DIR}/nvvm/include/")
