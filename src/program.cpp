@@ -15,7 +15,7 @@
 #include "flatten.h"
 
 #ifdef GPU
-#include "gpu_backend.h"
+#include "gpu_backend/gpu_backend.h"
 #endif
 
 using namespace std;
