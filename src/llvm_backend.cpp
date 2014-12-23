@@ -737,11 +737,11 @@ void LLVMBackend::visit(const ir::IfThenElse *op) {
   // i->addIncoming(elseValue, elseBlock);
 
 
-   IRPrinter printer(std::cout);
-   printer.print(op);
-
-   printer.print(op->thenBody);
-   printer.print(op->elseBody);
+//   IRPrinter printer(std::cout);
+//   printer.print(op);
+//
+//   printer.print(op->thenBody);
+//   printer.print(op->elseBody);
 
 
 }
