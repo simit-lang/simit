@@ -437,6 +437,72 @@ void LLVMBackend::visit(const Div *op) {
   }
 }
 
+#define LLVMBACKEND_VISIT_COMPARE_OP(typename, op, float_cmp, int_cmp) \
+void LLVMBackend::visit(const ir::typename *op) {\
+  iassert(isBoolean(op->type));\
+  iassert(isScalar(op->a.type()));\
+  iassert(isScalar(op->b.type()));\
+\
+  llvm::Value *a = compile(op->a);\
+  llvm::Value *b = compile(op->b);\
+\
+  const TensorType *type = op->a.type().toTensor();\
+  if (type->componentType == ScalarType::Float) {\
+    val = builder->float_cmp(a, b);\
+  } else {\
+    val = builder->int_cmp(a, b);\
+  }\
+}
+
+LLVMBACKEND_VISIT_COMPARE_OP(Eq, op, CreateFCmpOEQ, CreateICmpEQ)
+LLVMBACKEND_VISIT_COMPARE_OP(Ne, op, CreateFCmpONE, CreateICmpNE)
+LLVMBACKEND_VISIT_COMPARE_OP(Gt, op, CreateFCmpOGT, CreateICmpSGT)
+LLVMBACKEND_VISIT_COMPARE_OP(Lt, op, CreateFCmpOLT, CreateICmpSLT)
+LLVMBACKEND_VISIT_COMPARE_OP(Ge, op, CreateFCmpOGE, CreateICmpSGE)
+LLVMBACKEND_VISIT_COMPARE_OP(Le, op, CreateFCmpOLE, CreateICmpSLE)
+
+void LLVMBackend::visit(const ir::And *op) {
+  iassert(isBoolean(op->type));
+  iassert(isBoolean(op->a.type()));
+  iassert(isBoolean(op->b.type()));
+
+  llvm::Value *a = compile(op->a);
+  llvm::Value *b = compile(op->b);
+
+  val = builder->CreateAnd(a, b);
+}
+
+void LLVMBackend::visit(const ir::Or *op) {
+  iassert(isBoolean(op->type));
+  iassert(isBoolean(op->a.type()));
+  iassert(isBoolean(op->b.type()));
+
+  llvm::Value *a = compile(op->a);
+  llvm::Value *b = compile(op->b);
+
+  val = builder->CreateOr(a, b);
+}
+
+void LLVMBackend::visit(const ir::Not *op) {
+  iassert(isBoolean(op->type));
+  iassert(isBoolean(op->a.type()));
+
+  llvm::Value *a = compile(op->a);
+
+  val = builder->CreateNot(a);
+}
+
+void LLVMBackend::visit(const ir::Xor *op) {
+  iassert(isBoolean(op->type));
+  iassert(isBoolean(op->a.type()));
+  iassert(isBoolean(op->b.type()));
+
+  llvm::Value *a = compile(op->a);
+  llvm::Value *b = compile(op->b);
+
+  val = builder->CreateXor(a, b);
+}
+
 void LLVMBackend::visit(const AssignStmt *op) {
   /// \todo assignment of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only assign scalars to scalars
@@ -639,8 +705,61 @@ void LLVMBackend::visit(const ir::ForRange *op) {
 
 }
 
-void LLVMBackend::visit(const IfThenElse *op) {
-  not_supported_yet;
+void LLVMBackend::visit(const ir::IfThenElse *op) {
+  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+
+   llvm::Value *cond = compile(op->condition);
+   llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
+
+
+   llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "then", llvmFunc);
+   llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "else");
+   llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "exit");
+   builder->CreateCondBr(condEval, thenBlock, elseBlock);
+
+   builder->SetInsertPoint(thenBlock);
+   compile(op->thenBody);
+   builder->CreateBr(exitBlock);
+   thenBlock = builder->GetInsertBlock();
+
+   llvmFunc->getBasicBlockList().push_back(elseBlock);
+
+   builder->SetInsertPoint(elseBlock);
+   compile(op->elseBody);
+   builder->CreateBr(exitBlock);
+   elseBlock = builder->GetInsertBlock();
+
+   llvmFunc->getBasicBlockList().push_back(exitBlock);
+   builder->SetInsertPoint(exitBlock);
+
+}
+
+void LLVMBackend::visit(const While *op) {
+  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+
+  llvm::Value *cond = compile(op->condition);
+  llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
+
+
+  llvm::BasicBlock *bodyBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "body", llvmFunc);
+  llvm::BasicBlock *checkBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "check");
+  llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "exit");
+  builder->CreateCondBr(condEval, bodyBlock, exitBlock);
+
+  builder->SetInsertPoint(bodyBlock);
+  compile(op->body);
+  builder->CreateBr(checkBlock);
+  bodyBlock = builder->GetInsertBlock();
+  
+  llvmFunc->getBasicBlockList().push_back(checkBlock);
+  builder->SetInsertPoint(checkBlock);
+  llvm::Value *cond2 = compile(op->condition);
+  llvm::Value *condEval2 = builder->CreateICmpEQ(builder->getTrue(), cond2);
+  builder->CreateCondBr(condEval2, bodyBlock, exitBlock);
+  
+  llvmFunc->getBasicBlockList().push_back(exitBlock);
+  builder->SetInsertPoint(exitBlock);
+
 }
 
 void LLVMBackend::visit(const Block *op) {
