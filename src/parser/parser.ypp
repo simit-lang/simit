@@ -482,6 +482,7 @@ stmt
   | field_write_stmt
   | tensor_write_stmt
   | if_stmt
+  | while_stmt
   | for_stmt
   | const_stmt
   | expr_stmt
@@ -667,7 +668,33 @@ tensor_write_stmt
     // TODO
   }
 
+while_stmt
+  : while_stmt_header while_body while_end {
+    Expr cond = convertAndDelete($1);
+    Stmt body = convertAndDelete($2);
+    
+    ctx->addStatement(While::make(cond, body));
 
+  }
+
+%type <expr> while_stmt_header;
+while_stmt_header
+  : "while" boolean_expr {
+    ctx->scope();
+    $$ = new Expr(convertAndDelete($2));
+  }
+
+%type <stmt> while_body;
+while_body
+  : stmt_block {
+
+    $$ = new Stmt(convertAndDelete($1));
+  }
+
+while_end
+  : BLOCKEND {
+    ctx->unscope();
+  }
 if_stmt
   : "if" boolean_expr if_body else_clauses BLOCKEND {
    
