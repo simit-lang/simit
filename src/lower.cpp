@@ -9,7 +9,7 @@ namespace simit {
 namespace ir {
 
 Func lower(Func func) {
-  func = lowerAssemblies(func);
+  func = lowerMaps(func);
   func = lowerIndexExpressions(func);
   func = lowerTensorAccesses(func);
   return func;

@@ -1,7 +1,8 @@
 #include "lower.h"
 
-#include "ir_rewriter.h"
 #include "storage.h"
+#include "ir_rewriter.h"
+#include "ir_codegen.h"
 #include "inline.h"
 
 using namespace std;
@@ -25,43 +26,38 @@ inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
   return true;
 }
 
+class LowerMapFunctionRewriter : public MapFunctionRewriter {
+  using MapFunctionRewriter::visit;
+  virtual void visit(const TensorWrite *op) {
+    IRRewriter::visit(op);
+    if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
+      stmt = makeCompound(stmt, CompoundOperator::Add);
+    }
+  }
+};
 
-class LowerAssemblies : public IRRewriter {
+class LowerMaps : public IRRewriter {
 public:
-  LowerAssemblies(const Storage &storage) : storage(storage) {}
+  LowerMaps(const Storage &storage) : storage(storage) {}
 
 private:
   Storage storage;
 
   void visit(const Map *op) {
-    stmt = op;
-    return;
-
     iassert(hasStorage(op->vars, storage))
         << "Every assembled tensor should have a storage descriptor";
     tassert(hasSameStorage(op->vars, storage))
         << "All assembled tensors in the same Map must have the same storage.";
 
-    if (op->vars.size() == 0
-        || storage.get(op->vars[0]).getKind() != TensorStorage::SystemNone) {
-      TensorStorage::Kind tensorStorage = storage.get(op->vars[0]).getKind();
-
-      if (tensorStorage == TensorStorage::SystemReduced) {
-        Func kernel = op->function;
-        Stmt body = kernel.getBody();
-
-        Var targetVar = kernel.getArguments()[0];
-        Var neighborsVar = kernel.getArguments()[1];
-
-        Var loopVar(targetVar.getName(), Int);
-        ForDomain domain(op->target);
-
-        body = InlineMappedFunction(op,loopVar).rewrite(body);
-        Stmt loweredMap = For::make(loopVar, domain, body);
-        stmt = Block::make(op, loweredMap);
+    TensorStorage::Kind tensorStorage = storage.get(op->vars[0]).getKind();
+    if (tensorStorage != TensorStorage::SystemNone || op->vars.size() == 0) {
+      if (tensorStorage == TensorStorage::SystemReduced ||
+          tensorStorage == TensorStorage::DenseRowMajor) {
+        LowerMapFunctionRewriter mapFunctionRewriter;
+        stmt = inlineMap(op, mapFunctionRewriter);
       }
       else {
-        terror << "Unsupported tensor storage lowering";
+        ierror << "Unsupported tensor storage lowering";
       }
     }
     else {
@@ -70,8 +66,8 @@ private:
   }
 };
 
-Func lowerAssemblies(Func func) {
-  Stmt body = LowerAssemblies(func.getStorage()).rewrite(func.getBody());
+Func lowerMaps(Func func) {
+  Stmt body = LowerMaps(func.getStorage()).rewrite(func.getBody());
   return Func(func, body);
 }
 

@@ -10,9 +10,9 @@ class Storage;
 
 Func lower(Func func);
 
-/// Lower tensor assemblies to loops that stores the resulting tensors as
-/// specified by the 'TensorStorages' descriptors.
-Func lowerAssemblies(Func func);
+/// Lower map statements to loops. Map assemblies are lowered to loops that
+/// store the resulting tensors as specified by Func's Storage descriptor.
+Func lowerMaps(Func func);
 
 Func lowerIndexExpressions(Func func);
 

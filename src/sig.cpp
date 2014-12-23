@@ -7,10 +7,12 @@
 #include "util.h"
 
 using namespace std;
+using namespace simit::util;
 
 namespace simit {
 namespace ir {
 
+// class SIG
 SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
   set<IndexVar> added;
   vector<SIGVertex*> endpoints;
@@ -31,8 +33,16 @@ SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
   }
 }
 
-// This can be optimized by exploiting immutability to preserve substructures
+std::vector<const SIGEdge *> SIG::getEdges() const {
+  std::vector<const SIGEdge *> edges;
+  for (auto &edge : content->edges) {
+    edges.push_back(edge.second.get());
+  }
+  return edges;
+}
+
 SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
+  // This can be optimized by exploiting immutability to preserve substructures
   SIG merged = SIG();
 
   for (auto &v : g1.content->vertices) {
@@ -84,15 +94,7 @@ SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
 }
 
 bool ReductionVarsBeforefree(SIGVertex *i, SIGVertex *j) {
-  if (i->iv.isFreeVar() && j->iv.isReductionVar()) {
-    return false;
-  }
-  else if (i->iv.isReductionVar() && j->iv.isFreeVar()) {
-    return true;
-  }
-  else {
-    return (i->iv.getName() < j->iv.getName());
-  }
+  return (i->iv.isFreeVar() && j->iv.isReductionVar()) ? true : false;
 }
 
 void SIGVisitor::apply(const SIG &sig) {
@@ -140,6 +142,165 @@ void SIGVisitor::visit(const SIGEdge *e) {
   }
 }
 
+
+/// Class that builds a Sparse Iteration Graph from an expression.
+class SIGBuilder : public IRVisitor {
+public:
+  SIGBuilder(const Storage &storage) : storage(storage) {}
+
+  SIG create(Stmt stmt) {
+    stmt.accept(this);
+    SIG result = sig;
+    sig = SIG();
+    return result;
+  }
+
+private:
+  Storage storage;
+  SIG sig;
+
+  SIG create(Expr expr) {
+    expr.accept(this);
+    SIG result = sig;
+    sig = SIG();
+    return result;
+  }
+
+  void visit(const IndexedTensor *op) {
+    iassert(!isa<IndexExpr>(op->tensor))
+        << "IndexExprs should have been flattened by now:" << toString(*op);
+
+    Var tensorVar;
+    if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
+      const Var &var = to<VarExpr>(op->tensor)->var;
+      iassert(storage.hasStorage(var)) << "No storage descriptor found for"
+                                       << var << "in" << util::toString(*op);
+      if (storage.get(var).isSystem()) {
+        tensorVar = var;
+      }
+    }
+    sig = SIG(op->indexVars, tensorVar);
+  }
+
+  void visit(const Add *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Union);
+  }
+
+  void visit(const Sub *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Union);
+  }
+
+  void visit(const Mul *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Intersection);
+  }
+
+  void visit(const Div *op) {
+    SIG ig1 = create(op->a);
+    SIG ig2 = create(op->b);
+    sig = merge(ig1, ig2, SIG::Intersection);
+  }
+};
+
+SIG createSIG(Stmt stmt, const Storage &storage) {
+  return SIGBuilder(storage).create(stmt);
+}
+
+/// Get the number of block levels of the index variables in SIG
+size_t getNumBlockLevels(const SIG &sig) {
+  class GetNumBlockLevelsVisitor : public SIGVisitor {
+  public:
+    size_t get(const SIG &sig) {
+      numBlockLevels = 0;
+      apply(sig);
+      return numBlockLevels;
+    }
+
+  private:
+    size_t numBlockLevels;
+
+    void visit(const SIGVertex *v) {
+      size_t ivNumBlockLevels = v->iv.getNumBlockLevels();
+      if (numBlockLevels < ivNumBlockLevels) {
+        numBlockLevels = ivNumBlockLevels;
+      }
+    }
+  };
+  return GetNumBlockLevelsVisitor().get(sig);
+}
+
+
+// class LoopVars
+LoopVars LoopVars::create(const SIG &sig) {
+  class LoopVarsBuilder : private SIGVisitor {
+  public:
+    LoopVars build(const SIG &sig) {
+      vertexLoopVars.clear();
+
+      // We create one set of loop nests per block level in the SIG.
+      numBlockLevels = getNumBlockLevels(sig);
+      for (currBlockLevel=0; currBlockLevel<numBlockLevels; ++currBlockLevel) {
+        apply(sig);
+      }
+
+      return LoopVars(loopVars, vertexLoopVars);
+    }
+
+  private:
+    std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
+    std::vector<LoopVar> loopVars;
+    UniqueNameGenerator nameGenerator;
+
+    /// We create one loop variable per block level per index variable. The loop
+    /// variables are ordered by block level. This variable keeps track of which
+    /// block level we are currently creating loop variables for.
+    size_t currBlockLevel;
+
+    /// The number of block levels in the index variables in the SIG.
+    size_t numBlockLevels;
+
+    void visit(const SIGVertex *v) {
+      const IndexVar &indexVar = v->iv;
+
+      if (currBlockLevel < indexVar.getNumBlockLevels()) {
+        Var var(nameGenerator.getName(indexVar.getName()), Int);
+        ForDomain domain = indexVar.getDomain().getIndexSets()[currBlockLevel];
+
+        // We only need to reduce w.r.t. to the outer loop variable variable.
+        ReductionOperator rop = (currBlockLevel==0)
+                                ? indexVar.getOperator()
+                                : ReductionOperator::Undefined;
+                                
+        addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
+      }
+    }
+
+    void addVertexLoopVar(const IndexVar &indexVar, const LoopVar &loopVar) {
+      loopVars.push_back(loopVar);
+
+      // Add entry for the indexVar
+      if (vertexLoopVars.find(indexVar) == vertexLoopVars.end()) {
+        vertexLoopVars[indexVar] = std::vector<LoopVar>();
+      }
+      vertexLoopVars[indexVar].push_back(loopVar);
+    }
+  }; // class LoopVarsBuilder
+
+  return LoopVarsBuilder().build(sig);
+}
+
+LoopVars::LoopVars(const vector<LoopVar> &loopVars,
+                   const map<IndexVar,vector<LoopVar>> &vertexLoopVars)
+    : loopVars(loopVars), vertexLoopVars(vertexLoopVars) {
+}
+
+
+// Free functions
 std::ostream &operator<<(std::ostream &os, const SIGVertex &v) {
   return os << v.iv;
 }
@@ -173,6 +334,10 @@ std::ostream &operator<<(std::ostream &os, const SIG &g) {
   os << "SIG: ";
   SIGPrinter(os).print(g);
   return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const LoopVars &lvs) {
+  return os << util::join(lvs);
 }
 
 }} // namespace simit::ir

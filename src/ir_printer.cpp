@@ -32,8 +32,19 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const Var &v) {
-  return os << v.getName();
+std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
+  switch (d.kind) {
+    case ForDomain::IndexSet:
+      os << d.indexSet;
+      break;
+    case ForDomain::Endpoints:
+      os << d.set << ".endpoints[" << d.var << "]";
+      break;
+    case ForDomain::Edges:
+      os << d.set << ".edges[" << d.var << "]";
+      break;
+  }
+  return os;
 }
 
 
@@ -64,12 +75,20 @@ void IRPrinter::print(const Stmt &stmt) {
     stmt.accept(this);
   }
   else {
+    indent();
     os << "Stmt()";
   }
 }
 
 void IRPrinter::print(const IRNode &node) {
   node.accept(this);
+}
+
+static inline string bool_to_string(bool value) {
+  if (value)
+    return "true";
+  else
+    return "false";
 }
 
 void IRPrinter::visit(const Literal *op) {
@@ -114,14 +133,14 @@ void IRPrinter::visit(const Literal *op) {
           break;
         }
         case ScalarType::Boolean: {
-          const bool *fdata = static_cast<const bool*>(op->data);
+          const bool *bdata = static_cast<const bool*>(op->data);
           if (size == 1) {
-            os << fdata[0];
+            os << bool_to_string(bdata[0]);
           }
           else {
-            os << "[" << to_string(fdata[0]);
+            os << "[" + bool_to_string(bdata[0]);
             for (size_t i=1; i < size; ++i) {
-              os << ", " + to_string(fdata[i]);
+              os << ", " + bool_to_string(bdata[i]);
             }
             os << "]";
           }
@@ -175,7 +194,18 @@ void IRPrinter::visit(const TupleRead *op) {
 
 void IRPrinter::visit(const IndexRead *op) {
   print(op->edgeSet);
-  os << "." << op->indexName;
+  os << ".";
+  switch (op->kind) {
+    case IndexRead::Endpoints:
+      os << "endpoints";
+      break;
+    case IndexRead::NeighborsStart:
+      os << "neighbors.start";
+      break;
+    case IndexRead::Neighbors:
+      os << "neighbors";
+      break;
+  }
 }
 
 void IRPrinter::visit(const Length *op) {
@@ -246,6 +276,31 @@ void IRPrinter::visit(const Div *op) {
   os << ")";
 }
 
+#define PRINT_VISIT_BINARY_OP(type, symbol, op) \
+  void IRPrinter::visit(const type *op) {\
+  os << "(";\
+  print(op->a);\
+  os << " " << #symbol << " ";\
+  print(op->b);\
+  os << ")";\
+}
+
+PRINT_VISIT_BINARY_OP(Eq, ==, op)
+PRINT_VISIT_BINARY_OP(Ne, !=, op)
+PRINT_VISIT_BINARY_OP(Gt, >, op)
+PRINT_VISIT_BINARY_OP(Lt, <, op)
+PRINT_VISIT_BINARY_OP(Ge, >=, op)
+PRINT_VISIT_BINARY_OP(Le, <=, op)
+PRINT_VISIT_BINARY_OP(And, and, op)
+PRINT_VISIT_BINARY_OP(Or, or, op)
+PRINT_VISIT_BINARY_OP(Xor, xor, op)
+
+void IRPrinter::visit(const Not *op) {
+  os << "(not ";
+  print(op->a);
+  os << ")";
+}
+
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
   os << op->var << " = ";
@@ -304,22 +359,29 @@ void IRPrinter::visit(const Store *op) {
   os << ";";
 }
 
+void IRPrinter::visit(const ForRange *op) {
+  indent();
+  os << "for " << op->var << " in " << op->start << ":" << op->end;
+  os << ":" << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
+}
+
 void IRPrinter::visit(const For *op) {
   indent();
-  os << "for " << op->var << " in ";
-  switch (op->domain.kind) {
-    case ForDomain::IndexSet:
-      os << op->domain.indexSet;
-      break;
-    case ForDomain::Endpoints:
-      os << op->domain.set << ".endpoints[" << op->domain.var << "]";
-      break;
-    case ForDomain::Edges:
-      os << op->domain.set << ".edges[" << op->domain.var << "]";
-      break;
-  }
-
+  os << "for " << op->var << " in " << op->domain;
   os << ":" << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
+}
+
+void IRPrinter::visit(const While *op) {
+  indent();
+  os << "while";
+  print(op->condition);
+  os << endl;
   ++indentation;
   print(op->body);
   --indentation;
@@ -327,7 +389,16 @@ void IRPrinter::visit(const For *op) {
 
 void IRPrinter::visit(const IfThenElse *op) {
   indent();
-  os << "ifthenelse;";
+  os << "if ";
+  print(op->condition);
+  os << endl;
+  ++indentation;
+  print(op->thenBody);
+  --indentation;
+  os << "else" << endl;
+  ++indentation;
+  print(op->elseBody);
+  --indentation;
 }
 
 void IRPrinter::visit(const Block *op) {

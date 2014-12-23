@@ -39,6 +39,17 @@ protected:
   virtual void visit(const Mul *op);
   virtual void visit(const Div *op);
 
+  virtual void visit(const Eq *op);
+  virtual void visit(const Ne *op);
+  virtual void visit(const Gt *op);
+  virtual void visit(const Lt *op);
+  virtual void visit(const Ge *op);
+  virtual void visit(const Le *op);
+  virtual void visit(const And *op);
+  virtual void visit(const Or *op);
+  virtual void visit(const Not *op);
+  virtual void visit(const Xor *op);
+
   virtual void visit(const AssignStmt *op);
   virtual void visit(const Map *op);
   virtual void visit(const FieldWrite *op);
@@ -46,6 +57,7 @@ protected:
   virtual void visit(const Store *op);
   virtual void visit(const ForRange *op);
   virtual void visit(const For *op);
+  virtual void visit(const While *op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const Block *op);
   virtual void visit(const Pass *op);

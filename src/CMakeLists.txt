@@ -53,28 +53,37 @@ IF(FLEX_FOUND)
 ENDIF()
 
 # Simit
-file(GLOB HEADERS *.h ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_HEADER} ${SIMIT_GRAPH_VIZ_SOURCE_DIR}/*.h)
-file(GLOB SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
+file(GLOB SIMIT_HEADERS *.h ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_HEADER} ${SIMIT_GRAPH_VIZ_SOURCE_DIR}/*.h)
+file(GLOB SIMIT_SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
 
 # GPU Backend
 find_package(CUDA)
+set(CUDA_LIBS "")
 if (CUDA_FOUND)
   add_definitions(-DGPU)
   
-  target_link_libraries(${PROJECT_NAME} "-lcuda")
-  target_link_libraries(${PROJECT_NAME} "-lnvvm")
+  set(CUDA_LIBS ${CUDA_LIBS} "-lcuda")
+  set(CUDA_LIBS ${CUDA_LIBS} "-lnvvm")
 
   include_directories(${CUDA_INCLUDE_DIRS})
   include_directories("${CUDA_TOOLKIT_ROOT_DIR}/nvvm/include/")
 
   set(SIMIT_GPU_SOURCE_DIR ${SIMIT_SOURCE_DIR}/gpu_backend)
-  file(GLOB SOURCES *.cpp ${SIMIT_GPU_SOURCE_DIR}/*.cpp)
-  file(GLOB HEADERS *.h ${SIMIT_GPU_SOURCE_DIR}/*.h)
+  file(GLOB GPU_SOURCES ${SIMIT_GPU_SOURCE_DIR}/*.cpp)
+  file(GLOB GPU_HEADERS ${SIMIT_GPU_SOURCE_DIR}/*.h)
 else ()
   message("-- Building without gpu-backend")
 endif ()
+set(HEADERS ${SIMIT_HEADERS} ${GPU_HEADERS})
+set(SOURCES ${SIMIT_SOURCES} ${GPU_SOURCES})
 
 add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_INPUT})
+
+# GPU Backend linking
+separate_arguments(CUDA_LIBS)
+foreach(lib ${CUDA_LIBS})
+  target_link_libraries(${PROJECT_NAME} ${lib})
+endforeach()
 
 # Visualizer
 add_subdirectory(visualizer)

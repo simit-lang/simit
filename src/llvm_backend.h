@@ -71,11 +71,24 @@ protected:
   virtual void visit(const ir::Sub *);
   virtual void visit(const ir::Mul *);
   virtual void visit(const ir::Div *);
+
+  virtual void visit(const ir::Eq *);
+  virtual void visit(const ir::Ne *);
+  virtual void visit(const ir::Gt *);
+  virtual void visit(const ir::Lt *);
+  virtual void visit(const ir::Ge *);
+  virtual void visit(const ir::Le *);
+  virtual void visit(const ir::And *);
+  virtual void visit(const ir::Or *);
+  virtual void visit(const ir::Not *);
+  virtual void visit(const ir::Xor *);
+
   virtual void visit(const ir::AssignStmt *);
   virtual void visit(const ir::FieldWrite *);
   virtual void visit(const ir::Store *);
   virtual void visit(const ir::ForRange *);
   virtual void visit(const ir::For *);
+  virtual void visit(const ir::While *);
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
@@ -96,6 +109,10 @@ protected:
 
   llvm::Value *emitCall(std::string name,
                         std::initializer_list<llvm::Value*> args,
+                        llvm::Type *returnType);
+
+  llvm::Value *emitCall(std::string name,
+                        std::vector<llvm::Value*> args,
                         llvm::Type *returnType);
 
   void emitPrintf(std::string format);

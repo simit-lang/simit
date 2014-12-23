@@ -65,9 +65,10 @@ public:
     return os << er.ident;
   }
 
+  int ident;
+
 private:
   explicit inline ElementRef(int ident) : ident(ident) {}
-  int ident;
 
   friend class SetBase;
   friend class FieldRefBase;
@@ -183,30 +184,35 @@ public:
     typedef ptrdiff_t difference_type;
     typedef ElementRef& reference;
     typedef ElementRef* pointer;
-    
+
     ElementIterator(const SetBase* set, int idx=0) : curElem(idx), set(set) { }
     ElementIterator(const ElementIterator& other) : curElem(other.curElem),
                                                     set(other.set) {}
-    
+
     reference operator*() {return curElem;}
     pointer operator->() {return &curElem;}
-    
+
     ElementIterator& operator++() {
       curElem.ident++;
       return *this;
     }
-    
+
     ElementIterator operator++(int) {
       curElem.ident++;
       return *this;
     }
-    
-    bool operator!=(const ElementIterator& other) {
-      return !(set==other.set) || !(curElem.ident == other.curElem.ident);
+
+    friend bool operator!=(const ElementIterator& l, const ElementIterator& r) {
+      return !(l.set==r.set) || !(l.curElem == r.curElem);
     }
-    
-    bool operator==(const ElementIterator& other) {
-      return (set==other.set) && (curElem.ident == other.curElem.ident);
+
+    friend bool operator==(const ElementIterator& l, const ElementIterator& r) {
+      return (l.set==r.set) && (l.curElem == r.curElem);
+    }
+
+    friend bool operator<(const ElementIterator& l, const ElementIterator& r) {
+      iassert(l.set == r.set);
+      return l.curElem < r.curElem;
     }
 
     bool operator<(const ElementIterator& other) {
@@ -306,8 +312,10 @@ public:
     }
 
     bool lessThan(const EndpointIterator &other) const {
-      iassert(this->set == other.set) << "Comparing EndpointIterators from two different Sets";
-      iassert(this->curElem.ident == other.curElem.ident) << "Comparing EndpointIterators over two different edges";
+      iassert(this->set == other.set)
+          << "Comparing EndpointIterators from two different Sets";
+      iassert(this->curElem.ident == other.curElem.ident)
+          << "Comparing EndpointIterators over two different edges";
       return this->endpointNum < other.endpointNum;
     }
 
@@ -691,7 +699,8 @@ class TensorRef {
 
 template <typename T, int... dims>
 std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
-  ierror << "General tensor operator<< not yet supported";
+  static_assert(sizeof...(dims) <= 2,
+                "TensorRef operator<< only currently supported for order <= 2");
   return os;
 }
 

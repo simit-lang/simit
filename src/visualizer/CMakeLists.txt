@@ -3,9 +3,12 @@ set(VIZ_PROJECT_NAME ${PROJECT_NAME}viz)
 find_package(OpenGL)
 find_package(GLUT)
 
-if (NOT OPENGL_FOUND OR NOT GLUT_FOUND)
+if (NOT OPENGL_FOUND OR NOT GLUT_FOUND OR
+    GLUT_Xi_LIBRARY STREQUAL GLUT_Xi_LIBRARY-NOTFOUND OR
+    GLUT_Xmu_LIBRARY STREQUAL GLUT_Xmu_LIBRARY-NOTFOUND)
   message("Could not find OpenGL or GLUT so simviz will not be built")
 else()
+  message("-- Found OpenGL and GLUT")
 
   set(SIMIT_VISUALIZER_SOURCE_DIR ${SIMIT_SOURCE_DIR}/visualizer)
   file(GLOB SOURCES *.cpp ${SIMIT_VISUALIZER_SOURCE_DIR}/*.cpp)

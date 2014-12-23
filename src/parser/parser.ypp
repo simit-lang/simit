@@ -260,9 +260,14 @@
 %token NE        "!="
 %token LE        "<="
 %token GE        ">="
+%token AND       "and"
+%token OR        "or"
+%token NOT       "not"
+%token XOR       "xor"
+%token TRUE      "true"
+%token FALSE     "false"
 
 %token END 0     "end of file"
-
 
 // Rules
 %start program
@@ -477,6 +482,7 @@ stmt
   | field_write_stmt
   | tensor_write_stmt
   | if_stmt
+  | while_stmt
   | for_stmt
   | const_stmt
   | expr_stmt
@@ -662,40 +668,104 @@ tensor_write_stmt
     // TODO
   }
 
+while_stmt
+  : while_stmt_header while_body while_end {
+    Expr cond = convertAndDelete($1);
+    Stmt body = convertAndDelete($2);
+    
+    ctx->addStatement(While::make(cond, body));
 
+  }
+
+%type <expr> while_stmt_header;
+while_stmt_header
+  : "while" boolean_expr {
+    ctx->scope();
+    $$ = new Expr(convertAndDelete($2));
+  }
+
+%type <stmt> while_body;
+while_body
+  : stmt_block {
+
+    $$ = new Stmt(convertAndDelete($1));
+  }
+
+while_end
+  : BLOCKEND {
+    ctx->unscope();
+  }
+
+%type <stmt> if_stmt;
 if_stmt
-  : "if" expr stmt_block else_clauses BLOCKEND {
-    delete $2;
-    delete $3;
+  : "if" boolean_expr if_body else_clauses BLOCKEND {
+    Expr cond = convertAndDelete($2);
+    ctx->scope();
+    Stmt trueStmt = convertAndDelete($3);
+    ctx->unscope();
+    Stmt elseStmt = convertAndDelete($4);
+    Stmt *result = new Stmt(IfThenElse::make(cond, trueStmt, elseStmt));
+    ctx->addStatement(*result);
+    $$ = result;
   }
 
+%type <stmt> if_body;
+if_body
+  : stmt_block {
+    $$ = new Stmt(convertAndDelete($1));
+  }
+
+%type <stmt> else_clauses;
 else_clauses
-  : /* empty */
-  | elif_clauses "else" stmt_block {
-    delete $3;
+  : /* empty */ {
+    $$ = new Stmt(Pass::make());
   }
-
-elif_clauses
-  : /* empty */
-  | elif_clauses "elif" expr stmt_block {
-    delete $3;
-    delete $4;
+  | "else" stmt_block {
+    ctx->scope();
+    $$ = new Stmt(convertAndDelete($2));
+    ctx->unscope();
+  }
+  | "elif" boolean_expr if_body else_clauses {
+    Expr cond = convertAndDelete($2);
+    ctx->scope();
+    Stmt trueStmt = convertAndDelete($3);
+    ctx->unscope();
+    Stmt elseStmt = convertAndDelete($4);
+    Stmt *result = new Stmt(IfThenElse::make(cond, trueStmt, elseStmt));
+    ctx->addStatement(*result);
+    $$ = result;
   }
 
 for_stmt
-  : for_stmt_header stmt_block for_stmt_footer
-
-for_stmt_header
-  : "for" IDENT "in" index_set {
-    string varName = convertAndFree($IDENT);
-    Var var(varName, Int);
-    ctx->scope();
-
-    // If we need to write to loop variables, then that should be added as a
-    // separate loop structure (that can't be vectorized easily)
-    ctx->addSymbol(varName, var, Symbol::Read);
+  : for_stmt_header index_set stmt_block for_stmt_footer{    
+    if($2->getKind()==IndexSet::Set){
+      ctx->addStatement(For::make(*$1,ForDomain(*$2), *$3));
+    }
+    delete $1;
+    delete $2;
+    delete $3;
+  }
+  | for_stmt_header expr ":" expr stmt_block for_stmt_footer {    
+    ctx->addStatement(ForRange::make(*$1, *$2, *$4, *$5));
+    delete $1;
+    delete $2;
+    delete $4;
+    delete $5;
   }
 
+%type <var> for_stmt_header;
+for_stmt_header 
+ : "for" IDENT "in" {
+ string varName = convertAndFree($IDENT);
+ Var * var = new Var(varName, Int);     
+ ctx->scope();
+ // If we need to write to loop variables, then that should be added as a
+ // separate loop structure (that can't be vectorized easily)
+ ctx->addSymbol(varName, *var, Symbol::Read);
+
+ $$=var;
+ }
+  
 for_stmt_footer
   : BLOCKEND {
     ctx->unscope();
@@ -950,41 +1020,71 @@ elwise_binary_op
 boolean_expr
   : expr "==" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Eq::make(l, r));
   }
   | expr "!=" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Ne::make(l, r));
   }
-  | expr "<"  expr {
+  | expr ">" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Gt::make(l, r));
   }
-  | expr ">"  expr {
+  | expr "<" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
-  }
-  | expr "<=" expr {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Lt::make(l, r));
   }
   | expr ">=" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Ge::make(l, r));
   }
-
+  | expr "<=" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Le::make(l, r));
+  }
+  | expr "and" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(And::make(l, r));
+  }
+  | expr "or" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Or::make(l, r));
+  }
+  | "not" expr {
+    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr r = convertAndDelete($2);
+    $$ = new Expr(Not::make(r));
+  }
+  | expr "xor" expr {
+    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    Expr l = convertAndDelete($1);
+    Expr r = convertAndDelete($3);
+    $$ = new Expr(Xor::make(l, r));
+  }
+  | "true" {
+    bool val = true;
+    $$ = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+  }
+  | "false" {
+    bool val = false;
+    $$ = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+  }
 
 // Field Read Expressions
 %type <expr> field_read_expr;
@@ -1266,12 +1366,6 @@ index_set
     }
 
     $$ = new IndexSet(set);
-  }
-  | expr ":" expr {
-    if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
-    $$ = NULL;
-    delete $1;
-    delete $3;
   }
   | "*" {
     $$ = new IndexSet();

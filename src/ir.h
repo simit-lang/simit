@@ -4,43 +4,19 @@
 #include <string>
 #include <list>
 #include <cstring>
-
 #include <iostream>
-#include "ir_printer.h"
 
+#include "var.h"
+#include "types.h"
+#include "ir_printer.h"
 #include "intrusive_ptr.h"
 #include "uncopyable.h"
-#include "types.h"
 #include "indexvar.h"
 #include "error.h"
 #include "storage.h"
 
 namespace simit {
 namespace ir {
-
-namespace {
-struct VarContent {
-  std::string name;
-  Type type;
-
-  mutable long ref = 0;
-  friend inline void aquire(VarContent *c) {++c->ref;}
-  friend inline void release(VarContent *c) {if (--c->ref==0) delete c;}
-};
-}
-
-class Var : public util::IntrusivePtr<VarContent> {
-public:
-  Var() : IntrusivePtr() {}
-  Var(std::string name, Type type) : IntrusivePtr(new VarContent) {
-    ptr->name = name;
-    ptr->type = type;
-  }
-
-  const std::string &getName() const {return ptr->name;}
-  const Type &getType() const {return ptr->type;}
-};
-
 
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
@@ -343,19 +319,19 @@ struct TupleRead : public ExprNode<TupleRead> {
 /// An IndexRead retrieves an index from an edge set.  An example of an index
 /// is the endpoints of the edges in the set.
 struct IndexRead : public ExprNode<IndexRead> {
-  Expr edgeSet;
-  std::string indexName;
+  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2 };
 
-  static Expr make(Expr edgeSet, std::string indexName) {
+  Expr edgeSet;
+  Kind kind;
+
+  static Expr make(Expr edgeSet, Kind kind) {
     iassert(edgeSet.type().isSet());
-    iassert(indexName == "endpoints")
-        << "Only endpoints index supported for now";
 
     IndexRead *node = new IndexRead;
     node->type = TensorType::make(ScalarType(ScalarType::Int),
                                   {IndexDomain(IndexSet(edgeSet))});
     node->edgeSet = edgeSet;
-    node->indexName = indexName;
+    node->kind = kind;
     return node;
   }
 };
@@ -500,6 +476,148 @@ struct Div : public ExprNode<Div> {
   }
 };
 
+struct Eq : public ExprNode<Eq> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Eq *node = new Eq;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Ne : public ExprNode<Ne> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Ne *node = new Ne;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Gt : public ExprNode<Gt> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Gt *node = new Gt;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Lt : public ExprNode<Lt> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Lt *node = new Lt;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Ge : public ExprNode<Ge> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Ge *node = new Ge;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Le : public ExprNode<Le> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(a.type() == b.type());
+
+    Le *node = new Le;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct And : public ExprNode<And> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(isBoolean(a.type()));
+    iassert(isBoolean(b.type()));
+
+    And *node = new And;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Or : public ExprNode<Or> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(isBoolean(a.type()));
+    iassert(isBoolean(b.type()));
+
+    Or *node = new Or;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
+struct Not : public ExprNode<Not> {
+  Expr a;
+
+  static Expr make(Expr a) {
+    iassert(isBoolean(a.type()));
+
+    Not *node = new Not;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    return node;
+  }
+};
+
+struct Xor : public ExprNode<Xor> {
+  Expr a, b;
+
+  static Expr make(Expr a, Expr b) {
+    iassert(isBoolean(a.type()));
+    iassert(isBoolean(b.type()));
+
+    Xor *node = new Xor;
+    node->type = TensorType::make(ScalarType::Boolean);
+    node->a = a;
+    node->b = b;
+    return node;
+  }
+};
+
 struct Load : public ExprNode<Load> {
   Expr buffer;
   Expr index;
@@ -615,6 +733,19 @@ struct ForRange : public StmtNode<ForRange> {
 
 };
 
+/// A `while` loop.
+struct While : public StmtNode<While> {
+  Expr condition;
+  Stmt body;
+  
+  static Stmt make(Expr condition, Stmt body) {
+    While *node = new While;
+    node->condition = condition;
+    node->body = body;
+    return node;
+  }
+
+};
 struct ForDomain {
   enum Kind { IndexSet, Endpoints, Edges };
   Kind kind;

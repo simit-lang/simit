@@ -13,6 +13,10 @@ std::vector<IndexVar> getReductionVars(Expr expr);
 bool containsReduction(Expr expr);
 bool containsReduction(Stmt stmt);
 
+/// Returns true if the statement has been flattened (only contains one index
+/// expression), and false otherwise.
+bool isFlattened(Stmt stmt);
+
 }}
 
 #endif

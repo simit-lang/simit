@@ -1,0 +1,27 @@
+element Point
+  x : tensor[3](float);
+  v : tensor[3](float);
+  m : float;
+end
+
+extern points : set{Point};
+
+func conjugateGradients(A : tensor[points,points](float), b : tensor[points](float), xguess : tensor[points](float), tol : float, maxiters : int) -> (x : tensor[points](float))
+	r = b - A*xguess;
+	p = r;
+	iter = 0;
+	while( norm(r) < tol && iter < maxiters)
+		alpha = dot(r, r);
+		denom = dot(p, A*p);
+		alpha = alpha / denom;
+		
+		xguess = xguess + alpha*p;
+		oldrsqn = dot(r,r);
+		r = r - alpha*A*p;
+		newrsqn = dot(r,r);
+		beta = newrsqn/oldrsqn;
+		p = r + beta*p;
+		iter++;
+	end
+	return xguess;
+end
