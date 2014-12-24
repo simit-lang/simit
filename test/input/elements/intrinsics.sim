@@ -33,3 +33,9 @@ end
 func doacos(a : float) -> (c : float)
   c = acos(a);
 end
+
+%%% sin
+%! dosin(0.5) == 0.479426;
+func dosin(a : float) -> (c : float)
+  c = sin(a);
+end

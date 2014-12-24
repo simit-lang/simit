@@ -9,6 +9,7 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include <map>
 
 namespace llvm {
 class LLVMContext;

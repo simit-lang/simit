@@ -269,6 +269,13 @@ void LLVMBackend::visit(const ir::Load *op) {
 }
 
 void LLVMBackend::visit(const Call *op) {
+  std::map<std::string, llvm::Intrinsic::ID> llvmIntrinsicByName =
+                                                {{"sin",llvm::Intrinsic::sin},
+                                                 {"cos",llvm::Intrinsic::cos},
+                                                 {"sqrt",llvm::Intrinsic::sqrt},
+                                                 {"log",llvm::Intrinsic::log},
+                                                 {"exp",llvm::Intrinsic::exp}};
+    
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
   llvm::Function *fun = nullptr;
@@ -282,31 +289,22 @@ void LLVMBackend::visit(const Call *op) {
   }
 
   // these are intrinsic functions
-  if (op->func == ir::Intrinsics::sin) {
-    fun= llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sin,argTypes);
+  // first, see if this is an LLVM intrinsic
+  auto foundIntrinsic = llvmIntrinsicByName.find(op->func.getName());
+  if (foundIntrinsic != llvmIntrinsicByName.end()) {
+    fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
+      argTypes);
   }
-  else if (op->func == ir::Intrinsics::cos) {
-    fun= llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::cos,argTypes);
-  }
+  // now check if it is an intrinsic from libm
   else if (op->func == ir::Intrinsics::atan2 ||
            op->func == ir::Intrinsics::tan   ||
            op->func == ir::Intrinsics::asin  ||
            op->func == ir::Intrinsics::acos    ) {
-    // these are from libm/cmath
     auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
     fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
       op->func.getName(),ftype));
   }
-  else if (op->func == ir::Intrinsics::sqrt) {
-    fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::sqrt,argTypes);
-  }
-  else if (op->func == ir::Intrinsics::log) {
-    fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::log,argTypes);
-  }
-  else if (op->func == ir::Intrinsics::exp) {
-    fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::exp,argTypes);
-  }
-  else if (op->func == ir::Intrinsics::norm) {
+   else if (op->func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);
     llvm::Value *x = args[0];
 
