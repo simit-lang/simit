@@ -281,6 +281,12 @@ Stmt lower(Stmt stmt, const Storage &storage) {
     }
   }
 
+  // Insert initialization statement for the result. This is only needed when
+  // the left-hand side is a sparse iteration
+  if (sig.isSparse()) {
+    loopNest = Block::make(initializeLhsToZero(stmt), loopNest);
+  }
+
   return loopNest;
 }
 

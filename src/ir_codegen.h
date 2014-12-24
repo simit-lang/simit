@@ -13,6 +13,8 @@ struct CompoundOperator {
 };
 Stmt makeCompound(Stmt stmt, CompoundOperator cop);
 
+Stmt initializeLhsToZero(Stmt stmt);
+
 }}
 
 #endif
