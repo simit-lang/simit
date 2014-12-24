@@ -47,6 +47,21 @@ Func Intrinsics::cos = Func("cos",
                             {Var("r", Float)},
                             Func::Intrinsic);
 
+Func Intrinsics::tan = Func("tan",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+
+Func Intrinsics::asin = Func("asin",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+  
+Func Intrinsics::acos = Func("acos",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+  
 Func Intrinsics::atan2 = Func("atan2",
                               {Var("y", Float), Var("x", Float)},
                               {Var("r", Float)},
@@ -92,6 +107,9 @@ Func Intrinsics::dot = Func("dot",
 std::map<std::string, Func> Intrinsics::byName = {{"mod",mod},
                                                   {"sin",sin},
                                                   {"cos",cos},
+                                                  {"tan",tan},
+                                                  {"asin",asin},
+                                                  {"acos",acos},
                                                   {"atan2",atan2},
                                                   {"sqrt",sqrt},
                                                   {"log",log},

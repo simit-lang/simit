@@ -191,6 +191,9 @@ public:
   static Func mod;
   static Func sin;
   static Func cos;
+  static Func tan;
+  static Func asin;
+  static Func acos;
   static Func atan2;
   static Func sqrt;
   static Func log;

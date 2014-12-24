@@ -288,10 +288,14 @@ void LLVMBackend::visit(const Call *op) {
   else if (op->func == ir::Intrinsics::cos) {
     fun= llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::cos,argTypes);
   }
-  else if (op->func == ir::Intrinsics::atan2) {
-    // atan2 isn't an LLVM intrinsic
+  else if (op->func == ir::Intrinsics::atan2 ||
+           op->func == ir::Intrinsics::tan   ||
+           op->func == ir::Intrinsics::asin  ||
+           op->func == ir::Intrinsics::acos    ) {
+    // these are from libm/cmath
     auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
-    fun= llvm::cast<llvm::Function>(module->getOrInsertFunction("atan2",ftype));
+    fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      op->func.getName(),ftype));
   }
   else if (op->func == ir::Intrinsics::sqrt) {
     fun= llvm::Intrinsic::getDeclaration(module,llvm::Intrinsic::sqrt,argTypes);
