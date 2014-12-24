@@ -109,7 +109,8 @@ void SIGVisitor::apply(const SIG &sig) {
   }
 
   // Sort reduction variables before free vars because we do codegen bottom-up
-  sort(vertexIterationOrder.begin(), vertexIterationOrder.end(), ReductionVarsBeforefree);
+  sort(vertexIterationOrder.begin(), vertexIterationOrder.end(),
+       ReductionVarsBeforefree);
 
   for (SIGEdge *e : edgeIterationOrder) {
     if (visitedEdges.find(e) == visitedEdges.end()) {
@@ -278,6 +279,8 @@ LoopVars LoopVars::create(const SIG &sig) {
                                 
         addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
       }
+
+      SIGVisitor::visit(v);
     }
 
     void addVertexLoopVar(const IndexVar &indexVar, const LoopVar &loopVar) {
@@ -331,7 +334,6 @@ private:
 };
 
 std::ostream &operator<<(std::ostream &os, const SIG &g) {
-  os << "SIG: ";
   SIGPrinter(os).print(g);
   return os;
 }
