@@ -39,3 +39,9 @@ end
 func dosin(a : float) -> (c : float)
   c = sin(a);
 end
+
+%%% pow
+%! dopow(3.0, 3.0) == 27.0;
+func dopow(a : float, b : float) -> (c : float)
+  c = pow(a,b);
+end

@@ -198,6 +198,7 @@ public:
   static Func sqrt;
   static Func log;
   static Func exp;
+  static Func pow;
   static Func norm;
   static Func solve;
   static Func loc;

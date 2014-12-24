@@ -274,7 +274,8 @@ void LLVMBackend::visit(const Call *op) {
                                                  {"cos",llvm::Intrinsic::cos},
                                                  {"sqrt",llvm::Intrinsic::sqrt},
                                                  {"log",llvm::Intrinsic::log},
-                                                 {"exp",llvm::Intrinsic::exp}};
+                                                 {"exp",llvm::Intrinsic::exp},
+                                                 {"pow",llvm::Intrinsic::pow}};
     
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
