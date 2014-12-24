@@ -26,3 +26,15 @@ func f(p : int) -> (r : int)
     r = r + 2;
   end
 end
+
+%%% while-nested
+%! f(2) == 11;
+func f(p : int) -> (r : int)
+  r = 0;
+  while r < 10
+    while r < 5
+      r = r + 1;
+    end
+    r = r + 2;
+  end
+end
