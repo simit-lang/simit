@@ -69,7 +69,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   // NVVM kernel should always return void
   builder->CreateRetVoid();
 
-  return new GPUFunction(irFunc, func, module);
+  return new GPUFunction(irFunc, func, module, sharding);
 }
 
 llvm::Value *GPUBackend::compile(const ir::Expr &expr) {
@@ -92,7 +92,7 @@ void GPUBackend::visit(const ir::IndexRead *op) {
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::Length *op) {
-  not_supported_yet;
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Map *op) {
   ASSERT(false && "No code generation for this type");
@@ -152,32 +152,48 @@ void GPUBackend::visit(const ir::For *op) {
   ir::ForDomain domain = op->domain;
   
   // Only supports sharding over index set
-  bool sharded = true;
+  bool sharded = false;
   llvm::Value *index;
-  if (iName == xVar) {
-    index = getTidX();
-  }
-  else if (iName == yVar) {
-    index = getTidY();
-  }
-  else if (iName == zVar) {
-    index = getTidZ();
-  }
-  else {
-    if (xVar.empty()) {
-      xVar = iName;
+  if (domain.kind == ir::ForDomain::IndexSet) {
+    if (domain.indexSet == sharding.xDomain) {
       index = getTidX();
+      sharded = true;
     }
-    else if (yVar.empty()) {
-      yVar = iName;
+    else if (domain.indexSet == sharding.yDomain) {
       index = getTidY();
+      sharded = true;
     }
-    else if (zVar.empty()) {
-      zVar = iName;
+    else if (domain.indexSet == sharding.zDomain) {
       index = getTidZ();
+      sharded = true;
     }
     else {
-      sharded = false;
+      if (!sharding.xSharded) {
+        sharding.xDomain = domain.indexSet;
+        sharding.xSharded = true;
+        index = getTidX();
+        std::cout << "Sharding " << iName << " over x dimension" << std::endl;
+        sharded = true;
+      }
+      else if (!sharding.ySharded) {
+        // TODO(gkanwar): Currently only supports sharding in one dimension
+        not_supported_yet;
+        // yVar = iName;
+        // index = getTidY();
+        // std::cout << "Sharding " << iName << " over y dimension" << std::endl;
+        // sharded = true;
+      }
+      else if (!sharding.zSharded) {
+        // TODO(gkanwar): Currently only supports sharding in one dimension
+        not_supported_yet;
+        // zVar = iName;
+        // index = getTidZ();
+        // std::cout << "Sharding " << iName << " over z dimension" << std::endl;
+        // sharded = true;
+      }
+      else {
+        sharded = false;
+      }
     }
   }
 
@@ -201,13 +217,33 @@ void GPUBackend::visit(const ir::Pass *op) {
   ASSERT(false && "No code generation for this type");
 }
 
+namespace {
+
+void cleanFuncAttrs(llvm::Function *func) {
+  // Attribute groups disallowed in NVVM
+  func->removeFnAttr(llvm::Attribute::ReadNone);
+  func->removeFnAttr(llvm::Attribute::NoUnwind);
+}
+
+}
+
+llvm::Value *GPUBackend::emitBarrier() {
+  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_VOID, false);
+  llvm::Function *func = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy));
+  cleanFuncAttrs(func);
+  return builder->CreateCall(func);
+}
+
+llvm::Value *GPUBackend::emitCheckRoot() {
+  not_supported_yet;
+}
+
 llvm::Value *GPUBackend::getTidX() {
   llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
   llvm::Function *func = llvm::cast<llvm::Function>(
       module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.x", funcTy));
-  // Attribute groups disallowed in NVVM
-  func->removeFnAttr(llvm::Attribute::ReadNone);
-  func->removeFnAttr(llvm::Attribute::NoUnwind);
+  cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
@@ -215,9 +251,7 @@ llvm::Value *GPUBackend::getTidY() {
   llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
   llvm::Function *func = llvm::cast<llvm::Function>(
       module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.y", funcTy));
-  // Attribute groups disallowed in NVVM
-  func->removeFnAttr(llvm::Attribute::ReadNone);
-  func->removeFnAttr(llvm::Attribute::NoUnwind);
+  cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
@@ -225,9 +259,7 @@ llvm::Value *GPUBackend::getTidZ() {
   llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
   llvm::Function *func = llvm::cast<llvm::Function>(
       module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.z", funcTy));
-  // Attribute groups disallowed in NVVM
-  func->removeFnAttr(llvm::Attribute::ReadNone);
-  func->removeFnAttr(llvm::Attribute::NoUnwind);
+  cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 

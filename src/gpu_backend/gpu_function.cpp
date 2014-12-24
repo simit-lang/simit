@@ -1,6 +1,7 @@
 #include "gpu_function.h"
 
 #include <sstream>
+#include <iomanip>
 #include "cuda.h"
 #include "nvvm.h"
 
@@ -94,9 +95,10 @@ std::string generatePtx(const std::string &module,
 
 }  // namespace
 
-GPUFunction::GPUFunction(simit::ir::Func simitFunc,
-                         llvm::Function *llvmFunc, llvm::Module *llvmModule)
-    : Function(simitFunc), llvmFunc(llvmFunc), llvmModule(llvmModule) {}
+GPUFunction::GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
+                         llvm::Module *llvmModule, struct GPUSharding sharding)
+    : Function(simitFunc), llvmFunc(llvmFunc),
+      llvmModule(llvmModule), sharding(sharding){}
 GPUFunction::~GPUFunction() {
   // llvmFunc will be destroyed when the harness funtion object is destroyed
   // because it was claimed by a CallInst
@@ -205,6 +207,7 @@ llvm::Value *GPUFunction::pushArg(
       return llvm::ConstantStruct::get(llvmSetType, setData);
     }
     case ir::Type::Tuple: ierror << "Tuple arg not supported";
+    default: ierror << "Unknown arg type";
   }
 }
 
@@ -249,6 +252,19 @@ llvm::Function *GPUFunction::createHarness(
   return harness;
 }
 
+int GPUFunction::findShardSize(ir::IndexSet domain) {
+  if (domain.getKind() == ir::IndexSet::Range) {
+    return domain.getSize();
+  }
+  else if (domain.getKind() == ir::IndexSet::Set) {
+    actuals[ir::to<struct ir::VarExpr>(domain.getSet())->var.getName()]
+        .getSet()->getSize();
+  }
+  else {
+    ierror << "Invalid domain kind: " << domain.getKind();
+  }
+}
+
 simit::Function::FuncType GPUFunction::init(
     const std::vector<std::string> &formals,
     std::map<std::string, Actual> &actuals) {
@@ -282,29 +298,20 @@ simit::Function::FuncType GPUFunction::init(
   // Push data and build harness
   llvm::SmallVector<llvm::Value*, 8> args;
   std::map<void*, DeviceDataHandle> pushedBufs;
-  int width = 1;
-  int height = 1;
-  int numSets = 0;
   for (const std::string& formal : formals) {
     assert(actuals.find(formal) != actuals.end());
     Actual &actual = actuals.at(formal);
     args.push_back(pushArg(actual, pushedBufs));
-    // Divide sets over blocks of threads
-    if (actual.getType().isSet()) {
-      numSets++;
-      width = actual.getSet()->getSize();
-    }
-  }
-  // TODO(gkanwar): Support arbitrary number of set args
-  if (numSets > 1) {
-    not_supported_yet;
   }
   // TODO(gkanwar): For now, fixed block sizes
-  unsigned blockSizeX = 1;
-  unsigned blockSizeY = 1;
-  unsigned blockSizeZ = 1;
-  unsigned gridSizeX = width/1;
-  unsigned gridSizeY = height;
+  unsigned blockSizeX = sharding.xSharded ?
+      findShardSize(sharding.xDomain) : 1;
+  unsigned blockSizeY = sharding.ySharded ?
+      findShardSize(sharding.yDomain) : 1;
+  unsigned blockSizeZ = sharding.zSharded ?
+      findShardSize(sharding.zDomain) : 1;
+  unsigned gridSizeX = 1;
+  unsigned gridSizeY = 1;
   unsigned gridSizeZ = 1;
   // Create harness as the kernel to be run
   createHarness(args);

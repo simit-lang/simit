@@ -10,19 +10,23 @@
 #include "llvm/IR/Function.h"
 
 #include "function.h"
+#include "gpu_backend.h"
 
 namespace simit {
 namespace internal {
 
 class GPUFunction : public simit::Function {
  public:
-  GPUFunction(simit::ir::Func simitFunc,
-              llvm::Function *llvmFunc, llvm::Module *llvmModule);
+  GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
+              llvm::Module *llvmModule, struct GPUSharding sharding);
   ~GPUFunction();
 
   void print(std::ostream &os) const;
 
  private:
+  // Find the size of a domain
+  int findShardSize(ir::IndexSet domain);
+
   FuncType init(const std::vector<std::string> &formals,
                 std::map<std::string, Actual> &actuals);
   // Allocate the given argument as a device buffer
@@ -53,6 +57,7 @@ class GPUFunction : public simit::Function {
   std::unique_ptr<ir::Func> simitFunc;
   std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> llvmModule;
+  struct GPUSharding sharding;
 };
 
 }

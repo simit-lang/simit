@@ -71,10 +71,10 @@ protected:
   
   Function(const ir::Func &simitFunc);
 
-private:
   std::vector<std::string> formals;
   std::map<std::string, Actual> actuals;
 
+private:
   FuncType funcPtr;
   bool initRequired;
   virtual FuncType init(const std::vector<std::string> &formals,

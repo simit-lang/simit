@@ -12,6 +12,15 @@ class Value;
 namespace simit {
 namespace internal {
 
+struct GPUSharding {
+  bool xSharded = false;
+  bool ySharded = false;
+  bool zSharded = false;
+  ir::IndexSet xDomain;
+  ir::IndexSet yDomain;
+  ir::IndexSet zDomain;
+};
+
 class GPUBackend : public LLVMBackend {
 public:
   GPUBackend();
@@ -22,9 +31,7 @@ public:
 private:
   // Used to track which dimensions of the GPU computation have been
   // parallelized across blocks
-  std::string xVar;
-  std::string yVar;
-  std::string zVar;
+  struct GPUSharding sharding;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void visit(const ir::FieldRead *);
@@ -56,6 +63,8 @@ private:
   virtual void visit(const ir::Pass *);
 
   // Emits calls to nvvm intrinsics to read thread ids
+  llvm::Value *emitBarrier();
+  llvm::Value *emitCheckRoot();
   llvm::Value *getTidX();
   llvm::Value *getTidY();
   llvm::Value *getTidZ();

@@ -21,7 +21,7 @@ TEST(System, vector_add) {
 
   f->runSafe();
 
-  ASSERT_EQ(84.0, (int)(x.get(p0)));
+  ASSERT_EQ(84.0, (int)x.get(p0));
 }
 
 TEST(System, vector_add_blocked) {
@@ -65,7 +65,7 @@ TEST(System, vector_dot) {
   f->bind("points", &points);
 
   f->runSafe();
-  ASSERT_EQ(14.0, z.get(p0));
+  ASSERT_EQ(14.0, (int)z.get(p0));
 }
 
 TEST(System, vector_dot_blocked) {
