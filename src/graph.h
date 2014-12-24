@@ -640,6 +640,23 @@ class FieldRef<T> : public FieldRefBaseParameterized<T> {
     (*this->getElemDataPtr(element)) = val;
   }
 
+  friend std::ostream &operator<<(std::ostream &os, const FieldRef<T> &field) {
+    os << "[";
+    auto it = field.fieldData->set->begin();
+    auto end = field.fieldData->set->end();
+    if (it != end) {
+      os << (T)field.get(*it);
+      ++it;
+    }
+
+    while (it != end) {
+      os << ", " << (T)field.get(*it);
+      ++it;
+    }
+
+    return os << "]";
+  }
+
  private:
   FieldRef(void *fieldData) : FieldRefBaseParameterized<T>(fieldData) {}
   friend class SetBase;
@@ -699,19 +716,6 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
   return os;
 }
 
-template <typename T, int size>
-std::ostream &operator<<(std::ostream &os, const TensorRef<T, size> &t) {
-  os << "[";
-  if (0 < size) {
-    os << t(0);
-  }
-
-  for (int i=1; i<size; ++i) {
-    os << ", " << t(i);
-  }
-  return os << "]";
-}
-
 template <typename T, int r, int c>
 std::ostream &operator<<(std::ostream &os, const TensorRef<T, r, c> &t) {
   os << "[";
@@ -732,6 +736,19 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, r, c> &t) {
     for (int j=1; j<c; ++j) {
       os << ", " << t(i,j);
     }
+  }
+  return os << "]";
+}
+
+template <typename T, int size>
+std::ostream &operator<<(std::ostream &os, const TensorRef<T, size> &t) {
+  os << "[";
+  if (0 < size) {
+    os << t(0);
+  }
+
+  for (int i=1; i<size; ++i) {
+    os << ", " << t(i);
   }
   return os << "]";
 }
