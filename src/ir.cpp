@@ -83,6 +83,12 @@ Func Intrinsics::loc = Func("loc",
                             {Var("r", Float)},
                             Func::Intrinsic);
 
+Func Intrinsics::dot = Func("dot",
+                            {},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+
+
 std::map<std::string, Func> Intrinsics::byName = {{"mod",mod},
                                                   {"sin",sin},
                                                   {"cos",cos},
@@ -91,7 +97,8 @@ std::map<std::string, Func> Intrinsics::byName = {{"mod",mod},
                                                   {"log",log},
                                                   {"exp",exp},
                                                   {"norm",norm},
-                                                  {"solve",solve}};
+                                                  {"solve",solve},
+                                                  {"dot",dot}};
 
 // Type compute functions
 Type getFieldType(Expr elementOrSet, std::string fieldName) {

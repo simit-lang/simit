@@ -3,3 +3,16 @@
 func donorm(a : tensor[3](float)) -> (c : float)
   c = norm(a);
 end
+
+%%% dot
+%! dodot([1.0, 2.0], [2.0, 3.0]) == 8.0;
+func dodot(a : tensor[2](float), b : tensor[2](float)) -> (c : float)
+  c = dot(a, b);
+end
+
+%%% dot-long
+%! dodot([1.0, 2.0, 3.0, 4.0, 5.0], [2.0, 3.0, 4.0, 5.0, 6.0]) == 70.0;
+func dodot(a : tensor[5](float), b : tensor[5](float)) -> (c : float)
+  c = dot(a, b);
+end
+

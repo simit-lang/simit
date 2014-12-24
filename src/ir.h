@@ -198,6 +198,7 @@ public:
   static Func norm;
   static Func solve;
   static Func loc;
+  static Func dot;
   static std::map<std::string, Func> byName;
 };
 

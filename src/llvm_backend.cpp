@@ -341,6 +341,16 @@ void LLVMBackend::visit(const Call *op) {
     val = emitCall("loc", args, LLVM_INT);
     return;
   }
+  else if (op->func == ir::Intrinsics::dot) {
+    // we need to add the vector length to the args
+    auto type1 = op->actuals[0].type().toTensor();
+    auto type2 = op->actuals[1].type().toTensor();
+    uassert(type1->dimensions[0] == type2->dimensions[0]) <<
+      "dimension mismatch in dot product";
+    args.push_back(emitComputeLen(type1->dimensions[0]));
+    val = emitCall("dot", args, LLVM_DOUBLE);
+    return;
+  }
   else {
     // if not an intrinsic function, try to find it in the module
     fun = module->getFunction(op->func.getName());
