@@ -87,9 +87,8 @@ Func Intrinsics::pow = Func("pow",
                             {Var("r", Float)},
                             Func::Intrinsic);
 
-// TODO: Generalize to norm with n parameters
 Func Intrinsics::norm = Func("norm",
-                             {Var("x", vec3f)},
+                             {},
                              {Var("r", Float)},
                              Func::Intrinsic);
 

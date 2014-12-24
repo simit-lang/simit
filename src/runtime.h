@@ -40,5 +40,10 @@ double dot(double* a, double* b, int len) {
   return result;
 }
 
+// norm
+double norm(double* a, int len) {
+  return sqrt(dot(a, a, len));
+}
+
 }
 #endif

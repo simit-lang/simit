@@ -4,6 +4,12 @@ func donorm(a : tensor[3](float)) -> (c : float)
   c = norm(a);
 end
 
+%%% norm-notvec3f 
+%! donorm([1.0, 2.0, 3.0, 4.0, 5.0]) == 7.4162;
+func donorm(a : tensor[5](float)) -> (c : float)
+  c = norm(a);
+end
+
 %%% dot
 %! dodot([1.0, 2.0], [2.0, 3.0]) == 8.0;
 func dodot(a : tensor[2](float), b : tensor[2](float)) -> (c : float)

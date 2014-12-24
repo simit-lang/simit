@@ -307,23 +307,32 @@ void LLVMBackend::visit(const Call *op) {
   }
    else if (op->func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);
-    llvm::Value *x = args[0];
+    auto type = op->actuals[0].type().toTensor();
+    
+    // special case for vec3f
+    if (type->dimensions[0].getSize() == 3) {
+      llvm::Value *x = args[0];
 
-    llvm::Value *x0 = loadFromArray(x, llvmInt(0));
-    llvm::Value *sum = builder->CreateFMul(x0, x0);
+      llvm::Value *x0 = loadFromArray(x, llvmInt(0));
+      llvm::Value *sum = builder->CreateFMul(x0, x0);
 
-    llvm::Value *x1 = loadFromArray(x, llvmInt(1));
-    llvm::Value *x1pow = builder->CreateFMul(x1, x1);
-    sum = builder->CreateFAdd(sum, x1pow);
+      llvm::Value *x1 = loadFromArray(x, llvmInt(1));
+      llvm::Value *x1pow = builder->CreateFMul(x1, x1);
+      sum = builder->CreateFAdd(sum, x1pow);
 
-    llvm::Value *x2 = loadFromArray(x, llvmInt(2));
-    llvm::Value *x2pow = builder->CreateFMul(x2, x2);
-    sum = builder->CreateFAdd(sum, x2pow);
+      llvm::Value *x2 = loadFromArray(x, llvmInt(2));
+      llvm::Value *x2pow = builder->CreateFMul(x2, x2);
+      sum = builder->CreateFAdd(sum, x2pow);
 
-    llvm::Function *sqrt= llvm::Intrinsic::getDeclaration(module,
-                                                          llvm::Intrinsic::sqrt,
-                                                          {LLVM_DOUBLE});
-    val = builder->CreateCall(sqrt, sum);
+      llvm::Function *sqrt= llvm::Intrinsic::getDeclaration(module,
+                                                            llvm::Intrinsic::sqrt,
+                                                            {LLVM_DOUBLE});
+      val = builder->CreateCall(sqrt, sum);
+    } else {
+      args.push_back(emitComputeLen(type->dimensions[0]));
+      val = emitCall("norm", args, LLVM_DOUBLE);
+    }
+    
     return;
   }
   else if (op->func == ir::Intrinsics::solve) {
