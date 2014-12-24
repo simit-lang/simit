@@ -198,6 +198,7 @@
 
 // Precedence
 %nonassoc    "\\"               // solve
+%precedence  AND OR
 %left        "==" "!="
 %left        "<" ">" "<=" ">="
 %left        "-" "+"
@@ -205,7 +206,6 @@
 %precedence  NEG                // negation
 %right       "^"                // exponentiation
 %right       "'"                // transpose
-
 
 // Keywords
 %token INT       "int"
@@ -1018,7 +1018,11 @@ elwise_binary_op
 // Boolean Expressions
 %type <expr> boolean_expr;
 boolean_expr
-  : expr "==" expr {
+  : "(" boolean_expr ")" {
+    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    $$ = $2;
+  }
+  | expr "==" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     Expr l = convertAndDelete($1);
     Expr r = convertAndDelete($3);
