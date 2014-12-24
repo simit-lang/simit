@@ -79,8 +79,10 @@ add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${SIMIT_HEADERS} ${SIMIT_SOURC
 # GPU Backend linking
 if (CUDA_FOUND)
   if (LINUX)
-    target_link_libraries(${PROJECT_NAME} "-lcuda")
-    target_link_libraries(${PROJECT_NAME} "-lnvvm")
+    find_library(libcuda NAMES cuda PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64")
+    find_library(libnvvm NAMES nvvm PATHS "${CUDA_TOOLKIT_ROOT_DIR}/nvvm/lib64")
+    target_link_libraries(${PROJECT_NAME} ${libcuda})
+    target_link_libraries(${PROJECT_NAME} ${libnvvm})
   elseif (DARWIN)
     target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES})
     target_link_libraries(${PROJECT_NAME} "${CUDA_TOOLKIT_ROOT_DIR}/lib/libcuda.dylib")
