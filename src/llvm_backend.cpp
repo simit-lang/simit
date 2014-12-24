@@ -196,7 +196,7 @@ void LLVMBackend::visit(const ir::Length *op) {
 }
 
 void LLVMBackend::visit(const Map *op) {
-//  ierror << "No code generation for this type";
+  ierror << "No code generation for this type";
 }
 
 void LLVMBackend::visit(const IndexedTensor *op) {
