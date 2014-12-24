@@ -269,14 +269,14 @@ void LLVMBackend::visit(const ir::Load *op) {
 }
 
 void LLVMBackend::visit(const Call *op) {
-  std::map<std::string, llvm::Intrinsic::ID> llvmIntrinsicByName =
-                                                {{"sin",llvm::Intrinsic::sin},
-                                                 {"cos",llvm::Intrinsic::cos},
-                                                 {"sqrt",llvm::Intrinsic::sqrt},
-                                                 {"log",llvm::Intrinsic::log},
-                                                 {"exp",llvm::Intrinsic::exp},
-                                                 {"pow",llvm::Intrinsic::pow}};
-    
+  std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
+                                  {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
+                                   {ir::Intrinsics::cos,llvm::Intrinsic::cos},
+                                   {ir::Intrinsics::sqrt,llvm::Intrinsic::sqrt},
+                                   {ir::Intrinsics::log,llvm::Intrinsic::log},
+                                   {ir::Intrinsics::exp,llvm::Intrinsic::exp},
+                                   {ir::Intrinsics::pow,llvm::Intrinsic::pow}};
+  
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
   llvm::Function *fun = nullptr;
@@ -291,7 +291,7 @@ void LLVMBackend::visit(const Call *op) {
 
   // these are intrinsic functions
   // first, see if this is an LLVM intrinsic
-  auto foundIntrinsic = llvmIntrinsicByName.find(op->func.getName());
+  auto foundIntrinsic = llvmIntrinsicByName.find(op->func);
   if (foundIntrinsic != llvmIntrinsicByName.end()) {
     fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
       argTypes);
