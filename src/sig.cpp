@@ -98,6 +98,9 @@ bool ReductionVarsBeforefree(SIGVertex *i, SIGVertex *j) {
 }
 
 void SIGVisitor::apply(const SIG &sig) {
+  visitedVertices.clear();
+  visitedEdges.clear();
+
   std::vector<SIGEdge*> edgeIterationOrder;
   for (auto &e : sig.content->edges) {
     edgeIterationOrder.push_back(e.second.get());
