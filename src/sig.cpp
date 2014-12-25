@@ -228,12 +228,12 @@ size_t getNumBlockLevels(const SIG &sig) {
 
 // class LoopVars
 LoopVars LoopVars::create(const SIG &sig) {
-  class LoopVarsBuilder : private SIGVisitor {
+  class LoopVarsBuilder : protected SIGVisitor {
   public:
     LoopVars build(const SIG &sig) {
       vertexLoopVars.clear();
 
-      // We create one set of loop nests per block level in the SIG.
+      // We create one set of loop nests per block level in the SIG expression.
       numBlockLevels = getNumBlockLevels(sig);
       for (currBlockLevel=0; currBlockLevel<numBlockLevels; ++currBlockLevel) {
         apply(sig);
@@ -271,6 +271,62 @@ LoopVars LoopVars::create(const SIG &sig) {
       }
 
       SIGVisitor::visit(v);
+    }
+
+    void visit(const SIGEdge *e) {
+      tassert(e->endpoints.size() <= 2)
+          << "This code does not support higher-order tensors yet";
+
+      // There are three cases:
+      // - Case 1: The edge was visited before any of it's endpoints
+      // - Case 2: The edge was visited after one of its endpoints
+      // - Case 3: The edge was visited after more than one of its endpoints
+
+      /// Get an endpoint that has been visited.
+      vector<const SIGVertex*> visited;
+      vector<const SIGVertex*> notVisited;
+      for (const SIGVertex *ep : e->endpoints) {
+        if (visitedVertices.find(ep) != visitedVertices.end()) {
+          visited.push_back(ep);
+        }
+        else {
+          notVisited.push_back(ep);
+        }
+      }
+
+      // We currently only support case 2.
+      tassert(visited.size() == 1);
+      auto loopVars = vertexLoopVars[visited[0]->iv];
+      Var link = loopVars[loopVars.size()-1].getVar();
+
+      std::cout << "visited:     " << simit::util::join(visited) << std::endl;
+      std::cout << "not visited: " << simit::util::join(notVisited) << std::endl;
+
+      // Link the not visited variable(s) to the visited variable.
+      for (auto &veps : notVisited) {
+        const IndexVar &indexVar = veps->iv;
+
+        if (currBlockLevel < indexVar.getNumBlockLevels()) {
+          Var var(nameGenerator.getName(indexVar.getName()), Int);
+
+          Expr tensor = e->tensor;
+          std::cout << tensor << std::endl;
+
+
+          ForDomain domain(e->set, link, ForDomain::NeighborsStart);
+
+          // We only need to reduce w.r.t. to the outer loop variable variable.
+          ReductionOperator rop = (currBlockLevel==0)
+              ? indexVar.getOperator()
+              : ReductionOperator::Undefined;
+
+          addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
+        }
+
+        visitedVertices.insert(veps);
+      }
+
+      SIGVisitor::visit(e);
     }
 
     void addVertexLoopVar(const IndexVar &indexVar, const LoopVar &loopVar) {
