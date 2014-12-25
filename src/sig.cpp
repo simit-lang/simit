@@ -146,72 +146,71 @@ void SIGVisitor::visit(const SIGEdge *e) {
   }
 }
 
-
-/// Class that builds a Sparse Iteration Graph from an expression.
-class SIGBuilder : public IRVisitor {
-public:
-  SIGBuilder(const Storage &storage) : storage(storage) {}
-
-  SIG create(Stmt stmt) {
-    stmt.accept(this);
-    SIG result = sig;
-    sig = SIG();
-    return result;
-  }
-
-private:
-  Storage storage;
-  SIG sig;
-
-  SIG create(Expr expr) {
-    expr.accept(this);
-    SIG result = sig;
-    sig = SIG();
-    return result;
-  }
-
-  void visit(const IndexedTensor *op) {
-    iassert(!isa<IndexExpr>(op->tensor))
-        << "IndexExprs should have been flattened by now:" << toString(*op);
-
-    Var tensorVar;
-    if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
-      const Var &var = to<VarExpr>(op->tensor)->var;
-      iassert(storage.hasStorage(var)) << "No storage descriptor found for"
-                                       << var << "in" << util::toString(*op);
-      if (storage.get(var).isSystem()) {
-        tensorVar = var;
-      }
-    }
-    sig = SIG(op->indexVars, tensorVar);
-  }
-
-  void visit(const Add *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Union);
-  }
-
-  void visit(const Sub *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Union);
-  }
-
-  void visit(const Mul *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Intersection);
-  }
-
-  void visit(const Div *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Intersection);
-  }
-};
-
 SIG createSIG(Stmt stmt, const Storage &storage) {
+  /// Class that builds a Sparse Iteration Graph from an expression.
+  class SIGBuilder : public IRVisitor {
+  public:
+    SIGBuilder(const Storage &storage) : storage(storage) {}
+
+    SIG create(Stmt stmt) {
+      stmt.accept(this);
+      SIG result = sig;
+      sig = SIG();
+      return result;
+    }
+
+  private:
+    Storage storage;
+    SIG sig;
+
+    SIG create(Expr expr) {
+      expr.accept(this);
+      SIG result = sig;
+      sig = SIG();
+      return result;
+    }
+
+    void visit(const IndexedTensor *op) {
+      iassert(!isa<IndexExpr>(op->tensor))
+          << "IndexExprs should have been flattened by now:" << toString(*op);
+
+      Var tensorVar;
+      if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
+        const Var &var = to<VarExpr>(op->tensor)->var;
+        iassert(storage.hasStorage(var)) << "No storage descriptor found for"
+        << var << "in" << util::toString(*op);
+        if (storage.get(var).isSystem()) {
+          tensorVar = var;
+        }
+      }
+      sig = SIG(op->indexVars, tensorVar);
+    }
+
+    void visit(const Add *op) {
+      SIG ig1 = create(op->a);
+      SIG ig2 = create(op->b);
+      sig = merge(ig1, ig2, SIG::Union);
+    }
+
+    void visit(const Sub *op) {
+      SIG ig1 = create(op->a);
+      SIG ig2 = create(op->b);
+      sig = merge(ig1, ig2, SIG::Union);
+    }
+
+    void visit(const Mul *op) {
+      SIG ig1 = create(op->a);
+      SIG ig2 = create(op->b);
+      sig = merge(ig1, ig2, SIG::Intersection);
+    }
+
+    void visit(const Div *op) {
+      SIG ig1 = create(op->a);
+      SIG ig2 = create(op->b);
+      sig = merge(ig1, ig2, SIG::Intersection);
+    }
+  };
+
   return SIGBuilder(storage).create(stmt);
 }
 
