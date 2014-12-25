@@ -13,8 +13,8 @@ namespace simit {
 namespace ir {
 
 // class SIG
-SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
-  set<IndexVar> added;
+SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor, Expr set) : SIG() {
+  std::set<IndexVar> added;
   vector<SIGVertex*> endpoints;
 
   for (auto &iv : ivs) {
@@ -28,66 +28,52 @@ SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
   }
 
   if (tensor.defined()) {
-    SIGEdge *e = new SIGEdge(tensor, endpoints);
-    content->edges[tensor] = unique_ptr<SIGEdge>(e);
+    SIGEdge *e = new SIGEdge(tensor, set, endpoints);
+    content->edges.push_back(unique_ptr<SIGEdge>(e));
   }
 }
 
-std::vector<const SIGEdge *> SIG::getEdges() const {
-  std::vector<const SIGEdge *> edges;
-  for (auto &edge : content->edges) {
-    edges.push_back(edge.second.get());
-  }
-  return edges;
-}
-
-SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
+SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop) {
   // This can be optimized by exploiting immutability to preserve substructures
   SIG merged = SIG();
 
-  for (auto &v : g1.content->vertices) {
+  // Add the union of the index variables from the input sigs to the merged sig.
+  for (auto &v : sig1.content->vertices) {
     const IndexVar &iv = v.first;
-    SIGVertex *newVertex = new SIGVertex(iv);
-    merged.content->vertices[iv] = unique_ptr<SIGVertex>(newVertex);
+    if (merged.content->vertices.find(iv) == merged.content->vertices.end()) {
+      merged.content->vertices[iv] = unique_ptr<SIGVertex>(new SIGVertex(iv));
+    }
   }
-
-  for (auto &v : g2.content->vertices) {
+  for (auto &v : sig2.content->vertices) {
     const IndexVar &iv = v.first;
-    SIGVertex *newVertex = new SIGVertex(iv);
-    merged.content->vertices[iv] = unique_ptr<SIGVertex>(newVertex);
+    if (merged.content->vertices.find(iv) == merged.content->vertices.end()) {
+      merged.content->vertices[iv] = unique_ptr<SIGVertex>(new SIGVertex(iv));
+    }
   }
 
-  map<Var,vector<SIGVertex*>> edges;
-
-  for (auto &e : g1.content->edges) {
-    Var edgeSet = e.first;
+  // Add the edges from the input sigs to the merged sig. If two edges share the
+  // same endpoints then they are merged.
+  for (auto &e : sig1.content->edges) {
+    // Get pointers to the endpoints in the new sig
     vector<SIGVertex*> endpoints;
-    for (SIGVertex *g1v : e.second->endpoints) {
-      endpoints.push_back(merged.content->vertices[g1v->iv].get());
+    for (SIGVertex *eps : e->endpoints) {
+      endpoints.push_back(merged.content->vertices[eps->iv].get());
     }
-    edges[edgeSet] = endpoints;
+
+    SIGEdge *edge = new SIGEdge(e->tensor, e->set, endpoints);
+    merged.content->edges.push_back(unique_ptr<SIGEdge>(edge));
   }
 
-  for (auto &e : g2.content->edges) {
-    Var edgeSet = e.first;
+  // TODO: Add multi-edge merging: Build a lookup data structure etc.
+  for (auto &e : sig2.content->edges) {
+    // Get pointers to the endpoints in the new sig
     vector<SIGVertex*> endpoints;
-    for (SIGVertex *g1v : e.second->endpoints) {
-      endpoints.push_back(merged.content->vertices[g1v->iv].get());
+    for (SIGVertex *eps : e->endpoints) {
+      endpoints.push_back(merged.content->vertices[eps->iv].get());
     }
 
-    if (edges.find(edgeSet) == edges.end()) {
-      edges[edgeSet] = endpoints;
-    }
-    else {
-      // Vertex identification/contraction
-      vector<SIGVertex*> &currEps = edges[edgeSet];
-      currEps.insert(currEps.begin(), endpoints.begin(), endpoints.end());
-    }
-  }
-
-  for (auto &edge : edges) {
-    SIGEdge *newEdge = new SIGEdge(edge.first, edge.second);
-    merged.content->edges[edge.first] = unique_ptr<SIGEdge>(newEdge);
+    SIGEdge *edge = new SIGEdge(e->tensor, e->set, endpoints);
+    merged.content->edges.push_back(unique_ptr<SIGEdge>(edge));
   }
 
   return merged;
@@ -103,7 +89,7 @@ void SIGVisitor::apply(const SIG &sig) {
 
   std::vector<SIGEdge*> edgeIterationOrder;
   for (auto &e : sig.content->edges) {
-    edgeIterationOrder.push_back(e.second.get());
+    edgeIterationOrder.push_back(e.get());
   }
 
   std::vector<SIGVertex*> vertexIterationOrder;
@@ -115,15 +101,15 @@ void SIGVisitor::apply(const SIG &sig) {
   sort(vertexIterationOrder.begin(), vertexIterationOrder.end(),
        ReductionVarsBeforefree);
 
-  for (SIGEdge *e : edgeIterationOrder) {
-    if (visitedEdges.find(e) == visitedEdges.end()) {
-      visit(e);
-    }
-  }
-
   for (SIGVertex *v : vertexIterationOrder) {
     if (visitedVertices.find(v) == visitedVertices.end()) {
       visit(v);
+    }
+  }
+
+  for (SIGEdge *e : edgeIterationOrder) {
+    if (visitedEdges.find(e) == visitedEdges.end()) {
+      visit(e);
     }
   }
 }
@@ -175,15 +161,17 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
           << "IndexExprs should have been flattened by now:" << toString(*op);
 
       Var tensorVar;
+      Expr setExpr;
       if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
         const Var &var = to<VarExpr>(op->tensor)->var;
         iassert(storage.hasStorage(var)) << "No storage descriptor found for"
-        << var << "in" << util::toString(*op);
+                                         << var << "in" << util::toString(*op);
         if (storage.get(var).isSystem()) {
           tensorVar = var;
+          setExpr = storage.get(var).getSystemTargetSet();
         }
       }
-      sig = SIG(op->indexVars, tensorVar);
+      sig = SIG(op->indexVars, tensorVar, setExpr);
     }
 
     void visit(const Add *op) {
