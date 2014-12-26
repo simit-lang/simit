@@ -43,7 +43,7 @@ void checkNVVMCall(nvvmResult res) {
 }
 
 std::string utostr(uint num) {
-  return static_cast<std::ostringstream*>( &(std::ostringstream() << num) )->str();
+  return std::to_string(num);
 }
 
 // Uses libnvvm to compile an LLVM IR module to PTX.
