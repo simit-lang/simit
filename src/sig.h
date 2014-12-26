@@ -1,6 +1,6 @@
 #ifndef SIMIT_SIG_H
 #define SIMIT_SIG_H
-
+#include <algorithm>
 #include <vector>
 #include <map>
 #include <set>
