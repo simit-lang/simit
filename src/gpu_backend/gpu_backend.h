@@ -12,10 +12,66 @@ class Value;
 namespace simit {
 namespace internal {
 
-struct GPUSharding {
+class GPUSharding {
+public:
+  enum ShardDimension {NONE, X, Y, Z};
+
+  GPUSharding() {}
+  ~GPUSharding() {}
+
+  void scope(ShardDimension dim) {
+    iassert(dim != NONE);
+    switch (dim) {
+      case X: {
+        iassert(!inXShard);
+        inXShard = true;
+        break;
+      }
+      case Y: {
+        iassert(!inYShard);
+        inYShard = true;
+        break;
+      }
+      case Z: {
+        iassert(!inZShard);
+        inZShard = true;
+        break;
+      }
+    }
+  }
+
+  void unscope(ShardDimension dim) {
+    iassert(dim != NONE);
+    switch (dim) {
+      case X: {
+        inXShard = false;
+        break;
+      }
+      case Y: {
+        inYShard = false;
+        break;
+      }
+      case Z: {
+        inZShard = false;
+        break;
+      }
+    }
+  }
+
+  bool inShard() {
+    return inXShard || inYShard || inZShard;
+  }
+
+  bool isSharded() {
+    return xSharded || ySharded || zSharded;
+  }
+
   bool xSharded = false;
   bool ySharded = false;
   bool zSharded = false;
+  bool inXShard = false;
+  bool inYShard = false;
+  bool inZShard = false;
   ir::IndexSet xDomain;
   ir::IndexSet yDomain;
   ir::IndexSet zDomain;
@@ -31,7 +87,7 @@ public:
 private:
   // Used to track which dimensions of the GPU computation have been
   // parallelized across blocks
-  struct GPUSharding sharding;
+  GPUSharding sharding;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void visit(const ir::FieldRead *);
@@ -68,6 +124,9 @@ private:
   llvm::Value *getTidX();
   llvm::Value *getTidY();
   llvm::Value *getTidZ();
+
+  virtual void emitFirstAssign(const ir::AssignStmt *op,
+                               const std::string& varName);
 };
 
 }

@@ -524,9 +524,7 @@ void LLVMBackend::visit(const AssignStmt *op) {
 
   // Assigned for the first time
   if (!symtable.contains(varName)) {
-    ScalarType type = op->value.type().toTensor()->componentType;
-    llvm::Value *var = builder->CreateAlloca(createLLVMType(type));
-    symtable.insert(varName, var);
+    emitFirstAssign(op, varName);
   }
   iassert(symtable.contains(varName));
 
@@ -961,6 +959,13 @@ void LLVMBackend::emitPrintf(string format,
   printfArgs.insert(printfArgs.end(), args.begin(), args.end());
 
   builder->CreateCall(printfFunc, printfArgs);
+}
+
+void LLVMBackend::emitFirstAssign(const ir::AssignStmt *op,
+                                  const std::string& varName) {
+  ScalarType type = op->value.type().toTensor()->componentType;
+  llvm::Value *var = builder->CreateAlloca(createLLVMType(type));
+  symtable.insert(varName, var);
 }
 
 }}  // namespace simit::internal

@@ -108,24 +108,23 @@ GPUFunction::~GPUFunction() {
 llvm::Value *GPUFunction::pushArg(
     Actual& actual,
     std::map<void*, DeviceDataHandle> &pushedBufs) {
+  std::cout << "Push arg" << std::endl;
   switch (actual.getType().kind()) {
     case ir::Type::Tensor: {
       CUdeviceptr *devBuffer = new CUdeviceptr();
       const ir::TensorType *ttype = actual.getType().toTensor();
-      // std::cout << "Tensor type, size: "
-      //           << ttype->size() * ttype->componentType.bytes() << std::endl;
       checkCudaErrors(cuMemAlloc(
           devBuffer, ttype->size() * ttype->componentType.bytes()));
       const ir::Literal &literal = *(ir::to<ir::Literal>(*actual.getTensor()));
-      // std::cout << "[";
-      // char* data = reinterpret_cast<char*>(literal.data);
-      // for (int i = 0; i < literal.size; ++i) {
-      //   if (i != 0) std::cout << ",";
-      //   std::cout << std::hex << (int) data[i];
-      // }
-      // std::cout << "]" << std::endl;
+      std::cout << "[";
+      char* data = reinterpret_cast<char*>(literal.data);
+      for (int i = 0; i < literal.size; ++i) {
+        if (i != 0) std::cout << ",";
+        std::cout << std::hex << (int) data[i];
+      }
+      std::cout << "]" << std::dec << std::endl;
       checkCudaErrors(cuMemcpyHtoD(*devBuffer, literal.data, literal.size));
-      // std::cout << "Stored in: " << *devBuffer << std::endl;
+      std::cout << literal.data << " -> " << *devBuffer << std::endl;
       pushedBufs.emplace(literal.data,
                          DeviceDataHandle(devBuffer, literal.size));
       return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer));
@@ -214,6 +213,8 @@ llvm::Value *GPUFunction::pushArg(
 void GPUFunction::pullArgAndFree(void *hostPtr, DeviceDataHandle handle) {
   if (handle.shouldPull) {
     checkCudaErrors(cuMemcpyDtoH(hostPtr, *handle.devBuffer, handle.size));
+    std::cout << "Pull arg: " << *handle.devBuffer << " -> " << hostPtr
+              << " (" << handle.size << ")" << std::endl;
   }
   checkCudaErrors(cuMemFree(*handle.devBuffer));
 }
@@ -257,7 +258,7 @@ int GPUFunction::findShardSize(ir::IndexSet domain) {
     return domain.getSize();
   }
   else if (domain.getKind() == ir::IndexSet::Set) {
-    actuals[ir::to<struct ir::VarExpr>(domain.getSet())->var.getName()]
+    return actuals[ir::to<struct ir::VarExpr>(domain.getSet())->var.getName()]
         .getSet()->getSize();
   }
   else {

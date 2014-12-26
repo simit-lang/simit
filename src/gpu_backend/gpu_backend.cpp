@@ -152,20 +152,21 @@ void GPUBackend::visit(const ir::For *op) {
   ir::ForDomain domain = op->domain;
   
   // Only supports sharding over index set
-  bool sharded = false;
+  GPUSharding::ShardDimension sharded = GPUSharding::NONE;
   llvm::Value *index;
-  if (domain.kind == ir::ForDomain::IndexSet) {
+  if (domain.kind == ir::ForDomain::IndexSet &&
+      domain.indexSet.getKind() != ir::IndexSet::Range) {
     if (domain.indexSet == sharding.xDomain) {
       index = getTidX();
-      sharded = true;
+      sharded = GPUSharding::X;
     }
     else if (domain.indexSet == sharding.yDomain) {
       index = getTidY();
-      sharded = true;
+      sharded = GPUSharding::Y;
     }
     else if (domain.indexSet == sharding.zDomain) {
       index = getTidZ();
-      sharded = true;
+      sharded = GPUSharding::Z;
     }
     else {
       if (!sharding.xSharded) {
@@ -173,35 +174,29 @@ void GPUBackend::visit(const ir::For *op) {
         sharding.xSharded = true;
         index = getTidX();
         std::cout << "Sharding " << iName << " over x dimension" << std::endl;
-        sharded = true;
+        sharded = GPUSharding::X;
       }
       else if (!sharding.ySharded) {
         // TODO(gkanwar): Currently only supports sharding in one dimension
         not_supported_yet;
-        // yVar = iName;
-        // index = getTidY();
-        // std::cout << "Sharding " << iName << " over y dimension" << std::endl;
-        // sharded = true;
       }
       else if (!sharding.zSharded) {
         // TODO(gkanwar): Currently only supports sharding in one dimension
         not_supported_yet;
-        // zVar = iName;
-        // index = getTidZ();
-        // std::cout << "Sharding " << iName << " over z dimension" << std::endl;
-        // sharded = true;
       }
       else {
-        sharded = false;
+        sharded = GPUSharding::NONE;
       }
     }
   }
 
-  if (sharded) {
+  if (sharded != GPUSharding::NONE) {
+    sharding.scope(sharded);
     symtable.scope();
     symtable.insert(iName, index);
     LLVMBackend::compile(op->body);
     symtable.unscope();
+    sharding.unscope(sharded);
   }
   else {
     LLVMBackend::visit(op);
@@ -261,6 +256,20 @@ llvm::Value *GPUBackend::getTidZ() {
       module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.z", funcTy));
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
+}
+
+void GPUBackend::emitFirstAssign(const ir::AssignStmt *op,
+                                 const std::string& varName) {
+  // TODO(gkanwar): This doesn't handle sharding later in the code
+  if (sharding.isSharded() && !sharding.inShard()) {
+    not_supported_yet;
+  }
+  else {
+    // TODO(gkanwar): This should actually potentially be up to a two
+    // dimensional array to allow correct scoping with nested sharding.
+    // Potentially should be done as a second pass.
+    LLVMBackend::emitFirstAssign(op, varName);
+  }
 }
 
 }

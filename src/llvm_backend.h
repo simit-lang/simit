@@ -117,6 +117,8 @@ protected:
 
   void emitPrintf(std::string format);
   void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
+  virtual void emitFirstAssign(const ir::AssignStmt *op,
+                               const std::string& varName);
 
 private:
   static bool llvmInitialized;
