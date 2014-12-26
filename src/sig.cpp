@@ -239,12 +239,14 @@ LoopVars LoopVars::create(const SIG &sig) {
         apply(sig);
       }
 
-      return LoopVars(loopVars, vertexLoopVars);
+      return LoopVars(loopVars, vertexLoopVars, coordVars);
     }
 
   private:
-    std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
     std::vector<LoopVar> loopVars;
+    std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
+    std::map<std::vector<Var>, Var> coordVars;
+
     UniqueNameGenerator nameGenerator;
 
     /// We create one loop variable per block level per index variable. The loop
@@ -299,21 +301,13 @@ LoopVars LoopVars::create(const SIG &sig) {
       auto loopVars = vertexLoopVars[visited[0]->iv];
       Var link = loopVars[loopVars.size()-1].getVar();
 
-      std::cout << "visited:     " << simit::util::join(visited) << std::endl;
-      std::cout << "not visited: " << simit::util::join(notVisited) << std::endl;
-
       // Link the not visited variable(s) to the visited variable.
       for (auto &veps : notVisited) {
         const IndexVar &indexVar = veps->iv;
 
         if (currBlockLevel < indexVar.getNumBlockLevels()) {
           Var var(nameGenerator.getName(indexVar.getName()), Int);
-
-          Expr tensor = e->tensor;
-          std::cout << tensor << std::endl;
-
-
-          ForDomain domain(e->set, link, ForDomain::NeighborsStart);
+          ForDomain domain(e->set, link, ForDomain::Neighbors);
 
           // We only need to reduce w.r.t. to the outer loop variable variable.
           ReductionOperator rop = (currBlockLevel==0)
@@ -321,6 +315,15 @@ LoopVars LoopVars::create(const SIG &sig) {
               : ReductionOperator::Undefined;
 
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
+
+          // The ij var links i to j through the neighbors indices. E.g.
+          // for i in points:
+          //   pointsi = 0;
+          //   for ij in edges.neighbors.start[i]:edges.neighbors.start[(i+1)]:
+          //     j = springs.neighbors[ij];
+          //     pointsi = (pointsi + (A[ij] * points.b[j]));
+          //   points.c[i] = pointsi;
+          addCoordVar({link, var}, Var(link.getName()+indexVar.getName(), Int));
         }
 
         visitedVertices.insert(veps);
@@ -338,14 +341,20 @@ LoopVars LoopVars::create(const SIG &sig) {
       }
       vertexLoopVars[indexVar].push_back(loopVar);
     }
+
+    void addCoordVar(std::vector<Var> coord, const Var &var) {
+      sort(coord.begin(), coord.end());
+      coordVars[coord] = var;
+    }
   }; // class LoopVarsBuilder
 
   return LoopVarsBuilder().build(sig);
 }
 
 LoopVars::LoopVars(const vector<LoopVar> &loopVars,
-                   const map<IndexVar,vector<LoopVar>> &vertexLoopVars)
-    : loopVars(loopVars), vertexLoopVars(vertexLoopVars) {
+                   const map<IndexVar, vector<LoopVar>> &vertexLoopVars,
+                   const map<vector<Var>, Var> &coordVars)
+    : loopVars(loopVars), vertexLoopVars(vertexLoopVars), coordVars(coordVars) {
 }
 
 

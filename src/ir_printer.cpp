@@ -43,8 +43,8 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
     case ForDomain::Edges:
       os << d.set << ".edges[" << d.var << "]";
       break;
-    case ForDomain::NeighborsStart:
-      os << d.set << ".neighbors_start[" << d.var << "]";
+    case ForDomain::Neighbors:
+      os << d.set << ".neighbors[" << d.var << "]";
       break;
   }
   return os;

@@ -275,7 +275,24 @@ Stmt lower(Stmt stmt, const Storage &storage) {
   // the loop vars in reverse order)
   Stmt loopNest = kernel;
   for (auto loopVar=loopVars.rbegin(); loopVar!=loopVars.rend(); ++loopVar){
-    loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
+    if (loopVar->getDomain().kind == ForDomain::Neighbors) {
+      Expr set = loopVar->getDomain().set;
+      Var i = loopVar->getDomain().var;
+      Var j = loopVar->getVar();
+      Var ij = loopVars.getCoordVar({i, j});
+
+      Expr jRead = Load::make(IndexRead::make(set, IndexRead::Neighbors), ij);
+      loopNest = Block::make(AssignStmt::make(j, jRead), loopNest);
+
+      Expr start = Load::make(IndexRead::make(set, IndexRead::NeighborsStart),
+                              i);
+      Expr stop  = Load::make(IndexRead::make(set, IndexRead::NeighborsStart),
+                              Add::make(i, 1));
+
+      loopNest = ForRange::make(ij, start, stop, loopNest);
+    } else {
+      loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
+    }
     if (loopVar->hasReduction()) {
       loopNest = reduce(loopNest, kernel, loopVar->getReductionOperator());
     }

@@ -102,6 +102,12 @@ public:
     return vertexLoopVars.find(var) != vertexLoopVars.end();
   }
 
+  const Var &getCoordVar(std::vector<Var> coord) {
+    std::sort(coord.begin(), coord.end());
+    iassert(coordVars.find(coord) != coordVars.end());
+    return coordVars.at(coord);
+  }
+
   Iterator begin() const { return loopVars.begin(); }
   Iterator end() const { return loopVars.end(); }
 
@@ -110,11 +116,12 @@ public:
 
 private:
   std::vector<LoopVar> loopVars;
+  std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
+  std::map<std::vector<Var>, Var> coordVars;
 
-  std::map<IndexVar,std::vector<LoopVar>> vertexLoopVars;
-
-  LoopVars(const std::vector<LoopVar> &,
-           const std::map<IndexVar,std::vector<LoopVar>> &);
+  LoopVars(const std::vector<LoopVar>&,
+           const std::map<IndexVar,std::vector<LoopVar>>&,
+           const std::map<std::vector<Var>, Var>&);
 };
 
 
