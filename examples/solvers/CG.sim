@@ -6,20 +6,17 @@ end
 
 extern points : set{Point};
 
-func dot(a : tensor[points](float), b : tensor[points](float)) -> (x : float)
-  x = a * b';
-end
-
 func conjugateGradients(A : tensor[points,points](float), b : tensor[points](float), xguess : tensor[points](float), tol : float, maxiters : int) -> (x : tensor[points](float))
 	r = b - A*xguess;
 	p = r;
 	iter = 0;
+  x = xguess;
 	while( norm(r) < tol and iter < maxiters )
 		alpha = dot(r, r);
 		denom = dot(p, A*p);
 		alpha = alpha / denom;
 		
-		xguess = xguess + alpha*p;
+		x = x + alpha*p;
 		oldrsqn = dot(r,r);
 		r = r - alpha*A*p;
 		newrsqn = dot(r,r);
@@ -27,5 +24,5 @@ func conjugateGradients(A : tensor[points,points](float), b : tensor[points](flo
 		p = r + beta*p;
 		iter = iter + 1;
 	end
-  x = xguess;
+%  x = xguess;
 end
