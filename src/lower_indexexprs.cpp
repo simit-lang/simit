@@ -110,13 +110,25 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
 
     Expr tensorRead(Expr tensor, vector<IndexVar> indexVars, size_t blockLvls) {
       for (size_t i=0; i < blockLvls; ++i) {
+        std::vector<Var> vars;
         std::vector<Expr> indexExprs;
         for (const IndexVar &indexVar : indexVars) {
           if (i < indexVar.getNumBlockLevels()) {
-            indexExprs.push_back(loopVars.getLoopVars(indexVar)[i].getVar());
+            Var var = loopVars.getLoopVars(indexVar)[i].getVar();
+            vars.push_back(var);
+            indexExprs.push_back(var);
           }
         }
-        tensor = TensorRead::make(tensor, indexExprs);
+
+        // If loopVars has a variable representing the coordinate formed by vars
+        // then we load from the tensor using this variable.
+        Var coordVar = loopVars.getCoordVar(vars);
+        if (coordVar.defined()) {
+          tensor = Load::make(tensor, coordVar);
+        }
+        else {
+          tensor = TensorRead::make(tensor, indexExprs);
+        }
       }
       return tensor;
     }

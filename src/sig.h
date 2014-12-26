@@ -102,10 +102,10 @@ public:
     return vertexLoopVars.find(var) != vertexLoopVars.end();
   }
 
-  const Var &getCoordVar(std::vector<Var> coord) {
+  Var getCoordVar(std::vector<Var> coord) const {
     std::sort(coord.begin(), coord.end());
-    iassert(coordVars.find(coord) != coordVars.end());
-    return coordVars.at(coord);
+    return (coordVars.find(coord) != coordVars.end())
+        ? coordVars.at(coord) : Var();
   }
 
   Iterator begin() const { return loopVars.begin(); }
