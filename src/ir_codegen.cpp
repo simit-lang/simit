@@ -4,6 +4,7 @@
 
 #include "ir_rewriter.h"
 #include "ir_queries.h"
+#include "ir_builder.h"
 #include "indexvar.h"
 
 using namespace std;
@@ -17,7 +18,7 @@ Stmt makeCompound(Stmt stmt, CompoundOperator cop) {
   class MakeCompound : public IRRewriter {
   public:
     MakeCompound(CompoundOperator compoundOperator)
-    : compoundOperator(compoundOperator) {}
+        : compoundOperator(compoundOperator) {}
 
     Stmt rewrite(Stmt stmt) {
       return IRRewriter::rewrite(stmt);
@@ -30,16 +31,20 @@ Stmt makeCompound(Stmt stmt, CompoundOperator cop) {
     Expr rewrite(Expr e) {
       iassert(lhsExpr.defined());
       if (e.defined()) {
-        if (!isScalar(e.type())) {
+        if (!e.type().isTensor()) {
           e = IRRewriter::rewrite(e);
         }
         else {
+          iassert(lhsExpr.type() == e.type());
+          IRBuilder::BinaryOperator binop;
           switch (compoundOperator.kind) {
             case CompoundOperator::Add: {
-              e = Add::make(lhsExpr, e);
+              binop = IRBuilder::Add;
               break;
             }
           }
+          IRBuilder builder;
+          e = builder.binaryElwiseExpr(lhsExpr, binop, e);
         }
       }
       else {
