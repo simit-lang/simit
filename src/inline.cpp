@@ -9,6 +9,7 @@ namespace ir {
 
 Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
   this->targetLoopVar = targetLoopVar;
+
   Func func = map->function;
   iassert(func.getArguments().size() == 1 || func.getArguments().size() == 2)
       << "mapped functions must have exactly two arguments";
@@ -32,16 +33,18 @@ bool MapFunctionRewriter::isResult(Var var) {
 }
 
 void MapFunctionRewriter::visit(const FieldRead *op) {
+  // Read a field from the target set
   if (isa<VarExpr>(op->elementOrSet) &&
       to<VarExpr>(op->elementOrSet)->var == target) {
     Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
     expr = TensorRead::make(setFieldRead, {targetLoopVar});
   }
+  // Read a field from a neighbor set
   else if(isa<TupleRead>(op->elementOrSet) &&
           isa<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple) &&
           to<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple)->var==neighbors) {
-    Expr setFieldRead = FieldRead::make(neighborSet, op->fieldName);
-    expr = setFieldRead;
+    expr = FieldRead::make(neighborSet, op->fieldName);
+    Expr setFieldRead = expr;
 
     Expr index = IRRewriter::rewrite(op->elementOrSet);
     expr = TensorRead::make(setFieldRead, {index});
@@ -81,8 +84,6 @@ void MapFunctionRewriter::visit(const VarExpr *op) {
 }
 
 Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
-//  rewriter.init(map, lv);
-//  return rewriter.rewrite(map->function.getBody());
   return rewriter.inlineMapFunc(map, lv);
 }
 
