@@ -217,6 +217,7 @@
 %token EXTERN    "extern"
 %token PROC      "proc"
 %token FUNC      "func"
+%token INOUT     "inout"
 %token MAP       "map"
 %token TO        "to"
 %token WITH      "with"
@@ -231,6 +232,7 @@
 %token RETURN    "return"
 %token TEST      "%!"
 %token PRINT     "print"
+
 
 %token RARROW    "->"
 %token LP        "("
@@ -411,6 +413,7 @@ arguments
 %type <vars> argument_list;
 argument_list
   : argument_decl {
+    std::cout << "IN ARG_LIST" << std::endl;
     auto argument = convertAndDelete($argument_decl);
     $$ = new vector<Var>;
     $$->push_back(argument);
@@ -423,12 +426,20 @@ argument_list
 
 %type <var> argument_decl;
 argument_decl
-  : IDENT ":" type {
+  : INOUT IDENT ":" type {
+    //TODO: propagate that this is inout param
     std::string name = convertAndFree($IDENT);
 
     auto type = convertAndDelete($type);
     $$ = new Var(name, type);
   }
+  | IDENT ":" type {
+    std::string name = convertAndFree($IDENT);
+
+    auto type = convertAndDelete($type);
+    $$ = new Var(name, type);
+  }
+
 
 %type <vars> results;
 results
