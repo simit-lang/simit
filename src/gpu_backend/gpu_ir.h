@@ -2,6 +2,7 @@
 #define SIMIT_GPU_IR_H
 
 #include "error.h"
+#include "gpu_ir.h"
 #include "ir.h"
 
 namespace simit {
@@ -67,37 +68,10 @@ public:
     return depth;
   }
 
-  ShardDimension maybeShardFor(const ir::For *op) {
-    ir::ForDomain domain = op->domain;
-    if (domain.kind == ir::ForDomain::IndexSet &&
-        domain.indexSet.getKind() != ir::IndexSet::Range) {
-      if (domain.indexSet == xDomain) {
-        return X;
-      }
-      else if (domain.indexSet == yDomain) {
-        return Y;
-      }
-      else if (domain.indexSet == zDomain) {
-        return Z;
-      }
-      else if (!xSharded) {
-        xDomain = domain.indexSet;
-        xSharded = true;
-        return X;
-      }
-      else if (!ySharded) {
-        yDomain = domain.indexSet;
-        ySharded = true;
-        return Y;
-      }
-      else if (!zSharded) {
-        zDomain = domain.indexSet;
-        zSharded = true;
-        return Z;
-      }
-    }
-    return NONE;
-  }
+  // Update the tracked sharded variables to include the sharded GPUFor loop
+  void addShardDomain(const ir::GPUFor *op);
+  // Choose an available dimension and shard the For loop if possible
+  ShardDimension maybeShardFor(const ir::For *op);
 
   bool xSharded = false;
   bool ySharded = false;

@@ -6,6 +6,61 @@
 #include "scopedmap.h"
 
 namespace simit {
+namespace internal {
+
+void GPUSharding::addShardDomain(const ir::GPUFor *op) {
+  ir::ForDomain domain = op->domain;
+  GPUSharding::ShardDimension sharded = op->dimension;
+  switch (sharded) {
+    case X:
+      xDomain = domain.indexSet;
+      xSharded = true;
+      break;
+    case Y:
+      yDomain = domain.indexSet;
+      ySharded = true;
+      break;
+    case Z:
+      zDomain = domain.indexSet;
+      zSharded = true;
+      break;
+  }
+}
+
+GPUSharding::ShardDimension GPUSharding::maybeShardFor(const ir::For *op) {
+  ir::ForDomain domain = op->domain;
+  if (domain.kind == ir::ForDomain::IndexSet &&
+      domain.indexSet.getKind() != ir::IndexSet::Range) {
+    if (domain.indexSet == xDomain) {
+      return X;
+    }
+    else if (domain.indexSet == yDomain) {
+      return Y;
+    }
+    else if (domain.indexSet == zDomain) {
+      return Z;
+    }
+    else if (!xSharded) {
+      xDomain = domain.indexSet;
+      xSharded = true;
+      return X;
+    }
+    else if (!ySharded) {
+      yDomain = domain.indexSet;
+      ySharded = true;
+      return Y;
+    }
+    else if (!zSharded) {
+      zDomain = domain.indexSet;
+      zSharded = true;
+      return Z;
+    }
+  }
+  return NONE;
+}
+
+}  // namespace simit::internal
+
 namespace ir {
 
 class ShardLoops : public IRRewriter {

@@ -154,6 +154,7 @@ void GPUBackend::visit(const ir::GPUFor *op) {
   ir::ForDomain domain = op->domain;
   
   // Only supports sharding over index set
+  sharding.addShardDomain(op);
   GPUSharding::ShardDimension sharded = op->dimension;
   iassert(sharded != GPUSharding::NONE);
 
