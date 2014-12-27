@@ -386,8 +386,8 @@ function_header
     std::string name = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<Var>>($arguments);
     auto results = unique_ptr<vector<Var>>($results);
-    $$ = new Func(name, *arguments, *results, Stmt());
-
+    auto newArguments = unique_ptr<vector<Var>>(new vector<Var>());
+    
     std::set<std::string> argNames;
     for (Var &arg : *arguments) {
       auto found = arg.getName().find("___inout___");
@@ -396,12 +396,16 @@ function_header
         string newName = arg.getName().substr(0,found);
         auto newArg = Var(newName, arg.getType());
         ctx->addSymbol(newName, newArg, Symbol::ReadWrite);
-        argNames.insert(arg.getName());
+        argNames.insert(newArg.getName());
+        newArguments->push_back(newArg);
       } else {
         ctx->addSymbol(arg.getName(), arg, Symbol::Read);
         argNames.insert(arg.getName());
+        newArguments->push_back(arg);
       }
     }
+
+    $$ = new Func(name, *newArguments, *results, Stmt());
 
     for (Var &res : *results) {
       Symbol::Access access = (argNames.find(res.getName()) != argNames.end())

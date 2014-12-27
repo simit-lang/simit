@@ -1317,8 +1317,8 @@ namespace  simit { namespace internal  {
     std::string name = convertAndFree((yystack_[4].value.string));
     auto arguments = unique_ptr<vector<Var>>((yystack_[2].value.vars));
     auto results = unique_ptr<vector<Var>>((yystack_[0].value.vars));
-    (yylhs.value.function) = new Func(name, *arguments, *results, Stmt());
-
+    auto newArguments = unique_ptr<vector<Var>>(new vector<Var>());
+    
     std::set<std::string> argNames;
     for (Var &arg : *arguments) {
       auto found = arg.getName().find("___inout___");
@@ -1327,12 +1327,16 @@ namespace  simit { namespace internal  {
         string newName = arg.getName().substr(0,found);
         auto newArg = Var(newName, arg.getType());
         ctx->addSymbol(newName, newArg, Symbol::ReadWrite);
-        argNames.insert(arg.getName());
+        argNames.insert(newArg.getName());
+        newArguments->push_back(newArg);
       } else {
         ctx->addSymbol(arg.getName(), arg, Symbol::Read);
         argNames.insert(arg.getName());
+        newArguments->push_back(arg);
       }
     }
+
+    (yylhs.value.function) = new Func(name, *newArguments, *results, Stmt());
 
     for (Var &res : *results) {
       Symbol::Access access = (argNames.find(res.getName()) != argNames.end())
@@ -3586,22 +3590,22 @@ namespace  simit { namespace internal  {
   {
        0,   279,   279,   281,   284,   285,   293,   301,   302,   303,
      308,   318,   331,   334,   342,   352,   352,   352,   360,   377,
-     377,   377,   385,   415,   418,   424,   429,   437,   444,   454,
-     457,   463,   468,   476,   486,   489,   496,   497,   500,   501,
-     502,   503,   504,   505,   506,   507,   508,   509,   514,   555,
-     607,   611,   618,   621,   634,   637,   643,   648,   668,   688,
-     715,   725,   732,   738,   744,   757,   763,   766,   771,   783,
-     791,   801,   813,   818,   846,   849,   854,   862,   863,   864,
-     865,   866,   867,   868,   874,   894,   903,   911,   930,   998,
-    1018,  1046,  1051,  1060,  1061,  1062,  1063,  1069,  1073,  1079,
-    1085,  1091,  1097,  1103,  1109,  1115,  1121,  1126,  1132,  1136,
-    1144,  1178,  1179,  1180,  1186,  1219,  1241,  1244,  1250,  1256,
-    1267,  1268,  1269,  1270,  1274,  1286,  1290,  1300,  1309,  1321,
-    1333,  1337,  1340,  1382,  1392,  1397,  1405,  1408,  1422,  1428,
-    1431,  1481,  1485,  1486,  1490,  1494,  1501,  1512,  1519,  1523,
-    1527,  1541,  1545,  1560,  1564,  1571,  1578,  1582,  1586,  1600,
-    1604,  1619,  1623,  1630,  1634,  1641,  1644,  1650,  1653,  1660,
-    1679,  1703,  1704,  1712
+     377,   377,   385,   419,   422,   428,   433,   441,   448,   458,
+     461,   467,   472,   480,   490,   493,   500,   501,   504,   505,
+     506,   507,   508,   509,   510,   511,   512,   513,   518,   559,
+     611,   615,   622,   625,   638,   641,   647,   652,   672,   692,
+     719,   729,   736,   742,   748,   761,   767,   770,   775,   787,
+     795,   805,   817,   822,   850,   853,   858,   866,   867,   868,
+     869,   870,   871,   872,   878,   898,   907,   915,   934,  1002,
+    1022,  1050,  1055,  1064,  1065,  1066,  1067,  1073,  1077,  1083,
+    1089,  1095,  1101,  1107,  1113,  1119,  1125,  1130,  1136,  1140,
+    1148,  1182,  1183,  1184,  1190,  1223,  1245,  1248,  1254,  1260,
+    1271,  1272,  1273,  1274,  1278,  1290,  1294,  1304,  1313,  1325,
+    1337,  1341,  1344,  1386,  1396,  1401,  1409,  1412,  1426,  1432,
+    1435,  1485,  1489,  1490,  1494,  1498,  1505,  1516,  1523,  1527,
+    1531,  1545,  1549,  1564,  1568,  1575,  1582,  1586,  1590,  1604,
+    1608,  1623,  1627,  1634,  1638,  1645,  1648,  1654,  1657,  1664,
+    1683,  1707,  1708,  1716
   };
 
   // Print the state stack on the debug stream.
