@@ -3,6 +3,7 @@
 
 #include "ir.h"
 #include "ir_rewriter.h"
+#include <vector>
 
 namespace simit {
 namespace ir {

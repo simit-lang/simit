@@ -14,8 +14,9 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
   this->targetLoopVar = targetLoopVar;
 
   Func kernel = map->function;
-  iassert(kernel.getArguments().size() == 1 || kernel.getArguments().size() == 2)
-      << "mapped functions must have exactly two arguments";
+  // TODO: revise this assert given map functions can have many params
+  //iassert(kernel.getArguments().size() == 1 || kernel.getArguments().size() == 2)
+  //    << "mapped functions must have exactly two arguments";
 
   iassert(map->vars.size() == kernel.getResults().size());
   for (size_t i=0; i < kernel.getResults().size(); ++i) {
@@ -28,10 +29,10 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
   iassert(kernel.getArguments().size() >= 1)
       << "The function must have a target argument";
 
-  this->target = kernel.getArguments()[0];
+  this->target = kernel.getArguments()[map->partial_actuals.size()];
 
   if (kernel.getArguments().size() >= 2) {
-    this->neighbors = kernel.getArguments()[1];
+    this->neighbors = kernel.getArguments()[1+map->partial_actuals.size()];
   }
 
   return rewrite(kernel.getBody());
@@ -109,7 +110,21 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
 
   Var targetVar = kernel.getArguments()[0];
   Var neighborsVar = kernel.getArguments()[1];
+/*  
+ TODO: must refactor this with new logic.
+  Var targetVar = kernel.getArguments()[map->partial_actuals.size()];
+  Var neighborsVar = kernel.getArguments()[1+map->partial_actuals.size()];
 
+  auto initializers = vector<Stmt>();
+  for (size_t i=0; i<map->partial_actuals.size(); i++) {
+    Var tvar = kernel.getArguments()[i];
+    Expr rval = map->partial_actuals[i];
+    initializers.push_back(AssignStmt::make(tvar, rval));
+  }
+*/
+
+  auto initializersBlock = Block::make(initializers);
+  
   Var loopVar(targetVar.getName(), Int);
   ForDomain domain(map->target);
 
@@ -129,6 +144,10 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   inlinedMap = flattenIndexExpressions(inlinedMap);
 
   return inlinedMap;
+/*
+ * TODO: must refactor this given new logic.
+  return Block::make(initializersBlock, inlinedMap);
+*/
 }
 
 }}

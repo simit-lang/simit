@@ -25,8 +25,8 @@ end
 
 extern points : set{Point};
 
-func dist_mass(x : float, p : Point) -> (A : tensor[points,points](float))
-  A(p,p) = p.a; 
+func dist_mass(zz : float, p : Point) -> (A : tensor[points,points](float))
+  A(p,p) = zz; 
 end
 
 proc mul
