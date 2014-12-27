@@ -179,6 +179,7 @@ void GPUBackend::visit(const ir::GPUFor *op) {
   LLVMBackend::compile(op->body);
   symtable.unscope();
   sharding.unscope(sharded);
+  emitThreadBarrier();
 }
 void GPUBackend::visit(const ir::IfThenElse *op) {
   ASSERT(false && "No code generation for this type");
@@ -234,6 +235,14 @@ llvm::Value *GPUBackend::getTidZ() {
       module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.z", funcTy));
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
+}
+
+void GPUBackend::emitThreadBarrier() {
+  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_VOID, false);
+  llvm::Function *func = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy));
+  cleanFuncAttrs(func);
+  builder->CreateCall(func);
 }
 
 void GPUBackend::emitFirstAssign(const ir::AssignStmt *op,
