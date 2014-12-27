@@ -390,8 +390,17 @@ function_header
 
     std::set<std::string> argNames;
     for (Var &arg : *arguments) {
-      ctx->addSymbol(arg.getName(), arg, Symbol::Read);
-      argNames.insert(arg.getName());
+      auto found = arg.getName().find("___inout___");
+      if (found != string::npos) {
+        // this is an inout param
+        string newName = arg.getName().substr(0,found);
+        auto newArg = Var(newName, arg.getType());
+        ctx->addSymbol(newName, newArg, Symbol::ReadWrite);
+        argNames.insert(arg.getName());
+      } else {
+        ctx->addSymbol(arg.getName(), arg, Symbol::Read);
+        argNames.insert(arg.getName());
+      }
     }
 
     for (Var &res : *results) {
@@ -413,7 +422,6 @@ arguments
 %type <vars> argument_list;
 argument_list
   : argument_decl {
-    std::cout << "IN ARG_LIST" << std::endl;
     auto argument = convertAndDelete($argument_decl);
     $$ = new vector<Var>;
     $$->push_back(argument);
@@ -427,8 +435,8 @@ argument_list
 %type <var> argument_decl;
 argument_decl
   : INOUT IDENT ":" type {
-    //TODO: propagate that this is inout param
-    std::string name = convertAndFree($IDENT);
+    // this is by no means the best way to do this, but it works.
+    std::string name = convertAndFree($IDENT).append("___inout___");
 
     auto type = convertAndDelete($type);
     $$ = new Var(name, type);

@@ -1321,8 +1321,17 @@ namespace  simit { namespace internal  {
 
     std::set<std::string> argNames;
     for (Var &arg : *arguments) {
-      ctx->addSymbol(arg.getName(), arg, Symbol::Read);
-      argNames.insert(arg.getName());
+      auto found = arg.getName().find("___inout___");
+      if (found != string::npos) {
+        // this is an inout param
+        string newName = arg.getName().substr(0,found);
+        auto newArg = Var(newName, arg.getType());
+        ctx->addSymbol(newName, newArg, Symbol::ReadWrite);
+        argNames.insert(arg.getName());
+      } else {
+        ctx->addSymbol(arg.getName(), arg, Symbol::Read);
+        argNames.insert(arg.getName());
+      }
     }
 
     for (Var &res : *results) {
@@ -1353,7 +1362,6 @@ namespace  simit { namespace internal  {
   case 25:
 
     {
-    std::cout << "IN ARG_LIST" << std::endl;
     auto argument = convertAndDelete((yystack_[0].value.var));
     (yylhs.value.vars) = new vector<Var>;
     (yylhs.value.vars)->push_back(argument);
@@ -1374,8 +1382,8 @@ namespace  simit { namespace internal  {
   case 27:
 
     {
-    //TODO: propagate that this is inout param
-    std::string name = convertAndFree((yystack_[2].value.string));
+    // this is by no means the best way to do this, but it works.
+    std::string name = convertAndFree((yystack_[2].value.string)).append("___inout___");
 
     auto type = convertAndDelete((yystack_[0].value.type));
     (yylhs.value.var) = new Var(name, type);
@@ -3578,22 +3586,22 @@ namespace  simit { namespace internal  {
   {
        0,   279,   279,   281,   284,   285,   293,   301,   302,   303,
      308,   318,   331,   334,   342,   352,   352,   352,   360,   377,
-     377,   377,   385,   406,   409,   415,   421,   429,   436,   446,
-     449,   455,   460,   468,   478,   481,   488,   489,   492,   493,
-     494,   495,   496,   497,   498,   499,   500,   501,   506,   547,
-     599,   603,   610,   613,   626,   629,   635,   640,   660,   680,
-     707,   717,   724,   730,   736,   749,   755,   758,   763,   775,
-     783,   793,   805,   810,   838,   841,   846,   854,   855,   856,
-     857,   858,   859,   860,   866,   886,   895,   903,   922,   990,
-    1010,  1038,  1043,  1052,  1053,  1054,  1055,  1061,  1065,  1071,
-    1077,  1083,  1089,  1095,  1101,  1107,  1113,  1118,  1124,  1128,
-    1136,  1170,  1171,  1172,  1178,  1211,  1233,  1236,  1242,  1248,
-    1259,  1260,  1261,  1262,  1266,  1278,  1282,  1292,  1301,  1313,
-    1325,  1329,  1332,  1374,  1384,  1389,  1397,  1400,  1414,  1420,
-    1423,  1473,  1477,  1478,  1482,  1486,  1493,  1504,  1511,  1515,
-    1519,  1533,  1537,  1552,  1556,  1563,  1570,  1574,  1578,  1592,
-    1596,  1611,  1615,  1622,  1626,  1633,  1636,  1642,  1645,  1652,
-    1671,  1695,  1696,  1704
+     377,   377,   385,   415,   418,   424,   429,   437,   444,   454,
+     457,   463,   468,   476,   486,   489,   496,   497,   500,   501,
+     502,   503,   504,   505,   506,   507,   508,   509,   514,   555,
+     607,   611,   618,   621,   634,   637,   643,   648,   668,   688,
+     715,   725,   732,   738,   744,   757,   763,   766,   771,   783,
+     791,   801,   813,   818,   846,   849,   854,   862,   863,   864,
+     865,   866,   867,   868,   874,   894,   903,   911,   930,   998,
+    1018,  1046,  1051,  1060,  1061,  1062,  1063,  1069,  1073,  1079,
+    1085,  1091,  1097,  1103,  1109,  1115,  1121,  1126,  1132,  1136,
+    1144,  1178,  1179,  1180,  1186,  1219,  1241,  1244,  1250,  1256,
+    1267,  1268,  1269,  1270,  1274,  1286,  1290,  1300,  1309,  1321,
+    1333,  1337,  1340,  1382,  1392,  1397,  1405,  1408,  1422,  1428,
+    1431,  1481,  1485,  1486,  1490,  1494,  1501,  1512,  1519,  1523,
+    1527,  1541,  1545,  1560,  1564,  1571,  1578,  1582,  1586,  1600,
+    1604,  1619,  1623,  1630,  1634,  1641,  1644,  1650,  1653,  1660,
+    1679,  1703,  1704,  1712
   };
 
   // Print the state stack on the debug stream.
