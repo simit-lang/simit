@@ -62,6 +62,7 @@ void MapFunctionRewriter::visit(const FieldRead *op) {
   else {
     // TODO: Handle the case where the target var was reassigned
     //       tmp = s; ... = tmp.a;
+    std::cout << *op << std::endl;
     not_supported_yet;
   }
 }
@@ -129,7 +130,8 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   ForDomain domain(map->target);
 
   Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter);
-  Stmt inlinedMap = For::make(loopVar, domain, inlinedMapFunc);
+  Stmt inlinedMapFuncWithInit = Block::make(initializersBlock, inlinedMapFunc);
+  Stmt inlinedMap = For::make(loopVar, domain, inlinedMapFuncWithInit);
 
   for (auto &var : map->vars) {
     iassert(var.getType().isTensor());
