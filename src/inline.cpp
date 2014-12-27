@@ -124,15 +124,21 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   }
 */
 
-  auto initializersBlock = Block::make(initializers);
+  
   
   Var loopVar(targetVar.getName(), Int);
   ForDomain domain(map->target);
 
+  Stmt inlinedMap;
   Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter);
-  Stmt inlinedMapFuncWithInit = Block::make(initializersBlock, inlinedMapFunc);
-  Stmt inlinedMap = For::make(loopVar, domain, inlinedMapFuncWithInit);
-
+  if (initializers.size() > 0) {
+    auto initializersBlock = Block::make(initializers);
+    Stmt inlinedMapFuncWithInit = Block::make(initializersBlock, inlinedMapFunc);
+    inlinedMap = For::make(loopVar, domain, inlinedMapFuncWithInit);
+  } else {
+    inlinedMap = For::make(loopVar, domain, inlinedMapFunc);
+  }
+  
   for (auto &var : map->vars) {
     iassert(var.getType().isTensor());
     const TensorType *type = var.getType().toTensor();
