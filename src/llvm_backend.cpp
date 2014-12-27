@@ -173,7 +173,27 @@ void LLVMBackend::visit(const FieldRead *op) {
 }
 
 void LLVMBackend::visit(const TensorRead *op) {
-  ierror << "No code generation for this type";
+  const Expr& tensor = op->tensor;
+  iassert(tensor.type().isTensor());
+  const TensorType *type = op->tensor.type().toTensor();
+  llvm::Value *offset = llvm::ConstantInt::get(LLVM_INT, 0);
+  // TODO(gkanwar): Currently only supports scalar read
+  iassert(op->indices.size() == type->order());
+  for (int i = 0; i < type->order(); ++i) {
+    const Expr& index = op->indices[i];
+    llvm::Value *llvmIndex = compile(index);
+    const IndexDomain& domain = type->dimensions[i];
+    // ???
+    iassert(domain.getNumBlockLevels() == 1);
+    const IndexSet& indexSet = domain.getIndexSets()[0];
+    Expr indexSize = ir::Length::make(indexSet);
+    llvm::Value *llvmIndexSize = compile(indexSize);
+    offset = builder->CreateMul(offset, llvmIndexSize);
+    offset = builder->CreateAdd(offset, llvmIndex);
+  }
+  llvm::Value *llvmTensor = compile(tensor);
+  llvm::Value *ptr = builder->CreateGEP(llvmTensor, offset);
+  val = builder->CreateLoad(ptr);
 }
 
 void LLVMBackend::visit(const TupleRead *op) {
@@ -208,7 +228,29 @@ void LLVMBackend::visit(const IndexExpr *op) {
 }
 
 void LLVMBackend::visit(const TensorWrite *op) {
-  ierror << "No code generation for this expr: " << util::toString(*op);
+  const Expr& tensor = op->tensor;
+  iassert(tensor.type().isTensor());
+  const TensorType *type = op->tensor.type().toTensor();
+  llvm::Value *offset = llvm::ConstantInt::get(LLVM_INT, 0);
+  // TODO(gkanwar): Currently only supports scalar write
+  iassert(op->indices.size() == type->order());
+  for (int i = 0; i < type->order(); ++i) {
+    const Expr& index = op->indices[i];
+    llvm::Value *llvmIndex = compile(index);
+    const IndexDomain& domain = type->dimensions[i];
+    // ???
+    iassert(domain.getNumBlockLevels() == 1);
+    const IndexSet& indexSet = domain.getIndexSets()[0];
+    Expr indexSize = ir::Length::make(indexSet);
+    llvm::Value *llvmIndexSize = compile(indexSize);
+    offset = builder->CreateMul(offset, llvmIndexSize);
+    offset = builder->CreateAdd(offset, llvmIndex);
+  }
+  llvm::Value *llvmTensor = compile(tensor);
+  llvm::Value *value = compile(op->value);
+  llvm::Value *ptr = builder->CreateGEP(llvmTensor, offset);
+  builder->CreateStore(value, ptr);
+  val = nullptr;
 }
 
 void LLVMBackend::visit(const Literal *op) {

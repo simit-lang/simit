@@ -1,0 +1,13 @@
+%%% tensor-read
+%! read([0.0, 1.0, 2.0], 1) == 1.0;
+func read(a : tensor[3](float), b : int) -> (c : float)
+  c = a(b);
+end
+
+%%% tensor-read-big
+%! readbig([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], 0, 2) == 2.0;
+%! readbig([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], 1, 0) == 3.0;
+%! readbig([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], 1, 1) == 4.0;
+func readbig(a : tensor[2,3](float), b : int, c : int) -> (d : float)
+  d = a(b,c);
+end

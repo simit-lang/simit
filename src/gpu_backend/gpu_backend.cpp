@@ -83,7 +83,7 @@ void GPUBackend::visit(const ir::FieldRead *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::TensorRead *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::TupleRead *op) {
   ASSERT(false && "No code generation for this type");
@@ -104,7 +104,7 @@ void GPUBackend::visit(const ir::IndexExpr *op) {
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::TensorWrite *op) {
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 
 void GPUBackend::visit(const ir::Literal *op) {

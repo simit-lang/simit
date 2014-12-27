@@ -179,6 +179,7 @@ SIM_TEST(elements, blas3);
 SIM_TEST(elements, la);
 SIM_TEST(elements, intrinsics);
 SIM_TEST(elements, index_notation);
+SIM_TEST(elements, tensorrw);
 
 //SIM_TEST_SUITE(systems)
 //SIM_TEST(systems, fields);
