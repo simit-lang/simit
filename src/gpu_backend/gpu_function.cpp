@@ -327,7 +327,7 @@ simit::Function::FuncType GPUFunction::init(
   unsigned gridSizeY = 1;
   unsigned gridSizeZ = 1;
   // Create harness as the kernel to be run
-  createHarness(args);
+  llvm::Function *harness = createHarness(args);
 
   // Export IR to string
   std::string moduleStr;
@@ -371,7 +371,8 @@ simit::Function::FuncType GPUFunction::init(
   // Create CUDA module for binary object
   checkCudaErrors(cuModuleLoadDataEx(&cudaModule, cubin, 0, 0, 0));
   checkCudaErrors(cuLinkDestroy(linker));
-  checkCudaErrors(cuModuleGetFunction(&function, cudaModule, "kernel"));
+  checkCudaErrors(cuModuleGetFunction(
+      &function, cudaModule, harness->getName().data()));
                                
 
   return [this, function, cudaModule, context, pushedBufs,
@@ -421,6 +422,13 @@ simit::Function::FuncType GPUFunction::init(
     // }
     // checkCudaErrors(cuCtxDestroy(context));
     checkCudaErrors(cuModuleUnload(cudaModule));
+
+    // Hack to ensure that data is pushed again, and the harness is
+    // reconstructed with the new pointers.
+    // TODO(gkanwar): On a bind to a pushed argument, note that the
+    // argument should be repushed, and include in this returned lambda
+    // instructions to push dirtied args.
+    initRequired = true;
   };
 }
 

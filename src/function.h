@@ -74,9 +74,10 @@ protected:
   std::vector<std::string> formals;
   std::map<std::string, Actual> actuals;
 
+  bool initRequired;
+
 private:
   FuncType funcPtr;
-  bool initRequired;
   virtual FuncType init(const std::vector<std::string> &formals,
                         std::map<std::string, Actual> &actuals) = 0;
 };
