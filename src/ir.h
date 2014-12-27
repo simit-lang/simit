@@ -421,7 +421,8 @@ struct Add : public ExprNode<Add> {
 
   static Expr make(Expr a, Expr b) {
     iassert(isScalar(a.type()));
-    iassert(a.type() == b.type());
+    iassert(a.type() == b.type())
+        << a.type() << " doesn't match " << b.type();
 
     Add *node = new Add;
     node->type = a.type();

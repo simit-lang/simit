@@ -12,6 +12,7 @@
 #include "tensor_components.h"
 #include "variadic.h"
 #include "error.h"
+#include "types.h"
 
 namespace simit {
 
@@ -25,6 +26,9 @@ namespace internal {
 class VertexToEdgeEndpointIndex;
 class VertexToEdgeIndex;
 class NeighborIndex;
+#ifdef GPU
+class GPUFunction;
+#endif
 }
 
 class Function;
@@ -122,7 +126,7 @@ public:
     fieldNames[name] = fields.size()-1;
     return FieldRef<T, dimensions...>(fieldData);
   }
-  
+
   /// Get a Field corresponding to the string fieldName
   template <typename T, int... dimensions>
   FieldRef<T, dimensions...> getField(std::string fieldName) {
@@ -411,6 +415,12 @@ private:
           size *= dim;
         }
       }
+      TensorType(ComponentType componentType, std::vector<int> dims)
+          : componentType(componentType), dimensions(dims), size(1) {
+        for (auto dim : dimensions) {
+          size *= dim;
+        }
+      }
       ComponentType getComponentType() const { return componentType; }
       size_t getOrder() const { return dimensions.size(); }
       size_t getDimension(size_t i) const {
@@ -497,8 +507,46 @@ private:
   }
   void addEndpoints(int) {}
 
+  // helper for building a set based on IR type
+  void buildSetFields(const ir::ElementType *type) {
+    for (auto f : fields) {
+      delete f;
+    }
+
+    for (const ir::Field& field : type->fields) {
+      const ir::TensorType *ttype = field.type.toTensor();
+      ComponentType ctype;
+      switch (ttype->componentType.kind) {
+        case ir::ScalarType::Int: {
+          ctype = ComponentType::INT;
+          break;
+        }
+        case ir::ScalarType::Float: {
+          ctype = ComponentType::FLOAT;
+          break;
+        }
+        default: {
+          not_supported_yet;
+        }
+      }
+      std::vector<int> dims;
+      for (const ir::IndexDomain &domain : ttype->dimensions) {
+        dims.push_back(domain.getSize());
+      }
+      FieldData::TensorType *type =
+          new FieldData::TensorType(ctype, dims);
+      FieldData *fieldData = new FieldData(field.name, type, this);
+      fieldData->data = calloc(capacity, fieldData->sizeOfType);
+      fields.push_back(fieldData);
+      fieldNames[field.name] = fields.size()-1;
+    }
+  }
+
   friend FieldRefBase;
   friend Function;
+#ifdef GPU
+  friend internal::GPUFunction;
+#endif
 };
 
 

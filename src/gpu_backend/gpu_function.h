@@ -48,7 +48,8 @@ class GPUFunction : public simit::Function {
 
   // Copy argument memory into device and build an llvm value to point to it
   llvm::Value *pushArg(Actual& actual,
-                       std::map<void*, DeviceDataHandle> &pushedBufs);
+                       std::map<void*, DeviceDataHandle> &pushedBufs,
+                       bool shouldPull = true);
   // Copy device buffer into host data block and free the device buffer
   void pullArgAndFree(void *hostPtr, DeviceDataHandle handle);
   // Create the harness function which sets up args for the main function

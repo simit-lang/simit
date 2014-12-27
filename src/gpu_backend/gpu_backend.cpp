@@ -144,63 +144,40 @@ void GPUBackend::visit(const ir::Store *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::ForRange *op) {
-  // TODO(gkanwar): Some for domains should perhaps be handled differently
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::For *op) {
+  LLVMBackend::visit(op);
+}
+void GPUBackend::visit(const ir::GPUFor *op) {
   std::string iName = op->var.getName();
   ir::ForDomain domain = op->domain;
   
   // Only supports sharding over index set
-  GPUSharding::ShardDimension sharded = GPUSharding::NONE;
-  llvm::Value *index;
-  if (domain.kind == ir::ForDomain::IndexSet &&
-      domain.indexSet.getKind() != ir::IndexSet::Range) {
-    if (domain.indexSet == sharding.xDomain) {
-      index = getTidX();
-      sharded = GPUSharding::X;
-    }
-    else if (domain.indexSet == sharding.yDomain) {
-      index = getTidY();
-      sharded = GPUSharding::Y;
-    }
-    else if (domain.indexSet == sharding.zDomain) {
-      index = getTidZ();
-      sharded = GPUSharding::Z;
-    }
-    else {
-      if (!sharding.xSharded) {
-        sharding.xDomain = domain.indexSet;
-        sharding.xSharded = true;
-        index = getTidX();
-        std::cout << "Sharding " << iName << " over x dimension" << std::endl;
-        sharded = GPUSharding::X;
-      }
-      else if (!sharding.ySharded) {
-        // TODO(gkanwar): Currently only supports sharding in one dimension
-        not_supported_yet;
-      }
-      else if (!sharding.zSharded) {
-        // TODO(gkanwar): Currently only supports sharding in one dimension
-        not_supported_yet;
-      }
-      else {
-        sharded = GPUSharding::NONE;
-      }
-    }
-  }
+  GPUSharding::ShardDimension sharded = op->dimension;
+  iassert(sharded != GPUSharding::NONE);
 
-  if (sharded != GPUSharding::NONE) {
-    sharding.scope(sharded);
-    symtable.scope();
-    symtable.insert(iName, index);
-    LLVMBackend::compile(op->body);
-    symtable.unscope();
-    sharding.unscope(sharded);
+  llvm::Value *index;
+  switch (sharded) {
+    case GPUSharding::X:
+      std::cout << "Sharding " << iName << " over x dimension" << std::endl;
+      index = getTidX();
+      break;
+    case GPUSharding::Y:
+      std::cout << "Sharding " << iName << " over y dimension" << std::endl;
+      index = getTidY();
+      break;
+    case GPUSharding::Z:
+      std::cout << "Sharding " << iName << " over z dimension" << std::endl;
+      index = getTidZ();
+      break;
   }
-  else {
-    LLVMBackend::visit(op);
-  }
+  sharding.scope(sharded);
+  symtable.scope();
+  symtable.insert(iName, index);
+  LLVMBackend::compile(op->body);
+  symtable.unscope();
+  sharding.unscope(sharded);
 }
 void GPUBackend::visit(const ir::IfThenElse *op) {
   ASSERT(false && "No code generation for this type");

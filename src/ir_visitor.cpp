@@ -2,6 +2,10 @@
 
 #include "ir.h"
 
+#ifdef GPU
+#include "gpu_backend/gpu_ir.h"
+#endif
+
 namespace simit {
 namespace ir {
 
@@ -186,6 +190,12 @@ void IRVisitor::visit(const Block *op) {
 
 void IRVisitor::visit(const Pass *op) {
 }
+
+#ifdef GPU
+void IRVisitor::visit(const GPUFor *op) {
+  op->body.accept(this);
+}
+#endif
 
 void IRVisitor::visit(const Func *op) {
   op->getBody().accept(this);

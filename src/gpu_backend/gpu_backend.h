@@ -4,6 +4,7 @@
 #include "backend.h"
 #include "ir_visitor.h"
 #include "llvm_backend.h"
+#include "gpu_ir.h"
 
 namespace llvm {
 class Value;
@@ -11,71 +12,6 @@ class Value;
 
 namespace simit {
 namespace internal {
-
-class GPUSharding {
-public:
-  enum ShardDimension {NONE, X, Y, Z};
-
-  GPUSharding() {}
-  ~GPUSharding() {}
-
-  void scope(ShardDimension dim) {
-    iassert(dim != NONE);
-    switch (dim) {
-      case X: {
-        iassert(!inXShard);
-        inXShard = true;
-        break;
-      }
-      case Y: {
-        iassert(!inYShard);
-        inYShard = true;
-        break;
-      }
-      case Z: {
-        iassert(!inZShard);
-        inZShard = true;
-        break;
-      }
-    }
-  }
-
-  void unscope(ShardDimension dim) {
-    iassert(dim != NONE);
-    switch (dim) {
-      case X: {
-        inXShard = false;
-        break;
-      }
-      case Y: {
-        inYShard = false;
-        break;
-      }
-      case Z: {
-        inZShard = false;
-        break;
-      }
-    }
-  }
-
-  bool inShard() {
-    return inXShard || inYShard || inZShard;
-  }
-
-  bool isSharded() {
-    return xSharded || ySharded || zSharded;
-  }
-
-  bool xSharded = false;
-  bool ySharded = false;
-  bool zSharded = false;
-  bool inXShard = false;
-  bool inYShard = false;
-  bool inZShard = false;
-  ir::IndexSet xDomain;
-  ir::IndexSet yDomain;
-  ir::IndexSet zDomain;
-};
 
 class GPUBackend : public LLVMBackend {
 public:
@@ -117,6 +53,8 @@ private:
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
+
+  virtual void visit(const ir::GPUFor *);
 
   // Emits calls to nvvm intrinsics to read thread ids
   llvm::Value *emitBarrier();

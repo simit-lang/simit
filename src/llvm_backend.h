@@ -1,14 +1,14 @@
 #ifndef SIMIT_CODEGEN_LLVM_H
 #define SIMIT_CODEGEN_LLVM_H
 
-#include "backend.h"
-#include "ir_visitor.h"
-#include "scopedmap.h"
-
 #include <ostream>
 #include <memory>
 #include <set>
 #include <vector>
+
+#include "backend.h"
+#include "ir_visitor.h"
+#include "scopedmap.h"
 
 namespace llvm {
 class LLVMContext;

@@ -244,7 +244,16 @@ int main(int argc, const char* argv[]) {
       // NB: The LLVM code gets further optimized at init time (OSR, etc.)
     }
 
+    cout << "@@@@@@@@@@@@@@@@" << endl;
 #ifdef GPU
+    cout << "################: " <<emitGPU<< endl;
+    func = shardLoops(func);
+    cout << "Finished shardLoops" << endl;
+    if (emitGPU) {
+      cout << "--- Shard loops for GPU" << endl;
+      cout << func << endl;
+    }
+    
     if (emitGPU) {
       simit::internal::GPUBackend backend;
       std::string fstr = simit::util::toString(*backend.compile(func));

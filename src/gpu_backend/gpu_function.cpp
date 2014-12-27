@@ -107,7 +107,8 @@ GPUFunction::~GPUFunction() {
 
 llvm::Value *GPUFunction::pushArg(
     Actual& actual,
-    std::map<void*, DeviceDataHandle> &pushedBufs) {
+    std::map<void*, DeviceDataHandle> &pushedBufs,
+    bool shouldPull) {
   std::cout << "Push arg" << std::endl;
   switch (actual.getType().kind()) {
     case ir::Type::Tensor: {
@@ -126,7 +127,7 @@ llvm::Value *GPUFunction::pushArg(
       checkCudaErrors(cuMemcpyHtoD(*devBuffer, literal.data, literal.size));
       std::cout << literal.data << " -> " << *devBuffer << std::endl;
       pushedBufs.emplace(literal.data,
-                         DeviceDataHandle(devBuffer, literal.size));
+                         DeviceDataHandle(devBuffer, literal.size, shouldPull));
       return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer));
     }
     case ir::Type::Element: ierror << "Element arg not supported";
@@ -199,7 +200,7 @@ llvm::Value *GPUFunction::pushArg(
         size_t size = set->getSize() * ttype->size() * ttype->componentType.bytes();
         checkCudaErrors(cuMemAlloc(devBuffer, size));
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
-        pushedBufs.emplace(fieldData, DeviceDataHandle(devBuffer, size));
+        pushedBufs.emplace(fieldData, DeviceDataHandle(devBuffer, size, shouldPull));
         setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer)));
       }
 
@@ -302,9 +303,20 @@ simit::Function::FuncType GPUFunction::init(
   for (const std::string& formal : formals) {
     assert(actuals.find(formal) != actuals.end());
     Actual &actual = actuals.at(formal);
-    args.push_back(pushArg(actual, pushedBufs));
+    if (formal == "$shared") {
+      SetBase sharedSet;
+      std::cout << "Building shared..." << std::endl;
+      sharedSet.buildSetFields(actual.getType().toSet()
+                               ->elementType.toElement());
+      sharedSet.add();
+      std::cout << "Built shared." << std::endl;
+      actual.bind(&sharedSet);
+      args.push_back(pushArg(actual, pushedBufs, false));
+    }
+    else {
+      args.push_back(pushArg(actual, pushedBufs));
+    }
   }
-  // TODO(gkanwar): For now, fixed block sizes
   unsigned blockSizeX = sharding.xSharded ?
       findShardSize(sharding.xDomain) : 1;
   unsigned blockSizeY = sharding.ySharded ?

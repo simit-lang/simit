@@ -46,6 +46,10 @@ struct IfThenElse;
 struct Block;
 struct Pass;
 
+#ifdef GPU
+struct GPUFor;
+#endif
+
 class Func;
 class Stmt;
 class Expr;
@@ -101,6 +105,10 @@ public:
   virtual void visit(const IfThenElse *op);
   virtual void visit(const Block *op);
   virtual void visit(const Pass *op);
+
+#ifdef GPU
+  virtual void visit(const GPUFor *op);
+#endif
 
   virtual void visit(const Func *f);
 };

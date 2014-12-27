@@ -16,6 +16,7 @@
 
 #ifdef GPU
 #include "gpu_backend/gpu_backend.h"
+#include "gpu_backend/gpu_ir.h"
 #endif
 
 using namespace std;
@@ -35,6 +36,11 @@ static Function *compile(ir::Func func, internal::Backend *backend) {
   func = flattenIndexExpressions(func);
   func.setStorage(getStorage(func));
   func = lower(func);
+#ifdef GPU
+  if (kBackend == "gpu") {
+    func = shardLoops(func);
+  }
+#endif
   return backend->compile(func);
 }
 
