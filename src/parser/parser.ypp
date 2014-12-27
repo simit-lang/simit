@@ -556,9 +556,11 @@ assign_stmt
 
 // Map Statement
 map_stmt
-  : idents "=" "map" IDENT[func] "to" IDENT[target] with reduce {
+  : idents "=" "map" IDENT[func] partial_expr_list "to" IDENT[target] with reduce {
     auto varNames = unique_ptr<vector<string>>($idents);
 
+    auto partialExprList = unique_ptr<vector<Expr>>($partial_expr_list);
+    
     string funcName = convertAndFree($func);
     string targetsName = convertAndFree($target);
 
@@ -603,8 +605,19 @@ map_stmt
       vars.push_back(var);
     }
 
-    ctx->addStatement(Map::make(vars, func, targets, neighbor, reduction));
+    ctx->addStatement(Map::make(vars, func, *partialExprList, targets, neighbor,
+      reduction));
   }
+
+%type <exprs> partial_expr_list;
+partial_expr_list
+  : /* empty */ {
+    $$ = new vector<Expr>();
+  }
+  | "(" expr_list_or_empty ")" {
+    $$ = $2;
+  }
+
 
 %type <strings> idents;
 idents

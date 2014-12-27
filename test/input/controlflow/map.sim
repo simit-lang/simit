@@ -16,6 +16,25 @@ proc mul
   points.c = A * points.b;
 end
 
+%%% map-extra-params
+element Point
+  a : float;
+  b : float;
+  c : float;
+end
+
+extern points : set{Point};
+
+func dist_mass(x : float, p : Point) -> (A : tensor[points,points](float))
+  A(p,p) = p.a; 
+end
+
+proc mul
+  A = map dist_mass(2.0) to points reduce +;
+  points.c = A * points.b;
+end
+
+
 %%%-
 element Spring
   a : float;
