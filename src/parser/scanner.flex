@@ -51,6 +51,7 @@ using namespace simit::internal;
 "in"                  { return Parser::token::IN;        }
 "end"                 { return Parser::token::BLOCKEND;  }
 "return"              { return Parser::token::RETURN;    }
+"print"               { return Parser::token::PRINT;     }
 
 "->"                  { return Parser::token::RARROW;    }
 "("                   { return Parser::token::LP;        }

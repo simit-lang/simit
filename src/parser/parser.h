@@ -273,37 +273,38 @@ namespace  simit { namespace internal  {
         BLOCKEND = 285,
         RETURN = 286,
         TEST = 287,
-        RARROW = 288,
-        LP = 289,
-        RP = 290,
-        LB = 291,
-        RB = 292,
-        LC = 293,
-        RC = 294,
-        LA = 295,
-        RA = 296,
-        COMMA = 297,
-        PERIOD = 298,
-        COL = 299,
-        SEMICOL = 300,
-        ASSIGN = 301,
-        PLUS = 302,
-        MINUS = 303,
-        STAR = 304,
-        SLASH = 305,
-        DOTSTAR = 306,
-        DOTSLASH = 307,
-        EXP = 308,
-        TRANSPOSE = 309,
-        BACKSLASH = 310,
-        EQ = 311,
-        NE = 312,
-        LE = 313,
-        GE = 314,
-        NOT = 315,
-        XOR = 316,
-        TRUE = 317,
-        FALSE = 318
+        PRINT = 288,
+        RARROW = 289,
+        LP = 290,
+        RP = 291,
+        LB = 292,
+        RB = 293,
+        LC = 294,
+        RC = 295,
+        LA = 296,
+        RA = 297,
+        COMMA = 298,
+        PERIOD = 299,
+        COL = 300,
+        SEMICOL = 301,
+        ASSIGN = 302,
+        PLUS = 303,
+        MINUS = 304,
+        STAR = 305,
+        SLASH = 306,
+        DOTSTAR = 307,
+        DOTSLASH = 308,
+        EXP = 309,
+        TRANSPOSE = 310,
+        BACKSLASH = 311,
+        EQ = 312,
+        NE = 313,
+        LE = 314,
+        GE = 315,
+        NOT = 316,
+        XOR = 317,
+        TRUE = 318,
+        FALSE = 319
       };
     };
 
@@ -594,13 +595,13 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 748,     ///< Last index in yytable_.
-      yynnts_ = 81,  ///< Number of nonterminal symbols.
+      yylast_ = 803,     ///< Last index in yytable_.
+      yynnts_ = 82,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 64  ///< Number of tokens.
+      yyntokens_ = 65  ///< Number of tokens.
     };
 
 

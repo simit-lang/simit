@@ -417,6 +417,12 @@ void IRPrinter::visit(const Pass *op) {
   os << "pass;";
 }
 
+void IRPrinter::visit(const Print *op) {
+  indent();
+  os << "print ";
+  print(op->expr);
+}
+
 void IRPrinter::visit(const Func *func) {
   os << "func " << func->getName() << "(";
   if (func->getArguments().size() > 0) {

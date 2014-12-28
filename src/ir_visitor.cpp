@@ -191,6 +191,10 @@ void IRVisitor::visit(const Func *op) {
   op->getBody().accept(this);
 }
 
+void IRVisitor::visit(const Print *op) {
+  op->expr.accept(this);
+}
+
 
 // IRQuery
 bool IRQuery::query(const Expr &expr) {

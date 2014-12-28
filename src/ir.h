@@ -826,6 +826,15 @@ struct Pass : public StmtNode<Pass> {
   }
 };
 
+struct Print : public StmtNode<Print> {
+  Expr expr;
+
+  static Stmt make(Expr expr) {
+    Print *node = new Print;
+    node->expr = expr;
+    return node;
+  }
+};
 
 // Operators
 bool operator==(const Literal& l, const Literal& r);

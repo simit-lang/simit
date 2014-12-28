@@ -1,0 +1,31 @@
+%%% print-int
+%! f() == 0;
+func f() -> (r : int)
+  print 1
+  r = 0;
+end
+
+%%% print-float
+%! f() == 0;
+func f() -> (r : int)
+  print 3.14;
+  r = 0;
+end
+
+%%% print-bool
+%! f() == 0;
+func f() -> (r : int)
+  print true
+  print false
+  r = 0;
+end
+
+%%% print-expression
+%! f(1234, 0.5) == 0;
+func f(a : int, b : float) -> (r : int)
+  print a
+  print b
+  print true xor true
+  r = 0;
+end
+
