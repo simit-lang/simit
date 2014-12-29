@@ -31,7 +31,10 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
   virtual void visit(const TensorWrite *op) {
     IRRewriter::visit(op);
     if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
-      stmt = makeCompound(stmt, CompoundOperator::Add);
+      iassert(isa<TensorWrite>(stmt));
+      const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
+      stmt = TensorWrite::make(CompoundOperator::Add, tensorWrite->tensor,
+                               tensorWrite->indices, tensorWrite->value);
     }
   }
 };

@@ -208,7 +208,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
     static Stmt compoundAssign(Var var, ReductionOperator op, Expr value) {
       switch (op.getKind()) {
         case ReductionOperator::Sum:
-          return AssignStmt::make(var, Add::make(var, value));
+          return AssignStmt::make(CompoundOperator::Add, var, value);
         case ReductionOperator::Undefined:
           ierror;
           return Stmt();
@@ -237,9 +237,12 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
         tmpVar = Var(tmpVarName, TensorType::make(componentType));
         stmt = compoundAssign(tmpVar, rop, op->value);
 
-        tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
         if (isa<TensorRead>(op->tensor)) {
-          tmpWritebackStmt = makeCompound(tmpWritebackStmt, CompoundOperator::Add);
+          tmpWritebackStmt = TensorWrite::make(CompoundOperator::Add, op->tensor,
+                                           op->indices, tmpVar);
+        }
+        else {
+          tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
         }
       }
       else {

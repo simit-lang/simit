@@ -119,6 +119,9 @@ protected:
 
   void emitPrintf(std::string format);
   void emitPrintf(std::string format, std::vector<llvm::Value*> args);
+  virtual void emitFirstAssign(const std::string& varName,
+                               const ir::Expr& value);
+  void emitAssign(ir::Var var, const ir::Expr& value);
 
 private:
   static bool llvmInitialized;

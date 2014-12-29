@@ -244,7 +244,7 @@ void IRRewriter::visit(const AssignStmt *op) {
     stmt = op;
   }
   else {
-    stmt = AssignStmt::make(op->var, value);
+    stmt = AssignStmt::make(op->cop, op->var, value);
   }
 }
 
