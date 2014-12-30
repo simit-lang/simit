@@ -36,15 +36,26 @@ Stmt makeCompound(Stmt stmt, CompoundOperator cop) {
         }
         else {
           iassert(lhsExpr.type() == e.type());
-          IRBuilder::BinaryOperator binop;
-          switch (compoundOperator.kind) {
-            case CompoundOperator::Add: {
-              binop = IRBuilder::Add;
-              break;
+
+          if (isScalar(lhsExpr.type())) {
+            switch (compoundOperator.kind) {
+              case CompoundOperator::Add: {
+                e = Add::make(lhsExpr,e);
+                break;
+              }
             }
           }
-          IRBuilder builder;
-          e = builder.binaryElwiseExpr(lhsExpr, binop, e);
+          else {
+            IRBuilder::BinaryOperator binop;
+            switch (compoundOperator.kind) {
+              case CompoundOperator::Add: {
+                binop = IRBuilder::Add;
+                break;
+              }
+            }
+            IRBuilder builder;
+            e = builder.binaryElwiseExpr(lhsExpr, binop, e);
+          }
         }
       }
       else {
