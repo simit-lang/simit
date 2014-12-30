@@ -1,7 +1,7 @@
 %%% print-int
 %! f() == 0;
 func f() -> (r : int)
-  print 1
+  print 1;
   r = 0;
 end
 
@@ -15,17 +15,27 @@ end
 %%% print-bool
 %! f() == 0;
 func f() -> (r : int)
-  print true
-  print false
+  print true;
+  print false;
   r = 0;
 end
 
 %%% print-expression
 %! f(1234, 0.5) == 0;
 func f(a : int, b : float) -> (r : int)
-  print a
-  print b
-  print true xor true
+  print a;
+  print b;
+  print true xor true;
+  c = b* b + 2.1;
+  print c;
+  d = -1.6;
+  print d;
   r = 0;
 end
 
+%%% print-index
+%! adds(3.0, [0.0, 1.0, 4.0]) == 0;
+func adds(a : float, b : tensor[3](float)) -> (c : int)
+  print b(1);
+  c = 0;
+end

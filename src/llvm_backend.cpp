@@ -813,31 +813,36 @@ void printStmtAddScalarArg(std::string &format,
     args.push_back(val);
     break;
   case simit::ir::ScalarType::Boolean:
-    if (reinterpret_cast<llvm::ConstantInt*>(val)->isZero()) {
-      format.append("false");
-    } else {
-      format.append("true");
-    }
+    format.append("%d");
+    args.push_back(val);
     break;
   default:
-    throw "Unknown ScalarType";
+    unreachable << "Unknown ScalarType";
   }
 }
 
 void LLVMBackend::visit(const Print *op) {
+
   llvm::Value *result = compile(op->expr);
   Type type = op->expr.type();
+
   switch (type.kind()) {
   case Type::Kind::Tensor: {
-    size_t order = type.toTensor()->order();
+    const TensorType *tensor = type.toTensor();
+    ScalarType scalarType = tensor->componentType;
+    size_t order = tensor->order();
     std::string format;
     std::vector<llvm::Value*> args;
+
     if (order == 0) {
-      printStmtAddScalarArg(format, args, type.toTensor()->componentType, result);
+      printStmtAddScalarArg(format, args, scalarType, result);
       format.append("\n");
+    } else if (order == 1) {
+      not_supported_yet;
     } else {
       not_supported_yet;
     }
+
     emitPrintf(format, args);
   }
     break;
@@ -846,9 +851,8 @@ void LLVMBackend::visit(const Print *op) {
   case Type::Kind::Tuple:
     not_supported_yet;
   default:
-    throw "Unknown Type";
+    unreachable << "Unknown Type";
   }
-
 }
 
 llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
@@ -995,12 +999,12 @@ void LLVMBackend::emitPrintf(std::string format) {
   emitPrintf(format, {});
 }
 
-void LLVMBackend::emitPrintf(string format,
+void LLVMBackend::emitPrintf(std::string format,
                              std::initializer_list<llvm::Value*> args) {
   emitPrintf(format, std::vector<llvm::Value*>(args));
 }
 
-void LLVMBackend::emitPrintf(string format,
+void LLVMBackend::emitPrintf(std::string format,
                              std::vector<llvm::Value*> args) {
   auto int32Type = llvm::IntegerType::getInt32Ty(LLVM_CONTEXT);
   llvm::Function *printfFunc = module->getFunction("printf");

@@ -809,13 +809,10 @@ expr_stmt
     $$ = NULL;
   }
 
-%type <stmt> print_stmt;
 print_stmt
-  : "print" expr {
-     Expr expr = convertAndDelete($2);
-     Stmt *result = new Stmt(Print::make(expr));
-     ctx->addStatement(*result);
-     $$ = result;
+  : "print" expr ";" {
+     Expr expr = Expr(convertAndDelete($2));
+     ctx->addStatement(Stmt(Print::make(expr)));
   }
 
 // Expressions
