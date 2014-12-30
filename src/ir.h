@@ -408,11 +408,18 @@ struct Call : public ExprNode<Call> {
   }
 };
 
+#define iassert_scalar(a) \
+    iassert(isScalar(a.type())) << a << ": " << a.type()
+
+#define iassert_types_equal(a,b) \
+  iassert(a.type() == b.type()) << a.type() << "!=" << b.type() << "\n" \
+                                << #a << ":" << a << "\n" << #b << ":" << b
+
 struct Neg : public ExprNode<Neg> {
   Expr a;
 
   static Expr make(Expr a) {
-    iassert(isScalar(a.type()));
+    iassert_scalar(a);
 
     Neg *node = new Neg;
     node->type = a.type();
@@ -425,8 +432,8 @@ struct Add : public ExprNode<Add> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isScalar(a.type()));
-    iassert(a.type() == b.type());
+    iassert_scalar(a);
+    iassert_types_equal(a,b);
 
     Add *node = new Add;
     node->type = a.type();
@@ -440,8 +447,8 @@ struct Sub : public ExprNode<Sub> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isScalar(a.type()));
-    iassert(a.type() == b.type());
+    iassert_scalar(a);
+    iassert_types_equal(a,b);
 
     Sub *node = new Sub;
     node->type = a.type();
@@ -455,8 +462,8 @@ struct Mul : public ExprNode<Mul> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isScalar(a.type()));
-    iassert(a.type() == b.type());
+    iassert_scalar(a);
+    iassert_types_equal(a,b);
 
     Mul *node = new Mul;
     node->type = a.type();
@@ -470,8 +477,8 @@ struct Div : public ExprNode<Div> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isScalar(a.type()));
-    iassert(a.type() == b.type());
+    iassert_scalar(a);
+    iassert_types_equal(a,b);
 
     Div *node = new Div;
     node->type = a.type();
@@ -485,7 +492,7 @@ struct Eq : public ExprNode<Eq> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Eq *node = new Eq;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -499,7 +506,7 @@ struct Ne : public ExprNode<Ne> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Ne *node = new Ne;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -513,7 +520,7 @@ struct Gt : public ExprNode<Gt> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Gt *node = new Gt;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -527,7 +534,7 @@ struct Lt : public ExprNode<Lt> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Lt *node = new Lt;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -541,7 +548,7 @@ struct Ge : public ExprNode<Ge> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Ge *node = new Ge;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -555,7 +562,7 @@ struct Le : public ExprNode<Le> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Le *node = new Le;
     node->type = TensorType::make(ScalarType::Boolean);
