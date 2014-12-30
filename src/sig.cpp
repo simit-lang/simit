@@ -79,7 +79,7 @@ SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop) {
   return merged;
 }
 
-bool ReductionVarsBeforefree(SIGVertex *i, SIGVertex *j) {
+bool ReductionVarsAfterFree(SIGVertex *i, SIGVertex *j) {
   return (i->iv.isFreeVar() && j->iv.isReductionVar()) ? true : false;
 }
 
@@ -97,9 +97,9 @@ void SIGVisitor::apply(const SIG &sig) {
     vertexIterationOrder.push_back(v.second.get());
   }
 
-  // Sort reduction variables before free vars because we do codegen bottom-up
+  // Sort reduction variables after free variables
   sort(vertexIterationOrder.begin(), vertexIterationOrder.end(),
-       ReductionVarsBeforefree);
+       ReductionVarsAfterFree);
 
   for (SIGVertex *v : vertexIterationOrder) {
     if (visitedVertices.find(v) == visitedVertices.end()) {
@@ -259,16 +259,17 @@ LoopVars LoopVars::create(const SIG &sig) {
 
     void visit(const SIGVertex *v) {
       const IndexVar &indexVar = v->iv;
+      size_t numBlockLevels = indexVar.getNumBlockLevels();
 
-      if (currBlockLevel < indexVar.getNumBlockLevels()) {
+      if (currBlockLevel < numBlockLevels) {
         Var var(nameGenerator.getName(indexVar.getName()), Int);
         ForDomain domain = indexVar.getDomain().getIndexSets()[currBlockLevel];
 
-        // We only need to reduce w.r.t. to the outer loop variable variable.
-        ReductionOperator rop = (currBlockLevel==0)
+        // We only reduce w.r.t. to the inner loop variable.
+        ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
                                 ? indexVar.getOperator()
                                 : ReductionOperator::Undefined;
-                                
+
         addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
       }
 
@@ -305,14 +306,14 @@ LoopVars LoopVars::create(const SIG &sig) {
       for (auto &veps : notVisited) {
         const IndexVar &indexVar = veps->iv;
 
-        if (currBlockLevel < indexVar.getNumBlockLevels()) {
+        if (currBlockLevel == 0) {
           Var var(nameGenerator.getName(indexVar.getName()), Int);
           ForDomain domain(e->set, link, ForDomain::Neighbors);
 
-          // We only need to reduce w.r.t. to the outer loop variable variable.
-          ReductionOperator rop = (currBlockLevel==0)
-              ? indexVar.getOperator()
-              : ReductionOperator::Undefined;
+          // We only need to reduce w.r.t. to the inner loop variable.
+          ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
+                                  ? indexVar.getOperator()
+                                  : ReductionOperator::Undefined;
 
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
 
@@ -324,9 +325,8 @@ LoopVars LoopVars::create(const SIG &sig) {
           //     pointsi = (pointsi + (A[ij] * points.b[j]));
           //   points.c[i] = pointsi;
           addCoordVar({link, var}, Var(link.getName()+indexVar.getName(), Int));
+          visitedVertices.insert(veps);
         }
-
-        visitedVertices.insert(veps);
       }
 
       SIGVisitor::visit(e);

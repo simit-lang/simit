@@ -657,6 +657,9 @@ void LLVMBackend::visit(const For *op) {
     case ForDomain::Edges:
       not_supported_yet;
       break;
+    case ForDomain::Neighbors:
+      not_supported_yet;
+      break;
   }
   iassert(iNum);
 

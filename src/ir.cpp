@@ -99,7 +99,7 @@ Func Intrinsics::solve = Func("solve",
 
 Func Intrinsics::loc = Func("loc",
                             {},
-                            {Var("r", Float)},
+                            {Var("r", Int)},
                             Func::Intrinsic);
 
 Func Intrinsics::dot = Func("dot",
