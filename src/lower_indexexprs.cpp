@@ -37,7 +37,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       const IndexExpr *indexExpr = to<IndexExpr>(op->value);
 
       Var var = op->var;
-      Expr value = rewrite(indexExpr);
+      Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
         stmt = AssignStmt::make(var, value);
@@ -53,7 +53,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
 
       Expr elementOrSet = rewrite(op->elementOrSet);
       std::string fieldName = op->fieldName;
-      Expr value = rewrite(indexExpr);
+      Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
         stmt = FieldWrite::make(elementOrSet, fieldName, value);
@@ -148,6 +148,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         size_t lastLevel = iv.getNumBlockLevels()-1;
         indexExprs.push_back(loopVars.getLoopVars(iv)[lastLevel].getVar());
       }
+
       return TensorWrite::make(tensor, indexExprs, value);
     }
   };
@@ -167,67 +168,14 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
     /// Retrieve a statement that writes the tmp variable to the original
     /// location of the rewritten statement.  If result is !defined then the
     /// reduction variable does not ned to be written back.
-    Stmt getTmpWriteStmt() {return tmpWriteStmt;}
+    Stmt getTmpWritebackStmt() {return tmpWritebackStmt;}
 
   private:
     Stmt rstmt;
     ReductionOperator rop;
 
     Var tmpVar;
-    Stmt tmpWriteStmt;
-
-    void visit(const AssignStmt *op) {
-      if (op == rstmt) {
-        tmpVar = op->var;
-        stmt = compoundAssign(tmpVar, rop, op->value);
-      }
-      else {
-        stmt = op;
-      }
-    }
-
-    void visit(const TensorWrite *op) {
-      if (op == rstmt) {
-        iassert(op->value.type().isTensor());
-        ScalarType componentType = op->value.type().toTensor()->componentType;
-        string tmpVarName = getReductionTmpName(op);
-        tmpVar = Var(tmpVarName, TensorType::make(componentType));
-        stmt = compoundAssign(tmpVar, rop, op->value);
-
-        tmpWriteStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
-        if (isa<TensorRead>(op->tensor)) {
-          tmpWriteStmt = makeCompound(tmpWriteStmt, CompoundOperator::Add);
-        }
-      }
-      else {
-        stmt = op;
-      }
-    }
-
-    void visit(const FieldWrite *op) {
-      if (op == rstmt) {
-        iassert(op->value.type().isTensor());
-        ScalarType componentType = op->value.type().toTensor()->componentType;
-        string tmpVarName = getReductionTmpName(op);
-        tmpVar = Var(tmpVarName, TensorType::make(componentType));
-        stmt = compoundAssign(tmpVar, rop, op->value);
-
-        tmpWriteStmt = FieldWrite::make(op->elementOrSet,op->fieldName, tmpVar);
-      }
-      else {
-        stmt = op;
-      }
-    }
-
-    static Stmt compoundAssign(Var var, ReductionOperator op, Expr value) {
-      switch (op.getKind()) {
-        case ReductionOperator::Sum:
-          return AssignStmt::make(var, Add::make(var, value));
-        case ReductionOperator::Undefined:
-          ierror;
-          return Stmt();
-      }
-    }
+    Stmt tmpWritebackStmt;
 
     std::string getReductionTmpName(Stmt stmt) {
       class GetReductionTmpNameVisitor : public IRVisitor {
@@ -256,20 +204,78 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
       return GetReductionTmpNameVisitor().get(stmt);
     }
+
+    static Stmt compoundAssign(Var var, ReductionOperator op, Expr value) {
+      switch (op.getKind()) {
+        case ReductionOperator::Sum:
+          return AssignStmt::make(var, Add::make(var, value));
+        case ReductionOperator::Undefined:
+          ierror;
+          return Stmt();
+      }
+    }
+
+    void visit(const AssignStmt *op) {
+      if (op == rstmt) {
+        ScalarType componentType = op->var.getType().toTensor()->componentType;
+        tmpVar = Var(op->var.getName()+"tmp", TensorType::make(componentType));
+//        tmpVar = op->var;
+
+        stmt = compoundAssign(tmpVar, rop, op->value);
+        tmpWritebackStmt = compoundAssign(op->var, rop, tmpVar);
+      }
+      else {
+        stmt = op;
+      }
+    }
+
+    void visit(const TensorWrite *op) {
+      if (op == rstmt) {
+        iassert(op->value.type().isTensor());
+        ScalarType componentType = op->value.type().toTensor()->componentType;
+        string tmpVarName = getReductionTmpName(op);
+        tmpVar = Var(tmpVarName, TensorType::make(componentType));
+        stmt = compoundAssign(tmpVar, rop, op->value);
+
+        tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
+        if (isa<TensorRead>(op->tensor)) {
+          tmpWritebackStmt = makeCompound(tmpWritebackStmt, CompoundOperator::Add);
+        }
+      }
+      else {
+        stmt = op;
+      }
+    }
+
+    void visit(const FieldWrite *op) {
+      if (op == rstmt) {
+        iassert(op->value.type().isTensor());
+        ScalarType componentType = op->value.type().toTensor()->componentType;
+        string tmpVarName = getReductionTmpName(op);
+        tmpVar = Var(tmpVarName, TensorType::make(componentType));
+        stmt = compoundAssign(tmpVar, rop, op->value);
+
+        tmpWritebackStmt = FieldWrite::make(op->elementOrSet,op->fieldName, tmpVar);
+      }
+      else {
+        stmt = op;
+      }
+    }
   };
 
   ReduceRewriter reduceRewriter(kernel, reductionOperator);
   loopNest = reduceRewriter.rewrite(loopNest);
 
+  // Insert a temporary scalar to reduce into
   Var tmpVar = reduceRewriter.getTmpVar();
   iassert(tmpVar.defined());
 
   Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.getType(), {0}));
   loopNest = Block::make(alloc, loopNest);
 
-  Stmt tmpWriteStmt = reduceRewriter.getTmpWriteStmt();
-  if (tmpWriteStmt.defined()) {
-    loopNest = Block::make(loopNest, tmpWriteStmt);
+  Stmt tmpWritebackStmt = reduceRewriter.getTmpWritebackStmt();
+  if (tmpWritebackStmt.defined()) {
+    loopNest = Block::make(loopNest, tmpWritebackStmt);
   }
 
   return loopNest;
@@ -280,7 +286,8 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   SIG sig = createSIG(stmt, storage);
   LoopVars loopVars = LoopVars::create(sig);
 
-  // Create compute kernel (loop body)
+  // Create initial compute kernel (loop body). The initial kernel does not take
+  // into account reductions, so it will be rewritten to reflect these.
   Stmt kernel = specialize(stmt, loopVars);
 
   // Create loops (since we create the loops inside out, we must iterate over
@@ -305,14 +312,16 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
     } else {
       loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
     }
+
     if (loopVar->hasReduction()) {
       loopNest = reduce(loopNest, kernel, loopVar->getReductionOperator());
     }
   }
 
-  // Insert initialization statement for the result. This is only needed when
-  // the left-hand side is a sparse iteration
-  if (sig.isSparse()) {
+  // Initialize the result. Only necessary for sparse computations or
+  // reductions to scalars.
+  bool isResultScalar = containsReductionVar(stmt) && !containsFreeVar(stmt);
+  if (isResultScalar || sig.isSparse()) {
     loopNest = Block::make(initializeLhsToZero(stmt), loopNest);
   }
 
