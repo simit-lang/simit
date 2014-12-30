@@ -29,6 +29,8 @@ func f(a : int, b : float) -> (r : int)
   c = b* b + 2.1;
   print c;
   d = -1.6;
+  e = +1.6;
+  d = d + e;
   print d;
   r = 0;
 end
