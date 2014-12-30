@@ -276,7 +276,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 }
 
 /// Lowers the given 'stmt' containing an index expression.
-Stmt lower(Stmt stmt, const Storage &storage) {
+Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   SIG sig = createSIG(stmt, storage);
   LoopVars loopVars = LoopVars::create(sig);
 
@@ -332,21 +332,21 @@ Func lowerIndexExpressions(Func func) {
     const Storage *storage;
     void visit(const AssignStmt *op) {
       if (isa<IndexExpr>(op->value))
-        stmt = simit::ir::lower(op, *storage);
+        stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
     }
 
     void visit(const FieldWrite *op) {
       if (isa<IndexExpr>(op->value))
-        stmt = simit::ir::lower(op, *storage);
+        stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
     }
 
     void visit(const TensorWrite *op) {
       if (isa<IndexExpr>(op->value))
-        stmt = simit::ir::lower(op, *storage);
+        stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
     }
