@@ -3,6 +3,8 @@
 #include <vector>
 #include <set>
 
+#include "types.h"
+
 using namespace std;
 
 namespace simit {
@@ -59,7 +61,28 @@ std::vector<IndexVar> getReductionVars(Expr expr) {
   return GetReductionIndexVars().get(expr);
 }
 
-// containsReduction
+// containsFreeVar
+class ContainsFree : public IRQuery {
+  void visit(const IndexedTensor *op) {
+    for (auto &iv : op->indexVars) {
+      if (iv.isFreeVar()) {
+        result = true;
+        return;
+      }
+    }
+  }
+};
+
+bool containsFreeVar(Expr expr) {
+  return ContainsFree().query(expr);
+}
+
+bool containsFreeVar(Stmt stmt) {
+  return ContainsFree().query(stmt);
+}
+
+
+// containsReductionVar
 class ContainsReduction : public IRQuery {
   void visit(const IndexedTensor *op) {
     for (auto &iv : op->indexVars) {
@@ -71,14 +94,13 @@ class ContainsReduction : public IRQuery {
   }
 };
 
-bool containsReduction(Expr expr) {
+bool containsReductionVar(Expr expr) {
   return ContainsReduction().query(expr);
 }
 
-bool containsReduction(Stmt stmt) {
+bool containsReductionVar(Stmt stmt) {
   return ContainsReduction().query(stmt);
 }
-
 
 // isFlattened
 class CheckIsFlattened : private IRVisitor {
@@ -106,6 +128,32 @@ private:
 
 bool isFlattened(Stmt stmt) {
   return CheckIsFlattened().check(stmt);
+}
+
+bool isBlocked(Stmt stmt) {
+  class IsBlockedVisitor : private IRVisitor {
+  public:
+    bool check(Stmt stmt) {
+      isBlocked = false;
+      stmt.accept(this);
+      return isBlocked;
+    }
+  private:
+    bool isBlocked;
+
+    void updateBlocked(Expr expr) {
+      Type type = expr.type();
+      if (type.isTensor() && !isScalar(type.toTensor()->blockType())) {
+        isBlocked = true;
+      }
+    }
+
+    void visit(const IndexedTensor *op) {
+      updateBlocked(op->tensor);
+    }
+  };
+
+  return IsBlockedVisitor().check(stmt);
 }
 
 }}
