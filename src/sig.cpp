@@ -305,7 +305,7 @@ LoopVars LoopVars::create(const SIG &sig) {
       for (auto &veps : notVisited) {
         const IndexVar &indexVar = veps->iv;
 
-        if (currBlockLevel < indexVar.getNumBlockLevels()) {
+        if (currBlockLevel == 0) {
           Var var(nameGenerator.getName(indexVar.getName()), Int);
           ForDomain domain(e->set, link, ForDomain::Neighbors);
 
@@ -324,9 +324,8 @@ LoopVars LoopVars::create(const SIG &sig) {
           //     pointsi = (pointsi + (A[ij] * points.b[j]));
           //   points.c[i] = pointsi;
           addCoordVar({link, var}, Var(link.getName()+indexVar.getName(), Int));
+          visitedVertices.insert(veps);
         }
-
-        visitedVertices.insert(veps);
       }
 
       SIGVisitor::visit(e);
