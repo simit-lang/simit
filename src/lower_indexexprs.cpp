@@ -124,7 +124,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         // then we load from the tensor using this variable.
         Var coordVar = loopVars.getCoordVar(vars);
         if (coordVar.defined()) {
-          tensor = Load::make(tensor, coordVar);
+          tensor = TensorRead::make(tensor, {coordVar});
         }
         else {
           tensor = TensorRead::make(tensor, indexExprs);

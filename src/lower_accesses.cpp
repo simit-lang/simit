@@ -91,11 +91,11 @@ private:
     Expr index;
     switch (tensorStorage.getKind()) {
       case TensorStorage::DenseRowMajor: {
-        const TensorType *type = tensor.type().toTensor();
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
         }
         else if (indices.size() == 2) {
+          const TensorType *type = tensor.type().toTensor();
           Expr i = rewrite(indices[0]);
           Expr j = rewrite(indices[1]);
 
@@ -119,15 +119,21 @@ private:
         break;
       }
       case TensorStorage::SystemReduced: {
-        iassert(indices.size() == 2);
-        Expr i = rewrite(indices[0]);
-        Expr j = rewrite(indices[1]);
+        iassert(indices.size() == 1 || indices.size() == 2);
 
-        Expr edgeSet = tensorStorage.getSystemTargetSet();
-        Expr nbrs_start = IndexRead::make(edgeSet, IndexRead::NeighborsStart);
-        Expr nbrs = IndexRead::make(edgeSet, IndexRead::Neighbors);
+        if (indices.size() == 1) {
+          index = rewrite(indices[0]);
+        }
+        else {
+          Expr i = rewrite(indices[0]);
+          Expr j = rewrite(indices[1]);
 
-        index = Call::make(Intrinsics::loc, {i, j, nbrs_start, nbrs});
+          Expr edgeSet = tensorStorage.getSystemTargetSet();
+          Expr nbrs_start = IndexRead::make(edgeSet, IndexRead::NeighborsStart);
+          Expr nbrs = IndexRead::make(edgeSet, IndexRead::Neighbors);
+
+          index = Call::make(Intrinsics::loc, {i, j, nbrs_start, nbrs});
+        }
         break;
       }
       case TensorStorage::SystemUnreduced:

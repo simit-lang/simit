@@ -289,16 +289,22 @@ struct FieldRead : public ExprNode<FieldRead> {
   }
 };
 
-/// Expression that reads a tensor from a tensor location.
+/// Expression that reads a tensor from an n-dimensional tensor location.
 struct TensorRead : public ExprNode<TensorRead> {
   Expr tensor;
   std::vector<Expr> indices;
 
+  /// Construct a tensor read that reads a block from the location in `tensor`
+  /// specified by `indices`. The caller must either provide one or n indices,
+  /// where n is the tensor order. If one index is provided then the tensor read
+  /// has already been flattened, and will be directly lowered to a load.
   static Expr make(Expr tensor, std::vector<Expr> indices) {
     iassert(tensor.type().isTensor());
     for (auto &index : indices) {
       iassert(isScalar(index.type()) || index.type().isElement());
     }
+    iassert(indices.size() == 1 ||
+            indices.size() == tensor.type().toTensor()->order());
 
     TensorRead *node = new TensorRead;
     node->type = getBlockType(tensor);
@@ -630,6 +636,8 @@ struct Xor : public ExprNode<Xor> {
   }
 };
 
+/// Expression that loads a scalar from a buffer. A buffer is a one-dimensional
+/// tensor that is indexed by an integer range.
 struct Load : public ExprNode<Load> {
   Expr buffer;
   Expr index;
@@ -637,12 +645,8 @@ struct Load : public ExprNode<Load> {
   static Expr make(Expr buffer, Expr index) {
     iassert(isScalar(index.type()));
 
-    // TODO: Create a buffer/array type and assert that buffer is that type.
-    //       Then get the component from the buffer.
-    ScalarType ctype = buffer.type().toTensor()->componentType;
-
     Load  *node = new Load;
-    node->type = TensorType::make(ctype);
+    node->type = TensorType::make(buffer.type().toTensor()->componentType);
     node->buffer = buffer;
     node->index = index;
     return node;
