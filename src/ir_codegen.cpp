@@ -14,7 +14,7 @@ namespace ir {
 
 Stmt makeCompound(Stmt stmt, CompoundOperator cop) {
   /// Turns tensor writes into compound assignments (e.g. +=, *=)
-  /// \todo Generalize to include Assignments, FieldWrite, TupleWrite
+  /// TODO: Generalize to include Assignments, FieldWrite, TupleWrite
   class MakeCompound : public IRRewriter {
   public:
     MakeCompound(CompoundOperator compound) : compound(compound) {}
@@ -44,10 +44,8 @@ Stmt makeCompound(Stmt stmt, CompoundOperator cop) {
             break;
           }
         }
-        IRBuilder builder;
-        value = builder.binaryElwiseExpr(lhsRead, binop, value);
+        value = IRBuilder().binaryElwiseExpr(lhsRead, binop, value);
       }
-
 
       stmt = TensorWrite::make(op->tensor, op->indices, value);
     }

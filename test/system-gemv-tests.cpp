@@ -357,7 +357,7 @@ TEST(System, gemv_blocked_nw) {
   ASSERT_EQ(0.0, c2(1));
 }
 
-TEST(System, DISABLED_gemv_blocked_computed) {
+TEST(System, gemv_blocked_computed) {
   // Points
   Set<> points;
   FieldRef<double,2> b = points.addField<double,2>("b");

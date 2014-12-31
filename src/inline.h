@@ -38,10 +38,6 @@ protected:
   virtual void visit(const VarExpr *op);
 };
 
-/// Inlines the mapped function with respect to the given loop variable over
-/// the target set, using the given rewriter.
-Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter);
-
 /// Inlines the map returning a loop, using the given rewriter.
 Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter);
 

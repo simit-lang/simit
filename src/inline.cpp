@@ -2,6 +2,9 @@
 
 #include <vector>
 
+#include "temps.h"
+#include "flatten.h"
+
 using namespace std;
 
 namespace simit {
@@ -83,12 +86,16 @@ void MapFunctionRewriter::visit(const VarExpr *op) {
   }
 }
 
+/// Inlines the mapped function with respect to the given loop variable over
+/// the target set, using the given rewriter.
 Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
   return rewriter.inlineMapFunc(map, lv);
 }
 
 Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   Func kernel = map->function;
+  kernel = insertTemporaries(kernel);
+
   Var targetVar = kernel.getArguments()[0];
   Var neighborsVar = kernel.getArguments()[1];
 
@@ -105,6 +112,10 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
     Stmt init = AssignStmt::make(var, zero);
     inlinedMap = Block::make(init, inlinedMap);
   }
+
+  // We flatten the statement after it has been inlined, since inlining may
+  // introduce additional nested index expressions
+  inlinedMap = flattenIndexExpressions(inlinedMap);
 
   return inlinedMap;
 }
