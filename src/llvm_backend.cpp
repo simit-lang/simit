@@ -702,15 +702,18 @@ void LLVMBackend::visit(const ir::ForRange *op) {
   
   // Loop Header
   llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
-  
+
+  llvm::Value *rangeStart = compile(op->start);
+  llvm::Value *rangeEnd = compile(op->end);
+
   llvm::BasicBlock *loopBodyStart =
     llvm::BasicBlock::Create(LLVM_CONTEXT, iName+"_loop_body", llvmFunc);
   builder->CreateBr(loopBodyStart);
   builder->SetInsertPoint(loopBodyStart);
-  
+
   llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
-  i->addIncoming(compile(op->start), entryBlock);
-  
+  i->addIncoming(rangeStart, entryBlock);
+
   // Loop Body
   symtable.scope();
   symtable.insert(iName, i);
@@ -723,7 +726,7 @@ void LLVMBackend::visit(const ir::ForRange *op) {
                                           iName+"_nxt", false, true);
   i->addIncoming(i_nxt, loopBodyEnd);
 
-  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, compile(op->end),
+  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, rangeEnd,
                                                  iName+"_cmp");
   llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
                                                        iName+"_loop_end",
