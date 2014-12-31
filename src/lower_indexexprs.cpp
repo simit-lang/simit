@@ -359,6 +359,15 @@ Func lowerIndexExpressions(Func func) {
       else
         IRRewriter::visit(op);
     }
+
+    void visit(const IndexExpr *op) {
+      iassert_scalar(Expr(op));
+      expr = rewrite(op->value);
+    }
+
+    void visit(const IndexedTensor *op) {
+      expr = op->tensor;
+    }
   };
 
   return LowerIndexExpressionsRewriter().lower(func);
