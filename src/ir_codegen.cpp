@@ -35,7 +35,7 @@ Stmt makeCompound(Stmt stmt, CompoundOperator cop) {
           e = IRRewriter::rewrite(e);
         }
         else {
-          iassert(lhsExpr.type() == e.type());
+          iassert_types_equal(lhsExpr, e);
 
           if (isScalar(lhsExpr.type())) {
             switch (compoundOperator.kind) {
