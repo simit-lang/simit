@@ -17,62 +17,38 @@ Stmt makeCompound(Stmt stmt, CompoundOperator cop) {
   /// \todo Generalize to include Assignments, FieldWrite, TupleWrite
   class MakeCompound : public IRRewriter {
   public:
-    MakeCompound(CompoundOperator compoundOperator)
-        : compoundOperator(compoundOperator) {}
-
-    Stmt rewrite(Stmt stmt) {
-      return IRRewriter::rewrite(stmt);
-    }
+    MakeCompound(CompoundOperator compound) : compound(compound) {}
 
   private:
-    CompoundOperator compoundOperator;
-    Expr lhsExpr;
+    CompoundOperator compound;
 
-    Expr rewrite(Expr e) {
-      iassert(lhsExpr.defined());
-      if (e.defined()) {
-        if (!e.type().isTensor()) {
-          e = IRRewriter::rewrite(e);
-        }
-        else {
-          iassert_types_equal(lhsExpr, e);
+    void visit(const TensorWrite *op) {
+      Expr lhsRead = TensorRead::make(op->tensor, op->indices);
+      Expr value = rewrite(op->value);
 
-          if (isScalar(lhsExpr.type())) {
-            switch (compoundOperator.kind) {
-              case CompoundOperator::Add: {
-                e = Add::make(lhsExpr,e);
-                break;
-              }
-            }
-          }
-          else {
-            IRBuilder::BinaryOperator binop;
-            switch (compoundOperator.kind) {
-              case CompoundOperator::Add: {
-                binop = IRBuilder::Add;
-                break;
-              }
-            }
-            IRBuilder builder;
-            e = builder.binaryElwiseExpr(lhsExpr, binop, e);
+      iassert_types_equal(lhsRead, value);
+
+      if (isScalar(lhsRead.type())) {
+        switch (compound.kind) {
+          case CompoundOperator::Add: {
+            value = Add::make(lhsRead, value);
+            break;
           }
         }
       }
       else {
-        e = Expr();
+        IRBuilder::BinaryOperator binop;
+        switch (compound.kind) {
+          case CompoundOperator::Add: {
+            binop = IRBuilder::Add;
+            break;
+          }
+        }
+        IRBuilder builder;
+        value = builder.binaryElwiseExpr(lhsRead, binop, value);
       }
-      expr = Expr();
-      stmt = Stmt();
-      return e;
-    }
 
-    void visit(const TensorWrite *op) {
-      lhsExpr = TensorRead::make(op->tensor, op->indices);
-      vector<IndexVar> indexVars = getFreeVars(op->value);
-      if (indexVars.size()) {
-        lhsExpr = IndexedTensor::make(lhsExpr, indexVars);
-      }
-      Expr value = rewrite(op->value);
+
       stmt = TensorWrite::make(op->tensor, op->indices, value);
     }
   };
