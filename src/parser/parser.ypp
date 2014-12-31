@@ -689,7 +689,6 @@ tensor_write_stmt
     Expr setExpr = setSymbol.getExpr();
 
     Expr tensorExpr = FieldRead::make(setExpr, fieldName);
-    std::cout << tensorExpr << std::endl;
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
 
