@@ -230,6 +230,7 @@
 %token BLOCKEND  "end"
 %token RETURN    "return"
 %token TEST      "%!"
+%token PRINT     "print"
 
 %token RARROW    "->"
 %token LP        "("
@@ -486,6 +487,7 @@ stmt
   | for_stmt
   | const_stmt
   | expr_stmt
+  | print_stmt
 
 assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
@@ -830,6 +832,11 @@ expr_stmt
     $$ = NULL;
   }
 
+print_stmt
+  : "print" expr ";" {
+     Expr expr = Expr(convertAndDelete($2));
+     ctx->addStatement(Stmt(Print::make(expr)));
+  }
 
 // Expressions
 %type <expr> expr;

@@ -73,6 +73,7 @@ private:
   virtual void visit(const IfThenElse *);
   virtual void visit(const Block *);
   virtual void visit(const Pass *);
+  virtual void visit(const Print *);
 
   virtual void visit(const Func *);
 
