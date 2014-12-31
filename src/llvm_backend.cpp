@@ -736,29 +736,29 @@ void LLVMBackend::visit(const ir::ForRange *op) {
 void LLVMBackend::visit(const ir::IfThenElse *op) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
-   llvm::Value *cond = compile(op->condition);
-   llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
+  llvm::Value *cond = compile(op->condition);
+  llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
 
 
-   llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "then", llvmFunc);
-   llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "else");
-   llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "exit");
-   builder->CreateCondBr(condEval, thenBlock, elseBlock);
+  llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "then", llvmFunc);
+  llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "else");
+  llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "exit");
+  builder->CreateCondBr(condEval, thenBlock, elseBlock);
 
-   builder->SetInsertPoint(thenBlock);
-   compile(op->thenBody);
-   builder->CreateBr(exitBlock);
-   thenBlock = builder->GetInsertBlock();
+  builder->SetInsertPoint(thenBlock);
+  compile(op->thenBody);
+  builder->CreateBr(exitBlock);
+  thenBlock = builder->GetInsertBlock();
 
-   llvmFunc->getBasicBlockList().push_back(elseBlock);
+  llvmFunc->getBasicBlockList().push_back(elseBlock);
 
-   builder->SetInsertPoint(elseBlock);
-   compile(op->elseBody);
-   builder->CreateBr(exitBlock);
-   elseBlock = builder->GetInsertBlock();
+  builder->SetInsertPoint(elseBlock);
+  compile(op->elseBody);
+  builder->CreateBr(exitBlock);
+  elseBlock = builder->GetInsertBlock();
 
-   llvmFunc->getBasicBlockList().push_back(exitBlock);
-   builder->SetInsertPoint(exitBlock);
+  llvmFunc->getBasicBlockList().push_back(exitBlock);
+  builder->SetInsertPoint(exitBlock);
 
 }
 
@@ -799,6 +799,63 @@ void LLVMBackend::visit(const Block *op) {
 
 void LLVMBackend::visit(const Pass *op) {
   // Nothing to do
+}
+
+static
+void printStmtAddScalarArg(std::string &format,
+                           std::vector<llvm::Value*> &args,
+                           simit::ir::ScalarType type,
+                           llvm::Value *val) {
+  switch (type.kind) {
+  case simit::ir::ScalarType::Int:
+    format.append("%d");
+    args.push_back(val);
+    break;
+  case simit::ir::ScalarType::Float:
+    format.append("%f");
+    args.push_back(val);
+    break;
+  case simit::ir::ScalarType::Boolean:
+    format.append("%d");
+    args.push_back(val);
+    break;
+  default:
+    unreachable << "Unknown ScalarType";
+  }
+}
+
+void LLVMBackend::visit(const Print *op) {
+
+  llvm::Value *result = compile(op->expr);
+  Type type = op->expr.type();
+
+  switch (type.kind()) {
+  case Type::Kind::Tensor: {
+    const TensorType *tensor = type.toTensor();
+    ScalarType scalarType = tensor->componentType;
+    size_t order = tensor->order();
+    std::string format;
+    std::vector<llvm::Value*> args;
+
+    if (order == 0) {
+      printStmtAddScalarArg(format, args, scalarType, result);
+      format.append("\n");
+    } else if (order == 1) {
+      not_supported_yet;
+    } else {
+      not_supported_yet;
+    }
+
+    emitPrintf(format, args);
+  }
+    break;
+  case Type::Kind::Element:
+  case Type::Kind::Set:
+  case Type::Kind::Tuple:
+    not_supported_yet;
+  default:
+    unreachable << "Unknown Type";
+  }
 }
 
 llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
@@ -945,8 +1002,13 @@ void LLVMBackend::emitPrintf(std::string format) {
   emitPrintf(format, {});
 }
 
-void LLVMBackend::emitPrintf(string format,
-                             initializer_list<llvm::Value*> args) {
+void LLVMBackend::emitPrintf(std::string format,
+                             std::initializer_list<llvm::Value*> args) {
+  emitPrintf(format, std::vector<llvm::Value*>(args));
+}
+
+void LLVMBackend::emitPrintf(std::string format,
+                             std::vector<llvm::Value*> args) {
   auto int32Type = llvm::IntegerType::getInt32Ty(LLVM_CONTEXT);
   llvm::Function *printfFunc = module->getFunction("printf");
   if (printfFunc == nullptr) {

@@ -390,6 +390,15 @@ void IRRewriter::visit(const Func *f) {
   }
 }
 
+void IRRewriter::visit(const Print *op) {
+  Expr expr = rewrite(op->expr);
+  if (expr == op->expr) {
+    stmt = op;
+  } else {
+    stmt = Print::make(expr);
+  }
+}
+
 
 // Utility 
 

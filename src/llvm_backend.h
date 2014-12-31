@@ -93,6 +93,7 @@ protected:
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
+  virtual void visit(const ir::Print *);
 
   /// Get a pointer to the given field
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);
@@ -118,6 +119,7 @@ protected:
 
   void emitPrintf(std::string format);
   void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
+  void emitPrintf(std::string format, std::vector<llvm::Value*> args);
 
 private:
   static bool llvmInitialized;
