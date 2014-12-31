@@ -421,6 +421,7 @@ void IRPrinter::visit(const Print *op) {
   indent();
   os << "print ";
   print(op->expr);
+  os << ";";
 }
 
 void IRPrinter::visit(const Func *func) {
