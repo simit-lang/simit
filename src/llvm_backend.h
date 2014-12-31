@@ -118,7 +118,6 @@ protected:
                         llvm::Type *returnType);
 
   void emitPrintf(std::string format);
-  void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
   void emitPrintf(std::string format, std::vector<llvm::Value*> args);
 
 private:

@@ -891,15 +891,15 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
     return llvmInt(1);
   }
 
-  llvm::Value *result = nullptr;
+  llvm::Value *len = nullptr;
   switch (tensorStorage.getKind()) {
     case TensorStorage::DenseRowMajor: {
       auto it = tensorType->dimensions.begin();
-      result = emitComputeLen(*it++);
+      len = emitComputeLen(*it++);
       for (; it != tensorType->dimensions.end(); ++it) {
-        result = builder->CreateMul(result, emitComputeLen(*it));
+        len = builder->CreateMul(len, emitComputeLen(*it));
       }
-      return result;
+      break;
     }
     case TensorStorage::SystemReduced: {
       llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
@@ -915,14 +915,20 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
       llvm::Value *neighborIndexSizeLoc =
           builder->CreateInBoundsGEP(neighborStartIndex, setSize,
                                      "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
-      llvm::Value *neighborIndexSize =
-          builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
-                                     "neighbors"+LEN_SUFFIX);
+      len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
+                                       "neighbors"+LEN_SUFFIX);
 
       // Multiply by block size
-      // TODO
-
-      return neighborIndexSize;
+      Type blockType = tensorType->blockType();
+      if (!isScalar(blockType)) {
+        // TODO: The following assumes all blocks are dense row major. The right
+        //       way to assign a storage order for every block in the tensor
+        //       represented by a TensorStorage
+        llvm::Value *blockSize =
+            emitComputeLen(blockType.toTensor(), TensorStorage::DenseRowMajor);
+        len = builder->CreateMul(len, blockSize);
+      }
+      break;
     }
     case TensorStorage::SystemUnreduced: {
       not_supported_yet;
@@ -935,8 +941,8 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
       ierror << "Attempting to compute size of tensor with undefined storage";
       break;
   }
-  ierror;
-  return nullptr;
+  iassert(len != nullptr);
+  return len;
 }
 
 llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
@@ -1000,11 +1006,6 @@ llvm::Value *LLVMBackend::emitCall(std::string name,
 
 void LLVMBackend::emitPrintf(std::string format) {
   emitPrintf(format, {});
-}
-
-void LLVMBackend::emitPrintf(std::string format,
-                             std::initializer_list<llvm::Value*> args) {
-  emitPrintf(format, std::vector<llvm::Value*>(args));
 }
 
 void LLVMBackend::emitPrintf(std::string format,
