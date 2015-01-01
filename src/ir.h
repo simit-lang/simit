@@ -423,13 +423,6 @@ struct Call : public ExprNode<Call> {
   }
 };
 
-#define iassert_scalar(a) \
-    iassert(isScalar(a.type())) << a << ": " << a.type()
-
-#define iassert_types_equal(a,b) \
-  iassert(a.type() == b.type()) << a.type() << "!=" << b.type() << "\n" \
-                                << #a << ":" << a << "\n" << #b << ":" << b
-
 struct Neg : public ExprNode<Neg> {
   Expr a;
 

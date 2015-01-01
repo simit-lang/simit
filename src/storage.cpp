@@ -228,7 +228,7 @@ private:
       tensorStorage = TensorStorage(TensorStorage::DenseRowMajor);
     }
     else {
-      tensorStorage = TensorStorage(TensorStorage::SystemReduced);
+      not_supported_yet;
     }
     storage.add(var, tensorStorage);
     return tensorStorage;

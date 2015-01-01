@@ -28,8 +28,14 @@ inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
 
 class LowerMapFunctionRewriter : public MapFunctionRewriter {
   using MapFunctionRewriter::visit;
+
+  /// Change assignments to result to compound assignments, using the map
+  /// reduction operator.
   virtual void visit(const TensorWrite *op) {
+    // Rewrites the tensor write and assigns the result to stmt
     IRRewriter::visit(op);
+    Stmt tensorWrite = stmt;
+
     if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
       iassert(isa<TensorWrite>(stmt));
       const TensorWrite *tensorWrite = to<TensorWrite>(stmt);

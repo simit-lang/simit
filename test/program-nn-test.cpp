@@ -11,7 +11,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(DISABLED_Program, nn) {
+TEST(Program, DISABLED_nn) {
   Program program;
   std::string programText = R"(
 element Node
