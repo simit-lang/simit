@@ -172,6 +172,15 @@ Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
   return TensorType::make(expr.type().toTensor()->componentType, dimensions);
 }
 
+// struct CompoundOperator
+bool operator==(const CompoundOperator &l, const CompoundOperator &r) {
+  return l.kind == r.kind;
+}
+
+bool operator!=(const CompoundOperator &l, const CompoundOperator &r) {
+  return l.kind != r.kind;
+}
+
 // struct Literal
 void Literal::cast(Type type) {
   iassert(type.isTensor());

@@ -18,15 +18,6 @@
 namespace simit {
 namespace ir {
 
-// CompoundOperator type
-struct CompoundOperator {
-  enum Kind { None, Add };
-  Kind kind;
-  CompoundOperator() : kind(None) {}
-  CompoundOperator(Kind kind) : kind(kind) {}
-  CompoundOperator(const CompoundOperator &other) : kind(other.kind) {}
-};
-
 /// The base class of all nodes in the Simit Intermediate Representation
 /// (Simit IR)
 struct IRNode : private simit::interfaces::Uncopyable {
@@ -220,6 +211,19 @@ public:
 Type getFieldType(Expr elementOrSet, std::string fieldName);
 Type getBlockType(Expr tensor);
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
+
+
+/// CompoundOperator used with AssignStmt, TensorWrite, FieldWrite and Store.
+struct CompoundOperator {
+  enum Kind { None, Add };
+  Kind kind;
+  CompoundOperator() : kind(None) {}
+  CompoundOperator(Kind kind) : kind(kind) {}
+  CompoundOperator(const CompoundOperator &other) : kind(other.kind) {}
+};
+
+bool operator==(const CompoundOperator&, const CompoundOperator&);
+bool operator!=(const CompoundOperator&, const CompoundOperator&);
 
 
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note

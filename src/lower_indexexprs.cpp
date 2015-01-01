@@ -285,8 +285,50 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
   return loopNest;
 }
 
+/// Wraps tensor values that are compound assigned or written in index
+/// expressions to trigger lowering.
+Stmt wrapCompoundAssignedValues(Stmt stmt) {
+  class CompoundValueWrapper : public IRRewriter {
+    void visit(const AssignStmt *op) {
+      if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
+        // Wrap the written value in an index expression to trigger lowering
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        stmt = AssignStmt::make(op->cop, op->var, value);
+      }
+      else {
+        stmt = op;
+      }
+    }
+
+    void visit(const FieldWrite *op) {
+      if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
+        // Wrap the written value in an index expression to trigger lowering
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        stmt = FieldWrite::make(op->cop, op->elementOrSet, op->fieldName, value);
+      }
+      else {
+        stmt = op;
+      }
+    }
+
+    void visit(const TensorWrite *op) {
+      if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
+        // Wrap the written value in an index expression to trigger lowering
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        stmt = TensorWrite::make(op->cop, op->tensor, op->indices, value);
+      }
+      else {
+        stmt = op;
+      }
+    }
+  };
+  return CompoundValueWrapper().rewrite(stmt);
+}
+
 /// Lowers the given 'stmt' containing an index expression.
 Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
+  stmt = wrapCompoundAssignedValues(stmt);
+
   SIG sig = createSIG(stmt, storage);
   LoopVars loopVars = LoopVars::create(sig);
 
@@ -344,21 +386,21 @@ Func lowerIndexExpressions(Func func) {
   private:
     const Storage *storage;
     void visit(const AssignStmt *op) {
-      if (isa<IndexExpr>(op->value))
+      if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
         stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
     }
 
     void visit(const FieldWrite *op) {
-      if (isa<IndexExpr>(op->value))
+      if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
         stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
     }
 
     void visit(const TensorWrite *op) {
-      if (isa<IndexExpr>(op->value))
+      if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
         stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
@@ -373,7 +415,6 @@ Func lowerIndexExpressions(Func func) {
       expr = op->tensor;
     }
   };
-
   return LowerIndexExpressionsRewriter().lower(func);
 }
 

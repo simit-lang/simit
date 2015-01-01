@@ -35,19 +35,12 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
   virtual void visit(const TensorWrite *op) {
     // Rewrites the tensor write and assigns the result to stmt
     IRRewriter::visit(op);
-
+    iassert(isa<TensorWrite>(stmt));
     if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
-      iassert(isa<TensorWrite>(stmt));
       const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
-      if (tensorWrite->value.type().isTensor()) {
-        stmt = TensorWrite::make(
-            CompoundOperator::Add, tensorWrite->tensor, tensorWrite->indices,
-            IRBuilder().unaryElwiseExpr(IRBuilder::None, tensorWrite->value));
-      }
-      else {
-        stmt = TensorWrite::make(CompoundOperator::Add, tensorWrite->tensor,
-                                 tensorWrite->indices, tensorWrite->value);
-      }
+      iassert(tensorWrite->value.type().isTensor());
+      stmt = TensorWrite::make(CompoundOperator::Add, tensorWrite->tensor,
+                               tensorWrite->indices, tensorWrite->value);
     }
   }
 };
