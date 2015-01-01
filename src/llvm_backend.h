@@ -117,8 +117,15 @@ protected:
                         std::vector<llvm::Value*> args,
                         llvm::Type *returnType);
 
-  void emitPrintf(std::string format);
-  void emitPrintf(std::string format, std::vector<llvm::Value*> args);
+  /// Emit an empty function and set the builder cursor to its entry block. The
+  /// function's arguments and result variables are added to the symbol table.
+  llvm::Function *emitEmptyFunction(const std::string &name,
+                                    const std::vector<ir::Var> &arguments,
+                                    const std::vector<ir::Var> &results);
+
+//  void emitPrintf(std::string format);
+  void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
+
   virtual void emitFirstAssign(const std::string& varName,
                                const ir::Expr& value);
   void emitAssign(ir::Var var, const ir::Expr& value);

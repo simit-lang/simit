@@ -132,12 +132,12 @@ llvm::Type *createLLVMType(const Type &type) {
   return nullptr;
 }
 
-static llvm::Function *createFunction(const std::string &name,
-                                      const std::vector<std::string> &argNames,
-                                      const std::vector<llvm::Type*> &argTypes,
-                                      llvm::Module *module,
-                                      bool externalLinkage,
-                                      bool doesNotThrow) {
+static llvm::Function *createPrototype(const std::string &name,
+                                       const vector<string> &argNames,
+                                       const vector<llvm::Type*> &argTypes,
+                                       llvm::Module *module,
+                                       bool externalLinkage,
+                                       bool doesNotThrow) {
   llvm::FunctionType *ft= llvm::FunctionType::get(LLVM_VOID,argTypes,false);
   llvm::Function *f= llvm::Function::Create(
       ft,
@@ -160,19 +160,12 @@ static llvm::Function *createFunction(const std::string &name,
   return f;
 }
 
-llvm::Function *createFunction(const std::string &name,
-                               const vector<Var> &arguments,
-                               const vector<Var> &results,
-                               llvm::Module *module) {
-  return createFunction(name, arguments, results, module, false, true);
-}
-
-llvm::Function *createFunction(const std::string &name,
-                               const vector<Var> &arguments,
-                               const vector<Var> &results,
-                               llvm::Module *module,
-                               bool externalLinkage,
-                               bool doesNotThrow) {
+llvm::Function *createPrototype(const std::string &name,
+                                const vector<Var> &arguments,
+                                const vector<Var> &results,
+                                llvm::Module *module,
+                                bool externalLinkage,
+                                bool doesNotThrow) {
   vector<string>      llvmArgNames;
   vector<llvm::Type*> llvmArgTypes;
 
@@ -194,8 +187,8 @@ llvm::Function *createFunction(const std::string &name,
 
   assert(llvmArgNames.size() == llvmArgTypes.size());
 
-  return createFunction(name, llvmArgNames, llvmArgTypes,
-                        module, externalLinkage, doesNotThrow);
+  return createPrototype(name, llvmArgNames, llvmArgTypes,
+                         module, externalLinkage, doesNotThrow);
 }
 
 std::ostream &operator<<(std::ostream &os, const llvm::Value &value) {

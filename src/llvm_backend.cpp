@@ -78,18 +78,16 @@ simit::Function *LLVMBackend::compile(Func func) {
   }
 
   // Create compute function
-  llvm::Function *llvmFunc = createFunction(func.getName(), func.getArguments(),
-                                            func.getResults(), module);
-  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
-  builder->SetInsertPoint(entry);
-  for (auto &arg : llvmFunc->getArgumentList()) {
-    symtable.insert(arg.getName(), &arg);
-  }
+  llvm::Function *llvmFunc = emitEmptyFunction(func.getName(),
+                                               func.getArguments(),
+                                               func.getResults());
+
   for (auto &var : storage) {
     llvm::Value *buffer = buffers[var];
     llvm::Value *llvmTmp = builder->CreateLoad(buffer, buffer->getName());
     symtable.insert(llvmTmp->getName(), llvmTmp);
   }
+
   compile(func.getBody());
   builder->CreateRetVoid();
   symtable.clear();
@@ -108,14 +106,8 @@ simit::Function *LLVMBackend::compile(Func func) {
 
 
   // Create initialization function
-  llvm::Function *llvmInitFunc = createFunction(func.getName()+".init",
-                                                func.getArguments(),
-                                                func.getResults(), module);
-  entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmInitFunc);
-  builder->SetInsertPoint(entry);
-  for (auto &arg : llvmInitFunc->getArgumentList()) {
-    symtable.insert(arg.getName(), &arg);
-  }
+  emitEmptyFunction(func.getName()+".init",
+                    func.getArguments(), func.getResults());
 
   for (auto &var : storage) {
     Type type = var.getType();
@@ -135,14 +127,9 @@ simit::Function *LLVMBackend::compile(Func func) {
   symtable.clear();
 
   // Create de-initialization function
-  llvm::Function *llvmDeinitFunc = createFunction(func.getName()+".deinit",
-                                                  func.getArguments(),
-                                                  func.getResults(), module);
-  entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmDeinitFunc);
-  builder->SetInsertPoint(entry);
-  for (auto &arg : llvmDeinitFunc->getArgumentList()) {
-    symtable.insert(arg.getName(), &arg);
-  }
+  emitEmptyFunction(func.getName()+".deinit",
+                    func.getArguments(), func.getResults());
+
   for (auto &var : storage) {
     llvm::Value *tmpPtr = builder->CreateLoad(buffers[var]);
     tmpPtr = builder->CreateCast(llvm::Instruction::CastOps::BitCast,
@@ -991,8 +978,19 @@ llvm::Value *LLVMBackend::emitCall(std::string name,
   return builder->CreateCall(fun, std::vector<llvm::Value*>(args));
 }
 
-void LLVMBackend::emitPrintf(std::string format) {
-  emitPrintf(format, {});
+llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
+                                               const vector<ir::Var> &arguments,
+                                               const vector<ir::Var> &results) {
+  llvm::Function *llvmFunc = createPrototype(name, arguments, results, module);
+  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
+  builder->SetInsertPoint(entry);
+
+  // Add arguments and results to the symbol table
+  for (auto &arg : llvmFunc->getArgumentList()) {
+    symtable.insert(arg.getName(), &arg);
+  }
+
+  return llvmFunc;
 }
 
 void LLVMBackend::emitPrintf(std::string format,
