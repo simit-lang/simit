@@ -40,10 +40,10 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = AssignStmt::make(var, value);
+        stmt = AssignStmt::make(op->cop, var, value);
       }
       else {
-        stmt = tensorWrite(var, indexExpr->resultVars, value);
+        stmt = tensorWrite(op->cop, var, indexExpr->resultVars, value);
       }
     }
 
@@ -56,11 +56,11 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = FieldWrite::make(elementOrSet, fieldName, value);
+        stmt = FieldWrite::make(op->cop, elementOrSet, fieldName, value);
       }
       else {
         Expr field = FieldRead::make(elementOrSet, fieldName);
-        stmt = tensorWrite(field, indexExpr->resultVars, value);
+        stmt = tensorWrite(op->cop, field, indexExpr->resultVars, value);
       }
     }
 
@@ -71,11 +71,11 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = TensorWrite::make(op->tensor, op->indices, value);
+        stmt = TensorWrite::make(op->cop, op->tensor, op->indices, value);
       }
       else {
         Expr tensor = TensorRead::make(op->tensor, op->indices);
-        stmt = tensorWrite(tensor, indexExpr->resultVars, value);
+        stmt = tensorWrite(op->cop, tensor, indexExpr->resultVars, value);
       }
     }
 
@@ -137,7 +137,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       return tensorRead(tensor, indexVars, numBlockLevels(indexVars));
     }
 
-    Stmt tensorWrite(Expr tensor, vector<IndexVar> indexVars, Expr value) {
+    Stmt tensorWrite(CompoundOperator cop, Expr tensor,
+                     vector<IndexVar> indexVars, Expr value) {
       size_t blockLevels = numBlockLevels(indexVars);
       if (blockLevels > 1) {
         tensor = tensorRead(tensor, indexVars, blockLevels-1);
@@ -149,7 +150,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         indexExprs.push_back(loopVars.getLoopVars(iv)[lastLevel].getVar());
       }
 
-      return TensorWrite::make(tensor, indexExprs, value);
+      return TensorWrite::make(cop, tensor, indexExprs, value);
     }
   };
 

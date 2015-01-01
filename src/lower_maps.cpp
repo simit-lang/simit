@@ -1,6 +1,7 @@
 #include "lower.h"
 
 #include "storage.h"
+#include "ir_builder.h"
 #include "ir_rewriter.h"
 #include "ir_codegen.h"
 #include "inline.h"
@@ -34,13 +35,19 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
   virtual void visit(const TensorWrite *op) {
     // Rewrites the tensor write and assigns the result to stmt
     IRRewriter::visit(op);
-    Stmt tensorWrite = stmt;
 
     if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
       iassert(isa<TensorWrite>(stmt));
       const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
-      stmt = TensorWrite::make(CompoundOperator::Add, tensorWrite->tensor,
-                               tensorWrite->indices, tensorWrite->value);
+      if (tensorWrite->value.type().isTensor()) {
+        stmt = TensorWrite::make(
+            CompoundOperator::Add, tensorWrite->tensor, tensorWrite->indices,
+            IRBuilder().unaryElwiseExpr(IRBuilder::None, tensorWrite->value));
+      }
+      else {
+        stmt = TensorWrite::make(CompoundOperator::Add, tensorWrite->tensor,
+                                 tensorWrite->indices, tensorWrite->value);
+      }
     }
   }
 };
