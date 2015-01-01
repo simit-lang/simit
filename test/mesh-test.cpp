@@ -7,7 +7,7 @@
 #include <iostream>
 #include <dirent.h>
 
-#include "Mesh.h"
+#include "mesh.h"
 
 using namespace std;
 using namespace simit;

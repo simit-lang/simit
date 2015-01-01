@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include "Mesh.h"
+#include "mesh.h"
 
 using namespace simit;
 using namespace std;
