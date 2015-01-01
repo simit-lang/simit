@@ -40,10 +40,10 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = AssignStmt::make(var, value);
+        stmt = AssignStmt::make(op->cop, var, value);
       }
       else {
-        stmt = tensorWrite(var, indexExpr->resultVars, value);
+        stmt = tensorWrite(op->cop, var, indexExpr->resultVars, value);
       }
     }
 
@@ -56,11 +56,11 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = FieldWrite::make(elementOrSet, fieldName, value);
+        stmt = FieldWrite::make(op->cop, elementOrSet, fieldName, value);
       }
       else {
         Expr field = FieldRead::make(elementOrSet, fieldName);
-        stmt = tensorWrite(field, indexExpr->resultVars, value);
+        stmt = tensorWrite(op->cop, field, indexExpr->resultVars, value);
       }
     }
 
@@ -71,11 +71,11 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = TensorWrite::make(op->tensor, op->indices, value);
+        stmt = TensorWrite::make(op->cop, op->tensor, op->indices, value);
       }
       else {
         Expr tensor = TensorRead::make(op->tensor, op->indices);
-        stmt = tensorWrite(tensor, indexExpr->resultVars, value);
+        stmt = tensorWrite(op->cop, tensor, indexExpr->resultVars, value);
       }
     }
 
@@ -137,7 +137,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       return tensorRead(tensor, indexVars, numBlockLevels(indexVars));
     }
 
-    Stmt tensorWrite(Expr tensor, vector<IndexVar> indexVars, Expr value) {
+    Stmt tensorWrite(CompoundOperator cop, Expr tensor,
+                     vector<IndexVar> indexVars, Expr value) {
       size_t blockLevels = numBlockLevels(indexVars);
       if (blockLevels > 1) {
         tensor = tensorRead(tensor, indexVars, blockLevels-1);
@@ -149,7 +150,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         indexExprs.push_back(loopVars.getLoopVars(iv)[lastLevel].getVar());
       }
 
-      return TensorWrite::make(tensor, indexExprs, value);
+      return TensorWrite::make(cop, tensor, indexExprs, value);
     }
   };
 
@@ -208,7 +209,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
     static Stmt compoundAssign(Var var, ReductionOperator op, Expr value) {
       switch (op.getKind()) {
         case ReductionOperator::Sum:
-          return AssignStmt::make(var, Add::make(var, value));
+          return AssignStmt::make(CompoundOperator::Add, var, value);
         case ReductionOperator::Undefined:
           ierror;
           return Stmt();
@@ -237,9 +238,12 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
         tmpVar = Var(tmpVarName, TensorType::make(componentType));
         stmt = compoundAssign(tmpVar, rop, op->value);
 
-        tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
         if (isa<TensorRead>(op->tensor)) {
-          tmpWritebackStmt = makeCompound(tmpWritebackStmt, CompoundOperator::Add);
+          tmpWritebackStmt = TensorWrite::make(CompoundOperator::Add, op->tensor,
+                                           op->indices, tmpVar);
+        }
+        else {
+          tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
         }
       }
       else {
@@ -281,8 +285,50 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
   return loopNest;
 }
 
+/// Wraps tensor values that are compound assigned or written in index
+/// expressions to trigger lowering.
+Stmt wrapCompoundAssignedValues(Stmt stmt) {
+  class CompoundValueWrapper : public IRRewriter {
+    void visit(const AssignStmt *op) {
+      if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
+        // Wrap the written value in an index expression to trigger lowering
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        stmt = AssignStmt::make(op->cop, op->var, value);
+      }
+      else {
+        stmt = op;
+      }
+    }
+
+    void visit(const FieldWrite *op) {
+      if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
+        // Wrap the written value in an index expression to trigger lowering
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        stmt = FieldWrite::make(op->cop, op->elementOrSet, op->fieldName, value);
+      }
+      else {
+        stmt = op;
+      }
+    }
+
+    void visit(const TensorWrite *op) {
+      if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
+        // Wrap the written value in an index expression to trigger lowering
+        Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
+        stmt = TensorWrite::make(op->cop, op->tensor, op->indices, value);
+      }
+      else {
+        stmt = op;
+      }
+    }
+  };
+  return CompoundValueWrapper().rewrite(stmt);
+}
+
 /// Lowers the given 'stmt' containing an index expression.
 Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
+  stmt = wrapCompoundAssignedValues(stmt);
+
   SIG sig = createSIG(stmt, storage);
   LoopVars loopVars = LoopVars::create(sig);
 
@@ -340,21 +386,21 @@ Func lowerIndexExpressions(Func func) {
   private:
     const Storage *storage;
     void visit(const AssignStmt *op) {
-      if (isa<IndexExpr>(op->value))
+      if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
         stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
     }
 
     void visit(const FieldWrite *op) {
-      if (isa<IndexExpr>(op->value))
+      if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
         stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
     }
 
     void visit(const TensorWrite *op) {
-      if (isa<IndexExpr>(op->value))
+      if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
         stmt = simit::ir::lowerIndexStatement(op, *storage);
       else
         IRRewriter::visit(op);
@@ -369,7 +415,6 @@ Func lowerIndexExpressions(Func func) {
       expr = op->tensor;
     }
   };
-
   return LowerIndexExpressionsRewriter().lower(func);
 }
 

@@ -213,6 +213,19 @@ Type getBlockType(Expr tensor);
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
 
 
+/// CompoundOperator used with AssignStmt, TensorWrite, FieldWrite and Store.
+struct CompoundOperator {
+  enum Kind { None, Add };
+  Kind kind;
+  CompoundOperator() : kind(None) {}
+  CompoundOperator(Kind kind) : kind(kind) {}
+  CompoundOperator(const CompoundOperator &other) : kind(other.kind) {}
+};
+
+bool operator==(const CompoundOperator&, const CompoundOperator&);
+bool operator!=(const CompoundOperator&, const CompoundOperator&);
+
+
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
 /// that it is only possible to define dense tensor literals.
 struct Literal : public ExprNode<Literal> {
@@ -648,11 +661,17 @@ struct Load : public ExprNode<Load> {
 
 // Statements
 struct AssignStmt : public StmtNode<AssignStmt> {
+  CompoundOperator cop;
   Var var;
   Expr value;
-
+  
   static Stmt make(Var var, Expr value) {
+    return make(CompoundOperator::None, var, value);
+  }
+
+  static Stmt make(CompoundOperator cop, Var var, Expr value) {
     AssignStmt *node = new AssignStmt;
+    node->cop = cop;
     node->var = var;
     node->value = value;
     return node;
@@ -682,12 +701,19 @@ struct Map : public StmtNode<Map> {
 };
 
 struct FieldWrite : public StmtNode<FieldWrite> {
+  CompoundOperator cop;
   Expr elementOrSet;
   std::string fieldName;
   Expr value;
 
   static Stmt make(Expr elementOrSet, std::string fieldName, Expr value) {
+    return make(CompoundOperator::None, elementOrSet, fieldName, value);
+  }
+
+  static Stmt make(CompoundOperator cop, Expr elementOrSet,
+                   std::string fieldName, Expr value) {
     FieldWrite *node = new FieldWrite;
+    node->cop = cop;
     node->elementOrSet = elementOrSet;
     node->fieldName = fieldName;
     node->value = value;
@@ -697,12 +723,19 @@ struct FieldWrite : public StmtNode<FieldWrite> {
 
 struct TensorWrite : public StmtNode<TensorWrite> {
   // TODO: Consider whether to make tensor a Var
+  CompoundOperator cop;
   Expr tensor;
   std::vector<Expr> indices;
   Expr value;
 
   static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value) {
+    return make(CompoundOperator::None, tensor, indices, value);
+  }
+
+  static Stmt make(CompoundOperator cop, Expr tensor,
+                   std::vector<Expr> indices, Expr value) {
     TensorWrite *node = new TensorWrite;
+    node->cop = cop;
     node->tensor = tensor;
     node->indices = indices;
     node->value = value;
@@ -711,12 +744,18 @@ struct TensorWrite : public StmtNode<TensorWrite> {
 };
 
 struct Store : public StmtNode<Store> {
+  CompoundOperator cop;
   Expr buffer;
   Expr index;
   Expr value;
 
   static Stmt make(Expr buffer, Expr index, Expr value) {
+    return make(CompoundOperator::None, buffer, index, value);
+  }
+
+  static Stmt make(CompoundOperator cop, Expr buffer, Expr index, Expr value) {
     Store *node = new Store;
+    node->cop = cop;
     node->buffer = buffer;
     node->index = index;
     node->value = value;

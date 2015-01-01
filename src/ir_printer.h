@@ -16,12 +16,14 @@ class Expr;
 class Stmt;
 struct IRNode;
 struct ForDomain;
+struct CompoundOperator;
 
 std::ostream &operator<<(std::ostream &os, const Func &);
 std::ostream &operator<<(std::ostream &os, const Expr &);
 std::ostream &operator<<(std::ostream &os, const Stmt &);
 std::ostream &operator<<(std::ostream &os, const IRNode &);
 std::ostream &operator<<(std::ostream &os, const ForDomain &);
+std::ostream &operator<<(std::ostream &os, const CompoundOperator &);
 
 class IRPrinter : public IRVisitor {
 public:

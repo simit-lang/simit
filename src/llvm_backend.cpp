@@ -529,57 +529,16 @@ void LLVMBackend::visit(const ir::Xor *op) {
 }
 
 void LLVMBackend::visit(const AssignStmt *op) {
-  /// \todo assignment of scalars to tensors and tensors to tensors should be
-  ///       handled by the lowering so that we only assign scalars to scalars
-  ///       in the backend
-//  iassert(isScalar(op->value.type()) &&
-//         "assignment non-scalars should have been lowered by now");
-
-  iassert(op->var.getType().isTensor() && op->value.type().isTensor());
-
-  llvm::Value *value = compile(op->value);
-  string varName = op->var.getName();
-
-  // Assigned for the first time
-  if (!symtable.contains(varName)) {
-    ScalarType type = op->value.type().toTensor()->componentType;
-    llvm::Value *var = builder->CreateAlloca(createLLVMType(type));
-    symtable.insert(varName, var);
-  }
-  iassert(symtable.contains(varName));
-
-  llvm::Value *varPtr = symtable.get(varName);
-  iassert(varPtr->getType()->isPointerTy());
-
-  Var var = op->var;
-  const TensorType *varType = var.getType().toTensor();
-  const TensorType *valType = op->value.type().toTensor();
-
-  // Assigning a scalar to a scalar
-  if (varType->order() == 0 && valType->order() == 0) {
-    builder->CreateStore(value, varPtr);
-    value->setName(varName + VAL_SUFFIX);
-  }
-  // Assigning a scalar to an n-order tensor
-  else if (varType->order() > 0 && valType->order() == 0) {
-    if (isa<Literal>(op->value) &&
-        ((double*)to<Literal>(op->value)->data)[0] == 0.0) {
-      // emit memset 0
-      llvm::Value *varLen = emitComputeLen(varType, storage.get(var));
-      unsigned compSize = varType->componentType.bytes();
-      llvm::Value *varSize = builder->CreateMul(varLen, llvmInt(compSize));
-      builder->CreateMemSet(varPtr, llvmInt(0,8), varSize, compSize);
+  switch (op->cop.kind) {
+    case ir::CompoundOperator::None: {
+      emitAssign(op->var, op->value);
+      return;
     }
-    else {
-      not_supported_yet;
+    case ir::CompoundOperator::Add: {
+      emitAssign(op->var, Add::make(op->var, op->value));
+      return;
     }
-  }
-  else if (isa<Literal>(op->value)) {
-    value->setName(varName);
-    symtable.insert(varName, value);
-  }
-  else {
-    ierror;
+    default: ierror << "Unknown compound operator type";
   }
 }
 
@@ -599,6 +558,8 @@ void LLVMBackend::visit(const FieldWrite *op) {
 
   // Assigning a scalar to an n-order tensor
   if (fieldType.toTensor()->order() > 0 && valueType.toTensor()->order() == 0) {
+    iassert(op->cop.kind == CompoundOperator::None)
+        << "Compound write when assigning scalar to n-order tensor";
     if (isa<Literal>(op->value) &&
         ((double*)to<Literal>(op->value)->data)[0] == 0.0) {
       // emit memset 0
@@ -619,7 +580,19 @@ void LLVMBackend::visit(const FieldWrite *op) {
   else {
     // emit memcpy
     llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
-    llvm::Value *valuePtr = compile(op->value);
+    llvm::Value *valuePtr;
+    switch (op->cop.kind) {
+      case ir::CompoundOperator::None: {
+        valuePtr = compile(op->value);
+        break;
+      }
+      case ir::CompoundOperator::Add: {
+        valuePtr = compile(Add::make(
+            FieldRead::make(op->elementOrSet, op->fieldName), op->value));
+        break;
+      }
+      default: ierror << "Unknown compound operator type";
+    }
 
     const TensorType *tensorFieldType = fieldType.toTensor();
 
@@ -634,7 +607,18 @@ void LLVMBackend::visit(const FieldWrite *op) {
 void LLVMBackend::visit(const ir::Store *op) {
   llvm::Value *buffer = compile(op->buffer);
   llvm::Value *index = compile(op->index);
-  llvm::Value *value = compile(op->value);
+  llvm::Value *value;
+  switch (op->cop.kind) {
+    case CompoundOperator::None: {
+      value = compile(op->value);
+      break;
+    }
+    case CompoundOperator::Add: {
+      value = compile(Add::make(Load::make(op->buffer, op->index), op->value));
+      break;
+    }
+    default: ierror << "Unknown compound operator type";
+  }
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
@@ -1048,6 +1032,64 @@ void LLVMBackend::emitPrintf(std::string format,
   printfArgs.insert(printfArgs.end(), args.begin(), args.end());
 
   builder->CreateCall(printfFunc, printfArgs);
+}
+
+void LLVMBackend::emitFirstAssign(const std::string& varName,
+                                  const ir::Expr& value) {
+  ScalarType type = value.type().toTensor()->componentType;
+  llvm::Value *var = builder->CreateAlloca(createLLVMType(type));
+  symtable.insert(varName, var);
+}
+
+void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
+  /// \todo assignment of scalars to tensors and tensors to tensors should be
+  ///       handled by the lowering so that we only assign scalars to scalars
+  ///       in the backend
+//  iassert(isScalar(value.type()) &&
+//         "assignment non-scalars should have been lowered by now");
+  iassert(var.getType().isTensor() && value.type().isTensor());
+
+  std::string varName = var.getName();
+  llvm::Value *llvmValue = compile(value);
+
+  // Assigned for the first time
+  if (!symtable.contains(varName)) {
+    emitFirstAssign(varName, value);
+  }
+  iassert(symtable.contains(varName));
+
+  llvm::Value *varPtr = symtable.get(varName);
+  iassert(varPtr->getType()->isPointerTy());
+
+  const TensorType *varType = var.getType().toTensor();
+  const TensorType *valType = value.type().toTensor();
+
+  // Assigning a scalar to a scalar
+  if (varType->order() == 0 && valType->order() == 0) {
+    builder->CreateStore(llvmValue, varPtr);
+    llvmValue->setName(varName + VAL_SUFFIX);
+  }
+  // Assigning a scalar to an n-order tensor
+  else if (varType->order() > 0 && valType->order() == 0) {
+    if (isa<Literal>(value) &&
+        ((double*)to<Literal>(value)->data)[0] == 0.0) {
+      // emit memset 0
+      llvm::Value *varLen = emitComputeLen(varType, storage.get(var));
+      unsigned compSize = varType->componentType.bytes();
+      llvm::Value *varSize = builder->CreateMul(varLen, llvmInt(compSize));
+      builder->CreateMemSet(varPtr, llvmInt(0,8), varSize, compSize);
+    }
+    else {
+      not_supported_yet;
+    }
+  }
+  else if (isa<Literal>(value)) {
+    llvmValue->setName(varName);
+    symtable.insert(varName, llvmValue);
+  }
+  else {
+    ierror;
+  }
 }
 
 }}  // namespace simit::internal

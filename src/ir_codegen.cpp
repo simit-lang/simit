@@ -12,49 +12,6 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-Stmt makeCompound(Stmt stmt, CompoundOperator cop) {
-  /// Turns tensor writes into compound assignments (e.g. +=, *=)
-  /// TODO: Generalize to include Assignments, FieldWrite, TupleWrite
-  class MakeCompound : public IRRewriter {
-  public:
-    MakeCompound(CompoundOperator compound) : compound(compound) {}
-
-  private:
-    CompoundOperator compound;
-
-    void visit(const TensorWrite *op) {
-      Expr lhsRead = TensorRead::make(op->tensor, op->indices);
-      Expr value = rewrite(op->value);
-
-      iassert_types_equal(lhsRead, value);
-
-      if (isScalar(lhsRead.type())) {
-        switch (compound.kind) {
-          case CompoundOperator::Add: {
-            value = Add::make(lhsRead, value);
-            break;
-          }
-        }
-      }
-      else {
-        IRBuilder::BinaryOperator binop;
-        switch (compound.kind) {
-          case CompoundOperator::Add: {
-            binop = IRBuilder::Add;
-            break;
-          }
-        }
-        value = IRBuilder().binaryElwiseExpr(lhsRead, binop, value);
-      }
-
-      stmt = TensorWrite::make(op->tensor, op->indices, value);
-    }
-  };
-
-  return MakeCompound(cop).rewrite(stmt);
-}
-
-
 Stmt initializeLhsToZero(Stmt stmt) {
   class ReplaceRhsWithZero : public IRRewriter {
     void visit(const AssignStmt *op) {
