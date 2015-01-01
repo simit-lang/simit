@@ -666,8 +666,30 @@ tensor_write_stmt
     Expr tensorExpr = tensorSymbol.getExpr();
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
-  | field_read_expr "(" expr_list ")" {
-    // TODO
+  | IDENT "." IDENT[fieldName] "(" expr_list ")" "=" expr ";" {
+    //TODO: This rule really should be:
+    // field_read_expr "(" expr_list ")" "=" expr ";"
+    // but this requires reworking a lot of the parser.
+ 
+    string setName = convertAndFree($1);
+    string fieldName = convertAndFree($3);
+    auto indices = unique_ptr<vector<Expr>>($expr_list);
+    if ($expr == nullptr) break;  // TODO: remove check
+    Expr value = convertAndDelete($expr);
+
+    if (!ctx->hasSymbol(setName)) {
+      REPORT_ERROR(setName + " is not defined in scope", @1);
+    }
+
+    const Symbol &setSymbol = ctx->getSymbol(setName);
+    if (!setSymbol.isWritable()) {
+      REPORT_ERROR(setName + " is not writable", @1);
+    }
+
+    Expr setExpr = setSymbol.getExpr();
+
+    Expr tensorExpr = FieldRead::make(setExpr, fieldName);
+    ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
 
 while_stmt

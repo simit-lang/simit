@@ -213,6 +213,19 @@ Type getBlockType(Expr tensor);
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
 
 
+/// CompoundOperator used with AssignStmt, TensorWrite, FieldWrite and Store.
+struct CompoundOperator {
+  enum Kind { None, Add };
+  Kind kind;
+  CompoundOperator() : kind(None) {}
+  CompoundOperator(Kind kind) : kind(kind) {}
+  CompoundOperator(const CompoundOperator &other) : kind(other.kind) {}
+};
+
+bool operator==(const CompoundOperator&, const CompoundOperator&);
+bool operator!=(const CompoundOperator&, const CompoundOperator&);
+
+
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
 /// that it is only possible to define dense tensor literals.
 struct Literal : public ExprNode<Literal> {
@@ -413,13 +426,6 @@ struct Call : public ExprNode<Call> {
     return node;
   }
 };
-
-#define iassert_scalar(a) \
-    iassert(isScalar(a.type())) << a << ": " << a.type()
-
-#define iassert_types_equal(a,b) \
-  iassert(a.type() == b.type()) << a.type() << "!=" << b.type() << "\n" \
-                                << #a << ":" << a << "\n" << #b << ":" << b
 
 struct Neg : public ExprNode<Neg> {
   Expr a;
@@ -654,18 +660,6 @@ struct Load : public ExprNode<Load> {
 };
 
 // Statements
-struct AssignStmt : public StmtNode<AssignStmt> {
-  Var var;
-  Expr value;
-
-  static Stmt make(Var var, Expr value) {
-    AssignStmt *node = new AssignStmt;
-    node->var = var;
-    node->value = value;
-    return node;
-  }
-};
-
 struct Map : public StmtNode<Map> {
   std::vector<Var> vars;
   Func function;
@@ -688,16 +682,34 @@ struct Map : public StmtNode<Map> {
   }
 };
 
+struct AssignStmt : public StmtNode<AssignStmt> {
+  Var var;
+  Expr value;
+  CompoundOperator cop;
+
+  static Stmt make(Var var, Expr value,
+                   CompoundOperator cop=CompoundOperator::None) {
+    AssignStmt *node = new AssignStmt;
+    node->var = var;
+    node->value = value;
+    node->cop = cop;
+    return node;
+  }
+};
+
 struct FieldWrite : public StmtNode<FieldWrite> {
   Expr elementOrSet;
   std::string fieldName;
   Expr value;
+  CompoundOperator cop;
 
-  static Stmt make(Expr elementOrSet, std::string fieldName, Expr value) {
+  static Stmt make(Expr elementOrSet, std::string fieldName, Expr value,
+                   CompoundOperator cop=CompoundOperator::None) {
     FieldWrite *node = new FieldWrite;
     node->elementOrSet = elementOrSet;
     node->fieldName = fieldName;
     node->value = value;
+    node->cop = cop;
     return node;
   }
 };
@@ -707,12 +719,15 @@ struct TensorWrite : public StmtNode<TensorWrite> {
   Expr tensor;
   std::vector<Expr> indices;
   Expr value;
+  CompoundOperator cop;
 
-  static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value) {
+  static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value,
+                   CompoundOperator cop=CompoundOperator::None) {
     TensorWrite *node = new TensorWrite;
     node->tensor = tensor;
     node->indices = indices;
     node->value = value;
+    node->cop = cop;
     return node;
   }
 };
@@ -721,12 +736,15 @@ struct Store : public StmtNode<Store> {
   Expr buffer;
   Expr index;
   Expr value;
+  CompoundOperator cop;
 
-  static Stmt make(Expr buffer, Expr index, Expr value) {
+  static Stmt make(Expr buffer, Expr index, Expr value,
+                   CompoundOperator cop=CompoundOperator::None) {
     Store *node = new Store;
     node->buffer = buffer;
     node->index = index;
     node->value = value;
+    node->cop = cop;
     return node;
   }
 };

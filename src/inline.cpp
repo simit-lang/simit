@@ -2,6 +2,9 @@
 
 #include <vector>
 
+#include "temps.h"
+#include "flatten.h"
+
 using namespace std;
 
 namespace simit {
@@ -10,22 +13,28 @@ namespace ir {
 Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
   this->targetLoopVar = targetLoopVar;
 
-  Func func = map->function;
-  iassert(func.getArguments().size() == 1 || func.getArguments().size() == 2)
+  Func kernel = map->function;
+  iassert(kernel.getArguments().size() == 1 || kernel.getArguments().size() == 2)
       << "mapped functions must have exactly two arguments";
 
-  iassert(map->vars.size() == func.getResults().size());
-  for (size_t i=0; i < func.getResults().size(); ++i) {
-    resultToMapVar[func.getResults()[i]] = map->vars[i];
+  iassert(map->vars.size() == kernel.getResults().size());
+  for (size_t i=0; i < kernel.getResults().size(); ++i) {
+    resultToMapVar[kernel.getResults()[i]] = map->vars[i];
   }
 
   this->targetSet = map->target;
   this->neighborSet = map->neighbors;
 
-  this->target = func.getArguments()[0];
-  this->neighbors = func.getArguments()[1];
+  iassert(kernel.getArguments().size() >= 1)
+      << "The function must have a target argument";
 
-  return rewrite(func.getBody());
+  this->target = kernel.getArguments()[0];
+
+  if (kernel.getArguments().size() >= 2) {
+    this->neighbors = kernel.getArguments()[1];
+  }
+
+  return rewrite(kernel.getBody());
 }
 
 bool MapFunctionRewriter::isResult(Var var) {
@@ -83,12 +92,24 @@ void MapFunctionRewriter::visit(const VarExpr *op) {
   }
 }
 
+/// Inlines the mapped function with respect to the given loop variable over
+/// the target set, using the given rewriter.
 Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
   return rewriter.inlineMapFunc(map, lv);
 }
 
 Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   Func kernel = map->function;
+  kernel = insertTemporaries(kernel);
+
+  // The function must have at least two arguments: target and neighbors. It
+  // can also have additional arguments.
+
+  // The function must have at least one argument, namely the target. It may
+  // also have a neighbor set, as well as other arguments.
+  iassert(kernel.getArguments().size() >= 1)
+      << "The function must have a target argument";
+
   Var targetVar = kernel.getArguments()[0];
   Var neighborsVar = kernel.getArguments()[1];
 
@@ -105,6 +126,10 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
     Stmt init = AssignStmt::make(var, zero);
     inlinedMap = Block::make(init, inlinedMap);
   }
+
+  // We flatten the statement after it has been inlined, since inlining may
+  // introduce additional nested index expressions
+  inlinedMap = flattenIndexExpressions(inlinedMap);
 
   return inlinedMap;
 }

@@ -42,7 +42,7 @@ TEST(System, misc_triangle) {
   ASSERT_DOUBLE_EQ(0.1, b.get(v3));
 }
 
-TEST(DISABLED_System, misc_map_one_set) {
+TEST(System, DISABLED_misc_map_one_set) {
   // Points
   Set<> points;
   FieldRef<double> a = points.addField<double>("a");

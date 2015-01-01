@@ -2,6 +2,7 @@
 #define SIMIT_CODEGEN_LLVM_H
 
 #include "backend.h"
+#include "var.h"
 #include "ir_visitor.h"
 #include "scopedmap.h"
 
@@ -39,7 +40,7 @@ public:
   simit::Function *compile(simit::ir::Func func);
 
 protected:
-  ScopedMap<std::string, llvm::Value*> symtable;
+  ScopedMap<simit::ir::Var, llvm::Value*> symtable;
 
   ir::Storage storage;
   ir::TensorStorage fieldStorage;
@@ -117,9 +118,18 @@ protected:
                         std::vector<llvm::Value*> args,
                         llvm::Type *returnType);
 
-  void emitPrintf(std::string format);
-  void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
-  void emitPrintf(std::string format, std::vector<llvm::Value*> args);
+  /// Emit an empty function and set the builder cursor to its entry block. The
+  /// function's arguments and result variables are added to the symbol table.
+  llvm::Function *emitEmptyFunction(const std::string &name,
+                                    const std::vector<ir::Var> &arguments,
+                                    const std::vector<ir::Var> &results);
+
+//  void emitPrintf(std::string format);
+  void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
+
+  virtual void emitFirstAssign(const ir::Var& var,
+                               const ir::Expr& value);
+  void emitAssign(ir::Var var, const ir::Expr& value);
 
 private:
   static bool llvmInitialized;

@@ -49,8 +49,9 @@ static Expr createLoadExpr(Expr tensor, Expr index) {
   }
 }
 
-static Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
-  // If the tensor is a load then we hada  nested tensor read. Since we can't
+static Stmt createStoreStmt(Expr tensor, Expr index, Expr value,
+                            CompoundOperator cop) {
+  // If the tensor is a load then we had a nested tensor read. Since we can't
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
     const Load *load = to<Load>(tensor);
@@ -60,10 +61,10 @@ static Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
     Expr len  = createLengthComputation(blockType.toTensor()->dimensions);
 
     index = Add::make(Mul::make(load->index, len), index);
-    return Store::make(load->buffer, index, value);
+    return Store::make(load->buffer, index, value, cop);
   }
   else {
-    return Store::make(tensor, index, value);
+    return Store::make(tensor, index, value, cop);
   }
 }
 
@@ -162,7 +163,7 @@ private:
     Expr tensor = rewrite(op->tensor);
     Expr value = rewrite(op->value);
     Expr index = flattenIndices(op->tensor, op->indices);
-    stmt = createStoreStmt(tensor, index, value);
+    stmt = createStoreStmt(tensor, index, value, op->cop);
   }
 };
 

@@ -244,7 +244,7 @@ void IRRewriter::visit(const AssignStmt *op) {
     stmt = op;
   }
   else {
-    stmt = AssignStmt::make(op->var, value);
+    stmt = AssignStmt::make(op->var, value, op->cop);
   }
 }
 
@@ -267,7 +267,7 @@ void IRRewriter::visit(const FieldWrite *op) {
     stmt = op;
   }
   else {
-    stmt = FieldWrite::make(elementOrSet, op->fieldName, value);
+    stmt = FieldWrite::make(elementOrSet, op->fieldName, value, op->cop);
   }
 }
 
@@ -286,7 +286,7 @@ void IRRewriter::visit(const TensorWrite *op) {
     stmt = op;
   }
   else {
-    stmt = TensorWrite::make(tensor, indices, value);
+    stmt = TensorWrite::make(tensor, indices, value, op->cop);
   }
 }
 
@@ -298,7 +298,7 @@ void IRRewriter::visit(const Store *op) {
     stmt = op;
   }
   else {
-    stmt = Store::make(buffer, index, value);
+    stmt = Store::make(buffer, index, value, op->cop);
   }
 }
 
