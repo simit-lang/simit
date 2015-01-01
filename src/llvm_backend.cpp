@@ -61,9 +61,16 @@ simit::Function *LLVMBackend::compile(Func func) {
   this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
   this->storage = func.getStorage();
 
+  set<Var> argsAndResults;
+  argsAndResults.insert(func.getArguments().begin(), func.getArguments().end());
+  argsAndResults.insert(func.getResults().begin(), func.getResults().end());
+
   // Create global buffer variables
   map<Var, llvm::Value*> buffers;
   for (auto &var : storage) {
+    // Caller creates storage for input and output variables
+    if (argsAndResults.find(var) != argsAndResults.end()) continue;
+
     iassert(var.getType().isTensor());
     llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
     llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
@@ -82,9 +89,10 @@ simit::Function *LLVMBackend::compile(Func func) {
                                                func.getArguments(),
                                                func.getResults());
 
-  for (auto &var : storage) {
-    llvm::Value *buffer = buffers[var];
-    llvm::Value *llvmTmp = builder->CreateLoad(buffer, buffer->getName());
+  for (auto &buffer : buffers) {
+    Var var = buffer.first;
+    llvm::Value *bufferVal = buffer.second;
+    llvm::Value *llvmTmp = builder->CreateLoad(bufferVal, bufferVal->getName());
     symtable.insert(llvmTmp->getName(), llvmTmp);
   }
 
@@ -109,7 +117,10 @@ simit::Function *LLVMBackend::compile(Func func) {
   emitEmptyFunction(func.getName()+".init",
                     func.getArguments(), func.getResults());
 
-  for (auto &var : storage) {
+  for (auto &buffer : buffers) {
+    Var var = buffer.first;
+    llvm::Value *bufferVal = buffer.second;
+
     Type type = var.getType();
     llvm::Type *llvmType = createLLVMType(type);
 
@@ -121,7 +132,7 @@ simit::Function *LLVMBackend::compile(Func func) {
     llvm::Value *mem = builder->CreateCall(malloc, size);
 
     mem = builder->CreateCast(llvm::Instruction::CastOps::BitCast,mem,llvmType);
-    builder->CreateStore(mem, buffers[var]);
+    builder->CreateStore(mem, bufferVal);
   }
   builder->CreateRetVoid();
   symtable.clear();
@@ -130,8 +141,11 @@ simit::Function *LLVMBackend::compile(Func func) {
   emitEmptyFunction(func.getName()+".deinit",
                     func.getArguments(), func.getResults());
 
-  for (auto &var : storage) {
-    llvm::Value *tmpPtr = builder->CreateLoad(buffers[var]);
+  for (auto &buffer : buffers) {
+    Var var = buffer.first;
+    llvm::Value *bufferVal = buffer.second;
+
+    llvm::Value *tmpPtr = builder->CreateLoad(bufferVal);
     tmpPtr = builder->CreateCast(llvm::Instruction::CastOps::BitCast,
                                  tmpPtr, LLVM_INT8PTR);
     builder->CreateCall(free, tmpPtr);
