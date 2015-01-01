@@ -88,12 +88,11 @@ simit::Function *LLVMBackend::compile(Func func) {
   llvm::Function *llvmFunc = emitEmptyFunction(func.getName(),
                                                func.getArguments(),
                                                func.getResults());
-
   for (auto &buffer : buffers) {
     Var var = buffer.first;
     llvm::Value *bufferVal = buffer.second;
     llvm::Value *llvmTmp = builder->CreateLoad(bufferVal, bufferVal->getName());
-    symtable.insert(llvmTmp->getName(), llvmTmp);
+    symtable.insert(var, llvmTmp);
   }
 
   compile(func.getBody());
@@ -244,10 +243,9 @@ void LLVMBackend::visit(const Literal *op) {
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
-  iassert(symtable.contains(op->var.getName()))
-      << op->var << "not found in symbol table";
+  iassert(symtable.contains(op->var)) << op->var << "not found in symbol table";
 
-  val = symtable.get(op->var.getName());
+  val = symtable.get(op->var);
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
   // in which case we must load the value.  This case arises because we keep
@@ -663,7 +661,7 @@ void LLVMBackend::visit(const For *op) {
 
   // Loop Body
   symtable.scope();
-  symtable.insert(iName, i);
+  symtable.insert(op->var, i);
   compile(op->body);
   symtable.unscope();
 
@@ -701,10 +699,10 @@ void LLVMBackend::visit(const ir::ForRange *op) {
 
   // Loop Body
   symtable.scope();
-  symtable.insert(iName, i);
+  symtable.insert(op->var, i);
   compile(op->body);
   symtable.unscope();
-  
+
   // Loop Footer
   llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
   llvm::Value *i_nxt = builder->CreateAdd(i, builder->getInt32(1),
@@ -999,9 +997,19 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
   builder->SetInsertPoint(entry);
 
-  // Add arguments and results to the symbol table
-  for (auto &arg : llvmFunc->getArgumentList()) {
-    symtable.insert(arg.getName(), &arg);
+  iassert(llvmFunc->getArgumentList().size() == arguments.size()+results.size())
+      << "Number of arguments to llvm func does not match simit func arguments";
+
+  // Add arguments and results to symbol table
+  auto llvmArgIt = llvmFunc->getArgumentList().begin();
+  auto simitArgIt = arguments.begin();
+  for (; simitArgIt < arguments.end(); ++simitArgIt, ++llvmArgIt) {
+    symtable.insert(*simitArgIt, llvmArgIt);
+  }
+
+  auto simitResIt = results.begin();
+  for (; simitResIt < results.end(); ++simitResIt, ++llvmArgIt) {
+    symtable.insert(*simitResIt, llvmArgIt);
   }
 
   return llvmFunc;
@@ -1046,11 +1054,11 @@ void LLVMBackend::emitPrintf(std::string format,
   builder->CreateCall(printfFunc, printfArgs);
 }
 
-void LLVMBackend::emitFirstAssign(const std::string& varName,
+void LLVMBackend::emitFirstAssign(const ir::Var& var,
                                   const ir::Expr& value) {
   ScalarType type = value.type().toTensor()->componentType;
-  llvm::Value *var = builder->CreateAlloca(createLLVMType(type));
-  symtable.insert(varName, var);
+  llvm::Value *llvmVar = builder->CreateAlloca(createLLVMType(type));
+  symtable.insert(var, llvmVar);
 }
 
 void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
@@ -1065,12 +1073,12 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
   llvm::Value *llvmValue = compile(value);
 
   // Assigned for the first time
-  if (!symtable.contains(varName)) {
-    emitFirstAssign(varName, value);
+  if (!symtable.contains(var)) {
+    emitFirstAssign(var, value);
   }
-  iassert(symtable.contains(varName));
+  iassert(symtable.contains(var));
 
-  llvm::Value *varPtr = symtable.get(varName);
+  llvm::Value *varPtr = symtable.get(var);
   iassert(varPtr->getType()->isPointerTy());
 
   const TensorType *varType = var.getType().toTensor();
@@ -1097,7 +1105,7 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
   }
   else if (isa<Literal>(value)) {
     llvmValue->setName(varName);
-    symtable.insert(varName, llvmValue);
+    symtable.insert(var, llvmValue);
   }
   else {
     ierror;

@@ -2,6 +2,7 @@
 #define SIMIT_CODEGEN_LLVM_H
 
 #include "backend.h"
+#include "var.h"
 #include "ir_visitor.h"
 #include "scopedmap.h"
 
@@ -39,7 +40,7 @@ public:
   simit::Function *compile(simit::ir::Func func);
 
 protected:
-  ScopedMap<std::string, llvm::Value*> symtable;
+  ScopedMap<simit::ir::Var, llvm::Value*> symtable;
 
   ir::Storage storage;
   ir::TensorStorage fieldStorage;
@@ -126,7 +127,7 @@ protected:
 //  void emitPrintf(std::string format);
   void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
-  virtual void emitFirstAssign(const std::string& varName,
+  virtual void emitFirstAssign(const ir::Var& var,
                                const ir::Expr& value);
   void emitAssign(ir::Var var, const ir::Expr& value);
 
