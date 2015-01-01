@@ -40,7 +40,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = AssignStmt::make(op->cop, var, value);
+        stmt = AssignStmt::make(var, value, op->cop);
       }
       else {
         stmt = tensorWrite(op->cop, var, indexExpr->resultVars, value);
@@ -56,7 +56,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = FieldWrite::make(op->cop, elementOrSet, fieldName, value);
+        stmt = FieldWrite::make(elementOrSet, fieldName, value, op->cop);
       }
       else {
         Expr field = FieldRead::make(elementOrSet, fieldName);
@@ -71,7 +71,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = TensorWrite::make(op->cop, op->tensor, op->indices, value);
+        stmt = TensorWrite::make(op->tensor, op->indices, value, op->cop);
       }
       else {
         Expr tensor = TensorRead::make(op->tensor, op->indices);
@@ -150,7 +150,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         indexExprs.push_back(loopVars.getLoopVars(iv)[lastLevel].getVar());
       }
 
-      return TensorWrite::make(cop, tensor, indexExprs, value);
+      return TensorWrite::make(tensor, indexExprs, value, cop);
     }
   };
 
@@ -209,7 +209,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
     static Stmt compoundAssign(Var var, ReductionOperator op, Expr value) {
       switch (op.getKind()) {
         case ReductionOperator::Sum:
-          return AssignStmt::make(CompoundOperator::Add, var, value);
+          return AssignStmt::make(var, value, CompoundOperator::Add);
         case ReductionOperator::Undefined:
           ierror;
           return Stmt();
@@ -220,7 +220,6 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
       if (op == rstmt) {
         ScalarType componentType = op->var.getType().toTensor()->componentType;
         tmpVar = Var(op->var.getName()+"tmp", TensorType::make(componentType));
-//        tmpVar = op->var;
 
         stmt = compoundAssign(tmpVar, rop, op->value);
         tmpWritebackStmt = compoundAssign(op->var, rop, tmpVar);
@@ -239,8 +238,8 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
         stmt = compoundAssign(tmpVar, rop, op->value);
 
         if (isa<TensorRead>(op->tensor)) {
-          tmpWritebackStmt = TensorWrite::make(CompoundOperator::Add, op->tensor,
-                                           op->indices, tmpVar);
+          tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar,
+                                               CompoundOperator::Add);
         }
         else {
           tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
@@ -293,7 +292,7 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
       if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
         // Wrap the written value in an index expression to trigger lowering
         Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
-        stmt = AssignStmt::make(op->cop, op->var, value);
+        stmt = AssignStmt::make(op->var, value, op->cop);
       }
       else {
         stmt = op;
@@ -304,7 +303,8 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
       if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
         // Wrap the written value in an index expression to trigger lowering
         Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
-        stmt = FieldWrite::make(op->cop, op->elementOrSet, op->fieldName, value);
+        stmt = FieldWrite::make(op->elementOrSet, op->fieldName, value,
+                                op->cop);
       }
       else {
         stmt = op;
@@ -315,7 +315,7 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
       if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
         // Wrap the written value in an index expression to trigger lowering
         Expr value = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->value);
-        stmt = TensorWrite::make(op->cop, op->tensor, op->indices, value);
+        stmt = TensorWrite::make(op->tensor, op->indices, value, op->cop);
       }
       else {
         stmt = op;

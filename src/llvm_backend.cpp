@@ -1044,7 +1044,7 @@ void LLVMBackend::emitFirstAssign(const std::string& varName,
 void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
   /// \todo assignment of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only assign scalars to scalars
-  ///       in the backend
+  ///       in the backend. Probably requires copy and memset intrinsics.
 //  iassert(isScalar(value.type()) &&
 //         "assignment non-scalars should have been lowered by now");
   iassert(var.getType().isTensor() && value.type().isTensor());
