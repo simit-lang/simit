@@ -88,7 +88,6 @@ void MapFunctionRewriter::visit(const FieldRead *op) {
   else {
     // TODO: Handle the case where the target var was reassigned
     //       tmp = s; ... = tmp.a;
-    std::cout << *op << std::endl;
     not_supported_yet;
   }
 }
@@ -135,7 +134,6 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   iassert(kernel.getArguments().size() >= 1)
       << "The function must have a target argument";
   
- //TODO: must refactor this with new logic.
   Var targetVar = kernel.getArguments()[map->partial_actuals.size()];
 
   auto initializers = vector<Stmt>();
@@ -144,9 +142,6 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
     Expr rval = map->partial_actuals[i];
     initializers.push_back(AssignStmt::make(tvar, rval));
   }
-//END TODO
-
-  
   
   Var loopVar(targetVar.getName(), Int);
   ForDomain domain(map->target);
@@ -174,10 +169,6 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   inlinedMap = flattenIndexExpressions(inlinedMap);
 
   return inlinedMap;
-/*
- * TODO: must refactor this given new logic.
-  return Block::make(initializersBlock, inlinedMap);
-*/
 }
 
 }}
