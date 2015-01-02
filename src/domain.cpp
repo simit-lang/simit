@@ -57,7 +57,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
 
 // class IndexDomain
 size_t IndexDomain::getSize() const {
-  int size = 1;
+  size_t size = 1;
   for (auto &indexSet : getIndexSets()) {
     size *= indexSet.getSize();
   }
