@@ -827,7 +827,14 @@ void LLVMBackend::visit(const Print *op) {
       printStmtAddScalarArg(format, args, scalarType, result);
       format.append("\n");
     } else if (order == 1) {
-      not_supported_yet;
+      size_t size = tensor->size();
+      for (size_t i = 0; i < size; i++) {
+        llvm::Value *index = llvmInt(i);
+        llvm::Value *element = loadFromArray(result, index);
+        printStmtAddScalarArg(format, args, scalarType, element);
+        format.append(" ");
+      }
+      format.back() = '\n';
     } else {
       not_supported_yet;
     }
