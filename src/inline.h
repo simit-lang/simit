@@ -31,6 +31,9 @@ protected:
 
   /// Replace element field reads with set field reads
   virtual void visit(const FieldRead *op);
+  
+  /// Replace element field writes with set field writes
+  virtual void visit(const FieldWrite *op);
 
   /// Replace neighbor tuple reads with reads from target endpoints
   virtual void visit(const TupleRead *op);

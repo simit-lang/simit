@@ -42,6 +42,32 @@ bool MapFunctionRewriter::isResult(Var var) {
   return resultToMapVar.find(var) != resultToMapVar.end();
 }
 
+void MapFunctionRewriter::visit(const FieldWrite *op) {
+  // Write a field from the target set
+  if (isa<VarExpr>(op->elementOrSet) &&
+      to<VarExpr>(op->elementOrSet)->var == target) {
+    //iassert(false) << "field from target set";
+    Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
+    stmt = TensorWrite::make(setFieldRead, {targetLoopVar}, rewrite(op->value));
+  }
+  // Write a field from a neighbor set
+  else if(isa<TupleRead>(op->elementOrSet) &&
+          isa<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple) &&
+          to<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple)->var==neighbors) {
+    //TODO: handle this case.
+    // Currently, our parser doesn't parse such statements, so these should not
+    // arise.
+    not_supported_yet;
+  }
+  else {
+    // TODO: Handle the case where the target var was reassigned
+    //       tmp = s; ... = tmp.a;
+    std::cout << *op << std::endl;
+    not_supported_yet;
+  }
+}
+
+
 void MapFunctionRewriter::visit(const FieldRead *op) {
   // Read a field from the target set
   if (isa<VarExpr>(op->elementOrSet) &&
