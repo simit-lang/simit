@@ -14,8 +14,9 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
   this->targetLoopVar = targetLoopVar;
 
   Func kernel = map->function;
-  iassert(kernel.getArguments().size() == 1 || kernel.getArguments().size() == 2)
-      << "mapped functions must have exactly two arguments";
+  // TODO: revise this assert given map functions can have many params
+  //iassert(kernel.getArguments().size() == 1 || kernel.getArguments().size() == 2)
+  //    << "mapped functions must have exactly two arguments";
 
   iassert(map->vars.size() == kernel.getResults().size());
   for (size_t i=0; i < kernel.getResults().size(); ++i) {
@@ -28,10 +29,10 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
   iassert(kernel.getArguments().size() >= 1)
       << "The function must have a target argument";
 
-  this->target = kernel.getArguments()[0];
+  this->target = kernel.getArguments()[map->partial_actuals.size()];
 
   if (kernel.getArguments().size() >= 2) {
-    this->neighbors = kernel.getArguments()[1];
+    this->neighbors = kernel.getArguments()[1+map->partial_actuals.size()];
   }
 
   return rewrite(kernel.getBody());
@@ -40,6 +41,32 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
 bool MapFunctionRewriter::isResult(Var var) {
   return resultToMapVar.find(var) != resultToMapVar.end();
 }
+
+void MapFunctionRewriter::visit(const FieldWrite *op) {
+  // Write a field from the target set
+  if (isa<VarExpr>(op->elementOrSet) &&
+      to<VarExpr>(op->elementOrSet)->var == target) {
+    //iassert(false) << "field from target set";
+    Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
+    stmt = TensorWrite::make(setFieldRead, {targetLoopVar}, rewrite(op->value));
+  }
+  // Write a field from a neighbor set
+  else if(isa<TupleRead>(op->elementOrSet) &&
+          isa<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple) &&
+          to<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple)->var==neighbors) {
+    //TODO: handle this case.
+    // Currently, our parser doesn't parse such statements, so these should not
+    // arise.
+    not_supported_yet;
+  }
+  else {
+    // TODO: Handle the case where the target var was reassigned
+    //       tmp = s; ... = tmp.a;
+    std::cout << *op << std::endl;
+    not_supported_yet;
+  }
+}
+
 
 void MapFunctionRewriter::visit(const FieldRead *op) {
   // Read a field from the target set
@@ -106,16 +133,29 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   // also have a neighbor set, as well as other arguments.
   iassert(kernel.getArguments().size() >= 1)
       << "The function must have a target argument";
-
-  Var targetVar = kernel.getArguments()[0];
-  Var neighborsVar = kernel.getArguments()[1];
-
+  
+  Var targetVar = kernel.getArguments()[map->partial_actuals.size()];
+  
   Var loopVar(targetVar.getName(), Int);
   ForDomain domain(map->target);
 
   Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter);
-  Stmt inlinedMap = For::make(loopVar, domain, inlinedMapFunc);
 
+  Stmt inlinedMap;
+  auto initializers = vector<Stmt>();
+  for (size_t i=0; i<map->partial_actuals.size(); i++) {
+    Var tvar = kernel.getArguments()[i];
+    Expr rval = map->partial_actuals[i];
+    initializers.push_back(AssignStmt::make(tvar, rval));
+  }
+  if (initializers.size() > 0) {
+    auto initializersBlock = Block::make(initializers);
+    Stmt inlinedMapFuncWithInit = Block::make(initializersBlock, inlinedMapFunc);
+    inlinedMap = For::make(loopVar, domain, inlinedMapFuncWithInit);
+  } else {
+    inlinedMap = For::make(loopVar, domain, inlinedMapFunc);
+  }
+  
   for (auto &var : map->vars) {
     iassert(var.getType().isTensor());
     const TensorType *type = var.getType().toTensor();

@@ -327,6 +327,7 @@ void IRPrinter::visit(const Map *op) {
   indent();
   os << util::join(op->vars) << " = ";
   os << "map " << op->function.getName();
+  os << "(" << util::join(op->partial_actuals) << ")";
   os << " to ";
   print(op->target);
   if (op->neighbors.defined()) {
