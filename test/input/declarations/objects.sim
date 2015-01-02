@@ -26,3 +26,15 @@ end
 func f(p : Point) -> (r : float)
 	r = p.m;
 end
+
+%%%- tensor field-access
+element Point
+	x : tensor[3](float);
+	v : tensor[3](float);
+	m  : float;
+end
+
+func f(p : Point) -> (r : float)
+  s = p.v(1);
+  r = 1.0/s;
+end
