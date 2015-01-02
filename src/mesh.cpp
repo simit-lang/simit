@@ -131,7 +131,7 @@ int MeshVol::load(istream & in)
   for(unsigned int ii = 0;ii<v.size();ii++){
     in>>v[ii][0]>>v[ii][1]>>v[ii][2];
   }
-  for(unsigned int ii = 0;ii<v.size();ii++){
+  for(unsigned int ii = 0;ii<e.size();ii++){
     in>>num;
     e[ii].resize(num);
     for(unsigned int jj = 0; jj<e[ii].size(); jj++){
