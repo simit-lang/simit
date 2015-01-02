@@ -108,11 +108,8 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   // also have a neighbor set, as well as other arguments.
   iassert(kernel.getArguments().size() >= 1)
       << "The function must have a target argument";
-
-  Var targetVar = kernel.getArguments()[0];
-  Var neighborsVar = kernel.getArguments()[1];
-/*  
- TODO: must refactor this with new logic.
+  
+ //TODO: must refactor this with new logic.
   Var targetVar = kernel.getArguments()[map->partial_actuals.size()];
   Var neighborsVar = kernel.getArguments()[1+map->partial_actuals.size()];
 
@@ -122,7 +119,7 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
     Expr rval = map->partial_actuals[i];
     initializers.push_back(AssignStmt::make(tvar, rval));
   }
-*/
+//END TODO
 
   
   
