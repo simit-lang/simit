@@ -787,29 +787,6 @@ void LLVMBackend::visit(const Pass *op) {
   // Nothing to do
 }
 
-static
-void printStmtAddScalarArg(std::string &format,
-                           std::vector<llvm::Value*> &args,
-                           simit::ir::ScalarType type,
-                           llvm::Value *val) {
-  switch (type.kind) {
-  case simit::ir::ScalarType::Int:
-    format.append("%d");
-    args.push_back(val);
-    break;
-  case simit::ir::ScalarType::Float:
-    format.append("%f");
-    args.push_back(val);
-    break;
-  case simit::ir::ScalarType::Boolean:
-    format.append("%d");
-    args.push_back(val);
-    break;
-  default:
-    unreachable << "Unknown ScalarType";
-  }
-}
-
 void LLVMBackend::visit(const Print *op) {
 
   llvm::Value *result = compile(op->expr);
@@ -846,23 +823,27 @@ void LLVMBackend::visit(const Print *op) {
     default: {
       iassert(tensor->dimensions.size() >= 2);
       size_t size = tensor->size();
-      if (size % tensor->dimensions[0].getSize()) {
+      if (size % tensor->dimensions.back().getSize()) {
         not_supported_yet << "\nNot a rectangular tensor (total entries not a multiple of entries per row)";
       }
 
-      for (size_t i = 0; i < tensor->dimensions[0].getSize(); i++) {
+      for (size_t i = 0; i < tensor->dimensions.back().getSize(); i++) {
         format += specifier + " ";
       }
       format.back() = '\n';
 
-      std::vector<std::string> formatLines(size / tensor->dimensions[0].getSize(), format);
+      std::vector<std::string> formatLines(size / tensor->dimensions.back().getSize(), format);
 
       size_t stride = 1;
-      for (size_t i = 1; i < tensor->dimensions.size(); i++) {
+      for (size_t i = tensor->dimensions.size() - 2; i > 0; i--) {
         stride *= tensor->dimensions[i].getSize();
         for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
           formatLines[j].push_back('\n');
         }
+      }
+      stride *= tensor->dimensions[0].getSize();
+      for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
+        formatLines[j].push_back('\n');
       }
       formatLines.back().resize(formatLines.back().find_last_not_of("\n") + 2);
 
@@ -870,7 +851,6 @@ void LLVMBackend::visit(const Print *op) {
       for (string &str : formatLines) {
         charCount += str.length();
       }
-
       format.clear();
       format.reserve(charCount);
       for (string &str : formatLines) {
