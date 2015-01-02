@@ -102,9 +102,6 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   Func kernel = map->function;
   kernel = insertTemporaries(kernel);
 
-  // The function must have at least two arguments: target and neighbors. It
-  // can also have additional arguments.
-
   // The function must have at least one argument, namely the target. It may
   // also have a neighbor set, as well as other arguments.
   iassert(kernel.getArguments().size() >= 1)

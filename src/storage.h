@@ -110,8 +110,18 @@ private:
 };
 std::ostream &operator<<(std::ostream&, const Storage&);
 
-/// Retrieve a storage descriptor for each tensor used in 'func'.
+
+/// Retrieve a storage descriptor for each tensor used in `func`.
 Storage getStorage(const Func &func);
+
+/// Retrieve a storage descriptor for each tensor used in `stmt`.
+Storage getStorage(const Stmt &stmt);
+
+/// Adds storage descriptors for each tensor in `func` not already described.
+void updateStorage(const Func &func, Storage *storage);
+
+/// Adds storage descriptors for each tensor in `stmt` not already described.
+void updateStorage(const Stmt &stmt, Storage *storage);
 
 }}
 

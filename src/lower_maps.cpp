@@ -48,23 +48,26 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
 
 class LowerMaps : public IRRewriter {
 public:
-  LowerMaps(const Storage &storage) : storage(storage) {}
+  LowerMaps(Storage *storage) : storage(storage) {}
 
 private:
-  Storage storage;
+  Storage *storage;
 
   void visit(const Map *op) {
-    iassert(hasStorage(op->vars, storage))
+    iassert(hasStorage(op->vars, *storage))
         << "Every assembled tensor should have a storage descriptor";
-    tassert(hasSameStorage(op->vars, storage))
+    tassert(hasSameStorage(op->vars, *storage))
         << "All assembled tensors in the same Map must have the same storage.";
 
-    TensorStorage::Kind tensorStorage = storage.get(op->vars[0]).getKind();
+    TensorStorage::Kind tensorStorage = storage->get(op->vars[0]).getKind();
     if (tensorStorage != TensorStorage::SystemNone || op->vars.size() == 0) {
       if (tensorStorage == TensorStorage::SystemReduced ||
           tensorStorage == TensorStorage::DenseRowMajor) {
         LowerMapFunctionRewriter mapFunctionRewriter;
         stmt = inlineMap(op, mapFunctionRewriter);
+
+        // Add storage descriptor for the new tensors in the inlined map
+        updateStorage(stmt, storage);
       }
       else {
         ierror << "Unsupported tensor storage lowering";
@@ -77,7 +80,7 @@ private:
 };
 
 Func lowerMaps(Func func) {
-  Stmt body = LowerMaps(func.getStorage()).rewrite(func.getBody());
+  Stmt body = LowerMaps(&func.getStorage()).rewrite(func.getBody());
   return Func(func, body);
 }
 
