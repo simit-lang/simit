@@ -134,14 +134,13 @@ void IRPrinter::visit(const Literal *op) {
           break;
         }
         case ScalarType::Float: {
-          const double *fdata = static_cast<const double*>(op->data);
           if (size == 1) {
-            os << fdata[0];
+            os << op->getFloatVal(0);
           }
           else {
-            os << "[" << to_string(fdata[0]);
+            os << "[" << to_string(op->getFloatVal(0));
             for (size_t i=1; i < size; ++i) {
-              os << ", " + to_string(fdata[i]);
+              os << ", " + to_string(op->getFloatVal(i));
             }
             os << "]";
           }

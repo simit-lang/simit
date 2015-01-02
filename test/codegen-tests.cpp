@@ -74,8 +74,8 @@ TEST(Codegen, add0) {
 
   function->runSafe();
 
-  vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], 6.1);
+  vector<simit_float> results = toVectorOf<simit_float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], 6.1);
 }
 
 TEST(Codegen, sin) {
@@ -100,7 +100,6 @@ TEST(Codegen, sin) {
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_NEAR(results[0], sin(2.0), abs(epsilon*results[0]));
-
 }
 
 TEST(Codegen, cos) {
@@ -125,7 +124,6 @@ TEST(Codegen, cos) {
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_NEAR(results[0], cos(2.0), abs(epsilon*results[0]));
-
 }
 
 TEST(Codegen, sqrt) {
@@ -150,7 +148,6 @@ TEST(Codegen, sqrt) {
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_NEAR(results[0], sqrt(5.0), abs(epsilon*results[0]));
-
 }
 
 TEST(Codegen, log) {
@@ -175,7 +172,6 @@ TEST(Codegen, log) {
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_NEAR(results[0], log(5.0), abs(epsilon*results[0]));
-
 }
 
 TEST(Codegen, exp) {
@@ -200,7 +196,6 @@ TEST(Codegen, exp) {
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_NEAR(results[0], exp(5.0), abs(epsilon*results[0]));
-
 }
 
 TEST(Codegen, atan2) {
@@ -228,7 +223,6 @@ TEST(Codegen, atan2) {
 
   vector<double> results = toVectorOf<double>(cRes);
   ASSERT_NEAR(results[0], atan2(1.0,2.0), abs(epsilon*results[0]));
-
 }
 
 TEST(Codegen, forloop) {

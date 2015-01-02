@@ -10,7 +10,7 @@ using namespace simit;
 
 TEST(System, misc_triangle) {
   simit::Set<> verts;
-  simit::FieldRef<double> b = verts.addField<double>("b");
+  simit::FieldRef<simit_float> b = verts.addField<simit_float>("b");
 
   ElementRef v0 = verts.add();
   ElementRef v1 = verts.add();
@@ -18,7 +18,7 @@ TEST(System, misc_triangle) {
   ElementRef v3 = verts.add();
 
   simit::Set<3> trigs(verts,verts,verts);
-  simit::FieldRef<double> a = trigs.addField<double>("a");
+  simit::FieldRef<simit_float> a = trigs.addField<simit_float>("a");
 
   ElementRef t0 = trigs.add(v0,v1,v2);
   ElementRef t1 = trigs.add(v1,v2,v3);
@@ -36,10 +36,10 @@ TEST(System, misc_triangle) {
   f->runSafe();
 
   // Check outputs
-  ASSERT_DOUBLE_EQ(1.0, b.get(v0));
-  ASSERT_DOUBLE_EQ(1.1, b.get(v1));
-  ASSERT_DOUBLE_EQ(1.1, b.get(v2));
-  ASSERT_DOUBLE_EQ(0.1, b.get(v3));
+  ASSERT_FLOAT_EQ(1.0, b.get(v0));
+  ASSERT_FLOAT_EQ(1.1, b.get(v1));
+  ASSERT_FLOAT_EQ(1.1, b.get(v2));
+  ASSERT_FLOAT_EQ(0.1, b.get(v3));
 }
 
 TEST(System, DISABLED_misc_assemble_from_literal_vector) {
@@ -79,7 +79,7 @@ TEST(System, DISABLED_misc_assemble_from_literal_vector) {
 TEST(System, DISABLED_misc_map_one_set) {
   // Points
   Set<> points;
-  FieldRef<double> a = points.addField<double>("a");
+  FieldRef<simit_float> a = points.addField<simit_float>("a");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -97,7 +97,7 @@ TEST(System, DISABLED_misc_map_one_set) {
   f->runSafe();
 
   // Check outputs
-  ASSERT_DOUBLE_EQ(2, a.get(p0));
-  ASSERT_DOUBLE_EQ(4, a.get(p1));
-  ASSERT_DOUBLE_EQ(6, a.get(p2));
+  ASSERT_FLOAT_EQ(2, a.get(p0));
+  ASSERT_FLOAT_EQ(4, a.get(p1));
+  ASSERT_FLOAT_EQ(6, a.get(p2));
 }
