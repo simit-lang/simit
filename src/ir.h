@@ -664,9 +664,11 @@ struct Map : public StmtNode<Map> {
   std::vector<Var> vars;
   Func function;
   Expr target, neighbors;
+  std::vector<Expr> partial_actuals;
   ReductionOperator reduction;
 
   static Stmt make(std::vector<Var> vars, Func function,
+                   std::vector<Expr> partial_actuals,
                    Expr target, Expr neighbors=Expr(),
                    ReductionOperator reduction=ReductionOperator()) {
     iassert(target.type().isSet());
@@ -675,6 +677,7 @@ struct Map : public StmtNode<Map> {
     Map *node = new Map;
     node->vars = vars;
     node->function = function;
+    node->partial_actuals = partial_actuals;
     node->target = target;
     node->neighbors = neighbors;
     node->reduction = reduction;

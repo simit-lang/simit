@@ -217,6 +217,7 @@
 %token EXTERN    "extern"
 %token PROC      "proc"
 %token FUNC      "func"
+%token INOUT     "inout"
 %token MAP       "map"
 %token TO        "to"
 %token WITH      "with"
@@ -231,6 +232,7 @@
 %token RETURN    "return"
 %token TEST      "%!"
 %token PRINT     "print"
+
 
 %token RARROW    "->"
 %token LP        "("
@@ -384,13 +386,26 @@ function_header
     std::string name = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<Var>>($arguments);
     auto results = unique_ptr<vector<Var>>($results);
-    $$ = new Func(name, *arguments, *results, Stmt());
-
+    auto newArguments = unique_ptr<vector<Var>>(new vector<Var>());
+    
     std::set<std::string> argNames;
     for (Var &arg : *arguments) {
-      ctx->addSymbol(arg.getName(), arg, Symbol::Read);
-      argNames.insert(arg.getName());
+      auto found = arg.getName().find("___inout___");
+      if (found != string::npos) {
+        // this is an inout param
+        string newName = arg.getName().substr(0,found);
+        auto newArg = Var(newName, arg.getType());
+        ctx->addSymbol(newName, newArg, Symbol::ReadWrite);
+        argNames.insert(newArg.getName());
+        newArguments->push_back(newArg);
+      } else {
+        ctx->addSymbol(arg.getName(), arg, Symbol::Read);
+        argNames.insert(arg.getName());
+        newArguments->push_back(arg);
+      }
     }
+
+    $$ = new Func(name, *newArguments, *results, Stmt());
 
     for (Var &res : *results) {
       Symbol::Access access = (argNames.find(res.getName()) != argNames.end())
@@ -423,12 +438,20 @@ argument_list
 
 %type <var> argument_decl;
 argument_decl
-  : IDENT ":" type {
+  : INOUT IDENT ":" type {
+    // this is by no means the best way to do this, but it works.
+    std::string name = convertAndFree($IDENT).append("___inout___");
+
+    auto type = convertAndDelete($type);
+    $$ = new Var(name, type);
+  }
+  | IDENT ":" type {
     std::string name = convertAndFree($IDENT);
 
     auto type = convertAndDelete($type);
     $$ = new Var(name, type);
   }
+
 
 %type <vars> results;
 results
@@ -533,9 +556,11 @@ assign_stmt
 
 // Map Statement
 map_stmt
-  : idents "=" "map" IDENT[func] "to" IDENT[target] with reduce {
+  : idents "=" "map" IDENT[func] partial_expr_list "to" IDENT[target] with reduce {
     auto varNames = unique_ptr<vector<string>>($idents);
 
+    auto partialExprList = unique_ptr<vector<Expr>>($partial_expr_list);
+    
     string funcName = convertAndFree($func);
     string targetsName = convertAndFree($target);
 
@@ -580,8 +605,19 @@ map_stmt
       vars.push_back(var);
     }
 
-    ctx->addStatement(Map::make(vars, func, targets, neighbor, reduction));
+    ctx->addStatement(Map::make(vars, func, *partialExprList, targets, neighbor,
+      reduction));
   }
+
+%type <exprs> partial_expr_list;
+partial_expr_list
+  : /* empty */ {
+    $$ = new vector<Expr>();
+  }
+  | "(" expr_list_or_empty ")" {
+    $$ = $2;
+  }
+
 
 %type <strings> idents;
 idents

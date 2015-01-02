@@ -251,11 +251,22 @@ void IRRewriter::visit(const AssignStmt *op) {
 void IRRewriter::visit(const Map *op) {
   Expr target = rewrite(op->target);
   Expr neighbors = rewrite(op->neighbors);
-  if (target == op->target && neighbors == op->neighbors) {
+  
+  std::vector<Expr> partial_actuals(op->partial_actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->partial_actuals.size(); ++i) {
+    partial_actuals[i] = rewrite(op->partial_actuals[i]);
+    if (partial_actuals[i] != op->partial_actuals[i]) {
+      actualsSame = false;
+    }
+  }
+
+  if (target == op->target && neighbors == op->neighbors && actualsSame) {
     stmt = op;
   }
   else {
-    stmt = Map::make(op->vars, op->function, target, neighbors, op->reduction);
+    stmt = Map::make(op->vars, op->function, partial_actuals, target, neighbors,
+      op->reduction);
   }
 }
 

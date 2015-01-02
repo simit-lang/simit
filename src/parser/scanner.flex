@@ -39,6 +39,7 @@ using namespace simit::internal;
 "extern"              { return Parser::token::EXTERN;    }
 "proc"                { return Parser::token::PROC;      }
 "func"                { return Parser::token::FUNC;      }
+"inout"               { return Parser::token::INOUT;     }
 "map"                 { return Parser::token::MAP;       }
 "to"                  { return Parser::token::TO;        }
 "with"                { return Parser::token::WITH;      }
