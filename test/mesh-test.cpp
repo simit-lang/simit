@@ -156,3 +156,50 @@ f 5 1 8
     ASSERT_STREQ(&(output[0]), &(outputstring[0]));
 
 }
+
+TEST(MeshVol, CubeTest) {
+  const string input = R"(#v 12
+#e 2
+0 0 0
+0 0 0.5
+0 0.5 0
+0 0.5 0.5
+0 1 0
+0 1 0.5
+0.5 0 0
+0.5 0 0.5
+0.5 0.5 0
+0.5 0.5 0.5
+0.5 1 0
+0.5 1 0.5
+8 0 1 2 3 6 7 8 9
+8 2 3 4 5 8 9 10 11
+
+)";
+
+  const string output = R"(#vertices 12
+#elements 2
+0 0 0
+0 0 0.5
+0 0.5 0
+0 0.5 0.5
+0 1 0
+0 1 0.5
+0.5 0 0
+0.5 0 0.5
+0.5 0.5 0
+0.5 0.5 0.5
+0.5 1 0
+0.5 1 0.5
+8 0 1 2 3 6 7 8 9
+8 2 3 4 5 8 9 10 11
+)";
+    MeshVol m;
+    stringstream inputstream, outputstream;
+    inputstream << input;
+    m.load(inputstream);
+    m.save(outputstream);
+    string outputstring;
+    getline(outputstream, outputstring, '\0');
+    ASSERT_STREQ(&(output[0]), &(outputstring[0]));
+}

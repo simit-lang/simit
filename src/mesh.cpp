@@ -105,3 +105,69 @@ int Mesh::save(ostream & out)
   out<<"#end\n";
   return 0;
 }
+
+int MeshVol::load(const char * filename)
+{
+  ifstream in(filename);
+  if(!in.good()){
+    std::cout<<"Could not open "<<filename<<"\n";
+    return -1;
+  }
+  int status = load(in);
+  in.close();
+  return status;
+}
+
+int MeshVol::load(istream & in)
+{
+  string token;
+  in>>token;
+  int num;
+  in>>num;
+  v.resize(num);
+  in>>token;
+  in>>num;
+  e.resize(num);
+  for(unsigned int ii = 0;ii<v.size();ii++){
+    in>>v[ii][0]>>v[ii][1]>>v[ii][2];
+  }
+  for(unsigned int ii = 0;ii<v.size();ii++){
+    in>>num;
+    e[ii].resize(num);
+    for(unsigned int jj = 0; jj<e[ii].size(); jj++){
+      in>>e[ii][jj];
+    }
+  }
+  return 0;
+}
+
+int MeshVol::save(const char * filename)
+{
+  ofstream out(filename);
+  if(!out.good()){
+    std::cout<<"Could not open "<<filename<<"\n";
+    return -1;
+  }
+  int status = save(out);
+  out.close();
+  return status;
+}
+
+int MeshVol::save(ostream & out)
+{
+  out<<"#vertices "<<v.size()<<"\n";
+  out<<"#elements "<<e.size()<<"\n";
+  for(unsigned int ii = 0;ii<v.size();ii++){
+    out<<v[ii][0]<<" "<<v[ii][1]<<" "<<v[ii][2]<<"\n";
+  }
+  
+  for(unsigned int ii = 0;ii<e.size();ii++){
+    out<<e[ii].size();
+    for(unsigned int jj = 0;jj<e[ii].size();jj++){
+      out<<" "<<e[ii][jj];
+    }
+    out<<"\n";
+  }
+  
+  return 0;
+}
