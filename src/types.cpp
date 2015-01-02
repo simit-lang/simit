@@ -72,7 +72,7 @@ Type TensorType::blockType() const {
 }
 
 size_t TensorType::size() const {
-  int size = 1;
+  size_t size = 1;
   for (auto &dimension : dimensions) {
     size *= dimension.getSize();
   }

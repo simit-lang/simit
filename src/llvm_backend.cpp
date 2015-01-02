@@ -822,23 +822,70 @@ void LLVMBackend::visit(const Print *op) {
     size_t order = tensor->order();
     std::string format;
     std::vector<llvm::Value*> args;
+    std::string specifier = (scalarType.kind == ScalarType::Float? "%f" : "%d");
 
-    if (order == 0) {
-      printStmtAddScalarArg(format, args, scalarType, result);
-      format.append("\n");
-    } else if (order == 1) {
+    switch (order) {
+    case 0:
+      iassert(tensor->dimensions.size() == 0);
+      format = specifier + "\n";
+      args.push_back(result);
+      break;
+    case 1: {
+      iassert(tensor->dimensions.size() == 1);
+      std::string delim = (tensor->isColumnVector ? "\n" : " ");
       size_t size = tensor->size();
       for (size_t i = 0; i < size; i++) {
         llvm::Value *index = llvmInt(i);
         llvm::Value *element = loadFromArray(result, index);
-        printStmtAddScalarArg(format, args, scalarType, element);
-        format.append(" ");
+        format += specifier + delim;
+        args.push_back(element);
       }
       format.back() = '\n';
-    } else {
-      not_supported_yet;
     }
+      break;
+    default: {
+      iassert(tensor->dimensions.size() >= 2);
+      size_t size = tensor->size();
+      if (size % tensor->dimensions[0].getSize()) {
+        not_supported_yet << "\nNot a rectangular tensor (total entries not a multiple of entries per row)";
+      }
 
+      for (size_t i = 0; i < tensor->dimensions[0].getSize(); i++) {
+        format += specifier + " ";
+      }
+      format.back() = '\n';
+
+      std::vector<std::string> formatLines(size / tensor->dimensions[0].getSize(), format);
+
+      size_t stride = 1;
+      for (size_t i = 1; i < tensor->dimensions.size(); i++) {
+        stride *= tensor->dimensions[i].getSize();
+        for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
+          formatLines[j].push_back('\n');
+        }
+      }
+      formatLines.back().resize(formatLines.back().find_last_not_of("\n") + 2);
+
+      size_t charCount = 1;
+      for (string &str : formatLines) {
+        charCount += str.length();
+      }
+
+      format.clear();
+      format.reserve(charCount);
+      for (string &str : formatLines) {
+        format += str;
+      }
+
+      for (size_t i = 0; i < size; i++) {
+        llvm::Value *index = llvmInt(i);
+        llvm::Value *element = loadFromArray(result, index);
+        args.push_back(element);
+      }
+      format.back() = '\n';
+    }
+      break;
+    }
     emitPrintf(format, args);
   }
     break;
