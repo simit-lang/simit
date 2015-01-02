@@ -111,7 +111,6 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   
  //TODO: must refactor this with new logic.
   Var targetVar = kernel.getArguments()[map->partial_actuals.size()];
-  Var neighborsVar = kernel.getArguments()[1+map->partial_actuals.size()];
 
   auto initializers = vector<Stmt>();
   for (size_t i=0; i<map->partial_actuals.size(); i++) {
