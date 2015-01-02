@@ -755,8 +755,9 @@ void LLVMBackend::visit(const While *op) {
   llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
 
 
-  llvm::BasicBlock *bodyBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "body", llvmFunc);
-  llvm::BasicBlock *checkBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "check");
+  llvm::BasicBlock *bodyBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "body",
+                                                         llvmFunc);
+  llvm::BasicBlock *checkBlock = llvm::BasicBlock::Create(LLVM_CONTEXT,"check");
   llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "exit");
   builder->CreateCondBr(condEval, bodyBlock, exitBlock);
 
@@ -818,13 +819,14 @@ void LLVMBackend::visit(const Print *op) {
         args.push_back(element);
       }
       format.back() = '\n';
-    }
       break;
+    }
     default: {
       iassert(tensor->dimensions.size() >= 2);
       size_t size = tensor->size();
       if (size % tensor->dimensions.back().getSize()) {
-        not_supported_yet << "\nNot a rectangular tensor (total entries not a multiple of entries per row)";
+        not_supported_yet << "\nNot a rectangular tensor (total entries not a"
+                          << "multiple of entries per row)";
       }
 
       for (size_t i = 0; i < tensor->dimensions.back().getSize(); i++) {
@@ -832,7 +834,8 @@ void LLVMBackend::visit(const Print *op) {
       }
       format.back() = '\n';
 
-      std::vector<std::string> formatLines(size / tensor->dimensions.back().getSize(), format);
+      size_t numlines = size / tensor->dimensions.back().getSize();
+      std::vector<std::string> formatLines(numlines, format);
 
       size_t stride = 1;
       for (size_t i = tensor->dimensions.size() - 2; i > 0; i--) {
@@ -863,8 +866,8 @@ void LLVMBackend::visit(const Print *op) {
         args.push_back(element);
       }
       format.back() = '\n';
-    }
       break;
+    }
     }
     emitPrintf(format, args);
   }
