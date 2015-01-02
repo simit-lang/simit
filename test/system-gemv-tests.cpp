@@ -170,6 +170,10 @@ TEST(System, gemv_diagonal_inout) {
   // Check that outputs are correct
   ASSERT_EQ(2.0, a.get(s0));
   ASSERT_EQ(4.0, a.get(s1));
+
+  ASSERT_EQ(2.0, c.get(p0));
+  ASSERT_EQ(12.0, c.get(p1));
+  ASSERT_EQ(12.0, c.get(p2));
 }
 
 

@@ -135,19 +135,19 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
       << "The function must have a target argument";
   
   Var targetVar = kernel.getArguments()[map->partial_actuals.size()];
+  
+  Var loopVar(targetVar.getName(), Int);
+  ForDomain domain(map->target);
 
+  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter);
+
+  Stmt inlinedMap;
   auto initializers = vector<Stmt>();
   for (size_t i=0; i<map->partial_actuals.size(); i++) {
     Var tvar = kernel.getArguments()[i];
     Expr rval = map->partial_actuals[i];
     initializers.push_back(AssignStmt::make(tvar, rval));
   }
-  
-  Var loopVar(targetVar.getName(), Int);
-  ForDomain domain(map->target);
-
-  Stmt inlinedMap;
-  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter);
   if (initializers.size() > 0) {
     auto initializersBlock = Block::make(initializers);
     Stmt inlinedMapFuncWithInit = Block::make(initializersBlock, inlinedMapFunc);
