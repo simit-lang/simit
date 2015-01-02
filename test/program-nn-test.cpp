@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "simit-test.h"
 
 #include <cmath>
 #include <iostream>
@@ -12,54 +12,6 @@ using namespace std;
 using namespace simit;
 
 TEST(Program, DISABLED_nn) {
-  Program program;
-  std::string programText = R"(
-element Node
-  inv : float;
-  d  : float;
-  outv  : float;
-
-  print : float;
-end
-
-element Edge
-  w : float;
-end
-
-extern nodes : set{Node};
-extern edges : set{Edge}(nodes, nodes);
-
-func eval(n:Node) -> (v : tensor[nodes](float))
-  v(n) = 1.0/(1.0+exp(-n.outv));
-end
-
-func deriv(n:Node) -> (d : tensor[nodes](float))
-  d(n) = n.outv * (1.0-n.outv);
-end
-
-func wMat(e:Edge, n:(Node*2)) -> (W:tensor[nodes, nodes](float))
-  W(n(1),n(0)) = e.w;
-end
-
-proc main
-%  i1 = nodes.inv;
-
-  W = map wMat to edges with nodes reduce +;
-  nodes.outv = W * nodes.inv;
-
-  outv = map eval to nodes;
-  nodes.print = --outv;
-
-%  nodes.outv = outv .* (1.0 - outv);
-%  outv = map eval to nodes;
-%  nodes.outv = outv;
-%  d = map deriv to nodes;
-%  dVdw = (d'*W)';
-%  dVdw = W'*d;
-%  nodes.d = dVdw;
-end
-  )";
-
   // Points
   Set<> nodes;
   FieldRef<double> outv = nodes.addField<double>("outv");
@@ -127,15 +79,13 @@ end
   std::cout << std::endl;
 
   // Compile program and bind arguments
-  int errorCode = program.loadString(programText);
-  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
 
-  std::unique_ptr<Function> func = program.compile("main");
-  if (!func) FAIL() << program.getDiagnostics().getMessage();
+  f->bind("nodes", &nodes);
+  f->bind("edges", &edges);
 
-  func->bind("nodes", &nodes);
-  func->bind("edges", &edges);
-  func->runSafe();
+  f->runSafe();
 
   std::cout << "Check" << std::endl;
   for (auto &n : nodeRefs) {

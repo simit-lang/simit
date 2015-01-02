@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "simit-test.h"
 
 #include <iostream>
 
@@ -11,116 +11,6 @@ using namespace std;
 using namespace simit;
 
 TEST(Program, DISABLED_isprings) {
-  Program program;
-  std::string programText = R"(
-element Point
-  x : tensor[3](float);
-  v : tensor[3](float);
-
-  x2 : tensor[3](float);
-  v2 : tensor[3](float);
-
-  zeros : tensor[3](float);
-  ones : tensor[3](float);
-  print : tensor[3](float);
-end
-
-element Spring
-  k  : float;
-  l0 : float;
-  m  : float;
-end
-
-extern points  : set{Point};
-extern springs : set{Spring}(points,points);
-
-func compute_MK(s: Spring, p : (Point*2)) ->
-    (MK : tensor[points,points](tensor[3,3](float)))
-  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  grav = [0.0, 0.0, -9.81];
-  h = 1e-1;
-  k = s.k;
-  l0 = s.l0;
-
-  % Mass matrix
-  halfm = 0.5*s.m;
-  m = halfm*I;
-  M00 = m;
-  M11 = m;
-
-  % Spring force
-  dx = p(1).x - p(0).x;
-  l = norm(dx);
-
-  % Stiffness matrix
-  dxtdx = dx*dx';
-  dxdxt = dx'*dx;
-  K = h*h*k/(l0*l0*l*l)*(dxdxt + (l-l0)/l*(dxtdx*I - dxdxt));
-
-  MK(p(0),p(0)) = M00 + K;
-  MK(p(0),p(1)) =     - K;
-  MK(p(1),p(0)) =     - K;
-  MK(p(1),p(1)) = M11 + K;
-end
-
-func compute_f(s: Spring, p : (Point*2)) ->
-    (f : tensor[points](tensor[3](float)))
-  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  grav = [0.0, 0.0, -9.81];
-  h = 1e-1;
-  k = s.k;
-  l0 = s.l0;
-
-  % Mass matrix
-  halfm = 0.5*s.m;
-  m = halfm*I;
-  M00 = m;
-  M11 = m;
-
-  % Momentum
-  fm0 = halfm*p(0).v;
-  fm1 = halfm*p(1).v;
-
-  % Gravity
-  fg = h*halfm*grav;
-
-  % Spring force
-  dx = p(1).x - p(0).x;
-  l = norm(dx);
-  fs = h*k/(l0*l0)*(l-l0)*dx/l;
-
-  % Insert into globals
-  f(p(0)) = fm0 + fg + fs;
-  f(p(1)) = fm1 + fg - fs;
-end
-
-proc main
-  h = 1e-1;
-
-  fm = map compute_f to springs with points reduce +;
-  f = fm;
-
-  MK = map compute_MK to springs with points reduce +;
-
-  %r = f - MK*v;
-  MKv = MK * points.v;
-  r = f - MKv;
-
-  r2old = r*r';
-
-  Ap = MK*r;
-  rap = r*Ap;
-  a = r2old/rap;
-  ap = a*r;
-
-  v = points.v + ap;
-  points.v2 = v;
-
-  hvap = h * v;
-  points.x2  = points.x + hvap;
-end
-  )";
-
   // Points
   Set<> points;
   simit::FieldRef<double,3> x = points.addField<double,3>("x");
@@ -184,17 +74,14 @@ end
   k.set(s1, stiffness);
 
   // Compile program and bind arguments
-  int errorCode = program.loadString(programText);
-  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
 
-  std::unique_ptr<Function> func = program.compile("main");
-  if (!func) FAIL() << program.getDiagnostics().getMessage();
-
-  func->bind("points", &points);
-  func->bind("springs", &springs);
+  f->bind("points", &points);
+  f->bind("springs", &springs);
 
   for (size_t i=0; i < 10; ++i) {
-    func->runSafe();
+    f->runSafe();
   }
 
   // Check outputs
