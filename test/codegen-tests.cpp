@@ -49,8 +49,8 @@ TEST(Codegen, add0) {
 
   function->runSafe();
 
-  vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], 6.1);
+  vector<simit_float> results = toVectorOf<simit_float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], 6.1);
 }
 
 TEST(Codegen, sin) {
@@ -73,9 +73,8 @@ TEST(Codegen, sin) {
 
   function->runSafe();
 
-  vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], sin(2.0));
-
+  vector<simit_float> results = toVectorOf<simit_float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], sin(2.0));
 }
 
 TEST(Codegen, cos) {
@@ -98,8 +97,8 @@ TEST(Codegen, cos) {
 
   function->runSafe();
 
-  vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], cos(2.0));
+  vector<simit_float> results = toVectorOf<simit_float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], cos(2.0));
 
 }
 
@@ -123,8 +122,8 @@ TEST(Codegen, sqrt) {
 
   function->runSafe();
 
-  vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], sqrt(5.0));
+  vector<simit_float> results = toVectorOf<simit_float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], sqrt(5.0));
 
 }
 
@@ -148,8 +147,8 @@ TEST(Codegen, log) {
 
   function->runSafe();
 
-  vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], log(5.0));
+  vector<simit_float> results = toVectorOf<simit_float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], log(5.0));
 
 }
 
@@ -173,8 +172,8 @@ TEST(Codegen, exp) {
 
   function->runSafe();
 
-  vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], exp(5.0));
+  vector<simit_float> results = toVectorOf<simit_float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], exp(5.0));
 
 }
 
@@ -201,8 +200,8 @@ TEST(Codegen, atan2) {
 
   function->runSafe();
 
-  vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));
+  vector<simit_float> results = toVectorOf<simit_float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], atan2(1.0,2.0));
 
 }
 

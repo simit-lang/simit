@@ -1112,11 +1112,11 @@ boolean_expr
   }
   | "true" {
     bool val = true;
-    $$ = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+    $$ = new Expr(Literal::make(val));
   }
   | "false" {
     bool val = false;
-    $$ = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+    $$ = new Expr(Literal::make(val));
   }
 
 // Field Read Expressions
@@ -1477,7 +1477,7 @@ dense_tensor_literal
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
     Type type = TensorType::make(ScalarType(ScalarType::Float), idoms);
-    $$ = new Expr(Literal::make(type, values->values.data()));
+    $$ = new Expr(Literal::make(type, values->values));
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
@@ -1609,12 +1609,10 @@ int_dense_vector_literal
 %type <expr> scalar_literal;
 scalar_literal
   : signed_int_literal {
-    auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Int));
-    $$ = new Expr(Literal::make(scalarTensorType, &$1));
+    $$ = new Expr(Literal::make($1));
   }
   | signed_float_literal {
-    auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Float));
-    $$ = new Expr(Literal::make(scalarTensorType, &$1));
+    $$ = new Expr(Literal::make($1));
   }
 
 %type <num> signed_int_literal;

@@ -25,10 +25,10 @@ static size_t getTensorByteSize(const TensorType *tensorType) {
 }
 
 // class Expr
-Expr::Expr(int val) : IRHandle(Literal::make(Int, &val)) {
+Expr::Expr(int val) : IRHandle(Literal::make(val)) {
 }
 
-Expr::Expr(double val) : IRHandle(Literal::make(Float, &val)) {
+Expr::Expr(double val) : IRHandle(Literal::make(val)) {
 }
 
 // class Intrinsics
@@ -214,10 +214,8 @@ bool operator==(const Literal& l, const Literal& r) {
       // Rather large epsilon, but works for testing...
       const double EPSILON = 0.001;
 
-      double *ldata = static_cast<double*>(l.data);
-      double *rdata = static_cast<double*>(r.data);
       for (size_t i=0; i < l.type.toTensor()->size(); ++i) {
-        if (fabs(ldata[i] - rdata[i]) > EPSILON) {
+        if (fabs(l.getFloatVal(i) - r.getFloatVal(i)) > EPSILON) {
           return false;
         }
       }

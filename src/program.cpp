@@ -75,7 +75,9 @@ std::vector<std::string> Program::getFunctionNames() const {
   return functionNames;
 }
 
-std::unique_ptr<Function> Program::compile(const std::string &function) {
+std::unique_ptr<Function> Program::compile(const std::string &function,
+                                           int floatSize) {
+  ir::ScalarType::floatBytes = floatSize;
   ir::Func simitFunc = content->ctx.getFunction(function);
   if (!simitFunc.defined()) {
     content->diags.report() << "Attempting to compile an unknown function ("

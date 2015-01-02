@@ -2246,7 +2246,7 @@ namespace  simit { namespace internal  {
 
     {
     bool val = true;
-    (yylhs.value.expr) = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+    (yylhs.value.expr) = new Expr(Literal::make(val));
   }
 
     break;
@@ -2255,7 +2255,7 @@ namespace  simit { namespace internal  {
 
     {
     bool val = false;
-    (yylhs.value.expr) = new Expr(Literal::make(TensorType::make(ScalarType::Boolean), &val));
+    (yylhs.value.expr) = new Expr(Literal::make(val));
   }
 
     break;
@@ -2620,7 +2620,7 @@ namespace  simit { namespace internal  {
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
     Type type = TensorType::make(ScalarType(ScalarType::Float), idoms);
-    (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
+    (yylhs.value.expr) = new Expr(Literal::make(type, values->values));
   }
 
     break;
@@ -2803,7 +2803,7 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Int));
-    (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.num)));
+    (yylhs.value.expr) = new Expr(Literal::make(yystack_[0].value.num));
   }
 
     break;
@@ -2812,7 +2812,7 @@ namespace  simit { namespace internal  {
 
     {
     auto scalarTensorType = TensorType::make(ScalarType(ScalarType::Float));
-    (yylhs.value.expr) = new Expr(Literal::make(scalarTensorType, &(yystack_[0].value.fnum)));
+    (yylhs.value.expr) = new Expr(Literal::make(yystack_[0].value.fnum));
   }
 
     break;

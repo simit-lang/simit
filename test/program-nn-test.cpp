@@ -14,14 +14,14 @@ using namespace simit;
 TEST(Program, DISABLED_nn) {
   // Points
   Set<> nodes;
-  FieldRef<double> outv = nodes.addField<double>("outv");
-  FieldRef<double> inv = nodes.addField<double>("inv");
-  FieldRef<double> d = nodes.addField<double>("d");
-  FieldRef<double> print = nodes.addField<double>("print");
+  FieldRef<simit_float> outv = nodes.addField<simit_float>("outv");
+  FieldRef<simit_float> inv = nodes.addField<simit_float>("inv");
+  FieldRef<simit_float> d = nodes.addField<simit_float>("d");
+  FieldRef<simit_float> print = nodes.addField<simit_float>("print");
 
   // Springs
   Set<2> edges(nodes,nodes);
-  FieldRef<double> w = edges.addField<double>("w");
+  FieldRef<simit_float> w = edges.addField<simit_float>("w");
 
   int l0 = 3;
   int l1 = 3;
@@ -62,19 +62,19 @@ TEST(Program, DISABLED_nn) {
       simit::ElementRef edge = edges.add(nodeRefs[inputIdx], nodeRefs[outputIdx]);
       edgeRefs.push_back(edge);
       //has to initialize with some random weights
-      double rw = (ii*4.0+jj)/(4.0*l1)+0.01;
+      simit_float rw = (ii*4.0+jj)/(4.0*l1)+0.01;
       w.set(edge, rw);
     }
   }
 
   std::cout << "Inv" << std::endl;
   for (auto &n : nodeRefs) {
-    std::cout << (double)inv.get(n) << std::endl;
+    std::cout << (simit_float)inv.get(n) << std::endl;
   }
   std::cout << std::endl;
   std::cout << "Weights" << std::endl;
   for (auto &e : edgeRefs) {
-    std::cout << (double)w.get(e) << std::endl;
+    std::cout << (simit_float)w.get(e) << std::endl;
   }
   std::cout << std::endl;
 
@@ -89,27 +89,27 @@ TEST(Program, DISABLED_nn) {
 
   std::cout << "Check" << std::endl;
   for (auto &n : nodeRefs) {
-    std::cout << (double)print.get(n) << std::endl;
+    std::cout << (simit_float)print.get(n) << std::endl;
   }
   std::cout << std::endl;
   std::cout << "Outv" << std::endl;
   for (auto &n : nodeRefs) {
-    std::cout << (double)outv.get(n) << std::endl;
+    std::cout << (simit_float)outv.get(n) << std::endl;
   }
 
   // Check outputs
-//  TensorRef<double,3> f0 = f.get(p0);
-//  ASSERT_DOUBLE_EQ(2422.649730810374,  f0(0));
-//  ASSERT_DOUBLE_EQ(2422.649730810374,  f0(1));
-//  ASSERT_DOUBLE_EQ(2407.9347308103738, f0(2));
+//  TensorRef<simit_float,3> f0 = f.get(p0);
+//  ASSERT_FLOAT_EQ(2422.649730810374,  f0(0));
+//  ASSERT_FLOAT_EQ(2422.649730810374,  f0(1));
+//  ASSERT_FLOAT_EQ(2407.9347308103738, f0(2));
 //
-//  TensorRef<double,3> f1 = f.get(p1);
-//  ASSERT_DOUBLE_EQ(-1961.3248654051868, f1(0));
-//  ASSERT_DOUBLE_EQ(-1961.3248654051868, f1(1));
-//  ASSERT_DOUBLE_EQ(-2029.9948654051868, f1(2));
+//  TensorRef<simit_float,3> f1 = f.get(p1);
+//  ASSERT_FLOAT_EQ(-1961.3248654051868, f1(0));
+//  ASSERT_FLOAT_EQ(-1961.3248654051868, f1(1));
+//  ASSERT_FLOAT_EQ(-2029.9948654051868, f1(2));
 //
-//  TensorRef<double,3> f2 = f.get(p2);
-//  ASSERT_DOUBLE_EQ(-461.3248654051871, f2(0));
-//  ASSERT_DOUBLE_EQ(-461.3248654051871, f2(1));
-//  ASSERT_DOUBLE_EQ(-480.9448654051871, f2(2));
+//  TensorRef<simit_float,3> f2 = f.get(p2);
+//  ASSERT_FLOAT_EQ(-461.3248654051871, f2(0));
+//  ASSERT_FLOAT_EQ(-461.3248654051871, f2(1));
+//  ASSERT_FLOAT_EQ(-480.9448654051871, f2(2));
 }

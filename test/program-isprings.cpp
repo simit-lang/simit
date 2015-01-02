@@ -13,20 +13,20 @@ using namespace simit;
 TEST(Program, DISABLED_isprings) {
   // Points
   Set<> points;
-  simit::FieldRef<double,3> x = points.addField<double,3>("x");
-  simit::FieldRef<double,3> v = points.addField<double,3>("v");
-  simit::FieldRef<double,3> x2 = points.addField<double,3>("x2");
-  simit::FieldRef<double,3> v2 = points.addField<double,3>("v2");
+  simit::FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  simit::FieldRef<simit_float,3> v = points.addField<simit_float,3>("v");
+  simit::FieldRef<simit_float,3> x2 = points.addField<simit_float,3>("x2");
+  simit::FieldRef<simit_float,3> v2 = points.addField<simit_float,3>("v2");
 
-  simit::FieldRef<double,3> ones = points.addField<double,3>("ones");
-  simit::FieldRef<double,3> zeros = points.addField<double,3>("zeros");
-  simit::FieldRef<double,3> print = points.addField<double,3>("print");
+  simit::FieldRef<simit_float,3> ones = points.addField<simit_float,3>("ones");
+  simit::FieldRef<simit_float,3> zeros = points.addField<simit_float,3>("zeros");
+  simit::FieldRef<simit_float,3> print = points.addField<simit_float,3>("print");
 
   // Springs
   Set<2> springs(points,points);
-  simit::FieldRef<double> m = springs.addField<double>("m");
-  simit::FieldRef<double> l0 = springs.addField<double>("l0");
-  simit::FieldRef<double> k = springs.addField<double>("k");
+  simit::FieldRef<simit_float> m = springs.addField<simit_float>("m");
+  simit::FieldRef<simit_float> l0 = springs.addField<simit_float>("l0");
+  simit::FieldRef<simit_float> k = springs.addField<simit_float>("k");
 
   // Build a 3-chain
   ElementRef p0 = points.add();
@@ -57,12 +57,12 @@ TEST(Program, DISABLED_isprings) {
   ElementRef s1 = springs.add(p1,p2);
 
   // Initialize springs
-  double rho = 1.0;
-  double _l0 = 0.9;
-  double stiffness = 1e1;
-  double radius = 0.1;
-  double volume = 3.1415*radius*radius*_l0;
-  double springMass = rho*volume;
+  simit_float rho = 1.0;
+  simit_float _l0 = 0.9;
+  simit_float stiffness = 1e1;
+  simit_float radius = 0.1;
+  simit_float volume = 3.1415*radius*radius*_l0;
+  simit_float springMass = rho*volume;
 
   m.set(s0, springMass);
   m.set(s1, springMass);
@@ -85,19 +85,19 @@ TEST(Program, DISABLED_isprings) {
   }
 
   // Check outputs
-  TensorRef<double,3> x21 = x2.get(p0);
+  TensorRef<simit_float,3> x21 = x2.get(p0);
 
-  ASSERT_DOUBLE_EQ(0.10241860338789253, x21(0));
-  ASSERT_DOUBLE_EQ(0.0, x21(1));
-  ASSERT_DOUBLE_EQ(-0.0103815692520815, x21(2));
+  ASSERT_FLOAT_EQ(0.10241860338789253, x21(0));
+  ASSERT_FLOAT_EQ(0.0, x21(1));
+  ASSERT_FLOAT_EQ(-0.0103815692520815, x21(2));
 
-  TensorRef<double,3> x22 = x2.get(p1);
-  ASSERT_DOUBLE_EQ(1.01, x22(0));
-  ASSERT_DOUBLE_EQ(0.0, x22(1));
-  ASSERT_DOUBLE_EQ(-0.020763138504163, x22(2));
+  TensorRef<simit_float,3> x22 = x2.get(p1);
+  ASSERT_FLOAT_EQ(1.01, x22(0));
+  ASSERT_FLOAT_EQ(0.0, x22(1));
+  ASSERT_FLOAT_EQ(-0.020763138504163, x22(2));
 
-  TensorRef<double,3> x23 = x2.get(p2);
-  ASSERT_DOUBLE_EQ(1.9175813966121074, x23(0));
-  ASSERT_DOUBLE_EQ(0.0, x23(1));
-  ASSERT_DOUBLE_EQ(-0.0103815692520815, x23(2));
+  TensorRef<simit_float,3> x23 = x2.get(p2);
+  ASSERT_FLOAT_EQ(1.9175813966121074, x23(0));
+  ASSERT_FLOAT_EQ(0.0, x23(1));
+  ASSERT_FLOAT_EQ(-0.0103815692520815, x23(2));
 }
