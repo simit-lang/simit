@@ -59,6 +59,7 @@ file(GLOB SIMIT_SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
 # GPU Backend
 find_package(CUDA)
 if (CUDA_FOUND)
+  message("-- Building with gpu-backend")
   add_definitions(-DGPU)
 
   include_directories(${CUDA_INCLUDE_DIRS})
