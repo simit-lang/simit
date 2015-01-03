@@ -74,8 +74,8 @@ TEST(Codegen, add0) {
 
   function->runSafe();
 
-  vector<simit_float> results = toVectorOf<simit_float>(cRes);
-  ASSERT_FLOAT_EQ(results[0], 6.1);
+  vector<double> results = toVectorOf<double>(cRes);
+  ASSERT_DOUBLE_EQ(results[0], 6.1);
 }
 
 TEST(Codegen, sin) {
@@ -99,7 +99,7 @@ TEST(Codegen, sin) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_NEAR(results[0], sin(2.0), abs(epsilon*results[0]));
+  ASSERT_DOUBLE_EQ(results[0], sin(2.0));
 }
 
 TEST(Codegen, cos) {
@@ -123,7 +123,7 @@ TEST(Codegen, cos) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_NEAR(results[0], cos(2.0), abs(epsilon*results[0]));
+  ASSERT_DOUBLE_EQ(results[0], cos(2.0));
 }
 
 TEST(Codegen, sqrt) {
@@ -147,7 +147,7 @@ TEST(Codegen, sqrt) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_NEAR(results[0], sqrt(5.0), abs(epsilon*results[0]));
+  ASSERT_DOUBLE_EQ(results[0], sqrt(5.0));
 }
 
 TEST(Codegen, log) {
@@ -171,7 +171,7 @@ TEST(Codegen, log) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_NEAR(results[0], log(5.0), abs(epsilon*results[0]));
+  ASSERT_DOUBLE_EQ(results[0], log(5.0));
 }
 
 TEST(Codegen, exp) {
@@ -195,7 +195,7 @@ TEST(Codegen, exp) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_NEAR(results[0], exp(5.0), abs(epsilon*results[0]));
+  ASSERT_DOUBLE_EQ(results[0], exp(5.0));
 }
 
 TEST(Codegen, atan2) {
@@ -222,7 +222,7 @@ TEST(Codegen, atan2) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_NEAR(results[0], atan2(1.0,2.0), abs(epsilon*results[0]));
+  ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));
 }
 
 TEST(Codegen, forloop) {
@@ -238,6 +238,224 @@ TEST(Codegen, forloop) {
 
   unique_ptr<Backend> backend = getBackend();
   unique_ptr<Function> function(backend->compile(func));
+
+  Expr outVar = 0;
+  Expr iVar = 0;
+  
+  function->bind("out", &outVar);
+  
+  function->runSafe();
+  
+  vector<int> results = toVectorOf<int>(outVar);
+  ASSERT_EQ(results[0], 3);
+
+}
+
+// Float-32 version of codegen tests
+class CodegenF32 : public ::testing::Test {
+protected:
+  int oldSize;
+  virtual void SetUp() {
+    oldSize = ir::ScalarType::floatBytes;
+    ir::ScalarType::floatBytes = sizeof(float);
+  }
+  virtual void TearDown() {
+    ir::ScalarType::floatBytes = oldSize;
+  }
+};
+
+TEST_F(CodegenF32, add0) {
+  Var a("a", Float);
+  Var b("b", Float);
+  Var c("c", Float);
+
+  Expr axb = Add::make(a,b);
+  Stmt body = AssignStmt::make(c, axb);
+
+  Func func = Func("add0", {a,b}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr aArg = 2.0;
+  Expr bArg = 4.1;
+  Expr cRes = Literal::make(Float);
+
+  function->bind("a", &aArg);
+  function->bind("b", &bArg);
+  function->bind("c", &cRes);
+
+  function->runSafe();
+
+  vector<float> results = toVectorOf<float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], 6.1);
+}
+
+TEST_F(CodegenF32, sin) {
+  Var a("a", Float);
+  Var c("c", Float);
+
+  Expr sin_a = Call::make(Intrinsics::sin, {a});
+  Stmt body = AssignStmt::make(c, sin_a);
+
+  Func func = Func("testsin", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr aArg = 2.0;
+  Expr cRes = 0.0;
+
+  function->bind("a", &aArg);
+  function->bind("c", &cRes);
+
+  function->runSafe();
+
+  vector<float> results = toVectorOf<float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], sin(2.0));
+}
+
+TEST_F(CodegenF32, cos) {
+  Var a("a", Float);
+  Var c("c", Float);
+
+  Expr cos_a = Call::make(Intrinsics::cos, {a});
+  Stmt body = AssignStmt::make(c, cos_a);
+
+  Func func = Func("testcos", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr aVar = 2.0;
+  Expr cRes = 0.0;
+
+  function->bind("a", &aVar);
+  function->bind("c", &cRes);
+
+  function->runSafe();
+
+  vector<float> results = toVectorOf<float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], cos(2.0));
+
+}
+
+TEST_F(CodegenF32, sqrt) {
+  Var a("a", Float);
+  Var c("c", Float);
+
+  Expr sqrt_a = Call::make(Intrinsics::sqrt, {a});
+  Stmt body = AssignStmt::make(c, sqrt_a);
+
+  Func func = Func("testsqrt", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr aVar = 5.0;
+  Expr cRes = 0.0;
+
+  function->bind("a", &aVar);
+  function->bind("c", &cRes);
+
+  function->runSafe();
+
+  vector<float> results = toVectorOf<float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], sqrt(5.0));
+
+}
+
+TEST_F(CodegenF32, log) {
+  Var a("a", Float);
+  Var c("c", Float);
+
+  Expr log_a = Call::make(Intrinsics::log, {a});
+  Stmt body = AssignStmt::make(c, log_a);
+
+  Func func = Func("testlog", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr aVar = 5.0;
+  Expr cRes = 0.0;
+
+  function->bind("a", &aVar);
+  function->bind("c", &cRes);
+
+  function->runSafe();
+
+  vector<float> results = toVectorOf<float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], log(5.0));
+
+}
+
+TEST_F(CodegenF32, exp) {
+  Var a("a", Float);
+  Var c("c", Float);
+
+  Expr exp_a = Call::make(Intrinsics::exp, {a});
+  Stmt body = AssignStmt::make(c, exp_a);
+
+  Func func = Func("testexp", {a}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr aVar = 5.0;
+  Expr cRes = 0.0;
+
+  function->bind("a", &aVar);
+  function->bind("c", &cRes);
+
+  function->runSafe();
+
+  vector<float> results = toVectorOf<float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], exp(5.0));
+
+}
+
+TEST_F(CodegenF32, atan2) {
+  Var a("a", Float);
+  Var b("b", Float);
+  Var c("c", Float);
+
+  Expr atan2_ab = Call::make(Intrinsics::atan2, {a,b});
+  Stmt body = AssignStmt::make(c, atan2_ab);
+
+  Func func = Func("testatan2", {a,b}, {c}, body);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
+
+  Expr aVar = 1.0;
+  Expr bVar = 2.0;
+  Expr cRes = 0.0;
+
+  function->bind("a", &aVar);
+  function->bind("b", &bVar);
+  function->bind("c", &cRes);
+
+  function->runSafe();
+
+  vector<float> results = toVectorOf<float>(cRes);
+  ASSERT_FLOAT_EQ(results[0], atan2(1.0,2.0));
+
+}
+
+TEST_F(CodegenF32, forloop) {
+  Var i("i", Int);
+  Var out("out", Int);
+  Expr start = Expr(1);
+  Expr end = Expr(4);
+  Stmt body = AssignStmt::make(out, i);
+  
+  Stmt loop = ForRange::make(i, start, end, body);
+  
+  Func func = Func("testloop", {}, {out}, loop);
+
+  LLVMBackend backend;
+  unique_ptr<Function> function(backend.compile(func));
 
   Expr outVar = 0;
   Expr iVar = 0;
