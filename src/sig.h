@@ -1,6 +1,6 @@
 #ifndef SIMIT_SIG_H
 #define SIMIT_SIG_H
-
+#include <algorithm>
 #include <vector>
 #include <map>
 #include <set>
@@ -33,11 +33,13 @@ struct SIGVertex {
 /// space sparse and occur when two or more iteration variables are connected
 /// by a sparse matrix.
 struct SIGEdge {
-  Var tensor;
+  Var tensor;  // We might not need the tensor variable here
+  Expr set;
+
   std::vector<SIGVertex*> endpoints;
 
-  SIGEdge(Var tensor, const std::vector<SIGVertex*> &endpoints)
-      : tensor(tensor), endpoints(endpoints) {
+  SIGEdge(Var tensor, Expr set, const std::vector<SIGVertex*> &endpoints)
+      : tensor(tensor), set(set), endpoints(endpoints) {
     for (auto v : endpoints) {
       v->connectors.push_back(this);
     }
@@ -50,17 +52,16 @@ public:
   enum MergeOp { Union, Intersection };
 
   SIG() : content(new SIG::Content) {}
-  explicit SIG(const std::vector<IndexVar> &ivs, Var tensor=Var());
+  SIG(const std::vector<IndexVar> &ivs, Var tensor, Expr set);
 
   bool isSparse() const {return content->edges.size() > 0;}
-  std::vector<const SIGEdge *> getEdges() const;
 
   friend SIG merge(SIG&, SIG&, SIG::MergeOp);
 
 private:
   struct Content {
     std::map<IndexVar, std::unique_ptr<SIGVertex>> vertices;
-    std::map<Var, std::unique_ptr<SIGEdge>> edges;
+    std::vector<std::unique_ptr<SIGEdge>> edges;
   };
   std::shared_ptr<Content> content;
 
@@ -101,6 +102,12 @@ public:
     return vertexLoopVars.find(var) != vertexLoopVars.end();
   }
 
+  Var getCoordVar(std::vector<Var> coord) const {
+    std::sort(coord.begin(), coord.end());
+    return (coordVars.find(coord) != coordVars.end())
+        ? coordVars.at(coord) : Var();
+  }
+
   Iterator begin() const { return loopVars.begin(); }
   Iterator end() const { return loopVars.end(); }
 
@@ -109,11 +116,12 @@ public:
 
 private:
   std::vector<LoopVar> loopVars;
+  std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
+  std::map<std::vector<Var>, Var> coordVars;
 
-  std::map<IndexVar,std::vector<LoopVar>> vertexLoopVars;
-
-  LoopVars(const std::vector<LoopVar> &,
-           const std::map<IndexVar,std::vector<LoopVar>> &);
+  LoopVars(const std::vector<LoopVar>&,
+           const std::map<IndexVar,std::vector<LoopVar>>&,
+           const std::map<std::vector<Var>, Var>&);
 };
 
 

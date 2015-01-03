@@ -3,3 +3,51 @@
 func donorm(a : tensor[3](float)) -> (c : float)
   c = norm(a);
 end
+
+%%% norm-notvec3f 
+%! donorm([1.0, 2.0, 3.0, 4.0, 5.0]) == 7.4162;
+func donorm(a : tensor[5](float)) -> (c : float)
+  c = norm(a);
+end
+
+%%% dot
+%! dodot([1.0, 2.0], [2.0, 3.0]) == 8.0;
+func dodot(a : tensor[2](float), b : tensor[2](float)) -> (c : float)
+  c = dot(a, b);
+end
+
+%%% dot-long
+%! dodot([1.0, 2.0, 3.0, 4.0, 5.0], [2.0, 3.0, 4.0, 5.0, 6.0]) == 70.0;
+func dodot(a : tensor[5](float), b : tensor[5](float)) -> (c : float)
+  c = dot(a, b);
+end
+
+%%% tan
+%! dotan(1.0) == 1.55741;
+func dotan(a : float) -> (c : float)
+  c = tan(a);
+end
+
+%%% asin
+%! doasin(1.0) == 1.5708;
+func doasin(a : float) -> (c : float)
+  c = asin(a);
+end
+
+%%% acos
+%! doacos(0.5) == 1.04720;
+func doacos(a : float) -> (c : float)
+  c = acos(a);
+end
+
+%%% sin
+%! dosin(0.5) == 0.479426;
+func dosin(a : float) -> (c : float)
+  c = sin(a);
+end
+
+%%% pow
+%! dopow(3.0, 3.0) == 27.0;
+func dopow(a : float, b : float) -> (c : float)
+  c = pow(a,b);
+end

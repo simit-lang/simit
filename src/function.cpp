@@ -35,7 +35,8 @@ void Function::bind(const std::string &argName, ir::Expr *tensor) {
 
   // Check that the tensor matches the argument type
   uassert(tensor->type() == actuals[argName].getType())
-      << "tensor type does not match function argument type";
+      << "tensor type " << tensor->type() << "does not match function argument type"
+      << actuals[argName].getType();
 
   uassert(ir::to<ir::Literal>(*tensor) != nullptr);
 

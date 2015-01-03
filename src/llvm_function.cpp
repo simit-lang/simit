@@ -155,7 +155,7 @@ LLVMFunction::createHarness(const std::string &name,
                             const llvm::SmallVector<llvm::Value*,8> &args) {
   llvm::Function *llvmFunc = module->getFunction(name);
   std::string harnessName = name + ".harness";
-  llvm::Function *harness = createFunction(harnessName, {}, {}, module);
+  llvm::Function *harness = createPrototype(harnessName, {},{}, module);
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
   llvm::CallInst *call = llvm::CallInst::Create(llvmFunc, args, "",entry);
   call->setCallingConv(llvmFunc->getCallingConv());

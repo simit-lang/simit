@@ -136,19 +136,20 @@ void runTest(ProgramTestParam param) {
 //      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
     }
     FAIL();
+    return;
   }
-  else {
-    if (program.verify() != 0) {
-      for (auto &diag : program.getDiagnostics()) {
-        ADD_FAILURE() << diag.getMessage();
 
-        // TODO: Add back line info
+  if (program.verify() != 0) {
+    for (auto &diag : program.getDiagnostics()) {
+      ADD_FAILURE() << diag.getMessage();
+
+      // TODO: Add back line info
 //      string errorFile = param.path;
 //      unsigned int errorLine = param.line + error.getFirstLine() - 1;
 //      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
-      }
-      FAIL();
     }
+    FAIL();
+    return;
   }
 }
 

@@ -31,5 +31,19 @@ int loc(int v0, int v1, int *neighbors_start, int *neighbors) {
   return l;
 }
 
+// dot product
+double dot(double* a, double* b, int len) {
+  double result = 0.0;
+  for (int i=0; i<len; i++)
+    result += a[i] * b[i];
+  
+  return result;
+}
+
+// norm
+double norm(double* a, int len) {
+  return sqrt(dot(a, a, len));
+}
+
 }
 #endif

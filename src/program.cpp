@@ -94,6 +94,14 @@ int Program::loadFile(const std::string &filename) {
   return status;
 }
 
+std::vector<std::string> Program::getFunctionNames() const {
+  vector<string> functionNames;
+  for (auto &func : content->ctx.getFunctions()) {
+    functionNames.push_back(func.first);
+  }
+  return functionNames;
+}
+
 std::unique_ptr<Function> Program::compile(const std::string &function) {
   ir::Func simitFunc = content->ctx.getFunction(function);
   if (!simitFunc.defined()) {

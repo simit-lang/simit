@@ -9,73 +9,6 @@ using namespace std;
 using namespace simit;
 
 TEST(Program, DISABLED_esprings) {
-  Program program;
-  std::string programText = R"(
-element Point
-  x : tensor[3](float);
-  v : tensor[3](float);
-
-  fs : tensor[3](float);
-  fg : tensor[3](float);
-  M : tensor[3](float);
-  p : tensor[3](float);
-end
-
-element Spring
-  m  : float;
-  l0 : float;
-end
-
-extern points  : set{Point};
-extern springs : set{Spring}(points,points);
-
-func distribute_masses(s : Spring, p : (Point*2)) ->
-    (M : tensor[points](tensor[3](float)))
-  eye = [1.0, 1.0, 1.0];
-  M(p(0)) = 0.5*s.m*eye;
-  M(p(1)) = 0.5*s.m*eye;
-end
-
-func distribute_gravity(s : Spring, p : (Point*2)) ->
-    (f : tensor[points](tensor[3](float)))
-  grav = [0.0, 0.0, -9.81];
-  halfm = 0.5*s.m*grav;
-  f(p(0)) = halfm;
-  f(p(1)) = halfm;
-end
-
-func compute_stiffness(s : Spring, p : (Point*2)) ->
-    (f : tensor[points](tensor[3](float)))
-  stiffness = 3.0;
-  dx = p(1).x - p(0).x;
-  l = norm(dx);
-  f0 = stiffness/(s.l0*s.l0)*(l-s.l0)*dx/l;
-  f(p(0)) = f0;
-  f(p(1)) = -f0;
-end
-
-proc main
-  h = 0.01;
-
-  fg = map distribute_gravity to springs with points reduce +;
-  M = map distribute_masses to springs with points reduce +;
-  fs = map compute_stiffness to springs with points reduce +;
-
-  points.fs = --fs;
-  points.fg = --fg;
-  points.M = --M;
-
-  % p = M*v + h*(fs + fg);
-  points.p = (points.M .* points.v) + (h * (points.fs + points.fg));
-
-  % v = p / diag(M)
-  points.v = points.p ./ points.M;
-
-  % x = x + hv
-  points.x  = points.x + (h * points.v);
-end
-  )";
-
   // Points
   Set<> points;
   FieldRef<double,3> x = points.addField<double,3>("x");
@@ -161,17 +94,14 @@ end
   l0.set(s12, 0.9);
 
   // Compile program and bind arguments
-  int errorCode = program.loadString(programText);
-  if (errorCode) FAIL() << program.getDiagnostics().getMessage();
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
 
-  std::unique_ptr<Function> func = program.compile("main");
-  if (!func) FAIL() << program.getDiagnostics().getMessage();
-
-  func->bind("points", &points);
-  func->bind("springs", &springs);
+  f->bind("points", &points);
+  f->bind("springs", &springs);
 
   for (size_t i=0; i < 10; ++i) {
-    func->runSafe();
+    f->runSafe();
   }
 
   // Check outputs

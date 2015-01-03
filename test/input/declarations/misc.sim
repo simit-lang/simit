@@ -34,3 +34,13 @@ end
 func test()
   a = 1+1-2;
 end
+
+%%% write-to-tensor-field
+element Face
+  p : tensor[3,3](float);
+end
+
+func f(x : float) -> (f : Face)
+  f.p(0,0) = 1.0;
+end
+

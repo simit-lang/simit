@@ -47,6 +47,21 @@ Func Intrinsics::cos = Func("cos",
                             {Var("r", Float)},
                             Func::Intrinsic);
 
+Func Intrinsics::tan = Func("tan",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+
+Func Intrinsics::asin = Func("asin",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+  
+Func Intrinsics::acos = Func("acos",
+                            {Var("x", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
+  
 Func Intrinsics::atan2 = Func("atan2",
                               {Var("y", Float), Var("x", Float)},
                               {Var("r", Float)},
@@ -66,10 +81,14 @@ Func Intrinsics::exp = Func("exp",
                             {Var("x", Float)},
                             {Var("r", Float)},
                             Func::Intrinsic);
+  
+Func Intrinsics::pow = Func("pow",
+                            {Var("x", Float), Var("y", Float)},
+                            {Var("r", Float)},
+                            Func::Intrinsic);
 
-// TODO: Generalize to norm with n parameters
 Func Intrinsics::norm = Func("norm",
-                             {Var("x", vec3f)},
+                             {},
                              {Var("r", Float)},
                              Func::Intrinsic);
 
@@ -80,18 +99,29 @@ Func Intrinsics::solve = Func("solve",
 
 Func Intrinsics::loc = Func("loc",
                             {},
+                            {Var("r", Int)},
+                            Func::Intrinsic);
+
+Func Intrinsics::dot = Func("dot",
+                            {},
                             {Var("r", Float)},
                             Func::Intrinsic);
+
 
 std::map<std::string, Func> Intrinsics::byName = {{"mod",mod},
                                                   {"sin",sin},
                                                   {"cos",cos},
+                                                  {"tan",tan},
+                                                  {"asin",asin},
+                                                  {"acos",acos},
                                                   {"atan2",atan2},
                                                   {"sqrt",sqrt},
                                                   {"log",log},
                                                   {"exp",exp},
+                                                  {"pow",pow},
                                                   {"norm",norm},
-                                                  {"solve",solve}};
+                                                  {"solve",solve},
+                                                  {"dot",dot}};
 
 // Type compute functions
 Type getFieldType(Expr elementOrSet, std::string fieldName) {
@@ -140,6 +170,15 @@ Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
     dimensions.push_back(indexVar.getDomain());
   }
   return TensorType::make(expr.type().toTensor()->componentType, dimensions);
+}
+
+// struct CompoundOperator
+bool operator==(const CompoundOperator &l, const CompoundOperator &r) {
+  return l.kind == r.kind;
+}
+
+bool operator!=(const CompoundOperator &l, const CompoundOperator &r) {
+  return l.kind != r.kind;
 }
 
 // struct Literal

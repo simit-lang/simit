@@ -41,20 +41,20 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
                           "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
                           "v64:64:64-v128:128:128-n16:32:64");
 
-  llvm::Function *func = createFunction("kernel.main", irFunc.getArguments(),
-                                        irFunc.getResults(), module,
-                                        false, false);
+  llvm::Function *func = createPrototype("kernel.main", irFunc.getArguments(),
+                                         irFunc.getResults(), module,
+                                         false, false);
 
   // Name LLVM arguments, insert into symtable
   auto arg = func->arg_begin();
-  for (auto &irArg : irFunc.getArguments()) {
+  for (const ir::Var &irArg : irFunc.getArguments()) {
     arg->setName(irArg.getName());
-    symtable.insert(arg->getName(), &(*arg));
+    symtable.insert(irArg, &(*arg));
     arg++;
   }
-  for (auto &irRes : irFunc.getResults()) {
+  for (const ir::Var &irRes : irFunc.getResults()) {
     arg->setName(irRes.getName());
-    symtable.insert(arg->getName(), &(*arg));
+    symtable.insert(irRes, &(*arg));
     arg++;
   }
 
@@ -175,7 +175,7 @@ void GPUBackend::visit(const ir::GPUFor *op) {
   }
   sharding.scope(sharded);
   symtable.scope();
-  symtable.insert(iName, index);
+  symtable.insert(op->var, index);
   LLVMBackend::compile(op->body);
   symtable.unscope();
   sharding.unscope(sharded);
@@ -245,8 +245,8 @@ void GPUBackend::emitThreadBarrier() {
   builder->CreateCall(func);
 }
 
-void GPUBackend::emitFirstAssign(const ir::AssignStmt *op,
-                                 const std::string& varName) {
+void GPUBackend::emitFirstAssign(const ir::Var& var,
+                                 const ir::Expr& value) {
   // TODO(gkanwar): This doesn't handle sharding later in the code
   if (sharding.isSharded() && !sharding.inShard()) {
     not_supported_yet;
@@ -255,7 +255,7 @@ void GPUBackend::emitFirstAssign(const ir::AssignStmt *op,
     // TODO(gkanwar): This should actually potentially be up to a two
     // dimensional array to allow correct scoping with nested sharding.
     // Potentially should be done as a second pass.
-    LLVMBackend::emitFirstAssign(op, varName);
+    LLVMBackend::emitFirstAssign(var, value);
   }
 }
 

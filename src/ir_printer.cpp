@@ -43,6 +43,21 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
     case ForDomain::Edges:
       os << d.set << ".edges[" << d.var << "]";
       break;
+    case ForDomain::Neighbors:
+      os << d.set << ".neighbors[" << d.var << "]";
+      break;
+  }
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const CompoundOperator &cop) {
+  switch (cop.kind) {
+    case CompoundOperator::None: break;
+    case CompoundOperator::Add: {
+      os << "+";
+      break;
+    }
+    default: not_supported_yet;
   }
   return os;
 }
@@ -303,7 +318,7 @@ void IRPrinter::visit(const Not *op) {
 
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
-  os << op->var << " = ";
+  os << op->var << " " << op->cop << "= ";
   print(op->value);
   os << ";";
 }
@@ -312,6 +327,7 @@ void IRPrinter::visit(const Map *op) {
   indent();
   os << util::join(op->vars) << " = ";
   os << "map " << op->function.getName();
+  os << "(" << util::join(op->partial_actuals) << ")";
   os << " to ";
   print(op->target);
   if (op->neighbors.defined()) {
@@ -327,7 +343,7 @@ void IRPrinter::visit(const Map *op) {
 void IRPrinter::visit(const FieldWrite *op) {
   indent();
   print(op->elementOrSet);
-  os << "." << op->fieldName << " = ";
+  os << "." << op->fieldName << " " << op->cop << "= ";
   print(op->value);
   os << ";";
 }
@@ -344,7 +360,7 @@ void IRPrinter::visit(const TensorWrite *op) {
     os << ",";
     print(indices[i]);
   }
-  os << ") = ";
+  os << ") " << op->cop << "= ";
   print(op->value);
   os << ";";
 }
@@ -354,7 +370,7 @@ void IRPrinter::visit(const Store *op) {
   print(op->buffer);
   os << "[";
   print(op->index);
-  os << "] = ";
+  os << "] " << op->cop << "= ";
   print(op->value);
   os << ";";
 }
@@ -412,6 +428,13 @@ void IRPrinter::visit(const Block *op) {
 void IRPrinter::visit(const Pass *op) {
   indent();
   os << "pass;";
+}
+
+void IRPrinter::visit(const Print *op) {
+  indent();
+  os << "print ";
+  print(op->expr);
+  os << ";";
 }
 
 void IRPrinter::visit(const Func *func) {

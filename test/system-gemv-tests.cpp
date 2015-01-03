@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, DISABLED_gemv) {
+TEST(System, gemv) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -56,7 +56,7 @@ TEST(System, DISABLED_gemv) {
   ASSERT_EQ(10.0, c.get(p2));
 }
 
-TEST(System, DISABLED_gemv_diagonal) {
+TEST(System, gemv_diagonal) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -95,7 +95,89 @@ TEST(System, DISABLED_gemv_diagonal) {
   ASSERT_EQ(6.0, c.get(p2));
 }
 
-TEST(System, DISABLED_gemv_nw) {
+TEST(System, gemv_diagonal_extraparams) {
+  // Points
+  Set<> points;
+  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<double> c = points.addField<double>("c");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> a = springs.addField<double>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, 1.0);
+  a.set(s1, 2.0);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(2.0, c.get(p0));
+  ASSERT_EQ(12.0, c.get(p1));
+  ASSERT_EQ(12.0, c.get(p2));
+}
+
+TEST(System, gemv_diagonal_inout) {
+  // Points
+  Set<> points;
+  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<double> c = points.addField<double>("c");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> a = springs.addField<double>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, 1.0);
+  a.set(s1, 2.0);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(2.0, a.get(s0));
+  ASSERT_EQ(4.0, a.get(s1));
+
+  ASSERT_EQ(2.0, c.get(p0));
+  ASSERT_EQ(12.0, c.get(p1));
+  ASSERT_EQ(12.0, c.get(p2));
+}
+
+
+TEST(System, gemv_nw) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -134,7 +216,7 @@ TEST(System, DISABLED_gemv_nw) {
   ASSERT_EQ(0.0, c.get(p2));
 }
 
-TEST(System, DISABLED_gemv_sw) {
+TEST(System, gemv_sw) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -173,7 +255,7 @@ TEST(System, DISABLED_gemv_sw) {
   ASSERT_EQ(4.0, c.get(p2));
 }
 
-TEST(System, DISABLED_gemv_assemble_from_points) {
+TEST(System, gemv_assemble_from_points) {
   // Points
   Set<> points;
   FieldRef<double> a = points.addField<double>("a");
@@ -215,7 +297,45 @@ TEST(System, DISABLED_gemv_assemble_from_points) {
   ASSERT_EQ(0.0, c.get(p2));
 }
 
-TEST(System, DISABLED_gemv_blocked) {
+TEST(System, gemv_inplace) {
+  // Points
+  Set<> points;
+  FieldRef<double> b = points.addField<double>("b");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> a = springs.addField<double>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, 1.0);
+  a.set(s1, 2.0);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(3.0, b.get(p0));
+  ASSERT_EQ(13.0, b.get(p1));
+  ASSERT_EQ(10.0, b.get(p2));
+}
+
+TEST(System, gemv_blocked) {
   // Points
   Set<> points;
   FieldRef<double,2> b = points.addField<double,2>("b");
@@ -267,7 +387,7 @@ TEST(System, DISABLED_gemv_blocked) {
   ASSERT_EQ(136.0, c2(1));
 }
 
-TEST(System, DISABLED_gemv_blocked_nw) {
+TEST(System, gemv_blocked_nw) {
   // Points
   Set<> points;
   FieldRef<double,2> b = points.addField<double,2>("b");
@@ -319,7 +439,7 @@ TEST(System, DISABLED_gemv_blocked_nw) {
   ASSERT_EQ(0.0, c2(1));
 }
 
-TEST(System, DISABLED_gemv_blocked_computed) {
+TEST(System, gemv_blocked_computed) {
   // Points
   Set<> points;
   FieldRef<double,2> b = points.addField<double,2>("b");
@@ -369,42 +489,4 @@ TEST(System, DISABLED_gemv_blocked_computed) {
   TensorRef<double,2> c2 = c.get(p2);
   ASSERT_EQ(300.0, c2(0));
   ASSERT_EQ(400.0, c2(1));
-}
-
-TEST(System, DISABLED_gemv_inplace) {
-  // Points
-  Set<> points;
-  FieldRef<double> b = points.addField<double>("b");
-
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
-
-  b.set(p0, 1.0);
-  b.set(p1, 2.0);
-  b.set(p2, 3.0);
-
-  // Springs
-  Set<2> springs(points,points);
-  FieldRef<double> a = springs.addField<double>("a");
-
-  ElementRef s0 = springs.add(p0,p1);
-  ElementRef s1 = springs.add(p1,p2);
-
-  a.set(s0, 1.0);
-  a.set(s1, 2.0);
-
-  // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
-
-  f->bind("points", &points);
-  f->bind("springs", &springs);
-
-  f->runSafe();
-
-  // Check that outputs are correct
-  ASSERT_EQ(3.0, b.get(p0));
-  ASSERT_EQ(13.0, b.get(p1));
-  ASSERT_EQ(10.0, b.get(p2));
 }

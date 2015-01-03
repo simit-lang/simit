@@ -45,6 +45,7 @@ struct While;
 struct IfThenElse;
 struct Block;
 struct Pass;
+struct Print;
 
 #ifdef GPU
 struct GPUFor;
@@ -105,6 +106,7 @@ public:
   virtual void visit(const IfThenElse *op);
   virtual void visit(const Block *op);
   virtual void visit(const Pass *op);
+  virtual void visit(const Print *op);
 
 #ifdef GPU
   virtual void visit(const GPUFor *op);

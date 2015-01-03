@@ -37,6 +37,9 @@ public:
   ///         through the \ref getErrors and \ref getErrorString methods.
   int loadFile(const std::string &filename);
 
+  /// Returns the names of all the functions in the program.
+  std::vector<std::string> getFunctionNames() const;
+
   /// Compile and return a runnable function or NULL if an error occurred.
   std::unique_ptr<Function> compile(const std::string &function);
 

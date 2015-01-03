@@ -1,6 +1,7 @@
 #include "lower.h"
 
 #include "storage.h"
+#include "ir_builder.h"
 #include "ir_rewriter.h"
 #include "ir_codegen.h"
 #include "inline.h"
@@ -28,33 +29,45 @@ inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
 
 class LowerMapFunctionRewriter : public MapFunctionRewriter {
   using MapFunctionRewriter::visit;
+
   virtual void visit(const TensorWrite *op) {
+    // Rewrites the tensor write and assigns the result to stmt
     IRRewriter::visit(op);
+    iassert(isa<TensorWrite>(stmt));
     if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
-      stmt = makeCompound(stmt, CompoundOperator::Add);
+      const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
+      iassert(tensorWrite->value.type().isTensor());
+
+      // Change assignments to result to compound assignments, using the map
+      // reduction operator.
+      stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
+                               tensorWrite->value, CompoundOperator::Add);
     }
   }
 };
 
 class LowerMaps : public IRRewriter {
 public:
-  LowerMaps(const Storage &storage) : storage(storage) {}
+  LowerMaps(Storage *storage) : storage(storage) {}
 
 private:
-  Storage storage;
+  Storage *storage;
 
   void visit(const Map *op) {
-    iassert(hasStorage(op->vars, storage))
+    iassert(hasStorage(op->vars, *storage))
         << "Every assembled tensor should have a storage descriptor";
-    tassert(hasSameStorage(op->vars, storage))
+    tassert(hasSameStorage(op->vars, *storage))
         << "All assembled tensors in the same Map must have the same storage.";
 
-    TensorStorage::Kind tensorStorage = storage.get(op->vars[0]).getKind();
+    TensorStorage::Kind tensorStorage = storage->get(op->vars[0]).getKind();
     if (tensorStorage != TensorStorage::SystemNone || op->vars.size() == 0) {
       if (tensorStorage == TensorStorage::SystemReduced ||
           tensorStorage == TensorStorage::DenseRowMajor) {
         LowerMapFunctionRewriter mapFunctionRewriter;
         stmt = inlineMap(op, mapFunctionRewriter);
+
+        // Add storage descriptor for the new tensors in the inlined map
+        updateStorage(stmt, storage);
       }
       else {
         ierror << "Unsupported tensor storage lowering";
@@ -67,7 +80,7 @@ private:
 };
 
 Func lowerMaps(Func func) {
-  Stmt body = LowerMaps(func.getStorage()).rewrite(func.getBody());
+  Stmt body = LowerMaps(&func.getStorage()).rewrite(func.getBody());
   return Func(func, body);
 }
 

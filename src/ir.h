@@ -191,13 +191,18 @@ public:
   static Func mod;
   static Func sin;
   static Func cos;
+  static Func tan;
+  static Func asin;
+  static Func acos;
   static Func atan2;
   static Func sqrt;
   static Func log;
   static Func exp;
+  static Func pow;
   static Func norm;
   static Func solve;
   static Func loc;
+  static Func dot;
   static std::map<std::string, Func> byName;
 };
 
@@ -206,6 +211,19 @@ public:
 Type getFieldType(Expr elementOrSet, std::string fieldName);
 Type getBlockType(Expr tensor);
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
+
+
+/// CompoundOperator used with AssignStmt, TensorWrite, FieldWrite and Store.
+struct CompoundOperator {
+  enum Kind { None, Add };
+  Kind kind;
+  CompoundOperator() : kind(None) {}
+  CompoundOperator(Kind kind) : kind(kind) {}
+  CompoundOperator(const CompoundOperator &other) : kind(other.kind) {}
+};
+
+bool operator==(const CompoundOperator&, const CompoundOperator&);
+bool operator!=(const CompoundOperator&, const CompoundOperator&);
 
 
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
@@ -284,16 +302,22 @@ struct FieldRead : public ExprNode<FieldRead> {
   }
 };
 
-/// Expression that reads a tensor from a tensor location.
+/// Expression that reads a tensor from an n-dimensional tensor location.
 struct TensorRead : public ExprNode<TensorRead> {
   Expr tensor;
   std::vector<Expr> indices;
 
+  /// Construct a tensor read that reads a block from the location in `tensor`
+  /// specified by `indices`. The caller must either provide one or n indices,
+  /// where n is the tensor order. If one index is provided then the tensor read
+  /// has already been flattened, and will be directly lowered to a load.
   static Expr make(Expr tensor, std::vector<Expr> indices) {
     iassert(tensor.type().isTensor());
     for (auto &index : indices) {
       iassert(isScalar(index.type()) || index.type().isElement());
     }
+    iassert(indices.size() == 1 ||
+            indices.size() == tensor.type().toTensor()->order());
 
     TensorRead *node = new TensorRead;
     node->type = getBlockType(tensor);
@@ -407,7 +431,7 @@ struct Neg : public ExprNode<Neg> {
   Expr a;
 
   static Expr make(Expr a) {
-    iassert(isScalar(a.type()));
+    iassert_scalar(a);
 
     Neg *node = new Neg;
     node->type = a.type();
@@ -420,9 +444,8 @@ struct Add : public ExprNode<Add> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isScalar(a.type()));
-    iassert(a.type() == b.type())
-        << a.type() << " doesn't match " << b.type();
+    iassert_scalar(a);
+    iassert_types_equal(a,b);
 
     Add *node = new Add;
     node->type = a.type();
@@ -436,8 +459,8 @@ struct Sub : public ExprNode<Sub> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isScalar(a.type()));
-    iassert(a.type() == b.type());
+    iassert_scalar(a);
+    iassert_types_equal(a,b);
 
     Sub *node = new Sub;
     node->type = a.type();
@@ -451,8 +474,8 @@ struct Mul : public ExprNode<Mul> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isScalar(a.type()));
-    iassert(a.type() == b.type());
+    iassert_scalar(a);
+    iassert_types_equal(a,b);
 
     Mul *node = new Mul;
     node->type = a.type();
@@ -466,8 +489,8 @@ struct Div : public ExprNode<Div> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isScalar(a.type()));
-    iassert(a.type() == b.type());
+    iassert_scalar(a);
+    iassert_types_equal(a,b);
 
     Div *node = new Div;
     node->type = a.type();
@@ -481,7 +504,7 @@ struct Eq : public ExprNode<Eq> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Eq *node = new Eq;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -495,7 +518,7 @@ struct Ne : public ExprNode<Ne> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Ne *node = new Ne;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -509,7 +532,7 @@ struct Gt : public ExprNode<Gt> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Gt *node = new Gt;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -523,7 +546,7 @@ struct Lt : public ExprNode<Lt> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Lt *node = new Lt;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -537,7 +560,7 @@ struct Ge : public ExprNode<Ge> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Ge *node = new Ge;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -551,7 +574,7 @@ struct Le : public ExprNode<Le> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(a.type() == b.type());
+    iassert_types_equal(a,b);
 
     Le *node = new Le;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -619,6 +642,8 @@ struct Xor : public ExprNode<Xor> {
   }
 };
 
+/// Expression that loads a scalar from a buffer. A buffer is a one-dimensional
+/// tensor that is indexed by an integer range.
 struct Load : public ExprNode<Load> {
   Expr buffer;
   Expr index;
@@ -626,12 +651,8 @@ struct Load : public ExprNode<Load> {
   static Expr make(Expr buffer, Expr index) {
     iassert(isScalar(index.type()));
 
-    // TODO: Create a buffer/array type and assert that buffer is that type.
-    //       Then get the component from the buffer.
-    ScalarType ctype = buffer.type().toTensor()->componentType;
-
     Load  *node = new Load;
-    node->type = TensorType::make(ctype);
+    node->type = TensorType::make(buffer.type().toTensor()->componentType);
     node->buffer = buffer;
     node->index = index;
     return node;
@@ -639,25 +660,15 @@ struct Load : public ExprNode<Load> {
 };
 
 // Statements
-struct AssignStmt : public StmtNode<AssignStmt> {
-  Var var;
-  Expr value;
-
-  static Stmt make(Var var, Expr value) {
-    AssignStmt *node = new AssignStmt;
-    node->var = var;
-    node->value = value;
-    return node;
-  }
-};
-
 struct Map : public StmtNode<Map> {
   std::vector<Var> vars;
   Func function;
   Expr target, neighbors;
+  std::vector<Expr> partial_actuals;
   ReductionOperator reduction;
 
   static Stmt make(std::vector<Var> vars, Func function,
+                   std::vector<Expr> partial_actuals,
                    Expr target, Expr neighbors=Expr(),
                    ReductionOperator reduction=ReductionOperator()) {
     iassert(target.type().isSet());
@@ -666,9 +677,25 @@ struct Map : public StmtNode<Map> {
     Map *node = new Map;
     node->vars = vars;
     node->function = function;
+    node->partial_actuals = partial_actuals;
     node->target = target;
     node->neighbors = neighbors;
     node->reduction = reduction;
+    return node;
+  }
+};
+
+struct AssignStmt : public StmtNode<AssignStmt> {
+  Var var;
+  Expr value;
+  CompoundOperator cop;
+
+  static Stmt make(Var var, Expr value,
+                   CompoundOperator cop=CompoundOperator::None) {
+    AssignStmt *node = new AssignStmt;
+    node->var = var;
+    node->value = value;
+    node->cop = cop;
     return node;
   }
 };
@@ -677,12 +704,15 @@ struct FieldWrite : public StmtNode<FieldWrite> {
   Expr elementOrSet;
   std::string fieldName;
   Expr value;
+  CompoundOperator cop;
 
-  static Stmt make(Expr elementOrSet, std::string fieldName, Expr value) {
+  static Stmt make(Expr elementOrSet, std::string fieldName, Expr value,
+                   CompoundOperator cop=CompoundOperator::None) {
     FieldWrite *node = new FieldWrite;
     node->elementOrSet = elementOrSet;
     node->fieldName = fieldName;
     node->value = value;
+    node->cop = cop;
     return node;
   }
 };
@@ -692,12 +722,15 @@ struct TensorWrite : public StmtNode<TensorWrite> {
   Expr tensor;
   std::vector<Expr> indices;
   Expr value;
+  CompoundOperator cop;
 
-  static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value) {
+  static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value,
+                   CompoundOperator cop=CompoundOperator::None) {
     TensorWrite *node = new TensorWrite;
     node->tensor = tensor;
     node->indices = indices;
     node->value = value;
+    node->cop = cop;
     return node;
   }
 };
@@ -706,12 +739,15 @@ struct Store : public StmtNode<Store> {
   Expr buffer;
   Expr index;
   Expr value;
+  CompoundOperator cop;
 
-  static Stmt make(Expr buffer, Expr index, Expr value) {
+  static Stmt make(Expr buffer, Expr index, Expr value,
+                   CompoundOperator cop=CompoundOperator::None) {
     Store *node = new Store;
     node->buffer = buffer;
     node->index = index;
     node->value = value;
+    node->cop = cop;
     return node;
   }
 };
@@ -747,8 +783,9 @@ struct While : public StmtNode<While> {
   }
 
 };
+
 struct ForDomain {
-  enum Kind { IndexSet, Endpoints, Edges };
+  enum Kind { IndexSet, Endpoints, Edges, Neighbors };
   Kind kind;
 
   /// An index set
@@ -761,7 +798,7 @@ struct ForDomain {
   ForDomain() {}
   ForDomain(class IndexSet indexSet) : kind(IndexSet), indexSet(indexSet) {}
   ForDomain(Expr set, Var var, Kind kind) : kind(kind), set(set), var(var) {
-    iassert(kind==Edges || kind==Endpoints);
+    iassert(kind != IndexSet);
   }
 };
 
@@ -821,6 +858,15 @@ struct Pass : public StmtNode<Pass> {
   }
 };
 
+struct Print : public StmtNode<Print> {
+  Expr expr;
+
+  static Stmt make(Expr expr) {
+    Print *node = new Print;
+    node->expr = expr;
+    return node;
+  }
+};
 
 // Operators
 bool operator==(const Literal& l, const Literal& r);

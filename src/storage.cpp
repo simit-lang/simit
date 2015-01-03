@@ -154,9 +154,11 @@ Storage::Iterator Storage::end() const {
 }
 
 // Free functions
-class GetStorage : public IRVisitor {
+class GetStorageVisitor : public IRVisitor {
 public:
-  Storage get(Func func) {
+  GetStorageVisitor(Storage *storage) : storage(storage) {}
+
+  void get(Func func) {
     for (auto &arg : func.getArguments())
       if (arg.getType().isTensor())
         determineStorage(arg);
@@ -166,21 +168,19 @@ public:
         determineStorage(res);
 
     func.accept(this);
-    return storage;
   }
 
-  Storage get(Stmt stmt) {
+  void get(Stmt stmt) {
     stmt.accept(this);
-    return storage;
   }
 
 private:
-  Storage storage;
+  Storage *storage;
 
   void visit(const AssignStmt *op) {
     Var var = op->var;
     Type type = var.getType();
-    if (type.isTensor() && !isScalar(type) && !storage.hasStorage(var)) {
+    if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
       determineStorage(var);
     }
   }
@@ -189,7 +189,7 @@ private:
     if (isa<VarExpr>(op->tensor)) {
       const Var &var = to<VarExpr>(op->tensor)->var;
       Type type = var.getType();
-      if (type.isTensor() && !isScalar(type) && !storage.hasStorage(var)) {
+      if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
         determineStorage(var);
       }
     }
@@ -198,7 +198,7 @@ private:
   void visit(const Map *op) {
     for (auto &var : op->vars) {
       Type type = var.getType();
-      if (type.isTensor() && !isScalar(type) && !storage.hasStorage(var)) {
+      if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
         // For now we'll store all assembled vectors as dense and other tensors
         // as system reduced
         TensorStorage tensorStorage;
@@ -211,7 +211,7 @@ private:
                                         op->target, op->neighbors);
         }
         iassert(tensorStorage.getKind() != TensorStorage::Undefined);
-        storage.add(var, tensorStorage);
+        storage->add(var, tensorStorage);
       }
     }
   }
@@ -228,15 +228,31 @@ private:
       tensorStorage = TensorStorage(TensorStorage::DenseRowMajor);
     }
     else {
-      tensorStorage = TensorStorage(TensorStorage::SystemReduced);
+      not_supported_yet;
     }
-    storage.add(var, tensorStorage);
+    storage->add(var, tensorStorage);
     return tensorStorage;
   }
 };
 
 Storage getStorage(const Func &func) {
-  return GetStorage().get(func);
+  Storage storage;
+  updateStorage(func, &storage);
+  return storage;
+}
+
+Storage getStorage(const Stmt &stmt) {
+  Storage storage;
+  updateStorage(stmt, &storage);
+  return storage;
+}
+
+void updateStorage(const Func &func, Storage *storage) {
+  GetStorageVisitor(storage).get(func);
+}
+
+void updateStorage(const Stmt &stmt, Storage *storage) {
+  GetStorageVisitor(storage).get(stmt);
 }
 
 }}

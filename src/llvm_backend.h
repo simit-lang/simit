@@ -5,8 +5,10 @@
 #include <memory>
 #include <set>
 #include <vector>
+#include <map>
 
 #include "backend.h"
+#include "var.h"
 #include "ir_visitor.h"
 #include "scopedmap.h"
 
@@ -38,7 +40,7 @@ public:
   simit::Function *compile(simit::ir::Func func);
 
 protected:
-  ScopedMap<std::string, llvm::Value*> symtable;
+  ScopedMap<simit::ir::Var, llvm::Value*> symtable;
 
   ir::Storage storage;
   ir::TensorStorage fieldStorage;
@@ -92,6 +94,7 @@ protected:
   virtual void visit(const ir::IfThenElse *);
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
+  virtual void visit(const ir::Print *);
 
   /// Get a pointer to the given field
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);
@@ -115,10 +118,18 @@ protected:
                         std::vector<llvm::Value*> args,
                         llvm::Type *returnType);
 
-  void emitPrintf(std::string format);
-  void emitPrintf(std::string format, std::initializer_list<llvm::Value*> args);
-  virtual void emitFirstAssign(const ir::AssignStmt *op,
-                               const std::string& varName);
+  /// Emit an empty function and set the builder cursor to its entry block. The
+  /// function's arguments and result variables are added to the symbol table.
+  llvm::Function *emitEmptyFunction(const std::string &name,
+                                    const std::vector<ir::Var> &arguments,
+                                    const std::vector<ir::Var> &results);
+
+//  void emitPrintf(std::string format);
+  void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
+
+  virtual void emitFirstAssign(const ir::Var& var,
+                               const ir::Expr& value);
+  void emitAssign(ir::Var var, const ir::Expr& value);
 
 private:
   static bool llvmInitialized;

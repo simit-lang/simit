@@ -64,8 +64,8 @@ private:
   llvm::Value *getTidZ();
 
   void emitThreadBarrier();
-  virtual void emitFirstAssign(const ir::AssignStmt *op,
-                               const std::string& varName);
+  virtual void emitFirstAssign(const ir::Var& var,
+                               const ir::Expr& value);
 };
 
 }

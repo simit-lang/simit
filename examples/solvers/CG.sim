@@ -10,18 +10,19 @@ func conjugateGradients(A : tensor[points,points](float), b : tensor[points](flo
 	r = b - A*xguess;
 	p = r;
 	iter = 0;
-	while( norm(r) < tol && iter < maxiters)
+  x = xguess;
+	while( norm(r) < tol and iter < maxiters )
 		alpha = dot(r, r);
 		denom = dot(p, A*p);
 		alpha = alpha / denom;
 		
-		xguess = xguess + alpha*p;
+		x = x + alpha*p;
 		oldrsqn = dot(r,r);
 		r = r - alpha*A*p;
 		newrsqn = dot(r,r);
 		beta = newrsqn/oldrsqn;
 		p = r + beta*p;
-		iter++;
+		iter = iter + 1;
 	end
-	return xguess;
+%  x = xguess;
 end

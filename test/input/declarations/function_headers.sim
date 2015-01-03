@@ -17,3 +17,7 @@ end
 %%% matrix-3x4
 func f(p : tensor[3,4](float)) -> (r : tensor[3,4](float))
 end
+
+%%% inout
+func f(inout p : tensor[3](float))
+end

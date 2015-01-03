@@ -139,6 +139,10 @@ void IRVisitor::visit(const AssignStmt *op) {
 void IRVisitor::visit(const Map *op) {
   op->target.accept(this);
   op->neighbors.accept(this);
+  for (auto &p : op->partial_actuals) {
+    p.accept(this);
+  }
+  
 }
 
 void IRVisitor::visit(const FieldWrite *op) {
@@ -199,6 +203,10 @@ void IRVisitor::visit(const GPUFor *op) {
 
 void IRVisitor::visit(const Func *op) {
   op->getBody().accept(this);
+}
+
+void IRVisitor::visit(const Print *op) {
+  op->expr.accept(this);
 }
 
 

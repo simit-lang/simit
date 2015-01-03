@@ -198,6 +198,7 @@
 
 // Precedence
 %nonassoc    "\\"               // solve
+%precedence  AND OR
 %left        "==" "!="
 %left        "<" ">" "<=" ">="
 %left        "-" "+"
@@ -205,7 +206,6 @@
 %precedence  NEG                // negation
 %right       "^"                // exponentiation
 %right       "'"                // transpose
-
 
 // Keywords
 %token INT       "int"
@@ -217,6 +217,7 @@
 %token EXTERN    "extern"
 %token PROC      "proc"
 %token FUNC      "func"
+%token INOUT     "inout"
 %token MAP       "map"
 %token TO        "to"
 %token WITH      "with"
@@ -230,6 +231,8 @@
 %token BLOCKEND  "end"
 %token RETURN    "return"
 %token TEST      "%!"
+%token PRINT     "print"
+
 
 %token RARROW    "->"
 %token LP        "("
@@ -383,13 +386,26 @@ function_header
     std::string name = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<Var>>($arguments);
     auto results = unique_ptr<vector<Var>>($results);
-    $$ = new Func(name, *arguments, *results, Stmt());
-
+    auto newArguments = unique_ptr<vector<Var>>(new vector<Var>());
+    
     std::set<std::string> argNames;
     for (Var &arg : *arguments) {
-      ctx->addSymbol(arg.getName(), arg, Symbol::Read);
-      argNames.insert(arg.getName());
+      auto found = arg.getName().find("___inout___");
+      if (found != string::npos) {
+        // this is an inout param
+        string newName = arg.getName().substr(0,found);
+        auto newArg = Var(newName, arg.getType());
+        ctx->addSymbol(newName, newArg, Symbol::ReadWrite);
+        argNames.insert(newArg.getName());
+        newArguments->push_back(newArg);
+      } else {
+        ctx->addSymbol(arg.getName(), arg, Symbol::Read);
+        argNames.insert(arg.getName());
+        newArguments->push_back(arg);
+      }
     }
+
+    $$ = new Func(name, *newArguments, *results, Stmt());
 
     for (Var &res : *results) {
       Symbol::Access access = (argNames.find(res.getName()) != argNames.end())
@@ -422,12 +438,20 @@ argument_list
 
 %type <var> argument_decl;
 argument_decl
-  : IDENT ":" type {
+  : INOUT IDENT ":" type {
+    // this is by no means the best way to do this, but it works.
+    std::string name = convertAndFree($IDENT).append("___inout___");
+
+    auto type = convertAndDelete($type);
+    $$ = new Var(name, type);
+  }
+  | IDENT ":" type {
     std::string name = convertAndFree($IDENT);
 
     auto type = convertAndDelete($type);
     $$ = new Var(name, type);
   }
+
 
 %type <vars> results;
 results
@@ -486,6 +510,7 @@ stmt
   | for_stmt
   | const_stmt
   | expr_stmt
+  | print_stmt
 
 assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
@@ -531,9 +556,11 @@ assign_stmt
 
 // Map Statement
 map_stmt
-  : idents "=" "map" IDENT[func] "to" IDENT[target] with reduce {
+  : idents "=" "map" IDENT[func] partial_expr_list "to" IDENT[target] with reduce {
     auto varNames = unique_ptr<vector<string>>($idents);
 
+    auto partialExprList = unique_ptr<vector<Expr>>($partial_expr_list);
+    
     string funcName = convertAndFree($func);
     string targetsName = convertAndFree($target);
 
@@ -578,8 +605,19 @@ map_stmt
       vars.push_back(var);
     }
 
-    ctx->addStatement(Map::make(vars, func, targets, neighbor, reduction));
+    ctx->addStatement(Map::make(vars, func, *partialExprList, targets, neighbor,
+      reduction));
   }
+
+%type <exprs> partial_expr_list;
+partial_expr_list
+  : /* empty */ {
+    $$ = new vector<Expr>();
+  }
+  | "(" expr_list_or_empty ")" {
+    $$ = $2;
+  }
+
 
 %type <strings> idents;
 idents
@@ -664,8 +702,30 @@ tensor_write_stmt
     Expr tensorExpr = tensorSymbol.getExpr();
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
-  | field_read_expr "(" expr_list ")" {
-    // TODO
+  | IDENT "." IDENT[fieldName] "(" expr_list ")" "=" expr ";" {
+    //TODO: This rule really should be:
+    // field_read_expr "(" expr_list ")" "=" expr ";"
+    // but this requires reworking a lot of the parser.
+ 
+    string setName = convertAndFree($1);
+    string fieldName = convertAndFree($3);
+    auto indices = unique_ptr<vector<Expr>>($expr_list);
+    if ($expr == nullptr) break;  // TODO: remove check
+    Expr value = convertAndDelete($expr);
+
+    if (!ctx->hasSymbol(setName)) {
+      REPORT_ERROR(setName + " is not defined in scope", @1);
+    }
+
+    const Symbol &setSymbol = ctx->getSymbol(setName);
+    if (!setSymbol.isWritable()) {
+      REPORT_ERROR(setName + " is not writable", @1);
+    }
+
+    Expr setExpr = setSymbol.getExpr();
+
+    Expr tensorExpr = FieldRead::make(setExpr, fieldName);
+    ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
 
 while_stmt
@@ -807,6 +867,11 @@ expr_stmt
     $$ = NULL;
   }
 
+print_stmt
+  : "print" expr ";" {
+     Expr expr = Expr(convertAndDelete($2));
+     ctx->addStatement(Stmt(Print::make(expr)));
+  }
 
 // Expressions
 %type <expr> expr;
@@ -1018,7 +1083,11 @@ elwise_binary_op
 // Boolean Expressions
 %type <expr> boolean_expr;
 boolean_expr
-  : expr "==" expr {
+  : "(" boolean_expr ")" {
+    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    $$ = $2;
+  }
+  | expr "==" expr {
     if ($1 == NULL || $3 == NULL) { $$ = NULL; break; } // TODO: Remove check
     Expr l = convertAndDelete($1);
     Expr r = convertAndDelete($3);

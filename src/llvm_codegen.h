@@ -62,17 +62,13 @@ llvm::Type *createLLVMType(const ir::TensorType *ttype);
 llvm::StructType *createLLVMType(const ir::SetType *);
 llvm::Type *createLLVMType(const ir::Type &);
 
-/// Creates an empy llvm function.
-llvm::Function *createFunction(const std::string &name,
-                               const std::vector<ir::Var> &arguments,
-                               const std::vector<ir::Var> &results,
-                               llvm::Module *module);
-llvm::Function *createFunction(const std::string &name,
-                               const std::vector<ir::Var> &arguments,
-                               const std::vector<ir::Var> &results,
-                               llvm::Module *module,
-                               bool externalLinkage,
-                               bool doesNotThrow);
+/// Creates an llvm function prototype
+llvm::Function *createPrototype(const std::string &name,
+                                const std::vector<ir::Var> &arguments,
+                                const std::vector<ir::Var> &results,
+                                llvm::Module *module,
+                                bool externalLinkage=false,
+                                bool doesNotThrow=true);
 
 std::ostream &operator<<(std::ostream &os, const llvm::Value &);
 std::ostream &operator<<(std::ostream &os, const llvm::Type &);

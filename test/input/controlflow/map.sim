@@ -1,4 +1,4 @@
-%%% forall
+%%%- forall
 element Point
   a : float;
   b : float;
@@ -15,6 +15,25 @@ proc mul
   A = map dist_mass to points reduce +;
   points.c = A * points.b;
 end
+
+%%% map-extra-params
+element Point
+  a : float;
+  b : float;
+  c : float;
+end
+
+extern points : set{Point};
+
+func dist_mass(zz : float, p : Point) -> (A : tensor[points,points](float))
+  A(p,p) = zz; 
+end
+
+proc mul
+  A = map dist_mass(2.0) to points reduce +;
+  points.c = A * points.b;
+end
+
 
 %%%-
 element Spring

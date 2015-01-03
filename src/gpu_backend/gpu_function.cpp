@@ -231,8 +231,8 @@ void GPUFunction::print(std::ostream &os) const {
 llvm::Function *GPUFunction::createHarness(
     const llvm::SmallVector<llvm::Value*, 8> &args) {
   const std::string harnessName = "kernel";
-  llvm::Function *harness = createFunction(harnessName, {}, {},
-                                           llvmModule.get(), true, false);
+  llvm::Function *harness = createPrototype(harnessName, {}, {},
+                                            llvmModule.get(), true, false);
 
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
   // Note: CallInst takes ownership of llvmFunc. This is resolved in

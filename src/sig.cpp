@@ -13,8 +13,8 @@ namespace simit {
 namespace ir {
 
 // class SIG
-SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
-  set<IndexVar> added;
+SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor, Expr set) : SIG() {
+  std::set<IndexVar> added;
   vector<SIGVertex*> endpoints;
 
   for (auto &iv : ivs) {
@@ -28,79 +28,68 @@ SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor) : SIG() {
   }
 
   if (tensor.defined()) {
-    SIGEdge *e = new SIGEdge(tensor, endpoints);
-    content->edges[tensor] = unique_ptr<SIGEdge>(e);
+    SIGEdge *e = new SIGEdge(tensor, set, endpoints);
+    content->edges.push_back(unique_ptr<SIGEdge>(e));
   }
 }
 
-std::vector<const SIGEdge *> SIG::getEdges() const {
-  std::vector<const SIGEdge *> edges;
-  for (auto &edge : content->edges) {
-    edges.push_back(edge.second.get());
-  }
-  return edges;
-}
-
-SIG merge(SIG &g1, SIG &g2, SIG::MergeOp mop) {
+SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop) {
   // This can be optimized by exploiting immutability to preserve substructures
   SIG merged = SIG();
 
-  for (auto &v : g1.content->vertices) {
+  // Add the union of the index variables from the input sigs to the merged sig.
+  for (auto &v : sig1.content->vertices) {
     const IndexVar &iv = v.first;
-    SIGVertex *newVertex = new SIGVertex(iv);
-    merged.content->vertices[iv] = unique_ptr<SIGVertex>(newVertex);
+    if (merged.content->vertices.find(iv) == merged.content->vertices.end()) {
+      merged.content->vertices[iv] = unique_ptr<SIGVertex>(new SIGVertex(iv));
+    }
   }
-
-  for (auto &v : g2.content->vertices) {
+  for (auto &v : sig2.content->vertices) {
     const IndexVar &iv = v.first;
-    SIGVertex *newVertex = new SIGVertex(iv);
-    merged.content->vertices[iv] = unique_ptr<SIGVertex>(newVertex);
+    if (merged.content->vertices.find(iv) == merged.content->vertices.end()) {
+      merged.content->vertices[iv] = unique_ptr<SIGVertex>(new SIGVertex(iv));
+    }
   }
 
-  map<Var,vector<SIGVertex*>> edges;
-
-  for (auto &e : g1.content->edges) {
-    Var edgeSet = e.first;
+  // Add the edges from the input sigs to the merged sig. If two edges share the
+  // same endpoints then they are merged.
+  for (auto &e : sig1.content->edges) {
+    // Get pointers to the endpoints in the new sig
     vector<SIGVertex*> endpoints;
-    for (SIGVertex *g1v : e.second->endpoints) {
-      endpoints.push_back(merged.content->vertices[g1v->iv].get());
+    for (SIGVertex *eps : e->endpoints) {
+      endpoints.push_back(merged.content->vertices[eps->iv].get());
     }
-    edges[edgeSet] = endpoints;
+
+    SIGEdge *edge = new SIGEdge(e->tensor, e->set, endpoints);
+    merged.content->edges.push_back(unique_ptr<SIGEdge>(edge));
   }
 
-  for (auto &e : g2.content->edges) {
-    Var edgeSet = e.first;
+  // TODO: Add multi-edge merging: Build a lookup data structure etc.
+  for (auto &e : sig2.content->edges) {
+    // Get pointers to the endpoints in the new sig
     vector<SIGVertex*> endpoints;
-    for (SIGVertex *g1v : e.second->endpoints) {
-      endpoints.push_back(merged.content->vertices[g1v->iv].get());
+    for (SIGVertex *eps : e->endpoints) {
+      endpoints.push_back(merged.content->vertices[eps->iv].get());
     }
 
-    if (edges.find(edgeSet) == edges.end()) {
-      edges[edgeSet] = endpoints;
-    }
-    else {
-      // Vertex identification/contraction
-      vector<SIGVertex*> &currEps = edges[edgeSet];
-      currEps.insert(currEps.begin(), endpoints.begin(), endpoints.end());
-    }
-  }
-
-  for (auto &edge : edges) {
-    SIGEdge *newEdge = new SIGEdge(edge.first, edge.second);
-    merged.content->edges[edge.first] = unique_ptr<SIGEdge>(newEdge);
+    SIGEdge *edge = new SIGEdge(e->tensor, e->set, endpoints);
+    merged.content->edges.push_back(unique_ptr<SIGEdge>(edge));
   }
 
   return merged;
 }
 
-bool ReductionVarsBeforefree(SIGVertex *i, SIGVertex *j) {
+bool ReductionVarsAfterFree(SIGVertex *i, SIGVertex *j) {
   return (i->iv.isFreeVar() && j->iv.isReductionVar()) ? true : false;
 }
 
 void SIGVisitor::apply(const SIG &sig) {
+  visitedVertices.clear();
+  visitedEdges.clear();
+
   std::vector<SIGEdge*> edgeIterationOrder;
   for (auto &e : sig.content->edges) {
-    edgeIterationOrder.push_back(e.second.get());
+    edgeIterationOrder.push_back(e.get());
   }
 
   std::vector<SIGVertex*> vertexIterationOrder;
@@ -108,18 +97,19 @@ void SIGVisitor::apply(const SIG &sig) {
     vertexIterationOrder.push_back(v.second.get());
   }
 
-  // Sort reduction variables before free vars because we do codegen bottom-up
-  sort(vertexIterationOrder.begin(), vertexIterationOrder.end(), ReductionVarsBeforefree);
-
-  for (SIGEdge *e : edgeIterationOrder) {
-    if (visitedEdges.find(e) == visitedEdges.end()) {
-      visit(e);
-    }
-  }
+  // Sort reduction variables after free variables
+  sort(vertexIterationOrder.begin(), vertexIterationOrder.end(),
+       ReductionVarsAfterFree);
 
   for (SIGVertex *v : vertexIterationOrder) {
     if (visitedVertices.find(v) == visitedVertices.end()) {
       visit(v);
+    }
+  }
+
+  for (SIGEdge *e : edgeIterationOrder) {
+    if (visitedEdges.find(e) == visitedEdges.end()) {
+      visit(e);
     }
   }
 }
@@ -142,72 +132,73 @@ void SIGVisitor::visit(const SIGEdge *e) {
   }
 }
 
-
-/// Class that builds a Sparse Iteration Graph from an expression.
-class SIGBuilder : public IRVisitor {
-public:
-  SIGBuilder(const Storage &storage) : storage(storage) {}
-
-  SIG create(Stmt stmt) {
-    stmt.accept(this);
-    SIG result = sig;
-    sig = SIG();
-    return result;
-  }
-
-private:
-  Storage storage;
-  SIG sig;
-
-  SIG create(Expr expr) {
-    expr.accept(this);
-    SIG result = sig;
-    sig = SIG();
-    return result;
-  }
-
-  void visit(const IndexedTensor *op) {
-    iassert(!isa<IndexExpr>(op->tensor))
-        << "IndexExprs should have been flattened by now:" << toString(*op);
-
-    Var tensorVar;
-    if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
-      const Var &var = to<VarExpr>(op->tensor)->var;
-      iassert(storage.hasStorage(var)) << "No storage descriptor found for"
-                                       << var << "in" << util::toString(*op);
-      if (storage.get(var).isSystem()) {
-        tensorVar = var;
-      }
-    }
-    sig = SIG(op->indexVars, tensorVar);
-  }
-
-  void visit(const Add *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Union);
-  }
-
-  void visit(const Sub *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Union);
-  }
-
-  void visit(const Mul *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Intersection);
-  }
-
-  void visit(const Div *op) {
-    SIG ig1 = create(op->a);
-    SIG ig2 = create(op->b);
-    sig = merge(ig1, ig2, SIG::Intersection);
-  }
-};
-
 SIG createSIG(Stmt stmt, const Storage &storage) {
+  /// Class that builds a Sparse Iteration Graph from an expression.
+  class SIGBuilder : public IRVisitor {
+  public:
+    SIGBuilder(const Storage &storage) : storage(storage) {}
+
+    SIG create(Stmt stmt) {
+      stmt.accept(this);
+      SIG result = sig;
+      sig = SIG();
+      return result;
+    }
+
+  private:
+    Storage storage;
+    SIG sig;
+
+    SIG create(Expr expr) {
+      expr.accept(this);
+      SIG result = sig;
+      sig = SIG();
+      return result;
+    }
+
+    void visit(const IndexedTensor *op) {
+      iassert(!isa<IndexExpr>(op->tensor))
+          << "IndexExprs should have been flattened by now:" << toString(*op);
+
+      Var tensorVar;
+      Expr setExpr;
+      if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
+        const Var &var = to<VarExpr>(op->tensor)->var;
+        iassert(storage.hasStorage(var)) << "No storage descriptor found for"
+                                         << var << "in" << util::toString(*op);
+        if (storage.get(var).isSystem()) {
+          tensorVar = var;
+          setExpr = storage.get(var).getSystemTargetSet();
+        }
+      }
+      sig = SIG(op->indexVars, tensorVar, setExpr);
+    }
+
+    void visit(const Add *op) {
+      SIG ig1 = create(op->a);
+      SIG ig2 = create(op->b);
+      sig = merge(ig1, ig2, SIG::Union);
+    }
+
+    void visit(const Sub *op) {
+      SIG ig1 = create(op->a);
+      SIG ig2 = create(op->b);
+      sig = merge(ig1, ig2, SIG::Union);
+    }
+
+    void visit(const Mul *op) {
+      SIG ig1 = create(op->a);
+      SIG ig2 = create(op->b);
+      sig = merge(ig1, ig2, SIG::Intersection);
+    }
+
+    void visit(const Div *op) {
+      SIG ig1 = create(op->a);
+      SIG ig2 = create(op->b);
+      sig = merge(ig1, ig2, SIG::Intersection);
+    }
+  };
+
   return SIGBuilder(storage).create(stmt);
 }
 
@@ -237,23 +228,25 @@ size_t getNumBlockLevels(const SIG &sig) {
 
 // class LoopVars
 LoopVars LoopVars::create(const SIG &sig) {
-  class LoopVarsBuilder : private SIGVisitor {
+  class LoopVarsBuilder : protected SIGVisitor {
   public:
     LoopVars build(const SIG &sig) {
       vertexLoopVars.clear();
 
-      // We create one set of loop nests per block level in the SIG.
+      // We create one set of loop nests per block level in the SIG expression.
       numBlockLevels = getNumBlockLevels(sig);
       for (currBlockLevel=0; currBlockLevel<numBlockLevels; ++currBlockLevel) {
         apply(sig);
       }
 
-      return LoopVars(loopVars, vertexLoopVars);
+      return LoopVars(loopVars, vertexLoopVars, coordVars);
     }
 
   private:
-    std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
     std::vector<LoopVar> loopVars;
+    std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
+    std::map<std::vector<Var>, Var> coordVars;
+
     UniqueNameGenerator nameGenerator;
 
     /// We create one loop variable per block level per index variable. The loop
@@ -266,18 +259,77 @@ LoopVars LoopVars::create(const SIG &sig) {
 
     void visit(const SIGVertex *v) {
       const IndexVar &indexVar = v->iv;
+      size_t numBlockLevels = indexVar.getNumBlockLevels();
 
-      if (currBlockLevel < indexVar.getNumBlockLevels()) {
+      if (currBlockLevel < numBlockLevels) {
         Var var(nameGenerator.getName(indexVar.getName()), Int);
         ForDomain domain = indexVar.getDomain().getIndexSets()[currBlockLevel];
 
-        // We only need to reduce w.r.t. to the outer loop variable variable.
-        ReductionOperator rop = (currBlockLevel==0)
+        // We only reduce w.r.t. to the inner loop variable.
+        ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
                                 ? indexVar.getOperator()
                                 : ReductionOperator::Undefined;
-                                
+
         addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
       }
+
+      SIGVisitor::visit(v);
+    }
+
+    void visit(const SIGEdge *e) {
+      tassert(e->endpoints.size() <= 2)
+          << "This code does not support higher-order tensors yet";
+
+      // There are three cases:
+      // - Case 1: The edge was visited before any of it's endpoints
+      // - Case 2: The edge was visited after one of its endpoints
+      // - Case 3: The edge was visited after more than one of its endpoints
+
+      /// Get an endpoint that has been visited.
+      vector<const SIGVertex*> visited;
+      vector<const SIGVertex*> notVisited;
+      for (const SIGVertex *ep : e->endpoints) {
+        if (visitedVertices.find(ep) != visitedVertices.end()) {
+          visited.push_back(ep);
+        }
+        else {
+          notVisited.push_back(ep);
+        }
+      }
+
+      // We currently only support case 2.
+      tassert(visited.size() == 1);
+      auto loopVars = vertexLoopVars[visited[0]->iv];
+      Var link = loopVars[loopVars.size()-1].getVar();
+
+      // Link the not visited variable(s) to the visited variable.
+      for (auto &veps : notVisited) {
+        const IndexVar &indexVar = veps->iv;
+
+        if (currBlockLevel == 0) {
+          Var var(nameGenerator.getName(indexVar.getName()), Int);
+          ForDomain domain(e->set, link, ForDomain::Neighbors);
+
+          // We only need to reduce w.r.t. to the inner loop variable.
+          ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
+                                  ? indexVar.getOperator()
+                                  : ReductionOperator::Undefined;
+
+          addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
+
+          // The ij var links i to j through the neighbors indices. E.g.
+          // for i in points:
+          //   pointsi = 0;
+          //   for ij in edges.neighbors.start[i]:edges.neighbors.start[(i+1)]:
+          //     j = springs.neighbors[ij];
+          //     pointsi = (pointsi + (A[ij] * points.b[j]));
+          //   points.c[i] = pointsi;
+          addCoordVar({link, var}, Var(link.getName()+indexVar.getName(), Int));
+          visitedVertices.insert(veps);
+        }
+      }
+
+      SIGVisitor::visit(e);
     }
 
     void addVertexLoopVar(const IndexVar &indexVar, const LoopVar &loopVar) {
@@ -289,14 +341,20 @@ LoopVars LoopVars::create(const SIG &sig) {
       }
       vertexLoopVars[indexVar].push_back(loopVar);
     }
+
+    void addCoordVar(std::vector<Var> coord, const Var &var) {
+      sort(coord.begin(), coord.end());
+      coordVars[coord] = var;
+    }
   }; // class LoopVarsBuilder
 
   return LoopVarsBuilder().build(sig);
 }
 
 LoopVars::LoopVars(const vector<LoopVar> &loopVars,
-                   const map<IndexVar,vector<LoopVar>> &vertexLoopVars)
-    : loopVars(loopVars), vertexLoopVars(vertexLoopVars) {
+                   const map<IndexVar, vector<LoopVar>> &vertexLoopVars,
+                   const map<vector<Var>, Var> &coordVars)
+    : loopVars(loopVars), vertexLoopVars(vertexLoopVars), coordVars(coordVars) {
 }
 
 
@@ -331,7 +389,6 @@ private:
 };
 
 std::ostream &operator<<(std::ostream &os, const SIG &g) {
-  os << "SIG: ";
   SIGPrinter(os).print(g);
   return os;
 }

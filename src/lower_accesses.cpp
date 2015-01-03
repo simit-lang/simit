@@ -49,8 +49,9 @@ static Expr createLoadExpr(Expr tensor, Expr index) {
   }
 }
 
-static Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
-  // If the tensor is a load then we hada  nested tensor read. Since we can't
+static Stmt createStoreStmt(Expr tensor, Expr index, Expr value,
+                            CompoundOperator cop) {
+  // If the tensor is a load then we had a nested tensor read. Since we can't
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
     const Load *load = to<Load>(tensor);
@@ -60,10 +61,10 @@ static Stmt createStoreStmt(Expr tensor, Expr index, Expr value) {
     Expr len  = createLengthComputation(blockType.toTensor()->dimensions);
 
     index = Add::make(Mul::make(load->index, len), index);
-    return Store::make(load->buffer, index, value);
+    return Store::make(load->buffer, index, value, cop);
   }
   else {
-    return Store::make(tensor, index, value);
+    return Store::make(tensor, index, value, cop);
   }
 }
 
@@ -91,11 +92,11 @@ private:
     Expr index;
     switch (tensorStorage.getKind()) {
       case TensorStorage::DenseRowMajor: {
-        const TensorType *type = tensor.type().toTensor();
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
         }
         else if (indices.size() == 2) {
+          const TensorType *type = tensor.type().toTensor();
           Expr i = rewrite(indices[0]);
           Expr j = rewrite(indices[1]);
 
@@ -119,15 +120,21 @@ private:
         break;
       }
       case TensorStorage::SystemReduced: {
-        iassert(indices.size() == 2);
-        Expr i = rewrite(indices[0]);
-        Expr j = rewrite(indices[1]);
+        iassert(indices.size() == 1 || indices.size() == 2);
 
-        Expr edgeSet = tensorStorage.getSystemTargetSet();
-        Expr nbrs_start = IndexRead::make(edgeSet, IndexRead::NeighborsStart);
-        Expr nbrs = IndexRead::make(edgeSet, IndexRead::Neighbors);
+        if (indices.size() == 1) {
+          index = rewrite(indices[0]);
+        }
+        else {
+          Expr i = rewrite(indices[0]);
+          Expr j = rewrite(indices[1]);
 
-        index = Call::make(Intrinsics::loc, {i, j, nbrs_start, nbrs});
+          Expr edgeSet = tensorStorage.getSystemTargetSet();
+          Expr nbrs_start = IndexRead::make(edgeSet, IndexRead::NeighborsStart);
+          Expr nbrs = IndexRead::make(edgeSet, IndexRead::Neighbors);
+
+          index = Call::make(Intrinsics::loc, {i, j, nbrs_start, nbrs});
+        }
         break;
       }
       case TensorStorage::SystemUnreduced:
@@ -156,7 +163,7 @@ private:
     Expr tensor = rewrite(op->tensor);
     Expr value = rewrite(op->value);
     Expr index = flattenIndices(op->tensor, op->indices);
-    stmt = createStoreStmt(tensor, index, value);
+    stmt = createStoreStmt(tensor, index, value, op->cop);
   }
 };
 

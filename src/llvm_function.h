@@ -35,10 +35,10 @@ class LLVMFunction : public simit::Function {
   FuncType deinit;
 
   FuncType init(const std::vector<std::string> &formals,
-                   std::map<std::string, Actual> &actuals);
+                std::map<std::string, Actual> &actuals);
 
   FuncType createHarness(const std::string &name,
-                            const llvm::SmallVector<llvm::Value*,8> &args);
+                         const llvm::SmallVector<llvm::Value*,8> &args);
 
   llvm::Function *getInitFunc() const;
   llvm::Function *getDeinitFunc() const;
