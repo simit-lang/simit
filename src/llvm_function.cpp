@@ -45,6 +45,7 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
   fpm.add(llvm::createGVNPass());
   fpm.add(llvm::createCFGSimplificationPass());
   fpm.add(llvm::createPromoteMemoryToRegisterPass());
+  fpm.add(llvm::createAggressiveDCEPass());
 
   // Loop optimizations
   fpm.add(llvm::createLICMPass());

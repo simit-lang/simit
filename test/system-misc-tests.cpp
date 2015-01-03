@@ -42,7 +42,7 @@ TEST(System, misc_triangle) {
   ASSERT_DOUBLE_EQ(0.1, b.get(v3));
 }
 
-TEST(System, DISABLED_misc_assemble_from_literal_vector) {
+TEST(System, misc_assemble_from_literal_vector) {
   // Points
   Set<> points;
   FieldRef<double> x = points.addField<double>("x");
@@ -68,8 +68,6 @@ TEST(System, DISABLED_misc_assemble_from_literal_vector) {
   f->bind("springs", &springs);
 
   f->runSafe();
-
-  std::cout << x << std::endl;
 
   // Check that outputs are correct
   ASSERT_EQ(1.0, x.get(p0));

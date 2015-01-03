@@ -62,7 +62,6 @@ void MapFunctionRewriter::visit(const FieldWrite *op) {
   else {
     // TODO: Handle the case where the target var was reassigned
     //       tmp = s; ... = tmp.a;
-    std::cout << *op << std::endl;
     not_supported_yet;
   }
 }
