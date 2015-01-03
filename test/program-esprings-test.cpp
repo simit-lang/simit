@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(Program, DISABLED_esprings) {
+TEST(Program, esprings) {
   // Points
   Set<> points;
   FieldRef<double,3> x = points.addField<double,3>("x");
