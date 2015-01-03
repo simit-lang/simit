@@ -40,9 +40,7 @@ class GPUFunction : public simit::Function {
     size_t size;
     bool shouldPull;
 
-    DeviceDataHandle(CUdeviceptr *devBuffer, size_t size) :
-        devBuffer(devBuffer), size(size), shouldPull(true) {}
-    DeviceDataHandle(CUdeviceptr *devBuffer, size_t size, bool shouldPull) :
+    DeviceDataHandle(CUdeviceptr *devBuffer, size_t size, bool shouldPull=true) :
         devBuffer(devBuffer), size(size), shouldPull(shouldPull) {}
   };
 
