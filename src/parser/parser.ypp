@@ -516,7 +516,7 @@ assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
   // map statements...  This is too hacky and must be fixed.
   : idents "=" expr ";" {
-    if ($expr == nullptr) {break;} // TODO: Remove check
+    iassert($expr != nullptr) << "assigned expression" << "is null" ;
 
     auto varNames = convertAndDelete($idents);
     Expr value = convertAndDelete($expr);
@@ -1200,6 +1200,7 @@ set_read_expr
 // Call and Tensor Read Expressions
 %type <expr> call_or_paren_read_expr;
 call_or_paren_read_expr
+  // TODO: This rule should be removed and it's functionality put in next rule
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($IDENT);
     auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
@@ -1210,16 +1211,16 @@ call_or_paren_read_expr
         REPORT_ERROR(name + " is not readable", @1);
       }
 
-      // The parenthesis read can read from a tensor or a tuple.
-      auto expr = symbol.getExpr();
-      if (expr.type().isTensor()) {
-        $$ = new Expr(TensorRead::make(expr, *indices));
+      // The parenthesis read can be a read from a tensor or a tuple.
+      auto readExpr = symbol.getExpr();
+      if (readExpr.type().isTensor()) {
+        $$ = new Expr(TensorRead::make(readExpr, *indices));
       }
-      else if (expr.type().isTuple()) {
+      else if (readExpr.type().isTuple()) {
         if (indices->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", @3);
         }
-        $$ = new Expr(TupleRead::make(expr, (*indices)[0]));
+        $$ = new Expr(TupleRead::make(readExpr, (*indices)[0]));
       }
       else {
         REPORT_ERROR("can only access components in tensors and tuples", @1);
@@ -1233,8 +1234,23 @@ call_or_paren_read_expr
       REPORT_ERROR(name + " is not defined in scope", @1);
     }
   }
-  | field_read_expr "(" expr_list_or_empty ")" {
-    $$ = NULL;
+  | expr "(" expr_list_or_empty ")" {
+    Expr readExpr = convertAndDelete($expr);
+    auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
+
+    // The parenthesis read can be a read from a tensor or a tuple.
+    if (readExpr.type().isTensor()) {
+      $$ = new Expr(TensorRead::make(readExpr, *indices));
+    }
+    else if (readExpr.type().isTuple()) {
+      if (indices->size() != 1) {
+        REPORT_ERROR("reading a tuple requires exactly one index", @3);
+      }
+      $$ = new Expr(TupleRead::make(readExpr, (*indices)[0]));
+    }
+    else {
+      REPORT_ERROR("can only access components in tensors and tuples", @1);
+    }
   }
 
 %type <expr> call_expr;
