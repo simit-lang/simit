@@ -1,7 +1,5 @@
 set(TESTS simit-test)
 
-add_definitions(-Dsimit_float=double)
-
 file(GLOB GTEST_SOURCE gtest/gtest-all.cc)
 file(GLOB GTEST_HEADER gtest/gtest.h)
 include_directories(${SIMIT_TEST_DIR})

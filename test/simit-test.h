@@ -28,7 +28,7 @@ std::unique_ptr<simit::Function> getFunction(std::string fileName,
   }
 
   std::unique_ptr<simit::Function> f =
-      program.compile(functionName, sizeof(simit_float));
+      program.compile(functionName, sizeof(double));
   if (errorCode) {
     std::cerr << program.getDiagnostics().getMessage();
     return nullptr;
