@@ -75,6 +75,10 @@ private:
   std::vector<std::string> formals;
   std::map<std::string, Actual> actuals;
 
+  /// We store the simit Function's literals to prevent their memory from being
+  /// reclaimed, as compiled functions are expected to access them at runtime.
+  std::vector<simit::ir::Expr> literals;
+
   FuncType funcPtr;
   bool initRequired;
   virtual FuncType init(const std::vector<std::string> &formals,

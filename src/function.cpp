@@ -6,6 +6,7 @@ using namespace std;
 #include "graph.h"
 #include "types.h"
 #include "ir.h"
+#include "ir_visitor.h"
 #include "types.h"
 
 namespace simit {
@@ -24,6 +25,25 @@ Function::Function(const simit::ir::Func &simitFunc)
     formals.push_back(res.getName());
     actuals[res.getName()] = Actual(res.getType());
   }
+
+  // Gather the Simit literal expressions and store them in an array in the
+  // function, to prevent their memory from being reclaimed if the IR is
+  // deleted. This is necessary because compiled functions are expected to
+  // retrieve these values when being run.
+  class GatherLiteralsVisitor : private simit::ir::IRVisitor {
+  public:
+    vector<simit::ir::Expr> gather(simit::ir::Func func) {
+      literals.clear();
+      func.accept(this);
+      return literals;
+    }
+  private:
+    vector<simit::ir::Expr> literals;
+    void visit(const simit::ir::Literal *op) {
+      literals.push_back(op);
+    }
+  };
+  literals = GatherLiteralsVisitor().gather(simitFunc);
 }
 
 Function::~Function() {
@@ -35,8 +55,8 @@ void Function::bind(const std::string &argName, ir::Expr *tensor) {
 
   // Check that the tensor matches the argument type
   uassert(tensor->type() == actuals[argName].getType())
-      << "tensor type " << tensor->type() << "does not match function argument type"
-      << actuals[argName].getType();
+      << "tensor type " << tensor->type()
+      << "does not match function argument type" << actuals[argName].getType();
 
   uassert(ir::to<ir::Literal>(*tensor) != nullptr);
 
