@@ -61,15 +61,10 @@ simit::Function *LLVMBackend::compile(Func func) {
   this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
   this->storage = func.getStorage();
 
-  set<Var> argsAndResults;
-  argsAndResults.insert(func.getArguments().begin(), func.getArguments().end());
-  argsAndResults.insert(func.getResults().begin(), func.getResults().end());
-
   // Create global buffer variables
   map<Var, llvm::Value*> buffers;
   for (auto &var : storage) {
-    // Caller creates storage for input and output variables
-    if (argsAndResults.find(var) != argsAndResults.end()) continue;
+    if (!storage.get(var).needsInitialization()) continue;
 
     iassert(var.getType().isTensor());
     llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
@@ -1094,7 +1089,8 @@ void LLVMBackend::emitPrintf(std::string format,
 void LLVMBackend::emitFirstAssign(const ir::Var& var,
                                   const ir::Expr& value) {
   ScalarType type = value.type().toTensor()->componentType;
-  llvm::Value *llvmVar = builder->CreateAlloca(createLLVMType(type));
+  llvm::Value *llvmVar = builder->CreateAlloca(createLLVMType(type), nullptr,
+                                               var.getName());
   symtable.insert(var, llvmVar);
 }
 

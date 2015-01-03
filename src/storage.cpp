@@ -17,13 +17,18 @@ struct TensorStorage::Content {
   Expr systemTargeteSet;
   Expr systemStorageSet;
 
+  /// Whether the tensor needs storage allocated at runtime.
+  bool needsInitialization;
+
   Content(Kind kind) : kind(kind) {}
 };
 
 TensorStorage::TensorStorage() : TensorStorage(Undefined) {
 }
 
-TensorStorage::TensorStorage(Kind kind) : content(new Content(kind)) {
+TensorStorage::TensorStorage(Kind kind, bool needsInitialization)
+    : content(new Content(kind)) {
+  content->needsInitialization = needsInitialization;
 }
 
 TensorStorage::TensorStorage(Kind kind, const Expr &targetSet,
@@ -50,6 +55,10 @@ const Expr &TensorStorage::getSystemTargetSet() const {
 const Expr &TensorStorage::getSystemStorageSet() const {
   iassert(isSystem()) << "System storages require the storage set be provided";
   return content->systemStorageSet;
+}
+
+bool TensorStorage::needsInitialization() const {
+  return content->needsInitialization;
 }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
@@ -161,11 +170,11 @@ public:
   void get(Func func) {
     for (auto &arg : func.getArguments())
       if (arg.getType().isTensor())
-        determineStorage(arg);
+        determineStorage(arg, false);
 
     for (auto &res : func.getResults())
       if (res.getType().isTensor())
-        determineStorage(res);
+        determineStorage(res, false);
 
     func.accept(this);
   }
@@ -181,7 +190,8 @@ private:
     Var var = op->var;
     Type type = var.getType();
     if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
-      determineStorage(var);
+      bool needsInitialization = !isa<Literal>(op->value);
+      determineStorage(var, needsInitialization);
     }
   }
 
@@ -216,7 +226,7 @@ private:
     }
   }
 
-  TensorStorage determineStorage(Var var) {
+  TensorStorage determineStorage(Var var, bool initialize=true) {
     // If all dimensions are ranges then we choose dense row major. Otherwise,
     // we choose system reduced storage order (for now).
     Type type = var.getType();
@@ -225,7 +235,7 @@ private:
 
     TensorStorage tensorStorage;
     if (isElementTensorType(ttype) || ttype->order() <= 1) {
-      tensorStorage = TensorStorage(TensorStorage::DenseRowMajor);
+      tensorStorage = TensorStorage(TensorStorage::DenseRowMajor, initialize);
     }
     else {
       not_supported_yet;
