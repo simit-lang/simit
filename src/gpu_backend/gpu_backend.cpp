@@ -86,21 +86,26 @@ void GPUBackend::visit(const ir::TensorRead *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::TupleRead *op) {
+  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::IndexRead *op) {
+  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::Length *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Map *op) {
+  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::IndexedTensor *op) {
+  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::IndexExpr *op) {
+  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::TensorWrite *op) {
@@ -138,6 +143,7 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::FieldWrite *op) {
+  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::Store *op) {
