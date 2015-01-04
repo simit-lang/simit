@@ -46,6 +46,13 @@ std::string utostr(uint num) {
   return std::to_string(num);
 }
 
+extern "C" unsigned char simit_gpu_initmod_compute_20[];
+extern "C" int simit_gpu_initmod_compute_20_length;
+extern "C" unsigned char simit_gpu_initmod_compute_30[];
+extern "C" int simit_gpu_initmod_compute_30_length;
+extern "C" unsigned char simit_gpu_initmod_compute_35[];
+extern "C" int simit_gpu_initmod_compute_35_length;
+
 // Uses libnvvm to compile an LLVM IR module to PTX.
 std::string generatePtx(const std::string &module,
                         int devMajor, int devMinor,
@@ -57,6 +64,32 @@ std::string generatePtx(const std::string &module,
 
   // NVVM Initialization
   checkNVVMCall(nvvmCreateProgram(&compileUnit));
+  
+  // Add libdevice (math libraries, etc.) as initial module
+  //
+  // Reference:
+  // http://docs.nvidia.com/cuda/libdevice-users-guide/basic-usage.html
+  //
+  // The device to libdevice version mapping is weird (note 3.1-3.4=compute_20)
+  //    2.0 ≤ Arch < 3.0   libdevice.compute_20.XX.bc
+  //    Arch = 3.0         libdevice.compute_30.XX.bc
+  //    3.1 ≤ Arch < 3.5   libdevice.compute_20.XX.bc
+  //    Arch = 3.5         libdevice.compute_35.XX.bc
+  const char *libdevice;
+  int libdevice_length;
+  if (devMajor == 3 && devMajor == 0) {
+    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_30);
+    libdevice_length = simit_gpu_initmod_compute_30_length;
+  } else if (devMajor == 3 && devMajor == 5) {
+    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_35);
+    libdevice_length = simit_gpu_initmod_compute_35_length;
+  } else {
+    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_20);
+    libdevice_length = simit_gpu_initmod_compute_20_length;
+  }
+  checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
+                                       libdevice, libdevice_length,
+                                       "libdevice"));
 
   // Create NVVM compilation unit from LLVM IR
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
