@@ -122,6 +122,38 @@ void GPUBackend::visit(const ir::Load *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Call *op) {
+  std::map<ir::Func, std::string> nvvmIntrinsicByName =
+                                  {{ir::Intrinsics::sin,    std::string("__nv_sinf")},
+                                   {ir::Intrinsics::cos,    std::string("__nv_cosf")},
+                                   {ir::Intrinsics::sqrt,   std::string("__nv_sqrtf")},
+                                   {ir::Intrinsics::log,    std::string("__nv_logf")},
+                                   {ir::Intrinsics::exp,    std::string("__nv_fast_expf")},
+                                   {ir::Intrinsics::pow,    std::string("__nv_fast_powf")},
+                                   {ir::Intrinsics::atan2,  std::string("__nv_atan2f")},
+                                   {ir::Intrinsics::tan,    std::string("__nv_tanf")},
+                                   {ir::Intrinsics::asin,   std::string("__nv_asinf")},
+                                   {ir::Intrinsics::acos,   std::string("__nv_acosf")}};
+  
+  auto foundIntrinsic = nvvmIntrinsicByName.find(op->func);
+  if (foundIntrinsic != nvvmIntrinsicByName.end()) {
+    std::vector<llvm::Type*> argTypes;
+    std::vector<llvm::Value*> args;
+    llvm::Function *fun = nullptr;
+    // compile arguments first
+    for (auto a : op->actuals) {
+      argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
+      args.push_back(compile(a));
+    }
+  
+    auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
+    fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      foundIntrinsic->second, ftype));
+    
+    val = builder->CreateCall(fun, args);
+    return;
+  }
+  
+  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n\n";
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::Neg *op) {
