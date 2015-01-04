@@ -138,9 +138,15 @@ int main(int argc, const char* argv[]) {
   }
 
   auto functions = ctx.getFunctions();
-  auto iter = functions.begin();
 
   if (emitSimit) {
+    for (auto &constant : ctx.getConstants()) {
+      std::cout << "const " << constant.first << " = "
+                << constant.second << ";" << std::endl;
+    }
+    std::cout << std::endl;
+
+    auto iter = functions.begin();
     while (iter != functions.end()) {
       if (iter->second.getKind() == simit::ir::Func::Internal) {
         cout << iter->second << endl;

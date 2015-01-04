@@ -83,11 +83,18 @@ simit::Function *LLVMBackend::compile(Func func) {
   llvm::Function *llvmFunc = emitEmptyFunction(func.getName(),
                                                func.getArguments(),
                                                func.getResults());
+
+  // Load buffers
   for (auto &buffer : buffers) {
     Var var = buffer.first;
     llvm::Value *bufferVal = buffer.second;
     llvm::Value *llvmTmp = builder->CreateLoad(bufferVal, bufferVal->getName());
     symtable.insert(var, llvmTmp);
+  }
+
+  // Add constants to symbol table
+  for (auto &global : func.getEnvironment().globals) {
+    symtable.insert(global.first, compile(global.second));
   }
 
   compile(func.getBody());

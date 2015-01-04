@@ -34,6 +34,10 @@ Function::Function(const simit::ir::Func &simitFunc)
   public:
     vector<simit::ir::Expr> gather(simit::ir::Func func) {
       literals.clear();
+      for (auto &global : func.getEnvironment().globals) {
+        global.second.accept(this);
+      }
+
       func.accept(this);
       return literals;
     }

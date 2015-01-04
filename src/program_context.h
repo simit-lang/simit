@@ -96,6 +96,26 @@ public:
   }
 
   void addFunction(ir::Func f) {
+    class FunctionEnvironmentBuilder : private ir::IRVisitor {
+    public:
+      FunctionEnvironmentBuilder(const ProgramContext &ctx) : ctx(ctx) {}
+
+      ir::Environment buildEnvironment(ir::Func func) {
+        func.accept(this);
+        return env;
+      }
+    private:
+      const ProgramContext &ctx;
+      ir::Environment env;
+      void visit(const ir::VarExpr *op) {
+        if (ctx.isConstant(op->var)) {
+          env.globals[op->var] = ctx.getConstant(op->var);
+        }
+      }
+    };
+
+    f.setEnvironment(FunctionEnvironmentBuilder(*this).buildEnvironment(f));
+
     functions[f.getName()] = f;
   }
 
@@ -131,19 +151,25 @@ public:
     return externs.find(name) != externs.end();
   }
 
-  ir::Var getExtern(const std::string &name) {
-    return externs[name];
-  }
+  ir::Var getExtern(const std::string &name) { return externs[name];}
 
   ir::Var getExternExpr(const std::string &name) {return externs[name];}
 
   const std::map<std::string,ir::Var> &getExterns() {return externs;}
 
+
   void addConstant(ir::Var var, ir::Expr val) {
+    iassert(ir::isa<ir::Literal>(val));
     constants[var] = val;
   }
 
-  ir::Expr getConstant(ir::Var var) {return constants[var];}
+  bool isConstant(ir::Var var) const {
+    return constants.find(var) != constants.end();
+  }
+
+  ir::Expr getConstant(ir::Var var) const {return constants.at(var);}
+
+  const std::map<ir::Var,ir::Expr> &getConstants() const {return constants;}
 
 
   void addTest(Test *test) {tests.push_back(test);}
@@ -163,13 +189,13 @@ private:
 
   std::map<std::string, ir::Var>   externs;
   std::map<ir::Var,ir::Expr>       constants;
-
   std::map<std::string, ir::Func>  functions;
+
   std::list<std::vector<ir::Stmt>> statements;
 
   ScopedMap<std::string, Symbol>   exprSymtable;
 
-  std::vector<Test*>           tests;
+  std::vector<Test*>               tests;
 };
 
 }} // namespace simit::internal

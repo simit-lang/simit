@@ -168,13 +168,23 @@ public:
   GetStorageVisitor(Storage *storage) : storage(storage) {}
 
   void get(Func func) {
-    for (auto &arg : func.getArguments())
-      if (arg.getType().isTensor())
-        determineStorage(arg, false);
+    for (auto &global : func.getEnvironment().globals) {
+      if (global.first.getType().isTensor()) {
+        determineStorage(global.first, false);
+      }
+    }
 
-    for (auto &res : func.getResults())
-      if (res.getType().isTensor())
+    for (auto &arg : func.getArguments()) {
+      if (arg.getType().isTensor()) {
+        determineStorage(arg, false);
+      }
+    }
+
+    for (auto &res : func.getResults()) {
+      if (res.getType().isTensor()) {
         determineStorage(res, false);
+      }
+    }
 
     func.accept(this);
   }

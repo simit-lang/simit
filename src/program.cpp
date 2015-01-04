@@ -51,7 +51,7 @@ Program::~Program() {
 int Program::loadString(const string &programString) {
   std::vector<ParseError> errors;
   int status = content->frontend->parseString(programString, &content->ctx,
-                                                   &errors);
+                                              &errors);
   for (auto &error : errors) {
     content->diags.report() << error.toString();
   }

@@ -8,6 +8,20 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+std::ostream &operator<<(std::ostream &os, const Environment &env) {
+  auto it = env.globals.begin();
+  if (it != env.globals.end()) {
+    os << "const " << it->first << " = " << it->second << ";" << "\n";
+    ++it;
+  }
+  while (it != env.globals.end()) {
+    os << "const " << it->first << " = " << it->second << ";" << "\n";
+    ++it;
+  }
+
+  return os;
+}
+
 std::ostream &operator<<(std::ostream &os, const Func &function) {
   IRPrinter printer(os);
   printer.print(function);

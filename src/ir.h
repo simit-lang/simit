@@ -112,13 +112,21 @@ inline const S* to(Stmt s) {
 }
 
 
-/// A Simit function
+/// The environment of a function.
+struct Environment {
+  std::map<ir::Var, ir::Expr> globals;
+
+  Environment() {}
+  Environment(const std::map<ir::Var,ir::Expr> &globals) : globals(globals) {}
+};
+
 namespace {
 struct FuncContent {
+  int kind;
   std::string name;
   std::vector<Var> arguments;
   std::vector<Var> results;
-  int kind;
+  Environment env;
   Stmt body;
 
   Storage storage;
@@ -129,8 +137,7 @@ struct FuncContent {
 };
 }
 
-/// A description of a Simit function, which can be passed to the backend
-/// to get a runnable Function.
+/// A Simit Func, which can be passed to the backend to get a runnable Function.
 class Func : public util::IntrusivePtr<FuncContent> {
 public:
   enum Kind { Internal, External, Intrinsic };
@@ -162,6 +169,7 @@ public:
       : Func(func.getName(), func.getArguments(), func.getResults(), body,
              func.getKind()) {
     setStorage(func.getStorage());
+    setEnvironment(func.getEnvironment());
   }
 
   std::string getName() const {return ptr->name;}
@@ -171,6 +179,15 @@ public:
 
   /// Get the function kind, which can be Internal, Intrinsic or External.
   Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
+
+  /// Set the function's environment
+  void setEnvironment(const Environment &env) {ptr->env = env;}
+
+  /// Retrieve the function's environment
+  Environment &getEnvironment() {return ptr->env;}
+
+  /// Retrieve the function's environment
+  const Environment &getEnvironment() const {return ptr->env;}
 
   /// Set the storage descriptor for the function's local variables.
   void setStorage(const Storage &storage) {ptr->storage = storage;}
@@ -275,6 +292,8 @@ struct Literal : public ExprNode<Literal> {
 
   ~Literal() {free(data);}
 };
+bool operator==(const Literal& l, const Literal& r);
+bool operator!=(const Literal& l, const Literal& r);
 
 struct VarExpr : public ExprNode<VarExpr> {
   Var var;
@@ -867,10 +886,6 @@ struct Print : public StmtNode<Print> {
     return node;
   }
 };
-
-// Operators
-bool operator==(const Literal& l, const Literal& r);
-bool operator!=(const Literal& l, const Literal& r);
 
 }} // namespace simit::ir
 

@@ -11,6 +11,7 @@
 namespace simit {
 namespace ir {
 
+struct Environment;
 class Func;
 class Expr;
 class Stmt;
@@ -18,7 +19,9 @@ struct IRNode;
 struct ForDomain;
 struct CompoundOperator;
 
+std::ostream &operator<<(std::ostream &os, const Environment &);
 std::ostream &operator<<(std::ostream &os, const Func &);
+
 std::ostream &operator<<(std::ostream &os, const Expr &);
 std::ostream &operator<<(std::ostream &os, const Stmt &);
 std::ostream &operator<<(std::ostream &os, const IRNode &);
