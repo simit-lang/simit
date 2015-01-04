@@ -7,7 +7,6 @@ element Point
 
   zeros : tensor[3](float);
   ones : tensor[3](float);
-  print : tensor[3](float);
 end
 
 element Spring

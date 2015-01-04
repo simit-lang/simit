@@ -10,7 +10,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(Program, DISABLED_isprings) {
+TEST(Program, isprings) {
   // Points
   Set<> points;
   simit::FieldRef<double,3> x = points.addField<double,3>("x");
@@ -20,7 +20,6 @@ TEST(Program, DISABLED_isprings) {
 
   simit::FieldRef<double,3> ones = points.addField<double,3>("ones");
   simit::FieldRef<double,3> zeros = points.addField<double,3>("zeros");
-  simit::FieldRef<double,3> print = points.addField<double,3>("print");
 
   // Springs
   Set<2> springs(points,points);
@@ -40,10 +39,6 @@ TEST(Program, DISABLED_isprings) {
   v.set(p0, {0.1, 0.0, 0.0});
   v.set(p1, {0.1, 0.0, 0.0});
   v.set(p2, {0.1, 0.0, 0.0});
-
-  print.set(p0, {0.0, 0.0, 0.0});
-  print.set(p1, {0.0, 0.0, 0.0});
-  print.set(p2, {0.0, 0.0, 0.0});
 
   zeros.set(p0, {0.0, 0.0, 0.0});
   zeros.set(p1, {0.0, 0.0, 0.0});
