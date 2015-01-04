@@ -250,7 +250,7 @@ void IRRewriter::visit(const AssignStmt *op) {
 
 void IRRewriter::visit(const Map *op) {
   Expr target = rewrite(op->target);
-  Expr neighbors = rewrite(op->neighbors);
+  Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
   
   std::vector<Expr> partial_actuals(op->partial_actuals.size());
   bool actualsSame = true;

@@ -134,7 +134,10 @@ void IRVisitor::visit(const AssignStmt *op) {
 
 void IRVisitor::visit(const Map *op) {
   op->target.accept(this);
-  op->neighbors.accept(this);
+  if (op->neighbors.defined()) {
+    op->neighbors.accept(this);
+  }
+
   for (auto &p : op->partial_actuals) {
     p.accept(this);
   }
