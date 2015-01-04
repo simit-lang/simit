@@ -31,6 +31,10 @@ typedef llvm::IRBuilder<true, llvm::ConstantFolder,
 namespace simit {
 namespace internal {
 
+extern const std::string VAL_SUFFIX;
+extern const std::string PTR_SUFFIX;
+extern const std::string LEN_SUFFIX;
+
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMBackend : public Backend, public ir::IRVisitor {
 public:

@@ -64,8 +64,13 @@ GPUSharding::ShardDimension GPUSharding::maybeShardFor(const ir::For *op) {
 namespace ir {
 
 class ShardLoops : public IRRewriter {
+public:
+  Var getSharedVar() {
+    return sharedVar;
+  }
+
+protected:
   void visit(const Func *f) {
-    std::cout << "visit Func" << std::endl;
     for (auto &arg : f->getArguments()) {
       symtable.insert(arg.getName(), false);
     }
@@ -75,15 +80,14 @@ class ShardLoops : public IRRewriter {
     IRRewriter::visit(f);
     // Add shared arg
     std::vector<Var> args = func.getArguments();
-    args.emplace_back("$shared", SetType::make(
+    sharedVar = Var("$shared", SetType::make(
         ElementType::make("$shared", sharedFields), {}));
+    args.push_back(sharedVar);
     func = Func(func.getName(), args, func.getResults(),
                 func.getBody(), func.getKind());
-    std::cout << "end visit Func" << std::endl;
   }
 
   void visit(const For *op) {
-    std::cout << "visit For" << std::endl;
     internal::GPUSharding::ShardDimension sharded = sharding.maybeShardFor(op);
     sharding.scope(sharded);
     symtable.scope();
@@ -98,30 +102,12 @@ class ShardLoops : public IRRewriter {
       stmt = GPUFor::make(forStmt->var, forStmt->domain,
                           forStmt->body, sharded);
     }
-    std::cout << "end visit For" << std::endl;
   }
 
   void visit(const AssignStmt *op) {
-    std::cout << "visit Assign" << std::endl;
     const std::string& varName = op->var.getName();
     if (!symtable.contains(varName)) {
-      int depth = sharding.getDepth();
-      iassert(depth >= 0 && depth < 2)
-          << "Sharding depth must be 0, 1, or 2";
-      const TensorType *origType = op->var.getType().toTensor();
-      Type type = TensorType::make(origType->componentType,
-                                   origType->dimensions,
-                                   origType->isColumnVector);
-      std::cout << "Adding symbol: " << varName
-                << ", type: " << type << std::endl;
-      for (int dim = 0; dim < depth; ++dim) {
-        // Use a dummy dimension of 1
-        const_cast<TensorType*>(type.toTensor())
-            ->dimensions.emplace_back(IndexSet(1));
-      }
-      sharedFields.emplace_back(varName, type);
-      symtable.insert(varName, true);
-      std::cout << "Symbol added." << std::endl;
+      firstAssign(op->var);
     }
     Expr value = rewrite(op->value);
     // Rewrite the assign as a field write
@@ -131,57 +117,118 @@ class ShardLoops : public IRRewriter {
       Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
       // Build a 0 index into the $shared set
       int zero = 0;
-      std::cout << "Make tensor write" << std::endl;
       auto fieldRead = FieldRead::make(Var("$shared", type), varName);
-      std::cout << "sharedFields" << std::endl;
-      for (auto &field : sharedFields) {
-        std::cout << field.name << "," << field.type << std::endl;
-      }
-      std::cout << "Field read type: " << fieldRead.type() << std::endl;
-      stmt = TensorWrite::make(fieldRead,
-                               {Literal::make(Int, &zero)}, value);
-      std::cout << "Done make tensor write" << std::endl;
+      stmt = Store::make(fieldRead, Literal::make(Int, &zero), value, op->cop);
     }
     else {
-      stmt = AssignStmt::make(op->var, value);
+      stmt = AssignStmt::make(op->var, value, op->cop);
     }
-    std::cout << "end visit Assig" << std::endl;
   }
 
   void visit(const VarExpr *op) {
-    std::cout << "visit Var: " << op->var.getName() << std::endl;
     // Rewrite the read as a field read from the shared set
     if (symtable.get(op->var.getName())) {
-      // TODO(gkanwar): This type is incorrect for the set, because it doesn't
-      // include future fields.
+      // This type is incorrect for the set, because it doesn't
+      // include future fields. ReplaceShared will fix this in a second pass.
       Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
       // Build a 0 index into the $shared set
       int zero = 0;
       auto fieldRead = FieldRead::make(Var("$shared", type), op->var.getName());
-      std::cout << "sharedFields" << std::endl;
-      for (auto &field : sharedFields) {
-        std::cout << field.name << "," << field.type << std::endl;
-      }
-      std::cout << "Field read type: " << fieldRead.type() << std::endl;
-      expr = TensorRead::make(
-          fieldRead,
-          {Literal::make(Int, &zero)});
+      expr = Load::make(fieldRead, Literal::make(Int, &zero));
     }
     else {
       IRRewriter::visit(op);
     }
-    std::cout << "end visit Var: " << expr.type() << std::endl;
   }
 
-protected:
+  void firstAssign(Var var) {
+    std::string varName = var.getName();
+    int depth = sharding.getDepth();
+    iassert(depth >= 0 && depth < 2)
+    << "Sharding depth must be 0, 1, or 2";
+    const TensorType *origType = var.getType().toTensor();
+    Type type = TensorType::make(origType->componentType,
+                                 origType->dimensions,
+                                 origType->isColumnVector);
+    for (int dim = 0; dim < depth; ++dim) {
+      // Use a dummy dimension of 1
+      const_cast<TensorType*>(type.toTensor())
+          ->dimensions.emplace_back(IndexSet(1));
+    }
+    sharedFields.emplace_back(varName, type);
+    symtable.insert(varName, true);
+  }
+
   // Map from symbol to whether it is being lifted to the shared set
   internal::ScopedMap<std::string, bool> symtable;
   std::vector<Field> sharedFields;
   internal::GPUSharding sharding;
+
+
+  Var sharedVar;
+};
+
+// Visit all IR nodes which can store Var, and replace if it is
+// the shared var
+class ReplaceShared : public IRRewriter {
+public:
+  ReplaceShared(Var sharedVar) : sharedVar(sharedVar) {}
+
+protected:
+  void visit(const VarExpr *op) {
+    if (op->var.getName() == "$shared") {
+      expr = VarExpr::make(sharedVar);
+    }
+    else {
+      expr = op;
+    }
+  }
+
+  void visit(const Map *op) {
+    ierror << "Maps should be eliminated before sharding loops";
+  }
+
+  void visit(const AssignStmt *op) {
+    if (op->var.getName() == "$shared") {
+      Expr value = rewrite(op->value);
+      stmt = AssignStmt::make(sharedVar, value, op->cop);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const ForRange *op) {
+    if (op->var.getName() == "$shared") {
+      Expr start = rewrite(op->start);
+      Expr end = rewrite(op->end);
+      Stmt body = rewrite(op->body);
+      stmt = ForRange::make(sharedVar, start, end, body);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const For *op) {
+    if (op->var.getName() == "$shared") {
+      Stmt body = rewrite(op->body);
+      stmt = For::make(sharedVar, op->domain, body);
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
+  
+  Var sharedVar;
 };
 
 Func shardLoops(Func func) {
-  return ShardLoops().rewrite(func);
+  ShardLoops shardingRewriter;
+  Func sharded = shardingRewriter.rewrite(func);
+  Var sharedVar = shardingRewriter.getSharedVar();
+  Func final = ReplaceShared(sharedVar).rewrite(sharded);
+  return final;
 }
 
 }}  // namespace simit::ir

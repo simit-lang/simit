@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "simit-test.h"
 
 #include <memory>
 #include <cmath>
@@ -252,17 +252,7 @@ TEST(Codegen, forloop) {
 }
 
 // Float-32 version of codegen tests
-class CodegenF32 : public ::testing::Test {
-protected:
-  int oldSize;
-  virtual void SetUp() {
-    oldSize = ir::ScalarType::floatBytes;
-    ir::ScalarType::floatBytes = sizeof(float);
-  }
-  virtual void TearDown() {
-    ir::ScalarType::floatBytes = oldSize;
-  }
-};
+class CodegenF32 : public F32Test {};
 
 TEST_F(CodegenF32, add0) {
   Var a("a", Float);

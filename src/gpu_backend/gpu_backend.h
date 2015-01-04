@@ -64,6 +64,8 @@ private:
   llvm::Value *getTidZ();
 
   void emitThreadBarrier();
+  void emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value);
+  void emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value);
   virtual void emitFirstAssign(const ir::Var& var,
                                const ir::Expr& value);
 };

@@ -172,14 +172,46 @@ void GPUBackend::visit(const ir::Div *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::AssignStmt *op) {
-  LLVMBackend::visit(op);
+  // Only atomic for a compound scalar-scalar assign
+  if (op->cop.kind != ir::CompoundOperator::None &&
+      op->var.getType().toTensor()->order() == 0) {
+    switch (op->cop.kind) {
+      case ir::CompoundOperator::Add: {
+        if (!symtable.contains(op->var)) {
+          emitFirstAssign(op->var, op->value);
+        }
+        llvm::Value *value = compile(op->value);
+        llvm::Value *varPtr = symtable.get(op->var);
+        emitAtomicLoadAdd(varPtr, value);
+      }
+      default: ierror << "Unknown compound operator type";
+    }
+  }
+  else {
+    LLVMBackend::visit(op);
+  }
 }
 void GPUBackend::visit(const ir::FieldWrite *op) {
-  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Store *op) {
-  LLVMBackend::visit(op);
+  if (op->cop.kind != ir::CompoundOperator::None) {
+    llvm::Value *buffer = compile(op->buffer);
+    llvm::Value *index = compile(op->index);
+    llvm::Value *value = compile(op->value);
+    std::string locName = std::string(buffer->getName()) + PTR_SUFFIX;
+    llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
+    switch (op->cop.kind) {
+      case ir::CompoundOperator::Add: {
+        emitAtomicLoadAdd(bufferLoc, value);
+        break;
+      }
+      default: ierror << "Unknown compound operator type";
+    }
+  }
+  else {
+    LLVMBackend::visit(op);
+  }
 }
 void GPUBackend::visit(const ir::ForRange *op) {
   LLVMBackend::visit(op);
@@ -281,6 +313,29 @@ void GPUBackend::emitThreadBarrier() {
       module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy));
   cleanFuncAttrs(func);
   builder->CreateCall(func);
+}
+
+void GPUBackend::emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value) {
+  if (value->getType()->isIntegerTy()) {
+    builder->CreateAtomicRMW(llvm::AtomicRMWInst::Add, ptr, value,
+                             llvm::AtomicOrdering::Monotonic);
+  }
+  else if (value->getType()->isFloatTy()) {
+    emitAtomicFLoadAdd(ptr, value);
+  }
+  else {
+    ierror << "Unknown LLVM value type for atomic load add";
+  }
+}
+
+void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
+  std::vector<llvm::Type*> argTys = {LLVM_FLOATPTR, LLVM_FLOAT};
+  llvm::FunctionType *funcTy = llvm::FunctionType::get(
+      LLVM_FLOAT, argTys, false);
+  llvm::Function *func = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+      "llvm.nvvm.atomic.load.add.f32.p0f32", funcTy));
+  cleanFuncAttrs(func);
+  builder->CreateCall2(func, ptr, value);
 }
 
 void GPUBackend::emitFirstAssign(const ir::Var& var,
