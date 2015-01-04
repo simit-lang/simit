@@ -410,6 +410,17 @@ void IRRewriter::visit(const Print *op) {
   }
 }
 
+#ifdef GPU
+void IRRewriter::visit(const GPUFor *op) {
+  Stmt body = rewrite(op->body);
+  if (body == op->body) {
+    stmt = op;
+  }
+  else {
+    stmt = GPUFor::make(op->var, op->domain, body, op->dimension);
+  }
+}
+#endif
 
 // Utility 
 

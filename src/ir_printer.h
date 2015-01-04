@@ -79,6 +79,10 @@ private:
 
   virtual void visit(const Func *);
 
+#ifdef GPU
+  virtual void visit(const GPUFor *);
+#endif
+
   void indent();
 
   std::ostream &os;

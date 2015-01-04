@@ -3,6 +3,10 @@
 #include "ir.h"
 #include "util.h"
 
+#ifdef GPU
+#include "gpu_backend/gpu_ir.h"
+#endif
+
 using namespace std;
 
 namespace simit {
@@ -391,6 +395,17 @@ void IRPrinter::visit(const For *op) {
   print(op->body);
   --indentation;
 }
+
+#ifdef GPU
+void IRPrinter::visit(const GPUFor *op) {
+  indent();
+  os << "gpufor " << op->var << " in " << op->domain;
+  os << ":" << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
+}
+#endif
 
 void IRPrinter::visit(const While *op) {
   indent();
