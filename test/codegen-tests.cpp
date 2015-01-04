@@ -7,12 +7,19 @@
 #include "ir_printer.h"
 #include "backend.h"
 #include "llvm_backend.h"
+#ifdef GPU
+#include "gpu_backend/gpu_backend.h"
+#endif
 
 using namespace std;
 using namespace testing;
 using namespace simit;
 using namespace simit::ir;
 using namespace simit::internal;
+
+namespace simit { extern std::string kBackend; }
+
+const double epsilon = 0.0000001;
 
 template <typename T>
 std::vector<T> toVectorOf(Expr expr) {
@@ -26,6 +33,24 @@ std::vector<T> toVectorOf(Expr expr) {
   return vec;
 }
 
+unique_ptr<Backend> getBackend();
+unique_ptr<Backend> getBackend() {
+  Backend *res = NULL;
+  if (kBackend == "llvm") {
+    res  = new LLVMBackend();
+  }
+#ifdef GPU
+  else if (kBackend == "gpu") {
+    fprintf(stderr, "Initializing GPU backend\n");
+    res = new GPUBackend();
+  }
+#endif
+  else {
+    ierror << "Invalid backend choice";
+  }
+  return unique_ptr<Backend>(res);
+}
+
 TEST(Codegen, add0) {
   Var a("a", Float);
   Var b("b", Float);
@@ -36,8 +61,8 @@ TEST(Codegen, add0) {
 
   Func func = Func("add0", {a,b}, {c}, body);
 
-  LLVMBackend backend;
-  unique_ptr<Function> function(backend.compile(func));
+  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Function> function(backend->compile(func));
 
   Expr aArg = 2.0;
   Expr bArg = 4.1;
@@ -62,8 +87,8 @@ TEST(Codegen, sin) {
 
   Func func = Func("testsin", {a}, {c}, body);
 
-  LLVMBackend backend;
-  unique_ptr<Function> function(backend.compile(func));
+  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Function> function(backend->compile(func));
 
   Expr aArg = 2.0;
   Expr cRes = 0.0;
@@ -74,7 +99,7 @@ TEST(Codegen, sin) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], sin(2.0));
+  ASSERT_NEAR(results[0], sin(2.0), abs(epsilon*results[0]));
 
 }
 
@@ -87,8 +112,8 @@ TEST(Codegen, cos) {
 
   Func func = Func("testcos", {a}, {c}, body);
 
-  LLVMBackend backend;
-  unique_ptr<Function> function(backend.compile(func));
+  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Function> function(backend->compile(func));
 
   Expr aVar = 2.0;
   Expr cRes = 0.0;
@@ -99,7 +124,7 @@ TEST(Codegen, cos) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], cos(2.0));
+  ASSERT_NEAR(results[0], cos(2.0), abs(epsilon*results[0]));
 
 }
 
@@ -112,8 +137,8 @@ TEST(Codegen, sqrt) {
 
   Func func = Func("testsqrt", {a}, {c}, body);
 
-  LLVMBackend backend;
-  unique_ptr<Function> function(backend.compile(func));
+  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Function> function(backend->compile(func));
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
@@ -124,7 +149,7 @@ TEST(Codegen, sqrt) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], sqrt(5.0));
+  ASSERT_NEAR(results[0], sqrt(5.0), abs(epsilon*results[0]));
 
 }
 
@@ -137,8 +162,8 @@ TEST(Codegen, log) {
 
   Func func = Func("testlog", {a}, {c}, body);
 
-  LLVMBackend backend;
-  unique_ptr<Function> function(backend.compile(func));
+  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Function> function(backend->compile(func));
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
@@ -149,7 +174,7 @@ TEST(Codegen, log) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], log(5.0));
+  ASSERT_NEAR(results[0], log(5.0), abs(epsilon*results[0]));
 
 }
 
@@ -162,8 +187,8 @@ TEST(Codegen, exp) {
 
   Func func = Func("testexp", {a}, {c}, body);
 
-  LLVMBackend backend;
-  unique_ptr<Function> function(backend.compile(func));
+  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Function> function(backend->compile(func));
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
@@ -174,7 +199,7 @@ TEST(Codegen, exp) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], exp(5.0));
+  ASSERT_NEAR(results[0], exp(5.0), abs(epsilon*results[0]));
 
 }
 
@@ -188,8 +213,8 @@ TEST(Codegen, atan2) {
 
   Func func = Func("testatan2", {a,b}, {c}, body);
 
-  LLVMBackend backend;
-  unique_ptr<Function> function(backend.compile(func));
+  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Function> function(backend->compile(func));
 
   Expr aVar = 1.0;
   Expr bVar = 2.0;
@@ -202,7 +227,7 @@ TEST(Codegen, atan2) {
   function->runSafe();
 
   vector<double> results = toVectorOf<double>(cRes);
-  ASSERT_DOUBLE_EQ(results[0], atan2(1.0,2.0));
+  ASSERT_NEAR(results[0], atan2(1.0,2.0), abs(epsilon*results[0]));
 
 }
 
@@ -217,8 +242,8 @@ TEST(Codegen, forloop) {
   
   Func func = Func("testloop", {}, {out}, loop);
 
-  LLVMBackend backend;
-  unique_ptr<Function> function(backend.compile(func));
+  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Function> function(backend->compile(func));
 
   Expr outVar = 0;
   Expr iVar = 0;

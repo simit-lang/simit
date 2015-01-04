@@ -1,5 +1,11 @@
 set(TESTS simit-test)
 
+find_package(CUDA)
+if (CUDA_FOUND)
+  message("-- Building with gpu-backend")
+  add_definitions(-DGPU)
+endif ()
+
 file(GLOB GTEST_SOURCE gtest/gtest-all.cc)
 file(GLOB GTEST_HEADER gtest/gtest.h)
 include_directories(${SIMIT_TEST_DIR})
