@@ -189,6 +189,7 @@ SIM_TEST(declarations, function_headers);
 SIM_TEST(declarations, objects);
 SIM_TEST(declarations, variables);
 SIM_TEST(declarations, misc);
+SIM_TEST(declarations, fem_tensor);
 
 SIM_TEST_SUITE(controlflow)
 SIM_TEST(controlflow, map);
