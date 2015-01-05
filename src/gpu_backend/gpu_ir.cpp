@@ -79,8 +79,8 @@ protected:
     // Create an initial kernel
     kernels.emplace_back();
     // Rewrite the func, building list of kernels
-    // Always wrap the func body in Block
     IRRewriter::visit(f);
+    kernels.back().sharding = sharding;
     // Recreate the body from proto kernels
     Stmt body;
     if (isa<Block>(f->getBody())) {
@@ -88,7 +88,6 @@ protected:
       for (const internal::GPUProtoKernel& kernel : kernels) {
         if (!kernel.stmts.empty()) {
           Stmt gpuKernel = GPUKernel::make(Block::make(kernel.stmts), kernel.sharding);
-                    << gpuKernel << std::endl;
           kernelStmts.push_back(gpuKernel);
         }
       }
@@ -96,7 +95,7 @@ protected:
     }
     // Handle the case of a single Stmt
     else {
-      body = GPUKernel::make(func.getBody(), kernels.back().sharding);
+      body = GPUKernel::make(func.getBody(), sharding);
     }
 
     // Add shared arg
@@ -109,38 +108,43 @@ protected:
   }
 
   void visit(const Block *op) {
-    internal::GPUSharding before = kernels.back().sharding;
+    // Only preserve sharding if inside a sharded kernel
+    internal::GPUSharding init = sharding;
+    internal::GPUSharding before = init.inShard() ?
+        init : internal::GPUSharding();
     Stmt first = rewrite(op->first);
-    internal::GPUSharding after = kernels.back().sharding;
+    internal::GPUSharding after = sharding;
     if (first.defined() && !isa<Block>(first)) {
-      if (before == after) {
+      if (before == after &&
+          (!sharding.isSharded() || sharding.inShard())) {
         kernels.back().stmts.push_back(first);
       }
-      else if (!kernels.back().stmts.empty()) {
-        // Reset this kernel sharding
-        kernels.back().sharding = before;
+      else {
+        // Save this kernel sharding
+        kernels.back().sharding = init;
         // Make a new kernel
         internal::GPUProtoKernel kernel;
         kernel.stmts.push_back(first);
-        kernel.sharding = after;
         kernels.push_back(kernel);
       }
     }
 
-    before = after;
+    // Only preserve sharding if inside a sharded kernel
+    init = after;
+    before = init.inShard() ? init : internal::GPUSharding();
     Stmt rest = rewrite(op->rest);
-    after = kernels.back().sharding;
+    after = sharding;
     if (rest.defined() && !isa<Block>(rest)) {
-      if (before == after) {
+      if (before == after &&
+          (!sharding.isSharded() || sharding.inShard())) {
         kernels.back().stmts.push_back(rest);
       }
-      else if (!kernels.back().stmts.empty()) {
-        // Reset this kernel sharding
-        kernels.back().sharding = before;
+      else {
+        // Save this kernel sharding
+        kernels.back().sharding = init;
         // Make a new kernel
         internal::GPUProtoKernel kernel;
         kernel.stmts.push_back(rest);
-        kernel.sharding = after;
         kernels.push_back(kernel);
       }
     }
@@ -165,8 +169,7 @@ protected:
   }
 
   void visit(const For *op) {
-    internal::GPUSharding::ShardDimension sharded =
-        kernels.back().sharding.maybeShardFor(op);
+    internal::GPUSharding::ShardDimension sharded = sharding.maybeShardFor(op);
     symtable.scope();
     switch (sharded) {
       case internal::GPUSharding::X: {
@@ -186,9 +189,9 @@ protected:
         break;
       }
     }
-    kernels.back().sharding.scope(sharded);
+    sharding.scope(sharded);
     IRRewriter::visit(op);
-    kernels.back().sharding.unscope(sharded);
+    sharding.unscope(sharded);
     symtable.unscope();
 
     // Rewrite the For statement with sharding information
@@ -237,13 +240,13 @@ protected:
       expr = Load::make(fieldRead, Literal::make(Int, &zero));
     }
     else if (action == XSHARD) {
-      expr = VarExpr::make(kernels.back().sharding.xVar);
+      expr = VarExpr::make(sharding.xVar);
     }
     else if (action == YSHARD) {
-      expr = VarExpr::make(kernels.back().sharding.yVar);
+      expr = VarExpr::make(sharding.yVar);
     }
     else if (action == ZSHARD) {
-      expr = VarExpr::make(kernels.back().sharding.zVar);
+      expr = VarExpr::make(sharding.zVar);
     }
     else {
       IRRewriter::visit(op);
@@ -252,7 +255,7 @@ protected:
 
   void firstAssign(Var var) {
     std::string varName = var.getName();
-    int depth = kernels.back().sharding.getDepth();
+    int depth = sharding.getDepth();
     // iassert(depth >= 0 && depth < 2)
     // << "Sharding depth must be 0, 1, or 2";
     // XXX: Just for now
@@ -275,6 +278,8 @@ protected:
   internal::ScopedMap<ir::Var, VarAction> symtable;
   std::vector<Field> sharedFields;
 
+  // Current sharding info
+  internal::GPUSharding sharding;
   // List of kernels
   std::vector<internal::GPUProtoKernel> kernels;
 
