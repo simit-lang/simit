@@ -195,6 +195,17 @@ public:
 
 private:
   Storage *storage;
+  
+  // class to find leaf vars of an Expr.
+  class LeafVarsVisitor : public IRVisitor {
+    public:
+    std::set<Var> vars;
+    
+    void visit(const VarExpr *op) {
+      vars.insert(op->var);
+    }
+  
+  };
 
   void visit(const VarDecl *op) {
     Var var = op->var;
@@ -208,9 +219,22 @@ private:
   void visit(const AssignStmt *op) {
     Var var = op->var;
     Type type = var.getType();
+    Type rhsType = op->value.type();
+    
     if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
-      bool needsInitialization = !isa<Literal>(op->value);
-      determineStorage(var, needsInitialization);
+      // TODO: this is a hack.  We really should carry around TensorStorage
+      // as part of the type.
+      iassert(type.isTensor());
+      const TensorType *ttype = type.toTensor();
+      if (!isElementTensorType(ttype) && ttype->order() > 1) {
+        // assume system reduced storage
+        determineStorage(var, !isa<Literal>(op->value),
+          op->value);
+        
+      } else {
+        bool needsInitialization = !isa<Literal>(op->value);
+        determineStorage(var, needsInitialization);
+      }
     }
   }
 
@@ -261,6 +285,27 @@ private:
     }
     storage->add(var, tensorStorage);
     return tensorStorage;
+  }
+  
+  //TODO: this should be replaced with something that uses the type of rhs
+  TensorStorage determineStorage(Var var, bool initialize, Expr rhs) {
+    // find leaf vars in the rhs
+    LeafVarsVisitor varVisitor;
+    rhs.accept(&varVisitor);
+ 
+    for (auto v : varVisitor.vars) {
+      if (storage->hasStorage(v)) {
+        const TensorStorage varStorage = storage->get(v);
+        if (varStorage.getKind() == TensorStorage::SystemReduced) {
+          auto tensorStorage = TensorStorage(TensorStorage::SystemReduced,
+            varStorage.getSystemTargetSet(),
+            varStorage.getSystemStorageSet());
+          storage->add(var, tensorStorage);
+        }
+      }
+   
+    }
+    return TensorStorage(TensorStorage::Undefined);
   }
 };
 
