@@ -108,10 +108,9 @@ protected:
   }
 
   void visit(const Block *op) {
+    internal::GPUSharding before = sharding;
     // Only preserve sharding if inside a sharded kernel
-    internal::GPUSharding init = sharding;
-    internal::GPUSharding before = init.inShard() ?
-        init : internal::GPUSharding();
+    sharding = before.inShard() ? before : internal::GPUSharding();
     Stmt first = rewrite(op->first);
     internal::GPUSharding after = sharding;
     if (first.defined() && !isa<Block>(first)) {
@@ -121,7 +120,7 @@ protected:
       }
       else {
         // Save this kernel sharding
-        kernels.back().sharding = init;
+        kernels.back().sharding = before;
         // Make a new kernel
         internal::GPUProtoKernel kernel;
         kernel.stmts.push_back(first);
@@ -129,9 +128,9 @@ protected:
       }
     }
 
+    before = sharding;
     // Only preserve sharding if inside a sharded kernel
-    init = after;
-    before = init.inShard() ? init : internal::GPUSharding();
+    sharding = before.inShard() ? before : internal::GPUSharding();
     Stmt rest = rewrite(op->rest);
     after = sharding;
     if (rest.defined() && !isa<Block>(rest)) {
@@ -141,7 +140,7 @@ protected:
       }
       else {
         // Save this kernel sharding
-        kernels.back().sharding = init;
+        kernels.back().sharding = before;
         // Make a new kernel
         internal::GPUProtoKernel kernel;
         kernel.stmts.push_back(rest);

@@ -41,9 +41,9 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
                           "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
                           "v64:64:64-v128:128:128-n16:32:64");
 
-  llvm::Function *func = createPrototype("kernel.main", irFunc.getArguments(),
-                                         irFunc.getResults(), module,
-                                         false, false);
+  func = createPrototype("kernel.main", irFunc.getArguments(),
+                         irFunc.getResults(), module,
+                         false, false);
 
   // Name LLVM arguments, insert into symtable
   auto arg = func->arg_begin();
@@ -62,7 +62,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
 
   // Build 'entry' basic block
   llvm::BasicBlock *entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", func);
-  builder.reset(new llvm::IRBuilder<>(entry));
+  builder.reset(new LLVMIRBuilder(entry));
 
   irFunc.getBody().accept(this);
 
@@ -220,20 +220,34 @@ void GPUBackend::visit(const ir::For *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::GPUKernel *op) {
-  GPUSharding sharding = op->sharding;
+  GPUSharding kernelSharding = op->sharding;
+
+  // TODO(gkanwar): This is a quick hack, in the long run, we should
+  // actually fire off a kernel for each GPUKernel.
+  if (kernelSharding.isSharded()) {
+    // Just grab the last sharded loop description
+    sharding = kernelSharding;
+  }
 
   symtable.scope();
-  if (sharding.xSharded) {
-    symtable.insert(sharding.xVar, getTidX());
+  if (kernelSharding.xSharded) {
+    symtable.insert(kernelSharding.xVar, getTidX());
   }
-  if (sharding.ySharded) {
-    symtable.insert(sharding.yVar, getTidY());
+  if (kernelSharding.ySharded) {
+    symtable.insert(kernelSharding.yVar, getTidY());
   }
-  if (sharding.zSharded) {
-    symtable.insert(sharding.zVar, getTidZ());
+  if (kernelSharding.zSharded) {
+    symtable.insert(kernelSharding.zVar, getTidZ());
   }
-  LLVMBackend::compile(op->body);
+
+  if (!kernelSharding.isSharded()) {
+    emitTid0Code(op->body);
+  }
+  else {
+    LLVMBackend::compile(op->body);
+  }
   symtable.unscope();
+
   // TODO(gkanwar): Remove this once multiple kernels are supported
   emitThreadBarrier();
 }
@@ -322,6 +336,22 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
       "llvm.nvvm.atomic.load.add.f32.p0f32", funcTy));
   cleanFuncAttrs(func);
   builder->CreateCall2(func, ptr, value);
+}
+
+void GPUBackend::emitTid0Code(const ir::Stmt& body) {
+  // Condition is tid_x == 0 && tid_y == 0 && tid_z == 0
+  llvm::Value *cond = builder->CreateAnd(
+      builder->CreateICmpEQ(getTidX(), llvmInt(0)),
+      builder->CreateAnd(
+          builder->CreateICmpEQ(getTidY(), llvmInt(0)),
+          builder->CreateICmpEQ(getTidZ(), llvmInt(0))));
+  llvm::BasicBlock *then = llvm::BasicBlock::Create(LLVM_CONTEXT, "then", func);
+  llvm::BasicBlock *rest = llvm::BasicBlock::Create(LLVM_CONTEXT, "rest", func);
+  builder->CreateCondBr(cond, then, rest);
+  builder.reset(new LLVMIRBuilder(then));
+  LLVMBackend::compile(body);
+  builder->CreateBr(rest);
+  builder.reset(new LLVMIRBuilder(rest));
 }
 
 void GPUBackend::emitFirstAssign(const ir::Var& var,

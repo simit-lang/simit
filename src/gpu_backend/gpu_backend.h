@@ -25,6 +25,9 @@ private:
   // parallelized across blocks
   GPUSharding sharding;
 
+  // Currently compiling LLVM function
+  llvm::Function *func;
+
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void visit(const ir::FieldRead *);
   virtual void visit(const ir::TensorRead *);
@@ -66,6 +69,7 @@ private:
   void emitThreadBarrier();
   void emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value);
   void emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value);
+  void emitTid0Code(const ir::Stmt& body);
   virtual void emitFirstAssign(const ir::Var& var,
                                const ir::Expr& value);
 };
