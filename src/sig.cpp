@@ -65,6 +65,21 @@ SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop) {
   }
 
   // TODO: Add multi-edge merging: Build a lookup data structure etc.
+  // for now, if the two have all the same endpoints, just return, since
+  // the merging would just change the edge into a multi-edge.
+  bool haveSame = sig1.content->vertices.size() ==
+                  sig2.content->vertices.size();
+  
+  auto pred = [] (decltype(*sig1.content->vertices.begin()) a, decltype(a) b)
+    { return a.first == b.first; };
+  
+  haveSame = haveSame && std::equal(sig1.content->vertices.begin(),
+                                    sig1.content->vertices.end(),
+                                    sig2.content->vertices.begin(),
+                                    pred);
+  if (haveSame)
+    return merged;
+    
   for (auto &e : sig2.content->edges) {
     // Get pointers to the endpoints in the new sig
     vector<SIGVertex*> endpoints;
