@@ -48,7 +48,7 @@ struct Pass;
 struct Print;
 
 #ifdef GPU
-struct GPUFor;
+struct GPUKernel;
 #endif
 
 class Func;
@@ -109,7 +109,7 @@ public:
   virtual void visit(const Print *op);
 
 #ifdef GPU
-  virtual void visit(const GPUFor *op);
+  virtual void visit(const GPUKernel *op);
 #endif
 
   virtual void visit(const Func *f);

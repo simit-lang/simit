@@ -8,27 +8,9 @@
 namespace simit {
 namespace internal {
 
-void GPUSharding::addShardDomain(const ir::GPUFor *op) {
-  ir::ForDomain domain = op->domain;
-  GPUSharding::ShardDimension sharded = op->dimension;
-  switch (sharded) {
-    case X:
-      xDomain = domain.indexSet;
-      xSharded = true;
-      break;
-    case Y:
-      yDomain = domain.indexSet;
-      ySharded = true;
-      break;
-    case Z:
-      zDomain = domain.indexSet;
-      zSharded = true;
-      break;
-  }
-}
-
 GPUSharding::ShardDimension GPUSharding::maybeShardFor(const ir::For *op) {
   ir::ForDomain domain = op->domain;
+  ir::Var var = op->var;
   if (domain.kind == ir::ForDomain::IndexSet &&
       domain.indexSet.getKind() != ir::IndexSet::Range) {
     if (domain.indexSet == xDomain) {
@@ -42,22 +24,38 @@ GPUSharding::ShardDimension GPUSharding::maybeShardFor(const ir::For *op) {
     }
     else if (!xSharded) {
       xDomain = domain.indexSet;
+      xVar = var;
       xSharded = true;
       return X;
     }
     else if (!ySharded) {
       yDomain = domain.indexSet;
+      yVar = var;
       ySharded = true;
       return Y;
     }
     else if (!zSharded) {
       zDomain = domain.indexSet;
+      zVar = var;
       zSharded = true;
       return Z;
     }
   }
   return NONE;
 }
+
+bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2) {
+  return (!sharding1.xSharded && !sharding2.xSharded ||
+          sharding1.xSharded && sharding2.xSharded &&
+          sharding1.xDomain == sharding2.xDomain) &&
+      (!sharding1.ySharded && !sharding2.ySharded ||
+       sharding1.ySharded && sharding2.ySharded &&
+       sharding1.yDomain == sharding2.yDomain) &&
+      (!sharding1.zSharded && !sharding2.zSharded ||
+       sharding1.zSharded && sharding2.zSharded &&
+       sharding1.zDomain == sharding2.zDomain);
+}
+
 
 }  // namespace simit::internal
 
@@ -72,46 +70,144 @@ public:
 protected:
   void visit(const Func *f) {
     for (auto &arg : f->getArguments()) {
-      symtable.insert(arg.getName(), false);
+      symtable.insert(arg, NONE);
     }
     for (auto &res : f->getResults()) {
-      symtable.insert(res.getName(), false);
+      symtable.insert(res, NONE);
     }
+
+    // Create an initial kernel
+    kernels.emplace_back();
+    // Rewrite the func, building list of kernels
+    // Always wrap the func body in Block
     IRRewriter::visit(f);
+    // Recreate the body from proto kernels
+    Stmt body;
+    if (isa<Block>(f->getBody())) {
+      std::vector<Stmt> kernelStmts;
+      for (const internal::GPUProtoKernel& kernel : kernels) {
+        if (!kernel.stmts.empty()) {
+          Stmt gpuKernel = GPUKernel::make(Block::make(kernel.stmts), kernel.sharding);
+                    << gpuKernel << std::endl;
+          kernelStmts.push_back(gpuKernel);
+        }
+      }
+      body = kernelStmts.empty() ? Stmt() : Block::make(kernelStmts);
+    }
+    // Handle the case of a single Stmt
+    else {
+      body = GPUKernel::make(func.getBody(), kernels.back().sharding);
+    }
+
     // Add shared arg
     std::vector<Var> args = func.getArguments();
     sharedVar = Var("$shared", SetType::make(
         ElementType::make("$shared", sharedFields), {}));
     args.push_back(sharedVar);
     func = Func(func.getName(), args, func.getResults(),
-                func.getBody(), func.getKind());
+                body, func.getKind());
+  }
+
+  void visit(const Block *op) {
+    internal::GPUSharding before = kernels.back().sharding;
+    Stmt first = rewrite(op->first);
+    internal::GPUSharding after = kernels.back().sharding;
+    if (first.defined() && !isa<Block>(first)) {
+      if (before == after) {
+        kernels.back().stmts.push_back(first);
+      }
+      else if (!kernels.back().stmts.empty()) {
+        // Reset this kernel sharding
+        kernels.back().sharding = before;
+        // Make a new kernel
+        internal::GPUProtoKernel kernel;
+        kernel.stmts.push_back(first);
+        kernel.sharding = after;
+        kernels.push_back(kernel);
+      }
+    }
+
+    before = after;
+    Stmt rest = rewrite(op->rest);
+    after = kernels.back().sharding;
+    if (rest.defined() && !isa<Block>(rest)) {
+      if (before == after) {
+        kernels.back().stmts.push_back(rest);
+      }
+      else if (!kernels.back().stmts.empty()) {
+        // Reset this kernel sharding
+        kernels.back().sharding = before;
+        // Make a new kernel
+        internal::GPUProtoKernel kernel;
+        kernel.stmts.push_back(rest);
+        kernel.sharding = after;
+        kernels.push_back(kernel);
+      }
+    }
+
+    if (first == op->first && rest == op->rest) {
+      stmt = op;
+    }
+    else {
+      if (first.defined() && rest.defined()) {
+        stmt = Block::make(first, rest);
+      }
+      else if (first.defined() && !rest.defined()) {
+        stmt = first;
+      }
+      else if (!first.defined() && rest.defined()) {
+        stmt = rest;
+      }
+      else {
+        stmt = Stmt();
+      }
+    }
   }
 
   void visit(const For *op) {
-    internal::GPUSharding::ShardDimension sharded = sharding.maybeShardFor(op);
-    sharding.scope(sharded);
+    internal::GPUSharding::ShardDimension sharded =
+        kernels.back().sharding.maybeShardFor(op);
     symtable.scope();
-    symtable.insert(op->var.getName(), false);
+    switch (sharded) {
+      case internal::GPUSharding::X: {
+        symtable.insert(op->var, XSHARD);
+        break;
+      }
+      case internal::GPUSharding::Y: {
+        symtable.insert(op->var, YSHARD);
+        break;
+      }
+      case internal::GPUSharding::Z: {
+        symtable.insert(op->var, ZSHARD);
+        break;
+      }
+      default: {
+        symtable.insert(op->var, NONE);
+        break;
+      }
+    }
+    kernels.back().sharding.scope(sharded);
     IRRewriter::visit(op);
+    kernels.back().sharding.unscope(sharded);
     symtable.unscope();
-    sharding.unscope(sharded);
 
     // Rewrite the For statement with sharding information
     if (sharded != internal::GPUSharding::NONE) {
       const ir::For* forStmt = ir::to<ir::For>(stmt);
-      stmt = GPUFor::make(forStmt->var, forStmt->domain,
-                          forStmt->body, sharded);
+      // Cannot assign directly from pointer held by stmt
+      Stmt body = forStmt->body;
+      stmt = body;
     }
   }
 
   void visit(const AssignStmt *op) {
     const std::string& varName = op->var.getName();
-    if (!symtable.contains(varName)) {
+    if (!symtable.contains(op->var)) {
       firstAssign(op->var);
     }
     Expr value = rewrite(op->value);
     // Rewrite the assign as a field write
-    if (symtable.get(varName)) {
+    if (symtable.get(op->var) == LIFT) {
       // TODO(gkanwar): This type is incorrect for the set, because it doesn't
       // include future fields.
       Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
@@ -120,14 +216,18 @@ protected:
       auto fieldRead = FieldRead::make(Var("$shared", type), varName);
       stmt = Store::make(fieldRead, Literal::make(Int, &zero), value, op->cop);
     }
-    else {
+    else if (symtable.get(op->var) == NONE) {
       stmt = AssignStmt::make(op->var, value, op->cop);
+    }
+    else {
+      ierror << "Invalid assign to sharded var: " << op->var;
     }
   }
 
   void visit(const VarExpr *op) {
     // Rewrite the read as a field read from the shared set
-    if (symtable.get(op->var.getName())) {
+    VarAction action = symtable.get(op->var);
+    if (action == LIFT) {
       // This type is incorrect for the set, because it doesn't
       // include future fields. ReplaceShared will fix this in a second pass.
       Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
@@ -136,6 +236,15 @@ protected:
       auto fieldRead = FieldRead::make(Var("$shared", type), op->var.getName());
       expr = Load::make(fieldRead, Literal::make(Int, &zero));
     }
+    else if (action == XSHARD) {
+      expr = VarExpr::make(kernels.back().sharding.xVar);
+    }
+    else if (action == YSHARD) {
+      expr = VarExpr::make(kernels.back().sharding.yVar);
+    }
+    else if (action == ZSHARD) {
+      expr = VarExpr::make(kernels.back().sharding.zVar);
+    }
     else {
       IRRewriter::visit(op);
     }
@@ -143,27 +252,31 @@ protected:
 
   void firstAssign(Var var) {
     std::string varName = var.getName();
-    int depth = sharding.getDepth();
-    iassert(depth >= 0 && depth < 2)
-    << "Sharding depth must be 0, 1, or 2";
+    int depth = kernels.back().sharding.getDepth();
+    // iassert(depth >= 0 && depth < 2)
+    // << "Sharding depth must be 0, 1, or 2";
+    // XXX: Just for now
+    iassert(depth == 0);
     const TensorType *origType = var.getType().toTensor();
     Type type = TensorType::make(origType->componentType,
                                  origType->dimensions,
                                  origType->isColumnVector);
-    for (int dim = 0; dim < depth; ++dim) {
-      // Use a dummy dimension of 1
-      const_cast<TensorType*>(type.toTensor())
-          ->dimensions.emplace_back(IndexSet(1));
-    }
+    // for (int dim = 0; dim < depth; ++dim) {
+    //   // Use a dummy dimension of 1
+    //   const_cast<TensorType*>(type.toTensor())
+    //       ->dimensions.emplace_back(IndexSet(1));
+    // }
     sharedFields.emplace_back(varName, type);
-    symtable.insert(varName, true);
+    symtable.insert(var, LIFT);
   }
 
-  // Map from symbol to whether it is being lifted to the shared set
-  internal::ScopedMap<std::string, bool> symtable;
+  // Map from symbol to transformative action
+  enum VarAction { NONE, LIFT, XSHARD, YSHARD, ZSHARD };
+  internal::ScopedMap<ir::Var, VarAction> symtable;
   std::vector<Field> sharedFields;
-  internal::GPUSharding sharding;
 
+  // List of kernels
+  std::vector<internal::GPUProtoKernel> kernels;
 
   Var sharedVar;
 };

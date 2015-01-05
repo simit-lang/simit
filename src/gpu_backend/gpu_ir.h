@@ -15,6 +15,7 @@ public:
   GPUSharding() {}
   ~GPUSharding() {}
 
+  // TODO(gkanwar): Remove scoping
   void scope(ShardDimension dim) {
     switch (dim) {
       case X: {
@@ -68,8 +69,6 @@ public:
     return depth;
   }
 
-  // Update the tracked sharded variables to include the sharded GPUFor loop
-  void addShardDomain(const ir::GPUFor *op);
   // Choose an available dimension and shard the For loop if possible
   ShardDimension maybeShardFor(const ir::For *op);
 
@@ -82,6 +81,16 @@ public:
   ir::IndexSet xDomain;
   ir::IndexSet yDomain;
   ir::IndexSet zDomain;
+  ir::Var xVar;
+  ir::Var yVar;
+  ir::Var zVar;
+};
+
+bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2);
+
+struct GPUProtoKernel {
+  std::vector<ir::Stmt> stmts;
+  GPUSharding sharding;
 };
 
 }  // namespace simit::internal
@@ -89,19 +98,14 @@ public:
 
 namespace ir {
 
-struct GPUFor : public StmtNode<GPUFor> {
-  Var var;
-  ForDomain domain;
+struct GPUKernel : public StmtNode<GPUKernel> {
   Stmt body;
-  internal::GPUSharding::ShardDimension dimension;
+  internal::GPUSharding sharding;
 
-  static Stmt make(Var var, ForDomain domain, Stmt body,
-                   internal::GPUSharding::ShardDimension dimension) {
-    GPUFor *node = new GPUFor;
-    node->var = var;
-    node->domain = domain;
+  static Stmt make(Stmt body, internal::GPUSharding sharding) {
+    GPUKernel *node = new GPUKernel;
     node->body = body;
-    node->dimension = dimension;
+    node->sharding = sharding;
     return node;
   }
 };

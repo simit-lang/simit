@@ -219,36 +219,22 @@ void GPUBackend::visit(const ir::ForRange *op) {
 void GPUBackend::visit(const ir::For *op) {
   LLVMBackend::visit(op);
 }
-void GPUBackend::visit(const ir::GPUFor *op) {
-  std::string iName = op->var.getName();
-  ir::ForDomain domain = op->domain;
-  
-  // Only supports sharding over index set
-  sharding.addShardDomain(op);
-  GPUSharding::ShardDimension sharded = op->dimension;
-  iassert(sharded != GPUSharding::NONE);
+void GPUBackend::visit(const ir::GPUKernel *op) {
+  GPUSharding sharding = op->sharding;
 
-  llvm::Value *index;
-  switch (sharded) {
-    case GPUSharding::X:
-      std::cout << "Sharding " << iName << " over x dimension" << std::endl;
-      index = getTidX();
-      break;
-    case GPUSharding::Y:
-      std::cout << "Sharding " << iName << " over y dimension" << std::endl;
-      index = getTidY();
-      break;
-    case GPUSharding::Z:
-      std::cout << "Sharding " << iName << " over z dimension" << std::endl;
-      index = getTidZ();
-      break;
-  }
-  sharding.scope(sharded);
   symtable.scope();
-  symtable.insert(op->var, index);
+  if (sharding.xSharded) {
+    symtable.insert(sharding.xVar, getTidX());
+  }
+  if (sharding.ySharded) {
+    symtable.insert(sharding.yVar, getTidY());
+  }
+  if (sharding.zSharded) {
+    symtable.insert(sharding.zVar, getTidZ());
+  }
   LLVMBackend::compile(op->body);
   symtable.unscope();
-  sharding.unscope(sharded);
+  // TODO(gkanwar): Remove this once multiple kernels are supported
   emitThreadBarrier();
 }
 void GPUBackend::visit(const ir::IfThenElse *op) {
@@ -341,7 +327,7 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
 void GPUBackend::emitFirstAssign(const ir::Var& var,
                                  const ir::Expr& value) {
   // TODO(gkanwar): This doesn't handle sharding later in the code
-  if (sharding.isSharded() && !sharding.inShard()) {
+  if (sharding.isSharded()) {
     not_supported_yet;
   }
   else {

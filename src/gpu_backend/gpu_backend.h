@@ -54,7 +54,7 @@ private:
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
 
-  virtual void visit(const ir::GPUFor *);
+  virtual void visit(const ir::GPUKernel *);
 
   // Emits calls to nvvm intrinsics to read thread ids
   llvm::Value *emitBarrier();

@@ -195,12 +195,6 @@ void IRVisitor::visit(const Block *op) {
 void IRVisitor::visit(const Pass *op) {
 }
 
-#ifdef GPU
-void IRVisitor::visit(const GPUFor *op) {
-  op->body.accept(this);
-}
-#endif
-
 void IRVisitor::visit(const Func *op) {
   op->getBody().accept(this);
 }
@@ -208,6 +202,12 @@ void IRVisitor::visit(const Func *op) {
 void IRVisitor::visit(const Print *op) {
   op->expr.accept(this);
 }
+
+#ifdef GPU
+void IRVisitor::visit(const GPUKernel *op) {
+  op->body.accept(this);
+}
+#endif
 
 
 // IRQuery
