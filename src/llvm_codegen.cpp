@@ -23,8 +23,8 @@ llvm::ConstantInt *llvmUInt(long long unsigned int val, unsigned bits) {
   return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(bits, val, false));
 }
 
-llvm::ConstantFP *llvmFP(double val, unsigned bits) {
-  return llvm::ConstantFP::get(LLVM_CONTEXT, llvm::APFloat(val));
+llvm::Constant *llvmFP(double val, unsigned bits) {
+  return llvm::ConstantFP::get(getLLVMFloatType(), val);
 }
 
 llvm::Type *createLLVMType(ScalarType stype) {
@@ -32,7 +32,7 @@ llvm::Type *createLLVMType(ScalarType stype) {
     case ScalarType::Int:
       return LLVM_INT;
     case ScalarType::Float:
-      return LLVM_DOUBLE;
+      return getLLVMFloatType();
     case ScalarType::Boolean:
       return LLVM_BOOL;
   }
@@ -43,7 +43,7 @@ llvm::Type *llvmPtrType(ScalarType stype) {
     case ScalarType::Int:
       return LLVM_INTPTR;
     case ScalarType::Float:
-      return LLVM_DOUBLEPTR;
+      return getLLVMFloatPtrType();
     case ScalarType::Boolean:
       return LLVM_BOOL;
   }
@@ -72,7 +72,8 @@ Type simitType(const llvm::Type *type) {
     type = type->getPointerElementType();
   }
 
-  if (type->isDoubleTy()) {
+  if (ScalarType::singleFloat() && type->isFloatTy() ||
+      !ScalarType::singleFloat() && type->isDoubleTy()) {
     return Float;
   }
   else if (type->isIntegerTy()) {
@@ -89,6 +90,24 @@ llvm::Type *createLLVMType(const TensorType *ttype) {
 
 /// One for endpoints, two for neighbor index
 extern const int NUM_EDGE_INDEX_ELEMENTS = 3;
+
+llvm::Type *getLLVMFloatType() {
+  if (ScalarType::singleFloat()) {
+    return LLVM_FLOAT;
+  }
+  else {
+    return LLVM_DOUBLE;
+  }
+}
+
+llvm::Type *getLLVMFloatPtrType() {
+  if (ScalarType::singleFloat()) {
+    return LLVM_FLOATPTR;
+  }
+  else {
+    return LLVM_DOUBLEPTR;
+  }
+}
 
 // TODO: replace anonymous struct with one struct per element and set type
 llvm::StructType *createLLVMType(const ir::SetType *setType) {

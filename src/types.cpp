@@ -9,6 +9,15 @@
 namespace simit {
 namespace ir {
 
+// Default to double size
+int ScalarType::floatBytes = sizeof(double);
+
+bool ScalarType::singleFloat() {
+  iassert(floatBytes == sizeof(float) || floatBytes == sizeof(double))
+      << "Invalid float size: " << floatBytes;
+  return floatBytes == sizeof(float);
+}
+
 // struct TensorType
 std::vector<IndexSet> TensorType::outerDimensions() const {
   unsigned maxNest = 0;

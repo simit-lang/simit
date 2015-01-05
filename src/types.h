@@ -64,7 +64,11 @@ struct ScalarType {
   ScalarType() : kind(Int) {}
   ScalarType(Kind kind) : kind(kind) {}
 
+  static int floatBytes;
+
   Kind kind;
+
+  static bool singleFloat();
 
   // TODO: Add variable bit sizes later
 //  unsigned bits;
@@ -79,7 +83,7 @@ struct ScalarType {
     }
     else {
       iassert(isFloat());
-      return 8;
+      return floatBytes;
     }
   }
 

@@ -29,7 +29,7 @@ TEST(Set, AddAndGetFromTwoFields) {
   ASSERT_EQ(myset.getSize(), 1);
   
   ASSERT_EQ(10, f1.get(i));
-  ASSERT_EQ(101.1, f2.get(i));
+  ASSERT_DOUBLE_EQ(101.1, f2.get(i));
 }
 
 TEST(Set, IncreaseCapacity) {
@@ -271,9 +271,9 @@ TEST(EdgeSet, EdgeIteratorTest) {
        iter < edges.endpoints_end(e1);
        iter++) {
     if (count==0)
-      ASSERT_EQ(x.get(*iter), 1.1);
+      ASSERT_DOUBLE_EQ(x.get(*iter), 1.1);
     if (count==1)
-      ASSERT_EQ(x.get(*iter), 3.1);
+      ASSERT_DOUBLE_EQ(x.get(*iter), 3.1);
     count++;
   }
   

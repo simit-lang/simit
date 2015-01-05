@@ -1,4 +1,5 @@
 file(GLOB UTIL_SOURCES "${SIMIT_TOOLS_DIR}/*.cpp")
+
 foreach(UTIL_SOURCE ${UTIL_SOURCES})
 	get_filename_component(UTIL ${UTIL_SOURCE} NAME_WE)
 	add_executable(${UTIL} ${UTIL_SOURCE})

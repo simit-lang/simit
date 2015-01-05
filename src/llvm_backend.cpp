@@ -226,8 +226,10 @@ void LLVMBackend::visit(const Literal *op) {
         break;
       }
       case ScalarType::Float: {
-        iassert(ctype.bytes() == 8) << "Only 8-byte floats currently supported";
-        val = llvmFP(((double*)op->data)[0]);
+        iassert(ctype.bytes() == ScalarType::floatBytes)
+            << "Only " << ScalarType::floatBytes
+            << "-byte float mode allowed by current float setting";
+        val = llvmFP(op->getFloatVal(0));
         break;
       }
       case ScalarType::Boolean: {
@@ -302,11 +304,13 @@ void LLVMBackend::visit(const Call *op) {
            op->func == ir::Intrinsics::tan   ||
            op->func == ir::Intrinsics::asin  ||
            op->func == ir::Intrinsics::acos    ) {
-    auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
+    auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
+    std::string funcName = op->func.getName() +
+        (ir::ScalarType::singleFloat() ? "_f32" : "_f64");
     fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      op->func.getName(),ftype));
+        funcName,ftype));
   }
-   else if (op->func == ir::Intrinsics::norm) {
+  else if (op->func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);
     auto type = op->actuals[0].type().toTensor();
     
@@ -327,11 +331,13 @@ void LLVMBackend::visit(const Call *op) {
 
       llvm::Function *sqrt= llvm::Intrinsic::getDeclaration(module,
                                                             llvm::Intrinsic::sqrt,
-                                                            {LLVM_DOUBLE});
+                                                            {getLLVMFloatType()});
       val = builder->CreateCall(sqrt, sum);
     } else {
       args.push_back(emitComputeLen(type->dimensions[0]));
-      val = emitCall("norm", args, LLVM_DOUBLE);
+      std::string funcName = ir::ScalarType::singleFloat() ?
+          "norm_f32" : "norm_f64";
+      val = emitCall(funcName, args, getLLVMFloatType());
     }
     
     return;
@@ -340,15 +346,18 @@ void LLVMBackend::visit(const Call *op) {
     // FIX: compile is making these be LLVM_DOUBLE, but I need
     // LLVM_DOUBLEPTR
     std::vector<llvm::Type*> argTypes2 =
-        {LLVM_DOUBLEPTR, LLVM_DOUBLEPTR, LLVM_DOUBLEPTR, LLVM_INT, LLVM_INT};
+        {getLLVMFloatPtrType(), getLLVMFloatPtrType(), getLLVMFloatPtrType(),
+         LLVM_INT, LLVM_INT};
 
     auto type = op->actuals[0].type().toTensor();
     args.push_back(emitComputeLen(type->dimensions[0]));
     args.push_back(emitComputeLen(type->dimensions[1]));
 
-    auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes2, false);
-    fun = llvm::cast<llvm::Function>(module->getOrInsertFunction("cMatSolve",
-                                                                 ftype));
+    auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes2, false);
+    std::string funcName = ir::ScalarType::singleFloat() ?
+        "cMatSolve_f32" : "cMatSolve_f64";
+    fun = llvm::cast<llvm::Function>(
+        module->getOrInsertFunction(funcName, ftype));
   }
   else if (op->func == ir::Intrinsics::loc) {
     val = emitCall("loc", args, LLVM_INT);
@@ -361,7 +370,9 @@ void LLVMBackend::visit(const Call *op) {
     uassert(type1->dimensions[0] == type2->dimensions[0]) <<
       "dimension mismatch in dot product";
     args.push_back(emitComputeLen(type1->dimensions[0]));
-    val = emitCall("dot", args, LLVM_DOUBLE);
+    std::string funcName = ir::ScalarType::singleFloat() ?
+        "dot_f32" : "dot_f64";
+    val = emitCall(funcName, args, getLLVMFloatType());
     return;
   }
   else {
@@ -562,7 +573,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
     iassert(op->cop.kind == CompoundOperator::None)
         << "Compound write when assigning scalar to n-order tensor";
     if (isa<Literal>(op->value) &&
-        ((double*)to<Literal>(op->value)->data)[0] == 0.0) {
+        to<Literal>(op->value)->getFloatVal(0) == 0.0) {
       // emit memset 0
       llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
 
@@ -1132,7 +1143,7 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
   // Assigning a scalar to an n-order tensor
   else if (varType->order() > 0 && valType->order() == 0) {
     if (isa<Literal>(value) &&
-        ((double*)to<Literal>(value)->data)[0] == 0.0) {
+        to<Literal>(value)->getFloatVal(0) == 0.0) {
       // emit memset 0
       llvm::Value *varLen = emitComputeLen(varType, storage.get(var));
       unsigned compSize = varType->componentType.bytes();

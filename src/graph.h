@@ -12,6 +12,7 @@
 #include "tensor_components.h"
 #include "variadic.h"
 #include "error.h"
+#include "types.h"
 
 namespace simit {
 
@@ -157,8 +158,14 @@ public:
       iassert(isValidComponentType(f->type->getComponentType()));
       switch (f->type->getComponentType()) {
         case ComponentType::FLOAT: {
-          double* data = (double*)f->data;
-          data[element.ident] = data[numElements-1];
+          if (ir::ScalarType::singleFloat()) {
+            float* data = (float*)f->data;
+            data[element.ident] = data[numElements-1];
+          }
+          else {
+            double* data = (double*)f->data;
+            data[element.ident] = data[numElements-1];
+          }
           break;
         }
         case ComponentType::INT: {
@@ -565,6 +572,7 @@ protected:
 
   template <typename T>
   inline T *getElemDataPtr(ElementRef element, size_t elementFieldSize) const {
+    iassert(sizeof(T) == componentSize(fieldData->type->getComponentType()));
     return &static_cast<T*>(data)[element.ident * elementFieldSize];
   }
 

@@ -255,6 +255,25 @@ struct Literal : public ExprNode<Literal> {
     return Literal::make(type, nullptr);
   }
 
+  static Expr make(int val) {
+    return make(Int, &val);
+  }
+
+  static Expr make(double val) {
+    // Choose appropriate precision
+    if (ScalarType::singleFloat()) {
+      float floatVal = (float) val;
+      return make(Float, &floatVal);
+    }
+    else {
+      return make(Float, &val);
+    }
+  }
+
+  static Expr make(bool val) {
+    return make(Boolean, &val);
+  }
+
   static Expr make(Type type, void *values) {
     iassert(type.isTensor()) << "only tensor literals are supported for now";
 
@@ -287,7 +306,28 @@ struct Literal : public ExprNode<Literal> {
 
   static Expr make(Type type, std::vector<double> values) {
     iassert(isScalar(type) || type.toTensor()->size() == values.size());
-    return Literal::make(type, values.data());
+    iassert(type.toTensor()->componentType.kind == ScalarType::Float)
+        << "Float array constructor must use float component type";
+    if (ScalarType::singleFloat()) {
+      // Convert double vector to float vector
+      std::vector<float> floatValues;
+      for (double val : values) {
+        floatValues.push_back(val);
+      }
+      return Literal::make(type, floatValues.data());
+    }
+    else {
+      return Literal::make(type, values.data());
+    }
+  }
+
+  double getFloatVal(int index) const {
+    if (ScalarType::singleFloat()) {
+      return ((float*)data)[index];
+    }
+    else {
+      return ((double*)data)[index];
+    }
   }
 
   ~Literal() {free(data);}

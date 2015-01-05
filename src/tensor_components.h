@@ -5,6 +5,7 @@
 #include <string>
 
 #include "error.h"
+#include "types.h"
 
 namespace simit {
 
@@ -16,8 +17,15 @@ template<typename T> inline ComponentType typeOf() {
   iassert(false) << "Unsupported type";
 }
 
-template<> inline ComponentType typeOf<int>   () {return ComponentType::INT;  }
-template<> inline ComponentType typeOf<double>() {return ComponentType::FLOAT;}
+template<> inline ComponentType typeOf<int>   () {return ComponentType::INT;}
+template<> inline ComponentType typeOf<float>() {
+  iassert(ir::ScalarType::floatBytes == 4);
+  return ComponentType::FLOAT;
+}
+template<> inline ComponentType typeOf<double>() {
+  iassert(ir::ScalarType::floatBytes == 8);
+  return ComponentType::FLOAT;
+}
 
 
 inline bool isValidComponentType(ComponentType componentType) {
@@ -29,7 +37,7 @@ inline std::size_t componentSize(ComponentType ct) {
     case ComponentType::INT:
       return sizeof(int);
     case ComponentType::FLOAT:
-      return sizeof(double);
+      return ir::ScalarType::floatBytes;
   }
   unreachable;
   return 0;

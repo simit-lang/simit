@@ -19,6 +19,8 @@
 
 #define LLVM_INT       llvm::Type::getInt32Ty(LLVM_CONTEXT)
 #define LLVM_INTPTR    llvm::Type::getInt32PtrTy(LLVM_CONTEXT)
+#define LLVM_FLOAT     llvm::Type::getFloatTy(LLVM_CONTEXT)
+#define LLVM_FLOATPTR  llvm::Type::getFloatPtrTy(LLVM_CONTEXT)
 #define LLVM_DOUBLE    llvm::Type::getDoubleTy(LLVM_CONTEXT)
 #define LLVM_DOUBLEPTR llvm::Type::getDoublePtrTy(LLVM_CONTEXT)
 #define LLVM_BOOL      llvm::Type::getInt1Ty(LLVM_CONTEXT)
@@ -37,7 +39,7 @@ namespace internal {
 
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
-llvm::ConstantFP* llvmFP(double val, unsigned bits=64);
+llvm::Constant* llvmFP(double val, unsigned bits=64);
 // use llvm::ConstantInt::getTrue() or llvm::ConstantInt::getFalse() for boolean
 // literals
 
@@ -46,6 +48,10 @@ llvm::ConstantFP* llvmFP(double val, unsigned bits=64);
 
 /// The number of index struct elements that are compiled into an edge struct.
 extern const int NUM_EDGE_INDEX_ELEMENTS;
+
+extern bool singlePrecision;
+llvm::Type *getLLVMFloatType();
+llvm::Type *getLLVMFloatPtrType();
 
 llvm::Type *createLLVMType(ir::ScalarType stype);
 

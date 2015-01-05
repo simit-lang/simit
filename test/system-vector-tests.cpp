@@ -4,6 +4,7 @@
 #include "program.h"
 #include "function.h"
 #include "error.h"
+#include "types.h"
 
 using namespace std;
 using namespace simit;
