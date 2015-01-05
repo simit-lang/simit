@@ -64,7 +64,7 @@ struct ScalarType {
   ScalarType() : kind(Int) {}
   ScalarType(Kind kind) : kind(kind) {}
 
-  static int floatBytes;
+  static unsigned floatBytes;
 
   Kind kind;
 
