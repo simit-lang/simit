@@ -35,6 +35,7 @@ using namespace simit::internal;
 "tensor"              { return Parser::token::TENSOR;    }
 "element"             { return Parser::token::ELEMENT;   }
 "set"                 { return Parser::token::SET;       }
+"var"                 { return Parser::token::VAR;       }
 "const"               { return Parser::token::CONST;     }
 "extern"              { return Parser::token::EXTERN;    }
 "proc"                { return Parser::token::PROC;      }

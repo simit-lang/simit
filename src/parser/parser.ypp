@@ -213,6 +213,7 @@
 %token TENSOR    "tensor"
 %token ELEMENT   "element"
 %token SET       "set"
+%token VAR       "var"
 %token CONST     "const"
 %token EXTERN    "extern"
 %token PROC      "proc"
@@ -445,12 +446,7 @@ argument_decl
     auto type = convertAndDelete($type);
     $$ = new Var(name, type);
   }
-  | IDENT ":" type {
-    std::string name = convertAndFree($IDENT);
-
-    auto type = convertAndDelete($type);
-    $$ = new Var(name, type);
-  }
+  | var_decl
 
 
 %type <vars> results;
@@ -477,11 +473,7 @@ result_list
 
 %type <var> result_decl;
 result_decl
-  : IDENT ":" type {
-    std::string name = convertAndFree($IDENT);
-    auto type = convertAndDelete($type);
-    $$ = new Var(name, type);
-  }
+  : var_decl
 
 
 // Statements
@@ -501,7 +493,8 @@ stmts
   | stmts stmt
 
 stmt
-  : assign_stmt
+  : var_decl_stmt
+  | assign_stmt
   | map_stmt
   | field_write_stmt
   | tensor_write_stmt
@@ -512,11 +505,54 @@ stmt
   | expr_stmt
   | print_stmt
 
+
+// Variable Declarations
+var_decl_stmt
+  : "var" var_decl ";" {
+    Var var = convertAndDelete($var_decl);
+
+    if (ctx->hasSymbol(var.getName())) {
+      REPORT_ERROR("variable redeclaration", @var_decl);
+    }
+
+    ctx->addSymbol(var.getName(), var, Symbol::ReadWrite);
+    ctx->addStatement(VarDecl::make(var));
+  }
+  | "var" var_decl "=" expr ";" {
+    iassert($expr != nullptr) << "initialization expression is null" ;
+
+    Var var = convertAndDelete($var_decl);
+    Expr value = convertAndDelete($expr);
+
+    if (isScalar(value.type())) {
+      if (!var.getType().isTensor()) {
+        REPORT_ERROR("attempting to assign a scalar to a non-tensor", @expr);
+      }
+    }
+    else {
+      CHECK_TYPE_EQUALITY(var.getType(), value.type(), @expr);
+    }
+
+    ctx->addSymbol(var.getName(), var, Symbol::ReadWrite);
+    ctx->addStatement(VarDecl::make(var));
+    ctx->addStatement(AssignStmt::make(var, value));
+  }
+
+%type <var> var_decl;
+var_decl
+  : IDENT ":" type {
+    std::string name = convertAndFree($IDENT);
+    auto type = convertAndDelete($type);
+    $$ = new Var(name, type);
+  }
+
+
+// Assign Statement
 assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
   // map statements...  This is too hacky and must be fixed.
   : idents "=" expr ";" {
-    iassert($expr != nullptr) << "assigned expression" << "is null" ;
+    iassert($expr != nullptr) << "assigned expression is null" ;
 
     auto varNames = convertAndDelete($idents);
     Expr value = convertAndDelete($expr);
@@ -683,12 +719,11 @@ field_write_stmt
 
 tensor_write_stmt
   : IDENT "(" expr_list ")" "=" expr ";" {
+    iassert($expr != nullptr) << "assigned expression" << "is null" ;
+
     std::string tensorName = convertAndFree($1);
     auto indices = unique_ptr<vector<Expr>>($expr_list);
-    if ($expr == nullptr) break;  // TODO: remove check
     Expr value = convertAndDelete($expr);
-
-    if(!ctx->hasSymbol(tensorName)) break;  // TODO: Remove check
 
     if (!ctx->hasSymbol(tensorName)) {
       REPORT_ERROR(tensorName + " is not defined in scope", @1);
@@ -702,15 +737,15 @@ tensor_write_stmt
     Expr tensorExpr = tensorSymbol.getExpr();
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
   }
+  //TODO: This rule really should be:
+  // field_read_expr "(" expr_list ")" "=" expr ";"
+  // but this requires reworking a lot of the parser.
   | IDENT "." IDENT[fieldName] "(" expr_list ")" "=" expr ";" {
-    //TODO: This rule really should be:
-    // field_read_expr "(" expr_list ")" "=" expr ";"
-    // but this requires reworking a lot of the parser.
+    iassert($expr != nullptr) << "assigned expression" << "is null" ;
  
     string setName = convertAndFree($1);
     string fieldName = convertAndFree($3);
     auto indices = unique_ptr<vector<Expr>>($expr_list);
-    if ($expr == nullptr) break;  // TODO: remove check
     Expr value = convertAndDelete($expr);
 
     if (!ctx->hasSymbol(setName)) {
@@ -814,16 +849,15 @@ for_stmt
   }
 
 %type <var> for_stmt_header;
-for_stmt_header 
- : "for" IDENT "in" {
- string varName = convertAndFree($IDENT);
- Var * var = new Var(varName, Int);     
- ctx->scope();
- // If we need to write to loop variables, then that should be added as a
- // separate loop structure (that can't be vectorized easily)
- ctx->addSymbol(varName, *var, Symbol::Read);
-
- $$=var;
+for_stmt_header
+  : "for" IDENT "in" {
+    string varName = convertAndFree($IDENT);
+    Var * var = new Var(varName, Int);
+    ctx->scope();
+    // If we need to write to loop variables, then that should be added as a
+    // separate loop structure (that can't be vectorized easily)
+    ctx->addSymbol(varName, *var, Symbol::Read);
+    $$=var;
  }
   
 for_stmt_footer
@@ -909,7 +943,7 @@ ident_expr
 %type <expr> paren_expr;
 paren_expr
   : "(" expr ")" {
-    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    iassert($expr != nullptr) << "expression in parenthesis is null" ;
     $$ = $2;
   }
 
@@ -918,7 +952,7 @@ paren_expr
 %type <expr> linear_algebra_expr;
 linear_algebra_expr
   : "-" expr %prec NEG {
-    if ($2 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    iassert($2 != nullptr) << "negated expression is null" ;
 
     Expr expr = convertAndDelete($2);
     CHECK_IS_TENSOR(expr, @2);
@@ -1033,7 +1067,7 @@ linear_algebra_expr
     }
   }
   | expr "'" {
-    if ($1 == NULL) { $$ = NULL; break; } // TODO: Remove check
+    iassert($1 != nullptr) << "transposed expression is null";
     IRBuilder *builder = ctx->getBuilder();
     Expr expr = convertAndDelete($1);
 

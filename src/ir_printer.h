@@ -67,6 +67,7 @@ private:
   virtual void visit(const Not *);
   virtual void visit(const Xor *);
 
+  virtual void visit(const VarDecl *);
   virtual void visit(const AssignStmt *);
   virtual void visit(const Map *);
   virtual void visit(const FieldWrite *);

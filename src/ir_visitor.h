@@ -35,6 +35,7 @@ struct Or;
 struct Not;
 struct Xor;
 
+struct VarDecl;
 struct AssignStmt;
 struct FieldWrite;
 struct TensorWrite;
@@ -74,6 +75,7 @@ public:
   virtual void visit(const IndexedTensor *op);
   virtual void visit(const IndexExpr *op);
   virtual void visit(const Call *op);
+
   virtual void visit(const Neg *op);
   virtual void visit(const Add *op);
   virtual void visit(const Sub *op);
@@ -91,6 +93,7 @@ public:
   virtual void visit(const Not *op);
   virtual void visit(const Xor *op);
 
+  virtual void visit(const VarDecl *op);
   virtual void visit(const AssignStmt *op);
   virtual void visit(const Map *op);
   virtual void visit(const FieldWrite *op);

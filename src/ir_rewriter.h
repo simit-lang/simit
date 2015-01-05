@@ -50,6 +50,7 @@ protected:
   virtual void visit(const Not *op);
   virtual void visit(const Xor *op);
 
+  virtual void visit(const VarDecl *op);
   virtual void visit(const AssignStmt *op);
   virtual void visit(const Map *op);
   virtual void visit(const FieldWrite *op);

@@ -196,6 +196,15 @@ public:
 private:
   Storage *storage;
 
+  void visit(const VarDecl *op) {
+    Var var = op->var;
+    Type type = var.getType();
+    iassert(!storage->hasStorage(var)) << "Redeclaration of variable";
+    if (type.isTensor() && !isScalar(type)) {
+      determineStorage(var, true);
+    }
+  }
+
   void visit(const AssignStmt *op) {
     Var var = op->var;
     Type type = var.getType();

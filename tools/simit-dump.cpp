@@ -144,7 +144,9 @@ int main(int argc, const char* argv[]) {
       std::cout << "const " << constant.first << " = "
                 << constant.second << ";" << std::endl;
     }
-    std::cout << std::endl;
+    if (ctx.getConstants().size() > 0) {
+      std::cout << std::endl;
+    }
 
     auto iter = functions.begin();
     while (iter != functions.end()) {

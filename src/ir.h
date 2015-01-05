@@ -744,6 +744,16 @@ struct Map : public StmtNode<Map> {
   }
 };
 
+struct VarDecl : public StmtNode<VarDecl> {
+  Var var;
+
+  static Stmt make(Var var) {
+    VarDecl *node = new VarDecl;
+    node->var = var;
+    return node;
+  }
+};
+
 struct AssignStmt : public StmtNode<AssignStmt> {
   Var var;
   Expr value;

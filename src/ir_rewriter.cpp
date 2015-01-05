@@ -238,6 +238,10 @@ void IRRewriter::visit(const Xor *op) {
   expr = visitBinaryOp(op, *this);
 }
 
+void IRRewriter::visit(const VarDecl *op) {
+  stmt = op;
+}
+
 void IRRewriter::visit(const AssignStmt *op) {
   Expr value = rewrite(op->value);
   if (value == op->value) {

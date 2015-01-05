@@ -61,7 +61,10 @@ simit::Function *LLVMBackend::compile(Func func) {
   this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
   this->storage = func.getStorage();
 
-  // Create global buffer variables
+  // Allocate buffers for local variables in global storage.
+  // TODO: We should allocate small local dense tensors on the stack
+  // NOTE: Parallel backends need a better scheme where a local variable is
+  //       created for each thread or thread pool.
   map<Var, llvm::Value*> buffers;
   for (auto &var : storage) {
     if (!storage.get(var).needsInitialization()) continue;
@@ -1151,7 +1154,8 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
       builder->CreateMemSet(varPtr, llvmInt(0,8), varSize, compSize);
     }
     else {
-      not_supported_yet;
+      not_supported_yet << "you can only currently assign a scalar to a tensor "
+                           "if the scalar is 0.";
     }
   }
   else if (isa<Literal>(value)) {

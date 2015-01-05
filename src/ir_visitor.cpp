@@ -128,6 +128,9 @@ void IRVisitor::visit(const Xor *op) {
   op->b.accept(this);
 }
 
+void IRVisitor::visit(const VarDecl *op) {
+}
+
 void IRVisitor::visit(const AssignStmt *op) {
   op->value.accept(this);
 }
@@ -141,7 +144,6 @@ void IRVisitor::visit(const Map *op) {
   for (auto &p : op->partial_actuals) {
     p.accept(this);
   }
-  
 }
 
 void IRVisitor::visit(const FieldWrite *op) {
