@@ -19,6 +19,10 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
 
+#include "llvm/PassManager.h"
+#include "llvm/Analysis/Passes.h"
+#include "llvm/Transforms/Scalar.h"
+
 #include "llvm_codegen.h"
 #include "types.h"
 #include "ir.h"
@@ -41,9 +45,15 @@ const std::string LEN_SUFFIX(".len");
 // class LLVMBackend
 bool LLVMBackend::llvmInitialized = false;
 
-LLVMBackend::LLVMBackend() : val(nullptr),
-                             builder(new llvm::IRBuilder<>(LLVM_CONTEXT)) {
+llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
+  llvm::EngineBuilder engineBuilder(module);
+  llvm::ExecutionEngine *ee = engineBuilder.create();
+  iassert(ee != nullptr) << "Could not create ExecutionEngine";
+  return ee;
+}
 
+LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
+                             val(nullptr) {
   // For now we'll assume fields are always dense row major
   this->fieldStorage = TensorStorage::DenseRowMajor;
 
@@ -56,9 +66,12 @@ LLVMBackend::LLVMBackend() : val(nullptr),
 LLVMBackend::~LLVMBackend() {}
 
 simit::Function *LLVMBackend::compile(Func func) {
+  this->module = new llvm::Module("simit", LLVM_CONTEXT);
+  llvm::ExecutionEngine *ee = createExecutionEngine(module);
+  auto executionEngine = shared_ptr<llvm::ExecutionEngine>(ee);
+
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
-  this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
   this->storage = func.getStorage();
 
   // Allocate buffers for local variables in global storage.
@@ -109,12 +122,14 @@ simit::Function *LLVMBackend::compile(Func func) {
   llvm::FunctionType *m =
       llvm::FunctionType::get(LLVM_INT8PTR, {LLVM_INT}, false);
   llvm::Function *malloc =
-      llvm::Function::Create(m,llvm::Function::ExternalLinkage,"malloc",module);
+      llvm::Function::Create(m, llvm::Function::ExternalLinkage, "malloc",
+                             module);
 
   llvm::FunctionType *f =
       llvm::FunctionType::get(LLVM_VOID, {LLVM_INT8PTR}, false);
   llvm::Function *free =
-      llvm::Function::Create(f,llvm::Function::ExternalLinkage,"free",module);
+      llvm::Function::Create(f, llvm::Function::ExternalLinkage, "free",
+                             module);
 
 
   // Create initialization function
@@ -157,8 +172,28 @@ simit::Function *LLVMBackend::compile(Func func) {
   builder->CreateRetVoid();
   symtable.clear();
 
+
+  // Run LLVM optimization passes on the function
+  llvm::FunctionPassManager fpm(module);
+  fpm.add(new llvm::DataLayout(*executionEngine->getDataLayout()));
+
+  // Basic optimizations
+  fpm.add(llvm::createBasicAliasAnalysisPass());
+  fpm.add(llvm::createInstructionCombiningPass());
+  fpm.add(llvm::createGVNPass());
+  fpm.add(llvm::createCFGSimplificationPass());
+  fpm.add(llvm::createPromoteMemoryToRegisterPass());
+  fpm.add(llvm::createAggressiveDCEPass());
+
+  // Loop optimizations
+  fpm.add(llvm::createLICMPass());
+  fpm.add(llvm::createLoopStrengthReducePass());
+
+  fpm.doInitialization();
+  fpm.run(*llvmFunc);
+
   bool requiresInit = buffers.size() > 0;
-  return new LLVMFunction(func, llvmFunc, requiresInit, module);
+  return new LLVMFunction(func, llvmFunc, requiresInit, module,executionEngine);
 }
 
 llvm::Value *LLVMBackend::compile(const Expr &expr) {
@@ -300,7 +335,7 @@ void LLVMBackend::visit(const Call *op) {
   auto foundIntrinsic = llvmIntrinsicByName.find(op->func);
   if (foundIntrinsic != llvmIntrinsicByName.end()) {
     fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
-      argTypes);
+                                          argTypes);
   }
   // now check if it is an intrinsic from libm
   else if (op->func == ir::Intrinsics::atan2 ||
@@ -332,9 +367,9 @@ void LLVMBackend::visit(const Call *op) {
       llvm::Value *x2pow = builder->CreateFMul(x2, x2);
       sum = builder->CreateFAdd(sum, x2pow);
 
-      llvm::Function *sqrt= llvm::Intrinsic::getDeclaration(module,
-                                                            llvm::Intrinsic::sqrt,
-                                                            {getLLVMFloatType()});
+      llvm::Function *sqrt =
+          llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt,
+                                          {getLLVMFloatType()});
       val = builder->CreateCall(sqrt, sum);
     } else {
       args.push_back(emitComputeLen(type->dimensions[0]));

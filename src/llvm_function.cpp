@@ -10,10 +10,6 @@
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include "llvm/PassManager.h"
-#include "llvm/Analysis/Passes.h"
-#include "llvm/Transforms/Scalar.h"
-
 #include "llvm_codegen.h"
 #include "graph.h"
 #include "indices.h"
@@ -23,45 +19,18 @@ using namespace std;
 namespace simit {
 namespace internal {
 
-llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
-  llvm::EngineBuilder engineBuilder(module);
-  llvm::ExecutionEngine *ee = engineBuilder.create();
-  assert(ee && "Could not create ExecutionEngine");
-  return ee;
-}
-
 LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-                           bool requiresInit, llvm::Module *module)
+                           bool requiresInit, llvm::Module *module,
+                           shared_ptr<llvm::ExecutionEngine> executionEngine)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
-      executionEngine(createExecutionEngine(module)),
-      requiresInit(requiresInit), deinit(nullptr) {
-
-  llvm::FunctionPassManager fpm(module);
-  fpm.add(new llvm::DataLayout(*executionEngine->getDataLayout()));
-
-  // Basic optimizations
-  fpm.add(llvm::createBasicAliasAnalysisPass());
-  fpm.add(llvm::createInstructionCombiningPass());
-  fpm.add(llvm::createGVNPass());
-  fpm.add(llvm::createCFGSimplificationPass());
-  fpm.add(llvm::createPromoteMemoryToRegisterPass());
-  fpm.add(llvm::createAggressiveDCEPass());
-
-  // Loop optimizations
-  fpm.add(llvm::createLICMPass());
-  fpm.add(llvm::createLoopStrengthReducePass());
-
-  fpm.doInitialization();
-  fpm.run(*llvmFunc);
+      executionEngine(executionEngine), requiresInit(requiresInit),
+      deinit(nullptr) {
 }
 
 LLVMFunction::~LLVMFunction() {
   if (deinit) {
     deinit();
   }
-  executionEngine->removeModule(module);
-  delete executionEngine;
-  delete module;
 }
 
 void LLVMFunction::print(std::ostream &os) const {
@@ -156,7 +125,7 @@ LLVMFunction::createHarness(const std::string &name,
                             const llvm::SmallVector<llvm::Value*,8> &args) {
   llvm::Function *llvmFunc = module->getFunction(name);
   std::string harnessName = name + ".harness";
-  llvm::Function *harness = createPrototype(harnessName, {},{}, module);
+  llvm::Function *harness = createPrototype(harnessName, {}, {}, module);
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
   llvm::CallInst *call = llvm::CallInst::Create(llvmFunc, args, "",entry);
   call->setCallingConv(llvmFunc->getCallingConv());
