@@ -10,14 +10,26 @@ using namespace std;
 typedef array<double,3> Vector3d;
 typedef array<int,3> Vector3i;
 
-int Mesh::load(const char * filename)
+int openIfstream(ifstream & in, const char * filename);
+
+int openIfstream(ifstream & in, const char * filename)
 {
-  ifstream in(filename);
+  in.open(filename);
   if(!in.good()){
-    std::cout<<"Could not open "<<filename<<"\n";
+    std::cout<<"Cannot read "<<filename<<"\n";
     return -1;
   }
-  int status = load(in);
+  return 0;
+}
+
+int Mesh::load(const char * filename)
+{
+  ifstream in;
+  int status = openIfstream(in,filename);
+  if(status<0){
+    return status;
+  }
+  status = load(in);
   in.close();
   return status;
 }
@@ -108,12 +120,12 @@ int Mesh::save(ostream & out)
 
 int MeshVol::load(const char * filename)
 {
-  ifstream in(filename);
-  if(!in.good()){
-    std::cout<<"Could not open "<<filename<<"\n";
-    return -1;
+  ifstream in;
+  int status = openIfstream(in,filename);
+  if(status<0){
+    return status;
   }
-  int status = load(in);
+  status = load(in);
   in.close();
   return status;
 }
@@ -145,7 +157,7 @@ int MeshVol::save(const char * filename)
 {
   ofstream out(filename);
   if(!out.good()){
-    std::cout<<"Could not open "<<filename<<"\n";
+    cout<<"Could not open "<<filename<<"\n";
     return -1;
   }
   int status = save(out);
@@ -169,5 +181,96 @@ int MeshVol::save(ostream & out)
     out<<"\n";
   }
   
+  return 0;
+}
+
+int MeshVol::loadTet(const char * nodeFile, const char * eleFile)
+{
+  ifstream nodeIn, eleIn;
+  int status = openIfstream(nodeIn, nodeFile);
+  if(status<0){
+    return status;
+  }
+  status = openIfstream(eleIn, eleFile);
+  if(status<0){
+    return status;
+  }
+  status = loadTet(nodeIn, eleIn);
+  nodeIn.close();
+  eleIn.close();
+  return status;
+}
+
+int MeshVol::loadTet(istream & nodeIn, istream & eleIn)
+{
+  
+  //load vertices
+  int intVal;
+  nodeIn>>intVal;
+  v.resize(intVal);
+  string line;
+  unsigned int cnt = 0;
+  //discard rest of the first line.
+  getline(nodeIn,line);
+  while(1) {
+    getline(nodeIn,line);
+    if(nodeIn.eof()) {
+      break;
+    }
+    //skip empty lines
+    if(line.size()<3) {
+      continue;
+    }
+    //skip comments
+    if(line.at(0)=='#') {
+      continue;
+    }
+    stringstream ss(line);
+    
+    ss>>intVal;
+    for(int ii = 0;ii<3;ii++){
+      ss>>v[cnt][ii];
+    }
+    cnt ++ ;
+    if(cnt>=v.size()){
+      break;
+    }
+  }
+  
+  //load elements
+  eleIn>>intVal;
+  e.resize(intVal);
+  
+  int nV=0;
+  eleIn>>nV;
+  cnt = 0;
+  getline(eleIn,line);
+  while(1) {
+    getline(eleIn,line);
+    if(eleIn.eof()) {
+      break;
+    }
+    if(line.size()<3) {
+      continue;
+    }
+    if(line.at(0)=='#') {
+      continue;
+    }
+    stringstream ss(line);
+    ss>>intVal;
+    
+    e[cnt].resize(nV);
+    for(int ii = 0;ii<nV;ii++){
+      ss>>e[cnt][ii];
+      //tetgen is 1-based
+      //convert to 0 based
+      e[cnt][ii]--;
+    }
+    
+    cnt ++ ;
+    if(cnt>=e.size()){
+      break;
+    }
+  }
   return 0;
 }

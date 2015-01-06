@@ -43,6 +43,11 @@ struct MeshVol{
   int load(const char * filename);
   ///return -1 if failed to load or format is unrecognized
   int load(std::istream & in);
+
+  ///return -1 if failed to load
+  int loadTet(const char * nodeFile, const char * eleFile);
+  int loadTet(std::istream & nodeIn, std::istream & eleIn);
+
   ///return -1 if failed to save
   int save(const char * filename);
   int save(std::ostream & out);
