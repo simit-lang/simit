@@ -210,6 +210,8 @@ int MeshVol::loadTet(istream & nodeIn, istream & eleIn)
   v.resize(intVal);
   string line;
   unsigned int cnt = 0;
+  //discard rest of the first line.
+  getline(nodeIn,line);
   while(1) {
     getline(nodeIn,line);
     if(nodeIn.eof()) {
@@ -242,9 +244,10 @@ int MeshVol::loadTet(istream & nodeIn, istream & eleIn)
   int nV=0;
   eleIn>>nV;
   cnt = 0;
+  getline(eleIn,line);
   while(1) {
-    getline(nodeIn,line);
-    if(nodeIn.eof()) {
+    getline(eleIn,line);
+    if(eleIn.eof()) {
       break;
     }
     if(line.size()<3) {
@@ -259,6 +262,9 @@ int MeshVol::loadTet(istream & nodeIn, istream & eleIn)
     e[cnt].resize(nV);
     for(int ii = 0;ii<nV;ii++){
       ss>>e[cnt][ii];
+      //tetgen is 1-based
+      //convert to 0 based
+      e[cnt][ii]--;
     }
     
     cnt ++ ;
