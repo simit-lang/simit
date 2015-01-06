@@ -97,7 +97,7 @@ int Program::verify() {
     for (auto &test : content->ctx.getTests()) {
       if (functions.find(test->getCallee()) == functions.end()) {
         content->diags.report() << "Error: attempting to test unknown function "
-                       << "'" << test->getCallee() << "'";
+                                << "'" << test->getCallee() << "'";
         return 1;
       }
       ir::Func func = functions.at(test->getCallee());

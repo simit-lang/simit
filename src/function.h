@@ -59,8 +59,8 @@ protected:
     void bind(SetBase *set) { this->set = set; }
     bool isBound() const { return tensor != NULL; }
     const ir::Type &getType() const { return type; }
-    Tensor *getTensor() { iassert(tensor); return tensor; }
-    SetBase *getSet() { iassert(set); return set; }
+    Tensor *getTensor() { iassert(tensor != nullptr); return tensor; }
+    SetBase *getSet() { iassert(set != nullptr); return set; }
   private:
     ir::Type type;
     union {

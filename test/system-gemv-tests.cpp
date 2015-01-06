@@ -541,3 +541,59 @@ TEST(System, gemv_blocked_computed) {
   ASSERT_EQ(300.0, c2(0));
   ASSERT_EQ(400.0, c2(1));
 }
+
+TEST(System, gemv_input) {
+  // Points
+  Set<> points;
+  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<double> c = points.addField<double>("c");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  // Taint c
+  c.set(p0, 42.0);
+  c.set(p2, 42.0);
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> a = springs.addField<double>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, 1.0);
+  a.set(s1, 2.0);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  // Yes using literals for this is a total hack...
+  Tensor cs = ir::Literal::make(ir::TensorType::make(ir::ScalarType::Float,
+                                                     {ir::IndexDomain(2)}));
+  ((double*)ir::to<ir::Literal>(cs)->data)[0] = 1.0;
+  ((double*)ir::to<ir::Literal>(cs)->data)[1] = 2.0;
+
+  f->bind("c", &cs);
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+
+  f->runSafe();
+
+  // Check that inputs are preserved
+  ASSERT_EQ(1.0, b.get(p0));
+  ASSERT_EQ(2.0, b.get(p1));
+  ASSERT_EQ(3.0, b.get(p2));
+
+  // Check that outputs are correct
+  ASSERT_EQ(6.0, (double)c.get(p0));
+  ASSERT_EQ(26.0, (double)c.get(p1));
+  ASSERT_EQ(20.0, (double)c.get(p2));
+}

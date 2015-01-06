@@ -350,7 +350,7 @@ field_decl
 // Procedures and functions
 %type <function> procedure;
 procedure
-  : {ctx->scope();} procedure_header stmt_block BLOCKEND {ctx->unscope();} {
+  : "proc" {ctx->scope();} procedure_header stmt_block BLOCKEND {ctx->unscope();} {
     Func func = convertAndDelete($procedure_header);
     Stmt body = convertAndDelete($stmt_block);
     $$ = new Func(func.getName(), func.getArguments(), func.getResults(), body);
@@ -358,24 +358,33 @@ procedure
 
 %type <function> procedure_header;
 procedure_header
-  : "proc" IDENT {
+  : IDENT {
     std::string name = convertAndFree($IDENT);
     auto arguments = vector<Var>();
     auto results = vector<Var>();
 
     for (auto &extPair : ctx->getExterns()) {
       Var ext = ctx->getExtern(extPair.first);
-
-      // TODO: Make extResult a mutable parameter
       arguments.push_back(ext);
     }
 
     $$ = new Func(name, arguments, results, Stmt());
   }
+  | function_header {
+    Func func = convertAndDelete($function_header);
+    auto arguments = func.getArguments();
+
+    for (auto &extPair : ctx->getExterns()) {
+      Var ext = ctx->getExtern(extPair.first);
+      arguments.push_back(ext);
+    }
+
+    $$ = new Func(func.getName(), arguments, func.getResults(), func.getBody());
+  }
 
 %type <function> function;
 function
-  : {ctx->scope();} function_header stmt_block BLOCKEND {ctx->unscope();} {
+  : "func" {ctx->scope();} function_header stmt_block BLOCKEND {ctx->unscope();} {
     Func func = convertAndDelete($function_header);
     Stmt body = convertAndDelete($stmt_block);
     $$ = new Func(func.getName(), func.getArguments(), func.getResults(), body);
@@ -383,7 +392,7 @@ function
 
 %type <function> function_header;
 function_header
-  : "func" IDENT "(" arguments ")" results {
+  : IDENT "(" arguments ")" results {
     std::string name = convertAndFree($IDENT);
     auto arguments = unique_ptr<vector<Var>>($arguments);
     auto results = unique_ptr<vector<Var>>($results);
