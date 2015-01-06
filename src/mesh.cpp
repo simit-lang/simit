@@ -274,3 +274,54 @@ int MeshVol::loadTet(istream & nodeIn, istream & eleIn)
   }
   return 0;
 }
+
+int MeshVol::loadTetEdge(const char * edgeFile)
+{
+  ifstream edgeIn;
+  int status = openIfstream(edgeIn, edgeFile);
+  if(status<0){
+    return status;
+  }
+  status = loadTetEdge(edgeIn);
+  edgeIn.close();
+  return status;
+}
+
+int MeshVol::loadTetEdge(istream & edgeIn)
+{
+  //load vertices
+  int intVal;
+  edgeIn>>intVal;
+  edges.resize(intVal);
+  string line;
+  unsigned int cnt = 0;
+  //discard rest of the first line.
+  getline(edgeIn,line);
+  while(1) {
+    getline(edgeIn,line);
+    if(edgeIn.eof()) {
+      break;
+    }
+    //skip empty lines
+    if(line.size()<3) {
+      continue;
+    }
+    //skip comments
+    if(line.at(0)=='#') {
+      continue;
+    }
+    stringstream ss(line);
+    
+    ss>>intVal;
+    for(int ii = 0;ii<2;ii++){
+      ss>>edges[cnt][ii];
+      //zero based index
+      edges[cnt][ii]--;
+    }
+    cnt ++ ;
+    if(cnt>=edges.size()){
+      break;
+    }
+  }
+  return 0;
+}
