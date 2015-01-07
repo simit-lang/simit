@@ -40,6 +40,7 @@ struct AssignStmt;
 struct FieldWrite;
 struct TensorWrite;
 struct Store;
+struct CallStmt;
 struct ForRange;
 struct For;
 struct While;
@@ -95,6 +96,7 @@ public:
 
   virtual void visit(const VarDecl *op);
   virtual void visit(const AssignStmt *op);
+  virtual void visit(const CallStmt *op);
   virtual void visit(const Map *op);
   virtual void visit(const FieldWrite *op);
   virtual void visit(const TensorWrite *op);
@@ -115,6 +117,7 @@ class IRVisitorCallGraph : public IRVisitor {
 public:
   std::set<ir::Func> visited;
   virtual void visit(const Call *op);
+  virtual void visit(const CallStmt *op);
 };
 
 /// Query class to make it easier to write visitors to answer a yes/no question.

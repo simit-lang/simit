@@ -137,6 +137,12 @@ void IRVisitor::visit(const AssignStmt *op) {
   op->value.accept(this);
 }
 
+void IRVisitor::visit(const CallStmt *op) {
+  for (auto &actual : op->actuals) {
+    actual.accept(this);
+  }
+}
+
 void IRVisitor::visit(const Map *op) {
   op->target.accept(this);
   if (op->neighbors.defined()) {
@@ -219,6 +225,15 @@ void IRVisitorCallGraph::visit(const Call *op) {
   }
 }
 
+void IRVisitorCallGraph::visit(const CallStmt *op) {
+  if (visited.find(op->callee) == visited.end()) {
+    op->callee.accept(this);
+  }
+
+  for (auto &actual : op->actuals) {
+    actual.accept(this);
+  }
+}
 
 // IRQuery
 bool IRQuery::query(const Expr &expr) {

@@ -1621,7 +1621,7 @@ namespace  simit { namespace internal  {
     }
 
     ctx->addStatement(Map::make(vars, func, *partialExprList, targets, neighbor,
-      reduction));
+                                reduction));
   }
 
     break;
@@ -1788,7 +1788,6 @@ namespace  simit { namespace internal  {
     Stmt body = convertAndDelete((yystack_[1].value.stmt));
     
     ctx->addStatement(While::make(cond, body));
-
   }
 
     break;
@@ -2395,7 +2394,7 @@ namespace  simit { namespace internal  {
 
     {
     std::string name = convertAndFree((yystack_[3].value.string));
-    auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
+    auto arguments = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
 
     if (ctx->hasSymbol(name)) {
       const Symbol &symbol = ctx->getSymbol(name);
@@ -2406,13 +2405,13 @@ namespace  simit { namespace internal  {
       // The parenthesis read can be a read from a tensor or a tuple.
       auto readExpr = symbol.getExpr();
       if (readExpr.type().isTensor()) {
-        (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, *indices));
+        (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, *arguments));
       }
       else if (readExpr.type().isTuple()) {
-        if (indices->size() != 1) {
+        if (arguments->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", yystack_[1].location);
         }
-        (yylhs.value.expr) = new Expr(TupleRead::make(readExpr, (*indices)[0]));
+        (yylhs.value.expr) = new Expr(TupleRead::make(readExpr, (*arguments)[0]));
       }
       else {
         REPORT_ERROR("can only access components in tensors and tuples", yystack_[3].location);
@@ -2420,7 +2419,21 @@ namespace  simit { namespace internal  {
     }
     else if (ctx->containsFunction(name)) {
       Func func = ctx->getFunction(name);
-      (yylhs.value.expr) = new Expr(Call::make(func, *indices));
+
+      if (func.getResults().size() != 1) {
+        REPORT_ERROR("called function must have one result", yystack_[3].location);
+      }
+
+      Var resultFormal = func.getResults()[0];
+      Var resultActual = ctx->getBuilder()->temporary(resultFormal.getType());;
+
+      Stmt callStmt = CallStmt::make({resultActual}, func, *arguments);
+
+      ctx->addSymbol(resultActual.getName(), resultActual, Symbol::ReadWrite);
+      ctx->addStatement(VarDecl::make(resultActual));
+      ctx->addStatement(callStmt);
+
+      (yylhs.value.expr) = new Expr(VarExpr::make(resultActual));
     }
     else {
       REPORT_ERROR(name + " is not defined in scope", yystack_[3].location);
@@ -2433,17 +2446,17 @@ namespace  simit { namespace internal  {
 
     {
     Expr readExpr = convertAndDelete((yystack_[3].value.expr));
-    auto indices = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
+    auto arguments = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
 
     // The parenthesis read can be a read from a tensor or a tuple.
     if (readExpr.type().isTensor()) {
-      (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, *indices));
+      (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, *arguments));
     }
     else if (readExpr.type().isTuple()) {
-      if (indices->size() != 1) {
+      if (arguments->size() != 1) {
         REPORT_ERROR("reading a tuple requires exactly one index", yystack_[1].location);
       }
-      (yylhs.value.expr) = new Expr(TupleRead::make(readExpr, (*indices)[0]));
+      (yylhs.value.expr) = new Expr(TupleRead::make(readExpr, (*arguments)[0]));
     }
     else {
       REPORT_ERROR("can only access components in tensors and tuples", yystack_[3].location);
@@ -3709,19 +3722,19 @@ namespace  simit { namespace internal  {
      463,   466,   472,   477,   485,   491,   494,   501,   502,   505,
      506,   507,   508,   509,   510,   511,   512,   513,   514,   515,
      520,   530,   552,   563,   604,   659,   662,   669,   673,   680,
-     683,   696,   699,   705,   710,   730,   752,   776,   786,   793,
-     799,   805,   818,   824,   827,   832,   844,   852,   862,   873,
-     878,   906,   909,   914,   922,   923,   924,   925,   926,   927,
-     928,   934,   954,   963,   971,   990,  1058,  1078,  1106,  1111,
-    1120,  1121,  1122,  1123,  1129,  1133,  1139,  1145,  1151,  1157,
-    1163,  1169,  1175,  1181,  1186,  1192,  1196,  1204,  1238,  1239,
-    1240,  1247,  1280,  1317,  1320,  1326,  1332,  1343,  1344,  1345,
-    1346,  1350,  1362,  1366,  1376,  1385,  1397,  1409,  1413,  1416,
-    1458,  1468,  1473,  1481,  1484,  1498,  1504,  1507,  1557,  1561,
-    1562,  1566,  1570,  1577,  1588,  1595,  1599,  1603,  1617,  1621,
-    1636,  1640,  1647,  1654,  1658,  1662,  1676,  1680,  1695,  1699,
-    1706,  1709,  1715,  1718,  1724,  1727,  1734,  1753,  1777,  1778,
-    1786
+     683,   696,   699,   705,   710,   730,   752,   776,   785,   792,
+     798,   804,   817,   823,   826,   831,   843,   851,   861,   872,
+     877,   905,   908,   913,   921,   922,   923,   924,   925,   926,
+     927,   933,   953,   962,   970,   989,  1057,  1077,  1105,  1110,
+    1119,  1120,  1121,  1122,  1128,  1132,  1138,  1144,  1150,  1156,
+    1162,  1168,  1174,  1180,  1185,  1191,  1195,  1203,  1237,  1238,
+    1239,  1246,  1293,  1314,  1317,  1323,  1329,  1340,  1341,  1342,
+    1343,  1347,  1359,  1363,  1373,  1382,  1394,  1406,  1410,  1413,
+    1455,  1465,  1470,  1478,  1481,  1495,  1501,  1504,  1554,  1558,
+    1559,  1563,  1567,  1574,  1585,  1592,  1596,  1600,  1614,  1618,
+    1633,  1637,  1644,  1651,  1655,  1659,  1673,  1677,  1692,  1696,
+    1703,  1706,  1712,  1715,  1721,  1724,  1731,  1750,  1774,  1775,
+    1783
   };
 
   // Print the state stack on the debug stream.

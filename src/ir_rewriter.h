@@ -53,6 +53,7 @@ protected:
 
   virtual void visit(const VarDecl *op);
   virtual void visit(const AssignStmt *op);
+  virtual void visit(const CallStmt *op);
   virtual void visit(const Map *op);
   virtual void visit(const FieldWrite *op);
   virtual void visit(const TensorWrite *op);
@@ -76,6 +77,7 @@ protected:
   std::set<ir::Func> visited;
 
   virtual void visit(const Call *op);
+  virtual void visit(const CallStmt *op);
 };
 
 }}

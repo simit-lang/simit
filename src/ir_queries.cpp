@@ -157,7 +157,7 @@ bool isBlocked(Stmt stmt) {
 }
 
 std::vector<Func> getCallTree(Func func) {
-  class GetCallTreeVisitor : public IRVisitor {
+  class GetCallTreeVisitor : public IRVisitorCallGraph {
   public:
     vector<Func> get(Func func) {
       callTree.clear();
@@ -166,17 +166,12 @@ std::vector<Func> getCallTree(Func func) {
     }
 
   private:
+    using IRVisitor::visit;
+
     set<Func> visited;
     vector<Func> callTree;
 
-    void visit(const Call *op) {
-      op->func.accept(this);
-    }
-
     void visit(const Func *op) {
-      if (visited.find(*op) != visited.end()) {
-        return;
-      }
       visited.insert(*op);
       callTree.push_back(*op);
       IRVisitor::visit(op);

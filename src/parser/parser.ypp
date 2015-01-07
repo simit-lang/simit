@@ -651,7 +651,7 @@ map_stmt
     }
 
     ctx->addStatement(Map::make(vars, func, *partialExprList, targets, neighbor,
-      reduction));
+                                reduction));
   }
 
 %type <exprs> partial_expr_list;
@@ -778,7 +778,6 @@ while_stmt
     Stmt body = convertAndDelete($2);
     
     ctx->addStatement(While::make(cond, body));
-
   }
 
 %type <expr> while_stmt_header;
@@ -1243,10 +1242,10 @@ set_read_expr
 // Call and Tensor Read Expressions
 %type <expr> call_or_paren_read_expr;
 call_or_paren_read_expr
-  // TODO: This rule should be removed and it's functionality put in next rule
+  // This rule exist as a workaround because functions are not expressions
   : IDENT "(" expr_list_or_empty ")" {
     std::string name = convertAndFree($IDENT);
-    auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
+    auto arguments = unique_ptr<vector<Expr>>($expr_list_or_empty);
 
     if (ctx->hasSymbol(name)) {
       const Symbol &symbol = ctx->getSymbol(name);
@@ -1257,13 +1256,13 @@ call_or_paren_read_expr
       // The parenthesis read can be a read from a tensor or a tuple.
       auto readExpr = symbol.getExpr();
       if (readExpr.type().isTensor()) {
-        $$ = new Expr(TensorRead::make(readExpr, *indices));
+        $$ = new Expr(TensorRead::make(readExpr, *arguments));
       }
       else if (readExpr.type().isTuple()) {
-        if (indices->size() != 1) {
+        if (arguments->size() != 1) {
           REPORT_ERROR("reading a tuple requires exactly one index", @3);
         }
-        $$ = new Expr(TupleRead::make(readExpr, (*indices)[0]));
+        $$ = new Expr(TupleRead::make(readExpr, (*arguments)[0]));
       }
       else {
         REPORT_ERROR("can only access components in tensors and tuples", @1);
@@ -1271,7 +1270,21 @@ call_or_paren_read_expr
     }
     else if (ctx->containsFunction(name)) {
       Func func = ctx->getFunction(name);
-      $$ = new Expr(Call::make(func, *indices));
+
+      if (func.getResults().size() != 1) {
+        REPORT_ERROR("called function must have one result", @1);
+      }
+
+      Var resultFormal = func.getResults()[0];
+      Var resultActual = ctx->getBuilder()->temporary(resultFormal.getType());;
+
+      Stmt callStmt = CallStmt::make({resultActual}, func, *arguments);
+
+      ctx->addSymbol(resultActual.getName(), resultActual, Symbol::ReadWrite);
+      ctx->addStatement(VarDecl::make(resultActual));
+      ctx->addStatement(callStmt);
+
+      $$ = new Expr(VarExpr::make(resultActual));
     }
     else {
       REPORT_ERROR(name + " is not defined in scope", @1);
@@ -1279,37 +1292,21 @@ call_or_paren_read_expr
   }
   | expr "(" expr_list_or_empty ")" {
     Expr readExpr = convertAndDelete($expr);
-    auto indices = unique_ptr<vector<Expr>>($expr_list_or_empty);
+    auto arguments = unique_ptr<vector<Expr>>($expr_list_or_empty);
 
     // The parenthesis read can be a read from a tensor or a tuple.
     if (readExpr.type().isTensor()) {
-      $$ = new Expr(TensorRead::make(readExpr, *indices));
+      $$ = new Expr(TensorRead::make(readExpr, *arguments));
     }
     else if (readExpr.type().isTuple()) {
-      if (indices->size() != 1) {
+      if (arguments->size() != 1) {
         REPORT_ERROR("reading a tuple requires exactly one index", @3);
       }
-      $$ = new Expr(TupleRead::make(readExpr, (*indices)[0]));
+      $$ = new Expr(TupleRead::make(readExpr, (*arguments)[0]));
     }
     else {
       REPORT_ERROR("can only access components in tensors and tuples", @1);
     }
-  }
-
-%type <expr> call_expr;
-call_expr
-  : IDENT "(" expr_list_or_empty ")" {
-    std::string funcName = convertAndFree($1);
-    auto actuals = unique_ptr<vector<Expr>>($expr_list_or_empty);
-
-    if (!ctx->containsFunction(funcName)) {$$ = NULL; break;} // TODO: Remove check
-
-    if (!ctx->containsFunction(funcName)) {
-      REPORT_ERROR("undefined function '" + funcName + "'", @1);
-    }
-    Func func = ctx->getFunction(funcName);
-
-    $$ = new Expr(Call::make(func, *actuals));
   }
 
 %type <exprs> expr_list_or_empty;

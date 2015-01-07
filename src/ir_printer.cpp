@@ -342,6 +342,12 @@ void IRPrinter::visit(const AssignStmt *op) {
   os << ";";
 }
 
+void IRPrinter::visit(const CallStmt *op) {
+  indent();
+  os << util::join(op->results) << " = " << op->callee.getName()
+     << "(" << util::join(op->actuals) << ")" << ";";
+}
+
 void IRPrinter::visit(const Map *op) {
   indent();
   os << util::join(op->vars) << " = ";
@@ -512,6 +518,10 @@ void IRPrinterCallGraph::print(const Func &func) {
 
 void IRPrinterCallGraph::visit(const Call *op) {
   os << op->func << "\n\n";
+}
+
+void IRPrinterCallGraph::visit(const CallStmt *op) {
+  os << op->callee << "\n\n";
 }
 
 void IRPrinterCallGraph::visit(const Func *op) {

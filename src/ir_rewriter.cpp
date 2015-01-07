@@ -252,6 +252,23 @@ void IRRewriter::visit(const AssignStmt *op) {
   }
 }
 
+void IRRewriter::visit(const CallStmt *op) {
+  std::vector<Expr> actuals(op->actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->actuals.size(); ++i) {
+    actuals[i] = rewrite(op->actuals[i]);
+    if (actuals[i] != op->actuals[i]) {
+      actualsSame = false;
+    }
+  }
+  if (actualsSame) {
+    stmt = op;
+  }
+  else {
+    stmt = CallStmt::make(op->results, op->callee, actuals);
+  }
+}
+
 void IRRewriter::visit(const Map *op) {
   Expr target = rewrite(op->target);
   Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
@@ -273,7 +290,6 @@ void IRRewriter::visit(const Map *op) {
       op->reduction);
   }
 }
-
 
 void IRRewriter::visit(const FieldWrite *op) {
   Expr elementOrSet = rewrite(op->elementOrSet);
@@ -440,6 +456,33 @@ void IRRewriterCallGraph::visit(const Call *op) {
   }
   else {
     expr = Call::make(callee, actuals);
+  }
+}
+
+void IRRewriterCallGraph::visit(const CallStmt *op) {
+  Func callee;
+  if (visited.find(op->callee) == visited.end()) {
+    visited.insert(op->callee);
+    callee = rewrite(op->callee);
+  }
+  else {
+    callee = op->callee;
+  }
+
+  std::vector<Expr> actuals(op->actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->actuals.size(); ++i) {
+    actuals[i] = rewrite(op->actuals[i]);
+    if (actuals[i] != op->actuals[i]) {
+      actualsSame = false;
+    }
+  }
+
+  if (callee == op->callee && actualsSame) {
+    stmt = op;
+  }
+  else {
+    stmt = CallStmt::make(op->results, callee, actuals);
   }
 }
 

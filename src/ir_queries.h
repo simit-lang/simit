@@ -25,7 +25,8 @@ bool isFlattened(Stmt stmt);
 /// rhs is a blocked tensor
 bool isBlocked(Stmt stmt);
 
-
+/// Returns the call tree of `func`. The call tree constains all functions
+/// (transitively) called from `func`.
 std::vector<Func> getCallTree(Func func);
 
 }}

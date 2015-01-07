@@ -63,6 +63,9 @@ public:
   
   Expr transposedMatrix(Expr mat);
 
+  /// Create a temporary variable
+  Var temporary(Type type);
+
 private:
   UniqueNameGenerator names;
   std::vector<ir::Stmt> *stmts = nullptr;

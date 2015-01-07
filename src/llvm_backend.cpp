@@ -79,6 +79,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
   std::reverse(callTree.begin(), callTree.end());
+
   llvm::Function *llvmFunc = nullptr;
   for (auto &f : callTree) {
     if (f.getKind() != Func::Internal) continue;
@@ -126,7 +127,6 @@ simit::Function *LLVMBackend::compile(Func func) {
     compile(f.getBody());
     builder->CreateRetVoid();
     symtable.clear();
-    
   }
   iassert(llvmFunc);
 
@@ -202,7 +202,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   fpm.add(llvm::createLoopStrengthReducePass());
 
   fpm.doInitialization();
-  fpm.run(*llvmFunc);
+//  fpm.run(*llvmFunc);
 
   bool requiresInit = buffers.size() > 0;
   return new LLVMFunction(func, llvmFunc, requiresInit, module,executionEngine);
@@ -303,7 +303,8 @@ void LLVMBackend::visit(const VarExpr *op) {
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
   // in which case we must load the value.  This case arises because we keep
-  // many scalars on the stack.  One exceptions to this are loop variables.
+  // many scalars on the stack.  An exceptions to this are loop variables,
+  // which is why we can't assume Simit scalars are always kept on the stack.
   if (isScalar(op->type) && val->getType()->isPointerTy()) {
     string valName = string(val->getName()) + VAL_SUFFIX;
     val = builder->CreateAlignedLoad(val, 8, valName);
@@ -430,11 +431,7 @@ void LLVMBackend::visit(const Call *op) {
     fun = module->getFunction(op->func.getName());
   }
   else {
-    
-
     not_supported_yet << "Unsupported function call";
-
-
   }
   iassert(fun);
 
@@ -597,6 +594,21 @@ void LLVMBackend::visit(const ir::Xor *op) {
   val = builder->CreateXor(a, b);
 }
 
+void LLVMBackend::visit(const VarDecl *op) {
+  tassert(op->var.getType().isTensor()) << "Only tensor decls supported";
+
+  Var var = op->var;
+  if (isScalar(var.getType())) {
+    ScalarType type = var.getType().toTensor()->componentType;
+    llvm::Value *llvmVar =
+        builder->CreateAlloca(createLLVMType(type), nullptr, var.getName());
+    symtable.insert(var, llvmVar);
+  }
+  else {
+    // Ignore
+  }
+}
+
 void LLVMBackend::visit(const AssignStmt *op) {
   switch (op->cop.kind) {
     case ir::CompoundOperator::None: {
@@ -608,6 +620,138 @@ void LLVMBackend::visit(const AssignStmt *op) {
       return;
     }
     default: ierror << "Unknown compound operator type";
+  }
+}
+
+void LLVMBackend::visit(const ir::CallStmt *op) {
+  std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
+                                  {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
+                                   {ir::Intrinsics::cos,llvm::Intrinsic::cos},
+                                   {ir::Intrinsics::sqrt,llvm::Intrinsic::sqrt},
+                                   {ir::Intrinsics::log,llvm::Intrinsic::log},
+                                   {ir::Intrinsics::exp,llvm::Intrinsic::exp},
+                                   {ir::Intrinsics::pow,llvm::Intrinsic::pow}};
+  
+  std::vector<llvm::Type*> argTypes;
+  std::vector<llvm::Value*> args;
+  llvm::Function *fun = nullptr;
+  llvm::Value *call = nullptr;
+
+  // compile arguments first
+  for (auto a: op->actuals) {
+    //FIX: remove once solve() is no longer needed
+    //iassert(isScalar(a.type()));
+    argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
+    args.push_back(compile(a));
+  }
+
+  Func callee = op->callee;
+
+  if (callee.getKind() == Func::Intrinsic) {
+    // first, see if this is an LLVM intrinsic
+    auto foundIntrinsic = llvmIntrinsicByName.find(op->callee);
+    if (foundIntrinsic != llvmIntrinsicByName.end()) {
+      fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
+                                            argTypes);
+    }
+    // now check if it is an intrinsic from libm
+    else if (op->callee == ir::Intrinsics::atan2 ||
+             op->callee == ir::Intrinsics::tan   ||
+             op->callee == ir::Intrinsics::asin  ||
+             op->callee == ir::Intrinsics::acos    ) {
+      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
+      std::string floatType = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
+      std::string funcName = op->callee.getName() + floatType;
+      fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(funcName,
+                                                                   ftype));
+    }
+    else if (op->callee == ir::Intrinsics::norm) {
+      iassert(args.size() == 1);
+      auto type = op->actuals[0].type().toTensor();
+
+      // special case for vec3f
+      if (type->dimensions[0].getSize() == 3) {
+        llvm::Value *x = args[0];
+
+        llvm::Value *x0 = loadFromArray(x, llvmInt(0));
+        llvm::Value *sum = builder->CreateFMul(x0, x0);
+
+        llvm::Value *x1 = loadFromArray(x, llvmInt(1));
+        llvm::Value *x1pow = builder->CreateFMul(x1, x1);
+        sum = builder->CreateFAdd(sum, x1pow);
+
+        llvm::Value *x2 = loadFromArray(x, llvmInt(2));
+        llvm::Value *x2pow = builder->CreateFMul(x2, x2);
+        sum = builder->CreateFAdd(sum, x2pow);
+
+        llvm::Function *sqrt =
+        llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt,
+                                        {getLLVMFloatType()});
+        call = builder->CreateCall(sqrt, sum);
+      } else {
+        args.push_back(emitComputeLen(type->dimensions[0]));
+        std::string funcName = ir::ScalarType::singleFloat() ?
+        "norm_f32" : "norm_f64";
+        call = emitCall(funcName, args, getLLVMFloatType());
+      }
+    }
+    else if (op->callee == ir::Intrinsics::solve) {
+      // FIX: compile is making these be LLVM_DOUBLE, but I need
+      // LLVM_DOUBLEPTR
+      std::vector<llvm::Type*> argTypes2 =
+      {getLLVMFloatPtrType(), getLLVMFloatPtrType(), getLLVMFloatPtrType(),
+        LLVM_INT, LLVM_INT};
+
+      auto type = op->actuals[0].type().toTensor();
+      args.push_back(emitComputeLen(type->dimensions[0]));
+      args.push_back(emitComputeLen(type->dimensions[1]));
+
+      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes2,false);
+      std::string funcName = ir::ScalarType::singleFloat() ?
+      "cMatSolve_f32" : "cMatSolve_f64";
+      fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(funcName,
+                                                                   ftype));
+    }
+    else if (op->callee == ir::Intrinsics::loc) {
+      call = emitCall("loc", args, LLVM_INT);
+    }
+    else if (op->callee == ir::Intrinsics::dot) {
+      // we need to add the vector length to the args
+      auto type1 = op->actuals[0].type().toTensor();
+      auto type2 = op->actuals[1].type().toTensor();
+      uassert(type1->dimensions[0] == type2->dimensions[0]) <<
+      "dimension mismatch in dot product";
+      args.push_back(emitComputeLen(type1->dimensions[0]));
+      std::string funcName = ir::ScalarType::singleFloat() ?
+      "dot_f32" : "dot_f64";
+      call = emitCall(funcName, args, getLLVMFloatType());
+    }
+    else {
+      ierror << "intrinsic" << op->callee.getName() << "not found";
+    }
+
+    if (call == nullptr) {
+      iassert(fun);
+      call = builder->CreateCall(fun, args);
+    }
+    symtable.insert(op->results[0], call);
+  }
+  // If not an intrinsic function, try to find it in the module
+  else {
+    if (module->getFunction(op->callee.getName())) {
+      for (Var r : op->results) {
+        argTypes.push_back(createLLVMType(r.getType().toTensor()->componentType));
+
+        llvm::Value *llvmResult = symtable.get(r);
+        args.push_back(llvmResult);
+        symtable.insert(r, llvmResult);
+      }
+      fun = module->getFunction(op->callee.getName());
+      call = builder->CreateCall(fun, args);
+    }
+    else {
+      ierror << "function" << op->callee.getName() << "not found in module";
+    }
   }
 }
 

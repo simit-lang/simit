@@ -69,6 +69,7 @@ private:
 
   virtual void visit(const VarDecl *);
   virtual void visit(const AssignStmt *);
+  virtual void visit(const CallStmt *);
   virtual void visit(const Map *);
   virtual void visit(const FieldWrite *);
   virtual void visit(const TensorWrite *);
@@ -99,6 +100,7 @@ private:
   std::ostream &os;
 
   virtual void visit(const Call *);
+  virtual void visit(const CallStmt *);
   virtual void visit(const Func *);
 };
 

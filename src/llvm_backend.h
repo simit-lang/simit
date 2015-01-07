@@ -85,7 +85,9 @@ protected:
   virtual void visit(const ir::Not *);
   virtual void visit(const ir::Xor *);
 
+  virtual void visit(const ir::VarDecl *op);
   virtual void visit(const ir::AssignStmt *);
+  virtual void visit(const ir::CallStmt *);
   virtual void visit(const ir::FieldWrite *);
   virtual void visit(const ir::Store *);
   virtual void visit(const ir::ForRange *);

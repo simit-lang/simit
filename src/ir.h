@@ -769,6 +769,21 @@ struct AssignStmt : public StmtNode<AssignStmt> {
   }
 };
 
+struct CallStmt : public StmtNode<CallStmt> {
+  std::vector<Var> results;
+  Func callee;
+  std::vector<Expr> actuals;
+
+  static Stmt make(std::vector<Var> results,
+                   Func callee, std::vector<Expr> actuals) {
+    CallStmt *node = new CallStmt;
+    node->results = results;
+    node->callee = callee;
+    node->actuals = actuals;
+    return node;
+  }
+};
+
 struct FieldWrite : public StmtNode<FieldWrite> {
   Expr elementOrSet;
   std::string fieldName;

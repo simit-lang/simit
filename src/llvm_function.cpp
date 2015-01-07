@@ -42,6 +42,8 @@ void LLVMFunction::print(std::ostream &os) const {
 
 simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
                                              map<string, Actual> &actuals) {
+  iassert(formals.size() == llvmFunc->getArgumentList().size());
+
   if (llvmFunc->getArgumentList().size() == 0) {
     if (requiresInit) {
       llvm::Function *initFunc = getInitFunc();
@@ -54,13 +56,20 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
   }
   else {
     llvm::SmallVector<llvm::Value*, 8> args;
+    auto llvmArgIt = llvmFunc->getArgumentList().begin();
     for (const std::string &formal : formals) {
       assert(actuals.find(formal) != actuals.end());
       Actual &actual = actuals.at(formal);
+
       switch (actual.getType().kind()) {
         case ir::Type::Tensor: {
-          auto actualPtr = ir::to<ir::Literal>(*actual.getTensor());
-          args.push_back(llvmPtr(const_cast<ir::Literal*>(actualPtr)));
+          ir::Expr tensor = *actual.getTensor();
+          const ir::Literal *literal = ir::to<ir::Literal>(tensor);
+
+          llvm::Value *llvmActual = (llvmArgIt->getType()->isPointerTy())
+              ? llvmPtr(const_cast<ir::Literal*>(literal))
+              : llvmVal(literal);
+          args.push_back(llvmActual);
           break;
         }
         case ir::Type::Element: {
@@ -107,6 +116,7 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
           break;
         }
       }
+      ++llvmArgIt;
     }
 
     // Init function
