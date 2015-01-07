@@ -1,0 +1,18 @@
+%%% First piola kirchoff stress
+%- PK1(1.0,10.0,[1.0, 0.1, 0.0;0.2, 1.1, 0.1; 0.0, -0.1, 0.9 ]) == [-0.203299, 0.316594, 0.024066; 0.308297, 0.017031, -0.020330; -0.012033, 0.020330, -0.399563 ];
+func PK1(u:float, l:float, F:tensor[3,3](float))->(P:tensor[3,3](float))
+  JJ = log(det3(F));
+  Finv = inv3(F);
+  P = u*(F-Finv) + l*JJ*Finv;
+end
+
+%%% Gradient of first piola kirchoff stress
+%- dPdF(1.0,10.0,[1.0, 0.1, 0.0;0.2, 1.1, 0.1; 0.0, -0.1, 0.9 ],[1.0, 2.0, 3.0; 0.0, 0.0, 0.0; 0.0, 0.0, 0.0]) == [7.725282, 0.789449, 2.865494; 1.921653, 4.969785, 0.552198; 3.797480, -1.274178, 6.420995];
+func dPdF(u:float, l:float, F:tensor[3,3](float), dF:tensor[3,3](float))->
+  (dP:tensor[3,3](float))
+  dP = zero3;
+  JJ = log(det3(F));
+  Finv = inv3(F);
+  dP = u * dF + (u - l*JJ)*Finv*dF'*Finv';
+  dP = dP + l*trace3(Finv*dF)*Finv';
+end

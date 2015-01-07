@@ -38,6 +38,8 @@ struct MeshVol{
   std::vector<std::array< double,3> > v;
   ///element list
   std::vector<std::vector<int> > e;
+  ///edges list
+  std::vector<std::array< int,2> > edges;
   
   ///return -1 if failed to load
   int load(const char * filename);
@@ -47,10 +49,16 @@ struct MeshVol{
   ///return -1 if failed to load
   int loadTet(const char * nodeFile, const char * eleFile);
   int loadTet(std::istream & nodeIn, std::istream & eleIn);
-
+  int loadTetEdge(const char * edgeFile);
+  int loadTetEdge(std::istream & edgeIn);
   ///return -1 if failed to save
   int save(const char * filename);
   int save(std::ostream & out);
+  
+  ///save surface mesh obj file. Only works for hexahedral mesh
+  int saveHexObj(const char * filename);
+  ///for each vertex, what elements contain the vertex.
+  void elementNeighbors(std::vector<std::vector<int> > & eleNeighbor);
 };
 
 }
