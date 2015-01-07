@@ -2,7 +2,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
-#include <unordered_map>
+#include <map>
 #include "mesh.h"
 
 using namespace simit;
@@ -10,7 +10,7 @@ using namespace std;
 
 typedef array<double,3> Vector3d;
 typedef array<int,3> Vector3i;
-typedef unordered_map<int,int> IntMap;
+typedef map<int,int> IntMap;
 int openIfstream(ifstream & in, const char * filename);
 int openOfstream(ofstream & out, const char * filename);
 
