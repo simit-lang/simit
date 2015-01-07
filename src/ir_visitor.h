@@ -110,6 +110,12 @@ public:
   virtual void visit(const Func *f);
 };
 
+/// Visits a whole call graph.
+class IRVisitorCallGraph : public IRVisitor {
+public:
+  std::set<ir::Func> visited;
+  virtual void visit(const Call *op);
+};
 
 /// Query class to make it easier to write visitors to answer a yes/no question.
 class IRQuery : public IRVisitor {

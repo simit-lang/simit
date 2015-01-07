@@ -415,9 +415,32 @@ void IRRewriter::visit(const Print *op) {
 }
 
 
-// Utility 
+// class IRRewriterCallGraph
+void IRRewriterCallGraph::visit(const Call *op) {
+  Func callee;
+  if (visited.find(op->func) == visited.end()) {
+    visited.insert(op->func);
+    callee = rewrite(op->func);
+  }
+  else {
+    callee = op->func;
+  }
 
-Expr substitute(std::map<IndexVar,IndexVar> substitutions, Expr expr);
-Expr substitute(std::map<IndexVar,IndexVar> substitutions, Stmt stmt);
+  std::vector<Expr> actuals(op->actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->actuals.size(); ++i) {
+    actuals[i] = rewrite(op->actuals[i]);
+    if (actuals[i] != op->actuals[i]) {
+      actualsSame = false;
+    }
+  }
+
+  if (callee == op->func && actualsSame) {
+    expr = op;
+  }
+  else {
+    expr = Call::make(callee, actuals);
+  }
+}
 
 }} // namespace simit::ir

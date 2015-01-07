@@ -28,7 +28,7 @@ std::ostream &operator<<(std::ostream &os, const IRNode &);
 std::ostream &operator<<(std::ostream &os, const ForDomain &);
 std::ostream &operator<<(std::ostream &os, const CompoundOperator &);
 
-class IRPrinter : public IRVisitor {
+class IRPrinter : private IRVisitor {
 public:
   IRPrinter(std::ostream &os, signed indent=0);
   virtual ~IRPrinter() {}
@@ -88,6 +88,21 @@ private:
   std::ostream &os;
   unsigned indentation;
 };
+
+class IRPrinterCallGraph : public IRVisitor {
+public:
+  IRPrinterCallGraph(std::ostream &os) : os(os) {}
+  void print(const Func &);
+
+private:
+  std::set<ir::Func> visited;
+  std::ostream &os;
+
+  virtual void visit(const Call *);
+  virtual void visit(const Func *);
+};
+
+void printCallGraph(const Func &f, std::ostream &os);
 
 }} // namespace simit::ir
 #endif

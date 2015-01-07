@@ -1,6 +1,7 @@
 #ifndef SIMIT_IR_REWRITER_H
 #define SIMIT_IR_REWRITER_H
 
+#include <set>
 #include "ir.h"
 
 namespace simit {
@@ -65,6 +66,16 @@ protected:
   virtual void visit(const Print *op);
 
   virtual void visit(const Func *f);
+};
+
+
+/// Rewrites a whole call graph
+class IRRewriterCallGraph : public IRRewriter {
+protected:
+//  using IRRewriter::visit;
+  std::set<ir::Func> visited;
+
+  virtual void visit(const Call *op);
 };
 
 }}

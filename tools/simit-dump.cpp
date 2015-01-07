@@ -2,6 +2,7 @@
 
 #include "ir.h"
 #include "ir_printer.h"
+#include "ir_rewriter.h"
 #include "lower.h"
 #include "temps.h"
 #include "flatten.h"
@@ -187,43 +188,114 @@ int main(int argc, const char* argv[]) {
       }
     }
 
-    // Lower while printing lowered results
+    // Lower while printing intermediate results
     if (emitSimit) {
       cout << endl << endl;
       cout << "--- Compile " << function << endl;
     }
 
-    func = insertTemporaries(func);
-    func = flattenIndexExpressions(func);
+    { class Rewriter : public simit::ir::IRRewriterCallGraph {
+        using IRRewriter::visit;
+        void visit(const simit::ir::Func *op) {
+          if (op->getKind() != simit::ir::Func::Internal) {
+            func = *op;
+            return;
+          }
+          func = simit::ir::Func(*op, rewrite(op->getBody()));
+          func = insertTemporaries(func);
+          func = flattenIndexExpressions(func);
+        }
+      };
+      func = Rewriter().rewrite(func);
+    }
     if (emitSimit) {
       cout << "--- Insert Temporaries and Flatten Index Expressions" << endl;
-      cout << func << endl << endl;
+      simit::ir::IRPrinterCallGraph(cout).print(func);
+      cout << endl << endl << endl;
     }
 
-    func.setStorage(getStorage(func));
+    {
+      class Rewriter : public simit::ir::IRRewriterCallGraph {
+        using IRRewriter::visit;
+        void visit(const simit::ir::Func *op) {
+          if (op->getKind() != simit::ir::Func::Internal) {
+            func = *op;
+            return;
+          }
+          func = simit::ir::Func(*op, rewrite(op->getBody()));
+          func.setStorage(getStorage(func));
+        }
+      };
+      func = Rewriter().rewrite(func);
+    }
     if (emitSimit) {
       cout << "--- Tensor storage" << endl;
-      cout << func.getStorage() << endl << endl;
+      cout << func.getStorage() << endl << endl << endl;
     }
     
-    func = lowerMaps(func);
+    {
+      class Rewriter : public simit::ir::IRRewriterCallGraph {
+        using IRRewriter::visit;
+        void visit(const simit::ir::Func *op) {
+          if (op->getKind() != simit::ir::Func::Internal) {
+            func = *op;
+            return;
+          }
+          func = simit::ir::Func(*op, rewrite(op->getBody()));
+          func = lowerMaps(func);
+        }
+      };
+      func = Rewriter().rewrite(func);
+    }
     if (emitSimit) {
       cout << "--- Lower Maps" << endl;
-      cout << func << endl << endl;;
+      simit::ir::IRPrinterCallGraph(cout).print(func);
+      cout << endl << endl << endl;
     }
 
-    func = lowerIndexExpressions(func);
+    {
+      class Rewriter : public simit::ir::IRRewriterCallGraph {
+        using IRRewriter::visit;
+        void visit(const simit::ir::Func *op) {
+          if (op->getKind() != simit::ir::Func::Internal) {
+            func = *op;
+            return;
+          }
+          func = simit::ir::Func(*op, rewrite(op->getBody()));
+          func = lowerIndexExpressions(func);
+        }
+      };
+      func = Rewriter().rewrite(func);
+    }
     if (emitSimit) {
       cout << "--- Lower Index Expressions" << endl;
-      cout << func << endl << endl;;
+      simit::ir::IRPrinterCallGraph(cout).print(func);
+      cout << endl << endl << endl;
     }
 
-    func = lowerTensorAccesses(func);
+    {
+      class Rewriter : public simit::ir::IRRewriterCallGraph {
+        using IRRewriter::visit;
+        void visit(const simit::ir::Func *op) {
+          if (op->getKind() != simit::ir::Func::Internal) {
+            func = *op;
+            return;
+          }
+          func = simit::ir::Func(*op, rewrite(op->getBody()));
+          func = lowerTensorAccesses(func);
+        }
+      };
+      func = Rewriter().rewrite(func);
+    }
     if (emitSimit) {
       cout << "--- Lower Tensor Reads and Writes" << endl;
-      cout << func << endl;
+      simit::ir::IRPrinterCallGraph(cout).print(func);
+      cout << endl;
     }
 
+
+    // Emit and print llvm code
+    // NB: The LLVM code gets further optimized at init time (OSR, etc.)
     if (emitLLVM) {
       simit::internal::LLVMBackend backend;
       std::string fstr = simit::util::toString(*backend.compile(func));
@@ -231,8 +303,6 @@ int main(int argc, const char* argv[]) {
         cout << endl << "--- Emitting LLVM" << endl;
       }
       cout << simit::util::trim(fstr) << endl;
-
-      // NB: The LLVM code gets further optimized at init time (OSR, etc.)
     }
   }
 

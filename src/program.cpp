@@ -1,8 +1,10 @@
 #include "program.h"
 
 #include <set>
+#include <vector>
 
 #include "ir.h"
+#include "ir_rewriter.h"
 #include "frontend.h"
 #include "lower.h"
 #include "llvm_backend.h"
@@ -19,10 +21,23 @@ using namespace std;
 namespace simit {
 
 static Function *compile(ir::Func func, internal::Backend *backend) {
-  func = insertTemporaries(func);
-  func = flattenIndexExpressions(func);
-  func.setStorage(getStorage(func));
-  func = lower(func);
+  class OptimizeFunctionsVisitor : public ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const ir::Func *op) {
+      if (op->getKind() != ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+
+      func = ir::Func(*op, rewrite(op->getBody()));
+      func = insertTemporaries(func);
+      func = flattenIndexExpressions(func);
+      func.setStorage(getStorage(func));
+      func = lower(func);
+    }
+  };
+  func = OptimizeFunctionsVisitor().rewrite(func);
+
   return backend->compile(func);
 }
 

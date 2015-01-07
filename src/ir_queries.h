@@ -25,6 +25,9 @@ bool isFlattened(Stmt stmt);
 /// rhs is a blocked tensor
 bool isBlocked(Stmt stmt);
 
+
+std::vector<Func> getCallTree(Func func);
+
 }}
 
 #endif

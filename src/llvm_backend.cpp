@@ -3,6 +3,7 @@
 #include <cstdint>
 #include <iostream>
 #include <stack>
+#include <algorithm>
 
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
@@ -27,6 +28,7 @@
 #include "types.h"
 #include "ir.h"
 #include "ir_printer.h"
+#include "ir_queries.h"
 #include "llvm_function.h"
 #include "macros.h"
 #include "runtime.h"
@@ -72,51 +74,61 @@ simit::Function *LLVMBackend::compile(Func func) {
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
-  this->storage = func.getStorage();
-
-  // Allocate buffers for local variables in global storage.
-  // TODO: We should allocate small local dense tensors on the stack
-  // NOTE: Parallel backends need a better scheme where a local variable is
-  //       created for each thread or thread pool.
   map<Var, llvm::Value*> buffers;
-  for (auto &var : storage) {
-    if (!storage.get(var).needsInitialization()) continue;
 
-    iassert(var.getType().isTensor());
-    llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
-    llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
+  // Create compute functions
+  vector<Func> callTree = getCallTree(func);
+  std::reverse(callTree.begin(), callTree.end());
+  llvm::Function *llvmFunc = nullptr;
+  for (auto &f : callTree) {
+    if (f.getKind() != Func::Internal) continue;
+    iassert(f.getBody().defined());
 
-    llvm::GlobalVariable* buffer =
-        new llvm::GlobalVariable(*module, globalType,
-                                 false, llvm::GlobalValue::InternalLinkage,
-                                 llvm::ConstantPointerNull::get(globalType),
-                                 var.getName());
-    buffer->setAlignment(8);
-    buffers.insert(pair<Var,llvm::Value*>(var,buffer));
+    this->storage = f.getStorage();
+
+    // Allocate buffers for local variables in global storage.
+    // TODO: We should allocate small local dense tensors on the stack
+    map<Var, llvm::Value*> localBuffers;
+    for (auto &var : storage) {
+      if (!storage.get(var).needsInitialization()) continue;
+
+      iassert(var.getType().isTensor());
+      llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
+      llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
+
+      llvm::GlobalVariable* buffer =
+      new llvm::GlobalVariable(*module, globalType,
+                               false, llvm::GlobalValue::InternalLinkage,
+                               llvm::ConstantPointerNull::get(globalType),
+                               var.getName());
+      buffer->setAlignment(8);
+      localBuffers.insert(pair<Var,llvm::Value*>(var,buffer));
+    }
+    buffers.insert(localBuffers.begin(), localBuffers.end());
+
+    // Emit function
+    llvmFunc = emitEmptyFunction(f.getName(), f.getArguments(),
+                                 f.getResults());
+
+    // Load localBuffers
+    for (auto &buffer : localBuffers) {
+      Var var = buffer.first;
+      llvm::Value *bufferVal = buffer.second;
+      llvm::Value *llvmTmp = builder->CreateLoad(bufferVal, bufferVal->getName());
+      symtable.insert(var, llvmTmp);
+    }
+
+    // Add constants to symbol table
+    for (auto &global : f.getEnvironment().globals) {
+      symtable.insert(global.first, compile(global.second));
+    }
+    
+    compile(f.getBody());
+    builder->CreateRetVoid();
+    symtable.clear();
+    
   }
-
-  // Create compute function
-  llvm::Function *llvmFunc = emitEmptyFunction(func.getName(),
-                                               func.getArguments(),
-                                               func.getResults());
-
-  // Load buffers
-  for (auto &buffer : buffers) {
-    Var var = buffer.first;
-    llvm::Value *bufferVal = buffer.second;
-    llvm::Value *llvmTmp = builder->CreateLoad(bufferVal, bufferVal->getName());
-    symtable.insert(var, llvmTmp);
-  }
-
-  // Add constants to symbol table
-  for (auto &global : func.getEnvironment().globals) {
-    symtable.insert(global.first, compile(global.second));
-  }
-
-  compile(func.getBody());
-  builder->CreateRetVoid();
-  symtable.clear();
-
+  iassert(llvmFunc);
 
   // Declare malloc and free
   llvm::FunctionType *m =
@@ -413,11 +425,18 @@ void LLVMBackend::visit(const Call *op) {
     val = emitCall(funcName, args, getLLVMFloatType());
     return;
   }
-  else {
-    // if not an intrinsic function, try to find it in the module
+  // if not an intrinsic function, try to find it in the module
+  else if (module->getFunction(op->func.getName())) {
     fun = module->getFunction(op->func.getName());
   }
-  iassert(fun) << "Unsupported function call";
+  else {
+    
+
+    not_supported_yet << "Unsupported function call";
+
+
+  }
+  iassert(fun);
 
   val = builder->CreateCall(fun, args);
 }

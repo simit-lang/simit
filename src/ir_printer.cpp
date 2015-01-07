@@ -430,6 +430,8 @@ void IRPrinter::visit(const IfThenElse *op) {
   ++indentation;
   print(op->thenBody);
   --indentation;
+  os << endl;
+  indent();
   os << "else" << endl;
   ++indentation;
   print(op->elseBody);
@@ -497,5 +499,26 @@ void IRPrinter::indent() {
     os << "  ";
   }
 }
+
+// class IRPrinterCallGraph
+void IRPrinterCallGraph::print(const Func &func) {
+  if (func.defined()) {
+    func.accept(this);
+  }
+  else {
+    os << "Func()";
+  }
+}
+
+void IRPrinterCallGraph::visit(const Call *op) {
+  os << op->func << "\n\n";
+}
+
+void IRPrinterCallGraph::visit(const Func *op) {
+  IRVisitor::visit(op);
+  os << *op;
+}
+
+
 
 }} //namespace simit::ir
