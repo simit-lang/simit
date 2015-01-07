@@ -859,12 +859,12 @@ void LLVMBackend::visit(const Pass *op) {
 }
 
 void LLVMBackend::visit(const Print *op) {
-
   llvm::Value *result = compile(op->expr);
   Type type = op->expr.type();
 
   switch (type.kind()) {
   case Type::Kind::Tensor: {
+
     const TensorType *tensor = type.toTensor();
     ScalarType scalarType = tensor->componentType;
     size_t order = tensor->order();
@@ -872,76 +872,110 @@ void LLVMBackend::visit(const Print *op) {
     std::vector<llvm::Value*> args;
     std::string specifier = (scalarType.kind == ScalarType::Float? "%f" : "%d");
 
-    switch (order) {
-    case 0:
+    if (order == 0) {
       iassert(tensor->dimensions.size() == 0);
       format = specifier + "\n";
       args.push_back(result);
-      break;
-    case 1: {
-      iassert(tensor->dimensions.size() == 1);
-      std::string delim = (tensor->isColumnVector ? "\n" : " ");
-      size_t size = tensor->size();
-      for (size_t i = 0; i < size; i++) {
-        llvm::Value *index = llvmInt(i);
-        llvm::Value *element = loadFromArray(result, index);
-        format += specifier + delim;
-        args.push_back(element);
-      }
-      format.back() = '\n';
-      break;
-    }
-    default: {
-      iassert(tensor->dimensions.size() >= 2);
-      size_t size = tensor->size();
-      if (size % tensor->dimensions.back().getSize()) {
-        not_supported_yet << "\nNot a rectangular tensor (total entries not a"
-                          << "multiple of entries per row)";
+    } else  {
+      for (const IndexDomain &id : tensor->dimensions) {
+        for (const IndexSet &is : id.getIndexSets()) {
+          if (is.getKind() == IndexSet::Kind::Set) {
+
+            llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+            llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
+            llvm::Value *rangeStart = llvmInt(0);
+            llvm::Value *rangeEnd = builder->CreateSub(
+                  emitComputeLen(tensor, TensorStorage::DenseRowMajor), llvmInt(1));
+
+            llvm::BasicBlock *loopBodyStart =
+              llvm::BasicBlock::Create(LLVM_CONTEXT, "", llvmFunc);
+
+            builder->CreateBr(loopBodyStart);
+            builder->SetInsertPoint(loopBodyStart);
+
+            llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2);
+            i->addIncoming(rangeStart, entryBlock);
+
+            llvm::Value *entry = loadFromArray(result, i);
+            emitPrintf(specifier + " ", {entry});
+
+            llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
+            llvm::Value *iNext = builder->CreateAdd(i, llvmInt(1));
+            i->addIncoming(iNext, loopBodyEnd);
+
+            llvm::Value *exitCond = builder->CreateICmpSLT(iNext, rangeEnd);
+            llvm::BasicBlock *loopEnd =
+                llvm::BasicBlock::Create(LLVM_CONTEXT, "", llvmFunc);
+            builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
+            builder->SetInsertPoint(loopEnd);
+
+            emitPrintf(specifier + "\n", {loadFromArray(result, iNext)});
+            return;
+          }
+        }
       }
 
-      for (size_t i = 0; i < tensor->dimensions.back().getSize(); i++) {
-        format += specifier + " ";
-      }
-      format.back() = '\n';
+      if (order == 1) {
+        iassert(tensor->dimensions.size() == 1);
+        std::string delim = (tensor->isColumnVector ? "\n" : " ");
+        size_t size = tensor->size();
+        for (size_t i = 0; i < size; i++) {
+          llvm::Value *index = llvmInt(i);
+          llvm::Value *element = loadFromArray(result, index);
+          format += specifier + delim;
+          args.push_back(element);
+        }
+        format.back() = '\n';
+      } else {
+        iassert(tensor->dimensions.size() >= 2);
+        size_t size = tensor->size();
+        if (size % tensor->dimensions.back().getSize()) {
+          not_supported_yet << "\nNot a rectangular tensor (total entries not a"
+                            << "multiple of entries per row)";
+        }
 
-      size_t numlines = size / tensor->dimensions.back().getSize();
-      std::vector<std::string> formatLines(numlines, format);
+        for (size_t i = 0; i < tensor->dimensions.back().getSize(); i++) {
+          format += specifier + " ";
+        }
+        format.back() = '\n';
 
-      size_t stride = 1;
-      for (size_t i = tensor->dimensions.size() - 2; i > 0; i--) {
-        stride *= tensor->dimensions[i].getSize();
+        size_t numlines = size / tensor->dimensions.back().getSize();
+        std::vector<std::string> formatLines(numlines, format);
+
+        size_t stride = 1;
+        for (size_t i = tensor->dimensions.size() - 2; i > 0; i--) {
+          stride *= tensor->dimensions[i].getSize();
+          for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
+            formatLines[j].push_back('\n');
+          }
+        }
+        stride *= tensor->dimensions[0].getSize();
         for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
           formatLines[j].push_back('\n');
         }
-      }
-      stride *= tensor->dimensions[0].getSize();
-      for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
-        formatLines[j].push_back('\n');
-      }
-      formatLines.back().resize(formatLines.back().find_last_not_of("\n") + 2);
+        formatLines.back().resize(formatLines.back().find_last_not_of("\n") + 2);
 
-      size_t charCount = 1;
-      for (string &str : formatLines) {
-        charCount += str.length();
-      }
-      format.clear();
-      format.reserve(charCount);
-      for (string &str : formatLines) {
-        format += str;
-      }
+        size_t charCount = 1;
+        for (string &str : formatLines) {
+          charCount += str.length();
+        }
+        format.clear();
+        format.reserve(charCount);
+        for (string &str : formatLines) {
+          format += str;
+        }
 
-      for (size_t i = 0; i < size; i++) {
-        llvm::Value *index = llvmInt(i);
-        llvm::Value *element = loadFromArray(result, index);
-        args.push_back(element);
+        for (size_t i = 0; i < size; i++) {
+          llvm::Value *index = llvmInt(i);
+          llvm::Value *element = loadFromArray(result, index);
+          args.push_back(element);
+        }
+        format.back() = '\n';
       }
-      format.back() = '\n';
-      break;
-    }
     }
     emitPrintf(format, args);
   }
-    break;
+    return;
   case Type::Kind::Element:
   case Type::Kind::Set:
   case Type::Kind::Tuple:
