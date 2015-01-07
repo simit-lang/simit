@@ -33,6 +33,9 @@ public:
         inZShard = true;
         break;
       }
+      default: {
+        break;
+      }
     }
   }
 
@@ -48,6 +51,9 @@ public:
       }
       case Z: {
         inZShard = false;
+        break;
+      }
+      default: {
         break;
       }
     }

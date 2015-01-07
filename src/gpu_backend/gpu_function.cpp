@@ -129,7 +129,7 @@ std::string generatePtx(const std::string &module,
 }  // namespace
 
 GPUFunction::GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-                         llvm::Module *llvmModule, struct GPUSharding sharding)
+                         llvm::Module *llvmModule, class GPUSharding sharding)
     : Function(simitFunc), llvmFunc(llvmFunc),
       llvmModule(llvmModule), sharding(sharding){}
 GPUFunction::~GPUFunction() {
@@ -152,7 +152,7 @@ llvm::Value *GPUFunction::pushArg(
       const ir::Literal &literal = *(ir::to<ir::Literal>(*actual.getTensor()));
       std::cout << "[";
       char* data = reinterpret_cast<char*>(literal.data);
-      for (int i = 0; i < literal.size; ++i) {
+      for (size_t i = 0; i < literal.size; ++i) {
         if (i != 0) std::cout << ",";
         std::cout << std::hex << (int) data[i];
       }
@@ -242,6 +242,8 @@ llvm::Value *GPUFunction::pushArg(
     case ir::Type::Tuple: ierror << "Tuple arg not supported";
     default: ierror << "Unknown arg type";
   }
+  assert(false && "unreachable");
+  return NULL;
 }
 
 void GPUFunction::pullArgAndFree(void *hostPtr, DeviceDataHandle handle) {
@@ -298,6 +300,8 @@ int GPUFunction::findShardSize(ir::IndexSet domain) {
   else {
     ierror << "Invalid domain kind: " << domain.getKind();
   }
+  assert(false && "unreachable");
+  return -1;
 }
 
 simit::Function::FuncType GPUFunction::init(

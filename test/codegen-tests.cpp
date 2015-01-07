@@ -19,8 +19,6 @@ using namespace simit::internal;
 
 namespace simit { extern std::string kBackend; }
 
-const double epsilon = 0.0000001;
-
 template <typename T>
 std::vector<T> toVectorOf(Expr expr) {
   std::vector<T> vec;

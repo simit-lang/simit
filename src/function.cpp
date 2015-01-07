@@ -11,7 +11,7 @@ using namespace std;
 namespace simit {
 
 Function::Function(const simit::ir::Func &simitFunc)
-    : funcPtr(NULL), initRequired(true) {
+    : initRequired(true), funcPtr(NULL) {
   for (auto &arg : simitFunc.getArguments()) {
     formals.push_back(arg.getName());
     actuals[arg.getName()] = Actual(arg.getType());

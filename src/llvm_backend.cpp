@@ -179,7 +179,7 @@ void LLVMBackend::visit(const TensorRead *op) {
   llvm::Value *offset = llvm::ConstantInt::get(LLVM_INT, 0);
   // TODO(gkanwar): Currently only supports scalar read
   iassert(op->indices.size() == type->order());
-  for (int i = 0; i < type->order(); ++i) {
+  for (size_t i = 0; i < type->order(); ++i) {
     const Expr& index = op->indices[i];
     llvm::Value *llvmIndex = compile(index);
     const IndexDomain& domain = type->dimensions[i];
@@ -234,7 +234,7 @@ void LLVMBackend::visit(const TensorWrite *op) {
   llvm::Value *offset = llvm::ConstantInt::get(LLVM_INT, 0);
   // TODO(gkanwar): Currently only supports scalar write
   iassert(op->indices.size() == type->order());
-  for (int i = 0; i < type->order(); ++i) {
+  for (size_t i = 0; i < type->order(); ++i) {
     const Expr& index = op->indices[i];
     llvm::Value *llvmIndex = compile(index);
     const IndexDomain& domain = type->dimensions[i];

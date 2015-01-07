@@ -20,13 +20,15 @@ public:
 
   simit::Function *compile(simit::ir::Func func);
 
-private:
+protected:
   // Used to track which dimensions of the GPU computation have been
   // parallelized across blocks
   GPUSharding sharding;
 
   // Currently compiling LLVM function
   llvm::Function *func;
+  
+  using LLVMBackend::visit;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void visit(const ir::FieldRead *);

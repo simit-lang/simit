@@ -72,8 +72,8 @@ Type simitType(const llvm::Type *type) {
     type = type->getPointerElementType();
   }
 
-  if (ScalarType::singleFloat() && type->isFloatTy() ||
-      !ScalarType::singleFloat() && type->isDoubleTy()) {
+  if ((ScalarType::singleFloat() && type->isFloatTy()) ||
+      (!ScalarType::singleFloat() && type->isDoubleTy())) {
     return Float;
   }
   else if (type->isIntegerTy()) {

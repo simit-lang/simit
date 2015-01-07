@@ -281,6 +281,8 @@ llvm::Value *GPUBackend::emitBarrier() {
 
 llvm::Value *GPUBackend::emitCheckRoot() {
   not_supported_yet;
+  assert(false && "unreachable");
+  return NULL;
 }
 
 llvm::Value *GPUBackend::getTidX() {

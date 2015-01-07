@@ -45,15 +45,15 @@ GPUSharding::ShardDimension GPUSharding::maybeShardFor(const ir::For *op) {
 }
 
 bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2) {
-  return (!sharding1.xSharded && !sharding2.xSharded ||
-          sharding1.xSharded && sharding2.xSharded &&
-          sharding1.xDomain == sharding2.xDomain) &&
-      (!sharding1.ySharded && !sharding2.ySharded ||
-       sharding1.ySharded && sharding2.ySharded &&
-       sharding1.yDomain == sharding2.yDomain) &&
-      (!sharding1.zSharded && !sharding2.zSharded ||
-       sharding1.zSharded && sharding2.zSharded &&
-       sharding1.zDomain == sharding2.zDomain);
+  return ((!sharding1.xSharded && !sharding2.xSharded) ||
+          (sharding1.xSharded && sharding2.xSharded &&
+          sharding1.xDomain == sharding2.xDomain)) &&
+      ((!sharding1.ySharded && !sharding2.ySharded) ||
+       (sharding1.ySharded && sharding2.ySharded &&
+       sharding1.yDomain == sharding2.yDomain)) &&
+      ((!sharding1.zSharded && !sharding2.zSharded) ||
+       (sharding1.zSharded && sharding2.zSharded &&
+       sharding1.zDomain == sharding2.zDomain));
 }
 
 

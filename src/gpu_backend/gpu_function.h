@@ -18,7 +18,7 @@ namespace internal {
 class GPUFunction : public simit::Function {
  public:
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-              llvm::Module *llvmModule, struct GPUSharding sharding);
+              llvm::Module *llvmModule, class GPUSharding sharding);
   ~GPUFunction();
 
   void print(std::ostream &os) const;
@@ -56,7 +56,7 @@ class GPUFunction : public simit::Function {
   std::unique_ptr<ir::Func> simitFunc;
   std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> llvmModule;
-  struct GPUSharding sharding;
+  class GPUSharding sharding;
 };
 
 }
