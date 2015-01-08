@@ -147,15 +147,15 @@ float det3_f32(float * a){
 
 void inv3_f64(double * a, double * inv){
   double cof00 = a[4]*a[8]-a[5]*a[7];
-  double cof01 =-a[3]*a[8]-a[5]*a[6];
+  double cof01 =-a[3]*a[8]+a[5]*a[6];
   double cof02 = a[3]*a[7]-a[4]*a[6];
   
-  double cof10 =-a[1]*a[8]-a[2]*a[7];
-  double cof11 = a[0]*a[8]-a[2]*a[7];
-  double cof12 =-a[0]*a[7]-a[1]*a[6];
+  double cof10 =-a[1]*a[8]+a[2]*a[7];
+  double cof11 = a[0]*a[8]-a[2]*a[6];
+  double cof12 =-a[0]*a[7]+a[1]*a[6];
 
   double cof20 = a[1]*a[5]-a[2]*a[4];
-  double cof21 =-a[0]*a[5]-a[2]*a[3];
+  double cof21 =-a[0]*a[5]+a[2]*a[3];
   double cof22 = a[0]*a[4]-a[1]*a[3];
 
   double determ = a[0] * cof00 + a[1] * cof01 + a[2]*cof02;
@@ -176,15 +176,15 @@ void inv3_f64(double * a, double * inv){
 
 void inv3_f32(float * a, float * inv){
   float cof00 = a[4]*a[8]-a[5]*a[7];
-  float cof01 =-a[3]*a[8]-a[5]*a[6];
+  float cof01 =-a[3]*a[8]+a[5]*a[6];
   float cof02 = a[3]*a[7]-a[4]*a[6];
   
-  float cof10 =-a[1]*a[8]-a[2]*a[7];
-  float cof11 = a[0]*a[8]-a[2]*a[7];
-  float cof12 =-a[0]*a[7]-a[1]*a[6];
+  float cof10 =-a[1]*a[8]+a[2]*a[7];
+  float cof11 = a[0]*a[8]-a[2]*a[6];
+  float cof12 =-a[0]*a[7]+a[1]*a[6];
 
   float cof20 = a[1]*a[5]-a[2]*a[4];
-  float cof21 =-a[0]*a[5]-a[2]*a[3];
+  float cof21 =-a[0]*a[5]+a[2]*a[3];
   float cof22 = a[0]*a[4]-a[1]*a[3];
 
   float determ = a[0] * cof00 + a[1] * cof01 + a[2]*cof02;
