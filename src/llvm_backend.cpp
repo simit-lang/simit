@@ -651,6 +651,8 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
   Func callee = op->callee;
 
   if (callee.getKind() == Func::Intrinsic) {
+    std::string floatType = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
+
     // first, see if this is an LLVM intrinsic
     auto foundIntrinsic = llvmIntrinsicByName.find(op->callee);
     if (foundIntrinsic != llvmIntrinsicByName.end()) {
@@ -663,10 +665,14 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
              op->callee == ir::Intrinsics::asin  ||
              op->callee == ir::Intrinsics::acos    ) {
       auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
-      std::string floatType = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
-      std::string funcName = op->callee.getName() + floatType;
-      fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(funcName,
-                                                                   ftype));
+      std::string fname = op->callee.getName() + floatType;
+      fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(fname,ftype));
+    }
+    else if (callee == ir::Intrinsics::det) {
+      iassert(args.size() == 1);
+      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
+      std::string fname = op->callee.getName() + "3" + floatType;
+      fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(fname,ftype));
     }
     else if (op->callee == ir::Intrinsics::norm) {
       iassert(args.size() == 1);
@@ -693,25 +699,39 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
         call = builder->CreateCall(sqrt, sum);
       } else {
         args.push_back(emitComputeLen(type->dimensions[0]));
-        std::string funcName = ir::ScalarType::singleFloat() ?
-        "norm_f32" : "norm_f64";
+        std::string funcName = "norm" + floatType;
         call = emitCall(funcName, args, getLLVMFloatType());
       }
+    }
+    else if (callee == ir::Intrinsics::inv) {
+      iassert(args.size() == 1);
+      Var r = op->results[0];
+
+      argTypes.push_back(createLLVMType(r.getType().toTensor()->componentType));
+      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
+
+      llvm::Value *llvmResult = symtable.get(r);
+      args.push_back(llvmResult);
+      symtable.insert(r, llvmResult);
+
+      std::string fname = op->callee.getName() + "3" + floatType;
+      fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(fname,ftype));
+      call = builder->CreateCall(fun, args);
+      return;
     }
     else if (op->callee == ir::Intrinsics::solve) {
       // FIX: compile is making these be LLVM_DOUBLE, but I need
       // LLVM_DOUBLEPTR
       std::vector<llvm::Type*> argTypes2 =
-      {getLLVMFloatPtrType(), getLLVMFloatPtrType(), getLLVMFloatPtrType(),
-        LLVM_INT, LLVM_INT};
+          {getLLVMFloatPtrType(), getLLVMFloatPtrType(), getLLVMFloatPtrType(),
+           LLVM_INT, LLVM_INT};
 
       auto type = op->actuals[0].type().toTensor();
       args.push_back(emitComputeLen(type->dimensions[0]));
       args.push_back(emitComputeLen(type->dimensions[1]));
 
       auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes2,false);
-      std::string funcName = ir::ScalarType::singleFloat() ?
-      "cMatSolve_f32" : "cMatSolve_f64";
+      std::string funcName = "cMatSolve" + floatType;
       fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(funcName,
                                                                    ftype));
     }
@@ -722,11 +742,10 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       // we need to add the vector length to the args
       auto type1 = op->actuals[0].type().toTensor();
       auto type2 = op->actuals[1].type().toTensor();
-      uassert(type1->dimensions[0] == type2->dimensions[0]) <<
-      "dimension mismatch in dot product";
+      uassert(type1->dimensions[0] == type2->dimensions[0])
+          << "dimension mismatch in dot product";
       args.push_back(emitComputeLen(type1->dimensions[0]));
-      std::string funcName = ir::ScalarType::singleFloat() ?
-      "dot_f32" : "dot_f64";
+      std::string funcName = "dot" + floatType;
       call = emitCall(funcName, args, getLLVMFloatType());
     }
     else {
