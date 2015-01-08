@@ -14,6 +14,8 @@ namespace ir {
 
 Stmt initializeLhsToZero(Stmt stmt) {
   class ReplaceRhsWithZero : public IRRewriter {
+    using IRRewriter::visit;
+    
     void visit(const AssignStmt *op) {
       stmt = AssignStmt::make(op->var, 0.0);
     }

@@ -6,6 +6,28 @@
 #include <Eigen/Dense>
 
 extern "C" {
+
+// appease GCC
+double cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
+                     int rows, int columns);
+float cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
+                    int rows, int columns);
+int loc(int v0, int v1, int *neighbors_start, int *neighbors);
+double dot_f64(double* a, double* b, int len);
+float dot_f32(float* a, float* b, int len);
+double norm_f64(double* a, int len);
+float norm_f32(float* a, int len);
+double atan2_f64(double y, double x);
+float atan2_f32(float y, float x);
+double tan_f64(double x);
+float tan_f32(float x);
+double asin_f64(double x);
+float asin_f32(float x);
+double acos_f64(double x);
+float acos_f32(float x);
+double det3(double * a);
+void inv3(double * a, double * inv);
+
 double cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
                  int rows, int columns) {
   using namespace Eigen;
@@ -109,5 +131,43 @@ float acos_f32(float x) {
   return (float)acos(d_x);
 }
 
+//  0 1 2
+//  3 4 5
+//  6 7 8
+double det3(double * a){
+  return a[0] * (a[4]*a[8]-a[5]*a[7]) 
+       - a[1] * (a[3]*a[8]-a[5]*a[6])
+       + a[2] * (a[3]*a[7]-a[4]*a[6]);
+}
+
+void inv3(double * a, double * inv){
+  double cof00 = a[4]*a[8]-a[5]*a[7];
+  double cof01 =-a[3]*a[8]-a[5]*a[6];
+  double cof02 = a[3]*a[7]-a[4]*a[6];
+  
+  double cof10 =-a[1]*a[8]-a[2]*a[7];
+  double cof11 = a[0]*a[8]-a[2]*a[7];
+  double cof12 =-a[0]*a[7]-a[1]*a[6];
+
+  double cof20 = a[1]*a[5]-a[2]*a[4];
+  double cof21 =-a[0]*a[5]-a[2]*a[3];
+  double cof22 = a[0]*a[4]-a[1]*a[3];
+
+  double determ = a[0] * cof00 + a[1] * cof01 + a[2]*cof02;
+  
+  determ = 1.0/determ;
+  inv[0] = cof00 * determ;
+  inv[1] = cof10 * determ;
+  inv[2] = cof20 * determ;
+
+  inv[3] = cof01 * determ;
+  inv[4] = cof11 * determ;
+  inv[5] = cof21 * determ;
+
+  inv[6] = cof02 * determ;
+  inv[7] = cof12 * determ;
+  inv[8] = cof22 * determ;
+  
+}
 }
 #endif

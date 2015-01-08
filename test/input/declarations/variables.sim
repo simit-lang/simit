@@ -1,4 +1,4 @@
-%%% float constants 
+%%% float-consts
 const s      : float = 0.011;
 const s2     : float = 1.0e3;
 const s3     : float = 1e3;
@@ -12,7 +12,7 @@ const mat12  : tensor[1,2](float)   =  [2.0, 3.0];
 const mat21  : tensor[2,1](float)   =  [2.0; 3.0];
 const ten111 : tensor[1,1,1](float) = [[1.0]];
 
-%%% int constants
+%%% int-consts 
 const s      : int = 11;
 const vec3   : tensor[3](int)     =  [0, 1, 2];
 const mat22  : tensor[2,2](int)   =  [0, 1; 2, 3];
@@ -23,3 +23,37 @@ const mat11  : tensor[1,1](int)   =  [1];
 const mat12  : tensor[1,2](int)   =  [2, 3];
 const mat21  : tensor[2,1](int)   =  [2; 3];
 const ten111 : tensor[1,1,1](int) = [[1]];
+
+%%% const-use
+%! f() == 6.1;
+const s : float = 0.1;
+const v : tensor[3](float) =  [1.0, 2.0, 3.0];
+
+func f() -> (r : float)
+  r = s + v(0) + v(1) + v(2); 
+end
+
+%%% local-var-decl
+%! f(10.0) == 52.0;
+func f(a : float) -> (c : float)
+  var b : tensor[2](float);
+  b(0) = 42.0;
+  b(1) = a;
+  c = b(0) + b(1);
+end 
+
+%%% local-var-def-zero
+%! f(10.0) == 10.0;
+func f(a : float) -> (c : float)
+  var b : tensor[3](float) = 0.0;
+  b(1) = a;
+  c = b(0) + b(1) + b(2);
+end 
+
+%%% local-var-def-lit
+%! f(10.0) == 94.0;
+func f(a : float) -> (c : float)
+  var b : tensor[3](float) = [42.0, 42.0, 42.0];
+  b(1) = a;
+  c = b(0) + b(1) + b(2);
+end 

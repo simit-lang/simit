@@ -1,8 +1,10 @@
 #include "program.h"
 
 #include <set>
+#include <vector>
 
 #include "ir.h"
+#include "ir_rewriter.h"
 #include "frontend.h"
 #include "lower.h"
 #include "llvm_backend.h"
@@ -32,15 +34,28 @@ const std::vector<std::string> VALID_BACKENDS = {
 std::string kBackend = "llvm";
 
 static Function *compile(ir::Func func, internal::Backend *backend) {
-  func = insertTemporaries(func);
-  func = flattenIndexExpressions(func);
-  func.setStorage(getStorage(func));
-  func = lower(func);
-#ifdef GPU
-  if (kBackend == "gpu") {
-    func = shardLoops(func);
-  }
-#endif
+  class OptimizeFunctionsVisitor : public ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const ir::Func *op) {
+      if (op->getKind() != ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+
+      func = ir::Func(*op, rewrite(op->getBody()));
+      func = insertTemporaries(func);
+      func = flattenIndexExpressions(func);
+      func.setStorage(getStorage(func));
+      func = lower(func);
+      #ifdef GPU
+      if (kBackend == "gpu") {
+        func = shardLoops(func);
+      }
+      #endif
+    }
+  };
+  func = OptimizeFunctionsVisitor().rewrite(func);
+
   return backend->compile(func);
 }
 
@@ -78,7 +93,7 @@ Program::~Program() {
 int Program::loadString(const string &programString) {
   std::vector<ParseError> errors;
   int status = content->frontend->parseString(programString, &content->ctx,
-                                                   &errors);
+                                              &errors);
   for (auto &error : errors) {
     content->diags.report() << error.toString();
   }
@@ -124,7 +139,7 @@ int Program::verify() {
     for (auto &test : content->ctx.getTests()) {
       if (functions.find(test->getCallee()) == functions.end()) {
         content->diags.report() << "Error: attempting to test unknown function "
-                       << "'" << test->getCallee() << "'";
+                                << "'" << test->getCallee() << "'";
         return 1;
       }
       ir::Func func = functions.at(test->getCallee());

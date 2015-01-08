@@ -74,6 +74,8 @@ public:
 
 private:
   Storage storage;
+  
+  using IRRewriter::visit;
 
   Expr flattenIndices(Expr tensor, std::vector<Expr> indices) {
     // TODO: Generalize to n-order tensors and remove assert (also there's no

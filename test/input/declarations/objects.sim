@@ -27,7 +27,7 @@ func f(p : Point) -> (r : float)
 	r = p.m;
 end
 
-%%%- tensor field-access
+%%% tensor-field-access
 element Point
 	x : tensor[3](float);
 	v : tensor[3](float);

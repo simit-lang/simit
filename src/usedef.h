@@ -73,6 +73,8 @@ public:
 
 private:
   std::map<Var,VarDef> usedef;
+  
+  using IRVisitor::visit;
 
   void visit(const AssignStmt *op) {
     usedef[op->var] = VarDef(VarDef::Assignment, op);

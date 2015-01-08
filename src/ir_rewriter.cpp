@@ -238,6 +238,10 @@ void IRRewriter::visit(const Xor *op) {
   expr = visitBinaryOp(op, *this);
 }
 
+void IRRewriter::visit(const VarDecl *op) {
+  stmt = op;
+}
+
 void IRRewriter::visit(const AssignStmt *op) {
   Expr value = rewrite(op->value);
   if (value == op->value) {
@@ -248,9 +252,26 @@ void IRRewriter::visit(const AssignStmt *op) {
   }
 }
 
+void IRRewriter::visit(const CallStmt *op) {
+  std::vector<Expr> actuals(op->actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->actuals.size(); ++i) {
+    actuals[i] = rewrite(op->actuals[i]);
+    if (actuals[i] != op->actuals[i]) {
+      actualsSame = false;
+    }
+  }
+  if (actualsSame) {
+    stmt = op;
+  }
+  else {
+    stmt = CallStmt::make(op->results, op->callee, actuals);
+  }
+}
+
 void IRRewriter::visit(const Map *op) {
   Expr target = rewrite(op->target);
-  Expr neighbors = rewrite(op->neighbors);
+  Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
   
   std::vector<Expr> partial_actuals(op->partial_actuals.size());
   bool actualsSame = true;
@@ -269,7 +290,6 @@ void IRRewriter::visit(const Map *op) {
       op->reduction);
   }
 }
-
 
 void IRRewriter::visit(const FieldWrite *op) {
   Expr elementOrSet = rewrite(op->elementOrSet);
@@ -422,9 +442,59 @@ void IRRewriter::visit(const GPUKernel *op) {
 }
 #endif
 
-// Utility 
+// class IRRewriterCallGraph
+void IRRewriterCallGraph::visit(const Call *op) {
+  Func callee;
+  if (visited.find(op->func) == visited.end()) {
+    visited.insert(op->func);
+    callee = rewrite(op->func);
+  }
+  else {
+    callee = op->func;
+  }
 
-Expr substitute(std::map<IndexVar,IndexVar> substitutions, Expr expr);
-Expr substitute(std::map<IndexVar,IndexVar> substitutions, Stmt stmt);
+  std::vector<Expr> actuals(op->actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->actuals.size(); ++i) {
+    actuals[i] = rewrite(op->actuals[i]);
+    if (actuals[i] != op->actuals[i]) {
+      actualsSame = false;
+    }
+  }
+
+  if (callee == op->func && actualsSame) {
+    expr = op;
+  }
+  else {
+    expr = Call::make(callee, actuals);
+  }
+}
+
+void IRRewriterCallGraph::visit(const CallStmt *op) {
+  Func callee;
+  if (visited.find(op->callee) == visited.end()) {
+    visited.insert(op->callee);
+    callee = rewrite(op->callee);
+  }
+  else {
+    callee = op->callee;
+  }
+
+  std::vector<Expr> actuals(op->actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->actuals.size(); ++i) {
+    actuals[i] = rewrite(op->actuals[i]);
+    if (actuals[i] != op->actuals[i]) {
+      actualsSame = false;
+    }
+  }
+
+  if (callee == op->callee && actualsSame) {
+    stmt = op;
+  }
+  else {
+    stmt = CallStmt::make(op->results, callee, actuals);
+  }
+}
 
 }} // namespace simit::ir

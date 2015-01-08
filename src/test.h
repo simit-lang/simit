@@ -116,7 +116,6 @@ public:
   bool evaluate(const ir::Func &func, simit::Function *compiledFunc,
                 Diagnostics *diags) const {
     for (auto &ext : externs) {
-      std::cout << ext.first << std::endl;
       compiledFunc->bind(ext.first, ext.second);
     }
 

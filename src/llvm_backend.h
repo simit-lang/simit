@@ -49,11 +49,14 @@ protected:
   ir::Storage storage;
   ir::TensorStorage fieldStorage;
 
-  /// used to return variables from Expr visit functions
-  llvm::Value *val;
-
   llvm::Module *module;
   std::unique_ptr<LLVMIRBuilder> builder;
+
+  /// used to return variables from Expr visit functions
+  llvm::Value *val;
+  
+  using Backend::compile;
+  using ir::IRVisitor::visit;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void compile(const ir::Stmt &stmt);
@@ -89,7 +92,9 @@ protected:
   virtual void visit(const ir::Not *);
   virtual void visit(const ir::Xor *);
 
+  virtual void visit(const ir::VarDecl *op);
   virtual void visit(const ir::AssignStmt *);
+  virtual void visit(const ir::CallStmt *);
   virtual void visit(const ir::FieldWrite *);
   virtual void visit(const ir::Store *);
   virtual void visit(const ir::ForRange *);

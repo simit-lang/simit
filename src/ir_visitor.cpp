@@ -56,7 +56,9 @@ void IRVisitor::visit(const IndexExpr *op) {
 }
 
 void IRVisitor::visit(const Call *op) {
-  // TODO
+  for (auto &actual : op->actuals) {
+    actual.accept(this);
+  }
 }
 
 void IRVisitor::visit(const Neg *op) {
@@ -132,17 +134,28 @@ void IRVisitor::visit(const Xor *op) {
   op->b.accept(this);
 }
 
+void IRVisitor::visit(const VarDecl *op) {
+}
+
 void IRVisitor::visit(const AssignStmt *op) {
   op->value.accept(this);
 }
 
+void IRVisitor::visit(const CallStmt *op) {
+  for (auto &actual : op->actuals) {
+    actual.accept(this);
+  }
+}
+
 void IRVisitor::visit(const Map *op) {
   op->target.accept(this);
-  op->neighbors.accept(this);
+  if (op->neighbors.defined()) {
+    op->neighbors.accept(this);
+  }
+
   for (auto &p : op->partial_actuals) {
     p.accept(this);
   }
-  
 }
 
 void IRVisitor::visit(const FieldWrite *op) {
@@ -196,7 +209,9 @@ void IRVisitor::visit(const Pass *op) {
 }
 
 void IRVisitor::visit(const Func *op) {
-  op->getBody().accept(this);
+  if (op->getBody().defined()) {
+    op->getBody().accept(this);
+  }
 }
 
 void IRVisitor::visit(const Print *op) {
@@ -209,6 +224,26 @@ void IRVisitor::visit(const GPUKernel *op) {
 }
 #endif
 
+// class IRVisitorCallGraph
+void IRVisitorCallGraph::visit(const Call *op) {
+  if (visited.find(op->func) == visited.end()) {
+    op->func.accept(this);
+  }
+
+  for (auto &actual : op->actuals) {
+    actual.accept(this);
+  }
+}
+
+void IRVisitorCallGraph::visit(const CallStmt *op) {
+  if (visited.find(op->callee) == visited.end()) {
+    op->callee.accept(this);
+  }
+
+  for (auto &actual : op->actuals) {
+    actual.accept(this);
+  }
+}
 
 // IRQuery
 bool IRQuery::query(const Expr &expr) {

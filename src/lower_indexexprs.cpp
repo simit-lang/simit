@@ -12,6 +12,10 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+Stmt specialize(Stmt stmt, const LoopVars &loopVars);
+Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator);
+Stmt wrapCompoundAssignedValues(Stmt stmt);
+Stmt lowerIndexStatement(Stmt stmt, const Storage &storage);
 
 /// Specializes a statement containing an index expression to compute the
 /// value/block for the loop iteration given by the map from index variables
@@ -31,6 +35,8 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
   private:
     /// Loop variables used to compute index (created from the SIG)
     LoopVars const& loopVars;
+    
+    using IRRewriter::visit;
 
     void visit(const AssignStmt *op) {
       iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
@@ -177,6 +183,8 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
     Var tmpVar;
     Stmt tmpWritebackStmt;
+    
+    using IRRewriter::visit;
 
     std::string getReductionTmpName(Stmt stmt) {
       class GetReductionTmpNameVisitor : public IRVisitor {
@@ -188,6 +196,7 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
       private:
         std::string name;
+        using IRVisitor::visit;
         void visit(const TensorWrite *op) {
           op->tensor.accept(this);
           for (auto &index : op->indices) {
@@ -214,6 +223,8 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
           ierror;
           return Stmt();
       }
+      unreachable;
+      return Stmt();
     }
 
     void visit(const AssignStmt *op) {
@@ -288,6 +299,8 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 /// expressions to trigger lowering.
 Stmt wrapCompoundAssignedValues(Stmt stmt) {
   class CompoundValueWrapper : public IRRewriter {
+    using IRRewriter::visit;
+    
     void visit(const AssignStmt *op) {
       if (op->cop != CompoundOperator::None && !isa<IndexExpr>(op->value)) {
         // Wrap the written value in an index expression to trigger lowering
@@ -385,6 +398,9 @@ Func lowerIndexExpressions(Func func) {
 
   private:
     const Storage *storage;
+    
+    using IRRewriter::visit;
+    
     void visit(const AssignStmt *op) {
       if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
         stmt = simit::ir::lowerIndexStatement(op, *storage);

@@ -1,6 +1,7 @@
 #ifndef SIMIT_IR_REWRITER_H
 #define SIMIT_IR_REWRITER_H
 
+#include <set>
 #include "ir.h"
 
 #ifdef GPU
@@ -25,6 +26,8 @@ protected:
 
   /// visit methods that take Func assign to this to return their value.
   Func func;
+  
+  using IRVisitor::visit;
 
   virtual void visit(const Literal *op);
   virtual void visit(const VarExpr *op);
@@ -54,7 +57,9 @@ protected:
   virtual void visit(const Not *op);
   virtual void visit(const Xor *op);
 
+  virtual void visit(const VarDecl *op);
   virtual void visit(const AssignStmt *op);
+  virtual void visit(const CallStmt *op);
   virtual void visit(const Map *op);
   virtual void visit(const FieldWrite *op);
   virtual void visit(const TensorWrite *op);
@@ -72,6 +77,19 @@ protected:
 #endif
 
   virtual void visit(const Func *f);
+};
+
+
+/// Rewrites a whole call graph
+class IRRewriterCallGraph : public IRRewriter {
+protected:
+//  using IRRewriter::visit;
+  std::set<ir::Func> visited;
+  
+  using IRRewriter::visit;
+
+  virtual void visit(const Call *op);
+  virtual void visit(const CallStmt *op);
 };
 
 }}

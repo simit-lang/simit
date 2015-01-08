@@ -12,6 +12,10 @@ using namespace simit::util;
 namespace simit {
 namespace ir {
 
+// appease GCC
+bool ReductionVarsAfterFree(SIGVertex *i, SIGVertex *j);
+size_t getNumBlockLevels(const SIG &sig);
+
 // class SIG
 SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor, Expr set) : SIG() {
   std::set<IndexVar> added;
@@ -65,6 +69,21 @@ SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop) {
   }
 
   // TODO: Add multi-edge merging: Build a lookup data structure etc.
+  // for now, if the two have all the same endpoints, just return, since
+  // the merging would just change the edge into a multi-edge.
+  bool haveSame = sig1.content->vertices.size() ==
+                  sig2.content->vertices.size();
+  
+  auto pred = [] (decltype(*sig1.content->vertices.begin()) a, decltype(a) b)
+    { return a.first == b.first; };
+  
+  haveSame = haveSame && std::equal(sig1.content->vertices.begin(),
+                                    sig1.content->vertices.end(),
+                                    sig2.content->vertices.begin(),
+                                    pred);
+  if (haveSame)
+    return merged;
+    
   for (auto &e : sig2.content->edges) {
     // Get pointers to the endpoints in the new sig
     vector<SIGVertex*> endpoints;
@@ -148,6 +167,8 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
   private:
     Storage storage;
     SIG sig;
+    
+    using IRVisitor::visit;
 
     SIG create(Expr expr) {
       expr.accept(this);
@@ -214,6 +235,8 @@ size_t getNumBlockLevels(const SIG &sig) {
 
   private:
     size_t numBlockLevels;
+    
+    using SIGVisitor::visit;
 
     void visit(const SIGVertex *v) {
       size_t ivNumBlockLevels = v->iv.getNumBlockLevels();
@@ -256,6 +279,8 @@ LoopVars LoopVars::create(const SIG &sig) {
 
     /// The number of block levels in the index variables in the SIG.
     size_t numBlockLevels;
+    
+    using SIGVisitor::visit;
 
     void visit(const SIGVertex *v) {
       const IndexVar &indexVar = v->iv;
@@ -376,6 +401,8 @@ public:
 
 private:
   std::ostream &os;
+  
+  using SIGVisitor::visit;
 
   void visit(const SIGVertex *v) {
     os << *v << ", ";

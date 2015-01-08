@@ -17,13 +17,18 @@ struct TensorStorage::Content {
   Expr systemTargeteSet;
   Expr systemStorageSet;
 
+  /// Whether the tensor needs storage allocated at runtime.
+  bool needsInitialization;
+
   Content(Kind kind) : kind(kind) {}
 };
 
 TensorStorage::TensorStorage() : TensorStorage(Undefined) {
 }
 
-TensorStorage::TensorStorage(Kind kind) : content(new Content(kind)) {
+TensorStorage::TensorStorage(Kind kind, bool needsInitialization)
+    : content(new Content(kind)) {
+  content->needsInitialization = needsInitialization;
 }
 
 TensorStorage::TensorStorage(Kind kind, const Expr &targetSet,
@@ -50,6 +55,10 @@ const Expr &TensorStorage::getSystemTargetSet() const {
 const Expr &TensorStorage::getSystemStorageSet() const {
   iassert(isSystem()) << "System storages require the storage set be provided";
   return content->systemStorageSet;
+}
+
+bool TensorStorage::needsInitialization() const {
+  return content->needsInitialization;
 }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
@@ -159,13 +168,23 @@ public:
   GetStorageVisitor(Storage *storage) : storage(storage) {}
 
   void get(Func func) {
-    for (auto &arg : func.getArguments())
-      if (arg.getType().isTensor())
-        determineStorage(arg);
+    for (auto &global : func.getEnvironment().globals) {
+      if (global.first.getType().isTensor()) {
+        determineStorage(global.first, false);
+      }
+    }
 
-    for (auto &res : func.getResults())
-      if (res.getType().isTensor())
-        determineStorage(res);
+    for (auto &arg : func.getArguments()) {
+      if (arg.getType().isTensor()) {
+        determineStorage(arg, false);
+      }
+    }
+
+    for (auto &res : func.getResults()) {
+      if (res.getType().isTensor()) {
+        determineStorage(res, false);
+      }
+    }
 
     func.accept(this);
   }
@@ -176,12 +195,50 @@ public:
 
 private:
   Storage *storage;
+  
+  using IRVisitor::visit;
+  
+  // class to find leaf vars of an Expr.
+  class LeafVarsVisitor : public IRVisitor {
+    public:
+    std::set<Var> vars;
+    
+    using IRVisitor::visit;
+    
+    void visit(const VarExpr *op) {
+      vars.insert(op->var);
+    }
+  
+  };
+
+  void visit(const VarDecl *op) {
+    Var var = op->var;
+    Type type = var.getType();
+    iassert(!storage->hasStorage(var)) << "Redeclaration of variable";
+    if (type.isTensor() && !isScalar(type)) {
+      determineStorage(var, true);
+    }
+  }
 
   void visit(const AssignStmt *op) {
     Var var = op->var;
     Type type = var.getType();
+    Type rhsType = op->value.type();
+    
     if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
-      determineStorage(var);
+      // TODO: this is a hack.  We really should carry around TensorStorage
+      // as part of the type.
+      iassert(type.isTensor());
+      const TensorType *ttype = type.toTensor();
+      if (!isElementTensorType(ttype) && ttype->order() > 1) {
+        // assume system reduced storage
+        determineStorage(var, !isa<Literal>(op->value),
+          op->value);
+        
+      } else {
+        bool needsInitialization = !isa<Literal>(op->value);
+        determineStorage(var, needsInitialization);
+      }
     }
   }
 
@@ -216,7 +273,7 @@ private:
     }
   }
 
-  TensorStorage determineStorage(Var var) {
+  TensorStorage determineStorage(Var var, bool initialize=true) {
     // If all dimensions are ranges then we choose dense row major. Otherwise,
     // we choose system reduced storage order (for now).
     Type type = var.getType();
@@ -225,13 +282,34 @@ private:
 
     TensorStorage tensorStorage;
     if (isElementTensorType(ttype) || ttype->order() <= 1) {
-      tensorStorage = TensorStorage(TensorStorage::DenseRowMajor);
+      tensorStorage = TensorStorage(TensorStorage::DenseRowMajor, initialize);
     }
     else {
       not_supported_yet;
     }
     storage->add(var, tensorStorage);
     return tensorStorage;
+  }
+  
+  //TODO: this should be replaced with something that uses the type of rhs
+  TensorStorage determineStorage(Var var, bool initialize, Expr rhs) {
+    // find leaf vars in the rhs
+    LeafVarsVisitor varVisitor;
+    rhs.accept(&varVisitor);
+ 
+    for (auto v : varVisitor.vars) {
+      if (storage->hasStorage(v)) {
+        const TensorStorage varStorage = storage->get(v);
+        if (varStorage.getKind() == TensorStorage::SystemReduced) {
+          auto tensorStorage = TensorStorage(TensorStorage::SystemReduced,
+            varStorage.getSystemTargetSet(),
+            varStorage.getSystemStorageSet());
+          storage->add(var, tensorStorage);
+        }
+      }
+   
+    }
+    return TensorStorage(TensorStorage::Undefined);
   }
 };
 

@@ -59,8 +59,8 @@ protected:
     void bind(SetBase *set) { this->set = set; }
     bool isBound() const { return tensor != NULL; }
     const ir::Type &getType() const { return type; }
-    Tensor *getTensor() { iassert(tensor); return tensor; }
-    SetBase *getSet() { iassert(set); return set; }
+    Tensor *getTensor() { iassert(tensor != nullptr); return tensor; }
+    SetBase *getSet() { iassert(set != nullptr); return set; }
   private:
     ir::Type type;
     union {
@@ -74,10 +74,14 @@ protected:
   std::vector<std::string> formals;
   std::map<std::string, Actual> actuals;
 
+  /// We store the simit Function's literals to prevent their memory from being
+  /// reclaimed, as compiled functions are expected to access them at runtime.
+  std::vector<simit::ir::Expr> literals;
+
+  FuncType funcPtr;
   bool initRequired;
 
 private:
-  FuncType funcPtr;
   virtual FuncType init(const std::vector<std::string> &formals,
                         std::map<std::string, Actual> &actuals) = 0;
 };

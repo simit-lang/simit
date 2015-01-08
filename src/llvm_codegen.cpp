@@ -27,15 +27,9 @@ llvm::Constant *llvmFP(double val, unsigned bits) {
   return llvm::ConstantFP::get(getLLVMFloatType(), val);
 }
 
-llvm::Type *createLLVMType(ScalarType stype) {
-  switch (stype.kind) {
-    case ScalarType::Int:
-      return LLVM_INT;
-    case ScalarType::Float:
-      return getLLVMFloatType();
-    case ScalarType::Boolean:
-      return LLVM_BOOL;
-  }
+llvm::Constant* llvmBool(bool val) {
+  int intVal = (val) ? 1 : 0;
+  return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(1, intVal, false));
 }
 
 llvm::Type *llvmPtrType(ScalarType stype) {
@@ -47,6 +41,8 @@ llvm::Type *llvmPtrType(ScalarType stype) {
     case ScalarType::Boolean:
       return LLVM_BOOL;
   }
+  unreachable;
+  return nullptr;
 }
 
 llvm::Constant *llvmPtr(llvm::Type *type, const void *data) {
@@ -63,8 +59,23 @@ llvm::Constant *llvmPtr(const Type &type, const void *data) {
 }
 
 llvm::Constant *llvmPtr(const Literal *literal) {
-  assert(literal->type.isTensor());
+  iassert(literal->type.isTensor());
   return llvmPtr(literal->type, literal->data);
+}
+
+llvm::Constant *llvmVal(const ir::Literal *literal) {
+  ScalarType componentType = literal->type.toTensor()->componentType;
+  switch (componentType.kind) {
+    case ScalarType::Int:
+      return llvmInt(static_cast<int*>(literal->data)[0]);
+    case ScalarType::Float:
+      return llvmFP(literal->getFloatVal(0), componentType.bytes());
+    case ScalarType::Boolean:
+      return llvmBool(static_cast<bool*>(literal->data)[0]);
+    default:
+      unreachable;
+      return nullptr;
+  }
 }
 
 Type simitType(const llvm::Type *type) {
@@ -82,10 +93,6 @@ Type simitType(const llvm::Type *type) {
 
   unreachable;
   return Type();
-}
-
-llvm::Type *createLLVMType(const TensorType *ttype) {
-  return llvmPtrType(ttype->componentType);
 }
 
 /// One for endpoints, two for neighbor index
@@ -107,6 +114,23 @@ llvm::Type *getLLVMFloatPtrType() {
   else {
     return LLVM_DOUBLEPTR;
   }
+}
+
+llvm::Type *createLLVMType(const Type &type) {
+  switch (type.kind()) {
+    case Type::Tensor:
+      return createLLVMType(type.toTensor());
+    case Type::Element:
+      not_supported_yet;
+      break;
+    case Type::Set:
+      return createLLVMType(type.toSet());
+    case Type::Tuple:
+      not_supported_yet;
+      break;
+  }
+  unreachable;
+  return nullptr;
 }
 
 // TODO: replace anonymous struct with one struct per element and set type
@@ -134,18 +158,18 @@ llvm::StructType *createLLVMType(const ir::SetType *setType) {
   return llvm::StructType::get(LLVM_CONTEXT, llvmFieldTypes);
 }
 
-llvm::Type *createLLVMType(const Type &type) {
-  switch (type.kind()) {
-    case Type::Tensor:
-      return createLLVMType(type.toTensor());
-    case Type::Element:
-      not_supported_yet;
-      break;
-    case Type::Set:
-      return createLLVMType(type.toSet());
-    case Type::Tuple:
-      not_supported_yet;
-      break;
+llvm::Type *createLLVMType(const TensorType *type) {
+  return llvmPtrType(type->componentType);;
+}
+
+llvm::Type *createLLVMType(ScalarType stype) {
+  switch (stype.kind) {
+    case ScalarType::Int:
+      return LLVM_INT;
+    case ScalarType::Float:
+      return getLLVMFloatType();
+    case ScalarType::Boolean:
+      return LLVM_BOOL;
   }
   unreachable;
   return nullptr;
@@ -157,12 +181,10 @@ static llvm::Function *createPrototype(const std::string &name,
                                        llvm::Module *module,
                                        bool externalLinkage,
                                        bool doesNotThrow) {
-  llvm::FunctionType *ft= llvm::FunctionType::get(LLVM_VOID,argTypes,false);
-  llvm::Function *f= llvm::Function::Create(
-      ft,
-      externalLinkage ? llvm::Function::ExternalLinkage
-      : llvm::Function::InternalLinkage,
-      name, module);
+  llvm::FunctionType *ft = llvm::FunctionType::get(LLVM_VOID, argTypes, false);
+  auto linkage = externalLinkage ? llvm::Function::ExternalLinkage
+                                 : llvm::Function::InternalLinkage;
+  llvm::Function *f= llvm::Function::Create(ft, linkage, name, module);
   if (doesNotThrow) {
     f->setDoesNotThrow();
   }
@@ -194,8 +216,15 @@ llvm::Function *createPrototype(const std::string &name,
   for (auto &arg : arguments) {
     argNames.insert(arg.getName());
     llvmArgNames.push_back(arg.getName());
-    llvmArgTypes.push_back(createLLVMType(arg.getType()));
+
+    // Our convention is that scalars are passed to functions by value,
+    // while everything else is passed through a pointer
+    llvm::Type *llvmType = isScalar(arg.getType())
+        ? createLLVMType(arg.getType().toTensor()->componentType)
+        : createLLVMType(arg.getType());
+    llvmArgTypes.push_back(llvmType);
   }
+
   for (auto &res : results) {
     if (argNames.find(res.getName()) != argNames.end()) {
       continue;

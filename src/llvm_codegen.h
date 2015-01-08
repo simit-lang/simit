@@ -40,9 +40,7 @@ namespace internal {
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
 llvm::Constant* llvmFP(double val, unsigned bits=64);
-// use llvm::ConstantInt::getTrue() or llvm::ConstantInt::getFalse() for boolean
-// literals
-
+llvm::Constant* llvmBool(bool val);
 
 // Simit-specific utilities
 
@@ -53,20 +51,19 @@ extern bool singlePrecision;
 llvm::Type *getLLVMFloatType();
 llvm::Type *getLLVMFloatPtrType();
 
-llvm::Type *createLLVMType(ir::ScalarType stype);
-
 llvm::Type *llvmPtrType(ir::ScalarType stype);
 
 llvm::Constant *llvmPtr(llvm::Type *type, const void *data);
 llvm::Constant *llvmPtr(const ir::Type &type, const void *data);
-
 llvm::Constant *llvmPtr(const ir::Literal *literal);
+llvm::Constant *llvmVal(const ir::Literal *literal);
 
 ir::Type simitType(const llvm::Type *type);
 
-llvm::Type *createLLVMType(const ir::TensorType *ttype);
+llvm::Type       *createLLVMType(const ir::Type &);
 llvm::StructType *createLLVMType(const ir::SetType *);
-llvm::Type *createLLVMType(const ir::Type &);
+llvm::Type       *createLLVMType(const ir::TensorType *ttype);
+llvm::Type       *createLLVMType(ir::ScalarType stype);
 
 /// Creates an llvm function prototype
 llvm::Function *createPrototype(const std::string &name,

@@ -45,7 +45,7 @@ public:
   };
 
   TensorStorage();
-  TensorStorage(Kind kind);
+  TensorStorage(Kind kind, bool needsInitialization=true);
 
   /// Create a system tensor storage descriptor. The 'targetSet' argument is the
   /// the set that the system tensor was created by mapping over. The
@@ -60,6 +60,9 @@ public:
 
   const Expr &getSystemTargetSet() const;
   const Expr &getSystemStorageSet() const;
+
+  /// True if the tensor needs storage initialized at runtime, false otherwise.
+  bool needsInitialization() const;
 
 private:
   struct Content;

@@ -212,17 +212,16 @@ SIM_TEST(elements, tensorrw);
 SIM_TEST_SUITE_F32(elements_f32)
 SIM_TEST_F32(elements_f32, elements, intrinsics);
 
-//SIM_TEST_SUITE(systems)
-//SIM_TEST(systems, fields);
-
 SIM_TEST_SUITE(declarations)
 SIM_TEST(declarations, function_headers);
 SIM_TEST(declarations, objects);
 SIM_TEST(declarations, variables);
 SIM_TEST(declarations, misc);
+SIM_TEST(declarations, fem_tensor);
 
 SIM_TEST_SUITE(controlflow)
 SIM_TEST(controlflow, map);
+SIM_TEST(controlflow, calls);
 SIM_TEST(controlflow, if_stmt);
 SIM_TEST(controlflow, loops);
 SIM_TEST(controlflow, boolean);

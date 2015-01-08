@@ -13,6 +13,9 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+std::string tmpNameGen();
+bool overlaps(const std::vector<IndexVar> &as, const std::vector<IndexVar> &bs);
+
 /// Static namegen (hacky: fix later)
 std::string tmpNameGen() {
   static int i = 0;
@@ -39,6 +42,9 @@ public:
 
 private:
   std::vector<Stmt> stmts;
+  
+  using IRRewriter::rewrite;
+  using IRRewriter::visit;
 
   Expr rewrite(Expr e) {
     return IRRewriter::rewrite(e);

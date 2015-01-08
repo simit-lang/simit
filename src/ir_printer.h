@@ -11,6 +11,7 @@
 namespace simit {
 namespace ir {
 
+struct Environment;
 class Func;
 class Expr;
 class Stmt;
@@ -18,14 +19,16 @@ struct IRNode;
 struct ForDomain;
 struct CompoundOperator;
 
+std::ostream &operator<<(std::ostream &os, const Environment &);
 std::ostream &operator<<(std::ostream &os, const Func &);
+
 std::ostream &operator<<(std::ostream &os, const Expr &);
 std::ostream &operator<<(std::ostream &os, const Stmt &);
 std::ostream &operator<<(std::ostream &os, const IRNode &);
 std::ostream &operator<<(std::ostream &os, const ForDomain &);
 std::ostream &operator<<(std::ostream &os, const CompoundOperator &);
 
-class IRPrinter : public IRVisitor {
+class IRPrinter : private IRVisitor {
 public:
   IRPrinter(std::ostream &os, signed indent=0);
   virtual ~IRPrinter() {}
@@ -36,6 +39,7 @@ public:
   void print(const IRNode &);
 
 private:
+  using IRVisitor::visit;
   virtual void visit(const Literal *);
   virtual void visit(const VarExpr *);
   virtual void visit(const FieldRead *);
@@ -64,7 +68,9 @@ private:
   virtual void visit(const Not *);
   virtual void visit(const Xor *);
 
+  virtual void visit(const VarDecl *);
   virtual void visit(const AssignStmt *);
+  virtual void visit(const CallStmt *);
   virtual void visit(const Map *);
   virtual void visit(const FieldWrite *);
   virtual void visit(const TensorWrite *);
@@ -88,6 +94,24 @@ private:
   std::ostream &os;
   unsigned indentation;
 };
+
+class IRPrinterCallGraph : public IRVisitor {
+public:
+  IRPrinterCallGraph(std::ostream &os) : os(os) {}
+  void print(const Func &);
+
+private:
+  std::set<ir::Func> visited;
+  std::ostream &os;
+  
+  using IRVisitor::visit;
+
+  virtual void visit(const Call *);
+  virtual void visit(const CallStmt *);
+  virtual void visit(const Func *);
+};
+
+void printCallGraph(const Func &f, std::ostream &os);
 
 }} // namespace simit::ir
 #endif

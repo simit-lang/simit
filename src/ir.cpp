@@ -262,6 +262,8 @@ private:
       }
     }
   }
+  
+  using IRVisitor::visit;
 
   void visit(const IndexedTensor *op) {
     add(op->indexVars);

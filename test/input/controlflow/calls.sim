@@ -1,0 +1,21 @@
+%%% call 
+%! caller(5.0) == 30.0;
+func callee(c : float) -> (d : float)
+  d = c * 2.0;
+end
+
+func caller(a : float) -> (b : float)
+  b = callee(a) * 3.0;
+end
+
+%%% call-vector
+%! caller([1.0, 2.0]) == [9.0, 12.0];
+func callee(c : tensor[2](float)) -> (d : tensor[2](float))
+  d = c + [5.0, 6.0];
+end
+
+func caller(a : tensor[2](float)) -> (b : tensor[2](float))
+  b = callee(a) + [3.0, 4.0];
+end
+
+%%%- call-two-results

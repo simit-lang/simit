@@ -12,6 +12,20 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+std::ostream &operator<<(std::ostream &os, const Environment &env) {
+  auto it = env.globals.begin();
+  if (it != env.globals.end()) {
+    os << "const " << it->first << " = " << it->second << ";" << "\n";
+    ++it;
+  }
+  while (it != env.globals.end()) {
+    os << "const " << it->first << " = " << it->second << ";" << "\n";
+    ++it;
+  }
+
+  return os;
+}
+
 std::ostream &operator<<(std::ostream &os, const Func &function) {
   IRPrinter printer(os);
   printer.print(function);
@@ -319,11 +333,23 @@ void IRPrinter::visit(const Not *op) {
   os << ")";
 }
 
+void IRPrinter::visit(const VarDecl *op) {
+  indent();
+  os << "var " << op->var.getName() << " : " << op->var.getType();
+  os << ";";
+}
+
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
   os << op->var << " " << op->cop << "= ";
   print(op->value);
   os << ";";
+}
+
+void IRPrinter::visit(const CallStmt *op) {
+  indent();
+  os << util::join(op->results) << " = " << op->callee.getName()
+     << "(" << util::join(op->actuals) << ")" << ";";
 }
 
 void IRPrinter::visit(const Map *op) {
@@ -435,6 +461,8 @@ void IRPrinter::visit(const IfThenElse *op) {
   ++indentation;
   print(op->thenBody);
   --indentation;
+  os << endl;
+  indent();
   os << "else" << endl;
   ++indentation;
   print(op->elseBody);
@@ -502,5 +530,30 @@ void IRPrinter::indent() {
     os << "  ";
   }
 }
+
+// class IRPrinterCallGraph
+void IRPrinterCallGraph::print(const Func &func) {
+  if (func.defined()) {
+    func.accept(this);
+  }
+  else {
+    os << "Func()";
+  }
+}
+
+void IRPrinterCallGraph::visit(const Call *op) {
+  os << op->func << "\n\n";
+}
+
+void IRPrinterCallGraph::visit(const CallStmt *op) {
+  os << op->callee << "\n\n";
+}
+
+void IRPrinterCallGraph::visit(const Func *op) {
+  IRVisitor::visit(op);
+  os << *op;
+}
+
+
 
 }} //namespace simit::ir

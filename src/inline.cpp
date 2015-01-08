@@ -10,6 +10,8 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter);
+
 Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
   this->targetLoopVar = targetLoopVar;
 
@@ -62,7 +64,6 @@ void MapFunctionRewriter::visit(const FieldWrite *op) {
   else {
     // TODO: Handle the case where the target var was reassigned
     //       tmp = s; ... = tmp.a;
-    std::cout << *op << std::endl;
     not_supported_yet;
   }
 }

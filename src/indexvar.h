@@ -8,7 +8,7 @@
 namespace simit {
 namespace ir {
 
-namespace {
+// namespace { // hiding disabled for now - GCC hates this, TODO: migrate inside *.cpp?
   struct IndexVarContent {
     std::string name;
     IndexDomain domain;
@@ -18,7 +18,7 @@ namespace {
     friend inline void aquire(IndexVarContent *c) {++c->ref;}
     friend inline void release(IndexVarContent *c) {if (--c->ref==0) delete c;}
   };
-}
+// }
 
 /// An index variable describes iteration over an index set.  There are two
 /// types of index variables, free index variables and reduction index
