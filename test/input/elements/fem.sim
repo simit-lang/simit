@@ -16,6 +16,6 @@ func dPdF(u:float, l:float, F:tensor[3,3](float), dF:tensor[3,3](float))->
   (dP:tensor[3,3](float))
   JJ = log(det(F));
   Finv = inv(F);
-  dP = u * dF + (u - l*JJ)*Finv*dF'*Finv';
-  dP = dP + l*trace3(Finv*dF)*Finv';
+  FidF = Finv*dF;
+  dP = u * dF + (u - l*JJ) * Finv' * FidF' + l * trace3(FidF) * Finv';
 end
