@@ -12,7 +12,7 @@ using namespace std;
 namespace simit {
 
 Function::Function(const simit::ir::Func &simitFunc)
-    : initRequired(true), funcPtr(NULL) {
+    : funcPtr(NULL), initRequired(true) {
   for (auto &arg : simitFunc.getArguments()) {
     formals.push_back(arg.getName());
     actuals[arg.getName()] = Actual(arg.getType());
