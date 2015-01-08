@@ -1087,7 +1087,7 @@ void LLVMBackend::visit(const Print *op) {
                             << "multiple of entries per row)";
         }
 
-        for (size_t i = 0; i < tensor->dimensions.back().getSize(); i++) {
+        for (int i = 0; i < tensor->dimensions.back().getSize(); i++) {
           format += specifier + " ";
         }
         format.back() = '\n';
