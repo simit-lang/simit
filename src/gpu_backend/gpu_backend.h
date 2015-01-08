@@ -32,11 +32,11 @@ protected:
   // parallelized across blocks
   GPUSharding sharding;
 
-  // List of compiled kernels, in order of execution, with sharding info
-  std::vector< std::pair<llvm::Function *, GPUSharding> > kernels;
-
   // Currently compiling IR Func
   ir::Func irFunc;
+
+  // Currently compiling LLVM function
+  llvm::Function *func;
 
   using LLVMBackend::visit;
 
@@ -83,6 +83,9 @@ protected:
   void emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value);
   void emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value);
   void emitTid0Code(const ir::Stmt& body);
+  void emitKernelLaunch(llvm::Function *kernel,
+                        std::vector<llvm::Value*> args,
+                        GPUSharding sharding);
   virtual void emitFirstAssign(const ir::Var& var,
                                const ir::Expr& value);
 };
