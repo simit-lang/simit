@@ -34,10 +34,14 @@ public:
     /// For now we will assume it was split along the first dimension.
     SystemReduced,
 
+    /// A system tensor that only contains values along its diagonal, and hence
+    /// can be stored as a vector.
+    SystemDiagonal,
+
     /// A system tensor whose contributions are stored on the target set that it
     /// was assembled from. That is, the tensor is stored prior to the map
     /// reduction, and any expression that uses the tensor must reduce it.
-    SystemUnreduced,
+    //SystemUnreduced,
 
     /// A system tensor that is never stored. Any index expressions that use
     /// this tensor must be fused with the tensor assembly.
@@ -47,10 +51,13 @@ public:
   TensorStorage();
   TensorStorage(Kind kind, bool needsInitialization=true);
 
-  /// Create a system tensor storage descriptor. The 'targetSet' argument is the
-  /// the set that the system tensor was created by mapping over. The
-  /// 'storageSet' is the set the tensor is stored on.
-  TensorStorage(Kind kind, const Expr &targetSet, const Expr &storageSet);
+  /// Create a system tensor diagonal storage descriptor.
+  TensorStorage(const Expr &targetSet);
+
+  /// Create a system tensor reduced storage descriptor. The 'targetSet'
+  /// argument is the the set that the system tensor was created by mapping
+  /// over. The 'storageSet' is the set the tensor is stored on.
+  TensorStorage(const Expr &targetSet, const Expr &storageSet);
 
   /// Retrieve the tensor storage kind.
   Kind getKind() const;

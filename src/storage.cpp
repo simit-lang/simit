@@ -14,7 +14,7 @@ struct TensorStorage::Content {
 
   /// The target set that was used to assemble the system if the tensor is
   /// stored on a system, undefined otherwise.
-  Expr systemTargeteSet;
+  Expr systemTargetSet;
   Expr systemStorageSet;
 
   /// Whether the tensor needs storage allocated at runtime.
@@ -31,10 +31,14 @@ TensorStorage::TensorStorage(Kind kind, bool needsInitialization)
   content->needsInitialization = needsInitialization;
 }
 
-TensorStorage::TensorStorage(Kind kind, const Expr &targetSet,
-                             const Expr &storageSet) : TensorStorage(kind) {
-  iassert(kind==SystemReduced);
-  content->systemTargeteSet = targetSet;
+TensorStorage::TensorStorage(const Expr &targetSet)
+    : TensorStorage(SystemDiagonal) {
+  content->systemTargetSet = targetSet;
+}
+
+TensorStorage::TensorStorage(const Expr &targetSet, const Expr &storageSet)
+    : TensorStorage(SystemReduced) {
+  content->systemTargetSet = targetSet;
   content->systemStorageSet = storageSet;
 }
 
@@ -43,13 +47,22 @@ TensorStorage::Kind TensorStorage::getKind() const {
 }
 
 bool TensorStorage::isSystem() const {
-  return content->kind==SystemNone || content->kind==SystemReduced ||
-         content->kind==SystemUnreduced;
+  switch (content->kind) {
+    case DenseRowMajor:
+      return false;
+    case SystemNone:
+    case SystemReduced:
+    case SystemDiagonal:
+      return true;
+    case Undefined:
+      ierror;
+  }
+  return false;
 }
 
 const Expr &TensorStorage::getSystemTargetSet() const {
   iassert(isSystem()) << "System storages require the target set be provided";
-  return content->systemTargeteSet;
+  return content->systemTargetSet;
 }
 
 const Expr &TensorStorage::getSystemStorageSet() const {
@@ -75,13 +88,12 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
     case TensorStorage::SystemReduced:
       os << "System Reduced";
       break;
-    case TensorStorage::SystemUnreduced:
-      os << "System Unreduced";
+    case TensorStorage::SystemDiagonal:
+      os << "System Diagonal";
       break;
   }
   return os;
 }
-
 
 // class Storage
 struct Storage::Content {
@@ -263,9 +275,11 @@ private:
         if (tensorType->order() == 1) {
           tensorStorage = TensorStorage(TensorStorage::DenseRowMajor);
         }
+        else if (op->neighbors.defined()) {
+          tensorStorage = TensorStorage(op->target, op->neighbors);
+        }
         else {
-          tensorStorage = TensorStorage(TensorStorage::SystemReduced,
-                                        op->target, op->neighbors);
+          tensorStorage = TensorStorage(op->target);
         }
         iassert(tensorStorage.getKind() != TensorStorage::Undefined);
         storage->add(var, tensorStorage);
@@ -301,9 +315,8 @@ private:
       if (storage->hasStorage(v)) {
         const TensorStorage varStorage = storage->get(v);
         if (varStorage.getKind() == TensorStorage::SystemReduced) {
-          auto tensorStorage = TensorStorage(TensorStorage::SystemReduced,
-            varStorage.getSystemTargetSet(),
-            varStorage.getSystemStorageSet());
+          auto tensorStorage = TensorStorage(varStorage.getSystemTargetSet(),
+                                             varStorage.getSystemStorageSet());
           storage->add(var, tensorStorage);
         }
       }

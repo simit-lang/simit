@@ -353,7 +353,10 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   // the loop vars in reverse order)
   Stmt loopNest = kernel;
   for (auto loopVar=loopVars.rbegin(); loopVar!=loopVars.rend(); ++loopVar){
-    if (loopVar->getDomain().kind == ForDomain::Neighbors) {
+    if (loopVar->getDomain().kind == ForDomain::IndexSet) {
+      loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
+    }
+    else if (loopVar->getDomain().kind == ForDomain::Neighbors) {
       Expr set = loopVar->getDomain().set;
       Var i = loopVar->getDomain().var;
       Var j = loopVar->getVar();
@@ -369,7 +372,7 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
 
       loopNest = ForRange::make(ij, start, stop, loopNest);
     } else {
-      loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
+      not_supported_yet;
     }
 
     if (loopVar->hasReduction()) {

@@ -1223,8 +1223,10 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
       }
       break;
     }
-    case TensorStorage::SystemUnreduced: {
-      not_supported_yet;
+    case TensorStorage::SystemDiagonal: {
+      iassert(tensorType->dimensions.size() > 0);
+      auto dimension = tensorType->dimensions[0];
+      len = emitComputeLen(dimension);
       break;
     }
     case TensorStorage::SystemNone:

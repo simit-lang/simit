@@ -139,8 +139,8 @@ private:
         }
         break;
       }
-      case TensorStorage::SystemUnreduced:
-        not_supported_yet;
+      case TensorStorage::SystemDiagonal:
+        index = rewrite(indices[0]);
         break;
       case TensorStorage::SystemNone:
         ierror << "Can't store to a tensor without storage.";
