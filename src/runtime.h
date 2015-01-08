@@ -7,10 +7,10 @@
 
 extern "C" {
 // appease GCC
-double cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
-                     int rows, int columns);
-float cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
-                    int rows, int columns);
+void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
+                   int rows, int columns);
+void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
+                   int rows, int columns);
 int loc(int v0, int v1, int *neighbors_start, int *neighbors);
 double dot_f64(double* a, double* b, int len);
 float dot_f32(float* a, float* b, int len);
@@ -27,7 +27,7 @@ float acos_f32(float x);
 double det3(double * a);
 void inv3(double * a, double * inv);
 
-double cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
+void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
                  int rows, int columns) {
   using namespace Eigen;
   auto Amat = new Map<Matrix<double,Dynamic,Dynamic,RowMajor>>(bufferA, rows,
@@ -38,11 +38,9 @@ double cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
   // TODO: this may be overkill
   // we can probably get away with LLT or LDLT instead
   *cvec = Amat->colPivHouseholderQr().solve(*xvec);
-
-  return 1.0;
 }
 
-float cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
+void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
                 int rows, int columns) {
   using namespace Eigen;
   auto Amat = new Map<Matrix<float,Dynamic,Dynamic,RowMajor>>(bufferA, rows,
@@ -53,8 +51,6 @@ float cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
   // TODO: this may be overkill
   // we can probably get away with LLT or LDLT instead
   *cvec = Amat->colPivHouseholderQr().solve(*xvec);
-
-  return 1.0;
 }
 }
 #endif

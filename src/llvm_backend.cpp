@@ -325,6 +325,7 @@ void LLVMBackend::visit(const ir::Load *op) {
   val = builder->CreateAlignedLoad(bufferLoc, 8, valName);
 }
 
+// TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt.
 void LLVMBackend::visit(const Call *op) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
                                   {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
@@ -651,28 +652,27 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
   Func callee = op->callee;
 
   if (callee.getKind() == Func::Intrinsic) {
-    std::string floatType = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
+    std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
     // first, see if this is an LLVM intrinsic
     auto foundIntrinsic = llvmIntrinsicByName.find(op->callee);
     if (foundIntrinsic != llvmIntrinsicByName.end()) {
       fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
                                             argTypes);
+      call = builder->CreateCall(fun, args);
     }
     // now check if it is an intrinsic from libm
     else if (op->callee == ir::Intrinsics::atan2 ||
              op->callee == ir::Intrinsics::tan   ||
              op->callee == ir::Intrinsics::asin  ||
              op->callee == ir::Intrinsics::acos    ) {
-      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
-      std::string fname = op->callee.getName() + floatType;
-      fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(fname,ftype));
+      std::string fname = op->callee.getName() + floatTypeName;
+      call = emitCall(fname, args, getLLVMFloatType());
     }
     else if (callee == ir::Intrinsics::det) {
       iassert(args.size() == 1);
-      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
-      std::string fname = op->callee.getName() + "3" + floatType;
-      fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(fname,ftype));
+      std::string fname = op->callee.getName() + "3" + floatTypeName;
+      call = emitCall(fname, args, getLLVMFloatType());
     }
     else if (op->callee == ir::Intrinsics::norm) {
       iassert(args.size() == 1);
@@ -694,46 +694,33 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
         sum = builder->CreateFAdd(sum, x2pow);
 
         llvm::Function *sqrt =
-        llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt,
-                                        {getLLVMFloatType()});
+            llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt,
+                                            {getLLVMFloatType()});
         call = builder->CreateCall(sqrt, sum);
       } else {
         args.push_back(emitComputeLen(type->dimensions[0]));
-        std::string funcName = "norm" + floatType;
+        std::string funcName = "norm" + floatTypeName;
         call = emitCall(funcName, args, getLLVMFloatType());
       }
     }
     else if (callee == ir::Intrinsics::inv) {
       iassert(args.size() == 1);
-      Var r = op->results[0];
 
-      argTypes.push_back(createLLVMType(r.getType().toTensor()->componentType));
-      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
-
-      llvm::Value *llvmResult = symtable.get(r);
+      Var result = op->results[0];
+      llvm::Value *llvmResult = symtable.get(result);
       args.push_back(llvmResult);
-      symtable.insert(r, llvmResult);
+      symtable.insert(result, llvmResult);
 
-      std::string fname = op->callee.getName() + "3" + floatType;
-      fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(fname,ftype));
-      call = builder->CreateCall(fun, args);
-      return;
+      std::string fname = op->callee.getName() + "3" + floatTypeName;
+      call = emitCall(fname, args);
     }
     else if (op->callee == ir::Intrinsics::solve) {
-      // FIX: compile is making these be LLVM_DOUBLE, but I need
-      // LLVM_DOUBLEPTR
-      std::vector<llvm::Type*> argTypes2 =
-          {getLLVMFloatPtrType(), getLLVMFloatPtrType(), getLLVMFloatPtrType(),
-           LLVM_INT, LLVM_INT};
-
       auto type = op->actuals[0].type().toTensor();
       args.push_back(emitComputeLen(type->dimensions[0]));
       args.push_back(emitComputeLen(type->dimensions[1]));
 
-      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes2,false);
-      std::string funcName = "cMatSolve" + floatType;
-      fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(funcName,
-                                                                   ftype));
+      std::string fname = "cMatSolve" + floatTypeName;
+      call = emitCall(fname, args);
     }
     else if (op->callee == ir::Intrinsics::loc) {
       call = emitCall("loc", args, LLVM_INT);
@@ -745,18 +732,18 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       uassert(type1->dimensions[0] == type2->dimensions[0])
           << "dimension mismatch in dot product";
       args.push_back(emitComputeLen(type1->dimensions[0]));
-      std::string funcName = "dot" + floatType;
+      std::string funcName = "dot" + floatTypeName;
       call = emitCall(funcName, args, getLLVMFloatType());
+      symtable.insert(op->results[0], call);
     }
     else {
       ierror << "intrinsic" << op->callee.getName() << "not found";
     }
+    iassert(call);
 
-    if (call == nullptr) {
-      iassert(fun);
-      call = builder->CreateCall(fun, args);
+    if (!call->getType()->isVoidTy()) {
+      symtable.insert(op->results[0], call);
     }
-    symtable.insert(op->results[0], call);
   }
   // If not an intrinsic function, try to find it in the module
   else {
@@ -1274,14 +1261,11 @@ llvm::Value *LLVMBackend::loadFromArray(llvm::Value *array, llvm::Value *index){
   return builder->CreateLoad(loc);
 }
 
-llvm::Value *LLVMBackend::emitCall(string name,
-                                   initializer_list<llvm::Value*> args,
-                                   llvm::Type *returnType) {
-  return emitCall(name, vector<llvm::Value*>(args), returnType);
+llvm::Value *LLVMBackend::emitCall(string name, vector<llvm::Value*> args) {
+  return emitCall(name, args, LLVM_VOID);
 }
 
-llvm::Value *LLVMBackend::emitCall(std::string name,
-                                   std::vector<llvm::Value*> args,
+llvm::Value *LLVMBackend::emitCall(string name, vector<llvm::Value*> args,
                                    llvm::Type *returnType) {
   std::vector<llvm::Type*> argTypes;
   for (auto &arg : args) {
@@ -1290,9 +1274,9 @@ llvm::Value *LLVMBackend::emitCall(std::string name,
 
   llvm::FunctionType *ftype =
       llvm::FunctionType::get(returnType, argTypes, false);
-
   llvm::Function *fun =
       llvm::cast<llvm::Function>(module->getOrInsertFunction(name, ftype));
+
   iassert(fun != nullptr)
       << "could not find" << fun << "with the given signature";
 

@@ -115,12 +115,9 @@ protected:
 
   llvm::Value *loadFromArray(llvm::Value *array, llvm::Value *index);
 
-  llvm::Value *emitCall(std::string name,
-                        std::initializer_list<llvm::Value*> args,
-                        llvm::Type *returnType);
+  llvm::Value *emitCall(std::string name, std::vector<llvm::Value*> args);
 
-  llvm::Value *emitCall(std::string name,
-                        std::vector<llvm::Value*> args,
+  llvm::Value *emitCall(std::string name, std::vector<llvm::Value*> args,
                         llvm::Type *returnType);
 
   /// Emit an empty function and set the builder cursor to its entry block. The
