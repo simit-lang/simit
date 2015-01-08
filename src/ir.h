@@ -120,7 +120,7 @@ struct Environment {
   Environment(const std::map<ir::Var,ir::Expr> &globals) : globals(globals) {}
 };
 
-namespace {
+// namespace {
 struct FuncContent {
   int kind;
   std::string name;
@@ -135,7 +135,7 @@ struct FuncContent {
   friend inline void aquire(FuncContent *c) {++c->ref;}
   friend inline void release(FuncContent *c) {if (--c->ref==0) delete c;}
 };
-}
+// }
 
 /// A Simit Func, which can be passed to the backend to get a runnable Function.
 class Func : public util::IntrusivePtr<FuncContent> {

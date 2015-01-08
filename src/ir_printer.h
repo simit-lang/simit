@@ -39,6 +39,7 @@ public:
   void print(const IRNode &);
 
 private:
+  using IRVisitor::visit;
   virtual void visit(const Literal *);
   virtual void visit(const VarExpr *);
   virtual void visit(const FieldRead *);
@@ -98,6 +99,8 @@ public:
 private:
   std::set<ir::Func> visited;
   std::ostream &os;
+  
+  using IRVisitor::visit;
 
   virtual void visit(const Call *);
   virtual void visit(const CallStmt *);

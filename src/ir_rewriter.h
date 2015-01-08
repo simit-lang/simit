@@ -22,6 +22,8 @@ protected:
 
   /// visit methods that take Func assign to this to return their value.
   Func func;
+  
+  using IRVisitor::visit;
 
   virtual void visit(const Literal *op);
   virtual void visit(const VarExpr *op);
@@ -75,6 +77,8 @@ class IRRewriterCallGraph : public IRRewriter {
 protected:
 //  using IRRewriter::visit;
   std::set<ir::Func> visited;
+  
+  using IRRewriter::visit;
 
   virtual void visit(const Call *op);
   virtual void visit(const CallStmt *op);

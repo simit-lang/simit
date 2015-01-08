@@ -16,6 +16,8 @@
 
 using namespace std;
 
+void printUsage(); // GCC shut up
+
 void printUsage() {
   cerr << "Usage: simit-dump [options] <simit-source> " << endl << endl
        << "Options:"            << endl

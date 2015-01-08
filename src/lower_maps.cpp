@@ -52,6 +52,8 @@ public:
 
 private:
   Storage *storage;
+  
+  using IRRewriter::visit;
 
   void visit(const Map *op) {
     iassert(hasStorage(op->vars, *storage))

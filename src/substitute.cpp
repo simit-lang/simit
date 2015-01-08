@@ -15,6 +15,8 @@ public:
   }
 
   Substitute(map<Expr,Expr> substitutions) : substitutions(substitutions) {}
+  
+  using IRRewriter::rewrite;
 
   Stmt rewrite(Stmt stmt) {
     return IRRewriter::rewrite(stmt);
@@ -31,6 +33,8 @@ public:
 
 private:
   map<Expr,Expr> substitutions;
+
+  using IRRewriter::visit;
 
   void visit(const VarExpr *op) {
     expr = op;
@@ -60,6 +64,8 @@ public:
 
 private:
   map<IndexVar,IndexVar> subs;
+
+  using IRRewriter::visit;
 
   void visit(const IndexedTensor *op) {
     vector<IndexVar> indexVars;

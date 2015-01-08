@@ -10,6 +10,8 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter);
+
 Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
   this->targetLoopVar = targetLoopVar;
 

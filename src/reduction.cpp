@@ -1,4 +1,5 @@
 #include "reduction.h"
+#include "error.h"
 
 namespace simit {
 namespace ir {
@@ -11,6 +12,8 @@ std::string ReductionOperator::getName() {
     case Undefined:
       return "";
   }
+  unreachable;
+  return "";
 }
 
 bool operator==(const ReductionOperator &l, const ReductionOperator &r) {

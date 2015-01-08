@@ -41,6 +41,10 @@
   using namespace simit::internal;
   using namespace simit::ir;
 
+  std::string typeString(const Type &type); // GCC shut up
+  void transposeVector(Expr vec);
+  bool compare(const Type &l, const Type &r, ProgramContext *ctx);
+
   std::string typeString(const Type &type) {
     std::stringstream ss;
     ss << type;
@@ -1508,7 +1512,7 @@ component_type
 
 // Literals
 %code requires {
-  namespace {
+  //namespace { // TODO XXX gcc warning hack
     template <typename T>
     class TensorValues {
      public:
@@ -1545,7 +1549,7 @@ component_type
       std::vector<unsigned int> dimSizes;
       std::vector<T>            values;
     };
-  }
+  //}
 };
 
 

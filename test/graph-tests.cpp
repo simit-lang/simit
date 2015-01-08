@@ -44,8 +44,9 @@ TEST(Set, IncreaseCapacity) {
 
   int count = 0;
   bool foundIt[1029];
-  for (auto b : foundIt)
+  for (auto&& b : foundIt) {
     b = false;
+  }
   
   for (auto it : myset) {
     int val = fld.get(it);

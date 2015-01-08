@@ -57,7 +57,7 @@
   #include "ir_builder.h"
 
 
-  namespace {
+  //namespace { // TODO XXX gcc warning hack
     template <typename T>
     class TensorValues {
      public:
@@ -94,7 +94,7 @@
       std::vector<unsigned int> dimSizes;
       std::vector<T>            values;
     };
-  }
+  //}
 
 
   struct System {

@@ -6,6 +6,27 @@
 #include <Eigen/Dense>
 
 extern "C" {
+// appease GCC
+double cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
+                     int rows, int columns);
+float cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
+                    int rows, int columns);
+int loc(int v0, int v1, int *neighbors_start, int *neighbors);
+double dot_f64(double* a, double* b, int len);
+float dot_f32(float* a, float* b, int len);
+double norm_f64(double* a, int len);
+float norm_f32(float* a, int len);
+double atan2_f64(double y, double x);
+float atan2_f32(float y, float x);
+double tan_f64(double x);
+float tan_f32(float x);
+double asin_f64(double x);
+float asin_f32(float x);
+double acos_f64(double x);
+float acos_f32(float x);
+double det3(double * a);
+void inv3(double * a, double * inv);
+
 double cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
                  int rows, int columns) {
   using namespace Eigen;

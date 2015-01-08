@@ -15,6 +15,7 @@ enum ComponentType {INT, FLOAT};
 /** Helper to convert from C++ type to Simit Type. */
 template<typename T> inline ComponentType typeOf() {
   iassert(false) << "Unsupported type";
+  return ComponentType::INT; // TODO XXX gcc warning suppression
 }
 
 template<> inline ComponentType typeOf<int>   () {return ComponentType::INT;}

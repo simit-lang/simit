@@ -50,6 +50,9 @@ protected:
 
   /// used to return variables from Expr visit functions
   llvm::Value *val;
+  
+  using Backend::compile;
+  using ir::IRVisitor::visit;
 
   virtual llvm::Value *compile(const ir::Expr &expr);
   virtual void compile(const ir::Stmt &stmt);

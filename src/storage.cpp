@@ -196,10 +196,14 @@ public:
 private:
   Storage *storage;
   
+  using IRVisitor::visit;
+  
   // class to find leaf vars of an Expr.
   class LeafVarsVisitor : public IRVisitor {
     public:
     std::set<Var> vars;
+    
+    using IRVisitor::visit;
     
     void visit(const VarExpr *op) {
       vars.insert(op->var);

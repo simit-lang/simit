@@ -20,6 +20,8 @@ public:
 private:
   set<IndexVar> added;
   vector<IndexVar> indexVars;
+  
+  using IRVisitor::visit;
 
   void visit(const IndexedTensor *op) {
     for (auto &iv : op->indexVars) {
@@ -46,7 +48,9 @@ public:
 private:
   set<IndexVar> added;
   vector<IndexVar> indexVars;
-
+  
+  using IRVisitor::visit;
+  
   void visit(const IndexedTensor *op) {
     for (auto &iv : op->indexVars) {
       if (iv.isReductionVar() && added.find(iv) == added.end()) {
@@ -63,6 +67,7 @@ std::vector<IndexVar> getReductionVars(Expr expr) {
 
 // containsFreeVar
 class ContainsFree : public IRQuery {
+  using IRQuery::visit;
   void visit(const IndexedTensor *op) {
     for (auto &iv : op->indexVars) {
       if (iv.isFreeVar()) {
@@ -84,6 +89,7 @@ bool containsFreeVar(Stmt stmt) {
 
 // containsReductionVar
 class ContainsReduction : public IRQuery {
+  using IRQuery::visit;
   void visit(const IndexedTensor *op) {
     for (auto &iv : op->indexVars) {
       if (iv.isReductionVar()) {
@@ -115,6 +121,8 @@ public:
 private:
   bool indexExprFound;
   bool isFlattened;
+  
+  using IRVisitor::visit;
 
   void visit(const IndexExpr *op) {
     if (!indexExprFound) {
@@ -140,6 +148,8 @@ bool isBlocked(Stmt stmt) {
     }
   private:
     bool isBlocked;
+    
+    using IRVisitor::visit;
 
     void updateBlocked(Expr expr) {
       Type type = expr.type();
@@ -166,7 +176,7 @@ std::vector<Func> getCallTree(Func func) {
     }
 
   private:
-    using IRVisitor::visit;
+    using IRVisitorCallGraph::visit;
 
     set<Func> visited;
     vector<Func> callTree;

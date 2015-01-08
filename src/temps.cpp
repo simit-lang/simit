@@ -23,6 +23,8 @@ private:
   std::string fieldName;
 
   Expr fieldRead;
+  
+  using IRVisitor::visit;
 
   void visit(const FieldRead *op) {
     if (op->elementOrSet == elementOrSet && op->fieldName == fieldName) {
@@ -47,6 +49,8 @@ public:
 private:
   Expr fieldRead;
   bool fieldReductionFound = false;
+  
+  using IRVisitor::visit;
 
   void visit(const IndexedTensor *op) {
     if (op->tensor == fieldRead) {
@@ -62,6 +66,8 @@ private:
 
 class InsertTemporaries : public IRRewriter {
   int id=0;
+  
+  using IRRewriter::visit;
 
   void visit(const FieldWrite *op) {
     Expr elemOrSet = op->elementOrSet;

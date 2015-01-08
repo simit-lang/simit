@@ -43,6 +43,7 @@ Function::Function(const simit::ir::Func &simitFunc)
     }
   private:
     vector<simit::ir::Expr> literals;
+    using simit::ir::IRVisitor::visit;
     void visit(const simit::ir::Literal *op) {
       literals.push_back(op);
     }

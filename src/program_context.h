@@ -107,6 +107,7 @@ public:
     private:
       const ProgramContext &ctx;
       ir::Environment env;
+      using IRVisitor::visit;
       void visit(const ir::VarExpr *op) {
         if (ctx.isConstant(op->var)) {
           env.globals[op->var] = ctx.getConstant(op->var);

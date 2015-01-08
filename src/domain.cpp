@@ -30,6 +30,8 @@ bool operator==(const IndexSet &l, const IndexSet &r) {
       return true;
       break;
   }
+  unreachable;
+  return false;
 }
 
 bool operator!=(const IndexSet &l, const IndexSet &r) {

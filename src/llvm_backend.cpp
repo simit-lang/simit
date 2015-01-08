@@ -40,6 +40,9 @@ using namespace simit::internal;
 namespace simit {
 namespace internal {
 
+// appease GCC
+llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module);
+
 const std::string VAL_SUFFIX(".val");
 const std::string PTR_SUFFIX(".ptr");
 const std::string LEN_SUFFIX(".len");

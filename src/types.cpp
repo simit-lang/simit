@@ -123,6 +123,8 @@ bool operator==(const Type& l, const Type& r) {
     case Type::Tuple:
       return *l.toTuple() == *r.toTuple();
   }
+  unreachable;
+  return false;
 }
 
 bool operator!=(const Type& l, const Type& r) {
@@ -197,6 +199,7 @@ std::ostream &operator<<(std::ostream &os, const Type &type) {
     case Type::Tuple:
       return os << *type.toTuple();
   }
+  return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const ScalarType &type) {

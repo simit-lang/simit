@@ -28,6 +28,8 @@ protected:
 
   /// Check if the given variable is a result variable
   bool isResult(Var var);
+  
+  using IRRewriter::visit;
 
   /// Replace element field reads with set field reads
   virtual void visit(const FieldRead *op);

@@ -12,6 +12,10 @@ using namespace simit::util;
 namespace simit {
 namespace ir {
 
+// appease GCC
+bool ReductionVarsAfterFree(SIGVertex *i, SIGVertex *j);
+size_t getNumBlockLevels(const SIG &sig);
+
 // class SIG
 SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor, Expr set) : SIG() {
   std::set<IndexVar> added;
@@ -163,6 +167,8 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
   private:
     Storage storage;
     SIG sig;
+    
+    using IRVisitor::visit;
 
     SIG create(Expr expr) {
       expr.accept(this);
@@ -229,6 +235,8 @@ size_t getNumBlockLevels(const SIG &sig) {
 
   private:
     size_t numBlockLevels;
+    
+    using SIGVisitor::visit;
 
     void visit(const SIGVertex *v) {
       size_t ivNumBlockLevels = v->iv.getNumBlockLevels();
@@ -271,6 +279,8 @@ LoopVars LoopVars::create(const SIG &sig) {
 
     /// The number of block levels in the index variables in the SIG.
     size_t numBlockLevels;
+    
+    using SIGVisitor::visit;
 
     void visit(const SIGVertex *v) {
       const IndexVar &indexVar = v->iv;
@@ -391,6 +401,8 @@ public:
 
 private:
   std::ostream &os;
+  
+  using SIGVisitor::visit;
 
   void visit(const SIGVertex *v) {
     os << *v << ", ";

@@ -41,6 +41,8 @@ llvm::Type *llvmPtrType(ScalarType stype) {
     case ScalarType::Boolean:
       return LLVM_BOOL;
   }
+  unreachable;
+  return nullptr;
 }
 
 llvm::Constant *llvmPtr(llvm::Type *type, const void *data) {
@@ -169,6 +171,8 @@ llvm::Type *createLLVMType(ScalarType stype) {
     case ScalarType::Boolean:
       return LLVM_BOOL;
   }
+  unreachable;
+  return nullptr;
 }
 
 static llvm::Function *createPrototype(const std::string &name,
