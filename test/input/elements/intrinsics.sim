@@ -58,7 +58,7 @@ func dodet(a : tensor[3,3](float)) -> (c : float)
   c = det(a);
 end
 
-%%%- inv
+%%% inv
 %! doinv([4.0, 1.0, 8.0; 3.0, 4.0, 5.0; 1.0, 7.0, 7.0]) == [-0.0761, 0.5326, -0.2935; -0.1739, 0.2174, 0.0435; 0.1848, -0.2935, 0.1413];
 func doinv(a : tensor[3,3](float)) -> (c : tensor[3,3](float))
   c = inv(a);
