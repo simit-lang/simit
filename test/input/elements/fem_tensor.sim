@@ -1,6 +1,7 @@
-%sign for shape function
-const sw:tensor[8,3](float) =
-[-1.0,-1.0,-1.0;
+%%% precompute a 3 tensor used in fem
+%! shapeFunGrad(1,2) == [-0.04466,0.16667,-0.16667];
+%! computeGradN(0) == [-0.622008, -0.622008, -0.622008 ;-0.166667, -0.166667, 0.622008 ;-0.166667, 0.622008, -0.166667 ;-0.044658, 0.166667, 0.166667 ;0.622008, -0.166667, -0.166667 ;0.166667, -0.044658, 0.166667 ;0.166667, 0.166667, -0.044658 ;0.044658, 0.044658, 0.044658];
+const sw:tensor[8,3](float) =[-1.0,-1.0,-1.0;
  -1.0,-1.0, 1.0;
  -1.0, 1.0,-1.0;
  -1.0, 1.0, 1.0;
@@ -10,11 +11,7 @@ const sw:tensor[8,3](float) =
   1.0, 1.0, 1.0
 ];
 
-%quadrature weight
-const quadW :float = 0.125;
-
-const quadrature : tensor[8,3](float)=
-[-0.57735, -0.57735, -0.57735;
+const quadrature : tensor[8,3](float)=[-0.57735, -0.57735, -0.57735;
  -0.57735, -0.57735,  0.57735;
  -0.57735,  0.57735, -0.57735;
  -0.57735,  0.57735,  0.57735;
@@ -23,24 +20,23 @@ const quadrature : tensor[8,3](float)=
   0.57735,  0.57735, -0.57735;
   0.57735,  0.57735,  0.57735];
 
-%i vertex index
-%kk quadrature index
 func shapeFunGrad(kk:int, i:int) -> (gradN:tensor[3](float))
-  p = quadrature(kk);
-  gradN(0) = sw(i,0) * (1.0 + sw(i,1) * p(1)) * (1.0 + sw(i,2) * p(2));
-  gradN(1) = sw(i,1) * (1.0 + sw(i,0) * p(0)) * (1.0 + sw(i,2) * p(2));
-  gradN(2) = sw(i,2) * (1.0 + sw(i,0) * p(0)) * (1.0 + sw(i,1) * p(1));
+  var p : tensor[3](float);
+  p(0) = quadrature(kk,0);
+  p(1) = quadrature(kk,1);
+  p(2) = quadrature(kk,2);
+  gradN(0) = sw(i,0) * ((1.0) + sw(i,1) * p(1)) * ((1.0) + sw(i,2) * p(2));
+  gradN(1) = sw(i,1) * ((1.0) + sw(i,0) * p(0)) * ((1.0) + sw(i,2) * p(2));
+  gradN(2) = sw(i,2) * ((1.0) + sw(i,0) * p(0)) * ((1.0) + sw(i,1) * p(1));
   gradN = 0.25 * gradN;
 end
 
-%%% precompute a 3 tensor used in fem
-func computeGradN()->(gradN:tensor[8,8,3](float))
-  for qq in 0:8
-    for ii in 0:8
-      tmp = shapeFunGrad(qq,ii);
-      for jj in 0:3
-        gradN(qq,ii,jj) = tmp(jj);
-      end
+func computeGradN(qq:int)->(gradN:tensor[8,3](float))
+  var tmp:tensor[3](float);
+  for ii in 0:8
+    tmp = shapeFunGrad(qq,ii);
+    for jj in 0:3
+      gradN(ii,jj) = tmp(jj);
     end
   end
 end
