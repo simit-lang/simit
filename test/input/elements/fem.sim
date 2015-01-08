@@ -19,3 +19,49 @@ func dPdF(u:float, l:float, F:tensor[3,3](float), dF:tensor[3,3](float))->
   FidF = Finv*dF;
   dP = u * dF + (u - l*JJ) * Finv' * FidF' + l * trace3(FidF) * Finv';
 end
+
+%%%compute stiffness matrix blocks
+%- stiffness_blocks(1.0, 10.0 , 0.1666667, [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0],[1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0],[1.0,0.0,0.0])==[[1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0], [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0], [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0], [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0]];
+
+func trace3(M:tensor[3,3](float))->(t:float)
+  t = M(0,0)+M(1,1)+M(2,2);
+end
+
+func dPdF(u:float, l:float, F:tensor[3,3](float), dF:tensor[3,3](float))->
+  (dP:tensor[3,3](float))
+  JJ = log(det(F));
+  Finv = inv(F);
+  FidF = Finv*dF;
+  dP = u * dF + (u - l*JJ) * Finv' * FidF' + l * trace3(FidF) * Finv';
+end
+
+func stiffness_blocks(u:float, l:float, W:float, B:tensor[3,3](float), F:tensor[3,3](float), dFRow:tensor[3](float))
+  ->(K:tensor[4,3,3](float))
+  var dH:tensor[3,3,3](float)=0;
+  for kk in 0:3
+    var dF:tensor[3,3](float)=0;
+    for ll in 0:3
+      dF(kk,ll) = dFRow(ll);
+    end
+    tmp = -W*dPdF(u,l,F,dF)*B';
+    for ti in 0:3
+      for tj in 0:3
+        dH(kk,ti,tj) = tmp(ti,tj);
+      end
+    end
+  end
+  
+  for ii in 0:3
+    %loop over dimensions
+    for kk in 0:3
+      for ll in 0:3
+        K(ii,ll,kk) = dH(kk,ll,ii);
+      end
+    end
+  end
+  for kk in 0:3
+    for ll in 0:3
+      K(3, ll, kk) = -dH(kk, ll, 0) - dH(kk, ll, 1) - dH(kk, ll, 2);
+    end
+  end
+end
