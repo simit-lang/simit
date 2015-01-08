@@ -10,6 +10,6 @@ end
 
 proc main
   f = map doubleField to points;
-  points.a = --f;
+  points.a = f;
 end
 
