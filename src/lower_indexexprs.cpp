@@ -429,6 +429,68 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
           expr = op;
         }
       }
+    
+        void visit(const Sub *op) {
+        // the idea here is to lift out the system diagonal tensor reads (that
+        // take place during a tensor write) and place them in a higher level
+        // loop.  In addition, change A(i,j) to A(i) if A is diagonal.
+        
+        if (isa<TensorRead>(op->a)) {
+            auto tensor = to<TensorRead>(op->a)->tensor;
+            iassert(isa<VarExpr>(tensor));
+          
+            if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
+                && currentTensorWrite != nullptr) {
+              
+              std::vector<Expr> newIndices;
+              newIndices.push_back(VarExpr::make(outerIndexVar));
+              
+              std::vector<Expr> newWriteIndices;
+              for (auto x: currentTensorWrite->indices)
+                newWriteIndices.push_back(outerIndexVar);
+
+              
+              
+              liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
+                    newWriteIndices, TensorRead::make(tensor, newIndices)));
+              expr = Sub::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
+                               op->b);
+            }
+            else {
+              expr = op;
+            }
+        }
+        else if (isa<TensorRead>(op->b)) {
+            auto tensor = to<TensorRead>(op->b)->tensor;
+            iassert(isa<VarExpr>(tensor));
+          
+            if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
+                && currentTensorWrite != nullptr) {
+            
+              std::vector<Expr> newIndices;
+              newIndices.push_back(VarExpr::make(outerIndexVar));
+              
+              std::vector<Expr> newWriteIndices;
+              for (auto x: currentTensorWrite->indices)
+                newWriteIndices.push_back(outerIndexVar);
+
+              
+              
+              liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
+                    newWriteIndices, TensorRead::make(tensor, newIndices)));
+              expr = Sub::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
+                               op->b);
+            }
+            else {
+              expr = op;
+            }
+        }
+
+        else {
+          expr = op;
+        }
+      }
+
   };
 
   stmt = wrapCompoundAssignedValues(stmt);
