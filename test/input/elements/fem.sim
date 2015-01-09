@@ -60,7 +60,7 @@ func stiffness_blocks(u:float, l:float, W:float, B:tensor[3,3](float), F:tensor[
   end
   for kk in 0:3
     for ll in 0:3
-      K(3, ll, kk) = -dH(kk, ll, 0) - dH(kk, ll, 1) - dH(kk, ll, 2);
+      K(3, ll, kk) = - (dH(kk, ll, 0) + dH(kk, ll, 1) + dH(kk, ll, 2));
     end
   end
 end
