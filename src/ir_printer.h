@@ -104,6 +104,7 @@ private:
 
   virtual void visit(const Call *);
   virtual void visit(const CallStmt *);
+  virtual void visit(const Map *);
   virtual void visit(const Func *);
 };
 
