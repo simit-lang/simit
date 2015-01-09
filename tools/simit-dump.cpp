@@ -237,7 +237,7 @@ int main(int argc, const char* argv[]) {
         using simit::ir::IRVisitor::visit;
         void visit(const simit::ir::Func *func) {
           simit::ir::IRVisitorCallGraph::visit(func);
-          cout << func->getName() << ":" << endl;
+          cout << "func " << func->getName() << ":" << endl;
 
           for (auto &var : func->getStorage()) {
             cout << "  " << var << " : " << func->getStorage().get(var) << endl;

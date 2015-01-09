@@ -135,6 +135,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   }
   iassert(llvmFunc);
 
+
   // Declare malloc and free
   llvm::FunctionType *m =
       llvm::FunctionType::get(LLVM_INT8PTR, {LLVM_INT}, false);
@@ -1366,7 +1367,7 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
   iassert(var.getType().isTensor() && value.type().isTensor());
 
   std::string varName = var.getName();
-  llvm::Value *llvmValue = compile(value);
+  llvm::Value *valuePtr = compile(value);
 
   // Assigned for the first time
   if (!symtable.contains(var)) {
@@ -1382,30 +1383,36 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
 
   // Assigning a scalar to a scalar
   if (varType->order() == 0 && valType->order() == 0) {
-    builder->CreateStore(llvmValue, varPtr);
-    llvmValue->setName(varName + VAL_SUFFIX);
+    builder->CreateStore(valuePtr, varPtr);
+    valuePtr->setName(varName + VAL_SUFFIX);
   }
-  // Assigning a scalar to an n-order tensor
-  else if (varType->order() > 0 && valType->order() == 0) {
-    if (isa<Literal>(value) &&
-        to<Literal>(value)->getFloatVal(0) == 0.0) {
-      // emit memset 0
-      llvm::Value *varLen = emitComputeLen(varType, storage.get(var));
-      unsigned compSize = varType->componentType.bytes();
-      llvm::Value *varSize = builder->CreateMul(varLen, llvmInt(compSize));
-      builder->CreateMemSet(varPtr, llvmInt(0,8), varSize, compSize);
-    }
-    else {
-      not_supported_yet << "you can only currently assign a scalar to a tensor "
-                           "if the scalar is 0.";
-    }
-  }
-  else if (isa<Literal>(value)) {
-    llvmValue->setName(varName);
-    symtable.insert(var, llvmValue);
-  }
+  // Assign to n-order tensors
   else {
-    ierror;
+    llvm::Value *len = emitComputeLen(varType, storage.get(var));
+    unsigned componentSize = varType->componentType.bytes();
+    llvm::Value *size = builder->CreateMul(len, llvmInt(componentSize));
+
+    // Assigning a scalar to an n-order tensor
+    if (varType->order() > 0 && valType->order() == 0) {
+      // Assigning 0 to a tensor (memset)
+      if (isa<Literal>(value) && (to<Literal>(value)->getFloatVal(0) == 0.0 ||
+                                  ((int*)to<Literal>(value)->data)[0] == 0  )) {
+        builder->CreateMemSet(varPtr, llvmInt(0,8), size, componentSize);
+      }
+      // Assigning general scalar to a tensor
+      else {
+        not_supported_yet << "you can only currently assign a scalar to a"
+                          << "tensor if the scalar is 0.";
+      }
+    }
+    // Assign tensor to conforming tensor
+    else {
+      iassert(var.getType() == value.type())
+          << "variable and value types don't match";
+      llvm::Value *valuePtr = compile(value);
+      builder->CreateMemCpy(varPtr, valuePtr, size, componentSize);
+      symtable.insert(var, varPtr);
+    }
   }
 }
 
