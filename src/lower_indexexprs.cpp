@@ -388,8 +388,6 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
               for (auto x: currentTensorWrite->indices)
                 newWriteIndices.push_back(outerIndexVar);
 
-              
-              
               liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
                     newWriteIndices, TensorRead::make(tensor, newIndices)));
               expr = Add::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
@@ -413,8 +411,6 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
               for (auto x: currentTensorWrite->indices)
                 newWriteIndices.push_back(outerIndexVar);
 
-              
-              
               liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
                     newWriteIndices, TensorRead::make(tensor, newIndices)));
               expr = Add::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
@@ -449,8 +445,6 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
               for (auto x: currentTensorWrite->indices)
                 newWriteIndices.push_back(outerIndexVar);
 
-              
-              
               liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
                     newWriteIndices, TensorRead::make(tensor, newIndices)));
               expr = Sub::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
@@ -473,8 +467,6 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
               std::vector<Expr> newWriteIndices;
               for (auto x: currentTensorWrite->indices)
                 newWriteIndices.push_back(outerIndexVar);
-
-              
               
               liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
                     newWriteIndices, TensorRead::make(tensor, newIndices)));
