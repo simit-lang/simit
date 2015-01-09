@@ -209,19 +209,6 @@ private:
   Storage *storage;
   
   using IRVisitor::visit;
-  
-  // class to find leaf vars of an Expr.
-  class LeafVarsVisitor : public IRVisitor {
-    public:
-    std::set<Var> vars;
-    
-    using IRVisitor::visit;
-    
-    void visit(const VarExpr *op) {
-      vars.insert(op->var);
-    }
-  
-  };
 
   void visit(const VarDecl *op) {
     Var var = op->var;
@@ -244,8 +231,7 @@ private:
       const TensorType *ttype = type.toTensor();
       if (!isElementTensorType(ttype) && ttype->order() > 1) {
         // assume system reduced storage
-        determineStorage(var, !isa<Literal>(op->value),
-          op->value);
+        determineStorage(var, !isa<Literal>(op->value), op->value);
         
       } else {
         bool needsInitialization = !isa<Literal>(op->value);
@@ -287,7 +273,10 @@ private:
     }
   }
 
-  TensorStorage determineStorage(Var var, bool initialize=true) {
+  void determineStorage(Var var, bool initialize=true) {
+    // Scalars don't need storage
+    if (isScalar(var.getType())) return;
+
     // If all dimensions are ranges then we choose dense row major. Otherwise,
     // we choose system reduced storage order (for now).
     Type type = var.getType();
@@ -295,23 +284,37 @@ private:
     const TensorType *ttype = type.toTensor();
 
     TensorStorage tensorStorage;
-    if (isElementTensorType(ttype) || ttype->order() <= 1) {
+
+    // Element tensor (dimensions are not simit sets) are dense. In addition
+    // vectors are always dense.
+    if (isElementTensorType(ttype) || ttype->order() == 1) {
       tensorStorage = TensorStorage(TensorStorage::DenseRowMajor, initialize);
     }
     else {
       not_supported_yet;
     }
+    iassert(tensorStorage.getKind() != TensorStorage::Undefined);
+
     storage->add(var, tensorStorage);
-    return tensorStorage;
   }
   
   //TODO: this should be replaced with something that uses the type of rhs
-  TensorStorage determineStorage(Var var, bool initialize, Expr rhs) {
+  void determineStorage(Var var, bool initialize, Expr rhs) {
+    // class to find leaf vars of an Expr.
+    class LeafVarsVisitor : public IRVisitor {
+    public:
+      std::set<Var> vars;
+      using IRVisitor::visit;
+      void visit(const VarExpr *op) {
+        vars.insert(op->var);
+      }
+    };
+
     // find leaf vars in the rhs
-    LeafVarsVisitor varVisitor;
-    rhs.accept(&varVisitor);
+    LeafVarsVisitor leafVars;
+    rhs.accept(&leafVars);
  
-    for (auto v : varVisitor.vars) {
+    for (auto v : leafVars.vars) {
       if (storage->hasStorage(v)) {
         const TensorStorage varStorage = storage->get(v);
         if (varStorage.getKind() == TensorStorage::SystemReduced) {
@@ -322,7 +325,6 @@ private:
       }
    
     }
-    return TensorStorage(TensorStorage::Undefined);
   }
 };
 
