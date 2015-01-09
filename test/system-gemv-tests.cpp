@@ -646,7 +646,7 @@ TEST(System, gemv_input) {
   ASSERT_EQ(20.0, (double)c.get(p2));
 }
 
-TEST(System, DISABLED_gemv_diagonal_storage) {
+TEST(System, gemv_diagonal_storage) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
