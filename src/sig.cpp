@@ -250,9 +250,10 @@ size_t getNumBlockLevels(const SIG &sig) {
 
 
 // class LoopVars
-LoopVars LoopVars::create(const SIG &sig) {
+LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
   class LoopVarsBuilder : protected SIGVisitor {
   public:
+    LoopVarsBuilder(const Storage &storage) : storage(storage) {}
     LoopVars build(const SIG &sig) {
       vertexLoopVars.clear();
 
@@ -266,6 +267,7 @@ LoopVars LoopVars::create(const SIG &sig) {
     }
 
   private:
+    const Storage& storage;
     std::vector<LoopVar> loopVars;
     std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
     std::map<std::vector<Var>, Var> coordVars;
@@ -324,6 +326,9 @@ LoopVars LoopVars::create(const SIG &sig) {
 
       // We currently only support case 2.
       tassert(visited.size() == 1);
+      
+      auto storageKind = storage.get(e->tensor).getKind();
+     
       auto loopVars = vertexLoopVars[visited[0]->iv];
       Var link = loopVars[loopVars.size()-1].getVar();
 
@@ -333,8 +338,18 @@ LoopVars LoopVars::create(const SIG &sig) {
 
         if (currBlockLevel == 0) {
           Var var(nameGenerator.getName(indexVar.getName()), Int);
-          ForDomain domain(e->set, link, ForDomain::Neighbors);
-
+          
+          ForDomain::Kind domainKind = ForDomain::Neighbors;
+          
+          if (storageKind == TensorStorage::SystemReduced) {
+            domainKind = ForDomain::Neighbors;
+          } else if (storageKind == TensorStorage::SystemDiagonal) {
+            domainKind = ForDomain::Diagonal;
+          }
+          else
+            iassert("Unknown storage kind for tensor ") << e->tensor;
+          
+          ForDomain domain(e->set, link, domainKind);
           // We only need to reduce w.r.t. to the inner loop variable.
           ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
                                   ? indexVar.getOperator()
@@ -342,14 +357,16 @@ LoopVars LoopVars::create(const SIG &sig) {
 
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
 
-          // The ij var links i to j through the neighbors indices. E.g.
-          // for i in points:
-          //   pointsi = 0;
-          //   for ij in edges.neighbors.start[i]:edges.neighbors.start[(i+1)]:
-          //     j = springs.neighbors[ij];
-          //     pointsi = (pointsi + (A[ij] * points.b[j]));
-          //   points.c[i] = pointsi;
-          addCoordVar({link, var}, Var(link.getName()+indexVar.getName(), Int));
+          if (storageKind == TensorStorage::SystemReduced) {
+            // The ij var links i to j through the neighbors indices. E.g.
+            // for i in points:
+            //   pointsi = 0;
+            //   for ij in edges.neighbors.start[i]:edges.neighbors.start[(i+1)]:
+            //     j = springs.neighbors[ij];
+            //     pointsi = (pointsi + (A[ij] * points.b[j]));
+            //   points.c[i] = pointsi;
+            addCoordVar({link, var}, Var(link.getName()+indexVar.getName(), Int));
+          }
           visitedVertices.insert(veps);
         }
       }
@@ -373,7 +390,7 @@ LoopVars LoopVars::create(const SIG &sig) {
     }
   }; // class LoopVarsBuilder
 
-  return LoopVarsBuilder().build(sig);
+  return LoopVarsBuilder(storage).build(sig);
 }
 
 LoopVars::LoopVars(const vector<LoopVar> &loopVars,

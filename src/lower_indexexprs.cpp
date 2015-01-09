@@ -343,7 +343,7 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   stmt = wrapCompoundAssignedValues(stmt);
 
   SIG sig = createSIG(stmt, storage);
-  LoopVars loopVars = LoopVars::create(sig);
+  LoopVars loopVars = LoopVars::create(sig, storage);
 
   // Create initial compute kernel (loop body). The initial kernel does not take
   // into account reductions, so it will be rewritten to reflect these.
@@ -371,6 +371,13 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
                               Add::make(i, 1));
 
       loopNest = ForRange::make(ij, start, stop, loopNest);
+    }
+    else if (loopVar->getDomain().kind == ForDomain::Diagonal) {
+      Var i = loopVar->getDomain().var;
+      Var j = loopVar->getVar();
+      
+      loopNest = Block::make(AssignStmt::make(j, i), loopNest);
+      
     } else {
       not_supported_yet;
     }
