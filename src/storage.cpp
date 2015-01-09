@@ -107,6 +107,13 @@ void Storage::add(const Var &tensor, TensorStorage tstorage) {
   content->storage.insert(std::pair<Var,TensorStorage>(tensor,tstorage));
 }
 
+void Storage::add(const Storage &other) {
+  for (auto &var : other) {
+    iassert(!hasStorage(var)) << "Variable" << var << "already has storage";
+    add(var, other.get(var));
+  }
+}
+
 bool Storage::hasStorage(const Var &tensor) const {
   return content->storage.find(tensor) != content->storage.end();
 }

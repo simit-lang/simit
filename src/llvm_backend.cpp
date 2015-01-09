@@ -83,12 +83,14 @@ simit::Function *LLVMBackend::compile(Func func) {
   vector<Func> callTree = getCallTree(func);
   std::reverse(callTree.begin(), callTree.end());
 
+  this->storage = Storage();
+
   llvm::Function *llvmFunc = nullptr;
   for (auto &f : callTree) {
     if (f.getKind() != Func::Internal) continue;
     iassert(f.getBody().defined());
 
-    this->storage = f.getStorage();
+    this->storage.add(f.getStorage());
 
     // Allocate buffers for local variables in global storage.
     // TODO: We should allocate small local dense tensors on the stack
