@@ -85,6 +85,9 @@ public:
   /// Add storage for a tensor variable.
   void add(const Var &tensor, TensorStorage tensorStorage);
 
+  /// Add the variables from the `other` storage to this storage.
+  void add(const Storage &other);
+
   /// True if the tensor has a storage descriptor, false otherwise.
   bool hasStorage(const Var &tensor) const;
 
