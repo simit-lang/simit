@@ -37,9 +37,9 @@ end
 
 func stiffness_blocks(u:float, l:float, W:float, B:tensor[3,3](float), F:tensor[3,3](float), dFRow:tensor[3](float))
   ->(K:tensor[4,3,3](float))
-  var dH:tensor[3,3,3](float)=0;
+  var dH:tensor[3,3,3](float)=0.0;
   for kk in 0:3
-    var dF:tensor[3,3](float)=0;
+    var dF:tensor[3,3](float)=0.0;
     for ll in 0:3
       dF(kk,ll) = dFRow(ll);
     end
