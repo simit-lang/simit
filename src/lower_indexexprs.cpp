@@ -340,6 +340,97 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
 
 /// Lowers the given 'stmt' containing an index expression.
 Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
+  class DiagonalReadsRewriter : private IRRewriter {
+    public:
+      std::vector<Stmt> liftedStmts;
+      DiagonalReadsRewriter(const Storage& storage, Var outerIndexVar) :
+        storage(storage), outerIndexVar(outerIndexVar) {
+        currentTensorWrite = nullptr;
+      }
+      Stmt doRewrite(Stmt stmt) {
+        return this->rewrite(stmt);
+      }
+    private:
+      const Storage &storage;
+      Var outerIndexVar;
+      const TensorWrite *currentTensorWrite;
+      using IRRewriter::visit;
+    
+      void visit(const TensorWrite *op) {
+        currentTensorWrite = op;
+        auto rewritten = rewrite(op->value);
+        
+        if (rewritten != op->value) {
+          stmt = TensorWrite::make(op->tensor, op->indices, rewrite(op->value));
+        }
+        else {
+          stmt = op;
+        }
+        currentTensorWrite = nullptr;
+      }
+    
+      void visit(const Add *op) {
+        // the idea here is to lift out the system diagonal tensor reads (that
+        // take place during a tensor write) and place them in a higher level
+        // loop.  In addition, change A(i,j) to A(i) if A is diagonal.
+        
+        if (isa<TensorRead>(op->a)) {
+            auto tensor = to<TensorRead>(op->a)->tensor;
+            iassert(isa<VarExpr>(tensor));
+          
+            if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
+                && currentTensorWrite != nullptr) {
+              
+              std::vector<Expr> newIndices;
+              newIndices.push_back(VarExpr::make(outerIndexVar));
+              
+              std::vector<Expr> newWriteIndices;
+              for (auto x: currentTensorWrite->indices)
+                newWriteIndices.push_back(outerIndexVar);
+
+              
+              
+              liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
+                    newWriteIndices, TensorRead::make(tensor, newIndices)));
+              expr = Add::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
+                               op->b);
+            }
+            else {
+              expr = op;
+            }
+        }
+        else if (isa<TensorRead>(op->b)) {
+            auto tensor = to<TensorRead>(op->b)->tensor;
+            iassert(isa<VarExpr>(tensor));
+          
+            if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
+                && currentTensorWrite != nullptr) {
+            
+              std::vector<Expr> newIndices;
+              newIndices.push_back(VarExpr::make(outerIndexVar));
+              
+              std::vector<Expr> newWriteIndices;
+              for (auto x: currentTensorWrite->indices)
+                newWriteIndices.push_back(outerIndexVar);
+
+              
+              
+              liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
+                    newWriteIndices, TensorRead::make(tensor, newIndices)));
+              expr = Add::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
+                               op->b);
+            }
+            else {
+              expr = op;
+            }
+        }
+
+        else {
+          expr = op;
+        }
+      }
+  };
+
   stmt = wrapCompoundAssignedValues(stmt);
 
   SIG sig = createSIG(stmt, storage);
@@ -370,7 +461,16 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
       Expr stop  = Load::make(IndexRead::make(set, IndexRead::NeighborsStart),
                               Add::make(i, 1));
 
-      loopNest = ForRange::make(ij, start, stop, loopNest);
+      // Rewrite accesses to SystemDiagonal tensors & lift out ops
+      DiagonalReadsRewriter drRewriter(storage, i);
+      loopNest = drRewriter.doRewrite(loopNest);
+      if (drRewriter.liftedStmts.size() > 0) {
+        auto newBlock = Block::make(drRewriter.liftedStmts);
+        loopNest = Block::make(newBlock, ForRange::make(ij, start, stop, loopNest));
+      }
+      else {
+        loopNest = ForRange::make(ij, start, stop, loopNest);
+      }
     }
     else if (loopVar->getDomain().kind == ForDomain::Diagonal) {
       Var i = loopVar->getDomain().var;

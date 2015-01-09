@@ -56,7 +56,7 @@ public:
 
   bool isSparse() const {return content->edges.size() > 0;}
 
-  friend SIG merge(SIG&, SIG&, SIG::MergeOp);
+  friend SIG merge(SIG&, SIG&, SIG::MergeOp, Storage& storage);
 
 private:
   struct Content {

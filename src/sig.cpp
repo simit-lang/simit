@@ -37,7 +37,8 @@ SIG::SIG(const std::vector<IndexVar> &ivs, Var tensor, Expr set) : SIG() {
   }
 }
 
-SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop) {
+SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop, Storage& storage) {
+   
   // This can be optimized by exploiting immutability to preserve substructures
   SIG merged = SIG();
 
@@ -68,31 +69,48 @@ SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop) {
     merged.content->edges.push_back(unique_ptr<SIGEdge>(edge));
   }
 
-  // TODO: Add multi-edge merging: Build a lookup data structure etc.
-  // for now, if the two have all the same endpoints, just return, since
-  // the merging would just change the edge into a multi-edge.
-  bool haveSame = sig1.content->vertices.size() ==
-                  sig2.content->vertices.size();
-  
-  auto pred = [] (decltype(*sig1.content->vertices.begin()) a, decltype(a) b)
-    { return a.first == b.first; };
-  
-  haveSame = haveSame && std::equal(sig1.content->vertices.begin(),
-                                    sig1.content->vertices.end(),
-                                    sig2.content->vertices.begin(),
-                                    pred);
-  if (haveSame)
-    return merged;
-    
   for (auto &e : sig2.content->edges) {
     // Get pointers to the endpoints in the new sig
     vector<SIGVertex*> endpoints;
     for (SIGVertex *eps : e->endpoints) {
       endpoints.push_back(merged.content->vertices[eps->iv].get());
     }
+    // this predicate tests if the vertices have the same indexvar
+    auto vert_pred = [] (decltype(*e->endpoints.begin()) a, decltype(a) b)
+      {return a->iv == b->iv; };
+    
+    // predicate for edges checks if all endpoints are the same
+    auto edge_pred = [&] (unique_ptr<SIGEdge>& a) {
+        return a.get()->endpoints.size() == e->endpoints.size() &&
+        std::equal(a->endpoints.begin(),
+                   a->endpoints.end(),
+                   e->endpoints.begin(),
+                   vert_pred);
+      };
+    
+    // find an edge in the merged set that is "equal" to the edge we are
+    // adding.  this means it has all the same vertices.
+    auto exists = find_if(merged.content->edges.begin(),
+                       merged.content->edges.end(),
+                       edge_pred);
+    
+    if (exists  != merged.content->edges.end()) {
+      // if it exists, we want to keep the dominating version of the
+      // edge: the one that is a sysreduced tensor
+      auto storageKind = storage.get(e->tensor).getKind();
+  
+      if (storageKind == TensorStorage::SystemReduced) {
+        exists->get()->tensor = e->tensor;
+        exists->get()->set = e->set;
+      }
+      // otherwise, leave it alone.
+      
+      
+    } else {
+      SIGEdge *edge = new SIGEdge(e->tensor, e->set, endpoints);
 
-    SIGEdge *edge = new SIGEdge(e->tensor, e->set, endpoints);
-    merged.content->edges.push_back(unique_ptr<SIGEdge>(edge));
+      merged.content->edges.push_back(unique_ptr<SIGEdge>(edge));
+    }
   }
 
   return merged;
@@ -198,25 +216,25 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
     void visit(const Add *op) {
       SIG ig1 = create(op->a);
       SIG ig2 = create(op->b);
-      sig = merge(ig1, ig2, SIG::Union);
+      sig = merge(ig1, ig2, SIG::Union, storage);
     }
 
     void visit(const Sub *op) {
       SIG ig1 = create(op->a);
       SIG ig2 = create(op->b);
-      sig = merge(ig1, ig2, SIG::Union);
+      sig = merge(ig1, ig2, SIG::Union, storage);
     }
 
     void visit(const Mul *op) {
       SIG ig1 = create(op->a);
       SIG ig2 = create(op->b);
-      sig = merge(ig1, ig2, SIG::Intersection);
+      sig = merge(ig1, ig2, SIG::Intersection, storage);
     }
 
     void visit(const Div *op) {
       SIG ig1 = create(op->a);
       SIG ig2 = create(op->b);
-      sig = merge(ig1, ig2, SIG::Intersection);
+      sig = merge(ig1, ig2, SIG::Intersection, storage);
     }
   };
 
