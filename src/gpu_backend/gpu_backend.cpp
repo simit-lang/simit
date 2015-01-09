@@ -3,8 +3,10 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "error.h"
+#include "gpu_codegen.h"
 #include "gpu_function.h"
 #include "ir.h"
 #include "llvm_codegen.h"
@@ -25,51 +27,51 @@
 namespace simit {
 namespace internal {
 
-GPUBackend::GPUBackend() {}
+GPUBackend::GPUBackend() {
+  // CUDA runtime
+  CUdevice device;
+  CUcontext context;
+  int devCount;
+
+  // CUDA setup
+  checkCudaErrors(cuInit(0));
+  checkCudaErrors(cuDeviceGetCount(&devCount));
+  checkCudaErrors(cuDeviceGet(&device, 0));
+
+  char name[128];
+  checkCudaErrors(cuDeviceGetName(name, 128, device));
+  // TODO(gkanwar): Figure out logging system
+  std::cout << "Using CUDA Device [0]: " << name << std::endl;
+
+  checkCudaErrors(cuDeviceComputeCapability(&cuDevMajor, &cuDevMinor, device));
+  std::cout << "Device Compute Capability: "
+            << cuDevMajor << "." << cuDevMinor << std::endl;
+  iassert(cuDevMajor >= 2) << "ERROR: Device 0 is not SM 2.0 or greater";
+
+  // Create driver context
+  checkCudaErrors(cuCtxCreate(&context, 0, device));
+}
+
 GPUBackend::~GPUBackend() {}
 
 simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
-  this->module = new llvm::Module("nvvm-module", LLVM_CONTEXT);
-
-  // Set appropriate data layout
-  if (sizeof(void*) == 8)
-    module->setDataLayout("e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-                          "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
-                          "v64:64:64-v128:128:128-n16:32:64");
-  else
-    module->setDataLayout("e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-"
-                          "i64:64:64-f32:32:32-f64:64:64-v16:16:16-v32:32:32-"
-                          "v64:64:64-v128:128:128-n16:32:64");
-
-  func = createPrototype("kernel.main", irFunc.getArguments(),
-                         irFunc.getResults(), module,
-                         false, false);
-
-  // Name LLVM arguments, insert into symtable
-  auto arg = func->arg_begin();
-  for (const ir::Var &irArg : irFunc.getArguments()) {
-    arg->setName(irArg.getName());
-    symtable.insert(irArg, &(*arg));
-    arg++;
-  }
-  for (const ir::Var &irRes : irFunc.getResults()) {
-    arg->setName(irRes.getName());
-    symtable.insert(irRes, &(*arg));
-    arg++;
-  }
-
-  // TODO(gkanwar): Deal with temps?
-
-  // Build 'entry' basic block
-  llvm::BasicBlock *entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", func);
-  builder.reset(new LLVMIRBuilder(entry));
+  this->irFunc = irFunc;
+  this->module = createNVVMModule("kernels-module");
+  this->dataLayout.reset(new llvm::DataLayout(module));
+  // TODO(gkanwar): Set storage?
 
   irFunc.getBody().accept(this);
 
-  // NVVM kernel should always return void
-  builder->CreateRetVoid();
+  // Compile LLVM kernels to PTX string
+  std::string moduleStr;
+  llvm::raw_string_ostream raw_str(moduleStr);
+  raw_str << *module;
 
-  return new GPUFunction(irFunc, func, module, sharding);
+  std::string ptxStr = generatePtx(moduleStr, cuDevMajor, cuDevMinor,
+                                   module->getModuleIdentifier().c_str());
+
+  return new GPUFunction(irFunc, module, kernels, sharding,
+                         cuDevMajor, cuDevMinor);
 }
 
 llvm::Value *GPUBackend::compile(const ir::Expr &expr) {
@@ -220,15 +222,34 @@ void GPUBackend::visit(const ir::For *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::GPUKernel *op) {
-  GPUSharding kernelSharding = op->sharding;
+  // Create LLVM func
+  llvm::Function *func = createPrototype("kernel", irFunc.getArguments(),
+                                         irFunc.getResults(), module,
+                                         false, false);
 
-  // TODO(gkanwar): This is a quick hack, in the long run, we should
-  // actually fire off a kernel for each GPUKernel.
-  if (kernelSharding.isSharded()) {
-    // Just grab the last sharded loop description
-    sharding = kernelSharding;
+  // Name LLVM arguments, insert into symtable
+  auto arg = func->arg_begin();
+  for (const ir::Var &irArg : irFunc.getArguments()) {
+    arg->setName(irArg.getName());
+    symtable.insert(irArg, &(*arg));
+    arg++;
+  }
+  for (const ir::Var &irRes : irFunc.getResults()) {
+    arg->setName(irRes.getName());
+    symtable.insert(irRes, &(*arg));
+    arg++;
   }
 
+  // TODO(gkanwar): Deal with temps?
+
+  // Build 'entry' basic block
+  llvm::BasicBlock *entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", func);
+  builder.reset(new LLVMIRBuilder(entry));
+
+  GPUSharding kernelSharding = op->sharding;
+  kernels.emplace_back(func, kernelSharding);
+
+  // Code generate for the kernel
   symtable.scope();
   if (kernelSharding.xSharded) {
     symtable.insert(kernelSharding.xVar, getTidX());
@@ -240,16 +261,11 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
     symtable.insert(kernelSharding.zVar, getTidZ());
   }
 
-  if (!kernelSharding.isSharded()) {
-    emitTid0Code(op->body);
-  }
-  else {
-    LLVMBackend::compile(op->body);
-  }
+  LLVMBackend::compile(op->body);
   symtable.unscope();
 
-  // TODO(gkanwar): Remove this once multiple kernels are supported
-  emitThreadBarrier();
+  // NVVM kernel should always return void
+  builder->CreateRetVoid();
 }
 void GPUBackend::visit(const ir::IfThenElse *op) {
   ASSERT(false && "No code generation for this type");
@@ -342,18 +358,19 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
 
 void GPUBackend::emitTid0Code(const ir::Stmt& body) {
   // Condition is tid_x == 0 && tid_y == 0 && tid_z == 0
-  llvm::Value *cond = builder->CreateAnd(
-      builder->CreateICmpEQ(getTidX(), llvmInt(0)),
-      builder->CreateAnd(
-          builder->CreateICmpEQ(getTidY(), llvmInt(0)),
-          builder->CreateICmpEQ(getTidZ(), llvmInt(0))));
-  llvm::BasicBlock *then = llvm::BasicBlock::Create(LLVM_CONTEXT, "then", func);
-  llvm::BasicBlock *rest = llvm::BasicBlock::Create(LLVM_CONTEXT, "rest", func);
-  builder->CreateCondBr(cond, then, rest);
-  builder.reset(new LLVMIRBuilder(then));
-  LLVMBackend::compile(body);
-  builder->CreateBr(rest);
-  builder.reset(new LLVMIRBuilder(rest));
+  ierror << "Should not be used";
+  // llvm::Value *cond = builder->CreateAnd(
+  //     builder->CreateICmpEQ(getTidX(), llvmInt(0)),
+  //     builder->CreateAnd(
+  //         builder->CreateICmpEQ(getTidY(), llvmInt(0)),
+  //         builder->CreateICmpEQ(getTidZ(), llvmInt(0))));
+  // llvm::BasicBlock *then = llvm::BasicBlock::Create(LLVM_CONTEXT, "then", func);
+  // llvm::BasicBlock *rest = llvm::BasicBlock::Create(LLVM_CONTEXT, "rest", func);
+  // builder->CreateCondBr(cond, then, rest);
+  // builder.reset(new LLVMIRBuilder(then));
+  // LLVMBackend::compile(body);
+  // builder->CreateBr(rest);
+  // builder.reset(new LLVMIRBuilder(rest));
 }
 
 void GPUBackend::emitFirstAssign(const ir::Var& var,

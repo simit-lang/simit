@@ -23,6 +23,7 @@ class Type;
 class Value;
 class Instruction;
 class Function;
+class DataLayout;
 }
 
 typedef llvm::IRBuilder<true, llvm::ConstantFolder,
@@ -50,6 +51,7 @@ protected:
   ir::TensorStorage fieldStorage;
 
   llvm::Module *module;
+  std::unique_ptr<llvm::DataLayout> dataLayout;
   std::unique_ptr<LLVMIRBuilder> builder;
 
   /// used to return variables from Expr visit functions

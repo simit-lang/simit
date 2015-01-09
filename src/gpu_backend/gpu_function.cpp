@@ -21,122 +21,13 @@
 namespace simit {
 namespace internal {
 
-namespace {
-
-// This will output the proper CUDA error strings in the event that a CUDA
-// host call returns an error
-#define checkCudaErrors(err)  __checkCudaErrors (err, __FILE__, __LINE__)
-
-// These are the inline versions for all of the SDK helper functions
-void __checkCudaErrors(CUresult err, const char *file, const int line) {
-  if(CUDA_SUCCESS != err) {
-    ierror << "checkCudaErrors() Driver API error = " << err
-           << "from file <" << file
-           << ", line " << line;
-  }
-}
-
-/// checkNVVMCall - Verifies that NVVM result code is success, or terminate
-/// otherwise.
-void checkNVVMCall(nvvmResult res) {
-  iassert(res == NVVM_SUCCESS) << "libnvvm call failed";
-}
-
-std::string utostr(uint num) {
-  return std::to_string(num);
-}
-
-extern "C" unsigned char simit_gpu_initmod_compute_20[];
-extern "C" int simit_gpu_initmod_compute_20_length;
-extern "C" unsigned char simit_gpu_initmod_compute_30[];
-extern "C" int simit_gpu_initmod_compute_30_length;
-extern "C" unsigned char simit_gpu_initmod_compute_35[];
-extern "C" int simit_gpu_initmod_compute_35_length;
-
-// Uses libnvvm to compile an LLVM IR module to PTX.
-std::string generatePtx(const std::string &module,
-                        int devMajor, int devMinor,
-                        const char *moduleName) {
-  std::cout << "DEBUG: generatePtx" << std::endl
-	    << module << std::endl;
-  nvvmProgram compileUnit;
-  nvvmResult res;
-
-  // NVVM Initialization
-  checkNVVMCall(nvvmCreateProgram(&compileUnit));
-  
-  // Add libdevice (math libraries, etc.) as initial module
-  //
-  // Reference:
-  // http://docs.nvidia.com/cuda/libdevice-users-guide/basic-usage.html
-  //
-  // The device to libdevice version mapping is weird (note 3.1-3.4=compute_20)
-  //    2.0 ≤ Arch < 3.0   libdevice.compute_20.XX.bc
-  //    Arch = 3.0         libdevice.compute_30.XX.bc
-  //    3.1 ≤ Arch < 3.5   libdevice.compute_20.XX.bc
-  //    Arch = 3.5         libdevice.compute_35.XX.bc
-  const char *libdevice;
-  int libdevice_length;
-  if (devMajor == 3 && devMajor == 0) {
-    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_30);
-    libdevice_length = simit_gpu_initmod_compute_30_length;
-  } else if (devMajor == 3 && devMajor == 5) {
-    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_35);
-    libdevice_length = simit_gpu_initmod_compute_35_length;
-  } else {
-    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_20);
-    libdevice_length = simit_gpu_initmod_compute_20_length;
-  }
-  checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
-                                       libdevice, libdevice_length,
-                                       "libdevice"));
-
-  // Create NVVM compilation unit from LLVM IR
-  checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
-                                       module.c_str(), module.size(),
-                                       moduleName));
-
-  std::string computeArg = "-arch=compute_";
-  computeArg += utostr(devMajor);
-  computeArg += utostr(devMinor);
-
-  const char *options[] = { computeArg.c_str() };
-
-  // Compile LLVM IR into PTX
-  res = nvvmCompileProgram(compileUnit, 1, options);
-  if (res != NVVM_SUCCESS) {
-    std::cerr << "nvvmCompileProgram failed!" << std::endl;
-    size_t logSize;
-    nvvmGetProgramLogSize(compileUnit, &logSize);
-    char *msg = new char[logSize];
-    nvvmGetProgramLog(compileUnit, msg);
-    std::cerr << msg << std::endl;
-    delete [] msg;
-    ierror << "nvvmCompileProgram failed";
-  }
-
-  size_t ptxSize;
-  checkNVVMCall(nvvmGetCompiledResultSize(compileUnit, &ptxSize));
-  char *ptx = new char[ptxSize];
-  checkNVVMCall(nvvmGetCompiledResult(compileUnit, ptx));
-  checkNVVMCall(nvvmDestroyProgram(&compileUnit));
-
-  std::cout << "Ptx code: " << std::endl << std::string(ptx) << std::endl;
-
-  return std::string(ptx);
-}
-
-}  // namespace
-
-GPUFunction::GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-                         llvm::Module *llvmModule, class GPUSharding sharding)
-    : Function(simitFunc), llvmFunc(llvmFunc),
-      llvmModule(llvmModule), sharding(sharding){}
-GPUFunction::~GPUFunction() {
-  // llvmFunc will be destroyed when the harness funtion object is destroyed
-  // because it was claimed by a CallInst
-  llvmFunc.release();
-}
+GPUFunction::GPUFunction(
+    ir::Func simitFunc, llvm::Module *module,
+    std::vector< std::pair<llvm::Function *, GPUSharding> > kernels,
+    struct GPUSharding sharding, int cuDevMajor, int cuDevMinor)
+    : Function(simitFunc), module(module),
+      kernels(kernels), sharding(sharding),
+      cuDevMajor(cuDevMajor), cuDevMinor(cuDevMinor) {}
 
 llvm::Value *GPUFunction::pushArg(
     Actual& actual,
@@ -256,33 +147,44 @@ void GPUFunction::pullArgAndFree(void *hostPtr, DeviceDataHandle handle) {
 }
 
 void GPUFunction::print(std::ostream &os) const {
-  std::string fstr;
-  llvm::raw_string_ostream rsos(fstr);
-  llvmFunc->print(rsos);
-  os << fstr;
+  os << "-- LLVM module" << std::endl;
+  //os << moduleStr << std::endl << std::endl;
+  os << "-- PTX module" << std::endl;
+  //os << ptxStr << std::endl << std::endl;
   // TODO(gkanwar): Print out CUDA data setup aspects as well
 }
 
 llvm::Function *GPUFunction::createHarness(
-    const llvm::SmallVector<llvm::Value*, 8> &args) {
-  const std::string harnessName = "kernel";
+    const llvm::SmallVector<llvm::Value*, 8> &args,
+    llvm::Function *kernel,
+    llvm::Module *module) {
+  const std::string harnessName = kernel->getName().str() + "_harness";
   llvm::Function *harness = createPrototype(harnessName, {}, {},
-                                            llvmModule.get(), true, false);
+                                            module, true, false);
 
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
-  // Note: CallInst takes ownership of llvmFunc. This is resolved in
-  // the destructor
+  // Ensure the function declaration is present in harness module
+  // TODO(gkanwar): Just using the kernel type here gives a bug in LLVM
+  // parsing of the kernel declaration (incorrect type)
+  std::vector<llvm::Type*> argTys;
+  for (auto arg : args) {
+    argTys.push_back(arg->getType());
+  }
+  module->getOrInsertFunction(
+      kernel->getName(),
+      llvm::FunctionType::get(LLVM_VOID, argTys, false));
+  // Note: CallInst takes ownership of kernel
   llvm::CallInst *call = llvm::CallInst::Create(
-      llvmFunc.get(), args, "", entry);
-  call->setCallingConv(llvmFunc->getCallingConv());
+      kernel, args, "", entry);
+  call->setCallingConv(kernel->getCallingConv());
   llvm::ReturnInst::Create(LLVM_CONTEXT, entry);
 
   // Kernel metadata
   llvm::Value *mdVals[] = {
-    harness, llvm::MDString::get(LLVM_CONTEXT, harnessName), llvmInt(1)
+    harness, llvm::MDString::get(LLVM_CONTEXT, "kernel"), llvmInt(1)
   };
   llvm::MDNode *kernelMD = llvm::MDNode::get(LLVM_CONTEXT, mdVals);
-  llvm::NamedMDNode *nvvmAnnot = llvmModule
+  llvm::NamedMDNode *nvvmAnnot = module
       ->getOrInsertNamedMetadata("nvvm.annotations");
   nvvmAnnot->addOperand(kernelMD);
 
@@ -307,32 +209,9 @@ int GPUFunction::findShardSize(ir::IndexSet domain) {
 simit::Function::FuncType GPUFunction::init(
     const std::vector<std::string> &formals,
     std::map<std::string, Actual> &actuals) {
-  // CUDA runtime
-  CUdevice device;
-  CUmodule cudaModule;
-  CUcontext context;
-  CUfunction function;
   CUlinkState linker;
-  int devCount;
-
-  // CUDA setup
-  checkCudaErrors(cuInit(0));
-  checkCudaErrors(cuDeviceGetCount(&devCount));
-  checkCudaErrors(cuDeviceGet(&device, 0));
-
-  char name[128];
-  checkCudaErrors(cuDeviceGetName(name, 128, device));
-  // TODO(gkanwar): Figure out logging system
-  std::cout << "Using CUDA Device [0]: " << name << std::endl;
-
-  int devMajor, devMinor;
-  checkCudaErrors(cuDeviceComputeCapability(&devMajor, &devMinor, device));
-  std::cout << "Device Compute Capability: "
-            << devMajor << "." << devMinor << std::endl;
-  iassert(devMajor >= 2) << "ERROR: Device 0 is not SM 2.0 or greater";
-
-  // Create driver context
-  checkCudaErrors(cuCtxCreate(&context, 0, device));
+  CUmodule cudaModule;
+  std::vector<CUfunction> functions;
 
   // Push data and build harness
   llvm::SmallVector<llvm::Value*, 8> args;
@@ -354,26 +233,28 @@ simit::Function::FuncType GPUFunction::init(
       args.push_back(pushArg(actual, pushedBufs));
     }
   }
-  unsigned blockSizeX = sharding.xSharded ?
-      findShardSize(sharding.xDomain) : 1;
-  unsigned blockSizeY = sharding.ySharded ?
-      findShardSize(sharding.yDomain) : 1;
-  unsigned blockSizeZ = sharding.zSharded ?
-      findShardSize(sharding.zDomain) : 1;
-  unsigned gridSizeX = 1;
-  unsigned gridSizeY = 1;
-  unsigned gridSizeZ = 1;
-  // Create harness as the kernel to be run
-  llvm::Function *harness = createHarness(args);
+  // Create harnesses for kernel args
+  // TODO(gkanwar): Is this a memory leak?
+  std::vector<llvm::Function *> harnesses;
+  for (auto kernel : kernels) {
+    // Build harness
+    harnesses.push_back(createHarness(args, kernel.first, module.get()));
+  }
 
   // Export IR to string
   std::string moduleStr;
   llvm::raw_string_ostream str(moduleStr);
-  str << *(llvmModule.get());
+  str << *module;
+  std::cout << "Module:" << std::endl
+            << moduleStr << std::endl;
 
-  // Generate PTX
-  std::string ptx = generatePtx(moduleStr, devMajor, devMinor,
-                                llvmModule->getModuleIdentifier().c_str());
+  // Generate harness PTX
+  std::cout << "Create PTX" << std::endl;
+  std::string ptxStr = generatePtx(
+      moduleStr, cuDevMajor, cuDevMinor,
+      module->getModuleIdentifier().c_str());
+  std::cout << "PTX:" << std::endl
+            << ptxStr << std::endl;
 
   // JIT linker and final CUBIN
   char linkerInfo[1024];
@@ -394,8 +275,9 @@ simit::Function::FuncType GPUFunction::init(
   };
 
   checkCudaErrors(cuLinkCreate(5, linkerOptions, linkerOptionValues, &linker));
-  checkCudaErrors(cuLinkAddData(linker, CU_JIT_INPUT_PTX, (void*)ptx.c_str(),
-                                ptx.size(), "<compiled-ptx>", 0, NULL, NULL));
+  checkCudaErrors(cuLinkAddData(
+      linker, CU_JIT_INPUT_PTX, (void*)ptxStr.c_str(),
+      ptxStr.size(), "<kernels-ptx>", 0, NULL, NULL));
 
   void *cubin;
   size_t cubinSize;
@@ -408,43 +290,41 @@ simit::Function::FuncType GPUFunction::init(
   // Create CUDA module for binary object
   checkCudaErrors(cuModuleLoadDataEx(&cudaModule, cubin, 0, 0, 0));
   checkCudaErrors(cuLinkDestroy(linker));
-  checkCudaErrors(cuModuleGetFunction(
-      &function, cudaModule, harness->getName().data()));
-                               
+  // Create vector of kernels to be called
+  for (auto harness : harnesses) {
+    functions.emplace_back();
+    checkCudaErrors(cuModuleGetFunction(
+        &(functions.back()), cudaModule, harness->getName().data()));
+  }
 
-  return [this, function, cudaModule, context, pushedBufs,
-          blockSizeX, blockSizeY, blockSizeZ,
-          gridSizeX, gridSizeY, gridSizeZ](){
-    // Push data to GPU
-    std::cout << "Launching CUDA kernel with block size ("
-	      << blockSizeX << ","
-	      << blockSizeY << ","
-	      << blockSizeZ << ") and grid size ("
-	      << gridSizeX << ","
-	      << gridSizeY << ","
-	      << gridSizeZ << ")" << std::endl;
+  return [this, functions, cudaModule, pushedBufs](){
+    iassert(kernels.size() == functions.size())
+        << "Number of generated functions must equal number of kernels";
+    for (int i = 0; i < kernels.size(); ++i) {
+      GPUSharding sharding = kernels[i].second;
 
-    void **kernelParamsArr = new void*[0];
-    // int i = 0; 
-    // for (const std::string& formal : formals) {
-    //   GPUFunction::GPUArgHandle &handle = kernelParams[formal];
-    //   if (actuals.at(formal).getType().isSet()) {
-    //     for (auto &kv : handle.devBufferFields) {
-    //       kernelParamsArr[i++] = reinterpret_cast<void*>(kv.second);
-    //     }
-    //   }
-    //   else {
-    //     kernelParamsArr[i++] = reinterpret_cast<void*>(
-    //         handle.devBufferFields["main"]);
-    //   }
-    // }
-    // for (i = 0; i < numArgs; ++i) {
-    //     std::cout << "Kernel param loc: "
-    //               << kernelParamsArr[i] << std::endl;
-    // }
-    checkCudaErrors(cuLaunchKernel(function, gridSizeX, gridSizeY, gridSizeZ,
-                                   blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
-                                   kernelParamsArr, NULL));
+      unsigned blockSizeX = sharding.xSharded ?
+          findShardSize(sharding.xDomain) : 1;
+      unsigned blockSizeY = sharding.ySharded ?
+          findShardSize(sharding.yDomain) : 1;
+      unsigned blockSizeZ = sharding.zSharded ?
+          findShardSize(sharding.zDomain) : 1;
+      unsigned gridSizeX = 1;
+      unsigned gridSizeY = 1;
+      unsigned gridSizeZ = 1;
+      std::cout << "Launching CUDA kernel with block size ("
+                << blockSizeX << ","
+                << blockSizeY << ","
+                << blockSizeZ << ") and grid size ("
+                << gridSizeX << ","
+                << gridSizeY << ","
+                << gridSizeZ << ")" << std::endl;
+
+      void **kernelParamsArr = new void*[0];
+      checkCudaErrors(cuLaunchKernel(functions[i], gridSizeX, gridSizeY, gridSizeZ,
+                                     blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
+                                     kernelParamsArr, NULL));
+    }
 
     // Pull args back to CPU, clean up device buffers
     for (auto &kv : pushedBufs) {

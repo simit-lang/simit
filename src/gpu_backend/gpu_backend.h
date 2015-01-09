@@ -21,13 +21,19 @@ public:
   simit::Function *compile(simit::ir::Func func);
 
 protected:
+  // CUDA variables
+  int cuDevMajor, cuDevMinor;
+
   // Used to track which dimensions of the GPU computation have been
   // parallelized across blocks
   GPUSharding sharding;
 
-  // Currently compiling LLVM function
-  llvm::Function *func;
-  
+  // List of compiled kernels, in order of execution, with sharding info
+  std::vector< std::pair<llvm::Function *, GPUSharding> > kernels;
+
+  // Currently compiling IR Func
+  ir::Func irFunc;
+
   using LLVMBackend::visit;
 
   virtual llvm::Value *compile(const ir::Expr &expr);

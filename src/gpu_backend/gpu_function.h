@@ -11,15 +11,18 @@
 
 #include "function.h"
 #include "gpu_backend.h"
+#include "gpu_codegen.h"
 
 namespace simit {
 namespace internal {
 
 class GPUFunction : public simit::Function {
  public:
-  GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-              llvm::Module *llvmModule, class GPUSharding sharding);
-  ~GPUFunction();
+  GPUFunction(
+      ir::Func simitFunc, llvm::Module *module,
+      std::vector< std::pair<llvm::Function *, GPUSharding> > kernels,
+      class GPUSharding sharding, int cuDevMajor, int cuDevMinor);
+  ~GPUFunction() {}
 
   void print(std::ostream &os) const;
 
@@ -51,11 +54,13 @@ class GPUFunction : public simit::Function {
   // Copy device buffer into host data block and free the device buffer
   void pullArgAndFree(void *hostPtr, DeviceDataHandle handle);
   // Create the harness function which sets up args for the main function
-  llvm::Function *createHarness(const llvm::SmallVector<llvm::Value*, 8> &args);
+  llvm::Function *createHarness(const llvm::SmallVector<llvm::Value*, 8> &args,
+                                llvm::Function *kernel, llvm::Module *module);
 
   std::unique_ptr<ir::Func> simitFunc;
-  std::unique_ptr<llvm::Function> llvmFunc;
-  std::unique_ptr<llvm::Module> llvmModule;
+  std::vector< std::pair<llvm::Function *, GPUSharding> > kernels;
+  std::unique_ptr<llvm::Module> module;
+  int cuDevMajor, cuDevMinor;
   class GPUSharding sharding;
 };
 

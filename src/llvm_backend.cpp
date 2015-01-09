@@ -77,6 +77,14 @@ simit::Function *LLVMBackend::compile(Func func) {
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
+  this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
+  this->dataLayout.reset(new llvm::DataLayout(module));
+  this->storage = func.getStorage();
+
+  set<Var> argsAndResults;
+  argsAndResults.insert(func.getArguments().begin(), func.getArguments().end());
+  argsAndResults.insert(func.getResults().begin(), func.getResults().end());
+
   map<Var, llvm::Value*> buffers;
 
   // Create compute functions
@@ -352,7 +360,8 @@ void LLVMBackend::visit(const VarExpr *op) {
   // which is why we can't assume Simit scalars are always kept on the stack.
   if (isScalar(op->type) && val->getType()->isPointerTy()) {
     string valName = string(val->getName()) + VAL_SUFFIX;
-    val = builder->CreateAlignedLoad(val, 8, valName);
+    int align = dataLayout->getTypeAllocSize(val->getType());
+    val = builder->CreateLoad(val, valName);
   }
 }
 
@@ -364,7 +373,10 @@ void LLVMBackend::visit(const ir::Load *op) {
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
 
   string valName = string(buffer->getName()) + VAL_SUFFIX;
-  val = builder->CreateAlignedLoad(bufferLoc, 8, valName);
+  llvm::Type *eltType = createLLVMType(
+      op->buffer.type().toTensor()->componentType);
+  int align = dataLayout->getTypeAllocSize(eltType);
+  val = builder->CreateLoad(bufferLoc, valName);
 }
 
 void LLVMBackend::visit(const Call *op) {
@@ -880,7 +892,10 @@ void LLVMBackend::visit(const ir::Store *op) {
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
-  builder->CreateAlignedStore(value, bufferLoc, 8);
+  llvm::Type *eltType = createLLVMType(
+      op->buffer.type().toTensor()->componentType);
+  int align = dataLayout->getTypeAllocSize(eltType);
+  builder->CreateStore(value, bufferLoc);
 }
 
 void LLVMBackend::visit(const For *op) {
