@@ -253,4 +253,12 @@ std::ostream &operator<<(std::ostream &os, const llvm::Type &type) {
   return os << ss.str();
 }
 
+std::ostream &operator<<(std::ostream &os, const llvm::Module &module) {
+  std::string fstr;
+  llvm::raw_string_ostream rsos(fstr);
+  module.print(rsos, nullptr);
+  os << rsos.str();
+  return os;
+}
+
 }} // namespace simit::internal
