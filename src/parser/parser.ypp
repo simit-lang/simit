@@ -86,6 +86,8 @@
   #undef yylex
   #define yylex scanner->lex
 
+  /// This function is only used to get and free the result of IDENT rules,
+  /// since these are C char arrays. For other objects use convertAndDelete.
   inline std::string convertAndFree(const char *str) {
     std::string result = std::string(str);
     free((void*)str);
@@ -564,24 +566,116 @@ var_decl
 assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
   // map statements...  This is too hacky and must be fixed.
-  : idents "=" expr ";" {
+  : idents "=" IDENT "(" expr_list_or_empty ")" {
+    // TODO: Lots of duplicate code in this rule, and the other assignment rule/
+    //       the call_or_paren_read_expr. Not good, is going to be a source of
+    //       bugs, and should be cleaned up.
+    string name = convertAndFree($IDENT);
+    vector<Expr> arguments = convertAndDelete($expr_list_or_empty);
+    vector<string> varNames = convertAndDelete($idents);
+
+    if (ctx->hasSymbol(name)) {
+      if (varNames.size() > 1) {
+        REPORT_ERROR("can only assign the results of calls and maps to "
+                    "multiple variables", @idents);
+      }
+
+      const Symbol &symbol = ctx->getSymbol(name);
+      if (!symbol.isReadable()) {
+        REPORT_ERROR(name + " is not readable", @1);
+      }
+
+      // The parenthesis read can be a read from a tensor or a tuple.
+      Expr value;
+      auto readExpr = symbol.getExpr();
+      if (readExpr.type().isTensor()) {
+        value = TensorRead::make(readExpr, arguments);
+      }
+      else if (readExpr.type().isTuple()) {
+        if (arguments.size() != 1) {
+          REPORT_ERROR("reading a tuple requires exactly one index", @3);
+        }
+        value = TupleRead::make(readExpr, arguments[0]);
+      }
+      else {
+        REPORT_ERROR("can only access components in tensors and tuples", @1);
+      }
+
+      string varName = varNames[0];
+      Var var;
+      if (ctx->hasSymbol(varName)) {
+        Symbol symbol = ctx->getSymbol(varName);
+        if (!symbol.isWritable()) {
+          REPORT_ERROR(varName + " is constant", @idents);
+        }
+        CHECK_TYPE_EQUALITY(symbol.getVar().getType(), value.type(), @2);
+        var = symbol.getVar();
+      }
+      else {
+        var = Var(varName, value.type());
+        ctx->addSymbol(varName, var, Symbol::ReadWrite);
+      }
+      iassert(var.defined());
+
+      ctx->addStatement(AssignStmt::make(var, value));
+    }
+    else if (ctx->containsFunction(name)) {
+      Func func = ctx->getFunction(name);
+      std::vector<Var> results = func.getResults();
+
+      if (varNames.size() != results.size()) {
+        REPORT_ERROR("number of variables (" + to_string(varNames.size()) +
+                    ") does not match number of function results (" +
+                    to_string(func.getResults().size()) + ")", @1);
+      }
+
+      std::vector<Var> variables;
+      for (size_t i=0; i < varNames.size(); ++i) {
+        string varName = varNames[i];
+        Var result = results[i];
+
+        if (ctx->hasSymbol(varName)) {
+          Symbol symbol = ctx->getSymbol(varName);
+          if (!symbol.isWritable()) {
+            REPORT_ERROR(varName + " is constant", @1);
+          }
+          variables.push_back(symbol.getVar());
+        }
+        else {
+          // The variable does not already exist so we create it
+          Var var(varName, result.getType());
+          ctx->addSymbol(var.getName(), var, Symbol::ReadWrite);
+          ctx->addStatement(VarDecl::make(var));
+          variables.push_back(var);
+        }
+      }
+      iassert(variables.size() == varNames.size());
+
+      Stmt callStmt = CallStmt::make(variables, func, arguments);
+      ctx->addStatement(callStmt);
+    }
+    else {
+      REPORT_ERROR(name + " is not defined in scope", @1);
+    }
+  }
+  | idents "=" expr ";" {
     iassert($expr != nullptr) << "assigned expression is null" ;
 
     auto varNames = convertAndDelete($idents);
-    Expr value = convertAndDelete($expr);
-
     if (varNames.size() > 1) {
-      REPORT_ERROR("can only assign to one value in a non-map statement",
-                   @idents);
+      REPORT_ERROR("can only assign the results of calls and maps to "
+                   "multiple variables", @idents);
     }
+
     string varName = varNames[0];
+    Expr value = convertAndDelete($expr);
 
     Var var;
     if (ctx->hasSymbol(varName)) {
       Symbol symbol = ctx->getSymbol(varName);
 
       if (!symbol.isWritable()) {
-        REPORT_ERROR(varName + " is not writable", @idents);
+        REPORT_ERROR(varName + " is constant", @idents);
       }
 
       CHECK_TYPE_EQUALITY(symbol.getVar().getType(), value.type(), @expr);

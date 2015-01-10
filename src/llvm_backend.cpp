@@ -646,14 +646,11 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
 
   // compile arguments first
   for (auto a: op->actuals) {
-    //FIX: remove once solve() is no longer needed
-    //iassert(isScalar(a.type()));
     argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
     args.push_back(compile(a));
   }
 
   Func callee = op->callee;
-
   if (callee.getKind() == Func::Intrinsic) {
     std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
@@ -737,7 +734,6 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       args.push_back(emitComputeLen(type1->dimensions[0]));
       std::string funcName = "dot" + floatTypeName;
       call = emitCall(funcName, args, getLLVMFloatType());
-      symtable.insert(op->results[0], call);
     }
     else {
       ierror << "intrinsic" << op->callee.getName() << "not found";
@@ -745,7 +741,10 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
     iassert(call);
 
     if (!call->getType()->isVoidTy()) {
-      symtable.insert(op->results[0], call);
+      iassert(op->results.size() == 1);
+      Var var = op->results[0];
+      llvm::Value *llvmVar = symtable.get(var);
+      builder->CreateStore(call, llvmVar);
     }
   }
   // If not an intrinsic function, try to find it in the module
