@@ -11,8 +11,11 @@ namespace internal {
 GPUSharding::ShardDimension GPUSharding::maybeShardFor(const ir::For *op) {
   ir::ForDomain domain = op->domain;
   ir::Var var = op->var;
+  std::cerr << "MaybeShard\n" << *op << "\n";
+  std::cerr << "...with domain " << domain << " kind " << domain.kind << " index set " << domain.indexSet.getKind() << "\n";
   if (domain.kind == ir::ForDomain::IndexSet &&
       domain.indexSet.getKind() != ir::IndexSet::Range) {
+    std::cerr << "...should shard\n";
     if (domain.indexSet == xDomain) {
       return X;
     }
@@ -41,7 +44,16 @@ GPUSharding::ShardDimension GPUSharding::maybeShardFor(const ir::For *op) {
       return Z;
     }
   }
+  std::cerr << "...don't shard\n";
   return NONE;
+}
+
+std::ostream &operator<<(std::ostream &os, const GPUSharding &shard) {
+  os << "GPU Sharding [ ";
+  if (shard.xSharded) os << shard.xVar << " : " << shard.xDomain;
+  if (shard.ySharded) os << ", " << shard.yVar << " : " << shard.yDomain;
+  if (shard.zSharded) os << ", " << shard.zVar << " : " << shard.zDomain;
+  os << " ]\n";
 }
 
 bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2) {
@@ -62,11 +74,6 @@ bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2) {
 namespace ir {
 
 class ShardLoops : public IRRewriter {
-public:
-  Var getSharedVar() {
-    return sharedVar;
-  }
-
 protected:
   void visit(const Func *f) {
     for (auto &arg : f->getArguments()) {
@@ -87,6 +94,7 @@ protected:
       std::vector<Stmt> kernelStmts;
       for (const internal::GPUProtoKernel& kernel : kernels) {
         if (!kernel.stmts.empty()) {
+          std::cerr << kernel.sharding;
           Stmt gpuKernel = GPUKernel::make(Block::make(kernel.stmts), kernel.sharding);
           kernelStmts.push_back(gpuKernel);
         }
@@ -98,11 +106,7 @@ protected:
       body = GPUKernel::make(func.getBody(), sharding);
     }
 
-    // Add shared arg
     std::vector<Var> args = func.getArguments();
-    sharedVar = Var("$shared", SetType::make(
-        ElementType::make("$shared", sharedFields), {}));
-    args.push_back(sharedVar);
     func = Func(func.getName(), args, func.getResults(),
                 body, func.getKind());
   }
@@ -169,6 +173,8 @@ protected:
 
   void visit(const For *op) {
     internal::GPUSharding::ShardDimension sharded = sharding.maybeShardFor(op);
+    std::cerr << "Shard For\n" << *op << "\n"
+              << "in dimension " << sharded << "\n";
     symtable.scope();
     switch (sharded) {
       case internal::GPUSharding::X: {
@@ -203,42 +209,23 @@ protected:
   }
 
   void visit(const AssignStmt *op) {
-    const std::string& varName = op->var.getName();
+    if (symtable.contains(op->var) && symtable.get(op->var) != NONE) {
+      ierror << "Invalid assign to sharded var: " << op->var;
+    }
     if (!symtable.contains(op->var)) {
       firstAssign(op->var);
     }
-    Expr value = rewrite(op->value);
-    // Rewrite the assign as a field write
-    if (symtable.get(op->var) == LIFT) {
-      // TODO(gkanwar): This type is incorrect for the set, because it doesn't
-      // include future fields.
-      Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
-      // Build a 0 index into the $shared set
-      int zero = 0;
-      auto fieldRead = FieldRead::make(Var("$shared", type), varName);
-      stmt = Store::make(fieldRead, Literal::make(Int, &zero), value, op->cop);
-    }
-    else if (symtable.get(op->var) == NONE) {
-      stmt = AssignStmt::make(op->var, value, op->cop);
-    }
-    else {
-      ierror << "Invalid assign to sharded var: " << op->var;
-    }
+    IRRewriter::visit(op);
   }
 
   void visit(const VarExpr *op) {
-    // Rewrite the read as a field read from the shared set
-    VarAction action = symtable.get(op->var);
-    if (action == LIFT) {
-      // This type is incorrect for the set, because it doesn't
-      // include future fields. ReplaceShared will fix this in a second pass.
-      Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
-      // Build a 0 index into the $shared set
-      int zero = 0;
-      auto fieldRead = FieldRead::make(Var("$shared", type), op->var.getName());
-      expr = Load::make(fieldRead, Literal::make(Int, &zero));
+    // Rewrite the read if we are accessing a shard variable
+    if (!symtable.contains(op->var)) {
+      IRRewriter::visit(op);
+      return;
     }
-    else if (action == XSHARD) {
+    VarAction action = symtable.get(op->var);
+    if (action == XSHARD) {
       expr = VarExpr::make(sharding.xVar);
     }
     else if (action == YSHARD) {
@@ -251,14 +238,97 @@ protected:
       IRRewriter::visit(op);
     }
   }
+  
+  // TODO(jrk) do away with the NONE case and the symtable entirely
+  void firstAssign(Var var) {
+    symtable.insert(var, NONE);
+  }
+  
+  // Map from symbol to transformative action
+  enum VarAction { NONE, XSHARD, YSHARD, ZSHARD };
+  internal::ScopedMap<ir::Var, VarAction> symtable;
+
+  // Current sharding info
+  internal::GPUSharding sharding;
+  // List of kernels
+  std::vector<internal::GPUProtoKernel> kernels;
+};
+
+class LiftGPUVars : public IRRewriter {
+public:
+  Var getSharedVar() {
+    return sharedVar;
+  }
+
+protected:
+  void visit(const Func *f) {
+    for (auto &arg : f->getArguments()) {
+      symtable.insert(arg, NONE);
+    }
+    for (auto &res : f->getResults()) {
+      symtable.insert(res, NONE);
+    }
+
+    IRRewriter::visit(f);
+    Stmt body = func.getBody();
+
+    // Add shared arg
+    std::vector<Var> args = func.getArguments();
+    sharedVar = Var("$shared", SetType::make(
+        ElementType::make("$shared", sharedFields), {}));
+    args.push_back(sharedVar);
+    func = Func(func.getName(), args, func.getResults(),
+                body, func.getKind());
+  }
+
+  void visit(const AssignStmt *op) {
+    const std::string& varName = op->var.getName();
+    if (!symtable.contains(op->var)) {
+      firstAssign(op->var);
+    }
+    Expr value = rewrite(op->value);
+    // Rewrite the assign as a field write
+    if (symtable.get(op->var) == LIFT) {
+      std::cerr << "Lowering assign to $shared " << op->var << "\n";
+      // TODO(gkanwar): This type is incorrect for the set, because it doesn't
+      // include future fields.
+      Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
+      // Build a 0 index into the $shared set
+      int zero = 0;
+      auto fieldRead = FieldRead::make(Var("$shared", type), varName);
+      stmt = Store::make(fieldRead, Literal::make(Int, &zero), value, op->cop);
+      std::cerr << "   " << stmt << "\n";
+    }
+    else {
+      stmt = AssignStmt::make(op->var, value, op->cop);
+    }
+  }
+
+  void visit(const VarExpr *op) {
+    // Rewrite the read as a field read from the shared set
+    if (symtable.contains(op->var) && symtable.get(op->var) == LIFT) {
+      std::cerr << "Lowering ref to $shared " << op->var << "\n";
+      // This type is incorrect for the set, because it doesn't
+      // include future fields. ReplaceShared will fix this in a second pass.
+      Type type(SetType::make(ElementType::make("$shared", sharedFields), {}));
+      // Build a 0 index into the $shared set
+      int zero = 0;
+      auto fieldRead = FieldRead::make(Var("$shared", type), op->var.getName());
+      expr = Load::make(fieldRead, Literal::make(Int, &zero));
+      std::cerr << "   " << expr << "\n";
+    }
+    else {
+      IRRewriter::visit(op);
+    }
+  }
 
   void firstAssign(Var var) {
     std::string varName = var.getName();
-    int depth = sharding.getDepth();
+    // int depth = sharding.getDepth();
     // iassert(depth >= 0 && depth < 2)
     // << "Sharding depth must be 0, 1, or 2";
     // XXX: Just for now
-    iassert(depth == 0);
+    // iassert(depth == 0);
     const TensorType *origType = var.getType().toTensor();
     Type type = TensorType::make(origType->componentType,
                                  origType->dimensions,
@@ -273,15 +343,9 @@ protected:
   }
 
   // Map from symbol to transformative action
-  enum VarAction { NONE, LIFT, XSHARD, YSHARD, ZSHARD };
+  enum VarAction { NONE, LIFT };
   internal::ScopedMap<ir::Var, VarAction> symtable;
   std::vector<Field> sharedFields;
-
-  // Current sharding info
-  internal::GPUSharding sharding;
-  // List of kernels
-  std::vector<internal::GPUProtoKernel> kernels;
-
   Var sharedVar;
 };
 
@@ -294,6 +358,7 @@ public:
 protected:
   void visit(const VarExpr *op) {
     if (op->var.getName() == "$shared") {
+      std::cerr << "Replacing reference to $shared\n";
       expr = VarExpr::make(sharedVar);
     }
     else {
@@ -307,6 +372,7 @@ protected:
 
   void visit(const AssignStmt *op) {
     if (op->var.getName() == "$shared") {
+      std::cerr << "Replacing assignment to $shared\n";
       Expr value = rewrite(op->value);
       stmt = AssignStmt::make(sharedVar, value, op->cop);
     }
@@ -341,11 +407,23 @@ protected:
 };
 
 Func shardLoops(Func func) {
-  ShardLoops shardingRewriter;
-  Func sharded = shardingRewriter.rewrite(func);
-  Var sharedVar = shardingRewriter.getSharedVar();
-  Func final = ReplaceShared(sharedVar).rewrite(sharded);
-  return final;
+  LiftGPUVars liftingRewriter;
+  std::cerr << func << "\n";
+
+  std::cerr << "Sharding loops...\n";
+  func = ShardLoops().rewrite(func);
+  std::cerr << func << "\n";
+
+  std::cerr << "Lifting shared variables...\n";
+  func = liftingRewriter.rewrite(func);
+  std::cerr << func << "\n";
+
+  Var sharedVar = liftingRewriter.getSharedVar();
+  std::cerr << "Replacing shared variables...\n";
+  func = ReplaceShared(sharedVar).rewrite(func);
+  std::cerr << func << "\n";
+
+  return func;
 }
 
 }}  // namespace simit::ir

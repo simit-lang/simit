@@ -8,6 +8,27 @@
 namespace simit {
 namespace internal {
 
+/**
+  TODO(jrk)
+  Passes:
+    - variable lifetime, role - store var annotations
+      - lives past kernel
+      - written within kernel
+        - only reduced into
+        - write access is 1:1 with thread
+    - move var decls
+  
+  Tease apart memory management from sharding (insertion of gpukernel blocks)
+  
+  Do we ever allow shadowing decls? Or just decl on first assign,
+  only ever allowing one version of the same var?
+  
+  Tests:
+    - simple IR transform before/after structure validation
+  
+  Allow F32 mode in simit-dump, for testing.
+ */
+
 class GPUSharding {
 public:
   enum ShardDimension {NONE, X, Y, Z};
@@ -91,6 +112,8 @@ public:
   ir::Var yVar;
   ir::Var zVar;
 };
+
+std::ostream &operator<<(std::ostream &os, const GPUSharding &var);
 
 bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2);
 
