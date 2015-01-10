@@ -235,6 +235,14 @@ void IRVisitorCallGraph::visit(const CallStmt *op) {
   }
 }
 
+void IRVisitorCallGraph::visit(const Map *op) {
+  if (visited.find(op->function) == visited.end()) {
+    op->function.accept(this);
+  }
+
+  IRVisitor::visit(op);
+}
+
 // IRQuery
 bool IRQuery::query(const Expr &expr) {
   result = init;

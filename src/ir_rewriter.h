@@ -82,6 +82,7 @@ protected:
 
   virtual void visit(const Call *op);
   virtual void visit(const CallStmt *op);
+  virtual void visit(const Map *op);
 };
 
 }}

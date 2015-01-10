@@ -293,7 +293,7 @@ private:
 
     // Element tensor (dimensions are not simit sets) are dense. In addition
     // vectors are always dense.
-    if (isElementTensorType(ttype) || ttype->order() == 1) {
+    if (isElementTensorType(ttype) || ttype->order() == 1 || !rhs.defined()) {
       tensorStorage = TensorStorage(TensorStorage::DenseRowMajor, initialize);
     }
     else {

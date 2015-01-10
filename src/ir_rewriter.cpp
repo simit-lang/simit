@@ -486,4 +486,21 @@ void IRRewriterCallGraph::visit(const CallStmt *op) {
   }
 }
 
+void IRRewriterCallGraph::visit(const Map *op) {
+  IRRewriter::visit(op);
+
+  Func function;
+  if (visited.find(op->function) == visited.end()) {
+    visited.insert(op->function);
+    function = rewrite(op->function);
+  }
+  else {
+    function = op->function;
+  }
+
+  if (function != op->function) {
+    stmt = Map::make(op->vars, function, op->partial_actuals,
+                     op->target, op->neighbors, op->reduction);
+  }
+}
 }} // namespace simit::ir
