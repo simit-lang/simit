@@ -348,8 +348,9 @@ int main(int argc, const char* argv[]) {
       cout << "--- Shard loops for GPU" << endl;
       cout << func << endl;
 
+      simit::ir::ScalarType::floatBytes = 4; // XXX always test GPU with floatSize = 4 for now
       simit::internal::GPUBackend backend;
-      std::string fstr = simit::util::toString(*backend.compile(func, 4)); // XXX always test GPU with floatSize = 4 for now
+      std::string fstr = simit::util::toString(*backend.compile(func));
       if (emitSimit) {
         cout << endl << "--- Emitting GPU:" << endl;
       }
