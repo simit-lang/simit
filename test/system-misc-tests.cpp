@@ -107,7 +107,7 @@ TEST(System, DISABLED_misc_assemble_fem) {
   ASSERT_EQ(1.0, x.get(p1));
 }
 
-TEST(System, DISABLED_misc_map_one_set) {
+TEST(System, misc_map_one_set) {
   // Points
   Set<> points;
   FieldRef<double> a = points.addField<double>("a");
