@@ -326,17 +326,15 @@ int main(int argc, const char* argv[]) {
 
     cout << "@@@@@@@@@@@@@@@@" << endl;
 #ifdef GPU
-    cout << "################: " <<emitGPU<< endl;
-    func = shardLoops(func);
-    cout << "Finished shardLoops" << endl;
     if (emitGPU) {
+      cout << "################: " <<emitGPU<< endl;
+      func = shardLoops(func);
+      cout << "Finished shardLoops" << endl;
       cout << "--- Shard loops for GPU" << endl;
       cout << func << endl;
-    }
-    
-    if (emitGPU) {
+
       simit::internal::GPUBackend backend;
-      std::string fstr = simit::util::toString(*backend.compile(func));
+      std::string fstr = simit::util::toString(*backend.compile(func, 4)); // XXX always test GPU with floatSize = 4 for now
       if (emitSimit) {
         cout << endl << "--- Emitting GPU:" << endl;
       }
