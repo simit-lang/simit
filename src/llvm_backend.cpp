@@ -353,7 +353,7 @@ void LLVMBackend::visit(const Literal *op) {
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
-  iassert(symtable.contains(op->var)) << op->var << "not found in symbol table";
+  if (!symtable.contains(op->var)) ierror << op->var << " not found in symbol table";
 
   val = symtable.get(op->var);
 
