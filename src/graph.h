@@ -391,9 +391,9 @@ private:
       os << ", " << it->ident;
       if (getCardinality() > 0) {
         os << ":(";
-        os << endpoints[it->ident + 0];
+        os << endpoints[it->ident*getCardinality() + 0];
         for (int i=1; i<getCardinality(); ++i) {
-          os << "," << endpoints[it->ident + i];
+          os << "," << endpoints[it->ident*getCardinality() + i];
         }
         os << ")";
       }
