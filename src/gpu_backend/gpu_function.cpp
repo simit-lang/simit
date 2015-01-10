@@ -52,7 +52,21 @@ llvm::Value *GPUFunction::pushArg(
       std::cout << literal.data << " -> " << *devBuffer << std::endl;
       pushedBufs.emplace(literal.data,
                          DeviceDataHandle(devBuffer, literal.size, shouldPull));
-      return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer));
+      if (!actual.isOutput() && isScalar(actual.getType())) {
+        switch (ttype->componentType.kind) {
+          case ir::ScalarType::Int:
+            return llvmInt(*(int*)literal.data);
+          case ir::ScalarType::Float:
+            return llvmFP(literal.getFloatVal(0));
+          case ir::ScalarType::Boolean:
+            return llvmBool(*(bool*)literal.data);
+          default:
+            ierror << "Unknown ScalarType: " << ttype->componentType.kind;
+        }
+      }
+      else {
+        return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer));
+      }
     }
     case ir::Type::Element: ierror << "Element arg not supported";
     case ir::Type::Set: {
@@ -230,7 +244,7 @@ simit::Function::FuncType GPUFunction::init(
       args.push_back(pushArg(actual, pushedBufs, false));
     }
     else {
-      args.push_back(pushArg(actual, pushedBufs));
+      args.push_back(pushArg(actual, pushedBufs, true));
     }
   }
   // Create harnesses for kernel args

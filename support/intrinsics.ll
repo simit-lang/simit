@@ -131,7 +131,7 @@ define float @norm_f32(float* %a, i32 %len) nounwind {
 }
 
 ; Function Attrs: nounwind uwtable
-define double @det3(double* %a) nounwind {
+define double @det3_f64(double* %a) nounwind {
   %1 = alloca double*, align 8
   store double* %a, double** %1, align 8
   %2 = load double** %1, align 8
@@ -197,7 +197,73 @@ define double @det3(double* %a) nounwind {
 }
 
 ; Function Attrs: nounwind uwtable
-define void @inv3(double* %a, double* %inv) nounwind {
+define float @det3_f32(float* %a) nounwind {
+  %1 = alloca float*, align 8
+  store float* %a, float** %1, align 8
+  %2 = load float** %1, align 8
+  %3 = getelementptr inbounds float* %2, i64 0
+  %4 = load float* %3, align 4
+  %5 = load float** %1, align 8
+  %6 = getelementptr inbounds float* %5, i64 4
+  %7 = load float* %6, align 4
+  %8 = load float** %1, align 8
+  %9 = getelementptr inbounds float* %8, i64 8
+  %10 = load float* %9, align 4
+  %11 = fmul float %7, %10
+  %12 = load float** %1, align 8
+  %13 = getelementptr inbounds float* %12, i64 5
+  %14 = load float* %13, align 4
+  %15 = load float** %1, align 8
+  %16 = getelementptr inbounds float* %15, i64 7
+  %17 = load float* %16, align 4
+  %18 = fmul float %14, %17
+  %19 = fsub float %11, %18
+  %20 = fmul float %4, %19
+  %21 = load float** %1, align 8
+  %22 = getelementptr inbounds float* %21, i64 1
+  %23 = load float* %22, align 4
+  %24 = load float** %1, align 8
+  %25 = getelementptr inbounds float* %24, i64 3
+  %26 = load float* %25, align 4
+  %27 = load float** %1, align 8
+  %28 = getelementptr inbounds float* %27, i64 8
+  %29 = load float* %28, align 4
+  %30 = fmul float %26, %29
+  %31 = load float** %1, align 8
+  %32 = getelementptr inbounds float* %31, i64 5
+  %33 = load float* %32, align 4
+  %34 = load float** %1, align 8
+  %35 = getelementptr inbounds float* %34, i64 6
+  %36 = load float* %35, align 4
+  %37 = fmul float %33, %36
+  %38 = fsub float %30, %37
+  %39 = fmul float %23, %38
+  %40 = fsub float %20, %39
+  %41 = load float** %1, align 8
+  %42 = getelementptr inbounds float* %41, i64 2
+  %43 = load float* %42, align 4
+  %44 = load float** %1, align 8
+  %45 = getelementptr inbounds float* %44, i64 3
+  %46 = load float* %45, align 4
+  %47 = load float** %1, align 8
+  %48 = getelementptr inbounds float* %47, i64 7
+  %49 = load float* %48, align 4
+  %50 = fmul float %46, %49
+  %51 = load float** %1, align 8
+  %52 = getelementptr inbounds float* %51, i64 4
+  %53 = load float* %52, align 4
+  %54 = load float** %1, align 8
+  %55 = getelementptr inbounds float* %54, i64 6
+  %56 = load float* %55, align 4
+  %57 = fmul float %53, %56
+  %58 = fsub float %50, %57
+  %59 = fmul float %43, %58
+  %60 = fadd float %40, %59
+  ret float %60
+}
+
+; Function Attrs: nounwind uwtable
+define void @inv3_f64(double* %a, double* %inv) nounwind {
   %1 = alloca double*, align 8
   %2 = alloca double*, align 8
   %cof00 = alloca double, align 8
@@ -435,6 +501,250 @@ define void @inv3(double* %a, double* %inv) nounwind {
   %204 = load double** %2, align 8
   %205 = getelementptr inbounds double* %204, i64 8
   store double %203, double* %205, align 8
+  ret void
+}
+
+; Function Attrs: nounwind uwtable
+define void @inv3_f32(float* %a, float* %inv) nounwind {
+  %1 = alloca float*, align 8
+  %2 = alloca float*, align 8
+  %cof00 = alloca float, align 4
+  %cof01 = alloca float, align 4
+  %cof02 = alloca float, align 4
+  %cof10 = alloca float, align 4
+  %cof11 = alloca float, align 4
+  %cof12 = alloca float, align 4
+  %cof20 = alloca float, align 4
+  %cof21 = alloca float, align 4
+  %cof22 = alloca float, align 4
+  %determ = alloca float, align 4
+  store float* %a, float** %1, align 8
+  store float* %inv, float** %2, align 8
+  %3 = load float** %1, align 8
+  %4 = getelementptr inbounds float* %3, i64 4
+  %5 = load float* %4, align 4
+  %6 = load float** %1, align 8
+  %7 = getelementptr inbounds float* %6, i64 8
+  %8 = load float* %7, align 4
+  %9 = fmul float %5, %8
+  %10 = load float** %1, align 8
+  %11 = getelementptr inbounds float* %10, i64 5
+  %12 = load float* %11, align 4
+  %13 = load float** %1, align 8
+  %14 = getelementptr inbounds float* %13, i64 7
+  %15 = load float* %14, align 4
+  %16 = fmul float %12, %15
+  %17 = fsub float %9, %16
+  store float %17, float* %cof00, align 4
+  %18 = load float** %1, align 8
+  %19 = getelementptr inbounds float* %18, i64 3
+  %20 = load float* %19, align 4
+  %21 = fsub float -0.000000e+00, %20
+  %22 = load float** %1, align 8
+  %23 = getelementptr inbounds float* %22, i64 8
+  %24 = load float* %23, align 4
+  %25 = fmul float %21, %24
+  %26 = load float** %1, align 8
+  %27 = getelementptr inbounds float* %26, i64 5
+  %28 = load float* %27, align 4
+  %29 = load float** %1, align 8
+  %30 = getelementptr inbounds float* %29, i64 6
+  %31 = load float* %30, align 4
+  %32 = fmul float %28, %31
+  %33 = fsub float %25, %32
+  store float %33, float* %cof01, align 4
+  %34 = load float** %1, align 8
+  %35 = getelementptr inbounds float* %34, i64 3
+  %36 = load float* %35, align 4
+  %37 = load float** %1, align 8
+  %38 = getelementptr inbounds float* %37, i64 7
+  %39 = load float* %38, align 4
+  %40 = fmul float %36, %39
+  %41 = load float** %1, align 8
+  %42 = getelementptr inbounds float* %41, i64 4
+  %43 = load float* %42, align 4
+  %44 = load float** %1, align 8
+  %45 = getelementptr inbounds float* %44, i64 6
+  %46 = load float* %45, align 4
+  %47 = fmul float %43, %46
+  %48 = fsub float %40, %47
+  store float %48, float* %cof02, align 4
+  %49 = load float** %1, align 8
+  %50 = getelementptr inbounds float* %49, i64 1
+  %51 = load float* %50, align 4
+  %52 = fsub float -0.000000e+00, %51
+  %53 = load float** %1, align 8
+  %54 = getelementptr inbounds float* %53, i64 8
+  %55 = load float* %54, align 4
+  %56 = fmul float %52, %55
+  %57 = load float** %1, align 8
+  %58 = getelementptr inbounds float* %57, i64 2
+  %59 = load float* %58, align 4
+  %60 = load float** %1, align 8
+  %61 = getelementptr inbounds float* %60, i64 7
+  %62 = load float* %61, align 4
+  %63 = fmul float %59, %62
+  %64 = fsub float %56, %63
+  store float %64, float* %cof10, align 4
+  %65 = load float** %1, align 8
+  %66 = getelementptr inbounds float* %65, i64 0
+  %67 = load float* %66, align 4
+  %68 = load float** %1, align 8
+  %69 = getelementptr inbounds float* %68, i64 8
+  %70 = load float* %69, align 4
+  %71 = fmul float %67, %70
+  %72 = load float** %1, align 8
+  %73 = getelementptr inbounds float* %72, i64 2
+  %74 = load float* %73, align 4
+  %75 = load float** %1, align 8
+  %76 = getelementptr inbounds float* %75, i64 7
+  %77 = load float* %76, align 4
+  %78 = fmul float %74, %77
+  %79 = fsub float %71, %78
+  store float %79, float* %cof11, align 4
+  %80 = load float** %1, align 8
+  %81 = getelementptr inbounds float* %80, i64 0
+  %82 = load float* %81, align 4
+  %83 = fsub float -0.000000e+00, %82
+  %84 = load float** %1, align 8
+  %85 = getelementptr inbounds float* %84, i64 7
+  %86 = load float* %85, align 4
+  %87 = fmul float %83, %86
+  %88 = load float** %1, align 8
+  %89 = getelementptr inbounds float* %88, i64 1
+  %90 = load float* %89, align 4
+  %91 = load float** %1, align 8
+  %92 = getelementptr inbounds float* %91, i64 6
+  %93 = load float* %92, align 4
+  %94 = fmul float %90, %93
+  %95 = fsub float %87, %94
+  store float %95, float* %cof12, align 4
+  %96 = load float** %1, align 8
+  %97 = getelementptr inbounds float* %96, i64 1
+  %98 = load float* %97, align 4
+  %99 = load float** %1, align 8
+  %100 = getelementptr inbounds float* %99, i64 5
+  %101 = load float* %100, align 4
+  %102 = fmul float %98, %101
+  %103 = load float** %1, align 8
+  %104 = getelementptr inbounds float* %103, i64 2
+  %105 = load float* %104, align 4
+  %106 = load float** %1, align 8
+  %107 = getelementptr inbounds float* %106, i64 4
+  %108 = load float* %107, align 4
+  %109 = fmul float %105, %108
+  %110 = fsub float %102, %109
+  store float %110, float* %cof20, align 4
+  %111 = load float** %1, align 8
+  %112 = getelementptr inbounds float* %111, i64 0
+  %113 = load float* %112, align 4
+  %114 = fsub float -0.000000e+00, %113
+  %115 = load float** %1, align 8
+  %116 = getelementptr inbounds float* %115, i64 5
+  %117 = load float* %116, align 4
+  %118 = fmul float %114, %117
+  %119 = load float** %1, align 8
+  %120 = getelementptr inbounds float* %119, i64 2
+  %121 = load float* %120, align 4
+  %122 = load float** %1, align 8
+  %123 = getelementptr inbounds float* %122, i64 3
+  %124 = load float* %123, align 4
+  %125 = fmul float %121, %124
+  %126 = fsub float %118, %125
+  store float %126, float* %cof21, align 4
+  %127 = load float** %1, align 8
+  %128 = getelementptr inbounds float* %127, i64 0
+  %129 = load float* %128, align 4
+  %130 = load float** %1, align 8
+  %131 = getelementptr inbounds float* %130, i64 4
+  %132 = load float* %131, align 4
+  %133 = fmul float %129, %132
+  %134 = load float** %1, align 8
+  %135 = getelementptr inbounds float* %134, i64 1
+  %136 = load float* %135, align 4
+  %137 = load float** %1, align 8
+  %138 = getelementptr inbounds float* %137, i64 3
+  %139 = load float* %138, align 4
+  %140 = fmul float %136, %139
+  %141 = fsub float %133, %140
+  store float %141, float* %cof22, align 4
+  %142 = load float** %1, align 8
+  %143 = getelementptr inbounds float* %142, i64 0
+  %144 = load float* %143, align 4
+  %145 = load float* %cof00, align 4
+  %146 = fmul float %144, %145
+  %147 = load float** %1, align 8
+  %148 = getelementptr inbounds float* %147, i64 1
+  %149 = load float* %148, align 4
+  %150 = load float* %cof01, align 4
+  %151 = fmul float %149, %150
+  %152 = fadd float %146, %151
+  %153 = load float** %1, align 8
+  %154 = getelementptr inbounds float* %153, i64 2
+  %155 = load float* %154, align 4
+  %156 = load float* %cof02, align 4
+  %157 = fmul float %155, %156
+  %158 = fadd float %152, %157
+  store float %158, float* %determ, align 4
+  %159 = load float* %determ, align 4
+  %160 = fpext float %159 to double
+  %161 = fdiv double 1.000000e+00, %160
+  %162 = fptrunc double %161 to float
+  store float %162, float* %determ, align 4
+  %163 = load float* %cof00, align 4
+  %164 = load float* %determ, align 4
+  %165 = fmul float %163, %164
+  %166 = load float** %2, align 8
+  %167 = getelementptr inbounds float* %166, i64 0
+  store float %165, float* %167, align 4
+  %168 = load float* %cof10, align 4
+  %169 = load float* %determ, align 4
+  %170 = fmul float %168, %169
+  %171 = load float** %2, align 8
+  %172 = getelementptr inbounds float* %171, i64 1
+  store float %170, float* %172, align 4
+  %173 = load float* %cof20, align 4
+  %174 = load float* %determ, align 4
+  %175 = fmul float %173, %174
+  %176 = load float** %2, align 8
+  %177 = getelementptr inbounds float* %176, i64 2
+  store float %175, float* %177, align 4
+  %178 = load float* %cof01, align 4
+  %179 = load float* %determ, align 4
+  %180 = fmul float %178, %179
+  %181 = load float** %2, align 8
+  %182 = getelementptr inbounds float* %181, i64 3
+  store float %180, float* %182, align 4
+  %183 = load float* %cof11, align 4
+  %184 = load float* %determ, align 4
+  %185 = fmul float %183, %184
+  %186 = load float** %2, align 8
+  %187 = getelementptr inbounds float* %186, i64 4
+  store float %185, float* %187, align 4
+  %188 = load float* %cof21, align 4
+  %189 = load float* %determ, align 4
+  %190 = fmul float %188, %189
+  %191 = load float** %2, align 8
+  %192 = getelementptr inbounds float* %191, i64 5
+  store float %190, float* %192, align 4
+  %193 = load float* %cof02, align 4
+  %194 = load float* %determ, align 4
+  %195 = fmul float %193, %194
+  %196 = load float** %2, align 8
+  %197 = getelementptr inbounds float* %196, i64 6
+  store float %195, float* %197, align 4
+  %198 = load float* %cof12, align 4
+  %199 = load float* %determ, align 4
+  %200 = fmul float %198, %199
+  %201 = load float** %2, align 8
+  %202 = getelementptr inbounds float* %201, i64 7
+  store float %200, float* %202, align 4
+  %203 = load float* %cof22, align 4
+  %204 = load float* %determ, align 4
+  %205 = fmul float %203, %204
+  %206 = load float** %2, align 8
+  %207 = getelementptr inbounds float* %206, i64 8
+  store float %205, float* %207, align 4
   ret void
 }
 

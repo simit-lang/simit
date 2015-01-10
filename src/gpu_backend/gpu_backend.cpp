@@ -9,6 +9,7 @@
 #include "gpu_codegen.h"
 #include "gpu_function.h"
 #include "ir.h"
+#include "ir_queries.h"
 #include "llvm_codegen.h"
 #include "types.h"
 
@@ -58,8 +59,9 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   this->irFunc = irFunc;
   this->module = createNVVMModule("kernels-module");
   this->dataLayout.reset(new llvm::DataLayout(module));
-  // TODO(gkanwar): Set storage?
+  this->storage = irFunc.getStorage();
 
+  iassert(irFunc.getBody().defined()) << "cannot compile an undefined function";
   irFunc.getBody().accept(this);
 
   // Compile LLVM kernels to PTX string
@@ -154,7 +156,7 @@ void GPUBackend::visit(const ir::CallStmt *op) {
     // first, see if this is an LLVM intrinsic
     auto foundIntrinsic = nvvmIntrinsicByName.find(callee);
     if (foundIntrinsic != nvvmIntrinsicByName.end()) {
-      auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
+      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
       fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(
           foundIntrinsic->second, ftype));
       call = builder->CreateCall(fun, args);
@@ -251,7 +253,7 @@ void GPUBackend::visit(const ir::Call *op) {
 
   auto foundIntrinsic = nvvmIntrinsicByName.find(op->func);
   if (foundIntrinsic != nvvmIntrinsicByName.end()) {
-    auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
+    auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(
       foundIntrinsic->second, ftype));
     return;
