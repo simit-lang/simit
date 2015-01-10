@@ -74,7 +74,7 @@ TEST(System, misc_assemble_from_literal_vector) {
   ASSERT_EQ(1.0, x.get(p1));
 }
 
-TEST(System, misc_assemble_fem) {
+TEST(System, DISABLED_misc_assemble_fem) {
   // Points
   Set<> points;
   FieldRef<double> x = points.addField<double>("x");

@@ -9,15 +9,18 @@ end
 extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
-func f1(F:tensor[3,3](float))->(P:tensor[3,3](float))
-  P = F';
+func trace(A:tensor[3,3](float))->(t:float)
+  t = A(0,0)+A(1,1)+A(2,2);
+end
+
+func f1(A:tensor[3,3](float))->(t:float)
+  t = trace(A) + trace(A) - trace(A);
 end
 
 func f(s : Spring, p : (Point*2)) -> (X : tensor[points](float))
-  F = [1.0,0.0,0.0;0.0,1.0,0.0;0.0,0.0,1.0];
+  F = [1.0,0.0,0.0;0.0,-1.0,0.0;0.0,0.0,1.0];
   F1 = f1(F);
-  x0 = F1(0,0);
-  X(p(0)) = x0;
+  X(p(0)) = F1;
 end
 
 proc main
