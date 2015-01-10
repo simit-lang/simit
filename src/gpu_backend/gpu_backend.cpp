@@ -67,9 +67,6 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   llvm::raw_string_ostream raw_str(moduleStr);
   raw_str << *module;
 
-  std::string ptxStr = generatePtx(moduleStr, cuDevMajor, cuDevMinor,
-                                   module->getModuleIdentifier().c_str());
-
   return new GPUFunction(irFunc, module, kernels, sharding,
                          cuDevMajor, cuDevMinor);
 }
@@ -123,6 +120,110 @@ void GPUBackend::visit(const ir::VarExpr *op) {
 void GPUBackend::visit(const ir::Load *op) {
   LLVMBackend::visit(op);
 }
+void GPUBackend::visit(const ir::CallStmt *op) {
+  std::map<ir::Func, std::string> nvvmIntrinsicByName =
+                                  {{ir::Intrinsics::sin,    std::string("__nv_sinf")},
+                                   {ir::Intrinsics::cos,    std::string("__nv_cosf")},
+                                   {ir::Intrinsics::sqrt,   std::string("__nv_sqrtf")},
+                                   {ir::Intrinsics::log,    std::string("__nv_logf")},
+                                   {ir::Intrinsics::exp,    std::string("__nv_fast_expf")},
+                                   {ir::Intrinsics::pow,    std::string("__nv_fast_powf")},
+                                   {ir::Intrinsics::atan2,  std::string("__nv_atan2f")},
+                                   {ir::Intrinsics::tan,    std::string("__nv_tanf")},
+                                   {ir::Intrinsics::asin,   std::string("__nv_asinf")},
+                                   {ir::Intrinsics::acos,   std::string("__nv_acosf")}};
+  
+  std::vector<llvm::Type*> argTypes;
+  std::vector<llvm::Value*> args;
+  llvm::Function *fun = nullptr;
+  llvm::Value *call = nullptr;
+
+  // compile arguments first
+  for (auto a: op->actuals) {
+    //FIX: remove once solve() is no longer needed
+    //iassert(isScalar(a.type()));
+    argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
+    args.push_back(compile(a));
+  }
+
+  ir::Func callee = op->callee;
+
+  if (callee.getKind() == ir::Func::Intrinsic) {
+    std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
+
+    // first, see if this is an LLVM intrinsic
+    auto foundIntrinsic = nvvmIntrinsicByName.find(callee);
+    if (foundIntrinsic != nvvmIntrinsicByName.end()) {
+      auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
+      fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(
+          foundIntrinsic->second, ftype));
+      call = builder->CreateCall(fun, args);
+    }
+    else if (callee == ir::Intrinsics::det) {
+      iassert(args.size() == 1);
+      std::string fname = callee.getName() + "3" + floatTypeName;
+      call = emitCall(fname, args, getLLVMFloatType());
+    }
+    else if (callee == ir::Intrinsics::norm) {
+      iassert(args.size() == 1);
+      auto type = op->actuals[0].type().toTensor();
+      args.push_back(emitComputeLen(type->dimensions[0]));
+      std::string funcName = callee.getName() + floatTypeName;
+      call = emitCall(funcName, args, getLLVMFloatType());
+    }
+    else if (callee == ir::Intrinsics::inv) {
+      iassert(args.size() == 1);
+
+      ir::Var result = op->results[0];
+      llvm::Value *llvmResult = symtable.get(result);
+      args.push_back(llvmResult);
+      symtable.insert(result, llvmResult);
+
+      std::string fname = callee.getName() + "3" + floatTypeName;
+      call = emitCall(fname, args);
+    }
+    else if (callee == ir::Intrinsics::loc) {
+      // TODO(gkanwar)
+      not_supported_yet;
+    }
+    else if (callee == ir::Intrinsics::dot) {
+      // we need to add the vector length to the args
+      auto type1 = op->actuals[0].type().toTensor();
+      auto type2 = op->actuals[1].type().toTensor();
+      uassert(type1->dimensions[0] == type2->dimensions[0]) <<
+          "dimension mismatch in dot product";
+      args.push_back(emitComputeLen(type1->dimensions[0]));
+      std::string funcName = callee.getName() + floatTypeName;
+      call = emitCall(funcName, args, getLLVMFloatType());
+      symtable.insert(op->results[0], call);
+    }
+    else {
+      ierror << "intrinsic " << op->callee.getName() << " not found";
+    }
+  
+    iassert(call);
+    if (!call->getType()->isVoidTy()) {
+      symtable.insert(op->results[0], call);
+    }
+  }
+  // if not an intrinsic function, try to find it in the module
+  else {
+    if (module->getFunction(callee.getName())) {
+      for (ir::Var r : op->results) {
+        argTypes.push_back(createLLVMType(r.getType().toTensor()->componentType));
+
+        llvm::Value *llvmResult = symtable.get(r);
+        args.push_back(llvmResult);
+        symtable.insert(r, llvmResult);
+      }
+      fun = module->getFunction(op->callee.getName());
+      call = builder->CreateCall(fun, args);
+    }
+    else {
+      ierror << "function " << op->callee.getName() << " not found in module";
+    }
+  }
+}
 void GPUBackend::visit(const ir::Call *op) {
   std::map<ir::Func, std::string> nvvmIntrinsicByName =
                                   {{ir::Intrinsics::sin,    std::string("__nv_sinf")},
@@ -136,27 +237,58 @@ void GPUBackend::visit(const ir::Call *op) {
                                    {ir::Intrinsics::asin,   std::string("__nv_asinf")},
                                    {ir::Intrinsics::acos,   std::string("__nv_acosf")}};
   
+  std::vector<llvm::Type*> argTypes;
+  std::vector<llvm::Value*> args;
+  llvm::Function *fun = nullptr;
+
+  // compile arguments first
+  for (auto a: op->actuals) {
+    //FIX: remove once solve() is no longer needed
+    //iassert(isScalar(a.type()));
+    argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
+    args.push_back(compile(a));
+  }
+
   auto foundIntrinsic = nvvmIntrinsicByName.find(op->func);
   if (foundIntrinsic != nvvmIntrinsicByName.end()) {
-    std::vector<llvm::Type*> argTypes;
-    std::vector<llvm::Value*> args;
-    llvm::Function *fun = nullptr;
-    // compile arguments first
-    for (auto a : op->actuals) {
-      argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
-      args.push_back(compile(a));
-    }
-  
     auto ftype = llvm::FunctionType::get(LLVM_DOUBLE, argTypes, false);
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(
       foundIntrinsic->second, ftype));
-    
-    val = builder->CreateCall(fun, args);
     return;
   }
+  else if (op->func == ir::Intrinsics::norm) {
+    iassert(args.size() == 1);
+    auto type = op->actuals[0].type().toTensor();
+
+    args.push_back(emitComputeLen(type->dimensions[0]));
+    std::string funcName = ir::ScalarType::singleFloat() ?
+        "norm_f32" : "norm_f64";
+    val = emitCall(funcName, args, getLLVMFloatType());
+    return;
+  }
+  else if (op->func == ir::Intrinsics::dot) {
+    iassert(args.size() == 2);
+    // we need to add the vector length to the args
+    auto type1 = op->actuals[0].type().toTensor();
+    auto type2 = op->actuals[1].type().toTensor();
+    uassert(type1->dimensions[0] == type2->dimensions[0]) <<
+      "dimension mismatch in dot product";
+    args.push_back(emitComputeLen(type1->dimensions[0]));
+    std::string funcName = ir::ScalarType::singleFloat() ?
+        "dot_f32" : "dot_f64";
+    val = emitCall(funcName, args, getLLVMFloatType());
+    return;
+  }
+  // if not an intrinsic function, try to find it in the module
+  else if (module->getFunction(op->func.getName())) {
+    fun = module->getFunction(op->func.getName());
+  }
+  else {
+    std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n\n";
+    ASSERT(false && "No code generation for this type");
+  }
   
-  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n\n";
-  ASSERT(false && "No code generation for this type");
+  val = builder->CreateCall(fun, args);
 }
 void GPUBackend::visit(const ir::Neg *op) {
   LLVMBackend::visit(op);

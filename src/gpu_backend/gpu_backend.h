@@ -57,6 +57,7 @@ protected:
   virtual void visit(const ir::Mul *);
   virtual void visit(const ir::Div *);
   virtual void visit(const ir::AssignStmt *);
+  virtual void visit(const ir::CallStmt *);
   virtual void visit(const ir::FieldWrite *);
   virtual void visit(const ir::Store *);
   virtual void visit(const ir::ForRange *);

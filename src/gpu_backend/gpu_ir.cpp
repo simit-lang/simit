@@ -68,6 +68,8 @@ public:
   }
 
 protected:
+  enum VarAction { NONE, LIFT, XSHARD, YSHARD, ZSHARD };
+
   void visit(const Func *f) {
     for (auto &arg : f->getArguments()) {
       symtable.insert(arg, NONE);
@@ -252,28 +254,34 @@ protected:
     }
   }
 
-  void firstAssign(Var var) {
-    std::string varName = var.getName();
-    int depth = sharding.getDepth();
-    // iassert(depth >= 0 && depth < 2)
-    // << "Sharding depth must be 0, 1, or 2";
-    // XXX: Just for now
-    iassert(depth == 0);
-    const TensorType *origType = var.getType().toTensor();
-    Type type = TensorType::make(origType->componentType,
-                                 origType->dimensions,
-                                 origType->isColumnVector);
-    // for (int dim = 0; dim < depth; ++dim) {
-    //   // Use a dummy dimension of 1
-    //   const_cast<TensorType*>(type.toTensor())
-    //       ->dimensions.emplace_back(IndexSet(1));
-    // }
-    sharedFields.emplace_back(varName, type);
-    symtable.insert(var, LIFT);
+  void visit(const VarDecl *op) {
+    firstAssign(op->var, NONE);
+    IRRewriter::visit(op);
+  }
+
+  void firstAssign(Var var, VarAction action=LIFT) {
+    if (action == LIFT) {
+      std::string varName = var.getName();
+      int depth = sharding.getDepth();
+      // iassert(depth >= 0 && depth < 2)
+      // << "Sharding depth must be 0, 1, or 2";
+      // XXX: Just for now
+      iassert(depth == 0);
+      const TensorType *origType = var.getType().toTensor();
+      Type type = TensorType::make(origType->componentType,
+                                   origType->dimensions,
+                                   origType->isColumnVector);
+      // for (int dim = 0; dim < depth; ++dim) {
+      //   // Use a dummy dimension of 1
+      //   const_cast<TensorType*>(type.toTensor())
+      //       ->dimensions.emplace_back(IndexSet(1));
+      // }
+      sharedFields.emplace_back(varName, type);
+    }
+    symtable.insert(var, action);
   }
 
   // Map from symbol to transformative action
-  enum VarAction { NONE, LIFT, XSHARD, YSHARD, ZSHARD };
   internal::ScopedMap<ir::Var, VarAction> symtable;
   std::vector<Field> sharedFields;
 
