@@ -112,7 +112,10 @@ void MapFunctionRewriter::visit(const TupleRead *op) {
 }
 
 void MapFunctionRewriter::visit(const VarExpr *op) {
-  if (isResult(op->var)) {
+  if (op->var == target) {
+    expr = targetLoopVar;
+  }
+  else if (isResult(op->var)) {
     expr = resultToMapVar[op->var];
   }
   else {

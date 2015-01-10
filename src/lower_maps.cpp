@@ -62,21 +62,23 @@ private:
         << "All assembled tensors in the same Map must have the same storage.";
 
     TensorStorage::Kind tensorStorage = storage->get(op->vars[0]).getKind();
-    if (tensorStorage != TensorStorage::SystemNone || op->vars.size() == 0) {
-      if (tensorStorage == TensorStorage::SystemReduced ||
-          tensorStorage == TensorStorage::DenseRowMajor) {
+    switch (tensorStorage) {
+      case TensorStorage::SystemReduced:
+      case TensorStorage::SystemDiagonal:
+      case TensorStorage::DenseRowMajor: {
         LowerMapFunctionRewriter mapFunctionRewriter;
         stmt = inlineMap(op, mapFunctionRewriter);
 
         // Add storage descriptor for the new tensors in the inlined map
         updateStorage(stmt, storage);
+        break;
       }
-      else {
-        ierror << "Unsupported tensor storage lowering";
-      }
-    }
-    else {
-      stmt = op;
+      case TensorStorage::SystemNone:
+        not_supported_yet;
+        break;
+      case TensorStorage::Undefined:
+        unreachable << "Undefined tensor storage";
+        break;
     }
   }
 };

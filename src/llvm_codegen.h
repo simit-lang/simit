@@ -73,6 +73,7 @@ llvm::Function *createPrototype(const std::string &name,
                                 bool externalLinkage=false,
                                 bool doesNotThrow=true);
 
+std::ostream &operator<<(std::ostream &os, const llvm::Module &);
 std::ostream &operator<<(std::ostream &os, const llvm::Value &);
 std::ostream &operator<<(std::ostream &os, const llvm::Type &);
 

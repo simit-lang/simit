@@ -1,5 +1,7 @@
 #include "lower.h"
 
+#include <algorithm>
+
 #include "ir_rewriter.h"
 
 using namespace std;
@@ -77,10 +79,24 @@ private:
   
   using IRRewriter::visit;
 
+  static bool canComputeSize(const IndexDomain &dom) {
+    for (auto &is : dom.getIndexSets()) {
+      if (is.getKind() != IndexSet::Range) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  static int getDimSize(int i, const TensorType *type) {
+    tassert(canComputeSize(type->dimensions[i]))
+        << "only currently support dense tensors with static size";
+    int dimsize = type->dimensions[i].getSize();
+    return dimsize;
+  }
+
   Expr flattenIndices(Expr tensor, std::vector<Expr> indices) {
-    // TODO: Generalize to n-order tensors and remove assert (also there's no
-    //       need to have specialized code for vectors and matrices).
-    iassert(indices.size() <= 2);
+    iassert(tensor.type().isTensor());
 
     TensorStorage tensorStorage;
     if (isa<VarExpr>(tensor)) {
@@ -94,35 +110,32 @@ private:
     Expr index;
     switch (tensorStorage.getKind()) {
       case TensorStorage::DenseRowMajor: {
-        if (indices.size() == 1) {
-          index = rewrite(indices[0]);
-        }
-        else if (indices.size() == 2) {
-          const TensorType *type = tensor.type().toTensor();
-          Expr i = rewrite(indices[0]);
-          Expr j = rewrite(indices[1]);
+        iassert(indices.size() > 0);
+        const TensorType *type = tensor.type().toTensor();
 
-          IndexDomain dim1 = type->dimensions[1];
-          Expr d1;
-          if (dim1.getIndexSets().size() == 1 &&
-              dim1.getIndexSets()[0].getKind() == IndexSet::Range) {
-            iassert(dim1.getSize() < (size_t)(-1));
-            int dimSize = static_cast<int>(dim1.getSize());
-            d1 = Literal::make(i.type(), &dimSize);
+        // It simplifies the logic to generate the inner index first
+        reverse(indices.begin(), indices.end());
+
+        index = rewrite(indices[0]);
+        for (size_t i=1; i < indices.size(); ++i) {
+          Expr stride = getDimSize(indices.size()-i, type);
+          for (size_t j=i-1; j > 0; --j) {
+            stride = Mul::make(getDimSize(indices.size()-j,type), stride);
           }
-          else {
-            not_supported_yet;
-          }
-          iassert(d1.defined());
-          index = Add::make(Mul::make(i, d1), j);
-        }
-        else {
-          not_supported_yet;
+          Expr idx = Mul::make(rewrite(indices[i]), stride);
+          index = Add::make(idx, index);
         }
         break;
       }
       case TensorStorage::SystemReduced: {
-        iassert(indices.size() == 1 || indices.size() == 2);
+        iassert(tensor.type().isTensor());
+        size_t order = tensor.type().toTensor()->order();
+        tassert(order == 2)
+            << "only currently supports matrices in reduced form."
+            << tensor << "has" << indices.size() << "dimensions";
+        iassert(indices.size() == 1 || indices.size() == order)
+            << "must either supply one index per dimension"
+            << "or a single index (flattened)";
 
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
@@ -139,8 +152,8 @@ private:
         }
         break;
       }
-      case TensorStorage::SystemUnreduced:
-        not_supported_yet;
+      case TensorStorage::SystemDiagonal:
+        index = rewrite(indices[0]);
         break;
       case TensorStorage::SystemNone:
         ierror << "Can't store to a tensor without storage.";

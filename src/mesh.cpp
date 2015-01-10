@@ -285,9 +285,6 @@ int MeshVol::loadTet(istream & nodeIn, istream & eleIn)
     e[cnt].resize(nV);
     for(int ii = 0;ii<nV;ii++){
       ss>>e[cnt][ii];
-      //tetgen is 1-based
-      //convert to 0 based
-      e[cnt][ii]--;
     }
     
     cnt ++ ;
@@ -338,8 +335,6 @@ int MeshVol::loadTetEdge(istream & edgeIn)
     ss>>intVal;
     for(int ii = 0;ii<2;ii++){
       ss>>edges[cnt][ii];
-      //zero based index
-      edges[cnt][ii]--;
     }
     cnt ++ ;
     if(cnt>=edges.size()){

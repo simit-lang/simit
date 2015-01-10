@@ -205,8 +205,11 @@ SIM_TEST(elements, blas2);
 SIM_TEST(elements, blas3);
 SIM_TEST(elements, la);
 SIM_TEST(elements, intrinsics);
+SIM_TEST(elements, tensors);
 SIM_TEST(elements, index_notation);
 SIM_TEST(elements, tensorrw);
+SIM_TEST(elements, fem);
+SIM_TEST(elements, fem_tensor);
 
 /* Float-32 tests */
 SIM_TEST_SUITE_F32(elements_f32)
@@ -217,7 +220,6 @@ SIM_TEST(declarations, function_headers);
 SIM_TEST(declarations, objects);
 SIM_TEST(declarations, variables);
 SIM_TEST(declarations, misc);
-SIM_TEST(declarations, fem_tensor);
 
 SIM_TEST_SUITE(controlflow)
 SIM_TEST(controlflow, map);
