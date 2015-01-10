@@ -12,7 +12,6 @@ extern springs : set{Spring}(points,points);
 
 func dist_a(p : Point) -> (A : tensor[points,points](float))
   A(p,p) = p.a;
-  A(p,p) = p.a;
 end
 
 proc main 
