@@ -566,12 +566,12 @@ var_decl
 assign_stmt
   // This rule must use idents instead of IDENT or else the parser cannot parse
   // map statements...  This is too hacky and must be fixed.
-  : idents "=" IDENT "(" expr_list_or_empty ")" {
+  : idents "=" IDENT "(" expr_list ")" {
     // TODO: Lots of duplicate code in this rule, and the other assignment rule/
     //       the call_or_paren_read_expr. Not good, is going to be a source of
     //       bugs, and should be cleaned up.
     string name = convertAndFree($IDENT);
-    vector<Expr> arguments = convertAndDelete($expr_list_or_empty);
+    vector<Expr> arguments = convertAndDelete($expr_list);
     vector<string> varNames = convertAndDelete($idents);
 
     if (ctx->hasSymbol(name)) {
@@ -1341,9 +1341,9 @@ set_read_expr
 %type <expr> call_or_paren_read_expr;
 call_or_paren_read_expr
   // This rule exist as a workaround because functions are not expressions
-  : IDENT "(" expr_list_or_empty ")" {
+  : IDENT "(" expr_list ")" {
     std::string name = convertAndFree($IDENT);
-    auto arguments = unique_ptr<vector<Expr>>($expr_list_or_empty);
+    auto arguments = unique_ptr<vector<Expr>>($expr_list);
 
     if (ctx->hasSymbol(name)) {
       const Symbol &symbol = ctx->getSymbol(name);
@@ -1369,20 +1369,22 @@ call_or_paren_read_expr
     else if (ctx->containsFunction(name)) {
       Func func = ctx->getFunction(name);
 
-      if (func.getResults().size() != 1) {
-        REPORT_ERROR("called function must have one result", @1);
+      if (func.getResults().size() > 1) {
+        REPORT_ERROR("unassigned calls must have zero or one result", @1);
       }
 
-      Var resultFormal = func.getResults()[0];
-      Var resultActual = ctx->getBuilder()->temporary(resultFormal.getType());;
+      vector<Var> vars;
+      if (func.getResults().size() == 1) {
+        Var resultFormal = func.getResults()[0];
+        Var var = ctx->getBuilder()->temporary(resultFormal.getType());;
+        ctx->addSymbol(var.getName(), var, Symbol::ReadWrite);
+        ctx->addStatement(VarDecl::make(var));
+        $$ = new Expr(VarExpr::make(var));
 
-      Stmt callStmt = CallStmt::make({resultActual}, func, *arguments);
+        vars.push_back(var);
+      }
 
-      ctx->addSymbol(resultActual.getName(), resultActual, Symbol::ReadWrite);
-      ctx->addStatement(VarDecl::make(resultActual));
-      ctx->addStatement(callStmt);
-
-      $$ = new Expr(VarExpr::make(resultActual));
+      ctx->addStatement(CallStmt::make(vars, func, *arguments));
     }
     else {
       REPORT_ERROR(name + " is not defined in scope", @1);

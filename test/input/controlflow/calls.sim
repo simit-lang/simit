@@ -30,3 +30,15 @@ func caller(a : tensor[2](float)) -> (b : tensor[2](float))
   b(0) = g;
   b(1) = f;
 end
+
+%%% call-no-results
+%! caller([1.0, 2.0]) == [12.0, 10.0];
+func callee(inout c : tensor[2](float))
+  c(0) = c(0) * 3.0;
+end
+
+func caller(a : tensor[2](float)) -> (b : tensor[2](float))
+  callee(a);
+  b(0) = a(0) * 4.0;
+  b(1) = a(1) * 5.0;
+end
