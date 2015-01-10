@@ -275,7 +275,6 @@ TEST(System, gemv_diagonal_inout) {
   ASSERT_EQ(12.0, c.get(p2));
 }
 
-
 TEST(System, gemv_nw) {
   // Points
   Set<> points;

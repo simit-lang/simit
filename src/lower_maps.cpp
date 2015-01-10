@@ -38,7 +38,7 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
       const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
       iassert(tensorWrite->value.type().isTensor());
 
-      // Change assignments to result to compound assignments, using the map
+      // Change assignments to result to compound  assignments, using the map
       // reduction operator.
       stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
                                tensorWrite->value, CompoundOperator::Add);
@@ -58,28 +58,12 @@ private:
   void visit(const Map *op) {
     iassert(hasStorage(op->vars, *storage))
         << "Every assembled tensor should have a storage descriptor";
-    tassert(hasSameStorage(op->vars, *storage))
-        << "All assembled tensors in the same Map must have the same storage.";
 
-    TensorStorage::Kind tensorStorage = storage->get(op->vars[0]).getKind();
-    switch (tensorStorage) {
-      case TensorStorage::SystemReduced:
-      case TensorStorage::SystemDiagonal:
-      case TensorStorage::DenseRowMajor: {
-        LowerMapFunctionRewriter mapFunctionRewriter;
-        stmt = inlineMap(op, mapFunctionRewriter);
+    LowerMapFunctionRewriter mapFunctionRewriter;
+    stmt = inlineMap(op, mapFunctionRewriter);
 
-        // Add storage descriptor for the new tensors in the inlined map
-        updateStorage(stmt, storage);
-        break;
-      }
-      case TensorStorage::SystemNone:
-        not_supported_yet;
-        break;
-      case TensorStorage::Undefined:
-        unreachable << "Undefined tensor storage";
-        break;
-    }
+    // Add storage descriptor for the new tensors in the inlined map
+    updateStorage(stmt, storage);
   }
 };
 

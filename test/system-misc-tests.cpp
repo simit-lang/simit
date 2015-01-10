@@ -132,3 +132,61 @@ TEST(System, misc_map_one_set) {
   ASSERT_DOUBLE_EQ(4, a.get(p1));
   ASSERT_DOUBLE_EQ(6, a.get(p2));
 }
+
+TEST(System, misc_map_no_results_one_set) {
+  // Points
+  Set<> points;
+  FieldRef<double> a = points.addField<double>("a");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  a.set(p0, 1.0);
+  a.set(p1, 2.0);
+  a.set(p2, 3.0);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(2.0, (double)a.get(p0));
+  ASSERT_EQ(4.0, (double)a.get(p1));
+  ASSERT_EQ(6.0, (double)a.get(p2));
+}
+
+TEST(System, misc_map_no_results_two_sets) {
+  // Points
+  Set<> points;
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> a = springs.addField<double>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, 1.0);
+  a.set(s1, 2.0);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(2.0, (double)a.get(s0));
+  ASSERT_EQ(4.0, (double)a.get(s1));
+}
