@@ -871,7 +871,7 @@ struct While : public StmtNode<While> {
 };
 
 struct ForDomain {
-  enum Kind { IndexSet, Endpoints, Edges, Neighbors };
+  enum Kind { IndexSet, Endpoints, Edges, Neighbors, Diagonal };
   Kind kind;
 
   /// An index set

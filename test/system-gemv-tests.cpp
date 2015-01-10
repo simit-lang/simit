@@ -646,7 +646,7 @@ TEST(System, gemv_input) {
   ASSERT_EQ(20.0, (double)c.get(p2));
 }
 
-TEST(System, DISABLED_gemv_diagonal_storage) {
+TEST(System, gemv_diagonal_storage) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -682,3 +682,49 @@ TEST(System, DISABLED_gemv_diagonal_storage) {
   ASSERT_EQ(6.0, c.get(p1));
   ASSERT_EQ(6.0, c.get(p2));
 }
+
+TEST(System, gemv_diagonal_storage_and_sysreduced) {
+  // Points
+  Set<> points;
+  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<double> c = points.addField<double>("c");
+  FieldRef<double> a = points.addField<double>("a");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  a.set(p0, 1.0);
+  a.set(p1, 3.0);
+  a.set(p2, 2.0);
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> d = springs.addField<double>("d");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  d.set(s0, 1.0);
+  d.set(s1, 2.0);
+
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(4.0, (double)c.get(p0));
+  ASSERT_EQ(19.0, (double)c.get(p1));
+  ASSERT_EQ(16.0, (double)c.get(p2));
+}
+

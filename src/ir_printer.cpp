@@ -60,6 +60,9 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
     case ForDomain::Neighbors:
       os << d.set << ".neighbors[" << d.var << "]";
       break;
+    case ForDomain::Diagonal:
+      os << d.set << ".diagonal[" << d.var << "]";
+      break;
   }
   return os;
 }
