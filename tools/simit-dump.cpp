@@ -214,7 +214,7 @@ int main(int argc, const char* argv[]) {
     if (emitSimit) {
       cout << "--- Insert Temporaries and Flatten Index Expressions" << endl;
       simit::ir::IRPrinterCallGraph(cout).print(func);
-      cout << endl << endl << endl;
+      cout << endl;
     }
 
     {
@@ -267,7 +267,7 @@ int main(int argc, const char* argv[]) {
     if (emitSimit) {
       cout << "--- Lower Maps" << endl;
       simit::ir::IRPrinterCallGraph(cout).print(func);
-      cout << endl << endl << endl;
+      cout << endl;
     }
 
     {
@@ -287,7 +287,7 @@ int main(int argc, const char* argv[]) {
     if (emitSimit) {
       cout << "--- Lower Index Expressions" << endl;
       simit::ir::IRPrinterCallGraph(cout).print(func);
-      cout << endl << endl << endl;
+      cout << endl;
     }
 
     {
@@ -317,7 +317,7 @@ int main(int argc, const char* argv[]) {
       simit::internal::LLVMBackend backend;
       std::string fstr = simit::util::toString(*backend.compile(func));
       if (emitSimit) {
-        cout << endl << "--- Emitting LLVM" << endl;
+        cout << "--- Emitting LLVM" << endl;
       }
       cout << simit::util::trim(fstr) << endl;
     }

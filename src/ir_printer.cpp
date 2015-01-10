@@ -520,23 +520,25 @@ void IRPrinterCallGraph::print(const Func &func) {
 }
 
 void IRPrinterCallGraph::visit(const Call *op) {
-  if (op->func.getKind() == Func::Intrinsic) return;
-  os << op->func << "\n\n";
+  op->func.accept(this);
 }
 
 void IRPrinterCallGraph::visit(const CallStmt *op) {
-  if (op->callee.getKind() == Func::Intrinsic) return;
-  os << op->callee << "\n\n";
+  op->callee.accept(this);
 }
 
 void IRPrinterCallGraph::visit(const Map *op) {
-  if (op->function.getKind() == Func::Intrinsic) return;
-  os << op->function << "\n\n";
+  op->function.accept(this);
 }
 
 void IRPrinterCallGraph::visit(const Func *op) {
-  IRVisitor::visit(op);
-  os << *op;
+  if (op->getKind() == Func::Intrinsic) return;
+
+  if (visited.find(*op) == visited.end()) {
+    visited.insert(*op);
+    IRVisitor::visit(op);
+    os << *op << endl << endl;
+  }
 }
 
 
