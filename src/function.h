@@ -58,11 +58,14 @@ protected:
   typedef std::function<void()> FuncType;
   class Actual {
   public:
-    Actual(const ir::Type &type) : type(type), tensor(NULL) {}
+    Actual(const ir::Type &type, bool output=false)
+      : type(type), tensor(NULL), output(output) {}
     Actual() : Actual(ir::Type()) {}
     void bind(Tensor *tensor) { this->tensor = tensor; }
     void bind(SetBase *set) { this->set = set; }
     bool isBound() const { return tensor != NULL; }
+    void setOutput(bool output) { this->output = output; }
+    bool isOutput() const { return output; }
     const ir::Type &getType() const { return type; }
     Tensor *getTensor() { iassert(tensor != nullptr); return tensor; }
     SetBase *getSet() { iassert(set != nullptr); return set; }
@@ -72,6 +75,7 @@ protected:
       SetBase *set;
       Tensor  *tensor;
     };
+    bool output;
   };
   
   Function(const ir::Func &simitFunc);

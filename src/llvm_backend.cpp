@@ -794,7 +794,7 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       symtable.insert(op->results[0], call);
     }
     else {
-      ierror << "intrinsic" << op->callee.getName() << "not found";
+      ierror << "intrinsic " << op->callee.getName() << " not found";
     }
     iassert(call);
 
@@ -816,7 +816,7 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       call = builder->CreateCall(fun, args);
     }
     else {
-      ierror << "function" << op->callee.getName() << "not found in module";
+      ierror << "function " << op->callee.getName() << " not found in module";
     }
   }
 }

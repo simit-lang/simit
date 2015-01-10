@@ -5,6 +5,8 @@
 #include "error.h"
 #include "llvm_codegen.h"
 
+#include "gpu_backend/intrinsics.h"
+
 namespace simit {
 namespace internal {
 
@@ -80,6 +82,13 @@ std::string generatePtx(const std::string &module,
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
                                        libdevice, libdevice_length,
                                        "libdevice"));
+
+  // Add intrinsics bitcode library
+  std::unique_ptr<char[]> intrinsics_buf(get_simit_gpu_initmod_intrinsics().release());
+  const char *intrinsics = reinterpret_cast<const char*>(intrinsics_buf.get());
+  checkNVVMCall(nvvmAddModuleToProgram(compileUnit, intrinsics,
+                                       simit_gpu_initmod_intrinsics_length,
+                                       "intrinsics"));
 
   // Create NVVM compilation unit from LLVM IR
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
