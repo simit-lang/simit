@@ -126,7 +126,6 @@ protected:
                                     const std::vector<ir::Var> &arguments,
                                     const std::vector<ir::Var> &results);
 
-//  void emitPrintf(std::string format);
   void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
   virtual void emitFirstAssign(const ir::Var& var,

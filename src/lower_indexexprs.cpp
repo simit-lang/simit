@@ -341,148 +341,104 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
 /// Lowers the given 'stmt' containing an index expression.
 Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   class DiagonalReadsRewriter : private IRRewriter {
-    public:
-      std::vector<Stmt> liftedStmts;
-      DiagonalReadsRewriter(const Storage& storage, Var outerIndexVar) :
-        storage(storage), outerIndexVar(outerIndexVar) {
-        currentTensorWrite = nullptr;
+  public:
+    std::vector<Stmt> liftedStmts;
+
+    DiagonalReadsRewriter(const Storage& storage, Var outerIndexVar) :
+    storage(storage), outerIndexVar(outerIndexVar) {
+      currentTensorWrite = nullptr;
+    }
+
+    Stmt doRewrite(Stmt stmt) {
+      return this->rewrite(stmt);
+    }
+  private:
+    using IRRewriter::visit;
+    const Storage &storage;
+    Var outerIndexVar;
+    const TensorWrite *currentTensorWrite;
+
+    void visit(const TensorWrite *op) {
+      currentTensorWrite = op;
+      auto rewritten = rewrite(op->value);
+
+      if (rewritten != op->value) {
+        stmt = TensorWrite::make(op->tensor, op->indices, rewrite(op->value));
       }
-      Stmt doRewrite(Stmt stmt) {
-        return this->rewrite(stmt);
+      else {
+        stmt = op;
       }
-    private:
-      const Storage &storage;
-      Var outerIndexVar;
-      const TensorWrite *currentTensorWrite;
-      using IRRewriter::visit;
-    
-      void visit(const TensorWrite *op) {
-        currentTensorWrite = op;
-        auto rewritten = rewrite(op->value);
-        
-        if (rewritten != op->value) {
-          stmt = TensorWrite::make(op->tensor, op->indices, rewrite(op->value));
+      currentTensorWrite = nullptr;
+    }
+
+    Expr liftDiagonalExpression(Expr exprToCheck, Expr otherExpr, Expr op) {
+      auto tensor = to<TensorRead>(exprToCheck)->tensor;
+      iassert(isa<VarExpr>(tensor));
+
+      if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
+          && currentTensorWrite != nullptr) {
+        std::vector<Expr> newIndices;
+        newIndices.push_back(VarExpr::make(outerIndexVar));
+
+        std::vector<Expr> newWriteIndices;
+        for (auto x: currentTensorWrite->indices)
+          newWriteIndices.push_back(outerIndexVar);
+
+        Stmt liftedStmt =
+        TensorWrite::make(currentTensorWrite->tensor, newWriteIndices,
+                          TensorRead::make(tensor,newIndices));
+        liftedStmts.push_back(liftedStmt);
+
+        Expr lhsRead = TensorRead::make(currentTensorWrite->tensor,
+                                        currentTensorWrite->indices);
+        Expr rhs;
+        if (isa<Add>(op)) {
+          return Add::make(lhsRead, otherExpr);
         }
-        else {
-          stmt = op;
+        else if (isa<Sub>(op)) {
+          return Sub::make(lhsRead, otherExpr);
         }
-        currentTensorWrite = nullptr;
+        iassert(rhs.defined());
+        return rhs;
       }
-    
-      void visit(const Add *op) {
-        // the idea here is to lift out the system diagonal tensor reads (that
-        // take place during a tensor write) and place them in a higher level
-        // loop.  In addition, change A(i,j) to A(i) if A is diagonal.
-        
-        if (isa<TensorRead>(op->a)) {
-            auto tensor = to<TensorRead>(op->a)->tensor;
-            iassert(isa<VarExpr>(tensor));
-          
-            if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
-                && currentTensorWrite != nullptr) {
-              
-              std::vector<Expr> newIndices;
-              newIndices.push_back(VarExpr::make(outerIndexVar));
-              
-              std::vector<Expr> newWriteIndices;
-              for (auto x: currentTensorWrite->indices)
-                newWriteIndices.push_back(outerIndexVar);
-
-              liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
-                    newWriteIndices, TensorRead::make(tensor, newIndices)));
-              expr = Add::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
-                               op->b);
-            }
-            else {
-              expr = op;
-            }
-        }
-        else if (isa<TensorRead>(op->b)) {
-            auto tensor = to<TensorRead>(op->b)->tensor;
-            iassert(isa<VarExpr>(tensor));
-          
-            if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
-                && currentTensorWrite != nullptr) {
-            
-              std::vector<Expr> newIndices;
-              newIndices.push_back(VarExpr::make(outerIndexVar));
-              
-              std::vector<Expr> newWriteIndices;
-              for (auto x: currentTensorWrite->indices)
-                newWriteIndices.push_back(outerIndexVar);
-
-              liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
-                    newWriteIndices, TensorRead::make(tensor, newIndices)));
-              expr = Add::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
-                               op->b);
-            }
-            else {
-              expr = op;
-            }
-        }
-
-        else {
-          expr = op;
-        }
+      else {
+        return op;
       }
-    
-        void visit(const Sub *op) {
-        // the idea here is to lift out the system diagonal tensor reads (that
-        // take place during a tensor write) and place them in a higher level
-        // loop.  In addition, change A(i,j) to A(i) if A is diagonal.
-        
-        if (isa<TensorRead>(op->a)) {
-            auto tensor = to<TensorRead>(op->a)->tensor;
-            iassert(isa<VarExpr>(tensor));
-          
-            if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
-                && currentTensorWrite != nullptr) {
-              
-              std::vector<Expr> newIndices;
-              newIndices.push_back(VarExpr::make(outerIndexVar));
-              
-              std::vector<Expr> newWriteIndices;
-              for (auto x: currentTensorWrite->indices)
-                newWriteIndices.push_back(outerIndexVar);
+    }
 
-              liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
-                    newWriteIndices, TensorRead::make(tensor, newIndices)));
-              expr = Sub::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
-                               op->b);
-            }
-            else {
-              expr = op;
-            }
-        }
-        else if (isa<TensorRead>(op->b)) {
-            auto tensor = to<TensorRead>(op->b)->tensor;
-            iassert(isa<VarExpr>(tensor));
-          
-            if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
-                && currentTensorWrite != nullptr) {
-            
-              std::vector<Expr> newIndices;
-              newIndices.push_back(VarExpr::make(outerIndexVar));
-              
-              std::vector<Expr> newWriteIndices;
-              for (auto x: currentTensorWrite->indices)
-                newWriteIndices.push_back(outerIndexVar);
-              
-              liftedStmts.push_back(TensorWrite::make(currentTensorWrite->tensor,
-                    newWriteIndices, TensorRead::make(tensor, newIndices)));
-              expr = Sub::make(TensorRead::make(currentTensorWrite->tensor, currentTensorWrite->indices),
-                               op->b);
-            }
-            else {
-              expr = op;
-            }
-        }
+    void visit(const Add *op) {
+      // the idea here is to lift out the system diagonal tensor reads (that
+      // take place during a tensor write) and place them in a higher level
+      // loop.  In addition, change A(i,j) to A(i) if A is diagonal.
+      //
+      // E.g. `C(i,j) = A(i,j) + B(i,j)`, where B is system reduced, becomes:
+      // for i in points:
+      //   C(loc(i,j)) = A(i)
+      //   for ij in neighbors.start[i]:neighbors.start[i+1]:
+      //     C(ij) += B(ij)
 
-        else {
-          expr = op;
-        }
+      if (isa<TensorRead>(op->a)) {
+        expr = liftDiagonalExpression(op->a, op->b, op);
       }
+      else if (isa<TensorRead>(op->b)) {
+        expr = liftDiagonalExpression(op->b, op->a, op);
+      }
+      else {
+        expr = op;
+      }
+    }
 
+    void visit(const Sub *op) {
+      if (isa<TensorRead>(op->a)) {
+        expr = liftDiagonalExpression(op->a, op->b, op);
+      }
+      else if (isa<TensorRead>(op->b)) {
+        expr = liftDiagonalExpression(op->b, op->a, op);
+      }
+      else {
+        expr = op;
+      }
+    }
   };
 
   stmt = wrapCompoundAssignedValues(stmt);

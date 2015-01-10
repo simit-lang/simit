@@ -816,8 +816,8 @@ void LLVMBackend::visit(const FieldWrite *op) {
             FieldRead::make(op->elementOrSet, op->fieldName), op->value));
         break;
       }
-      default: ierror << "Unknown compound operator type";
     }
+    iassert(valuePtr != nullptr);
 
     const TensorType *tensorFieldType = fieldType.toTensor();
 
@@ -842,8 +842,8 @@ void LLVMBackend::visit(const ir::Store *op) {
       value = compile(Add::make(Load::make(op->buffer, op->index), op->value));
       break;
     }
-    default: ierror << "Unknown compound operator type";
   }
+  iassert(value != nullptr);
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
