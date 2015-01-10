@@ -120,7 +120,8 @@ struct TensorType : TypeNode {
     return TensorType::make(componentType, dimensions);
   }
 
-  static Type make(ScalarType componentType, std::vector<IndexDomain> dimensions,
+  static Type make(ScalarType componentType,
+                   std::vector<IndexDomain> dimensions,
                    bool isColumnVector = false) {
     TensorType *type = new TensorType;
     type->componentType = componentType;

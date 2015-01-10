@@ -1,6 +1,7 @@
 #include <iostream>
 
 #include "ir.h"
+#include "ir_visitor.h"
 #include "ir_printer.h"
 #include "ir_rewriter.h"
 #include "lower.h"
@@ -249,7 +250,21 @@ int main(int argc, const char* argv[]) {
     }
     if (emitSimit) {
       cout << "--- Tensor storage" << endl;
-      cout << func.getStorage() << endl << endl << endl;
+      class StoragePrinter : public simit::ir::IRVisitorCallGraph {
+        using simit::ir::IRVisitor::visit;
+        void visit(const simit::ir::Func *func) {
+          simit::ir::IRVisitorCallGraph::visit(func);
+          cout << "func " << func->getName() << ":" << endl;
+
+          for (auto &var : func->getStorage()) {
+            cout << "  " << var << " : " << func->getStorage().get(var) << endl;
+          }
+          cout << endl;
+        }
+      };
+      StoragePrinter storagePrinter;
+      func.accept(&storagePrinter);
+      cout << endl;
     }
     
     {

@@ -24,6 +24,13 @@ func eye(m : float) -> (M : tensor[3,3](float))
   M = 0.5 * m * I;
 end
 
+%%% read_result
+%! read_result([1.0, 2.0]) == [1.0, 3.0];
+func read_result(a : tensor[2](float)) -> (b : tensor[2](float))
+  b(0) = a(0);
+  b(1) = b(0) + a(1);
+end
+
 %%% fs
 %! fs([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [8.2742, 4.9645, 1.6548];
 func fs(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, s : float) -> (f : tensor[3](float))

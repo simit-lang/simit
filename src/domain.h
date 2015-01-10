@@ -70,7 +70,7 @@ public:
 
   /// Get the number of elements in the product of the index sets if all the
   /// index sets are Range sets, otherwise undefined.
-  size_t getSize() const;
+  int getSize() const;
 
 private:
   std::vector<IndexSet> indexSets;

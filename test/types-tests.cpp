@@ -23,14 +23,14 @@ TEST(IndexSet, eq) {
 TEST(IndexDomain, getSize) {
   vector<IndexSet> indices;
   indices.push_back(IndexSet(1));
-  ASSERT_EQ(IndexDomain(indices).getSize(), 1u);
+  ASSERT_EQ(IndexDomain(indices).getSize(), 1);
 
   indices.clear();
   indices.push_back(IndexSet(3));
-  ASSERT_EQ(IndexDomain(indices).getSize(), 3u);
+  ASSERT_EQ(IndexDomain(indices).getSize(), 3);
 
   indices.push_back(IndexSet(4));
-  ASSERT_EQ(IndexDomain(indices).getSize(), 12u);
+  ASSERT_EQ(IndexDomain(indices).getSize(), 12);
 }
 
 TEST(IndexDomain, eq) {

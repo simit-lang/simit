@@ -1,0 +1,11 @@
+element Point
+  x : tensor[2](float);
+end
+
+extern points : set{Point};
+
+proc main
+  x = points.x;
+  x = 2.0 * x;
+  points.x = x;
+end

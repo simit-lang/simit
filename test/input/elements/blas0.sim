@@ -23,6 +23,12 @@ func sub(a : float, b : float) -> (c : float)
   c = a - b;
 end
 
+%%% sub 2
+%- sub(3.0, 2.0, 1.0) == 0.0;
+func sub(a : float, b : float, d:float) -> (c : float)
+  c = a - b - c;
+end
+
 %%% mul
 %! mul(3.0, 2.0) == 6.0;
 func mul(a : float, b : float) -> (c : float)
