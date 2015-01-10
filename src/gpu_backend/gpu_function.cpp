@@ -147,10 +147,10 @@ void GPUFunction::pullArgAndFree(void *hostPtr, DeviceDataHandle handle) {
 }
 
 void GPUFunction::print(std::ostream &os) const {
-  os << "-- LLVM module" << std::endl;
-  //os << moduleStr << std::endl << std::endl;
-  os << "-- PTX module" << std::endl;
-  //os << ptxStr << std::endl << std::endl;
+  std::string moduleStr;
+  llvm::raw_string_ostream str(moduleStr);
+  str << *module;
+  os << moduleStr << std::endl << std::endl;
   // TODO(gkanwar): Print out CUDA data setup aspects as well
 }
 
