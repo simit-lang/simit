@@ -1,5 +1,6 @@
 #include <memory>
 #include <fstream>
+#include "error.h"
 
 namespace simit {
 namespace internal {
@@ -11,6 +12,10 @@ std::unique_ptr<char[]> get_simit_gpu_initmod_intrinsics() {
   in.open("../support/intrinsics.ll");
   in.seekg(0, std::ios::end);
   simit_gpu_initmod_intrinsics_length = in.tellg();
+
+  // make sure the file read successfully, otherwise this is monumentally unsafe!
+  iassert(simit_gpu_initmod_intrinsics_length > 0);
+
   in.seekg(0, std::ios::beg);
   std::unique_ptr<char[]> buffer(new char[
       simit_gpu_initmod_intrinsics_length]);
