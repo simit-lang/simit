@@ -1,0 +1,26 @@
+element Point
+  x : float;
+end
+
+element Spring
+  u : float;
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+func f1(F:tensor[3,3](float))->(P:tensor[3,3](float))
+  P = F';
+end
+
+func f(s : Spring, p : (Point*2)) -> (X : tensor[points](float))
+  F = [1.0,0.0,0.0;0.0,1.0,0.0;0.0,0.0,1.0];
+  F1 = f1(F);
+  x0 = F1(0,0);
+  X(p(0)) = x0;
+end
+
+proc main
+  X = map f to springs with points reduce +;
+  points.x = X;
+end

@@ -74,6 +74,39 @@ TEST(System, misc_assemble_from_literal_vector) {
   ASSERT_EQ(1.0, x.get(p1));
 }
 
+TEST(System, DISABLED_misc_assemble_fem) {
+  // Points
+  Set<> points;
+  FieldRef<double> x = points.addField<double>("x");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  x.set(p0, {0.0});
+  x.set(p1, {0.0});
+
+  // Springs
+  Set<2> springs(points,points);
+  FieldRef<double> u = springs.addField<double>("u");
+
+  springs.add(p0,p1);
+  springs.add(p1,p2);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(1.0, x.get(p0));
+  ASSERT_EQ(1.0, x.get(p1));
+}
+
 TEST(System, DISABLED_misc_map_one_set) {
   // Points
   Set<> points;
