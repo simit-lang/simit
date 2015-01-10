@@ -40,13 +40,18 @@ public:
     if (initRequired) {
       init();
     }
+    unmapArgs();
     funcPtr();
+    mapArgs();
   }
 
   inline void run() {
     iassert(!initRequired);
     funcPtr();
   }
+  
+  void mapArgs() {}
+  void unmapArgs(bool updated=true) {}
 
 protected:
   typedef void (*FuncPtrType)();
