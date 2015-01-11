@@ -86,11 +86,7 @@ protected:
   void firstAssign(Var var, VarAction action=LIFT) {
     if (action == LIFT) {
       std::string varName = var.getName();
-      // int depth = sharding.getDepth();
-      // iassert(depth >= 0 && depth < 2)
-      // << "Sharding depth must be 0, 1, or 2";
-      // XXX: Just for now
-      // iassert(depth == 0);
+
       const TensorType *origType = var.getType().toTensor();
       Type type = TensorType::make(origType->componentType,
                                    origType->dimensions,
@@ -112,7 +108,10 @@ protected:
 };
 
 // Visit all IR nodes which can store Var, and replace if it is
-// the shared var
+// the shared var.
+// This is only necessary to be sure the type of the sharedVar
+// actually matches, since it is expanded and rewritten for every
+// new field appended in the LiftGPUVars pass.
 class ReplaceShared : public IRRewriter {
 public:
   ReplaceShared(Var sharedVar) : sharedVar(sharedVar) {}
@@ -128,10 +127,6 @@ protected:
     }
   }
 
-  void visit(const Map *op) {
-    ierror << "Maps should be eliminated before sharding loops";
-  }
-
   void visit(const AssignStmt *op) {
     if (op->var.getName() == "$shared") {
       std::cerr << "Replacing assignment to $shared\n";
@@ -143,6 +138,7 @@ protected:
     }
   }
 
+#if 0 // this should never happen
   void visit(const ForRange *op) {
     if (op->var.getName() == "$shared") {
       Expr start = rewrite(op->start);
@@ -164,6 +160,7 @@ protected:
       IRRewriter::visit(op);
     }
   }
+#endif
   
   Var sharedVar;
 };
