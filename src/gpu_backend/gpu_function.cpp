@@ -287,8 +287,8 @@ simit::Function::FuncType GPUFunction::init(
             << ptxStr << std::endl;
 
   // JIT linker and final CUBIN
-  char linkerInfo[1024];
-  char linkerErrors[1024];
+  char linkerInfo[16384];
+  char linkerErrors[16384];
   CUjit_option linkerOptions[] = {
     CU_JIT_INFO_LOG_BUFFER,
     CU_JIT_INFO_LOG_BUFFER_SIZE_BYTES,
@@ -298,9 +298,9 @@ simit::Function::FuncType GPUFunction::init(
   };
   void *linkerOptionValues[] = {
     linkerInfo,
-    reinterpret_cast<void*>(1024),
+    reinterpret_cast<void*>(16384),
     linkerErrors,
-    reinterpret_cast<void*>(1024),
+    reinterpret_cast<void*>(16384),
     reinterpret_cast<void*>(1)
   };
 
@@ -318,7 +318,8 @@ simit::Function::FuncType GPUFunction::init(
 
   std::cout << "Linker log:" << std::endl
             << linkerInfo << std::endl
-            << linkerErrors << std::endl;
+            << linkerErrors << std::endl
+            << "End linker log." << std::endl;
 
   // Create CUDA module for binary object
   checkCudaErrors(cuModuleLoadDataEx(&cudaModule, cubin, 0, 0, 0));

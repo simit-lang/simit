@@ -648,17 +648,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
       getParamFunc, kernelBitCast, gridDims, blockDims, llvmInt(0));
 
   // Insert args into param buffer
-  uint64_t bufIndex = 0;
-  llvm::DataLayout dataLayout(module);
-  for (auto &arg : args) {
-    llvm::Value *bufPtr = builder->CreateGEP(paramBuf, llvmInt(bufIndex));
-    llvm::Value *argPtr = builder->CreateBitCast(
-        bufPtr,
-        // Pointer to arg type, addrspace 0
-        llvm::PointerType::get(arg->getType(), 0));
-    builder->CreateStore(arg, argPtr);
-    bufIndex += dataLayout.getTypeAllocSize(arg->getType());
-  }
+  emitFillBuf(paramBuf, args);
 
   llvm::Function *cudaLaunchFunc = llvm::cast<llvm::Function>(
       module->getOrInsertFunction("cudaLaunchDeviceV2", launchDevFuncTy));
@@ -674,6 +664,42 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   builder->CreateCall(syncFunc);
 }
 
+void GPUBackend::emitPrintf(std::string format,
+                            std::vector<llvm::Value*> args) {
+  llvm::Value *formatPtr = emitGlobalString(format);
+
+  // Convert any args that need to be extended
+  for (int i = 0; i < args.size(); ++i) {
+    auto &arg = args[i];
+    if (arg->getType()->isFloatTy()) {
+      args[i] = builder->CreateFPExt(arg, LLVM_DOUBLE);
+    }
+    else if (arg->getType()->isIntegerTy()) {
+      unsigned width = arg->getType()->getIntegerBitWidth();
+      if (width < 32) {
+        args[i] = builder->CreateSExt(arg, LLVM_INT);
+      }
+    }
+  }
+
+  // Alloc args buf
+  size_t size = 0;
+  for (auto &arg : args) {
+    size += dataLayout->getTypeAllocSize(arg->getType());
+  }
+
+  llvm::Value *argBuf = builder->CreateAlloca(LLVM_INT8, llvmInt(size), "buffer");
+  emitFillBuf(argBuf, args);
+
+  // Create and call vprintf syscall
+  std::vector<llvm::Type*> argTys = {LLVM_INT8PTR, LLVM_INT8PTR};
+  llvm::FunctionType *vprintfTy = llvm::FunctionType::get(
+      LLVM_INT, argTys, false);
+  llvm::Function *vprintf = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("vprintf", vprintfTy));
+
+  builder->CreateCall2(vprintf, formatPtr, argBuf);
+}
 void GPUBackend::emitFirstAssign(const ir::Var& var,
                                  const ir::Expr& value) {
   // TODO(gkanwar): This doesn't handle sharding later in the code
@@ -685,6 +711,20 @@ void GPUBackend::emitFirstAssign(const ir::Var& var,
     // dimensional array to allow correct scoping with nested sharding.
     // Potentially should be done as a second pass.
     LLVMBackend::emitFirstAssign(var, value);
+  }
+}
+
+void GPUBackend::emitFillBuf(llvm::Value *buffer,
+                             std::vector<llvm::Value*> vals) {
+  uint64_t bufIndex = 0;
+  for (auto &val : vals) {
+    llvm::Value *bufPtr = builder->CreateGEP(buffer, llvmInt(bufIndex));
+    llvm::Value *valPtr = builder->CreateBitCast(
+        bufPtr,
+        // Pointer to arg type, addrspace 0
+        llvm::PointerType::get(val->getType(), 0));
+    builder->CreateStore(val, valPtr);
+    bufIndex += dataLayout->getTypeAllocSize(val->getType());
   }
 }
 

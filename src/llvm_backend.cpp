@@ -1343,6 +1343,22 @@ llvm::Value *LLVMBackend::emitCall(string name, vector<llvm::Value*> args,
   return builder->CreateCall(fun, std::vector<llvm::Value*>(args));
 }
 
+llvm::Constant *LLVMBackend::emitGlobalString(const std::string& str) {
+  auto strValue = llvm::ConstantDataArray::getString(LLVM_CONTEXT, str);
+  auto strType = llvm::ArrayType::get(LLVM_INT8, str.size()+1);
+
+  llvm::GlobalVariable *strGlobal =
+      new llvm::GlobalVariable(*module, strType, true,
+                               llvm::GlobalValue::PrivateLinkage, strValue,
+                               "_str");
+  llvm::Constant *zero = llvm::Constant::getNullValue(LLVM_INT);
+
+  std::vector<llvm::Constant*> idx;
+  idx.push_back(zero);
+  idx.push_back(zero);
+  return llvm::ConstantExpr::getGetElementPtr(strGlobal, idx);
+}
+
 llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
                                                const vector<ir::Var> &arguments,
                                                const vector<ir::Var> &results) {
@@ -1370,12 +1386,11 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
 
 void LLVMBackend::emitPrintf(std::string format,
                              std::vector<llvm::Value*> args) {
-  auto int32Type = llvm::IntegerType::getInt32Ty(LLVM_CONTEXT);
   llvm::Function *printfFunc = module->getFunction("printf");
   if (printfFunc == nullptr) {
     std::vector<llvm::Type*> printfArgTypes;
     printfArgTypes.push_back(llvm::Type::getInt8PtrTy(LLVM_CONTEXT));
-    llvm::FunctionType* printfType = llvm::FunctionType::get(int32Type,
+    llvm::FunctionType* printfType = llvm::FunctionType::get(LLVM_INT,
                                                              printfArgTypes,
                                                              true);
     printfFunc = llvm::Function::Create(printfType,
@@ -1384,21 +1399,7 @@ void LLVMBackend::emitPrintf(std::string format,
     printfFunc->setCallingConv(llvm::CallingConv::C);
   }
 
-  auto formatValue = llvm::ConstantDataArray::getString(LLVM_CONTEXT, format);
-
-  auto intType = llvm::IntegerType::get(LLVM_CONTEXT,8);
-  auto formatStrType = llvm::ArrayType::get(intType, format.size()+1);
-
-  llvm::GlobalVariable *formatStr =
-      new llvm::GlobalVariable(*module, formatStrType, true,
-                               llvm::GlobalValue::PrivateLinkage, formatValue,
-                               ".str");
-  llvm::Constant *zero = llvm::Constant::getNullValue(int32Type);
-
-  std::vector<llvm::Constant*> idx;
-  idx.push_back(zero);
-  idx.push_back(zero);
-  llvm::Constant *str = llvm::ConstantExpr::getGetElementPtr(formatStr, idx);
+  llvm::Value *str = emitGlobalString(format);
 
   std::vector<llvm::Value*> printfArgs;
   printfArgs.push_back(str);

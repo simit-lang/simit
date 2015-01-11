@@ -19,6 +19,7 @@ class ExecutionEngine;
 class ConstantFolder;
 template<bool> class IRBuilderDefaultInserter;
 template<bool, typename, typename> class IRBuilder;
+class Constant;
 class Type;
 class Value;
 class Instruction;
@@ -126,14 +127,16 @@ protected:
   llvm::Value *emitCall(std::string name, std::vector<llvm::Value*> args,
                         llvm::Type *returnType);
 
+  /// Build a global string and return a constant pointer to it
+  llvm::Constant *emitGlobalString(const std::string& str);
+
   /// Emit an empty function and set the builder cursor to its entry block. The
   /// function's arguments and result variables are added to the symbol table.
   llvm::Function *emitEmptyFunction(const std::string &name,
                                     const std::vector<ir::Var> &arguments,
                                     const std::vector<ir::Var> &results);
 
-//  void emitPrintf(std::string format);
-  void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
+  virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
   virtual void emitFirstAssign(const ir::Var& var,
                                const ir::Expr& value);
