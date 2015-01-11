@@ -32,14 +32,14 @@ llvm::Constant* llvmBool(bool val) {
   return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(1, intVal, false));
 }
 
-llvm::Type *llvmPtrType(ScalarType stype) {
+llvm::Type *llvmPtrType(ScalarType stype, unsigned addrspace) {
   switch (stype.kind) {
     case ScalarType::Int:
-      return LLVM_INTPTR;
+      return llvm::Type::getInt32PtrTy(LLVM_CONTEXT, addrspace);
     case ScalarType::Float:
-      return getLLVMFloatPtrType();
+      return getLLVMFloatPtrType(addrspace);
     case ScalarType::Boolean:
-      return LLVM_BOOL;
+      return llvm::Type::getInt1PtrTy(LLVM_CONTEXT, addrspace);
   }
   unreachable;
   return nullptr;
@@ -54,8 +54,9 @@ llvm::Constant *llvmPtr(llvm::Type *type, const void *data) {
   return llvm::ConstantExpr::getIntToPtr(c, type);
 }
 
-llvm::Constant *llvmPtr(const Type &type, const void *data) {
-  return llvmPtr(createLLVMType(type), data);
+llvm::Constant *llvmPtr(const Type &type, const void *data,
+                        unsigned addrspace) {
+  return llvmPtr(createLLVMType(type, addrspace), data);
 }
 
 llvm::Constant *llvmPtr(const Literal *literal) {
@@ -107,24 +108,24 @@ llvm::Type *getLLVMFloatType() {
   }
 }
 
-llvm::Type *getLLVMFloatPtrType() {
+llvm::Type *getLLVMFloatPtrType(unsigned addrspace) {
   if (ScalarType::singleFloat()) {
-    return LLVM_FLOATPTR;
+    return llvm::Type::getFloatPtrTy(LLVM_CONTEXT, addrspace);
   }
   else {
-    return LLVM_DOUBLEPTR;
+    return llvm::Type::getDoublePtrTy(LLVM_CONTEXT, addrspace);
   }
 }
 
-llvm::Type *createLLVMType(const Type &type) {
+llvm::Type *createLLVMType(const Type &type, unsigned addrspace) {
   switch (type.kind()) {
     case Type::Tensor:
-      return createLLVMType(type.toTensor());
+      return createLLVMType(type.toTensor(), addrspace);
     case Type::Element:
       not_supported_yet;
       break;
     case Type::Set:
-      return createLLVMType(type.toSet());
+      return createLLVMType(type.toSet(), addrspace);
     case Type::Tuple:
       not_supported_yet;
       break;
@@ -134,7 +135,8 @@ llvm::Type *createLLVMType(const Type &type) {
 }
 
 // TODO: replace anonymous struct with one struct per element and set type
-llvm::StructType *createLLVMType(const ir::SetType *setType) {
+llvm::StructType *createLLVMType(const ir::SetType *setType,
+                                 unsigned addrspace) {
   const ElementType *elemType = setType->elementType.toElement();
   vector<llvm::Type*> llvmFieldTypes;
 
@@ -144,22 +146,25 @@ llvm::StructType *createLLVMType(const ir::SetType *setType) {
   // Edge indices (if the set is an edge set)
   if (setType->endpointSets.size() > 0) {
     // Endpoints
-    llvmFieldTypes.push_back(LLVM_INTPTR);
+    llvmFieldTypes.push_back(
+        llvm::Type::getInt32PtrTy(LLVM_CONTEXT, addrspace));
 
     // Neighbor Index
-    llvmFieldTypes.push_back(LLVM_INTPTR);
-    llvmFieldTypes.push_back(LLVM_INTPTR);
+    llvmFieldTypes.push_back(
+        llvm::Type::getInt32PtrTy(LLVM_CONTEXT, addrspace));
+    llvmFieldTypes.push_back(
+        llvm::Type::getInt32PtrTy(LLVM_CONTEXT, addrspace));
   }
 
   // Fields
   for (const Field &field : elemType->fields) {
-    llvmFieldTypes.push_back(createLLVMType(field.type));
+    llvmFieldTypes.push_back(createLLVMType(field.type, addrspace));
   }
   return llvm::StructType::get(LLVM_CONTEXT, llvmFieldTypes);
 }
 
-llvm::Type *createLLVMType(const TensorType *type) {
-  return llvmPtrType(type->componentType);;
+llvm::Type *createLLVMType(const TensorType *type, unsigned addrspace) {
+  return llvmPtrType(type->componentType, addrspace);
 }
 
 llvm::Type *createLLVMType(ScalarType stype) {
@@ -221,7 +226,7 @@ llvm::Function *createPrototype(const std::string &name,
     // while everything else is passed through a pointer
     llvm::Type *llvmType = isScalar(arg.getType())
         ? createLLVMType(arg.getType().toTensor()->componentType)
-        : createLLVMType(arg.getType());
+        : createLLVMType(arg.getType(), LLVM_GLOBAL_ADDRSPACE);
     llvmArgTypes.push_back(llvmType);
   }
 
@@ -230,7 +235,7 @@ llvm::Function *createPrototype(const std::string &name,
       continue;
     }
     llvmArgNames.push_back(res.getName());
-    llvmArgTypes.push_back(createLLVMType(res.getType()));
+    llvmArgTypes.push_back(createLLVMType(res.getType(), LLVM_GLOBAL_ADDRSPACE));
   }
 
   assert(llvmArgNames.size() == llvmArgTypes.size());

@@ -1402,7 +1402,6 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
 
 void LLVMBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
                              llvm::Value *size, unsigned align) {
-  std::cout << "Using LLVMBackend memcpy" << std::endl;
   builder->CreateMemCpy(dst, src, size, align);
 }
 

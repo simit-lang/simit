@@ -31,6 +31,17 @@
 #define LLVM_INT32     llvm::Type::getInt32Ty(LLVM_CONTEXT)
 #define LLVM_INT64     llvm::Type::getInt64Ty(LLVM_CONTEXT)
 
+// Pointers with global addrspace
+#define LLVM_INTPTR_GLOBAL    llvm::Type::getInt32PtrTy(LLVM_CONTEXT, 1)
+#define LLVM_FLOATPTR_GLOBAL  llvm::Type::getFloatPtrTy(LLVM_CONTEXT, 1)
+#define LLVM_DOUBLEPTR_GLOBAL llvm::Type::getDoublePtrTy(LLVM_CONTEXT, 1)
+#define LLVM_BOOLPTR_GLOBAL   llvm::Type::getInt1PtrTy(LLVM_CONTEXT, 1)
+#define LLVM_INT8PTR_GLOBAL   llvm::Type::getInt8PtrTy(LLVM_CONTEXT, 1)
+
+#define LLVM_GENERIC_ADDRSPACE 0
+#define LLVM_GLOBAL_ADDRSPACE 1
+#define LLVM_SHARED_ADDRSPACE 3
+
 typedef llvm::IRBuilder<true, llvm::ConstantFolder,
                         llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
@@ -49,20 +60,24 @@ extern const int NUM_EDGE_INDEX_ELEMENTS;
 
 extern bool singlePrecision;
 llvm::Type *getLLVMFloatType();
-llvm::Type *getLLVMFloatPtrType();
+llvm::Type *getLLVMFloatPtrType(unsigned addrspace=0);
 
-llvm::Type *llvmPtrType(ir::ScalarType stype);
+llvm::Type *llvmPtrType(ir::ScalarType stype, unsigned addrspace);
 
 llvm::Constant *llvmPtr(llvm::Type *type, const void *data);
-llvm::Constant *llvmPtr(const ir::Type &type, const void *data);
+llvm::Constant *llvmPtr(const ir::Type &type, const void *data,
+                        unsigned addrspace=0);
 llvm::Constant *llvmPtr(const ir::Literal *literal);
 llvm::Constant *llvmVal(const ir::Literal *literal);
 
 ir::Type simitType(const llvm::Type *type);
 
-llvm::Type       *createLLVMType(const ir::Type &);
-llvm::StructType *createLLVMType(const ir::SetType *);
-llvm::Type       *createLLVMType(const ir::TensorType *ttype);
+llvm::Type       *createLLVMType(const ir::Type &,
+                                 unsigned addrspace=0);
+llvm::StructType *createLLVMType(const ir::SetType *,
+                                 unsigned addrspace=0);
+llvm::Type       *createLLVMType(const ir::TensorType *ttype,
+                                 unsigned addrspace=0);
 llvm::Type       *createLLVMType(ir::ScalarType stype);
 
 /// Creates an llvm function prototype
