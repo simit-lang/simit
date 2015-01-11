@@ -5,8 +5,6 @@
 #include "error.h"
 #include "llvm_codegen.h"
 
-#include "gpu_backend/intrinsics.h"
-
 namespace simit {
 namespace internal {
 
@@ -39,12 +37,15 @@ llvm::Module *createNVVMModule(std::string name) {
   return module;
 }
 
-extern "C" unsigned char simit_gpu_initmod_compute_20[];
-extern "C" int simit_gpu_initmod_compute_20_length;
-extern "C" unsigned char simit_gpu_initmod_compute_30[];
-extern "C" int simit_gpu_initmod_compute_30_length;
-extern "C" unsigned char simit_gpu_initmod_compute_35[];
-extern "C" int simit_gpu_initmod_compute_35_length;
+extern "C" unsigned char simit_gpu_libdevice_compute_20[];
+extern "C" int simit_gpu_libdevice_compute_20_length;
+extern "C" unsigned char simit_gpu_libdevice_compute_30[];
+extern "C" int simit_gpu_libdevice_compute_30_length;
+extern "C" unsigned char simit_gpu_libdevice_compute_35[];
+extern "C" int simit_gpu_libdevice_compute_35_length;
+
+extern "C" unsigned char simit_gpu_intrinsics[];
+extern "C" int simit_gpu_intrinsics_length;
 
 std::string generatePtx(const std::string &module,
                         int devMajor, int devMinor,
@@ -70,25 +71,26 @@ std::string generatePtx(const std::string &module,
   const char *libdevice;
   int libdevice_length;
   if (devMajor == 3 && devMajor == 0) {
-    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_30);
-    libdevice_length = simit_gpu_initmod_compute_30_length;
+    libdevice = reinterpret_cast<const char*>(simit_gpu_libdevice_compute_30);
+    libdevice_length = simit_gpu_libdevice_compute_30_length;
   } else if (devMajor == 3 && devMajor == 5) {
-    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_35);
-    libdevice_length = simit_gpu_initmod_compute_35_length;
+    libdevice = reinterpret_cast<const char*>(simit_gpu_libdevice_compute_35);
+    libdevice_length = simit_gpu_libdevice_compute_35_length;
   } else {
-    libdevice = reinterpret_cast<const char*>(simit_gpu_initmod_compute_20);
-    libdevice_length = simit_gpu_initmod_compute_20_length;
+    libdevice = reinterpret_cast<const char*>(simit_gpu_libdevice_compute_20);
+    libdevice_length = simit_gpu_libdevice_compute_20_length;
   }
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
                                        libdevice, libdevice_length,
                                        "libdevice"));
 
+#if 0 // disabled for now, since it breaks in NVVM with either ll or bc blobs
   // Add intrinsics bitcode library
-  std::unique_ptr<char[]> intrinsics_buf(get_simit_gpu_initmod_intrinsics().release());
-  const char *intrinsics = reinterpret_cast<const char*>(intrinsics_buf.get());
+  const char *intrinsics = reinterpret_cast<const char*>(simit_gpu_intrinsics);
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit, intrinsics,
-                                       simit_gpu_initmod_intrinsics_length,
+                                       simit_gpu_intrinsics_length,
                                        "intrinsics"));
+#endif
 
   // Create NVVM compilation unit from LLVM IR
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit,

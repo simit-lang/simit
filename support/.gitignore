@@ -1,1 +1,5 @@
 bitcode2cpp
+linalg.bc
+linalg.ll
+intrinsics.bc
+initmod.*.bc

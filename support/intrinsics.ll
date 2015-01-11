@@ -1,9 +1,47 @@
-; ModuleID = 'intrinsics.c'
-; target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
-; target triple = "x86_64-pc-linux-gnu"
+; ModuleID = 'intrinsics.bc'
 
-; Function Attrs: nounwind uwtable
-define double @dot_f64(double* %a, double* %b, i32 %len) nounwind {
+; Function Attrs: nounwind ssp uwtable
+define i32 @loc(i32 %v0, i32 %v1, i32* %neighbors_start, i32* %neighbors) #0 {
+  %1 = alloca i32, align 4
+  %2 = alloca i32, align 4
+  %3 = alloca i32*, align 8
+  %4 = alloca i32*, align 8
+  %l = alloca i32, align 4
+  store i32 %v0, i32* %1, align 4
+  store i32 %v1, i32* %2, align 4
+  store i32* %neighbors_start, i32** %3, align 8
+  store i32* %neighbors, i32** %4, align 8
+  %5 = load i32* %1, align 4
+  %6 = sext i32 %5 to i64
+  %7 = load i32** %3, align 8
+  %8 = getelementptr inbounds i32* %7, i64 %6
+  %9 = load i32* %8, align 4
+  store i32 %9, i32* %l, align 4
+  br label %10
+
+; <label>:10                                      ; preds = %18, %0
+  %11 = load i32* %l, align 4
+  %12 = sext i32 %11 to i64
+  %13 = load i32** %4, align 8
+  %14 = getelementptr inbounds i32* %13, i64 %12
+  %15 = load i32* %14, align 4
+  %16 = load i32* %2, align 4
+  %17 = icmp ne i32 %15, %16
+  br i1 %17, label %18, label %21
+
+; <label>:18                                      ; preds = %10
+  %19 = load i32* %l, align 4
+  %20 = add nsw i32 %19, 1
+  store i32 %20, i32* %l, align 4
+  br label %10
+
+; <label>:21                                      ; preds = %10
+  %22 = load i32* %l, align 4
+  ret i32 %22
+}
+
+; Function Attrs: nounwind ssp uwtable
+define double @dot_f64(double* %a, double* %b, i32 %len) #0 {
   %1 = alloca double*, align 8
   %2 = alloca double*, align 8
   %3 = alloca i32, align 4
@@ -50,8 +88,8 @@ define double @dot_f64(double* %a, double* %b, i32 %len) nounwind {
   ret double %26
 }
 
-; Function Attrs: nounwind uwtable
-define float @dot_f32(float* %a, float* %b, i32 %len) nounwind {
+; Function Attrs: nounwind ssp uwtable
+define float @dot_f32(float* %a, float* %b, i32 %len) #0 {
   %1 = alloca float*, align 8
   %2 = alloca float*, align 8
   %3 = alloca i32, align 4
@@ -98,8 +136,8 @@ define float @dot_f32(float* %a, float* %b, i32 %len) nounwind {
   ret float %26
 }
 
-; Function Attrs: nounwind uwtable
-define double @norm_f64(double* %a, i32 %len) nounwind {
+; Function Attrs: nounwind ssp uwtable
+define double @norm_f64(double* %a, i32 %len) #0 {
   %1 = alloca double*, align 8
   %2 = alloca i32, align 4
   store double* %a, double** %1, align 8
@@ -114,10 +152,10 @@ define double @norm_f64(double* %a, i32 %len) nounwind {
   ret double %9
 }
 
-declare float @__nv_sqrtf(float)
+declare float @__nv_sqrtf(float) #1
 
-; Function Attrs: nounwind uwtable
-define float @norm_f32(float* %a, i32 %len) nounwind {
+; Function Attrs: nounwind ssp uwtable
+define float @norm_f32(float* %a, i32 %len) #0 {
   %1 = alloca float*, align 8
   %2 = alloca i32, align 4
   store float* %a, float** %1, align 8
@@ -130,8 +168,8 @@ define float @norm_f32(float* %a, i32 %len) nounwind {
   ret float %7
 }
 
-; Function Attrs: nounwind uwtable
-define double @det3_f64(double* %a) nounwind {
+; Function Attrs: nounwind ssp uwtable
+define double @det3_f64(double* %a) #0 {
   %1 = alloca double*, align 8
   store double* %a, double** %1, align 8
   %2 = load double** %1, align 8
@@ -196,8 +234,8 @@ define double @det3_f64(double* %a) nounwind {
   ret double %60
 }
 
-; Function Attrs: nounwind uwtable
-define float @det3_f32(float* %a) nounwind {
+; Function Attrs: nounwind ssp uwtable
+define float @det3_f32(float* %a) #0 {
   %1 = alloca float*, align 8
   store float* %a, float** %1, align 8
   %2 = load float** %1, align 8
@@ -262,8 +300,8 @@ define float @det3_f32(float* %a) nounwind {
   ret float %60
 }
 
-; Function Attrs: nounwind uwtable
-define void @inv3_f64(double* %a, double* %inv) nounwind {
+; Function Attrs: nounwind ssp uwtable
+define void @inv3_f64(double* %a, double* %inv) #0 {
   %1 = alloca double*, align 8
   %2 = alloca double*, align 8
   %cof00 = alloca double, align 8
@@ -504,8 +542,8 @@ define void @inv3_f64(double* %a, double* %inv) nounwind {
   ret void
 }
 
-; Function Attrs: nounwind uwtable
-define void @inv3_f32(float* %a, float* %inv) nounwind {
+; Function Attrs: nounwind ssp uwtable
+define void @inv3_f32(float* %a, float* %inv) #0 {
   %1 = alloca float*, align 8
   %2 = alloca float*, align 8
   %cof00 = alloca float, align 4
@@ -748,6 +786,9 @@ define void @inv3_f32(float* %a, float* %inv) nounwind {
   ret void
 }
 
+attributes #0 = { nounwind ssp uwtable "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #1 = { "less-precise-fpmad"="false" "no-frame-pointer-elim"="true" "no-frame-pointer-elim-non-leaf" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
+
 !llvm.ident = !{!0}
 
-!0 = metadata !{metadata !"Ubuntu clang version 3.4-1ubuntu3 (tags/RELEASE_34/final) (based on LLVM 3.4)"}
+!0 = metadata !{metadata !"Apple LLVM version 6.0 (clang-600.0.56) (based on LLVM 3.5svn)"}
