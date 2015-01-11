@@ -10,6 +10,8 @@ namespace ir {
 
 class LiftGPUVars : public IRRewriter {
 public:
+  LiftGPUVars() : currentKernelSharding(nullptr) {}
+
   Var getSharedVar() {
     return sharedVar;
   }
@@ -79,12 +81,19 @@ protected:
   }
 
   void visit(const VarDecl *op) {
-    firstAssign(op->var, NONE);
+    firstAssign(op->var);
     IRRewriter::visit(op);
   }
 
-  void firstAssign(Var var, VarAction action=LIFT) {
-    if (action == LIFT) {
+  void visit(const GPUKernel *op) {
+    currentKernelSharding = &op->sharding;
+    IRRewriter::visit(op);
+    currentKernelSharding = nullptr;
+  }
+
+  void firstAssign(Var var) {
+    if (!currentKernelSharding) {
+      // lift
       std::string varName = var.getName();
 
       const TensorType *origType = var.getType().toTensor();
@@ -97,13 +106,17 @@ protected:
       //       ->dimensions.emplace_back(IndexSet(1));
       // }
       sharedFields.emplace_back(varName, type);
+      symtable.insert(var, LIFT);
     }
-    symtable.insert(var, action);
+    else {
+      symtable.insert(var, NONE);
+    }
   }
 
   // Map from symbol to transformative action
   internal::ScopedMap<ir::Var, VarAction> symtable;
   std::vector<Field> sharedFields;
+  const internal::GPUSharding *currentKernelSharding;
   Var sharedVar;
 };
 

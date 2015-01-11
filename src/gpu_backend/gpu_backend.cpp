@@ -338,6 +338,16 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
         }
         llvm::Value *value = compile(op->value);
         llvm::Value *varPtr = symtable.get(op->var);
+        // Guard against non-pointer
+        iassert(varPtr->getType()->isPointerTy());
+        // Guard against invalid addrspace
+        unsigned addrspace = ((llvm::PointerType*)varPtr->getType())
+            ->getAddressSpace();
+        if (addrspace != LLVM_GLOBAL_ADDRSPACE &&
+            addrspace != LLVM_SHARED_ADDRSPACE) {
+          LLVMBackend::visit(op);
+          return;
+        }
         emitAtomicLoadAdd(varPtr, value);
         break;
       }
