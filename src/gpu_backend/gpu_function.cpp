@@ -83,7 +83,8 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
       SetBase *set = actual.getSet();
       const ir::SetType *setType = actual.getType().toSet();
 
-      llvm::StructType *llvmSetType = createLLVMType(setType);
+      llvm::StructType *llvmSetType =
+          createLLVMType(setType, LLVM_GLOBAL_ADDRSPACE);
       std::vector<llvm::Constant*> setData;
 
       // Set size
@@ -99,7 +100,7 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         checkCudaErrors(cuMemcpyHtoD(*endpointBuffer, endpoints, size));
         pushedBufs.emplace(endpoints,
                            DeviceDataHandle(endpointBuffer, size, false));
-        setData.push_back(llvmPtr(LLVM_INTPTR,
+        setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
                                   reinterpret_cast<void*>(*endpointBuffer)));
 
         // Edges index
@@ -121,7 +122,7 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         // not be written, but must be casted anyway.
         pushedBufs.emplace(const_cast<int*>(startIndex),
                            DeviceDataHandle(startBuffer, startSize, false));
-        setData.push_back(llvmPtr(LLVM_INTPTR,
+        setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
                                   reinterpret_cast<void*>(*startBuffer)));
 
         checkCudaErrors(cuMemAlloc(nbrBuffer, nbrSize));
@@ -131,7 +132,7 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         // not be written, but must be casted anyway.
         pushedBufs.emplace(const_cast<int*>(nbrIndex),
                            DeviceDataHandle(nbrBuffer, nbrSize, false));
-        setData.push_back(llvmPtr(LLVM_INTPTR,
+        setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
                                   reinterpret_cast<void*>(*nbrBuffer)));
       }
 
@@ -149,7 +150,8 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         checkCudaErrors(cuMemAlloc(devBuffer, size));
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
         pushedBufs.emplace(fieldData, DeviceDataHandle(devBuffer, size, shouldPull));
-        setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer)));
+        setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer),
+                                  LLVM_GLOBAL_ADDRSPACE));
       }
 
       return llvm::ConstantStruct::get(llvmSetType, setData);

@@ -69,6 +69,19 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   llvm::BasicBlock *entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", func);
   builder.reset(new LLVMIRBuilder(entry));
 
+  // Name LLVM arguments, insert into symtable
+  auto arg = func->arg_begin();
+  for (const ir::Var &irArg : irFunc.getArguments()) {
+    arg->setName(irArg.getName());
+    symtable.insert(irArg, &(*arg));
+    arg++;
+  }
+  for (const ir::Var &irRes : irFunc.getResults()) {
+    arg->setName(irRes.getName());
+    symtable.insert(irRes, &(*arg));
+    arg++;
+  }
+
   // Compile the body
   iassert(irFunc.getBody().defined()) << "cannot compile an undefined function";
   irFunc.getBody().accept(this);
@@ -510,11 +523,39 @@ void GPUBackend::emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value) {
 }
 
 void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
-  std::vector<llvm::Type*> argTys = {LLVM_FLOATPTR, LLVM_FLOAT};
+  llvm::Type *ptrGenTy = ptr->getType();
+  iassert(ptrGenTy->isPointerTy())
+      << "Atomic float load add requires pointer type for ptr";
+  llvm::PointerType *ptrTy = reinterpret_cast<llvm::PointerType*>(ptrGenTy);
+  unsigned addrspace = ptrTy->getAddressSpace();
+  std::vector<llvm::Type*> argTys;
+  std::string funcName;
+  switch (addrspace) {
+    case LLVM_GENERIC_ADDRSPACE: {
+      argTys.push_back(LLVM_FLOATPTR);
+      argTys.push_back(LLVM_FLOAT);
+      funcName = "llvm.nvvm.atomic.load.add.f32.p0f32";
+      break;
+    }
+    case LLVM_GLOBAL_ADDRSPACE: {
+      argTys.push_back(LLVM_FLOATPTR_GLOBAL);
+      argTys.push_back(LLVM_FLOAT);
+      funcName = "llvm.nvvm.atomic.load.add.f32.p1f32";
+      break;
+    }
+    case LLVM_SHARED_ADDRSPACE: {
+      argTys.push_back(llvm::Type::getFloatPtrTy(LLVM_CONTEXT, addrspace));
+      argTys.push_back(LLVM_FLOAT);
+      funcName = "llvm.nvvm.atomic.load.add.f32.p3f32";
+      break;
+    }
+    default:
+      ierror << "Unsupported addrspace for float load/add: " << addrspace;
+  }
   llvm::FunctionType *funcTy = llvm::FunctionType::get(
       LLVM_FLOAT, argTys, false);
   llvm::Function *func = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      "llvm.nvvm.atomic.load.add.f32.p0f32", funcTy));
+      funcName, funcTy));
   cleanFuncAttrs(func);
   builder->CreateCall2(func, ptr, value);
 }
@@ -623,6 +664,14 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
       module->getOrInsertFunction("cudaLaunchDeviceV2", launchDevFuncTy));
   builder->CreateCall2(cudaLaunchFunc, paramBuf,
                        llvm::ConstantPointerNull::get(cuStreamPtrTy));
+
+  // Synchronize memory after the call
+  std::vector<llvm::Type*> argTys;
+  llvm::FunctionType *syncFuncTy = llvm::FunctionType::get(
+      LLVM_INT, argTys, false);
+  llvm::Function *syncFunc = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("cudaDeviceSynchronize", syncFuncTy));
+  builder->CreateCall(syncFunc);
 }
 
 void GPUBackend::emitFirstAssign(const ir::Var& var,
