@@ -170,19 +170,19 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
   public:
     ReduceRewriter(Stmt rstmt, ReductionOperator rop) : rstmt(rstmt), rop(rop){}
 
-    Var getTmpVar() {return tmpVar;}
+    Var getReductionVar() {return reductionVar;}
 
     /// Retrieve a statement that writes the tmp variable to the original
     /// location of the rewritten statement.  If result is !defined then the
     /// reduction variable does not ned to be written back.
-    Stmt getTmpWritebackStmt() {return tmpWritebackStmt;}
+    Stmt getReductionVarWritebackStmt() {return reductionVarWriteBackStmt;}
 
   private:
     Stmt rstmt;
     ReductionOperator rop;
 
-    Var tmpVar;
-    Stmt tmpWritebackStmt;
+    Var reductionVar;
+    Stmt reductionVarWriteBackStmt;
     
     using IRRewriter::visit;
 
@@ -230,10 +230,11 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
     void visit(const AssignStmt *op) {
       if (op == rstmt) {
         ScalarType componentType = op->var.getType().toTensor()->componentType;
-        tmpVar = Var(op->var.getName()+"tmp", TensorType::make(componentType));
+        reductionVar = Var(op->var.getName()+"tmp",
+                           TensorType::make(componentType));
 
-        stmt = compoundAssign(tmpVar, rop, op->value);
-        tmpWritebackStmt = compoundAssign(op->var, rop, tmpVar);
+        stmt = compoundAssign(reductionVar, rop, op->value);
+        reductionVarWriteBackStmt = compoundAssign(op->var, rop, reductionVar);
       }
       else {
         stmt = op;
@@ -244,16 +245,18 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
       if (op == rstmt) {
         iassert(op->value.type().isTensor());
         ScalarType componentType = op->value.type().toTensor()->componentType;
-        string tmpVarName = getReductionTmpName(op);
-        tmpVar = Var(tmpVarName, TensorType::make(componentType));
-        stmt = compoundAssign(tmpVar, rop, op->value);
+        string reductionVarName = getReductionTmpName(op);
+        reductionVar = Var(reductionVarName, TensorType::make(componentType));
+        stmt = compoundAssign(reductionVar, rop, op->value);
 
         if (isa<TensorRead>(op->tensor)) {
-          tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar,
+          reductionVarWriteBackStmt = TensorWrite::make(op->tensor, op->indices,
+                                               reductionVar,
                                                CompoundOperator::Add);
         }
         else {
-          tmpWritebackStmt = TensorWrite::make(op->tensor, op->indices, tmpVar);
+          reductionVarWriteBackStmt = TensorWrite::make(op->tensor, op->indices,
+                                               reductionVar);
         }
       }
       else {
@@ -265,11 +268,13 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
       if (op == rstmt) {
         iassert(op->value.type().isTensor());
         ScalarType componentType = op->value.type().toTensor()->componentType;
-        string tmpVarName = getReductionTmpName(op);
-        tmpVar = Var(tmpVarName, TensorType::make(componentType));
-        stmt = compoundAssign(tmpVar, rop, op->value);
+        string reductionVarName = getReductionTmpName(op);
+        reductionVar = Var(reductionVarName, TensorType::make(componentType));
+        stmt = compoundAssign(reductionVar, rop, op->value);
 
-        tmpWritebackStmt = FieldWrite::make(op->elementOrSet,op->fieldName, tmpVar);
+        reductionVarWriteBackStmt = FieldWrite::make(op->elementOrSet,
+                                                     op->fieldName,
+                                                     reductionVar);
       }
       else {
         stmt = op;
@@ -281,13 +286,17 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
   loopNest = reduceRewriter.rewrite(loopNest);
 
   // Insert a temporary scalar to reduce into
-  Var tmpVar = reduceRewriter.getTmpVar();
-  iassert(tmpVar.defined());
+  Var rvar = reduceRewriter.getReductionVar();
+  iassert(rvar.defined());
 
-  Stmt alloc = AssignStmt::make(tmpVar, Literal::make(tmpVar.getType(), {0}));
-  loopNest = Block::make(alloc, loopNest);
+  Type rvarType = rvar.getType();
+  Stmt rvarDecl = VarDecl::make(rvar);
+  Stmt rvarInit =
+      Block::make(rvarDecl, AssignStmt::make(rvar,Literal::make(rvarType,{0})));
 
-  Stmt tmpWritebackStmt = reduceRewriter.getTmpWritebackStmt();
+  loopNest = Block::make(rvarInit, loopNest);
+
+  Stmt tmpWritebackStmt = reduceRewriter.getReductionVarWritebackStmt();
   if (tmpWritebackStmt.defined()) {
     loopNest = Block::make(loopNest, tmpWritebackStmt);
   }
@@ -375,7 +384,9 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
       auto tensor = to<TensorRead>(exprToCheck)->tensor;
       iassert(isa<VarExpr>(tensor));
 
-      if (storage.get(to<VarExpr>(tensor)->var).getKind() == TensorStorage::SystemDiagonal
+      TensorStorage::Kind storageKind =
+          storage.get(to<VarExpr>(tensor)->var).getKind();
+      if (storageKind == TensorStorage::SystemDiagonal
           && currentTensorWrite != nullptr) {
         std::vector<Expr> newIndices;
         newIndices.push_back(VarExpr::make(outerIndexVar));
@@ -476,7 +487,8 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
       loopNest = drRewriter.doRewrite(loopNest);
       if (drRewriter.liftedStmts.size() > 0) {
         auto newBlock = Block::make(drRewriter.liftedStmts);
-        loopNest = Block::make(newBlock, ForRange::make(ij, start, stop, loopNest));
+        loopNest = Block::make(newBlock,
+                               ForRange::make(ij, start, stop, loopNest));
       }
       else {
         loopNest = ForRange::make(ij, start, stop, loopNest);
