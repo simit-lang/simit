@@ -564,8 +564,6 @@ var_decl
 
 // Assign Statement
 assign_stmt
-  // This rule must use idents instead of IDENT or else the parser cannot parse
-  // map statements...  This is too hacky and must be fixed.
   : idents "=" IDENT "(" expr_list ")" {
     // TODO: Lots of duplicate code in this rule, and the other assignment rule/
     //       the call_or_paren_read_expr. Not good, is going to be a source of
@@ -730,8 +728,10 @@ map_stmt
                    to_string(func.getResults().size()) + ")", @1);
     }
 
+    size_t numFormals = func.getArguments().size();
     size_t numActuals = partialActuals.size() + 1 + (endpoints.size()>0 ?1:0);
-    if (func.getArguments().size() != numActuals) {
+    if (!(numFormals == numActuals ||
+          (endpoints.size() > 0 && numFormals == numActuals-1))) {
       REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
                    ") does not match the number of formals accepted by " +
                    func.getName() + " (" +
@@ -777,8 +777,10 @@ map_stmt
                    to_string(func.getResults().size()) + ")", @1);
     }
 
+    size_t numFormals = func.getArguments().size();
     size_t numActuals = partialActuals.size() + 1 + (endpoints.size()>0 ?1:0);
-    if (func.getArguments().size() != numActuals) {
+    if (!(numFormals == numActuals ||
+          (endpoints.size() > 0 && numFormals == numActuals-1))) {
       REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
                    ") does not match the number of formals accepted by " +
                    func.getName() + " (" +

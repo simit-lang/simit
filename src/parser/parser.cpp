@@ -1698,8 +1698,10 @@ namespace  simit { namespace internal  {
                    to_string(func.getResults().size()) + ")", yystack_[4].location);
     }
 
+    size_t numFormals = func.getArguments().size();
     size_t numActuals = partialActuals.size() + 1 + (endpoints.size()>0 ?1:0);
-    if (func.getArguments().size() != numActuals) {
+    if (!(numFormals == numActuals ||
+          (endpoints.size() > 0 && numFormals == numActuals-1))) {
       REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
                    ") does not match the number of formals accepted by " +
                    func.getName() + " (" +
@@ -1750,8 +1752,10 @@ namespace  simit { namespace internal  {
                    to_string(func.getResults().size()) + ")", yystack_[7].location);
     }
 
+    size_t numFormals = func.getArguments().size();
     size_t numActuals = partialActuals.size() + 1 + (endpoints.size()>0 ?1:0);
-    if (func.getArguments().size() != numActuals) {
+    if (!(numFormals == numActuals ||
+          (endpoints.size() > 0 && numFormals == numActuals-1))) {
       REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
                    ") does not match the number of formals accepted by " +
                    func.getName() + " (" +
@@ -3862,20 +3866,20 @@ namespace  simit { namespace internal  {
      393,   393,   393,   401,   435,   438,   444,   449,   457,   464,
      469,   472,   478,   483,   491,   497,   500,   507,   508,   511,
      512,   513,   514,   515,   516,   517,   518,   519,   520,   521,
-     526,   536,   558,   569,   661,   702,   746,   818,   821,   828,
-     832,   839,   842,   848,   853,   873,   895,   919,   928,   935,
-     941,   947,   960,   966,   969,   974,   986,   994,  1004,  1015,
-    1020,  1048,  1051,  1056,  1064,  1065,  1066,  1067,  1068,  1069,
-    1070,  1076,  1096,  1105,  1113,  1132,  1200,  1220,  1248,  1253,
-    1262,  1263,  1264,  1265,  1271,  1275,  1281,  1287,  1293,  1299,
-    1305,  1311,  1317,  1323,  1328,  1334,  1338,  1346,  1380,  1381,
-    1382,  1389,  1438,  1459,  1462,  1468,  1474,  1485,  1486,  1487,
-    1488,  1492,  1504,  1508,  1518,  1527,  1539,  1551,  1555,  1558,
-    1600,  1610,  1615,  1623,  1626,  1640,  1646,  1649,  1699,  1703,
-    1704,  1708,  1712,  1719,  1730,  1737,  1741,  1745,  1759,  1763,
-    1778,  1782,  1789,  1796,  1800,  1804,  1818,  1822,  1837,  1841,
-    1848,  1851,  1857,  1860,  1866,  1869,  1876,  1895,  1919,  1920,
-    1928
+     526,   536,   558,   567,   659,   700,   746,   820,   823,   830,
+     834,   841,   844,   850,   855,   875,   897,   921,   930,   937,
+     943,   949,   962,   968,   971,   976,   988,   996,  1006,  1017,
+    1022,  1050,  1053,  1058,  1066,  1067,  1068,  1069,  1070,  1071,
+    1072,  1078,  1098,  1107,  1115,  1134,  1202,  1222,  1250,  1255,
+    1264,  1265,  1266,  1267,  1273,  1277,  1283,  1289,  1295,  1301,
+    1307,  1313,  1319,  1325,  1330,  1336,  1340,  1348,  1382,  1383,
+    1384,  1391,  1440,  1461,  1464,  1470,  1476,  1487,  1488,  1489,
+    1490,  1494,  1506,  1510,  1520,  1529,  1541,  1553,  1557,  1560,
+    1602,  1612,  1617,  1625,  1628,  1642,  1648,  1651,  1701,  1705,
+    1706,  1710,  1714,  1721,  1732,  1739,  1743,  1747,  1761,  1765,
+    1780,  1784,  1791,  1798,  1802,  1806,  1820,  1824,  1839,  1843,
+    1850,  1853,  1859,  1862,  1868,  1871,  1878,  1897,  1921,  1922,
+    1930
   };
 
   // Print the state stack on the debug stream.
