@@ -716,6 +716,14 @@ map_stmt
                    to_string(func.getResults().size()) + ")", @1);
     }
 
+    size_t numActuals = partialActuals.size() + 1 + (neighbor.defined()?1:0);
+    if (func.getArguments().size() != numActuals) {
+      REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
+                   ") does not match the number of formals accepted by " +
+                   func.getName() + " (" +
+                   to_string(func.getArguments().size()) + ")", @1);
+    }
+
     if (!ctx->hasSymbol(targetName)) {
       REPORT_ERROR("undefined set '" + targetName + "'", @target);
     }
@@ -740,8 +748,16 @@ map_stmt
     if (varNames->size() != func.getResults().size()) {
       REPORT_ERROR("the number of variables (" + to_string(varNames->size()) +
                    ") does not match the number of results returned by " +
-                   func.getName() + " (" + to_string(func.getResults().size()) +
-                   ")", @1);
+                   func.getName() + " (" +
+                   to_string(func.getResults().size()) + ")", @1);
+    }
+
+    size_t numActuals = partialActuals.size() + 1 + (neighbor.defined()?1:0);
+    if (func.getArguments().size() != numActuals) {
+      REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
+                   ") does not match the number of formals accepted by " +
+                   func.getName() + " (" +
+                   to_string(func.getArguments().size()) + ")", @1);
     }
 
     if (!ctx->hasSymbol(targetName)) {

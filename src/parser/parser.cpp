@@ -1691,6 +1691,14 @@ namespace  simit { namespace internal  {
                    to_string(func.getResults().size()) + ")", yystack_[5].location);
     }
 
+    size_t numActuals = partialActuals.size() + 1 + (neighbor.defined()?1:0);
+    if (func.getArguments().size() != numActuals) {
+      REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
+                   ") does not match the number of formals accepted by " +
+                   func.getName() + " (" +
+                   to_string(func.getArguments().size()) + ")", yystack_[5].location);
+    }
+
     if (!ctx->hasSymbol(targetName)) {
       REPORT_ERROR("undefined set '" + targetName + "'", yystack_[1].location);
     }
@@ -1720,8 +1728,16 @@ namespace  simit { namespace internal  {
     if (varNames->size() != func.getResults().size()) {
       REPORT_ERROR("the number of variables (" + to_string(varNames->size()) +
                    ") does not match the number of results returned by " +
-                   func.getName() + " (" + to_string(func.getResults().size()) +
-                   ")", yystack_[8].location);
+                   func.getName() + " (" +
+                   to_string(func.getResults().size()) + ")", yystack_[8].location);
+    }
+
+    size_t numActuals = partialActuals.size() + 1 + (neighbor.defined()?1:0);
+    if (func.getArguments().size() != numActuals) {
+      REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
+                   ") does not match the number of formals accepted by " +
+                   func.getName() + " (" +
+                   to_string(func.getArguments().size()) + ")", yystack_[8].location);
     }
 
     if (!ctx->hasSymbol(targetName)) {
@@ -3856,20 +3872,20 @@ namespace  simit { namespace internal  {
      393,   393,   393,   401,   435,   438,   444,   449,   457,   464,
      469,   472,   478,   483,   491,   497,   500,   507,   508,   511,
      512,   513,   514,   515,   516,   517,   518,   519,   520,   521,
-     526,   536,   558,   569,   661,   702,   726,   779,   782,   789,
-     793,   800,   803,   816,   819,   825,   830,   850,   872,   896,
-     905,   912,   918,   924,   937,   943,   946,   951,   963,   971,
-     981,   992,   997,  1025,  1028,  1033,  1041,  1042,  1043,  1044,
-    1045,  1046,  1047,  1053,  1073,  1082,  1090,  1109,  1177,  1197,
-    1225,  1230,  1239,  1240,  1241,  1242,  1248,  1252,  1258,  1264,
-    1270,  1276,  1282,  1288,  1294,  1300,  1305,  1311,  1315,  1323,
-    1357,  1358,  1359,  1366,  1415,  1436,  1439,  1445,  1451,  1462,
-    1463,  1464,  1465,  1469,  1481,  1485,  1495,  1504,  1516,  1528,
-    1532,  1535,  1577,  1587,  1592,  1600,  1603,  1617,  1623,  1626,
-    1676,  1680,  1681,  1685,  1689,  1696,  1707,  1714,  1718,  1722,
-    1736,  1740,  1755,  1759,  1766,  1773,  1777,  1781,  1795,  1799,
-    1814,  1818,  1825,  1828,  1834,  1837,  1843,  1846,  1853,  1872,
-    1896,  1897,  1905
+     526,   536,   558,   569,   661,   702,   734,   795,   798,   805,
+     809,   816,   819,   832,   835,   841,   846,   866,   888,   912,
+     921,   928,   934,   940,   953,   959,   962,   967,   979,   987,
+     997,  1008,  1013,  1041,  1044,  1049,  1057,  1058,  1059,  1060,
+    1061,  1062,  1063,  1069,  1089,  1098,  1106,  1125,  1193,  1213,
+    1241,  1246,  1255,  1256,  1257,  1258,  1264,  1268,  1274,  1280,
+    1286,  1292,  1298,  1304,  1310,  1316,  1321,  1327,  1331,  1339,
+    1373,  1374,  1375,  1382,  1431,  1452,  1455,  1461,  1467,  1478,
+    1479,  1480,  1481,  1485,  1497,  1501,  1511,  1520,  1532,  1544,
+    1548,  1551,  1593,  1603,  1608,  1616,  1619,  1633,  1639,  1642,
+    1692,  1696,  1697,  1701,  1705,  1712,  1723,  1730,  1734,  1738,
+    1752,  1756,  1771,  1775,  1782,  1789,  1793,  1797,  1811,  1815,
+    1830,  1834,  1841,  1844,  1850,  1853,  1859,  1862,  1869,  1888,
+    1912,  1913,  1921
   };
 
   // Print the state stack on the debug stream.
