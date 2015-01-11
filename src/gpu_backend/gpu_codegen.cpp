@@ -84,13 +84,11 @@ std::string generatePtx(const std::string &module,
                                        libdevice, libdevice_length,
                                        "libdevice"));
 
-#if 0 // disabled for now, since it breaks in NVVM with either ll or bc blobs
   // Add intrinsics bitcode library
   const char *intrinsics = reinterpret_cast<const char*>(simit_gpu_intrinsics);
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit, intrinsics,
                                        simit_gpu_intrinsics_length,
                                        "intrinsics"));
-#endif
 
   // Create NVVM compilation unit from LLVM IR
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
