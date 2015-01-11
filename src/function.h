@@ -50,8 +50,12 @@ public:
     funcPtr();
   }
   
-  void mapArgs() {}
-  void unmapArgs(bool updated=true) {}
+  // TODO Should these really be an extension to the bind interface?
+  //      Per-argument updates/copies.
+  //      Don't always write in a new pointer (requires re-JIT), just alert to
+  //      updates in pointed-to data.
+  virtual void mapArgs() {}
+  virtual void unmapArgs(bool updated=true) {}
 
 protected:
   typedef void (*FuncPtrType)();

@@ -22,9 +22,12 @@ class GPUFunction : public simit::Function {
       ir::Func simitFunc, llvm::Module *module,
       std::vector< std::pair<llvm::Function *, GPUSharding> > kernels,
       class GPUSharding sharding, int cuDevMajor, int cuDevMinor);
-  ~GPUFunction() {}
+  ~GPUFunction();
 
   void print(std::ostream &os) const;
+
+  virtual void mapArgs();
+  virtual void unmapArgs(bool updated);
 
  private:
   // Find the size of a domain
@@ -42,21 +45,23 @@ class GPUFunction : public simit::Function {
     CUdeviceptr *devBuffer;
     size_t size;
     bool shouldPull;
+    // TODO: bool dirty;
 
     DeviceDataHandle(CUdeviceptr *devBuffer, size_t size, bool shouldPull=true) :
         devBuffer(devBuffer), size(size), shouldPull(shouldPull) {}
   };
 
   // Copy argument memory into device and build an llvm value to point to it
-  llvm::Value *pushArg(Actual& actual,
-                       std::map<void*, DeviceDataHandle> &pushedBufs,
-                       bool shouldPull);
-  // Copy device buffer into host data block and free the device buffer
-  void pullArgAndFree(void *hostPtr, DeviceDataHandle handle);
+  llvm::Value *pushArg(Actual& actual, bool shouldPull);
+  // Copy device buffer into host data block
+  void pullArg(void *hostPtr, DeviceDataHandle handle);
+  // Free the device buffer
+  void freeArg(DeviceDataHandle handle);
   // Create the harness function which sets up args for the main function
   llvm::Function *createHarness(const llvm::SmallVector<llvm::Value*, 8> &args,
                                 llvm::Function *kernel, llvm::Module *module);
 
+  std::map<void*, DeviceDataHandle> pushedBufs;
   std::unique_ptr<ir::Func> simitFunc;
   std::vector< std::pair<llvm::Function *, GPUSharding> > kernels;
   std::unique_ptr<llvm::Module> module;

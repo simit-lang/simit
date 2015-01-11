@@ -29,10 +29,24 @@ GPUFunction::GPUFunction(
       kernels(kernels), sharding(sharding),
       cuDevMajor(cuDevMajor), cuDevMinor(cuDevMinor) {}
 
-llvm::Value *GPUFunction::pushArg(
-    Actual& actual,
-    std::map<void*, DeviceDataHandle> &pushedBufs,
-    bool shouldPull) {
+GPUFunction::~GPUFunction() {
+  for (auto &kv : pushedBufs) {
+    freeArg(kv.second);
+  }
+}
+
+void GPUFunction::mapArgs() {
+  // Pull args back to CPU
+  for (auto &kv : pushedBufs) {
+    if (kv.second.shouldPull) pullArg(kv.first, kv.second);
+  }
+}
+
+void GPUFunction::unmapArgs(bool updated) {
+  // TODO implement
+}
+
+llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
   std::cout << "Push arg" << std::endl;
   switch (actual.getType().kind()) {
     case ir::Type::Tensor: {
@@ -151,12 +165,21 @@ llvm::Value *GPUFunction::pushArg(
   return NULL;
 }
 
-void GPUFunction::pullArgAndFree(void *hostPtr, DeviceDataHandle handle) {
-  if (handle.shouldPull) {
-    checkCudaErrors(cuMemcpyDtoH(hostPtr, *handle.devBuffer, handle.size));
-    std::cout << "Pull arg: " << *handle.devBuffer << " -> " << hostPtr
-              << " (" << handle.size << ")" << std::endl;
-  }
+void GPUFunction::pullArg(void *hostPtr, DeviceDataHandle handle) {
+  std::cout << "Pull arg: " << *handle.devBuffer << " -> " << hostPtr
+            << " (" << handle.size << ")" << std::endl;
+  checkCudaErrors(cuMemcpyDtoH(hostPtr, *handle.devBuffer, handle.size));
+}
+
+/* TODO
+void GPUFunction::pushArg(void *hostPtr, DeviceDataHandle handle) {
+  std::cout << "Push arg: " << *handle.devBuffer << " <- " << hostPtr
+            << " (" << handle.size << ")" << std::endl;
+  checkCudaErrors(cuMemcpyHtoD(*handle.devBuffer, hostPtr, handle.size));
+}
+*/
+
+void GPUFunction::freeArg(DeviceDataHandle handle) {
   checkCudaErrors(cuMemFree(*handle.devBuffer));
 }
 
@@ -229,7 +252,6 @@ simit::Function::FuncType GPUFunction::init(
 
   // Push data and build harness
   llvm::SmallVector<llvm::Value*, 8> args;
-  std::map<void*, DeviceDataHandle> pushedBufs;
   for (const std::string& formal : formals) {
     assert(actuals.find(formal) != actuals.end());
     Actual &actual = actuals.at(formal);
@@ -241,10 +263,10 @@ simit::Function::FuncType GPUFunction::init(
       sharedSet.add();
       std::cout << "Built shared." << std::endl;
       actual.bind(&sharedSet);
-      args.push_back(pushArg(actual, pushedBufs, false));
+      args.push_back(pushArg(actual, false));
     }
     else {
-      args.push_back(pushArg(actual, pushedBufs, true));
+      args.push_back(pushArg(actual, true));
     }
   }
   // Create harnesses for kernel args
@@ -311,7 +333,7 @@ simit::Function::FuncType GPUFunction::init(
         &(functions.back()), cudaModule, harness->getName().data()));
   }
 
-  return [this, functions, cudaModule, pushedBufs](){
+  return [this, functions, cudaModule](){
     iassert(kernels.size() == functions.size())
         << "Number of generated functions must equal number of kernels";
     for (int i = 0; i < kernels.size(); ++i) {
@@ -334,15 +356,10 @@ simit::Function::FuncType GPUFunction::init(
                 << gridSizeY << ","
                 << gridSizeZ << ")" << std::endl;
 
-      void **kernelParamsArr = new void*[0];
+      void **kernelParamsArr = new void*[0]; // TODO leaks
       checkCudaErrors(cuLaunchKernel(functions[i], gridSizeX, gridSizeY, gridSizeZ,
                                      blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
                                      kernelParamsArr, NULL));
-    }
-
-    // Pull args back to CPU, clean up device buffers
-    for (auto &kv : pushedBufs) {
-      pullArgAndFree(kv.first, kv.second);
     }
 
     // Clean up
