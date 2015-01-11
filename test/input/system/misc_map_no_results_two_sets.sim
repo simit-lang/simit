@@ -13,5 +13,5 @@ func f(inout s : Spring, p : (Point*2))
 end
 
 proc main 
-  map f to springs with points; 
+  map f to springs; 
 end

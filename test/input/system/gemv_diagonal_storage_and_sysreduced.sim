@@ -24,8 +24,8 @@ end
 
 proc main 
   A = map dist_a to points reduce +;
-  B = map dist_a2 to springs with points reduce +;
-  %A = map dist_a2 to springs with points reduce +;
+  B = map dist_a2 to springs reduce +;
+  %A = map dist_a2 to springs reduce +;
   C = A + B;
   points.c = C * points.b;
 end

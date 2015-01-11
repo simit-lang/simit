@@ -20,6 +20,6 @@ func f(s : Spring, p : (Point*2)) -> (b : tensor[points](float), A : tensor[poin
 end
 
 proc main 
-  b, A = map f to springs with points reduce +;
+  b, A = map f to springs reduce +;
   points.b = A*b;
 end

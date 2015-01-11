@@ -28,7 +28,7 @@ end
 proc main
 %  i1 = nodes.inv;
 
-  W = map wMat to edges with nodes reduce +;
+  W = map wMat to edges reduce +;
   nodes.outv = W * nodes.inv;
 
   outv = map eval to nodes;

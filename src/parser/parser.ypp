@@ -699,16 +699,30 @@ assign_stmt
 
 // Map Statement
 map_stmt
-  : "map" IDENT[func] partial_expr_list "to" IDENT[target] with {
+  : "map" IDENT[func] partial_expr_list "to" IDENT[target] {
     string funcName = convertAndFree($func);
     vector<Expr> partialActuals = convertAndDelete($partial_expr_list);
     string targetName = convertAndFree($target);
-    Expr neighbor = convertAndDelete($with);
 
     if (!ctx->containsFunction(funcName)) {
       REPORT_ERROR("undefined function '" + funcName + "'", @func);
     }
     Func func = ctx->getFunction(funcName);
+
+    if (!ctx->hasSymbol(targetName)) {
+      REPORT_ERROR("undefined set '" + targetName + "'", @target);
+    }
+    Expr target = ctx->getSymbol(targetName).getExpr();
+
+    if (!target.type().isSet()) {
+      REPORT_ERROR("maps can only be applied to sets", @target);
+    }
+
+    // Get endpoints
+    std::vector<Expr> endpoints;
+    for (Expr *endpoint : target.type().toSet()->endpointSets) {
+      endpoints.push_back(*endpoint);
+    }
 
     if (func.getResults().size() != 0) {
       REPORT_ERROR("the number of variables (0) does not match the number of "
@@ -716,7 +730,7 @@ map_stmt
                    to_string(func.getResults().size()) + ")", @1);
     }
 
-    size_t numActuals = partialActuals.size() + 1 + (neighbor.defined()?1:0);
+    size_t numActuals = partialActuals.size() + 1 + (endpoints.size()>0 ?1:0);
     if (func.getArguments().size() != numActuals) {
       REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
                    ") does not match the number of formals accepted by " +
@@ -724,26 +738,37 @@ map_stmt
                    to_string(func.getArguments().size()) + ")", @1);
     }
 
-    if (!ctx->hasSymbol(targetName)) {
-      REPORT_ERROR("undefined set '" + targetName + "'", @target);
-    }
-    Expr targets = ctx->getSymbol(targetName).getExpr();
+    // We assume the edge set is homogeneous for now
+    Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : Expr();
 
-    ctx->addStatement(Map::make({}, func, partialActuals, targets, neighbor));
+    ctx->addStatement(Map::make({}, func, partialActuals, target, endpoint));
   }
-  | idents "=" "map" IDENT[func] partial_expr_list "to" IDENT[target] with reduce {
+  | idents "=" "map" IDENT[func] partial_expr_list "to" IDENT[target] reduce {
     auto varNames = unique_ptr<vector<string>>($idents);
     vector<Expr> partialActuals = convertAndDelete($partial_expr_list);
     string funcName = convertAndFree($func);
     string targetName = convertAndFree($target);
-
-    Expr neighbor = convertAndDelete($with);
     ReductionOperator reduction($reduce);
 
     if (!ctx->containsFunction(funcName)) {
       REPORT_ERROR("undefined function '" + funcName + "'", @func);
     }
     Func func = ctx->getFunction(funcName);
+
+    if (!ctx->hasSymbol(targetName)) {
+      REPORT_ERROR("undefined set '" + targetName + "'", @target);
+    }
+    Expr target = ctx->getSymbol(targetName).getExpr();
+
+    if (!target.type().isSet()) {
+      REPORT_ERROR("maps can only be applied to sets", @target);
+    }
+
+    // Get endpoints
+    std::vector<Expr> endpoints;
+    for (Expr *endpoint : target.type().toSet()->endpointSets) {
+      endpoints.push_back(*endpoint);
+    }
 
     if (varNames->size() != func.getResults().size()) {
       REPORT_ERROR("the number of variables (" + to_string(varNames->size()) +
@@ -752,18 +777,13 @@ map_stmt
                    to_string(func.getResults().size()) + ")", @1);
     }
 
-    size_t numActuals = partialActuals.size() + 1 + (neighbor.defined()?1:0);
+    size_t numActuals = partialActuals.size() + 1 + (endpoints.size()>0 ?1:0);
     if (func.getArguments().size() != numActuals) {
       REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
                    ") does not match the number of formals accepted by " +
                    func.getName() + " (" +
                    to_string(func.getArguments().size()) + ")", @1);
     }
-
-    if (!ctx->hasSymbol(targetName)) {
-      REPORT_ERROR("undefined set '" + targetName + "'", @target);
-    }
-    Expr targets = ctx->getSymbol(targetName).getExpr();
 
     auto &results = func.getResults();
     vector<Var> vars;
@@ -786,7 +806,10 @@ map_stmt
       vars.push_back(var);
     }
 
-    ctx->addStatement(Map::make(vars, func, partialActuals, targets, neighbor,
+    // We assume the edge set is homogeneous for now
+    Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : Expr();
+
+    ctx->addStatement(Map::make(vars, func, partialActuals, target, endpoint,
                                 reduction));
   }
 
@@ -809,22 +832,6 @@ idents
   | idents "," IDENT {
     $$ = $1;
     $$->push_back(convertAndFree($IDENT));
-  }
-
-%type <expr> with;
-with
-  : /* empty */ {
-    $$ = new Expr();
-  }
-  | "with" IDENT {
-    std::string neighborsName = convertAndFree($IDENT);
-
-    if (!ctx->hasSymbol(neighborsName)) {
-      REPORT_ERROR("undefined set '" + neighborsName + "'", @2);
-    }
-    Expr neighbors = ctx->getSymbol(neighborsName).getExpr();
-
-    $$ = new Expr(neighbors);
   }
 
 %type <reductionop> reduce;

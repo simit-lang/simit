@@ -24,6 +24,6 @@ func f(s : Spring, p : (Point*2)) -> (X : tensor[points](float))
 end
 
 proc main
-  X = map f to springs with points reduce +;
+  X = map f to springs reduce +;
   points.x = X;
 end

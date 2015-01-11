@@ -18,8 +18,8 @@ func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
 end
 
 proc main 
-  A = map dist_a to springs with points reduce +;
-  B = map dist_a to springs with points reduce +;
+  A = map dist_a to springs reduce +;
+  B = map dist_a to springs reduce +;
   C = A + B;
   points.c = C * points.b;
 end
