@@ -17,14 +17,9 @@ namespace internal {
         - only reduced into
         - write access is 1:1 with thread
     - move var decls
-  
-  Tease apart memory management from sharding (insertion of gpukernel blocks)
-  
+
   Do we ever allow shadowing decls? Or just decl on first assign,
   only ever allowing one version of the same var?
-  
-  Tests:
-    - simple IR transform before/after structure validation
   
   Allow F32 mode in simit-dump, for testing.
  */
