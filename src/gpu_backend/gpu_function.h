@@ -18,10 +18,11 @@ namespace internal {
 
 class GPUFunction : public simit::Function {
  public:
-  GPUFunction(
-      ir::Func simitFunc, llvm::Module *module,
-      std::vector< std::pair<llvm::Function *, GPUSharding> > kernels,
-      class GPUSharding sharding, int cuDevMajor, int cuDevMinor);
+  GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
+              llvm::Module *module, class GPUSharding sharding,
+              int cuDevMajor, int cuDevMinor)
+    : Function(simitFunc), llvmFunc(llvmFunc), module(module),
+      sharding(sharding), cuDevMajor(cuDevMajor), cuDevMinor(cuDevMinor) {}
   ~GPUFunction();
 
   void print(std::ostream &os) const;
@@ -63,7 +64,7 @@ class GPUFunction : public simit::Function {
 
   std::map<void*, DeviceDataHandle> pushedBufs;
   std::unique_ptr<ir::Func> simitFunc;
-  std::vector< std::pair<llvm::Function *, GPUSharding> > kernels;
+  std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> module;
   int cuDevMajor, cuDevMinor;
   class GPUSharding sharding;

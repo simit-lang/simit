@@ -21,15 +21,11 @@
 namespace simit {
 namespace internal {
 
-GPUFunction::GPUFunction(
-    ir::Func simitFunc, llvm::Module *module,
-    std::vector< std::pair<llvm::Function *, GPUSharding> > kernels,
-    struct GPUSharding sharding, int cuDevMajor, int cuDevMinor)
-    : Function(simitFunc), module(module),
-      kernels(kernels), sharding(sharding),
-      cuDevMajor(cuDevMajor), cuDevMinor(cuDevMinor) {}
-
 GPUFunction::~GPUFunction() {
+  // llvmFunc will be destroyed when the harness funtion object is destroyed
+  // because it was claimed by a CallInst
+  llvmFunc.release();
+
   for (auto &kv : pushedBufs) {
     freeArg(kv.second);
   }
@@ -191,6 +187,7 @@ void GPUFunction::print(std::ostream &os) const {
   // TODO(gkanwar): Print out CUDA data setup aspects as well
 }
 
+// Takes ownership of kernel pointer, because it is passed to llvm::CallInst
 llvm::Function *GPUFunction::createHarness(
     const llvm::SmallVector<llvm::Value*, 8> &args,
     llvm::Function *kernel,
@@ -248,7 +245,7 @@ simit::Function::FuncType GPUFunction::init(
     std::map<std::string, Actual> &actuals) {
   CUlinkState linker;
   CUmodule cudaModule;
-  std::vector<CUfunction> functions;
+  CUfunction cudaFunction;
 
   // Push data and build harness
   llvm::SmallVector<llvm::Value*, 8> args;
@@ -270,12 +267,7 @@ simit::Function::FuncType GPUFunction::init(
     }
   }
   // Create harnesses for kernel args
-  // TODO(gkanwar): Is this a memory leak?
-  std::vector<llvm::Function *> harnesses;
-  for (auto kernel : kernels) {
-    // Build harness
-    harnesses.push_back(createHarness(args, kernel.first, module.get()));
-  }
+  llvm::Function *harness = createHarness(args, llvmFunc.get(), module.get());
 
   // Export IR to string
   std::string moduleStr;
@@ -313,7 +305,10 @@ simit::Function::FuncType GPUFunction::init(
   checkCudaErrors(cuLinkCreate(5, linkerOptions, linkerOptionValues, &linker));
   checkCudaErrors(cuLinkAddData(
       linker, CU_JIT_INPUT_PTX, (void*)ptxStr.c_str(),
-      ptxStr.size(), "<kernels-ptx>", 0, NULL, NULL));
+      ptxStr.size(), "<compiled-ptx>", 0, NULL, NULL));
+  // libcudadevrt.a
+  checkCudaErrors(cuLinkAddFile(linker, CU_JIT_INPUT_LIBRARY,
+                                LIBCUDADEVRT, 0, NULL, NULL));
 
   void *cubin;
   size_t cubinSize;
@@ -326,59 +321,18 @@ simit::Function::FuncType GPUFunction::init(
   // Create CUDA module for binary object
   checkCudaErrors(cuModuleLoadDataEx(&cudaModule, cubin, 0, 0, 0));
   checkCudaErrors(cuLinkDestroy(linker));
-  // Create vector of kernels to be called
-  for (auto harness : harnesses) {
-    functions.emplace_back();
-    checkCudaErrors(cuModuleGetFunction(
-        &(functions.back()), cudaModule, harness->getName().data()));
-  }
 
-  return [this, functions, cudaModule](){
-    iassert(kernels.size() == functions.size())
-        << "Number of generated functions must equal number of kernels";
-    for (int i = 0; i < kernels.size(); ++i) {
-      GPUSharding sharding = kernels[i].second;
-      
-      std::cerr << "Sharded with: " << sharding;
-      
-      unsigned blockSizeX = sharding.xSharded ?
-          findShardSize(sharding.xDomain) : 1;
-      unsigned blockSizeY = sharding.ySharded ?
-          findShardSize(sharding.yDomain) : 1;
-      unsigned blockSizeZ = sharding.zSharded ?
-          findShardSize(sharding.zDomain) : 1;
-      unsigned gridSizeX = 1;
-      unsigned gridSizeY = 1;
-      unsigned gridSizeZ = 1;
-      std::cout << "Launching CUDA kernel with block size ("
-                << blockSizeX << ","
-                << blockSizeY << ","
-                << blockSizeZ << ") and grid size ("
-                << gridSizeX << ","
-                << gridSizeY << ","
-                << gridSizeZ << ")" << std::endl;
+  // Get reference to CUDA function
+  checkCudaErrors(cuModuleGetFunction(
+      &cudaFunction, cudaModule, harness->getName().data()));
 
-      void **kernelParamsArr = new void*[0]; // TODO leaks
-      checkCudaErrors(cuLaunchKernel(functions[i], gridSizeX, gridSizeY, gridSizeZ,
-                                     blockSizeX, blockSizeY, blockSizeZ, 0, NULL,
-                                     kernelParamsArr, NULL));
-    }
-
-    // Clean up
-    // for (auto kv : kernelParams) {
-    //   for (auto kv2 : kv.second.devBufferFields) {
-    //     checkCudaErrors(cuMemFree(*kv2.second));
-    //   }
-    // }
-    // checkCudaErrors(cuCtxDestroy(context));
-    checkCudaErrors(cuModuleUnload(cudaModule));
-
-    // Hack to ensure that data is pushed again, and the harness is
-    // reconstructed with the new pointers.
-    // TODO(gkanwar): On a bind to a pushed argument, note that the
-    // argument should be repushed, and include in this returned lambda
-    // instructions to push dirtied args.
-    initRequired = true;
+  return [this, cudaFunction, cudaModule](){
+    void **kernelParamsArr = new void*[0]; // TODO leaks
+    checkCudaErrors(cuLaunchKernel(cudaFunction,
+                                   1, 1, 1, // grid size
+                                   1, 1, 1, // block size
+                                   0, NULL,
+                                   kernelParamsArr, NULL));
   };
 }
 

@@ -61,6 +61,8 @@ find_package(CUDA)
 if (CUDA_FOUND)
   message("-- Building with gpu-backend")
   add_definitions(-DGPU)
+  get_filename_component(CUDA_LIB_DIR ${CUDA_LIBRARIES} DIRECTORY)
+  add_definitions(-DLIBCUDADEVRT="${CUDA_LIB_DIR}/libcudadevrt.a")
 
   include_directories(${CUDA_INCLUDE_DIRS})
   include_directories("${CUDA_TOOLKIT_ROOT_DIR}/nvvm/include/")

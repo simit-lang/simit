@@ -61,15 +61,22 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   this->dataLayout.reset(new llvm::DataLayout(module));
   this->storage = irFunc.getStorage();
 
+  func = createPrototype(irFunc.getName(), irFunc.getArguments(),
+                         irFunc.getResults(), module,
+                         true, false);
+
+  // Build 'entry' basic block
+  llvm::BasicBlock *entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", func);
+  builder.reset(new LLVMIRBuilder(entry));
+
+  // Compile the body
   iassert(irFunc.getBody().defined()) << "cannot compile an undefined function";
   irFunc.getBody().accept(this);
 
-  // Compile LLVM kernels to PTX string
-  std::string moduleStr;
-  llvm::raw_string_ostream raw_str(moduleStr);
-  raw_str << *module;
+  // NVVM kernel should always return void
+  builder->CreateRetVoid();
 
-  return new GPUFunction(irFunc, module, kernels, sharding,
+  return new GPUFunction(irFunc, func, module, sharding,
                          cuDevMajor, cuDevMinor);
 }
 
@@ -357,12 +364,22 @@ void GPUBackend::visit(const ir::For *op) {
 }
 void GPUBackend::visit(const ir::GPUKernel *op) {
   // Create LLVM func
-  llvm::Function *func = createPrototype("kernel", irFunc.getArguments(),
-                                         irFunc.getResults(), module,
-                                         false, false);
+  llvm::Function *kernel = createPrototype(
+      irFunc.getName() + "_nested_kernel", irFunc.getArguments(),
+      irFunc.getResults(), module,
+      true, false);
+
+  // Kernel metadata
+  llvm::Value *mdVals[] = {
+    kernel, llvm::MDString::get(LLVM_CONTEXT, "kernel"), llvmInt(1)
+  };
+  llvm::MDNode *kernelMD = llvm::MDNode::get(LLVM_CONTEXT, mdVals);
+  llvm::NamedMDNode *nvvmAnnot = module
+      ->getOrInsertNamedMetadata("nvvm.annotations");
+  nvvmAnnot->addOperand(kernelMD);
 
   // Name LLVM arguments, insert into symtable
-  auto arg = func->arg_begin();
+  auto arg = kernel->arg_begin();
   for (const ir::Var &irArg : irFunc.getArguments()) {
     arg->setName(irArg.getName());
     symtable.insert(irArg, &(*arg));
@@ -377,11 +394,11 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   // TODO(gkanwar): Deal with temps?
 
   // Build 'entry' basic block
-  llvm::BasicBlock *entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", func);
+  llvm::BasicBlock *entry = llvm::BasicBlock::Create(
+      LLVM_CONTEXT, "entry", kernel);
   builder.reset(new LLVMIRBuilder(entry));
 
   GPUSharding kernelSharding = op->sharding;
-  kernels.emplace_back(func, kernelSharding);
 
   // Code generate for the kernel
   symtable.scope();
@@ -400,6 +417,18 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
 
   // NVVM kernel should always return void
   builder->CreateRetVoid();
+
+  // Emit a dynamic kernel launch
+  builder.reset(new LLVMIRBuilder(&func->getEntryBlock()));
+  std::vector<llvm::Value*> args;
+  for (auto &irArg : irFunc.getArguments()) {
+    args.push_back(symtable.get(irArg));
+  }
+  for (auto &irRes : irFunc.getResults()) {
+    // TODO(gkanwar): Figure out inouts
+    args.push_back(symtable.get(irRes));
+  }
+  emitKernelLaunch(kernel, args, kernelSharding);
 }
 void GPUBackend::visit(const ir::IfThenElse *op) {
   ASSERT(false && "No code generation for this type");
@@ -505,6 +534,95 @@ void GPUBackend::emitTid0Code(const ir::Stmt& body) {
   // LLVMBackend::compile(body);
   // builder->CreateBr(rest);
   // builder.reset(new LLVMIRBuilder(rest));
+}
+
+void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
+                                  std::vector<llvm::Value*> args,
+                                  GPUSharding sharding) {
+  std::cout << "emitKernelLaunch: " << std::endl;
+  for (llvm::Value *val : args) {
+    std::cout << "arg: " << val->getName().str() << std::endl;
+  }
+
+  // LLVM types
+  // i8*
+  llvm::Type *i8PtrTy = llvm::PointerType::getInt8PtrTy(LLVM_CONTEXT);
+
+  // struct dim3
+  std::vector<llvm::Type*> dim3Types = { LLVM_INT, LLVM_INT, LLVM_INT };
+  llvm::StructType *dim3Ty = llvm::StructType::create(
+      llvm::ArrayRef<llvm::Type*>(dim3Types), "dim3");
+
+  // cudaGetParamBufferV2
+  std::vector<llvm::Type*> getParamArgTys = {
+    i8PtrTy, dim3Ty, dim3Ty, LLVM_INT
+  };
+  llvm::FunctionType *getParamFuncTy = llvm::FunctionType::get(
+      i8PtrTy, getParamArgTys, false);
+
+  // CUstream_st
+  llvm::StructType *cuStreamTy = llvm::StructType::create(
+      LLVM_CONTEXT, "struct.CUstream_st");
+  // addrspace 0
+  llvm::PointerType *cuStreamPtrTy = llvm::PointerType::get(cuStreamTy, 0);
+
+  // cudaLaunchDeviceV2
+  std::vector<llvm::Type*> launchDevArgTys = {
+    i8PtrTy, cuStreamPtrTy
+  };
+  llvm::FunctionType *launchDevFuncTy = llvm::FunctionType::get(
+      LLVM_INT, launchDevArgTys, false);
+
+  // Build dimensions
+  std::vector<llvm::Constant*> gridDimsVec = {
+    llvmInt(1), llvmInt(1), llvmInt(1)
+  };
+  llvm::Constant *gridDims =
+      llvm::ConstantStruct::get(dim3Ty, gridDimsVec);
+
+  // TODO(gkanwar): Change back
+  std::vector<llvm::Constant*> initBlockDims = {
+    llvmInt(1), llvmInt(1), llvmInt(1)
+  };
+  llvm::Value *blockDims =
+      llvm::ConstantStruct::get(dim3Ty, initBlockDims);
+  blockDims = builder->CreateInsertValue(
+      blockDims,
+      sharding.xSharded ? emitComputeLen(sharding.xDomain) : llvmInt(1),
+      llvm::ArrayRef<unsigned>({0}));
+  blockDims = builder->CreateInsertValue(
+      blockDims,
+      sharding.ySharded ? emitComputeLen(sharding.yDomain) : llvmInt(1),
+      llvm::ArrayRef<unsigned>({1}));
+  blockDims = builder->CreateInsertValue(
+      blockDims,
+      sharding.zSharded ? emitComputeLen(sharding.zDomain) : llvmInt(1),
+      llvm::ArrayRef<unsigned>({2}));
+
+  // Build param buffer
+  llvm::Function *getParamFunc = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("cudaGetParameterBufferV2", getParamFuncTy));
+  llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, i8PtrTy);
+  llvm::Value *paramBuf = builder->CreateCall4(
+      getParamFunc, kernelBitCast, gridDims, blockDims, llvmInt(0));
+
+  // Insert args into param buffer
+  uint64_t bufIndex = 0;
+  llvm::DataLayout dataLayout(module);
+  for (auto &arg : args) {
+    llvm::Value *bufPtr = builder->CreateGEP(paramBuf, llvmInt(bufIndex));
+    llvm::Value *argPtr = builder->CreateBitCast(
+        bufPtr,
+        // Pointer to arg type, addrspace 0
+        llvm::PointerType::get(arg->getType(), 0));
+    builder->CreateStore(arg, argPtr);
+    bufIndex += dataLayout.getTypeAllocSize(arg->getType());
+  }
+
+  llvm::Function *cudaLaunchFunc = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("cudaLaunchDeviceV2", launchDevFuncTy));
+  builder->CreateCall2(cudaLaunchFunc, paramBuf,
+                       llvm::ConstantPointerNull::get(cuStreamPtrTy));
 }
 
 void GPUBackend::emitFirstAssign(const ir::Var& var,
