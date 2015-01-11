@@ -230,14 +230,6 @@ void LLVMBackend::visit(const FieldRead *op) {
   val = emitFieldRead(op->elementOrSet, op->fieldName);
 }
 
-void LLVMBackend::visit(const TensorRead *op) {
-  ierror << "No code generation for this type";
-}
-
-void LLVMBackend::visit(const TupleRead *op) {
-  ierror << "No code generation for this type";
-}
-
 void LLVMBackend::visit(const ir::IndexRead *op) {
   // TODO: Add support for different indices (contained in the Set type).
   unsigned int indexLoc = 1 + op->kind;
@@ -251,22 +243,6 @@ void LLVMBackend::visit(const ir::IndexRead *op) {
 
 void LLVMBackend::visit(const ir::Length *op) {
   val = emitComputeLen(op->indexSet);
-}
-
-void LLVMBackend::visit(const Map *op) {
-  ierror << "No code generation for this type";
-}
-
-void LLVMBackend::visit(const IndexedTensor *op) {
-  ierror << "No code generation for this expr: " << util::toString(*op);
-}
-
-void LLVMBackend::visit(const IndexExpr *op) {
-  ierror << "No code generation for this expr: " << util::toString(*op);
-}
-
-void LLVMBackend::visit(const TensorWrite *op) {
-  ierror << "No code generation for this expr: " << util::toString(*op);
 }
 
 void LLVMBackend::visit(const Literal *op) {
@@ -1145,6 +1121,38 @@ void LLVMBackend::visit(const Print *op) {
   }
 }
 
+void LLVMBackend::visit(const IndexExpr *op) {
+  ierror << "IndexedTensor expressions should never reach the backend: "
+         << util::toString(*op);
+}
+
+void LLVMBackend::visit(const TensorRead *op) {
+  ierror << "TensorRead expressions should never reach a backend: "
+         << util::toString(*op);
+}
+
+void LLVMBackend::visit(const TupleRead *op) {
+  ierror << "TupleRead expressions should never reach the backend: "
+         << util::toString(*op);
+}
+
+void LLVMBackend::visit(const IndexedTensor *op) {
+  ierror << "IndexedTensor expressions should never reach the backend: "
+         << util::toString(*op);
+}
+
+void LLVMBackend::visit(const Map *op) {
+  ierror << "Map statements should never reach the backend: "
+         << util::toString(*op);
+}
+
+void LLVMBackend::visit(const TensorWrite *op) {
+  ierror << "TensorWrite statements should never reach the backend: "
+         << util::toString(*op);
+}
+
+
+// helper methodes
 llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
                                         std::string fieldName) {
   assert(elemOrSet.type().isElement() || elemOrSet.type().isSet());
