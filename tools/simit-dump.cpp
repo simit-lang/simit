@@ -339,13 +339,10 @@ int main(int argc, const char* argv[]) {
       cout << simit::util::trim(fstr) << endl;
     }
 
-    cout << "@@@@@@@@@@@@@@@@" << endl;
 #ifdef GPU
     if (emitGPU) {
-      cout << "################: " <<emitGPU<< endl;
       func = shardLoops(func);
-      cout << "Finished shardLoops" << endl;
-      cout << "--- Shard loops for GPU" << endl;
+      cout << endl << "--- Shard loops for GPU" << endl;
       cout << func << endl;
 
       simit::ir::ScalarType::floatBytes = 4; // XXX always test GPU with floatSize = 4 for now

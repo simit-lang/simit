@@ -339,8 +339,9 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
         llvm::Value *value = compile(op->value);
         llvm::Value *varPtr = symtable.get(op->var);
         emitAtomicLoadAdd(varPtr, value);
+        break;
       }
-      default: ierror << "Unknown compound operator type";
+      default: ierror << "Unknown compound operator type: " << op->cop.kind;
     }
   }
   else {
