@@ -6,46 +6,36 @@
 #include "scopedmap.h"
 
 namespace simit {
+
+static bool isShardable(const ir::For *loop) {
+  return (loop->domain.kind == ir::ForDomain::IndexSet &&
+          loop->domain.indexSet.getKind() != ir::IndexSet::Range);
+}
+
 namespace internal {
 
-GPUSharding::ShardDimension GPUSharding::maybeShardFor(const ir::For *op) {
-  ir::ForDomain domain = op->domain;
-  ir::Var var = op->var;
-  std::cerr << "MaybeShard\n" << *op << "\n";
-  std::cerr << "...with domain " << domain << " kind " << domain.kind << " index set " << domain.indexSet.getKind() << "\n";
-  if (domain.kind == ir::ForDomain::IndexSet &&
-      domain.indexSet.getKind() != ir::IndexSet::Range) {
-    std::cerr << "...should shard\n";
-    if (domain.indexSet == xDomain) {
-      return X;
-    }
-    else if (domain.indexSet == yDomain) {
-      return Y;
-    }
-    else if (domain.indexSet == zDomain) {
-      return Z;
-    }
-    else if (!xSharded) {
-      xDomain = domain.indexSet;
-      xVar = var;
-      xSharded = true;
-      return X;
-    }
-    else if (!ySharded) {
-      yDomain = domain.indexSet;
-      yVar = var;
-      ySharded = true;
-      return Y;
-    }
-    else if (!zSharded) {
-      zDomain = domain.indexSet;
-      zVar = var;
-      zSharded = true;
-      return Z;
-    }
+void GPUSharding::shardFor(const ir::For *op) {
+  iassert(isShardable(op));
+  std::cerr << "Shard\n" << *op << "\n";
+  std::cerr << "...with domain " << op->domain << " kind " << op->domain.kind << " index set " << op->domain.indexSet.getKind() << "\n";
+  // TODO(jrk) these repeats should never happen
+  iassert (op->domain.indexSet != xDomain && op->domain.indexSet != yDomain && op->domain.indexSet != zDomain);
+  if (!xSharded) {
+    xDomain = op->domain.indexSet;
+    xVar = op->var;
+    xSharded = true;
   }
-  std::cerr << "...don't shard\n";
-  return NONE;
+  else if (!ySharded) {
+    yDomain = op->domain.indexSet;
+    yVar = op->var;
+    ySharded = true;
+  }
+  else {
+    iassert(!zSharded);
+    zDomain = op->domain.indexSet;
+    zVar = op->var;
+    zSharded = true;
+  }
 }
 
 std::ostream &operator<<(std::ostream &os, const GPUSharding &shard) {
@@ -75,184 +65,45 @@ bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2) {
 namespace ir {
 
 class ShardLoops : public IRRewriter {
-protected:
-  void visit(const Func *f) {
-    for (auto &arg : f->getArguments()) {
-      symtable.insert(arg, NONE);
-    }
-    for (auto &res : f->getResults()) {
-      symtable.insert(res, NONE);
-    }
+public:
+  ShardLoops() : currentKernelSharding(nullptr) {}
 
-    // Create an initial kernel
-    kernels.emplace_back();
-    // Rewrite the func, building list of kernels
-    IRRewriter::visit(f);
-    kernels.back().sharding = sharding;
-    // Recreate the body from proto kernels
-    Stmt body;
-    if (isa<Block>(f->getBody())) {
-      std::vector<Stmt> kernelStmts;
-      for (const internal::GPUProtoKernel& kernel : kernels) {
-        if (!kernel.stmts.empty()) {
-          std::cerr << kernel.sharding;
-          Stmt gpuKernel = GPUKernel::make(Block::make(kernel.stmts), kernel.sharding);
-          kernelStmts.push_back(gpuKernel);
-        }
-      }
-      body = kernelStmts.empty() ? Stmt() : Block::make(kernelStmts);
-    }
-    // Handle the case of a single Stmt
-    else {
-      body = GPUKernel::make(func.getBody(), sharding);
-    }
+private:
+  using IRRewriter::visit;
 
-    std::vector<Var> args = func.getArguments();
-    func = Func(func.getName(), args, func.getResults(),
-                body, func.getKind());
-  }
-
-  void visit(const Block *op) {
-    internal::GPUSharding before = sharding;
-    // Only preserve sharding if inside a sharded kernel
-    sharding = before.inShard() ? before : internal::GPUSharding();
-    Stmt first = rewrite(op->first);
-    internal::GPUSharding after = sharding;
-    if (first.defined() && !isa<Block>(first)) {
-      if (before == after &&
-          (!sharding.isSharded() || sharding.inShard())) {
-        kernels.back().stmts.push_back(first);
-      }
-      else {
-        // Save this kernel sharding
-        kernels.back().sharding = before;
-        // Make a new kernel
-        internal::GPUProtoKernel kernel;
-        kernel.stmts.push_back(first);
-        kernels.push_back(kernel);
-      }
-    }
-
-    before = sharding;
-    // Only preserve sharding if inside a sharded kernel
-    sharding = before.inShard() ? before : internal::GPUSharding();
-    Stmt rest = rewrite(op->rest);
-    after = sharding;
-    if (rest.defined() && !isa<Block>(rest)) {
-      if (before == after &&
-          (!sharding.isSharded() || sharding.inShard())) {
-        kernels.back().stmts.push_back(rest);
-      }
-      else {
-        // Save this kernel sharding
-        kernels.back().sharding = before;
-        // Make a new kernel
-        internal::GPUProtoKernel kernel;
-        kernel.stmts.push_back(rest);
-        kernels.push_back(kernel);
-      }
-    }
-
-    if (first == op->first && rest == op->rest) {
-      stmt = op;
-    }
-    else {
-      if (first.defined() && rest.defined()) {
-        stmt = Block::make(first, rest);
-      }
-      else if (first.defined() && !rest.defined()) {
-        stmt = first;
-      }
-      else if (!first.defined() && rest.defined()) {
-        stmt = rest;
-      }
-      else {
-        stmt = Stmt();
-      }
-    }
-  }
-
-  void visit(const For *op) {
-    internal::GPUSharding::ShardDimension sharded = sharding.maybeShardFor(op);
-    std::cerr << "Shard For\n" << *op << "\n"
-              << "in dimension " << sharded << "\n";
-    symtable.scope();
-    switch (sharded) {
-      case internal::GPUSharding::X: {
-        symtable.insert(op->var, XSHARD);
-        break;
-      }
-      case internal::GPUSharding::Y: {
-        symtable.insert(op->var, YSHARD);
-        break;
-      }
-      case internal::GPUSharding::Z: {
-        symtable.insert(op->var, ZSHARD);
-        break;
-      }
-      default: {
-        symtable.insert(op->var, NONE);
-        break;
-      }
-    }
-    sharding.scope(sharded);
-    IRRewriter::visit(op);
-    sharding.unscope(sharded);
-    symtable.unscope();
-
-    // Rewrite the For statement with sharding information
-    if (sharded != internal::GPUSharding::NONE) {
-      const ir::For* forStmt = ir::to<ir::For>(stmt);
-      // Cannot assign directly from pointer held by stmt
-      Stmt body = forStmt->body;
-      stmt = body;
-    }
-  }
-
-  void visit(const AssignStmt *op) {
-    if (symtable.contains(op->var) && symtable.get(op->var) != NONE) {
-      ierror << "Invalid assign to sharded var: " << op->var;
-    }
-    if (!symtable.contains(op->var)) {
-      firstAssign(op->var);
-    }
-    IRRewriter::visit(op);
-  }
-
-  void visit(const VarExpr *op) {
-    // Rewrite the read if we are accessing a shard variable
-    if (!symtable.contains(op->var)) {
-      IRRewriter::visit(op);
+  void visit(const For *loop) {
+    // Leave this as a loop if it's not a shardable loop, or if our kernel is
+    // already full of dimensions.
+    if (!isShardable(loop) ||
+        (currentKernelSharding && currentKernelSharding->shardFull())) {
+      IRRewriter::visit(loop);
       return;
     }
-    VarAction action = symtable.get(op->var);
-    if (action == XSHARD) {
-      expr = VarExpr::make(sharding.xVar);
+    
+    bool ownsKernel = false;
+    internal::GPUSharding _sharding;
+    
+    // TODO(jrk) we may never have multiple nested kernel loops, at all, in our input - simplify away entirely?
+    // for now:
+    iassert(currentKernelSharding);
+    
+    // if we're the first loop to en
+    if (!currentKernelSharding) {
+      ownsKernel = true;
+      currentKernelSharding = &_sharding;
     }
-    else if (action == YSHARD) {
-      expr = VarExpr::make(sharding.yVar);
-    }
-    else if (action == ZSHARD) {
-      expr = VarExpr::make(sharding.zVar);
-    }
-    else {
-      IRRewriter::visit(op);
-    }
-  }
-  
-  // TODO(jrk) do away with the NONE case and the symtable entirely
-  void firstAssign(Var var) {
-    symtable.insert(var, NONE);
-  }
-  
-  // Map from symbol to transformative action
-  enum VarAction { NONE, XSHARD, YSHARD, ZSHARD };
-  internal::ScopedMap<ir::Var, VarAction> symtable;
 
-  // Current sharding info
-  internal::GPUSharding sharding;
-  // List of kernels
-  std::vector<internal::GPUProtoKernel> kernels;
+    // TODO(jrk) enforce that no logic comes between kernel loops?
+    currentKernelSharding->shardFor(loop);
+    stmt = rewrite(loop->body);
+
+    if (ownsKernel) {
+      stmt = GPUKernel::make(stmt, *currentKernelSharding);
+      currentKernelSharding = nullptr;
+    }
+  }
+
+  internal::GPUSharding *currentKernelSharding;
 };
 
 class LiftGPUVars : public IRRewriter {

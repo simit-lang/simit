@@ -338,7 +338,9 @@ simit::Function::FuncType GPUFunction::init(
         << "Number of generated functions must equal number of kernels";
     for (int i = 0; i < kernels.size(); ++i) {
       GPUSharding sharding = kernels[i].second;
-
+      
+      std::cerr << "Sharded with: " << sharding;
+      
       unsigned blockSizeX = sharding.xSharded ?
           findShardSize(sharding.xDomain) : 1;
       unsigned blockSizeY = sharding.ySharded ?
