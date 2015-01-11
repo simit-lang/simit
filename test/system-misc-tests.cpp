@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, misc_triangle) {
+TEST(System, map_triangle) {
   simit::Set<> verts;
   simit::FieldRef<double> b = verts.addField<double>("b");
 
@@ -42,7 +42,7 @@ TEST(System, misc_triangle) {
   ASSERT_DOUBLE_EQ(0.1, b.get(v3));
 }
 
-TEST(System, misc_assemble_from_literal_vector) {
+TEST(System, map_assemble_from_literal_vector) {
   // Points
   Set<> points;
   FieldRef<double> x = points.addField<double>("x");
@@ -74,7 +74,7 @@ TEST(System, misc_assemble_from_literal_vector) {
   ASSERT_EQ(1.0, x.get(p1));
 }
 
-TEST(System, misc_assemble_fem) {
+TEST(System, map_assemble_fem) {
   // Points
   Set<> points;
   FieldRef<double> x = points.addField<double>("x");
@@ -107,7 +107,7 @@ TEST(System, misc_assemble_fem) {
   ASSERT_EQ(1.0, x.get(p1));
 }
 
-TEST(System, misc_map_one_set) {
+TEST(System, map_one_set) {
   // Points
   Set<> points;
   FieldRef<double> a = points.addField<double>("a");
@@ -133,7 +133,7 @@ TEST(System, misc_map_one_set) {
   ASSERT_DOUBLE_EQ(6, a.get(p2));
 }
 
-TEST(System, misc_map_no_results_one_set) {
+TEST(System, map_no_results_one_set) {
   // Points
   Set<> points;
   FieldRef<double> a = points.addField<double>("a");
@@ -160,7 +160,7 @@ TEST(System, misc_map_no_results_one_set) {
   ASSERT_EQ(6.0, (double)a.get(p2));
 }
 
-TEST(System, misc_map_no_results_two_sets) {
+TEST(System, map_no_results_two_sets) {
   // Points
   Set<> points;
   ElementRef p0 = points.add();
@@ -191,7 +191,7 @@ TEST(System, misc_map_no_results_two_sets) {
   ASSERT_EQ(4.0, (double)a.get(s1));
 }
 
-TEST(System, misc_map_two_results_one_set) {
+TEST(System, map_two_results_one_set) {
   // Points
   Set<> points;
   FieldRef<double> a = points.addField<double>("a");
@@ -219,7 +219,7 @@ TEST(System, misc_map_two_results_one_set) {
   ASSERT_EQ(54.0, (double)b.get(p2));
 }
 
-TEST(System, misc_map_two_results_two_sets) {
+TEST(System, map_two_results_two_sets) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -253,7 +253,7 @@ TEST(System, misc_map_two_results_two_sets) {
   ASSERT_EQ(168.0, (double)b.get(p2));
 }
 
-TEST(System, misc_map_edgeset_no_endpoints) {
+TEST(System, map_edgeset_no_endpoints) {
   // Points
   Set<> points;
   ElementRef p0 = points.add();
@@ -284,7 +284,7 @@ TEST(System, misc_map_edgeset_no_endpoints) {
   ASSERT_EQ(4.0, (double)a.get(s1));
 }
 
-TEST(System, misc_map_edgeset_no_endpoints_results) {
+TEST(System, map_edgeset_no_endpoints_results) {
   // Points
   Set<> points;
   FieldRef<double> b = points.addField<double>("b");
@@ -317,7 +317,7 @@ TEST(System, misc_map_edgeset_no_endpoints_results) {
   ASSERT_EQ(4.0, (double)a.get(s1));
 }
 
-TEST(System, cg) {
+TEST(System, DISABLED_cg) {
   Set<> points;
   FieldRef<double>  b = points.addField<double>("b");
   FieldRef<double>  c = points.addField<double>("c");
