@@ -6,6 +6,10 @@
 #include "llvm_backend.h"
 #include "gpu_ir.h"
 
+// transforms
+#include "shard_gpu_loops.h"
+#include "lift_gpu_vars.h"
+
 namespace llvm {
 class Value;
 }

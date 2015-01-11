@@ -74,8 +74,6 @@ struct GPUKernel : public StmtNode<GPUKernel> {
   }
 };
 
-Func shardLoops(Func func);
-
 }}  // namespace simit::ir
 
 #endif
