@@ -223,7 +223,7 @@ private:
   void visit(const VarDecl *op) {
     Var var = op->var;
     Type type = var.getType();
-    iassert(!storage->hasStorage(var)) << "Redeclaration of variable";
+    iassert(!storage->hasStorage(var)) << "Redeclaration of variable" << var;
     if (type.isTensor() && !isScalar(type)) {
       determineStorage(var, true);
     }

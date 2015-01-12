@@ -317,7 +317,7 @@ TEST(System, map_edgeset_no_endpoints_results) {
   ASSERT_EQ(4.0, (double)a.get(s1));
 }
 
-TEST(System, DISABLED_cg) {
+TEST(System, cg) {
   Set<> points;
   FieldRef<double>  b = points.addField<double>("b");
   FieldRef<double>  c = points.addField<double>("c");
@@ -348,7 +348,7 @@ TEST(System, DISABLED_cg) {
 
   f->runSafe();
 
-  ASSERT_EQ(0.9588, (double)c.get(p0));
-  ASSERT_EQ(1.9879, (double)c.get(p1));
-  ASSERT_EQ(3.0533, (double)c.get(p2));
+  ASSERT_EQ(0.95883777239709455653, (double)c.get(p0));
+  ASSERT_EQ(1.98789346246973352983, (double)c.get(p1));
+  ASSERT_EQ(3.05326876513317202466, (double)c.get(p2));
 }

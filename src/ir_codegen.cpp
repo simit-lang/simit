@@ -38,6 +38,8 @@ Func insertVarDecls(Func func) {
     set<Var> declared;
 
     void visit(const Func *f) {
+      declared.clear();
+
       for (auto &argument : f->getArguments()) {
         declared.insert(argument);
       }
@@ -65,6 +67,16 @@ Func insertVarDecls(Func func) {
       }
       else {
         stmt = op;
+      }
+    }
+
+    void visit(const Map *op) {
+      stmt = op;
+      for (auto &var : op->vars) {
+        if (declared.find(var) == declared.end()) {
+          stmt = Block::make(VarDecl::make(var), stmt);
+          declared.insert(var);
+        }
       }
     }
   };
