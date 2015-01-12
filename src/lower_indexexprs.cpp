@@ -72,16 +72,23 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
 
     void visit(const TensorWrite *op) {
       iassert(isa<IndexExpr>(op->value))<<"Can only specialize IndexExpr stmts";
-      const IndexExpr *indexExpr = to<IndexExpr>(op->value);
+
+      Expr tensor = rewrite(op->tensor);
+
+      vector<Expr> indices;
+      for (auto &index : op->indices) {
+        indices.push_back(rewrite(index));
+      }
 
       Expr value = rewrite(op->value);
 
       if (isScalar(op->value.type())) {
-        stmt = TensorWrite::make(op->tensor, op->indices, value, op->cop);
+        stmt = TensorWrite::make(tensor, indices, value, op->cop);
       }
       else {
-        Expr tensor = TensorRead::make(op->tensor, op->indices);
-        stmt = tensorWrite(op->cop, tensor, indexExpr->resultVars, value);
+        tensor = TensorRead::make(tensor, indices);
+        stmt = tensorWrite(op->cop, tensor,
+                           to<IndexExpr>(op->value)->resultVars, value);
       }
     }
 
@@ -90,7 +97,7 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
       iassert(!isa<IndexExpr>(op->tensor))
           << "index expressions should have been flattened by now";
 
-      expr = op->tensor;
+      expr = rewrite(op->tensor);
 
       // Add tensor reads until the type of expr is a scalar. This can require
       // multiple reads if the indexed tensor was blocked.
