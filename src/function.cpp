@@ -155,7 +155,7 @@ size_t Function::size(const ir::TensorType &type,
                       const ir::TensorStorage &storage) const {
   switch (storage.getKind()) {
     case ir::TensorStorage::DenseRowMajor: {
-      size_t result = 1;
+      size_t result = type.componentType.bytes();
 
       map<string,SetBase*> sets;
       for (pair<string,Actual> actual : actuals) {
