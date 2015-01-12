@@ -32,10 +32,10 @@ proc main
   var xguess : tensor[points](float) = 0.0;
   var x : tensor[points](float);
 
-% start cg
+% begin inlined CG
   tol = 1e-6;
   maxiters = 5;
-  r = b - (xguess*A);
+  r = b - (A*xguess);
   p = r;
   iter = 0;
   x = xguess;
@@ -55,8 +55,7 @@ proc main
     p = r + beta*p;
     iter = iter + 1;
   end
-
-% end cg
+% end inlined CG
 
   points.c = x;
 end
