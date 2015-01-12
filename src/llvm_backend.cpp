@@ -77,7 +77,7 @@ simit::Function *LLVMBackend::compile(Func func) {
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
-  map<Var, llvm::Value*> buffers;
+  buffers.clear();
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
@@ -92,39 +92,9 @@ simit::Function *LLVMBackend::compile(Func func) {
 
     this->storage.add(f.getStorage());
 
-
-    // Allocate buffers for local variables in global storage.
-    // TODO: We should allocate small local dense tensors on the stack
-    map<Var, llvm::Value*> localBuffers;
-    for (auto &var : storage) {
-      if (!storage.get(var).needsInitialization()) continue;
-
-      iassert(var.getType().isTensor());
-      llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
-      llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
-
-      llvm::GlobalVariable* buffer =
-          new llvm::GlobalVariable(*module, globalType,
-                                   false, llvm::GlobalValue::InternalLinkage,
-                                   llvm::ConstantPointerNull::get(globalType),
-                                   var.getName());
-      buffer->setAlignment(8);
-      localBuffers.insert(pair<Var,llvm::Value*>(var,buffer));
-    }
-    buffers.insert(localBuffers.begin(), localBuffers.end());
-
-
     // Emit function
     llvmFunc = emitEmptyFunction(f.getName(), f.getArguments(),
                                  f.getResults());
-
-    // Load localBuffers
-    for (auto &buffer : localBuffers) {
-      Var var = buffer.first;
-      llvm::Value *bufferVal = buffer.second;
-      llvm::Value *llvmTmp = builder->CreateLoad(bufferVal, bufferVal->getName());
-      symtable.insert(var, llvmTmp);
-    }
 
     // Add constants to symbol table
     for (auto &global : f.getEnvironment().globals) {
@@ -591,7 +561,7 @@ void LLVMBackend::visit(const VarDecl *op) {
     symtable.insert(var, llvmVar);
   }
   else {
-    // Ignore
+    makeGlobalTensor(op->var);
   }
 }
 
@@ -1417,6 +1387,28 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
       symtable.insert(var, varPtr);
     }
   }
+}
+
+void LLVMBackend::makeGlobalTensor(ir::Var var) {
+  // Allocate buffer for local variable in global storage.
+  // TODO: We should allocate small local dense tensors on the stack
+  if (!storage.get(var).needsInitialization()) return;
+
+  iassert(var.getType().isTensor());
+  llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
+  llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
+
+  llvm::GlobalVariable* buffer =
+      new llvm::GlobalVariable(*module, globalType,
+                               false, llvm::GlobalValue::InternalLinkage,
+                               llvm::ConstantPointerNull::get(globalType),
+                               var.getName());
+  buffer->setAlignment(8);
+  buffers.insert(pair<Var, llvm::Value*>(var, buffer));
+
+  // Add load to symtable
+  llvm::Value *llvmTmp = builder->CreateLoad(buffer, buffer->getName());
+  symtable.insert(var, llvmTmp);
 }
 
 }}  // namespace simit::internal

@@ -42,6 +42,8 @@ public:
 protected:
   ScopedMap<simit::ir::Var, llvm::Value*> symtable;
 
+  // Globally allocated buffers
+  std::map<ir::Var, llvm::Value*> buffers;
   ir::Storage storage;
   ir::TensorStorage fieldStorage;
 
@@ -131,6 +133,10 @@ protected:
   void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
   void emitAssign(ir::Var var, const ir::Expr& value);
+
+  /// Allocate a global pointer for a tensor, and add to the symtable
+  /// and list of global buffers
+  virtual void makeGlobalTensor(ir::Var var);
 
 private:
   static bool llvmInitialized;
