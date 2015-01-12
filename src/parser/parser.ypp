@@ -934,7 +934,6 @@ while_stmt_header
 %type <stmt> while_body;
 while_body
   : stmt_block {
-
     $$ = new Stmt(convertAndDelete($1));
   }
 
@@ -946,20 +945,18 @@ while_end
 %type <stmt> if_stmt;
 if_stmt
   : "if" boolean_expr if_body else_clauses BLOCKEND {
-    Expr cond = convertAndDelete($2);
-    ctx->scope();
-    Stmt trueStmt = convertAndDelete($3);
-    ctx->unscope();
-    Stmt elseStmt = convertAndDelete($4);
-    Stmt *result = new Stmt(IfThenElse::make(cond, trueStmt, elseStmt));
+    Expr cond = convertAndDelete($boolean_expr);
+    Stmt ifStmt = convertAndDelete($if_body);
+    Stmt elseStmt = convertAndDelete($else_clauses);
+    Stmt *result = new Stmt(IfThenElse::make(cond, ifStmt, elseStmt));
     ctx->addStatement(*result);
     $$ = result;
   }
 
 %type <stmt> if_body;
 if_body
-  : stmt_block {
-    $$ = new Stmt(convertAndDelete($1));
+  : {ctx->scope();} stmt_block {ctx->unscope();} {
+    $$ = new Stmt(convertAndDelete($stmt_block));
   }
 
 %type <stmt> else_clauses;
@@ -967,18 +964,14 @@ else_clauses
   : /* empty */ {
     $$ = new Stmt(Pass::make());
   }
-  | "else" stmt_block {
-    ctx->scope();
-    $$ = new Stmt(convertAndDelete($2));
-    ctx->unscope();
+  | "else" {ctx->scope();} stmt_block {ctx->unscope();} {
+    $$ = new Stmt(convertAndDelete($stmt_block));
   }
-  | "elif" boolean_expr if_body else_clauses {
-    Expr cond = convertAndDelete($2);
-    ctx->scope();
-    Stmt trueStmt = convertAndDelete($3);
-    ctx->unscope();
-    Stmt elseStmt = convertAndDelete($4);
-    Stmt *result = new Stmt(IfThenElse::make(cond, trueStmt, elseStmt));
+  | "elif" boolean_expr {ctx->scope();} if_body {ctx->unscope();} else_clauses {
+    Expr cond = convertAndDelete($boolean_expr);
+    Stmt ifStmt = convertAndDelete($if_body);
+    Stmt elseStmt = convertAndDelete($6);
+    Stmt *result = new Stmt(IfThenElse::make(cond, ifStmt, elseStmt));
     ctx->addStatement(*result);
     $$ = result;
   }
