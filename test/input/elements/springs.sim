@@ -1,0 +1,26 @@
+%%% fs
+%! fs([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [8.2742, 4.9645, 1.6548];
+func fs(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, s : float) -> (f : tensor[3](float))
+  dx = x1 - x0;
+  l = norm(dx);
+  f = s / (l0*l0)*(l-l0)*dx / l;
+end
+
+%%% stiffness
+%! stiffness([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [2.0272, 1.5544, 1.0816; 1.5544, 1.2707, 0.9870; 1.0816, 0.9870, 0.8924];
+func stiffness(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  dx = x1 - x0;
+  l = norm(dx);
+  K = k / (l0*l0*l*l)*(dx*dx' + (l-l0)/l*(dx'*dx*I - dx*dx'));
+end
+
+%%% stiffnesshh
+%! stiffnesshh([1.0, 0.0, 0.0], [2.0, 0.0, 0.0], 0.9, 10.0) == [0.12346, 0.0, 0.0; 0.0, 0.012346, 0.0; 0.0, 0.0, 0.012346];
+func stiffnesshh(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  h = 1e-1;
+  dx = x1 - x0;
+  l = norm(dx);
+  K = h*h*k/(l0*l0*l*l)*(dx'*dx + (l-l0)/l*(dx*dx'*I - dx'*dx));
+end

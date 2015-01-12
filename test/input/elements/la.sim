@@ -1,9 +1,3 @@
-%%% outer
-%! outer([1.0, 2.0, 3.0]) == [1.0, 2.0, 3.0; 2.0, 4.0, 6.0; 3.0, 6.0, 9.0];
-func outer(a : tensor[3](float)) -> (b : tensor[3,3](float))
-  b = a' * a;
-end
-
 %%% outer_mul
 %! outer_mul([1.0, 2.0, 3.0], [4.0, 5.0, 6.0]') == [32.0, 64.0, 96.0]';
 func outer_mul(a : tensor[3](float), b : tensor[3](float)) -> (c : tensor[3](float)')
@@ -31,14 +25,6 @@ func read_result(a : tensor[2](float)) -> (b : tensor[2](float))
   b(1) = b(0) + a(1);
 end
 
-%%% fs
-%! fs([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [8.2742, 4.9645, 1.6548];
-func fs(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, s : float) -> (f : tensor[3](float))
-  dx = x1 - x0;
-  l = norm(dx);
-  f = s / (l0*l0)*(l-l0)*dx / l;
-end
-
 %%% gemm
 %! gemm([1.0, 2.0, 3.0]) == [1.0, 2.0, 3.0; 2.0, 4.0, 6.0; 3.0, 6.0, 9.0]; 
 func gemm(dx : tensor[3](float)) -> (k : tensor[3,3](float))
@@ -52,99 +38,3 @@ func gemm_sub_dot(dx : tensor[3](float)) -> (k : tensor[3,3](float))
   I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
   k = dx'*dx*I - dx*dx';
 end
-
-%%% spring_force
-%! spring_force([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0) == [827.422873, 496.453724, 165.484575];
-func spring_force(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float) -> (f : tensor[3](float))
-  stiffness = 1.0e3;
-  dx = x1 - x0;
-  l = norm(dx);
-  f = stiffness/(l0*l0)*(l-l0)*dx/l;
-end
-
-%%% stiffness
-%! stiffness([1.0, 2.0, 3.0], [6.0, 5.0, 4.0], 2.0, 10.0) == [2.0272, 1.5544, 1.0816; 1.5544, 1.2707, 0.9870; 1.0816, 0.9870, 0.8924];
-func stiffness(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
-  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  dx = x1 - x0;
-  l = norm(dx);
-  K = k / (l0*l0*l*l)*(dx*dx' + (l-l0)/l*(dx'*dx*I - dx*dx'));
-end
-
-%%% stiffness2
-%! stiffness2([1.0, 0.0, 0.0], [2.0, 0.0, 0.0], 0.9, 10.0) == [0.12346, 0.0, 0.0; 0.0, 0.012346, 0.0; 0.0, 0.0, 0.012346];
-func stiffness2(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
-  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  h = 1e-1;
-  dx = x1 - x0;
-  l = norm(dx);
-  dxtdx = dx*dx';
-  dxdxt = dx'*dx;
-
-  t0 = dxtdx * I;
-  t1 = (t0 - dxdxt);
-  t2 = (l-l0)/l;
-  t3 = t2*t1;
-  t4 = dxdxt + t3;
-  t5 = h*h*k/(l0*l0*l*l);
-
-  K = t5 * t4;
-end
-
-%%% stiffness3
-%! stiffness3([1.0, 0.0, 0.0], [2.0, 0.0, 0.0], 0.9, 10.0) == [0.12346, 0.0, 0.0; 0.0, 0.012346, 0.0; 0.0, 0.0, 0.012346];
-func stiffness3(x0 : tensor[3](float), x1 : tensor[3](float), l0 : float, k : float) -> (K : tensor[3,3](float))
-  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  h = 1e-1;
-  dx = x1 - x0;
-  l = norm(dx);
-  dxtdx = dx*dx';
-  dxdxt = dx'*dx;
-
-  K = h*h*k/(l0*l0*l*l)*(dxdxt + (l-l0)/l*(dxtdx*I - dxdxt));
-end
-
-%%% fe_stress
-%! fe_stress([0.0, 0.0], [1.1, 0.0], [0.0, 1.1],  [0.0, 0.0], [1.0, 0.0], [0.0, 1.0], 10.0, 100.0) == [20.0454545454546, 0.0; 0.0, 20.0454545454546];
-%! fe_stress([34.1, 22.0], [35.2, 22.0], [34.1, 23.1],  [31.0, 20.0], [32.0, 20.0], [31.0, 21.0], 10.0, 100.0) == [20.0454545454546, 0.0; 0.0, 20.0454545454546];
-func fe_stress(v0x : tensor[2](float), v1x : tensor[2](float), v2x : tensor[2](float),
-           v0X : tensor[2](float), v1X : tensor[2](float), v2X : tensor[2](float),
-           mu : float, lambda : float)  -> (stress : tensor[2,2](float)) 
-  eye2 = [1.0, 0.0; 0.0, 1.0];
-  e0 = v1x - v0x;
-  e1 = v2x - v0x;
-  e2 = v2x - v1x;
-  E0 = v1X - v0X;
-  E1 = v2X - v0X;
-  F = [0.0, 0.0; 0.0, 0.0];
-  F(0,0) = e0(0);
-  F(0,1) = e0(1);
-  F(1,0) = e1(0);
-  F(1,1) = e1(1);
-
-  m = [0.0, 0.0; 0.0, 0.0];
-  m(0,0) = E0(0);
-  m(0,1) = E0(1);
-  m(1,0) = E1(0);
-  m(1,1) = E1(1);
-
-  det2m = m(0,0) * m(1,1) - m(0,1) * m(1,0);
-
-  inv2m = [0.0, 0.0; 0.0, 0.0];
-
-  d = 1.0/det2m;
-  inv2m(0,0) =  m(1,1);
-  inv2m(0,1) = -m(0,1);
-  inv2m(1,0) = -m(1,0);
-  inv2m(1,1) =  m(0,0);
-  inv2m = d * inv2m;
-
-  F = F * inv2m;
-
-  E = 0.5 * (F'*F-eye2);
-  trace2E = E(0,0) + E(1,1);
-  P = mu * E + lambda * trace2E * eye2;
-  J = F(0,0) * F(1,1) - F(0,1) * F(1,0);
-  stress = (P*F')./J;
-end
-
