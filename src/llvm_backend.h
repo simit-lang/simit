@@ -136,7 +136,7 @@ protected:
 
   /// Allocate a global pointer for a tensor, and add to the symtable
   /// and list of global buffers
-  void makeGlobalTensor(ir::Var var);
+  virtual void makeGlobalTensor(ir::Var var);
 
 private:
   static bool llvmInitialized;
