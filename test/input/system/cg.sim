@@ -27,35 +27,40 @@ proc main
   A = map   f to springs reduce +;
   I = map eye to points reduce +;
 
-  A = I - 0.01 * A;
-  
+  pointo1A = 0.01 * A;
+  A = I - pointo1A;
+
   var xguess : tensor[points](float) = 0.0;   
   var x : tensor[points](float);
 
 % start cg
   tol = 1e-6;
-  maxiters = 5;
-  r = b - (xguess*A);
+  maxiters = 50;
+  xguess_A = xguess * A;
+  r = b - (xguess_A);
   p = r;
   iter = 0;
   x = xguess;
-
-  while norm(r) > tol and iter < maxiters
+  
+  normr = norm(r);
+  while (normr > tol) and (iter < maxiters)
     alpha = dot(r, r);
     Atimesp = A * p;
     denom = dot(p, Atimesp);
     alpha = alpha / denom;
-
-    x = x + alpha*p;
+    alphaxp = alpha * p;
+    x = x + alphaxp;
     oldrsqn = dot(r,r);
-    r = r - alpha*A*p;
+    alphaxA = alpha * A;
+    alphaxAxp = alphaxA * p;
+    r = r - alphaxAxp;
     newrsqn = dot(r,r);
     beta = newrsqn/oldrsqn;
-    p = r + beta*p;
+    betaxp = beta*p;
+    p = r + betaxp;
     iter = iter + 1;
+    normr = norm(r);
   end
-
 % end cg
-
   points.c = x;
 end
