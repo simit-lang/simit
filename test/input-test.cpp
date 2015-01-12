@@ -206,6 +206,7 @@ SIM_TEST(elements, blas3);
 SIM_TEST(elements, la);
 SIM_TEST(elements, intrinsics);
 SIM_TEST(elements, tensors);
+SIM_TEST(elements, slice);
 SIM_TEST(elements, index_notation);
 SIM_TEST(elements, fem);
 SIM_TEST(elements, fem_tensor);
