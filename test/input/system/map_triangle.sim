@@ -16,7 +16,7 @@ func dist(t : Trig, v : (Vert*3)) -> ( R : tensor[verts](float))
 end
 
 proc main
-  R = map dist to trigs with verts reduce +;
+  R = map dist to trigs reduce +;
   verts.b = R;
 end
 

@@ -65,25 +65,19 @@ protected:
   virtual void compile(const ir::Stmt &stmt);
 
   virtual void visit(const ir::FieldRead *);
-  virtual void visit(const ir::TensorRead *);
-  virtual void visit(const ir::TupleRead *);
   virtual void visit(const ir::IndexRead *op);
   virtual void visit(const ir::Length *op);
-  virtual void visit(const ir::Map *);
-  virtual void visit(const ir::IndexedTensor *);
-  virtual void visit(const ir::IndexExpr *op);
-  virtual void visit(const ir::TensorWrite *);
 
   virtual void visit(const ir::Literal *);
   virtual void visit(const ir::VarExpr *);
   virtual void visit(const ir::Load *);
   virtual void visit(const ir::Call *);
+
   virtual void visit(const ir::Neg *);
   virtual void visit(const ir::Add *);
   virtual void visit(const ir::Sub *);
   virtual void visit(const ir::Mul *);
   virtual void visit(const ir::Div *);
-
   virtual void visit(const ir::Eq *);
   virtual void visit(const ir::Ne *);
   virtual void visit(const ir::Gt *);
@@ -107,6 +101,14 @@ protected:
   virtual void visit(const ir::Block *);
   virtual void visit(const ir::Pass *);
   virtual void visit(const ir::Print *);
+
+  /// IRNodes that should never reach the backend (should have been lowered)
+  virtual void visit(const ir::IndexExpr *op);
+  virtual void visit(const ir::Map *);
+  virtual void visit(const ir::IndexedTensor *);
+  virtual void visit(const ir::TensorRead *);
+  virtual void visit(const ir::TupleRead *);
+  virtual void visit(const ir::TensorWrite *);
 
   /// Get a pointer to the given field
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);
@@ -138,8 +140,6 @@ protected:
 
   virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
-  virtual void emitFirstAssign(const ir::Var& var,
-                               const ir::Expr& value);
   void emitAssign(ir::Var var, const ir::Expr& value);
 
 private:

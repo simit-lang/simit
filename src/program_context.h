@@ -12,6 +12,7 @@
 #include "types.h"
 #include "ir.h"
 #include "ir_builder.h"
+#include "ir_codegen.h"
 
 #include "test.h"
 
@@ -116,6 +117,7 @@ public:
     };
 
     f.setEnvironment(FunctionEnvironmentBuilder(*this).buildEnvironment(f));
+    f = insertVarDecls(f);
 
     functions[f.getName()] = f;
   }

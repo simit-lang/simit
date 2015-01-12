@@ -81,10 +81,10 @@ end
 proc main
   h = 1e-1;
 
-  fm = map compute_f to springs with points reduce +;
+  fm = map compute_f to springs reduce +;
   f = fm;
 
-  MK = map compute_MK to springs with points reduce +;
+  MK = map compute_MK to springs reduce +;
 
   %r = f - MK*v;
   MKv = MK * points.v;

@@ -331,11 +331,9 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
   // Only atomic for a compound scalar-scalar assign
   if (op->cop.kind != ir::CompoundOperator::None &&
       op->var.getType().toTensor()->order() == 0) {
+    iassert(symtable.contains(op->var)) << op->var << " has not been declared";
     switch (op->cop.kind) {
       case ir::CompoundOperator::Add: {
-        if (!symtable.contains(op->var)) {
-          emitFirstAssign(op->var, op->value);
-        }
         llvm::Value *value = compile(op->value);
         llvm::Value *varPtr = symtable.get(op->var);
         // Guard against non-pointer
@@ -710,19 +708,6 @@ void GPUBackend::emitPrintf(std::string format,
       module->getOrInsertFunction("vprintf", vprintfTy));
 
   builder->CreateCall2(vprintf, formatPtr, argBuf);
-}
-void GPUBackend::emitFirstAssign(const ir::Var& var,
-                                 const ir::Expr& value) {
-  // TODO(gkanwar): This doesn't handle sharding later in the code
-  if (sharding.isSharded()) {
-    not_supported_yet;
-  }
-  else {
-    // TODO(gkanwar): This should actually potentially be up to a two
-    // dimensional array to allow correct scoping with nested sharding.
-    // Potentially should be done as a second pass.
-    LLVMBackend::emitFirstAssign(var, value);
-  }
 }
 
 void GPUBackend::emitFillBuf(llvm::Value *buffer,

@@ -4,6 +4,7 @@
 
 #include "ir.h"
 #include "ir_rewriter.h"
+#include "ir_codegen.h"
 
 namespace simit {
 namespace ir {
@@ -99,7 +100,9 @@ class InsertTemporaries : public IRRewriter {
 };
 
 Func insertTemporaries(Func func) {
-  return InsertTemporaries().rewrite(func);
+  func = InsertTemporaries().rewrite(func);
+  func = insertVarDecls(func);
+  return func;
 }
 
 }}

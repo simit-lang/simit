@@ -17,6 +17,6 @@ func dist_a(z : float, s : Spring, p : (Point*2)) ->
 end
 
 proc main 
-  A = map dist_a(2.0) to springs with points reduce +;
+  A = map dist_a(2.0) to springs reduce +;
   points.c = A * points.b;
 end

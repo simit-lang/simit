@@ -1,0 +1,61 @@
+element Point
+  b  : float;
+  c  : float;
+  id : int;
+end
+
+element Spring
+  a : float;
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+func f(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
+  A(p(0),p(0)) =  s.a;
+  A(p(0),p(1)) = -s.a;
+  A(p(1),p(0)) = -s.a;
+  A(p(1),p(1)) =  s.a;
+end
+
+func eye(p : Point) -> (I : tensor[points,points](float))
+  I(p,p) = 1.0;
+end
+
+proc main
+  b = points.b;
+  A = map   f to springs reduce +;
+  I = map eye to points reduce +;
+
+  A = I - 0.01 * A;
+  
+  var xguess : tensor[points](float) = 0.0;   
+  var x : tensor[points](float);
+
+% start cg
+  tol = 1e-6;
+  maxiters = 5;
+  r = b - (xguess*A);
+  p = r;
+  iter = 0;
+  x = xguess;
+
+  while norm(r) > tol and iter < maxiters
+    alpha = dot(r, r);
+    Atimesp = A * p;
+    denom = dot(p, Atimesp);
+    alpha = alpha / denom;
+
+    x = x + alpha*p;
+    oldrsqn = dot(r,r);
+    r = r - alpha*A*p;
+    newrsqn = dot(r,r);
+    beta = newrsqn/oldrsqn;
+    p = r + beta*p;
+    iter = iter + 1;
+  end
+
+% end cg
+
+  points.c = x;
+end

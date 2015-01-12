@@ -124,9 +124,12 @@ public:
 class IRVisitorCallGraph : public IRVisitor {
 public:
   std::set<ir::Func> visited;
+
   using IRVisitor::visit;
+
   virtual void visit(const Call *op);
   virtual void visit(const CallStmt *op);
+  virtual void visit(const Map *op);
 };
 
 /// Query class to make it easier to write visitors to answer a yes/no question.

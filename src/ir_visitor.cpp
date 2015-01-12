@@ -228,6 +228,7 @@ void IRVisitor::visit(const GPUKernel *op) {
 void IRVisitorCallGraph::visit(const Call *op) {
   if (visited.find(op->func) == visited.end()) {
     op->func.accept(this);
+    visited.insert(op->func);
   }
 
   for (auto &actual : op->actuals) {
@@ -238,11 +239,21 @@ void IRVisitorCallGraph::visit(const Call *op) {
 void IRVisitorCallGraph::visit(const CallStmt *op) {
   if (visited.find(op->callee) == visited.end()) {
     op->callee.accept(this);
+    visited.insert(op->callee);
   }
 
   for (auto &actual : op->actuals) {
     actual.accept(this);
   }
+}
+
+void IRVisitorCallGraph::visit(const Map *op) {
+  if (visited.find(op->function) == visited.end()) {
+    op->function.accept(this);
+    visited.insert(op->function);
+  }
+
+  IRVisitor::visit(op);
 }
 
 // IRQuery

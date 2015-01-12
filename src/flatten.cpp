@@ -4,8 +4,9 @@
 #include <vector>
 
 #include "ir.h"
-#include "ir_rewriter.h"
 #include "ir_queries.h"
+#include "ir_rewriter.h"
+#include "ir_codegen.h"
 #include "substitute.h"
 
 using namespace std;
@@ -147,7 +148,9 @@ Stmt flattenIndexExpressions(Stmt stmt) {
 
 Func flattenIndexExpressions(Func func) {
   Stmt body = flattenIndexExpressions(func.getBody());
-  return Func(func, body);
+  func = Func(func, body);
+  func = insertVarDecls(func);
+  return func;
 }
 
 }} // namespace simit::ir

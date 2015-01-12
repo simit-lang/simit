@@ -1,0 +1,17 @@
+element Point
+end
+
+element Spring
+  a : float;
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+func f(inout s : Spring)
+  s.a = 2.0 * s.a;
+end
+
+proc main 
+  map f to springs; 
+end

@@ -33,28 +33,71 @@ const std::vector<std::string> VALID_BACKENDS = {
 std::string kBackend = "llvm";
 
 static Function *compile(ir::Func func, internal::Backend *backend) {
-  class OptimizeFunctionsVisitor : public ir::IRRewriterCallGraph {
+  class FlattenRewriter : public ir::IRRewriterCallGraph {
     using IRRewriter::visit;
     void visit(const ir::Func *op) {
       if (op->getKind() != ir::Func::Internal) {
         func = *op;
         return;
       }
-
       func = ir::Func(*op, rewrite(op->getBody()));
       func = insertTemporaries(func);
       func = flattenIndexExpressions(func);
-      func.setStorage(getStorage(func));
-      func = lower(func);
-      #ifdef GPU
-      if (kBackend == "gpu") {
-        func = shardLoops(func);
-        func = liftGPUVars(func);
-      }
-      #endif
     }
   };
-  func = OptimizeFunctionsVisitor().rewrite(func);
+  func = FlattenRewriter().rewrite(func);
+
+  class SetStorageRewriter : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      func.setStorage(getStorage(func));
+    }
+  };
+  func = SetStorageRewriter().rewrite(func);
+
+  class LowerMapsRewriter : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      func = lowerMaps(func);
+    }
+  };
+  func = LowerMapsRewriter().rewrite(func);
+
+  class LowerIndexExpressionsRewriter : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      func = lowerIndexExpressions(func);
+    }
+  };
+  func = LowerIndexExpressionsRewriter().rewrite(func);
+
+  class LowerTensorAccessesRewriter : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      func = lowerTensorAccesses(func);
+    }
+  };
+  func = LowerTensorAccessesRewriter().rewrite(func);
 
   return backend->compile(func);
 }

@@ -90,9 +90,6 @@ protected:
   virtual void emitPrintf(std::string format,
                           std::vector<llvm::Value*> args={});
 
-  virtual void emitFirstAssign(const ir::Var& var,
-                               const ir::Expr& value);
-
   void emitFillBuf(llvm::Value *buffer,
                    std::vector<llvm::Value*> vals);
 };

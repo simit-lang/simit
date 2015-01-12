@@ -44,9 +44,9 @@ end
 proc main
   h = 0.01;
 
-  fg = map distribute_gravity to springs with points reduce +;
-  M = map distribute_masses to springs with points reduce +;
-  fs = map compute_stiffness to springs with points reduce +;
+  fg = map distribute_gravity to springs reduce +;
+  M = map distribute_masses to springs reduce +;
+  fs = map compute_stiffness to springs reduce +;
 
   points.fs = --fs;
   points.fg = --fg;

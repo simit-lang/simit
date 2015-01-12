@@ -83,13 +83,14 @@ protected:
 /// Rewrites a whole call graph
 class IRRewriterCallGraph : public IRRewriter {
 protected:
-//  using IRRewriter::visit;
-  std::set<ir::Func> visited;
-  
+  /// Visited functions, and the function they were rewritten to.
+  std::map<ir::Func,ir::Func> visited;
+
   using IRRewriter::visit;
 
   virtual void visit(const Call *op);
   virtual void visit(const CallStmt *op);
+  virtual void visit(const Map *op);
 };
 
 }}

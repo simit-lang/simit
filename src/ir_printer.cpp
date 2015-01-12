@@ -64,6 +64,9 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
     case ForDomain::Neighbors:
       os << d.set << ".neighbors[" << d.var << "]";
       break;
+    case ForDomain::Diagonal:
+      os << d.set << ".diagonal[" << d.var << "]";
+      break;
   }
   return os;
 }
@@ -335,7 +338,7 @@ void IRPrinter::visit(const Not *op) {
 
 void IRPrinter::visit(const VarDecl *op) {
   indent();
-  os << "var " << op->var.getName() << " : " << op->var.getType();
+  os << "var " << op->var << " : " << op->var.getType();
   os << ";";
 }
 
@@ -354,9 +357,16 @@ void IRPrinter::visit(const CallStmt *op) {
 
 void IRPrinter::visit(const Map *op) {
   indent();
-  os << util::join(op->vars) << " = ";
+  if (op->vars.size() > 0) {
+    os << util::join(op->vars) << " = ";
+  }
+
   os << "map " << op->function.getName();
-  os << "(" << util::join(op->partial_actuals) << ")";
+
+  if (op->partial_actuals.size() > 0) {
+    os << "(" << util::join(op->partial_actuals) << ")";
+  }
+
   os << " to ";
   print(op->target);
   if (op->neighbors.defined()) {
@@ -542,23 +552,25 @@ void IRPrinterCallGraph::print(const Func &func) {
 }
 
 void IRPrinterCallGraph::visit(const Call *op) {
-  if (op->func.getKind() == Func::Intrinsic) return;
-  os << op->func << "\n\n";
+  op->func.accept(this);
 }
 
 void IRPrinterCallGraph::visit(const CallStmt *op) {
-  if (op->callee.getKind() == Func::Intrinsic) return;
-  os << op->callee << "\n\n";
+  op->callee.accept(this);
 }
 
 void IRPrinterCallGraph::visit(const Map *op) {
-  if (op->function.getKind() == Func::Intrinsic) return;
-  os << op->function << "\n\n";
+  op->function.accept(this);
 }
 
 void IRPrinterCallGraph::visit(const Func *op) {
-  IRVisitor::visit(op);
-  os << *op;
+  if (op->getKind() == Func::Intrinsic) return;
+
+  if (visited.find(*op) == visited.end()) {
+    visited.insert(*op);
+    IRVisitor::visit(op);
+    os << *op << endl << endl;
+  }
 }
 
 

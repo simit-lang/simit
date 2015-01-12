@@ -84,7 +84,8 @@ void Function::bind(const std::string &argName, SetBase *set) {
   // Type check
   for (size_t i=0; i < set->fields.size(); ++i) {
     SetBase::FieldData *fieldData = set->fields[i];
-    uassert(elemType->hasField(fieldData->name)) << "Field not found in set";
+    uassert(elemType->hasField(fieldData->name)) << "Field " <<
+      fieldData->name << " not found in set";
 
     const SetBase::FieldData::TensorType *setFieldType = fieldData->type;
     const ir::TensorType *elemFieldType =

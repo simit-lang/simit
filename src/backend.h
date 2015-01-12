@@ -1,5 +1,5 @@
-#ifndef SIMIT_CODEGEN_H
-#define SIMIT_CODEGEN_H
+#ifndef SIMIT_BACKEND_H
+#define SIMIT_BACKEND_H
 
 #include <vector>
 #include <map>
@@ -28,5 +28,5 @@ public:
   virtual simit::Function *compile(simit::ir::Func func) = 0;
 };
 
-}} // namespace simit::internal
+}}
 #endif

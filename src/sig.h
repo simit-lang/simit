@@ -56,7 +56,7 @@ public:
 
   bool isSparse() const {return content->edges.size() > 0;}
 
-  friend SIG merge(SIG&, SIG&, SIG::MergeOp);
+  friend SIG merge(SIG&, SIG&, SIG::MergeOp, Storage& storage);
 
 private:
   struct Content {
@@ -90,7 +90,7 @@ public:
   typedef std::vector<LoopVar>::const_iterator Iterator;
   typedef std::vector<LoopVar>::const_reverse_iterator ReverseIterator;
 
-  static LoopVars create(const SIG &sig);
+  static LoopVars create(const SIG &sig, const Storage& storage);
 
   /// Get the loop variables that correspond to the given index variable. There
   /// are one loop variable per block level in the indexvar domain.

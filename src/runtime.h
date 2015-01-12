@@ -25,8 +25,10 @@ double asin_f64(double x);
 float asin_f32(float x);
 double acos_f64(double x);
 float acos_f32(float x);
-double det3(double * a);
-void inv3(double * a, double * inv);
+double det3_f64(double* a);
+float det3_f32(float* a);
+void inv3_f64(double* a, double* inv);
+void inv3_f32(float* a, float* inv);
 
 void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
                  int rows, int columns) {

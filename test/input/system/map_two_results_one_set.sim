@@ -1,0 +1,16 @@
+element Point
+  a : float;
+  b : float;
+end
+
+extern points : set{Point};
+
+func f(p : Point) -> (b : tensor[points](float), A : tensor[points,points](float))
+  b(p) = 2.0 * p.a;
+  A(p,p) = 3.0 * p.a;
+end
+
+proc main 
+  b, A = map f to points;
+  points.b = A*b;
+end

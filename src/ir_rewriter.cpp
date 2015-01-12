@@ -444,57 +444,54 @@ void IRRewriter::visit(const GPUKernel *op) {
 
 // class IRRewriterCallGraph
 void IRRewriterCallGraph::visit(const Call *op) {
-  Func callee;
+  IRRewriter::visit(op);
+  op = to<Call>(stmt);
+
+  Func func = op->func;
   if (visited.find(op->func) == visited.end()) {
-    visited.insert(op->func);
-    callee = rewrite(op->func);
+    func = rewrite(op->func);
+    visited[op->func] = func;
   }
   else {
-    callee = op->func;
+    func = visited[op->func];
   }
 
-  std::vector<Expr> actuals(op->actuals.size());
-  bool actualsSame = true;
-  for (size_t i=0; i < op->actuals.size(); ++i) {
-    actuals[i] = rewrite(op->actuals[i]);
-    if (actuals[i] != op->actuals[i]) {
-      actualsSame = false;
-    }
-  }
-
-  if (callee == op->func && actualsSame) {
-    expr = op;
-  }
-  else {
-    expr = Call::make(callee, actuals);
-  }
+  expr = (func != op->func) ? Call::make(func, op->actuals) : op;
 }
 
 void IRRewriterCallGraph::visit(const CallStmt *op) {
-  Func callee;
+  IRRewriter::visit(op);
+  op = to<CallStmt>(stmt);
+
+  Func callee = op->callee;
   if (visited.find(op->callee) == visited.end()) {
-    visited.insert(op->callee);
     callee = rewrite(op->callee);
+    visited[op->callee] = callee;
   }
   else {
-    callee = op->callee;
+    callee = visited[op->callee];
   }
 
-  std::vector<Expr> actuals(op->actuals.size());
-  bool actualsSame = true;
-  for (size_t i=0; i < op->actuals.size(); ++i) {
-    actuals[i] = rewrite(op->actuals[i]);
-    if (actuals[i] != op->actuals[i]) {
-      actualsSame = false;
-    }
-  }
-
-  if (callee == op->callee && actualsSame) {
-    stmt = op;
-  }
-  else {
-    stmt = CallStmt::make(op->results, callee, actuals);
-  }
+  stmt = (callee != op->callee)
+      ? CallStmt::make(op->results, callee, op->actuals) : op;
 }
 
+void IRRewriterCallGraph::visit(const Map *op) {
+  IRRewriter::visit(op);
+  op = to<Map>(stmt);
+
+  Func function = op->function;
+  if (visited.find(op->function) == visited.end()) {
+    function = rewrite(op->function);
+    visited[op->function] = function;
+  }
+  else {
+    function = visited[op->function];
+  }
+
+  stmt = (function != op->function)
+      ? Map::make(op->vars, function, op->partial_actuals,
+                  op->target, op->neighbors, op->reduction)
+      : op;
+}
 }} // namespace simit::ir

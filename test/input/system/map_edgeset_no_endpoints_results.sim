@@ -1,0 +1,19 @@
+element Point
+  b : float;
+end
+
+element Spring
+  a : float;
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+func f(inout s : Spring) -> (r : tensor[points](float))
+  s.a = 2.0 * s.a;
+end
+
+proc main 
+  b = map f to springs; 
+  points.b = b;
+end
