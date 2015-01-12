@@ -128,7 +128,9 @@ protected:
   /// function's arguments and result variables are added to the symbol table.
   llvm::Function *emitEmptyFunction(const std::string &name,
                                     const std::vector<ir::Var> &arguments,
-                                    const std::vector<ir::Var> &results);
+                                    const std::vector<ir::Var> &results,
+                                    bool externalLinkage=false,
+                                    bool doesNotThrow=true);
 
   void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
