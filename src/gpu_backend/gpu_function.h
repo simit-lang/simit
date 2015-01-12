@@ -20,9 +20,11 @@ class GPUFunction : public simit::Function {
  public:
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module, class GPUSharding sharding,
-              int cuDevMajor, int cuDevMinor)
+              std::map<ir::Var, llvm::Value*> globalBufs,
+              ir::TensorStorage storage, int cuDevMajor, int cuDevMinor)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
-      sharding(sharding), cuDevMajor(cuDevMajor), cuDevMinor(cuDevMinor) {}
+      sharding(sharding), globalBufs(globalBufs), storage(storage),
+      cuDevMajor(cuDevMajor), cuDevMinor(cuDevMinor) {}
   ~GPUFunction();
 
   void print(std::ostream &os) const;
@@ -40,6 +42,8 @@ class GPUFunction : public simit::Function {
   CUdeviceptr allocArg(const ir::Type& var);
   // Get argument data as a Literal
   const ir::Literal& getArgData(Actual& actual);
+  // Compute tensor size given the actual bound sets
+  size_t computeTensorSize(const ir::Var& var);
 
   // Struct for tracking arguments being pushed and pulled to/from GPU
   struct DeviceDataHandle {
@@ -66,6 +70,8 @@ class GPUFunction : public simit::Function {
   std::unique_ptr<ir::Func> simitFunc;
   std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> module;
+  std::map<ir::Var, llvm::Value*> globalBufs;
+  ir::TensorStorage storage;
   int cuDevMajor, cuDevMinor;
   class GPUSharding sharding;
 };

@@ -99,6 +99,27 @@ static Function *compile(ir::Func func, internal::Backend *backend) {
   };
   func = LowerTensorAccessesRewriter().rewrite(func);
 
+#if GPU
+  class ShardLoopsRewriter : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      std::cout << "Shard loops: " << func.getName() << std::endl;
+      func = shardLoops(func);
+      std::cout << "Done." << std::endl;
+    }
+  };
+  if (kBackend == "gpu") {
+    func = ShardLoopsRewriter().rewrite(func);
+    std::cout << "Rewritten: " << std::endl
+              << func << std::endl;
+  }
+#endif
+
   return backend->compile(func);
 }
 

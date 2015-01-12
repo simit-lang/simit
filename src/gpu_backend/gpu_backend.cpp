@@ -56,31 +56,41 @@ GPUBackend::GPUBackend() {
 GPUBackend::~GPUBackend() {}
 
 simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
+  std::cout << "GPUBackend compile: " << irFunc.getName() << std::endl;
   this->irFunc = irFunc;
   this->module = createNVVMModule("kernels-module");
   this->dataLayout.reset(new llvm::DataLayout(module));
   this->storage = irFunc.getStorage();
 
-  func = createPrototype(irFunc.getName(), irFunc.getArguments(),
-                         irFunc.getResults(), module,
-                         true, false);
+  std::vector<ir::Func> callTree = ir::getCallTree(irFunc);
+  std::reverse(callTree.begin(), callTree.end());
 
-  // Build 'entry' basic block
-  llvm::BasicBlock *entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", func);
-  builder.reset(new LLVMIRBuilder(entry));
+  this->storage = ir::Storage();
 
-  // Name LLVM arguments, insert into symtable
-  auto arg = func->arg_begin();
-  for (const ir::Var &irArg : irFunc.getArguments()) {
-    arg->setName(irArg.getName());
-    symtable.insert(irArg, &(*arg));
-    arg++;
+  for (auto &f : callTree) {
+    std::cout << "calltree, f: " << f.getName() << std::endl;
+    if (f.getKind() != ir::Func::Internal) continue;
+    iassert(f.getBody().defined());
+
+    this->storage.add(f.getStorage());
+
+    // Emit function
+    func = emitEmptyFunction(f.getName(), f.getArguments(), f.getResults(),
+                      false, false);
+
+    // Add constants to symbol table
+    for (auto &global : f.getEnvironment().globals) {
+      symtable.insert(global.first, compile(global.second));
+    }
+
+    f.getBody().accept(this);
+    builder->CreateRetVoid();
+    symtable.clear();
+    std::cout << "Calltree done with f" << std::endl;
   }
-  for (const ir::Var &irRes : irFunc.getResults()) {
-    arg->setName(irRes.getName());
-    symtable.insert(irRes, &(*arg));
-    arg++;
-  }
+
+  func = emitEmptyFunction(irFunc.getName(), irFunc.getArguments(),
+                           irFunc.getResults(), true, false);
 
   // Compile the body
   iassert(irFunc.getBody().defined()) << "cannot compile an undefined function";
@@ -89,7 +99,9 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   // NVVM kernel should always return void
   builder->CreateRetVoid();
 
-  return new GPUFunction(irFunc, func, module, sharding,
+  std::cout << "Done compiling" << std::endl;
+
+  return new GPUFunction(irFunc, func, module, sharding, buffers, fieldStorage,
                          cuDevMajor, cuDevMinor);
 }
 
@@ -327,6 +339,20 @@ void GPUBackend::visit(const ir::Mul *op) {
 void GPUBackend::visit(const ir::Div *op) {
   LLVMBackend::visit(op);
 }
+
+void GPUBackend::visit(const ir::VarDecl *op) {
+  tassert(op->var.getType().isTensor()) << "Only tensor decls supported";
+
+  if (sharding.isSharded()) {
+    // Allow LLVMBackend to emit a local alloca
+    LLVMBackend::visit(op);
+  }
+  else { // Root scope
+    // Always global, to be accessible to all kernels
+    makeGlobalTensor(op->var);
+  }
+}
+
 void GPUBackend::visit(const ir::AssignStmt *op) {
   // Only atomic for a compound scalar-scalar assign
   if (op->cop.kind != ir::CompoundOperator::None &&
@@ -385,11 +411,15 @@ void GPUBackend::visit(const ir::For *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::GPUKernel *op) {
+  // Stash the symtable
+  ScopedMap<simit::ir::Var, llvm::Value*> oldSymtable = symtable;
+  symtable.clear();
+
   // Create LLVM func
-  llvm::Function *kernel = createPrototype(
+  llvm::Function *kernel = emitEmptyFunction(
       irFunc.getName() + "_nested_kernel", irFunc.getArguments(),
-      irFunc.getResults(), module,
-      true, false);
+      irFunc.getResults(), true, false);
+  builder.reset(new LLVMIRBuilder(&kernel->getEntryBlock()));
 
   // Kernel metadata
   llvm::Value *mdVals[] = {
@@ -400,30 +430,18 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
       ->getOrInsertNamedMetadata("nvvm.annotations");
   nvvmAnnot->addOperand(kernelMD);
 
-  // Name LLVM arguments, insert into symtable
-  auto arg = kernel->arg_begin();
-  for (const ir::Var &irArg : irFunc.getArguments()) {
-    arg->setName(irArg.getName());
-    symtable.insert(irArg, &(*arg));
-    arg++;
-  }
-  for (const ir::Var &irRes : irFunc.getResults()) {
-    arg->setName(irRes.getName());
-    symtable.insert(irRes, &(*arg));
-    arg++;
-  }
+  // Add global buffers to symtable
+  for (auto &buf : buffers) {
+    const ir::Var &var = buf.first;
+    llvm::Value *val = buf.second;
 
-  // TODO(gkanwar): Deal with temps?
-
-  // Build 'entry' basic block
-  llvm::BasicBlock *entry = llvm::BasicBlock::Create(
-      LLVM_CONTEXT, "entry", kernel);
-  builder.reset(new LLVMIRBuilder(entry));
+    llvm::Value *llvmTmp = builder->CreateLoad(val, val->getName());
+    symtable.insert(var, llvmTmp);
+  }
 
   GPUSharding kernelSharding = op->sharding;
 
   // Code generate for the kernel
-  symtable.scope();
   if (kernelSharding.xSharded) {
     symtable.insert(kernelSharding.xVar, getTidX());
   }
@@ -433,12 +451,14 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   if (kernelSharding.zSharded) {
     symtable.insert(kernelSharding.zVar, getTidZ());
   }
-
+  
   LLVMBackend::compile(op->body);
-  symtable.unscope();
 
   // NVVM kernel should always return void
   builder->CreateRetVoid();
+
+  // Unstash symtable
+  symtable = oldSymtable;
 
   // Emit a dynamic kernel launch
   builder.reset(new LLVMIRBuilder(&func->getEntryBlock()));

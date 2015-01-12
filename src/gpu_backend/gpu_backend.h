@@ -60,6 +60,8 @@ protected:
   virtual void visit(const ir::Sub *);
   virtual void visit(const ir::Mul *);
   virtual void visit(const ir::Div *);
+
+  virtual void visit(const ir::VarDecl *);
   virtual void visit(const ir::AssignStmt *);
   virtual void visit(const ir::CallStmt *);
   virtual void visit(const ir::FieldWrite *);

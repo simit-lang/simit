@@ -164,7 +164,7 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
 }
 
 void GPUFunction::pullArg(void *hostPtr, DeviceDataHandle handle) {
-  std::cout << "Pull arg: " << *handle.devBuffer << " -> " << hostPtr
+  std::cout << "Pull arg: " << (void*)(*handle.devBuffer) << " -> " << hostPtr
             << " (" << handle.size << ")" << std::endl;
   checkCudaErrors(cuMemcpyDtoH(hostPtr, *handle.devBuffer, handle.size));
 }
@@ -324,6 +324,30 @@ simit::Function::FuncType GPUFunction::init(
   // Create CUDA module for binary object
   checkCudaErrors(cuModuleLoadDataEx(&cudaModule, cubin, 0, 0, 0));
   checkCudaErrors(cuLinkDestroy(linker));
+
+  // Alloc global buffers and set global pointers
+  for (auto& buf : globalBufs) {
+    const ir::Var &bufVar = buf.first;
+    llvm::Value *bufVal = buf.second;
+
+    CUdeviceptr globalPtr;
+    size_t globalPtrSize;
+    checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
+                                      cudaModule, bufVar.getName().c_str()));
+    std::cout << "Pointer size: " << globalPtrSize << std::endl;
+    iassert(globalPtrSize == sizeof(void*))
+        << "Global pointers should all be pointer-sized. Got: "
+        << globalPtrSize << " bytes";
+
+    size_t bufSize = size(*bufVar.getType().toTensor(), storage);
+    CUdeviceptr devBuffer;
+    checkCudaErrors(cuMemAlloc(&devBuffer, bufSize));
+    void *devBufferPtr = reinterpret_cast<void*>(devBuffer);
+
+    std::cout << std::hex << devBuffer << " alloc'd for " << std::dec << bufSize << std::endl;
+    std::cout << "Copying: " << sizeof(void*) << std::endl;
+    checkCudaErrors(cuMemcpyHtoD(globalPtr, &devBufferPtr, sizeof(void*)));
+  }
 
   // Get reference to CUDA function
   checkCudaErrors(cuModuleGetFunction(

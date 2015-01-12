@@ -345,6 +345,10 @@ int main(int argc, const char* argv[]) {
       cout << endl << "--- Shard loops for GPU" << endl;
       cout << func << endl;
 
+      func = liftGPUVars(func);
+      cout << endl << "--- Lift GPU variables" << endl;
+      cout << func << endl;
+
       simit::ir::ScalarType::floatBytes = 4; // XXX always test GPU with floatSize = 4 for now
       simit::internal::GPUBackend backend;
       std::string fstr = simit::util::toString(*backend.compile(func));
