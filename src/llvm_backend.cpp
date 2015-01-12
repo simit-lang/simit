@@ -567,6 +567,7 @@ void LLVMBackend::visit(const VarDecl *op) {
     symtable.insert(var, llvmVar);
   }
   else {
+    if (!storage.get(var).needsInitialization()) return;
     makeGlobalTensor(op->var);
   }
 }
@@ -1304,8 +1305,11 @@ llvm::Constant *LLVMBackend::emitGlobalString(const std::string& str) {
 
 llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
                                                const vector<ir::Var> &arguments,
-                                               const vector<ir::Var> &results) {
-  llvm::Function *llvmFunc = createPrototype(name, arguments, results, module);
+                                               const vector<ir::Var> &results,
+                                               bool externalLinkage,
+                                               bool doesNotThrow) {
+  llvm::Function *llvmFunc = createPrototype(name, arguments, results, module,
+                                             externalLinkage, doesNotThrow);
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
   builder->SetInsertPoint(entry);
 
@@ -1408,15 +1412,13 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
 void LLVMBackend::makeGlobalTensor(ir::Var var) {
   // Allocate buffer for local variable in global storage.
   // TODO: We should allocate small local dense tensors on the stack
-  if (!storage.get(var).needsInitialization()) return;
-
   iassert(var.getType().isTensor());
   llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
   llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
 
   llvm::GlobalVariable* buffer =
       new llvm::GlobalVariable(*module, globalType,
-                               false, llvm::GlobalValue::InternalLinkage,
+                               false, llvm::GlobalValue::ExternalLinkage,
                                llvm::ConstantPointerNull::get(globalType),
                                var.getName());
   buffer->setAlignment(8);
