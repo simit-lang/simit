@@ -69,7 +69,7 @@ private:
   std::pair<Expr,Expr> materializeInterferringExprs(Expr a, Expr b) {
     std::vector<IndexVar> arvars = getReductionVars(a);
     std::vector<IndexVar> brvars = getReductionVars(b);
-    if (arvars.size() > 0 && !overlaps(arvars, brvars)) {
+    if (arvars.size() > 0 || brvars.size() > 0) {
       std::vector<IndexVar> afvars = getFreeVars(a);
       std::vector<IndexDomain> adims;
       for (auto &afvar : afvars) {
