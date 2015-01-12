@@ -230,14 +230,6 @@ std::ostream &operator<<(std::ostream &os, const TensorType &type) {
 }
 
 std::ostream &operator<<(std::ostream &os, const ElementType &type) {
-//  os << "struct " << type.name;
-//  if (type.fields.size() > 0) {
-//    os << std::endl << "\n  ";
-//  }
-//  for (auto &field : type.fields) {
-//    os << field.first << " : " << field.second.type << ";" << std::endl;
-//  }
-//  return os << "end";
   os << type.name;
   return os;
 }
