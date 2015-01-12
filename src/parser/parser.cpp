@@ -2591,17 +2591,17 @@ namespace  simit { namespace internal  {
 
     {
     Expr readExpr = convertAndDelete((yystack_[3].value.expr));
-    auto arguments = unique_ptr<vector<Expr>>((yystack_[1].value.exprs));
+    vector<Expr> indices = convertAndDelete((yystack_[1].value.exprs));
 
     // The parenthesis read can be a read from a tensor or a tuple.
     if (readExpr.type().isTensor()) {
-      (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, *arguments));
+      (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, indices));
     }
     else if (readExpr.type().isTuple()) {
-      if (arguments->size() != 1) {
+      if (indices.size() != 1) {
         REPORT_ERROR("reading a tuple requires exactly one index", yystack_[1].location);
       }
-      (yylhs.value.expr) = new Expr(TupleRead::make(readExpr, (*arguments)[0]));
+      (yylhs.value.expr) = new Expr(TupleRead::make(readExpr, indices[0]));
     }
     else {
       REPORT_ERROR("can only access components in tensors and tuples", yystack_[3].location);
@@ -2629,8 +2629,8 @@ namespace  simit { namespace internal  {
   case 125:
 
     {
+    iassert((yystack_[0].value.expr));
     (yylhs.value.exprs) = new std::vector<Expr>();
-    if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
     (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
     delete (yystack_[0].value.expr);
   }
@@ -2640,8 +2640,8 @@ namespace  simit { namespace internal  {
   case 126:
 
     {
+    iassert((yystack_[0].value.expr));
     (yylhs.value.exprs) = (yystack_[2].value.exprs);
-    if ((yystack_[0].value.expr) == NULL) break;  // TODO: Remove check
     (yylhs.value.exprs)->push_back(*(yystack_[0].value.expr));
     delete (yystack_[0].value.expr);
   }
@@ -3861,25 +3861,25 @@ namespace  simit { namespace internal  {
   const unsigned short int
    Parser ::yyrline_[] =
   {
-       0,   286,   286,   288,   291,   292,   300,   308,   309,   310,
-     315,   325,   338,   341,   349,   359,   359,   359,   367,   379,
-     393,   393,   393,   401,   435,   438,   444,   449,   457,   464,
-     469,   472,   478,   483,   491,   497,   500,   507,   508,   511,
-     512,   513,   514,   515,   516,   517,   518,   519,   520,   521,
-     526,   536,   558,   567,   659,   700,   746,   820,   823,   830,
-     834,   841,   844,   850,   855,   875,   897,   921,   930,   937,
-     943,   949,   962,   968,   971,   976,   988,   996,  1006,  1017,
-    1022,  1050,  1053,  1058,  1066,  1067,  1068,  1069,  1070,  1071,
-    1072,  1078,  1098,  1107,  1115,  1134,  1202,  1222,  1250,  1255,
-    1264,  1265,  1266,  1267,  1273,  1277,  1283,  1289,  1295,  1301,
-    1307,  1313,  1319,  1325,  1330,  1336,  1340,  1348,  1382,  1383,
-    1384,  1391,  1440,  1461,  1464,  1470,  1476,  1487,  1488,  1489,
-    1490,  1494,  1506,  1510,  1520,  1529,  1541,  1553,  1557,  1560,
-    1602,  1612,  1617,  1625,  1628,  1642,  1648,  1651,  1701,  1705,
-    1706,  1710,  1714,  1721,  1732,  1739,  1743,  1747,  1761,  1765,
-    1780,  1784,  1791,  1798,  1802,  1806,  1820,  1824,  1839,  1843,
-    1850,  1853,  1859,  1862,  1868,  1871,  1878,  1897,  1921,  1922,
-    1930
+       0,   285,   285,   287,   290,   291,   299,   307,   308,   309,
+     314,   324,   337,   340,   348,   358,   358,   358,   366,   378,
+     392,   392,   392,   400,   434,   437,   443,   448,   456,   463,
+     468,   471,   477,   482,   490,   496,   499,   506,   507,   510,
+     511,   512,   513,   514,   515,   516,   517,   518,   519,   520,
+     525,   535,   557,   566,   658,   699,   745,   819,   822,   829,
+     833,   840,   843,   849,   854,   874,   896,   920,   929,   936,
+     942,   948,   961,   967,   970,   975,   987,   995,  1005,  1016,
+    1021,  1049,  1052,  1057,  1065,  1066,  1067,  1068,  1069,  1070,
+    1071,  1077,  1097,  1106,  1114,  1133,  1201,  1221,  1249,  1254,
+    1263,  1264,  1265,  1266,  1272,  1276,  1282,  1288,  1294,  1300,
+    1306,  1312,  1318,  1324,  1329,  1335,  1339,  1347,  1381,  1382,
+    1383,  1390,  1439,  1460,  1463,  1469,  1475,  1486,  1487,  1488,
+    1489,  1493,  1505,  1509,  1519,  1528,  1540,  1552,  1556,  1559,
+    1601,  1611,  1616,  1624,  1627,  1641,  1647,  1650,  1700,  1704,
+    1705,  1709,  1713,  1720,  1731,  1738,  1742,  1746,  1760,  1764,
+    1779,  1783,  1790,  1797,  1801,  1805,  1819,  1823,  1838,  1842,
+    1849,  1852,  1858,  1861,  1867,  1870,  1877,  1896,  1920,  1921,
+    1929
   };
 
   // Print the state stack on the debug stream.

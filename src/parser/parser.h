@@ -191,11 +191,12 @@ namespace  simit { namespace internal  {
     {
     
 
-  int         num;
-  double      fnum;
-  const char *string;
+  int                            num;
+  double                         fnum;
+  const char                    *string;
+  std::vector<std::string>      *strings;
 
-  ir::Func *function;
+  ir::Func                      *function;
 
   ir::Type                      *type;
   ir::Field                     *field;
@@ -216,8 +217,6 @@ namespace  simit { namespace internal  {
   ir::ReductionOperator::Kind    reductionop;
   TensorValues<double>          *TensorDoubleValues;
   TensorValues<int>             *TensorIntValues;
-
-  std::vector<std::string> *strings;
 
 
   System *system;

@@ -160,11 +160,12 @@
 }
 
 %union {
-  int         num;
-  double      fnum;
-  const char *string;
+  int                            num;
+  double                         fnum;
+  const char                    *string;
+  std::vector<std::string>      *strings;
 
-  ir::Func *function;
+  ir::Func                      *function;
 
   ir::Type                      *type;
   ir::Field                     *field;
@@ -185,8 +186,6 @@
   ir::ReductionOperator::Kind    reductionop;
   TensorValues<double>          *TensorDoubleValues;
   TensorValues<int>             *TensorIntValues;
-
-  std::vector<std::string> *strings;
 }
 %destructor {} <num> <fnum> <binop> <reductionop>
 %destructor { free((void*)($$)); } <string>
@@ -1439,17 +1438,17 @@ call_or_paren_read_expr
   }
   | expr "(" expr_list_or_empty ")" {
     Expr readExpr = convertAndDelete($expr);
-    auto arguments = unique_ptr<vector<Expr>>($expr_list_or_empty);
+    vector<Expr> indices = convertAndDelete($expr_list_or_empty);
 
     // The parenthesis read can be a read from a tensor or a tuple.
     if (readExpr.type().isTensor()) {
-      $$ = new Expr(TensorRead::make(readExpr, *arguments));
+      $$ = new Expr(TensorRead::make(readExpr, indices));
     }
     else if (readExpr.type().isTuple()) {
-      if (arguments->size() != 1) {
+      if (indices.size() != 1) {
         REPORT_ERROR("reading a tuple requires exactly one index", @3);
       }
-      $$ = new Expr(TupleRead::make(readExpr, (*arguments)[0]));
+      $$ = new Expr(TupleRead::make(readExpr, indices[0]));
     }
     else {
       REPORT_ERROR("can only access components in tensors and tuples", @1);
@@ -1468,14 +1467,14 @@ expr_list_or_empty
 %type <exprs> expr_list;
 expr_list
   : expr {
+    iassert($expr);
     $$ = new std::vector<Expr>();
-    if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
   }
   | expr_list "," expr {
+    iassert($expr);
     $$ = $1;
-    if ($expr == NULL) break;  // TODO: Remove check
     $$->push_back(*$expr);
     delete $expr;
   }
