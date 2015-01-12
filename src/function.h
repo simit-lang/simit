@@ -17,6 +17,7 @@ namespace simit {
 namespace ir {
 class Func;
 struct Literal;
+class TensorStorage;
 }
 
 // TODO: Replace with a simple tensor implementation
@@ -81,7 +82,11 @@ protected:
     };
     bool output;
   };
-  
+
+  /// Get number of components in tensors with the given `type` and `storage`.
+  size_t size(const ir::TensorType &type,
+              const ir::TensorStorage &storage) const;
+
   Function(const ir::Func &simitFunc);
 
   std::vector<std::string> formals;

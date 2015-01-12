@@ -77,9 +77,7 @@ simit::Function *LLVMBackend::compile(Func func) {
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
-  this->module = new llvm::Module(func.getName(), LLVM_CONTEXT);
   this->dataLayout.reset(new llvm::DataLayout(module));
-  this->storage = func.getStorage();
 
   buffers.clear();
 
@@ -954,13 +952,19 @@ void LLVMBackend::visit(const While *op) {
   builder->SetInsertPoint(bodyBlock);
   compile(op->body);
   builder->CreateBr(checkBlock);
+  
+  // We actually need to save the original body block, because the
+  // current block could be different (e.g. if another loop was added
+  // as part of the while's body).
+  auto priorBodyBlock = bodyBlock;
   bodyBlock = builder->GetInsertBlock();
   
   llvmFunc->getBasicBlockList().push_back(checkBlock);
   builder->SetInsertPoint(checkBlock);
   llvm::Value *cond2 = compile(op->condition);
   llvm::Value *condEval2 = builder->CreateICmpEQ(builder->getTrue(), cond2);
-  builder->CreateCondBr(condEval2, bodyBlock, exitBlock);
+
+  builder->CreateCondBr(condEval2, priorBodyBlock, exitBlock);
   
   llvmFunc->getBasicBlockList().push_back(exitBlock);
   builder->SetInsertPoint(exitBlock);

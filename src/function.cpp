@@ -122,4 +122,64 @@ void Function::bind(const std::string &argName, SetBase *set) {
   initRequired = true;
 }
 
+static int size(const ir::IndexSet &indexSet,
+                const std::map<std::string, SetBase*> &sets) {
+  switch (indexSet.getKind()) {
+    case ir::IndexSet::Range:
+      return indexSet.getSize();
+    case ir::IndexSet::Set: {
+      ir::Expr set = indexSet.getSet();
+      iassert(!ir::isa<ir::VarExpr>(set))
+          << "Attempting to get the size of a runtime dynamic set";
+
+      std::string varName = ir::to<ir::VarExpr>(set)->var.getName();
+      iassert(sets.find(varName) != sets.end()) << "set not found in function";
+
+      return sets.at(varName)->getSize();
+    }
+    case ir::IndexSet::Dynamic:
+      not_supported_yet;
+      return 0;
+  }
+}
+
+static int size(const ir::IndexDomain &dimension,
+                const std::map<std::string, SetBase*> &sets) {
+  size_t result = 1;
+  for (const ir::IndexSet &indexSet : dimension.getIndexSets()) {
+    result *= size(indexSet, sets);
+  }
+  return result;
+}
+
+size_t Function::size(const ir::TensorType &type,
+                      const ir::TensorStorage &storage) const {
+  switch (storage.getKind()) {
+    case ir::TensorStorage::DenseRowMajor: {
+      size_t result = 1;
+
+      map<string,SetBase*> sets;
+      for (pair<string,Actual> actual : actuals) {
+        if (actual.second.getType().isSet()) {
+          sets[actual.first] = actual.second.getSet();
+        }
+      }
+
+      for (const ir::IndexDomain &dimension : type.dimensions) {
+        result *= simit::size(dimension, sets);
+      }
+      return result;
+    }
+    case ir::TensorStorage::SystemReduced:
+      return 43;
+    case ir::TensorStorage::SystemDiagonal:
+      return 44;
+    case ir::TensorStorage::SystemNone:
+      return 0;
+    case ir::TensorStorage::Undefined:
+      unreachable;
+      return 0;
+  }
+}
+
 } // namespace simit
