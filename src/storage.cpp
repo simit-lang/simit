@@ -92,6 +92,9 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
       os << "System Diagonal";
       break;
   }
+  if (ts.needsInitialization()) {
+    os << " (init)";
+  }
   return os;
 }
 
@@ -104,7 +107,7 @@ Storage::Storage() : content(new Content) {
 }
 
 void Storage::add(const Var &tensor, TensorStorage tstorage) {
-  content->storage.insert(std::pair<Var,TensorStorage>(tensor,tstorage));
+  content->storage[tensor] = tstorage;
 }
 
 void Storage::add(const Storage &other) {
@@ -230,18 +233,22 @@ private:
     Var var = op->var;
     Type type = var.getType();
     Type rhsType = op->value.type();
-    
-    if (!isScalar(type) && !storage->hasStorage(var)) {
+
+    if (!isScalar(type)) {
       // TODO: this is a hack.  We really should carry around TensorStorage
       // as part of the type.
       iassert(type.isTensor());
       const TensorType *ttype = type.toTensor();
-      if (!isElementTensorType(ttype) && ttype->order() > 1) {
+      // Element tensor and system vectors are dense.
+      if (isElementTensorType(ttype) || ttype->order() <= 1) {
+        if (!storage->hasStorage(var)) {
+          determineStorage(var);
+        }
+      }
+      // System matrices
+      else {
         // assume system reduced storage
         determineStorage(var, !isa<Literal>(op->value), op->value);
-        
-      } else {
-        determineStorage(var);
       }
     }
   }
@@ -259,7 +266,7 @@ private:
   void visit(const Map *op) {
     for (auto &var : op->vars) {
       Type type = var.getType();
-      if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
+      if (type.isTensor() && !isScalar(type)) {
         // For now we'll store all assembled vectors as dense and other tensors
         // as system reduced
         TensorStorage tensorStorage;
@@ -291,11 +298,11 @@ private:
 
     TensorStorage tensorStorage;
 
-    // Element tensor (dimensions are not simit sets) are dense. In addition
-    // vectors are always dense.
+    // Element tensor and system vectors are dense.
     if (isElementTensorType(ttype) || ttype->order() == 1 || !rhs.defined()) {
       tensorStorage = TensorStorage(TensorStorage::DenseRowMajor, initialize);
     }
+    // System matrices
     else {
       // find the leaf Vars in the RHS expression
       class LeafVarsVisitor : public IRVisitor {
@@ -316,14 +323,15 @@ private:
           const TensorStorage varStorage = storage->get(v);
           if (varStorage.getKind() == TensorStorage::SystemReduced) {
             tensorStorage = TensorStorage(varStorage.getSystemTargetSet(),
-                                               varStorage.getSystemStorageSet());
+                                          varStorage.getSystemStorageSet());
           }
         }
       }
     }
-    iassert(tensorStorage.getKind() != TensorStorage::Undefined);
 
-    storage->add(var, tensorStorage);
+    if (tensorStorage.getKind() != TensorStorage::Undefined) {
+      storage->add(var, tensorStorage);
+    }
   }
 };
 

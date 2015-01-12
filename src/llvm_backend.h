@@ -130,8 +130,6 @@ protected:
 
   void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
-  virtual void emitFirstAssign(const ir::Var& var,
-                               const ir::Expr& value);
   void emitAssign(ir::Var var, const ir::Expr& value);
 
 private:

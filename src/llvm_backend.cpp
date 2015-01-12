@@ -92,6 +92,7 @@ simit::Function *LLVMBackend::compile(Func func) {
 
     this->storage.add(f.getStorage());
 
+
     // Allocate buffers for local variables in global storage.
     // TODO: We should allocate small local dense tensors on the stack
     map<Var, llvm::Value*> localBuffers;
@@ -103,14 +104,15 @@ simit::Function *LLVMBackend::compile(Func func) {
       llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
 
       llvm::GlobalVariable* buffer =
-      new llvm::GlobalVariable(*module, globalType,
-                               false, llvm::GlobalValue::InternalLinkage,
-                               llvm::ConstantPointerNull::get(globalType),
-                               var.getName());
+          new llvm::GlobalVariable(*module, globalType,
+                                   false, llvm::GlobalValue::InternalLinkage,
+                                   llvm::ConstantPointerNull::get(globalType),
+                                   var.getName());
       buffer->setAlignment(8);
       localBuffers.insert(pair<Var,llvm::Value*>(var,buffer));
     }
     buffers.insert(localBuffers.begin(), localBuffers.end());
+
 
     // Emit function
     llvmFunc = emitEmptyFunction(f.getName(), f.getArguments(),
@@ -174,6 +176,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   builder->CreateRetVoid();
   symtable.clear();
 
+
   // Create de-initialization function
   emitEmptyFunction(func.getName()+".deinit",
                     func.getArguments(), func.getResults());
@@ -208,7 +211,7 @@ simit::Function *LLVMBackend::compile(Func func) {
   fpm.add(llvm::createLoopStrengthReducePass());
 
   fpm.doInitialization();
-//  fpm.run(*llvmFunc);
+  fpm.run(*llvmFunc);
 
   bool requiresInit = buffers.size() > 0;
   return new LLVMFunction(func, llvmFunc, requiresInit, module,executionEngine);
@@ -1362,14 +1365,6 @@ void LLVMBackend::emitPrintf(std::string format,
   builder->CreateCall(printfFunc, printfArgs);
 }
 
-void LLVMBackend::emitFirstAssign(const ir::Var& var,
-                                  const ir::Expr& value) {
-  ScalarType type = value.type().toTensor()->componentType;
-  llvm::Value *llvmVar = builder->CreateAlloca(createLLVMType(type), nullptr,
-                                               var.getName());
-  symtable.insert(var, llvmVar);
-}
-
 void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
   /// \todo assignment of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only assign scalars to scalars
@@ -1377,15 +1372,11 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
 //  iassert(isScalar(value.type()) &&
 //         "assignment non-scalars should have been lowered by now");
   iassert(var.getType().isTensor() && value.type().isTensor());
+  iassert(symtable.contains(var)) << var << "=" << value << ";"
+                                  << var << "has not been declared";
 
   std::string varName = var.getName();
   llvm::Value *valuePtr = compile(value);
-
-  // Assigned for the first time
-  if (!symtable.contains(var)) {
-    emitFirstAssign(var, value);
-  }
-  iassert(symtable.contains(var));
 
   llvm::Value *varPtr = symtable.get(var);
   iassert(varPtr->getType()->isPointerTy());

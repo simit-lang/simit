@@ -563,7 +563,9 @@ Func lowerIndexExpressions(Func func) {
       expr = op->tensor;
     }
   };
-  return LowerIndexExpressionsRewriter().lower(func);
+  func = LowerIndexExpressionsRewriter().lower(func);
+  func = insertVarDecls(func);
+  return func;
 }
 
 }}

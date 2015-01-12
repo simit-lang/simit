@@ -334,7 +334,7 @@ void IRPrinter::visit(const Not *op) {
 
 void IRPrinter::visit(const VarDecl *op) {
   indent();
-  os << "var " << op->var.getName() << " : " << op->var.getType();
+  os << "var " << op->var << " : " << op->var.getType();
   os << ";";
 }
 

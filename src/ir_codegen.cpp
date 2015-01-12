@@ -28,8 +28,48 @@ Stmt initializeLhsToZero(Stmt stmt) {
       stmt = TensorWrite::make(op->tensor, op->indices, 0.0);
     }
   };
-
   return ReplaceRhsWithZero().rewrite(stmt);
+}
+
+Func insertVarDecls(Func func) {
+  class InsertVarDeclsRewriter : public IRRewriter {
+    /// The set of variables that have already been declared. We do not need a
+    /// scoped map here because Vars are compared by identity and cannot shadow.
+    set<Var> declared;
+
+    void visit(const Func *f) {
+      for (auto &argument : f->getArguments()) {
+        declared.insert(argument);
+      }
+
+      for (auto &result : f->getResults()) {
+        declared.insert(result);
+      }
+
+      for (auto &global : f->getEnvironment().globals) {
+        declared.insert(global.first);
+      }
+
+      IRRewriter::visit(f);
+    }
+
+    void visit(const VarDecl *op) {
+      declared.insert(op->var);
+      stmt = op;
+    }
+
+    void visit(const AssignStmt *op) {
+      if (declared.find(op->var) == declared.end()) {
+        stmt = Block::make(VarDecl::make(op->var), op);
+        declared.insert(op->var);
+      }
+      else {
+        stmt = op;
+      }
+    }
+  };
+  func = InsertVarDeclsRewriter().rewrite(func);
+  return func;
 }
 
 }}
