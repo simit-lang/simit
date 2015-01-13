@@ -121,8 +121,7 @@ void GPUBackend::visit(const ir::TupleRead *op) {
   ASSERT(false && "No code generation for this type");
 }
 void GPUBackend::visit(const ir::IndexRead *op) {
-  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
-  ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Length *op) {
   LLVMBackend::visit(op);
@@ -280,9 +279,8 @@ void GPUBackend::visit(const ir::CallStmt *op) {
       std::string fname = callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args);
     }
-    else if (callee == ir::Intrinsics::loc) {
-      // TODO(gkanwar)
-      not_supported_yet;
+    else if (op->callee == ir::Intrinsics::loc) {
+      call = emitCall("loc", args, LLVM_INT);
     }
     else if (callee == ir::Intrinsics::dot) {
       // we need to add the vector length to the args
@@ -363,6 +361,10 @@ void GPUBackend::visit(const ir::Call *op) {
     std::string funcName = ir::ScalarType::singleFloat() ?
         "norm_f32" : "norm_f64";
     val = emitCall(funcName, args, getLLVMFloatType());
+    return;
+  }
+  else if (op->func == ir::Intrinsics::loc) {
+    val = emitCall("loc", args, LLVM_INT);
     return;
   }
   else if (op->func == ir::Intrinsics::dot) {
