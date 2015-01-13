@@ -100,6 +100,9 @@ protected:
   virtual void emitMemCpy(llvm::Value *dst, llvm::Value *src,
                           llvm::Value *size, unsigned align);
 
+  virtual void emitMemSet(llvm::Value *dst, llvm::Value *val,
+                          llvm::Value *size, unsigned align);
+
   void emitFillBuf(llvm::Value *buffer,
                    std::vector<llvm::Value*> vals);
 

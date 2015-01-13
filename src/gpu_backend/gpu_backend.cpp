@@ -829,6 +829,26 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   builder->CreateCall5(func, castDst, castSrc, size, llvmAlign, isVolatile);
 }
 
+void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
+                            llvm::Value *size, unsigned align) {
+  iassert(dst->getType()->isPointerTy());
+
+  // Emit our own memset decl, since the built-in has attributes which
+  // are not handled by NVVM
+  std::vector<llvm::Type*> argTys = {
+    LLVM_INT8PTR_GLOBAL, LLVM_INT8, LLVM_INT, LLVM_INT, LLVM_BOOL
+  };
+  llvm::FunctionType *funcTy = llvm::FunctionType::get(
+      LLVM_VOID, argTys, false);
+  llvm::Function *func = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("llvm.memset.p1i8.i32", funcTy));
+  cleanFuncAttrs(func);
+
+  llvm::Value *llvmAlign = llvmInt(align);
+  llvm::Value *castDst = builder->CreateBitCast(dst, LLVM_INT8PTR_GLOBAL);
+  llvm::Constant *isVolatile = llvmBool(true);
+  builder->CreateCall5(func, castDst, val, size, llvmAlign, isVolatile);
+}
 
 void GPUBackend::emitFillBuf(llvm::Value *buffer,
                              std::vector<llvm::Value*> vals) {
