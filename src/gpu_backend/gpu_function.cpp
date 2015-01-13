@@ -196,7 +196,8 @@ llvm::Function *GPUFunction::createHarness(
     const llvm::SmallVector<llvm::Value*, 8> &args,
     llvm::Function *kernel,
     llvm::Module *module) {
-  const std::string harnessName = kernel->getName().str() + "_harness";
+  std::string kernelName = kernel->getName().str();
+  const std::string harnessName = kernelName + std::string("_harness");
   llvm::Function *harness = createPrototype(harnessName, {}, {},
                                             module, true, false,
                                             CUDA_GLOBAL_ADDRSPACE);
@@ -210,7 +211,7 @@ llvm::Function *GPUFunction::createHarness(
     argTys.push_back(arg->getType());
   }
   module->getOrInsertFunction(
-      kernel->getName(),
+      kernelName,
       llvm::FunctionType::get(LLVM_VOID, argTys, false));
   // Note: CallInst takes ownership of kernel
   llvm::CallInst *call = llvm::CallInst::Create(
@@ -331,11 +332,12 @@ simit::Function::FuncType GPUFunction::init(
   // Alloc global buffers and set global pointers
   for (auto& buf : globalBufs) {
     const ir::Var &bufVar = buf.first;
+    llvm::Value *bufVal = buf.second;
 
     CUdeviceptr globalPtr;
     size_t globalPtrSize;
     checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
-                                      cudaModule, bufVar.getName().c_str()));
+                                      cudaModule, bufVal->getName().data()));
     std::cout << "Pointer size: " << globalPtrSize << std::endl;
     iassert(globalPtrSize == sizeof(void*))
         << "Global pointers should all be pointer-sized. Got: "

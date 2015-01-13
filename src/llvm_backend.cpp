@@ -80,6 +80,7 @@ simit::Function *LLVMBackend::compile(Func func) {
 
   this->dataLayout.reset(new llvm::DataLayout(module));
 
+  symtable.clear();
   buffers.clear();
 
   // Create compute functions

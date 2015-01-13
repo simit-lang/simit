@@ -71,10 +71,11 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   std::reverse(callTree.begin(), callTree.end());
 
   this->storage = ir::Storage();
+  symtable.clear();
+  buffers.clear();
 
   // TODO(gkanwar): Why do we sometimes get duplicates of functions being
   // generated? How do we properly handle this without duplicates?
-  /*
   for (auto &f : callTree) {
     std::cout << "calltree, f: " << f.getName() << std::endl;
     if (f.getKind() != ir::Func::Internal) continue;
@@ -96,26 +97,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
     symtable.clear();
     std::cout << "Calltree done with f" << std::endl;
   }
-  */
-
-  this->storage.add(irFunc.getStorage());
-
-  func = emitEmptyFunction(irFunc.getName(), irFunc.getArguments(),
-                           irFunc.getResults(), true, false);
-
-  // Add constants to symbol table
-  for (auto &global : irFunc.getEnvironment().globals) {
-    symtable.insert(global.first, compile(global.second));
-  }
-
-  // Compile the body
-  iassert(irFunc.getBody().defined()) << "cannot compile an undefined function";
-  irFunc.getBody().accept(this);
-
-  // NVVM kernel should always return void
-  builder->CreateRetVoid();
-
-  std::cout << "Done compiling" << std::endl;
+  iassert(func);
 
   return new GPUFunction(irFunc, func, module, buffers, fieldStorage,
                          cuDevMajor, cuDevMinor);
