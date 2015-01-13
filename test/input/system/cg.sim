@@ -28,19 +28,20 @@ proc main
   I = map eye to points reduce +;
 
   A = I - 0.01 * A;
-  
-  var xguess : tensor[points](float) = 0.0;   
+
+  var xguess : tensor[points](float) = 0.0;
   var x : tensor[points](float);
 
-% start cg
+% begin inlined CG
   tol = 1e-6;
   maxiters = 5;
-  r = b - (xguess*A);
+  r = b - (A*xguess);
   p = r;
   iter = 0;
   x = xguess;
 
-  while norm(r) > tol and iter < maxiters
+  normr = norm(r);
+  while (normr > tol) and (iter < maxiters)
     alpha = dot(r, r);
     Atimesp = A * p;
     denom = dot(p, Atimesp);
@@ -54,8 +55,7 @@ proc main
     p = r + beta*p;
     iter = iter + 1;
   end
-
-% end cg
+% end inlined CG
 
   points.c = x;
 end

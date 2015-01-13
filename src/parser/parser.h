@@ -191,11 +191,12 @@ namespace  simit { namespace internal  {
     {
     
 
-  int         num;
-  double      fnum;
-  const char *string;
+  int                            num;
+  double                         fnum;
+  const char                    *string;
+  std::vector<std::string>      *strings;
 
-  ir::Func *function;
+  ir::Func                      *function;
 
   ir::Type                      *type;
   ir::Field                     *field;
@@ -216,8 +217,6 @@ namespace  simit { namespace internal  {
   ir::ReductionOperator::Kind    reductionop;
   TensorValues<double>          *TensorDoubleValues;
   TensorValues<int>             *TensorIntValues;
-
-  std::vector<std::string> *strings;
 
 
   System *system;
@@ -597,8 +596,8 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 923,     ///< Last index in yytable_.
-      yynnts_ = 84,  ///< Number of nonterminal symbols.
+      yylast_ = 856,     ///< Last index in yytable_.
+      yynnts_ = 90,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,

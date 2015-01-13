@@ -83,7 +83,7 @@ protected:
     bool output;
   };
 
-  /// Get number of components in tensors with the given `type` and `storage`.
+  /// Get number of bytes required to store tensors with `type` and `storage`.
   size_t size(const ir::TensorType &type,
               const ir::TensorStorage &storage) const;
 

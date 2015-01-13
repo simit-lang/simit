@@ -29,6 +29,7 @@
 #include "ir.h"
 #include "ir_printer.h"
 #include "ir_queries.h"
+#include "ir_codegen.h"
 #include "llvm_function.h"
 #include "macros.h"
 #include "runtime.h"
@@ -1411,7 +1412,6 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
 
 void LLVMBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
                              llvm::Value *size, unsigned align) {
-  std::cout << "Using LLVMBackend memcpy" << std::endl;
   builder->CreateMemCpy(dst, src, size, align);
 }
 

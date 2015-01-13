@@ -66,34 +66,27 @@ private:
     return s;
   }
 
-  std::pair<Expr,Expr> materializeInterferringExprs(Expr a, Expr b) {
-    std::vector<IndexVar> arvars = getReductionVars(a);
-    std::vector<IndexVar> brvars = getReductionVars(b);
-    if (arvars.size() > 0 && !overlaps(arvars, brvars)) {
-      std::vector<IndexVar> afvars = getFreeVars(a);
-      std::vector<IndexDomain> adims;
-      for (auto &afvar : afvars) {
-        adims.push_back(afvar.getDomain());
-      }
-      Type atype = TensorType::make(a.type().toTensor()->componentType, adims);
-      Var atmp(tmpNameGen(), atype);
-      Expr aiexpr = IndexExpr::make(afvars, a);
-      Stmt astmt = AssignStmt::make(atmp, aiexpr);
-      stmts.push_back(astmt);
+  Expr spill(Expr a) {
+    vector<IndexVar> afvars = getFreeVars(a);
 
-      vector<IndexVar> bfvars = getFreeVars(b);
-      vector<IndexDomain> bdims;
-      for (auto &bfvar : bfvars) {
-        bdims.push_back(bfvar.getDomain());
-      }
-      Type btype = TensorType::make(a.type().toTensor()->componentType, bdims);
-      Var btmp(tmpNameGen(), btype);
-      Expr biexpr = IndexExpr::make(bfvars, b);
-      Stmt bstmt = AssignStmt::make(btmp, biexpr);
-      stmts.push_back(bstmt);
+    std::vector<IndexDomain> adims;
+    for (auto &afvar : afvars) {
+      adims.push_back(afvar.getDomain());
+    }
+    Type atype = TensorType::make(a.type().toTensor()->componentType, adims);
+    Var atmp(tmpNameGen(), atype);
+    Expr aiexpr = IndexExpr::make(afvars, a);
+    Stmt astmt = AssignStmt::make(atmp, aiexpr);
+    stmts.push_back(astmt);
+    return IndexedTensor::make(VarExpr::make(atmp), afvars);
+  }
 
-      a = IndexedTensor::make(VarExpr::make(atmp), afvars);
-      b = IndexedTensor::make(VarExpr::make(btmp), bfvars);
+  std::pair<Expr,Expr> spillSubExpressions(Expr a, Expr b) {
+    if (!isa<IndexedTensor>(a)) {
+      a = spill(a);
+    }
+    if (!isa<IndexedTensor>(b)) {
+      b = spill(b);
     }
     return pair<Expr,Expr>(a,b);
   }
@@ -104,7 +97,7 @@ private:
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
-    pair<Expr,Expr> ab = materializeInterferringExprs(a, b);
+    pair<Expr,Expr> ab = spillSubExpressions(a, b);
     expr = Sub::make(ab.first, ab.second);
   }
 
@@ -116,7 +109,7 @@ private:
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
-    pair<Expr,Expr> ab = materializeInterferringExprs(a, b);
+    pair<Expr,Expr> ab = spillSubExpressions(a, b);
     expr = Add::make(ab.first, ab.second);
   }
 

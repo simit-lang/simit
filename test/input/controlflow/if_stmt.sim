@@ -159,3 +159,16 @@ func f() -> (r : int)
     r = 2;
   end
 end
+
+%%% if-vardecl
+%! f(0) == 3;
+%! f(42) == 1;
+func f(p : int) -> (r : int)
+ var r1:int;
+ if p != 0
+   r1 = 1;
+ else
+   r1 = 3;
+ end
+ r = r1;
+end

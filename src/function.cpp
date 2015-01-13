@@ -171,9 +171,11 @@ size_t Function::size(const ir::TensorType &type,
       return result;
     }
     case ir::TensorStorage::SystemReduced:
-      return 43;
+      // TODO: Forgot to implement this case
+      return 0;
     case ir::TensorStorage::SystemDiagonal:
-      return 44;
+      // TODO: Forgot to implement this case
+      return 0;
     case ir::TensorStorage::SystemNone:
       return 0;
     case ir::TensorStorage::Undefined:

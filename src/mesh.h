@@ -57,6 +57,8 @@ struct MeshVol{
   
   ///save surface mesh obj file. Only works for hexahedral mesh
   int saveHexObj(const char * filename);
+  ///save surface mesh obj file. Only works for tetrahedral mesh
+  int saveTetObj(const char * filename);
   ///for each vertex, what elements contain the vertex.
   void elementNeighbors(std::vector<std::vector<int> > & eleNeighbor);
 };
