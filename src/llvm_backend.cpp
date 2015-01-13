@@ -278,8 +278,6 @@ void LLVMBackend::visit(const ir::Load *op) {
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
 
   string valName = string(buffer->getName()) + VAL_SUFFIX;
-  llvm::Type *eltType = createLLVMType(
-      op->buffer.type().toTensor()->componentType);
   val = builder->CreateLoad(bufferLoc, valName);
 }
 
@@ -803,8 +801,6 @@ void LLVMBackend::visit(const ir::Store *op) {
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
-  llvm::Type *eltType = createLLVMType(
-      op->buffer.type().toTensor()->componentType);
   builder->CreateStore(value, bufferLoc);
 }
 
