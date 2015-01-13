@@ -146,9 +146,13 @@ protected:
 
   void emitAssign(ir::Var var, const ir::Expr& value);
 
+  /// Emit a memcpy instruction
+  virtual void emitMemCpy(llvm::Value *dst, llvm::Value *src,
+                          llvm::Value *size, unsigned align);
+
   /// Allocate a global pointer for a tensor, and add to the symtable
   /// and list of global buffers
-  void makeGlobalTensor(ir::Var var);
+  virtual void makeGlobalTensor(ir::Var var);
 
 private:
   static bool llvmInitialized;
