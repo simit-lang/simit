@@ -266,7 +266,6 @@ void LLVMBackend::visit(const VarExpr *op) {
   // which is why we can't assume Simit scalars are always kept on the stack.
   if (isScalar(op->type) && val->getType()->isPointerTy()) {
     string valName = string(val->getName()) + VAL_SUFFIX;
-    int align = dataLayout->getTypeAllocSize(val->getType());
     val = builder->CreateLoad(val, valName);
   }
 }
@@ -281,7 +280,6 @@ void LLVMBackend::visit(const ir::Load *op) {
   string valName = string(buffer->getName()) + VAL_SUFFIX;
   llvm::Type *eltType = createLLVMType(
       op->buffer.type().toTensor()->componentType);
-  int align = dataLayout->getTypeAllocSize(eltType);
   val = builder->CreateLoad(bufferLoc, valName);
 }
 
@@ -808,7 +806,6 @@ void LLVMBackend::visit(const ir::Store *op) {
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
   llvm::Type *eltType = createLLVMType(
       op->buffer.type().toTensor()->componentType);
-  int align = dataLayout->getTypeAllocSize(eltType);
   builder->CreateStore(value, bufferLoc);
 }
 
