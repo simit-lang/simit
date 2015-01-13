@@ -1456,8 +1456,43 @@ call_or_paren_read_expr
 
       // The parenthesis read can be a read from a tensor or a tuple.
       auto readExpr = symbol.getExpr();
+      cout << "readExpr: " << readExpr << endl;
       if (readExpr.type().isTensor()) {
-        $$ = new Expr(TensorRead::make(readExpr, *arguments));
+        // check if we need to turn this into an index expression
+        // TODO: This logic needs to be in all paths that can create tensor
+        // reads.
+        int numSlices = 0;
+        for (auto arg: *arguments) {
+          if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":")
+            numSlices++;
+        }
+        if (numSlices > 0) {
+         // We will construct an index expression.
+         // first, we build IndexVars
+         std::vector<IndexVar> allivars;
+         std::vector<IndexVar> freeVars;
+         int i=0;
+         for (auto &arg: *arguments) {
+          if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
+            auto iv = IndexVar("tmpfree" + std::to_string(i), readExpr.type().toTensor()->dimensions[i]);
+            allivars.push_back(iv);
+            freeVars.push_back(iv);
+          }
+          else {
+            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i), readExpr.type().toTensor()->dimensions[i],
+              new Expr(arg)));
+          }
+          i++;
+         }
+            // now construct an index expression
+         $$ = new Expr(IndexExpr::make(freeVars,
+            IndexedTensor::make(readExpr, allivars)));
+        }
+        else {
+        
+          $$ = new Expr(TensorRead::make(readExpr, *arguments));
+        }
+        
       }
       else if (readExpr.type().isTuple()) {
         if (arguments->size() != 1) {

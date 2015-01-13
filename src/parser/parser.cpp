@@ -2645,8 +2645,43 @@ namespace  simit { namespace internal  {
 
       // The parenthesis read can be a read from a tensor or a tuple.
       auto readExpr = symbol.getExpr();
+      cout << "readExpr: " << readExpr << endl;
       if (readExpr.type().isTensor()) {
-        (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, *arguments));
+        // check if we need to turn this into an index expression
+        // TODO: This logic needs to be in all paths that can create tensor
+        // reads.
+        int numSlices = 0;
+        for (auto arg: *arguments) {
+          if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":")
+            numSlices++;
+        }
+        if (numSlices > 0) {
+         // We will construct an index expression.
+         // first, we build IndexVars
+         std::vector<IndexVar> allivars;
+         std::vector<IndexVar> freeVars;
+         int i=0;
+         for (auto &arg: *arguments) {
+          if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
+            auto iv = IndexVar("tmpfree" + std::to_string(i), readExpr.type().toTensor()->dimensions[i]);
+            allivars.push_back(iv);
+            freeVars.push_back(iv);
+          }
+          else {
+            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i), readExpr.type().toTensor()->dimensions[i],
+              new Expr(arg)));
+          }
+          i++;
+         }
+            // now construct an index expression
+         (yylhs.value.expr) = new Expr(IndexExpr::make(freeVars,
+            IndexedTensor::make(readExpr, allivars)));
+        }
+        else {
+        
+          (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, *arguments));
+        }
+        
       }
       else if (readExpr.type().isTuple()) {
         if (arguments->size() != 1) {
@@ -4001,13 +4036,13 @@ namespace  simit { namespace internal  {
     1114,  1122,  1123,  1124,  1125,  1126,  1127,  1128,  1134,  1154,
     1163,  1171,  1190,  1258,  1278,  1306,  1311,  1320,  1321,  1322,
     1323,  1329,  1333,  1339,  1345,  1351,  1357,  1363,  1369,  1375,
-    1381,  1386,  1392,  1396,  1404,  1438,  1439,  1440,  1447,  1496,
-    1517,  1520,  1529,  1535,  1539,  1543,  1553,  1554,  1555,  1556,
-    1560,  1572,  1576,  1586,  1595,  1607,  1619,  1623,  1626,  1668,
-    1678,  1683,  1691,  1694,  1708,  1714,  1717,  1767,  1771,  1772,
-    1776,  1780,  1787,  1798,  1805,  1809,  1813,  1827,  1831,  1846,
-    1850,  1857,  1864,  1868,  1872,  1886,  1890,  1905,  1909,  1916,
-    1919,  1925,  1928,  1934,  1937,  1944,  1963,  1987,  1988,  1996
+    1381,  1386,  1392,  1396,  1404,  1438,  1439,  1440,  1447,  1531,
+    1552,  1555,  1564,  1570,  1574,  1578,  1588,  1589,  1590,  1591,
+    1595,  1607,  1611,  1621,  1630,  1642,  1654,  1658,  1661,  1703,
+    1713,  1718,  1726,  1729,  1743,  1749,  1752,  1802,  1806,  1807,
+    1811,  1815,  1822,  1833,  1840,  1844,  1848,  1862,  1866,  1881,
+    1885,  1892,  1899,  1903,  1907,  1921,  1925,  1940,  1944,  1951,
+    1954,  1960,  1963,  1969,  1972,  1979,  1998,  2022,  2023,  2031
   };
 
   // Print the state stack on the debug stream.
