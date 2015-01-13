@@ -479,14 +479,17 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   }
   emitKernelLaunch(kernel, args, kernelSharding);
 }
+
 void GPUBackend::visit(const ir::IfThenElse *op) {
-  ASSERT(false && "No code generation for this type");
+  // ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Block *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::Pass *op) {
-  ASSERT(false && "No code generation for this type");
+  // ASSERT(false && "No code generation for this type");
+  LLVMBackend::visit(op);
 }
 
 namespace {
