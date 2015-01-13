@@ -128,8 +128,8 @@ static int size(const ir::IndexSet &indexSet,
       return indexSet.getSize();
     case ir::IndexSet::Set: {
       ir::Expr set = indexSet.getSet();
-      iassert(!ir::isa<ir::VarExpr>(set))
-          << "Attempting to get the size of a runtime dynamic set";
+      iassert(ir::isa<ir::VarExpr>(set))
+          << "Attempting to get the size of a runtime dynamic set: " << set;
 
       std::string varName = ir::to<ir::VarExpr>(set)->var.getName();
       iassert(sets.find(varName) != sets.end()) << "set not found in function";

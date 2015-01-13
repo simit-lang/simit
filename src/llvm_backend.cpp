@@ -776,7 +776,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
     unsigned elemSize = tensorFieldType->componentType.bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 
-    builder->CreateMemCpy(fieldPtr, valuePtr, fieldSize, elemSize);
+    emitMemCpy(fieldPtr, valuePtr, fieldSize, elemSize);
   }
 }
 
@@ -1393,10 +1393,16 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
       iassert(var.getType() == value.type())
           << "variable and value types don't match";
       llvm::Value *valuePtr = compile(value);
-      builder->CreateMemCpy(varPtr, valuePtr, size, componentSize);
+      emitMemCpy(varPtr, valuePtr, size, componentSize);
       symtable.insert(var, varPtr);
     }
   }
+}
+
+void LLVMBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
+                             llvm::Value *size, unsigned align) {
+  std::cout << "Using LLVMBackend memcpy" << std::endl;
+  builder->CreateMemCpy(dst, src, size, align);
 }
 
 void LLVMBackend::makeGlobalTensor(ir::Var var) {
@@ -1404,13 +1410,16 @@ void LLVMBackend::makeGlobalTensor(ir::Var var) {
   // TODO: We should allocate small local dense tensors on the stack
   iassert(var.getType().isTensor());
   llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
-  llvm::PointerType *globalType = llvm::PointerType::getUnqual(ctype);
+  llvm::PointerType *globalType = llvm::PointerType::get(
+      ctype, LLVM_GLOBAL_ADDRSPACE);
 
   llvm::GlobalVariable* buffer =
       new llvm::GlobalVariable(*module, globalType,
                                false, llvm::GlobalValue::ExternalLinkage,
                                llvm::ConstantPointerNull::get(globalType),
-                               var.getName());
+                               var.getName(), nullptr,
+                               llvm::GlobalVariable::NotThreadLocal,
+                               LLVM_GLOBAL_ADDRSPACE);
   buffer->setAlignment(8);
   buffers.insert(pair<Var, llvm::Value*>(var, buffer));
 
