@@ -29,6 +29,7 @@ namespace simit {
 namespace internal {
 
 GPUBackend::GPUBackend() {
+  // TODO: move into GPUFunction::init or similar?
   // CUDA runtime
   CUdevice device;
   CUcontext context;
@@ -47,7 +48,7 @@ GPUBackend::GPUBackend() {
   checkCudaErrors(cuDeviceComputeCapability(&cuDevMajor, &cuDevMinor, device));
   std::cout << "Device Compute Capability: "
             << cuDevMajor << "." << cuDevMinor << std::endl;
-  iassert(cuDevMajor >= 2) << "ERROR: Device 0 is not SM 2.0 or greater";
+  iassert((cuDevMajor == 3 && cuDevMinor >= 5) || cuDevMajor > 3) << "ERROR: Device 0 is not SM 3.5 or greater";
 
   // Create driver context
   checkCudaErrors(cuCtxCreate(&context, 0, device));
