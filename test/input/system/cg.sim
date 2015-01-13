@@ -42,17 +42,20 @@ proc main
 
   normr = norm(r);
   while (normr > tol) and (iter < maxiters)
-    alpha = dot(r, r);
-    Atimesp = A * p;
-    denom = dot(p, Atimesp);
-    alpha = alpha / denom;
+    Ap = A * p;
 
+    denom = dot(p, Ap);
+
+    alpha = dot(r, r);
+    alpha = alpha / denom;
     x = x + alpha*p;
+
     oldrsqn = dot(r,r);
-    r = r - alpha*A*p;
+    r = r - alpha * Ap;
     newrsqn = dot(r,r);
     beta = newrsqn/oldrsqn;
     p = r + beta*p;
+
     iter = iter + 1;
   end
 % end inlined CG
