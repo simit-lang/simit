@@ -754,7 +754,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
       unsigned compSize = tensorFieldType->componentType.bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
-      builder->CreateMemSet(fieldPtr, llvmInt(0,8), fieldSize, compSize);
+      emitMemSet(fieldPtr, llvmInt(0,8), fieldSize, compSize);
     }
     else {
       not_supported_yet;
@@ -1388,7 +1388,7 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
       // Assigning 0 to a tensor (memset)
       if (isa<Literal>(value) && (to<Literal>(value)->getFloatVal(0) == 0.0 ||
                                   ((int*)to<Literal>(value)->data)[0] == 0  )) {
-        builder->CreateMemSet(varPtr, llvmInt(0,8), size, componentSize);
+        emitMemSet(varPtr, llvmInt(0,8), size, componentSize);
       }
       // Assigning general scalar to a tensor
       else {
@@ -1410,6 +1410,11 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
 void LLVMBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
                              llvm::Value *size, unsigned align) {
   builder->CreateMemCpy(dst, src, size, align);
+}
+
+void LLVMBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
+                             llvm::Value *size, unsigned align) {
+  builder->CreateMemSet(dst, val, size, align);
 }
 
 void LLVMBackend::makeGlobalTensor(ir::Var var) {
