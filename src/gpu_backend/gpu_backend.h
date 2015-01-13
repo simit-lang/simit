@@ -28,9 +28,8 @@ protected:
   // CUDA variables
   int cuDevMajor, cuDevMinor;
 
-  // Used to track which dimensions of the GPU computation have been
-  // parallelized across blocks
-  GPUSharding sharding;
+  // Tracking whether we're in a kernel
+  bool inKernel = false;
 
   // Currently compiling IR Func
   ir::Func irFunc;

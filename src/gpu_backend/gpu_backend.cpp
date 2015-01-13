@@ -111,7 +111,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
 
   std::cout << "Done compiling" << std::endl;
 
-  return new GPUFunction(irFunc, func, module, sharding, buffers, fieldStorage,
+  return new GPUFunction(irFunc, func, module, buffers, fieldStorage,
                          cuDevMajor, cuDevMinor);
 }
 
@@ -353,7 +353,7 @@ void GPUBackend::visit(const ir::Div *op) {
 void GPUBackend::visit(const ir::VarDecl *op) {
   tassert(op->var.getType().isTensor()) << "Only tensor decls supported";
 
-  if (sharding.isSharded()) {
+  if (inKernel) {
     // Allow LLVMBackend to emit a local alloca
     LLVMBackend::visit(op);
   }
@@ -456,7 +456,9 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
     symtable.insert(kernelSharding.zVar, getTidZ());
   }
   
+  inKernel = true;
   LLVMBackend::compile(op->body);
+  inKernel = false;
 
   // NVVM kernel should always return void
   builder->CreateRetVoid();

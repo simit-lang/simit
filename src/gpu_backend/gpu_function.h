@@ -19,11 +19,11 @@ namespace internal {
 class GPUFunction : public simit::Function {
  public:
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-              llvm::Module *module, class GPUSharding sharding,
+              llvm::Module *module,
               std::map<ir::Var, llvm::Value*> globalBufs,
               ir::TensorStorage storage, int cuDevMajor, int cuDevMinor)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
-      sharding(sharding), globalBufs(globalBufs), storage(storage),
+      globalBufs(globalBufs), storage(storage),
       cuDevMajor(cuDevMajor), cuDevMinor(cuDevMinor) {}
   ~GPUFunction();
 
@@ -73,7 +73,6 @@ class GPUFunction : public simit::Function {
   std::map<ir::Var, llvm::Value*> globalBufs;
   ir::TensorStorage storage;
   int cuDevMajor, cuDevMinor;
-  class GPUSharding sharding;
 };
 
 }
