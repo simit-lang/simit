@@ -222,7 +222,6 @@ void GPUBackend::visit(const ir::CallStmt *op) {
       ir::Var result = op->results[0];
       llvm::Value *llvmResult = symtable.get(result);
       args.push_back(llvmResult);
-      symtable.insert(result, llvmResult);
 
       std::string fname = callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args);
