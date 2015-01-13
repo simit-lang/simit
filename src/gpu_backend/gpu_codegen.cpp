@@ -50,8 +50,6 @@ extern "C" int simit_gpu_intrinsics_length;
 std::string generatePtx(const std::string &module,
                         int devMajor, int devMinor,
                         const char *moduleName) {
-  std::cout << "DEBUG: generatePtx" << std::endl
-	    << module << std::endl;
   nvvmProgram compileUnit;
   nvvmResult res;
 
@@ -119,8 +117,6 @@ std::string generatePtx(const std::string &module,
   char *ptx = new char[ptxSize];
   checkNVVMCall(nvvmGetCompiledResult(compileUnit, ptx));
   checkNVVMCall(nvvmDestroyProgram(&compileUnit));
-
-  std::cout << "Ptx code: " << std::endl << std::string(ptx) << std::endl;
 
   return std::string(ptx);
 }
