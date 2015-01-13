@@ -239,7 +239,6 @@ void GPUBackend::visit(const ir::CallStmt *op) {
       args.push_back(emitComputeLen(type1->dimensions[0]));
       std::string funcName = callee.getName() + floatTypeName;
       call = emitCall(funcName, args, getLLVMFloatType());
-      symtable.insert(op->results[0], call);
     }
     else {
       ierror << "intrinsic " << op->callee.getName() << " not found";
@@ -247,7 +246,10 @@ void GPUBackend::visit(const ir::CallStmt *op) {
   
     iassert(call);
     if (!call->getType()->isVoidTy()) {
-      symtable.insert(op->results[0], call);
+      iassert(op->results.size() == 1);
+      ir::Var var = op->results[0];
+      llvm::Value *llvmVar = symtable.get(var);
+      builder->CreateStore(call, llvmVar);
     }
   }
   // if not an intrinsic function, try to find it in the module
@@ -298,7 +300,6 @@ void GPUBackend::visit(const ir::Call *op) {
     auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
     fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(
       foundIntrinsic->second, ftype));
-    return;
   }
   else if (op->func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);

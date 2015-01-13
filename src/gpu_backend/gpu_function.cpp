@@ -75,7 +75,8 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         }
       }
       else {
-        return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer));
+        return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer),
+                       LLVM_GLOBAL_ADDRSPACE);
       }
     }
     case ir::Type::Element: ierror << "Element arg not supported";
