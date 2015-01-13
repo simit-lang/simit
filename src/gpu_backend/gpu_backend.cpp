@@ -157,7 +157,64 @@ void GPUBackend::visit(const ir::TensorWrite *op) {
 }
 
 void GPUBackend::visit(const ir::Literal *op) {
-  LLVMBackend::visit(op);
+  const ir::TensorType *type = op->type.toTensor();
+  if (type->order() == 0) {
+    // Delegate scalar literals to generic LLVM backend
+    LLVMBackend::visit(op);
+  }
+  else {
+    // Put the data in global memory and generate a pointer
+    ir::ScalarType ctype = type->componentType;
+    llvm::Constant *dataConstant;
+    switch (ctype.kind) {
+      case ir::ScalarType::Int: {
+        iassert(ctype.bytes() == sizeof(uint32_t))
+            << "Incorrect native types used for constant data array";
+        iassert(op->size % sizeof(uint32_t) == 0)
+            << "Literal data size not a multiple of element size";
+        dataConstant = llvm::ConstantDataArray::get(
+            LLVM_CONTEXT, llvm::ArrayRef<uint32_t>(
+                reinterpret_cast<uint32_t*>(op->data),
+                op->size/sizeof(uint32_t)));
+        break;
+      }
+      case ir::ScalarType::Float: {
+        if (ir::ScalarType::floatBytes == sizeof(float)) {
+          iassert(op->size % sizeof(float) == 0)
+              << "Literal data size not a multiple of element size";
+          dataConstant = llvm::ConstantDataArray::get(
+              LLVM_CONTEXT, llvm::ArrayRef<float>(
+                  reinterpret_cast<float*>(op->data),
+                  op->size/sizeof(float)));
+        }
+        else if (ir::ScalarType::floatBytes == sizeof(double)) {
+          iassert(op->size % sizeof(double) == 0)
+              << "Literal data size not a multiple of element size";
+          dataConstant = llvm::ConstantDataArray::get(
+              LLVM_CONTEXT, llvm::ArrayRef<double>(
+                  reinterpret_cast<double*>(op->data),
+                  op->size/sizeof(double)));
+        }
+        else {
+          unreachable;
+        }
+        break;
+      }
+      case ir::ScalarType::Boolean: {
+        // TODO(gkanwar): Boolean support? ConstantDataArray only supports down
+        // to INT8 types.
+        not_supported_yet;
+        break;
+      }
+      default: unreachable;
+    }
+    llvm::GlobalVariable *globalData =
+        new llvm::GlobalVariable(*module, dataConstant->getType(), true,
+                                 llvm::GlobalVariable::InternalLinkage,
+                                 dataConstant);
+    val = globalData;
+  }
+  iassert(val);
 }
 void GPUBackend::visit(const ir::VarExpr *op) {
   LLVMBackend::visit(op);

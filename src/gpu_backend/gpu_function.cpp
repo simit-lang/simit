@@ -60,7 +60,7 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
       }
       std::cout << "]" << std::dec << std::endl;
       checkCudaErrors(cuMemcpyHtoD(*devBuffer, literal.data, literal.size));
-      std::cout << literal.data << " -> " << *devBuffer << std::endl;
+      std::cout << literal.data << " -> " << (void*)(*devBuffer) << std::endl;
       pushedBufs.emplace(literal.data,
                          DeviceDataHandle(devBuffer, literal.size, shouldPull));
       if (!actual.isOutput() && isScalar(actual.getType())) {

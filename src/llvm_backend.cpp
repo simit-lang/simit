@@ -247,6 +247,7 @@ void LLVMBackend::visit(const Literal *op) {
         val = llvm::ConstantInt::get(LLVM_BOOL, llvm::APInt(1, data, false));
         break;
       }
+      default: unreachable;
     }
   }
   else {
