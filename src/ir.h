@@ -107,7 +107,7 @@ inline bool isa(Stmt s) {
 
 template <typename S>
 inline const S* to(Stmt s) {
-  iassert(isa<S>(s)) << "Wrong Expr type";
+  iassert(isa<S>(s)) << "Wrong Expr type " << s;
   return static_cast<const S*>(s.ptr);
 }
 

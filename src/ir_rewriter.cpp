@@ -445,7 +445,7 @@ void IRRewriter::visit(const GPUKernel *op) {
 // class IRRewriterCallGraph
 void IRRewriterCallGraph::visit(const Call *op) {
   IRRewriter::visit(op);
-  op = to<Call>(stmt);
+  op = to<Call>(expr);
 
   Func func = op->func;
   if (visited.find(op->func) == visited.end()) {
