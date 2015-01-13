@@ -137,6 +137,7 @@ static int size(const ir::IndexSet &indexSet,
 
       return sets.at(varName)->getSize();
     }
+    case ir::IndexSet::Single:
     case ir::IndexSet::Dynamic:
       not_supported_yet;
       return 0;

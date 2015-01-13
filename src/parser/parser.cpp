@@ -1566,12 +1566,14 @@ namespace  simit { namespace internal  {
          int i=0;
          for (auto &arg: arguments) {
           if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
-            auto iv = IndexVar("tmpfree" + std::to_string(i), readExpr.type().toTensor()->dimensions[i]);
+            auto iv = IndexVar("tmpfree" + std::to_string(i),
+                readExpr.type().toTensor()->dimensions[i]);
             allivars.push_back(iv);
             freeVars.push_back(iv);
           }
           else {
-            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i), readExpr.type().toTensor()->dimensions[i],
+            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
+                readExpr.type().toTensor()->dimensions[i],
               new Expr(arg)));
           }
           i++;
@@ -2645,7 +2647,6 @@ namespace  simit { namespace internal  {
 
       // The parenthesis read can be a read from a tensor or a tuple.
       auto readExpr = symbol.getExpr();
-      cout << "readExpr: " << readExpr << endl;
       if (readExpr.type().isTensor()) {
         // check if we need to turn this into an index expression
         // TODO: This logic needs to be in all paths that can create tensor
@@ -2663,12 +2664,14 @@ namespace  simit { namespace internal  {
          int i=0;
          for (auto &arg: *arguments) {
           if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
-            auto iv = IndexVar("tmpfree" + std::to_string(i), readExpr.type().toTensor()->dimensions[i]);
+            auto iv = IndexVar("tmpfree" + std::to_string(i),
+                readExpr.type().toTensor()->dimensions[i]);
             allivars.push_back(iv);
             freeVars.push_back(iv);
           }
           else {
-            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i), readExpr.type().toTensor()->dimensions[i],
+            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
+                readExpr.type().toTensor()->dimensions[i],
               new Expr(arg)));
           }
           i++;
@@ -4029,20 +4032,20 @@ namespace  simit { namespace internal  {
      392,   392,   392,   400,   434,   437,   443,   448,   456,   463,
      468,   471,   477,   482,   490,   496,   499,   506,   507,   510,
      511,   512,   513,   514,   515,   516,   517,   518,   519,   520,
-     525,   535,   557,   566,   691,   732,   783,   863,   866,   873,
-     877,   884,   887,   893,   898,   918,   940,   962,   984,   993,
-    1000,  1005,  1011,  1022,  1022,  1022,  1028,  1031,  1031,  1031,
-    1034,  1034,  1034,  1044,  1052,  1062,  1073,  1078,  1106,  1109,
-    1114,  1122,  1123,  1124,  1125,  1126,  1127,  1128,  1134,  1154,
-    1163,  1171,  1190,  1258,  1278,  1306,  1311,  1320,  1321,  1322,
-    1323,  1329,  1333,  1339,  1345,  1351,  1357,  1363,  1369,  1375,
-    1381,  1386,  1392,  1396,  1404,  1438,  1439,  1440,  1447,  1531,
-    1552,  1555,  1564,  1570,  1574,  1578,  1588,  1589,  1590,  1591,
-    1595,  1607,  1611,  1621,  1630,  1642,  1654,  1658,  1661,  1703,
-    1713,  1718,  1726,  1729,  1743,  1749,  1752,  1802,  1806,  1807,
-    1811,  1815,  1822,  1833,  1840,  1844,  1848,  1862,  1866,  1881,
-    1885,  1892,  1899,  1903,  1907,  1921,  1925,  1940,  1944,  1951,
-    1954,  1960,  1963,  1969,  1972,  1979,  1998,  2022,  2023,  2031
+     525,   535,   557,   566,   693,   734,   785,   865,   868,   875,
+     879,   886,   889,   895,   900,   920,   942,   964,   986,   995,
+    1002,  1007,  1013,  1024,  1024,  1024,  1030,  1033,  1033,  1033,
+    1036,  1036,  1036,  1046,  1054,  1064,  1075,  1080,  1108,  1111,
+    1116,  1124,  1125,  1126,  1127,  1128,  1129,  1130,  1136,  1156,
+    1165,  1173,  1192,  1260,  1280,  1308,  1313,  1322,  1323,  1324,
+    1325,  1331,  1335,  1341,  1347,  1353,  1359,  1365,  1371,  1377,
+    1383,  1388,  1394,  1398,  1406,  1440,  1441,  1442,  1449,  1534,
+    1555,  1558,  1567,  1573,  1577,  1581,  1591,  1592,  1593,  1594,
+    1598,  1610,  1614,  1624,  1633,  1645,  1657,  1661,  1664,  1706,
+    1716,  1721,  1729,  1732,  1746,  1752,  1755,  1805,  1809,  1810,
+    1814,  1818,  1825,  1836,  1843,  1847,  1851,  1865,  1869,  1884,
+    1888,  1895,  1902,  1906,  1910,  1924,  1928,  1943,  1947,  1954,
+    1957,  1963,  1966,  1972,  1975,  1982,  2001,  2025,  2026,  2034
   };
 
   // Print the state stack on the debug stream.
