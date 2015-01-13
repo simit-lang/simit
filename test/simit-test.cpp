@@ -6,6 +6,7 @@
 
 #include "program.h"
 #include "util.h"
+#include "ir.h"
 
 // These are just extern declared from llvm/Support/CommandLine.h since that's
 // not currently in the build for simit-test and I'm lazy.
@@ -18,6 +19,21 @@ extern
 void ParseEnvironmentOptions(const char *progName, const char *envvar,
                              const char *Overview = nullptr);
 }}
+
+#ifdef F32
+// F32 environment setup
+class F32Environment : public ::testing::Environment {
+public:
+  int oldSize;
+  virtual void SetUp() {
+    oldSize = simit::ir::ScalarType::floatBytes;
+    simit::ir::ScalarType::floatBytes = sizeof(float);
+  }
+  virtual void TearDown() {
+    simit::ir::ScalarType::floatBytes = oldSize;
+  }
+};
+#endif
 
 int main(int argc, char **argv) {
   // Get optional LLVM opt-style arguments from the SIMIT_LLVM_DEBUG_ARGS
@@ -78,6 +94,10 @@ int main(int argc, char **argv) {
       }
     }
   }
-  
+
+#ifdef F32
+  // Add F32 test environemnt
+  ::testing::AddGlobalTestEnvironment(new F32Environment);
+#endif
   return RUN_ALL_TESTS();
 }

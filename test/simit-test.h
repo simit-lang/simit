@@ -9,6 +9,12 @@
 #include "error.h"
 #include "ir.h"
 
+#ifdef F32
+typedef float simit_float;
+#else
+typedef double simit_float;
+#endif
+
 inline std::string toLower(std::string str) {
   std::transform(str.begin(), str.end(), str.begin(), ::tolower);
   return str;
@@ -18,15 +24,15 @@ inline std::string toLower(std::string str) {
                        toLower(test_info_->test_case_name()) + "/" +  \
                        test_info_->name() + ".sim"
 
-#define GPU_TEST_FILE_NAME(test_case) \
-  std::string(TEST_INPUT_DIR) + "/" + \
-  toLower(test_case) + "/" +          \
-  test_info_->name() + ".sim"
+#ifdef F32
+#define ASSERT_SIMIT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.00001)
+#else
+#define ASSERT_SIMIT_FLOAT_EQ(a, b) ASSERT_DOUBLE_EQ(a, b)
+#endif
 
 inline
 std::unique_ptr<simit::Function> getFunction(std::string fileName,
-                                             std::string functionName="main",
-                                             int floatSize=8) {
+                                             std::string functionName="main") {
   simit::Program program;
   int errorCode = program.loadFile(fileName);
   if (errorCode) {
@@ -34,6 +40,11 @@ std::unique_ptr<simit::Function> getFunction(std::string fileName,
     return nullptr;
   }
 
+  #ifdef F32
+  int floatSize = sizeof(float);
+  #else
+  int floatSize = sizeof(double);
+  #endif
   std::unique_ptr<simit::Function> f =
       program.compile(functionName, floatSize);
   if (errorCode) {
@@ -43,16 +54,3 @@ std::unique_ptr<simit::Function> getFunction(std::string fileName,
 
   return f;
 }
-
-// F32 version of test
-class F32Test : public ::testing::Test {
-protected:
-  int oldSize;
-  virtual void SetUp() {
-    oldSize = simit::ir::ScalarType::floatBytes;
-    simit::ir::ScalarType::floatBytes = sizeof(float);
-  }
-  virtual void TearDown() {
-    simit::ir::ScalarType::floatBytes = oldSize;
-  }
-};

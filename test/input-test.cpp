@@ -153,29 +153,10 @@ void runTest(ProgramTestParam param) {
   }
 }
 
-template <typename T>
-class TestWithParamF32 : public TestWithParam<T> {
-protected:
-  int oldBytes;
-  virtual void SetUp() {
-    oldBytes = ir::ScalarType::floatBytes;
-    ir::ScalarType::floatBytes = sizeof(float);
-  }
-  virtual void TearDown() {
-    ir::ScalarType::floatBytes = oldBytes;
-  }
-};
-
 #define SIM_TEST_SUITE(name) \
   class name : public TestWithParam<ProgramTestParam> {}; \
   TEST_P(name, inputs) {                                  \
     runTest(GetParam());                                  \
-  }
-
-#define SIM_TEST_SUITE_F32(name) \
-  class name : public TestWithParamF32<ProgramTestParam> {}; \
-  TEST_P(name, inputs) {                                     \
-    runTest(GetParam());                                     \
   }
 
 #define SIM_TEST(suite, name)                                                \
@@ -183,13 +164,6 @@ protected:
   INSTANTIATE_TEST_CASE_P(name, suite,                                       \
                           ValuesIn(readTestsFromFile(string(TEST_INPUT_DIR)+ \
                                                        "/"+string(#suite),   \
-                                                     string(#name)+".sim")))
-
-#define SIM_TEST_F32(suite, suite_dir, name)                                 \
-  std::string path();                                                        \
-  INSTANTIATE_TEST_CASE_P(name, suite,                                       \
-                          ValuesIn(readTestsFromFile(string(TEST_INPUT_DIR)+ \
-                                                     "/"+string(#suite_dir), \
                                                      string(#name)+".sim")))
 
 /* Examples */
@@ -212,10 +186,6 @@ SIM_TEST(elements, tensorrw);
 SIM_TEST(elements, springs);
 SIM_TEST(elements, fem);
 SIM_TEST(elements, fem_tensor);
-
-/* Float-32 tests */
-SIM_TEST_SUITE_F32(elements_f32)
-SIM_TEST_F32(elements_f32, elements, intrinsics);
 
 SIM_TEST_SUITE(declarations)
 SIM_TEST(declarations, function_headers);
