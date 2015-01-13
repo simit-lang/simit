@@ -20,7 +20,7 @@ class Expr;
 class IndexSet {
 public:
   /// The types of index sets that are supported.
-  enum Kind {Range, Set, Dynamic};
+  enum Kind {Range, Set, Dynamic, Single};
 
   /// Create an index set consisting of the items in the given range.
   IndexSet(signed rangeSize) : kind(Range), rangeSize(rangeSize), set(nullptr){}
@@ -30,6 +30,9 @@ public:
 
   /// Create a variable-size index set.
   IndexSet() : kind(Dynamic) {}
+  
+  /// Create an index set of a single expression
+  IndexSet(const Expr &set, Kind kind);
 
   /// Get the Kind of the index set (Range, Set or Dynamic)
   Kind getKind() const { return kind; }

@@ -11,9 +11,12 @@ namespace ir {
 // class IndexSet
 IndexSet::IndexSet(const Expr &set) : kind(Set), rangeSize(-1),
                                       set(new Expr(set)) {}
+IndexSet::IndexSet(const Expr &set, Kind kind) : kind(kind), rangeSize(-1),
+                                      set(new Expr(set)) {}
 
 const Expr &IndexSet::getSet() const {
-  iassert(kind==Set);
+  iassert(kind==Set || kind==Single) << "Wrong kind (not a Set or Single) for "
+    << *this << " which is " << kind;
   return *set;
 }
 
@@ -24,6 +27,7 @@ bool operator==(const IndexSet &l, const IndexSet &r) {
   switch (l.getKind()) {
     case IndexSet::Range:
       return l.getSize() == r.getSize();
+    case IndexSet::Single:
     case IndexSet::Set:
       return l.getSet() == r.getSet();
     case IndexSet::Dynamic:
@@ -43,6 +47,7 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is) {
     case IndexSet::Range:
       os << "0:" << std::to_string(is.getSize());
       break;
+    case IndexSet::Single:
     case IndexSet::Set:
       os << is.getSet();
       break;

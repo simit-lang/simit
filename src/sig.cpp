@@ -314,7 +314,12 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
         ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
                                 ? indexVar.getOperator()
                                 : ReductionOperator::Undefined;
-
+        if (indexVar.isFixed()) {
+          domain = ForDomain(IndexSet(*indexVar.ptr->fixedExpr, IndexSet::Single));
+          cout << "expr is " << *(indexVar.getFixedExpr()) << endl;
+        }
+        cout << "Adding vertex loop var for ivar " << indexVar << endl;
+        cout << "with domain " << domain << endl;
         addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
       }
 

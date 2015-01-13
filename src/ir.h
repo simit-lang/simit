@@ -441,8 +441,10 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
     iassert(tensor.type().isTensor()) << "Only tensors can be indexed.";
     iassert(indexVars.size() == tensor.type().toTensor()->order());
     for (size_t i=0; i < indexVars.size(); ++i) {
-      iassert(indexVars[i].getDomain() == tensor.type().toTensor()->dimensions[i]
-             && "IndexVar domain does not match tensordimension");
+      iassert(indexVars[i].getDomain() == tensor.type().toTensor()->dimensions[i])
+             << "IndexVar domain does not match tensordimension "
+             << "for var " << indexVars[i]
+             << indexVars[i].getDomain() << " != " << tensor.type().toTensor()->dimensions[i];
     }
 
     IndexedTensor *node = new IndexedTensor;

@@ -473,7 +473,23 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   Stmt loopNest = kernel;
   for (auto loopVar=loopVars.rbegin(); loopVar!=loopVars.rend(); ++loopVar){
     if (loopVar->getDomain().kind == ForDomain::IndexSet) {
+//      cout << "getVar= " << loopVar->getVar() << endl;
+//      cout << "getDomain= " << loopVar->getDomain() << endl;
+//      cout << "loopnest= " << loopNest << endl;
+      
+      // if this is a Single domain, don't generate a loop, just use an
+      // assignment statement.
+      if (loopVar->getDomain().kind == ForDomain::IndexSet &&
+          loopVar->getDomain().indexSet.getKind() == IndexSet::Single) {
+          cout << "in special case " << endl;
+        auto assign = AssignStmt::make(loopVar->getVar(),
+            loopVar->getDomain().indexSet.getSet());
+        cout << "HERE" << assign << endl;
+        loopNest = Block::make(assign, loopNest);
+      }
+      else {
       loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
+      }
     }
     else if (loopVar->getDomain().kind == ForDomain::Neighbors) {
       Expr set = loopVar->getDomain().set;
