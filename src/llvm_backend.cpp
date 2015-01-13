@@ -103,8 +103,9 @@ simit::Function *LLVMBackend::compile(Func func) {
     for (auto &global : f.getEnvironment().globals) {
       symtable.insert(global.first, compile(global.second));
     }
-    
-    compile(f.getBody());
+
+    compile(moveVarDeclsToFront(f.getBody()));
+
     builder->CreateRetVoid();
     symtable.clear();
   }
