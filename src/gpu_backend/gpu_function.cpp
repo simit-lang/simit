@@ -36,6 +36,7 @@ void GPUFunction::mapArgs() {
   for (auto &kv : pushedBufs) {
     if (kv.second.shouldPull) pullArg(kv.first, kv.second);
   }
+  pushedBufs.clear();
 }
 
 void GPUFunction::unmapArgs(bool updated) {
