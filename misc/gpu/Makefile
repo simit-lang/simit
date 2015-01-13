@@ -1,6 +1,7 @@
 # TODO: integrate into real build
 
 # CLANG ?= /scratch/llvm32/bin/clang
+CLANG ?= clang
 TARGET_DIR=../../src/gpu_backend
 ARCHS=compute_20 compute_30 compute_35
 LIBDEVICE_BC_FILES=$(ARCHS:%=libdevice.%.bc)
@@ -12,7 +13,7 @@ LLVM_AS=$(LLVM_BINDIR)/llvm-as
 
 linalg.ll: linalg.c
 	# clean out: target* lines, attributes* lines, and #X attribute references - NVVM doesn't like them
-	$(CLANG) -S -emit-llvm $< -o - | grep -v '^target ' | grep -v '^attributes' | sed 's/ \#. / /g' | sed 's/ \#.$$//g' > $@
+	$(CLANG) -S -emit-llvm $< -o - | grep -v '^target ' | grep -v '^attributes' | sed 's/) \#. {/) alwaysinline {/g' | sed 's/ \#.$$//g' > $@
 
 bitcode2cpp: bitcode2cpp.cpp
 	c++ -o $@ $^
