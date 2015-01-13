@@ -76,7 +76,7 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
       }
       else {
         return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer),
-                       LLVM_GLOBAL_ADDRSPACE);
+                       CUDA_GLOBAL_ADDRSPACE);
       }
     }
     case ir::Type::Element: ierror << "Element arg not supported";
@@ -85,7 +85,7 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
       const ir::SetType *setType = actual.getType().toSet();
 
       llvm::StructType *llvmSetType =
-          createLLVMType(setType, LLVM_GLOBAL_ADDRSPACE);
+          createLLVMType(setType, CUDA_GLOBAL_ADDRSPACE);
       std::vector<llvm::Constant*> setData;
 
       // Set size
@@ -152,7 +152,7 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
         pushedBufs.emplace(fieldData, DeviceDataHandle(devBuffer, size, shouldPull));
         setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer),
-                                  LLVM_GLOBAL_ADDRSPACE));
+                                  CUDA_GLOBAL_ADDRSPACE));
       }
 
       return llvm::ConstantStruct::get(llvmSetType, setData);
@@ -197,7 +197,8 @@ llvm::Function *GPUFunction::createHarness(
     llvm::Module *module) {
   const std::string harnessName = kernel->getName().str() + "_harness";
   llvm::Function *harness = createPrototype(harnessName, {}, {},
-                                            module, true, false);
+                                            module, true, false,
+                                            CUDA_GLOBAL_ADDRSPACE);
 
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
   // Ensure the function declaration is present in harness module

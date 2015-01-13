@@ -378,8 +378,8 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
         // Guard against invalid addrspace
         unsigned addrspace = ((llvm::PointerType*)varPtr->getType())
             ->getAddressSpace();
-        if (addrspace != LLVM_GLOBAL_ADDRSPACE &&
-            addrspace != LLVM_SHARED_ADDRSPACE) {
+        if (addrspace != CUDA_GLOBAL_ADDRSPACE &&
+            addrspace != CUDA_SHARED_ADDRSPACE) {
           LLVMBackend::visit(op);
           return;
         }
@@ -579,19 +579,19 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
   std::vector<llvm::Type*> argTys;
   std::string funcName;
   switch (addrspace) {
-    case LLVM_GENERIC_ADDRSPACE: {
+    case CUDA_GENERIC_ADDRSPACE: {
       argTys.push_back(LLVM_FLOATPTR);
       argTys.push_back(LLVM_FLOAT);
       funcName = "llvm.nvvm.atomic.load.add.f32.p0f32";
       break;
     }
-    case LLVM_GLOBAL_ADDRSPACE: {
+    case CUDA_GLOBAL_ADDRSPACE: {
       argTys.push_back(LLVM_FLOATPTR_GLOBAL);
       argTys.push_back(LLVM_FLOAT);
       funcName = "llvm.nvvm.atomic.load.add.f32.p1f32";
       break;
     }
-    case LLVM_SHARED_ADDRSPACE: {
+    case CUDA_SHARED_ADDRSPACE: {
       argTys.push_back(llvm::Type::getFloatPtrTy(LLVM_CONTEXT, addrspace));
       argTys.push_back(LLVM_FLOAT);
       funcName = "llvm.nvvm.atomic.load.add.f32.p3f32";

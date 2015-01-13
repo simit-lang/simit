@@ -1310,7 +1310,7 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
                                                bool externalLinkage,
                                                bool doesNotThrow) {
   llvm::Function *llvmFunc = createPrototype(name, arguments, results, module,
-                                             externalLinkage, doesNotThrow);
+                                             externalLinkage, doesNotThrow, global_addrspace());
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
   builder->SetInsertPoint(entry);
 
@@ -1421,7 +1421,7 @@ void LLVMBackend::makeGlobalTensor(ir::Var var) {
   iassert(var.getType().isTensor());
   llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
   llvm::PointerType *globalType = llvm::PointerType::get(
-      ctype, LLVM_GLOBAL_ADDRSPACE);
+      ctype, global_addrspace());
 
   llvm::GlobalVariable* buffer =
       new llvm::GlobalVariable(*module, globalType,
@@ -1429,7 +1429,7 @@ void LLVMBackend::makeGlobalTensor(ir::Var var) {
                                llvm::ConstantPointerNull::get(globalType),
                                var.getName(), nullptr,
                                llvm::GlobalVariable::NotThreadLocal,
-                               LLVM_GLOBAL_ADDRSPACE);
+                               global_addrspace());
   buffer->setAlignment(8);
   buffers.insert(pair<Var, llvm::Value*>(var, buffer));
 

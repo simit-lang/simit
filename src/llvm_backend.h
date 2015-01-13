@@ -1,5 +1,5 @@
-#ifndef SIMIT_CODEGEN_LLVM_H
-#define SIMIT_CODEGEN_LLVM_H
+#ifndef SIMIT_LLVM_BACKEND_H
+#define SIMIT_LLVM_BACKEND_H
 
 #include <ostream>
 #include <memory>
@@ -46,6 +46,9 @@ public:
   simit::Function *compile(simit::ir::Func func);
 
 protected:
+  virtual unsigned global_addrspace()  { return 0; } // LLVM generic addrspace
+  virtual unsigned generic_addrspace() { return 0; } // LLVM generic addrspace
+  
   ScopedMap<simit::ir::Var, llvm::Value*> symtable;
 
   // Globally allocated buffers

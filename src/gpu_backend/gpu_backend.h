@@ -6,6 +6,10 @@
 #include "llvm_backend.h"
 #include "gpu_ir.h"
 
+#define CUDA_GENERIC_ADDRSPACE 0
+#define CUDA_GLOBAL_ADDRSPACE 1
+#define CUDA_SHARED_ADDRSPACE 3
+
 // transforms
 #include "shard_gpu_loops.h"
 #include "lift_gpu_vars.h"
@@ -36,6 +40,8 @@ protected:
 
   // Currently compiling LLVM function
   llvm::Function *func;
+  
+  virtual unsigned global_addrspace() { return CUDA_GLOBAL_ADDRSPACE; }
 
   using LLVMBackend::visit;
 

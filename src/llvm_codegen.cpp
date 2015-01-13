@@ -211,7 +211,8 @@ llvm::Function *createPrototype(const std::string &name,
                                 const vector<Var> &results,
                                 llvm::Module *module,
                                 bool externalLinkage,
-                                bool doesNotThrow) {
+                                bool doesNotThrow,
+                                unsigned addrspace) {
   vector<string>      llvmArgNames;
   vector<llvm::Type*> llvmArgTypes;
 
@@ -226,7 +227,7 @@ llvm::Function *createPrototype(const std::string &name,
     // while everything else is passed through a pointer
     llvm::Type *llvmType = isScalar(arg.getType())
         ? createLLVMType(arg.getType().toTensor()->componentType)
-        : createLLVMType(arg.getType(), LLVM_GLOBAL_ADDRSPACE);
+        : createLLVMType(arg.getType(), addrspace);
     llvmArgTypes.push_back(llvmType);
   }
 
@@ -235,7 +236,7 @@ llvm::Function *createPrototype(const std::string &name,
       continue;
     }
     llvmArgNames.push_back(res.getName());
-    llvmArgTypes.push_back(createLLVMType(res.getType(), LLVM_GLOBAL_ADDRSPACE));
+    llvmArgTypes.push_back(createLLVMType(res.getType(), addrspace));
   }
 
   assert(llvmArgNames.size() == llvmArgTypes.size());
