@@ -1,9 +1,7 @@
 set(TESTS simit-test)
 set(TESTS_F32 simit-test-f32)
 
-find_package(CUDA)
 if (CUDA_FOUND)
-  message("-- Building with gpu-backend")
   add_definitions(-DGPU)
 endif ()
 

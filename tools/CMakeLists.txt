@@ -1,13 +1,10 @@
-find_package(CUDA)
 if (CUDA_FOUND)
-  message("-- Building with gpu-backend")
   add_definitions(-DGPU)
 endif ()
 
 file(GLOB UTIL_SOURCES "${SIMIT_TOOLS_DIR}/*.cpp")
 
 # GPU backend (TEMP)
-find_package(CUDA)
 if (CUDA_FOUND)
   add_definitions(-DGPU)
 endif ()

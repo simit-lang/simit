@@ -57,7 +57,6 @@ file(GLOB SIMIT_HEADERS *.h ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER} ${SIMIT_
 file(GLOB SIMIT_SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
 
 # GPU Backend
-find_package(CUDA)
 if (CUDA_FOUND)
   message("-- Building with gpu-backend")
   add_definitions(-DGPU)
