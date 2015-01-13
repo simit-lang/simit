@@ -205,7 +205,9 @@ void GPUBackend::visit(const ir::Literal *op) {
     llvm::GlobalVariable *globalData =
         new llvm::GlobalVariable(*module, dataConstant->getType(), true,
                                  llvm::GlobalVariable::InternalLinkage,
-                                 dataConstant);
+                                 dataConstant, "global_const", nullptr,
+                                 llvm::GlobalVariable::NotThreadLocal,
+                                 CUDA_GLOBAL_ADDRSPACE);
     llvm::Type *finalType = createLLVMType(type);
     val = builder->CreateBitCast(globalData, finalType);
   }
