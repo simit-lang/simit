@@ -29,6 +29,7 @@
 #include "ir.h"
 #include "ir_printer.h"
 #include "ir_queries.h"
+#include "ir_codegen.h"
 #include "llvm_function.h"
 #include "macros.h"
 #include "runtime.h"

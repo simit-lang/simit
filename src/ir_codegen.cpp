@@ -80,8 +80,30 @@ Func insertVarDecls(Func func) {
       }
     }
   };
-  func = InsertVarDeclsRewriter().rewrite(func);
-  return func;
+  return InsertVarDeclsRewriter().rewrite(func);
+}
+
+std::pair<Stmt,std::vector<Stmt>> removeVarDecls(Stmt stmt) {
+  class RemoveVarDeclsRewriter : public IRRewriter {
+  public:
+    std::vector<Stmt> varDecls;
+
+    void visit(const VarDecl *op) {
+      varDecls.push_back(op);
+      stmt = Stmt();
+    }
+  };
+  RemoveVarDeclsRewriter rewriter;
+
+  Stmt result = rewriter.rewrite(stmt);
+  return std::pair<Stmt,vector<Stmt>>(result, rewriter.varDecls);
+}
+
+Stmt moveVarDeclsToFront(Stmt stmt) {
+  std::pair<Stmt,vector<Stmt>> varDecls = removeVarDecls(stmt);
+  return (varDecls.second.size() > 0)
+      ? Block::make(Block::make(varDecls.second), varDecls.first)
+      : varDecls.first;
 }
 
 }}
