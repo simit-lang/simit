@@ -339,6 +339,14 @@ simit::Function::FuncType GPUFunction::init(
         << "Global pointers should all be pointer-sized. Got: "
         << globalPtrSize << " bytes";
 
+    // Checks
+    unsigned int attrVal;
+    checkCudaErrors(cuPointerGetAttribute(&attrVal, CU_POINTER_ATTRIBUTE_IS_MANAGED, globalPtr));
+    if (!attrVal) continue;
+    iassert(attrVal == 1);
+    checkCudaErrors(cuPointerGetAttribute(&attrVal, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, globalPtr));
+    iassert(attrVal == CU_MEMORYTYPE_DEVICE);
+
     size_t bufSize = size(*bufVar.getType().toTensor(), storage);
     CUdeviceptr devBuffer;
     checkCudaErrors(cuMemAlloc(&devBuffer, bufSize));
@@ -346,7 +354,9 @@ simit::Function::FuncType GPUFunction::init(
 
     std::cout << std::hex << devBuffer << " alloc'd for " << std::dec << bufSize << std::endl;
     std::cout << "Copying: " << sizeof(void*) << std::endl;
-    checkCudaErrors(cuMemcpyHtoD(globalPtr, &devBufferPtr, sizeof(void*)));
+    void *globalPtrHost;
+    checkCudaErrors(cuPointerGetAttribute(&globalPtrHost, CU_POINTER_ATTRIBUTE_HOST_POINTER, globalPtr));
+    *((void**)globalPtrHost) = devBufferPtr;
   }
 
   // Get reference to CUDA function

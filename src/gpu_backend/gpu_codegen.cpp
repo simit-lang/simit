@@ -125,4 +125,15 @@ std::string generatePtx(const std::string &module,
   return std::string(ptx);
 }
 
+void addNVVMAnnotation(llvm::Value *target, std::string annot,
+                       llvm::Value *value, llvm::Module *module) {
+  llvm::Value *mdVals[] = {
+    target, llvm::MDString::get(LLVM_CONTEXT, annot), value
+  };
+  llvm::MDNode *node = llvm::MDNode::get(LLVM_CONTEXT, mdVals);
+  llvm::NamedMDNode *nvvmAnnot = module
+      ->getOrInsertNamedMetadata("nvvm.annotations");
+  nvvmAnnot->addOperand(node);
+}
+
 }}  // namespace simit::internal

@@ -51,6 +51,10 @@ GPUBackend::GPUBackend() {
 
   // Create driver context
   checkCudaErrors(cuCtxCreate(&context, 0, device));
+
+  int attrVal;
+  checkCudaErrors(cuDeviceGetAttribute(&attrVal, CU_DEVICE_ATTRIBUTE_UNIFIED_ADDRESSING, device));
+  iassert(attrVal == 1);
 }
 
 GPUBackend::~GPUBackend() {}
@@ -67,6 +71,9 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
 
   this->storage = ir::Storage();
 
+  // TODO(gkanwar): Why do we sometimes get duplicates of functions being
+  // generated? How do we properly handle this without duplicates?
+  /*
   for (auto &f : callTree) {
     std::cout << "calltree, f: " << f.getName() << std::endl;
     if (f.getKind() != ir::Func::Internal) continue;
@@ -88,6 +95,9 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
     symtable.clear();
     std::cout << "Calltree done with f" << std::endl;
   }
+  */
+
+  this->storage.add(irFunc.getStorage());
 
   func = emitEmptyFunction(irFunc.getName(), irFunc.getArguments(),
                            irFunc.getResults(), true, false);
@@ -422,13 +432,7 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   builder.reset(new LLVMIRBuilder(&kernel->getEntryBlock()));
 
   // Kernel metadata
-  llvm::Value *mdVals[] = {
-    kernel, llvm::MDString::get(LLVM_CONTEXT, "kernel"), llvmInt(1)
-  };
-  llvm::MDNode *kernelMD = llvm::MDNode::get(LLVM_CONTEXT, mdVals);
-  llvm::NamedMDNode *nvvmAnnot = module
-      ->getOrInsertNamedMetadata("nvvm.annotations");
-  nvvmAnnot->addOperand(kernelMD);
+  addNVVMAnnotation(kernel, "kernel", llvmInt(1), module);
 
   // Add global buffers to symtable
   for (auto &buf : buffers) {
@@ -485,9 +489,21 @@ void GPUBackend::visit(const ir::Pass *op) {
 namespace {
 
 void cleanFuncAttrs(llvm::Function *func) {
-  // Attribute groups disallowed in NVVM
-  func->removeFnAttr(llvm::Attribute::ReadNone);
-  func->removeFnAttr(llvm::Attribute::NoUnwind);
+  // Clean attributes off of params
+  llvm::AttributeSet funcAttrs = func->getAttributes();
+  llvm::AttributeSet cleanAttrs;
+  for (int slot = 0; slot < funcAttrs.getNumSlots(); ++slot) {
+    // Never add func attributes, because attribute groups are
+    // disallowed in NVVM. If left on, they trip up the parser
+    if (slot == 0) continue;
+    // Remove readonly from param attrs
+    int index = funcAttrs.getSlotIndex(slot);
+    llvm::AttributeSet cleanSlot = funcAttrs.removeAttribute(
+        LLVM_CONTEXT, index, llvm::Attribute::ReadOnly);
+    cleanAttrs.addAttributes(LLVM_CONTEXT, index, cleanSlot);
+  }
+
+  func->setAttributes(cleanAttrs);
 }
 
 }
@@ -730,6 +746,30 @@ void GPUBackend::emitPrintf(std::string format,
   builder->CreateCall2(vprintf, formatPtr, argBuf);
 }
 
+void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
+                            llvm::Value *size, unsigned align) {
+  iassert(dst->getType()->isPointerTy());
+  iassert(src->getType()->isPointerTy());
+
+  // Emit our own memcpy decl, since the built-in has attributes which
+  // are not handled by NVVM
+  std::vector<llvm::Type*> argTys = {
+    LLVM_INT8PTR_GLOBAL, LLVM_INT8PTR_GLOBAL, LLVM_INT, LLVM_INT, LLVM_BOOL
+  };
+  llvm::FunctionType *funcTy = llvm::FunctionType::get(
+      LLVM_VOID, argTys, false);
+  llvm::Function *func = llvm::cast<llvm::Function>(
+      module->getOrInsertFunction("llvm.memcpy.p1i8.p1i8.i32", funcTy));
+  cleanFuncAttrs(func);
+
+  llvm::Value *llvmAlign = llvmInt(align);
+  llvm::Value *castDst = builder->CreateBitCast(dst, LLVM_INT8PTR_GLOBAL);
+  llvm::Value *castSrc = builder->CreateBitCast(src, LLVM_INT8PTR_GLOBAL);
+  llvm::Constant *isVolatile = llvmBool(true);
+  builder->CreateCall5(func, castDst, castSrc, size, llvmAlign, isVolatile);
+}
+
+
 void GPUBackend::emitFillBuf(llvm::Value *buffer,
                              std::vector<llvm::Value*> vals) {
   uint64_t bufIndex = 0;
@@ -742,6 +782,15 @@ void GPUBackend::emitFillBuf(llvm::Value *buffer,
     builder->CreateStore(val, valPtr);
     bufIndex += dataLayout->getTypeAllocSize(val->getType());
   }
+}
+
+void GPUBackend::makeGlobalTensor(ir::Var var) {
+  LLVMBackend::makeGlobalTensor(var);
+
+  // Annotate the global as managed memory to allow us to write its
+  // value from the CUDA setup
+  llvm::Value *global = buffers[var];
+  addNVVMAnnotation(global, "managed", llvmInt(1), module);
 }
 
 }

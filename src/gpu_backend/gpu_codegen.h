@@ -31,6 +31,10 @@ std::string generatePtx(const std::string &module,
                         int devMajor, int devMinor,
                         const char *moduleName);
 
+// Add an NVVM annotation to a given LLVM entity
+void addNVVMAnnotation(llvm::Value *target, std::string annot,
+                       llvm::Value *value, llvm::Module *module);
+
 }}  // namespace simit::internal
 
 #endif

@@ -92,8 +92,13 @@ protected:
   virtual void emitPrintf(std::string format,
                           std::vector<llvm::Value*> args={});
 
+  virtual void emitMemCpy(llvm::Value *dst, llvm::Value *src,
+                          llvm::Value *size, unsigned align);
+
   void emitFillBuf(llvm::Value *buffer,
                    std::vector<llvm::Value*> vals);
+
+  virtual void makeGlobalTensor(ir::Var var);
 };
 
 }
