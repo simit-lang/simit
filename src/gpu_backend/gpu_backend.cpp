@@ -201,9 +201,16 @@ void GPUBackend::visit(const ir::Literal *op) {
         break;
       }
       case ir::ScalarType::Boolean: {
-        // TODO(gkanwar): Boolean support? ConstantDataArray only supports down
-        // to INT8 types.
         not_supported_yet;
+        // This code is untested, but likely correct
+        iassert(op->size % sizeof(bool) == 0)
+            << "Literal data size not a multiple of element size";
+        iassert(sizeof(bool) == sizeof(uint32_t))
+            << "Boolean literal assumes 32-bit data format";
+        dataConstant = llvm::ConstantDataArray::get(
+            LLVM_CONTEXT, llvm::ArrayRef<uint32_t>(
+                reinterpret_cast<uint32_t*>(op->data),
+                op->size/sizeof(uint32_t)));
         break;
       }
       default: unreachable;
@@ -212,7 +219,8 @@ void GPUBackend::visit(const ir::Literal *op) {
         new llvm::GlobalVariable(*module, dataConstant->getType(), true,
                                  llvm::GlobalVariable::InternalLinkage,
                                  dataConstant);
-    val = globalData;
+    llvm::Type *finalType = createLLVMType(type);
+    val = builder->CreateBitCast(globalData, finalType);
   }
   iassert(val);
 }

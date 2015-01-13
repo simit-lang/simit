@@ -251,6 +251,8 @@ void LLVMBackend::visit(const Literal *op) {
     }
   }
   else {
+    // TODO: This should become a reference to a global literal
+    // (unify with GPUBackend).
     val = llvmPtr(op);
   }
   iassert(val);
