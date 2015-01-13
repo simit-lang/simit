@@ -103,6 +103,11 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   func = emitEmptyFunction(irFunc.getName(), irFunc.getArguments(),
                            irFunc.getResults(), true, false);
 
+  // Add constants to symbol table
+  for (auto &global : irFunc.getEnvironment().globals) {
+    symtable.insert(global.first, compile(global.second));
+  }
+
   // Compile the body
   iassert(irFunc.getBody().defined()) << "cannot compile an undefined function";
   irFunc.getBody().accept(this);
