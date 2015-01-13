@@ -473,33 +473,36 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   Stmt loopNest = kernel;
   for (auto loopVar=loopVars.rbegin(); loopVar!=loopVars.rend(); ++loopVar){
     if (loopVar->getDomain().kind == ForDomain::IndexSet) {
-//      cout << "getVar= " << loopVar->getVar() << endl;
-//      cout << "getDomain= " << loopVar->getDomain() << endl;
-//      cout << "loopnest= " << loopNest << endl;
-      
       // if this is a Single domain, don't generate a loop, just use an
       // assignment statement.
-      if (loopVar->getDomain().kind == ForDomain::IndexSet &&
-          loopVar->getDomain().indexSet.getKind() == IndexSet::Single) {
-          cout << "in special case " << endl;
+      if (loopVar->getDomain().indexSet.getKind() == IndexSet::Single) {
         auto assign = AssignStmt::make(loopVar->getVar(),
             loopVar->getDomain().indexSet.getSet());
-        cout << "HERE" << assign << endl;
         loopNest = Block::make(assign, loopNest);
       }
       else {
       loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
       }
     }
-    else if (loopVar->getDomain().kind == ForDomain::Neighbors) {
+    else if (loopVar->getDomain().kind == ForDomain::Neighbors ||
+             loopVar->getDomain().kind == ForDomain::NeighborsOf) {
       Expr set = loopVar->getDomain().set;
       Var i = loopVar->getDomain().var;
       Var j = loopVar->getVar();
       Var ij = loopVars.getCoordVar({i, j});
 
       Expr jRead = Load::make(IndexRead::make(set, IndexRead::Neighbors), ij);
+      
+      // for NeighborsOf, we need to check if this is the j we are looking
+      // for
+      if (loopVar->getDomain().kind == ForDomain::NeighborsOf) {
+        Expr jCond = Eq::make(j, loopVar->getDomain().indexSet.getSet());
+        loopNest = IfThenElse::make(jCond, loopNest, Pass::make());
+      }
+
       loopNest = Block::make(AssignStmt::make(j, jRead), loopNest);
 
+      
       Expr start = Load::make(IndexRead::make(set, IndexRead::NeighborsStart),
                               i);
       Expr stop  = Load::make(IndexRead::make(set, IndexRead::NeighborsStart),

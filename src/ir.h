@@ -873,7 +873,7 @@ struct While : public StmtNode<While> {
 };
 
 struct ForDomain {
-  enum Kind { IndexSet, Endpoints, Edges, Neighbors, Diagonal };
+  enum Kind { IndexSet, Endpoints, Edges, Neighbors, NeighborsOf, Diagonal };
   Kind kind;
 
   /// An index set
@@ -888,6 +888,11 @@ struct ForDomain {
   ForDomain(Expr set, Var var, Kind kind) : kind(kind), set(set), var(var) {
     iassert(kind != IndexSet);
   }
+  ForDomain(Expr set, Var var, Kind kind, class IndexSet indexSet) : kind(kind),
+      indexSet(indexSet), set(set), var(var)  {
+    iassert(kind == NeighborsOf);
+  }
+
 };
 
 struct For : public StmtNode<For> {
