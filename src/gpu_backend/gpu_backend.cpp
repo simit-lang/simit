@@ -499,7 +499,7 @@ void cleanFuncAttrs(llvm::Function *func) {
   // Clean attributes off of params
   llvm::AttributeSet funcAttrs = func->getAttributes();
   llvm::AttributeSet cleanAttrs;
-  for (int slot = 0; slot < funcAttrs.getNumSlots(); ++slot) {
+  for (unsigned slot = 0; slot < funcAttrs.getNumSlots(); ++slot) {
     // Never add func attributes, because attribute groups are
     // disallowed in NVVM. If left on, they trip up the parser
     if (slot == 0) continue;
@@ -721,7 +721,7 @@ void GPUBackend::emitPrintf(std::string format,
   llvm::Value *formatPtr = emitGlobalString(format);
 
   // Convert any args that need to be extended
-  for (int i = 0; i < args.size(); ++i) {
+  for (size_t i = 0; i < args.size(); ++i) {
     auto &arg = args[i];
     if (arg->getType()->isFloatTy()) {
       args[i] = builder->CreateFPExt(arg, LLVM_DOUBLE);
