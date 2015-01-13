@@ -103,8 +103,9 @@ simit::Function *LLVMBackend::compile(Func func) {
     for (auto &global : f.getEnvironment().globals) {
       symtable.insert(global.first, compile(global.second));
     }
-    
-    compile(f.getBody());
+
+    compile(moveVarDeclsToFront(f.getBody()));
+
     builder->CreateRetVoid();
     symtable.clear();
   }
@@ -265,7 +266,6 @@ void LLVMBackend::visit(const VarExpr *op) {
   // which is why we can't assume Simit scalars are always kept on the stack.
   if (isScalar(op->type) && val->getType()->isPointerTy()) {
     string valName = string(val->getName()) + VAL_SUFFIX;
-    int align = dataLayout->getTypeAllocSize(val->getType());
     val = builder->CreateLoad(val, valName);
   }
 }
@@ -278,9 +278,6 @@ void LLVMBackend::visit(const ir::Load *op) {
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
 
   string valName = string(buffer->getName()) + VAL_SUFFIX;
-  llvm::Type *eltType = createLLVMType(
-      op->buffer.type().toTensor()->componentType);
-  int align = dataLayout->getTypeAllocSize(eltType);
   val = builder->CreateLoad(bufferLoc, valName);
 }
 
@@ -668,7 +665,6 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       Var result = op->results[0];
       llvm::Value *llvmResult = symtable.get(result);
       args.push_back(llvmResult);
-      symtable.insert(result, llvmResult);
 
       std::string fname = op->callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args);
@@ -805,9 +801,6 @@ void LLVMBackend::visit(const ir::Store *op) {
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
-  llvm::Type *eltType = createLLVMType(
-      op->buffer.type().toTensor()->componentType);
-  int align = dataLayout->getTypeAllocSize(eltType);
   builder->CreateStore(value, bufferLoc);
 }
 

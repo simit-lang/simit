@@ -36,6 +36,7 @@ void GPUFunction::mapArgs() {
   for (auto &kv : pushedBufs) {
     if (kv.second.shouldPull) pullArg(kv.first, kv.second);
   }
+  pushedBufs.clear();
 }
 
 void GPUFunction::unmapArgs(bool updated) {
@@ -330,7 +331,6 @@ simit::Function::FuncType GPUFunction::init(
   // Alloc global buffers and set global pointers
   for (auto& buf : globalBufs) {
     const ir::Var &bufVar = buf.first;
-    llvm::Value *bufVal = buf.second;
 
     CUdeviceptr globalPtr;
     size_t globalPtrSize;
