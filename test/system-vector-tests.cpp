@@ -11,7 +11,7 @@ using namespace simit;
 
 TEST(System, vector_add) {
   Set<> points;
-  FieldRef<double> x = points.addField<double>("x");
+  FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   ElementRef p0 = points.add();
   x.set(p0, 42.0);
@@ -22,12 +22,12 @@ TEST(System, vector_add) {
 
   f->runSafe();
 
-  ASSERT_EQ(84.0, x.get(p0));
+  ASSERT_EQ(84.0, (int)x.get(p0));
 }
 
 TEST(System, vector_add_blocked) {
   Set<> points;
-  FieldRef<double,3> x = points.addField<double,3>("x");
+  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -51,8 +51,8 @@ TEST(System, vector_add_blocked) {
 
 TEST(System, vector_dot) {
   Set<> points;
-  FieldRef<double> x = points.addField<double>("x");
-  FieldRef<double> z = points.addField<double>("z");
+  FieldRef<simit_float> x = points.addField<simit_float>("x");
+  FieldRef<simit_float> z = points.addField<simit_float>("z");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -66,13 +66,13 @@ TEST(System, vector_dot) {
   f->bind("points", &points);
 
   f->runSafe();
-  ASSERT_EQ(14.0, z.get(p0));
+  ASSERT_EQ(14.0, (int)z.get(p0));
 }
 
 TEST(System, vector_dot_blocked) {
   Set<> points;
-  FieldRef<double,3> x = points.addField<double,3>("x");
-  FieldRef<double> z = points.addField<double>("z");
+  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  FieldRef<simit_float> z = points.addField<simit_float>("z");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -86,13 +86,12 @@ TEST(System, vector_dot_blocked) {
   f->bind("points", &points);
 
   f->runSafe();
-  ASSERT_EQ(285.0, (double)z.get(p0));
+  ASSERT_EQ(285.0, (simit_float)z.get(p0));
 }
-
 
 TEST(System, vector_assign_blocked) {
   Set<> points;
-  FieldRef<double,2> x = points.addField<double,2>("x");
+  FieldRef<simit_float,2> x = points.addField<simit_float,2>("x");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();

@@ -41,24 +41,36 @@ public:
     if (initRequired) {
       init();
     }
+    unmapArgs();
     funcPtr();
+    mapArgs();
   }
 
   inline void run() {
     iassert(!initRequired);
     funcPtr();
   }
+  
+  // TODO Should these really be an extension to the bind interface?
+  //      Per-argument updates/copies.
+  //      Don't always write in a new pointer (requires re-JIT), just alert to
+  //      updates in pointed-to data.
+  virtual void mapArgs() {}
+  virtual void unmapArgs(bool updated=true) {}
 
 protected:
   typedef void (*FuncPtrType)();
   typedef std::function<void()> FuncType;
   class Actual {
   public:
-    Actual(const ir::Type &type) : type(type), tensor(NULL) {}
+    Actual(const ir::Type &type, bool output=false)
+      : type(type), tensor(NULL), output(output) {}
     Actual() : Actual(ir::Type()) {}
     void bind(Tensor *tensor) { this->tensor = tensor; }
     void bind(SetBase *set) { this->set = set; }
     bool isBound() const { return tensor != NULL; }
+    void setOutput(bool output) { this->output = output; }
+    bool isOutput() const { return output; }
     const ir::Type &getType() const { return type; }
     Tensor *getTensor() { iassert(tensor != nullptr); return tensor; }
     SetBase *getSet() { iassert(set != nullptr); return set; }
@@ -68,6 +80,7 @@ protected:
       SetBase *set;
       Tensor  *tensor;
     };
+    bool output;
   };
 
   /// Get number of bytes required to store tensors with `type` and `storage`.
@@ -76,7 +89,6 @@ protected:
 
   Function(const ir::Func &simitFunc);
 
-private:
   std::vector<std::string> formals;
   std::map<std::string, Actual> actuals;
 
@@ -86,6 +98,8 @@ private:
 
   FuncType funcPtr;
   bool initRequired;
+
+private:
   virtual FuncType init(const std::vector<std::string> &formals,
                         std::map<std::string, Actual> &actuals) = 0;
 };

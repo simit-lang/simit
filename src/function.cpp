@@ -20,10 +20,11 @@ Function::Function(const simit::ir::Func &simitFunc)
   for (auto &res : simitFunc.getResults()) {
     // Skip results that alias an argument
     if (actuals.find(res.getName()) != actuals.end()) {
+      actuals[res.getName()].setOutput(true);
       continue;
     }
     formals.push_back(res.getName());
-    actuals[res.getName()] = Actual(res.getType());
+    actuals[res.getName()] = Actual(res.getType(), true);
   }
 
   // Gather the Simit literal expressions and store them in an array in the

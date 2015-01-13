@@ -78,6 +78,8 @@ simit::Function *LLVMBackend::compile(Func func) {
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
+  this->dataLayout.reset(new llvm::DataLayout(module));
+
   buffers.clear();
 
   // Create compute functions
@@ -253,7 +255,7 @@ void LLVMBackend::visit(const Literal *op) {
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
-  iassert(symtable.contains(op->var)) << op->var << "not found in symbol table";
+  if (!symtable.contains(op->var)) ierror << op->var << " not found in symbol table";
 
   val = symtable.get(op->var);
 
@@ -263,7 +265,8 @@ void LLVMBackend::visit(const VarExpr *op) {
   // which is why we can't assume Simit scalars are always kept on the stack.
   if (isScalar(op->type) && val->getType()->isPointerTy()) {
     string valName = string(val->getName()) + VAL_SUFFIX;
-    val = builder->CreateAlignedLoad(val, 8, valName);
+    int align = dataLayout->getTypeAllocSize(val->getType());
+    val = builder->CreateLoad(val, valName);
   }
 }
 
@@ -275,7 +278,10 @@ void LLVMBackend::visit(const ir::Load *op) {
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
 
   string valName = string(buffer->getName()) + VAL_SUFFIX;
-  val = builder->CreateAlignedLoad(bufferLoc, 8, valName);
+  llvm::Type *eltType = createLLVMType(
+      op->buffer.type().toTensor()->componentType);
+  int align = dataLayout->getTypeAllocSize(eltType);
+  val = builder->CreateLoad(bufferLoc, valName);
 }
 
 // TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt.
@@ -689,7 +695,7 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       call = emitCall(funcName, args, getLLVMFloatType());
     }
     else {
-      ierror << "intrinsic" << op->callee.getName() << "not found";
+      ierror << "intrinsic " << op->callee.getName() << " not found";
     }
     iassert(call);
 
@@ -714,7 +720,7 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       call = builder->CreateCall(fun, args);
     }
     else {
-      ierror << "function" << op->callee.getName() << "not found in module";
+      ierror << "function " << op->callee.getName() << " not found in module";
     }
   }
 }
@@ -799,7 +805,10 @@ void LLVMBackend::visit(const ir::Store *op) {
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
-  builder->CreateAlignedStore(value, bufferLoc, 8);
+  llvm::Type *eltType = createLLVMType(
+      op->buffer.type().toTensor()->componentType);
+  int align = dataLayout->getTypeAllocSize(eltType);
+  builder->CreateStore(value, bufferLoc);
 }
 
 void LLVMBackend::visit(const For *op) {
@@ -1279,6 +1288,22 @@ llvm::Value *LLVMBackend::emitCall(string name, vector<llvm::Value*> args,
   return builder->CreateCall(fun, std::vector<llvm::Value*>(args));
 }
 
+llvm::Constant *LLVMBackend::emitGlobalString(const std::string& str) {
+  auto strValue = llvm::ConstantDataArray::getString(LLVM_CONTEXT, str);
+  auto strType = llvm::ArrayType::get(LLVM_INT8, str.size()+1);
+
+  llvm::GlobalVariable *strGlobal =
+      new llvm::GlobalVariable(*module, strType, true,
+                               llvm::GlobalValue::PrivateLinkage, strValue,
+                               "_str");
+  llvm::Constant *zero = llvm::Constant::getNullValue(LLVM_INT);
+
+  std::vector<llvm::Constant*> idx;
+  idx.push_back(zero);
+  idx.push_back(zero);
+  return llvm::ConstantExpr::getGetElementPtr(strGlobal, idx);
+}
+
 llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
                                                const vector<ir::Var> &arguments,
                                                const vector<ir::Var> &results,
@@ -1309,12 +1334,11 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
 
 void LLVMBackend::emitPrintf(std::string format,
                              std::vector<llvm::Value*> args) {
-  auto int32Type = llvm::IntegerType::getInt32Ty(LLVM_CONTEXT);
   llvm::Function *printfFunc = module->getFunction("printf");
   if (printfFunc == nullptr) {
     std::vector<llvm::Type*> printfArgTypes;
     printfArgTypes.push_back(llvm::Type::getInt8PtrTy(LLVM_CONTEXT));
-    llvm::FunctionType* printfType = llvm::FunctionType::get(int32Type,
+    llvm::FunctionType* printfType = llvm::FunctionType::get(LLVM_INT,
                                                              printfArgTypes,
                                                              true);
     printfFunc = llvm::Function::Create(printfType,
@@ -1323,21 +1347,7 @@ void LLVMBackend::emitPrintf(std::string format,
     printfFunc->setCallingConv(llvm::CallingConv::C);
   }
 
-  auto formatValue = llvm::ConstantDataArray::getString(LLVM_CONTEXT, format);
-
-  auto intType = llvm::IntegerType::get(LLVM_CONTEXT,8);
-  auto formatStrType = llvm::ArrayType::get(intType, format.size()+1);
-
-  llvm::GlobalVariable *formatStr =
-      new llvm::GlobalVariable(*module, formatStrType, true,
-                               llvm::GlobalValue::PrivateLinkage, formatValue,
-                               ".str");
-  llvm::Constant *zero = llvm::Constant::getNullValue(int32Type);
-
-  std::vector<llvm::Constant*> idx;
-  idx.push_back(zero);
-  idx.push_back(zero);
-  llvm::Constant *str = llvm::ConstantExpr::getGetElementPtr(formatStr, idx);
+  llvm::Value *str = emitGlobalString(format);
 
   std::vector<llvm::Value*> printfArgs;
   printfArgs.push_back(str);
@@ -1354,7 +1364,7 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
 //         "assignment non-scalars should have been lowered by now");
   iassert(var.getType().isTensor() && value.type().isTensor());
   iassert(symtable.contains(var)) << var << "=" << value << ";"
-                                  << var << "has not been declared";
+                                  << var << " has not been declared";
 
   std::string varName = var.getName();
   llvm::Value *valuePtr = compile(value);

@@ -11,13 +11,13 @@ using namespace simit;
 TEST(Program, esprings) {
   // Points
   Set<> points;
-  FieldRef<double,3> x = points.addField<double,3>("x");
-  FieldRef<double,3> v = points.addField<double,3>("v");
+  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  FieldRef<simit_float,3> v = points.addField<simit_float,3>("v");
 
-  FieldRef<double,3> fs = points.addField<double,3>("fs");
-  FieldRef<double,3> fg = points.addField<double,3>("fg");
-  FieldRef<double,3> M = points.addField<double,3>("M");
-  FieldRef<double,3> p = points.addField<double,3>("p");
+  FieldRef<simit_float,3> fs = points.addField<simit_float,3>("fs");
+  FieldRef<simit_float,3> fg = points.addField<simit_float,3>("fg");
+  FieldRef<simit_float,3> M = points.addField<simit_float,3>("M");
+  FieldRef<simit_float,3> p = points.addField<simit_float,3>("p");
 
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
@@ -48,8 +48,8 @@ TEST(Program, esprings) {
 
   // Springs
   Set<2> springs(points,points);
-  FieldRef<double> l0 = springs.addField<double>("l0");
-  FieldRef<double> m = springs.addField<double>("m");
+  FieldRef<simit_float> l0 = springs.addField<simit_float>("l0");
+  FieldRef<simit_float> m = springs.addField<simit_float>("m");
 
   // x springs
   ElementRef s1 = springs.add(p1,p2);
@@ -105,43 +105,43 @@ TEST(Program, esprings) {
   }
 
   // Check outputs
-  TensorRef<double,3> x1 = x.get(p1);
-  ASSERT_DOUBLE_EQ(0.0409248172084922, x1(0));
-  ASSERT_DOUBLE_EQ(0.0409248172084922, x1(1));
-  ASSERT_DOUBLE_EQ(-0.0130301827915078, x1(2));
+  TensorRef<simit_float,3> x1 = x.get(p1);
+  ASSERT_SIMIT_FLOAT_EQ(0.0409248172084922, x1(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0409248172084922, x1(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.0130301827915078, x1(2));
 
-  TensorRef<double,3> x2 = x.get(p2);
-  ASSERT_DOUBLE_EQ(0.959075182791508, x2(0));
-  ASSERT_DOUBLE_EQ(0.0409248172084922, x2(1));
-  ASSERT_DOUBLE_EQ(-0.0130301827915078, x2(2));
+  TensorRef<simit_float,3> x2 = x.get(p2);
+  ASSERT_SIMIT_FLOAT_EQ(0.959075182791508, x2(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0409248172084922, x2(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.0130301827915078, x2(2));
 
-  TensorRef<double,3> x3 = x.get(p3);
-  ASSERT_DOUBLE_EQ(0.0409248172084922, x3(0));
-  ASSERT_DOUBLE_EQ(0.959075182791508, x3(1));
-  ASSERT_DOUBLE_EQ(-0.0130301827915078, x3(2));
+  TensorRef<simit_float,3> x3 = x.get(p3);
+  ASSERT_SIMIT_FLOAT_EQ(0.0409248172084922, x3(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.959075182791508, x3(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.0130301827915078, x3(2));
 
-  TensorRef<double,3> x4 = x.get(p4);
-  ASSERT_DOUBLE_EQ(0.959075182791508, x4(0));
-  ASSERT_DOUBLE_EQ(0.959075182791508, x4(1));
-  ASSERT_DOUBLE_EQ(-0.0130301827915078, x4(2));
+  TensorRef<simit_float,3> x4 = x.get(p4);
+  ASSERT_SIMIT_FLOAT_EQ(0.959075182791508, x4(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.959075182791508, x4(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.0130301827915078, x4(2));
 
-  TensorRef<double,3> x5 = x.get(p5);
-  ASSERT_DOUBLE_EQ(0.0409248172084922, x5(0));
-  ASSERT_DOUBLE_EQ(0.0409248172084922, x5(1));
-  ASSERT_DOUBLE_EQ(0.905120182791508, x5(2));
+  TensorRef<simit_float,3> x5 = x.get(p5);
+  ASSERT_SIMIT_FLOAT_EQ(0.0409248172084922, x5(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0409248172084922, x5(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.905120182791508, x5(2));
 
-  TensorRef<double,3> x6 = x.get(p6);
-  ASSERT_DOUBLE_EQ(0.959075182791508, x6(0));
-  ASSERT_DOUBLE_EQ(0.0409248172084922, x6(1));
-  ASSERT_DOUBLE_EQ(0.905120182791508, x6(2));
+  TensorRef<simit_float,3> x6 = x.get(p6);
+  ASSERT_SIMIT_FLOAT_EQ(0.959075182791508, x6(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0409248172084922, x6(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.905120182791508, x6(2));
 
-  TensorRef<double,3> x7 = x.get(p7);
-  ASSERT_DOUBLE_EQ(0.0409248172084922, x7(0));
-  ASSERT_DOUBLE_EQ(0.959075182791508, x7(1));
-  ASSERT_DOUBLE_EQ(0.905120182791508, x7(2));
+  TensorRef<simit_float,3> x7 = x.get(p7);
+  ASSERT_SIMIT_FLOAT_EQ(0.0409248172084922, x7(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.959075182791508, x7(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.905120182791508, x7(2));
 
-  TensorRef<double,3> x8 = x.get(p8);
-  ASSERT_DOUBLE_EQ(0.959075182791508, x8(0));
-  ASSERT_DOUBLE_EQ(0.959075182791508, x8(1));
-  ASSERT_DOUBLE_EQ(0.905120182791508, x8(2));
+  TensorRef<simit_float,3> x8 = x.get(p8);
+  ASSERT_SIMIT_FLOAT_EQ(0.959075182791508, x8(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.959075182791508, x8(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.905120182791508, x8(2));
 }

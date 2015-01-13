@@ -10,6 +10,9 @@
 
 namespace simit {
 
+extern const std::vector<std::string> VALID_BACKENDS;
+extern std::string kBackend;
+
 class Diagnostics;
 class Function;
 

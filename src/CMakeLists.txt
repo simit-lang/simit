@@ -53,10 +53,53 @@ IF(FLEX_FOUND)
 ENDIF()
 
 # Simit
-file(GLOB HEADERS *.h ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_HEADER} ${SIMIT_GRAPH_VIZ_SOURCE_DIR}/*.h)
-file(GLOB SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
+file(GLOB SIMIT_HEADERS *.h ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_HEADER} ${SIMIT_GRAPH_VIZ_SOURCE_DIR}/*.h)
+file(GLOB SIMIT_SOURCES *.cpp ${SIMIT_PARSER_SOURCE_DIR}/*.cpp)
 
-add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${HEADERS} ${SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_INPUT})
+# GPU Backend
+find_package(CUDA)
+if (CUDA_FOUND)
+  message("-- Building with gpu-backend")
+  add_definitions(-DGPU)
+
+  include_directories(${CUDA_INCLUDE_DIRS})
+  include_directories("${CUDA_TOOLKIT_ROOT_DIR}/nvvm/include/")
+  
+  if (LINUX)
+    get_filename_component(CUDA_LIB_DIR ${CUDA_LIBRARIES} DIRECTORY)
+    add_definitions(-DLIBCUDADEVRT="${CUDA_LIB_DIR}/libcudadevrt.a")
+  elseif (DARWIN)
+    add_definitions(-DLIBCUDADEVRT="${CUDA_TOOLKIT_ROOT_DIR}/lib/libcudadevrt.a")
+  endif ()
+
+  set(SIMIT_GPU_SOURCE_DIR ${SIMIT_SOURCE_DIR}/gpu_backend)
+  file(GLOB GPU_SOURCES ${SIMIT_GPU_SOURCE_DIR}/*.cpp)
+  file(GLOB GPU_HEADERS ${SIMIT_GPU_SOURCE_DIR}/*.h)
+
+  set(SIMIT_HEADERS ${SIMIT_HEADERS} ${GPU_HEADERS})
+  set(SIMIT_SOURCES ${SIMIT_SOURCES} ${GPU_SOURCES})
+else ()
+  message("-- Building without gpu-backend")
+endif ()
+
+add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${SIMIT_HEADERS} ${SIMIT_SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_INPUT})
+
+# GPU Backend linking
+if (CUDA_FOUND)
+  if (LINUX)
+    find_library(libcuda NAMES cuda PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64")
+    find_library(libnvvm NAMES nvvm PATHS "${CUDA_TOOLKIT_ROOT_DIR}/nvvm/lib64")
+    target_link_libraries(${PROJECT_NAME} ${libcuda})
+    target_link_libraries(${PROJECT_NAME} ${libnvvm})
+  elseif (DARWIN)
+    target_link_libraries(${PROJECT_NAME} ${CUDA_LIBRARIES})
+    target_link_libraries(${PROJECT_NAME} "${CUDA_TOOLKIT_ROOT_DIR}/lib/libcuda.dylib")
+    target_link_libraries(${PROJECT_NAME} "${CUDA_TOOLKIT_ROOT_DIR}/nvvm/lib/libnvvm.dylib")
+  endif ()
+endif ()
+
+# Visualizer
+add_subdirectory(visualizer)
 
 # LLVM
 if (DEFINED ENV{LLVM_CONFIG})
@@ -117,8 +160,6 @@ foreach(ldflag ${LLVM_LDFLAGS})
 	 target_link_libraries(${PROJECT_NAME} ${ldflag})
   endif()
 endforeach()
-
-add_subdirectory(visualizer)
 
 # EIGEN
 if (DEFINED ENV{EIGEN3_INCLUDE_DIR})

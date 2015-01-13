@@ -3,6 +3,10 @@
 #include "ir.h"
 #include "util.h"
 
+#ifdef GPU
+#include "gpu_backend/gpu_ir.h"
+#endif
+
 using namespace std;
 
 namespace simit {
@@ -427,6 +431,27 @@ void IRPrinter::visit(const For *op) {
   print(op->body);
   --indentation;
 }
+
+#ifdef GPU
+void IRPrinter::visit(const GPUKernel *op) {
+  indent();
+  os << "gpukernel ";
+  internal::GPUSharding sharding = op->sharding;
+  if (sharding.xSharded) {
+    os << "x: " << sharding.xVar << " in " << sharding.xDomain << " ";
+  }
+  if (sharding.ySharded) {
+    os << "y: " << sharding.yVar << " in " << sharding.yDomain << " ";
+  }
+  if (sharding.zSharded) {
+    os << "z: " << sharding.zVar << " in " << sharding.zDomain << " ";
+  }
+  os << ":" << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
+}
+#endif
 
 void IRPrinter::visit(const While *op) {
   indent();

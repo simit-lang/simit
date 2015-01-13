@@ -1,6 +1,12 @@
 #include <gtest/gtest.h>
+#include <algorithm>
 #include <string>
 #include <iostream>
+#include <vector>
+
+#include "program.h"
+#include "util.h"
+#include "ir.h"
 
 // These are just extern declared from llvm/Support/CommandLine.h since that's
 // not currently in the build for simit-test and I'm lazy.
@@ -13,6 +19,21 @@ extern
 void ParseEnvironmentOptions(const char *progName, const char *envvar,
                              const char *Overview = nullptr);
 }}
+
+#ifdef F32
+// F32 environment setup
+class F32Environment : public ::testing::Environment {
+public:
+  int oldSize;
+  virtual void SetUp() {
+    oldSize = simit::ir::ScalarType::floatBytes;
+    simit::ir::ScalarType::floatBytes = sizeof(float);
+  }
+  virtual void TearDown() {
+    simit::ir::ScalarType::floatBytes = oldSize;
+  }
+};
+#endif
 
 int main(int argc, char **argv) {
   // Get optional LLVM opt-style arguments from the SIMIT_LLVM_DEBUG_ARGS
@@ -40,5 +61,43 @@ int main(int argc, char **argv) {
   }
 
   ::testing::InitGoogleTest(&argc, argv);
+
+  // Handle leftover flags
+  for (int i = 0; i < argc; ++i) {
+    std::string arg = argv[i];
+    if (arg.substr(0,2) == "--") {
+      std::vector<std::string> keyValPair = simit::util::split(arg, "=");
+      if (keyValPair.size() == 1) {
+        std::cerr << "Unrecognized arg: " << arg << std::endl;
+        return 1;
+      }
+      else if (keyValPair.size() == 2) {
+        if (keyValPair[0] == "--backend") {
+          if (std::find(simit::VALID_BACKENDS.begin(),
+                        simit::VALID_BACKENDS.end(),
+                        keyValPair[1]) != simit::VALID_BACKENDS.end()) {
+            simit::kBackend = keyValPair[1];
+          }
+          else {
+            std::cerr << "Invalid backend: " << keyValPair[1] << std::endl;
+            return 1;
+          }
+        }
+        else {
+          std::cerr << "Unrecognized arg: " << keyValPair[0] << std::endl;
+          return 1;
+        }
+      }
+      else {
+        std::cerr << "Misformatted arg: " << arg << std::endl;
+        return 1;
+      }
+    }
+  }
+
+#ifdef F32
+  // Add F32 test environemnt
+  ::testing::AddGlobalTestEnvironment(new F32Environment);
+#endif
   return RUN_ALL_TESTS();
 }

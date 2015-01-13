@@ -16,9 +16,21 @@
 #include "temps.h"
 #include "flatten.h"
 
+#ifdef GPU
+#include "gpu_backend/gpu_backend.h"
+#endif
+
 using namespace std;
 
 namespace simit {
+
+const std::vector<std::string> VALID_BACKENDS = {
+  "llvm",
+#ifdef GPU
+  "gpu",
+#endif
+};
+std::string kBackend = "llvm";
 
 static Function *compile(ir::Func func, internal::Backend *backend) {
   class FlattenRewriter : public ir::IRRewriterCallGraph {
@@ -87,6 +99,27 @@ static Function *compile(ir::Func func, internal::Backend *backend) {
   };
   func = LowerTensorAccessesRewriter().rewrite(func);
 
+#if GPU
+  class ShardLoopsRewriter : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      std::cout << "Shard loops: " << func.getName() << std::endl;
+      func = shardLoops(func);
+      std::cout << "Done." << std::endl;
+    }
+  };
+  if (kBackend == "gpu") {
+    func = ShardLoopsRewriter().rewrite(func);
+    std::cout << "Rewritten: " << std::endl
+              << func << std::endl;
+  }
+#endif
+
   return backend->compile(func);
 }
 
@@ -99,11 +132,20 @@ struct Program::ProgramContent {
   Diagnostics diags;
 };
 
-
 // class Program
 Program::Program() : content(new ProgramContent) {
   content->frontend = new internal::Frontend();
-  content->backend  = new internal::LLVMBackend();
+  if (kBackend == "llvm") {
+    content->backend  = new internal::LLVMBackend();
+  }
+#ifdef GPU
+  else if (kBackend == "gpu") {
+    content->backend = new internal::GPUBackend();
+  }
+#endif
+  else {
+    ierror << "Invalid backend choice";
+  }
 }
 
 Program::~Program() {

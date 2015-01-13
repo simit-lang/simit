@@ -4,6 +4,10 @@
 #include <set>
 #include "ir.h"
 
+#ifdef GPU
+#include "gpu_backend/gpu_ir.h"
+#endif
+
 namespace simit {
 namespace ir {
 
@@ -67,6 +71,10 @@ protected:
   virtual void visit(const Block *op);
   virtual void visit(const Pass *op);
   virtual void visit(const Print *op);
+
+#ifdef GPU
+  virtual void visit(const GPUKernel *op);
+#endif
 
   virtual void visit(const Func *f);
 };

@@ -10,7 +10,7 @@ using namespace simit;
 
 TEST(System, map_triangle) {
   simit::Set<> verts;
-  simit::FieldRef<double> b = verts.addField<double>("b");
+  simit::FieldRef<simit_float> b = verts.addField<simit_float>("b");
 
   ElementRef v0 = verts.add();
   ElementRef v1 = verts.add();
@@ -18,7 +18,7 @@ TEST(System, map_triangle) {
   ElementRef v3 = verts.add();
 
   simit::Set<3> trigs(verts,verts,verts);
-  simit::FieldRef<double> a = trigs.addField<double>("a");
+  simit::FieldRef<simit_float> a = trigs.addField<simit_float>("a");
 
   ElementRef t0 = trigs.add(v0,v1,v2);
   ElementRef t1 = trigs.add(v1,v2,v3);
@@ -36,16 +36,16 @@ TEST(System, map_triangle) {
   f->runSafe();
 
   // Check outputs
-  ASSERT_DOUBLE_EQ(1.0, b.get(v0));
-  ASSERT_DOUBLE_EQ(1.1, b.get(v1));
-  ASSERT_DOUBLE_EQ(1.1, b.get(v2));
-  ASSERT_DOUBLE_EQ(0.1, b.get(v3));
+  ASSERT_SIMIT_FLOAT_EQ(1.0, b.get(v0));
+  ASSERT_SIMIT_FLOAT_EQ(1.1, b.get(v1));
+  ASSERT_SIMIT_FLOAT_EQ(1.1, b.get(v2));
+  ASSERT_SIMIT_FLOAT_EQ(0.1, b.get(v3));
 }
 
 TEST(System, map_assemble_from_literal_vector) {
   // Points
   Set<> points;
-  FieldRef<double> x = points.addField<double>("x");
+  FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -77,7 +77,7 @@ TEST(System, map_assemble_from_literal_vector) {
 TEST(System, map_assemble_fem) {
   // Points
   Set<> points;
-  FieldRef<double> x = points.addField<double>("x");
+  FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -88,7 +88,7 @@ TEST(System, map_assemble_fem) {
 
   // Springs
   Set<2> springs(points,points);
-  FieldRef<double> u = springs.addField<double>("u");
+  FieldRef<simit_float> u = springs.addField<simit_float>("u");
 
   springs.add(p0,p1);
   springs.add(p1,p2);
@@ -110,7 +110,7 @@ TEST(System, map_assemble_fem) {
 TEST(System, map_one_set) {
   // Points
   Set<> points;
-  FieldRef<double> a = points.addField<double>("a");
+  FieldRef<simit_float> a = points.addField<simit_float>("a");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -128,15 +128,15 @@ TEST(System, map_one_set) {
   f->runSafe();
 
   // Check outputs
-  ASSERT_DOUBLE_EQ(2, a.get(p0));
-  ASSERT_DOUBLE_EQ(4, a.get(p1));
-  ASSERT_DOUBLE_EQ(6, a.get(p2));
+  ASSERT_SIMIT_FLOAT_EQ(2, a.get(p0));
+  ASSERT_SIMIT_FLOAT_EQ(4, a.get(p1));
+  ASSERT_SIMIT_FLOAT_EQ(6, a.get(p2));
 }
 
 TEST(System, map_no_results_one_set) {
   // Points
   Set<> points;
-  FieldRef<double> a = points.addField<double>("a");
+  FieldRef<simit_float> a = points.addField<simit_float>("a");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -155,9 +155,9 @@ TEST(System, map_no_results_one_set) {
   f->runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ(2.0, (double)a.get(p0));
-  ASSERT_EQ(4.0, (double)a.get(p1));
-  ASSERT_EQ(6.0, (double)a.get(p2));
+  ASSERT_EQ(2.0, (simit_float)a.get(p0));
+  ASSERT_EQ(4.0, (simit_float)a.get(p1));
+  ASSERT_EQ(6.0, (simit_float)a.get(p2));
 }
 
 TEST(System, map_no_results_two_sets) {
@@ -169,7 +169,7 @@ TEST(System, map_no_results_two_sets) {
 
   // Springs
   Set<2> springs(points,points);
-  FieldRef<double> a = springs.addField<double>("a");
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
@@ -187,15 +187,15 @@ TEST(System, map_no_results_two_sets) {
   f->runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ(2.0, (double)a.get(s0));
-  ASSERT_EQ(4.0, (double)a.get(s1));
+  ASSERT_EQ(2.0, (simit_float)a.get(s0));
+  ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
 TEST(System, map_two_results_one_set) {
   // Points
   Set<> points;
-  FieldRef<double> a = points.addField<double>("a");
-  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<simit_float> a = points.addField<simit_float>("a");
+  FieldRef<simit_float> b = points.addField<simit_float>("b");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -214,15 +214,15 @@ TEST(System, map_two_results_one_set) {
   f->runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ( 6.0, (double)b.get(p0));
-  ASSERT_EQ(24.0, (double)b.get(p1));
-  ASSERT_EQ(54.0, (double)b.get(p2));
+  ASSERT_EQ( 6.0, (simit_float)b.get(p0));
+  ASSERT_EQ(24.0, (simit_float)b.get(p1));
+  ASSERT_EQ(54.0, (simit_float)b.get(p2));
 }
 
 TEST(System, map_two_results_two_sets) {
   // Points
   Set<> points;
-  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<simit_float> b = points.addField<simit_float>("b");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -230,7 +230,7 @@ TEST(System, map_two_results_two_sets) {
 
   // Springs
   Set<2> springs(points,points);
-  FieldRef<double> a = springs.addField<double>("a");
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
@@ -248,9 +248,9 @@ TEST(System, map_two_results_two_sets) {
   f->runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ(43.0, (double)b.get(p0));
-  ASSERT_EQ(177.0, (double)b.get(p1));
-  ASSERT_EQ(168.0, (double)b.get(p2));
+  ASSERT_EQ(43.0, (simit_float)b.get(p0));
+  ASSERT_EQ(177.0, (simit_float)b.get(p1));
+  ASSERT_EQ(168.0, (simit_float)b.get(p2));
 }
 
 TEST(System, map_edgeset_no_endpoints) {
@@ -262,7 +262,7 @@ TEST(System, map_edgeset_no_endpoints) {
 
   // Springs
   Set<2> springs(points,points);
-  FieldRef<double> a = springs.addField<double>("a");
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
@@ -280,14 +280,14 @@ TEST(System, map_edgeset_no_endpoints) {
   f->runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ(2.0, (double)a.get(s0));
-  ASSERT_EQ(4.0, (double)a.get(s1));
+  ASSERT_EQ(2.0, (simit_float)a.get(s0));
+  ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
 TEST(System, map_edgeset_no_endpoints_results) {
   // Points
   Set<> points;
-  FieldRef<double> b = points.addField<double>("b");
+  FieldRef<simit_float> b = points.addField<simit_float>("b");
 
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -295,7 +295,7 @@ TEST(System, map_edgeset_no_endpoints_results) {
 
   // Springs
   Set<2> springs(points,points);
-  FieldRef<double> a = springs.addField<double>("a");
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
@@ -313,14 +313,14 @@ TEST(System, map_edgeset_no_endpoints_results) {
   f->runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ(2.0, (double)a.get(s0));
-  ASSERT_EQ(4.0, (double)a.get(s1));
+  ASSERT_EQ(2.0, (simit_float)a.get(s0));
+  ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
 TEST(System, cg) {
   Set<> points;
-  FieldRef<double>  b = points.addField<double>("b");
-  FieldRef<double>  c = points.addField<double>("c");
+  FieldRef<simit_float>  b = points.addField<simit_float>("b");
+  FieldRef<simit_float>  c = points.addField<simit_float>("c");
   FieldRef<int>    id = points.addField<int>("id");
 
   ElementRef p0 = points.add();
@@ -332,7 +332,7 @@ TEST(System, cg) {
   b.set(p2, 3.0);
 
   Set<2> springs(points,points);
-  FieldRef<double> a = springs.addField<double>("a");
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
@@ -348,7 +348,7 @@ TEST(System, cg) {
 
   f->runSafe();
 
-  ASSERT_EQ(0.95883777239709455653, (double)c.get(p0));
-  ASSERT_EQ(1.98789346246973352983, (double)c.get(p1));
-  ASSERT_EQ(3.05326876513317202466, (double)c.get(p2));
+  ASSERT_SIMIT_FLOAT_EQ(0.95883777239709455653, (simit_float)c.get(p0));
+  ASSERT_SIMIT_FLOAT_EQ(1.98789346246973352983, (simit_float)c.get(p1));
+  ASSERT_SIMIT_FLOAT_EQ(3.05326876513317202466, (simit_float)c.get(p2));
 }

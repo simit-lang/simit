@@ -26,6 +26,9 @@ namespace internal {
 class VertexToEdgeEndpointIndex;
 class VertexToEdgeIndex;
 class NeighborIndex;
+#ifdef GPU
+class GPUFunction;
+#endif
 }
 
 class Function;
@@ -123,7 +126,7 @@ public:
     fieldNames[name] = fields.size()-1;
     return FieldRef<T, dimensions...>(fieldData);
   }
-  
+
   /// Get a Field corresponding to the string fieldName
   template <typename T, int... dimensions>
   FieldRef<T, dimensions...> getField(std::string fieldName) {
@@ -194,7 +197,7 @@ public:
 
     ElementIterator(const SetBase* set, int idx=0) : curElem(idx), set(set) { }
     ElementIterator(const ElementIterator& other) : curElem(other.curElem),
-    set(other.set) {}
+                                                    set(other.set) {}
 
     reference operator*() {return curElem;}
     pointer operator->() {return &curElem;}
@@ -220,6 +223,11 @@ public:
     friend bool operator<(const ElementIterator& l, const ElementIterator& r) {
       iassert(l.set == r.set);
       return l.curElem < r.curElem;
+    }
+
+    bool operator<(const ElementIterator& other) {
+      iassert(set == other.set);
+      return curElem.ident < other.curElem.ident;
     }
 
   private:
@@ -343,13 +351,13 @@ public:
     return EndpointIterator(this, edge, cardinality);
   }
 
-  const void *getFieldData(const std::string &fieldName) const {
+  void *getFieldData(const std::string &fieldName) {
     iassert(fieldNames.find(fieldName) != fieldNames.end());
     return fields[fieldNames.at(fieldName)]->data;
   }
 
   /// Get an array containing, for each edge in a set, the elements it connects.
-  const int *getEndpointsData() const {return endpoints;}
+  int *getEndpointsData() { return endpoints; }
 
   /// If this set is an edge set with cardinality 2 then return an index that
   /// for each element in the first connected set contains it's neighbors in the
@@ -408,6 +416,12 @@ private:
     class TensorType {
     public:
       TensorType(ComponentType componentType, std::initializer_list<int> dims)
+          : componentType(componentType), dimensions(dims), size(1) {
+        for (auto dim : dimensions) {
+          size *= dim;
+        }
+      }
+      TensorType(ComponentType componentType, std::vector<int> dims)
           : componentType(componentType), dimensions(dims), size(1) {
         for (auto dim : dimensions) {
           size *= dim;
@@ -499,8 +513,46 @@ private:
   }
   void addEndpoints(int) {}
 
+  // helper for building a set based on IR type
+  void buildSetFields(const ir::ElementType *type) {
+    for (auto f : fields) {
+      delete f;
+    }
+
+    for (const ir::Field& field : type->fields) {
+      const ir::TensorType *ttype = field.type.toTensor();
+      ComponentType ctype;
+      switch (ttype->componentType.kind) {
+        case ir::ScalarType::Int: {
+          ctype = ComponentType::INT;
+          break;
+        }
+        case ir::ScalarType::Float: {
+          ctype = ComponentType::FLOAT;
+          break;
+        }
+        default: {
+          not_supported_yet;
+        }
+      }
+      std::vector<int> dims;
+      for (const ir::IndexDomain &domain : ttype->dimensions) {
+        dims.push_back(domain.getSize());
+      }
+      FieldData::TensorType *type =
+          new FieldData::TensorType(ctype, dims);
+      FieldData *fieldData = new FieldData(field.name, type, this);
+      fieldData->data = calloc(capacity, fieldData->sizeOfType);
+      fields.push_back(fieldData);
+      fieldNames[field.name] = fields.size()-1;
+    }
+  }
+
   friend FieldRefBase;
   friend Function;
+#ifdef GPU
+  friend internal::GPUFunction;
+#endif
 };
 
 

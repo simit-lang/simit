@@ -430,6 +430,17 @@ void IRRewriter::visit(const Print *op) {
   }
 }
 
+#ifdef GPU
+void IRRewriter::visit(const GPUKernel *op) {
+  Stmt body = rewrite(op->body);
+  if (body == op->body) {
+    stmt = op;
+  }
+  else {
+    stmt = GPUKernel::make(body, op->sharding);
+  }
+}
+#endif
 
 // class IRRewriterCallGraph
 void IRRewriterCallGraph::visit(const Call *op) {

@@ -1,16 +1,16 @@
 #ifndef SIMIT_CODEGEN_LLVM_H
 #define SIMIT_CODEGEN_LLVM_H
 
-#include "backend.h"
-#include "var.h"
-#include "ir_visitor.h"
-#include "scopedmap.h"
-
 #include <ostream>
 #include <memory>
 #include <set>
 #include <vector>
 #include <map>
+
+#include "backend.h"
+#include "var.h"
+#include "ir_visitor.h"
+#include "scopedmap.h"
 
 namespace llvm {
 class LLVMContext;
@@ -19,10 +19,12 @@ class ExecutionEngine;
 class ConstantFolder;
 template<bool> class IRBuilderDefaultInserter;
 template<bool, typename, typename> class IRBuilder;
+class Constant;
 class Type;
 class Value;
 class Instruction;
 class Function;
+class DataLayout;
 }
 
 typedef llvm::IRBuilder<true, llvm::ConstantFolder,
@@ -30,6 +32,10 @@ typedef llvm::IRBuilder<true, llvm::ConstantFolder,
 
 namespace simit {
 namespace internal {
+
+extern const std::string VAL_SUFFIX;
+extern const std::string PTR_SUFFIX;
+extern const std::string LEN_SUFFIX;
 
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMBackend : public Backend, public ir::IRVisitor {
@@ -48,6 +54,7 @@ protected:
   ir::TensorStorage fieldStorage;
 
   llvm::Module *module;
+  std::unique_ptr<llvm::DataLayout> dataLayout;
   std::unique_ptr<LLVMIRBuilder> builder;
 
   /// used to return variables from Expr visit functions
@@ -124,6 +131,9 @@ protected:
   llvm::Value *emitCall(std::string name, std::vector<llvm::Value*> args,
                         llvm::Type *returnType);
 
+  /// Build a global string and return a constant pointer to it
+  llvm::Constant *emitGlobalString(const std::string& str);
+
   /// Emit an empty function and set the builder cursor to its entry block. The
   /// function's arguments and result variables are added to the symbol table.
   llvm::Function *emitEmptyFunction(const std::string &name,
@@ -132,7 +142,7 @@ protected:
                                     bool externalLinkage=false,
                                     bool doesNotThrow=true);
 
-  void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
+  virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
   void emitAssign(ir::Var var, const ir::Expr& value);
 

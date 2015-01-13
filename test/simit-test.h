@@ -7,6 +7,13 @@
 #include "program.h"
 #include "function.h"
 #include "error.h"
+#include "ir.h"
+
+#ifdef F32
+typedef float simit_float;
+#else
+typedef double simit_float;
+#endif
 
 inline std::string toLower(std::string str) {
   std::transform(str.begin(), str.end(), str.begin(), ::tolower);
@@ -16,6 +23,12 @@ inline std::string toLower(std::string str) {
 #define TEST_FILE_NAME std::string(TEST_INPUT_DIR) + "/" +   \
                        toLower(test_info_->test_case_name()) + "/" +  \
                        test_info_->name() + ".sim"
+
+#ifdef F32
+#define ASSERT_SIMIT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.00001)
+#else
+#define ASSERT_SIMIT_FLOAT_EQ(a, b) ASSERT_DOUBLE_EQ(a, b)
+#endif
 
 inline
 std::unique_ptr<simit::Function> getFunction(std::string fileName,
@@ -27,8 +40,13 @@ std::unique_ptr<simit::Function> getFunction(std::string fileName,
     return nullptr;
   }
 
+  #ifdef F32
+  int floatSize = sizeof(float);
+  #else
+  int floatSize = sizeof(double);
+  #endif
   std::unique_ptr<simit::Function> f =
-      program.compile(functionName, sizeof(double));
+      program.compile(functionName, floatSize);
   if (errorCode) {
     std::cerr << program.getDiagnostics().getMessage();
     return nullptr;

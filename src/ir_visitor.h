@@ -49,6 +49,10 @@ struct Block;
 struct Pass;
 struct Print;
 
+#ifdef GPU
+struct GPUKernel;
+#endif
+
 class Func;
 class Stmt;
 class Expr;
@@ -108,6 +112,10 @@ public:
   virtual void visit(const Block *op);
   virtual void visit(const Pass *op);
   virtual void visit(const Print *op);
+
+#ifdef GPU
+  virtual void visit(const GPUKernel *op);
+#endif
 
   virtual void visit(const Func *f);
 };

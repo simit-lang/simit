@@ -6,6 +6,7 @@
 #include <Eigen/Dense>
 
 extern "C" {
+
 // appease GCC
 void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
                    int rows, int columns);

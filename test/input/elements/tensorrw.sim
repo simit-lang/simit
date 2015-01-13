@@ -1,0 +1,28 @@
+%%% tensor-read
+%! read([0.0, 1.0, 2.0], 1) == 1.0;
+func read(a : tensor[3](float), b : int) -> (c : float)
+  c = a(b);
+end
+
+%%% tensor-read-big
+%! readbig([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], 0, 2) == 2.0;
+%! readbig([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], 1, 0) == 3.0;
+%! readbig([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], 1, 1) == 4.0;
+func readbig(a : tensor[2,3](float), b : int, c : int) -> (d : float)
+  d = a(b,c);
+end
+
+%%% tensor-write
+%! write([0.0, 1.0, 2.0], 1, 5.0) == [0.0, 5.0, 2.0];
+func write(a : tensor[3](float), b : int, c : float) -> (d : tensor[3](float))
+  d = a;
+  d(b) = c;
+end
+
+%%% tensor-write-big
+%! writebig([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], 0, 2, 6.0) == [0.0, 1.0, 6.0; 3.0, 4.0, 5.0];
+%! writebig([0.0, 1.0, 2.0; 3.0, 4.0, 5.0], 1, 1, 6.0) == [0.0, 1.0, 2.0; 3.0, 6.0, 5.0];
+func writebig(a : tensor[2,3](float), b : int, c : int, d : float) -> (e : tensor[2,3](float))
+  e = a;
+  e(b,c) = d;
+end

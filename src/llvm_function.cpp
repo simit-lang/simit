@@ -78,7 +78,7 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
         }
         case ir::Type::Set: {
           const ir::SetType *setType = actual.getType().toSet();
-          const SetBase *set = actual.getSet();
+          SetBase *set = actual.getSet();
 
           llvm::StructType *llvmSetType = createLLVMType(setType);
 
