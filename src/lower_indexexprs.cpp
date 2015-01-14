@@ -360,8 +360,8 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   public:
     std::vector<Stmt> liftedStmts;
 
-    DiagonalReadsRewriter(const Storage& storage, Var outerIndexVar) :
-    storage(storage), outerIndexVar(outerIndexVar) {
+    DiagonalReadsRewriter(const Storage& storage, Var outerIndexVar, LoopVars loopVars) :
+    storage(storage), outerIndexVar(outerIndexVar), loopVars(loopVars) {
       currentTensorWrite = nullptr;
     }
 
@@ -371,6 +371,7 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   private:
     using IRRewriter::visit;
     const Storage &storage;
+    LoopVars loopVars;
     Var outerIndexVar;
     const TensorWrite *currentTensorWrite;
 
@@ -387,12 +388,23 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
       currentTensorWrite = nullptr;
     }
 
-    Expr liftDiagonalExpression(Expr exprToCheck, Expr otherExpr, Expr op) {
+    Expr liftDiagonalExpression(Expr exprToCheck, Expr otherExpr, Expr op,
+        Expr containingToCheck=Expr(), Expr containingOther=Expr()) {
+      
       auto tensor = to<TensorRead>(exprToCheck)->tensor;
-      iassert(isa<VarExpr>(tensor));
 
+      // If tensor is not a VarExpr, that means we have a hierarchical TensorRead
+      if (!isa<VarExpr>(tensor)) {
+        tassert(isa<TensorRead>(otherExpr)) << "We only support one level of blocking.";
+        
+        auto otherTensor = to<TensorRead>(otherExpr)->tensor;
+        return liftDiagonalExpression(tensor, otherTensor, op,
+          exprToCheck, otherExpr);
+      }
+      
       TensorStorage::Kind storageKind =
           storage.get(to<VarExpr>(tensor)->var).getKind();
+      
       if (storageKind == TensorStorage::SystemDiagonal
           && currentTensorWrite != nullptr) {
         std::vector<Expr> newIndices;
@@ -402,13 +414,55 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
         for (auto x: currentTensorWrite->indices)
           newWriteIndices.push_back(outerIndexVar);
 
-        Stmt liftedStmt =
-        TensorWrite::make(currentTensorWrite->tensor, newWriteIndices,
-                          TensorRead::make(tensor,newIndices));
+        cout << "making liftedStmt" << endl;
+        auto newRead = TensorRead::make(tensor,newIndices);
+        Expr newWriteTensor = currentTensorWrite->tensor;
+        
+        
+        if (containingToCheck.defined()) {
+          // we will make a loop over the innermost indices
+          // we find out which ones by looking at the containing expression's
+          // indices
+          auto containingTensorExpr = to<TensorRead>(containingToCheck);
+          newRead = TensorRead::make(newRead, containingTensorExpr->indices);
+          cout << " contianing expr's indices are " << util::join(containingTensorExpr->indices) << endl;
+          
+          // we also need to change the write such that the new write indices go
+          // outermost
+          iassert(isa<TensorRead>(newWriteTensor));
+          
+          newWriteTensor = TensorRead::make(to<TensorRead>(newWriteTensor)->tensor, newWriteIndices);
+          newWriteIndices = currentTensorWrite->indices;
+        }
+        Stmt liftedStmt;
+        
+        liftedStmt = TensorWrite::make(newWriteTensor, newWriteIndices,
+                          newRead);
+        
+        if (containingToCheck.defined()) {
+          auto containingTensorExpr = to<TensorRead>(containingToCheck);
+          size_t i = 0;
+          for (auto lv=loopVars.rbegin();
+               i<containingTensorExpr->indices.size() &&
+               lv != loopVars.rend();
+               lv++) {
+            liftedStmt = For::make(Var(lv->getVar()), ForDomain(lv->getDomain()), liftedStmt);
+            i++;
+          }
+          
+        }
         liftedStmts.push_back(liftedStmt);
 
+        cout << "making lhsRead" << endl;
         Expr lhsRead = TensorRead::make(currentTensorWrite->tensor,
                                         currentTensorWrite->indices);
+        cout << "making binop with lhsRead" << lhsRead << " and other " << otherExpr << endl;
+        
+        if (containingOther.defined()) {
+          auto containingTensorExpr = to<TensorRead>(containingOther);
+          otherExpr = TensorRead::make(otherExpr, containingTensorExpr->indices);
+          
+        }
         Expr rhs;
         if (isa<Add>(op)) {
           return Add::make(lhsRead, otherExpr);
@@ -509,7 +563,7 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
                               Add::make(i, 1));
 
       // Rewrite accesses to SystemDiagonal tensors & lift out ops
-      DiagonalReadsRewriter drRewriter(storage, i);
+      DiagonalReadsRewriter drRewriter(storage, i, loopVars);
       loopNest = drRewriter.doRewrite(loopNest);
       if (drRewriter.liftedStmts.size() > 0) {
         auto newBlock = Block::make(drRewriter.liftedStmts);

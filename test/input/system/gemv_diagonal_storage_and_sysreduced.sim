@@ -31,5 +31,5 @@ proc main
   A = map dist_a  to points  reduce +;
   B = map dist_a2 to springs reduce +;
   C = A + B;
-  points.c = points.b;
+  points.c(0) = C(0,0)(1,1);
 end
