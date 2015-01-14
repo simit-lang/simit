@@ -178,6 +178,7 @@ SIM_TEST(elements, blas1);
 SIM_TEST(elements, blas2);
 SIM_TEST(elements, blas3);
 SIM_TEST(elements, la);
+SIM_TEST(elements, booleans);
 SIM_TEST(elements, intrinsics);
 SIM_TEST(elements, tensors);
 SIM_TEST(elements, slice);

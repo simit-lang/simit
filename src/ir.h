@@ -651,8 +651,8 @@ struct And : public ExprNode<And> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isBoolean(a.type()));
-    iassert(isBoolean(b.type()));
+    iassert_boolean_scalar(a);
+    iassert_boolean_scalar(b);
 
     And *node = new And;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -666,8 +666,8 @@ struct Or : public ExprNode<Or> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isBoolean(a.type()));
-    iassert(isBoolean(b.type()));
+    iassert_boolean_scalar(a);
+    iassert_boolean_scalar(b);
 
     Or *node = new Or;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -681,7 +681,7 @@ struct Not : public ExprNode<Not> {
   Expr a;
 
   static Expr make(Expr a) {
-    iassert(isBoolean(a.type()));
+    iassert_boolean_scalar(a);
 
     Not *node = new Not;
     node->type = TensorType::make(ScalarType::Boolean);
@@ -694,8 +694,8 @@ struct Xor : public ExprNode<Xor> {
   Expr a, b;
 
   static Expr make(Expr a, Expr b) {
-    iassert(isBoolean(a.type()));
-    iassert(isBoolean(b.type()));
+    iassert_boolean_scalar(a);
+    iassert_boolean_scalar(b);
 
     Xor *node = new Xor;
     node->type = TensorType::make(ScalarType::Boolean);
