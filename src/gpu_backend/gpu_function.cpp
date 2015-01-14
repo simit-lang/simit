@@ -304,18 +304,10 @@ simit::Function::FuncType GPUFunction::init(
   // Create harnesses for kernel args
   llvm::Function *harness = createHarness(args, llvmFunc.get(), module.get());
 
-  // Export IR to string
-  std::string moduleStr;
-  llvm::raw_string_ostream str(moduleStr);
-  str << *module;
-  std::ofstream llFile("/tmp/simit.ll", std::ofstream::trunc);
-  llFile << moduleStr << std::endl;
-  llFile.close();
-
   // Generate harness PTX
   std::cout << "Create PTX" << std::endl;
   std::string ptxStr = generatePtx(
-      moduleStr, cuDevMajor, cuDevMinor,
+      module.get(), cuDevMajor, cuDevMinor,
       module->getModuleIdentifier().c_str());
   
   std::ofstream ptxFile("/tmp/simit.ptx", std::ofstream::trunc);

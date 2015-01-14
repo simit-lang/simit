@@ -49,7 +49,7 @@ inline llvm::PointerType *getOrCreateCUStreamPtrTy() {
 llvm::Module *createNVVMModule(std::string name);
 
 // Uses libnvvm to compile an LLVM IR module to PTX.
-std::string generatePtx(const std::string &module,
+std::string generatePtx(llvm::Module *module,
                         int devMajor, int devMinor,
                         const char *moduleName);
 

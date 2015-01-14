@@ -2,6 +2,10 @@
 
 #include "nvvm.h"
 
+#include <fstream>
+#include "llvm/Support/raw_ostream.h"
+#include "llvm/Bitcode/ReaderWriter.h"
+
 #include "error.h"
 #include "llvm_codegen.h"
 
@@ -52,7 +56,7 @@ extern "C" int simit_gpu_libdevice_compute_35_length;
 extern "C" unsigned char simit_gpu_intrinsics[];
 extern "C" int simit_gpu_intrinsics_length;
 
-std::string generatePtx(const std::string &module,
+std::string generatePtx(llvm::Module *module,
                         int devMajor, int devMinor,
                         const char *moduleName) {
   nvvmProgram compileUnit;
@@ -93,9 +97,29 @@ std::string generatePtx(const std::string &module,
                                        simit_gpu_intrinsics_length,
                                        "intrinsics"));
 
+  // Export IR to string
+  std::string llStr;
+  llvm::raw_string_ostream llOstr(llStr);
+  llOstr << *module;
+  std::ofstream llFile("/tmp/simit.ll", std::ofstream::trunc);
+  llFile << llStr << std::endl;
+  llFile.close();
+  
+  std::string bcStr;
+  llvm::raw_string_ostream bcOstr(bcStr);
+  llvm::WriteBitcodeToFile(module, bcOstr);
+  bcOstr.flush();
+  
+  std::cerr << "Bitcode: " << bcStr.size() << " bytes\n";
+  
+  std::ofstream bcFile("/tmp/simit.bc", std::ofstream::trunc | std::ofstream::binary);
+  bcFile << bcStr << std::endl;
+  bcFile.close();
+  
   // Create NVVM compilation unit from LLVM IR
   checkNVVMCall(nvvmAddModuleToProgram(compileUnit,
-                                       module.c_str(), module.size(),
+                                       // NOTE: this can also use llStr:
+                                       bcStr.c_str(), bcStr.size(),
                                        moduleName));
 
   std::string computeArg = "-arch=compute_";
