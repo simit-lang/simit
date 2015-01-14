@@ -25,7 +25,8 @@ static Expr createLengthComputation(const IndexDomain &dimensions) {
 }
 
 static Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
-  iassert(dimensions.size() > 0);
+  iassert(dimensions.size()>0)
+      << "attempting to compute the length of a scalar";
   Expr len = createLengthComputation(dimensions[0]);
   for (size_t i=1; i < dimensions.size(); ++i) {
     len = Mul::make(len, createLengthComputation(dimensions[i]));
@@ -34,6 +35,9 @@ static Expr createLengthComputation(const vector<IndexDomain> &dimensions) {
 }
 
 static Expr createLoadExpr(Expr tensor, Expr index) {
+  iassert(tensor.type().isTensor())
+      << "attempting to load from a non-tensor:" << tensor;
+
   // If the tensor is a load then we had a nested tensor read. Since we can't
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
@@ -53,6 +57,9 @@ static Expr createLoadExpr(Expr tensor, Expr index) {
 
 static Stmt createStoreStmt(Expr tensor, Expr index, Expr value,
                             CompoundOperator cop) {
+  iassert(tensor.type().isTensor())
+      << "attempting to store to a non-tensor:" << tensor;
+
   // If the tensor is a load then we had a nested tensor read. Since we can't
   // have nested loads we must flatten them.
   if (isa<Load>(tensor)) {
