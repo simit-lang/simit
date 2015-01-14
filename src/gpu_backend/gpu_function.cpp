@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <iomanip>
+#include <fstream>
 #include "cuda.h"
 #include "nvvm.h"
 
@@ -307,16 +308,19 @@ simit::Function::FuncType GPUFunction::init(
   std::string moduleStr;
   llvm::raw_string_ostream str(moduleStr);
   str << *module;
-  std::cout << "Module:" << std::endl
-            << moduleStr << std::endl;
+  std::ofstream llFile("/tmp/simit.ll", std::ofstream::trunc);
+  llFile << moduleStr << std::endl;
+  llFile.close();
 
   // Generate harness PTX
   std::cout << "Create PTX" << std::endl;
   std::string ptxStr = generatePtx(
       moduleStr, cuDevMajor, cuDevMinor,
       module->getModuleIdentifier().c_str());
-  std::cout << "PTX:" << std::endl
-            << ptxStr << std::endl;
+  
+  std::ofstream ptxFile("/tmp/simit.ptx", std::ofstream::trunc);
+  ptxFile << ptxStr << std::endl;
+  ptxFile.close();
 
   // JIT linker and final CUBIN
   char linkerInfo[16384];
@@ -348,10 +352,10 @@ simit::Function::FuncType GPUFunction::init(
   size_t cubinSize;
   checkCudaErrors(cuLinkComplete(linker, &cubin, &cubinSize));
 
-  std::cout << "Linker log:" << std::endl
-            << linkerInfo << std::endl
-            << linkerErrors << std::endl
-            << "End linker log." << std::endl;
+  std::ofstream linkerLog("/tmp/simit.linker.log", std::ofstream::trunc);
+  linkerLog << linkerInfo << std::endl
+            << linkerErrors << std::endl;
+  linkerLog.close();
 
   // Create CUDA module for binary object
   checkCudaErrors(cuModuleLoadDataEx(&cudaModule, cubin, 0, 0, 0));

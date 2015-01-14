@@ -15,8 +15,6 @@ namespace internal {
 
 void GPUSharding::shardFor(const ir::For *op) {
   iassert(isShardable(op));
-  std::cerr << "Shard\n" << *op << "\n";
-  std::cerr << "...with domain " << op->domain << " kind " << op->domain.kind << " index set " << op->domain.indexSet.getKind() << "\n";
   // TODO(jrk) these repeats should never happen
   iassert (op->domain.indexSet != xDomain && op->domain.indexSet != yDomain && op->domain.indexSet != zDomain);
   if (!xSharded) {
@@ -84,7 +82,6 @@ private:
 };
 
 Func shardLoops(Func func) {
-  std::cerr << "Sharding loops...\n";
   return ShardLoops().rewrite(func);
 }
 

@@ -5,6 +5,8 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <fstream>
+
 #include "error.h"
 #include "gpu_codegen.h"
 #include "gpu_function.h"
@@ -61,7 +63,10 @@ GPUBackend::GPUBackend() {
 GPUBackend::~GPUBackend() {}
 
 simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
-  std::cout << "GPUBackend compile: " << irFunc.getName() << std::endl;
+  std::ofstream irFile("/tmp/simit.sim", std::ofstream::trunc);
+  irFile << irFunc;
+  irFile.close();
+
   this->irFunc = irFunc;
   this->module = createNVVMModule("kernels-module");
   this->dataLayout.reset(new llvm::DataLayout(module));
@@ -78,7 +83,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   // TODO(gkanwar): Why do we sometimes get duplicates of functions being
   // generated? How do we properly handle this without duplicates?
   for (auto &f : callTree) {
-    std::cout << "calltree, f: " << f.getName() << std::endl;
+    // std::cout << "calltree, f: " << f.getName() << std::endl;
     if (f.getKind() != ir::Func::Internal) continue;
     iassert(f.getBody().defined());
 
@@ -96,7 +101,6 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
     f.getBody().accept(this);
     builder->CreateRetVoid();
     symtable.clear();
-    std::cout << "Calltree done with f" << std::endl;
   }
   iassert(func);
 
