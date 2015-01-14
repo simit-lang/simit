@@ -111,9 +111,13 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         // Neighbor index
         const internal::NeighborIndex *nbrs = set->getNeighborIndex();
         const int *startIndex = nbrs->getStartIndex();
-        size_t startSize = set->getSize() * sizeof(int);
+        size_t startSize = (set->getEndpointSet(0)->getSize()+1) * sizeof(int);
         const int *nbrIndex = nbrs->getNeighborIndex();
         size_t nbrSize = nbrs->getSize() * sizeof(int);
+        // Sentinel is present and correct
+        iassert(startIndex[set->getEndpointSet(0)->getSize()] == nbrs->getSize())
+            << "Sentinel: " << startIndex[set->getEndpointSet(0)->getSize()]
+            << " does not match neighbor size: " << nbrs->getSize();
         CUdeviceptr *startBuffer = new CUdeviceptr();
         CUdeviceptr *nbrBuffer = new CUdeviceptr();
 
@@ -152,6 +156,15 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         checkCudaErrors(cuMemAlloc(devBuffer, size));
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
         pushedBufs.emplace(fieldData, DeviceDataHandle(devBuffer, size, shouldPull));
+        std::cout << "Push field: " << field.name << std::endl;
+        std::cout << "[";
+        char* data = reinterpret_cast<char*>(fieldData);
+        for (size_t i = 0; i < size; ++i) {
+          if (i != 0) std::cout << ",";
+          std::cout << std::hex << (int) data[i];
+        }
+        std::cout << "]" << std::dec << std::endl;
+        std::cout << fieldData << " -> " << (void*)(*devBuffer) << std::endl;
         setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer),
                                   CUDA_GLOBAL_ADDRSPACE));
       }
@@ -169,6 +182,13 @@ void GPUFunction::pullArg(void *hostPtr, DeviceDataHandle handle) {
   std::cout << "Pull arg: " << (void*)(*handle.devBuffer) << " -> " << hostPtr
             << " (" << handle.size << ")" << std::endl;
   checkCudaErrors(cuMemcpyDtoH(hostPtr, *handle.devBuffer, handle.size));
+  std::cout << "[";
+  char* data = reinterpret_cast<char*>(hostPtr);
+  for (size_t i = 0; i < handle.size; ++i) {
+    if (i != 0) std::cout << ",";
+    std::cout << std::hex << (int) data[i];
+  }
+  std::cout << "]" << std::dec << std::endl;
 }
 
 /* TODO
