@@ -172,3 +172,14 @@ func f(p : int) -> (r : int)
  end
  r = r1;
 end
+
+%%% if-var
+%! f(true) == false;
+func f(p : bool) -> (r : bool)
+  if p
+    r = false;
+  else
+    r = true;
+  end
+end
+

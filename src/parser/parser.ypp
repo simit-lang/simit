@@ -1012,8 +1012,15 @@ while_end
 
 %type <stmt> if_stmt;
 if_stmt
-  : "if" boolean_expr if_body else_clauses BLOCKEND {
-    Expr cond = convertAndDelete($boolean_expr);
+  : "if" expr if_body else_clauses BLOCKEND {
+    iassert($expr) << "condition expression is null";
+
+    Expr cond = convertAndDelete($expr);
+    if (!isScalar(cond.type()) ||
+        !cond.type().toTensor()->componentType.isBoolean()) {
+      REPORT_ERROR("conditional expression is not boolean", @expr);
+    }
+
     Stmt ifStmt = convertAndDelete($if_body);
     Stmt elseStmt = convertAndDelete($else_clauses);
     Stmt *result = new Stmt(IfThenElse::make(cond, ifStmt, elseStmt));
@@ -1035,8 +1042,15 @@ else_clauses
   | "else" {ctx->scope();} stmt_block {ctx->unscope();} {
     $$ = new Stmt(convertAndDelete($stmt_block));
   }
-  | "elif" boolean_expr {ctx->scope();} if_body {ctx->unscope();} else_clauses {
-    Expr cond = convertAndDelete($boolean_expr);
+  | "elif" expr {ctx->scope();} if_body {ctx->unscope();} else_clauses {
+    iassert($expr) << "condition expression is null";
+
+    Expr cond = convertAndDelete($expr);
+    if (!isScalar(cond.type()) ||
+        !cond.type().toTensor()->componentType.isBoolean()) {
+      REPORT_ERROR("conditional expression is not boolean", @expr);
+    }
+
     Stmt ifStmt = convertAndDelete($if_body);
     Stmt elseStmt = convertAndDelete($6);
     Stmt *result = new Stmt(IfThenElse::make(cond, ifStmt, elseStmt));
@@ -1393,13 +1407,8 @@ boolean_expr
     Expr r = convertAndDelete($3);
     $$ = new Expr(Xor::make(l, r));
   }
-  | "true" {
-    bool val = true;
-    $$ = new Expr(Literal::make(val));
-  }
-  | "false" {
-    bool val = false;
-    $$ = new Expr(Literal::make(val));
+  | boolean_literal {
+    $$ = new Expr(Literal::make($boolean_literal));
   }
 
 // Field Read Expressions
