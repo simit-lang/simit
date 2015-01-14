@@ -17,13 +17,15 @@ func f1(A:tensor[3,3](float))->(t:float)
   t = trace(A) + trace(A) - trace(A);
 end
 
-func f(s : Spring, p : (Point*2)) -> (X : tensor[points](float))
+func f(s : Spring, p : (Point*2)) -> (X : tensor[points,points](tensor[3,3](float)))
   F = [1.0,0.0,0.0;0.0,-1.0,0.0;0.0,0.0,1.0];
   F1 = f1(F);
   X(p(0)) = F1;
+  X(p(1)) = F1;
 end
 
 proc main
   X = map f to springs reduce +;
-  points.x = X;
+  A = X + X;
+  
 end

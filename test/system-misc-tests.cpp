@@ -83,8 +83,8 @@ TEST(System, map_assemble_fem) {
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
 
-  x.set(p0, {0.0});
-  x.set(p1, {0.0});
+  x.set(p0, {1.0});
+  x.set(p1, {1.0});
 
   // Springs
   Set<2> springs(points,points);
