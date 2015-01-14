@@ -80,16 +80,23 @@ GPUFunction::~GPUFunction() {
 }
 
 void GPUFunction::mapArgs() {
-  // Pull args back to CPU
+  // Pull args back from GPU -> CPU
   for (auto &kv : pushedBufs) {
     if (kv.second.shouldPull) pullArg(kv.first, kv.second);
-    freeArg(kv.second);
   }
-  pushedBufs.clear();
 }
 
 void GPUFunction::unmapArgs(bool updated) {
-  // TODO implement
+  // Skip unmapping if args are not updated
+  if (!updated) return;
+
+  for (auto &kv : pushedBufs) {
+    // Push non-null args from CPU -> GPU
+    if (kv.first) {
+      checkCudaErrors(cuMemcpyHtoD(
+          *kv.second.devBuffer, kv.first, kv.second.size));
+    }
+  }
 }
 
 llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
