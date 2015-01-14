@@ -737,6 +737,11 @@ map_stmt
                    to_string(func.getArguments().size()) + ")", @1);
     }
 
+    if (target.type().toSet()->elementType != func.getArguments()[0].getType()){
+      REPORT_ERROR("the mapped set's element type is different from the mapped "
+                   "function's target argument", @target);
+    }
+
     // We assume the edge set is homogeneous for now
     Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : Expr();
 
@@ -784,6 +789,12 @@ map_stmt
                    ") does not match the number of formals accepted by " +
                    func.getName() + " (" +
                    to_string(func.getArguments().size()) + ")", @1);
+    }
+
+    Var targetFormal = func.getArguments()[partialActuals.size()];
+    if (target.type().toSet()->elementType != targetFormal.getType()){
+      REPORT_ERROR("the mapped set's element type is different from the mapped "
+                   "function's target argument", @target);
     }
 
     auto &results = func.getResults();
