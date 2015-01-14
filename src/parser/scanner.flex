@@ -32,6 +32,7 @@ using namespace simit::internal;
  /* Keywords and symbols */
 "int"                 { return Parser::token::INT;       }
 "float"               { return Parser::token::FLOAT;     }
+"bool"                { return Parser::token::BOOL;      }
 "tensor"              { return Parser::token::TENSOR;    }
 "element"             { return Parser::token::ELEMENT;   }
 "set"                 { return Parser::token::SET;       }

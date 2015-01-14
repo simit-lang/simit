@@ -162,6 +162,7 @@
 %union {
   int                            num;
   double                         fnum;
+  bool                           boolean;
   const char                    *string;
   std::vector<std::string>      *strings;
 
@@ -187,7 +188,7 @@
   TensorValues<double>          *TensorDoubleValues;
   TensorValues<int>             *TensorIntValues;
 }
-%destructor {} <num> <fnum> <binop> <reductionop>
+%destructor {} <num> <fnum> <boolean> <binop> <reductionop>
 %destructor { free((void*)($$)); } <string>
 %destructor { delete $$; } <*>
 
@@ -215,6 +216,7 @@
 // Keywords
 %token INT       "int"
 %token FLOAT     "float"
+%token BOOL      "bool"
 %token TENSOR    "tensor"
 %token ELEMENT   "element"
 %token SET       "set"
@@ -305,7 +307,7 @@ program_element
     ctx->addFunction(func);
   }
   | extern
-  | stmt
+  | const_stmt
   | test
 
 // Externs
@@ -1755,6 +1757,9 @@ component_type
   | FLOAT {
     $$ = new ScalarType(ScalarType::Float);
   }
+  | BOOL {
+    $$ = new ScalarType(ScalarType::Boolean);
+  }
 
 
 // Literals
@@ -1957,6 +1962,9 @@ scalar_literal
   | signed_float_literal {
     $$ = new Expr(Literal::make($1));
   }
+  | boolean_literal {
+    $$ = new Expr(Literal::make($1));
+  }
 
 %type <num> signed_int_literal;
 signed_int_literal
@@ -1974,6 +1982,15 @@ signed_float_literal
   }
   | "-" FLOAT_LITERAL {
     $$ = -$FLOAT_LITERAL;
+  }
+
+%type <boolean> boolean_literal;
+boolean_literal
+  : "true" {
+    $$ = true;
+  }
+  | "false" {
+    $$ = false;
   }
 
 // Tests

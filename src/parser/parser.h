@@ -193,6 +193,7 @@ namespace  simit { namespace internal  {
 
   int                            num;
   double                         fnum;
+  bool                           boolean;
   const char                    *string;
   std::vector<std::string>      *strings;
 
@@ -252,60 +253,61 @@ namespace  simit { namespace internal  {
         NEG = 265,
         INT = 266,
         FLOAT = 267,
-        TENSOR = 268,
-        ELEMENT = 269,
-        SET = 270,
-        VAR = 271,
-        CONST = 272,
-        EXTERN = 273,
-        PROC = 274,
-        FUNC = 275,
-        INOUT = 276,
-        MAP = 277,
-        TO = 278,
-        WITH = 279,
-        REDUCE = 280,
-        WHILE = 281,
-        IF = 282,
-        ELIF = 283,
-        ELSE = 284,
-        FOR = 285,
-        IN = 286,
-        BLOCKEND = 287,
-        RETURN = 288,
-        TEST = 289,
-        PRINT = 290,
-        RARROW = 291,
-        LP = 292,
-        RP = 293,
-        LB = 294,
-        RB = 295,
-        LC = 296,
-        RC = 297,
-        LA = 298,
-        RA = 299,
-        COMMA = 300,
-        PERIOD = 301,
-        COL = 302,
-        SEMICOL = 303,
-        ASSIGN = 304,
-        PLUS = 305,
-        MINUS = 306,
-        STAR = 307,
-        SLASH = 308,
-        DOTSTAR = 309,
-        DOTSLASH = 310,
-        EXP = 311,
-        TRANSPOSE = 312,
-        BACKSLASH = 313,
-        EQ = 314,
-        NE = 315,
-        LE = 316,
-        GE = 317,
-        NOT = 318,
-        XOR = 319,
-        TRUE = 320,
-        FALSE = 321
+        BOOL = 268,
+        TENSOR = 269,
+        ELEMENT = 270,
+        SET = 271,
+        VAR = 272,
+        CONST = 273,
+        EXTERN = 274,
+        PROC = 275,
+        FUNC = 276,
+        INOUT = 277,
+        MAP = 278,
+        TO = 279,
+        WITH = 280,
+        REDUCE = 281,
+        WHILE = 282,
+        IF = 283,
+        ELIF = 284,
+        ELSE = 285,
+        FOR = 286,
+        IN = 287,
+        BLOCKEND = 288,
+        RETURN = 289,
+        TEST = 290,
+        PRINT = 291,
+        RARROW = 292,
+        LP = 293,
+        RP = 294,
+        LB = 295,
+        RB = 296,
+        LC = 297,
+        RC = 298,
+        LA = 299,
+        RA = 300,
+        COMMA = 301,
+        PERIOD = 302,
+        COL = 303,
+        SEMICOL = 304,
+        ASSIGN = 305,
+        PLUS = 306,
+        MINUS = 307,
+        STAR = 308,
+        SLASH = 309,
+        DOTSTAR = 310,
+        DOTSLASH = 311,
+        EXP = 312,
+        TRANSPOSE = 313,
+        BACKSLASH = 314,
+        EQ = 315,
+        NE = 316,
+        LE = 317,
+        GE = 318,
+        NOT = 319,
+        XOR = 320,
+        TRUE = 321,
+        FALSE = 322
       };
     };
 
@@ -454,7 +456,7 @@ namespace  simit { namespace internal  {
     /// \param yyvalue   the value to check
     static bool yy_table_value_is_error_ (int yyvalue);
 
-    static const short int yypact_ninf_;
+    static const signed char yypact_ninf_;
     static const short int yytable_ninf_;
 
     /// Convert a scanner token number \a t to a symbol number.
@@ -596,13 +598,13 @@ namespace  simit { namespace internal  {
     enum
     {
       yyeof_ = 0,
-      yylast_ = 960,     ///< Last index in yytable_.
-      yynnts_ = 90,  ///< Number of nonterminal symbols.
+      yylast_ = 941,     ///< Last index in yytable_.
+      yynnts_ = 91,  ///< Number of nonterminal symbols.
       yyempty_ = -2,
       yyfinal_ = 2, ///< Termination state number.
       yyterror_ = 1,
       yyerrcode_ = 256,
-      yyntokens_ = 67  ///< Number of tokens.
+      yyntokens_ = 68  ///< Number of tokens.
     };
 
 

@@ -24,6 +24,10 @@ const mat12  : tensor[1,2](int)   =  [2, 3];
 const mat21  : tensor[2,1](int)   =  [2; 3];
 const ten111 : tensor[1,1,1](int) = [[1]];
 
+%%% bool-consts
+const st     : bool = true; 
+const sf     : bool = false; 
+
 %%% const-use
 %! f() == 6.1;
 const s : float = 0.1;
