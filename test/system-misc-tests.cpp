@@ -107,7 +107,7 @@ TEST(System, map_assemble_vector_components) {
   ASSERT_EQ(0.0, x.get(p2)(1));
 }
 
-TEST(System, map_assemble_fem) {
+TEST(System, DISABLED_map_assemble_fem) {
   // Points
   Set<> points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
