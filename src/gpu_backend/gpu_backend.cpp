@@ -694,9 +694,6 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   }
 
   // LLVM types
-  // i8*
-  llvm::Type *i8PtrTy = llvm::PointerType::getInt8PtrTy(LLVM_CONTEXT);
-
   // struct dim3
   std::vector<llvm::Type*> dim3Types = { LLVM_INT, LLVM_INT, LLVM_INT };
   llvm::StructType *dim3Ty = llvm::StructType::create(
@@ -704,10 +701,10 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 
   // cudaGetParamBufferV2
   std::vector<llvm::Type*> getParamArgTys = {
-    i8PtrTy, dim3Ty, dim3Ty, LLVM_INT
+    LLVM_INT8PTR, dim3Ty, dim3Ty, LLVM_INT
   };
   llvm::FunctionType *getParamFuncTy = llvm::FunctionType::get(
-      i8PtrTy, getParamArgTys, false);
+      LLVM_INT8PTR, getParamArgTys, false);
 
   // CUstream_st
   llvm::StructType *cuStreamTy = llvm::StructType::create(
@@ -717,7 +714,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 
   // cudaLaunchDeviceV2
   std::vector<llvm::Type*> launchDevArgTys = {
-    i8PtrTy, cuStreamPtrTy
+    LLVM_INT8PTR, cuStreamPtrTy
   };
   llvm::FunctionType *launchDevFuncTy = llvm::FunctionType::get(
       LLVM_INT, launchDevArgTys, false);
@@ -751,7 +748,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   // Build param buffer
   llvm::Function *getParamFunc = llvm::cast<llvm::Function>(
       module->getOrInsertFunction("cudaGetParameterBufferV2", getParamFuncTy));
-  llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, i8PtrTy);
+  llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, LLVM_INT8PTR);
   llvm::Value *paramBuf = builder->CreateCall4(
       getParamFunc, kernelBitCast, gridDims, blockDims, llvmInt(0));
 
@@ -862,8 +859,14 @@ void GPUBackend::emitFillBuf(llvm::Value *buffer,
         bufPtr,
         // Pointer to arg type, addrspace 0
         llvm::PointerType::get(val->getType(), 0));
-    builder->CreateStore(val, valPtr);
+    // Aligned store required to ensure that each parameter remains 8-byte aligned
+    builder->CreateAlignedStore(val, valPtr, 8);
     bufIndex += dataLayout->getTypeAllocSize(val->getType());
+    if (bufIndex % 8 != 0) {
+      iassert(bufIndex % 8 == 4)
+          << "Cannot accept non 4-byte aligned params";
+      bufIndex += 4;
+    }
   }
 }
 
