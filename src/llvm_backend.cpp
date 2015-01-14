@@ -645,6 +645,7 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       auto type = op->actuals[0].type().toTensor();
 
       // special case for vec3f
+      tassert(!ir::isScalar(op->actuals[0].type())) << "add scalar norm";
       if (type->dimensions[0].getIndexSets().size() == 1 &&
           type->dimensions[0].getIndexSets()[0].getKind()==IndexSet::Range &&
           type->dimensions[0].getSize() == 3) {
