@@ -258,8 +258,8 @@ void GPUBackend::visit(const ir::CallStmt *op) {
     auto foundIntrinsic = nvvmIntrinsicByName.find(callee);
     if (foundIntrinsic != nvvmIntrinsicByName.end()) {
       auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
-      fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-          foundIntrinsic->second, ftype));
+      module->getOrInsertFunction(foundIntrinsic->second, ftype);
+      fun = module->getFunction(foundIntrinsic->second);
       call = builder->CreateCall(fun, args);
     }
     else if (callee == ir::Intrinsics::det) {
@@ -355,8 +355,8 @@ void GPUBackend::visit(const ir::Call *op) {
   auto foundIntrinsic = nvvmIntrinsicByName.find(op->func);
   if (foundIntrinsic != nvvmIntrinsicByName.end()) {
     auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
-    fun = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      foundIntrinsic->second, ftype));
+    module->getOrInsertFunction(foundIntrinsic->second, ftype);
+    fun = module->getFunction(foundIntrinsic->second);
   }
   else if (op->func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);
@@ -577,8 +577,8 @@ void cleanFuncAttrs(llvm::Function *func) {
 
 llvm::Value *GPUBackend::emitBarrier() {
   llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_VOID, false);
-  llvm::Function *func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy));
+  module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy);
+  llvm::Function *func = module->getFunction("llvm.nvvm.barrier0");
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
@@ -591,32 +591,32 @@ llvm::Value *GPUBackend::emitCheckRoot() {
 
 llvm::Value *GPUBackend::getTidX() {
   llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
-  llvm::Function *func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.x", funcTy));
+  module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.x", funcTy);
+  llvm::Function *func = module->getFunction("llvm.nvvm.read.ptx.sreg.tid.x");
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
 llvm::Value *GPUBackend::getTidY() {
   llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
-  llvm::Function *func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.y", funcTy));
+  module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.y", funcTy);
+  llvm::Function *func = module->getFunction("llvm.nvvm.read.ptx.sreg.tid.y");
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
 llvm::Value *GPUBackend::getTidZ() {
   llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
-  llvm::Function *func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.z", funcTy));
+  module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.z", funcTy);
+  llvm::Function *func = module->getFunction("llvm.nvvm.read.ptx.sreg.tid.z");
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
 void GPUBackend::emitThreadBarrier() {
   llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_VOID, false);
-  llvm::Function *func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy));
+  module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy);
+  llvm::Function *func = module->getFunction("llvm.nvvm.barrier0");
   cleanFuncAttrs(func);
   builder->CreateCall(func);
 }
@@ -666,8 +666,8 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
   }
   llvm::FunctionType *funcTy = llvm::FunctionType::get(
       LLVM_FLOAT, argTys, false);
-  llvm::Function *func = llvm::cast<llvm::Function>(module->getOrInsertFunction(
-      funcName, funcTy));
+  module->getOrInsertFunction(funcName, funcTy);
+  llvm::Function *func = module->getFunction(funcName);
   cleanFuncAttrs(func);
   builder->CreateCall2(func, ptr, value);
 }
@@ -699,9 +699,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 
   // LLVM types
   // struct dim3
-  std::vector<llvm::Type*> dim3Types = { LLVM_INT, LLVM_INT, LLVM_INT };
-  llvm::StructType *dim3Ty = llvm::StructType::create(
-      llvm::ArrayRef<llvm::Type*>(dim3Types), "dim3");
+  llvm::StructType *dim3Ty = getOrCreateDim3Ty();
 
   // cudaGetParamBufferV2
   std::vector<llvm::Type*> getParamArgTys = {
@@ -711,10 +709,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
       LLVM_INT8PTR, getParamArgTys, false);
 
   // CUstream_st
-  llvm::StructType *cuStreamTy = llvm::StructType::create(
-      LLVM_CONTEXT, "struct.CUstream_st");
-  // addrspace 0
-  llvm::PointerType *cuStreamPtrTy = llvm::PointerType::get(cuStreamTy, 0);
+  llvm::PointerType *cuStreamPtrTy = getOrCreateCUStreamPtrTy();
 
   // cudaLaunchDeviceV2
   std::vector<llvm::Type*> launchDevArgTys = {
@@ -750,8 +745,9 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
       llvm::ArrayRef<unsigned>({2}));
 
   // Build param buffer
-  llvm::Function *getParamFunc = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("cudaGetParameterBufferV2", getParamFuncTy));
+  module->getOrInsertFunction("cudaGetParameterBufferV2", getParamFuncTy);
+  llvm::Function *getParamFunc = module->getFunction(
+      "cudaGetParameterBufferV2");
   llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, LLVM_INT8PTR);
   llvm::Value *paramBuf = builder->CreateCall4(
       getParamFunc, kernelBitCast, gridDims, blockDims, llvmInt(0));
@@ -759,8 +755,8 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   // Insert args into param buffer
   emitFillBuf(paramBuf, args);
 
-  llvm::Function *cudaLaunchFunc = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("cudaLaunchDeviceV2", launchDevFuncTy));
+  module->getOrInsertFunction("cudaLaunchDeviceV2", launchDevFuncTy);
+  llvm::Function *cudaLaunchFunc = module->getFunction("cudaLaunchDeviceV2");
   builder->CreateCall2(cudaLaunchFunc, paramBuf,
                        llvm::ConstantPointerNull::get(cuStreamPtrTy));
 
@@ -768,8 +764,8 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   std::vector<llvm::Type*> argTys;
   llvm::FunctionType *syncFuncTy = llvm::FunctionType::get(
       LLVM_INT, argTys, false);
-  llvm::Function *syncFunc = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("cudaDeviceSynchronize", syncFuncTy));
+  module->getOrInsertFunction("cudaDeviceSynchronize", syncFuncTy);
+  llvm::Function *syncFunc = module->getFunction("cudaDeviceSynchronize");
   builder->CreateCall(syncFunc);
 }
 
@@ -804,8 +800,8 @@ void GPUBackend::emitPrintf(std::string format,
   std::vector<llvm::Type*> argTys = {LLVM_INT8PTR, LLVM_INT8PTR};
   llvm::FunctionType *vprintfTy = llvm::FunctionType::get(
       LLVM_INT, argTys, false);
-  llvm::Function *vprintf = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("vprintf", vprintfTy));
+  module->getOrInsertFunction("vprintf", vprintfTy);
+  llvm::Function *vprintf = module->getFunction("vprintf");
 
   builder->CreateCall2(vprintf, formatPtr, argBuf);
 }
@@ -822,8 +818,8 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   };
   llvm::FunctionType *funcTy = llvm::FunctionType::get(
       LLVM_VOID, argTys, false);
-  llvm::Function *func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("llvm.memcpy.p1i8.p1i8.i32", funcTy));
+  module->getOrInsertFunction("llvm.memcpy.p1i8.p1i8.i32", funcTy);
+  llvm::Function *func = module->getFunction("llvm.memcpy.p1i8.p1i8.i32");
   cleanFuncAttrs(func);
 
   llvm::Value *llvmAlign = llvmInt(align);
@@ -844,8 +840,8 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
   };
   llvm::FunctionType *funcTy = llvm::FunctionType::get(
       LLVM_VOID, argTys, false);
-  llvm::Function *func = llvm::cast<llvm::Function>(
-      module->getOrInsertFunction("llvm.memset.p1i8.i32", funcTy));
+  module->getOrInsertFunction("llvm.memset.p1i8.i32", funcTy);
+  llvm::Function *func = module->getFunction("llvm.memset.p1i8.i32");
   cleanFuncAttrs(func);
 
   llvm::Value *llvmAlign = llvmInt(align);

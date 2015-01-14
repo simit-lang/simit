@@ -6,6 +6,7 @@
 #include <iostream>
 
 #include "llvm/IR/Module.h"
+#include "llvm_codegen.h"
 
 // This will output the proper CUDA error strings in the event that a CUDA
 // host call returns an error
@@ -22,6 +23,27 @@ inline void __checkCudaErrors(CUresult err, const char *file, const int line) {
 
 namespace simit {
 namespace internal {
+
+// CUDA-specific LLVM types
+inline llvm::StructType *getOrCreateDim3Ty() {
+  static llvm::StructType *dim3Ty;
+  if (!dim3Ty) {
+    std::vector<llvm::Type*> dim3Types = { LLVM_INT, LLVM_INT, LLVM_INT };
+    dim3Ty = llvm::StructType::create(
+        llvm::ArrayRef<llvm::Type*>(dim3Types), "dim3");
+  }
+  return dim3Ty;
+}
+
+inline llvm::PointerType *getOrCreateCUStreamPtrTy() {
+  static llvm::PointerType *cuStreamPtrTy;
+  if (!cuStreamPtrTy) {
+    llvm::StructType *cuStreamTy = llvm::StructType::create(
+      LLVM_CONTEXT, "struct.CUstream_st");
+    cuStreamPtrTy = llvm::PointerType::get(cuStreamTy, 0);
+  }
+  return cuStreamPtrTy;
+}
 
 // Make an llvm module with appropriate data layout for NVVM
 llvm::Module *createNVVMModule(std::string name);
