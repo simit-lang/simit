@@ -1,0 +1,32 @@
+%%% not
+%! donot(false) == true;
+func donot(a : bool) -> (b : bool)
+  b = not a;
+end
+
+%%% and
+%! doand(true, true) == true;
+%! doand(false, true) == false;
+%! doand(true, false) == false;
+%! doand(false, false) == false;
+func doand(a : bool, b : bool) -> (c : bool)
+  c = a and b;
+end
+
+%%% or 
+%! door(true, true) == true;
+%! door(false, true) == true;
+%! door(true, false) == true;
+%! door(false, false) == false;
+func door(a : bool, b : bool) -> (c : bool)
+  c = a or b;
+end
+
+%%% xor 
+%! doxor(true, true) == false;
+%! doxor(false, true) == true;
+%! doxor(true, false) == true;
+%! doxor(false, false) == false;
+func doxor(a : bool, b : bool) -> (c : bool)
+  c = a xor b;
+end

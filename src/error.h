@@ -200,6 +200,10 @@ struct ErrorReport {
   iassert(a.type() == b.type()) << a.type() << "!=" << b.type() << "\n"        \
                                 << #a << ":" << a << "\n" << #b << ":" << b
 
+#define iassert_boolean_scalar(a)                                              \
+  iassert(isScalar(a.type()) && a.type().toTensor()->componentType.isBoolean())\
+      << a << "must be a boolean scalar but is a" << a.type()
+
 // User asserts
 #define uassert(c)                                                             \
   simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__, (c), #c,        \
