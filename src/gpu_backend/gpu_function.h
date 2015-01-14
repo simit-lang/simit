@@ -21,10 +21,7 @@ class GPUFunction : public simit::Function {
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module,
               std::map<ir::Var, llvm::Value*> globalBufs,
-              ir::TensorStorage storage, int cuDevMajor, int cuDevMinor)
-    : Function(simitFunc), llvmFunc(llvmFunc), module(module),
-      globalBufs(globalBufs), storage(storage),
-      cuDevMajor(cuDevMajor), cuDevMinor(cuDevMinor) {}
+              ir::TensorStorage storage);
   ~GPUFunction();
 
   void print(std::ostream &os) const;
@@ -72,6 +69,8 @@ class GPUFunction : public simit::Function {
   std::unique_ptr<llvm::Module> module;
   std::map<ir::Var, llvm::Value*> globalBufs;
   ir::TensorStorage storage;
+  CUcontext *cudaContext;
+  CUmodule *cudaModule;
   int cuDevMajor, cuDevMinor;
 };
 

@@ -30,38 +30,6 @@
 namespace simit {
 namespace internal {
 
-GPUBackend::GPUBackend() {
-  // TODO: move into GPUFunction::init or similar?
-  // CUDA runtime
-  CUdevice device;
-  CUcontext context;
-  int devCount;
-
-  // CUDA setup
-  checkCudaErrors(cuInit(0));
-  checkCudaErrors(cuDeviceGetCount(&devCount));
-  checkCudaErrors(cuDeviceGet(&device, 0));
-
-  char name[128];
-  checkCudaErrors(cuDeviceGetName(name, 128, device));
-  // TODO(gkanwar): Figure out logging system
-  std::cout << "Using CUDA Device [0]: " << name << std::endl;
-
-  checkCudaErrors(cuDeviceComputeCapability(&cuDevMajor, &cuDevMinor, device));
-  std::cout << "Device Compute Capability: "
-            << cuDevMajor << "." << cuDevMinor << std::endl;
-  iassert((cuDevMajor == 3 && cuDevMinor >= 5) || cuDevMajor > 3) << "ERROR: Device 0 is not SM 3.5 or greater";
-
-  // Create driver context
-  checkCudaErrors(cuCtxCreate(&context, 0, device));
-
-  int attrVal;
-  checkCudaErrors(cuDeviceGetAttribute(&attrVal, CU_DEVICE_ATTRIBUTE_UNIFIED_ADDRESSING, device));
-  iassert(attrVal == 1);
-}
-
-GPUBackend::~GPUBackend() {}
-
 simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   std::ofstream irFile("/tmp/simit.sim", std::ofstream::trunc);
   irFile << irFunc;
@@ -104,8 +72,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   }
   iassert(func);
 
-  return new GPUFunction(irFunc, func, module, buffers, fieldStorage,
-                         cuDevMajor, cuDevMinor);
+  return new GPUFunction(irFunc, func, module, buffers, fieldStorage);
 }
 
 llvm::Value *GPUBackend::compile(const ir::Expr &expr) {

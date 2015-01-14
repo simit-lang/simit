@@ -23,8 +23,8 @@ namespace internal {
 
 class GPUBackend : public LLVMBackend {
 public:
-  GPUBackend();
-  ~GPUBackend();
+  GPUBackend() {}
+  ~GPUBackend() {}
 
   simit::Function *compile(simit::ir::Func func);
 

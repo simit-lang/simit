@@ -22,6 +22,42 @@
 namespace simit {
 namespace internal {
 
+GPUFunction::GPUFunction(
+    ir::Func simitFunc, llvm::Function *llvmFunc,
+    llvm::Module *module,
+    std::map<ir::Var, llvm::Value*> globalBufs,
+    ir::TensorStorage storage)
+    : Function(simitFunc), llvmFunc(llvmFunc), module(module),
+      globalBufs(globalBufs), storage(storage), cudaModule(nullptr) {
+  // CUDA runtime
+  CUdevice device;
+  int devCount;
+
+  // CUDA setup
+  checkCudaErrors(cuInit(0));
+  checkCudaErrors(cuDeviceGetCount(&devCount));
+  checkCudaErrors(cuDeviceGet(&device, 0));
+
+  char name[128];
+  checkCudaErrors(cuDeviceGetName(name, 128, device));
+  // TODO(gkanwar): Figure out logging system
+  std::cout << "Using CUDA Device [0]: " << name << std::endl;
+
+  checkCudaErrors(cuDeviceComputeCapability(&cuDevMajor, &cuDevMinor, device));
+  std::cout << "Device Compute Capability: "
+            << cuDevMajor << "." << cuDevMinor << std::endl;
+  iassert((cuDevMajor == 3 && cuDevMinor >= 5) || cuDevMajor > 3) << "ERROR: Device 0 is not SM 3.5 or greater";
+
+  // Create driver context
+  cudaContext = new CUcontext();
+  checkCudaErrors(cuCtxCreate(cudaContext, 0, device));
+
+  // Check managed memory, required for pushing globals
+  int attrVal;
+  checkCudaErrors(cuDeviceGetAttribute(&attrVal, CU_DEVICE_ATTRIBUTE_UNIFIED_ADDRESSING, device));
+  iassert(attrVal == 1);
+}
+
 GPUFunction::~GPUFunction() {
   // llvmFunc will be destroyed when the harness funtion object is destroyed
   // because it was claimed by a CallInst
@@ -30,12 +66,24 @@ GPUFunction::~GPUFunction() {
   for (auto &kv : pushedBufs) {
     freeArg(kv.second);
   }
+
+  // Clear CUDA module, if any
+  if (cudaModule) {
+    checkCudaErrors(cuModuleUnload(*cudaModule));
+    delete cudaModule;
+  }
+  // Release driver context, if any
+  if (cudaContext) {
+    checkCudaErrors(cuCtxDestroy(*cudaContext));
+    delete cudaContext;
+  }
 }
 
 void GPUFunction::mapArgs() {
   // Pull args back to CPU
   for (auto &kv : pushedBufs) {
     if (kv.second.shouldPull) pullArg(kv.first, kv.second);
+    freeArg(kv.second);
   }
   pushedBufs.clear();
 }
@@ -210,6 +258,7 @@ void GPUFunction::pushArg(void *hostPtr, DeviceDataHandle handle) {
 
 void GPUFunction::freeArg(DeviceDataHandle handle) {
   checkCudaErrors(cuMemFree(*handle.devBuffer));
+  delete handle.devBuffer;
 }
 
 void GPUFunction::print(std::ostream &os) const {
@@ -279,7 +328,6 @@ simit::Function::FuncType GPUFunction::init(
     const std::vector<std::string> &formals,
     std::map<std::string, Actual> &actuals) {
   CUlinkState linker;
-  CUmodule cudaModule;
   CUfunction cudaFunction;
 
   // Push data and build harness
@@ -349,8 +397,14 @@ simit::Function::FuncType GPUFunction::init(
             << linkerErrors << std::endl;
   linkerLog.close();
 
-  // Create CUDA module for binary object
-  checkCudaErrors(cuModuleLoadDataEx(&cudaModule, cubin, 0, 0, 0));
+  // Create CUDA module for binary object, possibly removing previous module
+  if (cudaModule) {
+    checkCudaErrors(cuModuleUnload(*cudaModule));
+  }
+  else {
+    cudaModule = new CUmodule();
+  }
+  checkCudaErrors(cuModuleLoadDataEx(cudaModule, cubin, 0, 0, 0));
   checkCudaErrors(cuLinkDestroy(linker));
 
   // Alloc global buffers and set global pointers
@@ -361,37 +415,38 @@ simit::Function::FuncType GPUFunction::init(
     CUdeviceptr globalPtr;
     size_t globalPtrSize;
     checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
-                                      cudaModule, bufVal->getName().data()));
+                                      *cudaModule, bufVal->getName().data()));
     std::cout << "Pointer size: " << globalPtrSize << std::endl;
     iassert(globalPtrSize == sizeof(void*))
         << "Global pointers should all be pointer-sized. Got: "
         << globalPtrSize << " bytes";
 
-    // Checks
+    // Checks for appropriate memory type
     unsigned int attrVal;
-    checkCudaErrors(cuPointerGetAttribute(&attrVal, CU_POINTER_ATTRIBUTE_IS_MANAGED, globalPtr));
-    if (!attrVal) continue;
+    checkCudaErrors(cuPointerGetAttribute(
+        &attrVal, CU_POINTER_ATTRIBUTE_IS_MANAGED, globalPtr));
     iassert(attrVal == 1);
-    checkCudaErrors(cuPointerGetAttribute(&attrVal, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, globalPtr));
+    checkCudaErrors(cuPointerGetAttribute(
+        &attrVal, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, globalPtr));
     iassert(attrVal == CU_MEMORYTYPE_DEVICE);
 
     size_t bufSize = size(*bufVar.getType().toTensor(), storage);
-    CUdeviceptr devBuffer;
-    checkCudaErrors(cuMemAlloc(&devBuffer, bufSize));
-    void *devBufferPtr = reinterpret_cast<void*>(devBuffer);
+    CUdeviceptr *devBuffer = new CUdeviceptr();
+    checkCudaErrors(cuMemAlloc(devBuffer, bufSize));
+    pushedBufs.emplace(nullptr, DeviceDataHandle(devBuffer, bufSize, false));
+    void *devBufferPtr = reinterpret_cast<void*>(*devBuffer);
 
-    std::cout << std::hex << devBuffer << " alloc'd for " << std::dec << bufSize << std::endl;
-    std::cout << "Copying: " << sizeof(void*) << std::endl;
     void *globalPtrHost;
-    checkCudaErrors(cuPointerGetAttribute(&globalPtrHost, CU_POINTER_ATTRIBUTE_HOST_POINTER, globalPtr));
+    checkCudaErrors(cuPointerGetAttribute(
+        &globalPtrHost, CU_POINTER_ATTRIBUTE_HOST_POINTER, globalPtr));
     *((void**)globalPtrHost) = devBufferPtr;
   }
 
   // Get reference to CUDA function
   checkCudaErrors(cuModuleGetFunction(
-      &cudaFunction, cudaModule, harness->getName().data()));
+      &cudaFunction, *cudaModule, harness->getName().data()));
 
-  return [this, cudaFunction, cudaModule](){
+  return [this, cudaFunction](){
     void **kernelParamsArr = new void*[0]; // TODO leaks
     checkCudaErrors(cuLaunchKernel(cudaFunction,
                                    1, 1, 1, // grid size
