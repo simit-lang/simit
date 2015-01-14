@@ -64,7 +64,8 @@ public:
   Expr transposedMatrix(Expr mat);
 
   /// Create a temporary variable
-  Var temporary(Type type);
+  Var temporary(Type type, std::string name="tmp");
+
 
 private:
   UniqueNameGenerator names;

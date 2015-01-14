@@ -237,8 +237,8 @@ Expr IRBuilder::transposedMatrix(Expr mat) {
   return IndexExpr::make(indexVars, val);
 }
 
-Var IRBuilder::temporary(Type type) {
-  return Var(names.getName(), type);
+Var IRBuilder::temporary(Type type, std::string name) {
+  return Var(names.getName(name), type);
 }
 
 }} // namespace simit::internal

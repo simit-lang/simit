@@ -314,6 +314,12 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
         ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
                                 ? indexVar.getOperator()
                                 : ReductionOperator::Undefined;
+      
+        // If the index set we are traversing over is fixed,
+        // we construct the corresponding domain & index set
+        if (indexVar.isFixed()) {
+          domain = ForDomain(IndexSet(*indexVar.ptr->fixedExpr, IndexSet::Single));
+        }
 
         addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
       }
@@ -360,19 +366,33 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           ForDomain::Kind domainKind = ForDomain::Neighbors;
           
           if (storageKind == TensorStorage::SystemReduced) {
-            domainKind = ForDomain::Neighbors;
+            // if we have a fixed index var, then we need
+            // a NeigborsOf domain
+            if (indexVar.isFixed()) {
+              domainKind = ForDomain::NeighborsOf;
+            }
+            else {
+              domainKind = ForDomain::Neighbors;
+            }
           } else if (storageKind == TensorStorage::SystemDiagonal) {
             domainKind = ForDomain::Diagonal;
           }
           else
             iassert("Unknown storage kind for tensor ") << e->tensor;
           
-          ForDomain domain(e->set, link, domainKind);
+          ForDomain domain;
+          
+          if (domainKind == ForDomain::NeighborsOf)
+            domain = ForDomain(e->set, link, domainKind,
+              IndexSet(*indexVar.ptr->fixedExpr, IndexSet::Single));
+          else
+            domain = ForDomain(e->set, link, domainKind);
+          
           // We only need to reduce w.r.t. to the inner loop variable.
           ReductionOperator rop = (currBlockLevel == numBlockLevels-1)
                                   ? indexVar.getOperator()
                                   : ReductionOperator::Undefined;
-
+          
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
 
           if (storageKind == TensorStorage::SystemReduced) {

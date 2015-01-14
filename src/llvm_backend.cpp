@@ -833,6 +833,7 @@ void LLVMBackend::visit(const For *op) {
     case ForDomain::Edges:
       not_supported_yet;
       break;
+    case ForDomain::NeighborsOf:
     case ForDomain::Neighbors:
       not_supported_yet;
       break;
@@ -1259,6 +1260,8 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexSet &is) {
       return builder->CreateExtractValue(setValue, {0},
                                          setValue->getName()+LEN_SUFFIX);
     }
+    case IndexSet::Single:
+      unreachable;
     case IndexSet::Dynamic:
       not_supported_yet;
       break;
