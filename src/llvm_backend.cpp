@@ -87,6 +87,10 @@ simit::Function *LLVMBackend::compile(Func func) {
   vector<Func> callTree = getCallTree(func);
   std::reverse(callTree.begin(), callTree.end());
 
+  for (auto &f : callTree) {
+    createPrototype(f.getName(), f.getArguments(), f.getResults(), module);
+  }
+
   this->storage = Storage();
 
   llvm::Function *llvmFunc = nullptr;
