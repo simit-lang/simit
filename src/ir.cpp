@@ -33,8 +33,8 @@ Expr::Expr(double val) : IRHandle(Literal::make(val)) {
 
 // class Intrinsics
 Func Intrinsics::mod = Func("mod",
-                            {Var("x", Float), Var("y", Float)},
-                            {Var("r", Float)},
+                            {Var("x", Int), Var("y", Int)},
+                            {Var("r", Int)},
                             Func::Intrinsic);
 
 Func Intrinsics::sin = Func("sin",

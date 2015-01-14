@@ -52,6 +52,13 @@ func dopow(a : float, b : float) -> (c : float)
   c = pow(a,b);
 end
 
+%%% mod
+%! domod(8, 3) == 2;
+%! domod(5, 5) == 0;
+func domod(a : int, b : int) -> (c : int)
+  c = mod(a, b);
+end
+
 %%% det
 %! dodet([4.0, 1.0, 8.0; 3.0, 4.0, 5.0; 1.0, 7.0, 7.0]) == 92.0;
 func dodet(a : tensor[3,3](float)) -> (c : float)

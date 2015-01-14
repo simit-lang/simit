@@ -285,7 +285,8 @@ void LLVMBackend::visit(const ir::Load *op) {
   val = builder->CreateLoad(bufferLoc, valName);
 }
 
-// TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt.
+// TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt,
+//       and is only kept around to emit loc.
 void LLVMBackend::visit(const Call *op) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
                                   {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
@@ -626,6 +627,13 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
              op->callee == ir::Intrinsics::acos    ) {
       std::string fname = op->callee.getName() + floatTypeName;
       call = emitCall(fname, args, getLLVMFloatType());
+    }
+    else if (op->callee == ir::Intrinsics::mod) {
+      iassert(op->actuals.size() == 2) << "mod takes two inputs, got"
+                                       << op->actuals.size();
+      call = builder->CreateSRem(compile(op->actuals[0]),
+                                 compile(op->actuals[1]));
+
     }
     else if (callee == ir::Intrinsics::det) {
       iassert(args.size() == 1);
