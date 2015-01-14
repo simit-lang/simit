@@ -74,6 +74,39 @@ TEST(System, map_assemble_from_literal_vector) {
   ASSERT_EQ(1.0, x.get(p1));
 }
 
+TEST(System, map_assemble_vector_components) {
+  // Points
+  Set<> points;
+  FieldRef<simit_float,2> x = points.addField<simit_float,2>("x");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  // Springs
+  Set<2> springs(points,points);
+
+  springs.add(p0,p1);
+  springs.add(p1,p2);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+
+  f->runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(42.0, x.get(p0)(0));
+  ASSERT_EQ(0.0,  x.get(p0)(1));
+  ASSERT_EQ(42.0,  x.get(p1)(0));
+  ASSERT_EQ(0.0, x.get(p1)(1));
+  ASSERT_EQ(0.0,  x.get(p2)(0));
+  ASSERT_EQ(0.0, x.get(p2)(1));
+}
+
 TEST(System, map_assemble_fem) {
   // Points
   Set<> points;

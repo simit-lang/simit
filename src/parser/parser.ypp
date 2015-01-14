@@ -872,7 +872,7 @@ field_write_stmt
 
 tensor_write_stmt
   : IDENT "(" expr_list ")" "=" expr ";" {
-    iassert($expr != nullptr) << "assigned expression" << "is null" ;
+    iassert($expr != nullptr) << "assigned expression is null" ;
 
     std::string tensorName = convertAndFree($1);
     auto indices = unique_ptr<vector<Expr>>($expr_list);
@@ -894,7 +894,7 @@ tensor_write_stmt
   // field_read_expr "(" expr_list ")" "=" expr ";"
   // but this requires reworking a lot of the parser.
   | IDENT "." IDENT[fieldName] "(" expr_list ")" "=" expr ";" {
-    iassert($expr != nullptr) << "assigned expression" << "is null" ;
+    iassert($expr != nullptr) << "assigned expression is null" ;
  
     string setName = convertAndFree($1);
     string fieldName = convertAndFree($3);
@@ -914,6 +914,26 @@ tensor_write_stmt
 
     Expr tensorExpr = FieldRead::make(setExpr, fieldName);
     ctx->addStatement(TensorWrite::make(tensorExpr, *indices, value));
+  }
+  | IDENT "(" expr_list ")" "(" expr_list ")" "=" expr ";" {
+    iassert($expr != nullptr) << "assigned expression is null" ;
+
+    std::string tensorName = convertAndFree($1);
+    vector<Expr> indices1 = convertAndDelete($3);
+    vector<Expr> indices2 = convertAndDelete($6);
+    Expr value = convertAndDelete($expr);
+
+    if (!ctx->hasSymbol(tensorName)) {
+      REPORT_ERROR(tensorName + " is not defined in scope", @1);
+    }
+
+    const Symbol &tensorSymbol = ctx->getSymbol(tensorName);
+    if (!tensorSymbol.isWritable()) {
+      REPORT_ERROR(tensorName + " is not writable", @1);
+    }
+
+    Expr tensorExpr = TensorRead::make(tensorSymbol.getExpr(), indices1);
+    ctx->addStatement(TensorWrite::make(tensorExpr, indices2, value));
   }
 
 while_stmt
