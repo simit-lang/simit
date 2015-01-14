@@ -229,6 +229,12 @@ void GPUBackend::visit(const ir::CallStmt *op) {
       fun = module->getFunction(foundIntrinsic->second);
       call = builder->CreateCall(fun, args);
     }
+    else if (callee == ir::Intrinsics::mod) {
+      iassert(op->actuals.size() == 2) << "mod takes two inputs, got"
+                                       << op->actuals.size();
+      call = builder->CreateSRem(compile(op->actuals[0]),
+                                 compile(op->actuals[1]));
+    }
     else if (callee == ir::Intrinsics::det) {
       iassert(args.size() == 1);
       std::string fname = callee.getName() + "3" + floatTypeName;
