@@ -73,6 +73,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   this->storage = ir::Storage();
   symtable.clear();
   buffers.clear();
+  inKernel = false;
 
   // TODO(gkanwar): Why do we sometimes get duplicates of functions being
   // generated? How do we properly handle this without duplicates?

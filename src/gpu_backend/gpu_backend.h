@@ -33,7 +33,7 @@ protected:
   int cuDevMajor, cuDevMinor;
 
   // Tracking whether we're in a kernel
-  bool inKernel = false;
+  bool inKernel;
 
   // Currently compiling IR Func
   ir::Func irFunc;
