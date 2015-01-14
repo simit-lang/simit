@@ -682,7 +682,7 @@ TEST(System, gemv_diagonal_storage) {
   ASSERT_EQ(6.0, c.get(p2));
 }
 
-TEST(System, gemv_diagonal_storage_and_sysreduced) {
+TEST(System, DISABLED_gemv_diagonal_storage_and_sysreduced) {
   // Points
   Set<> points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");

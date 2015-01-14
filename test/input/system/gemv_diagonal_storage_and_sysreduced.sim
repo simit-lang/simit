@@ -11,15 +11,20 @@ end
 extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
-func dist_a2(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
-  A(p(0),p(0)) = s.d;
-  A(p(0),p(1)) = s.d;
-  A(p(1),p(0)) = s.d;
-  A(p(1),p(1)) = s.d;
+func dist_a2(s : Spring, p : (Point*2)) -> (A : tensor[points,points](tensor[2,2](float)))
+  m = [1.0,0.0;0.0,1.0];
+  A(p(0),p(0)) = m;
+  A(p(0),p(1)) = m;
+  A(p(1),p(0)) = m;
+  A(p(1),p(1)) = m;
 end
 
-func dist_a(p : Point) -> (A : tensor[points,points](float))
-  A(p,p) = p.a;
+func dist_a(p : Point) -> (A : tensor[points,points](tensor[2,2](float)))
+  m = [1.0,0.0;0.0,1.0];
+  c = p.a;
+  if (c>0.0)
+    A(p,p) = m;
+  end
 end
 
 proc main 
@@ -27,5 +32,5 @@ proc main
   B = map dist_a2 to springs reduce +;
   %A = map dist_a2 to springs reduce +;
   C = A + B;
-  points.c = C * points.b;
+  points.c = points.b;
 end
