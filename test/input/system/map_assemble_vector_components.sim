@@ -15,5 +15,4 @@ end
 proc main
   X = map f to springs reduce +;
   points.x = X;
-  print points.x;
 end
