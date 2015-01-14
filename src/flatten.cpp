@@ -68,17 +68,10 @@ private:
 
   Expr spill(Expr a) {
     vector<IndexVar> afvars = getFreeVars(a);
-
-    std::vector<IndexDomain> adims;
-    for (auto &afvar : afvars) {
-      adims.push_back(afvar.getDomain());
-    }
-    Type atype = TensorType::make(a.type().toTensor()->componentType, adims);
-    Var atmp(tmpNameGen(), atype);
-    Expr aiexpr = IndexExpr::make(afvars, a);
-    Stmt astmt = AssignStmt::make(atmp, aiexpr);
-    stmts.push_back(astmt);
-    return IndexedTensor::make(VarExpr::make(atmp), afvars);
+    Expr spill = isa<IndexExpr>(a) ? a : IndexExpr::make(afvars, a);
+    Var tmp(tmpNameGen(), spill.type());
+    stmts.push_back(AssignStmt::make(tmp, spill));
+    return IndexedTensor::make(VarExpr::make(tmp), afvars);
   }
 
   std::pair<Expr,Expr> spillSubExpressions(Expr a, Expr b) {
@@ -92,8 +85,8 @@ private:
   }
 
   void visit(const Sub *op) {
-    iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
-    iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
+    iassert(isScalar(op->a.type()));
+    iassert(isScalar(op->b.type()));
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
@@ -103,14 +96,28 @@ private:
 
   // TODO: Add .* amd ./ too
   void visit(const Add *op) {
-    iassert(isScalar(op->a.type()) || isa<IndexedTensor>(op->a));
-    iassert(isScalar(op->b.type()) || isa<IndexedTensor>(op->b));
+    iassert(isScalar(op->a.type()));
+    iassert(isScalar(op->b.type()));
 
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
     pair<Expr,Expr> ab = spillSubExpressions(a, b);
     expr = Add::make(ab.first, ab.second);
+  }
+
+  void visit(const CallStmt *op) {
+    vector<Expr> actuals;
+    bool changed = false;
+    for (Expr actual : op->actuals) {
+      actual = rewrite(actual);
+      if (isa<IndexExpr>(actual)) {
+        actual = spill(actual);
+        changed = true;
+      }
+      actuals.push_back(actual);
+    }
+    stmt = changed ? CallStmt::make(op->results, op->callee, actuals) : op;
   }
 
   void visit(const IndexedTensor *op) {

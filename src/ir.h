@@ -462,7 +462,8 @@ struct IndexExpr : public ExprNode<IndexExpr> {
   std::vector<IndexVar> domain() const;
 
   static Expr make(std::vector<IndexVar> resultVars, Expr value) {
-    iassert(isScalar(value.type()));
+    iassert(isScalar(value.type())) << value << " : " << value.type();
+
     for (auto &idxVar : resultVars) {  // No reduction variables on lhs
       iassert(idxVar.isFreeVar());
     }
