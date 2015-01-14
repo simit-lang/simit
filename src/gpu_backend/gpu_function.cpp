@@ -98,10 +98,12 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         int *endpoints = set->getEndpointsData();
         CUdeviceptr *endpointBuffer = new CUdeviceptr();
         size_t size = set->getSize() * set->getCardinality() * sizeof(int);
-        checkCudaErrors(cuMemAlloc(endpointBuffer, size));
-        checkCudaErrors(cuMemcpyHtoD(*endpointBuffer, endpoints, size));
-        pushedBufs.emplace(endpoints,
-                           DeviceDataHandle(endpointBuffer, size, false));
+        if (size != 0) {
+          checkCudaErrors(cuMemAlloc(endpointBuffer, size));
+          checkCudaErrors(cuMemcpyHtoD(*endpointBuffer, endpoints, size));
+          pushedBufs.emplace(endpoints,
+                             DeviceDataHandle(endpointBuffer, size, false));
+        }
         setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
                                   reinterpret_cast<void*>(*endpointBuffer)));
 
@@ -121,23 +123,27 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         CUdeviceptr *startBuffer = new CUdeviceptr();
         CUdeviceptr *nbrBuffer = new CUdeviceptr();
 
-        checkCudaErrors(cuMemAlloc(startBuffer, startSize));
-        checkCudaErrors(cuMemcpyHtoD(*startBuffer, startIndex, startSize));
-        // Pushed bufs expects non-const pointers, because some are written two.
-        // Because we specify shouldPull=false in DeviceDataHandle, this will
-        // not be written, but must be casted anyway.
-        pushedBufs.emplace(const_cast<int*>(startIndex),
-                           DeviceDataHandle(startBuffer, startSize, false));
+        if (startSize != 0) {
+          checkCudaErrors(cuMemAlloc(startBuffer, startSize));
+          checkCudaErrors(cuMemcpyHtoD(*startBuffer, startIndex, startSize));
+          // Pushed bufs expects non-const pointers, because some are written two.
+          // Because we specify shouldPull=false in DeviceDataHandle, this will
+          // not be written, but must be casted anyway.
+          pushedBufs.emplace(const_cast<int*>(startIndex),
+                             DeviceDataHandle(startBuffer, startSize, false));
+        }
         setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
                                   reinterpret_cast<void*>(*startBuffer)));
 
-        checkCudaErrors(cuMemAlloc(nbrBuffer, nbrSize));
-        checkCudaErrors(cuMemcpyHtoD(*nbrBuffer, nbrIndex, nbrSize));
-        // Pushed bufs expects non-const pointers, because some are written two.
-        // Because we specify shouldPull=false in DeviceDataHandle, this will
-        // not be written, but must be casted anyway.
-        pushedBufs.emplace(const_cast<int*>(nbrIndex),
-                           DeviceDataHandle(nbrBuffer, nbrSize, false));
+        if (nbrSize != 0) {
+          checkCudaErrors(cuMemAlloc(nbrBuffer, nbrSize));
+          checkCudaErrors(cuMemcpyHtoD(*nbrBuffer, nbrIndex, nbrSize));
+          // Pushed bufs expects non-const pointers, because some are written two.
+          // Because we specify shouldPull=false in DeviceDataHandle, this will
+          // not be written, but must be casted anyway.
+          pushedBufs.emplace(const_cast<int*>(nbrIndex),
+                             DeviceDataHandle(nbrBuffer, nbrSize, false));
+        }
         setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
                                   reinterpret_cast<void*>(*nbrBuffer)));
       }
@@ -153,18 +159,20 @@ llvm::Value *GPUFunction::pushArg(Actual& actual, bool shouldPull) {
         const ir::TensorType *ttype = ftype.toTensor();
         void *fieldData = set->getFieldData(field.name);
         size_t size = set->getSize() * ttype->size() * ttype->componentType.bytes();
-        checkCudaErrors(cuMemAlloc(devBuffer, size));
-        checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
-        pushedBufs.emplace(fieldData, DeviceDataHandle(devBuffer, size, shouldPull));
-        std::cout << "Push field: " << field.name << std::endl;
-        std::cout << "[";
-        char* data = reinterpret_cast<char*>(fieldData);
-        for (size_t i = 0; i < size; ++i) {
-          if (i != 0) std::cout << ",";
-          std::cout << std::hex << (int) data[i];
+        if (size != 0) {
+          checkCudaErrors(cuMemAlloc(devBuffer, size));
+          checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
+          pushedBufs.emplace(fieldData, DeviceDataHandle(devBuffer, size, shouldPull));
+          std::cout << "Push field: " << field.name << std::endl;
+          std::cout << "[";
+          char* data = reinterpret_cast<char*>(fieldData);
+          for (size_t i = 0; i < size; ++i) {
+            if (i != 0) std::cout << ",";
+            std::cout << std::hex << (int) data[i];
+          }
+          std::cout << "]" << std::dec << std::endl;
+          std::cout << fieldData << " -> " << (void*)(*devBuffer) << std::endl;
         }
-        std::cout << "]" << std::dec << std::endl;
-        std::cout << fieldData << " -> " << (void*)(*devBuffer) << std::endl;
         setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer),
                                   CUDA_GLOBAL_ADDRSPACE));
       }
