@@ -389,9 +389,9 @@ TEST(System, cg) {
 TEST(System, slice) {
   // Points
   Set<> points;
-  FieldRef<double> b = points.addField<double>("b");
-  FieldRef<double> c = points.addField<double>("c");
-  FieldRef<double> d = points.addField<double>("d");
+  FieldRef<simit_float> b = points.addField<simit_float>("b");
+  FieldRef<simit_float> c = points.addField<simit_float>("c");
+  FieldRef<simit_float> d = points.addField<simit_float>("d");
   
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
@@ -411,7 +411,7 @@ TEST(System, slice) {
 
   // Springs
   Set<2> springs(points,points);
-  FieldRef<double> a = springs.addField<double>("a");
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
