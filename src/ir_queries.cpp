@@ -166,7 +166,6 @@ bool isBlocked(Stmt stmt) {
   return IsBlockedVisitor().check(stmt);
 }
 
-// TODO: Make calltree always emits a callee before a caller (see cloth code).
 std::vector<Func> getCallTree(Func func) {
   class GetCallTreeVisitor : public IRVisitorCallGraph {
   public:
@@ -177,11 +176,13 @@ std::vector<Func> getCallTree(Func func) {
     }
 
   private:
-    vector<Func> callTree;
-
     using IRVisitorCallGraph::visit;
 
+    set<Func> visited;
+    vector<Func> callTree;
+
     void visit(const Func *op) {
+      visited.insert(*op);
       callTree.push_back(*op);
       IRVisitor::visit(op);
     }
