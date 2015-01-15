@@ -1,0 +1,18 @@
+element Point
+  a : tensor[2](float);
+  b : tensor[2](float);
+  c : tensor[2](float);
+end
+
+extern points  : set{Point};
+
+func fd(p : Point) -> (A : tensor[points,points](tensor[2,2](float)))
+  A(p,p) = p.a' * p.a;
+end
+
+proc main 
+  h = 10.0;
+  A = map fd to points reduce +;
+  T = h * A;
+  points.c = T * points.b;
+end

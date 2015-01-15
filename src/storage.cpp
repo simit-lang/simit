@@ -316,14 +316,47 @@ private:
       LeafVarsVisitor leafVars;
       rhs.accept(&leafVars);
 
-      // If one of the input variables to the RHS expression is SystemReduced,
-      // then the output becomes SystemReduced.
-      for (auto v : leafVars.vars) {
-        if (storage->hasStorage(v)) {
-          const TensorStorage varStorage = storage->get(v);
-          if (varStorage.getKind() == TensorStorage::SystemReduced) {
-            tensorStorage = TensorStorage(varStorage.getSystemTargetSet(),
-                                          varStorage.getSystemStorageSet());
+      // When creating a matrix by combining two matrices, the new matrix gets
+      // the storage with higher priority from the inputs.
+      // E.g. if one of the input variables to the RHS expression is dense then
+      // the output becomes dense.
+      static map<TensorStorage::Kind, unsigned> priorities = {
+        {TensorStorage::DenseRowMajor,  4},
+        {TensorStorage::SystemReduced,  3},
+        {TensorStorage::SystemDiagonal, 2},
+        {TensorStorage::SystemNone,     1},
+        {TensorStorage::Undefined,      0}
+      };
+
+      for (Var operand : leafVars.vars) {
+        if (isScalar(operand.getType())) {
+          continue;
+        }
+
+        iassert(storage->hasStorage(operand))
+            << operand << "does not have a storage descriptor";
+
+        const TensorStorage operandStorage  = storage->get(operand);
+        auto operandStorageKind = operandStorage.getKind();
+        auto tensorStorageKind = tensorStorage.getKind();
+        if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
+          switch (operandStorage.getKind()) {
+            case TensorStorage::DenseRowMajor:
+            case TensorStorage::SystemNone:
+              tensorStorage = operandStorage.getKind();
+              break;
+            case TensorStorage::SystemReduced:
+              tensorStorage =
+                  TensorStorage(operandStorage.getSystemTargetSet(),
+                                operandStorage.getSystemStorageSet());
+              break;
+            case TensorStorage::SystemDiagonal:
+              tensorStorage =
+                  TensorStorage(operandStorage.getSystemTargetSet());
+              break;
+            case TensorStorage::Undefined:
+              unreachable;
+              break;
           }
         }
       }

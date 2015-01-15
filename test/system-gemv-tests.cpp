@@ -719,6 +719,39 @@ TEST(System, gemv_blocked_diagonal_storage) {
   ASSERT_EQ(366.0, c.get(p2)(1));
 }
 
+TEST(System, gemv_blocked_scaled_diagonal) {
+  Set<> points;
+  FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
+  FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
+  FieldRef<simit_float,2> a = points.addField<simit_float,2>("a");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  a.set(p0, {1.0, 2.0});
+  a.set(p1, {3.0, 4.0});
+  a.set(p2, {5.0, 6.0});
+
+  b.set(p0, {1.0, 1.0});
+  b.set(p1, {1.0, 1.0});
+  b.set(p2, {1.0, 1.0});
+
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+  f->bind("points", &points);
+  f->runSafe();
+
+  ASSERT_EQ(30.0,  c.get(p0)(0));
+  ASSERT_EQ(60.0,  c.get(p0)(1));
+
+  ASSERT_EQ(210.0, c.get(p1)(0));
+  ASSERT_EQ(280.0, c.get(p1)(1));
+
+  ASSERT_EQ(550.0, c.get(p2)(0));
+  ASSERT_EQ(660.0, c.get(p2)(1));
+}
+
 TEST(System, gemv_diagonal_storage_and_sysreduced) {
   // Points
   Set<> points;
@@ -733,10 +766,6 @@ TEST(System, gemv_diagonal_storage_and_sysreduced) {
   a.set(p0, 1.0);
   a.set(p1, 3.0);
   a.set(p2, 2.0);
-
-  //b.set(p0, 1.0);
-  //b.set(p1, 2.0);
-  //b.set(p2, 3.0);
 
   // Springs
   Set<2> springs(points,points);
@@ -761,4 +790,3 @@ TEST(System, gemv_diagonal_storage_and_sysreduced) {
   // Check that outputs are correct
   ASSERT_EQ(2.0, (simit_float)c.get(p0));
  }
-
