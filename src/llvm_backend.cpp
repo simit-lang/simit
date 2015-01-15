@@ -1150,7 +1150,21 @@ void LLVMBackend::visit(const TensorWrite *op) {
 }
 
 
-// helper methodes
+// helper methods
+llvm::Function *LLVMBackend::getBuiltIn(std::string name,
+                                        llvm::Type *retTy,
+                                        std::vector<llvm::Type*> argTys) {
+  llvm::FunctionType *funcTy;
+  if (argTys.size() > 0) {
+    funcTy = llvm::FunctionType::get(retTy, argTys, false);
+  }
+  else {
+    funcTy = llvm::FunctionType::get(retTy, false);
+  }
+  module->getOrInsertFunction(name, funcTy);
+  return module->getFunction(name);
+}
+
 llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
                                         std::string fieldName) {
   assert(elemOrSet.type().isElement() || elemOrSet.type().isSet());
@@ -1326,7 +1340,7 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
                                                bool externalLinkage,
                                                bool doesNotThrow) {
   llvm::Function *llvmFunc = createPrototype(name, arguments, results, module,
-                                             externalLinkage, doesNotThrow, global_addrspace());
+                                             externalLinkage, doesNotThrow);
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
   builder->SetInsertPoint(entry);
 

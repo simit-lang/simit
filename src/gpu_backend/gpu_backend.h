@@ -79,17 +79,17 @@ protected:
 
   virtual void visit(const ir::GPUKernel *);
 
-  // Emits calls to nvvm intrinsics to read thread ids
+  // Emits calls to nvvm intrinsics
   llvm::Value *emitBarrier();
   llvm::Value *emitCheckRoot();
   llvm::Value *getTidX();
   llvm::Value *getTidY();
   llvm::Value *getTidZ();
+  llvm::Value *emitCastGlobalToGen(llvm::Value *src);
 
   void emitThreadBarrier();
   void emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value);
   void emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value);
-  void emitTid0Code(const ir::Stmt& body);
   void emitKernelLaunch(llvm::Function *kernel,
                         std::vector<llvm::Value*> args,
                         GPUSharding sharding);

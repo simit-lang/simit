@@ -134,8 +134,7 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
             new DeviceDataHandle(literal.data, devBuffer, literal.size));
         std::vector<DeviceDataHandle*> argBufs = { pushedBufs.back() };
         argBufMap.emplace(formal, argBufs);
-        return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer),
-                       CUDA_GLOBAL_ADDRSPACE);
+        return llvmPtr(actual.getType(), reinterpret_cast<void*>(*devBuffer));
       }
     }
     case ir::Type::Element: ierror << "Element arg not supported";
@@ -143,8 +142,7 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
       SetBase *set = actual.getSet();
       const ir::SetType *setType = actual.getType().toSet();
 
-      llvm::StructType *llvmSetType =
-          createLLVMType(setType, CUDA_GLOBAL_ADDRSPACE);
+      llvm::StructType *llvmSetType = createLLVMType(setType);
       std::vector<llvm::Constant*> setData;
 
       // Set size
@@ -162,7 +160,7 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
           pushedBufs.push_back(new DeviceDataHandle(
               endpoints, endpointBuffer, size));
         }
-        setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
+        setData.push_back(llvmPtr(LLVM_INTPTR,
                                   reinterpret_cast<void*>(*endpointBuffer)));
 
         // Edges index
@@ -188,7 +186,7 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
           pushedBufs.push_back(new DeviceDataHandle(
               const_cast<int*>(startIndex), startBuffer, startSize));
         }
-        setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
+        setData.push_back(llvmPtr(LLVM_INTPTR,
                                   reinterpret_cast<void*>(*startBuffer)));
 
         if (nbrSize != 0) {
@@ -198,7 +196,7 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
           pushedBufs.push_back(new DeviceDataHandle(
               const_cast<int*>(nbrIndex), nbrBuffer, nbrSize));
         }
-        setData.push_back(llvmPtr(LLVM_INTPTR_GLOBAL,
+        setData.push_back(llvmPtr(LLVM_INTPTR,
                                   reinterpret_cast<void*>(*nbrBuffer)));
       }
 
@@ -230,8 +228,7 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
           std::cout << "]" << std::dec << std::endl;
           std::cout << fieldData << " -> " << (void*)(*devBuffer) << std::endl;
         }
-        setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer),
-                                  CUDA_GLOBAL_ADDRSPACE));
+        setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer)));
       }
       argBufMap.emplace(formal, fieldHandles);
 
@@ -282,8 +279,7 @@ llvm::Function *GPUFunction::createHarness(
   std::string kernelName = kernel->getName().str();
   const std::string harnessName = kernelName + std::string("_harness");
   llvm::Function *harness = createPrototype(harnessName, {}, {},
-                                            module, true, false,
-                                            CUDA_GLOBAL_ADDRSPACE);
+                                            module, true, false);
 
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
   // Ensure the function declaration is present in harness module
