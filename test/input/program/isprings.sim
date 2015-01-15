@@ -102,7 +102,7 @@ proc main
 
   tol = 1e-6;
   maxiters = 5;
-  r = v - (MDK*vguess);
+  r = f - (MDK*vguess);
   p = r;
   iter = 0;
   v = vguess;
