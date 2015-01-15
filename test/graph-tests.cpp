@@ -214,16 +214,16 @@ TEST(Field, boolean) {
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
 
-  ASSERT_EQ(false, b(p0));
-  ASSERT_EQ(false, b(p1));
+  ASSERT_FALSE(b(p0));
+  ASSERT_FALSE(b(p1));
 
   TensorRef<bool> boolean = b(p0);
   ASSERT_SIMIT_FLOAT_EQ(0u, boolean.getOrder());
   boolean = true;
   b(p1) = true;
 
-  ASSERT_EQ(true, b(p0));
-  ASSERT_EQ(true, b(p1));
+  ASSERT_TRUE(b(p0));
+  ASSERT_TRUE(b(p1));
 }
 
 TEST(EdgeSet, CreateAndGetEdge) {
