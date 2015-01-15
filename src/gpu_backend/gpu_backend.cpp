@@ -459,6 +459,8 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   // Stash the symtable
   ScopedMap<simit::ir::Var, llvm::Value*> oldSymtable = symtable;
   symtable.clear();
+  // Stash the current basic block
+  llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
   // Create LLVM func
   llvm::Function *kernel = emitEmptyFunction(
@@ -502,7 +504,7 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   symtable = oldSymtable;
 
   // Emit a dynamic kernel launch
-  builder.reset(new LLVMIRBuilder(&func->getEntryBlock()));
+  builder.reset(new LLVMIRBuilder(prevBB));
   std::vector<llvm::Value*> args;
   for (auto &irArg : irFunc.getArguments()) {
     args.push_back(symtable.get(irArg));
