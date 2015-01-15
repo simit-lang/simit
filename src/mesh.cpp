@@ -375,54 +375,54 @@ int findFace(const IntMap & m, int ei, const MeshVol & vol){
 ///save surface mesh obj file. Only works for hexahedral mesh
 int MeshVol::saveHexObj(const char * filename)
 {
-  ofstream out;
-  int status =openOfstream(out, filename);
-  if(status<0){
-    return status;
+  if(surf.v.size()==0){
+    makeHexSurf();
   }
+  return surf.save(filename);
+}
+
+void MeshVol::makeHexSurf()
+{
   //is a face exterior
-  if(exterior.size()==0){
-    exterior.resize(e.size());
-    for(unsigned int ii = 0;ii<exterior.size();ii++){
-      for (int jj = 0;jj<6;jj++){
-        exterior[ii][jj] = true;
-      }
-    }
-    
-    //mark exterior faces
-    vector<vector<int > > eleNeighbor;
-    elementNeighbors(eleNeighbor);
-    for(unsigned int ii =0 ;ii<v.size();ii++){
-      for(unsigned int nj = 0; nj<eleNeighbor[ii].size()-1;nj++){
-        int jj = eleNeighbor[ii][nj];
-        for(unsigned int nk = nj+1; nk<eleNeighbor[ii].size();nk++){
-          int kk = eleNeighbor[ii][nk];
-          IntMap im;
-          for(unsigned int vv = 0;vv<e[jj].size();vv++){
-            im[e[jj][vv]] = 1;
+  exterior.resize(e.size());
+  for(unsigned int ii = 0;ii<exterior.size();ii++){
+    unsigned int nV = e[ii].size();
+    exterior[ii].resize(nV,true);
+  }
+  
+  //mark exterior faces
+  vector<vector<int > > eleNeighbor;
+  elementNeighbors(eleNeighbor);
+  for(unsigned int ii =0 ;ii<v.size();ii++){
+    for(unsigned int nj = 0; nj<eleNeighbor[ii].size()-1;nj++){
+      int jj = eleNeighbor[ii][nj];
+      for(unsigned int nk = nj+1; nk<eleNeighbor[ii].size();nk++){
+        int kk = eleNeighbor[ii][nk];
+        IntMap im;
+        for(unsigned int vv = 0;vv<e[jj].size();vv++){
+          im[e[jj][vv]] = 1;
+        }
+        for(unsigned int vv = 0;vv<e[kk].size();vv++){
+          int key = e[kk][vv];
+          auto entry = im.find(key);
+          if(entry!=im.end()){
+            im[key] = 2;
+          }else{
+            im[key] = 1;
           }
-          for(unsigned int vv = 0;vv<e[kk].size();vv++){
-            int key = e[kk][vv];
-            auto entry = im.find(key);
-            if(entry!=im.end()){
-              im[key] = 2;
-            }else{
-              im[key] = 1;
-            }
-          }
-          if(im.size()==12){
-            //share a face
-            int fi = findFace(im, jj, *this);
-            exterior[jj][fi] = false;
-            fi = findFace(im, kk, *this);
-            exterior[kk][fi] = false;
-          }
+        }
+        if(im.size()==12){
+          //share a face
+          int fi = findFace(im, jj, *this);
+          exterior[jj][fi] = false;
+          fi = findFace(im, kk, *this);
+          exterior[kk][fi] = false;
         }
       }
     }
-  }  
+  }
   //save exterior vertices and exterior faces
-  vector<int> vidx(v.size(),-1);
+  vidx.resize(v.size(),-1);
   int vCnt = 0;
   //save vertices
   for(unsigned int ii = 0; ii<e.size();ii++){
@@ -434,7 +434,7 @@ int MeshVol::saveHexObj(const char * filename)
         int vi = e[ii][HexFaces[fi][fv]];
         if(vidx[vi]<0){
           vidx[vi] = vCnt;
-          out<<"v "<<v[vi][0]<<" "<<v[vi][1]<<" "<<v[vi][2]<<"\n";
+          surf.v.push_back(v[vi]);
           vCnt++;
         }
       }
@@ -448,18 +448,15 @@ int MeshVol::saveHexObj(const char * filename)
       }
       int trigs[2][3] = {{0,1,2},{2,3,0}};
       for(int ti = 0;ti<2;ti++){
-        out<<"f";
+        std::array< int,3> newTrig;
         for(int tv = 0;tv<3;tv++){
           int vi = e[ii][HexFaces[fi][trigs[ti][tv]]];
-          vi = vidx[vi];
-          out<<" "<<(vi+1);  
+          newTrig[tv] = vidx[vi];
         }
-        out<<"\n";
+        surf.t.push_back(newTrig);
       }
-      
     }
   }
-  return 0;
 }
 
 int findTetFace(const IntMap & m, int ei, const MeshVol & vol)
@@ -481,53 +478,53 @@ int findTetFace(const IntMap & m, int ei, const MeshVol & vol)
 ///save surface mesh obj file. Only works for hexahedral mesh
 int MeshVol::saveTetObj(const char * filename)
 {
-  ofstream out;
-  int status =openOfstream(out, filename);
-  if(status<0){
-    return status;
+  if(surf.v.size()==0){
+    makeTetSurf();
   }
-  if(exterior.size()==0){
-    exterior.resize(e.size());
-    for(unsigned int ii = 0;ii<exterior.size();ii++){
-      for (int jj = 0;jj<4;jj++){
-        exterior[ii][jj] = true;
-      }
-    }
+  return surf.save(filename);
+}
+
+void MeshVol::makeTetSurf()
+{
+  exterior.resize(e.size());
+  for(unsigned int ii = 0;ii<exterior.size();ii++){
+    unsigned int nV = e[ii].size();
+    exterior[ii].resize(nV, true);
+  }
   
-    //mark exterior faces
-    vector<vector<int > > eleNeighbor;
-    elementNeighbors(eleNeighbor);
-    for(unsigned int ii =0 ;ii<v.size();ii++){
-      for(unsigned int nj = 0; nj<eleNeighbor[ii].size()-1;nj++){
-        int jj = eleNeighbor[ii][nj];
-        for(unsigned int nk = nj+1; nk<eleNeighbor[ii].size();nk++){
-          int kk = eleNeighbor[ii][nk];
-          IntMap im;
-          for(unsigned int vv = 0;vv<e[jj].size();vv++){
-            im[e[jj][vv]] = 1;
+  //mark exterior faces
+  vector<vector<int > > eleNeighbor;
+  elementNeighbors(eleNeighbor);
+  for(unsigned int ii =0 ;ii<v.size();ii++){
+    for(unsigned int nj = 0; nj<eleNeighbor[ii].size()-1;nj++){
+      int jj = eleNeighbor[ii][nj];
+      for(unsigned int nk = nj+1; nk<eleNeighbor[ii].size();nk++){
+        int kk = eleNeighbor[ii][nk];
+        IntMap im;
+        for(unsigned int vv = 0;vv<e[jj].size();vv++){
+          im[e[jj][vv]] = 1;
+        }
+        for(unsigned int vv = 0;vv<e[kk].size();vv++){
+          int key = e[kk][vv];
+          auto entry = im.find(key);
+          if(entry!=im.end()){
+            im[key] = 2;
+          }else{
+            im[key] = 1;
           }
-          for(unsigned int vv = 0;vv<e[kk].size();vv++){
-            int key = e[kk][vv];
-            auto entry = im.find(key);
-            if(entry!=im.end()){
-              im[key] = 2;
-            }else{
-              im[key] = 1;
-            }
-          }
-          if(im.size()==5){
-            //share a face
-            int fi = findTetFace(im, jj, *this);
-            exterior[jj][fi] = false;
-            fi = findTetFace(im, kk, *this);
-            exterior[kk][fi] = false;
-          }
+        }
+        if(im.size()==5){
+          //share a face
+          int fi = findTetFace(im, jj, *this);
+          exterior[jj][fi] = false;
+          fi = findTetFace(im, kk, *this);
+          exterior[kk][fi] = false;
         }
       }
     }
   }
   //save exterior vertices and exterior faces
-  vector<int> vidx(v.size(),-1);
+  vidx.resize(v.size(),-1);
   int vCnt = 0;
   //save vertices
   for(unsigned int ii = 0; ii<e.size();ii++){
@@ -539,7 +536,7 @@ int MeshVol::saveTetObj(const char * filename)
         int vi = e[ii][TetFaces[fi][fv]];
         if(vidx[vi]<0){
           vidx[vi] = vCnt;
-          out<<"v "<<v[vi][0]<<" "<<v[vi][1]<<" "<<v[vi][2]<<"\n";
+          surf.v.push_back(v[vi]);
           vCnt++;
         }
       }
@@ -551,15 +548,14 @@ int MeshVol::saveTetObj(const char * filename)
       if(!exterior[ii][fi]){
         continue;
       }
-      out<<"f";
+      array<int,3>newTrig;
       for(int fv = 0; fv<3; fv++){
         int vi = e[ii][TetFaces[fi][fv]];
         vi = vidx[vi];
-        out<<" "<<(vi+1);  
+        newTrig[fv] = vi;
       }
-      out<<"\n";
+      surf.t.push_back(newTrig);
     }
   }
-  return 0;
 }
 

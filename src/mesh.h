@@ -63,7 +63,17 @@ struct MeshVol{
   void elementNeighbors(std::vector<std::vector<int> > & eleNeighbor);
   
   //is a face exterior
-  std::vector<std::array<bool,4> >exterior;
+  std::vector<std::vector<bool> >exterior;
+  //surface of the volume.
+  Mesh surf;
+  //map from volume vertex index to surface vertex index.
+  std::vector<int> vidx;
+  //copy vertices to surface.
+  void updateSurfVert();
+  //construct surface mesh for hexahedral finite elements.
+  void makeHexSurf();
+  //construct surface for tetrahedral.
+  void makeTetSurf();
 };
 
 }
