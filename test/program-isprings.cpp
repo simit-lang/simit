@@ -152,12 +152,41 @@ TEST(Program, DISABLED_isprings) {
   if (!f) FAIL();
   f->bind("points", &points);
   f->bind("springs", &springs);
-//  for (size_t i=0; i < 10; ++i) {
+  for (size_t i=0; i < 9; ++i) {
     f->runSafe();
-//  }
+  }
 
-  // Check outputs
-//  std::cout << x << std::endl;
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.527683955297994, v(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.72137873080947,  v(p2)(2));
+
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.967523428995587,  x(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(1.9602574003985656, x(p2)(2));
+
+  f->runSafe();
+
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.533862882516396, v(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.754380624415897, v(p2)(2));
 
   ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p0)(0));
   ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p0)(1));

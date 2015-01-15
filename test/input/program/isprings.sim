@@ -100,7 +100,7 @@ proc main
   var vguess : tensor[points](tensor[3](float)) = 0.0;
   var v : tensor[points](tensor[3](float));
 
-  tol = 1e-6;
+  tol = 1e-5;
   maxiters = 5;
   r = f - (MDK*vguess);
   p = r;
