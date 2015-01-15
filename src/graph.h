@@ -753,6 +753,16 @@ class TensorRef {
     return *this;
   }
 
+  inline
+  TensorRef<T, dimensions...> &operator=(const std::initializer_list<T> &vals) {
+    iassert(vals.size() == util::product<dimensions...>::value);
+    size_t i=0;
+    for (T val : vals) {
+      data[i++] = val;
+    }
+    return *this;
+  }
+
   inline operator T() const {
     static_assert(sizeof...(dimensions) == 0,
                   "Can only convert scalar tensors to scalar values.");

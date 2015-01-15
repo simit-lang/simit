@@ -105,19 +105,24 @@ void Function::bind(const std::string &argName, SetBase *set) {
     }
 
     uassert(setFieldTypeComponentType == elemFieldType->componentType)
-        << "Set type does not match function argument type";
+        << "field type"
+        << "does not match function argument type" << *elemFieldType;
+
     uassert(setFieldType->getOrder() == elemFieldType->order())
-        << "Set type does not match function argument type";
+        << "field type"
+        << "does not match function argument type" << *elemFieldType;
 
     const vector<ir::IndexDomain> &argFieldTypeDims = elemFieldType->dimensions;
     for (size_t i=0; i < elemFieldType->order(); ++i) {
       uassert(argFieldTypeDims[i].getIndexSets().size() == 1)
-          << "Set type does not match function argument type";
+          << "field type"
+          << "does not match function argument type" << *elemFieldType;
 
       size_t argFieldRange = argFieldTypeDims[i].getIndexSets()[0].getSize();
 
       uassert(setFieldType->getDimension(i) == argFieldRange)
-          << "Set type does not match function argument type";
+          << "field type"
+          << "does not match function argument type" << *elemFieldType;
     }
   }
 

@@ -32,21 +32,21 @@ TEST(Program, isprings_simple) {
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
 
-  x.set(p0, {0.0, 0.0, 0.0});
-  x.set(p1, {1.0, 0.0, 0.0});
-  x.set(p2, {2.0, 0.0, 0.0});
+  x(p0) = {0.0, 0.0, 0.0};
+  x(p1) = {1.0, 0.0, 0.0};
+  x(p2) = {2.0, 0.0, 0.0};
 
-  v.set(p0, {0.1, 0.0, 0.0});
-  v.set(p1, {0.1, 0.0, 0.0});
-  v.set(p2, {0.1, 0.0, 0.0});
+  v(p0) = {0.1, 0.0, 0.0};
+  v(p1) = {0.1, 0.0, 0.0};
+  v(p2) = {0.1, 0.0, 0.0};
 
-  zeros.set(p0, {0.0, 0.0, 0.0});
-  zeros.set(p1, {0.0, 0.0, 0.0});
-  zeros.set(p2, {0.0, 0.0, 0.0});
+  zeros(p0) = {0.0, 0.0, 0.0};
+  zeros(p1) = {0.0, 0.0, 0.0};
+  zeros(p2) = {0.0, 0.0, 0.0};
 
-  ones.set(p0, {1.0, 1.0, 1.0});
-  ones.set(p1, {1.0, 1.0, 1.0});
-  ones.set(p2, {1.0, 1.0, 1.0});
+  ones(p0) = {1.0, 1.0, 1.0};
+  ones(p1) = {1.0, 1.0, 1.0};
+  ones(p2) = {1.0, 1.0, 1.0};
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
