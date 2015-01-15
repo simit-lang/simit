@@ -89,7 +89,7 @@ TEST(Program, isprings_simple) {
   ASSERT_SIMIT_FLOAT_EQ(-0.0103815692520815, x2(p2)(2));
 }
 
-TEST(Program, DISABLED_isprings) {
+TEST(Program, isprings) {
   // Points
   Set<> points;
   simit::FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");

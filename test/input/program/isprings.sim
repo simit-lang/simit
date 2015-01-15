@@ -97,11 +97,12 @@ proc main
   f = fg + fe;
   f = M*points.v + h*f;
   
-  var vguess : tensor[points](tensor[3](float)) = 0.0;
+  % We should not be resetting vguess to zero every time step
+  vguess = points.v;
   var v : tensor[points](tensor[3](float));
 
   tol = 1e-5;
-  maxiters = 5;
+  maxiters = 50;
   r = f - (MDK*vguess);
   p = r;
   iter = 0;
@@ -119,6 +120,7 @@ proc main
 
     oldrsqn = dot(r,r);
     r = r - alpha * Ap;
+    normr = norm(r);
     newrsqn = dot(r,r);
     beta = newrsqn/oldrsqn;
     p = r + beta*p;
@@ -126,8 +128,7 @@ proc main
     iter = iter + 1;
   end
 
-  print v;
-
   points.v = v;
   points.x = points.x + h * points.v;
+
 end
