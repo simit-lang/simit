@@ -97,13 +97,37 @@ proc main
   f = fg + fe;
   f = M*points.v + h*f;
   
-  tmp = MDK * points.ones;
-  print tmp;
-  
+  var vguess : tensor[points](tensor[3](float)) = 0.0;
+  var v : tensor[points](tensor[3](float));
 
+  tol = 1e-6;
+  maxiters = 5;
+  r = v - (MDK*vguess);
+  p = r;
+  iter = 0;
+  v = vguess;
 
-%  v = MDK \ f;
+  normr = norm(r);
+  while (normr > tol) and (iter < maxiters)
+    Ap = MDK * p;
 
-%  points.v = v;
-%  points.x = points.x + h * points.v;
+    denom = dot(p, Ap);
+
+    alpha = dot(r, r);
+    alpha = alpha / denom;
+    v = v + alpha*p;
+
+    oldrsqn = dot(r,r);
+    r = r - alpha * Ap;
+    newrsqn = dot(r,r);
+    beta = newrsqn/oldrsqn;
+    p = r + beta*p;
+
+    iter = iter + 1;
+  end
+
+  print v;
+
+  points.v = v;
+  points.x = points.x + h * points.v;
 end
