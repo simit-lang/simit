@@ -647,6 +647,14 @@ class FieldRefBaseParameterized : public FieldRefBase {
     return TensorRef<T, dimensions...>(getElemDataPtr(element));
   }
 
+  TensorRef<T, dimensions...> operator()(ElementRef element) {
+    return get(element);
+  }
+
+  const TensorRef<T, dimensions...> operator()(ElementRef element) const {
+    return get(element);
+  }
+
   void set(ElementRef element, std::initializer_list<T> values) {
     size_t tensorSize = TensorRef<T,dimensions...>::getSize();
     iassert(values.size() == tensorSize) << "Incorrect number of init values";
