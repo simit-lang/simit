@@ -61,6 +61,9 @@ struct MeshVol{
   int saveTetObj(const char * filename);
   ///for each vertex, what elements contain the vertex.
   void elementNeighbors(std::vector<std::vector<int> > & eleNeighbor);
+  
+  //is a face exterior
+  std::vector<std::array<bool,4> >exterior;
 };
 
 }

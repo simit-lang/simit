@@ -381,45 +381,46 @@ int MeshVol::saveHexObj(const char * filename)
     return status;
   }
   //is a face exterior
-  vector<array<bool,6> >exterior(e.size());
-  for(unsigned int ii = 0;ii<exterior.size();ii++){
-    for (int jj = 0;jj<6;jj++){
-      exterior[ii][jj] = true;
+  if(exterior.size()==0){
+    exterior.resize(e.size());
+    for(unsigned int ii = 0;ii<exterior.size();ii++){
+      for (int jj = 0;jj<6;jj++){
+        exterior[ii][jj] = true;
+      }
     }
-  }
-  
-  //mark exterior faces
-  vector<vector<int > > eleNeighbor;
-  elementNeighbors(eleNeighbor);
-  for(unsigned int ii =0 ;ii<v.size();ii++){
-    for(unsigned int nj = 0; nj<eleNeighbor[ii].size()-1;nj++){
-      int jj = eleNeighbor[ii][nj];
-      for(unsigned int nk = nj+1; nk<eleNeighbor[ii].size();nk++){
-        int kk = eleNeighbor[ii][nk];
-        IntMap im;
-        for(unsigned int vv = 0;vv<e[jj].size();vv++){
-          im[e[jj][vv]] = 1;
-        }
-        for(unsigned int vv = 0;vv<e[kk].size();vv++){
-          int key = e[kk][vv];
-          auto entry = im.find(key);
-          if(entry!=im.end()){
-            im[key] = 2;
-          }else{
-            im[key] = 1;
+    
+    //mark exterior faces
+    vector<vector<int > > eleNeighbor;
+    elementNeighbors(eleNeighbor);
+    for(unsigned int ii =0 ;ii<v.size();ii++){
+      for(unsigned int nj = 0; nj<eleNeighbor[ii].size()-1;nj++){
+        int jj = eleNeighbor[ii][nj];
+        for(unsigned int nk = nj+1; nk<eleNeighbor[ii].size();nk++){
+          int kk = eleNeighbor[ii][nk];
+          IntMap im;
+          for(unsigned int vv = 0;vv<e[jj].size();vv++){
+            im[e[jj][vv]] = 1;
           }
-        }
-        if(im.size()==12){
-          //share a face
-          int fi = findFace(im, jj, *this);
-          exterior[jj][fi] = false;
-          fi = findFace(im, kk, *this);
-          exterior[kk][fi] = false;
+          for(unsigned int vv = 0;vv<e[kk].size();vv++){
+            int key = e[kk][vv];
+            auto entry = im.find(key);
+            if(entry!=im.end()){
+              im[key] = 2;
+            }else{
+              im[key] = 1;
+            }
+          }
+          if(im.size()==12){
+            //share a face
+            int fi = findFace(im, jj, *this);
+            exterior[jj][fi] = false;
+            fi = findFace(im, kk, *this);
+            exterior[kk][fi] = false;
+          }
         }
       }
     }
-  }
-  
+  }  
   //save exterior vertices and exterior faces
   vector<int> vidx(v.size(),-1);
   int vCnt = 0;
@@ -485,46 +486,46 @@ int MeshVol::saveTetObj(const char * filename)
   if(status<0){
     return status;
   }
-  //is a face exterior
-  vector<array<bool,4> >exterior(e.size());
-  for(unsigned int ii = 0;ii<exterior.size();ii++){
-    for (int jj = 0;jj<4;jj++){
-      exterior[ii][jj] = true;
+  if(exterior.size()==0){
+    exterior.resize(e.size());
+    for(unsigned int ii = 0;ii<exterior.size();ii++){
+      for (int jj = 0;jj<4;jj++){
+        exterior[ii][jj] = true;
+      }
     }
-  }
   
-  //mark exterior faces
-  vector<vector<int > > eleNeighbor;
-  elementNeighbors(eleNeighbor);
-  for(unsigned int ii =0 ;ii<v.size();ii++){
-    for(unsigned int nj = 0; nj<eleNeighbor[ii].size()-1;nj++){
-      int jj = eleNeighbor[ii][nj];
-      for(unsigned int nk = nj+1; nk<eleNeighbor[ii].size();nk++){
-        int kk = eleNeighbor[ii][nk];
-        IntMap im;
-        for(unsigned int vv = 0;vv<e[jj].size();vv++){
-          im[e[jj][vv]] = 1;
-        }
-        for(unsigned int vv = 0;vv<e[kk].size();vv++){
-          int key = e[kk][vv];
-          auto entry = im.find(key);
-          if(entry!=im.end()){
-            im[key] = 2;
-          }else{
-            im[key] = 1;
+    //mark exterior faces
+    vector<vector<int > > eleNeighbor;
+    elementNeighbors(eleNeighbor);
+    for(unsigned int ii =0 ;ii<v.size();ii++){
+      for(unsigned int nj = 0; nj<eleNeighbor[ii].size()-1;nj++){
+        int jj = eleNeighbor[ii][nj];
+        for(unsigned int nk = nj+1; nk<eleNeighbor[ii].size();nk++){
+          int kk = eleNeighbor[ii][nk];
+          IntMap im;
+          for(unsigned int vv = 0;vv<e[jj].size();vv++){
+            im[e[jj][vv]] = 1;
           }
-        }
-        if(im.size()==5){
-          //share a face
-          int fi = findTetFace(im, jj, *this);
-          exterior[jj][fi] = false;
-          fi = findTetFace(im, kk, *this);
-          exterior[kk][fi] = false;
+          for(unsigned int vv = 0;vv<e[kk].size();vv++){
+            int key = e[kk][vv];
+            auto entry = im.find(key);
+            if(entry!=im.end()){
+              im[key] = 2;
+            }else{
+              im[key] = 1;
+            }
+          }
+          if(im.size()==5){
+            //share a face
+            int fi = findTetFace(im, jj, *this);
+            exterior[jj][fi] = false;
+            fi = findTetFace(im, kk, *this);
+            exterior[kk][fi] = false;
+          }
         }
       }
     }
   }
-  
   //save exterior vertices and exterior faces
   vector<int> vidx(v.size(),-1);
   int vCnt = 0;
