@@ -372,12 +372,23 @@ int findFace(const IntMap & m, int ei, const MeshVol & vol){
   return 0;
 }
 
+void MeshVol::updateSurfVert()
+{
+  for(unsigned int ii = 0;ii<v.size();ii++){
+    if(vidx[ii]<0){
+      continue;
+    }
+    surf.v[vidx[ii]] = v[ii];
+  }
+}
+
 ///save surface mesh obj file. Only works for hexahedral mesh
 int MeshVol::saveHexObj(const char * filename)
 {
   if(surf.v.size()==0){
     makeHexSurf();
   }
+  updateSurfVert();
   return surf.save(filename);
 }
 
@@ -481,6 +492,7 @@ int MeshVol::saveTetObj(const char * filename)
   if(surf.v.size()==0){
     makeTetSurf();
   }
+  updateSurfVert();
   return surf.save(filename);
 }
 
