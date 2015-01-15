@@ -130,6 +130,7 @@ TEST(Program, DISABLED_isprings) {
   k(s0) = stiffness;
   k(s1) = stiffness;
   m(s0) = PI_*radius*radius*l0_*density;
+  m(s1) = PI_*radius*radius*l0_*density;
 
   for (auto &p : points) {
     if (x(p)(2) < zfloor) {
