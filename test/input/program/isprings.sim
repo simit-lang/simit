@@ -18,7 +18,9 @@ func compute_damping(p : Point) ->
     (D : tensor[points,points](tensor[3,3](float)))
   viscous = 1.0e-1;
   I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  D(p) = viscous*I;
+  if not p.fixed
+    D(p) = viscous*I;
+  end
 end
 
 func compute_mass(s : Spring, p : (Point*2)) ->
