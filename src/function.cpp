@@ -99,6 +99,9 @@ void Function::bind(const std::string &argName, SetBase *set) {
       case ComponentType::FLOAT:
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float);
         break;
+      case ComponentType::BOOLEAN:
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Boolean);
+        break;
     }
 
     uassert(setFieldTypeComponentType == elemFieldType->componentType)

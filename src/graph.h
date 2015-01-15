@@ -176,6 +176,10 @@ public:
           data[element.ident] = data[numElements-1];
           break;
         }
+        case ComponentType::BOOLEAN: {
+          bool* data = (bool*)f->data;
+          data[element.ident] = data[numElements-1];
+        }
       }
     }
     numElements--;
