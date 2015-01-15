@@ -1225,8 +1225,14 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
     }
     case TensorStorage::SystemDiagonal: {
       iassert(tensorType->dimensions.size() > 0);
-      auto dimension = tensorType->dimensions[0];
-      len = emitComputeLen(dimension);
+
+      // Just need one outer dimensions because diagonal
+      len = emitComputeLen(tensorType->outerDimensions()[0]);
+
+      Type blockType = tensorType->blockType();
+      llvm::Value *blockLen = emitComputeLen(blockType.toTensor(),
+                                             TensorStorage::DenseRowMajor);
+      len = builder->CreateMul(len, blockLen);
       break;
     }
     case TensorStorage::SystemNone:

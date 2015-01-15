@@ -360,8 +360,9 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   public:
     std::vector<Stmt> liftedStmts;
 
-    DiagonalReadsRewriter(const Storage& storage, Var outerIndexVar, LoopVars loopVars) :
-    storage(storage), outerIndexVar(outerIndexVar), loopVars(loopVars) {
+    DiagonalReadsRewriter(const Storage& storage, Var outerIndexVar,
+                          LoopVars loopVars)
+        :storage(storage), loopVars(loopVars), outerIndexVar(outerIndexVar) {
       currentTensorWrite = nullptr;
     }
 
@@ -414,7 +415,6 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
         for (auto x: currentTensorWrite->indices)
           newWriteIndices.push_back(outerIndexVar);
 
-        cout << "making liftedStmt" << endl;
         auto newRead = TensorRead::make(tensor,newIndices);
         Expr newWriteTensor = currentTensorWrite->tensor;
         
@@ -425,8 +425,7 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
           // indices
           auto containingTensorExpr = to<TensorRead>(containingToCheck);
           newRead = TensorRead::make(newRead, containingTensorExpr->indices);
-          cout << " contianing expr's indices are " << util::join(containingTensorExpr->indices) << endl;
-          
+
           // we also need to change the write such that the new write indices go
           // outermost
           iassert(isa<TensorRead>(newWriteTensor));
@@ -453,10 +452,8 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
         }
         liftedStmts.push_back(liftedStmt);
 
-        cout << "making lhsRead" << endl;
         Expr lhsRead = TensorRead::make(currentTensorWrite->tensor,
                                         currentTensorWrite->indices);
-        cout << "making binop with lhsRead" << lhsRead << " and other " << otherExpr << endl;
         
         if (containingOther.defined()) {
           auto containingTensorExpr = to<TensorRead>(containingOther);
