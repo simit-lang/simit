@@ -127,6 +127,8 @@ void Function::bind(const std::string &argName, SetBase *set) {
   }
 
   actuals[argName].bind(set);
+  // All sets are externs, and should be considered outputs
+  actuals[argName].setOutput(true);
   initRequired = true;
 }
 
