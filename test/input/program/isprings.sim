@@ -1,0 +1,104 @@
+element Point
+  x : tensor[3](float);
+  v : tensor[3](float);
+  fixed : bool;
+end
+
+element Spring
+  k  : float;
+  l0 : float;
+  m  : float;
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+func compute_damping(p : Point) ->
+    (D : tensor[points,points](tensor[3,3](float)))
+  viscous = 1.0e-1;
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  D(p) = viscous*I;
+end
+
+func compute_mass(s : Spring, p : (Point*2)) ->
+    (M  : tensor[points,points](tensor[3,3](float)),
+     fg : tensor[points](tensor[3](float)))
+  grav = [0.0, 0.0, -9.81];
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  free0 = not p(0).fixed;
+  free1 = not p(1).fixed;
+  mass0 = 1.0;
+  mass1 = 1.0;
+  fg0 = [0.0, 0.0, 0.0];
+  fg1 = [0.0, 0.0, 0.0];
+  if free0
+    mass0 = 0.5*s.m;
+    fg0 = mass0*grav;
+  end
+  if free1
+    mass1 = 0.5*s.m;
+    fg1 = mass1*grav;
+  end
+  M(p(0),p(0)) = mass0*I;
+  M(p(1),p(1)) = mass1*I;
+  fg(p(0)) = fg0;
+  fg(p(1)) = fg1;
+end
+
+func compute_elasticity(s: Spring, p : (Point*2)) ->
+    (K  : tensor[points,points](tensor[3,3](float)),
+     fe : tensor[points](tensor[3](float)))
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  free0 = not p(0).fixed;
+  free1 = not p(1).fixed;
+  stiffness = s.k;
+  l0 = s.l0;
+  % Spring force
+  dx = p(1).x - p(0).x;
+  l = norm(dx);
+  fe0 = stiffness/(l0*l0)*(l-l0)*dx/l;
+  fe1 = -fe0;
+  if free0
+    fe(p(0)) = fe0;
+  end
+  if free1
+    fe(p(1)) = fe1;
+  end
+  % Stiffness matrix
+  dxtdx = dx*dx';
+  dxdxt = dx'*dx;
+  k = stiffness/(l0*l0*l*l)*(dxdxt + (l-l0)/l*(dxtdx*I - dxdxt));
+  if free0 and free1
+    K(p(0),p(0)) =  k;
+    K(p(0),p(1)) = -k;
+    K(p(1),p(0)) = -k;
+    K(p(1),p(1)) =  k;
+  else
+    if free0
+      K(p(0),p(0)) = k;
+    end
+    if free1
+      K(p(1),p(1)) = k;
+    end
+  end
+end
+
+proc main
+  h = 1.0e-2;
+
+  D = map compute_damping to points reduce +;
+  M, fg = map compute_mass to springs reduce +;
+  K, fe = map compute_elasticity to springs reduce +;
+
+  MDK = M + h*D + h*h*K;
+  f = fg + fe;
+  f = M*points.v + h*f;
+  
+  print f;
+
+
+%  v = MDK \ f;
+
+%  points.v = v;
+%  points.x = points.x + h * points.v;
+end
