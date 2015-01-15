@@ -2,6 +2,7 @@ element Point
   x : tensor[3](float);
   v : tensor[3](float);
   fixed : bool;
+  ones : tensor[3](float);
 end
 
 element Spring
@@ -94,7 +95,9 @@ proc main
   f = fg + fe;
   f = M*points.v + h*f;
   
-  print f;
+  tmp = MDK * points.ones;
+  print tmp;
+  
 
 
 %  v = MDK \ f;

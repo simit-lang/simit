@@ -96,6 +96,8 @@ TEST(Program, DISABLED_isprings) {
   simit::FieldRef<simit_float,3> v = points.addField<simit_float,3>("v");
   simit::FieldRef<bool> fixed = points.addField<bool>("fixed");
 
+  simit::FieldRef<simit_float,3> ones = points.addField<simit_float,3>("ones");
+
   // Springs
   Set<2> springs(points,points);
   simit::FieldRef<simit_float> k = springs.addField<simit_float>("k");
@@ -114,6 +116,10 @@ TEST(Program, DISABLED_isprings) {
   v(p0) = {0.0, 0.0, 0.0};
   v(p1) = {0.0, 0.0, 0.0};
   v(p2) = {0.0, 0.0, 0.0};
+
+  ones(p0) = {1.0, 1.0, 1.0};
+  ones(p1) = {1.0, 1.0, 1.0};
+  ones(p2) = {1.0, 1.0, 1.0};
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
