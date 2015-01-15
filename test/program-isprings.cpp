@@ -10,7 +10,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(Program, isprings) {
+TEST(Program, isprings_simple) {
   // Points
   Set<> points;
   simit::FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
@@ -71,10 +71,8 @@ TEST(Program, isprings) {
   // Compile program and bind arguments
   std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
   if (!f) FAIL();
-
   f->bind("points", &points);
   f->bind("springs", &springs);
-
   for (size_t i=0; i < 10; ++i) {
     f->runSafe();
   }
