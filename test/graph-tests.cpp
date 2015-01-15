@@ -123,7 +123,6 @@ TEST(Field, Scalar) {
   simit_float scalar3 = x.get(p0);
   ASSERT_SIMIT_FLOAT_EQ(1.1, scalar3);
 
-//  TensorRef<simit_float,3> vec2 = p1.get(x);
   TensorRef<simit_float> scalar4 = x.get(p1);
   ASSERT_SIMIT_FLOAT_EQ(4.4, scalar4);
 }
@@ -208,6 +207,25 @@ TEST(Field, Tensor) {
   ASSERT_SIMIT_FLOAT_EQ(6.6, t4(1,0,0));
 }
 
+TEST(Field, boolean) {
+  Set<> points;
+  FieldRef<bool> b = points.addField<bool>("b");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+
+  ASSERT_FALSE(b(p0));
+  ASSERT_FALSE(b(p1));
+
+  TensorRef<bool> boolean = b(p0);
+  ASSERT_SIMIT_FLOAT_EQ(0u, boolean.getOrder());
+  boolean = true;
+  b(p1) = true;
+
+  ASSERT_TRUE(b(p0));
+  ASSERT_TRUE(b(p1));
+}
+
 TEST(EdgeSet, CreateAndGetEdge) {
   Set<> points;
 
@@ -233,19 +251,6 @@ TEST(EdgeSet, CreateAndGetEdge) {
   ASSERT_SIMIT_FLOAT_EQ(x.get(edges.getEndpoint(e,1)), 3.1);
   ASSERT_EQ(y.get(e), 54);
 }
-
-//TEST(EdgeSet, ConstructorTest) {
-//  Set<> points;
-//  points.add();
-//  auto p0 = points.add();
-//  
-//  Set<1> points2(points);
-//  auto p1 = points2.add(p0);
-//  
-//  Set<2> edges(points, points2);
-//  edges.add(p0, p1);
-//  ASSERT_DEATH(edges.add(p1, p0), "Assertion.*" );
-//}
 
 TEST(EdgeSet, EdgeIteratorTest) {
   Set<> points;

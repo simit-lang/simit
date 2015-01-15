@@ -10,7 +10,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(Program, isprings) {
+TEST(Program, isprings_simple) {
   // Points
   Set<> points;
   simit::FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
@@ -32,21 +32,21 @@ TEST(Program, isprings) {
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
 
-  x.set(p0, {0.0, 0.0, 0.0});
-  x.set(p1, {1.0, 0.0, 0.0});
-  x.set(p2, {2.0, 0.0, 0.0});
+  x(p0) = {0.0, 0.0, 0.0};
+  x(p1) = {1.0, 0.0, 0.0};
+  x(p2) = {2.0, 0.0, 0.0};
 
-  v.set(p0, {0.1, 0.0, 0.0});
-  v.set(p1, {0.1, 0.0, 0.0});
-  v.set(p2, {0.1, 0.0, 0.0});
+  v(p0) = {0.1, 0.0, 0.0};
+  v(p1) = {0.1, 0.0, 0.0};
+  v(p2) = {0.1, 0.0, 0.0};
 
-  zeros.set(p0, {0.0, 0.0, 0.0});
-  zeros.set(p1, {0.0, 0.0, 0.0});
-  zeros.set(p2, {0.0, 0.0, 0.0});
+  zeros(p0) = {0.0, 0.0, 0.0};
+  zeros(p1) = {0.0, 0.0, 0.0};
+  zeros(p2) = {0.0, 0.0, 0.0};
 
-  ones.set(p0, {1.0, 1.0, 1.0});
-  ones.set(p1, {1.0, 1.0, 1.0});
-  ones.set(p2, {1.0, 1.0, 1.0});
+  ones(p0) = {1.0, 1.0, 1.0};
+  ones(p1) = {1.0, 1.0, 1.0};
+  ones(p2) = {1.0, 1.0, 1.0};
 
   ElementRef s0 = springs.add(p0,p1);
   ElementRef s1 = springs.add(p1,p2);
@@ -71,28 +71,130 @@ TEST(Program, isprings) {
   // Compile program and bind arguments
   std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
   if (!f) FAIL();
-
   f->bind("points", &points);
   f->bind("springs", &springs);
-
   for (size_t i=0; i < 10; ++i) {
     f->runSafe();
   }
 
   // Check outputs
-  TensorRef<simit_float,3> x21 = x2.get(p0);
+  ASSERT_SIMIT_FLOAT_EQ(0.10241860338789253, x2(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                 x2(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.0103815692520815, x2(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(1.01,                x2(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                 x2(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.020763138504163,  x2(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(1.9175813966121074,  x2(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                 x2(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.0103815692520815, x2(p2)(2));
+}
 
-  ASSERT_SIMIT_FLOAT_EQ(0.10241860338789253, x21(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0, x21(1));
-  ASSERT_SIMIT_FLOAT_EQ(-0.0103815692520815, x21(2));
+TEST(Program, isprings) {
+  // Points
+  Set<> points;
+  simit::FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  simit::FieldRef<simit_float,3> v = points.addField<simit_float,3>("v");
+  simit::FieldRef<bool> fixed = points.addField<bool>("fixed");
 
-  TensorRef<simit_float,3> x22 = x2.get(p1);
-  ASSERT_SIMIT_FLOAT_EQ(1.01, x22(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0, x22(1));
-  ASSERT_SIMIT_FLOAT_EQ(-0.020763138504163, x22(2));
+  simit::FieldRef<simit_float,3> ones = points.addField<simit_float,3>("ones");
 
-  TensorRef<simit_float,3> x23 = x2.get(p2);
-  ASSERT_SIMIT_FLOAT_EQ(1.9175813966121074, x23(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0, x23(1));
-  ASSERT_SIMIT_FLOAT_EQ(-0.0103815692520815, x23(2));
+  // Springs
+  Set<2> springs(points,points);
+  simit::FieldRef<simit_float> k = springs.addField<simit_float>("k");
+  simit::FieldRef<simit_float> l0 = springs.addField<simit_float>("l0");
+  simit::FieldRef<simit_float> m = springs.addField<simit_float>("m");
+
+  // Build a 3-chain
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  x(p0) = {0.0, 0.0, 0.0};
+  x(p1) = {0.0, 0.0, 1.0};
+  x(p2) = {0.0, 0.0, 2.0};
+
+  v(p0) = {0.0, 0.0, 0.0};
+  v(p1) = {0.0, 0.0, 0.0};
+  v(p2) = {0.0, 0.0, 0.0};
+
+  ones(p0) = {1.0, 1.0, 1.0};
+  ones(p1) = {1.0, 1.0, 1.0};
+  ones(p2) = {1.0, 1.0, 1.0};
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  double l0_       = 1.0;
+  double stiffness = 100.00;
+  double density   = 1000.0;
+  double radius = 0.01;
+  double PI_ = 3.14159265358979;
+  double zfloor = 0.4;
+
+  l0(s0) = l0_;
+  l0(s1) = l0_;
+  k(s0) = stiffness;
+  k(s1) = stiffness;
+  m(s0) = PI_*radius*radius*l0_*density;
+  m(s1) = PI_*radius*radius*l0_*density;
+
+  for (auto &p : points) {
+    if (x(p)(2) < zfloor) {
+      fixed(p) = true;
+    }
+    else {
+      fixed(p) = false;
+    }
+  }
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+  f->bind("points", &points);
+  f->bind("springs", &springs);
+  for (size_t i=0; i < 9; ++i) {
+    f->runSafe();
+  }
+
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.527683955297994, v(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.72137873080947,  v(p2)(2));
+
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.967523428995587,  x(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                x(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(1.9602574003985656, x(p2)(2));
+
+  f->runSafe();
+
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.533862882516396, v(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,                v(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(-0.754380624415897, v(p2)(2));
+
+  ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(0.962184800170423, x(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(0.0,               x(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(1.952713594154406, x(p2)(2));
 }

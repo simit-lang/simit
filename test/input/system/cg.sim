@@ -56,6 +56,7 @@ proc main
     beta = newrsqn/oldrsqn;
     p = r + beta*p;
 
+    normr = norm(r);
     iter = iter + 1;
   end
 % end inlined CG

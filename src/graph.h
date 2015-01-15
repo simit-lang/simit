@@ -176,6 +176,10 @@ public:
           data[element.ident] = data[numElements-1];
           break;
         }
+        case ComponentType::BOOLEAN: {
+          bool* data = (bool*)f->data;
+          data[element.ident] = data[numElements-1];
+        }
       }
     }
     numElements--;
@@ -647,6 +651,14 @@ class FieldRefBaseParameterized : public FieldRefBase {
     return TensorRef<T, dimensions...>(getElemDataPtr(element));
   }
 
+  TensorRef<T, dimensions...> operator()(ElementRef element) {
+    return get(element);
+  }
+
+  const TensorRef<T, dimensions...> operator()(ElementRef element) const {
+    return get(element);
+  }
+
   void set(ElementRef element, std::initializer_list<T> values) {
     size_t tensorSize = TensorRef<T,dimensions...>::getSize();
     iassert(values.size() == tensorSize) << "Incorrect number of init values";
@@ -738,6 +750,16 @@ class TensorRef {
     static_assert(sizeof...(dimensions) == 0,
                   "Can only assign scalar values to scalar tensors.");
     data[0] = val;
+    return *this;
+  }
+
+  inline
+  TensorRef<T, dimensions...> &operator=(const std::initializer_list<T> &vals) {
+    iassert(vals.size() == util::product<dimensions...>::value);
+    size_t i=0;
+    for (T val : vals) {
+      data[i++] = val;
+    }
     return *this;
   }
 

@@ -389,8 +389,18 @@ void GPUBackend::visit(const ir::VarDecl *op) {
   tassert(op->var.getType().isTensor()) << "Only tensor decls supported";
 
   if (inKernel) {
-    // Allow LLVMBackend to emit a local alloca
-    LLVMBackend::visit(op);
+    ir::Var var = op->var;
+    if (isScalar(var.getType())) {
+      // Allow LLVMBackend to emit a local alloca
+      LLVMBackend::visit(op);
+    }
+    else {
+      const ir::TensorType *ttype = var.getType().toTensor();
+      ir::ScalarType ctype = ttype->componentType;
+      llvm::Value *llvmVar = builder->CreateAlloca(
+          createLLVMType(ctype), llvmInt(ttype->size()), var.getName());
+      symtable.insert(var, llvmVar);
+    }
   }
   else { // Root scope
     // Always global, to be accessible to all kernels
@@ -530,6 +540,7 @@ void GPUBackend::visit(const ir::Pass *op) {
 
 namespace {
 
+// TODO(gkanwar): Do we need to clean attrs now that we are passing in BC?
 void cleanFuncAttrs(llvm::Function *func) {
   // Clean attributes off of params
   llvm::AttributeSet funcAttrs = func->getAttributes();
@@ -551,9 +562,7 @@ void cleanFuncAttrs(llvm::Function *func) {
 }
 
 llvm::Value *GPUBackend::emitBarrier() {
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_VOID, false);
-  module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy);
-  llvm::Function *func = module->getFunction("llvm.nvvm.barrier0");
+  llvm::Function *func = getBuiltIn("llvm.nvvm.barrier0", LLVM_VOID, {});
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
@@ -565,33 +574,43 @@ llvm::Value *GPUBackend::emitCheckRoot() {
 }
 
 llvm::Value *GPUBackend::getTidX() {
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
-  module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.x", funcTy);
-  llvm::Function *func = module->getFunction("llvm.nvvm.read.ptx.sreg.tid.x");
+  llvm::Function *func = getBuiltIn(
+      "llvm.nvvm.read.ptx.sreg.tid.x", LLVM_INT, {});
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
 llvm::Value *GPUBackend::getTidY() {
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
-  module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.y", funcTy);
-  llvm::Function *func = module->getFunction("llvm.nvvm.read.ptx.sreg.tid.y");
+  llvm::Function *func = getBuiltIn(
+      "llvm.nvvm.read.ptx.sreg.tid.y", LLVM_INT, {});
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
 llvm::Value *GPUBackend::getTidZ() {
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_INT, false);
-  module->getOrInsertFunction("llvm.nvvm.read.ptx.sreg.tid.z", funcTy);
-  llvm::Function *func = module->getFunction("llvm.nvvm.read.ptx.sreg.tid.z");
+  llvm::Function *func = getBuiltIn(
+      "llvm.nvvm.read.ptx.sreg.tid.z", LLVM_INT, {});
   cleanFuncAttrs(func);
   return builder->CreateCall(func);
 }
 
+llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
+  iassert(src->getType()->isPointerTy());
+  llvm::PointerType *srcPtrTy = llvm::cast<llvm::PointerType>(src->getType());
+  iassert(srcPtrTy->getAddressSpace() ==
+          CUDA_GLOBAL_ADDRSPACE);
+  llvm::Value *srcCast = builder->CreateBitCast(src, LLVM_INT8PTR_GLOBAL);
+  llvm::Function *castFunc = getBuiltIn(
+      "llvm.nvvm.ptr.global.to.gen.p0i8.p1i8",
+      LLVM_INT8PTR, { LLVM_INT8PTR_GLOBAL });
+  cleanFuncAttrs(castFunc);
+  llvm::Value *out = builder->CreateCall(castFunc, srcCast);
+  llvm::Type *genTy = llvm::PointerType::getUnqual(srcPtrTy->getElementType());
+  return builder->CreateBitCast(out, genTy);
+}
+
 void GPUBackend::emitThreadBarrier() {
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(LLVM_VOID, false);
-  module->getOrInsertFunction("llvm.nvvm.barrier0", funcTy);
-  llvm::Function *func = module->getFunction("llvm.nvvm.barrier0");
+  llvm::Function *func = getBuiltIn("llvm.nvvm.barrier0", LLVM_VOID, {});
   cleanFuncAttrs(func);
   builder->CreateCall(func);
 }
@@ -639,29 +658,9 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
     default:
       ierror << "Unsupported addrspace for float load/add: " << addrspace;
   }
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(
-      LLVM_FLOAT, argTys, false);
-  module->getOrInsertFunction(funcName, funcTy);
-  llvm::Function *func = module->getFunction(funcName);
+  llvm::Function *func = getBuiltIn(funcName, LLVM_FLOAT, argTys);
   cleanFuncAttrs(func);
   builder->CreateCall2(func, ptr, value);
-}
-
-void GPUBackend::emitTid0Code(const ir::Stmt& body) {
-  // Condition is tid_x == 0 && tid_y == 0 && tid_z == 0
-  ierror << "Should not be used";
-  // llvm::Value *cond = builder->CreateAnd(
-  //     builder->CreateICmpEQ(getTidX(), llvmInt(0)),
-  //     builder->CreateAnd(
-  //         builder->CreateICmpEQ(getTidY(), llvmInt(0)),
-  //         builder->CreateICmpEQ(getTidZ(), llvmInt(0))));
-  // llvm::BasicBlock *then = llvm::BasicBlock::Create(LLVM_CONTEXT, "then", func);
-  // llvm::BasicBlock *rest = llvm::BasicBlock::Create(LLVM_CONTEXT, "rest", func);
-  // builder->CreateCondBr(cond, then, rest);
-  // builder.reset(new LLVMIRBuilder(then));
-  // LLVMBackend::compile(body);
-  // builder->CreateBr(rest);
-  // builder.reset(new LLVMIRBuilder(rest));
 }
 
 void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
@@ -680,8 +679,8 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   std::vector<llvm::Type*> getParamArgTys = {
     LLVM_INT8PTR, dim3Ty, dim3Ty, LLVM_INT
   };
-  llvm::FunctionType *getParamFuncTy = llvm::FunctionType::get(
-      LLVM_INT8PTR, getParamArgTys, false);
+  llvm::Function *getParamFunc = getBuiltIn(
+      "cudaGetParameterBufferV2", LLVM_INT8PTR, getParamArgTys);
 
   // CUstream_st
   llvm::PointerType *cuStreamPtrTy = getOrCreateCUStreamPtrTy();
@@ -690,8 +689,8 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   std::vector<llvm::Type*> launchDevArgTys = {
     LLVM_INT8PTR, cuStreamPtrTy
   };
-  llvm::FunctionType *launchDevFuncTy = llvm::FunctionType::get(
-      LLVM_INT, launchDevArgTys, false);
+  llvm::Function *cudaLaunchFunc = getBuiltIn(
+      "cudaLaunchDeviceV2", LLVM_INT, launchDevArgTys);
 
   // Build dimensions
   std::vector<llvm::Constant*> gridDimsVec = {
@@ -720,9 +719,6 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
       llvm::ArrayRef<unsigned>({2}));
 
   // Build param buffer
-  module->getOrInsertFunction("cudaGetParameterBufferV2", getParamFuncTy);
-  llvm::Function *getParamFunc = module->getFunction(
-      "cudaGetParameterBufferV2");
   llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, LLVM_INT8PTR);
   llvm::Value *paramBuf = builder->CreateCall4(
       getParamFunc, kernelBitCast, gridDims, blockDims, llvmInt(0));
@@ -730,17 +726,11 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   // Insert args into param buffer
   emitFillBuf(paramBuf, args);
 
-  module->getOrInsertFunction("cudaLaunchDeviceV2", launchDevFuncTy);
-  llvm::Function *cudaLaunchFunc = module->getFunction("cudaLaunchDeviceV2");
   builder->CreateCall2(cudaLaunchFunc, paramBuf,
                        llvm::ConstantPointerNull::get(cuStreamPtrTy));
 
   // Synchronize memory after the call
-  std::vector<llvm::Type*> argTys;
-  llvm::FunctionType *syncFuncTy = llvm::FunctionType::get(
-      LLVM_INT, argTys, false);
-  module->getOrInsertFunction("cudaDeviceSynchronize", syncFuncTy);
-  llvm::Function *syncFunc = module->getFunction("cudaDeviceSynchronize");
+  llvm::Function *syncFunc = getBuiltIn("cudaDeviceSynchronize", LLVM_INT, {});
   builder->CreateCall(syncFunc);
 }
 
@@ -772,11 +762,8 @@ void GPUBackend::emitPrintf(std::string format,
   emitFillBuf(argBuf, args);
 
   // Create and call vprintf syscall
-  std::vector<llvm::Type*> argTys = {LLVM_INT8PTR, LLVM_INT8PTR};
-  llvm::FunctionType *vprintfTy = llvm::FunctionType::get(
-      LLVM_INT, argTys, false);
-  module->getOrInsertFunction("vprintf", vprintfTy);
-  llvm::Function *vprintf = module->getFunction("vprintf");
+  llvm::Function *vprintf = getBuiltIn(
+      "vprintf", LLVM_INT, {LLVM_INT8PTR, LLVM_INT8PTR});
 
   builder->CreateCall2(vprintf, formatPtr, argBuf);
 }
@@ -786,20 +773,50 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   iassert(dst->getType()->isPointerTy());
   iassert(src->getType()->isPointerTy());
 
+
+  unsigned dstAddrspace = llvm::cast<llvm::PointerType>(
+      dst->getType())->getAddressSpace();
+  llvm::Type *dstCastTy;
+  std::string dstTyStr;
+  if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
+    dstCastTy = LLVM_INT8PTR_GLOBAL;
+    dstTyStr = "p1i8";
+  }
+  else if (dstAddrspace == CUDA_GENERIC_ADDRSPACE) {
+    dstCastTy = LLVM_INT8PTR;
+    dstTyStr = "p0i8";
+  }
+  else {
+    not_supported_yet;
+  }
+
+  unsigned srcAddrspace = llvm::cast<llvm::PointerType>(
+      src->getType())->getAddressSpace();
+  llvm::Type *srcCastTy;
+  std::string srcTyStr;
+  if (srcAddrspace == CUDA_GLOBAL_ADDRSPACE) {
+    srcCastTy = LLVM_INT8PTR_GLOBAL;
+    srcTyStr = "p1i8";
+  }
+  else if (srcAddrspace == CUDA_GENERIC_ADDRSPACE) {
+    srcCastTy = LLVM_INT8PTR;
+    srcTyStr = "p0i8";
+  }
+  else {
+    not_supported_yet;
+  }
+
   // Emit our own memcpy decl, since the built-in has attributes which
   // are not handled by NVVM
-  std::vector<llvm::Type*> argTys = {
-    LLVM_INT8PTR_GLOBAL, LLVM_INT8PTR_GLOBAL, LLVM_INT, LLVM_INT, LLVM_BOOL
-  };
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(
-      LLVM_VOID, argTys, false);
-  module->getOrInsertFunction("llvm.memcpy.p1i8.p1i8.i32", funcTy);
-  llvm::Function *func = module->getFunction("llvm.memcpy.p1i8.p1i8.i32");
+  std::string memcpyName = "llvm.memcpy."+dstTyStr+"."+srcTyStr+".i32";
+  llvm::Function *func = getBuiltIn(
+      memcpyName, LLVM_VOID,
+      {dstCastTy, srcCastTy, LLVM_INT, LLVM_INT, LLVM_BOOL});
   cleanFuncAttrs(func);
 
   llvm::Value *llvmAlign = llvmInt(align);
-  llvm::Value *castDst = builder->CreateBitCast(dst, LLVM_INT8PTR_GLOBAL);
-  llvm::Value *castSrc = builder->CreateBitCast(src, LLVM_INT8PTR_GLOBAL);
+  llvm::Value *castDst = builder->CreateBitCast(dst, dstCastTy);
+  llvm::Value *castSrc = builder->CreateBitCast(src, srcCastTy);
   llvm::Constant *isVolatile = llvmBool(true);
   builder->CreateCall5(func, castDst, castSrc, size, llvmAlign, isVolatile);
 }
@@ -808,19 +825,32 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
                             llvm::Value *size, unsigned align) {
   iassert(dst->getType()->isPointerTy());
 
+  unsigned dstAddrspace = llvm::cast<llvm::PointerType>(
+      dst->getType())->getAddressSpace();
+  llvm::Type *dstCastTy;
+  std::string dstTyStr;
+  if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
+    dstCastTy = LLVM_INT8PTR_GLOBAL;
+    dstTyStr = "p1i8";
+  }
+  else if (dstAddrspace == CUDA_GENERIC_ADDRSPACE) {
+    dstCastTy = LLVM_INT8PTR;
+    dstTyStr = "p0i8";
+  }
+  else {
+    not_supported_yet;
+  }
+
   // Emit our own memset decl, since the built-in has attributes which
   // are not handled by NVVM
-  std::vector<llvm::Type*> argTys = {
-    LLVM_INT8PTR_GLOBAL, LLVM_INT8, LLVM_INT, LLVM_INT, LLVM_BOOL
-  };
-  llvm::FunctionType *funcTy = llvm::FunctionType::get(
-      LLVM_VOID, argTys, false);
-  module->getOrInsertFunction("llvm.memset.p1i8.i32", funcTy);
-  llvm::Function *func = module->getFunction("llvm.memset.p1i8.i32");
+  std::string memsetName = "llvm.memset."+dstTyStr+".i32";
+  llvm::Function *func = getBuiltIn(
+      memsetName, LLVM_VOID,
+      { dstCastTy, LLVM_INT8, LLVM_INT, LLVM_INT, LLVM_BOOL });
   cleanFuncAttrs(func);
 
   llvm::Value *llvmAlign = llvmInt(align);
-  llvm::Value *castDst = builder->CreateBitCast(dst, LLVM_INT8PTR_GLOBAL);
+  llvm::Value *castDst = builder->CreateBitCast(dst, dstCastTy);
   llvm::Constant *isVolatile = llvmBool(true);
   builder->CreateCall5(func, castDst, val, size, llvmAlign, isVolatile);
 }
@@ -852,6 +882,10 @@ void GPUBackend::makeGlobalTensor(ir::Var var) {
   // value from the CUDA setup
   llvm::Value *global = buffers[var];
   addNVVMAnnotation(global, "managed", llvmInt(1), module);
+
+  // Replace the load in the symtable with an appropriately casted version
+  llvm::Value *llvmTmp = symtable.get(var);
+  symtable.insert(var, emitCastGlobalToGen(llvmTmp));
 }
 
 }

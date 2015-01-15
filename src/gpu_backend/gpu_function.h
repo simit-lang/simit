@@ -43,27 +43,33 @@ class GPUFunction : public simit::Function {
   size_t computeTensorSize(const ir::Var& var);
 
   // Struct for tracking arguments being pushed and pulled to/from GPU
+  // TODO: Split tracking current function args from any data we own on the GPU
   struct DeviceDataHandle {
     CUdeviceptr *devBuffer;
+    void *hostBuffer;
     size_t size;
-    bool shouldPull;
-    // TODO: bool dirty;
+    bool devDirty;
+    // TODO: Potentially support dirtying specific host buffers and
+    // pushing only those
+    // bool hostDirty;
 
-    DeviceDataHandle(CUdeviceptr *devBuffer, size_t size, bool shouldPull=true) :
-        devBuffer(devBuffer), size(size), shouldPull(shouldPull) {}
+    DeviceDataHandle(void *hostBuffer, CUdeviceptr *devBuffer, size_t size) :
+        hostBuffer(hostBuffer), devBuffer(devBuffer), size(size),
+        devDirty(false) {}
   };
 
   // Copy argument memory into device and build an llvm value to point to it
-  llvm::Value *pushArg(Actual& actual, bool shouldPull);
+  llvm::Value *pushArg(std::string formal, Actual& actual);
   // Copy device buffer into host data block
-  void pullArg(void *hostPtr, DeviceDataHandle handle);
+  void pullArg(DeviceDataHandle* handle);
   // Free the device buffer
-  void freeArg(DeviceDataHandle handle);
+  void freeArg(DeviceDataHandle* handle);
   // Create the harness function which sets up args for the main function
   llvm::Function *createHarness(const llvm::SmallVector<llvm::Value*, 8> &args,
                                 llvm::Function *kernel, llvm::Module *module);
 
-  std::map<void*, DeviceDataHandle> pushedBufs;
+  std::vector<DeviceDataHandle*> pushedBufs;
+  std::map<std::string, std::vector<DeviceDataHandle*> > argBufMap;
   std::unique_ptr<ir::Func> simitFunc;
   std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> module;

@@ -1,11 +1,7 @@
 element Point
   x : tensor[3](float);
   v : tensor[3](float);
-
-  x2 : tensor[3](float);
-  v2 : tensor[3](float);
-
-  zeros : tensor[3](float);
+  fixed : bool;
   ones : tensor[3](float);
 end
 
@@ -18,88 +14,121 @@ end
 extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
-func compute_MK(s: Spring, p : (Point*2)) ->
-    (MK : tensor[points,points](tensor[3,3](float)))
+func compute_damping(p : Point) ->
+    (D : tensor[points,points](tensor[3,3](float)))
+  viscous = 1.0e-1;
   I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  if not p.fixed
+    D(p) = viscous*I;
+  end
+end
+
+func compute_mass(s : Spring, p : (Point*2)) ->
+    (M  : tensor[points,points](tensor[3,3](float)),
+     fg : tensor[points](tensor[3](float)))
   grav = [0.0, 0.0, -9.81];
-  h = 1e-1;
-  k = s.k;
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  free0 = not p(0).fixed;
+  free1 = not p(1).fixed;
+  mass0 = 1.0;
+  mass1 = 1.0;
+  fg0 = [0.0, 0.0, 0.0];
+  fg1 = [0.0, 0.0, 0.0];
+  if free0
+    mass0 = 0.5*s.m;
+    fg0 = mass0*grav;
+  end
+  if free1
+    mass1 = 0.5*s.m;
+    fg1 = mass1*grav;
+  end
+  M(p(0),p(0)) = mass0*I;
+  M(p(1),p(1)) = mass1*I;
+  fg(p(0)) = fg0;
+  fg(p(1)) = fg1;
+end
+
+func compute_elasticity(s: Spring, p : (Point*2)) ->
+    (K  : tensor[points,points](tensor[3,3](float)),
+     fe : tensor[points](tensor[3](float)))
+  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  free0 = not p(0).fixed;
+  free1 = not p(1).fixed;
+  stiffness = s.k;
   l0 = s.l0;
-
-  % Mass matrix
-  halfm = 0.5*s.m;
-  m = halfm*I;
-  M00 = m;
-  M11 = m;
-
   % Spring force
   dx = p(1).x - p(0).x;
   l = norm(dx);
-
+  fe0 = stiffness/(l0*l0)*(l-l0)*dx/l;
+  fe1 = -fe0;
+  if free0
+    fe(p(0)) = fe0;
+  end
+  if free1
+    fe(p(1)) = fe1;
+  end
   % Stiffness matrix
   dxtdx = dx*dx';
   dxdxt = dx'*dx;
-  K = h*h*k/(l0*l0*l*l)*(dxdxt + (l-l0)/l*(dxtdx*I - dxdxt));
-
-  MK(p(0),p(0)) = M00 + K;
-  MK(p(0),p(1)) =     - K;
-  MK(p(1),p(0)) =     - K;
-  MK(p(1),p(1)) = M11 + K;
-end
-
-func compute_f(s: Spring, p : (Point*2)) ->
-    (f : tensor[points](tensor[3](float)))
-  I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  grav = [0.0, 0.0, -9.81];
-  h = 1e-1;
-  k = s.k;
-  l0 = s.l0;
-
-  % Mass matrix
-  halfm = 0.5*s.m;
-  m = halfm*I;
-  M00 = m;
-  M11 = m;
-
-  % Momentum
-  fm0 = halfm*p(0).v;
-  fm1 = halfm*p(1).v;
-
-  % Gravity
-  fg = h*halfm*grav;
-
-  % Spring force
-  dx = p(1).x - p(0).x;
-  l = norm(dx);
-  fs = h*k/(l0*l0)*(l-l0)*dx/l;
-
-  % Insert into globals
-  f(p(0)) = fm0 + fg + fs;
-  f(p(1)) = fm1 + fg - fs;
+  k = stiffness/(l0*l0*l*l)*(dxdxt + (l-l0)/l*(dxtdx*I - dxdxt));
+  if free0 and free1
+    K(p(0),p(0)) =  k;
+    K(p(0),p(1)) = -k;
+    K(p(1),p(0)) = -k;
+    K(p(1),p(1)) =  k;
+  else
+    if free0
+      K(p(0),p(0)) = k;
+    end
+    if free1
+      K(p(1),p(1)) = k;
+    end
+  end
 end
 
 proc main
-  h = 1e-1;
+  h = 1.0e-2;
 
-  fm = map compute_f to springs reduce +;
-  f = fm;
+  D = map compute_damping to points reduce +;
+  M, fg = map compute_mass to springs reduce +;
+  K, fe = map compute_elasticity to springs reduce +;
 
-  MK = map compute_MK to springs reduce +;
+  MDK = M + h*D + h*h*K;
+  f = fg + fe;
+  f = M*points.v + h*f;
+  
+  % We should not be resetting vguess to zero every time step
+  vguess = points.v;
+  var v : tensor[points](tensor[3](float));
 
-  %r = f - MK*v;
-  MKv = MK * points.v;
-  r = f - MKv;
+  tol = 1e-5;
+  maxiters = 50;
+  r = f - (MDK*vguess);
+  p = r;
+  iter = 0;
+  v = vguess;
 
-  r2old = r*r';
+  normr = norm(r);
+  while (normr > tol) and (iter < maxiters)
+    Ap = MDK * p;
 
-  Ap = MK*r;
-  rap = r*Ap;
-  a = r2old/rap;
-  ap = a*r;
+    denom = dot(p, Ap);
 
-  v = points.v + ap;
-  points.v2 = v;
+    alpha = dot(r, r);
+    alpha = alpha / denom;
+    v = v + alpha*p;
 
-  hvap = h * v;
-  points.x2  = points.x + hvap;
+    oldrsqn = dot(r,r);
+    r = r - alpha * Ap;
+    normr = norm(r);
+    newrsqn = dot(r,r);
+    beta = newrsqn/oldrsqn;
+    p = r + beta*p;
+
+    iter = iter + 1;
+  end
+
+  points.v = v;
+  points.x = points.x + h * points.v;
+
 end

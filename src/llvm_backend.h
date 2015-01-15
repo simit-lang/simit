@@ -137,6 +137,11 @@ protected:
   /// Build a global string and return a constant pointer to it
   llvm::Constant *emitGlobalString(const std::string& str);
 
+  /// Gets a reference to a named built-in
+  llvm::Function* getBuiltIn(std::string name,
+                             llvm::Type *retTy,
+                             std::vector<llvm::Type*> argTys);
+
   /// Emit an empty function and set the builder cursor to its entry block. The
   /// function's arguments and result variables are added to the symbol table.
   llvm::Function *emitEmptyFunction(const std::string &name,
