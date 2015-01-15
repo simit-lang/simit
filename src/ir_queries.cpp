@@ -2,6 +2,7 @@
 
 #include <vector>
 #include <set>
+#include <stack>
 
 #include "types.h"
 
@@ -167,28 +168,93 @@ bool isBlocked(Stmt stmt) {
 }
 
 std::vector<Func> getCallTree(Func func) {
-  class GetCallTreeVisitor : public IRVisitorCallGraph {
+  class ReverseCallGraphBuilder : public IRVisitor {
   public:
-    vector<Func> get(Func func) {
-      callTree.clear();
+    map<Func, set<Func>> get(Func func) {
+      reverseCallGraph.clear();
       func.accept(this);
-      return callTree;
+      return reverseCallGraph;
     }
 
   private:
-    using IRVisitorCallGraph::visit;
+    std::stack<Func> functionStack;
+    map<Func, set<Func>> reverseCallGraph;
 
-    set<Func> visited;
-    vector<Func> callTree;
+    void addReverseEdge(Func caller, Func callee) {
+      if (reverseCallGraph.find(caller) == reverseCallGraph.end()) {
+        reverseCallGraph[callee] = set<Func>();
+      }
+      reverseCallGraph[callee].insert(caller);
+    }
 
     void visit(const Func *op) {
-      visited.insert(*op);
-      callTree.push_back(*op);
-      IRVisitor::visit(op);
+      if (op->getKind() != Func::Internal) return;
+      functionStack.push(*op);
+      op->getBody().accept(this);
+      functionStack.pop();
+    }
+
+    void visit(const Call *op) {
+      iassert(functionStack.size() > 0);
+      addReverseEdge(functionStack.top(), op->func);
+      op->func.accept(this);
+    }
+
+    void visit(const CallStmt *op) {
+      iassert(functionStack.size() > 0);
+      addReverseEdge(functionStack.top(), op->callee);
+      op->callee.accept(this);
     }
   };
 
-  return GetCallTreeVisitor().get(func);
+  class GetCallTree {
+  public:
+    map<Func, set<Func>> callGraph;
+    set<Func> unmarked;
+    set<Func> temporaryMarked;
+    vector<Func> L;
+
+    void visit(Func n) {
+      tassert(temporaryMarked.find(n) == temporaryMarked.end())
+          << "Not a call DAG (mutual recursion?)";
+      if (unmarked.find(n) != unmarked.end()) {
+        temporaryMarked.insert(n);
+        for (auto &m : callGraph[n]) {
+          visit(m);
+        }
+        unmarked.erase(n);
+        temporaryMarked.erase(n);
+        L.push_back(n);
+      }
+    }
+
+    vector<Func> get(Func func) {
+      class GetFuncs : IRVisitorCallGraph {
+      public:
+        set<Func> funcs;
+        set<Func> get(Func func) {
+          funcs.clear();
+          func.accept(this);
+          return funcs;
+        }
+
+        using IRVisitor::visit;
+        void visit(const Func *f) {
+          funcs.insert(*f);
+          IRVisitorCallGraph::visit(f);
+        }
+      };
+      callGraph = ReverseCallGraphBuilder().get(func);
+      unmarked = GetFuncs().get(func);
+      while (unmarked.size() > 0) {
+        Func n = *unmarked.begin();
+        visit(n);
+      }
+      return L;
+    }
+  };
+
+  return GetCallTree().get(func);
 }
 
 }}
