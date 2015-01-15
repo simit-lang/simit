@@ -389,8 +389,18 @@ void GPUBackend::visit(const ir::VarDecl *op) {
   tassert(op->var.getType().isTensor()) << "Only tensor decls supported";
 
   if (inKernel) {
-    // Allow LLVMBackend to emit a local alloca
-    LLVMBackend::visit(op);
+    ir::Var var = op->var;
+    if (isScalar(var.getType())) {
+      // Allow LLVMBackend to emit a local alloca
+      LLVMBackend::visit(op);
+    }
+    else {
+      const ir::TensorType *ttype = var.getType().toTensor();
+      ir::ScalarType ctype = ttype->componentType;
+      llvm::Value *llvmVar = builder->CreateAlloca(
+          createLLVMType(ctype), llvmInt(ttype->size()), var.getName());
+      symtable.insert(var, llvmVar);
+    }
   }
   else { // Root scope
     // Always global, to be accessible to all kernels
@@ -786,20 +796,57 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   iassert(dst->getType()->isPointerTy());
   iassert(src->getType()->isPointerTy());
 
+
+  unsigned dstAddrspace = llvm::cast<llvm::PointerType>(
+      dst->getType())->getAddressSpace();
+  llvm::Type *dstCastTy;
+  std::string dstTyStr;
+  if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
+    dstCastTy = LLVM_INT8PTR_GLOBAL;
+    dstTyStr = "p1i8";
+  }
+  else if (dstAddrspace == CUDA_GENERIC_ADDRSPACE) {
+    dstCastTy = LLVM_INT8PTR;
+    dstTyStr = "p0i8";
+  }
+  else {
+    not_supported_yet;
+  }
+
+  unsigned srcAddrspace = llvm::cast<llvm::PointerType>(
+      src->getType())->getAddressSpace();
+  llvm::Type *srcCastTy;
+  std::string srcTyStr;
+  if (srcAddrspace == CUDA_GLOBAL_ADDRSPACE) {
+    srcCastTy = LLVM_INT8PTR_GLOBAL;
+    srcTyStr = "p1i8";
+  }
+  else if (srcAddrspace == CUDA_GENERIC_ADDRSPACE) {
+    srcCastTy = LLVM_INT8PTR;
+    srcTyStr = "p0i8";
+  }
+  else {
+    not_supported_yet;
+  }
+
   // Emit our own memcpy decl, since the built-in has attributes which
   // are not handled by NVVM
   std::vector<llvm::Type*> argTys = {
-    LLVM_INT8PTR_GLOBAL, LLVM_INT8PTR_GLOBAL, LLVM_INT, LLVM_INT, LLVM_BOOL
+    dstCastTy, srcCastTy, LLVM_INT, LLVM_INT, LLVM_BOOL
   };
   llvm::FunctionType *funcTy = llvm::FunctionType::get(
       LLVM_VOID, argTys, false);
-  module->getOrInsertFunction("llvm.memcpy.p1i8.p1i8.i32", funcTy);
-  llvm::Function *func = module->getFunction("llvm.memcpy.p1i8.p1i8.i32");
+  module->getOrInsertFunction("llvm.memcpy."
+                              +dstTyStr+"."
+                              +srcTyStr+".i32", funcTy);
+  llvm::Function *func = module->getFunction("llvm.memcpy."
+                                             +dstTyStr+"."
+                                             +srcTyStr+".i32");
   cleanFuncAttrs(func);
 
   llvm::Value *llvmAlign = llvmInt(align);
-  llvm::Value *castDst = builder->CreateBitCast(dst, LLVM_INT8PTR_GLOBAL);
-  llvm::Value *castSrc = builder->CreateBitCast(src, LLVM_INT8PTR_GLOBAL);
+  llvm::Value *castDst = builder->CreateBitCast(dst, dstCastTy);
+  llvm::Value *castSrc = builder->CreateBitCast(src, srcCastTy);
   llvm::Constant *isVolatile = llvmBool(true);
   builder->CreateCall5(func, castDst, castSrc, size, llvmAlign, isVolatile);
 }
@@ -808,19 +855,35 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
                             llvm::Value *size, unsigned align) {
   iassert(dst->getType()->isPointerTy());
 
+  unsigned dstAddrspace = llvm::cast<llvm::PointerType>(
+      dst->getType())->getAddressSpace();
+  llvm::Type *dstCastTy;
+  std::string dstTyStr;
+  if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
+    dstCastTy = LLVM_INT8PTR_GLOBAL;
+    dstTyStr = "p1i8";
+  }
+  else if (dstAddrspace == CUDA_GENERIC_ADDRSPACE) {
+    dstCastTy = LLVM_INT8PTR;
+    dstTyStr = "p0i8";
+  }
+  else {
+    not_supported_yet;
+  }
+
   // Emit our own memset decl, since the built-in has attributes which
   // are not handled by NVVM
   std::vector<llvm::Type*> argTys = {
-    LLVM_INT8PTR_GLOBAL, LLVM_INT8, LLVM_INT, LLVM_INT, LLVM_BOOL
+    dstCastTy, LLVM_INT8, LLVM_INT, LLVM_INT, LLVM_BOOL
   };
   llvm::FunctionType *funcTy = llvm::FunctionType::get(
       LLVM_VOID, argTys, false);
-  module->getOrInsertFunction("llvm.memset.p1i8.i32", funcTy);
-  llvm::Function *func = module->getFunction("llvm.memset.p1i8.i32");
+  module->getOrInsertFunction("llvm.memset."+dstTyStr+".i32", funcTy);
+  llvm::Function *func = module->getFunction("llvm.memset."+dstTyStr+".i32");
   cleanFuncAttrs(func);
 
   llvm::Value *llvmAlign = llvmInt(align);
-  llvm::Value *castDst = builder->CreateBitCast(dst, LLVM_INT8PTR_GLOBAL);
+  llvm::Value *castDst = builder->CreateBitCast(dst, dstCastTy);
   llvm::Constant *isVolatile = llvmBool(true);
   builder->CreateCall5(func, castDst, val, size, llvmAlign, isVolatile);
 }
