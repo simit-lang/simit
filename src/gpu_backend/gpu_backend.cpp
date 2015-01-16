@@ -46,12 +46,11 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   this->storage = ir::Storage();
   symtable.clear();
   buffers.clear();
-  inKernel = false;
 
-  // TODO(gkanwar): Why do we sometimes get duplicates of functions being
-  // generated? How do we properly handle this without duplicates?
   for (auto &f : callTree) {
-    // std::cout << "calltree, f: " << f.getName() << std::endl;
+    // If we're not compiling the top-level func, then we do regular stack
+    // allocations.
+    inKernel = (f.getName() != irFunc.getName());
     if (f.getKind() != ir::Func::Internal) continue;
     iassert(f.getBody().defined());
 
