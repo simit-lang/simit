@@ -42,8 +42,8 @@ static std::unique_ptr<Function> compile(ir::Func func,
         return;
       }
       func = ir::Func(*op, rewrite(op->getBody()));
-      func = insertTemporaries(func);
       func = flattenIndexExpressions(func);
+      func = insertTemporaries(func);
     }
   };
   func = FlattenRewriter().rewrite(func);

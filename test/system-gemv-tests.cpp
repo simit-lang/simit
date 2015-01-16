@@ -428,9 +428,9 @@ TEST(System, gemv_inplace) {
   f->runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ(3.0, b.get(p0));
-  ASSERT_EQ(13.0, b.get(p1));
-  ASSERT_EQ(10.0, b.get(p2));
+  ASSERT_EQ(3.0,  (double)b.get(p0));
+  ASSERT_EQ(13.0, (double)b.get(p1));
+  ASSERT_EQ(10.0, (double)b.get(p2));
 }
 
 TEST(System, gemv_blocked) {

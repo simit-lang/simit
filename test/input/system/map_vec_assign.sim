@@ -6,6 +6,7 @@ extern points : set{Point};
 
 func enforceConstraints(inout p : Point)
   tmp = p.x;
+  p.x = tmp + 0.1;
 end
 
 proc main

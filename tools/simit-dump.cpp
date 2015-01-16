@@ -222,8 +222,8 @@ int main(int argc, const char* argv[]) {
             return;
           }
           func = simit::ir::Func(*op, rewrite(op->getBody()));
-          func = insertTemporaries(func);
           func = flattenIndexExpressions(func);
+          func = insertTemporaries(func);
         }
       };
       func = Rewriter().rewrite(func);

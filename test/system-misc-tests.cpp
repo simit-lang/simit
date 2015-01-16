@@ -428,24 +428,42 @@ TEST(System, slice) {
 
   f->runSafe();
 
-  // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(p0));
   ASSERT_EQ(2.0, b.get(p1));
   ASSERT_EQ(3.0, b.get(p2));
-
-  // Check that outputs are correct
   ASSERT_EQ(1.0, c.get(p0));
   ASSERT_EQ(3.0, c.get(p1));
   ASSERT_EQ(2.0, c.get(p2));
-  
-    // Check that outputs are correct
   ASSERT_EQ(0.0, d.get(p0));
   ASSERT_EQ(2.0, d.get(p1));
   ASSERT_EQ(2.0, d.get(p2));
-
 }
 
-TEST(System, DISABLED_map_norm) {
+TEST(System, map_norm) {
+  Set<> points;
+  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  FieldRef<simit_float> y = points.addField<simit_float>("y");
+  
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  x.set(p0, {1.0, 2.0, 3.0});
+  x.set(p1, {4.0, 5.0, 6.0});
+  x.set(p2, {7.0, 8.0, 9.0});
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+  f->bind("points", &points);
+  f->runSafe();
+
+  ASSERT_EQ(3.74165738677394132949,  (double)y(p0));
+  ASSERT_EQ(8.77496438739212258895,  (double)y(p1));
+  ASSERT_EQ(13.92838827718411920387, (double)y(p2));
+}
+
+TEST(System, map_vec_assign) {
   Set<> points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   
@@ -455,7 +473,7 @@ TEST(System, DISABLED_map_norm) {
 
   x.set(p0, {1.0, 2.0, 3.0});
   x.set(p1, {4.0, 5.0, 6.0});
-  x.set(p2, {0.1, 0.2, 0.3});
+  x.set(p2, {7.0, 8.0, 9.0});
 
   // Compile program and bind arguments
   std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
@@ -463,5 +481,14 @@ TEST(System, DISABLED_map_norm) {
 
   f->bind("points", &points);
   f->runSafe();
-}
 
+  ASSERT_EQ(1.1, x(p0)(0));
+  ASSERT_EQ(2.1, x(p0)(1));
+  ASSERT_EQ(3.1, x(p0)(2));
+  ASSERT_EQ(4.1, x(p1)(0));
+  ASSERT_EQ(5.1, x(p1)(1));
+  ASSERT_EQ(6.1, x(p1)(2));
+  ASSERT_EQ(7.1, x(p2)(0));
+  ASSERT_EQ(8.1, x(p2)(1));
+  ASSERT_EQ(9.1, x(p2)(2));
+}
