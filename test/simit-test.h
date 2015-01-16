@@ -24,6 +24,7 @@ inline std::string toLower(std::string str) {
                        toLower(test_info_->test_case_name()) + "/" +  \
                        test_info_->name() + ".sim"
 
+// Reduce precision of asserts when using floats
 #ifdef F32
 #define ASSERT_SIMIT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.00001)
 #else
@@ -40,13 +41,7 @@ std::unique_ptr<simit::Function> getFunction(std::string fileName,
     return nullptr;
   }
 
-  #ifdef F32
-  int floatSize = sizeof(float);
-  #else
-  int floatSize = sizeof(double);
-  #endif
-  std::unique_ptr<simit::Function> f =
-      program.compile(functionName, floatSize);
+  std::unique_ptr<simit::Function> f = program.compile(functionName);
   if (errorCode) {
     std::cerr << program.getDiagnostics().getMessage();
     return nullptr;

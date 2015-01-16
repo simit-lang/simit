@@ -41,8 +41,7 @@ public:
   std::vector<std::string> getFunctionNames() const;
 
   /// Compile and return a runnable function or NULL if an error occurred.
-  std::unique_ptr<Function> compile(const std::string &function,
-                                    int floatSize = 8);
+  std::unique_ptr<Function> compile(const std::string &function);
 
   /// Verify the program by executing in-code comment tests.
   int verify();
