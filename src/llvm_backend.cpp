@@ -184,9 +184,14 @@ simit::Function *LLVMBackend::compile(Func func) {
   // Loop optimizations
   fpm.add(llvm::createLICMPass());
   fpm.add(llvm::createLoopStrengthReducePass());
+  
+  fpm.add(llvm::createIndVarSimplifyPass());
+  fpm.add(llvm::createLoopUnrollPass());
+  fpm.add(llvm::createEarlyCSEPass());
 
   fpm.doInitialization();
   fpm.run(*llvmFunc);
+  fpm.doFinalization();
 
   bool requiresInit = buffers.size() > 0;
   return new LLVMFunction(func, llvmFunc, requiresInit, module,executionEngine);
