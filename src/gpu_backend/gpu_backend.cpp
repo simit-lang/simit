@@ -737,11 +737,6 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   iassert(xSize) << "x dimension must be non-null";
   iassert(!ySize && !zSize) << "y and z dimensions not currently supported";
 
-  std::cout << "emitKernelLaunch: " << std::endl;
-  for (llvm::Value *val : args) {
-    std::cout << "arg: " << val->getName().str() << std::endl;
-  }
-
   // LLVM types
   // struct dim3
   llvm::StructType *dim3Ty = getOrCreateDim3Ty();
