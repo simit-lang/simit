@@ -763,7 +763,10 @@ void GPUBackend::emitPrintf(std::string format,
     size += dataLayout->getTypeAllocSize(arg->getType());
   }
 
-  llvm::Value *argBuf = builder->CreateAlloca(LLVM_INT8, llvmInt(size), "buffer");
+  llvm::AllocaInst *argBuf =
+      builder->CreateAlloca(LLVM_INT8, llvmInt(size), "buffer");
+  // Align 8, so vprintf will be happy
+  argBuf->setAlignment(8);
   emitFillBuf(argBuf, args);
 
   // Create and call vprintf syscall
