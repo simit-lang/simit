@@ -30,7 +30,7 @@ const std::vector<std::string> VALID_BACKENDS = {
   "gpu",
 #endif
 };
-std::string kBackend = "llvm";
+std::string kBackend;
 
 static Function *compile(ir::Func func, internal::Backend *backend) {
   class FlattenRewriter : public ir::IRRewriterCallGraph {
@@ -140,7 +140,8 @@ Program::Program() : content(new ProgramContent) {
   }
 #endif
   else {
-    ierror << "Invalid backend choice";
+    ierror << "Invalid backend choice: " << kBackend
+           << ". Did you forget to call simit::init()?";
   }
 }
 

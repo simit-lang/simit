@@ -6,6 +6,7 @@
 
 #include "program.h"
 #include "util.h"
+#include "init.h"
 #include "ir.h"
 
 // These are just extern declared from llvm/Support/CommandLine.h since that's
@@ -63,6 +64,7 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
 
   // Handle leftover flags
+  std::string simitBackend = "llvm";
   for (int i = 0; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg.substr(0,2) == "--") {
@@ -73,15 +75,7 @@ int main(int argc, char **argv) {
       }
       else if (keyValPair.size() == 2) {
         if (keyValPair[0] == "--backend") {
-          if (std::find(simit::VALID_BACKENDS.begin(),
-                        simit::VALID_BACKENDS.end(),
-                        keyValPair[1]) != simit::VALID_BACKENDS.end()) {
-            simit::kBackend = keyValPair[1];
-          }
-          else {
-            std::cerr << "Invalid backend: " << keyValPair[1] << std::endl;
-            return 1;
-          }
+          simitBackend = keyValPair[1];
         }
         else {
           std::cerr << "Unrecognized arg: " << keyValPair[0] << std::endl;
@@ -95,9 +89,17 @@ int main(int argc, char **argv) {
     }
   }
 
+
 #ifdef F32
   // Add F32 test environemnt
   ::testing::AddGlobalTestEnvironment(new F32Environment);
+  // Set float size
+  int floatSize = sizeof(float);
+#else
+  int floatSize = sizeof(double);
 #endif
+
+  simit::init(simitBackend, floatSize);
+
   return RUN_ALL_TESTS();
 }
