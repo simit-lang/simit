@@ -66,12 +66,21 @@ private:
     return s;
   }
 
-  Expr spill(Expr a) {
-    vector<IndexVar> afvars = getFreeVars(a);
-    Expr spill = isa<IndexExpr>(a) ? a : IndexExpr::make(afvars, a);
-    Var tmp(tmpNameGen(), spill.type());
-    stmts.push_back(AssignStmt::make(tmp, spill));
-    return IndexedTensor::make(VarExpr::make(tmp), afvars);
+  Expr spill(Expr a) {  
+    // If it is an index expression
+    if (containsIndexedTensor(a)) {
+      vector<IndexVar> afvars = getFreeVars(a);
+      Expr spill = isa<IndexExpr>(a) ? a : IndexExpr::make(afvars, a);
+      Var tmp(tmpNameGen(), spill.type());
+      stmts.push_back(AssignStmt::make(tmp, spill));
+      return IndexedTensor::make(VarExpr::make(tmp), afvars);
+    }
+    else {
+      Expr spill = a;
+      Var tmp(tmpNameGen(), spill.type());
+      stmts.push_back(AssignStmt::make(tmp, spill));
+      return VarExpr::make(tmp);
+    }
   }
 
   std::pair<Expr,Expr> spillSubExpressions(Expr a, Expr b) {
@@ -111,7 +120,10 @@ private:
     bool changed = false;
     for (Expr actual : op->actuals) {
       actual = rewrite(actual);
-      if (isa<IndexExpr>(actual)) {
+
+      // Spill non-var higher-order tensor-typed expressions in function calls
+      Type atype = actual.type();
+      if ((atype.isTensor() && !isScalar(atype) && !isa<VarExpr>(actual)) ) {
         actual = spill(actual);
         changed = true;
       }

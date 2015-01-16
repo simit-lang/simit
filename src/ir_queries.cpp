@@ -87,6 +87,15 @@ bool containsFreeVar(Stmt stmt) {
   return ContainsFree().query(stmt);
 }
 
+bool containsIndexedTensor(Expr expr) {
+  class ContainsIndexedTensor : public IRQuery {
+    using IRQuery::visit;
+    void visit(const IndexedTensor *op) {
+      result = true;
+    }
+  };
+  return ContainsIndexedTensor().query(expr);
+}
 
 // containsReductionVar
 class ContainsReduction : public IRQuery {

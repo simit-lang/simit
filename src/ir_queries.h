@@ -16,10 +16,11 @@ bool containsFreeVar(Stmt stmt);
 bool containsReductionVar(Expr expr);
 bool containsReductionVar(Stmt stmt);
 
+bool containsIndexedTensor(Expr expr);
+
 /// Returns true if the statement has been flattened (only contains one index
 /// expression), and false otherwise.
 bool isFlattened(Stmt stmt);
-
 
 /// Returns true if it is an assignment, tensor write or field write, whose
 /// rhs is a blocked tensor

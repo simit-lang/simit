@@ -1,12 +1,11 @@
 element Point
   x : tensor[3](float);
-  y : float;
 end
 
 extern points : set{Point};
 
 func enforceConstraints(inout p : Point)
-  p.y = norm(p.x);
+  tmp = p.x;
 end
 
 proc main
