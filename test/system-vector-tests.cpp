@@ -115,7 +115,7 @@ TEST(System, vector_add_large_system) {
   FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   std::vector<ElementRef> ps;
-  for(int i = 0; i < 2557; ++i) {
+  for(size_t i = 0; i < 2557; ++i) {
     ps.push_back(points.add());
     x.set(ps.back(), (simit_float)i);
   }
@@ -127,6 +127,6 @@ TEST(System, vector_add_large_system) {
   f->runSafe();
 
   for(size_t i = 0; i < ps.size(); ++i) {
-    ASSERT_EQ(i*2, (int)x.get(ps[i]));
+    ASSERT_EQ(i*2, (size_t)x.get(ps[i]));
   }
 }
