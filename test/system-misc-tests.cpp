@@ -445,3 +445,23 @@ TEST(System, slice) {
 
 }
 
+TEST(System, DISABLED_map_norm) {
+  Set<> points;
+  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  x.set(p0, {1.0, 2.0, 3.0});
+  x.set(p1, {4.0, 5.0, 6.0});
+  x.set(p2, {0.1, 0.2, 0.3});
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->runSafe();
+}
+

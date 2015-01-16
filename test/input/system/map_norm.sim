@@ -1,0 +1,18 @@
+element Point
+  x : tensor[3](float);
+end
+
+extern points : set{Point};
+
+func enforceConstraints(inout p : Point)
+  dist = norm(p.x);
+  if (dist < 1.0)
+    p.x = p.x/dist;
+  end
+end
+
+proc main
+
+map enforceConstraints to points;
+
+end
