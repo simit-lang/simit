@@ -19,6 +19,7 @@
 #include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/Analysis/Verifier.h"
 
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
@@ -188,6 +189,10 @@ simit::Function *LLVMBackend::compile(Func func) {
   fpm.doFinalization();
   
   mpm.run(*module);
+
+#ifdef SIMIT_DEBUG
+//    verifyModule(*module);
+#endif
 
   bool requiresInit = buffers.size() > 0;
   return new LLVMFunction(func, llvmFunc, requiresInit, module,executionEngine);

@@ -126,7 +126,13 @@ simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
     }
 
     // Compute function
-    return createHarness(llvmFunc->getName(), args);
+    FuncType computeFunc = createHarness(llvmFunc->getName(), args);
+
+#ifdef SIMIT_DEBUG
+//    verifyModule(*module);
+#endif
+
+    return computeFunc;
   }
 }
 
