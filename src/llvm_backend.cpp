@@ -23,6 +23,7 @@
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
 #include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 #include "llvm_codegen.h"
 #include "types.h"
@@ -169,28 +170,24 @@ simit::Function *LLVMBackend::compile(Func func) {
 
 
   // Run LLVM optimization passes on the function
+  // We use the built-in PassManagerBuilder to build
+  // the set of passes that are similar to clang's -O3
   llvm::FunctionPassManager fpm(module);
+  llvm::PassManager mpm;
+  llvm::PassManagerBuilder pmBuilder;
+  
+  pmBuilder.OptLevel = 3;
+  
   fpm.add(new llvm::DataLayout(*executionEngine->getDataLayout()));
 
-  // Basic optimizations
-  fpm.add(llvm::createBasicAliasAnalysisPass());
-  fpm.add(llvm::createInstructionCombiningPass());
-  fpm.add(llvm::createGVNPass());
-  fpm.add(llvm::createCFGSimplificationPass());
-  fpm.add(llvm::createPromoteMemoryToRegisterPass());
-  fpm.add(llvm::createAggressiveDCEPass());
-
-  // Loop optimizations
-  fpm.add(llvm::createLICMPass());
-  fpm.add(llvm::createLoopStrengthReducePass());
-  
-  fpm.add(llvm::createIndVarSimplifyPass());
-  fpm.add(llvm::createLoopUnrollPass());
-  fpm.add(llvm::createEarlyCSEPass());
+  pmBuilder.populateFunctionPassManager(fpm);
+  pmBuilder.populateModulePassManager(mpm);
 
   fpm.doInitialization();
   fpm.run(*llvmFunc);
   fpm.doFinalization();
+  
+  mpm.run(*module);
 
   bool requiresInit = buffers.size() > 0;
   return new LLVMFunction(func, llvmFunc, requiresInit, module,executionEngine);
