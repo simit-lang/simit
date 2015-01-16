@@ -95,6 +95,8 @@ public:
   /// Get the loop variables that correspond to the given index variable. There
   /// are one loop variable per block level in the indexvar domain.
   const std::vector<LoopVar> &getLoopVars(const IndexVar &var) const {
+    iassert(vertexLoopVars.find(var) != vertexLoopVars.end())
+        << "Loop var not found among vertex vars" ;
     return vertexLoopVars.at(var);
   }
 
