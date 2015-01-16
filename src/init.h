@@ -1,6 +1,8 @@
 #ifndef INIT_H
 #define INIT_H
 
+#include <algorithm>
+
 #include "error.h"
 #include "ir.h"
 #include "program.h"
