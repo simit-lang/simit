@@ -101,19 +101,19 @@ void GPUFunction::unmapArgs(bool updated) {
 }
 
 llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
-  std::cout << "Push arg: " << formal << std::endl;
+  // std::cout << "Push arg: " << formal << std::endl;
   switch (actual.getType().kind()) {
     case ir::Type::Tensor: {
       CUdeviceptr *devBuffer = new CUdeviceptr();
       const ir::TensorType *ttype = actual.getType().toTensor();
       const ir::Literal &literal = *(ir::to<ir::Literal>(*actual.getTensor()));
-      std::cout << "[";
-      char* data = reinterpret_cast<char*>(literal.data);
-      for (size_t i = 0; i < literal.size; ++i) {
-        if (i != 0) std::cout << ",";
-        std::cout << std::hex << (int) data[i];
-      }
-      std::cout << "]" << std::dec << std::endl;
+      // std::cout << "[";
+      // char* data = reinterpret_cast<char*>(literal.data);
+      // for (size_t i = 0; i < literal.size; ++i) {
+      //   if (i != 0) std::cout << ",";
+      //   std::cout << std::hex << (int) data[i];
+      // }
+      // std::cout << "]" << std::dec << std::endl;
       if (!actual.isOutput() && isScalar(actual.getType())) {
         switch (ttype->componentType.kind) {
           case ir::ScalarType::Int:
@@ -130,7 +130,7 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
         checkCudaErrors(cuMemAlloc(
             devBuffer, ttype->size() * ttype->componentType.bytes()));
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, literal.data, literal.size));
-        std::cout << literal.data << " -> " << (void*)(*devBuffer) << std::endl;
+        // std::cout << literal.data << " -> " << (void*)(*devBuffer) << std::endl;
         pushedBufs.push_back(
             new DeviceDataHandle(literal.data, devBuffer, literal.size));
         std::vector<DeviceDataHandle*> argBufs = { pushedBufs.back() };
@@ -219,15 +219,15 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
           pushedBufs.push_back(
               new DeviceDataHandle(fieldData, devBuffer, size));
           fieldHandles.push_back(pushedBufs.back());
-          std::cout << "Push field: " << field.name << std::endl;
-          std::cout << "[";
-          char* data = reinterpret_cast<char*>(fieldData);
-          for (size_t i = 0; i < size; ++i) {
-            if (i != 0) std::cout << ",";
-            std::cout << std::hex << (int) data[i];
-          }
-          std::cout << "]" << std::dec << std::endl;
-          std::cout << fieldData << " -> " << (void*)(*devBuffer) << std::endl;
+          // std::cout << "Push field: " << field.name << std::endl;
+          // std::cout << "[";
+          // char* data = reinterpret_cast<char*>(fieldData);
+          // for (size_t i = 0; i < size; ++i) {
+          //   if (i != 0) std::cout << ",";
+          //   std::cout << std::hex << (int) data[i];
+          // }
+          // std::cout << "]" << std::dec << std::endl;
+          // std::cout << fieldData << " -> " << (void*)(*devBuffer) << std::endl;
         }
         setData.push_back(llvmPtr(ftype, reinterpret_cast<void*>(*devBuffer)));
       }
@@ -243,19 +243,19 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
 }
 
 void GPUFunction::pullArg(DeviceDataHandle* handle) {
-  std::cout << "Pull arg: " << (void*)(*handle->devBuffer)
-            << " -> " << handle->hostBuffer
-            << " (" << handle->size << ")" << std::endl;
+  // std::cout << "Pull arg: " << (void*)(*handle->devBuffer)
+  //           << " -> " << handle->hostBuffer
+  //           << " (" << handle->size << ")" << std::endl;
   checkCudaErrors(cuMemcpyDtoH(
       handle->hostBuffer, *handle->devBuffer, handle->size));
   handle->devDirty = false;
-  std::cout << "[";
+  // std::cout << "[";
   char* data = reinterpret_cast<char*>(handle->hostBuffer);
-  for (size_t i = 0; i < handle->size; ++i) {
-    if (i != 0) std::cout << ",";
-    std::cout << std::hex << (int) data[i];
-  }
-  std::cout << "]" << std::dec << std::endl;
+  // for (size_t i = 0; i < handle->size; ++i) {
+  //   if (i != 0) std::cout << ",";
+  //   std::cout << std::hex << (int) data[i];
+  // }
+  // std::cout << "]" << std::dec << std::endl;
 }
 
 void GPUFunction::freeArg(DeviceDataHandle* handle) {
@@ -417,7 +417,6 @@ simit::Function::FuncType GPUFunction::init(
     size_t globalPtrSize;
     checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
                                       *cudaModule, bufVal->getName().data()));
-    std::cout << "Pointer size: " << globalPtrSize << std::endl;
     iassert(globalPtrSize == sizeof(void*))
         << "Global pointers should all be pointer-sized. Got: "
         << globalPtrSize << " bytes";
@@ -458,7 +457,7 @@ simit::Function::FuncType GPUFunction::init(
     for (const std::string& formal : formals) {
       iassert(actuals.find(formal) != actuals.end());
       if (actuals.at(formal).isOutput()) {
-        std::cout << "Dirtying " << formal << std::endl;
+        // std::cout << "Dirtying " << formal << std::endl;
         for (auto &handle : argBufMap[formal]) {
           handle->devDirty = true;
         }
