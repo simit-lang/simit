@@ -6,6 +6,7 @@
 #include <vector>
 #include <memory>
 
+#include "init.h"
 #include "uncopyable.h"
 
 namespace simit {
