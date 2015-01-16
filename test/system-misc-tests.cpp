@@ -458,9 +458,9 @@ TEST(System, map_norm) {
   f->bind("points", &points);
   f->runSafe();
 
-  ASSERT_EQ(3.74165738677394132949,  (double)y(p0));
-  ASSERT_EQ(8.77496438739212258895,  (double)y(p1));
-  ASSERT_EQ(13.92838827718411920387, (double)y(p2));
+  ASSERT_SIMIT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
+  ASSERT_SIMIT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
+  ASSERT_SIMIT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
 }
 
 TEST(System, map_vec_assign) {
@@ -482,13 +482,13 @@ TEST(System, map_vec_assign) {
   f->bind("points", &points);
   f->runSafe();
 
-  ASSERT_EQ(1.1, x(p0)(0));
-  ASSERT_EQ(2.1, x(p0)(1));
-  ASSERT_EQ(3.1, x(p0)(2));
-  ASSERT_EQ(4.1, x(p1)(0));
-  ASSERT_EQ(5.1, x(p1)(1));
-  ASSERT_EQ(6.1, x(p1)(2));
-  ASSERT_EQ(7.1, x(p2)(0));
-  ASSERT_EQ(8.1, x(p2)(1));
-  ASSERT_EQ(9.1, x(p2)(2));
+  ASSERT_SIMIT_FLOAT_EQ(1.1, x(p0)(0));
+  ASSERT_SIMIT_FLOAT_EQ(2.1, x(p0)(1));
+  ASSERT_SIMIT_FLOAT_EQ(3.1, x(p0)(2));
+  ASSERT_SIMIT_FLOAT_EQ(4.1, x(p1)(0));
+  ASSERT_SIMIT_FLOAT_EQ(5.1, x(p1)(1));
+  ASSERT_SIMIT_FLOAT_EQ(6.1, x(p1)(2));
+  ASSERT_SIMIT_FLOAT_EQ(7.1, x(p2)(0));
+  ASSERT_SIMIT_FLOAT_EQ(8.1, x(p2)(1));
+  ASSERT_SIMIT_FLOAT_EQ(9.1, x(p2)(2));
 }
