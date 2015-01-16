@@ -7,6 +7,7 @@
 #include "llvm/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/Scalar.h"
 
 #include <fstream>
 
@@ -61,7 +62,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
 
     // Emit function
     func = emitEmptyFunction(f.getName(), f.getArguments(), f.getResults(),
-                      false, false);
+                             false, false);
 
     // Add constants to symbol table
     for (auto &global : f.getEnvironment().globals) {
@@ -81,6 +82,8 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
 
   // Internalize pass
   fpm.add(llvm::createInternalizePass(llvm::ArrayRef<const char*>(exported)));
+  fpm.add(llvm::createGVNPass());
+  fpm.add(llvm::createPromoteMemoryToRegisterPass());
 
   return new GPUFunction(irFunc, func, module, buffers, fieldStorage);
 }
