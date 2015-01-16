@@ -83,7 +83,7 @@ llvm::Function *createPrototype(const std::string &name,
                                 const std::vector<ir::Var> &arguments,
                                 const std::vector<ir::Var> &results,
                                 llvm::Module *module,
-                                bool externalLinkage=false,
+                                bool externalLinkage,
                                 bool doesNotThrow=true,
                                 unsigned addrspace=LLVM_GENERIC_ADDRSPACE);
 
