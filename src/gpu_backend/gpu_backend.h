@@ -12,7 +12,7 @@
 
 // transforms
 #include "shard_gpu_loops.h"
-#include "lift_gpu_vars.h"
+#include "var_decl_rewriter.h"
 
 namespace llvm {
 class Value;

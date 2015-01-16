@@ -114,6 +114,20 @@ static Function *compile(ir::Func func, internal::Backend *backend) {
   if (kBackend == "gpu") {
     func = ShardLoopsRewriter().rewrite(func);
   }
+  class VarDeclsRewriter : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      func = rewriteVarDecls(func);
+    }
+  };
+  if (kBackend == "gpu") {
+    func = VarDeclsRewriter().rewrite(func);
+  }
 #endif
 
   return backend->compile(func);
