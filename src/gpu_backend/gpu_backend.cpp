@@ -736,8 +736,14 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 
 void GPUBackend::emitPrintf(std::string format,
                             std::vector<llvm::Value*> args) {
+  format = "(%d) " + format; // add thread ID
   llvm::Value *formatPtr = emitGlobalString(format);
-
+  
+  // add thread ID to beginning:
+  std::reverse(args.begin(), args.end());
+  args.push_back(getTidX());
+  std::reverse(args.begin(), args.end());
+  
   // Convert any args that need to be extended
   for (size_t i = 0; i < args.size(); ++i) {
     auto &arg = args[i];
