@@ -475,7 +475,26 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   llvm::Function *kernel = emitEmptyFunction(
       irFunc.getName() + "_nested_kernel", irFunc.getArguments(),
       irFunc.getResults(), true, false);
-  builder.reset(new LLVMIRBuilder(&kernel->getEntryBlock()));
+  // builder.reset(new LLVMIRBuilder(&kernel->getEntryBlock()));
+  builder->SetInsertPoint(&kernel->getEntryBlock());
+  
+  llvm::BasicBlock *bodyStart = llvm::BasicBlock::Create(
+    LLVM_CONTEXT, "bodyStart", kernel);
+  llvm::BasicBlock *earlyExit = llvm::BasicBlock::Create(
+    LLVM_CONTEXT, "earlyExit", kernel);
+  
+  // Guard: check if we're outside the intended range of the kernel loop and 
+  // early-exit if so.
+  GPUSharding kernelSharding = op->sharding;
+  llvm::Value *cond = builder->CreateICmpULT(getTidX(),
+    emitComputeLen(kernelSharding.xDomain));
+  builder->CreateCondBr(cond, bodyStart, earlyExit);
+
+  builder->SetInsertPoint(earlyExit);
+  builder->CreateRetVoid();
+
+  // Continue with kernel body
+  builder->SetInsertPoint(bodyStart);
 
   // Kernel metadata
   addNVVMAnnotation(kernel, "kernel", llvmInt(1), module);
@@ -488,8 +507,6 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
     llvm::Value *llvmTmp = builder->CreateLoad(val, val->getName());
     symtable.insert(var, llvmTmp);
   }
-
-  GPUSharding kernelSharding = op->sharding;
 
   // Code generate for the kernel
   if (kernelSharding.xSharded) {
@@ -573,24 +590,24 @@ llvm::Value *GPUBackend::emitCheckRoot() {
 }
 
 llvm::Value *GPUBackend::getTidX() {
-  llvm::Function *func = getBuiltIn(
+  llvm::Function *tidFunc = getBuiltIn(
       "llvm.nvvm.read.ptx.sreg.tid.x", LLVM_INT, {});
-  cleanFuncAttrs(func);
-  return builder->CreateCall(func);
+  cleanFuncAttrs(tidFunc);
+  llvm::Function *bidFunc = getBuiltIn(
+      "llvm.nvvm.read.ptx.sreg.ctaid.x", LLVM_INT, {});
+  cleanFuncAttrs(bidFunc);
+  auto tid = builder->CreateCall(tidFunc);
+  auto bid = builder->CreateCall(bidFunc);
+  auto blockOffset = builder->CreateMul(bid, llvmInt(blockSize));
+  return builder->CreateAdd(tid, blockOffset);
 }
 
 llvm::Value *GPUBackend::getTidY() {
-  llvm::Function *func = getBuiltIn(
-      "llvm.nvvm.read.ptx.sreg.tid.y", LLVM_INT, {});
-  cleanFuncAttrs(func);
-  return builder->CreateCall(func);
+  not_supported_yet; // these should never be emitted at this point
 }
 
 llvm::Value *GPUBackend::getTidZ() {
-  llvm::Function *func = getBuiltIn(
-      "llvm.nvvm.read.ptx.sreg.tid.z", LLVM_INT, {});
-  cleanFuncAttrs(func);
-  return builder->CreateCall(func);
+  not_supported_yet; // these should never be emitted at this point
 }
 
 llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
@@ -665,6 +682,8 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
 void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
                                   std::vector<llvm::Value*> args,
                                   GPUSharding sharding) {
+  iassert(sharding.xSharded && !sharding.ySharded && !sharding.zSharded);
+  
   std::cout << "emitKernelLaunch: " << std::endl;
   for (llvm::Value *val : args) {
     std::cout << "arg: " << val->getName().str() << std::endl;
@@ -695,27 +714,28 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   std::vector<llvm::Constant*> gridDimsVec = {
     llvmInt(1), llvmInt(1), llvmInt(1)
   };
-  llvm::Constant *gridDims =
+  llvm::Value *gridDims =
       llvm::ConstantStruct::get(dim3Ty, gridDimsVec);
-
-  // TODO(gkanwar): Change back
-  std::vector<llvm::Constant*> initBlockDims = {
-    llvmInt(1), llvmInt(1), llvmInt(1)
-  };
-  llvm::Value *blockDims =
-      llvm::ConstantStruct::get(dim3Ty, initBlockDims);
-  blockDims = builder->CreateInsertValue(
-      blockDims,
-      sharding.xSharded ? emitComputeLen(sharding.xDomain) : llvmInt(1),
+  
+  // numBlocks = 1 + ( (len-1) / blockSize )
+  llvm::Value *numBlocks =  builder->CreateAdd(
+                              builder->CreateUDiv(
+                                builder->CreateSub(
+                                  emitComputeLen(sharding.xDomain),
+                                  llvmInt(1)),
+                                llvmInt(blockSize)
+                              ), llvmInt(1)
+                            );
+  gridDims = builder->CreateInsertValue(
+      gridDims,
+      numBlocks,
       llvm::ArrayRef<unsigned>({0}));
-  blockDims = builder->CreateInsertValue(
-      blockDims,
-      sharding.ySharded ? emitComputeLen(sharding.yDomain) : llvmInt(1),
-      llvm::ArrayRef<unsigned>({1}));
-  blockDims = builder->CreateInsertValue(
-      blockDims,
-      sharding.zSharded ? emitComputeLen(sharding.zDomain) : llvmInt(1),
-      llvm::ArrayRef<unsigned>({2}));
+
+  std::vector<llvm::Constant*> initBlockDims = {
+    llvmInt(blockSize), llvmInt(1), llvmInt(1)
+  };
+  llvm::Constant *blockDims =
+      llvm::ConstantStruct::get(dim3Ty, initBlockDims);
 
   // Build param buffer
   llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, LLVM_INT8PTR);

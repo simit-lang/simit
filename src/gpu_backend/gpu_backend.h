@@ -31,6 +31,8 @@ public:
 protected:
   // CUDA variables
   int cuDevMajor, cuDevMinor;
+  
+  const int blockSize = 128;
 
   // Tracking whether we're in a kernel
   bool inKernel;

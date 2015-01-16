@@ -109,3 +109,24 @@ TEST(System, vector_assign_blocked) {
   ASSERT_EQ(6.0, x.get(p1)(0));
   ASSERT_EQ(8.0, x.get(p1)(1));
 }
+
+TEST(System, vector_add_large_system) {
+  Set<> points;
+  FieldRef<simit_float> x = points.addField<simit_float>("x");
+
+  std::vector<ElementRef> ps;
+  for(int i = 0; i < 2557; ++i) {
+    ps.push_back(points.add());
+    x.set(ps.back(), (simit_float)i);
+  }
+
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+  f->bind("points", &points);
+
+  f->runSafe();
+
+  for(size_t i = 0; i < ps.size(); ++i) {
+    ASSERT_EQ(i*2, (int)x.get(ps[i]));
+  }
+}
