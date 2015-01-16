@@ -9,6 +9,7 @@
 #include "cuda.h"
 #include "nvvm.h"
 
+#include "llvm/Analysis/Verifier.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/raw_ostream.h"
@@ -347,6 +348,10 @@ simit::Function::FuncType GPUFunction::init(
   }
   // Create harnesses for kernel args
   llvm::Function *harness = createHarness(args, llvmFunc.get(), module.get());
+
+  // Validate LLVM module
+  iassert(!llvm::verifyModule(*module, llvm::AbortProcessAction))
+      << "LLVM module does not pass verification";
 
   // Generate harness PTX
   std::cout << "Create PTX" << std::endl;
