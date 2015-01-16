@@ -97,8 +97,9 @@ simit::Function *LLVMBackend::compile(Func func) {
     this->storage.add(f.getStorage());
 
     // Emit function
+    bool external = (f == func);
     llvmFunc = emitEmptyFunction(f.getName(), f.getArguments(),
-                                 f.getResults());
+                                 f.getResults(), external);
 
     // Add constants to symbol table
     for (auto &global : f.getEnvironment().globals) {
@@ -106,7 +107,6 @@ simit::Function *LLVMBackend::compile(Func func) {
     }
 
     compile(moveVarDeclsToFront(f.getBody()));
-
     builder->CreateRetVoid();
     symtable.clear();
   }
@@ -119,7 +119,6 @@ simit::Function *LLVMBackend::compile(Func func) {
   llvm::Function *malloc =
       llvm::Function::Create(m, llvm::Function::ExternalLinkage, "malloc",
                              module);
-
   llvm::FunctionType *f =
       llvm::FunctionType::get(LLVM_VOID, {LLVM_INT8PTR}, false);
   llvm::Function *free =
@@ -128,8 +127,8 @@ simit::Function *LLVMBackend::compile(Func func) {
 
 
   // Create initialization function
-  emitEmptyFunction(func.getName()+".init",
-                    func.getArguments(), func.getResults());
+  emitEmptyFunction(func.getName()+".init", func.getArguments(),
+                    func.getResults(), true);
 
   for (auto &buffer : buffers) {
     Var var = buffer.first;
@@ -153,8 +152,8 @@ simit::Function *LLVMBackend::compile(Func func) {
 
 
   // Create de-initialization function
-  emitEmptyFunction(func.getName()+".deinit",
-                    func.getArguments(), func.getResults());
+  emitEmptyFunction(func.getName()+".deinit", func.getArguments(),
+                    func.getResults(), true);
 
   for (auto &buffer : buffers) {
     Var var = buffer.first;
