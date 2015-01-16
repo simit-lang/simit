@@ -130,7 +130,7 @@ struct ErrorReport {
         } else {
           (*msg) << "error";
         }
-        (*msg) << " at " << file << ":" << line << "\n";
+        (*msg) << " at " << file << ":" << line << " in " << func << "\n";
         if (conditionString) {
           (*msg) << " Condition failed: " << conditionString << "\n";
         }
@@ -167,17 +167,17 @@ struct ErrorReport {
 // internal asserts
 #ifndef WITHOUT_INTERNAL_ASSERTS
   #define iassert(c)                                                           \
-    simit::internal::ErrorReport(__FILE__, nullptr, __LINE__, (c), #c,         \
+    simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,    \
                                simit::internal::ErrorReport::Internal, false)
   #define ierror                                                               \
-    simit::internal::ErrorReport(__FILE__, nullptr, __LINE__, false, nullptr,  \
+    simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,\
                                simit::internal::ErrorReport::Internal, false)
 
   #define tassert(c)                                                           \
-    simit::internal::ErrorReport(__FILE__, nullptr, __LINE__, (c), #c,         \
+    simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,    \
                                simit::internal::ErrorReport::Temporary, false)
   #define terror                                                               \
-    simit::internal::ErrorReport(__FILE__, nullptr, __LINE__, false, nullptr,  \
+    simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,\
                                simit::internal::ErrorReport::Temporary, false)
 
   #define unreachable                                                          \

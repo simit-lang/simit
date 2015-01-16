@@ -1380,7 +1380,7 @@ void LLVMBackend::emitPrintf(std::string format,
   llvm::Value *str = emitGlobalString(format);
 
   std::vector<llvm::Value*> printfArgs;
-  for (int i = 0; i < args.size(); i++) {
+  for (size_t i = 0; i < args.size(); i++) {
     // printf requires float varargs be promoted to doubles!
     if (args[i]->getType()->isFloatTy()) {
       args[i] = builder->CreateFPCast(args[i], LLVM_DOUBLE);
