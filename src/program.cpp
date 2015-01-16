@@ -32,7 +32,8 @@ const std::vector<std::string> VALID_BACKENDS = {
 };
 std::string kBackend;
 
-static Function *compile(ir::Func func, internal::Backend *backend) {
+static std::unique_ptr<Function> compile(ir::Func func,
+                                         internal::Backend *backend) {
   class FlattenRewriter : public ir::IRRewriterCallGraph {
     using IRRewriter::visit;
     void visit(const ir::Func *op) {
@@ -130,7 +131,7 @@ static Function *compile(ir::Func func, internal::Backend *backend) {
   }
 #endif
 
-  return backend->compile(func);
+  return std::unique_ptr<Function>(backend->compile(func));
 }
 
 
@@ -216,20 +217,9 @@ int Program::verify() {
         return 1;
       }
       ir::Func func = functions.at(test->getCallee());
+      std::unique_ptr<Function> compiledFunc = simit::compile(func, content->backend);
 
-      if (compiled.find(func) == compiled.end()) {
-        compiled[func] = simit::compile(func, content->backend);
-      }
-    }
-
-    for (auto &test : content->ctx.getTests()) {
-      iassert(functions.find(test->getCallee()) != functions.end());
-      ir::Func func = functions.at(test->getCallee());
-
-      iassert(compiled.find(func) != compiled.end());
-      Function *compiledFunc = compiled.at(func);
-
-      bool evaluates = test->evaluate(func, compiledFunc, &content->diags);
+      bool evaluates = test->evaluate(func, compiledFunc.get(), &content->diags);
       if (!evaluates) {
         return 2;
       }

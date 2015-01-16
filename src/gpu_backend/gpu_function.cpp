@@ -73,6 +73,11 @@ GPUFunction::~GPUFunction() {
     checkCudaErrors(cuModuleUnload(*cudaModule));
     delete cudaModule;
   }
+
+  size_t free, total;
+  cuMemGetInfo(&free, &total);
+  std::cerr << "CUDA mem info: " << free << " free of " << total << std::endl;
+
   // Release driver context, if any
   if (cudaContext) {
     checkCudaErrors(cuCtxDestroy(*cudaContext));
