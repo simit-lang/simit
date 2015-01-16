@@ -98,6 +98,11 @@ protected:
   void emitKernelLaunch(llvm::Function *kernel,
                         std::vector<llvm::Value*> args,
                         GPUSharding sharding);
+  void emitKernelLaunch(llvm::Function *kernel,
+                        std::vector<llvm::Value*> args,
+                        llvm::Value *xSize,
+                        llvm::Value *ySize,
+                        llvm::Value *zSize);
 
   virtual void emitPrintf(std::string format,
                           std::vector<llvm::Value*> args={});
@@ -107,6 +112,8 @@ protected:
 
   virtual void emitMemSet(llvm::Value *dst, llvm::Value *val,
                           llvm::Value *size, unsigned align);
+  void emitShardedMemSet(ir::Type targetType, llvm::Value *target,
+                         llvm::Value *size);
 
   void emitFillBuf(llvm::Value *buffer,
                    std::vector<llvm::Value*> vals);

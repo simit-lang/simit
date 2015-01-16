@@ -427,8 +427,10 @@ void GPUBackend::visit(const ir::VarDecl *op) {
 
 void GPUBackend::visit(const ir::AssignStmt *op) {
   // Only atomic for a compound scalar-scalar assign
+  const ir::TensorType *varType = op->var.getType().toTensor();
+  const ir::TensorType *valType = op->value.type().toTensor();
   if (op->cop.kind != ir::CompoundOperator::None &&
-      op->var.getType().toTensor()->order() == 0) {
+      varType->order() == 0) {
     iassert(symtable.contains(op->var)) << op->var << " has not been declared";
     switch (op->cop.kind) {
       case ir::CompoundOperator::Add: {
@@ -450,12 +452,34 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
       default: ierror << "Unknown compound operator type: " << op->cop.kind;
     }
   }
+  else if (varType->order() > 0 && valType->order() == 0 &&
+           ir::isa<ir::Literal>(op->value) &&
+           (ir::to<ir::Literal>(op->value)->getFloatVal(0) == 0.0 ||
+            ((int*)ir::to<ir::Literal>(op->value))[0] == 0) &&
+           !inKernel) {
+    llvm::Value *varPtr = symtable.get(op->var);
+    emitShardedMemSet(op->var.getType(), varPtr,
+                      emitComputeLen(varType, fieldStorage));
+  }
   else {
     LLVMBackend::visit(op);
   }
 }
 void GPUBackend::visit(const ir::FieldWrite *op) {
-  LLVMBackend::visit(op);
+  // Sparse memset 0 should be emitted as a kernel
+  ir::Type fieldType = getFieldType(op->elementOrSet, op->fieldName);
+  ir::Type valueType = op->value.type();
+  if (fieldType.toTensor()->order() > 0 &&
+      valueType.toTensor()->order() == 0 &&
+      ir::isa<ir::Literal>(op->value) &&
+      ir::to<ir::Literal>(op->value)->getFloatVal(0) == 0.0) {
+    llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
+    emitShardedMemSet(fieldType, fieldPtr,
+                      emitComputeLen(fieldType.toTensor(), fieldStorage));
+  }
+  else {
+    LLVMBackend::visit(op);
+  }
 }
 void GPUBackend::visit(const ir::Store *op) {
   if (op->cop.kind != ir::CompoundOperator::None) {
@@ -548,7 +572,7 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   symtable = oldSymtable;
 
   // Emit a dynamic kernel launch
-  builder.reset(new LLVMIRBuilder(prevBB));
+  builder->SetInsertPoint(prevBB);
   std::vector<llvm::Value*> args;
   for (auto &irArg : irFunc.getArguments()) {
     args.push_back(symtable.get(irArg));
@@ -701,7 +725,18 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
                                   std::vector<llvm::Value*> args,
                                   GPUSharding sharding) {
   iassert(sharding.xSharded && !sharding.ySharded && !sharding.zSharded);
-  
+  emitKernelLaunch(kernel, args,
+                   emitComputeLen(sharding.xDomain), nullptr, nullptr);
+}
+
+void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
+                                  std::vector<llvm::Value*> args,
+                                  llvm::Value *xSize,
+                                  llvm::Value *ySize,
+                                  llvm::Value *zSize) {
+  iassert(xSize) << "x dimension must be non-null";
+  iassert(!ySize && !zSize) << "y and z dimensions not currently supported";
+
   std::cout << "emitKernelLaunch: " << std::endl;
   for (llvm::Value *val : args) {
     std::cout << "arg: " << val->getName().str() << std::endl;
@@ -739,7 +774,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   llvm::Value *numBlocks =  builder->CreateAdd(
                               builder->CreateUDiv(
                                 builder->CreateSub(
-                                  emitComputeLen(sharding.xDomain),
+                                  xSize,
                                   llvmInt(1)),
                                 llvmInt(blockSize)
                               ), llvmInt(1)
@@ -899,6 +934,69 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
   llvm::Value *castDst = builder->CreateBitCast(dst, dstCastTy);
   llvm::Constant *isVolatile = llvmBool(true);
   builder->CreateCall5(func, castDst, val, size, llvmAlign, isVolatile);
+}
+
+
+void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
+                                   llvm::Value *size) {
+  iassert(!inKernel);
+  iassert(targetType.isTensor());
+
+  // Stash the symtable
+  ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
+  symtable.clear();
+  // Stash the current basic block
+  llvm::BasicBlock *prevBB = builder->GetInsertBlock();
+
+  // Create LLVM func
+  ir::Var targetArg("target", targetType);
+  ir::Var sizeArg("size", ir::Int);
+  llvm::Function *kernel = emitEmptyFunction(
+      "memset_kernel", {targetArg, sizeArg}, {},  true, false);
+  builder->SetInsertPoint(&kernel->getEntryBlock());
+
+  // Kernel metadata
+  addNVVMAnnotation(kernel, "kernel", llvmInt(1), module);
+  
+  llvm::BasicBlock *bodyStart = llvm::BasicBlock::Create(
+    LLVM_CONTEXT, "bodyStart", kernel);
+  llvm::BasicBlock *earlyExit = llvm::BasicBlock::Create(
+    LLVM_CONTEXT, "earlyExit", kernel);
+  
+  // Guard: check if we're outside the intended range of the kernel loop and 
+  // early-exit if so.
+  llvm::Value *cond = builder->CreateICmpULT(getTidX(), symtable.get(sizeArg));
+  builder->CreateCondBr(cond, bodyStart, earlyExit);
+
+  builder->SetInsertPoint(earlyExit);
+  builder->CreateRetVoid();
+
+  // Continue with kernel body
+  builder->SetInsertPoint(bodyStart);
+
+  // Actual assign
+  llvm::Value *value;
+  if (targetType.toTensor()->componentType.kind == ir::ScalarType::Float) {
+    value = llvmFP(0);
+  }
+  else if (targetType.toTensor()->componentType.kind == ir::ScalarType::Int) {
+    value = llvmInt(0);
+  }
+  else {
+    not_supported_yet;
+  }
+  llvm::Value *ptr = builder->CreateGEP(symtable.get(targetArg), getTidX());
+  builder->CreateStore(value, ptr);
+
+  // Kernel should always return void
+  builder->CreateRetVoid();
+
+  // Unstash symtable
+  symtable = oldSymtable;
+
+  // Emit kernel launch
+  builder->SetInsertPoint(prevBB);
+  emitKernelLaunch(kernel, {target, size}, size, nullptr, nullptr);
 }
 
 void GPUBackend::emitFillBuf(llvm::Value *buffer,
