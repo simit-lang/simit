@@ -6,45 +6,70 @@
 namespace simit {
 namespace ir {
 
-class KernelRWAnalysisRewriter : public IRRewriter {
+class FindRootVars : public IRVisitor {
 public:
-  using IRRewriter::visit;
+  std::set<Var> getRootVars() {
+    return rootVars;
+  }
+
+  using IRVisitor::visit;
+
+  void visit(const VarDecl *op) {
+    if (!curKernel) {
+      rootVars.insert(op->var);
+    }
+    IRVisitor::visit(op);
+  }
 
   void visit(const GPUKernel *op) {
     iassert(!curKernel);
     curKernel = op;
-    reads.clear();
-    writes.clear();
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
     curKernel = nullptr;
-
-    stmt = GPUKernel::make(op->body, op->sharding, reads, writes);
   }
 
+private:
+  const GPUKernel *curKernel = nullptr;
+  std::set<Var> rootVars;
+};
+
+class ReadWriteAnalysis : public IRVisitor {
+public:
+  ReadWriteAnalysis(std::set<Var> rootVars) {
+    this->rootVars = rootVars;
+  }
+
+  std::set<Var> getReads() {
+    return reads;
+  }
+
+  std::set<Var> getWrites() {
+    return writes;
+  }
+
+  using IRVisitor::visit;
+
   void visit(const VarDecl *op) {
-    if (!curKernel) {
-      globalBufs.insert(op->var);
-    }
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
   }
 
   void visit(const VarExpr *op) {
     maybeRead(op->var);
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
   }
   void visit(const CallStmt *op) {
     for (Var result : op->results) {
       maybeWrite(result);
     }
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
   }
   void visit(const ForRange *op) {
     maybeRead(op->var);
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
   }
   void visit(const For *op) {
     maybeRead(op->domain.var);
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
   }
 
   // Writes
@@ -53,7 +78,7 @@ public:
       maybeRead(op->var);
     }
     maybeWrite(op->var);
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
   }
   void visit(const Store *op) {
     // TODO(gkanwar): Fix this nasty casework
@@ -68,38 +93,56 @@ public:
     else {
       not_supported_yet;
     }
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
   }
   void visit(const FieldWrite *op) {
     iassert(isa<VarExpr>(op->elementOrSet));
     maybeWrite(to<VarExpr>(op->elementOrSet)->var);
-    IRRewriter::visit(op);
+    IRVisitor::visit(op);
   }
 
 private:
   void maybeRead(Var var) {
-    if (curKernel) {
-      if (globalBufs.find(var) != globalBufs.end()) {
-        reads.insert(var);
-      }
+    if (rootVars.find(var) != rootVars.end()) {
+      reads.insert(var);
     }
   }
   void maybeWrite(Var var) {
-    if (curKernel) {
-      if (globalBufs.find(var) != globalBufs.end()) {
-        writes.insert(var);
-      }
+    if (rootVars.find(var) != rootVars.end()) {
+      writes.insert(var);
     }
   }
 
-  const GPUKernel *curKernel = nullptr;
-  std::set<Var> globalBufs;
+  std::set<Var> rootVars;
   std::set<Var> reads;
   std::set<Var> writes;
 };
 
+class KernelRWAnalysisRewriter : public IRRewriter {
+public:
+  KernelRWAnalysisRewriter(std::set<Var> rootVars) {
+    this->rootVars = rootVars;
+  }
+
+  using IRRewriter::visit;
+  
+  void visit(const GPUKernel *op) {
+    ReadWriteAnalysis readWriteAnalysis(rootVars);
+    readWriteAnalysis.visit(op);
+    std::set<Var> reads = readWriteAnalysis.getReads();
+    std::set<Var> writes = readWriteAnalysis.getWrites();
+    stmt = GPUKernel::make(op->body, op->sharding, reads, writes);
+  }
+
+private:
+  std::set<Var> rootVars;
+};
+
 Func kernelRWAnalysis(Func func) {
-  return KernelRWAnalysisRewriter().rewrite(func);
+  FindRootVars findRootVars;
+  findRootVars.visit(&func);
+  std::set<Var> rootVars = findRootVars.getRootVars();
+  return KernelRWAnalysisRewriter(rootVars).rewrite(func);
 }
 
 }}  // namespace simit::ir
