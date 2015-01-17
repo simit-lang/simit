@@ -237,9 +237,7 @@ void GPUBackend::visit(const ir::CallStmt *op) {
     // first, see if this is an LLVM intrinsic
     auto foundIntrinsic = nvvmIntrinsicByName.find(callee);
     if (foundIntrinsic != nvvmIntrinsicByName.end()) {
-      auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
-      module->getOrInsertFunction(foundIntrinsic->second, ftype);
-      fun = module->getFunction(foundIntrinsic->second);
+      fun = getBuiltIn(foundIntrinsic->second, getLLVMFloatType(), argTypes);
       call = builder->CreateCall(fun, args);
       // Export the intrinsic, so it's not optimized out of the module
       exported.push_back(fun->getName().data());
@@ -258,9 +256,25 @@ void GPUBackend::visit(const ir::CallStmt *op) {
     else if (callee == ir::Intrinsics::norm) {
       iassert(args.size() == 1);
       auto type = op->actuals[0].type().toTensor();
-      args.push_back(emitComputeLen(type->dimensions[0]));
-      std::string funcName = callee.getName() + floatTypeName;
-      call = emitCall(funcName, args, getLLVMFloatType());
+      
+      // Dense operation
+      if (!type->isSparse()) {
+        args.push_back(emitComputeLen(type->dimensions[0]));
+        std::string funcName = callee.getName() + floatTypeName;
+        call = emitCall(funcName, args, getLLVMFloatType());
+      }
+      else {
+        // Fire off kernel for sparse operation
+        llvm::Value *llvmResult = symtable.get(op->results[0]);
+        llvm::Value *size = emitComputeLen(type->dimensions[0]);
+        emitShardedDot(op->actuals[0].type(), op->actuals[0].type(),
+                       op->results[0].getType(), args[0], args[0],
+                       size, llvmResult);
+        llvm::Value *sqrt = getBuiltIn(
+            nvvmIntrinsicByName.at(ir::Intrinsics::sqrt),
+            getLLVMFloatType(), { getLLVMFloatType() });
+        call = builder->CreateCall(sqrt, builder->CreateLoad(llvmResult));
+      }
     }
     else if (callee == ir::Intrinsics::inv) {
       iassert(args.size() == 1);
@@ -368,10 +382,26 @@ void GPUBackend::visit(const ir::Call *op) {
     iassert(args.size() == 1);
     auto type = op->actuals[0].type().toTensor();
 
-    args.push_back(emitComputeLen(type->dimensions[0]));
-    std::string funcName = ir::ScalarType::singleFloat() ?
-        "norm_f32" : "norm_f64";
-    val = emitCall(funcName, args, getLLVMFloatType());
+    // Dense operation
+    if (!type->isSparse()) {
+      args.push_back(emitComputeLen(type->dimensions[0]));
+      std::string funcName = ir::ScalarType::singleFloat() ?
+          "norm_f32" : "norm_f64";
+      val = emitCall(funcName, args, getLLVMFloatType());
+    }
+    else {
+      // Fire off kernel for sparse computation
+      llvm::Value *result = builder->CreateAlloca(
+          getLLVMFloatType(), llvmInt(1));
+      llvm::Value *size = emitComputeLen(type->dimensions[0]);
+      ir::Type resultType = ir::TensorType::make(type->componentType);
+      emitShardedDot(op->actuals[0].type(), op->actuals[0].type(),
+                     resultType, args[0], args[0], size, result);
+      llvm::Value *sqrt = getBuiltIn(
+          nvvmIntrinsicByName.at(ir::Intrinsics::sqrt),
+          getLLVMFloatType(), { getLLVMFloatType() });
+      val = builder->CreateCall(sqrt, builder->CreateLoad(result));
+    }
     return;
   }
   else if (op->func == ir::Intrinsics::loc) {
@@ -398,7 +428,7 @@ void GPUBackend::visit(const ir::Call *op) {
     // Fallthrough: fire off a kernel for sparse operation
     iassert(type1->isSparse() && type2->isSparse());
 
-    llvm::Value *result;
+    llvm::Value *result = builder->CreateAlloca(getLLVMFloatType(), llvmInt(1));
     llvm::Value *size = emitComputeLen(type1->dimensions[0]);
     ir::Type resultType = ir::TensorType::make(type1->componentType);
     emitShardedDot(op->actuals[0].type(), op->actuals[1].type(),
@@ -1036,15 +1066,8 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
                                 llvm::Value *vec1, llvm::Value *vec2,
                                 llvm::Value *size, llvm::Value *result) {
   // Clear result first
-  if (resType.toTensor()->componentType.kind == ir::ScalarType::Int) {
-    builder->CreateStore(llvmInt(0), result);
-  }
-  else if (resType.toTensor()->componentType.kind == ir::ScalarType::Float) {
-    builder->CreateStore(llvmFP(0), result);
-  }
-  else {
-    not_supported_yet;
-  }
+  iassert(resType.toTensor()->componentType.kind == ir::ScalarType::Float);
+  builder->CreateStore(llvmFP(0), result);
 
   // Stash the symtable
   ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
@@ -1086,12 +1109,8 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
   llvm::Value *val2 = builder->CreateLoad(
       builder->CreateGEP(symtable.get(vec2Var), getTidX()));
   llvm::Value *mul;
-  if (val1->getType()->isIntegerTy()) {
-    mul = builder->CreateMul(val1, val2);
-  }
-  else if (val1->getType()->isFloatTy()) {
-    mul = builder->CreateFMul(val1, val2);
-  }
+  iassert(val1->getType()->isFloatTy());
+  mul = builder->CreateFMul(val1, val2);
   emitAtomicLoadAdd(symtable.get(resVar), mul);
 
   // Kernel should always return void
