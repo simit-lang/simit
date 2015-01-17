@@ -32,13 +32,6 @@ public:
     maybeRead(op->var);
     IRRewriter::visit(op);
   }
-  void visit(const AssignStmt *op) {
-    if (op->cop.kind != CompoundOperator::None) {
-      maybeRead(op->var);
-    }
-    maybeWrite(op->var);
-    IRRewriter::visit(op);
-  }
   void visit(const CallStmt *op) {
     for (Var result : op->results) {
       maybeWrite(result);
@@ -54,7 +47,34 @@ public:
     IRRewriter::visit(op);
   }
 
-  // TODO: Write analysis is not complete
+  // Writes
+  void visit(const AssignStmt *op) {
+    if (op->cop.kind != CompoundOperator::None) {
+      maybeRead(op->var);
+    }
+    maybeWrite(op->var);
+    IRRewriter::visit(op);
+  }
+  void visit(const Store *op) {
+    // TODO(gkanwar): Fix this nasty casework
+    if (isa<VarExpr>(op->buffer)) {
+      maybeWrite(to<VarExpr>(op->buffer)->var);
+    }
+    else if (isa<FieldRead>(op->buffer)) {
+      const FieldRead* fieldRead = to<FieldRead>(op->buffer);
+      iassert(isa<VarExpr>(fieldRead->elementOrSet));
+      maybeWrite(to<VarExpr>(fieldRead->elementOrSet)->var);
+    }
+    else {
+      not_supported_yet;
+    }
+    IRRewriter::visit(op);
+  }
+  void visit(const FieldWrite *op) {
+    iassert(isa<VarExpr>(op->elementOrSet));
+    maybeWrite(to<VarExpr>(op->elementOrSet)->var);
+    IRRewriter::visit(op);
+  }
 
 private:
   void maybeRead(Var var) {

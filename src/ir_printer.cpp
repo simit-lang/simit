@@ -440,10 +440,16 @@ void IRPrinter::visit(const GPUKernel *op) {
   os << "gpukernel [";
   bool first = true;
   for (Var read : op->reads) {
-    if (!first)
-      os << ",";
+    if (!first) os << ",";
     else first = false;
     os << read;
+  }
+  os << "|";
+  first = true;
+  for (Var write : op->writes) {
+    if (!first) os << ",";
+    else first = false;
+    os << write;
   }
   os << "] ";
   internal::GPUSharding sharding = op->sharding;
