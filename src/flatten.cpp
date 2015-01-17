@@ -75,15 +75,11 @@ private:
       stmts.push_back(AssignStmt::make(tmp, spill));
       return IndexedTensor::make(VarExpr::make(tmp), afvars);
     }
-    else if (!isScalar(a.type())) {
+    else {
       Expr spill = a;
       Var tmp(tmpNameGen(), spill.type());
       stmts.push_back(AssignStmt::make(tmp, spill));
       return VarExpr::make(tmp);
-    }
-    else {
-      // We don't need to spill scalars
-      return a;
     }
   }
 

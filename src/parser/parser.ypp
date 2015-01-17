@@ -1443,13 +1443,7 @@ field_read_expr
                    @fieldName);
     }
 
-    Expr fieldRead = FieldRead::make(elemOrSet, fieldName);
-
-    if (!isScalar(fieldRead.type())) {
-      fieldRead = ctx->getBuilder()->unaryElwiseExpr(IRBuilder::None,fieldRead);
-    }
-
-    $$ = new Expr(fieldRead);
+    $$ = new Expr(FieldRead::make(elemOrSet, fieldName));
   }
 
 %type <expr> set_read_expr;

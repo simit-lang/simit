@@ -439,7 +439,7 @@ TEST(System, slice) {
   ASSERT_EQ(2.0, d.get(p2));
 }
 
-TEST(System, map_norm) {
+TEST(System, DISABLED_map_norm) {
   Set<> points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float> y = points.addField<simit_float>("y");
@@ -463,7 +463,7 @@ TEST(System, map_norm) {
   ASSERT_SIMIT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
 }
 
-TEST(System, map_vec_assign) {
+TEST(System, DISABLED_map_vec_assign) {
   Set<> points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   
