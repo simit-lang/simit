@@ -26,6 +26,8 @@ protected:
   Var target;
   Var neighbors;
 
+  ReductionOperator reduction;
+
   /// Check if the given variable is a result variable
   bool isResult(Var var);
   

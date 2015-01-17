@@ -40,8 +40,19 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
 
       // Change assignments to result to compound  assignments, using the map
       // reduction operator.
-      stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
-                               tensorWrite->value, CompoundOperator::Add);
+      switch (reduction.getKind()) {
+        case ReductionOperator::Sum: {
+          stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
+                                   tensorWrite->value, CompoundOperator::Add);
+          break;
+        }
+        case ReductionOperator::Undefined: {
+          stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
+                                   tensorWrite->value);
+          break;
+        }
+        default: not_supported_yet;
+      }
     }
   }
 };

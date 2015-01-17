@@ -13,6 +13,7 @@ namespace ir {
 Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter);
 
 Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
+  this->reduction = map->reduction;
   this->targetLoopVar = targetLoopVar;
 
   Func kernel = map->function;
@@ -160,12 +161,14 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
     inlinedMap = For::make(loopVar, domain, inlinedMapFunc);
   }
   
-  for (auto &var : map->vars) {
-    iassert(var.getType().isTensor());
-    const TensorType *type = var.getType().toTensor();
-    Expr zero = Literal::make(TensorType::make(type->componentType), {0});
-    Stmt init = AssignStmt::make(var, zero);
-    inlinedMap = Block::make(init, inlinedMap);
+  if (map->reduction.getKind() != ReductionOperator::Undefined) {
+    for (auto &var : map->vars) {
+      iassert(var.getType().isTensor());
+      const TensorType *type = var.getType().toTensor();
+      Expr zero = Literal::make(TensorType::make(type->componentType), {0});
+      Stmt init = AssignStmt::make(var, zero);
+      inlinedMap = Block::make(init, inlinedMap);
+    }
   }
 
   // We flatten the statement after it has been inlined, since inlining may
