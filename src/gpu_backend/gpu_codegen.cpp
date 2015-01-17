@@ -101,7 +101,7 @@ std::string generatePtx(llvm::Module *module,
   std::string llStr;
   llvm::raw_string_ostream llOstr(llStr);
   llOstr << *module;
-  std::ofstream llFile("/tmp/simit.ll", std::ofstream::trunc);
+  std::ofstream llFile("simit.ll", std::ofstream::trunc);
   llFile << llStr << std::endl;
   llFile.close();
   
@@ -112,7 +112,7 @@ std::string generatePtx(llvm::Module *module,
   
   std::cerr << "Bitcode: " << bcStr.size() << " bytes\n";
   
-  std::ofstream bcFile("/tmp/simit.bc", std::ofstream::trunc | std::ofstream::binary);
+  std::ofstream bcFile("simit.bc", std::ofstream::trunc | std::ofstream::binary);
   bcFile << bcStr << std::endl;
   bcFile.close();
   

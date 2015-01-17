@@ -3,8 +3,6 @@
 #include <sstream>
 #include <iomanip>
 #include <fstream>
-#include "cuda.h"
-#include "nvvm.h"
 
 #include "cuda.h"
 #include "nvvm.h"
@@ -363,8 +361,8 @@ simit::Function::FuncType GPUFunction::init(
   std::string ptxStr = generatePtx(
       module.get(), cuDevMajor, cuDevMinor,
       module->getModuleIdentifier().c_str());
-  
-  std::ofstream ptxFile("/tmp/simit.ptx", std::ofstream::trunc);
+
+  std::ofstream ptxFile("simit.ptx", std::ofstream::trunc);
   ptxFile << ptxStr << std::endl;
   ptxFile.close();
 
@@ -398,7 +396,7 @@ simit::Function::FuncType GPUFunction::init(
   size_t cubinSize;
   checkCudaErrors(cuLinkComplete(linker, &cubin, &cubinSize));
 
-  std::ofstream linkerLog("/tmp/simit.linker.log", std::ofstream::trunc);
+  std::ofstream linkerLog("simit.linker.log", std::ofstream::trunc);
   linkerLog << linkerInfo << std::endl
             << linkerErrors << std::endl;
   linkerLog.close();

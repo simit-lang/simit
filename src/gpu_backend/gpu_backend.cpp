@@ -35,7 +35,7 @@ namespace simit {
 namespace internal {
 
 simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
-  std::ofstream irFile("/tmp/simit.sim", std::ofstream::trunc);
+  std::ofstream irFile("simit.sim", std::ofstream::trunc);
   irFile << irFunc;
   irFile.close();
 
