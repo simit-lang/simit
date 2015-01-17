@@ -184,7 +184,6 @@ size_t Function::size(const ir::TensorType &type,
       return result;
     }
     case ir::TensorStorage::SystemReduced: {
-      // TODO: Forgot to implement this case
       ir::Expr targetSetVar = storage.getSystemTargetSet();
       ir::Expr storageSetVar = storage.getSystemStorageSet();
 
@@ -207,10 +206,40 @@ size_t Function::size(const ir::TensorType &type,
       }
       return len;
     }
-    case ir::TensorStorage::SystemDiagonal:
-      // TODO: Forgot to implement this case
-      not_supported_yet;
-      return 0;
+    case ir::TensorStorage::SystemDiagonal: {
+      iassert(type.dimensions.size() > 0);
+
+      // Just need on outer dimension because diagonal
+      ir::IndexSet indexSet = type.outerDimensions()[0];
+      size_t len = 1;
+      switch (indexSet.getKind()) {
+        case ir::IndexSet::Range: {
+          len *= indexSet.getSize();
+          break;
+        }
+        case ir::IndexSet::Set: {
+          ir::Expr setExpr = indexSet.getSet();
+          iassert(ir::isa<ir::VarExpr>(setExpr));
+          string setName = ir::to<ir::VarExpr>(setExpr)->var.getName();
+          SetBase *set = const_cast<Actual&>(actuals.at(setName)).getSet();
+          len *= set->getSize();
+          break;
+        }
+        case ir::IndexSet::Single: unreachable;
+        case ir::IndexSet::Dynamic: not_supported_yet;
+        default: unreachable;
+      }
+      // Block size
+      ir::Type blockType = type.blockType();
+      if (!ir::isScalar(blockType)) {
+        // TODO: The following assumes all blocks are dense row major. The right
+        //       way to assign a storage order for every block in the tensor
+        //       represented by a TensorStorage
+        size_t blockSize = size(*blockType.toTensor(), ir::TensorStorage::DenseRowMajor);
+        len *= blockSize;
+      }
+      return len;
+    }
     case ir::TensorStorage::SystemNone:
       return 0;
     case ir::TensorStorage::Undefined:
