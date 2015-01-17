@@ -439,7 +439,7 @@ TEST(System, slice) {
   ASSERT_EQ(2.0, d.get(p2));
 }
 
-TEST(System, DISABLED_map_norm) {
+TEST(System, map_norm) {
   Set<> points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float> y = points.addField<simit_float>("y");
@@ -462,6 +462,31 @@ TEST(System, DISABLED_map_norm) {
   ASSERT_SIMIT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
   ASSERT_SIMIT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
 }
+
+TEST(System, map_pass_field) {
+  Set<> points;
+  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  FieldRef<simit_float> y = points.addField<simit_float>("y");
+  
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  x.set(p0, {1.0, 2.0, 3.0});
+  x.set(p1, {4.0, 5.0, 6.0});
+  x.set(p2, {7.0, 8.0, 9.0});
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+  f->bind("points", &points);
+  f->runSafe();
+
+  ASSERT_SIMIT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
+  ASSERT_SIMIT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
+  ASSERT_SIMIT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
+}
+
 
 TEST(System, DISABLED_map_vec_assign) {
   Set<> points;

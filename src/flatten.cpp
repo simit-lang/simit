@@ -44,6 +44,7 @@ public:
 
 private:
   std::vector<Stmt> stmts;
+  IRBuilder builder;
   
   using IRRewriter::rewrite;
   using IRRewriter::visit;
@@ -79,6 +80,12 @@ private:
     else if (!isScalar(a.type())) {
       Expr spill = a;
       Var tmp(tmpNameGen(), spill.type());
+      // if we're spilling a tensor, we have to spill the whole thing.
+      // TODO: We should let these actually go into the backend as
+      // assign statements and deal with them there
+      if (spill.type().isTensor()) {
+        spill = builder.unaryElwiseExpr(IRBuilder::None, spill);
+      }
       stmts.push_back(AssignStmt::make(tmp, spill));
       return VarExpr::make(tmp);
     }
