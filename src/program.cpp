@@ -143,6 +143,20 @@ static std::unique_ptr<Function> compile(ir::Func func,
   if (kBackend == "gpu") {
     func = KernelRWAnalysis().rewrite(func);
   }
+  class FuseKernelsRewriter : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      func = fuseKernels(func);
+    }
+  };
+  if (kBackend == "gpu") {
+    func = FuseKernelsRewriter().rewrite(func);
+  }
 #endif
 
   return std::unique_ptr<Function>(backend->compile(func));

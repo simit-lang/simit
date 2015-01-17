@@ -6,6 +6,7 @@
 namespace simit {
 namespace ir {
 
+std::set<Var> findRootVars(Func func);
 Func kernelRWAnalysis(Func func);
 
 }}  // namespace simit::ir

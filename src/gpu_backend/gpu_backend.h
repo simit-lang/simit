@@ -11,6 +11,7 @@
 #define CUDA_SHARED_ADDRSPACE 3
 
 // transforms
+#include "fuse_kernels.h"
 #include "kernel_rw_analysis.h"
 #include "shard_gpu_loops.h"
 #include "var_decl_rewriter.h"

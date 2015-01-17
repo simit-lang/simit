@@ -34,6 +34,11 @@ private:
   std::set<Var> rootVars;
 };
 
+std::set<Var> findRootVars(Func func) {
+  FindRootVars findRootVarsAnalysis;
+  findRootVarsAnalysis.visit(&func);
+  return findRootVarsAnalysis.getRootVars();
+}
 
 class KernelRWAnalysisRewriter : public IRRewriter {
 public:
@@ -56,9 +61,7 @@ private:
 };
 
 Func kernelRWAnalysis(Func func) {
-  FindRootVars findRootVars;
-  findRootVars.visit(&func);
-  std::set<Var> rootVars = findRootVars.getRootVars();
+  std::set<Var> rootVars = findRootVars(func);
   return KernelRWAnalysisRewriter(rootVars).rewrite(func);
 }
 

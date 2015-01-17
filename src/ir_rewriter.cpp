@@ -437,7 +437,7 @@ void IRRewriter::visit(const GPUKernel *op) {
     stmt = op;
   }
   else {
-    stmt = GPUKernel::make(body, op->sharding);
+    stmt = GPUKernel::make(body, op->sharding, op->reads, op->writes);
   }
 }
 #endif
