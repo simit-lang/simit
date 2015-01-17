@@ -89,6 +89,42 @@ TEST(System, vector_dot_blocked) {
   ASSERT_EQ(285.0, (simit_float)z.get(p0));
 }
 
+TEST(System, vector_dot_intrinsic) {
+  Set<> points;
+  FieldRef<simit_float> x = points.addField<simit_float>("x");
+  FieldRef<simit_float> z = points.addField<simit_float>("z");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+  ElementRef p3 = points.add();
+  ElementRef p4 = points.add();
+  ElementRef p5 = points.add();
+  ElementRef p6 = points.add();
+  ElementRef p7 = points.add();
+  ElementRef p8 = points.add();
+  ElementRef p9 = points.add();
+  ElementRef p10 = points.add();
+  x.set(p0, 1.0);
+  x.set(p1, 2.0);
+  x.set(p2, 3.0);
+  x.set(p3, 4.0);
+  x.set(p4, 5.0);
+  x.set(p5, 6.0);
+  x.set(p6, 7.0);
+  x.set(p7, 8.0);
+  x.set(p8, 9.0);
+  x.set(p9, 10.0);
+  x.set(p10, 11.0);
+
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+  f->bind("points", &points);
+
+  f->runSafe();
+  ASSERT_EQ(506.0, (int)z.get(p0));
+}
+
 TEST(System, vector_assign_blocked) {
   Set<> points;
   FieldRef<simit_float,2> x = points.addField<simit_float,2>("x");

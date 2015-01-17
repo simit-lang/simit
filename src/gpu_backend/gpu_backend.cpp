@@ -276,14 +276,30 @@ void GPUBackend::visit(const ir::CallStmt *op) {
       call = emitCall("loc", args, LLVM_INT);
     }
     else if (callee == ir::Intrinsics::dot) {
+      iassert(args.size() == 2);
       // we need to add the vector length to the args
       auto type1 = op->actuals[0].type().toTensor();
       auto type2 = op->actuals[1].type().toTensor();
       uassert(type1->dimensions[0] == type2->dimensions[0]) <<
           "dimension mismatch in dot product";
-      args.push_back(emitComputeLen(type1->dimensions[0]));
-      std::string funcName = callee.getName() + floatTypeName;
-      call = emitCall(funcName, args, getLLVMFloatType());
+
+      // Dense operation
+      if (!type1->isSparse() && !type2->isSparse()) {
+        args.push_back(emitComputeLen(type1->dimensions[0]));
+        std::string funcName = callee.getName() + floatTypeName;
+        call = emitCall(funcName, args, getLLVMFloatType());
+      }
+      else {
+        // Fire off kernel for sparse operation
+        iassert(type1->isSparse() && type2->isSparse());
+
+        llvm::Value *llvmResult = symtable.get(op->results[0]);
+        llvm::Value *size = emitComputeLen(type1->dimensions[0]);
+        emitShardedDot(op->actuals[0].type(), op->actuals[1].type(),
+                       op->results[0].getType(), args[0], args[1],
+                       size, llvmResult);
+        call = builder->CreateLoad(llvmResult);
+      }
     }
     else {
       ierror << "intrinsic " << op->callee.getName() << " not found";
@@ -369,10 +385,27 @@ void GPUBackend::visit(const ir::Call *op) {
     auto type2 = op->actuals[1].type().toTensor();
     uassert(type1->dimensions[0] == type2->dimensions[0]) <<
       "dimension mismatch in dot product";
-    args.push_back(emitComputeLen(type1->dimensions[0]));
-    std::string funcName = ir::ScalarType::singleFloat() ?
-        "dot_f32" : "dot_f64";
-    val = emitCall(funcName, args, getLLVMFloatType());
+
+    // Dense operation
+    if (!type1->isSparse() && !type2->isSparse()) {
+      std::string funcName = ir::ScalarType::singleFloat() ?
+          "dot_f32" : "dot_f64";
+      args.push_back(emitComputeLen(type1->dimensions[0]));
+      val = emitCall(funcName, args, getLLVMFloatType());
+      return;
+    }
+
+    // Fallthrough: fire off a kernel for sparse operation
+    iassert(type1->isSparse() && type2->isSparse());
+
+    llvm::Value *result;
+    llvm::Value *size = emitComputeLen(type1->dimensions[0]);
+    ir::Type resultType = ir::TensorType::make(type1->componentType);
+    emitShardedDot(op->actuals[0].type(), op->actuals[1].type(),
+                   resultType, args[0], args[1],
+                   size, result);
+    val = result;
+
     return;
   }
   // if not an intrinsic function, try to find it in the module
@@ -673,6 +706,11 @@ void GPUBackend::emitThreadBarrier() {
   builder->CreateCall(func);
 }
 
+void GPUBackend::emitDeviceSync() {
+  llvm::Function *syncFunc = getBuiltIn("cudaDeviceSynchronize", LLVM_INT, {});
+  builder->CreateCall(syncFunc);
+}
+
 void GPUBackend::emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value) {
   if (value->getType()->isIntegerTy()) {
     builder->CreateAtomicRMW(llvm::AtomicRMWInst::Add, ptr, value,
@@ -797,8 +835,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
                        llvm::ConstantPointerNull::get(cuStreamPtrTy));
 
   // Synchronize memory after the call
-  llvm::Function *syncFunc = getBuiltIn("cudaDeviceSynchronize", LLVM_INT, {});
-  builder->CreateCall(syncFunc);
+  emitDeviceSync();
 }
 
 void GPUBackend::emitPrintf(std::string format,
@@ -992,6 +1029,80 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   // Emit kernel launch
   builder->SetInsertPoint(prevBB);
   emitKernelLaunch(kernel, {target, size}, size, nullptr, nullptr);
+}
+
+void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
+                                ir::Type resType,
+                                llvm::Value *vec1, llvm::Value *vec2,
+                                llvm::Value *size, llvm::Value *result) {
+  // Clear result first
+  if (resType.toTensor()->componentType.kind == ir::ScalarType::Int) {
+    builder->CreateStore(llvmInt(0), result);
+  }
+  else if (resType.toTensor()->componentType.kind == ir::ScalarType::Float) {
+    builder->CreateStore(llvmFP(0), result);
+  }
+  else {
+    not_supported_yet;
+  }
+
+  // Stash the symtable
+  ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
+  symtable.clear();
+  // Stash the current basic block
+  llvm::BasicBlock *prevBB = builder->GetInsertBlock();
+
+  // Create LLVM func
+  ir::Var resVar("result", resType);
+  ir::Var vec1Var("vec1", vec1Type);
+  ir::Var vec2Var("vec2", vec2Type);
+  ir::Var sizeVar("size", ir::Int);
+  llvm::Function *kernel = emitEmptyFunction(
+      "dot_kernel", {vec1Var, vec2Var, sizeVar}, {resVar}, true, false);
+  builder->SetInsertPoint(&kernel->getEntryBlock());
+
+  // Kernel metadata
+  addNVVMAnnotation(kernel, "kernel", llvmInt(1), module);
+  
+  llvm::BasicBlock *bodyStart = llvm::BasicBlock::Create(
+      LLVM_CONTEXT, "bodyStart", kernel);
+  llvm::BasicBlock *earlyExit = llvm::BasicBlock::Create(
+      LLVM_CONTEXT, "earlyExit", kernel);
+  
+  // Guard: check if we're outside the intended range of the kernel loop and 
+  // early-exit if so.
+  llvm::Value *cond = builder->CreateICmpULT(getTidX(), symtable.get(sizeVar));
+  builder->CreateCondBr(cond, bodyStart, earlyExit);
+
+  builder->SetInsertPoint(earlyExit);
+  builder->CreateRetVoid();
+
+  // Continue with kernel body
+  builder->SetInsertPoint(bodyStart);
+
+  // Perform multiply and add
+  llvm::Value *val1 = builder->CreateLoad(
+      builder->CreateGEP(symtable.get(vec1Var), getTidX()));
+  llvm::Value *val2 = builder->CreateLoad(
+      builder->CreateGEP(symtable.get(vec2Var), getTidX()));
+  llvm::Value *mul;
+  if (val1->getType()->isIntegerTy()) {
+    mul = builder->CreateMul(val1, val2);
+  }
+  else if (val1->getType()->isFloatTy()) {
+    mul = builder->CreateFMul(val1, val2);
+  }
+  emitAtomicLoadAdd(symtable.get(resVar), mul);
+
+  // Kernel should always return void
+  builder->CreateRetVoid();
+
+  // Unstash symtable
+  symtable = oldSymtable;
+
+  // Emit kernel launch
+  builder->SetInsertPoint(prevBB);
+  emitKernelLaunch(kernel, {vec1, vec2, size, result}, size, nullptr, nullptr);
 }
 
 void GPUBackend::emitFillBuf(llvm::Value *buffer,

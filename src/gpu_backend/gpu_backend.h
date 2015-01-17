@@ -93,6 +93,7 @@ protected:
   llvm::Value *emitCastGlobalToGen(llvm::Value *src);
 
   void emitThreadBarrier();
+  void emitDeviceSync();
   void emitAtomicLoadAdd(llvm::Value *ptr, llvm::Value *value);
   void emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value);
   void emitKernelLaunch(llvm::Function *kernel,
@@ -114,6 +115,9 @@ protected:
                           llvm::Value *size, unsigned align);
   void emitShardedMemSet(ir::Type targetType, llvm::Value *target,
                          llvm::Value *size);
+  void emitShardedDot(ir::Type vec1Type, ir::Type vec2Type, ir::Type resType,
+                      llvm::Value *vec1, llvm::Value *vec2,
+                      llvm::Value *size, llvm::Value *result);
 
   void emitFillBuf(llvm::Value *buffer,
                    std::vector<llvm::Value*> vals);

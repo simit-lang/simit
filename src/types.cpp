@@ -88,6 +88,17 @@ size_t TensorType::size() const {
   return size;
 }
 
+bool TensorType::isSparse() const {
+  for (auto &indexDom : dimensions) {
+    for (auto &indexSet : indexDom.getIndexSets()) {
+      if (indexSet.getKind() != IndexSet::Range) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
 
 // struct SetType
 Type SetType::make(Type elementType, const std::vector<Expr> &endpointSets) {
