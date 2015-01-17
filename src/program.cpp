@@ -129,6 +129,20 @@ static std::unique_ptr<Function> compile(ir::Func func,
   if (kBackend == "gpu") {
     func = VarDeclsRewriter().rewrite(func);
   }
+  class KernelRWAnalysis : public simit::ir::IRRewriterCallGraph {
+    using IRRewriter::visit;
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        func = *op;
+        return;
+      }
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      func = kernelRWAnalysis(func);
+    }
+  };
+  if (kBackend == "gpu") {
+    func = KernelRWAnalysis().rewrite(func);
+  }
 #endif
 
   return std::unique_ptr<Function>(backend->compile(func));

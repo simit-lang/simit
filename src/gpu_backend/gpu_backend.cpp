@@ -575,10 +575,10 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
-  // Pass all globals as arguments
+  // Pass all globals reads as arguments
   std::vector<ir::Var> kernelArgs = irFunc.getArguments();
-  for (auto &kv : buffers) {
-    kernelArgs.push_back(kv.first);
+  for (auto var : op->reads) {
+    kernelArgs.push_back(var);
   }
 
   // Create LLVM func

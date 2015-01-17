@@ -437,16 +437,24 @@ void IRPrinter::visit(const For *op) {
 #ifdef GPU
 void IRPrinter::visit(const GPUKernel *op) {
   indent();
-  os << "gpukernel ";
+  os << "gpukernel [";
+  bool first = true;
+  for (Var read : op->reads) {
+    if (!first)
+      os << ",";
+    else first = false;
+    os << read;
+  }
+  os << "] ";
   internal::GPUSharding sharding = op->sharding;
   if (sharding.xSharded) {
-    os << "x: " << sharding.xVar << " in " << sharding.xDomain << " ";
+    os << "x{" << sharding.xVar << " in " << sharding.xDomain << "} ";
   }
   if (sharding.ySharded) {
-    os << "y: " << sharding.yVar << " in " << sharding.yDomain << " ";
+    os << "y{" << sharding.yVar << " in " << sharding.yDomain << "} ";
   }
   if (sharding.zSharded) {
-    os << "z: " << sharding.zVar << " in " << sharding.zDomain << " ";
+    os << "z{" << sharding.zVar << " in " << sharding.zDomain << "} ";
   }
   os << ":" << endl;
   ++indentation;

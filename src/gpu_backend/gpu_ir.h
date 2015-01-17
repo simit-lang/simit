@@ -65,11 +65,17 @@ namespace ir {
 struct GPUKernel : public StmtNode<GPUKernel> {
   Stmt body;
   internal::GPUSharding sharding;
+  std::set<Var> reads;
+  std::set<Var> writes;
 
-  static Stmt make(Stmt body, internal::GPUSharding sharding) {
+  static Stmt make(Stmt body, internal::GPUSharding sharding,
+                   std::set<Var> reads = {},
+                   std::set<Var> writes = {}) {
     GPUKernel *node = new GPUKernel;
     node->body = body;
     node->sharding = sharding;
+    node->reads = reads;
+    node->writes = writes;
     return node;
   }
 };
