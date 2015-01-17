@@ -212,6 +212,7 @@ llvm::Function *createPrototype(const std::string &name,
                                 llvm::Module *module,
                                 bool externalLinkage,
                                 bool doesNotThrow,
+                                bool scalarsByValue,
                                 unsigned addrspace) {
   vector<string>      llvmArgNames;
   vector<llvm::Type*> llvmArgTypes;
@@ -225,7 +226,7 @@ llvm::Function *createPrototype(const std::string &name,
 
     // Our convention is that scalars are passed to functions by value,
     // while everything else is passed through a pointer
-    llvm::Type *llvmType = isScalar(arg.getType())
+    llvm::Type *llvmType = (isScalar(arg.getType()) && scalarsByValue)
         ? createLLVMType(arg.getType().toTensor()->componentType)
         : createLLVMType(arg.getType(), addrspace);
     llvmArgTypes.push_back(llvmType);

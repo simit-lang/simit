@@ -1343,9 +1343,11 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
                                                const vector<ir::Var> &arguments,
                                                const vector<ir::Var> &results,
                                                bool externalLinkage,
-                                               bool doesNotThrow) {
+                                               bool doesNotThrow,
+                                               bool scalarsByValue) {
   llvm::Function *llvmFunc = createPrototype(name, arguments, results, module,
-                                             externalLinkage, doesNotThrow);
+                                             externalLinkage, doesNotThrow,
+                                             scalarsByValue);
   auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", llvmFunc);
   builder->SetInsertPoint(entry);
 

@@ -85,6 +85,7 @@ llvm::Function *createPrototype(const std::string &name,
                                 llvm::Module *module,
                                 bool externalLinkage,
                                 bool doesNotThrow=true,
+                                bool scalarsByValue=true,
                                 unsigned addrspace=LLVM_GENERIC_ADDRSPACE);
 
 std::ostream &operator<<(std::ostream &os, const llvm::Module &);

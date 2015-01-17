@@ -500,15 +500,14 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
         llvm::Value *varPtr = symtable.get(op->var);
         // Guard against non-pointer
         iassert(varPtr->getType()->isPointerTy());
-        // Guard against invalid addrspace
-        unsigned addrspace = ((llvm::PointerType*)varPtr->getType())
-            ->getAddressSpace();
-        if (addrspace != CUDA_GLOBAL_ADDRSPACE &&
-            addrspace != CUDA_SHARED_ADDRSPACE) {
-          LLVMBackend::visit(op);
-          return;
+        if (buffers.find(op->var) != buffers.end()) {
+          // Global or argument which might be accessed in parallel
+          emitAtomicLoadAdd(varPtr, value);
         }
-        emitAtomicLoadAdd(varPtr, value);
+        else {
+          // Local, will not be accessed in parallel
+          LLVMBackend::visit(op);
+        }
         break;
       }
       default: ierror << "Unknown compound operator type: " << op->cop.kind;
@@ -576,12 +575,25 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
+  // Pass all globals as arguments
+  std::vector<ir::Var> kernelArgs = irFunc.getArguments();
+  for (auto &kv : buffers) {
+    kernelArgs.push_back(kv.first);
+  }
+
   // Create LLVM func
   llvm::Function *kernel = emitEmptyFunction(
-      irFunc.getName() + "_nested_kernel", irFunc.getArguments(),
-      irFunc.getResults(), true, false);
-  // builder.reset(new LLVMIRBuilder(&kernel->getEntryBlock()));
+      irFunc.getName() + "_nested_kernel", kernelArgs,
+      irFunc.getResults(), true, false, false);
   builder->SetInsertPoint(&kernel->getEntryBlock());
+  
+  // Parameter attributes
+  llvm::AttributeSet attrSet = kernel->getAttributes();
+  for (int slot = 0; slot < attrSet.getNumSlots(); ++slot) {
+    int index = attrSet.getSlotIndex(slot);
+    attrSet = attrSet.addAttribute(LLVM_CONTEXT, index, llvm::Attribute::NoAlias);
+  }
+  kernel->setAttributes(attrSet);
   
   llvm::BasicBlock *bodyStart = llvm::BasicBlock::Create(
     LLVM_CONTEXT, "bodyStart", kernel);
@@ -603,15 +615,6 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
 
   // Kernel metadata
   addNVVMAnnotation(kernel, "kernel", llvmInt(1), module);
-
-  // Add global buffers to symtable
-  for (auto &buf : buffers) {
-    const ir::Var &var = buf.first;
-    llvm::Value *val = buf.second;
-
-    llvm::Value *llvmTmp = builder->CreateLoad(val, val->getName());
-    symtable.insert(var, llvmTmp);
-  }
 
   // Code generate for the kernel
   if (kernelSharding.xSharded) {
@@ -637,7 +640,7 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   // Emit a dynamic kernel launch
   builder->SetInsertPoint(prevBB);
   std::vector<llvm::Value*> args;
-  for (auto &irArg : irFunc.getArguments()) {
+  for (auto &irArg : kernelArgs) {
     args.push_back(symtable.get(irArg));
   }
   for (auto &irRes : irFunc.getResults()) {

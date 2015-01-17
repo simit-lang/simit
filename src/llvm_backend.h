@@ -147,7 +147,8 @@ protected:
                                     const std::vector<ir::Var> &arguments,
                                     const std::vector<ir::Var> &results,
                                     bool externalLinkage=false,
-                                    bool doesNotThrow=true);
+                                    bool doesNotThrow=true,
+                                    bool scalarsByValue=true);
 
   virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
