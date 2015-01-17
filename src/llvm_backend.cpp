@@ -62,9 +62,6 @@ llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
 
 LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
                              val(nullptr) {
-  // For now we'll assume fields are always dense row major
-  this->fieldStorage = TensorStorage::DenseRowMajor;
-
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
@@ -766,7 +763,8 @@ void LLVMBackend::visit(const FieldWrite *op) {
 
       const TensorType *tensorFieldType = fieldType.toTensor();
 
-      llvm::Value *fieldLen = emitComputeLen(tensorFieldType, fieldStorage);
+      // For now we'll assume fields are always dense row major
+      llvm::Value *fieldLen = emitComputeLen(tensorFieldType, TensorStorage::DenseRowMajor);
       unsigned compSize = tensorFieldType->componentType.bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
@@ -795,7 +793,8 @@ void LLVMBackend::visit(const FieldWrite *op) {
 
     const TensorType *tensorFieldType = fieldType.toTensor();
 
-    llvm::Value *fieldLen = emitComputeLen(tensorFieldType, fieldStorage);
+    // For now we'll assume fields are always dense row major
+    llvm::Value *fieldLen = emitComputeLen(tensorFieldType, TensorStorage::DenseRowMajor);
     unsigned elemSize = tensorFieldType->componentType.bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 

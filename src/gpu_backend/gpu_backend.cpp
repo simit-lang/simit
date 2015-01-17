@@ -520,8 +520,8 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
             ((int*)ir::to<ir::Literal>(op->value))[0] == 0) &&
            !inKernel) {
     llvm::Value *varPtr = symtable.get(op->var);
-    emitShardedMemSet(op->var.getType(), varPtr,
-                      emitComputeLen(varType, fieldStorage));
+    llvm::Value *len = emitComputeLen(varType, storage.get(op->var));
+    emitShardedMemSet(op->var.getType(), varPtr, len);
   }
   else {
     LLVMBackend::visit(op);
@@ -536,8 +536,9 @@ void GPUBackend::visit(const ir::FieldWrite *op) {
       ir::isa<ir::Literal>(op->value) &&
       ir::to<ir::Literal>(op->value)->getFloatVal(0) == 0.0) {
     llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
+    // For now we'll assume fields are always dense row major
     emitShardedMemSet(fieldType, fieldPtr,
-                      emitComputeLen(fieldType.toTensor(), fieldStorage));
+                      emitComputeLen(fieldType.toTensor(), ir::TensorStorage::DenseRowMajor));
   }
   else {
     LLVMBackend::visit(op);
@@ -999,7 +1000,7 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
 
 
 void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
-                                   llvm::Value *size) {
+                                   llvm::Value *length) {
   iassert(!inKernel);
   iassert(targetType.isTensor());
 
@@ -1011,9 +1012,9 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
 
   // Create LLVM func
   ir::Var targetArg("target", targetType);
-  ir::Var sizeArg("size", ir::Int);
+  ir::Var lengthArg("length", ir::Int);
   llvm::Function *kernel = emitEmptyFunction(
-      "memset_kernel", {targetArg, sizeArg}, {},  true, false);
+      "memset_kernel", {targetArg, lengthArg}, {},  true, false);
   builder->SetInsertPoint(&kernel->getEntryBlock());
 
   // Kernel metadata
@@ -1026,7 +1027,7 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   
   // Guard: check if we're outside the intended range of the kernel loop and 
   // early-exit if so.
-  llvm::Value *cond = builder->CreateICmpULT(getTidX(), symtable.get(sizeArg));
+  llvm::Value *cond = builder->CreateICmpULT(getTidX(), symtable.get(lengthArg));
   builder->CreateCondBr(cond, bodyStart, earlyExit);
 
   builder->SetInsertPoint(earlyExit);
@@ -1057,7 +1058,7 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
 
   // Emit kernel launch
   builder->SetInsertPoint(prevBB);
-  emitKernelLaunch(kernel, {target, size}, size, nullptr, nullptr);
+  emitKernelLaunch(kernel, {target, length}, length, nullptr, nullptr);
 }
 
 void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,

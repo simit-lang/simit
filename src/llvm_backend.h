@@ -54,7 +54,6 @@ protected:
   // Globally allocated buffers
   std::map<ir::Var, llvm::Value*> buffers;
   ir::Storage storage;
-  ir::TensorStorage fieldStorage;
 
   llvm::Module *module;
   std::unique_ptr<llvm::DataLayout> dataLayout;
