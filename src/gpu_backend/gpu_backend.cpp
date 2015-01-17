@@ -42,7 +42,6 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   this->irFunc = irFunc;
   this->module = createNVVMModule("kernels-module");
   this->dataLayout.reset(new llvm::DataLayout(module));
-  this->storage = irFunc.getStorage();
 
   std::vector<ir::Func> callTree = ir::getCallTree(irFunc);
   std::reverse(callTree.begin(), callTree.end());
@@ -85,7 +84,7 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
   fpm.add(llvm::createGVNPass());
   fpm.add(llvm::createPromoteMemoryToRegisterPass());
 
-  return new GPUFunction(irFunc, func, module, buffers, fieldStorage);
+  return new GPUFunction(irFunc, func, module, buffers, storage);
 }
 
 llvm::Value *GPUBackend::compile(const ir::Expr &expr) {

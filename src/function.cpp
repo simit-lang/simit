@@ -8,6 +8,7 @@ using namespace std;
 #include "ir.h"
 #include "ir_visitor.h"
 #include "types.h"
+#include "indices.h"
 
 namespace simit {
 
@@ -163,11 +164,12 @@ static int size(const ir::IndexDomain &dimension,
   return result;
 }
 
+// essentially a runtime version of LLVMBackend::emitComputeLen
 size_t Function::size(const ir::TensorType &type,
                       const ir::TensorStorage &storage) const {
   switch (storage.getKind()) {
     case ir::TensorStorage::DenseRowMajor: {
-      size_t result = type.componentType.bytes();
+      size_t result = 1;
 
       map<string,SetBase*> sets;
       for (pair<string,Actual> actual : actuals) {
@@ -181,11 +183,33 @@ size_t Function::size(const ir::TensorType &type,
       }
       return result;
     }
-    case ir::TensorStorage::SystemReduced:
+    case ir::TensorStorage::SystemReduced: {
       // TODO: Forgot to implement this case
-      return 0;
+      ir::Expr targetSetVar = storage.getSystemTargetSet();
+      ir::Expr storageSetVar = storage.getSystemStorageSet();
+
+      string targetSetName = ir::to<ir::VarExpr>(targetSetVar)->var.getName();
+      string storageSetName = ir::to<ir::VarExpr>(storageSetVar)->var.getName();
+
+      // compute neighbor index size
+      SetBase *targetSet = const_cast<Actual&>(actuals.at(targetSetName)).getSet();
+      const internal::NeighborIndex *neighborIndex = targetSet->getNeighborIndex();
+      size_t len = neighborIndex->getSize();
+
+      // compute block size
+      ir::Type blockType = type.blockType();
+      if (!ir::isScalar(blockType)) {
+        // TODO: The following assumes all blocks are dense row major. The right
+        //       way to assign a storage order for every block in the tensor
+        //       represented by a TensorStorage
+        size_t blockSize = size(*blockType.toTensor(), ir::TensorStorage::DenseRowMajor);
+        len *= blockSize;
+      }
+      return len;
+    }
     case ir::TensorStorage::SystemDiagonal:
       // TODO: Forgot to implement this case
+      not_supported_yet;
       return 0;
     case ir::TensorStorage::SystemNone:
       return 0;

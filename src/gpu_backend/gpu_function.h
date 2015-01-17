@@ -21,7 +21,7 @@ class GPUFunction : public simit::Function {
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module,
               std::map<ir::Var, llvm::Value*> globalBufs,
-              ir::TensorStorage storage);
+              ir::Storage storage);
   ~GPUFunction();
 
   void print(std::ostream &os) const;
@@ -53,9 +53,16 @@ class GPUFunction : public simit::Function {
     // pushing only those
     // bool hostDirty;
 
+    static size_t total_allocations;
+
     DeviceDataHandle(void *hostBuffer, CUdeviceptr *devBuffer, size_t size) :
         hostBuffer(hostBuffer), devBuffer(devBuffer), size(size),
-        devDirty(false) {}
+        devDirty(false)
+    {
+      total_allocations += size;
+    }
+
+    ~DeviceDataHandle() { total_allocations -= size; }
   };
 
   // Copy argument memory into device and build an llvm value to point to it
@@ -74,7 +81,7 @@ class GPUFunction : public simit::Function {
   std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> module;
   std::map<ir::Var, llvm::Value*> globalBufs;
-  ir::TensorStorage storage;
+  ir::Storage storage;
   CUcontext *cudaContext;
   CUmodule *cudaModule;
   int cuDevMajor, cuDevMinor;

@@ -21,11 +21,13 @@
 namespace simit {
 namespace internal {
 
+size_t GPUFunction::DeviceDataHandle::total_allocations = 0;
+
 GPUFunction::GPUFunction(
     ir::Func simitFunc, llvm::Function *llvmFunc,
     llvm::Module *module,
     std::map<ir::Var, llvm::Value*> globalBufs,
-    ir::TensorStorage storage)
+    ir::Storage storage)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       globalBufs(globalBufs), storage(storage), cudaModule(nullptr) {
   // CUDA runtime
@@ -130,8 +132,9 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
         }
       }
       else {
-        checkCudaErrors(cuMemAlloc(
-            devBuffer, ttype->size() * ttype->componentType.bytes()));
+        size_t size = ttype->size() * ttype->componentType.bytes();
+        assert(size == literal.size);
+        checkCudaErrors(cuMemAlloc(devBuffer, size));
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, literal.data, literal.size));
         // std::cout << literal.data << " -> " << (void*)(*devBuffer) << std::endl;
         pushedBufs.push_back(
@@ -433,7 +436,10 @@ simit::Function::FuncType GPUFunction::init(
         &attrVal, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, globalPtr));
     iassert(attrVal == CU_MEMORYTYPE_DEVICE);
 
-    size_t bufSize = size(*bufVar.getType().toTensor(), storage);
+    size_t bufSize = bufVar.getType().toTensor()->componentType.bytes();
+    if (!isScalar(bufVar.getType())) {
+      bufSize *= size(*bufVar.getType().toTensor(), storage.get(bufVar));
+    }
     CUdeviceptr *devBuffer = new CUdeviceptr();
     checkCudaErrors(cuMemAlloc(devBuffer, bufSize));
     pushedBufs.push_back(new DeviceDataHandle(nullptr, devBuffer, bufSize));
@@ -450,6 +456,8 @@ simit::Function::FuncType GPUFunction::init(
       &cudaFunction, *cudaModule, harness->getName().data()));
 
   return [this, cudaFunction, formals, actuals](){
+    // std::cerr << "Allocated GPU memory: "
+    //           << DeviceDataHandle::total_allocations << "\n";
     void **kernelParamsArr = new void*[0]; // TODO leaks
     checkCudaErrors(cuLaunchKernel(cudaFunction,
                                    1, 1, 1, // grid size
