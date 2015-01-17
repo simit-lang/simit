@@ -8,6 +8,7 @@
 #include "ir_rewriter.h"
 #include "ir_codegen.h"
 #include "substitute.h"
+#include "ir_builder.h"
 
 using namespace std;
 
@@ -154,12 +155,42 @@ private:
   }
 };
 
+class NormAndDotRewriter : public ir::IRRewriter {
+  using IRRewriter::visit;
+  IRBuilder builder;
+  void visit(const ir::CallStmt *op) {
+    if (op->callee.getName() == "norm") {
+      iassert(op->actuals.size() == 1);
+      iassert(op->results.size() == 1);
+      uassert(op->actuals[0].type().isTensor());
+      
+      auto dot = builder.innerProduct(op->actuals[0], op->actuals[0]);
+      auto tmpvar =builder.temporary(op->results[0].getType(), "normrewrite");
+      stmt = AssignStmt::make(tmpvar, dot);
+      stmt = Block::make(stmt, CallStmt::make(op->results, Intrinsics::sqrt,
+        {VarExpr::make(tmpvar)}));
+    }
+    else if (op->callee.getName() == "dot") {
+      iassert(op->actuals.size() == 2);
+      iassert(op->results.size() == 1);
+      auto dot = builder.innerProduct(op->actuals[0], op->actuals[1]);
+      
+      stmt = AssignStmt::make(op->results[0], dot);
+
+    }
+    else {
+      stmt = op;
+    }
+  }
+};
+
+
 Stmt flattenIndexExpressions(Stmt stmt) {
   return FlattenIndexExpressions().flatten(stmt);
 }
 
 Func flattenIndexExpressions(Func func) {
-  Stmt body = flattenIndexExpressions(func.getBody());
+  Stmt body = flattenIndexExpressions(NormAndDotRewriter().rewrite(func.getBody()));
   func = Func(func, body);
   func = insertVarDecls(func);
   return func;
