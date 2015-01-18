@@ -42,6 +42,11 @@ static std::unique_ptr<Function> compile(ir::Func func,
         return;
       }
       func = ir::Func(*op, rewrite(op->getBody()));
+#ifdef GPU
+      if (kBackend == "gpu") {
+        func = rewriteSystemAssigns(func);
+      }
+#endif
       func = flattenIndexExpressions(func);
       func = insertTemporaries(func);
     }
