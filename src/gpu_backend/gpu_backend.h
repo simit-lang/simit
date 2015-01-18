@@ -124,7 +124,8 @@ protected:
 
   void emitFillBuf(llvm::Value *buffer,
                    std::vector<llvm::Value*> vals,
-                   unsigned align);
+                   unsigned align,
+                   bool alignToArgSize);
 
   virtual void makeGlobalTensor(ir::Var var);
 };
