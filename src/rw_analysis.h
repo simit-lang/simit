@@ -23,6 +23,10 @@ public:
   using IRVisitor::visit;
 
   void visit(const VarDecl *op) {
+    // VarDecls should not be swapped around with anything that refers
+    // to op->var.
+    maybeRead(op->var);
+    maybeWrite(op->var);
     IRVisitor::visit(op);
   }
 

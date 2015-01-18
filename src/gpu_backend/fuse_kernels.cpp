@@ -14,43 +14,90 @@ namespace ir {
 // directly contain other blocks in rest, not first).
 class CanonicalizeBlocksRewriter : public IRRewriter {
 public:
+  CanonicalizeBlocksRewriter(bool forward) : forward(forward) {}
+
   using IRRewriter::visit;
 
   void visit(const Block *op) {
-    Stmt first = IRRewriter::rewrite(op->first);
+    // Guard against undefined rest
+    if (!op->rest.defined()) {
+      stmt = IRRewriter::rewrite(op->first);
+      return;
+    }
+
+    // TODO(gkanwar): The naming with forward vs. reverse here is horrible.
+    Stmt first, rest;
+    if (forward) {
+      first = IRRewriter::rewrite(op->first);
+      rest = op->rest;
+    }
+    else {
+      first = IRRewriter::rewrite(op->rest);
+      rest = op->first;
+    }
     iassert(first.defined());
     if (isa<Block>(first)) {
       const Block *firstBlock = to<Block>(first);
-      Stmt innerFirst = firstBlock->first;
-      iassert(innerFirst.defined());
-      if (firstBlock->rest.defined()) {
-        stmt = Block::make(
-            innerFirst,
-            IRRewriter::rewrite(
-                Block::make(firstBlock->rest, op->rest)));
+      Stmt innerFirst, innerLeftover;
+      if (forward) {
+        innerFirst = firstBlock->first;
+        innerLeftover= firstBlock->rest;
       }
       else {
-        stmt = Block::make(innerFirst, IRRewriter::rewrite(op->rest));
+        innerFirst = firstBlock->rest;
+        innerLeftover = firstBlock->first;
+      }
+      iassert(innerFirst.defined());
+      if (innerLeftover.defined()) {
+        if (forward) {
+          stmt = Block::make(
+              innerFirst,
+              IRRewriter::rewrite(
+                  Block::make(innerLeftover, rest)));
+        }
+        else {
+          stmt = Block::make(IRRewriter::rewrite(
+              Block::make(rest, innerLeftover)), innerFirst);
+        }
+      }
+      else {
+        if (forward) {
+          stmt = Block::make(innerFirst, IRRewriter::rewrite(rest));
+        }
+        else {
+          stmt = Block::make(IRRewriter::rewrite(rest), innerFirst);
+        }
       }
     }
     else {
-      stmt = Block::make(first, IRRewriter::rewrite(op->rest));
+      if (forward) {
+        stmt = Block::make(first, IRRewriter::rewrite(rest));
+      }
+      else {
+        stmt = Block::make(IRRewriter::rewrite(rest), first);
+      }
     }
+
     iassert(isa<Block>(stmt));
-    iassert(!isa<Block>(to<Block>(stmt)->first));
+    if (forward) {
+      iassert(!isa<Block>(to<Block>(stmt)->first));
+    }
+    else {
+      iassert(!isa<Block>(to<Block>(stmt)->rest));
+    }
   }
+
+private:
+  bool forward;
 };
 
-Func canonicalizeBlocks(Func func) {
-  return CanonicalizeBlocksRewriter().rewrite(func);
+Func canonicalizeBlocks(Func func, bool forward) {
+  return CanonicalizeBlocksRewriter(forward).rewrite(func);
 }
 
 class VarReplaceRewriter : public IRRewriter {
 public:
-  VarReplaceRewriter(Var init, Var final) {
-    this->init = init;
-    this->final = final;
-  }
+  VarReplaceRewriter(Var init, Var final) : init(init), final(final) {}
 
   using IRRewriter::visit;
 
@@ -133,11 +180,10 @@ Stmt replaceVar(Stmt stmt, Var init, Var final) {
   return VarReplaceRewriter(init, final).rewrite(stmt);
 }
 
-class KernelDownSwapRewriter : public IRRewriter {
+class KernelSwapRewriter : public IRRewriter {
 public:
-  KernelDownSwapRewriter(std::set<Var> rootVars) {
-    this->rootVars = rootVars;
-  }
+  KernelSwapRewriter(std::set<Var> rootVars, bool forward)
+      : rootVars(rootVars), forward(forward) {}
 
   using IRRewriter::visit;
 
@@ -150,12 +196,33 @@ public:
   // Swaps only happen in a block that contains GPUKernel as first, and another
   // block as rest.
   void visit(const Block *op) {
-    if (isa<GPUKernel>(op->first) && isa<Block>(op->rest)) {
-      const GPUKernel *kernel = to<GPUKernel>(op->first);
+    Stmt maybeKernel, rest;
+    // Ensure canonicalization in the correct direction
+    if (forward) {
+      iassert(!isa<Block>(op->first));
+      maybeKernel = op->first;
+      rest = op->rest;
+    }
+    else {
+      iassert(!isa<Block>(op->rest));
+      maybeKernel = op->rest;
+      rest = op->first;
+    }
+
+    if (isa<GPUKernel>(maybeKernel) && isa<Block>(rest)) {
+      const GPUKernel *kernel = to<GPUKernel>(maybeKernel);
       std::set<Var> kernelReads = kernel->reads;
       std::set<Var> kernelWrites = kernel->writes;
-      const Block *block = to<Block>(op->rest);
-      Stmt other = block->first;
+      const Block *block = to<Block>(rest);
+      Stmt other, leftover;
+      if (forward) {
+        other = block->first;
+        leftover = block->rest;
+      }
+      else {
+        other = block->rest;
+        leftover = block->first;
+      }
       ReadWriteAnalysis rwAnalysis(rootVars);
       other.accept(&rwAnalysis);
       std::set<Var> otherReads = rwAnalysis.getReads();
@@ -208,12 +275,21 @@ public:
                   !kernel->sharding.zSharded &&
                   !otherKernel->sharding.ySharded &&
                   !otherKernel->sharding.zSharded);
-          Stmt finalKernel = GPUKernel::make(
-              // Combined bodies
-              Block::make(kernel->body, replacedOtherBody),
-              kernel->sharding, combinedReads, combinedWrites);
-          stmt = Block::make(finalKernel,
-                             IRRewriter::rewrite(block->rest));
+          Stmt combinedBody;
+          if (forward) {
+            combinedBody = Block::make(kernel->body, replacedOtherBody);
+          }
+          else {
+            combinedBody = Block::make(replacedOtherBody, kernel->body);
+          }
+          Stmt finalKernel = GPUKernel::make(combinedBody, kernel->sharding,
+                                             combinedReads, combinedWrites);
+          if (forward) {
+            stmt = Block::make(finalKernel, IRRewriter::rewrite(leftover));
+          }
+          else {
+            stmt = Block::make(IRRewriter::rewrite(leftover), finalKernel);
+          }
         }
         else {
           // Swappable, but not fusable
@@ -223,20 +299,32 @@ public:
           // Progress guarantee: A kernel will have moved further in the block
           // on every recursion.
           // FOR NOW: Just recurse on that kernel
-          stmt = Block::make(kernel, IRRewriter::rewrite(op->rest));
+          if (forward) {
+            stmt = Block::make(kernel, IRRewriter::rewrite(rest));
+          }
+          else {
+            stmt = Block::make(IRRewriter::rewrite(rest), kernel);
+          }
         }
       }
       else {
         // Do the swap and recurse
-        if (block->rest.defined()) {
-          stmt = Block::make(other, IRRewriter::rewrite(
-              Block::make(kernel, block->rest)));
+        if (leftover.defined()) {
+          if (forward) {
+            stmt = Block::make(other, IRRewriter::rewrite(
+                Block::make(kernel, leftover)));
+          }
+          else {
+            stmt = Block::make(IRRewriter::rewrite(
+                Block::make(leftover, kernel)), other);
+          }
         }
         else {
           stmt = Block::make(other, kernel);
         }
       }
     }
+    // TODO(gkanwar): If we are a kernel, and rest is a kernel, try fusion
     else {
       IRRewriter::visit(op);
     }
@@ -244,15 +332,21 @@ public:
 
 private:
   std::set<Var> rootVars;
+  bool forward;
 };
 
 Func fuseKernels(Func func) {
   std::set<Var> rootVars = findRootVars(func);
-  func = canonicalizeBlocks(func);
   std::cout << "fuseKernels" << std::endl;
   // Pass 1: Move kernels as far down in blocks as possible,
   // starting from the top.
-  func = KernelDownSwapRewriter(rootVars).rewrite(func);
+  func = canonicalizeBlocks(func, true);
+  func = KernelSwapRewriter(rootVars, true).rewrite(func);
+
+  // Pass 2: Move kernels as far up in blocks as possible, starting
+  // from the bottom.
+  func = canonicalizeBlocks(func, false);
+  func = KernelSwapRewriter(rootVars, false).rewrite(func);
   return func;
 }
 

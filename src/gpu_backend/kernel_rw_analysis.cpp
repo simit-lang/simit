@@ -15,6 +15,16 @@ public:
 
   using IRVisitor::visit;
 
+  void visit(const Func *op) {
+    for (Var arg : op->getArguments()) {
+      rootVars.insert(arg);
+    }
+    for (Var res : op->getResults()) {
+      rootVars.insert(res);
+    }
+    IRVisitor::visit(op);
+  }
+
   void visit(const VarDecl *op) {
     if (!curKernel) {
       rootVars.insert(op->var);
