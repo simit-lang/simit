@@ -90,7 +90,11 @@ public:
       else
         finalResults.push_back(res);
     }
-    stmt = CallStmt::make(finalResults, op->callee, op->actuals);
+    std::vector<Expr> actuals(op->actuals.size());
+    for (size_t i=0; i < op->actuals.size(); ++i) {
+      actuals[i] = rewrite(op->actuals[i]);
+    }
+    stmt = CallStmt::make(finalResults, op->callee, actuals);
   }
 
   void visit(const ForRange *op) {
