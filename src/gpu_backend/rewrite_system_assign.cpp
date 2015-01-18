@@ -24,6 +24,17 @@ public:
     }
     IRRewriter::visit(op);
   }
+
+  void visit(const AssignStmt *op) {
+    Type valueType = op->value.type();
+    if (valueType.toTensor()->isSparse()) {
+      IRBuilder builder;
+      auto indexed = builder.unaryElwiseExpr(IRBuilder::None, op->value);
+      stmt = AssignStmt::make(op->var, indexed, op->cop);
+      return;
+    }
+    IRRewriter::visit(op);
+  }
 };
 
 Func rewriteSystemAssigns(Func func) {
