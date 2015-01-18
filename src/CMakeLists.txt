@@ -139,7 +139,13 @@ endif()
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS ${LLVM_LDFLAGS})
 
-set(LLVM_COMPONENTS core jit x86 bitwriter ipo)
+if (SIMIT_DEBUG)
+  message("building without ipo")
+  set(LLVM_COMPONENTS core jit x86 bitwriter)
+else()
+  set(LLVM_COMPONENTS core jit x86 bitwriter ipo)
+endif()
+
 execute_process(COMMAND ${LLVM_CONFIG} --libnames ${LLVM_COMPONENTS} OUTPUT_VARIABLE LLVM_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
 separate_arguments(LLVM_LIBS)  # Turn the space-separate string into a ;-separated list
 execute_process(COMMAND ${LLVM_CONFIG} --libdir OUTPUT_VARIABLE LLVM_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)

@@ -166,7 +166,11 @@ simit::Function *LLVMBackend::compile(Func func) {
   builder->CreateRetVoid();
   symtable.clear();
 
+#ifdef SIMIT_DEBUG
+//    verifyModule(*module);
+#endif
 
+#ifndef SIMIT_DEBUG
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
   // the set of passes that are similar to clang's -O3
@@ -186,9 +190,6 @@ simit::Function *LLVMBackend::compile(Func func) {
   fpm.doFinalization();
   
   mpm.run(*module);
-
-#ifdef SIMIT_DEBUG
-//    verifyModule(*module);
 #endif
 
   bool requiresInit = buffers.size() > 0;
