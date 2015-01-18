@@ -1750,7 +1750,7 @@ namespace  simit { namespace internal  {
                    to_string(func.getArguments().size()) + ")", yystack_[4].location);
     }
 
-    if (target.type().toSet()->elementType != func.getArguments()[0].getType()){
+    if (target.type().toSet()->elementType != func.getArguments()[partialActuals.size()].getType()){
       REPORT_ERROR("the mapped set's element type is different from the mapped "
                    "function's target argument", yystack_[0].location);
     }
