@@ -34,7 +34,7 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
 
   this->target = kernel.getArguments()[map->partial_actuals.size()];
 
-  if (kernel.getArguments().size() >= 2) {
+  if (kernel.getArguments().size() >= (2+map->partial_actuals.size())) {
     this->neighbors = kernel.getArguments()[1+map->partial_actuals.size()];
   }
 
