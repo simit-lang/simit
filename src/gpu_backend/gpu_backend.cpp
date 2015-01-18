@@ -861,8 +861,8 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   llvm::Value *paramBuf = builder->CreateCall4(
       getParamFunc, kernelBitCast, gridDims, blockDims, llvmInt(0));
 
-  // Insert args into param buffer
-  emitFillBuf(paramBuf, args);
+  // Insert args into param buffer, 8-byte aligned
+  emitFillBuf(paramBuf, args, 8);
 
   builder->CreateCall2(cudaLaunchFunc, paramBuf,
                        llvm::ConstantPointerNull::get(cuStreamPtrTy));
@@ -889,7 +889,11 @@ void GPUBackend::emitPrintf(std::string format,
     }
     else if (arg->getType()->isIntegerTy()) {
       unsigned width = arg->getType()->getIntegerBitWidth();
-      if (width < 32) {
+      if (width == 1) {
+        // Zero-extend boolean values
+        args[i] = builder->CreateZExt(arg, LLVM_INT);
+      }
+      else if (width < 32) {
         args[i] = builder->CreateSExt(arg, LLVM_INT);
       }
     }
@@ -899,13 +903,18 @@ void GPUBackend::emitPrintf(std::string format,
   size_t size = 0;
   for (auto &arg : args) {
     size += dataLayout->getTypeAllocSize(arg->getType());
+    // Ensure that we remain 4-byte aligned
+    if (size % 4 != 0) {
+      size += (4 - size%4);
+    }
   }
 
   llvm::AllocaInst *argBuf =
       builder->CreateAlloca(LLVM_INT8, llvmInt(size), "buffer");
-  // Align 8, so vprintf will be happy
+  // Align 8 on the buffer, so vprintf will be happy
   argBuf->setAlignment(8);
-  emitFillBuf(argBuf, args);
+  // Args should still be 4-byte aligned
+  emitFillBuf(argBuf, args, 4);
 
   // Create and call vprintf syscall
   llvm::Function *vprintf = getBuiltIn(
@@ -1128,7 +1137,9 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
 }
 
 void GPUBackend::emitFillBuf(llvm::Value *buffer,
-                             std::vector<llvm::Value*> vals) {
+                             std::vector<llvm::Value*> vals,
+                             unsigned align) {
+  iassert(align % 4 == 0) << "Align must be a multiple of 4";
   uint64_t bufIndex = 0;
   for (auto &val : vals) {
     llvm::Value *bufPtr = builder->CreateGEP(buffer, llvmInt(bufIndex));
@@ -1136,13 +1147,12 @@ void GPUBackend::emitFillBuf(llvm::Value *buffer,
         bufPtr,
         // Pointer to arg type, addrspace 0
         llvm::PointerType::get(val->getType(), 0));
-    // Aligned store required to ensure that each parameter remains 8-byte aligned
-    builder->CreateAlignedStore(val, valPtr, 8);
+    // Aligned store required to ensure that each parameter remains aligned
+    builder->CreateAlignedStore(val, valPtr, align);
     bufIndex += dataLayout->getTypeAllocSize(val->getType());
-    if (bufIndex % 8 != 0) {
-      iassert(bufIndex % 8 == 4)
-          << "Cannot accept non 4-byte aligned params";
-      bufIndex += 4;
+    if (bufIndex % align != 0) {
+      iassert(bufIndex % 4 == 0) << "Cannot accept non 4-byte aligned params";
+      bufIndex += (align - bufIndex%align);
     }
   }
 }

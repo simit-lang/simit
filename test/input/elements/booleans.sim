@@ -1,5 +1,6 @@
 %%% not
 %! donot(false) == true;
+%! donot(true) == false;
 func donot(a : bool) -> (b : bool)
   b = not a;
 end

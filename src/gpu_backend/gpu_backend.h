@@ -123,7 +123,8 @@ protected:
                       llvm::Value *size, llvm::Value *result);
 
   void emitFillBuf(llvm::Value *buffer,
-                   std::vector<llvm::Value*> vals);
+                   std::vector<llvm::Value*> vals,
+                   unsigned align);
 
   virtual void makeGlobalTensor(ir::Var var);
 };
