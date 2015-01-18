@@ -7,8 +7,6 @@ extern points : set{Point};
 
 proc main
   var a : float;
-  print a;
   a = dot(points.x, points.x);
-  print a;
   points.z = points.z + a;
 end
