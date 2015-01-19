@@ -588,6 +588,9 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
     }
   }
   iassert(!kernelSharding.ySharded && !kernelSharding.zSharded);
+  // TODO(gkanwar): Passing const arguments to kernels does not work properly
+  // at the moment. This is blocked on consts being handled correctly in
+  // the general backend.
 
   // Create LLVM func
   llvm::Function *kernel = emitEmptyFunction(
