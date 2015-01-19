@@ -88,15 +88,15 @@ proc main
   iter = 0;
   v = vguess;
 
-  normr2 = dot(r, r);
+  normr2 = r * r';
   while (normr2 > tol) and (iter < maxiters)
     Ap = MDK * p;
-    denom = dot(p, Ap);
+    denom = p * Ap;
     alpha = normr2 / denom;
     v = v + alpha * p;
     normr2old = normr2;
     r = r - alpha * Ap;
-    normr2 = dot(r, r);
+    normr2 = r * r';
     beta = normr2 / normr2old;
     p = r + beta * p;
     iter = iter + 1;
