@@ -441,6 +441,8 @@ simit::Function::FuncType GPUFunction::init(
       bufSize *= size(*bufVar.getType().toTensor(), storage.get(bufVar));
     }
     CUdeviceptr *devBuffer = new CUdeviceptr();
+    iassert(bufSize > 0)
+        << "Cannot allocate size 0 global buffer for var: " << bufVar;
     checkCudaErrors(cuMemAlloc(devBuffer, bufSize));
     pushedBufs.push_back(new DeviceDataHandle(nullptr, devBuffer, bufSize));
     void *devBufferPtr = reinterpret_cast<void*>(*devBuffer);
