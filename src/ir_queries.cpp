@@ -144,6 +144,29 @@ private:
   }
 };
 
+size_t countIndexVars(Expr expr) {
+  class CountIndexVarsVisitor : public IRVisitor {
+  public:
+    using IRVisitor::visit;
+    set<IndexVar> indexVars;
+
+    size_t count(Expr expr) {
+      indexVars.clear();
+      expr.accept(this);
+      return indexVars.size();
+    }
+
+    void visit(const IndexedTensor *op) {
+      for (auto &indexVar : op->indexVars) {
+        if (indexVars.find(indexVar) == indexVars.end()) {
+          indexVars.insert(indexVar);
+        }
+      }
+    }
+  };
+  return CountIndexVarsVisitor().count(expr);
+}
+
 bool isFlattened(Stmt stmt) {
   return CheckIsFlattened().check(stmt);
 }

@@ -396,11 +396,12 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
 
       // If tensor is not a VarExpr, that means we have a hierarchical TensorRead
       if (!isa<VarExpr>(tensor)) {
-        tassert(isa<TensorRead>(otherExpr)) << "We only support one level of blocking.";
+        tassert(isa<TensorRead>(otherExpr))
+            << "we only support one level of blocking" << otherExpr;
         
         auto otherTensor = to<TensorRead>(otherExpr)->tensor;
         return liftDiagonalExpression(tensor, otherTensor, op,
-          exprToCheck, otherExpr);
+                                      exprToCheck, otherExpr);
       }
       
       TensorStorage::Kind storageKind =

@@ -18,6 +18,8 @@ bool containsReductionVar(Stmt stmt);
 
 bool containsIndexedTensor(Expr expr);
 
+size_t countIndexVars(Expr expr);
+
 /// Returns true if the statement has been flattened (only contains one index
 /// expression), and false otherwise.
 bool isFlattened(Stmt stmt);

@@ -95,7 +95,22 @@ private:
     }
   }
 
-  std::pair<Expr,Expr> spillSubExpressions(Expr a, Expr b) {
+  std::pair<Expr,Expr> spillAsNeeded(Expr a, Expr b) {
+    class IsAnyInputSparseVisitor : public IRQuery {
+      using IRQuery::visit;
+      void visit(const IndexedTensor *op) {
+        if (op->tensor.type().toTensor()->isSparse()) {
+          result = true;
+        }
+      }
+    };
+
+    if (countIndexVars(a) == countIndexVars(b) &&
+        !IsAnyInputSparseVisitor().query(a) &&
+        !IsAnyInputSparseVisitor().query(b)) {
+      return pair<Expr,Expr>(a,b);
+    }
+
     if (!isa<IndexedTensor>(a)) {
       a = spill(a);
     }
@@ -111,7 +126,7 @@ private:
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
-    pair<Expr,Expr> ab = spillSubExpressions(a, b);
+    pair<Expr,Expr> ab = spillAsNeeded(a, b);
     expr = Sub::make(ab.first, ab.second);
   }
 
@@ -123,7 +138,7 @@ private:
     Expr a = rewrite(op->a);
     Expr b = rewrite(op->b);
 
-    pair<Expr,Expr> ab = spillSubExpressions(a, b);
+    pair<Expr,Expr> ab = spillAsNeeded(a, b);
     expr = Add::make(ab.first, ab.second);
   }
 
