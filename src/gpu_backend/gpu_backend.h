@@ -46,9 +46,6 @@ protected:
   // Currently compiling LLVM function
   llvm::Function *func;
 
-  // Exported symbols, used in internalize optimization pass
-  std::vector<const char*> exported;
-  
   virtual unsigned global_addrspace() { return CUDA_GLOBAL_ADDRSPACE; }
 
   using LLVMBackend::visit;

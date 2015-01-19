@@ -73,16 +73,6 @@ simit::Function *GPUBackend::compile(simit::ir::Func irFunc) {
     symtable.clear();
   }
   iassert(func);
-  exported.push_back(func->getName().data());
-
-  // Run LLVM/NVVM optimization passes on the function
-  llvm::FunctionPassManager fpm(module);
-  fpm.add(new llvm::DataLayout(*dataLayout));
-
-  // Internalize pass
-  fpm.add(llvm::createInternalizePass(llvm::ArrayRef<const char*>(exported)));
-  fpm.add(llvm::createGVNPass());
-  fpm.add(llvm::createPromoteMemoryToRegisterPass());
 
   return new GPUFunction(irFunc, func, module, buffers, storage);
 }
@@ -238,8 +228,6 @@ void GPUBackend::visit(const ir::CallStmt *op) {
     if (foundIntrinsic != nvvmIntrinsicByName.end()) {
       fun = getBuiltIn(foundIntrinsic->second, getLLVMFloatType(), argTypes);
       call = builder->CreateCall(fun, args);
-      // Export the intrinsic, so it's not optimized out of the module
-      exported.push_back(fun->getName().data());
     }
     else if (callee == ir::Intrinsics::mod) {
       iassert(op->actuals.size() == 2) << "mod takes two inputs, got"
@@ -374,8 +362,6 @@ void GPUBackend::visit(const ir::Call *op) {
     auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
     module->getOrInsertFunction(foundIntrinsic->second, ftype);
     fun = module->getFunction(foundIntrinsic->second);
-    // Export the intrinsic, so it's not optimized out of the module
-    exported.push_back(fun->getName().data());
   }
   else if (op->func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);
@@ -1171,7 +1157,6 @@ void GPUBackend::makeGlobalTensor(ir::Var var) {
   // value from the CUDA setup
   llvm::Value *global = buffers[var];
   addNVVMAnnotation(global, "managed", llvmInt(1), module);
-  exported.push_back(global->getName().data());
 
   // Replace the load in the symtable with an appropriately casted version
   llvm::Value *llvmTmp = symtable.get(var);
