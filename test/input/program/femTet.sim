@@ -1,0 +1,209 @@
+element Tet
+  u : float;
+  l : float;
+  %precomputed rest volume
+  W : float;
+  %precomputed matrix
+  B : tensor[3,3](float);
+end
+
+element Vert
+  x  : tensor[3](float);
+  v  : tensor[3](float);
+  fe : tensor[3](float);
+  c  : int;
+  m : float;
+end
+
+extern verts : set{Vert};
+extern tets : set{Tet}(verts, verts, verts, verts);
+
+func trace3(A:tensor[3,3](float))->(t:float)
+  t = A(0,0) + A(1,1)+ A(2,2);
+end
+
+func PK1(u:float, l:float, F:tensor[3,3](float))->(P:tensor[3,3](float))
+  JJ = log(det(F));
+  Finv = inv(F)';
+  P = u*(F-Finv) + l*JJ*Finv;
+end
+
+func dPdF(u:float, l:float, F:tensor[3,3](float), dF:tensor[3,3](float))->
+  (dP:tensor[3,3](float))
+  JJ = log(det(F));
+  Finv = inv(F);
+  FidF = Finv*dF;
+  dP = u * dF + (u - l*JJ) * Finv' * FidF' + l * trace3(FidF) * Finv';
+end
+
+func compute_mass(v : Vert) ->
+    (M  : tensor[verts, verts](tensor[3,3](float)))
+  grav = [0.0, -10.0, 0.0];
+  eye3 = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 1.0, 0.0];
+  M(v,v) = v.m *eye3;
+end
+
+func columnOf(H:tensor[3,3](float), ii:int)->(f:tensor[3](float))
+  f(0) = H(0,ii);
+  f(1) = H(1,ii);
+  f(2) = H(2,ii);
+end
+
+func compute_force(h:float, e : Tet, v : (Vert*4)) -> (f : tensor[verts](tensor[3](float)))
+  var Ds :tensor[3,3](float);
+  rho = 1000.0;
+  m = 0.25 * rho * e.W;
+  grav = [0.0, -10.0, 0.0];
+  fg = m*grav;
+  for ii in 0:3
+    for jj in 0:3
+      Ds(jj,ii) = v(ii).x(jj)-v(3).x(jj);
+    end
+  end
+  F = Ds*e.B;
+
+  P = PK1(e.u, e.l, F);
+  H = -e.W * P * e.B';
+
+  for ii in 0:3
+    fi = columnOf(H,ii);
+    
+    c = v(ii).c;
+    if (c <= 0)
+      f(v(ii)) = h*fi ;
+    end    
+    
+    c = v(3).c;
+    if (c <= 0)
+      f(v(3))  = -h*fi;
+    end
+  end
+  
+  for ii in 0:4
+    c = v(ii).c;
+    if(c<=0)
+      f(v(ii)) = h*fg + m*v(ii).v;
+    end
+  end
+  
+end
+
+func sliceMat(Kb:tensor[4,3,3](float), ii:int)->(K:tensor[3,3](float))
+  for jj in 0:3
+    for kk in 0:3
+      K(jj,kk) = Kb(ii,jj,kk);
+    end
+  end
+end
+
+func compute_stiffness(h:float, e : Tet, v : (Vert*4)) ->
+     (K : tensor[verts,verts](tensor[3,3](float)))
+  var Ds :tensor[3,3](float);
+  var dFRow:tensor[4,3](float);
+
+  for ii in 0:3
+    for jj in 0:3
+      Ds(jj,ii) = v(ii).x(jj)-v(3).x(jj);
+    end
+  end
+  F = Ds*e.B;
+  
+  for ii in 0:3
+    for ll in 0:3
+      dFRow(ii,ll) = e.B(ii,ll);
+    end
+
+    dFRow(3, ii) = -(e.B(0, ii)+e.B(1, ii)+e.B(2, ii));
+  end
+
+  for row in 0:4
+    var Kb:tensor[4,3,3](float) = 0.0;
+    for kk in 0:3
+      var dF:tensor[3,3](float) = 0.0;
+      for ll in 0:3
+        dF(kk, ll) = dFRow(row, ll);
+      end
+      dP = dPdF(e.u, e.l, F, dF);
+      dH = -e.W * dP * e.B';
+      
+      for ii in 0:3
+        for ll in 0:3
+          Kb(ii,ll, kk) = dH(ll, ii);
+        end
+        Kb(3, ii, kk) = -(dH(ii, 0)+dH(ii, 1)+dH(ii, 2));
+      end
+    end
+
+    for jj in 0:4
+        c1 = v(jj).c;
+        c2 = v(row).c;
+        if(c1<=0) and (c2<=0)
+          K(v(jj) , v(row)) = -(h*h*sliceMat(Kb,jj));
+        end
+    end
+  end
+  
+  rho = 1000.0;
+  m = 0.25 * rho * e.W;
+  M = m*[1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  for ii in 0:4
+    K(v(ii),v(ii)) = M;
+  end
+end
+
+func precomputeTetMat(inout t : Tet, v : (Vert*4))
+    ->(m:tensor[verts](float))
+  var M:tensor[3,3](float);
+  for ii in 0:3
+    for jj in 0:3
+      M(jj,ii) = v(ii).x(jj) - v(3).x(jj);
+    end
+  end
+  %workaround for a bug
+  t.B = 1.0*inv(M);
+  vol = -(1.0/6.0) * det(M);
+  t.W = vol;
+  
+  rho = 1000.0;
+  for ii in 0:4
+    m(v(ii))=0.25*rho*vol;
+  end
+end
+
+proc initializeTet
+  m = map precomputeTetMat to tets;
+  verts.m = m;
+end
+
+proc main
+  h=0.01;
+  
+  f = map compute_force(h) to tets reduce +;
+  A = map compute_stiffness(h) to tets reduce +; % was K
+  b = f;
+  xguess = 1.0 * verts.v;
+  
+  tol = 1e-6;
+  maxiters=100;
+  r = b - (A*xguess);
+  p = r;
+  iter = 0;
+  x = xguess;
+  
+  normr2 = r * r';
+  while (normr2 > tol) and (iter < maxiters)
+    Ap = A * p;
+    denom = p * Ap;
+    alpha = normr2 / denom;
+    x = x + alpha * p;
+    normr2old = normr2;
+    r = r - alpha * Ap;
+    normr2 = r * r';
+    beta = normr2 / normr2old;
+    p = r + beta * p;
+    iter = iter + 1;
+  end
+  
+  verts.v = x;
+  verts.x = h * x + verts.x;
+end
