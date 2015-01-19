@@ -147,7 +147,9 @@ std::string generatePtx(llvm::Module *module,
   checkNVVMCall(nvvmGetCompiledResult(compileUnit, ptx));
   checkNVVMCall(nvvmDestroyProgram(&compileUnit));
 
-  return std::string(ptx);
+  std::string ptxStr(ptx);
+  delete [] ptx;
+  return ptxStr;
 }
 
 void addNVVMAnnotation(llvm::Value *target, std::string annot,
