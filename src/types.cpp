@@ -88,7 +88,12 @@ size_t TensorType::size() const {
   return size;
 }
 
+// TODO: Get rid of this function. Sparsity is decided elsewhere.
 bool TensorType::isSparse() const {
+  if (order() < 2) {
+    return false;
+  }
+
   for (auto &indexDom : dimensions) {
     for (auto &indexSet : indexDom.getIndexSets()) {
       if (indexSet.getKind() != IndexSet::Range) {
