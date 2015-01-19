@@ -34,23 +34,29 @@ proc main
 
 % begin inlined CG
   tol = 1e-6;
-  maxiters = 25;
+  maxiters = 5;
   r = b - (A*xguess);
   p = r;
   iter = 0;
   x = xguess;
 
-  normr2 = r * r';
-  while (normr2 > tol) and (iter < maxiters)
+  normr = norm(r);
+  while (normr > tol) and (iter < maxiters)
     Ap = A * p;
-    denom = p * Ap;
-    alpha = normr2 / denom;
-    x = x + alpha * p;
-    normr2old = normr2;
+
+    denom = dot(p, Ap);
+
+    alpha = dot(r, r);
+    alpha = alpha / denom;
+    x = x + alpha*p;
+
+    oldrsqn = dot(r,r);
     r = r - alpha * Ap;
-    normr2 = r * r';
-    beta = normr2 / normr2old;
-    p = r + beta * p;
+    newrsqn = dot(r,r);
+    beta = newrsqn/oldrsqn;
+    p = r + beta*p;
+
+    normr = norm(r);
     iter = iter + 1;
   end
 % end inlined CG
