@@ -104,6 +104,16 @@ bool TensorType::isSparse() const {
   return false;
 }
 
+bool TensorType::hasSystemDimensions() const {
+  for (auto &indexDom : dimensions) {
+    for (auto &indexSet : indexDom.getIndexSets()) {
+      if (indexSet.getKind() != IndexSet::Range) {
+        return true;
+      }
+    }
+  }
+  return false;
+}
 
 // struct SetType
 Type SetType::make(Type elementType, const std::vector<Expr> &endpointSets) {

@@ -15,7 +15,7 @@ public:
     Type fieldType = getFieldType(op->elementOrSet, op->fieldName);
     Type valueType = op->value.type();
     if (fieldType.toTensor()->order() == valueType.toTensor()->order() &&
-        fieldType.toTensor()->isSparse()) {
+        fieldType.toTensor()->hasSystemDimensions()) {
       IRBuilder builder;
       auto indexed = builder.unaryElwiseExpr(IRBuilder::None, op->value);
       stmt = FieldWrite::make(op->elementOrSet, op->fieldName,
@@ -27,7 +27,7 @@ public:
 
   void visit(const AssignStmt *op) {
     Type valueType = op->value.type();
-    if (valueType.toTensor()->isSparse()) {
+    if (valueType.toTensor()->hasSystemDimensions()) {
       IRBuilder builder;
       auto indexed = builder.unaryElwiseExpr(IRBuilder::None, op->value);
       stmt = AssignStmt::make(op->var, indexed, op->cop);

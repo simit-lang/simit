@@ -116,6 +116,7 @@ struct TensorType : TypeNode {
   size_t size() const;
 
   bool isSparse() const;
+  bool hasSystemDimensions() const;
 
   static Type make(ScalarType componentType) {
     std::vector<IndexDomain> dimensions;
