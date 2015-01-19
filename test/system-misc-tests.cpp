@@ -166,6 +166,32 @@ TEST(System, map_one_set) {
   ASSERT_SIMIT_FLOAT_EQ(6, a.get(p2));
 }
 
+TEST(System, DISABLED_map_one_set_const_ref) {
+  // Points
+  Set<> points;
+  FieldRef<simit_float> a = points.addField<simit_float>("a");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  a.set(p0, 1.0);
+  a.set(p1, 2.0);
+  a.set(p2, 3.0);
+
+  // Compile program and bind arguments
+  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
+  if (!f) FAIL();
+
+  f->bind("points", &points);
+  f->runSafe();
+
+  // Check outputs
+  ASSERT_SIMIT_FLOAT_EQ(0.5, a.get(p0));
+  ASSERT_SIMIT_FLOAT_EQ(1.0, a.get(p1));
+  ASSERT_SIMIT_FLOAT_EQ(1.5, a.get(p2));
+}
+
 TEST(System, map_no_results_one_set) {
   // Points
   Set<> points;

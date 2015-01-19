@@ -1,0 +1,16 @@
+const s : float = 0.5;
+
+element Point
+ a : float;
+end
+
+extern points : set{Point};
+
+func halfField(p : Point) -> (f : tensor[points](float))
+  f(p) = p.a * s;
+end
+
+proc main
+  f = map halfField to points;
+  points.a = f;
+end

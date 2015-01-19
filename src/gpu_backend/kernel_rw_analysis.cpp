@@ -16,6 +16,9 @@ public:
   using IRVisitor::visit;
 
   void visit(const Func *op) {
+    for (auto &global : op->getEnvironment().globals) {
+      rootVars.insert(global.first);
+    }
     for (Var arg : op->getArguments()) {
       rootVars.insert(arg);
     }

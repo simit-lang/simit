@@ -197,6 +197,7 @@ static llvm::Function *createPrototype(const std::string &name,
   for (llvm::Argument &arg : f->getArgumentList()) {
     arg.setName(argNames[i]);
 
+    // TODO(gkanwar): Move noalias code here from GPU implementation
     if (arg.getType()->isPointerTy()) {
       f->setDoesNotCapture(i+1);  //  setDoesNotCapture(0) is the return value
     }
