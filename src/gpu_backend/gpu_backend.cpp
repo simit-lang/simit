@@ -555,6 +555,8 @@ void GPUBackend::visit(const ir::For *op) {
   LLVMBackend::visit(op);
 }
 void GPUBackend::visit(const ir::GPUKernel *op) {
+  GPUSharding kernelSharding = op->sharding;
+
   // Stash the symtable
   ScopedMap<simit::ir::Var, llvm::Value*> oldSymtable = symtable;
   symtable.clear();
@@ -562,15 +564,35 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
   // Pass all globals reads as arguments
-  std::vector<ir::Var> kernelArgs = irFunc.getArguments();
+  std::vector<ir::Var> kernelArgs;
   for (auto var : op->reads) {
     kernelArgs.push_back(var);
   }
+  std::vector<ir::Var> kernelResults;
+  for (auto var : op->writes) {
+    // Skip repeated arguments
+    if (op->reads.find(var) != op->reads.end()) continue;
+    kernelResults.push_back(var);
+  }
+  // Push domain variables into kernel args
+  if (kernelSharding.xSharded) {
+    iassert(kernelSharding.xDomain.getKind() == ir::IndexSet::Set);
+    iassert(ir::isa<ir::VarExpr>(kernelSharding.xDomain.getSet()));
+    ir::Var xDomainVar = ir::to<ir::VarExpr>(kernelSharding.xDomain.getSet())->var;
+    if (std::find(kernelArgs.begin(), kernelArgs.end(), xDomainVar) ==
+        kernelArgs.end() &&
+        std::find(kernelResults.begin(), kernelResults.end(), xDomainVar) ==
+        kernelResults.end()) {
+      // If not a duplicate
+      kernelArgs.push_back(xDomainVar);
+    }
+  }
+  iassert(!kernelSharding.ySharded && !kernelSharding.zSharded);
 
   // Create LLVM func
   llvm::Function *kernel = emitEmptyFunction(
       irFunc.getName() + "_nested_kernel", kernelArgs,
-      irFunc.getResults(), true, false, false);
+      kernelResults, true, false, false);
   builder->SetInsertPoint(&kernel->getEntryBlock());
   
   // Parameter attributes
@@ -588,7 +610,6 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   
   // Guard: check if we're outside the intended range of the kernel loop and 
   // early-exit if so.
-  GPUSharding kernelSharding = op->sharding;
   llvm::Value *cond = builder->CreateICmpULT(getTidX(),
     emitComputeLen(kernelSharding.xDomain));
   builder->CreateCondBr(cond, bodyStart, earlyExit);
@@ -629,7 +650,7 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   for (auto &irArg : kernelArgs) {
     args.push_back(symtable.get(irArg));
   }
-  for (auto &irRes : irFunc.getResults()) {
+  for (auto &irRes : kernelResults) {
     // TODO(gkanwar): Figure out inouts
     args.push_back(symtable.get(irRes));
   }
