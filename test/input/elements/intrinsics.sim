@@ -28,6 +28,12 @@ func dotan(a : float) -> (c : float)
   c = tan(a);
 end
 
+%%% atan2
+%! doatan2(1.0, 2.0) == 0.4636;
+func doatan2(a : float, b : float) -> (c : float)
+  c = atan2(a);
+end
+
 %%% asin
 %! doasin(1.0) == 1.5708;
 func doasin(a : float) -> (c : float)
