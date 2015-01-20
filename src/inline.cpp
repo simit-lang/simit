@@ -153,10 +153,11 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
     Expr rval = map->partial_actuals[i];
     initializers.push_back(AssignStmt::make(tvar, rval));
   }
+
   if (initializers.size() > 0) {
     auto initializersBlock = Block::make(initializers);
-    Stmt inlinedMapFuncWithInit = Block::make(initializersBlock, inlinedMapFunc);
-    inlinedMap = For::make(loopVar, domain, inlinedMapFuncWithInit);
+    inlinedMap = Block::make(initializersBlock,
+                             For::make(loopVar, domain, inlinedMapFunc));
   } else {
     inlinedMap = For::make(loopVar, domain, inlinedMapFunc);
   }

@@ -245,7 +245,7 @@ void GPUBackend::visit(const ir::CallStmt *op) {
       auto type = op->actuals[0].type().toTensor();
       
       // Dense operation
-      if (!type->isSparse()) {
+      if (!type->hasSystemDimensions()) {
         args.push_back(emitComputeLen(type->dimensions[0]));
         std::string funcName = callee.getName() + floatTypeName;
         call = emitCall(funcName, args, getLLVMFloatType());
@@ -285,14 +285,14 @@ void GPUBackend::visit(const ir::CallStmt *op) {
           "dimension mismatch in dot product";
 
       // Dense operation
-      if (!type1->isSparse() && !type2->isSparse()) {
+      if (!type1->hasSystemDimensions() && !type2->hasSystemDimensions()) {
         args.push_back(emitComputeLen(type1->dimensions[0]));
         std::string funcName = callee.getName() + floatTypeName;
         call = emitCall(funcName, args, getLLVMFloatType());
       }
       else {
         // Fire off kernel for sparse operation
-        iassert(type1->isSparse() && type2->isSparse());
+        iassert(type1->hasSystemDimensions() && type2->hasSystemDimensions());
 
         llvm::Value *llvmResult = symtable.get(op->results[0]);
         llvm::Value *size = emitComputeLen(type1->dimensions[0]);
@@ -368,7 +368,7 @@ void GPUBackend::visit(const ir::Call *op) {
     auto type = op->actuals[0].type().toTensor();
 
     // Dense operation
-    if (!type->isSparse()) {
+    if (!type->hasSystemDimensions()) {
       args.push_back(emitComputeLen(type->dimensions[0]));
       std::string funcName = ir::ScalarType::singleFloat() ?
           "norm_f32" : "norm_f64";
@@ -402,7 +402,7 @@ void GPUBackend::visit(const ir::Call *op) {
       "dimension mismatch in dot product";
 
     // Dense operation
-    if (!type1->isSparse() && !type2->isSparse()) {
+    if (!type1->hasSystemDimensions() && !type2->hasSystemDimensions()) {
       std::string funcName = ir::ScalarType::singleFloat() ?
           "dot_f32" : "dot_f64";
       args.push_back(emitComputeLen(type1->dimensions[0]));
@@ -411,7 +411,7 @@ void GPUBackend::visit(const ir::Call *op) {
     }
 
     // Fallthrough: fire off a kernel for sparse operation
-    iassert(type1->isSparse() && type2->isSparse());
+    iassert(type1->hasSystemDimensions() && type2->hasSystemDimensions());
 
     llvm::Value *result = builder->CreateAlloca(getLLVMFloatType(), llvmInt(1));
     llvm::Value *size = emitComputeLen(type1->dimensions[0]);
