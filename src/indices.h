@@ -15,24 +15,17 @@ class VertexToEdgeEndpointIndex {
   VertexToEdgeEndpointIndex(const SetBase &edgeSet);
  ~VertexToEdgeEndpointIndex();
   
-  int getNumEdgesForElement(ElementRef vertex, int whichEndpoint) {
-    return numEdgesForVertex[whichEndpoint][vertex.ident];
+  std::set<int> getWhichEdgesForElement(ElementRef vertex, int whichEndpoint) {
+    return whichEdgesForVertex[std::make_pair(whichEndpoint, vertex.ident)];
   }
-  
-  int* getWhichEdgesForElement(ElementRef vertex, int whichEndpoint) {
-    return whichEdgesForVertex[whichEndpoint][vertex.ident];
-  }
-  
-  std::vector<int*> getNumEdges() { return numEdgesForVertex; }
-  
-  std::vector<int**> getWhichEdges() { return whichEdgesForVertex; }
   
   int getTotalEdges() { return totalEdges; }
 
  private:
   std::vector<const SetBase*> endpointSets;       // the endpoint sets
-  std::vector<int*> numEdgesForVertex;      // number of edges the v belongs to
-  std::vector<int**> whichEdgesForVertex;   // which edges v belongs to
+  // which edges v belongs to
+  // Map from (endpointIndex, point) -> set of edge indices
+  std::map< std::pair<int, int>, std::set<int> > whichEdgesForVertex;
   int totalEdges;
 };
 
@@ -44,25 +37,15 @@ class VertexToEdgeIndex {
   VertexToEdgeIndex(const SetBase &edgeSet);
   ~VertexToEdgeIndex();
   
-  int getNumEdgesForElement(ElementRef vertex, const SetBase& whichSet) {
-    return numEdgesForVertex[&whichSet][vertex.ident];
+  std::set<int> getWhichEdgesForElement(ElementRef vertex, const SetBase& whichSet) {
+    return whichEdgesForVertex[std::make_pair(&whichSet, vertex.ident)];
   }
-  
-  int* getWhichEdgesForElement(ElementRef vertex, const SetBase& whichSet) {
-    return whichEdgesForVertex[&whichSet][vertex.ident];
-  }
-  
-  std::map<const SetBase*,int*> getNumEdges() { return numEdgesForVertex; }
-  
-  std::map<const SetBase*,int**> getWhichEdges() { return whichEdgesForVertex; }
   
   int getTotalEdges() { return totalEdges; }
   
  private:
   std::vector<const SetBase*> endpointSets;           // the endpoint sets
-  std::map<const SetBase*,int*> numEdgesForVertex;    // number of edges the v
-                                                      // belongs to
-  std::map<const SetBase*,int**> whichEdgesForVertex; // which edges v belongs to
+  std::map< std::pair<const SetBase*,int>, std::set<int> > whichEdgesForVertex;
   int totalEdges;
 };
 

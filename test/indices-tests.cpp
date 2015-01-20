@@ -20,9 +20,10 @@ TEST(VertexToEdgeEndpointIndex, chain) {
   internal::VertexToEdgeEndpointIndex edgeindex(edges);
 
   ASSERT_EQ(edgeindex.getTotalEdges(), 2);
-  ASSERT_EQ(edgeindex.getNumEdgesForElement(p0, 0), 2);
-  ASSERT_EQ(edgeindex.getNumEdgesForElement(p0, 1), 0);
-  ASSERT_EQ(edgeindex.getWhichEdgesForElement(p1, 1)[0], 0);
+  ASSERT_EQ(edgeindex.getWhichEdgesForElement(p0, 0).size(), 2);
+  ASSERT_EQ(edgeindex.getWhichEdgesForElement(p0, 1).size(), 0);
+  ASSERT_TRUE(edgeindex.getWhichEdgesForElement(p1, 1).find(0) !=
+              edgeindex.getWhichEdgesForElement(p1, 1).end());
 }
 
 TEST(VertexToEdgeIndex, chain) {
@@ -38,8 +39,10 @@ TEST(VertexToEdgeIndex, chain) {
   internal::VertexToEdgeIndex edgeindex(edges);
 
   ASSERT_EQ(edgeindex.getTotalEdges(), 2);
-  ASSERT_EQ(edgeindex.getNumEdgesForElement(p0, points), 2);
-  ASSERT_EQ(edgeindex.getWhichEdgesForElement(p1, points)[0], 0);
+  ASSERT_EQ(2, edgeindex.getWhichEdgesForElement(p0, points).size());
+  ASSERT_EQ(1, edgeindex.getWhichEdgesForElement(p1, points).size());
+  ASSERT_TRUE(edgeindex.getWhichEdgesForElement(p1, points).find(0)
+              != edgeindex.getWhichEdgesForElement(p1, points).end());
 }
 
 TEST(NeighborIndex, chain) {
