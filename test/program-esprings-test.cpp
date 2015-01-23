@@ -9,7 +9,7 @@ using namespace simit;
 
 TEST(Program, esprings) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float,3> v = points.addField<simit_float,3>("v");
 
@@ -46,7 +46,7 @@ TEST(Program, esprings) {
   v.set(p8, {0.0, 0.0, 0.0});
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> l0 = springs.addField<simit_float>("l0");
   FieldRef<simit_float> m = springs.addField<simit_float>("m");
 

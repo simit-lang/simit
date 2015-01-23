@@ -9,7 +9,7 @@ using namespace simit;
 
 TEST(System, gemv) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -26,7 +26,7 @@ TEST(System, gemv) {
   c.set(p2, 42.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -56,7 +56,7 @@ TEST(System, gemv) {
 }
 
 TEST(System, gemv_add) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -73,7 +73,7 @@ TEST(System, gemv_add) {
   c.set(p2, 42.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -107,7 +107,7 @@ TEST(System, gemv_storage) {
   // This test tests whether we determine storage correctly for matrices
   // that do not come (directly) from maps
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -124,7 +124,7 @@ TEST(System, gemv_storage) {
   c.set(p2, 42.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -156,7 +156,7 @@ TEST(System, gemv_storage) {
 
 TEST(System, gemv_diagonal) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -169,7 +169,7 @@ TEST(System, gemv_diagonal) {
   b.set(p2, 3.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -195,7 +195,7 @@ TEST(System, gemv_diagonal) {
 
 TEST(System, gemv_diagonal_extraparams) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -208,7 +208,7 @@ TEST(System, gemv_diagonal_extraparams) {
   b.set(p2, 3.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -234,7 +234,7 @@ TEST(System, gemv_diagonal_extraparams) {
 
 TEST(System, gemv_diagonal_inout) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -247,7 +247,7 @@ TEST(System, gemv_diagonal_inout) {
   b.set(p2, 3.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -276,7 +276,7 @@ TEST(System, gemv_diagonal_inout) {
 
 TEST(System, gemv_nw) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -289,7 +289,7 @@ TEST(System, gemv_nw) {
   b.set(p2, 3.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -315,7 +315,7 @@ TEST(System, gemv_nw) {
 
 TEST(System, gemv_sw) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -328,7 +328,7 @@ TEST(System, gemv_sw) {
   b.set(p2, 3.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -354,7 +354,7 @@ TEST(System, gemv_sw) {
 
 TEST(System, gemv_assemble_from_points) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
@@ -374,7 +374,7 @@ TEST(System, gemv_assemble_from_points) {
   c.set(p0, 42.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
 
   springs.add(p0,p1);
   springs.add(p1,p2);
@@ -396,7 +396,7 @@ TEST(System, gemv_assemble_from_points) {
 
 TEST(System, gemv_inplace) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
 
   ElementRef p0 = points.add();
@@ -408,7 +408,7 @@ TEST(System, gemv_inplace) {
   b.set(p2, 3.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -434,7 +434,7 @@ TEST(System, gemv_inplace) {
 
 TEST(System, gemv_blocked) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
   FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
 
@@ -451,7 +451,7 @@ TEST(System, gemv_blocked) {
   c.set(p2, {42.0, 42.0});
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float,2,2> a = springs.addField<simit_float,2,2>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -486,7 +486,7 @@ TEST(System, gemv_blocked) {
 
 TEST(System, gemv_blocked_nw) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
   FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
 
@@ -503,7 +503,7 @@ TEST(System, gemv_blocked_nw) {
   c.set(p2, {42.0, 42.0});
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float,2,2> a = springs.addField<simit_float,2,2>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -538,7 +538,7 @@ TEST(System, gemv_blocked_nw) {
 
 TEST(System, gemv_blocked_computed) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
   FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
   FieldRef<simit_float,2> x = points.addField<simit_float,2>("x");
@@ -560,7 +560,7 @@ TEST(System, gemv_blocked_computed) {
   c.set(p2, {42.0, 42.0});
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   springs.add(p0,p1);
   springs.add(p1,p2);
 
@@ -590,7 +590,7 @@ TEST(System, gemv_blocked_computed) {
 
 TEST(System, gemv_input) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
@@ -607,7 +607,7 @@ TEST(System, gemv_input) {
   c.set(p2, 42.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -646,7 +646,7 @@ TEST(System, gemv_input) {
 
 TEST(System, gemv_diagonal_storage) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
   FieldRef<simit_float> a = points.addField<simit_float>("a");
@@ -664,7 +664,7 @@ TEST(System, gemv_diagonal_storage) {
   b.set(p2, 3.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
 
   // Compile program and bind arguments
   Function func = getFunction(TEST_FILE_NAME, "main");
@@ -682,7 +682,7 @@ TEST(System, gemv_diagonal_storage) {
 }
 
 TEST(System, gemv_blocked_diagonal_storage) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
   FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
   FieldRef<simit_float,2> a = points.addField<simit_float,2>("a");
@@ -719,7 +719,7 @@ TEST(System, gemv_blocked_diagonal_storage) {
 }
 
 TEST(System, gemv_blocked_scaled_diagonal) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
   FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
   FieldRef<simit_float,2> a = points.addField<simit_float,2>("a");
@@ -753,7 +753,7 @@ TEST(System, gemv_blocked_scaled_diagonal) {
 
 TEST(System, gemv_diagonal_storage_and_sysreduced) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
   FieldRef<simit_float> a = points.addField<simit_float>("a");
@@ -767,7 +767,7 @@ TEST(System, gemv_diagonal_storage_and_sysreduced) {
   a.set(p2, 2.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> d = springs.addField<simit_float>("d");
 
   ElementRef s0 = springs.add(p0,p1);

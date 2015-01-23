@@ -16,7 +16,7 @@ class Func;
 class TensorStorage;
 }
 
-class SetBase;
+class Set;
 
 namespace internal {
 
@@ -26,7 +26,7 @@ public:
   virtual ~Function();
 
   void bind(const std::string &argName, Tensor *tensor);
-  void bind(const std::string &argName, SetBase *set);
+  void bind(const std::string &argName, Set *set);
 
   inline void init() {
     funcPtr = init(formals, actuals);
@@ -68,17 +68,17 @@ protected:
       : type(type), tensor(NULL), output(output) {}
     Actual() : Actual(ir::Type()) {}
     void bind(Tensor *tensor) { this->tensor = tensor; }
-    void bind(SetBase *set) { this->set = set; }
+    void bind(Set *set) { this->set = set; }
     bool isBound() const { return tensor != NULL; }
     void setOutput(bool output) { this->output = output; }
     bool isOutput() const { return output; }
     const ir::Type &getType() const { return type; }
     Tensor *getTensor() { iassert(tensor != nullptr); return tensor; }
-    SetBase *getSet() { iassert(set != nullptr); return set; }
+    Set *getSet() { iassert(set != nullptr); return set; }
   private:
     ir::Type type;
     union {
-      SetBase *set;
+      Set *set;
       Tensor  *tensor;
     };
     bool output;

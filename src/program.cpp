@@ -179,7 +179,7 @@ void Function::bind(const std::string &argName, Tensor *tensor) {
   impl->bind(argName, tensor);
 }
 
-void Function::bind(const std::string &argName, SetBase *set) {
+void Function::bind(const std::string &argName, Set *set) {
   iassert(defined()) << "undefined function";
   impl->bind(argName, set);
 }

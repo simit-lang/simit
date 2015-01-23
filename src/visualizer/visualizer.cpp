@@ -582,7 +582,7 @@ void handleMotionEvent(int x, int y) {
   }
 }
 
-void bindPointsData(const Set<>& points, FieldRef<double,3> coordField,
+void bindPointsData(const Set &points, FieldRef<double,3> coordField,
                     float r, float g, float b, float a) {
   while (!heldReferences.empty()) {
     delete heldReferences.front();
@@ -612,7 +612,7 @@ void bindPointsData(const Set<>& points, FieldRef<double,3> coordField,
   glEnableVertexAttribArray(posAttrib);
 }
 
-void bindEdgesData(Set<2>& edges, FieldRef<double,3> coordField,
+void bindEdgesData(Set &edges, FieldRef<double,3> coordField,
                    float r, float g, float b, float a) {
   while (!heldReferences.empty()) {
     delete heldReferences.front();
@@ -654,7 +654,7 @@ void bindEdgesData(Set<2>& edges, FieldRef<double,3> coordField,
   glEnableVertexAttribArray(posAttrib);
 }
 
-void bindFacesData(Set<3>& faces, FieldRef<double,3> coordField,
+void bindFacesData(Set &faces, FieldRef<double,3> coordField,
                    float r, float g, float b, float a) {
   // FIXME(gkanwar): Hack to copy edge data into a double array
   while (!heldReferences.empty()) {
@@ -768,7 +768,7 @@ void initDrawing() {
   initDrawing(argc, argv);
 }
 
-void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
+void drawPoints(const Set &points, FieldRef<double,3> coordField,
                 float r, float g, float b, float a) {
   if (!internal::kInitialized) {
     initDrawing();
@@ -788,7 +788,7 @@ void drawPoints(const Set<>& points, FieldRef<double,3> coordField,
   glutPostRedisplay();
 }
 
-void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
+void drawEdges(Set &edges, FieldRef<double,3> coordField,
                float r, float g, float b, float a) {
   if (!internal::kInitialized) {
     initDrawing();
@@ -808,7 +808,7 @@ void drawEdges(Set<2>& edges, FieldRef<double,3> coordField,
   glutPostRedisplay();
 }
 
-void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
+void drawFaces(Set &faces, FieldRef<double,3> coordField,
                float r, float g, float b, float a) {
   if (!internal::kInitialized) {
     initDrawing();
@@ -827,7 +827,7 @@ void drawFaces(Set<3>& faces, FieldRef<double,3> coordField,
   glutPostRedisplay();
 }
 
-void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
+void drawPointsBlocking(const Set &points, FieldRef<double,3> coordField,
                         float r, float g, float b, float a,
                         std::function<void()> animate) {
   if (!internal::kInitialized) {
@@ -849,7 +849,7 @@ void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
   pthread_join(internal::glutThread, NULL);
 }
 
-void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
+void drawEdgesBlocking(Set &edges, FieldRef<double,3> coordField,
                        float r, float g, float b, float a,
                        std::function<void()> animate) {
   if (!internal::kInitialized) {
@@ -871,7 +871,7 @@ void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
   pthread_join(internal::glutThread, NULL);
 }
 
-void drawFacesBlocking(Set<3>& faces, FieldRef<double,3> coordField,
+void drawFacesBlocking(Set &faces, FieldRef<double,3> coordField,
                        float r, float g, float b, float a,
                        std::function<void()> animate) {
   if (!internal::kInitialized) {
@@ -893,15 +893,15 @@ void drawFacesBlocking(Set<3>& faces, FieldRef<double,3> coordField,
   pthread_join(internal::glutThread, NULL);
 }
 
-void drawPointsBlocking(const Set<>& points, FieldRef<double,3> coordField,
+void drawPointsBlocking(const Set &points, FieldRef<double,3> coordField,
                         float r, float g, float b, float a) {
   drawPointsBlocking(points, coordField, r, g, b, a, [](){});
 }
-void drawEdgesBlocking(Set<2>& edges, FieldRef<double,3> coordField,
+void drawEdgesBlocking(Set &edges, FieldRef<double,3> coordField,
                        float r, float g, float b, float a) {
   drawEdgesBlocking(edges, coordField, r, g, b, a, [](){});
 }
-void drawFacesBlocking(Set<3>& faces, FieldRef<double,3> coordField,
+void drawFacesBlocking(Set &faces, FieldRef<double,3> coordField,
                        float r, float g, float b, float a) {
   drawFacesBlocking(faces, coordField, r, g, b, a, [](){});
 }

@@ -17,7 +17,7 @@
 namespace simit {
 
 // Forward declarations
-class SetBase;
+class Set;
 class FieldRefBase;
 template <typename T, int... dimensions> class FieldRef;
 template <typename T, int... dimensions> class TensorRef;
@@ -73,7 +73,7 @@ public:
 private:
   explicit inline ElementRef(int ident) : ident(ident) {}
 
-  friend class SetBase;
+  friend class Set;
   friend class FieldRefBase;
   friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
@@ -84,20 +84,20 @@ private:
 // Base class for Sets
 // Sets are used to represent collections within C++,
 // and can be passed as bound inputs to Simit programs.
-class SetBase {
+class Set {
 public:
-  SetBase() :  numElements(0), cardinality(0),
+  Set() :  numElements(0), cardinality(0),
                endpoints(nullptr), capacity(capacityIncrement),
                neighbors(nullptr) {}
 
   template <typename ...T>
-  SetBase(const T& ...sets) : SetBase() {
+  Set(const T& ...sets) : Set() {
     this->cardinality  = sizeof...(sets);
     this->endpointSets = epsMaker(endpointSets, sets...);
     this->endpoints    = (int*) calloc(sizeof(int), capacity*cardinality);
   }
 
-  ~SetBase() {
+  ~Set() {
     for (auto f: fields) {
       delete f;
     }
@@ -198,7 +198,7 @@ public:
     typedef ElementRef& reference;
     typedef ElementRef* pointer;
 
-    ElementIterator(const SetBase* set, int idx=0) : curElem(idx), set(set) { }
+    ElementIterator(const Set* set, int idx=0) : curElem(idx), set(set) { }
     ElementIterator(const ElementIterator& other) : curElem(other.curElem),
                                                     set(other.set) {}
 
@@ -235,7 +235,7 @@ public:
 
   private:
     ElementRef curElem; // current element index
-    const SetBase* set; // set we're iterating over
+    const Set* set; // set we're iterating over
   };
 
   /// Create an ElementIterator for this Set, set to the first element
@@ -245,7 +245,7 @@ public:
   ElementIterator end() const { return ElementIterator(this, getSize()); }
 
   /// Get the endpoint set at the given location.
-  const SetBase *getEndpointSet(int loc) const {
+  const Set *getEndpointSet(int loc) const {
     return endpointSets[loc];
   }
 
@@ -253,7 +253,7 @@ public:
   /// otherwise it is heterogeneous.
   bool isHomogeneous() const {
     if (cardinality > 0) {
-      const SetBase *firstEndpointSet = getEndpointSet(0);
+      const Set *firstEndpointSet = getEndpointSet(0);
       for (int i=1; i < cardinality; ++i) {
         // Endpointsets are the same if their pointers point at the same set
         if (getEndpointSet(i) != firstEndpointSet) {
@@ -279,7 +279,7 @@ public:
     typedef ElementRef& reference;
     typedef ElementRef* pointer;
 
-    EndpointIterator(const SetBase *set, ElementRef elem, int endpointN=0) :
+    EndpointIterator(const Set *set, ElementRef elem, int endpointN=0) :
     curElem(elem), retElem(-1), endpointNum(endpointN), set(set) {
       retElem = set->getEndpoint(curElem, endpointNum);
     }
@@ -341,7 +341,7 @@ public:
     ElementRef curElem;     // current element index
     ElementRef retElem;     // element we're returning
     int endpointNum;        // the current endpoint number
-    const SetBase *set;     // set we're iterating over
+    const Set *set;     // set we're iterating over
   };
   
   /// Start iterator for endpoints of an edge
@@ -367,14 +367,14 @@ public:
   /// second connceted set. Otherwise, return nullptr.
   const internal::NeighborIndex *getNeighborIndex() const;
 
-  friend std::ostream &operator<<(std::ostream &os, const SetBase &set) {
+  friend std::ostream &operator<<(std::ostream &os, const Set &set) {
     return set.streamOut(os);
   }
 
 private:
   int numElements;                           // number of elements in the set
   int cardinality;                           // number of element endpoints
-  std::vector<const SetBase*> endpointSets;  // the sets the endpoints belong to
+  std::vector<const Set*> endpointSets;  // the sets the endpoints belong to
   int* endpoints;                            // the endpoints of edge elements
 
   int capacity;                              // current capacity of the set
@@ -446,9 +446,9 @@ private:
     std::string name;
     const TensorType *type;
     size_t sizeOfType;
-    SetBase *set;  // Set this field is a member of. Used for printing, etc.
+    Set *set;  // Set this field is a member of. Used for printing, etc.
     
-    FieldData(const std::string &name, const TensorType *type, SetBase *set)
+    FieldData(const std::string &name, const TensorType *type, Set *set)
         : name(name), type(type), set(set), data(nullptr) {
       sizeOfType = componentSize(type->getComponentType()) * type->getSize();
     }
@@ -475,25 +475,25 @@ private:
   std::map<std::string, int> fieldNames; // name to field lookups
   
   /// disable copy constructors
-  SetBase(const SetBase& s);
-  SetBase& operator=(const SetBase& s);
+  Set(const Set& s);
+  Set& operator=(const Set& s);
 
   /// increase capacity of all fields
   void increaseCapacity();
 
   /// helpers for constructing endpoint sets
-  template <typename F, typename ...T> std::vector<const SetBase*>
-  epsMaker(std::vector<const SetBase*> sofar, const F& f, const T& ... sets) {
+  template <typename F, typename ...T> std::vector<const Set*>
+  epsMaker(std::vector<const Set*> sofar, const F& f, const T& ... sets) {
     sofar.push_back(&f);
     return epsMaker(sofar, sets...);
   }
-  template <typename F> std::vector<const SetBase*>
-  epsMaker(std::vector<const SetBase*> sofar, const F& f) {
+  template <typename F> std::vector<const Set*>
+  epsMaker(std::vector<const Set*> sofar, const F& f) {
     sofar.push_back(&f);
     return sofar;
   }
-  std::vector<const SetBase*>
-  epsMaker(std::vector<const SetBase*> sofar) {return sofar;}
+  std::vector<const Set*>
+  epsMaker(std::vector<const Set*> sofar) {return sofar;}
 
   void increaseEdgeCapacity() {
     size_t newSize = (capacity+capacityIncrement)*cardinality*sizeof(int);
@@ -559,16 +559,6 @@ private:
 };
 
 
-template <int c=0>
-class Set : public SetBase {
-public:
-  template <typename ...T>
-  Set(const T& ... sets) : SetBase(sets...) {
-    static_assert(sizeof...(sets) == c, "Wrong number of endpoint sets");
-  }
-};
-
-
 // Field References
 
 /// The base class of field references.
@@ -620,7 +610,7 @@ public:
 
 protected:
   FieldRefBase(void *fieldData)
-      : fieldData(static_cast<SetBase::FieldData*>(fieldData)),
+      : fieldData(static_cast<Set::FieldData*>(fieldData)),
         data(this->fieldData->data) {
     this->fieldData->fieldReferences.insert(this);
   }
@@ -631,12 +621,12 @@ protected:
     return &static_cast<T*>(data)[element.ident * elementFieldSize];
   }
 
-  SetBase::FieldData *fieldData;
+  Set::FieldData *fieldData;
 
 private:
   void *data;
 
-  friend SetBase;
+  friend Set;
 };
 
 template <typename T, int... dimensions>
@@ -682,7 +672,7 @@ class FieldRef : public FieldRefBaseParameterized<T,dimensions...> {
  private:
   FieldRef(void *fieldData)
       : FieldRefBaseParameterized<T,dimensions...>(fieldData) {}
-  friend class SetBase;
+  friend class Set;
 
   friend std::ostream &operator<<(std::ostream &os,
                                   const FieldRef<T, dimensions...> &field) {
@@ -730,7 +720,7 @@ class FieldRef<T> : public FieldRefBaseParameterized<T> {
 
  private:
   FieldRef(void *fieldData) : FieldRefBaseParameterized<T>(fieldData) {}
-  friend class SetBase;
+  friend class Set;
 };
 /// @endcond
 
@@ -835,7 +825,7 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, size> &t) {
 }
 
 // Graph generators
-void createElements(Set<> *elements, unsigned num);
+void createElements(Set *elements, unsigned num);
 
 class Box {
 public:
@@ -877,7 +867,7 @@ private:
   std::map<Coord, ElementRef> coords2edges;
 };
 
-Box createBox(Set<> *elements, Set<2> *edges,
+Box createBox(Set *elements, Set *edges,
               unsigned numX, unsigned numY, unsigned numZ);
 
 

@@ -22,8 +22,8 @@ TEST(Program, femTet) {
   simit::Function m_precomputation;
   simit::Function m_timeStepper;
 
-  Set<> m_verts;
-  simit::Set<4> m_tets(m_verts,m_verts,m_verts,m_verts);
+  Set m_verts;
+  simit::Set m_tets(m_verts,m_verts,m_verts,m_verts);
   
   simit::FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
   simit::FieldRef<simit_float,3>  v = m_verts.addField<simit_float,3>("v");

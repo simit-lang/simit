@@ -11,7 +11,7 @@ using namespace simit;
 
 TEST(Program, isprings_simple) {
   // Points
-  Set<> points;
+  Set points;
   simit::FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   simit::FieldRef<simit_float,3> v = points.addField<simit_float,3>("v");
   simit::FieldRef<simit_float,3> x2 = points.addField<simit_float,3>("x2");
@@ -21,7 +21,7 @@ TEST(Program, isprings_simple) {
   simit::FieldRef<simit_float,3> zeros = points.addField<simit_float,3>("zeros");
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   simit::FieldRef<simit_float> m = springs.addField<simit_float>("m");
   simit::FieldRef<simit_float> l0 = springs.addField<simit_float>("l0");
   simit::FieldRef<simit_float> k = springs.addField<simit_float>("k");
@@ -97,14 +97,14 @@ TEST(Program, isprings) {
   double zfloor = 0.4;
 
   // Points
-  Set<> points;
+  Set points;
   simit::FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   simit::FieldRef<simit_float,3> v = points.addField<simit_float,3>("v");
   simit::FieldRef<simit_float> m = points.addField<simit_float>("m");
   simit::FieldRef<bool> fixed = points.addField<bool>("fixed");
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   simit::FieldRef<simit_float> k = springs.addField<simit_float>("k");
   simit::FieldRef<simit_float> l0 = springs.addField<simit_float>("l0");
 

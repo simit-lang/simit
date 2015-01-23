@@ -15,7 +15,7 @@ TEST(SetTests, Utils) {
 }
 
 TEST(Set, AddAndGetFromTwoFields) {
-  Set<> myset;
+  Set myset;
   
   FieldRef<int> f1 = myset.addField<int>("intfld");
   FieldRef<simit_float> f2 = myset.addField<simit_float>("floatfld");
@@ -33,7 +33,7 @@ TEST(Set, AddAndGetFromTwoFields) {
 }
 
 TEST(Set, IncreaseCapacity) {
-  Set<> myset;
+  Set myset;
   
   auto fld = myset.addField<int>("foo");
   
@@ -60,7 +60,7 @@ TEST(Set, IncreaseCapacity) {
 }
 
 TEST(Set, FieldAccesByName) {
-  Set<> myset;
+  Set myset;
   
   auto f1 = myset.addField<simit_float>("fltfld");
   auto f2 = myset.addField<int>("intfld");
@@ -75,7 +75,7 @@ TEST(Set, FieldAccesByName) {
 
 // Iterator tests
 TEST(ElementIteratorTests, TestElementIteratorLoop) {
-  Set<> myset;
+  Set myset;
   
   FieldRef<int> f1 = myset.addField<int>("intfld");
   FieldRef<simit_float> f2 = myset.addField<simit_float>("floatfld");
@@ -89,7 +89,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
   }
   
   int howmany=0;
-  for (Set<>::ElementIterator it=myset.begin(); it<myset.end(); it++) {
+  for (Set::ElementIterator it=myset.begin(); it<myset.end(); it++) {
     auto el = *it;
     int val = f1.get(el);
     ASSERT_TRUE((val>=5) && (val<15));
@@ -108,7 +108,7 @@ TEST(ElementIteratorTests, TestElementIteratorLoop) {
 }
 
 TEST(Field, Scalar) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   ElementRef p0 = points.add();
@@ -128,7 +128,7 @@ TEST(Field, Scalar) {
 }
 
 TEST(Field, Vector) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
 
   ElementRef p0 = points.add();
@@ -154,7 +154,7 @@ TEST(Field, Vector) {
 }
 
 TEST(Field, Matrix) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,3,2> x = points.addField<simit_float,3,2>("x");
 
   ElementRef p0 = points.add();
@@ -179,7 +179,7 @@ TEST(Field, Matrix) {
 }
 
 TEST(Field, Tensor) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,2,3,4> x = points.addField<simit_float,2,3,4>("x");
 
   ElementRef p0 = points.add();
@@ -208,7 +208,7 @@ TEST(Field, Tensor) {
 }
 
 TEST(Field, boolean) {
-  Set<> points;
+  Set points;
   FieldRef<bool> b = points.addField<bool>("b");
 
   ElementRef p0 = points.add();
@@ -227,7 +227,7 @@ TEST(Field, boolean) {
 }
 
 TEST(EdgeSet, CreateAndGetEdge) {
-  Set<> points;
+  Set points;
 
   FieldRef<simit_float> x = points.addField<simit_float>("x");
   
@@ -240,7 +240,7 @@ TEST(EdgeSet, CreateAndGetEdge) {
   TensorRef<simit_float> scalar2 = x.get(p1);
   scalar2 = 3.1;
 
-  Set<2> edges(points, points);
+  Set edges(points, points);
   FieldRef<int> y = edges.addField<int>("y");
   
   ElementRef e = edges.add(p0, p1);
@@ -253,7 +253,7 @@ TEST(EdgeSet, CreateAndGetEdge) {
 }
 
 TEST(EdgeSet, EdgeIteratorTest) {
-  Set<> points;
+  Set points;
   
   FieldRef<simit_float> x = points.addField<simit_float>("x");
   
@@ -268,7 +268,7 @@ TEST(EdgeSet, EdgeIteratorTest) {
   TensorRef<simit_float> scalar2 = x.get(p1);
   scalar2 = 3.1;
   
-  Set<4> edges(points, points, points, points);
+  Set edges(points, points, points, points);
 
   ElementRef e1 = edges.add(p0, p1, p3, p2);
   
@@ -287,8 +287,8 @@ TEST(EdgeSet, EdgeIteratorTest) {
 }
 
 TEST(GraphGenerator, createBox) {
-  Set<> points;
-  Set<2> edges(points, points);
+  Set points;
+  Set edges(points, points);
   simit::FieldRef<simit_float,3> X = points.addField<simit_float,3>("x");
 
   Box box = createBox(&points, &edges, 3, 3, 3);

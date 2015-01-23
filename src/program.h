@@ -15,7 +15,7 @@ namespace simit {
 extern const std::vector<std::string> VALID_BACKENDS;
 extern std::string kBackend;
 
-class SetBase;
+class Set;
 class Diagnostics;
 
 namespace internal {
@@ -41,7 +41,7 @@ public:
   Function(internal::Function *function);
 
   void bind(const std::string &argName, Tensor *tensor);
-  void bind(const std::string &argName, SetBase *set);
+  void bind(const std::string &argName, Set *set);
 
   void init();
   bool isInit();

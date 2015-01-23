@@ -80,7 +80,7 @@ LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
         }
         case ir::Type::Set: {
           const ir::SetType *setType = actual.getType().toSet();
-          SetBase *set = actual.getSet();
+          Set *set = actual.getSet();
 
           llvm::StructType *llvmSetType = createLLVMType(setType);
 

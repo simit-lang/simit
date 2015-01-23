@@ -9,7 +9,7 @@ using namespace std;
 using namespace simit;
 
 TEST(System, vector_add) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   ElementRef p0 = points.add();
@@ -25,7 +25,7 @@ TEST(System, vector_add) {
 }
 
 TEST(System, vector_add_blocked) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
 
   ElementRef p0 = points.add();
@@ -49,7 +49,7 @@ TEST(System, vector_add_blocked) {
 }
 
 TEST(System, vector_dot) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
   FieldRef<simit_float> z = points.addField<simit_float>("z");
 
@@ -69,7 +69,7 @@ TEST(System, vector_dot) {
 }
 
 TEST(System, vector_dot_blocked) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float> z = points.addField<simit_float>("z");
 
@@ -89,7 +89,7 @@ TEST(System, vector_dot_blocked) {
 }
 
 TEST(System, vector_dot_intrinsic) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
   FieldRef<simit_float> z = points.addField<simit_float>("z");
 
@@ -125,7 +125,7 @@ TEST(System, vector_dot_intrinsic) {
 }
 
 TEST(System, vector_assign_blocked) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,2> x = points.addField<simit_float,2>("x");
 
   ElementRef p0 = points.add();
@@ -146,7 +146,7 @@ TEST(System, vector_assign_blocked) {
 }
 
 TEST(System, vector_add_large_system) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   std::vector<ElementRef> ps;

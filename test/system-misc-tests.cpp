@@ -8,7 +8,7 @@ using namespace std;
 using namespace simit;
 
 TEST(System, map_triangle) {
-  simit::Set<> verts;
+  simit::Set verts;
   simit::FieldRef<simit_float> b = verts.addField<simit_float>("b");
 
   ElementRef v0 = verts.add();
@@ -16,7 +16,7 @@ TEST(System, map_triangle) {
   ElementRef v2 = verts.add();
   ElementRef v3 = verts.add();
 
-  simit::Set<3> trigs(verts,verts,verts);
+  simit::Set trigs(verts,verts,verts);
   simit::FieldRef<simit_float> a = trigs.addField<simit_float>("a");
 
   ElementRef t0 = trigs.add(v0,v1,v2);
@@ -43,7 +43,7 @@ TEST(System, map_triangle) {
 
 TEST(System, map_assemble_from_literal_vector) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   ElementRef p0 = points.add();
@@ -54,7 +54,7 @@ TEST(System, map_assemble_from_literal_vector) {
   x.set(p1, {0.0});
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
 
   springs.add(p0,p1);
   springs.add(p1,p2);
@@ -75,7 +75,7 @@ TEST(System, map_assemble_from_literal_vector) {
 
 TEST(System, map_assemble_vector_components) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float,2> x = points.addField<simit_float,2>("x");
 
   ElementRef p0 = points.add();
@@ -83,7 +83,7 @@ TEST(System, map_assemble_vector_components) {
   ElementRef p2 = points.add();
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
 
   springs.add(p0,p1);
   springs.add(p1,p2);
@@ -108,7 +108,7 @@ TEST(System, map_assemble_vector_components) {
 
 TEST(System, DISABLED_map_assemble_fem) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> x = points.addField<simit_float>("x");
 
   ElementRef p0 = points.add();
@@ -119,7 +119,7 @@ TEST(System, DISABLED_map_assemble_fem) {
   x.set(p1, {1.0});
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> u = springs.addField<simit_float>("u");
 
   springs.add(p0,p1);
@@ -141,7 +141,7 @@ TEST(System, DISABLED_map_assemble_fem) {
 
 TEST(System, map_one_set) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
 
   ElementRef p0 = points.add();
@@ -167,7 +167,7 @@ TEST(System, map_one_set) {
 
 TEST(System, DISABLED_map_one_set_const_ref) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
 
   ElementRef p0 = points.add();
@@ -193,7 +193,7 @@ TEST(System, DISABLED_map_one_set_const_ref) {
 
 TEST(System, map_no_results_one_set) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
 
   ElementRef p0 = points.add();
@@ -220,13 +220,13 @@ TEST(System, map_no_results_one_set) {
 
 TEST(System, map_no_results_two_sets) {
   // Points
-  Set<> points;
+  Set points;
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -251,7 +251,7 @@ TEST(System, map_no_results_two_sets) {
 
 TEST(System, map_two_results_one_set) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
   FieldRef<simit_float> b = points.addField<simit_float>("b");
 
@@ -279,7 +279,7 @@ TEST(System, map_two_results_one_set) {
 
 TEST(System, map_two_results_two_sets) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
 
   ElementRef p0 = points.add();
@@ -287,7 +287,7 @@ TEST(System, map_two_results_two_sets) {
   ElementRef p2 = points.add();
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -313,13 +313,13 @@ TEST(System, map_two_results_two_sets) {
 
 TEST(System, map_edgeset_no_endpoints) {
   // Points
-  Set<> points;
+  Set points;
   ElementRef p0 = points.add();
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -344,7 +344,7 @@ TEST(System, map_edgeset_no_endpoints) {
 
 TEST(System, map_edgeset_no_endpoints_results) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
 
   ElementRef p0 = points.add();
@@ -352,7 +352,7 @@ TEST(System, map_edgeset_no_endpoints_results) {
   ElementRef p2 = points.add();
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -377,7 +377,7 @@ TEST(System, map_edgeset_no_endpoints_results) {
 
 TEST(System, slice) {
   // Points
-  Set<> points;
+  Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
   FieldRef<simit_float> d = points.addField<simit_float>("d");
@@ -399,7 +399,7 @@ TEST(System, slice) {
   d.set(p2, 55.0);
 
   // Springs
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);
@@ -429,7 +429,7 @@ TEST(System, slice) {
 }
 
 TEST(System, map_norm) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float> y = points.addField<simit_float>("y");
   
@@ -453,7 +453,7 @@ TEST(System, map_norm) {
 }
 
 TEST(System, map_pass_field) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   FieldRef<simit_float> y = points.addField<simit_float>("y");
   
@@ -478,7 +478,7 @@ TEST(System, map_pass_field) {
 
 
 TEST(System, DISABLED_map_vec_assign) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
   
   ElementRef p0 = points.add();

@@ -7,7 +7,7 @@ using namespace std;
 
 namespace simit {
 
-void SetBase::increaseCapacity() {
+void Set::increaseCapacity() {
   for (auto f : fields) {
     int typeSize = f->sizeOfType;
     f->data = realloc(f->data, (capacity+capacityIncrement) * typeSize);
@@ -20,7 +20,7 @@ void SetBase::increaseCapacity() {
   capacity += capacityIncrement;
 }
 
-const internal::NeighborIndex *SetBase::getNeighborIndex() const {
+const internal::NeighborIndex *Set::getNeighborIndex() const {
   tassert(isHomogeneous())
       << "neighbor indices are currently only supported for homogeneous sets";
 
@@ -33,7 +33,7 @@ const internal::NeighborIndex *SetBase::getNeighborIndex() const {
 
 
 // Graph generators
-void createElements(Set<> *elements, unsigned num) {
+void createElements(Set *elements, unsigned num) {
   for (size_t i=0; i < num; ++i) {
     elements->add();
   }
@@ -44,7 +44,7 @@ void createElements(Set<> *elements, unsigned num) {
 #define node1Y(x,y,z) x*numY*numZ + (y+1)*numZ + z  // y's neighbor
 #define node1Z(x,y,z) x*numY*numZ + y*numZ + (z+1)  // z's neighbor
 
-Box createBox(Set<> *elements, Set<2> *edges,
+Box createBox(Set *elements, Set *edges,
               unsigned numX, unsigned numY, unsigned numZ) {
   vector<ElementRef> points(numX*numY*numZ);
 

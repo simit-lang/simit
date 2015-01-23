@@ -108,7 +108,7 @@ public:
   };
 
   ProcedureTest(const std::string &callee,
-                std::map<std::string, simit::SetBase*> externs)
+                std::map<std::string,simit::Set*> externs)
       : callee(callee), externs(externs) {}
 
   std::string getCallee() const {return callee;}
@@ -124,7 +124,7 @@ public:
 
 private:
   std::string callee;
-  std::map<std::string, simit::SetBase*> externs;
+  std::map<std::string,simit::Set*> externs;
 };
 
 }}

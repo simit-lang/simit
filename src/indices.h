@@ -12,7 +12,7 @@ namespace internal {
 /// differentiating between different endpoints
 class VertexToEdgeEndpointIndex {
  public:
-  VertexToEdgeEndpointIndex(const SetBase &edgeSet);
+  VertexToEdgeEndpointIndex(const Set &edgeSet);
  ~VertexToEdgeEndpointIndex();
   
   std::set<int> getWhichEdgesForElement(ElementRef vertex, int whichEndpoint) {
@@ -22,7 +22,7 @@ class VertexToEdgeEndpointIndex {
   int getTotalEdges() { return totalEdges; }
 
  private:
-  std::vector<const SetBase*> endpointSets;       // the endpoint sets
+  std::vector<const Set*> endpointSets;       // the endpoint sets
   // which edges v belongs to
   // Map from (endpointIndex, point) -> set of edge indices
   std::map< std::pair<int, int>, std::set<int> > whichEdgesForVertex;
@@ -34,18 +34,18 @@ class VertexToEdgeEndpointIndex {
 /// with no differentiation by endpoint
 class VertexToEdgeIndex {
  public:
-  VertexToEdgeIndex(const SetBase &edgeSet);
+  VertexToEdgeIndex(const Set &edgeSet);
   ~VertexToEdgeIndex();
   
-  std::set<int> getWhichEdgesForElement(ElementRef vertex, const SetBase& whichSet) {
+  std::set<int> getWhichEdgesForElement(ElementRef vertex, const Set& whichSet) {
     return whichEdgesForVertex[std::make_pair(&whichSet, vertex.ident)];
   }
   
   int getTotalEdges() { return totalEdges; }
   
  private:
-  std::vector<const SetBase*> endpointSets;           // the endpoint sets
-  std::map< std::pair<const SetBase*,int>, std::set<int> > whichEdgesForVertex;
+  std::vector<const Set*> endpointSets;           // the endpoint sets
+  std::map< std::pair<const Set*,int>, std::set<int> > whichEdgesForVertex;
   int totalEdges;
 };
 
@@ -54,7 +54,7 @@ class VertexToEdgeIndex {
 /// is its own neighbor. This index does not work for heterogeneous graphs.
 class NeighborIndex {
  public:
-  NeighborIndex(const SetBase &edgeSet);
+  NeighborIndex(const Set &edgeSet);
   ~NeighborIndex();
   
   int getNumNeighbors(ElementRef vertex) const {

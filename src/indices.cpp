@@ -4,7 +4,7 @@ namespace simit {
 namespace internal {
 
 // class VertexToEdgeEndpointIndex
-VertexToEdgeEndpointIndex:: VertexToEdgeEndpointIndex(const SetBase &edgeSet) {
+VertexToEdgeEndpointIndex:: VertexToEdgeEndpointIndex(const Set &edgeSet) {
   totalEdges = edgeSet.getSize();
   for (int i=0; i<edgeSet.getCardinality(); ++i) {
     auto es = edgeSet.getEndpointSet(i);
@@ -24,7 +24,7 @@ VertexToEdgeEndpointIndex::~VertexToEdgeEndpointIndex() {
 
 
 // class VertexToEdgeIndex
-VertexToEdgeIndex::VertexToEdgeIndex(const SetBase &edgeSet) {
+VertexToEdgeIndex::VertexToEdgeIndex(const Set &edgeSet) {
   totalEdges = edgeSet.getSize();
   for (int i=0; i<edgeSet.getCardinality(); ++i) {
     auto es = edgeSet.getEndpointSet(i);
@@ -46,13 +46,13 @@ VertexToEdgeIndex::~VertexToEdgeIndex() {
 
 
 // class NeighborIndex
-NeighborIndex::NeighborIndex(const SetBase &edgeSet) {
+NeighborIndex::NeighborIndex(const Set &edgeSet) {
   VertexToEdgeIndex VToE(edgeSet);
 
   //number of vertices per edge
   unsigned cardinality = edgeSet.getCardinality();
 
-  const SetBase* vSet = edgeSet.getEndpointSet(0);
+  const Set* vSet = edgeSet.getEndpointSet(0);
   startIndex = (int*)malloc(sizeof(int) * (vSet->getSize()+1));
   startIndex[0] = 0;
   for(auto v : *vSet){

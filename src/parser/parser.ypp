@@ -2027,7 +2027,7 @@ test
     std::string setName = convertAndFree($IDENT);
     unique_ptr<System> system($system_generator);
 
-    //std::map<std::string, simit::SetBase*> externs;
+    //std::map<std::string, simit::Set*> externs;
     //externs[setName] = system->elements;
     //ctx->addTest(new ProcedureTest("test", externs));
   }

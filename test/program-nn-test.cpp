@@ -12,14 +12,14 @@ using namespace simit;
 
 TEST(Program, DISABLED_nn) {
   // Points
-  Set<> nodes;
+  Set nodes;
   FieldRef<simit_float> outv = nodes.addField<simit_float>("outv");
   FieldRef<simit_float> inv = nodes.addField<simit_float>("inv");
   FieldRef<simit_float> d = nodes.addField<simit_float>("d");
   FieldRef<simit_float> print = nodes.addField<simit_float>("print");
 
   // Springs
-  Set<2> edges(nodes,nodes);
+  Set edges(nodes,nodes);
   FieldRef<simit_float> w = edges.addField<simit_float>("w");
 
   int l0 = 3;

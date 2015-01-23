@@ -146,7 +146,7 @@ llvm::Value *GPUFunction::pushArg(std::string formal, Actual& actual) {
     }
     case ir::Type::Element: ierror << "Element arg not supported";
     case ir::Type::Set: {
-      SetBase *set = actual.getSet();
+      Set *set = actual.getSet();
       const ir::SetType *setType = actual.getType().toSet();
 
       llvm::StructType *llvmSetType = createLLVMType(setType);

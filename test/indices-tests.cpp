@@ -8,12 +8,12 @@ using namespace simit;
 using namespace simit::internal;
 
 TEST(VertexToEdgeEndpointIndex, chain) {
-  Set<> points;
+  Set points;
   auto p0 = points.add();
   auto p1 = points.add();
   auto p2 = points.add();
   
-  Set<2> edges(points, points);
+  Set edges(points, points);
   edges.add(p0, p1);
   edges.add(p0,p2);
   
@@ -27,12 +27,12 @@ TEST(VertexToEdgeEndpointIndex, chain) {
 }
 
 TEST(VertexToEdgeIndex, chain) {
-  Set<> points;
+  Set points;
   auto p0 = points.add();
   auto p1 = points.add();
   auto p2 = points.add();
   
-  Set<2> edges(points, points);
+  Set edges(points, points);
   edges.add(p0, p1);
   edges.add(p2,p0);
   
@@ -46,12 +46,12 @@ TEST(VertexToEdgeIndex, chain) {
 }
 
 TEST(NeighborIndex, chain) {
-  Set<> points;
+  Set points;
   auto p0 = points.add();
   auto p1 = points.add();
   auto p2 = points.add();
 
-  Set<2> edges(points, points);
+  Set edges(points, points);
   edges.add(p0, p1);
   edges.add(p1, p2);
 
@@ -62,13 +62,13 @@ TEST(NeighborIndex, chain) {
 }
 
 TEST(NeighborIndex, triangles) {
-  Set<> points;
+  Set points;
   auto p0 = points.add();
   auto p1 = points.add();
   auto p2 = points.add();
   auto p3 = points.add();
   
-  Set<3> edges(points, points, points);
+  Set edges(points, points, points);
   edges.add(p0, p1, p2);
   edges.add(p1, p2, p3);
   

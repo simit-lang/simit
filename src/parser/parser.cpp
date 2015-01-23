@@ -3346,7 +3346,7 @@ namespace  simit { namespace internal  {
     std::string setName = convertAndFree((yystack_[4].value.string));
     unique_ptr<System> system((yystack_[2].value.system));
 
-    //std::map<std::string, simit::SetBase*> externs;
+    //std::map<std::string, simit::Set*> externs;
     //externs[setName] = system->elements;
     //ctx->addTest(new ProcedureTest("test", externs));
   }

@@ -8,7 +8,7 @@ using namespace std;
 using namespace simit;
 
 TEST(Program, cg) {
-  Set<> points;
+  Set points;
   FieldRef<simit_float>  b = points.addField<simit_float>("b");
   FieldRef<simit_float>  c = points.addField<simit_float>("c");
   FieldRef<int>    id = points.addField<int>("id");
@@ -21,7 +21,7 @@ TEST(Program, cg) {
   b.set(p1, 2.0);
   b.set(p2, 3.0);
 
-  Set<2> springs(points,points);
+  Set springs(points,points);
   FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
   ElementRef s0 = springs.add(p0,p1);

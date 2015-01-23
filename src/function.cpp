@@ -74,7 +74,7 @@ void Function::bind(const std::string &argName, ir::Expr *tensor) {
   initRequired = true;
 }
 
-void Function::bind(const std::string &argName, SetBase *set) {
+void Function::bind(const std::string &argName, Set *set) {
   uassert(actuals.find(argName) != actuals.end())
       << "No argument of this name in function";
 
@@ -87,11 +87,11 @@ void Function::bind(const std::string &argName, SetBase *set) {
 
   // Type check
   for (size_t i=0; i < set->fields.size(); ++i) {
-    SetBase::FieldData *fieldData = set->fields[i];
+    Set::FieldData *fieldData = set->fields[i];
     uassert(elemType->hasField(fieldData->name)) << "Field " <<
       fieldData->name << " not found in set";
 
-    const SetBase::FieldData::TensorType *setFieldType = fieldData->type;
+    const Set::FieldData::TensorType *setFieldType = fieldData->type;
     const ir::TensorType *elemFieldType =
         elemType->field(fieldData->name).type.toTensor();
 
@@ -137,7 +137,7 @@ void Function::bind(const std::string &argName, SetBase *set) {
 }
 
 static int size(const ir::IndexSet &indexSet,
-                const std::map<std::string, SetBase*> &sets) {
+                const std::map<std::string, Set*> &sets) {
   switch (indexSet.getKind()) {
     case ir::IndexSet::Range:
       return indexSet.getSize();
@@ -159,7 +159,7 @@ static int size(const ir::IndexSet &indexSet,
 }
 
 static int size(const ir::IndexDomain &dimension,
-                const std::map<std::string, SetBase*> &sets) {
+                const std::map<std::string, Set*> &sets) {
   size_t result = 1;
   for (const ir::IndexSet &indexSet : dimension.getIndexSets()) {
     result *= size(indexSet, sets);
@@ -174,7 +174,7 @@ size_t Function::size(const ir::TensorType &type,
     case ir::TensorStorage::DenseRowMajor: {
       size_t result = 1;
 
-      map<string,SetBase*> sets;
+      map<string,Set*> sets;
       for (pair<string,Actual> actual : actuals) {
         if (actual.second.getType().isSet()) {
           sets[actual.first] = actual.second.getSet();
@@ -194,7 +194,7 @@ size_t Function::size(const ir::TensorType &type,
       string storageSetName = ir::to<ir::VarExpr>(storageSetVar)->var.getName();
 
       // compute neighbor index size
-      SetBase *targetSet = const_cast<Actual&>(actuals.at(targetSetName)).getSet();
+      Set *targetSet = const_cast<Actual&>(actuals.at(targetSetName)).getSet();
       const internal::NeighborIndex *neighborIndex = targetSet->getNeighborIndex();
       size_t len = neighborIndex->getSize();
 
@@ -224,7 +224,7 @@ size_t Function::size(const ir::TensorType &type,
           ir::Expr setExpr = indexSet.getSet();
           iassert(ir::isa<ir::VarExpr>(setExpr));
           string setName = ir::to<ir::VarExpr>(setExpr)->var.getName();
-          SetBase *set = const_cast<Actual&>(actuals.at(setName)).getSet();
+          Set *set = const_cast<Actual&>(actuals.at(setName)).getSet();
           len *= set->getSize();
           break;
         }
