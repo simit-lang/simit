@@ -19,6 +19,8 @@ using namespace std;
 namespace simit {
 namespace internal {
 
+typedef void (*FuncPtrType)();
+
 LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                            bool requiresInit, llvm::Module *module,
                            shared_ptr<llvm::ExecutionEngine> executionEngine)
@@ -40,8 +42,8 @@ void LLVMFunction::print(std::ostream &os) const {
   os << rsos.str();
 }
 
-simit::Function::FuncType LLVMFunction::init(const vector<string> &formals,
-                                             map<string, Actual> &actuals) {
+simit::internal::Function::FuncType
+LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
   iassert(formals.size() == llvmFunc->getArgumentList().size());
 
   if (llvmFunc->getArgumentList().size() == 0) {

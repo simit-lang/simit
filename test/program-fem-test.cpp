@@ -4,9 +4,9 @@
 
 #include "graph.h"
 #include "program.h"
-#include "function.h"
 #include "error.h"
 #include "mesh.h"
+
 using namespace std;
 using namespace simit;
 
@@ -19,8 +19,9 @@ TEST(Program, femTet) {
   MeshVol mv;
   mv.loadTet(nodeFile.c_str(), eleFile.c_str());
   
-  unique_ptr<simit::Function> m_precomputation;
-  unique_ptr<simit::Function> m_timeStepper;
+  simit::Function m_precomputation;
+  simit::Function m_timeStepper;
+
   Set<> m_verts;
   simit::Set<4> m_tets(m_verts,m_verts,m_verts,m_verts);
   
@@ -78,22 +79,23 @@ TEST(Program, femTet) {
   int errorCode = program.loadFile(TEST_FILE_NAME);
   m_precomputation = program.compile("initializeTet");
   if(errorCode) { std::cout<<program.getDiagnostics().getMessage(); exit(0); }
-  if(!m_precomputation) FAIL();
+  if(!m_precomputation.defined()) FAIL();
 
-  m_precomputation->bind("verts", &m_verts);
-  m_precomputation->bind("tets", &m_tets);
-  m_precomputation->init();
-  m_precomputation->runSafe();
+  m_precomputation.bind("verts", &m_verts);
+  m_precomputation.bind("tets", &m_tets);
+  m_precomputation.init();
+  m_precomputation.runSafe();
   
   m_timeStepper = program.compile("main");
-  if(!m_timeStepper) FAIL();
-  m_timeStepper->bind("verts", &m_verts);
-  m_timeStepper->bind("tets", &m_tets);
-  m_timeStepper->init();
+  if(!m_timeStepper.defined()) FAIL();
+  m_timeStepper.bind("verts", &m_verts);
+  m_timeStepper.bind("tets", &m_tets);
+  m_timeStepper.init();
   for (size_t i=0; i < nSteps; ++i) {
-    m_timeStepper->runSafe();
+    m_timeStepper.runSafe();
   }
-  m_timeStepper->mapArgs();
+  m_timeStepper.mapArgs();
+
   // Check outputs
   ASSERT_SIMIT_FLOAT_EQ(0.010771915616785779, x.get(vertRefs[100])(0));
   ASSERT_SIMIT_FLOAT_EQ(0.058853573999788439, x.get(vertRefs[100])(1));
@@ -104,7 +106,5 @@ TEST(Program, femTet) {
   ASSERT_SIMIT_FLOAT_EQ(0.02411959295647129,   x.get(vertRefs[300])(0));
   ASSERT_SIMIT_FLOAT_EQ(0.052036155669135678,   x.get(vertRefs[300])(1));
   ASSERT_SIMIT_FLOAT_EQ(0.030173075240629205,   x.get(vertRefs[300])(2));
-
-  
 }
 

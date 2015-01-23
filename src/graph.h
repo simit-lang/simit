@@ -23,6 +23,7 @@ template <typename T, int... dimensions> class FieldRef;
 template <typename T, int... dimensions> class TensorRef;
 
 namespace internal {
+class Function;
 class VertexToEdgeEndpointIndex;
 class VertexToEdgeIndex;
 class NeighborIndex;
@@ -30,8 +31,6 @@ class NeighborIndex;
 class GPUFunction;
 #endif
 }
-
-class Function;
 
 /// A Simit element reference.  All Simit elements live in Simit sets and an
 /// ElementRef provides a reference to an element.
@@ -553,7 +552,7 @@ private:
   }
 
   friend FieldRefBase;
-  friend Function;
+  friend simit::internal::Function;
 #ifdef GPU
   friend internal::GPUFunction;
 #endif

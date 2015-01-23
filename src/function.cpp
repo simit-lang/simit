@@ -10,7 +10,10 @@ using namespace std;
 #include "types.h"
 #include "indices.h"
 
+using namespace simit;
+
 namespace simit {
+namespace internal {
 
 Function::Function(const simit::ir::Func &simitFunc)
     : funcPtr(NULL), initRequired(true) {
@@ -179,7 +182,7 @@ size_t Function::size(const ir::TensorType &type,
       }
 
       for (const ir::IndexDomain &dimension : type.dimensions) {
-        result *= simit::size(dimension, sets);
+        result *= simit::internal::size(dimension, sets);
       }
       return result;
     }
@@ -248,4 +251,4 @@ size_t Function::size(const ir::TensorType &type,
   }
 }
 
-} // namespace simit
+}}

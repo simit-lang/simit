@@ -2,7 +2,6 @@
 
 #include "graph.h"
 #include "program.h"
-#include "function.h"
 #include "error.h"
 
 using namespace std;
@@ -94,14 +93,14 @@ TEST(Program, esprings) {
   l0.set(s12, 0.9);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
   for (size_t i=0; i < 10; ++i) {
-    f->runSafe();
+    func.runSafe();
   }
 
   // Check outputs

@@ -4,7 +4,6 @@
 
 #include "graph.h"
 #include "program.h"
-#include "function.h"
 #include "error.h"
 
 using namespace std;
@@ -69,12 +68,12 @@ TEST(Program, isprings_simple) {
   k.set(s1, stiffness);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("points", &points);
+  func.bind("springs", &springs);
   for (size_t i=0; i < 10; ++i) {
-    f->runSafe();
+    func.runSafe();
   }
 
   // Check outputs
@@ -146,12 +145,12 @@ TEST(Program, isprings) {
   }
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("points", &points);
+  func.bind("springs", &springs);
   for (size_t i=0; i < 10; ++i) {
-    f->runSafe();
+    func.runSafe();
   }
 
   ASSERT_SIMIT_FLOAT_EQ(0.0,                  v(p0)(0));

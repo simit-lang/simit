@@ -8,11 +8,11 @@
 #include "ir.h"
 #include "program_context.h"
 #include "function.h"
+#include "program.h"
 #include "graph.h"
 
 namespace simit {
 namespace internal {
-
 
 /// A Simit test case. Simit test cases can be declared in language comments
 /// and can subsequently be picked up by a test framework.
@@ -22,7 +22,7 @@ public:
   virtual ~Test() {}
 
   virtual std::string getCallee() const = 0;
-  virtual bool evaluate(const ir::Func &func, simit::Function *compiledFunc,
+  virtual bool evaluate(const ir::Func &func, simit::Function compiledFunc,
                         Diagnostics *diags) const = 0;
 };
 
@@ -43,7 +43,7 @@ public:
 
   std::string getCallee() const { return callee; }
 
-  bool evaluate(const ir::Func &func, simit::Function *compiledFunc,
+  bool evaluate(const ir::Func &func, simit::Function compiledFunc,
                 Diagnostics *diags) const {
     // run the function with test->call->arguments
     iassert(actuals.size() == func.getArguments().size());
@@ -51,7 +51,7 @@ public:
     std::vector<ir::Var>  formalArgs = func.getArguments();
     std::vector<ir::Expr> actualArgs = actuals;
     for (size_t i=0; i < actualArgs.size(); ++i) {
-      compiledFunc->bind(formalArgs[i].getName(), &actualArgs[i]);
+      compiledFunc.bind(formalArgs[i].getName(), &actualArgs[i]);
     }
 
     auto formalResults = func.getResults();
@@ -59,10 +59,10 @@ public:
     for (auto &formalResult : formalResults) {
       ir::Expr actualResult = ir::Literal::make(formalResult.getType());
       actualResults.push_back(actualResult);
-      compiledFunc->bind(formalResult.getName(), &actualResult);
+      compiledFunc.bind(formalResult.getName(), &actualResult);
     }
 
-    compiledFunc->runSafe();
+    compiledFunc.runSafe();
 
     // compare function result with test->literal
     auto expectedResults = expected;
@@ -113,10 +113,10 @@ public:
 
   std::string getCallee() const {return callee;}
 
-  bool evaluate(const ir::Func &func, simit::Function *compiledFunc,
+  bool evaluate(const ir::Func &func, simit::Function compiledFunc,
                 Diagnostics *diags) const {
     for (auto &ext : externs) {
-      compiledFunc->bind(ext.first, ext.second);
+      compiledFunc.bind(ext.first, ext.second);
     }
 
     return false;
@@ -127,6 +127,6 @@ private:
   std::map<std::string, simit::SetBase*> externs;
 };
 
-}} // namespace simit::internal
+}}
 
 #endif

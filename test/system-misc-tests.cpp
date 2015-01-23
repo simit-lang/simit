@@ -2,7 +2,6 @@
 
 #include "graph.h"
 #include "program.h"
-#include "function.h"
 #include "error.h"
 
 using namespace std;
@@ -27,13 +26,13 @@ TEST(System, map_triangle) {
   a.set(t1, 0.1);
 
  // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("verts", &verts);
-  f->bind("trigs", &trigs);
+  func.bind("verts", &verts);
+  func.bind("trigs", &trigs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check outputs
   ASSERT_SIMIT_FLOAT_EQ(1.0, b.get(v0));
@@ -61,13 +60,13 @@ TEST(System, map_assemble_from_literal_vector) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(1.0, x.get(p0));
@@ -90,13 +89,13 @@ TEST(System, map_assemble_vector_components) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(42.0, x.get(p0)(0));
@@ -127,13 +126,13 @@ TEST(System, DISABLED_map_assemble_fem) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(1.0, x.get(p0));
@@ -154,11 +153,11 @@ TEST(System, map_one_set) {
   a.set(p2, 3.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->runSafe();
+  func.bind("points", &points);
+  func.runSafe();
 
   // Check outputs
   ASSERT_SIMIT_FLOAT_EQ(2, a.get(p0));
@@ -180,11 +179,11 @@ TEST(System, DISABLED_map_one_set_const_ref) {
   a.set(p2, 3.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->runSafe();
+  func.bind("points", &points);
+  func.runSafe();
 
   // Check outputs
   ASSERT_SIMIT_FLOAT_EQ(0.5, a.get(p0));
@@ -206,12 +205,12 @@ TEST(System, map_no_results_one_set) {
   a.set(p2, 3.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
+  func.bind("points", &points);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(2.0, (simit_float)a.get(p0));
@@ -237,13 +236,13 @@ TEST(System, map_no_results_two_sets) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(2.0, (simit_float)a.get(s0));
@@ -265,12 +264,12 @@ TEST(System, map_two_results_one_set) {
   a.set(p2, 3.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
+  func.bind("points", &points);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ( 6.0, (simit_float)b.get(p0));
@@ -298,13 +297,13 @@ TEST(System, map_two_results_two_sets) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(43.0, (simit_float)b.get(p0));
@@ -330,13 +329,13 @@ TEST(System, map_edgeset_no_endpoints) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(2.0, (simit_float)a.get(s0));
@@ -363,13 +362,13 @@ TEST(System, map_edgeset_no_endpoints_results) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(2.0, (simit_float)a.get(s0));
@@ -410,13 +409,13 @@ TEST(System, slice) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   ASSERT_EQ(1.0, b.get(p0));
   ASSERT_EQ(2.0, b.get(p1));
@@ -443,10 +442,10 @@ TEST(System, map_norm) {
   x.set(p2, {7.0, 8.0, 9.0});
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
-  f->bind("points", &points);
-  f->runSafe();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("points", &points);
+  func.runSafe();
 
   ASSERT_SIMIT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
   ASSERT_SIMIT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
@@ -467,10 +466,10 @@ TEST(System, map_pass_field) {
   x.set(p2, {7.0, 8.0, 9.0});
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
-  f->bind("points", &points);
-  f->runSafe();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("points", &points);
+  func.runSafe();
 
   ASSERT_SIMIT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
   ASSERT_SIMIT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
@@ -491,11 +490,11 @@ TEST(System, DISABLED_map_vec_assign) {
   x.set(p2, {7.0, 8.0, 9.0});
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->runSafe();
+  func.bind("points", &points);
+  func.runSafe();
 
   ASSERT_SIMIT_FLOAT_EQ(1.1, x(p0)(0));
   ASSERT_SIMIT_FLOAT_EQ(2.1, x(p0)(1));

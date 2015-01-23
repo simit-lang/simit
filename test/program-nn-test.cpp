@@ -5,7 +5,6 @@
 
 #include "graph.h"
 #include "program.h"
-#include "function.h"
 #include "error.h"
 
 using namespace std;
@@ -79,13 +78,11 @@ TEST(Program, DISABLED_nn) {
   std::cout << std::endl;
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
-
-  f->bind("nodes", &nodes);
-  f->bind("edges", &edges);
-
-  f->runSafe();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("nodes", &nodes);
+  func.bind("edges", &edges);
+  func.runSafe();
 
   std::cout << "Check" << std::endl;
   for (auto &n : nodeRefs) {

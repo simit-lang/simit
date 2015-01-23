@@ -5,7 +5,6 @@
 
 #include "graph.h"
 #include "program.h"
-#include "function.h"
 #include "error.h"
 #include "ir.h"
 
@@ -31,20 +30,18 @@ inline std::string toLower(std::string str) {
 #define ASSERT_SIMIT_FLOAT_EQ(a, b) ASSERT_DOUBLE_EQ(a, b)
 #endif
 
-inline
-std::unique_ptr<simit::Function> getFunction(std::string fileName,
-                                             std::string functionName="main") {
+inline simit::Function getFunction(std::string fileName,
+                                   std::string functionName="main") {
   simit::Program program;
   int errorCode = program.loadFile(fileName);
   if (errorCode) {
     std::cerr << program.getDiagnostics().getMessage();
-    return nullptr;
+    return simit::Function();
   }
 
-  std::unique_ptr<simit::Function> f = program.compile(functionName);
-  if (errorCode) {
+  simit::Function f = program.compile(functionName);
+  if (!f.defined()) {
     std::cerr << program.getDiagnostics().getMessage();
-    return nullptr;
   }
 
   return f;

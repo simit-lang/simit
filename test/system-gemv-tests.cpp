@@ -2,7 +2,6 @@
 
 #include "graph.h"
 #include "program.h"
-#include "function.h"
 #include "error.h"
 
 using namespace std;
@@ -37,13 +36,13 @@ TEST(System, gemv) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(p0));
@@ -84,13 +83,13 @@ TEST(System, gemv_add) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(p0));
@@ -135,13 +134,13 @@ TEST(System, gemv_storage) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(p0));
@@ -180,13 +179,13 @@ TEST(System, gemv_diagonal) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(1.0, c.get(p0));
@@ -219,13 +218,13 @@ TEST(System, gemv_diagonal_extraparams) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(2.0, c.get(p0));
@@ -258,13 +257,13 @@ TEST(System, gemv_diagonal_inout) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(2.0, a.get(s0));
@@ -300,13 +299,13 @@ TEST(System, gemv_nw) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(1.0, c.get(p0));
@@ -339,13 +338,13 @@ TEST(System, gemv_sw) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(0.0, c.get(p0));
@@ -381,13 +380,13 @@ TEST(System, gemv_assemble_from_points) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(1.0, c.get(p0));
@@ -419,13 +418,13 @@ TEST(System, gemv_inplace) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(3.0,  (double)b.get(p0));
@@ -462,13 +461,13 @@ TEST(System, gemv_blocked) {
   a.set(s1, {5.0, 6.0, 7.0, 8.0});
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
@@ -514,13 +513,13 @@ TEST(System, gemv_blocked_nw) {
   a.set(s1, {5.0, 6.0, 7.0, 8.0});
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
@@ -566,13 +565,13 @@ TEST(System, gemv_blocked_computed) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
@@ -618,8 +617,8 @@ TEST(System, gemv_input) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
   // Yes using literals for this is a total hack...
   Tensor cs = ir::Literal::make(ir::TensorType::make(ir::ScalarType::Float,
@@ -627,12 +626,12 @@ TEST(System, gemv_input) {
   ((simit_float*)ir::to<ir::Literal>(cs)->data)[0] = 1.0;
   ((simit_float*)ir::to<ir::Literal>(cs)->data)[1] = 2.0;
 
-  f->bind("c", &cs);
+  func.bind("c", &cs);
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(p0));
@@ -668,13 +667,13 @@ TEST(System, gemv_diagonal_storage) {
   Set<2> springs(points,points);
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(1.0, c.get(p0));
@@ -701,12 +700,12 @@ TEST(System, gemv_blocked_diagonal_storage) {
   b.set(p2, {5.0, 6.0});
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
+  func.bind("points", &points);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(5.0,   c.get(p0)(0));
@@ -737,10 +736,10 @@ TEST(System, gemv_blocked_scaled_diagonal) {
   b.set(p1, {1.0, 1.0});
   b.set(p2, {1.0, 1.0});
 
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
-  f->bind("points", &points);
-  f->runSafe();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("points", &points);
+  func.runSafe();
 
   ASSERT_EQ(30.0,  c.get(p0)(0));
   ASSERT_EQ(60.0,  c.get(p0)(1));
@@ -779,13 +778,13 @@ TEST(System, gemv_diagonal_storage_and_sysreduced) {
 
 
   // Compile program and bind arguments
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   // Check that outputs are correct
   ASSERT_EQ(2.0, (simit_float)c.get(p0));

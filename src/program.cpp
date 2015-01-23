@@ -3,12 +3,12 @@
 #include <set>
 #include <vector>
 
+#include "function.h"
 #include "ir.h"
 #include "ir_rewriter.h"
 #include "frontend.h"
 #include "lower.h"
 #include "llvm_backend.h"
-#include "function.h"
 #include "util.h"
 #include "error.h"
 #include "program_context.h"
@@ -32,8 +32,7 @@ const std::vector<std::string> VALID_BACKENDS = {
 };
 std::string kBackend;
 
-static std::unique_ptr<Function> compile(ir::Func func,
-                                         internal::Backend *backend) {
+static Function compile(ir::Func func, internal::Backend *backend) {
   class FlattenRewriter : public ir::IRRewriterCallGraph {
     using IRRewriter::visit;
     void visit(const ir::Func *op) {
@@ -164,7 +163,51 @@ static std::unique_ptr<Function> compile(ir::Func func,
   }
 #endif
 
-  return std::unique_ptr<Function>(backend->compile(func));
+  return Function(backend->compile(func));
+}
+
+
+// class Function
+Function::Function() : Function(nullptr) {
+}
+
+Function::Function(internal::Function *func) : impl(func), funcPtr(nullptr) {
+}
+
+void Function::bind(const std::string &argName, Tensor *tensor) {
+  iassert(defined()) << "undefined function";
+  impl->bind(argName, tensor);
+}
+
+void Function::bind(const std::string &argName, SetBase *set) {
+  iassert(defined()) << "undefined function";
+  impl->bind(argName, set);
+}
+
+void Function::init() {
+  iassert(defined()) << "undefined function";
+  impl->init();
+  funcPtr = impl->getFunctionHandle();
+}
+
+bool Function::isInit() {
+  iassert(defined()) << "undefined function";
+  return impl->isInit();
+}
+
+void Function::runSafe() {
+  iassert(defined()) << "undefined function";
+  impl->runSafe();
+}
+
+void Function::mapArgs() {
+  iassert(defined()) << "undefined function";
+  impl->mapArgs();
+}
+
+void Function::unmapArgs(bool updated) {
+  iassert(defined()) << "undefined function";
+  impl->unmapArgs(updated);
 }
 
 
@@ -226,14 +269,14 @@ std::vector<std::string> Program::getFunctionNames() const {
   return functionNames;
 }
 
-std::unique_ptr<Function> Program::compile(const std::string &function) {
+Function Program::compile(const std::string &function) {
   ir::Func simitFunc = content->ctx.getFunction(function);
   if (!simitFunc.defined()) {
     content->diags.report() << "Attempting to compile an unknown function ("
                             << function << ")";
     return NULL;
   }
-  return std::unique_ptr<Function>(simit::compile(simitFunc, content->backend));
+  return simit::compile(simitFunc, content->backend);
 }
 
 int Program::verify() {
@@ -250,9 +293,9 @@ int Program::verify() {
         return 1;
       }
       ir::Func func = functions.at(test->getCallee());
-      std::unique_ptr<Function> compiledFunc = simit::compile(func, content->backend);
+      Function compiledFunc = simit::compile(func, content->backend);
 
-      bool evaluates = test->evaluate(func, compiledFunc.get(), &content->diags);
+      bool evaluates = test->evaluate(func, compiledFunc, &content->diags);
       if (!evaluates) {
         return 2;
       }

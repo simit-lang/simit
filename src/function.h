@@ -7,22 +7,18 @@
 
 #include "printable.h"
 #include "uncopyable.h"
-
-// TODO: Remove
-#include "ir.h"
-#include "types.h"
-
+#include "tensor.h"
 
 namespace simit {
+
 namespace ir {
 class Func;
-struct Literal;
 class TensorStorage;
 }
 
-// TODO: Replace with a simple tensor implementation
-typedef simit::ir::Expr Tensor;
 class SetBase;
+
+namespace internal {
 
 class Function : public simit::interfaces::Printable,
                         simit::interfaces::Uncopyable {
@@ -37,6 +33,15 @@ public:
     initRequired = false;
   }
 
+  bool isInit() {
+    return !initRequired;
+  }
+
+  inline void run() {
+    iassert(!initRequired);
+    funcPtr();
+  }
+
   inline void runSafe() {
     if (initRequired) {
       init();
@@ -44,11 +49,6 @@ public:
     unmapArgs();
     funcPtr();
     mapArgs();
-  }
-
-  inline void run() {
-    iassert(!initRequired);
-    funcPtr();
   }
   
   // TODO Should these really be an extension to the bind interface?
@@ -58,8 +58,9 @@ public:
   virtual void mapArgs() {}
   virtual void unmapArgs(bool updated=true) {}
 
+  std::function<void()> getFunctionHandle() {return funcPtr;}
+
 protected:
-  typedef void (*FuncPtrType)();
   typedef std::function<void()> FuncType;
   class Actual {
   public:
@@ -104,5 +105,5 @@ private:
                         std::map<std::string, Actual> &actuals) = 0;
 };
 
-} // namespace simit
+}}
 #endif

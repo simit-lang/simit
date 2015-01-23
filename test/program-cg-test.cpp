@@ -2,7 +2,6 @@
 
 #include "graph.h"
 #include "program.h"
-#include "function.h"
 #include "error.h"
 
 using namespace std;
@@ -31,13 +30,13 @@ TEST(Program, cg) {
   a.set(s0, 4.0);
   a.set(s1, 5.0);
 
-  std::unique_ptr<Function> f = getFunction(TEST_FILE_NAME, "main");
-  if (!f) FAIL();
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
 
-  f->bind("points", &points);
-  f->bind("springs", &springs);
+  func.bind("points", &points);
+  func.bind("springs", &springs);
 
-  f->runSafe();
+  func.runSafe();
 
   ASSERT_SIMIT_FLOAT_EQ(0.95883777239709455653, (simit_float)c.get(p0));
   ASSERT_SIMIT_FLOAT_EQ(1.98789346246973352983, (simit_float)c.get(p1));

@@ -70,7 +70,7 @@ LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
 
 LLVMBackend::~LLVMBackend() {}
 
-simit::Function *LLVMBackend::compile(Func func) {
+simit::internal::Function *LLVMBackend::compile(Func func) {
   this->module = new llvm::Module("simit", LLVM_CONTEXT);
   llvm::ExecutionEngine *ee = createExecutionEngine(module);
   auto executionEngine = shared_ptr<llvm::ExecutionEngine>(ee);

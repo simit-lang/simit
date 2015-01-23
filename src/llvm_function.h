@@ -18,7 +18,7 @@ namespace simit {
 namespace internal {
 
 /// A Simit function that has been compiled with LLVM.
-class LLVMFunction : public simit::Function {
+class LLVMFunction : public simit::internal::Function {
  public:
   LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                bool requiresInit, llvm::Module *module,
@@ -46,6 +46,5 @@ class LLVMFunction : public simit::Function {
   llvm::Function *getDeinitFunc() const;
 };
 
-}}  // namespace simit::internal
-
+}}
 #endif
