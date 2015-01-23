@@ -15,7 +15,7 @@ TEST(Program, femTet) {
   string prefix=dir+"/program/fem/bar2k";
   string nodeFile = prefix + ".node";
   string eleFile = prefix + ".ele";
-  int nSteps = 10;
+  size_t nSteps = 10;
   MeshVol mv;
   mv.loadTet(nodeFile.c_str(), eleFile.c_str());
   
