@@ -13,13 +13,12 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/ExecutionEngine/JIT.h"
-#include "llvm/Analysis/Verifier.h"
 
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
@@ -168,9 +167,7 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
 
 #ifdef SIMIT_DEBUG
 //    verifyModule(*module);
-#endif
-
-#ifndef SIMIT_DEBUG
+#else
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
   // the set of passes that are similar to clang's -O3
@@ -620,8 +617,11 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
     // first, see if this is an LLVM intrinsic
     auto foundIntrinsic = llvmIntrinsicByName.find(op->callee);
     if (foundIntrinsic != llvmIntrinsicByName.end()) {
+      iassert(op->results.size() == 1);
+      llvm::Type *overloadType =
+          createLLVMType(op->results[0].getType().toTensor()->componentType);
       fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
-                                            argTypes);
+                                            {overloadType});
       call = builder->CreateCall(fun, args);
     }
     // now check if it is an intrinsic from libm

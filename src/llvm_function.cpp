@@ -7,7 +7,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Analysis/Verifier.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm_codegen.h"
@@ -128,13 +128,7 @@ LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
     }
 
     // Compute function
-    FuncType computeFunc = createHarness(llvmFunc->getName(), args);
-
-#ifdef SIMIT_DEBUG
-//    verifyModule(*module);
-#endif
-
-    return computeFunc;
+    return createHarness(llvmFunc->getName(), args);
   }
 }
 
