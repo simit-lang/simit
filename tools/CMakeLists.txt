@@ -4,15 +4,11 @@ endif ()
 
 file(GLOB UTIL_SOURCES "${SIMIT_TOOLS_DIR}/*.cpp")
 
-# GPU backend (TEMP)
-if (CUDA_FOUND)
-  add_definitions(-DGPU)
-endif ()
-
 foreach(UTIL_SOURCE ${UTIL_SOURCES})
 	get_filename_component(UTIL ${UTIL_SOURCE} NAME_WE)
 	add_executable(${UTIL} ${UTIL_SOURCE})
 	target_link_libraries(${UTIL} ${PROJECT_NAME})
+
 	# GPU Backend linking
 	if (CUDA_FOUND)
 	  if (LINUX)
@@ -27,3 +23,8 @@ foreach(UTIL_SOURCE ${UTIL_SOURCES})
 	  endif ()
 	endif ()
 endforeach()
+
+# GPU backend (TEMP)
+if (CUDA_FOUND)
+  add_definitions(-DGPU)
+endif ()
