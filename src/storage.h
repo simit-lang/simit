@@ -48,10 +48,13 @@ public:
     SystemNone
   };
 
+  /// Create an undefined tensor storage
   TensorStorage();
+
+  /// Create a tensor storage descriptor.
   TensorStorage(Kind kind, bool needsInitialization=true);
 
-  /// Create a system tensor diagonal storage descriptor.
+  /// Create a system diagonal storage descriptor.
   TensorStorage(const Expr &targetSet);
 
   /// Create a system tensor reduced storage descriptor. The 'targetSet'

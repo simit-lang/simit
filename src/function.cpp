@@ -188,10 +188,8 @@ size_t Function::size(const ir::TensorType &type,
     }
     case ir::TensorStorage::SystemReduced: {
       ir::Expr targetSetVar = storage.getSystemTargetSet();
-      ir::Expr storageSetVar = storage.getSystemStorageSet();
 
       string targetSetName = ir::to<ir::VarExpr>(targetSetVar)->var.getName();
-      string storageSetName = ir::to<ir::VarExpr>(storageSetVar)->var.getName();
 
       // compute neighbor index size
       Set *targetSet = const_cast<Actual&>(actuals.at(targetSetName)).getSet();

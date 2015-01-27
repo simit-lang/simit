@@ -235,10 +235,9 @@ private:
     Type rhsType = op->value.type();
 
     if (!isScalar(type)) {
-      // TODO: this is a hack.  We really should carry around TensorStorage
-      // as part of the type.
       iassert(type.isTensor());
       const TensorType *ttype = type.toTensor();
+      
       // Element tensor and system vectors are dense.
       if (isElementTensorType(ttype) || ttype->order() <= 1) {
         if (!storage->hasStorage(var)) {
