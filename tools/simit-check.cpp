@@ -9,6 +9,8 @@ int main(int argc, const char* argv[]) {
     return 3;
   }
 
+  simit::init("llvm");
+
   simit::Program program;
   int status = program.loadFile(argv[1]);
   if (status == 2) {
