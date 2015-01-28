@@ -123,7 +123,12 @@ elseif (${LLVM_VERSION} MATCHES "^([3-9]|[0-9][0-9]+)\\.([5-9]|[0-9][0-9]+)(\\.[
   set(LLVM_CONFIG_GT_45 1)
 endif()
 
-message("-- Found LLVM: ${LLVM_CONFIG} (found version \"${LLVM_VERSION}\")")
+message("-- Found LLVM: ${LLVM_CONFIG} (version \"${LLVM_VERSION}\")")
+
+string(SUBSTRING ${LLVM_VERSION} 0 1 LLVM_MAJOR_VERSION)
+string(SUBSTRING ${LLVM_VERSION} 2 1 LLVM_MINOR_VERSION)
+add_definitions("-DLLVM_MAJOR_VERSION=${LLVM_MAJOR_VERSION}")
+add_definitions("-DLLVM_MINOR_VERSION=${LLVM_MINOR_VERSION}")
 
 execute_process(COMMAND ${LLVM_CONFIG} --cppflags OUTPUT_VARIABLE LLVM_CPPFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_FLAGS ${LLVM_CPPFLAGS})
@@ -139,12 +144,7 @@ endif()
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS ${LLVM_LDFLAGS})
 
-if (SIMIT_DEBUG)
-  message("building without ipo")
-  set(LLVM_COMPONENTS core jit x86 bitwriter)
-else()
-  set(LLVM_COMPONENTS core jit x86 bitwriter ipo)
-endif()
+set(LLVM_COMPONENTS core jit x86 bitwriter ipo)
 
 execute_process(COMMAND ${LLVM_CONFIG} --libnames ${LLVM_COMPONENTS} OUTPUT_VARIABLE LLVM_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
 separate_arguments(LLVM_LIBS)  # Turn the space-separate string into a ;-separated list

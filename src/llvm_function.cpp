@@ -7,7 +7,6 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/DataLayout.h"
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm_codegen.h"
@@ -26,7 +25,7 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                            shared_ptr<llvm::ExecutionEngine> executionEngine)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       executionEngine(executionEngine), requiresInit(requiresInit),
-      deinit(nullptr) {
+  deinit(nullptr) {
 }
 
 LLVMFunction::~LLVMFunction() {

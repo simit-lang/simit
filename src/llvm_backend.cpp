@@ -13,8 +13,13 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Function.h"
-#include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
+
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
+#include "llvm/Analysis/Verifier.h"
+#else
+#include "llvm/IR/Verifier.h"
+#endif
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TargetSelect.h"
@@ -166,7 +171,7 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
   symtable.clear();
 
 #ifdef SIMIT_DEBUG
-//    verifyModule(*module);
+    verifyModule(*module);
 #else
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
@@ -176,8 +181,9 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
   llvm::PassManagerBuilder pmBuilder;
   
   pmBuilder.OptLevel = 3;
-  
-  fpm.add(new llvm::DataLayout(*executionEngine->getDataLayout()));
+
+  module->setDataLayout(*executionEngine->getDataLayout());
+  fpm.add(new llvm::DataLayoutPass(*dataLayout));
 
   pmBuilder.populateFunctionPassManager(fpm);
   pmBuilder.populateModulePassManager(mpm);
