@@ -13,7 +13,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Function.h"
-#include "llvm/IR/Verifier.h"
+#include "llvm/Analysis/Verifier.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include "llvm/ADT/SmallVector.h"
