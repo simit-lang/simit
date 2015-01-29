@@ -29,7 +29,7 @@ public:
   GPUBackend() {}
   ~GPUBackend() {}
 
-  simit::Function *compile(simit::ir::Func func);
+  simit::internal::Function *compile(simit::ir::Func func);
 
 protected:
   // CUDA variables

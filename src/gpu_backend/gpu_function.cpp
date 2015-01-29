@@ -18,6 +18,8 @@
 #include "ir.h"
 #include "llvm_codegen.h"
 
+using namespace std;
+
 namespace simit {
 namespace internal {
 
@@ -332,9 +334,8 @@ int GPUFunction::findShardSize(ir::IndexSet domain) {
   return -1;
 }
 
-simit::Function::FuncType GPUFunction::init(
-    const std::vector<std::string> &formals,
-    std::map<std::string, Actual> &actuals) {
+simit::internal::Function::FuncType
+GPUFunction::init(const vector<string> &formals, map<string, Actual> &actuals) {
   CUlinkState linker;
   CUfunction cudaFunction;
 

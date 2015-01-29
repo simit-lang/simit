@@ -16,7 +16,7 @@
 namespace simit {
 namespace internal {
 
-class GPUFunction : public simit::Function {
+class GPUFunction : public simit::internal::Function {
  public:
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module,
