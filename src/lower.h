@@ -6,9 +6,11 @@
 namespace simit {
 namespace ir {
 
-class Storage;
+/// Optimize and lower `func` into the low level part of the Simit IR, that is
+/// is supported by backends. If `print` is true, then the IR will be printed
+/// to stdout between each lowering step.
+Func lower(Func func, bool print=false);
 
-Func lower(Func func);
 
 /// Lower map statements to loops. Map assemblies are lowered to loops that
 /// store the resulting tensors as specified by Func's Storage descriptor.
@@ -20,6 +22,5 @@ Func lowerIndexExpressions(Func func);
 /// on the storage scheme of the 
 Func lowerTensorAccesses(Func func);
 
-}} // namespace simit::ir
-
+}}
 #endif

@@ -208,125 +208,13 @@ int main(int argc, const char* argv[]) {
       }
     }
 
-    // Lower while printing intermediate results
     if (emitSimit) {
       cout << endl << endl;
       cout << "--- Compile " << function << endl;
     }
 
-    { class Rewriter : public simit::ir::IRRewriterCallGraph {
-        using IRRewriter::visit;
-        void visit(const simit::ir::Func *op) {
-          if (op->getKind() != simit::ir::Func::Internal) {
-            func = *op;
-            return;
-          }
-          func = simit::ir::Func(*op, rewrite(op->getBody()));
-          func = flattenIndexExpressions(func);
-          func = insertTemporaries(func);
-        }
-      };
-      func = Rewriter().rewrite(func);
-    }
-    if (emitSimit) {
-      cout << "--- Insert Temporaries and Flatten Index Expressions" << endl;
-      simit::ir::IRPrinterCallGraph(cout).print(func);
-      cout << endl;
-    }
-
-    {
-      class Rewriter : public simit::ir::IRRewriterCallGraph {
-        using IRRewriter::visit;
-        void visit(const simit::ir::Func *op) {
-          if (op->getKind() != simit::ir::Func::Internal) {
-            func = *op;
-            return;
-          }
-          func = simit::ir::Func(*op, rewrite(op->getBody()));
-          func.setStorage(getStorage(func));
-        }
-      };
-      func = Rewriter().rewrite(func);
-    }
-    if (emitSimit) {
-      cout << "--- Tensor storage" << endl;
-      class StoragePrinter : public simit::ir::IRVisitorCallGraph {
-        using simit::ir::IRVisitor::visit;
-        void visit(const simit::ir::Func *func) {
-          simit::ir::IRVisitorCallGraph::visit(func);
-          cout << "func " << func->getName() << ":" << endl;
-
-          for (auto &var : func->getStorage()) {
-            cout << "  " << var << " : " << func->getStorage().get(var) << endl;
-          }
-          cout << endl;
-        }
-      };
-      StoragePrinter storagePrinter;
-      func.accept(&storagePrinter);
-      cout << endl;
-    }
-    
-    {
-      class Rewriter : public simit::ir::IRRewriterCallGraph {
-        using IRRewriter::visit;
-        void visit(const simit::ir::Func *op) {
-          if (op->getKind() != simit::ir::Func::Internal) {
-            func = *op;
-            return;
-          }
-          func = simit::ir::Func(*op, rewrite(op->getBody()));
-          func = lowerMaps(func);
-        }
-      };
-      func = Rewriter().rewrite(func);
-    }
-    if (emitSimit) {
-      cout << "--- Lower Maps" << endl;
-      simit::ir::IRPrinterCallGraph(cout).print(func);
-      cout << endl;
-    }
-
-    {
-      class Rewriter : public simit::ir::IRRewriterCallGraph {
-        using IRRewriter::visit;
-        void visit(const simit::ir::Func *op) {
-          if (op->getKind() != simit::ir::Func::Internal) {
-            func = *op;
-            return;
-          }
-          func = simit::ir::Func(*op, rewrite(op->getBody()));
-          func = lowerIndexExpressions(func);
-        }
-      };
-      func = Rewriter().rewrite(func);
-    }
-    if (emitSimit) {
-      cout << "--- Lower Index Expressions" << endl;
-      simit::ir::IRPrinterCallGraph(cout).print(func);
-      cout << endl;
-    }
-
-    {
-      class Rewriter : public simit::ir::IRRewriterCallGraph {
-        using IRRewriter::visit;
-        void visit(const simit::ir::Func *op) {
-          if (op->getKind() != simit::ir::Func::Internal) {
-            func = *op;
-            return;
-          }
-          func = simit::ir::Func(*op, rewrite(op->getBody()));
-          func = lowerTensorAccesses(func);
-        }
-      };
-      func = Rewriter().rewrite(func);
-    }
-    if (emitSimit) {
-      cout << "--- Lower Tensor Reads and Writes" << endl;
-      simit::ir::IRPrinterCallGraph(cout).print(func);
-      cout << endl;
-    }
-
+    // Call lower with print=true
+    func = lower(func, true);
 
     // Emit and print llvm code
     // NB: The LLVM code gets further optimized at init time (OSR, etc.)
@@ -338,22 +226,6 @@ int main(int argc, const char* argv[]) {
       }
       cout << simit::util::trim(fstr) << endl;
     }
-
-#ifdef GPU
-    if (emitGPU) {
-      func = shardLoops(func);
-      cout << endl << "--- Shard loops for GPU" << endl;
-      cout << func << endl;
-
-      simit::ir::ScalarType::floatBytes = 4; // XXX always test GPU with floatSize = 4 for now
-      simit::internal::GPUBackend backend;
-      std::string fstr = simit::util::toString(*backend.compile(func));
-      if (emitSimit) {
-        cout << endl << "--- Emitting GPU:" << endl;
-      }
-      cout << simit::util::trim(fstr) << endl;
-    }
-#endif
   }
 
   return 0;
