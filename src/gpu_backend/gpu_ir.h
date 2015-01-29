@@ -69,8 +69,8 @@ struct GPUKernel : public StmtNode<GPUKernel> {
   std::set<Var> writes;
 
   static Stmt make(Stmt body, internal::GPUSharding sharding,
-                   std::set<Var> reads = {},
-                   std::set<Var> writes = {}) {
+                   std::set<Var> reads = std::set<Var>(),
+                   std::set<Var> writes = std::set<Var>()) {
     GPUKernel *node = new GPUKernel;
     node->body = body;
     node->sharding = sharding;
