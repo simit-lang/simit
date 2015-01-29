@@ -105,60 +105,58 @@ static Function compile(ir::Func func, internal::Backend *backend) {
   func = LowerTensorAccessesRewriter().rewrite(func);
 
 #if GPU
-  class ShardLoopsRewriter : public simit::ir::IRRewriterCallGraph {
-    using IRRewriter::visit;
-    void visit(const simit::ir::Func *op) {
-      if (op->getKind() != simit::ir::Func::Internal) {
-        func = *op;
-        return;
-      }
-      func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func = shardLoops(func);
-    }
-  };
   if (kBackend == "gpu") {
+    class ShardLoopsRewriter : public simit::ir::IRRewriterCallGraph {
+      using IRRewriter::visit;
+      void visit(const simit::ir::Func *op) {
+        if (op->getKind() != simit::ir::Func::Internal) {
+          func = *op;
+          return;
+        }
+        func = simit::ir::Func(*op, rewrite(op->getBody()));
+        func = shardLoops(func);
+      }
+    };
     func = ShardLoopsRewriter().rewrite(func);
-  }
-  class VarDeclsRewriter : public simit::ir::IRRewriterCallGraph {
-    using IRRewriter::visit;
-    void visit(const simit::ir::Func *op) {
-      if (op->getKind() != simit::ir::Func::Internal) {
-        func = *op;
-        return;
+
+    class VarDeclsRewriter : public simit::ir::IRRewriterCallGraph {
+      using IRRewriter::visit;
+      void visit(const simit::ir::Func *op) {
+        if (op->getKind() != simit::ir::Func::Internal) {
+          func = *op;
+          return;
+        }
+        func = simit::ir::Func(*op, rewrite(op->getBody()));
+        func = rewriteVarDecls(func);
       }
-      func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func = rewriteVarDecls(func);
-    }
-  };
-  if (kBackend == "gpu") {
+    };
     func = VarDeclsRewriter().rewrite(func);
-  }
-  class KernelRWAnalysis : public simit::ir::IRRewriterCallGraph {
-    using IRRewriter::visit;
-    void visit(const simit::ir::Func *op) {
-      if (op->getKind() != simit::ir::Func::Internal) {
-        func = *op;
-        return;
+
+
+    class KernelRWAnalysis : public simit::ir::IRRewriterCallGraph {
+      using IRRewriter::visit;
+      void visit(const simit::ir::Func *op) {
+        if (op->getKind() != simit::ir::Func::Internal) {
+          func = *op;
+          return;
+        }
+        func = simit::ir::Func(*op, rewrite(op->getBody()));
+        func = kernelRWAnalysis(func);
       }
-      func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func = kernelRWAnalysis(func);
-    }
-  };
-  if (kBackend == "gpu") {
+    };
     func = KernelRWAnalysis().rewrite(func);
-  }
-  class FuseKernelsRewriter : public simit::ir::IRRewriterCallGraph {
-    using IRRewriter::visit;
-    void visit(const simit::ir::Func *op) {
-      if (op->getKind() != simit::ir::Func::Internal) {
-        func = *op;
-        return;
+
+    class FuseKernelsRewriter : public simit::ir::IRRewriterCallGraph {
+      using IRRewriter::visit;
+      void visit(const simit::ir::Func *op) {
+        if (op->getKind() != simit::ir::Func::Internal) {
+          func = *op;
+          return;
+        }
+        func = simit::ir::Func(*op, rewrite(op->getBody()));
+        func = fuseKernels(func);
       }
-      func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func = fuseKernels(func);
-    }
-  };
-  if (kBackend == "gpu") {
+    };
     func = FuseKernelsRewriter().rewrite(func);
   }
 #endif
