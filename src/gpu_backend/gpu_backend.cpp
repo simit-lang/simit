@@ -125,7 +125,7 @@ void GPUBackend::visit(const ir::Literal *op) {
   else {
     // Put the data in global memory and generate a pointer
     ir::ScalarType ctype = type->componentType;
-    llvm::Constant *dataConstant;
+    llvm::Constant *dataConstant = nullptr;
     switch (ctype.kind) {
       case ir::ScalarType::Int: {
         iassert(ctype.bytes() == sizeof(uint32_t))
@@ -175,6 +175,8 @@ void GPUBackend::visit(const ir::Literal *op) {
       }
       default: unreachable;
     }
+    iassert(dataConstant != nullptr);
+
     llvm::GlobalVariable *globalData =
         new llvm::GlobalVariable(*module, dataConstant->getType(), true,
                                  llvm::GlobalVariable::InternalLinkage,
@@ -600,7 +602,7 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   
   // Parameter attributes
   llvm::AttributeSet attrSet = kernel->getAttributes();
-  for (int slot = 0; slot < attrSet.getNumSlots(); ++slot) {
+  for (unsigned slot = 0; slot < attrSet.getNumSlots(); ++slot) {
     int index = attrSet.getSlotIndex(slot);
     attrSet = attrSet.addAttribute(LLVM_CONTEXT, index, llvm::Attribute::NoAlias);
   }
@@ -722,10 +724,12 @@ llvm::Value *GPUBackend::getTidX() {
 
 llvm::Value *GPUBackend::getTidY() {
   not_supported_yet; // these should never be emitted at this point
+  return nullptr;
 }
 
 llvm::Value *GPUBackend::getTidZ() {
   not_supported_yet; // these should never be emitted at this point
+  return nullptr;
 }
 
 llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
@@ -946,7 +950,7 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
 
   unsigned dstAddrspace = llvm::cast<llvm::PointerType>(
       dst->getType())->getAddressSpace();
-  llvm::Type *dstCastTy;
+  llvm::Type *dstCastTy = nullptr;
   std::string dstTyStr;
   if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
     dstCastTy = LLVM_INT8PTR_GLOBAL;
@@ -959,10 +963,11 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   else {
     not_supported_yet;
   }
+  iassert(dstCastTy != nullptr);
 
   unsigned srcAddrspace = llvm::cast<llvm::PointerType>(
       src->getType())->getAddressSpace();
-  llvm::Type *srcCastTy;
+  llvm::Type *srcCastTy = nullptr;
   std::string srcTyStr;
   if (srcAddrspace == CUDA_GLOBAL_ADDRSPACE) {
     srcCastTy = LLVM_INT8PTR_GLOBAL;
@@ -975,6 +980,7 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   else {
     not_supported_yet;
   }
+  iassert(srcCastTy != nullptr);
 
   // Emit our own memcpy decl, since the built-in has attributes which
   // are not handled by NVVM
@@ -997,7 +1003,7 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
 
   unsigned dstAddrspace = llvm::cast<llvm::PointerType>(
       dst->getType())->getAddressSpace();
-  llvm::Type *dstCastTy;
+  llvm::Type *dstCastTy = nullptr;
   std::string dstTyStr;
   if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
     dstCastTy = LLVM_INT8PTR_GLOBAL;
@@ -1010,6 +1016,7 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
   else {
     not_supported_yet;
   }
+  iassert(dstCastTy != nullptr);
 
   // Emit our own memset decl, since the built-in has attributes which
   // are not handled by NVVM
@@ -1064,7 +1071,7 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   builder->SetInsertPoint(bodyStart);
 
   // Actual assign
-  llvm::Value *value;
+  llvm::Value *value = nullptr;
   if (targetType.toTensor()->componentType.kind == ir::ScalarType::Float) {
     value = llvmFP(0);
   }
@@ -1074,6 +1081,8 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   else {
     not_supported_yet;
   }
+  iassert(value != nullptr);
+
   llvm::Value *ptr = builder->CreateGEP(symtable.get(targetArg), getTidX());
   builder->CreateStore(value, ptr);
 

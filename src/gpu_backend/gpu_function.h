@@ -55,10 +55,9 @@ class GPUFunction : public simit::internal::Function {
 
     static size_t total_allocations;
 
-    DeviceDataHandle(void *hostBuffer, CUdeviceptr *devBuffer, size_t size) :
-        hostBuffer(hostBuffer), devBuffer(devBuffer), size(size),
-        devDirty(false)
-    {
+    DeviceDataHandle(void *hostBuffer, CUdeviceptr *devBuffer, size_t size)
+        : devBuffer(devBuffer), hostBuffer(hostBuffer), size(size),
+          devDirty(false) {
       total_allocations += size;
     }
 

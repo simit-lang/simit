@@ -258,7 +258,7 @@ void GPUFunction::pullArg(DeviceDataHandle* handle) {
       handle->hostBuffer, *handle->devBuffer, handle->size));
   handle->devDirty = false;
   // std::cout << "[";
-  char* data = reinterpret_cast<char*>(handle->hostBuffer);
+  // char* data = reinterpret_cast<char*>(handle->hostBuffer);
   // for (size_t i = 0; i < handle->size; ++i) {
   //   if (i != 0) std::cout << ",";
   //   std::cout << std::hex << (int) data[i];
