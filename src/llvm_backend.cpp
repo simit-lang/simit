@@ -182,7 +182,6 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
   
   pmBuilder.OptLevel = 3;
 
-  module->setDataLayout(*executionEngine->getDataLayout());
   fpm.add(new llvm::DataLayoutPass(*dataLayout));
 
   pmBuilder.populateFunctionPassManager(fpm);
