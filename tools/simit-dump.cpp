@@ -213,8 +213,8 @@ int main(int argc, const char* argv[]) {
       cout << "--- Compile " << function << endl;
     }
 
-    // Call lower with print=true
-    func = lower(func, true);
+    // Call lower with print=emitSimit
+    func = lower(func, emitSimit);
 
     // Emit and print llvm code
     // NB: The LLVM code gets further optimized at init time (OSR, etc.)
