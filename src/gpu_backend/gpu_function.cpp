@@ -7,7 +7,12 @@
 #include "cuda.h"
 #include "nvvm.h"
 
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
 #include "llvm/Analysis/Verifier.h"
+#else
+#include "llvm/IR/Verifier.h"
+#endif
+
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Support/raw_ostream.h"
@@ -357,7 +362,7 @@ GPUFunction::init(const vector<string> &formals, map<string, Actual> &actuals) {
   llvm::Function *harness = createHarness(args, llvmFunc.get(), module.get());
 
   // Validate LLVM module
-  iassert(!llvm::verifyModule(*module, llvm::AbortProcessAction))
+  iassert(!llvm::verifyModule(*module))
       << "LLVM module does not pass verification";
 
   // Generate harness PTX

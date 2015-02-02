@@ -170,9 +170,10 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
   builder->CreateRetVoid();
   symtable.clear();
 
-#ifdef SIMIT_DEBUG
-    verifyModule(*module);
-#else
+  iassert(!llvm::verifyModule(*module))
+      << "LLVM module does not pass verification";
+
+#ifndef SIMIT_DEBUG
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
   // the set of passes that are similar to clang's -O3

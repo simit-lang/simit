@@ -9,6 +9,12 @@
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/raw_ostream.h"
 
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
+#include "llvm/Analysis/Verifier.h"
+#else
+#include "llvm/IR/Verifier.h"
+#endif
+
 #include "llvm_codegen.h"
 #include "graph.h"
 #include "indices.h"
@@ -127,7 +133,10 @@ LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
     }
 
     // Compute function
-    return createHarness(llvmFunc->getName(), args);
+    auto harness = createHarness(llvmFunc->getName(), args);
+    iassert(!llvm::verifyModule(*module))
+        << "LLVM module does not pass verification";
+    return harness;
   }
 }
 
