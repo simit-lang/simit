@@ -191,18 +191,17 @@ class NormAndDotRewriter : public ir::IRRewriter {
       uassert(op->actuals[0].type().isTensor());
       
       auto dot = builder.innerProduct(op->actuals[0], op->actuals[0]);
-      auto tmpvar =builder.temporary(op->results[0].getType(), "normrewrite");
+      auto tmpvar = builder.temporary(op->results[0].getType(), "normrewrite");
       stmt = AssignStmt::make(tmpvar, dot);
       stmt = Block::make(stmt, CallStmt::make(op->results, Intrinsics::sqrt,
-        {VarExpr::make(tmpvar)}));
+                                              {VarExpr::make(tmpvar)}));
     }
     else if (op->callee.getName() == "dot") {
       iassert(op->actuals.size() == 2);
       iassert(op->results.size() == 1);
-      auto dot = builder.innerProduct(op->actuals[0], op->actuals[1]);
-      
-      stmt = AssignStmt::make(op->results[0], dot);
 
+      auto dot = builder.innerProduct(op->actuals[0], op->actuals[1]);
+      stmt = AssignStmt::make(op->results[0], dot);
     }
     else {
       stmt = op;

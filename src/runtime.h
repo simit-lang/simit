@@ -13,10 +13,7 @@ void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
 void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
                    int rows, int columns);
 int loc(int v0, int v1, int *neighbors_start, int *neighbors);
-double dot_f64(double* a, double* b, int len);
-float dot_f32(float* a, float* b, int len);
-double norm_f64(double* a, int len);
-float norm_f32(float* a, int len);
+
 double atan2_f64(double y, double x);
 float atan2_f32(float y, float x);
 double tan_f64(double x);
@@ -64,32 +61,6 @@ int loc(int v0, int v1, int *neighbors_start, int *neighbors) {
   int l = neighbors_start[v0];
   while(neighbors[l] != v1) l++;
   return l;
-}
-
-// dot product
-double dot_f64(double* a, double* b, int len) {
-  double result = 0.0;
-  for (int i=0; i<len; i++)
-    result += a[i] * b[i];
-  
-  return result;
-}
-
-float dot_f32(float* a, float* b, int len) {
-  float result = 0.0;
-  for (int i=0; i<len; i++)
-    result += a[i] * b[i];
-  
-  return result;
-}
-
-// norm
-double norm_f64(double* a, int len) {
-  return sqrt(dot_f64(a, a, len));
-}
-
-float norm_f32(float* a, int len) {
-  return sqrt(dot_f32(a, a, len));
 }
 
 // atan2 wrapper

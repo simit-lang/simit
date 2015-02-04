@@ -622,6 +622,9 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
 
   Func callee = op->callee;
   if (callee.getKind() == Func::Intrinsic) {
+    iassert(callee != ir::Intrinsics::norm && callee != ir::Intrinsics::dot)
+        << "norm and dot should have been lowered";
+
     std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
     // first, see if this is an LLVM intrinsic
@@ -654,39 +657,6 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       std::string fname = op->callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args, getLLVMFloatType());
     }
-    else if (op->callee == ir::Intrinsics::norm) {
-      iassert(args.size() == 1);
-      auto type = op->actuals[0].type().toTensor();
-
-      // special case for vec3f
-      tassert(!ir::isScalar(op->actuals[0].type()))
-          << "add scalar norm" << op->actuals[0];
-      if (type->dimensions[0].getIndexSets().size() == 1 &&
-          type->dimensions[0].getIndexSets()[0].getKind()==IndexSet::Range &&
-          type->dimensions[0].getSize() == 3) {
-        llvm::Value *x = args[0];
-
-        llvm::Value *x0 = loadFromArray(x, llvmInt(0));
-        llvm::Value *sum = builder->CreateFMul(x0, x0);
-
-        llvm::Value *x1 = loadFromArray(x, llvmInt(1));
-        llvm::Value *x1pow = builder->CreateFMul(x1, x1);
-        sum = builder->CreateFAdd(sum, x1pow);
-
-        llvm::Value *x2 = loadFromArray(x, llvmInt(2));
-        llvm::Value *x2pow = builder->CreateFMul(x2, x2);
-        sum = builder->CreateFAdd(sum, x2pow);
-
-        llvm::Function *sqrt =
-            llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt,
-                                            {getLLVMFloatType()});
-        call = builder->CreateCall(sqrt, sum);
-      } else {
-        args.push_back(emitComputeLen(type->dimensions[0]));
-        std::string funcName = "norm" + floatTypeName;
-        call = emitCall(funcName, args, getLLVMFloatType());
-      }
-    }
     else if (callee == ir::Intrinsics::inv) {
       iassert(args.size() == 1);
 
@@ -707,16 +677,6 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
     }
     else if (op->callee == ir::Intrinsics::loc) {
       call = emitCall("loc", args, LLVM_INT);
-    }
-    else if (op->callee == ir::Intrinsics::dot) {
-      // we need to add the vector length to the args
-      auto type1 = op->actuals[0].type().toTensor();
-      auto type2 = op->actuals[1].type().toTensor();
-      uassert(type1->dimensions[0] == type2->dimensions[0])
-          << "dimension mismatch in dot product";
-      args.push_back(emitComputeLen(type1->dimensions[0]));
-      std::string funcName = "dot" + floatTypeName;
-      call = emitCall(funcName, args, getLLVMFloatType());
     }
     else {
       ierror << "intrinsic " << op->callee.getName() << " not found";
