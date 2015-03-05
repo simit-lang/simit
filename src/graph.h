@@ -724,6 +724,7 @@ class FieldRef<T> : public FieldRefBaseParameterized<T> {
 };
 /// @endcond
 
+
 // Tensor References
 
 template <typename T, int... dimensions>
@@ -781,6 +782,11 @@ class TensorRef {
 };
 
 template <typename T, int... dims>
+bool operator==(const TensorRef<T, dims...> &l, const TensorRef<T, dims...> &r){
+  return false;
+}
+
+template <typename T, int... dims>
 std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
   static_assert(sizeof...(dims) <= 2,
                 "TensorRef operator<< only currently supported for order <= 2");
@@ -817,12 +823,12 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, size> &t) {
   if (0 < size) {
     os << t(0);
   }
-
   for (int i=1; i<size; ++i) {
     os << ", " << t(i);
   }
   return os << "]";
 }
+
 
 // Graph generators
 void createElements(Set *elements, unsigned num);
@@ -832,10 +838,7 @@ public:
   typedef std::pair<ElementRef,ElementRef> Coord;
 
   Box(unsigned nX, unsigned nY, unsigned nZ, std::vector<ElementRef> refs,
-      std::map<Box::Coord, ElementRef> coords2edges)
-      : nX(nX), nY(nY), nZ(nZ), refs(refs), coords2edges(coords2edges) {
-    iassert(refs.size() == nX*nY*nZ);
-  }
+      std::map<Box::Coord, ElementRef> coords2edges);
 
   unsigned numX() const {return nX;}
   unsigned numY() const {return nY;}
@@ -845,21 +848,9 @@ public:
     return refs[z*nY*nX + y*nX + x];
   }
 
-  ElementRef getEdge(ElementRef p1, ElementRef p2) const {
-    Coord coord(p1,p2);
-    if (coords2edges.find(coord) == coords2edges.end()) {
-      return ElementRef();
-    }
-    return coords2edges.at(coord);
-  }
+  ElementRef getEdge(ElementRef p1, ElementRef p2) const;
 
-  std::vector<ElementRef> getEdges() {
-    std::vector<ElementRef> edges;
-    for (auto &coord2edge : coords2edges) {
-      edges.push_back(coord2edge.second);
-    }
-    return edges;
-  }
+  std::vector<ElementRef> getEdges();
 
 private:
   unsigned nX, nY, nZ;

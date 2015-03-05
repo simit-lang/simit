@@ -44,6 +44,28 @@ void createElements(Set *elements, unsigned num) {
 #define node1Y(x,y,z) x*numY*numZ + (y+1)*numZ + z  // y's neighbor
 #define node1Z(x,y,z) x*numY*numZ + y*numZ + (z+1)  // z's neighbor
 
+Box::Box(unsigned nX, unsigned nY, unsigned nZ,
+    std::vector<ElementRef> refs, std::map<Box::Coord, ElementRef> coords2edges)
+    : nX(nX), nY(nY), nZ(nZ), refs(refs), coords2edges(coords2edges) {
+  iassert(refs.size() == nX*nY*nZ);
+}
+
+ElementRef Box::getEdge(ElementRef p1, ElementRef p2) const {
+  Coord coord(p1,p2);
+  if (coords2edges.find(coord) == coords2edges.end()) {
+    return ElementRef();
+  }
+  return coords2edges.at(coord);
+}
+
+std::vector<ElementRef> Box::getEdges() {
+  std::vector<ElementRef> edges;
+  for (auto &coord2edge : coords2edges) {
+    edges.push_back(coord2edge.second);
+  }
+  return edges;
+}
+
 Box createBox(Set *elements, Set *edges,
               unsigned numX, unsigned numY, unsigned numZ) {
   vector<ElementRef> points(numX*numY*numZ);
@@ -55,7 +77,6 @@ Box createBox(Set *elements, Set *edges,
       }
     }
   }
-
 
   map<Box::Coord, ElementRef> coords2edges;
 

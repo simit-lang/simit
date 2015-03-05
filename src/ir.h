@@ -203,6 +203,7 @@ public:
 
 
 /// Intrinsic functions
+// TODO: Add ceil, floor
 class Intrinsics {
 public:
   static Func mod;
