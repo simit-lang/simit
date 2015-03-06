@@ -77,15 +77,15 @@ TEST(Program, isprings_simple) {
   }
 
   // Check outputs
-  ASSERT_SIMIT_FLOAT_EQ(0.10241860338789253, x2(p0)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                 x2(p0)(1));
-  ASSERT_SIMIT_FLOAT_EQ(-0.0103815692520815, x2(p0)(2));
-  ASSERT_SIMIT_FLOAT_EQ(1.01,                x2(p1)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                 x2(p1)(1));
-  ASSERT_SIMIT_FLOAT_EQ(-0.020763138504163,  x2(p1)(2));
-  ASSERT_SIMIT_FLOAT_EQ(1.9175813966121074,  x2(p2)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                 x2(p2)(1));
-  ASSERT_SIMIT_FLOAT_EQ(-0.0103815692520815, x2(p2)(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.10241860338789253, x2(p0)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                 x2(p0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-0.0103815692520815, x2(p0)(2));
+  SIMIT_ASSERT_FLOAT_EQ(1.01,                x2(p1)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                 x2(p1)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-0.020763138504163,  x2(p1)(2));
+  SIMIT_ASSERT_FLOAT_EQ(1.9175813966121074,  x2(p2)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                 x2(p2)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-0.0103815692520815, x2(p2)(2));
 }
 
 TEST(Program, isprings) {
@@ -153,23 +153,23 @@ TEST(Program, isprings) {
     func.runSafe();
   }
 
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  v(p0)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  v(p0)(1));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  v(p0)(2));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  v(p1)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  v(p1)(1));
-  ASSERT_SIMIT_FLOAT_EQ(-0.54482994491692449, v(p1)(2));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  v(p2)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  v(p2)(1));
-  ASSERT_SIMIT_FLOAT_EQ(-0.8480293605755741,  v(p2)(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  v(p0)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  v(p0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  v(p0)(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  v(p1)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  v(p1)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-0.54482994491692449, v(p1)(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  v(p2)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  v(p2)(1));
+  SIMIT_ASSERT_FLOAT_EQ(-0.8480293605755741,  v(p2)(2));
 
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  x(p0)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  x(p0)(1));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  x(p0)(2));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  x(p1)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  x(p1)(1));
-  ASSERT_SIMIT_FLOAT_EQ(0.96180188527075183,  x(p1)(2));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  x(p2)(0));
-  ASSERT_SIMIT_FLOAT_EQ(0.0,                  x(p2)(1));
-  ASSERT_SIMIT_FLOAT_EQ(1.9500008677096612,   x(p2)(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  x(p0)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  x(p0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  x(p0)(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  x(p1)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  x(p1)(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.96180188527075183,  x(p1)(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  x(p2)(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0,                  x(p2)(1));
+  SIMIT_ASSERT_FLOAT_EQ(1.9500008677096612,   x(p2)(2));
 }

@@ -35,10 +35,10 @@ TEST(System, map_triangle) {
   func.runSafe();
 
   // Check outputs
-  ASSERT_SIMIT_FLOAT_EQ(1.0, b.get(v0));
-  ASSERT_SIMIT_FLOAT_EQ(1.1, b.get(v1));
-  ASSERT_SIMIT_FLOAT_EQ(1.1, b.get(v2));
-  ASSERT_SIMIT_FLOAT_EQ(0.1, b.get(v3));
+  SIMIT_ASSERT_FLOAT_EQ(1.0, b.get(v0));
+  SIMIT_ASSERT_FLOAT_EQ(1.1, b.get(v1));
+  SIMIT_ASSERT_FLOAT_EQ(1.1, b.get(v2));
+  SIMIT_ASSERT_FLOAT_EQ(0.1, b.get(v3));
 }
 
 TEST(System, map_assemble_from_literal_vector) {
@@ -160,9 +160,9 @@ TEST(System, map_one_set) {
   func.runSafe();
 
   // Check outputs
-  ASSERT_SIMIT_FLOAT_EQ(2, a.get(p0));
-  ASSERT_SIMIT_FLOAT_EQ(4, a.get(p1));
-  ASSERT_SIMIT_FLOAT_EQ(6, a.get(p2));
+  SIMIT_ASSERT_FLOAT_EQ(2, a.get(p0));
+  SIMIT_ASSERT_FLOAT_EQ(4, a.get(p1));
+  SIMIT_ASSERT_FLOAT_EQ(6, a.get(p2));
 }
 
 TEST(System, DISABLED_map_one_set_const_ref) {
@@ -186,9 +186,9 @@ TEST(System, DISABLED_map_one_set_const_ref) {
   func.runSafe();
 
   // Check outputs
-  ASSERT_SIMIT_FLOAT_EQ(0.5, a.get(p0));
-  ASSERT_SIMIT_FLOAT_EQ(1.0, a.get(p1));
-  ASSERT_SIMIT_FLOAT_EQ(1.5, a.get(p2));
+  SIMIT_ASSERT_FLOAT_EQ(0.5, a.get(p0));
+  SIMIT_ASSERT_FLOAT_EQ(1.0, a.get(p1));
+  SIMIT_ASSERT_FLOAT_EQ(1.5, a.get(p2));
 }
 
 TEST(System, map_no_results_one_set) {
@@ -447,9 +447,9 @@ TEST(System, map_norm) {
   func.bind("points", &points);
   func.runSafe();
 
-  ASSERT_SIMIT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
-  ASSERT_SIMIT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
-  ASSERT_SIMIT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
+  SIMIT_ASSERT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
+  SIMIT_ASSERT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
+  SIMIT_ASSERT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
 }
 
 TEST(System, map_pass_field) {
@@ -471,9 +471,9 @@ TEST(System, map_pass_field) {
   func.bind("points", &points);
   func.runSafe();
 
-  ASSERT_SIMIT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
-  ASSERT_SIMIT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
-  ASSERT_SIMIT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
+  SIMIT_ASSERT_FLOAT_EQ(3.74165738677394132949,  (simit_float)y(p0));
+  SIMIT_ASSERT_FLOAT_EQ(8.77496438739212258895,  (simit_float)y(p1));
+  SIMIT_ASSERT_FLOAT_EQ(13.92838827718411920387, (simit_float)y(p2));
 }
 
 
@@ -496,13 +496,13 @@ TEST(System, DISABLED_map_vec_assign) {
   func.bind("points", &points);
   func.runSafe();
 
-  ASSERT_SIMIT_FLOAT_EQ(1.1, x(p0)(0));
-  ASSERT_SIMIT_FLOAT_EQ(2.1, x(p0)(1));
-  ASSERT_SIMIT_FLOAT_EQ(3.1, x(p0)(2));
-  ASSERT_SIMIT_FLOAT_EQ(4.1, x(p1)(0));
-  ASSERT_SIMIT_FLOAT_EQ(5.1, x(p1)(1));
-  ASSERT_SIMIT_FLOAT_EQ(6.1, x(p1)(2));
-  ASSERT_SIMIT_FLOAT_EQ(7.1, x(p2)(0));
-  ASSERT_SIMIT_FLOAT_EQ(8.1, x(p2)(1));
-  ASSERT_SIMIT_FLOAT_EQ(9.1, x(p2)(2));
+  SIMIT_ASSERT_FLOAT_EQ(1.1, x(p0)(0));
+  SIMIT_ASSERT_FLOAT_EQ(2.1, x(p0)(1));
+  SIMIT_ASSERT_FLOAT_EQ(3.1, x(p0)(2));
+  SIMIT_ASSERT_FLOAT_EQ(4.1, x(p1)(0));
+  SIMIT_ASSERT_FLOAT_EQ(5.1, x(p1)(1));
+  SIMIT_ASSERT_FLOAT_EQ(6.1, x(p1)(2));
+  SIMIT_ASSERT_FLOAT_EQ(7.1, x(p2)(0));
+  SIMIT_ASSERT_FLOAT_EQ(8.1, x(p2)(1));
+  SIMIT_ASSERT_FLOAT_EQ(9.1, x(p2)(2));
 }

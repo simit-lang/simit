@@ -21,7 +21,7 @@ TEST(System, vector_add) {
 
   func.runSafe();
 
-  ASSERT_EQ(84.0, (int)x.get(p0));
+  SIMIT_EXPECT_FLOAT_EQ(84.0, (int)x.get(p0));
 }
 
 TEST(System, vector_add_blocked) {
@@ -40,12 +40,12 @@ TEST(System, vector_add_blocked) {
 
   func.runSafe();
 
-  ASSERT_EQ(2.0, x.get(p0)(0));
-  ASSERT_EQ(4.0, x.get(p0)(1));
-  ASSERT_EQ(6.0, x.get(p0)(2));
-  ASSERT_EQ(8.0, x.get(p1)(0));
-  ASSERT_EQ(10.0, x.get(p1)(1));
-  ASSERT_EQ(12.0, x.get(p1)(2));
+  SIMIT_EXPECT_FLOAT_EQ(2.0, x.get(p0)(0));
+  SIMIT_EXPECT_FLOAT_EQ(4.0, x.get(p0)(1));
+  SIMIT_EXPECT_FLOAT_EQ(6.0, x.get(p0)(2));
+  SIMIT_EXPECT_FLOAT_EQ(8.0, x.get(p1)(0));
+  SIMIT_EXPECT_FLOAT_EQ(10.0, x.get(p1)(1));
+  SIMIT_EXPECT_FLOAT_EQ(12.0, x.get(p1)(2));
 }
 
 TEST(System, vector_dot) {
@@ -65,7 +65,7 @@ TEST(System, vector_dot) {
   func.bind("points", &points);
 
   func.runSafe();
-  ASSERT_EQ(14.0, (int)z.get(p0));
+  SIMIT_EXPECT_FLOAT_EQ(14.0, (int)z.get(p0));
 }
 
 TEST(System, vector_dot_blocked) {
@@ -85,7 +85,7 @@ TEST(System, vector_dot_blocked) {
   func.bind("points", &points);
 
   func.runSafe();
-  ASSERT_EQ(285.0, (simit_float)z.get(p0));
+  SIMIT_EXPECT_FLOAT_EQ(285.0, (simit_float)z.get(p0));
 }
 
 TEST(System, vector_dot_intrinsic) {
@@ -121,7 +121,7 @@ TEST(System, vector_dot_intrinsic) {
   func.bind("points", &points);
 
   func.runSafe();
-  ASSERT_EQ(506.0, (int)z.get(p0));
+  SIMIT_EXPECT_FLOAT_EQ(506.0, (int)z.get(p0));
 }
 
 TEST(System, vector_assign_blocked) {
@@ -139,10 +139,10 @@ TEST(System, vector_assign_blocked) {
 
   func.runSafe();
 
-  ASSERT_EQ(2.0, x.get(p0)(0));
-  ASSERT_EQ(4.0, x.get(p0)(1));
-  ASSERT_EQ(6.0, x.get(p1)(0));
-  ASSERT_EQ(8.0, x.get(p1)(1));
+  SIMIT_EXPECT_FLOAT_EQ(2.0, x.get(p0)(0));
+  SIMIT_EXPECT_FLOAT_EQ(4.0, x.get(p0)(1));
+  SIMIT_EXPECT_FLOAT_EQ(6.0, x.get(p1)(0));
+  SIMIT_EXPECT_FLOAT_EQ(8.0, x.get(p1)(1));
 }
 
 TEST(System, vector_add_large_system) {
@@ -162,6 +162,6 @@ TEST(System, vector_add_large_system) {
   func.runSafe();
 
   for(size_t i = 0; i < ps.size(); ++i) {
-    ASSERT_EQ(i*2, (size_t)x.get(ps[i]));
+    SIMIT_EXPECT_FLOAT_EQ(i*2, (size_t)x.get(ps[i]));
   }
 }

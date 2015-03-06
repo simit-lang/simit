@@ -38,7 +38,7 @@ TEST(Program, cg) {
 
   func.runSafe();
 
-  ASSERT_SIMIT_FLOAT_EQ(0.95883777239709455653, (simit_float)c.get(p0));
-  ASSERT_SIMIT_FLOAT_EQ(1.98789346246973352983, (simit_float)c.get(p1));
-  ASSERT_SIMIT_FLOAT_EQ(3.05326876513317202466, (simit_float)c.get(p2));
+  SIMIT_ASSERT_FLOAT_EQ(0.95883777239709455653, (simit_float)c.get(p0));
+  SIMIT_ASSERT_FLOAT_EQ(1.98789346246973352983, (simit_float)c.get(p1));
+  SIMIT_ASSERT_FLOAT_EQ(3.05326876513317202466, (simit_float)c.get(p2));
 }

@@ -23,11 +23,17 @@ inline std::string toLower(std::string str) {
                        toLower(test_info_->test_case_name()) + "/" +  \
                        test_info_->name() + ".sim"
 
-// Reduce precision of asserts when using floats
+// Reduce precision of asserts/expects when using floats
 #ifdef F32
-#define ASSERT_SIMIT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.00001)
+#define SIMIT_EXPECT_FLOAT_EQ(a, b) EXPECT_NEAR(a, b, 0.00001)
 #else
-#define ASSERT_SIMIT_FLOAT_EQ(a, b) ASSERT_DOUBLE_EQ(a, b)
+#define SIMIT_EXPECT_FLOAT_EQ(a, b) EXPECT_DOUBLE_EQ(a, b)
+#endif
+
+#ifdef F32
+#define SIMIT_ASSERT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.00001)
+#else
+#define SIMIT_ASSERT_FLOAT_EQ(a, b) ASSERT_DOUBLE_EQ(a, b)
 #endif
 
 inline simit::Function getFunction(std::string fileName,
