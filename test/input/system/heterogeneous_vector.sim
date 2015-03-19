@@ -1,0 +1,17 @@
+element Data
+  x : float;
+end
+
+extern V : set{Data};
+extern U : set{Data};
+
+extern E : set{Data}(V,U);
+
+func f(e : Data, v : Data, u : Data) -> (XU : tensor[U](float))
+  XU(u) = v.x; 
+end
+
+proc main
+%  XU = map f to E reduce +;
+%  U.x = XU;
+end
