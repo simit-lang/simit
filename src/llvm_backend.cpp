@@ -1417,7 +1417,6 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
     else {
       iassert(var.getType() == value.type())
           << "variable and value types don't match";
-      llvm::Value *valuePtr = compile(value);
       emitMemCpy(varPtr, valuePtr, size, componentSize);
       symtable.insert(var, varPtr);
     }
