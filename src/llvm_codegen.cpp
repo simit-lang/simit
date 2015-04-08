@@ -150,8 +150,10 @@ llvm::StructType *createLLVMType(const ir::SetType *setType,
         llvm::Type::getInt32PtrTy(LLVM_CONTEXT, addrspace));
 
     // Neighbor Index
+    // row starts (block row)
     llvmFieldTypes.push_back(
         llvm::Type::getInt32PtrTy(LLVM_CONTEXT, addrspace));
+    // col indexes (block column)
     llvmFieldTypes.push_back(
         llvm::Type::getInt32PtrTy(LLVM_CONTEXT, addrspace));
   }
