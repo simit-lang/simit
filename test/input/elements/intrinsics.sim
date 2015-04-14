@@ -31,7 +31,7 @@ end
 %%% atan2
 %! doatan2(1.0, 2.0) == 0.4636;
 func doatan2(a : float, b : float) -> (c : float)
-  c = atan2(a);
+  c = atan2(a, b);
 end
 
 %%% asin
