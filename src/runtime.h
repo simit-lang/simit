@@ -55,7 +55,8 @@ void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
   mat.setFromTriplets(tripletList.begin(), tripletList.end());
 
 #ifndef SIMIT_EXTERN_SOLVE_NOOP
-  ConjugateGradient<SparseMatrix<double>> solver;
+  ConjugateGradient<SparseMatrix<double>,Lower,IdentityPreconditioner> solver;
+  solver.setMaxIterations(50);
   solver.compute(mat);
   *cvec = solver.solve(*xvec);
 #endif
@@ -85,7 +86,8 @@ void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
   mat.setFromTriplets(tripletList.begin(), tripletList.end());
   
 #ifndef SIMIT_EXTERN_SOLVE_NOOP
-  ConjugateGradient<SparseMatrix<float>> solver;
+  ConjugateGradient<SparseMatrix<float>,Lower,IdentityPreconditioner> solver;
+  solver.setMaxIterations(50);
   solver.compute(mat);
   *cvec = solver.solve(*xvec);
 #endif
