@@ -11,8 +11,11 @@ namespace simit{
 ///Assumes one object per file.
 ///Only reads vertex and face and ignores all other attributes.
 struct Mesh{
+  Mesh():saveColor(false){}
   ///vertex list
   std::vector<std::array< double,3> > v;
+  bool saveColor;
+  std::vector<std::array< double,3> > vcolor;
   ///triangle list
   std::vector<std::array< int,3> > t;
 

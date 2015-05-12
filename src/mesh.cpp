@@ -133,8 +133,15 @@ int Mesh::save(ostream & out)
   string vTok("v");
   string fTok("f");
   string tok;
-  for(size_t ii=0;ii<v.size();ii++){
-    out<<vTok<<" "<<v[ii][0]<<" "<<v[ii][1]<<" "<<v[ii][2]<<"\n";
+  if(saveColor){
+    for(size_t ii=0;ii<v.size();ii++){
+      out<<vTok<<" "<<v[ii][0]<<" "<<v[ii][1]<<" "<<v[ii][2]<<
+      " "<<vcolor[ii][0]<<" "<<vcolor[ii][1]<<" "<<vcolor[ii][2]<<"\n";
+    }
+  }else{
+    for(size_t ii=0;ii<v.size();ii++){
+      out<<vTok<<" "<<v[ii][0]<<" "<<v[ii][1]<<" "<<v[ii][2]<<"\n";
+    }
   }
   for(size_t ii=0;ii<t.size();ii++){
     out<<fTok<<" "<<t[ii][0]+1<<" "<<
