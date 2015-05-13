@@ -41,13 +41,13 @@ void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
   
   // Construct the matrix
   std::vector<Triplet<double>> tripletList;
-  tripletList.reserve(nnz);
-  for (int i=0; i<rows; i++) {
+  tripletList.reserve(nnz*bs_x*bs_y);
+  for (int i=0; i<rows/(bs_x); i++) {
     for (int j=row_start[i]; j<row_start[i+1]; j++) {
       for (int bi=0; bi<bs_x; bi++) {
       for (int bj=0; bj<bs_y; bj++) {
         tripletList.push_back(Triplet<double>(i*bs_x+bi, col_idx[j]*bs_y+bj,
-                                              bufferA[j+bi*bj]));
+                                              bufferA[j*bs_x*bs_y+bi*bs_x+bj]));
       }}
     }
   }
