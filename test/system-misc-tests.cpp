@@ -610,5 +610,45 @@ TEST(System, solve_external_blocked) {
   TensorRef<simit_float,2> c2 = c.get(p2);
   ASSERT_NEAR(2.0, c2(0), 1.0);
   ASSERT_NEAR(4.0, c2(1), 1.0);
-  }
+}
 
+TEST(System, DISABLED_if_reassign) {
+  // Points
+  Set points;
+  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  FieldRef<bool> c = points.addField<bool>("c");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  x.set(p0, {5.0, 5.0, 5.0});
+  x.set(p1, {5.0, 5.0, 5.0});
+  x.set(p2, {5.0, 5.0, 5.0});
+
+  c.set(p0, true);
+  c.set(p1, false);
+  c.set(p2, true);
+
+  // Compile program and bind arguments
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points", &points);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  TensorRef<simit_float,3> x0 = x.get(p0);
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x0(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x0(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x0(2));
+  TensorRef<simit_float,3> x1 = x.get(p1);
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x1(0));
+  SIMIT_ASSERT_FLOAT_EQ(1.0, x1(1));
+  SIMIT_ASSERT_FLOAT_EQ(2.0, x1(2));
+  TensorRef<simit_float,3> x2 = x.get(p2);
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x2(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x2(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x2(2));
+}
