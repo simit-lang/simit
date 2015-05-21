@@ -223,6 +223,9 @@ void GPUBackend::visit(const ir::CallStmt *op) {
   ir::Func callee = op->callee;
 
   if (callee.getKind() == ir::Func::Intrinsic) {
+    iassert(callee != ir::Intrinsics::norm && callee != ir::Intrinsics::dot)
+        << "norm and dot should have been lowered";
+
     std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
     // first, see if this is an LLVM intrinsic
@@ -242,29 +245,6 @@ void GPUBackend::visit(const ir::CallStmt *op) {
       std::string fname = callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args, getLLVMFloatType());
     }
-    else if (callee == ir::Intrinsics::norm) {
-      iassert(args.size() == 1);
-      auto type = op->actuals[0].type().toTensor();
-      
-      // Dense operation
-      if (!type->hasSystemDimensions()) {
-        args.push_back(emitComputeLen(type->dimensions[0]));
-        std::string funcName = callee.getName() + floatTypeName;
-        call = emitCall(funcName, args, getLLVMFloatType());
-      }
-      else {
-        // Fire off kernel for sparse operation
-        llvm::Value *llvmResult = symtable.get(op->results[0]);
-        llvm::Value *size = emitComputeLen(type->dimensions[0]);
-        emitShardedDot(op->actuals[0].type(), op->actuals[0].type(),
-                       op->results[0].getType(), args[0], args[0],
-                       size, llvmResult);
-        llvm::Value *sqrt = getBuiltIn(
-            nvvmIntrinsicByName.at(ir::Intrinsics::sqrt),
-            getLLVMFloatType(), { getLLVMFloatType() });
-        call = builder->CreateCall(sqrt, builder->CreateLoad(llvmResult));
-      }
-    }
     else if (callee == ir::Intrinsics::inv) {
       iassert(args.size() == 1);
 
@@ -277,32 +257,6 @@ void GPUBackend::visit(const ir::CallStmt *op) {
     }
     else if (op->callee == ir::Intrinsics::loc) {
       call = emitCall("loc", args, LLVM_INT);
-    }
-    else if (callee == ir::Intrinsics::dot) {
-      iassert(args.size() == 2);
-      // we need to add the vector length to the args
-      auto type1 = op->actuals[0].type().toTensor();
-      auto type2 = op->actuals[1].type().toTensor();
-      uassert(type1->dimensions[0] == type2->dimensions[0]) <<
-          "dimension mismatch in dot product";
-
-      // Dense operation
-      if (!type1->hasSystemDimensions() && !type2->hasSystemDimensions()) {
-        args.push_back(emitComputeLen(type1->dimensions[0]));
-        std::string funcName = callee.getName() + floatTypeName;
-        call = emitCall(funcName, args, getLLVMFloatType());
-      }
-      else {
-        // Fire off kernel for sparse operation
-        iassert(type1->hasSystemDimensions() && type2->hasSystemDimensions());
-
-        llvm::Value *llvmResult = symtable.get(op->results[0]);
-        llvm::Value *size = emitComputeLen(type1->dimensions[0]);
-        emitShardedDot(op->actuals[0].type(), op->actuals[1].type(),
-                       op->results[0].getType(), args[0], args[1],
-                       size, llvmResult);
-        call = builder->CreateLoad(llvmResult);
-      }
     }
     else {
       ierror << "intrinsic " << op->callee.getName() << " not found";

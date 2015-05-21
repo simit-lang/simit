@@ -4,33 +4,6 @@ int loc(int v0, int v1, int *neighbors_start, int *neighbors) {
   return l;
 }
 
-// dot product
-double dot_f64(double* a, double* b, int len) {
-  double result = 0.0;
-  for (int i=0; i<len; i++)
-    result += a[i] * b[i];
-  
-  return result;
-}
-
-float dot_f32(float* a, float* b, int len) {
-  float result = 0.0;
-  for (int i=0; i<len; i++)
-    result += a[i] * b[i];
-  
-  return result;
-}
-
-// norm
-extern float __nv_sqrtf(float x);
-double norm_f64(double* a, int len) {
-  return __nv_sqrtf(dot_f64(a, a, len));
-}
-
-float norm_f32(float* a, int len) {
-  return __nv_sqrtf(dot_f32(a, a, len));
-}
-
 //  0 1 2
 //  3 4 5
 //  6 7 8
