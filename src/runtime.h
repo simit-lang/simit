@@ -4,14 +4,18 @@
 #ifdef EIGEN
 #include <Eigen/Core>
 #include <Eigen/Dense>
+#include <Eigen/Sparse>
+#include <Eigen/IterativeLinearSolvers>
 
 extern "C" {
 
 // appease GCC
 void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
-                   int rows, int columns);
+                 int* row_start, int* col_idx,
+                 int rows, int columns, int nnz, int bs_x, int bs_y);
 void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
-                   int rows, int columns);
+                 int* row_start, int* col_idx,
+                 int rows, int columns, int nnz, int bs_x, int bs_y);
 int loc(int v0, int v1, int *neighbors_start, int *neighbors);
 
 double atan2_f64(double y, double x);
@@ -28,30 +32,69 @@ void inv3_f64(double* a, double* inv);
 void inv3_f32(float* a, float* inv);
 
 void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
-                 int rows, int columns) {
+                 int* row_start, int* col_idx,
+                 int rows, int columns, int nnz, int bs_x, int bs_y) {
   using namespace Eigen;
-  auto Amat = new Map<Matrix<double,Dynamic,Dynamic,RowMajor>>(bufferA, rows,
-                                                               columns);
+
   auto xvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferX, rows);
   auto cvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferC, rows);
+  
+  // Construct the matrix
+  std::vector<Triplet<double>> tripletList;
+  tripletList.reserve(nnz*bs_x*bs_y);
+  for (int i=0; i<rows/(bs_x); i++) {
+    for (int j=row_start[i]; j<row_start[i+1]; j++) {
+      for (int bi=0; bi<bs_x; bi++) {
+      for (int bj=0; bj<bs_y; bj++) {
+        tripletList.push_back(Triplet<double>(i*bs_x+bi, col_idx[j]*bs_y+bj,
+                                              bufferA[j*bs_x*bs_y+bi*bs_x+bj]));
+      }}
+    }
+  }
+  SparseMatrix<double> mat(rows,columns);
+  mat.setFromTriplets(tripletList.begin(), tripletList.end());
 
-  // TODO: this may be overkill
-  // we can probably get away with LLT or LDLT instead
-  *cvec = Amat->colPivHouseholderQr().solve(*xvec);
+#ifndef SIMIT_EXTERN_SOLVE_NOOP
+  ConjugateGradient<SparseMatrix<double>,Lower,IdentityPreconditioner> solver;
+  solver.setMaxIterations(50);
+  solver.compute(mat);
+  *cvec = solver.solve(*xvec);
+#endif
 }
 
 void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
-                int rows, int columns) {
+                 int* row_start, int* col_idx,
+                 int rows, int columns, int nnz, int bs_x, int bs_y) {
   using namespace Eigen;
-  auto Amat = new Map<Matrix<float,Dynamic,Dynamic,RowMajor>>(bufferA, rows,
-                                                              columns);
+
   auto xvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferX, rows);
   auto cvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferC, rows);
 
-  // TODO: this may be overkill
-  // we can probably get away with LLT or LDLT instead
-  *cvec = Amat->colPivHouseholderQr().solve(*xvec);
+  // Construct the matrix
+  std::vector<Triplet<float>> tripletList;
+  tripletList.reserve(nnz);
+  for (int i=0; i<rows; i++) {
+    for (int j=row_start[i]; j<row_start[i+1]; j++) {
+      for (int bi=0; bi<bs_x; bi++) {
+      for (int bj=0; bj<bs_y; bj++) {
+         tripletList.push_back(Triplet<float>(i*bs_x+bi, col_idx[j]*bs_y+bj,
+                                              bufferA[j+bi*bj]));
+      }}
+    }
+  }
+  SparseMatrix<float> mat(rows,columns);
+  mat.setFromTriplets(tripletList.begin(), tripletList.end());
+  
+#ifndef SIMIT_EXTERN_SOLVE_NOOP
+  ConjugateGradient<SparseMatrix<float>,Lower,IdentityPreconditioner> solver;
+  solver.setMaxIterations(50);
+  solver.compute(mat);
+  *cvec = solver.solve(*xvec);
+#endif
+  
 }
+
+
 }
 #endif
 

@@ -247,3 +247,4 @@ TEST(Codegen, forloop) {
   vector<int> results = toVectorOf<int>(outVar);
   ASSERT_EQ(results[0], 3);
 }
+

@@ -56,6 +56,10 @@ GPUFunction::GPUFunction(
             << cuDevMajor << "." << cuDevMinor << std::endl;
   iassert((cuDevMajor == 3 && cuDevMinor >= 5) || cuDevMajor > 3) << "ERROR: Device 0 is not SM 3.5 or greater";
 
+  size_t bytes;
+  checkCudaErrors(cuDeviceTotalMem(&bytes, device));
+  std::cout << "Total memory: " << bytes << std::endl;
+
   // Create driver context
   cudaContext = new CUcontext();
   checkCudaErrors(cuCtxCreate(cudaContext, 0, device));

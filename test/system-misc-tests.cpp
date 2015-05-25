@@ -506,3 +506,149 @@ TEST(System, DISABLED_map_vec_assign) {
   SIMIT_ASSERT_FLOAT_EQ(8.1, x(p2)(1));
   SIMIT_ASSERT_FLOAT_EQ(9.1, x(p2)(2));
 }
+
+TEST(System, solve_external) {
+  // Points
+  Set points;
+  FieldRef<simit_float> b = points.addField<simit_float>("b");
+  FieldRef<simit_float> c = points.addField<simit_float>("c");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b.set(p0, 2.0);
+  b.set(p1, 1.0);
+  b.set(p2, 4.0);
+
+  // Taint c
+  c.set(p0, 42.0);
+  c.set(p2, 42.0);
+
+  // Springs
+  Set springs(points,points);
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, 2.0);
+  a.set(s1, 1.0);
+
+  // Compile program and bind arguments
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points", &points);
+  func.bind("springs", &springs);
+
+  func.runSafe();
+
+  // Check that inputs are preserved
+  SIMIT_ASSERT_FLOAT_EQ(2.0, b.get(p0));
+  SIMIT_ASSERT_FLOAT_EQ(1.0, b.get(p1));
+  SIMIT_ASSERT_FLOAT_EQ(4.0, b.get(p2));
+
+  // Check that outputs are correct
+  ASSERT_NEAR(2.0, (double)c.get(p0), 0.00001);
+  ASSERT_NEAR(1.0, (double)c.get(p1), 0.00001);
+  ASSERT_NEAR(4.0, (double)c.get(p2), 0.00001);
+}
+
+// the test doesn't get very close to the correct answer
+// due to the low # of CG iterations.
+// SK has tested with more iterations and it does indeed
+// get a reasonable answer.
+TEST(System, solve_external_blocked) {
+  // Points
+  Set points;
+  FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
+  FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b.set(p0, {1.0, 3.0});
+  b.set(p1, {5.0, 7.0});
+  b.set(p2, {2.0, 4.0});
+
+  // Taint c
+  c.set(p0, {1.0, 1.0});
+  c.set(p2, {1.0, 1.0});
+
+  // Springs
+  Set springs(points,points);
+  FieldRef<simit_float,2,2> a = springs.addField<simit_float,2,2>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, {1.0, 2.0, 3.0, 4.0});
+  a.set(s1, {5.0, 6.0, 7.0, 8.0});
+
+  // Compile program and bind arguments
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points", &points);
+  func.bind("springs", &springs);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  // They're not going to be very close because the matrix is sucky for solves
+  // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
+  TensorRef<simit_float,2> c0 = c.get(p0);
+  ASSERT_NEAR(1.0, c0(0), 1.0);
+  ASSERT_NEAR(3.0, c0(1), 1.0);
+
+  TensorRef<simit_float,2> c1 = c.get(p1);
+  ASSERT_NEAR(5.0, c1(0), 1.0);
+  ASSERT_NEAR(7.0, c1(1), 1.0);
+  
+  TensorRef<simit_float,2> c2 = c.get(p2);
+  ASSERT_NEAR(2.0, c2(0), 1.0);
+  ASSERT_NEAR(4.0, c2(1), 1.0);
+}
+
+TEST(System, DISABLED_if_reassign) {
+  // Points
+  Set points;
+  FieldRef<simit_float,3> x = points.addField<simit_float,3>("x");
+  FieldRef<bool> c = points.addField<bool>("c");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  x.set(p0, {5.0, 5.0, 5.0});
+  x.set(p1, {5.0, 5.0, 5.0});
+  x.set(p2, {5.0, 5.0, 5.0});
+
+  c.set(p0, true);
+  c.set(p1, false);
+  c.set(p2, true);
+
+  // Compile program and bind arguments
+  Function func = getFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points", &points);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  TensorRef<simit_float,3> x0 = x.get(p0);
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x0(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x0(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x0(2));
+  TensorRef<simit_float,3> x1 = x.get(p1);
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x1(0));
+  SIMIT_ASSERT_FLOAT_EQ(1.0, x1(1));
+  SIMIT_ASSERT_FLOAT_EQ(2.0, x1(2));
+  TensorRef<simit_float,3> x2 = x.get(p2);
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x2(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x2(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.0, x2(2));
+}

@@ -668,9 +668,59 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       call = emitCall(fname, args);
     }
     else if (op->callee == ir::Intrinsics::solve) {
+    
+      // we need to add additional arguments: the row_start and col_idx pointers,
+      // as well as the number of rows, columns, nonzeros, and blocksize.
       auto type = op->actuals[0].type().toTensor();
+      
+      // FIXME: shouldn't assume this is a var expression...
+      tassert(isa<VarExpr>(op->actuals[0]));
+      auto tensorStorage = storage.get(to<VarExpr>(op->actuals[0])->var);
+      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
+      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
+
+      // Retrieve the size of the neighbor index, which is stored in the last
+      // element of neighbor start index.
+      llvm::Value *setSize =
+          builder->CreateExtractValue(storageSet, {0},
+                                      storageSet->getName()+LEN_SUFFIX);
+      
+      llvm::Value *row_start =
+          builder->CreateExtractValue(targetSet, {2}, "row_start");
+      llvm::Value *col_idx =
+          builder->CreateExtractValue(targetSet, {3}, "col_idx");
+    
+      
+      
+      llvm::Value *neighborIndexSizeLoc =
+          builder->CreateInBoundsGEP(row_start, setSize,
+                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
+      llvm::Value *len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
+                                       "neighbors"+LEN_SUFFIX);
+      llvm::Value *blockSize_r;
+      llvm::Value *blockSize_c;
+      
+      // Determine block sizes
+      Type blockType = type->blockType();
+      if (!isScalar(blockType)) {
+        // TODO: The following assumes all blocks are dense row major. The right
+        //       way to assign a storage order for every block in the tensor
+        //       represented by a TensorStorage.  Also assumes 2D blocks.
+        auto dims = blockType.toTensor()->dimensions;
+        blockSize_r = emitComputeLen(dims[0]);
+        blockSize_c = emitComputeLen(dims[1]);
+      }
+      else {
+        blockSize_r = llvmInt(1);
+        blockSize_c = llvmInt(1);
+      }
+      args.push_back(row_start);
+      args.push_back(col_idx);
       args.push_back(emitComputeLen(type->dimensions[0]));
       args.push_back(emitComputeLen(type->dimensions[1]));
+      args.push_back(len);
+      args.push_back(blockSize_r);
+      args.push_back(blockSize_c);
 
       std::string fname = "cMatSolve" + floatTypeName;
       call = emitCall(fname, args);

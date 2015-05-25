@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(System, heterogeneous_vector) {
+TEST(System, DISABLED_heterogeneous_vector) {
   Set V;
   Set U;
   Set E(V, U);
