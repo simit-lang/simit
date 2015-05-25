@@ -877,7 +877,10 @@ void LLVMBackend::visit(const For *op) {
 
   llvm::BasicBlock *loopBodyStart =
       llvm::BasicBlock::Create(LLVM_CONTEXT, iName+"_loop_body", llvmFunc);
-  builder->CreateBr(loopBodyStart);
+  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
+                                                       iName+"_loop_end", llvmFunc);
+  llvm::Value *firstCmp = builder->CreateICmpSLT(llvmInt(0), iNum);
+  builder->CreateCondBr(firstCmp, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopBodyStart);
 
   llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
@@ -896,8 +899,6 @@ void LLVMBackend::visit(const For *op) {
   i->addIncoming(i_nxt, loopBodyEnd);
 
   llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, iNum, iName+"_cmp");
-  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
-                                                       iName+"_loop_end", llvmFunc);
   builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopEnd);
 }
@@ -915,7 +916,11 @@ void LLVMBackend::visit(const ir::ForRange *op) {
 
   llvm::BasicBlock *loopBodyStart =
     llvm::BasicBlock::Create(LLVM_CONTEXT, iName+"_loop_body", llvmFunc);
-  builder->CreateBr(loopBodyStart);
+  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
+                                                       iName+"_loop_end",
+                                                       llvmFunc);
+  llvm::Value *firstCmp = builder->CreateICmpSLT(rangeStart, rangeEnd);
+  builder->CreateCondBr(firstCmp, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopBodyStart);
 
   llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
@@ -935,9 +940,6 @@ void LLVMBackend::visit(const ir::ForRange *op) {
 
   llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, rangeEnd,
                                                  iName+"_cmp");
-  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
-                                                       iName+"_loop_end",
-                                                       llvmFunc);
   builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
   builder->SetInsertPoint(loopEnd);
 
