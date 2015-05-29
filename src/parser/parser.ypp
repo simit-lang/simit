@@ -64,7 +64,7 @@
   #define REPORT_TYPE_MISSMATCH(t1, t2, loc)                          \
     do {                                                              \
       std::stringstream errorStr;                                     \
-      errorStr << "type missmatch (" <<                               \
+      errorStr << "type mismatch (" <<                               \
                   typeString(t1) << " and " << typeString(t2) << ")"; \
       REPORT_ERROR(errorStr.str(), loc);                              \
     } while (0)
@@ -1786,7 +1786,7 @@ component_type
 
       bool dimensionsMatch(const TensorValues<T> &other, std::string *errors) {
         iassert(errors != NULL);
-        std::string mismatchError = "missmatched dimension sizes";
+        std::string mismatchError = "mismatched dimension sizes";
         if (dimSizes.size()-1 != other.dimSizes.size()) {
           *errors = mismatchError;
           return false;
