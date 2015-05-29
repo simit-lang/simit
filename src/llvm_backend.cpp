@@ -181,6 +181,11 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
   
   pmBuilder.OptLevel = 3;
 
+  pmBuilder.BBVectorize = 1;
+  pmBuilder.LoopVectorize = 1;
+  pmBuilder.LoadCombine = 1;
+  pmBuilder.SLPVectorize = 1;
+
 #if LLVM_MAJOR_VERSION >= 3 && LLVM_MINOR_VERSION >= 5
   fpm.add(new llvm::DataLayoutPass(*engineBuilder->getDataLayout()));
 #else
