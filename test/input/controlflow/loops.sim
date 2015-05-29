@@ -20,6 +20,19 @@ func for_loop_test(A:tensor[3,3](float)) -> (B:tensor[3](float))
   end
 end
 
+%%% empty_for_test (Bug #158)
+%! empty_for() == 0;
+func empty_for() -> (a : int)
+  a = 0;
+  for i in 0:0
+    for j in 0:3
+      for k in 0:0
+        a = 42;
+      end
+    end
+  end
+end
+
 %%% while
 %! f(5) == 10;
 func f(p : int) -> (r : int)
