@@ -38,6 +38,7 @@ void ErrorReport::explode() {
 
   std::cerr << msg->str();
   delete msg;
+  throw;
   exit(1);
 }
 } // namespace internal
