@@ -19,7 +19,7 @@ end
 
 proc main 
   A = map dist_a to springs reduce +;
-  print A;
+%  print A;
   b = points.b;
   c = points.c;
   out = solve(A, b, c);
