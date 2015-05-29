@@ -22,15 +22,17 @@ class LLVMFunction : public simit::internal::Function {
  public:
   LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                bool requiresInit, llvm::Module *module,
-               std::shared_ptr<llvm::ExecutionEngine> executionEngine);
+               std::shared_ptr<llvm::EngineBuilder> engineBuilder);
 
   ~LLVMFunction();
 
   void print(std::ostream &os) const;
+  void printMachine(std::ostream &os) const;
 
  private:
   llvm::Function                         *llvmFunc;
   llvm::Module*                          module;
+  std::shared_ptr<llvm::EngineBuilder>   engineBuilder;
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;
 
   bool requiresInit;

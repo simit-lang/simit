@@ -60,6 +60,8 @@ public:
 
   std::function<void()> getFunctionHandle() {return funcPtr;}
 
+  virtual void printMachine(std::ostream &os) const = 0;
+
 protected:
   typedef std::function<void()> FuncType;
   class Actual {

@@ -25,6 +25,7 @@ class GPUFunction : public simit::internal::Function {
   ~GPUFunction();
 
   void print(std::ostream &os) const;
+  void printMachine(std::ostream &os) const {}
 
   virtual void mapArgs();
   virtual void unmapArgs(bool updated);

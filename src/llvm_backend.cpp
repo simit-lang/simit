@@ -48,7 +48,7 @@ namespace simit {
 namespace internal {
 
 // appease GCC
-llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module);
+shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module);
 
 const std::string VAL_SUFFIX(".val");
 const std::string PTR_SUFFIX(".ptr");
@@ -57,11 +57,9 @@ const std::string LEN_SUFFIX(".len");
 // class LLVMBackend
 bool LLVMBackend::llvmInitialized = false;
 
-llvm::ExecutionEngine *createExecutionEngine(llvm::Module *module) {
-  llvm::EngineBuilder engineBuilder(module);
-  llvm::ExecutionEngine *ee = engineBuilder.create();
-  iassert(ee != nullptr) << "Could not create ExecutionEngine";
-  return ee;
+shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
+  shared_ptr<llvm::EngineBuilder> engineBuilder(new llvm::EngineBuilder(module));
+  return engineBuilder;
 }
 
 LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
@@ -76,8 +74,6 @@ LLVMBackend::~LLVMBackend() {}
 
 simit::internal::Function *LLVMBackend::compile(Func func) {
   this->module = new llvm::Module("simit", LLVM_CONTEXT);
-  llvm::ExecutionEngine *ee = createExecutionEngine(module);
-  auto executionEngine = shared_ptr<llvm::ExecutionEngine>(ee);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
@@ -173,6 +169,8 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
   iassert(!llvm::verifyModule(*module))
       << "LLVM module does not pass verification";
 
+  auto engineBuilder = createEngineBuilder(module);
+
 #ifndef SIMIT_DEBUG
   // Run LLVM optimization passes on the function
   // We use the built-in PassManagerBuilder to build
@@ -184,9 +182,9 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
   pmBuilder.OptLevel = 3;
 
 #if LLVM_MAJOR_VERSION >= 3 && LLVM_MINOR_VERSION >= 5
-  fpm.add(new llvm::DataLayoutPass(*executionEngine->getDataLayout()));
+  fpm.add(new llvm::DataLayoutPass(*engineBuilder->getDataLayout()));
 #else
-  fpm.add(new llvm::DataLayout(*executionEngine->getDataLayout()));
+  fpm.add(new llvm::DataLayout(*engineBuilder->getDataLayout()));
 #endif
 
   pmBuilder.populateFunctionPassManager(fpm);
@@ -200,7 +198,7 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
 #endif
 
   bool requiresInit = buffers.size() > 0;
-  return new LLVMFunction(func, llvmFunc, requiresInit, module,executionEngine);
+  return new LLVMFunction(func, llvmFunc, requiresInit, module, engineBuilder);
 }
 
 llvm::Value *LLVMBackend::compile(const Expr &expr) {

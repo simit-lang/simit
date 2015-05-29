@@ -28,6 +28,7 @@ void printUsage() {
        << "Options:"            << endl
        << "-emit-simit"         << endl
        << "-emit-llvm"          << endl
+       << "-emit-asm"           << endl
        << "-emit-gpu=<file>"    << endl
        << "-compile"            << endl
        << "-compile=<function>" << endl
@@ -42,6 +43,7 @@ int main(int argc, const char* argv[]) {
 
   bool emitSimit = false;
   bool emitLLVM = false;
+  bool emitASM = false;
   bool emitGPU = false;
   bool compile = false;
 
@@ -61,6 +63,9 @@ int main(int argc, const char* argv[]) {
         }
         else if (arg == "-emit-llvm") {
           emitLLVM = true;
+        }
+        else if (arg == "-emit-asm") {
+          emitASM = true;
         }
         else if (arg == "-emit-gpu") {
           emitGPU = true;
@@ -218,13 +223,23 @@ int main(int argc, const char* argv[]) {
 
     // Emit and print llvm code
     // NB: The LLVM code gets further optimized at init time (OSR, etc.)
-    if (emitLLVM) {
+
+    if (emitLLVM || emitASM) {
       simit::internal::LLVMBackend backend;
-      std::string fstr = simit::util::toString(*backend.compile(func));
-      if (emitSimit) {
-        cout << "--- Emitting LLVM" << endl;
+      unique_ptr<simit::internal::Function> llvmFunc(backend.compile(func));
+
+      if (emitLLVM) {
+        std::string fstr = simit::util::toString(*llvmFunc);
+        if (emitSimit) {
+          cout << "--- Emitting LLVM" << endl;
+        }
+        cout << simit::util::trim(fstr) << endl;
       }
-      cout << simit::util::trim(fstr) << endl;
+
+      if (emitASM) {
+        cout << "--- Emitting Assembly" << endl;
+        llvmFunc->printMachine(cout);
+      }
     }
   }
 

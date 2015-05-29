@@ -28,9 +28,10 @@ typedef void (*FuncPtrType)();
 
 LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                            bool requiresInit, llvm::Module *module,
-                           shared_ptr<llvm::ExecutionEngine> executionEngine)
+                           std::shared_ptr<llvm::EngineBuilder> engineBuilder)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
-      executionEngine(executionEngine), requiresInit(requiresInit),
+      engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
+      requiresInit(requiresInit),
   deinit(nullptr) {
 }
 
@@ -45,6 +46,14 @@ void LLVMFunction::print(std::ostream &os) const {
   llvm::raw_string_ostream rsos(fstr);
   module->print(rsos, nullptr);
   os << rsos.str();
+}
+
+void LLVMFunction::printMachine(std::ostream &os) const {
+  llvm::TargetMachine *target = engineBuilder->selectTarget();
+  target->Options.PrintMachineCode = true;
+  llvm::ExecutionEngine *printee(engineBuilder->create(target));
+  printee->getPointerToFunction(llvmFunc);
+  target->Options.PrintMachineCode = false;
 }
 
 simit::internal::Function::FuncType
