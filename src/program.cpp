@@ -44,38 +44,38 @@ Function::Function(internal::Function *func) : impl(func), funcPtr(nullptr) {
 }
 
 void Function::bind(const std::string &argName, Tensor *tensor) {
-  iassert(defined()) << "undefined function";
+  uassert(defined()) << "undefined function";
   impl->bind(argName, tensor);
 }
 
 void Function::bind(const std::string &argName, Set *set) {
-  iassert(defined()) << "undefined function";
+  uassert(defined()) << "undefined function";
   impl->bind(argName, set);
 }
 
 void Function::init() {
-  iassert(defined()) << "undefined function";
+  uassert(defined()) << "undefined function";
   impl->init();
   funcPtr = impl->getFunctionHandle();
 }
 
 bool Function::isInit() {
-  iassert(defined()) << "undefined function";
+  uassert(defined()) << "undefined function";
   return impl->isInit();
 }
 
 void Function::runSafe() {
-  iassert(defined()) << "undefined function";
+  uassert(defined()) << "undefined function";
   impl->runSafe();
 }
 
 void Function::mapArgs() {
-  iassert(defined()) << "undefined function";
+  uassert(defined()) << "undefined function";
   impl->mapArgs();
 }
 
 void Function::unmapArgs(bool updated) {
-  iassert(defined()) << "undefined function";
+  uassert(defined()) << "undefined function";
   impl->unmapArgs(updated);
 }
 
