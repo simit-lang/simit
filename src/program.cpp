@@ -149,28 +149,28 @@ Function Program::compile(const std::string &function) {
 }
 
 int Program::verify() {
-    // For each test look up the called function. Grab the actual arguments and
-    // run the function with them as input.  Then compare the result to the
-    // expected literal.
-    const std::map<string, ir::Func> &functions = content->ctx.getFunctions();
-    std::map<ir::Func, simit::Function*> compiled;
+  // For each test look up the called function. Grab the actual arguments and
+  // run the function with them as input.  Then compare the result to the
+  // expected literal.
+  const std::map<string, ir::Func> &functions = content->ctx.getFunctions();
+  std::map<ir::Func, simit::Function*> compiled;
 
-    for (auto &test : content->ctx.getTests()) {
-      if (functions.find(test->getCallee()) == functions.end()) {
-        content->diags.report() << "Error: attempting to test unknown function "
-                                << "'" << test->getCallee() << "'";
-        return 1;
-      }
-      ir::Func func = functions.at(test->getCallee());
-      Function compiledFunc = simit::compile(func, content->backend);
-
-      bool evaluates = test->evaluate(func, compiledFunc, &content->diags);
-      if (!evaluates) {
-        return 2;
-      }
+  for (auto &test : content->ctx.getTests()) {
+    if (functions.find(test->getCallee()) == functions.end()) {
+      content->diags.report() << "Error: attempting to test unknown function "
+      << "'" << test->getCallee() << "'";
+      return 1;
     }
-    
-    return 0;
+    ir::Func func = functions.at(test->getCallee());
+    Function compiledFunc = simit::compile(func, content->backend);
+
+    bool evaluates = test->evaluate(func, compiledFunc, &content->diags);
+    if (!evaluates) {
+      return 2;
+    }
+  }
+
+  return 0;
 }
 
 bool Program::hasErrors() const {

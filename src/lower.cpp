@@ -144,6 +144,7 @@ Func lower(Func func, bool print) {
   }
 
 
+  // Lower to GPU Kernels
 #if GPU
   if (kBackend == "gpu") {
     class ShardLoopsRewriter : public simit::ir::IRRewriterCallGraph {
