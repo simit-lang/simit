@@ -183,13 +183,14 @@ simit::internal::Function *LLVMBackend::compile(Func func) {
 
   pmBuilder.BBVectorize = 1;
   pmBuilder.LoopVectorize = 1;
-  pmBuilder.LoadCombine = 1;
+//  pmBuilder.LoadCombine = 1;
   pmBuilder.SLPVectorize = 1;
 
+  llvm::DataLayout dataLayout(module);
 #if LLVM_MAJOR_VERSION >= 3 && LLVM_MINOR_VERSION >= 5
-  fpm.add(new llvm::DataLayoutPass(*engineBuilder->getDataLayout()));
+  fpm.add(new llvm::DataLayoutPass(dataLayout));
 #else
-  fpm.add(new llvm::DataLayout(*engineBuilder->getDataLayout()));
+  fpm.add(new llvm::DataLayout(dataLayout));
 #endif
 
   pmBuilder.populateFunctionPassManager(fpm);
