@@ -6,7 +6,6 @@
 #include "temps.h"
 #include "flatten.h"
 #include "ir_rewriter.h"
-#include "path_expression_analysis.h"
 #include "path_expressions.h"
 
 #ifdef GPU
@@ -47,13 +46,6 @@ Func lower(Func func, bool print) {
     simit::ir::IRPrinterCallGraph(cout).print(func);
     cout << endl;
   }
-
-
-  // Build Path Expressions for Tensors
-//  std::map<Var,PathExpression> pathExpressions = getPathExpressions(func);
-//  for (auto &pe : pathExpressions) {
-//    cout << pe.first << " -> " << pe.second << endl;
-//  }
 
 
   // Determine Storage
