@@ -11,7 +11,6 @@ namespace ir {
 /// to stdout between each lowering step.
 Func lower(Func func, bool print=false);
 
-
 /// Lower map statements to loops. Map assemblies are lowered to loops that
 /// store the resulting tensors as specified by Func's Storage descriptor.
 Func lowerMaps(Func func);
