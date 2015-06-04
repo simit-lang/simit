@@ -86,9 +86,8 @@ private:
 // and can be passed as bound inputs to Simit programs.
 class Set {
 public:
-  Set() :  numElements(0), cardinality(0),
-               endpoints(nullptr), capacity(capacityIncrement),
-               neighbors(nullptr) {}
+  Set() : name(""), numElements(0), cardinality(0), endpoints(nullptr),
+          capacity(capacityIncrement), neighbors(nullptr) {}
 
   template <typename ...T>
   Set(const T& ...sets) : Set() {
@@ -367,14 +366,18 @@ public:
   /// second connceted set. Otherwise, return nullptr.
   const internal::NeighborIndex *getNeighborIndex() const;
 
+  void setName(const std::string &name) { this->name = name; }
+  std::string getName() const { return name; }
+
   friend std::ostream &operator<<(std::ostream &os, const Set &set) {
     return set.streamOut(os);
   }
 
 private:
+  std::string name;
   int numElements;                           // number of elements in the set
   int cardinality;                           // number of element endpoints
-  std::vector<const Set*> endpointSets;  // the sets the endpoints belong to
+  std::vector<const Set*> endpointSets;      // the sets the endpoints belong to
   int* endpoints;                            // the endpoints of edge elements
 
   int capacity;                              // current capacity of the set
@@ -858,7 +861,7 @@ private:
   std::map<Coord, ElementRef> coords2edges;
 };
 
-Box createBox(Set *elements, Set *edges,
+Box createBox(Set *vertices, Set *edges,
               unsigned numX, unsigned numY, unsigned numZ);
 
 

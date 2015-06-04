@@ -66,14 +66,15 @@ std::vector<ElementRef> Box::getEdges() {
   return edges;
 }
 
-Box createBox(Set *elements, Set *edges,
+Box createBox(Set *vertices, Set *edges,
               unsigned numX, unsigned numY, unsigned numZ) {
+  uassert(numX >= 1 && numY >= 1 && numZ >= 1);
   vector<ElementRef> points(numX*numY*numZ);
 
   for(unsigned x = 0; x < numX; ++x) {
     for(unsigned y = 0; y < numY; ++y) {
       for(unsigned z = 0; z < numZ; ++z) {
-        points[node0(x,y,z)] = elements->add();
+        points[node0(x,y,z)] = vertices->add();
       }
     }
   }
