@@ -69,6 +69,7 @@ public:
     if (ptr) {
       aquire(ptr);
     }
+    return *this;
   }
 
   /// Move assignment operator
