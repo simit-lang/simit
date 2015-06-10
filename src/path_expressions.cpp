@@ -22,12 +22,12 @@ std::string ElementVar::getSetName() const {
   return content->setName;
 }
 
-bool operator==(const ElementVar& lhs, const ElementVar& rhs) {
+bool operator==(const ElementVar &lhs, const ElementVar &rhs) {
   return lhs.content == rhs.content;
 }
 
-bool operator!=(const ElementVar& lhs, const ElementVar& rhs) {
-  return lhs.content != rhs.content;
+bool operator<(const ElementVar &lhs, const ElementVar &rhs) {
+  return lhs.content < rhs.content;
 }
 
 std::ostream &operator<<(std::ostream& os, const ElementVar& v) {

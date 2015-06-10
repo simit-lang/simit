@@ -5,6 +5,7 @@
 #include <vector>
 #include "printable.h"
 #include "intrusive_ptr.h"
+#include "comparable.h"
 
 /// \file
 /// Path Expressions describe a neighborhood of a vertex or edge in a graph.
@@ -25,21 +26,24 @@ namespace pe {
 class PathExpressionVisitor;
 
 
-class ElementVar {
+class ElementVar : public interfaces::Comparable<ElementVar> {
 public:
   ElementVar();
-  ElementVar(std::string setName);
+  explicit ElementVar(std::string setName);
 
   bool defined();
   std::string getSetName() const;
 
   friend bool operator==(const ElementVar&, const ElementVar&);
-  friend bool operator!=(const ElementVar&, const ElementVar&);
+  friend bool operator<(const ElementVar&, const ElementVar&);
   friend std::ostream &operator<<(std::ostream&, const ElementVar&);
 
 private:
   struct ElementVarContent;
   std::shared_ptr<ElementVarContent> content;
+
+  bool eq(const ElementVar &other) {return content == other.content;}
+  bool le(const ElementVar &other) {return content < other.content;}
 };
 
 
