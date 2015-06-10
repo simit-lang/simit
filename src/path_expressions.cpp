@@ -35,27 +35,62 @@ std::ostream &operator<<(std::ostream& os, const ElementVar& v) {
   return os;
 }
 
-// class Link
-Link::Link(ElementVar E, ElementVar V, unsigned edgeEndpoint) {
+
+// class PathExpression
+ElementVar PathExpression::getPathEndpoint(unsigned pathEndpoint) const {
+  return ptr->getPathEndpoint(pathEndpoint);
+}
+
+PathExpression::Path PathExpression::getPath() {
+  struct PathVisitor : public PathExpressionVisitor {
+    void visit(const EV *ev) {
+      path.push_back(ev->getPathEndpoint(0));
+      path.push_back(ev->getPathEndpoint(1));
+    };
+
+    void visit(const Predicate *p) {
+      std::cout << *p << std::endl;
+    }
+
+    Path path;
+  };
+  PathVisitor pathVisitor;
+  this->accept(&pathVisitor);
+
+  return pathVisitor.path;
+}
+
+void PathExpression::accept(PathExpressionVisitor *visitor) const {
+  ptr->accept(visitor);
+}
+
+std::ostream &operator<<(std::ostream& os, const PathExpression& pe) {
+  os << *pe.ptr;
+  return os;
+}
+
+
+// class EV
+EV::EV(ElementVar E, ElementVar V, unsigned edgeEndpoint) {
   this->E = E;
   this->V = V;
   this->edgeEndpoint = edgeEndpoint;
 }
 
-PathExpression Link::make(ElementVar E, ElementVar V, unsigned edgeEndpoint) {
-  return PathExpression(new Link(E, V, edgeEndpoint));
+PathExpression EV::make(ElementVar E, ElementVar V, unsigned edgeEndpoint) {
+  return PathExpression(new EV(E, V, edgeEndpoint));
 }
 
-ElementVar Link::getPathEndpoint(unsigned pathEndpoint) const {
+ElementVar EV::getPathEndpoint(unsigned pathEndpoint) const {
   iassert(pathEndpoint < 2);
   return (pathEndpoint == 0) ? E : V;
 }
 
-void Link::accept(PathExpressionVisitor *visitor) const {
+void EV::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
-void Link::print(std::ostream &os) const {
+void EV::print(std::ostream &os) const {
   os << "(" << E << ")-" << edgeEndpoint << "-(" << V << ")";
 }
 
@@ -72,17 +107,6 @@ void Predicate::accept(PathExpressionVisitor *visitor) const {
 }
 
 void Predicate::print(std::ostream &os) const {
-}
-
-
-// class PathExpression
-ElementVar PathExpression::getPathEndpoint(unsigned pathEndpoint) const {
-  return ptr->getPathEndpoint(pathEndpoint);
-}
-
-std::ostream &operator<<(std::ostream& os, const PathExpression& pe) {
-  os << *pe.ptr;
-  return os;
 }
 
 }}

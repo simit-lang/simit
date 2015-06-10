@@ -2,6 +2,7 @@
 #define SIMIT_PATH_EXPRESSIONS_H
 
 #include <memory>
+#include <vector>
 #include "printable.h"
 #include "intrusive_ptr.h"
 
@@ -16,7 +17,7 @@
 /// compute new vertex or edge values by (linearly) combining the values from
 /// multiple vertices or edges in a neighborhood.
 ///
-/// This file defines the classes that make up path expressions (Link and
+/// This file defines the classes that make up path expressions (EV and
 /// Predicate) as well as Path Expression visitors.
 
 namespace simit {
@@ -57,15 +58,23 @@ public:
 
 class PathExpression : public util::IntrusivePtr<PathExpressionImpl> {
 public:
+  typedef std::vector<ElementVar> Path;
+
   PathExpression() : IntrusivePtr() {}
   PathExpression(PathExpressionImpl *impl) : IntrusivePtr(impl) {}
 
   ElementVar getPathEndpoint(unsigned pathEndpoint) const;
+
+  // Retrieves the symbolic path described by the path expression as an
+  // ordered collection of ElementVars.
+  Path getPath();
+
+  void accept(PathExpressionVisitor*) const;
 };
 std::ostream &operator<<(std::ostream&, const PathExpression&);
 
 
-class Link : public PathExpressionImpl {
+class EV : public PathExpressionImpl {
 public:
   static PathExpression make(ElementVar E, ElementVar V, unsigned edgeEndpoint);
 
@@ -77,7 +86,7 @@ private:
   ElementVar V;
   unsigned edgeEndpoint;
 
-  Link(ElementVar E, ElementVar V, unsigned edgeEndpoint);
+  EV(ElementVar E, ElementVar V, unsigned edgeEndpoint);
   void print(std::ostream &os) const;
 };
 
@@ -93,15 +102,11 @@ private:
   void print(std::ostream &os) const;
 };
 
+
 class PathExpressionVisitor {
 public:
-  virtual void visit(const Link *) = 0;
-  virtual void visit(const Predicate *) = 0;
-};
-
-class PathIterator {
-public:
-  PathIterator(const PathExpression &);
+  virtual void visit(const EV *) {};
+  virtual void visit(const Predicate *) {};
 };
 
 }}
