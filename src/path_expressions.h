@@ -65,10 +65,6 @@ public:
 
   ElementVar getPathEndpoint(unsigned pathEndpoint) const;
 
-  // Retrieves the symbolic path described by the path expression as an
-  // ordered collection of ElementVars.
-  Path getPath();
-
   void accept(PathExpressionVisitor*) const;
 };
 std::ostream &operator<<(std::ostream&, const PathExpression&);

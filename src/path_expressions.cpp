@@ -41,25 +41,6 @@ ElementVar PathExpression::getPathEndpoint(unsigned pathEndpoint) const {
   return ptr->getPathEndpoint(pathEndpoint);
 }
 
-PathExpression::Path PathExpression::getPath() {
-  struct PathVisitor : public PathExpressionVisitor {
-    void visit(const EV *ev) {
-      path.push_back(ev->getPathEndpoint(0));
-      path.push_back(ev->getPathEndpoint(1));
-    };
-
-    void visit(const Predicate *p) {
-      std::cout << *p << std::endl;
-    }
-
-    Path path;
-  };
-  PathVisitor pathVisitor;
-  this->accept(&pathVisitor);
-
-  return pathVisitor.path;
-}
-
 void PathExpression::accept(PathExpressionVisitor *visitor) const {
   ptr->accept(visitor);
 }
