@@ -11,12 +11,12 @@
 /// Path Expressions describe a neighborhood of a vertex or edge in a graph.
 /// A neighborhood is here defined as the vertices or edges that you can reach
 /// through a path expression, starting from a vertex or edge. Path Expressions
-/// are typically used to describe which other vertices and edges contribute to
-/// the new value of a given vertex or edge in a computation. This computation
-/// can be the application of a stencil/data-graph kernel, but can also be a
-/// matrix-vector multiplication, wherein the matrix is a linear function that
-/// compute new vertex or edge values by (linearly) combining the values from
-/// multiple vertices or edges in a neighborhood.
+/// are typically used to describe what vertices and edges contribute to the new
+/// value of a given vertex or edge in a computation. The computation can be the
+/// application of a stencil/data-graph kernel, but can also be a matrix-vector
+/// multiplication, since the matrix is a linear function that compute new
+/// vertex or edge values by (linearly) combining the values from multiple
+/// vertices or edges in a neighborhood.
 ///
 /// This file defines the classes that make up path expressions (EV and
 /// Predicate) as well as Path Expression visitors.

@@ -68,10 +68,12 @@ public:
     return os << er.ident;
   }
 
-  int ident;
+  int getIdent() const {return ident;}
 
 private:
   explicit inline ElementRef(int ident) : ident(ident) {}
+
+  int ident;
 
   friend class Set;
   friend class FieldRefBase;

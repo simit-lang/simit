@@ -5,8 +5,7 @@ namespace simit {
 namespace interfaces {
 
 /// Interface for classes that can be compared to each other. Classes that
-/// implement this interfaces must define == to get == and !=, and < to get
-/// <, >, <=, >=.
+/// implement this interfaces must define == and <, to get !=, >, <=, >=.
 template <class T>
 class Comparable {};
 
