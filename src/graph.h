@@ -283,7 +283,9 @@ public:
 
       Iterator(const Set *set, ElementRef elem, int endpointN=0)
           : curElem(elem), retElem(-1), endpointNum(endpointN), set(set) {
-        retElem = set->getEndpoint(curElem, endpointNum);
+        if (set->getCardinality() > 0) {
+          retElem = set->getEndpoint(curElem, endpointNum);
+        }
       }
       Iterator(const Iterator& other)
           : curElem(other.curElem), retElem(other.retElem),
