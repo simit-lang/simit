@@ -23,16 +23,19 @@ TEST(PathIndex, EV) {
   PathIndexBuilder builder;
   PathIndex index = builder.buildCSR(ev, 0, {{e, E}, {v, V}});
 
-  std::cout << index << std::endl;
-
   ASSERT_EQ(4u, index.numElements());
   ASSERT_EQ(4u*2, index.numNeighbors());
 
   std::vector<int> expectedElements = {0, 1, 2, 3};
-  std::vector<std::pair<int,int>> expectedNeighbors = {{0, 1}, {1, 2}, {2, 3}, {3, 4}};
+  std::vector<std::vector<int>> expectedNeighbors = {{0, 1}, {1, 2}, {2, 3}, {3, 4}};
   int i = 0;
   for (auto &e : index) {
-    ASSERT_EQ(expectedElements[i++], e.getIdent());
-    
+    ASSERT_EQ(expectedElements[i], e.getIdent());
+    ASSERT_EQ(2u, index.numNeighbors(e));
+    int j = 0;
+    for (auto &n : index.neighbors(e)) {
+      ASSERT_EQ(expectedNeighbors[i][j++], n.getIdent());
+    }
+    ++i;
   }
 }

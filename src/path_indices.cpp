@@ -31,7 +31,7 @@ unsigned SetEndpointPathIndex::numElements() const {
 }
 
 unsigned SetEndpointPathIndex::numNeighbors(const ElementRef &elem) const {
-
+  return edgeSet.getCardinality();
 }
 
 unsigned SetEndpointPathIndex::numNeighbors() const {
@@ -42,16 +42,15 @@ class SetEndpointElementIterator : public PathIndexImpl::ElementIterator::Base {
 public:
   SetEndpointElementIterator(const Set::ElementIterator &setElemIterator)
       : setElemIterator(setElemIterator) {}
-  ~SetEndpointElementIterator() {}
 
   void operator++() {++setElemIterator;}
   ElementRef& operator*() {return *setElemIterator;}
-
   Base* clone() const {return new SetEndpointElementIterator(*this);}
 
 protected:
   bool equal(const Base& o) const {
-    const SetEndpointElementIterator *other = static_cast<const SetEndpointElementIterator*>(&o);
+    const SetEndpointElementIterator *other =
+        static_cast<const SetEndpointElementIterator*>(&o);
     return setElemIterator == other->setElemIterator;
   }
 
@@ -69,10 +68,46 @@ SetEndpointPathIndex::ElementIterator SetEndpointPathIndex::end() const {
 
 SetEndpointPathIndex::Neighbors
 SetEndpointPathIndex::neighbors(const ElementRef &elem) const {
+  class SetEndpointNeighbors : public PathIndexImpl::Neighbors::Base {
+    class Iterator : public PathIndexImpl::Neighbors::Iterator::Base {
+    public:
+      Iterator(const Set::Endpoints::Iterator &epit) : epit(epit) {}
+
+      void operator++() {++epit;}
+      ElementRef& operator*() {return *epit;}
+      Base* clone() const {return new Iterator(*this);}
+
+    protected:
+      bool equal(const Base& o) const {
+        const Iterator *other = static_cast<const Iterator*>(&o);
+        return epit == other->epit;
+      }
+
+    private:
+      Set::Endpoints::Iterator epit;
+    };
+
+  public:
+    SetEndpointNeighbors(const Set::Endpoints &endpoints)
+        : endpoints(endpoints) {}
+    Neighbors::Iterator begin() const {return new Iterator(endpoints.begin());}
+    Neighbors::Iterator end() const {return new Iterator(endpoints.end());}
+
+  private:
+    Set::Endpoints endpoints;
+  };
+
+  return new SetEndpointNeighbors(edgeSet.getEndpoints(elem));
 }
 
 void SetEndpointPathIndex::print(std::ostream &os) const {
   os << "SetEndpointPathIndex";
+  for (auto &e : *this) {
+    os << "\n" << e << ": ";
+    for (auto &ep : neighbors(e)) {
+      os << ep << " ";
+    }
+  }
 }
 
 // class SegmentedPathIndex

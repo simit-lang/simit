@@ -38,23 +38,75 @@ public:
     ElementIterator(Base *impl) : impl(impl) {}
     ElementIterator(const ElementIterator& o) : impl(o.impl->clone()) {}
     ~ElementIterator() { delete impl; }
-
     ElementIterator& operator=(const ElementIterator& o) {
       if (impl != o.impl) { delete impl; impl = o.impl->clone(); }
       return *this;
     }
-    ElementIterator& operator++() { ++(*impl); return *this; }
-    ElementRef& operator*() const { return *(*impl); }
-    bool  operator==(const ElementIterator& o) const {
+
+    ElementIterator& operator++() {++(*impl); return *this;}
+    ElementRef& operator*() const {return *(*impl);}
+    bool operator==(const ElementIterator& o) const {
       return (impl == o.impl) || (*impl == *o.impl);
     }
-    bool  operator!=(const ElementIterator& o) const { return !(*this == o); }
+    bool operator!=(const ElementIterator& o) const {return !(*this == o);}
 
   private:
     Base *impl;
   };
 
-  typedef void Neighbors; // TODO
+  class Neighbors {
+  public:
+    class Iterator {
+    public:
+      class Base {
+      public:
+        Base() {}
+        virtual ~Base() {}
+        virtual void operator++() = 0;
+        virtual ElementRef& operator*() = 0;
+        virtual Base* clone() const = 0;
+        bool operator==(const Base& o) const {
+          return typeid(*this) == typeid(o) && equal(o);
+        }
+      protected:
+        virtual bool equal(const Base& o) const = 0;
+      };
+
+    Iterator() : impl(nullptr) {}
+    Iterator(Base *impl) : impl(impl) {}
+    Iterator(const Iterator& o) : impl(o.impl->clone()) {}
+    ~Iterator() {delete impl;}
+    Iterator& operator=(const Iterator& o) {
+      if (impl != o.impl) { delete impl; impl = o.impl->clone(); }
+      return *this;
+    }
+
+    Iterator& operator++() {++(*impl); return *this;}
+    ElementRef& operator*() const {return *(*impl);}
+    bool operator==(const Iterator& o) const {
+      return (impl == o.impl) || (*impl == *o.impl);
+    }
+    bool operator!=(const Iterator& o) const {return !(*this == o);}
+      
+    private:
+      Base *impl;
+    };
+
+    class Base {
+    public:
+      virtual Iterator begin() const = 0;
+      virtual Iterator end() const = 0;
+    };
+
+    Neighbors() : impl(nullptr) {}
+    Neighbors(Base *impl) : impl(impl) {}
+
+    Iterator begin() const {return impl->begin();}
+    Iterator end() const {return impl->end();}
+
+  private:
+    Base *impl;
+  };
 
   virtual ~PathIndexImpl() {}
 
@@ -67,6 +119,7 @@ public:
 
   virtual Neighbors neighbors(const ElementRef &elem) const = 0;
 
+private:
   mutable long ref = 0;
   friend inline void aquire(PathIndexImpl *p) {++p->ref;}
   friend inline void release(PathIndexImpl *p) {if (--p->ref==0) delete p;}
@@ -108,6 +161,7 @@ private:
 
 /// In a PartitionedPathIndex each element has a fixed number of neighbors.
 //class PartitionedPathIndex : public PathIndexImpl {};
+
 
 /// A SetEndpointPathIndex uses a Set's endpoint list to find path neighbors.
 class SetEndpointPathIndex : public PathIndexImpl {
