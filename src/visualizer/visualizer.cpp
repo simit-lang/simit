@@ -622,11 +622,10 @@ void bindEdgesData(Set &edges, FieldRef<double,3> coordField,
   heldReferences.push(data);
   int index = 0;
   for (auto elem = edges.begin(); elem != edges.end(); ++elem) {
-    for (auto endPoint = edges.endpoints_begin(*elem);
-         endPoint != edges.endpoints_end(*elem); endPoint++) {
+    for (auto &endPoint : edges.getEndpoints(*elem)) {
       iassert(index < (edges.getSize() * 2 * 3))
           << "Too many edges in set edge info.";
-      TensorRef<double,3> point = coordField.get(*endPoint);
+      TensorRef<double,3> point = coordField.get(endPoint);
       data[index] = point(0);
       data[index+1] = point(1);
       data[index+2] = point(2);
@@ -668,11 +667,10 @@ void bindFacesData(Set &faces, FieldRef<double,3> coordField,
 
   int index = 0;
   for (auto elem = faces.begin(); elem != faces.end(); ++elem) {
-    for (auto endPoint = faces.endpoints_begin(*elem);
-         endPoint != faces.endpoints_end(*elem); endPoint++) {
+    for (auto &endPoint : faces.getEndpoints(*elem)) {
       iassert(index < (faces.getSize() * 3 * 3))
           << "Too many faces in set edge info.";
-      TensorRef<double,3> point = coordField.get(*endPoint);
+      TensorRef<double,3> point = coordField.get(endPoint);
       posData[index] = point(0);
       posData[index+1] = point(1);
       posData[index+2] = point(2);

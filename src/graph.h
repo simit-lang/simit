@@ -270,89 +270,93 @@ public:
     return ElementRef(endpoints[edge.ident*cardinality+endpointNum]);
   }
   
-  /// Iterator that iterates over the endpoints of an edge
-  class EndpointIterator {
+  class Endpoints {
   public:
-    // some typedefs to make interop with std easier
-    typedef std::input_iterator_tag iterator_category;
-    typedef ElementRef value_type;
-    typedef ptrdiff_t difference_type;
-    typedef ElementRef& reference;
-    typedef ElementRef* pointer;
+    /// Iterator that iterates over the endpoints of an edge
+    class Iterator {
+    public:
+      typedef std::input_iterator_tag iterator_category;
+      typedef ElementRef value_type;
+      typedef ptrdiff_t difference_type;
+      typedef ElementRef& reference;
+      typedef ElementRef* pointer;
 
-    EndpointIterator(const Set *set, ElementRef elem, int endpointN=0) :
-    curElem(elem), retElem(-1), endpointNum(endpointN), set(set) {
-      retElem = set->getEndpoint(curElem, endpointNum);
+      Iterator(const Set *set, ElementRef elem, int endpointN=0)
+          : curElem(elem), retElem(-1), endpointNum(endpointN), set(set) {
+        retElem = set->getEndpoint(curElem, endpointNum);
+      }
+      Iterator(const Iterator& other)
+          : curElem(other.curElem), retElem(other.retElem),
+            endpointNum(other.endpointNum), set(other.set) { }
+
+      reference operator*() {return retElem;}
+      pointer operator->() {return &retElem;}
+
+      Iterator& operator++() {
+        const int cardinality = set->getCardinality();
+        endpointNum++;
+        if (endpointNum > set->cardinality-1)
+          retElem.ident = -1;   // return invalid element
+        else
+          retElem.ident = set->endpoints[curElem.ident*cardinality+endpointNum];
+        return *this;
+      }
+
+      Iterator operator++(int) {
+        const int cardinality = set->getCardinality();
+        endpointNum++;
+        if (endpointNum > cardinality-1)
+          retElem.ident = -1;   // return invalid element
+        else
+          retElem.ident = set->endpoints[curElem.ident*cardinality+endpointNum];
+        return *this;
+      }
+
+      friend bool operator!=(const Iterator &it1, const Iterator &it2) {
+        return !(it1.set == it2.set) ||
+               !(it1.curElem.ident == it2.curElem.ident) ||
+               !(it1.endpointNum == it2.endpointNum);
+      }
+
+      friend bool operator==(const Iterator &it1, const Iterator &it2) {
+        return (it1.set == it2.set) &&
+               (it1.curElem.ident == it2.curElem.ident) &&
+               (it1.endpointNum == it2.endpointNum);
+      }
+
+      friend inline bool operator<(const Iterator &e1,
+                                   const Iterator &e2) {
+        iassert(e1.set == e2.set)
+            << "Comparing Endpoints::Iterators from two different Sets";
+        iassert(e1.curElem.ident == e2.curElem.ident)
+            << "Comparing Endpoints::Iterators over two different edges";
+        return e1.endpointNum < e2.endpointNum;
+      }
+
+    private:
+      ElementRef curElem;  // current element index
+      ElementRef retElem;  // element we're returning
+      int endpointNum;     // the current endpoint number
+      const Set *set;      // set we're iterating over
+    };
+
+    Endpoints(const Set *set, ElementRef edge) : set(set), edge(edge) {}
+
+    Iterator begin() const {
+      return Iterator(set, edge, 0);
     }
-    EndpointIterator(const EndpointIterator& other) : curElem(other.curElem),
-    retElem(other.retElem), endpointNum(other.endpointNum), set(other.set) { }
 
-    reference operator*() {
-      return retElem;
-    }
-
-    pointer operator->()  {
-      return &retElem;
-    }
-
-    EndpointIterator& operator++() {
-      const int cardinality = set->getCardinality();
-      endpointNum++;
-      if (endpointNum > set->cardinality-1)
-        retElem.ident = -1;   // return invalid element
-      else
-        retElem.ident = set->endpoints[curElem.ident*cardinality+endpointNum];
-      return *this;
-    }
-
-    EndpointIterator operator++(int) {
-      const int cardinality = set->getCardinality();
-      endpointNum++;
-      if (endpointNum > cardinality-1)
-        retElem.ident = -1;   // return invalid element
-      else
-        retElem.ident = set->endpoints[curElem.ident*cardinality+endpointNum];
-      return *this;
-    }
-
-    bool operator!=(const EndpointIterator& other) {
-      return !(set==other.set) || !(curElem.ident == other.curElem.ident) ||
-      !(endpointNum==other.endpointNum);
-    }
-
-    bool operator==(const EndpointIterator& other) {
-      return (set==other.set) && (curElem.ident == other.curElem.ident) &&
-      (endpointNum==other.endpointNum);
-    }
-
-    bool lessThan(const EndpointIterator &other) const {
-      iassert(this->set == other.set)
-          << "Comparing EndpointIterators from two different Sets";
-      iassert(this->curElem.ident == other.curElem.ident)
-          << "Comparing EndpointIterators over two different edges";
-      return this->endpointNum < other.endpointNum;
-    }
-
-    friend inline bool operator<(const EndpointIterator &e1,
-                                 const EndpointIterator &e2) {
-      return e1.lessThan(e2);
+    Iterator end() const {
+      return Iterator(set, edge, set->getCardinality());
     }
 
   private:
-    ElementRef curElem;     // current element index
-    ElementRef retElem;     // element we're returning
-    int endpointNum;        // the current endpoint number
-    const Set *set;     // set we're iterating over
+    const Set *set;
+    ElementRef edge;
   };
-  
-  /// Start iterator for endpoints of an edge
-  EndpointIterator endpoints_begin(ElementRef edge) {
-    return EndpointIterator(this, edge, 0);
-  }
-  
-  /// End iterator for endpoints of an edge
-  EndpointIterator endpoints_end(ElementRef edge) {
-    return EndpointIterator(this, edge, cardinality);
+
+  Endpoints getEndpoints(ElementRef edge) const {
+    return Endpoints(this, edge);
   }
 
   void *getFieldData(const std::string &fieldName) {

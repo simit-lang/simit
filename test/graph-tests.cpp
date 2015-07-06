@@ -271,18 +271,17 @@ TEST(EdgeSet, EdgeIteratorTest) {
   Set edges(points, points, points, points);
 
   ElementRef e1 = edges.add(p0, p1, p3, p2);
-  
-   int count=0;
-  for (auto iter=edges.endpoints_begin(e1);
-       iter < edges.endpoints_end(e1);
-       iter++) {
-    if (count==0)
-      SIMIT_ASSERT_FLOAT_EQ(x.get(*iter), 1.1);
-    if (count==1)
-      SIMIT_ASSERT_FLOAT_EQ(x.get(*iter), 3.1);
+  int count=0;
+  for (auto &ep : edges.getEndpoints(e1)) {
+    if (count==0) {
+      SIMIT_ASSERT_FLOAT_EQ(x.get(ep), 1.1);
+    }
+    if (count==1) {
+      SIMIT_ASSERT_FLOAT_EQ(x.get(ep), 3.1);
+    }
     count++;
   }
-  
+
   ASSERT_EQ(count, 4);
 }
 
