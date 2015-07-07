@@ -32,6 +32,10 @@ class GPUFunction;
 #endif
 }
 
+namespace pe {
+class SetEndpointPathIndex;
+}
+
 /// A Simit element reference.  All Simit elements live in Simit sets and an
 /// ElementRef provides a reference to an element.
 class ElementRef {
@@ -80,6 +84,7 @@ private:
   friend class internal::VertexToEdgeEndpointIndex;
   friend class internal::VertexToEdgeIndex;
   friend class internal::NeighborIndex;
+  friend class pe::SetEndpointPathIndex;
 };
 
 
@@ -196,15 +201,13 @@ public:
     typedef std::input_iterator_tag iterator_category;
     typedef ElementRef value_type;
     typedef ptrdiff_t difference_type;
-    typedef ElementRef& reference;
-    typedef ElementRef* pointer;
 
     ElementIterator(const Set* set, int idx=0) : curElem(idx), set(set) { }
     ElementIterator(const ElementIterator& other) : curElem(other.curElem),
                                                     set(other.set) {}
 
-    reference operator*() {return curElem;}
-    pointer operator->() {return &curElem;}
+    const ElementRef& operator*() const {return curElem;}
+    const ElementRef* operator->() const {return &curElem;}
 
     ElementIterator& operator++() {
       curElem.ident++;
@@ -278,8 +281,6 @@ public:
       typedef std::input_iterator_tag iterator_category;
       typedef ElementRef value_type;
       typedef ptrdiff_t difference_type;
-      typedef ElementRef& reference;
-      typedef ElementRef* pointer;
 
       Iterator(const Set *set, ElementRef elem, int endpointN=0)
           : curElem(elem), retElem(-1), endpointNum(endpointN), set(set) {
@@ -291,8 +292,8 @@ public:
           : curElem(other.curElem), retElem(other.retElem),
             endpointNum(other.endpointNum), set(other.set) { }
 
-      reference operator*() {return retElem;}
-      pointer operator->() {return &retElem;}
+      const ElementRef& operator*() const {return retElem;}
+      const ElementRef* operator->() const {return &retElem;}
 
       Iterator& operator++() {
         const int cardinality = set->getCardinality();

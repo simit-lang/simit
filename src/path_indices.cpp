@@ -30,7 +30,7 @@ unsigned SetEndpointPathIndex::numElements() const {
     return edgeSet.getSize();
 }
 
-unsigned SetEndpointPathIndex::numNeighbors(const ElementRef &elem) const {
+unsigned SetEndpointPathIndex::numNeighbors(unsigned elemID) const {
   return edgeSet.getCardinality();
 }
 
@@ -38,43 +38,15 @@ unsigned SetEndpointPathIndex::numNeighbors() const {
   return numElements() * edgeSet.getCardinality();
 }
 
-class SetEndpointElementIterator : public PathIndexImpl::ElementIterator::Base {
-public:
-  SetEndpointElementIterator(const Set::ElementIterator &setElemIterator)
-      : setElemIterator(setElemIterator) {}
-
-  void operator++() {++setElemIterator;}
-  ElementRef& operator*() {return *setElemIterator;}
-  Base* clone() const {return new SetEndpointElementIterator(*this);}
-
-protected:
-  bool equal(const Base& o) const {
-    const SetEndpointElementIterator *other =
-        static_cast<const SetEndpointElementIterator*>(&o);
-    return setElemIterator == other->setElemIterator;
-  }
-
-private:
-  Set::ElementIterator setElemIterator;
-};
-
-SetEndpointPathIndex::ElementIterator SetEndpointPathIndex::begin() const {
-  return new SetEndpointElementIterator(edgeSet.begin());
-}
-
-SetEndpointPathIndex::ElementIterator SetEndpointPathIndex::end() const {
-  return new SetEndpointElementIterator(edgeSet.end());
-}
-
 SetEndpointPathIndex::Neighbors
-SetEndpointPathIndex::neighbors(const ElementRef &elem) const {
+SetEndpointPathIndex::neighbors(unsigned elemID) const {
   class SetEndpointNeighbors : public PathIndexImpl::Neighbors::Base {
     class Iterator : public PathIndexImpl::Neighbors::Iterator::Base {
     public:
       Iterator(const Set::Endpoints::Iterator &epit) : epit(epit) {}
 
       void operator++() {++epit;}
-      ElementRef& operator*() {return *epit;}
+      unsigned operator*() const {return epit->getIdent();}
       Base* clone() const {return new Iterator(*this);}
 
     protected:
@@ -97,28 +69,22 @@ SetEndpointPathIndex::neighbors(const ElementRef &elem) const {
     Set::Endpoints endpoints;
   };
 
-  return new SetEndpointNeighbors(edgeSet.getEndpoints(elem));
+  return new SetEndpointNeighbors(edgeSet.getEndpoints(ElementRef(elemID)));
 }
 
 void SetEndpointPathIndex::print(std::ostream &os) const {
   os << "SetEndpointPathIndex:";
   for (auto &e : *this) {
     os << "\n" << "  " << e << ": ";
-    for (auto &ep : neighbors(e)) {
+    for (auto ep : neighbors(e)) {
       os << ep << " ";
     }
   }
 }
 
 // class SegmentedPathIndex
-SegmentedPathIndex::ElementIterator SegmentedPathIndex::begin() const {
-}
-
-SegmentedPathIndex::ElementIterator SegmentedPathIndex::end() const {
-}
-
 SegmentedPathIndex::Neighbors
-SegmentedPathIndex::neighbors(const ElementRef &elem) const {
+SegmentedPathIndex::neighbors(unsigned elemID) const {
 }
 
 void SegmentedPathIndex::print(std::ostream &os) const {
@@ -169,10 +135,12 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     void visit(const VE *ve) {
       const Set &edgeSet = bindings.at(ve->getPathEndpoint(1));
       iassert(edgeSet.getCardinality() > 0) << "not an edge set";
-      std::map<ElementRef,std::vector<ElementRef>> neighbors;
+      std::map<unsigned,std::vector<unsigned>> neighbors;
       for (auto &e : edgeSet) {
+        iassert(e.getIdent() >= 0);
         for (auto &ep : edgeSet.getEndpoints(e)) {
-          neighbors[ep].push_back(e);
+          iassert(ep.getIdent() >= 0);
+          neighbors[ep.getIdent()].push_back(e.getIdent());
         }
       }
 
@@ -188,7 +156,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       int currElem = 0;
       int currNbrsStart = 0;
       for (auto &p : neighbors) {
-        nbrsStart[p.first.getIdent()] = currNbrsStart;
+        nbrsStart[p.first] = currNbrsStart;
         memcpy(&nbrs[currNbrsStart], p.second.data(),
                p.second.size() * sizeof(unsigned));
         currElem += 1;

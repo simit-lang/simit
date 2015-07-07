@@ -13,16 +13,16 @@ using namespace simit::pe;
 using namespace std;
 
 #define VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs) \
-do {                                                                      \
-  int i = 0;                                                              \
-  for (auto &e : index) {                                                 \
-    ASSERT_EQ(expectedNumNbrs[i], index.numNeighbors(e));                 \
-    int j = 0;                                                            \
-    for (auto &n : index.neighbors(e)) {                                  \
-      ASSERT_EQ(expectedNbrs[i][j++], (unsigned)n.getIdent());            \
-    }                                                                     \
-    ++i;                                                                  \
-  }                                                                       \
+do {                                                       \
+  int i = 0;                                               \
+  for (auto e : index) {                                   \
+    ASSERT_EQ(expectedNumNbrs[i], index.numNeighbors(e));  \
+    int j = 0;                                             \
+    for (auto n : index.neighbors(e)) {                    \
+      ASSERT_EQ(expectedNbrs[i][j++], n);                  \
+    }                                                      \
+    ++i;                                                   \
+  }                                                        \
 } while(0)
 
 TEST(PathIndex, EV) {

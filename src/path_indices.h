@@ -20,38 +20,24 @@ class PathIndexImpl : public interfaces::Printable {
 public:
   class ElementIterator {
   public:
-    class Base {
-    public:
-      Base() {}
-      virtual ~Base() {}
-      virtual void operator++() = 0;
-      virtual ElementRef& operator*() = 0;
-      virtual Base* clone() const = 0;
-      bool operator==(const Base& o) const {
-        return typeid(*this) == typeid(o) && equal(o);
-      }
-    protected:
-      virtual bool equal(const Base& o) const = 0;
-    };
+    ElementIterator(unsigned currElem) : currElem(currElem) {}
+    ElementIterator(const ElementIterator& it) : currElem(it.currElem) {}
+    ElementIterator& operator++() {++currElem; return *this;}
 
-    ElementIterator() : impl(nullptr) {}
-    ElementIterator(Base *impl) : impl(impl) {}
-    ElementIterator(const ElementIterator& o) : impl(o.impl->clone()) {}
-    ~ElementIterator() { delete impl; }
-    ElementIterator& operator=(const ElementIterator& o) {
-      if (impl != o.impl) { delete impl; impl = o.impl->clone(); }
-      return *this;
+    friend bool operator==(const ElementIterator& lhs,
+                           const ElementIterator& rhs) {
+      return lhs.currElem == rhs.currElem;
     }
 
-    ElementIterator& operator++() {++(*impl); return *this;}
-    ElementRef& operator*() const {return *(*impl);}
-    bool operator==(const ElementIterator& o) const {
-      return (impl == o.impl) || (*impl == *o.impl);
+    friend bool operator!=(const ElementIterator& lhs,
+                           const ElementIterator& rhs) {
+      return lhs.currElem != rhs.currElem;
     }
-    bool operator!=(const ElementIterator& o) const {return !(*this == o);}
+
+    const unsigned& operator*() const {return currElem;}
 
   private:
-    Base *impl;
+    unsigned currElem;
   };
 
   class Neighbors {
@@ -63,7 +49,7 @@ public:
         Base() {}
         virtual ~Base() {}
         virtual void operator++() = 0;
-        virtual ElementRef& operator*() = 0;
+        virtual unsigned operator*() const = 0;
         virtual Base* clone() const = 0;
         bool operator==(const Base& o) const {
           return typeid(*this) == typeid(o) && equal(o);
@@ -82,7 +68,7 @@ public:
     }
 
     Iterator& operator++() {++(*impl); return *this;}
-    ElementRef& operator*() const {return *(*impl);}
+    unsigned operator*() const {return *(*impl);}
     bool operator==(const Iterator& o) const {
       return (impl == o.impl) || (*impl == *o.impl);
     }
@@ -111,13 +97,13 @@ public:
   virtual ~PathIndexImpl() {}
 
   virtual unsigned numElements() const = 0;
-  virtual unsigned numNeighbors(const ElementRef &elem) const = 0;
+  virtual unsigned numNeighbors(unsigned elemID) const = 0;
   virtual unsigned numNeighbors() const = 0;
 
-  virtual ElementIterator begin() const = 0;
-  virtual ElementIterator end() const = 0;
+  ElementIterator begin() const {return ElementIterator(0);}
+  ElementIterator end() const {return ElementIterator(numElements());}
 
-  virtual Neighbors neighbors(const ElementRef &elem) const = 0;
+  virtual Neighbors neighbors(unsigned elemID) const = 0;
 
 private:
   mutable long ref = 0;
@@ -138,8 +124,8 @@ public:
   unsigned numElements() const {return ptr->numElements();}
 
   /// The number of path neighbors of `elem`.
-  unsigned numNeighbors(const ElementRef &elem) const {
-    return ptr->numNeighbors(elem);
+  unsigned numNeighbors(unsigned elemID) const {
+    return ptr->numNeighbors(elemID);
   }
 
   /// The sum of number of neighbors of each element covered by this path index.
@@ -150,8 +136,8 @@ public:
   ElementIterator end() const {return ptr->end();}
 
   /// Get the neighbors of `elem` through this path index.
-  Neighbors neighbors(const ElementRef &elem) const {
-    return ptr->neighbors(elem);
+  Neighbors neighbors(unsigned elemID) const {
+    return ptr->neighbors(elemID);
   }
 
   friend std::ostream &operator<<(std::ostream&, const PathIndex&);
@@ -170,13 +156,10 @@ private:
 class SetEndpointPathIndex : public PathIndexImpl {
 public:
   unsigned numElements() const;
-  unsigned numNeighbors(const ElementRef &elem) const;
+  unsigned numNeighbors(unsigned elemID) const;
   unsigned numNeighbors() const;
 
-  ElementIterator begin() const;
-  ElementIterator end() const;
-
-  Neighbors neighbors(const ElementRef &elem) const;
+  Neighbors neighbors(unsigned elemID) const;
 
 private:
   const Set &edgeSet;
@@ -199,19 +182,16 @@ public:
 
   unsigned numElements() const {return numElems;}
 
+  unsigned numNeighbors(unsigned elemID) const {
+    iassert(numElems > elemID);
+    return nbrsStart[elemID];
+  }
+
   unsigned numNeighbors() const {
     return nbrsStart[numElems];
   }
 
-  unsigned numNeighbors(const ElementRef &elem) const {
-    iassert(elem.getIdent() >= 0 && numElems > (unsigned)elem.getIdent());
-    return nbrsStart[elem.getIdent()];
-  }
-
-  ElementIterator begin() const;
-  ElementIterator end() const;
-
-  Neighbors neighbors(const ElementRef &elem) const;
+  Neighbors neighbors(unsigned elemID) const;
 
 private:
   /// Segmented vector, where `nbrsStart[i]:nbrsStart[i+1]` is the range of
