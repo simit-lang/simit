@@ -132,6 +132,8 @@ public:
   typedef PathIndexImpl::ElementIterator ElementIterator;
   typedef PathIndexImpl::Neighbors Neighbors;
 
+  PathIndex() : IntrusivePtr(nullptr) {}
+
   /// The number of elements that this path index maps to their neighbors.
   unsigned numElements() const {return ptr->numElements();}
 
@@ -158,6 +160,7 @@ private:
   PathIndex(PathIndexImpl *impl) : IntrusivePtr(impl) {}
   friend PathIndexBuilder;
 };
+
 
 /// In a PartitionedPathIndex each element has a fixed number of neighbors.
 //class PartitionedPathIndex : public PathIndexImpl {};
@@ -189,9 +192,21 @@ private:
 /// segmented vector with no holes (i.e. a packed index).
 class SegmentedPathIndex : public PathIndexImpl {
 public:
-  unsigned numElements() const;
-  unsigned numNeighbors(const ElementRef &elem) const;
-  unsigned numNeighbors() const;
+  ~SegmentedPathIndex() {
+    if (nbrsStart != nullptr) delete nbrsStart;
+    if (nbrs != nullptr) delete nbrs;
+  }
+
+  unsigned numElements() const {return numElems;}
+
+  unsigned numNeighbors() const {
+    return nbrsStart[numElems];
+  }
+
+  unsigned numNeighbors(const ElementRef &elem) const {
+    iassert(elem.getIdent() >= 0 && numElems > (unsigned)elem.getIdent());
+    return nbrsStart[elem.getIdent()];
+  }
 
   ElementIterator begin() const;
   ElementIterator end() const;
@@ -201,13 +216,21 @@ public:
 private:
   /// Segmented vector, where `nbrsStart[i]:nbrsStart[i+1]` is the range of
   /// locations of neighbors of `i` in `nbrs`.
-  std::vector<unsigned> nbrsStart;
-  std::vector<unsigned> nbrs;
+  unsigned numElems;
+  unsigned *nbrsStart;
+  unsigned *nbrs;
 
   void print(std::ostream &os) const;
 
   friend PathIndexBuilder;
-  SegmentedPathIndex();
+
+  SegmentedPathIndex(unsigned numElements, unsigned *nbrsStart, unsigned *nbrs)
+      : numElems(numElements), nbrsStart(nbrsStart), nbrs(nbrs) {}
+
+  SegmentedPathIndex() : numElems(0), nbrsStart(nullptr), nbrs(nullptr) {
+    nbrsStart = new unsigned[1];
+    nbrsStart[0] = 0;
+  }
 };
 
 
@@ -219,9 +242,9 @@ class PathIndexBuilder {
 public:
   PathIndexBuilder() {}
 
-  // Build a CSR path index by evaluating the `pe` over the given graph.
-  PathIndex buildCSR(const PathExpression &pe, unsigned sourceEndpoint,
-                     std::map<ElementVar,const Set&> bindings);
+  // Build a Segmented path index by evaluating the `pe` over the given graph.
+  PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint,
+                           std::map<ElementVar,const Set&> bindings);
 
 private:
   std::map<PathExpression,PathIndex> pathIndices;

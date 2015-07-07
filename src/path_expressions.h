@@ -74,9 +74,10 @@ public:
 std::ostream &operator<<(std::ostream&, const PathExpression&);
 
 
+/// EV are path expression atoms, that connect an edge to its endpoints
 class EV : public PathExpressionImpl {
 public:
-  static PathExpression make(ElementVar E, ElementVar V, unsigned edgeEndpoint);
+  static PathExpression make(ElementVar E, ElementVar V);
 
   ElementVar getPathEndpoint(unsigned pathEndpoint) const;
   void accept(PathExpressionVisitor *visitor) const;
@@ -84,9 +85,26 @@ public:
 private:
   ElementVar E;
   ElementVar V;
-  unsigned edgeEndpoint;
 
-  EV(ElementVar E, ElementVar V, unsigned edgeEndpoint);
+  EV(ElementVar E, ElementVar V);
+  void print(std::ostream &os) const;
+};
+
+
+/// VE at path expression atoms, that connect an element to the edges it is an
+/// endpoint of.
+class VE : public PathExpressionImpl {
+public:
+  static PathExpression make(ElementVar V, ElementVar E);
+
+  ElementVar getPathEndpoint(unsigned pathEndpoint) const;
+  void accept(PathExpressionVisitor *visitor) const;
+
+private:
+  ElementVar V;
+  ElementVar E;
+
+  VE(ElementVar V, ElementVar E);
   void print(std::ostream &os) const;
 };
 
@@ -105,8 +123,9 @@ private:
 
 class PathExpressionVisitor {
 public:
-  virtual void visit(const EV *) {};
-  virtual void visit(const Predicate *) {};
+  virtual void visit(const EV *) {}
+  virtual void visit(const VE *) {}
+  virtual void visit(const Predicate *) {}
 };
 
 }}

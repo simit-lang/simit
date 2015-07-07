@@ -101,9 +101,9 @@ SetEndpointPathIndex::neighbors(const ElementRef &elem) const {
 }
 
 void SetEndpointPathIndex::print(std::ostream &os) const {
-  os << "SetEndpointPathIndex";
+  os << "SetEndpointPathIndex:";
   for (auto &e : *this) {
-    os << "\n" << e << ": ";
+    os << "\n" << "  " << e << ": ";
     for (auto &ep : neighbors(e)) {
       os << ep << " ";
     }
@@ -111,23 +111,6 @@ void SetEndpointPathIndex::print(std::ostream &os) const {
 }
 
 // class SegmentedPathIndex
-SegmentedPathIndex::SegmentedPathIndex() {
-  nbrsStart.push_back(0);
-}
-
-unsigned SegmentedPathIndex::numElements() const {
-  iassert(nbrsStart.size() > 0);
-  return nbrsStart.size() - 1;
-}
-
-unsigned SegmentedPathIndex::numNeighbors(const ElementRef &elem) const {
-  iassert(elem.getIdent() >= 0 && nbrsStart.size() > (unsigned)elem.getIdent());
-  return nbrsStart[elem.getIdent()];
-}
-
-unsigned SegmentedPathIndex::numNeighbors() const {
-}
-
 SegmentedPathIndex::ElementIterator SegmentedPathIndex::begin() const {
 }
 
@@ -139,47 +122,92 @@ SegmentedPathIndex::neighbors(const ElementRef &elem) const {
 }
 
 void SegmentedPathIndex::print(std::ostream &os) const {
-  os << "SegmentedPathIndex";
-//  for (auto &<#item#> : <#collection#>) {<#body#>}
+  os << "SegmentedPathIndex:";
+  std::cout << std::endl;
+  for (size_t i=0; i < numElements()+1; ++i) {
+    std::cout << nbrsStart[i] << " ";
+  }
+  std::cout << std::endl;
+  for (size_t i=0; i < numNeighbors(); ++i) {
+    std::cout << nbrs[i] << " ";
+  }
 }
 
 
 // class PathIndexBuilder
-PathIndex PathIndexBuilder::buildCSR(const PathExpression &pe,
+PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
                                      unsigned sourceEndpoint,
                                      std::map<ElementVar,const Set&> bindings) {
   // Check if we have memoized the path index for this path expression, starting
   // at this sourceEndpoint, bound to these sets.
   // TODO
 
-  // If it is an EV path expression we return an EndpointPathIndex, that wraps
-  // the Edge set.
-  if (dynamic_cast<EV*>(pe.ptr) != nullptr) {
-    EV *ev = dynamic_cast<EV*>(pe.ptr);
-    const Set &edgeSet = bindings[ev->getPathEndpoint(0)];
-    return new SetEndpointPathIndex(edgeSet);
-  }
-
-  SegmentedPathIndex *pathIndex = new SegmentedPathIndex();
-
   // Interpret the path expression, starting at sourceEndpoint, over the graph.
-
-  // Given an element, the PathNeighborVisitor finds its neighbors through a
-  // path expression.
+  // That is given an element, the find its neighbors through the paths
+  // described by the path expression.
   class PathNeighborVisitor : public PathExpressionVisitor {
   public:
-//    PathNeighborVisitor(const PathIndexBuilder &builder) {
-//    }
+    PathNeighborVisitor(const std::map<ElementVar,const Set&> &bindings)
+        : bindings(bindings) {}
+
+    PathIndex build(const PathExpression &pe) {
+      pe.accept(this);
+      PathIndex pit = pi;
+      pi = nullptr;
+      return pit;
+    }
+
   private:
+    /// If it is an EV path expression we return an EndpointPathIndex that wraps
+    /// the Edge set.
     void visit(const EV *ev) {
-      std::cout << "Visiting EV" << std::endl;
+      const Set &edgeSet = bindings.at(ev->getPathEndpoint(0));
+      iassert(edgeSet.getCardinality() > 0) << "not an edge set";
+      pi = new SetEndpointPathIndex(edgeSet);
     };
+
+    void visit(const VE *ve) {
+      const Set &edgeSet = bindings.at(ve->getPathEndpoint(1));
+      iassert(edgeSet.getCardinality() > 0) << "not an edge set";
+      std::map<ElementRef,std::vector<ElementRef>> neighbors;
+      for (auto &e : edgeSet) {
+        for (auto &ep : edgeSet.getEndpoints(e)) {
+          neighbors[ep].push_back(e);
+        }
+      }
+
+      unsigned numNeighbors = 0;
+      for (auto &p : neighbors) {
+        numNeighbors += p.second.size();
+      }
+
+      unsigned numElements = neighbors.size();
+      unsigned *nbrsStart = new unsigned[numElements + 1];
+      unsigned *nbrs = new unsigned[numNeighbors];
+
+      int currElem = 0;
+      int currNbrsStart = 0;
+      for (auto &p : neighbors) {
+        nbrsStart[p.first.getIdent()] = currNbrsStart;
+        memcpy(&nbrs[currNbrsStart], p.second.data(),
+               p.second.size() * sizeof(unsigned));
+        currElem += 1;
+        currNbrsStart += p.second.size();
+      }
+      nbrsStart[numElements] = currNbrsStart;
+
+      pi = new SegmentedPathIndex(numElements, nbrsStart, nbrs);
+    }
+
+    void visit(const Predicate *p) {
+      pi = new SegmentedPathIndex();
+    }
+
+    PathIndex pi;
+    const std::map<ElementVar,const Set&> &bindings;
   };
 
-  PathNeighborVisitor visitor;
-  pe.accept(&visitor);
-
-  return pathIndex;
+  return PathNeighborVisitor(bindings).build(pe);
 }
 
 }}

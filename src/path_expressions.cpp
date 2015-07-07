@@ -52,14 +52,11 @@ std::ostream &operator<<(std::ostream& os, const PathExpression& pe) {
 
 
 // class EV
-EV::EV(ElementVar E, ElementVar V, unsigned edgeEndpoint) {
-  this->E = E;
-  this->V = V;
-  this->edgeEndpoint = edgeEndpoint;
+EV::EV(ElementVar E, ElementVar V) : E(E), V(V) {
 }
 
-PathExpression EV::make(ElementVar E, ElementVar V, unsigned edgeEndpoint) {
-  return PathExpression(new EV(E, V, edgeEndpoint));
+PathExpression EV::make(ElementVar E, ElementVar V) {
+  return PathExpression(new EV(E, V));
 }
 
 ElementVar EV::getPathEndpoint(unsigned pathEndpoint) const {
@@ -72,7 +69,29 @@ void EV::accept(PathExpressionVisitor *visitor) const {
 }
 
 void EV::print(std::ostream &os) const {
-  os << "(" << E << ")-" << edgeEndpoint << "-(" << V << ")";
+  os << "(" << E << ")-(" << V << ")";
+}
+
+
+// class VE
+VE::VE(ElementVar V, ElementVar E) : V(V), E(E) {
+}
+
+PathExpression VE::make(ElementVar V, ElementVar E) {
+  return PathExpression(new VE(V, E));
+}
+
+ElementVar VE::getPathEndpoint(unsigned pathEndpoint) const {
+  iassert(pathEndpoint < 2);
+  return (pathEndpoint == 0) ? V : E;
+}
+
+void VE::accept(PathExpressionVisitor *visitor) const {
+  visitor->visit(this);
+}
+
+void VE::print(std::ostream &os) const {
+  os << "(" << V << ")-(" << E << ")";
 }
 
 

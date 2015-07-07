@@ -9,7 +9,7 @@ using namespace simit::pe;
 TEST(PathExpression, EV) {
   ElementVar e = ElementVar("E");
   ElementVar v = ElementVar("V");
-  PathExpression ev = EV::make(e, v, 0);
+  PathExpression ev = EV::make(e, v);
   ASSERT_EQ(ev.getPathEndpoint(0), e);
   ASSERT_EQ(ev.getPathEndpoint(1), v);
 }
