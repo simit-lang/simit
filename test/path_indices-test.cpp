@@ -12,17 +12,20 @@ using namespace simit;
 using namespace simit::pe;
 using namespace std;
 
-#define VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs) \
-do {                                                       \
-  int i = 0;                                               \
-  for (auto e : index) {                                   \
-    ASSERT_EQ(expectedNumNbrs[i], index.numNeighbors(e));  \
-    int j = 0;                                             \
-    for (auto n : index.neighbors(e)) {                    \
-      ASSERT_EQ(expectedNbrs[i][j++], n);                  \
-    }                                                      \
-    ++i;                                                   \
-  }                                                        \
+#define VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs)   \
+do {                                                         \
+  int i = 0;                                                 \
+  for (auto e : index) {                                     \
+    ASSERT_EQ(expectedNumNbrs[i], index.numNeighbors(e));    \
+    int j = 0;                                               \
+    for (auto n : index.neighbors(e)) {                      \
+      ASSERT_EQ(expectedNbrs[i][j], n)                       \
+          << "expects neighbor " << j << " of element " << i \
+          << " to be " << expectedNbrs[i][j];                \
+      ++j;                                                   \
+    }                                                        \
+    ++i;                                                     \
+  }                                                          \
 } while(0)
 
 TEST(PathIndex, EV) {
@@ -62,5 +65,5 @@ TEST(PathIndex, VE) {
 
   vector<unsigned> expectedNumNbrs = {1, 2, 2, 2, 1};
   vector<vector<unsigned>> expectedNbrs={{0}, {0, 1}, {1, 2}, {2, 3}, {3}};
-//  VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
+  VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
 }

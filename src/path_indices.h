@@ -148,10 +148,6 @@ private:
 };
 
 
-/// In a PartitionedPathIndex each element has a fixed number of neighbors.
-//class PartitionedPathIndex : public PathIndexImpl {};
-
-
 /// A SetEndpointPathIndex uses a Set's endpoint list to find path neighbors.
 class SetEndpointPathIndex : public PathIndexImpl {
 public:
@@ -171,8 +167,8 @@ private:
 };
 
 
-/// A SegmentedPathIndex is one in which the path neighbors are packed into a
-/// segmented vector with no holes (i.e. a packed index).
+/// In a SegmentedPathIndex the path neighbors are packed into a segmented
+/// vector with no holes. This is equivalent to CSR indices.
 class SegmentedPathIndex : public PathIndexImpl {
 public:
   ~SegmentedPathIndex() {
@@ -184,7 +180,7 @@ public:
 
   unsigned numNeighbors(unsigned elemID) const {
     iassert(numElems > elemID);
-    return nbrsStart[elemID];
+    return nbrsStart[elemID+1]-nbrsStart[elemID];
   }
 
   unsigned numNeighbors() const {

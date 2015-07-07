@@ -62,6 +62,7 @@ SetEndpointPathIndex::neighbors(unsigned elemID) const {
   public:
     SetEndpointNeighbors(const Set::Endpoints &endpoints)
         : endpoints(endpoints) {}
+
     Neighbors::Iterator begin() const {return new Iterator(endpoints.begin());}
     Neighbors::Iterator end() const {return new Iterator(endpoints.end());}
 
@@ -85,6 +86,41 @@ void SetEndpointPathIndex::print(std::ostream &os) const {
 // class SegmentedPathIndex
 SegmentedPathIndex::Neighbors
 SegmentedPathIndex::neighbors(unsigned elemID) const {
+  class SegmentNeighbors : public PathIndexImpl::Neighbors::Base {
+    class Iterator : public PathIndexImpl::Neighbors::Iterator::Base {
+    public:
+      /// nbrs points to the neighbor segment of the current element.
+      Iterator(unsigned currNbr, const unsigned *nbrs)
+          : currNbr(currNbr), nbrs(nbrs) {}
+
+      void operator++() {++currNbr;}
+      unsigned operator*() const {return nbrs[currNbr];}
+      Base* clone() const {return new Iterator(*this);}
+
+    protected:
+      bool equal(const Base& o) const {
+        const Iterator *other = static_cast<const Iterator*>(&o);
+        return currNbr == other->currNbr;
+      }
+
+    private:
+      unsigned currNbr;
+      const unsigned *nbrs;
+    };
+
+  public:
+    SegmentNeighbors(unsigned numNbrs, const unsigned *nbrs)
+        : numNbrs(numNbrs), nbrs(nbrs) {}
+
+    Neighbors::Iterator begin() const {return new Iterator(0, nbrs);}
+    Neighbors::Iterator end() const {return new Iterator(numNbrs, nbrs);}
+
+  private:
+    unsigned numNbrs;
+    const unsigned *nbrs;
+  };
+
+  return new SegmentNeighbors(numNeighbors(elemID), &nbrs[nbrsStart[elemID]]);
 }
 
 void SegmentedPathIndex::print(std::ostream &os) const {
