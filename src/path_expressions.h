@@ -18,15 +18,15 @@
 /// vertex or edge values by (linearly) combining the values from multiple
 /// vertices or edges in a neighborhood.
 ///
-/// This file defines the classes that make up path expressions (EV and
-/// Predicate) as well as Path Expression visitors.
+/// This file defines the classes that make up path expressions (EV, VE and
+/// Formula) as well as Path Expression visitors.
 
 namespace simit {
 namespace pe {
 class PathExpressionVisitor;
 
 struct VarContent {
-  std::string setName;
+  std::string name;
   mutable long ref = 0;
   friend inline void aquire(VarContent *vc) {++vc->ref;}
   friend inline void release(VarContent *vc) {if (--vc->ref==0) delete vc;}
@@ -35,10 +35,10 @@ struct VarContent {
 class Var : public util::IntrusivePtr<VarContent> {
 public:
   Var();
-  explicit Var(std::string setName);
+  explicit Var(std::string name);
 
   bool defined();
-  std::string getSetName() const;
+  std::string getName() const;
 
   friend std::ostream &operator<<(std::ostream&, const Var&);
 };
@@ -48,7 +48,7 @@ class PathExpressionImpl : public interfaces::Printable {
 public:
   virtual ~PathExpressionImpl() {}
 
-  virtual Var getPathEndpoint(unsigned pathEndpoint) const = 0;
+  virtual Var getPathEndpoint(unsigned i) const = 0;
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
   mutable long ref = 0;
@@ -64,7 +64,7 @@ public:
   PathExpression() : IntrusivePtr() {}
   PathExpression(PathExpressionImpl *impl) : IntrusivePtr(impl) {}
 
-  Var getPathEndpoint(unsigned pathEndpoint) const;
+  Var getPathEndpoint(unsigned i) const;
 
   void accept(PathExpressionVisitor*) const;
 };
@@ -76,7 +76,7 @@ class EV : public PathExpressionImpl {
 public:
   static PathExpression make(Var E, Var V);
 
-  Var getPathEndpoint(unsigned pathEndpoint) const;
+  Var getPathEndpoint(unsigned i) const;
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
@@ -94,7 +94,7 @@ class VE : public PathExpressionImpl {
 public:
   static PathExpression make(Var V, Var E);
 
-  Var getPathEndpoint(unsigned pathEndpoint) const;
+  Var getPathEndpoint(unsigned i) const;
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
@@ -106,23 +106,109 @@ private:
 };
 
 
-class Predicate : public PathExpressionImpl {
+class Formula : public PathExpressionImpl {
 public:
-  Predicate();
+  struct PredicateImpl : public interfaces::Printable {
+    virtual ~PredicateImpl() {}
+    mutable long ref = 0;
+    friend inline void aquire(PredicateImpl *p) {++p->ref;}
+    friend inline void release(PredicateImpl *p) {if (--p->ref==0) delete p;}
+  };
+  struct PathExpr;
 
-  Var getPathEndpoint(unsigned pathEndpoint) const;
+  class Predicate : util::IntrusivePtr<PredicateImpl> {
+  public:
+    Predicate() : util::IntrusivePtr<PredicateImpl>() {}
+    Predicate(PredicateImpl *pred) : util::IntrusivePtr<PredicateImpl>(pred) {}
+    Predicate(PathExpression pathExpr) : Predicate(PathExpr::make(pathExpr)) {}
+
+    friend std::ostream &operator<<(std::ostream &os, const Predicate &p) {
+      return os << *p.ptr;
+    }
+  };
+
+  struct PathExpr : public PredicateImpl {
+    PathExpression pathExpr;
+
+    static Predicate make(const PathExpression &pathExpr) {
+      PathExpr *pred = new PathExpr;
+      pred->pathExpr = pathExpr;
+      return pred;
+    }
+
+    void print(std::ostream &os) const {os << "(" << pathExpr << ")";}
+  };
+
+  struct And : public PredicateImpl {
+    Predicate l, r;
+
+    static Predicate make(const Predicate &l, const Predicate &r) {
+      And *pred = new And;
+      pred->l = l;
+      pred->r = r;
+      return pred;
+    }
+
+    void print(std::ostream &os) const {
+      os << "(" << l << " \u2227 " << r << ")";
+    }
+  };
+
+  struct Or : public PredicateImpl {
+    Predicate l, r;
+
+    static Predicate make(const Predicate &l, const Predicate &r) {
+      Or *pred = new Or;
+      pred->l = l;
+      pred->r = r;
+      return pred;
+    }
+
+    void print(std::ostream &os) const {
+      os << "(" << l << " \u2228 " << r << ")";
+    }
+  };
+
+  struct Quantifier {
+    enum Type { Existential };
+    Type type;
+    Var var;
+    Quantifier(Type type, const Var &var) : type(type), var(var) {};
+
+    friend std::ostream &operator<<(std::ostream &os, const Quantifier &q) {
+      std::string typeStr;
+      switch (q.type) {
+        case Quantifier::Existential:
+          typeStr = "\u2203";
+          break;
+      }
+      return os << typeStr << q.var;
+    }
+  };
+
+  static PathExpression make(const std::vector<Var> &freeVars,
+                             const Quantifier &quantifier,
+                             const Predicate &predicate);
+
+  Var getPathEndpoint(unsigned i) const;
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
+  const std::vector<Var> &freeVars;
+  const Quantifier &quantifier;
+  const Predicate &predicate;
+
+  Formula(const std::vector<Var> &freeVars,
+          const Quantifier &quantifier,
+          const Predicate &predicate);
   void print(std::ostream &os) const;
 };
-
 
 class PathExpressionVisitor {
 public:
   virtual void visit(const EV *) {}
   virtual void visit(const VE *) {}
-  virtual void visit(const Predicate *) {}
+  virtual void visit(const Formula *) {}
 };
 
 }}

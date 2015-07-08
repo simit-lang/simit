@@ -206,7 +206,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       pi = new SegmentedPathIndex(numElements, nbrsStart, nbrs);
     }
 
-    void visit(const Predicate *p) {
+    void visit(const Formula *p) {
       pi = new SegmentedPathIndex();
     }
 

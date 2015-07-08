@@ -10,24 +10,23 @@ namespace pe {
 Var::Var() : util::IntrusivePtr<VarContent>() {
 }
 
-Var::Var(std::string setName)
-    : util::IntrusivePtr<VarContent>(new VarContent) {
-  ptr->setName = setName;
+Var::Var(std::string name) : util::IntrusivePtr<VarContent>(new VarContent) {
+  ptr->name = name;
 }
 
-std::string Var::getSetName() const {
-  return ptr->setName;
+std::string Var::getName() const {
+  return ptr->name;
 }
 
 std::ostream &operator<<(std::ostream& os, const Var& v) {
-  os << v.getSetName() << "_i" << " in " << v.getSetName();
+  os << v.getName();
   return os;
 }
 
 
 // class PathExpression
-Var PathExpression::getPathEndpoint(unsigned pathEndpoint) const {
-  return ptr->getPathEndpoint(pathEndpoint);
+Var PathExpression::getPathEndpoint(unsigned i) const {
+  return ptr->getPathEndpoint(i);
 }
 
 void PathExpression::accept(PathExpressionVisitor *visitor) const {
@@ -48,9 +47,9 @@ PathExpression EV::make(Var E, Var V) {
   return PathExpression(new EV(E, V));
 }
 
-Var EV::getPathEndpoint(unsigned pathEndpoint) const {
-  iassert(pathEndpoint < 2);
-  return (pathEndpoint == 0) ? E : V;
+Var EV::getPathEndpoint(unsigned i) const {
+  iassert(i < 2);
+  return (i == 0) ? E : V;
 }
 
 void EV::accept(PathExpressionVisitor *visitor) const {
@@ -58,7 +57,7 @@ void EV::accept(PathExpressionVisitor *visitor) const {
 }
 
 void EV::print(std::ostream &os) const {
-  os << "(" << E << ")-(" << V << ")";
+  os << E << "-" << V;
 }
 
 
@@ -67,12 +66,12 @@ VE::VE(Var V, Var E) : V(V), E(E) {
 }
 
 PathExpression VE::make(Var V, Var E) {
-  return PathExpression(new VE(V, E));
+  return new VE(V, E);
 }
 
-Var VE::getPathEndpoint(unsigned pathEndpoint) const {
-  iassert(pathEndpoint < 2);
-  return (pathEndpoint == 0) ? V : E;
+Var VE::getPathEndpoint(unsigned i) const {
+  iassert(i < 2);
+  return (i == 0) ? V : E;
 }
 
 void VE::accept(PathExpressionVisitor *visitor) const {
@@ -80,22 +79,36 @@ void VE::accept(PathExpressionVisitor *visitor) const {
 }
 
 void VE::print(std::ostream &os) const {
-  os << "(" << V << ")-(" << E << ")";
+  os << V << "-" << E;
 }
 
 
-// class Predicate
-Predicate::Predicate() {
+// class Formula
+Formula::Formula(const std::vector<Var> &freeVars,
+                 const Quantifier &quantifier,
+                 const Predicate &predicate)
+    : freeVars(freeVars), quantifier(quantifier), predicate(predicate) {
+  iassert(freeVars.size() == 2)
+      << "Only currently support matrix path expressions";
 }
 
-Var Predicate::getPathEndpoint(unsigned pathEndpoint) const {
+PathExpression Formula::make(const std::vector<Var> &freeVars,
+                             const Quantifier &quantifier,
+                             const Predicate &predicate) {
+  return new Formula(freeVars, quantifier, predicate);
 }
 
-void Predicate::accept(PathExpressionVisitor *visitor) const {
+Var Formula::getPathEndpoint(unsigned i) const {
+  return freeVars[i];
+}
+
+void Formula::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
-void Predicate::print(std::ostream &os) const {
+void Formula::print(std::ostream &os) const {
+  os << "(" << freeVars[0] << "," << freeVars[1] << ") " << quantifier
+     << " | " << predicate;
 }
 
 }}

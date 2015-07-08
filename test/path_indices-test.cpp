@@ -33,8 +33,8 @@ TEST(PathIndex, EV) {
   Set E(V,V);
   Box chain = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  Var e = Var("E");
-  Var v = Var("V");
+  Var e = Var("e");
+  Var v = Var("v");
   PathExpression ev = EV::make(e, v);
 
   PathIndexBuilder builder;
@@ -53,8 +53,8 @@ TEST(PathIndex, VE) {
   Set E(V,V);
   Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  Var v = Var("V");
-  Var e = Var("E");
+  Var v = Var("v");
+  Var e = Var("e");
   PathExpression ve = VE::make(v, e);
 
   PathIndexBuilder builder;
@@ -66,4 +66,23 @@ TEST(PathIndex, VE) {
   vector<unsigned> expectedNumNbrs = {1, 2, 2, 2, 1};
   vector<vector<unsigned>> expectedNbrs={{0}, {0, 1}, {1, 2}, {2, 3}, {3}};
   VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
+}
+
+TEST(PathIndex, VEV) {
+  Set V;
+  Set E(V,V);
+  Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
+
+  Var vi = Var("vi");
+  Var e  = Var("e");
+  Var vj = Var("vj");
+  PathExpression ve = VE::make(vi, e);
+  PathExpression ev = EV::make(e, vj);
+
+  Formula::Quantifier quantifier =
+      Formula::Quantifier(Formula::Quantifier::Existential, e);
+  Formula::Predicate conjunction = Formula::And::make(ve, ev);
+
+  PathExpression vev = Formula::make({vi,vj}, quantifier, conjunction);
+//  std::cout << vev << std::endl;
 }
