@@ -25,25 +25,22 @@ namespace simit {
 namespace pe {
 class PathExpressionVisitor;
 
+struct VarContent {
+  std::string setName;
+  mutable long ref = 0;
+  friend inline void aquire(VarContent *vc) {++vc->ref;}
+  friend inline void release(VarContent *vc) {if (--vc->ref==0) delete vc;}
+};
 
-class ElementVar : public interfaces::Comparable<ElementVar> {
+class Var : public util::IntrusivePtr<VarContent> {
 public:
-  ElementVar();
-  explicit ElementVar(std::string setName);
+  Var();
+  explicit Var(std::string setName);
 
   bool defined();
   std::string getSetName() const;
 
-  friend bool operator==(const ElementVar&, const ElementVar&);
-  friend bool operator<(const ElementVar&, const ElementVar&);
-  friend std::ostream &operator<<(std::ostream&, const ElementVar&);
-
-private:
-  struct ElementVarContent;
-  std::shared_ptr<ElementVarContent> content;
-
-  bool eq(const ElementVar &other) {return content == other.content;}
-  bool le(const ElementVar &other) {return content < other.content;}
+  friend std::ostream &operator<<(std::ostream&, const Var&);
 };
 
 
@@ -51,7 +48,7 @@ class PathExpressionImpl : public interfaces::Printable {
 public:
   virtual ~PathExpressionImpl() {}
 
-  virtual ElementVar getPathEndpoint(unsigned pathEndpoint) const = 0;
+  virtual Var getPathEndpoint(unsigned pathEndpoint) const = 0;
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
   mutable long ref = 0;
@@ -62,12 +59,12 @@ public:
 
 class PathExpression : public util::IntrusivePtr<PathExpressionImpl> {
 public:
-  typedef std::vector<ElementVar> Path;
+  typedef std::vector<Var> Path;
 
   PathExpression() : IntrusivePtr() {}
   PathExpression(PathExpressionImpl *impl) : IntrusivePtr(impl) {}
 
-  ElementVar getPathEndpoint(unsigned pathEndpoint) const;
+  Var getPathEndpoint(unsigned pathEndpoint) const;
 
   void accept(PathExpressionVisitor*) const;
 };
@@ -77,16 +74,16 @@ std::ostream &operator<<(std::ostream&, const PathExpression&);
 /// EV are path expression atoms, that connect an edge to its endpoints
 class EV : public PathExpressionImpl {
 public:
-  static PathExpression make(ElementVar E, ElementVar V);
+  static PathExpression make(Var E, Var V);
 
-  ElementVar getPathEndpoint(unsigned pathEndpoint) const;
+  Var getPathEndpoint(unsigned pathEndpoint) const;
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
-  ElementVar E;
-  ElementVar V;
+  Var E;
+  Var V;
 
-  EV(ElementVar E, ElementVar V);
+  EV(Var E, Var V);
   void print(std::ostream &os) const;
 };
 
@@ -95,16 +92,16 @@ private:
 /// endpoint of.
 class VE : public PathExpressionImpl {
 public:
-  static PathExpression make(ElementVar V, ElementVar E);
+  static PathExpression make(Var V, Var E);
 
-  ElementVar getPathEndpoint(unsigned pathEndpoint) const;
+  Var getPathEndpoint(unsigned pathEndpoint) const;
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
-  ElementVar V;
-  ElementVar E;
+  Var V;
+  Var E;
 
-  VE(ElementVar V, ElementVar E);
+  VE(Var V, Var E);
   void print(std::ostream &os) const;
 };
 
@@ -113,7 +110,7 @@ class Predicate : public PathExpressionImpl {
 public:
   Predicate();
 
-  ElementVar getPathEndpoint(unsigned pathEndpoint) const;
+  Var getPathEndpoint(unsigned pathEndpoint) const;
   void accept(PathExpressionVisitor *visitor) const;
 
 private:

@@ -7,8 +7,8 @@ using namespace std;
 using namespace simit::pe;
 
 TEST(PathExpression, EV) {
-  ElementVar e = ElementVar("E");
-  ElementVar v = ElementVar("V");
+  Var e = Var("E");
+  Var v = Var("V");
   PathExpression ev = EV::make(e, v);
   ASSERT_EQ(ev.getPathEndpoint(0), e);
   ASSERT_EQ(ev.getPathEndpoint(1), v);

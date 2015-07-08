@@ -220,7 +220,7 @@ public:
 
   // Build a Segmented path index by evaluating the `pe` over the given graph.
   PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint,
-                           std::map<ElementVar,const Set&> bindings);
+                           std::map<Var,const Set&> bindings);
 
 private:
   std::map<PathExpression,PathIndex> pathIndices;

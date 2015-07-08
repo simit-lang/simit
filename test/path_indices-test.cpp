@@ -33,8 +33,8 @@ TEST(PathIndex, EV) {
   Set E(V,V);
   Box chain = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  ElementVar e = ElementVar("E");
-  ElementVar v = ElementVar("V");
+  Var e = Var("E");
+  Var v = Var("V");
   PathExpression ev = EV::make(e, v);
 
   PathIndexBuilder builder;
@@ -53,8 +53,8 @@ TEST(PathIndex, VE) {
   Set E(V,V);
   Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  ElementVar v = ElementVar("V");
-  ElementVar e = ElementVar("E");
+  Var v = Var("V");
+  Var e = Var("E");
   PathExpression ve = VE::make(v, e);
 
   PathIndexBuilder builder;

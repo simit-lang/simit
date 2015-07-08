@@ -139,7 +139,7 @@ void SegmentedPathIndex::print(std::ostream &os) const {
 // class PathIndexBuilder
 PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
                                      unsigned sourceEndpoint,
-                                     std::map<ElementVar,const Set&> bindings) {
+                                     std::map<Var,const Set&> bindings) {
   // Check if we have memoized the path index for this path expression, starting
   // at this sourceEndpoint, bound to these sets.
   // TODO
@@ -149,7 +149,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
   // described by the path expression.
   class PathNeighborVisitor : public PathExpressionVisitor {
   public:
-    PathNeighborVisitor(const std::map<ElementVar,const Set&> &bindings)
+    PathNeighborVisitor(const std::map<Var,const Set&> &bindings)
         : bindings(bindings) {}
 
     PathIndex build(const PathExpression &pe) {
@@ -171,6 +171,8 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     void visit(const VE *ve) {
       const Set &edgeSet = bindings.at(ve->getPathEndpoint(1));
       iassert(edgeSet.getCardinality() > 0) << "not an edge set";
+
+      // Add each edge to the neighbor vectors of its endpoints
       std::map<unsigned,std::vector<unsigned>> neighbors;
       for (auto &e : edgeSet) {
         iassert(e.getIdent() >= 0);
@@ -180,6 +182,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         }
       }
 
+      // Pack neighbor vectors into a segmented vector (contiguous array).
       unsigned numNeighbors = 0;
       for (auto &p : neighbors) {
         numNeighbors += p.second.size();
@@ -208,7 +211,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
     PathIndex pi;
-    const std::map<ElementVar,const Set&> &bindings;
+    const std::map<Var,const Set&> &bindings;
   };
 
   return PathNeighborVisitor(bindings).build(pe);

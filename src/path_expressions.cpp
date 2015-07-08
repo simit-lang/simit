@@ -6,38 +6,27 @@
 namespace simit {
 namespace pe {
 
-// struct ElementVar
-struct ElementVar::ElementVarContent {
-  std::string setName;
-};
-
-ElementVar::ElementVar() : content(nullptr) {
+// struct Var
+Var::Var() : util::IntrusivePtr<VarContent>() {
 }
 
-ElementVar::ElementVar(std::string setName) : content(new ElementVarContent) {
-  content->setName = setName;
+Var::Var(std::string setName)
+    : util::IntrusivePtr<VarContent>(new VarContent) {
+  ptr->setName = setName;
 }
 
-std::string ElementVar::getSetName() const {
-  return content->setName;
+std::string Var::getSetName() const {
+  return ptr->setName;
 }
 
-bool operator==(const ElementVar &lhs, const ElementVar &rhs) {
-  return lhs.content == rhs.content;
-}
-
-bool operator<(const ElementVar &lhs, const ElementVar &rhs) {
-  return lhs.content < rhs.content;
-}
-
-std::ostream &operator<<(std::ostream& os, const ElementVar& v) {
+std::ostream &operator<<(std::ostream& os, const Var& v) {
   os << v.getSetName() << "_i" << " in " << v.getSetName();
   return os;
 }
 
 
 // class PathExpression
-ElementVar PathExpression::getPathEndpoint(unsigned pathEndpoint) const {
+Var PathExpression::getPathEndpoint(unsigned pathEndpoint) const {
   return ptr->getPathEndpoint(pathEndpoint);
 }
 
@@ -52,14 +41,14 @@ std::ostream &operator<<(std::ostream& os, const PathExpression& pe) {
 
 
 // class EV
-EV::EV(ElementVar E, ElementVar V) : E(E), V(V) {
+EV::EV(Var E, Var V) : E(E), V(V) {
 }
 
-PathExpression EV::make(ElementVar E, ElementVar V) {
+PathExpression EV::make(Var E, Var V) {
   return PathExpression(new EV(E, V));
 }
 
-ElementVar EV::getPathEndpoint(unsigned pathEndpoint) const {
+Var EV::getPathEndpoint(unsigned pathEndpoint) const {
   iassert(pathEndpoint < 2);
   return (pathEndpoint == 0) ? E : V;
 }
@@ -74,14 +63,14 @@ void EV::print(std::ostream &os) const {
 
 
 // class VE
-VE::VE(ElementVar V, ElementVar E) : V(V), E(E) {
+VE::VE(Var V, Var E) : V(V), E(E) {
 }
 
-PathExpression VE::make(ElementVar V, ElementVar E) {
+PathExpression VE::make(Var V, Var E) {
   return PathExpression(new VE(V, E));
 }
 
-ElementVar VE::getPathEndpoint(unsigned pathEndpoint) const {
+Var VE::getPathEndpoint(unsigned pathEndpoint) const {
   iassert(pathEndpoint < 2);
   return (pathEndpoint == 0) ? V : E;
 }
@@ -99,7 +88,7 @@ void VE::print(std::ostream &os) const {
 Predicate::Predicate() {
 }
 
-ElementVar Predicate::getPathEndpoint(unsigned pathEndpoint) const {
+Var Predicate::getPathEndpoint(unsigned pathEndpoint) const {
 }
 
 void Predicate::accept(PathExpressionVisitor *visitor) const {

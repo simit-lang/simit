@@ -28,15 +28,8 @@ public:
 
 private:
   mutable long ref = 0;
-  friend void aquire(const IRNode *node) {
-    ++node->ref;
-  }
-  
-  friend void release(const IRNode *node) {
-    if (--node->ref == 0) {
-      delete node;
-    }
-  }
+  friend void aquire(const IRNode *node) {++node->ref;}
+  friend void release(const IRNode *node) {if (--node->ref == 0) delete node;}
 };
 
 struct ExprNodeBase : public IRNode {
