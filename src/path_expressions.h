@@ -108,19 +108,33 @@ private:
 
 class Formula : public PathExpressionImpl {
 public:
+  struct PathExpr;
+  struct And;
+  struct Or;
+
+  class PredicateVisitor {
+  public:
+    virtual void visit(const PathExpr *) {}
+    virtual void visit(const And *) {}
+    virtual void visit(const Or *) {}
+  };
+
   struct PredicateImpl : public interfaces::Printable {
     virtual ~PredicateImpl() {}
+    virtual void accept(PredicateVisitor *visitor) const = 0;
+
     mutable long ref = 0;
     friend inline void aquire(PredicateImpl *p) {++p->ref;}
     friend inline void release(PredicateImpl *p) {if (--p->ref==0) delete p;}
   };
-  struct PathExpr;
 
   class Predicate : util::IntrusivePtr<PredicateImpl> {
   public:
     Predicate() : util::IntrusivePtr<PredicateImpl>() {}
     Predicate(PredicateImpl *pred) : util::IntrusivePtr<PredicateImpl>(pred) {}
     Predicate(PathExpression pathExpr) : Predicate(PathExpr::make(pathExpr)) {}
+
+    void accept(PredicateVisitor *visitor) const {ptr->accept(visitor);}
 
     friend std::ostream &operator<<(std::ostream &os, const Predicate &p) {
       return os << *p.ptr;
@@ -136,6 +150,7 @@ public:
       return pred;
     }
 
+    void accept(PredicateVisitor *visitor) const {visitor->visit(this);}
     void print(std::ostream &os) const {os << "(" << pathExpr << ")";}
   };
 
@@ -149,6 +164,7 @@ public:
       return pred;
     }
 
+    void accept(PredicateVisitor *visitor) const {visitor->visit(this);}
     void print(std::ostream &os) const {
       os << "(" << l << " \u2227 " << r << ")";
     }
@@ -164,21 +180,23 @@ public:
       return pred;
     }
 
+    void accept(PredicateVisitor *visitor) const {visitor->visit(this);}
     void print(std::ostream &os) const {
       os << "(" << l << " \u2228 " << r << ")";
     }
   };
 
-  struct Quantifier {
-    enum Type { Existential };
-    Type type;
+  struct QuantifiedVar {
+    enum Quantifier { Existential };
+    Quantifier quantifier;
     Var var;
-    Quantifier(Type type, const Var &var) : type(type), var(var) {};
+    QuantifiedVar(Quantifier quantifier, const Var &var)
+        : quantifier(quantifier), var(var) {};
 
-    friend std::ostream &operator<<(std::ostream &os, const Quantifier &q) {
+    friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar &q) {
       std::string typeStr;
-      switch (q.type) {
-        case Quantifier::Existential:
+      switch (q.quantifier) {
+        case Existential:
           typeStr = "\u2203";
           break;
       }
@@ -187,19 +205,24 @@ public:
   };
 
   static PathExpression make(const std::vector<Var> &freeVars,
-                             const Quantifier &quantifier,
+                             const std::vector<QuantifiedVar> &quantifiedVars,
                              const Predicate &predicate);
+
+  const Predicate &getPredicate() const {return predicate;}
+  const std::vector<QuantifiedVar> &getQuantifiedVars() const {
+    return quantifiedVars;
+  }
 
   Var getPathEndpoint(unsigned i) const;
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
-  const std::vector<Var> &freeVars;
-  const Quantifier &quantifier;
-  const Predicate &predicate;
+  std::vector<Var> freeVars;
+  std::vector<QuantifiedVar> quantifiedVars;
+  Predicate predicate;
 
   Formula(const std::vector<Var> &freeVars,
-          const Quantifier &quantifier,
+          const std::vector<QuantifiedVar> &quantifiedVars,
           const Predicate &predicate);
   void print(std::ostream &os) const;
 };

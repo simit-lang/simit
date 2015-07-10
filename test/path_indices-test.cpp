@@ -71,7 +71,7 @@ TEST(PathIndex, VE) {
 TEST(PathIndex, VEV) {
   Set V;
   Set E(V,V);
-  Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
+  Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
 
   Var vi = Var("vi");
   Var e  = Var("e");
@@ -79,10 +79,20 @@ TEST(PathIndex, VEV) {
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
 
-  Formula::Quantifier quantifier =
-      Formula::Quantifier(Formula::Quantifier::Existential, e);
+  Formula::QuantifiedVar quantifiedVar =
+      Formula::QuantifiedVar(Formula::QuantifiedVar::Existential, e);
   Formula::Predicate conjunction = Formula::And::make(ve, ev);
 
-  PathExpression vev = Formula::make({vi,vj}, quantifier, conjunction);
-//  std::cout << vev << std::endl;
+  PathExpression vev = Formula::make({vi,vj}, {quantifiedVar}, conjunction);
+  std::cout << vev << std::endl;
+
+  PathIndexBuilder builder;
+  PathIndex index = builder.buildSegmented(vev, 0, {{vi, V}, {e, E}, {vj, V}});
+
+  ASSERT_EQ(3u, index.numElements());
+  ASSERT_EQ(7u, index.numNeighbors());
+
+  vector<unsigned> expectedNumNbrs = {2, 3, 2};
+  vector<vector<unsigned>> expectedNbrs={{0, 1}, {0, 1, 2}, {1, 2}};
+  VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
 }

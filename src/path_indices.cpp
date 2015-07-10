@@ -1,6 +1,8 @@
 #include "path_indices.h"
 
 #include <iostream>
+#include <stack>
+
 #include "path_expressions.h"
 #include "graph.h"
 
@@ -138,8 +140,8 @@ void SegmentedPathIndex::print(std::ostream &os) const {
 
 // class PathIndexBuilder
 PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
-                                     unsigned sourceEndpoint,
-                                     std::map<Var,const Set&> bindings) {
+                                           unsigned sourceEndpoint,
+                                           std::map<Var,const Set&> bindings) {
   // Check if we have memoized the path index for this path expression, starting
   // at this sourceEndpoint, bound to these sets.
   // TODO
@@ -149,8 +151,9 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
   // described by the path expression.
   class PathNeighborVisitor : public PathExpressionVisitor {
   public:
-    PathNeighborVisitor(const std::map<Var,const Set&> &bindings)
-        : bindings(bindings) {}
+    PathNeighborVisitor(PathIndexBuilder *builder,
+                        const std::map<Var,const Set&> &bindings)
+        : builder(builder), bindings(bindings) {}
 
     PathIndex build(const PathExpression &pe) {
       pe.accept(this);
@@ -207,14 +210,78 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
     void visit(const Formula *p) {
+      class PathNeighborPredicateVisitor : public Formula::PredicateVisitor {
+      public:
+        PathNeighborPredicateVisitor(PathIndexBuilder *builder,
+                                     const std::map<Var,const Set&> &bindings)
+            : builder(builder), bindings(bindings) {}
+
+        PathIndex build(const Formula *f) {
+          formula = f;
+          f->getPredicate().accept(this);
+          iassert(pistack.size() == 1)
+              << "A formula should result in exactly one path index";
+          PathIndex pi = pistack.top();
+          pistack.pop();
+          return pi;
+        }
+
+      private:
+        void visit(const Formula::PathExpr *pe) {
+          pistack.push(builder->buildSegmented(pe->pathExpr, 0, bindings));
+        }
+
+        void visit(const Formula::And *a) {
+          a->l.accept(this);
+          a->r.accept(this);
+          iassert(pistack.size() >= 2)
+              << "Should be at least one path index from each subexpr on stack";
+
+          PathIndex l = pistack.top(); pistack.pop();
+          PathIndex r = pistack.top(); pistack.pop();
+
+          const std::vector<Formula::QuantifiedVar> &qvars =
+              formula->getQuantifiedVars();
+
+          // TODO: Break this assumption and replace below enumeration of cases
+          //       with an algorithm.
+          iassert(qvars.size() <= 1)
+              << "Multiple quantified variables not supported yet";
+          if (qvars.size() == 0) {
+            ierror << "Not supported yet"; // TODO
+          }
+          else if (qvars.size() == 1) {
+//            std::cout << "and" << std::endl;
+
+            // TODO: Fix
+            pistack.push(r);
+          }
+        }
+
+        void visit(const Formula::Or *o) {
+          std::cout << "or" << std::endl;
+        }
+
+        std::stack<PathIndex> pistack;
+        const Formula *formula;
+        PathIndexBuilder *builder;
+        const std::map<Var,const Set&> &bindings;
+      };
+
+      pi = PathNeighborPredicateVisitor(builder, bindings).build(p);
+
+//      std::cout << pi << std::endl;
+
       pi = new SegmentedPathIndex();
     }
 
-    PathIndex pi;
+    PathIndex pi;  // Path index returned from cases
+
+    PathIndexBuilder *builder;
     const std::map<Var,const Set&> &bindings;
   };
 
-  return PathNeighborVisitor(bindings).build(pe);
+  return PathNeighborVisitor(this, bindings).build(pe);
 }
 
 }}
