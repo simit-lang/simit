@@ -145,11 +145,6 @@ void SegmentedPathIndex::print(std::ostream &os) const {
 // class PathIndexBuilder
 PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
                                            unsigned sourceEndpoint) {
-  // Check if we have memoized the path index for this path expression, starting
-  // at this sourceEndpoint, bound to these sets.
-  
-
-
   // Interpret the path expression, starting at sourceEndpoint, over the graph.
   // That is given an element, the find its neighbors through the paths
   // described by the path expression.
@@ -238,14 +233,10 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         // variables to the quantified variable.
 
         map<Var, vector<pair<PathExpression,unsigned>>> varToLocations;
-        varToLocations[lhs.getPathEndpoint(0)].
-            push_back(pair<PathExpression,unsigned>(lhs,0));
-        varToLocations[lhs.getPathEndpoint(1)].
-            push_back(pair<PathExpression,unsigned>(lhs,1));
-        varToLocations[rhs.getPathEndpoint(0)].
-            push_back(pair<PathExpression,unsigned>(rhs,0));
-        varToLocations[rhs.getPathEndpoint(1)].
-            push_back(pair<PathExpression,unsigned>(rhs,1));
+        varToLocations[lhs.getPathEndpoint(0)].push_back({lhs,0});
+        varToLocations[lhs.getPathEndpoint(1)].push_back({lhs,1});
+        varToLocations[rhs.getPathEndpoint(0)].push_back({rhs,0});
+        varToLocations[rhs.getPathEndpoint(1)].push_back({rhs,1});
 
         iassert(varToLocations.find(qvar.var) != varToLocations.end())
             << "could not find quantified variable locations";
@@ -288,7 +279,15 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     PathIndexBuilder *builder;
   };
 
-  return PathNeighborVisitor(this).build(pe);
+  // Check if we have memoized the path index for this path expression, starting
+  // at this sourceEndpoint, bound to these sets.
+  if (pathIndices.find({pe,sourceEndpoint}) != pathIndices.end()) {
+    return pathIndices[{pe,sourceEndpoint}];
+  }
+
+  PathIndex pi = PathNeighborVisitor(this).build(pe);
+  pathIndices[{pe,sourceEndpoint}] = pi;
+  return pi;
 }
 
 }}

@@ -226,7 +226,7 @@ public:
 
 private:
   std::map<Var,const Set&> bindings;
-  std::map<PathExpression,PathIndex> pathIndices;
+  std::map<std::pair<PathExpression,unsigned>, PathIndex> pathIndices;
 };
 
 }}

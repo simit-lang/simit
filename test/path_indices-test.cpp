@@ -130,17 +130,38 @@ TEST(PathIndex, Memoization) {
   Var vi("vi");
   Var  e("e");
   Var vj("vj");
+  PathIndexBuilder builder({{vi, V}, {e, E}, {vj, V}});
+
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
+
+  // PathIndex implement equality by identity, so the two indices are the same
+  // iff the builder's memoization worked
+  PathIndex evindex1 = builder.buildSegmented(ev, 0);
+  PathIndex evindex2 = builder.buildSegmented(ev, 0);
+  ASSERT_EQ(evindex1, evindex2);
 
   Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
-  PathIndexBuilder builder({{vi, V}, {e, E}, {vj, V}});
   PathIndex index1 = builder.buildSegmented(vev, 0);
   PathIndex index2 = builder.buildSegmented(vev, 0);
-
-  // PathIndex implement equality by identity, so the two indices are the same
-  // iff the builder's memoization worked
   ASSERT_EQ(index1, index2);
+
+
+//  // PathIndices created in opposite directions over the same expressions should
+//  // not be the same
+//  // TODO: Possible optimization is to discover symmetric path expressions, and
+//  //       return the same path index when they are evaluated in both directions
+//  PathIndex index4 = builder.buildSegmented(vev1, 1);
+//  ASSERT_NEQ(index1, index3);
+//
+//
+//  // PathExpression implements equality by value, so two indices created from
+//  // equivalent, but different path expressions should be the same
+//  Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
+//  PathExpression vev2 = And::make({vi,vj}, {quantifiedVar}, ve, ev);
+//
+//  PathIndex index3 = builder.buildSegmented(vev2, 0);
+//  ASSERT_EQ(index1, index3);
 }
