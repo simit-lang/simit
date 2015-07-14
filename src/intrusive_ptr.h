@@ -1,6 +1,8 @@
 #ifndef SIMIT_INTRUSIVE_PTR_H
 #define SIMIT_INTRUSIVE_PTR_H
 
+#include <type_traits>
+
 namespace simit {
 namespace util {
 
@@ -21,7 +23,7 @@ template<typename T> void release(const T *);
 ///   friend void aquire(const X *x) { ++x->ref; }
 ///   friend void release(const X *x) { if (--x->ref ==0) delete x; }
 /// };
-template <class T>
+template <class T, bool Comparable=true>
 class IntrusivePtr {
 public:
   T *ptr;
@@ -92,32 +94,33 @@ public:
   /// Check whether the pointer is defined (ptr is not null).
   bool defined() const {return ptr != nullptr;}
 
-  friend inline
+
+  template<typename = std::enable_if<Comparable>> friend inline
   bool operator==(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
     return p1.ptr == p2.ptr;
   }
 
-  friend inline
+  template<typename = std::enable_if<Comparable>> friend inline
   bool operator!=(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
     return p1.ptr != p2.ptr;
   }
 
-  friend inline
+  template<typename = std::enable_if<Comparable>> friend inline
   bool operator<(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
     return p1.ptr < p2.ptr;
   }
 
-  friend inline
+  template<typename = std::enable_if<Comparable>> friend inline
   bool operator>(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
     return p1.ptr > p2.ptr;
   }
 
-  friend inline
+  template<typename = std::enable_if<Comparable>> friend inline
   bool operator<=(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
     return p1.ptr <= p2.ptr;
   }
 
-  friend inline
+  template<typename = std::enable_if<Comparable>> friend inline
   bool operator>=(const IntrusivePtr<T> &p1, const IntrusivePtr<T> &p2) {
     return p1.ptr >= p2.ptr;
   }
