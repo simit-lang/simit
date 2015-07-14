@@ -37,8 +37,8 @@ TEST(PathIndex, EV) {
   Var v("v");
   PathExpression ev = EV::make(e, v);
 
-  PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(ev, 0, {{e, E}, {v, V}});
+  PathIndexBuilder builder({{e, E}, {v, V}});
+  PathIndex index = builder.buildSegmented(ev, 0);
 
   ASSERT_EQ(4u, index.numElements());
   ASSERT_EQ(4u*2, index.numNeighbors());
@@ -57,8 +57,8 @@ TEST(PathIndex, VE) {
   Var e("e");
   PathExpression ve = VE::make(v, e);
 
-  PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(ve, 0, {{v, V}, {e, E}});
+  PathIndexBuilder builder({{v, V}, {e, E}});
+  PathIndex index = builder.buildSegmented(ve, 0);
 
   ASSERT_EQ(5u, index.numElements());
   ASSERT_EQ(8u, index.numNeighbors());
@@ -82,8 +82,8 @@ TEST(PathIndex, VEV) {
   Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
-  PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(vev, 0, {{vi, V}, {e, E}, {vj, V}});
+  PathIndexBuilder builder({{vi, V}, {e, E}, {vj, V}});
+  PathIndex index = builder.buildSegmented(vev, 0);
 
   ASSERT_EQ(3u, index.numElements());
   ASSERT_EQ(7u, index.numNeighbors());
@@ -111,8 +111,8 @@ TEST(PathIndex, Duplicates) {
   Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
-  PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(vev, 0, {{vi, V}, {e, E}, {vj, V}});
+  PathIndexBuilder builder({{vi, V}, {e, E}, {vj, V}});
+  PathIndex index = builder.buildSegmented(vev, 0);
 
   ASSERT_EQ(2u, index.numElements());
   ASSERT_EQ(4u, index.numNeighbors());
@@ -120,4 +120,27 @@ TEST(PathIndex, Duplicates) {
   vector<unsigned> expectedNumNbrs = {2, 2};
   vector<vector<unsigned>> expectedNbrs={{0, 1}, {0, 1}};
   VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
+}
+
+TEST(PathIndex, Memoization) {
+  Set V;
+  Set E(V,V);
+  Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
+
+  Var vi("vi");
+  Var  e("e");
+  Var vj("vj");
+  PathExpression ve = VE::make(vi, e);
+  PathExpression ev = EV::make(e, vj);
+
+  Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
+  PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
+
+  PathIndexBuilder builder({{vi, V}, {e, E}, {vj, V}});
+  PathIndex index1 = builder.buildSegmented(vev, 0);
+  PathIndex index2 = builder.buildSegmented(vev, 0);
+
+  // PathIndex implement equality by identity, so the two indices are the same
+  // iff the builder's memoization worked
+  ASSERT_EQ(index1, index2);
 }

@@ -111,6 +111,7 @@ private:
   friend inline void release(PathIndexImpl *p) {if (--p->ref==0) delete p;}
 };
 
+
 /// A Path Index enumerates the neighbors of an element through all the paths
 /// described by a path expression.
 class PathIndex : public util::IntrusivePtr<PathIndexImpl> {
@@ -216,13 +217,15 @@ private:
 /// recursively constructed from path expressions).
 class PathIndexBuilder {
 public:
-  PathIndexBuilder() {}
+  PathIndexBuilder(std::map<Var,const Set&> bindings) : bindings(bindings) {}
+
+  const std::map<Var,const Set&> &getBindings() const {return bindings;}
 
   // Build a Segmented path index by evaluating the `pe` over the given graph.
-  PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint,
-                           std::map<Var,const Set&> bindings);
+  PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint);
 
 private:
+  std::map<Var,const Set&> bindings;
   std::map<PathExpression,PathIndex> pathIndices;
 };
 
