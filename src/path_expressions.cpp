@@ -14,7 +14,7 @@ Var::Var(std::string name) : util::IntrusivePtr<VarContent>(new VarContent) {
   ptr->name = name;
 }
 
-std::string Var::getName() const {
+const std::string &Var::getName() const {
   return ptr->name;
 }
 
@@ -33,12 +33,6 @@ void PathExpression::accept(PathExpressionVisitor *visitor) const {
   ptr->accept(visitor);
 }
 
-std::ostream &operator<<(std::ostream& os, const PathExpression& pe) {
-  os << *pe.ptr;
-  return os;
-}
-
-
 // class EV
 EV::EV(Var E, Var V) : E(E), V(V) {
 }
@@ -54,10 +48,6 @@ Var EV::getPathEndpoint(unsigned i) const {
 
 void EV::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
-}
-
-void EV::print(std::ostream &os) const {
-  os << E << "-" << V;
 }
 
 
@@ -76,10 +66,6 @@ Var VE::getPathEndpoint(unsigned i) const {
 
 void VE::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
-}
-
-void VE::print(std::ostream &os) const {
-  os << V << "-" << E;
 }
 
 

@@ -51,11 +51,11 @@ public:
         virtual void operator++() = 0;
         virtual unsigned operator*() const = 0;
         virtual Base* clone() const = 0;
-        bool operator==(const Base& o) const {
-          return typeid(*this) == typeid(o) && equal(o);
+        friend bool operator==(const Base &l, const Base &r) {
+          return typeid(l) == typeid(r) && l.eq(r);
         }
       protected:
-        virtual bool equal(const Base& o) const = 0;
+        virtual bool eq(const Base &o) const = 0;
       };
 
     Iterator() : impl(nullptr) {}
@@ -217,16 +217,16 @@ private:
 /// recursively constructed from path expressions).
 class PathIndexBuilder {
 public:
-  PathIndexBuilder(std::map<Var,const Set&> bindings) : bindings(bindings) {}
+  typedef std::map<Var, const Set*> Bindings;
 
-  const std::map<Var,const Set&> &getBindings() const {return bindings;}
+  PathIndexBuilder() {}
 
   // Build a Segmented path index by evaluating the `pe` over the given graph.
-  PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint);
+  PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint,
+                           const Bindings &bindings);
 
 private:
-  std::map<Var,const Set&> bindings;
-  std::map<std::pair<PathExpression,unsigned>, PathIndex> pathIndices;
+  std::map<std::tuple<PathExpression,Bindings,unsigned>, PathIndex> pathIndices;
 };
 
 }}

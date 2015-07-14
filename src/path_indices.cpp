@@ -56,7 +56,7 @@ SetEndpointPathIndex::neighbors(unsigned elemID) const {
       Base* clone() const {return new Iterator(*this);}
 
     protected:
-      bool equal(const Base& o) const {
+      bool eq(const Base& o) const {
         const Iterator *other = static_cast<const Iterator*>(&o);
         return epit == other->epit;
       }
@@ -104,7 +104,7 @@ SegmentedPathIndex::neighbors(unsigned elemID) const {
       Base* clone() const {return new Iterator(*this);}
 
     protected:
-      bool equal(const Base& o) const {
+      bool eq(const Base& o) const {
         const Iterator *other = static_cast<const Iterator*>(&o);
         return currNbr == other->currNbr;
       }
@@ -144,13 +144,15 @@ void SegmentedPathIndex::print(std::ostream &os) const {
 
 // class PathIndexBuilder
 PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
-                                           unsigned sourceEndpoint) {
+                                           unsigned sourceEndpoint,
+                                           const Bindings &bindings){
   // Interpret the path expression, starting at sourceEndpoint, over the graph.
   // That is given an element, the find its neighbors through the paths
   // described by the path expression.
   class PathNeighborVisitor : public PathExpressionVisitor {
   public:
-    PathNeighborVisitor(PathIndexBuilder *builder) : builder(builder) {}
+    PathNeighborVisitor(PathIndexBuilder *builder, const Bindings &bindings)
+        : builder(builder), bindings(bindings) {}
 
     PathIndex build(const PathExpression &pe) {
       pe.accept(this);
@@ -191,13 +193,13 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     /// If it is an EV path expression we return an EndpointPathIndex that wraps
     /// the Edge set.
     void visit(const EV *ev) {
-      const Set &edgeSet = builder->getBindings().at(ev->getPathEndpoint(0));
+      const Set &edgeSet = *bindings.at(ev->getPathEndpoint(0));
       iassert(edgeSet.getCardinality() > 0) << "not an edge set";
       pi = new SetEndpointPathIndex(edgeSet);
     };
 
     void visit(const VE *ve) {
-      const Set &edgeSet = builder->getBindings().at(ve->getPathEndpoint(1));
+      const Set &edgeSet = *bindings.at(ve->getPathEndpoint(1));
       iassert(edgeSet.getCardinality() > 0) << "not an edge set";
 
       // Add each edge to the neighbor vectors of its endpoints
@@ -249,14 +251,16 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         // variable
         freeVarLoc = varToLocations[freeVars[0]][0];
         PathIndex sourceToQuantified =
-            builder->buildSegmented(freeVarLoc.first, freeVarLoc.second);
+            builder->buildSegmented(freeVarLoc.first, freeVarLoc.second,
+                                    bindings);
 
         // Build a path index from the quantified variable to the second free
         // variable
         freeVarLoc = varToLocations[freeVars[1]][0];;
         unsigned quantifiedLoc = ((freeVarLoc.second) == 0) ? 1 : 0;
         PathIndex quantifiedToSink =
-            builder->buildSegmented(freeVarLoc.first, quantifiedLoc);
+            builder->buildSegmented(freeVarLoc.first, quantifiedLoc,
+                                    bindings);
 
         // Build a path index from the first free variable to the second free
         // variable, through the quantified variable.
@@ -276,17 +280,20 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
     PathIndex pi;  // Path index returned from cases
+
     PathIndexBuilder *builder;
+    const Bindings &bindings;
   };
 
   // Check if we have memoized the path index for this path expression, starting
   // at this sourceEndpoint, bound to these sets.
-  if (pathIndices.find({pe,sourceEndpoint}) != pathIndices.end()) {
-    return pathIndices[{pe,sourceEndpoint}];
+  if (pathIndices.find({pe,bindings,sourceEndpoint}) != pathIndices.end()) {
+    std::cout << "memo" << std::endl;
+    return pathIndices[{pe,bindings,sourceEndpoint}];
   }
 
-  PathIndex pi = PathNeighborVisitor(this).build(pe);
-  pathIndices[{pe,sourceEndpoint}] = pi;
+  PathIndex pi = PathNeighborVisitor(this, bindings).build(pe);
+  pathIndices[{pe,bindings,sourceEndpoint}] = pi;
   return pi;
 }
 

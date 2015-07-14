@@ -49,7 +49,7 @@ public:
   explicit Var(std::string name);
 
   bool defined();
-  std::string getName() const;
+  const std::string &getName() const;
 
   friend std::ostream &operator<<(std::ostream&, const Var&);
 };
@@ -62,13 +62,28 @@ public:
   virtual Var getPathEndpoint(unsigned i) const = 0;
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
+  friend bool
+  operator==(const PathExpressionImpl &l, const PathExpressionImpl &r) {
+    return typeid(l) == typeid(r) && l.eq(r);
+  }
+
+  friend bool
+  operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
+    return typeid(l) == typeid(r) && l.le(r);
+  }
+
   mutable long ref = 0;
   friend inline void aquire(PathExpressionImpl *p) {++p->ref;}
   friend inline void release(PathExpressionImpl *p) {if (--p->ref==0) delete p;}
+
+private:
+  virtual bool eq(const PathExpressionImpl &o) const = 0;
+  virtual bool le(const PathExpressionImpl &o) const = 0;
 };
 
 
-class PathExpression : public util::IntrusivePtr<PathExpressionImpl> {
+class PathExpression : public util::IntrusivePtr<PathExpressionImpl,false>,
+                       public interfaces::Comparable<PathExpression> {
 public:
   typedef std::vector<Var> Path;
 
@@ -78,8 +93,19 @@ public:
   Var getPathEndpoint(unsigned i) const;
 
   void accept(PathExpressionVisitor*) const;
+
+  friend bool operator==(const PathExpression &l, const PathExpression &r) {
+    return *l.ptr == *r.ptr;
+  }
+
+  friend bool operator<(const PathExpression &l, const PathExpression &r) {
+    return *l.ptr < *r.ptr;
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
+    return os << *pe.ptr;
+  }
 };
-std::ostream &operator<<(std::ostream&, const PathExpression&);
 
 
 /// EV are path expression atoms, that connect an edge to its endpoints
@@ -95,7 +121,20 @@ private:
   Var V;
 
   EV(Var E, Var V);
-  void print(std::ostream &os) const;
+
+  bool eq(const PathExpressionImpl &o) const {
+    const EV *optr = static_cast<const EV*>(&o);
+    return E == optr->E && V == optr->V;
+  }
+
+  bool le(const PathExpressionImpl &o) const {
+    const EV *optr = static_cast<const EV*>(&o);
+    return (E != optr->E) ? E < optr->E : V < optr->V;
+  }
+
+  void print(std::ostream &os) const {
+    os << E << "-" << V;
+  }
 };
 
 
@@ -113,7 +152,19 @@ private:
   Var E;
 
   VE(Var V, Var E);
-  void print(std::ostream &os) const;
+
+  bool eq(const PathExpressionImpl &o) const {
+    return true;
+  }
+
+  bool le(const PathExpressionImpl &o) const {
+    const VE *optr = static_cast<const VE*>(&o);
+    return (V != optr->V) ? V < optr->V : E < optr->E;
+  }
+
+  void print(std::ostream &os) const {
+    os << V << "-" << E;
+  }
 };
 
 
@@ -173,6 +224,16 @@ private:
   And(const std::vector<Var> &freeVars, const std::vector<QVar> &quantifiedVars,
       const PathExpression &l, const PathExpression &r)
       : Formula(freeVars, quantifiedVars), l(l), r(r) {}
+
+  bool eq(const PathExpressionImpl &o) const {
+    const And *optr = static_cast<const And*>(&o);
+    return l == optr->l && r == optr->r;
+  }
+
+  bool le(const PathExpressionImpl &o) const {
+    const And *optr = static_cast<const And*>(&o);
+    return (l != optr->l) ? l < optr->l : r < optr->r;
+  }
 
   void print(std::ostream &os) const;
 };
