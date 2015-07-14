@@ -33,8 +33,8 @@ TEST(PathIndex, EV) {
   Set E(V,V);
   Box chain = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  Var e = Var("e");
-  Var v = Var("v");
+  Var e("e");
+  Var v("v");
   PathExpression ev = EV::make(e, v);
 
   PathIndexBuilder builder;
@@ -53,8 +53,8 @@ TEST(PathIndex, VE) {
   Set E(V,V);
   Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  Var v = Var("v");
-  Var e = Var("e");
+  Var v("v");
+  Var e("e");
   PathExpression ve = VE::make(v, e);
 
   PathIndexBuilder builder;
@@ -73,15 +73,13 @@ TEST(PathIndex, VEV) {
   Set E(V,V);
   Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
 
-  Var vi = Var("vi");
-  Var e  = Var("e");
-  Var vj = Var("vj");
+  Var vi("vi");
+  Var  e("e");
+  Var vj("vj");
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
 
-  Formula::QVar quantifiedVar =
-      Formula::QVar(Formula::QVar::Existential, e);
-
+  Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
   PathIndexBuilder builder;
@@ -92,5 +90,34 @@ TEST(PathIndex, VEV) {
 
   vector<unsigned> expectedNumNbrs = {2, 3, 2};
   vector<vector<unsigned>> expectedNbrs={{0, 1}, {0, 1, 2}, {1, 2}};
+  VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
+}
+
+TEST(PathIndex, Duplicates) {
+  Set V;
+  Set E(V,V);
+
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  E.add(v0,v1);
+  E.add(v1,v0);
+
+  Var vi("vi");
+  Var  e("e");
+  Var vj("vj");
+  PathExpression ve = VE::make(vi, e);
+  PathExpression ev = EV::make(e, vj);
+
+  Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
+  PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
+
+  PathIndexBuilder builder;
+  PathIndex index = builder.buildSegmented(vev, 0, {{vi, V}, {e, E}, {vj, V}});
+
+  ASSERT_EQ(2u, index.numElements());
+  ASSERT_EQ(4u, index.numNeighbors());
+
+  vector<unsigned> expectedNumNbrs = {2, 2};
+  vector<vector<unsigned>> expectedNbrs={{0, 1}, {0, 1}};
   VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
 }
