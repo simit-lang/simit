@@ -85,9 +85,8 @@ void VE::print(std::ostream &os) const {
 
 // class Formula
 Formula::Formula(const std::vector<Var> &freeVars,
-                 const std::vector<QuantifiedVar> &quantifiedVars,
-                 const Predicate &predicate)
-    : freeVars(freeVars), quantifiedVars(quantifiedVars), predicate(predicate) {
+                 const std::vector<QVar> &quantifiedVars)
+    : freeVars(freeVars), quantifiedVars(quantifiedVars) {
   // TODO: Remove these restrictions
   iassert(freeVars.size() == 2)
       << "For now, we only support matrix path expressions";
@@ -95,23 +94,29 @@ Formula::Formula(const std::vector<Var> &freeVars,
       << "For now, we only support one quantified variable";
 }
 
-PathExpression Formula::make(const std::vector<Var> &freeVars,
-                             const std::vector<QuantifiedVar> &quantifiedVars,
-                             const Predicate &predicate) {
-  return new Formula(freeVars, quantifiedVars, predicate);
-}
-
 Var Formula::getPathEndpoint(unsigned i) const {
   return freeVars[i];
 }
 
-void Formula::accept(PathExpressionVisitor *visitor) const {
+void Formula::print(std::ostream &os) const {
+  os << "(" << freeVars[0] << "," << freeVars[1] << ") " << quantifiedVars[0];
+}
+
+
+// class And
+PathExpression And::make(const std::vector<Var> &freeVars,
+                         const std::vector<QVar> &quantifiedVars,
+                         const PathExpression &l, const PathExpression &r) {
+  return new And(freeVars, quantifiedVars, l, r);
+}
+
+void And::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
-void Formula::print(std::ostream &os) const {
-  os << "(" << freeVars[0] << "," << freeVars[1] << ") " << quantifiedVars[0]
-     << " | " << predicate;
+void And::print(std::ostream &os) const {
+  Formula::print(os);
+  os << " | (" << l << ") \u2227 (" << r << ")";
 }
 
 }}

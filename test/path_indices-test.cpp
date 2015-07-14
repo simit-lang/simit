@@ -79,12 +79,10 @@ TEST(PathIndex, VEV) {
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
 
-  Formula::QuantifiedVar quantifiedVar =
-      Formula::QuantifiedVar(Formula::QuantifiedVar::Existential, e);
-  Formula::Predicate conjunction = Formula::And::make(ve, ev);
+  Formula::QVar quantifiedVar =
+      Formula::QVar(Formula::QVar::Existential, e);
 
-  PathExpression vev = Formula::make({vi,vj}, {quantifiedVar}, conjunction);
-  std::cout << vev << std::endl;
+  PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
   PathIndexBuilder builder;
   PathIndex index = builder.buildSegmented(vev, 0, {{vi, V}, {e, E}, {vj, V}});

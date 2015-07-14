@@ -2,9 +2,13 @@
 
 #include <iostream>
 #include <stack>
+#include <map>
+#include <vector>
 
 #include "path_expressions.h"
 #include "graph.h"
+
+using namespace std;
 
 namespace simit {
 namespace pe {
@@ -127,11 +131,11 @@ SegmentedPathIndex::neighbors(unsigned elemID) const {
 
 void SegmentedPathIndex::print(std::ostream &os) const {
   os << "SegmentedPathIndex:";
-  std::cout << std::endl;
+  std::cout << std::endl << "  ";
   for (size_t i=0; i < numElements()+1; ++i) {
     std::cout << nbrsStart[i] << " ";
   }
-  std::cout << std::endl;
+  std::cout << std::endl << "  ";
   for (size_t i=0; i < numNeighbors(); ++i) {
     std::cout << nbrs[i] << " ";
   }
@@ -163,6 +167,34 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
   private:
+    /// Pack neighbor vectors into a segmented vector (contiguous array).
+    PathIndex pack(const map<unsigned, set<unsigned>> &pathNeighbors) {
+      unsigned numNeighbors = 0;
+      for (auto &p : pathNeighbors) {
+        numNeighbors += p.second.size();
+      }
+
+      unsigned numElements = pathNeighbors.size();
+      unsigned *nbrsStart = new unsigned[numElements + 1];
+      unsigned *nbrs = new unsigned[numNeighbors];
+
+      int currNbrsStart = 0;
+      for (auto &p : pathNeighbors) {
+        unsigned elem = p.first;
+
+        vector<unsigned> pNeighbors(p.second.begin(), p.second.end());
+        sort(pNeighbors.begin(), pNeighbors.end());
+
+        nbrsStart[elem] = currNbrsStart;
+        memcpy(&nbrs[currNbrsStart], pNeighbors.data(),
+               pNeighbors.size() * sizeof(unsigned));
+
+        currNbrsStart += pNeighbors.size();
+      }
+      nbrsStart[numElements] = currNbrsStart;
+      return new SegmentedPathIndex(numElements, nbrsStart, nbrs);;
+    }
+
     /// If it is an EV path expression we return an EndpointPathIndex that wraps
     /// the Edge set.
     void visit(const EV *ev) {
@@ -176,103 +208,83 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       iassert(edgeSet.getCardinality() > 0) << "not an edge set";
 
       // Add each edge to the neighbor vectors of its endpoints
-      std::map<unsigned,std::vector<unsigned>> neighbors;
+      map<unsigned, set<unsigned>> pathNeighbors;
       for (auto &e : edgeSet) {
         iassert(e.getIdent() >= 0);
         for (auto &ep : edgeSet.getEndpoints(e)) {
           iassert(ep.getIdent() >= 0);
-          neighbors[ep.getIdent()].push_back(e.getIdent());
+          pathNeighbors[ep.getIdent()].insert(e.getIdent());
         }
       }
 
-      // Pack neighbor vectors into a segmented vector (contiguous array).
-      unsigned numNeighbors = 0;
-      for (auto &p : neighbors) {
-        numNeighbors += p.second.size();
-      }
-
-      unsigned numElements = neighbors.size();
-      unsigned *nbrsStart = new unsigned[numElements + 1];
-      unsigned *nbrs = new unsigned[numNeighbors];
-
-      int currElem = 0;
-      int currNbrsStart = 0;
-      for (auto &p : neighbors) {
-        nbrsStart[p.first] = currNbrsStart;
-        memcpy(&nbrs[currNbrsStart], p.second.data(),
-               p.second.size() * sizeof(unsigned));
-        currElem += 1;
-        currNbrsStart += p.second.size();
-      }
-      nbrsStart[numElements] = currNbrsStart;
-
-      pi = new SegmentedPathIndex(numElements, nbrsStart, nbrs);
+      pi = pack(pathNeighbors);
     }
 
-    void visit(const Formula *p) {
-      class PathNeighborPredicateVisitor : public Formula::PredicateVisitor {
-      public:
-        PathNeighborPredicateVisitor(PathIndexBuilder *builder,
-                                     const std::map<Var,const Set&> &bindings)
-            : builder(builder), bindings(bindings) {}
+    void visit(const And *f) {
+      auto &freeVars = f->getFreeVars();
+      iassert(freeVars.size() == 2)
+          << "For now, we only support matrix path expressions";
 
-        PathIndex build(const Formula *f) {
-          formula = f;
-          f->getPredicate().accept(this);
-          iassert(pistack.size() == 1)
-              << "A formula should result in exactly one path index";
-          PathIndex pi = pistack.top();
-          pistack.pop();
-          return pi;
-        }
+      PathExpression lhs = f->getLhs();
+      PathExpression rhs = f->getRhs();
 
-      private:
-        void visit(const Formula::PathExpr *pe) {
-          pistack.push(builder->buildSegmented(pe->pathExpr, 0, bindings));
-        }
+      map<unsigned, set<unsigned>> pathNeighbors;
+      if (f->isQuantified()) {
+        iassert(f->getQuantifiedVars().size() == 1)
+            << "For now, we only support one quantified variable";
 
-        void visit(const Formula::And *a) {
-          a->l.accept(this);
-          a->r.accept(this);
-          iassert(pistack.size() >= 2)
-              << "Should be at least one path index from each subexpr on stack";
+        Formula::QVar qvar = f->getQuantifiedVars()[0];
 
-          PathIndex l = pistack.top(); pistack.pop();
-          PathIndex r = pistack.top(); pistack.pop();
+        // The expression combines two binary path expressions with one
+        // quantified variable. Thus, each operand must link one of the two free
+        // variables to the quantified variable.
 
-          const std::vector<Formula::QuantifiedVar> &qvars =
-              formula->getQuantifiedVars();
+        map<Var, vector<pair<PathExpression,unsigned>>> varToLocations;
+        varToLocations[lhs.getPathEndpoint(0)].
+            push_back(pair<PathExpression,unsigned>(lhs,0));
+        varToLocations[lhs.getPathEndpoint(1)].
+            push_back(pair<PathExpression,unsigned>(lhs,1));
+        varToLocations[rhs.getPathEndpoint(0)].
+            push_back(pair<PathExpression,unsigned>(rhs,0));
+        varToLocations[rhs.getPathEndpoint(1)].
+            push_back(pair<PathExpression,unsigned>(rhs,1));
 
-          // TODO: Break this assumption and replace below enumeration of cases
-          //       with an algorithm.
-          iassert(qvars.size() <= 1)
-              << "Multiple quantified variables not supported yet";
-          if (qvars.size() == 0) {
-            ierror << "Not supported yet"; // TODO
+        iassert(varToLocations.find(qvar.var) != varToLocations.end())
+            << "could not find quantified variable locations";
+        iassert(varToLocations[qvar.var].size() == 2)
+            << "quantified binary expr only uses quantified variable once";
+
+        pair<PathExpression,unsigned> freeVarLoc;
+
+        // Build a path index from the first free variable to the quantified
+        // variable
+        freeVarLoc = varToLocations[freeVars[0]][0];
+        PathIndex sourceToQuantified =
+            builder->buildSegmented(freeVarLoc.first, freeVarLoc.second,
+                                    bindings);
+
+        // Build a path index from the quantified variable to the second free
+        // variable
+        freeVarLoc = varToLocations[freeVars[1]][0];;
+        unsigned quantifiedLoc = ((freeVarLoc.second) == 0) ? 1 : 0;
+        PathIndex quantifiedToSink =
+            builder->buildSegmented(freeVarLoc.first, quantifiedLoc, bindings);
+
+        // Build a path index from the first free variable to the second free
+        // variable, through the quantified variable.
+        for (unsigned source : sourceToQuantified) {
+          for (unsigned q : sourceToQuantified.neighbors(source)) {
+            for (unsigned sink : quantifiedToSink.neighbors(q)) {
+              pathNeighbors[source].insert(sink);
+            }
           }
-          else if (qvars.size() == 1) {
-//            std::cout << "and" << std::endl;
-
-            // TODO: Fix
-            pistack.push(r);
-          }
         }
+      }
+      else {
+        not_supported_yet;
+      }
 
-        void visit(const Formula::Or *o) {
-          std::cout << "or" << std::endl;
-        }
-
-        std::stack<PathIndex> pistack;
-        const Formula *formula;
-        PathIndexBuilder *builder;
-        const std::map<Var,const Set&> &bindings;
-      };
-
-      pi = PathNeighborPredicateVisitor(builder, bindings).build(p);
-
-//      std::cout << pi << std::endl;
-
-      pi = new SegmentedPathIndex();
+      pi = pack(pathNeighbors);
     }
 
     PathIndex pi;  // Path index returned from cases
