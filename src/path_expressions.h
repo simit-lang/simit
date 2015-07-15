@@ -118,8 +118,7 @@ private:
   EV(Var E, Var V);
 
   bool eq(const PathExpressionImpl &o) const {
-    const EV *optr = static_cast<const EV*>(&o);
-    return E == optr->E && V == optr->V;
+    return true;
   }
 
   void print(std::ostream &os) const {
