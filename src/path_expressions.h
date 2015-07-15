@@ -3,6 +3,8 @@
 
 #include <memory>
 #include <vector>
+#include <map>
+
 #include "printable.h"
 #include "intrusive_ptr.h"
 #include "comparable.h"
@@ -33,6 +35,8 @@
 /// QuantifiedVar := exist Var
 
 namespace simit {
+class Set;
+
 namespace pe {
 class PathExpressionVisitor;
 
@@ -68,25 +72,26 @@ public:
   }
 
   mutable long ref = 0;
-  friend inline void aquire(PathExpressionImpl *p) {++p->ref;}
-  friend inline void release(PathExpressionImpl *p) {if (--p->ref==0) delete p;}
+  friend inline void aquire(const PathExpressionImpl *p) {++p->ref;}
+  friend inline void release(const PathExpressionImpl *p) {
+    if (--p->ref==0) delete p;
+  }
 
 private:
   virtual bool eq(const PathExpressionImpl &o) const = 0;
 };
 
 
-class PathExpression : public util::IntrusivePtr<PathExpressionImpl,false>,
+class PathExpression : public util::IntrusivePtr<const PathExpressionImpl,false>,
                        public interfaces::Comparable<PathExpression> {
 public:
-  typedef std::vector<Var> Path;
+  typedef std::map<Var,const Set&> Bindings;
 
   PathExpression() : IntrusivePtr() {}
-  PathExpression(PathExpressionImpl *impl) : IntrusivePtr(impl) {}
+  PathExpression(const PathExpressionImpl *impl) : IntrusivePtr(impl) {}
+
 
   Var getPathEndpoint(unsigned i) const;
-
-  void accept(PathExpressionVisitor*) const;
 
   friend bool operator==(const PathExpression &l, const PathExpression &r) {
     return (l.ptr == r.ptr) || (*l.ptr == *r.ptr);
@@ -100,6 +105,8 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
     return os << *pe.ptr;
   }
+
+  void accept(PathExpressionVisitor*) const;
 };
 
 
@@ -157,7 +164,7 @@ public:
   enum Quantifier { Existential };
 
   QuantifiedVar(Quantifier quantifier, const Var &var)
-  : quantifier(quantifier), var(var) {}
+      : quantifier(quantifier), var(var) {}
 
   Var getVar() const {return var;}
   Quantifier getQuantifier() const {return quantifier;}
@@ -183,7 +190,10 @@ public:
   bool isQuantified() const {return quantifiedVars.size() > 0;}
 
   const std::vector<Var> &getFreeVars() const {return freeVars;}
-  const std::vector<QuantifiedVar> &getQuantifiedVars() const {return quantifiedVars;}
+
+  const std::vector<QuantifiedVar> &getQuantifiedVars() const {
+    return quantifiedVars;
+  }
 
   Var getPathEndpoint(unsigned i) const;
 
@@ -213,7 +223,8 @@ public:
 private:
   PathExpression l, r;
 
-  And(const std::vector<Var> &freeVars, const std::vector<QuantifiedVar> &quantifiedVars,
+  And(const std::vector<Var> &freeVars,
+      const std::vector<QuantifiedVar> &quantifiedVars,
       const PathExpression &l, const PathExpression &r)
       : Formula(freeVars, quantifiedVars), l(l), r(r) {}
 
@@ -228,9 +239,24 @@ private:
 
 class PathExpressionVisitor {
 public:
-  virtual void visit(const EV *) {}
-  virtual void visit(const VE *) {}
-  virtual void visit(const And *) {}
+  virtual void visit(const EV *);
+  virtual void visit(const VE *);
+  virtual void visit(const And *);
+};
+
+
+class PathExpressionRewriter : public PathExpressionVisitor {
+public:
+  virtual PathExpression rewrite(PathExpression e);
+
+protected:
+  PathExpression expr;
+
+  using PathExpressionVisitor::visit;
+
+  virtual void visit(const EV *);
+  virtual void visit(const VE *);
+  virtual void visit(const And *);
 };
 
 }}

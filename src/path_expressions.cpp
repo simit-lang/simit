@@ -105,4 +105,55 @@ void And::print(std::ostream &os) const {
   os << " | (" << l << ") \u2227 (" << r << ")";
 }
 
+
+// class PathExpressionVisitor
+void PathExpressionVisitor::visit(const EV *pe) {
+}
+
+void PathExpressionVisitor::visit(const VE *pe) {
+}
+
+void PathExpressionVisitor::visit(const And *pe) {
+  pe->getLhs().accept(this);
+  pe->getRhs().accept(this);
+}
+
+
+// class PathExpressionRewriter
+PathExpression PathExpressionRewriter::rewrite(PathExpression e) {
+  if (e.defined()) {
+    e.accept(this);
+    e = expr;
+  }
+  else {
+    e = PathExpression();
+  }
+  expr = PathExpression();
+  return e;
+}
+
+void PathExpressionRewriter::visit(const EV *pe) {
+  expr = pe;
+}
+
+void PathExpressionRewriter::visit(const VE *pe) {
+  expr = pe;
+}
+
+template <class T>
+PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
+  PathExpression l = pe->getLhs();
+  PathExpression r = pe->getRhs();
+  if (l.ptr == pe->getLhs().ptr && r.ptr == pe->getRhs().ptr) {
+    return pe;
+  }
+  else {
+    return T::make(pe->getFreeVars(), pe->getQuantifiedVars(), l, r);
+  }
+}
+
+void PathExpressionRewriter::visit(const And *pe) {
+  expr = visitBinaryConnective(pe, this);
+}
+
 }}

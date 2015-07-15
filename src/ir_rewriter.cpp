@@ -165,9 +165,9 @@ void IRRewriter::visit(const Neg *op) {
 }
 
 template <class T>
-Expr visitBinaryOp(const T *op, IRRewriter &mut) {
-  Expr a = mut.rewrite(op->a);
-  Expr b = mut.rewrite(op->b);
+Expr visitBinaryOp(const T *op, IRRewriter *rw) {
+  Expr a = rw->rewrite(op->a);
+  Expr b = rw->rewrite(op->b);
   if (a == op->a && b == op->b) {
     return op;
   }
@@ -177,51 +177,51 @@ Expr visitBinaryOp(const T *op, IRRewriter &mut) {
 }
 
 void IRRewriter::visit(const Add *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Sub *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Mul *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Div *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Eq *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Ne *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Gt *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Lt *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Ge *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Le *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const And *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Or *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const Not *op) {
@@ -235,7 +235,7 @@ void IRRewriter::visit(const Not *op) {
 }
 
 void IRRewriter::visit(const Xor *op) {
-  expr = visitBinaryOp(op, *this);
+  expr = visitBinaryOp(op, this);
 }
 
 void IRRewriter::visit(const VarDecl *op) {
