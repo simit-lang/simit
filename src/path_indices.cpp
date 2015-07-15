@@ -228,7 +228,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         iassert(f->getQuantifiedVars().size() == 1)
             << "For now, we only support one quantified variable";
 
-        Formula::QVar qvar = f->getQuantifiedVars()[0];
+        QuantifiedVar qvar = f->getQuantifiedVars()[0];
 
         // The expression combines two binary path expressions with one
         // quantified variable. Thus, each operand must link one of the two free
@@ -240,9 +240,9 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         varToLocations[rhs.getPathEndpoint(0)].push_back({rhs,0});
         varToLocations[rhs.getPathEndpoint(1)].push_back({rhs,1});
 
-        iassert(varToLocations.find(qvar.var) != varToLocations.end())
+        iassert(varToLocations.find(qvar.getVar()) != varToLocations.end())
             << "could not find quantified variable locations";
-        iassert(varToLocations[qvar.var].size() == 2)
+        iassert(varToLocations[qvar.getVar()].size() == 2)
             << "quantified binary expr only uses quantified variable once";
 
         pair<PathExpression,unsigned> freeVarLoc;

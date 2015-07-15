@@ -79,7 +79,7 @@ TEST(PathIndex, VEV) {
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
 
-  Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
+  QuantifiedVar quantifiedVar = QuantifiedVar(QuantifiedVar::Existential, e);
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
   PathIndexBuilder builder;
@@ -108,7 +108,7 @@ TEST(PathIndex, Duplicates) {
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
 
-  Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
+  QuantifiedVar quantifiedVar = QuantifiedVar(QuantifiedVar::Existential, e);
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
   PathIndexBuilder builder;
@@ -138,15 +138,15 @@ TEST(PathIndex, Memoization) {
 
   // PathIndex implement equality by identity, so the two indices are the same
   // iff the builder's memoization worked
-  PathIndex evindex1 = builder.buildSegmented(ev, 0, {{vi,&V}, {e,&E}, {vj,&V}});
-  PathIndex evindex2 = builder.buildSegmented(ev, 0, {{vi,&V}, {e,&E}, {vj,&V}});
+  PathIndex evindex1 = builder.buildSegmented(ev, 0, {{vi,&V},{e,&E},{vj,&V}});
+  PathIndex evindex2 = builder.buildSegmented(ev, 0, {{vi,&V},{e,&E},{vj,&V}});
   ASSERT_EQ(evindex1, evindex2);
 
-  Formula::QVar quantifiedVar = Formula::QVar(Formula::QVar::Existential, e);
+  QuantifiedVar quantifiedVar = QuantifiedVar(QuantifiedVar::Existential, e);
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
-  PathIndex index1 = builder.buildSegmented(vev, 0, {{vi,&V}, {e,&E}, {vj,&V}});
-  PathIndex index2 = builder.buildSegmented(vev, 0, {{vi,&V}, {e,&E}, {vj,&V}});
+  PathIndex index1 = builder.buildSegmented(vev, 0, {{vi,&V},{e,&E},{vj,&V}});
+  PathIndex index2 = builder.buildSegmented(vev, 0, {{vi,&V},{e,&E},{vj,&V}});
   ASSERT_EQ(index1, index2);
 
 
@@ -159,7 +159,7 @@ TEST(PathIndex, Memoization) {
 //  PathExpression ve2 = VE::make(vi2, e2);
 //  PathExpression ev2 = EV::make(e2, vj2);
 //
-//  Formula::QVar quantifiedVar2 = Formula::QVar(Formula::QVar::Existential, e2);
+//  QuantifiedVar quantifiedVar2 = QuantifiedVar(QuantifiedVar::Existential, e2);
 //  PathExpression vev2 = And::make({vi2,vj2}, {quantifiedVar2}, ve2, ev2);
 //
 //  PathIndex index3 = builder.buildSegmented(vev2,0,{{vi2,&V},{e2,&E},{vj2,&V}});

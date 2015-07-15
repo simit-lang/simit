@@ -25,12 +25,12 @@
 ///                 | VE
 ///                 | Predicate
 ///
-/// Formula := (Var,Var) QVar | Predicate
+/// Formula := (Var,Var) QuantifiedVar | Predicate
 ///
 /// Predicate := PathExpression and PathExpression
 ///            | PathExpression  or Expression
 ///
-/// QVar := exist Var
+/// QuantifiedVar := exist Var
 
 namespace simit {
 namespace pe {
@@ -153,49 +153,57 @@ private:
 };
 
 
+class QuantifiedVar {
+public:
+  enum Quantifier { Existential };
+
+  QuantifiedVar(Quantifier quantifier, const Var &var)
+  : quantifier(quantifier), var(var) {}
+
+  Var getVar() const {return var;}
+  Quantifier getQuantifier() const {return quantifier;}
+
+  friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar &q) {
+    std::string typeStr;
+    switch (q.getQuantifier()) {
+      case QuantifiedVar::Existential:
+        typeStr = "\u2203";
+        break;
+    }
+    return os << typeStr << q.getVar();
+  }
+
+private:
+  Quantifier quantifier;
+  Var var;
+};
+
+
 class Formula : public PathExpressionImpl {
 public:
-  struct QVar {
-    enum Quantifier { Existential };
-    Quantifier quantifier;
-    Var var;
-    QVar(Quantifier quantifier, const Var &var)
-        : quantifier(quantifier), var(var) {};
-
-    friend std::ostream &operator<<(std::ostream &os, const QVar &q) {
-      std::string typeStr;
-      switch (q.quantifier) {
-        case Existential:
-          typeStr = "\u2203";
-          break;
-      }
-      return os << typeStr << q.var;
-    }
-  };
-
   bool isQuantified() const {return quantifiedVars.size() > 0;}
 
   const std::vector<Var> &getFreeVars() const {return freeVars;}
-  const std::vector<QVar> &getQuantifiedVars() const {return quantifiedVars;}
+  const std::vector<QuantifiedVar> &getQuantifiedVars() const {return quantifiedVars;}
 
   Var getPathEndpoint(unsigned i) const;
 
 protected:
   Formula(const std::vector<Var> &freeVars,
-          const std::vector<QVar> &quantifiedVars);
+          const std::vector<QuantifiedVar> &quantifiedVars);
 
   void print(std::ostream &os) const;
 
 private:
   std::vector<Var> freeVars;
-  std::vector<QVar> quantifiedVars;
+  std::vector<QuantifiedVar> quantifiedVars;
 };
 
 
 class And : public Formula {
 public:
   static PathExpression make(const std::vector<Var> &freeVars,
-                             const std::vector<QVar> &quantifiedVars,
+                             const std::vector<QuantifiedVar> &quantifiedVars,
                              const PathExpression &l, const PathExpression &r);
 
   PathExpression getLhs() const {return l;}
@@ -206,7 +214,7 @@ public:
 private:
   PathExpression l, r;
 
-  And(const std::vector<Var> &freeVars, const std::vector<QVar> &quantifiedVars,
+  And(const std::vector<Var> &freeVars, const std::vector<QuantifiedVar> &quantifiedVars,
       const PathExpression &l, const PathExpression &r)
       : Formula(freeVars, quantifiedVars), l(l), r(r) {}
 

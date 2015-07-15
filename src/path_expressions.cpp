@@ -71,7 +71,7 @@ void VE::accept(PathExpressionVisitor *visitor) const {
 
 // class Formula
 Formula::Formula(const std::vector<Var> &freeVars,
-                 const std::vector<QVar> &quantifiedVars)
+                 const std::vector<QuantifiedVar> &quantifiedVars)
     : freeVars(freeVars), quantifiedVars(quantifiedVars) {
   // TODO: Remove these restrictions
   iassert(freeVars.size() == 2)
@@ -91,7 +91,7 @@ void Formula::print(std::ostream &os) const {
 
 // class And
 PathExpression And::make(const std::vector<Var> &freeVars,
-                         const std::vector<QVar> &quantifiedVars,
+                         const std::vector<QuantifiedVar> &quantifiedVars,
                          const PathExpression &l, const PathExpression &r) {
   return new And(freeVars, quantifiedVars, l, r);
 }
