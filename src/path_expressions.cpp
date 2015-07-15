@@ -1,30 +1,124 @@
 #include "path_expressions.h"
 
 #include <string>
+
 #include "error.h"
+#include "graph.h"
 
 namespace simit {
 namespace pe {
 
 // struct Var
-Var::Var() : util::IntrusivePtr<VarContent>() {
+Var::Var() : util::IntrusivePtr<const VarContent>() {
 }
 
-Var::Var(std::string name) : util::IntrusivePtr<VarContent>(new VarContent) {
-  ptr->name = name;
+Var::Var(const std::string &name)
+    : util::IntrusivePtr<const VarContent>(new VarContent(name)) {
+}
+
+Var::Var(const std::string &name, const Set *set)
+    : util::IntrusivePtr<const VarContent>(new VarContent(name, set)) {
 }
 
 const std::string &Var::getName() const {
   return ptr->name;
 }
 
+bool Var::isBound() const {
+  return ptr->set != nullptr;
+}
+
+const Set *Var::getBinding() const {
+  iassert(isBound()) << "attempting to get binding of unbound var" << getName();
+  return ptr->set;
+}
+
+void Var::accept(PathExpressionVisitor *v) const {
+  v->visit(*this);
+}
+
 std::ostream &operator<<(std::ostream& os, const Var& v) {
-  os << v.getName();
+  iassert(v.defined()) << "attempting to print undefined var";
+
+  if (v.isBound() && v.getBinding()->getName() != "") {
+    os << "(" << v.getName() << " in " << v.getBinding()->getName() << ")";
+  }
+  else {
+    os << v.getName();
+  }
   return os;
 }
 
 
 // class PathExpression
+class BindPathExpression : public PathExpressionRewriter {
+public:
+  BindPathExpression(const PathExpression::Bindings &bindings)
+      : bindings(bindings) {}
+
+  PathExpression bind(const PathExpression &pe) {
+    return this->rewrite(pe);
+  }
+
+private:
+  const PathExpression::Bindings &bindings;
+
+  void visit(const Var &v) {
+    iassert(bindings.find(v) != bindings.end()) << "no binding for" << v;
+    var = Var(v.getName(), &bindings.at(v));
+  }
+};
+
+PathExpression::PathExpression(const PathExpressionImpl *impl,
+                               const Bindings &bindings)
+    : IntrusivePtr(BindPathExpression(bindings).bind(impl).ptr) {
+}
+
+PathExpression PathExpression::bind(const Bindings &bindings) const {
+  return PathExpression(ptr, bindings);
+}
+
+bool PathExpression::isBound() const {
+#ifndef WITHOUT_INTERNAL_ASSERTS
+  // Invariant: Either all or none are bound
+  class CheckThatAllOrNoneAreBound : public PathExpressionVisitor {
+  public:
+    enum AllOrNoneBoundState { Unknown, None, All };
+    AllOrNoneBoundState allOrNoneBoundState;
+    void visit(const Var &var) {
+      switch (allOrNoneBoundState) {
+        case Unknown:
+          allOrNoneBoundState = (var.isBound()) ? All : None;
+          break;
+        case None:
+          iassert(!var.isBound())
+              << "Some but not all variables in the PathExpression are bound";
+          break;
+        case All:
+          iassert(var.isBound())
+              << "Some but not all variables in the PathExpression are bound";
+          break;
+      }
+    }
+  };
+  CheckThatAllOrNoneAreBound visitor;
+  this->accept(&visitor);
+#endif
+
+  class CheckIfBound : public PathExpressionVisitor {
+  public:
+    bool isBound = false;
+    bool check(const PathExpression &pe) {
+      pe.accept(this);
+      return isBound;
+    }
+    void visit(const Var &var) {
+      isBound = var.isBound();
+    }
+  };
+  return CheckIfBound().check(*this);
+}
+
 Var PathExpression::getPathEndpoint(unsigned i) const {
   return ptr->getPathEndpoint(i);
 }
@@ -107,10 +201,17 @@ void And::print(std::ostream &os) const {
 
 
 // class PathExpressionVisitor
+void PathExpressionVisitor::visit(const Var &var) {
+}
+
 void PathExpressionVisitor::visit(const EV *pe) {
+  pe->getE().accept(this);
+  pe->getV().accept(this);
 }
 
 void PathExpressionVisitor::visit(const VE *pe) {
+  pe->getV().accept(this);
+  pe->getE().accept(this);
 }
 
 void PathExpressionVisitor::visit(const And *pe) {
@@ -120,6 +221,19 @@ void PathExpressionVisitor::visit(const And *pe) {
 
 
 // class PathExpressionRewriter
+Var PathExpressionRewriter::rewrite(Var v) {
+  if (v.defined()) {
+    v.accept(this);
+    v = var;
+  }
+  else {
+    v = Var();
+  }
+  var = Var();
+  expr = PathExpression();
+  return v;
+}
+
 PathExpression PathExpressionRewriter::rewrite(PathExpression e) {
   if (e.defined()) {
     e.accept(this);
@@ -128,22 +242,41 @@ PathExpression PathExpressionRewriter::rewrite(PathExpression e) {
   else {
     e = PathExpression();
   }
+  var = Var();
   expr = PathExpression();
   return e;
 }
 
+void PathExpressionRewriter::visit(const Var &v) {
+  var = v;
+}
+
 void PathExpressionRewriter::visit(const EV *pe) {
-  expr = pe;
+  Var e = rewrite(pe->getE());
+  Var v = rewrite(pe->getV());
+  if (e.ptr == pe->getE().ptr && v.ptr == pe->getV().ptr) {
+    expr = pe;
+  }
+  else {
+    expr = EV::make(e, v);
+  }
 }
 
 void PathExpressionRewriter::visit(const VE *pe) {
-  expr = pe;
+  Var v = rewrite(pe->getV());
+  Var e = rewrite(pe->getE());
+  if (v.ptr == pe->getV().ptr && e.ptr == pe->getE().ptr) {
+    expr = pe;
+  }
+  else {
+    expr = VE::make(v, e);
+  }
 }
 
 template <class T>
 PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
-  PathExpression l = pe->getLhs();
-  PathExpression r = pe->getRhs();
+  PathExpression l = rw->rewrite(pe->getLhs());
+  PathExpression r = rw->rewrite(pe->getRhs());
   if (l.ptr == pe->getLhs().ptr && r.ptr == pe->getRhs().ptr) {
     return pe;
   }

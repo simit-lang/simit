@@ -42,18 +42,29 @@ class PathExpressionVisitor;
 
 struct VarContent {
   std::string name;
+  const Set *set;
+
+  VarContent() : VarContent("") {}
+  VarContent(const std::string &name) : VarContent(name, nullptr) {}
+  VarContent(const std::string &name, const Set *set) : name(name), set(set) {}
+
   mutable long ref = 0;
-  friend inline void aquire(VarContent *vc) {++vc->ref;}
-  friend inline void release(VarContent *vc) {if (--vc->ref==0) delete vc;}
+  friend inline void aquire(const VarContent *v) {++v->ref;}
+  friend inline void release(const VarContent *v) {if (--v->ref==0) delete v;}
 };
 
-class Var : public util::IntrusivePtr<VarContent> {
+class Var : public util::IntrusivePtr<const VarContent> {
 public:
   Var();
-  explicit Var(std::string name);
+  explicit Var(const std::string &name);
+  explicit Var(const std::string &name, const Set *set);
 
-  bool defined();
   const std::string &getName() const;
+  const Set *getBinding() const;
+
+  bool isBound() const;
+
+  void accept(PathExpressionVisitor*) const;
 
   friend std::ostream &operator<<(std::ostream&, const Var&);
 };
@@ -82,16 +93,24 @@ private:
 };
 
 
-class PathExpression : public util::IntrusivePtr<const PathExpressionImpl,false>,
-                       public interfaces::Comparable<PathExpression> {
+class PathExpression
+    : public util::IntrusivePtr<const PathExpressionImpl,false>,
+      public interfaces::Comparable<PathExpression> {
 public:
   typedef std::map<Var,const Set&> Bindings;
 
   PathExpression() : IntrusivePtr() {}
   PathExpression(const PathExpressionImpl *impl) : IntrusivePtr(impl) {}
+  PathExpression(const PathExpressionImpl *impl, const Bindings &bindings);
 
+  PathExpression bind(const Bindings &bindings) const;
+
+  /// True if the variables are bound to sets, false otherwise.
+  bool isBound() const;
 
   Var getPathEndpoint(unsigned i) const;
+
+  void accept(PathExpressionVisitor*) const;
 
   friend bool operator==(const PathExpression &l, const PathExpression &r) {
     return (l.ptr == r.ptr) || (*l.ptr == *r.ptr);
@@ -105,8 +124,6 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
     return os << *pe.ptr;
   }
-
-  void accept(PathExpressionVisitor*) const;
 };
 
 
@@ -114,6 +131,9 @@ public:
 class EV : public PathExpressionImpl {
 public:
   static PathExpression make(Var E, Var V);
+
+  const Var &getE() const {return E;}
+  const Var &getV() const {return V;}
 
   Var getPathEndpoint(unsigned i) const;
   void accept(PathExpressionVisitor *visitor) const;
@@ -139,6 +159,9 @@ private:
 class VE : public PathExpressionImpl {
 public:
   static PathExpression make(Var V, Var E);
+
+  const Var &getV() const {return V;}
+  const Var &getE() const {return E;}
 
   Var getPathEndpoint(unsigned i) const;
   void accept(PathExpressionVisitor *visitor) const;
@@ -239,24 +262,28 @@ private:
 
 class PathExpressionVisitor {
 public:
-  virtual void visit(const EV *);
-  virtual void visit(const VE *);
-  virtual void visit(const And *);
+  virtual void visit(const Var &v);
+  virtual void visit(const EV *pe);
+  virtual void visit(const VE *pe);
+  virtual void visit(const And *pe);
 };
 
 
 class PathExpressionRewriter : public PathExpressionVisitor {
 public:
+  virtual Var rewrite(Var v);
   virtual PathExpression rewrite(PathExpression e);
 
 protected:
-  PathExpression expr;
-
   using PathExpressionVisitor::visit;
 
-  virtual void visit(const EV *);
-  virtual void visit(const VE *);
-  virtual void visit(const And *);
+  Var var;
+  PathExpression expr;
+
+  virtual void visit(const Var &v);
+  virtual void visit(const EV *pe);
+  virtual void visit(const VE *pe);
+  virtual void visit(const And *pe);
 };
 
 }}

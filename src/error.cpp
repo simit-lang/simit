@@ -36,7 +36,7 @@ void ErrorReport::explode() {
     return;
   }
 
-  std::cerr << msg->str();
+  std::cerr << msg->str() << "\n";
   delete msg;
   throw;
   exit(1);

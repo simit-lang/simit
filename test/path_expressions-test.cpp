@@ -1,19 +1,20 @@
 #include "gtest/gtest.h"
 
 #include "path_expressions.h"
-#include "types.h"
+#include "graph.h"
 
 using namespace std;
+using namespace simit;
 using namespace simit::pe;
 
 TEST(PathExpression, EV) {
   Var e = Var("e");
   Var v = Var("v");
   PathExpression ev = EV::make(e, v);
-
   ASSERT_EQ(ev.getPathEndpoint(0), e);
   ASSERT_EQ(ev.getPathEndpoint(1), v);
   ASSERT_EQ(ev, ev);
+  ASSERT_FALSE(ev.isBound());
 
   // Check that two different EV are equal (equal means that if the variables of
   // both EV expressions are bound to the same sets, the resulting bound
@@ -21,16 +22,32 @@ TEST(PathExpression, EV) {
   Var f = Var("f");
   Var u = Var("u");
   PathExpression fu = EV::make(f, u);
-
   ASSERT_EQ(ev, fu);
 
+
   // Bind the same sets to ev and fu and compare them
-  // TODO
-  // ASSERT_EQ(boundev, boundfu);
+  Set V;
+  Set E(V,V);
+  V.setName("V");
+  E.setName("E");
+
+  PathExpression bev = ev.bind({{v,V}, {e,E}});
+  PathExpression bfu = fu.bind({{u,V}, {f,E}});
+  ASSERT_TRUE(bev.isBound());
+  ASSERT_TRUE(bfu.isBound());
+  ASSERT_EQ(bev, bfu);
+
 
   // Bind different sets to ev and fu and compare them
-  // TODO
-  // ASSERT_NQ(boundev, boundfu);
+//  Set U;
+//  Set F(U,U);
+//  U.setName("U");
+//  F.setName("F");
+//
+//  bfu = fu.bind({{u,U}, {f,F}});
+//  std::cout << bev << std::endl;
+//  std::cout << bfu << std::endl;
+//  ASSERT_NE(bev, bfu);
 }
 
 TEST(PathExpression, VE) {

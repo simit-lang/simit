@@ -15,6 +15,7 @@ Expr IRRewriter::rewrite(Expr e) {
   }
   expr = Expr();
   stmt = Stmt();
+  func = Func();
   return e;
 }
 
@@ -28,6 +29,7 @@ Stmt IRRewriter::rewrite(Stmt s) {
   }
   expr = Expr();
   stmt = Stmt();
+  func = Func();
   return s;
 }
 
