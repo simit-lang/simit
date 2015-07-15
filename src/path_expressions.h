@@ -67,18 +67,12 @@ public:
     return typeid(l) == typeid(r) && l.eq(r);
   }
 
-  friend bool
-  operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
-    return typeid(l) == typeid(r) && l.le(r);
-  }
-
   mutable long ref = 0;
   friend inline void aquire(PathExpressionImpl *p) {++p->ref;}
   friend inline void release(PathExpressionImpl *p) {if (--p->ref==0) delete p;}
 
 private:
   virtual bool eq(const PathExpressionImpl &o) const = 0;
-  virtual bool le(const PathExpressionImpl &o) const = 0;
 };
 
 
@@ -95,11 +89,12 @@ public:
   void accept(PathExpressionVisitor*) const;
 
   friend bool operator==(const PathExpression &l, const PathExpression &r) {
-    return *l.ptr == *r.ptr;
+    return (l.ptr == r.ptr) || (*l.ptr == *r.ptr);
   }
 
   friend bool operator<(const PathExpression &l, const PathExpression &r) {
-    return *l.ptr < *r.ptr;
+    if (l == r) return false;
+    return l.ptr < r.ptr;
   }
 
   friend std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
@@ -127,11 +122,6 @@ private:
     return E == optr->E && V == optr->V;
   }
 
-  bool le(const PathExpressionImpl &o) const {
-    const EV *optr = static_cast<const EV*>(&o);
-    return (E != optr->E) ? E < optr->E : V < optr->V;
-  }
-
   void print(std::ostream &os) const {
     os << E << "-" << V;
   }
@@ -155,11 +145,6 @@ private:
 
   bool eq(const PathExpressionImpl &o) const {
     return true;
-  }
-
-  bool le(const PathExpressionImpl &o) const {
-    const VE *optr = static_cast<const VE*>(&o);
-    return (V != optr->V) ? V < optr->V : E < optr->E;
   }
 
   void print(std::ostream &os) const {
@@ -228,11 +213,6 @@ private:
   bool eq(const PathExpressionImpl &o) const {
     const And *optr = static_cast<const And*>(&o);
     return l == optr->l && r == optr->r;
-  }
-
-  bool le(const PathExpressionImpl &o) const {
-    const And *optr = static_cast<const And*>(&o);
-    return (l != optr->l) ? l < optr->l : r < optr->r;
   }
 
   void print(std::ostream &os) const;
