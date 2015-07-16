@@ -28,47 +28,78 @@ do {                                                         \
   }                                                          \
 } while(0)
 
+
 TEST(PathIndex, EV) {
+  PathIndexBuilder builder;
+
   Set V;
   Set E(V,V);
-  Box chain = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
+  createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
   Var e("e", E);
   Var v("v", V);
   PathExpression ev = EV::make(e, v);
+  PathIndex evIndex = builder.buildSegmented(ev, 0);
+  ASSERT_EQ(4u, evIndex.numElements());
+  ASSERT_EQ(4u*2, evIndex.numNeighbors());
+  VERIFY_INDEX(evIndex,
+               vector<unsigned>({2, 2, 2, 2}),
+               vector<vector<unsigned>>({{0, 1}, {1, 2}, {2, 3}, {3, 4}}));
 
-  PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(ev, 0);
+  // Check that EV get's memoized
+  Var f("f", E);
+  Var u("u", V);
+  PathExpression fu = EV::make(f, u);
+  PathIndex fuIndex = builder.buildSegmented(fu, 0);
+  ASSERT_EQ(evIndex, fuIndex);
 
-  ASSERT_EQ(4u, index.numElements());
-  ASSERT_EQ(4u*2, index.numNeighbors());
+  // Check that different EV get's a different index
+  Set U;
+  Set F(V,V);
+  fu = fu.bind({{f,F}, {u,U}});
+  fuIndex = builder.buildSegmented(fu, 0);
+  ASSERT_NE(evIndex, fuIndex);
 
-  vector<unsigned> expectedNumNbrs = {2, 2, 2, 2};
-  vector<vector<unsigned>> expectedNbrs = {{0, 1}, {1, 2}, {2, 3}, {3, 4}};
-  VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
+  // Check that EV evaluated backwards get's a different index
+  // TODO
 }
 
+
 TEST(PathIndex, VE) {
+  PathIndexBuilder builder;
+
   Set V;
   Set E(V,V);
-  V.setName("V");
-  E.setName("E");
-  Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
+  createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
   Var v("v", V);
   Var e("e", E);
   PathExpression ve = VE::make(v, e);
+  PathIndex veIndex = builder.buildSegmented(ve, 0);
+  ASSERT_EQ(5u, veIndex.numElements());
+  ASSERT_EQ(8u, veIndex.numNeighbors());
+  VERIFY_INDEX(veIndex,
+               vector<unsigned>({1, 2, 2, 2, 1}),
+               vector<vector<unsigned>>({{0}, {0, 1}, {1, 2}, {2, 3}, {3}}));
 
-  PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(ve, 0);
+  // Check that VE get's memoized
+  Var u("u", V);
+  Var f("f", E);
+  PathExpression uf = VE::make(u,f);
+  PathIndex ufIndex = builder.buildSegmented(uf, 0);
+  ASSERT_EQ(veIndex, ufIndex);
 
-  ASSERT_EQ(5u, index.numElements());
-  ASSERT_EQ(8u, index.numNeighbors());
+  // Check that different VE get's a different index
+  Set U;
+  Set F(V,V);
+  uf = uf.bind({{f,F}, {u,U}});
+  ufIndex = builder.buildSegmented(uf, 0);
+  ASSERT_NE(veIndex, ufIndex);
 
-  vector<unsigned> expectedNumNbrs = {1, 2, 2, 2, 1};
-  vector<vector<unsigned>> expectedNbrs={{0}, {0, 1}, {1, 2}, {2, 3}, {3}};
-  VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
+  // Check that VE evaluated backwards get's a different index
+  // TODO
 }
+
 
 TEST(PathIndex, VEV) {
   Set V;
@@ -95,7 +126,7 @@ TEST(PathIndex, VEV) {
   VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
 }
 
-TEST(PathIndex, Duplicates) {
+TEST(PathIndex, Aliases) {
   Set V;
   Set E(V,V);
 
