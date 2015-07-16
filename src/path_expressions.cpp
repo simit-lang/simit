@@ -222,7 +222,7 @@ bool VE::lt(const PathExpressionImpl &o) const {
 
 // class Formula
 Formula::Formula(const std::vector<Var> &freeVars,
-                 const std::vector<QuantifiedVar> &quantifiedVars)
+                 const std::vector<QVar> &quantifiedVars)
     : freeVars(freeVars), quantifiedVars(quantifiedVars) {
   // TODO: Remove these restrictions
   iassert(freeVars.size() == 2)
@@ -242,7 +242,7 @@ void Formula::print(std::ostream &os) const {
 
 // class And
 PathExpression And::make(const std::vector<Var> &freeVars,
-                         const std::vector<QuantifiedVar> &quantifiedVars,
+                         const std::vector<QVar> &quantifiedVars,
                          const PathExpression &l, const PathExpression &r) {
   return new And(freeVars, quantifiedVars, l, r);
 }
@@ -342,12 +342,12 @@ PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
     }
   }
 
-  vector<QuantifiedVar> qVars;
-  for (auto &qvar : pe->getQuantifiedVars()) {
+  vector<QVar> qVars;
+  for (auto &qvar : pe->getQVars()) {
     Var var = rw->rewrite(qvar.getVar());
     if (var != qvar.getVar()) {
       varsChanged = true;
-      qVars.push_back(QuantifiedVar(qvar.getQuantifier(), var));
+      qVars.push_back(QVar(qvar.getQuantifier(), var));
     }
     else {
       qVars.push_back(qvar);

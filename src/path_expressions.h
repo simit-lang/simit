@@ -189,20 +189,23 @@ private:
 };
 
 
-class QuantifiedVar {
+class QVar {
 public:
-  enum Quantifier { Existential };
+  enum Quantifier { Exist };
 
-  QuantifiedVar(Quantifier quantifier, const Var &var)
+  QVar(Quantifier quantifier, const Var &var)
       : quantifier(quantifier), var(var) {}
+
+  QVar(const std::pair<Quantifier,Var> &qvar)
+      : quantifier(qvar.first), var(qvar.second) {}
 
   Var getVar() const {return var;}
   Quantifier getQuantifier() const {return quantifier;}
 
-  friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar &q) {
+  friend std::ostream &operator<<(std::ostream &os, const QVar &q) {
     std::string typeStr;
     switch (q.getQuantifier()) {
-      case QuantifiedVar::Existential:
+      case QVar::Exist:
         typeStr = "\u2203";
         break;
     }
@@ -221,7 +224,7 @@ public:
 
   const std::vector<Var> &getFreeVars() const {return freeVars;}
 
-  const std::vector<QuantifiedVar> &getQuantifiedVars() const {
+  const std::vector<QVar> &getQVars() const {
     return quantifiedVars;
   }
 
@@ -229,20 +232,20 @@ public:
 
 protected:
   Formula(const std::vector<Var> &freeVars,
-          const std::vector<QuantifiedVar> &quantifiedVars);
+          const std::vector<QVar> &quantifiedVars);
 
   void print(std::ostream &os) const;
 
 private:
   std::vector<Var> freeVars;
-  std::vector<QuantifiedVar> quantifiedVars;
+  std::vector<QVar> quantifiedVars;
 };
 
 
 class And : public Formula {
 public:
   static PathExpression make(const std::vector<Var> &freeVars,
-                             const std::vector<QuantifiedVar> &quantifiedVars,
+                             const std::vector<QVar> &quantifiedVars,
                              const PathExpression &l, const PathExpression &r);
 
   PathExpression getLhs() const {return l;}
@@ -255,7 +258,7 @@ private:
   PathExpression l, r;
 
   And(const std::vector<Var> &freeVars,
-      const std::vector<QuantifiedVar> &quantifiedVars,
+      const std::vector<QVar> &quantifiedVars,
       const PathExpression &l, const PathExpression &r)
       : Formula(freeVars, quantifiedVars), l(l), r(r) {}
 

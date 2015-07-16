@@ -98,14 +98,13 @@ TEST(PathExpression, VE) {
 }
 
 
-TEST(PathExpression, And) {
+TEST(PathExpression, AndExist) {
   Var vi("vi");
   Var  e("e");
   Var vj("vj");
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
-  QuantifiedVar q = QuantifiedVar(QuantifiedVar::Existential, e);
-  PathExpression vev = And::make({vi,vj}, {q}, ve, ev);
+  PathExpression vev = And::make({vi,vj}, {{QVar::Exist,e}}, ve, ev);
   ASSERT_EQ(vev.getPathEndpoint(0), vi);
   ASSERT_EQ(vev.getPathEndpoint(1), vj);
   CHECK_EQ(vev, vev);
@@ -115,8 +114,7 @@ TEST(PathExpression, And) {
   Var uj("uj");
   PathExpression uf = VE::make(ui, f);
   PathExpression fu = EV::make(f, uj);
-  QuantifiedVar qf = QuantifiedVar(QuantifiedVar::Existential, f);
-  PathExpression ufu = And::make({ui,uj}, {qf}, uf, fu);
+  PathExpression ufu = And::make({ui,uj}, {{QVar::Exist,f}}, uf, fu);
   CHECK_EQ(vev, ufu);
 
   // Bind the same sets to vev and ufu
