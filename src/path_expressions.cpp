@@ -9,15 +9,15 @@ namespace simit {
 namespace pe {
 
 // struct Var
-Var::Var() : util::IntrusivePtr<const VarContent,false>() {
+Var::Var() : util::IntrusivePtr<const VarContent>() {
 }
 
 Var::Var(const std::string &name)
-    : util::IntrusivePtr<const VarContent,false>(new VarContent(name)) {
+    : util::IntrusivePtr<const VarContent>(new VarContent(name)) {
 }
 
 Var::Var(const std::string &name, const Set &set)
-    : util::IntrusivePtr<const VarContent,false>(new VarContent(name, &set)) {
+    : util::IntrusivePtr<const VarContent>(new VarContent(name, &set)) {
 }
 
 const std::string &Var::getName() const {
@@ -29,7 +29,8 @@ bool Var::isBound() const {
 }
 
 const Set *Var::getBinding() const {
-  iassert(isBound()) << "attempting to get binding of unbound var" << getName();
+  iassert(isBound())
+      << "attempting to get binding of unbound var " << getName();
   return ptr->set;
 }
 
@@ -144,6 +145,31 @@ void EV::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
+template <class T>
+bool allOrNoneBound(const T *ev) {
+  return ( ev->getE().isBound() &&  ev->getV().isBound()) ||
+         (!ev->getE().isBound() && !ev->getV().isBound());
+}
+
+bool EV::eq(const PathExpressionImpl &o) const {
+  const EV *optr = static_cast<const EV*>(&o);
+  iassert(allOrNoneBound(this)) << "either all should be bound or none";
+  iassert(allOrNoneBound(optr)) << "either all should be bound or none";
+  return (!E.isBound() || !optr->E.isBound())
+      || (E.getBinding() == optr->E.getBinding() &&
+          V.getBinding() == optr->V.getBinding());
+  }
+
+bool EV::lt(const PathExpressionImpl &o) const {
+  const EV *optr = static_cast<const EV*>(&o);
+  iassert(allOrNoneBound(this)) << "either all should be bound or none";
+  iassert(allOrNoneBound(optr)) << "either all should be bound or none";
+  return (E.isBound() && optr->E.isBound() && V.isBound() && optr->V.isBound())
+      && ((E.getBinding() != optr->E.getBinding())
+           ? E.getBinding() < optr->E.getBinding()
+           : V.getBinding() < optr->V.getBinding());
+}
+
 
 // class VE
 VE::VE(Var V, Var E) : V(V), E(E) {
@@ -160,6 +186,25 @@ Var VE::getPathEndpoint(unsigned i) const {
 
 void VE::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
+}
+
+bool VE::eq(const PathExpressionImpl &o) const {
+  const VE *optr = static_cast<const VE*>(&o);
+  iassert(allOrNoneBound(this)) << "either all should be bound or none";
+  iassert(allOrNoneBound(optr)) << "either all should be bound or none";
+  return (!V.isBound() || !optr->V.isBound())
+      || (V.getBinding() == optr->V.getBinding() &&
+          E.getBinding() == optr->E.getBinding());
+}
+
+bool VE::lt(const PathExpressionImpl &o) const {
+  const VE *optr = static_cast<const VE*>(&o);
+  iassert(allOrNoneBound(this)) << "either all should be bound or none";
+  iassert(allOrNoneBound(optr)) << "either all should be bound or none";
+  return (V.isBound() && optr->V.isBound() && E.isBound() && optr->E.isBound())
+      && ((V.getBinding() != optr->V.getBinding())
+           ? V.getBinding() < optr->V.getBinding()
+           : E.getBinding() < optr->E.getBinding());
 }
 
 

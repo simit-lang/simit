@@ -221,7 +221,7 @@ public:
   PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint);
 
 private:
-  std::map<std::tuple<PathExpression,unsigned>, PathIndex> pathIndices;
+  std::map<std::pair<PathExpression,unsigned>, PathIndex> pathIndices;
 };
 
 }}

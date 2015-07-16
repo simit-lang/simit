@@ -4,6 +4,7 @@
 #include <memory>
 #include <vector>
 #include <map>
+#include <iostream> // TODO: Remove
 
 #include "printable.h"
 #include "intrusive_ptr.h"
@@ -53,8 +54,7 @@ struct VarContent {
   friend inline void release(const VarContent *v) {if (--v->ref==0) delete v;}
 };
 
-class Var : public util::IntrusivePtr<const VarContent,false>,
-            public interfaces::Comparable<Var> {
+class Var : public util::IntrusivePtr<const VarContent> {
 public:
   Var();
   explicit Var(const std::string &name);
@@ -66,17 +66,6 @@ public:
   bool isBound() const;
 
   void accept(PathExpressionVisitor*) const;
-
-  /// Unbound variables are equal, bound variables are equal if they have the
-  /// same binding, and unbound and bound variables are unequal.
-  friend bool operator==(const Var &l, const Var &r) {
-    return (!l.isBound() && !r.isBound()) ||
-           (l.isBound() && r.isBound() && l.getBinding() == r.getBinding());
-  }
-
-  friend bool operator<(const Var &l, const Var &r) {
-    return l.ptr < r.ptr;
-  }
 
   friend std::ostream &operator<<(std::ostream&, const Var&);
 };
@@ -94,6 +83,11 @@ public:
     return typeid(l) == typeid(r) && l.eq(r);
   }
 
+  friend bool
+  operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
+    return typeid(l) != typeid(r) || l.lt(r);
+  }
+
   mutable long ref = 0;
   friend inline void aquire(const PathExpressionImpl *p) {++p->ref;}
   friend inline void release(const PathExpressionImpl *p) {
@@ -102,6 +96,7 @@ public:
 
 private:
   virtual bool eq(const PathExpressionImpl &o) const = 0;
+  virtual bool lt(const PathExpressionImpl &o) const = 0;
 };
 
 
@@ -129,7 +124,7 @@ public:
   }
 
   friend bool operator<(const PathExpression &l, const PathExpression &r) {
-    return l.ptr < r.ptr;
+    return (l.ptr != r.ptr) && *l.ptr < *r.ptr;
   }
 
   friend std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
@@ -155,10 +150,8 @@ private:
 
   EV(Var E, Var V);
 
-  bool eq(const PathExpressionImpl &o) const {
-    const EV *optr = static_cast<const EV*>(&o);
-    return E == optr->getE() && V == optr->getV();
-  }
+  bool eq(const PathExpressionImpl &o) const;
+  bool lt(const PathExpressionImpl &o) const;
 
   void print(std::ostream &os) const {
     os << E << "-" << V;
@@ -184,10 +177,8 @@ private:
 
   VE(Var V, Var E);
 
-  bool eq(const PathExpressionImpl &o) const {
-    const VE *optr = static_cast<const VE*>(&o);
-    return V == optr->getV() && E == optr->getE();
-  }
+  bool eq(const PathExpressionImpl &o) const;
+  bool lt(const PathExpressionImpl &o) const;
 
   void print(std::ostream &os) const {
     os << V << "-" << E;
@@ -257,6 +248,7 @@ public:
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
+  // TODO: Factor fields and eq/lt into BinaryFormula class?
   PathExpression l, r;
 
   And(const std::vector<Var> &freeVars,
@@ -267,6 +259,11 @@ private:
   bool eq(const PathExpressionImpl &o) const {
     const And *optr = static_cast<const And*>(&o);
     return l == optr->l && r == optr->r;
+  }
+
+  bool lt(const PathExpressionImpl &o) const {
+    const And *optr = static_cast<const And*>(&o);
+    return (l != optr->l) ? l < optr->l : r < optr->r;
   }
 
   void print(std::ostream &os) const;
