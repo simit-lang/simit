@@ -33,12 +33,12 @@ TEST(PathIndex, EV) {
   Set E(V,V);
   Box chain = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  Var e("e");
-  Var v("v");
+  Var e("e", E);
+  Var v("v", V);
   PathExpression ev = EV::make(e, v);
 
   PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(ev, 0, {{e,&E}, {v,&V}});
+  PathIndex index = builder.buildSegmented(ev, 0);
 
   ASSERT_EQ(4u, index.numElements());
   ASSERT_EQ(4u*2, index.numNeighbors());
@@ -55,12 +55,12 @@ TEST(PathIndex, VE) {
   E.setName("E");
   Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  Var v("v");
-  Var e("e");
+  Var v("v", V);
+  Var e("e", E);
   PathExpression ve = VE::make(v, e);
 
   PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(ve, 0, {{v,&V}, {e,&E}});
+  PathIndex index = builder.buildSegmented(ve, 0);
 
   ASSERT_EQ(5u, index.numElements());
   ASSERT_EQ(8u, index.numNeighbors());
@@ -75,9 +75,9 @@ TEST(PathIndex, VEV) {
   Set E(V,V);
   Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
 
-  Var vi("vi");
-  Var  e("e");
-  Var vj("vj");
+  Var vi("vi", V);
+  Var e("e", E);
+  Var vj("vj", V);
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
 
@@ -85,7 +85,7 @@ TEST(PathIndex, VEV) {
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
   PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(vev, 0, {{vi,&V}, {e,&E}, {vj,&V}});
+  PathIndex index = builder.buildSegmented(vev, 0);
 
   ASSERT_EQ(3u, index.numElements());
   ASSERT_EQ(7u, index.numNeighbors());
@@ -104,9 +104,9 @@ TEST(PathIndex, Duplicates) {
   E.add(v0,v1);
   E.add(v1,v0);
 
-  Var vi("vi");
-  Var  e("e");
-  Var vj("vj");
+  Var vi("vi", V);
+  Var e("e", E);
+  Var vj("vj", V);
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
 
@@ -114,7 +114,7 @@ TEST(PathIndex, Duplicates) {
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
   PathIndexBuilder builder;
-  PathIndex index = builder.buildSegmented(vev, 0, {{vi,&V}, {e,&E}, {vj,&V}});
+  PathIndex index = builder.buildSegmented(vev, 0);
 
   ASSERT_EQ(2u, index.numElements());
   ASSERT_EQ(4u, index.numNeighbors());
@@ -131,41 +131,41 @@ TEST(PathIndex, Memoization) {
 
   PathIndexBuilder builder;
 
-  Var vi("vi");
-  Var  e("e");
-  Var vj("vj");
+  Var vi("vi", V);
+  Var e("e", E);
+  Var vj("vj", V);
 
   PathExpression ve = VE::make(vi, e);
   PathExpression ev = EV::make(e, vj);
 
   // PathIndex implement equality by identity, so the two indices are the same
   // iff the builder's memoization worked
-  PathIndex evindex1 = builder.buildSegmented(ev, 0, {{vi,&V},{e,&E},{vj,&V}});
-  PathIndex evindex2 = builder.buildSegmented(ev, 0, {{vi,&V},{e,&E},{vj,&V}});
+  PathIndex evindex1 = builder.buildSegmented(ev, 0);
+  PathIndex evindex2 = builder.buildSegmented(ev, 0);
   ASSERT_EQ(evindex1, evindex2);
 
   QuantifiedVar quantifiedVar = QuantifiedVar(QuantifiedVar::Existential, e);
   PathExpression vev = And::make({vi,vj}, {quantifiedVar}, ve, ev);
 
-  PathIndex index1 = builder.buildSegmented(vev, 0, {{vi,&V},{e,&E},{vj,&V}});
-  PathIndex index2 = builder.buildSegmented(vev, 0, {{vi,&V},{e,&E},{vj,&V}});
+  PathIndex index1 = builder.buildSegmented(vev, 0);
+  PathIndex index2 = builder.buildSegmented(vev, 0);
   ASSERT_EQ(index1, index2);
 
 
   // PathExpression implements equality by value, so two indices created from
   // equivalent, but different path expressions should be the same
-//  Var vi2("vi");
-//  Var  e2("e");
-//  Var vj2("vj");
-//
-//  PathExpression ve2 = VE::make(vi2, e2);
-//  PathExpression ev2 = EV::make(e2, vj2);
-//
-//  QuantifiedVar quantifiedVar2 = QuantifiedVar(QuantifiedVar::Existential, e2);
-//  PathExpression vev2 = And::make({vi2,vj2}, {quantifiedVar2}, ve2, ev2);
-//
-//  PathIndex index3 = builder.buildSegmented(vev2,0,{{vi2,&V},{e2,&E},{vj2,&V}});
-//  ASSERT_EQ(index1, index3);
+  Var vi2("vi", V);
+  Var e2("e", E);
+  Var vj2("vj", V);
+
+  PathExpression ve2 = VE::make(vi2, e2);
+  PathExpression ev2 = EV::make(e2, vj2);
+
+  QuantifiedVar quantifiedVar2 = QuantifiedVar(QuantifiedVar::Existential, e2);
+  PathExpression vev2 = And::make({vi2,vj2}, {quantifiedVar2}, ve2, ev2);
+
+  PathIndex index3 = builder.buildSegmented(vev2, 0);
+  ASSERT_EQ(index1, index3);
 
 
   // PathIndices created in opposite directions over the same expressions should

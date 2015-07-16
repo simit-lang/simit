@@ -495,12 +495,12 @@ private:
 
   /// helpers for constructing endpoint sets
   template <typename F, typename ...T> std::vector<const Set*>
-  epsMaker(std::vector<const Set*> sofar, const F& f, const T& ... sets) {
+  epsMaker(std::vector<const Set*> sofar, const F& f, const T& ... sets) const {
     sofar.push_back(&f);
     return epsMaker(sofar, sets...);
   }
   template <typename F> std::vector<const Set*>
-  epsMaker(std::vector<const Set*> sofar, const F& f) {
+  epsMaker(std::vector<const Set*> sofar, const F& f) const {
     sofar.push_back(&f);
     return sofar;
   }

@@ -144,15 +144,17 @@ void SegmentedPathIndex::print(std::ostream &os) const {
 
 // class PathIndexBuilder
 PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
-                                           unsigned sourceEndpoint,
-                                           const Bindings &bindings){
+                                           unsigned sourceEndpoint){
+  iassert(pe.isBound())
+      << "attempting to build an index from a path expression (" << pe
+      << ") that is not bound to sets";
+
   // Interpret the path expression, starting at sourceEndpoint, over the graph.
   // That is given an element, the find its neighbors through the paths
   // described by the path expression.
   class PathNeighborVisitor : public PathExpressionVisitor {
   public:
-    PathNeighborVisitor(PathIndexBuilder *builder, const Bindings &bindings)
-        : builder(builder), bindings(bindings) {}
+    PathNeighborVisitor(PathIndexBuilder *builder) : builder(builder) {}
 
     PathIndex build(const PathExpression &pe) {
       pe.accept(this);
@@ -193,14 +195,14 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     /// If it is an EV path expression we return an EndpointPathIndex that wraps
     /// the Edge set.
     void visit(const EV *ev) {
-      const Set &edgeSet = *bindings.at(ev->getPathEndpoint(0));
+      const Set &edgeSet = *ev->getE().getBinding();
       iassert(edgeSet.getCardinality() > 0)
           << "not an edge set" << edgeSet.getName();
       pi = new SetEndpointPathIndex(edgeSet);
     };
 
     void visit(const VE *ve) {
-      const Set &edgeSet = *bindings.at(ve->getPathEndpoint(1));
+      const Set &edgeSet = *ve->getE().getBinding();
       iassert(edgeSet.getCardinality() > 0)
           << "not an edge set" << edgeSet.getName();
 
@@ -253,16 +255,14 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         // variable
         freeVarLoc = varToLocations[freeVars[0]][0];
         PathIndex sourceToQuantified =
-            builder->buildSegmented(freeVarLoc.first, freeVarLoc.second,
-                                    bindings);
+            builder->buildSegmented(freeVarLoc.first, freeVarLoc.second);
 
         // Build a path index from the quantified variable to the second free
         // variable
         freeVarLoc = varToLocations[freeVars[1]][0];;
         unsigned quantifiedLoc = ((freeVarLoc.second) == 0) ? 1 : 0;
         PathIndex quantifiedToSink =
-            builder->buildSegmented(freeVarLoc.first, quantifiedLoc,
-                                    bindings);
+            builder->buildSegmented(freeVarLoc.first, quantifiedLoc);
 
         // Build a path index from the first free variable to the second free
         // variable, through the quantified variable.
@@ -282,20 +282,17 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
     PathIndex pi;  // Path index returned from cases
-
     PathIndexBuilder *builder;
-    const Bindings &bindings;
   };
 
   // Check if we have memoized the path index for this path expression, starting
   // at this sourceEndpoint, bound to these sets.
-  if (pathIndices.find({pe,bindings,sourceEndpoint}) != pathIndices.end()) {
-    std::cout << "memo" << std::endl;
-    return pathIndices[{pe,bindings,sourceEndpoint}];
+  if (pathIndices.find({pe,sourceEndpoint}) != pathIndices.end()) {
+    return pathIndices[{pe,sourceEndpoint}];
   }
 
-  PathIndex pi = PathNeighborVisitor(this, bindings).build(pe);
-  pathIndices[{pe,bindings,sourceEndpoint}] = pi;
+  PathIndex pi = PathNeighborVisitor(this).build(pe);
+  pathIndices[{pe,sourceEndpoint}] = pi;
   return pi;
 }
 

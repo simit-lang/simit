@@ -184,9 +184,7 @@ public:
     return nbrsStart[elemID+1]-nbrsStart[elemID];
   }
 
-  unsigned numNeighbors() const {
-    return nbrsStart[numElems];
-  }
+  unsigned numNeighbors() const {return nbrsStart[numElems];}
 
   Neighbors neighbors(unsigned elemID) const;
 
@@ -217,16 +215,13 @@ private:
 /// recursively constructed from path expressions).
 class PathIndexBuilder {
 public:
-  typedef std::map<Var, const Set*> Bindings;
-
   PathIndexBuilder() {}
 
   // Build a Segmented path index by evaluating the `pe` over the given graph.
-  PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint,
-                           const Bindings &bindings);
+  PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint);
 
 private:
-  std::map<std::tuple<PathExpression,Bindings,unsigned>, PathIndex> pathIndices;
+  std::map<std::tuple<PathExpression,unsigned>, PathIndex> pathIndices;
 };
 
 }}
