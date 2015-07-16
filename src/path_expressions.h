@@ -58,7 +58,7 @@ class Var : public util::IntrusivePtr<const VarContent,false>,
 public:
   Var();
   explicit Var(const std::string &name);
-  explicit Var(const std::string &name, const Set *set);
+  explicit Var(const std::string &name, const Set &set);
 
   const std::string &getName() const;
   const Set *getBinding() const;

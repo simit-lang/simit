@@ -16,8 +16,8 @@ Var::Var(const std::string &name)
     : util::IntrusivePtr<const VarContent,false>(new VarContent(name)) {
 }
 
-Var::Var(const std::string &name, const Set *set)
-    : util::IntrusivePtr<const VarContent,false>(new VarContent(name, set)) {
+Var::Var(const std::string &name, const Set &set)
+    : util::IntrusivePtr<const VarContent,false>(new VarContent(name, &set)) {
 }
 
 const std::string &Var::getName() const {
@@ -65,7 +65,7 @@ private:
 
   void visit(const Var &v) {
     iassert(bindings.find(v) != bindings.end()) << "no binding for" << v;
-    var = Var(v.getName(), &bindings.at(v));
+    var = Var(v.getName(), bindings.at(v));
   }
 };
 
