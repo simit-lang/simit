@@ -19,7 +19,7 @@ std::ostream &operator<<(std::ostream &os, const PathIndex &pi) {
     os << *pi.ptr;
   }
   else {
-    os << "empty path idex";
+    os << "empty PathIndex";
   }
   return os;
 }
@@ -249,20 +249,18 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         iassert(varToLocations[qvar.getVar()].size() == 2)
             << "quantified binary expr only uses quantified variable once";
 
-        pair<PathExpression,unsigned> freeVarLoc;
-
         // Build a path index from the first free variable to the quantified
         // variable
-        freeVarLoc = varToLocations[freeVars[0]][0];
+        pair<PathExpression,unsigned> sourceLoc= varToLocations[freeVars[0]][0];
         PathIndex sourceToQuantified =
-            builder->buildSegmented(freeVarLoc.first, freeVarLoc.second);
+            builder->buildSegmented(sourceLoc.first, sourceLoc.second);
 
         // Build a path index from the quantified variable to the second free
         // variable
-        freeVarLoc = varToLocations[freeVars[1]][0];;
-        unsigned quantifiedLoc = ((freeVarLoc.second) == 0) ? 1 : 0;
+        pair<PathExpression,unsigned>  sinkLoc = varToLocations[freeVars[1]][0];
+        unsigned quantifiedLoc = ((sinkLoc.second) == 0) ? 1 : 0;
         PathIndex quantifiedToSink =
-            builder->buildSegmented(freeVarLoc.first, quantifiedLoc);
+            builder->buildSegmented(sinkLoc.first, quantifiedLoc);
 
         // Build a path index from the first free variable to the second free
         // variable, through the quantified variable.
@@ -273,6 +271,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
             }
           }
         }
+        
       }
       else {
         not_supported_yet;
@@ -285,14 +284,17 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     PathIndexBuilder *builder;
   };
 
+  // TODO: Possible optimization is to ∂etect symmetric path expressions, and
+  //       return the same path index when they are evaluated in both directions
+
   // Check if we have memoized the path index for this path expression, starting
   // at this sourceEndpoint, bound to these sets.
   if (pathIndices.find({pe,sourceEndpoint}) != pathIndices.end()) {
-    return pathIndices[{pe,sourceEndpoint}];
+    return pathIndices.at({pe,sourceEndpoint});
   }
 
   PathIndex pi = PathNeighborVisitor(this).build(pe);
-  pathIndices[{pe,sourceEndpoint}] = pi;
+  pathIndices.insert({{pe,sourceEndpoint}, pi});
   return pi;
 }
 

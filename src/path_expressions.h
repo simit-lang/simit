@@ -4,7 +4,8 @@
 #include <memory>
 #include <vector>
 #include <map>
-#include <iostream> // TODO: Remove
+#include <typeinfo>
+#include <typeindex>
 
 #include "printable.h"
 #include "intrusive_ptr.h"
@@ -85,7 +86,9 @@ public:
 
   friend bool
   operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
-    return typeid(l) != typeid(r) || l.lt(r);
+    auto lidx = std::type_index(typeid(l));
+    auto ridx = std::type_index(typeid(r));
+    return (lidx != ridx) ? lidx < ridx : l.lt(r);
   }
 
   mutable long ref = 0;
