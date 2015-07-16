@@ -150,7 +150,7 @@ struct ErrorReport {
     if (condition) {
       return *this;
     }
-    (*msg) << " " << x;
+    (*msg) << x;
     return *this;
   }
 
