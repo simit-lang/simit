@@ -134,10 +134,11 @@ TEST(PathIndex, VEV) {
   ASSERT_EQ(vevIndex, ufuIndex);
 
   // Check that different VEV get's a different index
-//  Set U;
-//  Set F(U,U);
-//  ufu = ufu.bind({{ui,U}, {f,F}, {uj,U}});
-//  ufuIndex = builder.buildSegmented(ufu, 0);
+  Set U;
+  Set F(U,U);
+  ufu = ufu.bind({{ui,U}, {f,F}, {uj,U}});
+  ufuIndex = builder.buildSegmented(ufu, 0);
+  ASSERT_NE(vevIndex, ufuIndex);
 
   // Check that VEV evaluated backwards get's a different index
   // TODO

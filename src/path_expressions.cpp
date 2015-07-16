@@ -1,9 +1,13 @@
 #include "path_expressions.h"
 
 #include <string>
+#include <map>
+#include <vector>
 
 #include "error.h"
 #include "graph.h"
+
+using namespace std;
 
 namespace simit {
 namespace pe {
@@ -63,10 +67,18 @@ public:
 
 private:
   const PathExpression::Bindings &bindings;
+  map<Var, Var> boundVars;
 
   void visit(const Var &v) {
-    iassert(bindings.find(v) != bindings.end()) << "no binding for" << v;
-    var = Var(v.getName(), bindings.at(v));
+    // If we've already created a bound replacement for this Var then insert it
+    if (boundVars.find(v) != boundVars.end()) {
+      var = boundVars.at(v);
+    }
+    else {
+      iassert(bindings.find(v) != bindings.end()) << "no binding for" << v;
+      var = Var(v.getName(), bindings.at(v));
+      boundVars.insert({v, var});
+    }
   }
 };
 
@@ -320,13 +332,35 @@ void PathExpressionRewriter::visit(const VE *pe) {
 
 template <class T>
 PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
+  bool varsChanged = false;
+
+  vector<Var> freeVars;
+  for (size_t i=0; i < pe->getFreeVars().size(); ++i) {
+    freeVars.push_back(rw->rewrite(pe->getFreeVars()[i]));
+    if (freeVars[i] != pe->getFreeVars()[i]) {
+      varsChanged = true;
+    }
+  }
+
+  vector<QuantifiedVar> qVars;
+  for (auto &qvar : pe->getQuantifiedVars()) {
+    Var var = rw->rewrite(qvar.getVar());
+    if (var != qvar.getVar()) {
+      varsChanged = true;
+      qVars.push_back(QuantifiedVar(qvar.getQuantifier(), var));
+    }
+    else {
+      qVars.push_back(qvar);
+    }
+  }
+
   PathExpression l = rw->rewrite(pe->getLhs());
   PathExpression r = rw->rewrite(pe->getRhs());
-  if (l.ptr == pe->getLhs().ptr && r.ptr == pe->getRhs().ptr) {
+  if (!varsChanged && l.ptr == pe->getLhs().ptr && r.ptr == pe->getRhs().ptr) {
     return pe;
   }
   else {
-    return T::make(pe->getFreeVars(), pe->getQuantifiedVars(), l, r);
+    return T::make(freeVars, qVars, l, r);
   }
 }
 
