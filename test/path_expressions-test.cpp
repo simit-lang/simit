@@ -39,15 +39,13 @@ TEST(PathExpression, EV) {
 
 
   // Bind different sets to ev and fu and compare them
-//  Set U;
-//  Set F(U,U);
-//  U.setName("U");
-//  F.setName("F");
-//
-//  bfu = fu.bind({{u,U}, {f,F}});
-//  std::cout << bev << std::endl;
-//  std::cout << bfu << std::endl;
-//  ASSERT_NE(bev, bfu);
+  Set U;
+  Set F(U,U);
+  U.setName("U");
+  F.setName("F");
+
+  bfu = fu.bind({{u,U}, {f,F}});
+  ASSERT_NE(bev, bfu);
 }
 
 TEST(PathExpression, VE) {

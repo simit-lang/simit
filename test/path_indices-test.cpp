@@ -51,6 +51,8 @@ TEST(PathIndex, EV) {
 TEST(PathIndex, VE) {
   Set V;
   Set E(V,V);
+  V.setName("V");
+  E.setName("E");
   Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
   Var v("v");

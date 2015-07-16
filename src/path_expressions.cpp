@@ -9,15 +9,15 @@ namespace simit {
 namespace pe {
 
 // struct Var
-Var::Var() : util::IntrusivePtr<const VarContent>() {
+Var::Var() : util::IntrusivePtr<const VarContent,false>() {
 }
 
 Var::Var(const std::string &name)
-    : util::IntrusivePtr<const VarContent>(new VarContent(name)) {
+    : util::IntrusivePtr<const VarContent,false>(new VarContent(name)) {
 }
 
 Var::Var(const std::string &name, const Set *set)
-    : util::IntrusivePtr<const VarContent>(new VarContent(name, set)) {
+    : util::IntrusivePtr<const VarContent,false>(new VarContent(name, set)) {
 }
 
 const std::string &Var::getName() const {

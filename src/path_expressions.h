@@ -53,7 +53,8 @@ struct VarContent {
   friend inline void release(const VarContent *v) {if (--v->ref==0) delete v;}
 };
 
-class Var : public util::IntrusivePtr<const VarContent> {
+class Var : public util::IntrusivePtr<const VarContent,false>,
+            public interfaces::Comparable<Var> {
 public:
   Var();
   explicit Var(const std::string &name);
@@ -65,6 +66,17 @@ public:
   bool isBound() const;
 
   void accept(PathExpressionVisitor*) const;
+
+  /// Unbound variables are equal, bound variables are equal if they have the
+  /// same binding, and unbound and bound variables are unequal.
+  friend bool operator==(const Var &l, const Var &r) {
+    return (!l.isBound() && !r.isBound()) ||
+           (l.isBound() && r.isBound() && l.getBinding() == r.getBinding());
+  }
+
+  friend bool operator<(const Var &l, const Var &r) {
+    return l.ptr < r.ptr;
+  }
 
   friend std::ostream &operator<<(std::ostream&, const Var&);
 };
@@ -117,7 +129,6 @@ public:
   }
 
   friend bool operator<(const PathExpression &l, const PathExpression &r) {
-    if (l == r) return false;
     return l.ptr < r.ptr;
   }
 
@@ -145,7 +156,8 @@ private:
   EV(Var E, Var V);
 
   bool eq(const PathExpressionImpl &o) const {
-    return true;
+    const EV *optr = static_cast<const EV*>(&o);
+    return E == optr->getE() && V == optr->getV();
   }
 
   void print(std::ostream &os) const {
@@ -173,7 +185,8 @@ private:
   VE(Var V, Var E);
 
   bool eq(const PathExpressionImpl &o) const {
-    return true;
+    const VE *optr = static_cast<const VE*>(&o);
+    return V == optr->getV() && E == optr->getE();
   }
 
   void print(std::ostream &os) const {

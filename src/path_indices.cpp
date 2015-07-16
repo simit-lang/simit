@@ -194,13 +194,15 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     /// the Edge set.
     void visit(const EV *ev) {
       const Set &edgeSet = *bindings.at(ev->getPathEndpoint(0));
-      iassert(edgeSet.getCardinality() > 0) << "not an edge set";
+      iassert(edgeSet.getCardinality() > 0)
+          << "not an edge set" << edgeSet.getName();
       pi = new SetEndpointPathIndex(edgeSet);
     };
 
     void visit(const VE *ve) {
       const Set &edgeSet = *bindings.at(ve->getPathEndpoint(1));
-      iassert(edgeSet.getCardinality() > 0) << "not an edge set";
+      iassert(edgeSet.getCardinality() > 0)
+          << "not an edge set" << edgeSet.getName();
 
       // Add each edge to the neighbor vectors of its endpoints
       map<unsigned, set<unsigned>> pathNeighbors;
