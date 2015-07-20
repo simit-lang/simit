@@ -2,3 +2,5 @@ build
 xcode
 doc
 *~
+debug
+release
