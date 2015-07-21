@@ -190,10 +190,10 @@ bool Link::lt(const PathExpressionImpl &o) const {
 
 // class QuantifiedConnective
 QuantifiedConnective::QuantifiedConnective(const vector<Var> &freeVars,
-                                           const vector<QVar> &quantifiedVars,
+                                           const vector<QuantifiedVar> &qvars,
                                            const PathExpression &lhs,
                                            const PathExpression &rhs)
-    : freeVars(freeVars), quantifiedVars(quantifiedVars), lhs(lhs), rhs(rhs) {
+    : freeVars(freeVars), quantifiedVars(qvars), lhs(lhs), rhs(rhs) {
   // TODO: Remove these restrictions
   iassert(freeVars.size() == 2)
       << "For now, we only support matrix path expressions";
@@ -212,10 +212,10 @@ void QuantifiedConnective::print(std::ostream &os) const {
 
 // class QuantifiedAnd
 PathExpression QuantifiedAnd::make(const std::vector<Var> &freeVars,
-                                   const std::vector<QVar> &quantifiedVars,
+                                   const vector<QuantifiedVar> &qvars,
                                    const PathExpression &l,
                                    const PathExpression &r) {
-  return new QuantifiedAnd(freeVars, quantifiedVars, l, r);
+  return new QuantifiedAnd(freeVars, qvars, l, r);
 }
 
 void QuantifiedAnd::accept(PathExpressionVisitor *visitor) const {
@@ -297,12 +297,12 @@ PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
     }
   }
 
-  vector<QVar> qVars;
-  for (auto &qvar : pe->getQVars()) {
+  vector<QuantifiedVar> qVars;
+  for (auto &qvar : pe->getQuantifiedVars()) {
     Var var = rw->rewrite(qvar.getVar());
     if (var != qvar.getVar()) {
       varsChanged = true;
-      qVars.push_back(QVar(qvar.getQuantifier(), var));
+      qVars.push_back(QuantifiedVar(qvar.getQuantifier(), var));
     }
     else {
       qVars.push_back(qvar);

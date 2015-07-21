@@ -229,10 +229,10 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
 
       map<unsigned, set<unsigned>> pathNeighbors;
       if (f->isQuantified()) {
-        iassert(f->getQVars().size() == 1)
+        iassert(f->getQuantifiedVars().size() == 1)
             << "For now, we only support one quantified variable";
 
-        QVar qvar = f->getQVars()[0];
+        QuantifiedVar qvar = f->getQuantifiedVars()[0];
 
         // The expression combines two binary path expressions with one
         // quantified variable. Thus, each operand must link one of the two free

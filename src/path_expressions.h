@@ -167,23 +167,23 @@ private:
 };
 
 
-class QVar {
+class QuantifiedVar {
 public:
   enum Quantifier { Exist };
 
-  QVar(Quantifier quantifier, const Var &var)
+  QuantifiedVar(Quantifier quantifier, const Var &var)
       : quantifier(quantifier), var(var) {}
 
-  QVar(const std::pair<Quantifier,Var> &qvar)
-      : quantifier(qvar.first), var(qvar.second) {}
+  QuantifiedVar(const std::pair<Quantifier,Var> &QuantifiedVar)
+      : quantifier(QuantifiedVar.first), var(QuantifiedVar.second) {}
 
   Var getVar() const {return var;}
   Quantifier getQuantifier() const {return quantifier;}
 
-  friend std::ostream &operator<<(std::ostream &os, const QVar &q) {
+  friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar &q) {
     std::string typeStr;
     switch (q.getQuantifier()) {
-      case QVar::Exist:
+      case Exist:
         typeStr = "\u2203";
         break;
     }
@@ -202,7 +202,7 @@ public:
 
   const std::vector<Var> &getFreeVars() const {return freeVars;}
 
-  const std::vector<QVar> &getQVars() const {
+  const std::vector<QuantifiedVar> &getQuantifiedVars() const {
     return quantifiedVars;
   }
   
@@ -213,7 +213,7 @@ public:
 
 protected:
   QuantifiedConnective(const std::vector<Var> &freeVars,
-                       const std::vector<QVar> &quantifiedVars,
+                       const std::vector<QuantifiedVar> &quantifiedVars,
                        const PathExpression &lhs,
                        const PathExpression &rhs);
 
@@ -221,7 +221,7 @@ protected:
 
 private:
   std::vector<Var> freeVars;
-  std::vector<QVar> quantifiedVars;
+  std::vector<QuantifiedVar> quantifiedVars;
 
   PathExpression lhs, rhs;
 
@@ -243,7 +243,7 @@ private:
 class QuantifiedAnd : public QuantifiedConnective {
 public:
   static PathExpression make(const std::vector<Var> &freeVars,
-                             const std::vector<QVar> &quantifiedVars,
+                             const std::vector<QuantifiedVar> &quantifiedVars,
                              const PathExpression &lhs,
                              const PathExpression &rhs);
 
@@ -251,7 +251,7 @@ public:
 
 private:
   QuantifiedAnd(const std::vector<Var> &freeVars,
-                const std::vector<QVar> &quantifiedVars,
+                const std::vector<QuantifiedVar> &quantifiedVars,
                 const PathExpression &lhs, const PathExpression &rhs)
       : QuantifiedConnective(freeVars, quantifiedVars, lhs, rhs) {}
 

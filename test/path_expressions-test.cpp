@@ -70,7 +70,8 @@ TEST(PathExpression, ExistAnd_vev) {
   Var vj("vj");
   PathExpression ve = Link::make(vi, e, Link::ve);
   PathExpression ev = Link::make(e, vj, Link::ev);
-  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QVar::Exist,e}}, ve, ev);
+  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist,e}},
+                                           ve, ev);
   ASSERT_EQ(vev.getPathEndpoint(0), vi);
   ASSERT_EQ(vev.getPathEndpoint(1), vj);
   CHECK_EQ(vev, vev);
@@ -80,7 +81,8 @@ TEST(PathExpression, ExistAnd_vev) {
   Var uj("uj");
   PathExpression uf = Link::make(ui, f, Link::ve);
   PathExpression fu = Link::make(f, uj, Link::ev);
-  PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QVar::Exist,f}}, uf, fu);
+  PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QuantifiedVar::Exist,f}},
+                                           uf, fu);
   CHECK_EQ(vev, ufu);
 
   // Bind the same sets to vev and ufu

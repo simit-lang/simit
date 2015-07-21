@@ -102,7 +102,8 @@ TEST(PathIndex, ExistAnd_vev) {
 //  TODO: Replace VE and EV in all tests with link and delete EV/VE classes
   PathExpression ve = Link::make(vi, e, Link::ve);
   PathExpression ev = Link::make(e, vj, Link::ev);
-  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QVar::Exist,e}}, ve, ev);
+  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist,e}},
+                                           ve, ev);
   PathIndex vevIndex = builder.buildSegmented(vev, 0);
   ASSERT_EQ(3u, vevIndex.numElements());
   ASSERT_EQ(7u, vevIndex.numNeighbors());
@@ -116,7 +117,8 @@ TEST(PathIndex, ExistAnd_vev) {
   Var uj("uj", V);
   PathExpression uf = Link::make(ui, f, Link::ve);
   PathExpression fu = Link::make(f, uj, Link::ev);
-  PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QVar::Exist,f}}, uf, fu);
+  PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QuantifiedVar::Exist,f}},
+                                           uf, fu);
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_EQ(vevIndex, ufuIndex);
 
@@ -147,8 +149,8 @@ TEST(PathIndex, Alias) {
   PathExpression ve = Link::make(vi, e, Link::ve);
   PathExpression ev = Link::make(e, vj, Link::ev);
 
-  QVar quantifiedVar = QVar(QVar::Exist, e);
-  PathExpression vev = QuantifiedAnd::make({vi,vj}, {quantifiedVar}, ve, ev);
+  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist, e}},
+                                           ve, ev);
 
   PathIndexBuilder builder;
   PathIndex index = builder.buildSegmented(vev, 0);
