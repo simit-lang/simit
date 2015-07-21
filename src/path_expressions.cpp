@@ -136,6 +136,11 @@ void PathExpression::accept(PathExpressionVisitor *visitor) const {
   ptr->accept(visitor);
 }
 
+std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
+  PathExpressionPrinter(os).print(pe);
+  return os;
+}
+
 
 // class Link
 PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
@@ -154,11 +159,6 @@ Var Link::getPathEndpoint(unsigned i) const {
 void Link::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
-
-void Link::print(std::ostream &os) const {
-    os << lhs << "-" << rhs;
-}
-
 
 static bool allOrNoneBound(const Link *l) {
   iassert(l->getNumPathEndpoints() == 2)
@@ -205,10 +205,6 @@ Var QuantifiedConnective::getPathEndpoint(unsigned i) const {
   return freeVars[i];
 }
 
-void QuantifiedConnective::print(std::ostream &os) const {
-  os << "(" << freeVars[0] << "," << freeVars[1] << ") " << quantifiedVars[0];
-}
-
 
 // class QuantifiedAnd
 PathExpression QuantifiedAnd::make(const std::vector<Var> &freeVars,
@@ -220,11 +216,6 @@ PathExpression QuantifiedAnd::make(const std::vector<Var> &freeVars,
 
 void QuantifiedAnd::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
-}
-
-void QuantifiedAnd::print(std::ostream &os) const {
-  QuantifiedConnective::print(os);
-  os << " | (" << getLhs() << ") \u2227 (" << getRhs() << ")";
 }
 
 
@@ -321,6 +312,38 @@ PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
 
 void PathExpressionRewriter::visit(const QuantifiedAnd *pe) {
   expr = visitBinaryConnective(pe, this);
+}
+
+
+// class PathExpressionPrinter
+void PathExpressionPrinter::print(const PathExpression &pe) {
+  os << "(" << pe.getPathEndpoint(0) << "," << pe.getPathEndpoint(1) << ") | ";
+  pe.accept(this);
+}
+
+void PathExpressionPrinter::visit(const Var &v) {
+}
+
+void PathExpressionPrinter::visit(const Link *pe) {
+  os << pe->getLhs() << "-" << pe->getRhs();
+}
+
+static void printConnective(ostream &os, const QuantifiedConnective *pe) {
+  auto &qvars = pe->getQuantifiedVars();
+  iassert(qvars.size() == 0 || qvars.size() == 1)
+      << "only one or zero quantified variables currently supported";
+  if (qvars.size() > 0) {
+    os << qvars[0] << " ";
+  }
+}
+
+void PathExpressionPrinter::visit(const QuantifiedAnd *pe) {
+  printConnective(os, pe);
+  os << "(";
+  pe->getLhs().accept(this);
+  os << " and ";
+  pe->getRhs().accept(this);
+  os << ")";
 }
 
 }}

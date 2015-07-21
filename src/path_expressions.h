@@ -71,7 +71,7 @@ public:
 };
 
 
-class PathExpressionImpl : public interfaces::Printable {
+class PathExpressionImpl {
 public:
   virtual ~PathExpressionImpl() {}
 
@@ -102,7 +102,6 @@ private:
   virtual bool lt(const PathExpressionImpl &o) const = 0;
 };
 
-
 class PathExpression
     : public util::IntrusivePtr<const PathExpressionImpl,false>,
       public interfaces::Comparable<PathExpression> {
@@ -131,9 +130,7 @@ public:
     return (l.ptr != r.ptr) && *l.ptr < *r.ptr;
   }
 
-  friend std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
-    return os << *pe.ptr;
-  }
+  friend std::ostream &operator<<(std::ostream &os, const PathExpression &pe);
 };
 
 
@@ -162,8 +159,6 @@ private:
 
   bool eq(const PathExpressionImpl &o) const;
   bool lt(const PathExpressionImpl &o) const;
-
-  void print(std::ostream &os) const;
 };
 
 
@@ -217,8 +212,6 @@ protected:
                        const PathExpression &lhs,
                        const PathExpression &rhs);
 
-  void print(std::ostream &os) const;
-
 private:
   std::vector<Var> freeVars;
   std::vector<QuantifiedVar> quantifiedVars;
@@ -254,13 +247,13 @@ private:
                 const std::vector<QuantifiedVar> &quantifiedVars,
                 const PathExpression &lhs, const PathExpression &rhs)
       : QuantifiedConnective(freeVars, quantifiedVars, lhs, rhs) {}
-
-  void print(std::ostream &os) const;
 };
 
 
 class PathExpressionVisitor {
 public:
+  virtual ~PathExpressionVisitor() {}
+
   virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
   virtual void visit(const QuantifiedAnd *pe);
@@ -269,6 +262,8 @@ public:
 
 class PathExpressionRewriter : public PathExpressionVisitor {
 public:
+  virtual ~PathExpressionRewriter() {}
+
   virtual Var rewrite(Var v);
   virtual PathExpression rewrite(PathExpression e);
 
@@ -277,6 +272,22 @@ protected:
 
   Var var;
   PathExpression expr;
+
+  virtual void visit(const Var &v);
+  virtual void visit(const Link *pe);
+  virtual void visit(const QuantifiedAnd *pe);
+};
+
+
+class PathExpressionPrinter : public PathExpressionVisitor {
+public:
+  PathExpressionPrinter(std::ostream &os) : os(os) {}
+  virtual ~PathExpressionPrinter() {}
+
+  void print(const PathExpression &pe);
+
+protected:
+  std::ostream &os;
 
   virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
