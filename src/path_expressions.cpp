@@ -132,91 +132,59 @@ bool PathExpression::isBound() const {
   return CheckIfBound().check(*this);
 }
 
-Var PathExpression::getPathEndpoint(unsigned i) const {
-  return ptr->getPathEndpoint(i);
-}
-
 void PathExpression::accept(PathExpressionVisitor *visitor) const {
   ptr->accept(visitor);
 }
 
-// class EV
-EV::EV(Var E, Var V) : E(E), V(V) {
+
+// class Link
+PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
+  return PathExpression(new Link(lhs, rhs, type));
 }
 
-PathExpression EV::make(Var E, Var V) {
-  return PathExpression(new EV(E, V));
+Link::Link(const Var &lhs, const Var &rhs, Type type)
+    : lhs(lhs), rhs(rhs), type(type) {
 }
 
-Var EV::getPathEndpoint(unsigned i) const {
-  iassert(i < 2);
-  return (i == 0) ? E : V;
+Var Link::getPathEndpoint(unsigned i) const {
+  iassert(i < 2) << "attempting to retrieve non-existing path endpoint";
+  return (i==0) ? lhs : rhs;
 }
 
-void EV::accept(PathExpressionVisitor *visitor) const {
+void Link::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
-template <class T>
-bool allOrNoneBound(const T *ev) {
-  return ( ev->getE().isBound() &&  ev->getV().isBound()) ||
-         (!ev->getE().isBound() && !ev->getV().isBound());
+void Link::print(std::ostream &os) const {
+    os << lhs << "-" << rhs;
 }
 
-bool EV::eq(const PathExpressionImpl &o) const {
-  const EV *optr = static_cast<const EV*>(&o);
+
+static bool allOrNoneBound(const Link *l) {
+  iassert(l->getNumPathEndpoints() == 2)
+      << "only binary path expressions currently supported";
+  return ( l->getLhs().isBound() &&  l->getRhs().isBound())
+      || (!l->getLhs().isBound() && !l->getRhs().isBound());
+}
+
+bool Link::eq(const PathExpressionImpl &o) const {
+  const Link *optr = static_cast<const Link*>(&o);
   iassert(allOrNoneBound(this)) << "either all should be bound or none";
   iassert(allOrNoneBound(optr)) << "either all should be bound or none";
-  return (!E.isBound() || !optr->E.isBound())
-      || (E.getBinding() == optr->E.getBinding() &&
-          V.getBinding() == optr->V.getBinding());
-  }
+  return (!getLhs().isBound() || !optr->getLhs().isBound())
+      || (getLhs().getBinding() == optr->getLhs().getBinding() &&
+          getRhs().getBinding() == optr->getRhs().getBinding());
+}
 
-bool EV::lt(const PathExpressionImpl &o) const {
-  const EV *optr = static_cast<const EV*>(&o);
+bool Link::lt(const PathExpressionImpl &o) const {
+  const Link *optr = static_cast<const Link*>(&o);
   iassert(allOrNoneBound(this)) << "either all should be bound or none";
   iassert(allOrNoneBound(optr)) << "either all should be bound or none";
-  return (E.isBound() && optr->E.isBound() && V.isBound() && optr->V.isBound())
-      && ((E.getBinding() != optr->E.getBinding())
-           ? E.getBinding() < optr->E.getBinding()
-           : V.getBinding() < optr->V.getBinding());
-}
 
-
-// class VE
-VE::VE(Var V, Var E) : V(V), E(E) {
-}
-
-PathExpression VE::make(Var V, Var E) {
-  return new VE(V, E);
-}
-
-Var VE::getPathEndpoint(unsigned i) const {
-  iassert(i < 2);
-  return (i == 0) ? V : E;
-}
-
-void VE::accept(PathExpressionVisitor *visitor) const {
-  visitor->visit(this);
-}
-
-bool VE::eq(const PathExpressionImpl &o) const {
-  const VE *optr = static_cast<const VE*>(&o);
-  iassert(allOrNoneBound(this)) << "either all should be bound or none";
-  iassert(allOrNoneBound(optr)) << "either all should be bound or none";
-  return (!V.isBound() || !optr->V.isBound())
-      || (V.getBinding() == optr->V.getBinding() &&
-          E.getBinding() == optr->E.getBinding());
-}
-
-bool VE::lt(const PathExpressionImpl &o) const {
-  const VE *optr = static_cast<const VE*>(&o);
-  iassert(allOrNoneBound(this)) << "either all should be bound or none";
-  iassert(allOrNoneBound(optr)) << "either all should be bound or none";
-  return (V.isBound() && optr->V.isBound() && E.isBound() && optr->E.isBound())
-      && ((V.getBinding() != optr->V.getBinding())
-           ? V.getBinding() < optr->V.getBinding()
-           : E.getBinding() < optr->E.getBinding());
+  return (getLhs().isBound() && optr->getLhs().isBound())
+      && ((getLhs().getBinding() != optr->getLhs().getBinding())
+           ? getLhs().getBinding() < optr->getLhs().getBinding()
+           : getRhs().getBinding() < optr->getRhs().getBinding());
 }
 
 
@@ -264,14 +232,9 @@ void QuantifiedAnd::print(std::ostream &os) const {
 void PathExpressionVisitor::visit(const Var &var) {
 }
 
-void PathExpressionVisitor::visit(const EV *pe) {
-  pe->getE().accept(this);
-  pe->getV().accept(this);
-}
-
-void PathExpressionVisitor::visit(const VE *pe) {
-  pe->getV().accept(this);
-  pe->getE().accept(this);
+void PathExpressionVisitor::visit(const Link *pe) {
+  pe->getLhs().accept(this);
+  pe->getRhs().accept(this);
 }
 
 void PathExpressionVisitor::visit(const QuantifiedAnd *pe) {
@@ -311,25 +274,14 @@ void PathExpressionRewriter::visit(const Var &v) {
   var = v;
 }
 
-void PathExpressionRewriter::visit(const EV *pe) {
-  Var e = rewrite(pe->getE());
-  Var v = rewrite(pe->getV());
-  if (e.ptr == pe->getE().ptr && v.ptr == pe->getV().ptr) {
+void PathExpressionRewriter::visit(const Link *pe) {
+  Var lhs = rewrite(pe->getLhs());
+  Var rhs = rewrite(pe->getRhs());
+  if (lhs.ptr == pe->getLhs().ptr && rhs.ptr == pe->getRhs().ptr) {
     expr = pe;
   }
   else {
-    expr = EV::make(e, v);
-  }
-}
-
-void PathExpressionRewriter::visit(const VE *pe) {
-  Var v = rewrite(pe->getV());
-  Var e = rewrite(pe->getE());
-  if (v.ptr == pe->getV().ptr && e.ptr == pe->getE().ptr) {
-    expr = pe;
-  }
-  else {
-    expr = VE::make(v, e);
+    expr = Link::make(lhs, rhs, pe->getType());
   }
 }
 

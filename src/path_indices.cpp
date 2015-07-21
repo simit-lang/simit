@@ -192,31 +192,31 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       return new SegmentedPathIndex(numElements, nbrsStart, nbrs);;
     }
 
-    /// If it is an EV path expression we return an EndpointPathIndex that wraps
-    /// the Edge set.
-    void visit(const EV *ev) {
-      const Set &edgeSet = *ev->getE().getBinding();
-      iassert(edgeSet.getCardinality() > 0)
-          << "not an edge set" << edgeSet.getName();
-      pi = new SetEndpointPathIndex(edgeSet);
-    };
-
-    void visit(const VE *ve) {
-      const Set &edgeSet = *ve->getE().getBinding();
+    void visit(const Link *link) {
+      const Set &edgeSet = *link->getEdgeVar().getBinding();
       iassert(edgeSet.getCardinality() > 0)
           << "not an edge set" << edgeSet.getName();
 
-      // Add each edge to the neighbor vectors of its endpoints
-      map<unsigned, set<unsigned>> pathNeighbors;
-      for (auto &e : edgeSet) {
-        iassert(e.getIdent() >= 0);
-        for (auto &ep : edgeSet.getEndpoints(e)) {
-          iassert(ep.getIdent() >= 0);
-          pathNeighbors[ep.getIdent()].insert(e.getIdent());
+      switch (link->getType()) {
+        case Link::ev: {
+          pi = new SetEndpointPathIndex(edgeSet);
+          break;
+        }
+        case Link::ve: {
+          // Add each edge to the neighbor vectors of its endpoints
+          map<unsigned, set<unsigned>> pathNeighbors;
+          for (auto &e : edgeSet) {
+            iassert(e.getIdent() >= 0);
+            for (auto &ep : edgeSet.getEndpoints(e)) {
+              iassert(ep.getIdent() >= 0);
+              pathNeighbors[ep.getIdent()].insert(e.getIdent());
+            }
+          }
+          
+          pi = pack(pathNeighbors);
+          break;
         }
       }
-
-      pi = pack(pathNeighbors);
     }
 
     void visit(const QuantifiedAnd *f) {

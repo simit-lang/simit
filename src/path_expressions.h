@@ -75,6 +75,7 @@ class PathExpressionImpl : public interfaces::Printable {
 public:
   virtual ~PathExpressionImpl() {}
 
+  unsigned getNumPathEndpoints() const {return 2;}
   virtual Var getPathEndpoint(unsigned i) const = 0;
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
@@ -117,7 +118,8 @@ public:
   /// True if the variables are bound to sets, false otherwise.
   bool isBound() const;
 
-  Var getPathEndpoint(unsigned i) const;
+  unsigned getNumPathEndpoints() const {return ptr->getNumPathEndpoints();}
+  Var getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}
 
   void accept(PathExpressionVisitor*) const;
 
@@ -135,56 +137,33 @@ public:
 };
 
 
-/// EV are path expression atoms, that connect an edge to its endpoints
-class EV : public PathExpressionImpl {
+class Link : public PathExpressionImpl {
 public:
-  static PathExpression make(Var E, Var V);
+  enum Type {ev, ve};
 
-  const Var &getE() const {return E;}
-  const Var &getV() const {return V;}
+  static PathExpression make(const Var &lhs, const Var &rhs, Type type);
+
+  const Var &getLhs() const {return lhs;}
+  const Var &getRhs() const {return rhs;}
+
+  Type getType() const {return type;}
+
+  const Var &getVertexVar() const {return (type==ev) ? rhs : lhs;}
+  const Var &getEdgeVar() const   {return (type==ev) ? lhs : rhs;}
 
   Var getPathEndpoint(unsigned i) const;
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
-  Var E;
-  Var V;
+  Var lhs, rhs;
+  Type type;
 
-  EV(Var E, Var V);
-
-  bool eq(const PathExpressionImpl &o) const;
-  bool lt(const PathExpressionImpl &o) const;
-
-  void print(std::ostream &os) const {
-    os << E << "-" << V;
-  }
-};
-
-
-/// VE at path expression atoms, that connect an element to the edges it is an
-/// endpoint of.
-class VE : public PathExpressionImpl {
-public:
-  static PathExpression make(Var V, Var E);
-
-  const Var &getV() const {return V;}
-  const Var &getE() const {return E;}
-
-  Var getPathEndpoint(unsigned i) const;
-  void accept(PathExpressionVisitor *visitor) const;
-
-private:
-  Var V;
-  Var E;
-
-  VE(Var V, Var E);
+  Link(const Var &lhs, const Var &rhs, Type type);
 
   bool eq(const PathExpressionImpl &o) const;
   bool lt(const PathExpressionImpl &o) const;
 
-  void print(std::ostream &os) const {
-    os << V << "-" << E;
-  }
+  void print(std::ostream &os) const;
 };
 
 
@@ -283,8 +262,7 @@ private:
 class PathExpressionVisitor {
 public:
   virtual void visit(const Var &v);
-  virtual void visit(const EV *pe);
-  virtual void visit(const VE *pe);
+  virtual void visit(const Link *pe);
   virtual void visit(const QuantifiedAnd *pe);
 };
 
@@ -301,8 +279,7 @@ protected:
   PathExpression expr;
 
   virtual void visit(const Var &v);
-  virtual void visit(const EV *pe);
-  virtual void visit(const VE *pe);
+  virtual void visit(const Link *pe);
   virtual void visit(const QuantifiedAnd *pe);
 };
 

@@ -20,21 +20,22 @@ do {                                 \
 } while (false)
 
 
-TEST(PathExpression, EV) {
+TEST(PathExpression, Link) {
   Var e = Var("e");
   Var v = Var("v");
-  PathExpression ev = EV::make(e, v);
+
+  PathExpression ev = Link::make(e, v, Link::ev);
+  ASSERT_EQ(ev.getNumPathEndpoints(), 2u);
   ASSERT_EQ(ev.getPathEndpoint(0), e);
   ASSERT_EQ(ev.getPathEndpoint(1), v);
   CHECK_EQ(ev, ev);
   ASSERT_FALSE(ev.isBound());
 
-  // Check that two different EV are equal (equal means that if the variables of
-  // both EV expressions are bound to the same sets, the resulting bound
-  // expressions are equal)
+  // Check that different links are equal (equal means that the variables of
+  // both links are bound to the same sets)
   Var f = Var("f");
   Var u = Var("u");
-  PathExpression fu = EV::make(f, u);
+  PathExpression fu = Link::make(f, u, Link::ve);
   CHECK_EQ(ev, fu);
 
   // Bind the same sets to ev and fu
@@ -56,54 +57,19 @@ TEST(PathExpression, EV) {
   F.setName("F");
   bfu = fu.bind({{u,U}, {f,F}});
   CHECK_NE(bev, bfu);
+
+  // Check that bound ev != bound ve
+  PathExpression bve = Link::make(v, e, Link::ve).bind({{v,V}, {e,E}});
+  ASSERT_NE(bev, bve);
 }
 
 
-TEST(PathExpression, VE) {
-  Var v = Var("v");
-  Var e = Var("e");
-  PathExpression ve = VE::make(v, e);
-  ASSERT_EQ(ve.getPathEndpoint(0), v);
-  ASSERT_EQ(ve.getPathEndpoint(1), e);
-  CHECK_EQ(ve, ve);
-  ASSERT_FALSE(ve.isBound());
-
-  // Check that two different EV are equal (equal means that if the variables of
-  // both EV expressions are bound to the same sets, the resulting bound
-  // expressions are equal)
-  Var u = Var("u");
-  Var f = Var("f");
-  PathExpression uf = VE::make(u, f);
-  CHECK_EQ(ve, uf);
-
-  // Bind the same sets to ev and fu
-  Set V;
-  Set E(V,V);
-  V.setName("V");
-  E.setName("E");
-  PathExpression bve = ve.bind({{v,V}, {e,E}});
-  PathExpression buf = uf.bind({{u,V}, {f,E}});
-  ASSERT_TRUE(bve.isBound());
-  ASSERT_TRUE(buf.isBound());
-  CHECK_EQ(uf, bve);
-  CHECK_EQ(bve, buf);
-
-  // Bind different sets to ev and fu
-  Set U;
-  Set F(U,U);
-  U.setName("U");
-  F.setName("F");
-  buf = uf.bind({{u,U}, {f,F}});
-  CHECK_NE(bve, buf);
-}
-
-
-TEST(PathExpression, AndExist) {
+TEST(PathExpression, ExistAnd_vev) {
   Var vi("vi");
   Var  e("e");
   Var vj("vj");
-  PathExpression ve = VE::make(vi, e);
-  PathExpression ev = EV::make(e, vj);
+  PathExpression ve = Link::make(vi, e, Link::ve);
+  PathExpression ev = Link::make(e, vj, Link::ev);
   PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QVar::Exist,e}}, ve, ev);
   ASSERT_EQ(vev.getPathEndpoint(0), vi);
   ASSERT_EQ(vev.getPathEndpoint(1), vj);
@@ -112,8 +78,8 @@ TEST(PathExpression, AndExist) {
   Var ui("ui");
   Var  f("f");
   Var uj("uj");
-  PathExpression uf = VE::make(ui, f);
-  PathExpression fu = EV::make(f, uj);
+  PathExpression uf = Link::make(ui, f, Link::ve);
+  PathExpression fu = Link::make(f, uj, Link::ev);
   PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QVar::Exist,f}}, uf, fu);
   CHECK_EQ(vev, ufu);
 

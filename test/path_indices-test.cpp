@@ -29,7 +29,7 @@ do {                                                         \
 } while(0)
 
 
-TEST(PathIndex, EV) {
+TEST(PathIndex, Link) {
   PathIndexBuilder builder;
 
   Set V;
@@ -38,7 +38,10 @@ TEST(PathIndex, EV) {
 
   Var e("e", E);
   Var v("v", V);
-  PathExpression ev = EV::make(e, v);
+
+
+  // Test e-v links
+  PathExpression ev = Link::make(e, v, Link::ev);
   PathIndex evIndex = builder.buildSegmented(ev, 0);
   ASSERT_EQ(4u, evIndex.numElements());
   ASSERT_EQ(4u*2, evIndex.numNeighbors());
@@ -49,7 +52,7 @@ TEST(PathIndex, EV) {
   // Check that EV get's memoized
   Var f("f", E);
   Var u("u", V);
-  PathExpression fu = EV::make(f, u);
+  PathExpression fu = Link::make(f, u, Link::ev);
   PathIndex fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_EQ(evIndex, fuIndex);
 
@@ -60,21 +63,9 @@ TEST(PathIndex, EV) {
   fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_NE(evIndex, fuIndex);
 
-  // Check that EV evaluated backwards get's a different index
-  // TODO
-}
 
-
-TEST(PathIndex, VE) {
-  PathIndexBuilder builder;
-
-  Set V;
-  Set E(V,V);
-  createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
-
-  Var v("v", V);
-  Var e("e", E);
-  PathExpression ve = VE::make(v, e);
+  // Test v-e links
+  PathExpression ve = Link::make(v, e, Link::ve);
   PathIndex veIndex = builder.buildSegmented(ve, 0);
   ASSERT_EQ(5u, veIndex.numElements());
   ASSERT_EQ(8u, veIndex.numNeighbors());
@@ -83,25 +74,22 @@ TEST(PathIndex, VE) {
                vector<vector<unsigned>>({{0}, {0, 1}, {1, 2}, {2, 3}, {3}}));
 
   // Check that VE get's memoized
-  Var u("u", V);
-  Var f("f", E);
-  PathExpression uf = VE::make(u,f);
+  PathExpression uf = Link::make(u,f, Link::ve);
   PathIndex ufIndex = builder.buildSegmented(uf, 0);
   ASSERT_EQ(veIndex, ufIndex);
 
   // Check that different VE get's a different index
-  Set U;
-  Set F(V,V);
   uf = uf.bind({{f,F}, {u,U}});
   ufIndex = builder.buildSegmented(uf, 0);
   ASSERT_NE(veIndex, ufIndex);
 
-  // Check that VE evaluated backwards get's a different index
+
+  // Test that ev evaluated backwards gets the same index as ve and vice versa
   // TODO
 }
 
 
-TEST(PathIndex, VEV) {
+TEST(PathIndex, ExistAnd_vev) {
   PathIndexBuilder builder;
 
   Set V;
@@ -111,8 +99,9 @@ TEST(PathIndex, VEV) {
   Var vi("vi", V);
   Var e("e", E);
   Var vj("vj", V);
-  PathExpression ve = VE::make(vi, e);
-  PathExpression ev = EV::make(e, vj);
+//  TODO: Replace VE and EV in all tests with link and delete EV/VE classes
+  PathExpression ve = Link::make(vi, e, Link::ve);
+  PathExpression ev = Link::make(e, vj, Link::ev);
   PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QVar::Exist,e}}, ve, ev);
   PathIndex vevIndex = builder.buildSegmented(vev, 0);
   ASSERT_EQ(3u, vevIndex.numElements());
@@ -125,8 +114,8 @@ TEST(PathIndex, VEV) {
   Var ui("ui", V);
   Var f("e", E);
   Var uj("uj", V);
-  PathExpression uf = VE::make(ui, f);
-  PathExpression fu = EV::make(f, uj);
+  PathExpression uf = Link::make(ui, f, Link::ve);
+  PathExpression fu = Link::make(f, uj, Link::ev);
   PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QVar::Exist,f}}, uf, fu);
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_EQ(vevIndex, ufuIndex);
@@ -155,8 +144,8 @@ TEST(PathIndex, Alias) {
   Var vi("vi", V);
   Var e("e", E);
   Var vj("vj", V);
-  PathExpression ve = VE::make(vi, e);
-  PathExpression ev = EV::make(e, vj);
+  PathExpression ve = Link::make(vi, e, Link::ve);
+  PathExpression ev = Link::make(e, vj, Link::ev);
 
   QVar quantifiedVar = QVar(QVar::Exist, e);
   PathExpression vev = QuantifiedAnd::make({vi,vj}, {quantifiedVar}, ve, ev);
