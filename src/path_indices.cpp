@@ -219,7 +219,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       pi = pack(pathNeighbors);
     }
 
-    void visit(const And *f) {
+    void visit(const QuantifiedAnd *f) {
       auto &freeVars = f->getFreeVars();
       iassert(freeVars.size() == 2)
           << "For now, we only support matrix path expressions";

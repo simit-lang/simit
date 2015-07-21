@@ -25,16 +25,15 @@
 /// This file defines the classes that make up path expressions as well as Path
 /// Expression visitors. The EBNF for path expressions is:
 ///
-/// PathExpression := EV
-///                 | VE
-///                 | Predicate
+/// PathExpression := Link
+///                 | QuantifiedConnective
 ///
-/// Formula := (Var,Var) QuantifiedVar | Predicate
+/// QuantifiedConnective := (Var,Var) | [Quantifier Var] Connective
 ///
-/// Predicate := PathExpression and PathExpression
-///            | PathExpression  or Expression
+/// Connective := PathExpression and PathExpression
+///             | PathExpression  or Expression
 ///
-/// QuantifiedVar := exist Var
+/// Quantifier := exist
 
 namespace simit {
 class Set;
@@ -218,7 +217,7 @@ private:
 };
 
 
-class Formula : public PathExpressionImpl {
+class QuantifiedConnective : public PathExpressionImpl {
 public:
   bool isQuantified() const {return quantifiedVars.size() > 0;}
 
@@ -227,50 +226,55 @@ public:
   const std::vector<QVar> &getQVars() const {
     return quantifiedVars;
   }
+  
+  PathExpression getLhs() const {return lhs;}
+  PathExpression getRhs() const {return rhs;}
 
   Var getPathEndpoint(unsigned i) const;
 
 protected:
-  Formula(const std::vector<Var> &freeVars,
-          const std::vector<QVar> &quantifiedVars);
+  QuantifiedConnective(const std::vector<Var> &freeVars,
+                       const std::vector<QVar> &quantifiedVars,
+                       const PathExpression &lhs,
+                       const PathExpression &rhs);
 
   void print(std::ostream &os) const;
 
 private:
   std::vector<Var> freeVars;
   std::vector<QVar> quantifiedVars;
+
+  PathExpression lhs, rhs;
+
+  bool eq(const PathExpressionImpl &o) const {
+    const QuantifiedConnective *optr =
+        static_cast<const QuantifiedConnective*>(&o);
+    return getLhs() == optr->getLhs() && getRhs() == optr->getRhs();
+  }
+
+  bool lt(const PathExpressionImpl &o) const {
+    const QuantifiedConnective *optr =
+        static_cast<const QuantifiedConnective*>(&o);
+    return (getLhs() != optr->getLhs()) ? getLhs() < optr->getLhs()
+                                        : getRhs() < optr->getRhs();
+  }
 };
 
 
-class And : public Formula {
+class QuantifiedAnd : public QuantifiedConnective {
 public:
   static PathExpression make(const std::vector<Var> &freeVars,
                              const std::vector<QVar> &quantifiedVars,
-                             const PathExpression &l, const PathExpression &r);
-
-  PathExpression getLhs() const {return l;}
-  PathExpression getRhs() const {return r;}
+                             const PathExpression &lhs,
+                             const PathExpression &rhs);
 
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
-  // TODO: Factor fields and eq/lt into BinaryFormula class?
-  PathExpression l, r;
-
-  And(const std::vector<Var> &freeVars,
-      const std::vector<QVar> &quantifiedVars,
-      const PathExpression &l, const PathExpression &r)
-      : Formula(freeVars, quantifiedVars), l(l), r(r) {}
-
-  bool eq(const PathExpressionImpl &o) const {
-    const And *optr = static_cast<const And*>(&o);
-    return l == optr->l && r == optr->r;
-  }
-
-  bool lt(const PathExpressionImpl &o) const {
-    const And *optr = static_cast<const And*>(&o);
-    return (l != optr->l) ? l < optr->l : r < optr->r;
-  }
+  QuantifiedAnd(const std::vector<Var> &freeVars,
+                const std::vector<QVar> &quantifiedVars,
+                const PathExpression &lhs, const PathExpression &rhs)
+      : QuantifiedConnective(freeVars, quantifiedVars, lhs, rhs) {}
 
   void print(std::ostream &os) const;
 };
@@ -281,7 +285,7 @@ public:
   virtual void visit(const Var &v);
   virtual void visit(const EV *pe);
   virtual void visit(const VE *pe);
-  virtual void visit(const And *pe);
+  virtual void visit(const QuantifiedAnd *pe);
 };
 
 
@@ -299,7 +303,7 @@ protected:
   virtual void visit(const Var &v);
   virtual void visit(const EV *pe);
   virtual void visit(const VE *pe);
-  virtual void visit(const And *pe);
+  virtual void visit(const QuantifiedAnd *pe);
 };
 
 }}

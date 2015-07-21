@@ -220,10 +220,12 @@ bool VE::lt(const PathExpressionImpl &o) const {
 }
 
 
-// class Formula
-Formula::Formula(const std::vector<Var> &freeVars,
-                 const std::vector<QVar> &quantifiedVars)
-    : freeVars(freeVars), quantifiedVars(quantifiedVars) {
+// class QuantifiedConnective
+QuantifiedConnective::QuantifiedConnective(const vector<Var> &freeVars,
+                                           const vector<QVar> &quantifiedVars,
+                                           const PathExpression &lhs,
+                                           const PathExpression &rhs)
+    : freeVars(freeVars), quantifiedVars(quantifiedVars), lhs(lhs), rhs(rhs) {
   // TODO: Remove these restrictions
   iassert(freeVars.size() == 2)
       << "For now, we only support matrix path expressions";
@@ -231,29 +233,30 @@ Formula::Formula(const std::vector<Var> &freeVars,
       << "For now, we only support one quantified variable";
 }
 
-Var Formula::getPathEndpoint(unsigned i) const {
+Var QuantifiedConnective::getPathEndpoint(unsigned i) const {
   return freeVars[i];
 }
 
-void Formula::print(std::ostream &os) const {
+void QuantifiedConnective::print(std::ostream &os) const {
   os << "(" << freeVars[0] << "," << freeVars[1] << ") " << quantifiedVars[0];
 }
 
 
-// class And
-PathExpression And::make(const std::vector<Var> &freeVars,
-                         const std::vector<QVar> &quantifiedVars,
-                         const PathExpression &l, const PathExpression &r) {
-  return new And(freeVars, quantifiedVars, l, r);
+// class QuantifiedAnd
+PathExpression QuantifiedAnd::make(const std::vector<Var> &freeVars,
+                                   const std::vector<QVar> &quantifiedVars,
+                                   const PathExpression &l,
+                                   const PathExpression &r) {
+  return new QuantifiedAnd(freeVars, quantifiedVars, l, r);
 }
 
-void And::accept(PathExpressionVisitor *visitor) const {
+void QuantifiedAnd::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
-void And::print(std::ostream &os) const {
-  Formula::print(os);
-  os << " | (" << l << ") \u2227 (" << r << ")";
+void QuantifiedAnd::print(std::ostream &os) const {
+  QuantifiedConnective::print(os);
+  os << " | (" << getLhs() << ") \u2227 (" << getRhs() << ")";
 }
 
 
@@ -271,7 +274,7 @@ void PathExpressionVisitor::visit(const VE *pe) {
   pe->getE().accept(this);
 }
 
-void PathExpressionVisitor::visit(const And *pe) {
+void PathExpressionVisitor::visit(const QuantifiedAnd *pe) {
   pe->getLhs().accept(this);
   pe->getRhs().accept(this);
 }
@@ -364,7 +367,7 @@ PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
   }
 }
 
-void PathExpressionRewriter::visit(const And *pe) {
+void PathExpressionRewriter::visit(const QuantifiedAnd *pe) {
   expr = visitBinaryConnective(pe, this);
 }
 
