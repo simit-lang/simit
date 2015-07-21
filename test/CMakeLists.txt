@@ -6,9 +6,10 @@ file(GLOB GTEST_HEADER gtest/gtest.h)
 include_directories(${SIMIT_TEST_DIR})
 add_library(gtest ${GTEST_HEADER} ${GTEST_SOURCE})
 
-file(GLOB SOURCES *.cpp system-tests/*.cpp)
+file(GLOB HEADERS *.h)
+file(GLOB SOURCES *.cpp)
 
-add_executable(${TESTS} ${SOURCES})
+add_executable(${TESTS} ${SOURCES} ${HEADERS})
 target_link_libraries(${TESTS} gtest)
 target_link_libraries(${TESTS} pthread)
 target_link_libraries(${TESTS} ${PROJECT_NAME})

@@ -1,3 +1,6 @@
+#ifndef SIMIT_TEST_H
+#define SIMIT_TEST_H
+
 #include "gtest/gtest.h"
 #include <iostream>
 #include <string>
@@ -52,3 +55,5 @@ inline simit::Function getFunction(std::string fileName,
 
   return f;
 }
+
+#endif
