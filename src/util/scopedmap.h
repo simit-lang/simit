@@ -4,12 +4,13 @@
 #include <string>
 #include <map>
 #include <list>
+#include <ostream>
 
 #include "error.h"
 #include "util.h"
 
 namespace simit {
-namespace internal {
+namespace util {
 
 /// Tracks symbols and their associated IR nodes across a stack of scopes.
 template <typename Key, typename Value>

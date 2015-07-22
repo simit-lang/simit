@@ -8,11 +8,11 @@
 #include <map>
 #include <utility>
 
-#include "scopedmap.h"
 #include "types.h"
 #include "ir.h"
 #include "ir_builder.h"
 #include "ir_codegen.h"
+#include "util/scopedmap.h"
 
 #include "test.h"
 
@@ -193,12 +193,10 @@ private:
   std::map<std::string, ir::Var>   externs;
   std::map<ir::Var,ir::Expr>       constants;
   std::map<std::string, ir::Func>  functions;
-
   std::list<std::vector<ir::Stmt>> statements;
-
-  ScopedMap<std::string, Symbol>   exprSymtable;
-
   std::vector<Test*>               tests;
+
+  util::ScopedMap<std::string, Symbol> exprSymtable;
 };
 
 }} // namespace simit::internal

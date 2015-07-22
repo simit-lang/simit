@@ -10,7 +10,7 @@
 #include "backend.h"
 #include "var.h"
 #include "ir_visitor.h"
-#include "scopedmap.h"
+#include "util/scopedmap.h"
 
 namespace llvm {
 class LLVMContext;
@@ -49,7 +49,7 @@ protected:
   virtual unsigned global_addrspace()  { return 0; } // LLVM generic addrspace
   virtual unsigned generic_addrspace() { return 0; } // LLVM generic addrspace
   
-  ScopedMap<simit::ir::Var, llvm::Value*> symtable;
+  util::ScopedMap<simit::ir::Var, llvm::Value*> symtable;
 
   // Globally allocated buffers
   std::map<ir::Var, llvm::Value*> buffers;

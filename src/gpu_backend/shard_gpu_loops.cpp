@@ -2,7 +2,6 @@
 #include "gpu_ir.h"
 
 #include "ir_rewriter.h"
-#include "scopedmap.h"
 
 namespace simit {
 

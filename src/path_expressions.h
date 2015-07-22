@@ -10,7 +10,7 @@
 #include "printable.h"
 #include "intrusive_ptr.h"
 #include "comparable.h"
-#include "scopedmap.h"
+#include "util/scopedmap.h"
 #include "util/name_generator.h"
 
 /// \file
@@ -306,7 +306,7 @@ protected:
   const Var &rename(const Var &var) const;
 
 private:
-  internal::ScopedMap<Var,Var> renames;
+  util::ScopedMap<Var,Var> renames;
 };
 
 

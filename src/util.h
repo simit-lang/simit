@@ -17,11 +17,7 @@ std::string toString(const T &val) {
   return sstream.str();
 }
 
-/// Some << overloads to let the join functions print out pointer collections.
-template <typename T>
-std::ostream& operator<<(std::ostream &out, const T *dim) {
-  return out << *dim;
-}
+/// Some << overloads to let the join functions print smart-pointer collections.
 template <typename T>
 std::ostream& operator<<(std::ostream &out, const std::shared_ptr<T> dim) {
   return out << *dim;

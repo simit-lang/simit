@@ -2,7 +2,7 @@
 #include "gpu_ir.h"
 
 #include "ir_rewriter.h"
-#include "scopedmap.h"
+#include "util/scopedmap.h"
 
 namespace simit {
 
@@ -114,7 +114,7 @@ protected:
   }
 
   // Map from symbol to transformative action
-  internal::ScopedMap<ir::Var, VarAction> symtable;
+  util::ScopedMap<ir::Var, VarAction> symtable;
   std::vector<Field> sharedFields;
   const internal::GPUSharding *currentKernelSharding;
   Var sharedVar;
