@@ -10,26 +10,6 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-// class UniqueNameGenerator
-std::string UniqueNameGenerator::getName() {
-  return getName("tmp");
-}
-
-std::string UniqueNameGenerator::getName(const std::string &suggestion) {
-  if (takenNames.find(suggestion) == takenNames.end()) {
-    takenNames[suggestion] = 1;
-    return suggestion;
-  }
-  else {
-    string name = suggestion;
-    do {
-      name = suggestion + to_string(takenNames[suggestion]++);
-    } while (takenNames.find(name) != takenNames.end());
-    return  getName(name);
-  }
-}
-
-
 // class IndexVarFactory
 IndexVar IndexVarFactory::createIndexVar(const IndexDomain &domain) {
   return IndexVar(makeName(), domain);

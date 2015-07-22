@@ -5,6 +5,7 @@
 
 #include "ir.h"
 #include "error.h"
+#include "util/name_generator.h"
 
 namespace simit {
 namespace ir {
@@ -24,15 +25,6 @@ public:
 private:
   int nameID;
   std::string makeName();
-};
-
-class UniqueNameGenerator {
-public:
-  std::string getName();
-  std::string getName(const std::string &suggestion);
-
-private:
-  std::map<std::string,unsigned> takenNames;
 };
 
 /// Builds Simit IR nodes with unique names.
@@ -68,7 +60,7 @@ public:
 
 
 private:
-  UniqueNameGenerator names;
+  util::NameGenerator names;
   std::vector<ir::Stmt> *stmts = nullptr;
   IndexVarFactory factory;
 
