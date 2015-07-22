@@ -47,6 +47,8 @@ std::ostream &operator<<(std::ostream& os, const Var& v) {
 
 // class PathExpressionImpl
 bool operator==(const PathExpressionImpl &l, const PathExpressionImpl &r) {
+  // If one of the operands is a renamed path expression then we compare
+  // its sub-path expression that was renamed to the other operand
   auto &lid = typeid(l);
   auto &rid = typeid(r);
   if (lid != rid) {
@@ -67,6 +69,8 @@ bool operator==(const PathExpressionImpl &l, const PathExpressionImpl &r) {
 }
 
 bool operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
+  // If one of the operands is a renamed path expression then we compare
+  // its sub-path expression that was renamed to the other operand
   auto lid = std::type_index(typeid(l));
   auto rid = std::type_index(typeid(r));
   if (lid != rid) {
