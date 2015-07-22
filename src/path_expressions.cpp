@@ -3,6 +3,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include <algorithm>
 
 #include "error.h"
 #include "graph.h"
@@ -136,6 +137,11 @@ void PathExpression::accept(PathExpressionVisitor *visitor) const {
   ptr->accept(visitor);
 }
 
+PathExpression PathExpression::operator()(Var v0, Var v1) {
+  return new RenamedPathExpression(*this, {{getPathEndpoint(0),v0},
+                                   {getPathEndpoint(1),v1}});
+}
+
 std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
   PathExpressionPrinter(os).print(pe);
   return os;
@@ -219,6 +225,32 @@ void QuantifiedAnd::accept(PathExpressionVisitor *visitor) const {
 }
 
 
+// class RenamedPathExpression
+Var RenamedPathExpression::getPathEndpoint(unsigned i) const {
+  iassert(i < pe.getNumPathEndpoints())
+      << "path expression does not have requested endpoint";
+  iassert(renames.find(pe.getPathEndpoint(i)) != renames.end())
+      << "no mapping exist for endpoint " << pe.getPathEndpoint(i);
+  return renames.at(pe.getPathEndpoint(i));
+}
+
+void RenamedPathExpression::accept(PathExpressionVisitor *visitor) const {
+  visitor->visitRename(this);
+}
+
+bool RenamedPathExpression::eq(const PathExpressionImpl &o) const {
+  const RenamedPathExpression *optr =
+      static_cast<const RenamedPathExpression*>(&o);
+  return pe == optr->pe
+      && renames.size() == optr->renames.size()
+      && std::equal(renames.begin(), renames.end(), optr->renames.begin());
+}
+
+bool RenamedPathExpression::lt(const PathExpressionImpl &o) const {
+  
+}
+
+
 // class PathExpressionVisitor
 void PathExpressionVisitor::visit(const Var &var) {
 }
@@ -231,6 +263,29 @@ void PathExpressionVisitor::visit(const Link *pe) {
 void PathExpressionVisitor::visit(const QuantifiedAnd *pe) {
   pe->getLhs().accept(this);
   pe->getRhs().accept(this);
+}
+
+void PathExpressionVisitor::visit(const RenamedPathExpression *pe) {
+  pe->getPathExpression().accept(this);
+}
+
+const Var &PathExpressionVisitor::rename(const Var &var) const {
+  return renames.contains(var) ? renames.get(var) : var;
+}
+
+void PathExpressionVisitor::visitRename(const RenamedPathExpression *pe) {
+  renames.scope();
+  for (auto &rename : pe->getRenames()) {
+    // If v0 is renamed to a v1, which is renamed to v2, then rename v0 to v2
+    if (renames.contains(rename.second)) {
+      renames.insert(rename.first, renames.get(rename.second));
+    }
+    else {
+      renames.insert(rename);
+    }
+  }
+  visit(pe);  // template method
+  renames.unscope();
 }
 
 
@@ -314,6 +369,17 @@ void PathExpressionRewriter::visit(const QuantifiedAnd *pe) {
   expr = visitBinaryConnective(pe, this);
 }
 
+void PathExpressionRewriter::visit(const RenamedPathExpression *pe) {
+  PathExpression renamedPe = rewrite(pe->getPathExpression());
+  if (renamedPe == pe->getPathExpression()) {
+    expr = pe;
+  }
+  else {
+    // TODO: Test this
+    expr = renamedPe(pe->getPathEndpoint(0), pe->getPathEndpoint(1));
+  }
+}
+
 
 // class PathExpressionPrinter
 void PathExpressionPrinter::print(const PathExpression &pe) {
@@ -325,7 +391,7 @@ void PathExpressionPrinter::visit(const Var &v) {
 }
 
 void PathExpressionPrinter::visit(const Link *pe) {
-  os << pe->getLhs() << "-" << pe->getRhs();
+  os << rename(pe->getLhs()) << "-" << rename(pe->getRhs());
 }
 
 static void printConnective(ostream &os, const QuantifiedConnective *pe) {

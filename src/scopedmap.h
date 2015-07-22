@@ -32,9 +32,14 @@ public:
   /// Remove the top symbol scope.
   void unscope() { scopes.pop_front(); }
 
-  /// Return the first match
+  // Insert key-value pair into current scope
   void insert(const Key &symbol, const Value &value) {
     scopes.front()[symbol] = value;
+  }
+
+  // Insert key-value pair into current scope
+  void insert(const std::pair<Key, Value> &symVal) {
+    scopes.front().insert(symVal);
   }
 
   // True iff the symbol table contains the given symbol.
@@ -67,6 +72,7 @@ public:
       }
     }
     iassert(false) << "Attempting to get a symbol that is not in symbol table.";
+    return scopes.begin()->at(symbol); // silence warning
   }
 
   /// Iterator over symbol scopes.

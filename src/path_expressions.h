@@ -10,6 +10,7 @@
 #include "printable.h"
 #include "intrusive_ptr.h"
 #include "comparable.h"
+#include "scopedmap.h"
 
 /// \file
 /// Path Expressions describe a neighborhood of a vertex or edge in a graph.
@@ -40,6 +41,7 @@ class Set;
 
 namespace pe {
 class PathExpressionVisitor;
+class PathExpression;
 
 struct VarContent {
   std::string name;
@@ -76,6 +78,7 @@ public:
   virtual ~PathExpressionImpl() {}
 
   unsigned getNumPathEndpoints() const {return 2;}
+
   virtual Var getPathEndpoint(unsigned i) const = 0;
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
@@ -121,6 +124,8 @@ public:
   Var getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}
 
   void accept(PathExpressionVisitor*) const;
+
+  PathExpression operator()(Var v0, Var v1);
 
   friend bool operator==(const PathExpression &l, const PathExpression &r) {
     return (l.ptr == r.ptr) || (*l.ptr == *r.ptr);
@@ -216,6 +221,10 @@ private:
   std::vector<Var> freeVars;
   std::vector<QuantifiedVar> quantifiedVars;
 
+  // The free and quantified variables in the connective rename variables
+  // in the sub-expressions.
+  std::map<Var, std::vector<Var>> renames;
+
   PathExpression lhs, rhs;
 
   bool eq(const PathExpressionImpl &o) const {
@@ -250,6 +259,30 @@ private:
 };
 
 
+class RenamedPathExpression : public PathExpressionImpl {
+public:
+  Var getPathEndpoint(unsigned i) const;
+
+  const PathExpression &getPathExpression() const {return pe;}
+  const std::map<Var,Var> &getRenames() const {return renames;}
+
+  void accept(PathExpressionVisitor *visitor) const;
+
+private:
+  PathExpression pe;
+  std::map<Var,Var> renames;
+
+  // Path expressions can be renamed by using PathExpression::operator()
+  RenamedPathExpression(const PathExpression &pe,
+                        const std::map<Var,Var> &renames)
+      : pe(pe), renames(renames) {}
+  friend PathExpression;
+
+  bool eq(const PathExpressionImpl &o) const;
+  bool lt(const PathExpressionImpl &o) const;
+};
+
+
 class PathExpressionVisitor {
 public:
   virtual ~PathExpressionVisitor() {}
@@ -257,6 +290,18 @@ public:
   virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
   virtual void visit(const QuantifiedAnd *pe);
+
+  virtual void visit(const RenamedPathExpression *pe);
+
+  /// Records renamings and delegates to regular visit method. Called by
+  /// RenamedPathExpression::accept().
+  virtual void visitRename(const RenamedPathExpression *pe);
+
+protected:
+  const Var &rename(const Var &var) const;
+
+private:
+  internal::ScopedMap<Var,Var> renames;
 };
 
 
@@ -276,6 +321,8 @@ protected:
   virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
   virtual void visit(const QuantifiedAnd *pe);
+
+  virtual void visit(const RenamedPathExpression *pe);
 };
 
 
