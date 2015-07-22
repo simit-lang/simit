@@ -47,7 +47,6 @@ struct VarContent {
   std::string name;
   const Set *set;
 
-  VarContent() : VarContent("") {}
   VarContent(const std::string &name) : VarContent(name, nullptr) {}
   VarContent(const std::string &name, const Set *set) : name(name), set(set) {}
 
@@ -58,9 +57,11 @@ struct VarContent {
 
 class Var : public util::IntrusivePtr<const VarContent> {
 public:
-  Var();
-  explicit Var(const std::string &name);
-  explicit Var(const std::string &name, const Set &set);
+  Var() : Var("") {}
+  Var(const std::string &name)
+      : util::IntrusivePtr<const VarContent>(new VarContent(name)) {}
+  explicit Var(const std::string &name, const Set &set)
+      : util::IntrusivePtr<const VarContent>(new VarContent(name, &set)) {}
 
   const std::string &getName() const;
   const Set *getBinding() const;
