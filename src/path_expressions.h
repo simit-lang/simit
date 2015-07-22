@@ -166,6 +166,18 @@ public:
 };
 
 
+template <typename T>
+inline bool isa(PathExpression pe) {
+  return pe.defined() && dynamic_cast<const T*>(pe.ptr) != nullptr;
+}
+
+template <typename T>
+inline const T* to(PathExpression e) {
+  iassert(isa<T>(e)) << "Wrong PathExpression type";
+  return static_cast<const T*>(e.ptr);
+}
+
+
 class Link : public PathExpressionImpl {
 public:
   enum Type {ev, ve};
