@@ -45,6 +45,48 @@ std::ostream &operator<<(std::ostream& os, const Var& v) {
 }
 
 
+// class PathExpressionImpl
+bool operator==(const PathExpressionImpl &l, const PathExpressionImpl &r) {
+  auto &lid = typeid(l);
+  auto &rid = typeid(r);
+  if (lid != rid) {
+    static auto &renid = typeid(RenamedPathExpression);
+    if (lid == renid) {
+      auto lptr = static_cast<const RenamedPathExpression*>(&l);
+      return lptr->getPathExpression() == PathExpression(&r);
+    }
+    else if (rid == renid) {
+      auto rptr = static_cast<const RenamedPathExpression*>(&r);
+      return PathExpression(&l) == rptr->getPathExpression();
+    }
+    else {
+      return false;
+    }
+  }
+  return l.eq(r);
+}
+
+bool operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
+  auto lid = std::type_index(typeid(l));
+  auto rid = std::type_index(typeid(r));
+  if (lid != rid) {
+    static auto &renid = typeid(RenamedPathExpression);
+    if (lid == renid) {
+      auto lptr = static_cast<const RenamedPathExpression*>(&l);
+      return lptr->getPathExpression() < PathExpression(&r);
+    }
+    else if (rid == renid) {
+      auto rptr = static_cast<const RenamedPathExpression*>(&r);
+      return PathExpression(&l) < rptr->getPathExpression();
+    }
+    else {
+      return lid < rid;
+    }
+  }
+  return l.lt(r);
+}
+
+
 // class PathExpression
 class BindPathExpression : public PathExpressionRewriter {
 public:
@@ -163,7 +205,7 @@ static bool allOrNoneBound(const Link *l) {
 }
 
 bool Link::eq(const PathExpressionImpl &o) const {
-  const Link *optr = static_cast<const Link*>(&o);
+  auto optr = static_cast<const Link*>(&o);
   iassert(allOrNoneBound(this)) << "either all should be bound or none";
   iassert(allOrNoneBound(optr)) << "either all should be bound or none";
   return (!getLhs().isBound() || !optr->getLhs().isBound())
@@ -172,10 +214,9 @@ bool Link::eq(const PathExpressionImpl &o) const {
 }
 
 bool Link::lt(const PathExpressionImpl &o) const {
-  const Link *optr = static_cast<const Link*>(&o);
+  auto optr = static_cast<const Link*>(&o);
   iassert(allOrNoneBound(this)) << "either all should be bound or none";
   iassert(allOrNoneBound(optr)) << "either all should be bound or none";
-
   return (getLhs().isBound() && optr->getLhs().isBound())
       && ((getLhs().getBinding() != optr->getLhs().getBinding())
            ? getLhs().getBinding() < optr->getLhs().getBinding()
@@ -200,6 +241,17 @@ Var QuantifiedConnective::getPathEndpoint(unsigned i) const {
   return freeVars[i];
 }
 
+
+bool QuantifiedConnective::eq(const PathExpressionImpl &o) const {
+  auto optr = static_cast<const QuantifiedConnective*>(&o);
+  return getLhs() == optr->getLhs() && getRhs() == optr->getRhs();
+}
+
+bool QuantifiedConnective::lt(const PathExpressionImpl &o) const {
+  auto optr = static_cast<const QuantifiedConnective*>(&o);
+  return (getLhs() != optr->getLhs()) ? getLhs() < optr->getLhs()
+                                      : getRhs() < optr->getRhs();
+}
 
 // class QuantifiedAnd
 PathExpression QuantifiedAnd::make(const std::vector<Var> &freeVars,
@@ -228,15 +280,13 @@ void RenamedPathExpression::accept(PathExpressionVisitor *visitor) const {
 }
 
 bool RenamedPathExpression::eq(const PathExpressionImpl &o) const {
-  const RenamedPathExpression *optr =
-      static_cast<const RenamedPathExpression*>(&o);
-  return pe == optr->pe
-      && renames.size() == optr->renames.size()
-      && std::equal(renames.begin(), renames.end(), optr->renames.begin());
+  auto optr = static_cast<const RenamedPathExpression*>(&o);
+  return pe == optr->pe;
 }
 
 bool RenamedPathExpression::lt(const PathExpressionImpl &o) const {
-  
+  auto optr = static_cast<const RenamedPathExpression*>(&o);
+  return pe < optr->pe;
 }
 
 

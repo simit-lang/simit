@@ -1,4 +1,5 @@
 #include "gtest/gtest.h"
+#include "path_expressions-test.h"
 
 #include "path_expressions.h"
 #include "graph.h"
@@ -23,8 +24,8 @@ do {                                 \
 TEST(PathExpression, Link) {
   Var e = Var("e");
   Var v = Var("v");
-
   PathExpression ev = Link::make(e, v, Link::ev);
+
   ASSERT_EQ(ev.getNumPathEndpoints(), 2u);
   ASSERT_EQ(ev.getPathEndpoint(0), e);
   ASSERT_EQ(ev.getPathEndpoint(1), v);
@@ -64,6 +65,17 @@ TEST(PathExpression, Link) {
 }
 
 
+TEST(PathExpression, Renamed) {
+  PathExpression ve = makeVE("v", "e");
+  PathExpression rve1 = ve(Var("u"), Var("f"));
+  PathExpression rve2 = ve(Var("w"), Var("g"));
+
+  CHECK_EQ(rve1, rve2);
+  CHECK_EQ(rve1, ve);
+  CHECK_EQ(ve, rve1);
+}
+
+
 TEST(PathExpression, ExistAnd_vev) {
   Var vi("vi");
   Var  e("e");
@@ -75,6 +87,8 @@ TEST(PathExpression, ExistAnd_vev) {
   ASSERT_EQ(vev.getPathEndpoint(0), vi);
   ASSERT_EQ(vev.getPathEndpoint(1), vj);
   CHECK_EQ(vev, vev);
+  CHECK_NE(vev, ve);
+  CHECK_NE(ve, vev);
 
   Var ui("ui");
   Var  f("f");

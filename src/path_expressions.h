@@ -84,17 +84,8 @@ public:
   virtual Var getPathEndpoint(unsigned i) const = 0;
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
-  friend bool
-  operator==(const PathExpressionImpl &l, const PathExpressionImpl &r) {
-    return typeid(l) == typeid(r) && l.eq(r);
-  }
-
-  friend bool
-  operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
-    auto lidx = std::type_index(typeid(l));
-    auto ridx = std::type_index(typeid(r));
-    return (lidx != ridx) ? lidx < ridx : l.lt(r);
-  }
+  friend bool operator==(const PathExpressionImpl&, const PathExpressionImpl&);
+  friend bool operator<(const PathExpressionImpl&l, const PathExpressionImpl&);
 
   mutable long ref = 0;
   friend inline void aquire(const PathExpressionImpl *p) {++p->ref;}
@@ -232,18 +223,8 @@ private:
 
   PathExpression lhs, rhs;
 
-  bool eq(const PathExpressionImpl &o) const {
-    const QuantifiedConnective *optr =
-        static_cast<const QuantifiedConnective*>(&o);
-    return getLhs() == optr->getLhs() && getRhs() == optr->getRhs();
-  }
-
-  bool lt(const PathExpressionImpl &o) const {
-    const QuantifiedConnective *optr =
-        static_cast<const QuantifiedConnective*>(&o);
-    return (getLhs() != optr->getLhs()) ? getLhs() < optr->getLhs()
-                                        : getRhs() < optr->getRhs();
-  }
+  bool eq(const PathExpressionImpl &o) const;
+  bool lt(const PathExpressionImpl &o) const;
 };
 
 
