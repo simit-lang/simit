@@ -372,31 +372,59 @@ void PathExpressionRewriter::visit(const RenamedPathExpression *pe) {
 
 // class PathExpressionPrinter
 void PathExpressionPrinter::print(const PathExpression &pe) {
-  os << "(" << pe.getPathEndpoint(0) << "," << pe.getPathEndpoint(1) << ") | ";
+  os << "(";
+  print(pe.getPathEndpoint(0));
+  os << ",";
+  print(pe.getPathEndpoint(1));
+  os << ") | ";
   pe.accept(this);
+}
+
+void PathExpressionPrinter::print(const Var &v) {
+  std::string name;
+  if (names.find(v) != names.end()) {
+    name = names.at(v);
+  }
+  else {
+    if (v.getName() != "") {
+      name = nameGenerator.getName(v.getName());
+    }
+    else if (v.isBound()) {
+      name = nameGenerator.getName((v.getBinding()->getCardinality() == 0) ? "v" : "e");
+    }
+    else {
+      name = nameGenerator.getName("v");
+    }
+    names[v] = name;
+  }
+  os << name;
 }
 
 void PathExpressionPrinter::visit(const Var &v) {
 }
 
 void PathExpressionPrinter::visit(const Link *pe) {
-  os << rename(pe->getLhs()) << "-" << rename(pe->getRhs());
+  print(rename(pe->getLhs()));
+  os << "-";
+  print(rename(pe->getRhs()));
 }
 
-static void printConnective(ostream &os, const QuantifiedConnective *pe) {
+void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
   auto &qvars = pe->getQuantifiedVars();
   iassert(qvars.size() == 0 || qvars.size() == 1)
       << "only one or zero quantified variables currently supported";
   if (qvars.size() > 0) {
-    os << qvars[0] << " ";
+    os << qvars[0].getQuantifier();
+    print(qvars[0].getVar());
+    os << ".";
   }
 }
 
 void PathExpressionPrinter::visit(const QuantifiedAnd *pe) {
-  printConnective(os, pe);
+  printConnective(pe);
   os << "(";
   pe->getLhs().accept(this);
-  os << " and ";
+  os << " \u2227 ";
   pe->getRhs().accept(this);
   os << ")";
 }

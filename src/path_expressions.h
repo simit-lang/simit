@@ -11,6 +11,7 @@
 #include "intrusive_ptr.h"
 #include "comparable.h"
 #include "scopedmap.h"
+#include "util/name_generator.h"
 
 /// \file
 /// Path Expressions describe a neighborhood of a vertex or edge in a graph.
@@ -182,13 +183,16 @@ public:
   Quantifier getQuantifier() const {return quantifier;}
 
   friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar &q) {
-    std::string typeStr;
-    switch (q.getQuantifier()) {
-      case Exist:
-        typeStr = "\u2203";
+    return os << q.getQuantifier() << q.getVar();
+  }
+
+  friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar::Quantifier &q) {
+    switch (q) {
+      case QuantifiedVar::Quantifier::Exist:
+        os << "\u2203";
         break;
     }
-    return os << typeStr << q.getVar();
+    return os;
   }
 
 private:
@@ -333,13 +337,18 @@ public:
   virtual ~PathExpressionPrinter() {}
 
   void print(const PathExpression &pe);
+  void print(const Var &v);
 
 protected:
   std::ostream &os;
+  util::NameGenerator nameGenerator;
+  std::map<Var,std::string> names;
 
   virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
   virtual void visit(const QuantifiedAnd *pe);
+
+  void printConnective(const QuantifiedConnective *pe);
 };
 
 }}
