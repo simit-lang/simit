@@ -56,12 +56,13 @@ struct VarContent {
   friend inline void release(const VarContent *v) {if (--v->ref==0) delete v;}
 };
 
+
 class Var : public util::IntrusivePtr<const VarContent> {
 public:
   Var() : Var("") {}
-  Var(const std::string &name)
+  explicit Var(const std::string &name)
       : util::IntrusivePtr<const VarContent>(new VarContent(name)) {}
-  explicit Var(const std::string &name, const Set &set)
+  Var(const std::string &name, const Set &set)
       : util::IntrusivePtr<const VarContent>(new VarContent(name, &set)) {}
 
   const std::string &getName() const;
@@ -72,6 +73,38 @@ public:
   void accept(PathExpressionVisitor*) const;
 
   friend std::ostream &operator<<(std::ostream&, const Var&);
+};
+
+
+class QuantifiedVar {
+public:
+  enum Quantifier { Exist };
+
+  QuantifiedVar(Quantifier quantifier, const Var &var)
+      : quantifier(quantifier), var(var) {}
+
+  QuantifiedVar(const std::pair<Quantifier,Var> &QuantifiedVar)
+      : quantifier(QuantifiedVar.first), var(QuantifiedVar.second) {}
+
+  Var getVar() const {return var;}
+  Quantifier getQuantifier() const {return quantifier;}
+
+  friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar &q) {
+    return os << q.getQuantifier() << q.getVar();
+  }
+
+  friend std::ostream &operator<<(std::ostream &o, QuantifiedVar::Quantifier q){
+    switch (q) {
+      case Quantifier::Exist:
+        o << "\u2203";
+        break;
+    }
+    return o;
+  }
+
+private:
+  Quantifier quantifier;
+  Var var;
 };
 
 
@@ -97,6 +130,7 @@ private:
   virtual bool eq(const PathExpressionImpl &o) const = 0;
   virtual bool lt(const PathExpressionImpl &o) const = 0;
 };
+
 
 class PathExpression
     : public util::IntrusivePtr<const PathExpressionImpl,false>,
@@ -157,38 +191,6 @@ private:
 
   bool eq(const PathExpressionImpl &o) const;
   bool lt(const PathExpressionImpl &o) const;
-};
-
-
-class QuantifiedVar {
-public:
-  enum Quantifier { Exist };
-
-  QuantifiedVar(Quantifier quantifier, const Var &var)
-      : quantifier(quantifier), var(var) {}
-
-  QuantifiedVar(const std::pair<Quantifier,Var> &QuantifiedVar)
-      : quantifier(QuantifiedVar.first), var(QuantifiedVar.second) {}
-
-  Var getVar() const {return var;}
-  Quantifier getQuantifier() const {return quantifier;}
-
-  friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar &q) {
-    return os << q.getQuantifier() << q.getVar();
-  }
-
-  friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar::Quantifier &q) {
-    switch (q) {
-      case QuantifiedVar::Quantifier::Exist:
-        os << "\u2203";
-        break;
-    }
-    return os;
-  }
-
-private:
-  Quantifier quantifier;
-  Var var;
 };
 
 
