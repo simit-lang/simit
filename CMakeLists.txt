@@ -74,7 +74,7 @@ include_directories ("${SIMIT_GENERATED_SOURCE_DIR}")
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/misc)
 
 # CUDA
-if (DEFINED ENV{SIMIT_CUDA_ENABLE})
+if ($ENV{SIMIT_CUDA_ENABLE})
   find_package(CUDA)
 endif ()
 
