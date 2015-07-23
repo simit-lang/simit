@@ -18,30 +18,13 @@ const std::string &Var::getName() const {
   return ptr->name;
 }
 
-bool Var::isBound() const {
-  return ptr->set != nullptr;
-}
-
-const Set *Var::getBinding() const {
-  iassert(isBound())
-      << "attempting to get binding of unbound var " << getName();
-  return ptr->set;
-}
-
 void Var::accept(PathExpressionVisitor *v) const {
   v->visit(*this);
 }
 
 std::ostream &operator<<(std::ostream& os, const Var& v) {
   iassert(v.defined()) << "attempting to print undefined var";
-
-  if (v.isBound() && v.getBinding()->getName() != "") {
-    os << "(" << v.getName() << " in " << v.getBinding()->getName() << ")";
-  }
-  else {
-    os << v.getName();
-  }
-  return os;
+  return os << v.getName();
 }
 
 
@@ -90,61 +73,58 @@ bool operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
   return l.lt(r);
 }
 
+std::ostream &operator<<(std::ostream &os, const PathExpressionImpl &pe) {
+  PathExpressionPrinter(os).print(&pe);
+  return os;
+}
+
 
 // class PathExpression
-class BindPathExpression : public PathExpressionRewriter {
+class BindPathExpression : public PathExpressionVisitor {
 public:
   BindPathExpression(const PathExpression::Bindings &bindings)
       : bindings(bindings) {}
 
-  PathExpression bind(const PathExpression &pe) {
-    return this->rewrite(pe);
+  void bind(const PathExpression &pe) {
+    pe.accept(this);
   }
 
 private:
   const PathExpression::Bindings &bindings;
-  map<Var, Var> boundVars;
 
-  void visit(const Var &v) {
-    // If we've already created a bound replacement for this Var then insert it
-    if (boundVars.find(v) != boundVars.end()) {
-      var = boundVars.at(v);
-    }
-    else {
-      iassert(bindings.find(v) != bindings.end()) << "no binding for" << v;
-      var = Var(v.getName(), bindings.at(v));
-      boundVars.insert({v, var});
-    }
+  void visit(const Link *link) {
+    auto &lhs = link->getLhs();
+    auto &rhs = link->getRhs();
+    iassert(bindings.find(lhs) != bindings.end()) << "no binding for " << lhs;
+    iassert(bindings.find(rhs) != bindings.end()) << "no binding for " << rhs;
+    link->bind(&bindings.at(lhs), &bindings.at(rhs));
   }
 };
 
-PathExpression::PathExpression(const PathExpressionImpl *impl,
-                               const Bindings &bindings)
-    : IntrusivePtr(BindPathExpression(bindings).bind(impl).ptr) {
-}
-
-PathExpression PathExpression::bind(const Bindings &bindings) const {
-  return PathExpression(ptr, bindings);
+void PathExpression::bind(const Bindings &bindings) {
+  iassert(isa<Link>(*this)) << "only binding to links is currently supported";
+  BindPathExpression(bindings).bind(*this);
 }
 
 bool PathExpression::isBound() const {
 #ifndef WITHOUT_INTERNAL_ASSERTS
-  // Invariant: Either all or none are bound
+  /// Check invariant: either all or none are bound
   class CheckThatAllOrNoneAreBound : public PathExpressionVisitor {
   public:
     enum AllOrNoneBoundState { Unknown, None, All };
     AllOrNoneBoundState allOrNoneBoundState;
-    void visit(const Var &var) {
+
+    void visit(const Link *link) {
       switch (allOrNoneBoundState) {
         case Unknown:
-          allOrNoneBoundState = (var.isBound()) ? All : None;
+          allOrNoneBoundState = link->isBound() ? All : None;
           break;
         case None:
-          iassert(!var.isBound())
+          iassert(!link->isBound())
               << "Some but not all variables in the PathExpression are bound";
           break;
         case All:
-          iassert(var.isBound())
+          iassert(link->isBound())
               << "Some but not all variables in the PathExpression are bound";
           break;
       }
@@ -161,8 +141,8 @@ bool PathExpression::isBound() const {
       pe.accept(this);
       return isBound;
     }
-    void visit(const Var &var) {
-      isBound = var.isBound();
+    void visit(const Link *link) {
+      isBound = link->isBound();
     }
   };
   return CheckIfBound().check(*this);
@@ -184,12 +164,24 @@ std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
 
 
 // class Link
+Link::Link(const Var &lhs, const Var &rhs, Type type)
+    : type(type), lhs(lhs), rhs(rhs), lhsBinding(nullptr), rhsBinding(nullptr) {
+}
+
 PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
   return PathExpression(new Link(lhs, rhs, type));
 }
 
-Link::Link(const Var &lhs, const Var &rhs, Type type)
-    : lhs(lhs), rhs(rhs), type(type) {
+void Link::bind(const Set *lhsBinding, const Set *rhsBinding) const {
+  this->lhsBinding = lhsBinding;
+  this->rhsBinding = rhsBinding;
+}
+
+bool Link::isBound() const {
+  iassert((lhsBinding != nullptr && rhsBinding != nullptr)
+       || (lhsBinding == nullptr && rhsBinding == nullptr))
+      << "either all should be bound or none";
+  return lhsBinding != nullptr;
 }
 
 Var Link::getPathEndpoint(unsigned i) const {
@@ -201,30 +193,21 @@ void Link::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
-static bool allOrNoneBound(const Link *l) {
-  iassert(l->getNumPathEndpoints() == 2)
-      << "only binary path expressions currently supported";
-  return ( l->getLhs().isBound() &&  l->getRhs().isBound())
-      || (!l->getLhs().isBound() && !l->getRhs().isBound());
-}
-
 bool Link::eq(const PathExpressionImpl &o) const {
   auto optr = static_cast<const Link*>(&o);
-  iassert(allOrNoneBound(this)) << "either all should be bound or none";
-  iassert(allOrNoneBound(optr)) << "either all should be bound or none";
-  return (!getLhs().isBound() || !optr->getLhs().isBound())
-      || (getLhs().getBinding() == optr->getLhs().getBinding() &&
-          getRhs().getBinding() == optr->getRhs().getBinding());
+  return !this->isBound()
+      || !optr->isBound()
+      || (this->getLhsBinding() == optr->getLhsBinding() &&
+          this->getRhsBinding() == optr->getRhsBinding());
 }
 
 bool Link::lt(const PathExpressionImpl &o) const {
   auto optr = static_cast<const Link*>(&o);
-  iassert(allOrNoneBound(this)) << "either all should be bound or none";
-  iassert(allOrNoneBound(optr)) << "either all should be bound or none";
-  return (getLhs().isBound() && optr->getLhs().isBound())
-      && ((getLhs().getBinding() != optr->getLhs().getBinding())
-           ? getLhs().getBinding() < optr->getLhs().getBinding()
-           : getRhs().getBinding() < optr->getRhs().getBinding());
+  return this->isBound()
+      && optr->isBound()
+      && ((this->getLhsBinding() != optr->getLhsBinding())
+              ? this->getLhsBinding() < optr->getLhsBinding()
+              : this->getRhsBinding() < optr->getRhsBinding());
 }
 
 
@@ -443,11 +426,8 @@ void PathExpressionPrinter::print(const Var &v) {
     if (v.getName() != "") {
       name = nameGenerator.getName(v.getName());
     }
-    else if (v.isBound()) {
-      name = nameGenerator.getName((v.getBinding()->getCardinality() == 0) ? "v" : "e");
-    }
     else {
-      name = nameGenerator.getName("v");
+      name = nameGenerator.getName("e");
     }
     names[v] = name;
   }

@@ -36,12 +36,12 @@ TEST(PathIndex, Link) {
   Set E(V,V);
   createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
-  Var e("e", E);
-  Var v("v", V);
-
+  Var e("e");
+  Var v("v");
 
   // Test e-v links
   PathExpression ev = Link::make(e, v, Link::ev);
+  ev.bind({{e,E}, {v,V}});
   PathIndex evIndex = builder.buildSegmented(ev, 0);
   ASSERT_EQ(4u, evIndex.numElements());
   ASSERT_EQ(4u*2, evIndex.numNeighbors());
@@ -50,22 +50,23 @@ TEST(PathIndex, Link) {
                vector<vector<unsigned>>({{0, 1}, {1, 2}, {2, 3}, {3, 4}}));
 
   // Check that EV get's memoized
-  Var f("f", E);
-  Var u("u", V);
+  Var f("f");
+  Var u("u");
   PathExpression fu = Link::make(f, u, Link::ev);
+  fu.bind({{f,E}, {u,V}});
   PathIndex fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_EQ(evIndex, fuIndex);
 
   // Check that different EV get's a different index
   Set U;
   Set F(V,V);
-  fu = fu.bind({{f,F}, {u,U}});
+  fu.bind({{f,F}, {u,U}});
   fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_NE(evIndex, fuIndex);
 
-
   // Test v-e links
   PathExpression ve = Link::make(v, e, Link::ve);
+  ve.bind({{e,E}, {v,V}});
   PathIndex veIndex = builder.buildSegmented(ve, 0);
   ASSERT_EQ(5u, veIndex.numElements());
   ASSERT_EQ(8u, veIndex.numNeighbors());
@@ -75,14 +76,14 @@ TEST(PathIndex, Link) {
 
   // Check that VE get's memoized
   PathExpression uf = Link::make(u,f, Link::ve);
+  uf.bind({{f,E}, {u,V}});
   PathIndex ufIndex = builder.buildSegmented(uf, 0);
   ASSERT_EQ(veIndex, ufIndex);
 
   // Check that different VE get's a different index
-  uf = uf.bind({{f,F}, {u,U}});
+  uf.bind({{f,F}, {u,U}});
   ufIndex = builder.buildSegmented(uf, 0);
   ASSERT_NE(veIndex, ufIndex);
-
 
   // Test that ev evaluated backwards gets the same index as ve and vice versa
   // TODO
@@ -96,14 +97,18 @@ TEST(PathIndex, ExistAnd_vev) {
   Set E(V,V);
   Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
 
-  Var vi("vi", V);
-  Var e("e", E);
-  Var vj("vj", V);
-//  TODO: Replace VE and EV in all tests with link and delete EV/VE classes
-  PathExpression ve = Link::make(vi, e, Link::ve);
-  PathExpression ev = Link::make(e, vj, Link::ev);
-  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist,e}},
-                                           ve, ev);
+  Var v("v");
+  Var e("e");
+  PathExpression ve = Link::make(v, e, Link::ve);
+  PathExpression ev = Link::make(e, v, Link::ev);
+  ve.bind({{v,V}, {e,E}});
+  ev.bind({{v,V}, {e,E}});
+
+  Var vi("vi");
+  Var ee("e");
+  Var vj("vj");
+  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist,ee}},
+                                           ve(vi, ee), ev(ee, vj));
   PathIndex vevIndex = builder.buildSegmented(vev, 0);
   ASSERT_EQ(3u, vevIndex.numElements());
   ASSERT_EQ(7u, vevIndex.numNeighbors());
@@ -112,20 +117,26 @@ TEST(PathIndex, ExistAnd_vev) {
                vector<vector<unsigned>>({{0, 1}, {0, 1, 2}, {1, 2}}));
 
   // Check that VEV get's memoized
-  Var ui("ui", V);
-  Var f("e", E);
-  Var uj("uj", V);
-  PathExpression uf = Link::make(ui, f, Link::ve);
-  PathExpression fu = Link::make(f, uj, Link::ev);
-  PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QuantifiedVar::Exist,f}},
-                                           uf, fu);
+  Var u("u");
+  Var f("f");
+  PathExpression uf = Link::make(u, f, Link::ve);
+  PathExpression fu = Link::make(f, u, Link::ev);
+  uf.bind({{u,V}, {f,E}});
+  fu.bind({{u,V}, {f,E}});
+
+  Var ui("ui");
+  Var ff("f");
+  Var uj("uj");
+  PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
+                                           uf(ui, ff), fu(ff,uj));
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_EQ(vevIndex, ufuIndex);
 
   // Check that different VEV get's a different index
   Set U;
   Set F(U,U);
-  ufu = ufu.bind({{ui,U}, {f,F}, {uj,U}});
+  uf.bind({{u,U}, {f,F}});
+  fu.bind({{u,U}, {f,F}});
   ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_NE(vevIndex, ufuIndex);
 
@@ -143,14 +154,18 @@ TEST(PathIndex, Alias) {
   E.add(v0,v1);
   E.add(v1,v0);
 
-  Var vi("vi", V);
-  Var e("e", E);
-  Var vj("vj", V);
-  PathExpression ve = Link::make(vi, e, Link::ve);
-  PathExpression ev = Link::make(e, vj, Link::ev);
+  Var v("v");
+  Var e("e");
+  PathExpression ve = Link::make(v, e, Link::ve);
+  PathExpression ev = Link::make(e, v, Link::ev);
+  ve.bind({{v,V}, {e,E}});
+  ev.bind({{v,V}, {e,E}});
 
-  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist, e}},
-                                           ve, ev);
+  Var vi("vi");
+  Var ee("e");
+  Var vj("vj");
+  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist, ee}},
+                                           ve(vi,ee), ev(ee,vj));
 
   PathIndexBuilder builder;
   PathIndex index = builder.buildSegmented(vev, 0);

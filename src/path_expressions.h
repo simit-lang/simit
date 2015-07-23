@@ -46,10 +46,8 @@ class PathExpression;
 
 struct VarContent {
   std::string name;
-  const Set *set;
 
-  VarContent(const std::string &name) : VarContent(name, nullptr) {}
-  VarContent(const std::string &name, const Set *set) : name(name), set(set) {}
+  explicit VarContent(const std::string &name) {}
 
   mutable long ref = 0;
   friend inline void aquire(const VarContent *v) {++v->ref;}
@@ -60,15 +58,12 @@ struct VarContent {
 class Var : public util::IntrusivePtr<const VarContent> {
 public:
   Var() : Var("") {}
+
   explicit Var(const std::string &name)
       : util::IntrusivePtr<const VarContent>(new VarContent(name)) {}
-  Var(const std::string &name, const Set &set)
-      : util::IntrusivePtr<const VarContent>(new VarContent(name, &set)) {}
+
 
   const std::string &getName() const;
-  const Set *getBinding() const;
-
-  bool isBound() const;
 
   void accept(PathExpressionVisitor*) const;
 
@@ -118,7 +113,9 @@ public:
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
   friend bool operator==(const PathExpressionImpl&, const PathExpressionImpl&);
-  friend bool operator<(const PathExpressionImpl&l, const PathExpressionImpl&);
+  friend bool operator<(const PathExpressionImpl&, const PathExpressionImpl&);
+
+  friend std::ostream &operator<<(std::ostream&, const PathExpressionImpl&);
 
   mutable long ref = 0;
   friend inline void aquire(const PathExpressionImpl *p) {++p->ref;}
@@ -140,9 +137,8 @@ public:
 
   PathExpression() : IntrusivePtr() {}
   PathExpression(const PathExpressionImpl *impl) : IntrusivePtr(impl) {}
-  PathExpression(const PathExpressionImpl *impl, const Bindings &bindings);
 
-  PathExpression bind(const Bindings &bindings) const;
+  void bind(const Bindings &bindings);
 
   /// True if the variables are bound to sets, false otherwise.
   bool isBound() const;
@@ -184,20 +180,35 @@ public:
 
   static PathExpression make(const Var &lhs, const Var &rhs, Type type);
 
+  Type getType() const {return type;}
+
   const Var &getLhs() const {return lhs;}
   const Var &getRhs() const {return rhs;}
-
-  Type getType() const {return type;}
 
   const Var &getVertexVar() const {return (type==ev) ? rhs : lhs;}
   const Var &getEdgeVar() const   {return (type==ev) ? lhs : rhs;}
 
   Var getPathEndpoint(unsigned i) const;
+
+  void bind(const Set *lhsBinding, const Set *rhsBinding) const;
+  bool isBound() const;
+
+  const Set *getLhsBinding() const {return lhsBinding;}
+  const Set *getRhsBinding() const {return rhsBinding;}
+
+  const Set *getVertexBinding() const {return (type==ev)?rhsBinding:lhsBinding;}
+  const Set *getEdgeBinding() const   {return (type==ev)?lhsBinding:rhsBinding;}
+
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
-  Var lhs, rhs;
   Type type;
+  Var lhs;
+  Var rhs;
+
+  // Bindings are not immutable
+  mutable const Set *lhsBinding;
+  mutable const Set *rhsBinding;
 
   Link(const Var &lhs, const Var &rhs, Type type);
 

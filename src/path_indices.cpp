@@ -193,7 +193,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
     void visit(const Link *link) {
-      const Set &edgeSet = *link->getEdgeVar().getBinding();
+      const Set &edgeSet = *link->getEdgeBinding();
       iassert(edgeSet.getCardinality() > 0)
           << "not an edge set" << edgeSet.getName();
 
