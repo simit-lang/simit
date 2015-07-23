@@ -107,8 +107,8 @@ TEST(PathIndex, ExistAnd_vev) {
   Var vi("vi");
   Var ee("e");
   Var vj("vj");
-  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist,ee}},
-                                           ve(vi, ee), ev(ee, vj));
+  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,ee}},
+                                 ve(vi, ee), ev(ee, vj));
   PathIndex vevIndex = builder.buildSegmented(vev, 0);
   ASSERT_EQ(3u, vevIndex.numElements());
   ASSERT_EQ(7u, vevIndex.numNeighbors());
@@ -127,8 +127,8 @@ TEST(PathIndex, ExistAnd_vev) {
   Var ui("ui");
   Var ff("f");
   Var uj("uj");
-  PathExpression ufu = QuantifiedAnd::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
-                                           uf(ui, ff), fu(ff,uj));
+  PathExpression ufu = And::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
+                                 uf(ui, ff), fu(ff,uj));
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_EQ(vevIndex, ufuIndex);
 
@@ -164,8 +164,8 @@ TEST(PathIndex, Alias) {
   Var vi("vi");
   Var ee("e");
   Var vj("vj");
-  PathExpression vev = QuantifiedAnd::make({vi,vj}, {{QuantifiedVar::Exist, ee}},
-                                           ve(vi,ee), ev(ee,vj));
+  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist, ee}},
+                                 ve(vi,ee), ev(ee,vj));
 
   PathIndexBuilder builder;
   PathIndex index = builder.buildSegmented(vev, 0);

@@ -55,6 +55,8 @@ struct VarContent {
 };
 
 
+/// A path expression variable. Variables correspond to elements in sets, which
+/// is specified by binding them in the context of some Link (see Link::bind).
 class Var : public util::IntrusivePtr<const VarContent> {
 public:
   Var() : Var("") {}
@@ -174,6 +176,8 @@ inline const T* to(PathExpression e) {
 }
 
 
+/// A link is a logical predicate that maps two set elements to true if one of
+/// set elements is an endpoint of the other.
 class Link : public PathExpressionImpl {
 public:
   enum Type {ev, ve};
@@ -217,6 +221,10 @@ private:
 };
 
 
+/// A quantified connective combines a logical connective with one or more
+/// quantified variables. Connectives and quantifications are combined in
+/// the same path expression class for convenienec, since they must be
+/// evaluated together for efficiency.
 class QuantifiedConnective : public PathExpressionImpl {
 public:
   bool isQuantified() const {return quantifiedVars.size() > 0;}
@@ -253,7 +261,7 @@ private:
 };
 
 
-class QuantifiedAnd : public QuantifiedConnective {
+class And : public QuantifiedConnective {
 public:
   static PathExpression make(const std::vector<Var> &freeVars,
                              const std::vector<QuantifiedVar> &quantifiedVars,
@@ -263,9 +271,9 @@ public:
   void accept(PathExpressionVisitor *visitor) const;
 
 private:
-  QuantifiedAnd(const std::vector<Var> &freeVars,
-                const std::vector<QuantifiedVar> &quantifiedVars,
-                const PathExpression &lhs, const PathExpression &rhs)
+  And(const std::vector<Var> &freeVars,
+      const std::vector<QuantifiedVar> &quantifiedVars,
+      const PathExpression &lhs, const PathExpression &rhs)
       : QuantifiedConnective(freeVars, quantifiedVars, lhs, rhs) {}
 };
 
@@ -300,7 +308,7 @@ public:
 
   virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
-  virtual void visit(const QuantifiedAnd *pe);
+  virtual void visit(const And *pe);
 
   virtual void visit(const RenamedPathExpression *pe);
 
@@ -331,7 +339,7 @@ protected:
 
   virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
-  virtual void visit(const QuantifiedAnd *pe);
+  virtual void visit(const And *pe);
 
   virtual void visit(const RenamedPathExpression *pe);
 };
@@ -352,7 +360,7 @@ protected:
 
   virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
-  virtual void visit(const QuantifiedAnd *pe);
+  virtual void visit(const And *pe);
 
   void printConnective(const QuantifiedConnective *pe);
 };

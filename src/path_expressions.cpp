@@ -241,14 +241,13 @@ bool QuantifiedConnective::lt(const PathExpressionImpl &o) const {
 }
 
 // class QuantifiedAnd
-PathExpression QuantifiedAnd::make(const std::vector<Var> &freeVars,
-                                   const vector<QuantifiedVar> &qvars,
-                                   const PathExpression &l,
-                                   const PathExpression &r) {
-  return new QuantifiedAnd(freeVars, qvars, l, r);
+PathExpression And::make(const std::vector<Var> &freeVars,
+                         const vector<QuantifiedVar> &qvars,
+                         const PathExpression &l, const PathExpression &r) {
+  return new And(freeVars, qvars, l, r);
 }
 
-void QuantifiedAnd::accept(PathExpressionVisitor *visitor) const {
+void And::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
@@ -286,7 +285,7 @@ void PathExpressionVisitor::visit(const Link *pe) {
   pe->getRhs().accept(this);
 }
 
-void PathExpressionVisitor::visit(const QuantifiedAnd *pe) {
+void PathExpressionVisitor::visit(const And *pe) {
   pe->getLhs().accept(this);
   pe->getRhs().accept(this);
 }
@@ -391,7 +390,7 @@ PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
   }
 }
 
-void PathExpressionRewriter::visit(const QuantifiedAnd *pe) {
+void PathExpressionRewriter::visit(const And *pe) {
   expr = visitBinaryConnective(pe, this);
 }
 
@@ -454,7 +453,7 @@ void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
   }
 }
 
-void PathExpressionPrinter::visit(const QuantifiedAnd *pe) {
+void PathExpressionPrinter::visit(const And *pe) {
   printConnective(pe);
   os << "(";
   pe->getLhs().accept(this);
