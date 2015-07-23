@@ -514,7 +514,7 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   GPUSharding kernelSharding = op->sharding;
 
   // Stash the symtable
-  ScopedMap<simit::ir::Var, llvm::Value*> oldSymtable = symtable;
+  util::ScopedMap<simit::ir::Var, llvm::Value*> oldSymtable = symtable;
   symtable.clear();
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
@@ -993,7 +993,7 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   iassert(targetType.isTensor());
 
   // Stash the symtable
-  ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
+  util::ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
   symtable.clear();
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
@@ -1060,7 +1060,7 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
   builder->CreateStore(llvmFP(0), result);
 
   // Stash the symtable
-  ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
+  util::ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
   symtable.clear();
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
