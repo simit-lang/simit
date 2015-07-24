@@ -115,63 +115,6 @@ TEST(PathExpression, And) {
 }
 
 
-TEST(PathExpression, ExistAnd) {
-  PathExpression ve = makeVE();
-  PathExpression ev = makeEV();
-
-  Var vi("vi");
-  Var ee("e");
-  Var vj("vj");
-  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,ee}},
-                                 ve(vi,ee), ev(ee,vj));
-  Var vk("vk");
-  Var vl("vl");
-  Var vm("vm");
-  PathExpression vevev = And::make({vk,vl}, {{QuantifiedVar::Exist,vm}},
-                                   vev(vk,vm), vev(vm,vl));
-  ASSERT_EQ(vev.getPathEndpoint(0), vi);
-  ASSERT_EQ(vev.getPathEndpoint(1), vj);
-  CHECK_EQ(vev, vev);
-  CHECK_NE(vev, ve);
-  CHECK_NE(ve, vev);
-
-  // Check that two different quantified ands are equal
-  Var u("u");
-  Var f("f");
-  PathExpression uf = Link::make(u, f, Link::ve);
-  PathExpression fu = Link::make(f, u, Link::ev);
-
-  Var ui("ui");
-  Var ff("f");
-  Var uj("uj");
-  PathExpression ufu = And::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
-                                 uf(ui,ff), fu(ff,uj));
-  CHECK_EQ(vev, ufu);
-
-  // Bind the same sets to ev and uf
-  Set V;
-  Set E(V,V);
-  ve.bind(V,E);
-  ev.bind(E,V);
-  CHECK_EQ(ufu, vev);
-  uf.bind(V,E);
-  fu.bind(E,V);
-  ASSERT_TRUE(vev.isBound());
-  ASSERT_TRUE(ufu.isBound());
-  CHECK_EQ(vev, ufu);
-
-  // Bind different sets to ev and fu
-  Set U;
-  Set F(U,U);
-  uf.bind(U,F);
-  fu.bind(F,U);
-  ASSERT_TRUE(ufu.isBound());
-  CHECK_NE(vev, ufu);
-
-  // TODO: Test eve and compare eve with vev
-  // TODO: Test or and compare or and and expressions
-}
-
 TEST(PathExpression, Or) {
   Var v("v");
   Var e("e");
@@ -206,4 +149,119 @@ TEST(PathExpression, Or) {
   uf.bind(U,F);
   ASSERT_TRUE(ufORuf.isBound());
   CHECK_NE(veORve, ufORuf);
+}
+
+
+TEST(PathExpression, ExistAnd) {
+  PathExpression ve = makeVE();
+  PathExpression ev = makeEV();
+
+  Var vi("vi");
+  Var ee("e");
+  Var vj("vj");
+  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,ee}},
+                                 ve(vi,ee), ev(ee,vj));
+  Var vk("vk");
+  Var vl("vl");
+  Var vm("vm");
+  PathExpression vevev = And::make({vk,vl}, {{QuantifiedVar::Exist,vm}},
+                                   vev(vk,vm), vev(vm,vl));
+  ASSERT_EQ(vev.getPathEndpoint(0), vi);
+  ASSERT_EQ(vev.getPathEndpoint(1), vj);
+  CHECK_EQ(vev, vev);
+  CHECK_NE(vev, ve);
+  CHECK_NE(ve, vev);
+
+  // Check that two different quantified ands are equal
+
+  PathExpression uf = makeVE("u", "f");
+  PathExpression fu = makeEV("f", "u");
+
+  Var ui("ui");
+  Var f("f");
+  Var uj("uj");
+  PathExpression ufu = And::make({ui,uj}, {{QuantifiedVar::Exist,f}},
+                                 uf(ui,f), fu(f,uj));
+  CHECK_EQ(vev, ufu);
+
+  // Bind the same sets to ev and uf
+  Set V;
+  Set E(V,V);
+  ve.bind(V,E);
+  ev.bind(E,V);
+  CHECK_EQ(ufu, vev);
+  uf.bind(V,E);
+  fu.bind(E,V);
+  ASSERT_TRUE(vev.isBound());
+  ASSERT_TRUE(ufu.isBound());
+  CHECK_EQ(vev, ufu);
+
+  // Bind different sets to ev and fu
+  Set U;
+  Set F(U,U);
+  uf.bind(U,F);
+  fu.bind(F,U);
+  ASSERT_TRUE(ufu.isBound());
+  CHECK_NE(vev, ufu);
+
+  // TODO: Test eve and compare eve with vev
+  // TODO: Test or and compare or and and expressions
+}
+
+
+TEST(PathExpression, ExistOr) {
+  PathExpression ve = makeVE();
+  PathExpression ev = makeEV();
+
+  Var vi("vi");
+  Var ee("e");
+  Var vj("vj");
+  PathExpression vev = Or::make({vi,vj}, {{QuantifiedVar::Exist,ee}},
+                                ve(vi,ee), ev(ee,vj));
+  Var vk("vk");
+  Var vl("vl");
+  Var vm("vm");
+  PathExpression vevev = Or::make({vk,vl}, {{QuantifiedVar::Exist,vm}},
+                                  vev(vk,vm), vev(vm,vl));
+  ASSERT_EQ(vev.getPathEndpoint(0), vi);
+  ASSERT_EQ(vev.getPathEndpoint(1), vj);
+  CHECK_EQ(vev, vev);
+  CHECK_NE(vev, ve);
+  CHECK_NE(ve, vev);
+
+  // Check that two different quantified ands are equal
+
+  PathExpression uf = makeVE("u", "f");
+  PathExpression fu = makeEV("f", "u");
+
+  Var ui("ui");
+  Var f("f");
+  Var uj("uj");
+  PathExpression ufu = Or::make({ui,uj}, {{QuantifiedVar::Exist,f}},
+                                uf(ui,f), fu(f,uj));
+  CHECK_EQ(vev, ufu);
+
+  // Bind the same sets to ev and uf
+  Set V;
+  Set E(V,V);
+  ve.bind(V,E);
+  ev.bind(E,V);
+  CHECK_EQ(ufu, vev);
+  uf.bind(V,E);
+  fu.bind(E,V);
+  ASSERT_TRUE(vev.isBound());
+  ASSERT_TRUE(ufu.isBound());
+  CHECK_EQ(vev, ufu);
+
+  // Bind different sets to ev and fu
+  Set U;
+  Set F(U,U);
+  uf.bind(U,F);
+  fu.bind(F,U);
+  ASSERT_TRUE(ufu.isBound());
+  CHECK_NE(vev, ufu);
+
+  // TODO: Test eve and compare eve with vev
+  // TODO: Test or and compare or and and expressions
+
 }
