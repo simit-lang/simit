@@ -18,10 +18,6 @@ const std::string &Var::getName() const {
   return ptr->name;
 }
 
-void Var::accept(PathExpressionVisitor *v) const {
-  v->visit(*this);
-}
-
 std::ostream &operator<<(std::ostream& os, const Var& v) {
   iassert(v.defined()) << "attempting to print undefined var";
   return os << v.getName();
@@ -277,12 +273,7 @@ bool RenamedPathExpression::lt(const PathExpressionImpl &o) const {
 
 
 // class PathExpressionVisitor
-void PathExpressionVisitor::visit(const Var &var) {
-}
-
 void PathExpressionVisitor::visit(const Link *pe) {
-  pe->getLhs().accept(this);
-  pe->getRhs().accept(this);
 }
 
 void PathExpressionVisitor::visit(const And *pe) {
@@ -315,19 +306,6 @@ void PathExpressionVisitor::visitRename(const RenamedPathExpression *pe) {
 
 
 // class PathExpressionRewriter
-Var PathExpressionRewriter::rewrite(Var v) {
-  if (v.defined()) {
-    v.accept(this);
-    v = var;
-  }
-  else {
-    v = Var();
-  }
-  var = Var();
-  expr = PathExpression();
-  return v;
-}
-
 PathExpression PathExpressionRewriter::rewrite(PathExpression e) {
   if (e.defined()) {
     e.accept(this);
@@ -341,52 +319,19 @@ PathExpression PathExpressionRewriter::rewrite(PathExpression e) {
   return e;
 }
 
-void PathExpressionRewriter::visit(const Var &v) {
-  var = v;
-}
-
 void PathExpressionRewriter::visit(const Link *pe) {
-  Var lhs = rewrite(pe->getLhs());
-  Var rhs = rewrite(pe->getRhs());
-  if (lhs.ptr == pe->getLhs().ptr && rhs.ptr == pe->getRhs().ptr) {
-    expr = pe;
-  }
-  else {
-    expr = Link::make(lhs, rhs, pe->getType());
-  }
+  expr = pe;
 }
 
 template <class T>
 PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
-  bool varsChanged = false;
-
-  vector<Var> freeVars;
-  for (size_t i=0; i < pe->getFreeVars().size(); ++i) {
-    freeVars.push_back(rw->rewrite(pe->getFreeVars()[i]));
-    if (freeVars[i] != pe->getFreeVars()[i]) {
-      varsChanged = true;
-    }
-  }
-
-  vector<QuantifiedVar> qVars;
-  for (auto &qvar : pe->getQuantifiedVars()) {
-    Var var = rw->rewrite(qvar.getVar());
-    if (var != qvar.getVar()) {
-      varsChanged = true;
-      qVars.push_back(QuantifiedVar(qvar.getQuantifier(), var));
-    }
-    else {
-      qVars.push_back(qvar);
-    }
-  }
-
   PathExpression l = rw->rewrite(pe->getLhs());
   PathExpression r = rw->rewrite(pe->getRhs());
-  if (!varsChanged && l.ptr == pe->getLhs().ptr && r.ptr == pe->getRhs().ptr) {
+  if (l.ptr == pe->getLhs().ptr && r.ptr == pe->getRhs().ptr) {
     return pe;
   }
   else {
-    return T::make(freeVars, qVars, l, r);
+    return T::make(pe->getFreeVars(), pe->getQuantifiedVars(), l, r);
   }
 }
 
@@ -431,9 +376,6 @@ void PathExpressionPrinter::print(const Var &v) {
     names[v] = name;
   }
   os << name;
-}
-
-void PathExpressionPrinter::visit(const Var &v) {
 }
 
 void PathExpressionPrinter::visit(const Link *pe) {

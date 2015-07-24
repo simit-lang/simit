@@ -46,9 +46,7 @@ class PathExpression;
 
 struct VarContent {
   std::string name;
-
-  explicit VarContent(const std::string &name) {}
-
+  explicit VarContent(const std::string &name) : name(name) {}
   mutable long ref = 0;
   friend inline void aquire(const VarContent *v) {++v->ref;}
   friend inline void release(const VarContent *v) {if (--v->ref==0) delete v;}
@@ -64,11 +62,7 @@ public:
   explicit Var(const std::string &name)
       : util::IntrusivePtr<const VarContent>(new VarContent(name)) {}
 
-
   const std::string &getName() const;
-
-  void accept(PathExpressionVisitor*) const;
-
   friend std::ostream &operator<<(std::ostream&, const Var&);
 };
 
@@ -306,7 +300,6 @@ class PathExpressionVisitor {
 public:
   virtual ~PathExpressionVisitor() {}
 
-  virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
 
@@ -328,7 +321,6 @@ class PathExpressionRewriter : public PathExpressionVisitor {
 public:
   virtual ~PathExpressionRewriter() {}
 
-  virtual Var rewrite(Var v);
   virtual PathExpression rewrite(PathExpression e);
 
 protected:
@@ -337,7 +329,6 @@ protected:
   Var var;
   PathExpression expr;
 
-  virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
 
@@ -358,7 +349,6 @@ protected:
   util::NameGenerator nameGenerator;
   std::map<Var,std::string> names;
 
-  virtual void visit(const Var &v);
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
 
