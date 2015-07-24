@@ -154,6 +154,12 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
   /// described by the path expression.
   class PathNeighborVisitor : public PathExpressionVisitor {
   public:
+    struct Location {
+      PathExpression pathExpr;
+      unsigned endpoint;
+    };
+    typedef map<Var, vector<Location>> VarToLocationsMap;
+
     PathNeighborVisitor(PathIndexBuilder *builder) : builder(builder) {}
 
     PathIndex build(const PathExpression &pe) {
@@ -229,6 +235,20 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       }
     }
 
+    static
+    VarToLocationsMap getVarToLocationsMap(const vector<PathExpression> &pes) {
+      VarToLocationsMap varToLocationsMap;
+      for (auto &pe : pes) {
+        for (unsigned ep=0; ep < pe.getNumPathEndpoints(); ++ep) {
+          Location loc;
+          loc.pathExpr = pe;
+          loc.endpoint = ep;
+          varToLocationsMap[pe.getPathEndpoint(ep)].push_back(loc);
+        }
+      }
+      return varToLocationsMap;
+    }
+
     void visit(const And *f) {
       auto &freeVars = f->getFreeVars();
       iassert(freeVars.size() == 2)
@@ -244,33 +264,26 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
 
         QuantifiedVar qvar = f->getQuantifiedVars()[0];
 
-        // The expression combines two binary path expressions with one
-        // quantified variable. Thus, each operand must link one of the two free
-        // variables to the quantified variable.
-
-        map<Var, vector<pair<PathExpression,unsigned>>> varToLocations;
-        varToLocations[lhs.getPathEndpoint(0)].push_back({lhs,0});
-        varToLocations[lhs.getPathEndpoint(1)].push_back({lhs,1});
-        varToLocations[rhs.getPathEndpoint(0)].push_back({rhs,0});
-        varToLocations[rhs.getPathEndpoint(1)].push_back({rhs,1});
-
+        VarToLocationsMap varToLocations = getVarToLocationsMap({lhs,rhs});
         iassert(varToLocations.find(qvar.getVar()) != varToLocations.end())
             << "could not find quantified variable locations";
         iassert(varToLocations[qvar.getVar()].size() == 2)
             << "quantified binary expr only uses quantified variable once";
 
-        // Build a path index from the first free variable to the quantified
-        // variable
-        pair<PathExpression,unsigned> sourceLoc= varToLocations[freeVars[0]][0];
-        PathIndex sourceToQuantified =
-            builder->buildSegmented(sourceLoc.first, sourceLoc.second);
+        // The expression combines two binary path expressions with one
+        // quantified variable. Thus, each operand must link one of the two free
+        // variables to the quantified variable.
 
-        // Build a path index from the quantified variable to the second free
-        // variable
-        pair<PathExpression,unsigned>  sinkLoc = varToLocations[freeVars[1]][0];
-        unsigned quantifiedLoc = ((sinkLoc.second) == 0) ? 1 : 0;
+        // Build an index from the first free variable to the quantified var
+        Location sourceLoc = varToLocations[freeVars[0]][0];
+        PathIndex sourceToQuantified =
+            builder->buildSegmented(sourceLoc.pathExpr, sourceLoc.endpoint);
+
+        // Build an index from the quantified variable to the second free var
+        Location  sinkLoc = varToLocations[freeVars[1]][0];
+        unsigned quantifiedLoc = ((sinkLoc.endpoint) == 0) ? 1 : 0;
         PathIndex quantifiedToSink =
-            builder->buildSegmented(sinkLoc.first, quantifiedLoc);
+            builder->buildSegmented(sinkLoc.pathExpr, quantifiedLoc);
 
         // Build a path index from the first free variable to the second free
         // variable, through the quantified variable.
@@ -289,11 +302,64 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       pi = pack(pathNeighbors);
     }
 
+    void visit(const Or *f) {
+      auto &freeVars = f->getFreeVars();
+      iassert(freeVars.size() == 2)
+          << "For now, we only support matrix path expressions";
+
+      PathExpression lhs = f->getLhs();
+      PathExpression rhs = f->getRhs();
+
+      map<unsigned, set<unsigned>> pathNeighbors;
+      if (f->isQuantified()) {
+        iassert(f->getQuantifiedVars().size() == 1)
+            << "For now, we only support one quantified variable";
+
+        QuantifiedVar qvar = f->getQuantifiedVars()[0];
+        not_supported_yet;
+      }
+      else {
+        VarToLocationsMap lhsLocs = getVarToLocationsMap({lhs});
+        VarToLocationsMap rhsLocs = getVarToLocationsMap({rhs});
+        iassert(lhsLocs.find(freeVars[0]) != lhsLocs.end()
+             && lhsLocs.find(freeVars[1]) != lhsLocs.end())
+            << "free variables of Or expr does not match lhs operand";
+        iassert(rhsLocs.find(freeVars[0]) != rhsLocs.end()
+             && rhsLocs.find(freeVars[1]) != rhsLocs.end())
+            << "free variables of Or expr does not match rhs operand";
+
+        // Build an index from the first to second free variable through lhs
+        PathIndex lhsIndex =
+            builder->buildSegmented(lhsLocs.at(freeVars[0])[0].pathExpr,
+                                    lhsLocs.at(freeVars[0])[0].endpoint);
+
+        // Build an index from the first to second free variable through rhs
+        PathIndex rhsIndex =
+            builder->buildSegmented(rhsLocs.at(freeVars[0])[0].pathExpr,
+                                    rhsLocs.at(freeVars[0])[0].endpoint);
+
+        // Build a path index that is the union of lhsIndex and rhsIndex
+        for (unsigned elem : lhsIndex) {
+          pathNeighbors.insert({elem, set<unsigned>()});
+          for (unsigned nbr : lhsIndex.neighbors(elem)) {
+            pathNeighbors.at(elem).insert(nbr);
+          }
+        }
+        for (unsigned elem : rhsIndex) {
+          iassert(pathNeighbors.find(elem) != pathNeighbors.end());
+          for (unsigned nbr : rhsIndex.neighbors(elem)) {
+            pathNeighbors.at(elem).insert(nbr);
+          }
+        }
+      }
+      pi = pack(pathNeighbors);
+    }
+
     PathIndex pi;  // Path index returned from cases
     PathIndexBuilder *builder;
   };
 
-  // TODO: Possible optimization is to ∂etect symmetric path expressions, and
+  // TODO: Possible optimization is to detect symmetric path expressions, and
   //       return the same path index when they are evaluated in both directions
 
   // Check if we have memoized the path index for this path expression, starting
