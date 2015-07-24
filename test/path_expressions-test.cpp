@@ -44,9 +44,9 @@ TEST(PathExpression, Link) {
   Set E(V,V);
   V.setName("V");
   E.setName("E");
-  ev.bind({{v,V}, {e,E}});
+  ev.bind(E,V);
   CHECK_EQ(ev, fu);
-  fu.bind({{u,V}, {f,E}});
+  fu.bind(E,V);
   ASSERT_TRUE(ev.isBound());
   ASSERT_TRUE(fu.isBound());
   CHECK_EQ(ev, fu);
@@ -57,12 +57,12 @@ TEST(PathExpression, Link) {
   Set F(U,U);
   U.setName("U");
   F.setName("F");
-  fu.bind({{u,U}, {f,F}});
+  fu.bind(F,U);
   CHECK_NE(ev, fu);
 
   // Check that bound ev != bound ve
   PathExpression ve = Link::make(v, e, Link::ve);
-  ve.bind({{v,V}, {e,E}});
+  ve.bind(V,E);
   ASSERT_NE(ev, ve);
 }
 
@@ -78,11 +78,9 @@ TEST(PathExpression, Renamed) {
 }
 
 
-TEST(PathExpression, ExistAnd_vev) {
-  Var v("v");
-  Var e("e");
-  PathExpression ve = Link::make(v, e, Link::ve);
-  PathExpression ev = Link::make(e, v, Link::ev);
+TEST(PathExpression, ExistAnd) {
+  PathExpression ve = makeVE();
+  PathExpression ev = makeEV();
 
   Var vi("vi");
   Var ee("e");
@@ -116,11 +114,11 @@ TEST(PathExpression, ExistAnd_vev) {
   // Bind the same sets to vev and ufu
   Set V;
   Set E(V,V);
-  ve.bind({{v,V}, {e,E}});
-  ev.bind({{v,V}, {e,E}});
+  ve.bind(V,E);
+  ev.bind(E,V);
   CHECK_EQ(ufu, vev);
-  uf.bind({{u,V}, {f,E}});
-  fu.bind({{u,V}, {f,E}});
+  uf.bind(V,E);
+  fu.bind(E,V);
   ASSERT_TRUE(vev.isBound());
   ASSERT_TRUE(ufu.isBound());
   CHECK_EQ(vev, ufu);
@@ -128,8 +126,8 @@ TEST(PathExpression, ExistAnd_vev) {
   // Bind different sets to ev and fu
   Set U;
   Set F(U,U);
-  uf.bind({{u,U}, {f,F}});
-  fu.bind({{u,U}, {f,F}});
+  uf.bind(U,F);
+  fu.bind(F,U);
   ASSERT_TRUE(ufu.isBound());
   CHECK_NE(vev, ufu);
 //

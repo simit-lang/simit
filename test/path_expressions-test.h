@@ -6,14 +6,14 @@
 using namespace std;
 using namespace simit::pe;
 
-PathExpression makeEV(const string &eName="", const string &vName="") {
+PathExpression makeEV(const string &eName="e", const string &vName="v") {
   Var e = Var(eName);
   Var v = Var(vName);
   PathExpression ev = Link::make(e, v, Link::ev);
   return ev;
 }
 
-PathExpression makeVE(const string &vName="", const string &eName="") {
+PathExpression makeVE(const string &vName="v", const string &eName="e") {
   Var v = Var(vName);
   Var e = Var(eName);
   PathExpression ve = Link::make(v, e, Link::ve);

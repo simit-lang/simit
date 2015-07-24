@@ -76,30 +76,22 @@ std::ostream &operator<<(std::ostream &os, const PathExpressionImpl &pe) {
 
 
 // class PathExpression
-class BindPathExpression : public PathExpressionVisitor {
-public:
-  BindPathExpression(const PathExpression::Bindings &bindings)
-      : bindings(bindings) {}
-
-  void bind(const PathExpression &pe) {
-    pe.accept(this);
-  }
-
-private:
-  const PathExpression::Bindings &bindings;
-
-  void visit(const Link *link) {
-    auto &lhs = link->getLhs();
-    auto &rhs = link->getRhs();
-    iassert(bindings.find(lhs) != bindings.end()) << "no binding for " << lhs;
-    iassert(bindings.find(rhs) != bindings.end()) << "no binding for " << rhs;
-    link->bind(&bindings.at(lhs), &bindings.at(rhs));
-  }
-};
-
-void PathExpression::bind(const Bindings &bindings) {
-  iassert(isa<Link>(*this)) << "only binding to links is currently supported";
-  BindPathExpression(bindings).bind(*this);
+void PathExpression::bind(const Set &lhsBinding, const Set &rhsBinding) {
+  iassert(isa<Link>(*this)) << "bind is only defined for Link PathExpressions";
+  class BindPathExpression : public PathExpressionVisitor {
+  public:
+    void bind(const PathExpression &pe, const Set &lhs, const Set &rhs) {
+      this->lhs = &lhs;
+      this->rhs = &rhs;
+      pe.accept(this);
+    }
+  private:
+    const Set *lhs, *rhs;
+    void visit(const Link *link) {
+      link->bind(lhs, rhs);
+    }
+  };
+  BindPathExpression().bind(*this,lhsBinding,rhsBinding);
 }
 
 bool PathExpression::isBound() const {

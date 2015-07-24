@@ -44,7 +44,7 @@ TEST(PathIndex, Link) {
 
   // Test e-v links
   PathExpression ev = Link::make(e, v, Link::ev);
-  ev.bind({{e,E}, {v,V}});
+  ev.bind(E,V);
   PathIndex evIndex = builder.buildSegmented(ev, 0);
   ASSERT_EQ(4u, evIndex.numElements());
   ASSERT_EQ(4u*2, evIndex.numNeighbors());
@@ -54,20 +54,20 @@ TEST(PathIndex, Link) {
   Var f("f");
   Var u("u");
   PathExpression fu = Link::make(f, u, Link::ev);
-  fu.bind({{f,E}, {u,V}});
+  fu.bind(E,V);
   PathIndex fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_EQ(evIndex, fuIndex);
 
   // Check that different ev get's a different index
   Set U;
   Set F(V,V);
-  fu.bind({{f,F}, {u,U}});
+  fu.bind(F,U);
   fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_NE(evIndex, fuIndex);
 
   // Test v-e links
   PathExpression ve = Link::make(v, e, Link::ve);
-  ve.bind({{e,E}, {v,V}});
+  ve.bind(V,E);
   PathIndex veIndex = builder.buildSegmented(ve, 0);
   ASSERT_EQ(5u, veIndex.numElements());
   ASSERT_EQ(8u, veIndex.numNeighbors());
@@ -75,12 +75,12 @@ TEST(PathIndex, Link) {
 
   // Check that ve get's memoized
   PathExpression uf = Link::make(u,f, Link::ve);
-  uf.bind({{f,E}, {u,V}});
+  uf.bind(V,E);
   PathIndex ufIndex = builder.buildSegmented(uf, 0);
   ASSERT_EQ(veIndex, ufIndex);
 
   // Check that different VE get's a different index
-  uf.bind({{f,F}, {u,U}});
+  uf.bind(U,F);
   ufIndex = builder.buildSegmented(uf, 0);
   ASSERT_NE(veIndex, ufIndex);
 
@@ -92,7 +92,7 @@ TEST(PathIndex, Link) {
   G.add(box(0,0,0), box(4,0,0));
   Var g("g");
   PathExpression vg = Link::make(v, g, Link::ve);
-  vg.bind({{v,V}, {g,G}});
+  vg.bind(V,G);
   PathIndex vgIndex = builder.buildSegmented(vg, 0);
   ASSERT_EQ(5u, vgIndex.numElements());
   ASSERT_EQ(2u, vgIndex.numNeighbors());
@@ -112,8 +112,8 @@ TEST(PathIndex, ExistAnd) {
   Var e("e");
   PathExpression ve = Link::make(v, e, Link::ve);
   PathExpression ev = Link::make(e, v, Link::ev);
-  ve.bind({{v,V}, {e,E}});
-  ev.bind({{v,V}, {e,E}});
+  ve.bind(V,E);
+  ev.bind(E,V);
 
   Var vi("vi");
   Var ee("e");
@@ -130,8 +130,8 @@ TEST(PathIndex, ExistAnd) {
   Var f("f");
   PathExpression uf = Link::make(u, f, Link::ve);
   PathExpression fu = Link::make(f, u, Link::ev);
-  uf.bind({{u,V}, {f,E}});
-  fu.bind({{u,V}, {f,E}});
+  uf.bind(V,E);
+  fu.bind(E,V);
 
   Var ui("ui");
   Var ff("f");
@@ -144,8 +144,8 @@ TEST(PathIndex, ExistAnd) {
   // Check that a different vev get's a different index
   Set U;
   Set F(U,U);
-  uf.bind({{u,U}, {f,F}});
-  fu.bind({{u,U}, {f,F}});
+  uf.bind(U,F);
+  fu.bind(F,U);
   ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_NE(vevIndex, ufuIndex);
 
@@ -169,8 +169,8 @@ TEST(PathIndex, ExistAnd) {
   Var g("g");
   PathExpression vg = Link::make(v, g, Link::ve);
   PathExpression gv = Link::make(g, v, Link::ev);
-  vg.bind({{v,V}, {g,G}});
-  gv.bind({{v,V}, {g,G}});
+  vg.bind(V,G);
+  gv.bind(G,V);
   PathExpression vgv = And::make({vi,vj}, {{QuantifiedVar::Exist,g}},
                                  vg(vi, g), gv(g, vj));
   PathIndex vgvIndex = builder.buildSegmented(vgv, 0);
@@ -180,7 +180,6 @@ TEST(PathIndex, ExistAnd) {
   ASSERT_EQ(3u, vevgvIndex.numElements());
   ASSERT_EQ(6u, vevgvIndex.numNeighbors());
   VERIFY_INDEX(vevgvIndex, nbrs({{0,2}, {0,2}, {0,2}}));
-}
 }
 
 
@@ -197,8 +196,8 @@ TEST(PathIndex, Alias) {
   Var e("e");
   PathExpression ve = Link::make(v, e, Link::ve);
   PathExpression ev = Link::make(e, v, Link::ev);
-  ve.bind({{v,V}, {e,E}});
-  ev.bind({{v,V}, {e,E}});
+  ve.bind(V,E);
+  ev.bind(E,V);
 
   Var vi("vi");
   Var ee("e");

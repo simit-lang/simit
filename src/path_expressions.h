@@ -129,12 +129,12 @@ class PathExpression
     : public util::IntrusivePtr<const PathExpressionImpl,false>,
       public interfaces::Comparable<PathExpression> {
 public:
-  typedef std::map<Var,const Set&> Bindings;
-
   PathExpression() : IntrusivePtr() {}
   PathExpression(const PathExpressionImpl *impl) : IntrusivePtr(impl) {}
 
-  void bind(const Bindings &bindings);
+  /// Bind sets to the path expression endpoints. Since bindings are only
+  /// supported for Link PathExpressions, only two bindings are needed.
+  void bind(const Set &lhsBinding, const Set &rhsBinding);
 
   /// True if the variables are bound to sets, false otherwise.
   bool isBound() const;
