@@ -12,20 +12,22 @@ using namespace simit;
 using namespace simit::pe;
 using namespace std;
 
-#define VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs)   \
-do {                                                         \
-  int i = 0;                                                 \
-  for (auto e : index) {                                     \
-    ASSERT_EQ(expectedNumNbrs[i], index.numNeighbors(e));    \
-    int j = 0;                                               \
-    for (auto n : index.neighbors(e)) {                      \
-      ASSERT_EQ(expectedNbrs[i][j], n)                       \
-          << "expects neighbor " << j << " of element " << i \
-          << " to be " << expectedNbrs[i][j];                \
-      ++j;                                                   \
-    }                                                        \
-    ++i;                                                     \
-  }                                                          \
+typedef vector<vector<unsigned>> nbrs;
+
+#define VERIFY_INDEX(index, expectedNbrs)                                      \
+do {                                                                           \
+  int i = 0;                                                                   \
+  for (auto e : index) {                                                       \
+    ASSERT_EQ(expectedNbrs[i].size(), index.numNeighbors(e));                  \
+    int j = 0;                                                                 \
+    for (auto n : index.neighbors(e)) {                                        \
+      ASSERT_EQ(expectedNbrs[i][j], n)                                         \
+          << "expects neighbor " << j << " of element " << i                   \
+          << " to be " << expectedNbrs[i][j];                                  \
+      ++j;                                                                     \
+    }                                                                          \
+    ++i;                                                                       \
+  }                                                                            \
 } while(0)
 
 
@@ -45,9 +47,7 @@ TEST(PathIndex, Link) {
   PathIndex evIndex = builder.buildSegmented(ev, 0);
   ASSERT_EQ(4u, evIndex.numElements());
   ASSERT_EQ(4u*2, evIndex.numNeighbors());
-  VERIFY_INDEX(evIndex,
-               vector<unsigned>({2, 2, 2, 2}),
-               vector<vector<unsigned>>({{0, 1}, {1, 2}, {2, 3}, {3, 4}}));
+  VERIFY_INDEX(evIndex, nbrs({{0,1}, {1,2}, {2,3}, {3,4}}));
 
   // Check that EV get's memoized
   Var f("f");
@@ -70,9 +70,7 @@ TEST(PathIndex, Link) {
   PathIndex veIndex = builder.buildSegmented(ve, 0);
   ASSERT_EQ(5u, veIndex.numElements());
   ASSERT_EQ(8u, veIndex.numNeighbors());
-  VERIFY_INDEX(veIndex,
-               vector<unsigned>({1, 2, 2, 2, 1}),
-               vector<vector<unsigned>>({{0}, {0, 1}, {1, 2}, {2, 3}, {3}}));
+  VERIFY_INDEX(veIndex, nbrs({{0}, {0,1}, {1,2}, {2,3}, {3}}));
 
   // Check that VE get's memoized
   PathExpression uf = Link::make(u,f, Link::ve);
@@ -113,9 +111,7 @@ TEST(PathIndex, ExistAnd_vev) {
   PathIndex vevIndex = builder.buildSegmented(vev, 0);
   ASSERT_EQ(3u, vevIndex.numElements());
   ASSERT_EQ(7u, vevIndex.numNeighbors());
-  VERIFY_INDEX(vevIndex,
-               vector<unsigned>({2, 3, 2}),
-               vector<vector<unsigned>>({{0, 1}, {0, 1, 2}, {1, 2}}));
+  VERIFY_INDEX(vevIndex, nbrs({{0,1}, {0,1,2}, {1,2}}));
 
   // Check that vev get's memoized
   Var u("u");
@@ -151,9 +147,7 @@ TEST(PathIndex, ExistAnd_vev) {
   PathIndex vevevIndex = builder.buildSegmented(vevev, 0);
   ASSERT_EQ(3u, vevevIndex.numElements());
   ASSERT_EQ(9u, vevevIndex.numNeighbors());
-  VERIFY_INDEX(vevevIndex,
-               vector<unsigned>({3, 3, 3}),
-               vector<vector<unsigned>>({{0, 1, 2}, {0, 1, 2}, {0, 1, 2}}));
+  VERIFY_INDEX(vevevIndex, nbrs({{0,1,2}, {0,1,2}, {0,1,2}}));
 }
 
 
@@ -184,8 +178,5 @@ TEST(PathIndex, Alias) {
 
   ASSERT_EQ(2u, index.numElements());
   ASSERT_EQ(4u, index.numNeighbors());
-
-  vector<unsigned> expectedNumNbrs = {2, 2};
-  vector<vector<unsigned>> expectedNbrs={{0, 1}, {0, 1}};
-  VERIFY_INDEX(index, expectedNumNbrs, expectedNbrs);
+  VERIFY_INDEX(index, vector<vector<unsigned>>({{0,1}, {0,1}}));
 }
