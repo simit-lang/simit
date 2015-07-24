@@ -212,7 +212,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           // create neighbor lists
           const Set &vertexSet = *link->getVertexBinding();
           for (auto &v : vertexSet) {
-            pathNeighbors.insert({v.getIdent(),set<unsigned>()});
+            pathNeighbors.insert({v.getIdent(), set<unsigned>()});
           }
 
           // populate neighbor lists
@@ -275,18 +275,17 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         // Build a path index from the first free variable to the second free
         // variable, through the quantified variable.
         for (unsigned source : sourceToQuantified) {
+          pathNeighbors.insert({source, set<unsigned>()});
           for (unsigned q : sourceToQuantified.neighbors(source)) {
             for (unsigned sink : quantifiedToSink.neighbors(q)) {
-              pathNeighbors[source].insert(sink);
+              pathNeighbors.at(source).insert(sink);
             }
           }
         }
-
       }
       else {
         not_supported_yet;
       }
-
       pi = pack(pathNeighbors);
     }
 

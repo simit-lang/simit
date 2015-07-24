@@ -100,7 +100,7 @@ TEST(PathIndex, Link) {
 }
 
 
-TEST(PathIndex, ExistAnd_vev) {
+TEST(PathIndex, ExistAnd) {
   PathIndexBuilder builder;
 
   Set V;
@@ -149,10 +149,10 @@ TEST(PathIndex, ExistAnd_vev) {
   ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_NE(vevIndex, ufuIndex);
 
-  // Check that VEV evaluated backwards get's a different index
+  // Check that vev evaluated backwards get's a different index
   // TODO
 
-  // Test VEVEV expression
+  // Test vevev expression
   Var vk("vk");
   PathExpression vevev = And::make({vi,vj}, {{QuantifiedVar::Exist,vk}},
                                    vev(vi,vk), vev(vk, vj));
@@ -160,6 +160,27 @@ TEST(PathIndex, ExistAnd_vev) {
   ASSERT_EQ(3u, vevevIndex.numElements());
   ASSERT_EQ(9u, vevevIndex.numNeighbors());
   VERIFY_INDEX(vevevIndex, nbrs({{0,1,2}, {0,1,2}, {0,1,2}}));
+
+  // Test vevgv expressions  v-e-v-e-v
+  //                          ---g---
+  Set G(V,V);
+  G.add(box(0,0,0), box(2,0,0));
+
+  Var g("g");
+  PathExpression vg = Link::make(v, g, Link::ve);
+  PathExpression gv = Link::make(g, v, Link::ev);
+  vg.bind({{v,V}, {g,G}});
+  gv.bind({{v,V}, {g,G}});
+  PathExpression vgv = And::make({vi,vj}, {{QuantifiedVar::Exist,g}},
+                                 vg(vi, g), gv(g, vj));
+  PathIndex vgvIndex = builder.buildSegmented(vgv, 0);
+  PathExpression vevgv = And::make({vi,vj}, {{QuantifiedVar::Exist,vk}},
+                                   vev(vi,vk), vgv(vk, vj));
+  PathIndex vevgvIndex = builder.buildSegmented(vevgv, 0);
+  ASSERT_EQ(3u, vevgvIndex.numElements());
+  ASSERT_EQ(6u, vevgvIndex.numNeighbors());
+  VERIFY_INDEX(vevgvIndex, nbrs({{0,2}, {0,2}, {0,2}}));
+}
 }
 
 
