@@ -1,4 +1,5 @@
 #include "gtest/gtest.h"
+#include "path_expressions-test.h"
 
 #include <map>
 #include <set>
@@ -39,10 +40,9 @@ TEST(PathIndex, Link) {
   Set E(V,V);
   Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
+  // Test e-v links
   Var e("e");
   Var v("v");
-
-  // Test e-v links
   PathExpression ev = Link::make(e, v, Link::ev);
   ev.bind(E,V);
   PathIndex evIndex = builder.buildSegmented(ev, 0);
@@ -108,18 +108,16 @@ TEST(PathIndex, ExistAnd) {
   Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
 
   // Test vev expressions (there exist an e s.t. (vi-e and e-vj))
-  Var v("v");
-  Var e("e");
-  PathExpression ve = Link::make(v, e, Link::ve);
-  PathExpression ev = Link::make(e, v, Link::ev);
+  PathExpression ve = makeVE();
+  PathExpression ev = makeEV();
   ve.bind(V,E);
   ev.bind(E,V);
 
   Var vi("vi");
-  Var ee("e");
+  Var e("e");
   Var vj("vj");
-  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,ee}},
-                                 ve(vi, ee), ev(ee, vj));
+  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}},
+                                 ve(vi, e), ev(e, vj));
   PathIndex vevIndex = builder.buildSegmented(vev, 0);
   ASSERT_EQ(3u, vevIndex.numElements());
   ASSERT_EQ(7u, vevIndex.numNeighbors());
@@ -167,8 +165,8 @@ TEST(PathIndex, ExistAnd) {
   G.add(box(0,0,0), box(2,0,0));
 
   Var g("g");
-  PathExpression vg = Link::make(v, g, Link::ve);
-  PathExpression gv = Link::make(g, v, Link::ev);
+  PathExpression vg = makeVE();
+  PathExpression gv = makeEV();
   vg.bind(V,G);
   gv.bind(G,V);
   PathExpression vgv = And::make({vi,vj}, {{QuantifiedVar::Exist,g}},
