@@ -249,6 +249,17 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       return varToLocationsMap;
     }
 
+    PathIndex buildIndex(const PathExpression &pathExpr,
+                         const Var &source, const Var &sink) {
+      VarToLocationsMap locs = getVarToLocationsMap({pathExpr});
+      iassert(locs.find(source) != locs.end())
+          << "source variable is not in the path expression";
+      iassert(locs.find(sink) != locs.end())
+          << "sink variable is not in the path expression";
+      return builder->buildSegmented(locs.at(source)[0].pathExpr,
+                                     locs.at(source)[0].endpoint);
+    }
+
     void visit(const And *f) {
       auto &freeVars = f->getFreeVars();
       iassert(freeVars.size() == 2)
@@ -297,7 +308,29 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         }
       }
       else {
-        not_supported_yet;
+        // Build indices from first to second free variable through lhs and rhs
+        PathIndex lhsIndex = buildIndex(lhs, freeVars[0], freeVars[1]);
+        PathIndex rhsIndex = buildIndex(rhs, freeVars[0], freeVars[1]);
+
+        // Build a path index that is the intersection of lhsIndex and rhsIndex.
+        // OPT: If path indices supported efficient lookups we could instead:
+        //      for each (elem,nbr) pair in lhs, if it exist in rhs then emit.
+        map<unsigned, set<unsigned>> lhsPathNeighbors;
+        for (unsigned elem : lhsIndex) {
+          lhsPathNeighbors.insert({elem, set<unsigned>()});
+          for (unsigned nbr : lhsIndex.neighbors(elem)) {
+            lhsPathNeighbors.at(elem).insert(nbr);
+          }
+        }
+        for (unsigned elem : rhsIndex) {
+          pathNeighbors.insert({elem, set<unsigned>()});
+          for (unsigned nbr : rhsIndex.neighbors(elem)) {
+            auto &elemNbrs = lhsPathNeighbors.at(elem);
+            if (elemNbrs.find(nbr) != elemNbrs.end()) {
+              pathNeighbors.at(elem).insert(nbr);
+            }
+          }
+        }
       }
       pi = pack(pathNeighbors);
     }
@@ -319,24 +352,9 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         not_supported_yet;
       }
       else {
-        VarToLocationsMap lhsLocs = getVarToLocationsMap({lhs});
-        VarToLocationsMap rhsLocs = getVarToLocationsMap({rhs});
-        iassert(lhsLocs.find(freeVars[0]) != lhsLocs.end()
-             && lhsLocs.find(freeVars[1]) != lhsLocs.end())
-            << "free variables of Or expr does not match lhs operand";
-        iassert(rhsLocs.find(freeVars[0]) != rhsLocs.end()
-             && rhsLocs.find(freeVars[1]) != rhsLocs.end())
-            << "free variables of Or expr does not match rhs operand";
-
-        // Build an index from the first to second free variable through lhs
-        PathIndex lhsIndex =
-            builder->buildSegmented(lhsLocs.at(freeVars[0])[0].pathExpr,
-                                    lhsLocs.at(freeVars[0])[0].endpoint);
-
-        // Build an index from the first to second free variable through rhs
-        PathIndex rhsIndex =
-            builder->buildSegmented(rhsLocs.at(freeVars[0])[0].pathExpr,
-                                    rhsLocs.at(freeVars[0])[0].endpoint);
+        // Build indices from first to second free variable through lhs and rhs
+        PathIndex lhsIndex = buildIndex(lhs, freeVars[0], freeVars[1]);
+        PathIndex rhsIndex = buildIndex(rhs, freeVars[0], freeVars[1]);
 
         // Build a path index that is the union of lhsIndex and rhsIndex
         for (unsigned elem : lhsIndex) {

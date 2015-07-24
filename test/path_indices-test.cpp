@@ -22,7 +22,8 @@ do {                                                                           \
   unsigned i = 0;                                                              \
   unsigned int totalNbrs=0;                                                    \
   for (auto e : index) {                                                       \
-    ASSERT_EQ(expectedNeighbors[i].size(), index.numNeighbors(e));             \
+    ASSERT_EQ(expectedNeighbors[i].size(), index.numNeighbors(e))              \
+        << "element " << i << " has the wrong number of neighbors";            \
     unsigned j = 0;                                                            \
     for (auto n : index.neighbors(e)) {                                        \
       ASSERT_EQ(expectedNeighbors[i][j], n)                                    \
@@ -96,6 +97,53 @@ TEST(PathIndex, Link) {
   PathIndex vgIndex = builder.buildSegmented(vg, 0);
   VERIFY_INDEX(vgIndex, nbrs({{0}, {}, {}, {}, {0}}));
 }
+
+
+TEST(PathIndex, And) {
+  PathIndexBuilder builder;
+
+  //  -f-
+  // v-e-v-e-v-f-v
+  //  -----f-----
+  Set V;
+  Set E(V,V);
+  Set F(V,V);
+  Box box = createBox(&V, &E, 3, 1, 1);
+  ElementRef v3 = V.add();
+  F.add(box(2,0,0), v3);
+  F.add(box(0,0,0), v3);
+  F.add(box(0,0,0), box(1,0,0));
+
+  // test (ve or ve)
+  PathExpression ve = makeVE();
+  ve.bind(V,E);
+  Var v("v");
+  Var e("e");
+  PathExpression veANDve = And::make({v,e}, {}, ve(v,e), ve(e,v));
+  PathIndex veANDveIndex = builder.buildSegmented(veANDve, 0);
+  VERIFY_INDEX(veANDveIndex, nbrs({{0}, {0,1}, {1}, {}}));
+
+  // test (vev or vfv):
+  PathExpression ev = makeEV();
+  ev.bind(E,V);
+  Var vi("vi");
+  Var vj("vj");
+  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}},
+                                 ve(vi, e), ev(e, vj));
+  PathExpression vf = makeVE();
+  PathExpression fv = makeEV();
+  vf.bind(V,F);
+  fv.bind(F,V);
+  Var f("f");
+  PathExpression vfv = And::make({vi,vj}, {{QuantifiedVar::Exist,f}},
+                                 vf(vi, f), fv(f, vj));
+  PathExpression vevANDvfv = And::make({vi,vj}, {}, vev(vi,vj), vfv(vi,vj));
+  PathIndex vevANDvfvIndex = builder.buildSegmented(vevANDvfv, 0);
+  VERIFY_INDEX(vevANDvfvIndex, nbrs({{0,1}, {0,1}, {2}, {}}));
+
+  // TODO: Test optimization PathIndex(pe) == PathIndex(pe or pe)
+}
+
 
 
 TEST(PathIndex, ExistAnd) {

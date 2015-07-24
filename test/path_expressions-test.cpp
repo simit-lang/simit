@@ -78,6 +78,43 @@ TEST(PathExpression, Renamed) {
 }
 
 
+TEST(PathExpression, And) {
+  Var v("v");
+  Var e("e");
+  PathExpression ve = makeVE();
+  PathExpression veANDve = And::make({v,e}, {}, ve(v,e), ve(e,v));
+  PathExpression veANDve2 = And::make({v,e}, {}, ve(v,e), ve(e,v));
+  CHECK_EQ(veANDve, veANDve2);
+  CHECK_NE(veANDve, ve);
+  ASSERT_EQ(veANDve.getPathEndpoint(0), v);
+  ASSERT_EQ(veANDve.getPathEndpoint(1), e);
+
+  // Check that two different ors are equal
+  Var u("u");
+  Var f("f");
+  PathExpression uf = makeVE();
+  PathExpression ufANDuf = And::make({u,f}, {}, uf(u,f), uf(f,u));
+  CHECK_EQ(veANDve, ufANDuf);
+
+  // Bind the same sets to ev and uf
+  Set V;
+  Set E(V,V);
+  ve.bind(V,E);
+  CHECK_EQ(veANDve, ufANDuf);
+  uf.bind(V,E);
+  ASSERT_TRUE(veANDve.isBound());
+  ASSERT_TRUE(ufANDuf.isBound());
+  CHECK_EQ(veANDve, ufANDuf);
+
+  // Bind different sets to ve and fu
+  Set U;
+  Set F(U,U);
+  uf.bind(U,F);
+  ASSERT_TRUE(ufANDuf.isBound());
+  CHECK_NE(veANDve, ufANDuf);
+}
+
+
 TEST(PathExpression, ExistAnd) {
   PathExpression ve = makeVE();
   PathExpression ev = makeEV();
