@@ -255,6 +255,8 @@ private:
 };
 
 
+/// A logical conjunction that is quantified by one or more variables (see
+/// QuantifiedConnective).
 class And : public QuantifiedConnective {
 public:
   static PathExpression make(const std::vector<Var> &freeVars,
@@ -266,6 +268,25 @@ public:
 
 private:
   And(const std::vector<Var> &freeVars,
+      const std::vector<QuantifiedVar> &quantifiedVars,
+      const PathExpression &lhs, const PathExpression &rhs)
+      : QuantifiedConnective(freeVars, quantifiedVars, lhs, rhs) {}
+};
+
+
+/// A logical disjunction that is quantified by one or more variables (see
+/// QuantifiedConnective).
+class Or : public QuantifiedConnective {
+public:
+  static PathExpression make(const std::vector<Var> &freeVars,
+                             const std::vector<QuantifiedVar> &quantifiedVars,
+                             const PathExpression &lhs,
+                             const PathExpression &rhs);
+
+  void accept(PathExpressionVisitor *visitor) const;
+
+private:
+  Or(const std::vector<Var> &freeVars,
       const std::vector<QuantifiedVar> &quantifiedVars,
       const PathExpression &lhs, const PathExpression &rhs)
       : QuantifiedConnective(freeVars, quantifiedVars, lhs, rhs) {}
@@ -302,6 +323,7 @@ public:
 
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
+  virtual void visit(const Or *pe);
 
   virtual void visit(const RenamedPathExpression *pe);
 
@@ -331,6 +353,7 @@ protected:
 
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
+  virtual void visit(const Or *pe);
 
   virtual void visit(const RenamedPathExpression *pe);
 };
@@ -351,6 +374,7 @@ protected:
 
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
+  virtual void visit(const Or *pe);
 
   void printConnective(const QuantifiedConnective *pe);
 };

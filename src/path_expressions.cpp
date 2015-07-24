@@ -208,7 +208,7 @@ QuantifiedConnective::QuantifiedConnective(const vector<Var> &freeVars,
   // TODO: Remove these restrictions
   iassert(freeVars.size() == 2)
       << "For now, we only support matrix path expressions";
-  iassert(quantifiedVars.size() == 1)
+  iassert(quantifiedVars.size() < 2)
       << "For now, we only support one quantified variable";
 }
 
@@ -228,14 +228,29 @@ bool QuantifiedConnective::lt(const PathExpressionImpl &o) const {
                                       : getRhs() < optr->getRhs();
 }
 
-// class QuantifiedAnd
+
+// class And
 PathExpression And::make(const std::vector<Var> &freeVars,
-                         const vector<QuantifiedVar> &qvars,
-                         const PathExpression &l, const PathExpression &r) {
-  return new And(freeVars, qvars, l, r);
+                         const vector<QuantifiedVar> &quantifiedVars,
+                         const PathExpression &lhs,
+                         const PathExpression &rhs) {
+  return new And(freeVars, quantifiedVars, lhs, rhs);
 }
 
 void And::accept(PathExpressionVisitor *visitor) const {
+  visitor->visit(this);
+}
+
+
+// class Or
+PathExpression Or::make(const std::vector<Var> &freeVars,
+                        const std::vector<QuantifiedVar> &quantifiedVars,
+                        const PathExpression &lhs,
+                        const PathExpression &rhs) {
+  return new Or(freeVars, quantifiedVars, lhs, rhs);
+}
+
+void Or::accept(PathExpressionVisitor *visitor) const {
   visitor->visit(this);
 }
 
@@ -269,6 +284,11 @@ void PathExpressionVisitor::visit(const Link *pe) {
 }
 
 void PathExpressionVisitor::visit(const And *pe) {
+  pe->getLhs().accept(this);
+  pe->getRhs().accept(this);
+}
+
+void PathExpressionVisitor::visit(const Or *pe) {
   pe->getLhs().accept(this);
   pe->getRhs().accept(this);
 }
@@ -328,6 +348,10 @@ PathExpression visitBinaryConnective(const T *pe, PathExpressionRewriter *rw) {
 }
 
 void PathExpressionRewriter::visit(const And *pe) {
+  expr = visitBinaryConnective(pe, this);
+}
+
+void PathExpressionRewriter::visit(const Or *pe) {
   expr = visitBinaryConnective(pe, this);
 }
 
@@ -392,6 +416,15 @@ void PathExpressionPrinter::visit(const And *pe) {
   os << "(";
   pe->getLhs().accept(this);
   os << " \u2227 ";
+  pe->getRhs().accept(this);
+  os << ")";
+}
+
+void PathExpressionPrinter::visit(const Or *pe) {
+  printConnective(pe);
+  os << "(";
+  pe->getLhs().accept(this);
+  os << " \u2228 ";
   pe->getRhs().accept(this);
   os << ")";
 }

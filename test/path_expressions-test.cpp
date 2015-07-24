@@ -111,7 +111,7 @@ TEST(PathExpression, ExistAnd) {
                                  uf(ui,ff), fu(ff,uj));
   CHECK_EQ(vev, ufu);
 
-  // Bind the same sets to vev and ufu
+  // Bind the same sets to ev and uf
   Set V;
   Set E(V,V);
   ve.bind(V,E);
@@ -130,7 +130,43 @@ TEST(PathExpression, ExistAnd) {
   fu.bind(F,U);
   ASSERT_TRUE(ufu.isBound());
   CHECK_NE(vev, ufu);
-//
-//  // TODO: Test eve and compare eve with vev
-//  // TODO: Test or and compare or and and expressions
+
+  // TODO: Test eve and compare eve with vev
+  // TODO: Test or and compare or and and expressions
+}
+
+TEST(PathExpression, Or) {
+  Var v("v");
+  Var e("e");
+  PathExpression ve = makeVE();
+  PathExpression ve_or_ve = Or::make({v,e}, {}, ve(v,e), ve(e,v));
+  PathExpression ve_or_ve2 = Or::make({v,e}, {}, ve(v,e), ve(e,v));
+  CHECK_EQ(ve_or_ve, ve_or_ve2);
+  CHECK_NE(ve_or_ve, ve);
+  ASSERT_EQ(ve_or_ve.getPathEndpoint(0), v);
+  ASSERT_EQ(ve_or_ve.getPathEndpoint(1), e);
+
+  // Check that two different ors are equal
+  Var u("u");
+  Var f("f");
+  PathExpression uf = makeVE();
+  PathExpression uf_or_uf = Or::make({u,f}, {}, uf(u,f), uf(f,u));
+  CHECK_EQ(ve_or_ve, uf_or_uf);
+
+  // Bind the same sets to ev and uf
+  Set V;
+  Set E(V,V);
+  ve.bind(V,E);
+  CHECK_EQ(ve_or_ve, uf_or_uf);
+  uf.bind(V,E);
+  ASSERT_TRUE(ve_or_ve.isBound());
+  ASSERT_TRUE(uf_or_uf.isBound());
+  CHECK_EQ(ve_or_ve, uf_or_uf);
+
+  // Bind different sets to ve and fu
+  Set U;
+  Set F(U,U);
+  uf.bind(U,F);
+  ASSERT_TRUE(uf_or_uf.isBound());
+  CHECK_NE(ve_or_ve, uf_or_uf);
 }
