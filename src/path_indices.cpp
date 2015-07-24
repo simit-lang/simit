@@ -260,6 +260,30 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
                                      locs.at(source)[0].endpoint);
     }
 
+    tuple<PathIndex,PathIndex> buildIndices(const PathExpression &lhs,
+                                            const PathExpression &rhs,
+                                            const Var &source,
+                                            const Var &quantified,
+                                            const Var &sink) {
+      VarToLocationsMap varToLocations = getVarToLocationsMap({lhs,rhs});
+      iassert(varToLocations.find(quantified) != varToLocations.end())
+          << "could not find quantified variable locations";
+      iassert(varToLocations[quantified].size() == 2)
+          << "quantified binary expr only uses quantified variable once";
+
+      Location sourceLoc = varToLocations[source][0];
+      PathIndex sourceToQuantified =
+          builder->buildSegmented(sourceLoc.pathExpr, sourceLoc.endpoint);
+      PathIndex sourceToQuantified2, quantifiedToSink2;
+
+      Location sinkLoc = varToLocations[sink][0];
+      unsigned quantifiedLoc = ((sinkLoc.endpoint) == 0) ? 1 : 0;
+      PathIndex quantifiedToSink =
+          builder->buildSegmented(sinkLoc.pathExpr, quantifiedLoc);
+
+      return {sourceToQuantified, quantifiedToSink};
+    }
+
     void visit(const And *f) {
       auto &freeVars = f->getFreeVars();
       iassert(freeVars.size() == 2)
@@ -269,45 +293,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       PathExpression rhs = f->getRhs();
 
       map<unsigned, set<unsigned>> pathNeighbors;
-      if (f->isQuantified()) {
-        iassert(f->getQuantifiedVars().size() == 1)
-            << "For now, we only support one quantified variable";
-
-        QuantifiedVar qvar = f->getQuantifiedVars()[0];
-
-        VarToLocationsMap varToLocations = getVarToLocationsMap({lhs,rhs});
-        iassert(varToLocations.find(qvar.getVar()) != varToLocations.end())
-            << "could not find quantified variable locations";
-        iassert(varToLocations[qvar.getVar()].size() == 2)
-            << "quantified binary expr only uses quantified variable once";
-
-        // The expression combines two binary path expressions with one
-        // quantified variable. Thus, each operand must link one of the two free
-        // variables to the quantified variable.
-
-        // Build an index from the first free variable to the quantified var
-        Location sourceLoc = varToLocations[freeVars[0]][0];
-        PathIndex sourceToQuantified =
-            builder->buildSegmented(sourceLoc.pathExpr, sourceLoc.endpoint);
-
-        // Build an index from the quantified variable to the second free var
-        Location  sinkLoc = varToLocations[freeVars[1]][0];
-        unsigned quantifiedLoc = ((sinkLoc.endpoint) == 0) ? 1 : 0;
-        PathIndex quantifiedToSink =
-            builder->buildSegmented(sinkLoc.pathExpr, quantifiedLoc);
-
-        // Build a path index from the first free variable to the second free
-        // variable, through the quantified variable.
-        for (unsigned source : sourceToQuantified) {
-          pathNeighbors.insert({source, set<unsigned>()});
-          for (unsigned q : sourceToQuantified.neighbors(source)) {
-            for (unsigned sink : quantifiedToSink.neighbors(q)) {
-              pathNeighbors.at(source).insert(sink);
-            }
-          }
-        }
-      }
-      else {
+      if (!f->isQuantified()) {
         // Build indices from first to second free variable through lhs and rhs
         PathIndex lhsIndex = buildIndex(lhs, freeVars[0], freeVars[1]);
         PathIndex rhsIndex = buildIndex(rhs, freeVars[0], freeVars[1]);
@@ -332,6 +318,35 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           }
         }
       }
+      else {
+        iassert(f->getQuantifiedVars().size() == 1)
+            << "For now, we only support one quantified variable";
+
+        QuantifiedVar qvar = f->getQuantifiedVars()[0];
+
+        // The expression combines two binary path expressions with one
+        // quantified variable. Thus, each operand must link one of the two free
+        // variables to the quantified variable.
+
+        // Build indices from the first free variable to the quantified var,
+        // and from the quantified var to the second free variable
+        PathIndex sourceToQuantified;
+        PathIndex quantifiedToSink;
+
+        tie(sourceToQuantified, quantifiedToSink) =
+            buildIndices(lhs, rhs, freeVars[0], qvar.getVar(), freeVars[1]);
+
+        // Build a path index from the first free variable to the second free
+        // variable, through the quantified variable.
+        for (unsigned source : sourceToQuantified) {
+          pathNeighbors.insert({source, set<unsigned>()});
+          for (unsigned q : sourceToQuantified.neighbors(source)) {
+            for (unsigned sink : quantifiedToSink.neighbors(q)) {
+              pathNeighbors.at(source).insert(sink);
+            }
+          }
+        }
+      }
       pi = pack(pathNeighbors);
     }
 
@@ -344,14 +359,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       PathExpression rhs = f->getRhs();
 
       map<unsigned, set<unsigned>> pathNeighbors;
-      if (f->isQuantified()) {
-        iassert(f->getQuantifiedVars().size() == 1)
-            << "For now, we only support one quantified variable";
-
-        QuantifiedVar qvar = f->getQuantifiedVars()[0];
-        not_supported_yet;
-      }
-      else {
+      if (!f->isQuantified()) {
         // Build indices from first to second free variable through lhs and rhs
         PathIndex lhsIndex = buildIndex(lhs, freeVars[0], freeVars[1]);
         PathIndex rhsIndex = buildIndex(rhs, freeVars[0], freeVars[1]);
@@ -367,6 +375,40 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           iassert(pathNeighbors.find(elem) != pathNeighbors.end());
           for (unsigned nbr : rhsIndex.neighbors(elem)) {
             pathNeighbors.at(elem).insert(nbr);
+          }
+        }
+      }
+      else {
+        iassert(f->getQuantifiedVars().size() == 1)
+            << "For now, we only support one quantified variable";
+
+        QuantifiedVar qvar = f->getQuantifiedVars()[0];
+
+        // The expression combines two binary path expressions with one
+        // quantified variable. Thus, each operand must link one of the two free
+        // variables to the quantified variable.
+
+        // Build indices from the first free variable to the quantified var,
+        // and from the quantified var to the second free variable
+        PathIndex sourceToQuantified;
+        PathIndex quantifiedToSink;
+
+        // OPT: The index building algorithm is agnostic to the direction these
+        //      indices are built in. We should take advantage by:
+        //      - checking whether one direction is already available/memoized
+        //      - checking whether one direction is an ev link (which is fast)
+        tie(sourceToQuantified, quantifiedToSink) =
+            buildIndices(lhs, rhs, freeVars[0], qvar.getVar(), freeVars[1]);
+
+        // Build a path index that from the first free variable to the
+        // quantified variable. Every free variable that can reach any
+        // quantified variable gets links to every element of the second
+        // variable. Vice versa for the second variable, but jump from the
+        // quantified var.
+        for (unsigned elem : sourceToQuantified) {
+          for (unsigned nbr : sourceToQuantified.neighbors(elem)) {
+            // TODO: Iterate over the set bound to the sink. This set must be
+            //       retrieved from a new method PathExpression::getBinding(Var)
           }
         }
       }

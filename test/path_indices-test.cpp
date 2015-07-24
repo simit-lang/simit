@@ -145,6 +145,51 @@ TEST(PathIndex, And) {
 }
 
 
+TEST(PathIndex, Or) {
+  PathIndexBuilder builder;
+
+  //  -f-
+  // v-e-v-e-v-f-v
+  //  -----f-----
+  Set V;
+  Set E(V,V);
+  Set F(V,V);
+  Box box = createBox(&V, &E, 3, 1, 1);
+  ElementRef v3 = V.add();
+  F.add(box(2,0,0), v3);
+  F.add(box(0,0,0), v3);
+  F.add(box(0,0,0), box(1,0,0));
+
+  // test (ve or ve)
+  PathExpression ve = makeVE();
+  ve.bind(V,E);
+  Var v("v");
+  Var e("e");
+  PathExpression veORve = Or::make({v,e}, {}, ve(v,e), ve(e,v));
+  PathIndex veORveIndex = builder.buildSegmented(veORve, 0);
+  VERIFY_INDEX(veORveIndex, nbrs({{0}, {0,1}, {1}, {}}));
+
+  // test (vev or vfv):
+  PathExpression ev = makeEV();
+  ev.bind(E,V);
+  Var vi("vi");
+  Var vj("vj");
+  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}},
+                                 ve(vi, e), ev(e, vj));
+  PathExpression vf = makeVE();
+  PathExpression fv = makeEV();
+  vf.bind(V,F);
+  fv.bind(F,V);
+  Var f("f");
+  PathExpression vfv = And::make({vi,vj}, {{QuantifiedVar::Exist,f}},
+                                 vf(vi, f), fv(f, vj));
+  PathExpression vevORvfv = Or::make({vi,vj}, {}, vev(vi,vj), vfv(vi,vj));
+  PathIndex vevORvfvIndex = builder.buildSegmented(vevORvfv, 0);
+  VERIFY_INDEX(vevORvfvIndex, nbrs({{0,1,3}, {0,1,2}, {1,2,3}, {0,2,3}}));
+
+  // TODO: Test optimization PathIndex(pe) == PathIndex(pe or pe)
+}
+
 
 TEST(PathIndex, ExistAnd) {
   PathIndexBuilder builder;
@@ -221,49 +266,78 @@ TEST(PathIndex, ExistAnd) {
 }
 
 
-TEST(PathIndex, Or) {
+TEST(DISABLED_PathIndex, ExistOr) {
   PathIndexBuilder builder;
 
-  //  -f-
-  // v-e-v-e-v-f-v
-  //  -----f-----
   Set V;
   Set E(V,V);
-  Set F(V,V);
-  Box box = createBox(&V, &E, 3, 1, 1);
-  ElementRef v3 = V.add();
-  F.add(box(2,0,0), v3);
-  F.add(box(0,0,0), v3);
-  F.add(box(0,0,0), box(1,0,0));
+  Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
 
-  // test (ve or ve)
+  // Test vev expressions (there exist an e s.t. (vi-e and e-vj))
   PathExpression ve = makeVE();
-  ve.bind(V,E);
-  Var v("v");
-  Var e("e");
-  PathExpression veORve = Or::make({v,e}, {}, ve(v,e), ve(e,v));
-  PathIndex veORveIndex = builder.buildSegmented(veORve, 0);
-  VERIFY_INDEX(veORveIndex, nbrs({{0}, {0,1}, {1}, {}}));
-
-  // test (vev or vfv):
   PathExpression ev = makeEV();
+  ve.bind(V,E);
   ev.bind(E,V);
-  Var vi("vi");
-  Var vj("vj");
-  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}},
-                                 ve(vi, e), ev(e, vj));
-  PathExpression vf = makeVE();
-  PathExpression fv = makeEV();
-  vf.bind(V,F);
-  fv.bind(F,V);
-  Var f("f");
-  PathExpression vfv = And::make({vi,vj}, {{QuantifiedVar::Exist,f}},
-                                 vf(vi, f), fv(f, vj));
-  PathExpression vevORvfv = Or::make({vi,vj}, {}, vev(vi,vj), vfv(vi,vj));
-  PathIndex vevORvfvIndex = builder.buildSegmented(vevORvfv, 0);
-  VERIFY_INDEX(vevORvfvIndex, nbrs({{0,1,3}, {0,1,2}, {1,2,3}, {0,2,3}}));
 
-  // TODO: Test optimization PathIndex(pe) == PathIndex(pe or pe)
+  Var vi("vi");
+  Var e("e");
+  Var vj("vj");
+  PathExpression vev = Or::make({vi,vj}, {{QuantifiedVar::Exist,e}},
+                                ve(vi, e), ev(e, vj));
+  PathIndex vevIndex = builder.buildSegmented(vev, 0);
+  VERIFY_INDEX(vevIndex, nbrs({{0,1,2}, {0,1,2}, {0,1,2}}));
+
+//  // Check that vev get's memoized
+//  Var u("u");
+//  Var f("f");
+//  PathExpression uf = Link::make(u, f, Link::ve);
+//  PathExpression fu = Link::make(f, u, Link::ev);
+//  uf.bind(V,E);
+//  fu.bind(E,V);
+//
+//  Var ui("ui");
+//  Var ff("f");
+//  Var uj("uj");
+//  PathExpression ufu = Or::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
+//                                uf(ui, ff), fu(ff,uj));
+//  PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
+//  ASSERT_EQ(vevIndex, ufuIndex);
+//
+//  // Check that a different vev get's a different index
+//  Set U;
+//  Set F(U,U);
+//  uf.bind(U,F);
+//  fu.bind(F,U);
+//  ufuIndex = builder.buildSegmented(ufu, 0);
+//  ASSERT_NE(vevIndex, ufuIndex);
+//
+//  // Check that vev evaluated backwards get's a different index
+//  // TODO
+//
+//  // Test vevev expression
+//  Var vk("vk");
+//  PathExpression vevev = Or::make({vi,vj}, {{QuantifiedVar::Exist,vk}},
+//                                  vev(vi,vk), vev(vk, vj));
+//  PathIndex vevevIndex = builder.buildSegmented(vevev, 0);
+//  VERIFY_INDEX(vevevIndex, nbrs({{0,1,2}, {0,1,2}, {0,1,2}}));
+//
+//  // Test vevgv expressions: v-e-v-e-v
+//  //                          ---g---
+//  Set G(V,V);
+//  G.add(box(0,0,0), box(2,0,0));
+//
+//  Var g("g");
+//  PathExpression vg = makeVE();
+//  PathExpression gv = makeEV();
+//  vg.bind(V,G);
+//  gv.bind(G,V);
+//  PathExpression vgv = Or::make({vi,vj}, {{QuantifiedVar::Exist,g}},
+//                                vg(vi, g), gv(g, vj));
+//  PathIndex vgvIndex = builder.buildSegmented(vgv, 0);
+//  PathExpression vevgv = Or::make({vi,vj}, {{QuantifiedVar::Exist,vk}},
+//                                  vev(vi,vk), vgv(vk, vj));
+//  PathIndex vevgvIndex = builder.buildSegmented(vevgv, 0);
+//  VERIFY_INDEX(vevgvIndex, nbrs({{0,2}, {0,2}, {0,2}}));
 }
 
 
@@ -291,7 +365,5 @@ TEST(PathIndex, Alias) {
 
   PathIndexBuilder builder;
   PathIndex index = builder.buildSegmented(vev, 0);
-
-
   VERIFY_INDEX(index, vector<vector<unsigned>>({{0,1}, {0,1}}));
 }
