@@ -16,14 +16,15 @@ typedef vector<vector<unsigned>> nbrs;
 
 #define VERIFY_INDEX(index, expectedNbrs)                                      \
 do {                                                                           \
+  auto expectedNeighbors = expectedNbrs;                                       \
   int i = 0;                                                                   \
   for (auto e : index) {                                                       \
-    ASSERT_EQ(expectedNbrs[i].size(), index.numNeighbors(e));                  \
+    ASSERT_EQ(expectedNeighbors[i].size(), index.numNeighbors(e));             \
     int j = 0;                                                                 \
     for (auto n : index.neighbors(e)) {                                        \
-      ASSERT_EQ(expectedNbrs[i][j], n)                                         \
+      ASSERT_EQ(expectedNeighbors[i][j], n)                                    \
           << "expects neighbor " << j << " of element " << i                   \
-          << " to be " << expectedNbrs[i][j];                                  \
+          << " to be " << expectedNeighbors[i][j];                             \
       ++j;                                                                     \
     }                                                                          \
     ++i;                                                                       \
@@ -36,7 +37,7 @@ TEST(PathIndex, Link) {
 
   Set V;
   Set E(V,V);
-  createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
+  Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
   Var e("e");
   Var v("v");
@@ -57,7 +58,7 @@ TEST(PathIndex, Link) {
   PathIndex fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_EQ(evIndex, fuIndex);
 
-  // Check that different EV get's a different index
+  // Check that different ev get's a different index
   Set U;
   Set F(V,V);
   fu.bind({{f,F}, {u,U}});
@@ -72,7 +73,7 @@ TEST(PathIndex, Link) {
   ASSERT_EQ(8u, veIndex.numNeighbors());
   VERIFY_INDEX(veIndex, nbrs({{0}, {0,1}, {1,2}, {2,3}, {3}}));
 
-  // Check that VE get's memoized
+  // Check that ve get's memoized
   PathExpression uf = Link::make(u,f, Link::ve);
   uf.bind({{f,E}, {u,V}});
   PathIndex ufIndex = builder.buildSegmented(uf, 0);
@@ -85,6 +86,17 @@ TEST(PathIndex, Link) {
 
   // Test that ev evaluated backwards gets the same index as ve and vice versa
   // TODO
+
+  // Test ve where some variables do not have neighbors
+  Set G(V,V);
+  G.add(box(0,0,0), box(4,0,0));
+  Var g("g");
+  PathExpression vg = Link::make(v, g, Link::ve);
+  vg.bind({{v,V}, {g,G}});
+  PathIndex vgIndex = builder.buildSegmented(vg, 0);
+  ASSERT_EQ(5u, vgIndex.numElements());
+  ASSERT_EQ(2u, vgIndex.numNeighbors());
+  VERIFY_INDEX(vgIndex, nbrs({{0}, {}, {}, {}, {0}}));
 }
 
 

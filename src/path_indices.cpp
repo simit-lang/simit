@@ -149,9 +149,9 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       << "attempting to build an index from a path expression (" << pe
       << ") that is not bound to sets";
 
-  // Interpret the path expression, starting at sourceEndpoint, over the graph.
-  // That is given an element, the find its neighbors through the paths
-  // described by the path expression.
+  /// Interpret the path expression, starting at sourceEndpoint, over the graph.
+  /// That is given an element, the find its neighbors through the paths
+  /// described by the path expression.
   class PathNeighborVisitor : public PathExpressionVisitor {
   public:
     PathNeighborVisitor(PathIndexBuilder *builder) : builder(builder) {}
@@ -178,15 +178,18 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       int currNbrsStart = 0;
       for (auto &p : pathNeighbors) {
         unsigned elem = p.first;
-
-        vector<unsigned> pNeighbors(p.second.begin(), p.second.end());
-        sort(pNeighbors.begin(), pNeighbors.end());
-
         nbrsStart[elem] = currNbrsStart;
-        memcpy(&nbrs[currNbrsStart], pNeighbors.data(),
-               pNeighbors.size() * sizeof(unsigned));
 
-        currNbrsStart += pNeighbors.size();
+        unsigned pNeighborSize = p.second.size();
+        if (pNeighborSize > 0) {
+          vector<unsigned> pNeighbors(p.second.begin(), p.second.end());
+          sort(pNeighbors.begin(), pNeighbors.end());
+
+          memcpy(&nbrs[currNbrsStart], pNeighbors.data(),
+                 pNeighbors.size() * sizeof(unsigned));
+
+          currNbrsStart += pNeighborSize;
+        }
       }
       nbrsStart[numElements] = currNbrsStart;
       return new SegmentedPathIndex(numElements, nbrsStart, nbrs);;
@@ -203,16 +206,23 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           break;
         }
         case Link::ve: {
-          // Add each edge to the neighbor vectors of its endpoints
+          // add each edge to the neighbor vectors of its endpoints
           map<unsigned, set<unsigned>> pathNeighbors;
+
+          // create neighbor lists
+          const Set &vertexSet = *link->getVertexBinding();
+          for (auto &v : vertexSet) {
+            pathNeighbors.insert({v.getIdent(),set<unsigned>()});
+          }
+
+          // populate neighbor lists
           for (auto &e : edgeSet) {
             iassert(e.getIdent() >= 0);
             for (auto &ep : edgeSet.getEndpoints(e)) {
               iassert(ep.getIdent() >= 0);
-              pathNeighbors[ep.getIdent()].insert(e.getIdent());
+              pathNeighbors.at(ep.getIdent()).insert(e.getIdent());
             }
           }
-          
           pi = pack(pathNeighbors);
           break;
         }
@@ -271,7 +281,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
             }
           }
         }
-        
+
       }
       else {
         not_supported_yet;
