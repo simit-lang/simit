@@ -97,6 +97,7 @@ TEST(PathIndex, ExistAnd_vev) {
   Set E(V,V);
   Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
 
+  // Test vev expressions (there exist an e s.t. (vi-e and e-vj))
   Var v("v");
   Var e("e");
   PathExpression ve = Link::make(v, e, Link::ve);
@@ -116,7 +117,7 @@ TEST(PathIndex, ExistAnd_vev) {
                vector<unsigned>({2, 3, 2}),
                vector<vector<unsigned>>({{0, 1}, {0, 1, 2}, {1, 2}}));
 
-  // Check that VEV get's memoized
+  // Check that vev get's memoized
   Var u("u");
   Var f("f");
   PathExpression uf = Link::make(u, f, Link::ve);
@@ -132,7 +133,7 @@ TEST(PathIndex, ExistAnd_vev) {
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_EQ(vevIndex, ufuIndex);
 
-  // Check that different VEV get's a different index
+  // Check that a different vev get's a different index
   Set U;
   Set F(U,U);
   uf.bind({{u,U}, {f,F}});
@@ -142,6 +143,17 @@ TEST(PathIndex, ExistAnd_vev) {
 
   // Check that VEV evaluated backwards get's a different index
   // TODO
+
+  // Test VEVEV expression
+  Var vk("vk");
+  PathExpression vevev = And::make({vi,vj}, {{QuantifiedVar::Exist,vk}},
+                                   vev(vi,vk), vev(vk, vj));
+  PathIndex vevevIndex = builder.buildSegmented(vevev, 0);
+  ASSERT_EQ(3u, vevevIndex.numElements());
+  ASSERT_EQ(9u, vevevIndex.numNeighbors());
+  VERIFY_INDEX(vevevIndex,
+               vector<unsigned>({3, 3, 3}),
+               vector<vector<unsigned>>({{0, 1, 2}, {0, 1, 2}, {0, 1, 2}}));
 }
 
 
