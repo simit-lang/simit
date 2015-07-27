@@ -91,12 +91,12 @@ public:
       auto it = scope.begin();
       if (it != scope.end()) {
         std::string symString = simit::util::toString(it->second);
-        os << it->first << ": " << symString << "\n";
+        os << it->first << " -> " << symString << "\n";
         ++it;
       }
       for (; it != scope.end(); ++it) {
         std::string symString = simit::util::toString(it->second);
-        os << "  " << it->first << ": " << symString << "\n";
+        os << "  " << it->first << " -> " << symString << "\n";
       }
     }
     return os;

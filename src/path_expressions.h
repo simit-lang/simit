@@ -104,8 +104,11 @@ public:
   virtual ~PathExpressionImpl() {}
 
   unsigned getNumPathEndpoints() const {return 2;}
-
   virtual Var getPathEndpoint(unsigned i) const = 0;
+
+  bool isBound() const;
+  const Set *getBinding(const Var &var) const;
+
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
   friend bool operator==(const PathExpressionImpl&, const PathExpressionImpl&);
@@ -138,6 +141,9 @@ public:
 
   /// True if the variables are bound to sets, false otherwise.
   bool isBound() const;
+
+  /// Returns the binding set of `var`, or nullptr if it could not be found.
+  const Set *getBinding(const Var &var) const;
 
   unsigned getNumPathEndpoints() const {return ptr->getNumPathEndpoints();}
   Var getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}

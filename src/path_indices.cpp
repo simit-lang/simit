@@ -405,10 +405,23 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         // quantified variable gets links to every element of the second
         // variable. Vice versa for the second variable, but jump from the
         // quantified var.
-        for (unsigned elem : sourceToQuantified) {
-          for (unsigned nbr : sourceToQuantified.neighbors(elem)) {
-            // TODO: Iterate over the set bound to the sink. This set must be
-            //       retrieved from a new method PathExpression::getBinding(Var)
+        const Set *sinkSet = f->getBinding(freeVars[1]);
+
+        for (unsigned source : sourceToQuantified) {
+          pathNeighbors.insert({source, set<unsigned>()});
+          if (sourceToQuantified.numNeighbors(source) > 0) {
+            for (auto &sinkElem : *sinkSet) {
+              unsigned sink = sinkElem.getIdent();
+              pathNeighbors.at(source).insert(sink);
+            }
+          }
+        }
+
+        for (unsigned quantified : quantifiedToSink) {
+          for (unsigned sink: quantifiedToSink.neighbors(quantified)) {
+            for (unsigned source : sourceToQuantified) {
+              pathNeighbors.at(source).insert(sink);
+            }
           }
         }
       }

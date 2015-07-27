@@ -25,6 +25,76 @@ std::ostream &operator<<(std::ostream& os, const Var& v) {
 
 
 // class PathExpressionImpl
+bool PathExpressionImpl::isBound() const {
+#ifndef WITHOUT_INTERNAL_ASSERTS
+  /// Check invariant: either all or none are bound
+  class CheckThatAllOrNoneAreBound : public PathExpressionVisitor {
+  public:
+    enum AllOrNoneBoundState { Unknown, None, All };
+    AllOrNoneBoundState allOrNoneBoundState;
+
+    void visit(const Link *link) {
+      switch (allOrNoneBoundState) {
+        case Unknown:
+          allOrNoneBoundState = link->isBound() ? All : None;
+          break;
+        case None:
+          iassert(!link->isBound())
+              << "Some but not all variables in the PathExpression are bound";
+          break;
+        case All:
+          iassert(link->isBound())
+              << "Some but not all variables in the PathExpression are bound";
+          break;
+      }
+    }
+  };
+  CheckThatAllOrNoneAreBound visitor;
+  this->accept(&visitor);
+#endif
+
+  class CheckIfBound : public PathExpressionVisitor {
+  public:
+    bool isBound = false;
+    bool check(const PathExpressionImpl *pe) {
+      pe->accept(this);
+      return isBound;
+    }
+    void visit(const Link *link) {
+      isBound = link->isBound();
+    }
+  };
+  return CheckIfBound().check(this);
+}
+
+const Set *PathExpressionImpl::getBinding(const Var &var) const {
+  iassert(isBound())
+      << "attempting to the binding of a var from an unbound path expression";
+  class FindBinding : public PathExpressionVisitor {
+  public:
+    const Set *find(const Var &var, const PathExpressionImpl *pe) {
+      this->var = var;
+      binding = nullptr;
+      pe->accept(this);
+      return binding;
+    }
+
+  private:
+    Var var;
+    const Set *binding;
+
+    void visit(const Link *link) {
+      if (var == rename(link->getLhs())) {
+        binding = link->getLhsBinding();
+      }
+      else if (var == rename(link->getRhs())) {
+        binding = link->getRhsBinding();
+      }
+    }
+  };
+  return FindBinding().find(var, this);
+}
+
 bool operator==(const PathExpressionImpl &l, const PathExpressionImpl &r) {
   // If one of the operands is a renamed path expression then we compare
   // its sub-path expression that was renamed to the other operand
@@ -95,45 +165,11 @@ void PathExpression::bind(const Set &lhsBinding, const Set &rhsBinding) {
 }
 
 bool PathExpression::isBound() const {
-#ifndef WITHOUT_INTERNAL_ASSERTS
-  /// Check invariant: either all or none are bound
-  class CheckThatAllOrNoneAreBound : public PathExpressionVisitor {
-  public:
-    enum AllOrNoneBoundState { Unknown, None, All };
-    AllOrNoneBoundState allOrNoneBoundState;
+  return ptr->isBound();
+}
 
-    void visit(const Link *link) {
-      switch (allOrNoneBoundState) {
-        case Unknown:
-          allOrNoneBoundState = link->isBound() ? All : None;
-          break;
-        case None:
-          iassert(!link->isBound())
-              << "Some but not all variables in the PathExpression are bound";
-          break;
-        case All:
-          iassert(link->isBound())
-              << "Some but not all variables in the PathExpression are bound";
-          break;
-      }
-    }
-  };
-  CheckThatAllOrNoneAreBound visitor;
-  this->accept(&visitor);
-#endif
-
-  class CheckIfBound : public PathExpressionVisitor {
-  public:
-    bool isBound = false;
-    bool check(const PathExpression &pe) {
-      pe.accept(this);
-      return isBound;
-    }
-    void visit(const Link *link) {
-      isBound = link->isBound();
-    }
-  };
-  return CheckIfBound().check(*this);
+const Set *PathExpression::getBinding(const Var &var) const {
+  return ptr->getBinding(var);
 }
 
 void PathExpression::accept(PathExpressionVisitor *visitor) const {
@@ -157,7 +193,7 @@ Link::Link(const Var &lhs, const Var &rhs, Type type)
 }
 
 PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
-  return PathExpression(new Link(lhs, rhs, type));
+  return new Link(lhs, rhs, type);
 }
 
 void Link::bind(const Set *lhsBinding, const Set *rhsBinding) const {
