@@ -93,15 +93,24 @@ private:
 // and can be passed as bound inputs to Simit programs.
 class Set {
 public:
-  Set() : name(""), numElements(0), cardinality(0), endpoints(nullptr),
-          capacity(capacityIncrement), neighbors(nullptr) {}
+  Set(const std::string &name)
+      : name(name), numElements(0), cardinality(0), endpoints(nullptr),
+        capacity(capacityIncrement), neighbors(nullptr) {}
 
-  template <typename ...T>
-  Set(const T& ...sets) : Set() {
+  template <typename ...Sets>
+  Set(const char *name, const Sets& ...sets) : Set(std::string(name)) {
+    static_assert(util::are_same<Set, Sets...>{},
+        "Set constructor takes an optional name followed by zero or more Sets");
     this->cardinality  = sizeof...(sets);
     this->endpointSets = epsMaker(endpointSets, sets...);
     this->endpoints    = (int*) calloc(sizeof(int), capacity*cardinality);
   }
+
+  template <typename ...S>
+  Set(const std::string &name, const S& ...sets) : Set(name.c_str(), sets...) {}
+
+  template <typename ...S>
+  Set(const S& ...sets) : Set("", sets...) {}
 
   ~Set() {
     for (auto f: fields) {
