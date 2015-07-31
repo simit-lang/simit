@@ -16,10 +16,10 @@ namespace util {
 template <typename Key, typename Value>
 class ScopedMap {
 public:
-  typedef std::map<Key, Value> Map;
-  typedef typename std::list<Map>::const_iterator Iterator;
+  typedef std::map<Key, Value> Scope;
+  typedef typename std::list<Scope>::const_iterator Iterator;
 
-  ScopedMap()  {   scope(); }
+  ScopedMap(const Scope &scope = Scope()) {this->scope(scope);}
   ~ScopedMap() { unscope(); }
 
   void clear() {
@@ -28,10 +28,10 @@ public:
   }
 
   /// Add a new level of symbol scoping.
-  void scope()   { scopes.push_front(Map()); }
+  void scope(const Scope &scope = Scope()) {scopes.push_front(scope);}
 
   /// Remove the top symbol scope.
-  void unscope() { scopes.pop_front(); }
+  void unscope() {scopes.pop_front();}
 
   // Insert key-value pair into current scope
   void insert(const Key &symbol, const Value &value) {
@@ -77,33 +77,43 @@ public:
   }
 
   /// Iterator over symbol scopes.
-  Iterator begin() const { return scopes.begin(); }
+  Iterator begin() const {return scopes.begin();}
 
   /// Iterator over symbol scopes.
-  Iterator end() const { return scopes.end(); }
+  Iterator end() const {return scopes.end();}
 
   /// Print symbol table to stream.
   inline friend std::ostream &operator<<(std::ostream &os,
                                          const ScopedMap<Key,Value> &st) {
     os << "SymbolTable:\n";
-    for (auto scope : st.scopes) {
-      os << "- ";
-      auto it = scope.begin();
-      if (it != scope.end()) {
-        std::string symString = simit::util::toString(it->second);
-        os << it->first << " -> " << symString << "\n";
-        ++it;
-      }
-      for (; it != scope.end(); ++it) {
-        std::string symString = simit::util::toString(it->second);
-        os << "  " << it->first << " -> " << symString << "\n";
-      }
+    auto scopeIt = st.scopes.rbegin();
+    auto end = st.scopes.rend();
+    if (scopeIt != end) {
+      st.printScope(os, *scopeIt++);
+    }
+    while (scopeIt != end) {
+      os << "\n";
+      st.printScope(os, *scopeIt++);
     }
     return os;
   }
 
 private:
-  std::list<Map> scopes;
+  std::list<Scope> scopes;
+
+  void printScope(std::ostream &os, const Scope &scope) const {
+    os << "- ";
+    auto it = scope.begin();
+    if (it != scope.end()) {
+      std::string symString = simit::util::toString(it->second->getName());
+      os << it->first << " -> " << symString;
+      ++it;
+    }
+    for (; it != scope.end(); ++it) {
+      std::string symString = simit::util::toString(it->second->getName());
+      os << "\n  " << it->first << " -> " << symString;
+    }
+  }
 };
 
 }} // namespace simit::internal
