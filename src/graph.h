@@ -99,7 +99,7 @@ public:
 
   template <typename ...Sets>
   Set(const char *name, const Sets& ...sets) : Set(std::string(name)) {
-    static_assert(util::are_same<Set, Sets...>{},
+    static_assert(util::areSame<Set, Sets...>{},
         "Set constructor takes an optional name followed by zero or more Sets");
     this->cardinality  = sizeof...(sets);
     this->endpointSets = epsMaker(endpointSets, sets...);

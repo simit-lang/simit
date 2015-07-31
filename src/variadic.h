@@ -1,8 +1,20 @@
 #ifndef SIMIT_VARIADIC_H
 #define SIMIT_VARIADIC_H
 
+#include <type_traits>
+
 namespace simit {
 namespace util {
+
+
+// Compare types
+template<class T, class...>
+struct areSame : std::true_type {};
+
+template<class T1, class T2, class... TN>
+struct areSame<T1, T2, TN...>
+  : std::integral_constant<bool, std::is_same<T1,T2>{} && areSame<T1, TN...>{}>
+{};
 
 
 // Product
