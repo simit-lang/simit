@@ -63,7 +63,6 @@ public:
       : util::IntrusivePtr<const VarContent>(new VarContent(name)) {}
 
   const std::string &getName() const;
-  friend std::ostream &operator<<(std::ostream&, const Var&);
 };
 
 
@@ -79,19 +78,6 @@ public:
 
   Var getVar() const {return var;}
   Quantifier getQuantifier() const {return quantifier;}
-
-  friend std::ostream &operator<<(std::ostream &os, const QuantifiedVar &q) {
-    return os << q.getQuantifier() << q.getVar();
-  }
-
-  friend std::ostream &operator<<(std::ostream &o, QuantifiedVar::Quantifier q){
-    switch (q) {
-      case Quantifier::Exist:
-        o << "\u2203";
-        break;
-    }
-    return o;
-  }
 
 private:
   Quantifier quantifier;
@@ -114,8 +100,6 @@ public:
 
   friend bool operator==(const PathExpressionImpl&, const PathExpressionImpl&);
   friend bool operator<(const PathExpressionImpl&, const PathExpressionImpl&);
-
-  friend std::ostream &operator<<(std::ostream&, const PathExpressionImpl&);
 
   mutable long ref = 0;
   friend inline void aquire(const PathExpressionImpl *p) {++p->ref;}
@@ -163,8 +147,6 @@ public:
   friend bool operator<(const PathExpression &l, const PathExpression &r) {
     return (l.ptr != r.ptr) && *l.ptr < *r.ptr;
   }
-
-  friend std::ostream &operator<<(std::ostream &os, const PathExpression &pe);
 };
 
 
@@ -376,11 +358,18 @@ public:
 
   void print(const PathExpression &pe);
   void print(const Var &v);
+  void print(const QuantifiedVar &v);
 
 protected:
+  const std::string ELEMENTOF = "\u2208";
+  const std::string OR        = "\u2227";
+  const std::string AND       = "\u2228";
+  const std::string EXIST     = "\u2203";
+
   std::ostream &os;
   util::NameGenerator nameGenerator;
   std::map<Var,std::string> names;
+  std::map<const Set*,std::string> setNames;
 
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
@@ -388,6 +377,10 @@ protected:
 
   void printConnective(const QuantifiedConnective *pe);
 };
+
+std::ostream &operator<<(std::ostream&, const Var&);
+std::ostream &operator<<(std::ostream&, const PathExpressionImpl&);
+std::ostream &operator<<(std::ostream &os, const PathExpression &pe);
 
 }}
 

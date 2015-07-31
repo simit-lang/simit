@@ -18,11 +18,6 @@ const std::string &Var::getName() const {
   return ptr->name;
 }
 
-std::ostream &operator<<(std::ostream& os, const Var& v) {
-  iassert(v.defined()) << "attempting to print undefined var";
-  return os << v.getName();
-}
-
 
 // class PathExpressionImpl
 bool PathExpressionImpl::isBound() const {
@@ -181,12 +176,6 @@ bool operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
   return l.lt(r);
 }
 
-std::ostream &operator<<(std::ostream &os, const PathExpressionImpl &pe) {
-  PathExpressionPrinter(os).print(&pe);
-  return os;
-}
-
-
 // class PathExpression
 void PathExpression::bind(const Set &lhsBinding, const Set &rhsBinding) {
   iassert(isa<Link>(*this)) << "bind is only defined for Link PathExpressions";
@@ -225,11 +214,6 @@ void PathExpression::accept(PathExpressionVisitor *visitor) const {
 PathExpression PathExpression::operator()(Var v0, Var v1) {
   return new RenamedPathExpression(*this, {{getPathEndpoint(0),v0},
                                    {getPathEndpoint(1),v1}});
-}
-
-std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
-  PathExpressionPrinter(os).print(pe);
-  return os;
 }
 
 
@@ -452,9 +436,45 @@ void PathExpressionRewriter::visit(const RenamedPathExpression *pe) {
 // class PathExpressionPrinter
 void PathExpressionPrinter::print(const PathExpression &pe) {
   os << "(";
-  print(pe.getPathEndpoint(0));
-  os << ",";
-  print(pe.getPathEndpoint(1));
+  if (!pe.isBound()) {
+    unsigned numFreeVars = pe.getNumPathEndpoints();
+    for (unsigned i=0; i<numFreeVars; ++i) {
+      print(pe.getPathEndpoint(i));
+      if (i < numFreeVars-1) {
+        os << ",";
+      }
+    }
+  }
+  else {
+    auto bindings = pe.getBindings();
+    unsigned numFreeVars = pe.getNumPathEndpoints();
+    for (unsigned i=0; i<numFreeVars; ++i) {
+      Var ep = pe.getPathEndpoint(i);
+      print(ep);
+
+      const Set *binding = bindings.at(ep);
+      os << ELEMENTOF;
+      string setName;
+      if (binding->getName() != "") {
+        setName = binding->getName();
+      }
+      else {
+        if (setNames.find(binding) != setNames.end()) {
+          setName = setNames.at(binding);
+        }
+        else {
+          setName = nameGenerator.getName("S");
+          setNames.insert({binding,setName});
+        }
+      }
+      os << setName;
+      if (i < numFreeVars-1) {
+        os << ", ";
+      }
+    }
+  }
+
+
   os << ") | ";
   pe.accept(this);
 }
@@ -476,6 +496,15 @@ void PathExpressionPrinter::print(const Var &v) {
   os << name;
 }
 
+void PathExpressionPrinter::print(const QuantifiedVar &v) {
+  switch (v.getQuantifier()) {
+    case QuantifiedVar::Quantifier::Exist:
+      os << EXIST;
+      break;
+  }
+  print(v.getVar());
+}
+
 void PathExpressionPrinter::visit(const Link *pe) {
   print(rename(pe->getLhs()));
   os << "-";
@@ -486,18 +515,52 @@ void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
   auto &qvars = pe->getQuantifiedVars();
   iassert(qvars.size() == 0 || qvars.size() == 1)
       << "only one or zero quantified variables currently supported";
-  if (qvars.size() > 0) {
-    os << qvars[0].getQuantifier();
-    print(qvars[0].getVar());
-    os << ".";
+
+  if (!pe->isBound()) {
+    unsigned numQuantifiedVars = qvars.size();
+    for (unsigned i=0; i < numQuantifiedVars; ++i) {
+      auto &qvar = qvars[i];
+      print(qvar);
+      if (i < numQuantifiedVars-1) {
+        os << ",";
+      }
+    }
   }
+  else {
+    auto bindings = pe->getBindings();
+    unsigned numQuantifiedVars = qvars.size();
+    for (unsigned i=0; i<numQuantifiedVars; ++i) {
+      auto &qvar = qvars[i];
+      print(qvar);
+
+      const Set *binding = bindings.at(qvar.getVar());
+      os << ELEMENTOF;
+      string setName;
+      if (binding->getName() != "") {
+        setName = binding->getName();
+      }
+      else {
+        if (setNames.find(binding) != setNames.end()) {
+          setName = setNames.at(binding);
+        }
+        else {
+          setName = nameGenerator.getName("S");
+          setNames.insert({binding,setName});
+        }
+      }
+      os << setName;
+      if (i < numQuantifiedVars-1) {
+        os << ", ";
+      }
+    }  }
+  os << ".";
 }
 
 void PathExpressionPrinter::visit(const And *pe) {
   printConnective(pe);
   os << "(";
   pe->getLhs().accept(this);
-  os << " \u2227 ";
+  os << " " << OR << " ";
   pe->getRhs().accept(this);
   os << ")";
 }
@@ -506,9 +569,24 @@ void PathExpressionPrinter::visit(const Or *pe) {
   printConnective(pe);
   os << "(";
   pe->getLhs().accept(this);
-  os << " \u2228 ";
+  os << " " << AND << " ";
   pe->getRhs().accept(this);
   os << ")";
+}
+
+std::ostream &operator<<(std::ostream& os, const Var& v) {
+  iassert(v.defined()) << "attempting to print undefined var";
+  return os << v.getName();
+}
+
+std::ostream &operator<<(std::ostream &os, const PathExpressionImpl &pe) {
+  PathExpressionPrinter(os).print(&pe);
+  return os;
+}
+
+std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
+  PathExpressionPrinter(os).print(pe);
+  return os;
 }
 
 }}
