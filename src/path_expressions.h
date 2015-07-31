@@ -108,6 +108,7 @@ public:
 
   bool isBound() const;
   const Set *getBinding(const Var &var) const;
+  std::map<Var, const Set*> getBindings() const;
 
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
@@ -144,6 +145,9 @@ public:
 
   /// Returns the binding set of `var`, or nullptr if it could not be found.
   const Set *getBinding(const Var &var) const;
+
+  /// Returns a map from Vars to set bindings;
+  std::map<Var, const Set*> getBindings() const;
 
   unsigned getNumPathEndpoints() const {return ptr->getNumPathEndpoints();}
   const Var &getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}

@@ -97,6 +97,46 @@ const Set *PathExpressionImpl::getBinding(const Var &var) const {
   return FindBinding().find(var, this);
 }
 
+map<Var, const Set*> PathExpressionImpl::getBindings() const {
+  iassert(isBound())
+      << "attempting to get the bindings of an unbound path expression";
+  class GetBindings : public PathExpressionVisitor {
+  public:
+    map<Var, const Set*> find(const PathExpressionImpl *pe) {
+      bindings.clear();
+      pe->accept(this);
+      return bindings;
+    }
+
+  private:
+    map<Var, const Set*> bindings;
+
+    void visit(const Link *link) {
+      Var lhs = rename(link->getLhs());
+      Var rhs = rename(link->getRhs());
+      const Set *lhsBinding = link->getLhsBinding();
+      const Set *rhsBinding = link->getRhsBinding();
+
+      if (bindings.find(lhs) == bindings.end()) {
+        bindings.insert({lhs,lhsBinding});
+      }
+      else {
+        iassert(bindings.at(lhs) == lhsBinding)
+            << "the same var is bound to two sets";
+      }
+
+      if (bindings.find(rhs) == bindings.end()) {
+        bindings.insert({rhs,rhsBinding});
+      }
+      else {
+        iassert(bindings.at(rhs) == rhsBinding)
+            << "the same var is bound to two sets";
+      }
+    }
+  };
+  return GetBindings().find(this);
+}
+
 bool operator==(const PathExpressionImpl &l, const PathExpressionImpl &r) {
   // If one of the operands is a renamed path expression then we compare
   // its sub-path expression that was renamed to the other operand
@@ -172,6 +212,10 @@ bool PathExpression::isBound() const {
 
 const Set *PathExpression::getBinding(const Var &var) const {
   return ptr->getBinding(var);
+}
+
+std::map<Var, const Set*> PathExpression::getBindings() const {
+  return ptr->getBindings();
 }
 
 void PathExpression::accept(PathExpressionVisitor *visitor) const {
