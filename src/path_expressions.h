@@ -104,7 +104,7 @@ public:
   virtual ~PathExpressionImpl() {}
 
   unsigned getNumPathEndpoints() const {return 2;}
-  virtual Var getPathEndpoint(unsigned i) const = 0;
+  virtual const Var &getPathEndpoint(unsigned i) const = 0;
 
   bool isBound() const;
   const Set *getBinding(const Var &var) const;
@@ -146,7 +146,7 @@ public:
   const Set *getBinding(const Var &var) const;
 
   unsigned getNumPathEndpoints() const {return ptr->getNumPathEndpoints();}
-  Var getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}
+  const Var &getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}
 
   void accept(PathExpressionVisitor*) const;
 
@@ -192,7 +192,7 @@ public:
   const Var &getVertexVar() const {return (type==ev) ? rhs : lhs;}
   const Var &getEdgeVar() const   {return (type==ev) ? lhs : rhs;}
 
-  Var getPathEndpoint(unsigned i) const;
+  const Var &getPathEndpoint(unsigned i) const;
 
   void bind(const Set *lhsBinding, const Set *rhsBinding) const;
   bool isBound() const;
@@ -238,7 +238,7 @@ public:
   PathExpression getLhs() const {return lhs;}
   PathExpression getRhs() const {return rhs;}
 
-  Var getPathEndpoint(unsigned i) const;
+  const Var &getPathEndpoint(unsigned i) const;
 
 protected:
   QuantifiedConnective(const std::vector<Var> &freeVars,
@@ -301,7 +301,7 @@ private:
 
 class RenamedPathExpression : public PathExpressionImpl {
 public:
-  Var getPathEndpoint(unsigned i) const;
+  const Var &getPathEndpoint(unsigned i) const;
 
   const PathExpression &getPathExpression() const {return pe;}
   const std::map<Var,Var> &getRenames() const {return renames;}

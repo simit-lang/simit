@@ -210,7 +210,7 @@ bool Link::isBound() const {
   return lhsBinding != nullptr;
 }
 
-Var Link::getPathEndpoint(unsigned i) const {
+const Var &Link::getPathEndpoint(unsigned i) const {
   iassert(i < 2) << "attempting to retrieve non-existing path endpoint";
   return (i==0) ? lhs : rhs;
 }
@@ -250,7 +250,7 @@ QuantifiedConnective::QuantifiedConnective(const vector<Var> &freeVars,
       << "For now, we only support one quantified variable";
 }
 
-Var QuantifiedConnective::getPathEndpoint(unsigned i) const {
+const Var &QuantifiedConnective::getPathEndpoint(unsigned i) const {
   return freeVars[i];
 }
 
@@ -294,7 +294,7 @@ void Or::accept(PathExpressionVisitor *visitor) const {
 
 
 // class RenamedPathExpression
-Var RenamedPathExpression::getPathEndpoint(unsigned i) const {
+const Var &RenamedPathExpression::getPathEndpoint(unsigned i) const {
   iassert(i < pe.getNumPathEndpoints())
       << "path expression does not have requested endpoint";
   iassert(renames.find(pe.getPathEndpoint(i)) != renames.end())
