@@ -13,12 +13,6 @@ using namespace std;
 namespace simit {
 namespace pe {
 
-// struct Var
-const std::string &Var::getName() const {
-  return ptr->name;
-}
-
-
 // class PathExpressionImpl
 bool PathExpressionImpl::isBound() const {
 #ifndef WITHOUT_INTERNAL_ASSERTS
@@ -67,29 +61,8 @@ bool PathExpressionImpl::isBound() const {
 const Set *PathExpressionImpl::getBinding(const Var &var) const {
   iassert(isBound())
       << "attempting to get the binding of a var in an unbound path expression";
-  class FindBinding : public PathExpressionVisitor {
-  public:
-    const Set *find(const Var &var, const PathExpressionImpl *pe) {
-      this->var = var;
-      binding = nullptr;
-      pe->accept(this);
-      return binding;
-    }
-
-  private:
-    Var var;
-    const Set *binding;
-
-    void visit(const Link *link) {
-      if (var == rename(link->getLhs())) {
-        binding = link->getLhsBinding();
-      }
-      else if (var == rename(link->getRhs())) {
-        binding = link->getRhsBinding();
-      }
-    }
-  };
-  return FindBinding().find(var, this);
+  auto bindings = getBindings();
+  return (bindings.find(var) != bindings.end()) ? bindings.at(var) : nullptr;
 }
 
 map<Var, const Set*> PathExpressionImpl::getBindings() const {
@@ -494,6 +467,8 @@ void PathExpressionPrinter::print(const PathExpression &pe) {
     unsigned numFreeVars = pe.getNumPathEndpoints();
     for (unsigned i=0; i<numFreeVars; ++i) {
       Var ep = pe.getPathEndpoint(i);
+      iassert(bindings.find(ep) != bindings.end())
+          << "no binding for " << ep << " (" << ep.ptr << ")";
       print(ep);
       print(bindings.at(ep));
       if (i < numFreeVars-1) {
@@ -532,6 +507,8 @@ void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
     unsigned numQuantifiedVars = qvars.size();
     for (unsigned i=0; i<numQuantifiedVars; ++i) {
       auto &qvar = qvars[i];
+      iassert(bindings.find(qvar.getVar()) != bindings.end())
+          << "no binding for " << qvar.getVar();
       print(qvar);
       print(bindings.at(qvar.getVar()));
       if (i < numQuantifiedVars-1) {

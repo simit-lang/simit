@@ -11,13 +11,13 @@ using namespace simit::pe;
 #define CHECK_EQ(v1, v2)             \
 do {                                 \
   ASSERT_EQ(v1, v2);                 \
-  ASSERT_FALSE(v1 < v2 || v2 < v1);  \
+  ASSERT_FALSE(v1 < v2 || v1 > v2);  \
 } while (false)
 
 #define CHECK_NE(v1, v2)             \
 do {                                 \
   ASSERT_NE(v1, v2);                 \
-  ASSERT_TRUE(v1 < v2 || v2 < v1);   \
+  ASSERT_TRUE(v1 < v2 || v1 > v2);   \
 } while (false)
 
 

@@ -62,7 +62,7 @@ public:
   explicit Var(const std::string &name)
       : util::IntrusivePtr<const VarContent>(new VarContent(name)) {}
 
-  const std::string &getName() const;
+  const std::string &getName() const {return ptr->name;}
 };
 
 
