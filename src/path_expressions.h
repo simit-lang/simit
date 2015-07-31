@@ -356,9 +356,9 @@ public:
   PathExpressionPrinter(std::ostream &os) : os(os) {}
   virtual ~PathExpressionPrinter() {}
 
-  void print(const PathExpression &pe);
   void print(const Var &v);
   void print(const QuantifiedVar &v);
+  void print(const PathExpression &pe);
 
 protected:
   const std::string ELEMENTOF = "\u2208";
@@ -376,6 +376,7 @@ protected:
   virtual void visit(const Or *pe);
 
   void printConnective(const QuantifiedConnective *pe);
+  void print(const Set *binding);
 };
 
 std::ostream &operator<<(std::ostream&, const Var&);

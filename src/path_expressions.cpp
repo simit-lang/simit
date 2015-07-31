@@ -434,51 +434,6 @@ void PathExpressionRewriter::visit(const RenamedPathExpression *pe) {
 
 
 // class PathExpressionPrinter
-void PathExpressionPrinter::print(const PathExpression &pe) {
-  os << "(";
-  if (!pe.isBound()) {
-    unsigned numFreeVars = pe.getNumPathEndpoints();
-    for (unsigned i=0; i<numFreeVars; ++i) {
-      print(pe.getPathEndpoint(i));
-      if (i < numFreeVars-1) {
-        os << ",";
-      }
-    }
-  }
-  else {
-    auto bindings = pe.getBindings();
-    unsigned numFreeVars = pe.getNumPathEndpoints();
-    for (unsigned i=0; i<numFreeVars; ++i) {
-      Var ep = pe.getPathEndpoint(i);
-      print(ep);
-
-      const Set *binding = bindings.at(ep);
-      os << ELEMENTOF;
-      string setName;
-      if (binding->getName() != "") {
-        setName = binding->getName();
-      }
-      else {
-        if (setNames.find(binding) != setNames.end()) {
-          setName = setNames.at(binding);
-        }
-        else {
-          setName = nameGenerator.getName("S");
-          setNames.insert({binding,setName});
-        }
-      }
-      os << setName;
-      if (i < numFreeVars-1) {
-        os << ", ";
-      }
-    }
-  }
-
-
-  os << ") | ";
-  pe.accept(this);
-}
-
 void PathExpressionPrinter::print(const Var &v) {
   std::string name;
   if (names.find(v) != names.end()) {
@@ -496,6 +451,24 @@ void PathExpressionPrinter::print(const Var &v) {
   os << name;
 }
 
+void PathExpressionPrinter::print(const Set *binding) {
+  os << ELEMENTOF;
+  string setName;
+  if (binding->getName() != "") {
+    setName = binding->getName();
+  }
+  else {
+    if (setNames.find(binding) != setNames.end()) {
+      setName = setNames.at(binding);
+    }
+    else {
+      setName = nameGenerator.getName("S");
+      setNames.insert({binding,setName});
+    }
+  }
+  os << setName;
+}
+
 void PathExpressionPrinter::print(const QuantifiedVar &v) {
   switch (v.getQuantifier()) {
     case QuantifiedVar::Quantifier::Exist:
@@ -503,6 +476,34 @@ void PathExpressionPrinter::print(const QuantifiedVar &v) {
       break;
   }
   print(v.getVar());
+}
+
+void PathExpressionPrinter::print(const PathExpression &pe) {
+  os << "(";
+  if (!pe.isBound()) {
+    unsigned numFreeVars = pe.getNumPathEndpoints();
+    for (unsigned i=0; i<numFreeVars; ++i) {
+      print(pe.getPathEndpoint(i));
+      if (i < numFreeVars-1) {
+        os << ",";
+      }
+    }
+  }
+  else {
+    auto bindings = pe.getBindings();
+    unsigned numFreeVars = pe.getNumPathEndpoints();
+    for (unsigned i=0; i<numFreeVars; ++i) {
+      Var ep = pe.getPathEndpoint(i);
+      print(ep);
+      print(bindings.at(ep));
+      if (i < numFreeVars-1) {
+        os << ", ";
+      }
+    }
+  }
+
+  os << ") | ";
+  pe.accept(this);
 }
 
 void PathExpressionPrinter::visit(const Link *pe) {
@@ -532,27 +533,12 @@ void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
     for (unsigned i=0; i<numQuantifiedVars; ++i) {
       auto &qvar = qvars[i];
       print(qvar);
-
-      const Set *binding = bindings.at(qvar.getVar());
-      os << ELEMENTOF;
-      string setName;
-      if (binding->getName() != "") {
-        setName = binding->getName();
-      }
-      else {
-        if (setNames.find(binding) != setNames.end()) {
-          setName = setNames.at(binding);
-        }
-        else {
-          setName = nameGenerator.getName("S");
-          setNames.insert({binding,setName});
-        }
-      }
-      os << setName;
+      print(bindings.at(qvar.getVar()));
       if (i < numQuantifiedVars-1) {
         os << ", ";
       }
-    }  }
+    }
+  }
   os << ".";
 }
 
