@@ -205,7 +205,6 @@ TEST(PathExpression, ExistAnd) {
   CHECK_NE(vev, ufu);
 
   // TODO: Test eve and compare eve with vev
-  // TODO: Test or and compare or and and expressions
 }
 
 
@@ -262,6 +261,39 @@ TEST(PathExpression, ExistOr) {
   CHECK_NE(vev, ufu);
 
   // TODO: Test eve and compare eve with vev
-  // TODO: Test or and compare or and and expressions
+}
+
+
+TEST(DISABLED_PathExpression, Permute) {
+  Set V("V");
+  Set U("U");
+  Set E("E",V,U);
+
+  Var v("v");
+  Var e("e");
+  Var u("u");
+
+  PathExpression ve = makeVE();
+  PathExpression ue = makeVE();
+  PathExpression ev = makeEV();
+  PathExpression eu = makeEV();
+  ve.bind(V, E);
+  ue.bind(U, E);
+  ev.bind(E, V);
+  eu.bind(E, U);
+
+  PathExpression vev = And::make({v,v}, {{QuantifiedVar::Exist,e}},
+                                 ve(v,e), ev(e,v));
+  PathExpression veu = And::make({v,u}, {{QuantifiedVar::Exist,e}},
+                                 ve(v,e), eu(e,u));
+  PathExpression uev = And::make({u,v}, {{QuantifiedVar::Exist,e}},
+                                 ue(u,e), ev(e,v));
+
+  CHECK_NE(veu, vev);
+  CHECK_NE(uev, vev);
+  CHECK_NE(veu, uev);
+  // Permute veu2 = uev
+  PathExpression veu2 = uev; // TODO: Permute uev -> veu
+  CHECK_EQ(veu, veu2);
 
 }
