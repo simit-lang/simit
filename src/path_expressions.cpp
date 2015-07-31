@@ -31,7 +31,7 @@ bool PathExpressionImpl::isBound() const {
   class CheckThatAllOrNoneAreBound : public PathExpressionVisitor {
   public:
     enum AllOrNoneBoundState { Unknown, None, All };
-    AllOrNoneBoundState allOrNoneBoundState;
+    AllOrNoneBoundState allOrNoneBoundState = Unknown;
 
     void visit(const Link *link) {
       switch (allOrNoneBoundState) {
@@ -40,11 +40,13 @@ bool PathExpressionImpl::isBound() const {
           break;
         case None:
           iassert(!link->isBound())
-              << "Some but not all variables in the PathExpression are bound";
+              << "Some but not all variables in the PathExpression are bound.\n"
+              << *link << " is bound";
           break;
         case All:
           iassert(link->isBound())
-              << "Some but not all variables in the PathExpression are bound";
+              << "Some but not all variables in the PathExpression are bound.\n"
+              << *link << " is not bound";
           break;
       }
     }
@@ -69,7 +71,7 @@ bool PathExpressionImpl::isBound() const {
 
 const Set *PathExpressionImpl::getBinding(const Var &var) const {
   iassert(isBound())
-      << "attempting to the binding of a var from an unbound path expression";
+      << "attempting to get the binding of a var in an unbound path expression";
   class FindBinding : public PathExpressionVisitor {
   public:
     const Set *find(const Var &var, const PathExpressionImpl *pe) {
