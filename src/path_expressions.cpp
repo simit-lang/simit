@@ -85,21 +85,13 @@ map<Var, const Set*> PathExpressionImpl::getBindings() const {
       const Set *lhsBinding = link->getLhsBinding();
       const Set *rhsBinding = link->getRhsBinding();
 
-      if (bindings.find(lhs) == bindings.end()) {
-        bindings.insert({lhs,lhsBinding});
-      }
-      else {
-        iassert(bindings.at(lhs) == lhsBinding)
-            << "the same var is bound to two sets";
-      }
+      iassert(bindings.find(lhs) == bindings.end() || bindings.at(lhs) == lhsBinding)
+          << "the same var is bound to two sets";
+      iassert(bindings.find(rhs) == bindings.end() || bindings.at(rhs) == rhsBinding)
+          << "the same var is bound to two sets";
 
-      if (bindings.find(rhs) == bindings.end()) {
-        bindings.insert({rhs,rhsBinding});
-      }
-      else {
-        iassert(bindings.at(rhs) == rhsBinding)
-            << "the same var is bound to two sets";
-      }
+      bindings.insert({lhs,lhsBinding});
+      bindings.insert({rhs,rhsBinding});
     }
   };
   return GetBindings().find(this);
@@ -341,16 +333,17 @@ const Var &PathExpressionVisitor::rename(const Var &var) const {
 }
 
 void PathExpressionVisitor::visitRename(const RenamedPathExpression *pe) {
-  renames.scope();
+  std::map<Var,Var> newRenames;
   for (auto &rename : pe->getRenames()) {
     // If v0 is renamed to a v1, which is renamed to v2, then rename v0 to v2
     if (renames.contains(rename.second)) {
-      renames.insert(rename.first, renames.get(rename.second));
+      newRenames.insert({rename.first, renames.get(rename.second)});
     }
     else {
-      renames.insert(rename);
+      newRenames.insert(rename);
     }
   }
+  renames.scope(newRenames);
   visit(pe);  // template method
   renames.unscope();
 }
@@ -476,7 +469,6 @@ void PathExpressionPrinter::print(const PathExpression &pe) {
       }
     }
   }
-
   os << ") | ";
   pe.accept(this);
 }
