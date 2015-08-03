@@ -8,14 +8,14 @@
 #include "backend/backend_function.h"
 
 namespace simit {
-class Diagnostics;
-
 namespace ir {
 class Func;
 }
-
 namespace internal {
 class ProgramContext;
+}
+
+namespace backend {
 
 /// Code generators are used to turn Simit IR into some other representation.
 /// Examples include LLVM IR, compiled machine code and Graphviz .dot files.
@@ -25,7 +25,7 @@ public:
   virtual ~Backend() {}
 
   // TODO: Change to simply return a Function object (not pointer)
-  virtual simit::internal::Function *compile(const ir::Func &func) = 0;
+  virtual backend::Function *compile(const ir::Func &func) = 0;
 };
 
 }}

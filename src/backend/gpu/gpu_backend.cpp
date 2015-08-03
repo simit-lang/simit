@@ -32,9 +32,9 @@
 #endif
 
 namespace simit {
-namespace internal {
+namespace backend {
 
-simit::internal::Function *GPUBackend::compile(const simit::ir::Func &irFunc) {
+backend::Function *GPUBackend::compile(const simit::ir::Func &irFunc) {
   std::ofstream irFile("simit.sim", std::ofstream::trunc);
   irFile << irFunc;
   irFile.close();

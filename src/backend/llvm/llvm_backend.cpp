@@ -42,10 +42,9 @@
 
 using namespace std;
 using namespace simit::ir;
-using namespace simit::internal;
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 // appease GCC
 shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module);
@@ -72,7 +71,7 @@ LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
 
 LLVMBackend::~LLVMBackend() {}
 
-simit::internal::Function *LLVMBackend::compile(const Func &func) {
+backend::Function *LLVMBackend::compile(const Func &func) {
   this->module = new llvm::Module("simit", LLVM_CONTEXT);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
@@ -1512,4 +1511,4 @@ void LLVMBackend::makeGlobalTensor(ir::Var var) {
   symtable.insert(var, llvmTmp);
 }
 
-}}  // namespace simit::internal
+}}

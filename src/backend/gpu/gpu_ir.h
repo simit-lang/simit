@@ -5,7 +5,7 @@
 #include "ir.h"
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 /**
   TODO(jrk)
@@ -56,18 +56,18 @@ std::ostream &operator<<(std::ostream &os, const GPUSharding &var);
 
 bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2);
 
-}  // namespace simit::internal
+}
 
 
 namespace ir {
 
 struct GPUKernel : public StmtNode<GPUKernel> {
   Stmt body;
-  internal::GPUSharding sharding;
+  backend::GPUSharding sharding;
   std::set<Var> reads;
   std::set<Var> writes;
 
-  static Stmt make(Stmt body, internal::GPUSharding sharding,
+  static Stmt make(Stmt body, backend::GPUSharding sharding,
                    std::set<Var> reads = std::set<Var>(),
                    std::set<Var> writes = std::set<Var>()) {
     GPUKernel *node = new GPUKernel;
@@ -79,6 +79,6 @@ struct GPUKernel : public StmtNode<GPUKernel> {
   }
 };
 
-}}  // namespace simit::ir
+}}
 
 #endif

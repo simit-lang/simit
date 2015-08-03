@@ -10,10 +10,9 @@
 
 using namespace std;
 using namespace simit::ir;
-using namespace simit::internal;
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 llvm::ConstantInt *llvmInt(long long int val, unsigned bits) {
   return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(bits, val, true));
@@ -271,4 +270,4 @@ std::ostream &operator<<(std::ostream &os, const llvm::Module &module) {
   return os;
 }
 
-}} // namespace simit::internal
+}}

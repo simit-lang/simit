@@ -23,13 +23,16 @@ template <typename T, int... dimensions> class FieldRef;
 template <typename T, int... dimensions> class TensorRef;
 
 namespace internal {
-class Function;
 class VertexToEdgeEndpointIndex;
 class VertexToEdgeIndex;
 class NeighborIndex;
-#ifdef GPU
-class GPUFunction;
-#endif
+}
+
+namespace backend {
+class Function;
+//#ifdef GPU
+//class GPUFunction;
+//#endif
 }
 
 namespace pe {
@@ -573,10 +576,10 @@ private:
   }
 
   friend FieldRefBase;
-  friend simit::internal::Function;
-#ifdef GPU
-  friend internal::GPUFunction;
-#endif
+  friend simit::backend::Function;
+//#ifdef GPU
+//  friend simit::backend::GPUFunction;
+//#endif
 };
 
 

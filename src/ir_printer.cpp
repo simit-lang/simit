@@ -452,7 +452,7 @@ void IRPrinter::visit(const GPUKernel *op) {
     os << write;
   }
   os << "] ";
-  internal::GPUSharding sharding = op->sharding;
+  backend::GPUSharding sharding = op->sharding;
   if (sharding.xSharded) {
     os << "x{" << sharding.xVar << " in " << sharding.xDomain << "} ";
   }

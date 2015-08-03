@@ -11,14 +11,14 @@
 
 namespace simit {
 
+class Set;
+
 namespace ir {
 class Func;
 class TensorStorage;
 }
 
-class Set;
-
-namespace internal {
+namespace backend {
 
 class Function : public simit::interfaces::Printable,
                         simit::interfaces::Uncopyable {

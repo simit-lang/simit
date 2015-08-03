@@ -16,7 +16,7 @@ using namespace std;
 using namespace testing;
 using namespace simit;
 using namespace simit::ir;
-using namespace simit::internal;
+using namespace simit::backend;
 
 namespace simit { extern std::string kBackend; }
 
@@ -61,7 +61,7 @@ TEST(Codegen, add0) {
   Func func = Func("add0", {a,b}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::internal::Function> function(backend->compile(func));
+  unique_ptr<simit::backend::Function> function(backend->compile(func));
 
   Expr aArg = 2.0;
   Expr bArg = 4.1;
@@ -87,7 +87,7 @@ TEST(Codegen, sin) {
   Func func = Func("testsin", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::internal::Function> function(backend->compile(func));
+  unique_ptr<simit::backend::Function> function(backend->compile(func));
 
   Expr aArg = 2.0;
   Expr cRes = 0.0;
@@ -111,7 +111,7 @@ TEST(Codegen, cos) {
   Func func = Func("testcos", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::internal::Function> function(backend->compile(func));
+  unique_ptr<simit::backend::Function> function(backend->compile(func));
 
   Expr aVar = 2.0;
   Expr cRes = 0.0;
@@ -135,7 +135,7 @@ TEST(Codegen, sqrt) {
   Func func = Func("testsqrt", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::internal::Function> function(backend->compile(func));
+  unique_ptr<simit::backend::Function> function(backend->compile(func));
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
@@ -159,7 +159,7 @@ TEST(Codegen, log) {
   Func func = Func("testlog", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::internal::Function> function(backend->compile(func));
+  unique_ptr<simit::backend::Function> function(backend->compile(func));
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
@@ -183,7 +183,7 @@ TEST(Codegen, exp) {
   Func func = Func("testexp", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::internal::Function> function(backend->compile(func));
+  unique_ptr<simit::backend::Function> function(backend->compile(func));
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
@@ -208,7 +208,7 @@ TEST(Codegen, atan2) {
   Func func = Func("testatan2", {a,b}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::internal::Function> function(backend->compile(func));
+  unique_ptr<simit::backend::Function> function(backend->compile(func));
 
   Expr aVar = 1.0;
   Expr bVar = 2.0;
@@ -236,7 +236,7 @@ TEST(Codegen, forloop) {
   Func func = Func("testloop", {}, {out}, loop);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::internal::Function> function(backend->compile(func));
+  unique_ptr<simit::backend::Function> function(backend->compile(func));
 
   Expr outVar = 0;
   Expr iVar = 0;

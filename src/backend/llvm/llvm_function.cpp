@@ -22,7 +22,7 @@
 using namespace std;
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 typedef void (*FuncPtrType)();
 
@@ -56,7 +56,7 @@ void LLVMFunction::printMachine(std::ostream &os) const {
   target->Options.PrintMachineCode = false;
 }
 
-simit::internal::Function::FuncType
+backend::Function::FuncType
 LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
   iassert(formals.size() == llvmFunc->getArgumentList().size());
 

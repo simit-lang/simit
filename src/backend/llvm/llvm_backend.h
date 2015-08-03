@@ -31,7 +31,7 @@ typedef llvm::IRBuilder<true, llvm::ConstantFolder,
                         llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 extern const std::string VAL_SUFFIX;
 extern const std::string PTR_SUFFIX;
@@ -43,7 +43,7 @@ public:
   LLVMBackend();
   ~LLVMBackend();
 
-  simit::internal::Function *compile(const ir::Func &func);
+  backend::Function *compile(const ir::Func &func);
 
 protected:
   virtual unsigned global_addrspace()  { return 0; } // LLVM generic addrspace
@@ -170,5 +170,5 @@ private:
   static bool llvmInitialized;
 };
 
-}} // namespace simit::internal
+}}
 #endif

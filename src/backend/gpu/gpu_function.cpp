@@ -26,7 +26,7 @@
 using namespace std;
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 size_t GPUFunction::DeviceDataHandle::total_allocations = 0;
 
@@ -343,7 +343,7 @@ int GPUFunction::findShardSize(ir::IndexSet domain) {
   return -1;
 }
 
-simit::internal::Function::FuncType
+backend::Function::FuncType
 GPUFunction::init(const vector<string> &formals, map<string, Actual> &actuals) {
   CUlinkState linker;
   CUfunction cudaFunction;

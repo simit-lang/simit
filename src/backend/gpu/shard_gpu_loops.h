@@ -3,7 +3,8 @@
 
 #include "ir.h"
 
-namespace simit { namespace ir {
+namespace simit {
+namespace ir {
 Func shardLoops(Func func);
 }}
 

@@ -10,7 +10,7 @@
 #include "backend/llvm/llvm_codegen.h"
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 namespace {
 
@@ -163,4 +163,4 @@ void addNVVMAnnotation(llvm::Value *target, std::string annot,
   nvvmAnnot->addOperand(node);
 }
 
-}}  // namespace simit::internal
+}}

@@ -14,9 +14,9 @@
 #include "gpu_codegen.h"
 
 namespace simit {
-namespace internal {
+namespace backend {
 
-class GPUFunction : public simit::internal::Function {
+class GPUFunction : public simit::backend::Function {
  public:
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module,
@@ -87,7 +87,5 @@ class GPUFunction : public simit::internal::Function {
   int cuDevMajor, cuDevMinor;
 };
 
-}
-}
-
+}}
 #endif // SIMIT_GPU_FUNCTION_H

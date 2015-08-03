@@ -13,7 +13,7 @@ using namespace std;
 using namespace simit;
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 Function::Function(const simit::ir::Func &simitFunc)
     : funcPtr(NULL), initRequired(true) {
@@ -182,7 +182,7 @@ size_t Function::size(const ir::TensorType &type,
       }
 
       for (const ir::IndexDomain &dimension : type.dimensions) {
-        result *= simit::internal::size(dimension, sets);
+        result *= simit::backend::size(dimension, sets);
       }
       return result;
     }

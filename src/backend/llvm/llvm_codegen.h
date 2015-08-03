@@ -44,7 +44,7 @@ typedef llvm::IRBuilder<true, llvm::ConstantFolder,
                         llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
@@ -92,7 +92,5 @@ std::ostream &operator<<(std::ostream &os, const llvm::Module &);
 std::ostream &operator<<(std::ostream &os, const llvm::Value &);
 std::ostream &operator<<(std::ostream &os, const llvm::Type &);
 
-}} // namespace simit::internal
-
-
+}}
 #endif

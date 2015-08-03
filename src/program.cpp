@@ -29,7 +29,7 @@ const std::vector<std::string> VALID_BACKENDS = {
 };
 std::string kBackend;
 
-static Function compile(ir::Func func, internal::Backend *backend) {
+static Function compile(ir::Func func, backend::Backend *backend) {
   func = lower(func);
   return Function(backend->compile(func));
 }
@@ -39,7 +39,7 @@ static Function compile(ir::Func func, internal::Backend *backend) {
 Function::Function() : Function(nullptr) {
 }
 
-Function::Function(internal::Function *func) : impl(func), funcPtr(nullptr) {
+Function::Function(backend::Function *func) : impl(func), funcPtr(nullptr) {
 }
 
 void Function::bind(const std::string &argName, Tensor *tensor) {
@@ -83,7 +83,7 @@ void Function::unmapArgs(bool updated) {
 struct Program::ProgramContent {
   internal::ProgramContext ctx;
   internal::Frontend *frontend;
-  internal::Backend *backend;
+  backend::Backend *backend;
   Diagnostics diags;
 };
 
@@ -91,11 +91,11 @@ struct Program::ProgramContent {
 Program::Program() : content(new ProgramContent) {
   content->frontend = new internal::Frontend();
   if (kBackend == "llvm") {
-    content->backend  = new internal::LLVMBackend();
+    content->backend  = new backend::LLVMBackend();
   }
 #ifdef GPU
   else if (kBackend == "gpu") {
-    content->backend = new internal::GPUBackend();
+    content->backend = new backend::GPUBackend();
   }
 #endif
   else {

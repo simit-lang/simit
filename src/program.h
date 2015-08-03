@@ -18,7 +18,7 @@ extern std::string kBackend;
 class Set;
 class Diagnostics;
 
-namespace internal {
+namespace backend {
 class Function;
 }
 
@@ -38,7 +38,7 @@ class Function;
 class Function {
 public:
   Function();
-  Function(internal::Function *function);
+  Function(backend::Function *function);
 
   void bind(const std::string &argName, Tensor *tensor);
   void bind(const std::string &argName, Set *set);
@@ -59,7 +59,7 @@ public:
   bool defined() {return impl != nullptr;}
 
 private:
-  std::shared_ptr<internal::Function> impl;
+  std::shared_ptr<backend::Function> impl;
 
   // To make the run method faster we store the function pointer here.
   std::function<void()> funcPtr;

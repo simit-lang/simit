@@ -10,7 +10,7 @@ static bool isShardable(const ir::For *loop) {
           loop->domain.indexSet.getKind() != ir::IndexSet::Range);
 }
 
-namespace internal {
+namespace backend {
 
 void GPUSharding::shardFor(const ir::For *op) {
   iassert(isShardable(op));
@@ -34,7 +34,7 @@ void GPUSharding::shardFor(const ir::For *op) {
   }
 }
 
-}  // namespace simit::internal
+}  // namespace simit::backend
 
 namespace ir {
 
@@ -55,7 +55,7 @@ private:
     }
     
     bool ownsKernel = false;
-    internal::GPUSharding _sharding;
+    backend::GPUSharding _sharding;
     
     // TODO(jrk) we may never have multiple nested kernel loops, at all, in our input - simplify away entirely?
     // for now:
@@ -77,11 +77,11 @@ private:
     }
   }
 
-  internal::GPUSharding *currentKernelSharding;
+  backend::GPUSharding *currentKernelSharding;
 };
 
 Func shardLoops(Func func) {
   return ShardLoops().rewrite(func);
 }
 
-}}  // namespace simit::ir
+}}

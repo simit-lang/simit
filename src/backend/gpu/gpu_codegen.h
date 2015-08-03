@@ -22,7 +22,7 @@ inline void __checkCudaErrors(CUresult err, const char *file, const int line) {
 }
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 // CUDA-specific LLVM types
 inline llvm::StructType *getOrCreateDim3Ty() {
@@ -57,6 +57,5 @@ std::string generatePtx(llvm::Module *module,
 void addNVVMAnnotation(llvm::Value *target, std::string annot,
                        llvm::Value *value, llvm::Module *module);
 
-}}  // namespace simit::internal
-
+}}
 #endif

@@ -15,10 +15,10 @@ class ExecutionEngine;
 }
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 /// A Simit function that has been compiled with LLVM.
-class LLVMFunction : public simit::internal::Function {
+class LLVMFunction : public backend::Function {
  public:
   LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                bool requiresInit, llvm::Module *module,

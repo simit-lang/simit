@@ -2,7 +2,7 @@
 
 namespace simit {
 
-namespace internal {
+namespace backend {
   
 std::ostream &operator<<(std::ostream &os, const GPUSharding &shard) {
   os << "GPU Sharding [ ";
@@ -26,4 +26,4 @@ bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2) {
 }
 
 
-}}  // namespace simit::internal
+}}

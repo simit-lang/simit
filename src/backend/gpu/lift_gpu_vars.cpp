@@ -116,7 +116,7 @@ protected:
   // Map from symbol to transformative action
   util::ScopedMap<ir::Var, VarAction> symtable;
   std::vector<Field> sharedFields;
-  const internal::GPUSharding *currentKernelSharding;
+  const backend::GPUSharding *currentKernelSharding;
   Var sharedVar;
 };
 

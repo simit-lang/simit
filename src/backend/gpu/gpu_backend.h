@@ -23,14 +23,14 @@ class Value;
 }
 
 namespace simit {
-namespace internal {
+namespace backend {
 
 class GPUBackend : public LLVMBackend {
 public:
   GPUBackend() {}
   ~GPUBackend() {}
 
-  virtual simit::internal::Function *compile(const simit::ir::Func &func);
+  virtual backend::Function *compile(const simit::ir::Func &func);
 
 protected:
   // CUDA variables

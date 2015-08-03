@@ -225,8 +225,8 @@ int main(int argc, const char* argv[]) {
     // NB: The LLVM code gets further optimized at init time (OSR, etc.)
 
     if (emitLLVM || emitASM) {
-      simit::internal::LLVMBackend backend;
-      unique_ptr<simit::internal::Function> llvmFunc(backend.compile(func));
+      simit::backend::LLVMBackend backend;
+      unique_ptr<simit::backend::Function> llvmFunc(backend.compile(func));
 
       if (emitLLVM) {
         std::string fstr = simit::util::toString(*llvmFunc);
