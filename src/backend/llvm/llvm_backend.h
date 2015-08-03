@@ -43,7 +43,7 @@ public:
   LLVMBackend();
   ~LLVMBackend();
 
-  simit::internal::Function *compile(simit::ir::Func func);
+  simit::internal::Function *compile(const ir::Func &func);
 
 protected:
   virtual unsigned global_addrspace()  { return 0; } // LLVM generic addrspace

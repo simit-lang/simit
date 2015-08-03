@@ -5,7 +5,7 @@
 #include <map>
 
 #include "uncopyable.h"
-#include "function.h"
+#include "backend/backend_function.h"
 
 namespace simit {
 class Diagnostics;
@@ -25,7 +25,7 @@ public:
   virtual ~Backend() {}
 
   // TODO: Change to simply return a Function object (not pointer)
-  virtual simit::internal::Function *compile(simit::ir::Func func) = 0;
+  virtual simit::internal::Function *compile(const ir::Func &func) = 0;
 };
 
 }}

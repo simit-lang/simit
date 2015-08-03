@@ -13,7 +13,7 @@
 #include "util.h"
 #include "storage.h"
 
-#include "backend/function.h"
+#include "backend/backend_function.h"
 #include "backend/llvm/llvm_backend.h"
 #ifdef GPU
 #include "backend/gpu/gpu_backend.h"

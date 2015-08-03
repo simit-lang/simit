@@ -7,7 +7,7 @@
 
 #include "ir.h"
 #include "program_context.h"
-#include "backend/function.h"
+#include "backend/backend_function.h"
 #include "program.h"
 #include "graph.h"
 

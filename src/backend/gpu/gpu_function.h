@@ -9,7 +9,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
 
-#include "backend/function.h"
+#include "backend/backend_function.h"
 #include "gpu_backend.h"
 #include "gpu_codegen.h"
 

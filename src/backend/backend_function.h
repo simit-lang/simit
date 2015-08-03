@@ -1,5 +1,5 @@
-#ifndef SIMIT_FUNCTION_H
-#define SIMIT_FUNCTION_H
+#ifndef SIMIT_BACKEND_FUNCTION_H
+#define SIMIT_BACKEND_FUNCTION_H
 
 #include <cstdlib>
 #include <vector>

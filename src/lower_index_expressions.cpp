@@ -4,7 +4,7 @@ namespace simit {
 namespace ir {
 
 Stmt lower(Var target, const IndexExpr *indexExpression) {
-
+  return Stmt();
 }
 
 }}
