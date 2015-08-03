@@ -83,8 +83,8 @@ public:
   Iterator end() const {return scopes.end();}
 
   /// Print symbol table to stream.
-  inline friend std::ostream &operator<<(std::ostream &os,
-                                         const ScopedMap<Key,Value> &st) {
+  inline friend
+  std::ostream &operator<<(std::ostream &os, const ScopedMap<Key,Value> &st) {
     os << "SymbolTable:\n";
     auto scopeIt = st.scopes.rbegin();
     auto end = st.scopes.rend();
