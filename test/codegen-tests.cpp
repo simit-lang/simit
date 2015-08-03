@@ -5,10 +5,11 @@
 
 #include "ir.h"
 #include "ir_printer.h"
-#include "backend.h"
-#include "llvm_backend.h"
+
+#include "backend/backend.h"
+#include "backend/llvm/llvm_backend.h"
 #ifdef GPU
-#include "gpu_backend/gpu_backend.h"
+#include "backend/gpu/gpu_backend.h"
 #endif
 
 using namespace std;

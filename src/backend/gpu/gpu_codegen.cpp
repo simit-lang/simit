@@ -7,7 +7,7 @@
 #include "llvm/Bitcode/ReaderWriter.h"
 
 #include "error.h"
-#include "llvm_codegen.h"
+#include "backend/llvm/llvm_codegen.h"
 
 namespace simit {
 namespace internal {

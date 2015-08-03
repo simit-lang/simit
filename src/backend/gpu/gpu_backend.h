@@ -1,9 +1,10 @@
 #ifndef SIMIT_GPU_BACKEND_H
 #define SIMIT_GPU_BACKEND_H
 
-#include "backend.h"
+#include "backend/backend.h"
+#include "backend/llvm/llvm_backend.h"
+
 #include "ir_visitor.h"
-#include "llvm_backend.h"
 #include "gpu_ir.h"
 
 #define CUDA_GENERIC_ADDRSPACE 0

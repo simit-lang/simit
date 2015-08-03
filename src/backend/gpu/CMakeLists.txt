@@ -1,0 +1,37 @@
+if (CUDA_FOUND)
+  message("-- Building with gpu-backend")
+
+  set(SIMIT_DEFINITIONS ${SIMIT_DEFINITIONS} -DGPU)
+  
+  if (LINUX)
+    get_filename_component(CUDA_LIB_DIR ${CUDA_LIBRARIES} DIRECTORY)
+	set(SIMIT_DEFINITIONS ${SIMIT_DEFINITIONS} -DLIBCUDADEVRT="${CUDA_LIB_DIR}/libcudadevrt.a")
+  elseif (DARWIN)
+    set(SIMIT_DEFINITIONS ${SIMIT_DEFINITIONS} -DLIBCUDADEVRT="${CUDA_TOOLKIT_ROOT_DIR}/lib/libcudadevrt.a")
+  endif ()
+
+  set(SIMIT_INCLUDE_DIRS ${CUDA_INCLUDE_DIRS} "${CUDA_TOOLKIT_ROOT_DIR}/nvvm/include/")
+
+  file(GLOB SIMIT_HEADERS ${SIMIT_HEADERS} *.h)
+  file(GLOB SIMIT_SOURCES ${SIMIT_SOURCES} *.cpp)
+
+  # Libraries
+  if (LINUX)
+    find_library(libcuda NAMES cuda PATHS "${CUDA_TOOLKIT_ROOT_DIR}/lib64")
+    find_library(libnvvm NAMES nvvm PATHS "${CUDA_TOOLKIT_ROOT_DIR}/nvvm/lib64")
+	set(SIMIT_LIBRARIES ${SIMIT_LIBRARIES} ${libcuda})
+	set(SIMIT_LIBRARIES ${SIMIT_LIBRARIES} ${libnvvm})
+  elseif (DARWIN)
+	set(SIMIT_LIBRARIES ${SIMIT_LIBRARIES} ${CUDA_LIBRARIES})
+	set(SIMIT_LIBRARIES ${SIMIT_LIBRARIES} "${CUDA_TOOLKIT_ROOT_DIR}/lib/libcuda.dylib")
+	set(SIMIT_LIBRARIES ${SIMIT_LIBRARIES} "${CUDA_TOOLKIT_ROOT_DIR}/nvvm/lib/libnvvm.dylib")
+  endif ()
+else ()
+  message("-- Building without gpu-backend")
+endif ()
+
+set(SIMIT_SOURCES   ${SIMIT_SOURCES}   PARENT_SCOPE)
+set(SIMIT_HEADERS   ${SIMIT_HEADERS}   PARENT_SCOPE)
+set(SIMIT_LIBRARIES ${SIMIT_LIBRARIES} PARENT_SCOPE)
+set(SIMIT_INCLUDE_DIRS ${SIMIT_INCLUDE_DIRS} PARENT_SCOPE)
+set(SIMIT_DEFINITIONS ${SIMIT_DEFINITIONS} PARENT_SCOPE) 

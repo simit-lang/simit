@@ -4,7 +4,7 @@
 #include "util.h"
 
 #ifdef GPU
-#include "gpu_backend/gpu_ir.h"
+#include "backend/gpu/gpu_ir.h"
 #endif
 
 using namespace std;

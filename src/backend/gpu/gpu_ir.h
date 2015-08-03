@@ -2,7 +2,6 @@
 #define SIMIT_GPU_IR_H
 
 #include "error.h"
-#include "gpu_ir.h"
 #include "ir.h"
 
 namespace simit {

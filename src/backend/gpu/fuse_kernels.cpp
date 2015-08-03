@@ -2,6 +2,7 @@
 
 #include <algorithm>
 
+#include "gpu_ir.h"
 #include "ir_rewriter.h"
 #include "rw_analysis.h"
 

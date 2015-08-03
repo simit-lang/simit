@@ -7,16 +7,16 @@
 #include "lower.h"
 #include "temps.h"
 #include "flatten.h"
-#include "function.h"
 #include "frontend.h"
 #include "program_context.h"
-#include "llvm_backend.h"
 #include "error.h"
 #include "util.h"
 #include "storage.h"
 
+#include "backend/function.h"
+#include "backend/llvm/llvm_backend.h"
 #ifdef GPU
-#include "gpu_backend/gpu_backend.h"
+#include "backend/gpu/gpu_backend.h"
 #endif
 
 using namespace std;

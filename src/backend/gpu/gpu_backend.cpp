@@ -16,7 +16,7 @@
 #include "gpu_function.h"
 #include "ir.h"
 #include "ir_queries.h"
-#include "llvm_codegen.h"
+#include "backend/llvm/llvm_codegen.h"
 #include "types.h"
 
 #ifndef NASSERT

@@ -7,7 +7,7 @@
 #include <vector>
 #include <map>
 
-#include "backend.h"
+#include "backend/backend.h"
 #include "var.h"
 #include "ir_visitor.h"
 #include "util/scopedmap.h"

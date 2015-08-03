@@ -5,7 +5,7 @@
 #include "ir.h"
 
 #ifdef GPU
-#include "gpu_backend/gpu_ir.h"
+#include "backend/gpu/gpu_ir.h"
 #endif
 
 namespace simit {

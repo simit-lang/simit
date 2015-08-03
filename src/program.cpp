@@ -3,19 +3,18 @@
 #include <set>
 #include <vector>
 
-#include "function.h"
 #include "ir.h"
 #include "frontend.h"
 #include "lower.h"
-#include "llvm_backend.h"
 #include "util.h"
 #include "error.h"
 #include "program_context.h"
 #include "storage.h"
 
-
+#include "backend/function.h"
+#include "backend/llvm/llvm_backend.h"
 #ifdef GPU
-#include "gpu_backend/gpu_backend.h"
+#include "backend/gpu/gpu_backend.h"
 #endif
 
 using namespace std;

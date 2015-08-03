@@ -7,7 +7,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 
-#include "function.h"
+#include "backend/function.h"
 #include "ir.h"
 
 namespace llvm {

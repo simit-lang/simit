@@ -21,7 +21,7 @@
 #include "graph.h"
 #include "indices.h"
 #include "ir.h"
-#include "llvm_codegen.h"
+#include "backend/llvm/llvm_codegen.h"
 
 using namespace std;
 

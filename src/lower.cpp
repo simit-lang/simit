@@ -9,7 +9,7 @@
 #include "path_expressions.h"
 
 #ifdef GPU
-#include "gpu_backend/gpu_backend.h"
+#include "backend/gpu/gpu_backend.h"
 #endif
 
 using namespace std;

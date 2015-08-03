@@ -6,7 +6,7 @@
 #include <iostream>
 
 #include "llvm/IR/Module.h"
-#include "llvm_codegen.h"
+#include "backend/llvm/llvm_codegen.h"
 
 // This will output the proper CUDA error strings in the event that a CUDA
 // host call returns an error
