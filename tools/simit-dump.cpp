@@ -226,10 +226,10 @@ int main(int argc, const char* argv[]) {
 
     if (emitLLVM || emitASM) {
       simit::backend::LLVMBackend backend;
-      unique_ptr<simit::backend::Function> llvmFunc(backend.compile(func));
+      simit::Function llvmFunc(backend.compile(func));
 
       if (emitLLVM) {
-        std::string fstr = simit::util::toString(*llvmFunc);
+        std::string fstr = simit::util::toString(llvmFunc);
         if (emitSimit) {
           cout << "--- Emitting LLVM" << endl;
         }
@@ -238,7 +238,7 @@ int main(int argc, const char* argv[]) {
 
       if (emitASM) {
         cout << "--- Emitting Assembly" << endl;
-        llvmFunc->printMachine(cout);
+        llvmFunc.printMachine(cout);
       }
     }
   }

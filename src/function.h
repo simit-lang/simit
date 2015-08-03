@@ -46,6 +46,9 @@ public:
 
   bool defined() {return impl != nullptr;}
 
+  void printMachine(std::ostream &os);
+  friend std::ostream &operator<<(std::ostream &os, const Function &f);
+
 private:
   std::shared_ptr<backend::Function> impl;
 

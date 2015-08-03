@@ -4,6 +4,7 @@
 #include <vector>
 #include <map>
 
+#include "function.h"
 #include "uncopyable.h"
 #include "backend/backend_function.h"
 
@@ -24,8 +25,7 @@ public:
   Backend() {}
   virtual ~Backend() {}
 
-  // TODO: Change to simply return a Function object (not pointer)
-  virtual backend::Function *compile(const ir::Func &func) = 0;
+  virtual simit::Function compile(const ir::Func &func) = 0;
 };
 
 }}

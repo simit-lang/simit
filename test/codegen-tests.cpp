@@ -61,17 +61,17 @@ TEST(Codegen, add0) {
   Func func = Func("add0", {a,b}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::backend::Function> function(backend->compile(func));
+  simit::Function function = backend->compile(func);
 
   Expr aArg = 2.0;
   Expr bArg = 4.1;
   Expr cRes = Literal::make(Float);
 
-  function->bind("a", &aArg);
-  function->bind("b", &bArg);
-  function->bind("c", &cRes);
+  function.bind("a", &aArg);
+  function.bind("b", &bArg);
+  function.bind("c", &cRes);
 
-  function->runSafe();
+  function.runSafe();
 
   vector<simit_float> results = toVectorOf<simit_float>(cRes);
   SIMIT_ASSERT_FLOAT_EQ(results[0], 6.1);
@@ -87,15 +87,15 @@ TEST(Codegen, sin) {
   Func func = Func("testsin", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::backend::Function> function(backend->compile(func));
+  simit::Function function = backend->compile(func);
 
   Expr aArg = 2.0;
   Expr cRes = 0.0;
 
-  function->bind("a", &aArg);
-  function->bind("c", &cRes);
+  function.bind("a", &aArg);
+  function.bind("c", &cRes);
 
-  function->runSafe();
+  function.runSafe();
 
   vector<simit_float> results = toVectorOf<simit_float>(cRes);
   SIMIT_ASSERT_FLOAT_EQ(results[0], sin(2.0));
@@ -111,15 +111,15 @@ TEST(Codegen, cos) {
   Func func = Func("testcos", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::backend::Function> function(backend->compile(func));
+  simit::Function function = backend->compile(func);
 
   Expr aVar = 2.0;
   Expr cRes = 0.0;
 
-  function->bind("a", &aVar);
-  function->bind("c", &cRes);
+  function.bind("a", &aVar);
+  function.bind("c", &cRes);
 
-  function->runSafe();
+  function.runSafe();
 
   vector<simit_float> results = toVectorOf<simit_float>(cRes);
   SIMIT_ASSERT_FLOAT_EQ(results[0], cos(2.0));
@@ -135,15 +135,15 @@ TEST(Codegen, sqrt) {
   Func func = Func("testsqrt", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::backend::Function> function(backend->compile(func));
+  simit::Function function = backend->compile(func);
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
 
-  function->bind("a", &aVar);
-  function->bind("c", &cRes);
+  function.bind("a", &aVar);
+  function.bind("c", &cRes);
 
-  function->runSafe();
+  function.runSafe();
 
   vector<simit_float> results = toVectorOf<simit_float>(cRes);
   SIMIT_ASSERT_FLOAT_EQ(results[0], sqrt(5.0));
@@ -159,15 +159,15 @@ TEST(Codegen, log) {
   Func func = Func("testlog", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::backend::Function> function(backend->compile(func));
+  simit::Function function = backend->compile(func);
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
 
-  function->bind("a", &aVar);
-  function->bind("c", &cRes);
+  function.bind("a", &aVar);
+  function.bind("c", &cRes);
 
-  function->runSafe();
+  function.runSafe();
 
   vector<simit_float> results = toVectorOf<simit_float>(cRes);
   SIMIT_ASSERT_FLOAT_EQ(results[0], log(5.0));
@@ -183,15 +183,15 @@ TEST(Codegen, exp) {
   Func func = Func("testexp", {a}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::backend::Function> function(backend->compile(func));
+  simit::Function function = backend->compile(func);
 
   Expr aVar = 5.0;
   Expr cRes = 0.0;
 
-  function->bind("a", &aVar);
-  function->bind("c", &cRes);
+  function.bind("a", &aVar);
+  function.bind("c", &cRes);
 
-  function->runSafe();
+  function.runSafe();
 
   vector<simit_float> results = toVectorOf<simit_float>(cRes);
   SIMIT_ASSERT_FLOAT_EQ(results[0], exp(5.0));
@@ -208,17 +208,17 @@ TEST(Codegen, atan2) {
   Func func = Func("testatan2", {a,b}, {c}, body);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::backend::Function> function(backend->compile(func));
+  simit::Function function = backend->compile(func);
 
   Expr aVar = 1.0;
   Expr bVar = 2.0;
   Expr cRes = 0.0;
 
-  function->bind("a", &aVar);
-  function->bind("b", &bVar);
-  function->bind("c", &cRes);
+  function.bind("a", &aVar);
+  function.bind("b", &bVar);
+  function.bind("c", &cRes);
 
-  function->runSafe();
+  function.runSafe();
 
   vector<simit_float> results = toVectorOf<simit_float>(cRes);
   SIMIT_ASSERT_FLOAT_EQ(results[0], atan2(1.0,2.0));
@@ -236,14 +236,14 @@ TEST(Codegen, forloop) {
   Func func = Func("testloop", {}, {out}, loop);
 
   unique_ptr<Backend> backend = getBackend();
-  unique_ptr<simit::backend::Function> function(backend->compile(func));
+  simit::Function function = backend->compile(func);
 
   Expr outVar = 0;
   Expr iVar = 0;
   
-  function->bind("out", &outVar);
+  function.bind("out", &outVar);
   
-  function->runSafe();
+  function.runSafe();
   
   vector<int> results = toVectorOf<int>(outVar);
   ASSERT_EQ(results[0], 3);

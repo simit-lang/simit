@@ -47,4 +47,12 @@ void Function::unmapArgs(bool updated) {
   impl->unmapArgs(updated);
 }
 
+void Function::printMachine(std::ostream &os) {
+  impl->printMachine(os);
+}
+
+std::ostream &operator<<(std::ostream &os, const Function &f) {
+  return os << *f.impl;
+}
+
 }
