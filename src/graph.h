@@ -97,23 +97,22 @@ private:
 class Set {
 public:
   Set(const std::string &name)
-      : name(name), numElements(0), cardinality(0), endpoints(nullptr),
+      : name(name), numElements(0), endpoints(nullptr),
         capacity(capacityIncrement), neighbors(nullptr) {}
 
   template <typename ...Sets>
   Set(const char *name, const Sets& ...sets) : Set(std::string(name)) {
     static_assert(util::areSame<Set, Sets...>{},
         "Set constructor takes an optional name followed by zero or more Sets");
-    this->cardinality  = sizeof...(sets);
-    this->endpointSets = epsMaker(endpointSets, sets...);
-    this->endpoints    = (int*) calloc(sizeof(int), capacity*cardinality);
+    this->endpointSets = {&sets...};
+    this->endpoints    = (int*)calloc(sizeof(int), capacity * getCardinality());
   }
 
-  template <typename ...S>
-  Set(const std::string &name, const S& ...sets) : Set(name.c_str(), sets...) {}
+  template <typename ...Sets>
+  Set(std::string name, const Sets& ...sets) : Set(name.c_str(), sets...) {}
 
-  template <typename ...S>
-  Set(const S& ...sets) : Set("", sets...) {}
+  template <typename ...Sets>
+  Set(const Sets& ...sets) : Set("", sets...) {}
 
   ~Set() {
     for (auto f: fields) {
@@ -123,11 +122,11 @@ public:
   }
   
   /// Return the number of elements in the Set
-  int getSize() const { return numElements; }
+  inline int getSize() const { return numElements; }
 
   /// Return the number of endpoints of the elements in the set.  Non-edge sets
   /// have cardinality 0.
-  int getCardinality() const { return cardinality; }
+  inline int getCardinality() const { return endpointSets.size(); }
 
   /// Add a tensor field to the set.  Use the template parameters to specify the
   /// component type and dimension sizes of the tensors.  For example, define a
@@ -161,7 +160,7 @@ public:
   /// The endpoints refer to the respective Sets they come from.
   template <typename ...Endpoints>
   ElementRef add(Endpoints... endpoints) {
-    iassert(sizeof...(endpoints) == cardinality) <<"Wrong number of endpoints.";
+    iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of endpoints.";
     if (numElements > capacity-1)
       increaseEdgeCapacity();
     
@@ -268,9 +267,9 @@ public:
   /// A set is homogeneous of all it's endpoints come from the same set,
   /// otherwise it is heterogeneous.
   bool isHomogeneous() const {
-    if (cardinality > 0) {
+    if (getCardinality() > 0) {
       const Set *firstEndpointSet = getEndpointSet(0);
-      for (int i=1; i < cardinality; ++i) {
+      for (int i=1; i < getCardinality(); ++i) {
         // Endpointsets are the same if their pointers point at the same set
         if (getEndpointSet(i) != firstEndpointSet) {
           return false;
@@ -282,7 +281,7 @@ public:
 
   /// Get an endpoint of an edge
   ElementRef getEndpoint(ElementRef edge, int endpointNum) const {
-    return ElementRef(endpoints[edge.ident*cardinality+endpointNum]);
+    return ElementRef(endpoints[edge.ident*getCardinality() + endpointNum]);
   }
   
   class Endpoints {
@@ -310,7 +309,7 @@ public:
       Iterator& operator++() {
         const int cardinality = set->getCardinality();
         endpointNum++;
-        if (endpointNum > set->cardinality-1)
+        if (endpointNum > set->getCardinality()-1)
           retElem.ident = -1;   // return invalid element
         else
           retElem.ident = set->endpoints[curElem.ident*cardinality+endpointNum];
@@ -397,7 +396,6 @@ public:
 private:
   std::string name;
   int numElements;                           // number of elements in the set
-  int cardinality;                           // number of element endpoints
   std::vector<const Set*> endpointSets;      // the sets the endpoints belong to
   int* endpoints;                            // the endpoints of edge elements
 
@@ -520,7 +518,7 @@ private:
   epsMaker(std::vector<const Set*> sofar) {return sofar;}
 
   void increaseEdgeCapacity() {
-    size_t newSize = (capacity+capacityIncrement)*cardinality*sizeof(int);
+    size_t newSize = (capacity+capacityIncrement)*getCardinality()*sizeof(int);
     endpoints = (int*)realloc(endpoints, newSize);
   }
 
@@ -529,14 +527,14 @@ private:
   void addEndpoints(int which, F f, T ... eps) {
     uassert(endpointSets[which]->getSize() > f.ident)
         << "Invalid member of set in addEdge";
-    endpoints[numElements*cardinality+which] = f.ident;
+    endpoints[numElements*getCardinality()+which] = f.ident;
     addEndpoints(which+1, eps...);
   }
   template <typename F>
   void addEndpoints(int which, F f) {
     uassert(endpointSets[which]->getSize() > f.ident)
         << "Invalid member of set in addEdge";
-    endpoints[numElements*cardinality+which] = f.ident;
+    endpoints[numElements*getCardinality()+which] = f.ident;
   }
   void addEndpoints(int) {}
 
