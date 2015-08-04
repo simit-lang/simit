@@ -368,9 +368,11 @@ struct TensorRead : public ExprNode<TensorRead> {
   /// has already been flattened, and will be directly lowered to a load.
   static Expr make(Expr tensor, std::vector<Expr> indices) {
     iassert(tensor.type().isTensor());
+#ifdef SIMIT_ASSERTS
     for (auto &index : indices) {
       iassert(isScalar(index.type()) || index.type().isElement());
     }
+#endif
     iassert(indices.size() == 1 ||
             indices.size() == tensor.type().toTensor()->order());
 
@@ -434,12 +436,17 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
   static Expr make(Expr tensor, std::vector<IndexVar> indexVars) {
     iassert(tensor.type().isTensor()) << "Only tensors can be indexed.";
     iassert(indexVars.size() == tensor.type().toTensor()->order());
+
+#ifdef SIMIT_ASSERTS
+    std::vector<IndexDomain> dimensions =
+        tensor.type().toTensor()->getDimensions();
     for (size_t i=0; i < indexVars.size(); ++i) {
-      iassert(indexVars[i].getDomain() == tensor.type().toTensor()->dimensions[i])
+      iassert(indexVars[i].getDomain() == dimensions[i])
              << "IndexVar domain does not match tensordimension "
              << "for var " << indexVars[i]
-             << indexVars[i].getDomain() << " != " << tensor.type().toTensor()->dimensions[i];
+             << indexVars[i].getDomain() << " != " << dimensions[i];
     }
+#endif
 
     IndexedTensor *node = new IndexedTensor;
     node->type = TensorType::make(tensor.type().toTensor()->componentType);
@@ -457,10 +464,12 @@ struct IndexExpr : public ExprNode<IndexExpr> {
 
   static Expr make(std::vector<IndexVar> resultVars, Expr value) {
     iassert(isScalar(value.type())) << value << " : " << value.type();
-
+#ifdef SIMIT_ASSERTS
     for (auto &idxVar : resultVars) {  // No reduction variables on lhs
       iassert(idxVar.isFreeVar());
     }
+#endif
+
     IndexExpr *node = new IndexExpr;
     node->type = getIndexExprType(resultVars, value);
     node->resultVars = resultVars;

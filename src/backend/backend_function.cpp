@@ -116,7 +116,7 @@ void Function::bind(const std::string &argName, Set *set) {
         << "field type"
         << "does not match function argument type" << *elemFieldType;
 
-    const vector<ir::IndexDomain> &argFieldTypeDims = elemFieldType->dimensions;
+    const vector<ir::IndexDomain> &argFieldTypeDims = elemFieldType->getDimensions();
     for (size_t i=0; i < elemFieldType->order(); ++i) {
       uassert(argFieldTypeDims[i].getIndexSets().size() == 1)
           << "field type"
@@ -181,7 +181,7 @@ size_t Function::size(const ir::TensorType &type,
         }
       }
 
-      for (const ir::IndexDomain &dimension : type.dimensions) {
+      for (const ir::IndexDomain &dimension : type.getDimensions()) {
         result *= simit::backend::size(dimension, sets);
       }
       return result;
@@ -208,7 +208,7 @@ size_t Function::size(const ir::TensorType &type,
       return len;
     }
     case ir::TensorStorage::SystemDiagonal: {
-      iassert(type.dimensions.size() > 0);
+      iassert(type.order() > 0);
 
       // Just need on outer dimension because diagonal
       ir::IndexSet indexSet = type.outerDimensions()[0];

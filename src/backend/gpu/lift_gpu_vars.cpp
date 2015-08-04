@@ -98,7 +98,7 @@ protected:
 
       const TensorType *origType = var.getType().toTensor();
       Type type = TensorType::make(origType->componentType,
-                                   origType->dimensions,
+                                   origType->getDimensions(),
                                    origType->isColumnVector);
       // for (int dim = 0; dim < depth; ++dim) {
       //   // Use a dummy dimension of 1

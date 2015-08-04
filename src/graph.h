@@ -563,7 +563,7 @@ private:
         }
       }
       std::vector<int> dims;
-      for (const ir::IndexDomain &domain : ttype->dimensions) {
+      for (const ir::IndexDomain &domain : ttype->getDimensions()) {
         dims.push_back(domain.getSize());
       }
       FieldData::TensorType *type =
@@ -673,8 +673,8 @@ class FieldRefBaseParameterized : public FieldRefBase {
   }
 
   void set(ElementRef element, std::initializer_list<T> values) {
-    size_t tensorSize = TensorRef<T,dimensions...>::getSize();
-    iassert(values.size() == tensorSize) << "Incorrect number of init values";
+    iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
+        << "Incorrect number of init values";
     T *elemData = this->getElemDataPtr(element);
     size_t i=0;
     for (T val : values) {

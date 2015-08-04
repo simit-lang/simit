@@ -58,18 +58,18 @@ bool operator!=(const IndexSet &l, const IndexSet &r);
 std::ostream &operator<<(std::ostream &os, const IndexSet &is);
 
 
-/// An index domain is a set product of zero or more index sets.
-/// \todo Domain one of: a full set, edge endpoints, element edges
+/// An index domain is the set product of zero or more index sets.
 class IndexDomain {
 public:
   IndexDomain() {}
-  explicit IndexDomain(IndexSet is) { indexSets.push_back(is); }
-  explicit IndexDomain(std::vector<IndexSet> iss) : indexSets(iss) {};
+  IndexDomain(IndexSet is) { indexSets.push_back(is); }
+  IndexDomain(std::vector<IndexSet> iss) : indexSets(iss) {};
 
-  /// Get the index sets whose set product forms the domain.
+  /// Get the number of index sets in the index domain.
+  size_t getNumIndexSets() const {return indexSets.size();}
+
+  /// Get the ith index set of the index domain.
   const std::vector<IndexSet> &getIndexSets() const {return indexSets; }
-
-  size_t getNumBlockLevels() const {return indexSets.size();}
 
   /// Get the number of elements in the product of the index sets if all the
   /// index sets are Range sets, otherwise undefined.

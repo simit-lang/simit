@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.2.
+// A Bison parser, made by GNU Bison 3.0.4.
 
 // Skeleton implementation for Bison LALR(1) parsers in C++
 
-// Copyright (C) 2002-2013 Free Software Foundation, Inc.
+// Copyright (C) 2002-2015 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -87,7 +87,7 @@
   #define REPORT_TYPE_MISSMATCH(t1, t2, loc)                          \
     do {                                                              \
       std::stringstream errorStr;                                     \
-      errorStr << "type missmatch (" <<                               \
+      errorStr << "type mismatch (" <<                               \
                   typeString(t1) << " and " << typeString(t2) << ")"; \
       REPORT_ERROR(errorStr.str(), loc);                              \
     } while (0)
@@ -130,7 +130,7 @@
     iassert(ttype->order() == 1);
 
     Type transposedVector = TensorType::make(ttype->componentType,
-                                             ttype->dimensions,
+                                             ttype->getDimensions(),
                                              !ttype->isColumnVector);
 
     const_cast<ExprNodeBase*>(to<ExprNodeBase>(vec))->type = transposedVector;
@@ -258,7 +258,7 @@
 #endif // !YYDEBUG
 
 #define yyerrok         (yyerrstatus_ = 0)
-#define yyclearin       (yyempty = true)
+#define yyclearin       (yyla.clear ())
 
 #define YYACCEPT        goto yyacceptlab
 #define YYABORT         goto yyabortlab
@@ -373,6 +373,23 @@ namespace  simit { namespace internal  {
   inline
    Parser ::basic_symbol<Base>::~basic_symbol ()
   {
+    clear ();
+  }
+
+  template <typename Base>
+  inline
+  void
+   Parser ::basic_symbol<Base>::clear ()
+  {
+    Base::clear ();
+  }
+
+  template <typename Base>
+  inline
+  bool
+   Parser ::basic_symbol<Base>::empty () const
+  {
+    return Base::type_get () == empty_symbol;
   }
 
   template <typename Base>
@@ -388,7 +405,7 @@ namespace  simit { namespace internal  {
   // by_type.
   inline
    Parser ::by_type::by_type ()
-     : type (empty)
+    : type (empty_symbol)
   {}
 
   inline
@@ -403,10 +420,17 @@ namespace  simit { namespace internal  {
 
   inline
   void
+   Parser ::by_type::clear ()
+  {
+    type = empty_symbol;
+  }
+
+  inline
+  void
    Parser ::by_type::move (by_type& that)
   {
     type = that.type;
-    that.type = empty;
+    that.clear ();
   }
 
   inline
@@ -420,7 +444,7 @@ namespace  simit { namespace internal  {
   // by_state.
   inline
    Parser ::by_state::by_state ()
-    : state (empty)
+    : state (empty_state)
   {}
 
   inline
@@ -430,10 +454,17 @@ namespace  simit { namespace internal  {
 
   inline
   void
+   Parser ::by_state::clear ()
+  {
+    state = empty_state;
+  }
+
+  inline
+  void
    Parser ::by_state::move (by_state& that)
   {
     state = that.state;
-    that.state = empty;
+    that.clear ();
   }
 
   inline
@@ -445,7 +476,10 @@ namespace  simit { namespace internal  {
    Parser ::symbol_number_type
    Parser ::by_state::type_get () const
   {
-    return state == empty ? 0 : yystos_[state];
+    if (state == empty_state)
+      return empty_symbol;
+    else
+      return yystos_[state];
   }
 
   inline
@@ -459,7 +493,7 @@ namespace  simit { namespace internal  {
   {
     value = that.value;
     // that is emptied.
-    that.type = empty;
+    that.type = empty_symbol;
   }
 
   inline
@@ -968,6 +1002,10 @@ namespace  simit { namespace internal  {
     std::ostream& yyoutput = yyo;
     YYUSE (yyoutput);
     symbol_number_type yytype = yysym.type_get ();
+    // Avoid a (spurious) G++ 4.8 warning about "array subscript is
+    // below array bounds".
+    if (yysym.empty ())
+      std::abort ();
     yyo << (yytype < yyntokens_ ? "token" : "nterm")
         << ' ' << yytname_[yytype] << " ("
         << yysym.location << ": ";
@@ -1052,9 +1090,6 @@ namespace  simit { namespace internal  {
   int
    Parser ::parse ()
   {
-    /// Whether yyla contains a lookahead.
-    bool yyempty = true;
-
     // State.
     int yyn;
     /// Length of the RHS of the rule being reduced.
@@ -1106,7 +1141,7 @@ namespace  simit { namespace internal  {
       goto yydefault;
 
     // Read a lookahead token.
-    if (yyempty)
+    if (yyla.empty ())
       {
         YYCDEBUG << "Reading a token: ";
         try
@@ -1118,7 +1153,6 @@ namespace  simit { namespace internal  {
             error (yyexc);
             goto yyerrlab1;
           }
-        yyempty = false;
       }
     YY_SYMBOL_PRINT ("Next token is", yyla);
 
@@ -1137,9 +1171,6 @@ namespace  simit { namespace internal  {
         yyn = -yyn;
         goto yyreduce;
       }
-
-    // Discard the token being shifted.
-    yyempty = true;
 
     // Count tokens shifted since error; after three, turn off error status.
     if (yyerrstatus_)
@@ -1571,28 +1602,29 @@ namespace  simit { namespace internal  {
             numSlices++;
         }
         if (numSlices > 0) {
-         // We will construct an index expression.
-         // first, we build IndexVars
-         std::vector<IndexVar> allivars;
-         std::vector<IndexVar> freeVars;
-         int i=0;
-         for (auto &arg: arguments) {
-          if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
-            auto iv = IndexVar("tmpfree" + std::to_string(i),
-                readExpr.type().toTensor()->dimensions[i]);
-            allivars.push_back(iv);
-            freeVars.push_back(iv);
+          // We will construct an index expression.
+          // first, we build IndexVars
+          vector<IndexVar> allivars;
+          vector<IndexVar> freeVars;
+          vector<IndexDomain> dimensions =
+              readExpr.type().toTensor()->getDimensions();
+          int i=0;
+          for (auto &arg: arguments) {
+            if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
+              auto iv = IndexVar("tmpfree" + std::to_string(i), dimensions[i]);
+              allivars.push_back(iv);
+              freeVars.push_back(iv);
+            }
+            else {
+              allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
+                                          dimensions[i],
+                                          new Expr(arg)));
+            }
+            i++;
           }
-          else {
-            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
-                readExpr.type().toTensor()->dimensions[i],
-              new Expr(arg)));
-          }
-          i++;
-         }
-            // now construct an index expression
-         value = IndexExpr::make(freeVars,
-            IndexedTensor::make(readExpr, allivars));
+          // now construct an index expression
+          value = IndexExpr::make(freeVars,
+          IndexedTensor::make(readExpr, allivars));
         }
         else {
         
@@ -2325,6 +2357,8 @@ namespace  simit { namespace internal  {
 
     const TensorType *ltype = l.type().toTensor();
     const TensorType *rtype = r.type().toTensor();
+    vector<IndexDomain> ldimensions = ltype->getDimensions();
+    vector<IndexDomain> rdimensions = rtype->getDimensions();
 
     // Scale
     if (ltype->order()==0 || rtype->order()==0) {
@@ -2356,7 +2390,7 @@ namespace  simit { namespace internal  {
     // Matrix-Vector
     else if (ltype->order() == 2 && rtype->order() == 1) {
       // TODO: Figure out how column vectors should be handled here
-      if (ltype->dimensions[1] != rtype->dimensions[0]){
+      if (ldimensions[1] != rdimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
       (yylhs.value.expr) = new Expr(builder->gemv(l, r));
@@ -2364,14 +2398,14 @@ namespace  simit { namespace internal  {
     // Vector-Matrix
     else if (ltype->order() == 1 && rtype->order() == 2) {
       // TODO: Figure out how column vectors should be handled here
-      if (ltype->dimensions[0] != rtype->dimensions[0]) {
+      if (ldimensions[0] != rdimensions[0]) {
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
       (yylhs.value.expr) = new Expr(builder->gevm(l,r));
     }
     // Matrix-Matrix
     else if (ltype->order() == 2 && rtype->order() == 2) {
-      if (ltype->dimensions[1] != rtype->dimensions[0]){
+      if (ldimensions[1] != rdimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
       }
       (yylhs.value.expr) = new Expr(builder->gemm(l,r));
@@ -2673,34 +2707,34 @@ namespace  simit { namespace internal  {
             numSlices++;
         }
         if (numSlices > 0) {
-         // We will construct an index expression.
-         // first, we build IndexVars
-         std::vector<IndexVar> allivars;
-         std::vector<IndexVar> freeVars;
-         int i=0;
-         for (auto &arg: *arguments) {
-          if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
-            auto iv = IndexVar("tmpfree" + std::to_string(i),
-                readExpr.type().toTensor()->dimensions[i]);
-            allivars.push_back(iv);
-            freeVars.push_back(iv);
+          // We will construct an index expression.
+          // first, we build IndexVars
+          vector<IndexVar> allivars;
+          vector<IndexVar> freeVars;
+          vector<IndexDomain> dimensions =
+              readExpr.type().toTensor()->getDimensions();
+
+          int i=0;
+          for (auto &arg: *arguments) {
+            if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
+              auto iv = IndexVar("tmpfree" + std::to_string(i),
+                                 dimensions[i]);
+              allivars.push_back(iv);
+              freeVars.push_back(iv);
+            }
+            else {
+              allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
+                                          dimensions[i], new Expr(arg)));
+            }
+            i++;
           }
-          else {
-            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
-                readExpr.type().toTensor()->dimensions[i],
-              new Expr(arg)));
-          }
-          i++;
-         }
-            // now construct an index expression
-         (yylhs.value.expr) = new Expr(IndexExpr::make(freeVars,
-            IndexedTensor::make(readExpr, allivars)));
+          // now construct an index expression
+          (yylhs.value.expr) = new Expr(IndexExpr::make(freeVars,
+          IndexedTensor::make(readExpr, allivars)));
         }
         else {
-        
           (yylhs.value.expr) = new Expr(TensorRead::make(readExpr, *arguments));
         }
-        
       }
       else if (readExpr.type().isTuple()) {
         if (arguments->size() != 1) {
@@ -2921,7 +2955,7 @@ namespace  simit { namespace internal  {
     auto componentType = blockType->componentType;
 
     auto outerDimensions = unique_ptr<vector<IndexSet>>((yystack_[4].value.indexSets));
-    auto blockDimensions = blockType->dimensions;
+    auto blockDimensions = blockType->getDimensions();
 
     vector<IndexDomain> dimensions;
     if (blockType->order() == 0) {
@@ -2964,7 +2998,7 @@ namespace  simit { namespace internal  {
     {
     auto type = convertAndDelete((yystack_[1].value.type));
     const TensorType *tensorType = type.toTensor();
-    auto dimensions = tensorType->dimensions;
+    auto dimensions = tensorType->getDimensions();
     auto componentType = tensorType->componentType;
     (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions, true));
   }
@@ -3393,8 +3427,7 @@ namespace  simit { namespace internal  {
     if (!yyerrstatus_)
       {
         ++yynerrs_;
-        error (yyla.location, yysyntax_error_ (yystack_[0].state,
-                                           yyempty ? yyempty_ : yyla.type_get ()));
+        error (yyla.location, yysyntax_error_ (yystack_[0].state, yyla));
       }
 
 
@@ -3407,10 +3440,10 @@ namespace  simit { namespace internal  {
         // Return failure if at end of input.
         if (yyla.type_get () == yyeof_)
           YYABORT;
-        else if (!yyempty)
+        else if (!yyla.empty ())
           {
             yy_destroy_ ("Error: discarding", yyla);
-            yyempty = true;
+            yyla.clear ();
           }
       }
 
@@ -3486,7 +3519,7 @@ namespace  simit { namespace internal  {
     goto yyreturn;
 
   yyreturn:
-    if (!yyempty)
+    if (!yyla.empty ())
       yy_destroy_ ("Cleanup: discarding lookahead", yyla);
 
     /* Do not reclaim the symbols of the rule whose action triggered
@@ -3506,7 +3539,7 @@ namespace  simit { namespace internal  {
                  << std::endl;
         // Do not try to display the values of the reclaimed symbols,
         // as their printer might throw an exception.
-        if (!yyempty)
+        if (!yyla.empty ())
           yy_destroy_ (YY_NULLPTR, yyla);
 
         while (1 < yystack_.size ())
@@ -3526,9 +3559,8 @@ namespace  simit { namespace internal  {
 
   // Generate an error message.
   std::string
-   Parser ::yysyntax_error_ (state_type yystate, symbol_number_type yytoken) const
+   Parser ::yysyntax_error_ (state_type yystate, const symbol_type& yyla) const
   {
-    std::string yyres;
     // Number of reported tokens (one for the "unexpected", one per
     // "expected").
     size_t yycount = 0;
@@ -3542,7 +3574,7 @@ namespace  simit { namespace internal  {
          the only way this function was invoked is if the default action
          is an error action.  In that case, don't check for expected
          tokens because there are none.
-       - The only way there can be no lookahead present (in yytoken) is
+       - The only way there can be no lookahead present (in yyla) is
          if this state is a consistent state with a default action.
          Thus, detecting the absence of a lookahead is sufficient to
          determine that there is no unexpected or expected token to
@@ -3562,8 +3594,9 @@ namespace  simit { namespace internal  {
          token that will not be accepted due to an error action in a
          later state.
     */
-    if (yytoken != yyempty_)
+    if (!yyla.empty ())
       {
+        int yytoken = yyla.type_get ();
         yyarg[yycount++] = yytname_[yytoken];
         int yyn = yypact_[yystate];
         if (!yy_pact_value_is_default_ (yyn))
@@ -3606,6 +3639,7 @@ namespace  simit { namespace internal  {
 #undef YYCASE_
       }
 
+    std::string yyres;
     // Argument number.
     size_t yyi = 0;
     for (char const* yyp = yyformat; *yyp; ++yyp)
@@ -4082,21 +4116,21 @@ namespace  simit { namespace internal  {
      394,   394,   394,   402,   433,   436,   442,   447,   455,   462,
      469,   472,   478,   483,   491,   497,   500,   507,   508,   511,
      512,   513,   514,   515,   516,   517,   518,   519,   520,   521,
-     526,   536,   558,   567,   694,   735,   786,   866,   869,   876,
-     880,   887,   890,   896,   901,   921,   943,   965,   987,   996,
-    1003,  1008,  1014,  1032,  1032,  1032,  1038,  1041,  1041,  1041,
-    1044,  1044,  1044,  1061,  1069,  1079,  1090,  1095,  1123,  1126,
-    1131,  1139,  1140,  1141,  1142,  1143,  1144,  1145,  1151,  1171,
-    1180,  1188,  1207,  1275,  1295,  1323,  1328,  1337,  1338,  1339,
-    1340,  1346,  1350,  1356,  1362,  1368,  1374,  1380,  1386,  1392,
-    1398,  1403,  1409,  1416,  1450,  1451,  1452,  1459,  1544,  1565,
-    1568,  1577,  1583,  1587,  1591,  1601,  1602,  1603,  1604,  1608,
-    1620,  1624,  1634,  1643,  1655,  1667,  1671,  1674,  1716,  1726,
-    1731,  1739,  1742,  1756,  1762,  1765,  1768,  1818,  1822,  1823,
-    1827,  1831,  1838,  1849,  1856,  1860,  1864,  1878,  1882,  1897,
-    1901,  1908,  1915,  1919,  1923,  1937,  1941,  1956,  1960,  1967,
-    1970,  1973,  1979,  1982,  1988,  1991,  1997,  2000,  2007,  2026,
-    2050,  2051,  2059
+     526,   536,   558,   567,   695,   736,   787,   867,   870,   877,
+     881,   888,   891,   897,   902,   922,   944,   966,   988,   997,
+    1004,  1009,  1015,  1033,  1033,  1033,  1039,  1042,  1042,  1042,
+    1045,  1045,  1045,  1062,  1070,  1080,  1091,  1096,  1124,  1127,
+    1132,  1140,  1141,  1142,  1143,  1144,  1145,  1146,  1152,  1172,
+    1181,  1189,  1208,  1278,  1298,  1326,  1331,  1340,  1341,  1342,
+    1343,  1349,  1353,  1359,  1365,  1371,  1377,  1383,  1389,  1395,
+    1401,  1406,  1412,  1419,  1453,  1454,  1455,  1462,  1547,  1568,
+    1571,  1580,  1586,  1590,  1594,  1604,  1605,  1606,  1607,  1611,
+    1623,  1627,  1637,  1646,  1658,  1670,  1674,  1677,  1719,  1729,
+    1734,  1742,  1745,  1759,  1765,  1768,  1771,  1821,  1825,  1826,
+    1830,  1834,  1841,  1852,  1859,  1863,  1867,  1881,  1885,  1900,
+    1904,  1911,  1918,  1922,  1926,  1940,  1944,  1959,  1963,  1970,
+    1973,  1976,  1982,  1985,  1991,  1994,  2000,  2003,  2010,  2029,
+    2053,  2054,  2062
   };
 
   // Print the state stack on the debug stream.

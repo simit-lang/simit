@@ -151,7 +151,7 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
 
     // The type of a set field is:
     // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))`
-    std::vector<IndexDomain> dimensions;
+    vector<IndexDomain> dimensions;
     if (elemFieldType->order() == 0) {
       dimensions.push_back(IndexDomain(IndexSet(elementOrSet)));
     }
@@ -160,8 +160,9 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
       dimensions = vector<IndexDomain>(order);
       dimensions[0] = IndexDomain(IndexSet(elementOrSet));
 
+      vector<IndexDomain> elemFieldDimensions = elemFieldType->getDimensions();
       for (size_t i=0; i < order; ++i) {
-        dimensions[i] = dimensions[i] * elemFieldType->dimensions[i];
+        dimensions[i] = dimensions[i] * elemFieldDimensions[i];
       }
     }
     fieldType = TensorType::make(elemFieldType->componentType, dimensions);
@@ -195,10 +196,8 @@ bool operator!=(const CompoundOperator &l, const CompoundOperator &r) {
 // struct Literal
 void Literal::cast(Type type) {
   iassert(type.isTensor());
-  const TensorType *newType = type.toTensor();
-  const TensorType *oldType = this->type.toTensor();
-  iassert(newType->componentType == oldType->componentType);
-  iassert(newType->size() == oldType->size());
+  iassert(type.toTensor()->componentType == this->type.toTensor()->componentType);
+  iassert(type.toTensor()->size() == this->type.toTensor()->size());
 
   this->type = type;
 }

@@ -6,9 +6,9 @@
 
 #include "function.h"
 #include "uncopyable.h"
-#include "backend/backend_function.h"
 
 namespace simit {
+
 namespace ir {
 class Func;
 }
@@ -25,6 +25,11 @@ public:
   Backend() {}
   virtual ~Backend() {}
 
+  /// Compiles a statement with an environment to a runable function with
+  /// no parameters.
+  simit::Function compile(const ir::Stmt &stmt, const ir::Environment &env);
+
+  /// Compiles an IR function to a runable function with the same parameters.
   virtual simit::Function compile(const ir::Func &func) = 0;
 };
 

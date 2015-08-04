@@ -98,11 +98,15 @@ struct ScalarType {
 //       permitted.
 struct TensorType : TypeNode {
   ScalarType componentType;
-  std::vector<IndexDomain> dimensions;
+  std::vector<IndexDomain> dims;
 
   /// Marks whether the tensor type is a column vector.  This information is
   /// not used by the Simit compiler, but is here to ease frontend development.
   bool isColumnVector;
+
+  size_t order() const;
+
+  std::vector<IndexDomain> getDimensions() const;
 
   /// Returns the dimensions of a tensor where each block is a component.  These
   /// dimensions are not nested.  Note also that it is allowed for a tensor to
@@ -112,7 +116,6 @@ struct TensorType : TypeNode {
   /// Returns the type of the blocks in this tensor.
   Type blockType() const;
 
-  size_t order() const { return dimensions.size(); }
   size_t size() const;
 
   bool isSparse() const;
@@ -128,7 +131,7 @@ struct TensorType : TypeNode {
                    bool isColumnVector = false) {
     TensorType *type = new TensorType;
     type->componentType = componentType;
-    type->dimensions = dimensions;
+    type->dims = dimensions;
     type->isColumnVector = isColumnVector;
     return type;
   }
@@ -223,7 +226,7 @@ inline bool isBoolean(Type type) {
 /// An element tensor type is one whose dimensions are not sets
 inline bool isElementTensorType(const TensorType *type) {
   bool isElementType = true;
-  for (auto &dim : type->dimensions) {
+  for (auto &dim : type->getDimensions()) {
     for (auto &is : dim.getIndexSets()) {
       if (is.getKind() == IndexSet::Set) {
         isElementType = false;

@@ -15,7 +15,7 @@ namespace pe {
 
 // class PathExpressionImpl
 bool PathExpressionImpl::isBound() const {
-#ifndef WITHOUT_INTERNAL_ASSERTS
+#ifdef SIMIT_ASSERTS
   /// Check invariant: either all or none are bound
   class CheckThatAllOrNoneAreBound : public PathExpressionVisitor {
   public:

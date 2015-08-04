@@ -41,5 +41,5 @@ void ErrorReport::explode() {
   throw;
   exit(1);
 }
-} // namespace internal
-} // namespace simit
+
+}}

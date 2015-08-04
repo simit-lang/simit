@@ -343,9 +343,10 @@ void LLVMBackend::visit(const Call *op) {
   else if (op->func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);
     auto type = op->actuals[0].type().toTensor();
-    
+    vector<IndexDomain> dimensions = type->getDimensions();
+
     // special case for vec3f
-    if (type->dimensions[0].getSize() == 3) {
+    if (dimensions[0].getSize() == 3) {
       llvm::Value *x = args[0];
 
       llvm::Value *x0 = loadFromArray(x, llvmInt(0));
@@ -364,7 +365,7 @@ void LLVMBackend::visit(const Call *op) {
                                           {getLLVMFloatType()});
       val = builder->CreateCall(sqrt, sum);
     } else {
-      args.push_back(emitComputeLen(type->dimensions[0]));
+      args.push_back(emitComputeLen(dimensions[0]));
       std::string funcName = ir::ScalarType::singleFloat() ?
           "norm_f32" : "norm_f64";
       val = emitCall(funcName, args, getLLVMFloatType());
@@ -380,8 +381,9 @@ void LLVMBackend::visit(const Call *op) {
          LLVM_INT, LLVM_INT};
 
     auto type = op->actuals[0].type().toTensor();
-    args.push_back(emitComputeLen(type->dimensions[0]));
-    args.push_back(emitComputeLen(type->dimensions[1]));
+    vector<IndexDomain> dimensions = type->getDimensions();
+    args.push_back(emitComputeLen(dimensions[0]));
+    args.push_back(emitComputeLen(dimensions[1]));
 
     auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes2, false);
     std::string funcName = ir::ScalarType::singleFloat() ?
@@ -397,9 +399,12 @@ void LLVMBackend::visit(const Call *op) {
     // we need to add the vector length to the args
     auto type1 = op->actuals[0].type().toTensor();
     auto type2 = op->actuals[1].type().toTensor();
-    uassert(type1->dimensions[0] == type2->dimensions[0]) <<
-      "dimension mismatch in dot product";
-    args.push_back(emitComputeLen(type1->dimensions[0]));
+    vector<IndexDomain> type1Dimensions = type1->getDimensions();
+    vector<IndexDomain> type2Dimensions = type2->getDimensions();
+
+    uassert(type1Dimensions[0] == type2Dimensions[0]) <<
+        "dimension mismatch in dot product";
+    args.push_back(emitComputeLen(type1Dimensions[0]));
     std::string funcName = ir::ScalarType::singleFloat() ?
         "dot_f32" : "dot_f64";
     val = emitCall(funcName, args, getLLVMFloatType());
@@ -675,6 +680,7 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       // we need to add additional arguments: the row_start and col_idx pointers,
       // as well as the number of rows, columns, nonzeros, and blocksize.
       auto type = op->actuals[0].type().toTensor();
+      vector<IndexDomain> dimensions = type->getDimensions();
       
       // FIXME: shouldn't assume this is a var expression...
       tassert(isa<VarExpr>(op->actuals[0]));
@@ -705,13 +711,14 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       
       // Determine block sizes
       Type blockType = type->blockType();
+      vector<IndexDomain> blockDimensions =
+          blockType.toTensor()->getDimensions();
       if (!isScalar(blockType)) {
         // TODO: The following assumes all blocks are dense row major. The right
         //       way to assign a storage order for every block in the tensor
         //       represented by a TensorStorage.  Also assumes 2D blocks.
-        auto dims = blockType.toTensor()->dimensions;
-        blockSize_r = emitComputeLen(dims[0]);
-        blockSize_c = emitComputeLen(dims[1]);
+        blockSize_r = emitComputeLen(blockDimensions[0]);
+        blockSize_c = emitComputeLen(blockDimensions[1]);
       }
       else {
         blockSize_r = llvmInt(1);
@@ -719,8 +726,8 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       }
       args.push_back(row_start);
       args.push_back(col_idx);
-      args.push_back(emitComputeLen(type->dimensions[0]));
-      args.push_back(emitComputeLen(type->dimensions[1]));
+      args.push_back(emitComputeLen(dimensions[0]));
+      args.push_back(emitComputeLen(dimensions[1]));
       args.push_back(len);
       args.push_back(blockSize_r);
       args.push_back(blockSize_c);
@@ -1031,6 +1038,8 @@ void LLVMBackend::visit(const Print *op) {
   case Type::Kind::Tensor: {
 
     const TensorType *tensor = type.toTensor();
+    vector<IndexDomain> dimensions = tensor->getDimensions();
+
     ScalarType scalarType = tensor->componentType;
     size_t order = tensor->order();
     std::string format;
@@ -1038,11 +1047,11 @@ void LLVMBackend::visit(const Print *op) {
     std::string specifier = (scalarType.kind == ScalarType::Float? "%f" : "%d");
 
     if (order == 0) {
-      iassert(tensor->dimensions.size() == 0);
+      iassert(dimensions.size() == 0);
       format = specifier + "\n";
       args.push_back(result);
     } else  {
-      for (const IndexDomain &id : tensor->dimensions) {
+      for (const IndexDomain &id : dimensions) {
         for (const IndexSet &is : id.getIndexSets()) {
           if (is.getKind() == IndexSet::Kind::Set) {
 
@@ -1081,7 +1090,7 @@ void LLVMBackend::visit(const Print *op) {
       }
 
       if (order == 1) {
-        iassert(tensor->dimensions.size() == 1);
+        iassert(dimensions.size() == 1);
         std::string delim = (tensor->isColumnVector ? "\n" : " ");
         size_t size = tensor->size();
         for (size_t i = 0; i < size; i++) {
@@ -1092,29 +1101,29 @@ void LLVMBackend::visit(const Print *op) {
         }
         format.back() = '\n';
       } else {
-        iassert(tensor->dimensions.size() >= 2);
+        iassert(dimensions.size() >= 2);
         size_t size = tensor->size();
-        if (size % tensor->dimensions.back().getSize()) {
+        if (size % dimensions.back().getSize()) {
           not_supported_yet << "\nNot a rectangular tensor (total entries not a"
                             << "multiple of entries per row)";
         }
 
-        for (int i = 0; i < tensor->dimensions.back().getSize(); i++) {
+        for (int i = 0; i < dimensions.back().getSize(); i++) {
           format += specifier + " ";
         }
         format.back() = '\n';
 
-        size_t numlines = size / tensor->dimensions.back().getSize();
+        size_t numlines = size / dimensions.back().getSize();
         std::vector<std::string> formatLines(numlines, format);
 
         size_t stride = 1;
-        for (size_t i = tensor->dimensions.size() - 2; i > 0; i--) {
-          stride *= tensor->dimensions[i].getSize();
+        for (size_t i = dimensions.size() - 2; i > 0; i--) {
+          stride *= dimensions[i].getSize();
           for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
             formatLines[j].push_back('\n');
           }
         }
-        stride *= tensor->dimensions[0].getSize();
+        stride *= dimensions[0].getSize();
         for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
           formatLines[j].push_back('\n');
         }
@@ -1229,12 +1238,14 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
     return llvmInt(1);
   }
 
+  vector<IndexDomain> dimensions = tensorType->getDimensions();
+
   llvm::Value *len = nullptr;
   switch (tensorStorage.getKind()) {
     case TensorStorage::DenseRowMajor: {
-      auto it = tensorType->dimensions.begin();
+      auto it = dimensions.begin();
       len = emitComputeLen(*it++);
-      for (; it != tensorType->dimensions.end(); ++it) {
+      for (; it != dimensions.end(); ++it) {
         len = builder->CreateMul(len, emitComputeLen(*it));
       }
       break;
@@ -1269,7 +1280,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
       break;
     }
     case TensorStorage::SystemDiagonal: {
-      iassert(tensorType->dimensions.size() > 0);
+      iassert(dimensions.size() > 0);
 
       // Just need one outer dimensions because diagonal
       len = emitComputeLen(tensorType->outerDimensions()[0]);

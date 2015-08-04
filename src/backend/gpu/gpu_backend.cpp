@@ -322,10 +322,11 @@ void GPUBackend::visit(const ir::Call *op) {
   else if (op->func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);
     auto type = op->actuals[0].type().toTensor();
+    std::vector<ir::IndexDomain> dimensions = type->getDimensions();
 
     // Dense operation
     if (!type->hasSystemDimensions()) {
-      args.push_back(emitComputeLen(type->dimensions[0]));
+      args.push_back(emitComputeLen(dimensions[0]));
       std::string funcName = ir::ScalarType::singleFloat() ?
           "norm_f32" : "norm_f64";
       val = emitCall(funcName, args, getLLVMFloatType());
@@ -334,7 +335,7 @@ void GPUBackend::visit(const ir::Call *op) {
       // Fire off kernel for sparse computation
       llvm::Value *result = builder->CreateAlloca(
           getLLVMFloatType(), llvmInt(1));
-      llvm::Value *size = emitComputeLen(type->dimensions[0]);
+      llvm::Value *size = emitComputeLen(dimensions[0]);
       ir::Type resultType = ir::TensorType::make(type->componentType);
       emitShardedDot(op->actuals[0].type(), op->actuals[0].type(),
                      resultType, args[0], args[0], size, result);
@@ -354,14 +355,17 @@ void GPUBackend::visit(const ir::Call *op) {
     // we need to add the vector length to the args
     auto type1 = op->actuals[0].type().toTensor();
     auto type2 = op->actuals[1].type().toTensor();
-    uassert(type1->dimensions[0] == type2->dimensions[0]) <<
+    auto type1Dimensions = type1->getDimensions();
+    auto type2Dimensions = type2->getDimensions();
+
+    uassert(type1Dimensions[0] == type2Dimensions[0]) <<
       "dimension mismatch in dot product";
 
     // Dense operation
     if (!type1->hasSystemDimensions() && !type2->hasSystemDimensions()) {
       std::string funcName = ir::ScalarType::singleFloat() ?
           "dot_f32" : "dot_f64";
-      args.push_back(emitComputeLen(type1->dimensions[0]));
+      args.push_back(emitComputeLen(type1Dimensions[0]));
       val = emitCall(funcName, args, getLLVMFloatType());
       return;
     }
@@ -370,7 +374,7 @@ void GPUBackend::visit(const ir::Call *op) {
     iassert(type1->hasSystemDimensions() && type2->hasSystemDimensions());
 
     llvm::Value *result = builder->CreateAlloca(getLLVMFloatType(), llvmInt(1));
-    llvm::Value *size = emitComputeLen(type1->dimensions[0]);
+    llvm::Value *size = emitComputeLen(type1Dimensions[0]);
     ir::Type resultType = ir::TensorType::make(type1->componentType);
     emitShardedDot(op->actuals[0].type(), op->actuals[1].type(),
                    resultType, args[0], args[1],

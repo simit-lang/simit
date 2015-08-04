@@ -107,7 +107,7 @@
     iassert(ttype->order() == 1);
 
     Type transposedVector = TensorType::make(ttype->componentType,
-                                             ttype->dimensions,
+                                             ttype->getDimensions(),
                                              !ttype->isColumnVector);
 
     const_cast<ExprNodeBase*>(to<ExprNodeBase>(vec))->type = transposedVector;
@@ -596,28 +596,29 @@ assign_stmt
             numSlices++;
         }
         if (numSlices > 0) {
-         // We will construct an index expression.
-         // first, we build IndexVars
-         std::vector<IndexVar> allivars;
-         std::vector<IndexVar> freeVars;
-         int i=0;
-         for (auto &arg: arguments) {
-          if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
-            auto iv = IndexVar("tmpfree" + std::to_string(i),
-                readExpr.type().toTensor()->dimensions[i]);
-            allivars.push_back(iv);
-            freeVars.push_back(iv);
+          // We will construct an index expression.
+          // first, we build IndexVars
+          vector<IndexVar> allivars;
+          vector<IndexVar> freeVars;
+          vector<IndexDomain> dimensions =
+              readExpr.type().toTensor()->getDimensions();
+          int i=0;
+          for (auto &arg: arguments) {
+            if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
+              auto iv = IndexVar("tmpfree" + std::to_string(i), dimensions[i]);
+              allivars.push_back(iv);
+              freeVars.push_back(iv);
+            }
+            else {
+              allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
+                                          dimensions[i],
+                                          new Expr(arg)));
+            }
+            i++;
           }
-          else {
-            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
-                readExpr.type().toTensor()->dimensions[i],
-              new Expr(arg)));
-          }
-          i++;
-         }
-            // now construct an index expression
-         value = IndexExpr::make(freeVars,
-            IndexedTensor::make(readExpr, allivars));
+          // now construct an index expression
+          value = IndexExpr::make(freeVars,
+          IndexedTensor::make(readExpr, allivars));
         }
         else {
         
@@ -1216,6 +1217,8 @@ linear_algebra_expr
 
     const TensorType *ltype = l.type().toTensor();
     const TensorType *rtype = r.type().toTensor();
+    vector<IndexDomain> ldimensions = ltype->getDimensions();
+    vector<IndexDomain> rdimensions = rtype->getDimensions();
 
     // Scale
     if (ltype->order()==0 || rtype->order()==0) {
@@ -1247,7 +1250,7 @@ linear_algebra_expr
     // Matrix-Vector
     else if (ltype->order() == 2 && rtype->order() == 1) {
       // TODO: Figure out how column vectors should be handled here
-      if (ltype->dimensions[1] != rtype->dimensions[0]){
+      if (ldimensions[1] != rdimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
       $$ = new Expr(builder->gemv(l, r));
@@ -1255,14 +1258,14 @@ linear_algebra_expr
     // Vector-Matrix
     else if (ltype->order() == 1 && rtype->order() == 2) {
       // TODO: Figure out how column vectors should be handled here
-      if (ltype->dimensions[0] != rtype->dimensions[0]) {
+      if (ldimensions[0] != rdimensions[0]) {
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
       $$ = new Expr(builder->gevm(l,r));
     }
     // Matrix-Matrix
     else if (ltype->order() == 2 && rtype->order() == 2) {
-      if (ltype->dimensions[1] != rtype->dimensions[0]){
+      if (ldimensions[1] != rdimensions[0]){
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
       }
       $$ = new Expr(builder->gemm(l,r));
@@ -1478,34 +1481,34 @@ call_or_paren_read_expr
             numSlices++;
         }
         if (numSlices > 0) {
-         // We will construct an index expression.
-         // first, we build IndexVars
-         std::vector<IndexVar> allivars;
-         std::vector<IndexVar> freeVars;
-         int i=0;
-         for (auto &arg: *arguments) {
-          if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
-            auto iv = IndexVar("tmpfree" + std::to_string(i),
-                readExpr.type().toTensor()->dimensions[i]);
-            allivars.push_back(iv);
-            freeVars.push_back(iv);
+          // We will construct an index expression.
+          // first, we build IndexVars
+          vector<IndexVar> allivars;
+          vector<IndexVar> freeVars;
+          vector<IndexDomain> dimensions =
+              readExpr.type().toTensor()->getDimensions();
+
+          int i=0;
+          for (auto &arg: *arguments) {
+            if (isa<VarExpr>(arg) && to<VarExpr>(arg)->var.getName() == ":") {
+              auto iv = IndexVar("tmpfree" + std::to_string(i),
+                                 dimensions[i]);
+              allivars.push_back(iv);
+              freeVars.push_back(iv);
+            }
+            else {
+              allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
+                                          dimensions[i], new Expr(arg)));
+            }
+            i++;
           }
-          else {
-            allivars.push_back(IndexVar("tmpfixed" + std::to_string(i),
-                readExpr.type().toTensor()->dimensions[i],
-              new Expr(arg)));
-          }
-          i++;
-         }
-            // now construct an index expression
-         $$ = new Expr(IndexExpr::make(freeVars,
-            IndexedTensor::make(readExpr, allivars)));
+          // now construct an index expression
+          $$ = new Expr(IndexExpr::make(freeVars,
+          IndexedTensor::make(readExpr, allivars)));
         }
         else {
-        
           $$ = new Expr(TensorRead::make(readExpr, *arguments));
         }
-        
       }
       else if (readExpr.type().isTuple()) {
         if (arguments->size() != 1) {
@@ -1678,7 +1681,7 @@ tensor_type
     auto componentType = blockType->componentType;
 
     auto outerDimensions = unique_ptr<vector<IndexSet>>($index_sets);
-    auto blockDimensions = blockType->dimensions;
+    auto blockDimensions = blockType->getDimensions();
 
     vector<IndexDomain> dimensions;
     if (blockType->order() == 0) {
@@ -1716,7 +1719,7 @@ tensor_type
   | tensor_type "'" {
     auto type = convertAndDelete($1);
     const TensorType *tensorType = type.toTensor();
-    auto dimensions = tensorType->dimensions;
+    auto dimensions = tensorType->getDimensions();
     auto componentType = tensorType->componentType;
     $$ = new Type(TensorType::make(componentType, dimensions, true));
   }

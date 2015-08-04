@@ -34,10 +34,11 @@ std::string IndexVarFactory::makeName() {
 
 // class IRBuilder
 Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
-  std::vector<IndexVar> indexVars;
+  vector<IndexVar> indexVars;
   const TensorType *tensorType = e.type().toTensor();
+  vector<IndexDomain> dimensions = tensorType->getDimensions();
   for (unsigned int i=0; i < tensorType->order(); ++i) {
-    IndexDomain domain = tensorType->dimensions[i];
+    IndexDomain domain = dimensions[i];
     indexVars.push_back(factory.createIndexVar(domain));
   }
 
@@ -65,8 +66,9 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
 
   std::vector<IndexVar> indexVars;
   const TensorType *tensorType = tensor.type().toTensor();
+  vector<IndexDomain> dimensions = tensorType->getDimensions();
   for (unsigned int i=0; i < tensorType->order(); ++i) {
-    IndexDomain domain = tensorType->dimensions[i];
+    IndexDomain domain = dimensions[i];
     indexVars.push_back(factory.createIndexVar(domain));
   }
 
@@ -117,9 +119,9 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
 
 Expr IRBuilder::innerProduct(Expr l, Expr r) {
   iassert(l.type() == r.type());
-  const TensorType *ltype = l.type().toTensor();
-
-  auto i = factory.createIndexVar(ltype->dimensions[0], ReductionOperator::Sum);
+  const TensorType *type = l.type().toTensor();
+  vector<IndexDomain> dimensions = type->getDimensions();
+  auto i = factory.createIndexVar(dimensions[0], ReductionOperator::Sum);
 
   Expr a = IndexedTensor::make(l, {i});
   Expr b = IndexedTensor::make(r, {i});
@@ -131,10 +133,11 @@ Expr IRBuilder::innerProduct(Expr l, Expr r) {
 
 Expr IRBuilder::outerProduct(Expr l, Expr r) {
   iassert(l.type() == r.type());
-  const TensorType *ltype = l.type().toTensor();
+  const TensorType *type = l.type().toTensor();
+  vector<IndexDomain> dimensions = type->getDimensions();
 
-  auto i = factory.createIndexVar(ltype->dimensions[0]);
-  auto j = factory.createIndexVar(ltype->dimensions[0]);
+  auto i = factory.createIndexVar(dimensions[0]);
+  auto j = factory.createIndexVar(dimensions[0]);
 
   Expr a = IndexedTensor::make(l, {i});
   Expr b = IndexedTensor::make(r, {j});
@@ -146,13 +149,15 @@ Expr IRBuilder::outerProduct(Expr l, Expr r) {
 Expr IRBuilder::gemv(Expr l, Expr r) {
   const TensorType *ltype = l.type().toTensor();
   const TensorType *rtype = r.type().toTensor();
+  vector<IndexDomain> ldimensions = ltype->getDimensions();
+  vector<IndexDomain> rdimensions = rtype->getDimensions();
 
   iassert(ltype->order() == 2 && rtype->order() == 1);
-  iassert(ltype->dimensions[1] == rtype->dimensions[0]);
+  iassert(ldimensions[1] == rdimensions[0]);
 //  iassert(rtype->isColumnVector);
 
-  auto i = factory.createIndexVar(ltype->dimensions[0]);
-  auto j = factory.createIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
+  auto i = factory.createIndexVar(ldimensions[0]);
+  auto j = factory.createIndexVar(ldimensions[1], ReductionOperator::Sum);
 
   Expr a = IndexedTensor::make(l, {i, j});
   Expr b = IndexedTensor::make(r, {j});
@@ -169,12 +174,14 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
 Expr IRBuilder::gevm(Expr l, Expr r) {
   const TensorType *ltype = l.type().toTensor();
   const TensorType *rtype = r.type().toTensor();
+  vector<IndexDomain> ldimensions = ltype->getDimensions();
+  vector<IndexDomain> rdimensions = rtype->getDimensions();
 
   iassert(ltype->order() == 1 && rtype->order() == 2);
-  iassert(ltype->dimensions[0] == rtype->dimensions[0]);
+  iassert(ldimensions[0] == rdimensions[0]);
 
-  auto i = factory.createIndexVar(rtype->dimensions[1]);
-  auto j = factory.createIndexVar(rtype->dimensions[0], ReductionOperator::Sum);
+  auto i = factory.createIndexVar(rdimensions[1]);
+  auto j = factory.createIndexVar(rdimensions[0], ReductionOperator::Sum);
 
   Expr a = IndexedTensor::make(l, {j});
   Expr b = IndexedTensor::make(r, {j,i});
@@ -186,13 +193,15 @@ Expr IRBuilder::gevm(Expr l, Expr r) {
 Expr IRBuilder::gemm(Expr l, Expr r) {
   const TensorType *ltype = l.type().toTensor();
   const TensorType *rtype = r.type().toTensor();
+  vector<IndexDomain> ldimensions = ltype->getDimensions();
+  vector<IndexDomain> rdimensions = rtype->getDimensions();
 
   iassert(ltype->order() == 2 && rtype->order() == 2);
-  iassert(ltype->dimensions[1] == rtype->dimensions[0]);
+  iassert(ldimensions[1] == rdimensions[0]);
 
-  auto i = factory.createIndexVar(ltype->dimensions[0]);
-  auto j = factory.createIndexVar(rtype->dimensions[1]);
-  auto k = factory.createIndexVar(ltype->dimensions[1], ReductionOperator::Sum);
+  auto i = factory.createIndexVar(ldimensions[0]);
+  auto j = factory.createIndexVar(rdimensions[1]);
+  auto k = factory.createIndexVar(ldimensions[1], ReductionOperator::Sum);
 
   Expr a = IndexedTensor::make(l, {i,k});
   Expr b = IndexedTensor::make(r, {k,j});
@@ -205,11 +214,11 @@ Expr IRBuilder::transposedMatrix(Expr mat) {
   const TensorType *mattype = mat.type().toTensor();
 
   iassert(mattype->order() == 2);
-  const std::vector<IndexDomain> &dims = mattype->dimensions;
+  const std::vector<IndexDomain> &dimensions = mattype->getDimensions();
 
   std::vector<IndexVar> indexVars;
-  indexVars.push_back(factory.createIndexVar(dims[1]));
-  indexVars.push_back(factory.createIndexVar(dims[0]));
+  indexVars.push_back(factory.createIndexVar(dimensions[1]));
+  indexVars.push_back(factory.createIndexVar(dimensions[0]));
 
   std::vector<IndexVar> operandIndexVars(indexVars.rbegin(), indexVars.rend());
   Expr val = IndexedTensor::make(mat, operandIndexVars);

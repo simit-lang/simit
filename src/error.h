@@ -165,32 +165,37 @@ struct ErrorReport {
 };
 
 // internal asserts
-#ifndef WITHOUT_INTERNAL_ASSERTS
+#ifdef SIMIT_ASSERTS
   #define iassert(c)                                                           \
     simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,    \
                                simit::internal::ErrorReport::Internal, false)
   #define ierror                                                               \
     simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,\
                                simit::internal::ErrorReport::Internal, false)
-
-  #define tassert(c)                                                           \
-    simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,    \
-                               simit::internal::ErrorReport::Temporary, false)
-  #define terror                                                               \
-    simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,\
-                               simit::internal::ErrorReport::Temporary, false)
-
-  #define unreachable                                                          \
-    ierror << "reached unreachable location"
-  #define not_supported_yet                                                    \
-    ierror << "Not supported yet, but planned for the future"
 #else
-  #define iassert(c)
-  #define ierror
+  struct Dummy {
+    template<typename T>
+    Dummy &operator<<(T x) {
+      return *this;
+    }
+  };
 
-  #define unreachable
-  #define not_supported_yet
+  #define iassert(c) simit::internal::Dummy()
+  #define ierror simit::internal::Dummy()
 #endif
+
+#define tassert(c)                                                             \
+  simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, (c), #c,      \
+                               simit::internal::ErrorReport::Temporary, false)
+#define terror                                                                 \
+  simit::internal::ErrorReport(__FILE__, __FUNCTION__, __LINE__, false, NULL,  \
+                               simit::internal::ErrorReport::Temporary, false)
+
+#define unreachable                                                            \
+  ierror << "reached unreachable location"
+
+#define not_supported_yet                                                      \
+  ierror << "Not supported yet, but planned for the future"
 
 // internal assert helpers
 #define iassert_scalar(a)                                                      \
@@ -214,8 +219,6 @@ struct ErrorReport {
 #define uwarning                                                               \
   simit::internal::ErrorReport(__FILE__,__FUNCTION__,__LINE__, false, nullptr, \
                                simit::internal::ErrorReport::User, true)
-}
-
-}
+}}
 
 #endif

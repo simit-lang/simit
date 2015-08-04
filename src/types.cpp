@@ -6,6 +6,8 @@
 #include "macros.h"
 #include "util.h"
 
+using namespace std;
+
 namespace simit {
 namespace ir {
 
@@ -19,7 +21,18 @@ bool ScalarType::singleFloat() {
 }
 
 // struct TensorType
+// TODO: Define below functions in terms of block types instead of in terms of
+//       the dimensions
+size_t TensorType::order() const {
+  return getDimensions().size();
+}
+
+std::vector<IndexDomain> TensorType::getDimensions() const {
+  return dims;
+}
+
 std::vector<IndexSet> TensorType::outerDimensions() const {
+  vector<IndexDomain> dimensions = getDimensions();
   unsigned maxNest = 0;
   for (auto &dim : dimensions) {
     if (dim.getIndexSets().size() > maxNest) {
@@ -39,6 +52,7 @@ std::vector<IndexSet> TensorType::outerDimensions() const {
 
 
 Type TensorType::blockType() const {
+  vector<IndexDomain> dimensions = getDimensions();
   // TODO (grab blocktype computation in ir.h/ir.cpp)
   if (dimensions.size() == 0) {
     return TensorType::make(componentType);
@@ -81,6 +95,7 @@ Type TensorType::blockType() const {
 }
 
 size_t TensorType::size() const {
+  vector<IndexDomain> dimensions = getDimensions();
   size_t size = 1;
   for (auto &dimension : dimensions) {
     size *= dimension.getSize();
@@ -94,6 +109,7 @@ bool TensorType::isSparse() const {
     return false;
   }
 
+  vector<IndexDomain> dimensions = getDimensions();
   for (auto &indexDom : dimensions) {
     for (auto &indexSet : indexDom.getIndexSets()) {
       if (indexSet.getKind() != IndexSet::Range) {
@@ -105,6 +121,7 @@ bool TensorType::isSparse() const {
 }
 
 bool TensorType::hasSystemDimensions() const {
+  vector<IndexDomain> dimensions = getDimensions();
   for (auto &indexDom : dimensions) {
     for (auto &indexSet : indexDom.getIndexSets()) {
       if (indexSet.getKind() != IndexSet::Range) {
@@ -169,9 +186,12 @@ bool operator==(const TensorType &l, const TensorType &r) {
     return false;
   }
 
-  auto li = l.dimensions.begin();
-  auto ri = r.dimensions.begin();
-  for (; li != l.dimensions.end(); ++li, ++ri) {
+  vector<IndexDomain> ldimensions = l.getDimensions();
+  vector<IndexDomain> rdimensions = r.getDimensions();
+
+  auto li = ldimensions.begin();
+  auto ri = rdimensions.begin();
+  for (; li != ldimensions.end(); ++li, ++ri) {
     if (*li != *ri) {
       return false;
     }
@@ -249,7 +269,7 @@ std::ostream &operator<<(std::ostream &os, const TensorType &type) {
   }
   else {
     os << "tensor";
-    os << "[" << util::join(type.dimensions, "][") << "]";
+    os << "[" << util::join(type.getDimensions(), "][") << "]";
     os << "(" << type.componentType << ")";
   }
   return os;

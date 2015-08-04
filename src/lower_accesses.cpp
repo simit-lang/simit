@@ -45,7 +45,7 @@ static Expr createLoadExpr(Expr tensor, Expr index) {
     iassert(load->buffer.type().isTensor());
 
     Type blockType = load->buffer.type().toTensor()->blockType();
-    Expr len  = createLengthComputation(blockType.toTensor()->dimensions);
+    Expr len  = createLengthComputation(blockType.toTensor()->getDimensions());
 
     index = Add::make(Mul::make(load->index, len), index);
     return Load::make(load->buffer, index);
@@ -67,7 +67,7 @@ static Stmt createStoreStmt(Expr tensor, Expr index, Expr value,
     iassert(load->buffer.type().isTensor());
 
     Type blockType = load->buffer.type().toTensor()->blockType();
-    Expr len  = createLengthComputation(blockType.toTensor()->dimensions);
+    Expr len  = createLengthComputation(blockType.toTensor()->getDimensions());
 
     index = Add::make(Mul::make(load->index, len), index);
     return Store::make(load->buffer, index, value, cop);
@@ -95,10 +95,10 @@ private:
     return true;
   }
 
-  static int getDimSize(int i, const TensorType *type) {
-    tassert(canComputeSize(type->dimensions[i]))
+  static int getDimSize(int i, const vector<IndexDomain> &dimensions) {
+    tassert(canComputeSize(dimensions[i]))
         << "only currently support dense tensors with static size";
-    int dimsize = type->dimensions[i].getSize();
+    int dimsize = dimensions[i].getSize();
     return dimsize;
   }
 
@@ -119,15 +119,17 @@ private:
       case TensorStorage::DenseRowMajor: {
         iassert(indices.size() > 0);
         const TensorType *type = tensor.type().toTensor();
+        vector<IndexDomain> dimensions = type->getDimensions();
 
         // It simplifies the logic to generate the inner index first
         reverse(indices.begin(), indices.end());
 
         index = rewrite(indices[0]);
+
         for (size_t i=1; i < indices.size(); ++i) {
-          Expr stride = getDimSize(indices.size()-i, type);
+          Expr stride = getDimSize(indices.size()-i, dimensions);
           for (size_t j=i-1; j > 0; --j) {
-            stride = Mul::make(getDimSize(indices.size()-j,type), stride);
+            stride = Mul::make(getDimSize(indices.size()-j,dimensions), stride);
           }
           Expr idx = Mul::make(rewrite(indices[i]), stride);
           index = Add::make(idx, index);

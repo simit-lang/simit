@@ -16,6 +16,7 @@ namespace ir {
     Expr *fixedExpr;
     int kind;
 
+    ~IndexVarContent();
     mutable long ref = 0;
     friend inline void aquire(IndexVarContent *c) {++c->ref;}
     friend inline void release(IndexVarContent *c) {if (--c->ref==0) delete c;}
@@ -67,11 +68,12 @@ public:
     ptr->domain = domain;
   }
 
+
   std::string getName() const {return ptr->name;}
   const IndexDomain &getDomain() const {return ptr->domain;}
   Expr* getFixedExpr() const { return ptr->fixedExpr; }
 
-  size_t getNumBlockLevels() const {return ptr->domain.getNumBlockLevels();}
+  size_t getNumBlockLevels() const {return ptr->domain.getNumIndexSets();}
 
   bool isFreeVar() const { return  (ptr->kind == Free); }
   bool isReductionVar() const { return (ptr->kind == Reduction); }
