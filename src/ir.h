@@ -67,9 +67,22 @@ public:
 
   void accept(IRVisitor *v) const {ptr->accept(v);}
 
+  Expr operator()(const std::vector<IndexVar> &indexVars) const;
+
+  template <typename ...IndexVars>
+  Expr operator()(const IndexVars& ...indexVars) const {
+    return this->operator()({indexVars...});
+  }
+
   template <typename E> friend bool isa(Expr);
   template <typename E> friend const E* to(Expr);
 };
+
+Expr operator-(Expr);
+Expr operator+(Expr, Expr);
+Expr operator-(Expr, Expr);
+Expr operator*(Expr, Expr);
+Expr operator/(Expr, Expr);
 
 template <typename E>
 inline bool isa(Expr e) {
@@ -81,6 +94,7 @@ inline const E* to(Expr e) {
   iassert(isa<E>(e)) << "Wrong Expr type";
   return static_cast<const E*>(e.ptr);
 }
+
 
 class Stmt : public IRHandle {
 public:
@@ -434,15 +448,14 @@ struct IndexedTensor : public ExprNode<IndexedTensor> {
   std::vector<IndexVar> indexVars;
 
   static Expr make(Expr tensor, std::vector<IndexVar> indexVars) {
+#ifdef SIMIT_ASSERTS
     iassert(tensor.type().isTensor()) << "Only tensors can be indexed.";
     iassert(indexVars.size() == tensor.type().toTensor()->order());
-
-#ifdef SIMIT_ASSERTS
     std::vector<IndexDomain> dimensions =
         tensor.type().toTensor()->getDimensions();
     for (size_t i=0; i < indexVars.size(); ++i) {
       iassert(indexVars[i].getDomain() == dimensions[i])
-             << "IndexVar domain does not match tensordimension "
+             << "IndexVar domain does not match tensor dimension "
              << "for var " << indexVars[i]
              << indexVars[i].getDomain() << " != " << dimensions[i];
     }

@@ -31,6 +31,31 @@ Expr::Expr(int val) : IRHandle(Literal::make(val)) {
 Expr::Expr(double val) : IRHandle(Literal::make(val)) {
 }
 
+Expr Expr::operator()(const std::vector<IndexVar> &indexVars) const {
+  return IndexedTensor::make(*this, indexVars);
+}
+
+Expr operator-(Expr a) {
+  return Neg::make(a);
+}
+
+Expr operator+(Expr a, Expr b) {
+  return Add::make(a, b);
+}
+
+Expr operator-(Expr a, Expr b) {
+  return Sub::make(a, b);
+}
+
+Expr operator*(Expr a, Expr b) {
+  return Mul::make(a, b);
+}
+
+Expr operator/(Expr a, Expr b) {
+  return Div::make(a, b);
+}
+
+
 // class Intrinsics
 Func Intrinsics::mod = Func("mod",
                             {Var("x", Int), Var("y", Int)},

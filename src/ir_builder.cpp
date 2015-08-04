@@ -75,7 +75,6 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
   Expr a, b;
   if (ltype->order() == 0 || rtype->order() == 0) {
     std::vector<IndexVar> scalarIndexVars;
-
     std::vector<IndexVar> *lIndexVars;
     std::vector<IndexVar> *rIndexVars;
     if (ltype->order() == 0) {
