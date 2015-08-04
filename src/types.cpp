@@ -51,7 +51,7 @@ std::vector<IndexSet> TensorType::outerDimensions() const {
 }
 
 
-Type TensorType::blockType() const {
+Type TensorType::getBlockType() const {
   vector<IndexDomain> dimensions = getDimensions();
   // TODO (grab blocktype computation in ir.h/ir.cpp)
   if (dimensions.size() == 0) {
@@ -269,8 +269,8 @@ std::ostream &operator<<(std::ostream &os, const TensorType &type) {
   }
   else {
     os << "tensor";
-    os << "[" << util::join(type.getDimensions(), "][") << "]";
-    os << "(" << type.componentType << ")";
+    os << "[" << util::join(type.getDimensions(), ",") << "]";
+    os << "(" << type.getBlockType() << ")";
   }
   return os;
 }

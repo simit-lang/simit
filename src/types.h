@@ -114,7 +114,7 @@ struct TensorType : TypeNode {
   std::vector<IndexSet> outerDimensions() const;
 
   /// Returns the type of the blocks in this tensor.
-  Type blockType() const;
+  Type getBlockType() const;
 
   size_t size() const;
 

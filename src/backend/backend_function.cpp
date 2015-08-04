@@ -197,7 +197,7 @@ size_t Function::size(const ir::TensorType &type,
       size_t len = neighborIndex->getSize();
 
       // compute block size
-      ir::Type blockType = type.blockType();
+      ir::Type blockType = type.getBlockType();
       if (!ir::isScalar(blockType)) {
         // TODO: The following assumes all blocks are dense row major. The right
         //       way to assign a storage order for every block in the tensor
@@ -231,7 +231,7 @@ size_t Function::size(const ir::TensorType &type,
         default: unreachable;
       }
       // Block size
-      ir::Type blockType = type.blockType();
+      ir::Type blockType = type.getBlockType();
       if (!ir::isScalar(blockType)) {
         // TODO: The following assumes all blocks are dense row major. The right
         //       way to assign a storage order for every block in the tensor

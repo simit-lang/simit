@@ -16,7 +16,7 @@ IndexVar IndexVarFactory::createIndexVar(const IndexDomain &domain) {
 }
 
 IndexVar IndexVarFactory::createIndexVar(const IndexDomain &domain,
-                                       ReductionOperator rop) {
+                                         ReductionOperator rop) {
   return IndexVar(makeName(), domain, rop);
 }
 

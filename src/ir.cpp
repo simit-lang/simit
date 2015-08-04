@@ -172,7 +172,7 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
 
 Type getBlockType(Expr tensor) {
   iassert(tensor.type().isTensor());
-  return tensor.type().toTensor()->blockType();
+  return tensor.type().toTensor()->getBlockType();
 }
 
 Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {

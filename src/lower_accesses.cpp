@@ -44,7 +44,7 @@ static Expr createLoadExpr(Expr tensor, Expr index) {
     const Load *load = to<Load>(tensor);
     iassert(load->buffer.type().isTensor());
 
-    Type blockType = load->buffer.type().toTensor()->blockType();
+    Type blockType = load->buffer.type().toTensor()->getBlockType();
     Expr len  = createLengthComputation(blockType.toTensor()->getDimensions());
 
     index = Add::make(Mul::make(load->index, len), index);
@@ -66,7 +66,7 @@ static Stmt createStoreStmt(Expr tensor, Expr index, Expr value,
     const Load *load = to<Load>(tensor);
     iassert(load->buffer.type().isTensor());
 
-    Type blockType = load->buffer.type().toTensor()->blockType();
+    Type blockType = load->buffer.type().toTensor()->getBlockType();
     Expr len  = createLengthComputation(blockType.toTensor()->getDimensions());
 
     index = Add::make(Mul::make(load->index, len), index);

@@ -186,7 +186,7 @@ bool isBlocked(Stmt stmt) {
 
     void updateBlocked(Expr expr) {
       Type type = expr.type();
-      if (type.isTensor() && !isScalar(type.toTensor()->blockType())) {
+      if (type.isTensor() && !isScalar(type.toTensor()->getBlockType())) {
         isBlocked = true;
       }
     }

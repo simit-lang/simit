@@ -710,7 +710,7 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       llvm::Value *blockSize_c;
       
       // Determine block sizes
-      Type blockType = type->blockType();
+      Type blockType = type->getBlockType();
       vector<IndexDomain> blockDimensions =
           blockType.toTensor()->getDimensions();
       if (!isScalar(blockType)) {
@@ -1268,7 +1268,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
                                        "neighbors"+LEN_SUFFIX);
 
       // Multiply by block size
-      Type blockType = tensorType->blockType();
+      Type blockType = tensorType->getBlockType();
       if (!isScalar(blockType)) {
         // TODO: The following assumes all blocks are dense row major. The right
         //       way to assign a storage order for every block in the tensor
@@ -1285,7 +1285,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
       // Just need one outer dimensions because diagonal
       len = emitComputeLen(tensorType->outerDimensions()[0]);
 
-      Type blockType = tensorType->blockType();
+      Type blockType = tensorType->getBlockType();
       llvm::Value *blockLen = emitComputeLen(blockType.toTensor(),
                                              TensorStorage::DenseRowMajor);
       len = builder->CreateMul(len, blockLen);
