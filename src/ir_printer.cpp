@@ -123,10 +123,12 @@ void IRPrinter::print(const IRNode &node) {
 }
 
 static inline string bool_to_string(bool value) {
-  if (value)
+  if (value) {
     return "true";
-  else
+  }
+  else {
     return "false";
+  }
 }
 
 void IRPrinter::visit(const Literal *op) {
@@ -471,7 +473,7 @@ void IRPrinter::visit(const GPUKernel *op) {
 
 void IRPrinter::visit(const While *op) {
   indent();
-  os << "while";
+  os << "while ";
   print(op->condition);
   os << endl;
   ++indentation;

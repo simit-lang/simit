@@ -6,7 +6,8 @@
 namespace simit {
 namespace ir {
 
-Stmt lower(Var target, const IndexExpr *indexExpression);
+
+Stmt lower(Expr target, const IndexExpr *indexExpression);
 
 }}
 #endif

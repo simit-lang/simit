@@ -39,6 +39,9 @@ public:
   /// The kind of an index variable.
   enum Kind { Free, Reduction, Fixed };
 
+  /// Construct an undefined index variable.
+  IndexVar() : IntrusivePtr() {}
+
   /// Construct a free index variable.
   IndexVar(std::string name, IndexDomain domain)
       : IntrusivePtr(new IndexVarContent) {
