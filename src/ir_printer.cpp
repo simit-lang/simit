@@ -122,6 +122,10 @@ void IRPrinter::print(const IRNode &node) {
   node.accept(this);
 }
 
+void IRPrinter::skipNexExpressionParenthesis() {
+  skipNextExpressionParen = true;
+}
+
 static inline string bool_to_string(bool value) {
   if (value) {
     return "true";
@@ -212,7 +216,7 @@ void IRPrinter::visit(const FieldRead *op) {
 
 void IRPrinter::visit(const TensorRead *op) {
   print(op->tensor);
-  os << "(";
+  lparen();
   auto indices = op->indices;
   if (indices.size() > 0) {
     print(indices[0]);
@@ -221,14 +225,14 @@ void IRPrinter::visit(const TensorRead *op) {
     os << ",";
     print(indices[i]);
   }
-  os << ")";
+  rparen();
 }
 
 void IRPrinter::visit(const TupleRead *op) {
   print(op->tuple);
-  os << "(";
+  lparen();
   print(op->index);
-  os << ")";
+  rparen();
 }
 
 void IRPrinter::visit(const IndexRead *op) {
@@ -284,44 +288,44 @@ void IRPrinter::visit(const Neg *op) {
 }
 
 void IRPrinter::visit(const Add *op) {
-  os << "(";
+  lparen();
   print(op->a);
   os << " + ";
   print(op->b);
-  os << ")";
+  rparen();
 }
 
 void IRPrinter::visit(const Sub *op) {
-  os << "(";
+  lparen();
   print(op->a);
   os << " - ";
   print(op->b);
-  os << ")";
+  rparen();
 }
 
 void IRPrinter::visit(const Mul *op) {
-  os << "(";
+  lparen();
   print(op->a);
   os << " * ";
   print(op->b);
-  os << ")";
+  rparen();
 }
 
 void IRPrinter::visit(const Div *op) {
-  os << "(";
+  lparen();
   print(op->a);
   os << " / ";
   print(op->b);
-  os << ")";
+  rparen();
 }
 
-#define PRINT_VISIT_BINARY_OP(type, symbol, op) \
-  void IRPrinter::visit(const type *op) {\
-  os << "(";\
-  print(op->a);\
-  os << " " << #symbol << " ";\
-  print(op->b);\
-  os << ")";\
+#define PRINT_VISIT_BINARY_OP(type, symbol, op)                                \
+  void IRPrinter::visit(const type *op) {                                      \
+  lparen();                                                                    \
+  print(op->a);                                                                \
+  os << " " << #symbol << " ";                                                 \
+  print(op->b);                                                                \
+  rparen();                                                                    \
 }
 
 PRINT_VISIT_BINARY_OP(Eq, ==, op)
@@ -349,6 +353,7 @@ void IRPrinter::visit(const VarDecl *op) {
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
   os << op->var << " " << op->cop << "= ";
+  skipNexExpressionParenthesis();
   print(op->value);
   os << ";";
 }
@@ -568,6 +573,19 @@ void IRPrinter::indent() {
   for (unsigned i=0; i<indentation; ++i) {
     os << "  ";
   }
+}
+
+void IRPrinter::lparen() {
+  if (!skipNextExpressionParen) {
+    os << "(";
+  }
+}
+
+void IRPrinter::rparen() {
+  if (!skipNextExpressionParen) {
+    os << ")";
+  }
+  skipNextExpressionParen = false;
 }
 
 

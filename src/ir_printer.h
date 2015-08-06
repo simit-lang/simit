@@ -38,6 +38,8 @@ public:
   void print(const Stmt &);
   void print(const IRNode &);
 
+  void skipNexExpressionParenthesis();
+
 private:
   using IRVisitor::visit;
   virtual void visit(const Literal *);
@@ -91,9 +93,12 @@ private:
   virtual void visit(const Func *);
 
   void indent();
+  void lparen();
+  void rparen();
 
   std::ostream &os;
   unsigned indentation;
+  bool skipNextExpressionParen = false;
 };
 
 class IRPrinterCallGraph : public IRVisitor {
