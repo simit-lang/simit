@@ -436,6 +436,63 @@ void IRPrinter::visit(const For *op) {
   --indentation;
 }
 
+void IRPrinter::visit(const While *op) {
+  indent();
+  os << "while ";
+  print(op->condition);
+  os << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
+}
+
+void IRPrinter::visit(const IfThenElse *op) {
+  indent();
+  os << "if ";
+  print(op->condition);
+  os << endl;
+  ++indentation;
+  print(op->thenBody);
+  --indentation;
+  os << endl;
+  if (op->elseBody.defined()) {
+    indent();
+    os << "else" << endl;
+    ++indentation;
+    print(op->elseBody);
+    --indentation;
+  }
+}
+
+void IRPrinter::visit(const Block *op) {
+  print(op->first);
+  if (op->rest.defined()) {
+    os << endl;
+    print(op->rest);
+  }
+}
+
+void IRPrinter::visit(const Comment *op) {
+  indent();
+  os << "% " << op->comment << endl;
+  if (op->commentedStmt.defined()) {
+    print(op->commentedStmt);
+    os << endl;
+  }
+}
+
+void IRPrinter::visit(const Print *op) {
+  indent();
+  os << "print ";
+  print(op->expr);
+  os << ";";
+}
+
+void IRPrinter::visit(const Pass *op) {
+  indent();
+  os << "pass;";
+}
+
 #ifdef GPU
 void IRPrinter::visit(const GPUKernel *op) {
   indent();
@@ -470,52 +527,6 @@ void IRPrinter::visit(const GPUKernel *op) {
   --indentation;
 }
 #endif
-
-void IRPrinter::visit(const While *op) {
-  indent();
-  os << "while ";
-  print(op->condition);
-  os << endl;
-  ++indentation;
-  print(op->body);
-  --indentation;
-}
-
-void IRPrinter::visit(const IfThenElse *op) {
-  indent();
-  os << "if ";
-  print(op->condition);
-  os << endl;
-  ++indentation;
-  print(op->thenBody);
-  --indentation;
-  os << endl;
-  indent();
-  os << "else" << endl;
-  ++indentation;
-  print(op->elseBody);
-  --indentation;
-}
-
-void IRPrinter::visit(const Block *op) {
-  print(op->first);
-  if (op->rest.defined()) {
-    os << endl;
-    print(op->rest);
-  }
-}
-
-void IRPrinter::visit(const Pass *op) {
-  indent();
-  os << "pass;";
-}
-
-void IRPrinter::visit(const Print *op) {
-  indent();
-  os << "print ";
-  print(op->expr);
-  os << ";";
-}
 
 void IRPrinter::visit(const Func *func) {
   os << "func " << func->getName() << "(";
@@ -558,6 +569,7 @@ void IRPrinter::indent() {
     os << "  ";
   }
 }
+
 
 // class IRPrinterCallGraph
 void IRPrinterCallGraph::print(const Func &func) {

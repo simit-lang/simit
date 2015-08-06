@@ -405,9 +405,40 @@ void IRRewriter::visit(const Block *op) {
   }
 }
 
+void IRRewriter::visit(const Print *op) {
+  Expr expr = rewrite(op->expr);
+  if (expr == op->expr) {
+    stmt = op;
+  } else {
+    stmt = Print::make(expr);
+  }
+}
+
+void IRRewriter::visit(const Comment *op) {
+  Stmt commentedStmt = rewrite(op->commentedStmt);
+  if (commentedStmt == op->commentedStmt) {
+    stmt = op;
+  }
+  else {
+    stmt = Comment::make(op->comment, commentedStmt);
+  }
+}
+
 void IRRewriter::visit(const Pass *op) {
   stmt = op;
 }
+
+#ifdef GPU
+void IRRewriter::visit(const GPUKernel *op) {
+  Stmt body = rewrite(op->body);
+  if (body == op->body) {
+    stmt = op;
+  }
+  else {
+    stmt = GPUKernel::make(body, op->sharding, op->reads, op->writes);
+  }
+}
+#endif
 
 void IRRewriter::visit(const Func *f) {
   Stmt body = rewrite(f->getBody());
@@ -423,26 +454,6 @@ void IRRewriter::visit(const Func *f) {
   }
 }
 
-void IRRewriter::visit(const Print *op) {
-  Expr expr = rewrite(op->expr);
-  if (expr == op->expr) {
-    stmt = op;
-  } else {
-    stmt = Print::make(expr);
-  }
-}
-
-#ifdef GPU
-void IRRewriter::visit(const GPUKernel *op) {
-  Stmt body = rewrite(op->body);
-  if (body == op->body) {
-    stmt = op;
-  }
-  else {
-    stmt = GPUKernel::make(body, op->sharding, op->reads, op->writes);
-  }
-}
-#endif
 
 // class IRRewriterCallGraph
 void IRRewriterCallGraph::visit(const Call *op) {

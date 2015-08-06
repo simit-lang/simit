@@ -930,6 +930,13 @@ struct IfThenElse : public StmtNode<IfThenElse> {
   Expr condition;
   Stmt thenBody, elseBody;
 
+  static Stmt make(Expr condition, Stmt thenBody) {
+    IfThenElse *node = new IfThenElse;
+    node->condition = condition;
+    node->thenBody = thenBody;
+    return node;
+  }
+
   static Stmt make(Expr condition, Stmt thenBody, Stmt elseBody) {
     IfThenElse *node = new IfThenElse;
     node->condition = condition;
@@ -960,20 +967,39 @@ struct Block : public StmtNode<Block> {
   }
 };
 
-/// Empty statement that is convenient during code development.
-struct Pass : public StmtNode<Pass> {
-  static Stmt make() {
-    Pass *node = new Pass;
-    return node;
-  }
-};
-
 struct Print : public StmtNode<Print> {
   Expr expr;
 
   static Stmt make(Expr expr) {
     Print *node = new Print;
     node->expr = expr;
+    return node;
+  }
+};
+
+/// A comment that can optionally be applied to a statements
+struct Comment : public StmtNode<Comment> {
+  std::string comment;
+  Stmt commentedStmt;
+
+  static Stmt make(std::string comment) {
+    Comment *node = new Comment;
+    node->comment = comment;
+    return node;
+  }
+
+  static Stmt make(std::string comment, Stmt commentedStmt) {
+    Comment *node = new Comment;
+    node->comment = comment;
+    node->commentedStmt = commentedStmt;
+    return node;
+  }
+};
+
+/// Empty statement that is convenient during code development.
+struct Pass : public StmtNode<Pass> {
+  static Stmt make() {
+    Pass *node = new Pass;
     return node;
   }
 };

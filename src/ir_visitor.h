@@ -46,8 +46,9 @@ struct For;
 struct While;
 struct IfThenElse;
 struct Block;
-struct Pass;
 struct Print;
+struct Comment;
+struct Pass;
 
 #ifdef GPU
 struct GPUKernel;
@@ -110,8 +111,9 @@ public:
   virtual void visit(const While *op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const Block *op);
-  virtual void visit(const Pass *op);
   virtual void visit(const Print *op);
+  virtual void visit(const Comment *op);
+  virtual void visit(const Pass *op);
 
 #ifdef GPU
   virtual void visit(const GPUKernel *op);

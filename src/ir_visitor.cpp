@@ -195,7 +195,9 @@ void IRVisitor::visit(const While *op) {
 void IRVisitor::visit(const IfThenElse *op) {
   op->condition.accept(this);
   op->thenBody.accept(this);
-  op->elseBody.accept(this);
+  if (op->elseBody.defined()) {
+    op->elseBody.accept(this);
+  }
 }
 
 void IRVisitor::visit(const Block *op) {
@@ -205,17 +207,17 @@ void IRVisitor::visit(const Block *op) {
   }
 }
 
-void IRVisitor::visit(const Pass *op) {
+void IRVisitor::visit(const Print *op) {
+  op->expr.accept(this);
 }
 
-void IRVisitor::visit(const Func *op) {
-  if (op->getBody().defined()) {
-    op->getBody().accept(this);
+void IRVisitor::visit(const Comment *op) {
+  if (op->commentedStmt.defined()) {
+    op->commentedStmt.accept(this);
   }
 }
 
-void IRVisitor::visit(const Print *op) {
-  op->expr.accept(this);
+void IRVisitor::visit(const Pass *op) {
 }
 
 #ifdef GPU
@@ -223,6 +225,13 @@ void IRVisitor::visit(const GPUKernel *op) {
   op->body.accept(this);
 }
 #endif
+
+void IRVisitor::visit(const Func *op) {
+  if (op->getBody().defined()) {
+    op->getBody().accept(this);
+  }
+}
+
 
 // class IRVisitorCallGraph
 void IRVisitorCallGraph::visit(const Call *op) {

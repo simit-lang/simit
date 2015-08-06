@@ -69,8 +69,9 @@ protected:
   virtual void visit(const While *op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const Block *op);
-  virtual void visit(const Pass *op);
   virtual void visit(const Print *op);
+  virtual void visit(const Comment *op);
+  virtual void visit(const Pass *op);
 
 #ifdef GPU
   virtual void visit(const GPUKernel *op);

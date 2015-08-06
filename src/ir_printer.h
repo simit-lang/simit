@@ -80,14 +80,15 @@ private:
   virtual void visit(const While *);
   virtual void visit(const IfThenElse *);
   virtual void visit(const Block *);
-  virtual void visit(const Pass *);
   virtual void visit(const Print *);
-
-  virtual void visit(const Func *);
+  virtual void visit(const Comment *);
+  virtual void visit(const Pass *);
 
 #ifdef GPU
   virtual void visit(const GPUKernel *);
 #endif
+
+  virtual void visit(const Func *);
 
   void indent();
 
