@@ -86,6 +86,39 @@ bool contains(const std::map<K,V> &container, const K &key) {
   return container.find(key) != container.end();
 }
 
+template <typename Collection>
+class ReverseIterator {
+public:
+  typedef typename Collection::reverse_iterator reverse_iterator;
+  typedef typename Collection::const_reverse_iterator const_reverse_iterator;
+
+  ReverseIterator(Collection &collection) : collection(collection) {}
+  ReverseIterator(const Collection &collection) : collection(collection) {}
+
+  reverse_iterator begin() {return collection.rbegin();}
+  reverse_iterator end() {return collection.rend();}
+
+  const_reverse_iterator begin() const {return collection.rbegin();}
+  const_reverse_iterator end() const {return collection.rend();}
+
+private:
+  Collection &collection;
+};
+
+/// Iterate over a collection in reverse using a range for loop:
+/// for (auto &element : util::reverse(collection)) {...}
+template <typename T>
+ReverseIterator<T> reverse(T &collection) {
+  return ReverseIterator<T>(collection);
+}
+
+/// Iterate over a collection in reverse using a range for loop:
+/// for (auto &element : util::reverse(collection)) {...}
+template <typename T>
+ReverseIterator<T> reverse(const T &collection) {
+  return ReverseIterator<T>(collection);
+}
+
 }}
 
 #endif
