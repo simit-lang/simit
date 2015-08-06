@@ -27,38 +27,11 @@ struct Loop {
       : type(Sparse), indexVar(indexVar), parent(parent) {}
 };
 
-struct IndexDescriptor {
-  Var tensor;
-  // TODO: Build in direction (row-major or col-major, etc.)
-};
-
-struct CoordinateVar {
-  Var var;
-
-  // Index
-  IndexDescriptor index;
-
-  CoordinateVar(const IndexedTensor *indexedTensor) {
-    iassert(isa<VarExpr>(indexedTensor->tensor))
-        << "at this point the index expressions should have been flattened";
-    index.tensor = to<VarExpr>(indexedTensor->tensor)->var;
-
-    string name = util::join(indexedTensor->indexVars, "") +
-                  index.tensor.getName();
-    var = Var(name, Int);
-  }
-
-  friend ostream &operator<<(ostream &os, const CoordinateVar &cv) {
-    os << cv.var.getName() << " in nbr(" << cv.index.tensor.getName() << ")" ;
-    return os;
-  }
-};
-
 typedef vector<IndexVar> IndexTuple;
 typedef map<IndexTuple, vector<const IndexedTensor *>> IndexTupleUses;
 typedef map<IndexVar, vector<const IndexedTensor *>> IndexUses;
 typedef map<IndexVar, vector<IndexVar>> IndexVarGraph;
-typedef map<IndexVar, pair<Var,vector<CoordinateVar>>> InductionVars;
+typedef map<IndexVar, pair<Var,vector<Var>>> InductionVars;
 
 static ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
   os << "Index variable graph"  << endl;
@@ -154,6 +127,14 @@ static void createLoopNest(const IndexVarGraph &ivGraph,
   }
 }
 
+static Var createCoordinateVar(const IndexedTensor *indexedTensor) {
+  iassert(isa<VarExpr>(indexedTensor->tensor))
+      << "at this point the index expressions should have been flattened";
+  Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
+  string name = util::join(indexedTensor->indexVars, "") + tensor.getName();
+  return Var(name, Int);
+}
+
 static vector<Loop> createLoopNest(const IndexVarGraph &ivGraph,
                                    const vector<IndexVar> &sources){
   vector<Loop> loops;
@@ -180,7 +161,7 @@ static InductionVars createInductionVariables(const vector<Loop> &loops,
     if (loop.type == Loop::Sparse) {
       vector<const IndexedTensor *> uses = indexUses.at(loop.indexVar);
       for (auto &use : uses) {
-        CoordinateVar coordVar(use);
+        Var coordVar = createCoordinateVar(use);
         inductionVars.at(loop.indexVar).second.push_back(coordVar);
       }
     }
@@ -188,8 +169,32 @@ static InductionVars createInductionVariables(const vector<Loop> &loops,
   return inductionVars;
 }
 
-static Expr compareToIndex(const CoordinateVar &coordVar) {
-  return Lt::make(coordVar.var, Literal::make(1));
+static Expr compareToIndex(const Var &coordVar) {
+  return Lt::make(coordVar, Literal::make(1));
+}
+
+/// Compute the smallest value of the input variables.
+static Stmt computeMin(const Var &var, const vector<Var> &vars) {
+  Stmt minStmt = VarDecl::make(var);
+  iassert(vars.size() > 0);
+  if (vars.size() == 2) {
+    minStmt = Block::make(minStmt,
+                          IfThenElse::make(Le::make(vars[0], vars[1]),
+                                           AssignStmt::make(var, vars[0]),
+                                           AssignStmt::make(var, vars[1])));
+  }
+  else {
+    minStmt = Block::make(minStmt, AssignStmt::make(var, vars[0]));
+    for (size_t i=1; i < vars.size(); ++i) {
+      minStmt = Block::make(minStmt,
+                            IfThenElse::make(Lt::make(vars[i], var),
+                                             AssignStmt::make(var, vars[i])));
+    }
+  }
+
+  string commentString = var.getName() + " = min(" + util::join(vars) + ")";
+
+  return Comment::make(commentString, minStmt);
 }
 
 Stmt lower(Expr target, const IndexExpr *indexExpression) {
@@ -237,7 +242,7 @@ Stmt lower(Expr target, const IndexExpr *indexExpression) {
 
 
   // Emit loops
-  Stmt loopNest = Pass::make();
+  Stmt loopNest;
   for (auto &loop : util::reverse(loops)) {
     switch (loop.type) {
       case Loop::Dense: {
@@ -256,14 +261,14 @@ Stmt lower(Expr target, const IndexExpr *indexExpression) {
         auto coordIt = coordVars.begin();
         auto coordEnd = coordVars.end();
 
-        Expr condition = compareToIndex(*coordIt);
-        ++coordIt;
-
+        Expr condition = compareToIndex(*coordIt++);
         for (; coordIt != coordEnd; ++coordIt) {
           condition = And::make(condition, compareToIndex(*coordIt));
         }
 
-        loopNest = While::make(condition, loopNest);
+        Stmt initInductionVar = computeMin(inductionVar, coordVars);
+        Stmt body = Block::make(initInductionVar, loopNest);
+        loopNest = While::make(condition, body);
         break;
       }
     }
