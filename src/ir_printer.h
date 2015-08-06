@@ -93,8 +93,21 @@ private:
   virtual void visit(const Func *);
 
   void indent();
-  void lparen();
-  void rparen();
+
+  struct ParenPrinter {
+    std::ostream &os;
+    bool skipParen;
+    ParenPrinter(IRPrinter *irPrinter) : os(irPrinter->os) {
+      skipParen = irPrinter->skipNextExpressionParen;
+      irPrinter->skipNextExpressionParen = false;
+      if (!skipParen) os << "(";
+    };
+    ~ParenPrinter() {
+      if (!skipParen) os << ")";
+    }
+  };
+  friend ParenPrinter;
+  ParenPrinter paren() {return ParenPrinter(this); }
 
   std::ostream &os;
   unsigned indentation;
