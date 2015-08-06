@@ -3,6 +3,7 @@
 #include <vector>
 #include <set>
 #include <map>
+#include <string>
 
 #include "indexvar.h"
 #include "ir.h"
@@ -33,7 +34,7 @@ typedef map<IndexVar, vector<const IndexedTensor *>> IndexUses;
 typedef map<IndexVar, vector<IndexVar>> IndexVarGraph;
 typedef map<IndexVar, pair<Var,vector<Var>>> InductionVars;
 
-static ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
+ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
   os << "Index variable graph"  << endl;
   for (auto &ij : ivGraph) {
     auto i = ij.first;
@@ -44,7 +45,7 @@ static ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
   return os;
 }
 
-static ostream &operator<<(ostream &os, const IndexUses &indexUses) {
+ostream &operator<<(ostream &os, const IndexUses &indexUses) {
   os << "Index Variable Uses:" << std::endl;
   for (auto &itu : indexUses) {
     for (auto &it : itu.second) {
@@ -54,7 +55,7 @@ static ostream &operator<<(ostream &os, const IndexUses &indexUses) {
   return os;
 }
 
-static ostream &operator<<(ostream &os, const IndexTupleUses &indexTupleUses) {
+ostream &operator<<(ostream &os, const IndexTupleUses &indexTupleUses) {
   os << "Index Variable Tuple Uses:" << endl;
   for (auto &itu : indexTupleUses) {
     for (auto &it : itu.second) {
@@ -64,7 +65,7 @@ static ostream &operator<<(ostream &os, const IndexTupleUses &indexTupleUses) {
   return os;
 }
 
-static ostream &operator<<(ostream &os, const InductionVars &inductionVars) {
+ostream &operator<<(ostream &os, const InductionVars &inductionVars) {
   os << "Loop induction variables:" << endl;
   for (auto &inductionVar : inductionVars) {
     os << inductionVar.second.first;
@@ -76,7 +77,6 @@ static ostream &operator<<(ostream &os, const InductionVars &inductionVars) {
   return os;
 }
 
-
 static IndexTupleUses getIndexTupleUses(const IndexExpr *indexExpr) {
   struct GetIndexTupleUsesVisitor : public IRVisitor {
     IndexTupleUses indexTupleUses;
@@ -87,18 +87,6 @@ static IndexTupleUses getIndexTupleUses(const IndexExpr *indexExpr) {
   GetIndexTupleUsesVisitor visitor;
   indexExpr->accept(&visitor);
   return visitor.indexTupleUses;
-}
-
-static IndexUses getIndexUses(IndexTupleUses indexTupleUses) {
-  IndexUses indexUses;
-  for (auto &itu : indexTupleUses) {
-    for (auto &indexVar : itu.first) {
-      for (auto &indexedTensor : itu.second) {
-        indexUses[indexVar].push_back(indexedTensor);
-      }
-    }
-  }
-  return indexUses;
 }
 
 static IndexVarGraph createIndexVarGraph(IndexTupleUses indexTupleUses) {
@@ -115,8 +103,7 @@ static IndexVarGraph createIndexVarGraph(IndexTupleUses indexTupleUses) {
   return indexVarGraph;
 }
 
-static void createLoopNest(const IndexVarGraph &ivGraph,
-                           const IndexVar &source,
+static void createLoopNest(const IndexVarGraph &ivGraph, const IndexVar &source,
                            set<IndexVar> *visited, vector<Loop> *loops) {
   for (auto &sink : ivGraph.at(source)) {
     if (!util::contains(*visited, sink)) {
@@ -125,14 +112,6 @@ static void createLoopNest(const IndexVarGraph &ivGraph,
       createLoopNest(ivGraph, sink, visited, loops);
     }
   }
-}
-
-static Var createCoordinateVar(const IndexedTensor *indexedTensor) {
-  iassert(isa<VarExpr>(indexedTensor->tensor))
-      << "at this point the index expressions should have been flattened";
-  Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
-  string name = util::join(indexedTensor->indexVars, "") + tensor.getName();
-  return Var(name, Int);
 }
 
 static vector<Loop> createLoopNest(const IndexVarGraph &ivGraph,
@@ -149,9 +128,33 @@ static vector<Loop> createLoopNest(const IndexVarGraph &ivGraph,
   return loops;
 }
 
-static InductionVars createInductionVariables(const vector<Loop> &loops,
-                                              const IndexUses &indexUses) {
+static Var createCoordinateVar(const IndexedTensor *indexedTensor) {
+  iassert(isa<VarExpr>(indexedTensor->tensor))
+      << "at this point the index expressions should have been flattened";
+  Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
+  string name = util::join(indexedTensor->indexVars, "") + tensor.getName();
+  return Var(name, Int);
+}
 
+/// Build a map from index variables to the IndexTensors they access.
+/// - B+C  i -> B(i,j), C(i,j)
+///        j -> B(i,j), C(i,j)
+static IndexUses getIndexUses(IndexTupleUses indexTupleUses) {
+  IndexUses indexUses;
+  for (auto &itu : indexTupleUses) {
+    for (auto &indexVar : itu.first) {
+      for (auto &indexedTensor : itu.second) {
+        indexUses[indexVar].push_back(indexedTensor);
+      }
+    }
+  }
+  return indexUses;
+}
+
+static
+InductionVars createInductionVariables(const vector<Loop> &loops,
+                                       const IndexTupleUses &indexTupleUses) {
+  IndexUses indexUses = getIndexUses(indexTupleUses);
 
   InductionVars inductionVars;
   for (auto &loop : loops) {
@@ -193,7 +196,6 @@ static Stmt computeMin(const Var &var, const vector<Var> &vars) {
   }
 
   string commentString = var.getName() + " = min(" + util::join(vars) + ")";
-
   return Comment::make(commentString, minStmt);
 }
 
@@ -227,17 +229,10 @@ Stmt lower(Expr target, const IndexExpr *indexExpression) {
                                       indexExpression->resultVars);
 
 
-  // Build a map from index variables to the IndexTensors they access.
-  // - B+C  i -> B(i,j), C(i,j)
-  //        j -> B(i,j), C(i,j)
-  IndexUses indexUses = getIndexUses(indexTupleUses);
-  std::cout << indexUses << std::endl;
-
-
   // Create Loop Inducation Variables and Coordinate Induction Variables:
   // - B+C  i
   //        j: zip(ijB in nbr(B), ijC in nbr(C))
-  InductionVars inductionVars = createInductionVariables(loops, indexUses);
+  InductionVars inductionVars = createInductionVariables(loops, indexTupleUses);
   std::cout << inductionVars << std::endl;
 
 
@@ -274,9 +269,14 @@ Stmt lower(Expr target, const IndexExpr *indexExpression) {
     }
   }
 
-  std::cout << loopNest << std::endl;
-
-  return loopNest;
+  stringstream comment;
+  comment << util::toString(target)
+          << "(" + util::join(indexExpression->resultVars, ",")
+          << ") = ";
+  IRPrinter printer(comment);
+  printer.skipNexExpressionParenthesis();
+  printer.print(indexExpression->value);
+  return Comment::make(comment.str(), loopNest);
 }
 
 }}
