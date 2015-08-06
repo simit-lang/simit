@@ -5,6 +5,9 @@
 #include <sstream>
 #include <memory>
 #include <vector>
+#include <set>
+#include <map>
+#include <algorithm>
 
 namespace simit {
 namespace util {
@@ -59,12 +62,30 @@ std::string indent(std::string str, unsigned int num);
 std::vector<std::string> split(const std::string &str, const std::string &delim,
                                bool keepDelim = false);
 
-// Load text from file, returning 0 if succesfull, false otherwise.
+/// Load text from file, returning 0 if succesfull, false otherwise.
 int loadText(const std::string &file, std::string *text);
 
-// Trim whitespace from string
+// /Trim whitespace from string
 std::string trim(const std::string &str, const std::string &ws = " \t\n");
 
-}} // namespace simit::util
+/// Query whether a collection contains an element
+template <class C, typename V>
+bool contains(const C &container, const V &value) {
+  return std::find(container.begin(),container.end(),value) != container.end();
+}
+
+/// Query whether a set contains an element
+template <typename V>
+bool contains(const std::set<V> &container, const V &value) {
+  return container.find(value) != container.end();
+}
+
+/// Query whether a map contains an element
+template <typename K, typename V>
+bool contains(const std::map<K,V> &container, const K &key) {
+  return container.find(key) != container.end();
+}
+
+}}
 
 #endif
