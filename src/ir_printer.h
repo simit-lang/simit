@@ -12,9 +12,6 @@ namespace simit {
 namespace ir {
 
 struct Environment;
-class Func;
-class Expr;
-class Stmt;
 struct IRNode;
 struct ForDomain;
 struct CompoundOperator;
@@ -38,7 +35,7 @@ public:
   void print(const Stmt &);
   void print(const IRNode &);
 
-  void skipNexExpressionParenthesis();
+  void skipTopExprParenthesis();
 
 private:
   using IRVisitor::visit;
@@ -47,8 +44,8 @@ private:
   virtual void visit(const FieldRead *);
   virtual void visit(const TensorRead *);
   virtual void visit(const TupleRead *);
-  virtual void visit(const IndexRead *op);
-  virtual void visit(const Length *op);
+  virtual void visit(const IndexRead *);
+  virtual void visit(const Length *);
   virtual void visit(const Load *);
   virtual void visit(const IndexedTensor *);
   virtual void visit(const IndexExpr *);
@@ -98,8 +95,8 @@ private:
     std::ostream &os;
     bool skipParen;
     ParenPrinter(IRPrinter *irPrinter) : os(irPrinter->os) {
-      skipParen = irPrinter->skipNextExpressionParen;
-      irPrinter->skipNextExpressionParen = false;
+      skipParen = irPrinter->skipTopExprParen;
+      irPrinter->skipTopExprParen = false;
       if (!skipParen) os << "(";
     };
     ~ParenPrinter() {
@@ -107,11 +104,13 @@ private:
     }
   };
   friend ParenPrinter;
+
   ParenPrinter paren() {return ParenPrinter(this); }
+  void clearSkipParen() {skipTopExprParen = false;}
 
   std::ostream &os;
   unsigned indentation;
-  bool skipNextExpressionParen = false;
+  bool skipTopExprParen = false;
 };
 
 class IRPrinterCallGraph : public IRVisitor {

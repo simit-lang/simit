@@ -122,8 +122,8 @@ void IRPrinter::print(const IRNode &node) {
   node.accept(this);
 }
 
-void IRPrinter::skipNexExpressionParenthesis() {
-  skipNextExpressionParen = true;
+void IRPrinter::skipTopExprParenthesis() {
+  skipTopExprParen = true;
 }
 
 static inline string bool_to_string(bool value) {
@@ -136,6 +136,8 @@ static inline string bool_to_string(bool value) {
 }
 
 void IRPrinter::visit(const Literal *op) {
+  clearSkipParen();
+
   // TODO: Fix value printing to print matrices and tensors properly
   switch (op->type.kind()) {
     case Type::Tensor: {
@@ -206,15 +208,18 @@ void IRPrinter::visit(const Literal *op) {
 }
 
 void IRPrinter::visit(const VarExpr *op) {
+  clearSkipParen();
   os << op->var;
 }
 
 void IRPrinter::visit(const FieldRead *op) {
+  clearSkipParen();
   print(op->elementOrSet);
   os << "." << op->fieldName;
 }
 
 void IRPrinter::visit(const TensorRead *op) {
+  clearSkipParen();
   print(op->tensor);
   os << "(";
   auto indices = op->indices;
@@ -229,6 +234,7 @@ void IRPrinter::visit(const TensorRead *op) {
 }
 
 void IRPrinter::visit(const TupleRead *op) {
+  clearSkipParen();
   print(op->tuple);
   os << "(";
   print(op->index);
@@ -236,6 +242,7 @@ void IRPrinter::visit(const TupleRead *op) {
 }
 
 void IRPrinter::visit(const IndexRead *op) {
+  clearSkipParen();
   print(op->edgeSet);
   os << ".";
   switch (op->kind) {
@@ -252,17 +259,21 @@ void IRPrinter::visit(const IndexRead *op) {
 }
 
 void IRPrinter::visit(const Length *op) {
+  clearSkipParen();
   os << op->indexSet;
 }
 
 void IRPrinter::visit(const Load *op) {
+  clearSkipParen();
   print(op->buffer);
   os << "[";
+  skipTopExprParenthesis();
   print(op->index);
   os << "]";
 }
 
 void IRPrinter::visit(const IndexedTensor *op) {
+  clearSkipParen();
   print(op->tensor);
   if (op->indexVars.size() > 0) {
     os << "(" << util::join(op->indexVars,",") << ")";
@@ -270,6 +281,7 @@ void IRPrinter::visit(const IndexedTensor *op) {
 }
 
 void IRPrinter::visit(const IndexExpr *op) {
+  clearSkipParen();
   os << "{";
   if (op->resultVars.size() > 0) {
     os << simit::util::join(op->resultVars, ",") + " ";
@@ -279,6 +291,7 @@ void IRPrinter::visit(const IndexExpr *op) {
 }
 
 void IRPrinter::visit(const Call *op) {
+  clearSkipParen();
   os << op->func.getName() << "(" << util::join(op->actuals) << ")";
 }
 
@@ -291,6 +304,7 @@ void IRPrinter::visit(const type *op) {                                        \
 }
 
 void IRPrinter::visit(const Neg *op) {
+  clearSkipParen();
   os << "-";
   print(op->a);
 }
@@ -301,9 +315,9 @@ PRINT_VISIT_BINARY_OP(Mul, *, op)
 PRINT_VISIT_BINARY_OP(Div, /, op)
 
 void IRPrinter::visit(const Not *op) {
-  os << "(not ";
+  auto p = paren();
+  os << "not ";
   print(op->a);
-  os << ")";
 }
 
 PRINT_VISIT_BINARY_OP(Eq, ==, op)
@@ -316,6 +330,9 @@ PRINT_VISIT_BINARY_OP(And, and, op)
 PRINT_VISIT_BINARY_OP(Or, or, op)
 PRINT_VISIT_BINARY_OP(Xor, xor, op)
 
+
+// Statements
+
 void IRPrinter::visit(const VarDecl *op) {
   indent();
   os << "var " << op->var << " : " << op->var.getType();
@@ -325,7 +342,7 @@ void IRPrinter::visit(const VarDecl *op) {
 void IRPrinter::visit(const AssignStmt *op) {
   indent();
   os << op->var << " " << op->cop << "= ";
-  skipNexExpressionParenthesis();
+  skipTopExprParenthesis();
   print(op->value);
   os << ";";
 }
@@ -416,7 +433,7 @@ void IRPrinter::visit(const For *op) {
 void IRPrinter::visit(const While *op) {
   indent();
   os << "while ";
-  skipNexExpressionParenthesis();
+  skipTopExprParenthesis();
   print(op->condition);
   os << endl;
   ++indentation;
@@ -427,7 +444,7 @@ void IRPrinter::visit(const While *op) {
 void IRPrinter::visit(const IfThenElse *op) {
   indent();
   os << "if ";
-  skipNexExpressionParenthesis();
+  skipTopExprParenthesis();
   print(op->condition);
   os << endl;
   ++indentation;

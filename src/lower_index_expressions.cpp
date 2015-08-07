@@ -274,7 +274,7 @@ Stmt lower(Expr target, const IndexExpr *indexExpression) {
           << "(" + util::join(indexExpression->resultVars, ",")
           << ") = ";
   IRPrinter printer(comment);
-  printer.skipNexExpressionParenthesis();
+  printer.skipTopExprParenthesis();
   printer.print(indexExpression->value);
   return Comment::make(comment.str(), loopNest);
 }
