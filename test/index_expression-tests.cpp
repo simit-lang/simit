@@ -2,9 +2,8 @@
 
 #include "ir.h"
 #include "lower_index_expressions.h"
-
+#include "tensor_index.h"
 #include "graph.h"
-
 
 using namespace std;
 using namespace simit;
@@ -26,10 +25,10 @@ TEST(DISABLED_IndexExpression, add) {
 
   Expr add = IndexExpr::make({i,j}, B(i,j) + C(i,j));
   Var A("A", add.type());
-  std::cout << AssignStmt::make(A, add) << std::endl << std::endl;
 
-  Stmt loops = lower(A, to<IndexExpr>(add));
+  vector<TensorIndex> tensorIndices;
+  Stmt loops = lower(A, to<IndexExpr>(add), &tensorIndices);
 
-//  std::cout << loops << std::endl;
-
+  std::cout << loops << std::endl;
+//  std::cout << tensorIndices << std::endl;
 }

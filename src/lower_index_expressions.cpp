@@ -21,18 +21,35 @@ struct Loop {
   IndexVar indexVar;
   IndexVar parent;
 
-  Loop (const IndexVar &indexVar)
+  Loop(const IndexVar &indexVar)
       : type(Dense), indexVar(indexVar) {}
 
-  Loop (const IndexVar &indexVar, IndexVar parent)
+  Loop(const IndexVar &indexVar, IndexVar parent)
       : type(Sparse), indexVar(indexVar), parent(parent) {}
+};
+
+struct IndexInductionVar {
+  Var sourceVar;
+  Var sinkVar;
+  Var coordVar;
+  TensorIndex tensorIndex;
+
+  IndexInductionVar(Var inductionVar, Var sourceVar,
+                    Var tensor, unsigned sourceDim){
+    this->sinkVar = Var(inductionVar.getName() + tensor.getName(), Int);
+    this->sourceVar = sourceVar;
+    string coordVarName = inductionVar.getName() + sourceVar.getName() +
+                          tensor.getName();
+    this->coordVar = Var(coordVarName, Int);
+    this->tensorIndex = TensorIndex(tensor, sourceDim);
+  }
 };
 
 typedef vector<IndexVar> IndexTuple;
 typedef map<IndexTuple, vector<const IndexedTensor *>> IndexTupleUses;
 typedef map<IndexVar, vector<const IndexedTensor *>> IndexUses;
 typedef map<IndexVar, vector<IndexVar>> IndexVarGraph;
-typedef map<IndexVar, pair<Var,vector<Var>>> InductionVars;
+typedef map<IndexVar, pair<Var,vector<IndexInductionVar>>> InductionVars;
 
 ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
   os << "Index variable graph"  << endl;
@@ -74,6 +91,15 @@ ostream &operator<<(ostream &os, const InductionVars &inductionVars) {
     }
     os << endl;
   }
+  return os;
+}
+
+ostream &operator<<(ostream &os, const IndexInductionVar &indexInductionVar) {
+  os << indexInductionVar.sinkVar
+     << " in "      << indexInductionVar.tensorIndex
+     << ".sinks["   << indexInductionVar.coordVar
+     << " in "      << indexInductionVar.tensorIndex
+     << ".sources[" << indexInductionVar.sourceVar << "]]";
   return os;
 }
 
@@ -128,14 +154,6 @@ static vector<Loop> createLoopNest(const IndexVarGraph &ivGraph,
   return loops;
 }
 
-static Var createCoordinateVar(const IndexedTensor *indexedTensor) {
-  iassert(isa<VarExpr>(indexedTensor->tensor))
-      << "at this point the index expressions should have been flattened";
-  Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
-  string name = util::join(indexedTensor->indexVars, "") + tensor.getName();
-  return Var(name, Int);
-}
-
 /// Build a map from index variables to the IndexTensors they access.
 /// - B+C  i -> B(i,j), C(i,j)
 ///        j -> B(i,j), C(i,j)
@@ -153,27 +171,44 @@ static IndexUses getIndexUses(IndexTupleUses indexTupleUses) {
 
 static
 InductionVars createInductionVariables(const vector<Loop> &loops,
-                                       const IndexTupleUses &indexTupleUses) {
+                                       const IndexTupleUses &indexTupleUses,
+                                       std::vector<TensorIndex> *tensorIndices) {
   IndexUses indexUses = getIndexUses(indexTupleUses);
 
   InductionVars inductionVars;
   for (auto &loop : loops) {
-    Var inductionVar(loop.indexVar.getName(), Int);
-    inductionVars[loop.indexVar].first = inductionVar;
+    IndexVar indexVar = loop.indexVar;
+
+    Var inductionVar(indexVar.getName(), Int);
+    inductionVars[indexVar].first = inductionVar;
 
     if (loop.type == Loop::Sparse) {
-      vector<const IndexedTensor *> uses = indexUses.at(loop.indexVar);
-      for (auto &use : uses) {
-        Var coordVar = createCoordinateVar(use);
-        inductionVars.at(loop.indexVar).second.push_back(coordVar);
+      vector<const IndexedTensor *> uses = indexUses.at(indexVar);
+      Var parentInductionVar = inductionVars.at(loop.parent).first;
+
+      for (auto &indexedTensor : uses) {
+        iassert(isa<VarExpr>(indexedTensor->tensor))
+            << "at this point the index expressions should have been flattened";
+        Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
+        vector<IndexVar> indexVars = indexedTensor->indexVars;
+
+        IndexInductionVar indexInductionVar =
+            IndexInductionVar(inductionVar, parentInductionVar,
+                              tensor, util::locate(indexVars, loop.parent));
+        inductionVars.at(indexVar).second.push_back(indexInductionVar);
+
+        tensorIndices->push_back(indexInductionVar.tensorIndex);
       }
     }
   }
   return inductionVars;
 }
 
-static Expr compareToIndex(const Var &coordVar) {
-  return Lt::make(coordVar, Literal::make(1));
+static Expr compareToIndex(const IndexInductionVar &coordVar) {
+  Expr indexRead = TensorIndexRead::make(coordVar.tensorIndex,
+                                         coordVar.sourceVar + 1,
+                                         TensorIndexRead::Sources);
+  return Lt::make(coordVar.coordVar, indexRead);
 }
 
 /// Compute the smallest value of the input variables.
@@ -199,7 +234,8 @@ static Stmt computeMin(const Var &var, const vector<Var> &vars) {
   return Comment::make(commentString, minStmt);
 }
 
-Stmt lower(Expr target, const IndexExpr *indexExpression) {
+Stmt lower(Expr target, const IndexExpr *indexExpression,
+           std::vector<TensorIndex> *tensorIndices) {
   // Build a map from index variable tuples to the IndexTensors they access:
   // - B+C   (i,j) -> B(i,j), C(i,j)
   // - B+C'  (i,j) -> B(i,j)
@@ -232,7 +268,8 @@ Stmt lower(Expr target, const IndexExpr *indexExpression) {
   // Create Loop Inducation Variables and Coordinate Induction Variables:
   // - B+C  i
   //        j: zip(ijB in nbr(B), ijC in nbr(C))
-  InductionVars inductionVars = createInductionVariables(loops, indexTupleUses);
+  InductionVars inductionVars = createInductionVariables(loops, indexTupleUses,
+                                                         tensorIndices);
   std::cout << inductionVars << std::endl;
 
 
@@ -261,7 +298,8 @@ Stmt lower(Expr target, const IndexExpr *indexExpression) {
           condition = And::make(condition, compareToIndex(*coordIt));
         }
 
-        Stmt initInductionVar = computeMin(inductionVar, coordVars);
+//        Stmt initInductionVar = computeMin(inductionVar, coordVars);
+        Stmt initInductionVar = Pass::make();
         Stmt body = Block::make(initInductionVar, loopNest);
         loopNest = While::make(condition, body);
         break;
