@@ -8,6 +8,7 @@
 #include <set>
 #include <map>
 #include <algorithm>
+#include <cassert>
 
 namespace simit {
 namespace util {
@@ -118,6 +119,15 @@ template <typename T>
 ReverseIterator<T> reverse(const T &collection) {
   return ReverseIterator<T>(collection);
 }
+
+/// Retrieve the location in the collection of the given value
+template <class Collection, typename Value>
+size_t locate(const Collection &collection, const Value &value) {
+  assert(util::contains(collection, value));
+  return std::distance(collection.begin(), std::find(collection.begin(),
+                                                     collection.end(), value));
+}
+
 
 }}
 
