@@ -45,6 +45,7 @@ private:
   virtual void visit(const TensorRead *);
   virtual void visit(const TupleRead *);
   virtual void visit(const IndexRead *);
+  virtual void visit(const TensorIndexRead *);
   virtual void visit(const Length *);
   virtual void visit(const Load *);
   virtual void visit(const IndexedTensor *);

@@ -39,6 +39,10 @@ void IRVisitor::visit(const IndexRead *op) {
   op->edgeSet.accept(this);
 }
 
+void IRVisitor::visit(const TensorIndexRead *op) {
+  op->loc.accept(this);
+}
+
 void IRVisitor::visit(const Length *op) {
 }
 

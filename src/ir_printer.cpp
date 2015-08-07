@@ -258,6 +258,23 @@ void IRPrinter::visit(const IndexRead *op) {
   }
 }
 
+void IRPrinter::visit(const TensorIndexRead *op) {
+  clearSkipParen();
+  os << op->tensorIndex;
+  switch (op->readType) {
+    case TensorIndexRead::Sources:
+      os << ".sources";
+      break;
+    case TensorIndexRead::Sinks:
+      os << ".sinks";
+      break;
+  }
+  os << "[";
+  skipTopExprParenthesis();
+  print(op->loc);
+  os << "]";
+}
+
 void IRPrinter::visit(const Length *op) {
   clearSkipParen();
   os << op->indexSet;

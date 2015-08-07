@@ -14,6 +14,7 @@
 #include "indexvar.h"
 #include "error.h"
 #include "storage.h"
+#include "tensor_index.h"
 
 namespace simit {
 namespace ir {
@@ -427,6 +428,23 @@ struct IndexRead : public ExprNode<IndexRead> {
                                   {IndexDomain(IndexSet(edgeSet))});
     node->edgeSet = edgeSet;
     node->kind = kind;
+    return node;
+  }
+};
+
+struct TensorIndexRead : public ExprNode<TensorIndexRead> {
+  enum Type {Sources, Sinks};
+
+  TensorIndex tensorIndex;
+  Expr loc;
+  Type readType;
+
+  static Expr make(TensorIndex tensorIndex, Expr loc, Type readType) {
+    TensorIndexRead *node = new TensorIndexRead;
+    node->type = Int;
+    node->tensorIndex = tensorIndex;
+    node->loc = loc;
+    node->readType = readType;
     return node;
   }
 };
