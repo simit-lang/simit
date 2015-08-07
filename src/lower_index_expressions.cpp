@@ -286,20 +286,24 @@ Stmt lower(Expr target, const IndexExpr *indexExpression,
       case Loop::Sparse: {
         auto loopInductionVars = inductionVars.at(loop.indexVar);
         Var inductionVar = loopInductionVars.first;
-        auto &coordVars = loopInductionVars.second;
+        auto &indexInductionVars = loopInductionVars.second;
 
         // Sparse while loops simultaneously iterate over the coordinate
         // variables of one or more tensors
-        auto coordIt = coordVars.begin();
-        auto coordEnd = coordVars.end();
+        auto idxInductionVarIt = indexInductionVars.begin();
+        auto idxInductionVarEnd = indexInductionVars.end();
 
-        Expr condition = compareToIndex(*coordIt++);
-        for (; coordIt != coordEnd; ++coordIt) {
-          condition = And::make(condition, compareToIndex(*coordIt));
+        Expr condition = compareToIndex(*idxInductionVarIt++);
+        for (; idxInductionVarIt != idxInductionVarEnd; ++idxInductionVarIt) {
+          condition = And::make(condition, compareToIndex(*idxInductionVarIt));
         }
 
-//        Stmt initInductionVar = computeMin(inductionVar, coordVars);
-        Stmt initInductionVar = Pass::make();
+        vector<Var> sinkInductionVars;
+        for (auto &indexInductionVar : indexInductionVars) {
+          sinkInductionVars.push_back(indexInductionVar.sinkVar);
+        }
+
+        Stmt initInductionVar = computeMin(inductionVar, sinkInductionVars);
         Stmt body = Block::make(initInductionVar, loopNest);
         loopNest = While::make(condition, body);
         break;
