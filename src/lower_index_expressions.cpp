@@ -309,6 +309,18 @@ string matrixSliceString(const Var &var, unsigned sliceDimension) {
   return result;
 }
 
+string matrixSliceString(vector<Var> vars, unsigned sliceDimension) {
+  string result = "(";
+  for (size_t i=0; i < vars.size(); ++i) {
+    result += (i == sliceDimension) ? ":" : toString(vars[i]);
+    if (i < vars.size()-1) {
+      result += ",";
+    }
+  }
+  result += ")";
+  return result;
+}
+
 Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
   // Build a map from index variable tuples to the IndexTensors they access:
   // - B+C   (i,j) -> B(i,j), C(i,j)
@@ -379,15 +391,18 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
         iassert(loops.size() > 0);
 
         // Copy the workspace to the index expression target.
+        std::function<Var(IndexVar)> iv2v = [&inductionVars](IndexVar v) -> Var{
+          return inductionVars.at(v).first;
+        };
+        vector<Var> resultVars = util::map(indexExpression->resultVars, iv2v);
 
 //        Stmt body = Pass::make();
 //        Stmt loopStatement = sparseLoop({}, body, true);
 
-
         Stmt loopStatement = Pass::make();
 
         string comment = toString(target) +
-            matrixSliceString(inductionVars.at(loop.parent).first, 0) +
+            matrixSliceString(resultVars,util::locate(resultVars,inductionVar))+
             " = workspace";
         loopStatements.push_back(Comment::make(comment, loopStatement));
 
