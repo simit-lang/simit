@@ -47,7 +47,7 @@ public:
                     Var tensor, unsigned sourceDim){
     this->sinkVar = Var(inductionVar.getName() + tensor.getName(), Int);
     this->sourceVar = sourceVar;
-    string coordVarName = inductionVar.getName() + sourceVar.getName() +
+    string coordVarName = sourceVar.getName() + inductionVar.getName() +
                           tensor.getName();
     this->coordVar = Var(coordVarName, Int);
     this->tensorIndex = TensorIndex(tensor, sourceDim);
@@ -380,12 +380,13 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
         // values of B are added before the values of C are added.
         vector<Stmt> loopStatements;
         for (IndexInductionVar &inductionVar : indexInductionVars) {
+          // TODO OPT: The first loop can use = instead of +=.
           Stmt loopStatement = sparseLoop({inductionVar}, loopNest, true);
 
           string comment = "workspace += " +
               inductionVar.getTensorIndex().getTensor().getName() +
               matrixSliceString(inductionVar.getSourceVar(),
-                                inductionVar.getTensorIndex().getSourceDimension());
+                  inductionVar.getTensorIndex().getSourceDimension());
           loopStatements.push_back(Comment::make(comment, loopStatement));
         }
         iassert(loops.size() > 0);
