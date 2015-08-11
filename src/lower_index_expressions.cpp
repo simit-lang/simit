@@ -29,13 +29,20 @@ struct Loop {
       : type(Sparse), indexVar(indexVar), parent(parent) {}
 };
 
-struct IndexInductionVar {
-  Var sourceVar;
-  Var coordVar;
-  Var sinkVar;
-
-  TensorIndex tensorIndex;
-
+/// An IndexInductionVar is a pair of loop induction variables, a coordinate
+/// variable and a sink variable, that are retrieved from a tensor index using a
+/// source variable (`sourceVar`). That is, the mapping:
+///     (tensorIndex, sourceVar) -> (coordinateVar, sinkVar).
+///
+/// For example, (A.row2col, i) -> (ijA, jA) is evaluated as follows:
+///     ijA = A.row2col.sources[i];
+///      jA = A.row2col.sinks[ijA];
+///
+/// Given the expression c=A*b, ijA can be used to retrieve the matrix component
+/// at location (i,j) in A, while i can index into c and j into b. For example,
+///     c[i] += A[ijA] * b[j];
+class IndexInductionVar {
+public:
   IndexInductionVar(Var inductionVar, Var sourceVar,
                     Var tensor, unsigned sourceDim){
     this->sinkVar = Var(inductionVar.getName() + tensor.getName(), Int);
@@ -45,6 +52,28 @@ struct IndexInductionVar {
     this->coordVar = Var(coordVarName, Int);
     this->tensorIndex = TensorIndex(tensor, sourceDim);
   }
+
+  const Var &getSourceVar() const {return sourceVar;}
+  const Var &getCoordinateVar() const {return coordVar;}
+  const Var &getSinkVar() const {return sinkVar;}
+
+  const TensorIndex &getTensorIndex() const {return tensorIndex;}
+
+  friend ostream &operator<<(ostream &os, const IndexInductionVar &iiv) {
+  os << iiv.sinkVar
+     << " in "      << iiv.tensorIndex
+     << ".sinks["   << iiv.coordVar
+     << " in "      << iiv.tensorIndex
+     << ".sources[" << iiv.sourceVar << "]]";
+  return os;
+}
+
+private:
+  Var sourceVar;
+  Var coordVar;
+  Var sinkVar;
+
+  TensorIndex tensorIndex;
 };
 
 typedef vector<IndexVar> IndexTuple;
@@ -54,7 +83,7 @@ typedef map<IndexVar, vector<IndexVar>> IndexVarGraph;
 typedef map<IndexVar, pair<Var,vector<IndexInductionVar>>> InductionVars;
 
 ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
-  os << "Index variable graph"  << endl;
+  os << "Index Variable Graph:"  << endl;
   for (auto &ij : ivGraph) {
     auto i = ij.first;
     for (auto &j : ij.second) {
@@ -93,15 +122,6 @@ ostream &operator<<(ostream &os, const InductionVars &inductionVars) {
     }
     os << endl;
   }
-  return os;
-}
-
-ostream &operator<<(ostream &os, const IndexInductionVar &indexInductionVar) {
-  os << indexInductionVar.sinkVar
-     << " in "      << indexInductionVar.tensorIndex
-     << ".sinks["   << indexInductionVar.coordVar
-     << " in "      << indexInductionVar.tensorIndex
-     << ".sources[" << indexInductionVar.sourceVar << "]]";
   return os;
 }
 
@@ -205,23 +225,24 @@ InductionVars createInductionVariables(const vector<Loop> &loops,
 
 static
 Expr readFromSourceIndex(const IndexInductionVar &inductionVar, int offset=0) {
-  return (offset == 0) ? TensorIndexRead::make(inductionVar.tensorIndex,
-                               inductionVar.sourceVar,
+  return (offset == 0) ? TensorIndexRead::make(inductionVar.getTensorIndex(),
+                               inductionVar.getSourceVar(),
                                TensorIndexRead::Sources)
-                       : TensorIndexRead::make(inductionVar.tensorIndex,
-                               inductionVar.sourceVar + offset,
+                       : TensorIndexRead::make(inductionVar.getTensorIndex(),
+                               inductionVar.getSourceVar() + offset,
                                TensorIndexRead::Sources);
 }
 
 static
 Expr readFromSinkIndex(const IndexInductionVar &inductionVar) {
-  return TensorIndexRead::make(inductionVar.tensorIndex,
-                               inductionVar.coordVar,
+  return TensorIndexRead::make(inductionVar.getTensorIndex(),
+                               inductionVar.getCoordinateVar(),
                                TensorIndexRead::Sources);
 }
 
 static Expr compareToNextIndexLocation(const IndexInductionVar &inductionVar) {
-  return Lt::make(inductionVar.coordVar, readFromSourceIndex(inductionVar, 1));
+  return Lt::make(inductionVar.getCoordinateVar(),
+                  readFromSourceIndex(inductionVar, 1));
 }
 
 static
@@ -246,7 +267,7 @@ Stmt sparseLoop(const vector<IndexInductionVar> &inductionVars, Stmt body,
   // Initialize sink induction variables
   vector<Stmt> initSinkInductionVars;
   for (auto &inductionVar : inductionVars) {
-    Stmt initSinkVar = AssignStmt::make(inductionVar.sinkVar,
+    Stmt initSinkVar = AssignStmt::make(inductionVar.getSinkVar(),
                                         readFromSinkIndex(inductionVar));
     initSinkInductionVars.push_back(initSinkVar);
   }
@@ -254,11 +275,11 @@ Stmt sparseLoop(const vector<IndexInductionVar> &inductionVars, Stmt body,
 
 
   // Increment coordinate induction variables at the end of the loop body
-  vector<Stmt> incrementCoordVarStmts;
+  vector<Stmt> incCoordVarStmts;
   for (auto &inductionVar : inductionVars) {
-    incrementCoordVarStmts.push_back(increment(inductionVar.coordVar));
+    incCoordVarStmts.push_back(increment(inductionVar.getCoordinateVar()));
   }
-  body = Block::make(body, Block::make(incrementCoordVarStmts));
+  body = Block::make(body, Block::make(incCoordVarStmts));
 
 
   // Create loop
@@ -269,7 +290,7 @@ Stmt sparseLoop(const vector<IndexInductionVar> &inductionVars, Stmt body,
   if (initCoordVars) {
     vector<Stmt> initCoordVarsStmts;
     for (auto &inductionVar : inductionVars) {
-      Stmt initStmt = AssignStmt::make(inductionVar.coordVar,
+      Stmt initStmt = AssignStmt::make(inductionVar.getCoordinateVar(),
                                        readFromSourceIndex(inductionVar));
       initCoordVarsStmts.push_back(initStmt);
     }
@@ -278,6 +299,14 @@ Stmt sparseLoop(const vector<IndexInductionVar> &inductionVars, Stmt body,
   }
 
   return loop;
+}
+
+string matrixSliceString(const Var &var, unsigned sliceDimension) {
+  string result = "(";
+  result += (sliceDimension == 0) ? toString(var) + ",:"
+                                  : ":," + toString(var);
+  result += ")";
+  return result;
 }
 
 Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
@@ -319,7 +348,7 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
 
   // Emit loops
   Stmt loopNest;
-  for (auto &loop : util::reverse(loops)) {
+  for (Loop &loop : util::reverse(loops)) {
     switch (loop.type) {
       case Loop::Dense: {
         auto &loopInductionVar = inductionVars.at(loop.indexVar).first;
@@ -330,32 +359,39 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
       case Loop::Sparse: {
         auto loopInductionVars = inductionVars.at(loop.indexVar);
         Var inductionVar = loopInductionVars.first;
+
         vector<IndexInductionVar> indexInductionVars = loopInductionVars.second;
 
         // Create loops that add row i of each operand to the workspace. Note
         // that for union-conforming operators each operand is added in in a
         // separate loop nest. For example, if A=B+C then, for each row, all the
         // values of B are added before the values of C are added.
-        vector<Stmt> loops;
+        vector<Stmt> loopStatements;
         for (IndexInductionVar &inductionVar : indexInductionVars) {
-          Stmt loop = sparseLoop({inductionVar}, loopNest, true);
+          Stmt loopStatement = sparseLoop({inductionVar}, loopNest, true);
 
-          unsigned sourceDim = inductionVar.tensorIndex.getSourceDimension();
           string comment = "workspace += " +
-              inductionVar.tensorIndex.getTensor().getName() + "(" +
-              ((sourceDim == 0) ? toString(inductionVar.sourceVar)+",:"
-                                : ":,"+toString(inductionVar.sourceVar)) + ")";
-          loops.push_back(Comment::make(comment, loop));
+              inductionVar.getTensorIndex().getTensor().getName() +
+              matrixSliceString(inductionVar.getSourceVar(),
+                                inductionVar.getTensorIndex().getSourceDimension());
+          loopStatements.push_back(Comment::make(comment, loopStatement));
         }
         iassert(loops.size() > 0);
 
         // Copy the workspace to the index expression target.
 
 //        Stmt body = Pass::make();
-//        Stmt loop = sparseLoop({}, body, true);
-//        loops.push_back(loop);
+//        Stmt loopStatement = sparseLoop({}, body, true);
 
-        loopNest = Block::make(loops);
+
+        Stmt loopStatement = Pass::make();
+
+        string comment = toString(target) +
+            matrixSliceString(inductionVars.at(loop.parent).first, 0) +
+            " = workspace";
+        loopStatements.push_back(Comment::make(comment, loopStatement));
+
+        loopNest = Block::make(loopStatements);
         break;
       }
     }

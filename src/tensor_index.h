@@ -19,7 +19,9 @@ public:
       : tensor(tensor), sourceDimension(sourceDimension)  {}
 
   const Var &getTensor() const {return tensor;}
+
   unsigned getSourceDimension() const {return sourceDimension;}
+  unsigned getSinkDimension() const {return (sourceDimension==0) ? 1 : 0;}
 
 private:
   Var tensor;
