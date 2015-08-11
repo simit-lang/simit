@@ -288,8 +288,8 @@ Stmt lower(Expr target, const IndexExpr *indexExpression,
         Var inductionVar = loopInductionVars.first;
         auto &indexInductionVars = loopInductionVars.second;
 
-        // Sparse while loops simultaneously iterate over the coordinate
-        // variables of one or more tensors
+        // Create while loop condition. Sparse while loops simultaneously
+        // iterate over the coordinate variables of one or more tensors
         auto idxInductionVarIt = indexInductionVars.begin();
         auto idxInductionVarEnd = indexInductionVars.end();
 
@@ -298,14 +298,30 @@ Stmt lower(Expr target, const IndexExpr *indexExpression,
           condition = And::make(condition, compareToIndex(*idxInductionVarIt));
         }
 
+        // Compute the sink induction variable from the min of the different
+        // zipped sink induction variables.
         vector<Var> sinkInductionVars;
         for (auto &indexInductionVar : indexInductionVars) {
           sinkInductionVars.push_back(indexInductionVar.sinkVar);
         }
+        Stmt body = Block::make(computeMin(inductionVar, sinkInductionVars),
+                                loopNest);
 
-        Stmt initInductionVar = computeMin(inductionVar, sinkInductionVars);
-        Stmt body = Block::make(initInductionVar, loopNest);
+        // Emit compute statements statements
+        
+
+
+        // Create zipped while loop
         loopNest = While::make(condition, body);
+
+
+        // If the zipped while loop iterated over a union of induction variables
+        // then we emit while loop to iterate over remaining iterations of each
+        // iteration space
+        for (auto &inductionVar : inductionVars) {
+
+        }
+
         break;
       }
     }
@@ -313,8 +329,7 @@ Stmt lower(Expr target, const IndexExpr *indexExpression,
 
   stringstream comment;
   comment << util::toString(target)
-          << "(" + util::join(indexExpression->resultVars, ",")
-          << ") = ";
+          << "(" + util::join(indexExpression->resultVars, ",") << ") = ";
   IRPrinter printer(comment);
   printer.skipTopExprParenthesis();
   printer.print(indexExpression->value);
