@@ -8,6 +8,7 @@
 #include "indexvar.h"
 #include "ir.h"
 #include "ir_visitor.h"
+#include "ir_codegen.h"
 #include "util.h"
 
 using namespace std;
@@ -30,8 +31,9 @@ struct Loop {
 
 struct IndexInductionVar {
   Var sourceVar;
-  Var sinkVar;
   Var coordVar;
+  Var sinkVar;
+
   TensorIndex tensorIndex;
 
   IndexInductionVar(Var inductionVar, Var sourceVar,
@@ -171,8 +173,7 @@ static IndexUses getIndexUses(IndexTupleUses indexTupleUses) {
 
 static
 InductionVars createInductionVariables(const vector<Loop> &loops,
-                                       const IndexTupleUses &indexTupleUses,
-                                       std::vector<TensorIndex> *tensorIndices) {
+                                       const IndexTupleUses &indexTupleUses) {
   IndexUses indexUses = getIndexUses(indexTupleUses);
 
   InductionVars inductionVars;
@@ -196,46 +197,90 @@ InductionVars createInductionVariables(const vector<Loop> &loops,
             IndexInductionVar(inductionVar, parentInductionVar,
                               tensor, util::locate(indexVars, loop.parent));
         inductionVars.at(indexVar).second.push_back(indexInductionVar);
-
-        tensorIndices->push_back(indexInductionVar.tensorIndex);
       }
     }
   }
   return inductionVars;
 }
 
-static Expr compareToIndex(const IndexInductionVar &coordVar) {
-  Expr indexRead = TensorIndexRead::make(coordVar.tensorIndex,
-                                         coordVar.sourceVar + 1,
-                                         TensorIndexRead::Sources);
-  return Lt::make(coordVar.coordVar, indexRead);
+static
+Expr readFromSourceIndex(const IndexInductionVar &inductionVar, int offset=0) {
+  return (offset == 0) ? TensorIndexRead::make(inductionVar.tensorIndex,
+                               inductionVar.sourceVar,
+                               TensorIndexRead::Sources)
+                       : TensorIndexRead::make(inductionVar.tensorIndex,
+                               inductionVar.sourceVar + offset,
+                               TensorIndexRead::Sources);
 }
 
-/// Compute the smallest value of the input variables.
-static Stmt computeMin(const Var &var, const vector<Var> &vars) {
-  Stmt minStmt = VarDecl::make(var);
-  iassert(vars.size() > 0);
-  if (vars.size() == 2) {
-    minStmt = Block::make(minStmt,
-                          IfThenElse::make(Le::make(vars[0], vars[1]),
-                                           AssignStmt::make(var, vars[0]),
-                                           AssignStmt::make(var, vars[1])));
+static
+Expr readFromSinkIndex(const IndexInductionVar &inductionVar) {
+  return TensorIndexRead::make(inductionVar.tensorIndex,
+                               inductionVar.coordVar,
+                               TensorIndexRead::Sources);
+}
+
+static Expr compareToNextIndexLocation(const IndexInductionVar &inductionVar) {
+  return Lt::make(inductionVar.coordVar, readFromSourceIndex(inductionVar, 1));
+}
+
+static
+Expr sparseLoopCondition(const vector<IndexInductionVar> &inductionVars) {
+  auto it = inductionVars.begin();
+  auto end = inductionVars.end();
+  Expr condition = compareToNextIndexLocation(*it++);
+  for (; it != end; ++it) {
+    condition = And::make(condition, compareToNextIndexLocation(*it));
   }
-  else {
-    minStmt = Block::make(minStmt, AssignStmt::make(var, vars[0]));
-    for (size_t i=1; i < vars.size(); ++i) {
-      minStmt = Block::make(minStmt,
-                            IfThenElse::make(Lt::make(vars[i], var),
-                                             AssignStmt::make(var, vars[i])));
+  return condition;
+}
+
+static
+Stmt sparseLoop(const vector<IndexInductionVar> &inductionVars, Stmt body,
+                bool initCoordVars=true) {
+  // Create while loop condition. Sparse while loops simultaneously
+  // iterate over the coordinate variables of one or more tensors
+  Expr condition = sparseLoopCondition(inductionVars);
+
+
+  // Initialize sink induction variables
+  vector<Stmt> initSinkInductionVars;
+  for (auto &inductionVar : inductionVars) {
+    Stmt initSinkVar = AssignStmt::make(inductionVar.sinkVar,
+                                        readFromSinkIndex(inductionVar));
+    initSinkInductionVars.push_back(initSinkVar);
+  }
+  body = Block::make(Block::make(initSinkInductionVars), body);
+
+
+  // Increment coordinate induction variables at the end of the loop body
+  vector<Stmt> incrementCoordVarStmts;
+  for (auto &inductionVar : inductionVars) {
+    incrementCoordVarStmts.push_back(increment(inductionVar.coordVar));
+  }
+  body = Block::make(body, Block::make(incrementCoordVarStmts));
+
+
+  // Create loop
+  Stmt loop = While::make(condition, body);
+
+
+  // Initialize coordinate induction variable
+  if (initCoordVars) {
+    vector<Stmt> initCoordVarsStmts;
+    for (auto &inductionVar : inductionVars) {
+      Stmt initStmt = AssignStmt::make(inductionVar.coordVar,
+                                       readFromSourceIndex(inductionVar));
+      initCoordVarsStmts.push_back(initStmt);
     }
+    Stmt initCoordVars = Block::make(initCoordVarsStmts);
+    loop = Block::make(initCoordVars, loop);
   }
 
-  string commentString = var.getName() + " = min(" + util::join(vars) + ")";
-  return Comment::make(commentString, minStmt);
+  return loop;
 }
 
-Stmt lower(Expr target, const IndexExpr *indexExpression,
-           std::vector<TensorIndex> *tensorIndices) {
+Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
   // Build a map from index variable tuples to the IndexTensors they access:
   // - B+C   (i,j) -> B(i,j), C(i,j)
   // - B+C'  (i,j) -> B(i,j)
@@ -268,8 +313,7 @@ Stmt lower(Expr target, const IndexExpr *indexExpression,
   // Create Loop Inducation Variables and Coordinate Induction Variables:
   // - B+C  i
   //        j: zip(ijB in nbr(B), ijC in nbr(C))
-  InductionVars inductionVars = createInductionVariables(loops, indexTupleUses,
-                                                         tensorIndices);
+  InductionVars inductionVars = createInductionVariables(loops, indexTupleUses);
   std::cout << inductionVars << std::endl;
 
 
@@ -286,42 +330,32 @@ Stmt lower(Expr target, const IndexExpr *indexExpression,
       case Loop::Sparse: {
         auto loopInductionVars = inductionVars.at(loop.indexVar);
         Var inductionVar = loopInductionVars.first;
-        auto &indexInductionVars = loopInductionVars.second;
+        vector<IndexInductionVar> indexInductionVars = loopInductionVars.second;
 
-        // Create while loop condition. Sparse while loops simultaneously
-        // iterate over the coordinate variables of one or more tensors
-        auto idxInductionVarIt = indexInductionVars.begin();
-        auto idxInductionVarEnd = indexInductionVars.end();
+        // Create loops that add row i of each operand to the workspace. Note
+        // that for union-conforming operators each operand is added in in a
+        // separate loop nest. For example, if A=B+C then, for each row, all the
+        // values of B are added before the values of C are added.
+        vector<Stmt> loops;
+        for (IndexInductionVar &inductionVar : indexInductionVars) {
+          Stmt loop = sparseLoop({inductionVar}, loopNest, true);
 
-        Expr condition = compareToIndex(*idxInductionVarIt++);
-        for (; idxInductionVarIt != idxInductionVarEnd; ++idxInductionVarIt) {
-          condition = And::make(condition, compareToIndex(*idxInductionVarIt));
+          unsigned sourceDim = inductionVar.tensorIndex.getSourceDimension();
+          string comment = "workspace += " +
+              inductionVar.tensorIndex.getTensor().getName() + "(" +
+              ((sourceDim == 0) ? toString(inductionVar.sourceVar)+",:"
+                                : ":,"+toString(inductionVar.sourceVar)) + ")";
+          loops.push_back(Comment::make(comment, loop));
         }
+        iassert(loops.size() > 0);
 
-        // Compute the sink induction variable from the min of the different
-        // zipped sink induction variables.
-        vector<Var> sinkInductionVars;
-        for (auto &indexInductionVar : indexInductionVars) {
-          sinkInductionVars.push_back(indexInductionVar.sinkVar);
-        }
-        Stmt body = Block::make(computeMin(inductionVar, sinkInductionVars),
-                                loopNest);
+        // Copy the workspace to the index expression target.
 
-        // Emit compute statements statements
-        
+//        Stmt body = Pass::make();
+//        Stmt loop = sparseLoop({}, body, true);
+//        loops.push_back(loop);
 
-
-        // Create zipped while loop
-        loopNest = While::make(condition, body);
-
-
-        // If the zipped while loop iterated over a union of induction variables
-        // then we emit while loop to iterate over remaining iterations of each
-        // iteration space
-        for (auto &inductionVar : inductionVars) {
-
-        }
-
+        loopNest = Block::make(loops);
         break;
       }
     }

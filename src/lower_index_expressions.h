@@ -7,8 +7,7 @@
 namespace simit {
 namespace ir {
 
-Stmt lower(Expr target, const IndexExpr *indexExpression,
-           std::vector<TensorIndex> *tensorIndices);
+Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression);
 
 }}
 #endif
