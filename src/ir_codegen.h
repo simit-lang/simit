@@ -2,6 +2,7 @@
 #define SIMIT_IR_CODEGEN_H
 
 #include "ir.h"
+#include <vector>
 
 namespace simit {
 namespace ir {
@@ -20,6 +21,13 @@ std::pair<Stmt,std::vector<Stmt>> removeVarDecls(Stmt stmt);
 
 /// Moves VarDecl statements from within `stmt` to in front of it.
 Stmt moveVarDeclsToFront(Stmt stmt);
+
+/// Compute the smallest value of the given Exprs and assign the result to var.
+/// Can also provide a vector of classes convertible to an Expr, such as Var.
+Stmt min(const Var &result, const std::vector<Expr> &exprs);
+
+/// Increment var by 1. Assumes var is an integer.
+Stmt increment(const Var &var);
 
 }}
 

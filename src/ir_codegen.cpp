@@ -106,4 +106,28 @@ Stmt moveVarDeclsToFront(Stmt stmt) {
       : varDecls.first;
 }
 
+Stmt min(const Var &result, const std::vector<Expr> &exprs) {
+  iassert(exprs.size() > 0);
+  Stmt minStmt;
+  if (exprs.size() == 2) {
+    minStmt = IfThenElse::make(Le::make(exprs[0], exprs[1]),
+                               AssignStmt::make(result, exprs[0]),
+                               AssignStmt::make(result, exprs[1]));
+  }
+  else {
+    minStmt = AssignStmt::make(result, exprs[0]);
+    for (size_t i=1; i < exprs.size(); ++i) {
+      minStmt = IfThenElse::make(Lt::make(exprs[i], result),
+                                 AssignStmt::make(result, exprs[i]));
+    }
+  }
+
+  string commentString = result.getName() + " = min(" + util::join(exprs) + ")";
+  return Comment::make(commentString, minStmt);
+}
+
+Stmt increment(const Var &var) {
+  return AssignStmt::make(var, var + 1);
+}
+
 }}
