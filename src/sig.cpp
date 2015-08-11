@@ -8,7 +8,6 @@
 #include "util/name_generator.h"
 
 using namespace std;
-using namespace simit::util;
 
 namespace simit {
 namespace ir {
@@ -198,7 +197,8 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
 
     void visit(const IndexedTensor *op) {
       iassert(!isa<IndexExpr>(op->tensor))
-          << "IndexExprs should have been flattened by now:" << toString(*op);
+          << "IndexExprs should have been flattened by now:"
+          << util::toString(*op);
 
       Var tensorVar;
       Expr setExpr;
@@ -291,7 +291,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
     std::map<IndexVar, std::vector<LoopVar>> vertexLoopVars;
     std::map<std::vector<Var>, Var> coordVars;
 
-    NameGenerator nameGenerator;
+    util::NameGenerator nameGenerator;
 
     /// We create one loop variable per block level per index variable. The loop
     /// variables are ordered by block level. This variable keeps track of which

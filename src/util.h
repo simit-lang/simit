@@ -128,6 +128,14 @@ size_t locate(const Collection &collection, const Value &value) {
                                                      collection.end(), value));
 }
 
+template <class Collection, typename ParamValue, typename ResultValue>
+std::vector<ResultValue> map(const Collection &collection,
+                             std::function<ResultValue(ParamValue)> f) {
+  std::vector<ResultValue> result;
+  result.resize(collection.size());
+  std::transform(collection.begin(), collection.end(), result.begin(), f);
+  return result;
+}
 
 }}
 
