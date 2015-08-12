@@ -75,12 +75,13 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
 
 std::ostream &operator<<(std::ostream &os, const CompoundOperator &cop) {
   switch (cop) {
-    case CompoundOperator::None: break;
+    case CompoundOperator::None: {
+      break;
+    }
     case CompoundOperator::Add: {
       os << "+";
       break;
     }
-    default: not_supported_yet;
   }
   return os;
 }

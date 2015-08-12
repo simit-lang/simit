@@ -175,8 +175,9 @@ static Expr compareToNextIndexLocation(const TensorIndexVar &inductionVar) {
                   inductionVar.loadCoordinate(1));
 }
 
-static
-Expr sparseLoopCondition(const vector<TensorIndexVar> &inductionVars) {
+/// Create sparse while loop condition. Sparse while loops simultaneously
+/// iterate over the coordinate variables of one or more tensors
+static Expr subsetLoopCondition(const vector<TensorIndexVar> &inductionVars) {
   auto it = inductionVars.begin();
   auto end = inductionVars.end();
   Expr condition = compareToNextIndexLocation(*it++);
@@ -186,47 +187,57 @@ Expr sparseLoopCondition(const vector<TensorIndexVar> &inductionVars) {
   return condition;
 }
 
-static
-Stmt sparseLoop(const vector<TensorIndexVar> &inductionVars, Stmt body,
-                bool initCoordVars=true) {
-  // Create while loop condition. Sparse while loops simultaneously
-  // iterate over the coordinate variables of one or more tensors
-  Expr condition = sparseLoopCondition(inductionVars);
+static Stmt emitSubsetLoop(const Expr &target, const Var &inductionVar,
+                           const SubsetLoop &subsetLoop) {
+  auto &tensorIndexVars = subsetLoop.getTensorIndexVars();
+  iassert(tensorIndexVars.size() > 0);
 
+  // Create sparse while loop condition
+  Expr condition = subsetLoopCondition(tensorIndexVars);
 
   // Initialize sink induction variables
-  vector<Stmt> initSinkInductionVars;
-  for (auto &inductionVar : inductionVars) {
-    initSinkInductionVars.push_back(inductionVar.initSinkVar());
+  Stmt body;
+  if (tensorIndexVars.size() == 1) {
+    body = tensorIndexVars[0].initSinkVar(inductionVar);
   }
-  body = Block::make(Block::make(initSinkInductionVars), body);
+  else {
+    vector<Expr> sinkInductionVars;
+    vector<Stmt> initSinkInductionVars;
+    for (const TensorIndexVar &tensorIndexVar : tensorIndexVars) {
+      sinkInductionVars.push_back(tensorIndexVar.getSinkVar());
+      initSinkInductionVars.push_back(tensorIndexVar.initSinkVar());
+    }
+    body = Block::make(initSinkInductionVars);
 
+    // Compute the loop induction variable as min of the tensor index variables
+    body = Block::make(body, min(inductionVar, sinkInductionVars));
+  }
+
+  // Emit compute statement
+  // TODO
 
   // Increment coordinate induction variables at the end of the loop body
   vector<Stmt> incCoordVarStmts;
-  for (auto &inductionVar : inductionVars) {
+  for (auto &inductionVar : tensorIndexVars) {
     incCoordVarStmts.push_back(increment(inductionVar.getCoordinateVar()));
   }
   body = Block::make(body, Block::make(incCoordVarStmts));
 
-
   // Create loop
   Stmt loop = While::make(condition, body);
 
-
   // Initialize coordinate induction variable
-  if (initCoordVars) {
-    vector<Stmt> initCoordVarsStmts;
-    for (auto &inductionVar : inductionVars) {
-      initCoordVarsStmts.push_back(inductionVar.initCoordinateVar());
-    }
-    loop = Block::make(Block::make(initCoordVarsStmts), loop);
+  vector<Stmt> initCoordVarsStmts;
+  for (auto &inductionVar : tensorIndexVars) {
+    initCoordVarsStmts.push_back(inductionVar.initCoordinateVar());
   }
+  loop = Block::make(Block::make(initCoordVarsStmts), loop);
 
   return loop;
 }
 
-string tensorSliceString(const vector<Var> &vars, const Var &sliceVar) {
+static string tensorSliceString(const vector<IndexVar> &vars,
+                                const IndexVar &sliceVar) {
   unsigned sliceDimension = util::locate(vars, sliceVar);
   string result = "(";
   for (size_t i=0; i < vars.size(); ++i) {
@@ -237,6 +248,31 @@ string tensorSliceString(const vector<Var> &vars, const Var &sliceVar) {
   }
   result += ")";
   return result;
+}
+
+static string tensorSliceString(const Expr &expr, const IndexVar &sliceVar) {
+  class SlicePrinter : public IRPrinter {
+  public:
+    SlicePrinter(const IndexVar &sliceVar) : IRPrinter(ss), sliceVar(sliceVar){}
+    string toString(const Expr &expr) {
+      print(expr);
+      return ss.str();
+    }
+  private:
+    stringstream ss;
+    const IndexVar &sliceVar;
+    void visit(const IndexedTensor *indexedTensor) {
+      ss << indexedTensor->tensor
+         << tensorSliceString(indexedTensor->indexVars, sliceVar);
+    }
+  };
+  return SlicePrinter(sliceVar).toString(expr);;
+}
+
+static string workspaceWriteString(const SubsetLoop &subsetLoop,
+                                   const IndexVar &sliceVar) {
+  return "workspace " + util::toString(subsetLoop.getCompoundOperator())+"= " +
+         tensorSliceString(subsetLoop.getIndexExpression(), sliceVar);
 }
 
 Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
@@ -273,27 +309,22 @@ Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
   // - B+C  i
   //        j: zip(ijB in nbr(B), ijC in nbr(C))
   InductionVars inductionVars = createInductionVariables(loops, indexTupleUses);
-  std::cout << inductionVars << std::endl;
-
+//  std::cout << inductionVars << std::endl;
 
 
   // Emit loops
   Stmt loopNest;
   for (IndexVariableLoop &loop : util::reverse_iterator(loops)) {
+    IndexVar indexVar = loop.getIndexVar();
+    Var inductionVar  = loop.getInductionVar();
 
     // Dense loops
     if (!loop.isLinked()) {
-      IndexVar indexVar = loop.getIndexVar();
-      auto &loopInductionVar = inductionVars.at(indexVar).first;
-      auto &domain = indexVar.getDomain().getIndexSets()[0];
-      loopNest = For::make(loopInductionVar, domain, loopNest);
+      const IndexSet &indexSet = indexVar.getDomain().getIndexSets()[0];
+      loopNest = For::make(inductionVar, indexSet, loopNest);
     }
-    // Sparse loops
+    // Sparse/linked loops
     else {
-      auto loopInductionVars = inductionVars.at(loop.getIndexVar());
-      Var inductionVar = loopInductionVars.first;
-      vector<TensorIndexVar> indexInductionVars = loopInductionVars.second;
-
       vector<SubsetLoop> subsetLoops =
           createSubsetLoops(target, indexExpression, loop);
       std::cout << "Subset Loops:" << std::endl;
@@ -303,36 +334,24 @@ Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
       std::cout << std::endl;
 
 
-      // Create loops that add row i of each operand to the workspace. Note
-      // that for union-conforming operators each operand is added in in a
-      // separate loop nest. For example, if A=B+C then, for each row, all the
-      // values of B are added before the values of C are added.
+      // Emit each subset loop and add their results to the workspace
       vector<Stmt> loopStatements;
-      for (const TensorIndexVar &inductionVar : indexInductionVars) {
-        // TODO OPT: The first loop can use = instead of +=.
-        Stmt loopStatement = sparseLoop({inductionVar}, loopNest, true);
+      for (SubsetLoop &subsetLoop : subsetLoops) {
+        Stmt loopStatement = emitSubsetLoop(target, inductionVar, subsetLoop);
 
-        string comment = "workspace += ...";
-        //              inductionVar.getTensorIndex().getTensor().getName() +
-        //              matrixSliceString(inductionVar.getSourceVar(),
-        //                  inductionVar.getTensorIndex().getSourceDimension());
-        loopStatements.push_back(Comment::make(comment, loopStatement));
+        loopStatements.push_back(Comment::make(workspaceWriteString(subsetLoop, loop.getIndexVar()),
+                                               loopStatement));
       }
       iassert(loops.size() > 0);
 
-
-      // Copy the workspace to the index expression target.
-      std::function<Var(IndexVar)> iv2v = [&inductionVars](IndexVar v) -> Var{
-        return inductionVars.at(v).first;
-      };
-      vector<Var> resultVars = util::map(indexExpression->resultVars, iv2v);
 
       Stmt loopStatement = Pass::make();
       //        Stmt body = Pass::make();
       //        Stmt loopStatement = sparseLoop({}, body, true);
 
       string comment = toString(target) +
-      tensorSliceString(resultVars, inductionVar) + " = workspace";
+                       tensorSliceString(indexExpression->resultVars,
+                                         loop.getIndexVar()) + " = workspace";
       loopStatements.push_back(Comment::make(comment, loopStatement));
 
       loopNest = Block::make(loopStatements);

@@ -73,7 +73,11 @@ Stmt TensorIndexVar::initCoordinateVar() const {
 }
 
 Stmt TensorIndexVar::initSinkVar() const {
-  return AssignStmt::make(getSinkVar(), loadSink());
+  return initSinkVar(getSinkVar());
+}
+
+Stmt TensorIndexVar::initSinkVar(const Var &sinkVar) const {
+  return AssignStmt::make(sinkVar, loadSink());
 }
 
 
@@ -90,16 +94,8 @@ ostream &operator<<(ostream &os, const TensorIndexVar &tiv) {
 // class SubsetLoop
 std::ostream &operator<<(std::ostream &os, const SubsetLoop &ssl) {
   os << "foreach zip(" << util::join(ssl.getTensorIndexVars()) << ")";
-  os << "\n  ";
-  switch (ssl.getCompoundOperator()) {
-    case CompoundOperator::None:
-      os << "=";
-      break;
-    case CompoundOperator::Add:
-      os << "+=";
-      break;
-  }
-  os << " " << ssl.getComputeExpression();
+  os << "\n  " << ssl.getCompoundOperator() << "= "
+     << ssl.getComputeExpression();
   return os;
 }
 
@@ -162,7 +158,8 @@ private:
   /// Takes the set product of the subset loops in a and b
   vector<SubsetLoop> intersectionMerge(const vector<SubsetLoop> &a,
                                        const vector<SubsetLoop> &b,
-                                       function<Expr(Expr,Expr)> op) {
+                                       function<Expr(Expr,Expr)> op,
+                                       Expr iexpr) {
     vector<SubsetLoop> c;
     c.reserve(a.size() * b.size());
 
@@ -183,7 +180,7 @@ private:
           ctivars.push_back(btivar);
         }
 
-        c.push_back(SubsetLoop(ctivars, op(aComputeExpr, bComputeExpr)));
+        c.push_back(SubsetLoop(ctivars, op(aComputeExpr, bComputeExpr), iexpr));
       }
     }
 
@@ -201,7 +198,7 @@ private:
   inline void visitBinaryIntersectionOperator(const T *op) {
     this->subsetLoops = intersectionMerge(createSubsetLoops(op->a),
                                           createSubsetLoops(op->b),
-                                          T::make);
+                                          T::make, op);
   }
 
   void visit(const Add *op) {
@@ -236,7 +233,7 @@ private:
 
     Expr tensorLoad = Load::make(indexedTensor->tensor,
                                  tensorIndexVar.getCoordinateVar());
-    subsetLoops = {SubsetLoop({tensorIndexVar}, tensorLoad)};
+    subsetLoops = {SubsetLoop({tensorIndexVar}, tensorLoad, indexedTensor)};
   }
 };
 

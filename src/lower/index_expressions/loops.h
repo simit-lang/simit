@@ -57,6 +57,7 @@ public:
   Expr loadSink() const;
   Stmt initCoordinateVar() const;
   Stmt initSinkVar() const;
+  Stmt initSinkVar(const Var &sinkVar) const;
 
   friend std::ostream &operator<<(std::ostream&, const TensorIndexVar&);
 
@@ -71,8 +72,9 @@ private:
 class SubsetLoop {
 public:
   SubsetLoop(const std::vector<TensorIndexVar> &tensorIndexVars,
-             const Expr computeExpr = Expr())
-      : tensorIndexVars(tensorIndexVars), computeExpr(computeExpr){}
+             Expr computeExpr, Expr indexExpr)
+      : tensorIndexVars(tensorIndexVars),
+        computeExpr(computeExpr), indexExpr(indexExpr) {}
 
   void setCompoundOperator(CompoundOperator cop) {this->cop = cop;}
 
@@ -81,14 +83,19 @@ public:
   }
 
   CompoundOperator getCompoundOperator() const {return cop;}
+
   const Expr &getComputeExpression() const {return computeExpr;}
+
+  const Expr &getIndexExpression() const {return indexExpr;}
 
   friend std::ostream &operator<<(std::ostream&, const SubsetLoop&);
 
 private:
   std::vector<TensorIndexVar> tensorIndexVars;
   CompoundOperator cop = CompoundOperator::None;
+
   Expr computeExpr;
+  Expr indexExpr; // This is only kept for debugging purposes
 };
 
 
