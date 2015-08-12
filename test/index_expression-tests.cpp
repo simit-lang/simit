@@ -26,9 +26,7 @@ TEST(DISABLED_IndexExpression, add) {
   Expr add = IndexExpr::make({i,j}, B(i,j) + C(i,j));
   Var A("A", add.type());
 
-  vector<TensorIndex> tensorIndices;
-  Stmt loops = lower(A, to<IndexExpr>(add), &tensorIndices);
+  Stmt loops = lower_scatter_workspace(A, to<IndexExpr>(add));
 
   std::cout << loops << std::endl;
-//  std::cout << tensorIndices << std::endl;
 }
