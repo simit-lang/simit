@@ -70,11 +70,11 @@ private:
 
 class SubsetLoop {
 public:
-  SubsetLoop(const std::vector<TensorIndexVar> &tensorIndexVars)
-      : tensorIndexVars(tensorIndexVars) {}
+  SubsetLoop(const std::vector<TensorIndexVar> &tensorIndexVars,
+             const Expr computeExpr = Expr())
+      : tensorIndexVars(tensorIndexVars), computeExpr(computeExpr){}
 
   void setCompoundOperator(CompoundOperator cop) {this->cop = cop;}
-  void setComputeExpression(Expr computeExpr) {this->computeExpr = computeExpr;}
 
   const std::vector<TensorIndexVar> &getTensorIndexVars() const {
     return tensorIndexVars;
