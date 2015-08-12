@@ -109,7 +109,7 @@ private:
 /// Iterate over a collection in reverse using a range for loop:
 /// for (auto &element : util::reverse(collection)) {...}
 template <typename T>
-ReverseIterator<T> reverse(T &collection) {
+ReverseIterator<T> reverse_iterator(T &collection) {
   return ReverseIterator<T>(collection);
 }
 

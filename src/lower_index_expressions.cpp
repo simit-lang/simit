@@ -31,7 +31,7 @@ struct Loop {
 
 /// An IndexInductionVar is a pair of loop induction variables, a coordinate
 /// variable and a sink variable, that are retrieved from a tensor index using a
-/// source variable (`sourceVar`). That is, the mapping:
+/// source variable. That is, the mapping:
 ///     (tensorIndex, sourceVar) -> (coordinateVar, sinkVar).
 ///
 /// For example, (A.row2col, i) -> (ijA, jA) is evaluated as follows:
@@ -44,12 +44,11 @@ struct Loop {
 class IndexInductionVar {
 public:
   IndexInductionVar(Var inductionVar, Var sourceVar,
-                    Var tensor, unsigned sourceDim){
+                    Var tensor, unsigned sourceDim) {
     this->sinkVar = Var(inductionVar.getName() + tensor.getName(), Int);
     this->sourceVar = sourceVar;
-    string coordVarName = sourceVar.getName() + inductionVar.getName() +
-                          tensor.getName();
-    this->coordVar = Var(coordVarName, Int);
+    this->coordVar =
+        Var(sourceVar.getName()+inductionVar.getName()+tensor.getName(), Int);
     this->tensorIndex = TensorIndex(tensor, sourceDim);
   }
 
@@ -301,15 +300,8 @@ Stmt sparseLoop(const vector<IndexInductionVar> &inductionVars, Stmt body,
   return loop;
 }
 
-string matrixSliceString(const Var &var, unsigned sliceDimension) {
-  string result = "(";
-  result += (sliceDimension == 0) ? toString(var) + ",:"
-                                  : ":," + toString(var);
-  result += ")";
-  return result;
-}
-
-string matrixSliceString(vector<Var> vars, unsigned sliceDimension) {
+string tensorSliceString(const vector<Var> &vars, const Var &sliceVar) {
+  unsigned sliceDimension = util::locate(vars, sliceVar);
   string result = "(";
   for (size_t i=0; i < vars.size(); ++i) {
     result += (i == sliceDimension) ? ":" : toString(vars[i]);
@@ -360,7 +352,8 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
 
   // Emit loops
   Stmt loopNest;
-  for (Loop &loop : util::reverse(loops)) {
+  for (Loop &loop : util::reverse_iterator(loops)) {
+
     switch (loop.type) {
       case Loop::Dense: {
         auto &loopInductionVar = inductionVars.at(loop.indexVar).first;
@@ -371,25 +364,27 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
       case Loop::Sparse: {
         auto loopInductionVars = inductionVars.at(loop.indexVar);
         Var inductionVar = loopInductionVars.first;
-
         vector<IndexInductionVar> indexInductionVars = loopInductionVars.second;
+
 
         // Create loops that add row i of each operand to the workspace. Note
         // that for union-conforming operators each operand is added in in a
         // separate loop nest. For example, if A=B+C then, for each row, all the
         // values of B are added before the values of C are added.
         vector<Stmt> loopStatements;
-        for (IndexInductionVar &inductionVar : indexInductionVars) {
+        for (const IndexInductionVar &inductionVar : indexInductionVars) {
           // TODO OPT: The first loop can use = instead of +=.
           Stmt loopStatement = sparseLoop({inductionVar}, loopNest, true);
+          std::cout << inductionVar.getTensorIndex().getTensor() << std::endl;
 
-          string comment = "workspace += " +
-              inductionVar.getTensorIndex().getTensor().getName() +
-              matrixSliceString(inductionVar.getSourceVar(),
-                  inductionVar.getTensorIndex().getSourceDimension());
+          string comment = "workspace += ...";
+//              inductionVar.getTensorIndex().getTensor().getName() +
+//              matrixSliceString(inductionVar.getSourceVar(),
+//                  inductionVar.getTensorIndex().getSourceDimension());
           loopStatements.push_back(Comment::make(comment, loopStatement));
         }
         iassert(loops.size() > 0);
+
 
         // Copy the workspace to the index expression target.
         std::function<Var(IndexVar)> iv2v = [&inductionVars](IndexVar v) -> Var{
@@ -397,14 +392,12 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
         };
         vector<Var> resultVars = util::map(indexExpression->resultVars, iv2v);
 
+        Stmt loopStatement = Pass::make();
 //        Stmt body = Pass::make();
 //        Stmt loopStatement = sparseLoop({}, body, true);
 
-        Stmt loopStatement = Pass::make();
-
         string comment = toString(target) +
-            matrixSliceString(resultVars,util::locate(resultVars,inductionVar))+
-            " = workspace";
+            tensorSliceString(resultVars, inductionVar) + " = workspace";
         loopStatements.push_back(Comment::make(comment, loopStatement));
 
         loopNest = Block::make(loopStatements);
