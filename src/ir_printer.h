@@ -14,7 +14,7 @@ namespace ir {
 struct Environment;
 struct IRNode;
 struct ForDomain;
-struct CompoundOperator;
+enum class CompoundOperator;
 
 std::ostream &operator<<(std::ostream &os, const Environment &);
 std::ostream &operator<<(std::ostream &os, const Func &);

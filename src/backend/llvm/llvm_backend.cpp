@@ -595,7 +595,7 @@ void LLVMBackend::visit(const VarDecl *op) {
 }
 
 void LLVMBackend::visit(const AssignStmt *op) {
-  switch (op->cop.kind) {
+  switch (op->cop) {
     case ir::CompoundOperator::None: {
       emitAssign(op->var, op->value);
       return;
@@ -785,7 +785,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
 
   // Assigning a scalar to an n-order tensor
   if (fieldType.toTensor()->order() > 0 && valueType.toTensor()->order() == 0) {
-    iassert(op->cop.kind == CompoundOperator::None)
+    iassert(op->cop == CompoundOperator::None)
         << "Compound write when assigning scalar to n-order tensor";
     if (isa<Literal>(op->value) &&
         to<Literal>(op->value)->getFloatVal(0) == 0.0) {
@@ -809,7 +809,7 @@ void LLVMBackend::visit(const FieldWrite *op) {
     // emit memcpy
     llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
     llvm::Value *valuePtr;
-    switch (op->cop.kind) {
+    switch (op->cop) {
       case ir::CompoundOperator::None: {
         valuePtr = compile(op->value);
         break;
@@ -837,7 +837,7 @@ void LLVMBackend::visit(const ir::Store *op) {
   llvm::Value *buffer = compile(op->buffer);
   llvm::Value *index = compile(op->index);
   llvm::Value *value;
-  switch (op->cop.kind) {
+  switch (op->cop) {
     case CompoundOperator::None: {
       value = compile(op->value);
       break;

@@ -51,7 +51,7 @@ public:
 
   // Writes
   void visit(const AssignStmt *op) {
-    if (op->cop.kind != CompoundOperator::None) {
+    if (op->cop != CompoundOperator::None) {
       maybeRead(op->var);
     }
     maybeWrite(op->var);

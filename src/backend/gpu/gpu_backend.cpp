@@ -437,10 +437,10 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
   // Only atomic for a compound scalar-scalar assign
   const ir::TensorType *varType = op->var.getType().toTensor();
   const ir::TensorType *valType = op->value.type().toTensor();
-  if (op->cop.kind != ir::CompoundOperator::None &&
+  if (op->cop != ir::CompoundOperator::None &&
       varType->order() == 0) {
     iassert(symtable.contains(op->var)) << op->var << " has not been declared";
-    switch (op->cop.kind) {
+    switch (op->cop) {
       case ir::CompoundOperator::Add: {
         llvm::Value *value = compile(op->value);
         llvm::Value *varPtr = symtable.get(op->var);
@@ -456,7 +456,7 @@ void GPUBackend::visit(const ir::AssignStmt *op) {
         }
         break;
       }
-      default: ierror << "Unknown compound operator type: " << op->cop.kind;
+      default: ierror << "Unknown compound operator type: " << op->cop;
     }
   }
   else if (varType->order() > 0 && valType->order() == 0 &&
@@ -490,13 +490,13 @@ void GPUBackend::visit(const ir::FieldWrite *op) {
   }
 }
 void GPUBackend::visit(const ir::Store *op) {
-  if (op->cop.kind != ir::CompoundOperator::None) {
+  if (op->cop != ir::CompoundOperator::None) {
     llvm::Value *buffer = compile(op->buffer);
     llvm::Value *index = compile(op->index);
     llvm::Value *value = compile(op->value);
     std::string locName = std::string(buffer->getName()) + PTR_SUFFIX;
     llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
-    switch (op->cop.kind) {
+    switch (op->cop) {
       case ir::CompoundOperator::Add: {
         emitAtomicLoadAdd(bufferLoc, value);
         break;

@@ -74,7 +74,7 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
 }
 
 std::ostream &operator<<(std::ostream &os, const CompoundOperator &cop) {
-  switch (cop.kind) {
+  switch (cop) {
     case CompoundOperator::None: break;
     case CompoundOperator::Add: {
       os << "+";
