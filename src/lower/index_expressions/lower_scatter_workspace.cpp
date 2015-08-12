@@ -276,6 +276,7 @@ Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
   std::cout << inductionVars << std::endl;
 
 
+
   // Emit loops
   Stmt loopNest;
   for (IndexVariableLoop &loop : util::reverse_iterator(loops)) {
@@ -292,6 +293,14 @@ Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
       auto loopInductionVars = inductionVars.at(loop.getIndexVar());
       Var inductionVar = loopInductionVars.first;
       vector<TensorIndexVar> indexInductionVars = loopInductionVars.second;
+
+      vector<SubsetLoop> subsetLoops =
+          createSubsetLoops(target, indexExpression, loop);
+      std::cout << "Subset Loops:" << std::endl;
+      for (auto &subsetLoop : subsetLoops) {
+        std::cout << subsetLoop << std::endl;
+      }
+      std::cout << std::endl;
 
 
       // Create loops that add row i of each operand to the workspace. Note

@@ -67,5 +67,29 @@ private:
   TensorIndex tensorIndex;
 };
 
+
+class SubsetLoop {
+public:
+  SubsetLoop(const std::vector<TensorIndexVar> &tensorIndexVars)
+      : tensorIndexVars(tensorIndexVars) {}
+
+  const std::vector<TensorIndexVar> &getTensorIndexVars() const {
+    return tensorIndexVars;
+  }
+
+  const Expr &getComputeExpression() const {return computeExpression;}
+
+  friend std::ostream &operator<<(std::ostream&, const SubsetLoop&);
+
+private:
+  std::vector<TensorIndexVar> tensorIndexVars;
+  Expr computeExpression;
+};
+
+
+std::vector<SubsetLoop> createSubsetLoops(Expr target,
+                                          const IndexExpr *indexExpression,
+                                          IndexVariableLoop loop);
+
 }}
 #endif
