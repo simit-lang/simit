@@ -437,6 +437,9 @@ void IRPrinter::visit(const ForRange *op) {
   ++indentation;
   print(op->body);
   --indentation;
+  os << endl;
+  indent();
+  os << "end";
 }
 
 void IRPrinter::visit(const For *op) {
@@ -446,6 +449,9 @@ void IRPrinter::visit(const For *op) {
   ++indentation;
   print(op->body);
   --indentation;
+  os << endl;
+  indent();
+  os << "end";
 }
 
 void IRPrinter::visit(const While *op) {
@@ -457,6 +463,9 @@ void IRPrinter::visit(const While *op) {
   ++indentation;
   print(op->body);
   --indentation;
+  os << endl;
+  indent();
+  os << "end";
 }
 
 void IRPrinter::visit(const IfThenElse *op) {
@@ -476,6 +485,9 @@ void IRPrinter::visit(const IfThenElse *op) {
     print(op->elseBody);
     --indentation;
   }
+  os << endl;
+  indent();
+  os << "end";
 }
 
 void IRPrinter::visit(const Block *op) {
