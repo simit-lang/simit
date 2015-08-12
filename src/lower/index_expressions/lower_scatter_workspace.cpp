@@ -1,4 +1,4 @@
-#include "lower_index_expressions.h"
+#include "lower_scatter_workspace.h"
 
 #include <vector>
 #include <set>

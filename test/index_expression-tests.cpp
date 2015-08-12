@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "ir.h"
-#include "lower_index_expressions.h"
+#include "lower/index_expressions/lower_scatter_workspace.h"
 #include "tensor_index.h"
 #include "graph.h"
 

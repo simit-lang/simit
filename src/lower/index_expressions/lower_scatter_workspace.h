@@ -1,5 +1,5 @@
-#ifndef SIMIT_LOWER_INDEX_EXPRESSIONS_H
-#define SIMIT_LOWER_INDEX_EXPRESSIONS_H
+#ifndef SIMIT_LOWER_SCATTER_WORKSPACE_H
+#define SIMIT_LOWER_SCATTER_WORKSPACE_H
 
 #include "ir.h"
 #include "tensor_index.h"

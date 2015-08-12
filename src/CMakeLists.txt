@@ -65,6 +65,7 @@ set(SIMIT_HEADERS ${SIMIT_HEADERS} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER} $
 set(SIMIT_SOURCES ${SIMIT_SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER}  ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER})
 
 add_subdirectory(backend)
+add_subdirectory(lower)
 add_subdirectory(visualizer)
 
 add_definitions(${SIMIT_DEFINITIONS})
