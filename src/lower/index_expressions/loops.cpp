@@ -1,8 +1,11 @@
 #include "loops.h"
 
+using namespace std;
+
 namespace simit {
 namespace ir {
 
+// class IndexVariableLoop
 struct IndexVariableLoop::Content {
   IndexVar indexVar;
   Var inductionVar;
@@ -38,6 +41,26 @@ bool IndexVariableLoop::isLinked() const {
 
 IndexVariableLoop IndexVariableLoop::getLinkedLoop() const {
   return content->linkedLoop;
+}
+
+
+// class TensorIndexVar
+TensorIndexVar::TensorIndexVar(Var inductionVar, Var sourceVar, Var tensor,
+                 unsigned sourceDim, unsigned sinkDim) {
+  this->sinkVar = Var(inductionVar.getName() + tensor.getName(), Int);
+  this->sourceVar = sourceVar;
+  this->coordinateVar =
+      Var(sourceVar.getName()+inductionVar.getName()+tensor.getName(), Int);
+  this->tensorIndex = TensorIndex(tensor, sourceDim);
+}
+
+ostream &operator<<(ostream &os, const TensorIndexVar &tiv) {
+  os << tiv.sinkVar
+     << " in "      << tiv.tensorIndex
+     << ".sinks["   << tiv.coordinateVar
+     << " in "      << tiv.tensorIndex
+     << ".sources[" << tiv.sourceVar << "]]";
+  return os;
 }
 
 }}

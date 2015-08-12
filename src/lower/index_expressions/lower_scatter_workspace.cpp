@@ -18,57 +18,11 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-/// An IndexInductionVar is a pair of loop induction variables, a coordinate
-/// variable and a sink variable, that are retrieved from a tensor index using a
-/// source variable. That is, the mapping:
-///     (tensorIndex, sourceVar) -> (coordinateVar, sinkVar).
-///
-/// For example, (A.row2col, i) -> (ijA, jA) is evaluated as follows:
-///     ijA = A.row2col.sources[i];
-///      jA = A.row2col.sinks[ijA];
-///
-/// Given the expression c=A*b, ijA can be used to retrieve the matrix component
-/// at location (i,j) in A, while i can index into c and j into b. For example,
-///     c[i] += A[ijA] * b[j];
-class IndexInductionVar {
-public:
-  IndexInductionVar(Var inductionVar, Var sourceVar,
-                    Var tensor, unsigned sourceDim) {
-    this->sinkVar = Var(inductionVar.getName() + tensor.getName(), Int);
-    this->sourceVar = sourceVar;
-    this->coordVar =
-        Var(sourceVar.getName()+inductionVar.getName()+tensor.getName(), Int);
-    this->tensorIndex = TensorIndex(tensor, sourceDim);
-  }
-
-  const Var &getSourceVar() const {return sourceVar;}
-  const Var &getCoordinateVar() const {return coordVar;}
-  const Var &getSinkVar() const {return sinkVar;}
-
-  const TensorIndex &getTensorIndex() const {return tensorIndex;}
-
-  friend ostream &operator<<(ostream &os, const IndexInductionVar &iiv) {
-  os << iiv.sinkVar
-     << " in "      << iiv.tensorIndex
-     << ".sinks["   << iiv.coordVar
-     << " in "      << iiv.tensorIndex
-     << ".sources[" << iiv.sourceVar << "]]";
-  return os;
-}
-
-private:
-  Var sourceVar;
-  Var coordVar;
-  Var sinkVar;
-
-  TensorIndex tensorIndex;
-};
-
 typedef vector<IndexVar> IndexTuple;
 typedef map<IndexTuple, vector<const IndexedTensor *>> IndexTupleUses;
 typedef map<IndexVar, vector<const IndexedTensor *>> IndexUses;
 typedef map<IndexVar, vector<IndexVar>> IndexVarGraph;
-typedef map<IndexVar, pair<Var,vector<IndexInductionVar>>> InductionVars;
+typedef map<IndexVar, pair<Var,vector<TensorIndexVar>>> InductionVars;
 
 ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
   os << "Index Variable Graph:"  << endl;
@@ -205,9 +159,10 @@ InductionVars createInductionVariables(const vector<IndexVariableLoop> &loops,
         Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
         vector<IndexVar> indexVars = indexedTensor->indexVars;
 
-        IndexInductionVar indexInductionVar =
-            IndexInductionVar(inductionVar, linkedInductionVar,
-                              tensor, util::locate(indexVars, linkedIndexVar));
+        TensorIndexVar indexInductionVar(inductionVar, linkedInductionVar,
+                                         tensor,
+                                         util::locate(indexVars,linkedIndexVar),
+                                         util::locate(indexVars,indexVar));
         inductionVars.at(indexVar).second.push_back(indexInductionVar);
       }
     }
@@ -216,7 +171,7 @@ InductionVars createInductionVariables(const vector<IndexVariableLoop> &loops,
 }
 
 static
-Expr readFromSourceIndex(const IndexInductionVar &inductionVar, int offset=0) {
+Expr readFromSourceIndex(const TensorIndexVar &inductionVar, int offset=0) {
   return (offset == 0) ? TensorIndexRead::make(inductionVar.getTensorIndex(),
                                inductionVar.getSourceVar(),
                                TensorIndexRead::Sources)
@@ -226,19 +181,19 @@ Expr readFromSourceIndex(const IndexInductionVar &inductionVar, int offset=0) {
 }
 
 static
-Expr readFromSinkIndex(const IndexInductionVar &inductionVar) {
+Expr readFromSinkIndex(const TensorIndexVar &inductionVar) {
   return TensorIndexRead::make(inductionVar.getTensorIndex(),
                                inductionVar.getCoordinateVar(),
                                TensorIndexRead::Sources);
 }
 
-static Expr compareToNextIndexLocation(const IndexInductionVar &inductionVar) {
+static Expr compareToNextIndexLocation(const TensorIndexVar &inductionVar) {
   return Lt::make(inductionVar.getCoordinateVar(),
                   readFromSourceIndex(inductionVar, 1));
 }
 
 static
-Expr sparseLoopCondition(const vector<IndexInductionVar> &inductionVars) {
+Expr sparseLoopCondition(const vector<TensorIndexVar> &inductionVars) {
   auto it = inductionVars.begin();
   auto end = inductionVars.end();
   Expr condition = compareToNextIndexLocation(*it++);
@@ -249,7 +204,7 @@ Expr sparseLoopCondition(const vector<IndexInductionVar> &inductionVars) {
 }
 
 static
-Stmt sparseLoop(const vector<IndexInductionVar> &inductionVars, Stmt body,
+Stmt sparseLoop(const vector<TensorIndexVar> &inductionVars, Stmt body,
                 bool initCoordVars=true) {
   // Create while loop condition. Sparse while loops simultaneously
   // iterate over the coordinate variables of one or more tensors
@@ -358,7 +313,7 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
     else {
       auto loopInductionVars = inductionVars.at(loop.getIndexVar());
       Var inductionVar = loopInductionVars.first;
-      vector<IndexInductionVar> indexInductionVars = loopInductionVars.second;
+      vector<TensorIndexVar> indexInductionVars = loopInductionVars.second;
 
 
       // Create loops that add row i of each operand to the workspace. Note
@@ -366,7 +321,7 @@ Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
       // separate loop nest. For example, if A=B+C then, for each row, all the
       // values of B are added before the values of C are added.
       vector<Stmt> loopStatements;
-      for (const IndexInductionVar &inductionVar : indexInductionVars) {
+      for (const TensorIndexVar &inductionVar : indexInductionVars) {
         // TODO OPT: The first loop can use = instead of +=.
         Stmt loopStatement = sparseLoop({inductionVar}, loopNest, true);
 
