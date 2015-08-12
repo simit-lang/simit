@@ -53,6 +53,11 @@ public:
 
   const TensorIndex &getTensorIndex() const {return tensorIndex;}
 
+  Expr loadCoordinate(int offset=0) const;
+  Expr loadSink() const;
+  Stmt initCoordinateVar() const;
+  Stmt initSinkVar() const;
+
   friend std::ostream &operator<<(std::ostream&, const TensorIndexVar&);
 
 private:

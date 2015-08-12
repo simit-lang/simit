@@ -1,13 +1,14 @@
 #ifndef SIMIT_LOWER_SCATTER_WORKSPACE_H
 #define SIMIT_LOWER_SCATTER_WORKSPACE_H
 
+#include <vector>
 #include "ir.h"
-#include "tensor_index.h"
+#include "loops.h"
 
 namespace simit {
 namespace ir {
 
-Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression);
+Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression);
 
 }}
 #endif

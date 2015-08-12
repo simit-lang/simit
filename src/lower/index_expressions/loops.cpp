@@ -54,6 +54,26 @@ TensorIndexVar::TensorIndexVar(Var inductionVar, Var sourceVar, Var tensor,
   this->tensorIndex = TensorIndex(tensor, sourceDim);
 }
 
+Expr TensorIndexVar::loadCoordinate(int offset) const {
+  Expr sourceExpr = (offset == 0) ? getSourceVar() : getSourceVar() + offset;
+  return TensorIndexRead::make(getTensorIndex(), sourceExpr,
+                               TensorIndexRead::Sources);
+}
+
+Expr TensorIndexVar::loadSink() const {
+  return TensorIndexRead::make(getTensorIndex(), getCoordinateVar(),
+                               TensorIndexRead::Sinks);
+}
+
+Stmt TensorIndexVar::initCoordinateVar() const {
+  return AssignStmt::make(getCoordinateVar(), loadCoordinate());;
+}
+
+Stmt TensorIndexVar::initSinkVar() const {
+  return AssignStmt::make(getSinkVar(), loadSink());
+}
+
+
 ostream &operator<<(ostream &os, const TensorIndexVar &tiv) {
   os << tiv.sinkVar
      << " in "      << tiv.tensorIndex

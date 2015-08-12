@@ -26,7 +26,7 @@ TEST(DISABLED_IndexExpression, add) {
   Expr add = IndexExpr::make({i,j}, B(i,j) + C(i,j));
   Var A("A", add.type());
 
-  Stmt loops = lower_scatter_workspace(A, to<IndexExpr>(add));
+  Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add));
 
   std::cout << loops << std::endl;
 }

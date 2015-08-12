@@ -170,26 +170,9 @@ InductionVars createInductionVariables(const vector<IndexVariableLoop> &loops,
   return inductionVars;
 }
 
-static
-Expr readFromSourceIndex(const TensorIndexVar &inductionVar, int offset=0) {
-  return (offset == 0) ? TensorIndexRead::make(inductionVar.getTensorIndex(),
-                               inductionVar.getSourceVar(),
-                               TensorIndexRead::Sources)
-                       : TensorIndexRead::make(inductionVar.getTensorIndex(),
-                               inductionVar.getSourceVar() + offset,
-                               TensorIndexRead::Sources);
-}
-
-static
-Expr readFromSinkIndex(const TensorIndexVar &inductionVar) {
-  return TensorIndexRead::make(inductionVar.getTensorIndex(),
-                               inductionVar.getCoordinateVar(),
-                               TensorIndexRead::Sources);
-}
-
 static Expr compareToNextIndexLocation(const TensorIndexVar &inductionVar) {
   return Lt::make(inductionVar.getCoordinateVar(),
-                  readFromSourceIndex(inductionVar, 1));
+                  inductionVar.loadCoordinate(1));
 }
 
 static
@@ -214,9 +197,7 @@ Stmt sparseLoop(const vector<TensorIndexVar> &inductionVars, Stmt body,
   // Initialize sink induction variables
   vector<Stmt> initSinkInductionVars;
   for (auto &inductionVar : inductionVars) {
-    Stmt initSinkVar = AssignStmt::make(inductionVar.getSinkVar(),
-                                        readFromSinkIndex(inductionVar));
-    initSinkInductionVars.push_back(initSinkVar);
+    initSinkInductionVars.push_back(inductionVar.initSinkVar());
   }
   body = Block::make(Block::make(initSinkInductionVars), body);
 
@@ -237,12 +218,9 @@ Stmt sparseLoop(const vector<TensorIndexVar> &inductionVars, Stmt body,
   if (initCoordVars) {
     vector<Stmt> initCoordVarsStmts;
     for (auto &inductionVar : inductionVars) {
-      Stmt initStmt = AssignStmt::make(inductionVar.getCoordinateVar(),
-                                       readFromSourceIndex(inductionVar));
-      initCoordVarsStmts.push_back(initStmt);
+      initCoordVarsStmts.push_back(inductionVar.initCoordinateVar());
     }
-    Stmt initCoordVars = Block::make(initCoordVarsStmts);
-    loop = Block::make(initCoordVars, loop);
+    loop = Block::make(Block::make(initCoordVarsStmts), loop);
   }
 
   return loop;
@@ -261,7 +239,7 @@ string tensorSliceString(const vector<Var> &vars, const Var &sliceVar) {
   return result;
 }
 
-Stmt lower_scatter_workspace(Expr target, const IndexExpr *indexExpression) {
+Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
   // Build a map from index variable tuples to the IndexTensors they access:
   // - B+C   (i,j) -> B(i,j), C(i,j)
   // - B+C'  (i,j) -> B(i,j)
