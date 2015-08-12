@@ -73,17 +73,22 @@ public:
   SubsetLoop(const std::vector<TensorIndexVar> &tensorIndexVars)
       : tensorIndexVars(tensorIndexVars) {}
 
+  void setCompoundOperator(CompoundOperator cop) {this->cop = cop;}
+  void setComputeExpression(Expr computeExpr) {this->computeExpr = computeExpr;}
+
   const std::vector<TensorIndexVar> &getTensorIndexVars() const {
     return tensorIndexVars;
   }
 
-  const Expr &getComputeExpression() const {return computeExpression;}
+  CompoundOperator getCompoundOperator() const {return cop;}
+  const Expr &getComputeExpression() const {return computeExpr;}
 
   friend std::ostream &operator<<(std::ostream&, const SubsetLoop&);
 
 private:
   std::vector<TensorIndexVar> tensorIndexVars;
-  Expr computeExpression;
+  CompoundOperator cop = CompoundOperator::None;
+  Expr computeExpr;
 };
 
 

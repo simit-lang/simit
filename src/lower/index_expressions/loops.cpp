@@ -90,6 +90,15 @@ ostream &operator<<(ostream &os, const TensorIndexVar &tiv) {
 // class SubsetLoop
 std::ostream &operator<<(std::ostream &os, const SubsetLoop &ssl) {
   os << "foreach zip(" << util::join(ssl.getTensorIndexVars()) << ")";
+  os << "\n  ";
+  switch (ssl.getCompoundOperator()) {
+    case CompoundOperator::None:
+      os << "=";
+      break;
+    case CompoundOperator::Add:
+      os << "+=";
+      break;
+  }
   return os;
 }
 
@@ -132,7 +141,8 @@ vector<SubsetLoop> createSubsetLoops(Expr target,
 
     /// Concatenates the subset loops in a an b
     inline vector<SubsetLoop> unionMerge(const vector<SubsetLoop> &a,
-                                         const vector<SubsetLoop> &b) {
+                                         const vector<SubsetLoop> &b,
+                                         CompoundOperator cop) {
       vector<SubsetLoop> c;
       c.reserve(a.size() + b.size());
 
@@ -141,6 +151,11 @@ vector<SubsetLoop> createSubsetLoops(Expr target,
       }
       for (auto &bs : b) {
         c.push_back(bs);
+      }
+
+      c[0].setCompoundOperator(CompoundOperator::None);
+      for (size_t i=1; i < c.size(); ++i) {
+        c[i].setCompoundOperator(cop);
       }
 
       return c;
@@ -176,12 +191,16 @@ vector<SubsetLoop> createSubsetLoops(Expr target,
 
     void visit(const Add *op) {
       this->subsetLoops = unionMerge(createSubsetLoops(op->a),
-                                     createSubsetLoops(op->b));
+                                     createSubsetLoops(op->b),
+                                     CompoundOperator::Add);
     }
 
     void visit(const Sub *op) {
-      this->subsetLoops = unionMerge(createSubsetLoops(op->a),
-                                     createSubsetLoops(op->b));
+      not_supported_yet;
+      /// TODO: Add support for CompoundOperator::Sub
+//      this->subsetLoops = unionMerge(createSubsetLoops(op->a),
+//                                     createSubsetLoops(op->b),
+//                                     CompoundOperator::Sub);
     }
 
     void visit(const Mul *op) {
