@@ -154,9 +154,13 @@ static Stmt emitSubsetLoop(const Expr &target, const Var &inductionVar,
     // Compute the loop induction variable as min of the tensor index variables
     body = Block::make(body, min(inductionVar, sinkInductionVars));
   }
+  iassert(body.defined());
 
   // Emit compute statement
-  // TODO
+  Stmt computeStatement = Store::make(target, inductionVar,
+                                      subsetLoop.getComputeExpression(),
+                                      subsetLoop.getCompoundOperator());
+  body = Block::make(body, computeStatement);
 
   // Increment coordinate induction variables at the end of the loop body
   vector<Stmt> incCoordVarStmts;
@@ -218,7 +222,16 @@ static string workspaceWriteString(const SubsetLoop &subsetLoop,
 }
 
 Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
+  // Create loops
   vector<IndexVariableLoop> loops = createLoopNest(indexExpression);
+
+  // Create workspace
+  iassert(target.type().isTensor());
+
+  IndexDomain workspaceDomain = loops[loops.size()-1].getIndexVar().getDomain();
+  Type workspaceType = TensorType::make(target.type().toTensor()->componentType,
+                                        {workspaceDomain});
+  Var workspace("workspace", workspaceType);
 
   // Emit loops
   Stmt loopNest;
@@ -233,29 +246,21 @@ Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
     }
     // Sparse/linked loops
     else {
-      vector<SubsetLoop> subsetLoops =
-          createSubsetLoops(target, indexExpression, loop);
-      std::cout << "Subset Loops:" << std::endl;
-      for (auto &subsetLoop : subsetLoops) {
-        std::cout << subsetLoop << std::endl;
-      }
-      std::cout << std::endl;
-
+      vector<SubsetLoop> subsetLoops = createSubsetLoops(indexExpression, loop);
+      std::cout << "Subset Loops:" << std::endl
+                << util::join(subsetLoops, "\n") << std::endl << std::endl;
 
       // Emit each subset loop and add their results to the workspace
       vector<Stmt> loopStatements;
       for (SubsetLoop &subsetLoop : subsetLoops) {
-        Stmt loopStatement = emitSubsetLoop(target, inductionVar, subsetLoop);
-
-        loopStatements.push_back(Comment::make(workspaceWriteString(subsetLoop, loop.getIndexVar()),
-                                               loopStatement));
+        Stmt loopStmt = emitSubsetLoop(workspace, inductionVar, subsetLoop);
+        string comment = workspaceWriteString(subsetLoop, loop.getIndexVar());
+        loopStatements.push_back(Comment::make(comment, loopStmt));
       }
       iassert(loops.size() > 0);
 
-
+      // Emit the loop that copies the workspace to the target
       Stmt loopStatement = Pass::make();
-      //        Stmt body = Pass::make();
-      //        Stmt loopStatement = sparseLoop({}, body, true);
 
       string comment = toString(target) +
                        tensorSliceString(indexExpression->resultVars,

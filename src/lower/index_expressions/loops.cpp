@@ -103,9 +103,8 @@ std::ostream &operator<<(std::ostream &os, const SubsetLoop &ssl) {
 // Free functions
 class CreateSubsetLoopVisitor : public IRVisitor {
 public:
-  CreateSubsetLoopVisitor(Expr target, IndexVariableLoop loop) {
+  CreateSubsetLoopVisitor(IndexVariableLoop loop) {
     iassert(loop.isLinked());
-    this->target = target;
     this->indexVar = loop.getIndexVar();
     this->inductionVar = loop.getInductionVar();
     this->linkedIndexVar = loop.getLinkedLoop().getIndexVar();
@@ -237,9 +236,9 @@ private:
   }
 };
 
-vector<SubsetLoop> createSubsetLoops(Expr target, const IndexExpr *indexExpr,
+vector<SubsetLoop> createSubsetLoops(const IndexExpr *indexExpr,
                                      IndexVariableLoop loop) {
-  CreateSubsetLoopVisitor visitor(target, loop);
+  CreateSubsetLoopVisitor visitor(loop);
   return visitor.createSubsetLoops(indexExpr);
 }
 
