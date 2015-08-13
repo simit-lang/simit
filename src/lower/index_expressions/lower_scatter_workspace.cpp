@@ -118,6 +118,16 @@ static Expr compareToNextIndexLocation(const TensorIndexVar &inductionVar) {
                   inductionVar.loadCoordinate(1));
 }
 
+/// Check whether the expressions are equal.
+static Expr compare(const vector<Expr> &expressions) {
+  iassert(expressions.size() >= 2);
+  Expr result = expressions[0];
+  for (auto &expression : excludeFirst(expressions)) {
+    result = Eq::make(result, expression);
+  }
+  return result;
+}
+
 /// Create sparse while loop condition. Sparse while loops simultaneously
 /// iterate over the coordinate variables of one or more tensors
 static Expr subsetLoopCondition(const vector<TensorIndexVar> &inductionVars) {
@@ -130,6 +140,35 @@ static Expr subsetLoopCondition(const vector<TensorIndexVar> &inductionVars) {
   return condition;
 }
 
+static
+Stmt updateSinkInductionVars(const vector<TensorIndexVar> &tensorIndexVars) {
+  vector<Stmt> initSinkInductionVarStmts;
+  for (const TensorIndexVar &tensorIndexVar : tensorIndexVars) {
+    initSinkInductionVarStmts.push_back(tensorIndexVar.initSinkVar());
+  }
+  return Block::make(initSinkInductionVarStmts);
+}
+
+static Stmt createFastForwardLoop(const TensorIndexVar &tensorIndexVar) {
+  Var inductionVar = tensorIndexVar.getSourceVar();
+  Var sinkVar = tensorIndexVar.getSinkVar();
+
+  Expr fastForwardCondition = Lt::make(sinkVar, inductionVar);
+  Expr fastForwardLoopCondition =
+      And::make(fastForwardCondition,
+                compareToNextIndexLocation(tensorIndexVar));
+
+  Stmt incrementCoordVar = increment(tensorIndexVar.getCoordinateVar());
+  Stmt initSinkVar = tensorIndexVar.initSinkVar();
+  Stmt stepCoordAndSinkVars = Block::make(incrementCoordVar, initSinkVar);
+
+  // Poor man's do-while loop
+  return Block::make(stepCoordAndSinkVars, While::make(fastForwardLoopCondition,
+                                                       stepCoordAndSinkVars));
+}
+
+/// @param body A statement that is evaluated for every inductionVar value
+///             of the intersection between the tensorIndexVars.
 static Stmt createSubsetLoop(const Var &inductionVar,
                              const vector<TensorIndexVar> &tensorIndexVars,
                              Stmt body) {
@@ -139,7 +178,7 @@ static Stmt createSubsetLoop(const Var &inductionVar,
 
   // Only one TensorIndexVar so we emit a for loop over a range.
   if (tensorIndexVars.size() == 1) {
-    const TensorIndexVar &tensorIndexVar = tensorIndexVars[0];
+    const TensorIndexVar& tensorIndexVar = tensorIndexVars[0];
     body = Block::make(tensorIndexVars[0].initSinkVar(inductionVar), body);
     loop = ForRange::make(tensorIndexVar.getCoordinateVar(),
                           tensorIndexVar.loadCoordinate(),
@@ -148,30 +187,87 @@ static Stmt createSubsetLoop(const Var &inductionVar,
   }
   // Two or more TensorIndexVars so we merge their iteration space with a while
   else {
-    // Create sparse while loop condition
-    Expr condition = subsetLoopCondition(tensorIndexVars);
+    // Emit the code to execute at the intersection
+    Stmt intersectionStmt;
 
-    // Initialize induction variables
-    vector<Expr> sinkInductionVars;
-    vector<Stmt> initSinkInductionVarStmts;
-    for (const TensorIndexVar &tensorIndexVar : tensorIndexVars) {
-      sinkInductionVars.push_back(tensorIndexVar.getSinkVar());
-      initSinkInductionVarStmts.push_back(tensorIndexVar.initSinkVar());
+    // Init induction variable (at the intersection all sink vars are the same)
+    Var firstSinkVar = tensorIndexVars[0].getSinkVar();
+    Stmt initInductionVar = AssignStmt::make(inductionVar, firstSinkVar);
+    intersectionStmt = Block::make(intersectionStmt, initInductionVar);
+
+    // Append caller-provided loop body
+    intersectionStmt = Block::make(intersectionStmt, body);
+
+    // Increment each coordinate var
+    for (auto& tensorIndexVar : tensorIndexVars) {
+      Stmt incrementCoordVar = increment(tensorIndexVar.getCoordinateVar());
+      intersectionStmt = Block::make(intersectionStmt, incrementCoordVar);
     }
-    Stmt initSinkInductionVars = Block::make(initSinkInductionVarStmts);
+
+    // Update the sink induction variables
+    Stmt updateSinkVars = updateSinkInductionVars(tensorIndexVars);
+    intersectionStmt = Block::make(intersectionStmt, updateSinkVars);
+
+
+    // Emit the code to execute outside the intersection
+    Stmt notIntersectionStmt;
+
+    function<Expr(TensorIndexVar)> getSinkVarFunc =
+        [](const TensorIndexVar &t){return t.getSinkVar();};
+    vector<Expr> sinkVars = util::map(tensorIndexVars, getSinkVarFunc);
 
     // The loop induction variable is the min of the tensor index variables
-    Stmt initInductionVar = Block::make(initSinkInductionVars,
-                                        min(inductionVar, sinkInductionVars));
-    body = Block::make(initInductionVar, body);
+    initInductionVar = max(inductionVar, sinkVars);
+    notIntersectionStmt = Block::make(notIntersectionStmt, initInductionVar);
 
-    // Increment coordinate induction variables at the end of the loop body
-    vector<Stmt> incCoordVarStmts;
-    for (auto &inductionVar : tensorIndexVars) {
-      incCoordVarStmts.push_back(increment(inductionVar.getCoordinateVar()));
+    // Emit one fast forward loop per tensor index variable
+    if (tensorIndexVars.size() == 2) {
+      Var sinkVar0 = tensorIndexVars[0].getSinkVar();
+      Expr fastForwardCondition = Lt::make(sinkVar0, inductionVar);
+      Stmt fastForwardSinkVar0 = createFastForwardLoop(tensorIndexVars[0]);
+      Stmt fastForwardSinkVar1 = createFastForwardLoop(tensorIndexVars[1]);
+      Stmt fastForwardIfLess = IfThenElse::make(fastForwardCondition,
+                                                fastForwardSinkVar0,
+                                                fastForwardSinkVar1);
+      notIntersectionStmt = Block::make(notIntersectionStmt, fastForwardIfLess);
     }
-    Stmt incrementCoordVars = Block::make(incCoordVarStmts);
-    body = Block::make(body, incrementCoordVars);
+    else {
+      for (auto& tensorIndexVar : tensorIndexVars) {
+        Var sinkVar = tensorIndexVar.getSinkVar();
+        Expr fastForwardCondition = Lt::make(sinkVar, inductionVar);
+        Stmt fastForwardSinkVar = createFastForwardLoop(tensorIndexVar);
+        Stmt fastForwardIfLess = IfThenElse::make(fastForwardCondition,
+                                                  fastForwardSinkVar);
+        notIntersectionStmt = Block::make(notIntersectionStmt,
+                                          fastForwardIfLess);
+      }
+    }
+
+
+    // Check whether we are at the intersection of the tensor index sink vars
+    Expr intersectionCondition = compare(sinkVars);
+
+    // Create the loop body
+    Stmt loopBody = IfThenElse::make(intersectionCondition,
+                                     intersectionStmt, notIntersectionStmt);
+
+//    body = Block::make(
+
+
+//    // Initialize sink induction variables
+//    vector<Expr> sinkInductionVars;
+//    vector<Stmt> initSinkInductionVarStmts;
+//    for (const TensorIndexVar &tensorIndexVar : tensorIndexVars) {
+//      sinkInductionVars.push_back(tensorIndexVar.getSinkVar());
+//      initSinkInductionVarStmts.push_back(tensorIndexVar.initSinkVar());
+//    }
+//    Stmt initSinkInductionVars = Block::make(initSinkInductionVarStmts);
+//
+//    // The loop induction variable is the min of the tensor index variables
+//    Stmt initInductionVar = Block::make(initSinkInductionVars,
+//                                        min(inductionVar, sinkInductionVars));
+//    body = Block::make(initInductionVar, body);
+
 
     // Initialize coordinate induction variable
     vector<Stmt> initCoordinateVarStmts;
@@ -180,8 +276,9 @@ static Stmt createSubsetLoop(const Var &inductionVar,
     }
     Stmt initCoordinateVars = Block::make(initCoordinateVarStmts);
 
-    // Create loop
-    loop = Block::make(initCoordinateVars, While::make(condition, body));
+    // Create sparse while loop
+    Expr loopCondition = subsetLoopCondition(tensorIndexVars);
+    loop = Block::make(initCoordinateVars, While::make(loopCondition,loopBody));
   }
   iassert(loop.defined());
 
@@ -246,7 +343,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr *indexExpression) {
 
   // Emit loops
   Stmt loopNest;
-  for (IndexVariableLoop &loop : util::reverse_iterator(loops)) {
+  for (IndexVariableLoop &loop : util::reverse(loops)) {
     IndexVar indexVar = loop.getIndexVar();
     Var inductionVar  = loop.getInductionVar();
 
