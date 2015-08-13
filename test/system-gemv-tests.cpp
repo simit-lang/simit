@@ -1,11 +1,13 @@
 #include "simit-test.h"
 
 #include "graph.h"
+#include "tensor.h"
 #include "program.h"
 #include "error.h"
 
 using namespace std;
 using namespace simit;
+using namespace simit::ir;
 
 TEST(System, gemv) {
   // Points
@@ -620,9 +622,8 @@ TEST(System, gemv_input) {
   Function func = getFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
-  // Yes using literals for this is a total hack...
-  Tensor cs = ir::Literal::make(ir::TensorType::make(ir::ScalarType::Float,
-                                                     {ir::IndexDomain(2)}));
+  simit::Tensor cs = Literal::make(TensorType::make(ScalarType::Float,
+                                                    {IndexDomain(2)}));
   ((simit_float*)ir::to<ir::Literal>(cs)->data)[0] = 1.0;
   ((simit_float*)ir::to<ir::Literal>(cs)->data)[1] = 2.0;
 

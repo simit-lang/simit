@@ -11,9 +11,8 @@ namespace simit {
 
 namespace ir {
 class Func;
-}
-namespace internal {
-class ProgramContext;
+class Stmt;
+struct Environment;
 }
 
 namespace backend {

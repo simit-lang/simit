@@ -1,10 +1,13 @@
 #ifndef SIMIT_FUNCTION_H
 #define SIMIT_FUNCTION_H
 
-#include "tensor.h" // TODO: Replace with forward declaration
+#include <string>
+#include <functional>
+#include "error.h"
 
 namespace simit {
 class Set;
+class Tensor;
 
 namespace backend {
 class Function;

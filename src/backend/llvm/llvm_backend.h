@@ -8,6 +8,8 @@
 #include <map>
 
 #include "backend/backend.h"
+
+#include "storage.h"
 #include "var.h"
 #include "ir_visitor.h"
 #include "util/scopedmap.h"

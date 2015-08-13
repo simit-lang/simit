@@ -7,16 +7,22 @@
 
 #include "printable.h"
 #include "uncopyable.h"
-#include "tensor.h"
+#include "types.h"
 
 namespace simit {
 
 class Set;
+class Tensor;
+//namespace ir {
+//class Expr;
+//}
+//typedef simit::ir::Expr Tensor;
 
 namespace ir {
 class Func;
 class TensorStorage;
 }
+
 
 namespace backend {
 
@@ -50,7 +56,7 @@ public:
     funcPtr();
     mapArgs();
   }
-  
+
   // TODO Should these really be an extension to the bind interface?
   //      Per-argument updates/copies.
   //      Don't always write in a new pointer (requires re-JIT), just alert to

@@ -4,6 +4,8 @@
 using namespace std;
 
 #include "graph.h"
+#include "tensor.h"
+
 #include "types.h"
 #include "ir.h"
 #include "ir_visitor.h"
@@ -59,7 +61,7 @@ Function::Function(const simit::ir::Func &simitFunc)
 Function::~Function() {
 }
 
-void Function::bind(const std::string &argName, ir::Expr *tensor) {
+void Function::bind(const std::string &argName, simit::Tensor *tensor) {
   uassert(actuals.find(argName) != actuals.end())
       << "no argument of this name in function";
 
@@ -74,7 +76,7 @@ void Function::bind(const std::string &argName, ir::Expr *tensor) {
   initRequired = true;
 }
 
-void Function::bind(const std::string &argName, Set *set) {
+void Function::bind(const std::string &argName, simit::Set *set) {
   uassert(actuals.find(argName) != actuals.end())
       << "No argument of this name in function";
 

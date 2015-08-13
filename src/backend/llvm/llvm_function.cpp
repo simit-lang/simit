@@ -15,8 +15,10 @@
 #include "llvm/IR/Verifier.h"
 #endif
 
-#include "llvm_codegen.h"
 #include "graph.h"
+#include "tensor.h"
+
+#include "llvm_codegen.h"
 #include "indices.h"
 
 using namespace std;
@@ -79,7 +81,7 @@ LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
 
       switch (actual.getType().kind()) {
         case ir::Type::Tensor: {
-          ir::Expr tensor = *actual.getTensor();
+          simit::Tensor tensor = *actual.getTensor();
           const ir::Literal *literal = ir::to<ir::Literal>(tensor);
 
           llvm::Value *llvmActual = (llvmArgIt->getType()->isPointerTy())

@@ -6,10 +6,9 @@
 #include <string>
 #include <algorithm>
 
-#include "graph.h"
 #include "program.h"
+#include "function.h"
 #include "error.h"
-#include "ir.h"
 
 #ifdef F32
 typedef float simit_float;

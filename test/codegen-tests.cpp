@@ -3,6 +3,7 @@
 #include <memory>
 #include <cmath>
 
+#include "tensor.h"
 #include "ir.h"
 #include "ir_printer.h"
 
@@ -63,9 +64,9 @@ TEST(Codegen, add0) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Expr aArg = 2.0;
-  Expr bArg = 4.1;
-  Expr cRes = Literal::make(Float);
+  Tensor aArg = 2.0;
+  Tensor bArg = 4.1;
+  Tensor cRes = Literal::make(Float);
 
   function.bind("a", &aArg);
   function.bind("b", &bArg);
@@ -89,8 +90,8 @@ TEST(Codegen, sin) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Expr aArg = 2.0;
-  Expr cRes = 0.0;
+  Tensor aArg = 2.0;
+  Tensor cRes = 0.0;
 
   function.bind("a", &aArg);
   function.bind("c", &cRes);
@@ -113,8 +114,8 @@ TEST(Codegen, cos) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Expr aVar = 2.0;
-  Expr cRes = 0.0;
+  Tensor aVar = 2.0;
+  Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
@@ -137,8 +138,8 @@ TEST(Codegen, sqrt) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Expr aVar = 5.0;
-  Expr cRes = 0.0;
+  Tensor aVar = 5.0;
+  Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
@@ -161,8 +162,8 @@ TEST(Codegen, log) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Expr aVar = 5.0;
-  Expr cRes = 0.0;
+  Tensor aVar = 5.0;
+  Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
@@ -185,8 +186,8 @@ TEST(Codegen, exp) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Expr aVar = 5.0;
-  Expr cRes = 0.0;
+  Tensor aVar = 5.0;
+  Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
@@ -210,9 +211,9 @@ TEST(Codegen, atan2) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Expr aVar = 1.0;
-  Expr bVar = 2.0;
-  Expr cRes = 0.0;
+  Tensor aVar = 1.0;
+  Tensor bVar = 2.0;
+  Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("b", &bVar);
@@ -238,8 +239,8 @@ TEST(Codegen, forloop) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Expr outVar = 0;
-  Expr iVar = 0;
+  Tensor outVar = 0;
+  Tensor iVar = 0;
   
   function.bind("out", &outVar);
   

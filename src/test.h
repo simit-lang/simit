@@ -5,6 +5,8 @@
 #include <vector>
 #include <map>
 
+#include "tensor.h"
+
 #include "ir.h"
 #include "program_context.h"
 #include "backend/backend_function.h"
@@ -37,8 +39,8 @@ public:
 class FunctionTest : public Test {
 public:
   FunctionTest(const std::string &callee,
-       const std::vector<ir::Expr> &actuals,
-       const std::vector<ir::Expr> &expected)
+       const std::vector<simit::Tensor> &actuals,
+       const std::vector<simit::Tensor> &expected)
       : callee(callee), actuals(actuals), expected(expected) {}
 
   std::string getCallee() const { return callee; }
@@ -49,15 +51,15 @@ public:
     iassert(actuals.size() == func.getArguments().size());
 
     std::vector<ir::Var>  formalArgs = func.getArguments();
-    std::vector<ir::Expr> actualArgs = actuals;
+    std::vector<simit::Tensor> actualArgs = actuals;
     for (size_t i=0; i < actualArgs.size(); ++i) {
       compiledFunc.bind(formalArgs[i].getName(), &actualArgs[i]);
     }
 
     auto formalResults = func.getResults();
-    std::vector<ir::Expr> actualResults;
+    std::vector<simit::Tensor> actualResults;
     for (auto &formalResult : formalResults) {
-      ir::Expr actualResult = ir::Literal::make(formalResult.getType());
+      simit::Tensor actualResult = ir::Literal::make(formalResult.getType());
       actualResults.push_back(actualResult);
       compiledFunc.bind(formalResult.getName(), &actualResult);
     }
@@ -83,8 +85,8 @@ public:
 
 private:
   std::string callee;
-  std::vector<ir::Expr> actuals;
-  std::vector<ir::Expr> expected;
+  std::vector<simit::Tensor> actuals;
+  std::vector<simit::Tensor> expected;
 };
 
 
