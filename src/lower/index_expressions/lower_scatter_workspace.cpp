@@ -134,46 +134,55 @@ static Stmt createSubsetLoop(const Var &inductionVar,
                              Stmt body) {
   iassert(tensorIndexVars.size() > 0);
 
-  // Create sparse while loop condition
-  Expr condition = subsetLoopCondition(tensorIndexVars);
+  Stmt loop;
 
-  // Initialize induction variables
-  Stmt initInductionVar;
+  // Only one TensorIndexVar so we emit a for loop over a range.
   if (tensorIndexVars.size() == 1) {
-    initInductionVar = tensorIndexVars[0].initSinkVar(inductionVar);
+    const TensorIndexVar &tensorIndexVar = tensorIndexVars[0];
+    body = Block::make(tensorIndexVars[0].initSinkVar(inductionVar), body);
+    loop = ForRange::make(tensorIndexVar.getCoordinateVar(),
+                          tensorIndexVar.loadCoordinate(),
+                          tensorIndexVar.loadCoordinate(1),
+                          body);
   }
+  // Two or more TensorIndexVars so we merge their iteration space with a while
   else {
+    // Create sparse while loop condition
+    Expr condition = subsetLoopCondition(tensorIndexVars);
+
+    // Initialize induction variables
     vector<Expr> sinkInductionVars;
-    vector<Stmt> initSinkInductionVars;
+    vector<Stmt> initSinkInductionVarStmts;
     for (const TensorIndexVar &tensorIndexVar : tensorIndexVars) {
       sinkInductionVars.push_back(tensorIndexVar.getSinkVar());
-      initSinkInductionVars.push_back(tensorIndexVar.initSinkVar());
+      initSinkInductionVarStmts.push_back(tensorIndexVar.initSinkVar());
     }
-    initInductionVar = Block::make(initSinkInductionVars);
+    Stmt initSinkInductionVars = Block::make(initSinkInductionVarStmts);
 
-    // Compute the loop induction variable as min of the tensor index variables
-    initInductionVar = Block::make(initInductionVar,
-                                   min(inductionVar, sinkInductionVars));
+    // The loop induction variable is the min of the tensor index variables
+    Stmt initInductionVar = Block::make(initSinkInductionVars,
+                                        min(inductionVar, sinkInductionVars));
+    body = Block::make(initInductionVar, body);
+
+    // Increment coordinate induction variables at the end of the loop body
+    vector<Stmt> incCoordVarStmts;
+    for (auto &inductionVar : tensorIndexVars) {
+      incCoordVarStmts.push_back(increment(inductionVar.getCoordinateVar()));
+    }
+    Stmt incrementCoordVars = Block::make(incCoordVarStmts);
+    body = Block::make(body, incrementCoordVars);
+
+    // Initialize coordinate induction variable
+    vector<Stmt> initCoordinateVarStmts;
+    for (auto &inductionVar : tensorIndexVars) {
+      initCoordinateVarStmts.push_back(inductionVar.initCoordinateVar());
+    }
+    Stmt initCoordinateVars = Block::make(initCoordinateVarStmts);
+
+    // Create loop
+    loop = Block::make(initCoordinateVars, While::make(condition, body));
   }
-  iassert(initInductionVar.defined());
-  body = Block::make(initInductionVar, body);
-
-  // Increment coordinate induction variables at the end of the loop body
-  vector<Stmt> incCoordVarStmts;
-  for (auto &inductionVar : tensorIndexVars) {
-    incCoordVarStmts.push_back(increment(inductionVar.getCoordinateVar()));
-  }
-  body = Block::make(body, Block::make(incCoordVarStmts));
-
-  // Create loop
-  Stmt loop = While::make(condition, body);
-
-  // Initialize coordinate induction variable
-  vector<Stmt> initCoordVarsStmts;
-  for (auto &inductionVar : tensorIndexVars) {
-    initCoordVarsStmts.push_back(inductionVar.initCoordinateVar());
-  }
-  loop = Block::make(Block::make(initCoordVarsStmts), loop);
+  iassert(loop.defined());
 
   return loop;
 }
@@ -251,7 +260,6 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr *indexExpression) {
       Var linkedInductionVar  = loop.getLinkedLoop().getInductionVar();
 
       vector<SubsetLoop> subsetLoops = createSubsetLoops(indexExpression, loop);
-//      std::cout << "Subset Loops:\n" << util::join(subsetLoops, "\n")<<"\n\n";
 
       // Create each subset loop and add their results to the workspace
       vector<Stmt> loopStatements;
