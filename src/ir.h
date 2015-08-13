@@ -959,7 +959,13 @@ struct Block : public StmtNode<Block> {
   Stmt first, rest;
 
   static Stmt make(Stmt first, Stmt rest) {
-    iassert(first.defined()) << "Empty block";
+    iassert(first.defined() || rest.defined()) << "Empty block";
+
+    // Handle case where first is undefined, to ease codegen in loops
+    if (!first.defined()) {
+      std::swap(first,rest);
+    }
+
     Block *node = new Block;
     node->first = first;
     node->rest = rest;

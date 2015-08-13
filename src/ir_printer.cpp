@@ -481,8 +481,8 @@ void IRPrinter::visit(const IfThenElse *op) {
   ++indentation;
   print(op->thenBody);
   --indentation;
-  os << endl;
   if (op->elseBody.defined()) {
+    os << endl;
     indent();
     os << "else" << endl;
     ++indentation;
