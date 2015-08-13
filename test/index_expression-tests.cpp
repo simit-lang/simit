@@ -10,87 +10,80 @@ using namespace simit;
 using namespace simit::ir;
 
 TEST(IndexExpression, add) {
-  Var v("V", SetType::make(ElementType::make("v", {}), {}));
-  IndexSet is(v);
-  IndexDomain dim(is);
+  Type vertexType = ElementType::make("vertex", {});
+  Type vertexSetType = SetType::make(vertexType, {});
+  Var vertexSet("V", vertexSetType);
 
+  IndexDomain dim({vertexSet});
   IndexVar i("i", dim);
   IndexVar j("j", dim);
 
-  Type type = TensorType::make(ScalarType::Float, {dim,dim});
-
-  Expr B = Var("B", type);
-  Expr C = Var("C", type);
-
+  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
+  Var  A = Var("A", tensorType);
+  Expr B = Var("B", tensorType);
+  Expr C = Var("C", tensorType);
   Expr add = IndexExpr::make({i,j}, B(i,j) + C(i,j));
 
-  Var A("A", add.type());
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add));
-
   std::cout << loops << std::endl;
 }
 
 TEST(IndexExpression, mul) {
-  Var v("V", SetType::make(ElementType::make("v", {}), {}));
-  IndexSet is(v);
-  IndexDomain dim(is);
+  Type vertexType = ElementType::make("vertex", {});
+  Type vertexSetType = SetType::make(vertexType, {});
+  Var vertexSet("V", vertexSetType);
 
+  IndexDomain dim({vertexSet});
   IndexVar i("i", dim);
   IndexVar j("j", dim);
 
-  Type type = TensorType::make(ScalarType::Float, {dim,dim});
-
-  Expr B = Var("B", type);
-  Expr C = Var("C", type);
-
+  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
+  Var  A = Var("A", tensorType);
+  Expr B = Var("B", tensorType);
+  Expr C = Var("C", tensorType);
   Expr add = IndexExpr::make({i,j}, B(i,j) * C(i,j));
 
-  Var A("A", add.type());
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add));
-
   std::cout << loops << std::endl;
+
 }
 
 TEST(IndexExpression, addmul) {
-  Var v("V", SetType::make(ElementType::make("v", {}), {}));
-  IndexSet is(v);
-  IndexDomain dim(is);
+  Type vertexType = ElementType::make("vertex", {});
+  Type vertexSetType = SetType::make(vertexType, {});
+  Var vertexSet("V", vertexSetType);
 
+  IndexDomain dim({vertexSet});
   IndexVar i("i", dim);
   IndexVar j("j", dim);
 
-  Type type = TensorType::make(ScalarType::Float, {dim,dim});
-
-  Expr B = Var("B", type);
-  Expr C = Var("C", type);
-  Expr D = Var("D", type);
-
+  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
+  Var  A = Var("A", tensorType);
+  Expr B = Var("B", tensorType);
+  Expr C = Var("C", tensorType);
+  Expr D = Var("D", tensorType);
   Expr addmul = IndexExpr::make({i,j}, (B(i,j) + C(i,j)) * D(i,j));
 
-  Var A("A", addmul.type());
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(addmul));
-
   std::cout << loops << std::endl;
 }
 
 TEST(IndexExpression, muladd) {
-  Var v("V", SetType::make(ElementType::make("v", {}), {}));
-  IndexSet is(v);
-  IndexDomain dim(is);
+  Type vertexType = ElementType::make("vertex", {});
+  Type vertexSetType = SetType::make(vertexType, {});
+  Var vertexSet("V", vertexSetType);
 
+  IndexDomain dim({vertexSet});
   IndexVar i("i", dim);
   IndexVar j("j", dim);
 
-  Type type = TensorType::make(ScalarType::Float, {dim,dim});
-
-  Expr B = Var("B", type);
-  Expr C = Var("C", type);
-  Expr D = Var("D", type);
-
+  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
+  Var  A = Var("A", tensorType);
+  Expr B = Var("B", tensorType);
+  Expr C = Var("C", tensorType);
+  Expr D = Var("D", tensorType);
   Expr muladd = IndexExpr::make({i,j}, (B(i,j) * C(i,j)) + D(i,j));
 
-  Var A("A", muladd.type());
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(muladd));
-
   std::cout << loops << std::endl;
 }
