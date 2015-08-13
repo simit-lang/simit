@@ -23,8 +23,10 @@ std::pair<Stmt,std::vector<Stmt>> removeVarDecls(Stmt stmt);
 Stmt moveVarDeclsToFront(Stmt stmt);
 
 /// Compute the smallest value of the given Exprs and assign the result to var.
-/// Can also provide a vector of classes convertible to an Expr, such as Var.
 Stmt min(const Var &result, const std::vector<Expr> &exprs);
+
+/// Compute the largest value of the given Exprs and assign the result to var.
+Stmt max(const Var &result, const std::vector<Expr> &exprs);
 
 /// Increment var by 1. Assumes var is an integer.
 Stmt increment(const Var &var);

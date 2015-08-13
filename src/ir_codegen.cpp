@@ -106,24 +106,35 @@ Stmt moveVarDeclsToFront(Stmt stmt) {
       : varDecls.first;
 }
 
-Stmt min(const Var &result, const std::vector<Expr> &exprs) {
+Stmt find(const Var &result, const std::vector<Expr> &exprs, string name,
+          function<Expr(Expr,Expr)> compare) {
   iassert(exprs.size() > 0);
-  Stmt minStmt;
+
+  Stmt results;
   if (exprs.size() == 2) {
-    minStmt = IfThenElse::make(Le::make(exprs[0], exprs[1]),
+    results = IfThenElse::make(compare(exprs[0], exprs[1]),
                                AssignStmt::make(result, exprs[0]),
                                AssignStmt::make(result, exprs[1]));
   }
   else {
-    minStmt = AssignStmt::make(result, exprs[0]);
+    results = AssignStmt::make(result, exprs[0]);
     for (size_t i=1; i < exprs.size(); ++i) {
-      minStmt = IfThenElse::make(Lt::make(exprs[i], result),
+      results = IfThenElse::make(compare(exprs[i], result),
                                  AssignStmt::make(result, exprs[i]));
     }
   }
 
-  string commentString = result.getName() + " = min(" + util::join(exprs) + ")";
-  return Comment::make(commentString, minStmt);
+  string commentString = result.getName() + " = " + name
+                       + "(" + util::join(exprs) + ")";
+  return Comment::make(commentString, results);
+}
+
+Stmt min(const Var &result, const std::vector<Expr> &exprs) {
+  return find(result, exprs, "min", Lt::make);
+}
+
+Stmt max(const Var &result, const std::vector<Expr> &exprs) {
+  return find(result, exprs, "max", Gt::make);
 }
 
 Stmt increment(const Var &var) {
