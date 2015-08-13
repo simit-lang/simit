@@ -4,7 +4,8 @@
 
 #include "ir.h"
 #include "macros.h"
-#include "util.h"
+#include "util/util.h"
+#include "util/collections.h"
 
 using namespace std;
 
@@ -284,7 +285,11 @@ std::ostream &operator<<(std::ostream &os, const SetType &type) {
   os << "set{" << type.elementType.toElement()->name << "}";
 
   if (type.endpointSets.size() > 0) {
-    os << "(" << util::join(type.endpointSets) << ")";
+    os << "(" << *type.endpointSets[0];
+    for (auto &epSet : util::excludeFirst(type.endpointSets)) {
+      os << ", " << *epSet;
+    }
+    os << ")";
   }
 
   return os;

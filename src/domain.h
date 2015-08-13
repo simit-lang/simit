@@ -62,8 +62,8 @@ std::ostream &operator<<(std::ostream &os, const IndexSet &is);
 class IndexDomain {
 public:
   IndexDomain() {}
-  IndexDomain(IndexSet is) { indexSets.push_back(is); }
-  IndexDomain(std::vector<IndexSet> iss) : indexSets(iss) {};
+  IndexDomain(const IndexSet &is) { indexSets.push_back(is); }
+  IndexDomain(const std::vector<IndexSet> &iss) : indexSets(iss) {};
 
   /// Get the number of index sets in the index domain.
   size_t getNumIndexSets() const {return indexSets.size();}
