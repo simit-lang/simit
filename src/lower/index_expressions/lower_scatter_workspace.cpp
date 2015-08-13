@@ -11,7 +11,8 @@
 #include "ir.h"
 #include "ir_visitor.h"
 #include "ir_codegen.h"
-#include "util.h"
+#include "util/util.h"
+#include "util/collections.h"
 
 using namespace std;
 

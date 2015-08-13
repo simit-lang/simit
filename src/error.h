@@ -5,7 +5,7 @@
 #include <vector>
 #include <iostream>
 
-#include "util.h"
+#include "util/util.h"
 
 namespace simit {
 
