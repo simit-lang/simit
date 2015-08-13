@@ -163,8 +163,10 @@ static Stmt createFastForwardLoop(const TensorIndexVar &tensorIndexVar) {
   Stmt stepCoordAndSinkVars = Block::make(incrementCoordVar, initSinkVar);
 
   // Poor man's do-while loop
-  return Block::make(stepCoordAndSinkVars, While::make(fastForwardLoopCondition,
-                                                       stepCoordAndSinkVars));
+  Stmt fastForwardLoop = Block::make(stepCoordAndSinkVars,
+                                     While::make(fastForwardLoopCondition,
+                                                 stepCoordAndSinkVars));
+  return Comment::make("fastforward "+sinkVar.getName(), fastForwardLoop);
 }
 
 /// @param body A statement that is evaluated for every inductionVar value
@@ -250,24 +252,6 @@ static Stmt createSubsetLoop(const Var &inductionVar,
     // Create the loop body
     Stmt loopBody = IfThenElse::make(intersectionCondition,
                                      intersectionStmt, notIntersectionStmt);
-
-//    body = Block::make(
-
-
-//    // Initialize sink induction variables
-//    vector<Expr> sinkInductionVars;
-//    vector<Stmt> initSinkInductionVarStmts;
-//    for (const TensorIndexVar &tensorIndexVar : tensorIndexVars) {
-//      sinkInductionVars.push_back(tensorIndexVar.getSinkVar());
-//      initSinkInductionVarStmts.push_back(tensorIndexVar.initSinkVar());
-//    }
-//    Stmt initSinkInductionVars = Block::make(initSinkInductionVarStmts);
-//
-//    // The loop induction variable is the min of the tensor index variables
-//    Stmt initInductionVar = Block::make(initSinkInductionVars,
-//                                        min(inductionVar, sinkInductionVars));
-//    body = Block::make(initInductionVar, body);
-
 
     // Initialize coordinate induction variable
     vector<Stmt> initCoordinateVarStmts;
