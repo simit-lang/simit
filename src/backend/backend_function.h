@@ -13,16 +13,11 @@ namespace simit {
 
 class Set;
 class Tensor;
-//namespace ir {
-//class Expr;
-//}
-//typedef simit::ir::Expr Tensor;
 
 namespace ir {
 class Func;
 class TensorStorage;
 }
-
 
 namespace backend {
 
