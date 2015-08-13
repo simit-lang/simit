@@ -503,7 +503,7 @@ void IRPrinter::visit(const Comment *op) {
   os << "% " << op->comment << endl;
   if (op->commentedStmt.defined()) {
     print(op->commentedStmt);
-    os << endl;
+    os << op->footer;
   }
 }
 

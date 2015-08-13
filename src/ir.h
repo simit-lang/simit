@@ -990,17 +990,14 @@ struct Print : public StmtNode<Print> {
 struct Comment : public StmtNode<Comment> {
   std::string comment;
   Stmt commentedStmt;
+  std::string footer;
 
-  static Stmt make(std::string comment) {
-    Comment *node = new Comment;
-    node->comment = comment;
-    return node;
-  }
-
-  static Stmt make(std::string comment, Stmt commentedStmt) {
+  static Stmt make(std::string comment, Stmt commentedStmt=Stmt(),
+                   std::string footer=""){
     Comment *node = new Comment;
     node->comment = comment;
     node->commentedStmt = commentedStmt;
+    node->footer = footer;
     return node;
   }
 };

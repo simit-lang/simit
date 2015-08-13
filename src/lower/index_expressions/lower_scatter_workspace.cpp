@@ -255,7 +255,7 @@ Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression) {
       for (SubsetLoop &subsetLoop : subsetLoops) {
         Stmt loopStmt = emitSubsetLoop(workspace, inductionVar, subsetLoop);
         string comment = workspaceWriteString(subsetLoop, loop.getIndexVar());
-        loopStatements.push_back(Comment::make(comment, loopStmt));
+        loopStatements.push_back(Comment::make(comment, loopStmt, "\n"));
       }
       iassert(loops.size() > 0);
 
