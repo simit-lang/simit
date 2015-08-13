@@ -88,20 +88,12 @@ bool contains(const std::map<K,V> &container, const K &key) {
 }
 
 template <typename Collection>
-class ReverseIterator {
+class ReverseIterable {
 public:
   typedef typename Collection::reverse_iterator reverse_iterator;
-  typedef typename Collection::const_reverse_iterator const_reverse_iterator;
-
-  ReverseIterator(Collection &collection) : collection(collection) {}
-  ReverseIterator(const Collection &collection) : collection(collection) {}
-
+  ReverseIterable(Collection &c) : collection(c) {}
   reverse_iterator begin() {return collection.rbegin();}
   reverse_iterator end() {return collection.rend();}
-
-  const_reverse_iterator begin() const {return collection.rbegin();}
-  const_reverse_iterator end() const {return collection.rend();}
-
 private:
   Collection &collection;
 };
@@ -109,16 +101,66 @@ private:
 /// Iterate over a collection in reverse using a range for loop:
 /// for (auto &element : util::reverse(collection)) {...}
 template <typename T>
-ReverseIterator<T> reverse_iterator(T &collection) {
-  return ReverseIterator<T>(collection);
+ReverseIterable<T> reverse(T &collection) {
+  return ReverseIterable<T>(collection);
 }
+
+template <typename Collection>
+class ReverseConstIterable {
+public:
+  typedef typename Collection::const_reverse_iterator const_reverse_iterator;
+  ReverseConstIterable(const Collection &c) : collection(c) {}
+  const_reverse_iterator begin() const {return collection.rbegin();}
+  const_reverse_iterator end() const {return collection.rend();}
+private:
+  const Collection &collection;
+};
 
 /// Iterate over a collection in reverse using a range for loop:
 /// for (auto &element : util::reverse(collection)) {...}
 template <typename T>
-ReverseIterator<T> reverse(const T &collection) {
-  return ReverseIterator<T>(collection);
+ReverseIterable<T> reverse(const T &collection) {
+  return ReverseConstIterable<T>(collection);
 }
+
+template <typename Collection>
+class ExcludeFirstIterable {
+public:
+  typedef typename Collection::iterator iterator;
+  ExcludeFirstIterable(Collection &c) : collection(c) {}
+  iterator begin() {
+    return (collection.begin() == collection.end() ?   collection.end()
+                                                   : ++collection.begin());
+  }
+  iterator end() {return collection.end();}
+private:
+  Collection &collection;
+};
+
+template<typename T>
+ExcludeFirstIterable<T> excludeFirst(T &collection) {
+  return ExcludeFirstIterable<T>(collection);
+}
+
+template <typename Collection>
+class ExcludeFirstConstIterable {
+public:
+  typedef typename Collection::const_iterator const_iterator;
+  ExcludeFirstConstIterable(const Collection &c) : collection(c) {}
+  const_iterator begin() const {
+    return (collection.begin() == collection.end() ?   collection.end()
+                                                   : ++collection.begin());
+  }
+  const_iterator end() const {return collection.end();}
+private:
+  const Collection &collection;
+};
+
+template<typename T>
+ExcludeFirstConstIterable<T> excludeFirst(const T &collection) {
+  return ExcludeFirstConstIterable<T>(collection);
+}
+
 
 /// Retrieve the location in the collection of the given value
 template <class Collection, typename Value>
