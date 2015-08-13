@@ -42,7 +42,7 @@ bool IndexVariableLoop::isLinked() const {
   return content->linkedLoop.defined();
 }
 
-IndexVariableLoop IndexVariableLoop::getLinkedLoop() const {
+const IndexVariableLoop &IndexVariableLoop::getLinkedLoop() const {
   return content->linkedLoop;
 }
 

@@ -8,7 +8,7 @@
 namespace simit {
 namespace ir {
 
-Stmt lowerScatterWorkspace(Expr target, const IndexExpr *indexExpression);
+Stmt lowerScatterWorkspace(Var target, const IndexExpr *indexExpression);
 
 }}
 #endif

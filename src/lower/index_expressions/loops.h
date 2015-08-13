@@ -20,7 +20,7 @@ public:
   const Var &getInductionVar() const;
 
   bool isLinked() const;
-  IndexVariableLoop getLinkedLoop() const;
+  const IndexVariableLoop &getLinkedLoop() const;
 
   bool defined() const {return content != nullptr;}
 

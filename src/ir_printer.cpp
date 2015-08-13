@@ -40,6 +40,7 @@ std::ostream &operator<<(std::ostream &os, const Expr &expr) {
 
 std::ostream &operator<<(std::ostream &os, const Stmt &Stmt) {
   IRPrinter printer(os);
+  printer.skipTopExprParenthesis();
   printer.print(Stmt);
   return os;
 }
@@ -399,6 +400,7 @@ void IRPrinter::visit(const FieldWrite *op) {
   indent();
   print(op->elementOrSet);
   os << "." << op->fieldName << " " << op->cop << "= ";
+  skipTopExprParenthesis();
   print(op->value);
   os << ";";
 }
@@ -416,6 +418,7 @@ void IRPrinter::visit(const TensorWrite *op) {
     print(indices[i]);
   }
   os << ") " << op->cop << "= ";
+  skipTopExprParenthesis();
   print(op->value);
   os << ";";
 }
@@ -426,6 +429,7 @@ void IRPrinter::visit(const Store *op) {
   os << "[";
   print(op->index);
   os << "] " << op->cop << "= ";
+  skipTopExprParenthesis();
   print(op->value);
   os << ";";
 }

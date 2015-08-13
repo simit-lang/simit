@@ -9,7 +9,7 @@ using namespace std;
 using namespace simit;
 using namespace simit::ir;
 
-TEST(IndexExpression_DISABLED, add) {
+TEST(IndexExpression, add) {
   Var v("V", SetType::make(ElementType::make("v", {}), {}));
   IndexSet is(v);
   IndexDomain dim(is);
@@ -30,7 +30,7 @@ TEST(IndexExpression_DISABLED, add) {
   std::cout << loops << std::endl;
 }
 
-TEST(IndexExpression_DISABLED, mul) {
+TEST(IndexExpression, mul) {
   Var v("V", SetType::make(ElementType::make("v", {}), {}));
   IndexSet is(v);
   IndexDomain dim(is);
@@ -51,7 +51,7 @@ TEST(IndexExpression_DISABLED, mul) {
   std::cout << loops << std::endl;
 }
 
-TEST(IndexExpression_DISABLED, addmul) {
+TEST(IndexExpression, addmul) {
   Var v("V", SetType::make(ElementType::make("v", {}), {}));
   IndexSet is(v);
   IndexDomain dim(is);
@@ -73,7 +73,7 @@ TEST(IndexExpression_DISABLED, addmul) {
   std::cout << loops << std::endl;
 }
 
-TEST(IndexExpression_DISABLED, muladd) {
+TEST(IndexExpression, muladd) {
   Var v("V", SetType::make(ElementType::make("v", {}), {}));
   IndexSet is(v);
   IndexDomain dim(is);
