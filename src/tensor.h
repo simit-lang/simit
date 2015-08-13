@@ -4,34 +4,31 @@
 #include <ostream>
 #include <memory>
 
-// TODO: Remove
-#include "ir.h"
-#include "types.h"
-
-// TODO: Replace with a simple tensor implementation
-//typedef simit::ir::Expr Tensor;
+#include "ir.h" // TODO: Remove
 
 namespace simit {
 
 class Tensor {
 public:
-  Tensor(simit::ir::Expr literal) : literal(literal) {}
-  Tensor(int val) : literal(val) {}
-  Tensor(double val) : literal(val) {}
+  Tensor(const simit::ir::Expr &literal);
+  Tensor(int val);
+  Tensor(double val);
 
-  operator simit::ir::Expr() {return literal;}
+  Tensor(const Tensor &other);
+  Tensor(Tensor &&other) noexcept;
+  Tensor &operator=(const Tensor &other);
+  Tensor &operator=(Tensor &&other) noexcept;
+  ~Tensor();
 
-  ir::Type type() {return literal.type();}
+  const ir::Type &type();
+  operator simit::ir::Expr();
 
   friend std::ostream &operator<<(std::ostream &os, const Tensor &tensor);
 
 private:
-  simit::ir::Expr literal;
-  class Content;
-  class std::shared_ptr<Content> content;
+  struct Content;
+  Content *content;
 };
-
-
 
 }
 #endif
