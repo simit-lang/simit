@@ -66,11 +66,9 @@ void Function::bind(const std::string &argName, simit::Tensor *tensor) {
       << "no argument of this name in function";
 
   // Check that the tensor matches the argument type
-  uassert(tensor->type() == actuals[argName].getType())
-      << "tensor type " << tensor->type()
+  uassert(tensor->getType() == actuals[argName].getType())
+      << "tensor type " << tensor->getType()
       << "does not match function argument type" << actuals[argName].getType();
-
-  uassert(ir::to<ir::Literal>(*tensor) != nullptr);
 
   actuals[argName].bind(tensor);
   initRequired = true;

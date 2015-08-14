@@ -12,6 +12,7 @@
 #include "backend/backend_function.h"
 #include "program.h"
 #include "graph.h"
+#include "util/collections.h"
 
 namespace simit {
 namespace internal {
@@ -33,7 +34,7 @@ public:
 /// their results are compared against expected values:
 ///
 /// %! add([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]) == [3.0, 5.0, 7.0];
-/// func add(a : tensor[3](float), b : tensor[3](float)) -> (c : tensor[3](float))
+/// func add(a : tensor[3](float), b : tensor[3](float))->(c : tensor[3](float))
 ///   c = a + b;
 /// end
 class FunctionTest : public Test {
@@ -67,15 +68,13 @@ public:
     compiledFunc.runSafe();
 
     // compare function result with test->literal
-    auto expectedResults = expected;
-    iassert(expectedResults.size() == actualResults.size());
-    auto rit = actualResults.begin();
-    auto eit = expectedResults.begin();
-    for (; rit != actualResults.end(); ++rit, ++eit) {
-      if (*ir::to<ir::Literal>(*rit) != *ir::to<ir::Literal>(*eit)) {
+    for (auto pair : util::zip(actualResults, expected)) {
+      auto &actual = pair.first;
+      auto &expected = pair.second;
+      if (actual != expected) {
         // TODO: Report with line number of test
-        diags->report() << "Test failure (" << util::toString(*rit)
-                        << " != " << util::toString(*eit) << ")";
+        diags->report() << "Test failure (" << util::toString(actual)
+                        << " != " << util::toString(expected) << ")";
         return false;
       }
     }

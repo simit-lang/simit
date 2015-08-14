@@ -324,12 +324,7 @@ struct Literal : public ExprNode<Literal> {
   }
 
   double getFloatVal(int index) const {
-    if (ScalarType::singleFloat()) {
-      return ((float*)data)[index];
-    }
-    else {
-      return ((double*)data)[index];
-    }
+    return ((double*)data)[index];
   }
 
   ~Literal() {free(data);}

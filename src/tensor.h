@@ -5,10 +5,12 @@
 #include <memory>
 
 #include "ir.h" // TODO: Remove
+#include "comparable.h"
 
 namespace simit {
 
-class Tensor {
+
+class Tensor : public interfaces::Comparable<Tensor> {
 public:
   Tensor(const simit::ir::Expr &literal);
   Tensor(int val);
@@ -20,8 +22,13 @@ public:
   Tensor &operator=(Tensor &&other) noexcept;
   ~Tensor();
 
-  const ir::Type &type();
-  operator simit::ir::Expr();
+  const ir::Type &getType() const;
+
+  void *getData();
+  const void *getData() const;
+
+  friend bool operator==(const Tensor&, const Tensor&);
+  friend bool operator!=(const Tensor&, const Tensor&);
 
   friend std::ostream &operator<<(std::ostream &os, const Tensor &tensor);
 

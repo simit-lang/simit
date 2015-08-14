@@ -16,8 +16,9 @@ struct Tensor::Content {
   simit::ir::Expr literal;
 };
 
-Tensor::Tensor(const simit::ir::Expr &literal)
+Tensor::Tensor(const ir::Expr &literal)
     : content(new Tensor::Content) {
+  uassert(ir::to<ir::Literal>(literal) != nullptr);
   content->type = literal.type();
   content->literal = literal;
 }
@@ -53,12 +54,28 @@ Tensor &Tensor::operator=(Tensor &&other) noexcept {
 Tensor::~Tensor() {
 }
 
-const ir::Type &Tensor::type() {
+const ir::Type &Tensor::getType() const {
   return content->type;
 }
 
-Tensor::operator simit::ir::Expr() {
-  return content->literal;
+void *Tensor::getData() {
+  const ir::Literal *literal = ir::to<ir::Literal>(content->literal);
+  return literal->data;
+}
+
+const void *Tensor::getData() const {
+  const ir::Literal *literal = ir::to<ir::Literal>(content->literal);
+  return literal->data;
+}
+
+bool operator==(const Tensor &l, const Tensor &r) {
+  return *ir::to<ir::Literal>(l.content->literal)
+      == *ir::to<ir::Literal>(r.content->literal);
+}
+
+bool operator!=(const Tensor &l, const Tensor &r) {
+  return *ir::to<ir::Literal>(l.content->literal)
+      != *ir::to<ir::Literal>(r.content->literal);
 }
 
 std::ostream &operator<<(std::ostream &os, const Tensor &tensor) {

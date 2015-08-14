@@ -22,14 +22,10 @@ using namespace simit::backend;
 namespace simit { extern std::string kBackend; }
 
 template <typename T>
-std::vector<T> toVectorOf(Expr expr) {
+std::vector<T> toVectorOf(const Tensor &tensor) {
   std::vector<T> vec;
-  const Literal *lit = to<Literal>(expr);
-  assert(lit);
-
-  assert(lit->type.isTensor());
-  T *vals = static_cast<T*>(lit->data);
-  vec.assign(vals, vals + lit->type.toTensor()->size());
+  const T *vals = static_cast<const T*>(tensor.getData());
+  vec.assign(vals, vals + tensor.getType().toTensor()->size());
   return vec;
 }
 

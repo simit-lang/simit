@@ -63,19 +63,22 @@ llvm::Constant *llvmPtr(const Literal *literal) {
   return llvmPtr(literal->type, literal->data);
 }
 
-llvm::Constant *llvmVal(const ir::Literal *literal) {
-  ScalarType componentType = literal->type.toTensor()->componentType;
+llvm::Constant *llvmVal(const Type &type, const void *data) {
+  ScalarType componentType = type.toTensor()->componentType;
   switch (componentType.kind) {
     case ScalarType::Int:
-      return llvmInt(static_cast<int*>(literal->data)[0]);
+      return llvmInt(static_cast<const int*>(data)[0]);
     case ScalarType::Float:
-      return llvmFP(literal->getFloatVal(0), componentType.bytes());
+      return llvmFP(static_cast<const double*>(data)[0], componentType.bytes());
     case ScalarType::Boolean:
-      return llvmBool(static_cast<bool*>(literal->data)[0]);
-    default:
-      unreachable;
-      return nullptr;
+      return llvmBool(static_cast<const bool*>(data)[0]);
   }
+  ierror;
+  return nullptr;
+}
+
+llvm::Constant *llvmVal(const Literal *literal) {
+  return llvmVal(literal->type, literal->data);
 }
 
 Type simitType(const llvm::Type *type) {

@@ -81,12 +81,10 @@ LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
 
       switch (actual.getType().kind()) {
         case ir::Type::Tensor: {
-          simit::Tensor tensor = *actual.getTensor();
-          const ir::Literal *literal = ir::to<ir::Literal>(tensor);
-
+          Tensor *tensor = actual.getTensor();
           llvm::Value *llvmActual = (llvmArgIt->getType()->isPointerTy())
-              ? llvmPtr(const_cast<ir::Literal*>(literal))
-              : llvmVal(literal);
+              ? llvmPtr(tensor->getType(), tensor->getData())
+              : llvmVal(tensor->getType(), tensor->getData());
           args.push_back(llvmActual);
           break;
         }

@@ -66,7 +66,10 @@ llvm::Constant *llvmPtr(llvm::Type *type, const void *data);
 llvm::Constant *llvmPtr(const ir::Type &type, const void *data,
                         unsigned addrspace=LLVM_GENERIC_ADDRSPACE);
 llvm::Constant *llvmPtr(const ir::Literal *literal);
+
+llvm::Constant *llvmVal(const ir::Type &type, const void *data);
 llvm::Constant *llvmVal(const ir::Literal *literal);
+
 
 ir::Type simitType(const llvm::Type *type);
 
