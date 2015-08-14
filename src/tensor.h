@@ -9,7 +9,6 @@
 
 namespace simit {
 
-
 class Tensor : public interfaces::Comparable<Tensor> {
 public:
   Tensor(const simit::ir::Expr &literal);

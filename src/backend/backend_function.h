@@ -81,8 +81,8 @@ protected:
   private:
     ir::Type type;
     union {
-      Set *set;
-      Tensor  *tensor;
+      simit::Set    *set;
+      simit::Tensor *tensor;
     };
     bool output;
   };

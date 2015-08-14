@@ -40,41 +40,53 @@ public:
 class FunctionTest : public Test {
 public:
   FunctionTest(const std::string &callee,
-       const std::vector<simit::Tensor> &actuals,
-       const std::vector<simit::Tensor> &expected)
+       const std::vector<simit::Tensor*> &actuals,
+       const std::vector<simit::Tensor*> &expected)
       : callee(callee), actuals(actuals), expected(expected) {}
+
+  ~FunctionTest() {
+    for (auto &actual : actuals) {
+      iassert(actual != nullptr);
+      delete actual;
+    }
+    for (auto &expect : expected) {
+      iassert(expect != nullptr);
+      delete expect;
+    }
+  }
 
   std::string getCallee() const { return callee; }
 
   bool evaluate(const ir::Func &func, simit::Function compiledFunc,
                 Diagnostics *diags) const {
+
+
     // run the function with test->call->arguments
     iassert(actuals.size() == func.getArguments().size());
 
     std::vector<ir::Var>  formalArgs = func.getArguments();
-    std::vector<simit::Tensor> actualArgs = actuals;
-    for (size_t i=0; i < actualArgs.size(); ++i) {
-      compiledFunc.bind(formalArgs[i].getName(), &actualArgs[i]);
+    for (size_t i=0; i < actuals.size(); ++i) {
+      compiledFunc.bind(formalArgs[i].getName(), actuals[i]);
     }
 
-    auto formalResults = func.getResults();
-    std::vector<simit::Tensor> actualResults;
-    for (auto &formalResult : formalResults) {
-      simit::Tensor actualResult = ir::Literal::make(formalResult.getType());
-      actualResults.push_back(actualResult);
-      compiledFunc.bind(formalResult.getName(), &actualResult);
+    auto resultFormals = func.getResults();
+    std::vector<std::unique_ptr<simit::Tensor>> results;
+    for (auto &resultFormal : resultFormals) {
+      auto result= new simit::Tensor(ir::Literal::make(resultFormal.getType()));
+      compiledFunc.bind(resultFormal.getName(), result);
+      results.push_back(std::unique_ptr<simit::Tensor>(result));
     }
 
     compiledFunc.runSafe();
 
     // compare function result with test->literal
-    for (auto pair : util::zip(actualResults, expected)) {
+    for (auto pair : util::zip(results, expected)) {
       auto &actual = pair.first;
       auto &expected = pair.second;
-      if (actual != expected) {
+      if (*actual != *expected) {
         // TODO: Report with line number of test
-        diags->report() << "Test failure (" << util::toString(actual)
-                        << " != " << util::toString(expected) << ")";
+        diags->report() << "Test failure (" << util::toString(*actual)
+                        << " != " << util::toString(*expected) << ")";
         return false;
       }
     }
@@ -84,8 +96,8 @@ public:
 
 private:
   std::string callee;
-  std::vector<simit::Tensor> actuals;
-  std::vector<simit::Tensor> expected;
+  std::vector<simit::Tensor*> actuals;
+  std::vector<simit::Tensor*> expected;
 };
 
 

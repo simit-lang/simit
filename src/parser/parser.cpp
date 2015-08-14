@@ -3358,16 +3358,16 @@ namespace  simit { namespace internal  {
     auto actualLiterals = unique_ptr<vector<Expr>>((yystack_[4].value.exprs));
     auto expectedLiteral = convertAndDelete((yystack_[1].value.expr));
 
-    std::vector<simit::Tensor> actuals;
+    std::vector<simit::Tensor*> actuals;
     for (auto &actualLit : *actualLiterals) {
       if (!isa<Literal>(actualLit)) {
         REPORT_ERROR("function calls in tests must have literal arguments", yystack_[7].location);
       }
-      actuals.push_back(actualLit);
+      actuals.push_back(new Tensor(actualLit));
     }
 
-    std::vector<simit::Tensor> expected;
-    expected.push_back(expectedLiteral);
+    std::vector<simit::Tensor*> expected;
+    expected.push_back(new Tensor(expectedLiteral));
 
     ctx->addTest(new FunctionTest(name, actuals, expected));
   }

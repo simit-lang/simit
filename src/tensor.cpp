@@ -16,9 +16,8 @@ struct Tensor::Content {
   simit::ir::Expr literal;
 };
 
-Tensor::Tensor(const ir::Expr &literal)
-    : content(new Tensor::Content) {
-  uassert(ir::to<ir::Literal>(literal) != nullptr);
+Tensor::Tensor(const ir::Expr &literal) : content(new Tensor::Content) {
+  uassert(ir::isa<ir::Literal>(literal));
   content->type = literal.type();
   content->literal = literal;
 }
@@ -52,6 +51,10 @@ Tensor &Tensor::operator=(Tensor &&other) noexcept {
 }
 
 Tensor::~Tensor() {
+  if (content != nullptr) {
+    delete content;
+    content = nullptr;
+  }
 }
 
 const ir::Type &Tensor::getType() const {
