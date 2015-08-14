@@ -69,6 +69,8 @@ int loadText(const std::string &file, std::string *text);
 // /Trim whitespace from string
 std::string trim(const std::string &str, const std::string &ws = " \t\n");
 
+bool almostEqual(double a, double b, double maxRelativeError);
+bool almostEqual(float a, float b, float maxRelativeError);
 }}
 
 #endif

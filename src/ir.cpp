@@ -209,13 +209,11 @@ Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
   return TensorType::make(expr.type().toTensor()->componentType, dimensions);
 }
 
-
 // struct Literal
 void Literal::cast(Type type) {
   iassert(type.isTensor());
-  iassert(type.toTensor()->componentType == this->type.toTensor()->componentType);
+  iassert(type.toTensor()->componentType==this->type.toTensor()->componentType);
   iassert(type.toTensor()->size() == this->type.toTensor()->size());
-
   this->type = type;
 }
 
