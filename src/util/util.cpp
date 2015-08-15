@@ -1,6 +1,5 @@
 #include "util.h"
 
-#include <cmath>
 #include <fstream>
 
 namespace simit {
@@ -63,40 +62,6 @@ std::string trim(const std::string &str, const std::string &ws) {
   const auto strRange = strEnd - strBegin + 1;
 
   return str.substr(strBegin, strRange);
-}
-
-bool almostEqual(float a, float b, float maxRelativeError) {
-  if (a == b) {
-    return true;
-  }
-  double relativeError;
-  if (fabs(b) > fabs(a)) {
-    relativeError = fabs((a - b) / b);
-  }
-  else {
-    relativeError = fabs((a - b) / a);
-  }
-  if (relativeError <= maxRelativeError) {
-    return true;
-  }
-  return false;
-}
-
-bool almostEqual(double a, double b, double maxRelativeError) {
-  if (a == b) {
-    return true;
-  }
-  double relativeError;
-  if (fabs(b) > fabs(a)) {
-    relativeError = fabs((a - b) / b);
-  }
-  else {
-    relativeError = fabs((a - b) / a);
-  }
-  if (relativeError <= maxRelativeError) {
-    return true;
-  }
-  return false;
 }
 
 }} // namespace simit::util
