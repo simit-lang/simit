@@ -623,6 +623,8 @@ TEST(System, gemv_input) {
 
   simit::Tensor cs(ir::TensorType::make(ir::ScalarType::Float,
                                         {ir::IndexDomain(2)}));
+
+  // TODO: Add indexing to tensors
   static_cast<simit_float*>(cs.getData())[0] = 1.0;
   static_cast<simit_float*>(cs.getData())[1] = 2.0;
 

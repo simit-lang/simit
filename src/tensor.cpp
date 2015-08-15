@@ -68,18 +68,17 @@ struct Tensor::Content {
   }
 };
 
-Tensor::Tensor(const ir::Type &type) : content(new Tensor::Content(type)) {
-}
-
-Tensor::Tensor(const ir::Type &type, void *data)
-
-    : content(new Tensor::Content(type, data)) {
-}
-
 Tensor::Tensor(int val) : Tensor(Int, &val) {
 }
 
 Tensor::Tensor(double val) : Tensor(Float, &val) {
+}
+
+Tensor::Tensor(const ir::Type &type) : content(new Tensor::Content(type)) {
+}
+
+Tensor::Tensor(const ir::Type &type, void *data)
+    : content(new Tensor::Content(type, data)) {
 }
 
 Tensor::Tensor(const Tensor &other)

@@ -4,18 +4,19 @@
 #include <ostream>
 #include <memory>
 
-#include "ir.h" // TODO: Remove
-#include "comparable.h"
-
 namespace simit {
 
-class Tensor : public interfaces::Comparable<Tensor> {
+namespace ir {
+class Type;
+}
+
+class Tensor {
 public:
-  Tensor(const ir::Type &type);
-  Tensor(const ir::Type &type, void *data);
-  
   Tensor(int val);
   Tensor(double val);
+
+  Tensor(const ir::Type &type);
+  Tensor(const ir::Type &type, void *data);
 
   Tensor(const Tensor &other);
   Tensor(Tensor &&other) noexcept;
