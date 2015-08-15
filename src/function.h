@@ -31,8 +31,8 @@ public:
   Function();
   Function(backend::Function *function);
 
-  void bind(const std::string &argName, Tensor *tensor);
-  void bind(const std::string &argName, Set *set);
+  void bind(const std::string &argName, simit::Tensor *tensor);
+  void bind(const std::string &argName, simit::Set *set);
 
   void init();
   bool isInit();

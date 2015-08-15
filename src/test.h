@@ -30,7 +30,7 @@ public:
 };
 
 
-/// A Simit function test. Test functions are invoked in language comments and
+/// A Simit function test. Test functions are called from language comments and
 /// their results are compared against expected values:
 ///
 /// %! add([0.0, 1.0, 2.0], [3.0, 4.0, 5.0]) == [3.0, 5.0, 7.0];
@@ -101,7 +101,7 @@ private:
 };
 
 
-/// A Simit procedure test. Test procedures are invoked in language comments.
+/// A Simit procedure test. Test procedures are called from language comments.
 /// The initial value of externs are set and the value is compared to expected
 /// results after procedure invocation:
 ///

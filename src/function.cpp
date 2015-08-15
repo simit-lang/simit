@@ -11,12 +11,12 @@ Function::Function() : Function(nullptr) {
 Function::Function(backend::Function *func) : impl(func), funcPtr(nullptr) {
 }
 
-void Function::bind(const std::string &argName, Tensor *tensor) {
+void Function::bind(const std::string &argName, simit::Tensor *tensor) {
   uassert(defined()) << "undefined function";
   impl->bind(argName, tensor);
 }
 
-void Function::bind(const std::string &argName, Set *set) {
+void Function::bind(const std::string &argName, simit::Set *set) {
   uassert(defined()) << "undefined function";
   impl->bind(argName, set);
 }

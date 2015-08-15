@@ -12,8 +12,6 @@ using namespace std;
 #include "types.h"
 #include "indices.h"
 
-using namespace simit;
-
 namespace simit {
 namespace backend {
 
