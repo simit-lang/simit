@@ -11,6 +11,7 @@
 
 #include "tensor_components.h"
 #include "variadic.h"
+#include "comparable.h"
 #include "error.h"
 #include "types.h"
 
@@ -749,64 +750,67 @@ class FieldRef<T> : public FieldRefBaseParameterized<T> {
 
 // Tensor References
 
-template <typename T, int... dimensions>
-class TensorRef {
+template <typename ComponentType, int... Dimensions>
+class TensorRef
+    : public interfaces::Comparable<TensorRef<ComponentType,Dimensions...>> {
  public:
   static size_t getOrder() {
-    return sizeof...(dimensions);
+    return sizeof...(Dimensions);
   }
 
-  static size_t getSize() { return util::product<dimensions...>::value; }
+  static size_t getSize() {return util::product<Dimensions...>::value;}
 
-  inline TensorRef<T> &operator=(T val) {
-    static_assert(sizeof...(dimensions) == 0,
+  inline TensorRef<ComponentType>& operator=(ComponentType val) {
+    static_assert(sizeof...(Dimensions) == 0,
                   "Can only assign scalar values to scalar tensors.");
     data[0] = val;
     return *this;
   }
 
-  inline
-  TensorRef<T, dimensions...> &operator=(const std::initializer_list<T> &vals) {
-    iassert(vals.size() == util::product<dimensions...>::value);
+  inline TensorRef<ComponentType,Dimensions...>&
+  operator=(const std::initializer_list<ComponentType> &vals) {
+    iassert(vals.size() == util::product<Dimensions...>::value);
     size_t i=0;
-    for (T val : vals) {
+    for (ComponentType val : vals) {
       data[i++] = val;
     }
     return *this;
   }
 
-  inline operator T() const {
-    static_assert(sizeof...(dimensions) == 0,
+  inline operator ComponentType() const {
+    static_assert(sizeof...(Dimensions) == 0,
                   "Can only convert scalar tensors to scalar values.");
     return data[0];
   }
 
   template <typename... Indices>
-  inline T &operator()(Indices... index) {
-    static_assert(sizeof...(dimensions) > 0,
-                  "Access scalars directly, not through operator()");
-    static_assert(sizeof...(index) == sizeof...(dimensions),
+  inline ComponentType& operator()(Indices... index) {
+    static_assert(sizeof...(index) == sizeof...(Dimensions),
                   "Incorrect number of indices used to index tensor");
-    auto dims = simit::util::seq<dimensions...>();
-    return data[simit::util::computeOffset(dims, index...)];
+    return data[util::computeOffset(util::seq<Dimensions...>(), index...)];
   }
 
-  template <typename... Indices>
-  inline const T &operator()(Indices... index) const {
-    return const_cast<TensorRef<T,dimensions...>*>(this)->operator()(index...);
+  template <typename... Indices> inline
+  const ComponentType& operator()(Indices... index) const {
+    static_assert(sizeof...(index) == sizeof...(Dimensions),
+                  "Incorrect number of indices used to index tensor");
+    return data[util::computeOffset(util::seq<Dimensions...>(), index...)];
+  }
+
+  friend bool operator==(const TensorRef& l, const TensorRef& r){
+    return l.data == r.data;
+  }
+
+  friend bool operator<(const TensorRef& l, const TensorRef& r){
+    return l.data < r.data;
   }
 
  private:
-  inline TensorRef(T *data) : data(data) {}
-  T *data;
+  inline TensorRef(ComponentType *data) : data(data) {}
+  ComponentType *data;
 
-  friend class FieldRefBaseParameterized<T, dimensions...>;
+  friend class FieldRefBaseParameterized<ComponentType, Dimensions...>;
 };
-
-template <typename T, int... dims>
-bool operator==(const TensorRef<T, dims...> &l, const TensorRef<T, dims...> &r){
-  return false;
-}
 
 template <typename T, int... dims>
 std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
@@ -827,7 +831,7 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, r, c> &t) {
     }
   }
 
-  for (int i=0; i<r; ++i) {
+  for (int i=1; i<r; ++i) {
     os << "; ";
     if (0 < c) {
       os << t(i,0);
