@@ -11,7 +11,9 @@ namespace simit {
 
 class Tensor : public interfaces::Comparable<Tensor> {
 public:
-  Tensor(const simit::ir::Expr &literal);
+  Tensor(const ir::Type &type);
+  Tensor(const ir::Type &type, void *data);
+  
   Tensor(int val);
   Tensor(double val);
 
@@ -22,6 +24,9 @@ public:
   ~Tensor();
 
   const ir::Type &getType() const;
+
+  unsigned getSize() const;
+  unsigned getComponentSize() const;
 
   void *getData();
   const void *getData() const;

@@ -72,7 +72,7 @@ public:
     auto resultFormals = func.getResults();
     std::vector<std::unique_ptr<simit::Tensor>> results;
     for (auto &resultFormal : resultFormals) {
-      auto result= new simit::Tensor(ir::Literal::make(resultFormal.getType()));
+      auto result= new simit::Tensor(resultFormal.getType());
       compiledFunc.bind(resultFormal.getName(), result);
       results.push_back(std::unique_ptr<simit::Tensor>(result));
     }

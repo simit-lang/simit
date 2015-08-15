@@ -2017,11 +2017,15 @@ test
       if (!isa<Literal>(actualLit)) {
         REPORT_ERROR("function calls in tests must have literal arguments", @1);
       }
-      actuals.push_back(new Tensor(actualLit));
+      iassert(isa<Literal>(actualLit));
+      const Literal *lit = to<Literal>(actualLit);
+      actuals.push_back(new Tensor(lit->type, lit->data));
     }
 
     std::vector<simit::Tensor*> expected;
-    expected.push_back(new Tensor(expectedLiteral));
+    iassert(isa<Literal>(expectedLiteral));
+    const Literal *lit = to<Literal>(expectedLiteral);
+    expected.push_back(new Tensor(lit->type, lit->data));
 
     ctx->addTest(new FunctionTest(name, actuals, expected));
   }

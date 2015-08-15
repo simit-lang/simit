@@ -3363,11 +3363,15 @@ namespace  simit { namespace internal  {
       if (!isa<Literal>(actualLit)) {
         REPORT_ERROR("function calls in tests must have literal arguments", yystack_[7].location);
       }
-      actuals.push_back(new Tensor(actualLit));
+      iassert(isa<Literal>(actualLit));
+      const Literal *lit = to<Literal>(actualLit);
+      actuals.push_back(new Tensor(lit->type, lit->data));
     }
 
     std::vector<simit::Tensor*> expected;
-    expected.push_back(new Tensor(expectedLiteral));
+    iassert(isa<Literal>(expectedLiteral));
+    const Literal *lit = to<Literal>(expectedLiteral);
+    expected.push_back(new Tensor(lit->type, lit->data));
 
     ctx->addTest(new FunctionTest(name, actuals, expected));
   }
@@ -4129,8 +4133,8 @@ namespace  simit { namespace internal  {
     1734,  1742,  1745,  1759,  1765,  1768,  1771,  1821,  1825,  1826,
     1830,  1834,  1841,  1852,  1859,  1863,  1867,  1881,  1885,  1900,
     1904,  1911,  1918,  1922,  1926,  1940,  1944,  1959,  1963,  1970,
-    1973,  1976,  1982,  1985,  1991,  1994,  2000,  2003,  2010,  2029,
-    2053,  2054,  2062
+    1973,  1976,  1982,  1985,  1991,  1994,  2000,  2003,  2010,  2033,
+    2057,  2058,  2066
   };
 
   // Print the state stack on the debug stream.

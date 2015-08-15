@@ -62,7 +62,7 @@ TEST(Codegen, add0) {
 
   Tensor aArg = 2.0;
   Tensor bArg = 4.1;
-  Tensor cRes = Literal::make(Float);
+  Tensor cRes = Float;
 
   function.bind("a", &aArg);
   function.bind("b", &bArg);
