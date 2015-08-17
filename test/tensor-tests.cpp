@@ -33,7 +33,7 @@ TEST(Tensor, Size) {
   DenseTensor<double,2,2,3> ten223;
   DenseTensor<double,2,4,2> ten242;
   DenseTensor<double,5,2,2> ten522;
-  ASSERT_EQ(8u, ten222.getSize());
+  ASSERT_EQ( 8u, ten222.getSize());
   ASSERT_EQ(12u, ten223.getSize());
   ASSERT_EQ(16u, ten242.getSize());
   ASSERT_EQ(20u, ten522.getSize());

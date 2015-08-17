@@ -16,7 +16,6 @@
 #endif
 
 #include "graph.h"
-#include "tensor.h"
 
 #include "llvm_codegen.h"
 #include "indices.h"

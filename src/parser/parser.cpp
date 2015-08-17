@@ -173,8 +173,8 @@
   #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)   \
     do {                                          \
       iassert(lt.isTensor() && rt.isTensor());    \
-      const TensorType *ltt = lt.toTensor();      \
-      const TensorType *rtt = rt.toTensor();      \
+      const ir::TensorType* ltt = lt.toTensor();  \
+      const ir::TensorType* rtt = rt.toTensor();  \
       if (ltt->order() > 0 && rtt->order() > 0) { \
         CHECK_TYPE_EQUALITY(lt, rt, loc);         \
       }                                           \
@@ -2227,7 +2227,7 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[5].value.string));
     auto type = convertAndDelete((yystack_[3].value.type));
-    const TensorType *tensorType = type.toTensor();
+    const ir::TensorType *tensorType = type.toTensor();
 
     Expr literalExpr = convertAndDelete((yystack_[1].value.expr));
 
@@ -2237,7 +2237,7 @@ namespace  simit { namespace internal  {
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
-    const TensorType *litTensorType = litType.toTensor();
+    const ir::TensorType *litTensorType = litType.toTensor();
     if (tensorType->order() == 2 && litTensorType->order() == 1) {
       const_cast<Literal*>(to<Literal>(literalExpr))->cast(type);
     }
@@ -2330,8 +2330,8 @@ namespace  simit { namespace internal  {
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
 
-    const TensorType *ltype = l.type().toTensor();
-    const TensorType *rtype = r.type().toTensor();
+    const ir::TensorType *ltype = l.type().toTensor();
+    const ir::TensorType *rtype = r.type().toTensor();
 
     if (ltype->order()>0&&rtype->order()>0 && !compare(l.type(),r.type(),ctx)) {
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), yystack_[1].location);
@@ -2355,8 +2355,8 @@ namespace  simit { namespace internal  {
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
 
-    const TensorType *ltype = l.type().toTensor();
-    const TensorType *rtype = r.type().toTensor();
+    const ir::TensorType *ltype = l.type().toTensor();
+    const ir::TensorType *rtype = r.type().toTensor();
     vector<IndexDomain> ldimensions = ltype->getDimensions();
     vector<IndexDomain> rdimensions = rtype->getDimensions();
 
@@ -2430,8 +2430,8 @@ namespace  simit { namespace internal  {
     CHECK_IS_TENSOR(l, yystack_[2].location);
     CHECK_IS_TENSOR(r, yystack_[0].location);
 
-    const TensorType *ltype = l.type().toTensor();
-    const TensorType *rtype = r.type().toTensor();
+    const ir::TensorType *ltype = l.type().toTensor();
+    const ir::TensorType *rtype = r.type().toTensor();
 
     if (ltype->order()==0 || rtype->order()==0) {
       (yylhs.value.expr) = new Expr(builder->binaryElwiseExpr(l, IRBuilder::Div, r));
@@ -2452,7 +2452,7 @@ namespace  simit { namespace internal  {
 
     CHECK_IS_TENSOR(expr, yystack_[1].location);
 
-    const TensorType *type = expr.type().toTensor();
+    const ir::TensorType *type = expr.type().toTensor();
     switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
@@ -2933,7 +2933,7 @@ namespace  simit { namespace internal  {
 
     {
     auto componentType = convertAndDelete((yystack_[0].value.scalarType));
-    (yylhs.value.type) = new Type(TensorType::make(componentType));
+    (yylhs.value.type) = new Type(ir::TensorType::make(componentType));
   }
 
     break;
@@ -2950,7 +2950,7 @@ namespace  simit { namespace internal  {
 
     {
     auto blockTypePtr = convertAndDelete((yystack_[1].value.type));
-    const TensorType *blockType = blockTypePtr.toTensor();
+    const ir::TensorType *blockType = blockTypePtr.toTensor();
 
     auto componentType = blockType->componentType;
 
@@ -2988,7 +2988,7 @@ namespace  simit { namespace internal  {
       }
     }
 
-    (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions));
+    (yylhs.value.type) = new Type(ir::TensorType::make(componentType, dimensions));
   }
 
     break;
@@ -2997,10 +2997,10 @@ namespace  simit { namespace internal  {
 
     {
     auto type = convertAndDelete((yystack_[1].value.type));
-    const TensorType *tensorType = type.toTensor();
+    const ir::TensorType *tensorType = type.toTensor();
     auto dimensions = tensorType->getDimensions();
     auto componentType = tensorType->componentType;
-    (yylhs.value.type) = new Type(TensorType::make(componentType, dimensions, true));
+    (yylhs.value.type) = new Type(ir::TensorType::make(componentType, dimensions, true));
   }
 
     break;
@@ -3063,7 +3063,7 @@ namespace  simit { namespace internal  {
   case 154:
 
     {
-    (yylhs.value.scalarType) = new ScalarType(ScalarType::Int);
+    (yylhs.value.scalarType) = new ir::ScalarType(ir::ScalarType::Int);
   }
 
     break;
@@ -3071,7 +3071,7 @@ namespace  simit { namespace internal  {
   case 155:
 
     {
-    (yylhs.value.scalarType) = new ScalarType(ScalarType::Float);
+    (yylhs.value.scalarType) = new ir::ScalarType(ir::ScalarType::Float);
   }
 
     break;
@@ -3079,7 +3079,7 @@ namespace  simit { namespace internal  {
   case 156:
 
     {
-    (yylhs.value.scalarType) = new ScalarType(ScalarType::Boolean);
+    (yylhs.value.scalarType) = new ir::ScalarType(ir::ScalarType::Boolean);
   }
 
     break;
@@ -3099,7 +3099,7 @@ namespace  simit { namespace internal  {
     auto values = unique_ptr<TensorValues<double>>((yystack_[1].value.TensorDoubleValues));
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
-    Type type = TensorType::make(ScalarType(ScalarType::Float), idoms);
+    Type type = ir::TensorType::make(ir::ScalarType::Float, idoms);
     (yylhs.value.expr) = new Expr(Literal::make(type, values->values));
   }
 
@@ -3111,7 +3111,7 @@ namespace  simit { namespace internal  {
     auto values = unique_ptr<TensorValues<int>>((yystack_[1].value.TensorIntValues));
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
-    Type type = TensorType::make(ScalarType(ScalarType::Int), idoms);
+    Type type = ir::TensorType::make(ir::ScalarType::Int, idoms);
     (yylhs.value.expr) = new Expr(Literal::make(type, values->values.data()));
   }
 

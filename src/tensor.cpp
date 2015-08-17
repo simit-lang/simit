@@ -31,19 +31,19 @@ struct Tensor::Content {
     this->data = malloc(numElements * getComponentSize());
 
     switch (type.toTensor()->componentType.kind) {
-      case ScalarType::Boolean:
+      case ir::ScalarType::Boolean:
         zero<bool>(data, numElements);
         break;
-      case ScalarType::Int:
+      case ir::ScalarType::Int:
         zero<int>(data, numElements);
         break;
-      case ScalarType::Float:
-        if (ScalarType::singleFloat()) {
-          iassert(ScalarType::floatBytes == sizeof(float));
+      case ir::ScalarType::Float:
+        if (ir::ScalarType::singleFloat()) {
+          iassert(ir::ScalarType::floatBytes == sizeof(float));
           zero<float>(data, numElements);
         }
         else {
-          iassert(ScalarType::floatBytes == sizeof(double));
+          iassert(ir::ScalarType::floatBytes == sizeof(double));
           zero<double>(data, numElements);
         }
         break;
@@ -142,7 +142,7 @@ bool operator==(const Tensor &l, const Tensor &r) {
   }
 
   switch (ltype.toTensor()->componentType.kind) {
-    case ScalarType::Int: {
+    case ir::ScalarType::Int: {
       const int *ldata = static_cast<const int*>(l.getData());
       const int *rdata = static_cast<const int*>(r.getData());
       for (size_t i=0; i < l.getSize(); ++i) {
@@ -151,7 +151,7 @@ bool operator==(const Tensor &l, const Tensor &r) {
       }
       break;
     }
-    case ScalarType::Float: {
+    case ir::ScalarType::Float: {
       if (ir::ScalarType::floatBytes == sizeof(float)) {
         const float *ldata = static_cast<const float*>(l.getData());
         const float *rdata = static_cast<const float*>(r.getData());
@@ -172,7 +172,7 @@ bool operator==(const Tensor &l, const Tensor &r) {
       }
       break;
     }
-    case ScalarType::Boolean: {
+    case ir::ScalarType::Boolean: {
       const bool *ldata = static_cast<const bool*>(l.getData());
       const bool *rdata = static_cast<const bool*>(r.getData());
       for (size_t i=0; i < l.getSize(); ++i) {
@@ -195,7 +195,7 @@ bool operator!=(const Tensor &l, const Tensor &r) {
   }
 
   switch (ltype.toTensor()->componentType.kind) {
-    case ScalarType::Int: {
+    case ir::ScalarType::Int: {
       const int *ldata = static_cast<const int*>(l.getData());
       const int *rdata = static_cast<const int*>(r.getData());
       for (size_t i=0; i < l.getSize(); ++i) {
@@ -204,7 +204,7 @@ bool operator!=(const Tensor &l, const Tensor &r) {
       }
       break;
     }
-    case ScalarType::Float: {
+    case ir::ScalarType::Float: {
       if (ir::ScalarType::floatBytes == sizeof(float)) {
         const float *ldata = static_cast<const float*>(l.getData());
         const float *rdata = static_cast<const float*>(r.getData());
@@ -225,7 +225,7 @@ bool operator!=(const Tensor &l, const Tensor &r) {
       }
       break;
     }
-    case ScalarType::Boolean: {
+    case ir::ScalarType::Boolean: {
       const bool *ldata = static_cast<const bool*>(l.getData());
       const bool *rdata = static_cast<const bool*>(r.getData());
       for (size_t i=0; i < l.getSize(); ++i) {
@@ -295,5 +295,49 @@ std::ostream &operator<<(std::ostream &os, const Tensor &tensor) {
   }
   return os;
 }
+
+
+// class TensorType
+const TensorType* TensorType::getBlockType() const {
+  iassert(isBlocked());
+  return blockType;
+}
+
+ComponentType TensorType::getComponentType() const {
+  iassert(!isBlocked());
+  return componentType;
+}
+
+size_t TensorType::getSize() const {
+  size_t size = (isBlocked()) ? blockType->getSize() : 1;
+  for (int dimension : dimensions) {
+    size *= dimension;
+  }
+  return size;
+}
+
+std::ostream& operator<<(std::ostream& os, const TensorType& tensorType) {
+  size_t order = tensorType.getOrder();
+  os << "tensor";
+  if (order > 0) {
+    os << "[";
+    os << tensorType.getDimension(0);
+    for (size_t i=1; i < tensorType.getOrder(); ++i) {
+      os << "," << tensorType.getDimension(i);
+    }
+    os << "]";
+  }
+  os << "(";
+  if (tensorType.isBlocked()) {
+    os << tensorType.getBlockType();
+  }
+  // Base case
+  else {
+    os << tensorType.getComponentType();
+  }
+  os << ")";
+  return os;
+}
+
 
 }

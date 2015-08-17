@@ -150,8 +150,8 @@
   #define BINARY_ELWISE_TYPE_CHECK(lt, rt, loc)   \
     do {                                          \
       iassert(lt.isTensor() && rt.isTensor());    \
-      const TensorType *ltt = lt.toTensor();      \
-      const TensorType *rtt = rt.toTensor();      \
+      const ir::TensorType* ltt = lt.toTensor();  \
+      const ir::TensorType* rtt = rt.toTensor();  \
       if (ltt->order() > 0 && rtt->order() > 0) { \
         CHECK_TYPE_EQUALITY(lt, rt, loc);         \
       }                                           \
@@ -1096,7 +1096,7 @@ const_stmt
   : "const" IDENT ":" tensor_type "=" tensor_literal ";" {
     std::string name = convertAndFree($IDENT);
     auto type = convertAndDelete($tensor_type);
-    const TensorType *tensorType = type.toTensor();
+    const ir::TensorType *tensorType = type.toTensor();
 
     Expr literalExpr = convertAndDelete($tensor_literal);
 
@@ -1106,7 +1106,7 @@ const_stmt
 
     // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
     // cast $tensor_literal to a 1xn matrix.
-    const TensorType *litTensorType = litType.toTensor();
+    const ir::TensorType *litTensorType = litType.toTensor();
     if (tensorType->order() == 2 && litTensorType->order() == 1) {
       const_cast<Literal*>(to<Literal>(literalExpr))->cast(type);
     }
@@ -1195,8 +1195,8 @@ linear_algebra_expr
     CHECK_IS_TENSOR(l, @1);
     CHECK_IS_TENSOR(r, @3);
 
-    const TensorType *ltype = l.type().toTensor();
-    const TensorType *rtype = r.type().toTensor();
+    const ir::TensorType *ltype = l.type().toTensor();
+    const ir::TensorType *rtype = r.type().toTensor();
 
     if (ltype->order()>0&&rtype->order()>0 && !compare(l.type(),r.type(),ctx)) {
         REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
@@ -1215,8 +1215,8 @@ linear_algebra_expr
     CHECK_IS_TENSOR(l, @1);
     CHECK_IS_TENSOR(r, @3);
 
-    const TensorType *ltype = l.type().toTensor();
-    const TensorType *rtype = r.type().toTensor();
+    const ir::TensorType *ltype = l.type().toTensor();
+    const ir::TensorType *rtype = r.type().toTensor();
     vector<IndexDomain> ldimensions = ltype->getDimensions();
     vector<IndexDomain> rdimensions = rtype->getDimensions();
 
@@ -1285,8 +1285,8 @@ linear_algebra_expr
     CHECK_IS_TENSOR(l, @1);
     CHECK_IS_TENSOR(r, @3);
 
-    const TensorType *ltype = l.type().toTensor();
-    const TensorType *rtype = r.type().toTensor();
+    const ir::TensorType *ltype = l.type().toTensor();
+    const ir::TensorType *rtype = r.type().toTensor();
 
     if (ltype->order()==0 || rtype->order()==0) {
       $$ = new Expr(builder->binaryElwiseExpr(l, IRBuilder::Div, r));
@@ -1302,7 +1302,7 @@ linear_algebra_expr
 
     CHECK_IS_TENSOR(expr, @1);
 
-    const TensorType *type = expr.type().toTensor();
+    const ir::TensorType *type = expr.type().toTensor();
     switch (type->order()) {
       case 0:
         // OPT: This might lead to redundant code to be removed in later pass
@@ -1669,14 +1669,14 @@ tuple_type
 tensor_type
   : component_type {
     auto componentType = convertAndDelete($component_type);
-    $$ = new Type(TensorType::make(componentType));
+    $$ = new Type(ir::TensorType::make(componentType));
   }
   | "tensor" "(" tensor_type[block_type] ")" {
     $$ = $block_type;
   }
   | "tensor" "[" index_sets "]" "(" tensor_type[block_type] ")" {
     auto blockTypePtr = convertAndDelete($block_type);
-    const TensorType *blockType = blockTypePtr.toTensor();
+    const ir::TensorType *blockType = blockTypePtr.toTensor();
 
     auto componentType = blockType->componentType;
 
@@ -1714,14 +1714,14 @@ tensor_type
       }
     }
 
-    $$ = new Type(TensorType::make(componentType, dimensions));
+    $$ = new Type(ir::TensorType::make(componentType, dimensions));
   }
   | tensor_type "'" {
     auto type = convertAndDelete($1);
-    const TensorType *tensorType = type.toTensor();
+    const ir::TensorType *tensorType = type.toTensor();
     auto dimensions = tensorType->getDimensions();
     auto componentType = tensorType->componentType;
-    $$ = new Type(TensorType::make(componentType, dimensions, true));
+    $$ = new Type(ir::TensorType::make(componentType, dimensions, true));
   }
 
 %type <indexSets> index_sets;
@@ -1763,13 +1763,13 @@ index_set
 %type <scalarType> component_type;
 component_type
   : INT {
-    $$ = new ScalarType(ScalarType::Int);
+    $$ = new ir::ScalarType(ir::ScalarType::Int);
   }
   | FLOAT {
-    $$ = new ScalarType(ScalarType::Float);
+    $$ = new ir::ScalarType(ir::ScalarType::Float);
   }
   | BOOL {
-    $$ = new ScalarType(ScalarType::Boolean);
+    $$ = new ir::ScalarType(ir::ScalarType::Boolean);
   }
 
 
@@ -1835,14 +1835,14 @@ dense_tensor_literal
     auto values = unique_ptr<TensorValues<double>>($2);
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
-    Type type = TensorType::make(ScalarType(ScalarType::Float), idoms);
+    Type type = ir::TensorType::make(ir::ScalarType::Float, idoms);
     $$ = new Expr(Literal::make(type, values->values));
   }
   | "[" int_dense_tensor_literal "]" {
     auto values = unique_ptr<TensorValues<int>>($2);
     auto idoms = std::vector<IndexDomain>(values->dimSizes.rbegin(),
                                           values->dimSizes.rend());
-    Type type = TensorType::make(ScalarType(ScalarType::Int), idoms);
+    Type type = ir::TensorType::make(ir::ScalarType::Int, idoms);
     $$ = new Expr(Literal::make(type, values->values.data()));
   }
 
