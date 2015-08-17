@@ -6,7 +6,6 @@ using namespace std;
 #include "graph.h"
 #include "tensor.h"
 
-#include "types.h"
 #include "ir.h"
 #include "ir_visitor.h"
 #include "types.h"
@@ -110,13 +109,13 @@ void Function::bind(const std::string &argName, simit::Set *set) {
 
     ir::ScalarType setFieldTypeComponentType;
     switch (setFieldType->getComponentType()) {
-      case ComponentType::INT:
+      case ComponentType::Int:
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Int);
         break;
-      case ComponentType::FLOAT:
+      case ComponentType::Float:
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float);
         break;
-      case ComponentType::BOOLEAN:
+      case ComponentType::Boolean:
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Boolean);
         break;
     }

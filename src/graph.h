@@ -31,9 +31,6 @@ class NeighborIndex;
 
 namespace backend {
 class Function;
-//#ifdef GPU
-//class GPUFunction;
-//#endif
 }
 
 namespace pe {
@@ -175,9 +172,8 @@ public:
   /// Remove an element from the Set
   void remove(ElementRef element) {
     for (auto f : fields){
-      iassert(isValidComponentType(f->type->getComponentType()));
       switch (f->type->getComponentType()) {
-        case ComponentType::FLOAT: {
+        case ComponentType::Float: {
           if (ir::ScalarType::singleFloat()) {
             float* data = (float*)f->data;
             data[element.ident] = data[numElements-1];
@@ -188,12 +184,12 @@ public:
           }
           break;
         }
-        case ComponentType::INT: {
+        case ComponentType::Int: {
           int* data = (int*)f->data;
           data[element.ident] = data[numElements-1];
           break;
         }
-        case ComponentType::BOOLEAN: {
+        case ComponentType::Boolean: {
           bool* data = (bool*)f->data;
           data[element.ident] = data[numElements-1];
         }
@@ -550,11 +546,11 @@ private:
       ComponentType ctype;
       switch (ttype->componentType.kind) {
         case ir::ScalarType::Int: {
-          ctype = ComponentType::INT;
+          ctype = ComponentType::Int;
           break;
         }
         case ir::ScalarType::Float: {
-          ctype = ComponentType::FLOAT;
+          ctype = ComponentType::Float;
           break;
         }
         default: {
@@ -576,9 +572,6 @@ private:
 
   friend FieldRefBase;
   friend simit::backend::Function;
-//#ifdef GPU
-//  friend simit::backend::GPUFunction;
-//#endif
 };
 
 

@@ -10,60 +10,58 @@
 namespace simit {
 
 /** The types of supported tensor components. */
-enum ComponentType {INT, FLOAT, BOOLEAN};
+enum class ComponentType {Float, Int, Boolean };
 
 /** Helper to convert from C++ type to Simit Type. */
 template<typename T> inline ComponentType typeOf() {
   ierror << "Unsupported type";
-  return ComponentType::INT; // TODO XXX gcc warning suppression
+  return ComponentType::Int; // TODO XXX gcc warning suppression
 }
 
 template<> inline ComponentType typeOf<int>() {
-  return ComponentType::INT;
+  return ComponentType::Int;
 }
 
 template<> inline ComponentType typeOf<float>() {
   iassert(ir::ScalarType::floatBytes == 4);
-  return ComponentType::FLOAT;
+  return ComponentType::Float;
 }
 
 template<> inline ComponentType typeOf<double>() {
   iassert(ir::ScalarType::floatBytes == 8);
-  return ComponentType::FLOAT;
+  return ComponentType::Float;
 }
 
 template<> inline ComponentType typeOf<bool>() {
-  return ComponentType::BOOLEAN;
-}
-
-inline bool isValidComponentType(ComponentType componentType) {
-  return (ComponentType::INT || ComponentType::FLOAT);
+  return ComponentType::Boolean;
 }
 
 inline std::size_t componentSize(ComponentType ct) {
   switch (ct) {
-    case ComponentType::INT:
+    case ComponentType::Int:
       return sizeof(int);
-    case ComponentType::FLOAT:
+    case ComponentType::Float:
       return ir::ScalarType::floatBytes;
-    case ComponentType::BOOLEAN:
+    case ComponentType::Boolean:
       return sizeof(bool);
   }
   unreachable;
   return 0;
 }
 
-inline std::string componentTypeString(ComponentType ct) {
-  switch (ct) {
-    case ComponentType::INT:
-      return "int";
-    case ComponentType::FLOAT:
-      return "float";
-    case ComponentType::BOOLEAN:
-      return "bool";
+inline std::ostream& operator<<(std::ostream& os, ComponentType componentType) {
+  switch (componentType) {
+    case ComponentType::Float:
+      os << "float";
+      break;
+    case ComponentType::Int:
+      os << "int";
+      break;
+    case ComponentType::Boolean:
+      os << "bool";
+      break;
   }
-  unreachable;
-  return "";
+  return os;
 }
 
 } // namespace simit
