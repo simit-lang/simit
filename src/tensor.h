@@ -46,6 +46,7 @@ private:
   Content *content;
 };
 
+/// Non-templated Tensor base class that is stored in the IR
 template <typename ComponentType, int... Dimensions>
 class DenseTensor {
 public:
@@ -88,6 +89,7 @@ public:
   }
 
   static size_t getSize() {return util::product<Dimensions...>::value;}
+  static size_t getSizeInBytes() {return getSize() * sizeof(ComponentType);}
 
   template <typename... Indices> inline
   ComponentType& operator()(Indices... index) {

@@ -61,29 +61,47 @@ public:
 
   std::function<void()> getFunctionHandle() {return funcPtr;}
 
+  /// Print the function as machine code.
   virtual void printMachine(std::ostream &os) const = 0;
 
 protected:
   typedef std::function<void()> FuncType;
+
   class Actual {
   public:
     Actual(const ir::Type &type, bool output=false)
-      : type(type), tensor(NULL), output(output) {}
+        : type(type), tensor(NULL), output(output) {}
     Actual() : Actual(ir::Type()) {}
+
     void bind(simit::Tensor *tensor) { this->tensor = tensor; }
     void bind(Set *set) { this->set = set; }
+
     bool isBound() const { return tensor != NULL; }
+
     void setOutput(bool output) { this->output = output; }
     bool isOutput() const { return output; }
-    const ir::Type &getType() const { return type; }
-    simit::Tensor *getTensor() { iassert(tensor != nullptr); return tensor; }
-    Set *getSet() { iassert(set != nullptr); return set; }
+
+    const ir::Type& getType() const { return type; }
+
+    simit::Tensor* getTensor() {
+      iassert(tensor != nullptr && type.isTensor());
+      return tensor;
+    }
+
+    simit::Set* getSet() {
+      iassert(set != nullptr && type.isSet());
+      return set;
+    }
+
   private:
     ir::Type type;
     union {
-      simit::Set    *set;
-      simit::Tensor *tensor;
+      simit::Set*    set;
+      simit::Tensor* tensor;
     };
+
+    /// Output actuals are references to Sets/Tensors in the user program. These
+    /// must not be deleted.
     bool output;
   };
 
@@ -96,8 +114,9 @@ protected:
   std::vector<std::string> formals;
   std::map<std::string, Actual> actuals;
 
-  /// We store the simit Function's literals to prevent their memory from being
-  /// reclaimed, as compiled functions are expected to access them at runtime.
+  /// We store the Simit Function's literals to prevent their memory from being
+  /// reclaimed if the IR is deleted, as compiled functions are expected to
+  /// access them at runtime.
   std::vector<simit::ir::Expr> literals;
 
   FuncType funcPtr;

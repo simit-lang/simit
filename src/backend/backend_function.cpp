@@ -17,11 +17,13 @@ namespace backend {
 
 Function::Function(const simit::ir::Func &simitFunc)
     : funcPtr(NULL), initRequired(true) {
-  for (auto &arg : simitFunc.getArguments()) {
+
+  for (const ir::Var& arg : simitFunc.getArguments()) {
     formals.push_back(arg.getName());
     actuals[arg.getName()] = Actual(arg.getType());
   }
-  for (auto &res : simitFunc.getResults()) {
+
+  for (const ir::Var& res : simitFunc.getResults()) {
     // Skip results that alias an argument
     if (actuals.find(res.getName()) != actuals.end()) {
       actuals[res.getName()].setOutput(true);
