@@ -15,6 +15,19 @@ using namespace std;
 namespace simit {
 namespace backend {
 
+// class TensorData
+TensorData::TensorData(simit::Tensor* tensor) {
+  data = tensor->getData();
+  ownsData = false;
+}
+
+TensorData::TensorData(const simit::Tensor& tensor) {
+//  data = malloc(tensor.getSizeInBytes());
+  ownsData = true;
+}
+
+
+// class Function
 Function::Function(const simit::ir::Func &simitFunc)
     : funcPtr(NULL), initRequired(true) {
 

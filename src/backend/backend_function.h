@@ -21,6 +21,26 @@ class TensorStorage;
 
 namespace backend {
 
+class TensorData {
+public:
+  TensorData() : data(nullptr), ownsData(false) {}
+  TensorData(simit::Tensor* tensor);
+  TensorData(const simit::Tensor& tensor);
+
+  ~TensorData() {
+    if (ownsData) {
+      free(data);
+    }
+  }
+
+  void* getData() {return data;}
+  const void* getData() const {return data;}
+
+private:
+  void* data;
+  bool ownsData;
+};
+
 class Function : public simit::interfaces::Printable,
                         simit::interfaces::Uncopyable {
 public:
@@ -70,34 +90,42 @@ protected:
   class Actual {
   public:
     Actual(const ir::Type &type, bool output=false)
-        : type(type), tensor(NULL), output(output) {}
+        : type(type), bound(false), output(output) {}
     Actual() : Actual(ir::Type()) {}
 
-    void bind(simit::Tensor *tensor) { this->tensor = tensor; }
-    void bind(Set *set) { this->set = set; }
-
-    bool isBound() const { return tensor != NULL; }
-
-    void setOutput(bool output) { this->output = output; }
-    bool isOutput() const { return output; }
-
-    const ir::Type& getType() const { return type; }
-
-    simit::Tensor* getTensor() {
-      iassert(tensor != nullptr && type.isTensor());
-      return tensor;
+    ~Actual() {
+      if (bound && type.isTensor()) {
+        delete tensor;
+      }
     }
+
+    void bind(simit::Tensor* tensor) {this->tensor = new TensorData(tensor);}
+    void bind(simit::Set* set) {this->set = set;}
+
+    bool isBound() const {return bound;}
+
+    void setOutput(bool output) {this->output = output;}
+    bool isOutput() const {return output;}
+
+    const ir::Type& getType() const {return type;}
 
     simit::Set* getSet() {
       iassert(set != nullptr && type.isSet());
       return set;
     }
 
+    TensorData* getTensor() {
+      iassert(tensor != nullptr && type.isTensor());
+      return tensor;
+    }
+
   private:
     ir::Type type;
+
+    bool bound;
     union {
-      simit::Set*    set;
-      simit::Tensor* tensor;
+      simit::Set* set;
+      TensorData* tensor;
     };
 
     /// Output actuals are references to Sets/Tensors in the user program. These
