@@ -39,7 +39,7 @@ class LLVMFunction : public backend::Function {
   FuncType deinit;
 
   FuncType init(const std::vector<std::string> &formals,
-                std::map<std::string, Actual> &actuals);
+                const std::map<std::string, Actual*> &actuals);
 
   FuncType createHarness(const std::string &name,
                          const llvm::SmallVector<llvm::Value*,8> &args);

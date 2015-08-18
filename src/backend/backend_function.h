@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <vector>
 #include <map>
+#include <memory>
 
 #include "printable.h"
 #include "uncopyable.h"
@@ -12,7 +13,7 @@
 namespace simit {
 
 class Set;
-class Tensor;
+class Tensor; // TODO: Replace this forward decl with TensorData
 
 namespace ir {
 class Func;
@@ -21,24 +22,28 @@ class TensorStorage;
 
 namespace backend {
 
-class TensorData {
+class Actual : public simit::interfaces::Uncopyable {
 public:
-  TensorData() : data(nullptr), ownsData(false) {}
-  TensorData(simit::Tensor* tensor);
-  TensorData(const simit::Tensor& tensor);
+  Actual(const ir::Type &type, bool output=false);
+  Actual();
+  ~Actual();
 
-  ~TensorData() {
-    if (ownsData) {
-      free(data);
-    }
-  }
+  void bind(simit::Tensor* tensor);
+  void bind(simit::Set* set);
 
-  void* getData() {return data;}
-  const void* getData() const {return data;}
+  bool isBound() const;
+
+  void setOutput(bool output);
+  bool isOutput() const;
+
+  const ir::Type& getType() const;
+
+  simit::Set* getSet();
+  void* getTensorData();
 
 private:
-  void* data;
-  bool ownsData;
+  struct Content;                    // Avoids bleeding simit:: namespace types
+  std::unique_ptr<Content> content;  // into backends.
 };
 
 class Function : public simit::interfaces::Printable,
@@ -87,52 +92,6 @@ public:
 protected:
   typedef std::function<void()> FuncType;
 
-  class Actual {
-  public:
-    Actual(const ir::Type &type, bool output=false)
-        : type(type), bound(false), output(output) {}
-    Actual() : Actual(ir::Type()) {}
-
-    ~Actual() {
-      if (bound && type.isTensor()) {
-        delete tensor;
-      }
-    }
-
-    void bind(simit::Tensor* tensor) {this->tensor = new TensorData(tensor);}
-    void bind(simit::Set* set) {this->set = set;}
-
-    bool isBound() const {return bound;}
-
-    void setOutput(bool output) {this->output = output;}
-    bool isOutput() const {return output;}
-
-    const ir::Type& getType() const {return type;}
-
-    simit::Set* getSet() {
-      iassert(set != nullptr && type.isSet());
-      return set;
-    }
-
-    TensorData* getTensor() {
-      iassert(tensor != nullptr && type.isTensor());
-      return tensor;
-    }
-
-  private:
-    ir::Type type;
-
-    bool bound;
-    union {
-      simit::Set* set;
-      TensorData* tensor;
-    };
-
-    /// Output actuals are references to Sets/Tensors in the user program. These
-    /// must not be deleted.
-    bool output;
-  };
-
   /// Get number of bytes required to store tensors with `type` and `storage`.
   size_t size(const ir::TensorType &type,
               const ir::TensorStorage &storage) const;
@@ -140,7 +99,7 @@ protected:
   Function(const ir::Func &simitFunc);
 
   std::vector<std::string> formals;
-  std::map<std::string, Actual> actuals;
+  std::map<std::string, Actual*> actuals;
 
   /// We store the Simit Function's literals to prevent their memory from being
   /// reclaimed if the IR is deleted, as compiled functions are expected to
@@ -152,7 +111,7 @@ protected:
 
 private:
   virtual FuncType init(const std::vector<std::string> &formals,
-                        std::map<std::string, Actual> &actuals) = 0;
+                        const std::map<std::string, Actual*> &actuals) = 0;
 };
 
 }}

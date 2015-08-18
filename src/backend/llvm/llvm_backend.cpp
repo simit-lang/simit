@@ -1036,7 +1036,6 @@ void LLVMBackend::visit(const Print *op) {
 
   switch (type.kind()) {
   case Type::Kind::Tensor: {
-
     const TensorType *tensor = type.toTensor();
     vector<IndexDomain> dimensions = tensor->getDimensions();
 
@@ -1232,7 +1231,7 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
                                      setOrElemValue->getName()+"."+fieldName);
 }
 
-llvm::Value *LLVMBackend::emitComputeLen(const ir::TensorType *tensorType,
+llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
                                          const TensorStorage &tensorStorage) {
   if (tensorType->order() == 0) {
     return llvmInt(1);

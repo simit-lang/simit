@@ -4,7 +4,8 @@
 using namespace std;
 
 #include "graph.h"
-#include "tensor.h"
+#include "tensor.h" // TODO: Remove this dependency
+#include "tensor_data.h"
 
 #include "ir.h"
 #include "ir_visitor.h"
@@ -14,15 +15,67 @@ using namespace std;
 namespace simit {
 namespace backend {
 
-// class TensorData
-TensorData::TensorData(simit::Tensor* tensor) {
-  data = tensor->getData();
-  ownsData = false;
+// class Actual
+struct Actual::Content {
+  ir::Type type;
+
+  bool bound = false;
+  union {
+    simit::Set* set;
+    TensorData* tensor;
+  };
+
+  /// Output actuals are references to Sets/Tensors in the user program. These
+  /// must not be deleted.
+  bool output = false;
+};
+
+Actual::Actual() : content(new Content) {
 }
 
-TensorData::TensorData(const simit::Tensor& tensor) {
-//  data = malloc(tensor.getSizeInBytes());
-  ownsData = true;
+Actual::Actual(const ir::Type &type, bool output) : Actual() {
+  content->type = type;
+  content->output = output;
+}
+
+Actual::~Actual() {
+  if (content->bound && content->type.isTensor()) {
+    delete content->tensor;
+  }
+}
+
+void Actual::bind(simit::Tensor* tensor) {
+  content->tensor = new TensorData(tensor);
+}
+
+void Actual::bind(simit::Set* set) {
+  content->set = set;
+}
+
+bool Actual::isBound() const {
+  return content->bound;
+}
+
+void Actual::setOutput(bool output) {
+  content->output = output;
+}
+
+bool Actual::isOutput() const {
+  return content->output;
+}
+
+const ir::Type& Actual::getType() const {
+  return content->type;
+}
+
+simit::Set* Actual::getSet() {
+  iassert(content->set != nullptr && content->type.isSet());
+  return content->set;
+}
+
+void* Actual::getTensorData() {
+  iassert(content->tensor != nullptr && content->type.isTensor());
+  return content->tensor->getData();
 }
 
 
@@ -32,17 +85,17 @@ Function::Function(const simit::ir::Func &simitFunc)
 
   for (const ir::Var& arg : simitFunc.getArguments()) {
     formals.push_back(arg.getName());
-    actuals[arg.getName()] = Actual(arg.getType());
+    actuals[arg.getName()] = new Actual(arg.getType());
   }
 
   for (const ir::Var& res : simitFunc.getResults()) {
     // Skip results that alias an argument
     if (actuals.find(res.getName()) != actuals.end()) {
-      actuals[res.getName()].setOutput(true);
+      actuals[res.getName()]->setOutput(true);
       continue;
     }
     formals.push_back(res.getName());
-    actuals[res.getName()] = Actual(res.getType(), true);
+    actuals[res.getName()] = new Actual(res.getType(), true);
   }
 
   // Gather the Simit literal expressions and store them in an array in the
@@ -71,6 +124,9 @@ Function::Function(const simit::ir::Func &simitFunc)
 }
 
 Function::~Function() {
+  for (auto &actual : actuals) {
+    delete actual.second;
+  }
 }
 
 void Function::bind(const std::string &argName, simit::Tensor *tensor) {
@@ -78,11 +134,11 @@ void Function::bind(const std::string &argName, simit::Tensor *tensor) {
       << "no argument of this name in function";
 
   // Check that the tensor matches the argument type
-  uassert(tensor->getType() == actuals[argName].getType())
+  uassert(tensor->getType() == actuals[argName]->getType())
       << "tensor type " << tensor->getType()
-      << "does not match function argument type" << actuals[argName].getType();
+      << "does not match function argument type" << actuals[argName]->getType();
 
-  actuals[argName].bind(tensor);
+  actuals[argName]->bind(tensor);
   initRequired = true;
 }
 
@@ -91,10 +147,9 @@ void Function::bind(const std::string &argName, simit::Set *set) {
       << "No argument of this name in function";
 
   // Check that the set matches the argument type
-  ir::Type argType = actuals[argName].getType();
+  ir::Type argType = actuals[argName]->getType();
   uassert(argType.isSet()) << "Argument is not a set";
   const ir::SetType *argSetType = argType.toSet();
-//  auto &argFieldsMap = argSetType->elementType.toElement()->fields;
   const ir::ElementType *elemType = argSetType->elementType.toElement();
 
   // Type check
@@ -142,9 +197,9 @@ void Function::bind(const std::string &argName, simit::Set *set) {
     }
   }
 
-  actuals[argName].bind(set);
+  actuals[argName]->bind(set);
   // All sets are externs, and should be considered outputs
-  actuals[argName].setOutput(true);
+  actuals[argName]->setOutput(true);
   initRequired = true;
 }
 
@@ -187,9 +242,9 @@ size_t Function::size(const ir::TensorType &type,
       size_t result = 1;
 
       map<string,Set*> sets;
-      for (pair<string,Actual> actual : actuals) {
-        if (actual.second.getType().isSet()) {
-          sets[actual.first] = actual.second.getSet();
+      for (pair<string,Actual*> actual : actuals) {
+        if (actual.second->getType().isSet()) {
+          sets[actual.first] = actual.second->getSet();
         }
       }
 
@@ -204,7 +259,7 @@ size_t Function::size(const ir::TensorType &type,
       string targetSetName = ir::to<ir::VarExpr>(targetSetVar)->var.getName();
 
       // compute neighbor index size
-      Set *targetSet = const_cast<Actual&>(actuals.at(targetSetName)).getSet();
+      Set *targetSet = actuals.at(targetSetName)->getSet();
       const internal::NeighborIndex *neighborIndex = targetSet->getNeighborIndex();
       size_t len = neighborIndex->getSize();
 
@@ -234,7 +289,7 @@ size_t Function::size(const ir::TensorType &type,
           ir::Expr setExpr = indexSet.getSet();
           iassert(ir::isa<ir::VarExpr>(setExpr));
           string setName = ir::to<ir::VarExpr>(setExpr)->var.getName();
-          Set *set = const_cast<Actual&>(actuals.at(setName)).getSet();
+          Set *set = actuals.at(setName)->getSet();
           len *= set->getSize();
           break;
         }

@@ -58,7 +58,8 @@ void LLVMFunction::printMachine(std::ostream &os) const {
 }
 
 backend::Function::FuncType
-LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
+LLVMFunction::init(const vector<string> &formals,
+                   const map<string, Actual*> &actuals){
   iassert(formals.size() == llvmFunc->getArgumentList().size());
 
   if (llvmFunc->getArgumentList().size() == 0) {
@@ -76,14 +77,14 @@ LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
     auto llvmArgIt = llvmFunc->getArgumentList().begin();
     for (const std::string &formal : formals) {
       assert(actuals.find(formal) != actuals.end());
-      Actual &actual = actuals.at(formal);
+      Actual *actual = actuals.at(formal);
 
-      switch (actual.getType().kind()) {
+      switch (actual->getType().kind()) {
         case ir::Type::Tensor: {
-          TensorData *tensor = actual.getTensor();
+          void* tensorData = actual->getTensorData();
           llvm::Value *llvmActual = (llvmArgIt->getType()->isPointerTy())
-              ? llvmPtr(actual.getType(), tensor->getData())
-              : llvmVal(actual.getType(), tensor->getData());
+              ? llvmPtr(actual->getType(), tensorData)
+              : llvmVal(actual->getType(), tensorData);
           args.push_back(llvmActual);
           break;
         }
@@ -92,8 +93,8 @@ LLVMFunction::init(const vector<string> &formals, map<string, Actual> &actuals){
           break;
         }
         case ir::Type::Set: {
-          const ir::SetType *setType = actual.getType().toSet();
-          Set *set = actual.getSet();
+          const ir::SetType *setType = actual->getType().toSet();
+          Set *set = actual->getSet();
 
           llvm::StructType *llvmSetType = createLLVMType(setType);
 
