@@ -298,9 +298,9 @@ std::ostream &operator<<(std::ostream &os, const Tensor &tensor) {
 
 
 // class TensorType
-const TensorType* TensorType::getBlockType() const {
+TensorType TensorType::getBlockType() const {
   iassert(isBlocked());
-  return blockType;
+  return *blockType;
 }
 
 ComponentType TensorType::getComponentType() const {

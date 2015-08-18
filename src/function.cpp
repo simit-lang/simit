@@ -11,6 +11,11 @@ Function::Function() : Function(nullptr) {
 Function::Function(backend::Function *func) : impl(func), funcPtr(nullptr) {
 }
 
+void Function::bind(const std::string& argName,
+                    const TensorType& ttype, void* data) {
+  not_supported_yet;
+}
+
 void Function::bind(const std::string &argName, simit::Tensor *tensor) {
   uassert(defined()) << "undefined function";
   impl->bind(argName, tensor);

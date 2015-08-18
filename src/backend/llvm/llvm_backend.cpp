@@ -71,7 +71,7 @@ LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
 
 LLVMBackend::~LLVMBackend() {}
 
-simit::Function LLVMBackend::compile(const Func &func) {
+Function* LLVMBackend::compile(const Func &func) {
   this->module = new llvm::Module("simit", LLVM_CONTEXT);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";

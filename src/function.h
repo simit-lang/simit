@@ -3,11 +3,10 @@
 
 #include <string>
 #include <functional>
-#include "error.h"
+#include "tensor.h"
 
 namespace simit {
 class Set;
-class Tensor;
 
 namespace backend {
 class Function;
@@ -31,8 +30,13 @@ public:
   Function();
   Function(backend::Function *function);
 
-  void bind(const std::string &argName, simit::Tensor *tensor);
-  void bind(const std::string &argName, simit::Set *set);
+  template <typename CType, int... Dims>
+  void bind(const std::string& argName, DenseTensor<CType,Dims...> *tensor) {
+    bind(argName, tensor->getTensorType(), tensor->getData());
+  }
+  void bind(const std::string& argName, const TensorType& ttype, void* data);
+  void bind(const std::string& argName, simit::Tensor* tensor);
+  void bind(const std::string& argName, simit::Set* set);
 
   void init();
   bool isInit();

@@ -60,7 +60,6 @@ public:
   bool evaluate(const ir::Func &func, simit::Function compiledFunc,
                 Diagnostics *diags) const {
 
-
     // run the function with test->call->arguments
     iassert(actuals.size() == func.getArguments().size());
 

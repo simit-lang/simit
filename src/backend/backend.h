@@ -4,7 +4,6 @@
 #include <vector>
 #include <map>
 
-#include "function.h"
 #include "uncopyable.h"
 
 namespace simit {
@@ -16,6 +15,7 @@ struct Environment;
 }
 
 namespace backend {
+class Function;
 
 /// Code generators are used to turn Simit IR into some other representation.
 /// Examples include LLVM IR, compiled machine code and Graphviz .dot files.
@@ -26,10 +26,10 @@ public:
 
   /// Compiles a statement with an environment to a runable function with
   /// no parameters.
-  simit::Function compile(const ir::Stmt &stmt, const ir::Environment &env);
+  backend::Function* compile(const ir::Stmt &stmt, const ir::Environment &env);
 
   /// Compiles an IR function to a runable function with the same parameters.
-  virtual simit::Function compile(const ir::Func &func) = 0;
+  virtual backend::Function* compile(const ir::Func &func) = 0;
 };
 
 }}

@@ -63,7 +63,7 @@ public:
 
   bool isBlocked() const {return blocked;}
 
-  const TensorType* getBlockType() const;
+  TensorType getBlockType() const;
   ComponentType getComponentType() const;
 
   size_t getOrder() const { return dimensions.size(); }
