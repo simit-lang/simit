@@ -32,7 +32,7 @@ std::vector<IndexDomain> TensorType::getDimensions() const {
   return dims;
 }
 
-std::vector<IndexSet> TensorType::outerDimensions() const {
+std::vector<IndexSet> TensorType::getOuterDimensions() const {
   vector<IndexDomain> dimensions = getDimensions();
   unsigned maxNest = 0;
   for (auto &dim : dimensions) {
@@ -50,7 +50,6 @@ std::vector<IndexSet> TensorType::outerDimensions() const {
 
   return outerDimensions;
 }
-
 
 Type TensorType::getBlockType() const {
   vector<IndexDomain> dimensions = getDimensions();

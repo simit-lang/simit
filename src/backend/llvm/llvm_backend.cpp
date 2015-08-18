@@ -1282,7 +1282,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       iassert(dimensions.size() > 0);
 
       // Just need one outer dimensions because diagonal
-      len = emitComputeLen(tensorType->outerDimensions()[0]);
+      len = emitComputeLen(tensorType->getOuterDimensions()[0]);
 
       Type blockType = tensorType->getBlockType();
       llvm::Value *blockLen = emitComputeLen(blockType.toTensor(),

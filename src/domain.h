@@ -23,7 +23,7 @@ public:
   enum Kind {Range, Set, Dynamic, Single};
 
   /// Create an index set consisting of the items in the given range.
-  IndexSet(signed rangeSize) : kind(Range), rangeSize(rangeSize), set(nullptr){}
+  IndexSet(unsigned rangeSize) : kind(Range), rangeSize(rangeSize), set(nullptr){}
 
   /// Create an index set over the given set.
   IndexSet(const Expr &set);
@@ -38,7 +38,7 @@ public:
   Kind getKind() const { return kind; }
 
   /// Returns the size of the index set if kind is Range, otherwise undefined
-  int getSize() const {
+  unsigned getSize() const {
     iassert(kind == Range) << "Only Range index sets have a static size";
     return rangeSize;
   }
@@ -49,7 +49,7 @@ public:
 private:
   Kind kind;
 
-  int rangeSize;
+  unsigned rangeSize;
   std::shared_ptr<Expr> set;
 };
 

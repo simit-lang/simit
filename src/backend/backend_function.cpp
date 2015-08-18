@@ -11,6 +11,7 @@ using namespace std;
 #include "ir_visitor.h"
 #include "types.h"
 #include "indices.h"
+#include "util/collections.h"
 
 namespace simit {
 namespace backend {
@@ -130,8 +131,8 @@ Function::~Function() {
 }
 
 void Function::bind(const std::string &argName, simit::Tensor *tensor) {
-  uassert(actuals.find(argName) != actuals.end())
-      << "no argument of this name in function";
+  uassert(util::contains(actuals, argName))
+      << "no argument of this name in the function";
 
   // Check that the tensor matches the argument type
   uassert(tensor->getType() == actuals[argName]->getType())
@@ -143,8 +144,8 @@ void Function::bind(const std::string &argName, simit::Tensor *tensor) {
 }
 
 void Function::bind(const std::string &argName, simit::Set *set) {
-  uassert(actuals.find(argName) != actuals.end())
-      << "No argument of this name in function";
+  uassert(util::contains(actuals, argName))
+      << "no argument of this name in the function";
 
   // Check that the set matches the argument type
   ir::Type argType = actuals[argName]->getType();
@@ -278,7 +279,7 @@ size_t Function::size(const ir::TensorType &type,
       iassert(type.order() > 0);
 
       // Just need on outer dimension because diagonal
-      ir::IndexSet indexSet = type.outerDimensions()[0];
+      ir::IndexSet indexSet = type.getOuterDimensions()[0];
       size_t len = 1;
       switch (indexSet.getKind()) {
         case ir::IndexSet::Range: {

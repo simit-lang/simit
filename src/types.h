@@ -59,7 +59,7 @@ private:
 };
 
 struct ScalarType {
-  enum Kind {Int, Float, Boolean};
+  enum Kind {Float, Int, Boolean};
 
   ScalarType() : kind(Int) {}
   ScalarType(Kind kind) : kind(kind) {}
@@ -111,7 +111,7 @@ struct TensorType : TypeNode {
   /// Returns the dimensions of a tensor where each block is a component.  These
   /// dimensions are not nested.  Note also that it is allowed for a tensor to
   /// have fewer outer than inner dimensions (e.g. a vector of matrices).
-  std::vector<IndexSet> outerDimensions() const;
+  std::vector<IndexSet> getOuterDimensions() const;
 
   /// Returns the type of the blocks in this tensor.
   Type getBlockType() const;
@@ -263,13 +263,11 @@ const Type Int = TensorType::make(ScalarType(ScalarType::Int));
 const Type Float = TensorType::make(ScalarType(ScalarType::Float));
 const Type Boolean = TensorType::make(ScalarType(ScalarType::Boolean));
 
-const Type vec3f = TensorType::make(ScalarType::Float,
-                                    {IndexDomain(IndexSet(3))});
-                                    
-const Type mat3f = TensorType::make(ScalarType::Float,
-                                    {IndexDomain(IndexSet(3)),
-                                     IndexDomain(IndexSet(3))});
 
+const Type vec3f = TensorType::make(ScalarType::Float,
+                                    {IndexDomain(3)});
+const Type mat3f = TensorType::make(ScalarType::Float,
+                                    {IndexDomain(3), IndexDomain(3)});
 
 }} // namespace simit::ir
 
