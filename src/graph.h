@@ -9,7 +9,7 @@
 #include <set>
 #include <ostream>
 
-#include "tensor_components.h"
+#include "tensor_type.h"
 #include "variadic.h"
 #include "comparable.h"
 #include "error.h"

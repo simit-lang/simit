@@ -8,9 +8,7 @@
 #include "error.h"
 #include "util/compare.h"
 #include "variadic.h"
-
-// TODO: Move tensor type into here?
-#include "tensor_components.h"
+#include "tensor_type.h"
 
 namespace simit {
 
@@ -49,61 +47,6 @@ private:
   struct Content;
   Content *content;
 };
-
-class TensorType {
-public:
-  TensorType(ComponentType componentType,
-             std::initializer_list<int> dimensions={})
-      : dimensions(dimensions), blocked(false), componentType(componentType) {}
-
-  TensorType(const TensorType &blockType,
-             std::initializer_list<int> dimensions={})
-      : dimensions(dimensions), blocked(true),
-        blockType(new TensorType(blockType)) {}
-
-  bool isBlocked() const {return blocked;}
-
-  TensorType getBlockType() const;
-  ComponentType getComponentType() const;
-
-  size_t getOrder() const { return dimensions.size(); }
-  size_t getDimension(size_t i) const {
-    iassert(i<getOrder());
-    return dimensions[i];
-  }
-
-  size_t getSize() const;
-
-private:
-  std::vector<int> dimensions;
-
-  bool blocked;
-  union {
-    const TensorType* blockType;
-    ComponentType     componentType;
-  };
-};
-std::ostream& operator<<(std::ostream& os, const TensorType& tensorType);
-
-template <typename ComponentType, int... Dimensions>
-inline TensorType computeType() {
-  TensorType subType = computeType<ComponentType>();
-  return (subType.isBlocked())
-          ? TensorType(subType, {Dimensions...})
-          : TensorType(subType.getComponentType(), {Dimensions...});
-}
-template<> inline TensorType computeType<double>() {
-  return simit::ComponentType::Float;
-}
-template<> inline TensorType computeType<float>() {
-  return simit::ComponentType::Float;
-}
-template<> inline TensorType computeType<int>() {
-  return simit::ComponentType::Int;
-}
-template<> inline TensorType computeType<bool>() {
-  return simit::ComponentType::Boolean;
-}
 
 
 /// Non-templated Tensor base class that is stored in the IR
