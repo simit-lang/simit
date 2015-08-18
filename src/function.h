@@ -3,7 +3,9 @@
 
 #include <string>
 #include <functional>
+
 #include "tensor.h"
+#include "tensor_data.h"
 
 namespace simit {
 class Set;
@@ -32,9 +34,10 @@ public:
 
   template <typename CType, int... Dims>
   void bind(const std::string& argName, DenseTensor<CType,Dims...> *tensor) {
-    bind(argName, tensor->getTensorType(), tensor->getData());
+    bind(argName, TensorData(tensor->getTensorType(), tensor->getData()));
   }
-  void bind(const std::string& argName, const TensorType& ttype, void* data);
+  void bind(const std::string& argName, const TensorData& tensor);
+
   void bind(const std::string& argName, simit::Tensor* tensor);
   void bind(const std::string& argName, simit::Set* set);
 

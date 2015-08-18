@@ -11,8 +11,7 @@ Function::Function() : Function(nullptr) {
 Function::Function(backend::Function *func) : impl(func), funcPtr(nullptr) {
 }
 
-void Function::bind(const std::string& argName,
-                    const TensorType& ttype, void* data) {
+void Function::bind(const std::string& argName, const TensorData& tensor) {
   not_supported_yet;
 }
 

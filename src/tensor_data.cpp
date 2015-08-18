@@ -7,7 +7,8 @@
 namespace simit {
 
 struct TensorData::Content {
-  TensorType* tensorType = nullptr;
+  // TODO: Replace with non-ptr
+  TensorType* type = nullptr;
 
   void* data     = nullptr;
   bool  ownsData = false;
@@ -16,19 +17,17 @@ struct TensorData::Content {
 TensorData::TensorData() : content(new Content) {
 }
 
+TensorData::TensorData(const TensorType& tensorType, void* data) : TensorData(){
+  content->type = new TensorType(tensorType);
+  content->data = data;
+}
+
 TensorData::TensorData(simit::Tensor* tensor) : TensorData() {
   content->data = tensor->getData();
   content->ownsData = false;
 }
 
-TensorData::TensorData(const simit::Tensor& tensor) : TensorData() {
-  // TODO: Fix and test
-//  data = malloc(tensor.getSizeInBytes());
-  content->ownsData = true;
-}
-
 TensorData::~TensorData() {
-  delete content->tensorType;
   if (content->ownsData) {
     free(content->data);
   }
@@ -43,7 +42,7 @@ const void* TensorData::getData() const {
 }
 
 const TensorType& TensorData::getTensorType() const {
-  return *content->tensorType;
+  return *content->type;
 }
 
 }

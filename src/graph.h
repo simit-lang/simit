@@ -435,6 +435,7 @@ private:
   // A field on the members of the Set.
   // Invariant: elements < capacity
   struct FieldData {
+    // Replace with simit::TensorType
     class TensorType {
     public:
       TensorType(ComponentType componentType, std::initializer_list<int> dims)
