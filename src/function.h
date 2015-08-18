@@ -33,7 +33,7 @@ public:
   /// Bind the tensor to the given argument.
   template <typename CType, int... Dims>
   void bind(std::string argumentName, DenseTensor<CType,Dims...>* tensor) {
-    bind(argumentName, tensor->getTensorType(), tensor->getData());
+    bind(argumentName, tensor->getType(), tensor->getData());
   }
 
   /// Bind tensor data to the given argument with type checks.

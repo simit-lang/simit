@@ -26,6 +26,7 @@ TensorType TensorType::getBlockType() const {
 }
 
 ComponentType TensorType::getComponentType() const {
+  // TODO: If it is blocked, then recurse to the component type
   iassert(!isBlocked());
   return componentType;
 }
@@ -59,6 +60,14 @@ std::ostream& operator<<(std::ostream& os, const TensorType& tensorType) {
   }
   os << ")";
   return os;
+}
+
+bool operator==(const TensorType& l, const TensorType& r) {
+  return true; // TODO: Fix
+}
+
+bool operator!=(const TensorType& l, const TensorType& r) {
+  return !(l == r);
 }
 
 }

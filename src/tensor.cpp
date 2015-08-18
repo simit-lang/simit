@@ -5,6 +5,7 @@
 
 #include "ir.h"
 #include "types.h"
+#include "util/compare.h"
 
 using namespace simit::ir;
 
@@ -294,6 +295,56 @@ std::ostream &operator<<(std::ostream &os, const Tensor &tensor) {
       break;
   }
   return os;
+}
+
+
+// Compare function
+bool tensorsEq(const TensorType& ltype, const void *ldata,
+               const TensorType& rtype, const void *rdata) {
+  if (ltype != rtype) {
+    return false;
+  }
+
+  switch (ltype.getComponentType()) {
+    case ComponentType::Int: {
+      return util::compareEq<int>(ldata, rdata, ltype.getSize());
+    }
+    case ComponentType::Float: {
+      if (ir::ScalarType::floatBytes == sizeof(float)) {
+        return util::compareEq<float>(ldata, rdata, ltype.getSize());
+      }
+      else if (ir::ScalarType::floatBytes == sizeof(double)) {
+        return util::compareEq<double>(ldata, rdata, ltype.getSize());
+      }
+    }
+    case ComponentType::Boolean: {
+      return util::compareEq<bool>(ldata, rdata, ltype.getSize());
+    }
+  }
+}
+
+bool tensorsNe(const TensorType& ltype, const void *ldata,
+               const TensorType &rtype, const void *rdata) {
+  if (ltype != rtype) {
+    return true;
+  }
+
+  switch (ltype.getComponentType()) {
+    case ComponentType::Int: {
+      return util::compareNe<int>(ldata, rdata, ltype.getSize());
+    }
+    case ComponentType::Float: {
+      if (ir::ScalarType::floatBytes == sizeof(float)) {
+        return util::compareNe<float>(ldata, rdata, ltype.getSize());
+      }
+      else if (ir::ScalarType::floatBytes == sizeof(double)) {
+        return util::compareNe<double>(ldata, rdata, ltype.getSize());
+      }
+    }
+    case ComponentType::Boolean: {
+      return util::compareNe<bool>(ldata, rdata, ltype.getSize());
+    }
+  }
 }
 
 }

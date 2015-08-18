@@ -111,6 +111,9 @@ template<> inline TensorType computeType<bool>() {
 }
 
 
+bool operator==(const TensorType& l, const TensorType& r);
+bool operator!=(const TensorType& l, const TensorType& r);
+
 }
 
 #endif
