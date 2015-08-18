@@ -512,21 +512,21 @@ void LLVMBackend::visit(const Div *op) {
   }
 }
 
-#define LLVMBACKEND_VISIT_COMPARE_OP(typename, op, float_cmp, int_cmp) \
-void LLVMBackend::visit(const ir::typename *op) {\
-  iassert(isBoolean(op->type));\
-  iassert(isScalar(op->a.type()));\
-  iassert(isScalar(op->b.type()));\
-\
-  llvm::Value *a = compile(op->a);\
-  llvm::Value *b = compile(op->b);\
-\
-  const TensorType *type = op->a.type().toTensor();\
-  if (type->componentType == ScalarType::Float) {\
-    val = builder->float_cmp(a, b);\
-  } else {\
-    val = builder->int_cmp(a, b);\
-  }\
+#define LLVMBACKEND_VISIT_COMPARE_OP(typename, op, float_cmp, int_cmp)         \
+void LLVMBackend::visit(const ir::typename *op) {                              \
+  iassert(isBoolean(op->type));                                                \
+  iassert(isScalar(op->a.type()));                                             \
+  iassert(isScalar(op->b.type()));                                             \
+                                                                               \
+  llvm::Value *a = compile(op->a);                                             \
+  llvm::Value *b = compile(op->b);                                             \
+                                                                               \
+  const TensorType *type = op->a.type().toTensor();                            \
+  if (type->componentType == ScalarType::Float) {                              \
+    val = builder->float_cmp(a, b);                                            \
+  } else {                                                                     \
+    val = builder->int_cmp(a, b);                                              \
+  }                                                                            \
 }
 
 LLVMBACKEND_VISIT_COMPARE_OP(Eq, op, CreateFCmpOEQ, CreateICmpEQ)
