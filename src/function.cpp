@@ -1,6 +1,9 @@
 #include "function.h"
 
 #include "backend/backend_function.h"
+#include "types_convert.h"
+
+using namespace std;
 
 namespace simit {
 
@@ -11,18 +14,22 @@ Function::Function() : Function(nullptr) {
 Function::Function(backend::Function *func) : impl(func), funcPtr(nullptr) {
 }
 
-void Function::bind(const std::string& argName, const TensorData& tensor) {
-  not_supported_yet;
+void Function::bind(string argumentName, const TensorType& ttype, void* data) {
+  impl->bindTensorData(argumentName, ir::convert(ttype), data);
 }
 
-void Function::bind(const std::string &argName, simit::Tensor *tensor) {
-  uassert(defined()) << "undefined function";
-  impl->bind(argName, tensor);
+void Function::bind(string argumentName, void* data) {
+  impl->bindTensorData(argumentName, data);
 }
 
-void Function::bind(const std::string &argName, simit::Set *set) {
+void Function::bind(string argumentName, simit::Tensor *tensor) {
   uassert(defined()) << "undefined function";
-  impl->bind(argName, set);
+  bind(argumentName, tensor->getData());
+}
+
+void Function::bind(string argumentName, simit::Set *set) {
+  uassert(defined()) << "undefined function";
+  impl->bind(argumentName, set);
 }
 
 void Function::init() {

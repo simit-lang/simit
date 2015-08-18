@@ -55,11 +55,11 @@ std::ostream& operator<<(std::ostream& os, ComponentType componentType);
 class TensorType {
 public:
   TensorType(ComponentType componentType,
-             std::initializer_list<int> dimensions={})
+             std::vector<int> dimensions={})
       : dimensions(dimensions), blocked(false), componentType(componentType) {}
 
   TensorType(const TensorType &blockType,
-             std::initializer_list<int> dimensions={})
+             std::vector<int> dimensions={})
       : dimensions(dimensions), blocked(true),
         blockType(new TensorType(blockType)) {}
 

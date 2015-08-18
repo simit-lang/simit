@@ -621,12 +621,11 @@ TEST(System, gemv_input) {
   Function func = getFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
-  simit::Tensor cs(ir::TensorType::make(ir::ScalarType::Float,
-                                        {ir::IndexDomain(2)}));
+  simit::DenseTensor<simit_float, 2> cs;
 
   // TODO: Add indexing to tensors
-  static_cast<simit_float*>(cs.getData())[0] = 1.0;
-  static_cast<simit_float*>(cs.getData())[1] = 2.0;
+  cs.getData()[0] = 1.0;
+  cs.getData()[1] = 2.0;
 
   func.bind("c", &cs);
 

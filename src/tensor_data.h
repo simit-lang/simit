@@ -6,7 +6,6 @@
 
 namespace simit {
 class Tensor;
-class TensorType;
 
 /// The TensorData class is an untyped version of simit::Tensor, where the types
 /// are stored in a runtime TensorType object. This means it can be passed to
@@ -14,17 +13,14 @@ class TensorType;
 class TensorData {
 public:
   TensorData();
-  TensorData(const TensorType& tensorType, void* data);
-  TensorData(simit::Tensor* tensor);
-
+  TensorData(void* data, bool ownData=false);
   ~TensorData();
 
   void* getData();
   const void* getData() const;
 
-  const TensorType& getTensorType() const;
-
 private:
+  // TODO: Remove indirection and move to backend_function.h
   struct Content;
   std::unique_ptr<Content> content;
 };

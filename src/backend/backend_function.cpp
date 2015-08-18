@@ -7,9 +7,9 @@ using namespace std;
 #include "tensor.h" // TODO: Remove this dependency
 #include "tensor_data.h"
 
+#include "types.h"
 #include "ir.h"
 #include "ir_visitor.h"
-#include "types.h"
 #include "indices.h"
 #include "util/collections.h"
 
@@ -45,8 +45,8 @@ Actual::~Actual() {
   }
 }
 
-void Actual::bind(simit::Tensor* tensor) {
-  content->tensor = new TensorData(tensor);
+void Actual::bindTensorData(void* data) {
+  content->tensor = new TensorData(data);
 }
 
 void Actual::bind(simit::Set* set) {
@@ -130,16 +130,20 @@ Function::~Function() {
   }
 }
 
-void Function::bind(const std::string &argName, simit::Tensor *tensor) {
-  uassert(util::contains(actuals, argName))
-      << "no argument of this name in the function";
-
+void Function::bindTensorData(const string &argumentName, const ir::Type& type,
+                              void* data){
   // Check that the tensor matches the argument type
-  uassert(tensor->getType() == actuals[argName]->getType())
-      << "tensor type " << tensor->getType()
-      << "does not match function argument type" << actuals[argName]->getType();
+  uassert(type == actuals[argumentName]->getType())
+      << "tensor type " << type
+      << "does not match function argument type"
+      << actuals[argumentName]->getType();
+  bindTensorData(argumentName, data);
+}
 
-  actuals[argName]->bind(tensor);
+void Function::bindTensorData(const std::string& argumentName, void* data) {
+  uassert(util::contains(actuals, argumentName))
+      << "no argument of this name in the function";
+  actuals[argumentName]->bindTensorData(data);
   initRequired = true;
 }
 

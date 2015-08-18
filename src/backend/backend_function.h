@@ -8,7 +8,7 @@
 
 #include "printable.h"
 #include "uncopyable.h"
-#include "types.h"
+#include "error.h"
 
 namespace simit {
 
@@ -17,7 +17,10 @@ class Tensor; // TODO: Replace this forward decl with TensorData
 
 namespace ir {
 class Func;
+class Expr;
 class TensorStorage;
+class Type;
+struct TensorType;
 }
 
 namespace backend {
@@ -28,7 +31,7 @@ public:
   Actual();
   ~Actual();
 
-  void bind(simit::Tensor* tensor);
+  void bindTensorData(void* data);
   void bind(simit::Set* set);
 
   bool isBound() const;
@@ -42,8 +45,8 @@ public:
   void* getTensorData();
 
 private:
-  struct Content;                    // Avoids bleeding simit:: namespace types
-  std::unique_ptr<Content> content;  // into backends.
+  struct Content;
+  std::unique_ptr<Content> content;
 };
 
 class Function : public simit::interfaces::Printable,
@@ -52,6 +55,18 @@ public:
   virtual ~Function();
 
   void bind(const std::string &argName, simit::Tensor *tensor);
+
+  /// Bind the given data to the argument with the given argName. The data is
+  /// assumed to be laid out in the way specified by the type, which is
+  /// type-checked against the formal.
+  void bindTensorData(const std::string &argumentName, const ir::Type& type,
+                      void* data);
+
+  /// Bind the given data to the argument with the given argName. The data is
+  /// assumed to be laid out in the format specified in the IR and is not
+  /// type-checked.
+  void bindTensorData(const std::string& argumentName, void* data);
+
   void bind(const std::string &argName, simit::Set *set);
 
   inline void init() {
