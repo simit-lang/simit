@@ -11,6 +11,7 @@
 #include "util.h"
 #include "macros.h"
 #include "ir_printer.h"
+#include "util/compare.h"
 
 using namespace std;
 
@@ -227,35 +228,22 @@ bool operator==(const Literal& l, const Literal& r) {
   iassert(getTensorByteSize(l.type.toTensor()) ==
           getTensorByteSize(r.type.toTensor()));
 
+  size_t size = l.type.toTensor()->size();
   switch (l.type.toTensor()->componentType.kind) {
-    case ScalarType::Int: {
-      size_t tensorDataSize = getTensorByteSize(l.type.toTensor());
-      if (memcmp(l.data, r.data, tensorDataSize) != 0) {
-        return false;
-      }
-      break;
+    case ir::ScalarType::Int: {
+      return util::compare<int>(l.data, r.data, size);
     }
-    case ScalarType::Float: {
-      // Rather large epsilon, but works for testing...
-      const double EPSILON = 0.001;
-
-      for (size_t i=0; i < l.type.toTensor()->size(); ++i) {
-        if (fabs(l.getFloatVal(i) - r.getFloatVal(i)) > EPSILON) {
-          return false;
-        }
+    case ir::ScalarType::Float: {
+      if (ir::ScalarType::floatBytes == sizeof(float)) {
+        return util::compare<float>(l.data, r.data, size);
       }
-      break;
-    }
-    case ScalarType::Boolean: {
-      bool *ldata = static_cast<bool*>(l.data);
-      bool *rdata = static_cast<bool*>(r.data);
-      for (size_t i=0; i < l.type.toTensor()->size(); ++i) {
-        if (ldata[i] != rdata[i])
-          return false;
+      else if (ir::ScalarType::floatBytes == sizeof(double)) {
+        return util::compare<double>(l.data, r.data, size);
       }
-      break;
     }
-
+    case ir::ScalarType::Boolean: {
+      return util::compare<bool>(l.data, r.data, size);
+    }
   }
   return true;
 }

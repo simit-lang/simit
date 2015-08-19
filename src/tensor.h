@@ -130,9 +130,10 @@ private:
 };
 
 
-/// Two tensors are equal if their type and all of their elements are equal.
-bool tensorsCompare(const TensorType& ltype, const void *ldata,
+bool compareTensors(const TensorType& ltype, const void *ldata,
                     const TensorType &rtype, const void *rdata);
+
+/// Two tensors are equal if their type and all of their elements are equal.
 template <typename ComponentType1, int... Dimensions1,
           typename ComponentType2, int... Dimensions2>
 bool operator==(const DenseTensor<ComponentType1,Dimensions1...>& l,
@@ -142,7 +143,7 @@ bool operator==(const DenseTensor<ComponentType1,Dimensions1...>& l,
 template <typename ComponentType1, int... Dimensions>
 bool operator==(const DenseTensor<ComponentType1,Dimensions...>& l,
                 const DenseTensor<ComponentType1,Dimensions...>& r) {
-  return tensorsCompare(l.getType(), l.getData(), r.getType(), r.getData());
+  return compareTensors(l.getType(), l.getData(), r.getType(), r.getData());
 }
 
 /// Two tensors are unequal if their types or any of their elements are unequal.

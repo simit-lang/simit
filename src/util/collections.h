@@ -181,6 +181,5 @@ ZipConstIterable<C1, C2> zip(const C1 &collection1, const C2 &collection2) {
   return ZipConstIterable<C1, C2>(collection1, collection2);
 }
 
-
 }}
 #endif

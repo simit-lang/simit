@@ -217,9 +217,8 @@ std::ostream &operator<<(std::ostream &os, const Tensor &tensor) {
   return os;
 }
 
-
 // Compare function
-bool tensorsCompare(const TensorType& ltype, const void *ldata,
+bool compareTensors(const TensorType& ltype, const void *ldata,
                     const TensorType& rtype, const void *rdata) {
   if (ltype != rtype) {
     return false;

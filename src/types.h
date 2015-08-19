@@ -269,6 +269,6 @@ const Type vec3f = TensorType::make(ScalarType::Float,
 const Type mat3f = TensorType::make(ScalarType::Float,
                                     {IndexDomain(3), IndexDomain(3)});
 
-}} // namespace simit::ir
+}}
 
 #endif
