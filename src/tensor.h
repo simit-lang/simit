@@ -221,52 +221,56 @@ bool operator!=(const DenseTensor<ComponentType1,Dimensions...>& l,
 }
 
 /// Print tensors to a stream.
-template <typename ComponentType, int... Dimensions>
-std::ostream&
-operator<<(std::ostream& os, const DenseTensor<ComponentType,Dimensions...>& t){
-  os << "tensor";
-  return os;
-}
-template <typename ComponentType, int rows, int cols>
-std::ostream&
-operator<<(std::ostream& os, const DenseTensor<ComponentType,rows,cols>& t) {
-  os << "matrix:\n";
-  std::ios::fmtflags osflags(os.flags());
-  os << std::setprecision(2) << std::fixed;
-  if (0 < rows) {
-    if (0 < cols) {
-      os << t(0,0);
-    }
-    for (int j=1; j<cols; ++j) {
-      os << " " << t(0,j);
-    }
-  }
+template <typename ComponentType, int... Dimensions> std::ostream&
+operator<<(std::ostream& os, const DenseTensor<ComponentType,Dimensions...>& t) {
+  TensorType type = t.getType();
 
-  for (int i=1; i<rows; ++i) {
-    os << "\n";
-    if (0 < cols) {
-      os << t(i,0);
-    }
-    for (int j=1; j<cols; ++j) {
-      os << " " << t(i,j);
-    }
-  }
-  os.flags(osflags);
-  return os;
-}
-template <typename ComponentType, int size>
-std::ostream& operator<<(std::ostream& os, const DenseTensor<ComponentType,size>& t){
-  os << "[";
   std::ios::fmtflags osflags(os.flags());
-  os << std::setprecision(2) << std::fixed;
-  if (0 < size) {
-    os << t(0);
+  if (type.getOrder() == 0) {
+    iassert(t.getOrder() == 0);
+    os << t({});
   }
-  for (int i=1; i<size; ++i) {
-    os << " " << t(i);
+  else if (type.getOrder() == 1) {
+    os << std::setprecision(2) << std::fixed;
+    size_t size = type.getDimension(0);
+    os << "[";
+    if (0 < size) {
+      os << t({0});
+    }
+    for (size_t i=1; i<size; ++i) {
+      os << " " << t({i});
+    }
+    os << "]";
+  }
+  else if (type.getOrder() == 2) {
+    os << std::setprecision(2) << std::fixed;
+    size_t rows = type.getDimension(0);
+    size_t cols = type.getDimension(1);
+    os << "[";
+    if (0 < rows) {
+      if (0 < cols) {
+        os << t({0,0});
+      }
+      for (size_t j=1; j<cols; ++j) {
+        os << " " << t({0,j});
+      }
+    }
+    for (size_t i=1; i<rows; ++i) {
+      os << ";";
+      if (0 < cols) {
+        os << t({i,0});
+      }
+      for (size_t j=1; j<cols; ++j) {
+        os << " " << t({i,j});
+      }
+    }
+    os << "]";
+
+  }
+  else {
+    os << "tensor";
   }
   os.flags(osflags);
-  os << "]";
   return os;
 }
 
