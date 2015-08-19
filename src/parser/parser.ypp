@@ -2010,24 +2010,10 @@ test
   : "%!" IDENT "(" expr_list_or_empty ")" "==" tensor_literal ";" {
     std::string name = convertAndFree($IDENT);
     auto actualLiterals = unique_ptr<vector<Expr>>($expr_list_or_empty);
-    auto expectedLiteral = convertAndDelete($tensor_literal);
+    Expr expectedLiteral = convertAndDelete($tensor_literal);
 
-    std::vector<simit::Tensor*> actuals;
-    for (auto &actualLit : *actualLiterals) {
-      if (!isa<Literal>(actualLit)) {
-        REPORT_ERROR("function calls in tests must have literal arguments", @1);
-      }
-      iassert(isa<Literal>(actualLit));
-      const Literal *lit = to<Literal>(actualLit);
-      actuals.push_back(new Tensor(lit->type, lit->data));
-    }
-
-    std::vector<simit::Tensor*> expected;
-    iassert(isa<Literal>(expectedLiteral));
-    const Literal *lit = to<Literal>(expectedLiteral);
-    expected.push_back(new Tensor(lit->type, lit->data));
-
-    ctx->addTest(new FunctionTest(name, actuals, expected));
+    ctx->addTest(new FunctionTest(name, *actualLiterals.get(),
+                                  {expectedLiteral}));
   }
   // Test systems (see github issue #66)
   | "%!" IDENT "=" system_generator ":" extern_assert {

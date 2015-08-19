@@ -3356,24 +3356,10 @@ namespace  simit { namespace internal  {
     {
     std::string name = convertAndFree((yystack_[6].value.string));
     auto actualLiterals = unique_ptr<vector<Expr>>((yystack_[4].value.exprs));
-    auto expectedLiteral = convertAndDelete((yystack_[1].value.expr));
+    Expr expectedLiteral = convertAndDelete((yystack_[1].value.expr));
 
-    std::vector<simit::Tensor*> actuals;
-    for (auto &actualLit : *actualLiterals) {
-      if (!isa<Literal>(actualLit)) {
-        REPORT_ERROR("function calls in tests must have literal arguments", yystack_[7].location);
-      }
-      iassert(isa<Literal>(actualLit));
-      const Literal *lit = to<Literal>(actualLit);
-      actuals.push_back(new Tensor(lit->type, lit->data));
-    }
-
-    std::vector<simit::Tensor*> expected;
-    iassert(isa<Literal>(expectedLiteral));
-    const Literal *lit = to<Literal>(expectedLiteral);
-    expected.push_back(new Tensor(lit->type, lit->data));
-
-    ctx->addTest(new FunctionTest(name, actuals, expected));
+    ctx->addTest(new FunctionTest(name, *actualLiterals.get(),
+                                  {expectedLiteral}));
   }
 
     break;
@@ -4133,8 +4119,8 @@ namespace  simit { namespace internal  {
     1734,  1742,  1745,  1759,  1765,  1768,  1771,  1821,  1825,  1826,
     1830,  1834,  1841,  1852,  1859,  1863,  1867,  1881,  1885,  1900,
     1904,  1911,  1918,  1922,  1926,  1940,  1944,  1959,  1963,  1970,
-    1973,  1976,  1982,  1985,  1991,  1994,  2000,  2003,  2010,  2033,
-    2057,  2058,  2066
+    1973,  1976,  1982,  1985,  1991,  1994,  2000,  2003,  2010,  2019,
+    2043,  2044,  2052
   };
 
   // Print the state stack on the debug stream.

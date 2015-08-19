@@ -13,6 +13,7 @@
 #include "program.h"
 #include "graph.h"
 #include "util/collections.h"
+#include "util/arrays.h"
 
 namespace simit {
 namespace internal {
@@ -40,52 +41,78 @@ public:
 class FunctionTest : public Test {
 public:
   FunctionTest(const std::string &callee,
-       const std::vector<simit::Tensor*> &actuals,
-       const std::vector<simit::Tensor*> &expected)
-      : callee(callee), actuals(actuals), expected(expected) {}
-
-  ~FunctionTest() {
-    for (auto &actual : actuals) {
-      iassert(actual != nullptr);
-      delete actual;
+               const std::vector<ir::Expr> &actualLiterals,
+               const std::vector<ir::Expr> &expectLiterals)
+      : callee(callee), actuals(actualLiterals), expects(expectLiterals) {
+    for (auto& actual : actualLiterals) {
+      iassert(ir::isa<ir::Literal>(actual));
     }
-    for (auto &expect : expected) {
-      iassert(expect != nullptr);
-      delete expect;
+    for (auto& expect : expectLiterals) {
+      iassert(ir::isa<ir::Literal>(expect));
     }
   }
+
+  ~FunctionTest() {}
 
   std::string getCallee() const { return callee; }
 
   bool evaluate(const ir::Func &func, simit::Function compiledFunc,
                 Diagnostics *diags) const {
 
-    // run the function with test->call->arguments
-    iassert(actuals.size() == func.getArguments().size());
-
-    std::vector<ir::Var>  formalArgs = func.getArguments();
-    for (size_t i=0; i < actuals.size(); ++i) {
-      compiledFunc.bind(formalArgs[i].getName(), actuals[i]);
+    // Check that actual types match function formal types
+    if (actuals.size() != func.getArguments().size()) {
+      diags->report() << "The number of actuals do not match the number of "
+                         "formals.";
+      return false;
+    }
+    for (auto pair : util::zip(actuals, func.getArguments())) {
+      if (pair.first.type() != pair.second.getType()) {
+        diags->report() << "The actual types do not match the formal types.";
+        return false;
+      }
     }
 
-    auto resultFormals = func.getResults();
-    std::vector<std::unique_ptr<simit::Tensor>> results;
-    for (auto &resultFormal : resultFormals) {
-      auto result= new simit::Tensor(resultFormal.getType());
-      compiledFunc.bind(resultFormal.getName(), result);
-      results.push_back(std::unique_ptr<simit::Tensor>(result));
+    // Check that expected types match function result types
+    if (expects.size() != func.getResults().size()) {
+      diags->report() << "The number of results do not match the expected "
+                         "number of results.";
+      return false;
+    }
+    for (auto pair : util::zip(expects, func.getResults())) {
+      if (pair.first.type() != pair.second.getType()) {
+        diags->report() << "The result types do not match the expected result "
+                           "types.";
+        return false;
+      }
+    }
+
+    // Bind the actuals
+    for (auto pair : util::zip(func.getArguments(), actuals)) {
+      auto& formal = pair.first;
+      auto& actual = pair.second;
+      compiledFunc.bind(formal.getName(), ir::to<ir::Literal>(actual)->data);
+    }
+
+    // Allocate space for and bind results
+    std::vector<ir::Expr> results;
+    for (auto &resultFormal : func.getResults()) {
+      ir::Type resultType = resultFormal.getType();
+      ir::Expr result = ir::Literal::make(resultType);
+      results.push_back(result);
+      compiledFunc.bind(resultFormal.getName(),
+                        ir::to<ir::Literal>(result)->data);
     }
 
     compiledFunc.runSafe();
 
-    // compare function result with test->literal
-    for (auto pair : util::zip(results, expected)) {
-      auto &actual = pair.first;
-      auto &expected = pair.second;
-      if (*actual != *expected) {
-        // TODO: Report with line number of test
-        diags->report() << "Test failure (" << util::toString(*actual)
-                        << " != " << util::toString(*expected) << ")";
+    // Compare function result with the expected result
+    for (auto pair : util::zip(results, expects)) {
+      auto& result = pair.first;
+      auto& expect = pair.second;
+
+      if (*ir::to<ir::Literal>(result) != *ir::to<ir::Literal>(expect)) {
+        diags->report() << util::toString(result) << " != " <<
+                           util::toString(expect);
         return false;
       }
     }
@@ -95,8 +122,8 @@ public:
 
 private:
   std::string callee;
-  std::vector<simit::Tensor*> actuals;
-  std::vector<simit::Tensor*> expected;
+  std::vector<ir::Expr> actuals;
+  std::vector<ir::Expr> expects;
 };
 
 
