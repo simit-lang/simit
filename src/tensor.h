@@ -92,21 +92,42 @@ public:
     delete[] data;
   }
 
-  static size_t getSize() {return util::product<Dimensions...>::value;}
-  static size_t getSizeInBytes() {return getSize() * sizeof(ComponentType);}
+  static constexpr size_t getOrder() {return sizeof...(Dimensions);}
 
   template <typename... Indices> inline
-  ComponentType& operator()(Indices... index) {
-    static_assert(sizeof...(index) == sizeof...(Dimensions),
-                  "Incorrect number of indices used to index tensor");
-    return data[util::computeOffset(util::seq<Dimensions...>(), index...)];
+  ComponentType& operator()(Indices... indices) {
+    static_assert(getOrder() > 0, "Indexing is not defined for scalars.");
+    static_assert(sizeof...(indices) == sizeof...(Dimensions),
+                  "Incorrect number of indices used to index tensor.");
+    return data[util::computeOffset(util::seq<Dimensions...>(), indices...)];
   }
 
   template <typename... Indices> inline
-  const ComponentType& operator()(Indices... index) const {
-    static_assert(sizeof...(index) == sizeof...(Dimensions),
-                  "Incorrect number of indices used to index tensor");
-    return data[util::computeOffset(util::seq<Dimensions...>(), index...)];
+  const ComponentType& operator()(Indices... indices) const {
+    static_assert(getOrder() > 0, "Indexing is not defined for scalars.");
+    static_assert(sizeof...(indices) == getOrder(),
+                  "Incorrect number of indices used to index tensor.");
+    return data[util::computeOffset(util::seq<Dimensions...>(), indices...)];
+  }
+
+  ComponentType& operator()(const std::vector<size_t>& indices) {
+    iassert(indices.size() == getOrder())
+        << "Incorrect number of indices used to index tensor.";
+    return data[util::computeOffset(util::seq<Dimensions...>(), indices)];
+  }
+
+  const ComponentType& operator()(const std::vector<size_t>& indices) const {
+    iassert(indices.size() == getOrder())
+        << "Incorrect number of indices used to index tensor.";
+    return data[util::computeOffset(util::seq<Dimensions...>(), indices)];
+  }
+
+  static constexpr size_t getSize() {
+    return util::product<Dimensions...>::value;
+  }
+
+  static constexpr size_t getSizeInBytes() {
+    return getSize() * sizeof(ComponentType);
   }
 
   const ComponentType* getData() const {return data;}

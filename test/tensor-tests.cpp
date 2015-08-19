@@ -7,6 +7,44 @@
 using namespace std;
 using namespace simit;
 
+TEST(Tensor, index) {
+  DenseTensor<double,2,2> mat1 = {0.0, 1.0, 2.0, 0.0};
+  DenseTensor<double,2,2> mat2;
+  mat2(0,1) = 1.0;
+  mat2(1,0) = 2.0;
+  ASSERT_EQ(mat1, mat2);
+
+  DenseTensor<double,2,3,2> ten1 = {0.0, 0.0,  0.0, 0.0,  0.0, 1.0,
+                                    0.0, 0.0,  2.0, 0.0,  0.0, 0.0};
+  DenseTensor<double,2,3,2> ten2;
+  ten2(0,2,1) = 1.0;
+  ten2(1,1,0) = 2.0;
+  ASSERT_EQ(ten1, ten2);
+}
+
+TEST(Tensor, order) {
+  DenseTensor<double> scalard;
+  ASSERT_EQ(0u, scalard.getOrder());
+
+  DenseTensor<float> scalarf;
+  ASSERT_EQ(0u, scalarf.getOrder());
+
+  DenseTensor<double,3> vec3d;
+  ASSERT_EQ(1u, vec3d.getOrder());
+
+  DenseTensor<float,3> vec3f;
+  ASSERT_EQ(1u, vec3f.getOrder());
+
+  DenseTensor<double,2> vec2d;
+  ASSERT_EQ(1u, vec2d.getOrder());
+
+  DenseTensor<double,2,2> mat22d;
+  ASSERT_EQ(2u, mat22d.getOrder());
+
+  DenseTensor<double,2,3> mat23d;
+  ASSERT_EQ(2u, mat23d.getOrder());
+}
+
 TEST(Tensor, Size) {
   DenseTensor<double> scalar;
   DenseTensor<double,1> vec1;
@@ -37,14 +75,6 @@ TEST(Tensor, Size) {
   ASSERT_EQ(12u, ten223.getSize());
   ASSERT_EQ(16u, ten242.getSize());
   ASSERT_EQ(20u, ten522.getSize());
-}
-
-TEST(Tensor, index) {
-  DenseTensor<double,2,2> mat1 = {0.0, 1.0, 2.0, 0.0};
-  DenseTensor<double,2,2> mat2;
-  mat2(0,1) = 1.0;
-  mat2(1,0) = 2.0;
-  ASSERT_EQ(mat1, mat2);
 }
 
 TEST(Tensor, copy) {
