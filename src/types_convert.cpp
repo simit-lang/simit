@@ -47,19 +47,23 @@ Type convert(const simit::TensorType &tensorType) {
 }
 
 static simit::TensorType convert(const TensorType &tensorType) {
-  if (tensorType.order() == 0) {
-    return convert(tensorType.componentType);
+  auto outerDimensions = tensorType.getOuterDimensions();
+  std::vector<int> dimensions;
+  dimensions.reserve(outerDimensions.size());
+  for (const IndexSet &dim : tensorType.getOuterDimensions()) {
+    iassert(dim.getKind() == IndexSet::Range);
+    dimensions.push_back(dim.getSize());
   }
-  else  {
-    auto outerDimensions = tensorType.getOuterDimensions();
-    std::vector<int> dimensions;
-    dimensions.reserve(outerDimensions.size());
-    for (const IndexSet &dim : tensorType.getOuterDimensions()) {
-      iassert(dim.getKind() == IndexSet::Range);
-      dimensions.push_back(dim.getSize());
-    }
-    simit::TensorType blockType = convert(tensorType.getBlockType());
-    return simit::TensorType(blockType, dimensions);
+
+  Type blockType = tensorType.getBlockType();
+  iassert(blockType.isTensor());
+  auto blockTensorType = blockType.toTensor();
+  if (blockTensorType->order() == 0) {
+    return simit::TensorType(convert(blockTensorType->componentType),
+                             dimensions);
+  }
+  else {
+    return simit::TensorType(convert(blockType), dimensions);;
   }
 }
 
