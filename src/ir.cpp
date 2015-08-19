@@ -21,11 +21,6 @@ namespace ir {
 // class Expr
 Expr::Expr(const Var &var) : Expr(VarExpr::make(var)) {}
 
-static size_t getTensorByteSize(const TensorType *tensorType) {
-  return tensorType->size() * tensorType->componentType.bytes();
-}
-
-// class Expr
 Expr::Expr(int val) : IRHandle(Literal::make(val)) {
 }
 
@@ -216,6 +211,10 @@ void Literal::cast(Type type) {
   iassert(type.toTensor()->componentType==this->type.toTensor()->componentType);
   iassert(type.toTensor()->size() == this->type.toTensor()->size());
   this->type = type;
+}
+
+inline size_t getTensorByteSize(const TensorType *tensorType) {
+  return tensorType->size() * tensorType->componentType.bytes();
 }
 
 bool operator==(const Literal& l, const Literal& r) {

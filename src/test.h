@@ -44,12 +44,6 @@ public:
                const std::vector<ir::Expr> &actualLiterals,
                const std::vector<ir::Expr> &expectLiterals)
       : callee(callee), actuals(actualLiterals), expects(expectLiterals) {
-    for (auto& actual : actualLiterals) {
-      iassert(ir::isa<ir::Literal>(actual));
-    }
-    for (auto& expect : expectLiterals) {
-      iassert(ir::isa<ir::Literal>(expect));
-    }
   }
 
   ~FunctionTest() {}
@@ -66,6 +60,7 @@ public:
       return false;
     }
     for (auto pair : util::zip(actuals, func.getArguments())) {
+      iassert(ir::isa<ir::Literal>(pair.first));
       if (pair.first.type() != pair.second.getType()) {
         diags->report() << "The actual types do not match the formal types.";
         return false;
@@ -79,6 +74,7 @@ public:
       return false;
     }
     for (auto pair : util::zip(expects, func.getResults())) {
+      iassert(ir::isa<ir::Literal>(pair.first));
       if (pair.first.type() != pair.second.getType()) {
         diags->report() << "The result types do not match the expected result "
                            "types.";
