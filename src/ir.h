@@ -15,6 +15,7 @@
 #include "error.h"
 #include "storage.h"
 #include "tensor_index.h"
+#include "util/arrays.h"
 
 namespace simit {
 namespace ir {
@@ -276,14 +277,16 @@ struct Literal : public ExprNode<Literal> {
     return make(Boolean, &val);
   }
 
-  static Expr make(Type type, void *values) {
+  static Expr make(Type type, void* values) {
     iassert(type.isTensor()) << "only tensor literals are supported for now";
+    const TensorType *ttype = type.toTensor();
 
     size_t size = 0;
+    size_t sizeInBytes = 0;
     switch (type.kind()) {
       case Type::Tensor: {
-        const TensorType *ttype = type.toTensor();
-        size = ttype->size() * ttype->componentType.bytes();
+        size = ttype->size();
+        sizeInBytes = size * ttype->componentType.bytes();
         break;
       }
       case Type::Set:
@@ -295,14 +298,32 @@ struct Literal : public ExprNode<Literal> {
 
     Literal *node = new Literal;
     node->type = type;
-    node->size = size;
+    node->size = sizeInBytes;
     node->data = malloc(node->size);
     if (values != nullptr) {
       memcpy(node->data, values, node->size);
     }
     else {
-      memset(node->data, 0, node->size);
-    } 
+      // Zero array
+      switch (ttype->componentType.kind) {
+        case ir::ScalarType::Boolean:
+          util::zero<bool>(node->data, size);
+          break;
+        case ir::ScalarType::Int:
+          util::zero<int>(node->data, size);
+          break;
+        case ir::ScalarType::Float:
+          if (ir::ScalarType::singleFloat()) {
+            iassert(ir::ScalarType::floatBytes == sizeof(float));
+            util::zero<float>(node->data, size);
+          }
+          else {
+            iassert(ir::ScalarType::floatBytes == sizeof(double));
+            util::zero<double>(node->data, size);
+          }
+          break;
+      }
+    }
     return node;
   }
 

@@ -6,18 +6,11 @@
 #include "ir.h"
 #include "types.h"
 #include "util/compare.h"
+#include "util/arrays.h"
 
 using namespace simit::ir;
 
 namespace simit {
-
-template <typename T>
-static void zero(void *data, unsigned size) {
-  T *tdata = static_cast<T*>(data);
-  for (unsigned i=0; i < size; ++i) {
-    tdata[i] = T();
-  }
-}
 
 // class Tensor
 struct Tensor::Content {
@@ -33,19 +26,19 @@ struct Tensor::Content {
 
     switch (type.toTensor()->componentType.kind) {
       case ir::ScalarType::Boolean:
-        zero<bool>(data, numElements);
+        util::zero<bool>(data, numElements);
         break;
       case ir::ScalarType::Int:
-        zero<int>(data, numElements);
+        util::zero<int>(data, numElements);
         break;
       case ir::ScalarType::Float:
         if (ir::ScalarType::singleFloat()) {
           iassert(ir::ScalarType::floatBytes == sizeof(float));
-          zero<float>(data, numElements);
+          util::zero<float>(data, numElements);
         }
         else {
           iassert(ir::ScalarType::floatBytes == sizeof(double));
-          zero<double>(data, numElements);
+          util::zero<double>(data, numElements);
         }
         break;
     }
@@ -166,7 +159,6 @@ bool operator==(const Tensor &l, const Tensor &r) {
 bool operator!=(const Tensor &l, const Tensor &r) {
   return !(l == r);
 }
-
 
 template <typename T>
 static void printData(std::ostream &os, const T *data, unsigned size) {
