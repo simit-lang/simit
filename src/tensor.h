@@ -58,8 +58,8 @@ public:
     std::fill(&data[0], &data[getSize()], ComponentType());
   }
 
-  DenseTensor(const ComponentType &val) : data(new ComponentType(val)) {
-    static_assert(getSize() == 1, "Using scalar constructor with non-scalar");
+  DenseTensor(ComponentType val) : data(new ComponentType(val)) {
+    static_assert(getOrder() == 0, "Using scalar constructor with non-scalar");
   }
 
   DenseTensor(const std::initializer_list<ComponentType>& vals) : DenseTensor(){
@@ -94,6 +94,14 @@ public:
 
   static constexpr size_t getOrder() {return sizeof...(Dimensions);}
 
+  /// Convert scalar tensors to their component type
+  inline operator ComponentType() const {
+    static_assert(getOrder()==0,
+                  "Can only convert scalar tensors to scalar values.");
+    return data[0];
+  }
+
+  /// Methods to index into the tensor
   template <typename... Indices> inline
   ComponentType& operator()(Indices... indices) {
     static_assert(getOrder() > 0, "Indexing is not defined for scalars.");
@@ -194,6 +202,7 @@ typedef DenseTensor<bool,4,4>   Matrix4b;
 bool compareTensors(const TensorType& ltype, const void *ldata,
                     const TensorType& rtype, const void *rdata);
 
+
 /// Two tensors are equal if their type and all of their elements are equal.
 template <typename ComponentType1, int... Dimensions1,
           typename ComponentType2, int... Dimensions2>
@@ -206,6 +215,14 @@ bool operator==(const DenseTensor<ComponentType1,Dimensions...>& l,
                 const DenseTensor<ComponentType1,Dimensions...>& r) {
   return compareTensors(l.getType(), l.getData(), r.getType(), r.getData());
 }
+template <typename ComponentType>
+bool operator==(const DenseTensor<ComponentType>& l, const ComponentType& r) {
+  return l == DenseTensor<ComponentType>(r);
+}
+template <typename ComponentType>
+bool operator==(const ComponentType& l, const DenseTensor<ComponentType>& r) {
+  return DenseTensor<ComponentType>(l) == r;
+}
 
 /// Two tensors are unequal if their types or any of their elements are unequal.
 template <typename ComponentType1, int... Dimensions1,
@@ -217,6 +234,14 @@ bool operator!=(const DenseTensor<ComponentType1,Dimensions1...>& l,
 template <typename ComponentType1, int... Dimensions>
 bool operator!=(const DenseTensor<ComponentType1,Dimensions...>& l,
                 const DenseTensor<ComponentType1,Dimensions...>& r) {
+  return !(l == r);
+}
+template <typename ComponentType>
+bool operator!=(const DenseTensor<ComponentType>& l, const ComponentType& r) {
+  return !(l == r);
+}
+template <typename ComponentType>
+bool operator!=(const ComponentType& l, const DenseTensor<ComponentType>& r) {
   return !(l == r);
 }
 

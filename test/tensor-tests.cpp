@@ -7,6 +7,40 @@
 using namespace std;
 using namespace simit;
 
+TEST(Tensor, scalars) {
+  DenseTensor<double> v1(1.0);
+  ASSERT_EQ(1.0, v1);
+  ASSERT_EQ(1.0, v1({}));
+  ASSERT_EQ(v1, 1.0);
+  ASSERT_NE(2.0, v1);
+  ASSERT_NE(v1, 2.0);
+
+  v1 = 2.0;
+  ASSERT_EQ(2.0, v1);
+
+  DenseTensor<double> v2 = 3.0;
+  ASSERT_EQ(3.0, v2);
+
+  // Test default values
+  Double d;
+  DenseTensor<float>  f;
+  Int    i;
+  Bool   b;
+  ASSERT_EQ(0.0,   d);
+  ASSERT_EQ(0.0f,  f);
+  ASSERT_EQ(0,     i);
+  ASSERT_EQ(false, b);
+
+  d = 4.0;
+  f = 5.0;
+  i = 6;
+  b = true;
+  ASSERT_EQ(4.0,  d);
+  ASSERT_EQ(5.0f, f);
+  ASSERT_EQ(6,    i);
+  ASSERT_EQ(true, b);
+}
+
 TEST(Tensor, index) {
   DenseTensor<double,2,2> mat1 = {0.0, 1.0, 2.0, 0.0};
   DenseTensor<double,2,2> mat2;
