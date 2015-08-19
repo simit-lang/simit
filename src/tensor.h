@@ -130,8 +130,48 @@ private:
 };
 
 
+/// Helper typedefs
+typedef DenseTensor<float>  Float;
+typedef DenseTensor<double> Double;
+typedef DenseTensor<int>    Int;
+typedef DenseTensor<bool>   Bool;
+
+typedef DenseTensor<float,2>  Vector2f;
+typedef DenseTensor<float,3>  Vector3f;
+typedef DenseTensor<float,4>  Vector4f;
+
+typedef DenseTensor<double,2> Vector2d;
+typedef DenseTensor<double,3> Vector3d;
+typedef DenseTensor<double,4> Vector4d;
+
+typedef DenseTensor<int,2>    Vector2i;
+typedef DenseTensor<int,3>    Vector3i;
+typedef DenseTensor<int,4>    Vector4i;
+
+typedef DenseTensor<bool,2>   Vector2b;
+typedef DenseTensor<bool,3>   Vector3b;
+typedef DenseTensor<bool,4>   Vector4b;
+
+typedef DenseTensor<float,2,2>  Matrix2f;
+typedef DenseTensor<float,3,3>  Matrix3f;
+typedef DenseTensor<float,4,4>  Matrix4f;
+
+typedef DenseTensor<double,2,2> Matrix2d;
+typedef DenseTensor<double,3,3> Matrix3d;
+typedef DenseTensor<double,4,4> Matrix4d;
+
+typedef DenseTensor<int,2,2>    Matrix2i;
+typedef DenseTensor<int,3,3>    Matrix3i;
+typedef DenseTensor<int,4,4>    Matrix4i;
+
+typedef DenseTensor<bool,2,2>   Matrix2b;
+typedef DenseTensor<bool,3,3>   Matrix3b;
+typedef DenseTensor<bool,4,4>   Matrix4b;
+
+
+/// Compare two tensor data pointers.
 bool compareTensors(const TensorType& ltype, const void *ldata,
-                    const TensorType &rtype, const void *rdata);
+                    const TensorType& rtype, const void *rdata);
 
 /// Two tensors are equal if their type and all of their elements are equal.
 template <typename ComponentType1, int... Dimensions1,

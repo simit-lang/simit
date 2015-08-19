@@ -62,10 +62,10 @@ struct Tensor::Content {
   }
 };
 
-Tensor::Tensor(int val) : Tensor(Int, &val) {
+Tensor::Tensor(int val) : Tensor(ir::Int, &val) {
 }
 
-Tensor::Tensor(double val) : Tensor(Float, &val) {
+Tensor::Tensor(double val) : Tensor(ir::Float, &val) {
 }
 
 Tensor::Tensor(const ir::Type &type) : content(new Tensor::Content(type)) {

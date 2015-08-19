@@ -1079,7 +1079,7 @@ for_stmt
 for_stmt_header
   : "for" IDENT "in" {
     string varName = convertAndFree($IDENT);
-    Var * var = new Var(varName, Int);
+    Var * var = new Var(varName, ir::Int);
     ctx->scope();
     // If we need to write to loop variables, then that should be added as a
     // separate loop structure (that can't be vectorized easily)

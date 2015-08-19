@@ -2204,7 +2204,7 @@ namespace  simit { namespace internal  {
 
     {
     string varName = convertAndFree((yystack_[1].value.string));
-    Var * var = new Var(varName, Int);
+    Var * var = new Var(varName, ir::Int);
     ctx->scope();
     // If we need to write to loop variables, then that should be added as a
     // separate loop structure (that can't be vectorized easily)

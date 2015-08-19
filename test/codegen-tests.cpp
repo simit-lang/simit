@@ -15,14 +15,13 @@
 
 using namespace std;
 using namespace testing;
-using namespace simit;
 using namespace simit::ir;
 using namespace simit::backend;
 
 namespace simit { extern std::string kBackend; }
 
 template <typename T>
-std::vector<T> toVectorOf(const Tensor &tensor) {
+std::vector<T> toVectorOf(const simit::Tensor &tensor) {
   std::vector<T> vec;
   const T *vals = static_cast<const T*>(tensor.getData());
   vec.assign(vals, vals + tensor.getType().toTensor()->size());
@@ -32,7 +31,7 @@ std::vector<T> toVectorOf(const Tensor &tensor) {
 unique_ptr<Backend> getBackend();
 unique_ptr<Backend> getBackend() {
   Backend *res = NULL;
-  if (kBackend == "llvm") {
+  if (simit::kBackend == "llvm") {
     res  = new LLVMBackend();
   }
 #ifdef GPU
@@ -60,9 +59,9 @@ TEST(Codegen, add0) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Tensor aArg = 2.0;
-  Tensor bArg = 4.1;
-  Tensor cRes = Float;
+  simit::Tensor aArg = 2.0;
+  simit::Tensor bArg = 4.1;
+  simit::Tensor cRes = Float;
 
   function.bind("a", &aArg);
   function.bind("b", &bArg);
@@ -86,8 +85,8 @@ TEST(Codegen, sin) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Tensor aArg = 2.0;
-  Tensor cRes = 0.0;
+  simit::Tensor aArg = 2.0;
+  simit::Tensor cRes = 0.0;
 
   function.bind("a", &aArg);
   function.bind("c", &cRes);
@@ -110,8 +109,8 @@ TEST(Codegen, cos) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Tensor aVar = 2.0;
-  Tensor cRes = 0.0;
+  simit::Tensor aVar = 2.0;
+  simit::Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
@@ -134,8 +133,8 @@ TEST(Codegen, sqrt) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Tensor aVar = 5.0;
-  Tensor cRes = 0.0;
+  simit::Tensor aVar = 5.0;
+  simit::Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
@@ -158,8 +157,8 @@ TEST(Codegen, log) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Tensor aVar = 5.0;
-  Tensor cRes = 0.0;
+  simit::Tensor aVar = 5.0;
+  simit::Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
@@ -182,8 +181,8 @@ TEST(Codegen, exp) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Tensor aVar = 5.0;
-  Tensor cRes = 0.0;
+  simit::Tensor aVar = 5.0;
+  simit::Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
@@ -207,9 +206,9 @@ TEST(Codegen, atan2) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Tensor aVar = 1.0;
-  Tensor bVar = 2.0;
-  Tensor cRes = 0.0;
+  simit::Tensor aVar = 1.0;
+  simit::Tensor bVar = 2.0;
+  simit::Tensor cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("b", &bVar);
@@ -235,8 +234,8 @@ TEST(Codegen, forloop) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  Tensor outVar = 0;
-  Tensor iVar = 0;
+  simit::Tensor outVar = 0;
+  simit::Tensor iVar = 0;
   
   function.bind("out", &outVar);
   
