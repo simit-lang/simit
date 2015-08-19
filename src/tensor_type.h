@@ -56,12 +56,11 @@ class TensorType {
 public:
   TensorType(ComponentType componentType,
              std::vector<int> dimensions={})
-      : dimensions(dimensions), blocked(false), componentType(componentType) {}
+      : blocked(false), componentType(componentType), dimensions(dimensions) {}
 
-  TensorType(const TensorType &blockType,
-             std::vector<int> dimensions={})
-      : dimensions(dimensions), blocked(true),
-        blockType(new TensorType(blockType)) {}
+  TensorType(const TensorType &blockType, std::vector<int> dimensions)
+      : blocked(true), blockType(new TensorType(blockType)),
+        dimensions(dimensions) {}
 
   bool isBlocked() const {return blocked;}
 
@@ -77,13 +76,13 @@ public:
   size_t getSize() const;
 
 private:
-  std::vector<int> dimensions;
-
   bool blocked;
   union {
-    const TensorType* blockType;
-    ComponentType     componentType;
+    TensorType*   blockType;
+    ComponentType componentType;
   };
+
+  std::vector<int> dimensions;
 };
 
 std::ostream& operator<<(std::ostream& os, const TensorType& tensorType);
