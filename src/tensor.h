@@ -118,25 +118,34 @@ private:
   ComponentType *data;
 };
 
+template <>
+class DenseTensor<Dynamic_Tensor> {
+public:
+  DenseTensor(const TensorType &type) : type(type) {}
+
+//  size_t getSize() {}
+
+private:
+  TensorType type;
+};
+
+
 /// Two tensors are equal if their type and all of their elements are equal.
-bool tensorsEq(const TensorType& ltype, const void *ldata,
-               const TensorType &rtype, const void *rdata);
-template <typename ComponentType1, int... Dimensions>
-bool operator==(const DenseTensor<ComponentType1,Dimensions...>& l,
-                const DenseTensor<ComponentType1,Dimensions...>& r) {
-  return tensorsEq(l.getType(), l.getData(), r.getType(), r.getData());
-}
+bool tensorsCompare(const TensorType& ltype, const void *ldata,
+                    const TensorType &rtype, const void *rdata);
 template <typename ComponentType1, int... Dimensions1,
           typename ComponentType2, int... Dimensions2>
 bool operator==(const DenseTensor<ComponentType1,Dimensions1...>& l,
                 const DenseTensor<ComponentType2,Dimensions2...>& r) {
   return false;
 }
+template <typename ComponentType1, int... Dimensions>
+bool operator==(const DenseTensor<ComponentType1,Dimensions...>& l,
+                const DenseTensor<ComponentType1,Dimensions...>& r) {
+  return tensorsCompare(l.getType(), l.getData(), r.getType(), r.getData());
+}
 
 /// Two tensors are unequal if their types or any of their elements are unequal.
-bool tensorsNe(const TensorType& ltype, const void *ldata,
-               const TensorType &rtype, const
-               void *rdata);
 template <typename ComponentType1, int... Dimensions1,
           typename ComponentType2, int... Dimensions2>
 bool operator!=(const DenseTensor<ComponentType1,Dimensions1...>& l,
@@ -146,7 +155,7 @@ bool operator!=(const DenseTensor<ComponentType1,Dimensions1...>& l,
 template <typename ComponentType1, int... Dimensions>
 bool operator!=(const DenseTensor<ComponentType1,Dimensions...>& l,
                 const DenseTensor<ComponentType1,Dimensions...>& r) {
-  return tensorsNe(l.getType(), l.getData(), r.getType(), r.getData());
+  return !(l == r);
 }
 
 /// Print tensors to a stream.

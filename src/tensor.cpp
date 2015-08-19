@@ -142,101 +142,29 @@ bool operator==(const Tensor &l, const Tensor &r) {
     return false;
   }
 
+  const void *ldata = l.getData();
+  const void *rdata = r.getData();
+  size_t size = l.getSize();
   switch (ltype.toTensor()->componentType.kind) {
     case ir::ScalarType::Int: {
-      const int *ldata = static_cast<const int*>(l.getData());
-      const int *rdata = static_cast<const int*>(r.getData());
-      for (size_t i=0; i < l.getSize(); ++i) {
-        if (ldata[i] != rdata[i])
-          return false;
-      }
-      break;
+      return util::compare<int>(ldata, rdata, size);
     }
     case ir::ScalarType::Float: {
       if (ir::ScalarType::floatBytes == sizeof(float)) {
-        const float *ldata = static_cast<const float*>(l.getData());
-        const float *rdata = static_cast<const float*>(r.getData());
-        for (size_t i=0; i < l.getSize(); ++i) {
-          if (!util::almostEqual(ldata[i], rdata[i], 0.0001f)) {
-            return false;
-          }
-        }
+        return util::compare<float>(ldata, rdata, size);
       }
       else if (ir::ScalarType::floatBytes == sizeof(double)) {
-        const double *ldata = static_cast<const double*>(l.getData());
-        const double *rdata = static_cast<const double*>(r.getData());
-        for (size_t i=0; i < l.getSize(); ++i) {
-          if (!util::almostEqual(ldata[i], rdata[i], 0.0001)) {
-            return false;
-          }
-        }
+        return util::compare<double>(ldata, rdata, size);
       }
-      break;
     }
     case ir::ScalarType::Boolean: {
-      const bool *ldata = static_cast<const bool*>(l.getData());
-      const bool *rdata = static_cast<const bool*>(r.getData());
-      for (size_t i=0; i < l.getSize(); ++i) {
-        if (ldata[i] != rdata[i])
-          return false;
-      }
-      break;
+      return util::compare<bool>(ldata, rdata, size);
     }
-
   }
-  return true;
 }
 
 bool operator!=(const Tensor &l, const Tensor &r) {
-  Type ltype = l.getType();
-  Type rtype = r.getType();
-
-  if (ltype != rtype) {
-    return true;
-  }
-
-  switch (ltype.toTensor()->componentType.kind) {
-    case ir::ScalarType::Int: {
-      const int *ldata = static_cast<const int*>(l.getData());
-      const int *rdata = static_cast<const int*>(r.getData());
-      for (size_t i=0; i < l.getSize(); ++i) {
-        if (ldata[i] == rdata[i])
-          return false;
-      }
-      break;
-    }
-    case ir::ScalarType::Float: {
-      if (ir::ScalarType::floatBytes == sizeof(float)) {
-        const float *ldata = static_cast<const float*>(l.getData());
-        const float *rdata = static_cast<const float*>(r.getData());
-        for (size_t i=0; i < l.getSize(); ++i) {
-          if (util::almostEqual(ldata[i], rdata[i], 0.001f)) {
-            return false;
-          }
-        }
-      }
-      else if (ir::ScalarType::floatBytes == sizeof(double)) {
-        const double *ldata = static_cast<const double*>(l.getData());
-        const double *rdata = static_cast<const double*>(r.getData());
-        for (size_t i=0; i < l.getSize(); ++i) {
-          if (util::almostEqual(ldata[i], rdata[i], 0.001)) {
-            return false;
-          }
-        }
-      }
-      break;
-    }
-    case ir::ScalarType::Boolean: {
-      const bool *ldata = static_cast<const bool*>(l.getData());
-      const bool *rdata = static_cast<const bool*>(r.getData());
-      for (size_t i=0; i < l.getSize(); ++i) {
-        if (ldata[i] == rdata[i])
-          return false;
-      }
-      break;
-    }
-  }
-  return true;
+  return !(l == r);
 }
 
 
@@ -247,7 +175,7 @@ static void printData(std::ostream &os, const T *data, unsigned size) {
   }
   else {
     os << "[" << data[0];
-    for (size_t i=0; i < size; ++i) {
+    for (size_t i=1; i < size; ++i) {
       os << ", " << data[i];
     }
     os << "]";
@@ -299,50 +227,26 @@ std::ostream &operator<<(std::ostream &os, const Tensor &tensor) {
 
 
 // Compare function
-bool tensorsEq(const TensorType& ltype, const void *ldata,
-               const TensorType& rtype, const void *rdata) {
+bool tensorsCompare(const TensorType& ltype, const void *ldata,
+                    const TensorType& rtype, const void *rdata) {
   if (ltype != rtype) {
     return false;
   }
 
   switch (ltype.getComponentType()) {
     case ComponentType::Int: {
-      return util::compareEq<int>(ldata, rdata, ltype.getSize());
+      return util::compare<int>(ldata, rdata, ltype.getSize());
     }
     case ComponentType::Float: {
       if (ir::ScalarType::floatBytes == sizeof(float)) {
-        return util::compareEq<float>(ldata, rdata, ltype.getSize());
+        return util::compare<float>(ldata, rdata, ltype.getSize());
       }
       else if (ir::ScalarType::floatBytes == sizeof(double)) {
-        return util::compareEq<double>(ldata, rdata, ltype.getSize());
+        return util::compare<double>(ldata, rdata, ltype.getSize());
       }
     }
     case ComponentType::Boolean: {
-      return util::compareEq<bool>(ldata, rdata, ltype.getSize());
-    }
-  }
-}
-
-bool tensorsNe(const TensorType& ltype, const void *ldata,
-               const TensorType &rtype, const void *rdata) {
-  if (ltype != rtype) {
-    return true;
-  }
-
-  switch (ltype.getComponentType()) {
-    case ComponentType::Int: {
-      return util::compareNe<int>(ldata, rdata, ltype.getSize());
-    }
-    case ComponentType::Float: {
-      if (ir::ScalarType::floatBytes == sizeof(float)) {
-        return util::compareNe<float>(ldata, rdata, ltype.getSize());
-      }
-      else if (ir::ScalarType::floatBytes == sizeof(double)) {
-        return util::compareNe<double>(ldata, rdata, ltype.getSize());
-      }
-    }
-    case ComponentType::Boolean: {
-      return util::compareNe<bool>(ldata, rdata, ltype.getSize());
+      return util::compare<bool>(ldata, rdata, ltype.getSize());
     }
   }
 }
