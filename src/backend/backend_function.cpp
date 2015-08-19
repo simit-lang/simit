@@ -169,11 +169,15 @@ void Function::bind(const std::string &argName, simit::Set *set) {
 
     ir::ScalarType setFieldTypeComponentType;
     switch (setFieldType->getComponentType()) {
-      case ComponentType::Int:
-        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Int);
-        break;
       case ComponentType::Float:
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float);
+        break;
+      case ComponentType::Double:
+        iassert(ir::ScalarType::floatBytes == sizeof(double));
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Float);
+        break;
+      case ComponentType::Int:
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Int);
         break;
       case ComponentType::Boolean:
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Boolean);

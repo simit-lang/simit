@@ -8,6 +8,9 @@ std::ostream& operator<<(std::ostream& os, ComponentType componentType) {
     case ComponentType::Float:
       os << "float";
       break;
+    case ComponentType::Double:
+      os << "double";
+      break;
     case ComponentType::Int:
       os << "int";
       break;

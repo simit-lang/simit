@@ -10,8 +10,9 @@ using namespace simit;
 //// Set tests
 
 TEST(SetTests, Utils) {
+  EXPECT_EQ(typeOf<float>(), ComponentType::Float);
+  EXPECT_EQ(typeOf<double>(), ComponentType::Double);
   EXPECT_EQ(typeOf<int>(), ComponentType::Int);
-  EXPECT_EQ(typeOf<simit_float>(), ComponentType::Float);
   EXPECT_EQ(typeOf<bool>(), ComponentType::Boolean);
 }
 

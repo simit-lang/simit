@@ -225,20 +225,16 @@ bool compareTensors(const TensorType& ltype, const void *ldata,
   }
 
   switch (ltype.getComponentType()) {
-    case ComponentType::Int: {
+    case ComponentType::Float:
+      std::cout << "float: " << ltype.getSize() << std::endl;
+      return util::compare<float>(ldata, rdata, ltype.getSize());
+    case ComponentType::Double:
+      std::cout << "double: " << ltype.getSize() << std::endl;
+      return util::compare<double>(ldata, rdata, ltype.getSize());
+    case ComponentType::Int:
       return util::compare<int>(ldata, rdata, ltype.getSize());
-    }
-    case ComponentType::Float: {
-      if (ir::ScalarType::floatBytes == sizeof(float)) {
-        return util::compare<float>(ldata, rdata, ltype.getSize());
-      }
-      else if (ir::ScalarType::floatBytes == sizeof(double)) {
-        return util::compare<double>(ldata, rdata, ltype.getSize());
-      }
-    }
-    case ComponentType::Boolean: {
+    case ComponentType::Boolean:
       return util::compare<bool>(ldata, rdata, ltype.getSize());
-    }
   }
 }
 

@@ -10,7 +10,7 @@
 namespace simit {
 
 /** The types of supported tensor components. */
-enum class ComponentType {Float, Int, Boolean };
+enum class ComponentType {Float, Double, Int, Boolean };
 
 /** Helper to convert from C++ type to Simit Type. */
 template<typename T> inline ComponentType typeOf() {
@@ -23,13 +23,11 @@ template<> inline ComponentType typeOf<int>() {
 }
 
 template<> inline ComponentType typeOf<float>() {
-  iassert(ir::ScalarType::floatBytes == 4);
   return ComponentType::Float;
 }
 
 template<> inline ComponentType typeOf<double>() {
-  iassert(ir::ScalarType::floatBytes == 8);
-  return ComponentType::Float;
+  return ComponentType::Double;
 }
 
 template<> inline ComponentType typeOf<bool>() {
@@ -38,10 +36,12 @@ template<> inline ComponentType typeOf<bool>() {
 
 inline std::size_t componentSize(ComponentType ct) {
   switch (ct) {
+    case ComponentType::Float:
+      return sizeof(float);
+    case ComponentType::Double:
+      return sizeof(double);
     case ComponentType::Int:
       return sizeof(int);
-    case ComponentType::Float:
-      return ir::ScalarType::floatBytes;
     case ComponentType::Boolean:
       return sizeof(bool);
   }
@@ -95,11 +95,11 @@ inline TensorType computeType() {
           ? TensorType(subType, {Dimensions...})
           : TensorType(subType.getComponentType(), {Dimensions...});
 }
-template<> inline TensorType computeType<double>() {
-  return simit::ComponentType::Float;
-}
 template<> inline TensorType computeType<float>() {
   return simit::ComponentType::Float;
+}
+template<> inline TensorType computeType<double>() {
+  return simit::ComponentType::Double;
 }
 template<> inline TensorType computeType<int>() {
   return simit::ComponentType::Int;

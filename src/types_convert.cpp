@@ -9,6 +9,9 @@ ScalarType convert(ComponentType componentType) {
   switch (componentType) {
     case ComponentType::Float:
       return ScalarType::Float;
+    case ComponentType::Double:
+      iassert(ir::ScalarType::floatBytes == sizeof(double));
+      return ScalarType::Float;
     case ComponentType::Int:
       return ScalarType::Int;
     case ComponentType::Boolean:
@@ -19,7 +22,16 @@ ScalarType convert(ComponentType componentType) {
 ComponentType convert(ScalarType scalarType) {
   switch (scalarType.kind) {
     case ScalarType::Float:
-      return ComponentType::Float;
+      if (ir::ScalarType::floatBytes == sizeof(float)) {
+        return ComponentType::Float;
+      }
+      else if (ir::ScalarType::floatBytes == sizeof(double)) {
+        return ComponentType::Double;
+      }
+      else {
+        not_supported_yet;
+        return ComponentType::Double;
+      }
     case ScalarType::Int:
       return ComponentType::Int;
     case ScalarType::Boolean:

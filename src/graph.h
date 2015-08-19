@@ -174,14 +174,13 @@ public:
     for (auto f : fields){
       switch (f->type->getComponentType()) {
         case ComponentType::Float: {
-          if (ir::ScalarType::singleFloat()) {
-            float* data = (float*)f->data;
-            data[element.ident] = data[numElements-1];
-          }
-          else {
-            double* data = (double*)f->data;
-            data[element.ident] = data[numElements-1];
-          }
+          float* data = (float*)f->data;
+          data[element.ident] = data[numElements-1];
+          break;
+        }
+        case ComponentType::Double: {
+          double* data = (double*)f->data;
+          data[element.ident] = data[numElements-1];
           break;
         }
         case ComponentType::Int: {
