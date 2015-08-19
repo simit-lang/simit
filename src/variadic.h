@@ -63,27 +63,53 @@ struct removeFirst {
   typedef seq<rest...> type;
 };
 
+
 /// Compute product of static sequence
 template <int... values>
 inline int computeProduct(seq<values...> seq) {
   return product<values...>::value;
 }
 
-template <typename... Indices, int... dimensions>
-inline int computeOffset(Indices... indices, const seq<dimensions...> &dims);
-
-template <int... dimensions>
-inline int computeOffset(const seq<dimensions...> &dims, int i) {
-  return i;
-}
 
 /// Compute the offset into an n-dimensional array
-template <int... dimensions, typename... Indices>
-inline int computeOffset(seq<dimensions...> dims, int index, Indices... rest) {
+template <int... dimensions, typename... Indices> inline
+int computeOffset(seq<dimensions...> dims, int index, Indices... rest) {
   typename removeFirst<dimensions...>::type innerDims;
   return index * computeProduct(innerDims) + computeOffset(innerDims, rest...);
 }
 
-}} // namespace simit::util
+template <int... dimensions> inline
+int computeOffset(const seq<dimensions...> &dims, int i) {
+  return i;
+}
 
+
+/// Compute the offset into an n-dimensional array
+template <int... dimensions> inline
+int computeOffset(seq<dimensions...> dims, const std::vector<size_t>& indices) {
+  return computeOffset(dims, indices.begin(), indices.end());
+}
+
+template <int... dimensions> inline
+int computeOffset(seq<dimensions...> dims,
+                  const std::vector<size_t>::const_iterator& begin,
+                  const std::vector<size_t>::const_iterator& end) {
+  typename removeFirst<dimensions...>::type innerDims;
+  return *begin * computeProduct(innerDims) + computeOffset(innerDims,
+                                                           begin+1, end);
+}
+
+template <int... dimensions> inline
+int computeOffset(const seq<> &dims,
+                  const std::vector<size_t>::const_iterator& begin,
+                  const std::vector<size_t>::const_iterator& end) {
+  return *begin;
+}
+
+inline
+int computeOffset(seq<> dims, const std::vector<size_t>& indices) {
+  return 0;
+}
+
+}}
 #endif
