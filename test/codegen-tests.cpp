@@ -20,14 +20,6 @@ using namespace simit::backend;
 
 namespace simit { extern std::string kBackend; }
 
-template <typename T>
-std::vector<T> toVectorOf(const simit::Tensor &tensor) {
-  std::vector<T> vec;
-  const T *vals = static_cast<const T*>(tensor.getData());
-  vec.assign(vals, vals + tensor.getType().toTensor()->size());
-  return vec;
-}
-
 unique_ptr<Backend> getBackend();
 unique_ptr<Backend> getBackend() {
   Backend *res = NULL;
@@ -46,7 +38,7 @@ unique_ptr<Backend> getBackend() {
   return unique_ptr<Backend>(res);
 }
 
-TEST(Codegen, add0) {
+TEST(Codegen, add) {
   Var a("a", Float);
   Var b("b", Float);
   Var c("c", Float);
@@ -59,9 +51,9 @@ TEST(Codegen, add0) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  simit::Tensor aArg = 2.0;
-  simit::Tensor bArg = 4.1;
-  simit::Tensor cRes = Float;
+  simit_float aArg = 2.0;
+  simit_float bArg = 4.1;
+  simit_float cRes = 0.0;
 
   function.bind("a", &aArg);
   function.bind("b", &bArg);
@@ -69,8 +61,7 @@ TEST(Codegen, add0) {
 
   function.runSafe();
 
-  vector<simit_float> results = toVectorOf<simit_float>(cRes);
-  SIMIT_ASSERT_FLOAT_EQ(results[0], 6.1);
+  SIMIT_ASSERT_FLOAT_EQ(6.1, cRes);
 }
 
 TEST(Codegen, sin) {
@@ -85,16 +76,15 @@ TEST(Codegen, sin) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  simit::Tensor aArg = 2.0;
-  simit::Tensor cRes = 0.0;
+  simit_float aArg = 2.0;
+  simit_float cRes = 0.0;
 
   function.bind("a", &aArg);
   function.bind("c", &cRes);
 
   function.runSafe();
 
-  vector<simit_float> results = toVectorOf<simit_float>(cRes);
-  SIMIT_ASSERT_FLOAT_EQ(results[0], sin(2.0));
+  SIMIT_ASSERT_FLOAT_EQ(sin(2.0), cRes);
 }
 
 TEST(Codegen, cos) {
@@ -109,16 +99,15 @@ TEST(Codegen, cos) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  simit::Tensor aVar = 2.0;
-  simit::Tensor cRes = 0.0;
+  simit_float aArg = 2.0;
+  simit_float cRes = 0.0;
 
-  function.bind("a", &aVar);
+  function.bind("a", &aArg);
   function.bind("c", &cRes);
 
   function.runSafe();
 
-  vector<simit_float> results = toVectorOf<simit_float>(cRes);
-  SIMIT_ASSERT_FLOAT_EQ(results[0], cos(2.0));
+  SIMIT_ASSERT_FLOAT_EQ(cos(2.0), cRes);
 }
 
 TEST(Codegen, sqrt) {
@@ -133,16 +122,15 @@ TEST(Codegen, sqrt) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  simit::Tensor aVar = 5.0;
-  simit::Tensor cRes = 0.0;
+  simit_float aVar = 5.0;
+  simit_float cRes = 0.0;
 
   function.bind("a", &aVar);
   function.bind("c", &cRes);
 
   function.runSafe();
 
-  vector<simit_float> results = toVectorOf<simit_float>(cRes);
-  SIMIT_ASSERT_FLOAT_EQ(results[0], sqrt(5.0));
+  SIMIT_ASSERT_FLOAT_EQ(sqrt(5.0), cRes);
 }
 
 TEST(Codegen, log) {
@@ -157,16 +145,15 @@ TEST(Codegen, log) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  simit::Tensor aVar = 5.0;
-  simit::Tensor cRes = 0.0;
+  simit_float aArg = 5.0;
+  simit_float cRes = 0.0;
 
-  function.bind("a", &aVar);
+  function.bind("a", &aArg);
   function.bind("c", &cRes);
 
   function.runSafe();
 
-  vector<simit_float> results = toVectorOf<simit_float>(cRes);
-  SIMIT_ASSERT_FLOAT_EQ(results[0], log(5.0));
+  SIMIT_ASSERT_FLOAT_EQ(log(5.0), cRes);
 }
 
 TEST(Codegen, exp) {
@@ -181,16 +168,15 @@ TEST(Codegen, exp) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  simit::Tensor aVar = 5.0;
-  simit::Tensor cRes = 0.0;
+  simit_float aArg = 5.0;
+  simit_float cRes = 0.0;
 
-  function.bind("a", &aVar);
+  function.bind("a", &aArg);
   function.bind("c", &cRes);
 
   function.runSafe();
 
-  vector<simit_float> results = toVectorOf<simit_float>(cRes);
-  SIMIT_ASSERT_FLOAT_EQ(results[0], exp(5.0));
+  SIMIT_ASSERT_FLOAT_EQ(exp(5.0), cRes);
 }
 
 TEST(Codegen, atan2) {
@@ -206,18 +192,17 @@ TEST(Codegen, atan2) {
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  simit::Tensor aVar = 1.0;
-  simit::Tensor bVar = 2.0;
-  simit::Tensor cRes = 0.0;
+  simit_float aArg = 1.0;
+  simit_float bArg = 2.0;
+  simit_float cRes = 0.0;
 
-  function.bind("a", &aVar);
-  function.bind("b", &bVar);
+  function.bind("a", &aArg);
+  function.bind("b", &bArg);
   function.bind("c", &cRes);
 
   function.runSafe();
 
-  vector<simit_float> results = toVectorOf<simit_float>(cRes);
-  SIMIT_ASSERT_FLOAT_EQ(results[0], atan2(1.0,2.0));
+  SIMIT_ASSERT_FLOAT_EQ(atan2(1.0,2.0), cRes);
 }
 
 TEST(Codegen, forloop) {
@@ -225,23 +210,20 @@ TEST(Codegen, forloop) {
   Var out("out", Int);
   Expr start = Expr(1);
   Expr end = Expr(4);
-  Stmt body = AssignStmt::make(out, i);
-  
+  Stmt body = AssignStmt::make(out, i, CompoundOperator::Add);
   Stmt loop = ForRange::make(i, start, end, body);
-  
+
   Func func = Func("testloop", {}, {out}, loop);
 
   unique_ptr<Backend> backend = getBackend();
   simit::Function function = backend->compile(func);
 
-  simit::Tensor outVar = 0;
-  simit::Tensor iVar = 0;
-  
-  function.bind("out", &outVar);
-  
+  int outRes = 0;
+
+  function.bind("out", &outRes);
+
   function.runSafe();
   
-  vector<int> results = toVectorOf<int>(outVar);
-  ASSERT_EQ(results[0], 3);
+  ASSERT_EQ(6, outRes);
 }
 

@@ -13,7 +13,6 @@
 namespace simit {
 
 class Set;
-class Tensor; // TODO: Replace this forward decl with TensorData
 
 namespace ir {
 class Func;
@@ -53,8 +52,6 @@ class Function : public simit::interfaces::Printable,
                         simit::interfaces::Uncopyable {
 public:
   virtual ~Function();
-
-  void bind(const std::string &argName, simit::Tensor *tensor);
 
   /// Bind the given data to the argument with the given argName. The data is
   /// assumed to be laid out in the way specified by the type, which is

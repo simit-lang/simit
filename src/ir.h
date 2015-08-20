@@ -805,8 +805,11 @@ struct AssignStmt : public StmtNode<AssignStmt> {
   Expr value;
   CompoundOperator cop;
 
-  static Stmt make(Var var, Expr value,
-                   CompoundOperator cop=CompoundOperator::None) {
+  static Stmt make(Var var, Expr value) {
+    return make(var, value, CompoundOperator::None);
+  }
+
+  static Stmt make(Var var, Expr value, CompoundOperator cop) {
     AssignStmt *node = new AssignStmt;
     node->var = var;
     node->value = value;

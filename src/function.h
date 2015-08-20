@@ -32,7 +32,7 @@ public:
 
   /// Bind the tensor to the given argument.
   template <typename CType, int... Dims>
-  void bind(std::string argumentName, DenseTensor<CType,Dims...>* tensor) {
+  void bind(std::string argumentName, Tensor<CType,Dims...>* tensor) {
     bind(argumentName, tensor->getType(), tensor->getData());
   }
 
@@ -42,7 +42,7 @@ public:
   /// Bind tensor data to the given argument without type checks.
   void bind(std::string argumentName, void* data);
 
-  void bind(std::string argumentName, simit::Tensor* tensor);
+  /// Bind the set to the given argument.
   void bind(std::string argumentName, simit::Set* set);
 
   void init();

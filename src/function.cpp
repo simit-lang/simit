@@ -22,11 +22,6 @@ void Function::bind(string argumentName, void* data) {
   impl->bindTensorData(argumentName, data);
 }
 
-void Function::bind(string argumentName, simit::Tensor *tensor) {
-  uassert(defined()) << "undefined function";
-  bind(argumentName, tensor->getData());
-}
-
 void Function::bind(string argumentName, simit::Set *set) {
   uassert(defined()) << "undefined function";
   impl->bind(argumentName, set);

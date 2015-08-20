@@ -621,11 +621,9 @@ TEST(System, gemv_input) {
   Function func = getFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
-  simit::DenseTensor<simit_float, 2> cs;
-
-  // TODO: Add indexing to tensors
-  cs.getData()[0] = 1.0;
-  cs.getData()[1] = 2.0;
+  simit::Tensor<simit_float, 2> cs;
+  cs(0) = 1.0;
+  cs(1) = 2.0;
 
   func.bind("c", &cs);
 

@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace simit {
-class Tensor;
 
 /// The TensorData class is an untyped version of simit::Tensor, where the types
 /// are stored in a runtime TensorType object. This means it can be passed to
