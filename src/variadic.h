@@ -40,7 +40,7 @@ template <int... vals> struct product;
 
 template <>
 struct product <> {
-  static const int value = 1;
+  static constexpr int value = 1;
 };
 
 template <int val, int... rest>
@@ -65,8 +65,8 @@ struct removeFirst {
 
 
 /// Compute product of static sequence
-template <int... values>
-inline int computeProduct(seq<values...> seq) {
+template <int... values> inline constexpr
+int computeProduct(seq<values...> seq) {
   return product<values...>::value;
 }
 
@@ -78,7 +78,7 @@ int computeOffset(seq<dimensions...> dims, int index, Indices... rest) {
   return index * computeProduct(innerDims) + computeOffset(innerDims, rest...);
 }
 
-template <int... dimensions> inline
+template <int... dimensions> inline constexpr
 int computeOffset(const seq<dimensions...> &dims, int i) {
   return i;
 }
@@ -95,18 +95,20 @@ int computeOffset(seq<dimensions...> dims,
                   const std::vector<size_t>::const_iterator& begin,
                   const std::vector<size_t>::const_iterator& end) {
   typename removeFirst<dimensions...>::type innerDims;
-  return *begin * computeProduct(innerDims) + computeOffset(innerDims,
-                                                           begin+1, end);
+  const int i      = *begin;
+  const int stride = computeProduct(innerDims);
+  const int rest   = computeOffset(innerDims, begin+1, end);
+  return i * stride + rest;
 }
 
 template <int... dimensions> inline
 int computeOffset(const seq<> &dims,
                   const std::vector<size_t>::const_iterator& begin,
                   const std::vector<size_t>::const_iterator& end) {
-  return *begin;
+  return 0;
 }
 
-inline
+inline constexpr
 int computeOffset(seq<> dims, const std::vector<size_t>& indices) {
   return 0;
 }
