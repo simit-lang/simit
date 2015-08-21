@@ -9,6 +9,13 @@
 #include "init.h"
 #include "ir.h"
 
+#include "program.h"
+#include "backend/backend.h"
+#include "backend/llvm/llvm_backend.h"
+#ifdef GPU
+#include "backend/gpu/gpu_backend.h"
+#endif
+
 // These are just extern declared from llvm/Support/CommandLine.h since that's
 // not currently in the build for simit-test and I'm lazy.
 namespace llvm {
@@ -102,4 +109,41 @@ int main(int argc, char **argv) {
   simit::init(simitBackend, floatSize);
 
   return RUN_ALL_TESTS();
+}
+
+namespace simit {
+extern std::string kBackend;
+}
+
+std::unique_ptr<simit::backend::Backend> getTestBackend() {
+  simit::backend::Backend *res = NULL;
+  if (simit::kBackend == "llvm") {
+    res  = new simit::backend::LLVMBackend();
+  }
+#ifdef GPU
+  else if (kBackend == "gpu") {
+    fprintf(stderr, "Initializing GPU backend\n");
+    res = new GPUBackend();
+  }
+#endif
+  else {
+    ierror << "Invalid backend choice";
+  }
+  return std::unique_ptr<simit::backend::Backend>(res);
+}
+
+simit::Function loadFunction(std::string fileName, std::string funcName="main"){
+  simit::Program program;
+  int errorCode = program.loadFile(fileName);
+  if (errorCode) {
+    std::cerr << program.getDiagnostics().getMessage();
+    return simit::Function();
+  }
+
+  simit::Function f = program.compile(funcName);
+  if (!f.defined()) {
+    std::cerr << program.getDiagnostics().getMessage();
+  }
+
+  return f;
 }

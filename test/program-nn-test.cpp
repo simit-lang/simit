@@ -78,7 +78,7 @@ TEST(Program, DISABLED_nn) {
   std::cout << std::endl;
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("nodes", &nodes);
   func.bind("edges", &edges);

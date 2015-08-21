@@ -27,7 +27,7 @@ TEST(System, DISABLED_heterogeneous_vector) {
   ElementRef u1 = U.add();
   ElementRef u2 = U.add();
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("V", &V);
   func.bind("U", &U);

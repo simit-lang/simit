@@ -30,7 +30,7 @@ TEST(Program, cg) {
   a.set(s0, 4.0);
   a.set(s1, 5.0);
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);

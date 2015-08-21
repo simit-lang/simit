@@ -68,7 +68,7 @@ TEST(Program, isprings_simple) {
   k.set(s1, stiffness);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
   func.bind("springs", &springs);
@@ -145,7 +145,7 @@ TEST(Program, isprings) {
   }
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
   func.bind("springs", &springs);

@@ -6,9 +6,13 @@
 #include <string>
 #include <algorithm>
 
-#include "program.h"
 #include "function.h"
 #include "error.h"
+
+namespace simit {
+namespace backend {
+class Backend;
+}}
 
 #ifdef F32
 typedef float simit_float;
@@ -38,21 +42,8 @@ inline std::string toLower(std::string str) {
 #define SIMIT_ASSERT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.0000000000001)
 #endif
 
-inline simit::Function getFunction(std::string fileName,
-                                   std::string functionName="main") {
-  simit::Program program;
-  int errorCode = program.loadFile(fileName);
-  if (errorCode) {
-    std::cerr << program.getDiagnostics().getMessage();
-    return simit::Function();
-  }
+std::unique_ptr<simit::backend::Backend> getTestBackend();
 
-  simit::Function f = program.compile(functionName);
-  if (!f.defined()) {
-    std::cerr << program.getDiagnostics().getMessage();
-  }
-
-  return f;
-}
+simit::Function loadFunction(std::string fileName, std::string funcName="main");
 
 #endif

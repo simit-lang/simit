@@ -15,7 +15,7 @@ TEST(System, vector_add) {
   ElementRef p0 = points.add();
   x.set(p0, 42.0);
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
 
@@ -34,7 +34,7 @@ TEST(System, vector_add_blocked) {
   x.set(p0, {1.0, 2.0, 3.0});
   x.set(p1, {4.0, 5.0, 6.0});
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
 
@@ -60,7 +60,7 @@ TEST(System, vector_dot) {
   x.set(p1, 2.0);
   x.set(p2, 3.0);
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
 
@@ -80,7 +80,7 @@ TEST(System, vector_dot_blocked) {
   x.set(p1, {4.0,5.0,6.0});
   x.set(p2, {7.0,8.0,9.0});
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
 
@@ -116,7 +116,7 @@ TEST(System, vector_dot_intrinsic) {
   x.set(p9, 10.0);
   x.set(p10, 11.0);
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
 
@@ -133,7 +133,7 @@ TEST(System, vector_assign_blocked) {
   x.set(p0, {1.0, 2.0});
   x.set(p1, {3.0, 4.0});
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
 
@@ -155,7 +155,7 @@ TEST(System, vector_add_large_system) {
     x.set(ps.back(), (simit_float)i);
   }
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
 

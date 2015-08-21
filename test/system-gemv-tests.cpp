@@ -37,7 +37,7 @@ TEST(System, gemv) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -84,7 +84,7 @@ TEST(System, gemv_add) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -135,7 +135,7 @@ TEST(System, gemv_storage) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -180,7 +180,7 @@ TEST(System, gemv_diagonal) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -219,7 +219,7 @@ TEST(System, gemv_diagonal_extraparams) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -258,7 +258,7 @@ TEST(System, gemv_diagonal_inout) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -300,7 +300,7 @@ TEST(System, gemv_nw) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -339,7 +339,7 @@ TEST(System, gemv_sw) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -381,7 +381,7 @@ TEST(System, gemv_assemble_from_points) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -419,7 +419,7 @@ TEST(System, gemv_inplace) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -462,7 +462,7 @@ TEST(System, gemv_blocked) {
   a.set(s1, {5.0, 6.0, 7.0, 8.0});
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -514,7 +514,7 @@ TEST(System, gemv_blocked_nw) {
   a.set(s1, {5.0, 6.0, 7.0, 8.0});
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -566,7 +566,7 @@ TEST(System, gemv_blocked_computed) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -618,7 +618,7 @@ TEST(System, gemv_input) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   simit::Tensor<simit_float, 2> cs;
@@ -666,7 +666,7 @@ TEST(System, gemv_diagonal_storage) {
   Set springs(points,points);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -699,7 +699,7 @@ TEST(System, gemv_blocked_diagonal_storage) {
   b.set(p2, {5.0, 6.0});
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -735,7 +735,7 @@ TEST(System, gemv_blocked_scaled_diagonal) {
   b.set(p1, {1.0, 1.0});
   b.set(p2, {1.0, 1.0});
 
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
   func.runSafe();
@@ -777,7 +777,7 @@ TEST(System, gemv_diagonal_storage_and_sysreduced) {
 
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -819,7 +819,7 @@ TEST(System, DISABLED_gemv_pass_element) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);

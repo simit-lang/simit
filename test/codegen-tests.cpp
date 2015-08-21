@@ -6,37 +6,12 @@
 #include "tensor.h"
 #include "ir.h"
 #include "ir_printer.h"
-
 #include "backend/backend.h"
-#include "backend/llvm/llvm_backend.h"
-#ifdef GPU
-#include "backend/gpu/gpu_backend.h"
-#endif
 
 using namespace std;
 using namespace testing;
 using namespace simit::ir;
 using namespace simit::backend;
-
-namespace simit { extern std::string kBackend; }
-
-unique_ptr<Backend> getBackend();
-unique_ptr<Backend> getBackend() {
-  Backend *res = NULL;
-  if (simit::kBackend == "llvm") {
-    res  = new LLVMBackend();
-  }
-#ifdef GPU
-  else if (kBackend == "gpu") {
-    fprintf(stderr, "Initializing GPU backend\n");
-    res = new GPUBackend();
-  }
-#endif
-  else {
-    ierror << "Invalid backend choice";
-  }
-  return unique_ptr<Backend>(res);
-}
 
 TEST(Codegen, add) {
   Var a("a", Float);
@@ -48,7 +23,7 @@ TEST(Codegen, add) {
 
   Func func = Func("add0", {a,b}, {c}, body);
 
-  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Backend> backend = getTestBackend();
   simit::Function function = backend->compile(func);
 
   simit_float aArg = 2.0;
@@ -73,7 +48,7 @@ TEST(Codegen, sin) {
 
   Func func = Func("testsin", {a}, {c}, body);
 
-  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Backend> backend = getTestBackend();
   simit::Function function = backend->compile(func);
 
   simit_float aArg = 2.0;
@@ -96,7 +71,7 @@ TEST(Codegen, cos) {
 
   Func func = Func("testcos", {a}, {c}, body);
 
-  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Backend> backend = getTestBackend();
   simit::Function function = backend->compile(func);
 
   simit_float aArg = 2.0;
@@ -119,7 +94,7 @@ TEST(Codegen, sqrt) {
 
   Func func = Func("testsqrt", {a}, {c}, body);
 
-  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Backend> backend = getTestBackend();
   simit::Function function = backend->compile(func);
 
   simit_float aVar = 5.0;
@@ -142,7 +117,7 @@ TEST(Codegen, log) {
 
   Func func = Func("testlog", {a}, {c}, body);
 
-  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Backend> backend = getTestBackend();
   simit::Function function = backend->compile(func);
 
   simit_float aArg = 5.0;
@@ -165,7 +140,7 @@ TEST(Codegen, exp) {
 
   Func func = Func("testexp", {a}, {c}, body);
 
-  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Backend> backend = getTestBackend();
   simit::Function function = backend->compile(func);
 
   simit_float aArg = 5.0;
@@ -189,7 +164,7 @@ TEST(Codegen, atan2) {
 
   Func func = Func("testatan2", {a,b}, {c}, body);
 
-  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Backend> backend = getTestBackend();
   simit::Function function = backend->compile(func);
 
   simit_float aArg = 1.0;
@@ -215,7 +190,7 @@ TEST(Codegen, forloop) {
 
   Func func = Func("testloop", {}, {out}, loop);
 
-  unique_ptr<Backend> backend = getBackend();
+  unique_ptr<Backend> backend = getTestBackend();
   simit::Function function = backend->compile(func);
 
   int outRes = 0;

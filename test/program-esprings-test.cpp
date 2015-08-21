@@ -93,7 +93,7 @@ TEST(Program, esprings) {
   l0.set(s12, 0.9);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);

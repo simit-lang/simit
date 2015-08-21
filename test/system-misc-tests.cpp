@@ -26,7 +26,7 @@ TEST(System, map_triangle) {
   a.set(t1, 0.1);
 
  // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("verts", &verts);
@@ -60,7 +60,7 @@ TEST(System, map_assemble_from_literal_vector) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -89,7 +89,7 @@ TEST(System, map_assemble_vector_components) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -126,7 +126,7 @@ TEST(System, DISABLED_map_assemble_fem) {
   springs.add(p1,p2);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -153,7 +153,7 @@ TEST(System, map_one_set) {
   a.set(p2, 3.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -179,7 +179,7 @@ TEST(System, DISABLED_map_one_set_const_ref) {
   a.set(p2, 3.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -205,7 +205,7 @@ TEST(System, map_no_results_one_set) {
   a.set(p2, 3.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -236,7 +236,7 @@ TEST(System, map_no_results_two_sets) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -264,7 +264,7 @@ TEST(System, map_two_results_one_set) {
   a.set(p2, 3.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -297,7 +297,7 @@ TEST(System, map_two_results_two_sets) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -329,7 +329,7 @@ TEST(System, map_edgeset_no_endpoints) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -362,7 +362,7 @@ TEST(System, map_edgeset_no_endpoints_results) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -409,7 +409,7 @@ TEST(System, slice) {
   a.set(s1, 2.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -442,7 +442,7 @@ TEST(System, map_norm) {
   x.set(p2, {7.0, 8.0, 9.0});
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
   func.runSafe();
@@ -466,7 +466,7 @@ TEST(System, map_pass_field) {
   x.set(p2, {7.0, 8.0, 9.0});
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
   func.runSafe();
@@ -490,7 +490,7 @@ TEST(System, DISABLED_map_vec_assign) {
   x.set(p2, {7.0, 8.0, 9.0});
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -536,7 +536,7 @@ TEST(System, solve_external) {
   a.set(s1, 1.0);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -588,7 +588,7 @@ TEST(System, solve_external_blocked) {
   a.set(s1, {5.0, 6.0, 7.0, 8.0});
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
@@ -631,7 +631,7 @@ TEST(System, DISABLED_if_reassign) {
   c.set(p2, true);
 
   // Compile program and bind arguments
-  Function func = getFunction(TEST_FILE_NAME, "main");
+  Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
 
   func.bind("points", &points);
