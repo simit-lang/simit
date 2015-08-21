@@ -7,6 +7,8 @@
 namespace simit {
 namespace ir {
 
+struct IRNode;
+
 struct Literal;
 struct VarExpr;
 struct FieldRead;
@@ -150,6 +152,148 @@ protected:
 
 private:
   bool init;
+};
+
+
+#define VISIT(Type) \
+void visit(const Type *op) { \
+  if (patterns.find(#Type) != patterns.end()) { \
+    bool cont = patterns.at(#Type)(op); \
+    if (cont) { \
+      IRVisitor::visit(op);\
+    } \
+  } \
+  else { \
+    IRVisitor::visit(op); \
+  } \
+}
+
+typedef std::map<std::string, std::function<bool(const IRNode*)>> MatchPatterns;
+
+/// @example Print all AssignStmts in Func
+///   match<Func>(func, {
+///     {"AssignStmt", [&storage](const IRNode* irNode) -> bool {
+///       const AssignStmt* op = static_cast<const AssignStmt*>(op);
+///       std::cout << *op << std::endl;
+///       return false;
+///     }},
+///   });
+template <class IR>
+void match(IR ir, const MatchPatterns &patterns) {
+
+  class MatchVisitor : public IRVisitor {
+  public:
+    void process(const IR& ir, const MatchPatterns &patterns) {
+#ifdef SIMIT_ASSERTS
+      std::set<std::string> patternStrings = {
+        "Literal",
+        "VarExpr",
+        "FieldRead",
+        "TensorRead",
+        "TupleRead",
+        "IndexRead",
+        "TensorIndexRead",
+        "Length",
+        "Load",
+        "IndexedTensor",
+        "IndexExpr",
+        "Call",
+        "Neg",
+        "Add",
+        "Sub",
+        "Mul",
+        "Div",
+        "Eq",
+        "Ne",
+        "Gt",
+        "Lt",
+        "Ge",
+        "Le",
+        "And",
+        "Or",
+        "Not",
+        "Xor",
+        "VarDecl",
+        "AssignStmt",
+        "CallStmt",
+        "Map",
+        "FieldWrite",
+        "TensorWrite",
+        "Store",
+        "ForRange",
+        "For",
+        "While",
+        "IfThenElse",
+        "Block",
+        "Print",
+        "Comment",
+        "Pass",
+        "GPUKernel"};
+      for (auto &pattern : patterns) {
+        iassert(patternStrings.find(pattern.first) != patternStrings.end())
+            << "undefined pattern";
+      }
+#endif
+
+      this->patterns = patterns;
+      ir.accept(this);
+    }
+
+  private:
+    using IRVisitor::visit;
+
+    MatchPatterns patterns;
+    VISIT(Literal)
+    VISIT(VarExpr)
+    VISIT(FieldRead)
+    VISIT(TensorRead)
+    VISIT(TupleRead)
+    VISIT(IndexRead)
+    VISIT(TensorIndexRead)
+    VISIT(Length)
+    VISIT(Load)
+    VISIT(IndexedTensor)
+    VISIT(IndexExpr)
+    VISIT(Call)
+
+    VISIT(Neg)
+    VISIT(Add)
+    VISIT(Sub)
+    VISIT(Mul)
+    VISIT(Div)
+
+    VISIT(Eq)
+    VISIT(Ne)
+    VISIT(Gt)
+    VISIT(Lt)
+    VISIT(Ge)
+    VISIT(Le)
+    VISIT(And)
+    VISIT(Or)
+    VISIT(Not)
+    VISIT(Xor)
+
+    VISIT(VarDecl)
+    VISIT(AssignStmt)
+    VISIT(CallStmt)
+    VISIT(Map)
+    VISIT(FieldWrite)
+    VISIT(TensorWrite)
+    VISIT(Store)
+    VISIT(ForRange)
+    VISIT(For)
+    VISIT(While)
+    VISIT(IfThenElse)
+    VISIT(Block)
+    VISIT(Print)
+    VISIT(Comment)
+    VISIT(Pass)
+#ifdef GPU
+    VISIT(GPUKernel)
+#endif
+  };
+
+  MatchVisitor().process(ir, patterns);
 };
 
 }} // namespace simit::internal
