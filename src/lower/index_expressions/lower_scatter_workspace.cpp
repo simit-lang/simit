@@ -350,7 +350,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr *indexExpression) {
         string comment = "workspace " +
             util::toString(subsetLoop.getCompoundOperator())+"= " +
             tensorSliceString(subsetLoop.getIndexExpression(), indexVar);
-        loopStatements.push_back(Comment::make(comment, loopStmt, "\n"));
+        loopStatements.push_back(Comment::make(comment, loopStmt, true));
       }
       iassert(loops.size() > 0);
 

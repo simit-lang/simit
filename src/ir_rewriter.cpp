@@ -430,7 +430,8 @@ void IRRewriter::visit(const Comment *op) {
     stmt = op;
   }
   else {
-    stmt = Comment::make(op->comment, commentedStmt);
+    stmt = Comment::make(op->comment, commentedStmt,
+                         op->footerSpace, op->headerSpace);
   }
 }
 

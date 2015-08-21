@@ -73,6 +73,9 @@ private:
     LowerMapFunctionRewriter mapFunctionRewriter;
     stmt = inlineMap(op, mapFunctionRewriter);
 
+    // Add comment
+    stmt = Comment::make(util::toString(*op), stmt, true, true);
+
     // Add storage descriptor for the new tensors in the inlined map
     updateStorage(stmt, storage);
   }

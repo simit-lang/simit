@@ -503,11 +503,16 @@ void IRPrinter::visit(const Block *op) {
 }
 
 void IRPrinter::visit(const Comment *op) {
+  if (op->headerSpace) {
+    os << "\n";
+  }
   indent();
   os << "% " << op->comment << endl;
   if (op->commentedStmt.defined()) {
     print(op->commentedStmt);
-    os << op->footer;
+  }
+  if (op->footerSpace) {
+    os << "\n";
   }
 }
 

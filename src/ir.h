@@ -1015,14 +1015,16 @@ struct Print : public StmtNode<Print> {
 struct Comment : public StmtNode<Comment> {
   std::string comment;
   Stmt commentedStmt;
-  std::string footer;
+  bool footerSpace;
+  bool headerSpace;
 
   static Stmt make(std::string comment, Stmt commentedStmt=Stmt(),
-                   std::string footer=""){
+                   bool footerSpace=false, bool headerSpace=false){
     Comment *node = new Comment;
     node->comment = comment;
     node->commentedStmt = commentedStmt;
-    node->footer = footer;
+    node->footerSpace = footerSpace;
+    node->headerSpace = headerSpace;
     return node;
   }
 };
