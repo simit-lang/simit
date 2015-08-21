@@ -274,7 +274,9 @@ void LLVMBackend::visit(const Literal *op) {
 }
 
 void LLVMBackend::visit(const VarExpr *op) {
-  if (!symtable.contains(op->var)) ierror << op->var << " not found in symbol table";
+  if (!symtable.contains(op->var)) {
+    ierror << op->var << " not found in symbol table";
+  }
 
   val = symtable.get(op->var);
 
@@ -1441,12 +1443,12 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
   ///       in the backend. Probably requires copy and memset intrinsics.
 //  iassert(isScalar(value.type()) &&
 //         "assignment non-scalars should have been lowered by now");
-  iassert(var.getType().isTensor() && value.type().isTensor());
-  iassert(symtable.contains(var)) << var << "=" << value << ";"
-                                  << var << " has not been declared";
-
-  std::string varName = var.getName();
   llvm::Value *valuePtr = compile(value);
+
+  iassert(var.getType().isTensor() && value.type().isTensor());
+  std::string varName = var.getName();
+  iassert(symtable.contains(var)) << var << " has not been declared in:\n"
+                                  << var << " = " << value << ";";
 
   llvm::Value *varPtr = symtable.get(var);
   iassert(varPtr->getType()->isPointerTy());
