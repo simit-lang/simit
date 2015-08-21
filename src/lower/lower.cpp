@@ -2,6 +2,10 @@
 
 #include <map>
 
+#include "lower_maps.h"
+#include "lower_indexexprs.h"
+#include "lower_accesses.h"
+
 #include "storage.h"
 #include "temps.h"
 #include "flatten.h"
@@ -112,7 +116,7 @@ Func lower(Func func, bool print) {
         return;
       }
       func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func = lowerIndexExpressions(func);
+      func = lowerIndexExprs(func);
     }
   };
   func = LowerIndexExpressionsRewriter().rewrite(func);

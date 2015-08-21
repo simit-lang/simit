@@ -4,7 +4,7 @@
 #include "ir_visitor.h"
 #include "ir_printer.h"
 #include "ir_rewriter.h"
-#include "lower.h"
+#include "lower/lower.h"
 #include "temps.h"
 #include "flatten.h"
 #include "frontend.h"

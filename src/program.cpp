@@ -5,11 +5,11 @@
 
 #include "ir.h"
 #include "frontend.h"
-#include "lower.h"
 #include "util.h"
 #include "error.h"
 #include "program_context.h"
 #include "storage.h"
+#include "lower/lower.h"
 
 #include "backend/llvm/llvm_backend.h"
 #ifdef GPU

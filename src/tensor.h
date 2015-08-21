@@ -111,6 +111,7 @@ private:
   ComponentType *data;
 };
 
+// TODO: Add dynamic tensor class
 template <>
 class Tensor<Dynamic_Tensor> {
 public:

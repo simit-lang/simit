@@ -1,4 +1,4 @@
-#include "lower.h"
+#include "lower_indexexprs.h"
 
 #include "ir.h"
 #include "ir_queries.h"
@@ -597,8 +597,9 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
   return loopNest;
 }
 
+
 /// Lower the index expressions in 'func'.
-Func lowerIndexExpressions(Func func) {
+Func lowerIndexExprs(Func func) {
   class LowerIndexExpressionsRewriter : private IRRewriter {
   public:
     Func lower(Func func) {
@@ -643,6 +644,7 @@ Func lowerIndexExpressions(Func func) {
   };
   func = LowerIndexExpressionsRewriter().lower(func);
   func = insertVarDecls(func);
+
   return func;
 }
 
