@@ -29,11 +29,26 @@ typedef void (*FuncPtrType)();
 
 LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
                            bool requiresInit, llvm::Module *module,
-                           std::shared_ptr<llvm::EngineBuilder> engineBuilder)
+                           std::shared_ptr<llvm::EngineBuilder> engineBuilder,
+                           const std::vector<ir::Var>& globals)
+    // TODO: Pass globals up to Function for typechecks...
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
       requiresInit(requiresInit),
   deinit(nullptr) {
+
+  for (auto& global : globals) {
+    string name = global.getName();
+    llvm::GlobalValue* llvmGlobalVal = module->getNamedValue(name);
+    void* globalPtr = executionEngine->getPointerToGlobal(llvmGlobalVal);
+    this->globals.insert({name, (void**)globalPtr});
+
+      // Data passed from user
+//    void* data = malloc(sizeof(double));
+      // Init like this
+//    *this->globals.at(name) = data;
+//    *((double*)data) = 42.0;
+  }
 }
 
 LLVMFunction::~LLVMFunction() {

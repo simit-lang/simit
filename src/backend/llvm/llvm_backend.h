@@ -43,9 +43,9 @@ extern const std::string LEN_SUFFIX;
 class LLVMBackend : public Backend, public ir::IRVisitor {
 public:
   LLVMBackend();
-  ~LLVMBackend();
+  virtual ~LLVMBackend();
 
-  virtual Function* compile(const ir::Func &func);
+  using Backend::compile;
 
 protected:
   virtual unsigned global_addrspace()  { return 0; } // LLVM generic addrspace
@@ -56,6 +56,7 @@ protected:
   // Globally allocated buffers
   std::map<ir::Var, llvm::Value*> buffers;
   ir::Storage storage;
+  std::set<ir::Var> globals;
 
   llvm::Module *module;
   std::unique_ptr<llvm::DataLayout> dataLayout;
@@ -63,13 +64,14 @@ protected:
 
   /// used to return variables from Expr visit functions
   llvm::Value *val;
-  
-  using Backend::compile;
-  using ir::IRVisitor::visit;
 
-  virtual llvm::Value *compile(const ir::Expr &expr);
+  virtual Function* compile(const ir::Func &func,
+                            const std::vector<ir::Var>& globals);
+
+  virtual llvm::Value* compile(const ir::Expr &expr);
   virtual void compile(const ir::Stmt &stmt);
 
+  using ir::IRVisitor::visit;
   virtual void visit(const ir::FieldRead *);
   virtual void visit(const ir::IndexRead *op);
   virtual void visit(const ir::Length *op);

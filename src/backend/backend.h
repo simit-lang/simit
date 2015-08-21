@@ -9,9 +9,9 @@
 namespace simit {
 
 namespace ir {
+class Var;
 class Func;
 class Stmt;
-struct Environment;
 }
 
 namespace backend {
@@ -24,12 +24,18 @@ public:
   Backend() {}
   virtual ~Backend() {}
 
-  /// Compiles a statement with an environment to a runable function with
-  /// no parameters.
-  backend::Function* compile(const ir::Stmt &stmt, const ir::Environment &env);
+  /// Compiles an IR function to a runable function.
+  backend::Function* compile(const ir::Func& func);
 
-  /// Compiles an IR function to a runable function with the same parameters.
-  virtual backend::Function* compile(const ir::Func &func) = 0;
+  /// Compiles an IR statement to a runable function. Any undefined variable
+  /// becomes part of the runable function's environment and must be bound
+  /// before the function is run.
+  backend::Function* compile(const ir::Stmt& stmt);
+
+protected:
+  /// Compile the closure consisting of the function and a context.
+  virtual backend::Function* compile(const ir::Func& func,
+                                     const std::vector<ir::Var>& globals) = 0;
 };
 
 }}

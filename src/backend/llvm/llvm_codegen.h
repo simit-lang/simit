@@ -58,9 +58,9 @@ extern const int NUM_EDGE_INDEX_ELEMENTS;
 
 extern bool singlePrecision;
 llvm::Type *getLLVMFloatType();
-llvm::Type *getLLVMFloatPtrType(unsigned addrspace=0);
+llvm::PointerType *getLLVMFloatPtrType(unsigned addrspace=0);
 
-llvm::Type *llvmPtrType(ir::ScalarType stype, unsigned addrspace);
+llvm::PointerType *llvmPtrType(ir::ScalarType stype, unsigned addrspace);
 
 llvm::Constant *llvmPtr(llvm::Type *type, const void *data);
 llvm::Constant *llvmPtr(const ir::Type &type, const void *data,

@@ -31,7 +31,7 @@ llvm::Constant* llvmBool(bool val) {
   return llvm::ConstantInt::get(LLVM_CONTEXT, llvm::APInt(1, intVal, false));
 }
 
-llvm::Type *llvmPtrType(ScalarType stype, unsigned addrspace) {
+llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
   switch (stype.kind) {
     case ScalarType::Int:
       return llvm::Type::getInt32PtrTy(LLVM_CONTEXT, addrspace);
@@ -110,7 +110,7 @@ llvm::Type *getLLVMFloatType() {
   }
 }
 
-llvm::Type *getLLVMFloatPtrType(unsigned addrspace) {
+llvm::PointerType *getLLVMFloatPtrType(unsigned addrspace) {
   if (ScalarType::singleFloat()) {
     return llvm::Type::getFloatPtrTy(LLVM_CONTEXT, addrspace);
   }

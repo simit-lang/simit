@@ -39,6 +39,7 @@
 #include "llvm_function.h"
 #include "macros.h"
 #include "runtime.h"
+#include "util/collections.h"
 
 using namespace std;
 using namespace simit::ir;
@@ -71,21 +72,43 @@ LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
 
 LLVMBackend::~LLVMBackend() {}
 
-Function* LLVMBackend::compile(const Func &func) {
+Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
   this->module = new llvm::Module("simit", LLVM_CONTEXT);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
   this->dataLayout.reset(new llvm::DataLayout(module));
 
-  symtable.clear();
-  buffers.clear();
+  this->symtable.clear();
+  this->buffers.clear();
+  this->globals.clear();
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
   std::reverse(callTree.begin(), callTree.end());
 
   this->storage = Storage();
+
+  // Add global variables to symbol table
+  std::map<std::string,void**> globalPointers;
+  for (auto& global : globals) {
+    // TODO: Remove dead code
+//    void** globalPtr = static_cast<void**>(malloc(sizeof(void*)));
+//    llvm::Constant *llvmPtrConst = llvmPtr(global.getType(), globalPtr);
+    llvm::Constant *llvmPtrConst = llvmPtr(global.getType(), 0);
+    ScalarType ctype = global.getType().toTensor()->componentType;
+    auto globalType = llvm::PointerType::get(createLLVMType(ctype),
+                                             global_addrspace());
+    llvm::GlobalVariable* llvmGlobalPtr =
+        new llvm::GlobalVariable(*module, globalType, false,
+                                 llvm::GlobalValue::ExternalLinkage,
+                                 llvmPtrConst,
+                                 global.getName(), nullptr,
+                                 llvm::GlobalVariable::NotThreadLocal,
+                                 global_addrspace());
+    symtable.insert(global, llvmGlobalPtr);
+    this->globals.insert(global);
+  }
 
   llvm::Function *llvmFunc = nullptr;
   for (auto &f : callTree) {
@@ -108,7 +131,8 @@ Function* LLVMBackend::compile(const Func &func) {
       symtable.insert(global.first, compile(global.second));
     }
 
-    compile(moveVarDeclsToFront(f.getBody()));
+    Stmt body = moveVarDeclsToFront(f.getBody());
+    compile(body);
     builder->CreateRetVoid();
 
     symtable.unscope();
@@ -208,7 +232,8 @@ Function* LLVMBackend::compile(const Func &func) {
 #endif
 
   bool requiresInit = buffers.size() > 0;
-  return new LLVMFunction(func, llvmFunc, requiresInit, module, engineBuilder);
+  return new LLVMFunction(func, llvmFunc, requiresInit, module, engineBuilder,
+                          globals);
 }
 
 llvm::Value *LLVMBackend::compile(const Expr &expr) {
@@ -285,12 +310,19 @@ void LLVMBackend::visit(const VarExpr *op) {
 
   val = symtable.get(op->var);
 
+  string ptrName = string(val->getName()) + PTR_SUFFIX;
+  string valName = string(val->getName()) + VAL_SUFFIX;
+
+  // Globals are stored as pointer-pointers so we must load them
+  if (util::contains(globals, op->var)) {
+    val = builder->CreateLoad(val, ptrName);
+  }
+
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
   // in which case we must load the value.  This case arises because we keep
   // many scalars on the stack.  An exceptions to this are loop variables,
   // which is why we can't assume Simit scalars are always kept on the stack.
   if (isScalar(op->type) && val->getType()->isPointerTy()) {
-    string valName = string(val->getName()) + VAL_SUFFIX;
     val = builder->CreateLoad(val, valName);
   }
 }
@@ -459,7 +491,8 @@ void LLVMBackend::visit(const Add *op) {
       val = builder->CreateFAdd(a, b);
       break;
     case ScalarType::Boolean:
-      iassert(false) << "Cannot add boolean values.";
+      ierror << "Cannot add boolean values.";
+      break;
   }
 }
 
@@ -1465,6 +1498,11 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
   llvm::Value *varPtr = symtable.get(var);
   iassert(varPtr->getType()->isPointerTy());
 
+  // Globals are stored as pointer-pointers so we must load them
+  if (util::contains(globals, var)) {
+    varPtr = builder->CreateLoad(varPtr, var.getName());
+  }
+
   const TensorType *varType = var.getType().toTensor();
   const TensorType *valType = value.type().toTensor();
 
@@ -1516,8 +1554,8 @@ llvm::Value *LLVMBackend::makeGlobalTensor(ir::Var var) {
   // TODO: We should allocate small local dense tensors on the stack
   iassert(var.getType().isTensor());
   llvm::Type *ctype = createLLVMType(var.getType().toTensor()->componentType);
-  llvm::PointerType *globalType = llvm::PointerType::get(
-      ctype, global_addrspace());
+  llvm::PointerType *globalType = llvm::PointerType::get(ctype,
+                                                         global_addrspace());
 
   llvm::GlobalVariable* buffer =
       new llvm::GlobalVariable(*module, globalType,

@@ -104,11 +104,11 @@ public:
 protected:
   typedef std::function<void()> FuncType;
 
+  Function(const ir::Func &simitFunc);
+
   /// Get number of bytes required to store tensors with `type` and `storage`.
   size_t size(const ir::TensorType &type,
               const ir::TensorStorage &storage) const;
-
-  Function(const ir::Func &simitFunc);
 
   std::vector<std::string> formals;
   std::map<std::string, Actual*> actuals;

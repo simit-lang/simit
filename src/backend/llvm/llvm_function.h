@@ -20,9 +20,10 @@ namespace backend {
 /// A Simit function that has been compiled with LLVM.
 class LLVMFunction : public backend::Function {
  public:
-  LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-               bool requiresInit, llvm::Module *module,
-               std::shared_ptr<llvm::EngineBuilder> engineBuilder);
+  LLVMFunction(ir::Func simitFunc, llvm::Function* llvmFunc,
+               bool requiresInit, llvm::Module* module,
+               std::shared_ptr<llvm::EngineBuilder> engineBuilder,
+               const std::vector<ir::Var>& globals);
 
   ~LLVMFunction();
 
@@ -30,22 +31,25 @@ class LLVMFunction : public backend::Function {
   void printMachine(std::ostream &os) const;
 
  private:
-  llvm::Function                         *llvmFunc;
+  llvm::Function*                        llvmFunc;
   llvm::Module*                          module;
   std::shared_ptr<llvm::EngineBuilder>   engineBuilder;
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;
 
+  // Globals storage
+  std::map<std::string,void**> globals;
+
   bool requiresInit;
   FuncType deinit;
 
-  FuncType init(const std::vector<std::string> &formals,
-                const std::map<std::string, Actual*> &actuals);
+  FuncType init(const std::vector<std::string>& formals,
+                const std::map<std::string, Actual*>& actuals);
 
-  FuncType createHarness(const std::string &name,
-                         const llvm::SmallVector<llvm::Value*,8> &args);
+  FuncType createHarness(const std::string& name,
+                         const llvm::SmallVector<llvm::Value*,8>& args);
 
-  llvm::Function *getInitFunc() const;
-  llvm::Function *getDeinitFunc() const;
+  llvm::Function* getInitFunc() const;
+  llvm::Function* getDeinitFunc() const;
 };
 
 }}
