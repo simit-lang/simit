@@ -3,7 +3,10 @@
 #include <map>
 
 #include "lower_maps.h"
-#include "lower_indexexprs.h"
+
+#include "lower_indexexprs.h" // TODO: Deprecated and should be replaced
+#include "index_expressions/lower_index_expressions.h"
+
 #include "lower_accesses.h"
 
 #include "storage.h"
@@ -23,188 +26,101 @@ extern std::string kBackend;
 
 namespace ir {
 
-Func lower(Func func, bool print) {
-  // Flatten and insert temporaries
-  class FlattenRewriter : public ir::IRRewriterCallGraph {
+static
+Func rewriteCallGraph(const Func& func, const function<Func(Func)>& rewriter) {
+  class Rewriter : public simit::ir::IRRewriterCallGraph {
+  public:
+    Rewriter(const function<Func(Func)>& rewriter) : rewriter(rewriter) {}
+    const function<Func(Func)>& rewriter;
+
     using IRRewriter::visit;
-    void visit(const ir::Func *op) {
-      if (op->getKind() != ir::Func::Internal) {
+    void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
         func = *op;
         return;
       }
-      func = ir::Func(*op, rewrite(op->getBody()));
-
-#ifdef GPU
-      if (kBackend == "gpu") {
-        func = rewriteSystemAssigns(func);
-      }
-#endif
-      func = flattenIndexExpressions(func);
-      func = insertTemporaries(func);
+      func = simit::ir::Func(*op, rewrite(op->getBody()));
+      func = rewriter(func);
     }
   };
-  func = FlattenRewriter().rewrite(func);
+  return Rewriter(rewriter).rewrite(func);
+}
 
+static
+void visitCallGraph(Func func, const function<void(Func)>& visitRule) {
+  class Visitor : public simit::ir::IRVisitorCallGraph {
+  public:
+    Visitor(const function<void(Func)>& visitRule) : visitRule(visitRule) {}
+    const function<void(Func)>& visitRule;
+
+    using simit::ir::IRVisitor::visit;
+    void visit(const simit::ir::Func *op) {
+      simit::ir::IRVisitorCallGraph::visit(op);
+      visitRule(*op);
+    }
+  };
+  Visitor visitor(visitRule);
+  func.accept(&visitor);
+}
+
+static inline
+void printCallGraph(string headerText, Func func, bool print) {
   if (print) {
-    cout << "--- Insert Temporaries and Flatten Index Expressions" << endl;
+    cout << "--- " << headerText << endl;
     simit::ir::IRPrinterCallGraph(cout).print(func);
     cout << endl;
   }
+}
 
+Func lower(Func func, bool print) {
+#ifdef GPU
+  // Rewrite system assignments
+  if (kBackend == "gpu") {
+    func = rewriteCallGraph(func, rewriteSystemAssigns);
+  }
+#endif
+
+  // Flatten index expressions and insert temporaries
+  func = rewriteCallGraph(func, (Func(*)(Func))flattenIndexExpressions);
+  func = rewriteCallGraph(func, insertTemporaries);
+  printCallGraph("Insert Temporaries and Flatten Index Expressions",func,print);
 
   // Determine Storage
-  class SetStorageRewriter : public simit::ir::IRRewriterCallGraph {
-    using IRRewriter::visit;
-    void visit(const simit::ir::Func *op) {
-      if (op->getKind() != simit::ir::Func::Internal) {
-        func = *op;
-        return;
-      }
-      func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func.setStorage(getStorage(func));
-    }
-  };
-  func = SetStorageRewriter().rewrite(func);
-
+  func = rewriteCallGraph(func, [](Func func) -> Func {
+    func.setStorage(getStorage(func));
+    return func;
+  });
   if (print) {
     cout << "--- Tensor storage" << endl;
-    class StoragePrinter : public simit::ir::IRVisitorCallGraph {
-      using simit::ir::IRVisitor::visit;
-      void visit(const simit::ir::Func *func) {
-        simit::ir::IRVisitorCallGraph::visit(func);
-        cout << "func " << func->getName() << ":" << endl;
-
-        for (auto &var : func->getStorage()) {
-          cout << "  " << var << " : " << func->getStorage().get(var) << endl;
-        }
-        cout << endl;
+    visitCallGraph(func, [](Func func) {
+      cout << "func " << func.getName() << ":" << endl;
+      for (auto &var : func.getStorage()) {
+        cout << "  " << var << " : " << func.getStorage().get(var) << endl;
       }
-    };
-    StoragePrinter storagePrinter;
-    func.accept(&storagePrinter);
+      cout << endl;
+    });
     cout << endl;
   }
-
 
   // Lower maps
-  class LowerMapsRewriter : public simit::ir::IRRewriterCallGraph {
-    using IRRewriter::visit;
-    void visit(const simit::ir::Func *op) {
-      if (op->getKind() != simit::ir::Func::Internal) {
-        func = *op;
-        return;
-      }
-      func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func = lowerMaps(func);
-    }
-  };
-  func = LowerMapsRewriter().rewrite(func);
-
-  if (print) {
-    cout << "--- Lower Maps" << endl;
-    simit::ir::IRPrinterCallGraph(cout).print(func);
-    cout << endl;
-  }
-
+  func = rewriteCallGraph(func, lowerMaps);
+  printCallGraph("Lower Maps", func, print);
 
   // Lower Index Expressions
-  class LowerIndexExpressionsRewriter : public simit::ir::IRRewriterCallGraph {
-    using IRRewriter::visit;
-    void visit(const simit::ir::Func *op) {
-      if (op->getKind() != simit::ir::Func::Internal) {
-        func = *op;
-        return;
-      }
-      func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func = lowerIndexExprs(func);
-    }
-  };
-  func = LowerIndexExpressionsRewriter().rewrite(func);
-
-  if (print) {
-    cout << "--- Lower Index Expressions" << endl;
-    simit::ir::IRPrinterCallGraph(cout).print(func);
-    cout << endl;
-  }
-
+  func = rewriteCallGraph(func, lowerIndexExprs);
+  printCallGraph("Lower Index Expressions", func, print);
 
   // Lower Tensor Reads and Writes
-  class LowerTensorAccessesRewriter : public simit::ir::IRRewriterCallGraph {
-    using IRRewriter::visit;
-    void visit(const simit::ir::Func *op) {
-      if (op->getKind() != simit::ir::Func::Internal) {
-        func = *op;
-        return;
-      }
-      func = simit::ir::Func(*op, rewrite(op->getBody()));
-      func = lowerTensorAccesses(func);
-    }
-  };
-  func = LowerTensorAccessesRewriter().rewrite(func);
-
-  if (print) {
-    cout << "--- Lower Tensor Reads and Writes" << endl;
-    simit::ir::IRPrinterCallGraph(cout).print(func);
-    cout << endl;
-  }
-
+  func = rewriteCallGraph(func, lowerTensorAccesses);
+  printCallGraph("Lower Tensor Reads and Writes", func, print);
 
   // Lower to GPU Kernels
 #if GPU
   if (kBackend == "gpu") {
-    class ShardLoopsRewriter : public simit::ir::IRRewriterCallGraph {
-      using IRRewriter::visit;
-      void visit(const simit::ir::Func *op) {
-        if (op->getKind() != simit::ir::Func::Internal) {
-          func = *op;
-          return;
-        }
-        func = simit::ir::Func(*op, rewrite(op->getBody()));
-        func = shardLoops(func);
-      }
-    };
-    func = ShardLoopsRewriter().rewrite(func);
-
-    class VarDeclsRewriter : public simit::ir::IRRewriterCallGraph {
-      using IRRewriter::visit;
-      void visit(const simit::ir::Func *op) {
-        if (op->getKind() != simit::ir::Func::Internal) {
-          func = *op;
-          return;
-        }
-        func = simit::ir::Func(*op, rewrite(op->getBody()));
-        func = rewriteVarDecls(func);
-      }
-    };
-    func = VarDeclsRewriter().rewrite(func);
-
-
-    class KernelRWAnalysis : public simit::ir::IRRewriterCallGraph {
-      using IRRewriter::visit;
-      void visit(const simit::ir::Func *op) {
-        if (op->getKind() != simit::ir::Func::Internal) {
-          func = *op;
-          return;
-        }
-        func = simit::ir::Func(*op, rewrite(op->getBody()));
-        func = kernelRWAnalysis(func);
-      }
-    };
-    func = KernelRWAnalysis().rewrite(func);
-
-    class FuseKernelsRewriter : public simit::ir::IRRewriterCallGraph {
-      using IRRewriter::visit;
-      void visit(const simit::ir::Func *op) {
-        if (op->getKind() != simit::ir::Func::Internal) {
-          func = *op;
-          return;
-        }
-        func = simit::ir::Func(*op, rewrite(op->getBody()));
-        func = fuseKernels(func);
-      }
-    };
-    func = FuseKernelsRewriter().rewrite(func);
-  }
+    func = rewriteCallGraph(func, shardLoops);
+    func = rewriteCallGraph(func, rewriteVarDecls);
+    func = rewriteCallGraph(func, kernelRWAnalysis);
+    func = rewriteCallGraph(func, fuseKernels);
 #endif
   return func;
 }
