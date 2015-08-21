@@ -87,7 +87,7 @@ ostream &operator<<(ostream &os, const TensorIndexVar &tiv) {
      << " in "      << tiv.tensorIndex
      << ".sinks["   << tiv.coordinateVar
      << " in "      << tiv.tensorIndex
-     << ".sources[" << tiv.sourceVar << "]]";
+     << ".coordinates[" << tiv.sourceVar << "]]";
   return os;
 }
 

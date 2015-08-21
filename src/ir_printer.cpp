@@ -265,7 +265,7 @@ void IRPrinter::visit(const TensorIndexRead *op) {
   os << op->tensorIndex;
   switch (op->readType) {
     case TensorIndexRead::Sources:
-      os << ".sources";
+      os << ".coordinates";
       break;
     case TensorIndexRead::Sinks:
       os << ".sinks";

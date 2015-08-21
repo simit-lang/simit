@@ -10,7 +10,10 @@
 namespace simit {
 namespace ir {
 
-/// A tensor index describes
+/// A tensor index describes mappings of the form source->coordinate->sink,
+/// where source is an element of the source dimension, sink an element of the
+/// sink dimension and a coordinate corresponds to the location of a tensor
+/// value.
 class TensorIndex {
 public:
   TensorIndex() {}
