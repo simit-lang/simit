@@ -174,8 +174,8 @@ typedef std::map<std::string, std::function<bool(const IRNode*)>> MatchPatterns;
 
 /// @example Print all AssignStmts in Func
 ///   match<Func>(func, {
-///     {"AssignStmt", [&storage](const IRNode* irNode) -> bool {
-///       const AssignStmt* op = static_cast<const AssignStmt*>(op);
+///     {"AssignStmt", [](const IRNode* irNode) -> bool {
+///       const AssignStmt* op = static_cast<const AssignStmt*>(irNode);
 ///       std::cout << *op << std::endl;
 ///       return false;
 ///     }},
