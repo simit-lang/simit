@@ -89,12 +89,16 @@ Function* LLVMBackend::compile(const Func &func) {
 
   llvm::Function *llvmFunc = nullptr;
   for (auto &f : callTree) {
-    if (f.getKind() != Func::Internal) continue;
+    if (f.getKind() != Func::Internal) {
+      continue;
+    }
     iassert(f.getBody().defined());
 
     this->storage.add(f.getStorage());
 
     // Emit function
+    symtable.scope();
+
     bool external = (f == func);
     llvmFunc = emitEmptyFunction(f.getName(), f.getArguments(),
                                  f.getResults(), external);
@@ -106,7 +110,8 @@ Function* LLVMBackend::compile(const Func &func) {
 
     compile(moveVarDeclsToFront(f.getBody()));
     builder->CreateRetVoid();
-    symtable.clear();
+
+    symtable.unscope();
   }
   iassert(llvmFunc);
 
@@ -584,16 +589,19 @@ void LLVMBackend::visit(const VarDecl *op) {
   tassert(op->var.getType().isTensor()) << "Only tensor decls supported";
 
   Var var = op->var;
+  llvm::Value *llvmVar = nullptr;
   if (isScalar(var.getType())) {
     ScalarType type = var.getType().toTensor()->componentType;
-    llvm::Value *llvmVar =
-        builder->CreateAlloca(createLLVMType(type), nullptr, var.getName());
-    symtable.insert(var, llvmVar);
+    llvmVar = builder->CreateAlloca(createLLVMType(type),nullptr,var.getName());
   }
   else {
-    if (!storage.get(var).needsInitialization()) return;
-    makeGlobalTensor(op->var);
+    if (!storage.get(var).needsInitialization()) {
+      return;
+    }
+    llvmVar = makeGlobalTensor(op->var);
   }
+  iassert(llvmVar);
+  symtable.insert(var, llvmVar);
 }
 
 void LLVMBackend::visit(const AssignStmt *op) {
@@ -760,7 +768,6 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
 
         llvm::Value *llvmResult = symtable.get(r);
         args.push_back(llvmResult);
-        symtable.insert(r, llvmResult);
       }
       fun = module->getFunction(op->callee.getName());
       call = builder->CreateCall(fun, args);
@@ -1490,7 +1497,6 @@ void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
       iassert(var.getType() == value.type())
           << "variable and value types don't match";
       emitMemCpy(varPtr, valuePtr, size, componentSize);
-      symtable.insert(var, varPtr);
     }
   }
 }
@@ -1505,7 +1511,7 @@ void LLVMBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
   builder->CreateMemSet(dst, val, size, align);
 }
 
-void LLVMBackend::makeGlobalTensor(ir::Var var) {
+llvm::Value *LLVMBackend::makeGlobalTensor(ir::Var var) {
   // Allocate buffer for local variable in global storage.
   // TODO: We should allocate small local dense tensors on the stack
   iassert(var.getType().isTensor());
@@ -1524,8 +1530,7 @@ void LLVMBackend::makeGlobalTensor(ir::Var var) {
   buffers.insert(pair<Var, llvm::Value*>(var, buffer));
 
   // Add load to symtable
-  llvm::Value *llvmTmp = builder->CreateLoad(buffer, buffer->getName());
-  symtable.insert(var, llvmTmp);
+  return builder->CreateLoad(buffer, buffer->getName());
 }
 
 }}
