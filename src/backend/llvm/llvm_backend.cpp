@@ -310,7 +310,7 @@ void LLVMBackend::visit(const VarExpr *op) {
 
   val = symtable.get(op->var);
 
-  string ptrName = string(val->getName()) + PTR_SUFFIX;
+  string ptrName = string(val->getName());
   string valName = string(val->getName()) + VAL_SUFFIX;
 
   // Globals are stored as pointer-pointers so we must load them
