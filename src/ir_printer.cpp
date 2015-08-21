@@ -264,7 +264,7 @@ void IRPrinter::visit(const TensorIndexRead *op) {
   clearSkipParen();
   os << op->tensorIndex;
   switch (op->readType) {
-    case TensorIndexRead::Sources:
+    case TensorIndexRead::Coordinates:
       os << ".coordinates";
       break;
     case TensorIndexRead::Sinks:

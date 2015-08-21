@@ -109,12 +109,12 @@ protected:
   virtual void visit(const ir::Print *);
 
   /// IRNodes that should never reach the backend (should have been lowered)
-  virtual void visit(const ir::IndexExpr *op);
   virtual void visit(const ir::Map *);
   virtual void visit(const ir::IndexedTensor *);
-  virtual void visit(const ir::TensorRead *);
+  virtual void visit(const ir::IndexExpr *op);
   virtual void visit(const ir::TupleRead *);
   virtual void visit(const ir::TensorWrite *);
+  virtual void visit(const ir::TensorRead *);
 
   /// Get a pointer to the given field
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);

@@ -15,7 +15,6 @@
 #include "error.h"
 #include "storage.h"
 #include "tensor_index.h"
-#include "util/arrays.h"
 
 namespace simit {
 namespace ir {
@@ -253,498 +252,23 @@ struct Literal : public ExprNode<Literal> {
   size_t size;
 
   void cast(Type type);
+  double getFloatVal(int index) const;
 
-  static Expr make(Type type) {
-    return Literal::make(type, nullptr);
-  }
-
-  static Expr make(int val) {
-    return make(Int, &val);
-  }
-
-  static Expr make(double val) {
-    // Choose appropriate precision
-    if (ScalarType::singleFloat()) {
-      float floatVal = (float) val;
-      return make(Float, &floatVal);
-    }
-    else {
-      return make(Float, &val);
-    }
-  }
-
-  static Expr make(bool val) {
-    return make(Boolean, &val);
-  }
-
-  static Expr make(Type type, void* values) {
-    iassert(type.isTensor()) << "only tensor literals are supported for now";
-    const TensorType *ttype = type.toTensor();
-
-    size_t size = 0;
-    size_t sizeInBytes = 0;
-    switch (type.kind()) {
-      case Type::Tensor: {
-        size = ttype->size();
-        sizeInBytes = size * ttype->componentType.bytes();
-        break;
-      }
-      case Type::Set:
-      case Type::Element:
-      case Type::Tuple:
-        iassert(false) << "Only tensor and scalar literals currently supported";
-        break;
-    }
-
-    Literal *node = new Literal;
-    node->type = type;
-    node->size = sizeInBytes;
-    node->data = malloc(node->size);
-    if (values != nullptr) {
-      memcpy(node->data, values, node->size);
-    }
-    else {
-      // Zero array
-      switch (ttype->componentType.kind) {
-        case ir::ScalarType::Boolean:
-          util::zero<bool>(node->data, size);
-          break;
-        case ir::ScalarType::Int:
-          util::zero<int>(node->data, size);
-          break;
-        case ir::ScalarType::Float:
-          if (ir::ScalarType::singleFloat()) {
-            iassert(ir::ScalarType::floatBytes == sizeof(float));
-            util::zero<float>(node->data, size);
-          }
-          else {
-            iassert(ir::ScalarType::floatBytes == sizeof(double));
-            util::zero<double>(node->data, size);
-          }
-          break;
-      }
-    }
-    return node;
-  }
-
-  static Expr make(Type type, std::vector<double> values) {
-    iassert(isScalar(type) || type.toTensor()->size() == values.size());
-    iassert(type.toTensor()->componentType.kind == ScalarType::Float)
-        << "Float array constructor must use float component type";
-    if (ScalarType::singleFloat()) {
-      // Convert double vector to float vector
-      std::vector<float> floatValues;
-      for (double val : values) {
-        floatValues.push_back(val);
-      }
-      return Literal::make(type, floatValues.data());
-    }
-    else {
-      return Literal::make(type, values.data());
-    }
-  }
-
-  double getFloatVal(int index) const {
-    return ((double*)data)[index];
-  }
-
-  ~Literal() {free(data);}
+  static Expr make(Type type);
+  static Expr make(int val);
+  static Expr make(double val);
+  static Expr make(bool val);
+  static Expr make(Type type, void* values);
+  static Expr make(Type type, std::vector<double> values);
+  ~Literal();
 };
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
 
+
 struct VarExpr : public ExprNode<VarExpr> {
   Var var;
-
-  static Expr make(Var var) {
-    VarExpr *node = new VarExpr;
-    node->type = var.getType();
-    node->var = var;
-    return node;
-  }
-};
-
-/// Expression that reads a tensor from an element or set field.
-struct FieldRead : public ExprNode<FieldRead> {
-  Expr elementOrSet;
-  std::string fieldName;
-
-  static Expr make(Expr elementOrSet, std::string fieldName) {
-    iassert(elementOrSet.type().isElement() || elementOrSet.type().isSet());
-    FieldRead *node = new FieldRead;
-    node->type = getFieldType(elementOrSet, fieldName);
-    node->elementOrSet = elementOrSet;
-    node->fieldName = fieldName;
-    return node;
-  }
-};
-
-/// Expression that reads a tensor from an n-dimensional tensor location.
-struct TensorRead : public ExprNode<TensorRead> {
-  Expr tensor;
-  std::vector<Expr> indices;
-
-  /// Construct a tensor read that reads a block from the location in `tensor`
-  /// specified by `indices`. The caller must either provide one or n indices,
-  /// where n is the tensor order. If one index is provided then the tensor read
-  /// has already been flattened, and will be directly lowered to a load.
-  static Expr make(Expr tensor, std::vector<Expr> indices) {
-    iassert(tensor.type().isTensor());
-#ifdef SIMIT_ASSERTS
-    for (auto &index : indices) {
-      iassert(isScalar(index.type()) || index.type().isElement());
-    }
-#endif
-    iassert(indices.size() == 1 ||
-            indices.size() == tensor.type().toTensor()->order());
-
-    TensorRead *node = new TensorRead;
-    node->type = getBlockType(tensor);
-    node->tensor = tensor;
-    node->indices = indices;
-    return node;
-  }
-};
-
-struct TupleRead : public ExprNode<TupleRead> {
-  Expr tuple, index;
-
-  static Expr make(Expr tuple, Expr index) {
-    iassert(tuple.type().isTuple());
-    TupleRead *node = new TupleRead;
-    node->type = tuple.type().toTuple()->elementType;
-    node->tuple = tuple;
-    node->index = index;
-    return node;
-  }
-};
-
-/// An IndexRead retrieves an index from an edge set.  An example of an index
-/// is the endpoints of the edges in the set.
-struct IndexRead : public ExprNode<IndexRead> {
-  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2 };
-
-  Expr edgeSet;
-  Kind kind;
-
-  static Expr make(Expr edgeSet, Kind kind) {
-    iassert(edgeSet.type().isSet());
-
-    IndexRead *node = new IndexRead;
-    node->type = TensorType::make(ScalarType(ScalarType::Int),
-                                  {IndexDomain(IndexSet(edgeSet))});
-    node->edgeSet = edgeSet;
-    node->kind = kind;
-    return node;
-  }
-};
-
-struct TensorIndexRead : public ExprNode<TensorIndexRead> {
-  enum Type {Sources, Sinks};
-
-  TensorIndex tensorIndex;
-  Expr loc;
-  Type readType;
-
-  static Expr make(TensorIndex tensorIndex, Expr loc, Type readType) {
-    TensorIndexRead *node = new TensorIndexRead;
-    node->type = Int;
-    node->tensorIndex = tensorIndex;
-    node->loc = loc;
-    node->readType = readType;
-    return node;
-  }
-};
-
-/// TODO: Consider merging Length and IndexRead into e.g. PropertyRead.
-struct Length : public ExprNode<Length> {
-  IndexSet indexSet;
-
-  static Expr make(IndexSet indexSet) {
-    Length *node = new Length;
-    node->type = TensorType::make(ScalarType(ScalarType::Int));
-    node->indexSet = indexSet;
-    return node;
-  }
-};
-
-struct IndexedTensor : public ExprNode<IndexedTensor> {
-  Expr tensor;
-  std::vector<IndexVar> indexVars;
-
-  static Expr make(Expr tensor, std::vector<IndexVar> indexVars) {
-#ifdef SIMIT_ASSERTS
-    iassert(tensor.type().isTensor()) << "Only tensors can be indexed.";
-    iassert(indexVars.size() == tensor.type().toTensor()->order());
-    std::vector<IndexDomain> dimensions =
-        tensor.type().toTensor()->getDimensions();
-    for (size_t i=0; i < indexVars.size(); ++i) {
-      iassert(indexVars[i].getDomain() == dimensions[i])
-             << "IndexVar domain does not match tensor dimension "
-             << "for var " << indexVars[i]
-             << indexVars[i].getDomain() << " != " << dimensions[i];
-    }
-#endif
-
-    IndexedTensor *node = new IndexedTensor;
-    node->type = TensorType::make(tensor.type().toTensor()->componentType);
-    node->tensor = tensor;
-    node->indexVars = indexVars;
-    return node;
-  }
-};
-
-struct IndexExpr : public ExprNode<IndexExpr> {
-  std::vector<IndexVar> resultVars;
-  Expr value;
-
-  std::vector<IndexVar> domain() const;
-
-  static Expr make(std::vector<IndexVar> resultVars, Expr value) {
-    iassert(isScalar(value.type())) << value << " : " << value.type();
-#ifdef SIMIT_ASSERTS
-    for (auto &idxVar : resultVars) {  // No reduction variables on lhs
-      iassert(idxVar.isFreeVar());
-    }
-#endif
-
-    IndexExpr *node = new IndexExpr;
-    node->type = getIndexExprType(resultVars, value);
-    node->resultVars = resultVars;
-    node->value = value;
-    return node;
-  }
-};
-
-struct Call : public ExprNode<Call> {
-  Func func;
-  std::vector<Expr> actuals;
-
-  static Expr make(Func func, std::vector<Expr> actuals) {
-    iassert(func.getResults().size() == 1)
-        << "only calls of function with one results is currently supported.";
-
-    Call *node = new Call;
-    node->type = func.getResults()[0].getType();
-    node->func = func;
-    node->actuals = actuals;
-    return node;
-  }
-};
-
-struct Neg : public ExprNode<Neg> {
-  Expr a;
-
-  static Expr make(Expr a) {
-    iassert_scalar(a);
-
-    Neg *node = new Neg;
-    node->type = a.type();
-    node->a = a;
-    return node;
-  }
-};
-
-struct Add : public ExprNode<Add> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_scalar(a);
-    iassert_types_equal(a,b);
-
-    Add *node = new Add;
-    node->type = a.type();
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Sub : public ExprNode<Sub> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_scalar(a);
-    iassert_types_equal(a,b);
-
-    Sub *node = new Sub;
-    node->type = a.type();
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Mul : public ExprNode<Mul> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_scalar(a);
-    iassert_types_equal(a,b);
-
-    Mul *node = new Mul;
-    node->type = a.type();
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Div : public ExprNode<Div> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_scalar(a);
-    iassert_types_equal(a,b);
-
-    Div *node = new Div;
-    node->type = a.type();
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Eq : public ExprNode<Eq> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_types_equal(a,b);
-
-    Eq *node = new Eq;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Ne : public ExprNode<Ne> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_types_equal(a,b);
-
-    Ne *node = new Ne;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Gt : public ExprNode<Gt> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_types_equal(a,b);
-
-    Gt *node = new Gt;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Lt : public ExprNode<Lt> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_types_equal(a,b);
-
-    Lt *node = new Lt;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Ge : public ExprNode<Ge> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_types_equal(a,b);
-
-    Ge *node = new Ge;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Le : public ExprNode<Le> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_types_equal(a,b);
-
-    Le *node = new Le;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct And : public ExprNode<And> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_boolean_scalar(a);
-    iassert_boolean_scalar(b);
-
-    And *node = new And;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Or : public ExprNode<Or> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_boolean_scalar(a);
-    iassert_boolean_scalar(b);
-
-    Or *node = new Or;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
-};
-
-struct Not : public ExprNode<Not> {
-  Expr a;
-
-  static Expr make(Expr a) {
-    iassert_boolean_scalar(a);
-
-    Not *node = new Not;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    return node;
-  }
-};
-
-struct Xor : public ExprNode<Xor> {
-  Expr a, b;
-
-  static Expr make(Expr a, Expr b) {
-    iassert_boolean_scalar(a);
-    iassert_boolean_scalar(b);
-
-    Xor *node = new Xor;
-    node->type = TensorType::make(ScalarType::Boolean);
-    node->a = a;
-    node->b = b;
-    return node;
-  }
+  static Expr make(Var var);
 };
 
 /// Expression that loads a scalar from a buffer. A buffer is a one-dimensional
@@ -752,120 +276,133 @@ struct Xor : public ExprNode<Xor> {
 struct Load : public ExprNode<Load> {
   Expr buffer;
   Expr index;
-
-  static Expr make(Expr buffer, Expr index) {
-    iassert(isScalar(index.type()));
-
-    Load  *node = new Load;
-    node->type = TensorType::make(buffer.type().toTensor()->componentType);
-    node->buffer = buffer;
-    node->index = index;
-    return node;
-  }
+  static Expr make(Expr buffer, Expr index);
 };
 
-// Statements
-struct Map : public StmtNode<Map> {
-  std::vector<Var> vars;
-  Func function;
-  Expr target, neighbors;
-  std::vector<Expr> partial_actuals;
-  ReductionOperator reduction;
+/// Expression that reads a tensor from an element or set field.
+struct FieldRead : public ExprNode<FieldRead> {
+  Expr elementOrSet;
+  std::string fieldName;
+  static Expr make(Expr elementOrSet, std::string fieldName);
+};
 
-  static Stmt make(std::vector<Var> vars, Func function,
-                   std::vector<Expr> partial_actuals,
-                   Expr target, Expr neighbors=Expr(),
-                   ReductionOperator reduction=ReductionOperator()) {
-    iassert(target.type().isSet());
-    iassert(!neighbors.defined() || neighbors.type().isSet());
-    iassert(vars.size() == function.getResults().size());
-    Map *node = new Map;
-    node->vars = vars;
-    node->function = function;
-    node->partial_actuals = partial_actuals;
-    node->target = target;
-    node->neighbors = neighbors;
-    node->reduction = reduction;
-    return node;
-  }
+struct Call : public ExprNode<Call> {
+  Func func;
+  std::vector<Expr> actuals;
+  static Expr make(Func func, std::vector<Expr> actuals);
+};
+
+/// TODO: Consider merging Length and IndexRead into e.g. PropertyRead.
+struct Length : public ExprNode<Length> {
+  IndexSet indexSet;
+  static Expr make(IndexSet indexSet);
+};
+
+/// An IndexRead retrieves an index from an edge set.  An example of an index
+/// is the endpoints of the edges in the set.
+/// TODO DEPRECATED: This node has been deprecated by TensorIndexRead and
+///                  should be phased out
+struct IndexRead : public ExprNode<IndexRead> {
+  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2 };
+  Expr edgeSet;
+  Kind kind;
+  static Expr make(Expr edgeSet, Kind kind);
+};
+
+struct TensorIndexRead : public ExprNode<TensorIndexRead> {
+  enum Type {Coordinates, Sinks};
+  TensorIndex tensorIndex;
+  Expr loc;
+  Type readType;
+  static Expr make(TensorIndex tensorIndex, Expr loc, Type readType);
+};
+
+struct Neg : public ExprNode<Neg> {
+  Expr a;
+  static Expr make(Expr a);
+};
+
+struct Add : public ExprNode<Add> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Sub : public ExprNode<Sub> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Mul : public ExprNode<Mul> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Div : public ExprNode<Div> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Not : public ExprNode<Not> {
+  Expr a;
+  static Expr make(Expr a);
+};
+
+struct Eq : public ExprNode<Eq> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Ne : public ExprNode<Ne> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Gt : public ExprNode<Gt> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Lt : public ExprNode<Lt> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Ge : public ExprNode<Ge> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Le : public ExprNode<Le> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct And : public ExprNode<And> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Or : public ExprNode<Or> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
+};
+
+struct Xor : public ExprNode<Xor> {
+  Expr a, b;
+  static Expr make(Expr a, Expr b);
 };
 
 struct VarDecl : public StmtNode<VarDecl> {
   Var var;
-
-  static Stmt make(Var var) {
-    VarDecl *node = new VarDecl;
-    node->var = var;
-    return node;
-  }
+  static Stmt make(Var var);
 };
 
 struct AssignStmt : public StmtNode<AssignStmt> {
   Var var;
   Expr value;
   CompoundOperator cop;
-
-  static Stmt make(Var var, Expr value) {
-    return make(var, value, CompoundOperator::None);
-  }
-
-  static Stmt make(Var var, Expr value, CompoundOperator cop) {
-    AssignStmt *node = new AssignStmt;
-    node->var = var;
-    node->value = value;
-    node->cop = cop;
-    return node;
-  }
-};
-
-struct CallStmt : public StmtNode<CallStmt> {
-  std::vector<Var> results;
-  Func callee;
-  std::vector<Expr> actuals;
-
-  static Stmt make(std::vector<Var> results,
-                   Func callee, std::vector<Expr> actuals) {
-    CallStmt *node = new CallStmt;
-    node->results = results;
-    node->callee = callee;
-    node->actuals = actuals;
-    return node;
-  }
-};
-
-struct FieldWrite : public StmtNode<FieldWrite> {
-  Expr elementOrSet;
-  std::string fieldName;
-  Expr value;
-  CompoundOperator cop;
-
-  static Stmt make(Expr elementOrSet, std::string fieldName, Expr value,
-                   CompoundOperator cop=CompoundOperator::None) {
-    FieldWrite *node = new FieldWrite;
-    node->elementOrSet = elementOrSet;
-    node->fieldName = fieldName;
-    node->value = value;
-    node->cop = cop;
-    return node;
-  }
-};
-
-struct TensorWrite : public StmtNode<TensorWrite> {
-  // TODO: Consider whether to make tensor a Var
-  Expr tensor;
-  std::vector<Expr> indices;
-  Expr value;
-  CompoundOperator cop;
-
-  static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value,
-                   CompoundOperator cop=CompoundOperator::None) {
-    TensorWrite *node = new TensorWrite;
-    node->tensor = tensor;
-    node->indices = indices;
-    node->value = value;
-    node->cop = cop;
-    return node;
-  }
+  static Stmt make(Var var, Expr value);
+  static Stmt make(Var var, Expr value, CompoundOperator cop);
 };
 
 struct Store : public StmtNode<Store> {
@@ -873,16 +410,38 @@ struct Store : public StmtNode<Store> {
   Expr index;
   Expr value;
   CompoundOperator cop;
-
   static Stmt make(Expr buffer, Expr index, Expr value,
-                   CompoundOperator cop=CompoundOperator::None) {
-    Store *node = new Store;
-    node->buffer = buffer;
-    node->index = index;
-    node->value = value;
-    node->cop = cop;
-    return node;
-  }
+                   CompoundOperator cop=CompoundOperator::None);
+};
+
+struct FieldWrite : public StmtNode<FieldWrite> {
+  Expr elementOrSet;
+  std::string fieldName;
+  Expr value;
+  CompoundOperator cop;
+  static Stmt make(Expr elementOrSet, std::string fieldName, Expr value,
+                   CompoundOperator cop=CompoundOperator::None);
+};
+
+struct CallStmt : public StmtNode<CallStmt> {
+  std::vector<Var> results;
+  Func callee;
+  std::vector<Expr> actuals;
+  static Stmt make(std::vector<Var> results,
+                   Func callee, std::vector<Expr> actuals);
+};
+
+struct Block : public StmtNode<Block> {
+  Stmt first, rest;
+  static Stmt make(Stmt first, Stmt rest);
+  static Stmt make(std::vector<Stmt> stmts);
+};
+
+struct IfThenElse : public StmtNode<IfThenElse> {
+  Expr condition;
+  Stmt thenBody, elseBody;
+  static Stmt make(Expr condition, Stmt thenBody);
+  static Stmt make(Expr condition, Stmt thenBody, Stmt elseBody);
 };
 
 /// A `for` over a range.
@@ -891,30 +450,7 @@ struct ForRange : public StmtNode<ForRange> {
   Expr start;
   Expr end;
   Stmt body;
-  
-  static Stmt make(Var var, Expr start, Expr end, Stmt body) {
-    ForRange *node = new ForRange;
-    node->var = var;
-    node->start = start;
-    node->end = end;
-    node->body = body;
-    return node;
-  }
-
-};
-
-/// A `while` loop.
-struct While : public StmtNode<While> {
-  Expr condition;
-  Stmt body;
-  
-  static Stmt make(Expr condition, Stmt body) {
-    While *node = new While;
-    node->condition = condition;
-    node->body = body;
-    return node;
-  }
-
+  static Stmt make(Var var, Expr start, Expr end, Stmt body);
 };
 
 struct ForDomain {
@@ -937,78 +473,24 @@ struct ForDomain {
       indexSet(indexSet), set(set), var(var)  {
     iassert(kind == NeighborsOf);
   }
-
 };
 
 struct For : public StmtNode<For> {
   Var var;
   ForDomain domain;
   Stmt body;
-
-  static Stmt make(Var var, ForDomain domain, Stmt body) {
-    For *node = new For;
-    node->var = var;
-    node->domain = domain;
-    node->body = body;
-    return node;
-  }
+  static Stmt make(Var var, ForDomain domain, Stmt body);
 };
 
-struct IfThenElse : public StmtNode<IfThenElse> {
+struct While : public StmtNode<While> {
   Expr condition;
-  Stmt thenBody, elseBody;
-
-  static Stmt make(Expr condition, Stmt thenBody) {
-    IfThenElse *node = new IfThenElse;
-    node->condition = condition;
-    node->thenBody = thenBody;
-    return node;
-  }
-
-  static Stmt make(Expr condition, Stmt thenBody, Stmt elseBody) {
-    IfThenElse *node = new IfThenElse;
-    node->condition = condition;
-    node->thenBody = thenBody;
-    node->elseBody = elseBody;
-    return node;
-  }
-};
-
-struct Block : public StmtNode<Block> {
-  Stmt first, rest;
-
-  static Stmt make(Stmt first, Stmt rest) {
-    iassert(first.defined() || rest.defined()) << "Empty block";
-
-    // Handle case where first is undefined, to ease codegen in loops
-    if (!first.defined()) {
-      std::swap(first,rest);
-    }
-
-    Block *node = new Block;
-    node->first = first;
-    node->rest = rest;
-    return node;
-  }
-
-  static Stmt make(std::vector<Stmt> stmts) {
-    iassert(stmts.size() > 0) << "Empty block";
-    Stmt node;
-    for (size_t i=stmts.size(); i>0; --i) {
-      node = Block::make(stmts[i-1], node);
-    }
-    return node;
-  }
+  Stmt body;
+  static Stmt make(Expr condition, Stmt body);
 };
 
 struct Print : public StmtNode<Print> {
   Expr expr;
-
-  static Stmt make(Expr expr) {
-    Print *node = new Print;
-    node->expr = expr;
-    return node;
-  }
+  static Stmt make(Expr expr);
 };
 
 /// A comment that can optionally be applied to a statements
@@ -1017,24 +499,66 @@ struct Comment : public StmtNode<Comment> {
   Stmt commentedStmt;
   bool footerSpace;
   bool headerSpace;
-
   static Stmt make(std::string comment, Stmt commentedStmt=Stmt(),
-                   bool footerSpace=false, bool headerSpace=false){
-    Comment *node = new Comment;
-    node->comment = comment;
-    node->commentedStmt = commentedStmt;
-    node->footerSpace = footerSpace;
-    node->headerSpace = headerSpace;
-    return node;
-  }
+                   bool footerSpace=false, bool headerSpace=false);
 };
 
 /// Empty statement that is convenient during code development.
 struct Pass : public StmtNode<Pass> {
-  static Stmt make() {
-    Pass *node = new Pass;
-    return node;
-  }
+  static Stmt make();
+};
+
+struct TupleRead : public ExprNode<TupleRead> {
+  Expr tuple, index;
+  static Expr make(Expr tuple, Expr index);
+};
+
+/// Expression that reads a tensor from an n-dimensional tensor location.
+struct TensorRead : public ExprNode<TensorRead> {
+  Expr tensor;
+  std::vector<Expr> indices;
+
+  /// Construct a tensor read that reads a block from the location in `tensor`
+  /// specified by `indices`. The caller must either provide one or n indices,
+  /// where n is the tensor order. If one index is provided then the tensor read
+  /// has already been flattened, and will be directly lowered to a load.
+  static Expr make(Expr tensor, std::vector<Expr> indices);
+};
+
+struct TensorWrite : public StmtNode<TensorWrite> {
+  // TODO: Consider whether to make tensor a Var
+  Expr tensor;
+  std::vector<Expr> indices;
+  Expr value;
+  CompoundOperator cop;
+  static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value,
+                   CompoundOperator cop=CompoundOperator::None);
+};
+
+struct IndexedTensor : public ExprNode<IndexedTensor> {
+  Expr tensor;
+  std::vector<IndexVar> indexVars;
+
+  static Expr make(Expr tensor, std::vector<IndexVar> indexVars);
+};
+
+struct IndexExpr : public ExprNode<IndexExpr> {
+  std::vector<IndexVar> resultVars;
+  Expr value;
+  std::vector<IndexVar> domain() const;
+  static Expr make(std::vector<IndexVar> resultVars, Expr value);
+};
+
+struct Map : public StmtNode<Map> {
+  std::vector<Var> vars;
+  Func function;
+  Expr target, neighbors;
+  std::vector<Expr> partial_actuals;
+  ReductionOperator reduction;
+  static Stmt make(std::vector<Var> vars,
+                   Func function, std::vector<Expr> partial_actuals,
+                   Expr target, Expr neighbors=Expr(),
+                   ReductionOperator reduction=ReductionOperator());
 };
 
 }} // namespace simit::ir

@@ -61,7 +61,7 @@ TensorIndexVar::TensorIndexVar(Var inductionVar, Var sourceVar, Var tensor,
 Expr TensorIndexVar::loadCoordinate(int offset) const {
   Expr sourceExpr = (offset == 0) ? getSourceVar() : getSourceVar() + offset;
   return TensorIndexRead::make(getTensorIndex(), sourceExpr,
-                               TensorIndexRead::Sources);
+                               TensorIndexRead::Coordinates);
 }
 
 Expr TensorIndexVar::loadSink() const {
