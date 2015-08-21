@@ -401,6 +401,7 @@ void IRRewriter::visit(const Block *op) {
   }
   else {
     if (first.defined() && rest.defined()) {
+      stmt = Block::make(first, rest, op->scoped);
       stmt = Block::make(first, rest);
     }
     else if (first.defined() && !rest.defined()) {

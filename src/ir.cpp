@@ -52,6 +52,35 @@ Expr operator/(Expr a, Expr b) {
   return Div::make(a, b);
 }
 
+// class Func
+Func::Func(const std::string &name, const std::vector<Var> &arguments,
+           const std::vector<Var> &results, Kind kind)
+    : Func(name, arguments, results, Stmt(), kind) {
+  iassert(kind != Internal);
+}
+
+  /// Create a function definition.
+Func::Func(const std::string &name, const std::vector<Var> &arguments,
+           const std::vector<Var> &results, Stmt body, Kind kind)
+    : IntrusivePtr(new FuncContent) {
+  ptr->kind = kind;
+  ptr->name = name;
+  ptr->arguments = arguments;
+  ptr->results = results;
+  if (body.defined()) {
+    ptr->body = Block::make({body}, true);
+  }
+}
+
+  /// Creates a new func with the same prototype as the given func, but with
+  /// the new body
+Func::Func(const Func &func, Stmt body)
+    : Func(func.getName(), func.getArguments(), func.getResults(), body,
+           func.getKind()) {
+  setStorage(func.getStorage());
+  setEnvironment(func.getEnvironment());
+}
+
 
 // class Intrinsics
 Func Intrinsics::mod = Func("mod",
@@ -644,7 +673,7 @@ Stmt CallStmt::make(std::vector<Var> results,
 }
 
 // struct Block
-Stmt Block::make(Stmt first, Stmt rest) {
+Stmt Block::make(Stmt first, Stmt rest, bool scoped) {
   iassert(first.defined() || rest.defined()) << "Empty block";
 
   // Handle case where first is undefined, to ease codegen in loops
@@ -655,15 +684,17 @@ Stmt Block::make(Stmt first, Stmt rest) {
   Block *node = new Block;
   node->first = first;
   node->rest = rest;
+  node->scoped = scoped;
   return node;
 }
 
-Stmt Block::make(std::vector<Stmt> stmts) {
+Stmt Block::make(std::vector<Stmt> stmts, bool scoped) {
   iassert(stmts.size() > 0) << "Empty block";
   Stmt node;
-  for (size_t i=stmts.size(); i>0; --i) {
-    node = Block::make(stmts[i-1], node);
+  for (size_t i=stmts.size(); i>1; --i) {
+    node = Block::make(stmts[i-1], node, false);
   }
+  node = Block::make(stmts[0], node, scoped);
   return node;
 }
 
@@ -671,15 +702,15 @@ Stmt Block::make(std::vector<Stmt> stmts) {
 Stmt IfThenElse::make(Expr condition, Stmt thenBody) {
   IfThenElse *node = new IfThenElse;
   node->condition = condition;
-  node->thenBody = thenBody;
+  node->thenBody = Block::make({thenBody}, true);
   return node;
 }
 
 Stmt IfThenElse::make(Expr condition, Stmt thenBody, Stmt elseBody) {
   IfThenElse *node = new IfThenElse;
   node->condition = condition;
-  node->thenBody = thenBody;
-  node->elseBody = elseBody;
+  node->thenBody = Block::make({thenBody}, true);
+  node->elseBody = Block::make({elseBody}, true);
   return node;
 }
 
@@ -689,7 +720,7 @@ Stmt ForRange::make(Var var, Expr start, Expr end, Stmt body) {
   node->var = var;
   node->start = start;
   node->end = end;
-  node->body = body;
+  node->body = Block::make({body}, true);
   return node;
 }
 
@@ -698,7 +729,7 @@ Stmt For::make(Var var, ForDomain domain, Stmt body) {
   For *node = new For;
   node->var = var;
   node->domain = domain;
-  node->body = body;
+  node->body = Block::make({body}, true);
   return node;
 }
 
@@ -706,7 +737,7 @@ Stmt For::make(Var var, ForDomain domain, Stmt body) {
 Stmt While::make(Expr condition, Stmt body) {
   While *node = new While;
   node->condition = condition;
-  node->body = body;
+  node->body = Block::make({body}, true);
   return node;
 }
 

@@ -983,7 +983,6 @@ void LLVMBackend::visit(const ir::IfThenElse *op) {
 
   llvmFunc->getBasicBlockList().push_back(exitBlock);
   builder->SetInsertPoint(exitBlock);
-
 }
 
 void LLVMBackend::visit(const While *op) {
@@ -1022,9 +1021,15 @@ void LLVMBackend::visit(const While *op) {
 }
 
 void LLVMBackend::visit(const Block *op) {
+  if (op->scoped) {
+    symtable.scope();
+  }
   compile(op->first);
   if (op->rest.defined()) {
     compile(op->rest);
+  }
+  if (op->scoped) {
+    symtable.unscope();
   }
 }
 

@@ -2,9 +2,6 @@
 #define SIMIT_IR_H
 
 #include <string>
-#include <list>
-#include <cstring>
-#include <iostream>
 
 #include "var.h"
 #include "types.h"
@@ -12,7 +9,6 @@
 #include "intrusive_ptr.h"
 #include "uncopyable.h"
 #include "indexvar.h"
-#include "error.h"
 #include "storage.h"
 #include "tensor_index.h"
 
@@ -155,30 +151,15 @@ public:
 
   /// Create a function declaration.
   Func(const std::string &name, const std::vector<Var> &arguments,
-       const std::vector<Var> &results, Kind kind)
-      : Func(name, arguments, results, Stmt(), kind) {
-    iassert(kind != Internal);
-  }
+       const std::vector<Var> &results, Kind kind);
 
   /// Create a function definition.
   Func(const std::string &name, const std::vector<Var> &arguments,
-       const std::vector<Var> &results, Stmt body, Kind kind=Internal)
-      : IntrusivePtr(new FuncContent) {
-    ptr->kind = kind;
-    ptr->name = name;
-    ptr->arguments = arguments;
-    ptr->results = results;
-    ptr->body = body;
-  }
+       const std::vector<Var> &results, Stmt body, Kind kind=Internal);
 
   /// Creates a new func with the same prototype as the given func, but with
   /// the new body
-  Func(const Func &func, Stmt body)
-      : Func(func.getName(), func.getArguments(), func.getResults(), body,
-             func.getKind()) {
-    setStorage(func.getStorage());
-    setEnvironment(func.getEnvironment());
-  }
+  Func(const Func &func, Stmt body);
 
   std::string getName() const {return ptr->name;}
   const std::vector<Var> &getArguments() const {return ptr->arguments;}
@@ -433,8 +414,9 @@ struct CallStmt : public StmtNode<CallStmt> {
 
 struct Block : public StmtNode<Block> {
   Stmt first, rest;
-  static Stmt make(Stmt first, Stmt rest);
-  static Stmt make(std::vector<Stmt> stmts);
+  bool scoped;
+  static Stmt make(Stmt first, Stmt rest, bool scoped=false);
+  static Stmt make(std::vector<Stmt> stmts, bool scoped=false);
 };
 
 struct IfThenElse : public StmtNode<IfThenElse> {
