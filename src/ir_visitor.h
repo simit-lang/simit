@@ -157,147 +157,99 @@ private:
 };
 
 
-#define VISIT(Type) \
-void visit(const Type *op) { \
-  if (patterns.find(#Type) != patterns.end()) { \
-    bool cont = patterns.at(#Type)(op); \
-    if (cont) { \
-      IRVisitor::visit(op);\
-    } \
-  } \
-  else { \
-    IRVisitor::visit(op); \
-  } \
+/// @example Print all Add and AssignStmt objects in func. Use closures to
+///          capture environment variables (e.g. [&]).
+///   match(func,
+///     std::function<void(const Add*)>([](const Add* op) {
+///       std::cout << *op << std::endl;
+///     })
+///     ,
+///     std::function<void(const AssignStmt*)>([](const AssignStmt* op) {
+///       std::cout << *op << std::endl;
+///     })
+///   );
+
+#define RULE(Rule)                                                             \
+std::function<void(const Rule*)> Rule##Func;                                   \
+void unpack(std::function<void(const Rule*)> pattern) {                        \
+  Rule##Func = pattern;                                                        \
+}                                                                              \
+void visit(const Rule* op) {                                                   \
+  if (Rule##Func) {                                                            \
+    Rule##Func(op);                                                            \
+  }                                                                            \
+  IRVisitor::visit(op);                                                        \
 }
 
-typedef std::map<std::string, std::function<bool(const IRNode*)>> MatchPatterns;
+class MatchVisitor : public IRVisitor {
+public:
 
-/// @example Print all AssignStmts in Func
-///   match<Func>(func, {
-///     {"AssignStmt", [](const IRNode* irNode) -> bool {
-///       iassert(dynamic_cast<const AssignStmt*>(irNode));
-///       const AssignStmt* op = static_cast<const AssignStmt*>(irNode);
-///       std::cout << *op << std::endl;
-///       return false;
-///     }},
-///   });
-template <class IR>
-void match(IR ir, const MatchPatterns &patterns) {
+  template <class First, class... Rest>
+  void unpack(First first, Rest... rest) {
+    unpack(first);
+    unpack(rest...);
+  }
 
-  class MatchVisitor : public IRVisitor {
-  public:
-    void process(const IR& ir, const MatchPatterns &patterns) {
-#ifdef SIMIT_ASSERTS
-      std::set<std::string> patternStrings = {
-        "Literal",
-        "VarExpr",
-        "FieldRead",
-        "TensorRead",
-        "TupleRead",
-        "IndexRead",
-        "TensorIndexRead",
-        "Length",
-        "Load",
-        "IndexedTensor",
-        "IndexExpr",
-        "Call",
-        "Neg",
-        "Add",
-        "Sub",
-        "Mul",
-        "Div",
-        "Eq",
-        "Ne",
-        "Gt",
-        "Lt",
-        "Ge",
-        "Le",
-        "And",
-        "Or",
-        "Not",
-        "Xor",
-        "VarDecl",
-        "AssignStmt",
-        "CallStmt",
-        "Map",
-        "FieldWrite",
-        "TensorWrite",
-        "Store",
-        "ForRange",
-        "For",
-        "While",
-        "IfThenElse",
-        "Block",
-        "Print",
-        "Comment",
-        "Pass",
-        "GPUKernel"};
-      for (auto &pattern : patterns) {
-        iassert(patternStrings.find(pattern.first) != patternStrings.end())
-            << "undefined pattern";
-      }
-#endif
+  RULE(Literal)
+  RULE(VarExpr)
+  RULE(Load)
+  RULE(FieldRead)
+  RULE(Call)
+  RULE(Length)
+  RULE(IndexRead)
+  RULE(TensorIndexRead)
 
-      this->patterns = patterns;
-      ir.accept(this);
-    }
+  RULE(Neg)
+  RULE(Add)
+  RULE(Sub)
+  RULE(Mul)
+  RULE(Div)
 
-  private:
-    using IRVisitor::visit;
+  RULE(Not)
+  RULE(Eq)
+  RULE(Ne)
+  RULE(Gt)
+  RULE(Lt)
+  RULE(Ge)
+  RULE(Le)
+  RULE(And)
+  RULE(Or)
+  RULE(Xor)
 
-    MatchPatterns patterns;
-    VISIT(Literal)
-    VISIT(VarExpr)
-    VISIT(FieldRead)
-    VISIT(TensorRead)
-    VISIT(TupleRead)
-    VISIT(IndexRead)
-    VISIT(TensorIndexRead)
-    VISIT(Length)
-    VISIT(Load)
-    VISIT(IndexedTensor)
-    VISIT(IndexExpr)
-    VISIT(Call)
+  RULE(VarDecl)
+  RULE(AssignStmt)
+  RULE(Store)
+  RULE(FieldWrite)
+  RULE(CallStmt)
+  RULE(Block)
+  RULE(IfThenElse)
+  RULE(ForRange)
+  RULE(For)
+  RULE(While)
+  RULE(Print)
+  RULE(Comment)
+  RULE(Pass)
 
-    VISIT(Neg)
-    VISIT(Add)
-    VISIT(Sub)
-    VISIT(Mul)
-    VISIT(Div)
+  RULE(TupleRead)
+  RULE(TensorRead)
+  RULE(TensorWrite)
+  RULE(IndexedTensor)
+  RULE(IndexExpr)
+  RULE(Map)
 
-    VISIT(Eq)
-    VISIT(Ne)
-    VISIT(Gt)
-    VISIT(Lt)
-    VISIT(Ge)
-    VISIT(Le)
-    VISIT(And)
-    VISIT(Or)
-    VISIT(Not)
-    VISIT(Xor)
+  RULE(Func)
 
-    VISIT(VarDecl)
-    VISIT(AssignStmt)
-    VISIT(CallStmt)
-    VISIT(Map)
-    VISIT(FieldWrite)
-    VISIT(TensorWrite)
-    VISIT(Store)
-    VISIT(ForRange)
-    VISIT(For)
-    VISIT(While)
-    VISIT(IfThenElse)
-    VISIT(Block)
-    VISIT(Print)
-    VISIT(Comment)
-    VISIT(Pass)
-#ifdef GPU
-    VISIT(GPUKernel)
-#endif
-  };
-
-  MatchVisitor().process(ir, patterns);
+  template <class IR, class... Patterns>
+  void process(IR ir, Patterns... patterns) {
+    unpack(patterns...);
+    ir.accept(this);
+  }
 };
+
+template <class IR, class... Patterns>
+void match(IR ir, Patterns... patterns) {
+  MatchVisitor().process(ir, patterns...);
+}
 
 }} // namespace simit::internal
 #endif

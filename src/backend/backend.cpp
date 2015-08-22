@@ -23,38 +23,36 @@ Function* Backend::compile(const Stmt& stmt) {
   };
 
   // Find all undefined variables and add them to the context as globals.
-  match<Func>(func, {
-    {"VarDecl", [&](const IRNode* irNode) -> bool {
-      iassert(dynamic_cast<const VarDecl*>(irNode));
-      const VarDecl* op = static_cast<const VarDecl*>(irNode);
+  match(func,
+    function<void(const VarDecl*)>([&](const VarDecl* op) {
+      definedVariables.insert(op->var, op->var);
+    })
+    ,
+    function<void(const ForRange*)>([&](const ForRange* op) {
       definedVariables.insert(op->var,op->var);
-      return true;
-    }},
-    {"ForRange", [&](const IRNode* irNode) -> bool {
-      iassert(dynamic_cast<const ForRange*>(irNode));
-      const ForRange* op = static_cast<const ForRange*>(irNode);
+    })
+    ,
+    function<void(const For*)>([&](const For* op) {
       definedVariables.insert(op->var,op->var);
-      return true;
-    }},
-    {"For", [&](const IRNode* irNode) -> bool {
-      iassert(dynamic_cast<const For*>(irNode));
-      const For* op = static_cast<const For*>(irNode);
-      definedVariables.insert(op->var,op->var);
-      return true;
-    }},
-    {"AssignStmt", [&](const IRNode* irNode) -> bool {
-      iassert(dynamic_cast<const AssignStmt*>(irNode));
-      const AssignStmt* op = static_cast<const AssignStmt*>(irNode);
+    })
+    ,
+    function<void(const AssignStmt*)>([&](const AssignStmt* op) {
       addToGlobalsIfNotDefined(op->var);
-      return true;
-    }},
-    {"VarExpr", [&](const IRNode* irNode) -> bool {
-      iassert(dynamic_cast<const VarExpr*>(irNode));
-      const VarExpr* op = static_cast<const VarExpr*>(irNode);
+    })
+    ,
+    function<void(const VarExpr*)>([&](const VarExpr* op) {
       addToGlobalsIfNotDefined(op->var);
-      return true;
-    }},
-  });
+    })
+    ,
+    function<void(const Block*)>([&](const Block* op) {
+      // TODO: Figure out how to scope/unscope symtable. Either add it as a
+      //       match parameter, and let it scope/unscope it, or add support
+      //       for returning a void lambda that executes after children have
+      //       been visited
+    })
+  );
+
+
 
   return compile(func, globals);
 }
