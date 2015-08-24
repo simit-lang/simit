@@ -157,18 +157,6 @@ private:
 };
 
 
-/// @example Print all Add and AssignStmt objects in func. Use closures to
-///          capture environment variables (e.g. [&]).
-///   match(func,
-///     std::function<void(const Add*)>([](const Add* op) {
-///       std::cout << *op << std::endl;
-///     })
-///     ,
-///     std::function<void(const AssignStmt*)>([](const AssignStmt* op) {
-///       std::cout << *op << std::endl;
-///     })
-///   );
-
 #define RULE(Rule)                                                             \
 std::function<void(const Rule*)> Rule##Func;                                   \
 void unpack(std::function<void(const Rule*)> pattern) {                        \
@@ -183,6 +171,12 @@ void visit(const Rule* op) {                                                   \
 
 class MatchVisitor : public IRVisitor {
 public:
+
+  template <class IR, class... Patterns>
+  void process(IR ir, Patterns... patterns) {
+    unpack(patterns...);
+    ir.accept(this);
+  }
 
   template <class First, class... Rest>
   void unpack(First first, Rest... rest) {
@@ -238,14 +232,23 @@ public:
   RULE(Map)
 
   RULE(Func)
-
-  template <class IR, class... Patterns>
-  void process(IR ir, Patterns... patterns) {
-    unpack(patterns...);
-    ir.accept(this);
-  }
 };
 
+/**
+\example Print all Add and AssignStmt objects in func. Use closures to
+          capture environment variables (e.g. [&]).
+\code{.cpp}
+match(func,
+  std::function<void(const Add*)>([](const Add* op) {
+    std::cout << *op << std::endl;
+  })
+  ,
+  std::function<void(const AssignStmt*)>([](const AssignStmt* op) {
+    std::cout << *op << std::endl;
+  })
+);
+\endcode
+**/
 template <class IR, class... Patterns>
 void match(IR ir, Patterns... patterns) {
   MatchVisitor().process(ir, patterns...);
