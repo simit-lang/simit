@@ -11,7 +11,7 @@
 
 #include "storage.h"
 #include "var.h"
-#include "ir_visitor.h"
+#include "backend/backend_visitor.h"
 #include "util/scopedmap.h"
 
 namespace llvm {
@@ -40,7 +40,7 @@ extern const std::string PTR_SUFFIX;
 extern const std::string LEN_SUFFIX;
 
 /// Code generator that uses LLVM to compile Simit IR.
-class LLVMBackend : public Backend, public ir::IRVisitor {
+class LLVMBackend : public Backend, private BackendVisitor {
 public:
   LLVMBackend();
   virtual ~LLVMBackend();
@@ -71,52 +71,44 @@ protected:
   virtual llvm::Value* compile(const ir::Expr &expr);
   virtual void compile(const ir::Stmt &stmt);
 
-  using ir::IRVisitor::visit;
-  virtual void visit(const ir::FieldRead *);
-  virtual void visit(const ir::IndexRead *op);
-  virtual void visit(const ir::Length *op);
+  using BackendVisitor::compile;
+  virtual void compile(const ir::Literal&);
+  virtual void compile(const ir::VarExpr&);
+  virtual void compile(const ir::Load&);
+  virtual void compile(const ir::FieldRead&);
+  virtual void compile(const ir::Call&);
+  virtual void compile(const ir::Length&);
+  virtual void compile(const ir::IndexRead&);
+  virtual void compile(const ir::TensorIndexRead&);
 
-  virtual void visit(const ir::Literal *);
-  virtual void visit(const ir::VarExpr *);
-  virtual void visit(const ir::Load *);
-  virtual void visit(const ir::Call *);
+  virtual void compile(const ir::Neg&);
+  virtual void compile(const ir::Add&);
+  virtual void compile(const ir::Sub&);
+  virtual void compile(const ir::Mul&);
+  virtual void compile(const ir::Div&);
 
-  virtual void visit(const ir::Neg *);
-  virtual void visit(const ir::Add *);
-  virtual void visit(const ir::Sub *);
-  virtual void visit(const ir::Mul *);
-  virtual void visit(const ir::Div *);
-  virtual void visit(const ir::Eq *);
-  virtual void visit(const ir::Ne *);
-  virtual void visit(const ir::Gt *);
-  virtual void visit(const ir::Lt *);
-  virtual void visit(const ir::Ge *);
-  virtual void visit(const ir::Le *);
-  virtual void visit(const ir::And *);
-  virtual void visit(const ir::Or *);
-  virtual void visit(const ir::Not *);
-  virtual void visit(const ir::Xor *);
-
-  virtual void visit(const ir::VarDecl *op);
-  virtual void visit(const ir::AssignStmt *);
-  virtual void visit(const ir::CallStmt *);
-  virtual void visit(const ir::FieldWrite *);
-  virtual void visit(const ir::Store *);
-  virtual void visit(const ir::ForRange *);
-  virtual void visit(const ir::For *);
-  virtual void visit(const ir::While *);
-  virtual void visit(const ir::IfThenElse *);
-  virtual void visit(const ir::Block *);
-  virtual void visit(const ir::Pass *);
-  virtual void visit(const ir::Print *);
-
-  /// IRNodes that should never reach the backend (should have been lowered)
-  virtual void visit(const ir::Map *);
-  virtual void visit(const ir::IndexedTensor *);
-  virtual void visit(const ir::IndexExpr *op);
-  virtual void visit(const ir::TupleRead *);
-  virtual void visit(const ir::TensorWrite *);
-  virtual void visit(const ir::TensorRead *);
+  virtual void compile(const ir::Not&);
+  virtual void compile(const ir::Eq&);
+  virtual void compile(const ir::Ne&);
+  virtual void compile(const ir::Gt&);
+  virtual void compile(const ir::Lt&);
+  virtual void compile(const ir::Ge&);
+  virtual void compile(const ir::Le&);
+  virtual void compile(const ir::And&);
+  virtual void compile(const ir::Or&);
+  virtual void compile(const ir::Xor&);
+  
+  virtual void compile(const ir::VarDecl&);
+  virtual void compile(const ir::AssignStmt&);
+  virtual void compile(const ir::CallStmt&);
+  virtual void compile(const ir::Store&);
+  virtual void compile(const ir::FieldWrite&);
+  virtual void compile(const ir::Block&);
+  virtual void compile(const ir::IfThenElse&);
+  virtual void compile(const ir::ForRange&);
+  virtual void compile(const ir::For&);
+  virtual void compile(const ir::While&);
+  virtual void compile(const ir::Print&);
 
   /// Get a pointer to the given field
   llvm::Value *emitFieldRead(const ir::Expr &elemOrSet, std::string fieldName);

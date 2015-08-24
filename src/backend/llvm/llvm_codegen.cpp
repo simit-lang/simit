@@ -58,9 +58,9 @@ llvm::Constant *llvmPtr(const Type &type, const void *data,
   return llvmPtr(createLLVMType(type, addrspace), data);
 }
 
-llvm::Constant *llvmPtr(const Literal *literal) {
-  iassert(literal->type.isTensor());
-  return llvmPtr(literal->type, literal->data);
+llvm::Constant *llvmPtr(const Literal& literal) {
+  iassert(literal.type.isTensor());
+  return llvmPtr(literal.type, literal.data);
 }
 
 llvm::Constant *llvmVal(const Type &type, const void *data) {

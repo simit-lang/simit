@@ -101,9 +101,9 @@ public:
 
   virtual void visit(const VarDecl *op);
   virtual void visit(const AssignStmt *op);
+  virtual void visit(const CallStmt *op);
   virtual void visit(const Store *op);
   virtual void visit(const FieldWrite *op);
-  virtual void visit(const CallStmt *op);
   virtual void visit(const Block *op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const ForRange *op);

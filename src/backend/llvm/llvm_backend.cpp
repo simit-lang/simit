@@ -248,47 +248,28 @@ void LLVMBackend::compile(const Stmt &stmt) {
   val = nullptr;
 }
 
-void LLVMBackend::visit(const FieldRead *op) {
-  val = emitFieldRead(op->elementOrSet, op->fieldName);
-}
-
-void LLVMBackend::visit(const ir::IndexRead *op) {
-  // TODO: Add support for different indices (contained in the Set type).
-  unsigned int indexLoc = 1 + op->kind;
-
-  iassert(op->edgeSet.type().isSet());
-  iassert(op->edgeSet.type().toSet()->endpointSets.size() > 0);
-
-  llvm::Value *edgesValue = compile(op->edgeSet);
-  val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(*op));
-}
-
-void LLVMBackend::visit(const ir::Length *op) {
-  val = emitComputeLen(op->indexSet);
-}
-
-void LLVMBackend::visit(const Literal *op) {
-  iassert(op->type.isTensor()) << "Only tensor literals supported for now";
-  const TensorType *type = op->type.toTensor();
+void LLVMBackend::compile(const Literal& literal) {
+  iassert(literal.type.isTensor()) << "Only tensor literals supported for now";
+  const TensorType *type = literal.type.toTensor();
 
   if (type->order() == 0) {
     ScalarType ctype = type->componentType;
     switch (ctype.kind) {
       case ScalarType::Int: {
         iassert(ctype.bytes() == 4) << "Only 4-byte ints currently supported";
-        val = llvmInt(((int*)op->data)[0]);
+        val = llvmInt(((int*)literal.data)[0]);
         break;
       }
       case ScalarType::Float: {
         iassert(ctype.bytes() == ScalarType::floatBytes)
             << "Only " << ScalarType::floatBytes
             << "-byte float mode allowed by current float setting";
-        val = llvmFP(op->getFloatVal(0));
+        val = llvmFP(literal.getFloatVal(0));
         break;
       }
       case ScalarType::Boolean: {
         iassert(ctype.bytes() == sizeof(bool));
-        bool data = ((bool*)op->data)[0];
+        bool data = ((bool*)literal.data)[0];
         val = llvm::ConstantInt::get(LLVM_BOOL, llvm::APInt(1, data, false));
         break;
       }
@@ -298,23 +279,23 @@ void LLVMBackend::visit(const Literal *op) {
   else {
     // TODO: This should become a reference to a global literal
     // (unify with GPUBackend).
-    val = llvmPtr(op);
+    val = llvmPtr(literal);
   }
   iassert(val);
 }
 
-void LLVMBackend::visit(const VarExpr *op) {
-  if (!symtable.contains(op->var)) {
-    ierror << op->var << " not found in symbol table";
+void LLVMBackend::compile(const VarExpr& varExpr) {
+  if (!symtable.contains(varExpr.var)) {
+    ierror << varExpr.var << " not found in symbol table";
   }
 
-  val = symtable.get(op->var);
+  val = symtable.get(varExpr.var);
 
   string ptrName = string(val->getName());
   string valName = string(val->getName()) + VAL_SUFFIX;
 
   // Globals are stored as pointer-pointers so we must load them
-  if (util::contains(globals, op->var)) {
+  if (util::contains(globals, varExpr.var)) {
     val = builder->CreateLoad(val, ptrName);
   }
 
@@ -322,14 +303,14 @@ void LLVMBackend::visit(const VarExpr *op) {
   // in which case we must load the value.  This case arises because we keep
   // many scalars on the stack.  An exceptions to this are loop variables,
   // which is why we can't assume Simit scalars are always kept on the stack.
-  if (isScalar(op->type) && val->getType()->isPointerTy()) {
+  if (isScalar(varExpr.type) && val->getType()->isPointerTy()) {
     val = builder->CreateLoad(val, valName);
   }
 }
 
-void LLVMBackend::visit(const ir::Load *op) {
-  llvm::Value *buffer = compile(op->buffer);
-  llvm::Value *index = compile(op->index);
+void LLVMBackend::compile(const ir::Load& load) {
+  llvm::Value *buffer = compile(load.buffer);
+  llvm::Value *index = compile(load.index);
 
   string locName = string(buffer->getName()) + PTR_SUFFIX;
   llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
@@ -338,9 +319,13 @@ void LLVMBackend::visit(const ir::Load *op) {
   val = builder->CreateLoad(bufferLoc, valName);
 }
 
+void LLVMBackend::compile(const FieldRead& fieldRead) {
+  val = emitFieldRead(fieldRead.elementOrSet, fieldRead.fieldName);
+}
+
 // TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt,
 //       and is only kept around to emit loc.
-void LLVMBackend::visit(const Call *op) {
+void LLVMBackend::compile(const Call& call) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
                                   {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
                                    {ir::Intrinsics::cos,llvm::Intrinsic::cos},
@@ -354,7 +339,7 @@ void LLVMBackend::visit(const Call *op) {
   llvm::Function *fun = nullptr;
   
   // compile arguments first
-  for (auto a: op->actuals) {
+  for (auto a: call.actuals) {
     //FIX: remove once solve() is no longer needed
     //iassert(isScalar(a.type()));
     argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
@@ -363,25 +348,25 @@ void LLVMBackend::visit(const Call *op) {
 
   // these are intrinsic functions
   // first, see if this is an LLVM intrinsic
-  auto foundIntrinsic = llvmIntrinsicByName.find(op->func);
+  auto foundIntrinsic = llvmIntrinsicByName.find(call.func);
   if (foundIntrinsic != llvmIntrinsicByName.end()) {
     fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
                                           argTypes);
   }
   // now check if it is an intrinsic from libm
-  else if (op->func == ir::Intrinsics::atan2 ||
-           op->func == ir::Intrinsics::tan   ||
-           op->func == ir::Intrinsics::asin  ||
-           op->func == ir::Intrinsics::acos    ) {
+  else if (call.func == ir::Intrinsics::atan2 ||
+           call.func == ir::Intrinsics::tan   ||
+           call.func == ir::Intrinsics::asin  ||
+           call.func == ir::Intrinsics::acos    ) {
     auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
-    std::string funcName = op->func.getName() +
+    std::string funcName = call.func.getName() +
         (ir::ScalarType::singleFloat() ? "_f32" : "_f64");
     fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
         funcName,ftype));
   }
-  else if (op->func == ir::Intrinsics::norm) {
+  else if (call.func == ir::Intrinsics::norm) {
     iassert(args.size() == 1);
-    auto type = op->actuals[0].type().toTensor();
+    auto type = call.actuals[0].type().toTensor();
     vector<IndexDomain> dimensions = type->getDimensions();
 
     // special case for vec3f
@@ -412,14 +397,14 @@ void LLVMBackend::visit(const Call *op) {
     
     return;
   }
-  else if (op->func == ir::Intrinsics::solve) {
+  else if (call.func == ir::Intrinsics::solve) {
     // FIX: compile is making these be LLVM_DOUBLE, but I need
     // LLVM_DOUBLEPTR
     std::vector<llvm::Type*> argTypes2 =
         {getLLVMFloatPtrType(), getLLVMFloatPtrType(), getLLVMFloatPtrType(),
          LLVM_INT, LLVM_INT};
 
-    auto type = op->actuals[0].type().toTensor();
+    auto type = call.actuals[0].type().toTensor();
     vector<IndexDomain> dimensions = type->getDimensions();
     args.push_back(emitComputeLen(dimensions[0]));
     args.push_back(emitComputeLen(dimensions[1]));
@@ -430,14 +415,14 @@ void LLVMBackend::visit(const Call *op) {
     fun = llvm::cast<llvm::Function>(
         module->getOrInsertFunction(funcName, ftype));
   }
-  else if (op->func == ir::Intrinsics::loc) {
+  else if (call.func == ir::Intrinsics::loc) {
     val = emitCall("loc", args, LLVM_INT);
     return;
   }
-  else if (op->func == ir::Intrinsics::dot) {
+  else if (call.func == ir::Intrinsics::dot) {
     // we need to add the vector length to the args
-    auto type1 = op->actuals[0].type().toTensor();
-    auto type2 = op->actuals[1].type().toTensor();
+    auto type1 = call.actuals[0].type().toTensor();
+    auto type2 = call.actuals[1].type().toTensor();
     vector<IndexDomain> type1Dimensions = type1->getDimensions();
     vector<IndexDomain> type2Dimensions = type2->getDimensions();
 
@@ -450,8 +435,8 @@ void LLVMBackend::visit(const Call *op) {
     return;
   }
   // if not an intrinsic function, try to find it in the module
-  else if (module->getFunction(op->func.getName())) {
-    fun = module->getFunction(op->func.getName());
+  else if (module->getFunction(call.func.getName())) {
+    fun = module->getFunction(call.func.getName());
   }
   else {
     not_supported_yet << "Unsupported function call";
@@ -461,11 +446,31 @@ void LLVMBackend::visit(const Call *op) {
   val = builder->CreateCall(fun, args);
 }
 
-void LLVMBackend::visit(const Neg *op) {
-  iassert(isScalar(op->type));
-  llvm::Value *a = compile(op->a);
 
-  switch (op->type.toTensor()->componentType.kind) {
+void LLVMBackend::compile(const ir::Length& length) {
+  val = emitComputeLen(length.indexSet);
+}
+
+void LLVMBackend::compile(const ir::IndexRead& indexRead) {
+  // TODO: Add support for different indices (contained in the Set type).
+  unsigned int indexLoc = 1 + indexRead.kind;
+
+  iassert(indexRead.edgeSet.type().isSet());
+  iassert(indexRead.edgeSet.type().toSet()->endpointSets.size() > 0);
+
+  llvm::Value *edgesValue = compile(indexRead.edgeSet);
+  val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(indexRead));
+}
+
+void LLVMBackend::compile(const ir::TensorIndexRead& op) {
+
+}
+
+void LLVMBackend::compile(const Neg& negExpr) {
+  iassert(isScalar(negExpr.type));
+  llvm::Value *a = compile(negExpr.a);
+
+  switch (negExpr.type.toTensor()->componentType.kind) {
     case ScalarType::Int:
       val = builder->CreateNeg(a);
       break;
@@ -477,13 +482,13 @@ void LLVMBackend::visit(const Neg *op) {
   }
 }
 
-void LLVMBackend::visit(const Add *op) {
-  iassert(isScalar(op->type));
+void LLVMBackend::compile(const Add& addExpr) {
+  iassert(isScalar(addExpr.type));
 
-  llvm::Value *a = compile(op->a);
-  llvm::Value *b = compile(op->b);
+  llvm::Value *a = compile(addExpr.a);
+  llvm::Value *b = compile(addExpr.b);
 
-  switch (op->type.toTensor()->componentType.kind) {
+  switch (addExpr.type.toTensor()->componentType.kind) {
     case ScalarType::Int:
       val = builder->CreateAdd(a, b);
       break;
@@ -496,13 +501,13 @@ void LLVMBackend::visit(const Add *op) {
   }
 }
 
-void LLVMBackend::visit(const Sub *op) {
-  iassert(isScalar(op->type));
+void LLVMBackend::compile(const Sub& subExpr) {
+  iassert(isScalar(subExpr.type));
 
-  llvm::Value *a = compile(op->a);
-  llvm::Value *b = compile(op->b);
+  llvm::Value *a = compile(subExpr.a);
+  llvm::Value *b = compile(subExpr.b);
 
-  switch (op->type.toTensor()->componentType.kind) {
+  switch (subExpr.type.toTensor()->componentType.kind) {
     case ScalarType::Int:
       val = builder->CreateSub(a, b);
       break;
@@ -514,13 +519,13 @@ void LLVMBackend::visit(const Sub *op) {
   }
 }
 
-void LLVMBackend::visit(const Mul *op) {
-  iassert(isScalar(op->type));
+void LLVMBackend::compile(const Mul& mulExpr) {
+  iassert(isScalar(mulExpr.type));
 
-  llvm::Value *a = compile(op->a);
-  llvm::Value *b = compile(op->b);
+  llvm::Value *a = compile(mulExpr.a);
+  llvm::Value *b = compile(mulExpr.b);
 
-  switch (op->type.toTensor()->componentType.kind) {
+  switch (mulExpr.type.toTensor()->componentType.kind) {
     case ScalarType::Int:
       val = builder->CreateMul(a, b);
       break;
@@ -532,13 +537,13 @@ void LLVMBackend::visit(const Mul *op) {
   }
 }
 
-void LLVMBackend::visit(const Div *op) {
-  iassert(isScalar(op->type));
+void LLVMBackend::compile(const Div& divExpr) {
+  iassert(isScalar(divExpr.type));
 
-  llvm::Value *a = compile(op->a);
-  llvm::Value *b = compile(op->b);
+  llvm::Value *a = compile(divExpr.a);
+  llvm::Value *b = compile(divExpr.b);
 
-  switch (op->type.toTensor()->componentType.kind) {
+  switch (divExpr.type.toTensor()->componentType.kind) {
     case ScalarType::Int:
       // TODO: Figure out what's the deal with integer div. Cast to fp, div and
       // truncate?
@@ -552,16 +557,25 @@ void LLVMBackend::visit(const Div *op) {
   }
 }
 
+void LLVMBackend::compile(const ir::Not& notExpr) {
+  iassert(isBoolean(notExpr.type));
+  iassert(isBoolean(notExpr.a.type()));
+
+  llvm::Value *a = compile(notExpr.a);
+
+  val = builder->CreateNot(a);
+}
+
 #define LLVMBACKEND_VISIT_COMPARE_OP(typename, op, float_cmp, int_cmp)         \
-void LLVMBackend::visit(const ir::typename *op) {                              \
-  iassert(isBoolean(op->type));                                                \
-  iassert(isScalar(op->a.type()));                                             \
-  iassert(isScalar(op->b.type()));                                             \
+void LLVMBackend::compile(const ir::typename& op) {                            \
+  iassert(isBoolean(op.type));                                                 \
+  iassert(isScalar(op.a.type()));                                              \
+  iassert(isScalar(op.b.type()));                                              \
                                                                                \
-  llvm::Value *a = compile(op->a);                                             \
-  llvm::Value *b = compile(op->b);                                             \
+  llvm::Value *a = compile(op.a);                                              \
+  llvm::Value *b = compile(op.b);                                              \
                                                                                \
-  const TensorType *type = op->a.type().toTensor();                            \
+  const TensorType *type = op.a.type().toTensor();                             \
   if (type->componentType == ScalarType::Float) {                              \
     val = builder->float_cmp(a, b);                                            \
   } else {                                                                     \
@@ -576,52 +590,43 @@ LLVMBACKEND_VISIT_COMPARE_OP(Lt, op, CreateFCmpOLT, CreateICmpSLT)
 LLVMBACKEND_VISIT_COMPARE_OP(Ge, op, CreateFCmpOGE, CreateICmpSGE)
 LLVMBACKEND_VISIT_COMPARE_OP(Le, op, CreateFCmpOLE, CreateICmpSLE)
 
-void LLVMBackend::visit(const ir::And *op) {
-  iassert(isBoolean(op->type));
-  iassert(isBoolean(op->a.type()));
-  iassert(isBoolean(op->b.type()));
+void LLVMBackend::compile(const ir::And& andExpr) {
+  iassert(isBoolean(andExpr.type));
+  iassert(isBoolean(andExpr.a.type()));
+  iassert(isBoolean(andExpr.b.type()));
 
-  llvm::Value *a = compile(op->a);
-  llvm::Value *b = compile(op->b);
+  llvm::Value *a = compile(andExpr.a);
+  llvm::Value *b = compile(andExpr.b);
 
   val = builder->CreateAnd(a, b);
 }
 
-void LLVMBackend::visit(const ir::Or *op) {
-  iassert(isBoolean(op->type));
-  iassert(isBoolean(op->a.type()));
-  iassert(isBoolean(op->b.type()));
+void LLVMBackend::compile(const ir::Or& orExpr) {
+  iassert(isBoolean(orExpr.type));
+  iassert(isBoolean(orExpr.a.type()));
+  iassert(isBoolean(orExpr.b.type()));
 
-  llvm::Value *a = compile(op->a);
-  llvm::Value *b = compile(op->b);
+  llvm::Value *a = compile(orExpr.a);
+  llvm::Value *b = compile(orExpr.b);
 
   val = builder->CreateOr(a, b);
 }
 
-void LLVMBackend::visit(const ir::Not *op) {
-  iassert(isBoolean(op->type));
-  iassert(isBoolean(op->a.type()));
+void LLVMBackend::compile(const ir::Xor& xorExpr) {
+  iassert(isBoolean(xorExpr.type));
+  iassert(isBoolean(xorExpr.a.type()));
+  iassert(isBoolean(xorExpr.b.type()));
 
-  llvm::Value *a = compile(op->a);
-
-  val = builder->CreateNot(a);
-}
-
-void LLVMBackend::visit(const ir::Xor *op) {
-  iassert(isBoolean(op->type));
-  iassert(isBoolean(op->a.type()));
-  iassert(isBoolean(op->b.type()));
-
-  llvm::Value *a = compile(op->a);
-  llvm::Value *b = compile(op->b);
+  llvm::Value *a = compile(xorExpr.a);
+  llvm::Value *b = compile(xorExpr.b);
 
   val = builder->CreateXor(a, b);
 }
 
-void LLVMBackend::visit(const VarDecl *op) {
-  tassert(op->var.getType().isTensor()) << "Only tensor decls supported";
+void LLVMBackend::compile(const VarDecl& varDecl) {
+  tassert(varDecl.var.getType().isTensor()) << "Only tensor decls supported";
 
-  Var var = op->var;
+  Var var = varDecl.var;
   llvm::Value *llvmVar = nullptr;
   if (isScalar(var.getType())) {
     ScalarType type = var.getType().toTensor()->componentType;
@@ -631,27 +636,27 @@ void LLVMBackend::visit(const VarDecl *op) {
     if (!storage.get(var).needsInitialization()) {
       return;
     }
-    llvmVar = makeGlobalTensor(op->var);
+    llvmVar = makeGlobalTensor(varDecl.var);
   }
   iassert(llvmVar);
   symtable.insert(var, llvmVar);
 }
 
-void LLVMBackend::visit(const AssignStmt *op) {
-  switch (op->cop) {
+void LLVMBackend::compile(const AssignStmt& assignStmt) {
+  switch (assignStmt.cop) {
     case ir::CompoundOperator::None: {
-      emitAssign(op->var, op->value);
+      emitAssign(assignStmt.var, assignStmt.value);
       return;
     }
     case ir::CompoundOperator::Add: {
-      emitAssign(op->var, Add::make(op->var, op->value));
+      emitAssign(assignStmt.var, Add::make(assignStmt.var, assignStmt.value));
       return;
     }
     default: ierror << "Unknown compound operator type";
   }
 }
 
-void LLVMBackend::visit(const ir::CallStmt *op) {
+void LLVMBackend::compile(const CallStmt& callStmt) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
                                   {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
                                    {ir::Intrinsics::cos,llvm::Intrinsic::cos},
@@ -666,12 +671,12 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
   llvm::Value *call = nullptr;
 
   // compile arguments first
-  for (auto a: op->actuals) {
+  for (auto a: callStmt.actuals) {
     argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
     args.push_back(compile(a));
   }
 
-  Func callee = op->callee;
+  Func callee = callStmt.callee;
   if (callee.getKind() == Func::Intrinsic) {
     iassert(callee != ir::Intrinsics::norm && callee != ir::Intrinsics::dot)
         << "norm and dot should have been lowered";
@@ -679,55 +684,55 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
     std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
     // first, see if this is an LLVM intrinsic
-    auto foundIntrinsic = llvmIntrinsicByName.find(op->callee);
+    auto foundIntrinsic = llvmIntrinsicByName.find(callStmt.callee);
     if (foundIntrinsic != llvmIntrinsicByName.end()) {
-      iassert(op->results.size() == 1);
-      llvm::Type *overloadType =
-          createLLVMType(op->results[0].getType().toTensor()->componentType);
+      iassert(callStmt.results.size() == 1);
+      auto ctype = callStmt.results[0].getType().toTensor()->componentType;
+      llvm::Type *overloadType = createLLVMType(ctype);
       fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
                                             {overloadType});
       call = builder->CreateCall(fun, args);
     }
     // now check if it is an intrinsic from libm
-    else if (op->callee == ir::Intrinsics::atan2 ||
-             op->callee == ir::Intrinsics::tan   ||
-             op->callee == ir::Intrinsics::asin  ||
-             op->callee == ir::Intrinsics::acos    ) {
-      std::string fname = op->callee.getName() + floatTypeName;
+    else if (callStmt.callee == ir::Intrinsics::atan2 ||
+             callStmt.callee == ir::Intrinsics::tan   ||
+             callStmt.callee == ir::Intrinsics::asin  ||
+             callStmt.callee == ir::Intrinsics::acos    ) {
+      std::string fname = callStmt.callee.getName() + floatTypeName;
       call = emitCall(fname, args, getLLVMFloatType());
     }
-    else if (op->callee == ir::Intrinsics::mod) {
-      iassert(op->actuals.size() == 2) << "mod takes two inputs, got"
-                                       << op->actuals.size();
-      call = builder->CreateSRem(compile(op->actuals[0]),
-                                 compile(op->actuals[1]));
+    else if (callStmt.callee == ir::Intrinsics::mod) {
+      iassert(callStmt.actuals.size() == 2) << "mod takes two inputs, got"
+                                       << callStmt.actuals.size();
+      call = builder->CreateSRem(compile(callStmt.actuals[0]),
+                                 compile(callStmt.actuals[1]));
 
     }
     else if (callee == ir::Intrinsics::det) {
       iassert(args.size() == 1);
-      std::string fname = op->callee.getName() + "3" + floatTypeName;
+      std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args, getLLVMFloatType());
     }
     else if (callee == ir::Intrinsics::inv) {
       iassert(args.size() == 1);
 
-      Var result = op->results[0];
+      Var result = callStmt.results[0];
       llvm::Value *llvmResult = symtable.get(result);
       args.push_back(llvmResult);
 
-      std::string fname = op->callee.getName() + "3" + floatTypeName;
+      std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args);
     }
-    else if (op->callee == ir::Intrinsics::solve) {
+    else if (callStmt.callee == ir::Intrinsics::solve) {
     
       // we need to add additional arguments: the row_start and col_idx pointers,
       // as well as the number of rows, columns, nonzeros, and blocksize.
-      auto type = op->actuals[0].type().toTensor();
+      auto type = callStmt.actuals[0].type().toTensor();
       vector<IndexDomain> dimensions = type->getDimensions();
       
       // FIXME: shouldn't assume this is a var expression...
-      tassert(isa<VarExpr>(op->actuals[0]));
-      auto tensorStorage = storage.get(to<VarExpr>(op->actuals[0])->var);
+      tassert(isa<VarExpr>(callStmt.actuals[0]));
+      auto tensorStorage = storage.get(to<VarExpr>(callStmt.actuals[0])->var);
       llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
       llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
 
@@ -778,61 +783,85 @@ void LLVMBackend::visit(const ir::CallStmt *op) {
       std::string fname = "cMatSolve" + floatTypeName;
       call = emitCall(fname, args);
     }
-    else if (op->callee == ir::Intrinsics::loc) {
+    else if (callStmt.callee == ir::Intrinsics::loc) {
       call = emitCall("loc", args, LLVM_INT);
     }
     else {
-      ierror << "intrinsic " << op->callee.getName() << " not found";
+      ierror << "intrinsic " << callStmt.callee.getName() << " not found";
     }
     iassert(call);
 
     if (!call->getType()->isVoidTy()) {
-      iassert(op->results.size() == 1);
-      Var var = op->results[0];
+      iassert(callStmt.results.size() == 1);
+      Var var = callStmt.results[0];
       llvm::Value *llvmVar = symtable.get(var);
       builder->CreateStore(call, llvmVar);
     }
   }
   // If not an intrinsic function, try to find it in the module
   else {
-    if (module->getFunction(op->callee.getName())) {
-      for (Var r : op->results) {
+    if (module->getFunction(callStmt.callee.getName())) {
+      for (Var r : callStmt.results) {
         argTypes.push_back(createLLVMType(r.getType().toTensor()->componentType));
 
         llvm::Value *llvmResult = symtable.get(r);
         args.push_back(llvmResult);
       }
-      fun = module->getFunction(op->callee.getName());
+      fun = module->getFunction(callStmt.callee.getName());
       call = builder->CreateCall(fun, args);
     }
     else {
-      ierror << "function " << op->callee.getName() << " not found in module";
+      ierror << "function " << callStmt.callee.getName() << " not found in module";
     }
   }
 }
 
-void LLVMBackend::visit(const FieldWrite *op) {
+void LLVMBackend::compile(const Store& store) {
+  llvm::Value *buffer = compile(store.buffer);
+  llvm::Value *index = compile(store.index);
+  llvm::Value *value;
+  switch (store.cop) {
+    case CompoundOperator::None: {
+      value = compile(store.value);
+      break;
+    }
+    case CompoundOperator::Add: {
+      value = compile(Add::make(Load::make(store.buffer, store.index),
+                                store.value));
+      break;
+    }
+  }
+  iassert(value != nullptr);
+
+  string locName = string(buffer->getName()) + PTR_SUFFIX;
+  llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
+  builder->CreateStore(value, bufferLoc);
+}
+
+void LLVMBackend::compile(const FieldWrite& fieldWrite) {
   /// \todo field writes of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only write scalars to scalars
   ///       in the backend
-//  iassert(isScalar(op->value.type()))
+//  iassert(isScalar(op.value.type()))
 //      << "assignment non-scalars should have been lowered by now";
 
-  iassert(op->value.type().isTensor());
-  iassert(getFieldType(op->elementOrSet, op->fieldName).isTensor());
-  iassert(op->elementOrSet.type().isSet()||op->elementOrSet.type().isElement());
+  iassert(fieldWrite.value.type().isTensor());
+  iassert(getFieldType(fieldWrite.elementOrSet,
+                       fieldWrite.fieldName).isTensor());
+  iassert(fieldWrite.elementOrSet.type().isSet() ||
+          fieldWrite.elementOrSet.type().isElement());
 
-  Type fieldType = getFieldType(op->elementOrSet, op->fieldName);
-  Type valueType = op->value.type();
+  Type fieldType = getFieldType(fieldWrite.elementOrSet, fieldWrite.fieldName);
+  Type valueType = fieldWrite.value.type();
 
   // Assigning a scalar to an n-order tensor
   if (fieldType.toTensor()->order() > 0 && valueType.toTensor()->order() == 0) {
-    iassert(op->cop == CompoundOperator::None)
+    iassert(fieldWrite.cop == CompoundOperator::None)
         << "Compound write when assigning scalar to n-order tensor";
-    if (isa<Literal>(op->value) &&
-        to<Literal>(op->value)->getFloatVal(0) == 0.0) {
+    if (isa<Literal>(fieldWrite.value) &&
+        to<Literal>(fieldWrite.value)->getFloatVal(0) == 0.0) {
       // emit memset 0
-      llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
+      llvm::Value *fieldPtr = emitFieldRead(fieldWrite.elementOrSet, fieldWrite.fieldName);
 
       const TensorType *tensorFieldType = fieldType.toTensor();
 
@@ -849,16 +878,16 @@ void LLVMBackend::visit(const FieldWrite *op) {
   }
   else {
     // emit memcpy
-    llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
+    llvm::Value *fieldPtr = emitFieldRead(fieldWrite.elementOrSet, fieldWrite.fieldName);
     llvm::Value *valuePtr;
-    switch (op->cop) {
+    switch (fieldWrite.cop) {
       case ir::CompoundOperator::None: {
-        valuePtr = compile(op->value);
+        valuePtr = compile(fieldWrite.value);
         break;
       }
       case ir::CompoundOperator::Add: {
         valuePtr = compile(Add::make(
-            FieldRead::make(op->elementOrSet, op->fieldName), op->value));
+            FieldRead::make(fieldWrite.elementOrSet, fieldWrite.fieldName), fieldWrite.value));
         break;
       }
     }
@@ -875,30 +904,93 @@ void LLVMBackend::visit(const FieldWrite *op) {
   }
 }
 
-void LLVMBackend::visit(const ir::Store *op) {
-  llvm::Value *buffer = compile(op->buffer);
-  llvm::Value *index = compile(op->index);
-  llvm::Value *value;
-  switch (op->cop) {
-    case CompoundOperator::None: {
-      value = compile(op->value);
-      break;
-    }
-    case CompoundOperator::Add: {
-      value = compile(Add::make(Load::make(op->buffer, op->index), op->value));
-      break;
-    }
+void LLVMBackend::compile(const Block& block) {
+  if (block.scoped) {
+    symtable.scope();
   }
-  iassert(value != nullptr);
-
-  string locName = string(buffer->getName()) + PTR_SUFFIX;
-  llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
-  builder->CreateStore(value, bufferLoc);
+  compile(block.first);
+  if (block.rest.defined()) {
+    compile(block.rest);
+  }
+  if (block.scoped) {
+    symtable.unscope();
+  }
 }
 
-void LLVMBackend::visit(const For *op) {
-  std::string iName = op->var.getName();
-  ForDomain domain = op->domain;
+void LLVMBackend::compile(const ir::IfThenElse& ifThenElse) {
+  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+
+  llvm::Value *cond = compile(ifThenElse.condition);
+  llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
+
+
+  llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "then",
+                                                         llvmFunc);
+  llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "else");
+  llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "exit");
+  builder->CreateCondBr(condEval, thenBlock, elseBlock);
+
+  builder->SetInsertPoint(thenBlock);
+  compile(ifThenElse.thenBody);
+  builder->CreateBr(exitBlock);
+  thenBlock = builder->GetInsertBlock();
+
+  llvmFunc->getBasicBlockList().push_back(elseBlock);
+
+  builder->SetInsertPoint(elseBlock);
+  compile(ifThenElse.elseBody);
+  builder->CreateBr(exitBlock);
+  elseBlock = builder->GetInsertBlock();
+
+  llvmFunc->getBasicBlockList().push_back(exitBlock);
+  builder->SetInsertPoint(exitBlock);
+}
+
+void LLVMBackend::compile(const ir::ForRange& forLoop) {
+  std::string iName = forLoop.var.getName();
+  
+  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
+  
+  // Loop Header
+  llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
+
+  llvm::Value *rangeStart = compile(forLoop.start);
+  llvm::Value *rangeEnd = compile(forLoop.end);
+
+  llvm::BasicBlock *loopBodyStart =
+    llvm::BasicBlock::Create(LLVM_CONTEXT, iName+"_loop_body", llvmFunc);
+  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
+                                                       iName+"_loop_end",
+                                                       llvmFunc);
+  llvm::Value *firstCmp = builder->CreateICmpSLT(rangeStart, rangeEnd);
+  builder->CreateCondBr(firstCmp, loopBodyStart, loopEnd);
+  builder->SetInsertPoint(loopBodyStart);
+
+  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
+  i->addIncoming(rangeStart, entryBlock);
+
+  // Loop Body
+  symtable.scope();
+  symtable.insert(forLoop.var, i);
+  compile(forLoop.body);
+  symtable.unscope();
+
+  // Loop Footer
+  llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
+  llvm::Value *i_nxt = builder->CreateAdd(i, builder->getInt32(1),
+                                          iName+"_nxt", false, true);
+  i->addIncoming(i_nxt, loopBodyEnd);
+
+  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, rangeEnd,
+                                                 iName+"_cmp");
+  builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
+  builder->SetInsertPoint(loopEnd);
+
+}
+
+void LLVMBackend::compile(const For& forLoop) {
+  std::string iName = forLoop.var.getName();
+  ForDomain domain = forLoop.domain;
 
   llvm::Value *iNum = nullptr;
   switch (domain.kind) {
@@ -940,8 +1032,8 @@ void LLVMBackend::visit(const For *op) {
 
   // Loop Body
   symtable.scope();
-  symtable.insert(op->var, i);
-  compile(op->body);
+  symtable.insert(forLoop.var, i);
+  compile(forLoop.body);
   symtable.unscope();
 
   // Loop Footer
@@ -955,80 +1047,10 @@ void LLVMBackend::visit(const For *op) {
   builder->SetInsertPoint(loopEnd);
 }
 
-void LLVMBackend::visit(const ir::ForRange *op) {
-  std::string iName = op->var.getName();
-  
-  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
-  
-  // Loop Header
-  llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
-
-  llvm::Value *rangeStart = compile(op->start);
-  llvm::Value *rangeEnd = compile(op->end);
-
-  llvm::BasicBlock *loopBodyStart =
-    llvm::BasicBlock::Create(LLVM_CONTEXT, iName+"_loop_body", llvmFunc);
-  llvm::BasicBlock *loopEnd = llvm::BasicBlock::Create(LLVM_CONTEXT,
-                                                       iName+"_loop_end",
-                                                       llvmFunc);
-  llvm::Value *firstCmp = builder->CreateICmpSLT(rangeStart, rangeEnd);
-  builder->CreateCondBr(firstCmp, loopBodyStart, loopEnd);
-  builder->SetInsertPoint(loopBodyStart);
-
-  llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2, iName);
-  i->addIncoming(rangeStart, entryBlock);
-
-  // Loop Body
-  symtable.scope();
-  symtable.insert(op->var, i);
-  compile(op->body);
-  symtable.unscope();
-
-  // Loop Footer
-  llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
-  llvm::Value *i_nxt = builder->CreateAdd(i, builder->getInt32(1),
-                                          iName+"_nxt", false, true);
-  i->addIncoming(i_nxt, loopBodyEnd);
-
-  llvm::Value *exitCond = builder->CreateICmpSLT(i_nxt, rangeEnd,
-                                                 iName+"_cmp");
-  builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
-  builder->SetInsertPoint(loopEnd);
-
-}
-
-void LLVMBackend::visit(const ir::IfThenElse *op) {
+void LLVMBackend::compile(const While& whileLoop) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
-  llvm::Value *cond = compile(op->condition);
-  llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
-
-
-  llvm::BasicBlock *thenBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "then", llvmFunc);
-  llvm::BasicBlock *elseBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "else");
-  llvm::BasicBlock *exitBlock = llvm::BasicBlock::Create(LLVM_CONTEXT, "exit");
-  builder->CreateCondBr(condEval, thenBlock, elseBlock);
-
-  builder->SetInsertPoint(thenBlock);
-  compile(op->thenBody);
-  builder->CreateBr(exitBlock);
-  thenBlock = builder->GetInsertBlock();
-
-  llvmFunc->getBasicBlockList().push_back(elseBlock);
-
-  builder->SetInsertPoint(elseBlock);
-  compile(op->elseBody);
-  builder->CreateBr(exitBlock);
-  elseBlock = builder->GetInsertBlock();
-
-  llvmFunc->getBasicBlockList().push_back(exitBlock);
-  builder->SetInsertPoint(exitBlock);
-}
-
-void LLVMBackend::visit(const While *op) {
-  llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
-
-  llvm::Value *cond = compile(op->condition);
+  llvm::Value *cond = compile(whileLoop.condition);
   llvm::Value *condEval = builder->CreateICmpEQ(builder->getTrue(), cond);
 
 
@@ -1039,7 +1061,7 @@ void LLVMBackend::visit(const While *op) {
   builder->CreateCondBr(condEval, bodyBlock, exitBlock);
 
   builder->SetInsertPoint(bodyBlock);
-  compile(op->body);
+  compile(whileLoop.body);
   builder->CreateBr(checkBlock);
   
   // We actually need to save the original body block, because the
@@ -1050,36 +1072,18 @@ void LLVMBackend::visit(const While *op) {
   
   llvmFunc->getBasicBlockList().push_back(checkBlock);
   builder->SetInsertPoint(checkBlock);
-  llvm::Value *cond2 = compile(op->condition);
+  llvm::Value *cond2 = compile(whileLoop.condition);
   llvm::Value *condEval2 = builder->CreateICmpEQ(builder->getTrue(), cond2);
 
   builder->CreateCondBr(condEval2, priorBodyBlock, exitBlock);
   
   llvmFunc->getBasicBlockList().push_back(exitBlock);
   builder->SetInsertPoint(exitBlock);
-
 }
 
-void LLVMBackend::visit(const Block *op) {
-  if (op->scoped) {
-    symtable.scope();
-  }
-  compile(op->first);
-  if (op->rest.defined()) {
-    compile(op->rest);
-  }
-  if (op->scoped) {
-    symtable.unscope();
-  }
-}
-
-void LLVMBackend::visit(const Pass *op) {
-  // Nothing to do
-}
-
-void LLVMBackend::visit(const Print *op) {
-  llvm::Value *result = compile(op->expr);
-  Type type = op->expr.type();
+void LLVMBackend::compile(const Print& print) {
+  llvm::Value *result = compile(print.expr);
+  Type type = print.expr.type();
 
   switch (type.kind()) {
   case Type::Kind::Tensor: {
@@ -1203,36 +1207,6 @@ void LLVMBackend::visit(const Print *op) {
   default:
     unreachable << "Unknown Type";
   }
-}
-
-void LLVMBackend::visit(const IndexExpr *op) {
-  ierror << "IndexedTensor expressions should never reach the backend: "
-         << util::toString(*op);
-}
-
-void LLVMBackend::visit(const TensorRead *op) {
-  ierror << "TensorRead expressions should never reach a backend: "
-         << util::toString(*op);
-}
-
-void LLVMBackend::visit(const TupleRead *op) {
-  ierror << "TupleRead expressions should never reach the backend: "
-         << util::toString(*op);
-}
-
-void LLVMBackend::visit(const IndexedTensor *op) {
-  ierror << "IndexedTensor expressions should never reach the backend: "
-         << util::toString(*op);
-}
-
-void LLVMBackend::visit(const Map *op) {
-  ierror << "Map statements should never reach the backend: "
-         << util::toString(*op);
-}
-
-void LLVMBackend::visit(const TensorWrite *op) {
-  ierror << "TensorWrite statements should never reach the backend: "
-         << util::toString(*op);
 }
 
 
