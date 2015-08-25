@@ -1,5 +1,11 @@
 #include "backend.h"
 
+#include "backend_impl.h"
+#include "backend/llvm/llvm_backend.h"
+#ifdef GPU
+#include "backend/gpu/gpu_backend.h"
+#endif
+
 #include "ir.h"
 #include "ir_visitor.h"
 #include "util/scopedmap.h"
@@ -10,7 +16,25 @@ using namespace simit::ir;
 namespace simit {
 namespace backend {
 
+BackendImpl* getBackendImpl(const std::string &type) {
+  if (type == "llvm") {
+    return new backend::LLVMBackend();
+  }
+#ifdef GPU
+  if (type == "gpu") {
+    return new backend::GPUBackend();
+  }
+#endif
+
+  ierror << "Invalid backend choice: " << type << ". "
+         << "Did you forget to call simit::init()?";
+  return nullptr;
+}
+
 // class Backend
+Backend::Backend(const std::string &type) : pimpl(getBackendImpl(type)) {
+}
+
 Function* Backend::compile(const Stmt& stmt) {
   Func func("main", {}, {}, stmt);
 
@@ -52,13 +76,11 @@ Function* Backend::compile(const Stmt& stmt) {
     })
   );
 
-
-
-  return compile(func, globals);
+  return pimpl->compile(func, globals);
 }
 
 Function* Backend::compile(const Func& func) {
-  return compile(func, {});
+  return pimpl->compile(func, {});
 }
 
 }}

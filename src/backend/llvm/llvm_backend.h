@@ -7,7 +7,7 @@
 #include <vector>
 #include <map>
 
-#include "backend/backend.h"
+#include "backend/backend_impl.h"
 
 #include "storage.h"
 #include "var.h"
@@ -40,12 +40,10 @@ extern const std::string PTR_SUFFIX;
 extern const std::string LEN_SUFFIX;
 
 /// Code generator that uses LLVM to compile Simit IR.
-class LLVMBackend : public Backend, protected BackendVisitor<> {
+class LLVMBackend : public BackendImpl, protected BackendVisitor<> {
 public:
   LLVMBackend();
   virtual ~LLVMBackend();
-
-  using Backend::compile;
 
 protected:
   virtual unsigned global_addrspace()  { return 0; } // LLVM generic addrspace
@@ -65,6 +63,7 @@ protected:
   /// used to return variables from Expr visit functions
   llvm::Value *val;
 
+  using BackendImpl::compile;
   virtual Function* compile(const ir::Func &func,
                             const std::vector<ir::Var>& globals);
 

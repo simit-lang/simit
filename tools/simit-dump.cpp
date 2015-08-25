@@ -13,13 +13,11 @@
 #include "util.h"
 #include "storage.h"
 
+#include "backend/backend.h"
 #include "backend/backend_function.h"
-#include "backend/llvm/llvm_backend.h"
-#ifdef GPU
-#include "backend/gpu/gpu_backend.h"
-#endif
 
 using namespace std;
+using namespace simit;
 
 void printUsage(); // GCC shut up
 
@@ -47,10 +45,10 @@ int main(int argc, const char* argv[]) {
   bool emitGPU = false;
   bool compile = false;
 
-  std::string section;
-  std::string function;
-  std::string sourceFile;
-  std::string gpuOutFile;
+  string section;
+  string function;
+  string sourceFile;
+  string gpuOutFile;
 
   // Parse Arguments
   for (int i=1; i < argc; ++i) {
@@ -225,8 +223,8 @@ int main(int argc, const char* argv[]) {
     // NB: The LLVM code gets further optimized at init time (OSR, etc.)
 
     if (emitLLVM || emitASM) {
-      simit::backend::LLVMBackend backend;
-      simit::Function llvmFunc(backend.compile(func));
+      backend::Backend backend("llvm");
+      simit::Function  llvmFunc(backend.compile(func));
 
       if (emitLLVM) {
         std::string fstr = simit::util::toString(llvmFunc);

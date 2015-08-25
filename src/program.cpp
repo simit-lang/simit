@@ -11,10 +11,7 @@
 #include "storage.h"
 #include "lower/lower.h"
 
-#include "backend/llvm/llvm_backend.h"
-#ifdef GPU
-#include "backend/gpu/gpu_backend.h"
-#endif
+#include "backend/backend.h"
 
 using namespace std;
 
@@ -38,25 +35,14 @@ static Function compile(ir::Func func, backend::Backend *backend) {
 struct Program::ProgramContent {
   internal::ProgramContext ctx;
   internal::Frontend *frontend;
-  backend::Backend *backend;
+  backend::Backend   *backend;
   Diagnostics diags;
 };
 
 // class Program
 Program::Program() : content(new ProgramContent) {
   content->frontend = new internal::Frontend();
-  if (kBackend == "llvm") {
-    content->backend  = new backend::LLVMBackend();
-  }
-#ifdef GPU
-  else if (kBackend == "gpu") {
-    content->backend = new backend::GPUBackend();
-  }
-#endif
-  else {
-    ierror << "Invalid backend choice: " << kBackend
-           << ". Did you forget to call simit::init()?";
-  }
+  content->backend =  new backend::Backend(kBackend);
 }
 
 Program::~Program() {

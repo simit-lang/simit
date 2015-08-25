@@ -1,28 +1,23 @@
 #ifndef SIMIT_BACKEND_H
 #define SIMIT_BACKEND_H
 
-#include <vector>
-#include <map>
-
+#include <memory>
 #include "uncopyable.h"
 
 namespace simit {
-
 namespace ir {
-class Var;
 class Func;
 class Stmt;
 }
-
 namespace backend {
 class Function;
+class BackendImpl;
 
 /// Code generators are used to turn Simit IR into some other representation.
 /// Examples include LLVM IR, compiled machine code and Graphviz .dot files.
 class Backend : simit::interfaces::Uncopyable {
 public:
-  Backend() {}
-  virtual ~Backend() {}
+  Backend(const std::string &type);
 
   /// Compiles an IR function to a runable function.
   backend::Function* compile(const ir::Func& func);
@@ -33,9 +28,7 @@ public:
   backend::Function* compile(const ir::Stmt& stmt);
 
 protected:
-  /// Compile the closure consisting of the function and a context.
-  virtual backend::Function* compile(const ir::Func& func,
-                                     const std::vector<ir::Var>& globals) = 0;
+  BackendImpl* pimpl;
 };
 
 }}

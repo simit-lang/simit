@@ -116,19 +116,7 @@ extern std::string kBackend;
 }
 
 std::unique_ptr<simit::backend::Backend> getTestBackend() {
-  simit::backend::Backend *res = NULL;
-  if (simit::kBackend == "llvm") {
-    res  = new simit::backend::LLVMBackend();
-  }
-#ifdef GPU
-  else if (kBackend == "gpu") {
-    fprintf(stderr, "Initializing GPU backend\n");
-    res = new GPUBackend();
-  }
-#endif
-  else {
-    ierror << "Invalid backend choice";
-  }
+  simit::backend::Backend *res = new simit::backend::Backend(simit::kBackend);
   return std::unique_ptr<simit::backend::Backend>(res);
 }
 
