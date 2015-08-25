@@ -21,10 +21,8 @@ TEST(Codegen, add) {
   Expr axb = Add::make(a,b);
   Stmt body = AssignStmt::make(c, axb);
 
-  Func func = Func("add0", {a,b}, {c}, body);
-
   unique_ptr<Backend> backend = getTestBackend();
-  simit::Function function = backend->compile(func);
+  simit::Function function = backend->compile(body);
 
   simit_float aArg = 2.0;
   simit_float bArg = 4.1;

@@ -15,33 +15,13 @@ Function::Function() : Function(nullptr) {
 Function::Function(backend::Function *func) : impl(func), funcPtr(nullptr) {
 }
 
-void Function::bind(string argument, const TensorType& ttype, void* data) {
-#ifdef SIMIT_ASSERTS
-  ir::Type type = ir::convert(ttype);
-  ir::Type argType = impl->getArgType(argument);
-  uassert(defined()) << "undefined function";
-  uassert(impl->hasArg(argument)) << "no argument of this name in the function";
-  uassert(type == argType)
-      << "tensor type " << type
-      << " does not match function argument type " << argType;
-#endif
-
-  return bind(argument, data);
-}
-
-void Function::bind(string argument, void* data) {
-  uassert(defined()) << "undefined function";
-  uassert(impl->hasArg(argument)) << "no argument of this name in the function";
-
-  impl->bindTensor(argument, data);
-}
-
-void Function::bind(string argument, simit::Set *set) {
+void Function::bind(const std::string& bindable, simit::Set *set) {
 #ifdef SIMIT_ASSERTS
   uassert(defined()) << "undefined function";
-  uassert(impl->hasArg(argument)) << "no argument of this name in the function";
+  uassert(impl->hasBindable(bindable))
+      << "no argument or global of this name in the function";
   // Check that the set matches the argument type
-  ir::Type argType = impl->getArgType(argument);
+  ir::Type argType = impl->getArgType(bindable);
   uassert(argType.isSet()) << "Argument is not a set";
   const ir::SetType *argSetType = argType.toSet();
   const ir::ElementType *elemType = argSetType->elementType.toElement();
@@ -96,7 +76,28 @@ void Function::bind(string argument, simit::Set *set) {
   }
 #endif
 
-  impl->bindSet(argument, set);
+  impl->bindSet(bindable, set);
+}
+
+void Function::bind(const std::string& bindable, const TensorType& ttype, void* data) {
+#ifdef SIMIT_ASSERTS
+  uassert(defined()) << "undefined function";
+  uassert(impl->hasBindable(bindable))
+      << "no argument or global of this name in the function";
+  ir::Type type = ir::convert(ttype);
+  ir::Type argType = impl->getArgType(bindable);
+  uassert(type == argType)
+      << "tensor type " << type
+      << " does not match function argument type " << argType;
+#endif
+  return bind(bindable, data);
+}
+
+void Function::bind(const std::string& bindable, void* data) {
+  uassert(defined()) << "undefined function";
+  uassert(impl->hasBindable(bindable))
+      << "no argument or global of this name in the function";
+  impl->bindTensor(bindable, data);
 }
 
 void Function::init() {

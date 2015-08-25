@@ -7,7 +7,6 @@
 
 #include "printable.h"
 #include "uncopyable.h"
-#include "error.h"
 
 namespace simit {
 class Set;
@@ -16,22 +15,18 @@ namespace ir {
 class Func;
 class Expr;
 class Type;
+class Var;
 }
 
 namespace backend {
 
-class Function : public simit::interfaces::Printable,
-                        simit::interfaces::Uncopyable {
+class Function : public interfaces::Printable, interfaces::Uncopyable {
 protected:
-    Function(const ir::Func &func);
+    Function(const ir::Func &func, const std::vector<ir::Var>& globals);
 
 public:
   typedef std::function<void()> FuncType;
   virtual ~Function();
-
-  bool hasArg(std::string arg) const;
-  const std::vector<std::string>& getArgs() const;
-  const ir::Type& getArgType(std::string arg) const;
 
   /// Bind the given data to the argument with the given name.
   virtual void bindTensor(const std::string& arg, void* data) = 0;
@@ -59,12 +54,26 @@ public:
   /// Print the function as machine assembly code to the stream.
   virtual void printMachine(std::ostream &os) const = 0;
 
+
+  bool hasArg(std::string arg) const;
+  const std::vector<std::string>& getArgs() const;
+  const ir::Type& getArgType(std::string arg) const;
+
+  bool hasGlobal(std::string global) const;
+  const std::vector<std::string>& getGlobals() const;
+  const ir::Type& getGlobalType(std::string global) const;
+
+  bool hasBindable(std::string bindable) const;
+
 private:
-  std::vector<std::string> formals;
-  std::map<std::string, ir::Type> formalTypes;
+  std::vector<std::string> arguments;
+  std::map<std::string, ir::Type> argumentTypes;
+
+  std::vector<std::string> globals;
+  std::map<std::string, ir::Type> globalTypes;
 
   /// We store the Simit Function's literals to prevent their memory from being
-  /// reclaimed if the IR is deleted, as compiled functions are expected to
+  /// reclaimed if the IR is deleted, as compiled functions are allowed to
   /// access them at runtime.
   std::vector<simit::ir::Expr> literals;
 };

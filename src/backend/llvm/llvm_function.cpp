@@ -15,31 +15,31 @@
 #include "llvm/IR/Verifier.h"
 #endif
 
-#include "graph.h"
 #include "backend/actual.h"
 #include "llvm_codegen.h"
+#include "graph.h"
 #include "indices.h"
+#include "util/collections.h"
 
 using namespace std;
+using namespace simit::ir;
 
 namespace simit {
 namespace backend {
 
 typedef void (*FuncPtrType)();
 
-LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-                           llvm::Module *module,
-                           std::shared_ptr<llvm::EngineBuilder> engineBuilder,
-                           const std::vector<ir::Var>& globals)
-    // TODO: Pass globals up to Function for typechecks...
-    : Function(simitFunc), llvmFunc(llvmFunc), module(module),
+LLVMFunction::LLVMFunction(ir::Func func, const vector<ir::Var>& globals,
+                           llvm::Function* llvmFunc, llvm::Module* module,
+                           std::shared_ptr<llvm::EngineBuilder> engineBuilder)
+    : Function(func, globals), llvmFunc(llvmFunc), module(module),
       engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
       initialized(false), deinit(nullptr) {
 
-  for (const ir::Var& arg : simitFunc.getArguments()) {
+  for (const ir::Var& arg : func.getArguments()) {
     actuals[arg.getName()] = new Actual(false);
   }
-  for (const ir::Var& res : simitFunc.getResults()) {
+  for (const ir::Var& res : func.getResults()) {
     // Skip results that alias an argument
     if (actuals.find(res.getName()) != actuals.end()) {
       actuals[res.getName()]->setOutput(true);
@@ -48,17 +48,13 @@ LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
     actuals[res.getName()] = new Actual(true);
   }
 
-  for (auto& global : globals) {
-    string name = global.getName();
-    llvm::GlobalValue* llvmGlobalVal = module->getNamedValue(name);
-    void* globalPtr = executionEngine->getPointerToGlobal(llvmGlobalVal);
-    this->globals.insert({name, (void**)globalPtr});
+  for (const string& global : getGlobals()) {
+    Type type = getGlobalType(global);
 
-      // Data passed from user
-//    void* data = malloc(sizeof(double));
-      // Init like this
-//    *this->globals.at(name) = data;
-//    *((double*)data) = 42.0;
+    llvm::GlobalValue* llvmGlobal = module->getNamedValue(global);
+    void** globalPtr = (void**)executionEngine->getPointerToGlobal(llvmGlobal);
+    *globalPtr = nullptr;
+    this->globals.insert({global, globalPtr});
   }
 }
 
@@ -71,40 +67,28 @@ LLVMFunction::~LLVMFunction() {
   }
 }
 
-void LLVMFunction::bindTensor(const std::string& arg, void* data) {
-  actuals[arg]->bindTensor(data);
-  initialized = false;
+void LLVMFunction::bindTensor(const std::string& bindable, void* data) {
+  iassert(hasBindable(bindable));
+  if (hasArg(bindable)) {
+    actuals.at(bindable)->bindTensor(data);
+    initialized = false;
+  }
+  else if (hasGlobal(bindable)) {
+    *globals.at(bindable) = data;
+  }
 }
 
-void LLVMFunction::bindSet(const std::string& arg, simit::Set* set) {
-  actuals[arg]->bindSet(set);
-  actuals[arg]->setOutput(true);
+void LLVMFunction::bindSet(const std::string& bindable, simit::Set* set) {
+  tassert(hasArg(bindable)) << "Global sets not supported yet";
+  actuals[bindable]->bindSet(set);
+  actuals[bindable]->setOutput(true);
   initialized = false;
 }
 
 Function::FuncType LLVMFunction::init() {
   initialized = true;
-  return init(getArgs(), actuals);
-}
+  vector<string> formals = getArgs();
 
-void LLVMFunction::print(std::ostream &os) const {
-  std::string fstr;
-  llvm::raw_string_ostream rsos(fstr);
-  module->print(rsos, nullptr);
-  os << rsos.str();
-}
-
-void LLVMFunction::printMachine(std::ostream &os) const {
-  llvm::TargetMachine *target = engineBuilder->selectTarget();
-  target->Options.PrintMachineCode = true;
-  llvm::ExecutionEngine *printee(engineBuilder->create(target));
-  printee->getPointerToFunction(llvmFunc);
-  target->Options.PrintMachineCode = false;
-}
-
-backend::Function::FuncType
-LLVMFunction::init(const vector<string> &formals,
-                   const map<string, Actual*> &actuals){
   iassert(formals.size() == llvmFunc->getArgumentList().size());
 
   if (llvmFunc->getArgumentList().size() == 0) {
@@ -189,6 +173,21 @@ LLVMFunction::init(const vector<string> &formals,
         << "LLVM module does not pass verification";
     return harness;
   }
+}
+
+void LLVMFunction::print(std::ostream &os) const {
+  std::string fstr;
+  llvm::raw_string_ostream rsos(fstr);
+  module->print(rsos, nullptr);
+  os << rsos.str();
+}
+
+void LLVMFunction::printMachine(std::ostream &os) const {
+  llvm::TargetMachine *target = engineBuilder->selectTarget();
+  target->Options.PrintMachineCode = true;
+  llvm::ExecutionEngine *printee(engineBuilder->create(target));
+  printee->getPointerToFunction(llvmFunc);
+  target->Options.PrintMachineCode = false;
 }
 
 LLVMFunction::FuncType

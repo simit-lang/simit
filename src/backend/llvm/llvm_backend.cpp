@@ -95,9 +95,6 @@ Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
   // Add global variables to symbol table
   std::map<std::string,void**> globalPointers;
   for (auto& global : globals) {
-    // TODO: Remove dead code
-//    void** globalPtr = static_cast<void**>(malloc(sizeof(void*)));
-//    llvm::Constant *llvmPtrConst = llvmPtr(global.getType(), globalPtr);
     llvm::Constant *llvmPtrConst = llvmPtr(global.getType(), 0);
     ScalarType ctype = global.getType().toTensor()->componentType;
     auto globalType = llvm::PointerType::get(createLLVMType(ctype),
@@ -231,7 +228,7 @@ Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
   mpm.run(*module);
 #endif
 
-  return new LLVMFunction(func, llvmFunc, module, engineBuilder, globals);
+  return new LLVMFunction(func, globals, llvmFunc, module, engineBuilder);
 }
 
 llvm::Value *LLVMBackend::compile(const Expr &expr) {

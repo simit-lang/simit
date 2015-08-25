@@ -21,15 +21,13 @@ class Actual;
 /// A Simit function that has been compiled with LLVM.
 class LLVMFunction : public backend::Function {
  public:
-  LLVMFunction(ir::Func simitFunc, llvm::Function* llvmFunc,
-               llvm::Module* module,
-               std::shared_ptr<llvm::EngineBuilder> engineBuilder,
-               const std::vector<ir::Var>& globals);
-
+  LLVMFunction(ir::Func func, const std::vector<ir::Var>& globals,
+               llvm::Function* llvmFunc, llvm::Module* module,
+               std::shared_ptr<llvm::EngineBuilder> engineBuilder);
   virtual ~LLVMFunction();
 
-  virtual void bindTensor(const std::string& arg, void* data);
-  virtual void bindSet(const std::string& arg, simit::Set* set);
+  virtual void bindTensor(const std::string& bindable, void* data);
+  virtual void bindSet(const std::string& bindable, simit::Set* set);
 
   virtual FuncType init();
 
@@ -54,9 +52,6 @@ class LLVMFunction : public backend::Function {
 
   bool initialized;
   FuncType deinit;
-
-  FuncType init(const std::vector<std::string>& formals,
-                const std::map<std::string, Actual*>& actuals);
 
   FuncType createHarness(const std::string& name,
                          const llvm::SmallVector<llvm::Value*,8>& args);

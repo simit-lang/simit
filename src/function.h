@@ -28,22 +28,25 @@ class Function;
 class Function {
 public:
   Function();
+
+  /// Create a function from a backend::Function. backend::Function objects can
+  /// be created using the backend::Backend::compile methods.
   Function(backend::Function *function);
 
   /// Bind the set to the given argument.
-  void bind(std::string argument, simit::Set* set);
+  void bind(const std::string& bindable, simit::Set* set);
 
   /// Bind the tensor to the given argument.
   template <typename CType, int... Dims>
-  void bind(std::string argument, Tensor<CType,Dims...>* tensor) {
-    bind(argument, tensor->getType(), tensor->getData());
+  void bind(const std::string& bindable, Tensor<CType,Dims...>* tensor) {
+    bind(bindable, tensor->getType(), tensor->getData());
   }
 
-  /// Bind tensor data to the given argument with type checks.
-  void bind(std::string argument, const TensorType& ttype, void* data);
+  /// Bind tensor data to the bindable (argument or global) with type checks.
+  void bind(const std::string& bindable, const TensorType& ttype, void* data);
 
-  /// Bind tensor data to the given argument without type checks.
-  void bind(std::string argument, void* data);
+  /// Bind tensor data to the bindable (argument or global) without type checks.
+  void bind(const std::string& bindable, void* data);
 
   /// Initialize the function. This must be done between calls to bind arguments
   /// and calls to run. If runSafe is used, there init will be called

@@ -9,22 +9,29 @@ using namespace std;
 #include "ir_visitor.h"
 #include "indices.h"
 #include "util/collections.h"
+#include "error.h"
 
 namespace simit {
 namespace backend {
 
 // class Function
-Function::Function(const ir::Func& func) {
+Function::Function(const ir::Func& func, const vector<ir::Var>& globals) {
   for (const ir::Var& arg : func.getArguments()) {
     string argName = arg.getName();
-    formals.push_back(argName);
-    formalTypes[argName] = arg.getType();
+    arguments.push_back(argName);
+    argumentTypes[argName] = arg.getType();
   }
 
   for (const ir::Var& res : func.getResults()) {
     string resName = res.getName();
-    formals.push_back(resName);
-    formalTypes[resName] = res.getType();
+    arguments.push_back(resName);
+    argumentTypes[resName] = res.getType();
+  }
+
+  for (const ir::Var& global : globals) {
+    string globalName = global.getName();
+    this->globals.push_back(globalName);
+    globalTypes[globalName] = global.getType();
   }
 
   // Gather the Simit literal expressions and store them in an array in the
@@ -56,15 +63,32 @@ Function::~Function() {
 }
 
 bool Function::hasArg(std::string arg) const {
-  return formalTypes.find(arg) != formalTypes.end();
+  return util::contains(argumentTypes, arg);
 }
 
 const std::vector<std::string>& Function::getArgs() const {
-  return formals;
+  return arguments;
 }
 
 const ir::Type& Function::getArgType(std::string arg) const {
-  return formalTypes.at(arg);
+  return argumentTypes.at(arg);
+}
+
+bool Function::hasGlobal(std::string global) const {
+  return util::contains(globals, global);
+}
+
+const std::vector<std::string>& Function::getGlobals() const {
+  return globals;
+}
+
+const ir::Type& Function::getGlobalType(std::string global) const {
+  return globalTypes.at(global);
+}
+
+bool Function::hasBindable(std::string bindable) const {
+  iassert(!(hasArg(bindable) && hasGlobal(bindable)));
+  return hasArg(bindable) || hasGlobal(bindable);
 }
 
 }}
