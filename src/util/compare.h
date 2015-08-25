@@ -9,9 +9,6 @@ namespace util {
 bool almostEqual(double a, double b, double maxRelativeError=0.0001);
 bool almostEqual(float a, float b, float maxRelativeError=0.0001);
 
-//template <typename T>
-//bool compare
-
 /// Compares two arrays and returns true if the content is equal.
 template <typename T> inline
 bool compare(const T* ldata, const T* rdata, size_t num) {

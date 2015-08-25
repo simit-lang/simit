@@ -40,7 +40,7 @@ extern const std::string PTR_SUFFIX;
 extern const std::string LEN_SUFFIX;
 
 /// Code generator that uses LLVM to compile Simit IR.
-class LLVMBackend : public Backend, private BackendVisitor {
+class LLVMBackend : public Backend, protected BackendVisitor<> {
 public:
   LLVMBackend();
   virtual ~LLVMBackend();

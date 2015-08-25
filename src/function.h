@@ -23,7 +23,7 @@ class Function;
 /// visible.
 ///
 /// If you call the function using `runSafe` (recommended for testing) you don't
-/// need to call `init`, `mapArgs` or `unmapArgs` as these will be called
+/// need to call `init`, `mapArgs` or `unmapArgs` as they will be called
 /// automatically.
 class Function {
 public:
