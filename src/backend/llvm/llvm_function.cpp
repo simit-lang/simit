@@ -16,7 +16,7 @@
 #endif
 
 #include "graph.h"
-
+#include "backend/actual.h"
 #include "llvm_codegen.h"
 #include "indices.h"
 
@@ -28,14 +28,25 @@ namespace backend {
 typedef void (*FuncPtrType)();
 
 LLVMFunction::LLVMFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
-                           bool requiresInit, llvm::Module *module,
+                           llvm::Module *module,
                            std::shared_ptr<llvm::EngineBuilder> engineBuilder,
                            const std::vector<ir::Var>& globals)
     // TODO: Pass globals up to Function for typechecks...
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
-      requiresInit(requiresInit),
-  deinit(nullptr) {
+      initialized(false), deinit(nullptr) {
+
+  for (const ir::Var& arg : simitFunc.getArguments()) {
+    actuals[arg.getName()] = new Actual(false);
+  }
+  for (const ir::Var& res : simitFunc.getResults()) {
+    // Skip results that alias an argument
+    if (actuals.find(res.getName()) != actuals.end()) {
+      actuals[res.getName()]->setOutput(true);
+      continue;
+    }
+    actuals[res.getName()] = new Actual(true);
+  }
 
   for (auto& global : globals) {
     string name = global.getName();
@@ -55,6 +66,25 @@ LLVMFunction::~LLVMFunction() {
   if (deinit) {
     deinit();
   }
+  for (auto &actual : actuals) {
+    delete actual.second;
+  }
+}
+
+void LLVMFunction::bindTensor(const std::string& arg, void* data) {
+  actuals[arg]->bindTensor(data);
+  initialized = false;
+}
+
+void LLVMFunction::bindSet(const std::string& arg, simit::Set* set) {
+  actuals[arg]->bindSet(set);
+  actuals[arg]->setOutput(true);
+  initialized = false;
+}
+
+Function::FuncType LLVMFunction::init() {
+  initialized = true;
+  return init(getArgs(), actuals);
 }
 
 void LLVMFunction::print(std::ostream &os) const {
@@ -78,13 +108,11 @@ LLVMFunction::init(const vector<string> &formals,
   iassert(formals.size() == llvmFunc->getArgumentList().size());
 
   if (llvmFunc->getArgumentList().size() == 0) {
-    if (requiresInit) {
-      llvm::Function *initFunc = getInitFunc();
-      llvm::Function *deinitFunc = getDeinitFunc();
-      ((FuncPtrType)executionEngine->getPointerToFunction(initFunc))();
-      auto fptr = executionEngine->getPointerToFunction(deinitFunc);
-      deinit = FuncType((FuncPtrType)fptr);
-    }
+    llvm::Function *initFunc = getInitFunc();
+    llvm::Function *deinitFunc = getDeinitFunc();
+    ((FuncPtrType)executionEngine->getPointerToFunction(initFunc))();
+    auto fptr = executionEngine->getPointerToFunction(deinitFunc);
+    deinit = FuncType((FuncPtrType)fptr);
     return FuncType((FuncPtrType)executionEngine->getPointerToFunction(llvmFunc));
   }
   else {
@@ -94,12 +122,13 @@ LLVMFunction::init(const vector<string> &formals,
       assert(actuals.find(formal) != actuals.end());
       Actual *actual = actuals.at(formal);
 
-      switch (actual->getType().kind()) {
+      ir::Type type = getArgType(formal);
+      switch (type.kind()) {
         case ir::Type::Tensor: {
           void* tensorData = actual->getTensorData();
           llvm::Value *llvmActual = (llvmArgIt->getType()->isPointerTy())
-              ? llvmPtr(actual->getType(), tensorData)
-              : llvmVal(actual->getType(), tensorData);
+              ? llvmPtr(type, tensorData)
+              : llvmVal(type, tensorData);
           args.push_back(llvmActual);
           break;
         }
@@ -108,7 +137,7 @@ LLVMFunction::init(const vector<string> &formals,
           break;
         }
         case ir::Type::Set: {
-          const ir::SetType *setType = actual->getType().toSet();
+          const ir::SetType *setType = type.toSet();
           Set *set = actual->getSet();
 
           llvm::StructType *llvmSetType = createLLVMType(setType);
@@ -150,11 +179,9 @@ LLVMFunction::init(const vector<string> &formals,
       ++llvmArgIt;
     }
 
-    // Init function
-    if (requiresInit) {
-      createHarness(string(llvmFunc->getName())+".init", args)();
-      deinit = createHarness(string(llvmFunc->getName())+".deinit", args);
-    }
+    // Create Init/deinit function harnesses
+    createHarness(string(llvmFunc->getName())+".init", args)();
+    deinit = createHarness(string(llvmFunc->getName())+".deinit", args);
 
     // Compute function
     auto harness = createHarness(llvmFunc->getName(), args);

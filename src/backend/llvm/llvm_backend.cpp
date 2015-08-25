@@ -81,7 +81,10 @@ Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
 
   this->symtable.clear();
   this->buffers.clear();
+
   this->globals.clear();
+  this->globals.insert(globals.begin(), globals.end());
+
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
@@ -107,7 +110,6 @@ Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
                                  llvm::GlobalVariable::NotThreadLocal,
                                  global_addrspace());
     symtable.insert(global, llvmGlobalPtr);
-    this->globals.insert(global);
   }
 
   llvm::Function *llvmFunc = nullptr;
@@ -156,7 +158,6 @@ Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
   // Create initialization function
   emitEmptyFunction(func.getName()+".init", func.getArguments(),
                     func.getResults(), true);
-
   for (auto &buffer : buffers) {
     Var var = buffer.first;
     llvm::Value *bufferVal = buffer.second;
@@ -181,7 +182,6 @@ Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
   // Create de-initialization function
   emitEmptyFunction(func.getName()+".deinit", func.getArguments(),
                     func.getResults(), true);
-
   for (auto &buffer : buffers) {
     Var var = buffer.first;
     llvm::Value *bufferVal = buffer.second;
@@ -231,9 +231,7 @@ Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
   mpm.run(*module);
 #endif
 
-  bool requiresInit = buffers.size() > 0;
-  return new LLVMFunction(func, llvmFunc, requiresInit, module, engineBuilder,
-                          globals);
+  return new LLVMFunction(func, llvmFunc, module, engineBuilder, globals);
 }
 
 llvm::Value *LLVMBackend::compile(const Expr &expr) {

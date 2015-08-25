@@ -16,19 +16,29 @@ class ExecutionEngine;
 
 namespace simit {
 namespace backend {
+class Actual;
 
 /// A Simit function that has been compiled with LLVM.
 class LLVMFunction : public backend::Function {
  public:
   LLVMFunction(ir::Func simitFunc, llvm::Function* llvmFunc,
-               bool requiresInit, llvm::Module* module,
+               llvm::Module* module,
                std::shared_ptr<llvm::EngineBuilder> engineBuilder,
                const std::vector<ir::Var>& globals);
 
-  ~LLVMFunction();
+  virtual ~LLVMFunction();
 
-  void print(std::ostream &os) const;
-  void printMachine(std::ostream &os) const;
+  virtual void bindTensor(const std::string& arg, void* data);
+  virtual void bindSet(const std::string& arg, simit::Set* set);
+
+  virtual FuncType init();
+
+  virtual bool isInitialized() {
+    return initialized;
+  }
+
+  virtual void print(std::ostream &os) const;
+  virtual void printMachine(std::ostream &os) const;
 
  private:
   llvm::Function*                        llvmFunc;
@@ -36,10 +46,13 @@ class LLVMFunction : public backend::Function {
   std::shared_ptr<llvm::EngineBuilder>   engineBuilder;
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;
 
-  // Globals storage
+  /// Function actual storage
+  std::map<std::string,Actual*> actuals;
+
+  /// Globals storage
   std::map<std::string,void**> globals;
 
-  bool requiresInit;
+  bool initialized;
   FuncType deinit;
 
   FuncType init(const std::vector<std::string>& formals,

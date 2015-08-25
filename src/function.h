@@ -30,38 +30,50 @@ public:
   Function();
   Function(backend::Function *function);
 
+  /// Bind the set to the given argument.
+  void bind(std::string argument, simit::Set* set);
+
   /// Bind the tensor to the given argument.
   template <typename CType, int... Dims>
-  void bind(std::string argumentName, Tensor<CType,Dims...>* tensor) {
-    bind(argumentName, tensor->getType(), tensor->getData());
+  void bind(std::string argument, Tensor<CType,Dims...>* tensor) {
+    bind(argument, tensor->getType(), tensor->getData());
   }
 
   /// Bind tensor data to the given argument with type checks.
-  void bind(std::string argumentName, const TensorType& ttype, void* data);
+  void bind(std::string argument, const TensorType& ttype, void* data);
 
   /// Bind tensor data to the given argument without type checks.
-  void bind(std::string argumentName, void* data);
+  void bind(std::string argument, void* data);
 
-  /// Bind the set to the given argument.
-  void bind(std::string argumentName, simit::Set* set);
-
+  /// Initialize the function. This must be done between calls to bind arguments
+  /// and calls to run. If runSafe is used, there init will be called
+  /// automatically as needed.
   void init();
-  bool isInit();
 
+  /// Run the function. Make sure to bind arguments and map arguments, and to
+  /// init the function before calling this method. Also make sure to map/unmap
+  /// arguments if you need to access them between calls to run.
   inline void run() {
-    iassert(isInit()) << "Function has not been initialized";
     funcPtr();
   }
 
+  /// Run the function. This method will automatically map/unmap arguments and
+  /// initialize the function as necessary. However, it will incur additional
+  /// overhead over manually initializing and mapping arguments.
   void runSafe();
 
   void mapArgs();
   void unmapArgs(bool updated=true);
 
-  bool defined() {return impl != nullptr;}
+  /// True if the function has been defined, false otherwise.
+  bool defined() const {return impl != nullptr;}
 
-  void printMachine(std::ostream &os);
+  /// Write the function to the stream. The output depends on the backend,
+  /// for example the LLVM backend will write LLVM IR.
   friend std::ostream &operator<<(std::ostream &os, const Function &f);
+
+  /// Print the function as machine assembly code to the stream.
+  void printMachine(std::ostream &os);
 
 private:
   std::shared_ptr<backend::Function> impl;

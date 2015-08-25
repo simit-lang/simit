@@ -17,7 +17,8 @@
 
 namespace simit {
 
-// Forward declarations
+class Function;
+
 class Set;
 class FieldRefBase;
 template <typename T, int... dimensions> class FieldRef;
@@ -27,10 +28,6 @@ namespace internal {
 class VertexToEdgeEndpointIndex;
 class VertexToEdgeIndex;
 class NeighborIndex;
-}
-
-namespace backend {
-class Function;
 }
 
 namespace pe {
@@ -571,7 +568,7 @@ private:
   }
 
   friend FieldRefBase;
-  friend simit::backend::Function;
+  friend simit::Function;
 };
 
 

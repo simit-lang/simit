@@ -4,90 +4,46 @@
 #include <cstdlib>
 #include <vector>
 #include <map>
-#include <memory>
 
 #include "printable.h"
 #include "uncopyable.h"
 #include "error.h"
 
 namespace simit {
-
 class Set;
 
 namespace ir {
 class Func;
 class Expr;
-class TensorStorage;
 class Type;
-struct TensorType;
 }
 
 namespace backend {
 
-class Actual : public simit::interfaces::Uncopyable {
-public:
-  Actual(const ir::Type &type, bool output=false);
-  Actual();
-  ~Actual();
-
-  void bindTensorData(void* data);
-  void bind(simit::Set* set);
-
-  bool isBound() const;
-
-  void setOutput(bool output);
-  bool isOutput() const;
-
-  const ir::Type& getType() const;
-
-  simit::Set* getSet();
-  void* getTensorData();
-
-private:
-  struct Content;
-  std::unique_ptr<Content> content;
-};
-
 class Function : public simit::interfaces::Printable,
                         simit::interfaces::Uncopyable {
+protected:
+    Function(const ir::Func &func);
+
 public:
+  typedef std::function<void()> FuncType;
   virtual ~Function();
 
-  /// Bind the given data to the argument with the given argName. The data is
-  /// assumed to be laid out in the way specified by the type, which is
-  /// type-checked against the formal.
-  void bindTensorData(const std::string &argumentName, const ir::Type& type,
-                      void* data);
+  bool hasArg(std::string arg) const;
+  const std::vector<std::string>& getArgs() const;
+  const ir::Type& getArgType(std::string arg) const;
 
-  /// Bind the given data to the argument with the given argName. The data is
-  /// assumed to be laid out in the format specified in the IR and is not
-  /// type-checked.
-  void bindTensorData(const std::string& argumentName, void* data);
+  /// Bind the given data to the argument with the given name.
+  virtual void bindTensor(const std::string& arg, void* data) = 0;
 
-  void bind(const std::string &argName, simit::Set *set);
+  /// Bind the given set to the argument with the given name.
+  virtual void bindSet(const std::string& arg, simit::Set* set) = 0;
 
-  inline void init() {
-    funcPtr = init(formals, actuals);
-    initRequired = false;
-  }
+  /// Initialize the function.
+  virtual FuncType init() = 0;
 
-  bool isInit() {
-    return !initRequired;
-  }
-
-  inline void run() {
-    iassert(!initRequired);
-    funcPtr();
-  }
-
-  inline void runSafe() {
-    if (initRequired) {
-      init();
-    }
-    unmapArgs();
-    funcPtr();
-    mapArgs();
-  }
+  /// Query whether the function requires intialization.
+  virtual bool isInitialized() = 0;
 
   // TODO Should these really be an extension to the bind interface?
   //      Per-argument updates/copies.
@@ -96,34 +52,21 @@ public:
   virtual void mapArgs() {}
   virtual void unmapArgs(bool updated=true) {}
 
-  std::function<void()> getFunctionHandle() {return funcPtr;}
+  /// Write the function to the stream. The output depends on the backend,
+  /// for example the LLVM backend will write LLVM IR.
+  virtual void print(std::ostream &os) const = 0;
 
-  /// Print the function as machine code.
+  /// Print the function as machine assembly code to the stream.
   virtual void printMachine(std::ostream &os) const = 0;
 
-protected:
-  typedef std::function<void()> FuncType;
-
-  Function(const ir::Func &simitFunc);
-
-  /// Get number of bytes required to store tensors with `type` and `storage`.
-  size_t size(const ir::TensorType &type,
-              const ir::TensorStorage &storage) const;
-
+private:
   std::vector<std::string> formals;
-  std::map<std::string, Actual*> actuals;
+  std::map<std::string, ir::Type> formalTypes;
 
   /// We store the Simit Function's literals to prevent their memory from being
   /// reclaimed if the IR is deleted, as compiled functions are expected to
   /// access them at runtime.
   std::vector<simit::ir::Expr> literals;
-
-  FuncType funcPtr;
-  bool initRequired;
-
-private:
-  virtual FuncType init(const std::vector<std::string> &formals,
-                        const std::map<std::string, Actual*> &actuals) = 0;
 };
 
 }}
