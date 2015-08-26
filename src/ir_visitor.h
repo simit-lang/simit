@@ -19,11 +19,13 @@ struct Call;
 struct Length;
 struct IndexRead;
 struct TensorIndexRead;
+
 struct Neg;
 struct Add;
 struct Sub;
 struct Mul;
 struct Div;
+
 struct Not;
 struct Eq;
 struct Ne;
@@ -34,6 +36,7 @@ struct Le;
 struct And;
 struct Or;
 struct Xor;
+
 struct VarDecl;
 struct AssignStmt;
 struct CallStmt;
@@ -48,6 +51,7 @@ struct Kernel;
 struct Print;
 struct Comment;
 struct Pass;
+
 struct TupleRead;
 struct TensorRead;
 struct TensorWrite;

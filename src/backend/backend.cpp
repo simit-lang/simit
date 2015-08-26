@@ -39,7 +39,7 @@ Backend::~Backend() {
   delete pimpl;
 }
 
-Function* Backend::compile(const Stmt& stmt, const std::set<ir::Var>& output) {
+Function* Backend::compile(const Stmt& stmt, std::set<ir::Var> output) {
   Func func("main", {}, {}, stmt);
   std::set<Var> globals = output;
 

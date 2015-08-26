@@ -29,7 +29,7 @@ public:
   /// any undefined variable becomes part of the runable function's environment
   /// and must be bound before the function is run.
   backend::Function* compile(const ir::Stmt& stmt,
-                             const std::set<ir::Var>& output);
+                             std::set<ir::Var> output=std::set<ir::Var>());
 
 protected:
   BackendImpl* pimpl;
