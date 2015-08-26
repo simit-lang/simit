@@ -105,12 +105,12 @@ private:
     os << "- ";
     auto it = scope.begin();
     if (it != scope.end()) {
-      std::string symString = simit::util::toString(it->second->getName());
+      std::string symString = simit::util::toString(it->second);
       os << it->first << " -> " << symString;
       ++it;
     }
     for (; it != scope.end(); ++it) {
-      std::string symString = simit::util::toString(it->second->getName());
+      std::string symString = simit::util::toString(it->second);
       os << "\n  " << it->first << " -> " << symString;
     }
   }
