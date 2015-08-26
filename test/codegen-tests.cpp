@@ -20,7 +20,7 @@ TEST(Codegen, add) {
   Expr axb = Add::make(a,b);
   Stmt body = AssignStmt::make(c, axb);
 
-  simit::Function function = getTestBackend()->compile(body);
+  simit::Function function = getTestBackend()->compile(body, {c});
 
   simit_float aArg = 2.0;
   simit_float bArg = 4.1;

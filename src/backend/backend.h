@@ -2,12 +2,14 @@
 #define SIMIT_BACKEND_H
 
 #include <memory>
+#include <set>
 #include "uncopyable.h"
 
 namespace simit {
 namespace ir {
 class Func;
 class Stmt;
+class Var;
 }
 namespace backend {
 class Function;
@@ -23,10 +25,11 @@ public:
   /// Compiles an IR function to a runable function.
   backend::Function* compile(const ir::Func& func);
 
-  /// Compiles an IR statement to a runable function. Any undefined variable
-  /// becomes part of the runable function's environment and must be bound
-  /// before the function is run.
-  backend::Function* compile(const ir::Stmt& stmt);
+  /// Compiles an IR statement to a runable function. The output variables and
+  /// any undefined variable becomes part of the runable function's environment
+  /// and must be bound before the function is run.
+  backend::Function* compile(const ir::Stmt& stmt,
+                             const std::set<ir::Var>& output);
 
 protected:
   BackendImpl* pimpl;
