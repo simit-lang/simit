@@ -35,11 +35,11 @@ BackendImpl* getBackendImpl(const std::string &type) {
 Backend::Backend(const std::string &type) : pimpl(getBackendImpl(type)) {
 }
 
-Function* Backend::compile(const Stmt& stmt) {
 Backend::~Backend() {
   delete pimpl;
 }
 
+Function* Backend::compile(const Stmt& stmt) {
   Func func("main", {}, {}, stmt);
 
   util::ScopedMap<Var,Var> definedVariables;
