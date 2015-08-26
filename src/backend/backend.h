@@ -18,6 +18,7 @@ class BackendImpl;
 class Backend : simit::interfaces::Uncopyable {
 public:
   Backend(const std::string &type);
+  ~Backend();
 
   /// Compiles an IR function to a runable function.
   backend::Function* compile(const ir::Func& func);

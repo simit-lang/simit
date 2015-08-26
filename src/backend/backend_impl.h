@@ -14,6 +14,8 @@ class Function;
 
 class BackendImpl : simit::interfaces::Uncopyable {
 public:
+  virtual ~BackendImpl() {}
+
   /// Compile the closure consisting of the function and a context.
   virtual Function* compile(ir::Func func, std::set<ir::Var> globals) = 0;
 };
