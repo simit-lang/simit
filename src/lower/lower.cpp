@@ -46,7 +46,6 @@ Func rewriteCallGraph(const Func& func, const function<Func(Func)>& rewriter) {
   return Rewriter(rewriter).rewrite(func);
 }
 
-static
 void visitCallGraph(Func func, const function<void(Func)>& visitRule) {
   class Visitor : public simit::ir::IRVisitorCallGraph {
   public:
@@ -107,8 +106,12 @@ Func lower(Func func, bool print) {
   printCallGraph("Lower Maps", func, print);
 
   // Lower Index Expressions
-  func = rewriteCallGraph(func, lowerIndexExprs);
+  func = rewriteCallGraph(func, lowerIndexExpressions);
   printCallGraph("Lower Index Expressions", func, print);
+
+  // TODO: Deprecated index expression lower pass to be replaced
+  func = rewriteCallGraph(func, lowerIndexExprs);
+  printCallGraph("Lower Index Expressions OLD", func, print);
 
   // Lower Tensor Reads and Writes
   func = rewriteCallGraph(func, lowerTensorAccesses);
