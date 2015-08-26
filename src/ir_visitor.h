@@ -2,7 +2,7 @@
 #define SIMIT_IR_VISITOR_H
 
 #include <set>
-#include "macros.h"
+#include "error.h"
 
 namespace simit {
 namespace ir {
@@ -156,21 +156,34 @@ private:
   bool init;
 };
 
-
 #define RULE(Rule)                                                             \
 std::function<void(const Rule*)> Rule##Func;                                   \
+std::function<void(const Rule*, Matcher*)> Rule##CtxFunc;                      \
 void unpack(std::function<void(const Rule*)> pattern) {                        \
+  iassert(!Rule##CtxFunc && !Rule##Func);                                      \
   Rule##Func = pattern;                                                        \
+}                                                                              \
+void unpack(std::function<void(const Rule*, Matcher*)> pattern) {              \
+  iassert(!Rule##CtxFunc && !Rule##Func);                                      \
+  Rule##CtxFunc = pattern;                                                     \
 }                                                                              \
 void visit(const Rule* op) {                                                   \
   if (Rule##Func) {                                                            \
     Rule##Func(op);                                                            \
   }                                                                            \
+  else if (Rule##CtxFunc) {                                                    \
+    Rule##CtxFunc(op, this);                                                   \
+    return;                                                                    \
+  }                                                                            \
   IRVisitor::visit(op);                                                        \
 }
 
-class MatchVisitor : public IRVisitor {
+class Matcher : public IRVisitor {
 public:
+  template <class IR>
+  void match(IR ir) {
+    ir.accept(this);
+  }
 
   template <class IR, class... Patterns>
   void process(IR ir, Patterns... patterns) {
@@ -178,6 +191,7 @@ public:
     ir.accept(this);
   }
 
+private:
   template <class First, class... Rest>
   void unpack(First first, Rest... rest) {
     unpack(first);
@@ -251,7 +265,7 @@ match(func,
 **/
 template <class IR, class... Patterns>
 void match(IR ir, Patterns... patterns) {
-  MatchVisitor().process(ir, patterns...);
+  Matcher().process(ir, patterns...);
 }
 
 }} // namespace simit::internal
