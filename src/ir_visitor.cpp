@@ -32,6 +32,9 @@ void IRVisitor::visit(const TensorIndexRead *op) {
 }
 
 void IRVisitor::visit(const Length *op) {
+  if (op->indexSet.getKind() == IndexSet::Set) {
+    op->indexSet.getSet().accept(this);
+  }
 }
 
 void IRVisitor::visit(const Load *op) {

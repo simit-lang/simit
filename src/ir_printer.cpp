@@ -236,7 +236,7 @@ void IRPrinter::visit(const Call *op) {
 
 void IRPrinter::visit(const Length *op) {
   clearSkipParen();
-  os << op->indexSet;
+  os << "length(" << op->indexSet << ")";
 }
 
 void IRPrinter::visit(const IndexRead *op) {

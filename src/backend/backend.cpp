@@ -60,9 +60,10 @@ Function* Backend::compile(const Stmt& stmt) {
       definedVariables.insert(op->var, op->var);
     })
     ,
-    function<void(const ForRange*,Matcher*)>([&](const ForRange* op,
-                                                 Matcher* ctx) {
+    function<void(const ForRange*,Matcher*)>([&](const ForRange* op, Matcher* ctx) {
       definedVariables.scope();
+      ctx->match(op->start);
+      ctx->match(op->end);
       definedVariables.insert(op->var,op->var);
       ctx->match(op->body);
       definedVariables.unscope();

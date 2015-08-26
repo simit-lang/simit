@@ -94,7 +94,17 @@ void IRRewriter::visit(const Call *op) {
 }
 
 void IRRewriter::visit(const Length *op) {
-  expr = op;
+  if (op->indexSet.getKind() == IndexSet::Set) {
+    Expr set = rewrite(op->indexSet.getSet());
+    if (set == op->indexSet.getSet()) {
+      expr = op;
+    }
+    else {
+      expr = Length::make(IndexSet(set));
+    }
+  } else {
+    expr = op;
+  }
 }
 
 void IRRewriter::visit(const IndexRead *op) {
