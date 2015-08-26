@@ -290,7 +290,7 @@ void LLVMBackend::compile(const VarExpr& varExpr) {
   }
 }
 
-void LLVMBackend::compile(const ir::Load& load) {
+void LLVMBackend::compile(const Load& load) {
   llvm::Value *buffer = compile(load.buffer);
   llvm::Value *index = compile(load.index);
 
@@ -429,11 +429,11 @@ void LLVMBackend::compile(const Call& call) {
 }
 
 
-void LLVMBackend::compile(const ir::Length& length) {
+void LLVMBackend::compile(const Length& length) {
   val = emitComputeLen(length.indexSet);
 }
 
-void LLVMBackend::compile(const ir::IndexRead& indexRead) {
+void LLVMBackend::compile(const IndexRead& indexRead) {
   // TODO: Add support for different indices (contained in the Set type).
   unsigned int indexLoc = 1 + indexRead.kind;
 
@@ -444,8 +444,8 @@ void LLVMBackend::compile(const ir::IndexRead& indexRead) {
   val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(indexRead));
 }
 
-void LLVMBackend::compile(const ir::TensorIndexRead& op) {
-
+void LLVMBackend::compile(const TensorIndexRead& op) {
+  not_supported_yet;
 }
 
 void LLVMBackend::compile(const Neg& negExpr) {
@@ -539,7 +539,7 @@ void LLVMBackend::compile(const Div& divExpr) {
   }
 }
 
-void LLVMBackend::compile(const ir::Not& notExpr) {
+void LLVMBackend::compile(const Not& notExpr) {
   iassert(isBoolean(notExpr.type));
   iassert(isBoolean(notExpr.a.type()));
 
@@ -548,8 +548,8 @@ void LLVMBackend::compile(const ir::Not& notExpr) {
   val = builder->CreateNot(a);
 }
 
-#define LLVMBACKEND_VISIT_COMPARE_OP(typename, op, float_cmp, int_cmp)         \
-void LLVMBackend::compile(const ir::typename& op) {                            \
+#define LLVMBACKEND_VISIT_COMPARE_OP(Type, op, float_cmp, int_cmp)             \
+void LLVMBackend::compile(Type op) {                                           \
   iassert(isBoolean(op.type));                                                 \
   iassert(isScalar(op.a.type()));                                              \
   iassert(isScalar(op.b.type()));                                              \
@@ -557,22 +557,22 @@ void LLVMBackend::compile(const ir::typename& op) {                            \
   llvm::Value *a = compile(op.a);                                              \
   llvm::Value *b = compile(op.b);                                              \
                                                                                \
-  const TensorType *type = op.a.type().toTensor();                             \
-  if (type->componentType == ScalarType::Float) {                              \
+  const TensorType *ttype = op.a.type().toTensor();                            \
+  if (ttype->componentType == ScalarType::Float) {                             \
     val = builder->float_cmp(a, b);                                            \
   } else {                                                                     \
     val = builder->int_cmp(a, b);                                              \
   }                                                                            \
 }
 
-LLVMBACKEND_VISIT_COMPARE_OP(Eq, op, CreateFCmpOEQ, CreateICmpEQ)
-LLVMBACKEND_VISIT_COMPARE_OP(Ne, op, CreateFCmpONE, CreateICmpNE)
-LLVMBACKEND_VISIT_COMPARE_OP(Gt, op, CreateFCmpOGT, CreateICmpSGT)
-LLVMBACKEND_VISIT_COMPARE_OP(Lt, op, CreateFCmpOLT, CreateICmpSLT)
-LLVMBACKEND_VISIT_COMPARE_OP(Ge, op, CreateFCmpOGE, CreateICmpSGE)
-LLVMBACKEND_VISIT_COMPARE_OP(Le, op, CreateFCmpOLE, CreateICmpSLE)
+LLVMBACKEND_VISIT_COMPARE_OP(const Eq&, op, CreateFCmpOEQ, CreateICmpEQ)
+LLVMBACKEND_VISIT_COMPARE_OP(const Ne&, op, CreateFCmpONE, CreateICmpNE)
+LLVMBACKEND_VISIT_COMPARE_OP(const Gt&, op, CreateFCmpOGT, CreateICmpSGT)
+LLVMBACKEND_VISIT_COMPARE_OP(const Lt&, op, CreateFCmpOLT, CreateICmpSLT)
+LLVMBACKEND_VISIT_COMPARE_OP(const Ge&, op, CreateFCmpOGE, CreateICmpSGE)
+LLVMBACKEND_VISIT_COMPARE_OP(const Le&, op, CreateFCmpOLE, CreateICmpSLE)
 
-void LLVMBackend::compile(const ir::And& andExpr) {
+void LLVMBackend::compile(const And& andExpr) {
   iassert(isBoolean(andExpr.type));
   iassert(isBoolean(andExpr.a.type()));
   iassert(isBoolean(andExpr.b.type()));
@@ -583,7 +583,7 @@ void LLVMBackend::compile(const ir::And& andExpr) {
   val = builder->CreateAnd(a, b);
 }
 
-void LLVMBackend::compile(const ir::Or& orExpr) {
+void LLVMBackend::compile(const Or& orExpr) {
   iassert(isBoolean(orExpr.type));
   iassert(isBoolean(orExpr.a.type()));
   iassert(isBoolean(orExpr.b.type()));
@@ -594,7 +594,7 @@ void LLVMBackend::compile(const ir::Or& orExpr) {
   val = builder->CreateOr(a, b);
 }
 
-void LLVMBackend::compile(const ir::Xor& xorExpr) {
+void LLVMBackend::compile(const Xor& xorExpr) {
   iassert(isBoolean(xorExpr.type));
   iassert(isBoolean(xorExpr.a.type()));
   iassert(isBoolean(xorExpr.b.type()));
@@ -899,7 +899,7 @@ void LLVMBackend::compile(const Block& block) {
   }
 }
 
-void LLVMBackend::compile(const ir::IfThenElse& ifThenElse) {
+void LLVMBackend::compile(const IfThenElse& ifThenElse) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
   llvm::Value *cond = compile(ifThenElse.condition);
@@ -928,7 +928,7 @@ void LLVMBackend::compile(const ir::IfThenElse& ifThenElse) {
   builder->SetInsertPoint(exitBlock);
 }
 
-void LLVMBackend::compile(const ir::ForRange& forLoop) {
+void LLVMBackend::compile(const ForRange& forLoop) {
   std::string iName = forLoop.var.getName();
   
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
@@ -1304,7 +1304,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
   return len;
 }
 
-llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
+llvm::Value *LLVMBackend::emitComputeLen(const IndexDomain &dom) {
   assert(dom.getIndexSets().size() > 0);
 
   auto it = dom.getIndexSets().begin();
@@ -1315,7 +1315,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexDomain &dom) {
   return result;
 }
 
-llvm::Value *LLVMBackend::emitComputeLen(const ir::IndexSet &is) {
+llvm::Value *LLVMBackend::emitComputeLen(const IndexSet &is) {
   switch (is.getKind()) {
     case IndexSet::Range:
       return llvmInt(is.getSize());
@@ -1438,7 +1438,7 @@ void LLVMBackend::emitPrintf(std::string format,
   builder->CreateCall(printfFunc, printfArgs);
 }
 
-void LLVMBackend::emitAssign(Var var, const ir::Expr& value) {
+void LLVMBackend::emitAssign(Var var, const Expr& value) {
   /// \todo assignment of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only assign scalars to scalars
   ///       in the backend. Probably requires copy and memset intrinsics.
