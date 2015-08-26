@@ -326,6 +326,16 @@ void IRRewriter::visit(const While *op) {
   }
 }
 
+void IRRewriter::visit(const Kernel *op) {
+  Stmt body = rewrite(op->body);
+  if (body == op->body) {
+    stmt = op;
+  }
+  else {
+    stmt = Kernel::make(op->var, op->domain, body);
+  }
+}
+
 void IRRewriter::visit(const Print *op) {
   Expr expr = rewrite(op->expr);
   if (expr == op->expr) {

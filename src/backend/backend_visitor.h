@@ -13,7 +13,9 @@ public:
 
 protected:
   void visitError(std::string type, const void* op);
-  void accept(const ir::Comment&);
+
+  void compile(const ir::Kernel&);
+  void compile(const ir::Comment&);
 };
 
 template <typename T>
@@ -84,9 +86,17 @@ protected:
   virtual void compile(const ir::While&) = 0;
   virtual void compile(const ir::Print&) = 0;
 
+
   // Optional
-  virtual void compile(const ir::Comment& c) {BackendVisitorBase::accept(c);}
-  virtual void compile(const ir::Pass&) {}
+
+  /// The default Kernel compilation converts the kernel to a For loop and calls
+  /// compile on it.
+  virtual void compile(const ir::Kernel& op) {BackendVisitorBase::compile(op);}
+
+  /// The default Comment compilation calls compile on the commented statement.
+  virtual void compile(const ir::Comment& op) {BackendVisitorBase::compile(op);}
+
+  virtual void compile(const ir::Pass&)       {}
 
 private:
   using ir::IRVisitorStrict::visit;
@@ -123,6 +133,7 @@ private:
   void visit(const ir::ForRange* op)        {compile(*op);}
   void visit(const ir::For* op)             {compile(*op);}
   void visit(const ir::While* op)           {compile(*op);}
+  void visit(const ir::Kernel *op)          {compile(*op);}
   void visit(const ir::Print* op)           {compile(*op);}
   void visit(const ir::Comment* op)         {compile(*op);}
   void visit(const ir::Pass* op)            {compile(*op);}

@@ -466,8 +466,7 @@ void IRPrinter::visit(const IfThenElse *op) {
 
 void IRPrinter::visit(const ForRange *op) {
   indent();
-  os << "for " << op->var << " in " << op->start << ":" << op->end;
-  os << ":" << endl;
+  os << "for " << op->var << " in " << op->start << " : " << op->end << endl;
   ++indentation;
   print(op->body);
   --indentation;
@@ -478,8 +477,7 @@ void IRPrinter::visit(const ForRange *op) {
 
 void IRPrinter::visit(const For *op) {
   indent();
-  os << "for " << op->var << " in " << op->domain;
-  os << ":" << endl;
+  os << "for " << op->var << " in " << op->domain << endl;
   ++indentation;
   print(op->body);
   --indentation;
@@ -498,6 +496,16 @@ void IRPrinter::visit(const While *op) {
   print(op->body);
   --indentation;
   os << endl;
+  indent();
+  os << "end";
+}
+
+void IRPrinter::visit(const Kernel *op) {
+  indent();
+  os << "kernel for " << op->var << " in " << op->domain << endl;
+  ++indentation;
+  print(op->body);
+  --indentation;
   indent();
   os << "end";
 }

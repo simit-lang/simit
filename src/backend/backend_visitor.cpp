@@ -20,8 +20,12 @@ void BackendVisitorBase::visitError(std::string type, const void* op) {
   ierror << type << " should never reach the backend: " << util::toString(*ir);
 }
 
-void BackendVisitorBase::accept(const ir::Comment& c) {
-  c.commentedStmt.accept(this);
+void BackendVisitorBase::compile(const ir::Kernel& kernel) {
+  not_supported_yet;
+}
+
+void BackendVisitorBase::compile(const ir::Comment& comment) {
+  comment.commentedStmt.accept(this);
 }
 
 }}

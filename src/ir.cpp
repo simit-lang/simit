@@ -741,6 +741,15 @@ Stmt While::make(Expr condition, Stmt body) {
   return node;
 }
 
+// struct Kernel
+Stmt Kernel::make(Var var, IndexDomain domain, Stmt body) {
+  Kernel *node = new Kernel;
+  node->var = var;
+  node->domain = domain;
+  node->body = body;
+  return node;
+}
+
 // struct Print
 Stmt Print::make(Expr expr) {
   Print *node = new Print;

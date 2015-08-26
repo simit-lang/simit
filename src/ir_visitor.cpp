@@ -173,6 +173,10 @@ void IRVisitor::visit(const While *op) {
   op->body.accept(this);
 }
 
+void IRVisitor::visit(const Kernel *op) {
+  op->body.accept(this);
+}
+
 void IRVisitor::visit(const Print *op) {
   op->expr.accept(this);
 }

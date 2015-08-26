@@ -96,6 +96,7 @@ public:
   virtual void visit(const ForRange* op) = 0;
   virtual void visit(const For* op) = 0;
   virtual void visit(const While* op) = 0;
+  virtual void visit(const Kernel *op) = 0;
   virtual void visit(const Print* op) = 0;
   virtual void visit(const Comment* op) = 0;
   virtual void visit(const Pass* op) = 0;
@@ -153,7 +154,7 @@ public:
   virtual void visit(const ForRange *op);
   virtual void visit(const For *op);
   virtual void visit(const While *op);
-//  virtual void visit(const Kernel *op);
+  virtual void visit(const Kernel *op);
   virtual void visit(const Print *op);
   virtual void visit(const Comment *op);
   virtual void visit(const Pass *op);

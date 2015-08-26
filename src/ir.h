@@ -456,6 +456,7 @@ struct ForDomain {
   }
 };
 
+// TODO DEPRECATED: Remove when new index system is in place.
 struct For : public StmtNode<For> {
   Var var;
   ForDomain domain;
@@ -467,6 +468,13 @@ struct While : public StmtNode<While> {
   Expr condition;
   Stmt body;
   static Stmt make(Expr condition, Stmt body);
+};
+
+struct Kernel : public StmtNode<Kernel> {
+  Var var;
+  IndexDomain domain;
+  Stmt body;
+  static Stmt make(Var var, IndexDomain domain, Stmt body);
 };
 
 struct Print : public StmtNode<Print> {
