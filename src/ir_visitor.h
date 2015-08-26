@@ -7,26 +7,24 @@
 namespace simit {
 namespace ir {
 
-struct IRNode;
+class Func;
+class Stmt;
+class Expr;
 
 struct Literal;
 struct VarExpr;
+struct Load;
 struct FieldRead;
-struct TensorRead;
-struct TupleRead;
+struct Call;
+struct Length;
 struct IndexRead;
 struct TensorIndexRead;
-struct Length;
-struct Map;
-struct IndexedTensor;
-struct IndexExpr;
-struct Call;
-struct Load;
 struct Neg;
 struct Add;
 struct Sub;
 struct Mul;
 struct Div;
+struct Not;
 struct Eq;
 struct Ne;
 struct Gt;
@@ -35,44 +33,90 @@ struct Ge;
 struct Le;
 struct And;
 struct Or;
-struct Not;
 struct Xor;
-
 struct VarDecl;
 struct AssignStmt;
-struct FieldWrite;
-struct TensorWrite;
-struct Store;
 struct CallStmt;
+struct Store;
+struct FieldWrite;
+struct Block;
+struct IfThenElse;
 struct ForRange;
 struct For;
 struct While;
-struct IfThenElse;
-struct Block;
+struct Kernel;
 struct Print;
 struct Comment;
 struct Pass;
+struct TupleRead;
+struct TensorRead;
+struct TensorWrite;
+struct IndexedTensor;
+struct IndexExpr;
+struct Map;
 
-#ifdef GPU
-struct GPUKernel;
-#endif
+/// IR visitor without default implementations. Sub-classes must therefore
+/// override all Expr and Stmt visit methods. For a visitor with default
+/// implementations see IRVisitor.
+class IRVisitorStrict {
+public:
+  virtual void visit(const Literal* op) = 0;
+  virtual void visit(const VarExpr* op) = 0;
+  virtual void visit(const Load* op) = 0;
+  virtual void visit(const FieldRead* op) = 0;
+  virtual void visit(const Call* op) = 0;
+  virtual void visit(const Length* op) = 0;
+  virtual void visit(const IndexRead* op) = 0;
+  virtual void visit(const TensorIndexRead* op) = 0;
 
-class Func;
-class Stmt;
-class Expr;
+  virtual void visit(const Neg* op) = 0;
+  virtual void visit(const Add* op) = 0;
+  virtual void visit(const Sub* op) = 0;
+  virtual void visit(const Mul* op) = 0;
+  virtual void visit(const Div* op) = 0;
 
-/// Visitor where the iteration order is specified in the visitor instead of
-/// the accept methods.  This design is chosen to allow different visitors to
-/// specify different traversal orders.  As a consequence the visit methods are
-/// called to start a traversal, while handle methods are called to perform
-/// actions on objects as specified by visitor subclasses.
-///
-/// The default IRVisitor visits each tensor in a function once in forward order
-/// starting with arguments and literals and ending with the results.
-class IRVisitor {
+  virtual void visit(const Not* op) = 0;
+  virtual void visit(const Eq* op) = 0;
+  virtual void visit(const Ne* op) = 0;
+  virtual void visit(const Gt* op) = 0;
+  virtual void visit(const Lt* op) = 0;
+  virtual void visit(const Ge* op) = 0;
+  virtual void visit(const Le* op) = 0;
+  virtual void visit(const And* op) = 0;
+  virtual void visit(const Or* op) = 0;
+  virtual void visit(const Xor* op) = 0;
+
+  virtual void visit(const VarDecl* op) = 0;
+  virtual void visit(const AssignStmt* op) = 0;
+  virtual void visit(const CallStmt* op) = 0;
+  virtual void visit(const Store* op) = 0;
+  virtual void visit(const FieldWrite* op) = 0;
+  virtual void visit(const Block* op) = 0;
+  virtual void visit(const IfThenElse* op) = 0;
+  virtual void visit(const ForRange* op) = 0;
+  virtual void visit(const For* op) = 0;
+  virtual void visit(const While* op) = 0;
+  virtual void visit(const Print* op) = 0;
+  virtual void visit(const Comment* op) = 0;
+  virtual void visit(const Pass* op) = 0;
+
+  /// High-level IRNodes that are lowered and never reach the backend
+  virtual void visit(const TupleRead* op) = 0;
+  virtual void visit(const TensorRead* op) = 0;
+  virtual void visit(const TensorWrite* op) = 0;
+  virtual void visit(const IndexedTensor* op) = 0;
+  virtual void visit(const IndexExpr* op) = 0;
+  virtual void visit(const Map* op) = 0;
+
+  virtual void visit(const Func* f) {}
+};
+
+/// IR visitor with default implementations that recursively visits the IR.
+class IRVisitor : public IRVisitorStrict {
 public:
   virtual ~IRVisitor();
 
+  using IRVisitorStrict::visit;
   virtual void visit(const Literal *op);
   virtual void visit(const VarExpr *op);
   virtual void visit(const Load *op);
@@ -109,6 +153,7 @@ public:
   virtual void visit(const ForRange *op);
   virtual void visit(const For *op);
   virtual void visit(const While *op);
+//  virtual void visit(const Kernel *op);
   virtual void visit(const Print *op);
   virtual void visit(const Comment *op);
   virtual void visit(const Pass *op);
@@ -120,10 +165,6 @@ public:
   virtual void visit(const IndexedTensor *op);
   virtual void visit(const IndexExpr *op);
   virtual void visit(const Map *op);
-
-#ifdef GPU
-  virtual void visit(const GPUKernel *op);
-#endif
 
   virtual void visit(const Func *f);
 };
@@ -234,6 +275,7 @@ private:
   RULE(ForRange)
   RULE(For)
   RULE(While)
+//  RULE(Kernel)
   RULE(Print)
   RULE(Comment)
   RULE(Pass)

@@ -68,8 +68,7 @@ Function* Backend::compile(const Stmt& stmt) {
       definedVariables.unscope();
     })
     ,
-    function<void(const For*,Matcher*)>([&](const For* op,
-                                            Matcher* ctx) {
+    function<void(const For*,Matcher*)>([&](const For* op, Matcher* ctx) {
       definedVariables.scope();
       definedVariables.insert(op->var,op->var);
       ctx->match(op->body);

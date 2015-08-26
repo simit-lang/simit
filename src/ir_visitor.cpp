@@ -23,18 +23,6 @@ void IRVisitor::visit(const FieldRead *op) {
   op->elementOrSet.accept(this);
 }
 
-void IRVisitor::visit(const TensorRead *op) {
-  op->tensor.accept(this);
-  for (auto &index : op->indices) {
-    index.accept(this);
-  }
-}
-
-void IRVisitor::visit(const TupleRead *op) {
-  op->tuple.accept(this);
-  op->index.accept(this);
-}
-
 void IRVisitor::visit(const IndexRead *op) {
   op->edgeSet.accept(this);
 }
@@ -49,14 +37,6 @@ void IRVisitor::visit(const Length *op) {
 void IRVisitor::visit(const Load *op) {
   op->buffer.accept(this);
   op->index.accept(this);
-}
-
-void IRVisitor::visit(const IndexedTensor *op) {
-  op->tensor.accept(this);
-}
-
-void IRVisitor::visit(const IndexExpr *op) {
-  op->value.accept(this);
 }
 
 void IRVisitor::visit(const Call *op) {
@@ -151,34 +131,31 @@ void IRVisitor::visit(const CallStmt *op) {
   }
 }
 
-void IRVisitor::visit(const Map *op) {
-  op->target.accept(this);
-  if (op->neighbors.defined()) {
-    op->neighbors.accept(this);
-  }
-
-  for (auto &p : op->partial_actuals) {
-    p.accept(this);
-  }
+void IRVisitor::visit(const Store *op) {
+  op->buffer.accept(this);
+  op->index.accept(this);
+  op->value.accept(this);
 }
+
 
 void IRVisitor::visit(const FieldWrite *op) {
   op->elementOrSet.accept(this);
   op->value.accept(this);
 }
 
-void IRVisitor::visit(const TensorWrite *op) {
-  op->tensor.accept(this);
-  for (auto &index : op->indices) {
-    index.accept(this);
+void IRVisitor::visit(const Block *op) {
+  op->first.accept(this);
+  if (op->rest.defined()) {
+    op->rest.accept(this);
   }
-  op->value.accept(this);
 }
 
-void IRVisitor::visit(const Store *op) {
-  op->buffer.accept(this);
-  op->index.accept(this);
-  op->value.accept(this);
+void IRVisitor::visit(const IfThenElse *op) {
+  op->condition.accept(this);
+  op->thenBody.accept(this);
+  if (op->elseBody.defined()) {
+    op->elseBody.accept(this);
+  }
 }
 
 void IRVisitor::visit(const ForRange *op) {
@@ -196,21 +173,6 @@ void IRVisitor::visit(const While *op) {
   op->body.accept(this);
 }
 
-void IRVisitor::visit(const IfThenElse *op) {
-  op->condition.accept(this);
-  op->thenBody.accept(this);
-  if (op->elseBody.defined()) {
-    op->elseBody.accept(this);
-  }
-}
-
-void IRVisitor::visit(const Block *op) {
-  op->first.accept(this);
-  if (op->rest.defined()) {
-    op->rest.accept(this);
-  }
-}
-
 void IRVisitor::visit(const Print *op) {
   op->expr.accept(this);
 }
@@ -224,11 +186,44 @@ void IRVisitor::visit(const Comment *op) {
 void IRVisitor::visit(const Pass *op) {
 }
 
-#ifdef GPU
-void IRVisitor::visit(const GPUKernel *op) {
-  op->body.accept(this);
+void IRVisitor::visit(const TupleRead *op) {
+  op->tuple.accept(this);
+  op->index.accept(this);
 }
-#endif
+
+void IRVisitor::visit(const TensorRead *op) {
+  op->tensor.accept(this);
+  for (auto &index : op->indices) {
+    index.accept(this);
+  }
+}
+
+void IRVisitor::visit(const TensorWrite *op) {
+  op->tensor.accept(this);
+  for (auto &index : op->indices) {
+    index.accept(this);
+  }
+  op->value.accept(this);
+}
+
+void IRVisitor::visit(const IndexedTensor *op) {
+  op->tensor.accept(this);
+}
+
+void IRVisitor::visit(const IndexExpr *op) {
+  op->value.accept(this);
+}
+
+void IRVisitor::visit(const Map *op) {
+  op->target.accept(this);
+  if (op->neighbors.defined()) {
+    op->neighbors.accept(this);
+  }
+
+  for (auto &p : op->partial_actuals) {
+    p.accept(this);
+  }
+}
 
 void IRVisitor::visit(const Func *op) {
   if (op->getBody().defined()) {

@@ -55,6 +55,17 @@ void IRRewriter::visit(const VarExpr *op) {
   expr = op;
 }
 
+void IRRewriter::visit(const Load *op) {
+  Expr buffer = rewrite(op->buffer);
+  Expr index = rewrite(op->index);
+  if (buffer == op->buffer && index == op->index) {
+    expr = op;
+  }
+  else {
+    expr = Load::make(buffer, index);
+  }
+}
+
 void IRRewriter::visit(const FieldRead *op) {
   Expr elementOrSet = rewrite(op->elementOrSet);
   if (elementOrSet == op->elementOrSet) {
@@ -65,33 +76,25 @@ void IRRewriter::visit(const FieldRead *op) {
   }
 }
 
-void IRRewriter::visit(const TensorRead *op) {
-  Expr tensor = rewrite(op->tensor);
-  std::vector<Expr> indices(op->indices.size());
-  bool indicesSame = true;
-  for (size_t i=0; i < op->indices.size(); ++i) {
-    indices[i] = rewrite(op->indices[i]);
-    if (indices[i] != op->indices[i]) {
-      indicesSame = false;
+void IRRewriter::visit(const Call *op) {
+  std::vector<Expr> actuals(op->actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->actuals.size(); ++i) {
+    actuals[i] = rewrite(op->actuals[i]);
+    if (actuals[i] != op->actuals[i]) {
+      actualsSame = false;
     }
   }
-  if (tensor == op->tensor && indicesSame) {
+  if (actualsSame) {
     expr = op;
   }
   else {
-    expr = TensorRead::make(tensor, indices);
+    expr = Call::make(op->func, actuals);
   }
 }
 
-void IRRewriter::visit(const TupleRead *op) {
-  Expr tuple = rewrite(op->tuple);
-  Expr index = rewrite(op->index);
-  if (tuple == op->tuple && index == op->index) {
-    expr = op;
-  }
-  else {
-    expr = TupleRead::make(tuple, index);
-  }
+void IRRewriter::visit(const Length *op) {
+  expr = op;
 }
 
 void IRRewriter::visit(const IndexRead *op) {
@@ -111,58 +114,6 @@ void IRRewriter::visit(const TensorIndexRead *op) {
   }
   else {
     expr = TensorIndexRead::make(op->tensorIndex, loc, op->readType);
-  }
-}
-
-void IRRewriter::visit(const Length *op) {
-  expr = op;
-}
-
-void IRRewriter::visit(const Load *op) {
-  Expr buffer = rewrite(op->buffer);
-  Expr index = rewrite(op->index);
-  if (buffer == op->buffer && index == op->index) {
-    expr = op;
-  }
-  else {
-    expr = Load::make(buffer, index);
-  }
-}
-
-void IRRewriter::visit(const IndexedTensor *op) {
-  Expr tensor = rewrite(op->tensor);
-  if (tensor == op->tensor) {
-    expr = op;
-  }
-  else {
-    expr = IndexedTensor::make(tensor, op->indexVars);
-  }
-}
-
-void IRRewriter::visit(const IndexExpr *op) {
-  Expr value = rewrite(op->value);
-  if (value == op->value) {
-    expr = op;
-  }
-  else {
-    expr = IndexExpr::make(op->resultVars, value);
-  }
-}
-
-void IRRewriter::visit(const Call *op) {
-  std::vector<Expr> actuals(op->actuals.size());
-  bool actualsSame = true;
-  for (size_t i=0; i < op->actuals.size(); ++i) {
-    actuals[i] = rewrite(op->actuals[i]);
-    if (actuals[i] != op->actuals[i]) {
-      actualsSame = false;
-    }
-  }
-  if (actualsSame) {
-    expr = op;
-  }
-  else {
-    expr = Call::make(op->func, actuals);
   }
 }
 
@@ -281,25 +232,15 @@ void IRRewriter::visit(const CallStmt *op) {
   }
 }
 
-void IRRewriter::visit(const Map *op) {
-  Expr target = rewrite(op->target);
-  Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
-  
-  std::vector<Expr> partial_actuals(op->partial_actuals.size());
-  bool actualsSame = true;
-  for (size_t i=0; i < op->partial_actuals.size(); ++i) {
-    partial_actuals[i] = rewrite(op->partial_actuals[i]);
-    if (partial_actuals[i] != op->partial_actuals[i]) {
-      actualsSame = false;
-    }
-  }
-
-  if (target == op->target && neighbors == op->neighbors && actualsSame) {
+void IRRewriter::visit(const Store *op) {
+  Expr buffer = rewrite(op->buffer);
+  Expr index = rewrite(op->index);
+  Expr value = rewrite(op->value);
+  if (buffer == op->buffer && op->index == index && value == op->value) {
     stmt = op;
   }
   else {
-    stmt = Map::make(op->vars, op->function, partial_actuals, target, neighbors,
-      op->reduction);
+    stmt = Store::make(buffer, index, value, op->cop);
   }
 }
 
@@ -314,34 +255,39 @@ void IRRewriter::visit(const FieldWrite *op) {
   }
 }
 
-void IRRewriter::visit(const TensorWrite *op) {
-  Expr tensor = rewrite(op->tensor);
-  std::vector<Expr> indices(op->indices.size());
-  bool indicesSame = true;
-  for (size_t i=0; i < op->indices.size(); ++i) {
-    indices[i] = rewrite(op->indices[i]);
-    if (indices[i] != op->indices[i]) {
-      indicesSame = false;
-    }
-  }
-  Expr value = rewrite(op->value);
-  if (tensor == op->tensor && indicesSame && value == op->value) {
+void IRRewriter::visit(const Block *op) {
+  Stmt first = rewrite(op->first);
+  Stmt rest = rewrite(op->rest);
+  if (first == op->first && rest == op->rest) {
     stmt = op;
   }
   else {
-    stmt = TensorWrite::make(tensor, indices, value, op->cop);
+    if (first.defined() && rest.defined()) {
+      stmt = Block::make(first, rest, op->scoped);
+      stmt = Block::make(first, rest);
+    }
+    else if (first.defined() && !rest.defined()) {
+      stmt = first;
+    }
+    else if (!first.defined() && rest.defined()) {
+      stmt = rest;
+    }
+    else {
+      stmt = Stmt();
+    }
   }
 }
 
-void IRRewriter::visit(const Store *op) {
-  Expr buffer = rewrite(op->buffer);
-  Expr index = rewrite(op->index);
-  Expr value = rewrite(op->value);
-  if (buffer == op->buffer && op->index == index && value == op->value) {
+void IRRewriter::visit(const IfThenElse *op) {
+  Expr condition = rewrite(op->condition);
+  Stmt thenBody = rewrite(op->thenBody);
+  Stmt elseBody = rewrite(op->elseBody);
+  if (condition == op->condition && thenBody == op->thenBody &&
+      elseBody == op->elseBody) {
     stmt = op;
   }
   else {
-    stmt = Store::make(buffer, index, value, op->cop);
+    stmt = IfThenElse::make(condition, thenBody, elseBody);
   }
 }
 
@@ -380,42 +326,6 @@ void IRRewriter::visit(const While *op) {
   }
 }
 
-void IRRewriter::visit(const IfThenElse *op) {
-  Expr condition = rewrite(op->condition);
-  Stmt thenBody = rewrite(op->thenBody);
-  Stmt elseBody = rewrite(op->elseBody);
-  if (condition == op->condition && thenBody == op->thenBody &&
-      elseBody == op->elseBody) {
-    stmt = op;
-  }
-  else {
-    stmt = IfThenElse::make(condition, thenBody, elseBody);
-  }
-}
-
-void IRRewriter::visit(const Block *op) {
-  Stmt first = rewrite(op->first);
-  Stmt rest = rewrite(op->rest);
-  if (first == op->first && rest == op->rest) {
-    stmt = op;
-  }
-  else {
-    if (first.defined() && rest.defined()) {
-      stmt = Block::make(first, rest, op->scoped);
-      stmt = Block::make(first, rest);
-    }
-    else if (first.defined() && !rest.defined()) {
-      stmt = first;
-    }
-    else if (!first.defined() && rest.defined()) {
-      stmt = rest;
-    }
-    else {
-      stmt = Stmt();
-    }
-  }
-}
-
 void IRRewriter::visit(const Print *op) {
   Expr expr = rewrite(op->expr);
   if (expr == op->expr) {
@@ -440,17 +350,95 @@ void IRRewriter::visit(const Pass *op) {
   stmt = op;
 }
 
-#ifdef GPU
-void IRRewriter::visit(const GPUKernel *op) {
-  Stmt body = rewrite(op->body);
-  if (body == op->body) {
+void IRRewriter::visit(const TensorWrite *op) {
+  Expr tensor = rewrite(op->tensor);
+  std::vector<Expr> indices(op->indices.size());
+  bool indicesSame = true;
+  for (size_t i=0; i < op->indices.size(); ++i) {
+    indices[i] = rewrite(op->indices[i]);
+    if (indices[i] != op->indices[i]) {
+      indicesSame = false;
+    }
+  }
+  Expr value = rewrite(op->value);
+  if (tensor == op->tensor && indicesSame && value == op->value) {
     stmt = op;
   }
   else {
-    stmt = GPUKernel::make(body, op->sharding, op->reads, op->writes);
+    stmt = TensorWrite::make(tensor, indices, value, op->cop);
   }
 }
-#endif
+
+void IRRewriter::visit(const TupleRead *op) {
+  Expr tuple = rewrite(op->tuple);
+  Expr index = rewrite(op->index);
+  if (tuple == op->tuple && index == op->index) {
+    expr = op;
+  }
+  else {
+    expr = TupleRead::make(tuple, index);
+  }
+}
+
+void IRRewriter::visit(const TensorRead *op) {
+  Expr tensor = rewrite(op->tensor);
+  std::vector<Expr> indices(op->indices.size());
+  bool indicesSame = true;
+  for (size_t i=0; i < op->indices.size(); ++i) {
+    indices[i] = rewrite(op->indices[i]);
+    if (indices[i] != op->indices[i]) {
+      indicesSame = false;
+    }
+  }
+  if (tensor == op->tensor && indicesSame) {
+    expr = op;
+  }
+  else {
+    expr = TensorRead::make(tensor, indices);
+  }
+}
+
+void IRRewriter::visit(const IndexedTensor *op) {
+  Expr tensor = rewrite(op->tensor);
+  if (tensor == op->tensor) {
+    expr = op;
+  }
+  else {
+    expr = IndexedTensor::make(tensor, op->indexVars);
+  }
+}
+
+void IRRewriter::visit(const IndexExpr *op) {
+  Expr value = rewrite(op->value);
+  if (value == op->value) {
+    expr = op;
+  }
+  else {
+    expr = IndexExpr::make(op->resultVars, value);
+  }
+}
+
+void IRRewriter::visit(const Map *op) {
+  Expr target = rewrite(op->target);
+  Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
+  
+  std::vector<Expr> partial_actuals(op->partial_actuals.size());
+  bool actualsSame = true;
+  for (size_t i=0; i < op->partial_actuals.size(); ++i) {
+    partial_actuals[i] = rewrite(op->partial_actuals[i]);
+    if (partial_actuals[i] != op->partial_actuals[i]) {
+      actualsSame = false;
+    }
+  }
+
+  if (target == op->target && neighbors == op->neighbors && actualsSame) {
+    stmt = op;
+  }
+  else {
+    stmt = Map::make(op->vars, op->function, partial_actuals, target, neighbors,
+      op->reduction);
+  }
+}
 
 void IRRewriter::visit(const Func *f) {
   Stmt body = rewrite(f->getBody());

@@ -20,4 +20,8 @@ void BackendVisitorBase::visitError(std::string type, const void* op) {
   ierror << type << " should never reach the backend: " << util::toString(*ir);
 }
 
+void BackendVisitorBase::accept(const ir::Comment& c) {
+  c.commentedStmt.accept(this);
+}
+
 }}

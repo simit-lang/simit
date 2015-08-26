@@ -214,33 +214,29 @@ void IRPrinter::visit(const VarExpr *op) {
   os << op->var;
 }
 
+void IRPrinter::visit(const Load *op) {
+  clearSkipParen();
+  print(op->buffer);
+  os << "[";
+  skipTopExprParenthesis();
+  print(op->index);
+  os << "]";
+}
+
 void IRPrinter::visit(const FieldRead *op) {
   clearSkipParen();
   print(op->elementOrSet);
   os << "." << op->fieldName;
 }
 
-void IRPrinter::visit(const TensorRead *op) {
+void IRPrinter::visit(const Call *op) {
   clearSkipParen();
-  print(op->tensor);
-  os << "(";
-  auto indices = op->indices;
-  if (indices.size() > 0) {
-    print(indices[0]);
-  }
-  for (size_t i=1; i < indices.size(); ++i) {
-    os << ",";
-    print(indices[i]);
-  }
-  os << ")";
+  os << op->func.getName() << "(" << util::join(op->actuals) << ")";
 }
 
-void IRPrinter::visit(const TupleRead *op) {
+void IRPrinter::visit(const Length *op) {
   clearSkipParen();
-  print(op->tuple);
-  os << "(";
-  print(op->index);
-  os << ")";
+  os << op->indexSet;
 }
 
 void IRPrinter::visit(const IndexRead *op) {
@@ -275,43 +271,6 @@ void IRPrinter::visit(const TensorIndexRead *op) {
   skipTopExprParenthesis();
   print(op->loc);
   os << "]";
-}
-
-void IRPrinter::visit(const Length *op) {
-  clearSkipParen();
-  os << op->indexSet;
-}
-
-void IRPrinter::visit(const Load *op) {
-  clearSkipParen();
-  print(op->buffer);
-  os << "[";
-  skipTopExprParenthesis();
-  print(op->index);
-  os << "]";
-}
-
-void IRPrinter::visit(const IndexedTensor *op) {
-  clearSkipParen();
-  print(op->tensor);
-  if (op->indexVars.size() > 0) {
-    os << "(" << util::join(op->indexVars,",") << ")";
-  }
-}
-
-void IRPrinter::visit(const IndexExpr *op) {
-  clearSkipParen();
-  os << "{";
-  if (op->resultVars.size() > 0) {
-    os << simit::util::join(op->resultVars, ",") + " ";
-  }
-  print(op->value);
-  os << "}";
-}
-
-void IRPrinter::visit(const Call *op) {
-  clearSkipParen();
-  os << op->func.getName() << "(" << util::join(op->actuals) << ")";
 }
 
 #define PRINT_VISIT_BINARY_OP(type, symbol, op)                                \
@@ -370,6 +329,47 @@ void IRPrinter::visit(const CallStmt *op) {
   indent();
   os << util::join(op->results) << " = " << op->callee.getName()
      << "(" << util::join(op->actuals) << ")" << ";";
+}
+
+void IRPrinter::visit(const TupleRead *op) {
+  clearSkipParen();
+  print(op->tuple);
+  os << "(";
+  print(op->index);
+  os << ")";
+}
+
+void IRPrinter::visit(const TensorRead *op) {
+  clearSkipParen();
+  print(op->tensor);
+  os << "(";
+  auto indices = op->indices;
+  if (indices.size() > 0) {
+    print(indices[0]);
+  }
+  for (size_t i=1; i < indices.size(); ++i) {
+    os << ",";
+    print(indices[i]);
+  }
+  os << ")";
+}
+
+void IRPrinter::visit(const IndexedTensor *op) {
+  clearSkipParen();
+  print(op->tensor);
+  if (op->indexVars.size() > 0) {
+    os << "(" << util::join(op->indexVars,",") << ")";
+  }
+}
+
+void IRPrinter::visit(const IndexExpr *op) {
+  clearSkipParen();
+  os << "{";
+  if (op->resultVars.size() > 0) {
+    os << simit::util::join(op->resultVars, ",") + " ";
+  }
+  print(op->value);
+  os << "}";
 }
 
 void IRPrinter::visit(const Map *op) {
@@ -434,6 +434,36 @@ void IRPrinter::visit(const Store *op) {
   os << ";";
 }
 
+void IRPrinter::visit(const Block *op) {
+  print(op->first);
+  if (op->rest.defined()) {
+    os << endl;
+    print(op->rest);
+  }
+}
+
+void IRPrinter::visit(const IfThenElse *op) {
+  indent();
+  os << "if ";
+  skipTopExprParenthesis();
+  print(op->condition);
+  os << endl;
+  ++indentation;
+  print(op->thenBody);
+  --indentation;
+  if (op->elseBody.defined()) {
+    os << endl;
+    indent();
+    os << "else" << endl;
+    ++indentation;
+    print(op->elseBody);
+    --indentation;
+  }
+  os << endl;
+  indent();
+  os << "end";
+}
+
 void IRPrinter::visit(const ForRange *op) {
   indent();
   os << "for " << op->var << " in " << op->start << ":" << op->end;
@@ -472,34 +502,11 @@ void IRPrinter::visit(const While *op) {
   os << "end";
 }
 
-void IRPrinter::visit(const IfThenElse *op) {
+void IRPrinter::visit(const Print *op) {
   indent();
-  os << "if ";
-  skipTopExprParenthesis();
-  print(op->condition);
-  os << endl;
-  ++indentation;
-  print(op->thenBody);
-  --indentation;
-  if (op->elseBody.defined()) {
-    os << endl;
-    indent();
-    os << "else" << endl;
-    ++indentation;
-    print(op->elseBody);
-    --indentation;
-  }
-  os << endl;
-  indent();
-  os << "end";
-}
-
-void IRPrinter::visit(const Block *op) {
-  print(op->first);
-  if (op->rest.defined()) {
-    os << endl;
-    print(op->rest);
-  }
+  os << "print ";
+  print(op->expr);
+  os << ";";
 }
 
 void IRPrinter::visit(const Comment *op) {
@@ -514,13 +521,6 @@ void IRPrinter::visit(const Comment *op) {
   if (op->footerSpace) {
     os << "\n";
   }
-}
-
-void IRPrinter::visit(const Print *op) {
-  indent();
-  os << "print ";
-  print(op->expr);
-  os << ";";
 }
 
 void IRPrinter::visit(const Pass *op) {

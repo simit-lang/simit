@@ -21,7 +21,7 @@ struct IRNode : private simit::interfaces::Uncopyable {
 public:
   IRNode() {}
   virtual ~IRNode() {}
-  virtual void accept(IRVisitor *visitor) const = 0;
+  virtual void accept(IRVisitorStrict *visitor) const = 0;
 
 private:
   mutable long ref = 0;
@@ -38,12 +38,12 @@ struct StmtNodeBase : public IRNode {
 
 template <typename T>
 struct ExprNode : public ExprNodeBase {
-  void accept(IRVisitor *v) const { v->visit((const T *)this); }
+  void accept(IRVisitorStrict *v) const { v->visit((const T *)this); }
 };
 
 template <typename T>
 struct StmtNode : public StmtNodeBase {
-  void accept(IRVisitor *v) const { v->visit((const T *)this); }
+  void accept(IRVisitorStrict *v) const { v->visit((const T *)this); }
 };
 
 struct IRHandle : util::IntrusivePtr<const IRNode> {
@@ -62,7 +62,7 @@ public:
 
   Type type() const {return static_cast<const ExprNodeBase*>(ptr)->type;}
 
-  void accept(IRVisitor *v) const {ptr->accept(v);}
+  void accept(IRVisitorStrict *v) const {ptr->accept(v);}
 
   Expr operator()(const std::vector<IndexVar> &indexVars) const;
 
@@ -98,7 +98,7 @@ public:
   Stmt() : IRHandle() {}
   Stmt(const StmtNodeBase *stmt) : IRHandle(stmt) {}
 
-  void accept(IRVisitor *v) const {ptr->accept(v);}
+  void accept(IRVisitorStrict *v) const {ptr->accept(v);}
 
   template <typename S> friend bool isa(Stmt);
   template <typename S> friend const S* to(Stmt);
@@ -187,7 +187,7 @@ public:
   /// Retrieve a storage descriptor for the function's local variables
   const Storage &getStorage() const {return ptr->storage;}
 
-  void accept(IRVisitor *visitor) const { visitor->visit(this); };
+  void accept(IRVisitorStrict *visitor) const { visitor->visit(this); };
 };
 
 
@@ -426,7 +426,6 @@ struct IfThenElse : public StmtNode<IfThenElse> {
   static Stmt make(Expr condition, Stmt thenBody, Stmt elseBody);
 };
 
-/// A `for` over a range.
 struct ForRange : public StmtNode<ForRange> {
   Var var;
   Expr start;
@@ -475,7 +474,8 @@ struct Print : public StmtNode<Print> {
   static Stmt make(Expr expr);
 };
 
-/// A comment that can optionally be applied to a statements
+/// A comment, that can optionally be applied to a statement with footer and
+/// header space.
 struct Comment : public StmtNode<Comment> {
   std::string comment;
   Stmt commentedStmt;

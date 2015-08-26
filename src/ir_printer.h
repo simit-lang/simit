@@ -25,7 +25,7 @@ std::ostream &operator<<(std::ostream &os, const IRNode &);
 std::ostream &operator<<(std::ostream &os, const ForDomain &);
 std::ostream &operator<<(std::ostream &os, const CompoundOperator &);
 
-class IRPrinter : private IRVisitor {
+class IRPrinter : private IRVisitorStrict {
 public:
   IRPrinter(std::ostream &os, signed indent=0);
   virtual ~IRPrinter() {}
@@ -38,51 +38,53 @@ public:
   void skipTopExprParenthesis();
 
 private:
-  using IRVisitor::visit;
-  virtual void visit(const Literal *);
-  virtual void visit(const VarExpr *);
-  virtual void visit(const FieldRead *);
-  virtual void visit(const TensorRead *);
-  virtual void visit(const TupleRead *);
-  virtual void visit(const IndexRead *);
-  virtual void visit(const TensorIndexRead *);
-  virtual void visit(const Length *);
-  virtual void visit(const Load *);
-  virtual void visit(const IndexedTensor *);
-  virtual void visit(const IndexExpr *);
-  virtual void visit(const Call *);
-  virtual void visit(const Neg *);
-  virtual void visit(const Add *);
-  virtual void visit(const Sub *);
-  virtual void visit(const Mul *);
-  virtual void visit(const Div *);
+  using IRVisitorStrict::visit;
+  virtual void visit(const Literal *op);
+  virtual void visit(const VarExpr *op);
+  virtual void visit(const Load *op);
+  virtual void visit(const FieldRead *op);
+  virtual void visit(const Call *op);
+  virtual void visit(const Length *op);
+  virtual void visit(const IndexRead *op);
+  virtual void visit(const TensorIndexRead *op);
 
-  virtual void visit(const Eq *);
-  virtual void visit(const Ne *);
-  virtual void visit(const Gt *);
-  virtual void visit(const Lt *);
-  virtual void visit(const Ge *);
-  virtual void visit(const Le *);
-  virtual void visit(const And *);
-  virtual void visit(const Or *);
-  virtual void visit(const Not *);
-  virtual void visit(const Xor *);
+  virtual void visit(const Neg *op);
+  virtual void visit(const Add *op);
+  virtual void visit(const Sub *op);
+  virtual void visit(const Mul *op);
+  virtual void visit(const Div *op);
 
-  virtual void visit(const VarDecl *);
-  virtual void visit(const AssignStmt *);
-  virtual void visit(const CallStmt *);
-  virtual void visit(const Map *);
-  virtual void visit(const FieldWrite *);
-  virtual void visit(const TensorWrite *);
-  virtual void visit(const Store *);
-  virtual void visit(const ForRange *);
-  virtual void visit(const For *);
-  virtual void visit(const While *);
-  virtual void visit(const IfThenElse *);
-  virtual void visit(const Block *);
-  virtual void visit(const Print *);
-  virtual void visit(const Comment *);
-  virtual void visit(const Pass *);
+  virtual void visit(const Not *op);
+  virtual void visit(const Eq *op);
+  virtual void visit(const Ne *op);
+  virtual void visit(const Gt *op);
+  virtual void visit(const Lt *op);
+  virtual void visit(const Ge *op);
+  virtual void visit(const Le *op);
+  virtual void visit(const And *op);
+  virtual void visit(const Or *op);
+  virtual void visit(const Xor *op);
+
+  virtual void visit(const VarDecl *op);
+  virtual void visit(const AssignStmt *op);
+  virtual void visit(const CallStmt *op);
+  virtual void visit(const Store *op);
+  virtual void visit(const FieldWrite *op);
+  virtual void visit(const Block *op);
+  virtual void visit(const IfThenElse *op);
+  virtual void visit(const ForRange *op);
+  virtual void visit(const For *op);
+  virtual void visit(const While *op);
+  virtual void visit(const Print *op);
+  virtual void visit(const Comment *op);
+  virtual void visit(const Pass *op);
+
+  virtual void visit(const TupleRead *op);
+  virtual void visit(const TensorRead *op);
+  virtual void visit(const TensorWrite *op);
+  virtual void visit(const IndexedTensor *op);
+  virtual void visit(const IndexExpr *op);
+  virtual void visit(const Map *op);
 
 #ifdef GPU
   virtual void visit(const GPUKernel *);

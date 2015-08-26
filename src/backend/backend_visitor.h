@@ -6,13 +6,14 @@
 namespace simit {
 namespace backend {
 
-class BackendVisitorBase : protected ir::IRVisitor {
+class BackendVisitorBase : protected ir::IRVisitorStrict {
 public:
   void accept(const ir::Expr& expr);
   void accept(const ir::Stmt& stmt);
 
 protected:
   void visitError(std::string type, const void* op);
+  void accept(const ir::Comment&);
 };
 
 template <typename T>
@@ -84,10 +85,11 @@ protected:
   virtual void compile(const ir::Print&) = 0;
 
   // Optional
+  virtual void compile(const ir::Comment& c) {BackendVisitorBase::accept(c);}
   virtual void compile(const ir::Pass&) {}
 
 private:
-  using ir::IRVisitor::visit;
+  using ir::IRVisitorStrict::visit;
   void visit(const ir::Literal* op)         {compile(*op);}
   void visit(const ir::VarExpr* op)         {compile(*op);}
   void visit(const ir::Load* op)            {compile(*op);}
@@ -122,6 +124,7 @@ private:
   void visit(const ir::For* op)             {compile(*op);}
   void visit(const ir::While* op)           {compile(*op);}
   void visit(const ir::Print* op)           {compile(*op);}
+  void visit(const ir::Comment* op)         {compile(*op);}
   void visit(const ir::Pass* op)            {compile(*op);}
 
   /// High-level IRNodes that should be lowered and never reach the backend
