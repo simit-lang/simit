@@ -48,18 +48,6 @@ Function* Backend::compile(const Stmt& stmt) {
 
   // Find all undefined variables and add them to the context as globals.
   match(func,
-    function<void(const VarDecl*)>([&](const VarDecl* op) {
-      definedVariables.insert(op->var, op->var);
-    })
-    ,
-    function<void(const ForRange*)>([&](const ForRange* op) {
-      definedVariables.insert(op->var,op->var);
-    })
-    ,
-    function<void(const For*)>([&](const For* op) {
-      definedVariables.insert(op->var,op->var);
-    })
-    ,
     function<void(const AssignStmt*)>([&](const AssignStmt* op) {
       addToGlobalsIfNotDefined(op->var);
     })
@@ -68,11 +56,33 @@ Function* Backend::compile(const Stmt& stmt) {
       addToGlobalsIfNotDefined(op->var);
     })
     ,
-    function<void(const Block*)>([&](const Block* op) {
-      // TODO: Figure out how to scope/unscope symtable. Either add it as a
-      //       match parameter, and let it scope/unscope it, or add support
-      //       for returning a void lambda that executes after children have
-      //       been visited
+    function<void(const VarDecl*)>([&](const VarDecl* op) {
+      definedVariables.insert(op->var, op->var);
+    })
+    ,
+    function<void(const ForRange*,Matcher*)>([&](const ForRange* op,
+                                                 Matcher* ctx) {
+      definedVariables.scope();
+      definedVariables.insert(op->var,op->var);
+      ctx->match(op->body);
+      definedVariables.unscope();
+    })
+    ,
+    function<void(const For*,Matcher*)>([&](const For* op,
+                                            Matcher* ctx) {
+      definedVariables.scope();
+      definedVariables.insert(op->var,op->var);
+      ctx->match(op->body);
+      definedVariables.unscope();
+    })
+    ,
+    function<void(const Block*,Matcher*)>([&](const Block* op, Matcher* ctx) {
+      definedVariables.scope();
+      ctx->match(op->first);
+      if (op->rest.defined()) {
+        ctx->match(op->rest);
+      }
+      definedVariables.unscope();
     })
   );
 
