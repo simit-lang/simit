@@ -10,6 +10,7 @@ class BackendVisitorBase : protected ir::IRVisitor {
 public:
   void accept(const ir::Expr& expr);
   void accept(const ir::Stmt& stmt);
+
 protected:
   void visitError(std::string type, const void* op);
 };
@@ -40,7 +41,7 @@ public:
 };
 
 template <typename BackendExprType=void>
-class BackendVisitor : protected BackendVisitorExprHelper<BackendExprType> {
+class BackendVisitor : public BackendVisitorExprHelper<BackendExprType> {
 protected:
   using BackendVisitorExprHelper<BackendExprType>::compile;
 

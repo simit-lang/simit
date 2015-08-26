@@ -62,8 +62,7 @@ shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
   return engineBuilder;
 }
 
-LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
-                             val(nullptr) {
+LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
@@ -72,7 +71,7 @@ LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)),
 
 LLVMBackend::~LLVMBackend() {}
 
-Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
+Function* LLVMBackend::compile(Func func, vector<Var> globals) {
   this->module = new llvm::Module("simit", LLVM_CONTEXT);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
@@ -229,18 +228,6 @@ Function* LLVMBackend::compile(const Func &func, const vector<Var>& globals) {
 #endif
 
   return new LLVMFunction(func, globals, llvmFunc, module, engineBuilder);
-}
-
-llvm::Value *LLVMBackend::compile(const Expr &expr) {
-  expr.accept(this);
-  llvm::Value *tmp = val;
-  val = nullptr;
-  return tmp;
-}
-
-void LLVMBackend::compile(const Stmt &stmt) {
-  stmt.accept(this);
-  val = nullptr;
 }
 
 void LLVMBackend::compile(const Literal& literal) {

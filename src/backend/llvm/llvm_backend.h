@@ -40,7 +40,7 @@ extern const std::string PTR_SUFFIX;
 extern const std::string LEN_SUFFIX;
 
 /// Code generator that uses LLVM to compile Simit IR.
-class LLVMBackend : public BackendImpl, protected BackendVisitor<> {
+class LLVMBackend : public BackendImpl, protected BackendVisitor<llvm::Value*> {
 public:
   LLVMBackend();
   virtual ~LLVMBackend();
@@ -60,15 +60,8 @@ protected:
   std::unique_ptr<llvm::DataLayout> dataLayout;
   std::unique_ptr<LLVMIRBuilder> builder;
 
-  /// used to return variables from Expr visit functions
-  llvm::Value *val;
-
   using BackendImpl::compile;
-  virtual Function* compile(const ir::Func &func,
-                            const std::vector<ir::Var>& globals);
-
-  virtual llvm::Value* compile(const ir::Expr &expr);
-  virtual void compile(const ir::Stmt &stmt);
+  virtual Function* compile(ir::Func func, std::vector<ir::Var> globals);
 
   using BackendVisitor::compile;
   virtual void compile(const ir::Literal&);
