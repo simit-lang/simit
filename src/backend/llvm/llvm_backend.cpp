@@ -71,7 +71,7 @@ LLVMBackend::LLVMBackend() : builder(new llvm::IRBuilder<>(LLVM_CONTEXT)) {
 
 LLVMBackend::~LLVMBackend() {}
 
-Function* LLVMBackend::compile(Func func, vector<Var> globals) {
+Function* LLVMBackend::compile(ir::Func func, set<Var> globals) {
   this->module = new llvm::Module("simit", LLVM_CONTEXT);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
@@ -81,8 +81,7 @@ Function* LLVMBackend::compile(Func func, vector<Var> globals) {
   this->symtable.clear();
   this->buffers.clear();
 
-  this->globals.clear();
-  this->globals.insert(globals.begin(), globals.end());
+  this->globals = globals;
 
 
   // Create compute functions
@@ -230,7 +229,7 @@ Function* LLVMBackend::compile(Func func, vector<Var> globals) {
   return new LLVMFunction(func, globals, llvmFunc, module, engineBuilder);
 }
 
-void LLVMBackend::compile(const Literal& literal) {
+void LLVMBackend::compile(const ir::Literal& literal) {
   iassert(literal.type.isTensor()) << "Only tensor literals supported for now";
   const TensorType *type = literal.type.toTensor();
 
@@ -266,7 +265,7 @@ void LLVMBackend::compile(const Literal& literal) {
   iassert(val);
 }
 
-void LLVMBackend::compile(const VarExpr& varExpr) {
+void LLVMBackend::compile(const ir::VarExpr& varExpr) {
   if (!symtable.contains(varExpr.var)) {
     ierror << varExpr.var << " not found in symbol table";
   }
@@ -290,7 +289,7 @@ void LLVMBackend::compile(const VarExpr& varExpr) {
   }
 }
 
-void LLVMBackend::compile(const Load& load) {
+void LLVMBackend::compile(const ir::Load& load) {
   llvm::Value *buffer = compile(load.buffer);
   llvm::Value *index = compile(load.index);
 
@@ -301,13 +300,13 @@ void LLVMBackend::compile(const Load& load) {
   val = builder->CreateLoad(bufferLoc, valName);
 }
 
-void LLVMBackend::compile(const FieldRead& fieldRead) {
+void LLVMBackend::compile(const ir::FieldRead& fieldRead) {
   val = emitFieldRead(fieldRead.elementOrSet, fieldRead.fieldName);
 }
 
 // TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt,
 //       and is only kept around to emit loc.
-void LLVMBackend::compile(const Call& call) {
+void LLVMBackend::compile(const ir::Call& call) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
                                   {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
                                    {ir::Intrinsics::cos,llvm::Intrinsic::cos},
@@ -429,11 +428,11 @@ void LLVMBackend::compile(const Call& call) {
 }
 
 
-void LLVMBackend::compile(const Length& length) {
+void LLVMBackend::compile(const ir::Length& length) {
   val = emitComputeLen(length.indexSet);
 }
 
-void LLVMBackend::compile(const IndexRead& indexRead) {
+void LLVMBackend::compile(const ir::IndexRead& indexRead) {
   // TODO: Add support for different indices (contained in the Set type).
   unsigned int indexLoc = 1 + indexRead.kind;
 
@@ -444,11 +443,11 @@ void LLVMBackend::compile(const IndexRead& indexRead) {
   val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(indexRead));
 }
 
-void LLVMBackend::compile(const TensorIndexRead& op) {
+void LLVMBackend::compile(const ir::TensorIndexRead& op) {
   not_supported_yet;
 }
 
-void LLVMBackend::compile(const Neg& negExpr) {
+void LLVMBackend::compile(const ir::Neg& negExpr) {
   iassert(isScalar(negExpr.type));
   llvm::Value *a = compile(negExpr.a);
 
@@ -464,7 +463,7 @@ void LLVMBackend::compile(const Neg& negExpr) {
   }
 }
 
-void LLVMBackend::compile(const Add& addExpr) {
+void LLVMBackend::compile(const ir::Add& addExpr) {
   iassert(isScalar(addExpr.type));
 
   llvm::Value *a = compile(addExpr.a);
@@ -483,7 +482,7 @@ void LLVMBackend::compile(const Add& addExpr) {
   }
 }
 
-void LLVMBackend::compile(const Sub& subExpr) {
+void LLVMBackend::compile(const ir::Sub& subExpr) {
   iassert(isScalar(subExpr.type));
 
   llvm::Value *a = compile(subExpr.a);
@@ -501,7 +500,7 @@ void LLVMBackend::compile(const Sub& subExpr) {
   }
 }
 
-void LLVMBackend::compile(const Mul& mulExpr) {
+void LLVMBackend::compile(const ir::Mul& mulExpr) {
   iassert(isScalar(mulExpr.type));
 
   llvm::Value *a = compile(mulExpr.a);
@@ -519,7 +518,7 @@ void LLVMBackend::compile(const Mul& mulExpr) {
   }
 }
 
-void LLVMBackend::compile(const Div& divExpr) {
+void LLVMBackend::compile(const ir::Div& divExpr) {
   iassert(isScalar(divExpr.type));
 
   llvm::Value *a = compile(divExpr.a);
@@ -539,7 +538,7 @@ void LLVMBackend::compile(const Div& divExpr) {
   }
 }
 
-void LLVMBackend::compile(const Not& notExpr) {
+void LLVMBackend::compile(const ir::Not& notExpr) {
   iassert(isBoolean(notExpr.type));
   iassert(isBoolean(notExpr.a.type()));
 
@@ -572,7 +571,7 @@ LLVMBACKEND_VISIT_COMPARE_OP(const Lt&, op, CreateFCmpOLT, CreateICmpSLT)
 LLVMBACKEND_VISIT_COMPARE_OP(const Ge&, op, CreateFCmpOGE, CreateICmpSGE)
 LLVMBACKEND_VISIT_COMPARE_OP(const Le&, op, CreateFCmpOLE, CreateICmpSLE)
 
-void LLVMBackend::compile(const And& andExpr) {
+void LLVMBackend::compile(const ir::And& andExpr) {
   iassert(isBoolean(andExpr.type));
   iassert(isBoolean(andExpr.a.type()));
   iassert(isBoolean(andExpr.b.type()));
@@ -583,7 +582,7 @@ void LLVMBackend::compile(const And& andExpr) {
   val = builder->CreateAnd(a, b);
 }
 
-void LLVMBackend::compile(const Or& orExpr) {
+void LLVMBackend::compile(const ir::Or& orExpr) {
   iassert(isBoolean(orExpr.type));
   iassert(isBoolean(orExpr.a.type()));
   iassert(isBoolean(orExpr.b.type()));
@@ -594,7 +593,7 @@ void LLVMBackend::compile(const Or& orExpr) {
   val = builder->CreateOr(a, b);
 }
 
-void LLVMBackend::compile(const Xor& xorExpr) {
+void LLVMBackend::compile(const ir::Xor& xorExpr) {
   iassert(isBoolean(xorExpr.type));
   iassert(isBoolean(xorExpr.a.type()));
   iassert(isBoolean(xorExpr.b.type()));
@@ -605,7 +604,7 @@ void LLVMBackend::compile(const Xor& xorExpr) {
   val = builder->CreateXor(a, b);
 }
 
-void LLVMBackend::compile(const VarDecl& varDecl) {
+void LLVMBackend::compile(const ir::VarDecl& varDecl) {
   tassert(varDecl.var.getType().isTensor()) << "Only tensor decls supported";
 
   Var var = varDecl.var;
@@ -624,7 +623,7 @@ void LLVMBackend::compile(const VarDecl& varDecl) {
   symtable.insert(var, llvmVar);
 }
 
-void LLVMBackend::compile(const AssignStmt& assignStmt) {
+void LLVMBackend::compile(const ir::AssignStmt& assignStmt) {
   switch (assignStmt.cop) {
     case ir::CompoundOperator::None: {
       emitAssign(assignStmt.var, assignStmt.value);
@@ -638,7 +637,7 @@ void LLVMBackend::compile(const AssignStmt& assignStmt) {
   }
 }
 
-void LLVMBackend::compile(const CallStmt& callStmt) {
+void LLVMBackend::compile(const ir::CallStmt& callStmt) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
                                   {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
                                    {ir::Intrinsics::cos,llvm::Intrinsic::cos},
@@ -798,7 +797,7 @@ void LLVMBackend::compile(const CallStmt& callStmt) {
   }
 }
 
-void LLVMBackend::compile(const Store& store) {
+void LLVMBackend::compile(const ir::Store& store) {
   llvm::Value *buffer = compile(store.buffer);
   llvm::Value *index = compile(store.index);
   llvm::Value *value;
@@ -820,7 +819,7 @@ void LLVMBackend::compile(const Store& store) {
   builder->CreateStore(value, bufferLoc);
 }
 
-void LLVMBackend::compile(const FieldWrite& fieldWrite) {
+void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
   /// \todo field writes of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only write scalars to scalars
   ///       in the backend
@@ -886,7 +885,7 @@ void LLVMBackend::compile(const FieldWrite& fieldWrite) {
   }
 }
 
-void LLVMBackend::compile(const Block& block) {
+void LLVMBackend::compile(const ir::Block& block) {
   if (block.scoped) {
     symtable.scope();
   }
@@ -899,7 +898,7 @@ void LLVMBackend::compile(const Block& block) {
   }
 }
 
-void LLVMBackend::compile(const IfThenElse& ifThenElse) {
+void LLVMBackend::compile(const ir::IfThenElse& ifThenElse) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
   llvm::Value *cond = compile(ifThenElse.condition);
@@ -928,7 +927,7 @@ void LLVMBackend::compile(const IfThenElse& ifThenElse) {
   builder->SetInsertPoint(exitBlock);
 }
 
-void LLVMBackend::compile(const ForRange& forLoop) {
+void LLVMBackend::compile(const ir::ForRange& forLoop) {
   std::string iName = forLoop.var.getName();
   
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
@@ -970,7 +969,7 @@ void LLVMBackend::compile(const ForRange& forLoop) {
 
 }
 
-void LLVMBackend::compile(const For& forLoop) {
+void LLVMBackend::compile(const ir::For& forLoop) {
   std::string iName = forLoop.var.getName();
   ForDomain domain = forLoop.domain;
 
@@ -1029,7 +1028,7 @@ void LLVMBackend::compile(const For& forLoop) {
   builder->SetInsertPoint(loopEnd);
 }
 
-void LLVMBackend::compile(const While& whileLoop) {
+void LLVMBackend::compile(const ir::While& whileLoop) {
   llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
 
   llvm::Value *cond = compile(whileLoop.condition);
@@ -1063,7 +1062,7 @@ void LLVMBackend::compile(const While& whileLoop) {
   builder->SetInsertPoint(exitBlock);
 }
 
-void LLVMBackend::compile(const Print& print) {
+void LLVMBackend::compile(const ir::Print& print) {
   llvm::Value *result = compile(print.expr);
   Type type = print.expr.type();
 

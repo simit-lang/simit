@@ -39,10 +39,10 @@ Function* Backend::compile(const Stmt& stmt) {
   Func func("main", {}, {}, stmt);
 
   util::ScopedMap<Var,Var> definedVariables;
-  std::vector<Var> globals;
+  std::set<Var> globals;
   function<void(Var var)> addToGlobalsIfNotDefined = [&](Var var) {
     if (!definedVariables.contains(var)) {
-      globals.push_back(var);
+      globals.insert(var);
     }
   };
 

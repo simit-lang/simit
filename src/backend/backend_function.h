@@ -3,6 +3,7 @@
 
 #include <cstdlib>
 #include <vector>
+#include <set>
 #include <map>
 
 #include "printable.h"
@@ -22,7 +23,7 @@ namespace backend {
 
 class Function : public interfaces::Printable, interfaces::Uncopyable {
 protected:
-    Function(const ir::Func &func, const std::vector<ir::Var>& globals);
+    Function(const ir::Func &func, const std::set<ir::Var>& globals);
 
 public:
   typedef std::function<void()> FuncType;
@@ -60,7 +61,7 @@ public:
   const ir::Type& getArgType(std::string arg) const;
 
   bool hasGlobal(std::string global) const;
-  const std::vector<std::string>& getGlobals() const;
+  const std::set<std::string>& getGlobals() const;
   const ir::Type& getGlobalType(std::string global) const;
 
   bool hasBindable(std::string bindable) const;
@@ -69,7 +70,7 @@ private:
   std::vector<std::string> arguments;
   std::map<std::string, ir::Type> argumentTypes;
 
-  std::vector<std::string> globals;
+  std::set<std::string> globals;
   std::map<std::string, ir::Type> globalTypes;
 
   /// We store the Simit Function's literals to prevent their memory from being

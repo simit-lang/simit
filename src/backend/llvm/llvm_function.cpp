@@ -29,7 +29,7 @@ namespace backend {
 
 typedef void (*FuncPtrType)();
 
-LLVMFunction::LLVMFunction(ir::Func func, const vector<ir::Var>& globals,
+LLVMFunction::LLVMFunction(ir::Func func, const set<ir::Var>& globals,
                            llvm::Function* llvmFunc, llvm::Module* module,
                            std::shared_ptr<llvm::EngineBuilder> engineBuilder)
     : Function(func, globals), llvmFunc(llvmFunc), module(module),

@@ -1,7 +1,7 @@
 #ifndef SIMIT_BACKEND_IMPL_H
 #define SIMIT_BACKEND_IMPL_H
 
-#include <vector>
+#include <set>
 #include "uncopyable.h"
 
 namespace simit {
@@ -15,7 +15,7 @@ class Function;
 class BackendImpl : simit::interfaces::Uncopyable {
 public:
   /// Compile the closure consisting of the function and a context.
-  virtual Function* compile(ir::Func func, std::vector<ir::Var> globals) = 0;
+  virtual Function* compile(ir::Func func, std::set<ir::Var> globals) = 0;
 };
 
 }}
