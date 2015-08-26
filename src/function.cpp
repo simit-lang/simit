@@ -125,16 +125,20 @@ void Function::unmapArgs(bool updated) {
   impl->unmapArgs(updated);
 }
 
-void Function::printMachine(std::ostream &os) {
+void Function::print(std::ostream& os) const {
+  if (defined()) {
+    os << *impl;
+  }
+}
+
+void Function::printMachine(std::ostream& os) const {
   if (defined()) {
     impl->printMachine(os);
   }
 }
 
-std::ostream &operator<<(std::ostream &os, const Function &f) {
-  if (f.defined()) {
-    os << *f.impl;
-  }
+std::ostream& operator<<(std::ostream& os, const Function& f) {
+  f.print(os);
   return os;
 }
 

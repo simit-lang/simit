@@ -71,12 +71,12 @@ public:
   /// True if the function has been defined, false otherwise.
   bool defined() const {return impl != nullptr;}
 
-  /// Write the function to the stream. The output depends on the backend,
-  /// for example the LLVM backend will write LLVM IR.
-  friend std::ostream &operator<<(std::ostream &os, const Function &f);
+  /// Print the function to the stream. The output depends on the backend. For
+  /// example, the LLVM backend will print LLVM IR.
+  void print(std::ostream& os) const;
 
-  /// Print the function as machine assembly code to the stream.
-  void printMachine(std::ostream &os);
+  /// Print the function to the stream as machine assembly code.
+  void printMachine(std::ostream& os) const;
 
 private:
   std::shared_ptr<backend::Function> impl;
@@ -84,6 +84,10 @@ private:
   // To make the run method faster we store the function pointer here.
   std::function<void()> funcPtr;
 };
+
+/// Write the function to the stream. The output depends on the backend,
+/// for example the LLVM backend will write LLVM IR. Same as Function::print.
+std::ostream& operator<<(std::ostream& os, const Function& f);
 
 }
 #endif

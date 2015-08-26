@@ -8,9 +8,6 @@ namespace interfaces {
 
 class Printable {
 public:
-  friend std::ostream &operator<<(std::ostream &os, const Printable &pr);
-
-private:
   virtual void print(std::ostream &os) const = 0;
 };
 
