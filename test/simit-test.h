@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "function.h"
+#include "backend/backend.h"
 #include "error.h"
 
 namespace simit {

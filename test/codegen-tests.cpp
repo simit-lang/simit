@@ -6,7 +6,6 @@
 #include "tensor.h"
 #include "ir.h"
 #include "ir_printer.h"
-#include "backend/backend.h"
 
 using namespace std;
 using namespace testing;
@@ -21,8 +20,7 @@ TEST(Codegen, add) {
   Expr axb = Add::make(a,b);
   Stmt body = AssignStmt::make(c, axb);
 
-  unique_ptr<Backend> backend = getTestBackend();
-  simit::Function function = backend->compile(body);
+  simit::Function function = getTestBackend()->compile(body);
 
   simit_float aArg = 2.0;
   simit_float bArg = 4.1;

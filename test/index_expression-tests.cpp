@@ -1,4 +1,4 @@
-#include "gtest/gtest.h"
+#include "simit-test.h"
 
 #include "ir.h"
 #include "lower/index_expressions/lower_scatter_workspace.h"
