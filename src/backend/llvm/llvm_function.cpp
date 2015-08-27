@@ -15,8 +15,10 @@
 #include "llvm/IR/Verifier.h"
 #endif
 
-#include "backend/actual.h"
+#include "llvm_types.h"
 #include "llvm_codegen.h"
+
+#include "backend/actual.h"
 #include "graph.h"
 #include "indices.h"
 #include "util/collections.h"
@@ -124,7 +126,7 @@ Function::FuncType LLVMFunction::init() {
           const ir::SetType *setType = type.toSet();
           Set *set = actual->getSet();
 
-          llvm::StructType *llvmSetType = createLLVMType(setType);
+          llvm::StructType *llvmSetType = llvmType(*setType);
 
           vector<llvm::Constant*> setData;
 
@@ -134,15 +136,15 @@ Function::FuncType LLVMFunction::init() {
           // Edge indices (if the set is an edge set)
           if (setType->endpointSets.size() > 0) {
             // Endpoints index
-            setData.push_back(llvmPtr(LLVM_INTPTR, set->getEndpointsData()));
+            setData.push_back(llvmPtr(LLVM_INT_PTR, set->getEndpointsData()));
 
             // Edges index
             // TODO
 
             // Neighbor index
             const internal::NeighborIndex *nbrs = set->getNeighborIndex();
-            setData.push_back(llvmPtr(LLVM_INTPTR,nbrs->getStartIndex()));
-            setData.push_back(llvmPtr(LLVM_INTPTR,nbrs->getNeighborIndex()));
+            setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getStartIndex()));
+            setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getNeighborIndex()));
           }
 
           // Fields
@@ -196,7 +198,7 @@ LLVMFunction::createHarness(const std::string &name,
   llvm::Function *llvmFunc = module->getFunction(name);
   std::string harnessName = name + ".harness";
   llvm::Function *harness = createPrototype(harnessName, {}, {}, module, true);
-  auto entry = llvm::BasicBlock::Create(LLVM_CONTEXT, "entry", harness);
+  auto entry = llvm::BasicBlock::Create(LLVM_CTX, "entry", harness);
   llvm::CallInst *call = llvm::CallInst::Create(llvmFunc, args, "",entry);
   call->setCallingConv(llvmFunc->getCallingConv());
   llvm::ReturnInst::Create(module->getContext(), entry);
