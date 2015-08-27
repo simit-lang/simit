@@ -9,6 +9,7 @@
 #include "ir.h"
 #include "ir_visitor.h"
 #include "util/scopedmap.h"
+#include "util/collections.h"
 
 using namespace std;
 using namespace simit::ir;
@@ -39,17 +40,34 @@ Backend::~Backend() {
   delete pimpl;
 }
 
-Function* Backend::compile(const Stmt& stmt, std::set<ir::Var> output) {
-  Func func("main", {}, {}, stmt);
-  std::set<Var> globals = output;
+Function* Backend::compile(const Func& func) {
+  return pimpl->compile(func, {});
+}
 
-  // Find all undefined variables and add them to the context as globals.
+backend::Function* Backend::compile(const Stmt& stmt) {
+  return compile(stmt, {});
+}
+
+Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
+  Func func("main", {}, {}, stmt);
+  std::vector<Var> globals;
+
+  std::set<Var> globalsSet;
   util::ScopedMap<Var,void*> definedVariables;
   function<void(Var var)> addToGlobalsIfNotDefined = [&](Var var) {
-    if (!definedVariables.contains(var)) {
-      globals.insert(var);
+    if (!definedVariables.contains(var) && !util::contains(globalsSet, var)) {
+      globals.push_back(var);
+      globalsSet.insert(var);
+      definedVariables.insert(var, nullptr);
     }
   };
+
+  // Remove duplicates in output
+  for (const Var& var : output) {
+    addToGlobalsIfNotDefined(var);
+  }
+
+  // Find all undefined variables and add them to the context as globals.
   match(func,
     function<void(const VarExpr*)>([&](const VarExpr* op) {
       addToGlobalsIfNotDefined(op->var);
@@ -90,10 +108,6 @@ Function* Backend::compile(const Stmt& stmt, std::set<ir::Var> output) {
   );
 
   return pimpl->compile(func, globals);
-}
-
-Function* Backend::compile(const Func& func) {
-  return pimpl->compile(func, {});
 }
 
 }}

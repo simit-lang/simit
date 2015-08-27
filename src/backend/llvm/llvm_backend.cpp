@@ -77,7 +77,7 @@ LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
 
 LLVMBackend::~LLVMBackend() {}
 
-Function* LLVMBackend::compile(ir::Func func, set<Var> globals) {
+Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
   this->module = new llvm::Module("simit", LLVM_CTX);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
@@ -87,7 +87,8 @@ Function* LLVMBackend::compile(ir::Func func, set<Var> globals) {
   this->symtable.clear();
   this->buffers.clear();
 
-  this->globals = globals;
+  this->globals.clear();
+  this->globals.insert(globals.begin(), globals.end());
 
 
   // Create compute functions

@@ -15,7 +15,7 @@ namespace simit {
 namespace backend {
 
 // class Function
-Function::Function(const ir::Func& func, const set<ir::Var>& globals) {
+Function::Function(const ir::Func& func, const vector<ir::Var>& globals) {
   for (const ir::Var& arg : func.getArguments()) {
     string argName = arg.getName();
     arguments.push_back(argName);
@@ -30,7 +30,7 @@ Function::Function(const ir::Func& func, const set<ir::Var>& globals) {
 
   for (const ir::Var& global : globals) {
     string globalName = global.getName();
-    this->globals.insert(globalName);
+    this->globals.push_back(globalName);
     globalTypes[globalName] = global.getType();
   }
 
@@ -78,7 +78,7 @@ bool Function::hasGlobal(std::string global) const {
   return util::contains(globals, global);
 }
 
-const std::set<std::string>& Function::getGlobals() const {
+const std::vector<std::string>& Function::getGlobals() const {
   return globals;
 }
 
