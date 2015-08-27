@@ -86,16 +86,8 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
 
   this->symtable.clear();
   this->buffers.clear();
-
-  this->globals.clear();
-  this->globals.insert(globals.begin(), globals.end());
-
-
-  // Create compute functions
-  vector<Func> callTree = getCallTree(func);
-  std::reverse(callTree.begin(), callTree.end());
-
   this->storage = Storage();
+  this->globals = set<ir::Var>(globals.begin(), globals.end());
 
   // Add global variables to symbol table
   std::map<std::string,void**> globalPointers;
@@ -103,7 +95,7 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
     Type type = global.getType();
     llvm::Type* globalType = llvmType(global.getType(), globalAddrspace());
     llvm::Constant* initializer = defaultInitializer(globalType);
-    llvm::GlobalVariable* llvmGlobalPtr =
+    llvm::GlobalVariable* globalPtr =
         new llvm::GlobalVariable(*module,
                                  globalType,
                                  false,
@@ -114,8 +106,13 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
                                  llvm::GlobalVariable::NotThreadLocal,
                                  globalAddrspace(),
                                  true);
-    symtable.insert(global, llvmGlobalPtr);
+    globalPtr->setAlignment(8);
+    symtable.insert(global, globalPtr);
   }
+
+  // Create compute functions
+  vector<Func> callTree = getCallTree(func);
+  std::reverse(callTree.begin(), callTree.end());
 
   llvm::Function *llvmFunc = nullptr;
   for (auto &f : callTree) {
@@ -454,7 +451,9 @@ void LLVMBackend::compile(const ir::IndexRead& indexRead) {
 }
 
 void LLVMBackend::compile(const ir::TensorIndexRead& op) {
-  not_supported_yet;
+  std::cout << op << std::endl;
+
+//  not_supported_yet;
 }
 
 void LLVMBackend::compile(const ir::Neg& negExpr) {
