@@ -33,13 +33,6 @@
 #define LLVM_INT32     llvm::Type::getInt32Ty(LLVM_CONTEXT)
 #define LLVM_INT64     llvm::Type::getInt64Ty(LLVM_CONTEXT)
 
-// Pointers with global addrspace
-#define LLVM_INTPTR_GLOBAL    llvm::Type::getInt32PtrTy(LLVM_CONTEXT, 1)
-#define LLVM_FLOATPTR_GLOBAL  llvm::Type::getFloatPtrTy(LLVM_CONTEXT, 1)
-#define LLVM_DOUBLEPTR_GLOBAL llvm::Type::getDoublePtrTy(LLVM_CONTEXT, 1)
-#define LLVM_BOOLPTR_GLOBAL   llvm::Type::getInt1PtrTy(LLVM_CONTEXT, 1)
-#define LLVM_INT8PTR_GLOBAL   llvm::Type::getInt8PtrTy(LLVM_CONTEXT, 1)
-
 typedef llvm::IRBuilder<true, llvm::ConstantFolder,
                         llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 

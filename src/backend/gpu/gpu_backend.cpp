@@ -695,10 +695,10 @@ llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
   llvm::PointerType *srcPtrTy = llvm::cast<llvm::PointerType>(src->getType());
   iassert(srcPtrTy->getAddressSpace() ==
           CUDA_GLOBAL_ADDRSPACE);
-  llvm::Value *srcCast = builder->CreateBitCast(src, LLVM_INT8PTR_GLOBAL);
+  llvm::Value *srcCast = builder->CreateBitCast(src, CUDA_INT8PTR_GLOBAL);
   llvm::Function *castFunc = getBuiltIn(
       "llvm.nvvm.ptr.global.to.gen.p0i8.p1i8",
-      LLVM_INT8PTR, { LLVM_INT8PTR_GLOBAL });
+      LLVM_INT8PTR, { CUDA_INT8PTR_GLOBAL });
   cleanFuncAttrs(castFunc);
   llvm::Value *out = builder->CreateCall(castFunc, srcCast);
   llvm::Type *genTy = llvm::PointerType::getUnqual(srcPtrTy->getElementType());
@@ -745,7 +745,7 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
       break;
     }
     case CUDA_GLOBAL_ADDRSPACE: {
-      argTys.push_back(LLVM_FLOATPTR_GLOBAL);
+      argTys.push_back(CUDA_FLOATPTR_GLOBAL);
       argTys.push_back(LLVM_FLOAT);
       funcName = "llvm.nvvm.atomic.load.add.f32.p1f32";
       break;
@@ -911,7 +911,7 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   llvm::Type *dstCastTy = nullptr;
   std::string dstTyStr;
   if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
-    dstCastTy = LLVM_INT8PTR_GLOBAL;
+    dstCastTy = CUDA_INT8PTR_GLOBAL;
     dstTyStr = "p1i8";
   }
   else if (dstAddrspace == CUDA_GENERIC_ADDRSPACE) {
@@ -928,7 +928,7 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   llvm::Type *srcCastTy = nullptr;
   std::string srcTyStr;
   if (srcAddrspace == CUDA_GLOBAL_ADDRSPACE) {
-    srcCastTy = LLVM_INT8PTR_GLOBAL;
+    srcCastTy = CUDA_INT8PTR_GLOBAL;
     srcTyStr = "p1i8";
   }
   else if (srcAddrspace == CUDA_GENERIC_ADDRSPACE) {
@@ -964,7 +964,7 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
   llvm::Type *dstCastTy = nullptr;
   std::string dstTyStr;
   if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
-    dstCastTy = LLVM_INT8PTR_GLOBAL;
+    dstCastTy = CUDA_INT8PTR_GLOBAL;
     dstTyStr = "p1i8";
   }
   else if (dstAddrspace == CUDA_GENERIC_ADDRSPACE) {

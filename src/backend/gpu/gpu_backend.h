@@ -11,6 +11,13 @@
 #define CUDA_GLOBAL_ADDRSPACE 1
 #define CUDA_SHARED_ADDRSPACE 3
 
+// Pointers with global addrspace
+#define CUDA_INTPTR_GLOBAL    llvm::Type::getInt32PtrTy(LLVM_CONTEXT, 1)
+#define CUDA_FLOATPTR_GLOBAL  llvm::Type::getFloatPtrTy(LLVM_CONTEXT, 1)
+#define CUDA_DOUBLEPTR_GLOBAL llvm::Type::getDoublePtrTy(LLVM_CONTEXT, 1)
+#define CUDA_BOOLPTR_GLOBAL   llvm::Type::getInt1PtrTy(LLVM_CONTEXT, 1)
+#define CUDA_INT8PTR_GLOBAL   llvm::Type::getInt8PtrTy(LLVM_CONTEXT, 1)
+
 // transforms
 #include "fuse_kernels.h"
 #include "kernel_rw_analysis.h"
