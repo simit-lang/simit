@@ -7,10 +7,15 @@
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Constants.h"
 
-#include "ir.h"
 #include "llvm_defines.h"
 
 namespace simit {
+namespace ir {
+struct TensorType;
+struct Literal;
+class Var;
+}
+
 namespace backend {
 
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
@@ -23,19 +28,22 @@ llvm::Constant*    llvmBool(bool val);
 /// The number of index struct elements that are compiled into an edge struct.
 extern const int NUM_EDGE_INDEX_ELEMENTS;
 
-llvm::Constant *llvmPtr(llvm::Type *type, const void *data);
-llvm::Constant *llvmPtr(const ir::Type &type, const void *data,
-                        unsigned addrspace=0);
-llvm::Constant *llvmPtr(const ir::Literal& literal);
+llvm::Constant* llvmPtr(llvm::PointerType* type, const void *data);
 
-llvm::Constant *llvmVal(const ir::Type &type, const void *data);
-llvm::Constant *llvmVal(const ir::Literal *literal);
+llvm::Constant* llvmPtr(const ir::TensorType& type, const void *data,
+                        unsigned addrspace=0);
+llvm::Constant* llvmPtr(const ir::Literal& literal);
+
+llvm::Constant* llvmVal(const ir::TensorType& type, const void *data);
+llvm::Constant* llvmVal(const ir::Literal& literal);
+
+llvm::Constant* defaultInitializer(llvm::Type* type);
 
 /// Creates an llvm function prototype
-llvm::Function *createPrototype(const std::string &name,
-                                const std::vector<ir::Var> &arguments,
-                                const std::vector<ir::Var> &results,
-                                llvm::Module *module,
+llvm::Function* createPrototype(const std::string& name,
+                                const std::vector<ir::Var>& arguments,
+                                const std::vector<ir::Var>& results,
+                                llvm::Module* module,
                                 bool externalLinkage,
                                 bool doesNotThrow=true,
                                 bool scalarsByValue=true,

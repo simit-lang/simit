@@ -2,6 +2,8 @@
 
 #include <utility>
 #include "llvm_types.h"
+#include "llvm_util.h"
+#include "ir.h"
 
 using namespace std;
 using namespace simit::ir;
@@ -39,8 +41,8 @@ llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
   return nullptr;
 }
 
-llvm::Constant *llvmPtr(llvm::Type *type, const void *data) {
-  llvm::Constant *c = (sizeof(void*) == 4)
+llvm::Constant *llvmPtr(llvm::PointerType* type, const void* data) {
+  llvm::Constant* c = (sizeof(void*) == 4)
       ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CTX),
                                (int)(intptr_t)data)
       : llvm::ConstantInt::get(llvm::Type::getInt64Ty(LLVM_CTX),
@@ -48,18 +50,18 @@ llvm::Constant *llvmPtr(llvm::Type *type, const void *data) {
   return llvm::ConstantExpr::getIntToPtr(c, type);
 }
 
-llvm::Constant *llvmPtr(const Type &type, const void *data,
+llvm::Constant *llvmPtr(const TensorType &type, const void *data,
                         unsigned addrspace) {
   return llvmPtr(llvmType(type, addrspace), data);
 }
 
-llvm::Constant *llvmPtr(const Literal& literal) {
+llvm::Constant* llvmPtr(const Literal& literal) {
   iassert(literal.type.isTensor());
-  return llvmPtr(literal.type, literal.data);
+  return llvmPtr(*literal.type.toTensor(), literal.data);
 }
 
-llvm::Constant *llvmVal(const Type &type, const void *data) {
-  ScalarType componentType = type.toTensor()->componentType;
+llvm::Constant* llvmVal(const TensorType& type, const void *data) {
+  ScalarType componentType = type.componentType;
   switch (componentType.kind) {
     case ScalarType::Int:
       return llvmInt(static_cast<const int*>(data)[0]);
@@ -72,17 +74,18 @@ llvm::Constant *llvmVal(const Type &type, const void *data) {
   return nullptr;
 }
 
-llvm::Constant *llvmVal(const Literal *literal) {
-  return llvmVal(literal->type, literal->data);
+llvm::Constant* llvmVal(const Literal& literal) {
+  iassert(literal.type.isTensor());
+  return llvmVal(*literal.type.toTensor(), literal.data);
 }
 
-/// One for endpoints, two for neighbor index
-extern const int NUM_EDGE_INDEX_ELEMENTS = 3;
+llvm::Constant* initializer(llvm::Type* type);
 
-static llvm::Function *createPrototype(const std::string &name,
-                                       const vector<string> &argNames,
-                                       const vector<llvm::Type*> &argTypes,
-                                       llvm::Module *module,
+
+static llvm::Function *createPrototype(const std::string& name,
+                                       const vector<string>& argNames,
+                                       const vector<llvm::Type*>& argTypes,
+                                       llvm::Module* module,
                                        bool externalLinkage,
                                        bool doesNotThrow) {
   llvm::FunctionType *ft = llvm::FunctionType::get(LLVM_VOID, argTypes, false);
@@ -106,7 +109,30 @@ static llvm::Function *createPrototype(const std::string &name,
   return f;
 }
 
-llvm::Function *createPrototype(const std::string &name,
+llvm::Constant* defaultInitializer(llvm::Type* type) {
+  llvm::Constant* initializer = nullptr;
+  if (type->isIntegerTy()) {
+    std::cout << "here" << std::endl;
+    return llvmInt(0);
+  }
+  else if (type->isFloatingPointTy()) {
+    return llvmFP(0.0);
+  }
+  else if (type->isPointerTy()) {
+    llvm::PointerType* ptrType = llvm::cast<llvm::PointerType>(type);
+    return llvm::ConstantPointerNull::get(ptrType);
+  }
+  else if (type->isStructTy()) {
+    llvm::StructType* structType = llvm::cast<llvm::StructType>(type);
+    return llvm::ConstantAggregateZero::get(structType);
+  }
+  else {
+    ierror << "creating an initializer not supported for this type";
+  }
+  return initializer;
+}
+
+llvm::Function* createPrototype(const std::string &name,
                                 const vector<Var> &arguments,
                                 const vector<Var> &results,
                                 llvm::Module *module,

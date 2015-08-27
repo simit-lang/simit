@@ -54,7 +54,7 @@ protected:
   // Currently compiling LLVM function
   llvm::Function *func;
 
-  virtual unsigned global_addrspace() { return CUDA_GLOBAL_ADDRSPACE; }
+  virtual unsigned globalAddrspace() { return CUDA_GLOBAL_ADDRSPACE; }
 
   using LLVMBackend::visit;
 

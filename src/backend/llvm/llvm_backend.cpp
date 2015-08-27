@@ -100,20 +100,19 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
   // Add global variables to symbol table
   std::map<std::string,void**> globalPointers;
   for (auto& global : globals) {
-    llvm::Constant *llvmPtrConst = llvmPtr(global.getType(), 0);
-    ScalarType ctype = global.getType().toTensor()->componentType;
-    auto globalType = llvm::PointerType::get(llvmType(ctype),
-                                             global_addrspace());
+    Type type = global.getType();
+    llvm::Type* globalType = llvmType(global.getType(), globalAddrspace());
+    llvm::Constant* initializer = defaultInitializer(globalType);
     llvm::GlobalVariable* llvmGlobalPtr =
         new llvm::GlobalVariable(*module,
                                  globalType,
                                  false,
                                  llvm::GlobalValue::ExternalLinkage,
-                                 llvmPtrConst,
+                                 initializer,
                                  global.getName(),
                                  nullptr,
                                  llvm::GlobalVariable::NotThreadLocal,
-                                 global_addrspace(),
+                                 globalAddrspace(),
                                  true);
     symtable.insert(global, llvmGlobalPtr);
   }
@@ -1520,8 +1519,7 @@ llvm::Value *LLVMBackend::makeGlobalTensor(ir::Var var) {
   // TODO: We should allocate small local dense tensors on the stack
   iassert(var.getType().isTensor());
   llvm::Type *ctype = llvmType(var.getType().toTensor()->componentType);
-  llvm::PointerType *globalType = llvm::PointerType::get(ctype,
-                                                         global_addrspace());
+  llvm::PointerType *globalType = llvm::PointerType::get(ctype, globalAddrspace());
 
   llvm::GlobalVariable* buffer =
       new llvm::GlobalVariable(*module, globalType,
@@ -1529,7 +1527,7 @@ llvm::Value *LLVMBackend::makeGlobalTensor(ir::Var var) {
                                llvm::ConstantPointerNull::get(globalType),
                                var.getName(), nullptr,
                                llvm::GlobalVariable::NotThreadLocal,
-                               global_addrspace());
+                               globalAddrspace());
   buffer->setAlignment(8);
   buffers.insert(pair<Var, llvm::Value*>(var, buffer));
 

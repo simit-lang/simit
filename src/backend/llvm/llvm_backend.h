@@ -46,9 +46,8 @@ public:
   virtual ~LLVMBackend();
 
 protected:
-  virtual unsigned global_addrspace()  { return 0; } // LLVM generic addrspace
-  virtual unsigned generic_addrspace() { return 0; } // LLVM generic addrspace
-  
+  virtual unsigned globalAddrspace() {return 0;}
+
   util::ScopedMap<simit::ir::Var, llvm::Value*> symtable;
 
   // Globally allocated buffers

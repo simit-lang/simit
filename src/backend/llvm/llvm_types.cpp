@@ -32,6 +32,10 @@ llvm::PointerType* const LLVM_INT8_PTR   = llvm::Type::getInt8PtrTy(LLVM_CTX);
 llvm::PointerType* const LLVM_INT32_PTR  = llvm::Type::getInt32PtrTy(LLVM_CTX);
 llvm::PointerType* const LLVM_INT64_PTR  = llvm::Type::getInt64PtrTy(LLVM_CTX);
 
+/// One for endpoints, two for neighbor index
+extern const int NUM_EDGE_INDEX_ELEMENTS = 3;
+
+
 llvm::Type* llvmType(const Type& type, unsigned addrspace) {
   switch (type.kind()) {
     case Type::Tensor:

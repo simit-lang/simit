@@ -111,10 +111,11 @@ Function::FuncType LLVMFunction::init() {
       ir::Type type = getArgType(formal);
       switch (type.kind()) {
         case ir::Type::Tensor: {
+          const ir::TensorType* tensorType = type.toTensor();
           void* tensorData = actual->getTensorData();
           llvm::Value *llvmActual = (llvmArgIt->getType()->isPointerTy())
-              ? llvmPtr(type, tensorData)
-              : llvmVal(type, tensorData);
+              ? llvmPtr(*tensorType, tensorData)
+              : llvmVal(*tensorType, tensorData);
           args.push_back(llvmActual);
           break;
         }
@@ -150,7 +151,8 @@ Function::FuncType LLVMFunction::init() {
           // Fields
           for (auto &field : setType->elementType.toElement()->fields) {
             assert(field.type.isTensor());
-            setData.push_back(llvmPtr(field.type, set->getFieldData(field.name)));
+            setData.push_back(llvmPtr(*field.type.toTensor(),
+                                      set->getFieldData(field.name)));
           }
 
           llvm::Value *llvmSet= llvm::ConstantStruct::get(llvmSetType, setData);
