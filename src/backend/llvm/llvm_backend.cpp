@@ -36,6 +36,8 @@
 
 #include "types.h"
 #include "ir.h"
+#include "func.h"
+#include "intrinsics.h"
 #include "ir_printer.h"
 #include "ir_queries.h"
 #include "ir_codegen.h"
@@ -131,7 +133,7 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
                                  f.getResults(), external);
 
     // Add constants to symbol table
-    for (auto &global : f.getEnvironment().globals) {
+    for (auto &global : f.getEnvironment().getConstants()) {
       symtable.insert(global.first, compile(global.second));
     }
 
@@ -315,17 +317,17 @@ void LLVMBackend::compile(const ir::FieldRead& fieldRead) {
 //       and is only kept around to emit loc.
 void LLVMBackend::compile(const ir::Call& call) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
-                                  {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
-                                   {ir::Intrinsics::cos,llvm::Intrinsic::cos},
-                                   {ir::Intrinsics::sqrt,llvm::Intrinsic::sqrt},
-                                   {ir::Intrinsics::log,llvm::Intrinsic::log},
-                                   {ir::Intrinsics::exp,llvm::Intrinsic::exp},
-                                   {ir::Intrinsics::pow,llvm::Intrinsic::pow}};
-  
+      {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
+       {ir::intrinsics::cos(), llvm::Intrinsic::cos},
+       {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
+       {ir::intrinsics::log(), llvm::Intrinsic::log},
+       {ir::intrinsics::exp(), llvm::Intrinsic::exp},
+       {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
+
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
   llvm::Function *fun = nullptr;
-  
+
   // compile arguments first
   for (auto a: call.actuals) {
     //FIX: remove once solve() is no longer needed
@@ -342,17 +344,17 @@ void LLVMBackend::compile(const ir::Call& call) {
                                           argTypes);
   }
   // now check if it is an intrinsic from libm
-  else if (call.func == ir::Intrinsics::atan2 ||
-           call.func == ir::Intrinsics::tan   ||
-           call.func == ir::Intrinsics::asin  ||
-           call.func == ir::Intrinsics::acos    ) {
+  else if (call.func == ir::intrinsics::atan2() ||
+           call.func == ir::intrinsics::tan()   ||
+           call.func == ir::intrinsics::asin()  ||
+           call.func == ir::intrinsics::acos()) {
     auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes, false);
     std::string funcName = call.func.getName() +
         (ir::ScalarType::singleFloat() ? "_f32" : "_f64");
     fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
         funcName,ftype));
   }
-  else if (call.func == ir::Intrinsics::norm) {
+  else if (call.func == ir::intrinsics::norm()) {
     iassert(args.size() == 1);
     auto type = call.actuals[0].type().toTensor();
     vector<IndexDomain> dimensions = type->getDimensions();
@@ -385,7 +387,7 @@ void LLVMBackend::compile(const ir::Call& call) {
     
     return;
   }
-  else if (call.func == ir::Intrinsics::solve) {
+  else if (call.func == ir::intrinsics::solve()) {
     // FIX: compile is making these be LLVM_DOUBLE, but I need
     // LLVM_DOUBLEPTR
     std::vector<llvm::Type*> argTypes2 =
@@ -403,11 +405,11 @@ void LLVMBackend::compile(const ir::Call& call) {
     fun = llvm::cast<llvm::Function>(
         module->getOrInsertFunction(funcName, ftype));
   }
-  else if (call.func == ir::Intrinsics::loc) {
+  else if (call.func == ir::intrinsics::loc()) {
     val = emitCall("loc", args, LLVM_INT);
     return;
   }
-  else if (call.func == ir::Intrinsics::dot) {
+  else if (call.func == ir::intrinsics::dot()) {
     // we need to add the vector length to the args
     auto type1 = call.actuals[0].type().toTensor();
     auto type2 = call.actuals[1].type().toTensor();
@@ -648,12 +650,12 @@ void LLVMBackend::compile(const ir::AssignStmt& assignStmt) {
 
 void LLVMBackend::compile(const ir::CallStmt& callStmt) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
-                                  {{ir::Intrinsics::sin,llvm::Intrinsic::sin},
-                                   {ir::Intrinsics::cos,llvm::Intrinsic::cos},
-                                   {ir::Intrinsics::sqrt,llvm::Intrinsic::sqrt},
-                                   {ir::Intrinsics::log,llvm::Intrinsic::log},
-                                   {ir::Intrinsics::exp,llvm::Intrinsic::exp},
-                                   {ir::Intrinsics::pow,llvm::Intrinsic::pow}};
+      {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
+       {ir::intrinsics::cos(), llvm::Intrinsic::cos},
+       {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
+       {ir::intrinsics::log(), llvm::Intrinsic::log},
+       {ir::intrinsics::exp(), llvm::Intrinsic::exp},
+       {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
   
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
@@ -668,7 +670,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
 
   Func callee = callStmt.callee;
   if (callee.getKind() == Func::Intrinsic) {
-    iassert(callee != ir::Intrinsics::norm && callee != ir::Intrinsics::dot)
+    iassert(callee != ir::intrinsics::norm() && callee != ir::intrinsics::dot())
         << "norm and dot should have been lowered";
 
     std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
@@ -684,26 +686,26 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       call = builder->CreateCall(fun, args);
     }
     // now check if it is an intrinsic from libm
-    else if (callStmt.callee == ir::Intrinsics::atan2 ||
-             callStmt.callee == ir::Intrinsics::tan   ||
-             callStmt.callee == ir::Intrinsics::asin  ||
-             callStmt.callee == ir::Intrinsics::acos    ) {
+    else if (callStmt.callee == ir::intrinsics::atan2() ||
+             callStmt.callee == ir::intrinsics::tan()   ||
+             callStmt.callee == ir::intrinsics::asin()  ||
+             callStmt.callee == ir::intrinsics::acos()) {
       std::string fname = callStmt.callee.getName() + floatTypeName;
       call = emitCall(fname, args, llvmFloatType());
     }
-    else if (callStmt.callee == ir::Intrinsics::mod) {
+    else if (callStmt.callee == ir::intrinsics::mod()) {
       iassert(callStmt.actuals.size() == 2) << "mod takes two inputs, got"
                                        << callStmt.actuals.size();
       call = builder->CreateSRem(compile(callStmt.actuals[0]),
                                  compile(callStmt.actuals[1]));
 
     }
-    else if (callee == ir::Intrinsics::det) {
+    else if (callee == ir::intrinsics::det()) {
       iassert(args.size() == 1);
       std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args, llvmFloatType());
     }
-    else if (callee == ir::Intrinsics::inv) {
+    else if (callee == ir::intrinsics::inv()) {
       iassert(args.size() == 1);
 
       Var result = callStmt.results[0];
@@ -713,7 +715,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
       call = emitCall(fname, args);
     }
-    else if (callStmt.callee == ir::Intrinsics::solve) {
+    else if (callStmt.callee == ir::intrinsics::solve()) {
     
       // we need to add additional arguments: the row_start and col_idx pointers,
       // as well as the number of rows, columns, nonzeros, and blocksize.
@@ -773,7 +775,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       std::string fname = "cMatSolve" + floatTypeName;
       call = emitCall(fname, args);
     }
-    else if (callStmt.callee == ir::Intrinsics::loc) {
+    else if (callStmt.callee == ir::intrinsics::loc()) {
       call = emitCall("loc", args, LLVM_INT);
     }
     else {

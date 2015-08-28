@@ -25,6 +25,9 @@ TEST(IndexExpression, add) {
 
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add));
   std::cout << loops << std::endl;
+
+//  simit::Function function = getTestBackend()->compile(loops);
+//  std::cout << function << std::endl;
 }
 
 TEST(IndexExpression, mul) {

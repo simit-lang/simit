@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "ir.h"
+#include "intrinsics.h"
 #include "ir_queries.h"
 #include "ir_rewriter.h"
 #include "ir_codegen.h"
@@ -193,7 +194,7 @@ class NormAndDotRewriter : public ir::IRRewriter {
       auto dot = builder.innerProduct(op->actuals[0], op->actuals[0]);
       auto tmpvar = builder.temporary(op->results[0].getType(), "normrewrite");
       stmt = AssignStmt::make(tmpvar, dot);
-      stmt = Block::make(stmt, CallStmt::make(op->results, Intrinsics::sqrt,
+      stmt = Block::make(stmt, CallStmt::make(op->results, intrinsics::sqrt(),
                                               {VarExpr::make(tmpvar)}));
     }
     else if (op->callee.getName() == "dot") {

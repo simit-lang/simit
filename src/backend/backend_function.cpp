@@ -42,10 +42,13 @@ Function::Function(const ir::Func& func, const vector<ir::Var>& globals) {
   public:
     vector<simit::ir::Expr> gather(simit::ir::Func func) {
       literals.clear();
-      for (auto &global : func.getEnvironment().globals) {
+
+      // Gather literals in global constant initializers
+      for (auto &global : func.getEnvironment().getConstants()) {
         global.second.accept(this);
       }
 
+      // Gather literals in the function body
       func.accept(this);
       return literals;
     }

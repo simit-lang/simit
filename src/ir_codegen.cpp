@@ -48,8 +48,8 @@ Func insertVarDecls(Func func) {
         declared.insert(result);
       }
 
-      for (auto &global : f->getEnvironment().globals) {
-        declared.insert(global.first);
+      for (auto &constant : f->getEnvironment().getConstants()) {
+        declared.insert(constant.first);
       }
 
       IRRewriter::visit(f);

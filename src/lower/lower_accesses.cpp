@@ -3,6 +3,7 @@
 #include <algorithm>
 
 #include "ir_rewriter.h"
+#include "intrinsics.h"
 
 using namespace std;
 
@@ -157,7 +158,7 @@ private:
           Expr nbrs_start = IndexRead::make(edgeSet, IndexRead::NeighborsStart);
           Expr nbrs = IndexRead::make(edgeSet, IndexRead::Neighbors);
 
-          index = Call::make(Intrinsics::loc, {i, j, nbrs_start, nbrs});
+          index = Call::make(intrinsics::loc(), {i, j, nbrs_start, nbrs});
         }
         break;
       }

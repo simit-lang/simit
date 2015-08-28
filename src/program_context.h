@@ -10,6 +10,8 @@
 
 #include "types.h"
 #include "ir.h"
+#include "func.h"
+#include "intrinsics.h"
 #include "ir_builder.h"
 #include "ir_codegen.h"
 #include "util/scopedmap.h"
@@ -56,8 +58,9 @@ inline std::ostream &operator<<(std::ostream &os, const Symbol &symbol) {
 class ProgramContext {
 public:
   ProgramContext() {
-    functions.insert(ir::Intrinsics::byName.begin(),
-                     ir::Intrinsics::byName.end());
+    auto bynames = ir::intrinsics::byNames();
+    functions.insert(ir::intrinsics::byNames().begin(),
+                     ir::intrinsics::byNames().end());
   }
 
   ~ProgramContext() {
@@ -111,7 +114,7 @@ public:
       using IRVisitor::visit;
       void visit(const ir::VarExpr *op) {
         if (ctx.isConstant(op->var)) {
-          env.globals[op->var] = ctx.getConstant(op->var);
+          env.addConstant(op->var, ctx.getConstantInitializer(op->var));
         }
       }
     };
@@ -170,7 +173,7 @@ public:
     return constants.find(var) != constants.end();
   }
 
-  ir::Expr getConstant(ir::Var var) const {return constants.at(var);}
+  ir::Expr getConstantInitializer(ir::Var var) const {return constants.at(var);}
 
   const std::map<ir::Var,ir::Expr> &getConstants() const {return constants;}
 

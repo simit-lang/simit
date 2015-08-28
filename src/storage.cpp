@@ -190,7 +190,7 @@ public:
   GetStorageVisitor(Storage *storage) : storage(storage) {}
 
   void get(Func func) {
-    for (auto &global : func.getEnvironment().globals) {
+    for (auto &global : func.getEnvironment().getConstants()) {
       if (global.first.getType().isTensor()) {
         determineStorage(global.first, false);
       }

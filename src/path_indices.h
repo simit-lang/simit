@@ -144,6 +144,7 @@ public:
   friend std::ostream &operator<<(std::ostream&, const PathIndex&);
 
 private:
+  /// PathIndex objects are constructed through a PathIndexBuilder.
   PathIndex(PathIndexImpl *impl) : IntrusivePtr(impl) {}
   friend PathIndexBuilder;
 };

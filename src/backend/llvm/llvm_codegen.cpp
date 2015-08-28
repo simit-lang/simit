@@ -112,7 +112,6 @@ static llvm::Function *createPrototype(const std::string& name,
 llvm::Constant* defaultInitializer(llvm::Type* type) {
   llvm::Constant* initializer = nullptr;
   if (type->isIntegerTy()) {
-    std::cout << "here" << std::endl;
     return llvmInt(0);
   }
   else if (type->isFloatingPointTy()) {
