@@ -39,13 +39,22 @@ public:
   Func(const std::string& name, const std::vector<Var>& arguments,
        const std::vector<Var>& results, Kind kind);
 
+  /// Create a function definition with an environment.
+  Func(const std::string& name, const std::vector<Var>& arguments,
+       const std::vector<Var>& results, const Stmt& body,
+       const Environment& environment, Kind kind=Internal);
+
   /// Create a function definition.
   Func(const std::string& name, const std::vector<Var>& arguments,
        const std::vector<Var>& results, const Stmt& body, Kind kind=Internal);
 
   /// Creates a new func with the same prototype as the given func, but with
-  /// the new body
+  /// a new body
   Func(const Func& func, Stmt body);
+
+  /// Creates a new func identical to an old func, except for a different
+  /// environment. That is, create a closure around func.
+  Func(const Func& func, const Environment& environment);
 
   std::string getName() const {return ptr->name;}
   const std::vector<Var>& getArguments() const {return ptr->arguments;}
@@ -54,12 +63,6 @@ public:
 
   /// Get the function kind, which can be Internal, Intrinsic or External.
   Func::Kind getKind() const {return static_cast<Kind>(ptr->kind);}
-
-  /// Set the function's environment
-  void setEnvironment(const Environment& env) {ptr->env = env;}
-
-  /// Retrieve the function's environment
-  Environment& getEnvironment() {return ptr->env;}
 
   /// Retrieve the function's environment
   const Environment& getEnvironment() const {return ptr->env;}

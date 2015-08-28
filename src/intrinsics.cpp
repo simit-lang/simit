@@ -40,7 +40,6 @@ void tanInit() {
                 Func::Intrinsic);
 }
 
-
 static Func asinVar;
 void asinInit() {
   asinVar = Func("asin",
@@ -48,7 +47,6 @@ void asinInit() {
                  {Var("r", Float)},
                  Func::Intrinsic);
 }
-
 
 static Func acosVar;
 void acosInit() {
@@ -58,7 +56,6 @@ void acosInit() {
                  Func::Intrinsic);
 }
 
-
 static Func atan2Var;
 void atan2Init() {
   atan2Var = Func("atan2",
@@ -66,7 +63,6 @@ void atan2Init() {
                   {Var("r", Float)},
                   Func::Intrinsic);
 }
-
 
 static Func sqrtVar;
 void sqrtInit() {
@@ -76,7 +72,6 @@ void sqrtInit() {
                  Func::Intrinsic);
 }
 
-
 static Func logVar;
 void logInit() {
   logVar = Func("log",
@@ -84,7 +79,6 @@ void logInit() {
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
-
 
 static Func expVar;
 void expInit() {
@@ -94,7 +88,6 @@ void expInit() {
                 Func::Intrinsic);
 }
 
-
 static Func powVar;
 void powInit() {
   powVar = Func("pow",
@@ -103,7 +96,6 @@ void powInit() {
                 Func::Intrinsic);
 }
 
-
 static Func normVar;
 void normInit() {
   normVar = Func("norm",
@@ -111,7 +103,6 @@ void normInit() {
                  {Var("r", Float)},
                  Func::Intrinsic);
 }
-
 
 static Func dotVar;
 void dotInit() {
@@ -130,7 +121,6 @@ void detInit() {
                 Func::Intrinsic);
 }
 
-
 static Func invVar;
 void invInit() {
   invVar = Func("inv",
@@ -138,7 +128,6 @@ void invInit() {
                 {Var("r", mat3f)},
                 Func::Intrinsic);
 }
-
 
 static Func solveVar;
 void solveInit() {
@@ -148,7 +137,6 @@ void solveInit() {
                   Func::Intrinsic);
 }
 
-
 static Func locVar;
 void locInit() {
   locVar = Func("loc",
@@ -156,8 +144,6 @@ void locInit() {
                 {Var("r", Int)},
                 Func::Intrinsic);
 }
-
-
 
 // We lazily initialize all the intrinsics. No need to call all the constructors
 // unless we will use them.

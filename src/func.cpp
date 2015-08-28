@@ -18,23 +18,34 @@ Func::Func(const std::string& name, const std::vector<Var>& arguments,
 }
 
 Func::Func(const std::string& name, const std::vector<Var>& arguments,
-           const std::vector<Var>& results, const Stmt& body, Kind kind)
+           const std::vector<Var>& results, const Stmt& body,
+           const Environment& environment, Kind kind)
     : IntrusivePtr(new FuncContent) {
   ptr->kind = kind;
   ptr->name = name;
   ptr->arguments = arguments;
   ptr->results = results;
+  ptr->env = environment;
   ptr->body = new Stmt();
   if (body.defined()) {
     *ptr->body = Block::make({body}, true);
   }
 }
 
+Func::Func(const std::string& name, const std::vector<Var>& arguments,
+           const std::vector<Var>& results, const Stmt& body, Kind kind)
+    : Func(name, arguments, results, body, Environment(), kind) {
+}
+
 Func::Func(const Func& func, Stmt body)
     : Func(func.getName(), func.getArguments(), func.getResults(), body,
-           func.getKind()) {
+           func.getEnvironment(), func.getKind()) {
   setStorage(func.getStorage());
-  setEnvironment(func.getEnvironment());
+}
+
+Func::Func(const Func& func, const Environment& environment)
+    : Func(func.getName(), func.getArguments(), func.getResults(),
+           func.getBody(), environment, func.getKind()) {
 }
 
 Stmt Func::getBody() const {

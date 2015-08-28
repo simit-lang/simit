@@ -104,10 +104,11 @@ public:
     public:
       FunctionEnvironmentBuilder(const ProgramContext &ctx) : ctx(ctx) {}
 
-      ir::Environment buildEnvironment(ir::Func func) {
+      ir::Func buildEnvironment(const ir::Func& func) {
         func.accept(this);
-        return env;
+        return ir::Func(func, env);
       }
+      
     private:
       const ProgramContext &ctx;
       ir::Environment env;
@@ -119,7 +120,7 @@ public:
       }
     };
 
-    f.setEnvironment(FunctionEnvironmentBuilder(*this).buildEnvironment(f));
+    f = FunctionEnvironmentBuilder(*this).buildEnvironment(f);
     f = insertVarDecls(f);
 
     functions[f.getName()] = f;
