@@ -10,6 +10,10 @@
 namespace simit {
 namespace ir {
 
+/// An index variable loop is the loop associated with a (free or reduction)
+/// index variable. An index variable loop can be linked to another index
+/// variable loop, which means that only some of the index variable values need
+/// to be traversed, as determined by tensor indices.
 class IndexVariableLoop {
 public:
   IndexVariableLoop();
@@ -28,7 +32,6 @@ private:
   struct Content;
   std::shared_ptr<Content> content;
 };
-
 
 /// A TensorIndexVar is a pair of loop induction variables, a coordinate
 /// variable and a sink variable, that are retrieved from a tensor index using a
@@ -68,7 +71,6 @@ private:
   TensorIndex tensorIndex;
 };
 
-
 class SubsetLoop {
 public:
   SubsetLoop(const std::vector<TensorIndexVar> &tensorIndexVars,
@@ -95,7 +97,7 @@ private:
   CompoundOperator cop = CompoundOperator::None;
 
   Expr computeExpr;
-  Expr indexExpr; // This is only kept for debugging purposes
+  Expr indexExpr;
 };
 
 

@@ -296,9 +296,11 @@ private:
 };
 
 /**
-\example Print all Add and AssignStmt objects in func. Use closures to
-          capture environment variables (e.g. [&]).
-\code{.cpp}
+Match patterns to the IR.
+
+For example, to print all Add and AssignStmt objects in func. Use closures to
+capture environment variables (e.g. [&]):
+~~~~~~~~~~~~~~~{.cpp}
 match(func,
   std::function<void(const Add*)>([](const Add* op) {
     std::cout << *op << std::endl;
@@ -308,7 +310,7 @@ match(func,
     std::cout << *op << std::endl;
   })
 );
-\endcode
+~~~~~~~~~~~~~~~
 **/
 template <class IR, class... Patterns>
 void match(IR ir, Patterns... patterns) {
