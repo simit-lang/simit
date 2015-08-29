@@ -312,7 +312,8 @@ static string tensorSliceString(const Expr &expr, const IndexVar &sliceVar) {
   return SlicePrinter(sliceVar).toString(expr);;
 }
 
-Stmt lowerScatterWorkspace(Var target, const IndexExpr *indexExpression) {
+Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
+                           Environment* env) {
   // Create loops
   vector<IndexVariableLoop> loops = createLoopNest(indexExpression);
 
@@ -362,8 +363,8 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr *indexExpression) {
       auto& resultVars = indexExpression->resultVars;
 
       TensorIndexVar resultIndexVar(inductionVar, linkedInductionVar, target,
-                                      util::locate(resultVars,linkedIndexVar),
-                                      util::locate(resultVars,indexVar));
+                                    util::locate(resultVars,linkedIndexVar),
+                                    util::locate(resultVars,indexVar));
       Stmt copyFromWorkspace = Store::make(target,
                                            resultIndexVar.getCoordinateVar(),
                                            Load::make(workspace, inductionVar));

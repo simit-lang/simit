@@ -453,9 +453,7 @@ void LLVMBackend::compile(const ir::IndexRead& indexRead) {
 }
 
 void LLVMBackend::compile(const ir::TensorIndexRead& op) {
-  std::cout << op << std::endl;
-
-//  not_supported_yet;
+  not_supported_yet;
 }
 
 void LLVMBackend::compile(const ir::Neg& negExpr) {

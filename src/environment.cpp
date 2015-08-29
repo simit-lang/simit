@@ -2,6 +2,7 @@
 
 #include "var.h"
 #include "ir.h"
+#include "util/collections.h"
 
 namespace simit {
 namespace ir {
@@ -66,11 +67,20 @@ const TensorIndex& Environment::getTensorIndex(const Var& tensorVar) const {
 void* Environment::getTemporaryDataPointer(const Var& tensorVar) const {
 }
 
+const std::vector<Var>& Environment::getBindables() const {
+}
+
+const Var& Environment::getBindable(const std::string& name) const {
+}
+
+const std::vector<Var>& Environment::getExternsOfBindable() const {
+}
+
 void Environment::addConstant(const Var& var, const Expr& initializer) {
   content->constants.push_back({var, initializer});
 }
 
-void Environment::addExtern(const Var& var) {
+void Environment::addExtern(const Var& var, const Var& bindable) {
   content->externs.push_back(var);
 }
 
@@ -79,16 +89,46 @@ void Environment::addTemporary(const Var& var) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Environment& env) {
-  for (auto& con : env.getConstants()) {
-    os << "const " << con.first << " = " << con.second << ";" << std::endl;
+  bool somethingPrinted = false;
+
+  if (env.getConstants().size() > 0) {
+    for (auto& con : env.getConstants()) {
+      os << "const " << con.first.getName() << " : " << con.first.getType()
+         << " = " << con.second << ";" << std::endl;
+    }
+
+    os << std::endl << "const " << env.getConstants().begin()->first << " : "
+       << env.getConstants().begin()->first.getType()
+       << " = " << env.getConstants().begin()->second << ";";
+    for (auto& con : util::excludeFirst(env.getConstants())) {
+      os << std::endl << "const " << con.first.getName() << " : "
+         << con.first.getType() << " = " << con.second << ";";
+    }
+    somethingPrinted = true;
   }
-  os << std::endl;
-  for (auto& ext : env.getExterns()) {
-    os << "extern " << ext << ";" << std::endl;
+
+  if (env.getExterns().size() > 0) {
+    if (somethingPrinted) {
+      os << std::endl;
+    }
+    os << "extern " << *env.getExterns().begin()  << " : "
+       << env.getExterns().begin()->getType() << ";";
+    for (auto& ext : util::excludeFirst(env.getExterns())) {
+      os << std::endl << "extern " << ext  << " : " << ext.getType() << ";";
+    }
+    somethingPrinted = true;
   }
-  os << std::endl << "% Global temporaries" << std::endl;
-  for (auto& temp : env.getTemporaries()) {
-    os << temp << ";" << std::endl;
+
+  if (env.getTemporaries().size() > 0) {
+    if (somethingPrinted) {
+      os << std::endl;
+    }
+
+    os << "temp " << *env.getTemporaries().begin()  << " : "
+       << env.getTemporaries().begin()->getType() << ";";
+    for (auto& temp : util::excludeFirst(env.getTemporaries())) {
+      os << std::endl << "temp " << temp  << " : " << temp.getType() << ";";
+    }
   }
   return os;
 }

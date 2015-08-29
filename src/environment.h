@@ -4,13 +4,13 @@
 #include <vector>
 #include <map>
 #include <ostream>
+#include "var.h"
 
 namespace simit {
 namespace pe {
 class PathExpression;
 }
 namespace ir {
-class Var;
 class Expr;
 class TensorIndex;
 
@@ -50,13 +50,29 @@ public:
   /// tensor variable.
   void* getTemporaryDataPointer(const Var& tensorVar) const;
 
-  /// Add a constant to the environment.
+  /// Get the environment's bindable variables. A bindable variable is a
+  /// variable that must be bound by a user. These are initially the same as the
+  /// externs, but compiler lowering passes may turn bindable variables into
+  /// multiple extern arrays. For example, a bindable sparse tensor can get
+  /// turned into one extern data array and two extern index arrays. Use
+  /// Environment::getExternsOfBindable to Expr::accept.
+  const std::vector<Var>& getBindables() const;
+
+  /// Get the bindable variable with the given name. A bindable variable is a
+  /// variable that must be bound by a user.
+  const Var& getBindable(const std::string& name) const;
+
+  /// Get the extern variables that correspond to a given bindable variable.
+  /// See Environment::getBindables.
+  const std::vector<Var>& getExternsOfBindable() const;
+
+  /// Insert a constant into the environment.
   void addConstant(const Var& var, const Expr& initializer);
 
-  /// Add an extern to the environement.
-  void addExtern(const Var& var);
+  /// Insert an extern into the environement.
+  void addExtern(const Var& var, const Var& bindable=Var());
 
-  /// Add a temporary to the environment.
+  /// Insert a temporary into the environment.
   void addTemporary(const Var& var);
 
 private:
