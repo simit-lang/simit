@@ -238,13 +238,13 @@ void IRPrinter::visit(const IndexRead *op) {
 
 void IRPrinter::visit(const TensorIndexRead *op) {
   clearSkipParen();
-  os << op->tensorIndex;
+  const TensorIndex& ti = op->tensorIndex;
   switch (op->readType) {
     case TensorIndexRead::Coordinates:
-      os << ".coordinates";
+      os << ti.getCoordsArray();
       break;
     case TensorIndexRead::Sinks:
-      os << ".sinks";
+      os << ti.getSinksArray();
       break;
   }
   os << "[";

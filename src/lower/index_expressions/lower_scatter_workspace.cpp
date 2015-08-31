@@ -173,7 +173,7 @@ static Stmt createFastForwardLoop(const TensorIndexVar &tensorIndexVar) {
 ///             of the intersection between the tensorIndexVars.
 static Stmt createSubsetLoop(const Var &inductionVar,
                              const vector<TensorIndexVar> &tensorIndexVars,
-                             Stmt body) {
+                             Stmt body, Environment* env) {
   iassert(tensorIndexVars.size() > 0);
 
   Stmt loop;
@@ -269,13 +269,13 @@ static Stmt createSubsetLoop(const Var &inductionVar,
   return loop;
 }
 
-static Stmt createSubsetLoop(const Expr &target, const Var &inductionVar,
-                             const SubsetLoop &subsetLoop) {
+static Stmt createSubsetLoopStmt(const Expr &target, const Var &inductionVar,
+                             const SubsetLoop &subsetLoop, Environment* env) {
   Stmt computeStatement = Store::make(target, inductionVar,
                                       subsetLoop.getComputeExpression(),
                                       subsetLoop.getCompoundOperator());
   return createSubsetLoop(inductionVar, subsetLoop.getTensorIndexVars(),
-                          computeStatement);
+                          computeStatement, env);
 }
 
 static string tensorSliceString(const vector<IndexVar> &vars,
@@ -345,12 +345,14 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       IndexVar linkedIndexVar = loop.getLinkedLoop().getIndexVar();
       Var linkedInductionVar  = loop.getLinkedLoop().getInductionVar();
 
-      vector<SubsetLoop> subsetLoops = createSubsetLoops(indexExpression, loop);
+      vector<SubsetLoop> subsetLoops =
+          createSubsetLoops(indexExpression, loop, env);
 
       // Create each subset loop and add their results to the workspace
       vector<Stmt> loopStatements;
       for (SubsetLoop &subsetLoop : subsetLoops) {
-        Stmt loopStmt = createSubsetLoop(workspace, inductionVar, subsetLoop);
+        Stmt loopStmt = createSubsetLoopStmt(workspace, inductionVar,
+                                             subsetLoop, env);
         string comment = "workspace " +
             util::toString(subsetLoop.getCompoundOperator())+"= " +
             tensorSliceString(subsetLoop.getIndexExpression(), indexVar);
@@ -362,11 +364,10 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       // Create the loop that copies the workspace to the target
       auto& resultVars = indexExpression->resultVars;
 
-      // TODO: Get tensor index from environment
-
-      TensorIndex resultTensorIndex(target.getName(),
-                                    util::locate(resultVars, linkedIndexVar),
-                                    util::locate(resultVars, indexVar));
+      TensorIndex resultTensorIndex =
+          env->getTensorIndex(target,
+                              util::locate(resultVars, linkedIndexVar),
+                              util::locate(resultVars, indexVar));
 
       TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),
                                     linkedInductionVar, resultTensorIndex);
@@ -376,7 +377,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
                                            Load::make(workspace, inductionVar));
       Stmt resetWorkspace = Store::make(workspace, inductionVar, 0.0);
       Stmt body = Block::make(copyFromWorkspace, resetWorkspace);
-      Stmt loopStmt = createSubsetLoop(inductionVar, {resultIndexVar}, body);
+      Stmt loopStmt = createSubsetLoop(inductionVar,{resultIndexVar},body,env);
 
       string comment = toString(target)
                      + tensorSliceString(resultVars, loop.getIndexVar())

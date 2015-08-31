@@ -4,13 +4,17 @@
 #include "ir.h"
 #include "util/collections.h"
 
+using namespace std;
+
 namespace simit {
 namespace ir {
 
 struct Environment::Content {
-  std::vector<std::pair<Var, Expr>> constants;
-  std::vector<ir::Var>              externs;
-  std::vector<ir::Var>              temporaries;
+  vector<pair<Var, Expr>> constants;
+  vector<Var>             externs;
+  vector<Var>             temporaries;
+
+  map<Var, TensorIndex> tensorIndices;
 };
 
 Environment::Environment() : content(new Content) {
@@ -61,7 +65,21 @@ Environment::getPathExpression(const Var& tensorVar) const {
 const Var& Environment::getDataArray(const Var& tensorVar) const {
 }
 
-const TensorIndex& Environment::getTensorIndex(const Var& tensorVar) const {
+const TensorIndex& Environment::getTensorIndex(const Var& tensor,
+                                               unsigned sourceDim,
+                                               unsigned sinkDim) {
+  tassert(sourceDim == 0 && sinkDim == 1)
+      << "Only currently support row->col indices";
+  if (!util::contains(content->tensorIndices, tensor)) {
+    string name = tensor.getName() + "_rows2cols";
+
+    Var coordsArray(name+"_coords", Int);
+    Var sinksArray(name+"_sinks", Int);
+
+    TensorIndex ti(tensor, coordsArray, sinksArray, sourceDim, sinkDim);
+    addTensorIndex(tensor, ti);
+  }
+  return content->tensorIndices.at(tensor);
 }
 
 void* Environment::getTemporaryDataPointer(const Var& tensorVar) const {
@@ -86,6 +104,23 @@ void Environment::addExtern(const Var& var, const Var& bindable) {
 
 void Environment::addTemporary(const Var& var) {
   content->temporaries.push_back(var);
+}
+
+void Environment::addTensorIndex(Var tensor, TensorIndex ti) {
+  iassert(util::contains(content->externs, tensor) ||
+          util::contains(content->temporaries, tensor))
+      << tensor << " is not an extern or temporary";
+
+  if (util::contains(content->externs, tensor)) {
+    addExtern(ti.getCoordsArray());
+    addExtern(ti.getSinksArray());
+  }
+  else {  // (util::contains(content->temporaries, tensor))
+    addTemporary(ti.getCoordsArray());
+    addTemporary(ti.getSinksArray());
+  }
+
+  content->tensorIndices.insert({tensor, ti});
 }
 
 std::ostream& operator<<(std::ostream& os, const Environment& env) {

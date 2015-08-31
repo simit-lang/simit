@@ -53,6 +53,10 @@ TEST(IndexExpression, mul) {
   Expr add = IndexExpr::make({i,j}, B(i,j) * C(i,j));
 
   Environment env;
+  env.addExtern(A);
+  env.addExtern(to<VarExpr>(B)->var);
+  env.addExtern(to<VarExpr>(C)->var);
+
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add), &env);
   std::cout << loops << std::endl;
 
@@ -75,6 +79,11 @@ TEST(IndexExpression, addmul) {
   Expr addmul = IndexExpr::make({i,j}, (B(i,j) + C(i,j)) * D(i,j));
 
   Environment env;
+  env.addExtern(A);
+  env.addExtern(to<VarExpr>(B)->var);
+  env.addExtern(to<VarExpr>(C)->var);
+  env.addExtern(to<VarExpr>(D)->var);
+
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(addmul), &env);
   std::cout << loops << std::endl;
 }
@@ -96,6 +105,11 @@ TEST(IndexExpression, muladd) {
   Expr muladd = IndexExpr::make({i,j}, (B(i,j) * C(i,j)) + D(i,j));
 
   Environment env;
+  env.addExtern(A);
+  env.addExtern(to<VarExpr>(B)->var);
+  env.addExtern(to<VarExpr>(C)->var);
+  env.addExtern(to<VarExpr>(D)->var);
+
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(muladd), &env);
   std::cout << loops << std::endl;
 }

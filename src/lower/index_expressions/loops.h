@@ -105,8 +105,9 @@ private:
 };
 
 
-std::vector<SubsetLoop> createSubsetLoops(const IndexExpr *indexExpression,
-                                          IndexVariableLoop loop);
+std::vector<SubsetLoop> createSubsetLoops(const IndexExpr* indexExpression,
+                                          IndexVariableLoop loop,
+                                          Environment* env);
 
 }}
 #endif

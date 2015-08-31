@@ -104,12 +104,13 @@ std::ostream& operator<<(std::ostream& os, const SubsetLoop& ssl) {
 // Free functions
 class CreateSubsetLoopVisitor : public IRVisitor {
 public:
-  CreateSubsetLoopVisitor(IndexVariableLoop loop) {
+  CreateSubsetLoopVisitor(IndexVariableLoop loop, Environment* env) {
     iassert(loop.isLinked());
     this->indexVar = loop.getIndexVar();
     this->inductionVar = loop.getInductionVar();
     this->linkedIndexVar = loop.getLinkedLoop().getIndexVar();
     this->linkedInductionVar = loop.getLinkedLoop().getInductionVar();
+    this->env = env;
   }
 
   vector<SubsetLoop> createSubsetLoops(const IndexExpr *indexExpression) {
@@ -123,6 +124,8 @@ private:
   Var inductionVar;
   IndexVar linkedIndexVar;
   Var linkedInductionVar;
+
+  Environment* env;
 
   vector<SubsetLoop> subsetLoops;
 
@@ -224,15 +227,15 @@ private:
   void visit(const IndexedTensor *indexedTensor) {
     const vector<IndexVar>& indexVars = indexedTensor->indexVars;
     iassert(isa<VarExpr>(indexedTensor->tensor))
-    << "at this point the index expressions should have been flattened";
+        << "at this point the index expressions should have been flattened";
     Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
 
-    TensorIndex tensorIndex(tensor.getName(),
-                            util::locate(indexVars, linkedIndexVar),
-                            util::locate(indexVars, indexVar));
+    TensorIndex ti = env->getTensorIndex(tensor,
+                                         util::locate(indexVars,linkedIndexVar),
+                                         util::locate(indexVars,indexVar));
 
     TensorIndexVar tensorIndexVar(inductionVar.getName(), tensor.getName(),
-                                  linkedInductionVar, tensorIndex);
+                                  linkedInductionVar, ti);
 
     Expr tensorLoad = Load::make(indexedTensor->tensor,
                                  tensorIndexVar.getCoordinateVar());
@@ -240,9 +243,9 @@ private:
   }
 };
 
-vector<SubsetLoop> createSubsetLoops(const IndexExpr *indexExpr,
-                                     IndexVariableLoop loop) {
-  CreateSubsetLoopVisitor visitor(loop);
+vector<SubsetLoop> createSubsetLoops(const IndexExpr* indexExpr,
+                                     IndexVariableLoop loop, Environment* env) {
+  CreateSubsetLoopVisitor visitor(loop, env);
   return visitor.createSubsetLoops(indexExpr);
 }
 

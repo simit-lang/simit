@@ -44,7 +44,8 @@ public:
   const Var& getDataArray(const Var& tensorVar) const;
 
   /// Get the tensor index of a tensor variable.
-  const TensorIndex& getTensorIndex(const Var& tensorVar) const;
+  const TensorIndex& getTensorIndex(const Var& tensor,
+                                    unsigned sourceDim, unsigned sinkDim);
 
   /// Get a pointer to the allocated memory of the data array of a temporary
   /// tensor variable.
@@ -74,6 +75,9 @@ public:
 
   /// Insert a temporary into the environment.
   void addTemporary(const Var& var);
+
+  /// Associate the tensor variable with a tensor index.
+  void addTensorIndex(Var tensor, TensorIndex ti);
 
 private:
   struct Content;
