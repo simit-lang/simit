@@ -70,7 +70,6 @@ protected:
   virtual void compile(const ir::Call&);
   virtual void compile(const ir::Length&);
   virtual void compile(const ir::IndexRead&);
-  virtual void compile(const ir::TensorIndexRead&);
 
   virtual void compile(const ir::Neg&);
   virtual void compile(const ir::Add&);

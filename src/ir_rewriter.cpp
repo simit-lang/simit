@@ -117,16 +117,6 @@ void IRRewriter::visit(const IndexRead *op) {
   }
 }
 
-void IRRewriter::visit(const TensorIndexRead *op) {
-  Expr loc = rewrite(op->loc);
-  if (loc == op->loc) {
-    expr = op;
-  }
-  else {
-    expr = TensorIndexRead::make(op->tensorIndex, loc, op->readType);
-  }
-}
-
 void IRRewriter::visit(const Neg *op) {
   Expr a = rewrite(op->a);
   if (a == op->a) {

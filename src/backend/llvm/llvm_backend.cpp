@@ -452,10 +452,6 @@ void LLVMBackend::compile(const ir::IndexRead& indexRead) {
   val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(indexRead));
 }
 
-void LLVMBackend::compile(const ir::TensorIndexRead& op) {
-  not_supported_yet;
-}
-
 void LLVMBackend::compile(const ir::Neg& negExpr) {
   iassert(isScalar(negExpr.type));
   llvm::Value *a = compile(negExpr.a);

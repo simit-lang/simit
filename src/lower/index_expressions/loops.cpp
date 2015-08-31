@@ -60,13 +60,11 @@ TensorIndexVar::TensorIndexVar(string inductionVarName, string tensorName,
 
 Expr TensorIndexVar::loadCoordinate(int offset) const {
   Expr sourceExpr = (offset == 0) ? getSourceVar() : getSourceVar() + offset;
-  return TensorIndexRead::make(getTensorIndex(), sourceExpr,
-                               TensorIndexRead::Coordinates);
+  return Load::make(getTensorIndex().getCoordsArray(), sourceExpr);
 }
 
 Expr TensorIndexVar::loadSink() const {
-  return TensorIndexRead::make(getTensorIndex(), getCoordinateVar(),
-                               TensorIndexRead::Sinks);
+  return Load::make(getTensorIndex().getSinksArray(), getCoordinateVar());
 }
 
 Stmt TensorIndexVar::initCoordinateVar() const {

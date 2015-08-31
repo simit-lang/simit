@@ -181,21 +181,12 @@ struct Length : public ExprNode<Length> {
 
 /// An IndexRead retrieves an index from an edge set.  An example of an index
 /// is the endpoints of the edges in the set.
-/// TODO DEPRECATED: This node has been deprecated by TensorIndexRead and
-///                  should be phased out
+/// TODO DEPRECATED: This node has been deprecated with the old lowering pass
 struct IndexRead : public ExprNode<IndexRead> {
   enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2 };
   Expr edgeSet;
   Kind kind;
   static Expr make(Expr edgeSet, Kind kind);
-};
-
-struct TensorIndexRead : public ExprNode<TensorIndexRead> {
-  enum Type {Coordinates, Sinks};
-  TensorIndex tensorIndex;
-  Expr loc;
-  Type readType;
-  static Expr make(TensorIndex tensorIndex, Expr loc, Type readType);
 };
 
 struct Neg : public ExprNode<Neg> {

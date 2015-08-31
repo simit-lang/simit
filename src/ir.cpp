@@ -306,17 +306,6 @@ Expr IndexRead::make(Expr edgeSet, Kind kind) {
   return node;
 }
 
-// struct TensorIndexRead
-Expr TensorIndexRead::make(TensorIndex tensorIndex, Expr loc, Type readType) {
-  TensorIndexRead *node = new TensorIndexRead;
-  node->type = Int;
-  node->tensorIndex = tensorIndex;
-  node->loc = loc;
-  node->readType = readType;
-  return node;
-}
-
-
 // struct Neg
 Expr Neg::make(Expr a) {
   iassert_scalar(a);

@@ -55,7 +55,6 @@ protected:
   virtual void compile(const ir::Call&) = 0;
   virtual void compile(const ir::Length&) = 0;
   virtual void compile(const ir::IndexRead&) = 0;
-  virtual void compile(const ir::TensorIndexRead&) = 0;
 
   virtual void compile(const ir::Neg&) = 0;
   virtual void compile(const ir::Add&) = 0;
@@ -107,7 +106,6 @@ private:
   void visit(const ir::Call* op)            {compile(*op);}
   void visit(const ir::Length* op)          {compile(*op);}
   void visit(const ir::IndexRead* op)       {compile(*op);}
-  void visit(const ir::TensorIndexRead* op) {compile(*op);}
   void visit(const ir::Neg* op)             {compile(*op);}
   void visit(const ir::Add* op)             {compile(*op);}
   void visit(const ir::Sub* op)             {compile(*op);}

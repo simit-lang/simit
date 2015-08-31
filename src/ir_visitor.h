@@ -18,7 +18,6 @@ struct FieldRead;
 struct Call;
 struct Length;
 struct IndexRead;
-struct TensorIndexRead;
 
 struct Neg;
 struct Add;
@@ -71,7 +70,6 @@ public:
   virtual void visit(const Call* op) = 0;
   virtual void visit(const Length* op) = 0;
   virtual void visit(const IndexRead* op) = 0;
-  virtual void visit(const TensorIndexRead* op) = 0;
 
   virtual void visit(const Neg* op) = 0;
   virtual void visit(const Add* op) = 0;
@@ -129,7 +127,6 @@ public:
   virtual void visit(const Call *op);
   virtual void visit(const Length *op);
   virtual void visit(const IndexRead *op);
-  virtual void visit(const TensorIndexRead *op);
 
   virtual void visit(const Neg *op);
   virtual void visit(const Add *op);
@@ -251,7 +248,6 @@ private:
   RULE(Call)
   RULE(Length)
   RULE(IndexRead)
-  RULE(TensorIndexRead)
 
   RULE(Neg)
   RULE(Add)

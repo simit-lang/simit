@@ -236,23 +236,6 @@ void IRPrinter::visit(const IndexRead *op) {
   }
 }
 
-void IRPrinter::visit(const TensorIndexRead *op) {
-  clearSkipParen();
-  const TensorIndex& ti = op->tensorIndex;
-  switch (op->readType) {
-    case TensorIndexRead::Coordinates:
-      os << ti.getCoordsArray();
-      break;
-    case TensorIndexRead::Sinks:
-      os << ti.getSinksArray();
-      break;
-  }
-  os << "[";
-  skipTopExprParenthesis();
-  print(op->loc);
-  os << "]";
-}
-
 #define PRINT_VISIT_BINARY_OP(type, symbol, op)                                \
 void IRPrinter::visit(const type *op) {                                        \
   auto p = paren();                                                            \
