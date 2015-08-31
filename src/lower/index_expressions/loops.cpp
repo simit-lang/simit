@@ -19,11 +19,11 @@ struct IndexVariableLoop::Content {
 IndexVariableLoop::IndexVariableLoop() {
 }
 
-IndexVariableLoop::IndexVariableLoop(const IndexVar &indexVar)
+IndexVariableLoop::IndexVariableLoop(const IndexVar& indexVar)
     : IndexVariableLoop(indexVar, IndexVariableLoop()) {
 }
 
-IndexVariableLoop::IndexVariableLoop(const IndexVar &indexVar,
+IndexVariableLoop::IndexVariableLoop(const IndexVar& indexVar,
                                      IndexVariableLoop linkedLoop)
     : content(new Content) {
   content->indexVar = indexVar;
@@ -31,11 +31,11 @@ IndexVariableLoop::IndexVariableLoop(const IndexVar &indexVar,
   content->linkedLoop = linkedLoop;
 }
 
-const IndexVar &IndexVariableLoop::getIndexVar() const {
+const IndexVar& IndexVariableLoop::getIndexVar() const {
   return content->indexVar;
 }
 
-const Var &IndexVariableLoop::getInductionVar() const {
+const Var& IndexVariableLoop::getInductionVar() const {
   return content->inductionVar;
 }
 
@@ -43,19 +43,19 @@ bool IndexVariableLoop::isLinked() const {
   return content->linkedLoop.defined();
 }
 
-const IndexVariableLoop &IndexVariableLoop::getLinkedLoop() const {
+const IndexVariableLoop& IndexVariableLoop::getLinkedLoop() const {
   return content->linkedLoop;
 }
 
 
 // class TensorIndexVar
-TensorIndexVar::TensorIndexVar(Var inductionVar, Var sourceVar, Var tensor,
-                 unsigned sourceDim, unsigned sinkDim) {
-  this->sinkVar = Var(inductionVar.getName() + tensor.getName(), Int);
+TensorIndexVar::TensorIndexVar(string inductionVarName, string tensorName,
+                               Var sourceVar, TensorIndex tensorIndex) {
+  string sinkName = inductionVarName + tensorName;
   this->sourceVar = sourceVar;
-  this->coordinateVar =
-      Var(sourceVar.getName()+inductionVar.getName()+tensor.getName(), Int);
-  this->tensorIndex = TensorIndex(tensor, sourceDim);
+  this->coordinateVar = Var(sourceVar.getName() + sinkName, Int);
+  this->sinkVar = Var(sinkName, Int);
+  this->tensorIndex = tensorIndex;
 }
 
 Expr TensorIndexVar::loadCoordinate(int offset) const {
@@ -77,12 +77,12 @@ Stmt TensorIndexVar::initSinkVar() const {
   return initSinkVar(getSinkVar());
 }
 
-Stmt TensorIndexVar::initSinkVar(const Var &sinkVar) const {
+Stmt TensorIndexVar::initSinkVar(const Var& sinkVar) const {
   return AssignStmt::make(sinkVar, loadSink());
 }
 
 
-ostream &operator<<(ostream &os, const TensorIndexVar &tiv) {
+ostream& operator<<(ostream& os, const TensorIndexVar& tiv) {
   os << tiv.sinkVar
      << " in "      << tiv.tensorIndex
      << ".sinks["   << tiv.coordinateVar
@@ -93,7 +93,7 @@ ostream &operator<<(ostream &os, const TensorIndexVar &tiv) {
 
 
 // class SubsetLoop
-std::ostream &operator<<(std::ostream &os, const SubsetLoop &ssl) {
+std::ostream& operator<<(std::ostream& os, const SubsetLoop& ssl) {
   os << "foreach zip(" << util::join(ssl.getTensorIndexVars()) << ")";
   os << "\n  " << ssl.getCompoundOperator() << "= "
      << ssl.getComputeExpression();
@@ -134,16 +134,16 @@ private:
   }
 
   /// Concatenates the subset loops in a an b
-  inline vector<SubsetLoop> unionMerge(const vector<SubsetLoop> &a,
-                                       const vector<SubsetLoop> &b,
+  inline vector<SubsetLoop> unionMerge(const vector<SubsetLoop>& a,
+                                       const vector<SubsetLoop>& b,
                                        CompoundOperator cop) {
     vector<SubsetLoop> c;
     c.reserve(a.size() + b.size());
 
-    for (auto &as : a) {
+    for (auto& as : a) {
       c.push_back(as);
     }
-    for (auto &bs : b) {
+    for (auto& bs : b) {
       c.push_back(bs);
     }
 
@@ -156,27 +156,27 @@ private:
   }
 
   /// Takes the set product of the subset loops in a and b
-  vector<SubsetLoop> intersectionMerge(const vector<SubsetLoop> &a,
-                                       const vector<SubsetLoop> &b,
+  vector<SubsetLoop> intersectionMerge(const vector<SubsetLoop>& a,
+                                       const vector<SubsetLoop>& b,
                                        function<Expr(Expr,Expr)> op,
                                        Expr iexpr) {
     vector<SubsetLoop> c;
     c.reserve(a.size() * b.size());
 
-    for (auto &as : a) {
+    for (auto& as : a) {
       vector<TensorIndexVar> ativars = as.getTensorIndexVars();
       Expr aComputeExpr = as.getComputeExpression();
-      for (auto &bs : b) {
+      for (auto& bs : b) {
         vector<TensorIndexVar> btivars = bs.getTensorIndexVars();
         Expr bComputeExpr = bs.getComputeExpression();
 
         vector<TensorIndexVar> ctivars;
         ctivars.reserve(ativars.size() + btivars.size());
 
-        for (auto &ativar : ativars) {
+        for (auto& ativar : ativars) {
           ctivars.push_back(ativar);
         }
-        for (auto &btivar : btivars) {
+        for (auto& btivar : btivars) {
           ctivars.push_back(btivar);
         }
 
@@ -222,14 +222,17 @@ private:
   }
 
   void visit(const IndexedTensor *indexedTensor) {
-    const vector<IndexVar> &indexVars = indexedTensor->indexVars;
+    const vector<IndexVar>& indexVars = indexedTensor->indexVars;
     iassert(isa<VarExpr>(indexedTensor->tensor))
     << "at this point the index expressions should have been flattened";
     Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
 
-    TensorIndexVar tensorIndexVar(inductionVar, linkedInductionVar, tensor,
-                                  util::locate(indexVars,linkedIndexVar),
-                                  util::locate(indexVars,indexVar));
+    TensorIndex tensorIndex(tensor.getName(),
+                            util::locate(indexVars, linkedIndexVar),
+                            util::locate(indexVars, indexVar));
+
+    TensorIndexVar tensorIndexVar(inductionVar.getName(), tensor.getName(),
+                                  linkedInductionVar, tensorIndex);
 
     Expr tensorLoad = Load::make(indexedTensor->tensor,
                                  tensorIndexVar.getCoordinateVar());

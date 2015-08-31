@@ -17,14 +17,14 @@ namespace ir {
 class IndexVariableLoop {
 public:
   IndexVariableLoop();
-  IndexVariableLoop(const IndexVar &indexVar);
-  IndexVariableLoop(const IndexVar &indexVar, IndexVariableLoop linkedLoop);
+  IndexVariableLoop(const IndexVar& indexVar);
+  IndexVariableLoop(const IndexVar& indexVar, IndexVariableLoop linkedLoop);
 
-  const IndexVar &getIndexVar() const;
-  const Var &getInductionVar() const;
+  const IndexVar& getIndexVar() const;
+  const Var& getInductionVar() const;
 
   bool isLinked() const;
-  const IndexVariableLoop &getLinkedLoop() const;
+  const IndexVariableLoop& getLinkedLoop() const;
 
   bool defined() const {return content != nullptr;}
 
@@ -43,26 +43,30 @@ private:
 ///      jA = A.row2col.sinks[ijA];
 ///
 /// Given the expression c=A*b, ijA can be used to retrieve the matrix component
-/// at location (i,j) in A, while i can index into c and j into b. For example,
-///     c[i] += A[ijA] * b[j];
+/// at location (i,j) in A, while i can index into c and jA into b. For example,
+///     c[i] += A[ijA] * b[jA];
+///
+/// When merging multiple loops over different tensor index variables, their
+/// sink variables are merged into the overall loop induction variable. For
+/// example, jA and jB are merged into j.
 class TensorIndexVar {
 public:
-  TensorIndexVar(Var inductionVar, Var sourceVar, Var tensor,
-                 unsigned sourceDim, unsigned sinkDim);
+  TensorIndexVar(std::string inductionVarName, std::string tensorName,
+                 Var sourceVar, TensorIndex tensorIndex);
 
-  const Var &getSourceVar() const {return sourceVar;}
-  const Var &getCoordinateVar() const {return coordinateVar;}
-  const Var &getSinkVar() const {return sinkVar;}
+  const Var& getSourceVar() const {return sourceVar;}
+  const Var& getCoordinateVar() const {return coordinateVar;}
+  const Var& getSinkVar() const {return sinkVar;}
 
-  const TensorIndex &getTensorIndex() const {return tensorIndex;}
+  const TensorIndex& getTensorIndex() const {return tensorIndex;}
 
   Expr loadCoordinate(int offset=0) const;
   Expr loadSink() const;
   Stmt initCoordinateVar() const;
   Stmt initSinkVar() const;
-  Stmt initSinkVar(const Var &sinkVar) const;
+  Stmt initSinkVar(const Var& sinkVar) const;
 
-  friend std::ostream &operator<<(std::ostream&, const TensorIndexVar&);
+  friend std::ostream& operator<<(std::ostream&, const TensorIndexVar&);
 
 private:
   Var sourceVar;
@@ -73,24 +77,24 @@ private:
 
 class SubsetLoop {
 public:
-  SubsetLoop(const std::vector<TensorIndexVar> &tensorIndexVars,
+  SubsetLoop(const std::vector<TensorIndexVar>& tensorIndexVars,
              Expr computeExpr, Expr indexExpr)
       : tensorIndexVars(tensorIndexVars),
         computeExpr(computeExpr), indexExpr(indexExpr) {}
 
   void setCompoundOperator(CompoundOperator cop) {this->cop = cop;}
 
-  const std::vector<TensorIndexVar> &getTensorIndexVars() const {
+  const std::vector<TensorIndexVar>& getTensorIndexVars() const {
     return tensorIndexVars;
   }
 
   CompoundOperator getCompoundOperator() const {return cop;}
 
-  const Expr &getComputeExpression() const {return computeExpr;}
+  const Expr& getComputeExpression() const {return computeExpr;}
 
-  const Expr &getIndexExpression() const {return indexExpr;}
+  const Expr& getIndexExpression() const {return indexExpr;}
 
-  friend std::ostream &operator<<(std::ostream&, const SubsetLoop&);
+  friend std::ostream& operator<<(std::ostream&, const SubsetLoop&);
 
 private:
   std::vector<TensorIndexVar> tensorIndexVars;

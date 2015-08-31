@@ -362,9 +362,15 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       // Create the loop that copies the workspace to the target
       auto& resultVars = indexExpression->resultVars;
 
-      TensorIndexVar resultIndexVar(inductionVar, linkedInductionVar, target,
-                                    util::locate(resultVars,linkedIndexVar),
-                                    util::locate(resultVars,indexVar));
+      // TODO: Get tensor index from environment
+
+      TensorIndex resultTensorIndex(target.getName(),
+                                    util::locate(resultVars, linkedIndexVar),
+                                    util::locate(resultVars, indexVar));
+
+      TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),
+                                    linkedInductionVar, resultTensorIndex);
+
       Stmt copyFromWorkspace = Store::make(target,
                                            resultIndexVar.getCoordinateVar(),
                                            Load::make(workspace, inductionVar));

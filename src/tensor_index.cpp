@@ -9,7 +9,7 @@ namespace simit {
 namespace ir {
 
 ostream &operator<<(ostream &os, const TensorIndex &ti) {
-  os << ti.getTensor() << ".";
+  os << ti.getName() << ".";
   if (ti.getSourceDimension() == 0) {
     os << "row2col";
   }

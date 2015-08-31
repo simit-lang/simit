@@ -21,17 +21,25 @@ class TensorIndex {
 public:
   TensorIndex() {}
 
-  TensorIndex(const Var &tensor, unsigned sourceDimension)
-      : tensor(tensor), sourceDimension(sourceDimension)  {}
+  TensorIndex(std::string name,
+              unsigned sourceDim, unsigned sinkDim)
+      : name(name), sourceDimension(sourceDim), sinkDimension(sinkDim) {}
 
-  const Var &getTensor() const {return tensor;}
+  std::string getName() const {return name;}
+
+  const Var& getCoordsArray() const {return coordsArray;}
+  const Var& getSinksArray() const {return sinksArray;}
 
   unsigned getSourceDimension() const {return sourceDimension;}
-  unsigned getSinkDimension() const {return (sourceDimension==0) ? 1 : 0;}
+  unsigned getSinkDimension() const {return sinkDimension;}
 
 private:
-  Var tensor;
+  std::string name;
+  Var coordsArray;
+  Var sinksArray;
+
   unsigned sourceDimension;
+  unsigned sinkDimension;
 };
 
 std::ostream &operator<<(std::ostream&, const TensorIndex&);
