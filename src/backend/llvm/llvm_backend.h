@@ -60,7 +60,7 @@ protected:
   std::unique_ptr<LLVMIRBuilder> builder;
 
   using BackendImpl::compile;
-  virtual Function* compile(ir::Func func, std::vector<ir::Var> globals);
+  virtual Function* compile(ir::Func func);
 
   using BackendVisitor::compile;
   virtual void compile(const ir::Literal&);

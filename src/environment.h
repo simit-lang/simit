@@ -26,6 +26,9 @@ public:
   Environment& operator=(const Environment& other);
   Environment& operator=(Environment&& other) noexcept;
 
+  /// Returns true if the environment is empty, false otherwise.
+  bool isEmpty() const;
+
   /// Get global constants and their initializer expressions.
   const std::vector<std::pair<Var, Expr>>& getConstants() const;
 

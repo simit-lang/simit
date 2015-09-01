@@ -41,7 +41,7 @@ Backend::~Backend() {
 }
 
 Function* Backend::compile(const Func& func) {
-  return pimpl->compile(func, {});
+  return pimpl->compile(func);
 }
 
 backend::Function* Backend::compile(const Stmt& stmt) {
@@ -49,14 +49,14 @@ backend::Function* Backend::compile(const Stmt& stmt) {
 }
 
 Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
-  Func func("main", {}, {}, stmt);
-  std::vector<Var> globals;
+  Environment env;
 
+  // Add output and undefined variable in the stmt to the environment as externs
   std::set<Var> globalsSet;
   util::ScopedMap<Var,void*> definedVariables;
   function<void(Var var)> addToGlobalsIfNotDefined = [&](Var var) {
     if (!definedVariables.contains(var) && !util::contains(globalsSet, var)) {
-      globals.push_back(var);
+      env.addExtern(var);
       globalsSet.insert(var);
       definedVariables.insert(var, nullptr);
     }
@@ -68,7 +68,7 @@ Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
   }
 
   // Find all undefined variables and add them to the context as globals.
-  match(func,
+  match(stmt,
     function<void(const VarExpr*)>([&](const VarExpr* op) {
       addToGlobalsIfNotDefined(op->var);
     })
@@ -100,7 +100,8 @@ Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
     })
   );
 
-  return pimpl->compile(func, globals);
+  Func func("main", {}, {}, stmt, env);
+  return pimpl->compile(func);
 }
 
 }}

@@ -79,7 +79,7 @@ LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
 
 LLVMBackend::~LLVMBackend() {}
 
-Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
+Function* LLVMBackend::compile(ir::Func func) {
   this->module = new llvm::Module("simit", LLVM_CTX);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
@@ -88,14 +88,15 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
 
   this->symtable.clear();
   this->buffers.clear();
+  this->globals.clear();
   this->storage = Storage();
-  this->globals = set<ir::Var>(globals.begin(), globals.end());
 
-  // Add global variables to symbol table
-  std::map<std::string,void**> globalPointers;
-  for (auto& global : globals) {
-    Type type = global.getType();
-    llvm::Type* globalType = llvmType(global.getType(), globalAddrspace());
+  const Environment& env = func.getEnvironment();
+
+  // Emit global externs
+  for (auto& globalExtern : env.getExterns()) {
+    Type type = globalExtern.getType();
+    llvm::Type* globalType = llvmType(globalExtern.getType(),globalAddrspace());
     llvm::Constant* initializer = defaultInitializer(globalType);
     llvm::GlobalVariable* globalPtr =
         new llvm::GlobalVariable(*module,
@@ -103,13 +104,15 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
                                  false,
                                  llvm::GlobalValue::ExternalLinkage,
                                  initializer,
-                                 global.getName(),
+                                 globalExtern.getName(),
                                  nullptr,
                                  llvm::GlobalVariable::NotThreadLocal,
                                  globalAddrspace(),
                                  true);
     globalPtr->setAlignment(8);
-    symtable.insert(global, globalPtr);
+
+    this->symtable.insert(globalExtern, globalPtr);
+    this->globals.insert(globalExtern);
   }
 
   // Create compute functions
@@ -235,7 +238,8 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
   mpm.run(*module);
 #endif
 
-  return new LLVMFunction(func, globals, llvmFunc, module, engineBuilder);
+  // TODO: Remove second argument
+  return new LLVMFunction(func, env.getExterns(), llvmFunc, module, engineBuilder);
 }
 
 void LLVMBackend::compile(const ir::Literal& literal) {

@@ -481,6 +481,11 @@ void IRPrinter::visit(const GPUKernel *op) {
 #endif
 
 void IRPrinter::visit(const Func *func) {
+  const Environment& env = func->getEnvironment();
+  if (!env.isEmpty()) {
+    os << env << endl << endl;
+  }
+
   os << "func " << func->getName() << "(";
   if (func->getArguments().size() > 0) {
     const Var &arg = func->getArguments()[0];

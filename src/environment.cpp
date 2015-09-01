@@ -47,6 +47,11 @@ Environment& Environment::operator=(Environment&& other) noexcept {
   return *this;
 }
 
+bool Environment::isEmpty() const {
+  return content->constants.size() == 0 && content->externs.size() == 0 &&
+         content->temporaries.size() == 0;
+}
+
 const std::vector<std::pair<Var, Expr>>& Environment::getConstants() const {
   return content->constants;
 }
