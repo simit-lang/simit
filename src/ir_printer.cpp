@@ -395,12 +395,8 @@ void IRPrinter::visit(const Store *op) {
   os << ";";
 }
 
-void IRPrinter::visit(const Block *op) {
-  print(op->first);
-  if (op->rest.defined()) {
-    os << endl;
-    print(op->rest);
-  }
+void IRPrinter::visit(const Scope *op) {
+  print(op->scopedStmt);
 }
 
 void IRPrinter::visit(const IfThenElse *op) {
@@ -469,6 +465,14 @@ void IRPrinter::visit(const Kernel *op) {
   --indentation;
   indent();
   os << "end";
+}
+
+void IRPrinter::visit(const Block *op) {
+  print(op->first);
+  if (op->rest.defined()) {
+    os << endl;
+    print(op->rest);
+  }
 }
 
 void IRPrinter::visit(const Print *op) {

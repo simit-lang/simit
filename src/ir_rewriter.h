@@ -58,12 +58,13 @@ protected:
   virtual void visit(const CallStmt *op);
   virtual void visit(const Store *op);
   virtual void visit(const FieldWrite *op);
-  virtual void visit(const Block *op);
+  virtual void visit(const Scope *op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const ForRange *op);
   virtual void visit(const For *op);
   virtual void visit(const While *op);
   virtual void visit(const Kernel *op);
+  virtual void visit(const Block *op);
   virtual void visit(const Print *op);
   virtual void visit(const Comment *op);
   virtual void visit(const Pass *op);

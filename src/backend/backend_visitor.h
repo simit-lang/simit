@@ -15,6 +15,7 @@ protected:
   void visitError(std::string type, const void* op);
 
   void compile(const ir::Kernel&);
+  void compile(const ir::Block&);
   void compile(const ir::Comment&);
 };
 
@@ -78,7 +79,7 @@ protected:
   virtual void compile(const ir::CallStmt&) = 0;
   virtual void compile(const ir::Store&) = 0;
   virtual void compile(const ir::FieldWrite&) = 0;
-  virtual void compile(const ir::Block&) = 0;
+  virtual void compile(const ir::Scope&) = 0;
   virtual void compile(const ir::IfThenElse&) = 0;
   virtual void compile(const ir::ForRange&) = 0;
   virtual void compile(const ir::For&) = 0;
@@ -92,49 +93,52 @@ protected:
   /// compile on it.
   virtual void compile(const ir::Kernel& op) {BackendVisitorBase::compile(op);}
 
+  virtual void compile(const ir::Block& op) {BackendVisitorBase::compile(op);}
+
   /// The default Comment compilation calls compile on the commented statement.
   virtual void compile(const ir::Comment& op) {BackendVisitorBase::compile(op);}
 
-  virtual void compile(const ir::Pass&)       {}
+  virtual void compile(const ir::Pass&) {}
 
 private:
   using ir::IRVisitorStrict::visit;
-  void visit(const ir::Literal* op)         {compile(*op);}
-  void visit(const ir::VarExpr* op)         {compile(*op);}
-  void visit(const ir::Load* op)            {compile(*op);}
-  void visit(const ir::FieldRead* op)       {compile(*op);}
-  void visit(const ir::Call* op)            {compile(*op);}
-  void visit(const ir::Length* op)          {compile(*op);}
-  void visit(const ir::IndexRead* op)       {compile(*op);}
-  void visit(const ir::Neg* op)             {compile(*op);}
-  void visit(const ir::Add* op)             {compile(*op);}
-  void visit(const ir::Sub* op)             {compile(*op);}
-  void visit(const ir::Mul* op)             {compile(*op);}
-  void visit(const ir::Div* op)             {compile(*op);}
-  void visit(const ir::Not* op)             {compile(*op);}
-  void visit(const ir::Eq* op)              {compile(*op);}
-  void visit(const ir::Ne* op)              {compile(*op);}
-  void visit(const ir::Gt* op)              {compile(*op);}
-  void visit(const ir::Lt* op)              {compile(*op);}
-  void visit(const ir::Ge* op)              {compile(*op);}
-  void visit(const ir::Le* op)              {compile(*op);}
-  void visit(const ir::And* op)             {compile(*op);}
-  void visit(const ir::Or* op)              {compile(*op);}
-  void visit(const ir::Xor* op)             {compile(*op);}
-  void visit(const ir::VarDecl* op)         {compile(*op);}
-  void visit(const ir::AssignStmt* op)      {compile(*op);}
-  void visit(const ir::CallStmt* op)        {compile(*op);}
-  void visit(const ir::Store* op)           {compile(*op);}
-  void visit(const ir::FieldWrite* op)      {compile(*op);}
-  void visit(const ir::Block* op)           {compile(*op);}
-  void visit(const ir::IfThenElse* op)      {compile(*op);}
-  void visit(const ir::ForRange* op)        {compile(*op);}
-  void visit(const ir::For* op)             {compile(*op);}
-  void visit(const ir::While* op)           {compile(*op);}
-  void visit(const ir::Kernel *op)          {compile(*op);}
-  void visit(const ir::Print* op)           {compile(*op);}
-  void visit(const ir::Comment* op)         {compile(*op);}
-  void visit(const ir::Pass* op)            {compile(*op);}
+  void visit(const ir::Literal* op)    {compile(*op);}
+  void visit(const ir::VarExpr* op)    {compile(*op);}
+  void visit(const ir::Load* op)       {compile(*op);}
+  void visit(const ir::FieldRead* op)  {compile(*op);}
+  void visit(const ir::Call* op)       {compile(*op);}
+  void visit(const ir::Length* op)     {compile(*op);}
+  void visit(const ir::IndexRead* op)  {compile(*op);}
+  void visit(const ir::Neg* op)        {compile(*op);}
+  void visit(const ir::Add* op)        {compile(*op);}
+  void visit(const ir::Sub* op)        {compile(*op);}
+  void visit(const ir::Mul* op)        {compile(*op);}
+  void visit(const ir::Div* op)        {compile(*op);}
+  void visit(const ir::Not* op)        {compile(*op);}
+  void visit(const ir::Eq* op)         {compile(*op);}
+  void visit(const ir::Ne* op)         {compile(*op);}
+  void visit(const ir::Gt* op)         {compile(*op);}
+  void visit(const ir::Lt* op)         {compile(*op);}
+  void visit(const ir::Ge* op)         {compile(*op);}
+  void visit(const ir::Le* op)         {compile(*op);}
+  void visit(const ir::And* op)        {compile(*op);}
+  void visit(const ir::Or* op)         {compile(*op);}
+  void visit(const ir::Xor* op)        {compile(*op);}
+  void visit(const ir::VarDecl* op)    {compile(*op);}
+  void visit(const ir::AssignStmt* op) {compile(*op);}
+  void visit(const ir::CallStmt* op)   {compile(*op);}
+  void visit(const ir::Store* op)      {compile(*op);}
+  void visit(const ir::FieldWrite* op) {compile(*op);}
+  void visit(const ir::Scope* op)      {compile(*op);}
+  void visit(const ir::IfThenElse* op) {compile(*op);}
+  void visit(const ir::ForRange* op)   {compile(*op);}
+  void visit(const ir::For* op)        {compile(*op);}
+  void visit(const ir::While* op)      {compile(*op);}
+  void visit(const ir::Kernel *op)     {compile(*op);}
+  void visit(const ir::Block* op)      {compile(*op);}
+  void visit(const ir::Print* op)      {compile(*op);}
+  void visit(const ir::Comment* op)    {compile(*op);}
+  void visit(const ir::Pass* op)       {compile(*op);}
 
   /// High-level IRNodes that should be lowered and never reach the backend
   using BackendVisitorBase::visitError;

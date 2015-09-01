@@ -255,26 +255,13 @@ void IRRewriter::visit(const FieldWrite *op) {
   }
 }
 
-void IRRewriter::visit(const Block *op) {
-  Stmt first = rewrite(op->first);
-  Stmt rest = rewrite(op->rest);
-  if (first == op->first && rest == op->rest) {
+void IRRewriter::visit(const Scope *op) {
+  Stmt scopedStmt = rewrite(op->scopedStmt);
+  if (scopedStmt == op->scopedStmt) {
     stmt = op;
   }
   else {
-    if (first.defined() && rest.defined()) {
-      stmt = Block::make(first, rest, op->scoped);
-      stmt = Block::make(first, rest);
-    }
-    else if (first.defined() && !rest.defined()) {
-      stmt = first;
-    }
-    else if (!first.defined() && rest.defined()) {
-      stmt = rest;
-    }
-    else {
-      stmt = Stmt();
-    }
+    stmt = Scope::make(scopedStmt);
   }
 }
 
@@ -333,6 +320,28 @@ void IRRewriter::visit(const Kernel *op) {
   }
   else {
     stmt = Kernel::make(op->var, op->domain, body);
+  }
+}
+
+void IRRewriter::visit(const Block *op) {
+  Stmt first = rewrite(op->first);
+  Stmt rest = rewrite(op->rest);
+  if (first == op->first && rest == op->rest) {
+    stmt = op;
+  }
+  else {
+    if (first.defined() && rest.defined()) {
+      stmt = Block::make(first, rest);
+    }
+    else if (first.defined() && !rest.defined()) {
+      stmt = first;
+    }
+    else if (!first.defined() && rest.defined()) {
+      stmt = rest;
+    }
+    else {
+      stmt = Stmt();
+    }
   }
 }
 

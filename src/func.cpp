@@ -28,7 +28,7 @@ Func::Func(const std::string& name, const std::vector<Var>& arguments,
   ptr->env = environment;
   ptr->body = new Stmt();
   if (body.defined()) {
-    *ptr->body = Block::make({body}, true);
+    *ptr->body = Scope::make(body);
   }
 }
 

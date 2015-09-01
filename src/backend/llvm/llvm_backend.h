@@ -93,7 +93,7 @@ protected:
   virtual void compile(const ir::CallStmt&);
   virtual void compile(const ir::Store&);
   virtual void compile(const ir::FieldWrite&);
-  virtual void compile(const ir::Block&);
+  virtual void compile(const ir::Scope&);
   virtual void compile(const ir::IfThenElse&);
   virtual void compile(const ir::ForRange&);
   virtual void compile(const ir::For&);

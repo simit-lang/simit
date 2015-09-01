@@ -24,6 +24,13 @@ void BackendVisitorBase::compile(const ir::Kernel& kernel) {
   not_supported_yet;
 }
 
+void BackendVisitorBase::compile(const ir::Block& op) {
+  op.first.accept(this);
+  if (op.rest.defined()) {
+    op.rest.accept(this);
+  }
+}
+
 void BackendVisitorBase::compile(const ir::Comment& comment) {
   comment.commentedStmt.accept(this);
 }

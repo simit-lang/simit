@@ -142,11 +142,8 @@ void IRVisitor::visit(const FieldWrite *op) {
   op->value.accept(this);
 }
 
-void IRVisitor::visit(const Block *op) {
-  op->first.accept(this);
-  if (op->rest.defined()) {
-    op->rest.accept(this);
-  }
+void IRVisitor::visit(const Scope* op) {
+  op->scopedStmt.accept(this);
 }
 
 void IRVisitor::visit(const IfThenElse *op) {
@@ -174,6 +171,13 @@ void IRVisitor::visit(const While *op) {
 
 void IRVisitor::visit(const Kernel *op) {
   op->body.accept(this);
+}
+
+void IRVisitor::visit(const Block *op) {
+  op->first.accept(this);
+  if (op->rest.defined()) {
+    op->rest.accept(this);
+  }
 }
 
 void IRVisitor::visit(const Print *op) {

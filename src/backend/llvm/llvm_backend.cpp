@@ -126,7 +126,7 @@ Function* LLVMBackend::compile(ir::Func func, vector<Var> globals) {
     this->storage.add(f.getStorage());
 
     // Emit function
-    symtable.scope();
+    symtable.scope(); // put function arguments in new scope
 
     bool external = (f == func);
     llvmFunc = emitEmptyFunction(f.getName(), f.getArguments(),
@@ -890,17 +890,10 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
   }
 }
 
-void LLVMBackend::compile(const ir::Block& block) {
-  if (block.scoped) {
-    symtable.scope();
-  }
-  compile(block.first);
-  if (block.rest.defined()) {
-    compile(block.rest);
-  }
-  if (block.scoped) {
-    symtable.unscope();
-  }
+void LLVMBackend::compile(const ir::Scope& scope) {
+  symtable.scope();
+  compile(scope.scopedStmt);
+  symtable.unscope();
 }
 
 void LLVMBackend::compile(const ir::IfThenElse& ifThenElse) {
@@ -956,10 +949,8 @@ void LLVMBackend::compile(const ir::ForRange& forLoop) {
   i->addIncoming(rangeStart, entryBlock);
 
   // Loop Body
-  symtable.scope();
   symtable.insert(forLoop.var, i);
   compile(forLoop.body);
-  symtable.unscope();
 
   // Loop Footer
   llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
@@ -1017,10 +1008,8 @@ void LLVMBackend::compile(const ir::For& forLoop) {
   i->addIncoming(builder->getInt32(0), entryBlock);
 
   // Loop Body
-  symtable.scope();
   symtable.insert(forLoop.var, i);
   compile(forLoop.body);
-  symtable.unscope();
 
   // Loop Footer
   llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();

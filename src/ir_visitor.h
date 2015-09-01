@@ -41,12 +41,13 @@ struct AssignStmt;
 struct CallStmt;
 struct Store;
 struct FieldWrite;
-struct Block;
+struct Scope;
 struct IfThenElse;
 struct ForRange;
 struct For;
 struct While;
 struct Kernel;
+struct Block;
 struct Print;
 struct Comment;
 struct Pass;
@@ -93,12 +94,13 @@ public:
   virtual void visit(const CallStmt* op) = 0;
   virtual void visit(const Store* op) = 0;
   virtual void visit(const FieldWrite* op) = 0;
-  virtual void visit(const Block* op) = 0;
+  virtual void visit(const Scope* op) = 0;
   virtual void visit(const IfThenElse* op) = 0;
   virtual void visit(const ForRange* op) = 0;
   virtual void visit(const For* op) = 0;
   virtual void visit(const While* op) = 0;
   virtual void visit(const Kernel *op) = 0;
+  virtual void visit(const Block* op) = 0;
   virtual void visit(const Print* op) = 0;
   virtual void visit(const Comment* op) = 0;
   virtual void visit(const Pass* op) = 0;
@@ -150,12 +152,13 @@ public:
   virtual void visit(const CallStmt *op);
   virtual void visit(const Store *op);
   virtual void visit(const FieldWrite *op);
-  virtual void visit(const Block *op);
+  virtual void visit(const Scope* op);
   virtual void visit(const IfThenElse *op);
   virtual void visit(const ForRange *op);
   virtual void visit(const For *op);
   virtual void visit(const While *op);
   virtual void visit(const Kernel *op);
+  virtual void visit(const Block *op);
   virtual void visit(const Print *op);
   virtual void visit(const Comment *op);
   virtual void visit(const Pass *op);
@@ -271,12 +274,13 @@ private:
   RULE(Store)
   RULE(FieldWrite)
   RULE(CallStmt)
-  RULE(Block)
+  RULE(Scope)
   RULE(IfThenElse)
   RULE(ForRange)
   RULE(For)
   RULE(While)
-//  RULE(Kernel)
+  RULE(Kernel)
+  RULE(Block)
   RULE(Print)
   RULE(Comment)
   RULE(Pass)

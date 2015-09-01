@@ -82,34 +82,21 @@ Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
     })
     ,
     function<void(const ForRange*,Matcher*)>([&](const ForRange* op, Matcher* ctx) {
-      definedVariables.scope();
       ctx->match(op->start);
       ctx->match(op->end);
       definedVariables.insert(op->var, nullptr);
       ctx->match(op->body);
-      definedVariables.unscope();
     })
     ,
     function<void(const For*,Matcher*)>([&](const For* op, Matcher* ctx) {
-      definedVariables.scope();
       definedVariables.insert(op->var, nullptr);
       ctx->match(op->body);
-      definedVariables.unscope();
     })
     ,
-    function<void(const Block*,Matcher*)>([&](const Block* op, Matcher* ctx) {
-      if (op->scoped) {
-        definedVariables.scope();
-      }
-
-      ctx->match(op->first);
-      if (op->rest.defined()) {
-        ctx->match(op->rest);
-      }
-
-      if (op->scoped) {
-        definedVariables.unscope();
-      }
+    function<void(const Scope*,Matcher*)>([&](const Scope* op, Matcher* ctx) {
+      definedVariables.scope();
+      ctx->match(op->scopedStmt);
+      definedVariables.unscope();
     })
   );
 

@@ -534,8 +534,68 @@ Stmt CallStmt::make(std::vector<Var> results,
   return node;
 }
 
+// struct Scope
+Stmt Scope::make(Stmt scopedStmt) {
+  iassert(scopedStmt.defined());
+  Scope *node = new Scope;
+  node->scopedStmt = scopedStmt;
+  return node;
+}
+
+// struct IfThenElse
+Stmt IfThenElse::make(Expr condition, Stmt thenBody) {
+  IfThenElse *node = new IfThenElse;
+  node->condition = condition;
+  node->thenBody = Scope::make(thenBody);
+  return node;
+}
+
+Stmt IfThenElse::make(Expr condition, Stmt thenBody, Stmt elseBody) {
+  IfThenElse *node = new IfThenElse;
+  node->condition = condition;
+  node->thenBody = Scope::make(thenBody);
+  node->elseBody = Scope::make(elseBody);
+  return node;
+}
+
+// struct ForRange
+Stmt ForRange::make(Var var, Expr start, Expr end, Stmt body) {
+  ForRange *node = new ForRange;
+  node->var = var;
+  node->start = start;
+  node->end = end;
+  node->body = Scope::make(body);
+  return Scope::make(node);  // Put loop variable in a scope
+}
+
+// struct For
+Stmt For::make(Var var, ForDomain domain, Stmt body) {
+  For *node = new For;
+  node->var = var;
+  node->domain = domain;
+  node->body = Scope::make(body);
+  return Scope::make(node);  // Put loop variable in a scope
+}
+
+// struct While
+Stmt While::make(Expr condition, Stmt body) {
+  While *node = new While;
+  node->condition = condition;
+  node->body = Scope::make(body);
+  return node;
+}
+
+// struct Kernel
+Stmt Kernel::make(Var var, IndexDomain domain, Stmt body) {
+  Kernel *node = new Kernel;
+  node->var = var;
+  node->domain = domain;
+  node->body = body;
+  return node;
+}
+
 // struct Block
-Stmt Block::make(Stmt first, Stmt rest, bool scoped) {
+Stmt Block::make(Stmt first, Stmt rest) {
   iassert(first.defined() || rest.defined()) << "Empty block";
 
   // Handle case where first is undefined, to ease codegen in loops
@@ -546,69 +606,15 @@ Stmt Block::make(Stmt first, Stmt rest, bool scoped) {
   Block *node = new Block;
   node->first = first;
   node->rest = rest;
-  node->scoped = scoped;
   return node;
 }
 
-Stmt Block::make(std::vector<Stmt> stmts, bool scoped) {
+Stmt Block::make(std::vector<Stmt> stmts) {
   iassert(stmts.size() > 0) << "Empty block";
   Stmt node;
-  for (size_t i=stmts.size(); i>1; --i) {
-    node = Block::make(stmts[i-1], node, false);
+  for (size_t i=stmts.size(); i>0; --i) {
+    node = Block::make(stmts[i-1], node);
   }
-  node = Block::make(stmts[0], node, scoped);
-  return node;
-}
-
-// struct IfThenElse
-Stmt IfThenElse::make(Expr condition, Stmt thenBody) {
-  IfThenElse *node = new IfThenElse;
-  node->condition = condition;
-  node->thenBody = Block::make({thenBody}, true);
-  return node;
-}
-
-Stmt IfThenElse::make(Expr condition, Stmt thenBody, Stmt elseBody) {
-  IfThenElse *node = new IfThenElse;
-  node->condition = condition;
-  node->thenBody = Block::make({thenBody}, true);
-  node->elseBody = Block::make({elseBody}, true);
-  return node;
-}
-
-// struct ForRange
-Stmt ForRange::make(Var var, Expr start, Expr end, Stmt body) {
-  ForRange *node = new ForRange;
-  node->var = var;
-  node->start = start;
-  node->end = end;
-  node->body = Block::make({body}, true);
-  return node;
-}
-
-// struct For
-Stmt For::make(Var var, ForDomain domain, Stmt body) {
-  For *node = new For;
-  node->var = var;
-  node->domain = domain;
-  node->body = Block::make({body}, true);
-  return node;
-}
-
-// struct While
-Stmt While::make(Expr condition, Stmt body) {
-  While *node = new While;
-  node->condition = condition;
-  node->body = Block::make({body}, true);
-  return node;
-}
-
-// struct Kernel
-Stmt Kernel::make(Var var, IndexDomain domain, Stmt body) {
-  Kernel *node = new Kernel;
-  node->var = var;
-  node->domain = domain;
-  node->body = body;
   return node;
 }
 

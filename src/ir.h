@@ -303,11 +303,9 @@ struct CallStmt : public StmtNode<CallStmt> {
                    Func callee, std::vector<Expr> actuals);
 };
 
-struct Block : public StmtNode<Block> {
-  Stmt first, rest;
-  bool scoped;
-  static Stmt make(Stmt first, Stmt rest, bool scoped=false);
-  static Stmt make(std::vector<Stmt> stmts, bool scoped=false);
+struct Scope : public StmtNode<Scope> {
+  Stmt scopedStmt;
+  static Stmt make(Stmt scopedStmt);
 };
 
 struct IfThenElse : public StmtNode<IfThenElse> {
@@ -366,6 +364,12 @@ struct Kernel : public StmtNode<Kernel> {
   IndexDomain domain;
   Stmt body;
   static Stmt make(Var var, IndexDomain domain, Stmt body);
+};
+
+struct Block : public StmtNode<Block> {
+  Stmt first, rest;
+  static Stmt make(Stmt first, Stmt rest);
+  static Stmt make(std::vector<Stmt> stmts);
 };
 
 struct Print : public StmtNode<Print> {
