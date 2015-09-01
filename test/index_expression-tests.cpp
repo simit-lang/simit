@@ -32,8 +32,8 @@ TEST(IndexExpression, add) {
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add), &env);
   std::cout << loops << std::endl << std::endl;
 //  std::cout << env << std::endl << std::endl;
+  simit::Function function = getTestBackend()->compile(loops, env);
 
-  simit::Function function = getTestBackend()->compile(loops);
   std::cout << function << std::endl;
 }
 

@@ -40,11 +40,11 @@ public:
   /// lowering passes, and must be initialized before a simit::Function is run.
   const std::vector<Var>& getTemporaries() const;
 
-  /// Get the path expression of a tensor variable in the environment.
-  const pe::PathExpression& getPathExpression(const Var& tensorVar) const;
-
-  /// Get the data array of a tensor variable.
-  const Var& getDataArray(const Var& tensorVar) const;
+//  /// Get the path expression of a tensor variable in the environment.
+//  const pe::PathExpression& getPathExpression(const Var& tensorVar) const;
+//
+//  /// Get the data array of a tensor variable.
+//  const Var& getDataArray(const Var& tensorVar) const;
 
   /// Get the tensor index of a tensor variable.
   const TensorIndex& getTensorIndex(const Var& tensor,
@@ -60,7 +60,7 @@ public:
   /// multiple extern arrays. For example, a bindable sparse tensor can get
   /// turned into one extern data array and two extern index arrays. Use
   /// Environment::getExternsOfBindable to Expr::accept.
-  const std::vector<std::string>& getBindables() const;
+  const std::vector<std::string>& getBindableNames() const;
 
   /// True if a bindable of the given name is part of the environment, false
   /// otherwise.

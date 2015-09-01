@@ -73,12 +73,12 @@ const std::vector<Var>& Environment::getTemporaries() const {
   return content->temporaries;
 }
 
-const pe::PathExpression&
-Environment::getPathExpression(const Var& tensorVar) const {
-}
-
-const Var& Environment::getDataArray(const Var& tensorVar) const {
-}
+//const pe::PathExpression&
+//Environment::getPathExpression(const Var& tensorVar) const {
+//}
+//
+//const Var& Environment::getDataArray(const Var& tensorVar) const {
+//}
 
 const TensorIndex& Environment::getTensorIndex(const Var& tensor,
                                                unsigned sourceDim,
@@ -103,7 +103,7 @@ void* Environment::getTemporaryDataPointer(const Var& tensorVar) const {
   return nullptr;
 }
 
-const std::vector<std::string>& Environment::getBindables() const {
+const std::vector<std::string>& Environment::getBindableNames() const {
   return content->bindableNames;
 }
 
@@ -155,15 +155,15 @@ void Environment::addTemporary(const Var& var) {
 }
 
 void Environment::addTensorIndex(Var tensor, TensorIndex ti) {
-  iassert(util::contains(content->externs, tensor) ||
+  iassert(util::contains(content->externsOfBindable, tensor) ||
           util::contains(content->temporaries, tensor))
       << tensor << " is not an extern or temporary";
 
-  if (util::contains(content->externs, tensor)) {
-    addExtern(ti.getCoordsArray());
-    addExtern(ti.getSinksArray());
+  if (util::contains(content->externsOfBindable, tensor)) {
+    addExtern(ti.getCoordsArray(), tensor);
+    addExtern(ti.getSinksArray(), tensor);
   }
-  else {  // (util::contains(content->temporaries, tensor))
+  else {
     addTemporary(ti.getCoordsArray());
     addTemporary(ti.getSinksArray());
   }

@@ -382,8 +382,8 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
                                            Load::make(workspace, inductionVar));
       Stmt resetWorkspace = Store::make(workspace, inductionVar, 0.0);
       Stmt body = Block::make(copyFromWorkspace, resetWorkspace);
-      Stmt loopStmt = createSubsetLoopStmt(inductionVar,{resultIndexVar},body,env);
-
+      Stmt loopStmt = createSubsetLoopStmt(inductionVar, {resultIndexVar},
+                                           body, env);
       string comment = toString(target)
                      + tensorSliceString(resultVars, loop.getIndexVar())
                      + " = workspace";

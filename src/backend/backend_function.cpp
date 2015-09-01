@@ -78,7 +78,7 @@ bool Function::hasGlobal(std::string name) const {
 }
 
 const std::vector<std::string>& Function::getGlobals() const {
-  return environment->getBindables();
+  return environment->getBindableNames();
 }
 
 const ir::Type& Function::getGlobalType(std::string global) const {

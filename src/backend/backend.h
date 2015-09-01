@@ -7,6 +7,7 @@
 namespace simit {
 namespace ir {
 class Func;
+class Environment;
 class Stmt;
 class Var;
 }
@@ -27,7 +28,7 @@ public:
   /// Compiles an IR statement to a runable function. Any undefined variable
   /// becomes part of the runable function's environment and must be bound
   /// before the function is run.
-  backend::Function* compile(const ir::Stmt& stmt);
+  backend::Function* compile(const ir::Stmt& stmt, const ir::Environment& env);
 
   /// Compiles an IR statement to a runable function. The output variables and
   /// any undefined variable becomes part of the runable function's environment

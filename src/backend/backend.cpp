@@ -44,30 +44,36 @@ Function* Backend::compile(const Func& func) {
   return pimpl->compile(func);
 }
 
-backend::Function* Backend::compile(const Stmt& stmt) {
-  return compile(stmt, {});
-}
-
-Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
-  Environment env;
+backend::Function* Backend::compile(const Stmt& stmt, const Environment& env) {
+  Environment environment = env;
 
   // Add output and undefined variable in the stmt to the environment as externs
   std::set<Var> globalsSet;
   util::ScopedMap<Var,void*> definedVariables;
+
+  // Add all environment variables to defined variables
+  for (auto& var : environment.getConstants()) {
+    globalsSet.insert(var.first);
+    definedVariables.insert(var.first, nullptr);
+  }
+  for (auto& var : environment.getExterns()) {
+    globalsSet.insert(var);
+    definedVariables.insert(var, nullptr);
+  }
+  for (auto& var : environment.getTemporaries()) {
+    globalsSet.insert(var);
+    definedVariables.insert(var, nullptr);
+  }
+
+  // Find all undefined variables and add them to the context as globals.
   function<void(Var var)> addToGlobalsIfNotDefined = [&](Var var) {
     if (!definedVariables.contains(var) && !util::contains(globalsSet, var)) {
-      env.addExtern(var);
+      environment.addExtern(var);
       globalsSet.insert(var);
       definedVariables.insert(var, nullptr);
     }
   };
 
-  // Remove duplicates in output
-  for (const Var& var : output) {
-    addToGlobalsIfNotDefined(var);
-  }
-
-  // Find all undefined variables and add them to the context as globals.
   match(stmt,
     function<void(const VarExpr*)>([&](const VarExpr* op) {
       addToGlobalsIfNotDefined(op->var);
@@ -100,8 +106,22 @@ Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
     })
   );
 
-  Func func("main", {}, {}, stmt, env);
+  Func func("main", {}, {}, stmt, environment);
   return pimpl->compile(func);
+}
+
+Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
+  Environment env;
+
+  std::set<Var> externSet;
+  for (const Var& var : output) {
+    if (!util::contains(externSet, var)) {  // Remove duplicates
+      externSet.insert(var);
+      env.addExtern(var);
+    }
+  }
+
+  return compile(stmt, env);
 }
 
 }}
