@@ -10,7 +10,9 @@
 
 #include "domain.h"
 
-// TODO: Change types to encapsulated classes.
+// TODO: Refactor the type system:
+//       - Make the Type class work similar to Expr
+//       - Make ScalarType a Type TypeNode instance
 
 namespace simit {
 namespace ir {
@@ -23,15 +25,17 @@ struct TensorType;
 struct ElementType;
 struct SetType;
 struct TupleType;
+struct ArrayType;
 
 class Type {
 public:
-  enum Kind {Tensor, Element, Set, Tuple};
+  enum Kind {Tensor, Element, Set, Tuple, Array};
   Type() : ptr(nullptr) {}
-  Type(TensorType *tensor);
-  Type(ElementType *element);
-  Type(SetType *set);
-  Type(TupleType *tuple);
+  Type(TensorType* tensor);
+  Type(ElementType* element);
+  Type(SetType* set);
+  Type(TupleType* tuple);
+  Type(ArrayType* array);
 
   bool defined() const { return ptr != nullptr; }
 
@@ -41,11 +45,13 @@ public:
   bool isElement() const { return _kind==Element; }
   bool isSet()     const { return _kind==Set; }
   bool isTuple()   const { return _kind==Tuple; }
+  bool isArray()   const { return _kind==Array; }
 
-  const TensorType  *toTensor()  const {iassert(isTensor());  return tensor;}
-  const ElementType *toElement() const {iassert(isElement()); return element;}
-  const SetType     *toSet()     const {iassert(isSet());     return set;}
-  const TupleType   *toTuple()   const {iassert(isTuple());   return tuple;}
+  const TensorType*  toTensor()  const {iassert(isTensor());  return tensor;}
+  const ElementType* toElement() const {iassert(isElement()); return element;}
+  const SetType*     toSet()     const {iassert(isSet());     return set;}
+  const TupleType*   toTuple()   const {iassert(isTuple());   return tuple;}
+  const ArrayType*   toArray()   const {iassert(isArray());   return array;}
 
 private:
   Kind _kind;
@@ -54,6 +60,7 @@ private:
     ElementType *element;
     SetType     *set;
     TupleType   *tuple;
+    ArrayType   *array;
   };
   std::shared_ptr<TypeNode> ptr;
 };
@@ -157,7 +164,7 @@ struct ElementType : TypeNode {
     return fieldNames.find(fieldName) != fieldNames.end();
   }
 
-  const Field &field(const std::string &fieldName) const {
+  const Field& field(const std::string& fieldName) const {
     iassert(hasField(fieldName)) << "Undefined field"
                                  << fieldName << "in" << name;
     return fields[fieldNames.at(fieldName)];
@@ -186,7 +193,7 @@ struct SetType : TypeNode {
 
   // TODO: Add method to retrieve a set field (compute from elementType fields)
 
-  static Type make(Type elementType, const std::vector<Expr> &endpointSets);
+  static Type make(Type elementType, const std::vector<Expr>& endpointSets);
   ~SetType();
 };
 
@@ -203,16 +210,32 @@ struct TupleType : TypeNode {
   }
 };
 
+struct ArrayType : TypeNode {
+  ScalarType elementType;
+
+  unsigned size;  // optional size: 0 means dynamic size
+
+  static Type make(ScalarType elementType, unsigned size=0) {
+    ArrayType* type = new ArrayType;
+    type->elementType = elementType;
+    type->size = size;
+    return type;
+  }
+};
+
 
 // Type functions
-inline Type::Type(TensorType *tensor)
+inline Type::Type(TensorType* tensor)
     : _kind(Tensor), tensor(tensor), ptr(tensor) {}
-inline Type::Type(ElementType *element)
+inline Type::Type(ElementType* element)
     : _kind(Element), element(element), ptr(element) {}
-inline Type::Type(SetType *set)
+inline Type::Type(SetType* set)
     : _kind(Set), set(set), ptr(set) {}
-inline Type::Type(TupleType *tuple)
+inline Type::Type(TupleType* tuple)
     : _kind(Tuple), tuple(tuple), ptr(tuple) {}
+inline Type::Type(ArrayType* array)
+    : _kind(Array), array(array), ptr(array) {}
+
 
 inline bool isScalar(Type type) {
   return type.kind()==Type::Tensor && type.toTensor()->order() == 0;
@@ -226,8 +249,8 @@ inline bool isBoolean(Type type) {
 /// An element tensor type is one whose dimensions are not sets
 inline bool isElementTensorType(const TensorType *type) {
   bool isElementType = true;
-  for (auto &dim : type->getDimensions()) {
-    for (auto &is : dim.getIndexSets()) {
+  for (auto& dim : type->getDimensions()) {
+    for (auto& is : dim.getIndexSets()) {
       if (is.getKind() == IndexSet::Set) {
         isElementType = false;
       }
@@ -236,27 +259,30 @@ inline bool isElementTensorType(const TensorType *type) {
   return isElementType;
 }
 
-bool operator==(const Type &, const Type &);
-bool operator!=(const Type &, const Type &);
+bool operator==(const Type&, const Type&);
+bool operator!=(const Type&, const Type&);
 
-bool operator==(const ScalarType &, const ScalarType &);
-bool operator==(const TensorType &, const TensorType &);
-bool operator==(const ElementType &, const ElementType &);
-bool operator==(const SetType &, const SetType &);
-bool operator==(const TupleType &, const TupleType &);
+bool operator==(const ScalarType&, const ScalarType&);
+bool operator==(const TensorType&, const TensorType&);
+bool operator==(const ElementType&, const ElementType&);
+bool operator==(const SetType&, const SetType&);
+bool operator==(const TupleType&, const TupleType&);
+bool operator==(const ArrayType&, const ArrayType&);
 
-bool operator!=(const ScalarType &, const ScalarType &);
-bool operator!=(const TensorType &, const TensorType &);
-bool operator!=(const ElementType &, const ElementType &);
-bool operator!=(const SetType &, const SetType &);
-bool operator!=(const TupleType &, const TupleType &);
+bool operator!=(const ScalarType&, const ScalarType&);
+bool operator!=(const TensorType&, const TensorType&);
+bool operator!=(const ElementType&, const ElementType&);
+bool operator!=(const SetType&, const SetType&);
+bool operator!=(const TupleType&, const TupleType&);
+bool operator!=(const ArrayType&, const ArrayType&);
 
-std::ostream &operator<<(std::ostream &os, const Type &);
-std::ostream &operator<<(std::ostream &os, const ScalarType &);
-std::ostream &operator<<(std::ostream &os, const TensorType &);
-std::ostream &operator<<(std::ostream &os, const ElementType &);
-std::ostream &operator<<(std::ostream &os, const SetType &);
-std::ostream &operator<<(std::ostream &os, const TupleType &);
+std::ostream& operator<<(std::ostream&, const Type&);
+std::ostream& operator<<(std::ostream&, const ScalarType&);
+std::ostream& operator<<(std::ostream&, const TensorType&);
+std::ostream& operator<<(std::ostream&, const ElementType&);
+std::ostream& operator<<(std::ostream&, const SetType&);
+std::ostream& operator<<(std::ostream&, const TupleType&);
+std::ostream& operator<<(std::ostream&, const ArrayType&);
 
 // Common types
 const Type Int = TensorType::make(ScalarType(ScalarType::Int));

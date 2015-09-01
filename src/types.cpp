@@ -35,14 +35,14 @@ std::vector<IndexDomain> TensorType::getDimensions() const {
 std::vector<IndexSet> TensorType::getOuterDimensions() const {
   vector<IndexDomain> dimensions = getDimensions();
   unsigned maxNest = 0;
-  for (auto &dim : dimensions) {
+  for (auto& dim : dimensions) {
     if (dim.getIndexSets().size() > maxNest) {
       maxNest = dim.getIndexSets().size();
     }
   }
 
   std::vector<IndexSet> outerDimensions;
-  for (auto &dim : dimensions) {
+  for (auto& dim : dimensions) {
     if (dim.getIndexSets().size() == maxNest) {
       outerDimensions.push_back(dim.getIndexSets()[0]);
     }
@@ -69,20 +69,20 @@ Type TensorType::getBlockType() const {
   }
   else {
     unsigned maxNesting = 0;
-    for (auto &dim : dimensions) {
+    for (auto& dim : dimensions) {
       if (dim.getIndexSets().size() > maxNesting) {
         maxNesting = dim.getIndexSets().size();
       }
     }
 
-    for (auto &dim : dimensions) {
+    for (auto& dim : dimensions) {
       if (dim.getIndexSets().size() < maxNesting) {
-        const std::vector<IndexSet> &nests = dim.getIndexSets();
+        const std::vector<IndexSet>& nests = dim.getIndexSets();
         std::vector<IndexSet> blockNests(nests.begin(), nests.end());
         blockDimensions.push_back(IndexDomain(blockNests));
       }
       else {
-        const std::vector<IndexSet> &nests = dim.getIndexSets();
+        const std::vector<IndexSet>& nests = dim.getIndexSets();
         std::vector<IndexSet> blockNests(nests.begin()+1, nests.end());
         blockDimensions.push_back(IndexDomain(blockNests));
       }
@@ -97,7 +97,7 @@ Type TensorType::getBlockType() const {
 size_t TensorType::size() const {
   vector<IndexDomain> dimensions = getDimensions();
   size_t size = 1;
-  for (auto &dimension : dimensions) {
+  for (auto& dimension : dimensions) {
     size *= dimension.getSize();
   }
   return size;
@@ -110,8 +110,8 @@ bool TensorType::isSparse() const {
   }
 
   vector<IndexDomain> dimensions = getDimensions();
-  for (auto &indexDom : dimensions) {
-    for (auto &indexSet : indexDom.getIndexSets()) {
+  for (auto& indexDom : dimensions) {
+    for (auto& indexSet : indexDom.getIndexSets()) {
       if (indexSet.getKind() != IndexSet::Range) {
         return true;
       }
@@ -122,8 +122,8 @@ bool TensorType::isSparse() const {
 
 bool TensorType::hasSystemDimensions() const {
   vector<IndexDomain> dimensions = getDimensions();
-  for (auto &indexDom : dimensions) {
-    for (auto &indexSet : indexDom.getIndexSets()) {
+  for (auto& indexDom : dimensions) {
+    for (auto& indexSet : indexDom.getIndexSets()) {
       if (indexSet.getKind() != IndexSet::Range) {
         return true;
       }
@@ -133,18 +133,18 @@ bool TensorType::hasSystemDimensions() const {
 }
 
 // struct SetType
-Type SetType::make(Type elementType, const std::vector<Expr> &endpointSets) {
+Type SetType::make(Type elementType, const std::vector<Expr>& endpointSets) {
   iassert(elementType.isElement());
   SetType *type = new SetType;
   type->elementType = elementType;
-  for (auto &eps : endpointSets) {
+  for (auto& eps : endpointSets) {
     type->endpointSets.push_back(new Expr(eps));
   }
   return type;
 }
 
 SetType::~SetType() {
-  for (auto &eps : endpointSets) {
+  for (auto& eps : endpointSets) {
     delete eps;
   }
 }
@@ -165,6 +165,8 @@ bool operator==(const Type& l, const Type& r) {
       return *l.toSet() == *r.toSet();
     case Type::Tuple:
       return *l.toTuple() == *r.toTuple();
+    case Type::Array:
+      return *l.toArray() == *r.toArray();
   }
   unreachable;
   return false;
@@ -174,11 +176,11 @@ bool operator!=(const Type& l, const Type& r) {
   return !(l == r);
 }
 
-bool operator==(const ScalarType &l, const ScalarType &r) {
+bool operator==(const ScalarType& l, const ScalarType& r) {
   return l.kind == r.kind;
 }
 
-bool operator==(const TensorType &l, const TensorType &r) {
+bool operator==(const TensorType& l, const TensorType& r) {
   if (l.componentType != r.componentType) {
     return false;
   }
@@ -200,41 +202,49 @@ bool operator==(const TensorType &l, const TensorType &r) {
   return true;
 }
 
-bool operator==(const ElementType &l, const ElementType &r) {
+bool operator==(const ArrayType& l, const ArrayType& r) {
+  return l.elementType == r.elementType && l.size == r.size;
+}
+
+bool operator==(const ElementType& l, const ElementType& r) {
   // Element type names are unique
   return (l.name == r.name);
 }
 
 
-bool operator==(const SetType &l, const SetType &r) {
+bool operator==(const SetType& l, const SetType& r) {
   return l.elementType == r.elementType;
 }
 
-bool operator==(const TupleType &l, const TupleType &r) {
+bool operator==(const TupleType& l, const TupleType& r) {
   return l.elementType == r.elementType && l.size == r.size;
 }
 
-bool operator!=(const ScalarType &l, const ScalarType &r) {
+bool operator!=(const ScalarType& l, const ScalarType& r) {
   return !(l == r);
 }
 
-bool operator!=(const TensorType &l, const TensorType &r) {
+bool operator!=(const TensorType& l, const TensorType& r) {
   return !(l == r);
 }
 
-bool operator!=(const ElementType &l, const ElementType &r) {
+bool operator!=(const ElementType& l, const ElementType& r) {
   return !(l == r);
 }
 
-bool operator!=(const SetType &l, const SetType &r) {
+bool operator!=(const SetType& l, const SetType& r) {
   return !(l == r);
 }
 
-bool operator!=(const TupleType &l, const TupleType &r) {
+bool operator!=(const TupleType& l, const TupleType& r) {
   return !(l == r);
 }
 
-std::ostream &operator<<(std::ostream &os, const Type &type) {
+bool operator!=(const ArrayType& l, const ArrayType& r) {
+  return !(l == r);
+}
+
+std::ostream& operator<<(std::ostream& os, const Type& type) {
   switch (type.kind()) {
     case Type::Tensor:
       return os << *type.toTensor();
@@ -244,11 +254,13 @@ std::ostream &operator<<(std::ostream &os, const Type &type) {
       return os << *type.toSet();
     case Type::Tuple:
       return os << *type.toTuple();
+    case Type::Array:
+      return os << *type.toArray();
   }
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const ScalarType &type) {
+std::ostream& operator<<(std::ostream& os, const ScalarType& type) {
   switch (type.kind) {
     case ScalarType::Int:
       os << "int";
@@ -263,7 +275,7 @@ std::ostream &operator<<(std::ostream &os, const ScalarType &type) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const TensorType &type) {
+std::ostream& operator<<(std::ostream& os, const TensorType& type) {
   if (type.order() == 0) {
     os << type.componentType;
   }
@@ -275,17 +287,17 @@ std::ostream &operator<<(std::ostream &os, const TensorType &type) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const ElementType &type) {
+std::ostream& operator<<(std::ostream& os, const ElementType& type) {
   os << type.name;
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const SetType &type) {
+std::ostream& operator<<(std::ostream& os, const SetType& type) {
   os << "set{" << type.elementType.toElement()->name << "}";
 
   if (type.endpointSets.size() > 0) {
     os << "(" << *type.endpointSets[0];
-    for (auto &epSet : util::excludeFirst(type.endpointSets)) {
+    for (auto& epSet : util::excludeFirst(type.endpointSets)) {
       os << ", " << *epSet;
     }
     os << ")";
@@ -294,9 +306,20 @@ std::ostream &operator<<(std::ostream &os, const SetType &type) {
   return os;
 }
 
-std::ostream &operator<<(std::ostream &os, const TupleType &type) {
+std::ostream& operator<<(std::ostream& os, const TupleType& type) {
   return os << "(" << type.elementType.toElement()->name << "*" << type.size
             << ")";
+}
+
+std::ostream& operator<<(std::ostream& os, const ArrayType& type) {
+  os << type.elementType;
+  if (type.size > 0) {
+    os << "[" << type.size << "]";
+  }
+  else {
+    os << "*";
+  }
+  return os;
 }
 
 

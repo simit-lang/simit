@@ -179,11 +179,9 @@ void IRPrinter::visit(const Literal *op) {
       break;
     
     case Type::Element:
-      not_supported_yet;
     case Type::Set:
-      not_supported_yet;
-      break;
     case Type::Tuple:
+    case Type::Array:
       not_supported_yet;
       break;
   }

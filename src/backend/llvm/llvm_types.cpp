@@ -46,8 +46,10 @@ llvm::Type* llvmType(const Type& type, unsigned addrspace) {
     case Type::Set:
       return llvmType(*type.toSet(), addrspace);
     case Type::Tuple:
-      not_supported_yet;
+      ierror << "Tuples not supported in the backend";
       break;
+    case Type::Array:
+      return llvmType(*type.toSet(), addrspace);
   }
   unreachable;
   return nullptr;
@@ -85,6 +87,10 @@ llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace) {
 
 llvm::PointerType* llvmType(const TensorType& type, unsigned addrspace) {
   return llvmPtrType(type.componentType, addrspace);
+}
+
+llvm::PointerType* llvmType(const ir::ArrayType& type, unsigned addrspace) {
+  return llvmPtrType(type.elementType, addrspace);
 }
 
 llvm::Type* llvmType(ScalarType stype) {

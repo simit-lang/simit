@@ -163,6 +163,10 @@ Function::FuncType LLVMFunction::init() {
           not_supported_yet;
           break;
         }
+        case ir::Type::Array: {
+          not_supported_yet;
+          break;
+        }
       }
       ++llvmArgIt;
     }

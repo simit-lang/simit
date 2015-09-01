@@ -152,6 +152,7 @@ Expr Literal::make(Type type, void* values) {
     case Type::Set:
     case Type::Element:
     case Type::Tuple:
+    case Type::Array:
       iassert(false) << "Only tensor and scalar literals currently supported";
       break;
   }
@@ -259,7 +260,13 @@ Expr Load::make(Expr buffer, Expr index) {
   iassert(isScalar(index.type()));
 
   Load  *node = new Load;
-  node->type = TensorType::make(buffer.type().toTensor()->componentType);
+
+  // TODO: Temporary handle loading from TensorType (should only support arrays)
+  ScalarType loadType = (buffer.type().isTensor())
+                        ? buffer.type().toTensor()->componentType
+                        : buffer.type().toArray()->elementType;
+
+  node->type = TensorType::make(loadType);
   node->buffer = buffer;
   node->index = index;
   return node;

@@ -68,13 +68,15 @@ const Var& Environment::getDataArray(const Var& tensorVar) const {
 const TensorIndex& Environment::getTensorIndex(const Var& tensor,
                                                unsigned sourceDim,
                                                unsigned sinkDim) {
+  iassert(tensor.getType().isTensor()) << "Only tensors have tensor indices";
   tassert(sourceDim == 0 && sinkDim == 1)
       << "Only currently support row->col indices";
+
   if (!util::contains(content->tensorIndices, tensor)) {
     string name = tensor.getName() + "_rows2cols";
 
-    Var coordsArray(name+"_coords", Int);
-    Var sinksArray(name+"_sinks", Int);
+    Var coordsArray(name+"_coords", ArrayType::make(ScalarType::Int));
+    Var sinksArray(name+"_sinks",   ArrayType::make(ScalarType::Int));
 
     TensorIndex ti(tensor, coordsArray, sinksArray, sourceDim, sinkDim);
     addTensorIndex(tensor, ti);
