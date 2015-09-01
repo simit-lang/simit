@@ -171,9 +171,9 @@ static Stmt createFastForwardLoop(const TensorIndexVar &tensorIndexVar) {
 
 /// @param body A statement that is evaluated for every inductionVar value
 ///             of the intersection between the tensorIndexVars.
-static Stmt createSubsetLoop(const Var &inductionVar,
-                             const vector<TensorIndexVar> &tensorIndexVars,
-                             Stmt body, Environment* env) {
+static Stmt createSubsetLoopStmt(const Var &inductionVar,
+                                 const vector<TensorIndexVar> &tensorIndexVars,
+                                 Stmt body, Environment* env) {
   iassert(tensorIndexVars.size() > 0);
 
   Stmt loop;
@@ -210,7 +210,6 @@ static Stmt createSubsetLoop(const Var &inductionVar,
     Stmt updateSinkVars = updateSinkInductionVars(tensorIndexVars);
     intersectionStmt = Block::make(intersectionStmt, updateSinkVars);
 
-
     // Emit the code to execute outside the intersection
     Stmt notIntersectionStmt;
 
@@ -245,7 +244,6 @@ static Stmt createSubsetLoop(const Var &inductionVar,
       }
     }
 
-
     // Check whether we are at the intersection of the tensor index sink vars
     Expr intersectionCondition = compare(sinkVars);
 
@@ -270,12 +268,13 @@ static Stmt createSubsetLoop(const Var &inductionVar,
 }
 
 static Stmt createSubsetLoopStmt(const Expr &target, const Var &inductionVar,
-                             const SubsetLoop &subsetLoop, Environment* env) {
+                                 const SubsetLoop &subsetLoop,
+                                 Environment* env) {
   Stmt computeStatement = Store::make(target, inductionVar,
                                       subsetLoop.getComputeExpression(),
                                       subsetLoop.getCompoundOperator());
-  return createSubsetLoop(inductionVar, subsetLoop.getTensorIndexVars(),
-                          computeStatement, env);
+  return createSubsetLoopStmt(inductionVar, subsetLoop.getTensorIndexVars(),
+                              computeStatement, env);
 }
 
 static string tensorSliceString(const vector<IndexVar> &vars,
@@ -348,15 +347,20 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       vector<SubsetLoop> subsetLoops =
           createSubsetLoops(indexExpression, loop, env);
 
-      // Create each subset loop and add their results to the workspace
       vector<Stmt> loopStatements;
+
+      // Create induction var decl
+      Stmt inductionVarDecl = VarDecl::make(inductionVar);
+      loopStatements.push_back(inductionVarDecl);
+
+      // Create each subset loop and add their results to the workspace
       for (SubsetLoop &subsetLoop : subsetLoops) {
         Stmt loopStmt = createSubsetLoopStmt(workspace, inductionVar,
                                              subsetLoop, env);
         string comment = "workspace " +
             util::toString(subsetLoop.getCompoundOperator())+"= " +
             tensorSliceString(subsetLoop.getIndexExpression(), indexVar);
-        loopStatements.push_back(Comment::make(comment, loopStmt, true));
+        loopStatements.push_back(Comment::make(comment, loopStmt, false, true));
       }
       iassert(loops.size() > 0);
 
@@ -377,12 +381,12 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
                                            Load::make(workspace, inductionVar));
       Stmt resetWorkspace = Store::make(workspace, inductionVar, 0.0);
       Stmt body = Block::make(copyFromWorkspace, resetWorkspace);
-      Stmt loopStmt = createSubsetLoop(inductionVar,{resultIndexVar},body,env);
+      Stmt loopStmt = createSubsetLoopStmt(inductionVar,{resultIndexVar},body,env);
 
       string comment = toString(target)
                      + tensorSliceString(resultVars, loop.getIndexVar())
                      + " = workspace";
-      loopStatements.push_back(Comment::make(comment, loopStmt));
+      loopStatements.push_back(Comment::make(comment, loopStmt, false, true));
 
       loopNest = Block::make(loopStatements);
     }

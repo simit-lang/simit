@@ -98,12 +98,18 @@ Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
     })
     ,
     function<void(const Block*,Matcher*)>([&](const Block* op, Matcher* ctx) {
-      definedVariables.scope();
+      if (op->scoped) {
+        definedVariables.scope();
+      }
+
       ctx->match(op->first);
       if (op->rest.defined()) {
         ctx->match(op->rest);
       }
-      definedVariables.unscope();
+
+      if (op->scoped) {
+        definedVariables.unscope();
+      }
     })
   );
 
