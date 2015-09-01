@@ -49,7 +49,7 @@ llvm::Type* llvmType(const Type& type, unsigned addrspace) {
       ierror << "Tuples not supported in the backend";
       break;
     case Type::Array:
-      return llvmType(*type.toSet(), addrspace);
+      return llvmType(*type.toArray(), addrspace);
   }
   unreachable;
   return nullptr;
