@@ -10,6 +10,7 @@
 #include "indexvar.h"
 #include "ir.h"
 #include "ir_visitor.h"
+#include "ir_printer.h"
 #include "ir_codegen.h"
 #include "util/util.h"
 #include "util/collections.h"

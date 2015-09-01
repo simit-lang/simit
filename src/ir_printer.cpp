@@ -12,62 +12,6 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-std::ostream &operator<<(std::ostream &os, const Expr &expr) {
-  IRPrinter printer(os);
-  printer.print(expr);
-  return os;
-}
-
-std::ostream &operator<<(std::ostream &os, const Stmt &Stmt) {
-  IRPrinter printer(os);
-  printer.skipTopExprParenthesis();
-  printer.print(Stmt);
-  return os;
-}
-
-std::ostream &operator<<(std::ostream &os, const IRNode &node) {
-  IRPrinter printer(os);
-  printer.print(node);
-  return os;
-}
-
-std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
-  switch (d.kind) {
-    case ForDomain::IndexSet:
-      os << d.indexSet;
-      break;
-    case ForDomain::Endpoints:
-      os << d.set << ".endpoints[" << d.var << "]";
-      break;
-    case ForDomain::Edges:
-      os << d.set << ".edges[" << d.var << "]";
-      break;
-    case ForDomain::NeighborsOf:
-      os << d.set << ".neighborsOf[" << d.var << "]";
-    case ForDomain::Neighbors:
-      os << d.set << ".neighbors[" << d.var << "]";
-      break;
-    case ForDomain::Diagonal:
-      os << d.set << ".diagonal[" << d.var << "]";
-      break;
-  }
-  return os;
-}
-
-std::ostream &operator<<(std::ostream &os, const CompoundOperator &cop) {
-  switch (cop) {
-    case CompoundOperator::None: {
-      break;
-    }
-    case CompoundOperator::Add: {
-      os << "+";
-      break;
-    }
-  }
-  return os;
-}
-
-
 // class IRPrinter
 IRPrinter::IRPrinter(std::ostream &os, signed indent) : os(os), indentation(0) {
 }

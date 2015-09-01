@@ -15,12 +15,6 @@ struct IRNode;
 struct ForDomain;
 enum class CompoundOperator;
 
-std::ostream &operator<<(std::ostream &os, const Expr &);
-std::ostream &operator<<(std::ostream &os, const Stmt &);
-std::ostream &operator<<(std::ostream &os, const IRNode &);
-std::ostream &operator<<(std::ostream &os, const ForDomain &);
-std::ostream &operator<<(std::ostream &os, const CompoundOperator &);
-
 class IRPrinter : private IRVisitorStrict {
 public:
   IRPrinter(std::ostream &os, signed indent=0);

@@ -1,6 +1,7 @@
 #include "func.h"
 
 #include "ir.h"
+#include "ir_printer.h"
 
 namespace simit {
 namespace ir {
@@ -57,38 +58,8 @@ void Func::accept(IRVisitorStrict *visitor) const {
 }
 
 std::ostream &operator<<(std::ostream& os, const Func& func) {
-  os << "func " << func.getName() << "(";
-  if (func.getArguments().size() > 0) {
-    const Var &arg = func.getArguments()[0];
-    os << arg << " : " << arg.getType();
-  }
-  for (size_t i=1; i < func.getArguments().size(); ++i) {
-    const Var &arg = func.getArguments()[i];
-    os << ", " << arg << " : " << arg.getType();
-  }
-  os << ")";
-
-  if (func.getResults().size() > 0) {
-    os << " -> (";
-    const Var &res = func.getResults()[0];
-    os << res << " : " << res.getType();
-
-    for (size_t i=1; i < func.getResults().size(); ++i) {
-      const Var &res = func.getResults()[i];
-      os << ", " << res << " : " << res.getType();
-    }
-    os << ")";
-  }
-
-  if (func.getBody().defined()) {
-    os << ":" << std::endl;
-
-    IRPrinter printer(os, 1);
-    printer.print(func.getBody());
-  }
-  else {
-    os << ";";
-  }
+  IRPrinter printer(os);
+  printer.print(func);
   return os;
 }
 

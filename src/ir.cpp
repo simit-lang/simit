@@ -19,6 +19,13 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+// class IRNode
+std::ostream &operator<<(std::ostream &os, const IRNode &node) {
+  IRPrinter printer(os);
+  printer.print(node);
+  return os;
+}
+
 // class Expr
 Expr::Expr(const Var &var) : Expr(VarExpr::make(var)) {}
 
@@ -30,6 +37,12 @@ Expr::Expr(double val) : IRHandle(Literal::make(val)) {
 
 Expr Expr::operator()(const std::vector<IndexVar> &indexVars) const {
   return IndexedTensor::make(*this, indexVars);
+}
+
+std::ostream &operator<<(std::ostream &os, const Expr &expr) {
+  IRPrinter printer(os);
+  printer.print(expr);
+  return os;
 }
 
 Expr operator-(Expr a) {
@@ -50,6 +63,38 @@ Expr operator*(Expr a, Expr b) {
 
 Expr operator/(Expr a, Expr b) {
   return Div::make(a, b);
+}
+
+// class Stmt
+std::ostream &operator<<(std::ostream &os, const Stmt &Stmt) {
+  IRPrinter printer(os);
+  printer.skipTopExprParenthesis();
+  printer.print(Stmt);
+  return os;
+}
+
+// class ForDomain
+std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
+  switch (d.kind) {
+    case ForDomain::IndexSet:
+      os << d.indexSet;
+      break;
+    case ForDomain::Endpoints:
+      os << d.set << ".endpoints[" << d.var << "]";
+      break;
+    case ForDomain::Edges:
+      os << d.set << ".edges[" << d.var << "]";
+      break;
+    case ForDomain::NeighborsOf:
+      os << d.set << ".neighborsOf[" << d.var << "]";
+    case ForDomain::Neighbors:
+      os << d.set << ".neighbors[" << d.var << "]";
+      break;
+    case ForDomain::Diagonal:
+      os << d.set << ".diagonal[" << d.var << "]";
+      break;
+  }
+  return os;
 }
 
 // Type compute functions
@@ -100,6 +145,20 @@ Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
     dimensions.push_back(indexVar.getDomain());
   }
   return TensorType::make(expr.type().toTensor()->componentType, dimensions);
+}
+
+// enum CompoundOperator
+std::ostream &operator<<(std::ostream &os, const CompoundOperator &cop) {
+  switch (cop) {
+    case CompoundOperator::None: {
+      break;
+    }
+    case CompoundOperator::Add: {
+      os << "+";
+      break;
+    }
+  }
+  return os;
 }
 
 // struct Literal

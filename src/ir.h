@@ -8,9 +8,8 @@
 #include "var.h"
 #include "types.h"
 #include "func.h"
-#include "ir_printer.h"
+#include "ir_visitor.h"
 #include "indexvar.h"
-#include "tensor_index.h"
 
 namespace simit {
 namespace ir {
@@ -28,6 +27,8 @@ private:
   friend void aquire(const IRNode *node) {++node->ref;}
   friend void release(const IRNode *node) {if (--node->ref == 0) delete node;}
 };
+
+std::ostream &operator<<(std::ostream &os, const IRNode &);
 
 struct ExprNodeBase : public IRNode {
   Type type;
@@ -75,6 +76,8 @@ public:
   template <typename E> friend const E* to(Expr);
 };
 
+std::ostream &operator<<(std::ostream &os, const Expr &);
+
 Expr operator-(Expr);
 Expr operator+(Expr, Expr);
 Expr operator-(Expr, Expr);
@@ -104,6 +107,8 @@ public:
   template <typename S> friend const S* to(Stmt);
 };
 
+std::ostream &operator<<(std::ostream &os, const Stmt &);
+
 template <typename S>
 inline bool isa(Stmt s) {
   return s.defined() && dynamic_cast<const S*>(s.ptr) != nullptr;
@@ -124,6 +129,7 @@ Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
 
 /// CompoundOperator used with AssignStmt, TensorWrite, FieldWrite and Store.
 enum class CompoundOperator { None, Add };
+std::ostream &operator<<(std::ostream &os, const CompoundOperator &);
 
 
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
@@ -344,6 +350,7 @@ struct ForDomain {
     iassert(kind == NeighborsOf);
   }
 };
+std::ostream &operator<<(std::ostream &os, const ForDomain &);
 
 // TODO DEPRECATED: Remove when new index system is in place.
 struct For : public StmtNode<For> {

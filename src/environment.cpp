@@ -2,6 +2,7 @@
 
 #include "var.h"
 #include "ir.h"
+#include "tensor_index.h"
 #include "util/collections.h"
 
 using namespace std;

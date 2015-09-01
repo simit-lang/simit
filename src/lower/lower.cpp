@@ -13,6 +13,7 @@
 #include "temps.h"
 #include "flatten.h"
 #include "ir_rewriter.h"
+#include "ir_printer.h"
 #include "path_expressions.h"
 
 #ifdef GPU
