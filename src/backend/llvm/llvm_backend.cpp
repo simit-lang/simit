@@ -238,8 +238,7 @@ Function* LLVMBackend::compile(ir::Func func) {
   mpm.run(*module);
 #endif
 
-  // TODO: Remove second argument
-  return new LLVMFunction(func, env.getExterns(), llvmFunc, module, engineBuilder);
+  return new LLVMFunction(func, llvmFunc, module, engineBuilder);
 }
 
 void LLVMBackend::compile(const ir::Literal& literal) {

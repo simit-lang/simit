@@ -13,6 +13,7 @@ class Set;
 
 namespace ir {
 class Func;
+class Environment;
 class Expr;
 class Type;
 class Var;
@@ -22,7 +23,7 @@ namespace backend {
 
 class Function : public interfaces::Printable, interfaces::Uncopyable {
 protected:
-    Function(const ir::Func &func, const std::vector<ir::Var>& globals);
+    Function(const ir::Func &func);
 
 public:
   typedef std::function<void()> FuncType;
@@ -59,18 +60,17 @@ public:
   const std::vector<std::string>& getArgs() const;
   const ir::Type& getArgType(std::string arg) const;
 
-  bool hasGlobal(std::string global) const;
+  bool hasGlobal(std::string name) const;
   const std::vector<std::string>& getGlobals() const;
   const ir::Type& getGlobalType(std::string global) const;
 
   bool hasBindable(std::string bindable) const;
 
 private:
+  ir::Environment* environment;
+
   std::vector<std::string> arguments;
   std::map<std::string, ir::Type> argumentTypes;
-
-  std::vector<std::string> globals;
-  std::map<std::string, ir::Type> globalTypes;
 
   /// We store the Simit Function's literals to prevent their memory from being
   /// reclaimed if the IR is deleted, as compiled functions are allowed to

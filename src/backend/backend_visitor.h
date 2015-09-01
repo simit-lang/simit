@@ -47,6 +47,8 @@ public:
 template <typename BackendExprType=void>
 class BackendVisitor : public BackendVisitorExprHelper<BackendExprType> {
 protected:
+  virtual ~BackendVisitor() {}
+
   using BackendVisitorExprHelper<BackendExprType>::compile;
 
   virtual void compile(const ir::Literal&) = 0;

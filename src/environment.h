@@ -60,7 +60,11 @@ public:
   /// multiple extern arrays. For example, a bindable sparse tensor can get
   /// turned into one extern data array and two extern index arrays. Use
   /// Environment::getExternsOfBindable to Expr::accept.
-  const std::vector<Var>& getBindables() const;
+  const std::vector<std::string>& getBindables() const;
+
+  /// True if a bindable of the given name is part of the environment, false
+  /// otherwise.
+  bool hasBindable(const std::string& name) const;
 
   /// Get the bindable variable with the given name. A bindable variable is a
   /// variable that must be bound by a user.
@@ -68,7 +72,7 @@ public:
 
   /// Get the extern variables that correspond to a given bindable variable.
   /// See Environment::getBindables.
-  const std::vector<Var>& getExternsOfBindable() const;
+  const std::vector<Var>& getExternsOfBindable(const Var& bindable) const;
 
   /// Insert a constant into the environment.
   void addConstant(const Var& var, const Expr& initializer);

@@ -15,6 +15,15 @@ struct Environment::Content {
   vector<Var>             externs;
   vector<Var>             temporaries;
 
+  /// Environment bindables are variables that must be bound by user code before
+  /// a simit::Function can be run. A bindable Var may, but do not have to, map
+  /// to other Vars if the bindable has been replaced by other data structures.
+  /// For example, a sparse tensor bindable is rebound by the lowering stages to
+  /// value and index arrays, while a set will not map to other variables.
+  vector<string>        bindableNames;
+  map<string, Var>      bindables;
+  map<Var, vector<Var>> externsOfBindable;
+
   map<Var, TensorIndex> tensorIndices;
 };
 
@@ -91,15 +100,28 @@ const TensorIndex& Environment::getTensorIndex(const Var& tensor,
 }
 
 void* Environment::getTemporaryDataPointer(const Var& tensorVar) const {
+  return nullptr;
 }
 
-const std::vector<Var>& Environment::getBindables() const {
+const std::vector<std::string>& Environment::getBindables() const {
+  return content->bindableNames;
+}
+
+bool Environment::hasBindable(const std::string& name) const {
+  return util::contains(content->bindables, name);
 }
 
 const Var& Environment::getBindable(const std::string& name) const {
+  iassert(hasBindable(name))
+      << "no bindable called " << name << " in environment.";
+  return content->bindables.at(name);
 }
 
-const std::vector<Var>& Environment::getExternsOfBindable() const {
+const vector<Var>& Environment::getExternsOfBindable(const Var& bindable) const{
+  iassert(util::contains(content->externsOfBindable, bindable))
+      << bindable << " not in environment";
+
+  return content->externsOfBindable.at(bindable);
 }
 
 void Environment::addConstant(const Var& var, const Expr& initializer) {
@@ -107,7 +129,25 @@ void Environment::addConstant(const Var& var, const Expr& initializer) {
 }
 
 void Environment::addExtern(const Var& var, const Var& bindable) {
+  iassert(!util::contains(content->externs, var))
+      << var << " already in environment";
+
   content->externs.push_back(var);
+
+  // Add an extern that is a new bindable
+  if (!bindable.defined()) {
+    iassert(!util::contains(content->externsOfBindable, var))
+        << var << " bindable already in environment";
+    content->bindableNames.push_back(var.getName());
+    content->bindables.insert({var.getName(), var});
+    content->externsOfBindable.insert({var, {var}}); // Not rebound yet
+  }
+  // Add another extern of an existing bindable
+  else {
+    iassert(util::contains(content->externsOfBindable, bindable))
+        << bindable << " bindable not in environment.";
+    content->externsOfBindable.at(bindable).push_back(var);
+  }
 }
 
 void Environment::addTemporary(const Var& var) {

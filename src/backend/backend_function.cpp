@@ -15,7 +15,8 @@ namespace simit {
 namespace backend {
 
 // class Function
-Function::Function(const ir::Func& func, const vector<ir::Var>& globals) {
+Function::Function(const ir::Func& func)
+    : environment(new ir::Environment(func.getEnvironment())) {
   for (const ir::Var& arg : func.getArguments()) {
     string argName = arg.getName();
     arguments.push_back(argName);
@@ -26,12 +27,6 @@ Function::Function(const ir::Func& func, const vector<ir::Var>& globals) {
     string resName = res.getName();
     arguments.push_back(resName);
     argumentTypes[resName] = res.getType();
-  }
-
-  for (const ir::Var& global : globals) {
-    string globalName = global.getName();
-    this->globals.push_back(globalName);
-    globalTypes[globalName] = global.getType();
   }
 
   // Gather the Simit literal expressions and store them in an array in the
@@ -63,6 +58,7 @@ Function::Function(const ir::Func& func, const vector<ir::Var>& globals) {
 }
 
 Function::~Function() {
+  delete environment;
 }
 
 bool Function::hasArg(std::string arg) const {
@@ -77,16 +73,17 @@ const ir::Type& Function::getArgType(std::string arg) const {
   return argumentTypes.at(arg);
 }
 
-bool Function::hasGlobal(std::string global) const {
-  return util::contains(globals, global);
+bool Function::hasGlobal(std::string name) const {
+  return environment->hasBindable(name);
 }
 
 const std::vector<std::string>& Function::getGlobals() const {
-  return globals;
+  return environment->getBindables();
 }
 
 const ir::Type& Function::getGlobalType(std::string global) const {
-  return globalTypes.at(global);
+  uassert(hasGlobal(global)) << "No global called " << global << " in function";
+  return environment->getBindable(global).getType();
 }
 
 bool Function::hasBindable(std::string bindable) const {

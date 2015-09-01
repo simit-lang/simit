@@ -21,8 +21,7 @@ class Actual;
 /// A Simit function that has been compiled with LLVM.
 class LLVMFunction : public backend::Function {
  public:
-  LLVMFunction(ir::Func func, const std::vector<ir::Var>& globals,
-               llvm::Function* llvmFunc, llvm::Module* module,
+  LLVMFunction(ir::Func func, llvm::Function* llvmFunc, llvm::Module* module,
                std::shared_ptr<llvm::EngineBuilder> engineBuilder);
   virtual ~LLVMFunction();
 
