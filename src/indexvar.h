@@ -72,17 +72,45 @@ public:
   }
 
 
-  std::string getName() const {return ptr->name;}
-  const IndexDomain &getDomain() const {return ptr->domain;}
-  Expr* getFixedExpr() const { return ptr->fixedExpr; }
+  std::string getName() const {
+    iassert(defined()) << "Undefined IndexVar";
+    return ptr->name;
+  }
 
-  size_t getNumBlockLevels() const {return ptr->domain.getNumIndexSets();}
+  const IndexDomain &getDomain() const {
+    iassert(defined()) << "Undefined IndexVar";
+    return ptr->domain;
+  }
 
-  bool isFreeVar() const { return  (ptr->kind == Free); }
-  bool isReductionVar() const { return (ptr->kind == Reduction); }
-  bool isFixed() const { return (ptr->kind == Fixed); }
+  Expr* getFixedExpr() const {
+    iassert(defined()) << "Undefined IndexVar";
+    return ptr->fixedExpr;
+  }
 
-  ReductionOperator getOperator() const { return ptr->rop; }
+  size_t getNumBlockLevels() const {
+    iassert(defined()) << "Undefined IndexVar";
+    return ptr->domain.getNumIndexSets();
+  }
+
+  bool isFreeVar() const {
+    iassert(defined()) << "Undefined IndexVar";
+    return  (ptr->kind == Free);
+  }
+
+  bool isReductionVar() const {
+    iassert(defined()) << "Undefined IndexVar";
+    return (ptr->kind == Reduction);
+  }
+
+  bool isFixed() const {
+    iassert(defined()) << "Undefined IndexVar";
+    return (ptr->kind == Fixed);
+  }
+
+  ReductionOperator getOperator() const {
+    iassert(defined()) << "Undefined IndexVar";
+    return ptr->rop;
+  }
 };
 
 std::ostream &operator<<(std::ostream &os, const IndexVar &);

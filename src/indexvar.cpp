@@ -14,6 +14,7 @@ IndexVarContent::~IndexVarContent() {
 
 // class IndexVar
 std::ostream &operator<<(std::ostream &os, const IndexVar &var) {
+  iassert(var.defined()) << "Undefined IndexVar";
   if (var.isReductionVar()) {
     os << var.getOperator();
   }

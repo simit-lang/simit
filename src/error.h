@@ -143,6 +143,7 @@ struct ErrorReport {
         }
         break;
     }
+    (*msg) << " ";
   }
 
   template<typename T>
