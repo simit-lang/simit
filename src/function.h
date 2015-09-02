@@ -12,8 +12,9 @@ namespace backend {
 class Function;
 }
 
-/// A callable Simit function. You can bind arguments and externs to a function
-/// using the `bind` methods and call it using the `run` and `runSafe` method.
+/// A callable Simit function. You can bind arguments and externs (bindables) to
+/// a function using the `bind` methods and call it using the `run` and
+/// `runSafe` method.
 ///
 /// If you call the function using `run` (recommended for performance) you have
 /// to first call `init` to initialize bound arguments and externs. Furthermore,
@@ -42,11 +43,16 @@ public:
     bind(bindable, tensor->getType(), tensor->getData());
   }
 
-  /// Bind tensor data to the bindable (argument or global) with type checks.
+  /// Bind tensor data to the bindable with type checks.
   void bind(const std::string& bindable, const TensorType& ttype, void* data);
 
-  /// Bind tensor data to the bindable (argument or global) without type checks.
+  /// Bind tensor data to the bindable.
   void bind(const std::string& bindable, void* data);
+
+  /// Bind sparse tensor data in the CSR format to the bindable.
+  /// See e.g. \link https://en.wikipedia.org/wiki/Sparse_matrix
+  void bind(const std::string& bindable, const int* rowPtr, const int* colInd,
+            void* data);
 
   /// Initialize the function. This must be done between calls to bind arguments
   /// and calls to run. If runSafe is used, there init will be called

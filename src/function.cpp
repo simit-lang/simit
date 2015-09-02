@@ -79,7 +79,8 @@ void Function::bind(const std::string& bindable, simit::Set *set) {
   impl->bindSet(bindable, set);
 }
 
-void Function::bind(const std::string& bindable, const TensorType& ttype, void* data) {
+void Function::bind(const string& bindable, const TensorType& ttype,
+                    void* data) {
 #ifdef SIMIT_ASSERTS
   uassert(defined()) << "undefined function";
   uassert(impl->hasBindable(bindable))
@@ -98,6 +99,11 @@ void Function::bind(const std::string& bindable, void* data) {
   uassert(impl->hasBindable(bindable))
       << "no argument or global of this name in the function";
   impl->bindTensor(bindable, data);
+}
+
+void Function::bind(const string& bindable, const int* rowPtr,const int* colInd,
+                    void* data) {
+  std::cout << "binding sparse matrix:" << bindable << std::endl;
 }
 
 void Function::init() {

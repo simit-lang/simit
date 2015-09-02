@@ -1,9 +1,8 @@
 #include "simit-test.h"
 
 #include "ir.h"
+#include "environment.h"
 #include "lower/index_expressions/lower_scatter_workspace.h"
-#include "tensor_index.h"
-#include "graph.h"
 
 using namespace std;
 using namespace simit::ir;
@@ -32,9 +31,35 @@ TEST(IndexExpression, add) {
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add), &env);
   std::cout << loops << std::endl << std::endl;
 //  std::cout << env << std::endl << std::endl;
-  simit::Function function = getTestBackend()->compile(loops, env);
+  std::cout << std::endl;
 
+  simit::Function function = getTestBackend()->compile(loops, env);
   std::cout << function << std::endl;
+
+  // 1.0 2.0 0.0
+  // 3.0 4.0 0.0
+  // 0.0 0.0 0.0
+  int A_row_ptr[4] = {0, 2, 4, 4};
+  int A_col_ind[4] = {0, 1, 0, 1};
+  double A_vals[4] = {1.0, 2.0, 3.0, 4.0};
+  function.bind("A", A_row_ptr, A_col_ind, A_vals);
+
+  // 0.0 0.0 0.0
+  // 0.0 0.1 0.2
+  // 0.0 0.3 0.4
+  int B_row_ptr[4] = {0, 0, 2, 4};
+  int B_col_ind[4] = {1, 2, 1, 2};
+  double B_vals[4] = {0.1, 0.2, 0.3, 0.4};
+  function.bind("B", B_row_ptr, B_col_ind, B_vals);
+
+  // 1.0 2.0 0.0
+  // 3.0 4.1 0.2
+  // 0.0 0.3 0.4
+  int C_row_ptr[4] = {0, 2, 5, 7};
+  int C_col_ind[7] = {0, 1, 0, 1, 2, 1, 2};
+  double C_vals[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+  function.bind("C", C_row_ptr, C_col_ind, C_vals);
+
 }
 
 TEST(IndexExpression, mul) {
