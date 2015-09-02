@@ -125,7 +125,8 @@ static Func invVar;
 void invInit() {
   invVar = Func("inv",
                 {},
-                {Var("r", mat3f)},
+                {Var("r", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
                 Func::Intrinsic);
 }
 

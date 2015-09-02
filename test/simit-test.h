@@ -47,4 +47,15 @@ std::unique_ptr<simit::backend::Backend> getTestBackend();
 
 simit::Function loadFunction(std::string fileName, std::string funcName="main");
 
+#define Vec3f TensorType::make(ScalarType::Float, {IndexDomain(3)})
+
+#define Mat3f TensorType::make(ScalarType::Float, \
+                               {IndexDomain(3),IndexDomain(3)})
+
+#define Vec3i TensorType::make(ScalarType::Int, {IndexDomain(3)})
+
+#define Mat3i TensorType::make(ScalarType::Int, \
+                               {IndexDomain(3),IndexDomain(3)})
+
+
 #endif

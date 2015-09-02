@@ -289,12 +289,6 @@ const Type Int = TensorType::make(ScalarType(ScalarType::Int));
 const Type Float = TensorType::make(ScalarType(ScalarType::Float));
 const Type Boolean = TensorType::make(ScalarType(ScalarType::Boolean));
 
-
-const Type vec3f = TensorType::make(ScalarType::Float,
-                                    {IndexDomain(3)});
-const Type mat3f = TensorType::make(ScalarType::Float,
-                                    {IndexDomain(3), IndexDomain(3)});
-
 }}
 
 #endif
