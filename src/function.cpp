@@ -54,24 +54,24 @@ void Function::bind(const std::string& name, simit::Set *set) {
     }
 
     uassert(setFieldTypeComponentType == elemFieldType->componentType)
-        << "field type"
-        << "does not match function argument type" << *elemFieldType;
+        << "field type does not match function argument type "
+        << util::quote(*elemFieldType);
 
     uassert(setFieldType->getOrder() == elemFieldType->order())
-        << "field type"
-        << "does not match function argument type" << *elemFieldType;
+        << "field type does not match function argument type "
+        << util::quote(*elemFieldType);
 
-    const vector<ir::IndexDomain> &argFieldTypeDims = elemFieldType->getDimensions();
+    const vector<ir::IndexDomain> &fieldDims = elemFieldType->getDimensions();
     for (size_t i=0; i < elemFieldType->order(); ++i) {
-      uassert(argFieldTypeDims[i].getIndexSets().size() == 1)
-          << "field type"
-          << "does not match function argument type" << *elemFieldType;
+      uassert(fieldDims[i].getIndexSets().size() == 1)
+          << "field type does not match function argument type "
+          << util::quote(*elemFieldType);
 
-      size_t argFieldRange = argFieldTypeDims[i].getIndexSets()[0].getSize();
+      size_t argFieldRange = fieldDims[i].getIndexSets()[0].getSize();
 
       uassert(setFieldType->getDimension(i) == argFieldRange)
-          << "field type"
-          << "does not match function argument type" << *elemFieldType;
+          << "field type does not match function argument type "
+          << util::quote(*elemFieldType);
     }
   }
 #endif
@@ -102,7 +102,7 @@ void Function::bind(const std::string& name, void* data) {
 
 void Function::bind(const string& name, const int* rowPtr, const int* colInd,
                     void* data) {
-  std::cout << "binding sparse matrix: " << name << std::endl;
+  std::cout << "binding sparse matrix: " << util::quote(name) << std::endl;
   impl->bind(name, rowPtr, colInd, data);
 }
 
