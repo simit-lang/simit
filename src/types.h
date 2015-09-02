@@ -165,8 +165,8 @@ struct ElementType : TypeNode {
   }
 
   const Field& field(const std::string& fieldName) const {
-    iassert(hasField(fieldName)) << "Undefined field"
-                                 << fieldName << "in" << name;
+    iassert(hasField(fieldName)) << "Undefined field '"
+                                 << fieldName << "' in '" << name << "'";
     return fields[fieldNames.at(fieldName)];
   }
 
