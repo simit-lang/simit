@@ -91,4 +91,9 @@ bool Function::hasBindable(std::string bindable) const {
   return hasArg(bindable) || hasGlobal(bindable);
 }
 
+const ir::Type& Function::getBindableType(std::string bindable) const {
+  iassert(hasBindable(bindable));
+  return (hasArg(bindable)) ? getArgType(bindable) : getGlobalType(bindable);
+}
+
 }}

@@ -59,7 +59,6 @@ public:
   /// Print the function as machine assembly code to the stream.
   virtual void printMachine(std::ostream &os) const = 0;
 
-
   bool hasArg(std::string arg) const;
   const std::vector<std::string>& getArgs() const;
   const ir::Type& getArgType(std::string arg) const;
@@ -69,6 +68,7 @@ public:
   const ir::Type& getGlobalType(std::string global) const;
 
   bool hasBindable(std::string bindable) const;
+  const ir::Type& getBindableType(std::string bindable) const;
 
 private:
   ir::Environment* environment;

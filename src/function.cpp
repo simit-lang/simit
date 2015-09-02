@@ -21,7 +21,7 @@ void Function::bind(const std::string& name, simit::Set *set) {
   uassert(impl->hasBindable(name))
       << "no argument or global of this name in the function";
   // Check that the set matches the argument type
-  ir::Type argType = impl->getArgType(name);
+  ir::Type argType = impl->getBindableType(name);
   uassert(argType.isSet()) << "Argument is not a set";
   const ir::SetType *argSetType = argType.toSet();
   const ir::ElementType *elemType = argSetType->elementType.toElement();
@@ -79,14 +79,13 @@ void Function::bind(const std::string& name, simit::Set *set) {
   impl->bind(name, set);
 }
 
-void Function::bind(const string& name, const TensorType& ttype,
-                    void* data) {
+void Function::bind(const string& name, const TensorType& ttype, void* data) {
 #ifdef SIMIT_ASSERTS
   uassert(defined()) << "undefined function";
   uassert(impl->hasBindable(name))
       << "no argument or global of this name in the function";
   ir::Type type = ir::convert(ttype);
-  ir::Type argType = impl->getArgType(name);
+  ir::Type argType = impl->getBindableType(name);
   uassert(type == argType)
       << "tensor type " << type
       << " does not match function argument type " << argType;
