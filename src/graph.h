@@ -387,47 +387,6 @@ public:
   }
 
 private:
-  std::string name;
-  int numElements;                           // number of elements in the set
-  std::vector<const Set*> endpointSets;      // the sets the endpoints belong to
-  int* endpoints;                            // the endpoints of edge elements
-
-  int capacity;                              // current capacity of the set
-  static const int capacityIncrement = 1024; // increment for capacity increases
-
-  mutable internal::NeighborIndex *neighbors;// neighbor index (lazily created)
-
-  std::ostream &streamOut(std::ostream &os) const {
-    os << "{";
-    auto it = begin();
-    auto it_end = end();
-    if (it != it_end) {
-      os << it->ident;
-      if (getCardinality() > 0) {
-        os << ":(";
-        os << endpoints[0];
-        for (int i=1; i<getCardinality(); ++i) {
-          os << "," << endpoints[i];
-        }
-        os << ")";
-      }
-      ++it;
-    }
-    while (it != it_end) {
-      os << ", " << it->ident;
-      if (getCardinality() > 0) {
-        os << ":(";
-        os << endpoints[it->ident*getCardinality() + 0];
-        for (int i=1; i<getCardinality(); ++i) {
-          os << "," << endpoints[it->ident*getCardinality() + i];
-        }
-        os << ")";
-      }
-      ++it;
-    }
-    return os << "}";
-  }
-
   // A field on the members of the Set.
   // Invariant: elements < capacity
   struct FieldData {
@@ -459,11 +418,6 @@ private:
       size_t size;
     };
 
-    std::string name;
-    const TensorType *type;
-    size_t sizeOfType;
-    Set *set;  // Set this field is a member of. Used for printing, etc.
-    
     FieldData(const std::string &name, const TensorType *type, Set *set)
         : name(name), type(type), set(set), data(nullptr) {
       sizeOfType = componentSize(type->getComponentType()) * type->getSize();
@@ -473,12 +427,20 @@ private:
       if (data != nullptr) free(data);
       delete type;
     }
+
+    std::string name;
     
-    void* data;         // buffer for the data
+    const TensorType *type;
+    size_t sizeOfType;
+
+    // The Set this field is a member of. Used for printing, etc.
+    Set *set;
+
+    /// Buffer for the field data
+    void* data;
 
     /// Field references so that we can update their data pointers if we realloc
-    /// field data.
-    //  Note: his is a bit too complex, but avoids two loads on field get/set.
+    /// field data. Avoids two loads on field get/set.
     std::set<FieldRefBase*> fieldReferences;
     
   private:
@@ -487,9 +449,21 @@ private:
     FieldData& operator=(const FieldData& f);
   };
 
-  std::vector<FieldData*> fields;          // fields of the elements in the set
-  std::map<std::string, int> fieldNames; // name to field lookups
-  
+  // Set data
+  std::string name;
+  int numElements;                           // number of elements in the set
+  std::vector<const Set*> endpointSets;      // the sets the endpoints belong to
+  int* endpoints;                            // the endpoints of edge elements
+
+  int capacity;                              // current capacity of the set
+  static const int capacityIncrement = 1024; // increment for capacity increases
+
+  mutable internal::NeighborIndex *neighbors;// neighbor index (lazily created)
+
+  std::map<std::string, int> fieldNames;     // name to field lookups
+  std::vector<FieldData*> fields;            // fields of elements in the set
+
+
   /// disable copy constructors
   Set(const Set& s);
   Set& operator=(const Set& s);
@@ -565,6 +539,37 @@ private:
       fields.push_back(fieldData);
       fieldNames[field.name] = fields.size()-1;
     }
+  }
+
+  std::ostream &streamOut(std::ostream &os) const {
+    os << "{";
+    auto it = begin();
+    auto it_end = end();
+    if (it != it_end) {
+      os << it->ident;
+      if (getCardinality() > 0) {
+        os << ":(";
+        os << endpoints[0];
+        for (int i=1; i<getCardinality(); ++i) {
+          os << "," << endpoints[i];
+        }
+        os << ")";
+      }
+      ++it;
+    }
+    while (it != it_end) {
+      os << ", " << it->ident;
+      if (getCardinality() > 0) {
+        os << ":(";
+        os << endpoints[it->ident*getCardinality() + 0];
+        for (int i=1; i<getCardinality(); ++i) {
+          os << "," << endpoints[it->ident*getCardinality() + i];
+        }
+        os << ")";
+      }
+      ++it;
+    }
+    return os << "}";
   }
 
   friend FieldRefBase;
