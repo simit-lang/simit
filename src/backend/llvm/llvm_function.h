@@ -46,7 +46,7 @@ class LLVMFunction : public backend::Function {
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;
 
   /// Function actual storage
-  std::map<std::string,Actual*> actuals;
+  std::map<std::string, std::unique_ptr<Actual>> actuals;
 
   /// Globals storage
   std::map<std::string,void**> globals;

@@ -38,21 +38,8 @@ LLVMFunction::LLVMFunction(ir::Func func, llvm::Function* llvmFunc,
       engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
       initialized(false), deinit(nullptr) {
 
-  for (const ir::Var& arg : func.getArguments()) {
-    actuals[arg.getName()] = new Actual(false);
-  }
-  for (const ir::Var& res : func.getResults()) {
-    // Skip results that alias an argument
-    if (actuals.find(res.getName()) != actuals.end()) {
-      actuals[res.getName()]->setOutput(true);
-      continue;
-    }
-    actuals[res.getName()] = new Actual(true);
-  }
-
   for (const string& global : getGlobals()) {
     Type type = getGlobalType(global);
-
     llvm::GlobalValue* llvmGlobal = module->getNamedValue(global);
     void** globalPtr = (void**)executionEngine->getPointerToGlobal(llvmGlobal);
     *globalPtr = nullptr;
@@ -64,22 +51,18 @@ LLVMFunction::~LLVMFunction() {
   if (deinit) {
     deinit();
   }
-  for (auto &actual : actuals) {
-    delete actual.second;
-  }
 }
 
 void LLVMFunction::bind(const std::string& name, simit::Set* set) {
   tassert(hasArg(name)) << "Global sets not supported yet";
-  actuals[name]->bindSet(set);
-  actuals[name]->setOutput(true);
+  actuals[name] = std::unique_ptr<Actual>(new SetActual(set));
   initialized = false;
 }
 
 void LLVMFunction::bind(const std::string& name, void* data) {
   iassert(hasBindable(name));
   if (hasArg(name)) {
-    actuals.at(name)->bindTensor(data);
+    actuals[name] = std::unique_ptr<Actual>(new TensorActual(data));
     initialized = false;
   }
   else if (hasGlobal(name)) {
@@ -89,7 +72,7 @@ void LLVMFunction::bind(const std::string& name, void* data) {
 
 void LLVMFunction::bind(const std::string& name, const int* rowPtr,
                         const int* colInd, void* data) {
-  std::cout << "hepp: " << colInd[2] << std::endl;
+  not_supported_yet;
 }
 
 Function::FuncType LLVMFunction::init() {
@@ -101,34 +84,35 @@ Function::FuncType LLVMFunction::init() {
   if (llvmFunc->getArgumentList().size() == 0) {
     llvm::Function *initFunc = getInitFunc();
     llvm::Function *deinitFunc = getDeinitFunc();
-    ((FuncPtrType)executionEngine->getPointerToFunction(initFunc))();
-    auto fptr = executionEngine->getPointerToFunction(deinitFunc);
-    deinit = FuncType((FuncPtrType)fptr);
-    return FuncType((FuncPtrType)executionEngine->getPointerToFunction(llvmFunc));
+    auto init = (FuncPtrType)executionEngine->getPointerToFunction(initFunc);
+    init();
+    deinit = (FuncPtrType)executionEngine->getPointerToFunction(deinitFunc);
+    return (FuncPtrType)executionEngine->getPointerToFunction(llvmFunc);
   }
   else {
     llvm::SmallVector<llvm::Value*, 8> args;
     auto llvmArgIt = llvmFunc->getArgumentList().begin();
-    for (const std::string &formal : formals) {
-      assert(actuals.find(formal) != actuals.end());
-      Actual *actual = actuals.at(formal);
+    for (const std::string& formal : formals) {
+      iassert(util::contains(actuals, formal));
 
+      llvm::Argument* llvmFormal = llvmArgIt++;
+      Actual* actual = actuals.at(formal).get();
       ir::Type type = getArgType(formal);
-      switch (type.kind()) {
-        case ir::Type::Tensor: {
-          const ir::TensorType* tensorType = type.toTensor();
-          void* tensorData = actual->getTensorData();
-          llvm::Value *llvmActual = (llvmArgIt->getType()->isPointerTy())
-              ? llvmPtr(*tensorType, tensorData)
-              : llvmVal(*tensorType, tensorData);
-          args.push_back(llvmActual);
-          break;
+      iassert(type.kind() == ir::Type::Set || type.kind() == ir::Type::Tensor);
+
+      class InitActual : public ActualVisitor {
+      public:
+        llvm::Value* result;
+        Type type;
+        llvm::Argument* llvmFormal;
+        llvm::Value* init(Actual* a, const Type& t, llvm::Argument* f) {
+          this->type = t;
+          this->llvmFormal = f;
+          a->accept(this);
+          return result;
         }
-        case ir::Type::Element: {
-          not_supported_yet;
-          break;
-        }
-        case ir::Type::Set: {
+
+        void visit(SetActual* actual) {
           const ir::SetType *setType = type.toSet();
           Set *set = actual->getSet();
 
@@ -160,20 +144,19 @@ Function::FuncType LLVMFunction::init() {
                                       set->getFieldData(field.name)));
           }
 
-          llvm::Value *llvmSet= llvm::ConstantStruct::get(llvmSetType, setData);
-          args.push_back(llvmSet);
-          break;
+          result = llvm::ConstantStruct::get(llvmSetType, setData);
         }
-        case ir::Type::Tuple: {
-          not_supported_yet;
-          break;
+
+        void visit(TensorActual* actual) {
+          const ir::TensorType* tensorType = type.toTensor();
+          void* tensorData = actual->getData();
+          result = (llvmFormal->getType()->isPointerTy())
+                   ? llvmPtr(*tensorType, tensorData)
+                   : llvmVal(*tensorType, tensorData);
         }
-        case ir::Type::Array: {
-          not_supported_yet;
-          break;
-        }
-      }
-      ++llvmArgIt;
+      };
+      llvm::Value* llvmActual = InitActual().init(actual, type, llvmFormal);
+      args.push_back(llvmActual);
     }
 
     // Create Init/deinit function harnesses

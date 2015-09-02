@@ -4,60 +4,79 @@
 #include "uncopyable.h"
 
 namespace simit {
+class Set;
+
 namespace backend {
+
+class SetActual;
+class TensorActual;
+
+class ActualVisitor {
+public:
+  virtual void visit(SetActual* actual) = 0;
+  virtual void visit(TensorActual* actual) = 0;
+};
 
 class Actual : public simit::interfaces::Uncopyable {
 public:
-  Actual(bool output) : output(output) {
-  }
+  virtual ~Actual() {}
+  virtual void accept(ActualVisitor* v) = 0;
+};
 
-  ~Actual() {
-    if (bound && !output && kind == Tensor) {
-      free(tensorData);
-    }
-  }
+class SetActual : public Actual {
+public:
+  SetActual(simit::Set* set) : set(set) {}
+  virtual ~SetActual() {}
 
-  void bindTensor(void* data) {
-    kind = Tensor;
-    this->tensorData = data;
-  }
+  const simit::Set* getSet() const {return set;}
+  simit::Set* getSet() {return set;}
 
-  void bindSet(simit::Set* set) {
-    kind = Set;
-    this->set = set;
-  }
-
-  bool isBound() const {return bound;}
-
-  void setOutput(bool output) {this->output = output;}
-  bool isOutput() const {return output;}
-
-  const ir::Type& getType() const;
-
-  simit::Set* getSet() {
-    iassert(set != nullptr && kind == Set);
-    return set;
-  }
-
-  void* getTensorData() {
-    iassert(tensorData != nullptr && kind == Tensor);
-    return tensorData;
-  }
+  virtual void accept(ActualVisitor* v) {v->visit(this);}
 
 private:
-  bool bound = false;
-
-  enum Kind {Set, Tensor};
-  Kind kind;
-  union {
-    simit::Set* set;
-    void* tensorData;
-  };
-
-  /// Output actuals are references to Sets/Tensors in the user program. These
-  /// must not be deleted.
-  bool output;
+  simit::Set* set;  // TODO: Change to not depend on simit::Set
 };
+
+class TensorActual : public Actual {
+public:
+  TensorActual(void* data) : data(data) {}
+  virtual ~TensorActual() {}
+
+  const void* getData() const {return data;}
+  void* getData() {return data;}
+
+  virtual void accept(ActualVisitor* v) {v->visit(this);}
+
+private:
+  void* data;
+};
+
+class SparseTensorActual : public TensorActual {
+public:
+  SparseTensorActual(const unsigned* coords, const unsigned* sinks, void* data)
+      : TensorActual(data) {}
+  virtual ~SparseTensorActual() {}
+
+  const unsigned* getCoords() const {return coords;}
+  const unsigned* getSinks() const {return sinks;}
+
+  virtual void accept(ActualVisitor* v) {v->visit(this);}
+
+private:
+  const unsigned* coords;
+  const unsigned* sinks;
+};
+
+template <typename A>
+inline bool isa(Actual* a) {
+  return dynamic_cast<const A*>(a) != nullptr;
+}
+
+template <typename A>
+inline A* to(Actual* a) {
+  iassert(isa<A>(a)) << "Wrong Actual type";
+  return static_cast<A*>(a);
+}
 
 }}
 #endif
