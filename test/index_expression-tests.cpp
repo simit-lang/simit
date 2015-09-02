@@ -34,7 +34,6 @@ TEST(IndexExpression, add) {
   std::cout << std::endl;
 
   simit::Function function = getTestBackend()->compile(loops, env);
-  std::cout << function << std::endl;
 
   // 1.0 2.0 0.0
   // 3.0 4.0 0.0
@@ -60,6 +59,7 @@ TEST(IndexExpression, add) {
   double C_vals[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
   function.bind("C", C_row_ptr, C_col_ind, C_vals);
 
+  std::cout << function << std::endl;
 }
 
 TEST(IndexExpression, mul) {

@@ -69,22 +69,27 @@ LLVMFunction::~LLVMFunction() {
   }
 }
 
-void LLVMFunction::bindTensor(const std::string& bindable, void* data) {
-  iassert(hasBindable(bindable));
-  if (hasArg(bindable)) {
-    actuals.at(bindable)->bindTensor(data);
+void LLVMFunction::bind(const std::string& name, simit::Set* set) {
+  tassert(hasArg(name)) << "Global sets not supported yet";
+  actuals[name]->bindSet(set);
+  actuals[name]->setOutput(true);
+  initialized = false;
+}
+
+void LLVMFunction::bind(const std::string& name, void* data) {
+  iassert(hasBindable(name));
+  if (hasArg(name)) {
+    actuals.at(name)->bindTensor(data);
     initialized = false;
   }
-  else if (hasGlobal(bindable)) {
-    *globals.at(bindable) = data;
+  else if (hasGlobal(name)) {
+    *globals.at(name) = data;
   }
 }
 
-void LLVMFunction::bindSet(const std::string& bindable, simit::Set* set) {
-  tassert(hasArg(bindable)) << "Global sets not supported yet";
-  actuals[bindable]->bindSet(set);
-  actuals[bindable]->setOutput(true);
-  initialized = false;
+void LLVMFunction::bind(const std::string& name, const int* rowPtr,
+                        const int* colInd, void* data) {
+  std::cout << "hepp: " << colInd[2] << std::endl;
 }
 
 Function::FuncType LLVMFunction::init() {

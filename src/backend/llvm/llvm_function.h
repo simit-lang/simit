@@ -25,8 +25,10 @@ class LLVMFunction : public backend::Function {
                std::shared_ptr<llvm::EngineBuilder> engineBuilder);
   virtual ~LLVMFunction();
 
-  virtual void bindTensor(const std::string& bindable, void* data);
-  virtual void bindSet(const std::string& bindable, simit::Set* set);
+  virtual void bind(const std::string& name, simit::Set* set);
+  virtual void bind(const std::string& name, void* data);
+  virtual void bind(const std::string& name, const int* rowPtr,
+                    const int* colInd, void* data);
 
   virtual FuncType init();
 

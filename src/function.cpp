@@ -12,16 +12,16 @@ namespace simit {
 Function::Function() : Function(nullptr) {
 }
 
-Function::Function(backend::Function *func) : impl(func), funcPtr(nullptr) {
+Function::Function(backend::Function* func) : impl(func), funcPtr(nullptr) {
 }
 
-void Function::bind(const std::string& bindable, simit::Set *set) {
+void Function::bind(const std::string& name, simit::Set *set) {
 #ifdef SIMIT_ASSERTS
   uassert(defined()) << "undefined function";
-  uassert(impl->hasBindable(bindable))
+  uassert(impl->hasBindable(name))
       << "no argument or global of this name in the function";
   // Check that the set matches the argument type
-  ir::Type argType = impl->getArgType(bindable);
+  ir::Type argType = impl->getArgType(name);
   uassert(argType.isSet()) << "Argument is not a set";
   const ir::SetType *argSetType = argType.toSet();
   const ir::ElementType *elemType = argSetType->elementType.toElement();
@@ -76,34 +76,35 @@ void Function::bind(const std::string& bindable, simit::Set *set) {
   }
 #endif
 
-  impl->bindSet(bindable, set);
+  impl->bind(name, set);
 }
 
-void Function::bind(const string& bindable, const TensorType& ttype,
+void Function::bind(const string& name, const TensorType& ttype,
                     void* data) {
 #ifdef SIMIT_ASSERTS
   uassert(defined()) << "undefined function";
-  uassert(impl->hasBindable(bindable))
+  uassert(impl->hasBindable(name))
       << "no argument or global of this name in the function";
   ir::Type type = ir::convert(ttype);
-  ir::Type argType = impl->getArgType(bindable);
+  ir::Type argType = impl->getArgType(name);
   uassert(type == argType)
       << "tensor type " << type
       << " does not match function argument type " << argType;
 #endif
-  return bind(bindable, data);
+  return bind(name, data);
 }
 
-void Function::bind(const std::string& bindable, void* data) {
+void Function::bind(const std::string& name, void* data) {
   uassert(defined()) << "undefined function";
-  uassert(impl->hasBindable(bindable))
+  uassert(impl->hasBindable(name))
       << "no argument or global of this name in the function";
-  impl->bindTensor(bindable, data);
+  impl->bind(name, data);
 }
 
-void Function::bind(const string& bindable, const int* rowPtr,const int* colInd,
+void Function::bind(const string& name, const int* rowPtr, const int* colInd,
                     void* data) {
-  std::cout << "binding sparse matrix:" << bindable << std::endl;
+  std::cout << "binding sparse matrix: " << name << std::endl;
+  impl->bind(name, rowPtr, colInd, data);
 }
 
 void Function::init() {

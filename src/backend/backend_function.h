@@ -29,11 +29,15 @@ public:
   typedef std::function<void()> FuncType;
   virtual ~Function();
 
-  /// Bind the given data to the argument with the given name.
-  virtual void bindTensor(const std::string& arg, void* data) = 0;
+  /// Bind the given set to the set with the given name.
+  virtual void bind(const std::string& name, simit::Set* set) = 0;
 
-  /// Bind the given set to the argument with the given name.
-  virtual void bindSet(const std::string& arg, simit::Set* set) = 0;
+  /// Bind the given data to the tensor with the given name.
+  virtual void bind(const std::string& name, void* data) = 0;
+
+  /// Bind the given data and indices to the sparse tensor with the given name.
+  virtual void bind(const std::string& name, const int* rowPtr,
+                    const int* colInd, void* data) = 0;
 
   /// Initialize the function.
   virtual FuncType init() = 0;

@@ -32,26 +32,26 @@ public:
 
   /// Create a function from a backend::Function. backend::Function objects can
   /// be created using the backend::Backend::compile methods.
-  Function(backend::Function *function);
+  Function(backend::Function* function);
 
   /// Bind the set to the given argument.
-  void bind(const std::string& bindable, simit::Set* set);
+  void bind(const std::string& name, simit::Set* set);
 
   /// Bind the tensor to the given argument.
   template <typename CType, int... Dims>
-  void bind(const std::string& bindable, Tensor<CType,Dims...>* tensor) {
-    bind(bindable, tensor->getType(), tensor->getData());
+  void bind(const std::string& name, Tensor<CType,Dims...>* tensor) {
+    bind(name, tensor->getType(), tensor->getData());
   }
 
   /// Bind tensor data to the bindable with type checks.
-  void bind(const std::string& bindable, const TensorType& ttype, void* data);
+  void bind(const std::string& name, const TensorType& ttype, void* data);
 
   /// Bind tensor data to the bindable.
-  void bind(const std::string& bindable, void* data);
+  void bind(const std::string& name, void* data);
 
   /// Bind sparse tensor data in the CSR format to the bindable.
   /// See e.g. \link https://en.wikipedia.org/wiki/Sparse_matrix
-  void bind(const std::string& bindable, const int* rowPtr, const int* colInd,
+  void bind(const std::string& name, const int* rowPtr, const int* colInd,
             void* data);
 
   /// Initialize the function. This must be done between calls to bind arguments
