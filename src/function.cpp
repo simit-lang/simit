@@ -102,7 +102,6 @@ void Function::bind(const std::string& name, void* data) {
 
 void Function::bind(const string& name, const int* rowPtr, const int* colInd,
                     void* data) {
-  std::cout << "binding sparse matrix: " << util::quote(name) << std::endl;
   impl->bind(name, rowPtr, colInd, data);
 }
 

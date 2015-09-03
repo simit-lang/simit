@@ -2,6 +2,8 @@
 #define SIMIT_LLVM_FUNCTION_H
 
 #include <string>
+#include <vector>
+#include <map>
 #include <memory>
 
 #include "llvm/IR/Module.h"
@@ -49,7 +51,7 @@ class LLVMFunction : public backend::Function {
   std::map<std::string, std::unique_ptr<Actual>> actuals;
 
   /// Globals storage
-  std::map<std::string, void**> externPtrs;
+  std::map<std::string, std::vector<void**>> externPtrs;
 
   bool initialized;
   FuncType deinit;

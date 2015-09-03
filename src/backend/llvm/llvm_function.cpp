@@ -40,11 +40,20 @@ LLVMFunction::LLVMFunction(ir::Func func, llvm::Function* llvmFunc,
       engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
       initialized(false), deinit(nullptr) {
 
-  for (const string& global : getGlobals()) {
-    llvm::GlobalValue* llvmGlobal = module->getNamedValue(global);
-    void** globalPtr = (void**)executionEngine->getPointerToGlobal(llvmGlobal);
-    *globalPtr = nullptr;
-    this->externPtrs.insert({global, globalPtr});
+  const Environment* env = getEnvironment();
+  for (const string& name : env->getBindableNames()) {
+    Var bindable = env->getBindable(name);
+
+    /// Store a pointer to each of the bindable's extern in externPtrs
+    vector<void**> extPtrs;
+    for (const Var& ext : env->getExternsOfBindable(bindable)) {
+      llvm::GlobalValue* llvmGlobal = module->getNamedValue(ext.getName());
+      void** globalPtr = (void**)executionEngine->getPointerToGlobal(llvmGlobal);
+      *globalPtr = nullptr;
+      extPtrs.push_back(globalPtr);
+    }
+    iassert(!util::contains(this->externPtrs, name));
+    this->externPtrs.insert({name, extPtrs});
   }
 }
 
@@ -66,7 +75,8 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
     const ir::SetType* setType = getGlobalType(name).toSet();
 
     // Write set size to extern
-    auto externSizePtr = (int*)externPtrs.at(name);
+    iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+    auto externSizePtr = (int*)externPtrs.at(name)[0];
     *externSizePtr = set->getSize();
 
     // Write field pointers to extern
@@ -85,13 +95,24 @@ void LLVMFunction::bind(const std::string& name, void* data) {
     initialized = false;
   }
   else if (hasGlobal(name)) {
-    *externPtrs.at(name) = data;
+    iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+    *externPtrs.at(name)[0] = data;
   }
 }
 
 void LLVMFunction::bind(const std::string& name, const int* rowPtr,
                         const int* colInd, void* data) {
-  not_supported_yet;
+  iassert(hasBindable(name));
+  tassert(!hasArg(name)) << "Only support global sparse matrices";
+
+  if (hasGlobal(name)) {
+    iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==3);
+
+    // Sparse matrix externs are ordered: data, rowPtr, colInd
+    *externPtrs.at(name)[0] = data;
+    *externPtrs.at(name)[1] = (void*)rowPtr;
+    *externPtrs.at(name)[2] = (void*)colInd;
+  }
 }
 
 Function::FuncType LLVMFunction::init() {
