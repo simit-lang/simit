@@ -73,12 +73,26 @@ const std::vector<Var>& Environment::getTemporaries() const {
   return content->temporaries;
 }
 
-//const pe::PathExpression&
-//Environment::getPathExpression(const Var& tensorVar) const {
-//}
-//
-//const Var& Environment::getDataArray(const Var& tensorVar) const {
-//}
+const std::vector<std::string>& Environment::getBindableNames() const {
+  return content->bindableNames;
+}
+
+bool Environment::hasBindable(const std::string& name) const {
+  return util::contains(content->bindables, name);
+}
+
+const Var& Environment::getBindable(const std::string& name) const {
+  iassert(hasBindable(name))
+      << "no bindable called " << name << " in environment.";
+  return content->bindables.at(name);
+}
+
+const vector<Var>& Environment::getExternsOfBindable(const Var& bindable) const{
+  iassert(util::contains(content->externsOfBindable, bindable))
+      << bindable << " not in environment";
+
+  return content->externsOfBindable.at(bindable);
+}
 
 const TensorIndex& Environment::getTensorIndex(const Var& tensor,
                                                unsigned sourceDim,
@@ -99,29 +113,13 @@ const TensorIndex& Environment::getTensorIndex(const Var& tensor,
   return content->tensorIndices.at(tensor);
 }
 
-void* Environment::getTemporaryDataPointer(const Var& tensorVar) const {
-  return nullptr;
+bool Environment::hasPathExpession(const Var& tensor) const {
+  not_supported_yet;
 }
 
-const std::vector<std::string>& Environment::getBindableNames() const {
-  return content->bindableNames;
-}
+const pe::PathExpression&
+Environment::getPathExpression(const Var& tensorVar) const {
 
-bool Environment::hasBindable(const std::string& name) const {
-  return util::contains(content->bindables, name);
-}
-
-const Var& Environment::getBindable(const std::string& name) const {
-  iassert(hasBindable(name))
-      << "no bindable called " << name << " in environment.";
-  return content->bindables.at(name);
-}
-
-const vector<Var>& Environment::getExternsOfBindable(const Var& bindable) const{
-  iassert(util::contains(content->externsOfBindable, bindable))
-      << bindable << " not in environment";
-
-  return content->externsOfBindable.at(bindable);
 }
 
 void Environment::addConstant(const Var& var, const Expr& initializer) {

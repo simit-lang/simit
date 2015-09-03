@@ -40,20 +40,6 @@ public:
   /// lowering passes, and must be initialized before a simit::Function is run.
   const std::vector<Var>& getTemporaries() const;
 
-//  /// Get the path expression of a tensor variable in the environment.
-//  const pe::PathExpression& getPathExpression(const Var& tensorVar) const;
-//
-//  /// Get the data array of a tensor variable.
-//  const Var& getDataArray(const Var& tensorVar) const;
-
-  /// Get the tensor index of a tensor variable.
-  const TensorIndex& getTensorIndex(const Var& tensor,
-                                    unsigned sourceDim, unsigned sinkDim);
-
-  /// Get a pointer to the allocated memory of the data array of a temporary
-  /// tensor variable.
-  void* getTemporaryDataPointer(const Var& tensorVar) const;
-
   /// Get the environment's bindable variables. A bindable variable is a
   /// variable that must be bound by a user. These are initially the same as the
   /// externs, but compiler lowering passes may turn bindable variables into
@@ -73,6 +59,16 @@ public:
   /// Get the extern variables that correspond to a given bindable variable.
   /// See Environment::getBindables.
   const std::vector<Var>& getExternsOfBindable(const Var& bindable) const;
+
+  /// Get the tensor index of a tensor variable.
+  const TensorIndex& getTensorIndex(const Var& tensor,
+                                    unsigned sourceDim, unsigned sinkDim);
+
+  /// True if the tensor variable has a path expression, false otherwise.
+  bool hasPathExpession(const Var& tensor) const;
+
+  /// Get the path expression of a tensor variable in the environment.
+  const pe::PathExpression& getPathExpression(const Var& tensor) const;
 
   /// Insert a constant into the environment.
   void addConstant(const Var& var, const Expr& initializer);
