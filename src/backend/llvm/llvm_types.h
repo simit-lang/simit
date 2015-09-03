@@ -37,7 +37,8 @@ extern llvm::PointerType* const LLVM_INT64_PTR;
 
 
 llvm::Type*        llvmType(const ir::Type&,       unsigned addrspace=0);
-llvm::StructType*  llvmType(const ir::SetType&,    unsigned addrspace=0);
+llvm::StructType*  llvmType(const ir::SetType&,    unsigned addrspace=0,
+                            bool packed=false);
 llvm::PointerType* llvmType(const ir::TensorType&, unsigned addrspace=0);
 llvm::PointerType* llvmType(const ir::ArrayType&,  unsigned addrspace=0);
 llvm::Type*        llvmType(ir::ScalarType);

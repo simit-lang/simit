@@ -23,6 +23,8 @@
 #include "indices.h"
 #include "util/collections.h"
 
+#include "llvm_util.h"
+
 using namespace std;
 using namespace simit::ir;
 
@@ -39,11 +41,10 @@ LLVMFunction::LLVMFunction(ir::Func func, llvm::Function* llvmFunc,
       initialized(false), deinit(nullptr) {
 
   for (const string& global : getGlobals()) {
-    Type type = getGlobalType(global);
     llvm::GlobalValue* llvmGlobal = module->getNamedValue(global);
     void** globalPtr = (void**)executionEngine->getPointerToGlobal(llvmGlobal);
     *globalPtr = nullptr;
-    this->globals.insert({global, globalPtr});
+    this->externPtrs.insert({global, globalPtr});
   }
 }
 
@@ -54,9 +55,27 @@ LLVMFunction::~LLVMFunction() {
 }
 
 void LLVMFunction::bind(const std::string& name, simit::Set* set) {
-  tassert(hasArg(name)) << "Global sets not supported yet";
-  actuals[name] = std::unique_ptr<Actual>(new SetActual(set));
-  initialized = false;
+  iassert(hasBindable(name));
+  iassert(getBindableType(name).isSet());
+
+  if (hasArg(name)) {
+    actuals[name] = std::unique_ptr<Actual>(new SetActual(set));
+    initialized = false;
+  }
+  else {
+    const ir::SetType* setType = getGlobalType(name).toSet();
+
+    // Write set size to extern
+    auto externSizePtr = (int*)externPtrs.at(name);
+    *externSizePtr = set->getSize();
+
+    // Write field pointers to extern
+    void** externFieldsPtr = (void**)(externSizePtr + 1);
+    for (auto& field : setType->elementType.toElement()->fields) {
+      *externFieldsPtr = set->getFieldData(field.name);
+      ++externFieldsPtr;
+    }
+  }
 }
 
 void LLVMFunction::bind(const std::string& name, void* data) {
@@ -66,7 +85,7 @@ void LLVMFunction::bind(const std::string& name, void* data) {
     initialized = false;
   }
   else if (hasGlobal(name)) {
-    *globals.at(name) = data;
+    *externPtrs.at(name) = data;
   }
 }
 

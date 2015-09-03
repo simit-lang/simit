@@ -179,7 +179,6 @@ struct Call : public ExprNode<Call> {
   static Expr make(Func func, std::vector<Expr> actuals);
 };
 
-/// TODO: Consider merging Length and IndexRead into e.g. PropertyRead.
 struct Length : public ExprNode<Length> {
   IndexSet indexSet;
   static Expr make(IndexSet indexSet);

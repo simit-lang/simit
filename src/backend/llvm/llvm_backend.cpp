@@ -93,14 +93,24 @@ Function* LLVMBackend::compile(ir::Func func) {
 
   const Environment& env = func.getEnvironment();
 
+  // Emit global constants
+  // TODO
+
   // Emit global externs
   for (auto& globalExtern : env.getExterns()) {
     Type type = globalExtern.getType();
-    llvm::Type* globalType = llvmType(globalExtern.getType(),globalAddrspace());
-    llvm::Constant* initializer = defaultInitializer(globalType);
+    int addrspace = globalAddrspace();
+
+    // Make sure extern structs are packed, so that we can correctly set them
+    llvm::Type* externType =
+        (globalExtern.getType().isSet())
+          ? llvmType(*globalExtern.getType().toSet(), addrspace, true)
+          : llvmType(globalExtern.getType(), addrspace);
+
+    llvm::Constant* initializer = defaultInitializer(externType);
     llvm::GlobalVariable* globalPtr =
         new llvm::GlobalVariable(*module,
-                                 globalType,
+                                 externType,
                                  false,
                                  llvm::GlobalValue::ExternalLinkage,
                                  initializer,
@@ -114,6 +124,9 @@ Function* LLVMBackend::compile(ir::Func func) {
     this->symtable.insert(globalExtern, globalPtr);
     this->globals.insert(globalExtern);
   }
+
+  // Emit global temporaries
+  // TODO
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);

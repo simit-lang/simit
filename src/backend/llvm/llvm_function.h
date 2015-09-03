@@ -49,7 +49,7 @@ class LLVMFunction : public backend::Function {
   std::map<std::string, std::unique_ptr<Actual>> actuals;
 
   /// Globals storage
-  std::map<std::string,void**> globals;
+  std::map<std::string, void**> externPtrs;
 
   bool initialized;
   FuncType deinit;

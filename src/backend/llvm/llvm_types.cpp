@@ -56,7 +56,8 @@ llvm::Type* llvmType(const Type& type, unsigned addrspace) {
 }
 
 // TODO: replace anonymous struct with one struct per element and set type
-llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace) {
+llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace,
+                           bool packed) {
   const ElementType *elemType = setType.elementType.toElement();
   vector<llvm::Type*> llvmFieldTypes;
 
@@ -82,7 +83,7 @@ llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace) {
   for (const Field &field : elemType->fields) {
     llvmFieldTypes.push_back(llvmType(field.type, addrspace));
   }
-  return llvm::StructType::get(LLVM_CTX, llvmFieldTypes);
+  return llvm::StructType::get(LLVM_CTX, llvmFieldTypes, packed);
 }
 
 llvm::PointerType* llvmType(const TensorType& type, unsigned addrspace) {
