@@ -40,17 +40,19 @@ LLVMFunction::LLVMFunction(ir::Func func, llvm::Function* llvmFunc,
       engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
       initialized(false), deinit(nullptr) {
 
-  const Environment* env = getEnvironment();
-  for (const string& name : env->getBindableNames()) {
-    Var bindable = env->getBindable(name);
+  const Environment& env = getEnvironment();
 
-    /// Store a pointer to each of the bindable's extern in externPtrs
+  // Set up pointers for binding externs
+  for (const string& name : env.getBindableNames()) {
+    Var bindable = env.getBindable(name);
+
+    // Store a pointer to each of the bindable's extern in externPtrs
     vector<void**> extPtrs;
-    for (const Var& ext : env->getExternsOfBindable(bindable)) {
-      llvm::GlobalValue* llvmGlobal = module->getNamedValue(ext.getName());
-      void** globalPtr = (void**)executionEngine->getPointerToGlobal(llvmGlobal);
-      *globalPtr = nullptr;
-      extPtrs.push_back(globalPtr);
+    for (const Var& ext : env.getExternsOfBindable(bindable)) {
+      llvm::GlobalValue* llvmExt = module->getNamedValue(ext.getName());
+      void** extPtr = (void**)executionEngine->getPointerToGlobal(llvmExt);
+      *extPtr = nullptr;
+      extPtrs.push_back(extPtr);
     }
     iassert(!util::contains(this->externPtrs, name));
     this->externPtrs.insert({name, extPtrs});

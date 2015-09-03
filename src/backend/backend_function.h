@@ -70,7 +70,7 @@ public:
   bool hasBindable(std::string bindable) const;
   const ir::Type& getBindableType(std::string bindable) const;
 
-  const ir::Environment* getEnvironment() const;
+  const ir::Environment& getEnvironment() const;
 
 private:
   ir::Environment* environment;

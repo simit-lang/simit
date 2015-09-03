@@ -3,6 +3,7 @@
 #include "tensor.h"
 #include "graph.h"
 #include "ir.h"
+#include "lower/index_expressions/lower_scatter_workspace.h"
 
 using namespace simit::ir;
 
@@ -89,6 +90,54 @@ TEST(Function, bindVector) {
   ASSERT_EQ(bExpected, bArg);
 }
 
-TEST(Function, bindSparseTensor) {
+TEST(DISABLED_Function, bindSparseTensor) {
+  Type vertexType = ElementType::make("vertex", {});
+  Type vertexSetType = SetType::make(vertexType, {});
+  Var V("V", vertexSetType);
 
+  IndexDomain dim({V});
+  IndexVar i("i", dim);
+  IndexVar j("j", dim);
+
+  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
+  Var A("A", tensorType);
+  Expr negExpr = IndexExpr::make({i,j}, -VarExpr::make(A)(i,j));
+
+  // Create environment and compile
+  Environment env;
+  env.addExtern(V);
+  env.addExtern(A);
+  Stmt neg = lowerScatterWorkspace(A, to<IndexExpr>(negExpr), &env);
+  std::cout << neg << std::endl << std::endl;
+  simit::Function function = getTestBackend()->compile(neg, env);
+
+  // Create and bind arguments
+  simit::Set Varg;
+  Varg.add();
+  Varg.add();
+  Varg.add();
+  function.bind("V", &Varg);
+
+  // 1.0 2.0 0.0
+  // 0.0 3.0 4.0
+  // 0.0 0.0 0.0
+  int A_row_ptr[4] = {0, 2, 4, 4};
+  int A_col_ind[4] = {0, 1, 1, 2};
+  double A_vals[4] = {1.0, 2.0, 3.0, 4.0};
+  std::cout << "A: ";
+  for (int i=0; i < 4; ++i) {
+    std::cout << A_vals[i] << ",";
+  }
+  std::cout << std::endl;
+  function.bind("A", A_row_ptr, A_col_ind, A_vals);
+
+
+  // Run and check output
+  function.runSafe();
+
+  std::cout << "A:  " << std::endl;
+  for (int i=0; i < 4; ++i) {
+    std::cout << A_vals[i] << ",";
+  }
+  std::cout << std::endl;
 }

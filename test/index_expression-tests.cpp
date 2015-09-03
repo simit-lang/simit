@@ -1,5 +1,6 @@
 #include "simit-test.h"
 
+#include "graph.h"
 #include "ir.h"
 #include "environment.h"
 #include "lower/index_expressions/lower_scatter_workspace.h"
@@ -10,9 +11,9 @@ using namespace simit::ir;
 TEST(IndexExpression, add) {
   Type vertexType = ElementType::make("vertex", {});
   Type vertexSetType = SetType::make(vertexType, {});
-  Var vertexSet("V", vertexSetType);
+  Var V("V", vertexSetType);
 
-  IndexDomain dim({vertexSet});
+  IndexDomain dim({V});
   IndexVar i("i", dim);
   IndexVar j("j", dim);
 
@@ -23,6 +24,7 @@ TEST(IndexExpression, add) {
   Expr add = IndexExpr::make({i,j}, B(i,j) + C(i,j));
 
   Environment env;
+  env.addExtern(V);
   env.addExtern(A);
   env.addExtern(to<VarExpr>(B)->var);
   env.addExtern(to<VarExpr>(C)->var);
@@ -34,6 +36,12 @@ TEST(IndexExpression, add) {
   std::cout << std::endl;
 
   simit::Function function = getTestBackend()->compile(loops, env);
+
+  /// The size of V determines the dimensions of the matrices (we don't support
+  /// sparse matrices with range dimensions yet).
+  simit::Set Varg;
+  Varg.add(); Varg.add(); Varg.add();
+  function.bind("V", &Varg);
 
   // 1.0 2.0 0.0
   // 3.0 4.0 0.0

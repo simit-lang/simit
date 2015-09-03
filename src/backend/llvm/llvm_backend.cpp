@@ -97,36 +97,23 @@ Function* LLVMBackend::compile(ir::Func func) {
   // TODO
 
   // Emit global externs
-  for (auto& globalExtern : env.getExterns()) {
-    Type type = globalExtern.getType();
-    int addrspace = globalAddrspace();
-
-    // Make sure extern structs are packed, so that we can correctly set them
-    llvm::Type* externType =
-        (globalExtern.getType().isSet())
-          ? llvmType(*globalExtern.getType().toSet(), addrspace, true)
-          : llvmType(globalExtern.getType(), addrspace);
-
-    llvm::Constant* initializer = defaultInitializer(externType);
-    llvm::GlobalVariable* globalPtr =
-        new llvm::GlobalVariable(*module,
-                                 externType,
-                                 false,
-                                 llvm::GlobalValue::ExternalLinkage,
-                                 initializer,
-                                 globalExtern.getName(),
-                                 nullptr,
-                                 llvm::GlobalVariable::NotThreadLocal,
-                                 globalAddrspace(),
-                                 true);
-    globalPtr->setAlignment(8);
-
-    this->symtable.insert(globalExtern, globalPtr);
-    this->globals.insert(globalExtern);
+  for (const Var& ext : env.getExterns()) {
+    llvm::GlobalVariable* ptr = createGlobal(module, ext,
+                                             llvm::GlobalValue::ExternalLinkage,
+                                             globalAddrspace());
+    this->symtable.insert(ext, ptr);
+    this->globals.insert(ext);
   }
 
   // Emit global temporaries
-  // TODO
+  for (const Var& tmp : env.getTemporaries()) {
+    llvm::GlobalVariable* ptr = createGlobal(module, tmp,
+                                             llvm::GlobalValue::PrivateLinkage,
+                                             globalAddrspace());
+    this->symtable.insert(tmp, ptr);
+    this->globals.insert(tmp);
+  }
+
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);

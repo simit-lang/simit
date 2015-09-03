@@ -174,7 +174,7 @@ static Stmt createFastForwardLoop(const TensorIndexVar &tensorIndexVar) {
 ///             of the intersection between the tensorIndexVars.
 static Stmt createSubsetLoopStmt(const Var &inductionVar,
                                  const vector<TensorIndexVar> &tensorIndexVars,
-                                 Stmt body, Environment* env) {
+                                 Stmt body) {
   iassert(tensorIndexVars.size() > 0);
 
   Stmt loop;
@@ -268,14 +268,16 @@ static Stmt createSubsetLoopStmt(const Var &inductionVar,
   return loop;
 }
 
-static Stmt createSubsetLoopStmt(const Expr &target, const Var &inductionVar,
-                                 const SubsetLoop &subsetLoop,
-                                 Environment* env) {
-  Stmt computeStatement = Store::make(target, inductionVar,
-                                      subsetLoop.getComputeExpression(),
-                                      subsetLoop.getCompoundOperator());
+static
+Stmt createSubsetLoopStmt(const Expr &target, const Var &inductionVar,
+                          const SubsetLoop &subsetLoop,
+                          Environment* environment) {
+  Stmt computeStmt = Store::make(target, inductionVar,
+                                 subsetLoop.getComputeExpression(),
+                                 subsetLoop.getCompoundOperator());
+  computeStmt = Block::make(computeStmt, Print::make(subsetLoop.getComputeExpression()));
   return createSubsetLoopStmt(inductionVar, subsetLoop.getTensorIndexVars(),
-                              computeStatement, env);
+                              computeStmt);
 }
 
 static string tensorSliceString(const vector<IndexVar> &vars,
@@ -313,18 +315,20 @@ static string tensorSliceString(const Expr &expr, const IndexVar &sliceVar) {
 }
 
 Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
-                           Environment* env) {
+                           Environment* environment) {
+  iassert(target.getType().isTensor());
+  const TensorType* type = target.getType().toTensor();
+
   // Create loops
   vector<IndexVariableLoop> loops = createLoopNest(indexExpression);
 
-  // Create workspace
-  iassert(target.getType().isTensor());
-
-  ScalarType workspaceComponentType =target.getType().toTensor()->componentType;
-  IndexDomain workspaceDomain = loops[loops.size()-1].getIndexVar().getDomain();
-  Type workspaceType = TensorType::make(workspaceComponentType,
-                                        {workspaceDomain});
+  // Create workspace on target
+  ScalarType workspaceCType = type->componentType;
+  tassert(type->order()==2) << "lowerScatterWorkspace only works for matrices.";
+  IndexDomain workspaceDomain = type->getDimensions()[1];  // Row workspace
+  Type workspaceType = TensorType::make(workspaceCType, {workspaceDomain});
   Var workspace("workspace", workspaceType);
+  environment->addTemporary(workspace);
 
   // Emit loops
   Stmt loopNest;
@@ -346,7 +350,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       Var linkedInductionVar  = loop.getLinkedLoop().getInductionVar();
 
       vector<SubsetLoop> subsetLoops =
-          createSubsetLoops(indexExpression, loop, env);
+          createSubsetLoops(indexExpression, loop, environment);
 
       vector<Stmt> loopStatements;
 
@@ -357,7 +361,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       // Create each subset loop and add their results to the workspace
       for (SubsetLoop &subsetLoop : subsetLoops) {
         Stmt loopStmt = createSubsetLoopStmt(workspace, inductionVar,
-                                             subsetLoop, env);
+                                             subsetLoop, environment);
         string comment = "workspace " +
             util::toString(subsetLoop.getCompoundOperator())+"= " +
             tensorSliceString(subsetLoop.getIndexExpression(), indexVar);
@@ -370,9 +374,9 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       auto& resultVars = indexExpression->resultVars;
 
       TensorIndex resultTensorIndex =
-          env->getTensorIndex(target,
-                              util::locate(resultVars, linkedIndexVar),
-                              util::locate(resultVars, indexVar));
+          environment->getTensorIndex(target,
+                                      util::locate(resultVars, linkedIndexVar),
+                                      util::locate(resultVars, indexVar));
 
       TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),
                                     linkedInductionVar, resultTensorIndex);
@@ -382,8 +386,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
                                            Load::make(workspace, inductionVar));
       Stmt resetWorkspace = Store::make(workspace, inductionVar, 0.0);
       Stmt body = Block::make(copyFromWorkspace, resetWorkspace);
-      Stmt loopStmt = createSubsetLoopStmt(inductionVar, {resultIndexVar},
-                                           body, env);
+      Stmt loopStmt = createSubsetLoopStmt(inductionVar, {resultIndexVar},body);
       string comment = toString(target)
                      + tensorSliceString(resultVars, loop.getIndexVar())
                      + " = workspace";

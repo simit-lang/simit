@@ -5,6 +5,8 @@
 #include "llvm_util.h"
 #include "ir.h"
 
+#include "llvm/IR/GlobalVariable.h"
+
 using namespace std;
 using namespace simit::ir;
 
@@ -169,6 +171,34 @@ llvm::Function* createPrototype(const std::string &name,
 
   return createPrototype(name, llvmArgNames, llvmArgTypes,
                          module, externalLinkage, doesNotThrow);
+}
+
+llvm::GlobalVariable* createGlobal(llvm::Module *module, const Var& var,
+                                   llvm::GlobalValue::LinkageTypes linkage,
+                                   unsigned addrspace) {
+  bool isExtern = (linkage == llvm::GlobalValue::ExternalLinkage);
+
+  Type type = var.getType();
+
+  // Make sure extern structs are packed, so that we can correctly set them
+  llvm::Type* externType = (type.isSet())
+                             ? llvmType(*type.toSet(), addrspace, isExtern)
+                             : llvmType(type, addrspace);
+
+  llvm::Constant* initializer = defaultInitializer(externType);
+  llvm::GlobalVariable* globalPtr =
+      new llvm::GlobalVariable(*module,
+                               externType,
+                               false,
+                               linkage,
+                               initializer,
+                               var.getName(),
+                               nullptr,
+                               llvm::GlobalVariable::NotThreadLocal,
+                               addrspace,
+                               isExtern);
+  globalPtr->setAlignment(8);
+  return globalPtr;
 }
 
 }}

@@ -96,8 +96,8 @@ const ir::Type& Function::getBindableType(std::string bindable) const {
   return (hasArg(bindable)) ? getArgType(bindable) : getGlobalType(bindable);
 }
 
-const ir::Environment* Function::getEnvironment() const {
-  return environment;
+const ir::Environment& Function::getEnvironment() const {
+  return *environment;
 }
 
 }}
