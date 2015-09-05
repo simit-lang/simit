@@ -275,7 +275,6 @@ Stmt createSubsetLoopStmt(const Expr &target, const Var &inductionVar,
   Stmt computeStmt = Store::make(target, inductionVar,
                                  subsetLoop.getComputeExpression(),
                                  subsetLoop.getCompoundOperator());
-  computeStmt = Block::make(computeStmt, Print::make(subsetLoop.getComputeExpression()));
   return createSubsetLoopStmt(inductionVar, subsetLoop.getTensorIndexVars(),
                               computeStmt);
 }
@@ -384,7 +383,8 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       Stmt copyFromWorkspace = Store::make(target,
                                            resultIndexVar.getCoordinateVar(),
                                            Load::make(workspace, inductionVar));
-      Stmt resetWorkspace = Store::make(workspace, inductionVar, 0.0);
+      Expr resetVal = Literal::make(TensorType::make(workspaceCType));
+      Stmt resetWorkspace = Store::make(workspace, inductionVar, resetVal);
       Stmt body = Block::make(copyFromWorkspace, resetWorkspace);
       Stmt loopStmt = createSubsetLoopStmt(inductionVar, {resultIndexVar},body);
       string comment = toString(target)

@@ -563,9 +563,23 @@ Stmt AssignStmt::make(Var var, Expr value, CompoundOperator cop) {
 }
 
 // struct Store
-Stmt Store::make(Expr buffer, Expr index, Expr value, CompoundOperator cop) {
+Stmt Store::make(Expr buf, Expr index, Expr value, CompoundOperator cop) {
+  iassert(isScalar(value.type()));
+  // TODO: Change to only allow stores to arrays, not tensors
+//  iassert(buffer.type().isArray()) << "Can only store to arrays";
+//  iassert(value.type()==TensorType::make(buff().toArray()->elementType))
+//            << "Stored value type " << util::quote(value.type())
+//            << " does not match the element type of array "
+//            << util::quote(buff().toArray()->elementType);
+  iassert(buf.type().isArray() || buf.type().isTensor())
+      << "Can only store to arrays and tensors";
+  iassert(!buf.type().isTensor() ||
+          TensorType::make(buf.type().toTensor()->componentType)==value.type())
+      << "Stored value type " << util::quote(value.type())
+      << " does not match the component type of tensor "
+      << util::quote(buf.type().toTensor()->getBlockType()) ;
   Store *node = new Store;
-  node->buffer = buffer;
+  node->buffer = buf;
   node->index = index;
   node->value = value;
   node->cop = cop;
