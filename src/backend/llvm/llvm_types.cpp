@@ -116,6 +116,19 @@ llvm::Type *llvmFloatType() {
   }
 }
 
+llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
+  switch (stype.kind) {
+    case ScalarType::Int:
+      return llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace);
+    case ScalarType::Float:
+      return llvmFloatPtrType(addrspace);
+    case ScalarType::Boolean:
+      return llvm::Type::getInt1PtrTy(LLVM_CTX, addrspace);
+  }
+  unreachable;
+  return nullptr;
+}
+
 llvm::PointerType *llvmFloatPtrType(unsigned addrspace) {
   if (ScalarType::singleFloat()) {
     return llvm::Type::getFloatPtrTy(LLVM_CTX, addrspace);
