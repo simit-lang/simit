@@ -36,17 +36,10 @@ struct SparseMatrix {
 struct TestParams {
   Expr expr;
   vector<SparseMatrix> operands;
-  vector<simit_float> expected;
+  SparseMatrix expected;
 
-  TestParams(Expr expr, vector<SparseMatrix> operands,
-             vector<simit_float> expected)
-      : expr(expr), operands(operands), expected(expected) {}
-
-  // TODO: Get rid of this once the index generation system works properly
-  //       and we only need the expected values (constructor above)
-  SparseMatrix resultMat;
   TestParams(Expr expr, vector<SparseMatrix> operands, SparseMatrix expected)
-      : expr(expr), operands(operands), expected(expected.vals), resultMat(expected) {}
+      : expr(expr), operands(operands), expected(expected) {}
 
   friend ostream& operator<<(ostream& os, const TestParams& p) {
     IRPrinter printer(os);
@@ -119,11 +112,8 @@ TEST_P(IndexExpressionTest, Matrix) {
     })
   );
 
-  vector<simit_float> expected = GetParam().expected;
-
   // TODO: add code to initialize result indices and vals from operands
-  SparseMatrix result = GetParam().resultMat;
-  SparseMatrix resultOrig = result;
+  SparseMatrix result = GetParam().expected;
 
   vector<Var> vars;
   match(expr,
@@ -166,7 +156,8 @@ TEST_P(IndexExpressionTest, Matrix) {
   // Bind matrices
   vector<SparseMatrix> operands = GetParam().operands;
   for (const SparseMatrix& mat : operands) {
-    function.bind(mat.name, mat.rowPtr.data(), mat.colInd.data(), (void*)mat.vals.data());
+    function.bind(mat.name, mat.rowPtr.data(), mat.colInd.data(),
+                  (void*)mat.vals.data());
   }
   function.bind(result.name, result.rowPtr.data(),
                 result.colInd.data(), (void*)result.vals.data());
@@ -174,27 +165,27 @@ TEST_P(IndexExpressionTest, Matrix) {
   function.runSafe();
 
   // Check that the results are correct
-  for (auto pair : simit::util::zip(result.vals, expected)) {
+  const SparseMatrix& expected = GetParam().expected;
+  for (auto pair : simit::util::zip(result.vals, expected.vals)) {
     SIMIT_ASSERT_FLOAT_EQ(pair.first, pair.second)
         << "  Actual: " << simit::util::join(result.vals) << endl
-        << "Expected: " << simit::util::join(expected);
+        << "Expected: " << simit::util::join(expected.vals);
   }
 
-  // Check that the result indices are unchanged
-  for (auto rowPtrs : simit::util::zip(result.rowPtr, resultOrig.rowPtr)) {
+  for (auto rowPtrs : simit::util::zip(result.rowPtr, expected.rowPtr)) {
     ASSERT_EQ(rowPtrs.second, rowPtrs.first)
         << result.name << "'s rowPtr index array "
         << "was changed by compute kernel" << endl
         << "  Actual: " << simit::util::join(result.rowPtr) << endl
-        << "Original: " << simit::util::join(resultOrig.rowPtr);
+        << "Original: " << simit::util::join(expected.rowPtr);
   }
 
-  for (auto colInds : simit::util::zip(result.colInd, resultOrig.colInd)) {
+  for (auto colInds : simit::util::zip(result.colInd, expected.colInd)) {
     ASSERT_EQ(colInds.second, colInds.first)
         << result.name << "'s colInd index array "
         << "was changed by compute kernel" << endl
         << "  Actual: " << simit::util::join(result.colInd) << endl
-        << "Original: " << simit::util::join(resultOrig.colInd);
+        << "Original: " << simit::util::join(expected.colInd);
   }
 
   // Check that the operands are unchanged
