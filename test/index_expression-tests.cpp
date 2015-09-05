@@ -2,86 +2,292 @@
 
 #include "graph.h"
 #include "ir.h"
+#include "ir_printer.h"
 #include "environment.h"
 #include "lower/index_expressions/lower_scatter_workspace.h"
+#include "util/util.h"
+#include "util/collections.h"
 
 using namespace std;
 using namespace simit::ir;
 
-TEST(IndexExpression, add) {
-  Type vertexType = ElementType::make("Vertex", {});
-  Type vertexSetType = SetType::make(vertexType, {});
-  Var V("V", vertexSetType);
+struct SparseMatrix {
+  string name;
+  size_t M, N;
+  vector<int> rowPtr;
+  vector<int> colInd;
+  vector<simit_float> vals;
 
-  IndexDomain dim({V});
-  IndexVar i("i", dim);
-  IndexVar j("j", dim);
+  SparseMatrix() {} // TODO Remove
 
-  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
-  Var A("A", tensorType);
-  Expr B = Var("B", tensorType);
-  Expr C = Var("C", tensorType);
-  Expr add = IndexExpr::make({i,j}, B(i,j) + C(i,j));
+  SparseMatrix(string name, size_t M, size_t N,
+               vector<int> rowPtr, vector<int> colInd, vector<simit_float> vals)
+      : name(name), M(M), N(N), rowPtr(rowPtr), colInd(colInd), vals(vals) {}
 
+  friend ostream& operator<<(ostream& os, const SparseMatrix& m) {
+    os << m.name << ": " << endl;
+    os << " " << simit::util::join(m.rowPtr) << endl;
+    os << " " << simit::util::join(m.colInd) << endl;
+    os << " " << simit::util::join(m.vals);
+    return os;
+  }
+};
+
+struct TestParams {
+  Expr expr;
+  vector<SparseMatrix> operands;
+  vector<simit_float> expected;
+
+  TestParams(Expr expr, vector<SparseMatrix> operands,
+             vector<simit_float> expected)
+      : expr(expr), operands(operands), expected(expected) {}
+
+  // TODO: Get rid of this once the index generation system works properly
+  //       and we only need the expected values (constructor above)
+  SparseMatrix resultMat;
+  TestParams(Expr expr, vector<SparseMatrix> operands, SparseMatrix expected)
+      : expr(expr), operands(operands), expected(expected.vals), resultMat(expected) {}
+
+  friend ostream& operator<<(ostream& os, const TestParams& p) {
+    IRPrinter printer(os);
+    printer.skipTopExprParenthesis();
+    os << "A(i,j) = ";
+    printer.print(p.expr);
+    os << endl;
+    os << simit::util::join(p.operands, "\n");
+    return os;
+  }
+};
+
+class IndexExpressionTest : public ::testing::TestWithParam<TestParams> {};
+
+static const Type VType = SetType::make(ElementType::make("Vertex", {}), {});
+static const Var V("V", VType);
+static const IndexDomain dim({V});
+
+static const IndexVar i("i", dim);
+static const IndexVar j("j", dim);
+
+Var createMatrixVar(string name, IndexVar i, IndexVar j) {
+  return Var(name, TensorType::make(typeOf<simit_float>(),
+                                    {i.getDomain(), j.getDomain()}));
+}
+
+Expr B(IndexVar i, IndexVar j) {return Expr(createMatrixVar("B",i,j))(i,j);}
+Expr C(IndexVar i, IndexVar j) {return Expr(createMatrixVar("C",i,j))(i,j);}
+Expr D(IndexVar i, IndexVar j) {return Expr(createMatrixVar("D",i,j))(i,j);}
+
+TEST_P(IndexExpressionTest, Matrix) {
+  Expr expr = GetParam().expr;
+
+  map<string,const SparseMatrix*> operandsFromNames;
+  for (const SparseMatrix& operand : GetParam().operands) {
+    iassert(!simit::util::contains(operandsFromNames, operand.name));
+    operandsFromNames.insert({operand.name, &operand});
+  }
+
+  // Get the size of each set and verify sizes are consistent
+  map<string, size_t> setSizes;
+  vector<Var> setVars;
+  match(expr,
+    std::function<void(const VarExpr*)>([&](const VarExpr* op) {
+      const Var& var = op->var;
+      const SparseMatrix* operand = operandsFromNames.at(var.getName());
+      iassert(var.getType().isTensor());
+      vector<IndexDomain> dims = var.getType().toTensor()->getDimensions();
+      for (const IndexDomain& dim : dims) {
+        int currDim = 0;
+        for (const IndexSet& is : dim.getIndexSets()) {
+          if (is.getKind() == IndexSet::Set) {
+            Expr setExpr = is.getSet();
+            iassert(isa<VarExpr>(setExpr));
+            const Var& setVar = to<VarExpr>(setExpr)->var;
+            string setName = setVar.getName();
+            size_t setSize = (currDim==0) ? operand->M : operand->N;
+            if (simit::util::contains(setSizes, setName)) {
+              iassert(setSizes.at(setName) == setSize)
+                  << "inconsistent dimension size"  ;
+            }
+            else {
+              setSizes.insert({setName, setSize});
+              setVars.push_back(setVar);
+            }
+          }
+          ++currDim;
+        }
+      }
+    })
+  );
+
+  vector<simit_float> expected = GetParam().expected;
+
+  // TODO: add code to initialize result indices and vals from operands
+  SparseMatrix result = GetParam().resultMat;
+  SparseMatrix resultOrig = result;
+
+  vector<Var> vars;
+  match(expr,
+    std::function<void(const VarExpr*)>([&vars](const VarExpr* op) {
+      vars.push_back(op->var);
+    })
+  );
+
+  Var A = createMatrixVar("A", i,j);
+
+  // Set up environment
   Environment env;
-  env.addExtern(V);
+  for (auto& setVar : setVars) {
+    env.addExtern(setVar);
+  }
   env.addExtern(A);
-  env.addExtern(to<VarExpr>(B)->var);
-  env.addExtern(to<VarExpr>(C)->var);
+  for (const Var& var : vars) {
+    env.addExtern(var);
+  }
 
-  Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add), &env);
+  Expr iexpr = IndexExpr::make({i,j}, expr);
+  Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(iexpr), &env);
+//  std::cout << loops << std::endl;
+
   simit::Function function = getTestBackend()->compile(loops, env);
 
-  /// The size of V determines the dimensions of the matrices (we don't support
-  /// sparse matrices with range dimensions yet).
-  simit::Set Varg;
-  Varg.add(); Varg.add(); Varg.add();
-  function.bind("V", &Varg);
+  // Find and bind set variables
+  vector<unique_ptr<simit::Set>> sets;
+  for (auto& setSizePair : setSizes) {
+    string setName = setSizePair.first;
+    size_t setSize = setSizePair.second;
+    simit::Set* set = new simit::Set(setName);
+    sets.push_back(unique_ptr<simit::Set>(set));
+    for (size_t i=0; i < setSize; ++i) {
+      set->add();
+    }
+    function.bind(setName, set);
+  }
 
-  // 1.0 2.0 0.0
-  // 3.0 4.0 0.0
-  // 0.0 0.0 0.0
-  int B_rowPtr[4]  = {0, 2, 4, 4};
-  int B_colInd[4]  = {0, 1, 0, 1};
-  double B_vals[4] = {1.0, 2.0, 3.0, 4.0};
-  function.bind("B", B_rowPtr, B_colInd, B_vals);
-
-  // 0.0 0.0 0.0
-  // 0.0 0.1 0.2
-  // 0.0 0.3 0.4
-  int C_rowPtr[4]  = {0, 0, 2, 4};
-  int C_colInd[4]  = {1, 2, 1, 2};
-  double C_vals[4] = {0.1, 0.2, 0.3, 0.4};
-  function.bind("C", C_rowPtr, C_colInd, C_vals);
-
-  // 1.0 2.0 0.0
-  // 3.0 4.1 0.2
-  // 0.0 0.3 0.4
-  int A_rowPtr[4] = {0, 2, 5, 7};
-  int A_colInd[7] = {0, 1, 0, 1, 2, 1, 2};
-  double A_vals[7] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
-  function.bind("A", A_rowPtr, A_colInd, A_vals);
+  // Bind matrices
+  vector<SparseMatrix> operands = GetParam().operands;
+  for (const SparseMatrix& mat : operands) {
+    function.bind(mat.name, mat.rowPtr.data(), mat.colInd.data(), (void*)mat.vals.data());
+  }
+  function.bind(result.name, result.rowPtr.data(),
+                result.colInd.data(), (void*)result.vals.data());
 
   function.runSafe();
 
-  SIMIT_EXPECT_FLOAT_EQ(1.0, B_vals[0]);
-  SIMIT_EXPECT_FLOAT_EQ(2.0, B_vals[1]);
-  SIMIT_EXPECT_FLOAT_EQ(3.0, B_vals[2]);
-  SIMIT_EXPECT_FLOAT_EQ(4.0, B_vals[3]);
+  // Check that the results are correct
+  for (auto pair : simit::util::zip(result.vals, expected)) {
+    SIMIT_ASSERT_FLOAT_EQ(pair.first, pair.second)
+        << "  Actual: " << simit::util::join(result.vals) << endl
+        << "Expected: " << simit::util::join(expected);
+  }
 
-  SIMIT_EXPECT_FLOAT_EQ(0.1, C_vals[0]);
-  SIMIT_EXPECT_FLOAT_EQ(0.2, C_vals[1]);
-  SIMIT_EXPECT_FLOAT_EQ(0.3, C_vals[2]);
-  SIMIT_EXPECT_FLOAT_EQ(0.4, C_vals[3]);
+  // Check that the result indices are unchanged
+  for (auto rowPtrs : simit::util::zip(result.rowPtr, resultOrig.rowPtr)) {
+    ASSERT_EQ(rowPtrs.second, rowPtrs.first)
+        << result.name << "'s rowPtr index array "
+        << "was changed by compute kernel" << endl
+        << "  Actual: " << simit::util::join(result.rowPtr) << endl
+        << "Original: " << simit::util::join(resultOrig.rowPtr);
+  }
 
-  SIMIT_EXPECT_FLOAT_EQ(1.0, A_vals[0]);
-  SIMIT_EXPECT_FLOAT_EQ(2.0, A_vals[1]);
-  SIMIT_EXPECT_FLOAT_EQ(3.0, A_vals[2]);
-  SIMIT_EXPECT_FLOAT_EQ(4.1, A_vals[3]);
-  SIMIT_EXPECT_FLOAT_EQ(0.2, A_vals[4]);
-  SIMIT_EXPECT_FLOAT_EQ(0.3, A_vals[5]);
-  SIMIT_EXPECT_FLOAT_EQ(0.4, A_vals[6]);
+  for (auto colInds : simit::util::zip(result.colInd, resultOrig.colInd)) {
+    ASSERT_EQ(colInds.second, colInds.first)
+        << result.name << "'s colInd index array "
+        << "was changed by compute kernel" << endl
+        << "  Actual: " << simit::util::join(result.colInd) << endl
+        << "Original: " << simit::util::join(resultOrig.colInd);
+  }
+
+  // Check that the operands are unchanged
+  for (auto operandPair : simit::util::zip(operands, GetParam().operands)) {
+    auto& opCopy = operandPair.first;
+    auto& opOrig = operandPair.second;
+
+    for (auto rowPtrs : simit::util::zip(opCopy.rowPtr, opOrig.rowPtr)) {
+      ASSERT_EQ(rowPtrs.second, rowPtrs.first)
+          << operandPair.first.name << "'s rowPtr index array "
+          << "was changed by compute kernel" << endl
+          << "  Actual: " << simit::util::join(opCopy.rowPtr) << endl
+          << "Original: " << simit::util::join(opOrig.rowPtr);
+    }
+
+    for (auto colInds : simit::util::zip(opCopy.colInd, opOrig.colInd)) {
+      ASSERT_EQ(colInds.second, colInds.first)
+          << operandPair.first.name << "'s colInd index array "
+          << "was changed by compute kernel" << endl
+          << "  Actual: " << simit::util::join(opCopy.colInd) << endl
+          << "Original: " << simit::util::join(opOrig.colInd);
+    }
+
+    for (auto vals : simit::util::zip(opCopy.vals, opOrig.vals)) {
+      SIMIT_ASSERT_FLOAT_EQ(vals.second, vals.first)
+          << operandPair.first.name << "'s value array "
+          << "was changed by compute kernel" << endl
+          << "  Actual: " << simit::util::join(opCopy.vals) << endl
+          << "Original: " << simit::util::join(opOrig.vals);
+    }
+  }
 }
+
+INSTANTIATE_TEST_CASE_P(Add, IndexExpressionTest,
+                        testing::Values(
+                        TestParams(
+                          B(i,j) + C(i,j),
+                          {
+                            // 1.0 2.0 0.0
+                            // 3.0 4.0 0.0
+                            // 0.0 0.0 0.0
+                            SparseMatrix("B", 3, 3,
+                                         {0, 2, 4, 4},
+                                         {0, 1, 0, 1},
+                                         {1.0, 2.0, 3.0, 4.0}),
+                            // 0.0 0.0 0.0
+                            // 0.0 0.1 0.2
+                            // 0.0 0.3 0.4
+                            SparseMatrix("C", 3, 3,
+                                         {0, 0, 2, 4},
+                                         {1, 2, 1, 2},
+                                         {0.1, 0.2, 0.3, 0.4})
+                          },
+                          // 1.0 2.0 0.0
+                          // 3.0 4.1 0.2
+                          // 0.0 0.3 0.4
+                          SparseMatrix("A", 3, 3,
+                                       {0, 2, 5, 7},
+                                       {0, 1, 0, 1, 2, 1, 2},
+                                       {1.0, 2.0, 3.0, 4.1, 0.2, 0.3, 0.4})
+                        )
+                        ));
+
+
+INSTANTIATE_TEST_CASE_P(DISABLED_Mul, IndexExpressionTest,
+                        testing::Values(
+                        TestParams(
+                          B(i,j) * C(i,j),
+                          {
+                            // 1.0 2.0 0.0
+                            // 3.0 4.0 0.0
+                            // 0.0 0.0 0.0
+                            SparseMatrix("B", 3, 3,
+                                         {0, 2, 4, 4},
+                                         {0, 1, 0, 1},
+                                         {1.0, 2.0, 3.0, 4.0}),
+                            // 0.0 0.0 0.0
+                            // 0.0 0.1 0.2
+                            // 0.0 0.3 0.4
+                            SparseMatrix("C", 3, 3,
+                                         {0, 0, 2, 4},
+                                         {1, 2, 1, 2},
+                                         {0.1, 0.2, 0.3, 0.4})
+                          },
+                          // 0.0 0.0 0.0
+                          // 0.0 0.4 0.0
+                          // 0.0 0.0 0.0
+                          SparseMatrix("A", 3, 3,
+                                       {0, 0, 1, 1},
+                                       {1},
+                                       {0.4})
+                        )
+                        ));
 
 TEST(IndexExpression, mul) {
   Type vertexType = ElementType::make("Vertex", {});

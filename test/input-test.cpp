@@ -163,7 +163,7 @@ void runTest(ProgramTestParam param) {
   std::string path();                                                        \
   INSTANTIATE_TEST_CASE_P(name, suite,                                       \
                           ValuesIn(readTestsFromFile(string(TEST_INPUT_DIR)+ \
-                                                       "/"+string(#suite),   \
+                                                     "/"+string(#suite),     \
                                                      string(#name)+".sim")))
 
 /* Examples */

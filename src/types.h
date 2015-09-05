@@ -99,6 +99,29 @@ struct ScalarType {
   bool isBoolean() const { return kind == Boolean; }
 };
 
+/** Helper to convert from C++ type to Simit Type. */
+template<typename T> inline ScalarType typeOf() {
+  ierror << "Unsupported type";
+  return ScalarType::Int; // Suppress warning
+}
+
+template<> inline ScalarType typeOf<int>() {
+  return ScalarType::Int;
+}
+
+template<> inline ScalarType typeOf<float>() {
+  return ScalarType::Float;
+}
+
+template<> inline ScalarType typeOf<double>() {
+  return ScalarType::Float;
+}
+
+template<> inline ScalarType typeOf<bool>() {
+  return ScalarType::Boolean;
+}
+
+
 // TODO: Change the implementation of TensorType store a blockType plus outer
 //       dimensions.  With the current scheme we cannot distinguish between a
 //       vector of matrices and a matrix of vectors, both of which must be
