@@ -134,6 +134,17 @@ private:
     return subsetLoops;
   }
 
+  void visit(const Neg* op) {
+    vector<SubsetLoop> a = createSubsetLoops(op->a);
+    vector<SubsetLoop> c;
+    c.reserve(a.size());
+    for (auto& as : a) {
+      Expr aExpr = as.getComputeExpression();
+      c.push_back(SubsetLoop(as.getTensorIndexVars(), Neg::make(aExpr), op));
+    }
+    this->subsetLoops = c;
+  }
+
   /// Concatenates the subset loops in a an b
   inline vector<SubsetLoop> unionMerge(const vector<SubsetLoop>& a,
                                        const vector<SubsetLoop>& b,
@@ -189,24 +200,24 @@ private:
   }
 
   template <class T>
-  inline void visitBinaryUnionOperator(const T *op, CompoundOperator cop) {
+  inline void visitBinaryUnionOperator(const T* op, CompoundOperator cop) {
     this->subsetLoops = unionMerge(createSubsetLoops(op->a),
                                    createSubsetLoops(op->b),
                                    cop);
   }
 
   template <class T>
-  inline void visitBinaryIntersectionOperator(const T *op) {
+  inline void visitBinaryIntersectionOperator(const T* op) {
     this->subsetLoops = intersectionMerge(createSubsetLoops(op->a),
                                           createSubsetLoops(op->b),
                                           T::make, op);
   }
 
-  void visit(const Add *op) {
+  void visit(const Add* op) {
     visitBinaryUnionOperator(op, CompoundOperator::Add);
   }
 
-  void visit(const Sub *op) {
+  void visit(const Sub* op) {
     not_supported_yet;
     /// TODO: Add support for CompoundOperator::Sub
     //      this->subsetLoops = unionMerge(createSubsetLoops(op->a),
