@@ -8,6 +8,7 @@ namespace simit {
 namespace ir {
 class Var;
 class Func;
+class Storage;
 }
 namespace backend {
 class Function;
@@ -17,7 +18,7 @@ public:
   virtual ~BackendImpl() {}
 
   /// Compile the closure consisting of the function and a context.
-  virtual Function* compile(ir::Func func) = 0;
+  virtual Function* compile(ir::Func func, const ir::Storage& storage) = 0;
 };
 
 }}

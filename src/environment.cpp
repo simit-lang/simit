@@ -113,15 +113,6 @@ const TensorIndex& Environment::getTensorIndex(const Var& tensor,
   return content->tensorIndices.at(tensor);
 }
 
-bool Environment::hasPathExpession(const Var& tensor) const {
-  not_supported_yet;
-}
-
-const pe::PathExpression&
-Environment::getPathExpression(const Var& tensorVar) const {
-
-}
-
 void Environment::addConstant(const Var& var, const Expr& initializer) {
   content->constants.push_back({var, initializer});
 }

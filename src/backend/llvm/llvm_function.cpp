@@ -33,12 +33,12 @@ namespace backend {
 
 typedef void (*FuncPtrType)();
 
-LLVMFunction::LLVMFunction(ir::Func func, llvm::Function* llvmFunc,
-                           llvm::Module* module,
+LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
+                           llvm::Function* llvmFunc, llvm::Module* module,
                            std::shared_ptr<llvm::EngineBuilder> engineBuilder)
     : Function(func), llvmFunc(llvmFunc), module(module),
       engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
-      initialized(false), deinit(nullptr) {
+      initialized(false), deinit(nullptr), storage(storage) {
 
   const Environment& env = getEnvironment();
 

@@ -9,7 +9,7 @@ using namespace std;
 using namespace simit::ir;
 
 TEST(IndexExpression, add) {
-  Type vertexType = ElementType::make("vertex", {});
+  Type vertexType = ElementType::make("Vertex", {});
   Type vertexSetType = SetType::make(vertexType, {});
   Var V("V", vertexSetType);
 
@@ -29,13 +29,15 @@ TEST(IndexExpression, add) {
   env.addExtern(to<VarExpr>(B)->var);
   env.addExtern(to<VarExpr>(C)->var);
 
+  Storage storage;
+
+
   std::cout << env << std::endl << std::endl;
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add), &env);
   std::cout << loops << std::endl << std::endl;
 //  std::cout << env << std::endl << std::endl;
-  std::cout << std::endl;
 
-  simit::Function function = getTestBackend()->compile(loops, env);
+  simit::Function function = getTestBackend()->compile(loops, env, storage);
 
   /// The size of V determines the dimensions of the matrices (we don't support
   /// sparse matrices with range dimensions yet).
@@ -71,7 +73,7 @@ TEST(IndexExpression, add) {
 }
 
 TEST(IndexExpression, mul) {
-  Type vertexType = ElementType::make("vertex", {});
+  Type vertexType = ElementType::make("Vertex", {});
   Type vertexSetType = SetType::make(vertexType, {});
   Var vertexSet("V", vertexSetType);
 
@@ -95,7 +97,7 @@ TEST(IndexExpression, mul) {
 }
 
 TEST(IndexExpression, addmul) {
-  Type vertexType = ElementType::make("vertex", {});
+  Type vertexType = ElementType::make("Vertex", {});
   Type vertexSetType = SetType::make(vertexType, {});
   Var vertexSet("V", vertexSetType);
 
@@ -121,7 +123,7 @@ TEST(IndexExpression, addmul) {
 }
 
 TEST(IndexExpression, muladd) {
-  Type vertexType = ElementType::make("vertex", {});
+  Type vertexType = ElementType::make("Vertex", {});
   Type vertexSetType = SetType::make(vertexType, {});
   Var vertexSet("V", vertexSetType);
 

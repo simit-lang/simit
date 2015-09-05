@@ -26,8 +26,12 @@ const std::vector<std::string> VALID_BACKENDS = {
 std::string kBackend;
 
 static Function compile(ir::Func func, backend::Backend *backend) {
+  ir::Storage storage;
+  // Fill in storage path expressions, etc.
+  /// map<Var,pe::PathExpressions> pes = assignPathExpressions(func);
+  /// storage.addPathExpressions(pes);
   func = lower(func);
-  return Function(backend->compile(func));
+  return Function(backend->compile(func, storage));
 }
 
 

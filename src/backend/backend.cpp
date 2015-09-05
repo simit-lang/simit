@@ -40,12 +40,21 @@ Backend::~Backend() {
   delete pimpl;
 }
 
-Function* Backend::compile(const Func& func) {
-  return pimpl->compile(func);
+backend::Function* Backend::compile(const ir::Func& func) {
+  return compile(func, Storage());
+}
+
+Function* Backend::compile(const Func& func, const Storage& storage) {
+  return pimpl->compile(func, storage);
 }
 
 backend::Function* Backend::compile(const Stmt& stmt, const Environment& env) {
-  Environment environment = env;
+  return compile(stmt, env, Storage());
+}
+
+backend::Function* Backend::compile(const Stmt& stmt, const Environment& env,
+                                    const Storage& storage) {
+  Environment environment = env; // copy
 
   // Add output and undefined variable in the stmt to the environment as externs
   std::set<Var> globalsSet;
@@ -107,7 +116,7 @@ backend::Function* Backend::compile(const Stmt& stmt, const Environment& env) {
   );
 
   Func func("main", {}, {}, stmt, environment);
-  return pimpl->compile(func);
+  return pimpl->compile(func, storage);
 }
 
 Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
@@ -121,7 +130,7 @@ Function* Backend::compile(const Stmt& stmt, vector<ir::Var> output){
     }
   }
 
-  return compile(stmt, env);
+  return compile(stmt, env, Storage());
 }
 
 }}

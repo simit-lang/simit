@@ -2,6 +2,7 @@
 
 #include "ir.h"
 #include "ir_visitor.h"
+#include "path_expressions.h"
 
 using namespace std;
 
@@ -19,6 +20,9 @@ struct TensorStorage::Content {
 
   /// Whether the tensor needs storage allocated at runtime.
   bool needsInitialization;
+
+  /// A path expression describing
+  pe::PathExpression pathExpression;
 
   Content(Kind kind) : kind(kind) {}
 };
@@ -72,6 +76,18 @@ const Expr &TensorStorage::getSystemStorageSet() const {
 
 bool TensorStorage::needsInitialization() const {
   return content->needsInitialization;
+}
+
+bool TensorStorage::hasPathExpression() const {
+  return content->pathExpression.defined();
+}
+
+const pe::PathExpression& TensorStorage::getPathExpression() const {
+  return content->pathExpression;
+}
+
+void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
+  content->pathExpression = pathExpression;
 }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {

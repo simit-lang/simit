@@ -79,7 +79,7 @@ LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
 
 LLVMBackend::~LLVMBackend() {}
 
-Function* LLVMBackend::compile(ir::Func func) {
+Function* LLVMBackend::compile(ir::Func func, const ir::Storage &storage) {
   this->module = new llvm::Module("simit", LLVM_CTX);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
@@ -174,7 +174,7 @@ Function* LLVMBackend::compile(ir::Func func) {
 
     iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
-    llvm::Value *len = emitComputeLen(ttype, storage.get(var));
+    llvm::Value *len = emitComputeLen(ttype, this->storage.get(var));
     unsigned compSize = ttype->componentType.bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(compSize));
     llvm::Value *mem = builder->CreateCall(malloc, size);
@@ -238,7 +238,7 @@ Function* LLVMBackend::compile(ir::Func func) {
   mpm.run(*module);
 #endif
 
-  return new LLVMFunction(func, llvmFunc, module, engineBuilder);
+  return new LLVMFunction(func, storage, llvmFunc, module, engineBuilder);
 }
 
 void LLVMBackend::compile(const ir::Literal& literal) {

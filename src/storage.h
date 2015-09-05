@@ -7,8 +7,10 @@
 #include "intrusive_ptr.h"
 
 namespace simit {
+namespace pe {
+class PathExpression;
+}
 namespace ir {
-
 class Func;
 class Var;
 class Stmt;
@@ -73,6 +75,10 @@ public:
 
   /// True if the tensor needs storage initialized at runtime, false otherwise.
   bool needsInitialization() const;
+
+  bool hasPathExpression() const;
+  const pe::PathExpression& getPathExpression() const;
+  void setPathExpression(const pe::PathExpression& pathExpression);
 
 private:
   struct Content;

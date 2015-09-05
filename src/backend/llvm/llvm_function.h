@@ -24,7 +24,8 @@ class Actual;
 /// A Simit function that has been compiled with LLVM.
 class LLVMFunction : public backend::Function {
  public:
-  LLVMFunction(ir::Func func, llvm::Function* llvmFunc, llvm::Module* module,
+  LLVMFunction(ir::Func func, const ir::Storage &storage,
+               llvm::Function* llvmFunc, llvm::Module* module,
                std::shared_ptr<llvm::EngineBuilder> engineBuilder);
   virtual ~LLVMFunction();
 
@@ -60,6 +61,8 @@ class LLVMFunction : public backend::Function {
 
   bool initialized;
   FuncType deinit;
+
+  ir::Storage storage;
 
   FuncType createHarness(const std::string& name,
                          const llvm::SmallVector<llvm::Value*,8>& args);

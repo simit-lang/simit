@@ -64,12 +64,6 @@ public:
   const TensorIndex& getTensorIndex(const Var& tensor,
                                     unsigned sourceDim, unsigned sinkDim);
 
-  /// True if the tensor variable has a path expression, false otherwise.
-  bool hasPathExpession(const Var& tensor) const;
-
-  /// Get the path expression of a tensor variable in the environment.
-  const pe::PathExpression& getPathExpression(const Var& tensor) const;
-
   /// Insert a constant into the environment.
   void addConstant(const Var& var, const Expr& initializer);
 

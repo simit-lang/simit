@@ -19,6 +19,7 @@ struct FuncContent {
 
   Stmt* body = nullptr; // Stored as a pointer so it can be forward declared.
 
+  // TODO: Remove storage from Func
   Storage storage;
 
   ~FuncContent();
