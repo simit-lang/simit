@@ -11,6 +11,7 @@
 
 #include "backend/backend_function.h"
 #include "ir.h"
+#include "storage.h"
 
 namespace llvm {
 class ExecutionEngine;
@@ -48,10 +49,14 @@ class LLVMFunction : public backend::Function {
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;
 
   /// Function actual storage
-  std::map<std::string, std::unique_ptr<Actual>> actuals;
+  std::map<std::string, std::unique_ptr<Actual>> arguments;
+  std::map<std::string, std::unique_ptr<Actual>> globals;
 
-  /// Globals storage
+  /// Externs
   std::map<std::string, std::vector<void**>> externPtrs;
+
+  // Temporaries
+  std::map<std::string, std::vector<void**>> temporaryPtrs;
 
   bool initialized;
   FuncType deinit;
@@ -61,6 +66,9 @@ class LLVMFunction : public backend::Function {
 
   llvm::Function* getInitFunc() const;
   llvm::Function* getDeinitFunc() const;
+
+  /// Get the number of elements in the index domains.
+  size_t size(const ir::IndexDomain &dimension);
 };
 
 }}

@@ -8,7 +8,7 @@
 using namespace simit::ir;
 
 TEST(Function, bindSet) {
-  Type vertexType = ElementType::make("vertex", {Field("field", Int)});
+  Type vertexType = ElementType::make("Vertex", {Field("field", Int)});
   Type vertexSetType = SetType::make(vertexType, {});
   Var V("V", vertexSetType);
   Var i("i", Int);
@@ -66,7 +66,6 @@ TEST(Function, bindScalar) {
 TEST(Function, bindVector) {
   Var a("a", Vec3i);
   Var b("b", Vec3i);
-
   Var i("i", Int);
   Stmt neg = ForRange::make(i, 0, 3, Store::make(a, i, -Load::make(b, i)));
 
@@ -90,8 +89,8 @@ TEST(Function, bindVector) {
   ASSERT_EQ(bExpected, bArg);
 }
 
-TEST(DISABLED_Function, bindSparseTensor) {
-  Type vertexType = ElementType::make("vertex", {});
+TEST(Function, bindSparseTensor) {
+  Type vertexType = ElementType::make("Vertex", {});
   Type vertexSetType = SetType::make(vertexType, {});
   Var V("V", vertexSetType);
 
@@ -99,8 +98,7 @@ TEST(DISABLED_Function, bindSparseTensor) {
   IndexVar i("i", dim);
   IndexVar j("j", dim);
 
-  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
-  Var A("A", tensorType);
+  Var A("A", TensorType::make(ScalarType::Int, {dim,dim}));
   Expr negExpr = IndexExpr::make({i,j}, -VarExpr::make(A)(i,j));
 
   // Create environment and compile
@@ -108,7 +106,6 @@ TEST(DISABLED_Function, bindSparseTensor) {
   env.addExtern(V);
   env.addExtern(A);
   Stmt neg = lowerScatterWorkspace(A, to<IndexExpr>(negExpr), &env);
-  std::cout << neg << std::endl << std::endl;
   simit::Function function = getTestBackend()->compile(neg, env);
 
   // Create and bind arguments
@@ -121,23 +118,16 @@ TEST(DISABLED_Function, bindSparseTensor) {
   // 1.0 2.0 0.0
   // 0.0 3.0 4.0
   // 0.0 0.0 0.0
-  int A_row_ptr[4] = {0, 2, 4, 4};
-  int A_col_ind[4] = {0, 1, 1, 2};
-  double A_vals[4] = {1.0, 2.0, 3.0, 4.0};
-  std::cout << "A: ";
-  for (int i=0; i < 4; ++i) {
-    std::cout << A_vals[i] << ",";
-  }
-  std::cout << std::endl;
-  function.bind("A", A_row_ptr, A_col_ind, A_vals);
-
+  int A_rowPtr[4] = {0, 2, 4, 4};
+  int A_colInd[4] = {0, 1, 1, 2};
+  int   A_vals[4] = {1, 2, 3, 4};
+  function.bind("A", A_rowPtr, A_colInd, A_vals);
 
   // Run and check output
   function.runSafe();
 
-  std::cout << "A:  " << std::endl;
-  for (int i=0; i < 4; ++i) {
-    std::cout << A_vals[i] << ",";
-  }
-  std::cout << std::endl;
+  ASSERT_EQ(-1, A_vals[0]);
+  ASSERT_EQ(-2, A_vals[1]);
+  ASSERT_EQ(-3, A_vals[2]);
+  ASSERT_EQ(-4, A_vals[3]);
 }

@@ -57,11 +57,31 @@ LLVMFunction::LLVMFunction(ir::Func func, llvm::Function* llvmFunc,
     iassert(!util::contains(this->externPtrs, name));
     this->externPtrs.insert({name, extPtrs});
   }
+
+  // Allocate and initialize temporaries
+  for (const Var& tmp : env.getTemporaries()) {
+    iassert(tmp.getType().isTensor());
+
+    vector<void**> tmpPtrs;
+
+    llvm::GlobalValue* llvmTmp = module->getNamedValue(tmp.getName());
+    void** tmpPtr = (void**)executionEngine->getPointerToGlobal(llvmTmp);
+    *tmpPtr = nullptr;
+    tmpPtrs.push_back(tmpPtr);
+
+    temporaryPtrs.insert({tmp.getName(), tmpPtrs});
+  }
 }
 
 LLVMFunction::~LLVMFunction() {
   if (deinit) {
     deinit();
+  }
+  for (auto& tmpPtrs : temporaryPtrs) {
+    for (void** tmpPtr : tmpPtrs.second) {
+      free(*tmpPtr);
+      *tmpPtr = nullptr;
+    }
   }
 }
 
@@ -70,10 +90,11 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
   iassert(getBindableType(name).isSet());
 
   if (hasArg(name)) {
-    actuals[name] = std::unique_ptr<Actual>(new SetActual(set));
+    arguments[name] = std::unique_ptr<Actual>(new SetActual(set));
     initialized = false;
   }
   else {
+    globals[name] = std::unique_ptr<Actual>(new SetActual(set));
     const ir::SetType* setType = getGlobalType(name).toSet();
 
     // Write set size to extern
@@ -93,10 +114,11 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
 void LLVMFunction::bind(const std::string& name, void* data) {
   iassert(hasBindable(name));
   if (hasArg(name)) {
-    actuals[name] = std::unique_ptr<Actual>(new TensorActual(data));
+    arguments[name] = std::unique_ptr<Actual>(new TensorActual(data));
     initialized = false;
   }
   else if (hasGlobal(name)) {
+    globals[name] = std::unique_ptr<Actual>(new TensorActual(data));
     iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
     *externPtrs.at(name)[0] = data;
   }
@@ -117,12 +139,65 @@ void LLVMFunction::bind(const std::string& name, const int* rowPtr,
   }
 }
 
+size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
+  size_t result = 1;
+  for (const ir::IndexSet& indexSet : dimension.getIndexSets()) {
+    switch (indexSet.getKind()) {
+      case ir::IndexSet::Range:
+        result *= indexSet.getSize();
+      case ir::IndexSet::Set: {
+        ir::Expr setExpr = indexSet.getSet();
+        iassert(ir::isa<ir::VarExpr>(setExpr))
+            << "Attempting to get the static size of a runtime dynamic set: "
+            << quote(setExpr);
+        string setName = ir::to<ir::VarExpr>(setExpr)->var.getName();
+
+        iassert(util::contains(arguments, setName) ||
+                util::contains(globals, setName));
+        Actual* setActual = util::contains(arguments, setName)
+                            ? arguments.at(setName).get()
+                            : globals.at(setName).get();
+        iassert(isa<SetActual>(setActual));
+        Set* set = to<SetActual>(setActual)->getSet();
+        result *= set->getSize();
+        break;
+      }
+      case ir::IndexSet::Single:
+      case ir::IndexSet::Dynamic:
+        not_supported_yet;
+    }
+    iassert(result != 0);
+  }
+  return result;
+}
+
 Function::FuncType LLVMFunction::init() {
+  // Initialize temporaries
+  for (const Var& tmp : getEnvironment().getTemporaries()) {
+    Type type = tmp.getType();
+
+    if (type.isTensor()) {
+      const ir::TensorType* tensorType = type.toTensor();
+      unsigned order = tensorType->order();
+      iassert(order <= 2) << "Higher-order tensors not supported";
+      if (order == 1) {
+        // Vectors are currently always dense
+        IndexDomain vecDimension = tensorType->getDimensions()[0];
+        size_t vecSize = tensorType->componentType.bytes() * size(vecDimension);
+        iassert(temporaryPtrs.at(tmp.getName()).size() == 1);
+        *temporaryPtrs.at(tmp.getName())[0] = malloc(vecSize);
+      }
+      else if (order == 2) {
+        not_supported_yet << "Initializing " << tmp << " matrix";
+      }
+    }
+  }
+
+  // Compile a harness void function without arguments that calls the simit
+  // llvm function with pointers to the arguments.
   initialized = true;
   vector<string> formals = getArgs();
-
   iassert(formals.size() == llvmFunc->getArgumentList().size());
-
   if (llvmFunc->getArgumentList().size() == 0) {
     llvm::Function *initFunc = getInitFunc();
     llvm::Function *deinitFunc = getDeinitFunc();
@@ -135,10 +210,10 @@ Function::FuncType LLVMFunction::init() {
     llvm::SmallVector<llvm::Value*, 8> args;
     auto llvmArgIt = llvmFunc->getArgumentList().begin();
     for (const std::string& formal : formals) {
-      iassert(util::contains(actuals, formal));
+      iassert(util::contains(arguments, formal));
 
       llvm::Argument* llvmFormal = llvmArgIt++;
-      Actual* actual = actuals.at(formal).get();
+      Actual* actual = arguments.at(formal).get();
       ir::Type type = getArgType(formal);
       iassert(type.kind() == ir::Type::Set || type.kind() == ir::Type::Tensor);
 
