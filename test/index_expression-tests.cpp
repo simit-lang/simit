@@ -285,7 +285,7 @@ INSTANTIATE_TEST_CASE_P(Mul, IndexExpressionTest,
                         )
                         ));
 
-INSTANTIATE_TEST_CASE_P(MixedAddMul, IndexExpressionTest,
+INSTANTIATE_TEST_CASE_P(Mixed, IndexExpressionTest,
                         testing::Values(
                         TestParams(
                           (B(i,j) + C(i,j)) * D(i,j),
@@ -319,6 +319,39 @@ INSTANTIATE_TEST_CASE_P(MixedAddMul, IndexExpressionTest,
                                        {0, 1, 4, 6},
                                        {1, 0,1,2, 1,2},
                                        {0.2, 0.9, 3.6, 3.0, 4.2, 5.6})
+                        ),
+                        TestParams(
+                          B(i,j) + (C(i,j) * D(i,j)),
+                          {
+                            // 1.0 2.0 0.0
+                            // 3.0 4.0 0.0
+                            // 0.0 0.0 0.0
+                            SparseMatrix("B", 3, 3,
+                                         {0, 2, 4, 4},
+                                         {0,1, 0,1},
+                                         {1.0, 2.0, 3.0, 4.0}),
+                            // 0.0 0.0 0.0
+                            // 0.0 5.0 6.0
+                            // 0.0 7.0 8.0
+                            SparseMatrix("C", 3, 3,
+                                         {0, 0, 2, 4},
+                                         {1,2, 1,2},
+                                         {5.0, 6.0, 7.0, 8.0}),
+                            // 0.0 0.1 0.2
+                            // 0.3 0.4 0.5
+                            // 0.0 0.6 0.7
+                            SparseMatrix("D", 3, 3,
+                                         {0, 2, 5, 7},
+                                         {1,2, 0,1,2, 1,2},
+                                         {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7})
+                          },
+                          // 1.0 2.0 0.0
+                          // 3.0 6.0 3.0
+                          // 0.0 4.2 5.6
+                          SparseMatrix("A", 3, 3,
+                                       {0, 2, 5, 7},
+                                       {0,1, 0,1,2, 1,2},
+                                       {1.0, 2.0, 3.0, 6.0, 3.0, 4.2, 5.6})
                         )
                         ));
 
