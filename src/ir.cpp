@@ -620,6 +620,7 @@ Stmt IfThenElse::make(Expr condition, Stmt thenBody) {
   IfThenElse *node = new IfThenElse;
   node->condition = condition;
   node->thenBody = Scope::make(thenBody);
+  node->elseBody = Stmt();
   return node;
 }
 

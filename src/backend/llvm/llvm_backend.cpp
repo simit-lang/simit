@@ -920,7 +920,9 @@ void LLVMBackend::compile(const ir::IfThenElse& ifThenElse) {
   llvmFunc->getBasicBlockList().push_back(elseBlock);
 
   builder->SetInsertPoint(elseBlock);
-  compile(ifThenElse.elseBody);
+  if (ifThenElse.elseBody.defined()) {
+    compile(ifThenElse.elseBody);
+  }
   builder->CreateBr(exitBlock);
   elseBlock = builder->GetInsertBlock();
 
