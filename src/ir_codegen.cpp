@@ -110,23 +110,29 @@ Stmt find(const Var &result, const std::vector<Expr> &exprs, string name,
           function<Expr(Expr,Expr)> compare) {
   iassert(exprs.size() > 0);
 
-  Stmt results;
-  if (exprs.size() == 2) {
-    results = IfThenElse::make(compare(exprs[0], exprs[1]),
+  Stmt resultStmt;
+  if (exprs.size() == 1) {
+    resultStmt = AssignStmt::make(result, exprs[0]);
+  }
+  else if (exprs.size() == 2) {
+    resultStmt = IfThenElse::make(compare(exprs[0], exprs[1]),
                                AssignStmt::make(result, exprs[0]),
                                AssignStmt::make(result, exprs[1]));
   }
   else {
-    results = AssignStmt::make(result, exprs[0]);
+    resultStmt = AssignStmt::make(result, exprs[0]);
+    vector<Stmt> tests;
     for (size_t i=1; i < exprs.size(); ++i) {
-      results = IfThenElse::make(compare(exprs[i], result),
-                                 AssignStmt::make(result, exprs[i]));
+      Stmt test = IfThenElse::make(compare(exprs[i], result),
+                                   AssignStmt::make(result, exprs[i]));
+      tests.push_back(test);
     }
+    resultStmt = Block::make(resultStmt, Block::make(tests));
   }
 
   string commentString = result.getName() + " = " + name
                        + "(" + util::join(exprs) + ")";
-  return Comment::make(commentString, results);
+  return Comment::make(commentString, resultStmt);
 }
 
 Stmt min(const Var &result, const std::vector<Expr> &exprs) {
@@ -135,6 +141,23 @@ Stmt min(const Var &result, const std::vector<Expr> &exprs) {
 
 Stmt max(const Var &result, const std::vector<Expr> &exprs) {
   return find(result, exprs, "max", Gt::make);
+}
+
+Expr compare(const vector<Expr> &expressions) {
+  iassert(expressions.size() > 0);
+
+  Expr result;
+  if (expressions.size() == 1) {
+    result = expressions[0];
+  }
+  else {
+    result = Eq::make(expressions[0], expressions[1]);
+    for (size_t i=2; i < expressions.size(); ++i) {
+      result = And::make(result, Eq::make(expressions[i-1], expressions[i]));
+    }
+  }
+  iassert(result);
+  return result;
 }
 
 Stmt increment(const Var &var) {

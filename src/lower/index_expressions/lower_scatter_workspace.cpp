@@ -119,16 +119,6 @@ static Expr compareToNextIndexLocation(const TensorIndexVar &inductionVar) {
                   inductionVar.loadCoord(1));
 }
 
-/// Check whether the expressions are equal.
-static Expr compare(const vector<Expr> &expressions) {
-  iassert(expressions.size() >= 2);
-  Expr result = expressions[0];
-  for (auto &expression : excludeFirst(expressions)) {
-    result = Eq::make(result, expression);
-  }
-  return result;
-}
-
 /// Create sparse while loop condition. Sparse while loops simultaneously
 /// iterate over the coordinate variables of one or more tensors
 static Expr subsetLoopCondition(const vector<TensorIndexVar> &inductionVars) {
