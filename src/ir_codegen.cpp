@@ -156,7 +156,7 @@ Expr compare(const vector<Expr> &expressions) {
       result = And::make(result, Eq::make(expressions[i-1], expressions[i]));
     }
   }
-  iassert(result);
+  iassert(result.defined());
   return result;
 }
 
