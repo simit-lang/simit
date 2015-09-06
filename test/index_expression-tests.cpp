@@ -56,7 +56,7 @@ struct TestParams {
   }
 };
 
-class IndexExpressionTest : public ::testing::TestWithParam<TestParams> {};
+class IndexExpression : public ::testing::TestWithParam<TestParams> {};
 
 static const Type VType = SetType::make(ElementType::make("Vertex", {}), {});
 static const Var V("V", VType);
@@ -74,7 +74,7 @@ Expr B(IndexVar i, IndexVar j) {return Expr(createMatrixVar("B",i,j))(i,j);}
 Expr C(IndexVar i, IndexVar j) {return Expr(createMatrixVar("C",i,j))(i,j);}
 Expr D(IndexVar i, IndexVar j) {return Expr(createMatrixVar("D",i,j))(i,j);}
 
-TEST_P(IndexExpressionTest, Matrix) {
+TEST_P(IndexExpression, Matrix) {
   Expr expr = GetParam().expr;
 
   map<string,const SparseMatrix*> operandsFromNames;
@@ -224,7 +224,7 @@ TEST_P(IndexExpressionTest, Matrix) {
   }
 }
 
-INSTANTIATE_TEST_CASE_P(Add, IndexExpressionTest,
+INSTANTIATE_TEST_CASE_P(Add, IndexExpression,
                         testing::Values(
                         TestParams(
                           B(i,j) + C(i,j),
@@ -281,7 +281,7 @@ INSTANTIATE_TEST_CASE_P(Add, IndexExpressionTest,
                         ));
 
 
-INSTANTIATE_TEST_CASE_P(Mul, IndexExpressionTest,
+INSTANTIATE_TEST_CASE_P(Mul, IndexExpression,
                         testing::Values(
                         TestParams(
                           B(i,j) * C(i,j),
@@ -337,7 +337,7 @@ INSTANTIATE_TEST_CASE_P(Mul, IndexExpressionTest,
                         )
                         ));
 
-INSTANTIATE_TEST_CASE_P(Mixed, IndexExpressionTest,
+INSTANTIATE_TEST_CASE_P(Mixed, IndexExpression,
                         testing::Values(
                         TestParams(
                           (B(i,j) + C(i,j)) * D(i,j),
@@ -398,3 +398,31 @@ INSTANTIATE_TEST_CASE_P(Mixed, IndexExpressionTest,
                                              4.2, 5.6})
                         )
                         ));
+
+TEST(DISABLED_IndexExpression, gemv) {
+  Type VType = SetType::make(ElementType::make("Vertex", {}), {});
+  Var V("V", VType);
+  IndexDomain dim({V});
+
+  IndexVar i("i", dim);
+  IndexVar j("j", dim, ReductionOperator::Sum);
+
+  Type vectorType = TensorType::make(ScalarType::Float, {dim});
+  Type matrixType = TensorType::make(ScalarType::Float, {dim,dim});
+
+  // a = Bc
+  Var  a = Var("a", vectorType);
+  Expr B = Var("B", matrixType);
+  Expr c = Var("c", vectorType);
+
+  Expr iexpr = IndexExpr::make({i}, B(i,j)*c(j));
+
+  Environment env;
+  env.addExtern(a);
+  env.addExtern(to<VarExpr>(B)->var);
+  env.addExtern(to<VarExpr>(c)->var);
+
+  Stmt loops = lowerScatterWorkspace(a, to<IndexExpr>(iexpr), &env);
+  std::cout << loops << std::endl;
+}
+
