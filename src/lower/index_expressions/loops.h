@@ -55,14 +55,14 @@ public:
                  Var sourceVar, TensorIndex tensorIndex);
 
   const Var& getSourceVar() const {return sourceVar;}
-  const Var& getCoordinateVar() const {return coordinateVar;}
+  const Var& getCoordVar() const {return coordinateVar;}
   const Var& getSinkVar() const {return sinkVar;}
 
   const TensorIndex& getTensorIndex() const {return tensorIndex;}
 
-  Expr loadCoordinate(int offset=0) const;
+  Expr loadCoord(int offset=0) const;
   Expr loadSink() const;
-  Stmt initCoordinateVar() const;
+  Stmt initCoordVar() const;
   Stmt initSinkVar() const;
   Stmt initSinkVar(const Var& sinkVar) const;
 

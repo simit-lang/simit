@@ -58,17 +58,17 @@ TensorIndexVar::TensorIndexVar(string inductionVarName, string tensorName,
   this->tensorIndex = tensorIndex;
 }
 
-Expr TensorIndexVar::loadCoordinate(int offset) const {
+Expr TensorIndexVar::loadCoord(int offset) const {
   Expr sourceExpr = (offset == 0) ? getSourceVar() : getSourceVar() + offset;
   return Load::make(getTensorIndex().getCoordsArray(), sourceExpr);
 }
 
 Expr TensorIndexVar::loadSink() const {
-  return Load::make(getTensorIndex().getSinksArray(), getCoordinateVar());
+  return Load::make(getTensorIndex().getSinksArray(), getCoordVar());
 }
 
-Stmt TensorIndexVar::initCoordinateVar() const {
-  return AssignStmt::make(getCoordinateVar(), loadCoordinate());;
+Stmt TensorIndexVar::initCoordVar() const {
+  return AssignStmt::make(getCoordVar(), loadCoord());;
 }
 
 Stmt TensorIndexVar::initSinkVar() const {
@@ -247,7 +247,7 @@ private:
                                   linkedInductionVar, ti);
 
     Expr tensorLoad = Load::make(indexedTensor->tensor,
-                                 tensorIndexVar.getCoordinateVar());
+                                 tensorIndexVar.getCoordVar());
     subsetLoops = {SubsetLoop({tensorIndexVar}, tensorLoad, indexedTensor)};
   }
 };

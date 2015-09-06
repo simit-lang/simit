@@ -136,7 +136,6 @@ TEST_P(IndexExpressionTest, Matrix) {
 
   Expr iexpr = IndexExpr::make({i,j}, expr);
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(iexpr), &env);
-//  std::cout << loops << std::endl;
 
   simit::Function function = getTestBackend()->compile(loops, env);
 
@@ -250,7 +249,7 @@ INSTANTIATE_TEST_CASE_P(Add, IndexExpressionTest,
                         ));
 
 
-INSTANTIATE_TEST_CASE_P(DISABLED_Mul, IndexExpressionTest,
+INSTANTIATE_TEST_CASE_P(Mul, IndexExpressionTest,
                         testing::Values(
                         TestParams(
                           B(i,j) * C(i,j),
@@ -279,30 +278,6 @@ INSTANTIATE_TEST_CASE_P(DISABLED_Mul, IndexExpressionTest,
                                        {0.4})
                         )
                         ));
-
-TEST(IndexExpression, mul) {
-  Type vertexType = ElementType::make("Vertex", {});
-  Type vertexSetType = SetType::make(vertexType, {});
-  Var vertexSet("V", vertexSetType);
-
-  IndexDomain dim({vertexSet});
-  IndexVar i("i", dim);
-  IndexVar j("j", dim);
-
-  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
-  Var  A = Var("A", tensorType);
-  Expr B = Var("B", tensorType);
-  Expr C = Var("C", tensorType);
-  Expr add = IndexExpr::make({i,j}, B(i,j) * C(i,j));
-
-  Environment env;
-  env.addExtern(A);
-  env.addExtern(to<VarExpr>(B)->var);
-  env.addExtern(to<VarExpr>(C)->var);
-
-  Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(add), &env);
-  std::cout << loops << std::endl;
-}
 
 TEST(IndexExpression, addmul) {
   Type vertexType = ElementType::make("Vertex", {});
