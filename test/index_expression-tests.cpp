@@ -22,7 +22,11 @@ struct SparseMatrix {
 
   SparseMatrix(string name, size_t M, size_t N,
                vector<int> rowPtr, vector<int> colInd, vector<simit_float> vals)
-      : name(name), M(M), N(N), rowPtr(rowPtr), colInd(colInd), vals(vals) {}
+      : name(name), M(M), N(N), rowPtr(rowPtr), colInd(colInd), vals(vals) {
+    iassert(rowPtr.size() == M+1);
+    iassert(colInd.size() == (unsigned)rowPtr[rowPtr.size()-1]);
+    iassert(vals.size() == colInd.size());
+  }
 
   friend ostream& operator<<(ostream& os, const SparseMatrix& m) {
     os << m.name << ": " << endl;
@@ -166,7 +170,9 @@ TEST_P(IndexExpressionTest, Matrix) {
   // Check that the results are correct
   const SparseMatrix& expected = GetParam().expected;
   for (auto pair : simit::util::zip(result.vals, expected.vals)) {
-    SIMIT_ASSERT_FLOAT_EQ(pair.first, pair.second)
+    simit_float resultVal = pair.first;
+    simit_float expectedVal = pair.second;
+    SIMIT_ASSERT_FLOAT_EQ(expectedVal, resultVal)
         << "  Actual: " << simit::util::join(result.vals) << endl
         << "Expected: " << simit::util::join(expected.vals);
   }
@@ -279,31 +285,44 @@ INSTANTIATE_TEST_CASE_P(Mul, IndexExpressionTest,
                         )
                         ));
 
-TEST(IndexExpression, addmul) {
-  Type vertexType = ElementType::make("Vertex", {});
-  Type vertexSetType = SetType::make(vertexType, {});
-  Var vertexSet("V", vertexSetType);
+INSTANTIATE_TEST_CASE_P(MixedAddMul, IndexExpressionTest,
+                        testing::Values(
+                        TestParams(
+                          (B(i,j) + C(i,j)) * D(i,j),
+                          {
+                            // 1.0 2.0 0.0
+                            // 3.0 4.0 0.0
+                            // 0.0 0.0 0.0
+                            SparseMatrix("B", 3, 3,
+                                         {0, 2, 4, 4},
+                                         {0,1, 0,1},
+                                         {1.0, 2.0, 3.0, 4.0}),
+                            // 0.0 0.0 0.0
+                            // 0.0 5.0 6.0
+                            // 0.0 7.0 8.0
+                            SparseMatrix("C", 3, 3,
+                                         {0, 0, 2, 4},
+                                         {1,2, 1,2},
+                                         {5.0, 6.0, 7.0, 8.0}),
+                            // 0.0 0.1 0.2
+                            // 0.3 0.4 0.5
+                            // 0.0 0.6 0.7
+                            SparseMatrix("D", 3, 3,
+                                         {0, 2, 5, 7},
+                                         {1,2, 0,1,2, 1,2},
+                                         {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7})
+                          },
+                          // 0.0 0.2 0.0
+                          // 0.9 3.6 3.0
+                          // 0.0 4.2 5.6
+                          SparseMatrix("A", 3, 3,
+                                       {0, 1, 4, 6},
+                                       {1, 0,1,2, 1,2},
+                                       {0.2, 0.9, 3.6, 3.0, 4.2, 5.6})
+                        )
+                        ));
 
-  IndexDomain dim({vertexSet});
-  IndexVar i("i", dim);
-  IndexVar j("j", dim);
 
-  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
-  Var  A = Var("A", tensorType);
-  Expr B = Var("B", tensorType);
-  Expr C = Var("C", tensorType);
-  Expr D = Var("D", tensorType);
-  Expr addmul = IndexExpr::make({i,j}, (B(i,j) + C(i,j)) * D(i,j));
-
-  Environment env;
-  env.addExtern(A);
-  env.addExtern(to<VarExpr>(B)->var);
-  env.addExtern(to<VarExpr>(C)->var);
-  env.addExtern(to<VarExpr>(D)->var);
-
-  Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(addmul), &env);
-  std::cout << loops << std::endl;
-}
 
 TEST(IndexExpression, muladd) {
   Type vertexType = ElementType::make("Vertex", {});

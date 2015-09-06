@@ -10,9 +10,8 @@ namespace ir {
 
 ostream &operator<<(ostream& os, const TensorIndex& ti) {
   os << "TensorIndex (" << ti.getSourceDimension() << " -> "
-     << ti.getSinkDimension() << "):" << std::endl;
-  os << ti.getCoordsArray() << std::endl;
-  os << ti.getSinksArray();
+     << ti.getSinkDimension() << ")";
+  os << ":" << endl << ti.getCoordsArray() << endl << ti.getSinksArray();
   return os;
 }
 

@@ -332,7 +332,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
 
   // Create workspace on target
   ScalarType workspaceCType = type->componentType;
-  tassert(type->order()==2) << "lowerScatterWorkspace only works for matrices.";
+  tassert(type->order()==2) << "lowerScatterWorkspace only works for matrices";
   IndexDomain workspaceDomain = type->getDimensions()[1];  // Row workspace
   Type workspaceType = TensorType::make(workspaceCType, {workspaceDomain});
   Var workspace("workspace", workspaceType);
@@ -367,7 +367,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       loopStatements.push_back(inductionVarDecl);
 
       // Create each subset loop and add their results to the workspace
-      for (SubsetLoop &subsetLoop : subsetLoops) {
+      for (const SubsetLoop& subsetLoop : subsetLoops) {
         Stmt loopStmt = createSubsetLoopStmt(workspace, inductionVar,
                                              subsetLoop, environment);
         string comment = "workspace " +
@@ -376,7 +376,6 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
         loopStatements.push_back(Comment::make(comment, loopStmt, false, true));
       }
       iassert(loops.size() > 0);
-
 
       // Create the loop that copies the workspace to the target
       auto& resultVars = indexExpression->resultVars;

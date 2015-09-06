@@ -92,9 +92,15 @@ ostream& operator<<(ostream& os, const TensorIndexVar& tiv) {
 
 // class SubsetLoop
 std::ostream& operator<<(std::ostream& os, const SubsetLoop& ssl) {
-  os << "foreach zip(" << util::join(ssl.getTensorIndexVars()) << ")";
-  os << "\n  " << ssl.getCompoundOperator() << "= "
-     << ssl.getComputeExpression();
+  os << "foreach zip(";
+  if (ssl.getTensorIndexVars().size() > 0) {
+    os << ssl.getTensorIndexVars()[0].getCoordVar();
+  }
+  for (auto& tiVar : util::excludeFirst(ssl.getTensorIndexVars())) {
+    os << ", " << tiVar.getCoordVar();
+  }
+  os << ")" << endl;
+  os << " " << ssl.getCompoundOperator() << "= " << ssl.getComputeExpression();
   return os;
 }
 
@@ -152,12 +158,8 @@ private:
     vector<SubsetLoop> c;
     c.reserve(a.size() + b.size());
 
-    for (auto& as : a) {
-      c.push_back(as);
-    }
-    for (auto& bs : b) {
-      c.push_back(bs);
-    }
+    c.insert(c.end(), a.begin(), a.end());
+    c.insert(c.end(), b.begin(), b.end());
 
     c[0].setCompoundOperator(CompoundOperator::None);
     for (size_t i=1; i < c.size(); ++i) {
@@ -170,29 +172,38 @@ private:
   /// Takes the set product of the subset loops in a and b
   vector<SubsetLoop> intersectionMerge(const vector<SubsetLoop>& a,
                                        const vector<SubsetLoop>& b,
-                                       function<Expr(Expr,Expr)> op,
-                                       Expr iexpr) {
+                                       function<Expr(Expr,Expr)> op) {
     vector<SubsetLoop> c;
     c.reserve(a.size() * b.size());
 
-    for (auto& as : a) {
+    for (const SubsetLoop& as : a) {
       vector<TensorIndexVar> ativars = as.getTensorIndexVars();
       Expr aComputeExpr = as.getComputeExpression();
-      for (auto& bs : b) {
+
+      for (const SubsetLoop& bs : b) {
         vector<TensorIndexVar> btivars = bs.getTensorIndexVars();
         Expr bComputeExpr = bs.getComputeExpression();
 
         vector<TensorIndexVar> ctivars;
         ctivars.reserve(ativars.size() + btivars.size());
 
-        for (auto& ativar : ativars) {
-          ctivars.push_back(ativar);
-        }
-        for (auto& btivar : btivars) {
-          ctivars.push_back(btivar);
+        ctivars.insert(ctivars.end(), ativars.begin(), ativars.end());
+        ctivars.insert(ctivars.end(), btivars.begin(), btivars.end());
+
+        Expr iexpr = op(as.getIndexExpression(), bs.getIndexExpression());
+        SubsetLoop cs = SubsetLoop(ctivars,op(aComputeExpr,bComputeExpr),iexpr);
+
+        CompoundOperator ac = as.getCompoundOperator();
+        CompoundOperator bc = bs.getCompoundOperator();
+        if (ac != CompoundOperator::None || bc != CompoundOperator::None) {
+          // TODO: Handle (B+C)(D-E) = BD-BE+CD-CE
+          //       In this case CE will have two compound operators but +- = -
+          tassert(ac == CompoundOperator::None || bc== CompoundOperator::None ||
+                  ac==bc);
+          cs.setCompoundOperator(ac);
         }
 
-        c.push_back(SubsetLoop(ctivars, op(aComputeExpr, bComputeExpr), iexpr));
+        c.push_back(cs);
       }
     }
 
@@ -210,7 +221,7 @@ private:
   inline void visitBinaryIntersectionOperator(const T* op) {
     this->subsetLoops = intersectionMerge(createSubsetLoops(op->a),
                                           createSubsetLoops(op->b),
-                                          T::make, op);
+                                          T::make);
   }
 
   void visit(const Add* op) {
