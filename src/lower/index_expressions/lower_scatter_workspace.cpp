@@ -224,15 +224,18 @@ static Stmt createSubsetLoopStmt(const Var &inductionVar,
       notIntersectionStmt = Block::make(notIntersectionStmt, fastForwardIfLess);
     }
     else {
+      vector<Stmt> fastForwardLoops;
       for (auto& tensorIndexVar : tensorIndexVars) {
         Var sinkVar = tensorIndexVar.getSinkVar();
         Expr fastForwardCondition = Lt::make(sinkVar, inductionVar);
         Stmt fastForwardSinkVar = createFastForwardLoop(tensorIndexVar);
         Stmt fastForwardIfLess = IfThenElse::make(fastForwardCondition,
                                                   fastForwardSinkVar);
-        notIntersectionStmt = Block::make(notIntersectionStmt,
-                                          fastForwardIfLess);
+        fastForwardLoops.push_back(fastForwardIfLess);
       }
+      Stmt fastForwardLoopsStmt = Block::make(fastForwardLoops);
+      notIntersectionStmt = Block::make(notIntersectionStmt,
+                                        fastForwardLoopsStmt);
     }
 
     // Check whether we are at the intersection of the tensor index sink vars

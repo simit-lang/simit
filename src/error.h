@@ -203,8 +203,8 @@ struct ErrorReport {
   iassert(isScalar(a.type())) << a << ": " << a.type()
 
 #define iassert_types_equal(a,b)                                               \
-  iassert(a.type() == b.type()) << a.type() << "!=" << b.type() << "\n"        \
-                                << #a << ":" << a << "\n" << #b << ":" << b
+  iassert(a.type() == b.type()) << a.type() << " != " << b.type() << "\n"      \
+                                << #a << ": " << a << "\n" << #b << ": " << b
 
 #define iassert_boolean_scalar(a)                                              \
   iassert(isScalar(a.type()) && a.type().toTensor()->componentType.isBoolean())\
