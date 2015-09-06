@@ -229,28 +229,54 @@ INSTANTIATE_TEST_CASE_P(Add, IndexExpressionTest,
                         TestParams(
                           B(i,j) + C(i,j),
                           {
-                            // 1.0 2.0 0.0
-                            // 3.0 4.0 0.0
-                            // 0.0 0.0 0.0
                             SparseMatrix("B", 3, 3,
                                          {0, 2, 4, 4},
                                          {0, 1, 0, 1},
-                                         {1.0, 2.0, 3.0, 4.0}),
-                            // 0.0 0.0 0.0
-                            // 0.0 0.1 0.2
-                            // 0.0 0.3 0.4
+                                         {1.0, 2.0,
+                                          3.0, 4.0
+                                                       }),
                             SparseMatrix("C", 3, 3,
                                          {0, 0, 2, 4},
                                          {1, 2, 1, 2},
-                                         {0.1, 0.2, 0.3, 0.4})
+                                         {
+                                               0.1, 0.2,
+                                               0.3, 0.4})
                           },
-                          // 1.0 2.0 0.0
-                          // 3.0 4.1 0.2
-                          // 0.0 0.3 0.4
                           SparseMatrix("A", 3, 3,
                                        {0, 2, 5, 7},
                                        {0, 1, 0, 1, 2, 1, 2},
-                                       {1.0, 2.0, 3.0, 4.1, 0.2, 0.3, 0.4})
+                                       {1.0, 2.0,
+                                        3.0, 4.1, 0.2,
+                                             0.3, 0.4})
+                        ),
+                        TestParams(
+                          B(i,j) + C(i,j) + D(i,j),
+                          {
+                            SparseMatrix("B", 3, 3,
+                                         {0, 2, 4, 4},
+                                         {0,1, 0,1},
+                                         {1.0, 2.0,
+                                          3.0, 4.0
+                                                       }),
+                            SparseMatrix("C", 3, 3,
+                                         {0, 0, 2, 4},
+                                         {1,2, 1,2},
+                                         {
+                                               5.0, 6.0,
+                                               7.0, 8.0}),
+                            SparseMatrix("D", 3, 3,
+                                         {0, 2, 5, 7},
+                                         {1,2, 0,1,2, 1,2},
+                                         {     0.1, 0.2,
+                                          0.3, 0.4, 0.5,
+                                               0.6, 0.7})
+                          },
+                          SparseMatrix("A", 3, 3,
+                                       {0, 3, 6, 8},
+                                       {0,1,2, 0,1,2, 1,2},
+                                       {1.0, 2.1, 0.2,
+                                        3.3, 9.4, 6.5,
+                                             7.6, 8.7})
                         )
                         ));
 
@@ -260,28 +286,25 @@ INSTANTIATE_TEST_CASE_P(Mul, IndexExpressionTest,
                         TestParams(
                           B(i,j) * C(i,j),
                           {
-                            // 1.0 2.0 0.0
-                            // 3.0 4.0 0.0
-                            // 0.0 0.0 0.0
                             SparseMatrix("B", 3, 3,
                                          {0, 2, 4, 4},
                                          {0, 1, 0, 1},
-                                         {1.0, 2.0, 3.0, 4.0}),
-                            // 0.0 0.0 0.0
-                            // 0.0 0.1 0.2
-                            // 0.0 0.3 0.4
+                                         {1.0, 2.0,
+                                          3.0, 4.0
+                                                       }),
                             SparseMatrix("C", 3, 3,
                                          {0, 0, 2, 4},
                                          {1, 2, 1, 2},
-                                         {0.1, 0.2, 0.3, 0.4})
+                                         {
+                                               0.1, 0.2,
+                                               0.3, 0.4})
                           },
-                          // 0.0 0.0 0.0
-                          // 0.0 0.4 0.0
-                          // 0.0 0.0 0.0
                           SparseMatrix("A", 3, 3,
                                        {0, 0, 1, 1},
                                        {1},
-                                       {0.4})
+                                       {
+                                             0.4
+                                                     })
                         )
                         ));
 
@@ -290,95 +313,59 @@ INSTANTIATE_TEST_CASE_P(Mixed, IndexExpressionTest,
                         TestParams(
                           (B(i,j) + C(i,j)) * D(i,j),
                           {
-                            // 1.0 2.0 0.0
-                            // 3.0 4.0 0.0
-                            // 0.0 0.0 0.0
                             SparseMatrix("B", 3, 3,
                                          {0, 2, 4, 4},
                                          {0,1, 0,1},
-                                         {1.0, 2.0, 3.0, 4.0}),
-                            // 0.0 0.0 0.0
-                            // 0.0 5.0 6.0
-                            // 0.0 7.0 8.0
+                                         {1.0, 2.0,
+                                          3.0, 4.0
+                                                       }),
                             SparseMatrix("C", 3, 3,
                                          {0, 0, 2, 4},
                                          {1,2, 1,2},
-                                         {5.0, 6.0, 7.0, 8.0}),
-                            // 0.0 0.1 0.2
-                            // 0.3 0.4 0.5
-                            // 0.0 0.6 0.7
+                                         {
+                                               5.0, 6.0,
+                                               7.0, 8.0}),
                             SparseMatrix("D", 3, 3,
                                          {0, 2, 5, 7},
                                          {1,2, 0,1,2, 1,2},
-                                         {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7})
+                                         {     0.1, 0.2,
+                                          0.3, 0.4, 0.5,
+                                               0.6, 0.7})
                           },
-                          // 0.0 0.2 0.0
-                          // 0.9 3.6 3.0
-                          // 0.0 4.2 5.6
                           SparseMatrix("A", 3, 3,
                                        {0, 1, 4, 6},
                                        {1, 0,1,2, 1,2},
-                                       {0.2, 0.9, 3.6, 3.0, 4.2, 5.6})
+                                       {     0.2,
+                                        0.9, 3.6, 3.0,
+                                             4.2, 5.6})
                         ),
                         TestParams(
                           B(i,j) + (C(i,j) * D(i,j)),
                           {
-                            // 1.0 2.0 0.0
-                            // 3.0 4.0 0.0
-                            // 0.0 0.0 0.0
                             SparseMatrix("B", 3, 3,
                                          {0, 2, 4, 4},
                                          {0,1, 0,1},
-                                         {1.0, 2.0, 3.0, 4.0}),
-                            // 0.0 0.0 0.0
-                            // 0.0 5.0 6.0
-                            // 0.0 7.0 8.0
+                                         {1.0, 2.0,
+                                          3.0, 4.0
+                                                       }),
                             SparseMatrix("C", 3, 3,
                                          {0, 0, 2, 4},
                                          {1,2, 1,2},
-                                         {5.0, 6.0, 7.0, 8.0}),
-                            // 0.0 0.1 0.2
-                            // 0.3 0.4 0.5
-                            // 0.0 0.6 0.7
+                                         {
+                                               5.0, 6.0,
+                                               7.0, 8.0}),
                             SparseMatrix("D", 3, 3,
                                          {0, 2, 5, 7},
                                          {1,2, 0,1,2, 1,2},
-                                         {0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7})
+                                         {     0.1, 0.2,
+                                          0.3, 0.4, 0.5,
+                                               0.6, 0.7})
                           },
-                          // 1.0 2.0 0.0
-                          // 3.0 6.0 3.0
-                          // 0.0 4.2 5.6
                           SparseMatrix("A", 3, 3,
                                        {0, 2, 5, 7},
                                        {0,1, 0,1,2, 1,2},
-                                       {1.0, 2.0, 3.0, 6.0, 3.0, 4.2, 5.6})
+                                       {1.0, 2.0,
+                                        3.0, 6.0, 3.0,
+                                             4.2, 5.6})
                         )
                         ));
-
-
-
-TEST(IndexExpression, muladd) {
-  Type vertexType = ElementType::make("Vertex", {});
-  Type vertexSetType = SetType::make(vertexType, {});
-  Var vertexSet("V", vertexSetType);
-
-  IndexDomain dim({vertexSet});
-  IndexVar i("i", dim);
-  IndexVar j("j", dim);
-
-  Type tensorType = TensorType::make(ScalarType::Float, {dim,dim});
-  Var  A = Var("A", tensorType);
-  Expr B = Var("B", tensorType);
-  Expr C = Var("C", tensorType);
-  Expr D = Var("D", tensorType);
-  Expr muladd = IndexExpr::make({i,j}, (B(i,j) * C(i,j)) + D(i,j));
-
-  Environment env;
-  env.addExtern(A);
-  env.addExtern(to<VarExpr>(B)->var);
-  env.addExtern(to<VarExpr>(C)->var);
-  env.addExtern(to<VarExpr>(D)->var);
-
-  Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(muladd), &env);
-  std::cout << loops << std::endl;
-}
