@@ -96,8 +96,8 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage &storage) {
   // Emit global constants
   // TODO
 
-  // Emit global externs
-  for (const Var& ext : env.getExterns()) {
+  // Emit global variables (externs and temporaries)
+  for (const Var& ext : env.getExternVars()) {
     llvm::GlobalVariable* ptr = createGlobal(module, ext,
                                              llvm::GlobalValue::ExternalLinkage,
                                              globalAddrspace());
@@ -106,7 +106,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage &storage) {
   }
 
   // Emit global temporaries
-  for (const Var& tmp : env.getTemporaries()) {
+  for (const Var& tmp : env.getTemporaryVars()) {
     llvm::GlobalVariable* ptr = createGlobal(module, tmp,
                                              llvm::GlobalValue::PrivateLinkage,
                                              globalAddrspace());

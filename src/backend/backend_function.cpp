@@ -74,16 +74,12 @@ const ir::Type& Function::getArgType(std::string arg) const {
 }
 
 bool Function::hasGlobal(std::string name) const {
-  return environment->hasBindable(name);
+  return environment->hasExtern(name);
 }
 
-const std::vector<std::string>& Function::getGlobals() const {
-  return environment->getBindableNames();
-}
-
-const ir::Type& Function::getGlobalType(std::string global) const {
-  uassert(hasGlobal(global)) << "No global called " << global << " in function";
-  return environment->getBindable(global).getType();
+const ir::Type& Function::getGlobalType(std::string name) const {
+  uassert(hasGlobal(name)) << "No global called " << name << " in function";
+  return environment->getExtern(name).getVar().getType();
 }
 
 bool Function::hasBindable(std::string bindable) const {

@@ -64,8 +64,7 @@ public:
   const ir::Type& getArgType(std::string arg) const;
 
   bool hasGlobal(std::string name) const;
-  const std::vector<std::string>& getGlobals() const;
-  const ir::Type& getGlobalType(std::string global) const;
+  const ir::Type& getGlobalType(std::string name) const;
 
   bool hasBindable(std::string bindable) const;
   const ir::Type& getBindableType(std::string bindable) const;

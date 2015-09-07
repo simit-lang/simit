@@ -43,33 +43,35 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
   const Environment& env = getEnvironment();
 
   // Set up pointers for binding externs
-  for (const string& name : env.getBindableNames()) {
-    Var bindable = env.getBindable(name);
+  for (const VarMapping& externMapping : env.getExterns()) {
+    Var bindable = externMapping.getVar();
 
     // Store a pointer to each of the bindable's extern in externPtrs
     vector<void**> extPtrs;
-    for (const Var& ext : env.getExternsOfBindable(bindable)) {
+    for (const Var& ext : externMapping.getMappings()) {
       llvm::GlobalValue* llvmExt = module->getNamedValue(ext.getName());
       void** extPtr = (void**)executionEngine->getPointerToGlobal(llvmExt);
       *extPtr = nullptr;
       extPtrs.push_back(extPtr);
     }
-    iassert(!util::contains(this->externPtrs, name));
-    this->externPtrs.insert({name, extPtrs});
+    iassert(!util::contains(this->externPtrs, bindable.getName()));
+    this->externPtrs.insert({bindable.getName(), extPtrs});
   }
 
   // Allocate and initialize temporaries
-  for (const Var& tmp : env.getTemporaries()) {
-    iassert(tmp.getType().isTensor());
+  for (const VarMapping& temporaryMapping : env.getTemporaries()) {
+    Var temporary = temporaryMapping.getVar();
+    iassert(temporary.getType().isTensor())
+        << "Only support tensor temporaries";
 
     vector<void**> tmpPtrs;
-
-    llvm::GlobalValue* llvmTmp = module->getNamedValue(tmp.getName());
-    void** tmpPtr = (void**)executionEngine->getPointerToGlobal(llvmTmp);
-    *tmpPtr = nullptr;
-    tmpPtrs.push_back(tmpPtr);
-
-    temporaryPtrs.insert({tmp.getName(), tmpPtrs});
+    for (const Var& tmp : temporaryMapping.getMappings()) {
+      llvm::GlobalValue* llvmTmp = module->getNamedValue(tmp.getName());
+      void** tmpPtr = (void**)executionEngine->getPointerToGlobal(llvmTmp);
+      *tmpPtr = nullptr;
+      tmpPtrs.push_back(tmpPtr);
+    }
+    temporaryPtrs.insert({temporary.getName(), tmpPtrs});
   }
 }
 
@@ -173,19 +175,24 @@ size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
 
 Function::FuncType LLVMFunction::init() {
   // Initialize temporaries
-  for (const Var& tmp : getEnvironment().getTemporaries()) {
-    Type type = tmp.getType();
+  for (const VarMapping& temporaryMapping : getEnvironment().getTemporaries()) {
+    const Var& tmp = temporaryMapping.getVar();
+    const Type& type = tmp.getType();
 
     if (type.isTensor()) {
       const ir::TensorType* tensorType = type.toTensor();
       unsigned order = tensorType->order();
       iassert(order <= 2) << "Higher-order tensors not supported";
+
       if (order == 1) {
         // Vectors are currently always dense
+        iassert(temporaryMapping.getMappings().size() == 1);
+
+        const Var& tmpArray = temporaryMapping.getMappings()[0];
         IndexDomain vecDimension = tensorType->getDimensions()[0];
         size_t vecSize = tensorType->componentType.bytes() * size(vecDimension);
-        iassert(temporaryPtrs.at(tmp.getName()).size() == 1);
-        *temporaryPtrs.at(tmp.getName())[0] = malloc(vecSize);
+        iassert(temporaryPtrs.at(tmpArray.getName()).size() == 1);
+        *temporaryPtrs.at(tmpArray.getName())[0] = malloc(vecSize);
       }
       else if (order == 2) {
         not_supported_yet << "Initializing " << tmp << " matrix";

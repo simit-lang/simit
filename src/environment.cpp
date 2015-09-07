@@ -10,21 +10,25 @@ using namespace std;
 namespace simit {
 namespace ir {
 
+// class VarMapping
+std::ostream& operator<<(std::ostream& os, const VarMapping& vm) {
+  os << vm.getVar();
+  if (vm.getMappings().size() > 0) {
+    os << " -> " << util::join(vm.getMappings());
+  }
+  return os;
+}
+
+// class Environment
 struct Environment::Content {
   vector<pair<Var, Expr>> constants;
-  vector<Var>             externs;
-  vector<Var>             temporaries;
+  vector<VarMapping>      externs;
+  vector<VarMapping>      temporaries;
 
-  /// Environment bindables are variables that must be bound by user code before
-  /// a simit::Function can be run. A bindable Var may, but do not have to, map
-  /// to other Vars if the bindable has been replaced by other data structures.
-  /// For example, a sparse tensor bindable is rebound by the lowering stages to
-  /// value and index arrays, while a set will not map to other variables.
-  vector<string>        bindableNames;
-  map<string, Var>      bindables;
-  map<Var, vector<Var>> externsOfBindable;
+  map<string, size_t>     externLocationByName;
+  map<Var, size_t>        temporaryLocationByName;
 
-  map<Var, TensorIndex> tensorIndices;
+  map<Var, TensorIndex>   tensorIndices;
 };
 
 Environment::Environment() : content(new Content) {
@@ -65,33 +69,69 @@ const std::vector<std::pair<Var, Expr>>& Environment::getConstants() const {
   return content->constants;
 }
 
-const std::vector<Var>& Environment::getExterns() const {
+const std::vector<VarMapping>& Environment::getExterns() const {
   return content->externs;
 }
 
-const std::vector<Var>& Environment::getTemporaries() const {
+bool Environment::hasExtern(const std::string& name) const {
+  return util::contains(content->externLocationByName, name);
+}
+
+const VarMapping& Environment::getExtern(const std::string& name) const {
+  iassert(hasExtern(name));
+  return content->externs[content->externLocationByName.at(name)];
+}
+
+std::vector<Var> Environment::getExternVars() const {
+  vector<Var> externVars;
+  set<Var> included;
+  for (const VarMapping& externMapping : getExterns()) {
+    if (externMapping.getMappings().size() == 0) {
+      const Var& ext = externMapping.getVar();
+      iassert(!util::contains(included, ext));
+      externVars.push_back(ext);
+      included.insert(ext);
+    }
+    else {
+      for (const Var& ext : externMapping.getMappings()) {
+        if (!util::contains(included, ext)) {
+          externVars.push_back(ext);
+          included.insert(ext);
+        }
+      }
+    }
+  }
+  return externVars;
+}
+
+const std::vector<VarMapping>& Environment::getTemporaries() const {
   return content->temporaries;
 }
 
-const std::vector<std::string>& Environment::getBindableNames() const {
-  return content->bindableNames;
+bool Environment::hasTemporary(const Var& var) const {
+  return util::contains(content->temporaryLocationByName, var);
 }
 
-bool Environment::hasBindable(const std::string& name) const {
-  return util::contains(content->bindables, name);
-}
-
-const Var& Environment::getBindable(const std::string& name) const {
-  iassert(hasBindable(name))
-      << "no bindable called " << name << " in environment.";
-  return content->bindables.at(name);
-}
-
-const vector<Var>& Environment::getExternsOfBindable(const Var& bindable) const{
-  iassert(util::contains(content->externsOfBindable, bindable))
-      << bindable << " not in environment";
-
-  return content->externsOfBindable.at(bindable);
+std::vector<Var> Environment::getTemporaryVars() const {
+  vector<Var> temporaryVars;
+  set<Var> included;
+  for (const VarMapping& temporaryMapping : getTemporaries()) {
+    if (temporaryMapping.getMappings().size() == 0) {
+      const Var& ext = temporaryMapping.getVar();
+      iassert(!util::contains(included, ext));
+      temporaryVars.push_back(ext);
+      included.insert(ext);
+    }
+    else {
+      for (const Var& ext : temporaryMapping.getMappings()) {
+        if (!util::contains(included, ext)) {
+          temporaryVars.push_back(ext);
+          included.insert(ext);
+        }
+      }
+    }
+  }
+  return temporaryVars;
 }
 
 const TensorIndex& Environment::getTensorIndex(const Var& tensor,
@@ -117,40 +157,49 @@ void Environment::addConstant(const Var& var, const Expr& initializer) {
   content->constants.push_back({var, initializer});
 }
 
-void Environment::addExtern(const Var& var, const Var& bindable) {
-  iassert(!util::contains(content->externs, var))
-      << var << " already in environment";
+void Environment::addExtern(const Var& var) {
+  iassert(!hasExtern(var.getName())) << var << " already in environment";
 
   content->externs.push_back(var);
+  size_t loc = content->externs.size()-1;
+  content->externLocationByName.insert({var.getName(), loc});
 
-  // Add an extern that is a new bindable
-  if (!bindable.defined()) {
-    iassert(!util::contains(content->externsOfBindable, var))
-        << var << " bindable already in environment";
-    content->bindableNames.push_back(var.getName());
-    content->bindables.insert({var.getName(), var});
-    content->externsOfBindable.insert({var, {var}}); // Not rebound yet
-  }
-  // Add another extern of an existing bindable
-  else {
-    iassert(util::contains(content->externsOfBindable, bindable))
-        << bindable << " bindable not in environment.";
-    content->externsOfBindable.at(bindable).push_back(var);
-  }
+  // TODO: Change so that variables are not mapped to themselves. This means
+  //       lowering must map (sparse/dense) tensor value storage to arrays.
+  addExternMapping(var, var);
+}
+
+void Environment::addExternMapping(const Var& var, const Var& mapping) {
+  iassert(hasExtern(var.getName()));
+  size_t loc = content->externLocationByName.at(var.getName());
+  content->externs.at(loc).addMapping(mapping);
 }
 
 void Environment::addTemporary(const Var& var) {
+  iassert(!hasExtern(var.getName())) << var << " already in environment";
+
   content->temporaries.push_back(var);
+  size_t loc = content->temporaries.size()-1 ;
+  content->temporaryLocationByName.insert({var, loc});
+
+  // TODO: Change so that variables are not mapped to themselves. This means
+  //       lowering must map (sparse/dense) tensor value storage to arrays.
+  addTemporaryMapping(var, var);
+}
+
+void Environment::addTemporaryMapping(const Var& var, const Var& mapping) {
+  iassert(hasTemporary(var));
+  size_t loc =content->temporaryLocationByName.at(var);
+  content->temporaries.at(loc).addMapping(mapping);
 }
 
 void Environment::addTensorIndex(Var tensor, TensorIndex ti) {
-  iassert(util::contains(content->externsOfBindable, tensor) ||
-          util::contains(content->temporaries, tensor))
+  iassert(hasExtern(tensor.getName()) || hasTemporary(tensor))
       << tensor << " is not an extern or temporary";
 
-  if (util::contains(content->externsOfBindable, tensor)) {
-    addExtern(ti.getCoordsArray(), tensor);
-    addExtern(ti.getSinksArray(), tensor);
+  if (hasExtern(tensor.getName())) {
+    addExternMapping(tensor, ti.getCoordsArray());
+    addExternMapping(tensor, ti.getSinksArray());
   }
   else {
     addTemporary(ti.getCoordsArray());
@@ -183,9 +232,10 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
     if (somethingPrinted) {
       os << std::endl;
     }
-    os << "extern " << *env.getExterns().begin()  << " : "
-       << env.getExterns().begin()->getType() << ";";
-    for (auto& ext : util::excludeFirst(env.getExterns())) {
+    auto externVars = env.getExternVars();
+    os << "extern " << *externVars.begin()  << " : "
+       << externVars.begin()->getType() << ";";
+    for (auto& ext : util::excludeFirst(externVars)) {
       os << std::endl << "extern " << ext  << " : " << ext.getType() << ";";
     }
     somethingPrinted = true;
@@ -195,10 +245,10 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
     if (somethingPrinted) {
       os << std::endl;
     }
-
-    os << "temp " << *env.getTemporaries().begin()  << " : "
-       << env.getTemporaries().begin()->getType() << ";";
-    for (auto& temp : util::excludeFirst(env.getTemporaries())) {
+    auto temporaryVars = env.getTemporaryVars();
+    os << "temp " << *temporaryVars.begin()  << " : "
+       << temporaryVars.begin()->getType() << ";";
+    for (auto& temp : util::excludeFirst(temporaryVars)) {
       os << std::endl << "temp " << temp  << " : " << temp.getType() << ";";
     }
   }

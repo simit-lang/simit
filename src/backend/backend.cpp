@@ -65,11 +65,13 @@ backend::Function* Backend::compile(const Stmt& stmt, const Environment& env,
     globalsSet.insert(var.first);
     definedVariables.insert(var.first, nullptr);
   }
-  for (auto& var : environment.getExterns()) {
+  for (auto& ext : environment.getExterns()) {
+    const Var& var = ext.getVar();
     globalsSet.insert(var);
     definedVariables.insert(var, nullptr);
   }
-  for (auto& var : environment.getTemporaries()) {
+  for (auto& tmp : environment.getTemporaries()) {
+    const Var& var = tmp.getVar();
     globalsSet.insert(var);
     definedVariables.insert(var, nullptr);
   }
