@@ -24,13 +24,16 @@ typedef vector<IndexVar> IndexTuple;
 typedef map<IndexTuple, vector<const IndexedTensor *>> IndexTupleUses;
 typedef map<IndexVar, vector<IndexVar>> IndexVarGraph;
 
-ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
+inline ostream &operator<<(ostream &os, const IndexVarGraph &ivGraph) {
   os << "Index Variable Graph:"  << endl;
   for (auto &ij : ivGraph) {
     auto i = ij.first;
-    for (auto &j : ij.second) {
-      os << i << " -> " << j << endl;
+    os << i;
+    if (ij.second.size() > 0) {
+      os << " -> ";
+      os << util::join(ij.second, ",");
     }
+    os << endl;
   }
   return os;
 }
@@ -64,14 +67,18 @@ static IndexTupleUses getIndexTupleUses(const IndexExpr *indexExpr) {
 ///        k -> j and j -> k
 static IndexVarGraph createIndexVarGraph(const IndexExpr *indexExpression) {
   IndexTupleUses indexTupleUses = getIndexTupleUses(indexExpression);
-
   IndexVarGraph indexVarGraph;
   for (auto &itu : indexTupleUses) {
-    IndexTuple it = itu.first;
-    for (size_t i=0; i < it.size() - 1; ++i) {
-      for (size_t j=i+1; j < it.size(); ++j) {
-        indexVarGraph[it[i]].push_back(it[j]);
-        indexVarGraph[it[j]].push_back(it[i]);
+    IndexTuple indexTuple = itu.first;
+    for (auto& index : indexTuple) {
+      indexVarGraph.insert({index, vector<IndexVar>()});
+    }
+
+    // Add edges between all index variables present in the same tuple
+    for (size_t i=0; i < indexTuple.size() - 1; ++i) {
+      for (size_t j=i+1; j < indexTuple.size(); ++j) {
+        indexVarGraph.at(indexTuple[i]).push_back(indexTuple[j]);
+        indexVarGraph.at(indexTuple[j]).push_back(indexTuple[i]);
       }
     }
   }
@@ -82,6 +89,7 @@ static void createLoopNest(const IndexVarGraph &ivGraph,
                            const IndexVariableLoop &linkedLoop,
                            set<IndexVar> *visited,
                            vector<IndexVariableLoop> *loops) {
+  iassert(util::contains(ivGraph, linkedLoop.getIndexVar()));
   for (const IndexVar &sink : ivGraph.at(linkedLoop.getIndexVar())) {
     if (!util::contains(*visited, sink)) {
       visited->insert(sink);
