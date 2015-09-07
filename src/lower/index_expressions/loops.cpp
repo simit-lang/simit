@@ -47,6 +47,13 @@ const IndexVariableLoop& IndexVariableLoop::getLinkedLoop() const {
   return content->linkedLoop;
 }
 
+std::ostream& operator<<(std::ostream& os, const IndexVariableLoop& ivl) {
+  if (ivl.getLinkedLoop().defined()) {
+    os << ivl.getLinkedLoop().getIndexVar() << "->";
+  }
+  os << ivl.getIndexVar();
+  return os;
+}
 
 // class TensorIndexVar
 TensorIndexVar::TensorIndexVar(string inductionVarName, string tensorName,

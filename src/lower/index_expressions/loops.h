@@ -10,10 +10,10 @@
 namespace simit {
 namespace ir {
 
-/// An index variable loop is the loop associated with a (free or reduction)
-/// index variable. An index variable loop can be linked to another index
-/// variable loop, which means that only some of the index variable values need
-/// to be traversed, as determined by tensor indices.
+/// An index variable loop is a loop associated with a n index variable. An
+/// index variable loop can be linked to another index variable loop, which
+/// means that only some of the index variable values need to be traversed, as
+/// determined by tensor indices.
 class IndexVariableLoop {
 public:
   IndexVariableLoop();
@@ -28,23 +28,29 @@ public:
 
   bool defined() const {return content != nullptr;}
 
+  friend std::ostream& operator<<(std::ostream&, const IndexVariableLoop&);
+
 private:
   struct Content;
   std::shared_ptr<Content> content;
 };
 
-/// A TensorIndexVar is a pair of loop induction variables, a coordinate
-/// variable and a sink variable, that are retrieved from a tensor index using a
-/// source variable. That is, the mapping:
-///     (tensorIndex, sourceVar) -> (coordinateVar, sinkVar).
+/// A TensorIndexVar is a pair of loop induction variables, a coord variable and
+/// a sink variable, that are retrieved from a tensor index using a source
+/// variable. That is: `(tensorIndex, sourceVar) -> (coordinateVar, sinkVar)`.
 ///
-/// For example, (A.row2col, i) -> (ijA, jA) is evaluated as follows:
+/// For example, `(A.row2col, i) -> (ijA, jA)` is evaluated as follows:
+/// \code
 ///     ijA = A.row2col.sources[i];
 ///      jA = A.row2col.sinks[ijA];
+/// \endcode
 ///
-/// Given the expression c=A*b, ijA can be used to retrieve the matrix component
-/// at location (i,j) in A, while i can index into c and jA into b. For example,
+/// Given the expression `c=A*b`, ijA can be used to retrieve the matrix
+/// component at location (i,j) in A, while i can index into c and jA into b.
+/// For example,
+/// \code
 ///     c[i] += A[ijA] * b[jA];
+/// \endcode
 ///
 /// When merging multiple loops over different tensor index variables, their
 /// sink variables are merged into the overall loop induction variable. For
@@ -75,6 +81,12 @@ private:
   TensorIndex tensorIndex;
 };
 
+/// Loops over a subset of the iteration space of an induction variable. It does
+/// this by merging the iteration space of multiple tensor index variables (that
+/// represents different ways to reach the induction variable through tensor
+/// indices. That is, a SubsetLoop over jB and jC (j reachable through
+/// the tensor indices B and C) simultaneously iterate over the jB's reachable
+/// through B and and the jC's reachable through C, merging their values into j.
 class SubsetLoop {
 public:
   SubsetLoop(const std::vector<TensorIndexVar>& tensorIndexVars,
@@ -103,7 +115,6 @@ private:
   Expr computeExpr;
   Expr indexExpr;
 };
-
 
 std::vector<SubsetLoop> createSubsetLoops(const IndexExpr* indexExpression,
                                           IndexVariableLoop loop,
