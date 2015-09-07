@@ -327,17 +327,11 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
                            Environment* environment) {
   iassert(target.getType().isTensor());
   const TensorType* type = target.getType().toTensor();
+  tassert(type->order() <= 2)
+      << "lowerScatterWorkspace does not support higher-order tensors";
 
   // Create loops
   vector<IndexVariableLoop> loops = createLoopNest(indexExpression);
-
-  // Create workspace on target
-  ScalarType workspaceCType = type->componentType;
-  tassert(type->order()==2) << "lowerScatterWorkspace only works for matrices";
-  IndexDomain workspaceDomain = type->getDimensions()[1];  // Row workspace
-  Type workspaceType = TensorType::make(workspaceCType, {workspaceDomain});
-  Var workspace("workspace", workspaceType);
-  environment->addTemporary(workspace);
 
   // Emit loops
   Stmt loopNest;
@@ -348,10 +342,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
     // Dense loops
     if (!loop.isLinked()) {
       const IndexSet &indexSet = indexVar.getDomain().getIndexSets()[0];
-//      loopNest = Kernel::make(inductionVar, indexSet, loopNest);
-//      loopNest = For::make(inductionVar, indexSet, loopNest);
-      loopNest = ForRange::make(inductionVar, 0, Length::make(indexSet),
-                                loopNest);
+      loopNest = ForRange::make(inductionVar, 0, Length::make(indexSet), loopNest);
     }
     // Sparse/linked loops
     else {
@@ -360,6 +351,21 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
 
       vector<SubsetLoop> subsetLoops =
           createSubsetLoops(indexExpression, loop, environment);
+
+      // Create workspace on target
+      ScalarType workspaceCType = type->componentType;
+      Var workspace;
+      if (type->order() < 2) {
+        workspace = target;
+      }
+      else {
+        // Sparse output
+        IndexDomain workspaceDomain = type->getDimensions()[1]; // Row workspace
+        Type workspaceType = TensorType::make(workspaceCType,{workspaceDomain});
+        workspace = Var("workspace", workspaceType);
+        environment->addTemporary(workspace);
+      }
+      iassert(workspace.defined());
 
       vector<Stmt> loopStatements;
 
