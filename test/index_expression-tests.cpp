@@ -89,6 +89,7 @@ TEST_P(IndexExpression, Matrix) {
   match(expr,
     std::function<void(const VarExpr*)>([&](const VarExpr* op) {
       const Var& var = op->var;
+      iassert(simit::util::contains(operandsFromNames, var.getName()));
       const SparseMatrix* operand = operandsFromNames.at(var.getName());
       iassert(var.getType().isTensor());
       vector<IndexDomain> dims = var.getType().toTensor()->getDimensions();
@@ -398,6 +399,31 @@ INSTANTIATE_TEST_CASE_P(Mixed, IndexExpression,
                                              4.2, 5.6})
                         )
                         ));
+
+TEST(DISABLED_IndexExpression, vecadd) {
+  Type VType = SetType::make(ElementType::make("Vertex", {}), {});
+  Var V("V", VType);
+  IndexDomain dim({V});
+
+  IndexVar i("i", dim);
+
+  Type vectorType = TensorType::make(ScalarType::Float, {dim});
+
+  // a = b+c
+  Var  a = Var("a", vectorType);
+  Expr b = Var("B", vectorType);
+  Expr c = Var("c", vectorType);
+
+  Expr iexpr = IndexExpr::make({i}, b(i)+c(i));
+
+  Environment env;
+  env.addExtern(a);
+  env.addExtern(to<VarExpr>(b)->var);
+  env.addExtern(to<VarExpr>(c)->var);
+
+  Stmt loops = lowerScatterWorkspace(a, to<IndexExpr>(iexpr), &env);
+  std::cout << loops << std::endl;
+}
 
 TEST(DISABLED_IndexExpression, gemv) {
   Type VType = SetType::make(ElementType::make("Vertex", {}), {});

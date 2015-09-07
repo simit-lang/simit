@@ -634,6 +634,11 @@ Stmt IfThenElse::make(Expr condition, Stmt thenBody, Stmt elseBody) {
 
 // struct ForRange
 Stmt ForRange::make(Var var, Expr start, Expr end, Stmt body) {
+  iassert(var.defined());
+  iassert(body.defined());
+  iassert(start.defined());
+  iassert(end.defined());
+
   ForRange *node = new ForRange;
   node->var = var;
   node->start = start;
