@@ -5,10 +5,13 @@
 #include "ir_printer.h"
 #include "environment.h"
 #include "lower/index_expressions/lower_scatter_workspace.h"
+#include "path_expression_analysis.h"
+#include "path_expressions.h"
 #include "util/util.h"
 #include "util/collections.h"
 
 using namespace std;
+using namespace simit;
 using namespace simit::ir;
 
 struct SparseMatrix {
@@ -17,8 +20,6 @@ struct SparseMatrix {
   vector<int> rowPtr;
   vector<int> colInd;
   vector<simit_float> vals;
-
-  SparseMatrix() {} // TODO Remove
 
   SparseMatrix(string name, size_t M, size_t N,
                vector<int> rowPtr, vector<int> colInd, vector<simit_float> vals)
@@ -30,9 +31,9 @@ struct SparseMatrix {
 
   friend ostream& operator<<(ostream& os, const SparseMatrix& m) {
     os << m.name << ": " << endl;
-    os << " " << simit::util::join(m.rowPtr) << endl;
-    os << " " << simit::util::join(m.colInd) << endl;
-    os << " " << simit::util::join(m.vals);
+    os << " " << util::join(m.rowPtr) << endl;
+    os << " " << util::join(m.colInd) << endl;
+    os << " " << util::join(m.vals);
     return os;
   }
 };
@@ -51,7 +52,7 @@ struct TestParams {
     os << "A(i,j) = ";
     printer.print(p.expr);
     os << endl;
-    os << simit::util::join(p.operands, "\n");
+    os << util::join(p.operands, "\n");
     return os;
   }
 };
@@ -66,8 +67,8 @@ static const IndexVar i("i", dim);
 static const IndexVar j("j", dim);
 
 Var createMatrixVar(string name, IndexVar i, IndexVar j) {
-  return Var(name, TensorType::make(typeOf<simit_float>(),
-                                    {i.getDomain(), j.getDomain()}));
+  return Var(name, ir::TensorType::make(ir::typeOf<simit_float>(),
+                                        {i.getDomain(), j.getDomain()}));
 }
 
 Expr B(IndexVar i, IndexVar j) {return Expr(createMatrixVar("B",i,j))(i,j);}
@@ -79,7 +80,7 @@ TEST_P(IndexExpression, Matrix) {
 
   map<string,const SparseMatrix*> operandsFromNames;
   for (const SparseMatrix& operand : GetParam().operands) {
-    iassert(!simit::util::contains(operandsFromNames, operand.name));
+    iassert(!util::contains(operandsFromNames, operand.name));
     operandsFromNames.insert({operand.name, &operand});
   }
 
@@ -89,7 +90,7 @@ TEST_P(IndexExpression, Matrix) {
   match(expr,
     std::function<void(const VarExpr*)>([&](const VarExpr* op) {
       const Var& var = op->var;
-      iassert(simit::util::contains(operandsFromNames, var.getName()));
+      iassert(util::contains(operandsFromNames, var.getName()));
       const SparseMatrix* operand = operandsFromNames.at(var.getName());
       iassert(var.getType().isTensor());
       vector<IndexDomain> dims = var.getType().toTensor()->getDimensions();
@@ -102,7 +103,7 @@ TEST_P(IndexExpression, Matrix) {
             const Var& setVar = to<VarExpr>(setExpr)->var;
             string setName = setVar.getName();
             size_t setSize = (currDim==0) ? operand->M : operand->N;
-            if (simit::util::contains(setSizes, setName)) {
+            if (util::contains(setSizes, setName)) {
               iassert(setSizes.at(setName) == setSize)
                   << "inconsistent dimension size"  ;
             }
@@ -116,9 +117,6 @@ TEST_P(IndexExpression, Matrix) {
       }
     })
   );
-
-  // TODO: add code to initialize result indices and vals from operands
-  SparseMatrix result = GetParam().expected;
 
   vector<Var> vars;
   match(expr,
@@ -141,6 +139,13 @@ TEST_P(IndexExpression, Matrix) {
 
   Expr iexpr = IndexExpr::make({i,j}, expr);
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(iexpr), &env);
+
+  // TODO: add code to initialize result indices and vals from operands
+//  PathExpressionBuilder builder;
+//  std::cout << iexpr << std::endl;
+//  pe::PathExpression pe = builder.computePathExpression(A,to<IndexExpr>(iexpr));
+//  std::cout << pe << std::endl;
+  SparseMatrix result = GetParam().expected;
 
   simit::Function function = getTestBackend()->compile(loops, env);
 
@@ -170,57 +175,57 @@ TEST_P(IndexExpression, Matrix) {
 
   // Check that the results are correct
   const SparseMatrix& expected = GetParam().expected;
-  for (auto pair : simit::util::zip(result.vals, expected.vals)) {
+  for (auto pair : util::zip(result.vals, expected.vals)) {
     simit_float resultVal = pair.first;
     simit_float expectedVal = pair.second;
     SIMIT_ASSERT_FLOAT_EQ(expectedVal, resultVal)
-        << "  Actual: " << simit::util::join(result.vals) << endl
-        << "Expected: " << simit::util::join(expected.vals);
+        << "  Actual: " << util::join(result.vals) << endl
+        << "Expected: " << util::join(expected.vals);
   }
 
-  for (auto rowPtrs : simit::util::zip(result.rowPtr, expected.rowPtr)) {
+  for (auto rowPtrs : util::zip(result.rowPtr, expected.rowPtr)) {
     ASSERT_EQ(rowPtrs.second, rowPtrs.first)
         << result.name << "'s rowPtr index array "
         << "was changed by compute kernel" << endl
-        << "  Actual: " << simit::util::join(result.rowPtr) << endl
-        << "Original: " << simit::util::join(expected.rowPtr);
+        << "  Actual: " << util::join(result.rowPtr) << endl
+        << "Original: " << util::join(expected.rowPtr);
   }
 
-  for (auto colInds : simit::util::zip(result.colInd, expected.colInd)) {
+  for (auto colInds : util::zip(result.colInd, expected.colInd)) {
     ASSERT_EQ(colInds.second, colInds.first)
         << result.name << "'s colInd index array "
         << "was changed by compute kernel" << endl
-        << "  Actual: " << simit::util::join(result.colInd) << endl
-        << "Original: " << simit::util::join(expected.colInd);
+        << "  Actual: " << util::join(result.colInd) << endl
+        << "Original: " << util::join(expected.colInd);
   }
 
   // Check that the operands are unchanged
-  for (auto operandPair : simit::util::zip(operands, GetParam().operands)) {
+  for (auto operandPair : util::zip(operands, GetParam().operands)) {
     auto& opCopy = operandPair.first;
     auto& opOrig = operandPair.second;
 
-    for (auto rowPtrs : simit::util::zip(opCopy.rowPtr, opOrig.rowPtr)) {
+    for (auto rowPtrs : util::zip(opCopy.rowPtr, opOrig.rowPtr)) {
       ASSERT_EQ(rowPtrs.second, rowPtrs.first)
           << operandPair.first.name << "'s rowPtr index array "
           << "was changed by compute kernel" << endl
-          << "  Actual: " << simit::util::join(opCopy.rowPtr) << endl
-          << "Original: " << simit::util::join(opOrig.rowPtr);
+          << "  Actual: " << util::join(opCopy.rowPtr) << endl
+          << "Original: " << util::join(opOrig.rowPtr);
     }
 
-    for (auto colInds : simit::util::zip(opCopy.colInd, opOrig.colInd)) {
+    for (auto colInds : util::zip(opCopy.colInd, opOrig.colInd)) {
       ASSERT_EQ(colInds.second, colInds.first)
           << operandPair.first.name << "'s colInd index array "
           << "was changed by compute kernel" << endl
-          << "  Actual: " << simit::util::join(opCopy.colInd) << endl
-          << "Original: " << simit::util::join(opOrig.colInd);
+          << "  Actual: " << util::join(opCopy.colInd) << endl
+          << "Original: " << util::join(opOrig.colInd);
     }
 
-    for (auto vals : simit::util::zip(opCopy.vals, opOrig.vals)) {
+    for (auto vals : util::zip(opCopy.vals, opOrig.vals)) {
       SIMIT_ASSERT_FLOAT_EQ(vals.second, vals.first)
           << operandPair.first.name << "'s value array "
           << "was changed by compute kernel" << endl
-          << "  Actual: " << simit::util::join(opCopy.vals) << endl
-          << "Original: " << simit::util::join(opOrig.vals);
+          << "  Actual: " << util::join(opCopy.vals) << endl
+          << "Original: " << util::join(opOrig.vals);
     }
   }
 }
@@ -407,7 +412,7 @@ TEST(DISABLED_IndexExpression, vecadd) {
 
   IndexVar i("i", dim);
 
-  Type vectorType = TensorType::make(ScalarType::Float, {dim});
+  Type vectorType = ir::TensorType::make(ScalarType::Float, {dim});
 
   // a = b+c
   Var  a = Var("a", vectorType);
@@ -433,8 +438,8 @@ TEST(DISABLED_IndexExpression, gemv) {
   IndexVar i("i", dim);
   IndexVar j("j", dim, ReductionOperator::Sum);
 
-  Type vectorType = TensorType::make(ScalarType::Float, {dim});
-  Type matrixType = TensorType::make(ScalarType::Float, {dim,dim});
+  Type vectorType = ir::TensorType::make(ScalarType::Float, {dim});
+  Type matrixType = ir::TensorType::make(ScalarType::Float, {dim,dim});
 
   // a = Bc
   Var  a = Var("a", vectorType);

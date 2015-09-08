@@ -2,6 +2,7 @@
 #define SIMIT_IR_VISITOR_H
 
 #include <set>
+#include <functional>
 #include "error.h"
 
 namespace simit {

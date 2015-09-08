@@ -484,31 +484,33 @@ void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
   iassert(qvars.size() == 0 || qvars.size() == 1)
       << "only one or zero quantified variables currently supported";
 
-  if (!pe->isBound()) {
-    unsigned numQuantifiedVars = qvars.size();
-    for (unsigned i=0; i < numQuantifiedVars; ++i) {
-      auto &qvar = qvars[i];
-      print(qvar);
-      if (i < numQuantifiedVars-1) {
-        os << ",";
+  if (qvars.size() > 0) {
+    if (!pe->isBound()) {
+      unsigned numQuantifiedVars = qvars.size();
+      for (unsigned i=0; i < numQuantifiedVars; ++i) {
+        auto &qvar = qvars[i];
+        print(qvar);
+        if (i < numQuantifiedVars-1) {
+          os << ",";
+        }
       }
     }
-  }
-  else {
-    auto bindings = pe->getBindings();
-    unsigned numQuantifiedVars = qvars.size();
-    for (unsigned i=0; i<numQuantifiedVars; ++i) {
-      auto &qvar = qvars[i];
-      iassert(bindings.find(qvar.getVar()) != bindings.end())
-          << "no binding for " << qvar.getVar();
-      print(qvar);
-      print(bindings.at(qvar.getVar()));
-      if (i < numQuantifiedVars-1) {
-        os << ", ";
+    else {
+      auto bindings = pe->getBindings();
+      unsigned numQuantifiedVars = qvars.size();
+      for (unsigned i=0; i<numQuantifiedVars; ++i) {
+        auto &qvar = qvars[i];
+        iassert(bindings.find(qvar.getVar()) != bindings.end())
+            << "no binding for " << qvar.getVar();
+        print(qvar);
+        print(bindings.at(qvar.getVar()));
+        if (i < numQuantifiedVars-1) {
+          os << ", ";
+        }
       }
     }
+    os << ".";
   }
-  os << ".";
 }
 
 void PathExpressionPrinter::visit(const And *pe) {
@@ -540,7 +542,12 @@ std::ostream &operator<<(std::ostream &os, const PathExpressionImpl &pe) {
 }
 
 std::ostream &operator<<(std::ostream &os, const PathExpression &pe) {
-  PathExpressionPrinter(os).print(pe);
+  if (pe.defined()) {
+    PathExpressionPrinter(os).print(pe);
+  }
+  else {
+    os << "Undefined PathExpression";
+  }
   return os;
 }
 
