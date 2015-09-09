@@ -269,12 +269,13 @@ void IRPrinter::visit(const IndexedTensor *op) {
 
 void IRPrinter::visit(const IndexExpr *op) {
   clearSkipParen();
-  os << "{";
+  os << "(";
   if (op->resultVars.size() > 0) {
     os << simit::util::join(op->resultVars, ",") + " ";
   }
+  skipTopExprParenthesis();
   print(op->value);
-  os << "}";
+  os << ")";
 }
 
 void IRPrinter::visit(const Map *op) {

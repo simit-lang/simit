@@ -437,6 +437,7 @@ struct IndexExpr : public ExprNode<IndexExpr> {
   std::vector<IndexVar> resultVars;
   Expr value;
   std::vector<IndexVar> domain() const;
+
   static Expr make(std::vector<IndexVar> resultVars, Expr value);
 };
 
