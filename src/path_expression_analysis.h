@@ -2,10 +2,13 @@
 #define SIMIT_PATH_EXPRESSION_ANALYSIS_H
 
 #include <map>
+#include <vector>
 
 namespace simit {
+class Set;
 namespace pe {
 class PathExpression;
+class Var;
 }
 namespace ir {
 class Var;
@@ -23,8 +26,13 @@ public:
 
   pe::PathExpression getPathExpression(Var target);
 
+  void bind(ir::Var var, const Set* set);
+
 private:
-  std::map<Var, pe::PathExpression> pathExpressions;
+  std::map<ir::Var, pe::PathExpression> pathExpressions;
+
+  // Maps each set variable to its path expression variables to support binding.
+  std::map<ir::Var, std::vector<pe::Var>> pathExpressionVars;
 
   /// Add a path expression to the builder. This path expression that will be
   /// used to compute derived path expressions.

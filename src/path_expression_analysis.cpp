@@ -17,7 +17,7 @@ namespace ir {
 
 map<Var, pe::PathExpression> getPathExpressions(const Func& func) {
   map<Var, pe::PathExpression> pathExpressions;
-
+  not_supported_yet;
   return pathExpressions;
 }
 
@@ -27,23 +27,28 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
 
   const Var& targetSet = to<VarExpr>(map->target)->var;
   pe::Var e = pe::Var(targetSet.getName());
+  pathExpressionVars[targetSet].push_back(e);
 
   for (const Var& var : map->vars) {
     iassert(var.getType().isTensor());
     const TensorType* type = var.getType().toTensor();
-    tassert(type->order()==2) << "path expressions only supported for matrices";
 
     std::vector<IndexSet> dims = type->getOuterDimensions();
-    iassert(dims[0].getKind() == IndexSet::Set &&
-            dims[1].getKind() == IndexSet::Set);
-    iassert(isa<VarExpr>(dims[0].getSet()) && isa<VarExpr>(dims[1].getSet()))
-        << "can't compute path expressions from dynamic sets (yet?)";
+    std::vector<pe::Var> peVars;
+    for (const IndexSet& dim : dims) {
+      iassert(dim.getKind() == IndexSet::Set);
+      iassert(isa<VarExpr>(dim.getSet()))
+          << "can't compute path expressions from dynamic sets (yet?)";
 
-    Var dim0 = to<VarExpr>(dims[0].getSet())->var;
-    Var dim1 = to<VarExpr>(dims[1].getSet())->var;
+      ir::Var dimensionSet = to<VarExpr>(dim.getSet())->var;
+      pe::Var v = pe::Var(dimensionSet.getName());
+      pathExpressionVars[dimensionSet].push_back(v);
+      peVars.push_back(v);
+    }
 
-    pe::Var u = pe::Var(dim0.getName());
-    pe::Var v = pe::Var(dim1.getName());
+    tassert(type->order()==2) << "path expressions only supported for matrices";
+    pe::Var u = peVars[0];
+    pe::Var v = peVars[1];
 
     pe::PathExpression ve = Link::make(u, e, Link::ve);
     pe::PathExpression ev = Link::make(e, v, Link::ev);
@@ -102,6 +107,13 @@ void PathExpressionBuilder::computePathExpression(Var target,
 pe::PathExpression PathExpressionBuilder::getPathExpression(Var target) {
   iassert(util::contains(pathExpressions, target));
   return pathExpressions.at(target);
+}
+
+void PathExpressionBuilder::bind(ir::Var var, const Set* set) {
+  iassert(util::contains(pathExpressionVars, var));
+  for (pe::Var& peVar : pathExpressionVars.at(var)) {
+    peVar.bind(set);
+  }
 }
 
 void PathExpressionBuilder::addPathExpression(Var target,
