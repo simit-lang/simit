@@ -16,13 +16,19 @@ struct Map;
 class PathExpressionBuilder {
 public:
   /// Construct a path expression from the given map statement.
-  pe::PathExpression computePathExpression(Var target, const Map* iexpr);
+  void computePathExpression(const Map* map);
 
   /// Construct a path expression from the index expressionfor the given target.
-  pe::PathExpression computePathExpression(Var target, const IndexExpr* iexpr);
+  void computePathExpression(Var target, const IndexExpr* iexpr);
+
+  pe::PathExpression getPathExpression(Var target);
 
 private:
   std::map<Var, pe::PathExpression> pathExpressions;
+
+  /// Add a path expression to the builder. This path expression that will be
+  /// used to compute derived path expressions.
+  void addPathExpression(Var target, const pe::PathExpression& pe);
 };
 
 /// Associates tensor variables with path expressions. Variables that are not
