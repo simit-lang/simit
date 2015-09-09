@@ -184,7 +184,7 @@ PathExpression PathExpression::operator()(Var v0, Var v1) {
 
 // class Link
 Link::Link(const Var &lhs, const Var &rhs, Type type)
-    : type(type), lhs(lhs), rhs(rhs), lhsBinding(nullptr), rhsBinding(nullptr) {
+    : type(type), lhs(lhs), rhs(rhs) {
 }
 
 PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
@@ -192,15 +192,30 @@ PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
 }
 
 void Link::bind(const Set *lhsBinding, const Set *rhsBinding) const {
-  this->lhsBinding = lhsBinding;
-  this->rhsBinding = rhsBinding;
+  this->lhs.bind(lhsBinding);
+  this->rhs.bind(rhsBinding);
+}
+
+const Set* Link::getLhsBinding() const {
+  return lhs.getBinding();
+}
+
+const Set* Link::getRhsBinding() const {
+  return rhs.getBinding();
+}
+
+const Set* Link::getVertexBinding() const {
+  return (type==ev) ? rhs.getBinding() : lhs.getBinding();
+}
+
+const Set* Link::getEdgeBinding() const   {
+  return (type==ev) ? lhs.getBinding() : rhs.getBinding();
 }
 
 bool Link::isBound() const {
-  iassert((lhsBinding != nullptr && rhsBinding != nullptr)
-       || (lhsBinding == nullptr && rhsBinding == nullptr))
+  iassert((lhs.isBound()&&rhs.isBound()) || (!lhs.isBound()&&!rhs.isBound()))
       << "either all should be bound or none";
-  return lhsBinding != nullptr;
+  return lhs.isBound();
 }
 
 const Var &Link::getPathEndpoint(unsigned i) const {

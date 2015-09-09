@@ -46,6 +46,7 @@ class PathExpression;
 
 struct VarContent {
   std::string name;
+  mutable const Set* binding = nullptr;
   explicit VarContent(const std::string &name) : name(name) {}
   mutable long ref = 0;
   friend inline void aquire(const VarContent *v) {++v->ref;}
@@ -63,6 +64,10 @@ public:
       : util::IntrusivePtr<const VarContent>(new VarContent(name)) {}
 
   const std::string &getName() const {return ptr->name;}
+  const Set* getBinding() const {return ptr->binding;}
+
+  bool isBound() const {return ptr->binding != nullptr;}
+  void bind(const Set* set) const {ptr->binding = set;}
 };
 
 
@@ -183,11 +188,11 @@ public:
   void bind(const Set *lhsBinding, const Set *rhsBinding) const;
   bool isBound() const;
 
-  const Set *getLhsBinding() const {return lhsBinding;}
-  const Set *getRhsBinding() const {return rhsBinding;}
+  const Set *getLhsBinding() const;
+  const Set *getRhsBinding() const;
 
-  const Set *getVertexBinding() const {return (type==ev)?rhsBinding:lhsBinding;}
-  const Set *getEdgeBinding() const   {return (type==ev)?lhsBinding:rhsBinding;}
+  const Set *getVertexBinding() const;
+  const Set *getEdgeBinding() const;
 
   void accept(PathExpressionVisitor *visitor) const;
 
@@ -195,10 +200,6 @@ private:
   Type type;
   Var lhs;
   Var rhs;
-
-  // Bindings are not immutable
-  mutable const Set *lhsBinding;
-  mutable const Set *rhsBinding;
 
   Link(const Var &lhs, const Var &rhs, Type type);
 
