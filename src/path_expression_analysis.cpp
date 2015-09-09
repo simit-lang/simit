@@ -95,6 +95,18 @@ void PathExpressionBuilder::computePathExpression(Var target,
       PathExpression b = peStack.top();
       peStack.pop();
 
+      PathExpression pe = pe::Or::make(peVars, {}, a, b);
+      peStack.push(pe);
+    }),
+    function<void(const Mul*, Matcher* ctx)>([&](const Mul* op, Matcher* ctx) {
+      ctx->match(op->a);
+      PathExpression a = peStack.top();
+      peStack.pop();
+
+      ctx->match(op->b);
+      PathExpression b = peStack.top();
+      peStack.pop();
+
       PathExpression pe = pe::And::make(peVars, {}, a, b);
       peStack.push(pe);
     })

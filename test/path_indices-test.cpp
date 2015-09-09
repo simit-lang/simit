@@ -1,4 +1,5 @@
-#include "gtest/gtest.h"
+#include "simit-test.h"
+#include "path_indices-tests.h"
 #include "path_expressions-test.h"
 
 #include <map>
@@ -12,31 +13,6 @@
 using namespace simit;
 using namespace simit::pe;
 using namespace std;
-
-typedef vector<vector<unsigned>> nbrs;
-
-#define VERIFY_INDEX(index, expectedNbrs)                                      \
-do {                                                                           \
-  auto expectedNeighbors = expectedNbrs;                                       \
-  ASSERT_EQ(expectedNeighbors.size(), index.numElements());                    \
-  unsigned i = 0;                                                              \
-  unsigned int totalNbrs=0;                                                    \
-  for (auto e : index) {                                                       \
-    ASSERT_EQ(expectedNeighbors[i].size(), index.numNeighbors(e))              \
-        << "element " << i << " has the wrong number of neighbors";            \
-    unsigned j = 0;                                                            \
-    for (auto n : index.neighbors(e)) {                                        \
-      ASSERT_EQ(expectedNeighbors[i][j], n)                                    \
-          << "expects neighbor " << j << " of element " << i                   \
-          << " to be " << expectedNeighbors[i][j];                             \
-      ++j;                                                                     \
-    }                                                                          \
-    totalNbrs += j;                                                            \
-    ++i;                                                                       \
-  }                                                                            \
-  ASSERT_EQ(totalNbrs, index.numNeighbors());                                  \
-} while(0)
-
 
 TEST(PathIndex, Link) {
   PathIndexBuilder builder;
@@ -102,17 +78,10 @@ TEST(PathIndex, Link) {
 TEST(PathIndex, And) {
   PathIndexBuilder builder;
 
-  //  -f-
-  // v-e-v-e-v-f-v
-  //  -----f-----
   Set V;
   Set E(V,V);
   Set F(V,V);
-  Box box = createBox(&V, &E, 3, 1, 1);
-  ElementRef v3 = V.add();
-  F.add(box(2,0,0), v3);
-  F.add(box(0,0,0), v3);
-  F.add(box(0,0,0), box(1,0,0));
+  createTestGraph0(&V, &E, &F);
 
   // test (ve or ve)
   PathExpression ve = makeVE();
@@ -148,17 +117,10 @@ TEST(PathIndex, And) {
 TEST(PathIndex, Or) {
   PathIndexBuilder builder;
 
-  //  -f-
-  // v-e-v-e-v-f-v
-  //  -----f-----
   Set V;
   Set E(V,V);
   Set F(V,V);
-  Box box = createBox(&V, &E, 3, 1, 1);
-  ElementRef v3 = V.add();
-  F.add(box(2,0,0), v3);
-  F.add(box(0,0,0), v3);
-  F.add(box(0,0,0), box(1,0,0));
+  createTestGraph0(&V, &E, &F);
 
   // test (ve or ve)
   PathExpression ve = makeVE();
@@ -271,10 +233,8 @@ TEST(PathIndex, ExistOr) {
 
   Set V;
   Set E(V,V);
-  V.add();                               // v
-  Box box = createBox(&V, &E, 2, 1, 1);  //   v-e-v
-  ElementRef v3 = V.add();               // v
-  ElementRef v4 = V.add();               // v
+  Set G(V,V);
+  createTestGraph1(&V, &E, &G);
 
   // Test vev expressions (there exist an e s.t. (vi-e and e-vj))
   PathExpression ve = makeVE();
@@ -326,9 +286,6 @@ TEST(PathIndex, ExistOr) {
                                  {0,1,2,3,4}, {0,1,2,3,4}}));
 
   // Test vevgv expressions: v   v-e-v-e-v   v-g-v
-  Set G(V,V);
-  G.add(v3, v4);
-
   vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}}, ve(vi, e), ev(e, vj));
 
   Var g("g");
