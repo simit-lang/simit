@@ -91,10 +91,36 @@ TEST(PathExpressionBuilder, mul) {
   pe::PathIndexBuilder indexBuilder;
   pe::PathIndex pi = indexBuilder.buildSegmented(pe, 0);
   VERIFY_INDEX(pi, nbrs({{0,1}, {0,1}, {2}, {}}));
+}
 
-  pe::PathExpression peBound = builder.getPathExpression(A);
+TEST(DISABLED_PathExpressionBuilder, gemm) {
+  Var A("A", ir::TensorType::make(ir::typeOf<simit_float>(), {dim,dim}));
+  Var B("B", ir::TensorType::make(ir::typeOf<simit_float>(), {dim,dim}));
+  Var C("C", ir::TensorType::make(ir::typeOf<simit_float>(), {dim,dim}));
 
-  ASSERT_TRUE(peBound.isBound());
+  Stmt mapB = Map::make({B}, f, {}, E);
+  Stmt mapC = Map::make({C}, f, {}, F);
+  Expr iexpr = IndexExpr::make({i,j}, Expr(B)(i,k) * Expr(C)(k,j));
+  std::cout << iexpr << std::endl;
 
-  std::cout << "A: " << pe << std::endl;
+  PathExpressionBuilder builder;
+  builder.computePathExpression(to<Map>(mapB));
+  builder.computePathExpression(to<Map>(mapC));
+  builder.computePathExpression(A, to<IndexExpr>(iexpr));
+
+  Set Vs;
+  Set Es(Vs,Vs);
+  Set Fs(Vs,Vs);
+  createTestGraph1(&Vs, &Es, &Fs);
+
+  builder.bind(V, &Vs);
+  builder.bind(E, &Es);
+  builder.bind(F, &Fs);
+
+  pe::PathExpression pe = builder.getPathExpression(A);
+  ASSERT_TRUE(pe.isBound());
+
+  pe::PathIndexBuilder indexBuilder;
+  pe::PathIndex pi = indexBuilder.buildSegmented(pe, 0);
+  VERIFY_INDEX(pi, nbrs({{3,4}, {0,1,2,3,4}, {0,1,2,3,4}, {3,4}, {3,4}}));
 }
