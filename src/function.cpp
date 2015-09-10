@@ -19,7 +19,7 @@ void Function::bind(const std::string& name, simit::Set *set) {
 #ifdef SIMIT_ASSERTS
   uassert(defined()) << "undefined function";
   uassert(impl->hasBindable(name))
-      << "no argument or global of this name in the function";
+      << "no argument or global " << util::quote(name) << " in function";
   // Check that the set matches the argument type
   ir::Type argType = impl->getBindableType(name);
   uassert(argType.isSet()) << "Argument is not a set";

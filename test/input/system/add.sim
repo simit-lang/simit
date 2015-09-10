@@ -1,0 +1,26 @@
+element Vertex
+  a : float;
+  b : float;
+end
+
+element Edge
+  e : float;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+extern F : set{Edge}(V,V);
+
+func dist_a(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
+  A(v(0),v(0)) = e.e;
+  A(v(0),v(1)) = e.e;
+  A(v(1),v(0)) = e.e;
+  A(v(1),v(1)) = e.e;
+end
+
+proc main 
+  A = map dist_a to E reduce +;
+  B = map dist_a to F reduce +;
+  C = A + B;
+  V.a = C * V.b;
+end
