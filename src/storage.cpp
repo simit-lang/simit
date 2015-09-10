@@ -64,6 +64,10 @@ bool TensorStorage::isSystem() const {
   return false;
 }
 
+bool TensorStorage::isDense() const {
+  return content->kind == DenseRowMajor;
+}
+
 const Expr &TensorStorage::getSystemTargetSet() const {
   iassert(isSystem()) << "System storages require the target set be provided";
   return content->systemTargetSet;
@@ -138,7 +142,8 @@ bool Storage::hasStorage(const Var &tensor) const {
 }
 
 TensorStorage &Storage::get(const Var &tensor) {
-  iassert(hasStorage(tensor)) << "no storage specified for tensor" << tensor;
+  iassert(hasStorage(tensor))
+      << " no storage specified for tensor " << util::quote(tensor);
   return content->storage.at(tensor);
 }
 

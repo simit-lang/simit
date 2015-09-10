@@ -70,6 +70,8 @@ public:
   /// True if the tensor is stored on a system, false otherwise.
   bool isSystem() const;
 
+  bool isDense() const;
+
   const Expr &getSystemTargetSet() const;
   const Expr &getSystemStorageSet() const;
 

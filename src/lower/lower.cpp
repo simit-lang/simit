@@ -3,8 +3,6 @@
 #include <map>
 
 #include "lower_maps.h"
-
-#include "lower_indexexprs.h" // TODO: Deprecated and should be replaced
 #include "index_expressions/lower_index_expressions.h"
 
 #include "lower_accesses.h"
@@ -109,10 +107,6 @@ Func lower(Func func, bool print) {
   // Lower Index Expressions
   func = rewriteCallGraph(func, lowerIndexExpressions);
   printCallGraph("Lower Index Expressions", func, print);
-
-  // TODO: Deprecated index expression lower pass to be replaced
-  func = rewriteCallGraph(func, lowerIndexExprs);
-  printCallGraph("Lower Index Expressions OLD", func, print);
 
   // Lower Tensor Reads and Writes
   func = rewriteCallGraph(func, lowerTensorAccesses);

@@ -11,7 +11,7 @@ extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 extern F : set{Edge}(V,V);
 
-func dist_a(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
+func f(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
   A(v(0),v(0)) = e.e;
   A(v(0),v(1)) = e.e;
   A(v(1),v(0)) = e.e;
@@ -19,8 +19,10 @@ func dist_a(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
 end
 
 proc main 
-  A = map dist_a to E reduce +;
-  B = map dist_a to F reduce +;
+  A = map f to E reduce +;
+  B = map f to F reduce +;
+  print E.e; 
+  print F.e; 
   C = A + B;
   V.a = C * V.b;
 end

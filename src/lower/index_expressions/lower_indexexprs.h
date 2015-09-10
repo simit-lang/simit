@@ -6,7 +6,7 @@
 namespace simit {
 namespace ir {
 
-Func lowerIndexExprs(Func func);
+Stmt lowerIndexStatement(Stmt stmt, const Storage &storage);
 
 }}
 #endif
