@@ -194,78 +194,71 @@ struct IndexRead : public ExprNode<IndexRead> {
   static Expr make(Expr edgeSet, Kind kind);
 };
 
-struct Neg : public ExprNode<Neg> {
+struct UnaryExpr {
   Expr a;
+};
+
+struct BinaryExpr {
+  Expr a, b;
+};
+
+struct Neg : public UnaryExpr, public ExprNode<Neg> {
   static Expr make(Expr a);
 };
 
-struct Add : public ExprNode<Add> {
-  Expr a, b;
+struct Add : public BinaryExpr, public ExprNode<Add> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Sub : public ExprNode<Sub> {
-  Expr a, b;
+struct Sub : public BinaryExpr, public ExprNode<Sub> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Mul : public ExprNode<Mul> {
-  Expr a, b;
+struct Mul : public BinaryExpr, public ExprNode<Mul> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Div : public ExprNode<Div> {
-  Expr a, b;
+struct Div : public BinaryExpr, public ExprNode<Div> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Not : public ExprNode<Not> {
-  Expr a;
+struct Not : public UnaryExpr, public ExprNode<Not> {
   static Expr make(Expr a);
 };
 
-struct Eq : public ExprNode<Eq> {
-  Expr a, b;
+struct Eq : public BinaryExpr, public ExprNode<Eq> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Ne : public ExprNode<Ne> {
-  Expr a, b;
+struct Ne : public BinaryExpr, public ExprNode<Ne> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Gt : public ExprNode<Gt> {
-  Expr a, b;
+struct Gt : public BinaryExpr, public ExprNode<Gt> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Lt : public ExprNode<Lt> {
-  Expr a, b;
+struct Lt : public BinaryExpr, public ExprNode<Lt> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Ge : public ExprNode<Ge> {
-  Expr a, b;
+struct Ge : public BinaryExpr, public ExprNode<Ge> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Le : public ExprNode<Le> {
-  Expr a, b;
+struct Le : public BinaryExpr, public ExprNode<Le> {
   static Expr make(Expr a, Expr b);
 };
 
-struct And : public ExprNode<And> {
-  Expr a, b;
+struct And : public BinaryExpr, public ExprNode<And> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Or : public ExprNode<Or> {
-  Expr a, b;
+struct Or : public BinaryExpr, public ExprNode<Or> {
   static Expr make(Expr a, Expr b);
 };
 
-struct Xor : public ExprNode<Xor> {
-  Expr a, b;
+struct Xor : public BinaryExpr, public ExprNode<Xor> {
   static Expr make(Expr a, Expr b);
 };
 

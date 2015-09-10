@@ -20,6 +20,9 @@ struct Call;
 struct Length;
 struct IndexRead;
 
+struct UnaryExpr;
+struct BinaryExpr;
+
 struct Neg;
 struct Add;
 struct Sub;
@@ -130,6 +133,9 @@ public:
   virtual void visit(const Call *op);
   virtual void visit(const Length *op);
   virtual void visit(const IndexRead *op);
+
+  virtual void visit(const UnaryExpr* op);
+  virtual void visit(const BinaryExpr* op);
 
   virtual void visit(const Neg *op);
   virtual void visit(const Add *op);
@@ -252,6 +258,9 @@ private:
   RULE(Call)
   RULE(Length)
   RULE(IndexRead)
+
+  RULE(UnaryExpr)
+  RULE(BinaryExpr)
 
   RULE(Neg)
   RULE(Add)

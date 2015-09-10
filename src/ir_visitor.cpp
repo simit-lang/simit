@@ -44,77 +44,73 @@ void IRVisitor::visit(const Call *op) {
   }
 }
 
-void IRVisitor::visit(const Neg *op) {
+void IRVisitor::visit(const UnaryExpr* op) {
   op->a.accept(this);
+}
+
+void IRVisitor::visit(const BinaryExpr* op) {
+  op->a.accept(this);
+  op->b.accept(this);
+}
+
+void IRVisitor::visit(const Neg *op) {
+  visit(static_cast<const UnaryExpr*>(op));
 }
 
 void IRVisitor::visit(const Add *op) {
-  op->a.accept(this);
-  op->b.accept(this);
+  visit(static_cast<const BinaryExpr*>(op));
 }
 
 void IRVisitor::visit(const Sub *op) {
-  op->a.accept(this);
-  op->b.accept(this);
+  visit(static_cast<const BinaryExpr*>(op));
 }
 
 void IRVisitor::visit(const Mul *op) {
-  op->a.accept(this);
-  op->b.accept(this);
+  visit(static_cast<const BinaryExpr*>(op));
 }
 
 void IRVisitor::visit(const Div *op) {
-  op->a.accept(this);
-  op->b.accept(this);
-}
-
-void IRVisitor::visit(const Eq *op) {
-  op->a.accept(this);
-  op->b.accept(this);
-}
-
-void IRVisitor::visit(const Ne *op) {
-  op->a.accept(this);
-  op->b.accept(this);
-}
-
-void IRVisitor::visit(const Gt *op) {
-  op->a.accept(this);
-  op->b.accept(this);
-}
-
-void IRVisitor::visit(const Lt *op) {
-  op->a.accept(this);
-  op->b.accept(this);
-}
-
-void IRVisitor::visit(const Ge *op) {
-  op->a.accept(this);
-  op->b.accept(this);
-}
-
-void IRVisitor::visit(const Le *op) {
-  op->a.accept(this);
-  op->b.accept(this);
-}
-
-void IRVisitor::visit(const And *op) {
-  op->a.accept(this);
-  op->b.accept(this);
-}
-
-void IRVisitor::visit(const Or *op) {
-  op->a.accept(this);
-  op->b.accept(this);
+  visit(static_cast<const BinaryExpr*>(op));
 }
 
 void IRVisitor::visit(const Not *op) {
-  op->a.accept(this);
+  visit(static_cast<const UnaryExpr*>(op));
+}
+
+void IRVisitor::visit(const Eq *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
+void IRVisitor::visit(const Ne *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
+void IRVisitor::visit(const Gt *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
+void IRVisitor::visit(const Lt *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
+void IRVisitor::visit(const Ge *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
+void IRVisitor::visit(const Le *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
+void IRVisitor::visit(const And *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
+void IRVisitor::visit(const Or *op) {
+  visit(static_cast<const BinaryExpr*>(op));
 }
 
 void IRVisitor::visit(const Xor *op) {
-  op->a.accept(this);
-  op->b.accept(this);
+  visit(static_cast<const BinaryExpr*>(op));
 }
 
 void IRVisitor::visit(const VarDecl *op) {
