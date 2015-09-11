@@ -16,10 +16,15 @@ class Var;
 class Stmt;
 class Expr;
 
+// TODO: Should we remove the whole system concept? This gives us Dense indices,
+//       PathExpression (reduced or unreduced) indices, Diagonal indices,
+//       Matrix-Free indices, ... .
+
 /// The storage arrangement of a tensor (e.g. dense or stored on a set).
 class TensorStorage {
 public:
   enum Kind {
+    /// Undefined storage.
     Undefined,
 
     /// The tensor is stored in dense row major order.
@@ -32,8 +37,8 @@ public:
     // SparseMatrixCSR,
 
     /// A system tensor that is split in one dimension with one slice stored on
-    /// each element of the set of that dimension.
-    /// For now we will assume it was split along the first dimension.
+    /// each element of the set of that dimension. For now we will assume it was
+    /// split along the first dimension.
     SystemReduced,
 
     /// A system tensor that only contains values along its diagonal, and hence
@@ -47,7 +52,7 @@ public:
 
     /// A system tensor that is never stored. Any index expressions that use
     /// this tensor must be fused with the tensor assembly.
-    SystemNone
+    MatrixFree
   };
 
   /// Create an undefined tensor storage
@@ -67,20 +72,22 @@ public:
   /// Retrieve the tensor storage kind.
   Kind getKind() const;
 
-  /// True if the tensor is stored on a system, false otherwise.
-  bool isSystem() const;
-
+  /// True if the tensor is dense, which means all values are stored without an
+  /// index.
   bool isDense() const;
-
-  const Expr &getSystemTargetSet() const;
-  const Expr &getSystemStorageSet() const;
 
   /// True if the tensor needs storage initialized at runtime, false otherwise.
   bool needsInitialization() const;
+  /// True if the tensor is stored on a system, false otherwise.
+  bool isSystem() const;
 
   bool hasPathExpression() const;
   const pe::PathExpression& getPathExpression() const;
   void setPathExpression(const pe::PathExpression& pathExpression);
+
+  // TODO DEPRECATED: These should not be needed with the new TensorIndex system
+  const Expr &getSystemTargetSet() const;
+  const Expr &getSystemStorageSet() const;
 
 private:
   struct Content;

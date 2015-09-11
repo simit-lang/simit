@@ -167,8 +167,8 @@ private:
       case TensorStorage::SystemDiagonal:
         index = rewrite(indices[0]);
         break;
-      case TensorStorage::SystemNone:
-        ierror << "Can't store to a tensor without storage.";
+      case TensorStorage::MatrixFree:
+        ierror << "Can't store to a matrix-free tensor.";
         break;
       case TensorStorage::Undefined:
         ierror;

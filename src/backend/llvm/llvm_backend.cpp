@@ -1296,11 +1296,11 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       len = builder->CreateMul(len, blockLen);
       break;
     }
-    case TensorStorage::SystemNone:
-      ierror << "Attempting to compute size of tensor without storage";
+    case TensorStorage::MatrixFree:
+      ierror << "Can't compute the size of a matrix-free tensor";
       break;
     case TensorStorage::Undefined:
-      ierror << "Attempting to compute size of tensor with undefined storage";
+      ierror << "Can't compute the size of tensor with undefined storage";
       break;
   }
   iassert(len != nullptr);

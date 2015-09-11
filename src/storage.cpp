@@ -50,11 +50,15 @@ TensorStorage::Kind TensorStorage::getKind() const {
   return content->kind;
 }
 
+bool TensorStorage::isDense() const {
+  return content->kind == DenseRowMajor;
+}
+
 bool TensorStorage::isSystem() const {
   switch (content->kind) {
     case DenseRowMajor:
       return false;
-    case SystemNone:
+    case MatrixFree:
     case SystemReduced:
     case SystemDiagonal:
       return true;
@@ -62,20 +66,6 @@ bool TensorStorage::isSystem() const {
       ierror;
   }
   return false;
-}
-
-bool TensorStorage::isDense() const {
-  return content->kind == DenseRowMajor;
-}
-
-const Expr &TensorStorage::getSystemTargetSet() const {
-  iassert(isSystem()) << "System storages require the target set be provided";
-  return content->systemTargetSet;
-}
-
-const Expr &TensorStorage::getSystemStorageSet() const {
-  iassert(isSystem()) << "System storages require the storage set be provided";
-  return content->systemStorageSet;
 }
 
 bool TensorStorage::needsInitialization() const {
@@ -94,6 +84,16 @@ void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
   content->pathExpression = pathExpression;
 }
 
+const Expr &TensorStorage::getSystemTargetSet() const {
+  iassert(isSystem()) << "System storages require the target set be provided";
+  return content->systemTargetSet;
+}
+
+const Expr &TensorStorage::getSystemStorageSet() const {
+  iassert(isSystem()) << "System storages require the storage set be provided";
+  return content->systemStorageSet;
+}
+
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
   switch (ts.getKind()) {
     case TensorStorage::Undefined:
@@ -102,8 +102,8 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
     case TensorStorage::DenseRowMajor:
       os << "Dense Row Major";
       break;
-    case TensorStorage::SystemNone:
-      os << "System None";
+    case TensorStorage::MatrixFree:
+      os << "Matrix-Free";
       break;
     case TensorStorage::SystemReduced:
       os << "System Reduced";
@@ -111,9 +111,6 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
     case TensorStorage::SystemDiagonal:
       os << "System Diagonal";
       break;
-  }
-  if (ts.needsInitialization()) {
-    os << " (init)";
   }
   return os;
 }
@@ -344,7 +341,7 @@ private:
         {TensorStorage::DenseRowMajor,  4},
         {TensorStorage::SystemReduced,  3},
         {TensorStorage::SystemDiagonal, 2},
-        {TensorStorage::SystemNone,     1},
+        {TensorStorage::MatrixFree,     1},
         {TensorStorage::Undefined,      0}
       };
 
@@ -362,7 +359,7 @@ private:
         if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
           switch (operandStorage.getKind()) {
             case TensorStorage::DenseRowMajor:
-            case TensorStorage::SystemNone:
+            case TensorStorage::MatrixFree:
               tensorStorage = operandStorage.getKind();
               break;
             case TensorStorage::SystemReduced:
