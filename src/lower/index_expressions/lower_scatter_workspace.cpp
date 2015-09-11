@@ -364,6 +364,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
         Type workspaceType = TensorType::make(workspaceCType,{workspaceDomain});
         workspace = Var("workspace", workspaceType);
         environment->addTemporary(workspace);
+        storage->add(workspace, TensorStorage::Kind::DenseRowMajor);
       }
       iassert(workspace.defined());
 

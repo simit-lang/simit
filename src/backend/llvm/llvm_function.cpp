@@ -199,6 +199,7 @@ Function::FuncType LLVMFunction::init() {
       }
     }
   }
+  Function::FuncType func;
 
   // Compile a harness void function without arguments that calls the simit
   // llvm function with pointers to the arguments.
@@ -211,7 +212,7 @@ Function::FuncType LLVMFunction::init() {
     auto init = (FuncPtrType)executionEngine->getPointerToFunction(initFunc);
     init();
     deinit = (FuncPtrType)executionEngine->getPointerToFunction(deinitFunc);
-    return (FuncPtrType)executionEngine->getPointerToFunction(llvmFunc);
+    func = (FuncPtrType)executionEngine->getPointerToFunction(llvmFunc);
   }
   else {
     llvm::SmallVector<llvm::Value*, 8> args;
@@ -284,15 +285,16 @@ Function::FuncType LLVMFunction::init() {
     }
 
     // Create Init/deinit function harnesses
-    createHarness(string(llvmFunc->getName())+".init", args)();
+    auto init = createHarness(string(llvmFunc->getName())+".init", args);
+    init();
     deinit = createHarness(string(llvmFunc->getName())+".deinit", args);
 
     // Compute function
-    auto harness = createHarness(llvmFunc->getName(), args);
+    func = createHarness(llvmFunc->getName(), args);
     iassert(!llvm::verifyModule(*module))
         << "LLVM module does not pass verification";
-    return harness;
   }
+  return func;
 }
 
 void LLVMFunction::print(std::ostream &os) const {

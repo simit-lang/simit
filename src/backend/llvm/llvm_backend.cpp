@@ -114,7 +114,6 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
     this->globals.insert(tmp);
   }
 
-
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
   std::reverse(callTree.begin(), callTree.end());
