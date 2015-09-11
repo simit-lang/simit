@@ -516,6 +516,9 @@ void IRPrinter::visit(const Func *func) {
     ++indentation;
     print(func->getBody());
     --indentation;
+    os << endl;
+    indent();
+    os << "end";
   }
   else {
     os << ";";
