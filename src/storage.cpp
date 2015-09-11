@@ -120,7 +120,7 @@ void Storage::add(const Var &tensor, TensorStorage tstorage) {
 void Storage::add(const Storage &other) {
   for (auto &var : other) {
     iassert(!hasStorage(var)) << "Variable" << var << "already has storage";
-    add(var, other.get(var));
+    add(var, other.getStorage(var));
   }
 }
 
@@ -128,14 +128,14 @@ bool Storage::hasStorage(const Var &tensor) const {
   return content->storage.find(tensor) != content->storage.end();
 }
 
-TensorStorage &Storage::get(const Var &tensor) {
+TensorStorage &Storage::getStorage(const Var &tensor) {
   iassert(hasStorage(tensor))
       << " no storage specified for tensor " << util::quote(tensor);
   return content->storage.at(tensor);
 }
 
-const TensorStorage &Storage::get(const Var &tensor) const {
-  return const_cast<Storage*>(this)->get(tensor);
+const TensorStorage &Storage::getStorage(const Var &tensor) const {
+  return const_cast<Storage*>(this)->getStorage(tensor);
 }
 
 struct Storage::Iterator::Content {
@@ -171,11 +171,11 @@ std::ostream &operator<<(std::ostream &os, const Storage &storage) {
   Storage::Iterator it = storage.begin();
   Storage::Iterator end = storage.end();
   if (it != end) {
-    os << *it << " : " << storage.get(*it);
+    os << *it << " : " << storage.getStorage(*it);
     ++it;
   }
   for (; it != end; ++it) {
-    os << std::endl << *it << " : " << storage.get(*it);
+    os << std::endl << *it << " : " << storage.getStorage(*it);
   }
   return os;
 }
@@ -343,7 +343,7 @@ private:
         iassert(storage->hasStorage(operand))
             << operand << "does not have a storage descriptor";
 
-        const TensorStorage operandStorage  = storage->get(operand);
+        const TensorStorage operandStorage  = storage->getStorage(operand);
         auto operandStorageKind = operandStorage.getKind();
         auto tensorStorageKind = tensorStorage.getKind();
         if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {

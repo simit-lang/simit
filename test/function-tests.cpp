@@ -105,7 +105,8 @@ TEST(Function, bindSparseTensor) {
   Environment env;
   env.addExtern(V);
   env.addExtern(A);
-  Stmt neg = lowerScatterWorkspace(A, to<IndexExpr>(negExpr), &env);
+  Storage storage;
+  Stmt neg = lowerScatterWorkspace(A, to<IndexExpr>(negExpr), &env, &storage);
   simit::Function function = getTestBackend()->compile(neg, env);
 
   // Create and bind arguments

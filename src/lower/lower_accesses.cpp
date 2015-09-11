@@ -110,7 +110,7 @@ private:
 
     TensorStorage tensorStorage;
     if (isa<VarExpr>(tensor)) {
-      tensorStorage = storage.get(to<VarExpr>(tensor)->var);
+      tensorStorage = storage.getStorage(to<VarExpr>(tensor)->var);
     }
     else {
       // Fields are always dense row major

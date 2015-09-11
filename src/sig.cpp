@@ -97,7 +97,7 @@ SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop, Storage& storage) {
     if (exists  != merged.content->edges.end()) {
       // if it exists, we want to keep the dominating version of the
       // edge: the one that is a sysreduced tensor
-      auto storageKind = storage.get(e->tensor).getKind();
+      auto storageKind = storage.getStorage(e->tensor).getKind();
   
       if (storageKind == TensorStorage::Kind::SystemReduced) {
         exists->get()->tensor = e->tensor;
@@ -206,9 +206,9 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
         const Var &var = to<VarExpr>(op->tensor)->var;
         iassert(storage.hasStorage(var)) << "No storage descriptor found for"
                                          << var << "in" << util::toString(*op);
-        if (storage.get(var).isSystem()) {
+        if (storage.getStorage(var).isSystem()) {
           tensorVar = var;
-          setExpr = storage.get(var).getSystemTargetSet();
+          setExpr = storage.getStorage(var).getSystemTargetSet();
         }
       }
       sig = SIG(op->indexVars, tensorVar, setExpr);
@@ -352,7 +352,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
       // We currently only support case 2.
       tassert(visited.size() == 1);
       
-      auto storageKind = storage.get(e->tensor).getKind();
+      auto storageKind = storage.getStorage(e->tensor).getKind();
      
       auto loopVars = vertexLoopVars[visited[0]->iv];
       Var link = loopVars[loopVars.size()-1].getVar();

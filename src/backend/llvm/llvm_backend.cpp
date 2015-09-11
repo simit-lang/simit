@@ -79,7 +79,7 @@ LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
 
 LLVMBackend::~LLVMBackend() {}
 
-Function* LLVMBackend::compile(ir::Func func, const ir::Storage &storage) {
+Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   this->module = new llvm::Module("simit", LLVM_CTX);
 
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
@@ -89,7 +89,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage &storage) {
   this->symtable.clear();
   this->buffers.clear();
   this->globals.clear();
-  this->storage = Storage();
+  this->storage = storage;
 
   const Environment& env = func.getEnvironment();
 
@@ -174,7 +174,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage &storage) {
 
     iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
-    llvm::Value *len = emitComputeLen(ttype, this->storage.get(bufferVar));
+    llvm::Value *len= emitComputeLen(ttype,this->storage.getStorage(bufferVar));
     unsigned compSize = ttype->componentType.bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(compSize));
     llvm::Value *mem = builder->CreateCall(malloc, size);
@@ -718,7 +718,8 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       
       // FIXME: shouldn't assume this is a var expression...
       tassert(isa<VarExpr>(callStmt.actuals[0]));
-      auto tensorStorage = storage.get(to<VarExpr>(callStmt.actuals[0])->var);
+      const TensorStorage& tensorStorage =
+          storage.getStorage(to<VarExpr>(callStmt.actuals[0])->var);
       llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
       llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
 
@@ -1472,7 +1473,7 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
   }
   // Assign to n-order tensors
   else {
-    llvm::Value *len = emitComputeLen(varType, storage.get(var));
+    llvm::Value *len = emitComputeLen(varType, storage.getStorage(var));
     unsigned componentSize = varType->componentType.bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(componentSize));
 

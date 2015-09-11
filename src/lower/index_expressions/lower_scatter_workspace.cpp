@@ -324,7 +324,7 @@ static string tensorSliceString(const Expr &expr, const IndexVar &sliceVar) {
 }
 
 Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
-                           Environment* environment) {
+                           Environment* environment, Storage* storage) {
   iassert(target.getType().isTensor());
   const TensorType* type = target.getType().toTensor();
   tassert(type->order() <= 2)

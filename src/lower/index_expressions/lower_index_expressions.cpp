@@ -95,7 +95,7 @@ Func lowerIndexExpressions(Func func) {
     }
 
   private:
-    const Storage *storage;
+    Storage *storage;
     Environment environment;
     
     using IRRewriter::visit;
@@ -133,7 +133,8 @@ Func lowerIndexExpressions(Func func) {
       const Var& var = op->var;
       const TensorType* type = iexpr->type.toTensor();
 
-      if (type->order()==0 || type->order()==1 || storage->get(var).isDense()) {
+      if (type->order()==0 || type->order()==1 ||
+          storage->getStorage(var).isDense()) {
         kind = DenseResult;
       }
       else if (isBinaryScale(iexpr)) {
@@ -166,7 +167,7 @@ Func lowerIndexExpressions(Func func) {
           break;
         case MatrixElwise:
           std::cout << "Emitting matrix elwise loops" << std::endl;
-          stmt = lowerScatterWorkspace(op->var, iexpr, &environment);
+          stmt = lowerScatterWorkspace(op->var, iexpr, &environment, storage);
           std::cout << stmt << std::endl;
           break;
         case MatrixMultiply:

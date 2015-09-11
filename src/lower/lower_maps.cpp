@@ -20,9 +20,11 @@ inline bool hasStorage(std::vector<Var> vars, const Storage &storage) {
 
 inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
   if (vars.size() == 0) return true;
-  TensorStorage::Kind firstStorage = storage.get(vars[0]).getKind();
+  TensorStorage::Kind firstStorage = storage.getStorage(vars[0]).getKind();
   for (auto &var : vars) {
-    if (storage.get(var).getKind() != firstStorage) return false;
+    if (storage.getStorage(var).getKind() != firstStorage) {
+      return false;
+    }
   }
   return true;
 }

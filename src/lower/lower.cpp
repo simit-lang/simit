@@ -93,7 +93,7 @@ Func lower(Func func, bool print) {
     visitCallGraph(func, [](Func func) {
       cout << "func " << func.getName() << ":" << endl;
       for (auto &var : func.getStorage()) {
-        cout << "  " << var << " : " << func.getStorage().get(var) << endl;
+        cout << "  " << var <<" : "<< func.getStorage().getStorage(var) << endl;
       }
       cout << endl;
     });

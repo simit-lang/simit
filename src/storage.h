@@ -108,10 +108,10 @@ public:
   bool hasStorage(const Var &tensor) const;
 
   /// Retrieve the storage of a tensor variable to modify it.
-  TensorStorage &get(const Var &tensor);
+  TensorStorage &getStorage(const Var &tensor);
 
   /// Retrieve the storage of a tensor variable to inspect it.
-  const TensorStorage &get(const Var &tensor) const;
+  const TensorStorage &getStorage(const Var &tensor) const;
 
   /// Iterator over storage Vars in this Storage descriptor.
   class Iterator {

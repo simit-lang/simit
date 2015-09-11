@@ -12,7 +12,7 @@ namespace ir {
 /// and scatters computed values into a dense workspace. In the course of
 /// lowering this functon may add arrays and indices to the environment.
 Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
-                           Environment* env);
+                           Environment* env, Storage* storage);
 
 }}
 #endif

@@ -136,9 +136,10 @@ TEST_P(IndexExpression, Matrix) {
   for (const Var& var : vars) {
     env.addExtern(var);
   }
+  Storage storage;
 
   Expr iexpr = IndexExpr::make({i,j}, expr);
-  Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(iexpr), &env);
+  Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(iexpr), &env, &storage);
 
   // TODO: add code to initialize result indices and vals from operands
 //  PathExpressionBuilder builder;
@@ -425,8 +426,9 @@ TEST(DISABLED_IndexExpression, vecadd) {
   env.addExtern(a);
   env.addExtern(to<VarExpr>(b)->var);
   env.addExtern(to<VarExpr>(c)->var);
+  Storage storage;
 
-  Stmt loops = lowerScatterWorkspace(a, to<IndexExpr>(iexpr), &env);
+  Stmt loops = lowerScatterWorkspace(a, to<IndexExpr>(iexpr), &env, &storage);
   std::cout << loops << std::endl;
 }
 
@@ -452,8 +454,9 @@ TEST(DISABLED_IndexExpression, gemv) {
   env.addExtern(a);
   env.addExtern(to<VarExpr>(B)->var);
   env.addExtern(to<VarExpr>(c)->var);
+  Storage storage;
 
-  Stmt loops = lowerScatterWorkspace(a, to<IndexExpr>(iexpr), &env);
+  Stmt loops = lowerScatterWorkspace(a, to<IndexExpr>(iexpr), &env, &storage);
   std::cout << loops << std::endl;
 }
 
