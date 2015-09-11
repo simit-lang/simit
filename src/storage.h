@@ -59,7 +59,7 @@ public:
   TensorStorage();
 
   /// Create a tensor storage descriptor.
-  TensorStorage(Kind kind, bool needsInitialization=true);
+  TensorStorage(Kind kind);
 
   /// Create a system diagonal storage descriptor.
   TensorStorage(const Expr &targetSet);
@@ -82,11 +82,6 @@ public:
   bool hasPathExpression() const;
   const pe::PathExpression& getPathExpression() const;
   void setPathExpression(const pe::PathExpression& pathExpression);
-
-  /// True if the tensor needs storage initialized at runtime, false otherwise.
-  /// TODO DEPRECATED: Should not need this. Environment tells us what is a
-  ///                  constant/global/etc.
-  bool needsInitialization() const;
 
   // TODO DEPRECATED: These should not be needed with the new TensorIndex system
   const Expr &getSystemTargetSet() const;

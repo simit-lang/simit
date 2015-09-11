@@ -20,18 +20,13 @@ struct TensorStorage::Content {
 
   /// A path expression describing
   pe::PathExpression pathExpression;
-
-  /// Whether the tensor needs storage allocated at runtime.
-  bool needsInitialization;
 };
 
 TensorStorage::TensorStorage() : TensorStorage(Kind::Undefined) {
 }
 
-TensorStorage::TensorStorage(Kind kind, bool needsInitialization)
-    : content(new Content) {
+TensorStorage::TensorStorage(Kind kind) : content(new Content) {
   content->kind = kind;
-  content->needsInitialization = needsInitialization;
 }
 
 TensorStorage::TensorStorage(const Expr &targetSet)
@@ -77,10 +72,6 @@ const pe::PathExpression& TensorStorage::getPathExpression() const {
 
 void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
   content->pathExpression = pathExpression;
-}
-
-bool TensorStorage::needsInitialization() const {
-  return content->needsInitialization;
 }
 
 const Expr &TensorStorage::getSystemTargetSet() const {
@@ -209,19 +200,19 @@ public:
   void get(Func func) {
     for (auto &global : func.getEnvironment().getConstants()) {
       if (global.first.getType().isTensor()) {
-        determineStorage(global.first, false);
+        determineStorage(global.first);
       }
     }
 
     for (auto &arg : func.getArguments()) {
       if (arg.getType().isTensor()) {
-        determineStorage(arg, false);
+        determineStorage(arg);
       }
     }
 
     for (auto &res : func.getResults()) {
       if (res.getType().isTensor()) {
-        determineStorage(res, false);
+        determineStorage(res);
       }
     }
 
@@ -242,7 +233,7 @@ private:
     Type type = var.getType();
     iassert(!storage->hasStorage(var)) << "Redeclaration of variable" << var;
     if (type.isTensor() && !isScalar(type)) {
-      determineStorage(var, true);
+      determineStorage(var);
     }
   }
 
@@ -258,13 +249,13 @@ private:
       // Element tensor and system vectors are dense.
       if (isElementTensorType(ttype) || ttype->order() <= 1) {
         if (!storage->hasStorage(var)) {
-          determineStorage(var, true);
+          determineStorage(var);
         }
       }
       // System matrices
       else {
         // assume system reduced storage
-        determineStorage(var, !isa<Literal>(op->value), op->value);
+        determineStorage(var, op->value);
       }
     }
   }
@@ -274,7 +265,7 @@ private:
       const Var &var = to<VarExpr>(op->tensor)->var;
       Type type = var.getType();
       if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
-        determineStorage(var, true);
+        determineStorage(var);
       }
     }
   }
@@ -302,7 +293,7 @@ private:
     }
   }
 
-  void determineStorage(Var var, bool initialize, Expr rhs=Expr()) {
+  void determineStorage(Var var, Expr rhs=Expr()) {
     // Scalars don't need storage
     if (isScalar(var.getType())) return;
 
@@ -316,8 +307,7 @@ private:
 
     // Element tensor and system vectors are dense.
     if (isElementTensorType(ttype) || ttype->order() == 1 || !rhs.defined()) {
-      tensorStorage = TensorStorage(TensorStorage::Kind::DenseRowMajor,
-                                    initialize);
+      tensorStorage = TensorStorage(TensorStorage::Kind::DenseRowMajor);
     }
     // System matrices
     else {

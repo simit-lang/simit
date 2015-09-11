@@ -622,9 +622,6 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
     llvmVar = builder->CreateAlloca(llvmType(type),nullptr,var.getName());
   }
   else {
-    if (!storage.get(var).needsInitialization()) {
-      return;
-    }
     llvmVar = makeGlobalTensor(varDecl.var);
   }
   iassert(llvmVar);
