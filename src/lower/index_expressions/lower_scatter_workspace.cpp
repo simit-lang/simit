@@ -320,7 +320,7 @@ static string tensorSliceString(const Expr &expr, const IndexVar &sliceVar) {
          << tensorSliceString(indexedTensor->indexVars, sliceVar);
     }
   };
-  return SlicePrinter(sliceVar).toString(expr);
+  return SlicePrinter(sliceVar).toString(expr);;
 }
 
 Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,

@@ -166,15 +166,15 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage &storage) {
   emitEmptyFunction(func.getName()+".init", func.getArguments(),
                     func.getResults(), true);
   for (auto &buffer : buffers) {
-    Var var = buffer.first;
-    llvm::Value *bufferVal = buffer.second;
+    const Var&   bufferVar = buffer.first;
+    llvm::Value* bufferVal = buffer.second;
 
-    Type type = var.getType();
+    Type type = bufferVar.getType();
     llvm::Type *ltype = llvmType(type);
 
     iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
-    llvm::Value *len = emitComputeLen(ttype, this->storage.get(var));
+    llvm::Value *len = emitComputeLen(ttype, this->storage.get(bufferVar));
     unsigned compSize = ttype->componentType.bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(compSize));
     llvm::Value *mem = builder->CreateCall(malloc, size);
@@ -850,12 +850,14 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
     if (isa<Literal>(fieldWrite.value) &&
         to<Literal>(fieldWrite.value)->getFloatVal(0) == 0.0) {
       // emit memset 0
-      llvm::Value *fieldPtr = emitFieldRead(fieldWrite.elementOrSet, fieldWrite.fieldName);
+      llvm::Value *fieldPtr = emitFieldRead(fieldWrite.elementOrSet,
+                                            fieldWrite.fieldName);
 
       const TensorType *tensorFieldType = fieldType.toTensor();
 
       // For now we'll assume fields are always dense row major
-      llvm::Value *fieldLen = emitComputeLen(tensorFieldType, TensorStorage::DenseRowMajor);
+      llvm::Value *fieldLen = emitComputeLen(tensorFieldType,
+                                             TensorStorage::DenseRowMajor);
       unsigned compSize = tensorFieldType->componentType.bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
@@ -867,7 +869,8 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
   }
   else {
     // emit memcpy
-    llvm::Value *fieldPtr = emitFieldRead(fieldWrite.elementOrSet, fieldWrite.fieldName);
+    llvm::Value *fieldPtr = emitFieldRead(fieldWrite.elementOrSet,
+                                          fieldWrite.fieldName);
     llvm::Value *valuePtr;
     switch (fieldWrite.cop) {
       case ir::CompoundOperator::None: {
@@ -876,7 +879,8 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
       }
       case ir::CompoundOperator::Add: {
         valuePtr = compile(Add::make(
-            FieldRead::make(fieldWrite.elementOrSet, fieldWrite.fieldName), fieldWrite.value));
+            FieldRead::make(fieldWrite.elementOrSet, fieldWrite.fieldName),
+                                     fieldWrite.value));
         break;
       }
     }
@@ -885,7 +889,8 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
     const TensorType *tensorFieldType = fieldType.toTensor();
 
     // For now we'll assume fields are always dense row major
-    llvm::Value *fieldLen = emitComputeLen(tensorFieldType, TensorStorage::DenseRowMajor);
+    llvm::Value *fieldLen = emitComputeLen(tensorFieldType,
+                                           TensorStorage::DenseRowMajor);
     unsigned elemSize = tensorFieldType->componentType.bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 

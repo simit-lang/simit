@@ -130,11 +130,10 @@ Func lowerIndexExpressions(Func func) {
       Kind kind = Unknown;
 
       iassert(iexpr->type.isTensor());
+      const Var& var = op->var;
       const TensorType* type = iexpr->type.toTensor();
 
-      if (type->order()==0 || type->order()==1 ||
-          storage->get(op->var).isDense()) {
-//          (storage->hasStorage(op->var) && storage->get(op->var).isDense())) {
+      if (type->order()==0 || type->order()==1 || storage->get(var).isDense()) {
         kind = DenseResult;
       }
       else if (isBinaryScale(iexpr)) {

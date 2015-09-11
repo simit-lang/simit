@@ -4,8 +4,10 @@
 
 #include "ir_rewriter.h"
 #include "intrinsics.h"
+#include "util/util.h"
 
 using namespace std;
+using simit::util::quote;
 
 namespace simit {
 namespace ir {
@@ -141,11 +143,11 @@ private:
         iassert(tensor.type().isTensor());
         size_t order = tensor.type().toTensor()->order();
         tassert(order == 2)
-            << "only currently supports matrices in reduced form."
-            << tensor << "has" << indices.size() << "dimensions";
+            << "Only currently supports matrices in reduced form. "
+            << quote(tensor) << " has " << indices.size() << " dimensions";
         iassert(indices.size() == 1 || indices.size() == order)
-            << "must either supply one index per dimension"
-            << "or a single index (flattened)";
+            << "Must either supply one index per dimension or a single "
+            << "index (flattened)";
 
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
