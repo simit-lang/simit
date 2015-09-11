@@ -148,7 +148,7 @@ TEST_P(IndexExpression, Matrix) {
 //  std::cout << pe << std::endl;
   SparseMatrix result = GetParam().expected;
 
-  simit::Function function = getTestBackend()->compile(loops, env);
+  simit::Function function = getTestBackend()->compile(loops, env, storage);
 
   // Find and bind set variables
   vector<unique_ptr<simit::Set>> sets;

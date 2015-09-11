@@ -246,7 +246,7 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
       os << std::endl;
     }
     auto temporaryVars = env.getTemporaryVars();
-    os << "temp " << *temporaryVars.begin()  << " : "
+    os << *temporaryVars.begin()  << " : "
        << temporaryVars.begin()->getType() << ";";
     for (auto& temp : util::excludeFirst(temporaryVars)) {
       os << std::endl << "temp " << temp  << " : " << temp.getType() << ";";

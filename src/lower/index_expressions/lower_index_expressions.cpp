@@ -105,7 +105,7 @@ Func lowerIndexExpressions(Func func) {
       if (body != f->getBody()) {
         func = Func(f->getName(), f->getArguments(), f->getResults(),
                     body, environment, f->getKind());
-        func.setStorage(f->getStorage());
+        func.setStorage(*storage);
       }
       else {
         func = *f;

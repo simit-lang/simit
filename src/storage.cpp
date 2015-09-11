@@ -113,8 +113,8 @@ struct Storage::Content {
 Storage::Storage() : content(new Content) {
 }
 
-void Storage::add(const Var &tensor, TensorStorage tstorage) {
-  content->storage[tensor] = tstorage;
+void Storage::add(const Var &tensor, TensorStorage tensorStorage) {
+  content->storage[tensor] = tensorStorage;
 }
 
 void Storage::add(const Storage &other) {
@@ -130,7 +130,7 @@ bool Storage::hasStorage(const Var &tensor) const {
 
 TensorStorage &Storage::getStorage(const Var &tensor) {
   iassert(hasStorage(tensor))
-      << " no storage specified for tensor " << util::quote(tensor);
+      << " no tensor storage specified for " << util::quote(tensor);
   return content->storage.at(tensor);
 }
 
