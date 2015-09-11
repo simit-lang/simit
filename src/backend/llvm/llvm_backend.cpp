@@ -856,8 +856,8 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
       const TensorType *tensorFieldType = fieldType.toTensor();
 
       // For now we'll assume fields are always dense row major
-      llvm::Value *fieldLen = emitComputeLen(tensorFieldType,
-                                             TensorStorage::DenseRowMajor);
+      llvm::Value *fieldLen =
+          emitComputeLen(tensorFieldType, TensorStorage::Kind::DenseRowMajor);
       unsigned compSize = tensorFieldType->componentType.bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
@@ -889,8 +889,8 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
     const TensorType *tensorFieldType = fieldType.toTensor();
 
     // For now we'll assume fields are always dense row major
-    llvm::Value *fieldLen = emitComputeLen(tensorFieldType,
-                                           TensorStorage::DenseRowMajor);
+    llvm::Value *fieldLen =
+        emitComputeLen(tensorFieldType, TensorStorage::Kind::DenseRowMajor);
     unsigned elemSize = tensorFieldType->componentType.bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 
@@ -1093,8 +1093,9 @@ void LLVMBackend::compile(const ir::Print& print) {
             llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
             llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
             llvm::Value *rangeStart = llvmInt(0);
-            llvm::Value *rangeEnd = builder->CreateSub(
-                  emitComputeLen(tensor, TensorStorage::DenseRowMajor), llvmInt(1));
+            llvm::Value *rangeLen =
+                emitComputeLen(tensor, TensorStorage::Kind::DenseRowMajor);
+            llvm::Value *rangeEnd = builder->CreateSub(rangeLen, llvmInt(1));
 
             llvm::BasicBlock *loopBodyStart =
               llvm::BasicBlock::Create(LLVM_CTX, "", llvmFunc);
@@ -1247,7 +1248,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
 
   llvm::Value *len = nullptr;
   switch (tensorStorage.getKind()) {
-    case TensorStorage::DenseRowMajor: {
+    case TensorStorage::Kind::DenseRowMajor: {
       auto it = dimensions.begin();
       len = emitComputeLen(*it++);
       for (; it != dimensions.end(); ++it) {
@@ -1255,7 +1256,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       }
       break;
     }
-    case TensorStorage::SystemReduced: {
+    case TensorStorage::Kind::SystemReduced: {
       llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
       llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
 
@@ -1279,27 +1280,29 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
         //       way to assign a storage order for every block in the tensor
         //       represented by a TensorStorage
         llvm::Value *blockSize =
-            emitComputeLen(blockType.toTensor(), TensorStorage::DenseRowMajor);
+            emitComputeLen(blockType.toTensor(),
+                           TensorStorage::Kind::DenseRowMajor);
         len = builder->CreateMul(len, blockSize);
       }
       break;
     }
-    case TensorStorage::SystemDiagonal: {
+    case TensorStorage::Kind::SystemDiagonal: {
       iassert(dimensions.size() > 0);
 
       // Just need one outer dimensions because diagonal
       len = emitComputeLen(tensorType->getOuterDimensions()[0]);
 
       Type blockType = tensorType->getBlockType();
-      llvm::Value *blockLen = emitComputeLen(blockType.toTensor(),
-                                             TensorStorage::DenseRowMajor);
+      llvm::Value *blockLen =
+          emitComputeLen(blockType.toTensor(),
+                         TensorStorage::Kind::DenseRowMajor);
       len = builder->CreateMul(len, blockLen);
       break;
     }
-    case TensorStorage::MatrixFree:
+    case TensorStorage::Kind::MatrixFree:
       ierror << "Can't compute the size of a matrix-free tensor";
       break;
-    case TensorStorage::Undefined:
+    case TensorStorage::Kind::Undefined:
       ierror << "Can't compute the size of tensor with undefined storage";
       break;
   }

@@ -23,7 +23,7 @@ class Expr;
 /// The storage arrangement of a tensor (e.g. dense or stored on a set).
 class TensorStorage {
 public:
-  enum Kind {
+  enum class Kind {
     /// Undefined storage.
     Undefined,
 
@@ -69,21 +69,24 @@ public:
   /// over. The 'storageSet' is the set the tensor is stored on.
   TensorStorage(const Expr &targetSet, const Expr &storageSet);
 
-  /// Retrieve the tensor storage kind.
+  /// Retrieve the tensor storage type.
   Kind getKind() const;
 
   /// True if the tensor is dense, which means all values are stored without an
   /// index.
   bool isDense() const;
 
-  /// True if the tensor needs storage initialized at runtime, false otherwise.
-  bool needsInitialization() const;
   /// True if the tensor is stored on a system, false otherwise.
   bool isSystem() const;
 
   bool hasPathExpression() const;
   const pe::PathExpression& getPathExpression() const;
   void setPathExpression(const pe::PathExpression& pathExpression);
+
+  /// True if the tensor needs storage initialized at runtime, false otherwise.
+  /// TODO DEPRECATED: Should not need this. Environment tells us what is a
+  ///                  constant/global/etc.
+  bool needsInitialization() const;
 
   // TODO DEPRECATED: These should not be needed with the new TensorIndex system
   const Expr &getSystemTargetSet() const;

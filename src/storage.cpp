@@ -18,30 +18,29 @@ struct TensorStorage::Content {
   Expr systemTargetSet;
   Expr systemStorageSet;
 
-  /// Whether the tensor needs storage allocated at runtime.
-  bool needsInitialization;
-
   /// A path expression describing
   pe::PathExpression pathExpression;
 
-  Content(Kind kind) : kind(kind) {}
+  /// Whether the tensor needs storage allocated at runtime.
+  bool needsInitialization;
 };
 
-TensorStorage::TensorStorage() : TensorStorage(Undefined) {
+TensorStorage::TensorStorage() : TensorStorage(Kind::Undefined) {
 }
 
 TensorStorage::TensorStorage(Kind kind, bool needsInitialization)
-    : content(new Content(kind)) {
+    : content(new Content) {
+  content->kind = kind;
   content->needsInitialization = needsInitialization;
 }
 
 TensorStorage::TensorStorage(const Expr &targetSet)
-    : TensorStorage(SystemDiagonal) {
+    : TensorStorage(Kind::SystemDiagonal) {
   content->systemTargetSet = targetSet;
 }
 
 TensorStorage::TensorStorage(const Expr &targetSet, const Expr &storageSet)
-    : TensorStorage(SystemReduced) {
+    : TensorStorage(Kind::SystemReduced) {
   content->systemTargetSet = targetSet;
   content->systemStorageSet = storageSet;
 }
@@ -51,25 +50,21 @@ TensorStorage::Kind TensorStorage::getKind() const {
 }
 
 bool TensorStorage::isDense() const {
-  return content->kind == DenseRowMajor;
+  return getKind() == Kind::DenseRowMajor;
 }
 
 bool TensorStorage::isSystem() const {
-  switch (content->kind) {
-    case DenseRowMajor:
+  switch (getKind()) {
+    case Kind::DenseRowMajor:
       return false;
-    case MatrixFree:
-    case SystemReduced:
-    case SystemDiagonal:
+    case Kind::SystemReduced:
+    case Kind::SystemDiagonal:
+    case Kind::MatrixFree:
       return true;
-    case Undefined:
+    case Kind::Undefined:
       ierror;
   }
   return false;
-}
-
-bool TensorStorage::needsInitialization() const {
-  return content->needsInitialization;
 }
 
 bool TensorStorage::hasPathExpression() const {
@@ -84,6 +79,10 @@ void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
   content->pathExpression = pathExpression;
 }
 
+bool TensorStorage::needsInitialization() const {
+  return content->needsInitialization;
+}
+
 const Expr &TensorStorage::getSystemTargetSet() const {
   iassert(isSystem()) << "System storages require the target set be provided";
   return content->systemTargetSet;
@@ -96,19 +95,19 @@ const Expr &TensorStorage::getSystemStorageSet() const {
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
   switch (ts.getKind()) {
-    case TensorStorage::Undefined:
+    case TensorStorage::Kind::Undefined:
       os << "Undefined";
       break;
-    case TensorStorage::DenseRowMajor:
+    case TensorStorage::Kind::DenseRowMajor:
       os << "Dense Row Major";
       break;
-    case TensorStorage::MatrixFree:
+    case TensorStorage::Kind::MatrixFree:
       os << "Matrix-Free";
       break;
-    case TensorStorage::SystemReduced:
+    case TensorStorage::Kind::SystemReduced:
       os << "System Reduced";
       break;
-    case TensorStorage::SystemDiagonal:
+    case TensorStorage::Kind::SystemDiagonal:
       os << "System Diagonal";
       break;
   }
@@ -259,7 +258,7 @@ private:
       // Element tensor and system vectors are dense.
       if (isElementTensorType(ttype) || ttype->order() <= 1) {
         if (!storage->hasStorage(var)) {
-          determineStorage(var);
+          determineStorage(var, true);
         }
       }
       // System matrices
@@ -275,7 +274,7 @@ private:
       const Var &var = to<VarExpr>(op->tensor)->var;
       Type type = var.getType();
       if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
-        determineStorage(var);
+        determineStorage(var, true);
       }
     }
   }
@@ -289,7 +288,7 @@ private:
         TensorStorage tensorStorage;
         auto tensorType = type.toTensor();
         if (tensorType->order() == 1) {
-          tensorStorage = TensorStorage(TensorStorage::DenseRowMajor);
+          tensorStorage = TensorStorage(TensorStorage::Kind::DenseRowMajor);
         }
         else if (op->neighbors.defined()) {
           tensorStorage = TensorStorage(op->target, op->neighbors);
@@ -297,13 +296,13 @@ private:
         else {
           tensorStorage = TensorStorage(op->target);
         }
-        iassert(tensorStorage.getKind() != TensorStorage::Undefined);
+        iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
         storage->add(var, tensorStorage);
       }
     }
   }
 
-  void determineStorage(Var var, bool initialize=true, Expr rhs=Expr()) {
+  void determineStorage(Var var, bool initialize, Expr rhs=Expr()) {
     // Scalars don't need storage
     if (isScalar(var.getType())) return;
 
@@ -317,7 +316,8 @@ private:
 
     // Element tensor and system vectors are dense.
     if (isElementTensorType(ttype) || ttype->order() == 1 || !rhs.defined()) {
-      tensorStorage = TensorStorage(TensorStorage::DenseRowMajor, initialize);
+      tensorStorage = TensorStorage(TensorStorage::Kind::DenseRowMajor,
+                                    initialize);
     }
     // System matrices
     else {
@@ -338,11 +338,11 @@ private:
       // E.g. if one of the input variables to the RHS expression is dense then
       // the output becomes dense.
       static map<TensorStorage::Kind, unsigned> priorities = {
-        {TensorStorage::DenseRowMajor,  4},
-        {TensorStorage::SystemReduced,  3},
-        {TensorStorage::SystemDiagonal, 2},
-        {TensorStorage::MatrixFree,     1},
-        {TensorStorage::Undefined,      0}
+        {TensorStorage::Kind::DenseRowMajor,  4},
+        {TensorStorage::Kind::SystemReduced,  3},
+        {TensorStorage::Kind::SystemDiagonal, 2},
+        {TensorStorage::Kind::MatrixFree,     1},
+        {TensorStorage::Kind::Undefined,      0}
       };
 
       for (Var operand : leafVars.vars) {
@@ -358,20 +358,20 @@ private:
         auto tensorStorageKind = tensorStorage.getKind();
         if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
           switch (operandStorage.getKind()) {
-            case TensorStorage::DenseRowMajor:
-            case TensorStorage::MatrixFree:
+            case TensorStorage::Kind::DenseRowMajor:
+            case TensorStorage::Kind::MatrixFree:
               tensorStorage = operandStorage.getKind();
               break;
-            case TensorStorage::SystemReduced:
+            case TensorStorage::Kind::SystemReduced:
               tensorStorage =
                   TensorStorage(operandStorage.getSystemTargetSet(),
                                 operandStorage.getSystemStorageSet());
               break;
-            case TensorStorage::SystemDiagonal:
+            case TensorStorage::Kind::SystemDiagonal:
               tensorStorage =
                   TensorStorage(operandStorage.getSystemTargetSet());
               break;
-            case TensorStorage::Undefined:
+            case TensorStorage::Kind::Undefined:
               unreachable;
               break;
           }
@@ -379,7 +379,7 @@ private:
       }
     }
 
-    if (tensorStorage.getKind() != TensorStorage::Undefined) {
+    if (tensorStorage.getKind() != TensorStorage::Kind::Undefined) {
       storage->add(var, tensorStorage);
     }
   }

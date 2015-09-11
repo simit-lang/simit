@@ -99,7 +99,7 @@ SIG merge(SIG &sig1, SIG &sig2, SIG::MergeOp mop, Storage& storage) {
       // edge: the one that is a sysreduced tensor
       auto storageKind = storage.get(e->tensor).getKind();
   
-      if (storageKind == TensorStorage::SystemReduced) {
+      if (storageKind == TensorStorage::Kind::SystemReduced) {
         exists->get()->tensor = e->tensor;
         exists->get()->set = e->set;
       }
@@ -366,7 +366,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           
           ForDomain::Kind domainKind = ForDomain::Neighbors;
           
-          if (storageKind == TensorStorage::SystemReduced) {
+          if (storageKind == TensorStorage::Kind::SystemReduced) {
             // if we have a fixed index var, then we need
             // a NeigborsOf domain
             if (indexVar.isFixed()) {
@@ -375,7 +375,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
             else {
               domainKind = ForDomain::Neighbors;
             }
-          } else if (storageKind == TensorStorage::SystemDiagonal) {
+          } else if (storageKind == TensorStorage::Kind::SystemDiagonal) {
             domainKind = ForDomain::Diagonal;
           }
           else
@@ -396,7 +396,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
 
-          if (storageKind == TensorStorage::SystemReduced) {
+          if (storageKind == TensorStorage::Kind::SystemReduced) {
             // The ij var links i to j through the neighbors indices. E.g.
             // for i in points:
             //   pointsi = 0;
