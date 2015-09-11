@@ -22,7 +22,7 @@
 #include "graph.h"
 #include "indices.h"
 #include "util/collections.h"
-
+#include "util/util.h"
 #include "llvm_util.h"
 
 using namespace std;
@@ -132,7 +132,11 @@ void LLVMFunction::bind(const std::string& name, const int* rowPtr,
   tassert(!hasArg(name)) << "Only support global sparse matrices";
 
   if (hasGlobal(name)) {
-    iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==3);
+    iassert(util::contains(externPtrs,name))
+        << "extern " << util::quote(name) << " does not have any extern ptrs";
+    iassert(externPtrs.at(name).size() == 3)
+        << "extern " << util::quote(name) << " has wrong size "
+        << externPtrs.at(name).size();
 
     // Sparse matrix externs are ordered: data, rowPtr, colInd
     *externPtrs.at(name)[0] = data;

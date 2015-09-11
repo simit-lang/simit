@@ -115,13 +115,15 @@ std::ostream& operator<<(std::ostream& os, const SubsetLoop& ssl) {
 // Free functions
 class CreateSubsetLoopVisitor : public IRVisitor {
 public:
-  CreateSubsetLoopVisitor(IndexVariableLoop loop, Environment* env) {
+  CreateSubsetLoopVisitor(IndexVariableLoop loop, Environment* environment,
+                          Storage* storage) {
     iassert(loop.isLinked());
     this->indexVar = loop.getIndexVar();
     this->inductionVar = loop.getInductionVar();
     this->linkedIndexVar = loop.getLinkedLoop().getIndexVar();
     this->linkedInductionVar = loop.getLinkedLoop().getInductionVar();
-    this->env = env;
+    this->environment = environment;
+    this->storage = storage;
   }
 
   vector<SubsetLoop> createSubsetLoops(const IndexExpr *indexExpression) {
@@ -136,7 +138,8 @@ private:
   IndexVar linkedIndexVar;
   Var linkedInductionVar;
 
-  Environment* env;
+  Environment* environment;
+  Storage* storage;
 
   vector<SubsetLoop> subsetLoops;
 
@@ -257,9 +260,22 @@ private:
         << "at this point the index expressions should have been flattened";
     Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
 
-    TensorIndex ti = env->getTensorIndex(tensor,
-                                         util::locate(indexVars,linkedIndexVar),
-                                         util::locate(indexVars,indexVar));
+    TensorStorage& ts = storage->getStorage(tensor);
+    unsigned sourceDim = util::locate(indexVars,linkedIndexVar);
+    unsigned sinkDim   = util::locate(indexVars,indexVar);
+    if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
+      ts.addTensorIndex(tensor, sourceDim, sinkDim);
+      const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
+      if (environment->hasExtern(tensor.getName())) {
+        environment->addExternMapping(tensor, ti.getCoordsArray());
+        environment->addExternMapping(tensor, ti.getSinksArray());
+      }
+      else {
+        environment->addTemporaryMapping(tensor, ti.getCoordsArray());
+        environment->addTemporaryMapping(tensor, ti.getSinksArray());
+      }
+    }
+    const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
 
     TensorIndexVar tensorIndexVar(inductionVar.getName(), tensor.getName(),
                                   linkedInductionVar, ti);
@@ -271,8 +287,10 @@ private:
 };
 
 vector<SubsetLoop> createSubsetLoops(const IndexExpr* indexExpr,
-                                     IndexVariableLoop loop, Environment* env) {
-  CreateSubsetLoopVisitor visitor(loop, env);
+                                     IndexVariableLoop loop,
+                                     Environment* environment,
+                                     Storage* storage) {
+  CreateSubsetLoopVisitor visitor(loop, environment, storage);
   return visitor.createSubsetLoops(indexExpr);
 }
 

@@ -15,6 +15,7 @@ class Func;
 class Var;
 class Stmt;
 class Expr;
+class TensorIndex;
 
 // TODO: Should we remove the whole system concept? This gives us Dense indices,
 //       PathExpression (reduced or unreduced) indices, Diagonal indices,
@@ -82,6 +83,10 @@ public:
   bool hasPathExpression() const;
   const pe::PathExpression& getPathExpression() const;
   void setPathExpression(const pe::PathExpression& pathExpression);
+
+  bool hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
+  const TensorIndex& getTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
+  void addTensorIndex(Var tensor, unsigned sourceDim, unsigned sinkDim);
 
   // TODO DEPRECATED: These should not be needed with the new TensorIndex system
   const Expr &getSystemTargetSet() const;

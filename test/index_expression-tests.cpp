@@ -129,14 +129,16 @@ TEST_P(IndexExpression, Matrix) {
 
   // Set up environment
   Environment env;
+  Storage storage;
   for (auto& setVar : setVars) {
     env.addExtern(setVar);
   }
   env.addExtern(A);
+  storage.add(A, TensorStorage::Kind::SystemReduced);
   for (const Var& var : vars) {
     env.addExtern(var);
+    storage.add(var, TensorStorage::Kind::SystemReduced);
   }
-  Storage storage;
 
   Expr iexpr = IndexExpr::make({i,j}, expr);
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(iexpr), &env, &storage);
@@ -417,15 +419,15 @@ TEST(DISABLED_IndexExpression, vecadd) {
 
   // a = b+c
   Var  a = Var("a", vectorType);
-  Expr b = Var("B", vectorType);
+  Expr b = Var("b", vectorType);
   Expr c = Var("c", vectorType);
 
   Expr iexpr = IndexExpr::make({i}, b(i)+c(i));
 
   Environment env;
-  env.addExtern(a);
   env.addExtern(to<VarExpr>(b)->var);
   env.addExtern(to<VarExpr>(c)->var);
+
   Storage storage;
 
   Stmt loops = lowerScatterWorkspace(a, to<IndexExpr>(iexpr), &env, &storage);
@@ -454,6 +456,7 @@ TEST(DISABLED_IndexExpression, gemv) {
   env.addExtern(a);
   env.addExtern(to<VarExpr>(B)->var);
   env.addExtern(to<VarExpr>(c)->var);
+
   Storage storage;
 
   Stmt loops = lowerScatterWorkspace(a, to<IndexExpr>(iexpr), &env, &storage);

@@ -9,6 +9,8 @@
 
 namespace simit {
 namespace ir {
+class Environment;
+class Storage;
 
 /// An index variable loop is a loop associated with a n index variable. An
 /// index variable loop can be linked to another index variable loop, which
@@ -118,7 +120,8 @@ private:
 
 std::vector<SubsetLoop> createSubsetLoops(const IndexExpr* indexExpression,
                                           IndexVariableLoop loop,
-                                          Environment* env);
+                                          Environment* environment,
+                                          Storage* storage);
 
 }}
 #endif

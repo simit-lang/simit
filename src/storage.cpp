@@ -1,8 +1,12 @@
 #include "storage.h"
 
+#include <memory>
+
 #include "ir.h"
 #include "ir_visitor.h"
 #include "path_expressions.h"
+#include "tensor_index.h"
+#include "util/collections.h"
 
 using namespace std;
 
@@ -18,8 +22,8 @@ struct TensorStorage::Content {
   Expr systemTargetSet;
   Expr systemStorageSet;
 
-  /// A path expression describing
   pe::PathExpression pathExpression;
+  map<pair<unsigned,unsigned>, TensorIndex> tensorIndices;
 };
 
 TensorStorage::TensorStorage() : TensorStorage(Kind::Undefined) {
@@ -72,6 +76,32 @@ const pe::PathExpression& TensorStorage::getPathExpression() const {
 
 void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
   content->pathExpression = pathExpression;
+}
+
+bool TensorStorage::hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const {
+  return util::contains(content->tensorIndices, {sourceDim, sinkDim});
+}
+
+const TensorIndex& TensorStorage::getTensorIndex(unsigned sourceDim,
+                                                 unsigned sinkDim) const {
+  iassert(hasTensorIndex(sourceDim,sinkDim));
+  tassert(sourceDim == 0 && sinkDim == 1)
+      << "Only currently support row->col indices";
+  return content->tensorIndices.at({sourceDim,sinkDim});
+}
+
+void TensorStorage::addTensorIndex(Var tensor, unsigned sourceDim,
+                                   unsigned sinkDim) {
+  iassert(!hasTensorIndex(sourceDim, sinkDim));
+  string name = tensor.getName() + "_rows2cols";
+
+  Var coordsArray(name+"_coords", ArrayType::make(ScalarType::Int));
+  Var sinksArray(name+"_sinks",   ArrayType::make(ScalarType::Int));
+
+  content->tensorIndices.insert({{sourceDim,sinkDim},
+                                 TensorIndex(tensor, coordsArray, sinksArray,
+                                             sourceDim, sinkDim)});
+
 }
 
 const Expr &TensorStorage::getSystemTargetSet() const {

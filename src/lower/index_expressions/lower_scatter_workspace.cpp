@@ -350,7 +350,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       Var linkedInductionVar  = loop.getLinkedLoop().getInductionVar();
 
       vector<SubsetLoop> subsetLoops =
-          createSubsetLoops(indexExpression, loop, environment);
+          createSubsetLoops(indexExpression, loop, environment, storage);
 
       // Create workspace on target
       ScalarType workspaceCType = type->componentType;
@@ -388,10 +388,23 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       // Create the loop that copies the workspace to the target
       auto& resultVars = indexExpression->resultVars;
 
-      TensorIndex resultTensorIndex =
-          environment->getTensorIndex(target,
-                                      util::locate(resultVars, linkedIndexVar),
-                                      util::locate(resultVars, indexVar));
+      TensorStorage& ts = storage->getStorage(target);
+      unsigned sourceDim = util::locate(resultVars, linkedIndexVar);
+      unsigned sinkDim   = util::locate(resultVars, indexVar);
+      if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
+        ts.addTensorIndex(target, sourceDim, sinkDim);
+        const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
+        if (environment->hasExtern(target.getName())) {
+          environment->addExternMapping(target, ti.getCoordsArray());
+          environment->addExternMapping(target, ti.getSinksArray());
+        }
+        else {
+          environment->addTemporaryMapping(target, ti.getCoordsArray());
+          environment->addTemporaryMapping(target, ti.getSinksArray());
+        }
+      }
+      const TensorIndex& resultTensorIndex =
+          ts.getTensorIndex(sourceDim,sinkDim);
 
       TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),
                                     linkedInductionVar, resultTensorIndex);
