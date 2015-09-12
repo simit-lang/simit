@@ -166,9 +166,7 @@ Func lowerIndexExpressions(Func func) {
           stmt = lowerIndexStatement(op, *storage);
           break;
         case MatrixElwise:
-          std::cout << "Emitting matrix elwise loops" << std::endl;
           stmt = lowerScatterWorkspace(op->var, iexpr, &environment, storage);
-          std::cout << stmt << std::endl;
           break;
         case MatrixMultiply:
           break;

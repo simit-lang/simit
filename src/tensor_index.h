@@ -11,13 +11,8 @@
 namespace simit {
 namespace ir {
 
-/// A tensor index describes a mapping of the form source->coordinate->sink,
-/// where source is an element of the source dimension, sink an element of the
-/// sink dimension and a coordinate corresponds to the location of a tensor
-/// value.
-///
-/// A tensor index consist of a path index and source and sink dimensions. The
-/// path indices that implement tensor indices can be shared among.
+/// A tensor index is a map source->coordinate->sink described by a path
+/// expression.
 class TensorIndex {
 public:
   TensorIndex() {}

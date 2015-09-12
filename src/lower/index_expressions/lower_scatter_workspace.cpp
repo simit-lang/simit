@@ -399,12 +399,10 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
           environment->addExternMapping(target, ti.getCoordArray());
           environment->addExternMapping(target, ti.getSinkArray());
         }
-        else if (environment->hasTemporary(target)) {
-          environment->addTemporaryMapping(target, ti.getCoordArray());
-          environment->addTemporaryMapping(target, ti.getSinkArray());
+        else {
+          environment->addTensorIndex(ts.getPathExpression(), target.getName());
         }
 
-        environment->addTensorIndex(ts.getPathExpression(), target.getName());
       }
       const TensorIndex& resultTensorIndex =
           ts.getTensorIndex(sourceDim,sinkDim);

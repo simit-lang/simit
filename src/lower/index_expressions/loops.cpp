@@ -271,12 +271,9 @@ private:
         environment->addExternMapping(tensor, ti.getCoordArray());
         environment->addExternMapping(tensor, ti.getSinkArray());
       }
-      else if (environment->hasTemporary(tensor)) {
-        environment->addTemporaryMapping(tensor, ti.getCoordArray());
-        environment->addTemporaryMapping(tensor, ti.getSinkArray());
+      else {
+        environment->addTensorIndex(ts.getPathExpression(), tensor.getName());
       }
-
-      environment->addTensorIndex(ts.getPathExpression(), tensor.getName());
     }
     const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
 

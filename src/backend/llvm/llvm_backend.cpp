@@ -116,21 +116,21 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   }
 
   // Emit global tensor indices
-//  for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
-//    const Var& coordArray = tensorIndex.getCoordArray();
-//    llvm::GlobalVariable* coordPtr =
-//        createGlobal(module, coordArray, llvm::GlobalValue::PrivateLinkage,
-//                     globalAddrspace());
-//    this->symtable.insert(coordArray, coordPtr);
-//    this->globals.insert(coordArray);
-//
-//    const Var& sinkArray  = tensorIndex.getSinkArray();
-//    llvm::GlobalVariable* sinkPtr =
-//        createGlobal(module, sinkArray, llvm::GlobalValue::PrivateLinkage,
-//                     globalAddrspace());
-//    this->symtable.insert(sinkArray, sinkPtr);
-//    this->globals.insert(sinkArray);
-//  }
+  for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
+    const Var& coordArray = tensorIndex.getCoordArray();
+    llvm::GlobalVariable* coordPtr =
+        createGlobal(module, coordArray, llvm::GlobalValue::PrivateLinkage,
+                     globalAddrspace());
+    this->symtable.insert(coordArray, coordPtr);
+    this->globals.insert(coordArray);
+
+    const Var& sinkArray  = tensorIndex.getSinkArray();
+    llvm::GlobalVariable* sinkPtr =
+        createGlobal(module, sinkArray, llvm::GlobalValue::PrivateLinkage,
+                     globalAddrspace());
+    this->symtable.insert(sinkArray, sinkPtr);
+    this->globals.insert(sinkArray);
+  }
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
