@@ -35,12 +35,13 @@
 #include "llvm_util.h"
 
 #include "types.h"
-#include "ir.h"
 #include "func.h"
+#include "ir.h"
 #include "intrinsics.h"
 #include "ir_printer.h"
 #include "ir_queries.h"
 #include "ir_codegen.h"
+#include "tensor_index.h"
 #include "llvm_function.h"
 #include "macros.h"
 #include "runtime.h"
@@ -113,6 +114,23 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
     this->symtable.insert(tmp, ptr);
     this->globals.insert(tmp);
   }
+
+  // Emit global tensor indices
+//  for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
+//    const Var& coordArray = tensorIndex.getCoordArray();
+//    llvm::GlobalVariable* coordPtr =
+//        createGlobal(module, coordArray, llvm::GlobalValue::PrivateLinkage,
+//                     globalAddrspace());
+//    this->symtable.insert(coordArray, coordPtr);
+//    this->globals.insert(coordArray);
+//
+//    const Var& sinkArray  = tensorIndex.getSinkArray();
+//    llvm::GlobalVariable* sinkPtr =
+//        createGlobal(module, sinkArray, llvm::GlobalValue::PrivateLinkage,
+//                     globalAddrspace());
+//    this->symtable.insert(sinkArray, sinkPtr);
+//    this->globals.insert(sinkArray);
+//  }
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);

@@ -2,6 +2,8 @@
 
 #include "var.h"
 #include "ir.h"
+#include "path_expressions.h"
+#include "tensor_index.h"
 #include "util/collections.h"
 
 using namespace std;
@@ -26,6 +28,8 @@ struct Environment::Content {
 
   map<string, size_t>     externLocationByName;
   map<Var, size_t>        temporaryLocationByName;
+
+  vector<TensorIndex>     tensorIndices;
 };
 
 Environment::Environment() : content(new Content) {
@@ -166,14 +170,35 @@ void Environment::addTemporary(const Var& var) {
 }
 
 void Environment::addTemporaryMapping(const Var& var, const Var& mapping) {
-  iassert(hasTemporary(var));
+  iassert(hasTemporary(var)) << var;
   size_t loc =content->temporaryLocationByName.at(var);
   content->temporaries.at(loc).addMapping(mapping);
+}
+
+void Environment::addTensorIndex(const pe::PathExpression& pexpr,
+                                 std::string name) {
+  if (name != "") {
+    name += "_";
+  }
+  Var coordArray(name + "coords", ArrayType::make(ScalarType::Int));
+  Var  sinkArray(name + "sinks",  ArrayType::make(ScalarType::Int));
+  content->tensorIndices.push_back(TensorIndex(coordArray, sinkArray, 0,1));
+}
+
+const TensorIndex&
+Environment::getTensorIndex(const pe::PathExpression& pexpr) const {
+  not_supported_yet;
+  return content->tensorIndices[0];
+}
+
+const std::vector<TensorIndex>& Environment::getTensorIndices() const {
+  return content->tensorIndices;
 }
 
 std::ostream& operator<<(std::ostream& os, const Environment& env) {
   bool somethingPrinted = false;
 
+  // Constants
   if (env.getConstants().size() > 0) {
     for (auto& con : env.getConstants()) {
       os << "const " << con.first.getName() << " : " << con.first.getType()
@@ -190,6 +215,7 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
     somethingPrinted = true;
   }
 
+  // Externs
   if (env.getExterns().size() > 0) {
     if (somethingPrinted) {
       os << std::endl;
@@ -203,6 +229,7 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
     somethingPrinted = true;
   }
 
+  // Temporaries
   if (env.getTemporaries().size() > 0) {
     if (somethingPrinted) {
       os << std::endl;
@@ -213,7 +240,22 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
     for (auto& temp : util::excludeFirst(temporaryVars)) {
       os << std::endl << "temp " << temp  << " : " << temp.getType() << ";";
     }
+    somethingPrinted = true;
   }
+
+  // Tensor indices
+  if (env.getTensorIndices().size() > 0) {
+    if (somethingPrinted) {
+      os << std::endl;
+    }
+    auto tensorIndices = env.getTensorIndices();
+    os << *tensorIndices.begin();
+    for (auto& tensorIndex : util::excludeFirst(tensorIndices)) {
+      os << std::endl << tensorIndex;
+    }
+    somethingPrinted = true;
+  }
+
   return os;
 }
 

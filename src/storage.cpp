@@ -90,17 +90,17 @@ const TensorIndex& TensorStorage::getTensorIndex(unsigned sourceDim,
   return content->tensorIndices.at({sourceDim,sinkDim});
 }
 
-void TensorStorage::addTensorIndex(Var tensor, unsigned sourceDim,
+void TensorStorage::addTensorIndex(Var tensor, unsigned srcDim,
                                    unsigned sinkDim) {
-  iassert(!hasTensorIndex(sourceDim, sinkDim));
+  iassert(!hasTensorIndex(srcDim, sinkDim));
   string name = tensor.getName() + "_rows2cols";
 
-  Var coordsArray(name+"_coords", ArrayType::make(ScalarType::Int));
-  Var sinksArray(name+"_sinks",   ArrayType::make(ScalarType::Int));
+  Var coordArray(name+"_coords", ArrayType::make(ScalarType::Int));
+  Var sinkArray(name+"_sinks",   ArrayType::make(ScalarType::Int));
 
-  content->tensorIndices.insert({{sourceDim,sinkDim},
-                                 TensorIndex(tensor, coordsArray, sinksArray,
-                                             sourceDim, sinkDim)});
+  content->tensorIndices.insert({{srcDim,sinkDim},
+                                 TensorIndex(coordArray, sinkArray,
+                                             srcDim, sinkDim)});
 
 }
 

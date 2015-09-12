@@ -67,11 +67,11 @@ TensorIndexVar::TensorIndexVar(string inductionVarName, string tensorName,
 
 Expr TensorIndexVar::loadCoord(int offset) const {
   Expr sourceExpr = (offset == 0) ? getSourceVar() : getSourceVar() + offset;
-  return Load::make(getTensorIndex().getCoordsArray(), sourceExpr);
+  return Load::make(getTensorIndex().getCoordArray(), sourceExpr);
 }
 
 Expr TensorIndexVar::loadSink() const {
-  return Load::make(getTensorIndex().getSinksArray(), getCoordVar());
+  return Load::make(getTensorIndex().getSinkArray(), getCoordVar());
 }
 
 Stmt TensorIndexVar::initCoordVar() const {
@@ -266,14 +266,17 @@ private:
     if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
       ts.addTensorIndex(tensor, sourceDim, sinkDim);
       const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
+
       if (environment->hasExtern(tensor.getName())) {
-        environment->addExternMapping(tensor, ti.getCoordsArray());
-        environment->addExternMapping(tensor, ti.getSinksArray());
+        environment->addExternMapping(tensor, ti.getCoordArray());
+        environment->addExternMapping(tensor, ti.getSinkArray());
       }
-      else {
-        environment->addTemporaryMapping(tensor, ti.getCoordsArray());
-        environment->addTemporaryMapping(tensor, ti.getSinksArray());
+      else if (environment->hasTemporary(tensor)) {
+        environment->addTemporaryMapping(tensor, ti.getCoordArray());
+        environment->addTemporaryMapping(tensor, ti.getSinkArray());
       }
+
+      environment->addTensorIndex(ts.getPathExpression(), tensor.getName());
     }
     const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
 

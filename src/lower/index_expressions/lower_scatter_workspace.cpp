@@ -394,14 +394,17 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
         ts.addTensorIndex(target, sourceDim, sinkDim);
         const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
+
         if (environment->hasExtern(target.getName())) {
-          environment->addExternMapping(target, ti.getCoordsArray());
-          environment->addExternMapping(target, ti.getSinksArray());
+          environment->addExternMapping(target, ti.getCoordArray());
+          environment->addExternMapping(target, ti.getSinkArray());
         }
-        else {
-          environment->addTemporaryMapping(target, ti.getCoordsArray());
-          environment->addTemporaryMapping(target, ti.getSinksArray());
+        else if (environment->hasTemporary(target)) {
+          environment->addTemporaryMapping(target, ti.getCoordArray());
+          environment->addTemporaryMapping(target, ti.getSinkArray());
         }
+
+        environment->addTensorIndex(ts.getPathExpression(), target.getName());
       }
       const TensorIndex& resultTensorIndex =
           ts.getTensorIndex(sourceDim,sinkDim);
@@ -409,8 +412,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),
                                     linkedInductionVar, resultTensorIndex);
 
-      Stmt copyFromWorkspace = Store::make(target,
-                                           resultIndexVar.getCoordVar(),
+      Stmt copyFromWorkspace = Store::make(target, resultIndexVar.getCoordVar(),
                                            Load::make(workspace, inductionVar));
       Expr resetVal = Literal::make(TensorType::make(workspaceCType));
       Stmt resetWorkspace = Store::make(workspace, inductionVar, resetVal);

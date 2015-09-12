@@ -12,6 +12,7 @@ class PathExpression;
 }
 namespace ir {
 class Expr;
+class TensorIndex;
 
 /// A VarMapping is a mapping from a Var to a vector of Vars that implement it.
 /// For example, a dense tensor Var may be implemented by an array, while a
@@ -101,6 +102,19 @@ public:
   /// multiple mappings. For example, a sparse matrix Var can be mapped to three
   /// arrays that store its values and CSR indices.
   void addTemporaryMapping(const Var& var, const Var& mapping);
+
+  /// True of the environment has a tensor index for the given path expression.
+  bool hasTensorIndex(const pe::PathExpression& pexpr) const;
+
+  /// Retrieve the tensor index of the given path expression.
+  const TensorIndex& getTensorIndex(const pe::PathExpression& pexpr) const;
+
+  /// Retrieve all the tensor indices in the environment.
+  const std::vector<TensorIndex>& getTensorIndices() const;
+
+  /// Add a tensor index described by the given path expression to the
+  /// environment. A tensor index name can optionally be specified.
+  void addTensorIndex(const pe::PathExpression& pexpr, std::string name="");
 
 private:
   struct Content;

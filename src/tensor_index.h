@@ -21,22 +21,20 @@ class TensorIndex {
 public:
   TensorIndex() {}
 
-  TensorIndex(Var tensor, Var coordsArray, Var sinksArray,
-              unsigned sourceDim, unsigned sinkDim)
-      : tensor(tensor), coordsArray(coordsArray), sinksArray(sinksArray),
-        sourceDimension(sourceDim), sinkDimension(sinkDim) {
+  TensorIndex(Var coordArray, Var sinkArray, unsigned srcDim, unsigned sinkDim)
+      : coordArray(coordArray), sinkArray(sinkArray),
+        sourceDimension(srcDim), sinkDimension(sinkDim) {
   }
 
-  const Var& getCoordsArray() const {return coordsArray;}
-  const Var& getSinksArray() const {return sinksArray;}
+  const Var& getCoordArray() const {return coordArray;}
+  const Var& getSinkArray() const {return sinkArray;}
 
   unsigned getSourceDimension() const {return sourceDimension;}
   unsigned getSinkDimension() const {return sinkDimension;}
 
 private:
-  Var tensor;
-  Var coordsArray;
-  Var sinksArray;
+  Var coordArray;
+  Var sinkArray;
 
   unsigned sourceDimension;
   unsigned sinkDimension;

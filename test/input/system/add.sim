@@ -21,8 +21,8 @@ end
 proc main 
   A = map f to E reduce +;
   B = map f to F reduce +;
-  print E.e; 
-  print F.e; 
+%  print E.e; 
+%  print F.e; 
   C = A + B;
   V.a = C * V.b;
 end
