@@ -58,8 +58,23 @@ inline bool isBinaryScale(const IndexExpr* iexpr) {
   return result;
 }
 
-inline bool isMatricesWithSameStructure(const IndexExpr* iexpr) {
-  return false;
+inline bool doesOperandsHaveSameStructure(const IndexExpr* iexpr,
+                                          const Storage& storage) {
+  bool result = true;
+  pe::PathExpression pexpr;
+  match(iexpr->value,
+    std::function<void(const VarExpr*)>([&](const VarExpr* op) {
+      iassert(storage.hasStorage(op->var));
+      if (!pexpr.defined()) {
+        pexpr = storage.getStorage(op->var).getPathExpression();
+      }
+      else if (pexpr != storage.getStorage(op->var).getPathExpression()) {
+        result = false;
+      }
+    })
+  );
+
+  return result;
 }
 
 inline bool isElwise(const IndexExpr* iexpr) {
@@ -141,13 +156,9 @@ Func lowerIndexExpressions(Func func) {
         kind = MatrixScale;
       }
       else if (isElwise(iexpr)) {
-        // TODO: Check if the matrices all have the same structure, i.e.
-        //       the same sindex experssion.
-//        kind = isMatricesWithSameStructure(iexpr)
-//               ? MatrixElwiseWithSameStructure
-//               : MatrixElwise;
-        kind = MatrixElwiseWithSameStructure;
-//        kind = MatrixElwise;
+        kind = doesOperandsHaveSameStructure(iexpr, *storage)
+               ? MatrixElwiseWithSameStructure
+               : MatrixElwise;
       }
       else if (isGemm(iexpr)) {
         kind = MatrixMultiply;
