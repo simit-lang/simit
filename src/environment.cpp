@@ -177,12 +177,7 @@ void Environment::addTemporaryMapping(const Var& var, const Var& mapping) {
 
 void Environment::addTensorIndex(const pe::PathExpression& pexpr,
                                  std::string name) {
-  if (name != "") {
-    name += "_";
-  }
-  Var coordArray(name + "coords", ArrayType::make(ScalarType::Int));
-  Var  sinkArray(name + "sinks",  ArrayType::make(ScalarType::Int));
-  content->tensorIndices.push_back(TensorIndex(coordArray, sinkArray, 0,1));
+  content->tensorIndices.push_back(TensorIndex(name+"_index", pexpr));
 }
 
 const TensorIndex&

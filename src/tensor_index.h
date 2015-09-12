@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "var.h"
+#include "path_expressions.h"
 
 namespace simit {
 namespace ir {
@@ -21,23 +22,20 @@ class TensorIndex {
 public:
   TensorIndex() {}
 
-  TensorIndex(Var coordArray, Var sinkArray, unsigned srcDim, unsigned sinkDim)
-      : coordArray(coordArray), sinkArray(sinkArray),
-        sourceDimension(srcDim), sinkDimension(sinkDim) {
-  }
+  TensorIndex(std::string name, pe::PathExpression pexpr);
+
+  const std::string getName() const {return name;}
+
+  const pe::PathExpression& getPathExpression() const {return pexpr;}
 
   const Var& getCoordArray() const {return coordArray;}
   const Var& getSinkArray() const {return sinkArray;}
 
-  unsigned getSourceDimension() const {return sourceDimension;}
-  unsigned getSinkDimension() const {return sinkDimension;}
-
 private:
+  std::string name;
+  pe::PathExpression pexpr;
   Var coordArray;
   Var sinkArray;
-
-  unsigned sourceDimension;
-  unsigned sinkDimension;
 };
 
 std::ostream& operator<<(std::ostream&, const TensorIndex&);
