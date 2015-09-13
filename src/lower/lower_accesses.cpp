@@ -114,12 +114,12 @@ private:
     }
     else {
       // Fields are always dense row major
-      tensorStorage = TensorStorage::Kind::DenseRowMajor;
+      tensorStorage = TensorStorage::Kind::Dense;
     }
 
     Expr index;
     switch (tensorStorage.getKind()) {
-      case TensorStorage::Kind::DenseRowMajor: {
+      case TensorStorage::Kind::Dense: {
         iassert(indices.size() > 0);
         const TensorType *type = tensor.type().toTensor();
         vector<IndexDomain> dimensions = type->getDimensions();
@@ -139,7 +139,7 @@ private:
         }
         break;
       }
-      case TensorStorage::Kind::SystemReduced: {
+      case TensorStorage::Kind::Indexed: {
         iassert(tensor.type().isTensor());
         size_t order = tensor.type().toTensor()->order();
         tassert(order == 2)
@@ -164,7 +164,7 @@ private:
         }
         break;
       }
-      case TensorStorage::Kind::SystemDiagonal:
+      case TensorStorage::Kind::Diagonal:
         index = rewrite(indices[0]);
         break;
       case TensorStorage::Kind::MatrixFree:

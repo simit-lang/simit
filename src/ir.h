@@ -437,9 +437,11 @@ struct IndexExpr : public ExprNode<IndexExpr> {
 struct Map : public StmtNode<Map> {
   std::vector<Var> vars;
   Func function;
-  Expr target, neighbors;
+  Expr target;
+  Expr neighbors;
   std::vector<Expr> partial_actuals;
   ReductionOperator reduction;
+
   static Stmt make(std::vector<Var> vars,
                    Func function, std::vector<Expr> partial_actuals,
                    Expr target, Expr neighbors=Expr(),

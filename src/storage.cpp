@@ -6,6 +6,7 @@
 #include "ir_visitor.h"
 #include "path_expressions.h"
 #include "tensor_index.h"
+#include "path_expression_analysis.h"
 #include "util/collections.h"
 
 using namespace std;
@@ -34,12 +35,12 @@ TensorStorage::TensorStorage(Kind kind) : content(new Content) {
 }
 
 TensorStorage::TensorStorage(const Expr &targetSet)
-    : TensorStorage(Kind::SystemDiagonal) {
+    : TensorStorage(Kind::Diagonal) {
   content->systemTargetSet = targetSet;
 }
 
 TensorStorage::TensorStorage(const Expr &targetSet, const Expr &storageSet)
-    : TensorStorage(Kind::SystemReduced) {
+    : TensorStorage(Kind::Indexed) {
   content->systemTargetSet = targetSet;
   content->systemStorageSet = storageSet;
 }
@@ -49,15 +50,15 @@ TensorStorage::Kind TensorStorage::getKind() const {
 }
 
 bool TensorStorage::isDense() const {
-  return getKind() == Kind::DenseRowMajor;
+  return getKind() == Kind::Dense;
 }
 
 bool TensorStorage::isSystem() const {
   switch (getKind()) {
-    case Kind::DenseRowMajor:
+    case Kind::Dense:
       return false;
-    case Kind::SystemReduced:
-    case Kind::SystemDiagonal:
+    case Kind::Indexed:
+    case Kind::Diagonal:
     case Kind::MatrixFree:
       return true;
     case Kind::Undefined:
@@ -113,17 +114,17 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
     case TensorStorage::Kind::Undefined:
       os << "Undefined";
       break;
-    case TensorStorage::Kind::DenseRowMajor:
-      os << "Dense Row Major";
+    case TensorStorage::Kind::Dense:
+      os << "Dense";
+      break;
+    case TensorStorage::Kind::Indexed:
+      os << "Indexed";
+      break;
+    case TensorStorage::Kind::Diagonal:
+      os << "Diagonal";
       break;
     case TensorStorage::Kind::MatrixFree:
       os << "Matrix-Free";
-      break;
-    case TensorStorage::Kind::SystemReduced:
-      os << "System Reduced";
-      break;
-    case TensorStorage::Kind::SystemDiagonal:
-      os << "System Diagonal";
       break;
   }
   return os;
@@ -252,6 +253,31 @@ private:
   
   using IRVisitor::visit;
 
+  void visit(const Map *op) {
+    for (auto &var : op->vars) {
+      Type type = var.getType();
+      if (type.isTensor() && !isScalar(type)) {
+        // For now we'll store all assembled vectors as dense and other tensors
+        // as system reduced
+        TensorStorage tensorStorage;
+        const TensorType* tensorType = type.toTensor();
+        if (tensorType->order() == 1) {
+          tensorStorage = TensorStorage(TensorStorage::Kind::Dense);
+        }
+        else {
+          if (op->neighbors.defined()) {
+            tensorStorage = TensorStorage(op->target, op->neighbors);
+          }
+          else {
+            tensorStorage = TensorStorage(op->target);
+          }
+        }
+        iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
+        storage->add(var, tensorStorage);
+      }
+    }
+  }
+
   void visit(const VarDecl *op) {
     Var var = op->var;
     Type type = var.getType();
@@ -294,29 +320,6 @@ private:
     }
   }
 
-  void visit(const Map *op) {
-    for (auto &var : op->vars) {
-      Type type = var.getType();
-      if (type.isTensor() && !isScalar(type)) {
-        // For now we'll store all assembled vectors as dense and other tensors
-        // as system reduced
-        TensorStorage tensorStorage;
-        auto tensorType = type.toTensor();
-        if (tensorType->order() == 1) {
-          tensorStorage = TensorStorage(TensorStorage::Kind::DenseRowMajor);
-        }
-        else if (op->neighbors.defined()) {
-          tensorStorage = TensorStorage(op->target, op->neighbors);
-        }
-        else {
-          tensorStorage = TensorStorage(op->target);
-        }
-        iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
-        storage->add(var, tensorStorage);
-      }
-    }
-  }
-
   void determineStorage(Var var, Expr rhs=Expr()) {
     // Scalars don't need storage
     if (isScalar(var.getType())) return;
@@ -331,7 +334,7 @@ private:
 
     // Element tensor and system vectors are dense.
     if (isElementTensorType(ttype) || ttype->order() == 1 || !rhs.defined()) {
-      tensorStorage = TensorStorage(TensorStorage::Kind::DenseRowMajor);
+      tensorStorage = TensorStorage(TensorStorage::Kind::Dense);
     }
     // System matrices
     else {
@@ -352,11 +355,11 @@ private:
       // E.g. if one of the input variables to the RHS expression is dense then
       // the output becomes dense.
       static map<TensorStorage::Kind, unsigned> priorities = {
-        {TensorStorage::Kind::DenseRowMajor,  4},
-        {TensorStorage::Kind::SystemReduced,  3},
-        {TensorStorage::Kind::SystemDiagonal, 2},
-        {TensorStorage::Kind::MatrixFree,     1},
-        {TensorStorage::Kind::Undefined,      0}
+        {TensorStorage::Kind::Dense,      4},
+        {TensorStorage::Kind::Indexed,    3},
+        {TensorStorage::Kind::Diagonal,   2},
+        {TensorStorage::Kind::MatrixFree, 1},
+        {TensorStorage::Kind::Undefined,  0}
       };
 
       for (Var operand : leafVars.vars) {
@@ -372,16 +375,16 @@ private:
         auto tensorStorageKind = tensorStorage.getKind();
         if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
           switch (operandStorage.getKind()) {
-            case TensorStorage::Kind::DenseRowMajor:
+            case TensorStorage::Kind::Dense:
             case TensorStorage::Kind::MatrixFree:
               tensorStorage = operandStorage.getKind();
               break;
-            case TensorStorage::Kind::SystemReduced:
+            case TensorStorage::Kind::Indexed:
               tensorStorage =
                   TensorStorage(operandStorage.getSystemTargetSet(),
                                 operandStorage.getSystemStorageSet());
               break;
-            case TensorStorage::Kind::SystemDiagonal:
+            case TensorStorage::Kind::Diagonal:
               tensorStorage =
                   TensorStorage(operandStorage.getSystemTargetSet());
               break;

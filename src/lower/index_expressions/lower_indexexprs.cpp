@@ -407,7 +407,7 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
       TensorStorage::Kind storageKind =
           storage.getStorage(to<VarExpr>(tensor)->var).getKind();
       
-      if (storageKind == TensorStorage::Kind::SystemDiagonal &&
+      if (storageKind == TensorStorage::Kind::Diagonal &&
           currentTensorWrite != nullptr) {
         std::vector<Expr> newIndices;
         newIndices.push_back(VarExpr::make(outerIndexVar));

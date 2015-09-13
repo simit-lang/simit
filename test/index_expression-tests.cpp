@@ -134,10 +134,10 @@ TEST_P(IndexExpression, Matrix) {
     env.addExtern(setVar);
   }
   env.addExtern(A);
-  storage.add(A, TensorStorage::Kind::SystemReduced);
+  storage.add(A, TensorStorage::Kind::Indexed);
   for (const Var& var : vars) {
     env.addExtern(var);
-    storage.add(var, TensorStorage::Kind::SystemReduced);
+    storage.add(var, TensorStorage::Kind::Indexed);
   }
 
   Expr iexpr = IndexExpr::make({i,j}, expr);

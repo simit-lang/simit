@@ -872,7 +872,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
 
       // For now we'll assume fields are always dense row major
       llvm::Value *fieldLen =
-          emitComputeLen(tensorFieldType, TensorStorage::Kind::DenseRowMajor);
+          emitComputeLen(tensorFieldType, TensorStorage::Kind::Dense);
       unsigned compSize = tensorFieldType->componentType.bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
@@ -905,7 +905,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
 
     // For now we'll assume fields are always dense row major
     llvm::Value *fieldLen =
-        emitComputeLen(tensorFieldType, TensorStorage::Kind::DenseRowMajor);
+        emitComputeLen(tensorFieldType, TensorStorage::Kind::Dense);
     unsigned elemSize = tensorFieldType->componentType.bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 
@@ -1109,7 +1109,7 @@ void LLVMBackend::compile(const ir::Print& print) {
             llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
             llvm::Value *rangeStart = llvmInt(0);
             llvm::Value *rangeLen =
-                emitComputeLen(tensor, TensorStorage::Kind::DenseRowMajor);
+                emitComputeLen(tensor, TensorStorage::Kind::Dense);
             llvm::Value *rangeEnd = builder->CreateSub(rangeLen, llvmInt(1));
 
             llvm::BasicBlock *loopBodyStart =
@@ -1263,7 +1263,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
 
   llvm::Value *len = nullptr;
   switch (tensorStorage.getKind()) {
-    case TensorStorage::Kind::DenseRowMajor: {
+    case TensorStorage::Kind::Dense: {
       auto it = dimensions.begin();
       len = emitComputeLen(*it++);
       for (; it != dimensions.end(); ++it) {
@@ -1271,7 +1271,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       }
       break;
     }
-    case TensorStorage::Kind::SystemReduced: {
+    case TensorStorage::Kind::Indexed: {
       llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
       llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
 
@@ -1295,13 +1295,12 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
         //       way to assign a storage order for every block in the tensor
         //       represented by a TensorStorage
         llvm::Value *blockSize =
-            emitComputeLen(blockType.toTensor(),
-                           TensorStorage::Kind::DenseRowMajor);
+            emitComputeLen(blockType.toTensor(), TensorStorage::Kind::Dense);
         len = builder->CreateMul(len, blockSize);
       }
       break;
     }
-    case TensorStorage::Kind::SystemDiagonal: {
+    case TensorStorage::Kind::Diagonal: {
       iassert(dimensions.size() > 0);
 
       // Just need one outer dimensions because diagonal
@@ -1309,8 +1308,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
 
       Type blockType = tensorType->getBlockType();
       llvm::Value *blockLen =
-          emitComputeLen(blockType.toTensor(),
-                         TensorStorage::Kind::DenseRowMajor);
+          emitComputeLen(blockType.toTensor(), TensorStorage::Kind::Dense);
       len = builder->CreateMul(len, blockLen);
       break;
     }

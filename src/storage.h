@@ -28,28 +28,21 @@ public:
     /// Undefined storage.
     Undefined,
 
-    /// The tensor is stored in dense row major order.
-    DenseRowMajor,
+    /// The dense tensor stored row major.
+    /// TODO: Add a tensor layout object that describes the layout (row, z, ...)
+    Dense,
 
-    /// The tensor is stored in dense z (morton) order.
-    // DenseZOrder
+    /// A sparse matrix, whose non-empty (non-zero) components are accessible
+    /// through a tensor index.
+    Indexed,
 
-    /// The matrix is stored sparsely using the compressed sparse row layout.
-    // SparseMatrixCSR,
-
-    /// A system tensor that is split in one dimension with one slice stored on
-    /// each element of the set of that dimension. For now we will assume it was
-    /// split along the first dimension.
-    SystemReduced,
-
-    /// A system tensor that only contains values along its diagonal, and hence
-    /// can be stored as a vector.
-    SystemDiagonal,
+    /// A diagonal matrix.
+    Diagonal,
 
     /// A system tensor whose contributions are stored on the target set that it
     /// was assembled from. That is, the tensor is stored prior to the map
     /// reduction, and any expression that uses the tensor must reduce it.
-    //SystemUnreduced,
+    // Unreduced,
 
     /// A system tensor that is never stored. Any index expressions that use
     /// this tensor must be fused with the tensor assembly.
