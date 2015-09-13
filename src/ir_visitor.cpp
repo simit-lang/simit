@@ -234,6 +234,11 @@ void IRVisitor::visit(const Func *op) {
   }
 }
 
+#ifdef GPU
+void IRVisitor::visit(const GPUKernel *op) {
+  op->body.accept(this);
+}
+#endif
 
 // class IRVisitorCallGraph
 void IRVisitorCallGraph::visit(const Call *op) {

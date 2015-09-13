@@ -6,7 +6,8 @@
 #include <iostream>
 
 #include "llvm/IR/Module.h"
-#include "backend/llvm/llvm_codegen.h"
+#include "backend/llvm/llvm_defines.h"
+#include "backend/llvm/llvm_types.h"
 
 // This will output the proper CUDA error strings in the event that a CUDA
 // host call returns an error
@@ -39,7 +40,7 @@ inline llvm::PointerType *getOrCreateCUStreamPtrTy() {
   static llvm::PointerType *cuStreamPtrTy;
   if (!cuStreamPtrTy) {
     llvm::StructType *cuStreamTy = llvm::StructType::create(
-      LLVM_CONTEXT, "struct.CUstream_st");
+      LLVM_CTX, "struct.CUstream_st");
     cuStreamPtrTy = llvm::PointerType::get(cuStreamTy, 0);
   }
   return cuStreamPtrTy;

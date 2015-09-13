@@ -78,6 +78,10 @@ protected:
   virtual void visit(const Map *op);
 
   virtual void visit(const Func *f);
+
+#ifdef GPU
+  void visit(const GPUKernel *op);
+#endif
 };
 
 

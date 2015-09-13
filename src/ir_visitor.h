@@ -63,6 +63,10 @@ struct IndexedTensor;
 struct IndexExpr;
 struct Map;
 
+#ifdef GPU
+struct GPUKernel;
+#endif
+
 /// IR visitor without default implementations. Sub-classes must therefore
 /// override all Expr and Stmt visit methods. For a visitor with default
 /// implementations see IRVisitor.
@@ -118,6 +122,10 @@ public:
   virtual void visit(const Map* op) = 0;
 
   virtual void visit(const Func* f) {}
+
+#ifdef GPU
+  virtual void visit(const GPUKernel* op) = 0;
+#endif
 };
 
 /// IR visitor with default implementations that recursively visits the IR.
@@ -179,6 +187,10 @@ public:
   virtual void visit(const Map *op);
 
   virtual void visit(const Func *f);
+
+#ifdef GPU
+  virtual void visit(const GPUKernel* op);
+#endif
 };
 
 /// Visits a whole call graph.
@@ -303,6 +315,10 @@ private:
   RULE(Map)
 
   RULE(Func)
+
+#ifdef GPU
+  RULE(GPUKernel)
+#endif
 };
 
 /**

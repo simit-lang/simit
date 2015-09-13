@@ -27,7 +27,7 @@ std::string utostr(uint num) {
 }  // anonymous namespace
 
 llvm::Module *createNVVMModule(std::string name) {
-  llvm::Module *module = new llvm::Module(name, LLVM_CONTEXT);
+  llvm::Module *module = new llvm::Module(name, LLVM_CTX);
 
   // Set appropriate data layout
   if (sizeof(void*) == 8) {
@@ -155,9 +155,9 @@ std::string generatePtx(llvm::Module *module,
 void addNVVMAnnotation(llvm::Value *target, std::string annot,
                        llvm::Value *value, llvm::Module *module) {
   llvm::Value *mdVals[] = {
-    target, llvm::MDString::get(LLVM_CONTEXT, annot), value
+    target, llvm::MDString::get(LLVM_CTX, annot), value
   };
-  llvm::MDNode *node = llvm::MDNode::get(LLVM_CONTEXT, mdVals);
+  llvm::MDNode *node = llvm::MDNode::get(LLVM_CTX, mdVals);
   llvm::NamedMDNode *nvvmAnnot = module
       ->getOrInsertNamedMetadata("nvvm.annotations");
   nvvmAnnot->addOperand(node);
