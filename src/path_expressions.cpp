@@ -5,13 +5,23 @@
 #include <vector>
 #include <algorithm>
 
-#include "error.h"
 #include "graph.h"
+#include "util/collections.h"
+#include "error.h"
 
 using namespace std;
 
 namespace simit {
 namespace pe {
+
+// class QuantifiedVar
+bool operator==(const QuantifiedVar& l, const QuantifiedVar& r) {
+  return l.getQuantifier() == r.getQuantifier();
+}
+
+bool operator<(const QuantifiedVar& l, const QuantifiedVar&r ) {
+  return l.getQuantifier() < r.getQuantifier();
+}
 
 // class PathExpressionImpl
 bool PathExpressionImpl::isBound() const {
@@ -62,7 +72,7 @@ const Set *PathExpressionImpl::getBinding(const Var &var) const {
   iassert(isBound())
       << "attempting to get the binding of a var in an unbound path expression";
   auto bindings = getBindings();
-  return (bindings.find(var) != bindings.end()) ? bindings.at(var) : nullptr;
+  return util::contains(bindings,var) ? bindings.at(var) : nullptr;
 }
 
 map<Var, const Set*> PathExpressionImpl::getBindings() const {
@@ -84,14 +94,8 @@ map<Var, const Set*> PathExpressionImpl::getBindings() const {
       Var rhs = rename(link->getRhs());
       const Set *lhsBinding = link->getLhsBinding();
       const Set *rhsBinding = link->getRhsBinding();
-
-      iassert(bindings.find(lhs) == bindings.end() || bindings.at(lhs) == lhsBinding)
-          << "the same var is bound to two sets";
-      iassert(bindings.find(rhs) == bindings.end() || bindings.at(rhs) == rhsBinding)
-          << "the same var is bound to two sets";
-
-      bindings.insert({lhs,lhsBinding});
-      bindings.insert({rhs,rhsBinding});
+      bindings.insert({lhs, lhsBinding});
+      bindings.insert({rhs, rhsBinding});
     }
   };
   return GetBindings().find(this);
@@ -229,19 +233,13 @@ void Link::accept(PathExpressionVisitor *visitor) const {
 
 bool Link::eq(const PathExpressionImpl &o) const {
   auto optr = static_cast<const Link*>(&o);
-  return !this->isBound()
-      || !optr->isBound()
-      || (this->getLhsBinding() == optr->getLhsBinding() &&
-          this->getRhsBinding() == optr->getRhsBinding());
+  return this->getLhs() == optr->getLhs() && this->getRhs() == optr->getRhs();
 }
 
 bool Link::lt(const PathExpressionImpl &o) const {
   auto optr = static_cast<const Link*>(&o);
-  return this->isBound()
-      && optr->isBound()
-      && ((this->getLhsBinding() != optr->getLhsBinding())
-              ? this->getLhsBinding() < optr->getLhsBinding()
-              : this->getRhsBinding() < optr->getRhsBinding());
+  return (getLhs() != optr->getLhs()) ? getLhs() < optr->getLhs()
+                                      : getRhs() < optr->getRhs();
 }
 
 
@@ -262,16 +260,35 @@ const Var &QuantifiedConnective::getPathEndpoint(unsigned i) const {
   return freeVars[i];
 }
 
-
 bool QuantifiedConnective::eq(const PathExpressionImpl &o) const {
   auto optr = static_cast<const QuantifiedConnective*>(&o);
+  for (auto qvars : util::zip(getQuantifiedVars(), optr->getQuantifiedVars())) {
+    if (qvars.first != qvars.second) {
+      return false;
+    }
+  }
   return getLhs() == optr->getLhs() && getRhs() == optr->getRhs();
 }
 
 bool QuantifiedConnective::lt(const PathExpressionImpl &o) const {
   auto optr = static_cast<const QuantifiedConnective*>(&o);
-  return (getLhs() != optr->getLhs()) ? getLhs() < optr->getLhs()
-                                      : getRhs() < optr->getRhs();
+  if (getLhs() != optr->getLhs()) {
+    return getLhs() < optr->getLhs();
+  }
+  else if (getRhs() != optr->getRhs()) {
+    return getRhs() < optr->getRhs();
+  }
+  else {
+    if (getQuantifiedVars().size() != optr->getQuantifiedVars().size()) {
+      return getQuantifiedVars().size() < optr->getQuantifiedVars().size();
+    }
+    for (auto qv : util::zip(getQuantifiedVars(), optr->getQuantifiedVars())) {
+      if (qv.first != qv.second) {
+        return qv.first < qv.second;
+      }
+    }
+    return false;
+  }
 }
 
 
@@ -307,6 +324,7 @@ const Var &RenamedPathExpression::getPathEndpoint(unsigned i) const {
       << "path expression does not have requested endpoint";
   iassert(renames.find(pe.getPathEndpoint(i)) != renames.end())
       << "no mapping exist for endpoint " << pe.getPathEndpoint(i);
+  iassert(util::contains(renames, pe.getPathEndpoint(i)));
   return renames.at(pe.getPathEndpoint(i));
 }
 
@@ -417,7 +435,7 @@ void PathExpressionRewriter::visit(const RenamedPathExpression *pe) {
 // class PathExpressionPrinter
 void PathExpressionPrinter::print(const Var &v) {
   std::string name;
-  if (names.find(v) != names.end()) {
+  if (util::contains(names, v)) {
     name = names.at(v);
   }
   else {
@@ -439,7 +457,7 @@ void PathExpressionPrinter::print(const Set *binding) {
     setName = binding->getName();
   }
   else {
-    if (setNames.find(binding) != setNames.end()) {
+    if (util::contains(setNames, binding)) {
       setName = setNames.at(binding);
     }
     else {
@@ -475,7 +493,7 @@ void PathExpressionPrinter::print(const PathExpression &pe) {
     unsigned numFreeVars = pe.getNumPathEndpoints();
     for (unsigned i=0; i<numFreeVars; ++i) {
       Var ep = pe.getPathEndpoint(i);
-      iassert(bindings.find(ep) != bindings.end())
+      iassert(util::contains(bindings, ep))
           << "no binding for " << ep << " (" << ep.ptr << ")";
       print(ep);
       print(bindings.at(ep));
@@ -515,7 +533,7 @@ void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
       unsigned numQuantifiedVars = qvars.size();
       for (unsigned i=0; i<numQuantifiedVars; ++i) {
         auto &qvar = qvars[i];
-        iassert(bindings.find(qvar.getVar()) != bindings.end())
+        iassert(util::contains(bindings, qvar.getVar()))
             << "no binding for " << qvar.getVar();
         print(qvar);
         print(bindings.at(qvar.getVar()));

@@ -30,18 +30,19 @@ TEST(PathIndex, Link) {
   VERIFY_INDEX(evIndex, nbrs({{0,1}, {1,2}, {2,3}, {3,4}}));
 
   // Check that EV get's memoized
+  PathExpression ev2 = Link::make(e, v, Link::ev);
+  ev2.bind(E,V);
+  PathIndex ev2Index = builder.buildSegmented(ev, 0);
+  ASSERT_EQ(evIndex, ev2Index);
+
+  // Check that different ev get's a different index
   Var f("f");
   Var u("u");
   PathExpression fu = Link::make(f, u, Link::ev);
-  fu.bind(E,V);
-  PathIndex fuIndex = builder.buildSegmented(fu, 0);
-  ASSERT_EQ(evIndex, fuIndex);
-
-  // Check that different ev get's a different index
   Set U;
   Set F(V,V);
   fu.bind(F,U);
-  fuIndex = builder.buildSegmented(fu, 0);
+  PathIndex fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_NE(evIndex, fuIndex);
 
   // Test v-e links
@@ -51,14 +52,15 @@ TEST(PathIndex, Link) {
   VERIFY_INDEX(veIndex, nbrs({{0}, {0,1}, {1,2}, {2,3}, {3}}));
 
   // Check that ve get's memoized
-  PathExpression uf = Link::make(u,f, Link::ve);
-  uf.bind(V,E);
-  PathIndex ufIndex = builder.buildSegmented(uf, 0);
-  ASSERT_EQ(veIndex, ufIndex);
+  PathExpression ve2 = Link::make(v, e, Link::ve);
+  ve2.bind(V,E);
+  PathIndex ve2Index = builder.buildSegmented(ve2, 0);
+  ASSERT_EQ(veIndex, ve2Index);
 
   // Check that different VE get's a different index
+  PathExpression uf = Link::make(u,f, Link::ve);
   uf.bind(U,F);
-  ufIndex = builder.buildSegmented(uf, 0);
+  PathIndex ufIndex = builder.buildSegmented(uf, 0);
   ASSERT_NE(veIndex, ufIndex);
 
   // Test that ev evaluated backwards gets the same index as ve and vice versa
@@ -110,7 +112,7 @@ TEST(PathIndex, And) {
   PathIndex vevANDvfvIndex = builder.buildSegmented(vevANDvfv, 0);
   VERIFY_INDEX(vevANDvfvIndex, nbrs({{0,1}, {0,1}, {2}, {}}));
 
-  // TODO: Test optimization PathIndex(pe) == PathIndex(pe or pe)
+  // TODO: Test optimization PathIndex(pe or pe) == PathIndex(pe)
 }
 
 
@@ -175,6 +177,22 @@ TEST(PathIndex, ExistAnd) {
   VERIFY_INDEX(vevIndex, nbrs({{0,1}, {0,1,2}, {1,2}}));
 
   // Check that vev get's memoized
+  Var v2("v2");
+  Var e2("e2");
+  PathExpression ve2 = Link::make(v2, e2, Link::ve);
+  PathExpression ev2 = Link::make(e2, v2, Link::ev);
+  ve2.bind(V,E);
+  ev2.bind(E,V);
+
+  Var vi2("vi2");
+  Var ee2("f");
+  Var vj2("vj2");
+  PathExpression vev2 = And::make({vi2,vj2}, {{QuantifiedVar::Exist,ee2}},
+                                  ve(vi2, ee2), ev(ee2,vj2));
+  PathIndex vev2Index = builder.buildSegmented(vev2, 0);
+  ASSERT_EQ(vevIndex, vev2Index);
+
+  // Check that a different vev get's a different index
   Var u("u");
   Var f("f");
   PathExpression uf = Link::make(u, f, Link::ve);
@@ -187,15 +205,11 @@ TEST(PathIndex, ExistAnd) {
   Var uj("uj");
   PathExpression ufu = And::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
                                  uf(ui, ff), fu(ff,uj));
-  PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
-  ASSERT_EQ(vevIndex, ufuIndex);
-
-  // Check that a different vev get's a different index
   Set U;
   Set F(U,U);
   uf.bind(U,F);
   fu.bind(F,U);
-  ufuIndex = builder.buildSegmented(ufu, 0);
+  PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_NE(vevIndex, ufuIndex);
 
   // Check that vev evaluated backwards get's a different index
@@ -221,6 +235,10 @@ TEST(PathIndex, ExistAnd) {
   PathExpression vgv = And::make({vi,vj}, {{QuantifiedVar::Exist,g}},
                                  vg(vi, g), gv(g, vj));
   PathIndex vgvIndex = builder.buildSegmented(vgv, 0);
+  ASSERT_NE(vev, vgv);
+  ASSERT_TRUE(vev < vgv || vev > vgv);
+  ASSERT_NE(vevIndex, vgvIndex);
+
   PathExpression vevgv = And::make({vi,vj}, {{QuantifiedVar::Exist,vk}},
                                    vev(vi,vk), vgv(vk, vj));
   PathIndex vevgvIndex = builder.buildSegmented(vevgv, 0);
@@ -250,7 +268,16 @@ TEST(PathIndex, ExistOr) {
   PathIndex vevIndex = builder.buildSegmented(vev, 0);
   VERIFY_INDEX(vevIndex, nbrs({{1,2}, {0,1,2,3,4}, {0,1,2,3,4}, {1,2}, {1,2}}));
 
-  // Check that vev get's memoized
+  // Check that vev gets memoized
+  Var vi2("vi2");
+  Var ee2("e2");
+  Var vj2("vj2");
+  PathExpression vev2 = Or::make({vi2,vj2}, {{QuantifiedVar::Exist,ee2}},
+                                 ve(vi2,ee2), ev(ee2,vj2));
+  PathIndex vev2Index = builder.buildSegmented(vev2, 0);
+  ASSERT_EQ(vevIndex, vev2Index);
+
+  // Check that a different vev get's a different index
   Var u("u");
   Var f("f");
   PathExpression uf = Link::make(u, f, Link::ve);
@@ -263,15 +290,11 @@ TEST(PathIndex, ExistOr) {
   Var uj("uj");
   PathExpression ufu = Or::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
                                 uf(ui, ff), fu(ff,uj));
-  PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
-  ASSERT_EQ(vevIndex, ufuIndex);
-
-  // Check that a different vev get's a different index
   Set U;
   Set F(U,U);
   uf.bind(U,F);
   fu.bind(F,U);
-  ufuIndex = builder.buildSegmented(ufu, 0);
+  PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_NE(vevIndex, ufuIndex);
 
   // Check that vev evaluated backwards get's a different index

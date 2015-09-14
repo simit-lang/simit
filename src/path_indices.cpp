@@ -7,6 +7,7 @@
 
 #include "path_expressions.h"
 #include "graph.h"
+#include "util/collections.h"
 
 using namespace std;
 
@@ -437,7 +438,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
 
   // Check if we have memoized the path index for this path expression, starting
   // at this sourceEndpoint, bound to these sets.
-  if (pathIndices.find({pe,sourceEndpoint}) != pathIndices.end()) {
+  if (util::contains(pathIndices, {pe,sourceEndpoint})) {
     return pathIndices.at({pe,sourceEndpoint});
   }
 

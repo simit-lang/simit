@@ -71,7 +71,7 @@ public:
 };
 
 
-class QuantifiedVar {
+class QuantifiedVar : public interfaces::Comparable<QuantifiedVar> {
 public:
   enum Quantifier { Exist };
 
@@ -88,6 +88,9 @@ private:
   Quantifier quantifier;
   Var var;
 };
+
+bool operator==(const QuantifiedVar&, const QuantifiedVar&);
+bool operator<(const QuantifiedVar&, const QuantifiedVar&);
 
 
 class PathExpressionImpl {
@@ -145,11 +148,15 @@ public:
 
   PathExpression operator()(Var v0, Var v1);
 
+  /// Two path expressions are equal if they have the same form and the same
+  /// path variables.
   friend bool operator==(const PathExpression &l, const PathExpression &r) {
+    if (l.defined() ^ r.defined()) return false;
     return (l.ptr == r.ptr) || (*l.ptr == *r.ptr);
   }
 
   friend bool operator<(const PathExpression &l, const PathExpression &r) {
+    if (l.defined() ^ r.defined()) return true;
     return (l.ptr != r.ptr) && *l.ptr < *r.ptr;
   }
 };
