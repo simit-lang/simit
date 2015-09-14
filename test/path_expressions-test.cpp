@@ -5,7 +5,6 @@
 #include "graph.h"
 
 using namespace std;
-using namespace simit;
 using namespace simit::pe;
 
 #define CHECK_EQ(v1, v2)             \
@@ -21,8 +20,8 @@ do {                                 \
 } while (false)
 
 TEST(PathExpression, Link) {
-  Var e = Var("e");
-  Var v = Var("v");
+  Var e = Var("e", Set("E"));
+  Var v = Var("v", Set("V"));
   PathExpression ev = Link::make(e, v, Link::ev);
 
   ASSERT_EQ(ev.getNumPathEndpoints(), 2u);
@@ -36,8 +35,8 @@ TEST(PathExpression, Link) {
   CHECK_EQ(ev, ev2);
 
   // Check that links with different vars are not equal
-  Var f = Var("f");
-  Var u = Var("u");
+  Var f = Var("f", Set("F"));
+  Var u = Var("u", Set("U"));
   PathExpression fu = Link::make(f, u, Link::ve);
   CHECK_NE(ev, fu);
 
@@ -45,8 +44,8 @@ TEST(PathExpression, Link) {
   CHECK_NE(ev, PathExpression());
 
   // Check that binding works.
-  Set V;
-  Set E(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
   V.setName("V");
   E.setName("E");
   ev.bind(E,V);
@@ -88,8 +87,8 @@ TEST(PathExpression, And) {
   CHECK_NE(veANDve, ufANDuf);
 
   // Check that binding works
-  Set V;
-  Set E(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
   ve.bind(V,E);
   ASSERT_TRUE(veANDve.isBound());
 }
@@ -115,8 +114,8 @@ TEST(PathExpression, Or) {
   CHECK_NE(veORve, ufORuf);
 
   // Check that binding works
-  Set V;
-  Set E(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
   ve.bind(V,E);
   ASSERT_TRUE(veORve.isBound());
 }
@@ -158,8 +157,8 @@ TEST(PathExpression, ExistAnd) {
   CHECK_NE(vev, ufu);
 
   // Check that binding works
-  Set V;
-  Set E(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
   ve.bind(V,E);
   ev.bind(E,V);
   ASSERT_TRUE(vev.isBound());
@@ -205,8 +204,8 @@ TEST(PathExpression, ExistOr) {
   CHECK_NE(vev, ufu);
 
   // Check that binding works
-  Set V;
-  Set E(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
   ve.bind(V,E);
   ev.bind(E,V);
   ASSERT_TRUE(vev.isBound());
@@ -216,9 +215,9 @@ TEST(PathExpression, ExistOr) {
 }
 
 TEST(DISABLED_PathExpression, Permute) {
-  Set V("V");
-  Set U("U");
-  Set E("E",V,U);
+  simit::Set V("V");
+  simit::Set U("U");
+  simit::Set E("E",V,U);
 
   Var v("v");
   Var e("e");

@@ -44,30 +44,51 @@ namespace pe {
 class PathExpressionVisitor;
 class PathExpression;
 
+struct SetContent {
+  std::string name;
+  mutable const simit::Set* binding = nullptr;
+
+  SetContent(std::string name) : name(name) {}
+  mutable long ref = 0;
+  friend inline void aquire(const SetContent *v) {++v->ref;}
+  friend inline void release(const SetContent *v) {if (--v->ref==0) delete v;}
+};
+
+class Set : public util::IntrusivePtr<SetContent> {
+public:
+  Set() : util::IntrusivePtr<SetContent>() {}
+
+  Set(std::string name) : util::IntrusivePtr<SetContent>(new SetContent(name)){}
+
+  const std::string &getName() const {return ptr->name;}
+
+  const simit::Set* getBinding() const {return ptr->binding;}
+  bool isBound() const {return ptr->binding != nullptr;}
+  void bind(const simit::Set* set) const {ptr->binding = set;}
+};
+
 struct VarContent {
   std::string name;
-  mutable const Set* binding = nullptr;
-  explicit VarContent(const std::string &name) : name(name) {}
+  Set set;
   mutable long ref = 0;
   friend inline void aquire(const VarContent *v) {++v->ref;}
   friend inline void release(const VarContent *v) {if (--v->ref==0) delete v;}
 };
 
-
 /// A path expression variable. Variables correspond to elements in sets, which
 /// is specified by binding them in the context of some Link (see Link::bind).
-class Var : public util::IntrusivePtr<const VarContent> {
+class Var : public util::IntrusivePtr<VarContent> {
 public:
-  Var() : Var("") {}
+  Var() : Var("", Set()) {}
 
-  explicit Var(const std::string &name)
-      : util::IntrusivePtr<const VarContent>(new VarContent(name)) {}
+  Var(std::string name, Set set=Set())
+      : util::IntrusivePtr<VarContent>(new VarContent) {
+    ptr->name = name;
+    ptr->set = set;
+  }
 
   const std::string &getName() const {return ptr->name;}
-  const Set* getBinding() const {return ptr->binding;}
-
-  bool isBound() const {return ptr->binding != nullptr;}
-  void bind(const Set* set) const {ptr->binding = set;}
+  const Set& getSet() const {return ptr->set;}
 };
 
 
@@ -101,8 +122,8 @@ public:
   virtual const Var &getPathEndpoint(unsigned i) const = 0;
 
   bool isBound() const;
-  const Set *getBinding(const Var &var) const;
-  std::map<Var, const Set*> getBindings() const;
+  const simit::Set *getBinding(const Var &var) const;
+  std::map<Var, const simit::Set*> getBindings() const;
 
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
@@ -130,16 +151,16 @@ public:
 
   /// Bind sets to the path expression endpoints. Since bindings are only
   /// supported for Link PathExpressions, only two bindings are needed.
-  void bind(const Set &lhsBinding, const Set &rhsBinding);
+  void bind(const simit::Set &lhsBinding, const simit::Set &rhsBinding);
 
   /// True if the variables are bound to sets, false otherwise.
   bool isBound() const;
 
   /// Returns the binding set of `var`, or nullptr if it could not be found.
-  const Set *getBinding(const Var &var) const;
+  const simit::Set *getBinding(const Var &var) const;
 
   /// Returns a map from Vars to set bindings;
-  std::map<Var, const Set*> getBindings() const;
+  std::map<Var, const simit::Set*> getBindings() const;
 
   unsigned getNumPathEndpoints() const {return ptr->getNumPathEndpoints();}
   const Var &getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}
@@ -192,14 +213,14 @@ public:
 
   const Var &getPathEndpoint(unsigned i) const;
 
-  void bind(const Set *lhsBinding, const Set *rhsBinding) const;
+  void bind(const simit::Set *lhsBinding, const simit::Set *rhsBinding) const;
   bool isBound() const;
 
-  const Set *getLhsBinding() const;
-  const Set *getRhsBinding() const;
+  const simit::Set *getLhsBinding() const;
+  const simit::Set *getRhsBinding() const;
 
-  const Set *getVertexBinding() const;
-  const Set *getEdgeBinding() const;
+  const simit::Set *getVertexBinding() const;
+  const simit::Set *getEdgeBinding() const;
 
   void accept(PathExpressionVisitor *visitor) const;
 
@@ -377,14 +398,14 @@ protected:
   std::ostream &os;
   util::NameGenerator nameGenerator;
   std::map<Var,std::string> names;
-  std::map<const Set*,std::string> setNames;
+  std::map<const simit::Set*,std::string> setNames;
 
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
   virtual void visit(const Or *pe);
 
   void printConnective(const QuantifiedConnective *pe);
-  void print(const Set *binding);
+  void print(const simit::Set *binding);
 };
 
 std::ostream &operator<<(std::ostream&, const Var&);

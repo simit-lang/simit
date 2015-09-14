@@ -68,32 +68,32 @@ bool PathExpressionImpl::isBound() const {
   return CheckIfBound().check(this);
 }
 
-const Set *PathExpressionImpl::getBinding(const Var &var) const {
+const simit::Set *PathExpressionImpl::getBinding(const Var &var) const {
   iassert(isBound())
       << "attempting to get the binding of a var in an unbound path expression";
   auto bindings = getBindings();
   return util::contains(bindings,var) ? bindings.at(var) : nullptr;
 }
 
-map<Var, const Set*> PathExpressionImpl::getBindings() const {
+map<Var, const simit::Set*> PathExpressionImpl::getBindings() const {
   iassert(isBound())
       << "attempting to get the bindings of an unbound path expression";
   class GetBindings : public PathExpressionVisitor {
   public:
-    map<Var, const Set*> find(const PathExpressionImpl *pe) {
+    map<Var, const simit::Set*> find(const PathExpressionImpl *pe) {
       bindings.clear();
       pe->accept(this);
       return bindings;
     }
 
   private:
-    map<Var, const Set*> bindings;
+    map<Var, const simit::Set*> bindings;
 
     void visit(const Link *link) {
       Var lhs = rename(link->getLhs());
       Var rhs = rename(link->getRhs());
-      const Set *lhsBinding = link->getLhsBinding();
-      const Set *rhsBinding = link->getRhsBinding();
+      const simit::Set *lhsBinding = link->getLhsBinding();
+      const simit::Set *rhsBinding = link->getRhsBinding();
       bindings.insert({lhs, lhsBinding});
       bindings.insert({rhs, rhsBinding});
     }
@@ -146,17 +146,18 @@ bool operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
 }
 
 // class PathExpression
-void PathExpression::bind(const Set &lhsBinding, const Set &rhsBinding) {
+void PathExpression::bind(const simit::Set &lhsBinding, const simit::Set &rhsBinding) {
   iassert(isa<Link>(*this)) << "bind is only defined for Link PathExpressions";
   class BindPathExpression : public PathExpressionVisitor {
   public:
-    void bind(const PathExpression &pe, const Set &lhs, const Set &rhs) {
+    void bind(const PathExpression &pe, const simit::Set &lhs,
+              const simit::Set &rhs) {
       this->lhs = &lhs;
       this->rhs = &rhs;
       pe.accept(this);
     }
   private:
-    const Set *lhs, *rhs;
+    const simit::Set *lhs, *rhs;
     void visit(const Link *link) {
       link->bind(lhs, rhs);
     }
@@ -168,11 +169,11 @@ bool PathExpression::isBound() const {
   return ptr->isBound();
 }
 
-const Set *PathExpression::getBinding(const Var &var) const {
+const simit::Set* PathExpression::getBinding(const Var &var) const {
   return ptr->getBinding(var);
 }
 
-std::map<Var, const Set*> PathExpression::getBindings() const {
+std::map<Var, const simit::Set*> PathExpression::getBindings() const {
   return ptr->getBindings();
 }
 
@@ -195,31 +196,32 @@ PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
   return new Link(lhs, rhs, type);
 }
 
-void Link::bind(const Set *lhsBinding, const Set *rhsBinding) const {
-  this->lhs.bind(lhsBinding);
-  this->rhs.bind(rhsBinding);
+void Link::bind(const simit::Set *lhsBinding, const simit::Set *rhsBinding) const {
+  this->lhs.getSet().bind(lhsBinding);
+  this->rhs.getSet().bind(rhsBinding);
 }
 
-const Set* Link::getLhsBinding() const {
-  return lhs.getBinding();
+const simit::Set* Link::getLhsBinding() const {
+  return lhs.getSet().getBinding();
 }
 
-const Set* Link::getRhsBinding() const {
-  return rhs.getBinding();
+const simit::Set* Link::getRhsBinding() const {
+  return rhs.getSet().getBinding();
 }
 
-const Set* Link::getVertexBinding() const {
-  return (type==ev) ? rhs.getBinding() : lhs.getBinding();
+const simit::Set* Link::getVertexBinding() const {
+  return (type==ev) ? rhs.getSet().getBinding() : lhs.getSet().getBinding();
 }
 
-const Set* Link::getEdgeBinding() const   {
-  return (type==ev) ? lhs.getBinding() : rhs.getBinding();
+const simit::Set* Link::getEdgeBinding() const   {
+  return (type==ev) ? lhs.getSet().getBinding() : rhs.getSet().getBinding();
 }
 
 bool Link::isBound() const {
-  iassert((lhs.isBound()&&rhs.isBound()) || (!lhs.isBound()&&!rhs.isBound()))
+  iassert((lhs.getSet().isBound() && rhs.getSet().isBound()) ||
+          (!lhs.getSet().isBound() && !rhs.getSet().isBound()))
       << "either all should be bound or none";
-  return lhs.isBound();
+  return lhs.getSet().isBound();
 }
 
 const Var &Link::getPathEndpoint(unsigned i) const {
@@ -233,13 +235,15 @@ void Link::accept(PathExpressionVisitor *visitor) const {
 
 bool Link::eq(const PathExpressionImpl &o) const {
   auto optr = static_cast<const Link*>(&o);
-  return this->getLhs() == optr->getLhs() && this->getRhs() == optr->getRhs();
+  return this->getLhs().getSet() == optr->getLhs().getSet() &&
+         this->getRhs().getSet() == optr->getRhs().getSet();
 }
 
 bool Link::lt(const PathExpressionImpl &o) const {
   auto optr = static_cast<const Link*>(&o);
-  return (getLhs() != optr->getLhs()) ? getLhs() < optr->getLhs()
-                                      : getRhs() < optr->getRhs();
+  return (getLhs().getSet() != optr->getLhs().getSet())
+         ? getLhs().getSet() < optr->getLhs().getSet()
+         : getRhs().getSet() < optr->getRhs().getSet();
 }
 
 
@@ -450,7 +454,7 @@ void PathExpressionPrinter::print(const Var &v) {
   os << name;
 }
 
-void PathExpressionPrinter::print(const Set *binding) {
+void PathExpressionPrinter::print(const simit::Set *binding) {
   os << ELEMENTOF;
   string setName;
   if (binding->getName() != "") {

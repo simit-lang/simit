@@ -26,7 +26,7 @@ std::ostream &operator<<(std::ostream &os, const PathIndex &pi) {
 }
 
 // class SetEndpointPathIndex
-SetEndpointPathIndex::SetEndpointPathIndex(const Set &edgeSet)
+SetEndpointPathIndex::SetEndpointPathIndex(const simit::Set &edgeSet)
     : edgeSet{edgeSet} {
   // TODO: Generalize to support gaps in the future
   iassert(edgeSet.isHomogeneous())
@@ -50,7 +50,7 @@ SetEndpointPathIndex::neighbors(unsigned elemID) const {
   class SetEndpointNeighbors : public PathIndexImpl::Neighbors::Base {
     class Iterator : public PathIndexImpl::Neighbors::Iterator::Base {
     public:
-      Iterator(const Set::Endpoints::Iterator &epit) : epit(epit) {}
+      Iterator(const simit::Set::Endpoints::Iterator &epit) : epit(epit) {}
 
       void operator++() {++epit;}
       unsigned operator*() const {return epit->getIdent();}
@@ -63,18 +63,18 @@ SetEndpointPathIndex::neighbors(unsigned elemID) const {
       }
 
     private:
-      Set::Endpoints::Iterator epit;
+      simit::Set::Endpoints::Iterator epit;
     };
 
   public:
-    SetEndpointNeighbors(const Set::Endpoints &endpoints)
+    SetEndpointNeighbors(const simit::Set::Endpoints &endpoints)
         : endpoints(endpoints) {}
 
     Neighbors::Iterator begin() const {return new Iterator(endpoints.begin());}
     Neighbors::Iterator end() const {return new Iterator(endpoints.end());}
 
   private:
-    Set::Endpoints endpoints;
+    simit::Set::Endpoints endpoints;
   };
 
   return new SetEndpointNeighbors(edgeSet.getEndpoints(ElementRef(elemID)));
@@ -203,7 +203,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
     void visit(const Link *link) {
-      const Set &edgeSet = *link->getEdgeBinding();
+      const simit::Set &edgeSet = *link->getEdgeBinding();
       iassert(edgeSet.getCardinality() > 0)
           << "not an edge set" << edgeSet.getName();
 
@@ -217,7 +217,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           map<unsigned, set<unsigned>> pathNeighbors;
 
           // create neighbor lists
-          const Set &vertexSet = *link->getVertexBinding();
+          const simit::Set &vertexSet = *link->getVertexBinding();
           for (auto &v : vertexSet) {
             pathNeighbors.insert({v.getIdent(), set<unsigned>()});
           }
@@ -236,15 +236,15 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       }
     }
 
-    static
-    VarToLocationsMap getVarToLocationsMap(const vector<PathExpression> &pes) {
+    static VarToLocationsMap
+    getVarToLocationsMap(const vector<PathExpression>& pexprs) {
       VarToLocationsMap varToLocationsMap;
-      for (auto &pe : pes) {
-        for (unsigned ep=0; ep < pe.getNumPathEndpoints(); ++ep) {
+      for (const PathExpression& pexpr : pexprs) {
+        for (unsigned ep=0; ep < pexpr.getNumPathEndpoints(); ++ep) {
           Location loc;
-          loc.pathExpr = pe;
+          loc.pathExpr = pexpr;
           loc.endpoint = ep;
-          varToLocationsMap[pe.getPathEndpoint(ep)].push_back(loc);
+          varToLocationsMap[pexpr.getPathEndpoint(ep)].push_back(loc);
         }
       }
       return varToLocationsMap;
@@ -253,9 +253,9 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     PathIndex buildIndex(const PathExpression &pathExpr,
                          const Var &source, const Var &sink) {
       VarToLocationsMap locs = getVarToLocationsMap({pathExpr});
-      iassert(locs.find(source) != locs.end())
+      iassert(util::contains(locs, source))
           << "source variable is not in the path expression";
-      iassert(locs.find(sink) != locs.end())
+      iassert(util::contains(locs, sink))
           << "sink variable is not in the path expression";
       return builder->buildSegmented(locs.at(source)[0].pathExpr,
                                      locs.at(source)[0].endpoint);
@@ -406,7 +406,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         // quantified variable gets links to every element of the second
         // variable. Vice versa for the second variable, but jump from the
         // quantified var.
-        const Set *sinkSet = f->getBinding(freeVars[1]);
+        const simit::Set *sinkSet = f->getBinding(freeVars[1]);
 
         for (unsigned source : sourceToQuantified) {
           pathNeighbors.insert({source, set<unsigned>()});

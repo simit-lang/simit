@@ -9,6 +9,7 @@ class Set;
 namespace pe {
 class PathExpression;
 class Var;
+class Set;
 }
 namespace ir {
 class Var;
@@ -32,11 +33,13 @@ private:
   std::map<ir::Var, pe::PathExpression> pathExpressions;
 
   // Maps each set variable to its path expression variables to support binding.
-  std::map<ir::Var, std::vector<pe::Var>> pathExpressionVars;
+  std::map<ir::Var, pe::Set> pathExpressionSets;
 
   /// Add a path expression to the builder. This path expression that will be
   /// used to compute derived path expressions.
   void addPathExpression(Var target, const pe::PathExpression& pe);
+
+  const pe::Set& getPathExpressionSet(Var irSetVar);
 };
 
 /// Associates tensor variables with path expressions. Variables that are not

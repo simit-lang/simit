@@ -160,12 +160,12 @@ public:
   Neighbors neighbors(unsigned elemID) const;
 
 private:
-  const Set &edgeSet;
+  const simit::Set &edgeSet;
 
   void print(std::ostream &os) const;
 
   friend PathIndexBuilder;
-  SetEndpointPathIndex(const Set &edgeSet);
+  SetEndpointPathIndex(const simit::Set &edgeSet);
 };
 
 

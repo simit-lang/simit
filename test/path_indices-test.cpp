@@ -17,13 +17,13 @@ using namespace std;
 TEST(PathIndex, Link) {
   PathIndexBuilder builder;
 
-  Set V;
-  Set E(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
   Box box = createBox(&V, &E, 5, 1, 1);  // v-e-v-e-v-e-v-e-v
 
   // Test e-v links
-  Var e("e");
-  Var v("v");
+  Var e("e", simit::pe::Set("E"));
+  Var v("v", simit::pe::Set("V"));
   PathExpression ev = Link::make(e, v, Link::ev);
   ev.bind(E,V);
   PathIndex evIndex = builder.buildSegmented(ev, 0);
@@ -36,11 +36,11 @@ TEST(PathIndex, Link) {
   ASSERT_EQ(evIndex, ev2Index);
 
   // Check that different ev get's a different index
-  Var f("f");
-  Var u("u");
+  Var f("f", simit::pe::Set("F"));
+  Var u("u", simit::pe::Set("U"));
   PathExpression fu = Link::make(f, u, Link::ev);
-  Set U;
-  Set F(V,V);
+  simit::Set U;
+  simit::Set F(V,V);
   fu.bind(F,U);
   PathIndex fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_NE(evIndex, fuIndex);
@@ -67,9 +67,9 @@ TEST(PathIndex, Link) {
   // TODO
 
   // Test ve where some variables do not have neighbors
-  Set G(V,V);
+  simit::Set G(V,V);
   G.add(box(0,0,0), box(4,0,0));
-  Var g("g");
+  Var g("g", simit::pe::Set("G"));
   PathExpression vg = Link::make(v, g, Link::ve);
   vg.bind(V,G);
   PathIndex vgIndex = builder.buildSegmented(vg, 0);
@@ -80,9 +80,9 @@ TEST(PathIndex, Link) {
 TEST(PathIndex, And) {
   PathIndexBuilder builder;
 
-  Set V;
-  Set E(V,V);
-  Set F(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
+  simit::Set F(V,V);
   createTestGraph0(&V, &E, &F);
 
   // test (ve or ve)
@@ -119,9 +119,9 @@ TEST(PathIndex, And) {
 TEST(PathIndex, Or) {
   PathIndexBuilder builder;
 
-  Set V;
-  Set E(V,V);
-  Set F(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
+  simit::Set F(V,V);
   createTestGraph0(&V, &E, &F);
 
   // test (ve or ve)
@@ -158,8 +158,8 @@ TEST(PathIndex, Or) {
 TEST(PathIndex, ExistAnd) {
   PathIndexBuilder builder;
 
-  Set V;
-  Set E(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
   Box box = createBox(&V, &E, 3, 1, 1);  // v-e-v-e-v
 
   // Test vev expressions (there exist an e s.t. (vi-e and e-vj))
@@ -177,10 +177,8 @@ TEST(PathIndex, ExistAnd) {
   VERIFY_INDEX(vevIndex, nbrs({{0,1}, {0,1,2}, {1,2}}));
 
   // Check that vev get's memoized
-  Var v2("v2");
-  Var e2("e2");
-  PathExpression ve2 = Link::make(v2, e2, Link::ve);
-  PathExpression ev2 = Link::make(e2, v2, Link::ev);
+  PathExpression ve2 = makeVE();
+  PathExpression ev2 = makeEV();
   ve2.bind(V,E);
   ev2.bind(E,V);
 
@@ -193,10 +191,8 @@ TEST(PathIndex, ExistAnd) {
   ASSERT_EQ(vevIndex, vev2Index);
 
   // Check that a different vev get's a different index
-  Var u("u");
-  Var f("f");
-  PathExpression uf = Link::make(u, f, Link::ve);
-  PathExpression fu = Link::make(f, u, Link::ev);
+  PathExpression uf = makeVE("u", "f");
+  PathExpression fu = makeEV("f", "u");
   uf.bind(V,E);
   fu.bind(E,V);
 
@@ -205,8 +201,8 @@ TEST(PathIndex, ExistAnd) {
   Var uj("uj");
   PathExpression ufu = And::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
                                  uf(ui, ff), fu(ff,uj));
-  Set U;
-  Set F(U,U);
+  simit::Set U;
+  simit::Set F(U,U);
   uf.bind(U,F);
   fu.bind(F,U);
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
@@ -224,7 +220,7 @@ TEST(PathIndex, ExistAnd) {
 
   // Test vevgv expressions: v-e-v-e-v
   //                          ---g---
-  Set G(V,V);
+  simit::Set G(V,V);
   G.add(box(0,0,0), box(2,0,0));
 
   Var g("g");
@@ -249,9 +245,9 @@ TEST(PathIndex, ExistAnd) {
 TEST(PathIndex, ExistOr) {
   PathIndexBuilder builder;
 
-  Set V;
-  Set E(V,V);
-  Set G(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
+  simit::Set G(V,V);
   createTestGraph1(&V, &E, &G);
 
   // Test vev expressions (there exist an e s.t. (vi-e and e-vj))
@@ -278,10 +274,8 @@ TEST(PathIndex, ExistOr) {
   ASSERT_EQ(vevIndex, vev2Index);
 
   // Check that a different vev get's a different index
-  Var u("u");
-  Var f("f");
-  PathExpression uf = Link::make(u, f, Link::ve);
-  PathExpression fu = Link::make(f, u, Link::ev);
+  PathExpression uf = makeVE("u", "f");
+  PathExpression fu = makeEV("f", "u");
   uf.bind(V,E);
   fu.bind(E,V);
 
@@ -290,8 +284,8 @@ TEST(PathIndex, ExistOr) {
   Var uj("uj");
   PathExpression ufu = Or::make({ui,uj}, {{QuantifiedVar::Exist,ff}},
                                 uf(ui, ff), fu(ff,uj));
-  Set U;
-  Set F(U,U);
+  simit::Set U;
+  simit::Set F(U,U);
   uf.bind(U,F);
   fu.bind(F,U);
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
@@ -328,18 +322,17 @@ TEST(PathIndex, ExistOr) {
 
 
 TEST(PathIndex, Alias) {
-  Set V;
-  Set E(V,V);
+  simit::Set V;
+  simit::Set E(V,V);
 
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
   E.add(v0,v1);
   E.add(v1,v0);
 
-  Var v("v");
-  Var e("e");
-  PathExpression ve = Link::make(v, e, Link::ve);
-  PathExpression ev = Link::make(e, v, Link::ev);
+  PathExpression ve = makeVE();
+  PathExpression ev = makeEV();
+
   ve.bind(V,E);
   ev.bind(E,V);
 

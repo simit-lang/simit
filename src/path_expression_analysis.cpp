@@ -26,8 +26,8 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
       << "can't compute path expressions from dynamic sets (yet?)";
 
   const Var& targetSet = to<VarExpr>(map->target)->var;
-  pe::Var e = pe::Var(targetSet.getName());
-  pathExpressionVars[targetSet].push_back(e);
+  pe::Set E = getPathExpressionSet(targetSet);
+  pe::Var e = pe::Var("e", E);
 
   for (const Var& var : map->vars) {
     iassert(var.getType().isTensor());
@@ -41,21 +41,25 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
           << "can't compute path expressions from dynamic sets (yet?)";
 
       ir::Var dimensionSet = to<VarExpr>(dim.getSet())->var;
-      pe::Var v = pe::Var(dimensionSet.getName());
-      pathExpressionVars[dimensionSet].push_back(v);
+
+      pe::Set V = getPathExpressionSet(dimensionSet);
+      pe::Var v = pe::Var("v", V);
+
       peVars.push_back(v);
     }
 
-    tassert(type->order()==2) << "path expressions only supported for matrices";
-    pe::Var u = peVars[0];
-    pe::Var v = peVars[1];
+    if (type->order() >= 2) {
+      tassert(type->order()==2) << "path expressions only supported for matrices";
+      pe::Var u = peVars[0];
+      pe::Var v = peVars[1];
 
-    pe::PathExpression ve = Link::make(u, e, Link::ve);
-    pe::PathExpression ev = Link::make(e, v, Link::ev);
+      pe::PathExpression ve = Link::make(u, e, Link::ve);
+      pe::PathExpression ev = Link::make(e, v, Link::ev);
 
-    PathExpression vev = pe::And::make({u,v}, {{QuantifiedVar::Exist,e}},
-                                       ve(u,e), ev(e,v));
-    addPathExpression(var, vev);
+      PathExpression vev = pe::And::make({u,v}, {{QuantifiedVar::Exist,e}},
+                                         ve(u,e), ev(e,v));
+      addPathExpression(var, vev);
+    }
   }
 }
 
@@ -64,7 +68,7 @@ void PathExpressionBuilder::computePathExpression(Var target,
   vector<pe::Var> peVars;
   map<IndexVar,pe::Var> peVarMap;
   for (const IndexVar& indexVar : iexpr->resultVars) {
-    pe::Var peVar = pe::Var(indexVar.getName());
+    pe::Var peVar = pe::Var(indexVar.getName(), pe::Set());
     peVars.push_back(peVar);
     peVarMap.insert({indexVar, peVar});
   }
@@ -122,15 +126,20 @@ pe::PathExpression PathExpressionBuilder::getPathExpression(Var target) {
 }
 
 void PathExpressionBuilder::bind(ir::Var var, const Set* set) {
-  iassert(util::contains(pathExpressionVars, var));
-  for (pe::Var& peVar : pathExpressionVars.at(var)) {
-    peVar.bind(set);
-  }
+  iassert(util::contains(pathExpressionSets, var));
+  pathExpressionSets.at(var).bind(set);
 }
 
 void PathExpressionBuilder::addPathExpression(Var target,
                                               const pe::PathExpression& pe) {
   pathExpressions.insert({target, pe});
+}
+
+const pe::Set& PathExpressionBuilder::getPathExpressionSet(Var irSetVar) {
+  if (!util::contains(pathExpressionSets, irSetVar)) {
+    pathExpressionSets.insert({irSetVar, pe::Set(irSetVar.getName())});
+  }
+  return pathExpressionSets.at(irSetVar);
 }
 
 }}

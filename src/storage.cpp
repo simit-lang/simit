@@ -250,11 +250,14 @@ public:
 
 private:
   Storage *storage;
-  
+  PathExpressionBuilder peBuilder;
+
   using IRVisitor::visit;
 
   void visit(const Map *op) {
-    for (auto &var : op->vars) {
+    peBuilder.computePathExpression(op);
+
+    for (const Var& var : op->vars) {
       Type type = var.getType();
       if (type.isTensor() && !isScalar(type)) {
         // For now we'll store all assembled vectors as dense and other tensors
@@ -267,6 +270,12 @@ private:
         else {
           if (op->neighbors.defined()) {
             tensorStorage = TensorStorage(op->target, op->neighbors);
+
+            // Add path expression
+            tassert(tensorType->order() == 2)
+                << "tensor has order " << tensorType->order()
+                << ", while we only currently supports sparse matrices";
+            tensorStorage.setPathExpression(peBuilder.getPathExpression(var));
           }
           else {
             tensorStorage = TensorStorage(op->target);
