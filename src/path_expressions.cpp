@@ -14,6 +14,11 @@ using namespace std;
 namespace simit {
 namespace pe {
 
+const std::string PathExpressionPrinter::ELEMENTOF = "\u2208";
+const std::string PathExpressionPrinter::OR        = "\u2227";
+const std::string PathExpressionPrinter::AND       = "\u2228";
+const std::string PathExpressionPrinter::EXIST     = "\u2203";
+
 // class QuantifiedVar
 bool operator==(const QuantifiedVar& l, const QuantifiedVar& r) {
   return l.getQuantifier() == r.getQuantifier();
@@ -438,6 +443,7 @@ void PathExpressionRewriter::visit(const RenamedPathExpression *pe) {
 
 // class PathExpressionPrinter
 void PathExpressionPrinter::print(const Var &v) {
+  iassert(v.defined()) << "attempting to print undefined var";
   std::string name;
   if (util::contains(names, v)) {
     name = names.at(v);
@@ -452,6 +458,10 @@ void PathExpressionPrinter::print(const Var &v) {
     names[v] = name;
   }
   os << name;
+
+  if (v.getSet().defined() && v.getSet().getName() != "") {
+    os << PathExpressionPrinter::ELEMENTOF << v.getSet().getName();
+  }
 }
 
 void PathExpressionPrinter::print(const simit::Set *binding) {
@@ -569,8 +579,8 @@ void PathExpressionPrinter::visit(const Or *pe) {
 }
 
 std::ostream &operator<<(std::ostream& os, const Var& v) {
-  iassert(v.defined()) << "attempting to print undefined var";
-  return os << v.getName();
+  PathExpressionPrinter(os).print(v);
+  return os;
 }
 
 std::ostream &operator<<(std::ostream &os, const PathExpressionImpl &pe) {

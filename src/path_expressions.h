@@ -177,7 +177,9 @@ public:
   }
 
   friend bool operator<(const PathExpression &l, const PathExpression &r) {
-    if (l.defined() ^ r.defined()) return true;
+    if ((l.defined() ^ r.defined()) || (!l.defined() && !r.defined())) {
+      return false;
+    }
     return (l.ptr != r.ptr) && *l.ptr < *r.ptr;
   }
 };
@@ -382,6 +384,11 @@ protected:
 
 class PathExpressionPrinter : public PathExpressionVisitor {
 public:
+  static const std::string ELEMENTOF;
+  static const std::string OR;
+  static const std::string AND;
+  static const std::string EXIST;
+
   PathExpressionPrinter(std::ostream &os) : os(os) {}
   virtual ~PathExpressionPrinter() {}
 
@@ -390,11 +397,6 @@ public:
   void print(const PathExpression &pe);
 
 protected:
-  const std::string ELEMENTOF = "\u2208";
-  const std::string OR        = "\u2227";
-  const std::string AND       = "\u2228";
-  const std::string EXIST     = "\u2203";
-
   std::ostream &os;
   util::NameGenerator nameGenerator;
   std::map<Var,std::string> names;
