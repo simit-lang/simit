@@ -263,19 +263,22 @@ private:
     TensorStorage& ts = storage->getStorage(tensor);
     unsigned sourceDim = util::locate(indexVars,linkedIndexVar);
     unsigned sinkDim   = util::locate(indexVars,indexVar);
+    TensorIndex ti;
     if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
-      ts.addTensorIndex(tensor, sourceDim, sinkDim);
-      const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
-
       if (environment->hasExtern(tensor.getName())) {
+        ts.addTensorIndex(tensor, sourceDim, sinkDim);
+        ti = ts.getTensorIndex(sourceDim, sinkDim);
         environment->addExternMapping(tensor, ti.getCoordArray());
         environment->addExternMapping(tensor, ti.getSinkArray());
       }
       else {
         environment->addTensorIndex(ts.getPathExpression(), tensor.getName());
+        ti = environment->getTensorIndex(ts.getPathExpression());
       }
     }
-    const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
+    else {
+      ti = ts.getTensorIndex(sourceDim, sinkDim);
+    }
 
     TensorIndexVar tensorIndexVar(inductionVar.getName(), tensor.getName(),
                                   linkedInductionVar, ti);

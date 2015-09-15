@@ -295,9 +295,8 @@ void LLVMBackend::compile(const ir::Literal& literal) {
 }
 
 void LLVMBackend::compile(const ir::VarExpr& varExpr) {
-  if (!symtable.contains(varExpr.var)) {
-    ierror << varExpr.var << " not found in symbol table";
-  }
+  iassert(symtable.contains(varExpr.var))
+      << varExpr.var << " not found in symbol table:\n\n" << symtable;
 
   val = symtable.get(varExpr.var);
 

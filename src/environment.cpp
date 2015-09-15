@@ -22,14 +22,15 @@ std::ostream& operator<<(std::ostream& os, const VarMapping& vm) {
 
 // class Environment
 struct Environment::Content {
-  vector<pair<Var, Expr>> constants;
-  vector<VarMapping>      externs;
-  vector<VarMapping>      temporaries;
+  vector<pair<Var, Expr>>        constants;
+  vector<VarMapping>             externs;
+  vector<VarMapping>             temporaries;
 
-  map<string, size_t>     externLocationByName;
-  map<Var, size_t>        temporaryLocationByName;
+  map<string, size_t>            externLocationByName;
+  map<Var, size_t>               temporaryLocationByName;
 
-  vector<TensorIndex>     tensorIndices;
+  vector<TensorIndex>            tensorIndices;
+  map<pe::PathExpression,size_t> tensorIndexLocations;
 };
 
 Environment::Environment() : content(new Content) {
@@ -175,15 +176,19 @@ void Environment::addTemporaryMapping(const Var& var, const Var& mapping) {
   content->temporaries.at(loc).addMapping(mapping);
 }
 
-void Environment::addTensorIndex(const pe::PathExpression& pexpr,
-                                 std::string name) {
+void Environment::addTensorIndex(const pe::PathExpression& pexpr, string name) {
+  iassert(pexpr.defined())
+      << "Attempting to add a tensor index with an undefined path expression";
   content->tensorIndices.push_back(TensorIndex(name+"_index", pexpr));
+  size_t loc = content->tensorIndices.size() - 1;
+  content->tensorIndexLocations.insert({pexpr, loc});
 }
 
 const TensorIndex&
 Environment::getTensorIndex(const pe::PathExpression& pexpr) const {
-  not_supported_yet;
-  return content->tensorIndices[0];
+  iassert(util::contains(content->tensorIndexLocations, pexpr))
+      << "Could not find " << pexpr << " in environment";
+  return content->tensorIndices[content->tensorIndexLocations.at(pexpr)];
 }
 
 const std::vector<TensorIndex>& Environment::getTensorIndices() const {

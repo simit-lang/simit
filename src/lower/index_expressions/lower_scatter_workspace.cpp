@@ -391,24 +391,25 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       TensorStorage& ts = storage->getStorage(target);
       unsigned sourceDim = util::locate(resultVars, linkedIndexVar);
       unsigned sinkDim   = util::locate(resultVars, indexVar);
+      TensorIndex ti;
       if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
-        ts.addTensorIndex(target, sourceDim, sinkDim);
-        const TensorIndex& ti = ts.getTensorIndex(sourceDim, sinkDim);
-
         if (environment->hasExtern(target.getName())) {
+          ts.addTensorIndex(target, sourceDim, sinkDim);
+          ti = ts.getTensorIndex(sourceDim, sinkDim);
           environment->addExternMapping(target, ti.getCoordArray());
           environment->addExternMapping(target, ti.getSinkArray());
         }
         else {
           environment->addTensorIndex(ts.getPathExpression(), target.getName());
+          ti = environment->getTensorIndex(ts.getPathExpression());
         }
-
       }
-      const TensorIndex& resultTensorIndex =
-          ts.getTensorIndex(sourceDim,sinkDim);
+      else {
+        ti = ts.getTensorIndex(sourceDim, sinkDim);
+      }
 
       TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),
-                                    linkedInductionVar, resultTensorIndex);
+                                    linkedInductionVar, ti);
 
       Stmt copyFromWorkspace = Store::make(target, resultIndexVar.getCoordVar(),
                                            Load::make(workspace, inductionVar));
