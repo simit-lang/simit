@@ -6,6 +6,7 @@
 
 #include "lower_indexexprs.h"
 #include "lower_scatter_workspace.h"
+#include "lower_matrix_multiply.h"
 
 namespace simit {
 namespace ir {
@@ -180,6 +181,7 @@ Func lowerIndexExpressions(Func func) {
           stmt = lowerScatterWorkspace(op->var, iexpr, &environment, storage);
           break;
         case MatrixMultiply:
+          stmt = lowerMatrixMultiply(op->var, iexpr, &environment, storage);
           break;
       }
 
