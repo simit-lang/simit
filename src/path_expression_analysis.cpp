@@ -63,6 +63,38 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
   }
 }
 
+static PathExpression orPathExpressions(PathExpression a, PathExpression b,
+                                        vector<pe::Var> peVars) {
+  if (a.defined() && b.defined()) {
+    return pe::Or::make(peVars, {}, a, b);
+  }
+  else if (a.defined()) {
+    return a;
+  }
+  else if (b.defined()) {
+    return b;
+  }
+  else {
+    return PathExpression();
+  }
+}
+
+static PathExpression andPathExpressions(PathExpression a, PathExpression b,
+                                         vector<pe::Var> peVars) {
+  if (a.defined() && b.defined()) {
+    return pe::And::make(peVars, {}, a, b);
+  }
+  else if (a.defined()) {
+    return a;
+  }
+  else if (b.defined()) {
+    return b;
+  }
+  else {
+    return PathExpression();
+  }
+}
+
 void PathExpressionBuilder::computePathExpression(Var target,
                                                   const IndexExpr* iexpr){
   vector<pe::Var> peVars;
@@ -76,18 +108,21 @@ void PathExpressionBuilder::computePathExpression(Var target,
   stack<PathExpression> peStack;
   match(Expr(iexpr),
     function<void(const IndexedTensor*)>([&](const IndexedTensor* op){
-      iassert(isa<VarExpr>(op->tensor))
-          << "index expression should have been flattened by now";
-      const Var& tensor = to<VarExpr>(op->tensor)->var;
-      iassert(tensor.getType().isTensor());
+      if (isa<VarExpr>(op->tensor)) {
+        const Var& tensor = to<VarExpr>(op->tensor)->var;
+        iassert(tensor.getType().isTensor());
 
-      // Retrieve the indexed tensor's path expression
-      PathExpression pe = getPathExpression(to<VarExpr>(op->tensor)->var);
+        // Retrieve the indexed tensor's path expression
+        PathExpression pe = getPathExpression(to<VarExpr>(op->tensor)->var);
 
-      tassert(op->indexVars.size()==2)<<"only matrices are currently supported";
+        tassert(op->indexVars.size()==2)<<"only matrices are currently supported";
 
-      peStack.push(pe(peVarMap.at(op->indexVars[0]),
-                      peVarMap.at(op->indexVars[1])));
+        peStack.push(pe(peVarMap.at(op->indexVars[0]),
+                        peVarMap.at(op->indexVars[1])));
+      }
+      else {
+        peStack.push(PathExpression());
+      }
 
     }),
     function<void(const Add*, Matcher* ctx)>([&](const Add* op, Matcher* ctx) {
@@ -99,8 +134,7 @@ void PathExpressionBuilder::computePathExpression(Var target,
       PathExpression b = peStack.top();
       peStack.pop();
 
-      PathExpression pe = pe::Or::make(peVars, {}, a, b);
-      peStack.push(pe);
+      peStack.push(orPathExpressions(a, b, peVars));
     }),
     function<void(const Mul*, Matcher* ctx)>([&](const Mul* op, Matcher* ctx) {
       ctx->match(op->a);
@@ -111,12 +145,11 @@ void PathExpressionBuilder::computePathExpression(Var target,
       PathExpression b = peStack.top();
       peStack.pop();
 
-      PathExpression pe = pe::And::make(peVars, {}, a, b);
-      peStack.push(pe);
+      peStack.push(andPathExpressions(a, b, peVars));
     })
   );
 
-  iassert(peStack.size() == 1);
+  iassert(peStack.size() == 1) << "incorrect stack size " << peStack.size();
   addPathExpression(target, peStack.top());
 }
 
