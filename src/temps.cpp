@@ -4,7 +4,7 @@
 
 #include "ir.h"
 #include "ir_rewriter.h"
-#include "ir_codegen.h"
+#include "ir_transforms.h"
 
 namespace simit {
 namespace ir {

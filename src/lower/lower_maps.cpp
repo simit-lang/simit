@@ -3,7 +3,7 @@
 #include "storage.h"
 #include "ir_builder.h"
 #include "ir_rewriter.h"
-#include "ir_codegen.h"
+#include "ir_transforms.h"
 #include "inline.h"
 
 using namespace std;

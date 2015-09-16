@@ -7,7 +7,7 @@
 #include "intrinsics.h"
 #include "ir_queries.h"
 #include "ir_rewriter.h"
-#include "ir_codegen.h"
+#include "ir_transforms.h"
 #include "substitute.h"
 #include "ir_builder.h"
 

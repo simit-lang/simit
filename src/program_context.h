@@ -13,7 +13,7 @@
 #include "func.h"
 #include "intrinsics.h"
 #include "ir_builder.h"
-#include "ir_codegen.h"
+#include "ir_transforms.h"
 #include "util/scopedmap.h"
 
 #include "test.h"

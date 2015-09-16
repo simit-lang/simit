@@ -1,9 +1,10 @@
 #include "lower_indexexprs.h"
 
 #include "ir.h"
+#include "ir_codegen.h"
 #include "ir_queries.h"
 #include "ir_rewriter.h"
-#include "ir_codegen.h"
+#include "ir_transforms.h"
 #include "ir_printer.h"
 #include "sig.h"
 

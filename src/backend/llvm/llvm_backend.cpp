@@ -40,7 +40,7 @@
 #include "intrinsics.h"
 #include "ir_printer.h"
 #include "ir_queries.h"
-#include "ir_codegen.h"
+#include "ir_transforms.h"
 #include "tensor_index.h"
 #include "llvm_function.h"
 #include "macros.h"
@@ -157,7 +157,11 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
       symtable.insert(global.first, compile(global.second));
     }
 
+    // LLVM does not de-allocate any stack memory until a functoin returns, so
+    // we must make sure to not allocate stack memory inside a loop. To do this
+    // we move all the var decls to the front of the function body
     Stmt body = moveVarDeclsToFront(f.getBody());
+
     compile(body);
     builder->CreateRetVoid();
 

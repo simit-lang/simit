@@ -2,7 +2,7 @@
 
 #include "ir.h"
 #include "ir_rewriter.h"
-#include "ir_codegen.h"
+#include "ir_transforms.h"
 
 #include "lower_indexexprs.h"
 #include "lower_scatter_workspace.h"
