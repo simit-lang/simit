@@ -1,7 +1,7 @@
 #include "ir_printer.h"
 
 #include "ir.h"
-#include "util.h"
+#include "util/util.h"
 
 #ifdef GPU
 #include "backend/gpu/gpu_ir.h"

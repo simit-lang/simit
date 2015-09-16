@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "types.h"
-#include "util.h"
+#include "util/util.h"
 #include "macros.h"
 #include "ir_printer.h"
 #include "util/compare.h"

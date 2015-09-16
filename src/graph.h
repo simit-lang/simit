@@ -321,13 +321,13 @@ public:
 
       friend bool operator!=(const Iterator &it1, const Iterator &it2) {
         return !(it1.set == it2.set) ||
-               !(it1.curElem.ident == it2.curElem.ident) ||
+               !(it1.curElem.getIdent() == it2.curElem.getIdent()) ||
                !(it1.endpointNum == it2.endpointNum);
       }
 
       friend bool operator==(const Iterator &it1, const Iterator &it2) {
         return (it1.set == it2.set) &&
-               (it1.curElem.ident == it2.curElem.ident) &&
+               (it1.curElem.getIdent() == it2.curElem.getIdent()) &&
                (it1.endpointNum == it2.endpointNum);
       }
 
@@ -335,7 +335,7 @@ public:
                                    const Iterator &e2) {
         iassert(e1.set == e2.set)
             << "Comparing Endpoints::Iterators from two different Sets";
-        iassert(e1.curElem.ident == e2.curElem.ident)
+        iassert(e1.curElem.getIdent() == e2.curElem.getIdent())
             << "Comparing Endpoints::Iterators over two different edges";
         return e1.endpointNum < e2.endpointNum;
       }

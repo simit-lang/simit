@@ -1,7 +1,7 @@
 #include "tensor_index.h"
 
 #include "error.h"
-#include "util.h"
+#include "util/util.h"
 
 using namespace std;
 

@@ -5,7 +5,7 @@
 
 #include "ir.h"
 #include "frontend.h"
-#include "util.h"
+#include "util/util.h"
 #include "error.h"
 #include "program_context.h"
 #include "storage.h"

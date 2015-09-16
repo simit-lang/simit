@@ -4,7 +4,7 @@
 #include <iostream>
 #include <set>
 
-#include "util.h"
+#include "util/util.h"
 #include "util/name_generator.h"
 
 using namespace std;

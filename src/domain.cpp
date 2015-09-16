@@ -1,7 +1,7 @@
 #include "domain.h"
 
 #include "macros.h"
-#include "util.h"
+#include "util/util.h"
 #include "ir.h"
 #include "ir_printer.h"
 
