@@ -77,6 +77,7 @@ public:
   const pe::PathExpression& getPathExpression() const;
   void setPathExpression(const pe::PathExpression& pathExpression);
 
+  // TODO DEPRECATED: These live in the environment now
   bool hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
   const TensorIndex& getTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
   void addTensorIndex(Var tensor, unsigned sourceDim, unsigned sinkDim);

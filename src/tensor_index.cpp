@@ -16,8 +16,8 @@ TensorIndex::TensorIndex(std::string name, pe::PathExpression pexpr)
 }
 
 ostream &operator<<(ostream& os, const TensorIndex& ti) {
-  os << "tensor-index " << ti.getName() << "(" << ti.getPathExpression()
-     << "):" << endl;
+  os << "tensor-index " << ti.getName() << ": " << ti.getPathExpression()
+     << endl;
   os << "  " << ti.getCoordArray() << endl;
   os << "  " << ti.getSinkArray();
   return os;

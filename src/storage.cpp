@@ -254,6 +254,15 @@ private:
 
   using IRVisitor::visit;
 
+  void visit(const VarDecl *op) {
+    Var var = op->var;
+    Type type = var.getType();
+    iassert(!storage->hasStorage(var)) << "Redeclaration of variable" << var;
+    if (type.isTensor() && !isScalar(type)) {
+      determineStorage(var);
+    }
+  }
+
   void visit(const Map *op) {
     peBuilder.computePathExpression(op);
 
@@ -287,15 +296,6 @@ private:
     }
   }
 
-  void visit(const VarDecl *op) {
-    Var var = op->var;
-    Type type = var.getType();
-    iassert(!storage->hasStorage(var)) << "Redeclaration of variable" << var;
-    if (type.isTensor() && !isScalar(type)) {
-      determineStorage(var);
-    }
-  }
-
   void visit(const AssignStmt *op) {
     Var var = op->var;
     Type type = var.getType();
@@ -315,6 +315,12 @@ private:
       else {
         // assume system reduced storage
         determineStorage(var, op->value);
+
+        if (isa<IndexExpr>(op->value)) {
+          peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
+          pe::PathExpression pexpr = peBuilder.getPathExpression(var);
+          storage->getStorage(var).setPathExpression(pexpr);
+        }
       }
     }
   }
