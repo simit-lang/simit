@@ -41,6 +41,7 @@
 #include "ir_printer.h"
 #include "ir_queries.h"
 #include "ir_transforms.h"
+#include "ir_rewriter.h" // TODO: Remove this header
 #include "tensor_index.h"
 #include "llvm_function.h"
 #include "macros.h"
@@ -80,6 +81,42 @@ LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
 
 LLVMBackend::~LLVMBackend() {}
 
+// TODO: Remove this function, once the old init system has been removed
+static Func makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
+  class MakeSystemTensorsGlobalRewriter : public ir::IRRewriter {
+  public:
+    MakeSystemTensorsGlobalRewriter() {}
+
+  private:
+    Environment environment;
+
+    void visit(const Func* f) {
+      environment = f->getEnvironment();
+
+      Stmt body = rewrite(f->getBody());
+      if (body != f->getBody()) {
+        func = Func(f->getName(), f->getArguments(), f->getResults(), body,
+                    environment);
+        func.setStorage(f->getStorage());
+      }
+      else {
+        func = *f;
+      }
+    }
+
+    void visit(const VarDecl* op) {
+      const Var& var = op->var;
+      if (isSystemTensorType(var.getType()) && environment.hasTensorIndex(var)){
+        environment.addTemporary(var);
+      }
+      else {
+        stmt = op;
+      }
+    }
+  };
+  return MakeSystemTensorsGlobalRewriter().rewrite(func);
+}
+
 Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   this->module = new llvm::Module("simit", LLVM_CTX);
 
@@ -91,6 +128,14 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   this->buffers.clear();
   this->globals.clear();
   this->storage = storage;
+
+  // This backend stores all system tensors as globals.
+  // TODO: Replace hacky makeSystemTensorsGlobalIfNoStorage with
+  //       makeSystemTensorsGlobal. The makeSystemTensorsGlobalIfNoStorage
+  //       function was used to make the old init system that relied on storage
+  //       work while transitioning to the new one based on pexprs
+//  func = makeSystemTensorsGlobal(func);
+  func = makeSystemTensorsGlobalIfHasTensorIndex(func);
 
   const Environment& env = func.getEnvironment();
 
@@ -1491,6 +1536,7 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
   }
   // Assign to n-order tensors
   else {
+    iassert(storage.hasStorage(var)) << var << " has no storage";
     llvm::Value *len = emitComputeLen(varType, storage.getStorage(var));
     unsigned componentSize = varType->componentType.bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(componentSize));

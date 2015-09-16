@@ -196,7 +196,7 @@ struct ErrorReport {
   ierror << "reached unreachable location"
 
 #define not_supported_yet                                                      \
-  ierror << "Not supported yet, but planned for the future"
+  ierror << "Not supported yet, but planned for the future\n "
 
 // internal assert helpers
 #define iassert_scalar(a)                                                      \
