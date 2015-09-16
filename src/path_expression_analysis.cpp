@@ -107,23 +107,31 @@ void PathExpressionBuilder::computePathExpression(Var target,
 
   stack<PathExpression> peStack;
   match(Expr(iexpr),
-    function<void(const IndexedTensor*)>([&](const IndexedTensor* op){
-      if (isa<VarExpr>(op->tensor)) {
-        const Var& tensor = to<VarExpr>(op->tensor)->var;
-        iassert(tensor.getType().isTensor());
+    function<void(const IndexedTensor*)>([&](const IndexedTensor* op) {
+      iassert(op->tensor.type().isTensor());
+      const TensorType* type = op->tensor.type().toTensor();
+      tassert(type->order()<=2) << "we do not support higher-order tensors yet";
+
+      if (type->order() == 2) {
+        // Perhaps continue the traversal into op->tensor and match on VarExpr,
+        // literal, FieldRead, etc, to get op->tensor's path expression.
+        tassert(isa<VarExpr>(op->tensor))
+            << "generalize to work with indexed literals, field reads, etc.";
 
         // Retrieve the indexed tensor's path expression
         PathExpression pe = getPathExpression(to<VarExpr>(op->tensor)->var);
 
-        tassert(op->indexVars.size()==2)<<"only matrices are currently supported";
+        tassert(op->indexVars.size() == 2)
+            << "only matrices are currently supported";
 
         peStack.push(pe(peVarMap.at(op->indexVars[0]),
                         peVarMap.at(op->indexVars[1])));
       }
       else {
+        // Scalars and vectors are dense and do not have path expressions,
+        // so we push an undefined path expression on the stack.
         peStack.push(PathExpression());
       }
-
     }),
     function<void(const Add*, Matcher* ctx)>([&](const Add* op, Matcher* ctx) {
       ctx->match(op->a);
@@ -176,7 +184,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
 }
 
 pe::PathExpression PathExpressionBuilder::getPathExpression(Var target) {
-  iassert(util::contains(pathExpressions, target));
+  iassert(util::contains(pathExpressions, target))
+      << "no path expression has been built for " << target;
   return pathExpressions.at(target);
 }
 
