@@ -143,8 +143,7 @@ private:
 
 
 class PathExpression
-    : public util::IntrusivePtr<const PathExpressionImpl,false>,
-      public interfaces::Comparable<PathExpression> {
+    : public util::IntrusivePtr<const PathExpressionImpl> {
 public:
   PathExpression() : IntrusivePtr() {}
   PathExpression(const PathExpressionImpl *impl) : IntrusivePtr(impl) {}
@@ -171,16 +170,32 @@ public:
 
   /// Two path expressions are equal if they have the same form and the same
   /// path variables.
-  friend bool operator==(const PathExpression &l, const PathExpression &r) {
+  friend bool operator==(const PathExpression& l, const PathExpression& r) {
     if (l.defined() ^ r.defined()) return false;
     return (l.ptr == r.ptr) || (*l.ptr == *r.ptr);
   }
 
-  friend bool operator<(const PathExpression &l, const PathExpression &r) {
+  friend bool operator<(const PathExpression& l, const PathExpression& r) {
     if ((l.defined() ^ r.defined()) || (!l.defined() && !r.defined())) {
       return false;
     }
     return (l.ptr != r.ptr) && *l.ptr < *r.ptr;
+  }
+
+  friend bool operator!=(const PathExpression& lhs, const PathExpression& rhs) {
+    return !(lhs == rhs);
+  }
+
+  friend bool operator>(const PathExpression& lhs, const PathExpression& rhs) {
+    return !(lhs < rhs || lhs == rhs);
+  }
+
+  friend bool operator<=(const PathExpression& lhs, const PathExpression& rhs) {
+    return !(lhs > rhs);
+  }
+
+  friend bool operator>=(const PathExpression& lhs, const PathExpression& rhs) {
+    return !(lhs < rhs);
   }
 };
 
