@@ -59,19 +59,15 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
   }
 
   // Allocate and initialize temporaries
-  for (const VarMapping& temporaryMapping : env.getTemporaries()) {
-    Var temporary = temporaryMapping.getVar();
-    iassert(temporary.getType().isTensor())
+  for (const Var& tmp : env.getTemporaries()) {
+    iassert(tmp.getType().isTensor())
         << "Only support tensor temporaries";
 
-    vector<void**> tmpPtrs;
-    for (const Var& tmp : temporaryMapping.getMappings()) {
-      llvm::GlobalValue* llvmTmp = module->getNamedValue(tmp.getName());
-      void** tmpPtr = (void**)executionEngine->getPointerToGlobal(llvmTmp);
-      *tmpPtr = nullptr;
-      tmpPtrs.push_back(tmpPtr);
-    }
-    temporaryPtrs.insert({temporary.getName(), tmpPtrs});
+    llvm::GlobalValue* llvmTmp = module->getNamedValue(tmp.getName());
+    void** tmpPtr = (void**)executionEngine->getPointerToGlobal(llvmTmp);
+    *tmpPtr = nullptr;
+
+    temporaryPtrs.insert({tmp.getName(), tmpPtr});
   }
 }
 
@@ -79,11 +75,8 @@ LLVMFunction::~LLVMFunction() {
   if (deinit) {
     deinit();
   }
-  for (auto& tmpPtrs : temporaryPtrs) {
-    for (void** tmpPtr : tmpPtrs.second) {
-      free(*tmpPtr);
-      *tmpPtr = nullptr;
-    }
+  for (auto& tmpPtr : temporaryPtrs) {
+    free(*tmpPtr.second);
   }
 }
 
@@ -179,8 +172,7 @@ size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
 
 Function::FuncType LLVMFunction::init() {
   // Initialize temporaries
-  for (const VarMapping& temporaryMapping : getEnvironment().getTemporaries()) {
-    const Var& tmp = temporaryMapping.getVar();
+  for (const Var& tmp : getEnvironment().getTemporaries()) {
     const Type& type = tmp.getType();
 
     if (type.isTensor()) {
@@ -190,13 +182,9 @@ Function::FuncType LLVMFunction::init() {
 
       if (order == 1) {
         // Vectors are currently always dense
-        iassert(temporaryMapping.getMappings().size() == 1);
-
-        const Var& tmpArray = temporaryMapping.getMappings()[0];
         IndexDomain vecDimension = tensorType->getDimensions()[0];
         size_t vecSize = tensorType->componentType.bytes() * size(vecDimension);
-        iassert(temporaryPtrs.at(tmpArray.getName()).size() == 1);
-        *temporaryPtrs.at(tmpArray.getName())[0] = malloc(vecSize);
+        *temporaryPtrs.at(tmp.getName()) = malloc(vecSize);
       }
       else if (order == 2) {
         not_supported_yet << "Initializing " << tmp << " matrix";

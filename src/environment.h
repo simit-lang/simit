@@ -72,16 +72,19 @@ public:
 
   /// Get global temporaries. Global temporaries are inserted by compiler
   /// lowering passes, and must be initialized before a simit::Function is run.
-  const std::vector<VarMapping>& getTemporaries() const;
+  const std::vector<Var>& getTemporaries() const;
 
   /// Returns true if the environment has a temporary of the given name.
   bool hasTemporary(const Var& var) const;
 
-  /// Returns all the temporary variables. In cases where an temporary has been
-  /// mapped the mapped variables are included in the result. If two variables
-  /// have been mapped to the same variable, then the variable is only included
-  /// once in the returned vector.
-  std::vector<Var> getTemporaryVars() const;
+  /// Retrieve all the tensor indices in the environment.
+  const std::vector<TensorIndex>& getTensorIndices() const;
+
+  /// True of the environment has a tensor index for the given path expression.
+  bool hasTensorIndex(const pe::PathExpression& pexpr) const;
+
+  /// Retrieve the tensor index of the given path expression.
+  const TensorIndex& getTensorIndex(const pe::PathExpression& pexpr) const;
 
   /// Insert a constant into the environment.
   void addConstant(const Var& var, const Expr& initializer);
@@ -97,20 +100,6 @@ public:
 
   /// Insert a temporary into the environment.
   void addTemporary(const Var& var);
-
-  /// Map the temporary Var to another Var that implements it. A Var can have
-  /// multiple mappings. For example, a sparse matrix Var can be mapped to three
-  /// arrays that store its values and CSR indices.
-  void addTemporaryMapping(const Var& var, const Var& mapping);
-
-  /// True of the environment has a tensor index for the given path expression.
-  bool hasTensorIndex(const pe::PathExpression& pexpr) const;
-
-  /// Retrieve the tensor index of the given path expression.
-  const TensorIndex& getTensorIndex(const pe::PathExpression& pexpr) const;
-
-  /// Retrieve all the tensor indices in the environment.
-  const std::vector<TensorIndex>& getTensorIndices() const;
 
   /// Add a tensor index described by the given path expression to the
   /// environment. A tensor index name can optionally be specified.

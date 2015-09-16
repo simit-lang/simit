@@ -71,9 +71,8 @@ backend::Function* Backend::compile(const Stmt& stmt, const Environment& env,
     definedVariables.insert(var, nullptr);
   }
   for (auto& tmp : environment.getTemporaries()) {
-    const Var& var = tmp.getVar();
-    globalsSet.insert(var);
-    definedVariables.insert(var, nullptr);
+    globalsSet.insert(tmp);
+    definedVariables.insert(tmp, nullptr);
   }
 
   // Find all undefined variables and add them to the context as globals.

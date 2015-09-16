@@ -57,7 +57,7 @@ class LLVMFunction : public backend::Function {
   std::map<std::string, std::vector<void**>> externPtrs;
 
   // Temporaries
-  std::map<std::string, std::vector<void**>> temporaryPtrs;
+  std::map<std::string, void**> temporaryPtrs;
 
   bool initialized;
   FuncType deinit;

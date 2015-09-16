@@ -23,11 +23,12 @@ std::ostream& operator<<(std::ostream& os, const VarMapping& vm) {
 // class Environment
 struct Environment::Content {
   vector<pair<Var, Expr>>        constants;
-  vector<VarMapping>             externs;
-  vector<VarMapping>             temporaries;
 
+  vector<VarMapping>             externs;
   map<string, size_t>            externLocationByName;
-  map<Var, size_t>               temporaryLocationByName;
+
+  vector<Var>                    temporaries;
+  set<Var>                       temporarySet;
 
   vector<TensorIndex>            tensorIndices;
   map<pe::PathExpression,size_t> tensorIndexLocations;
@@ -106,34 +107,12 @@ std::vector<Var> Environment::getExternVars() const {
   return externVars;
 }
 
-const std::vector<VarMapping>& Environment::getTemporaries() const {
+const std::vector<Var>& Environment::getTemporaries() const {
   return content->temporaries;
 }
 
 bool Environment::hasTemporary(const Var& var) const {
-  return util::contains(content->temporaryLocationByName, var);
-}
-
-std::vector<Var> Environment::getTemporaryVars() const {
-  vector<Var> temporaryVars;
-  set<Var> included;
-  for (const VarMapping& temporaryMapping : getTemporaries()) {
-    if (temporaryMapping.getMappings().size() == 0) {
-      const Var& ext = temporaryMapping.getVar();
-      iassert(!util::contains(included, ext));
-      temporaryVars.push_back(ext);
-      included.insert(ext);
-    }
-    else {
-      for (const Var& ext : temporaryMapping.getMappings()) {
-        if (!util::contains(included, ext)) {
-          temporaryVars.push_back(ext);
-          included.insert(ext);
-        }
-      }
-    }
-  }
-  return temporaryVars;
+  return util::contains(content->temporarySet, var);
 }
 
 void Environment::addConstant(const Var& var, const Expr& initializer) {
@@ -160,20 +139,8 @@ void Environment::addExternMapping(const Var& var, const Var& mapping) {
 
 void Environment::addTemporary(const Var& var) {
   iassert(!hasExtern(var.getName())) << var << " already in environment";
-
   content->temporaries.push_back(var);
-  size_t loc = content->temporaries.size()-1 ;
-  content->temporaryLocationByName.insert({var, loc});
-
-  // TODO: Change so that variables are not mapped to themselves. This means
-  //       lowering must map (sparse/dense) tensor value storage to arrays.
-  addTemporaryMapping(var, var);
-}
-
-void Environment::addTemporaryMapping(const Var& var, const Var& mapping) {
-  iassert(hasTemporary(var)) << var;
-  size_t loc =content->temporaryLocationByName.at(var);
-  content->temporaries.at(loc).addMapping(mapping);
+  content->temporarySet.insert(var);
 }
 
 void Environment::addTensorIndex(const pe::PathExpression& pexpr, string name) {
@@ -234,10 +201,10 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
     if (somethingPrinted) {
       os << std::endl;
     }
-    auto temporaryVars = env.getTemporaryVars();
-    os << *temporaryVars.begin()  << " : "
-       << temporaryVars.begin()->getType() << ";";
-    for (auto& temp : util::excludeFirst(temporaryVars)) {
+    auto temporaries = env.getTemporaries();
+    os << *temporaries.begin()  << " : "
+       << temporaries.begin()->getType() << ";";
+    for (auto& temp : util::excludeFirst(temporaries)) {
       os << std::endl << "temp " << temp  << " : " << temp.getType() << ";";
     }
     somethingPrinted = true;
