@@ -309,6 +309,7 @@ void LLVMFunction::print(std::ostream &os) const {
 }
 
 void LLVMFunction::printMachine(std::ostream &os) const {
+  // TODO: Make printMachine write to os, instead of stderr
   llvm::TargetMachine *target = engineBuilder->selectTarget();
   target->Options.PrintMachineCode = true;
   llvm::ExecutionEngine *printee(engineBuilder->create(target));

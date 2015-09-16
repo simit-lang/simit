@@ -109,7 +109,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   // Emit global temporaries
   for (const Var& tmp : env.getTemporaryVars()) {
     llvm::GlobalVariable* ptr = createGlobal(module, tmp,
-                                             llvm::GlobalValue::PrivateLinkage,
+                                             llvm::GlobalValue::ExternalLinkage,
                                              globalAddrspace());
     this->symtable.insert(tmp, ptr);
     this->globals.insert(tmp);
@@ -119,14 +119,14 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
     const Var& coordArray = tensorIndex.getCoordArray();
     llvm::GlobalVariable* coordPtr =
-        createGlobal(module, coordArray, llvm::GlobalValue::PrivateLinkage,
+        createGlobal(module, coordArray, llvm::GlobalValue::ExternalLinkage,
                      globalAddrspace());
     this->symtable.insert(coordArray, coordPtr);
     this->globals.insert(coordArray);
 
     const Var& sinkArray  = tensorIndex.getSinkArray();
     llvm::GlobalVariable* sinkPtr =
-        createGlobal(module, sinkArray, llvm::GlobalValue::PrivateLinkage,
+        createGlobal(module, sinkArray, llvm::GlobalValue::ExternalLinkage,
                      globalAddrspace());
     this->symtable.insert(sinkArray, sinkPtr);
     this->globals.insert(sinkArray);
