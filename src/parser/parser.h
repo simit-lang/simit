@@ -50,7 +50,7 @@
 
   #include <vector>
 
-  #include "util.h"
+  #include "util/util.h"
   #include "ir.h"
   #include "error.h"
   #include "types.h"
