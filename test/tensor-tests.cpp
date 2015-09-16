@@ -26,10 +26,10 @@ TEST(Tensor, scalars) {
   Tensor<float>  f;
   Int    i;
   Bool   b;
-  ASSERT_EQ(0.0,   d);
-  ASSERT_EQ(0.0f,  f);
-  ASSERT_EQ(0,     i);
-  ASSERT_EQ(false, b);
+  ASSERT_EQ(0.0,  d);
+  ASSERT_EQ(0.0f, f);
+  ASSERT_EQ(0,    i);
+  ASSERT_EQ(Tensor<float>(false), b);
 
   d = 4.0;
   f = 5.0;

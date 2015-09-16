@@ -4,6 +4,7 @@
 #include <cstdlib>
 #include <vector>
 #include <map>
+#include <functional>
 
 #include "printable.h"
 #include "uncopyable.h"

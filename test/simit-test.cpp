@@ -5,9 +5,9 @@
 #include <vector>
 
 #include "program.h"
-#include "util.h"
 #include "init.h"
 #include "ir.h"
+#include "util/util.h"
 
 #include "program.h"
 #include "backend/backend.h"

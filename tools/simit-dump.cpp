@@ -10,7 +10,7 @@
 #include "frontend.h"
 #include "program_context.h"
 #include "error.h"
-#include "util.h"
+#include "util/util.h"
 #include "storage.h"
 
 #include "backend/backend.h"

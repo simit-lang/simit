@@ -27,7 +27,7 @@ std::ostream &operator<<(std::ostream &os, const PathIndex &pi) {
 
 // class SetEndpointPathIndex
 SetEndpointPathIndex::SetEndpointPathIndex(const simit::Set &edgeSet)
-    : edgeSet{edgeSet} {
+    : edgeSet(edgeSet) {
   // TODO: Generalize to support gaps in the future
   iassert(edgeSet.isHomogeneous())
       << "Must be homogeneous because otherwise there are gaps";
@@ -282,7 +282,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       PathIndex quantifiedToSink =
           builder->buildSegmented(sinkLoc.pathExpr, quantifiedLoc);
 
-      return {sourceToQuantified, quantifiedToSink};
+      return make_pair(sourceToQuantified, quantifiedToSink);
     }
 
     void visit(const And *f) {

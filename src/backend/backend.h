@@ -2,6 +2,7 @@
 #define SIMIT_BACKEND_H
 
 #include <vector>
+#include <string>
 #include "uncopyable.h"
 
 namespace simit {
