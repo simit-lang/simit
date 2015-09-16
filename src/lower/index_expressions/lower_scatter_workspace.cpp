@@ -432,7 +432,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
   IRPrinter printer(comment);
   printer.skipTopExprParenthesis();
   printer.print(indexExpression->value);
-  return Comment::make(comment.str(), loopNest);
+  return Comment::make(comment.str(), loopNest, true);
 }
 
 }}
