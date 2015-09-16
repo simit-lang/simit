@@ -82,4 +82,33 @@ Stmt moveVarDeclsToFront(Stmt stmt) {
       : varDecls.first;
 }
 
+Func makeSystemTensorsGlobal(Func func) {
+  class MakeSystemTensorsGlobalRewriter : public IRRewriter {
+    Environment environment;
+
+    void visit(const Func* f) {
+      environment = f->getEnvironment();
+
+      Stmt body = rewrite(f->getBody());
+      if (body != f->getBody()) {
+        func = Func(f->getName(), f->getArguments(), f->getResults(), body,
+                    environment);
+      }
+      else {
+        func = *f;
+      }
+    }
+
+    void visit(const VarDecl* op) {
+      if (isSystemTensorType(op->var.getType())) {
+        environment.addTemporary(op->var);
+      }
+      else {
+        stmt = op;
+      }
+    }
+  };
+  return MakeSystemTensorsGlobalRewriter().rewrite(func);
+}
+
 }}

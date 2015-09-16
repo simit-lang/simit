@@ -270,16 +270,41 @@ inline bool isBoolean(Type type) {
 }
 
 /// An element tensor type is one whose dimensions are not sets
-inline bool isElementTensorType(const TensorType *type) {
-  bool isElementType = true;
-  for (auto& dim : type->getDimensions()) {
-    for (auto& is : dim.getIndexSets()) {
-      if (is.getKind() == IndexSet::Set) {
-        isElementType = false;
-      }
-    }
+//inline bool isElementTensorType(const TensorType *type) {
+//  bool isElementType = true;
+//  for (auto& dim : type->getDimensions()) {
+//    for (auto& is : dim.getIndexSets()) {
+//      if (is.getKind() == IndexSet::Set) {
+//        isElementType = false;
+//      }
+//    }
+//  }
+//  return isElementType;
+//}
+
+/// A system tensor is a tensor whose dimensions contain at least one set.
+inline bool isSystemTensorType(const TensorType* type) {
+  return type->hasSystemDimensions();
+}
+
+/// A system tensor is a tensor whose dimensions contain at least one set.
+inline bool isSystemTensorType(Type type) {
+  if (type.isTensor() && isSystemTensorType(type.toTensor())) {
+    return true;
   }
-  return isElementType;
+  else {
+    return false;
+  }
+}
+
+/// An element tensor is a tensor whose dimensions contain no sets.
+inline bool isElementTensorType(const TensorType* type) {
+  return !isSystemTensorType(type);
+}
+
+/// An element tensor is a tensor whose dimensions contain no sets.
+inline bool isElementTensorType(Type type) {
+  return !isSystemTensorType(type);
 }
 
 bool operator==(const Type&, const Type&);

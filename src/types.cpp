@@ -124,8 +124,13 @@ bool TensorType::hasSystemDimensions() const {
   vector<IndexDomain> dimensions = getDimensions();
   for (auto& indexDom : dimensions) {
     for (auto& indexSet : indexDom.getIndexSets()) {
-      if (indexSet.getKind() != IndexSet::Range) {
-        return true;
+      switch (indexSet.getKind()) {
+        case IndexSet::Set:
+          return true;
+        case IndexSet::Dynamic:
+        case IndexSet::Range:
+        case IndexSet::Single:
+          break;
       }
     }
   }

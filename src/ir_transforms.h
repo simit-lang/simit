@@ -22,5 +22,10 @@ std::pair<Stmt,std::vector<Stmt>> removeVarDecls(Stmt stmt);
 /// Moves VarDecl statements from within `stmt` to in front of it.
 Stmt moveVarDeclsToFront(Stmt stmt);
 
+/// Makes all the system tensors declared in the func body global variables.
+/// A system tensor is a tensor whose dimensions include at least one Simit set.
+/// The global variables are added to the resulting Funcs environment.
+Func makeSystemTensorsGlobal(Func func);
+
 }}
 #endif
