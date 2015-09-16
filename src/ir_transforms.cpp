@@ -93,6 +93,7 @@ Func makeSystemTensorsGlobal(Func func) {
       if (body != f->getBody()) {
         func = Func(f->getName(), f->getArguments(), f->getResults(), body,
                     environment);
+        func.setStorage(f->getStorage());
       }
       else {
         func = *f;
