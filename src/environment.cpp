@@ -31,7 +31,9 @@ struct Environment::Content {
   set<Var>                       temporarySet;
 
   vector<TensorIndex>            tensorIndices;
-  map<pe::PathExpression,size_t> tensorIndexLocations;
+  map<pe::PathExpression,size_t> locationOfTensorIndex;
+
+  map<Var,TensorIndex>           tensorIndexOfVar;
 };
 
 Environment::Environment() : content(new Content) {
@@ -115,6 +117,30 @@ bool Environment::hasTemporary(const Var& var) const {
   return util::contains(content->temporarySet, var);
 }
 
+const std::vector<TensorIndex>& Environment::getTensorIndices() const {
+  return content->tensorIndices;
+}
+
+bool Environment::hasTensorIndex(const pe::PathExpression& pexpr) const {
+  return util::contains(content->locationOfTensorIndex, pexpr);
+}
+
+const TensorIndex&
+Environment::getTensorIndex(const pe::PathExpression& pexpr) const {
+  iassert(util::contains(content->locationOfTensorIndex, pexpr))
+      << "Could not find " << pexpr << " in environment";
+  return content->tensorIndices[content->locationOfTensorIndex.at(pexpr)];
+}
+
+bool Environment::hasTensorIndex(const Var& var) const {
+  return util::contains(content->tensorIndexOfVar, var);
+}
+
+const TensorIndex& Environment::getTensorIndex(const Var& var) const {
+  iassert(hasTensorIndex(var)) << var << " has no tensor index in environment";
+  return content->tensorIndexOfVar.at(var);
+}
+
 void Environment::addConstant(const Var& var, const Expr& initializer) {
   content->constants.push_back({var, initializer});
 }
@@ -143,23 +169,24 @@ void Environment::addTemporary(const Var& var) {
   content->temporarySet.insert(var);
 }
 
-void Environment::addTensorIndex(const pe::PathExpression& pexpr, string name) {
+void Environment::addTensorIndex(const pe::PathExpression& pexpr,
+                                 const Var& var) {
   iassert(pexpr.defined())
       << "Attempting to add a tensor index with an undefined path expression";
-  content->tensorIndices.push_back(TensorIndex(name+"_index", pexpr));
-  size_t loc = content->tensorIndices.size() - 1;
-  content->tensorIndexLocations.insert({pexpr, loc});
-}
+  iassert(var.defined())
+      << "attempting to add a tensor index to an undefined var";
 
-const TensorIndex&
-Environment::getTensorIndex(const pe::PathExpression& pexpr) const {
-  iassert(util::contains(content->tensorIndexLocations, pexpr))
-      << "Could not find " << pexpr << " in environment";
-  return content->tensorIndices[content->tensorIndexLocations.at(pexpr)];
-}
+  string name = var.getName();
 
-const std::vector<TensorIndex>& Environment::getTensorIndices() const {
-  return content->tensorIndices;
+  // Lazily create a new index if no index with the given pexpr exist.
+  // TODO: Maybe rename indices as they get used by multiple tensors
+  if (!hasTensorIndex(pexpr)) {
+    TensorIndex ti(name+"_index", pexpr);
+    content->tensorIndices.push_back(ti);
+    size_t loc = content->tensorIndices.size() - 1;
+    content->locationOfTensorIndex.insert({pexpr, loc});
+  }
+  content->tensorIndexOfVar.insert({var, getTensorIndex(pexpr)});
 }
 
 std::ostream& operator<<(std::ostream& os, const Environment& env) {

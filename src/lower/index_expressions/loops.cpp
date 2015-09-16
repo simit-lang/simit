@@ -272,8 +272,11 @@ private:
         environment->addExternMapping(tensor, ti.getSinkArray());
       }
       else {
-        environment->addTensorIndex(ts.getPathExpression(), tensor.getName());
-        ti = environment->getTensorIndex(ts.getPathExpression());
+        const pe::PathExpression pexpr = ts.getPathExpression();
+        if (!environment->hasTensorIndex(pexpr)) {
+          environment->addTensorIndex(pexpr, tensor);
+        }
+        ti = environment->getTensorIndex(pexpr);
       }
     }
     else {

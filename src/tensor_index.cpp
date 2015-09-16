@@ -16,10 +16,12 @@ TensorIndex::TensorIndex(std::string name, pe::PathExpression pexpr)
 }
 
 ostream &operator<<(ostream& os, const TensorIndex& ti) {
+  auto coords = ti.getCoordArray();
+  auto sinks = ti.getSinkArray();
   os << "tensor-index " << ti.getName() << ": " << ti.getPathExpression()
      << endl;
-  os << "  " << ti.getCoordArray() << endl;
-  os << "  " << ti.getSinkArray();
+  os << "  " << coords << " : " << coords.getType() << endl;
+  os << "  " << sinks << " : " << sinks.getType();
   return os;
 }
 

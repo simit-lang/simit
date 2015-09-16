@@ -86,6 +86,12 @@ public:
   /// Retrieve the tensor index of the given path expression.
   const TensorIndex& getTensorIndex(const pe::PathExpression& pexpr) const;
 
+  /// True of the environment contains the tensor index of var.
+  bool hasTensorIndex(const Var& var) const;
+
+  /// Retrieve the tensor index of var.
+  const TensorIndex& getTensorIndex(const Var& var) const;
+
   /// Insert a constant into the environment.
   void addConstant(const Var& var, const Expr& initializer);
 
@@ -102,8 +108,8 @@ public:
   void addTemporary(const Var& var);
 
   /// Add a tensor index described by the given path expression to the
-  /// environment. A tensor index name can optionally be specified.
-  void addTensorIndex(const pe::PathExpression& pexpr, std::string name="");
+  /// environment, and associate it with var.
+  void addTensorIndex(const pe::PathExpression& pexpr, const Var& var);
 
 private:
   struct Content;
