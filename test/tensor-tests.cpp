@@ -29,7 +29,7 @@ TEST(Tensor, scalars) {
   ASSERT_EQ(0.0,  d);
   ASSERT_EQ(0.0f, f);
   ASSERT_EQ(0,    i);
-  ASSERT_EQ(Tensor<float>(false), b);
+  ASSERT_EQ(Tensor<bool>(false), b);
 
   d = 4.0;
   f = 5.0;
@@ -38,7 +38,7 @@ TEST(Tensor, scalars) {
   ASSERT_EQ(4.0,  d);
   ASSERT_EQ(5.0f, f);
   ASSERT_EQ(6,    i);
-  ASSERT_EQ(true, b);
+  ASSERT_EQ(Tensor<bool>(true), b);
 }
 
 TEST(Tensor, index) {
