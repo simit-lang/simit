@@ -49,7 +49,8 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
     }
 
     if (type->order() >= 2) {
-      tassert(type->order()==2) << "path expressions only supported for matrices";
+      tassert(type->order() == 2)
+          << "path expressions only supported for matrices";
       pe::Var u = peVars[0];
       pe::Var v = peVars[1];
 
@@ -64,9 +65,10 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
 }
 
 static PathExpression orPathExpressions(PathExpression a, PathExpression b,
-                                        vector<pe::Var> peVars) {
+                                        vector<pe::Var> peVars,
+                                        vector<QuantifiedVar> qvars) {
   if (a.defined() && b.defined()) {
-    return pe::Or::make(peVars, {}, a, b);
+    return pe::Or::make(peVars, qvars, a, b);
   }
   else if (a.defined()) {
     return a;
@@ -80,9 +82,10 @@ static PathExpression orPathExpressions(PathExpression a, PathExpression b,
 }
 
 static PathExpression andPathExpressions(PathExpression a, PathExpression b,
-                                         vector<pe::Var> peVars) {
+                                         vector<pe::Var> peVars,
+                                         vector<QuantifiedVar> qvars) {
   if (a.defined() && b.defined()) {
-    return pe::And::make(peVars, {}, a, b);
+    return pe::And::make(peVars, qvars, a, b);
   }
   else if (a.defined()) {
     return a;
@@ -106,6 +109,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
   }
 
   stack<PathExpression> peStack;
+  vector<QuantifiedVar> qvars;
+
   match(Expr(iexpr),
     function<void(const IndexedTensor*)>([&](const IndexedTensor* op) {
       iassert(op->tensor.type().isTensor());
@@ -125,13 +130,12 @@ void PathExpressionBuilder::computePathExpression(Var target,
             << "only matrices are currently supported";
 
         // We must check for, and add to the map, any reduction variables
-        if (op->indexVars[0].isReductionVar()) {
-          pe::Var peVar = pe::Var(op->indexVars[0].getName(), pe::Set());
-          peVarMap.insert({op->indexVars[0], peVar});
-        }
-        if (op->indexVars[1].isReductionVar()) {
-          pe::Var peVar = pe::Var(op->indexVars[1].getName(), pe::Set());
-          peVarMap.insert({op->indexVars[1], peVar});
+        for (const IndexVar& indexVar : op->indexVars) {
+          if (indexVar.isReductionVar() && !util::contains(peVarMap,indexVar)) {
+            pe::Var peVar = pe::Var(indexVar.getName(), pe::Set());
+            peVarMap.insert({indexVar, peVar});
+            qvars.push_back(QuantifiedVar(QuantifiedVar::Exist, peVar));
+          }
         }
 
         peStack.push(pe(peVarMap.at(op->indexVars[0]),
@@ -152,7 +156,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
       PathExpression b = peStack.top();
       peStack.pop();
 
-      peStack.push(orPathExpressions(a, b, peVars));
+      peStack.push(orPathExpressions(a, b, peVars, qvars));
+      qvars.clear();
     }),
     function<void(const Sub*, Matcher* ctx)>([&](const Sub* op, Matcher* ctx) {
       ctx->match(op->a);
@@ -163,7 +168,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
       PathExpression b = peStack.top();
       peStack.pop();
 
-      peStack.push(orPathExpressions(a, b, peVars));
+      peStack.push(orPathExpressions(a, b, peVars, qvars));
+      qvars.clear();
     }),
     function<void(const Mul*, Matcher* ctx)>([&](const Mul* op, Matcher* ctx) {
       ctx->match(op->a);
@@ -174,7 +180,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
       PathExpression b = peStack.top();
       peStack.pop();
 
-      peStack.push(andPathExpressions(a, b, peVars));
+      peStack.push(andPathExpressions(a, b, peVars, qvars));
+      qvars.clear();
     }),
     function<void(const Div*, Matcher* ctx)>([&](const Div* op, Matcher* ctx) {
       ctx->match(op->a);
@@ -185,7 +192,8 @@ void PathExpressionBuilder::computePathExpression(Var target,
       PathExpression b = peStack.top();
       peStack.pop();
 
-      peStack.push(andPathExpressions(a, b, peVars));
+      peStack.push(andPathExpressions(a, b, peVars, qvars));
+      qvars.clear();
     })
   );
 

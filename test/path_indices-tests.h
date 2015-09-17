@@ -41,7 +41,7 @@ inline void createTestGraph0(Set* V, Set* E, Set* F) {
   F->add(box(0,0,0), box(1,0,0));
 }
 
-/// v  v-e-v-e-v  v-g-v
+/// v  v-e-v-e-v  v-f-v
 inline void createTestGraph1(Set* V, Set* E, Set* F) {
   V->add();
   Box box = createBox(V, E, 2, 1, 1);

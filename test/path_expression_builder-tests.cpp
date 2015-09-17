@@ -91,7 +91,9 @@ TEST(PathExpressionBuilder, mul) {
   VERIFY_INDEX(pi, nbrs({{0,1}, {0,1}, {2}, {}}));
 }
 
-TEST(DISABLED_PathExpressionBuilder, gemm) {
+TEST(PathExpressionBuilder, gemm) {
+  // TODO: Test B*B
+
   Var A("A", ir::TensorType::make(ir::typeOf<simit_float>(), {dim,dim}));
   Var B("B", ir::TensorType::make(ir::typeOf<simit_float>(), {dim,dim}));
   Var C("C", ir::TensorType::make(ir::typeOf<simit_float>(), {dim,dim}));
@@ -99,7 +101,6 @@ TEST(DISABLED_PathExpressionBuilder, gemm) {
   Stmt mapB = Map::make({B}, f, {}, E);
   Stmt mapC = Map::make({C}, f, {}, F);
   Expr iexpr = IndexExpr::make({i,j}, Expr(B)(i,k) * Expr(C)(k,j));
-  std::cout << iexpr << std::endl;
 
   PathExpressionBuilder builder;
   builder.computePathExpression(to<Map>(mapB));
@@ -111,7 +112,7 @@ TEST(DISABLED_PathExpressionBuilder, gemm) {
   Set Vs;
   Set Es(Vs,Vs);
   Set Fs(Vs,Vs);
-  createTestGraph1(&Vs, &Es, &Fs);
+  createTestGraph0(&Vs, &Es, &Fs);
 
   pe::PathIndexBuilder indexBuilder;
   indexBuilder.bind("V", &Vs);
@@ -119,5 +120,5 @@ TEST(DISABLED_PathExpressionBuilder, gemm) {
   indexBuilder.bind("F", &Fs);
 
   pe::PathIndex pi = indexBuilder.buildSegmented(pe, 0);
-  VERIFY_INDEX(pi, nbrs({{3,4}, {0,1,2,3,4}, {0,1,2,3,4}, {3,4}, {3,4}}));
+  VERIFY_INDEX(pi, nbrs({{0,1,3}, {0,1,2,3}, {0,1,2,3}, {}}));
 }

@@ -375,10 +375,6 @@ void PathExpressionPrinter::print(const Var &v) {
     names[v] = name;
   }
   os << name;
-
-  if (v.getSet().defined() && v.getSet().getName() != "") {
-    os << PathExpressionPrinter::ELEMENTOF << v.getSet();
-  }
 }
 
 void PathExpressionPrinter::print(Set binding) {
