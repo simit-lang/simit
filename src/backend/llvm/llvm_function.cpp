@@ -209,9 +209,6 @@ Function::FuncType LLVMFunction::init() {
     pe::PathExpression pexpr = tensorIndex.getPathExpression();
     pe::PathIndex pidx = piBuilder.buildSegmented(pexpr, 0);
     pathIndices.insert({pexpr, pidx});
-//    std::cout << pexpr << std::endl;
-//    std::cout << pidx << std::endl;
-//    std::cout << std::endl;
 
     pair<const uint32_t**,const uint32_t**> ptrPair = tensorIndexPtrs.at(pexpr);
 
@@ -238,7 +235,10 @@ Function::FuncType LLVMFunction::init() {
       if (order == 1) {
         // Vectors are currently always dense
         IndexDomain vecDimension = tensorType->getDimensions()[0];
-        size_t vecSize = size(vecDimension) * tensorType->componentType.bytes();
+        Type blockType = tensorType->getBlockType();
+        size_t blockSize = blockType.toTensor()->size();
+        size_t componentSize = tensorType->componentType.bytes();
+        size_t vecSize = size(vecDimension) * blockSize * componentSize;
         *temporaryPtrs.at(tmp.getName()) = malloc(vecSize);
       }
       else if (order == 2) {
@@ -246,8 +246,11 @@ Function::FuncType LLVMFunction::init() {
         const pe::PathExpression& pexpr =
             environment.getTensorIndex(tmp).getPathExpression();
         iassert(util::contains(pathIndices, pexpr));
+        Type blockType = tensorType->getBlockType();
+        size_t blockSize = blockType.toTensor()->size();
+        size_t componentSize = tensorType->componentType.bytes();
         size_t matSize = pathIndices.at(pexpr).numNeighbors() *
-                         tensorType->componentType.bytes();
+                         blockSize * componentSize;
         *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
       }
     }
