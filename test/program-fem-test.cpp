@@ -91,10 +91,10 @@ TEST(Program, femTet) {
   m_timeStepper.bind("verts", &m_verts);
   m_timeStepper.bind("tets", &m_tets);
   m_timeStepper.init();
+
   for (size_t i=0; i < nSteps; ++i) {
     m_timeStepper.runSafe();
   }
-  m_timeStepper.mapArgs();
 
   // Check outputs
   SIMIT_ASSERT_FLOAT_EQ(0.010771915616785779,  x.get(vertRefs[100])(0));

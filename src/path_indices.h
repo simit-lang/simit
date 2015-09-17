@@ -175,8 +175,8 @@ private:
 class SegmentedPathIndex : public PathIndexImpl {
 public:
   ~SegmentedPathIndex() {
-    if (coordsData != nullptr) delete coordsData;
-    if (sinksData != nullptr) delete sinksData;
+    delete[] coordsData;
+    delete[] sinksData;
   }
 
   unsigned numElements() const {return numElems;}
@@ -195,7 +195,7 @@ public:
 private:
   /// Segmented vector, where `nbrsStart[i]:nbrsStart[i+1]` is the range of
   /// locations of neighbors of `i` in `nbrs`.
-  unsigned numElems;
+  size_t numElems;
   uint32_t* coordsData;
   uint32_t* sinksData;
 
@@ -203,7 +203,7 @@ private:
 
   friend PathIndexBuilder;
 
-  SegmentedPathIndex(unsigned numElements, uint32_t *nbrsStart, uint32_t *nbrs)
+  SegmentedPathIndex(size_t numElements, uint32_t *nbrsStart, uint32_t *nbrs)
       : numElems(numElements), coordsData(nbrsStart), sinksData(nbrs) {}
 
   SegmentedPathIndex() : numElems(0), coordsData(nullptr), sinksData(nullptr) {

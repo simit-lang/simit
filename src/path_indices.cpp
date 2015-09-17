@@ -175,28 +175,28 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         numNeighbors += p.second.size();
       }
 
-      unsigned numElements = pathNeighbors.size();
-      unsigned *nbrsStart = new unsigned[numElements + 1];
-      unsigned *nbrs = new unsigned[numNeighbors];
+      size_t numElements = pathNeighbors.size();
+      uint32_t* coordsData = new uint32_t[numElements + 1];
+      uint32_t* sinksData = new uint32_t[numNeighbors];
 
       int currNbrsStart = 0;
-      for (auto &p : pathNeighbors) {
+      for (auto& p : pathNeighbors) {
         unsigned elem = p.first;
-        nbrsStart[elem] = currNbrsStart;
+        coordsData[elem] = currNbrsStart;
 
         unsigned pNeighborSize = p.second.size();
         if (pNeighborSize > 0) {
           vector<unsigned> pNeighbors(p.second.begin(), p.second.end());
           sort(pNeighbors.begin(), pNeighbors.end());
 
-          memcpy(&nbrs[currNbrsStart], pNeighbors.data(),
-                 pNeighbors.size() * sizeof(unsigned));
+          memcpy(&sinksData[currNbrsStart], pNeighbors.data(),
+                 pNeighbors.size() * sizeof(uint32_t));
 
           currNbrsStart += pNeighborSize;
         }
       }
-      nbrsStart[numElements] = currNbrsStart;
-      return new SegmentedPathIndex(numElements, nbrsStart, nbrs);;
+      coordsData[numElements] = currNbrsStart;
+      return new SegmentedPathIndex(numElements, coordsData, sinksData);;
     }
 
     void visit(const Link *link) {

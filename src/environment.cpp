@@ -172,7 +172,8 @@ void Environment::addTemporary(const Var& var) {
 void Environment::addTensorIndex(const pe::PathExpression& pexpr,
                                  const Var& var) {
   iassert(pexpr.defined())
-      << "Attempting to add a tensor index with an undefined path expression";
+      << "Attempting to add tensor " << util::quote(var)
+      << " index with an undefined path expression";
   iassert(var.defined())
       << "attempting to add a tensor index to an undefined var";
 

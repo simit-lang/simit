@@ -214,6 +214,8 @@ struct SetType : TypeNode {
   /// between this file and ir.h.
   std::vector<Expr*> endpointSets;
 
+  size_t getCardinality() const {return endpointSets.size();}
+
   // TODO: Add method to retrieve a set field (compute from elementType fields)
 
   static Type make(Type elementType, const std::vector<Expr>& endpointSets);
