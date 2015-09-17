@@ -5,7 +5,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(DISABLED_System, add) {
+TEST(System, add) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");
@@ -37,8 +37,6 @@ TEST(DISABLED_System, add) {
   func.bind("F", &F);
 
   func.runSafe();
-
-  std::cout << a << std::endl;
 
   // Check that outputs are correct
   ASSERT_EQ(19.0, a.get(v0));

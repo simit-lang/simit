@@ -134,7 +134,7 @@ Func lowerIndexExpressions(Func func) {
         return;
       }
       if (!isa<IndexExpr>(op->value)) {
-        stmt = lowerIndexStatement(op, *storage);
+        stmt = lowerIndexStatement(op, &environment, *storage);
         return;
       }
 
@@ -175,7 +175,7 @@ Func lowerIndexExpressions(Func func) {
         case DenseResult:
         case MatrixScale:
         case MatrixElwiseWithSameStructure:
-          stmt = lowerIndexStatement(op, *storage);
+          stmt = lowerIndexStatement(op, &environment, *storage);
           break;
         case MatrixElwise:
           stmt = lowerScatterWorkspace(op->var, iexpr, &environment, storage);
@@ -193,7 +193,7 @@ Func lowerIndexExpressions(Func func) {
         IRRewriter::visit(op);
         return;
       }
-      stmt = lowerIndexStatement(op, *storage);
+      stmt = lowerIndexStatement(op, &environment, *storage);
     }
 
     void visit(const TensorWrite *op) {
@@ -201,7 +201,7 @@ Func lowerIndexExpressions(Func func) {
         IRRewriter::visit(op);
         return;
       }
-      stmt = lowerIndexStatement(op, *storage);
+      stmt = lowerIndexStatement(op, &environment, *storage);
     }
 
     void visit(const IndexExpr *op) {

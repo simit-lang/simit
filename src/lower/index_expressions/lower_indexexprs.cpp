@@ -7,6 +7,8 @@
 #include "ir_transforms.h"
 #include "ir_printer.h"
 #include "sig.h"
+#include "path_expressions.h"
+#include "tensor_index.h"
 
 using namespace std;
 
@@ -355,8 +357,31 @@ Stmt wrapCompoundAssignedValues(Stmt stmt) {
   return CompoundValueWrapper().rewrite(stmt);
 }
 
+TensorIndex getTensorIndexOfStatement(Stmt stmt, const Storage& storage,
+                                      Environment* environment) {
+  TensorIndex tensorIndex;
+  match(stmt,
+    std::function<void(const VarExpr*)>([&](const VarExpr* op) {
+      const Var& var = op->var;
+      const Type& type = op->type;
+      if (type.isTensor() && type.toTensor()->order() == 2) {
+        iassert(storage.hasStorage(var));
+        const TensorStorage& tensorStorage = storage.getStorage(var);
+        if (tensorStorage.getKind() == TensorStorage::Kind::Indexed) {
+          const pe::PathExpression pexpr = tensorStorage.getPathExpression();
+          if (!environment->hasTensorIndex(pexpr)) {
+            environment->addTensorIndex(pexpr, var);
+          }
+          tensorIndex = environment->getTensorIndex(pexpr);
+        }
+      }
+    })
+  );
+  return tensorIndex;
+}
+
 /// Lowers the given 'stmt' containing an index expression.
-Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
+Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
   class DiagonalReadsRewriter : private IRRewriter {
   public:
     std::vector<Stmt> liftedStmts;
@@ -544,8 +569,11 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
       Var j = loopVar->getVar();
       Var ij = loopVars.getCoordVar({i, j});
 
-      Expr jRead = Load::make(IndexRead::make(set, IndexRead::Neighbors), ij);
-      
+      TensorIndex tensorIndex = getTensorIndexOfStatement(stmt, storage,
+                                                          environment);
+
+      Expr jRead = Load::make(tensorIndex.getSinkArray(), ij);
+
       // for NeighborsOf, we need to check if this is the j we are looking
       // for
       if (loopVar->getDomain().kind == ForDomain::NeighborsOf) {
@@ -555,11 +583,8 @@ Stmt lowerIndexStatement(Stmt stmt, const Storage &storage) {
 
       loopNest = Block::make(AssignStmt::make(j, jRead), loopNest);
 
-      
-      Expr start = Load::make(IndexRead::make(set, IndexRead::NeighborsStart),
-                              i);
-      Expr stop  = Load::make(IndexRead::make(set, IndexRead::NeighborsStart),
-                              Add::make(i, 1));
+      Expr start = Load::make(tensorIndex.getCoordArray(), i);
+      Expr stop = Load::make(tensorIndex.getCoordArray(), i+1);
 
       // Rewrite accesses to SystemDiagonal tensors & lift out ops
       DiagonalReadsRewriter drRewriter(storage, i, loopVars);
@@ -605,31 +630,35 @@ Func lowerIndexExprs(Func func) {
   public:
     Func lower(Func func) {
       storage = &func.getStorage();
-      return this->rewrite(func);
+      environment = func.getEnvironment();
+      Stmt body = this->rewrite(func.getBody());
+      return Func(func.getName(), func.getArguments(), func.getResults(),
+                  body, environment);
     }
 
   private:
     const Storage *storage;
+    Environment environment;
     
     using IRRewriter::visit;
     
     void visit(const AssignStmt *op) {
       if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
-        stmt = simit::ir::lowerIndexStatement(op, *storage);
+        stmt = simit::ir::lowerIndexStatement(op, &environment, *storage);
       else
         IRRewriter::visit(op);
     }
 
     void visit(const FieldWrite *op) {
       if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
-        stmt = simit::ir::lowerIndexStatement(op, *storage);
+        stmt = simit::ir::lowerIndexStatement(op, &environment, *storage);
       else
         IRRewriter::visit(op);
     }
 
     void visit(const TensorWrite *op) {
       if (isa<IndexExpr>(op->value) || op->cop != CompoundOperator::None)
-        stmt = simit::ir::lowerIndexStatement(op, *storage);
+        stmt = simit::ir::lowerIndexStatement(op, &environment, *storage);
       else
         IRRewriter::visit(op);
     }

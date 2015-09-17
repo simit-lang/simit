@@ -6,7 +6,7 @@
 namespace simit {
 namespace ir {
 
-Stmt lowerIndexStatement(Stmt stmt, const Storage &storage);
+Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage);
 
 }}
 #endif
