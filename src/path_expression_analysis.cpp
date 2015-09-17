@@ -124,6 +124,16 @@ void PathExpressionBuilder::computePathExpression(Var target,
         tassert(op->indexVars.size() == 2)
             << "only matrices are currently supported";
 
+        // We must check for, and add to the map, any reduction variables
+        if (op->indexVars[0].isReductionVar()) {
+          pe::Var peVar = pe::Var(op->indexVars[0].getName(), pe::Set());
+          peVarMap.insert({op->indexVars[0], peVar});
+        }
+        if (op->indexVars[1].isReductionVar()) {
+          pe::Var peVar = pe::Var(op->indexVars[1].getName(), pe::Set());
+          peVarMap.insert({op->indexVars[1], peVar});
+        }
+
         peStack.push(pe(peVarMap.at(op->indexVars[0]),
                         peVarMap.at(op->indexVars[1])));
       }
