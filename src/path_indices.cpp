@@ -146,10 +146,6 @@ void SegmentedPathIndex::print(std::ostream &os) const {
 // class PathIndexBuilder
 PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
                                            unsigned sourceEndpoint){
-  iassert(pe.isBound())
-      << "attempting to build an index from a path expression (" << pe
-      << ") that is not bound to sets";
-
   /// Interpret the path expression, starting at sourceEndpoint, over the graph.
   /// That is given an element, the find its neighbors through the paths
   /// described by the path expression.
@@ -203,7 +199,8 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
     void visit(const Link *link) {
-      const simit::Set &edgeSet = *link->getEdgeBinding();
+      const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
+
       iassert(edgeSet.getCardinality() > 0)
           << "not an edge set" << edgeSet.getName();
 
@@ -217,7 +214,8 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           map<unsigned, set<unsigned>> pathNeighbors;
 
           // create neighbor lists
-          const simit::Set &vertexSet = *link->getVertexBinding();
+          const simit::Set& vertexSet =
+              *builder->getBinding(link->getVertexSet());
           for (auto &v : vertexSet) {
             pathNeighbors.insert({v.getIdent(), set<unsigned>()});
           }
@@ -406,7 +404,7 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         // quantified variable gets links to every element of the second
         // variable. Vice versa for the second variable, but jump from the
         // quantified var.
-        const simit::Set *sinkSet = f->getBinding(freeVars[1]);
+        auto sinkSet = builder->getBinding(f->getSet(freeVars[1]));
 
         for (unsigned source : sourceToQuantified) {
           pathNeighbors.insert({source, set<unsigned>()});
@@ -445,6 +443,15 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
   PathIndex pi = PathNeighborVisitor(this).build(pe);
   pathIndices.insert({{pe,sourceEndpoint}, pi});
   return pi;
+}
+
+void PathIndexBuilder::bind(std::string name, const simit::Set* set) {
+  bindings.insert({name,set});
+}
+
+const simit::Set* PathIndexBuilder::getBinding(pe::Set pset) const {
+  iassert(pset.defined());
+  return bindings.at(pset.getName());
 }
 
 }}

@@ -38,15 +38,13 @@
 /// Quantifier := exist
 
 namespace simit {
-class Set;
-
+class Set; // TODO REMOVE
 namespace pe {
 class PathExpressionVisitor;
 class PathExpression;
 
 struct SetContent {
   std::string name;
-  mutable const simit::Set* binding = nullptr;
 
   SetContent(std::string name) : name(name) {}
   mutable long ref = 0;
@@ -61,10 +59,6 @@ public:
   Set(std::string name) : util::IntrusivePtr<SetContent>(new SetContent(name)){}
 
   const std::string &getName() const {return ptr->name;}
-
-  const simit::Set* getBinding() const {return ptr->binding;}
-  bool isBound() const {return ptr->binding != nullptr;}
-  void bind(const simit::Set* set) const {ptr->binding = set;}
 };
 
 
@@ -122,9 +116,8 @@ public:
   unsigned getNumPathEndpoints() const {return 2;}
   virtual const Var &getPathEndpoint(unsigned i) const = 0;
 
-  bool isBound() const;
-  const simit::Set *getBinding(const Var &var) const;
-  std::map<Var, const simit::Set*> getBindings() const;
+  Set getSet(const Var &var) const;
+  std::map<Var,Set> getSets() const;
 
   virtual void accept(PathExpressionVisitor *visitor) const = 0;
 
@@ -149,18 +142,14 @@ public:
   PathExpression() : IntrusivePtr() {}
   PathExpression(const PathExpressionImpl *impl) : IntrusivePtr(impl) {}
 
-  /// Bind sets to the path expression endpoints. Since bindings are only
-  /// supported for Link PathExpressions, only two bindings are needed.
-  void bind(const simit::Set &lhsBinding, const simit::Set &rhsBinding);
-
-  /// True if the variables are bound to sets, false otherwise.
-  bool isBound() const;
+  // TODO REMOVE
+  void bind(const simit::Set &lhsBinding, const simit::Set &rhsBinding){}
 
   /// Returns the binding set of `var`, or nullptr if it could not be found.
-  const simit::Set *getBinding(const Var &var) const;
+  Set getSet(const Var &var) const;
 
   /// Returns a map from Vars to set bindings;
-  std::map<Var, const simit::Set*> getBindings() const;
+  std::map<Var,Set> getSets() const;
 
   unsigned getNumPathEndpoints() const {return ptr->getNumPathEndpoints();}
   const Var &getPathEndpoint(unsigned i) const {return ptr->getPathEndpoint(i);}
@@ -231,14 +220,13 @@ public:
 
   const Var &getPathEndpoint(unsigned i) const;
 
-  void bind(const simit::Set *lhsBinding, const simit::Set *rhsBinding) const;
-  bool isBound() const;
+  void bind(Set lhsBinding, Set rhsBinding) const;
 
-  const simit::Set *getLhsBinding() const;
-  const simit::Set *getRhsBinding() const;
+  Set getLhsSet() const;
+  Set getRhsSet() const;
 
-  const simit::Set *getVertexBinding() const;
-  const simit::Set *getEdgeBinding() const;
+  Set getVertexSet() const;
+  Set getEdgeSet() const;
 
   void accept(PathExpressionVisitor *visitor) const;
 
@@ -416,14 +404,14 @@ protected:
   std::ostream &os;
   util::NameGenerator nameGenerator;
   std::map<Var,std::string> names;
-  std::map<const simit::Set*,std::string> setNames;
+  std::map<Set,std::string> setNames;
 
   virtual void visit(const Link *pe);
   virtual void visit(const And *pe);
   virtual void visit(const Or *pe);
 
   void printConnective(const QuantifiedConnective *pe);
-  void print(const simit::Set *binding);
+  void print(Set binding);
 };
 
 std::ostream &operator<<(std::ostream&, const Set&);

@@ -2,7 +2,6 @@
 #include "path_expressions-test.h"
 
 #include "path_expressions.h"
-#include "graph.h"
 
 using namespace std;
 using namespace simit::pe;
@@ -28,7 +27,6 @@ TEST(PathExpression, Link) {
   ASSERT_EQ(ev.getPathEndpoint(0), e);
   ASSERT_EQ(ev.getPathEndpoint(1), v);
   CHECK_EQ(ev, ev);
-  ASSERT_FALSE(ev.isBound());
 
   // Check that links with the same vars are equal
   PathExpression ev2 = Link::make(e, v, Link::ev);
@@ -42,18 +40,6 @@ TEST(PathExpression, Link) {
 
   // Check that links are different from an undefined pexprs
   CHECK_NE(ev, PathExpression());
-
-  // Check that binding works.
-  simit::Set V;
-  simit::Set E(V,V);
-  V.setName("V");
-  E.setName("E");
-  ev.bind(E,V);
-  ASSERT_TRUE(ev.isBound());
-
-  // Check that links with different vars bound to the same sets are equal
-//  fu.bind(E,V);
-//  CHECK_EQ(ev, fu);
 }
 
 TEST(PathExpression, Renamed) {
@@ -85,12 +71,6 @@ TEST(PathExpression, And) {
   PathExpression uf = makeVE();
   PathExpression ufANDuf = And::make({u,f}, {}, uf(u,f), uf(f,u));
   CHECK_NE(veANDve, ufANDuf);
-
-  // Check that binding works
-  simit::Set V;
-  simit::Set E(V,V);
-  ve.bind(V,E);
-  ASSERT_TRUE(veANDve.isBound());
 }
 
 TEST(PathExpression, Or) {
@@ -112,12 +92,6 @@ TEST(PathExpression, Or) {
   PathExpression uf = makeVE();
   PathExpression ufORuf = Or::make({u,f}, {}, uf(u,f), uf(f,u));
   CHECK_NE(veORve, ufORuf);
-
-  // Check that binding works
-  simit::Set V;
-  simit::Set E(V,V);
-  ve.bind(V,E);
-  ASSERT_TRUE(veORve.isBound());
 }
 
 TEST(PathExpression, ExistAnd) {
@@ -155,14 +129,6 @@ TEST(PathExpression, ExistAnd) {
   PathExpression ufu = And::make({ui,uj}, {{QuantifiedVar::Exist,f}},
                                  uf(ui,f), fu(f,uj));
   CHECK_NE(vev, ufu);
-
-  // Check that binding works
-  simit::Set V;
-  simit::Set E(V,V);
-  ve.bind(V,E);
-  ev.bind(E,V);
-  ASSERT_TRUE(vev.isBound());
-  ASSERT_TRUE(vevev.isBound());
 
   // TODO: Test eve and compare eve with vev
 }
@@ -203,22 +169,10 @@ TEST(PathExpression, ExistOr) {
                                  uf(ui,f), fu(f,uj));
   CHECK_NE(vev, ufu);
 
-  // Check that binding works
-  simit::Set V;
-  simit::Set E(V,V);
-  ve.bind(V,E);
-  ev.bind(E,V);
-  ASSERT_TRUE(vev.isBound());
-  ASSERT_TRUE(vevev.isBound());
-
   // TODO: Test eve and compare eve with vev
 }
 
 TEST(DISABLED_PathExpression, Permute) {
-  simit::Set V("V");
-  simit::Set U("U");
-  simit::Set E("E",V,U);
-
   Var v("v");
   Var e("e");
   Var u("u");
@@ -227,10 +181,6 @@ TEST(DISABLED_PathExpression, Permute) {
   PathExpression ue = makeVE();
   PathExpression ev = makeEV();
   PathExpression eu = makeEV();
-  ve.bind(V, E);
-  ue.bind(U, E);
-  ev.bind(E, V);
-  eu.bind(E, U);
 
   PathExpression vev = And::make({v,v}, {{QuantifiedVar::Exist,e}},
                                  ve(v,e), ev(e,v));
@@ -245,5 +195,4 @@ TEST(DISABLED_PathExpression, Permute) {
   // Permute veu2 = uev
   PathExpression veu2 = uev; // TODO: Permute uev -> veu
   CHECK_EQ(veu, veu2);
-
 }

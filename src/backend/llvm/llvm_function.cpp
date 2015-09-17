@@ -174,6 +174,17 @@ size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
 
 Function::FuncType LLVMFunction::init() {
   pe::PathIndexBuilder piBuilder;
+
+  std::map<std::string, const Set*> bindings;
+  for (auto& pair : arguments) {
+    string name = pair.first;
+    Actual* actual = pair.second.get();
+    if (isa<SetActual>(actual)) {
+      Set* set = to<SetActual>(actual)->getSet();
+      bindings.insert({name, set});
+    }
+  }
+
   const Environment& environment = getEnvironment();
 
   // Initialize indices

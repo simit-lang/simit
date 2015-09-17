@@ -29,81 +29,33 @@ bool operator<(const QuantifiedVar& l, const QuantifiedVar&r ) {
 }
 
 // class PathExpressionImpl
-bool PathExpressionImpl::isBound() const {
-#ifdef SIMIT_ASSERTS
-  /// Check invariant: either all or none are bound
-  class CheckThatAllOrNoneAreBound : public PathExpressionVisitor {
-  public:
-    enum AllOrNoneBoundState { Unknown, None, All };
-    AllOrNoneBoundState allOrNoneBoundState = Unknown;
-
-    void visit(const Link *link) {
-      switch (allOrNoneBoundState) {
-        case Unknown:
-          allOrNoneBoundState = link->isBound() ? All : None;
-          break;
-        case None:
-          iassert(!link->isBound())
-              << "Some but not all variables in the PathExpression are bound.\n"
-              << *link << " is bound";
-          break;
-        case All:
-          iassert(link->isBound())
-              << "Some but not all variables in the PathExpression are bound.\n"
-              << *link << " is not bound";
-          break;
-      }
-    }
-  };
-  CheckThatAllOrNoneAreBound visitor;
-  this->accept(&visitor);
-#endif
-
-  class CheckIfBound : public PathExpressionVisitor {
-  public:
-    bool isBound = false;
-    bool check(const PathExpressionImpl *pe) {
-      pe->accept(this);
-      return isBound;
-    }
-    void visit(const Link *link) {
-      isBound = link->isBound();
-    }
-  };
-  return CheckIfBound().check(this);
+Set PathExpressionImpl::getSet(const Var &var) const {
+  auto bindings = getSets();
+  return util::contains(bindings,var) ? bindings.at(var) : Set();
 }
 
-const simit::Set *PathExpressionImpl::getBinding(const Var &var) const {
-  iassert(isBound())
-      << "attempting to get the binding of a var in an unbound path expression";
-  auto bindings = getBindings();
-  return util::contains(bindings,var) ? bindings.at(var) : nullptr;
-}
-
-map<Var, const simit::Set*> PathExpressionImpl::getBindings() const {
-  iassert(isBound())
-      << "attempting to get the bindings of an unbound path expression";
-  class GetBindings : public PathExpressionVisitor {
+map<Var,Set> PathExpressionImpl::getSets() const {
+  class GetSets : public PathExpressionVisitor {
   public:
-    map<Var, const simit::Set*> find(const PathExpressionImpl *pe) {
+    map<Var,Set> find(const PathExpressionImpl *pe) {
       bindings.clear();
       pe->accept(this);
       return bindings;
     }
 
   private:
-    map<Var, const simit::Set*> bindings;
+    map<Var,Set> bindings;
 
     void visit(const Link *link) {
       Var lhs = rename(link->getLhs());
       Var rhs = rename(link->getRhs());
-      const simit::Set *lhsBinding = link->getLhsBinding();
-      const simit::Set *rhsBinding = link->getRhsBinding();
-      bindings.insert({lhs, lhsBinding});
-      bindings.insert({rhs, rhsBinding});
+      Set lhsSet = link->getLhsSet();
+      Set rhsSet = link->getRhsSet();
+      bindings.insert({lhs, lhsSet});
+      bindings.insert({rhs, rhsSet});
     }
   };
-  return GetBindings().find(this);
+  return GetSets().find(this);
 }
 
 bool operator==(const PathExpressionImpl &l, const PathExpressionImpl &r) {
@@ -151,35 +103,12 @@ bool operator<(const PathExpressionImpl &l, const PathExpressionImpl &r) {
 }
 
 // class PathExpression
-void PathExpression::bind(const simit::Set &lhsBinding, const simit::Set &rhsBinding) {
-  iassert(isa<Link>(*this)) << "bind is only defined for Link PathExpressions";
-  class BindPathExpression : public PathExpressionVisitor {
-  public:
-    void bind(const PathExpression &pe, const simit::Set &lhs,
-              const simit::Set &rhs) {
-      this->lhs = &lhs;
-      this->rhs = &rhs;
-      pe.accept(this);
-    }
-  private:
-    const simit::Set *lhs, *rhs;
-    void visit(const Link *link) {
-      link->bind(lhs, rhs);
-    }
-  };
-  BindPathExpression().bind(*this,lhsBinding,rhsBinding);
+Set PathExpression::getSet(const Var &var) const {
+  return ptr->getSet(var);
 }
 
-bool PathExpression::isBound() const {
-  return ptr->isBound();
-}
-
-const simit::Set* PathExpression::getBinding(const Var &var) const {
-  return ptr->getBinding(var);
-}
-
-std::map<Var, const simit::Set*> PathExpression::getBindings() const {
-  return ptr->getBindings();
+std::map<Var,Set> PathExpression::getSets() const {
+  return ptr->getSets();
 }
 
 void PathExpression::accept(PathExpressionVisitor *visitor) const {
@@ -201,32 +130,20 @@ PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
   return new Link(lhs, rhs, type);
 }
 
-void Link::bind(const simit::Set *lhsBinding, const simit::Set *rhsBinding) const {
-  this->lhs.getSet().bind(lhsBinding);
-  this->rhs.getSet().bind(rhsBinding);
+Set Link::getLhsSet() const {
+  return lhs.getSet();
 }
 
-const simit::Set* Link::getLhsBinding() const {
-  return lhs.getSet().getBinding();
+Set Link::getRhsSet() const {
+  return rhs.getSet();
 }
 
-const simit::Set* Link::getRhsBinding() const {
-  return rhs.getSet().getBinding();
+Set Link::getVertexSet() const {
+  return (type==ev) ? rhs.getSet() : lhs.getSet();
 }
 
-const simit::Set* Link::getVertexBinding() const {
-  return (type==ev) ? rhs.getSet().getBinding() : lhs.getSet().getBinding();
-}
-
-const simit::Set* Link::getEdgeBinding() const   {
-  return (type==ev) ? lhs.getSet().getBinding() : rhs.getSet().getBinding();
-}
-
-bool Link::isBound() const {
-  iassert((lhs.getSet().isBound() && rhs.getSet().isBound()) ||
-          (!lhs.getSet().isBound() && !rhs.getSet().isBound()))
-      << "either all should be bound or none";
-  return lhs.getSet().isBound();
+Set Link::getEdgeSet() const   {
+  return (type==ev) ? lhs.getSet() : rhs.getSet();
 }
 
 const Var &Link::getPathEndpoint(unsigned i) const {
@@ -464,11 +381,11 @@ void PathExpressionPrinter::print(const Var &v) {
   }
 }
 
-void PathExpressionPrinter::print(const simit::Set *binding) {
+void PathExpressionPrinter::print(Set binding) {
   os << ELEMENTOF;
   string setName;
-  if (binding->getName() != "") {
-    setName = binding->getName();
+  if (binding.getName() != "") {
+    setName = binding.getName();
   }
   else {
     if (util::contains(setNames, binding)) {
@@ -493,27 +410,16 @@ void PathExpressionPrinter::print(const QuantifiedVar &v) {
 
 void PathExpressionPrinter::print(const PathExpression &pe) {
   os << "(";
-  if (!pe.isBound()) {
-    unsigned numFreeVars = pe.getNumPathEndpoints();
-    for (unsigned i=0; i<numFreeVars; ++i) {
-      print(pe.getPathEndpoint(i));
-      if (i < numFreeVars-1) {
-        os << ",";
-      }
-    }
-  }
-  else {
-    auto bindings = pe.getBindings();
-    unsigned numFreeVars = pe.getNumPathEndpoints();
-    for (unsigned i=0; i<numFreeVars; ++i) {
-      Var ep = pe.getPathEndpoint(i);
-      iassert(util::contains(bindings, ep))
-          << "no binding for " << ep << " (" << ep.ptr << ")";
-      print(ep);
-      print(bindings.at(ep));
-      if (i < numFreeVars-1) {
-        os << ", ";
-      }
+  auto bindings = pe.getSets();
+  unsigned numFreeVars = pe.getNumPathEndpoints();
+  for (unsigned i=0; i<numFreeVars; ++i) {
+    Var ep = pe.getPathEndpoint(i);
+    iassert(util::contains(bindings, ep))
+    << "no binding for " << ep << " (" << ep.ptr << ")";
+    print(ep);
+    print(bindings.at(ep));
+    if (i < numFreeVars-1) {
+      os << ", ";
     }
   }
   os << ") | ";
@@ -532,28 +438,16 @@ void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {
       << "only one or zero quantified variables currently supported";
 
   if (qvars.size() > 0) {
-    if (!pe->isBound()) {
-      unsigned numQuantifiedVars = qvars.size();
-      for (unsigned i=0; i < numQuantifiedVars; ++i) {
-        auto &qvar = qvars[i];
-        print(qvar);
-        if (i < numQuantifiedVars-1) {
-          os << ",";
-        }
-      }
-    }
-    else {
-      auto bindings = pe->getBindings();
-      unsigned numQuantifiedVars = qvars.size();
-      for (unsigned i=0; i<numQuantifiedVars; ++i) {
-        auto &qvar = qvars[i];
-        iassert(util::contains(bindings, qvar.getVar()))
-            << "no binding for " << qvar.getVar();
-        print(qvar);
-        print(bindings.at(qvar.getVar()));
-        if (i < numQuantifiedVars-1) {
-          os << ", ";
-        }
+    auto bindings = pe->getSets();
+    unsigned numQuantifiedVars = qvars.size();
+    for (unsigned i=0; i<numQuantifiedVars; ++i) {
+      auto &qvar = qvars[i];
+      iassert(util::contains(bindings, qvar.getVar()))
+      << "no binding for " << qvar.getVar();
+      print(qvar);
+      print(bindings.at(qvar.getVar()));
+      if (i < numQuantifiedVars-1) {
+        os << ", ";
       }
     }
     os << ".";
@@ -580,6 +474,7 @@ void PathExpressionPrinter::visit(const Or *pe) {
 
 std::ostream &operator<<(std::ostream& os, const Set& s) {
   os << s.getName();
+  return os;
 }
 
 std::ostream &operator<<(std::ostream& os, const Var& v) {

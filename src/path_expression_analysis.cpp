@@ -189,11 +189,6 @@ pe::PathExpression PathExpressionBuilder::getPathExpression(Var target) {
   return pathExpressions.at(target);
 }
 
-void PathExpressionBuilder::bind(ir::Var var, const Set* set) {
-  iassert(util::contains(pathExpressionSets, var));
-  pathExpressionSets.at(var).bind(set);
-}
-
 void PathExpressionBuilder::addPathExpression(Var target,
                                               const pe::PathExpression& pe) {
   pathExpressions.insert({target, pe});

@@ -45,19 +45,18 @@ TEST(PathExpressionBuilder, add) {
   builder.computePathExpression(to<Map>(mapC));
   builder.computePathExpression(A, to<IndexExpr>(iexpr));
 
+  pe::PathExpression pe = builder.getPathExpression(A);
+
   Set Vs;
   Set Es(Vs,Vs);
   Set Fs(Vs,Vs);
   createTestGraph0(&Vs, &Es, &Fs);
 
-  builder.bind(V, &Vs);
-  builder.bind(E, &Es);
-  builder.bind(F, &Fs);
-
-  pe::PathExpression pe = builder.getPathExpression(A);
-  ASSERT_TRUE(pe.isBound());
-
   pe::PathIndexBuilder indexBuilder;
+  indexBuilder.bind("V", &Vs);
+  indexBuilder.bind("E", &Es);
+  indexBuilder.bind("F", &Fs);
+
   pe::PathIndex pi = indexBuilder.buildSegmented(pe, 0);
   VERIFY_INDEX(pi, nbrs({{0,1,3}, {0,1,2}, {1,2,3}, {0,2,3}}));
 }
@@ -76,19 +75,18 @@ TEST(PathExpressionBuilder, mul) {
   builder.computePathExpression(to<Map>(mapC));
   builder.computePathExpression(A, to<IndexExpr>(iexpr));
 
+  pe::PathExpression pe = builder.getPathExpression(A);
+
   Set Vs;
   Set Es(Vs,Vs);
   Set Fs(Vs,Vs);
   createTestGraph0(&Vs, &Es, &Fs);
 
-  builder.bind(V, &Vs);
-  builder.bind(E, &Es);
-  builder.bind(F, &Fs);
-
-  pe::PathExpression pe = builder.getPathExpression(A);
-  ASSERT_TRUE(pe.isBound());
-
   pe::PathIndexBuilder indexBuilder;
+  indexBuilder.bind("V", &Vs);
+  indexBuilder.bind("E", &Es);
+  indexBuilder.bind("F", &Fs);
+
   pe::PathIndex pi = indexBuilder.buildSegmented(pe, 0);
   VERIFY_INDEX(pi, nbrs({{0,1}, {0,1}, {2}, {}}));
 }
@@ -108,19 +106,18 @@ TEST(DISABLED_PathExpressionBuilder, gemm) {
   builder.computePathExpression(to<Map>(mapC));
   builder.computePathExpression(A, to<IndexExpr>(iexpr));
 
+  pe::PathExpression pe = builder.getPathExpression(A);
+
   Set Vs;
   Set Es(Vs,Vs);
   Set Fs(Vs,Vs);
   createTestGraph1(&Vs, &Es, &Fs);
 
-  builder.bind(V, &Vs);
-  builder.bind(E, &Es);
-  builder.bind(F, &Fs);
-
-  pe::PathExpression pe = builder.getPathExpression(A);
-  ASSERT_TRUE(pe.isBound());
-
   pe::PathIndexBuilder indexBuilder;
+  indexBuilder.bind("V", &Vs);
+  indexBuilder.bind("E", &Es);
+  indexBuilder.bind("F", &Fs);
+
   pe::PathIndex pi = indexBuilder.buildSegmented(pe, 0);
   VERIFY_INDEX(pi, nbrs({{3,4}, {0,1,2,3,4}, {0,1,2,3,4}, {3,4}, {3,4}}));
 }

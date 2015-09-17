@@ -25,13 +25,13 @@ TEST(PathIndex, Link) {
   Var e("e", simit::pe::Set("E"));
   Var v("v", simit::pe::Set("V"));
   PathExpression ev = Link::make(e, v, Link::ev);
-  ev.bind(E,V);
+  builder.bind("V", &V);
+  builder.bind("E", &E);
   PathIndex evIndex = builder.buildSegmented(ev, 0);
   VERIFY_INDEX(evIndex, nbrs({{0,1}, {1,2}, {2,3}, {3,4}}));
 
   // Check that EV get's memoized
   PathExpression ev2 = Link::make(e, v, Link::ev);
-  ev2.bind(E,V);
   PathIndex ev2Index = builder.buildSegmented(ev, 0);
   ASSERT_EQ(evIndex, ev2Index);
 
@@ -41,25 +41,23 @@ TEST(PathIndex, Link) {
   PathExpression fu = Link::make(f, u, Link::ev);
   simit::Set U;
   simit::Set F(V,V);
-  fu.bind(F,U);
+  builder.bind("U", &U);
+  builder.bind("F", &F);
   PathIndex fuIndex = builder.buildSegmented(fu, 0);
   ASSERT_NE(evIndex, fuIndex);
 
   // Test v-e links
   PathExpression ve = Link::make(v, e, Link::ve);
-  ve.bind(V,E);
   PathIndex veIndex = builder.buildSegmented(ve, 0);
   VERIFY_INDEX(veIndex, nbrs({{0}, {0,1}, {1,2}, {2,3}, {3}}));
 
   // Check that ve get's memoized
   PathExpression ve2 = Link::make(v, e, Link::ve);
-  ve2.bind(V,E);
   PathIndex ve2Index = builder.buildSegmented(ve2, 0);
   ASSERT_EQ(veIndex, ve2Index);
 
   // Check that different VE get's a different index
   PathExpression uf = Link::make(u,f, Link::ve);
-  uf.bind(U,F);
   PathIndex ufIndex = builder.buildSegmented(uf, 0);
   ASSERT_NE(veIndex, ufIndex);
 
@@ -67,11 +65,11 @@ TEST(PathIndex, Link) {
   // TODO
 
   // Test ve where some variables do not have neighbors
-  simit::Set G(V,V);
-  G.add(box(0,0,0), box(4,0,0));
   Var g("g", simit::pe::Set("G"));
   PathExpression vg = Link::make(v, g, Link::ve);
-  vg.bind(V,G);
+  simit::Set G(V,V);
+  G.add(box(0,0,0), box(4,0,0));
+  builder.bind("G", &G);
   PathIndex vgIndex = builder.buildSegmented(vg, 0);
   VERIFY_INDEX(vgIndex, nbrs({{0}, {}, {}, {}, {0}}));
 }
@@ -87,24 +85,23 @@ TEST(PathIndex, And) {
 
   // test (ve or ve)
   PathExpression ve = makeVE();
-  ve.bind(V,E);
   Var v("v");
   Var e("e");
   PathExpression veANDve = And::make({v,e}, {}, ve(v,e), ve(e,v));
+  builder.bind("V", &V);
+  builder.bind("E", &E);
   PathIndex veANDveIndex = builder.buildSegmented(veANDve, 0);
   VERIFY_INDEX(veANDveIndex, nbrs({{0}, {0,1}, {1}, {}}));
 
   // test (vev or vfv):
   PathExpression ev = makeEV();
-  ev.bind(E,V);
   Var vi("vi");
   Var vj("vj");
   PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}},
                                  ve(vi, e), ev(e, vj));
-  PathExpression vf = makeVE();
-  PathExpression fv = makeEV();
-  vf.bind(V,F);
-  fv.bind(F,V);
+  PathExpression vf = makeVE("v","V", "f","F");
+  PathExpression fv = makeEV("f","F", "v","V");
+  builder.bind("F", &F);
   Var f("f");
   PathExpression vfv = And::make({vi,vj}, {{QuantifiedVar::Exist,f}},
                                  vf(vi, f), fv(f, vj));
@@ -126,7 +123,8 @@ TEST(PathIndex, Or) {
 
   // test (ve or ve)
   PathExpression ve = makeVE();
-  ve.bind(V,E);
+  builder.bind("V", &V);
+  builder.bind("E", &E);
   Var v("v");
   Var e("e");
   PathExpression veORve = Or::make({v,e}, {}, ve(v,e), ve(e,v));
@@ -140,10 +138,9 @@ TEST(PathIndex, Or) {
   Var vj("vj");
   PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}},
                                  ve(vi, e), ev(e, vj));
-  PathExpression vf = makeVE();
-  PathExpression fv = makeEV();
-  vf.bind(V,F);
-  fv.bind(F,V);
+  PathExpression vf = makeVE("v","V", "f","F");
+  PathExpression fv = makeEV("f","F", "v","V");
+  builder.bind("F", &F);
   Var f("f");
   PathExpression vfv = And::make({vi,vj}, {{QuantifiedVar::Exist,f}},
                                  vf(vi, f), fv(f, vj));
@@ -165,8 +162,8 @@ TEST(PathIndex, ExistAnd) {
   // Test vev expressions (there exist an e s.t. (vi-e and e-vj))
   PathExpression ve = makeVE();
   PathExpression ev = makeEV();
-  ve.bind(V,E);
-  ev.bind(E,V);
+  builder.bind("V", &V);
+  builder.bind("E", &E);
 
   Var vi("vi");
   Var e("e");
@@ -179,8 +176,6 @@ TEST(PathIndex, ExistAnd) {
   // Check that vev get's memoized
   PathExpression ve2 = makeVE();
   PathExpression ev2 = makeEV();
-  ve2.bind(V,E);
-  ev2.bind(E,V);
 
   Var vi2("vi2");
   Var ee2("f");
@@ -191,11 +186,8 @@ TEST(PathIndex, ExistAnd) {
   ASSERT_EQ(vevIndex, vev2Index);
 
   // Check that a different vev get's a different index
-  PathExpression uf = makeVE("u", "f");
-  PathExpression fu = makeEV("f", "u");
-  uf.bind(V,E);
-  fu.bind(E,V);
-
+  PathExpression uf = makeVE("u","U", "f","F");
+  PathExpression fu = makeEV("f","F", "u","U");
   Var ui("ui");
   Var ff("f");
   Var uj("uj");
@@ -203,8 +195,8 @@ TEST(PathIndex, ExistAnd) {
                                  uf(ui, ff), fu(ff,uj));
   simit::Set U;
   simit::Set F(U,U);
-  uf.bind(U,F);
-  fu.bind(F,U);
+  builder.bind("U", &U);
+  builder.bind("F", &F);
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_NE(vevIndex, ufuIndex);
 
@@ -224,10 +216,9 @@ TEST(PathIndex, ExistAnd) {
   G.add(box(0,0,0), box(2,0,0));
 
   Var g("g");
-  PathExpression vg = makeVE();
-  PathExpression gv = makeEV();
-  vg.bind(V,G);
-  gv.bind(G,V);
+  PathExpression vg = makeVE("v","V", "g","G");
+  PathExpression gv = makeEV("g","G", "v","V");
+  builder.bind("G", &G);
   PathExpression vgv = And::make({vi,vj}, {{QuantifiedVar::Exist,g}},
                                  vg(vi, g), gv(g, vj));
   PathIndex vgvIndex = builder.buildSegmented(vgv, 0);
@@ -241,7 +232,6 @@ TEST(PathIndex, ExistAnd) {
   VERIFY_INDEX(vevgvIndex, nbrs({{0,2}, {0,2}, {0,2}}));
 }
 
-
 TEST(PathIndex, ExistOr) {
   PathIndexBuilder builder;
 
@@ -253,8 +243,8 @@ TEST(PathIndex, ExistOr) {
   // Test vev expressions (there exist an e s.t. (vi-e and e-vj))
   PathExpression ve = makeVE();
   PathExpression ev = makeEV();
-  ve.bind(V,E);
-  ev.bind(E,V);
+  builder.bind("V", &V);
+  builder.bind("E", &E);
 
   Var vi("vi");
   Var e("e");
@@ -274,11 +264,8 @@ TEST(PathIndex, ExistOr) {
   ASSERT_EQ(vevIndex, vev2Index);
 
   // Check that a different vev get's a different index
-  PathExpression uf = makeVE("u", "f");
-  PathExpression fu = makeEV("f", "u");
-  uf.bind(V,E);
-  fu.bind(E,V);
-
+  PathExpression uf = makeVE("u","U", "f","F");
+  PathExpression fu = makeEV("f","F", "u","U");
   Var ui("ui");
   Var ff("f");
   Var uj("uj");
@@ -286,8 +273,8 @@ TEST(PathIndex, ExistOr) {
                                 uf(ui, ff), fu(ff,uj));
   simit::Set U;
   simit::Set F(U,U);
-  uf.bind(U,F);
-  fu.bind(F,U);
+  builder.bind("U", &U);
+  builder.bind("F", &F);
   PathIndex ufuIndex = builder.buildSegmented(ufu, 0);
   ASSERT_NE(vevIndex, ufuIndex);
 
@@ -306,10 +293,9 @@ TEST(PathIndex, ExistOr) {
   vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}}, ve(vi, e), ev(e, vj));
 
   Var g("g");
-  PathExpression vg = makeVE();
-  PathExpression gv = makeEV();
-  vg.bind(V,G);
-  gv.bind(G,V);
+  PathExpression vg = makeVE("v","V", "g","G");
+  PathExpression gv = makeEV("g","G", "v","V");
+  builder.bind("G", &G);
   PathExpression vgv = And::make({vi,vj}, {{QuantifiedVar::Exist,g}},
                                  vg(vi, g), gv(g, vj));
   PathIndex vgvIndex = builder.buildSegmented(vgv, 0);
@@ -319,7 +305,6 @@ TEST(PathIndex, ExistOr) {
   VERIFY_INDEX(vevgvIndex, nbrs({{3,4}, {0,1,2,3,4}, {0,1,2,3,4},
                                  {3,4}, {3,4}}));
 }
-
 
 TEST(PathIndex, Alias) {
   simit::Set V;
@@ -333,9 +318,6 @@ TEST(PathIndex, Alias) {
   PathExpression ve = makeVE();
   PathExpression ev = makeEV();
 
-  ve.bind(V,E);
-  ev.bind(E,V);
-
   Var vi("vi");
   Var ee("e");
   Var vj("vj");
@@ -343,6 +325,8 @@ TEST(PathIndex, Alias) {
                                  ve(vi,ee), ev(ee,vj));
 
   PathIndexBuilder builder;
+  builder.bind("V", &V);
+  builder.bind("E", &E);
   PathIndex index = builder.buildSegmented(vev, 0);
   VERIFY_INDEX(index, vector<vector<unsigned>>({{0,1}, {0,1}}));
 }

@@ -11,6 +11,7 @@
 #include "path_expressions.h"
 
 namespace simit {
+class Set;
 namespace pe {
 class PathExpression;
 class PathIndexBuilder;
@@ -217,12 +218,19 @@ private:
 class PathIndexBuilder {
 public:
   PathIndexBuilder() {}
+  PathIndexBuilder(std::map<std::string, const simit::Set*> bindings)
+      : bindings(bindings) {}
 
   // Build a Segmented path index by evaluating the `pe` over the given graph.
   PathIndex buildSegmented(const PathExpression &pe, unsigned sourceEndpoint);
 
+  void bind(std::string name, const simit::Set* set);
+
+  const simit::Set* getBinding(pe::Set pset) const;
+
 private:
   std::map<std::pair<PathExpression,unsigned>, PathIndex> pathIndices;
+  std::map<std::string, const simit::Set*> bindings;
 };
 
 }}

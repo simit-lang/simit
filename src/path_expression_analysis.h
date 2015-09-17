@@ -27,8 +27,6 @@ public:
 
   pe::PathExpression getPathExpression(Var target);
 
-  void bind(ir::Var var, const Set* set);
-
 private:
   std::map<ir::Var, pe::PathExpression> pathExpressions;
 
