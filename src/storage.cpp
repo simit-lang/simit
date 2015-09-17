@@ -264,34 +264,53 @@ private:
   }
 
   void visit(const Map *op) {
-    peBuilder.computePathExpression(op);
+    // If the map target set is not an edge set, then matrices are diagonal.
+    // Otherwise, the matrices are indexed with a path expression
+    Type targetType = op->target.type();
+    iassert(targetType.isSet());
+    if (targetType.toSet()->getCardinality() == 0) {
+      for (const Var& var : op->vars) {
+        iassert(var.getType().isTensor());
+        const TensorType* type = var.getType().toTensor();
 
-    for (const Var& var : op->vars) {
-      Type type = var.getType();
-      if (type.isTensor() && !isScalar(type)) {
-        // For now we'll store all assembled vectors as dense and other tensors
-        // as system reduced
-        TensorStorage tensorStorage;
-        const TensorType* tensorType = type.toTensor();
-        if (tensorType->order() == 1) {
-          tensorStorage = TensorStorage(TensorStorage::Kind::Dense);
+        if (type->order() < 2) {
+          storage->add(var, TensorStorage(TensorStorage::Kind::Dense));
         }
         else {
-          if (op->neighbors.defined()) {
-            tensorStorage = TensorStorage(op->target, op->neighbors);
+          storage->add(var, TensorStorage(op->target));
+        }
+      }
+    }
+    else {
+      peBuilder.computePathExpression(op);
 
-            // Add path expression
-            tassert(tensorType->order() == 2)
-                << "tensor has order " << tensorType->order()
-                << ", while we only currently supports sparse matrices";
-            tensorStorage.setPathExpression(peBuilder.getPathExpression(var));
+      for (const Var& var : op->vars) {
+        Type type = var.getType();
+        if (type.isTensor() && !isScalar(type)) {
+          // For now we'll store all assembled vectors as dense and other tensors
+          // as system reduced
+          TensorStorage tensorStorage;
+          const TensorType* tensorType = type.toTensor();
+          if (tensorType->order() == 1) {
+            tensorStorage = TensorStorage(TensorStorage::Kind::Dense);
           }
           else {
-            tensorStorage = TensorStorage(op->target);
+            if (op->neighbors.defined()) {
+              tensorStorage = TensorStorage(op->target, op->neighbors);
+
+              // Add path expression
+              tassert(tensorType->order() == 2)
+              << "tensor has order " << tensorType->order()
+              << ", while we only currently supports sparse matrices";
+              tensorStorage.setPathExpression(peBuilder.getPathExpression(var));
+            }
+            else {
+              tensorStorage = TensorStorage(op->target);
+            }
           }
+          iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
+          storage->add(var, tensorStorage);
         }
-        iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
-        storage->add(var, tensorStorage);
       }
     }
   }

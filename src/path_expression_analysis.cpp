@@ -125,21 +125,26 @@ void PathExpressionBuilder::computePathExpression(Var target,
 
         // Retrieve the indexed tensor's path expression
         PathExpression pe = getPathExpression(to<VarExpr>(op->tensor)->var);
+        if (pe.defined()) {
+          tassert(op->indexVars.size() == 2)
+              << "only matrices are currently supported";
 
-        tassert(op->indexVars.size() == 2)
-            << "only matrices are currently supported";
-
-        // We must check for, and add to the map, any reduction variables
-        for (const IndexVar& indexVar : op->indexVars) {
-          if (indexVar.isReductionVar() && !util::contains(peVarMap,indexVar)) {
-            pe::Var peVar = pe::Var(indexVar.getName(), pe::Set());
-            peVarMap.insert({indexVar, peVar});
-            qvars.push_back(QuantifiedVar(QuantifiedVar::Exist, peVar));
+          // We must check for, and add to the map, any reduction variables
+          for (const IndexVar& indexVar : op->indexVars) {
+            if (indexVar.isReductionVar() && !util::contains(peVarMap,indexVar)) {
+              pe::Var peVar = pe::Var(indexVar.getName(), pe::Set());
+              peVarMap.insert({indexVar, peVar});
+              qvars.push_back(QuantifiedVar(QuantifiedVar::Exist, peVar));
+            }
           }
-        }
 
-        peStack.push(pe(peVarMap.at(op->indexVars[0]),
-                        peVarMap.at(op->indexVars[1])));
+          peStack.push(pe(peVarMap.at(op->indexVars[0]),
+                          peVarMap.at(op->indexVars[1])));
+        }
+        else {
+          // Matrices without path expressions (e.g. Diagonal matrices)
+          peStack.push(PathExpression());
+        }
       }
       else {
         // Scalars and vectors are dense and do not have path expressions,
@@ -202,9 +207,7 @@ void PathExpressionBuilder::computePathExpression(Var target,
 }
 
 pe::PathExpression PathExpressionBuilder::getPathExpression(Var target) {
-  iassert(util::contains(pathExpressions, target))
-      << "no path expression has been built for " << target;
-  return pathExpressions.at(target);
+  return pathExpressions[target];
 }
 
 void PathExpressionBuilder::addPathExpression(Var target,
