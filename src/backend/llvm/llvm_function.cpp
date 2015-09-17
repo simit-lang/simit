@@ -21,6 +21,8 @@
 #include "backend/actual.h"
 #include "graph.h"
 #include "indices.h"
+#include "tensor_index.h"
+#include "path_indices.h"
 #include "util/collections.h"
 #include "util/util.h"
 #include "llvm_util.h"
@@ -171,8 +173,20 @@ size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
 }
 
 Function::FuncType LLVMFunction::init() {
+  pe::PathIndexBuilder piBuilder;
+  const Environment& environment = getEnvironment();
+
+  // Initialize indices
+  for (const TensorIndex& tensorIndex : environment.getTensorIndices()) {
+    pe::PathExpression pexpr = tensorIndex.getPathExpression();
+    pe::PathIndex pidx = piBuilder.buildSegmented(pexpr, 0);
+//    std::cout << pexpr << std::endl;
+//    std::cout << pidx << std::endl;
+//    std::cout << std::endl;
+  }
+
   // Initialize temporaries
-  for (const Var& tmp : getEnvironment().getTemporaries()) {
+  for (const Var& tmp : environment.getTemporaries()) {
     const Type& type = tmp.getType();
 
     if (type.isTensor()) {
@@ -191,10 +205,10 @@ Function::FuncType LLVMFunction::init() {
       }
     }
   }
-  Function::FuncType func;
 
   // Compile a harness void function without arguments that calls the simit
   // llvm function with pointers to the arguments.
+  Function::FuncType func;
   initialized = true;
   vector<string> formals = getArgs();
   iassert(formals.size() == llvmFunc->getArgumentList().size());

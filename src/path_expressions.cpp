@@ -460,7 +460,7 @@ void PathExpressionPrinter::print(const Var &v) {
   os << name;
 
   if (v.getSet().defined() && v.getSet().getName() != "") {
-    os << PathExpressionPrinter::ELEMENTOF << v.getSet().getName();
+    os << PathExpressionPrinter::ELEMENTOF << v.getSet();
   }
 }
 
@@ -576,6 +576,10 @@ void PathExpressionPrinter::visit(const Or *pe) {
   os << " " << AND << " ";
   pe->getRhs().accept(this);
   os << ")";
+}
+
+std::ostream &operator<<(std::ostream& os, const Set& s) {
+  os << s.getName();
 }
 
 std::ostream &operator<<(std::ostream& os, const Var& v) {

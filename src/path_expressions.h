@@ -67,6 +67,7 @@ public:
   void bind(const simit::Set* set) const {ptr->binding = set;}
 };
 
+
 struct VarContent {
   std::string name;
   Set set;
@@ -425,6 +426,7 @@ protected:
   void print(const simit::Set *binding);
 };
 
+std::ostream &operator<<(std::ostream&, const Set&);
 std::ostream &operator<<(std::ostream&, const Var&);
 std::ostream &operator<<(std::ostream&, const PathExpressionImpl&);
 std::ostream &operator<<(std::ostream &os, const PathExpression &pe);
