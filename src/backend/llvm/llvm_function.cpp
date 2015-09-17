@@ -44,7 +44,7 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
 
   const Environment& env = getEnvironment();
 
-  // Set up pointers for binding externs
+  // Initialize extern pointers
   for (const VarMapping& externMapping : env.getExterns()) {
     Var bindable = externMapping.getVar();
 
@@ -60,17 +60,34 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
     this->externPtrs.insert({bindable.getName(), extPtrs});
   }
 
-  // Allocate and initialize temporaries
+  // Initialize temporary pointers
   for (const Var& tmp : env.getTemporaries()) {
     iassert(tmp.getType().isTensor())
         << "Only support tensor temporaries";
-
     llvm::GlobalValue* llvmTmp = module->getNamedValue(tmp.getName());
     void** tmpPtr = (void**)executionEngine->getPointerToGlobal(llvmTmp);
     *tmpPtr = nullptr;
-
     temporaryPtrs.insert({tmp.getName(), tmpPtr});
   }
+
+  // Initialize tensorIndex ptrs
+  for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
+    const Var& coords = tensorIndex.getCoordArray();
+    llvm::GlobalValue* llvmCoords = module->getNamedValue(coords.getName());
+    const uint32_t** coordsPtr =
+        (const uint32_t**)executionEngine->getPointerToGlobal(llvmCoords);
+    *coordsPtr = nullptr;
+
+    const Var& sinks = tensorIndex.getSinkArray();
+    llvm::GlobalValue* llvmSinks = module->getNamedValue(sinks.getName());
+    const uint32_t** sinksPtr =
+        (const uint32_t**)executionEngine->getPointerToGlobal(llvmSinks);
+    *sinksPtr = nullptr;
+
+    const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
+    tensorIndexPtrs.insert({pexpr, {coordsPtr, sinksPtr}});
+  }
+
 }
 
 LLVMFunction::~LLVMFunction() {
@@ -79,6 +96,7 @@ LLVMFunction::~LLVMFunction() {
   }
   for (auto& tmpPtr : temporaryPtrs) {
     free(*tmpPtr.second);
+    *tmpPtr.second = nullptr;
   }
 }
 
@@ -175,13 +193,12 @@ size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
 Function::FuncType LLVMFunction::init() {
   pe::PathIndexBuilder piBuilder;
 
-  std::map<std::string, const Set*> bindings;
   for (auto& pair : arguments) {
     string name = pair.first;
     Actual* actual = pair.second.get();
     if (isa<SetActual>(actual)) {
       Set* set = to<SetActual>(actual)->getSet();
-      bindings.insert({name, set});
+      piBuilder.bind(name,set);
     }
   }
 
@@ -191,13 +208,26 @@ Function::FuncType LLVMFunction::init() {
   for (const TensorIndex& tensorIndex : environment.getTensorIndices()) {
     pe::PathExpression pexpr = tensorIndex.getPathExpression();
     pe::PathIndex pidx = piBuilder.buildSegmented(pexpr, 0);
+    pathIndices.insert({pexpr, pidx});
 //    std::cout << pexpr << std::endl;
 //    std::cout << pidx << std::endl;
 //    std::cout << std::endl;
+
+    pair<const uint32_t**,const uint32_t**> ptrPair = tensorIndexPtrs.at(pexpr);
+
+    if (isa<pe::SegmentedPathIndex>(pidx)) {
+      const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
+      *ptrPair.first = spidx->getCoordData();
+      *ptrPair.second = spidx->getSinkData();
+    }
+    else {
+      not_supported_yet << "doesn't know how to initialize this pathindex type";
+    }
   }
 
   // Initialize temporaries
   for (const Var& tmp : environment.getTemporaries()) {
+    iassert(util::contains(temporaryPtrs, tmp.getName()));
     const Type& type = tmp.getType();
 
     if (type.isTensor()) {
@@ -208,11 +238,17 @@ Function::FuncType LLVMFunction::init() {
       if (order == 1) {
         // Vectors are currently always dense
         IndexDomain vecDimension = tensorType->getDimensions()[0];
-        size_t vecSize = tensorType->componentType.bytes() * size(vecDimension);
+        size_t vecSize = size(vecDimension) * tensorType->componentType.bytes();
         *temporaryPtrs.at(tmp.getName()) = malloc(vecSize);
       }
       else if (order == 2) {
-        not_supported_yet << "Initializing " << tmp << " matrix";
+        iassert(environment.hasTensorIndex(tmp));
+        const pe::PathExpression& pexpr =
+            environment.getTensorIndex(tmp).getPathExpression();
+        iassert(util::contains(pathIndices, pexpr));
+        size_t matSize = pathIndices.at(pexpr).numNeighbors() *
+                         tensorType->componentType.bytes();
+        *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
       }
     }
   }

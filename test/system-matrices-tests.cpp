@@ -41,9 +41,9 @@ TEST(DISABLED_System, add) {
   std::cout << a << std::endl;
 
   // Check that outputs are correct
-  ASSERT_EQ(15.0, a.get(v0));
+  ASSERT_EQ(19.0, a.get(v0));
   ASSERT_EQ(13.0, a.get(v1));
-  ASSERT_EQ(14.0, a.get(v2));
+  ASSERT_EQ(26.0, a.get(v2));
 
   // Check that inputs are preserved
   ASSERT_EQ(1.0, b.get(v0));

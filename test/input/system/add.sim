@@ -19,10 +19,13 @@ func f(e : Edge, v : (Vertex*2)) -> (A : tensor[V,V](float))
 end
 
 proc main 
-  A = map f to E reduce +;
-  B = map f to F reduce +;
-%  print E.e; 
-%  print F.e; 
-  C = A + B;
-  V.a = C * V.b;
+  B = map f to E reduce +;
+  C = map f to F reduce +;
+  A = B + C;
+  V.a = A * V.b;
+  %print B;
+  %print C;
+  %print A;
+  %print V.b;
+  %print V.a;
 end

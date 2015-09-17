@@ -125,13 +125,13 @@ public:
   /// The number of elements that this path index maps to their neighbors.
   unsigned numElements() const {return ptr->numElements();}
 
+  /// The sum of number of neighbors of each element covered by this path index.
+  unsigned numNeighbors() const {return ptr->numNeighbors();}
+
   /// The number of path neighbors of `elem`.
   unsigned numNeighbors(unsigned elemID) const {
     return ptr->numNeighbors(elemID);
   }
-
-  /// The sum of number of neighbors of each element covered by this path index.
-  unsigned numNeighbors() const {return ptr->numNeighbors();}
 
   /// Iterator that iterates over the elements covered by this path index.
   ElementIterator begin() const {return ptr->begin();}
@@ -175,18 +175,20 @@ private:
 class SegmentedPathIndex : public PathIndexImpl {
 public:
   ~SegmentedPathIndex() {
-    if (nbrsStart != nullptr) delete nbrsStart;
-    if (nbrs != nullptr) delete nbrs;
+    if (coordsData != nullptr) delete coordsData;
+    if (sinksData != nullptr) delete sinksData;
   }
 
   unsigned numElements() const {return numElems;}
+  unsigned numNeighbors() const {return coordsData[numElems];}
+
+  const unsigned* getCoordData() const {return coordsData;}
+  const unsigned* getSinkData() const {return sinksData;}
 
   unsigned numNeighbors(unsigned elemID) const {
     iassert(numElems > elemID);
-    return nbrsStart[elemID+1]-nbrsStart[elemID];
+    return coordsData[elemID+1]-coordsData[elemID];
   }
-
-  unsigned numNeighbors() const {return nbrsStart[numElems];}
 
   Neighbors neighbors(unsigned elemID) const;
 
@@ -194,21 +196,32 @@ private:
   /// Segmented vector, where `nbrsStart[i]:nbrsStart[i+1]` is the range of
   /// locations of neighbors of `i` in `nbrs`.
   unsigned numElems;
-  unsigned *nbrsStart;
-  unsigned *nbrs;
+  uint32_t* coordsData;
+  uint32_t* sinksData;
 
   void print(std::ostream &os) const;
 
   friend PathIndexBuilder;
 
-  SegmentedPathIndex(unsigned numElements, unsigned *nbrsStart, unsigned *nbrs)
-      : numElems(numElements), nbrsStart(nbrsStart), nbrs(nbrs) {}
+  SegmentedPathIndex(unsigned numElements, uint32_t *nbrsStart, uint32_t *nbrs)
+      : numElems(numElements), coordsData(nbrsStart), sinksData(nbrs) {}
 
-  SegmentedPathIndex() : numElems(0), nbrsStart(nullptr), nbrs(nullptr) {
-    nbrsStart = new unsigned[1];
-    nbrsStart[0] = 0;
+  SegmentedPathIndex() : numElems(0), coordsData(nullptr), sinksData(nullptr) {
+    coordsData = new uint32_t[1];
+    coordsData[0] = 0;
   }
 };
+
+template <typename PI>
+inline bool isa(PathIndex pi) {
+  return pi.defined() && dynamic_cast<const PI*>(pi.ptr) != nullptr;
+}
+
+template <typename PI>
+inline const PI* to(PathIndex pi) {
+  iassert(isa<PI>(pi)) << "Wrong PathIndex type " << pi;
+  return static_cast<const PI*>(pi.ptr);
+}
 
 
 /// A builder that builds path indices by evaluating path expressions on graphs.

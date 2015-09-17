@@ -18,6 +18,10 @@ class ExecutionEngine;
 }
 
 namespace simit {
+namespace pe {
+class PathExpression;
+class PathIndex;
+}
 namespace backend {
 class Actual;
 
@@ -56,8 +60,14 @@ class LLVMFunction : public backend::Function {
   /// Externs
   std::map<std::string, std::vector<void**>> externPtrs;
 
-  // Temporaries
+  /// Temporaries
   std::map<std::string, void**> temporaryPtrs;
+
+  /// TensorIndices
+  std::map<pe::PathExpression,
+           std::pair<const uint32_t**,const uint32_t**>> tensorIndexPtrs;
+  std::map<pe::PathExpression, pe::PathIndex>            pathIndices;
+
 
   bool initialized;
   FuncType deinit;

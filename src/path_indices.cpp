@@ -127,18 +127,19 @@ SegmentedPathIndex::neighbors(unsigned elemID) const {
     const unsigned *nbrs;
   };
 
-  return new SegmentNeighbors(numNeighbors(elemID), &nbrs[nbrsStart[elemID]]);
+  return new SegmentNeighbors(numNeighbors(elemID),
+                              &sinksData[coordsData[elemID]]);
 }
 
 void SegmentedPathIndex::print(std::ostream &os) const {
   os << "SegmentedPathIndex:";
   os << "\n  ";
   for (size_t i=0; i < numElements()+1; ++i) {
-    os << nbrsStart[i] << " ";
+    os << coordsData[i] << " ";
   }
   os << "\n  ";
   for (size_t i=0; i < numNeighbors(); ++i) {
-    os << nbrs[i] << " ";
+    os << sinksData[i] << " ";
   }
 }
 
