@@ -1,7 +1,6 @@
 #ifndef SIMIT_DOMAIN_H
 #define SIMIT_DOMAIN_H
 
-#include <cstddef>
 #include <string>
 #include <vector>
 #include <ostream>
