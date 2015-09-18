@@ -681,6 +681,10 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
   tassert(varDecl.var.getType().isTensor()) << "Only tensor decls supported";
 
   Var var = varDecl.var;
+  // Do not duplicate variable storage, even on a duplicated declaration
+  if (symtable.contains(var)) {
+    return;
+  }
   llvm::Value *llvmVar = nullptr;
   if (isScalar(var.getType())) {
     ScalarType type = var.getType().toTensor()->componentType;

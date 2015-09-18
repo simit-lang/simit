@@ -98,7 +98,60 @@ inline bool isElwise(const IndexExpr* iexpr) {
 }
 
 inline bool isGemm(const IndexExpr* iexpr) {
-  return false;
+  // Very specific index expression form: (i,j B(i,+k)*C(+k,j))
+  // "First" matrix is defined as the one with its first index var
+  // as a free variable. The "second" matrix is defined as the reverse.
+  // The remaining variable should be summed.
+  if (iexpr->resultVars.size() != 2) {
+    return false;
+  }
+  bool result = true;
+  bool foundFirst = false;
+  bool foundSecond = false;
+  match(iexpr->value,
+    std::function<void(const IndexedTensor*)>([&](const IndexedTensor* op) {
+      if (result == false) {
+        return;
+      }
+      if (op->indexVars.size() != 2) {
+        result = false;
+        return;
+      }
+      // Check for first matrix
+      // TODO: We only allow non-transposed multiplication
+      if (op->indexVars[0].isFreeVar() &&
+          op->indexVars[0] == iexpr->resultVars[0] &&
+          op->indexVars[1].isReductionVar() &&
+          op->indexVars[1].getOperator() == ReductionOperator::Sum) {
+        // We're doing a transpose multiply, unhandled right now
+        if (foundFirst) {
+          result = false;
+          return;
+        }
+        foundFirst = true;
+      }
+      // Check for second matrix
+      else if (op->indexVars[1].isFreeVar() &&
+               op->indexVars[1] == iexpr->resultVars[1] &&
+               op->indexVars[0].isReductionVar() &&
+               op->indexVars[0].getOperator() == ReductionOperator::Sum) {
+        // Transpose multiply is unhandled right now
+        if (foundSecond) {
+          result = false;
+          return;
+        }
+        foundSecond = true;
+      }
+      // Tensor term is not of matrix multiply form
+      else {
+        result = false;
+        return;
+      }
+    })
+  );
+  result = result && foundFirst && foundSecond;
+
+  return result;
 }
 
 Func lowerIndexExpressions(Func func) {

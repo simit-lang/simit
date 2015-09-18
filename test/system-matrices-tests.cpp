@@ -49,7 +49,7 @@ TEST(System, add) {
   ASSERT_EQ(3.0, b.get(v2));
 }
 
-TEST(DISABLED_System, gemm_simple) {
+TEST(System, gemm_simple) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -62,8 +62,6 @@ TEST(DISABLED_System, gemm_simple) {
   b.set(p0, 1.0);
   b.set(p1, 2.0);
   b.set(p2, 3.0);
-
-  // Taint c
   c.set(p0, 22.0);
   c.set(p1, 35.0);
   c.set(p2, 42.0);
@@ -88,12 +86,12 @@ TEST(DISABLED_System, gemm_simple) {
   func.runSafe();
 
   // Check that inputs are preserved
-  //ASSERT_EQ(1.0, b.get(p0));
-  //ASSERT_EQ(2.0, b.get(p1));
-  //ASSERT_EQ(3.0, b.get(p2));
+  ASSERT_EQ(1.0, b.get(p0));
+  ASSERT_EQ(2.0, b.get(p1));
+  ASSERT_EQ(3.0, b.get(p2));
 
   // Check that outputs are correct
-  //ASSERT_EQ(3.0, c.get(p0));
-  //ASSERT_EQ(13.0, c.get(p1));
-  //ASSERT_EQ(10.0, c.get(p2));
+  ASSERT_EQ(18158.0, c.get(p0));
+  ASSERT_EQ(22674.0, c.get(p1));
+  ASSERT_EQ(25276.0, c.get(p2));
 }
