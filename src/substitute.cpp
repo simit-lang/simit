@@ -4,6 +4,7 @@ using namespace std;
 
 #include "ir.h"
 #include "ir_rewriter.h"
+#include "util/collections.h"
 
 namespace simit {
 namespace ir {
@@ -14,7 +15,15 @@ public:
     substitutions.insert(pair<Expr,Expr>(oldExpr, newExpr));
   }
 
-  Substitute(map<Expr,Expr> substitutions) : substitutions(substitutions) {}
+  Substitute(map<Expr,Expr> substitutions) : substitutions(substitutions) {
+    for (auto& sub : substitutions) {
+      match(sub.first,
+        std::function<void(const VarExpr*)>([&](const VarExpr* op) {
+          varSubstitutions.insert({op->var, sub.second});
+        })
+      );
+    }
+  }
   
   using IRRewriter::rewrite;
 
@@ -23,7 +32,7 @@ public:
   }
 
   Expr rewrite(Expr expr) {
-    if (substitutions.find(expr) != substitutions.end()) {
+    if (util::contains(substitutions, expr)) {
       return substitutions.at(expr);
     }
     else {
@@ -33,11 +42,17 @@ public:
 
 private:
   map<Expr,Expr> substitutions;
+  map<Var,Expr> varSubstitutions;
 
   using IRRewriter::visit;
 
   void visit(const VarExpr *op) {
-    expr = op;
+    if (util::contains(varSubstitutions, op->var)) {
+      expr = varSubstitutions.at(op->var);
+    }
+    else {
+      expr = op;
+    }
   }
 };
 
