@@ -28,6 +28,10 @@ Func insertVarDecls(Func func) {
         declared.insert(constant.first);
       }
 
+      for (auto &temp : f->getEnvironment().getTemporaries()) {
+        declared.insert(temp);
+      }
+
       IRRewriter::visit(f);
     }
 
