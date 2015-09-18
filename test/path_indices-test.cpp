@@ -83,7 +83,7 @@ TEST(PathIndex, And) {
   simit::Set F(V,V);
   createTestGraph0(&V, &E, &F);
 
-  // test (ve or ve)
+  // test (ve and ve)
   PathExpression ve = makeVE();
   Var v("v");
   Var e("e");
@@ -93,7 +93,7 @@ TEST(PathIndex, And) {
   PathIndex veANDveIndex = builder.buildSegmented(veANDve, 0);
   VERIFY_INDEX(veANDveIndex, nbrs({{0}, {0,1}, {1}, {}}));
 
-  // test (vev or vfv):
+  // test (vev and vfv):
   PathExpression ev = makeEV();
   Var vi("vi");
   Var vj("vj");
@@ -329,4 +329,41 @@ TEST(PathIndex, Alias) {
   builder.bind("E", &E);
   PathIndex index = builder.buildSegmented(vev, 0);
   VERIFY_INDEX(index, vector<vector<unsigned>>({{0,1}, {0,1}}));
+}
+
+TEST(PathIndex, Hypergraph) {
+
+  Var vi("vi");
+  Var e("e");
+  Var f("f");
+  Var vj("vj");
+
+  PathExpression ve = makeVE("v","V", "e","E");
+  PathExpression ev = makeEV("e","E", "v","V");
+  PathExpression vev = And::make({vi,vj}, {{QuantifiedVar::Exist,e}},
+                                 ve(vi, e), ev(e, vj));
+
+  PathExpression vf = makeVE("v","V", "f","F");
+  PathExpression fv = makeEV("f","F", "v","V");
+  PathExpression vfv = And::make({vi,vj}, {{QuantifiedVar::Exist,f}},
+                                 ve(vi, f), ev(f, vj));
+
+  simit::Set V;
+  simit::Set E(V,V,V);
+  simit::Set F(V,V,V);
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  ElementRef v3 = V.add();
+  E.add(v0, v1, v2);
+  E.add(v1, v2, v3);
+
+  PathIndexBuilder builder;
+  builder.bind("V", &V);
+  builder.bind("E", &E);
+  builder.bind("F", &F);
+
+  PathExpression vevORvfv = Or::make({vi,vj}, {}, vev(vi,vj), vfv(vi,vj));
+  PathIndex pidx = builder.buildSegmented(vevORvfv, 0);
+  VERIFY_INDEX(pidx, nbrs({{0,1,2}, {0,1,2,3}, {0,1,2,3}, {1,2,3}}));
 }
