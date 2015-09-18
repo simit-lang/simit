@@ -26,7 +26,7 @@ struct SparseMatrix {
       : name(name), M(M), N(N), rowPtr(rowPtr), colInd(colInd), vals(vals) {
     iassert(rowPtr.size() == M+1);
     iassert(colInd.size() == (unsigned)rowPtr[rowPtr.size()-1]);
-    iassert(vals.size() == colInd.size());
+    iassert(vals.size()%colInd.size() == 0);
   }
 
   friend ostream& operator<<(ostream& os, const SparseMatrix& m) {
@@ -39,12 +39,14 @@ struct SparseMatrix {
 };
 
 struct TestParams {
+  vector<IndexVar> ivars;
   Expr expr;
   vector<SparseMatrix> operands;
   SparseMatrix expected;
 
-  TestParams(Expr expr, vector<SparseMatrix> operands, SparseMatrix expected)
-      : expr(expr), operands(operands), expected(expected) {}
+  TestParams(vector<IndexVar> ivars, Expr expr, vector<SparseMatrix> operands,
+             SparseMatrix expected)
+      : ivars(ivars), expr(expr), operands(operands), expected(expected) {}
 
   friend ostream& operator<<(ostream& os, const TestParams& p) {
     IRPrinter printer(os);
@@ -61,10 +63,14 @@ class IndexExpression : public ::testing::TestWithParam<TestParams> {};
 
 static const Type VType = SetType::make(ElementType::make("Vertex", {}), {});
 static const Var V("V", VType);
-static const IndexDomain dim({V});
 
+static const IndexDomain dim({V});
 static const IndexVar i("i", dim);
 static const IndexVar j("j", dim);
+
+static const IndexDomain dimb({IndexSet(V),IndexSet(2)});
+static const IndexVar ib("ib", dimb);
+static const IndexVar jb("jb", dimb);
 
 Var createMatrixVar(string name, IndexVar i, IndexVar j) {
   return Var(name, ir::TensorType::make(ir::typeOf<simit_float>(),
@@ -76,6 +82,10 @@ Expr C(IndexVar i, IndexVar j) {return Expr(createMatrixVar("C",i,j))(i,j);}
 Expr D(IndexVar i, IndexVar j) {return Expr(createMatrixVar("D",i,j))(i,j);}
 
 TEST_P(IndexExpression, Matrix) {
+  vector<IndexVar> ivars = GetParam().ivars;
+  IndexVar i = ivars[0];
+  IndexVar j = ivars[1];
+
   Expr expr = GetParam().expr;
 
   map<string,const SparseMatrix*> operandsFromNames;
@@ -149,7 +159,9 @@ TEST_P(IndexExpression, Matrix) {
 //  pe::PathExpression pe = builder.computePathExpression(A,to<IndexExpr>(iexpr));
 //  std::cout << pe << std::endl;
   SparseMatrix result = GetParam().expected;
-
+  for (size_t i=0; i < result.vals.size(); ++i) {
+    result.vals[i] = 0.0;
+  }
   simit::Function function = getTestBackend()->compile(loops, env, storage);
 
   // Find and bind set variables
@@ -235,12 +247,12 @@ TEST_P(IndexExpression, Matrix) {
 
 INSTANTIATE_TEST_CASE_P(Add, IndexExpression,
                         testing::Values(
-                        TestParams(
+                        TestParams({i,j},
                           B(i,j) + C(i,j),
                           {
                             SparseMatrix("B", 3, 3,
                                          {0, 2, 4, 4},
-                                         {0, 1, 0, 1},
+                                         {0,1, 0,1},
                                          {1.0, 2.0,
                                           3.0, 4.0
                                                        }),
@@ -248,17 +260,18 @@ INSTANTIATE_TEST_CASE_P(Add, IndexExpression,
                                          {0, 0, 2, 4},
                                          {1, 2, 1, 2},
                                          {
-                                               0.1, 0.2,
-                                               0.3, 0.4})
+                                               5.0, 6.0,
+                                               7.0, 8.0})
                           },
                           SparseMatrix("A", 3, 3,
                                        {0, 2, 5, 7},
-                                       {0, 1, 0, 1, 2, 1, 2},
+                                       {0,1, 0,1,2, 1,2},
                                        {1.0, 2.0,
-                                        3.0, 4.1, 0.2,
-                                             0.3, 0.4})
-                        ),
-                        TestParams(
+                                        3.0, 9.0, 6.0,
+                                             7.0, 8.0})
+                        )
+                        ,
+                        TestParams({i,j},
                           B(i,j) + C(i,j) + D(i,j),
                           {
                             SparseMatrix("B", 3, 3,
@@ -287,12 +300,42 @@ INSTANTIATE_TEST_CASE_P(Add, IndexExpression,
                                         3.3, 9.4, 6.5,
                                              7.6, 8.7})
                         )
+                        ,
+                        TestParams({ib,jb},
+                          B(ib,jb) + C(ib,jb),
+                          {
+                            SparseMatrix("B", 3, 3,
+                                         {0, 2, 4, 4},
+                                         {0,1, 0,1},
+                                         {1.1, 1.2, 1.3, 1.4,
+                                          2.1, 2.2, 2.3, 2.4,
+                                          3.1, 3.2, 3.3, 3.4,
+                                          4.1, 4.2, 4.3, 4.4}),
+                            SparseMatrix("C", 3, 3,
+                                         {0, 0, 2, 4},
+                                         {1,2, 1,2},
+                                         {5.1, 5.2, 5.3, 5.4,
+                                          6.1, 6.2, 6.3, 6.4,
+                                          7.1, 7.2, 7.3, 7.4,
+                                          8.1, 8.2, 8.3, 8.4})
+                          },
+                          SparseMatrix("A", 3, 3,
+                                       {0, 2, 5, 7},
+                                       {0,1, 0,1,2, 1,2},
+                                       {1.1, 1.2, 1.3, 1.4,
+                                        2.1, 2.2, 2.3, 2.4,
+                                        3.1, 3.2, 3.3, 3.4,
+                                        9.2, 9.4, 9.6, 9.8,
+                                        6.1, 6.2, 6.3, 6.4,
+                                        7.1, 7.2, 7.3, 7.4,
+                                        8.1, 8.2, 8.3, 8.4})
+                        )
                         ));
 
 
 INSTANTIATE_TEST_CASE_P(Mul, IndexExpression,
                         testing::Values(
-                        TestParams(
+                        TestParams({i,j},
                           B(i,j) * C(i,j),
                           {
                             SparseMatrix("B", 3, 3,
@@ -315,7 +358,7 @@ INSTANTIATE_TEST_CASE_P(Mul, IndexExpression,
                                              0.4
                                                      })
                         ),
-                        TestParams(
+                        TestParams({i,j},
                           B(i,j) * C(i,j) * D(i,j),
                           {
                             SparseMatrix("B", 3, 3,
@@ -348,7 +391,7 @@ INSTANTIATE_TEST_CASE_P(Mul, IndexExpression,
 
 INSTANTIATE_TEST_CASE_P(Mixed, IndexExpression,
                         testing::Values(
-                        TestParams(
+                        TestParams({i,j},
                           (B(i,j) + C(i,j)) * D(i,j),
                           {
                             SparseMatrix("B", 3, 3,
@@ -377,7 +420,7 @@ INSTANTIATE_TEST_CASE_P(Mixed, IndexExpression,
                                         0.9, 3.6, 3.0,
                                              4.2, 5.6})
                         ),
-                        TestParams(
+                        TestParams({i,j},
                           B(i,j) + (C(i,j) * D(i,j)),
                           {
                             SparseMatrix("B", 3, 3,

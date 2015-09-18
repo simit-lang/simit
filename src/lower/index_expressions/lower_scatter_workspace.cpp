@@ -12,6 +12,7 @@
 #include "ir_visitor.h"
 #include "ir_printer.h"
 #include "ir_codegen.h"
+#include "substitute.h"
 #include "util/util.h"
 #include "util/collections.h"
 
@@ -279,12 +280,34 @@ static Stmt createSubsetLoopStmt(const Var &inductionVar,
 }
 
 static
-Stmt createSubsetLoopStmt(const Expr &target, const Var &inductionVar,
-                          const SubsetLoop &subsetLoop,
+Stmt rewriteToBlocked(Stmt stmt, vector<Var> inductionVars, Expr blockSize) {
+  Var ii("ii", inductionVars[0].getType());
+  map<Expr,Expr> substitutions;
+  for (const Var& inductionVar : inductionVars) {
+    substitutions.insert({inductionVar, inductionVar*blockSize + ii});
+  }
+  return ForRange::make(ii, 0, blockSize, substitute(substitutions, stmt));
+}
+
+static
+Stmt createSubsetLoopStmt(const Var& target, const Var& inductionVar,
+                          Expr blockSize, const SubsetLoop& subsetLoop,
                           Environment* environment) {
   Stmt computeStmt = Store::make(target, inductionVar,
                                  subsetLoop.getComputeExpression(),
                                  subsetLoop.getCompoundOperator());
+  iassert(target.getType().isTensor());
+  Type blockType = target.getType().toTensor()->getBlockType();
+  const TensorType* btype = blockType.toTensor();
+
+  if (btype->order() > 0) {
+    vector<Var> inductionVars;
+    inductionVars.push_back(inductionVar);
+    for (auto& tiv : subsetLoop.getTensorIndexVars()) {
+      inductionVars.push_back(tiv.getCoordVar());
+    }
+    computeStmt = rewriteToBlocked(computeStmt, inductionVars, blockSize);
+  }
   return createSubsetLoopStmt(inductionVar, subsetLoop.getTensorIndexVars(),
                               computeStmt);
 }
@@ -323,12 +346,26 @@ static string tensorSliceString(const Expr &expr, const IndexVar &sliceVar) {
   return SlicePrinter(sliceVar).toString(expr);;
 }
 
+static Stmt copyFromWorkspace(Var target, Expr targetIndex,
+                              Var workspace, Expr workspaceIndex) {
+  ScalarType workspaceCType = workspace.getType().toTensor()->componentType;
+  Stmt copyFromWorkspace = Store::make(target, targetIndex,
+                                       Load::make(workspace, workspaceIndex));
+  Expr resetVal = Literal::make(TensorType::make(workspaceCType));
+  Stmt resetWorkspace = Store::make(workspace, workspaceIndex, resetVal);
+  return Block::make(copyFromWorkspace, resetWorkspace);
+}
+
 Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
                            Environment* environment, Storage* storage) {
   iassert(target.getType().isTensor());
   const TensorType* type = target.getType().toTensor();
   tassert(type->order() <= 2)
       << "lowerScatterWorkspace does not support higher-order tensors";
+
+  Type blockType = type->getBlockType();
+  const TensorType* btype = blockType.toTensor();
+  Expr blockSize = (int)btype->size();
 
   // Create loops
   vector<IndexVariableLoop> loops = createLoopNest(indexExpression);
@@ -376,7 +413,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
 
       // Create each subset loop and add their results to the workspace
       for (const SubsetLoop& subsetLoop : subsetLoops) {
-        Stmt loopStmt = createSubsetLoopStmt(workspace, inductionVar,
+        Stmt loopStmt = createSubsetLoopStmt(workspace, inductionVar, blockSize,
                                              subsetLoop, environment);
         string comment = "workspace " +
             util::toString(subsetLoop.getCompoundOperator())+"= " +
@@ -414,11 +451,14 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),
                                     linkedInductionVar, ti);
 
-      Stmt copyFromWorkspace = Store::make(target, resultIndexVar.getCoordVar(),
-                                           Load::make(workspace, inductionVar));
-      Expr resetVal = Literal::make(TensorType::make(workspaceCType));
-      Stmt resetWorkspace = Store::make(workspace, inductionVar, resetVal);
-      Stmt body = Block::make(copyFromWorkspace, resetWorkspace);
+      Stmt body;
+      body = copyFromWorkspace(target, resultIndexVar.getCoordVar(),
+                               workspace, inductionVar);
+      if (btype->order() > 0) {
+        const Var& coordVar = resultIndexVar.getCoordVar();
+        body = rewriteToBlocked(body, {inductionVar, coordVar}, blockSize);
+      }
+
       Stmt loopStmt = createSubsetLoopStmt(inductionVar, {resultIndexVar},body);
       string comment = toString(target)
                      + tensorSliceString(resultVars, loop.getIndexVar())
