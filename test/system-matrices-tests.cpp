@@ -96,7 +96,7 @@ TEST(System, gemm_simple) {
   ASSERT_EQ(25276.0, c.get(p2));
 }
 
-TEST(System, gemm_blocked) {
+TEST(DISABLED_System, gemm_blocked) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
