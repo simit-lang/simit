@@ -4,6 +4,8 @@
 
 #include "ir_rewriter.h"
 #include "intrinsics.h"
+#include "path_expressions.h"
+#include "tensor_index.h"
 #include "util/util.h"
 
 using namespace std;
@@ -86,8 +88,17 @@ public:
 
 private:
   Storage storage;
+  Environment environment;
   
   using IRRewriter::visit;
+
+  void visit(const Func* f) {
+    environment = f->getEnvironment();
+    Stmt body = rewrite(f->getBody());
+    func = Func(f->getName(), f->getArguments(), f->getResults(), body,
+                environment);
+    func.setStorage(storage);
+  }
 
   static bool canComputeSize(const IndexDomain &dom) {
     for (auto &is : dom.getIndexSets()) {
@@ -149,6 +160,9 @@ private:
             << "Must either supply one index per dimension or a single "
             << "index (flattened)";
 
+        iassert(isa<VarExpr>(tensor));
+        const Var& var = to<VarExpr>(tensor)->var;
+
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
         }
@@ -156,11 +170,15 @@ private:
           Expr i = rewrite(indices[0]);
           Expr j = rewrite(indices[1]);
 
-          Expr edgeSet = tensorStorage.getSystemTargetSet();
-          Expr nbrs_start = IndexRead::make(edgeSet, IndexRead::NeighborsStart);
-          Expr nbrs = IndexRead::make(edgeSet, IndexRead::Neighbors);
+          const pe::PathExpression pexpr = tensorStorage.getPathExpression();
+          if (!environment.hasTensorIndex(pexpr)) {
+            environment.addTensorIndex(pexpr, var);
+          }
+          TensorIndex tensorIndex = environment.getTensorIndex(pexpr);
 
-          index = Call::make(intrinsics::loc(), {i, j, nbrs_start, nbrs});
+          Expr coords = tensorIndex.getCoordArray();
+          Expr sinks  = tensorIndex.getSinkArray();
+          index = Call::make(intrinsics::loc(), {i, j, coords, sinks});
         }
         break;
       }
@@ -195,8 +213,7 @@ private:
 };
 
 Func lowerTensorAccesses(Func func) {
-  Stmt body = LowerTensorAccesses(func.getStorage()).rewrite(func.getBody());
-  return Func(func, body);
+  return LowerTensorAccesses(func.getStorage()).rewrite(func);
 }
 
 }}

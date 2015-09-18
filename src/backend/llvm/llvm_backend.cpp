@@ -400,7 +400,9 @@ void LLVMBackend::compile(const ir::Call& call) {
   for (auto a: call.actuals) {
     //FIX: remove once solve() is no longer needed
     //iassert(isScalar(a.type()));
-    argTypes.push_back(llvmType(a.type().toTensor()->componentType));
+    ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->componentType
+                                           : a.type().toArray()->elementType;
+    argTypes.push_back(llvmType(ctype));
     args.push_back(compile(a));
   }
 
