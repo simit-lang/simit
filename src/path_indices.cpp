@@ -176,8 +176,8 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
       }
 
       size_t numElements = pathNeighbors.size();
-      uint32_t* coordsData = new uint32_t[numElements + 1];
-      uint32_t* sinksData = new uint32_t[numNeighbors];
+      uint32_t* coordsData= (uint32_t*)malloc((numElements+1)*sizeof(uint32_t));
+      uint32_t* sinksData = (uint32_t*)malloc(numNeighbors*sizeof(uint32_t));
 
       int currNbrsStart = 0;
       for (auto& p : pathNeighbors) {

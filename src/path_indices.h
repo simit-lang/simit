@@ -175,8 +175,8 @@ private:
 class SegmentedPathIndex : public PathIndexImpl {
 public:
   ~SegmentedPathIndex() {
-    delete[] coordsData;
-    delete[] sinksData;
+    free(coordsData);
+    free(sinksData);
   }
 
   unsigned numElements() const {return numElems;}
