@@ -20,5 +20,5 @@ end
 proc main 
   A = map dist_a to springs reduce +;
   B = A*A;
-  % print B(0,0);
+  points.c = B * points.b;
 end
