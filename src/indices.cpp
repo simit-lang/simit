@@ -68,6 +68,10 @@ NeighborIndex::NeighborIndex(const Set &edgeSet) {
     neighbors.insert(neighbors.end(), nbr.begin(), nbr.end());
     startIndex[v.ident+1] = neighbors.size();
   }
+
+  for (int i=0; i < vSet->getSize(); ++i) {
+    std::sort(neighbors.begin()+startIndex[i], neighbors.begin()+startIndex[i+1]);
+  }
 }
 
 NeighborIndex::~NeighborIndex() {
