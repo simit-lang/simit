@@ -286,7 +286,7 @@ std::ostream& operator<<(std::ostream& os, const TensorType& type) {
   }
   else {
     os << "tensor";
-    os << "[" << util::join(type.getDimensions(), ",") << "]";
+    os << "[" << util::join(type.getOuterDimensions(), ",") << "]";
     os << "(" << type.getBlockType() << ")";
   }
   return os;
