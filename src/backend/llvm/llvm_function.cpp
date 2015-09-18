@@ -164,6 +164,7 @@ size_t LLVMFunction::size(const ir::IndexDomain& dimension) {
     switch (indexSet.getKind()) {
       case ir::IndexSet::Range:
         result *= indexSet.getSize();
+        break;
       case ir::IndexSet::Set: {
         ir::Expr setExpr = indexSet.getSet();
         iassert(ir::isa<ir::VarExpr>(setExpr))
@@ -253,6 +254,10 @@ Function::FuncType LLVMFunction::init() {
                          blockSize * componentSize;
         *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
       }
+    }
+    else {
+      unreachable << "don't know how to initialize temporary "
+                  << util::quote(tmp);
     }
   }
 
