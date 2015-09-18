@@ -239,8 +239,8 @@ Function::FuncType LLVMFunction::init() {
         Type blockType = tensorType->getBlockType();
         size_t blockSize = blockType.toTensor()->size();
         size_t componentSize = tensorType->componentType.bytes();
-        size_t vecSize = size(vecDimension) * blockSize * componentSize;
-        *temporaryPtrs.at(tmp.getName()) = malloc(vecSize);
+        *temporaryPtrs.at(tmp.getName()) =
+            calloc(size(vecDimension) *blockSize, componentSize);
       }
       else if (order == 2) {
         iassert(environment.hasTensorIndex(tmp));
