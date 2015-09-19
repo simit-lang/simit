@@ -95,3 +95,60 @@ TEST(System, gemm_simple) {
   ASSERT_EQ(22674.0, c.get(p1));
   ASSERT_EQ(25276.0, c.get(p2));
 }
+
+TEST(DISABLED_System, gemm_blocked) {
+  // Points
+  Set points;
+  FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");
+  FieldRef<simit_float,2> c = points.addField<simit_float,2>("c");
+  FieldRef<simit_float,2,2> d = points.addField<simit_float,2,2>("d");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b.set(p0, {1.0, 2.0});
+  b.set(p1, {3.0, 4.0});
+  b.set(p2, {5.0, 6.0});
+
+  d.set(p0, {1.0, 2.0, 3.0, 4.0});
+  d.set(p1, {2.0, 3.0, 4.0, 5.0});
+  d.set(p2, {3.0, 4.0, 5.0, 6.0});
+
+  // Taint c
+  c.set(p0, {42.0, 42.0});
+  c.set(p2, {42.0, 42.0});
+
+  // Springs
+  Set springs(points,points);
+  FieldRef<simit_float,2,2> a = springs.addField<simit_float,2,2>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, {1.0, 2.0, 3.0, 4.0});
+  a.set(s1, {5.0, 6.0, 7.0, 8.0});
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points", &points);
+  func.bind("springs", &springs);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
+  TensorRef<simit_float,2> c0 = c.get(p0);
+  ASSERT_EQ(4048.0, c0(0));
+  ASSERT_EQ(8288.0, c0(1));
+
+  TensorRef<simit_float,2> c1 = c.get(p1);
+  ASSERT_EQ(13502.0, c1(0));
+  ASSERT_EQ(21958.0, c1(1));
+
+  TensorRef<simit_float,2> c2 = c.get(p2);
+  ASSERT_EQ(16544.0, c2(0));
+  ASSERT_EQ(11120.0, c2(1));
+}

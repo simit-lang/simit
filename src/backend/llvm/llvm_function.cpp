@@ -243,7 +243,8 @@ Function::FuncType LLVMFunction::init() {
             calloc(size(vecDimension) *blockSize, componentSize);
       }
       else if (order == 2) {
-        iassert(environment.hasTensorIndex(tmp));
+        iassert(environment.hasTensorIndex(tmp))
+          << "No tensor index for: " << tmp;
         const pe::PathExpression& pexpr =
             environment.getTensorIndex(tmp).getPathExpression();
         iassert(util::contains(pathIndices, pexpr));
