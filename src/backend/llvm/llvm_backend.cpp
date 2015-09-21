@@ -82,7 +82,7 @@ LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
 LLVMBackend::~LLVMBackend() {}
 
 // TODO: Remove this function, once the old init system has been removed
-static Func makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
+Func makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
   class MakeSystemTensorsGlobalRewriter : public ir::IRRewriter {
   public:
     MakeSystemTensorsGlobalRewriter() {}
@@ -138,44 +138,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   func = makeSystemTensorsGlobalIfHasTensorIndex(func);
 
   const Environment& env = func.getEnvironment();
-
-  // Emit global constants
-  // TODO
-
-  // Emit global variables (externs and temporaries)
-  for (const Var& ext : env.getExternVars()) {
-    llvm::GlobalVariable* ptr = createGlobal(module, ext,
-                                             llvm::GlobalValue::ExternalLinkage,
-                                             globalAddrspace());
-    this->symtable.insert(ext, ptr);
-    this->globals.insert(ext);
-  }
-
-  // Emit global temporaries
-  for (const Var& tmp : env.getTemporaries()) {
-    llvm::GlobalVariable* ptr = createGlobal(module, tmp,
-                                             llvm::GlobalValue::ExternalLinkage,
-                                             globalAddrspace());
-    this->symtable.insert(tmp, ptr);
-    this->globals.insert(tmp);
-  }
-
-  // Emit global tensor indices
-  for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
-    const Var& coordArray = tensorIndex.getCoordArray();
-    llvm::GlobalVariable* coordPtr =
-        createGlobal(module, coordArray, llvm::GlobalValue::ExternalLinkage,
-                     globalAddrspace());
-    this->symtable.insert(coordArray, coordPtr);
-    this->globals.insert(coordArray);
-
-    const Var& sinkArray  = tensorIndex.getSinkArray();
-    llvm::GlobalVariable* sinkPtr =
-        createGlobal(module, sinkArray, llvm::GlobalValue::ExternalLinkage,
-                     globalAddrspace());
-    this->symtable.insert(sinkArray, sinkPtr);
-    this->globals.insert(sinkArray);
-  }
+  emitGlobals(env);
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
@@ -1509,6 +1472,46 @@ void LLVMBackend::emitPrintf(std::string format,
   printfArgs.insert(printfArgs.end(), args.begin(), args.end());
 
   builder->CreateCall(printfFunc, printfArgs);
+}
+
+void LLVMBackend::emitGlobals(const ir::Environment& env) {
+  // Emit global constants
+  // TODO
+
+  // Emit global variables (externs and temporaries)
+  for (const Var& ext : env.getExternVars()) {
+    llvm::GlobalVariable* ptr = createGlobal(module, ext,
+                                             llvm::GlobalValue::ExternalLinkage,
+                                             globalAddrspace());
+    this->symtable.insert(ext, ptr);
+    this->globals.insert(ext);
+  }
+
+  // Emit global temporaries
+  for (const Var& tmp : env.getTemporaries()) {
+    llvm::GlobalVariable* ptr = createGlobal(module, tmp,
+                                             llvm::GlobalValue::ExternalLinkage,
+                                             globalAddrspace());
+    this->symtable.insert(tmp, ptr);
+    this->globals.insert(tmp);
+  }
+
+  // Emit global tensor indices
+  for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
+    const Var& coordArray = tensorIndex.getCoordArray();
+    llvm::GlobalVariable* coordPtr =
+        createGlobal(module, coordArray, llvm::GlobalValue::ExternalLinkage,
+                     globalAddrspace());
+    this->symtable.insert(coordArray, coordPtr);
+    this->globals.insert(coordArray);
+
+    const Var& sinkArray  = tensorIndex.getSinkArray();
+    llvm::GlobalVariable* sinkPtr =
+        createGlobal(module, sinkArray, llvm::GlobalValue::ExternalLinkage,
+                     globalAddrspace());
+    this->symtable.insert(sinkArray, sinkPtr);
+    this->globals.insert(sinkArray);
+  }
 }
 
 void LLVMBackend::emitAssign(Var var, const Expr& value) {

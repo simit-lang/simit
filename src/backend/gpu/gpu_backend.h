@@ -12,11 +12,11 @@
 #define CUDA_SHARED_ADDRSPACE 3
 
 // Pointers with global addrspace
-#define CUDA_INTPTR_GLOBAL    llvm::Type::getInt32PtrTy(LLVM_CONTEXT, 1)
-#define CUDA_FLOATPTR_GLOBAL  llvm::Type::getFloatPtrTy(LLVM_CONTEXT, 1)
-#define CUDA_DOUBLEPTR_GLOBAL llvm::Type::getDoublePtrTy(LLVM_CONTEXT, 1)
-#define CUDA_BOOLPTR_GLOBAL   llvm::Type::getInt1PtrTy(LLVM_CONTEXT, 1)
-#define CUDA_INT8PTR_GLOBAL   llvm::Type::getInt8PtrTy(LLVM_CONTEXT, 1)
+#define CUDA_INT_PTR_GLOBAL    llvm::Type::getInt32PtrTy(LLVM_CTX, 1)
+#define CUDA_FLOAT_PTR_GLOBAL  llvm::Type::getFloatPtrTy(LLVM_CTX, 1)
+#define CUDA_DOUBLE_PTR_GLOBAL llvm::Type::getDoublePtrTy(LLVM_CTX, 1)
+#define CUDA_BOOL_PTR_GLOBAL   llvm::Type::getInt1PtrTy(LLVM_CTX, 1)
+#define CUDA_INT8_PTR_GLOBAL   llvm::Type::getInt8PtrTy(LLVM_CTX, 1)
 
 // transforms
 #include "fuse_kernels.h"
@@ -37,8 +37,6 @@ public:
   GPUBackend() {}
   ~GPUBackend() {}
 
-  virtual simit::Function compile(const ir::Func &func);
-
 protected:
   // CUDA variables
   int cuDevMajor, cuDevMinor;
@@ -51,46 +49,50 @@ protected:
   // Currently compiling IR Func
   ir::Func irFunc;
 
-  // Currently compiling LLVM function
-  llvm::Function *func;
-
   virtual unsigned globalAddrspace() { return CUDA_GLOBAL_ADDRSPACE; }
 
-  using LLVMBackend::visit;
+  using LLVMBackend::compile;
+  virtual Function* compile(ir::Func func, const ir::Storage& storage);
 
-  virtual llvm::Value *compile(const ir::Expr &expr);
-  virtual void visit(const ir::FieldRead *);
-  virtual void visit(const ir::TensorRead *);
-  virtual void visit(const ir::TupleRead *);
-  virtual void visit(const ir::IndexRead *op);
-  virtual void visit(const ir::Length *op);
-  virtual void visit(const ir::Map *);
-  virtual void visit(const ir::IndexedTensor *);
-  virtual void visit(const ir::IndexExpr *op);
-  virtual void visit(const ir::TensorWrite *);
+  virtual void compile(const ir::Literal&);
+  virtual void compile(const ir::VarExpr&);
+  virtual void compile(const ir::Load&);
+  virtual void compile(const ir::FieldRead&);
+  virtual void compile(const ir::Call&);
+  virtual void compile(const ir::Length&);
+  virtual void compile(const ir::IndexRead&);
 
-  virtual void visit(const ir::Literal *);
-  virtual void visit(const ir::VarExpr *);
-  virtual void visit(const ir::Load *);
-  virtual void visit(const ir::Call *);
-  virtual void visit(const ir::Neg *);
-  virtual void visit(const ir::Add *);
-  virtual void visit(const ir::Sub *);
-  virtual void visit(const ir::Mul *);
-  virtual void visit(const ir::Div *);
+  // Binary ops delegated to generic LLVM backend:
+  // virtual void compile(const ir::Neg&);
+  // virtual void compile(const ir::Add&);
+  // virtual void compile(const ir::Sub&);
+  // virtual void compile(const ir::Mul&);
+  // virtual void compile(const ir::Div&);
 
-  virtual void visit(const ir::VarDecl *);
-  virtual void visit(const ir::AssignStmt *);
-  virtual void visit(const ir::CallStmt *);
-  virtual void visit(const ir::FieldWrite *);
-  virtual void visit(const ir::Store *);
-  virtual void visit(const ir::ForRange *);
-  virtual void visit(const ir::For *);
-  virtual void visit(const ir::IfThenElse *);
-  virtual void visit(const ir::Block *);
-  virtual void visit(const ir::Pass *);
+  // virtual void compile(const ir::Not&);
+  // virtual void compile(const ir::Eq&);
+  // virtual void compile(const ir::Ne&);
+  // virtual void compile(const ir::Gt&);
+  // virtual void compile(const ir::Lt&);
+  // virtual void compile(const ir::Ge&);
+  // virtual void compile(const ir::Le&);
+  // virtual void compile(const ir::And&);
+  // virtual void compile(const ir::Or&);
+  // virtual void compile(const ir::Xor&);
 
-  virtual void visit(const ir::GPUKernel *);
+  virtual void compile(const ir::VarDecl&);
+  virtual void compile(const ir::AssignStmt&);
+  virtual void compile(const ir::CallStmt&);
+  virtual void compile(const ir::Store&);
+  virtual void compile(const ir::FieldWrite&);
+  virtual void compile(const ir::Scope&);
+  virtual void compile(const ir::IfThenElse&);
+  virtual void compile(const ir::ForRange&);
+  virtual void compile(const ir::For&);
+  virtual void compile(const ir::While&);
+  virtual void compile(const ir::Print&);
+
+  virtual void compile(const ir::GPUKernel&);
 
   // Emits calls to nvvm intrinsics
   llvm::Value *emitBarrier();
@@ -132,7 +134,7 @@ protected:
                    unsigned align,
                    bool alignToArgSize);
 
-  virtual void makeGlobalTensor(ir::Var var);
+  virtual llvm::Value *makeGlobalTensor(ir::Var var);
 };
 
 }

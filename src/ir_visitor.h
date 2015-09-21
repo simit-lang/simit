@@ -124,7 +124,12 @@ public:
   virtual void visit(const Func* f) {}
 
 #ifdef GPU
-  virtual void visit(const GPUKernel* op) = 0;
+  // NOTE: GPU-specific visitors are not declared pure virtual,
+  // because they are backend-specific. This should be removed when
+  // switching to a more general parallel IR representation.
+  virtual void visit(const GPUKernel* op) {
+    ierror << "GPUKernel visitor must be implemented.";
+  }
 #endif
 };
 

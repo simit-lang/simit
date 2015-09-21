@@ -9,6 +9,7 @@
 
 #include "backend/backend_impl.h"
 
+#include "environment.h"
 #include "storage.h"
 #include "var.h"
 #include "backend/backend_visitor.h"
@@ -136,9 +137,13 @@ protected:
                                     bool doesNotThrow=true,
                                     bool scalarsByValue=true);
 
-  virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
+  /// Produce LLVM globals for everything in `env` and store in `globals`
+  /// and in `symtable` appropriately.
+  void emitGlobals(const ir::Environment& env);
 
   void emitAssign(ir::Var var, const ir::Expr& value);
+
+  virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
   /// Emit a memcpy instruction
   virtual void emitMemCpy(llvm::Value *dst, llvm::Value *src,
@@ -152,6 +157,8 @@ protected:
   /// and list of global buffers
   virtual llvm::Value *makeGlobalTensor(ir::Var var);
 
+  // TODO: Remove this function, once the old init system has been removed
+  ir::Func makeSystemTensorsGlobalIfHasTensorIndex(ir::Func func);
 private:
   static bool llvmInitialized;
 };

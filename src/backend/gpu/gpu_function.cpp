@@ -34,7 +34,7 @@ GPUFunction::GPUFunction(
     ir::Func simitFunc, llvm::Function *llvmFunc,
     llvm::Module *module,
     std::map<ir::Var, llvm::Value*> globalBufs,
-    ir::Storage storage)
+    const ir::Storage& storage)
     : Function(simitFunc), llvmFunc(llvmFunc), module(module),
       globalBufs(globalBufs), storage(storage), cudaModule(nullptr) {
   // CUDA runtime
@@ -344,7 +344,7 @@ int GPUFunction::findShardSize(ir::IndexSet domain) {
 }
 
 backend::Function::FuncType
-GPUFunction::init(const vector<string> &formals, map<string, Actual> &actuals) {
+GPUFunction::init() {
   CUlinkState linker;
   CUfunction cudaFunction;
 

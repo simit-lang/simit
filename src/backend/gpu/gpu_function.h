@@ -15,13 +15,14 @@
 
 namespace simit {
 namespace backend {
+class Actual;
 
 class GPUFunction : public simit::backend::Function {
  public:
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module,
               std::map<ir::Var, llvm::Value*> globalBufs,
-              ir::Storage storage);
+              const ir::Storage& storage);
   ~GPUFunction();
 
   void print(std::ostream &os) const;
@@ -30,12 +31,17 @@ class GPUFunction : public simit::backend::Function {
   virtual void mapArgs();
   virtual void unmapArgs(bool updated);
 
+  virtual void bind(const std::string& name, Set* set);
+  virtual void bind(const std::string& name, void* data);
+  virtual void bind(const std::string& name, const int* rowPtr,
+                    const int* colInd, void *data);
+  virtual FuncType init();
+  virtual bool isInitialized();
+
  private:
   // Find the size of a domain
   int findShardSize(ir::IndexSet domain);
 
-  FuncType init(const std::vector<std::string> &formals,
-                std::map<std::string, Actual> &actuals);
   // Allocate the given argument as a device buffer
   CUdeviceptr allocArg(const ir::Type& var);
   // Get argument data as a Literal
@@ -81,7 +87,7 @@ class GPUFunction : public simit::backend::Function {
   std::unique_ptr<llvm::Function> llvmFunc;
   std::unique_ptr<llvm::Module> module;
   std::map<ir::Var, llvm::Value*> globalBufs;
-  ir::Storage storage;
+  const ir::Storage& storage;
   CUcontext *cudaContext;
   CUmodule *cudaModule;
   int cuDevMajor, cuDevMinor;
