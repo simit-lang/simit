@@ -119,6 +119,7 @@ Func lower(Func func, bool print) {
     func = rewriteCallGraph(func, rewriteVarDecls);
     func = rewriteCallGraph(func, kernelRWAnalysis);
     func = rewriteCallGraph(func, fuseKernels);
+  }
 #endif
   return func;
 }

@@ -21,12 +21,14 @@ Function::Function(const ir::Func& func)
     string argName = arg.getName();
     arguments.push_back(argName);
     argumentTypes[argName] = arg.getType();
+    argumentIsResult[argName] = false;
   }
 
   for (const ir::Var& res : func.getResults()) {
     string resName = res.getName();
     arguments.push_back(resName);
     argumentTypes[resName] = res.getType();
+    argumentIsResult[resName] = true;
   }
 
   // Gather the Simit literal expressions and store them in an array in the
@@ -71,6 +73,10 @@ const std::vector<std::string>& Function::getArgs() const {
 
 const ir::Type& Function::getArgType(std::string arg) const {
   return argumentTypes.at(arg);
+}
+
+bool Function::isArgResult(std::string arg) const {
+  return argumentIsResult.at(arg);
 }
 
 bool Function::hasGlobal(std::string name) const {

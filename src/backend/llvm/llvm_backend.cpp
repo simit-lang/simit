@@ -82,7 +82,7 @@ LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
 LLVMBackend::~LLVMBackend() {}
 
 // TODO: Remove this function, once the old init system has been removed
-Func makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
+Func LLVMBackend::makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
   class MakeSystemTensorsGlobalRewriter : public ir::IRRewriter {
   public:
     MakeSystemTensorsGlobalRewriter() {}

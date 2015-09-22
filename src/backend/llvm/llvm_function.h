@@ -18,9 +18,11 @@ class ExecutionEngine;
 }
 
 namespace simit {
+
 namespace pe {
 class PathExpression;
 class PathIndex;
+class PathIndexBuilder;
 }
 namespace backend {
 class Actual;
@@ -47,11 +49,18 @@ class LLVMFunction : public backend::Function {
   virtual void print(std::ostream &os) const;
   virtual void printMachine(std::ostream &os) const;
 
- private:
+ protected:
+  /// Get the number of elements in the index domains.
+  size_t size(const ir::IndexDomain &dimension);
+
+  void initIndices(pe::PathIndexBuilder piBuilder,
+                   const ir::Environment& environment);
+
+  bool initialized;
+
   llvm::Function*                        llvmFunc;
   llvm::Module*                          module;
-  std::shared_ptr<llvm::EngineBuilder>   engineBuilder;
-  std::shared_ptr<llvm::ExecutionEngine> executionEngine;
+  ir::Storage storage;
 
   /// Function actual storage
   std::map<std::string, std::unique_ptr<Actual>> arguments;
@@ -60,28 +69,25 @@ class LLVMFunction : public backend::Function {
   /// Externs
   std::map<std::string, std::vector<void**>> externPtrs;
 
-  /// Temporaries
-  std::map<std::string, void**> temporaryPtrs;
-
   /// TensorIndices
   std::map<pe::PathExpression,
            std::pair<const uint32_t**,const uint32_t**>> tensorIndexPtrs;
   std::map<pe::PathExpression, pe::PathIndex>            pathIndices;
 
+ private:
+  std::shared_ptr<llvm::EngineBuilder>   engineBuilder;
+  std::shared_ptr<llvm::ExecutionEngine> executionEngine;
 
-  bool initialized;
+  /// Temporaries
+  std::map<std::string, void**> temporaryPtrs;
+
   FuncType deinit;
-
-  ir::Storage storage;
 
   FuncType createHarness(const std::string& name,
                          const llvm::SmallVector<llvm::Value*,8>& args);
 
   llvm::Function* getInitFunc() const;
   llvm::Function* getDeinitFunc() const;
-
-  /// Get the number of elements in the index domains.
-  size_t size(const ir::IndexDomain &dimension);
 };
 
 }}

@@ -9,6 +9,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Function.h"
 
+#include "backend/llvm/llvm_function.h"
 #include "backend/backend_function.h"
 #include "gpu_backend.h"
 #include "gpu_codegen.h"
@@ -17,7 +18,7 @@ namespace simit {
 namespace backend {
 class Actual;
 
-class GPUFunction : public simit::backend::Function {
+class GPUFunction : public LLVMFunction {
  public:
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module,
@@ -28,20 +29,16 @@ class GPUFunction : public simit::backend::Function {
   void print(std::ostream &os) const;
   void printMachine(std::ostream &os) const {}
 
+  virtual void bind(const std::string& name, simit::Set* set);
+  virtual void bind(const std::string& name, void* data);
+  virtual void bind(const std::string& name, const int* rowPtr,
+                    const int* colInd, void* data);
   virtual void mapArgs();
   virtual void unmapArgs(bool updated);
 
-  virtual void bind(const std::string& name, Set* set);
-  virtual void bind(const std::string& name, void* data);
-  virtual void bind(const std::string& name, const int* rowPtr,
-                    const int* colInd, void *data);
   virtual FuncType init();
-  virtual bool isInitialized();
 
  private:
-  // Find the size of a domain
-  int findShardSize(ir::IndexSet domain);
-
   // Allocate the given argument as a device buffer
   CUdeviceptr allocArg(const ir::Type& var);
   // Get argument data as a Literal
@@ -72,7 +69,7 @@ class GPUFunction : public simit::backend::Function {
   };
 
   // Copy argument memory into device and build an llvm value to point to it
-  llvm::Value *pushArg(std::string formal, Actual& actual);
+  llvm::Value *pushArg(std::string formal, Actual* actual);
   // Copy device buffer into host data block
   void pullArg(DeviceDataHandle* handle);
   // Free the device buffer
@@ -84,10 +81,7 @@ class GPUFunction : public simit::backend::Function {
   std::vector<DeviceDataHandle*> pushedBufs;
   std::map<std::string, std::vector<DeviceDataHandle*> > argBufMap;
   std::unique_ptr<ir::Func> simitFunc;
-  std::unique_ptr<llvm::Function> llvmFunc;
-  std::unique_ptr<llvm::Module> module;
   std::map<ir::Var, llvm::Value*> globalBufs;
-  const ir::Storage& storage;
   CUcontext *cudaContext;
   CUmodule *cudaModule;
   int cuDevMajor, cuDevMinor;

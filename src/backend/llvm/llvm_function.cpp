@@ -206,22 +206,7 @@ Function::FuncType LLVMFunction::init() {
   const Environment& environment = getEnvironment();
 
   // Initialize indices
-  for (const TensorIndex& tensorIndex : environment.getTensorIndices()) {
-    pe::PathExpression pexpr = tensorIndex.getPathExpression();
-    pe::PathIndex pidx = piBuilder.buildSegmented(pexpr, 0);
-    pathIndices.insert({pexpr, pidx});
-
-    pair<const uint32_t**,const uint32_t**> ptrPair = tensorIndexPtrs.at(pexpr);
-
-    if (isa<pe::SegmentedPathIndex>(pidx)) {
-      const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
-      *ptrPair.first = spidx->getCoordData();
-      *ptrPair.second = spidx->getSinkData();
-    }
-    else {
-      not_supported_yet << "doesn't know how to initialize this pathindex type";
-    }
-  }
+  initIndices(piBuilder, environment);
 
   // Initialize temporaries
   for (const Var& tmp : environment.getTemporaries()) {
@@ -373,6 +358,27 @@ void LLVMFunction::printMachine(std::ostream &os) const {
   llvm::ExecutionEngine *printee(engineBuilder->create(target));
   printee->getPointerToFunction(llvmFunc);
   target->Options.PrintMachineCode = false;
+}
+
+void LLVMFunction::initIndices(pe::PathIndexBuilder piBuilder,
+                               const Environment& environment) {
+  // Initialize indices
+  for (const TensorIndex& tensorIndex : environment.getTensorIndices()) {
+    pe::PathExpression pexpr = tensorIndex.getPathExpression();
+    pe::PathIndex pidx = piBuilder.buildSegmented(pexpr, 0);
+    pathIndices.insert({pexpr, pidx});
+
+    pair<const uint32_t**,const uint32_t**> ptrPair = tensorIndexPtrs.at(pexpr);
+
+    if (isa<pe::SegmentedPathIndex>(pidx)) {
+      const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
+      *ptrPair.first = spidx->getCoordData();
+      *ptrPair.second = spidx->getSinkData();
+    }
+    else {
+      not_supported_yet << "doesn't know how to initialize this pathindex type";
+    }
+  }
 }
 
 LLVMFunction::FuncType
