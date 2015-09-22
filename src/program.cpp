@@ -50,9 +50,14 @@ Program::Program() : content(new ProgramContent) {
 }
 
 Program::~Program() {
+  clear();
+}
+
+void Program::clear() {
   delete content->frontend;
   delete content->backend;
   delete content;
+  content = nullptr;
 }
 
 int Program::loadString(const string &programString) {

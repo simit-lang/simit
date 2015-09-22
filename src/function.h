@@ -34,6 +34,9 @@ public:
   /// be created using the backend::Backend::compile methods.
   Function(backend::Function* function);
 
+  /// Clear Function of data (makes it undefined).
+  void clear();
+
   /// Bind the set to the given argument.
   void bind(const std::string& name, simit::Set* set);
 

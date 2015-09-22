@@ -15,6 +15,10 @@ Function::Function() : Function(nullptr) {
 Function::Function(backend::Function* func) : impl(func), funcPtr(nullptr) {
 }
 
+void Function::clear() {
+  impl = nullptr;
+}
+
 void Function::bind(const std::string& name, simit::Set *set) {
 #ifdef SIMIT_ASSERTS
   uassert(defined()) << "undefined function";
