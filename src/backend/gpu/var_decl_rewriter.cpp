@@ -2,6 +2,8 @@
 #include "ir_transforms.h"
 #include "ir_rewriter.h"
 
+#include "gpu_ir.h"
+
 namespace simit {
 namespace ir {
 
