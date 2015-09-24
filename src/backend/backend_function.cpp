@@ -21,7 +21,15 @@ Function::Function(const ir::Func& func)
     string argName = arg.getName();
     arguments.push_back(argName);
     argumentTypes[argName] = arg.getType();
-    argumentIsResult[argName] = false;
+    // System-level arguments should be considered outputs
+    if (arg.getType().isSet() ||
+        (arg.getType().isTensor() &&
+         arg.getType().toTensor()->hasSystemDimensions())) {
+      argumentIsResult[argName] = true;
+    }
+    else {
+      argumentIsResult[argName] = false;
+    }
   }
 
   for (const ir::Var& res : func.getResults()) {

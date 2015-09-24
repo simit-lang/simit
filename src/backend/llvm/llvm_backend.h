@@ -18,6 +18,7 @@
 namespace llvm {
 class LLVMContext;
 class Module;
+class EngineBuilder;
 class ExecutionEngine;
 class ConstantFolder;
 template<bool> class IRBuilderDefaultInserter;
@@ -39,6 +40,8 @@ namespace backend {
 extern const std::string VAL_SUFFIX;
 extern const std::string PTR_SUFFIX;
 extern const std::string LEN_SUFFIX;
+
+std::shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module);
 
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMBackend : public BackendImpl, protected BackendVisitor<llvm::Value*> {

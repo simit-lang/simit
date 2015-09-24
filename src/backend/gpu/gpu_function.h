@@ -3,6 +3,7 @@
 
 #include <string>
 #include <map>
+#include <memory>
 #include <vector>
 #include "cuda.h"
 
@@ -22,6 +23,7 @@ class GPUFunction : public LLVMFunction {
  public:
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module,
+              std::shared_ptr<llvm::EngineBuilder> engineBuilder,
               std::map<ir::Var, llvm::Value*> globalBufs,
               const ir::Storage& storage);
   ~GPUFunction();

@@ -124,7 +124,10 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   mpm.run(*module);
 #endif
 
-  return new GPUFunction(irFunc, func, module, buffers, storage);
+  // Fake an EngineBuilder to allow interfacing with the LLVMFunction
+  // superclass.
+  std::shared_ptr<llvm::EngineBuilder> engineBuilder = createEngineBuilder(module);
+  return new GPUFunction(irFunc, func, module, engineBuilder, buffers, storage);
 }
 
 void GPUBackend::compile(const ir::Literal& op) {
@@ -556,7 +559,7 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
 
   // Stash the symtable
   util::ScopedMap<simit::ir::Var, llvm::Value*> oldSymtable = symtable;
-  symtable.clear();
+  symtable = util::ScopedMap<simit::ir::Var, llvm::Value*>();
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
@@ -1023,7 +1026,7 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
 
   // Stash the symtable
   util::ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
-  symtable.clear();
+  symtable = util::ScopedMap<simit::ir::Var, llvm::Value*>();
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
@@ -1090,7 +1093,7 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
 
   // Stash the symtable
   util::ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
-  symtable.clear();
+  symtable = util::ScopedMap<simit::ir::Var, llvm::Value*>();
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
@@ -1167,7 +1170,7 @@ void GPUBackend::emitFillBuf(llvm::Value *buffer,
 }
 
 llvm::Value* GPUBackend::makeGlobalTensor(ir::Var var) {
-  LLVMBackend::makeGlobalTensor(var);
+  llvm::Value *llvmGlobal = LLVMBackend::makeGlobalTensor(var);
 
   // Annotate the global as managed memory to allow us to write its
   // value from the CUDA setup
@@ -1175,7 +1178,7 @@ llvm::Value* GPUBackend::makeGlobalTensor(ir::Var var) {
   addNVVMAnnotation(global, "managed", llvmInt(1), module);
 
   // Replace the load in the symtable with an appropriately casted version
-  llvm::Value *llvmTmp = emitCastGlobalToGen(symtable.get(var));
+  llvm::Value *llvmTmp = emitCastGlobalToGen(llvmGlobal);
   symtable.insert(var, llvmTmp);
 
   return llvmTmp;

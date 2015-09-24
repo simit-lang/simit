@@ -37,9 +37,10 @@ size_t GPUFunction::DeviceDataHandle::total_allocations = 0;
 GPUFunction::GPUFunction(
     ir::Func simitFunc, llvm::Function *llvmFunc,
     llvm::Module *module,
+    std::shared_ptr<llvm::EngineBuilder> engineBuilder,
     std::map<ir::Var, llvm::Value*> globalBufs,
     const ir::Storage& storage)
-    : LLVMFunction(simitFunc, storage, llvmFunc, module, nullptr),
+    : LLVMFunction(simitFunc, storage, llvmFunc, module, engineBuilder),
       globalBufs(globalBufs), cudaModule(nullptr) {
   // CUDA runtime
   CUdevice device;

@@ -1,6 +1,9 @@
 #include "backend_visitor.h"
 
 #include "ir.h"
+#ifdef GPU
+#include "backend/gpu/gpu_ir.h"
+#endif
 
 using namespace simit::ir;
 
@@ -23,6 +26,12 @@ void BackendVisitorBase::visitError(std::string type, const void* op) {
 void BackendVisitorBase::compile(const ir::Kernel& kernel) {
   not_supported_yet;
 }
+
+#ifdef GPU
+void BackendVisitorBase::compile(const ir::GPUKernel& kernel) {
+  not_supported_yet;
+}
+#endif
 
 void BackendVisitorBase::compile(const ir::Block& op) {
   op.first.accept(this);

@@ -57,9 +57,6 @@ namespace backend {
 typedef llvm::IRBuilder<true, llvm::ConstantFolder,
                         llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
-// appease GCC
-shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module);
-
 const std::string VAL_SUFFIX(".val");
 const std::string PTR_SUFFIX(".ptr");
 const std::string LEN_SUFFIX(".len");
