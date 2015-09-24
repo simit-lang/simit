@@ -571,6 +571,8 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
       TensorIndex tensorIndex = getTensorIndexOfStatement(stmt, storage,
                                                           environment);
+      iassert(tensorIndex.getSinkArray().defined())
+          << "Empty tensor index returned from: " << stmt;
 
       Expr jRead = Load::make(tensorIndex.getSinkArray(), ij);
 
