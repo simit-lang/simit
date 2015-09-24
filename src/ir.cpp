@@ -170,7 +170,12 @@ void Literal::cast(Type type) {
 }
 
 double Literal::getFloatVal(int index) const {
-  return ((double*)data)[index];
+  if (ScalarType::singleFloat()) {
+    return ((float*)data)[index];
+  }
+  else {
+    return ((double*)data)[index];
+  }
 }
 
 Expr Literal::make(Type type) {

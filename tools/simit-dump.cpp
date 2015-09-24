@@ -39,6 +39,12 @@ int main(int argc, const char* argv[]) {
     return 3;
   }
 
+#ifdef F32
+  simit::init("llvm", sizeof(float));
+#else
+  simit::init("llvm", sizeof(double));
+#endif
+
   bool emitSimit = false;
   bool emitLLVM = false;
   bool emitASM = false;
