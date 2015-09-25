@@ -473,13 +473,39 @@ GPUFunction::init() {
       bufSize *= ttype->getBlockType().toTensor()->size();
       // Vectors have dense allocation
       if (ttype->order() == 1) {
-        bufSize *= size(ttype->getDimensions()[0]);
+        bufSize *= size(ttype->getOuterDimensions()[0]);
       }
       else if (ttype->order() == 2) {
-        const pe::PathExpression& pexpr =
-            env.getTensorIndex(bufVar).getPathExpression();
-        iassert(util::contains(pathIndices, pexpr));
-        bufSize *= pathIndices.at(pexpr).numNeighbors();
+        const ir::TensorStorage& ts = storage.getStorage(bufVar);
+        switch (ts.getKind()) {
+          case ir::TensorStorage::Kind::Dense: {
+            // Only multiply size over outer dimensions, because we already
+            // included block size
+            for (auto &dim : ttype->getOuterDimensions()) {
+              bufSize *= size(dim);
+            }
+            break;
+          }
+          case ir::TensorStorage::Kind::Indexed: {
+            iassert(env.hasTensorIndex(bufVar))
+                << "Indexed tensor does not have "
+                << "tensor index in environment: " << bufVar;
+            const pe::PathExpression& pexpr =
+                env.getTensorIndex(bufVar).getPathExpression();
+            iassert(util::contains(pathIndices, pexpr));
+            bufSize *= pathIndices.at(pexpr).numNeighbors();
+            break;
+          }
+          case ir::TensorStorage::Kind::Diagonal: {
+            // Just grab first outer dimension
+            bufSize *= size(ttype->getOuterDimensions()[0]);
+            break;
+          }
+          default: {
+            ierror << "Can't compute matrix size for unknown TensorStorage: "
+                   << bufVar;
+          }
+        }
       }
       else {
         ierror << "Higher-order tensor allocation not supported";
