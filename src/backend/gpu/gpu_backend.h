@@ -115,6 +115,8 @@ protected:
                         llvm::Value *ySize,
                         llvm::Value *zSize);
 
+  virtual void emitGlobals(const ir::Environment& env);
+
   virtual void emitPrintf(std::string format,
                           std::vector<llvm::Value*> args={});
 

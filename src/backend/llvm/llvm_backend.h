@@ -140,11 +140,11 @@ protected:
                                     bool doesNotThrow=true,
                                     bool scalarsByValue=true);
 
+  void emitAssign(ir::Var var, const ir::Expr& value);
+
   /// Produce LLVM globals for everything in `env` and store in `globals`
   /// and in `symtable` appropriately.
-  void emitGlobals(const ir::Environment& env);
-
-  void emitAssign(ir::Var var, const ir::Expr& value);
+  virtual void emitGlobals(const ir::Environment& env);
 
   virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 

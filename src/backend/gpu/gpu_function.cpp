@@ -34,6 +34,30 @@ namespace backend {
 
 size_t GPUFunction::DeviceDataHandle::total_allocations = 0;
 
+static void *getGlobalHostPtr(CUmodule& cudaModule, std::string name) {
+  CUdeviceptr globalPtr;
+  size_t globalPtrSize;
+  checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
+                                    cudaModule, name.data()));
+  iassert(globalPtrSize == sizeof(void*))
+      << "Global pointers should all be pointer-sized. Got: "
+      << globalPtrSize << " bytes";
+
+  // Checks for appropriate memory type
+  unsigned int attrVal;
+  checkCudaErrors(cuPointerGetAttribute(
+      &attrVal, CU_POINTER_ATTRIBUTE_IS_MANAGED, globalPtr));
+  iassert(attrVal == 1);
+  checkCudaErrors(cuPointerGetAttribute(
+      &attrVal, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, globalPtr));
+  iassert(attrVal == CU_MEMORYTYPE_DEVICE);
+  
+  void *globalPtrHost;
+  checkCudaErrors(cuPointerGetAttribute(
+      &globalPtrHost, CU_POINTER_ATTRIBUTE_HOST_POINTER, globalPtr));
+  return globalPtrHost;
+}
+
 GPUFunction::GPUFunction(
     ir::Func simitFunc, llvm::Function *llvmFunc,
     llvm::Module *module,
@@ -450,23 +474,6 @@ GPUFunction::init() {
     const ir::Var &bufVar = buf.first;
     llvm::Value *bufVal = buf.second;
 
-    CUdeviceptr globalPtr;
-    size_t globalPtrSize;
-    checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
-                                      *cudaModule, bufVal->getName().data()));
-    iassert(globalPtrSize == sizeof(void*))
-        << "Global pointers should all be pointer-sized. Got: "
-        << globalPtrSize << " bytes";
-
-    // Checks for appropriate memory type
-    unsigned int attrVal;
-    checkCudaErrors(cuPointerGetAttribute(
-        &attrVal, CU_POINTER_ATTRIBUTE_IS_MANAGED, globalPtr));
-    iassert(attrVal == 1);
-    checkCudaErrors(cuPointerGetAttribute(
-        &attrVal, CU_POINTER_ATTRIBUTE_MEMORY_TYPE, globalPtr));
-    iassert(attrVal == CU_MEMORYTYPE_DEVICE);
-
     const ir::TensorType* ttype = bufVar.getType().toTensor();
     size_t bufSize = ttype->componentType.bytes();
     if (!isScalar(bufVar.getType())) {
@@ -518,10 +525,43 @@ GPUFunction::init() {
     pushedBufs.push_back(new DeviceDataHandle(nullptr, devBuffer, bufSize));
     void *devBufferPtr = reinterpret_cast<void*>(*devBuffer);
 
-    void *globalPtrHost;
-    checkCudaErrors(cuPointerGetAttribute(
-        &globalPtrHost, CU_POINTER_ATTRIBUTE_HOST_POINTER, globalPtr));
+    void *globalPtrHost = getGlobalHostPtr(*cudaModule, bufVar.getName());
     *((void**)globalPtrHost) = devBufferPtr;
+  }
+
+  // Initialize tensor index data
+  for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
+    const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
+    const uint32_t** coordDataPtr = tensorIndexPtrs[pexpr].first;
+    const uint32_t** sinkDataPtr = tensorIndexPtrs[pexpr].second;
+    CUdeviceptr *devCoordBuffer = new CUdeviceptr();
+    CUdeviceptr *devSinkBuffer = new CUdeviceptr();
+
+    // Push data to GPU
+    const pe::PathIndex& pidx = pathIndices[pexpr];
+    if (isa<pe::SegmentedPathIndex>(pidx)) {
+      const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
+      size_t coordSize = spidx->numElements()*sizeof(uint32_t);
+      size_t sinkSize = spidx->numNeighbors()*sizeof(uint32_t);
+      checkCudaErrors(cuMemAlloc(devCoordBuffer, coordSize));
+      checkCudaErrors(cuMemcpyHtoD(
+          *devCoordBuffer, *coordDataPtr, coordSize));
+      
+      checkCudaErrors(cuMemAlloc(devSinkBuffer, sinkSize));
+      checkCudaErrors(cuMemcpyHtoD(
+          *devSinkBuffer, *sinkDataPtr, sinkSize));
+    }
+    else {
+      not_supported_yet;
+    }
+
+    const ir::Var& coords = tensorIndex.getCoordArray();
+    void *coordsPtrHost = getGlobalHostPtr(*cudaModule, coords.getName());
+    *((void**)coordsPtrHost) = devCoordBuffer;
+
+    const ir::Var& sinks = tensorIndex.getSinkArray();
+    void *sinksPtrHost = getGlobalHostPtr(*cudaModule, sinks.getName());
+    *((void**)sinksPtrHost) = devSinkBuffer;
   }
 
   // Get reference to CUDA function

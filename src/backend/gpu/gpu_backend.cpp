@@ -889,6 +889,28 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
   emitDeviceSync();
 }
 
+void GPUBackend::emitGlobals(const ir::Environment& env) {
+  LLVMBackend::emitGlobals(env);
+
+  // We must add the managed annotation to all globals
+  for (const ir::Var& ext : env.getExternVars()) {
+    llvm::Value *global = symtable.get(ext);
+    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+  }
+  for (const ir::Var& tmp : env.getTemporaries()) {
+    llvm::Value *global = symtable.get(tmp);
+    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+  }
+  for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
+    const ir::Var& coordArray = tensorIndex.getCoordArray();
+    llvm::Value *global = symtable.get(coordArray);
+    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+    const ir::Var& sinkArray = tensorIndex.getSinkArray();
+    global = symtable.get(sinkArray);
+    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+  }
+}
+
 void GPUBackend::emitPrintf(std::string format,
                             std::vector<llvm::Value*> args) {
   format = "(%d) " + format; // add thread ID
