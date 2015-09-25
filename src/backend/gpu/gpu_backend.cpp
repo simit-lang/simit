@@ -22,6 +22,7 @@
 #include "backend/llvm/llvm_defines.h"
 #include "tensor_index.h"
 #include "types.h"
+#include "util/collections.h"
 
 #ifndef NASSERT
 #define ASSERT(cond) \
@@ -125,6 +126,11 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   
   mpm.run(*module);
 #endif
+
+  // Add temporaries to buffers
+  for (const ir::Var& tmp : env.getTemporaries()) {
+    buffers[tmp] = symtable.get(tmp);
+  }
 
   // Fake an EngineBuilder to allow interfacing with the LLVMFunction
   // superclass.

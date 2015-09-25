@@ -53,7 +53,7 @@ class LLVMFunction : public backend::Function {
   /// Get the number of elements in the index domains.
   size_t size(const ir::IndexDomain &dimension);
 
-  void initIndices(pe::PathIndexBuilder piBuilder,
+  void initIndices(pe::PathIndexBuilder& piBuilder,
                    const ir::Environment& environment);
 
   bool initialized;

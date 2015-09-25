@@ -557,11 +557,11 @@ GPUFunction::init() {
 
     const ir::Var& coords = tensorIndex.getCoordArray();
     void *coordsPtrHost = getGlobalHostPtr(*cudaModule, coords.getName());
-    *((void**)coordsPtrHost) = devCoordBuffer;
+    *((void**)coordsPtrHost) = reinterpret_cast<void*>(*devCoordBuffer);
 
     const ir::Var& sinks = tensorIndex.getSinkArray();
     void *sinksPtrHost = getGlobalHostPtr(*cudaModule, sinks.getName());
-    *((void**)sinksPtrHost) = devSinkBuffer;
+    *((void**)sinksPtrHost) = reinterpret_cast<void*>(*devSinkBuffer);
   }
 
   // Get reference to CUDA function

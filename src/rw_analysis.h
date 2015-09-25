@@ -67,9 +67,23 @@ public:
       iassert(isa<VarExpr>(fieldRead->elementOrSet));
       maybeWrite(to<VarExpr>(fieldRead->elementOrSet)->var);
     }
-    else {
-      not_supported_yet;
+    // else {
+    //   not_supported_yet;
+    // }
+    IRVisitor::visit(op);
+  }
+  void visit(const Load *op) {
+    if (isa<VarExpr>(op->buffer)) {
+      maybeRead(to<VarExpr>(op->buffer)->var);
     }
+    else if (isa<FieldRead>(op->buffer)) {
+      const FieldRead* fieldRead = to<FieldRead>(op->buffer);
+      iassert(isa<VarExpr>(fieldRead->elementOrSet));
+      maybeWrite(to<VarExpr>(fieldRead->elementOrSet)->var);
+    }
+    // else {
+    //   not_supported_yet;
+    // }
     IRVisitor::visit(op);
   }
   void visit(const FieldWrite *op) {

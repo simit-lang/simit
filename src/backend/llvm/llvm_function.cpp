@@ -360,7 +360,7 @@ void LLVMFunction::printMachine(std::ostream &os) const {
   target->Options.PrintMachineCode = false;
 }
 
-void LLVMFunction::initIndices(pe::PathIndexBuilder piBuilder,
+void LLVMFunction::initIndices(pe::PathIndexBuilder& piBuilder,
                                const Environment& environment) {
   // Initialize indices
   for (const TensorIndex& tensorIndex : environment.getTensorIndices()) {
