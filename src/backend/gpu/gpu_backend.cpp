@@ -9,6 +9,7 @@
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Scalar.h"
 
+#include <algorithm>
 #include <fstream>
 
 #include "error.h"
@@ -19,6 +20,7 @@
 #include "ir_queries.h"
 #include "backend/llvm/llvm_codegen.h"
 #include "backend/llvm/llvm_defines.h"
+#include "tensor_index.h"
 #include "types.h"
 
 #ifndef NASSERT
@@ -224,7 +226,8 @@ void GPUBackend::compile(const ir::Call& op) {
   for (auto a: op.actuals) {
     //FIX: remove once solve() is no longer needed
     //iassert(isScalar(a.type()));
-    argTypes.push_back(llvmType(a.type().toTensor()->componentType));
+    ir::ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->componentType
+                                               : a.type().toArray()->elementType;
     args.push_back(compile(a));
   }
 
@@ -558,22 +561,34 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
   GPUSharding kernelSharding = op.sharding;
 
   // Stash the symtable
-  util::ScopedMap<simit::ir::Var, llvm::Value*> oldSymtable = symtable;
-  symtable = util::ScopedMap<simit::ir::Var, llvm::Value*>();
+  symtable.scope();
+
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
-  // Pass all globals reads as arguments
+  // Pass all globals reads as arguments. Exclude them from the global list in
+  // the scope of the GPUKernel so they are resolved from the symtable properly.
+  std::set<ir::Var> excludeGlobals;
   std::vector<ir::Var> kernelArgs;
   for (auto var : op.reads) {
     kernelArgs.push_back(var);
+    excludeGlobals.insert(var);
   }
   std::vector<ir::Var> kernelResults;
   for (auto var : op.writes) {
     // Skip repeated arguments
     if (op.reads.find(var) != op.reads.end()) continue;
     kernelResults.push_back(var);
+    excludeGlobals.insert(var);
   }
+
+  // HACK: Stash argument vars from the globals
+  std::set<ir::Var> oldGlobals = globals;
+  globals.clear();
+  std::set_difference(oldGlobals.begin(), oldGlobals.end(),
+                      excludeGlobals.begin(), excludeGlobals.end(),
+                      std::inserter(globals, globals.begin()));
+
   // Push domain variables into kernel args
   if (kernelSharding.xSharded) {
     iassert(kernelSharding.xDomain.getKind() == ir::IndexSet::Set);
@@ -644,8 +659,11 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
   // NVVM kernel should always return void
   builder->CreateRetVoid();
 
+  // Unstash globals
+  globals = oldGlobals;
+
   // Unstash symtable
-  symtable = oldSymtable;
+  symtable.unscope();
 
   // Emit a dynamic kernel launch
   builder->SetInsertPoint(prevBB);
