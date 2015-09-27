@@ -13,7 +13,9 @@ namespace ir {
 class MapFunctionRewriter : protected IRRewriter {
 public:
   virtual ~MapFunctionRewriter() {}
-  Stmt inlineMapFunc(const Map *map, Var targetLoopVar);
+
+  Stmt inlineMapFunc(const Map *map, Var targetLoopVar,
+                     Var endpoints=Var(), Var locs=Var());
 
 protected:
   std::map<Var,Var> resultToMapVar;
@@ -28,22 +30,25 @@ protected:
 
   ReductionOperator reduction;
 
+  Var endpoints;
+  Var locs;
+
   /// Check if the given variable is a result variable
   bool isResult(Var var);
   
   using IRRewriter::visit;
 
-  /// Replace element field reads with set field reads
-  virtual void visit(const FieldRead *op);
+    /// Replace element field reads with set field reads
+  void visit(const FieldRead *op);
   
   /// Replace element field writes with set field writes
-  virtual void visit(const FieldWrite *op);
+  void visit(const FieldWrite *op);
 
   /// Replace neighbor tuple reads with reads from target endpoints
-  virtual void visit(const TupleRead *op);
+  void visit(const TupleRead *op);
 
   /// Replace function formal results with map actual results
-  virtual void visit(const VarExpr *op);
+  void visit(const VarExpr *op);
 };
 
 /// Inlines the map returning a loop, using the given rewriter.
