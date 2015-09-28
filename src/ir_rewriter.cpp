@@ -350,7 +350,7 @@ void IRRewriter::visit(const Print *op) {
   if (expr == op->expr) {
     stmt = op;
   } else {
-    stmt = Print::make(expr);
+    stmt = Print::make(expr, op->format);
   }
 }
 

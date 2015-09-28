@@ -373,7 +373,10 @@ struct Block : public StmtNode<Block> {
 
 struct Print : public StmtNode<Print> {
   Expr expr;
-  static Stmt make(Expr expr);
+  std::string str;
+  std::string format;
+  static Stmt make(Expr expr, std::string format="");
+  static Stmt make(std::string str);
 };
 
 /// A comment, that can optionally be applied to a statement with footer and

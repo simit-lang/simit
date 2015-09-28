@@ -1136,132 +1136,26 @@ void LLVMBackend::compile(const ir::While& whileLoop) {
 }
 
 void LLVMBackend::compile(const ir::Print& print) {
+  std::vector<llvm::Value*> args;
+  
+  if (!print.expr.defined()) {
+    emitPrintf(print.str, args);
+    return;
+  }
+
   llvm::Value *result = compile(print.expr);
   Type type = print.expr.type();
 
-  switch (type.kind()) {
-  case Type::Kind::Tensor: {
-    const TensorType *tensor = type.toTensor();
-    vector<IndexDomain> dimensions = tensor->getDimensions();
+  iassert(isScalar(type)) << "Backend can only compile scalars";
 
-    ScalarType scalarType = tensor->componentType;
-    size_t order = tensor->order();
-    std::string format;
-    std::vector<llvm::Value*> args;
-    std::string specifier = (scalarType.kind == ScalarType::Float? "%f" : "%d");
+  const TensorType *tensor = type.toTensor();
+  ScalarType scalarType = tensor->componentType;
+  std::string specifier = std::string("%") + print.format +
+                          (scalarType.kind == ScalarType::Float? "g" : "d");
 
-    if (order == 0) {
-      iassert(dimensions.size() == 0);
-      format = specifier + "\n";
-      args.push_back(result);
-    } else  {
-      for (const IndexDomain &id : dimensions) {
-        for (const IndexSet &is : id.getIndexSets()) {
-          if (is.getKind() == IndexSet::Kind::Set) {
-
-            llvm::Function *llvmFunc = builder->GetInsertBlock()->getParent();
-            llvm::BasicBlock *entryBlock = builder->GetInsertBlock();
-            llvm::Value *rangeStart = llvmInt(0);
-            llvm::Value *rangeLen =
-                emitComputeLen(tensor, TensorStorage::Kind::Dense);
-            llvm::Value *rangeEnd = builder->CreateSub(rangeLen, llvmInt(1));
-
-            llvm::BasicBlock *loopBodyStart =
-              llvm::BasicBlock::Create(LLVM_CTX, "", llvmFunc);
-
-            builder->CreateBr(loopBodyStart);
-            builder->SetInsertPoint(loopBodyStart);
-
-            llvm::PHINode *i = builder->CreatePHI(LLVM_INT32, 2);
-            i->addIncoming(rangeStart, entryBlock);
-
-            llvm::Value *entry = loadFromArray(result, i);
-            emitPrintf(specifier + " ", {entry});
-
-            llvm::BasicBlock *loopBodyEnd = builder->GetInsertBlock();
-            llvm::Value *iNext = builder->CreateAdd(i, llvmInt(1));
-            i->addIncoming(iNext, loopBodyEnd);
-
-            llvm::Value *exitCond = builder->CreateICmpSLT(iNext, rangeEnd);
-            llvm::BasicBlock *loopEnd =
-                llvm::BasicBlock::Create(LLVM_CTX, "", llvmFunc);
-            builder->CreateCondBr(exitCond, loopBodyStart, loopEnd);
-            builder->SetInsertPoint(loopEnd);
-
-            emitPrintf(specifier + "\n", {loadFromArray(result, iNext)});
-            return;
-          }
-        }
-      }
-
-      if (order == 1) {
-        iassert(dimensions.size() == 1);
-        std::string delim = (tensor->isColumnVector ? "\n" : " ");
-        size_t size = tensor->size();
-        for (size_t i = 0; i < size; i++) {
-          llvm::Value *index = llvmInt(i);
-          llvm::Value *element = loadFromArray(result, index);
-          format += specifier + delim;
-          args.push_back(element);
-        }
-        format.back() = '\n';
-      } else {
-        iassert(dimensions.size() >= 2);
-        size_t size = tensor->size();
-        if (size % dimensions.back().getSize()) {
-          not_supported_yet << "\nNot a rectangular tensor (total entries not a"
-                            << "multiple of entries per row)";
-        }
-
-        for (int i = 0; i < dimensions.back().getSize(); i++) {
-          format += specifier + " ";
-        }
-        format.back() = '\n';
-
-        size_t numlines = size / dimensions.back().getSize();
-        std::vector<std::string> formatLines(numlines, format);
-
-        size_t stride = 1;
-        for (size_t i = dimensions.size() - 2; i > 0; i--) {
-          stride *= dimensions[i].getSize();
-          for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
-            formatLines[j].push_back('\n');
-          }
-        }
-        stride *= dimensions[0].getSize();
-        for (size_t j = stride - 1; j < formatLines.size(); j += stride) {
-          formatLines[j].push_back('\n');
-        }
-        formatLines.back().resize(formatLines.back().find_last_not_of("\n") + 2);
-
-        size_t charCount = 1;
-        for (string &str : formatLines) {
-          charCount += str.length();
-        }
-        format.clear();
-        format.reserve(charCount);
-        for (string &str : formatLines) {
-          format += str;
-        }
-
-        for (size_t i = 0; i < size; i++) {
-          llvm::Value *index = llvmInt(i);
-          llvm::Value *element = loadFromArray(result, index);
-          args.push_back(element);
-        }
-        format.back() = '\n';
-      }
-    }
-    emitPrintf(format, args);
-  }
-    return;
-  case Type::Kind::Element:
-  case Type::Kind::Set:
-  case Type::Kind::Tuple:
-    not_supported_yet;
-  default:
-    unreachable << "Unknown Type";
-  }
+  std::string format = specifier;
+  args.push_back(result);
+  emitPrintf(format, args);
 }
 
 

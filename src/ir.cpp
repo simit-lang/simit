@@ -698,9 +698,16 @@ Stmt Block::make(std::vector<Stmt> stmts) {
 }
 
 // struct Print
-Stmt Print::make(Expr expr) {
+Stmt Print::make(Expr expr, std::string format) {
   Print *node = new Print;
   node->expr = expr;
+  node->format = format;
+  return node;
+}
+
+Stmt Print::make(std::string str) {
+  Print *node = new Print;
+  node->str = str;
   return node;
 }
 
