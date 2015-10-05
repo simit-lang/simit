@@ -274,7 +274,11 @@ void IRRewriter::visit(const IfThenElse *op) {
     stmt = op;
   }
   else {
-    stmt = IfThenElse::make(condition, thenBody, elseBody);
+    if (elseBody.defined()) {
+      stmt = IfThenElse::make(condition, thenBody, elseBody);
+    } else {
+      stmt = IfThenElse::make(condition, thenBody);
+    }
   }
 }
 
@@ -346,11 +350,15 @@ void IRRewriter::visit(const Block *op) {
 }
 
 void IRRewriter::visit(const Print *op) {
-  Expr expr = rewrite(op->expr);
-  if (expr == op->expr) {
-    stmt = op;
+  if (op-expr.defined()) {
+    Expr expr = rewrite(op->expr);
+    if (expr == op->expr) {
+      stmt = op;
+    } else {
+      stmt = Print::make(expr, op->format);
+    }
   } else {
-    stmt = Print::make(expr, op->format);
+    stmt = op;
   }
 }
 

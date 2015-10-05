@@ -31,7 +31,7 @@ private:
   const Stmt printSpace = Print::make(" ");
   const Stmt printNewline = Print::make("\n");
   const Stmt printEqual = Print::make(" = ");
-  const Stmt printBlank = Print::make(std::string(10, '-'));
+  const Stmt printBlank = Print::make(std::string(12, '-'));
 
   Stmt printIndent(unsigned int indentLevel) {
     return (indentLevel == 0) ? Pass::make() : 
@@ -142,7 +142,7 @@ private:
               to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
               Length::make(dimensions[order - 1]), 
               Block::make({maybePrintNewline, printIndent(indentLevel),
-                           Print::make(readElement, "10.5")})); 
+                           Print::make(readElement, "12.5")})); 
             printTensorStmt = Block::make(
               AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
               printTensorStmt);
@@ -159,7 +159,7 @@ private:
               to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
               Length::make(dimensions[order - 1]), 
               Block::make({maybePrintIndent, 
-                           Print::make(readElement, "10.5"), printSpace})); 
+                           Print::make(readElement, "12.5"), printSpace})); 
             if (order >= 2) {
               printSmallTensor = ForRange::make(
                 to<VarExpr>(tensorReadIndices[order - 2])->var, 
@@ -193,7 +193,7 @@ private:
             }
 
             Expr isSmallTensor = Le::make(Length::make(dimensions[order - 1]),
-                                          Literal::make(8));
+                                          Literal::make(7));
             printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
                                                printLargeTensor);
           }
@@ -276,7 +276,7 @@ private:
             printBlankElement);
           Stmt printSmallTensor = Block::make({tiVar.initSinkVar(), printBlanks,
                                                incColumnVar, 
-                                               Print::make(readElement, "10.5"), 
+                                               Print::make(readElement, "12.5"), 
                                                printSpace});
           printSmallTensor = ForRange::make(tiVar.getCoordVar(), 
                                             tiVar.loadCoord(), 
@@ -293,7 +293,7 @@ private:
             printSmallTensor);
 
           Expr isSmallTensor = Le::make(Length::make(dimensions[order - 1]),
-                                        Literal::make(8));
+                                        Literal::make(7));
           printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
                                              printLargeTensor);
         } else {
@@ -356,7 +356,7 @@ private:
           Stmt printSmallTensor = Block::make({maybePrintNewline,
                                                printIndent(indentLevel),
                                                printStartBlanks, 
-                                               Print::make(readElement, "10.5"),
+                                               Print::make(readElement, "12.5"),
                                                printSpace, printEndBlanks});
           printSmallTensor = ForRange::make(tensorReadIndex, 
                                             Literal::make(0),
@@ -367,7 +367,7 @@ private:
             printSmallTensor);
 
           Expr isSmallTensor = Le::make(Length::make(dimensions[1]),
-                                        Literal::make(8));
+                                        Literal::make(7));
           printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
                                              printLargeTensor);
         } else {

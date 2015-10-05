@@ -3,6 +3,7 @@
 #include <string>
 
 #include "ir.h"
+#include "ir_builder.h"
 #include "ir_rewriter.h"
 #include "ir_transforms.h"
 #include "util/name_generator.h"
@@ -71,6 +72,28 @@ class InsertTemporaries : public IRRewriter {
 
   using IRRewriter::visit;
 
+#if 0
+  Expr multiplyByOne(Expr tensor) {
+    std::vector<IndexVar> indexVars;
+    std::vector<IndexVar> scalarIndexVars;
+    IndexVarFactory factory;
+    
+    const TensorType *tensorType = tensor.type().toTensor();
+    std::vector<IndexDomain> dimensions = tensorType->getDimensions();
+    for (unsigned int i=0; i < tensorType->order(); ++i) {
+      IndexDomain domain = dimensions[i];
+      indexVars.push_back(factory.createIndexVar(domain));
+    }
+  
+    
+    Expr l = IndexedTensor::make(Literal::make(1.0), scalarIndexVars);
+    Expr r = IndexedTensor::make(tensor, indexVars);
+    Expr val = Mul::make(l, r);
+    
+    return IndexExpr::make(indexVars, val);
+  }
+#endif
+
   void visit(const FieldWrite *op) {
     Expr elemOrSet = op->elementOrSet;
     std::string fieldName = op->fieldName;
@@ -100,10 +123,16 @@ class InsertTemporaries : public IRRewriter {
   }
 
   void visit(const Print *op) {
+    if (!op->expr.defined()) {
+      stmt = op;
+      return;
+    }
+
     std::stringstream oss;
+    std::string exprLabel;
+
     oss << op->expr;
-   
-    std::string exprLabel = oss.str() + " = \n";
+    exprLabel = oss.str() + " = \n";
 
     if (isa<VarExpr>(op->expr)) {
       stmt = Block::make(Print::make(exprLabel), Print::make(op->expr));
