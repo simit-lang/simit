@@ -29,25 +29,18 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   IndexDomain workspaceDomain = type->getDimensions()[1]; // Row domain
   IndexSet outerRowSet = workspaceDomain.getIndexSets()[0];
   // IndexSet outerColSet(1);
-  std::cout << "outerRowSet: " << outerRowSet << std::endl;
   vector<IndexDomain> workspaceDomains =
     targetBlockType.toTensor()->getDimensions();
   if (workspaceDomains.size() >= 2) {
-    //workspaceDomains[0] = IndexDomain(outerColSet)*workspaceDomains[0];
     workspaceDomains[1] = IndexDomain(outerRowSet)*workspaceDomains[1];
-    std::cout << "Expanded row domain: " << workspaceDomains[1] << std::endl;
   }
   else {
     workspaceDomains = {workspaceDomain};
   }
-  std::cout << "workspaceDomains: (" << workspaceDomains.size() << ")" << std::endl;
-  for (auto id : workspaceDomains) {
-    std::cout << id << std::endl;
-  }
-  std::cout << "end workspaceDomains: " << std::endl;
+
   ScalarType tensorCType = type->componentType;
   Type workspaceType = TensorType::make(tensorCType, workspaceDomains);
-  std::cout << "Build workspace type: " << workspaceType << std::endl;
+
   workspace = Var("workspace", workspaceType);
   env->addTemporary(workspace);
   storage->add(workspace, TensorStorage::Kind::Dense);
