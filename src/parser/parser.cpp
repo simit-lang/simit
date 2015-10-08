@@ -133,7 +133,7 @@
                                              ttype->getDimensions(),
                                              !ttype->isColumnVector);
 
-    const_cast<ExprNodeBase*>(to<ExprNodeBase>(vec))->type = transposedVector;
+    const_cast<ExprNode*>(to<ExprNode>(vec))->type = transposedVector;
   }
 
   bool compare(const Type &l, const Type &r, ProgramContext *ctx) {
