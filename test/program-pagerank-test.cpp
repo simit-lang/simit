@@ -42,7 +42,15 @@ TEST(Program, pagerank) {
 
   func.bind("pages", &pages);
   func.bind("links", &links);
-  func.runSafe();
+
+  func.init();
+  func.unmapArgs();
+
+  for (size_t i=0; i < 10; ++i) {
+    func.run();
+  }
+
+  func.mapArgs();
 
   SIMIT_ASSERT_FLOAT_EQ(0.341250, pr.get(A));
   SIMIT_ASSERT_FLOAT_EQ(0.150000, pr.get(B));
