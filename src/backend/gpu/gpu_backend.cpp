@@ -10,6 +10,12 @@
 #include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
+#include "llvm/Analysis/Verifier.h"
+#else
+#include "llvm/IR/Verifier.h"
+#endif
+
 #include <algorithm>
 #include <fstream>
 
@@ -82,7 +88,7 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
     // Emit function
     symtable.scope(); // put function arguments in new scope
     func = emitEmptyFunction(f.getName(), f.getArguments(), f.getResults(),
-                             false, false);
+                             !inKernel, false);
 
     // Add constants to symbol table
     for (auto &global : env.getConstants()) {
@@ -95,6 +101,9 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
     symtable.unscope();
   }
   iassert(func);
+
+  iassert(!llvm::verifyModule(*module))
+      << "LLVM module does not pass verification";
 
 #ifndef SIMIT_DEBUG
   // Run LLVM optimization passes on the function
