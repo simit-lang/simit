@@ -61,7 +61,7 @@ bool operator==(const GPUSharding& sharding1, const GPUSharding& sharding2);
 
 namespace ir {
 
-struct GPUKernel : public StmtNode<GPUKernel> {
+struct GPUKernel : public StmtNode {
   Stmt body;
   backend::GPUSharding sharding;
   std::set<Var> reads;
@@ -77,6 +77,8 @@ struct GPUKernel : public StmtNode<GPUKernel> {
     node->writes = writes;
     return node;
   }
+
+  void accept(IRVisitorStrict *v) const {v->visit((const GPUKernel*)this);}
 };
 
 }}
