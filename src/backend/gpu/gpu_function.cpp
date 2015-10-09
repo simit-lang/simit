@@ -541,7 +541,7 @@ GPUFunction::init() {
     const pe::PathIndex& pidx = pathIndices[pexpr];
     if (isa<pe::SegmentedPathIndex>(pidx)) {
       const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
-      size_t coordSize = spidx->numElements()*sizeof(uint32_t);
+      size_t coordSize = (spidx->numElements()+1)*sizeof(uint32_t);
       size_t sinkSize = spidx->numNeighbors()*sizeof(uint32_t);
       checkCudaErrors(cuMemAlloc(devCoordBuffer, coordSize));
       checkCudaErrors(cuMemcpyHtoD(

@@ -403,7 +403,7 @@ void GPUBackend::compile(const ir::AssignStmt& op) {
            (ir::to<ir::Literal>(op.value)->getFloatVal(0) == 0.0 ||
             ((int*)ir::to<ir::Literal>(op.value))[0] == 0) &&
            !inKernel) {
-    llvm::Value *varPtr = symtable.get(op.var);
+    llvm::Value *varPtr = compile(op.var);
     llvm::Value *len = emitComputeLen(varType, storage.getStorage(op.var));
     emitShardedMemSet(op.var.getType(), varPtr, len);
   }
@@ -685,11 +685,11 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
   builder->SetInsertPoint(prevBB);
   std::vector<llvm::Value*> args;
   for (auto &irArg : kernelArgs) {
-    args.push_back(symtable.get(irArg));
+    args.push_back(compile(irArg));
   }
   for (auto &irRes : kernelResults) {
     // TODO(gkanwar): Figure out inouts
-    args.push_back(symtable.get(irRes));
+    args.push_back(compile(irRes));
   }
   emitKernelLaunch(kernel, args, kernelSharding);
 }

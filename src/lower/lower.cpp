@@ -75,6 +75,7 @@ Func lower(Func func, bool print) {
   // Rewrite system assignments
   if (kBackend == "gpu") {
     func = rewriteCallGraph(func, rewriteSystemAssigns);
+    printCallGraph("Rewrite System Assigns (GPU)", func, print);
   }
 #endif
 
