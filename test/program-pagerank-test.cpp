@@ -45,11 +45,7 @@ TEST(Program, pagerank) {
 
   func.init();
   func.unmapArgs();
-
-  for (size_t i=0; i < 10; ++i) {
-    func.run();
-  }
-
+  func.run();
   func.mapArgs();
 
   SIMIT_EXPECT_FLOAT_EQ(0.341250, pr.get(A));
