@@ -397,7 +397,10 @@ struct Block : public StmtNode {
 
 struct Print : public StmtNode {
   Expr expr;
-  static Stmt make(Expr expr);
+  std::string str;
+  std::string format;
+  static Stmt make(Expr expr, std::string format="");
+  static Stmt make(std::string str);
   void accept(IRVisitorStrict *v) const {v->visit((const Print*)this);}
 };
 

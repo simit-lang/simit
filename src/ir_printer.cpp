@@ -3,6 +3,8 @@
 #include "ir.h"
 #include "util/util.h"
 
+#include <regex>
+
 #ifdef GPU
 #include "backend/gpu/gpu_ir.h"
 #endif
@@ -423,7 +425,28 @@ void IRPrinter::visit(const Block *op) {
 void IRPrinter::visit(const Print *op) {
   indent();
   os << "print ";
-  print(op->expr);
+  if (op->expr.defined()) {
+    if (op->format != "") {
+      os << "(";
+      print(op->expr);
+      os << ", \"" << op->format << "\")";
+    } else {
+      print(op->expr);
+    }
+  } else {
+    std::stringstream oss;
+    for (size_t i = 0; i < op->str.size(); ++i) {
+      switch (op->str[i]) {
+        case '\n':
+          oss << "\\n";
+          break;
+        default:
+          oss << op->str[i];
+          break;
+      }
+    }
+    os << "\"" << oss.str() << "\"";
+  }
   os << ";";
 }
 

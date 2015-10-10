@@ -6,6 +6,7 @@
 #include "index_expressions/lower_index_expressions.h"
 
 #include "lower_accesses.h"
+#include "lower_prints.h"
 
 #include "storage.h"
 #include "temps.h"
@@ -81,7 +82,7 @@ Func lower(Func func, bool print) {
   // Flatten index expressions and insert temporaries
   func = rewriteCallGraph(func, (Func(*)(Func))flattenIndexExpressions);
   func = rewriteCallGraph(func, insertTemporaries);
-  printCallGraph("Insert Temporaries and Flatten Index Expressions",func,print);
+  printCallGraph("Insert Temporaries and Flatten Index Expressions", func, print);
 
   // Determine Storage
   func = rewriteCallGraph(func, [](Func func) -> Func {
@@ -100,6 +101,9 @@ Func lower(Func func, bool print) {
     cout << endl;
   }
 
+  func = rewriteCallGraph(func, lowerPrints);
+  printCallGraph("Lower Prints", func, print);
+  
   // Lower maps
   func = rewriteCallGraph(func, lowerMaps);
   printCallGraph("Lower Maps", func, print);
