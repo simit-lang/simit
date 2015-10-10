@@ -84,12 +84,12 @@
       YYERROR;                    \
     } while (0)
 
-  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)                          \
-    do {                                                              \
-      std::stringstream errorStr;                                     \
-      errorStr << "type mismatch (" <<                               \
-                  typeString(t1) << " and " << typeString(t2) << ")"; \
-      REPORT_ERROR(errorStr.str(), loc);                              \
+  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)                            \
+    do {                                                                \
+      std::stringstream errorStr;                                       \
+      errorStr << "type mismatch (" <<                                  \
+                  typeString(t1) << " and " << typeString(t2) << ")";   \
+      REPORT_ERROR(errorStr.str(), loc);                                \
     } while (0)
 
   #define REPORT_INDEX_VARIABLE_MISSMATCH(numIndexVars, order, loc) \
@@ -103,7 +103,7 @@
   void Parser::error(const Parser::location_type &loc,
                            const std::string &msg) {
     errors->push_back(ParseError(loc.begin.line, loc.begin.column,
-                            loc.end.line, loc.end.column, msg));
+                                 loc.end.line, loc.end.column, msg));
   }
 
   #undef yylex
