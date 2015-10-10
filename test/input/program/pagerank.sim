@@ -25,7 +25,7 @@ proc main
   c = map outlinks to links reduce +;
   pages.outlinks = c;
   A = map pagerank_matrix to links reduce +;
-  var pr : tensor[pages](float);
+  var pr : tensor[pages](float) = 0.0;
   pr = pr + 1.0;
   for i in 0:iterations
     pstop = (1.0 - damping_factor);
