@@ -4,6 +4,7 @@
 
 #include "temps.h"
 #include "flatten.h"
+#include "intrinsics.h"
 
 using namespace std;
 
@@ -12,7 +13,10 @@ namespace ir {
 
 Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter);
 
-Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar) {
+Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
+                                        Var endpoints, Var locs) {
+  this->endpoints = endpoints;
+  this->locs = locs;
   this->reduction = map->reduction;
   this->targetLoopVar = targetLoopVar;
 
@@ -127,7 +131,56 @@ void MapFunctionRewriter::visit(const VarExpr *op) {
 /// Inlines the mapped function with respect to the given loop variable over
 /// the target set, using the given rewriter.
 Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
-  return rewriter.inlineMapFunc(map, lv);
+  // Compute locations of the mapped edge
+  bool returnsMatrix = false;
+  for (auto& result : map->function.getResults()) {
+    Type type = result.getType();
+    if (type.isTensor() && type.toTensor()->order() == 2) {
+      returnsMatrix = true;
+      break;
+    }
+  }
+
+  Expr target = map->target;
+  iassert(map->target.type().isSet());
+  const SetType* setType = map->target.type().toSet();
+  int cardinality = setType->endpointSets.size();
+  if (returnsMatrix && cardinality > 0) {
+    Var i("i", Int);
+    Var j("j", Int);
+
+    Var eps("eps", TensorType::make(ScalarType::Int,
+                                    {IndexDomain(cardinality)}));
+    Expr endpoints = IndexRead::make(target, IndexRead::Endpoints);
+    Expr epLoc = Add::make(Mul::make(lv, cardinality), i);
+    Expr ep = Load::make(endpoints, epLoc);
+    Stmt epsInit = TensorWrite::make(eps, {i}, ep);
+    Stmt epsInitLoop = ForRange::make(i, 0, cardinality, epsInit);
+
+    Var locs("locs", TensorType::make(ScalarType::Int,
+                                      {IndexDomain(cardinality),
+                                       IndexDomain(cardinality)}));
+
+    Expr nbrs_start = IndexRead::make(target, IndexRead::NeighborsStart);
+    Expr nbrs = IndexRead::make(target, IndexRead::Neighbors);
+    Expr loc = Call::make(intrinsics::loc(), {Load::make(eps,i),
+                                              Load::make(eps,j),
+                                              nbrs_start, nbrs});
+    Stmt locsInit = TensorWrite::make(locs, {i,j}, loc);
+
+    Stmt locsInitLoop = ForRange::make(j, 0, cardinality, locsInit);
+    locsInitLoop      = ForRange::make(i, 0, cardinality, locsInitLoop);
+
+    Stmt computeLocs = Block::make({VarDecl::make(eps),
+                                    epsInitLoop,
+                                    VarDecl::make(locs),
+                                    locsInitLoop});
+
+    return Block::make(computeLocs, rewriter.inlineMapFunc(map, lv, eps, locs));
+  }
+  else {
+    return rewriter.inlineMapFunc(map, lv);
+  }
 }
 
 Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {

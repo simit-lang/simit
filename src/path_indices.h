@@ -193,8 +193,8 @@ public:
   Neighbors neighbors(unsigned elemID) const;
 
 private:
-  /// Segmented vector, where `nbrsStart[i]:nbrsStart[i+1]` is the range of
-  /// locations of neighbors of `i` in `nbrs`.
+  /// Segmented vector, where `coordsData[i]:coordsData[i+1]` is the range of
+  /// locations of neighbors of `i` in `sinksData`.
   size_t numElems;
   uint32_t* coordsData;
   uint32_t* sinksData;

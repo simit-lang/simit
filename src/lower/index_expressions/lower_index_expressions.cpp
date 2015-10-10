@@ -26,13 +26,10 @@ inline bool isBinaryExpression(const IndexExpr* iexpr) {
   return getExperssionArity(iexpr) == 2;
 }
 
-inline bool isBinaryScale(const IndexExpr* iexpr) {
-  if (!isBinaryExpression(iexpr)) {
-    return false;
-  }
+inline bool isScale(const IndexExpr* iexpr) {
 
   bool result = false;
-  // Binary expression with at least one scalar variable
+  // Expression with at least one scalar variable
   match(iexpr->value,
     std::function<void(const VarExpr*)>([&](const VarExpr* op) {
       if (isScalar(op->type)) {
@@ -206,7 +203,7 @@ Func lowerIndexExpressions(Func func) {
           storage->getStorage(var).isDense()) {
         kind = DenseResult;
       }
-      else if (isBinaryScale(iexpr)) {
+      else if (isScale(iexpr)) {
         kind = MatrixScale;
       }
       else if (isElwise(iexpr)) {
@@ -223,8 +220,6 @@ Func lowerIndexExpressions(Func func) {
           << Stmt(op);
 
       switch (kind) {
-        case Unknown:
-          break;
         case DenseResult:
         case MatrixScale:
         case MatrixElwiseWithSameStructure:
@@ -236,8 +231,10 @@ Func lowerIndexExpressions(Func func) {
         case MatrixMultiply:
           stmt = lowerMatrixMultiply(op->var, iexpr, &environment, storage);
           break;
+        case Unknown:
+          ierror << "unknown matrix expression";
+          break;
       }
-
       iassert(stmt.defined());
     }
 

@@ -25,6 +25,9 @@ public:
   Program();
   ~Program();
 
+  /// Clear program of data (makes it undefined).
+  void clear();
+
   /// Add the Simit code in the given string to the program.
   /// \return 0 on success, and 1 if the Simit code has errors. If the code
   ///         has errors these can be retrieved through the \ref getErrors

@@ -1,0 +1,36 @@
+const damping_factor : float = 0.85;
+const iterations   : int = 10;
+
+element Page
+  outlinks : float;
+  pr : float;
+end
+
+element Link
+end
+
+extern pages : set{Page};
+extern links : set{Link}(pages,pages);
+
+func outlinks(link : Link, p : (Page * 2)) -> (c : tensor[pages](float))
+  c(p(0)) = 1.0;
+end
+
+func pagerank_matrix(link : Link, p : (Page*2))
+  -> (A : tensor[pages,pages](float))
+  A(p(1),p(0)) = damping_factor / p(0).outlinks;
+end
+
+proc main
+  c = map outlinks to links reduce +;
+  pages.outlinks = c;
+  A = map pagerank_matrix to links reduce +;
+  var pr : tensor[pages](float);
+  pr = pr + 1.0;
+  for i in 0:iterations
+    pstop = (1.0 - damping_factor);
+    B = A*pr;
+    pr = B + pstop;
+  end
+  pages.pr = pr;
+end

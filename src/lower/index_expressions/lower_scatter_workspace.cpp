@@ -6,6 +6,7 @@
 #include <string>
 
 #include "loops.h"
+#include "lower_tensor_utils.h"
 
 #include "indexvar.h"
 #include "ir.h"
@@ -277,16 +278,6 @@ static Stmt createSubsetLoopStmt(const Var &inductionVar,
   iassert(loop.defined());
 
   return loop;
-}
-
-static
-Stmt rewriteToBlocked(Stmt stmt, vector<Var> inductionVars, Expr blockSize) {
-  Var ii("ii", inductionVars[0].getType());
-  map<Expr,Expr> substitutions;
-  for (const Var& inductionVar : inductionVars) {
-    substitutions.insert({inductionVar, inductionVar*blockSize + ii});
-  }
-  return ForRange::make(ii, 0, blockSize, substitute(substitutions, stmt));
 }
 
 static

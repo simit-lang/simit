@@ -3,6 +3,8 @@
 #include <vector>
 
 #include "loops.h"
+#include "lower_indexexprs.h"
+#include "lower_tensor_utils.h"
 
 using namespace std;
 
@@ -14,13 +16,31 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   iassert(target.getType().isTensor());
   const TensorType* type = target.getType().toTensor();
   tassert(type->order() == 2)
-      << "lowerMatrixMultiply does not support non-matrix tensors";
-  ScalarType tensorCType = type->componentType;
+    << "lowerMatrixMultiply does not support non-matrix tensors";
+  Type targetBlockType = type->getBlockType();
+  // Check no blocking or single blocking
+  tassert(targetBlockType.isTensor() &&
+          (targetBlockType.toTensor()->order() == 0 ||
+           targetBlockType.toTensor()->getBlockType().toTensor()->order() == 0))
+    << "lowerMatrixMultiply does not support multiply levels of blocking";
 
   // Build a dense row workspace for per-row reductions
   Var workspace;
-  IndexDomain workspaceDomain = type->getDimensions()[1]; // Row dimension
-  Type workspaceType = TensorType::make(tensorCType,{workspaceDomain});
+  IndexDomain workspaceDomain = type->getDimensions()[1]; // Row domain
+  IndexSet outerRowSet = workspaceDomain.getIndexSets()[0];
+  // IndexSet outerColSet(1);
+  vector<IndexDomain> workspaceDomains =
+    targetBlockType.toTensor()->getDimensions();
+  if (workspaceDomains.size() >= 2) {
+    workspaceDomains[1] = IndexDomain(outerRowSet)*workspaceDomains[1];
+  }
+  else {
+    workspaceDomains = {workspaceDomain};
+  }
+
+  ScalarType tensorCType = type->componentType;
+  Type workspaceType = TensorType::make(tensorCType, workspaceDomains);
+
   workspace = Var("workspace", workspaceType);
   env->addTemporary(workspace);
   storage->add(workspace, TensorStorage::Kind::Dense);
@@ -31,7 +51,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // Thus we can assume that the first result var is the row index, and the
   // second is a column index
   iassert(indexExpression->resultVars.size() == 2)
-      << "lowerMatrixMuliply does not support non-matrix output";
+    << "lowerMatrixMuliply does not support non-matrix output";
   const IndexVar& rowVar = indexExpression->resultVars[0];
 
   // Identify first and second tensors
@@ -59,6 +79,12 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
           isa<VarExpr>(secondTensor->tensor));
   const Var& firstTensorVar = to<VarExpr>(firstTensor->tensor)->var;
   const Var& secondTensorVar = to<VarExpr>(secondTensor->tensor)->var;
+  const TensorType* firstType = firstTensorVar.getType().toTensor();
+  const TensorType* secondType = secondTensorVar.getType().toTensor();
+  Type firstBlockType = firstType->getBlockType();
+  Type secondBlockType = secondType->getBlockType();
+  const TensorType* firstBlockTType = firstBlockType.toTensor();
+  const TensorType* secondBlockTType = secondBlockType.toTensor();
 
   // Get outer loop, over the row index variable
   IndexVariableLoop rowLoop(rowVar);
@@ -98,9 +124,21 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // Make a variable for the current value in this row of the first matrix
   Var firstVal(firstTensorVar.getName() +
                firstIndex.getCoordVar().getName(),
-               TensorType::make(tensorCType));
+               firstBlockType);
+  firstBodyStmts.push_back(VarDecl::make(firstVal));
   Expr load = Load::make(firstTensor->tensor, firstIndex.getCoordVar());
-  firstBodyStmts.push_back(AssignStmt::make(firstVal, load));
+  if (firstBlockTType->order() != 0) {
+    Var dummyIndex("dummyIndex", firstIndex.getCoordVar().getType());
+    Stmt dummyInit = AssignStmt::make(dummyIndex, Literal::make(0));
+    Stmt firstValStore = Store::make(firstVal, VarExpr::make(dummyIndex), load);
+    Stmt block = Block::make(dummyInit, firstValStore);
+    block = rewriteToBlocked(block, {firstIndex.getCoordVar(), dummyIndex},
+                             (int)firstBlockTType->size());
+    firstBodyStmts.push_back(block);
+  }
+  else {
+    firstBodyStmts.push_back(AssignStmt::make(firstVal, load));
+  }
 
   // Loop over the second matrix row, multiplying values with firstVal
   // and reducing into the workspace vectori
@@ -128,11 +166,85 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   secondBodyStmts.push_back(secondIndex.initSinkVar());
 
   // Compute and store the inner value into the workspace
-  Expr innerVal = Load::make(secondTensor->tensor, secondIndex.getCoordVar());
-  innerVal = Mul::make(VarExpr::make(firstVal), innerVal);
-  secondBodyStmts.push_back(
-    Store::make(workspace, secondIndex.getSinkVar(),
-                innerVal, CompoundOperator::Add));
+  if (firstBlockTType->order() == 0 &&
+      secondBlockTType->order() == 0) {
+    Expr innerVal = Load::make(secondTensor->tensor, secondIndex.getCoordVar());
+    innerVal = Mul::make(VarExpr::make(firstVal), innerVal);
+    secondBodyStmts.push_back(
+      Store::make(workspace, secondIndex.getSinkVar(),
+                  innerVal, CompoundOperator::Add));
+  }
+  else {
+    // TODO: Remove this constraint. We can use this recursion more generally.
+    tassert(targetBlockType.toTensor()
+            ->getBlockType().toTensor()->order() == 0);
+    Expr first, second;
+    const TensorType* blockTensorType = targetBlockType.toTensor();
+    IndexVar u("u", blockTensorType->getDimensions()[0]);
+    IndexVar v("v", blockTensorType->getDimensions()[1]);
+    IndexVar w;
+    if (firstBlockTType->order() == 0) {
+      first = Expr(firstVal);
+    }
+    else {
+      iassert(firstBlockTType->getDimensions()[0] ==
+              blockTensorType->getDimensions()[0]);
+      w = IndexVar("w", firstBlockTType->getDimensions()[1],
+                   ReductionOperator::Sum);
+      first = Expr(firstVal)(u,w);
+      // HACK: Need to explicitly add storage now, instead of letting this be
+      // handled by a backend on VarDecl
+      storage->add(firstVal, TensorStorage::Kind::Dense);
+    }
+    if (secondBlockTType->order() == 0) {
+      second = Load::make(secondTensor->tensor, secondIndex.getCoordVar());
+    }
+    else {
+      // Copy block into second value temporary
+      Expr innerVal = Load::make(secondTensor->tensor, secondIndex.getCoordVar());
+      Var innerValVar(secondTensorVar.getName() +
+                      secondIndex.getCoordVar().getName(),
+                      secondBlockType);
+      secondBodyStmts.push_back(VarDecl::make(innerValVar));
+      Var innerDummy("dummyIndexInner", secondIndex.getCoordVar().getType());
+      Stmt innerDummyInit = AssignStmt::make(innerDummy, Literal::make(0));
+      Stmt innerValStore = Store::make(innerValVar,
+                                       Expr(innerDummy), innerVal);
+      Stmt block = Block::make(innerDummyInit, innerValStore);
+      block = rewriteToBlocked(block, {secondIndex.getCoordVar(), innerDummy},
+                               (int)targetBlockType.toTensor()->size());
+      secondBodyStmts.push_back(block);
+      
+      iassert(w.defined());
+      second = Expr(innerValVar)(w,v);
+      // HACK: Need to explicitly add storage now, instead of letting this be
+      // handled by a backend on VarDecl
+      storage->add(innerValVar, TensorStorage::Kind::Dense);
+    }
+    // Evaluate inner-most multiply
+    Expr innerVal = IndexExpr::make({u,v}, first*second);
+    Var blockOut("blockOut", targetBlockType);
+    // Block out is written to as a tensor, so needs an explicit VarDecl
+    secondBodyStmts.push_back(VarDecl::make(blockOut));
+    // HACK: Need to explicitly add storage now, instead of letting this be
+    // handled by a backend on VarDecl
+    storage->add(blockOut, TensorStorage::Kind::Dense);
+    // TODO: General recursion is probably usable here
+    Stmt blockOutWrite = AssignStmt::make(blockOut, innerVal);
+    blockOutWrite = lowerIndexStatement(blockOutWrite, env, *storage);
+    secondBodyStmts.push_back(blockOutWrite);
+    // Copy block into workspace
+    Var copyDummy("dummyIndexCopy", secondIndex.getCoordVar().getType());
+    Stmt copyDummyInit = AssignStmt::make(copyDummy, Literal::make(0));
+    Expr copyLoad = Load::make(blockOut, Expr(copyDummy));
+    Stmt copyStore = Store::make(workspace, secondIndex.getSinkVar(),
+                                 copyLoad, CompoundOperator::Add);
+    Stmt copyBlock = Block::make(copyDummyInit, copyStore);
+    copyBlock = rewriteToBlocked(copyBlock, {secondIndex.getSinkVar(), copyDummy},
+                                 (int)targetBlockType.toTensor()->size());
+    copyBlock = Comment::make("Copy block into workspace", copyBlock, true);
+    secondBodyStmts.push_back(copyBlock);
+  }
 
   Stmt secondCoordLoop = ForRange::make(secondIndex.getCoordVar(),
                                         secondIndex.loadCoord(),

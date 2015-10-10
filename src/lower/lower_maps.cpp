@@ -32,28 +32,54 @@ inline bool hasSameStorage(std::vector<Var> vars, const Storage &storage) {
 class LowerMapFunctionRewriter : public MapFunctionRewriter {
   using MapFunctionRewriter::visit;
 
-  virtual void visit(const TensorWrite *op) {
+  void visit(const TensorWrite *op) {
     // Rewrites the tensor write and assigns the result to stmt
     IRRewriter::visit(op);
     iassert(isa<TensorWrite>(stmt));
+    const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
+    iassert(tensorWrite->value.type().isTensor());
     if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
-      const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
-      iassert(tensorWrite->value.type().isTensor());
+      if (locs.defined() && op->indices.size() == 2) {
+        iassert(endpoints.defined());
+        iassert(op->indices.size() == 2);
+        vector<Expr> indices;
+        for (auto& index : op->indices) {
+          iassert(isa<TupleRead>(index)) << index;
+          indices.push_back(to<TupleRead>(index)->index);
+        }
+        Expr index = TensorRead::make(locs, indices);
 
-      // Change assignments to result to compound  assignments, using the map
-      // reduction operator.
-      switch (reduction.getKind()) {
-        case ReductionOperator::Sum: {
-          stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
-                                   tensorWrite->value, CompoundOperator::Add);
-          break;
+        // Change assignments to result to compound  assignments, using the map
+        // reduction operator.
+        switch (reduction.getKind()) {
+          case ReductionOperator::Sum: {
+            stmt = TensorWrite::make(rewrite(op->tensor), {index},
+                                     rewrite(op->value), CompoundOperator::Add);
+            break;
+          }
+          case ReductionOperator::Undefined: {
+            stmt = TensorWrite::make(rewrite(op->tensor), {index},
+                                     rewrite(op->value));
+            break;
+          }
         }
-        case ReductionOperator::Undefined: {
-          stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
-                                   tensorWrite->value);
-          break;
+      }
+      else {
+        // Change assignments to result to compound  assignments, using the map
+        // reduction operator.
+        switch (reduction.getKind()) {
+          case ReductionOperator::Sum: {
+            stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
+                                     tensorWrite->value, CompoundOperator::Add);
+            break;
+          }
+          case ReductionOperator::Undefined: {
+            stmt = TensorWrite::make(tensorWrite->tensor, tensorWrite->indices,
+                                     tensorWrite->value);
+            break;
+          }
         }
-        default: not_supported_yet;
+        iassert(stmt.defined());
       }
     }
   }

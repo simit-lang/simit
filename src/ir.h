@@ -30,21 +30,11 @@ private:
 
 std::ostream &operator<<(std::ostream &os, const IRNode &);
 
-struct ExprNodeBase : public IRNode {
+struct ExprNode : public IRNode {
   Type type;
 };
 
-struct StmtNodeBase : public IRNode {
-};
-
-template <typename T>
-struct ExprNode : public ExprNodeBase {
-  void accept(IRVisitorStrict *v) const { v->visit((const T *)this); }
-};
-
-template <typename T>
-struct StmtNode : public StmtNodeBase {
-  void accept(IRVisitorStrict *v) const { v->visit((const T *)this); }
+struct StmtNode : public IRNode {
 };
 
 struct IRHandle : util::IntrusivePtr<const IRNode> {
@@ -55,13 +45,13 @@ struct IRHandle : util::IntrusivePtr<const IRNode> {
 class Expr : public IRHandle {
 public:
   Expr() : IRHandle() {}
-  Expr(const ExprNodeBase *expr) : IRHandle(expr) {}
+  Expr(const ExprNode *expr) : IRHandle(expr) {}
   Expr(const Var &var);
 
   Expr(int val);
   Expr(double val);
 
-  Type type() const {return static_cast<const ExprNodeBase*>(ptr)->type;}
+  Type type() const {return static_cast<const ExprNode*>(ptr)->type;}
 
   void accept(IRVisitorStrict *v) const {ptr->accept(v);}
 
@@ -99,7 +89,7 @@ inline const E* to(Expr e) {
 class Stmt : public IRHandle {
 public:
   Stmt() : IRHandle() {}
-  Stmt(const StmtNodeBase *stmt) : IRHandle(stmt) {}
+  Stmt(const StmtNode *stmt) : IRHandle(stmt) {}
 
   void accept(IRVisitorStrict *v) const {ptr->accept(v);}
 
@@ -134,7 +124,7 @@ std::ostream &operator<<(std::ostream &os, const CompoundOperator &);
 
 /// Represents a \ref Tensor that is defined as a constant or loaded.  Note
 /// that it is only possible to define dense tensor literals.
-struct Literal : public ExprNode<Literal> {
+struct Literal : public ExprNode {
   void *data;
   size_t size;
 
@@ -148,177 +138,207 @@ struct Literal : public ExprNode<Literal> {
   static Expr make(Type type, void* values);
   static Expr make(Type type, std::vector<double> values);
   ~Literal();
+  void accept(IRVisitorStrict *v) const {v->visit((const Literal*)this);}
 };
 bool operator==(const Literal& l, const Literal& r);
 bool operator!=(const Literal& l, const Literal& r);
 
 
-struct VarExpr : public ExprNode<VarExpr> {
+struct VarExpr : public ExprNode {
   Var var;
   static Expr make(Var var);
+  void accept(IRVisitorStrict *v) const {v->visit((const VarExpr*)this);}
 };
 
 /// Expression that loads a scalar from a buffer. A buffer is a one-dimensional
 /// tensor that is indexed by an integer range.
-struct Load : public ExprNode<Load> {
+struct Load : public ExprNode {
   Expr buffer;
   Expr index;
   static Expr make(Expr buffer, Expr index);
+  void accept(IRVisitorStrict *v) const {v->visit((const Load*)this);}
 };
 
 /// Expression that reads a tensor from an element or set field.
-struct FieldRead : public ExprNode<FieldRead> {
+struct FieldRead : public ExprNode {
   Expr elementOrSet;
   std::string fieldName;
   static Expr make(Expr elementOrSet, std::string fieldName);
+  void accept(IRVisitorStrict *v) const {v->visit((const FieldRead*)this);}
 };
 
-struct Call : public ExprNode<Call> {
+struct Call : public ExprNode {
   Func func;
   std::vector<Expr> actuals;
   static Expr make(Func func, std::vector<Expr> actuals);
+  void accept(IRVisitorStrict *v) const {v->visit((const Call*)this);}
 };
 
-struct Length : public ExprNode<Length> {
+struct Length : public ExprNode {
   IndexSet indexSet;
   static Expr make(IndexSet indexSet);
+  void accept(IRVisitorStrict *v) const {v->visit((const Length*)this);}
 };
 
 /// An IndexRead retrieves an index from an edge set.  An example of an index
 /// is the endpoints of the edges in the set.
 /// TODO DEPRECATED: This node has been deprecated with the old lowering pass
-struct IndexRead : public ExprNode<IndexRead> {
+struct IndexRead : public ExprNode {
   enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2 };
   Expr edgeSet;
   Kind kind;
   static Expr make(Expr edgeSet, Kind kind);
+  void accept(IRVisitorStrict *v) const {v->visit((const IndexRead*)this);}
 };
 
-struct UnaryExpr {
+struct UnaryExpr : public ExprNode {
   Expr a;
 };
 
-struct BinaryExpr {
+struct BinaryExpr : public ExprNode {
   Expr a, b;
 };
 
-struct Neg : public UnaryExpr, public ExprNode<Neg> {
+struct Neg : public UnaryExpr {
   static Expr make(Expr a);
+  void accept(IRVisitorStrict *v) const {v->visit((const Neg*)this);}
 };
 
-struct Add : public BinaryExpr, public ExprNode<Add> {
+struct Add : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Add*)this);}
 };
 
-struct Sub : public BinaryExpr, public ExprNode<Sub> {
+struct Sub : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Sub*)this);}
 };
 
-struct Mul : public BinaryExpr, public ExprNode<Mul> {
+struct Mul : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Mul*)this);}
 };
 
-struct Div : public BinaryExpr, public ExprNode<Div> {
+struct Div : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Div*)this);}
 };
 
-struct Not : public UnaryExpr, public ExprNode<Not> {
+struct Not : public UnaryExpr {
   static Expr make(Expr a);
+  void accept(IRVisitorStrict *v) const {v->visit((const Not*)this);}
 };
 
-struct Eq : public BinaryExpr, public ExprNode<Eq> {
+struct Eq : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Eq*)this);}
 };
 
-struct Ne : public BinaryExpr, public ExprNode<Ne> {
+struct Ne : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Ne*)this);}
 };
 
-struct Gt : public BinaryExpr, public ExprNode<Gt> {
+struct Gt : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Gt*)this);}
 };
 
-struct Lt : public BinaryExpr, public ExprNode<Lt> {
+struct Lt : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Lt*)this);}
 };
 
-struct Ge : public BinaryExpr, public ExprNode<Ge> {
+struct Ge : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Ge*)this);}
 };
 
-struct Le : public BinaryExpr, public ExprNode<Le> {
+struct Le : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Le*)this);}
 };
 
-struct And : public BinaryExpr, public ExprNode<And> {
+struct And : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const And*)this);}
 };
 
-struct Or : public BinaryExpr, public ExprNode<Or> {
+struct Or : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Or*)this);}
 };
 
-struct Xor : public BinaryExpr, public ExprNode<Xor> {
+struct Xor : public BinaryExpr {
   static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Xor*)this);}
 };
 
-struct VarDecl : public StmtNode<VarDecl> {
+struct VarDecl : public StmtNode {
   Var var;
   static Stmt make(Var var);
+  void accept(IRVisitorStrict *v) const {v->visit((const VarDecl*)this);}
 };
 
-struct AssignStmt : public StmtNode<AssignStmt> {
+struct AssignStmt : public StmtNode {
   Var var;
   Expr value;
   CompoundOperator cop;
   static Stmt make(Var var, Expr value);
   static Stmt make(Var var, Expr value, CompoundOperator cop);
+  void accept(IRVisitorStrict *v) const {v->visit((const AssignStmt*)this);}
 };
 
-struct Store : public StmtNode<Store> {
+struct Store : public StmtNode {
   Expr buffer;
   Expr index;
   Expr value;
   CompoundOperator cop;
   static Stmt make(Expr buffer, Expr index, Expr value,
                    CompoundOperator cop=CompoundOperator::None);
+  void accept(IRVisitorStrict *v) const {v->visit((const Store*)this);}
 };
 
-struct FieldWrite : public StmtNode<FieldWrite> {
+struct FieldWrite : public StmtNode {
   Expr elementOrSet;
   std::string fieldName;
   Expr value;
   CompoundOperator cop;
   static Stmt make(Expr elementOrSet, std::string fieldName, Expr value,
                    CompoundOperator cop=CompoundOperator::None);
+  void accept(IRVisitorStrict *v) const {v->visit((const FieldWrite*)this);}
 };
 
-struct CallStmt : public StmtNode<CallStmt> {
+struct CallStmt : public StmtNode {
   std::vector<Var> results;
   Func callee;
   std::vector<Expr> actuals;
   static Stmt make(std::vector<Var> results,
                    Func callee, std::vector<Expr> actuals);
+  void accept(IRVisitorStrict *v) const {v->visit((const CallStmt*)this);}
 };
 
-struct Scope : public StmtNode<Scope> {
+struct Scope : public StmtNode {
   Stmt scopedStmt;
   static Stmt make(Stmt scopedStmt);
+  void accept(IRVisitorStrict *v) const {v->visit((const Scope*)this);}
 };
 
-struct IfThenElse : public StmtNode<IfThenElse> {
+struct IfThenElse : public StmtNode {
   Expr condition;
   Stmt thenBody, elseBody;
   static Stmt make(Expr condition, Stmt thenBody);
   static Stmt make(Expr condition, Stmt thenBody, Stmt elseBody);
+  void accept(IRVisitorStrict *v) const {v->visit((const IfThenElse*)this);}
 };
 
-struct ForRange : public StmtNode<ForRange> {
+struct ForRange : public StmtNode {
   Var var;
   Expr start;
   Expr end;
   Stmt body;
   static Stmt make(Var var, Expr start, Expr end, Stmt body);
+  void accept(IRVisitorStrict *v) const {v->visit((const ForRange*)this);}
 };
 
 struct ForDomain {
@@ -345,63 +365,71 @@ struct ForDomain {
 std::ostream &operator<<(std::ostream &os, const ForDomain &);
 
 // TODO DEPRECATED: Remove when new index system is in place.
-struct For : public StmtNode<For> {
+struct For : public StmtNode {
   Var var;
   ForDomain domain;
   Stmt body;
   static Stmt make(Var var, ForDomain domain, Stmt body);
+  void accept(IRVisitorStrict *v) const {v->visit((const For*)this);}
 };
 
-struct While : public StmtNode<While> {
+struct While : public StmtNode {
   Expr condition;
   Stmt body;
   static Stmt make(Expr condition, Stmt body);
+  void accept(IRVisitorStrict *v) const {v->visit((const While*)this);}
 };
 
-struct Kernel : public StmtNode<Kernel> {
+struct Kernel : public StmtNode {
   Var var;
   IndexDomain domain;
   Stmt body;
   static Stmt make(Var var, IndexDomain domain, Stmt body);
+  void accept(IRVisitorStrict *v) const {v->visit((const Kernel*)this);}
 };
 
-struct Block : public StmtNode<Block> {
+struct Block : public StmtNode {
   Stmt first, rest;
   static Stmt make(Stmt first, Stmt rest);
   static Stmt make(std::vector<Stmt> stmts);
+  void accept(IRVisitorStrict *v) const {v->visit((const Block*)this);}
 };
 
-struct Print : public StmtNode<Print> {
+struct Print : public StmtNode {
   Expr expr;
   std::string str;
   std::string format;
   static Stmt make(Expr expr, std::string format="");
   static Stmt make(std::string str);
+  void accept(IRVisitorStrict *v) const {v->visit((const Print*)this);}
 };
 
 /// A comment, that can optionally be applied to a statement with footer and
 /// header space.
-struct Comment : public StmtNode<Comment> {
+struct Comment : public StmtNode {
   std::string comment;
   Stmt commentedStmt;
   bool footerSpace;
   bool headerSpace;
   static Stmt make(std::string comment, Stmt commentedStmt=Stmt(),
                    bool footerSpace=false, bool headerSpace=false);
+  void accept(IRVisitorStrict *v) const {v->visit((const Comment*)this);}
 };
 
 /// Empty statement that is convenient during code development.
-struct Pass : public StmtNode<Pass> {
+struct Pass : public StmtNode {
   static Stmt make();
+  void accept(IRVisitorStrict *v) const {v->visit((const Pass*)this);}
 };
 
-struct TupleRead : public ExprNode<TupleRead> {
+struct TupleRead : public ExprNode {
   Expr tuple, index;
   static Expr make(Expr tuple, Expr index);
+  void accept(IRVisitorStrict *v) const {v->visit((const TupleRead*)this);}
 };
 
 /// Expression that reads a tensor from an n-dimensional tensor location.
-struct TensorRead : public ExprNode<TensorRead> {
+struct TensorRead : public ExprNode {
   Expr tensor;
   std::vector<Expr> indices;
 
@@ -410,9 +438,10 @@ struct TensorRead : public ExprNode<TensorRead> {
   /// where n is the tensor order. If one index is provided then the tensor read
   /// has already been flattened, and will be directly lowered to a load.
   static Expr make(Expr tensor, std::vector<Expr> indices);
+  void accept(IRVisitorStrict *v) const {v->visit((const TensorRead*)this);}
 };
 
-struct TensorWrite : public StmtNode<TensorWrite> {
+struct TensorWrite : public StmtNode {
   // TODO: Consider whether to make tensor a Var
   Expr tensor;
   std::vector<Expr> indices;
@@ -420,24 +449,27 @@ struct TensorWrite : public StmtNode<TensorWrite> {
   CompoundOperator cop;
   static Stmt make(Expr tensor, std::vector<Expr> indices, Expr value,
                    CompoundOperator cop=CompoundOperator::None);
+  void accept(IRVisitorStrict *v) const {v->visit((const TensorWrite*)this);}
 };
 
-struct IndexedTensor : public ExprNode<IndexedTensor> {
+struct IndexedTensor : public ExprNode {
   Expr tensor;
   std::vector<IndexVar> indexVars;
 
   static Expr make(Expr tensor, std::vector<IndexVar> indexVars);
+  void accept(IRVisitorStrict *v) const {v->visit((const IndexedTensor*)this);}
 };
 
-struct IndexExpr : public ExprNode<IndexExpr> {
+struct IndexExpr : public ExprNode {
   std::vector<IndexVar> resultVars;
   Expr value;
   std::vector<IndexVar> domain() const;
 
   static Expr make(std::vector<IndexVar> resultVars, Expr value);
+  void accept(IRVisitorStrict *v) const {v->visit((const IndexExpr*)this);}
 };
 
-struct Map : public StmtNode<Map> {
+struct Map : public StmtNode {
   std::vector<Var> vars;
   Func function;
   Expr target;
@@ -449,6 +481,7 @@ struct Map : public StmtNode<Map> {
                    Func function, std::vector<Expr> partial_actuals,
                    Expr target, Expr neighbors=Expr(),
                    ReductionOperator reduction=ReductionOperator());
+  void accept(IRVisitorStrict *v) const {v->visit((const Map*)this);}
 };
 
 }} // namespace simit::ir
