@@ -71,7 +71,7 @@ static simit::TensorType convert(const TensorType &tensorType) {
   iassert(blockType.isTensor());
   auto blockTensorType = blockType.toTensor();
   if (blockTensorType->order() == 0) {
-    return simit::TensorType(convert(blockTensorType->componentType),
+    return simit::TensorType(convert(blockTensorType->getComponentType()),
                              dimensions);
   }
   else {

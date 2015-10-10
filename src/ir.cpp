@@ -128,7 +128,7 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
         dimensions[i] = dimensions[i] * elemFieldDimensions[i];
       }
     }
-    fieldType = TensorType::make(elemFieldType->componentType, dimensions);
+    fieldType = TensorType::make(elemFieldType->getComponentType(), dimensions);
   }
   return fieldType;
 }
@@ -144,7 +144,7 @@ Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
   for (auto &indexVar : lhsIndexVars) {
     dimensions.push_back(indexVar.getDomain());
   }
-  return TensorType::make(expr.type().toTensor()->componentType, dimensions);
+  return TensorType::make(expr.type().toTensor()->getComponentType(), dimensions);
 }
 
 // enum CompoundOperator
@@ -164,7 +164,8 @@ std::ostream &operator<<(std::ostream &os, const CompoundOperator &cop) {
 // struct Literal
 void Literal::cast(Type type) {
   iassert(type.isTensor());
-  iassert(type.toTensor()->componentType==this->type.toTensor()->componentType);
+  iassert(type.toTensor()->getComponentType() ==
+          this->type.toTensor()->getComponentType());
   iassert(type.toTensor()->size() == this->type.toTensor()->size());
   this->type = type;
 }
@@ -205,7 +206,7 @@ Expr Literal::make(Type type, void* values) {
   switch (type.kind()) {
     case Type::Tensor: {
       size = ttype->size();
-      sizeInBytes = size * ttype->componentType.bytes();
+      sizeInBytes = size * ttype->getComponentType().bytes();
       break;
     }
     case Type::Set:
@@ -225,7 +226,7 @@ Expr Literal::make(Type type, void* values) {
   }
   else {
     // Zero array
-    switch (ttype->componentType.kind) {
+    switch (ttype->getComponentType().kind) {
       case ir::ScalarType::Boolean:
         util::zero<bool>(node->data, size);
         break;
@@ -249,7 +250,7 @@ Expr Literal::make(Type type, void* values) {
 
 Expr Literal::make(Type type, std::vector<double> values) {
   iassert(isScalar(type) || type.toTensor()->size() == values.size());
-  iassert(type.toTensor()->componentType.kind == ScalarType::Float)
+  iassert(type.toTensor()->getComponentType().kind == ScalarType::Float)
       << "Float array constructor must use float component type";
   if (ScalarType::singleFloat()) {
     // Convert double vector to float vector
@@ -269,7 +270,7 @@ Literal::~Literal() {
 }
 
 inline size_t getTensorByteSize(const TensorType *tensorType) {
-  return tensorType->size() * tensorType->componentType.bytes();
+  return tensorType->size() * tensorType->getComponentType().bytes();
 }
 
 bool operator==(const Literal& l, const Literal& r) {
@@ -283,7 +284,7 @@ bool operator==(const Literal& l, const Literal& r) {
           getTensorByteSize(r.type.toTensor()));
 
   size_t size = l.type.toTensor()->size();
-  switch (l.type.toTensor()->componentType.kind) {
+  switch (l.type.toTensor()->getComponentType().kind) {
     case ir::ScalarType::Int: {
       return util::compare<int>(l.data, r.data, size);
     }
@@ -322,7 +323,7 @@ Expr Load::make(Expr buffer, Expr index) {
 
   // TODO: Temporary handle loading from TensorType (should only support arrays)
   ScalarType loadType = (buffer.type().isTensor())
-                        ? buffer.type().toTensor()->componentType
+                        ? buffer.type().toTensor()->getComponentType()
                         : buffer.type().toArray()->elementType;
 
   node->type = TensorType::make(loadType);
@@ -574,7 +575,7 @@ Stmt Store::make(Expr buf, Expr index, Expr value, CompoundOperator cop) {
   iassert(buf.type().isArray() || buf.type().isTensor())
       << "Can only store to arrays and tensors";
   iassert(!buf.type().isTensor() ||
-          TensorType::make(buf.type().toTensor()->componentType)==value.type())
+          TensorType::make(buf.type().toTensor()->getComponentType())==value.type())
       << "Stored value type " << util::quote(value.type())
       << " does not match the component type of tensor "
       << util::quote(buf.type().toTensor()->getBlockType()) ;
@@ -783,7 +784,7 @@ Expr IndexedTensor::make(Expr tensor, std::vector<IndexVar> indexVars) {
 #endif
 
   IndexedTensor *node = new IndexedTensor;
-  node->type = TensorType::make(tensor.type().toTensor()->componentType);
+  node->type = TensorType::make(tensor.type().toTensor()->getComponentType());
   node->tensor = tensor;
   node->indexVars = indexVars;
   return node;

@@ -239,9 +239,9 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
     void visit(const AssignStmt *op) {
       if (op == rstmt) {
-        ScalarType componentType = op->var.getType().toTensor()->componentType;
+        ScalarType ctype = op->var.getType().toTensor()->getComponentType();
         reductionVar = Var(op->var.getName()+"tmp",
-                           TensorType::make(componentType));
+                           TensorType::make(ctype));
 
         stmt = compoundAssign(reductionVar, rop, op->value);
         reductionVarWriteBackStmt = compoundAssign(op->var, rop, reductionVar);
@@ -254,9 +254,9 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
     void visit(const TensorWrite *op) {
       if (op == rstmt) {
         iassert(op->value.type().isTensor());
-        ScalarType componentType = op->value.type().toTensor()->componentType;
+        ScalarType ctype = op->value.type().toTensor()->getComponentType();
         string reductionVarName = getReductionTmpName(op);
-        reductionVar = Var(reductionVarName, TensorType::make(componentType));
+        reductionVar = Var(reductionVarName, TensorType::make(ctype));
         stmt = compoundAssign(reductionVar, rop, op->value);
 
         if (isa<TensorRead>(op->tensor)) {
@@ -277,9 +277,9 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
     void visit(const FieldWrite *op) {
       if (op == rstmt) {
         iassert(op->value.type().isTensor());
-        ScalarType componentType = op->value.type().toTensor()->componentType;
+        ScalarType ctype = op->value.type().toTensor()->getComponentType();
         string reductionVarName = getReductionTmpName(op);
-        reductionVar = Var(reductionVarName, TensorType::make(componentType));
+        reductionVar = Var(reductionVarName, TensorType::make(ctype));
         stmt = compoundAssign(reductionVar, rop, op->value);
 
         reductionVarWriteBackStmt = FieldWrite::make(op->elementOrSet,

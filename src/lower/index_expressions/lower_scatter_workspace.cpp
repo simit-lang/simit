@@ -339,7 +339,7 @@ static string tensorSliceString(const Expr &expr, const IndexVar &sliceVar) {
 
 static Stmt copyFromWorkspace(Var target, Expr targetIndex,
                               Var workspace, Expr workspaceIndex) {
-  ScalarType workspaceCType = workspace.getType().toTensor()->componentType;
+  ScalarType workspaceCType = workspace.getType().toTensor()->getComponentType();
   Stmt copyFromWorkspace = Store::make(target, targetIndex,
                                        Load::make(workspace, workspaceIndex));
   Expr resetVal = Literal::make(TensorType::make(workspaceCType));
@@ -381,7 +381,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
           createSubsetLoops(indexExpression, loop, environment, storage);
 
       // Create workspace on target
-      ScalarType workspaceCType = type->componentType;
+      ScalarType workspaceCType = type->getComponentType();
       Var workspace;
       if (type->order() < 2) {
         workspace = target;

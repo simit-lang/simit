@@ -515,7 +515,7 @@ private:
     for (const ir::Field& field : type->fields) {
       const ir::TensorType *ttype = field.type.toTensor();
       ComponentType ctype;
-      switch (ttype->componentType.kind) {
+      switch (ttype->getComponentType().kind) {
         case ir::ScalarType::Int: {
           ctype = ComponentType::Int;
           break;

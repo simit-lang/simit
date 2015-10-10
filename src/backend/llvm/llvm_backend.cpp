@@ -241,7 +241,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
     iassert(type.isTensor());
     const TensorType *ttype = type.toTensor();
     llvm::Value *len= emitComputeLen(ttype,this->storage.getStorage(bufferVar));
-    unsigned compSize = ttype->componentType.bytes();
+    unsigned compSize = ttype->getComponentType().bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(compSize));
     llvm::Value *mem = builder->CreateCall(malloc, size);
 
@@ -312,7 +312,7 @@ void LLVMBackend::compile(const ir::Literal& literal) {
   const TensorType *type = literal.type.toTensor();
 
   if (type->order() == 0) {
-    ScalarType ctype = type->componentType;
+    ScalarType ctype = type->getComponentType();
     switch (ctype.kind) {
       case ScalarType::Int: {
         iassert(ctype.bytes() == 4) << "Only 4-byte ints currently supported";
@@ -400,7 +400,7 @@ void LLVMBackend::compile(const ir::Call& call) {
   for (auto a: call.actuals) {
     //FIX: remove once solve() is no longer needed
     //iassert(isScalar(a.type()));
-    ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->componentType
+    ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->getComponentType()
                                            : a.type().toArray()->elementType;
     argTypes.push_back(llvmType(ctype));
     args.push_back(compile(a));
@@ -526,7 +526,7 @@ void LLVMBackend::compile(const ir::Neg& negExpr) {
   iassert(isScalar(negExpr.type));
   llvm::Value *a = compile(negExpr.a);
 
-  switch (negExpr.type.toTensor()->componentType.kind) {
+  switch (negExpr.type.toTensor()->getComponentType().kind) {
     case ScalarType::Int:
       val = builder->CreateNeg(a);
       break;
@@ -544,7 +544,7 @@ void LLVMBackend::compile(const ir::Add& addExpr) {
   llvm::Value *a = compile(addExpr.a);
   llvm::Value *b = compile(addExpr.b);
 
-  switch (addExpr.type.toTensor()->componentType.kind) {
+  switch (addExpr.type.toTensor()->getComponentType().kind) {
     case ScalarType::Int:
       val = builder->CreateAdd(a, b);
       break;
@@ -563,7 +563,7 @@ void LLVMBackend::compile(const ir::Sub& subExpr) {
   llvm::Value *a = compile(subExpr.a);
   llvm::Value *b = compile(subExpr.b);
 
-  switch (subExpr.type.toTensor()->componentType.kind) {
+  switch (subExpr.type.toTensor()->getComponentType().kind) {
     case ScalarType::Int:
       val = builder->CreateSub(a, b);
       break;
@@ -581,7 +581,7 @@ void LLVMBackend::compile(const ir::Mul& mulExpr) {
   llvm::Value *a = compile(mulExpr.a);
   llvm::Value *b = compile(mulExpr.b);
 
-  switch (mulExpr.type.toTensor()->componentType.kind) {
+  switch (mulExpr.type.toTensor()->getComponentType().kind) {
     case ScalarType::Int:
       val = builder->CreateMul(a, b);
       break;
@@ -599,7 +599,7 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
   llvm::Value *a = compile(divExpr.a);
   llvm::Value *b = compile(divExpr.b);
 
-  switch (divExpr.type.toTensor()->componentType.kind) {
+  switch (divExpr.type.toTensor()->getComponentType().kind) {
     case ScalarType::Int:
       // TODO: Figure out what's the deal with integer div. Cast to fp, div and
       // truncate?
@@ -632,7 +632,7 @@ void LLVMBackend::compile(Type op) {                                           \
   llvm::Value *b = compile(op.b);                                              \
                                                                                \
   const TensorType *ttype = op.a.type().toTensor();                            \
-  if (ttype->componentType == ScalarType::Float) {                             \
+  if (ttype->getComponentType() == ScalarType::Float) {                        \
     val = builder->float_cmp(a, b);                                            \
   } else {                                                                     \
     val = builder->int_cmp(a, b);                                              \
@@ -689,7 +689,7 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
   }
   llvm::Value *llvmVar = nullptr;
   if (isScalar(var.getType())) {
-    ScalarType type = var.getType().toTensor()->componentType;
+    ScalarType type = var.getType().toTensor()->getComponentType();
     llvmVar = builder->CreateAlloca(llvmType(type),nullptr,var.getName());
   }
   else {
@@ -729,7 +729,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
 
   // compile arguments first
   for (auto a: callStmt.actuals) {
-    argTypes.push_back(llvmType(a.type().toTensor()->componentType));
+    argTypes.push_back(llvmType(a.type().toTensor()->getComponentType()));
     args.push_back(compile(a));
   }
 
@@ -744,7 +744,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     auto foundIntrinsic = llvmIntrinsicByName.find(callStmt.callee);
     if (foundIntrinsic != llvmIntrinsicByName.end()) {
       iassert(callStmt.results.size() == 1);
-      auto ctype = callStmt.results[0].getType().toTensor()->componentType;
+      auto ctype = callStmt.results[0].getType().toTensor()->getComponentType();
       llvm::Type *overloadType = llvmType(ctype);
       fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
                                             {overloadType});
@@ -860,7 +860,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
   else {
     if (module->getFunction(callStmt.callee.getName())) {
       for (Var r : callStmt.results) {
-        argTypes.push_back(llvmType(r.getType().toTensor()->componentType));
+        argTypes.push_back(llvmType(r.getType().toTensor()->getComponentType()));
 
         llvm::Value *llvmResult = symtable.get(r);
         args.push_back(llvmResult);
@@ -927,7 +927,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
       // For now we'll assume fields are always dense row major
       llvm::Value *fieldLen =
           emitComputeLen(tensorFieldType, TensorStorage::Kind::Dense);
-      unsigned compSize = tensorFieldType->componentType.bytes();
+      unsigned compSize = tensorFieldType->getComponentType().bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
       emitMemSet(fieldPtr, llvmInt(0,8), fieldSize, compSize);
@@ -960,7 +960,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
     // For now we'll assume fields are always dense row major
     llvm::Value *fieldLen =
         emitComputeLen(tensorFieldType, TensorStorage::Kind::Dense);
-    unsigned elemSize = tensorFieldType->componentType.bytes();
+    unsigned elemSize = tensorFieldType->getComponentType().bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 
     emitMemCpy(fieldPtr, valuePtr, fieldSize, elemSize);
@@ -1149,7 +1149,7 @@ void LLVMBackend::compile(const ir::Print& print) {
   iassert(isScalar(type)) << "Backend can only compile scalars";
 
   const TensorType *tensor = type.toTensor();
-  ScalarType scalarType = tensor->componentType;
+  ScalarType scalarType = tensor->getComponentType();
   std::string specifier = std::string("%") + print.format +
                           (scalarType.kind == ScalarType::Float? "g" : "d");
 
@@ -1438,7 +1438,7 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
   else {
     iassert(storage.hasStorage(var)) << var << " has no storage";
     llvm::Value *len = emitComputeLen(varType, storage.getStorage(var));
-    unsigned componentSize = varType->componentType.bytes();
+    unsigned componentSize = varType->getComponentType().bytes();
     llvm::Value *size = builder->CreateMul(len, llvmInt(componentSize));
 
     // Assigning a scalar to an n-order tensor
@@ -1477,7 +1477,7 @@ llvm::Value *LLVMBackend::makeGlobalTensor(ir::Var var) {
   // Allocate buffer for local variable in global storage.
   // TODO: We should allocate small local dense tensors on the stack
   iassert(var.getType().isTensor());
-  llvm::Type *ctype = llvmType(var.getType().toTensor()->componentType);
+  llvm::Type *ctype = llvmType(var.getType().toTensor()->getComponentType());
   llvm::PointerType *globalType = llvm::PointerType::get(ctype, globalAddrspace());
 
   llvm::GlobalVariable* buffer =

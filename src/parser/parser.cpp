@@ -129,7 +129,7 @@
     const TensorType *ttype = vec.type().toTensor();
     iassert(ttype->order() == 1);
 
-    Type transposedVector = TensorType::make(ttype->componentType,
+    Type transposedVector = TensorType::make(ttype->getComponentType(),
                                              ttype->getDimensions(),
                                              !ttype->isColumnVector);
 
@@ -2081,8 +2081,7 @@ namespace  simit { namespace internal  {
     iassert((yystack_[3].value.expr)) << "condition expression is null";
 
     Expr cond = convertAndDelete((yystack_[3].value.expr));
-    if (!isScalar(cond.type()) ||
-        !cond.type().toTensor()->componentType.isBoolean()) {
+    if (!isBoolean(cond.type())) {
       REPORT_ERROR("conditional expression is not boolean", yystack_[3].location);
     }
 
@@ -2161,8 +2160,7 @@ namespace  simit { namespace internal  {
     iassert((yystack_[4].value.expr)) << "condition expression is null";
 
     Expr cond = convertAndDelete((yystack_[4].value.expr));
-    if (!isScalar(cond.type()) ||
-        !cond.type().toTensor()->componentType.isBoolean()) {
+    if (!isBoolean(cond.type())) {
       REPORT_ERROR("conditional expression is not boolean", yystack_[4].location);
     }
 
@@ -2952,7 +2950,7 @@ namespace  simit { namespace internal  {
     auto blockTypePtr = convertAndDelete((yystack_[1].value.type));
     const ir::TensorType *blockType = blockTypePtr.toTensor();
 
-    auto componentType = blockType->componentType;
+    auto componentType = blockType->getComponentType();
 
     auto outerDimensions = unique_ptr<vector<IndexSet>>((yystack_[4].value.indexSets));
     auto blockDimensions = blockType->getDimensions();
@@ -2999,7 +2997,7 @@ namespace  simit { namespace internal  {
     auto type = convertAndDelete((yystack_[1].value.type));
     const ir::TensorType *tensorType = type.toTensor();
     auto dimensions = tensorType->getDimensions();
-    auto componentType = tensorType->componentType;
+    auto componentType = tensorType->getComponentType();
     (yylhs.value.type) = new Type(ir::TensorType::make(componentType, dimensions, true));
   }
 
@@ -4108,19 +4106,19 @@ namespace  simit { namespace internal  {
      512,   513,   514,   515,   516,   517,   518,   519,   520,   521,
      526,   536,   558,   567,   695,   736,   787,   867,   870,   877,
      881,   888,   891,   897,   902,   922,   944,   966,   988,   997,
-    1004,  1009,  1015,  1033,  1033,  1033,  1039,  1042,  1042,  1042,
-    1045,  1045,  1045,  1062,  1070,  1080,  1091,  1096,  1124,  1127,
-    1132,  1140,  1141,  1142,  1143,  1144,  1145,  1146,  1152,  1172,
-    1181,  1189,  1208,  1278,  1298,  1326,  1331,  1340,  1341,  1342,
-    1343,  1349,  1353,  1359,  1365,  1371,  1377,  1383,  1389,  1395,
-    1401,  1406,  1412,  1419,  1453,  1454,  1455,  1462,  1547,  1568,
-    1571,  1580,  1586,  1590,  1594,  1604,  1605,  1606,  1607,  1611,
-    1623,  1627,  1637,  1646,  1658,  1670,  1674,  1677,  1719,  1729,
-    1734,  1742,  1745,  1759,  1765,  1768,  1771,  1821,  1825,  1826,
-    1830,  1834,  1841,  1852,  1859,  1863,  1867,  1881,  1885,  1900,
-    1904,  1911,  1918,  1922,  1926,  1940,  1944,  1959,  1963,  1970,
-    1973,  1976,  1982,  1985,  1991,  1994,  2000,  2003,  2010,  2019,
-    2043,  2044,  2052
+    1004,  1009,  1015,  1032,  1032,  1032,  1038,  1041,  1041,  1041,
+    1044,  1044,  1044,  1060,  1068,  1078,  1089,  1094,  1122,  1125,
+    1130,  1138,  1139,  1140,  1141,  1142,  1143,  1144,  1150,  1170,
+    1179,  1187,  1206,  1276,  1296,  1324,  1329,  1338,  1339,  1340,
+    1341,  1347,  1351,  1357,  1363,  1369,  1375,  1381,  1387,  1393,
+    1399,  1404,  1410,  1417,  1451,  1452,  1453,  1460,  1545,  1566,
+    1569,  1578,  1584,  1588,  1592,  1602,  1603,  1604,  1605,  1609,
+    1621,  1625,  1635,  1644,  1656,  1668,  1672,  1675,  1717,  1727,
+    1732,  1740,  1743,  1757,  1763,  1766,  1769,  1819,  1823,  1824,
+    1828,  1832,  1839,  1850,  1857,  1861,  1865,  1879,  1883,  1898,
+    1902,  1909,  1916,  1920,  1924,  1938,  1942,  1957,  1961,  1968,
+    1971,  1974,  1980,  1983,  1989,  1992,  1998,  2001,  2008,  2017,
+    2041,  2042,  2050
   };
 
   // Print the state stack on the debug stream.

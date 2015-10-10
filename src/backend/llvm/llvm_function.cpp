@@ -238,7 +238,7 @@ Function::FuncType LLVMFunction::init() {
         IndexDomain vecDimension = tensorType->getDimensions()[0];
         Type blockType = tensorType->getBlockType();
         size_t blockSize = blockType.toTensor()->size();
-        size_t componentSize = tensorType->componentType.bytes();
+        size_t componentSize = tensorType->getComponentType().bytes();
         *temporaryPtrs.at(tmp.getName()) =
             calloc(size(vecDimension) *blockSize, componentSize);
       }
@@ -250,7 +250,7 @@ Function::FuncType LLVMFunction::init() {
         iassert(util::contains(pathIndices, pexpr));
         Type blockType = tensorType->getBlockType();
         size_t blockSize = blockType.toTensor()->size();
-        size_t componentSize = tensorType->componentType.bytes();
+        size_t componentSize = tensorType->getComponentType().bytes();
         size_t matSize = pathIndices.at(pexpr).numNeighbors() *
                          blockSize * componentSize;
         *temporaryPtrs.at(tmp.getName()) = malloc(matSize);

@@ -75,7 +75,7 @@ void IRPrinter::visit(const Literal *op) {
       iassert(op->type.kind() == Type::Tensor);
       const TensorType *type = op->type.toTensor();
       size = type->size();
-      componentType = type->componentType.kind;
+      componentType = type->getComponentType().kind;
 
       switch (componentType) {
         case ScalarType::Int:  {
