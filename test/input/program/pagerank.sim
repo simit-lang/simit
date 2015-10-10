@@ -12,8 +12,8 @@ end
 extern pages : set{Page};
 extern links : set{Link}(pages,pages);
 
-func outlinks(link : Link, p : (Page * 2)) -> (C : tensor[pages](float))
-  C(p(0)) = 1.0;
+func outlinks(link : Link, p : (Page * 2)) -> (c : tensor[pages](float))
+  c(p(0)) = 1.0;
 end
 
 func pagerank_matrix(link : Link, p : (Page*2))
@@ -22,8 +22,8 @@ func pagerank_matrix(link : Link, p : (Page*2))
 end
 
 proc main
-  C = map outlinks to links reduce +;
-  pages.outlinks = C;
+  c = map outlinks to links reduce +;
+  pages.outlinks = c;
   A = map pagerank_matrix to links reduce +;
   var pr : tensor[pages](float);
   pr = pr + 1.0;
