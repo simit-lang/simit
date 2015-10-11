@@ -1451,7 +1451,8 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
       // Assigning general scalar to a tensor
       else {
         not_supported_yet << "you can only currently assign a scalar to a"
-                          << "tensor if the scalar is 0.";
+                          << "tensor if the scalar is 0:" << std::endl
+                          << var.getName() << " = " << value;
       }
     }
     // Assign tensor to conforming tensor
