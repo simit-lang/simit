@@ -21,7 +21,12 @@ TEST(Codegen, add) {
   Expr axb = Add::make(a,b);
   Stmt body = AssignStmt::make(c, axb);
 
-  simit::Function function = getTestBackend()->compile(body, {c});
+  simit::ir::Environment env;
+  env.addExtern(a);
+  env.addExtern(b);
+  env.addExtern(c);
+
+  simit::Function function = getTestBackend()->compile(body, env);
 
   simit_float aArg = 2.0;
   simit_float bArg = 4.1;
