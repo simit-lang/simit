@@ -71,7 +71,7 @@ class GPUFunction : public LLVMFunction {
   };
 
   // Copy argument memory into device and build an llvm value to point to it
-  llvm::Value *pushArg(std::string formal, Actual* actual);
+  llvm::Value *pushArg(std::string name, ir::Type& argType, Actual* actual);
   // Copy device buffer into host data block
   void pullArg(DeviceDataHandle* handle);
   // Free the device buffer

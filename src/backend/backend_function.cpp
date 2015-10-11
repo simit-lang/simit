@@ -25,10 +25,7 @@ Function::Function(const ir::Func& func)
     if (arg.getType().isSet() ||
         (arg.getType().isTensor() &&
          arg.getType().toTensor()->hasSystemDimensions())) {
-      argumentIsResult[argName] = true;
-    }
-    else {
-      argumentIsResult[argName] = false;
+      results.insert(argName);
     }
   }
 
@@ -36,7 +33,7 @@ Function::Function(const ir::Func& func)
     string resName = res.getName();
     arguments.push_back(resName);
     argumentTypes[resName] = res.getType();
-    argumentIsResult[resName] = true;
+    results.insert(resName);
   }
 
   // Gather the Simit literal expressions and store them in an array in the
@@ -83,8 +80,8 @@ const ir::Type& Function::getArgType(std::string arg) const {
   return argumentTypes.at(arg);
 }
 
-bool Function::isArgResult(std::string arg) const {
-  return argumentIsResult.at(arg);
+bool Function::isResult(std::string name) const {
+  return results.count(name);
 }
 
 bool Function::hasGlobal(std::string name) const {

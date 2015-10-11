@@ -18,6 +18,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <utility>
 
 #include "error.h"
 #include "gpu_codegen.h"
@@ -383,6 +384,10 @@ void GPUBackend::compile(const ir::AssignStmt& op) {
       case ir::CompoundOperator::Add: {
         llvm::Value *value = compile(op.value);
         llvm::Value *varPtr = symtable.get(op.var);
+        // Globals are stored as pointer-pointers so we must load them
+        if (util::contains(globals, op.var)) {
+          varPtr = builder->CreateLoad(varPtr, op.var.getName());
+        }
         // Guard against non-pointer
         iassert(varPtr->getType()->isPointerTy());
         if (buffers.find(op.var) != buffers.end()) {
@@ -536,6 +541,12 @@ void GPUBackend::compile(const ir::FieldWrite& op) {
       valueType.toTensor()->order() == 0 &&
       ir::isa<ir::Literal>(op.value) &&
       ir::to<ir::Literal>(op.value)->getFloatVal(0) == 0.0) {
+    // TODO: Currently do not support int memsets
+    tassert(valueType.toTensor()->getComponentType().kind
+            == ir::ScalarType::Float)
+        << "Assigning int/bool tensor to zero unsupported"
+        << std::endl << op.elementOrSet << "." << op.fieldName
+        << " = " << op.value;
     llvm::Value *fieldPtr = emitFieldRead(op.elementOrSet, op.fieldName);
     // For now we'll assume fields are always dense row major
     emitShardedMemSet(
@@ -685,11 +696,21 @@ void GPUBackend::compile(const ir::GPUKernel& op) {
   builder->SetInsertPoint(prevBB);
   std::vector<llvm::Value*> args;
   for (auto &irArg : kernelArgs) {
-    args.push_back(compile(irArg));
+    llvm::Value *arg = symtable.get(irArg);
+    // TODO: Move this global vs. local distinction to function
+    // and kernel symtable management
+    if (util::contains(globals, irArg)) {
+      arg = builder->CreateLoad(arg, irArg.getName());
+    }
+    args.push_back(arg);
   }
   for (auto &irRes : kernelResults) {
     // TODO(gkanwar): Figure out inouts
-    args.push_back(compile(irRes));
+    llvm::Value *res = symtable.get(irRes);
+    if (util::contains(globals, irRes)) {
+      res = builder->CreateLoad(res, irRes.getName());
+    }
+    args.push_back(res);
   }
   emitKernelLaunch(kernel, args, kernelSharding);
 }
@@ -924,6 +945,19 @@ void GPUBackend::emitGlobals(const ir::Environment& env) {
     const ir::Var& sinkArray = tensorIndex.getSinkArray();
     global = symtable.get(sinkArray);
     addNVVMAnnotation(global, "managed", llvmInt(1), module);
+  }
+
+  // We must add externs and temporaries to the list of globally
+  // allocated buffers, because the GPU backend does not simply
+  // map the pointer to host memory, but instead must allocate
+  // and copy the values back and forth.
+  for (const ir::Var& ext : env.getExternVars()) {
+    llvm::Value *global = symtable.get(ext);
+    buffers.insert(std::pair<ir::Var, llvm::Value*>(ext, global));
+  }
+  for (const ir::Var& tmp : env.getTemporaries()) {
+    llvm::Value *global = symtable.get(tmp);
+    buffers.insert(std::pair<ir::Var, llvm::Value*>(tmp, global));
   }
 }
 

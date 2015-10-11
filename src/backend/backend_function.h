@@ -5,6 +5,7 @@
 #include <vector>
 #include <map>
 #include <functional>
+#include <set>
 
 #include "printable.h"
 #include "uncopyable.h"
@@ -63,7 +64,7 @@ public:
   bool hasArg(std::string arg) const;
   const std::vector<std::string>& getArgs() const;
   const ir::Type& getArgType(std::string arg) const;
-  bool isArgResult(std::string arg) const;
+  bool isResult(std::string name) const;
 
   bool hasGlobal(std::string name) const;
   const ir::Type& getGlobalType(std::string name) const;
@@ -78,7 +79,7 @@ private:
 
   std::vector<std::string> arguments;
   std::map<std::string, ir::Type> argumentTypes;
-  std::map<std::string, bool> argumentIsResult;
+  std::set<std::string> results;
 
   /// We store the Simit Function's literals to prevent their memory from being
   /// reclaimed if the IR is deleted, as compiled functions are allowed to

@@ -160,24 +160,16 @@ void GPUFunction::bind(const std::string& name, const int* rowPtr,
 }
 
 
-llvm::Value *GPUFunction::pushArg(std::string name, Actual* actual) {
+llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* actual) {
   // TODO: Use ActualVisitor
-
-  ir::Type argType = getArgType(name);
 
   // std::cout << "Push arg: " << formal << std::endl;
   if (isa<TensorActual>(actual)) {
     TensorActual* tActual = to<TensorActual>(actual);
     CUdeviceptr *devBuffer = new CUdeviceptr();
     const ir::TensorType *ttype = argType.toTensor();
-    // std::cout << "[";
-    // char* data = reinterpret_cast<char*>(literal.data);
-    // for (size_t i = 0; i < literal.size; ++i) {
-    //   if (i != 0) std::cout << ",";
-    //   std::cout << std::hex << (int) data[i];
-    // }
-    // std::cout << "]" << std::dec << std::endl;
-    if (!isArgResult(name) && isScalar(argType)) {
+    // TODO: How to handle scalar extern values??
+    if (!isResult(name) && isScalar(argType)) {
       switch (ttype->getComponentType().kind) {
         case ir::ScalarType::Int:
           return llvmInt(*(int*)tActual->getData());
@@ -392,13 +384,25 @@ GPUFunction::init() {
   llvm::SmallVector<llvm::Value*, 8> args;
   for (auto& kv : arguments) {
     std::string name = kv.first;
+    ir::Type argType = getArgType(name);
     Actual *actual = kv.second.get();
-    args.push_back(pushArg(name, actual));
+    args.push_back(pushArg(name, argType, actual));
     if (isa<SetActual>(actual)) {
       Set* set = to<SetActual>(actual)->getSet();
       piBuilder.bind(name, set);
     }
   }
+  for (auto& kv : globals) {
+    std::string name = kv.first;
+    ir::Type globalType = getGlobalType(name);
+    Actual *actual = kv.second.get();
+    pushArg(name, globalType, actual);
+    if (isa<SetActual>(actual)) {
+      Set* set = to<SetActual>(actual)->getSet();
+      piBuilder.bind(name, set);
+    }
+  }
+  // TODO: Add temporaries?
 
   const ir::Environment& env = getEnvironment();
 
@@ -469,6 +473,8 @@ GPUFunction::init() {
   checkCudaErrors(cuModuleLoadDataEx(cudaModule, cubin, 0, 0, 0));
   checkCudaErrors(cuLinkDestroy(linker));
 
+  // TODO: Remove this old-style hack witih properly handling the cleaner
+  // Environment abstraction.
   // Alloc global buffers and set global pointers
   for (auto& buf : globalBufs) {
     const ir::Var &bufVar = buf.first;
@@ -494,13 +500,20 @@ GPUFunction::init() {
             break;
           }
           case ir::TensorStorage::Kind::Indexed: {
-            iassert(env.hasTensorIndex(bufVar))
-                << "Indexed tensor does not have "
-                << "tensor index in environment: " << bufVar;
-            const pe::PathExpression& pexpr =
-                env.getTensorIndex(bufVar).getPathExpression();
-            iassert(util::contains(pathIndices, pexpr));
-            bufSize *= pathIndices.at(pexpr).numNeighbors();
+            if (env.hasTensorIndex(bufVar)) {
+              const pe::PathExpression& pexpr =
+                  env.getTensorIndex(bufVar).getPathExpression();
+              iassert(util::contains(pathIndices, pexpr));
+              bufSize *= pathIndices.at(pexpr).numNeighbors();
+            }
+            // In the LLVM backend, we choose to initialize non tensor-index
+            // tensors dynamically at runtime. The GPU does allocation here,
+            // so we need to "statically" compute the right size.
+            else {
+              const pe::PathExpression& pexpr = ts.getPathExpression();
+              iassert (util::contains(pathIndices, pexpr));
+              bufSize *= pathIndices.at(pexpr).numNeighbors();
+            }
             break;
           }
           case ir::TensorStorage::Kind::Diagonal: {
@@ -522,12 +535,37 @@ GPUFunction::init() {
     iassert(bufSize > 0)
         << "Cannot allocate size 0 global buffer for var: " << bufVar;
     checkCudaErrors(cuMemAlloc(devBuffer, bufSize));
-    pushedBufs.push_back(new DeviceDataHandle(nullptr, devBuffer, bufSize));
+
+    // Find the host-side data, if it exists
+    void *hostPtr = nullptr;
+    if (hasGlobal(bufVar.getName())) {
+      iassert(util::contains(externPtrs, bufVar.getName()) &&
+              externPtrs.at(bufVar.getName()).size() == 1);
+      hostPtr = *externPtrs.at(bufVar.getName())[0];
+    }
+
+    DeviceDataHandle* handle = new DeviceDataHandle(hostPtr, devBuffer, bufSize);
+    pushedBufs.push_back(handle);
+    std::vector<DeviceDataHandle*> handleVec = {handle};
+    argBufMap.emplace(bufVar.getName(), handleVec);
     void *devBufferPtr = reinterpret_cast<void*>(*devBuffer);
 
     void *globalPtrHost = getGlobalHostPtr(*cudaModule, bufVar.getName());
     *((void**)globalPtrHost) = devBufferPtr;
   }
+  for (auto& kv : globals) {
+    std::string name = kv.first;
+    std::vector<DeviceDataHandle*> handles = argBufMap[name];
+    iassert(handles.size() == 1)
+        << "Globals must correspond to exactly one pushed buffer" << std::endl
+        << "Found: " << handles.size();
+    DeviceDataHandle* handle = handles[0];
+    CUdeviceptr *devBuffer = handle->devBuffer;
+    void *devBufferPtr = reinterpret_cast<void*>(*devBuffer);
+    void *globalPtrHost = getGlobalHostPtr(*cudaModule, name);
+    *((void**)globalPtrHost) = devBufferPtr;
+  }
+  // TODO: Similar global setting for temporaries?
 
   // Initialize tensor index data
   for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
@@ -558,17 +596,21 @@ GPUFunction::init() {
     const ir::Var& coords = tensorIndex.getCoordArray();
     void *coordsPtrHost = getGlobalHostPtr(*cudaModule, coords.getName());
     *((void**)coordsPtrHost) = reinterpret_cast<void*>(*devCoordBuffer);
+    std::cout << "store in: " << coordsPtrHost << std::endl;
+    std::cout << "Value of coordsPtr: " << *(void**)coordsPtrHost << std::endl;
 
     const ir::Var& sinks = tensorIndex.getSinkArray();
     void *sinksPtrHost = getGlobalHostPtr(*cudaModule, sinks.getName());
     *((void**)sinksPtrHost) = reinterpret_cast<void*>(*devSinkBuffer);
+    std::cout << "store in: " << sinksPtrHost << std::endl;
+    std::cout << "Value of sinksPtr: " << *(void**)sinksPtrHost << std::endl;
   }
 
   // Get reference to CUDA function
   checkCudaErrors(cuModuleGetFunction(
       &cudaFunction, *cudaModule, harness->getName().data()));
 
-  return [this, cudaFunction](){
+  return [this, env, cudaFunction](){
     // std::cerr << "Allocated GPU memory: "
     //           << DeviceDataHandle::total_allocations << "\n";
     void **kernelParamsArr = new void*[0]; // TODO leaks
@@ -580,11 +622,16 @@ GPUFunction::init() {
     // Set device dirty bit for all output arg buffers
     for (auto& pair : arguments) {
       std::string name = pair.first;
-      if (isArgResult(name)) {
+      if (isResult(name)) {
         // std::cout << "Dirtying " << formal << std::endl;
         for (auto &handle : argBufMap[name]) {
           handle->devDirty = true;
         }
+      }
+    }
+    for (auto& ext : env.getExternVars()) {
+      for (auto &handle : argBufMap[ext.getName()]) {
+        handle->devDirty = true;
       }
     }
   };
