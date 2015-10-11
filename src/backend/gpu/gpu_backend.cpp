@@ -245,6 +245,7 @@ void GPUBackend::compile(const ir::Call& op) {
     //iassert(isScalar(a.type()));
     ir::ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->getComponentType()
                                                : a.type().toArray()->elementType;
+    argTypes.push_back(llvmType(ctype));
     args.push_back(compile(a));
   }
 
