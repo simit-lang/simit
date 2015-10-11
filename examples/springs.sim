@@ -43,8 +43,8 @@ proc main
   x = points.x;
   v = points.v;
 
-  M, fg = map distribute_masses to springs with points reduce +;
-  K, fs = map compute_stiffness to springs with points reduce +;
+  M, fg = map distribute_masses to springs reduce +;
+  K, fs = map compute_stiffness to springs reduce +;
   f = fs + fg;
 
   p  = M*v + (h*f)';

@@ -61,12 +61,12 @@
       YYERROR;                    \
     } while (0)
 
-  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)                          \
-    do {                                                              \
-      std::stringstream errorStr;                                     \
-      errorStr << "type mismatch (" <<                               \
-                  typeString(t1) << " and " << typeString(t2) << ")"; \
-      REPORT_ERROR(errorStr.str(), loc);                              \
+  #define REPORT_TYPE_MISSMATCH(t1, t2, loc)                            \
+    do {                                                                \
+      std::stringstream errorStr;                                       \
+      errorStr << "type mismatch (" <<                                  \
+                  typeString(t1) << " and " << typeString(t2) << ")";   \
+      REPORT_ERROR(errorStr.str(), loc);                                \
     } while (0)
 
   #define REPORT_INDEX_VARIABLE_MISSMATCH(numIndexVars, order, loc) \
@@ -80,7 +80,7 @@
   void Parser::error(const Parser::location_type &loc,
                            const std::string &msg) {
     errors->push_back(ParseError(loc.begin.line, loc.begin.column,
-                            loc.end.line, loc.end.column, msg));
+                                 loc.end.line, loc.end.column, msg));
   }
 
   #undef yylex
@@ -106,7 +106,7 @@
     const TensorType *ttype = vec.type().toTensor();
     iassert(ttype->order() == 1);
 
-    Type transposedVector = TensorType::make(ttype->componentType,
+    Type transposedVector = TensorType::make(ttype->getComponentType(),
                                              ttype->getDimensions(),
                                              !ttype->isColumnVector);
 
@@ -1016,8 +1016,7 @@ if_stmt
     iassert($expr) << "condition expression is null";
 
     Expr cond = convertAndDelete($expr);
-    if (!isScalar(cond.type()) ||
-        !cond.type().toTensor()->componentType.isBoolean()) {
+    if (!isBoolean(cond.type())) {
       REPORT_ERROR("conditional expression is not boolean", @expr);
     }
 
@@ -1046,8 +1045,7 @@ else_clauses
     iassert($expr) << "condition expression is null";
 
     Expr cond = convertAndDelete($expr);
-    if (!isScalar(cond.type()) ||
-        !cond.type().toTensor()->componentType.isBoolean()) {
+    if (!isBoolean(cond.type())) {
       REPORT_ERROR("conditional expression is not boolean", @expr);
     }
 
@@ -1678,7 +1676,7 @@ tensor_type
     auto blockTypePtr = convertAndDelete($block_type);
     const ir::TensorType *blockType = blockTypePtr.toTensor();
 
-    auto componentType = blockType->componentType;
+    auto componentType = blockType->getComponentType();
 
     auto outerDimensions = unique_ptr<vector<IndexSet>>($index_sets);
     auto blockDimensions = blockType->getDimensions();
@@ -1720,7 +1718,7 @@ tensor_type
     auto type = convertAndDelete($1);
     const ir::TensorType *tensorType = type.toTensor();
     auto dimensions = tensorType->getDimensions();
-    auto componentType = tensorType->componentType;
+    auto componentType = tensorType->getComponentType();
     $$ = new Type(ir::TensorType::make(componentType, dimensions, true));
   }
 

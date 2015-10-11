@@ -50,7 +50,7 @@ llvm::Constant* llvmPtr(const Literal& literal) {
 }
 
 llvm::Constant* llvmVal(const TensorType& type, const void *data) {
-  ScalarType componentType = type.componentType;
+  ScalarType componentType = type.getComponentType();
   switch (componentType.kind) {
     case ScalarType::Int:
       return llvmInt(static_cast<const int*>(data)[0]);
@@ -146,7 +146,7 @@ llvm::Function* createPrototype(const std::string &name,
     // Our convention is that scalars are passed to functions by value,
     // while everything else is passed through a pointer
     llvm::Type *type = (isScalar(arg.getType()) && scalarsByValue)
-        ? llvmType(arg.getType().toTensor()->componentType)
+        ? llvmType(arg.getType().toTensor()->getComponentType())
         : llvmType(arg.getType(), addrspace);
     llvmArgTypes.push_back(type);
   }

@@ -45,16 +45,12 @@ TEST(Program, pagerank) {
 
   func.init();
   func.unmapArgs();
-
-  for (size_t i=0; i < 10; ++i) {
-    func.run();
-  }
-
+  func.run();
   func.mapArgs();
 
-  SIMIT_ASSERT_FLOAT_EQ(0.341250, pr.get(A));
-  SIMIT_ASSERT_FLOAT_EQ(0.150000, pr.get(B));
-  SIMIT_ASSERT_FLOAT_EQ(0.150000, pr.get(C));
-  SIMIT_ASSERT_FLOAT_EQ(0.150000, pr.get(D));
-  SIMIT_ASSERT_FLOAT_EQ(0.63131250000000005, pr.get(E));
+  SIMIT_EXPECT_FLOAT_EQ(0.341250, pr.get(A));
+  SIMIT_EXPECT_FLOAT_EQ(0.150000, pr.get(B));
+  SIMIT_EXPECT_FLOAT_EQ(0.150000, pr.get(C));
+  SIMIT_EXPECT_FLOAT_EQ(0.150000, pr.get(D));
+  SIMIT_EXPECT_FLOAT_EQ(0.63131250000000005, pr.get(E));
 }

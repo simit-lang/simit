@@ -178,7 +178,7 @@ llvm::Value *GPUFunction::pushArg(std::string name, Actual* actual) {
     // }
     // std::cout << "]" << std::dec << std::endl;
     if (!isArgResult(name) && isScalar(argType)) {
-      switch (ttype->componentType.kind) {
+      switch (ttype->getComponentType().kind) {
         case ir::ScalarType::Int:
           return llvmInt(*(int*)tActual->getData());
         case ir::ScalarType::Float:
@@ -188,11 +188,11 @@ llvm::Value *GPUFunction::pushArg(std::string name, Actual* actual) {
         case ir::ScalarType::Boolean:
           return llvmBool(*(bool*)tActual->getData());
         default:
-          ierror << "Unknown ScalarType: " << ttype->componentType.kind;
+          ierror << "Unknown ScalarType: " << ttype->getComponentType().kind;
       }
     }
     else {
-      size_t size = ttype->size() * ttype->componentType.bytes();
+      size_t size = ttype->size() * ttype->getComponentType().bytes();
       checkCudaErrors(cuMemAlloc(devBuffer, size));
       checkCudaErrors(cuMemcpyHtoD(*devBuffer, tActual->getData(), size));
       // std::cout << literal.data << " -> " << (void*)(*devBuffer) << std::endl;
@@ -277,7 +277,7 @@ llvm::Value *GPUFunction::pushArg(std::string name, Actual* actual) {
       iassert(ftype.isTensor()) << "Element field must be tensor type";
       const ir::TensorType *ttype = ftype.toTensor();
       void *fieldData = set->getFieldData(field.name);
-      size_t size = set->getSize() * ttype->size() * ttype->componentType.bytes();
+      size_t size = set->getSize() * ttype->size() * ttype->getComponentType().bytes();
       if (size != 0) {
         checkCudaErrors(cuMemAlloc(devBuffer, size));
         checkCudaErrors(cuMemcpyHtoD(*devBuffer, fieldData, size));
@@ -475,7 +475,7 @@ GPUFunction::init() {
     llvm::Value *bufVal = buf.second;
 
     const ir::TensorType* ttype = bufVar.getType().toTensor();
-    size_t bufSize = ttype->componentType.bytes();
+    size_t bufSize = ttype->getComponentType().bytes();
     if (!isScalar(bufVar.getType())) {
       bufSize *= ttype->getBlockType().toTensor()->size();
       // Vectors have dense allocation

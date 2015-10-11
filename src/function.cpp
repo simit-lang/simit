@@ -57,7 +57,7 @@ void Function::bind(const std::string& name, simit::Set *set) {
         break;
     }
 
-    uassert(setFieldTypeComponentType == elemFieldType->componentType)
+    uassert(setFieldTypeComponentType == elemFieldType->getComponentType())
         << "field type does not match function argument type "
         << util::quote(*elemFieldType);
 

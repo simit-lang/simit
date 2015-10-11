@@ -339,6 +339,9 @@ private:
           peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
           pe::PathExpression pexpr = peBuilder.getPathExpression(var);
           storage->getStorage(var).setPathExpression(pexpr);
+        } else if (isa<VarExpr>(op->value) && rhsType.isTensor()) {
+          pe::PathExpression pexpr = storage->getStorage(to<VarExpr>(op->value)->var).getPathExpression();
+          storage->getStorage(var).setPathExpression(pexpr);
         }
       }
     }

@@ -177,7 +177,9 @@ void IRVisitor::visit(const Block *op) {
 }
 
 void IRVisitor::visit(const Print *op) {
-  op->expr.accept(this);
+  if (op->expr.defined()) {
+    op->expr.accept(this);
+  }
 }
 
 void IRVisitor::visit(const Comment *op) {

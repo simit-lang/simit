@@ -207,7 +207,7 @@ struct ErrorReport {
                                 << #a << ": " << a << "\n" << #b << ": " << b
 
 #define iassert_boolean_scalar(a)                                              \
-  iassert(isScalar(a.type()) && a.type().toTensor()->componentType.isBoolean())\
+  iassert(isScalar(a.type()))                                                  \
       << a << "must be a boolean scalar but is a" << a.type()
 
 // User asserts

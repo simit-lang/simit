@@ -97,7 +97,7 @@ protected:
       std::string varName = var.getName();
 
       const TensorType *origType = var.getType().toTensor();
-      Type type = TensorType::make(origType->componentType,
+      Type type = TensorType::make(origType->getComponentType(),
                                    origType->getDimensions(),
                                    origType->isColumnVector);
       // for (int dim = 0; dim < depth; ++dim) {

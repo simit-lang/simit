@@ -87,7 +87,7 @@ llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace,
 }
 
 llvm::PointerType* llvmType(const TensorType& type, unsigned addrspace) {
-  return llvmPtrType(type.componentType, addrspace);
+  return llvmPtrType(type.getComponentType(), addrspace);
 }
 
 llvm::PointerType* llvmType(const ir::ArrayType& type, unsigned addrspace) {

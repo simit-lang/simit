@@ -186,7 +186,7 @@ bool operator==(const ScalarType& l, const ScalarType& r) {
 }
 
 bool operator==(const TensorType& l, const TensorType& r) {
-  if (l.componentType != r.componentType) {
+  if (l.getComponentType() != r.getComponentType()) {
     return false;
   }
   if (l.order() != r.order()) {
@@ -282,7 +282,7 @@ std::ostream& operator<<(std::ostream& os, const ScalarType& type) {
 
 std::ostream& operator<<(std::ostream& os, const TensorType& type) {
   if (type.order() == 0) {
-    os << type.componentType;
+    os << type.getComponentType();
   }
   else {
     os << "tensor";

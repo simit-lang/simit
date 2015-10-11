@@ -92,3 +92,7 @@ TEST(Type, eq) {
   ASSERT_NE(TensorType::make(ScalarType(ScalarType::Float), dims0),
             TensorType::make(ScalarType(ScalarType::Float), dims1));
 }
+
+TEST(Type, blocking) {
+  
+}

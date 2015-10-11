@@ -156,7 +156,7 @@ void GPUBackend::compile(const ir::Literal& op) {
   }
   else {
     // Put the data in global memory and generate a pointer
-    ir::ScalarType ctype = type->componentType;
+    ir::ScalarType ctype = type->getComponentType();
     llvm::Constant *dataConstant = nullptr;
     switch (ctype.kind) {
       case ir::ScalarType::Int: {
@@ -242,7 +242,7 @@ void GPUBackend::compile(const ir::Call& op) {
   for (auto a: op.actuals) {
     //FIX: remove once solve() is no longer needed
     //iassert(isScalar(a.type()));
-    ir::ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->componentType
+    ir::ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->getComponentType()
                                                : a.type().toArray()->elementType;
     args.push_back(compile(a));
   }
@@ -270,7 +270,7 @@ void GPUBackend::compile(const ir::Call& op) {
       llvm::Value *result = builder->CreateAlloca(
           llvmFloatType(), llvmInt(1));
       llvm::Value *size = emitComputeLen(dimensions[0]);
-      ir::Type resultType = ir::TensorType::make(type->componentType);
+      ir::Type resultType = ir::TensorType::make(type->getComponentType());
       emitShardedDot(op.actuals[0].type(), op.actuals[0].type(),
                      resultType, args[0], args[0], size, result);
       llvm::Value *sqrt = getBuiltIn(
@@ -309,7 +309,7 @@ void GPUBackend::compile(const ir::Call& op) {
 
     llvm::Value *result = builder->CreateAlloca(llvmFloatType(), llvmInt(1));
     llvm::Value *size = emitComputeLen(type1Dimensions[0]);
-    ir::Type resultType = ir::TensorType::make(type1->componentType);
+    ir::Type resultType = ir::TensorType::make(type1->getComponentType());
     emitShardedDot(op.actuals[0].type(), op.actuals[1].type(),
                    resultType, args[0], args[1],
                    size, result);
@@ -360,7 +360,7 @@ void GPUBackend::compile(const ir::VarDecl& op) {
     }
     else {
       const ir::TensorType *ttype = var.getType().toTensor();
-      ir::ScalarType ctype = ttype->componentType;
+      ir::ScalarType ctype = ttype->getComponentType();
       llvm::Value *llvmVar = builder->CreateAlloca(
           llvmType(ctype), llvmInt(ttype->size()), var.getName());
       symtable.insert(var, llvmVar);
@@ -434,7 +434,7 @@ void GPUBackend::compile(const ir::CallStmt& op) {
   for (auto a: op.actuals) {
     //FIX: remove once solve() is no longer needed
     //iassert(isScalar(a.type()));
-    argTypes.push_back(llvmType(a.type().toTensor()->componentType));
+    argTypes.push_back(llvmType(a.type().toTensor()->getComponentType()));
     args.push_back(compile(a));
   }
 
@@ -493,7 +493,7 @@ void GPUBackend::compile(const ir::CallStmt& op) {
   else {
     if (module->getFunction(callee.getName())) {
       for (ir::Var r : op.results) {
-        argTypes.push_back(llvmType(r.getType().toTensor()->componentType));
+        argTypes.push_back(llvmType(r.getType().toTensor()->getComponentType()));
 
         llvm::Value *llvmResult = symtable.get(r);
         args.push_back(llvmResult);
@@ -1114,10 +1114,10 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
 
   // Actual assign
   llvm::Value *value = nullptr;
-  if (targetType.toTensor()->componentType.kind == ir::ScalarType::Float) {
+  if (targetType.toTensor()->getComponentType().kind == ir::ScalarType::Float) {
     value = llvmFP(0);
   }
-  else if (targetType.toTensor()->componentType.kind == ir::ScalarType::Int) {
+  else if (targetType.toTensor()->getComponentType().kind == ir::ScalarType::Int) {
     value = llvmInt(0);
   }
   else {
@@ -1144,7 +1144,7 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
                                 llvm::Value *vec1, llvm::Value *vec2,
                                 llvm::Value *size, llvm::Value *result) {
   // Clear result first
-  iassert(resType.toTensor()->componentType.kind == ir::ScalarType::Float);
+  iassert(resType.toTensor()->getComponentType().kind == ir::ScalarType::Float);
   builder->CreateStore(llvmFP(0), result);
 
   // Stash the symtable

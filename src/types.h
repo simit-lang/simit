@@ -127,14 +127,9 @@ template<> inline ScalarType typeOf<bool>() {
 //       vector of matrices and a matrix of vectors, both of which must be
 //       permitted.
 struct TensorType : TypeNode {
-  ScalarType componentType;
-  std::vector<IndexDomain> dims;
-
-  /// Marks whether the tensor type is a column vector.  This information is
-  /// not used by the Simit compiler, but is here to ease frontend development.
-  bool isColumnVector;
-
+public:
   size_t order() const;
+  ScalarType getComponentType() const {return componentType;}
 
   std::vector<IndexDomain> getDimensions() const;
 
@@ -165,6 +160,14 @@ struct TensorType : TypeNode {
     type->isColumnVector = isColumnVector;
     return type;
   }
+
+  /// Marks whether the tensor type is a column vector.  This information is
+  /// not used by the Simit compiler, but is here to ease frontend development.
+  bool isColumnVector;
+
+private:
+  ScalarType componentType;
+  std::vector<IndexDomain> dims;
 };
 
 struct Field {
@@ -267,8 +270,7 @@ inline bool isScalar(Type type) {
 }
 
 inline bool isBoolean(Type type) {
-  return type.kind()==Type::Tensor && type.toTensor()->order() == 0 &&
-      type.toTensor()->componentType.isBoolean();
+  return isScalar(type) && type.toTensor()->getComponentType().isBoolean();
 }
 
 /// A system tensor is a tensor whose dimensions contain at least one set.
