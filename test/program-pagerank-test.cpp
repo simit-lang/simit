@@ -8,7 +8,7 @@
 using namespace std;
 using namespace simit;
 
-TEST(Program, pagerank) {
+TEST(Program, DISABLED_pagerank) {
   // Pages
   Set pages;
   FieldRef<simit_float> outlinks = pages.addField<simit_float>("outlinks");

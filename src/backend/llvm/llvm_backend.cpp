@@ -1443,15 +1443,25 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
 
     // Assigning a scalar to an n-order tensor
     if (varType->order() > 0 && valType->order() == 0) {
-      // Assigning 0 to a tensor (memset)
-      if (isa<Literal>(value) && (to<Literal>(value)->getFloatVal(0) == 0.0 ||
-                                  ((int*)to<Literal>(value)->data)[0] == 0  )) {
-        emitMemSet(varPtr, llvmInt(0,8), size, componentSize);
+      if (isa<Literal>(value)) {
+        const ScalarType& sType = valType->getComponentType();
+        // Assigning 0 to a tensor (memset)
+        if ((sType.kind == ScalarType::Float &&
+             to<Literal>(value)->getFloatVal(0) == 0.0) ||
+            (sType.kind == ScalarType::Int &&
+             ((int*)to<Literal>(value)->data)[0] == 0)) {
+          emitMemSet(varPtr, llvmInt(0,8), size, componentSize);
+        }
+        else {
+          not_supported_yet << "Cannot assign non-zero value to tensor:"
+                            << std::endl
+                            << var.getName() << " = " << value;
+        }
       }
       // Assigning general scalar to a tensor
       else {
         not_supported_yet << "you can only currently assign a scalar to a"
-                          << "tensor if the scalar is 0:" << std::endl
+                          << "tensor if the scalar is a literal 0:" << std::endl
                           << var.getName() << " = " << value;
       }
     }
