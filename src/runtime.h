@@ -1,11 +1,6 @@
 #ifndef SIMIT_RUNTIME_H
 #define SIMIT_RUNTIME_H
 
-#ifdef EIGEN
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-#include <Eigen/IterativeLinearSolvers>
 #include <time.h>
 #include <vector>
 
@@ -35,10 +30,36 @@ void inv3_f32(float* a, float* inv);
 double complexNorm_f64(double r, double i);
 float complexNorm_f32(float r, float i);  
 
+
 void simitStoreTime(int i, double value);
 double simitClock();
 
+// If Eigen is not detected, make solves just do a noop.
+// This is not a #else because we will in the future support more
+// solver backends.
+#ifndef EIGEN
+void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
+                 int* row_start, int* col_idx,
+                 int rows, int columns, int nnz, int bs_x, int bs_y) {
+  return;
+}
 
+void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
+                 int* row_start, int* col_idx,
+                 int rows, int columns, int nnz, int bs_x, int bs_y) {
+  return;
+}
+#endif
+} // extern "C"
+
+
+#ifdef EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+#include <Eigen/IterativeLinearSolvers>
+
+extern "C" {
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f32
 void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
                  int* row_start, int* col_idx,
@@ -103,10 +124,9 @@ void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
 #endif
   
 }
+} // extern "C"
+#endif // ifdef EIGEN
 
-
-}
-#endif
 
 extern "C" {
 

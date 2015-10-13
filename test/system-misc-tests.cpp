@@ -707,6 +707,9 @@ TEST(System, solve_external) {
 
   func.runSafe();
 
+  // Only do these checks if Eigen is present; otherwise the solve
+  // is a noop.
+#ifdef EIGEN
   // Check that inputs are preserved
   SIMIT_ASSERT_FLOAT_EQ(2.0, b.get(p0));
   SIMIT_ASSERT_FLOAT_EQ(1.0, b.get(p1));
@@ -716,6 +719,7 @@ TEST(System, solve_external) {
   ASSERT_NEAR(2.0, (double)c.get(p0), 0.00001);
   ASSERT_NEAR(1.0, (double)c.get(p1), 0.00001);
   ASSERT_NEAR(4.0, (double)c.get(p2), 0.00001);
+#endif
 }
 
 // the test doesn't get very close to the correct answer
@@ -758,6 +762,9 @@ TEST(System, solve_external_blocked) {
   func.bind("springs", &springs);
 
   func.runSafe();
+  // Only do these checks if Eigen is present; otherwise the solve
+  // is a noop.
+#ifdef EIGEN
 
   // Check that outputs are correct
   // They're not going to be very close because the matrix is sucky for solves
@@ -773,6 +780,7 @@ TEST(System, solve_external_blocked) {
   TensorRef<simit_float,2> c2 = c.get(p2);
   ASSERT_NEAR(2.0, c2(0), 1.0);
   ASSERT_NEAR(4.0, c2(1), 1.0);
+#endif
 }
 #endif
 
