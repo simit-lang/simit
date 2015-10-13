@@ -370,7 +370,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
     // Dense loops
     if (!loop.isLinked()) {
       const IndexSet &indexSet = indexVar.getDomain().getIndexSets()[0];
-      loopNest = ForRange::make(inductionVar, 0, Length::make(indexSet), loopNest);
+      loopNest = For::make(inductionVar, indexSet, loopNest);
     }
     // Sparse/linked loops
     else {

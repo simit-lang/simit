@@ -67,19 +67,19 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   //       function was used to make the old init system that relied on storage
   //       work while transitioning to the new one based on pexprs
 //  func = makeSystemTensorsGlobal(func);
-  irFunc = makeSystemTensorsGlobalIfHasTensorIndex(irFunc);
+  this->irFunc = makeSystemTensorsGlobalIfHasTensorIndex(this->irFunc);
 
-  const ir::Environment& env = irFunc.getEnvironment();
+  const ir::Environment& env = this->irFunc.getEnvironment();
   emitGlobals(env);
 
-  std::vector<ir::Func> callTree = ir::getCallTree(irFunc);
+  std::vector<ir::Func> callTree = ir::getCallTree(this->irFunc);
   std::reverse(callTree.begin(), callTree.end());
 
   llvm::Function *func = nullptr;
   for (auto &f : callTree) {
     // If we're not compiling the top-level func, then we do regular stack
     // allocations.
-    inKernel = (f.getName() != irFunc.getName());
+    inKernel = (f.getName() != this->irFunc.getName());
 
     if (f.getKind() != ir::Func::Internal) continue;
     iassert(f.getBody().defined());
@@ -139,14 +139,14 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
 #endif
 
   // Add temporaries to buffers
-  for (const ir::Var& tmp : env.getTemporaries()) {
-    buffers[tmp] = symtable.get(tmp);
-  }
+  // for (const ir::Var& tmp : env.getTemporaries()) {
+  //   buffers[tmp] = symtable.get(tmp);
+  // }
 
   // Fake an EngineBuilder to allow interfacing with the LLVMFunction
   // superclass.
   std::shared_ptr<llvm::EngineBuilder> engineBuilder = createEngineBuilder(module);
-  return new GPUFunction(irFunc, func, module, engineBuilder, buffers, storage);
+  return new GPUFunction(this->irFunc, func, module, engineBuilder, storage);
 }
 
 void GPUBackend::compile(const ir::Literal& op) {
@@ -391,6 +391,7 @@ void GPUBackend::compile(const ir::AssignStmt& op) {
         }
         // Guard against non-pointer
         iassert(varPtr->getType()->isPointerTy());
+        // TODO: This check should probably look at things in env instead
         if (buffers.find(op.var) != buffers.end()) {
           // Global or argument which might be accessed in parallel
           emitAtomicLoadAdd(varPtr, value);
@@ -952,14 +953,14 @@ void GPUBackend::emitGlobals(const ir::Environment& env) {
   // allocated buffers, because the GPU backend does not simply
   // map the pointer to host memory, but instead must allocate
   // and copy the values back and forth.
-  for (const ir::Var& ext : env.getExternVars()) {
-    llvm::Value *global = symtable.get(ext);
-    buffers.insert(std::pair<ir::Var, llvm::Value*>(ext, global));
-  }
-  for (const ir::Var& tmp : env.getTemporaries()) {
-    llvm::Value *global = symtable.get(tmp);
-    buffers.insert(std::pair<ir::Var, llvm::Value*>(tmp, global));
-  }
+  // for (const ir::Var& ext : env.getExternVars()) {
+  //   llvm::Value *global = symtable.get(ext);
+  //   buffers.insert(std::pair<ir::Var, llvm::Value*>(ext, global));
+  // }
+  // for (const ir::Var& tmp : env.getTemporaries()) {
+  //   llvm::Value *global = symtable.get(tmp);
+  //   buffers.insert(std::pair<ir::Var, llvm::Value*>(tmp, global));
+  // }
 }
 
 void GPUBackend::emitPrintf(std::string format,
@@ -1271,6 +1272,10 @@ llvm::Value* GPUBackend::makeGlobalTensor(ir::Var var) {
   // Replace the load in the symtable with an appropriately casted version
   llvm::Value *llvmTmp = emitCastGlobalToGen(llvmGlobal);
   symtable.insert(var, llvmTmp);
+
+  // Add to env as a temporary so we can allocate memory appropriately
+  ir::Environment& env = irFunc.getEnvironment();
+  env.addTemporary(var);
 
   return llvmTmp;
 }

@@ -24,7 +24,6 @@ class GPUFunction : public LLVMFunction {
   GPUFunction(ir::Func simitFunc, llvm::Function *llvmFunc,
               llvm::Module *module,
               std::shared_ptr<llvm::EngineBuilder> engineBuilder,
-              std::map<ir::Var, llvm::Value*> globalBufs,
               const ir::Storage& storage);
   ~GPUFunction();
 
@@ -41,16 +40,10 @@ class GPUFunction : public LLVMFunction {
   virtual FuncType init();
 
  private:
-  // Allocate the given argument as a device buffer
-  CUdeviceptr allocArg(const ir::Type& var);
-  // Get argument data as a Literal
-  const ir::Literal& getArgData(Actual& actual);
-  // Compute tensor size given the actual bound sets
-  size_t computeTensorSize(const ir::Var& var);
-
   // Struct for tracking arguments being pushed and pulled to/from GPU
   // TODO: Split tracking current function args from any data we own on the GPU
-  struct DeviceDataHandle {
+  class DeviceDataHandle {
+   public:
     CUdeviceptr *devBuffer;
     void *hostBuffer;
     size_t size;
@@ -68,10 +61,36 @@ class GPUFunction : public LLVMFunction {
     }
 
     ~DeviceDataHandle() { total_allocations -= size; }
+
+   private:
+    friend std::ostream& operator<<(std::ostream& os,
+                                    const DeviceDataHandle& handle) {
+      return os << handle.hostBuffer << " <-> " << handle.devBuffer
+                << " (" << handle.size << ")";
+    }
   };
+  // Internal collection to hold pushed set data
+  // NOTE: None of the DeviceDataHandle pointers are owned by this struct,
+  // they are instead memory-managed by the pushedBufs array.
+  struct SetData {
+    int setSize;
+
+    // Only included if this is an edge set
+    DeviceDataHandle *endpoints;
+    DeviceDataHandle *startIndex; // row starts
+    DeviceDataHandle *nbrIndex; // col indexes
+
+    // Fields
+    std::vector<DeviceDataHandle*> fields;
+  };
+
+  // Push all data for a set, and return references to pushed buffers in a
+  // SetData struct.
+  SetData pushSetData(Set* set, const ir::SetType* setType);
 
   // Copy argument memory into device and build an llvm value to point to it
   llvm::Value *pushArg(std::string name, ir::Type& argType, Actual* actual);
+  
   // Copy device buffer into host data block
   void pullArg(DeviceDataHandle* handle);
   // Free the device buffer
