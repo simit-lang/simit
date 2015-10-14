@@ -260,6 +260,8 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   mpm.run(*module);
 #endif
 
+  std::cout << *llvmFunc << std::endl;
+
   return new LLVMFunction(func, storage, llvmFunc, module, engineBuilder);
 }
 
@@ -508,18 +510,7 @@ void LLVMBackend::compile(const ir::Call& call) {
   else if (module->getFunction(call.func.getName())) {
     fun = module->getFunction(call.func.getName());
   }
-  // if it is an external call, just generate a call to it
-  else if (call.func.getKind() == Func::External) {
-    // ensure it is called with the correct number of arguments.
-    uassert(call.actuals.size() == call.func.getArguments().size()) <<
-      "External function " << call.func.getName() << " called with" <<
-      call.actuals.size() << " arguments, but expected " <<
-      call.func.getArguments().size() << " arguments.";
-    
-    val = emitCall(call.func.getName(), args, llvmFloatType());
-    return;
-  }
-  else {
+   else {
     not_supported_yet << "Unsupported function call";
   }
   iassert(fun);
@@ -1003,6 +994,25 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       builder->CreateStore(call, llvmVar);
     }
   }
+   // if it is an external call, just generate a call to it
+  else if (callStmt.callee.getKind() == Func::External) {
+    // ensure it is called with the correct number of arguments.
+    uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
+      "External function '" << callStmt.callee.getName() << "' called with " <<
+      callStmt.actuals.size() << " arguments, but expected " <<
+      callStmt.callee.getArguments().size() << " arguments.";
+    std::cout << callStmt.callee << std::endl;
+    //args.push_back(compile(callStmt.callee.getResults()[0]));
+    llvm::Value *llvmVar = symtable.get(callStmt.callee.getResults()[0]);
+    args.push_back(llvmVar);
+    std::cout << *args[2]<< std::endl;
+    argTypes.push_back(llvmFloatPtrType());
+    std::cout << *argTypes[2] << std::endl;
+    call = emitCall(callStmt.callee.getName(), args);
+    std::cout << *call << std::endl;
+    return;
+  }
+
   // If not an intrinsic function, try to find it in the module
   else {
     if (module->getFunction(callStmt.callee.getName())) {
