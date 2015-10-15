@@ -32,8 +32,7 @@ class GPUFunction : public LLVMFunction {
 
   virtual void bind(const std::string& name, simit::Set* set);
   virtual void bind(const std::string& name, void* data);
-  virtual void bind(const std::string& name, const int* rowPtr,
-                    const int* colInd, void* data);
+  virtual void bind(const std::string& name, TensorData& data);
   virtual void mapArgs();
   virtual void unmapArgs(bool updated);
 
@@ -84,9 +83,27 @@ class GPUFunction : public LLVMFunction {
     std::vector<DeviceDataHandle*> fields;
   };
 
+  // Internal collection to hold pushed sparse tensor data
+  // NOTE: None of the DeviceDataHandle pointers are owned by this struct,
+  // they are instead memory-managed by the pushedBufs array.
+  struct SparseTensorData {
+    DeviceDataHandle *data;
+    DeviceDataHandle *rowPtr;
+    DeviceDataHandle *colInd;
+  };
+
   // Push all data for a set, and return references to pushed buffers in a
   // SetData struct.
   SetData pushSetData(Set* set, const ir::SetType* setType);
+  // Push data for a global tensor
+  DeviceDataHandle *pushGlobalTensor(const ir::Environment& env,
+                                     const ir::Storage& storage,
+                                     const ir::Var& bufVar,
+                                     const ir::TensorType* ttype);
+  // Push data for an extern sparse tensor
+  SparseTensorData pushExternSparseTensor(const ir::Environment& env,
+                                          const ir::Var& bufVar,
+                                          const ir::TensorType* ttype);
 
   // Copy argument memory into device and build an llvm value to point to it
   llvm::Value *pushArg(std::string name, ir::Type& argType, Actual* actual);
@@ -102,7 +119,7 @@ class GPUFunction : public LLVMFunction {
   std::vector<DeviceDataHandle*> pushedBufs;
   std::map<std::string, std::vector<DeviceDataHandle*> > argBufMap;
   std::unique_ptr<ir::Func> simitFunc;
-  std::map<ir::Var, llvm::Value*> globalBufs;
+  std::map<std::string, TensorData*> tensorData;
   CUcontext *cudaContext;
   CUmodule *cudaModule;
   int cuDevMajor, cuDevMinor;

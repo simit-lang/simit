@@ -139,8 +139,7 @@ void LLVMFunction::bind(const std::string& name, void* data) {
   }
 }
 
-void LLVMFunction::bind(const std::string& name, const int* rowPtr,
-                        const int* colInd, void* data) {
+void LLVMFunction::bind(const std::string& name, TensorData& tensorData) {
   iassert(hasBindable(name));
   tassert(!hasArg(name)) << "Only support global sparse matrices";
 
@@ -152,9 +151,9 @@ void LLVMFunction::bind(const std::string& name, const int* rowPtr,
         << externPtrs.at(name).size();
 
     // Sparse matrix externs are ordered: data, rowPtr, colInd
-    *externPtrs.at(name)[0] = data;
-    *externPtrs.at(name)[1] = (void*)rowPtr;
-    *externPtrs.at(name)[2] = (void*)colInd;
+    *externPtrs.at(name)[0] = tensorData.getData();
+    *externPtrs.at(name)[1] = (void*)tensorData.getRowPtr();
+    *externPtrs.at(name)[2] = (void*)tensorData.getColInd();
   }
 }
 

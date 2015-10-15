@@ -22,6 +22,7 @@
 #include "indices.h"
 #include "ir.h"
 #include "tensor_index.h"
+#include "tensor_data.h"
 #include "path_indices.h"
 #include "backend/actual.h"
 #include "backend/llvm/llvm_codegen.h"
@@ -34,14 +35,15 @@ namespace backend {
 
 size_t GPUFunction::DeviceDataHandle::total_allocations = 0;
 
-static void *getGlobalHostPtr(CUmodule& cudaModule, std::string name) {
+static void *getGlobalHostPtr(CUmodule& cudaModule, std::string name,
+                              size_t expectedSize) {
   CUdeviceptr globalPtr;
   size_t globalPtrSize;
   checkCudaErrors(cuModuleGetGlobal(&globalPtr, &globalPtrSize,
                                     cudaModule, name.data()));
-  iassert(globalPtrSize == sizeof(void*))
-      << "Global pointers should all be pointer-sized. Got: "
-      << globalPtrSize << " bytes";
+  iassert(globalPtrSize == expectedSize)
+      << "Global pointer for " << name << " is wrong size. Got "
+      << globalPtrSize << ", but expected " << expectedSize;
 
   // Checks for appropriate memory type
   unsigned int attrVal;
@@ -102,6 +104,10 @@ GPUFunction::~GPUFunction() {
   for (DeviceDataHandle *handle : pushedBufs) {
     freeArg(handle);
   }
+  for (auto &kv : tensorData) {
+    // Delete TensorData objects
+    delete kv.second;
+  }
 
   // Clear CUDA module, if any
   if (cudaModule) {
@@ -155,9 +161,11 @@ void GPUFunction::bind(const std::string& name, void* data) {
   LLVMFunction::bind(name, data);
   initialized = false;
 }
-void GPUFunction::bind(const std::string& name, const int* rowPtr,
-                       const int* colInd, void* data) {
-  LLVMFunction::bind(name, rowPtr, colInd, data);
+void GPUFunction::bind(const std::string& name, TensorData& data) {
+  LLVMFunction::bind(name, data);
+  // We need to track the data sizes from TensorData, which LLVMFunction
+  // doesn't do, so we maintain our own mapping
+  tensorData[name] = new TensorData(data);
   initialized = false;
 }
 
@@ -268,6 +276,116 @@ GPUFunction::SetData GPUFunction::pushSetData(Set* set, const ir::SetType* setTy
   }
 
   return data;
+}
+
+GPUFunction::DeviceDataHandle*
+GPUFunction::pushGlobalTensor(
+    const ir::Environment& env, const ir::Storage& storage,
+    const ir::Var& bufVar, const ir::TensorType* ttype) {
+  size_t bufSize = ttype->getComponentType().bytes();
+  if (!isScalar(bufVar.getType())) {
+    bufSize *= ttype->getBlockType().toTensor()->size();
+    // Vectors have dense allocation
+    if (ttype->order() == 1) {
+      bufSize *= size(ttype->getOuterDimensions()[0]);
+    }
+    else if (ttype->order() == 2) {
+      const ir::TensorStorage& ts = storage.getStorage(bufVar);
+      switch (ts.getKind()) {
+        case ir::TensorStorage::Kind::Dense: {
+          // Only multiply size over outer dimensions, because we already
+          // included block size
+          for (auto &dim : ttype->getOuterDimensions()) {
+            bufSize *= size(dim);
+          }
+          break;
+        }
+        case ir::TensorStorage::Kind::Indexed: {
+          if (env.hasTensorIndex(bufVar)) {
+            const pe::PathExpression& pexpr =
+                env.getTensorIndex(bufVar).getPathExpression();
+            iassert(util::contains(pathIndices, pexpr));
+            bufSize *= pathIndices.at(pexpr).numNeighbors();
+          }
+          // In the LLVM backend, we choose to initialize non tensor-index
+          // tensors dynamically at runtime. The GPU does allocation here,
+          // so we need to "statically" compute the right size.
+          else {
+            const pe::PathExpression& pexpr = ts.getPathExpression();
+            iassert (util::contains(pathIndices, pexpr));
+            bufSize *= pathIndices.at(pexpr).numNeighbors();
+          }
+          break;
+        }
+        case ir::TensorStorage::Kind::Diagonal: {
+          // Just grab first outer dimension
+          bufSize *= size(ttype->getOuterDimensions()[0]);
+          break;
+        }
+        default: {
+          ierror << "Can't compute matrix size for unknown TensorStorage: "
+                 << bufVar;
+        }
+      }
+    }
+    else {
+      ierror << "Higher-order tensor allocation not supported";
+    }
+  }
+  CUdeviceptr *devBuffer = new CUdeviceptr();
+  iassert(bufSize > 0)
+      << "Cannot allocate size 0 global buffer for var: " << bufVar;
+  checkCudaErrors(cuMemAlloc(devBuffer, bufSize));
+
+  // Find the host-side data, if it exists
+  void *hostPtr = nullptr;
+  if (hasGlobal(bufVar.getName())) {
+    iassert(util::contains(externPtrs, bufVar.getName()) &&
+            externPtrs.at(bufVar.getName()).size() == 1);
+    hostPtr = *externPtrs.at(bufVar.getName())[0];
+  }
+
+  DeviceDataHandle* handle = new DeviceDataHandle(hostPtr, devBuffer, bufSize);
+  return handle;
+}
+
+GPUFunction::SparseTensorData
+GPUFunction::pushExternSparseTensor(const ir::Environment& env,
+                                    const ir::Var& bufVar,
+                                    const ir::TensorType* ttype) {
+  iassert(tensorData.count(bufVar.getName()));
+  TensorData* data = tensorData[bufVar.getName()];
+  CUdeviceptr *dataBuffer = new CUdeviceptr();
+  CUdeviceptr *rowPtrBuffer = new CUdeviceptr();
+  CUdeviceptr *colIndBuffer = new CUdeviceptr();
+  size_t dataSize = ttype->getComponentType().bytes() *
+      ttype->getBlockType().toTensor()->size() *
+      data->getDataLen();
+  size_t colIndSize = sizeof(int)*data->getDataLen();
+  size_t rowPtrSize = sizeof(int)*data->getRowLen();
+  checkCudaErrors(cuMemAlloc(dataBuffer, dataSize));
+  checkCudaErrors(cuMemAlloc(rowPtrBuffer, rowPtrSize));
+  checkCudaErrors(cuMemAlloc(colIndBuffer, colIndSize));
+  checkCudaErrors(cuMemcpyHtoD(
+      *dataBuffer, data->getData(), dataSize));
+  checkCudaErrors(cuMemcpyHtoD(
+      *rowPtrBuffer, (void*)data->getRowPtr(), rowPtrSize));
+  checkCudaErrors(cuMemcpyHtoD(
+      *colIndBuffer, (void*)data->getColInd(), colIndSize));
+  GPUFunction::SparseTensorData out;
+  DeviceDataHandle *dataHandle = new DeviceDataHandle(
+      data->getData(), dataBuffer, dataSize);
+  DeviceDataHandle *rowPtrHandle = new DeviceDataHandle(
+      (void*)data->getRowPtr(), rowPtrBuffer, rowPtrSize);
+  DeviceDataHandle *colIndHandle = new DeviceDataHandle(
+      (void*)data->getColInd(), colIndBuffer, colIndSize);
+  pushedBufs.push_back(dataHandle);
+  pushedBufs.push_back(rowPtrHandle);
+  pushedBufs.push_back(colIndHandle);
+  out.data = dataHandle;
+  out.rowPtr = rowPtrHandle;
+  out.colInd = colIndHandle;
+  return out;
 }
 
 llvm::Value *GPUFunction::pushArg(std::string name, ir::Type& argType, Actual* actual) {
@@ -528,80 +646,54 @@ GPUFunction::init() {
 
     if (bufVar.getType().isTensor()) {
       const ir::TensorType* ttype = bufVar.getType().toTensor();
-      size_t bufSize = ttype->getComponentType().bytes();
-      if (!isScalar(bufVar.getType())) {
-        bufSize *= ttype->getBlockType().toTensor()->size();
-        // Vectors have dense allocation
-        if (ttype->order() == 1) {
-          bufSize *= size(ttype->getOuterDimensions()[0]);
-        }
-        else if (ttype->order() == 2) {
-          const ir::TensorStorage& ts = storage.getStorage(bufVar);
-          switch (ts.getKind()) {
-            case ir::TensorStorage::Kind::Dense: {
-              // Only multiply size over outer dimensions, because we already
-              // included block size
-              for (auto &dim : ttype->getOuterDimensions()) {
-                bufSize *= size(dim);
-              }
-              break;
-            }
-            case ir::TensorStorage::Kind::Indexed: {
-              if (env.hasTensorIndex(bufVar)) {
-                const pe::PathExpression& pexpr =
-                    env.getTensorIndex(bufVar).getPathExpression();
-                iassert(util::contains(pathIndices, pexpr));
-                bufSize *= pathIndices.at(pexpr).numNeighbors();
-              }
-              // In the LLVM backend, we choose to initialize non tensor-index
-              // tensors dynamically at runtime. The GPU does allocation here,
-              // so we need to "statically" compute the right size.
-              else {
-                const pe::PathExpression& pexpr = ts.getPathExpression();
-                iassert (util::contains(pathIndices, pexpr));
-                bufSize *= pathIndices.at(pexpr).numNeighbors();
-              }
-              break;
-            }
-            case ir::TensorStorage::Kind::Diagonal: {
-              // Just grab first outer dimension
-              bufSize *= size(ttype->getOuterDimensions()[0]);
-              break;
-            }
-            default: {
-              ierror << "Can't compute matrix size for unknown TensorStorage: "
-                     << bufVar;
-            }
-          }
-        }
-        else {
-          ierror << "Higher-order tensor allocation not supported";
-        }
+      // Special case for extern sparse tensors, which get bound
+      // differently
+      if (env.hasExtern(bufVar.getName()) &&
+          externPtrs.at(bufVar.getName()).size() > 1) {
+        iassert(externPtrs.at(bufVar.getName()).size() == 3)
+            << "Extern sparse tensors should have three extern "
+            << "pointers for: data, rowPtr, colInd";
+        GPUFunction::SparseTensorData pushedData =
+            pushExternSparseTensor(env, bufVar, ttype);
+
+        // Arg buf map does not include the indices, since we do not
+        // write that data, and thus is never needs to be dirtied.
+        std::vector<DeviceDataHandle*> handleVec = {pushedData.data};
+        argBufMap.emplace(bufVar.getName(), handleVec);
+
+        const ir::VarMapping& mapping = env.getExtern(bufVar.getName());
+        iassert(mapping.getMappings().size() == 3)
+            << "Extern sparse tensor should be mapped to three vars, for "
+            << "rowPtr, colInd, and data.";
+        const ir::Var& dataVar = mapping.getMappings()[0];
+        const ir::Var& rowPtrVar = mapping.getMappings()[1];
+        const ir::Var& colIndVar = mapping.getMappings()[2];
+        void *globalPtrHost = getGlobalHostPtr(
+            *cudaModule, dataVar.getName(), sizeof(void*));
+        *((void**)globalPtrHost) = reinterpret_cast<void*>(
+            *(pushedData.data->devBuffer));
+        globalPtrHost = getGlobalHostPtr(
+            *cudaModule, rowPtrVar.getName(), sizeof(void*));
+        *((void**)globalPtrHost) = reinterpret_cast<void*>(
+            *(pushedData.rowPtr->devBuffer));
+        globalPtrHost = getGlobalHostPtr(
+            *cudaModule, colIndVar.getName(), sizeof(void*));
+        *((void**)globalPtrHost) = reinterpret_cast<void*>(
+            *(pushedData.colInd->devBuffer));
       }
-      CUdeviceptr *devBuffer = new CUdeviceptr();
-      iassert(bufSize > 0)
-          << "Cannot allocate size 0 global buffer for var: " << bufVar;
-      checkCudaErrors(cuMemAlloc(devBuffer, bufSize));
+      else {
+        DeviceDataHandle *handle = pushGlobalTensor(
+            env, storage, bufVar, ttype);
+        pushedBufs.push_back(handle);
 
-      // Find the host-side data, if it exists
-      void *hostPtr = nullptr;
-      if (hasGlobal(bufVar.getName())) {
-        iassert(util::contains(externPtrs, bufVar.getName()) &&
-                externPtrs.at(bufVar.getName()).size() == 1);
-        hostPtr = *externPtrs.at(bufVar.getName())[0];
+        std::vector<DeviceDataHandle*> handleVec = {handle};
+        argBufMap.emplace(bufVar.getName(), handleVec);
+
+        void *devBufferPtr = reinterpret_cast<void*>(*handle->devBuffer);
+        void *globalPtrHost = getGlobalHostPtr(
+            *cudaModule, bufVar.getName(), sizeof(void*));
+        *((void**)globalPtrHost) = devBufferPtr;
       }
-
-      DeviceDataHandle* handle = new DeviceDataHandle(hostPtr, devBuffer, bufSize);
-      pushedBufs.push_back(handle);
-      std::vector<DeviceDataHandle*> handleVec = {handle};
-      argBufMap.emplace(bufVar.getName(), handleVec);
-      void *devBufferPtr = reinterpret_cast<void*>(*devBuffer);
-      std::cout << "Alloc'd: dev " << devBufferPtr << std::endl;
-
-      void *globalPtrHost = getGlobalHostPtr(*cudaModule, bufVar.getName());
-      *((void**)globalPtrHost) = devBufferPtr;
-      std::cout << "store in: " << globalPtrHost << std::endl;
-      std::cout << "globalPtrHost: " << *((void**)globalPtrHost) << std::endl;
     }
     else if (bufVar.getType().isSet()) {
       // Set globals must correspond to host-side data, because we don't know
@@ -611,8 +703,15 @@ GPUFunction::init() {
       const ir::SetType* setType = bufVar.getType().toSet();
       Set* set = to<SetActual>(globals[bufVar.getName()].get())->getSet();
       GPUFunction::SetData pushedData = pushSetData(set, setType);
+      std::vector<DeviceDataHandle*> handleVec;
       
-      void *globalPtrHost = getGlobalHostPtr(*cudaModule, bufVar.getName());
+      size_t expectedSize = sizeof(int) // setSize
+          + pushedData.fields.size() * sizeof(void*); // fields
+      if (setType->getCardinality() > 0) {
+        expectedSize += 3*sizeof(void*); // endpoints and indices arrays
+      }
+      void *globalPtrHost = getGlobalHostPtr(
+          *cudaModule, bufVar.getName(), expectedSize);
       // Build packed global set struct
       *(int*)globalPtrHost = pushedData.setSize;
       globalPtrHost = ((int*)globalPtrHost)+1;
@@ -626,6 +725,9 @@ GPUFunction::init() {
         *(void**)globalPtrHost  = reinterpret_cast<void*>(
             *(pushedData.nbrIndex->devBuffer));
         globalPtrHost = ((void**)globalPtrHost)+1;
+        handleVec.push_back(pushedData.endpoints);
+        handleVec.push_back(pushedData.startIndex);
+        handleVec.push_back(pushedData.nbrIndex);
       }
       // NOTE: This code assumes the width of void* is the same as
       // and float*/int* on the GPU.
@@ -633,7 +735,9 @@ GPUFunction::init() {
         *(void**)globalPtrHost = reinterpret_cast<void*>(
             *(fieldHandle->devBuffer));
         globalPtrHost = ((void**)globalPtrHost)+1;
+        handleVec.push_back(fieldHandle);
       }
+      argBufMap.emplace(bufVar.getName(), handleVec);
     }
   }
   // for (auto& kv : globals) {
@@ -679,13 +783,15 @@ GPUFunction::init() {
     }
 
     const ir::Var& coords = tensorIndex.getCoordArray();
-    void *coordsPtrHost = getGlobalHostPtr(*cudaModule, coords.getName());
+    void *coordsPtrHost = getGlobalHostPtr(
+        *cudaModule, coords.getName(), sizeof(void*));
     *((void**)coordsPtrHost) = reinterpret_cast<void*>(*devCoordBuffer);
     std::cout << "store in: " << coordsPtrHost << std::endl;
     std::cout << "Value of coordsPtr: " << *(void**)coordsPtrHost << std::endl;
 
     const ir::Var& sinks = tensorIndex.getSinkArray();
-    void *sinksPtrHost = getGlobalHostPtr(*cudaModule, sinks.getName());
+    void *sinksPtrHost = getGlobalHostPtr(
+        *cudaModule, sinks.getName(), sizeof(void*));
     *((void**)sinksPtrHost) = reinterpret_cast<void*>(*devSinkBuffer);
     std::cout << "store in: " << sinksPtrHost << std::endl;
     std::cout << "Value of sinksPtr: " << *(void**)sinksPtrHost << std::endl;

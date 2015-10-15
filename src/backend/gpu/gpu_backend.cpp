@@ -363,8 +363,21 @@ void GPUBackend::compile(const ir::VarDecl& op) {
     else {
       const ir::TensorType *ttype = var.getType().toTensor();
       ir::ScalarType ctype = ttype->getComponentType();
-      llvm::Value *llvmVar = builder->CreateAlloca(
-          llvmType(ctype), llvmInt(ttype->size()), var.getName());
+      llvm::Value *llvmVar;
+      if (!ttype->hasSystemDimensions()) {
+        llvmVar = builder->CreateAlloca(
+            llvmType(ctype), llvmInt(ttype->size()), var.getName());
+      }
+      else {
+        // NOTE: This could be really slow or result in OOM if the loops and
+        // temporaries generated in lowering do not work well.
+        llvm::Function* mallocFunc = getBuiltIn(
+            "malloc", LLVM_INT8_PTR, {LLVM_INT64});
+        llvm::Value *len = emitComputeLen(ttype, storage.getStorage(var));
+        len = builder->CreateIntCast(len, LLVM_INT64, true);
+        llvmVar = builder->CreateCall(mallocFunc, len);
+        llvmVar = builder->CreatePointerCast(llvmVar, llvmType(*ttype));
+      }
       symtable.insert(var, llvmVar);
     }
   }

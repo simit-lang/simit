@@ -12,6 +12,7 @@
 
 namespace simit {
 class Set;
+class TensorData;
 
 namespace ir {
 class Func;
@@ -38,8 +39,7 @@ public:
   virtual void bind(const std::string& name, void* data) = 0;
 
   /// Bind the given data and indices to the sparse tensor with the given name.
-  virtual void bind(const std::string& name, const int* rowPtr,
-                    const int* colInd, void* data) = 0;
+  virtual void bind(const std::string& name, TensorData& data) = 0;
 
   /// Initialize the function.
   virtual FuncType init() = 0;

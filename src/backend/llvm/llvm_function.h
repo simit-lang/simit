@@ -12,6 +12,7 @@
 #include "backend/backend_function.h"
 #include "ir.h"
 #include "storage.h"
+#include "tensor_data.h"
 
 namespace llvm {
 class ExecutionEngine;
@@ -37,8 +38,7 @@ class LLVMFunction : public backend::Function {
 
   virtual void bind(const std::string& name, simit::Set* set);
   virtual void bind(const std::string& name, void* data);
-  virtual void bind(const std::string& name, const int* rowPtr,
-                    const int* colInd, void* data);
+  virtual void bind(const std::string& name, TensorData& data);
 
   virtual FuncType init();
 

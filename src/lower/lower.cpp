@@ -124,6 +124,8 @@ Func lower(Func func, bool print) {
     printCallGraph("Shard Loops", func, print);
     func = rewriteCallGraph(func, rewriteVarDecls);
     printCallGraph("Rewritten Var Decls", func, print);
+    func = rewriteCallGraph(func, localizeTemps);
+    printCallGraph("Localize Temps", func, print);
     func = rewriteCallGraph(func, kernelRWAnalysis);
     printCallGraph("Kernel RW Analysis", func, print);
     func = rewriteCallGraph(func, fuseKernels);
