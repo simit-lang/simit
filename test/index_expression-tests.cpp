@@ -154,7 +154,7 @@ TEST_P(IndexExpression, Matrix) {
 
   Expr iexpr = IndexExpr::make({i,j}, expr);
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(iexpr), &env, &storage);
-  Func func = lower(Func("indexexprs", {}, {}, loops, env, Func::Internal), true);
+  Func func = lower(Func("indexexprs", {}, {}, loops, env, Func::Internal));
 
   // TODO: add code to initialize result indices and vals from operands
 //  PathExpressionBuilder builder;

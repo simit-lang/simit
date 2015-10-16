@@ -24,15 +24,7 @@ public:
 
     Stmt newBody = IRRewriter::rewrite(op->body);
     for (auto& kv : renamedTemps) {
-      Var newVar = kv.second;
-      // if (isSystemTensorType(newVar.getType())) {
-        // Emit system tensors into the environment as new temps
-      //   env.addTemporary(newVar);
-      // }
-      // else {
-        // Emit element tensors as VarDecls at the top of the body
-        newBody = Block::make(VarDecl::make(newVar), newBody);
-      // }
+      newBody = Block::make(VarDecl::make(kv.second), newBody);
     }
     renamedTemps.clear();
     inKernel = false;
@@ -43,32 +35,8 @@ public:
   void visit(const VarExpr *op) {
     if (inKernel && env.hasTemporary(op->var)) {
       Var newVar = renameVar(op->var);
-      // if (!isSystemTensorType(newVar.getType())) {
-        expr = VarExpr::make(newVar);
-        storage.add(newVar, TensorStorage::Kind::Dense);
-      // }
-      // else {
-      //   iassert(newVar.getType().isTensor());
-      //   const TensorType *ttype = newVar.getType().toTensor();
-      //   tassert(ttype->order() == 2)
-      //       << "Cannot handle non-matrix expansion of kernel temps";
-      //   tassert(sharding.xSharded &&
-      //           !sharding.ySharded &&
-      //           !sharding.zSharded)
-      //       << "Cannot handle multiply shard dimensions";
-      //   Var xVar = sharding.xVar;
-
-      //   // The second dimension is the kernel dimension
-      //   std::vector<IndexDomain> dims = ttype->getDimensions();
-      //   IndexVarFactory factory;
-      //   IndexVar freeVar = factory.createIndexVar(dims[0]);
-      //   IndexVar fixedVar(xVar.getName(), sharding.xDomain,
-      //                     new Expr(VarExpr::make(xVar)));
-      //   std::vector<IndexVar> tensorIndicies = {freeVar, fixedVar};
-      //   expr = IndexExpr::make(
-      //       {freeVar},
-      //       IndexedTensor::make(VarExpr::make(newVar), tensorIndicies));
-      // }
+      expr = VarExpr::make(newVar);
+      storage.add(newVar, TensorStorage::Kind::Dense);
     }
     else {
       expr = op;
@@ -86,33 +54,7 @@ public:
 private:
   Var renameVar(const Var& var) {
     if (!renamedTemps.count(var)) {
-      Var newVar(var.getName() + "_kernel", var.getType());
-      //Type newType = var.getType();
-      // if (!isSystemTensorType(newType)) {
-        // Element tensors can be replaced with VarDecls
-        // at the head of the kernel, so no need to transform them
-      // newVar = Var(var.getName() + "_kernel", var.getType());
-      // }
-      // else {
-        // System tensors must be allocated globally, because we
-        // don't know their size at compile time.
-        // Expand the dimension of Var by the sharding dimension
-      //   iassert(newType.isTensor())
-      //       << "Cannot have non-tensor temporary";
-      //   const TensorType *ttype = newType.toTensor();
-      //   tassert(ttype->order() == 1)
-      //       << "Cannot handle matrix temporaries duplicated across kernels";
-      //   std::vector<IndexDomain> dimensions = ttype->getDimensions();
-      //   tassert(sharding.xSharded &&
-      //           !sharding.ySharded &&
-      //           !sharding.zSharded)
-      //       << "Cannot handle multi-dimensional kernels yet";
-      //   dimensions.emplace_back(sharding.xDomain);
-
-      //   newType = TensorType::make(ttype->getComponentType(), dimensions);
-      //   newVar = Var(var.getName() + "_kernel", newType);
-      // }
-      renamedTemps[var] = newVar;
+      renamedTemps[var] = Var(var.getName() + "_kernel", var.getType());
     }
     return renamedTemps[var];
   }

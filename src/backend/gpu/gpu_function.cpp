@@ -632,18 +632,12 @@ GPUFunction::init() {
   checkCudaErrors(cuModuleLoadDataEx(cudaModule, cubin, 0, 0, 0));
   checkCudaErrors(cuLinkDestroy(linker));
 
-  // DEBUG
-  std::cout << "Environment: " << std::endl;
-  std::cout << env << std::endl;
-
   // Allocate all globals (i.e. externs and temporaries) and
   // set the CUDA global pointers
   std::vector<ir::Var> globalVars = env.getExternVars();
   globalVars.insert(globalVars.begin(),
                     env.getTemporaries().begin(), env.getTemporaries().end());
   for (auto& bufVar : globalVars) {
-    std::cout << "Alloc global env: " << bufVar << std::endl;
-
     if (bufVar.getType().isTensor()) {
       const ir::TensorType* ttype = bufVar.getType().toTensor();
       // Special case for extern sparse tensors, which get bound
@@ -786,15 +780,15 @@ GPUFunction::init() {
     void *coordsPtrHost = getGlobalHostPtr(
         *cudaModule, coords.getName(), sizeof(void*));
     *((void**)coordsPtrHost) = reinterpret_cast<void*>(*devCoordBuffer);
-    std::cout << "store in: " << coordsPtrHost << std::endl;
-    std::cout << "Value of coordsPtr: " << *(void**)coordsPtrHost << std::endl;
+    // std::cout << "store in: " << coordsPtrHost << std::endl;
+    // std::cout << "Value of coordsPtr: " << *(void**)coordsPtrHost << std::endl;
 
     const ir::Var& sinks = tensorIndex.getSinkArray();
     void *sinksPtrHost = getGlobalHostPtr(
         *cudaModule, sinks.getName(), sizeof(void*));
     *((void**)sinksPtrHost) = reinterpret_cast<void*>(*devSinkBuffer);
-    std::cout << "store in: " << sinksPtrHost << std::endl;
-    std::cout << "Value of sinksPtr: " << *(void**)sinksPtrHost << std::endl;
+    // std::cout << "store in: " << sinksPtrHost << std::endl;
+    // std::cout << "Value of sinksPtr: " << *(void**)sinksPtrHost << std::endl;
   }
 
   // Get reference to CUDA function
