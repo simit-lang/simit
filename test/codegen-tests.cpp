@@ -205,38 +205,5 @@ TEST(Codegen, forloop) {
 }
 
 
-extern "C" void test_ext_func(simit_float a, simit_float b, simit_float *c) {
-  *c = a+b;
-}
-
-TEST(Codegen, extern_func) {
-  Var a("a", Float);
-  Var b("b", Float);
-  Var c("c", Float);
-  
-  // this test is akin to declaring an external func called "test_ext_func"
-  // and then creating another func "tst_func" that calls the external func.
-  
-  Func ext_func = Func("test_ext_func", {a, b}, {c}, Func::External);
-  Stmt call_to_ext_func = CallStmt::make({c}, ext_func, {a,b});
-  //Stmt body = AssignStmt::make(c, call_to_ext_func);
-  Func tst_func = Func("test_extern_func", {a,b}, {c}, call_to_ext_func);
-  
-  unique_ptr<Backend> backend = getTestBackend();
-  simit::Function function = backend->compile(tst_func);
-  
-  
-  simit_float aArg = 1.0;
-  simit_float bArg = 4.0;
-  simit_float cRes = -1.0;
-
-  function.bind("a", &aArg);
-  function.bind("b", &bArg);
-  function.bind("c", &cRes);
-
-  function.runSafe();
-
-  SIMIT_ASSERT_FLOAT_EQ(1.0+4.0, cRes);
-}
 
 

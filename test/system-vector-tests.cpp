@@ -166,43 +166,4 @@ TEST(System, vector_add_large_system) {
   }
 }
 
-extern "C" void ext_vec3f_add(simit_float *a, simit_float *b, simit_float *c) {
-  c[0] = a[0] + b[0];
-  c[1] = a[1] + b[1];
-  c[2] = a[2] + b[2];
-}
-
-TEST(System, vector_add_using_extern) {
-  Set points;
-  FieldRef<simit_float> a = points.addField<simit_float>("a");
-  FieldRef<simit_float> b = points.addField<simit_float>("b");
-  FieldRef<simit_float> c = points.addField<simit_float>("c");
-
-  ElementRef p0 = points.add();
-  a.set(p0, 42.0);
-  b.set(p0, 24.0);
-  c.set(p0, -1.0);
-  
-  ElementRef p1 = points.add();
-  a.set(p1, 20.0);
-  b.set(p1, 14.0);
-  c.set(p1, -1.0);
-  
-  ElementRef p2 = points.add();
-  a.set(p2, 12.0);
-  b.set(p2, 21.0);
-  c.set(p2, -1.0);
-  
-  
-  Function func = loadFunction(TEST_FILE_NAME, "main");
-  if (!func.defined()) FAIL();
-  func.bind("points", &points);
-
-  func.runSafe();
-
-  SIMIT_EXPECT_FLOAT_EQ(66.0, (int)c.get(p0));
-  SIMIT_EXPECT_FLOAT_EQ(34.0, (int)c.get(p1));
-  SIMIT_EXPECT_FLOAT_EQ(33.0, (int)c.get(p2));
-
-}
 
