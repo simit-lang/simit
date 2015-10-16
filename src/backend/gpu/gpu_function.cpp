@@ -556,10 +556,10 @@ GPUFunction::init() {
 
   // Alloc and push arguments and globals, then build harness
   llvm::SmallVector<llvm::Value*, 8> args;
-  for (auto& kv : arguments) {
-    std::string name = kv.first;
+  vector<string> formals = getArgs();
+  for (const std::string& name : formals) {
     ir::Type argType = getArgType(name);
-    Actual *actual = kv.second.get();
+    Actual *actual = arguments[name].get();
     args.push_back(pushArg(name, argType, actual));
     if (isa<SetActual>(actual)) {
       Set* set = to<SetActual>(actual)->getSet();
