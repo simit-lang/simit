@@ -86,12 +86,12 @@ public:
 private:
   Var renameVar(const Var& var) {
     if (!renamedTemps.count(var)) {
-      Var newVar;
-      Type newType = var.getType();
+      Var newVar(var.getName() + "_kernel", var.getType());
+      //Type newType = var.getType();
       // if (!isSystemTensorType(newType)) {
         // Element tensors can be replaced with VarDecls
         // at the head of the kernel, so no need to transform them
-        newVar = Var(var.getName() + "_kernel", newType);
+      // newVar = Var(var.getName() + "_kernel", var.getType());
       // }
       // else {
         // System tensors must be allocated globally, because we

@@ -92,7 +92,7 @@ Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
                              !inKernel, false);
 
     // Add constants to symbol table
-    for (auto &global : env.getConstants()) {
+    for (auto &global : f.getEnvironment().getConstants()) {
       symtable.insert(global.first, compile(global.second));
     }
 

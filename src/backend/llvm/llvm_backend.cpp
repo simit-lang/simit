@@ -314,7 +314,13 @@ void LLVMBackend::compile(const ir::VarExpr& varExpr) {
 
   // Globals are stored as pointer-pointers so we must load them
   if (util::contains(globals, varExpr.var)) {
-    val = builder->CreateLoad(val, ptrName);
+      val = builder->CreateLoad(val, ptrName);
+      // Cast non-generic address spaces into generic
+      if (val->getType()->isPointerTy() &&
+          val->getType()->getPointerAddressSpace() != 0) {
+        llvm::Type* eltTy = val->getType()->getPointerElementType();
+        val = builder->CreateAddrSpaceCast(val, eltTy->getPointerTo(0));
+      }
   }
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
