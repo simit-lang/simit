@@ -37,6 +37,8 @@ public:
   int getDataLen() { return dataLen; }
 
 private:
+  Kind kind;
+
   // Sparse tensor data
   const int* rowPtr;
   const int* colInd;
@@ -44,7 +46,6 @@ private:
   int rowLen;
   int dataLen;
 
-  Kind kind;
 };
 
 } // namespace simit
