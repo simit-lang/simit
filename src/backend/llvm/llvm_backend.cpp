@@ -114,7 +114,7 @@ Func LLVMBackend::makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
 
 Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   this->module = new llvm::Module("simit", LLVM_CTX);
-  std::cout << "Compiling " << func.getName() << std::endl;
+
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
   this->dataLayout.reset(new llvm::DataLayout(module));
@@ -260,8 +260,6 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   mpm.run(*module);
 #endif
 
-  std::cout << *llvmFunc << std::endl;
-
   return new LLVMFunction(func, storage, llvmFunc, module, engineBuilder);
 }
 
@@ -315,6 +313,7 @@ void LLVMBackend::compile(const ir::Literal& literal) {
 }
 
 void LLVMBackend::compile(const ir::VarExpr& varExpr) {
+  //std::cout << "Compiling " << varExpr.var.getName() << std::endl;
   iassert(symtable.contains(varExpr.var))
       << varExpr.var << " not found in symbol table:\n\n" << symtable;
 
@@ -363,6 +362,7 @@ void LLVMBackend::compile(const ir::FieldRead& fieldRead) {
   val = emitFieldRead(fieldRead.elementOrSet, fieldRead.fieldName);
 }
 
+
 // TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt,
 //       and is only kept around to emit loc.
 void LLVMBackend::compile(const ir::Call& call) {
@@ -379,15 +379,11 @@ void LLVMBackend::compile(const ir::Call& call) {
   llvm::Function *fun = nullptr;
 
   // compile arguments first
-  for (auto a: call.actuals) {
-    //FIX: remove once solve() is no longer needed
-    //iassert(isScalar(a.type()));
-    ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->getComponentType()
-                                           : a.type().toArray()->elementType;
-    argTypes.push_back(llvmType(ctype));
-    args.push_back(compile(a));
+  //std::cout << "Compile arguments first----" << std::endl;
+  for (Expr a: call.actuals) {
+    compileArgument(a, argTypes, args);
   }
-  
+
   std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
   // these are intrinsic functions
@@ -806,6 +802,77 @@ void LLVMBackend::compile(const ir::AssignStmt& assignStmt) {
   }
 }
 
+void LLVMBackend::compileArgument(Expr argument, std::vector<llvm::Type*>& argTypes,
+                     std::vector<llvm::Value*>& args) {
+    ScalarType ctype = argument.type().isTensor() ? argument.type().toTensor()->getComponentType()
+                                           : argument.type().toArray()->elementType;
+    argTypes.push_back(llvmType(ctype));
+    args.push_back(compile(argument));
+  
+    if (argument.type().isTensor() && argument.type().toTensor()->isSparse()) {
+      std::cout << "    " << argument << " is sparse!\n";
+      // we need to add additional arguments: the row_start and col_idx pointers,
+      // as well as the number of rows, columns, nonzeros, and blocksize.
+      auto type = argument.type().toTensor();
+      vector<IndexDomain> dimensions = type->getDimensions();
+      
+      // FIXME: shouldn't assume this is a var expression...
+      tassert(isa<VarExpr>(argument));
+      const TensorStorage& tensorStorage =
+          storage.getStorage(to<VarExpr>(argument)->var);
+      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
+      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
+
+      // Retrieve the size of the neighbor index, which is stored in the last
+      // element of neighbor start index.
+      llvm::Value *setSize =
+          builder->CreateExtractValue(storageSet, {0},
+                                      storageSet->getName()+LEN_SUFFIX);
+      
+      llvm::Value *row_start =
+          builder->CreateExtractValue(targetSet, {2}, "row_start");
+      llvm::Value *col_idx =
+          builder->CreateExtractValue(targetSet, {3}, "col_idx");
+    
+      
+      
+      llvm::Value *neighborIndexSizeLoc =
+          builder->CreateInBoundsGEP(row_start, setSize,
+                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
+      llvm::Value *len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
+                                       "neighbors"+LEN_SUFFIX);
+      llvm::Value *blockSize_r;
+      llvm::Value *blockSize_c;
+      
+      // Determine block sizes
+      Type blockType = type->getBlockType();
+      vector<IndexDomain> blockDimensions =
+          blockType.toTensor()->getDimensions();
+      if (!isScalar(blockType)) {
+        // TODO: The following assumes all blocks are dense row major. The right
+        //       way to assign a storage order for every block in the tensor
+        //       represented by a TensorStorage.  Also assumes 2D blocks.
+        blockSize_r = emitComputeLen(blockDimensions[0]);
+        blockSize_c = emitComputeLen(blockDimensions[1]);
+      }
+      else {
+        blockSize_r = llvmInt(1);
+        blockSize_c = llvmInt(1);
+      }
+      args.push_back(row_start);
+      args.push_back(col_idx);
+      args.push_back(emitComputeLen(dimensions[0]));
+      args.push_back(emitComputeLen(dimensions[1]));
+      args.push_back(len);
+      args.push_back(blockSize_r);
+      args.push_back(blockSize_c);
+
+
+    }
+
+}
+
+
 void LLVMBackend::compile(const ir::CallStmt& callStmt) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
       {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
@@ -822,8 +889,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
 
   // compile arguments first
   for (auto a: callStmt.actuals) {
-    argTypes.push_back(llvmType(a.type().toTensor()->getComponentType()));
-    args.push_back(compile(a));
+    compileArgument(a, argTypes, args);
   }
 
   Func callee = callStmt.callee;
@@ -875,62 +941,62 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     }
     else if (callStmt.callee == ir::intrinsics::solve()) {
     
-      // we need to add additional arguments: the row_start and col_idx pointers,
-      // as well as the number of rows, columns, nonzeros, and blocksize.
-      auto type = callStmt.actuals[0].type().toTensor();
-      vector<IndexDomain> dimensions = type->getDimensions();
-      
-      // FIXME: shouldn't assume this is a var expression...
-      tassert(isa<VarExpr>(callStmt.actuals[0]));
-      const TensorStorage& tensorStorage =
-          storage.getStorage(to<VarExpr>(callStmt.actuals[0])->var);
-      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
-      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
-
-      // Retrieve the size of the neighbor index, which is stored in the last
-      // element of neighbor start index.
-      llvm::Value *setSize =
-          builder->CreateExtractValue(storageSet, {0},
-                                      storageSet->getName()+LEN_SUFFIX);
-      
-      llvm::Value *row_start =
-          builder->CreateExtractValue(targetSet, {2}, "row_start");
-      llvm::Value *col_idx =
-          builder->CreateExtractValue(targetSet, {3}, "col_idx");
-    
-      
-      
-      llvm::Value *neighborIndexSizeLoc =
-          builder->CreateInBoundsGEP(row_start, setSize,
-                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
-      llvm::Value *len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
-                                       "neighbors"+LEN_SUFFIX);
-      llvm::Value *blockSize_r;
-      llvm::Value *blockSize_c;
-      
-      // Determine block sizes
-      Type blockType = type->getBlockType();
-      vector<IndexDomain> blockDimensions =
-          blockType.toTensor()->getDimensions();
-      if (!isScalar(blockType)) {
-        // TODO: The following assumes all blocks are dense row major. The right
-        //       way to assign a storage order for every block in the tensor
-        //       represented by a TensorStorage.  Also assumes 2D blocks.
-        blockSize_r = emitComputeLen(blockDimensions[0]);
-        blockSize_c = emitComputeLen(blockDimensions[1]);
-      }
-      else {
-        blockSize_r = llvmInt(1);
-        blockSize_c = llvmInt(1);
-      }
-      args.push_back(row_start);
-      args.push_back(col_idx);
-      args.push_back(emitComputeLen(dimensions[0]));
-      args.push_back(emitComputeLen(dimensions[1]));
-      args.push_back(len);
-      args.push_back(blockSize_r);
-      args.push_back(blockSize_c);
-
+//      // we need to add additional arguments: the row_start and col_idx pointers,
+//      // as well as the number of rows, columns, nonzeros, and blocksize.
+//      auto type = callStmt.actuals[0].type().toTensor();
+//      vector<IndexDomain> dimensions = type->getDimensions();
+//      
+//      // FIXME: shouldn't assume this is a var expression...
+//      tassert(isa<VarExpr>(callStmt.actuals[0]));
+//      const TensorStorage& tensorStorage =
+//          storage.getStorage(to<VarExpr>(callStmt.actuals[0])->var);
+//      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
+//      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
+//
+//      // Retrieve the size of the neighbor index, which is stored in the last
+//      // element of neighbor start index.
+//      llvm::Value *setSize =
+//          builder->CreateExtractValue(storageSet, {0},
+//                                      storageSet->getName()+LEN_SUFFIX);
+//      
+//      llvm::Value *row_start =
+//          builder->CreateExtractValue(targetSet, {2}, "row_start");
+//      llvm::Value *col_idx =
+//          builder->CreateExtractValue(targetSet, {3}, "col_idx");
+//    
+//      
+//      
+//      llvm::Value *neighborIndexSizeLoc =
+//          builder->CreateInBoundsGEP(row_start, setSize,
+//                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
+//      llvm::Value *len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
+//                                       "neighbors"+LEN_SUFFIX);
+//      llvm::Value *blockSize_r;
+//      llvm::Value *blockSize_c;
+//      
+//      // Determine block sizes
+//      Type blockType = type->getBlockType();
+//      vector<IndexDomain> blockDimensions =
+//          blockType.toTensor()->getDimensions();
+//      if (!isScalar(blockType)) {
+//        // TODO: The following assumes all blocks are dense row major. The right
+//        //       way to assign a storage order for every block in the tensor
+//        //       represented by a TensorStorage.  Also assumes 2D blocks.
+//        blockSize_r = emitComputeLen(blockDimensions[0]);
+//        blockSize_c = emitComputeLen(blockDimensions[1]);
+//      }
+//      else {
+//        blockSize_r = llvmInt(1);
+//        blockSize_c = llvmInt(1);
+//      }
+//      args.push_back(row_start);
+//      args.push_back(col_idx);
+//      args.push_back(emitComputeLen(dimensions[0]));
+//      args.push_back(emitComputeLen(dimensions[1]));
+//      args.push_back(len);
+//      args.push_back(blockSize_r);
+//      args.push_back(blockSize_c);
+//
       std::string fname = "cMatSolve" + floatTypeName;
       call = emitCall(fname, args);
     }
@@ -1010,9 +1076,12 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     llvm::Value *llvmVar = symtable.get(callStmt.results[0]);
     args.push_back(llvmVar);
 
-    std::cout << "type of return: " << callStmt.callee.getResults()[0].getType() << std::endl;
+    ScalarType element_type = callStmt.results[0].getType().toTensor()->getComponentType();
+    auto ret_type = llvmPtrType(element_type, 0);
 
-    argTypes.push_back(llvmFloatPtrType());
+    std::cout << "type of return: " <<  *llvmPtrType(element_type, 0) << std::endl;
+
+    argTypes.push_back(ret_type);
     std::cout << *argTypes[2] << std::endl;
     call = emitCall(callStmt.callee.getName(), args);
     //std::cout << *call << std::endl;
