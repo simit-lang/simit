@@ -203,7 +203,3 @@ TEST(Codegen, forloop) {
   
   ASSERT_EQ(6, outRes);
 }
-
-
-
-

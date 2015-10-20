@@ -773,7 +773,6 @@ TEST(System, solve_external_blocked) {
   TensorRef<simit_float,2> c2 = c.get(p2);
   ASSERT_NEAR(2.0, c2(0), 1.0);
   ASSERT_NEAR(4.0, c2(1), 1.0);
-
 }
 #endif
 

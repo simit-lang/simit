@@ -165,5 +165,3 @@ TEST(System, vector_add_large_system) {
     SIMIT_EXPECT_FLOAT_EQ(i*2, (size_t)x.get(ps[i]));
   }
 }
-
-
