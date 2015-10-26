@@ -76,6 +76,7 @@ Func lower(Func func, bool print) {
   // Rewrite system assignments
   if (kBackend == "gpu") {
     func = rewriteCallGraph(func, rewriteSystemAssigns);
+    printCallGraph("Rewrite System Assigns (GPU)", func, print);
   }
 #endif
 
@@ -120,9 +121,16 @@ Func lower(Func func, bool print) {
 #if GPU
   if (kBackend == "gpu") {
     func = rewriteCallGraph(func, shardLoops);
+    printCallGraph("Shard Loops", func, print);
     func = rewriteCallGraph(func, rewriteVarDecls);
+    printCallGraph("Rewritten Var Decls", func, print);
+    func = rewriteCallGraph(func, localizeTemps);
+    printCallGraph("Localize Temps", func, print);
     func = rewriteCallGraph(func, kernelRWAnalysis);
+    printCallGraph("Kernel RW Analysis", func, print);
     func = rewriteCallGraph(func, fuseKernels);
+    printCallGraph("Fuse Kernels", func, print);
+  }
 #endif
   return func;
 }

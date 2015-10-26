@@ -7,6 +7,7 @@
 
 namespace simit {
 class Set;
+class TensorData;
 
 namespace backend {
 class Function;
@@ -54,8 +55,7 @@ public:
 
   /// Bind sparse tensor data in the CSR format to the bindable.
   /// See e.g. \link https://en.wikipedia.org/wiki/Sparse_matrix
-  void bind(const std::string& name, const int* rowPtr, const int* colInd,
-            void* data);
+  void bind(const std::string& name, TensorData& data);
 
   /// Initialize the function. This must be done between calls to bind arguments
   /// and calls to run. If runSafe is used, there init will be called

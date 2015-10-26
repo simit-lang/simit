@@ -4,9 +4,11 @@
 #include "ir.h"
 #include "ir_printer.h"
 #include "environment.h"
+#include "lower/lower.h"
 #include "lower/index_expressions/lower_scatter_workspace.h"
 #include "path_expression_analysis.h"
 #include "path_expressions.h"
+#include "tensor_data.h"
 #include "util/util.h"
 #include "util/collections.h"
 
@@ -152,6 +154,7 @@ TEST_P(IndexExpression, Matrix) {
 
   Expr iexpr = IndexExpr::make({i,j}, expr);
   Stmt loops = lowerScatterWorkspace(A, to<IndexExpr>(iexpr), &env, &storage);
+  Func func = lower(Func("indexexprs", {}, {}, loops, env, Func::Internal));
 
   // TODO: add code to initialize result indices and vals from operands
 //  PathExpressionBuilder builder;
@@ -162,7 +165,7 @@ TEST_P(IndexExpression, Matrix) {
   for (size_t i=0; i < result.vals.size(); ++i) {
     result.vals[i] = 0.0;
   }
-  simit::Function function = getTestBackend()->compile(loops, env, storage);
+  simit::Function function = getTestBackend()->compile(func, storage);
 
   // Find and bind set variables
   vector<unique_ptr<simit::Set>> sets;
@@ -180,11 +183,14 @@ TEST_P(IndexExpression, Matrix) {
   // Bind matrices
   vector<SparseMatrix> operands = GetParam().operands;
   for (const SparseMatrix& mat : operands) {
-    function.bind(mat.name, mat.rowPtr.data(), mat.colInd.data(),
-                  (void*)mat.vals.data());
+    TensorData data(mat.rowPtr.data(), mat.colInd.data(), (void*)mat.vals.data(),
+                    mat.rowPtr.size(), mat.vals.size());
+    function.bind(mat.name, data);
   }
-  function.bind(result.name, result.rowPtr.data(),
-                result.colInd.data(), (void*)result.vals.data());
+  TensorData resultData(result.rowPtr.data(), result.colInd.data(),
+                        (void*)result.vals.data(), result.rowPtr.size(),
+                        result.vals.size());
+  function.bind(result.name, resultData);
 
   function.runSafe();
 

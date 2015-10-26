@@ -67,6 +67,7 @@ public:
 
   /// Retrieve the function's environment
   const Environment& getEnvironment() const {return ptr->env;}
+  Environment& getEnvironment() {return ptr->env;}
 
   /// Set the storage descriptor for the function's local variables.
   void setStorage(const Storage& storage) {ptr->storage = storage;}

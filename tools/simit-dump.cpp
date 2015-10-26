@@ -119,6 +119,13 @@ int main(int argc, const char* argv[]) {
     gpuOutFile = sourceFile + ".out";
   }
 
+  std::string backend = emitGPU ? "gpu" : "llvm";
+#ifdef F32
+  simit::init(backend, sizeof(float));
+#else
+  simit::init(backend, sizeof(double));
+#endif
+
   std::string source;
   int status = simit::util::loadText(sourceFile, &source);
   if (status != 0) {
@@ -238,6 +245,14 @@ int main(int argc, const char* argv[]) {
         cout << "--- Emitting Assembly" << endl;
         llvmFunc.printMachine(cout);
       }
+    }
+    else if (emitGPU) {
+      backend::Backend backend("gpu");
+      simit::Function llvmFunc(backend.compile(func));
+
+      std::string fstr = simit::util::toString(llvmFunc);
+      cout << "--- Emitting GPU" << endl;
+      cout << simit::util::trim(fstr) << endl;
     }
   }
 

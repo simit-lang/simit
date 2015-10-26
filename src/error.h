@@ -155,6 +155,15 @@ struct ErrorReport {
     return *this;
   }
 
+  // Support for manipulators, such as std::endl
+  ErrorReport &operator<<(std::ostream& (*manip)(std::ostream&)) {
+    if (condition) {
+      return *this;
+    }
+    (*msg) << manip;
+    return *this;
+  }
+
   ~ErrorReport() noexcept(false) {
     if (condition) {
       return;

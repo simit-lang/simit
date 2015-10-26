@@ -5,12 +5,14 @@
 #include <vector>
 #include <map>
 #include <functional>
+#include <set>
 
 #include "printable.h"
 #include "uncopyable.h"
 
 namespace simit {
 class Set;
+class TensorData;
 
 namespace ir {
 class Func;
@@ -37,8 +39,7 @@ public:
   virtual void bind(const std::string& name, void* data) = 0;
 
   /// Bind the given data and indices to the sparse tensor with the given name.
-  virtual void bind(const std::string& name, const int* rowPtr,
-                    const int* colInd, void* data) = 0;
+  virtual void bind(const std::string& name, TensorData& data) = 0;
 
   /// Initialize the function.
   virtual FuncType init() = 0;
@@ -63,6 +64,7 @@ public:
   bool hasArg(std::string arg) const;
   const std::vector<std::string>& getArgs() const;
   const ir::Type& getArgType(std::string arg) const;
+  bool isResult(std::string name) const;
 
   bool hasGlobal(std::string name) const;
   const ir::Type& getGlobalType(std::string name) const;
@@ -77,6 +79,7 @@ private:
 
   std::vector<std::string> arguments;
   std::map<std::string, ir::Type> argumentTypes;
+  std::set<std::string> results;
 
   /// We store the Simit Function's literals to prevent their memory from being
   /// reclaimed if the IR is deleted, as compiled functions are allowed to

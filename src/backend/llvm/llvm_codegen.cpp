@@ -55,7 +55,12 @@ llvm::Constant* llvmVal(const TensorType& type, const void *data) {
     case ScalarType::Int:
       return llvmInt(static_cast<const int*>(data)[0]);
     case ScalarType::Float:
-      return llvmFP(static_cast<const double*>(data)[0], componentType.bytes());
+      if (ir::ScalarType::singleFloat()) {
+        return llvmFP(static_cast<const float*>(data)[0], componentType.bytes());
+      }
+      else {
+        return llvmFP(static_cast<const double*>(data)[0], componentType.bytes());
+      }
     case ScalarType::Boolean:
       return llvmBool(static_cast<const bool*>(data)[0]);
   }

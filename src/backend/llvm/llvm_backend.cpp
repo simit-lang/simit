@@ -57,9 +57,6 @@ namespace backend {
 typedef llvm::IRBuilder<true, llvm::ConstantFolder,
                         llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
-// appease GCC
-shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module);
-
 const std::string VAL_SUFFIX(".val");
 const std::string PTR_SUFFIX(".ptr");
 const std::string LEN_SUFFIX(".len");
@@ -82,7 +79,7 @@ LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
 LLVMBackend::~LLVMBackend() {}
 
 // TODO: Remove this function, once the old init system has been removed
-static Func makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
+Func LLVMBackend::makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
   class MakeSystemTensorsGlobalRewriter : public ir::IRRewriter {
   public:
     MakeSystemTensorsGlobalRewriter() {}
@@ -138,44 +135,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   func = makeSystemTensorsGlobalIfHasTensorIndex(func);
 
   const Environment& env = func.getEnvironment();
-
-  // Emit global constants
-  // TODO
-
-  // Emit global variables (externs and temporaries)
-  for (const Var& ext : env.getExternVars()) {
-    llvm::GlobalVariable* ptr = createGlobal(module, ext,
-                                             llvm::GlobalValue::ExternalLinkage,
-                                             globalAddrspace());
-    this->symtable.insert(ext, ptr);
-    this->globals.insert(ext);
-  }
-
-  // Emit global temporaries
-  for (const Var& tmp : env.getTemporaries()) {
-    llvm::GlobalVariable* ptr = createGlobal(module, tmp,
-                                             llvm::GlobalValue::ExternalLinkage,
-                                             globalAddrspace());
-    this->symtable.insert(tmp, ptr);
-    this->globals.insert(tmp);
-  }
-
-  // Emit global tensor indices
-  for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
-    const Var& coordArray = tensorIndex.getCoordArray();
-    llvm::GlobalVariable* coordPtr =
-        createGlobal(module, coordArray, llvm::GlobalValue::ExternalLinkage,
-                     globalAddrspace());
-    this->symtable.insert(coordArray, coordPtr);
-    this->globals.insert(coordArray);
-
-    const Var& sinkArray  = tensorIndex.getSinkArray();
-    llvm::GlobalVariable* sinkPtr =
-        createGlobal(module, sinkArray, llvm::GlobalValue::ExternalLinkage,
-                     globalAddrspace());
-    this->symtable.insert(sinkArray, sinkPtr);
-    this->globals.insert(sinkArray);
-  }
+  emitGlobals(env);
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
@@ -354,7 +314,13 @@ void LLVMBackend::compile(const ir::VarExpr& varExpr) {
 
   // Globals are stored as pointer-pointers so we must load them
   if (util::contains(globals, varExpr.var)) {
-    val = builder->CreateLoad(val, ptrName);
+      val = builder->CreateLoad(val, ptrName);
+      // Cast non-generic address spaces into generic
+      if (val->getType()->isPointerTy() &&
+          val->getType()->getPointerAddressSpace() != 0) {
+        llvm::Type* eltTy = val->getType()->getPointerElementType();
+        val = builder->CreateAddrSpaceCast(val, eltTy->getPointerTo(0));
+      }
   }
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
@@ -1405,6 +1371,46 @@ void LLVMBackend::emitPrintf(std::string format,
   builder->CreateCall(printfFunc, printfArgs);
 }
 
+void LLVMBackend::emitGlobals(const ir::Environment& env) {
+  // Emit global constants
+  // TODO
+
+  // Emit global variables (externs and temporaries)
+  for (const Var& ext : env.getExternVars()) {
+    llvm::GlobalVariable* ptr = createGlobal(module, ext,
+                                             llvm::GlobalValue::ExternalLinkage,
+                                             globalAddrspace());
+    this->symtable.insert(ext, ptr);
+    this->globals.insert(ext);
+  }
+
+  // Emit global temporaries
+  for (const Var& tmp : env.getTemporaries()) {
+    llvm::GlobalVariable* ptr = createGlobal(module, tmp,
+                                             llvm::GlobalValue::ExternalLinkage,
+                                             globalAddrspace());
+    this->symtable.insert(tmp, ptr);
+    this->globals.insert(tmp);
+  }
+
+  // Emit global tensor indices
+  for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
+    const Var& coordArray = tensorIndex.getCoordArray();
+    llvm::GlobalVariable* coordPtr =
+        createGlobal(module, coordArray, llvm::GlobalValue::ExternalLinkage,
+                     globalAddrspace());
+    this->symtable.insert(coordArray, coordPtr);
+    this->globals.insert(coordArray);
+
+    const Var& sinkArray  = tensorIndex.getSinkArray();
+    llvm::GlobalVariable* sinkPtr =
+        createGlobal(module, sinkArray, llvm::GlobalValue::ExternalLinkage,
+                     globalAddrspace());
+    this->symtable.insert(sinkArray, sinkPtr);
+    this->globals.insert(sinkArray);
+  }
+}
+
 void LLVMBackend::emitAssign(Var var, const Expr& value) {
   /// \todo assignment of scalars to tensors and tensors to tensors should be
   ///       handled by the lowering so that we only assign scalars to scalars
@@ -1443,15 +1449,26 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
 
     // Assigning a scalar to an n-order tensor
     if (varType->order() > 0 && valType->order() == 0) {
-      // Assigning 0 to a tensor (memset)
-      if (isa<Literal>(value) && (to<Literal>(value)->getFloatVal(0) == 0.0 ||
-                                  ((int*)to<Literal>(value)->data)[0] == 0  )) {
-        emitMemSet(varPtr, llvmInt(0,8), size, componentSize);
+      if (isa<Literal>(value)) {
+        const ScalarType& sType = valType->getComponentType();
+        // Assigning 0 to a tensor (memset)
+        if ((sType.kind == ScalarType::Float &&
+             to<Literal>(value)->getFloatVal(0) == 0.0) ||
+            (sType.kind == ScalarType::Int &&
+             ((int*)to<Literal>(value)->data)[0] == 0)) {
+          emitMemSet(varPtr, llvmInt(0,8), size, componentSize);
+        }
+        else {
+          not_supported_yet << "Cannot assign non-zero value to tensor:"
+                            << std::endl
+                            << var.getName() << " = " << value;
+        }
       }
       // Assigning general scalar to a tensor
       else {
         not_supported_yet << "you can only currently assign a scalar to a"
-                          << "tensor if the scalar is 0.";
+                          << "tensor if the scalar is a literal 0:" << std::endl
+                          << var.getName() << " = " << value;
       }
     }
     // Assign tensor to conforming tensor

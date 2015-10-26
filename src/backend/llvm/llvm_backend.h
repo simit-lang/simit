@@ -9,6 +9,7 @@
 
 #include "backend/backend_impl.h"
 
+#include "environment.h"
 #include "storage.h"
 #include "var.h"
 #include "backend/backend_visitor.h"
@@ -17,6 +18,7 @@
 namespace llvm {
 class LLVMContext;
 class Module;
+class EngineBuilder;
 class ExecutionEngine;
 class ConstantFolder;
 template<bool> class IRBuilderDefaultInserter;
@@ -38,6 +40,8 @@ namespace backend {
 extern const std::string VAL_SUFFIX;
 extern const std::string PTR_SUFFIX;
 extern const std::string LEN_SUFFIX;
+
+std::shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module);
 
 /// Code generator that uses LLVM to compile Simit IR.
 class LLVMBackend : public BackendImpl, protected BackendVisitor<llvm::Value*> {
@@ -136,9 +140,13 @@ protected:
                                     bool doesNotThrow=true,
                                     bool scalarsByValue=true);
 
-  virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
-
   void emitAssign(ir::Var var, const ir::Expr& value);
+
+  /// Produce LLVM globals for everything in `env` and store in `globals`
+  /// and in `symtable` appropriately.
+  virtual void emitGlobals(const ir::Environment& env);
+
+  virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
 
   /// Emit a memcpy instruction
   virtual void emitMemCpy(llvm::Value *dst, llvm::Value *src,
@@ -152,6 +160,8 @@ protected:
   /// and list of global buffers
   virtual llvm::Value *makeGlobalTensor(ir::Var var);
 
+  // TODO: Remove this function, once the old init system has been removed
+  ir::Func makeSystemTensorsGlobalIfHasTensorIndex(ir::Func func);
 private:
   static bool llvmInitialized;
 };

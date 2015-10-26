@@ -31,6 +31,7 @@ float det3_f32(float* a);
 void inv3_f64(double* a, double* inv);
 void inv3_f32(float* a, float* inv);
 
+// NOTE: Implementation MUST stay synchronized with cMatSolve_f32
 void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
                  int* row_start, int* col_idx,
                  int rows, int columns, int nnz, int bs_x, int bs_y) {
@@ -62,6 +63,7 @@ void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
 #endif
 }
 
+// NOTE: Implementation MUST stay synchronized with cMatSolve_f64
 void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
                  int* row_start, int* col_idx,
                  int rows, int columns, int nnz, int bs_x, int bs_y) {
@@ -72,13 +74,13 @@ void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
 
   // Construct the matrix
   std::vector<Triplet<float>> tripletList;
-  tripletList.reserve(nnz);
-  for (int i=0; i<rows; i++) {
+  tripletList.reserve(nnz*bs_x*bs_y);
+  for (int i=0; i<rows/(bs_x); i++) {
     for (int j=row_start[i]; j<row_start[i+1]; j++) {
       for (int bi=0; bi<bs_x; bi++) {
       for (int bj=0; bj<bs_y; bj++) {
          tripletList.push_back(Triplet<float>(i*bs_x+bi, col_idx[j]*bs_y+bj,
-                                              bufferA[j+bi*bj]));
+                                              bufferA[j*bs_x*bs_y+bi*bs_x+bj]));
       }}
     }
   }

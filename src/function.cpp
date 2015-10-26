@@ -104,9 +104,8 @@ void Function::bind(const std::string& name, void* data) {
   impl->bind(name, data);
 }
 
-void Function::bind(const string& name, const int* rowPtr, const int* colInd,
-                    void* data) {
-  impl->bind(name, rowPtr, colInd, data);
+void Function::bind(const string& name, TensorData& data) {
+  impl->bind(name, data);
 }
 
 void Function::init() {

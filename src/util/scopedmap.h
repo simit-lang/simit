@@ -61,8 +61,8 @@ public:
         return scope.at(symbol);
       }
     }
-    ierror << "Attempting to load symbol" << symbol
-           << "which is not in the symbol table";
+    ierror << "Attempting to load symbol " << symbol
+           << " which is not in the symbol table";
     return scopes.begin()->begin()->second;
   }
 

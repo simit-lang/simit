@@ -1,6 +1,7 @@
 #include "simit-test.h"
 
 #include "tensor.h"
+#include "tensor_data.h"
 #include "graph.h"
 #include "ir.h"
 #include "lower/index_expressions/lower_scatter_workspace.h"
@@ -125,7 +126,8 @@ TEST(Function, bindSparseTensor) {
   int A_rowPtr[4] = {0, 2, 4, 4};
   int A_colInd[4] = {0, 1, 1, 2};
   int   A_vals[4] = {1, 2, 3, 4};
-  function.bind("A", A_rowPtr, A_colInd, A_vals);
+  simit::TensorData data(A_rowPtr, A_colInd, A_vals, 4, 4);
+  function.bind("A", data);
 
   // Run and check output
   function.runSafe();

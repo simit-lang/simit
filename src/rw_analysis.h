@@ -27,6 +27,19 @@ public:
     // to op->var.
     maybeRead(op->var);
     maybeWrite(op->var);
+    // Check for system dimensions -- we need to read the set length
+    if (op->var.getType().isTensor()) {
+      const TensorType *ttype = op->var.getType().toTensor();
+      for (const IndexDomain& dim : ttype->getDimensions()) {
+        for (const IndexSet& is : dim.getIndexSets()) {
+          if (is.getKind() == IndexSet::Set) {
+            iassert(isa<VarExpr>(is.getSet()))
+                << "Cannot understand non-Var set dimensions";
+            maybeRead(to<VarExpr>(is.getSet())->var);
+          }
+        }
+      }
+    }
     IRVisitor::visit(op);
   }
 
@@ -67,8 +80,16 @@ public:
       iassert(isa<VarExpr>(fieldRead->elementOrSet));
       maybeWrite(to<VarExpr>(fieldRead->elementOrSet)->var);
     }
-    else {
-      not_supported_yet;
+    IRVisitor::visit(op);
+  }
+  void visit(const Load *op) {
+    if (isa<VarExpr>(op->buffer)) {
+      maybeRead(to<VarExpr>(op->buffer)->var);
+    }
+    else if (isa<FieldRead>(op->buffer)) {
+      const FieldRead* fieldRead = to<FieldRead>(op->buffer);
+      iassert(isa<VarExpr>(fieldRead->elementOrSet));
+      maybeWrite(to<VarExpr>(fieldRead->elementOrSet)->var);
     }
     IRVisitor::visit(op);
   }

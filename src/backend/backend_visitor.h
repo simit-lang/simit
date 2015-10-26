@@ -4,6 +4,12 @@
 #include "ir_visitor.h"
 
 namespace simit {
+#ifdef GPU
+namespace ir {
+struct GPUKernel;
+}
+#endif
+
 namespace backend {
 
 class BackendVisitorBase : protected ir::IRVisitorStrict {
@@ -15,6 +21,9 @@ protected:
   void visitError(std::string type, const void* op);
 
   void compile(const ir::Kernel&);
+#ifdef GPU
+  void compile(const ir::GPUKernel&);
+#endif
   void compile(const ir::Block&);
   void compile(const ir::Comment&);
 };
@@ -94,6 +103,10 @@ protected:
   /// The default Kernel compilation converts the kernel to a For loop and calls
   /// compile on it.
   virtual void compile(const ir::Kernel& op) {BackendVisitorBase::compile(op);}
+  // TODO: GPUKernel should be generalized to Kernel
+#ifdef GPU
+  virtual void compile(const ir::GPUKernel& op) {BackendVisitorBase::compile(op);}
+#endif
 
   virtual void compile(const ir::Block& op) {BackendVisitorBase::compile(op);}
 
@@ -141,6 +154,10 @@ private:
   void visit(const ir::Print* op)      {compile(*op);}
   void visit(const ir::Comment* op)    {compile(*op);}
   void visit(const ir::Pass* op)       {compile(*op);}
+
+#ifdef GPU
+  void visit(const ir::GPUKernel* op)     {compile(*op);}
+#endif
 
   /// High-level IRNodes that should be lowered and never reach the backend
   using BackendVisitorBase::visitError;

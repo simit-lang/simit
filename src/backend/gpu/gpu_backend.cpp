@@ -7,17 +7,30 @@
 #include "llvm/PassManager.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 #include "llvm/Transforms/Scalar.h"
 
+#if LLVM_MAJOR_VERSION <= 3 && LLVM_MINOR_VERSION <= 4
+#include "llvm/Analysis/Verifier.h"
+#else
+#include "llvm/IR/Verifier.h"
+#endif
+
+#include <algorithm>
 #include <fstream>
+#include <utility>
 
 #include "error.h"
 #include "gpu_codegen.h"
 #include "gpu_function.h"
+#include "intrinsics.h"
 #include "ir.h"
 #include "ir_queries.h"
 #include "backend/llvm/llvm_codegen.h"
+#include "backend/llvm/llvm_defines.h"
+#include "tensor_index.h"
 #include "types.h"
+#include "util/collections.h"
 
 #ifndef NASSERT
 #define ASSERT(cond) \
@@ -34,7 +47,7 @@
 namespace simit {
 namespace backend {
 
-simit::Function GPUBackend::compile(const ir::Func &irFunc) {
+Function* GPUBackend::compile(ir::Func irFunc, const ir::Storage& storage) {
   std::ofstream irFile("simit.sim", std::ofstream::trunc);
   irFile << irFunc;
   irFile.close();
@@ -43,117 +56,137 @@ simit::Function GPUBackend::compile(const ir::Func &irFunc) {
   this->module = createNVVMModule("kernels-module");
   this->dataLayout.reset(new llvm::DataLayout(module));
 
-  std::vector<ir::Func> callTree = ir::getCallTree(irFunc);
-  std::reverse(callTree.begin(), callTree.end());
-
-  this->storage = ir::Storage();
+  this->storage = storage;
   symtable.clear();
   buffers.clear();
+  globals.clear();
 
+  // This backend stores all system tensors as globals.
+  // TODO: Replace hacky makeSystemTensorsGlobalIfNoStorage with
+  //       makeSystemTensorsGlobal. The makeSystemTensorsGlobalIfNoStorage
+  //       function was used to make the old init system that relied on storage
+  //       work while transitioning to the new one based on pexprs
+//  func = makeSystemTensorsGlobal(func);
+  this->irFunc = makeSystemTensorsGlobalIfHasTensorIndex(this->irFunc);
+
+  const ir::Environment& env = this->irFunc.getEnvironment();
+  emitGlobals(env);
+
+  std::vector<ir::Func> callTree = ir::getCallTree(this->irFunc);
+  std::reverse(callTree.begin(), callTree.end());
+
+  llvm::Function *func = nullptr;
   for (auto &f : callTree) {
     // If we're not compiling the top-level func, then we do regular stack
     // allocations.
-    inKernel = (f.getName() != irFunc.getName());
+    inKernel = (f.getName() != this->irFunc.getName());
+
     if (f.getKind() != ir::Func::Internal) continue;
     iassert(f.getBody().defined());
 
     this->storage.add(f.getStorage());
 
     // Emit function
+    symtable.scope(); // put function arguments in new scope
     func = emitEmptyFunction(f.getName(), f.getArguments(), f.getResults(),
-                             false, false);
+                             !inKernel, false);
 
     // Add constants to symbol table
-    for (auto &global : f.getEnvironment().globals) {
+    for (auto &global : f.getEnvironment().getConstants()) {
       symtable.insert(global.first, compile(global.second));
     }
 
-    f.getBody().accept(this);
+    compile(f.getBody());
     builder->CreateRetVoid();
-    symtable.clear();
+
+    symtable.unscope();
   }
   iassert(func);
 
-  return new GPUFunction(irFunc, func, module, buffers, storage);
+  iassert(!llvm::verifyModule(*module))
+      << "LLVM module does not pass verification";
+
+#ifndef SIMIT_DEBUG
+  // Run LLVM optimization passes on the function
+  // We use the built-in PassManagerBuilder to build
+  // the set of passes that are similar to clang's -O3
+  llvm::FunctionPassManager fpm(module);
+  llvm::PassManager mpm;
+  llvm::PassManagerBuilder pmBuilder;
+  
+  pmBuilder.OptLevel = 3;
+
+  pmBuilder.BBVectorize = 1;
+  pmBuilder.LoopVectorize = 1;
+//  pmBuilder.LoadCombine = 1;
+  pmBuilder.SLPVectorize = 1;
+
+  llvm::DataLayout dataLayout(module);
+#if LLVM_MAJOR_VERSION >= 3 && LLVM_MINOR_VERSION >= 5
+  fpm.add(new llvm::DataLayoutPass(dataLayout));
+#else
+  fpm.add(new llvm::DataLayout(dataLayout));
+#endif
+
+  pmBuilder.populateFunctionPassManager(fpm);
+  pmBuilder.populateModulePassManager(mpm);
+
+  fpm.doInitialization();
+  fpm.run(*func);
+  fpm.doFinalization();
+  
+  mpm.run(*module);
+#endif
+
+  // Add temporaries to buffers
+  // for (const ir::Var& tmp : env.getTemporaries()) {
+  //   buffers[tmp] = symtable.get(tmp);
+  // }
+
+  // Fake an EngineBuilder to allow interfacing with the LLVMFunction
+  // superclass.
+  std::shared_ptr<llvm::EngineBuilder> engineBuilder = createEngineBuilder(module);
+  return new GPUFunction(this->irFunc, func, module, engineBuilder, storage);
 }
 
-llvm::Value *GPUBackend::compile(const ir::Expr &expr) {
-  expr.accept(this);
-  llvm::Value *tmp = val;
-  val = nullptr;
-  return tmp;
-}
-
-void GPUBackend::visit(const ir::FieldRead *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::TensorRead *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::TupleRead *op) {
-  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
-  ASSERT(false && "No code generation for this type");
-}
-void GPUBackend::visit(const ir::IndexRead *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Length *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Map *op) {
-  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
-  ASSERT(false && "No code generation for this type");
-}
-void GPUBackend::visit(const ir::IndexedTensor *op) {
-  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
-  ASSERT(false && "No code generation for this type");
-}
-void GPUBackend::visit(const ir::IndexExpr *op) {
-  std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n";
-  ASSERT(false && "No code generation for this type");
-}
-void GPUBackend::visit(const ir::TensorWrite *op) {
-  LLVMBackend::visit(op);
-}
-
-void GPUBackend::visit(const ir::Literal *op) {
-  const ir::TensorType *type = op->type.toTensor();
+void GPUBackend::compile(const ir::Literal& op) {
+  const ir::TensorType *type = op.type.toTensor();
   if (type->order() == 0) {
     // Delegate scalar literals to generic LLVM backend
-    LLVMBackend::visit(op);
+    LLVMBackend::compile(op);
   }
   else {
     // Put the data in global memory and generate a pointer
-    ir::ScalarType ctype = type->componentType;
+    ir::ScalarType ctype = type->getComponentType();
     llvm::Constant *dataConstant = nullptr;
     switch (ctype.kind) {
       case ir::ScalarType::Int: {
         iassert(ctype.bytes() == sizeof(uint32_t))
             << "Incorrect native types used for constant data array";
-        iassert(op->size % sizeof(uint32_t) == 0)
+        iassert(op.size % sizeof(uint32_t) == 0)
             << "Literal data size not a multiple of element size";
         dataConstant = llvm::ConstantDataArray::get(
-            LLVM_CONTEXT, llvm::ArrayRef<uint32_t>(
-                reinterpret_cast<uint32_t*>(op->data),
-                op->size/sizeof(uint32_t)));
+            LLVM_CTX, llvm::ArrayRef<uint32_t>(
+                reinterpret_cast<uint32_t*>(op.data),
+                op.size/sizeof(uint32_t)));
         break;
       }
       case ir::ScalarType::Float: {
         if (ir::ScalarType::floatBytes == sizeof(float)) {
-          iassert(op->size % sizeof(float) == 0)
+          iassert(op.size % sizeof(float) == 0)
               << "Literal data size not a multiple of element size";
           dataConstant = llvm::ConstantDataArray::get(
-              LLVM_CONTEXT, llvm::ArrayRef<float>(
-                  reinterpret_cast<float*>(op->data),
-                  op->size/sizeof(float)));
+              LLVM_CTX, llvm::ArrayRef<float>(
+                  reinterpret_cast<float*>(op.data),
+                  op.size/sizeof(float)));
         }
         else if (ir::ScalarType::floatBytes == sizeof(double)) {
-          iassert(op->size % sizeof(double) == 0)
+          iassert(op.size % sizeof(double) == 0)
               << "Literal data size not a multiple of element size";
           dataConstant = llvm::ConstantDataArray::get(
-              LLVM_CONTEXT, llvm::ArrayRef<double>(
-                  reinterpret_cast<double*>(op->data),
-                  op->size/sizeof(double)));
+              LLVM_CTX, llvm::ArrayRef<double>(
+                  reinterpret_cast<double*>(op.data),
+                  op.size/sizeof(double)));
         }
         else {
           unreachable;
@@ -163,14 +196,14 @@ void GPUBackend::visit(const ir::Literal *op) {
       case ir::ScalarType::Boolean: {
         not_supported_yet;
         // This code is untested, but likely correct
-        iassert(op->size % sizeof(bool) == 0)
+        iassert(op.size % sizeof(bool) == 0)
             << "Literal data size not a multiple of element size";
         iassert(sizeof(bool) == sizeof(uint32_t))
             << "Boolean literal assumes 32-bit data format";
         dataConstant = llvm::ConstantDataArray::get(
-            LLVM_CONTEXT, llvm::ArrayRef<uint32_t>(
-                reinterpret_cast<uint32_t*>(op->data),
-                op->size/sizeof(uint32_t)));
+            LLVM_CTX, llvm::ArrayRef<uint32_t>(
+                reinterpret_cast<uint32_t*>(op.data),
+                op.size/sizeof(uint32_t)));
         break;
       }
       default: unreachable;
@@ -183,145 +216,48 @@ void GPUBackend::visit(const ir::Literal *op) {
                                  dataConstant, "global_const", nullptr,
                                  llvm::GlobalVariable::NotThreadLocal,
                                  CUDA_GLOBAL_ADDRSPACE);
-    llvm::Type *finalType = createLLVMType(type, CUDA_GLOBAL_ADDRSPACE);
+    llvm::Type *finalType = llvmType(*type, CUDA_GLOBAL_ADDRSPACE);
     val = builder->CreateBitCast(globalData, finalType);
   }
   iassert(val);
 }
-void GPUBackend::visit(const ir::VarExpr *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Load *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::CallStmt *op) {
+
+void GPUBackend::compile(const ir::Call& op) {
   std::map<ir::Func, std::string> nvvmIntrinsicByName =
-                                  {{ir::Intrinsics::sin,    std::string("__nv_sinf")},
-                                   {ir::Intrinsics::cos,    std::string("__nv_cosf")},
-                                   {ir::Intrinsics::sqrt,   std::string("__nv_sqrtf")},
-                                   {ir::Intrinsics::log,    std::string("__nv_logf")},
-                                   {ir::Intrinsics::exp,    std::string("__nv_fast_expf")},
-                                   {ir::Intrinsics::pow,    std::string("__nv_fast_powf")},
-                                   {ir::Intrinsics::atan2,  std::string("__nv_atan2f")},
-                                   {ir::Intrinsics::tan,    std::string("__nv_tanf")},
-                                   {ir::Intrinsics::asin,   std::string("__nv_asinf")},
-                                   {ir::Intrinsics::acos,   std::string("__nv_acosf")}};
-  
-  std::vector<llvm::Type*> argTypes;
-  std::vector<llvm::Value*> args;
-  llvm::Function *fun = nullptr;
-  llvm::Value *call = nullptr;
-
-  // compile arguments first
-  for (auto a: op->actuals) {
-    //FIX: remove once solve() is no longer needed
-    //iassert(isScalar(a.type()));
-    argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
-    args.push_back(compile(a));
-  }
-
-  ir::Func callee = op->callee;
-
-  if (callee.getKind() == ir::Func::Intrinsic) {
-    iassert(callee != ir::Intrinsics::norm && callee != ir::Intrinsics::dot)
-        << "norm and dot should have been lowered";
-
-    std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
-
-    // first, see if this is an LLVM intrinsic
-    auto foundIntrinsic = nvvmIntrinsicByName.find(callee);
-    if (foundIntrinsic != nvvmIntrinsicByName.end()) {
-      fun = getBuiltIn(foundIntrinsic->second, getLLVMFloatType(), argTypes);
-      call = builder->CreateCall(fun, args);
-    }
-    else if (callee == ir::Intrinsics::mod) {
-      iassert(op->actuals.size() == 2) << "mod takes two inputs, got"
-                                       << op->actuals.size();
-      call = builder->CreateSRem(compile(op->actuals[0]),
-                                 compile(op->actuals[1]));
-    }
-    else if (callee == ir::Intrinsics::det) {
-      iassert(args.size() == 1);
-      std::string fname = callee.getName() + "3" + floatTypeName;
-      call = emitCall(fname, args, getLLVMFloatType());
-    }
-    else if (callee == ir::Intrinsics::inv) {
-      iassert(args.size() == 1);
-
-      ir::Var result = op->results[0];
-      llvm::Value *llvmResult = symtable.get(result);
-      args.push_back(llvmResult);
-
-      std::string fname = callee.getName() + "3" + floatTypeName;
-      call = emitCall(fname, args);
-    }
-    else if (op->callee == ir::Intrinsics::loc) {
-      call = emitCall("loc", args, LLVM_INT);
-    }
-    else {
-      ierror << "intrinsic " << op->callee.getName() << " not found";
-    }
-  
-    iassert(call);
-    if (!call->getType()->isVoidTy()) {
-      iassert(op->results.size() == 1);
-      ir::Var var = op->results[0];
-      llvm::Value *llvmVar = symtable.get(var);
-      builder->CreateStore(call, llvmVar);
-    }
-  }
-  // if not an intrinsic function, try to find it in the module
-  else {
-    if (module->getFunction(callee.getName())) {
-      for (ir::Var r : op->results) {
-        argTypes.push_back(createLLVMType(r.getType().toTensor()->componentType));
-
-        llvm::Value *llvmResult = symtable.get(r);
-        args.push_back(llvmResult);
-        symtable.insert(r, llvmResult);
-      }
-      fun = module->getFunction(op->callee.getName());
-      call = builder->CreateCall(fun, args);
-    }
-    else {
-      ierror << "function " << op->callee.getName() << " not found in module";
-    }
-  }
-}
-void GPUBackend::visit(const ir::Call *op) {
-  std::map<ir::Func, std::string> nvvmIntrinsicByName =
-                                  {{ir::Intrinsics::sin,    std::string("__nv_sinf")},
-                                   {ir::Intrinsics::cos,    std::string("__nv_cosf")},
-                                   {ir::Intrinsics::sqrt,   std::string("__nv_sqrtf")},
-                                   {ir::Intrinsics::log,    std::string("__nv_logf")},
-                                   {ir::Intrinsics::exp,    std::string("__nv_fast_expf")},
-                                   {ir::Intrinsics::pow,    std::string("__nv_fast_powf")},
-                                   {ir::Intrinsics::atan2,  std::string("__nv_atan2f")},
-                                   {ir::Intrinsics::tan,    std::string("__nv_tanf")},
-                                   {ir::Intrinsics::asin,   std::string("__nv_asinf")},
-                                   {ir::Intrinsics::acos,   std::string("__nv_acosf")}};
+      {{ir::intrinsics::sin(),    std::string("__nv_sinf")},
+       {ir::intrinsics::cos(),    std::string("__nv_cosf")},
+       {ir::intrinsics::sqrt(),   std::string("__nv_sqrtf")},
+       {ir::intrinsics::log(),    std::string("__nv_logf")},
+       {ir::intrinsics::exp(),    std::string("__nv_fast_expf")},
+       {ir::intrinsics::pow(),    std::string("__nv_fast_powf")},
+       {ir::intrinsics::atan2(),  std::string("__nv_atan2f")},
+       {ir::intrinsics::tan(),    std::string("__nv_tanf")},
+       {ir::intrinsics::asin(),   std::string("__nv_asinf")},
+       {ir::intrinsics::acos(),   std::string("__nv_acosf")}};
   
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
   llvm::Function *fun = nullptr;
 
   // compile arguments first
-  for (auto a: op->actuals) {
+  for (auto a: op.actuals) {
     //FIX: remove once solve() is no longer needed
     //iassert(isScalar(a.type()));
-    argTypes.push_back(createLLVMType(a.type().toTensor()->componentType));
+    ir::ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->getComponentType()
+                                               : a.type().toArray()->elementType;
+    argTypes.push_back(llvmType(ctype));
     args.push_back(compile(a));
   }
 
-  auto foundIntrinsic = nvvmIntrinsicByName.find(op->func);
+  auto foundIntrinsic = nvvmIntrinsicByName.find(op.func);
   if (foundIntrinsic != nvvmIntrinsicByName.end()) {
-    auto ftype = llvm::FunctionType::get(getLLVMFloatType(), argTypes, false);
+    auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes, false);
     module->getOrInsertFunction(foundIntrinsic->second, ftype);
     fun = module->getFunction(foundIntrinsic->second);
   }
-  else if (op->func == ir::Intrinsics::norm) {
+  else if (op.func == ir::intrinsics::norm()) {
     iassert(args.size() == 1);
-    auto type = op->actuals[0].type().toTensor();
+    auto type = op.actuals[0].type().toTensor();
     std::vector<ir::IndexDomain> dimensions = type->getDimensions();
 
     // Dense operation
@@ -329,32 +265,32 @@ void GPUBackend::visit(const ir::Call *op) {
       args.push_back(emitComputeLen(dimensions[0]));
       std::string funcName = ir::ScalarType::singleFloat() ?
           "norm_f32" : "norm_f64";
-      val = emitCall(funcName, args, getLLVMFloatType());
+      val = emitCall(funcName, args, llvmFloatType());
     }
     else {
       // Fire off kernel for sparse computation
       llvm::Value *result = builder->CreateAlloca(
-          getLLVMFloatType(), llvmInt(1));
+          llvmFloatType(), llvmInt(1));
       llvm::Value *size = emitComputeLen(dimensions[0]);
-      ir::Type resultType = ir::TensorType::make(type->componentType);
-      emitShardedDot(op->actuals[0].type(), op->actuals[0].type(),
+      ir::Type resultType = ir::TensorType::make(type->getComponentType());
+      emitShardedDot(op.actuals[0].type(), op.actuals[0].type(),
                      resultType, args[0], args[0], size, result);
       llvm::Value *sqrt = getBuiltIn(
-          nvvmIntrinsicByName.at(ir::Intrinsics::sqrt),
-          getLLVMFloatType(), { getLLVMFloatType() });
+          nvvmIntrinsicByName.at(ir::intrinsics::sqrt()),
+          llvmFloatType(), { llvmFloatType() });
       val = builder->CreateCall(sqrt, builder->CreateLoad(result));
     }
     return;
   }
-  else if (op->func == ir::Intrinsics::loc) {
+  else if (op.func == ir::intrinsics::loc()) {
     val = emitCall("loc", args, LLVM_INT);
     return;
   }
-  else if (op->func == ir::Intrinsics::dot) {
+  else if (op.func == ir::intrinsics::dot()) {
     iassert(args.size() == 2);
     // we need to add the vector length to the args
-    auto type1 = op->actuals[0].type().toTensor();
-    auto type2 = op->actuals[1].type().toTensor();
+    auto type1 = op.actuals[0].type().toTensor();
+    auto type2 = op.actuals[1].type().toTensor();
     auto type1Dimensions = type1->getDimensions();
     auto type2Dimensions = type2->getDimensions();
 
@@ -366,17 +302,17 @@ void GPUBackend::visit(const ir::Call *op) {
       std::string funcName = ir::ScalarType::singleFloat() ?
           "dot_f32" : "dot_f64";
       args.push_back(emitComputeLen(type1Dimensions[0]));
-      val = emitCall(funcName, args, getLLVMFloatType());
+      val = emitCall(funcName, args, llvmFloatType());
       return;
     }
 
     // Fallthrough: fire off a kernel for sparse operation
     iassert(type1->hasSystemDimensions() && type2->hasSystemDimensions());
 
-    llvm::Value *result = builder->CreateAlloca(getLLVMFloatType(), llvmInt(1));
+    llvm::Value *result = builder->CreateAlloca(llvmFloatType(), llvmInt(1));
     llvm::Value *size = emitComputeLen(type1Dimensions[0]);
-    ir::Type resultType = ir::TensorType::make(type1->componentType);
-    emitShardedDot(op->actuals[0].type(), op->actuals[1].type(),
+    ir::Type resultType = ir::TensorType::make(type1->getComponentType());
+    emitShardedDot(op.actuals[0].type(), op.actuals[1].type(),
                    resultType, args[0], args[1],
                    size, result);
     val = result;
@@ -384,119 +320,222 @@ void GPUBackend::visit(const ir::Call *op) {
     return;
   }
   // if not an intrinsic function, try to find it in the module
-  else if (module->getFunction(op->func.getName())) {
-    fun = module->getFunction(op->func.getName());
+  else if (module->getFunction(op.func.getName())) {
+    fun = module->getFunction(op.func.getName());
   }
   else {
-    std::cerr << "GPUBackend::visit unsupported node:\n\n" << *op << "\n\n";
+    std::cerr << "GPUBackend::compile unsupported node:\n\n" << op << "\n\n";
     ASSERT(false && "No code generation for this type");
   }
   
   val = builder->CreateCall(fun, args);
 }
-void GPUBackend::visit(const ir::Neg *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Add *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Sub *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Mul *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Div *op) {
-  LLVMBackend::visit(op);
+
+void GPUBackend::compile(const ir::VarExpr& op) {
+  LLVMBackend::compile(op);
 }
 
-void GPUBackend::visit(const ir::VarDecl *op) {
-  tassert(op->var.getType().isTensor()) << "Only tensor decls supported";
+void GPUBackend::compile(const ir::Load& op) {
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::FieldRead& op) {
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::Length& op) {
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::IndexRead& op) {
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::VarDecl& op) {
+  tassert(op.var.getType().isTensor()) << "Only tensor decls supported";
 
   if (inKernel) {
-    ir::Var var = op->var;
+    ir::Var var = op.var;
     if (isScalar(var.getType())) {
       // Allow LLVMBackend to emit a local alloca
-      LLVMBackend::visit(op);
+      LLVMBackend::compile(op);
     }
     else {
       const ir::TensorType *ttype = var.getType().toTensor();
-      ir::ScalarType ctype = ttype->componentType;
-      llvm::Value *llvmVar = builder->CreateAlloca(
-          createLLVMType(ctype), llvmInt(ttype->size()), var.getName());
+      ir::ScalarType ctype = ttype->getComponentType();
+      llvm::Value *llvmVar;
+      if (!ttype->hasSystemDimensions()) {
+        llvmVar = builder->CreateAlloca(
+            llvmType(ctype), llvmInt(ttype->size()), var.getName());
+      }
+      else {
+        // NOTE: This could be really slow or result in OOM if the loops and
+        // temporaries generated in lowering do not work well.
+        llvm::Function* mallocFunc = getBuiltIn(
+            "malloc", LLVM_INT8_PTR, {LLVM_INT64});
+        llvm::Value *len = emitComputeLen(ttype, storage.getStorage(var));
+        len = builder->CreateIntCast(len, LLVM_INT64, true);
+        llvmVar = builder->CreateCall(mallocFunc, len);
+        llvmVar = builder->CreatePointerCast(llvmVar, llvmType(*ttype));
+      }
       symtable.insert(var, llvmVar);
     }
   }
   else { // Root scope
     // Always global, to be accessible to all kernels
-    makeGlobalTensor(op->var);
+    makeGlobalTensor(op.var);
   }
 }
 
-void GPUBackend::visit(const ir::AssignStmt *op) {
+void GPUBackend::compile(const ir::AssignStmt& op) {
   // Only atomic for a compound scalar-scalar assign
-  const ir::TensorType *varType = op->var.getType().toTensor();
-  const ir::TensorType *valType = op->value.type().toTensor();
-  if (op->cop != ir::CompoundOperator::None &&
+  const ir::TensorType *varType = op.var.getType().toTensor();
+  const ir::TensorType *valType = op.value.type().toTensor();
+  if (op.cop != ir::CompoundOperator::None &&
       varType->order() == 0) {
-    iassert(symtable.contains(op->var)) << op->var << " has not been declared";
-    switch (op->cop) {
+    iassert(symtable.contains(op.var)) << op.var << " has not been declared";
+    switch (op.cop) {
       case ir::CompoundOperator::Add: {
-        llvm::Value *value = compile(op->value);
-        llvm::Value *varPtr = symtable.get(op->var);
+        llvm::Value *value = compile(op.value);
+        llvm::Value *varPtr = symtable.get(op.var);
+        // Globals are stored as pointer-pointers so we must load them
+        if (util::contains(globals, op.var)) {
+          varPtr = builder->CreateLoad(varPtr, op.var.getName());
+        }
         // Guard against non-pointer
         iassert(varPtr->getType()->isPointerTy());
-        if (buffers.find(op->var) != buffers.end()) {
+        // TODO: This check should probably look at things in env instead
+        if (buffers.find(op.var) != buffers.end()) {
           // Global or argument which might be accessed in parallel
           emitAtomicLoadAdd(varPtr, value);
         }
         else {
           // Local, will not be accessed in parallel
-          LLVMBackend::visit(op);
+          LLVMBackend::compile(op);
         }
         break;
       }
-      default: ierror << "Unknown compound operator type: " << op->cop;
+      default: ierror << "Unknown compound operator type: " << op.cop;
     }
   }
   else if (varType->order() > 0 && valType->order() == 0 &&
-           ir::isa<ir::Literal>(op->value) &&
-           (ir::to<ir::Literal>(op->value)->getFloatVal(0) == 0.0 ||
-            ((int*)ir::to<ir::Literal>(op->value))[0] == 0) &&
+           ir::isa<ir::Literal>(op.value) &&
+           (ir::to<ir::Literal>(op.value)->getFloatVal(0) == 0.0 ||
+            ((int*)ir::to<ir::Literal>(op.value))[0] == 0) &&
            !inKernel) {
-    llvm::Value *varPtr = symtable.get(op->var);
-    llvm::Value *len = emitComputeLen(varType, storage.get(op->var));
-    emitShardedMemSet(op->var.getType(), varPtr, len);
+    llvm::Value *varPtr = compile(op.var);
+    llvm::Value *len = emitComputeLen(varType, storage.getStorage(op.var));
+    emitShardedMemSet(op.var.getType(), varPtr, len);
   }
   else {
-    LLVMBackend::visit(op);
+    LLVMBackend::compile(op);
   }
 }
-void GPUBackend::visit(const ir::FieldWrite *op) {
-  // Sparse memset 0 should be emitted as a kernel
-  ir::Type fieldType = getFieldType(op->elementOrSet, op->fieldName);
-  ir::Type valueType = op->value.type();
-  if (fieldType.toTensor()->order() > 0 &&
-      valueType.toTensor()->order() == 0 &&
-      ir::isa<ir::Literal>(op->value) &&
-      ir::to<ir::Literal>(op->value)->getFloatVal(0) == 0.0) {
-    llvm::Value *fieldPtr = emitFieldRead(op->elementOrSet, op->fieldName);
-    // For now we'll assume fields are always dense row major
-    emitShardedMemSet(fieldType, fieldPtr,
-                      emitComputeLen(fieldType.toTensor(), ir::TensorStorage::DenseRowMajor));
+
+void GPUBackend::compile(const ir::CallStmt& op) {
+  std::map<ir::Func, std::string> nvvmIntrinsicByName =
+      {{ir::intrinsics::sin(),    std::string("__nv_sinf")},
+       {ir::intrinsics::cos(),    std::string("__nv_cosf")},
+       {ir::intrinsics::sqrt(),   std::string("__nv_sqrtf")},
+       {ir::intrinsics::log(),    std::string("__nv_logf")},
+       {ir::intrinsics::exp(),    std::string("__nv_fast_expf")},
+       {ir::intrinsics::pow(),    std::string("__nv_fast_powf")},
+       {ir::intrinsics::atan2(),  std::string("__nv_atan2f")},
+       {ir::intrinsics::tan(),    std::string("__nv_tanf")},
+       {ir::intrinsics::asin(),   std::string("__nv_asinf")},
+       {ir::intrinsics::acos(),   std::string("__nv_acosf")}};
+  
+  std::vector<llvm::Type*> argTypes;
+  std::vector<llvm::Value*> args;
+  llvm::Function *fun = nullptr;
+  llvm::Value *call = nullptr;
+
+  // compile arguments first
+  for (auto a: op.actuals) {
+    //FIX: remove once solve() is no longer needed
+    //iassert(isScalar(a.type()));
+    argTypes.push_back(llvmType(a.type().toTensor()->getComponentType()));
+    args.push_back(compile(a));
   }
+
+  ir::Func callee = op.callee;
+
+  if (callee.getKind() == ir::Func::Intrinsic) {
+    iassert(callee != ir::intrinsics::norm() &&
+            callee != ir::intrinsics::dot())
+        << "norm and dot should have been lowered";
+
+    std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
+
+    // first, see if this is an LLVM intrinsic
+    auto foundIntrinsic = nvvmIntrinsicByName.find(callee);
+    if (foundIntrinsic != nvvmIntrinsicByName.end()) {
+      fun = getBuiltIn(foundIntrinsic->second, llvmFloatType(), argTypes);
+      call = builder->CreateCall(fun, args);
+    }
+    else if (callee == ir::intrinsics::mod()) {
+      iassert(op.actuals.size() == 2) << "mod takes two inputs, got"
+                                       << op.actuals.size();
+      call = builder->CreateSRem(compile(op.actuals[0]),
+                                 compile(op.actuals[1]));
+    }
+    else if (callee == ir::intrinsics::det()) {
+      iassert(args.size() == 1);
+      std::string fname = callee.getName() + "3" + floatTypeName;
+      call = emitCall(fname, args, llvmFloatType());
+    }
+    else if (callee == ir::intrinsics::inv()) {
+      iassert(args.size() == 1);
+
+      ir::Var result = op.results[0];
+      llvm::Value *llvmResult = symtable.get(result);
+      args.push_back(llvmResult);
+
+      std::string fname = callee.getName() + "3" + floatTypeName;
+      call = emitCall(fname, args);
+    }
+    else if (op.callee == ir::intrinsics::loc()) {
+      call = emitCall("loc", args, LLVM_INT);
+    }
+    else {
+      ierror << "intrinsic " << op.callee.getName() << " not found";
+    }
+  
+    iassert(call);
+    if (!call->getType()->isVoidTy()) {
+      iassert(op.results.size() == 1);
+      ir::Var var = op.results[0];
+      llvm::Value *llvmVar = symtable.get(var);
+      builder->CreateStore(call, llvmVar);
+    }
+  }
+  // if not an intrinsic function, try to find it in the module
   else {
-    LLVMBackend::visit(op);
+    if (module->getFunction(callee.getName())) {
+      for (ir::Var r : op.results) {
+        argTypes.push_back(llvmType(r.getType().toTensor()->getComponentType()));
+
+        llvm::Value *llvmResult = symtable.get(r);
+        args.push_back(llvmResult);
+        symtable.insert(r, llvmResult);
+      }
+      fun = module->getFunction(op.callee.getName());
+      call = builder->CreateCall(fun, args);
+    }
+    else {
+      ierror << "function " << op.callee.getName() << " not found in module";
+    }
   }
 }
-void GPUBackend::visit(const ir::Store *op) {
-  if (op->cop != ir::CompoundOperator::None) {
-    llvm::Value *buffer = compile(op->buffer);
-    llvm::Value *index = compile(op->index);
-    llvm::Value *value = compile(op->value);
+
+void GPUBackend::compile(const ir::Store& op) {
+  if (op.cop != ir::CompoundOperator::None) {
+    llvm::Value *buffer = compile(op.buffer);
+    llvm::Value *index = compile(op.index);
+    llvm::Value *value = compile(op.value);
     std::string locName = std::string(buffer->getName()) + PTR_SUFFIX;
     llvm::Value *bufferLoc = builder->CreateInBoundsGEP(buffer, index, locName);
-    switch (op->cop) {
+    switch (op.cop) {
       case ir::CompoundOperator::Add: {
         emitAtomicLoadAdd(bufferLoc, value);
         break;
@@ -505,35 +544,93 @@ void GPUBackend::visit(const ir::Store *op) {
     }
   }
   else {
-    LLVMBackend::visit(op);
+    LLVMBackend::compile(op);
   }
 }
-void GPUBackend::visit(const ir::ForRange *op) {
-  LLVMBackend::visit(op);
+
+void GPUBackend::compile(const ir::FieldWrite& op) {
+  // Sparse memset 0 should be emitted as a kernel
+  ir::Type fieldType = getFieldType(op.elementOrSet, op.fieldName);
+  ir::Type valueType = op.value.type();
+  if (fieldType.toTensor()->order() > 0 &&
+      valueType.toTensor()->order() == 0 &&
+      ir::isa<ir::Literal>(op.value) &&
+      ir::to<ir::Literal>(op.value)->getFloatVal(0) == 0.0) {
+    // TODO: Currently do not support int memsets
+    tassert(valueType.toTensor()->getComponentType().kind
+            == ir::ScalarType::Float)
+        << "Assigning int/bool tensor to zero unsupported"
+        << std::endl << op.elementOrSet << "." << op.fieldName
+        << " = " << op.value;
+    llvm::Value *fieldPtr = emitFieldRead(op.elementOrSet, op.fieldName);
+    // For now we'll assume fields are always dense row major
+    emitShardedMemSet(
+        fieldType, fieldPtr, emitComputeLen(
+            fieldType.toTensor(), ir::TensorStorage::Kind::Dense));
+  }
+  else {
+    LLVMBackend::compile(op);
+  }
 }
-void GPUBackend::visit(const ir::For *op) {
-  LLVMBackend::visit(op);
+
+void GPUBackend::compile(const ir::Scope& op) {
+  LLVMBackend::compile(op);
 }
-void GPUBackend::visit(const ir::GPUKernel *op) {
-  GPUSharding kernelSharding = op->sharding;
+
+void GPUBackend::compile(const ir::IfThenElse& op) {
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::ForRange& op) {
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::For& op) {
+  // Loop will be emitted linearly, instead of as a kernel over processors
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::While& op) {
+  // Loop will be emitted linearly, instead of as a kernel over processors
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::Print& op) {
+  LLVMBackend::compile(op);
+}
+
+void GPUBackend::compile(const ir::GPUKernel& op) {
+  GPUSharding kernelSharding = op.sharding;
 
   // Stash the symtable
-  util::ScopedMap<simit::ir::Var, llvm::Value*> oldSymtable = symtable;
-  symtable.clear();
+  symtable.scope();
+
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
-  // Pass all globals reads as arguments
+  // Pass all globals reads as arguments. Exclude them from the global list in
+  // the scope of the GPUKernel so they are resolved from the symtable properly.
+  std::set<ir::Var> excludeGlobals;
   std::vector<ir::Var> kernelArgs;
-  for (auto var : op->reads) {
+  for (auto var : op.reads) {
     kernelArgs.push_back(var);
+    excludeGlobals.insert(var);
   }
   std::vector<ir::Var> kernelResults;
-  for (auto var : op->writes) {
+  for (auto var : op.writes) {
     // Skip repeated arguments
-    if (op->reads.find(var) != op->reads.end()) continue;
+    if (op.reads.find(var) != op.reads.end()) continue;
     kernelResults.push_back(var);
+    excludeGlobals.insert(var);
   }
+
+  // HACK: Stash argument vars from the globals
+  std::set<ir::Var> oldGlobals = globals;
+  globals.clear();
+  std::set_difference(oldGlobals.begin(), oldGlobals.end(),
+                      excludeGlobals.begin(), excludeGlobals.end(),
+                      std::inserter(globals, globals.begin()));
+
   // Push domain variables into kernel args
   if (kernelSharding.xSharded) {
     iassert(kernelSharding.xDomain.getKind() == ir::IndexSet::Set);
@@ -562,14 +659,14 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   llvm::AttributeSet attrSet = kernel->getAttributes();
   for (unsigned slot = 0; slot < attrSet.getNumSlots(); ++slot) {
     int index = attrSet.getSlotIndex(slot);
-    attrSet = attrSet.addAttribute(LLVM_CONTEXT, index, llvm::Attribute::NoAlias);
+    attrSet = attrSet.addAttribute(LLVM_CTX, index, llvm::Attribute::NoAlias);
   }
   kernel->setAttributes(attrSet);
   
   llvm::BasicBlock *bodyStart = llvm::BasicBlock::Create(
-    LLVM_CONTEXT, "bodyStart", kernel);
+    LLVM_CTX, "bodyStart", kernel);
   llvm::BasicBlock *earlyExit = llvm::BasicBlock::Create(
-    LLVM_CONTEXT, "earlyExit", kernel);
+    LLVM_CTX, "earlyExit", kernel);
   
   // Guard: check if we're outside the intended range of the kernel loop and 
   // early-exit if so.
@@ -598,38 +695,39 @@ void GPUBackend::visit(const ir::GPUKernel *op) {
   }
   
   inKernel = true;
-  LLVMBackend::compile(op->body);
+  LLVMBackend::compile(op.body);
   inKernel = false;
 
   // NVVM kernel should always return void
   builder->CreateRetVoid();
 
+  // Unstash globals
+  globals = oldGlobals;
+
   // Unstash symtable
-  symtable = oldSymtable;
+  symtable.unscope();
 
   // Emit a dynamic kernel launch
   builder->SetInsertPoint(prevBB);
   std::vector<llvm::Value*> args;
   for (auto &irArg : kernelArgs) {
-    args.push_back(symtable.get(irArg));
+    llvm::Value *arg = symtable.get(irArg);
+    // TODO: Move this global vs. local distinction to function
+    // and kernel symtable management
+    if (util::contains(globals, irArg)) {
+      arg = builder->CreateLoad(arg, irArg.getName());
+    }
+    args.push_back(arg);
   }
   for (auto &irRes : kernelResults) {
     // TODO(gkanwar): Figure out inouts
-    args.push_back(symtable.get(irRes));
+    llvm::Value *res = symtable.get(irRes);
+    if (util::contains(globals, irRes)) {
+      res = builder->CreateLoad(res, irRes.getName());
+    }
+    args.push_back(res);
   }
   emitKernelLaunch(kernel, args, kernelSharding);
-}
-
-void GPUBackend::visit(const ir::IfThenElse *op) {
-  // ASSERT(false && "No code generation for this type");
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Block *op) {
-  LLVMBackend::visit(op);
-}
-void GPUBackend::visit(const ir::Pass *op) {
-  // ASSERT(false && "No code generation for this type");
-  LLVMBackend::visit(op);
 }
 
 namespace {
@@ -646,8 +744,8 @@ void cleanFuncAttrs(llvm::Function *func) {
     // Remove readonly from param attrs
     int index = funcAttrs.getSlotIndex(slot);
     llvm::AttributeSet cleanSlot = funcAttrs.removeAttribute(
-        LLVM_CONTEXT, index, llvm::Attribute::ReadOnly);
-    cleanAttrs.addAttributes(LLVM_CONTEXT, index, cleanSlot);
+        LLVM_CTX, index, llvm::Attribute::ReadOnly);
+    cleanAttrs.addAttributes(LLVM_CTX, index, cleanSlot);
   }
 
   func->setAttributes(cleanAttrs);
@@ -695,10 +793,10 @@ llvm::Value *GPUBackend::emitCastGlobalToGen(llvm::Value *src) {
   llvm::PointerType *srcPtrTy = llvm::cast<llvm::PointerType>(src->getType());
   iassert(srcPtrTy->getAddressSpace() ==
           CUDA_GLOBAL_ADDRSPACE);
-  llvm::Value *srcCast = builder->CreateBitCast(src, CUDA_INT8PTR_GLOBAL);
+  llvm::Value *srcCast = builder->CreateBitCast(src, CUDA_INT8_PTR_GLOBAL);
   llvm::Function *castFunc = getBuiltIn(
       "llvm.nvvm.ptr.global.to.gen.p0i8.p1i8",
-      LLVM_INT8PTR, { CUDA_INT8PTR_GLOBAL });
+      LLVM_INT8_PTR, { CUDA_INT8_PTR_GLOBAL });
   cleanFuncAttrs(castFunc);
   llvm::Value *out = builder->CreateCall(castFunc, srcCast);
   llvm::Type *genTy = llvm::PointerType::getUnqual(srcPtrTy->getElementType());
@@ -739,19 +837,19 @@ void GPUBackend::emitAtomicFLoadAdd(llvm::Value *ptr, llvm::Value *value) {
   std::string funcName;
   switch (addrspace) {
     case CUDA_GENERIC_ADDRSPACE: {
-      argTys.push_back(LLVM_FLOATPTR);
+      argTys.push_back(LLVM_FLOAT_PTR);
       argTys.push_back(LLVM_FLOAT);
       funcName = "llvm.nvvm.atomic.load.add.f32.p0f32";
       break;
     }
     case CUDA_GLOBAL_ADDRSPACE: {
-      argTys.push_back(CUDA_FLOATPTR_GLOBAL);
+      argTys.push_back(CUDA_FLOAT_PTR_GLOBAL);
       argTys.push_back(LLVM_FLOAT);
       funcName = "llvm.nvvm.atomic.load.add.f32.p1f32";
       break;
     }
     case CUDA_SHARED_ADDRSPACE: {
-      argTys.push_back(llvm::Type::getFloatPtrTy(LLVM_CONTEXT, addrspace));
+      argTys.push_back(llvm::Type::getFloatPtrTy(LLVM_CTX, addrspace));
       argTys.push_back(LLVM_FLOAT);
       funcName = "llvm.nvvm.atomic.load.add.f32.p3f32";
       break;
@@ -786,17 +884,17 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 
   // cudaGetParamBufferV2
   std::vector<llvm::Type*> getParamArgTys = {
-    LLVM_INT8PTR, dim3Ty, dim3Ty, LLVM_INT
+    LLVM_INT8_PTR, dim3Ty, dim3Ty, LLVM_INT
   };
   llvm::Function *getParamFunc = getBuiltIn(
-      "cudaGetParameterBufferV2", LLVM_INT8PTR, getParamArgTys);
+      "cudaGetParameterBufferV2", LLVM_INT8_PTR, getParamArgTys);
 
   // CUstream_st
   llvm::PointerType *cuStreamPtrTy = getOrCreateCUStreamPtrTy();
 
   // cudaLaunchDeviceV2
   std::vector<llvm::Type*> launchDevArgTys = {
-    LLVM_INT8PTR, cuStreamPtrTy
+    LLVM_INT8_PTR, cuStreamPtrTy
   };
   llvm::Function *cudaLaunchFunc = getBuiltIn(
       "cudaLaunchDeviceV2", LLVM_INT, launchDevArgTys);
@@ -829,7 +927,7 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
       llvm::ConstantStruct::get(dim3Ty, initBlockDims);
 
   // Build param buffer
-  llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, LLVM_INT8PTR);
+  llvm::Value *kernelBitCast = builder->CreateBitCast(kernel, LLVM_INT8_PTR);
   llvm::Value *paramBuf = builder->CreateCall4(
       getParamFunc, kernelBitCast, gridDims, blockDims, llvmInt(0));
 
@@ -841,6 +939,41 @@ void GPUBackend::emitKernelLaunch(llvm::Function *kernel,
 
   // Synchronize memory after the call
   emitDeviceSync();
+}
+
+void GPUBackend::emitGlobals(const ir::Environment& env) {
+  LLVMBackend::emitGlobals(env);
+
+  // We must add the managed annotation to all globals
+  for (const ir::Var& ext : env.getExternVars()) {
+    llvm::Value *global = symtable.get(ext);
+    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+  }
+  for (const ir::Var& tmp : env.getTemporaries()) {
+    llvm::Value *global = symtable.get(tmp);
+    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+  }
+  for (const ir::TensorIndex& tensorIndex : env.getTensorIndices()) {
+    const ir::Var& coordArray = tensorIndex.getCoordArray();
+    llvm::Value *global = symtable.get(coordArray);
+    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+    const ir::Var& sinkArray = tensorIndex.getSinkArray();
+    global = symtable.get(sinkArray);
+    addNVVMAnnotation(global, "managed", llvmInt(1), module);
+  }
+
+  // We must add externs and temporaries to the list of globally
+  // allocated buffers, because the GPU backend does not simply
+  // map the pointer to host memory, but instead must allocate
+  // and copy the values back and forth.
+  // for (const ir::Var& ext : env.getExternVars()) {
+  //   llvm::Value *global = symtable.get(ext);
+  //   buffers.insert(std::pair<ir::Var, llvm::Value*>(ext, global));
+  // }
+  // for (const ir::Var& tmp : env.getTemporaries()) {
+  //   llvm::Value *global = symtable.get(tmp);
+  //   buffers.insert(std::pair<ir::Var, llvm::Value*>(tmp, global));
+  // }
 }
 
 void GPUBackend::emitPrintf(std::string format,
@@ -895,7 +1028,7 @@ void GPUBackend::emitPrintf(std::string format,
 
   // Create and call vprintf syscall
   llvm::Function *vprintf = getBuiltIn(
-      "vprintf", LLVM_INT, {LLVM_INT8PTR, LLVM_INT8PTR});
+      "vprintf", LLVM_INT, {LLVM_INT8_PTR, LLVM_INT8_PTR});
 
   builder->CreateCall2(vprintf, formatPtr, argBuf);
 }
@@ -911,11 +1044,11 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   llvm::Type *dstCastTy = nullptr;
   std::string dstTyStr;
   if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
-    dstCastTy = CUDA_INT8PTR_GLOBAL;
+    dstCastTy = CUDA_INT8_PTR_GLOBAL;
     dstTyStr = "p1i8";
   }
   else if (dstAddrspace == CUDA_GENERIC_ADDRSPACE) {
-    dstCastTy = LLVM_INT8PTR;
+    dstCastTy = LLVM_INT8_PTR;
     dstTyStr = "p0i8";
   }
   else {
@@ -928,11 +1061,11 @@ void GPUBackend::emitMemCpy(llvm::Value *dst, llvm::Value *src,
   llvm::Type *srcCastTy = nullptr;
   std::string srcTyStr;
   if (srcAddrspace == CUDA_GLOBAL_ADDRSPACE) {
-    srcCastTy = CUDA_INT8PTR_GLOBAL;
+    srcCastTy = CUDA_INT8_PTR_GLOBAL;
     srcTyStr = "p1i8";
   }
   else if (srcAddrspace == CUDA_GENERIC_ADDRSPACE) {
-    srcCastTy = LLVM_INT8PTR;
+    srcCastTy = LLVM_INT8_PTR;
     srcTyStr = "p0i8";
   }
   else {
@@ -964,11 +1097,11 @@ void GPUBackend::emitMemSet(llvm::Value *dst, llvm::Value *val,
   llvm::Type *dstCastTy = nullptr;
   std::string dstTyStr;
   if (dstAddrspace == CUDA_GLOBAL_ADDRSPACE) {
-    dstCastTy = CUDA_INT8PTR_GLOBAL;
+    dstCastTy = CUDA_INT8_PTR_GLOBAL;
     dstTyStr = "p1i8";
   }
   else if (dstAddrspace == CUDA_GENERIC_ADDRSPACE) {
-    dstCastTy = LLVM_INT8PTR;
+    dstCastTy = LLVM_INT8_PTR;
     dstTyStr = "p0i8";
   }
   else {
@@ -998,7 +1131,7 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
 
   // Stash the symtable
   util::ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
-  symtable.clear();
+  symtable = util::ScopedMap<simit::ir::Var, llvm::Value*>();
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
@@ -1013,9 +1146,9 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
   addNVVMAnnotation(kernel, "kernel", llvmInt(1), module);
   
   llvm::BasicBlock *bodyStart = llvm::BasicBlock::Create(
-    LLVM_CONTEXT, "bodyStart", kernel);
+    LLVM_CTX, "bodyStart", kernel);
   llvm::BasicBlock *earlyExit = llvm::BasicBlock::Create(
-    LLVM_CONTEXT, "earlyExit", kernel);
+    LLVM_CTX, "earlyExit", kernel);
   
   // Guard: check if we're outside the intended range of the kernel loop and 
   // early-exit if so.
@@ -1030,10 +1163,10 @@ void GPUBackend::emitShardedMemSet(ir::Type targetType, llvm::Value *target,
 
   // Actual assign
   llvm::Value *value = nullptr;
-  if (targetType.toTensor()->componentType.kind == ir::ScalarType::Float) {
+  if (targetType.toTensor()->getComponentType().kind == ir::ScalarType::Float) {
     value = llvmFP(0);
   }
-  else if (targetType.toTensor()->componentType.kind == ir::ScalarType::Int) {
+  else if (targetType.toTensor()->getComponentType().kind == ir::ScalarType::Int) {
     value = llvmInt(0);
   }
   else {
@@ -1060,12 +1193,12 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
                                 llvm::Value *vec1, llvm::Value *vec2,
                                 llvm::Value *size, llvm::Value *result) {
   // Clear result first
-  iassert(resType.toTensor()->componentType.kind == ir::ScalarType::Float);
+  iassert(resType.toTensor()->getComponentType().kind == ir::ScalarType::Float);
   builder->CreateStore(llvmFP(0), result);
 
   // Stash the symtable
   util::ScopedMap<ir::Var, llvm::Value*> oldSymtable = symtable;
-  symtable.clear();
+  symtable = util::ScopedMap<simit::ir::Var, llvm::Value*>();
   // Stash the current basic block
   llvm::BasicBlock *prevBB = builder->GetInsertBlock();
 
@@ -1082,9 +1215,9 @@ void GPUBackend::emitShardedDot(ir::Type vec1Type, ir::Type vec2Type,
   addNVVMAnnotation(kernel, "kernel", llvmInt(1), module);
   
   llvm::BasicBlock *bodyStart = llvm::BasicBlock::Create(
-      LLVM_CONTEXT, "bodyStart", kernel);
+      LLVM_CTX, "bodyStart", kernel);
   llvm::BasicBlock *earlyExit = llvm::BasicBlock::Create(
-      LLVM_CONTEXT, "earlyExit", kernel);
+      LLVM_CTX, "earlyExit", kernel);
   
   // Guard: check if we're outside the intended range of the kernel loop and 
   // early-exit if so.
@@ -1141,8 +1274,8 @@ void GPUBackend::emitFillBuf(llvm::Value *buffer,
   }
 }
 
-void GPUBackend::makeGlobalTensor(ir::Var var) {
-  LLVMBackend::makeGlobalTensor(var);
+llvm::Value* GPUBackend::makeGlobalTensor(ir::Var var) {
+  llvm::Value *llvmGlobal = LLVMBackend::makeGlobalTensor(var);
 
   // Annotate the global as managed memory to allow us to write its
   // value from the CUDA setup
@@ -1150,8 +1283,14 @@ void GPUBackend::makeGlobalTensor(ir::Var var) {
   addNVVMAnnotation(global, "managed", llvmInt(1), module);
 
   // Replace the load in the symtable with an appropriately casted version
-  llvm::Value *llvmTmp = symtable.get(var);
-  symtable.insert(var, emitCastGlobalToGen(llvmTmp));
+  llvm::Value *llvmTmp = emitCastGlobalToGen(llvmGlobal);
+  symtable.insert(var, llvmTmp);
+
+  // Add to env as a temporary so we can allocate memory appropriately
+  ir::Environment& env = irFunc.getEnvironment();
+  env.addTemporary(var);
+
+  return llvmTmp;
 }
 
 }
