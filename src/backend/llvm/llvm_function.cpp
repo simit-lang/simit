@@ -38,9 +38,9 @@ typedef void (*FuncPtrType)();
 LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
                            llvm::Function* llvmFunc, llvm::Module* module,
                            std::shared_ptr<llvm::EngineBuilder> engineBuilder)
-    : Function(func), llvmFunc(llvmFunc), module(module),
-      engineBuilder(engineBuilder), executionEngine(engineBuilder->create()),
-      initialized(false), deinit(nullptr), storage(storage) {
+    : Function(func), initialized(false), llvmFunc(llvmFunc), module(module),
+      storage(storage), engineBuilder(engineBuilder),
+      executionEngine(engineBuilder->create()), deinit(nullptr) {
 
   const Environment& env = getEnvironment();
 
