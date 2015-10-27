@@ -365,151 +365,22 @@ void LLVMBackend::compile(const ir::FieldRead& fieldRead) {
 // TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt,
 //       and is only kept around to emit loc.
 void LLVMBackend::compile(const ir::Call& call) {
-  std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
-      {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
-       {ir::intrinsics::cos(), llvm::Intrinsic::cos},
-       {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
-       {ir::intrinsics::log(), llvm::Intrinsic::log},
-       {ir::intrinsics::exp(), llvm::Intrinsic::exp},
-       {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
+  iassert(call.func == ir::intrinsics::loc()) <<
+    "Only loc should use Call node";
 
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
-  llvm::Function *fun = nullptr;
 
   // compile arguments first
   for (Expr a: call.actuals) {
     compileArgument(a, argTypes, args);
   }
 
-  std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
-  // these are intrinsic functions
-  // first, see if this is an LLVM intrinsic
-  auto foundIntrinsic = llvmIntrinsicByName.find(call.func);
-  if (foundIntrinsic != llvmIntrinsicByName.end()) {
-    fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
-                                          argTypes);
-  }
-  // now check if it is an intrinsic from libm
-  else if (call.func == ir::intrinsics::atan2() ||
-           call.func == ir::intrinsics::tan()   ||
-           call.func == ir::intrinsics::asin()  ||
-           call.func == ir::intrinsics::acos()) {
-    auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes, false);
-    std::string funcName = call.func.getName() + floatTypeName;
-    fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
-        funcName,ftype));
-  }
-  else if (call.func == ir::intrinsics::norm()) {
-    iassert(args.size() == 1);
-    auto type = call.actuals[0].type().toTensor();
-    vector<IndexDomain> dimensions = type->getDimensions();
-
-    // special case for vec3f
-    if (dimensions[0].getSize() == 3) {
-      llvm::Value *x = args[0];
-
-      llvm::Value *x0 = loadFromArray(x, llvmInt(0));
-      llvm::Value *sum = builder->CreateFMul(x0, x0);
-
-      llvm::Value *x1 = loadFromArray(x, llvmInt(1));
-      llvm::Value *x1pow = builder->CreateFMul(x1, x1);
-      sum = builder->CreateFAdd(sum, x1pow);
-
-      llvm::Value *x2 = loadFromArray(x, llvmInt(2));
-      llvm::Value *x2pow = builder->CreateFMul(x2, x2);
-      sum = builder->CreateFAdd(sum, x2pow);
-
-      llvm::Function *sqrt =
-          llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt,
-                                          {llvmFloatType()});
-      val = builder->CreateCall(sqrt, sum);
-    } else {
-      args.push_back(emitComputeLen(dimensions[0]));
-      std::string fName = "norm" + floatTypeName;
-      val = emitCall(fName, args, llvmFloatType());
-    }
-    
-    return;
-  }
-  else if (call.func == ir::intrinsics::solve()) {
-    // FIX: compile is making these be LLVM_DOUBLE, but I need
-    // LLVM_DOUBLEPTR
-    std::vector<llvm::Type*> argTypes2 =
-        {llvmFloatPtrType(), llvmFloatPtrType(), llvmFloatPtrType(),
-         LLVM_INT, LLVM_INT};
-
-    auto type = call.actuals[0].type().toTensor();
-    vector<IndexDomain> dimensions = type->getDimensions();
-    args.push_back(emitComputeLen(dimensions[0]));
-    args.push_back(emitComputeLen(dimensions[1]));
-
-    auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes2, false);
-    std::string fName = "cMatSolve" + floatTypeName;
-    fun = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction(fName, ftype));
-  }
-  else if (call.func == ir::intrinsics::loc()) {
+  if (call.func == ir::intrinsics::loc()) {
     val = emitCall("loc", args, LLVM_INT);
     return;
   }
-  else if (call.func == ir::intrinsics::dot()) {
-    // we need to add the vector length to the args
-    auto type1 = call.actuals[0].type().toTensor();
-    auto type2 = call.actuals[1].type().toTensor();
-    vector<IndexDomain> type1Dimensions = type1->getDimensions();
-    vector<IndexDomain> type2Dimensions = type2->getDimensions();
-
-    uassert(type1Dimensions[0] == type2Dimensions[0]) <<
-        "dimension mismatch in dot product";
-    args.push_back(emitComputeLen(type1Dimensions[0]));
-    std::string fName = "dot" + floatTypeName;
-    val = emitCall(fName, args, llvmFloatType());
-    return;
-  }
-  else if (call.func == ir::intrinsics::createComplex()) {
-    val = builder->CreateComplex(args[0], args[1]);
-    return;
-  }
-  else if (call.func == ir::intrinsics::complexNorm()) {
-    std::string fname = "complexNorm" + floatTypeName;
-    val = emitCall(fname, {
-        builder->ComplexGetReal(args[0]),
-        builder->ComplexGetImag(args[0])
-    }, llvmFloatType());
-    return;
-  }
-  else if (call.func == ir::intrinsics::complexGetReal()) {
-    val = builder->ComplexGetReal(args[0]);
-  }
-  else if (call.func == ir::intrinsics::complexGetImag()) {
-    val = builder->ComplexGetImag(args[0]);
-  }
-  else if (call.func == ir::intrinsics::complexConj()) {
-    val = builder->CreateComplex(
-        builder->ComplexGetReal(args[0]),
-        builder->CreateFNeg(builder->ComplexGetImag(args[0])));
-    return;
-  }
-  else if (call.func == ir::intrinsics::simitClock()) {
-    val = emitCall("simitClock", args, llvmFloatType());
-    return;
-  }
-  else if (call.func == ir::intrinsics::simitStoreTime()) {
-    val = emitCall("simitStoreTime", args);
-    return;
-  }
-  // if not an intrinsic function, try to find it in the module
-  else if (module->getFunction(call.func.getName())) {
-    fun = module->getFunction(call.func.getName());
-  }
-   else {
-    not_supported_yet << "Unsupported function call";
-  }
-  iassert(fun);
-
-  val = builder->CreateCall(fun, args);
 }
 
 
