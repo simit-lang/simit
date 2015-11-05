@@ -64,7 +64,7 @@ class GPUFunction : public LLVMFunction {
    private:
     friend std::ostream& operator<<(std::ostream& os,
                                     const DeviceDataHandle& handle) {
-      return os << handle.hostBuffer << " <-> " << handle.devBuffer
+      return os << handle.hostBuffer << " <-> " << (void*)(*handle.devBuffer)
                 << " (" << handle.size << ")";
     }
   };
