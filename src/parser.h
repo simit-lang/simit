@@ -3,102 +3,100 @@
 
 #include <exception>
 #include <vector>
-#include <utility>
-#include <string>
-#include <iostream>
 
-#include "token.h"
-#include "hir.h"
+#include "scanner.h"
+#include "program_context.h"
 #include "error.h"
 
 namespace simit { 
 namespace internal {
 
+class ParseException : public std::exception {};
+
 class ParserNew {
 public:
-  ParserNew(std::vector<ParseError> *errors) : errors(errors) {}
-
-  hir::Program::Ptr parse(const TokenStream &);
+  void parse(const TokenList &, ProgramContext *, std::vector<ParseError> *);
 
 private:
-  class SyntaxError : public std::exception {};
+  void parseProgram();
+  void parseProgramElement();
+  void parseElementTypeDecl();
+  void parseFieldDecl();
+  void parseExternDecl();
+  void parseFunction();
+  void parseProcedure();
+  void parseArgsAndResults();
+  void parseArguments();
+  void parseArgumentDecl();
+  void parseResults();
+  void parseResultList();
+  void parseStmtBlock();
+  void parseStmt();
+  void parseVarDecl();
+  void parseConstDecl();
+  void parseIdentDecl();
+  void parseWhileStmt();
+  void parseDoUntilStmt();
+  void parseIfStmt();
+  void parseElseClause();
+  void parseForStmt();
+  void parseForStmtRange();
+  void parsePrintStmt();
+  void parseExprOrAssignStmt();
+  void parseExpr();
+  void parseMapExpr();
+  void parseOrExpr();
+  void parseAndExpr();
+  void parseXorExpr();
+  void parseEqExpr();
+  void parseIneqExpr();
+  void parseBooleanFactor();
+  void parseSolveExpr();
+  void parseAddExpr();
+  void parseMulExpr();
+  void parseNegExpr();
+  void parseExpExpr();
+  void parseTransposeExpr();
+  void parseCallOrReadExpr();
+  void parseFactor();
+  void parseNonemptyExprList();
+  void parseOptionalExprList();
+  void parseExprList();
+  void parseExprListElement();
+  void parseType();
+  void parseElementType();
+  void parseSetType();
+  void parseEndpoints();
+  void parseTupleType();
+  void parseTensorType();
+  void parseTensorTypeStart();
+  void parseIndexSets();
+  void parseIndexSet();
+  void parseTensorLiteral();
+  void parseDenseTensorLiteral();
+  void parseDenseTensorLiteralInner();
+  void parseDenseMatrixLiteral();
+  void parseDenseVectorLiteral();
+  void parseDenseIntVectorLiteral();
+  void parseDenseFloatVectorLiteral();
+  void parseSignedIntLiteral();
+  void parseSignedFloatLiteral();
+  void parseTest();
+  void parseSystemGenerator();
+  void parseExternAssert();
 
-private:
-  hir::Program::Ptr                parseProgram();
-  hir::HIRNode::Ptr                parseProgramElement();
-  hir::ElementTypeDecl::Ptr        parseElementTypeDecl();
-  std::vector<hir::Field::Ptr>     parseFieldDeclList();
-  hir::Field::Ptr                  parseFieldDecl();
-  hir::ExternDecl::Ptr             parseExternDecl();
-  hir::FuncDecl::Ptr               parseFuncDecl();
-  hir::ProcDecl::Ptr               parseProcDecl();
-  std::vector<hir::Argument::Ptr>  parseArguments();
-  hir::Argument::Ptr               parseArgumentDecl();
-  std::vector<hir::IdentDecl::Ptr> parseResults();
-  hir::StmtBlock::Ptr              parseStmtBlock();
-  hir::Stmt::Ptr                   parseStmt();
-  hir::VarDecl::Ptr                parseVarDecl();
-  hir::ConstDecl::Ptr              parseConstDecl();
-  hir::IdentDecl::Ptr              parseIdentDecl();
-  hir::IdentDecl::Ptr              parseTensorDecl();
-  hir::WhileStmt::Ptr              parseWhileStmt();
-  hir::DoWhileStmt::Ptr            parseDoWhileStmt();
-  hir::IfStmt::Ptr                 parseIfStmt();
-  hir::Stmt::Ptr                   parseElseClause();
-  hir::ForStmt::Ptr                parseForStmt();
-  hir::ForDomain::Ptr              parseForDomain();
-  hir::PrintStmt::Ptr              parsePrintStmt();
-  hir::ExprStmt::Ptr               parseExprOrAssignStmt();
-  hir::Expr::Ptr                   parseExpr();
-  hir::Expr::Ptr                   parseMapExpr();
-  hir::Expr::Ptr                   parseOrExpr();
-  hir::Expr::Ptr                   parseAndExpr();
-  hir::Expr::Ptr                   parseXorExpr();
-  hir::Expr::Ptr                   parseEqExpr();
-  hir::Expr::Ptr                   parseTerm();
-  hir::Expr::Ptr                   parseAddExpr();
-  hir::Expr::Ptr                   parseMulExpr();
-  hir::Expr::Ptr                   parseNegExpr();
-  hir::Expr::Ptr                   parseExpExpr();
-  hir::Expr::Ptr                   parseTransposeExpr();
-  hir::Expr::Ptr                   parseCallOrReadExpr();
-  hir::Expr::Ptr                   parseFactor();
-  hir::Identifier::Ptr             parseIdent();
-  std::vector<hir::ReadParam::Ptr> parseReadParams();
-  hir::ReadParam::Ptr              parseReadParam();
-  std::vector<hir::Expr::Ptr>      parseCallParams();
-  hir::Type::Ptr                   parseType();
-  hir::ElementType::Ptr            parseElementType();
-  hir::SetType::Ptr                parseSetType();
-  std::vector<hir::Endpoint::Ptr>  parseEndpoints();
-  hir::TupleLength::Ptr            parseTupleLength();
-  hir::TupleType::Ptr              parseTupleType();
-  hir::TensorType::Ptr             parseTensorType();
-  hir::NDTensorType::Ptr           parseTensorBlockType();
-  hir::ScalarType::Ptr             parseScalarType();
-  std::vector<hir::IndexSet::Ptr>  parseIndexSets();
-  hir::IndexSet::Ptr               parseIndexSet();
-  hir::Expr::Ptr                   parseTensorLiteral();
-  hir::DenseTensorLiteral::Ptr     parseDenseTensorLiteral();
-  hir::DenseTensorLiteral::Ptr     parseDenseTensorLiteralInner();
-  hir::DenseTensorLiteral::Ptr     parseDenseMatrixLiteral();
-  hir::DenseTensorLiteral::Ptr     parseDenseVectorLiteral();
-  hir::IntVectorLiteral::Ptr       parseDenseIntVectorLiteral();
-  hir::FloatVectorLiteral::Ptr     parseDenseFloatVectorLiteral();
-  int                              parseSignedIntLiteral();
-  double                           parseSignedFloatLiteral();
-  hir::Test::Ptr                   parseTest();
+  inline Token consume(TokenType type) { 
+    Token token = peek();
+    std::cout << token << " " << Token(type) << std::endl;
+    if (!tokens.consume(type)) {
+      throw ParseException();
+    }
+    return token;
+  }
+  inline Token peek(unsigned int k = 0) { return tokens.peek(k); }
 
-  void reportError(const Token &, std::string);
-
-  Token peek(unsigned k = 0) const { return tokens.peek(k); }
-  
-  void  skipTo(std::vector<Token::Type>);
-  Token consume(Token::Type); 
-  bool  tryconsume(Token::Type type) { return tokens.consume(type); }
-
-private:
-  TokenStream tokens;
+  TokenList tokens;
+  ProgramContext *ctx;
   std::vector<ParseError> *errors;
 };
 

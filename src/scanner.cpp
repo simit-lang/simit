@@ -1,60 +1,301 @@
 #include <cctype>
 #include <string>
 #include <cstdlib>
-#include <iostream>
 
 #include "scanner.h"
-#include "error.h"
 
 namespace simit { 
 namespace internal {
 
-Token::Type ScannerNew::getTokenType(const std::string token) {
-  if (token == "int") return Token::Type::INT;
-  if (token == "float") return Token::Type::FLOAT;
-  if (token == "bool") return Token::Type::BOOL;
-  if (token == "string") return Token::Type::STRING;
-  if (token == "tensor") return Token::Type::TENSOR;
-  if (token == "matrix") return Token::Type::TENSOR;
-  if (token == "vector") return Token::Type::TENSOR;
-  if (token == "element") return Token::Type::ELEMENT;
-  if (token == "set") return Token::Type::SET;
-  if (token == "var") return Token::Type::VAR;
-  if (token == "const") return Token::Type::CONST;
-  if (token == "extern") return Token::Type::EXTERN;
-  if (token == "proc") return Token::Type::PROC;
-  if (token == "func") return Token::Type::FUNC;
-  if (token == "inout") return Token::Type::INOUT;
-  if (token == "map") return Token::Type::MAP;
-  if (token == "to") return Token::Type::TO;
-  if (token == "with") return Token::Type::WITH;
-  if (token == "reduce") return Token::Type::REDUCE;
-  if (token == "while") return Token::Type::WHILE;
-  if (token == "do") return Token::Type::DO;
-  if (token == "if") return Token::Type::IF;
-  if (token == "elif") return Token::Type::ELIF;
-  if (token == "else") return Token::Type::ELSE;
-  if (token == "for") return Token::Type::FOR;
-  if (token == "in") return Token::Type::IN;
-  if (token == "end") return Token::Type::BLOCKEND;
-  if (token == "return") return Token::Type::RETURN;
-  if (token == "print") return Token::Type::PRINT;
-  if (token == "and") return Token::Type::AND; 
-  if (token == "or") return Token::Type::OR;
-  if (token == "not") return Token::Type::NOT;
-  if (token == "xor") return Token::Type::XOR;
-  if (token == "true") return Token::Type::TRUE;
-  if (token == "false") return Token::Type::FALSE;
- 
-  // If string does not correspond to a keyword, assume it is an identifier.
-  return Token::Type::IDENT;
+std::ostream &operator <<(std::ostream &out, Token token) {
+  out << "(";
+  switch (token.type) {
+    case TokenType::END:
+      out << "END";
+      break;
+    case TokenType::UNKNOWN:
+      out << "UNKNOWN";
+      break;
+    case TokenType::INT_LITERAL:
+      out << "INT_LITERAL";
+      break;
+    case TokenType::FLOAT_LITERAL:
+      out << "FLOAT_LITERAL";
+      break;
+    case TokenType::STRING_LITERAL:
+      out << "STRING_LITERAL";
+      break;
+    case TokenType::IDENT:
+      out << "IDENT";
+      break;
+    case TokenType::AND:
+      out << "AND";
+      break;
+    case TokenType::OR:
+      out << "OR";
+      break;
+    case TokenType::NEG:
+      out << "NEG";
+      break;
+    case TokenType::INT:
+      out << "INT";
+      break;
+    case TokenType::FLOAT:
+      out << "FLOAT";
+      break;
+    case TokenType::BOOL:
+      out << "BOOL";
+      break;
+    case TokenType::STRING:
+      out << "STRING";
+      break;
+    case TokenType::TENSOR:
+      out << "TENSOR";
+      break;
+    case TokenType::ELEMENT:
+      out << "ELEMENT";
+      break;
+    case TokenType::SET:
+      out << "SET";
+      break;
+    case TokenType::VAR:
+      out << "VAR";
+      break;
+    case TokenType::CONST:
+      out << "CONST";
+      break;
+    case TokenType::EXTERN:
+      out << "EXTERN";
+      break;
+    case TokenType::PROC:
+      out << "PROC";
+      break;
+    case TokenType::FUNC:
+      out << "FUNC";
+      break;
+    case TokenType::INOUT:
+      out << "INOUT";
+      break;
+    case TokenType::MAP:
+      out << "MAP";
+      break;
+    case TokenType::TO:
+      out << "TO";
+      break;
+    case TokenType::WITH:
+      out << "WITH";
+      break;
+    case TokenType::REDUCE:
+      out << "REDUCE";
+      break;
+    case TokenType::WHILE:
+      out << "WHILE";
+      break;
+    case TokenType::DO:
+      out << "DO";
+      break;
+    case TokenType::UNTIL:
+      out << "UNTIL";
+      break;
+    case TokenType::IF:
+      out << "IF";
+      break;
+    case TokenType::ELIF:
+      out << "ELIF";
+      break;
+    case TokenType::ELSE:
+      out << "ELSE";
+      break;
+    case TokenType::FOR:
+      out << "FOR";
+      break;
+    case TokenType::IN:
+      out << "IN";
+      break;
+    case TokenType::BLOCKEND:
+      out << "BLOCKEND";
+      break;
+    case TokenType::RETURN:
+      out << "RETURN";
+      break;
+    case TokenType::TEST:
+      out << "TEST";
+      break;
+    case TokenType::PRINT:
+      out << "PRINT";
+      break;
+    case TokenType::RARROW:
+      out << "RARROW";
+      break;
+    case TokenType::LP:
+      out << "LP";
+      break;
+    case TokenType::RP:
+      out << "RP";
+      break;
+    case TokenType::LB:
+      out << "LB";
+      break;
+    case TokenType::RB:
+      out << "RB";
+      break;
+    case TokenType::LC:
+      out << "LC";
+      break;
+    case TokenType::RC:
+      out << "RC";
+      break;
+    case TokenType::LA:
+      out << "LA";
+      break;
+    case TokenType::RA:
+      out << "RA";
+      break;
+    case TokenType::COMMA:
+      out << "COMMA";
+      break;
+    case TokenType::PERIOD:
+      out << "PERIOD";
+      break;
+    case TokenType::COL:
+      out << "COL";
+      break;
+    case TokenType::SEMICOL:
+      out << "SEMICOL";
+      break;
+    case TokenType::ASSIGN:
+      out << "ASSIGN";
+      break;
+    case TokenType::PLUS:
+      out << "PLUS";
+      break;
+    case TokenType::MINUS:
+      out << "MINUS";
+      break;
+    case TokenType::STAR:
+      out << "STAR";
+      break;
+    case TokenType::SLASH:
+      out << "SLASH";
+      break;
+    case TokenType::DOTSTAR:
+      out << "DOTSTAR";
+      break;
+    case TokenType::DOTSLASH:
+      out << "DOTSLASH";
+      break;
+    case TokenType::EXP:
+      out << "EXP";
+      break;
+    case TokenType::TRANSPOSE:
+      out << "TRANSPOSE";
+      break;
+    case TokenType::BACKSLASH:
+      out << "BACKSLASH";
+      break;
+    case TokenType::EQ:
+      out << "EQ";
+      break;
+    case TokenType::NE:
+      out << "NE";
+      break;
+    case TokenType::LE:
+      out << "LE";
+      break;
+    case TokenType::GE:
+      out << "GE";
+      break;
+    case TokenType::NOT:
+      out << "NOT";
+      break;
+    case TokenType::XOR:
+      out << "XOR";
+      break;
+    case TokenType::TRUE:
+      out << "TRUE";
+      break;
+    case TokenType::FALSE:
+      out << "FALSE";
+      break;
+    default:
+      out << "";
+      break;
+  }
+  switch (token.type) {
+    case TokenType::INT_LITERAL:
+      out << ", " << token.num;
+      break;
+    case TokenType::FLOAT_LITERAL:
+      out << ", " << token.fnum;
+      break;
+    case TokenType::STRING_LITERAL:
+      out << ", \"" << token.str << "\"";
+      break;
+    case TokenType::IDENT:
+      out << ", " << token.str;
+      break;
+    default:
+      break;
+  }
+  out << ")";
+  return out;
 }
 
-TokenStream ScannerNew::lex(std::istream &programStream) {
-  TokenStream tokens;
-  unsigned line = 1;
-  unsigned col = 1;
+std::ostream &operator <<(std::ostream &out, TokenList tokens) {
+  for (std::list<Token>::const_iterator it = tokens.tokens.cbegin();
+      it != tokens.tokens.cend(); ++it) {
+    out << *it << std::endl;
+  }
+  return out;
+}
+
+TokenType ScannerNew::getTokenType(std::string token) {
+  if (token == "int") return TokenType::INT;
+  if (token == "float") return TokenType::FLOAT;
+  if (token == "bool") return TokenType::BOOL;
+  if (token == "string") return TokenType::STRING;
+  if (token == "tensor") return TokenType::TENSOR;
+  if (token == "matrix") return TokenType::TENSOR;
+  if (token == "vector") return TokenType::TENSOR;
+  if (token == "element") return TokenType::ELEMENT;
+  if (token == "set") return TokenType::SET;
+  if (token == "var") return TokenType::VAR;
+  if (token == "const") return TokenType::CONST;
+  if (token == "extern") return TokenType::EXTERN;
+  if (token == "proc") return TokenType::PROC;
+  if (token == "func") return TokenType::FUNC;
+  if (token == "inout") return TokenType::INOUT;
+  if (token == "map") return TokenType::MAP;
+  if (token == "to") return TokenType::TO;
+  if (token == "with") return TokenType::WITH;
+  if (token == "reduce") return TokenType::REDUCE;
+  if (token == "while") return TokenType::WHILE;
+  if (token == "do") return TokenType::DO;
+  if (token == "until") return TokenType::UNTIL;
+  if (token == "if") return TokenType::IF;
+  if (token == "elif") return TokenType::ELIF;
+  if (token == "else") return TokenType::ELSE;
+  if (token == "for") return TokenType::FOR;
+  if (token == "in") return TokenType::IN;
+  if (token == "end") return TokenType::BLOCKEND;
+  if (token == "return") return TokenType::RETURN;
+  if (token == "print") return TokenType::PRINT;
+  if (token == "and") return TokenType::AND; 
+  if (token == "or") return TokenType::OR;
+  if (token == "not") return TokenType::NOT;
+  if (token == "xor") return TokenType::XOR;
+  if (token == "true") return TokenType::TRUE;
+  if (token == "false") return TokenType::FALSE;
+ 
+  // If string does not correspond to a keyword, assume it is an identifier.
+  return TokenType::IDENT;
+}
+
+TokenList ScannerNew::lex(std::istream &programStream) {
+  TokenList tokens;
   ScanState state = ScanState::INITIAL;
+  unsigned int lineNum = 1;
+  unsigned int colNum = 1;
 
   while (programStream.peek() != EOF) {
     if (programStream.peek() == '_' || std::isalpha(programStream.peek())) {
@@ -67,135 +308,120 @@ TokenStream ScannerNew::lex(std::istream &programStream) {
 
       Token newToken;
       newToken.type = getTokenType(tokenString);
-      newToken.lineBegin = line;
-      newToken.colBegin = col;
-      newToken.lineEnd = line;
-      newToken.colEnd = col + tokenString.length() - 1;
-      if (newToken.type == Token::Type::IDENT) {
+      if (newToken.type == TokenType::IDENT) {
         newToken.str = tokenString;
       }
       tokens.addToken(newToken);
 
-      col += tokenString.length();
+      colNum += tokenString.length();
     } else {
       switch (programStream.peek()) {
         case '(':
           programStream.get();
-          tokens.addToken(Token::Type::LP, line, col++);
+          tokens.addToken(TokenType::LP);
           break;
         case ')':
           programStream.get();
-          tokens.addToken(Token::Type::RP, line, col++);
+          tokens.addToken(TokenType::RP);
           break;
         case '[':
           programStream.get();
-          tokens.addToken(Token::Type::LB, line, col++);
+          tokens.addToken(TokenType::LB);
           break;
         case ']':
           programStream.get();
-          tokens.addToken(Token::Type::RB, line, col++);
+          tokens.addToken(TokenType::RB);
           break;
         case '{':
           programStream.get();
-          tokens.addToken(Token::Type::LC, line, col++);
+          tokens.addToken(TokenType::LC);
           break;
         case '}':
           programStream.get();
-          tokens.addToken(Token::Type::RC, line, col++);
+          tokens.addToken(TokenType::RC);
           break;
         case '<':
           programStream.get();
           if (programStream.peek() == '=') {
             programStream.get();
-            tokens.addToken(Token::Type::LE, line, col, 2);
-            col += 2;
+            tokens.addToken(TokenType::LE);
           } else {
-            tokens.addToken(Token::Type::LA, line, col++);
+            tokens.addToken(TokenType::LA);
           }
           break;
         case '>':
           programStream.get();
           if (programStream.peek() == '=') {
             programStream.get();
-            tokens.addToken(Token::Type::GE, line, col, 2);
-            col += 2;
+            tokens.addToken(TokenType::GE);
           } else {
-            tokens.addToken(Token::Type::RA, line, col++);
+            tokens.addToken(TokenType::RA);
           }
           break;
         case ',':
           programStream.get();
-          tokens.addToken(Token::Type::COMMA, line, col++);
+          tokens.addToken(TokenType::COMMA);
           break;
         case '.':
           programStream.get();
           switch (programStream.peek()) {
             case '*':
               programStream.get();
-              tokens.addToken(Token::Type::DOTSTAR, line, col, 2);
-              col += 2;
+              tokens.addToken(TokenType::DOTSTAR);
               break;
             case '/':
               programStream.get();
-              tokens.addToken(Token::Type::DOTSLASH, line, col, 2);
-              col += 2;
+              tokens.addToken(TokenType::DOTSLASH);
               break;
             default:
-              tokens.addToken(Token::Type::PERIOD, line, col++);
+              tokens.addToken(TokenType::PERIOD);
               break;
           }
           break;
         case ':':
           programStream.get();
-          tokens.addToken(Token::Type::COL, line, col++);
+          tokens.addToken(TokenType::COL);
           break;
         case ';':
           programStream.get();
-          tokens.addToken(Token::Type::SEMICOL, line, col++);
+          tokens.addToken(TokenType::SEMICOL);
           break;
         case '=':
           programStream.get();
           if (programStream.peek() == '=') {
             programStream.get();
-            tokens.addToken(Token::Type::EQ, line, col, 2);
-            col += 2;
+            tokens.addToken(TokenType::EQ);
           } else {
-            tokens.addToken(Token::Type::ASSIGN, line, col++);
+            tokens.addToken(TokenType::ASSIGN);
           }
           break;
         case '*':
           programStream.get();
-          tokens.addToken(Token::Type::STAR, line, col++);
+          tokens.addToken(TokenType::STAR);
           break;
         case '/':
           programStream.get();
-          tokens.addToken(Token::Type::SLASH, line, col++);
+          tokens.addToken(TokenType::SLASH);
           break;
         case '\\':
           programStream.get();
-          tokens.addToken(Token::Type::BACKSLASH, line, col++);
+          tokens.addToken(TokenType::BACKSLASH);
           break;
         case '^':
           programStream.get();
-          tokens.addToken(Token::Type::EXP, line, col++);
+          tokens.addToken(TokenType::EXP);
           break;
         case '\'':
           programStream.get();
-          tokens.addToken(Token::Type::TRANSPOSE, line, col++);
+          tokens.addToken(TokenType::TRANSPOSE);
           break;
         case '!':
           programStream.get();
           if (programStream.peek() == '=') {
             programStream.get();
-            tokens.addToken(Token::Type::NE, line, col, 2);
-            col += 2;
+            tokens.addToken(TokenType::NE);
           } else {
-            reportError("unexpected symbol '!'", line, col++);
-            while (programStream.peek() != EOF && 
-                !std::isspace(programStream.peek())) {
-              programStream.get();
-              ++col;
-            }
+            // TODO: raise error
           }
           break;
         case '%':
@@ -203,31 +429,21 @@ TokenStream ScannerNew::lex(std::istream &programStream) {
           switch (programStream.peek()) {
             case '!':
               programStream.get();
-              tokens.addToken(Token::Type::TEST, line, col, 2);
+              tokens.addToken(TokenType::TEST);
               state = ScanState::SLTEST;
-              col += 2;
               break;
             case '{':
               if (programStream.peek() == '!') {
                 programStream.get();
-                tokens.addToken(Token::Type::TEST, line, col, 2);
+                tokens.addToken(TokenType::TEST);
                 state = ScanState::MLTEST;
-                col += 2;
               } else {
                 std::string comment;
+
                 while (programStream.peek() != EOF) {
                   if (programStream.peek() == '%') {
                     programStream.get();
-
-                    if (programStream.peek() == '\n') {
-                      ++line;
-                      col = 1;
-                    } else {
-                      col += 2;
-                    }
-
                     if (programStream.peek() == '}') {
-                      programStream.get();
                       // TODO: emit COMMENT token
                       break;
                     } else {
@@ -235,33 +451,23 @@ TokenStream ScannerNew::lex(std::istream &programStream) {
                       comment += programStream.get();
                     }
                   } else {
-                    if (programStream.peek() == '\n') {
-                      ++line;
-                      col = 1;
-                    } else {
-                      ++col;
-                    }
-
                     comment += programStream.get();
                   }
                 }
 
                 if (programStream.peek() == EOF) {
-                  reportError("unclosed comment", line, col);
+                  // TODO: raise error
                 }
               }
               break;
             case '}':
-            {
-              programStream.get();
               if (state == ScanState::MLTEST) {
+                programStream.get();
                 state = ScanState::INITIAL;
               } else {
-                reportError("could not find corresponding '!%{'", line, col);
+                // TODO: raise error
               }
-              col += 2;
               break;
-            }
             default:
             {
               std::string comment;
@@ -269,136 +475,131 @@ TokenStream ScannerNew::lex(std::istream &programStream) {
                   programStream.peek() != EOF) {
                 comment += programStream.get();
               }
-
-              col += (comment.length() + 1);
               // TODO: emit COMMENT token
               break;
             }
           }
           break;
         case '\n':
-          programStream.get();
-          if (state == ScanState::SLTEST) {
-            state = ScanState::INITIAL;
-          }
-          ++line;
-          col = 1;
-          break;
+          ++lineNum;
+          colNum = 0;
         case ' ':
         case '\t':
           programStream.get();
-          ++col;
+          ++colNum;
           break;
+#if 0
+        case '+':
+        case '-': 
+        default: 
+        {
+          if (programStream.peek() != '+' && programStream.peek() != '-' && 
+              programStream.peek() != '.' && 
+              !std::isdigit(programStream.peek())) {
+            // TODO: raise error
+            programStream.get();
+            break;
+          }
+
+          std::string tokenString;
+
+          if (programStream.peek() == '+' || programStream.peek() == '-') {
+            const char ch = programStream.get();
+            
+            if (ch == '+' && !std::isdigit(programStream.peek()) && 
+                programStream.peek() != '.') {
+              tokens.addToken(TokenType::PLUS);
+              break;
+            } else if (ch == '-' && !std::isdigit(programStream.peek()) &&
+                programStream.peek() != '.') {
+              if (programStream.peek() == '>') {
+                programStream.get();
+                tokens.addToken(TokenType::RARROW);
+              } else {
+                tokens.addToken(TokenType::MINUS);
+              }
+              break;
+            }
+
+            tokenString += ch;
+          }
+#endif
         case '+':
           programStream.get();
-          tokens.addToken(Token::Type::PLUS, line, col++);
+          tokens.addToken(TokenType::PLUS);
           break;
         case '-': 
           programStream.get();
           if (programStream.peek() == '>') {
             programStream.get();
-            tokens.addToken(Token::Type::RARROW, line, col, 2);
-            col += 2;
+            tokens.addToken(TokenType::RARROW);
           } else {
-            tokens.addToken(Token::Type::MINUS, line, col++);
+            tokens.addToken(TokenType::MINUS);
           }
           break;
         default: 
         {
-          Token newToken;
-          newToken.type = Token::Type::INT_LITERAL;
-          newToken.lineBegin = line;
-          newToken.colBegin = col;
-
           if (programStream.peek() != '.' && 
               !std::isdigit(programStream.peek())) {
-            std::stringstream errMsg;
-            errMsg << "unexpected symbol '" 
-                   << (char)programStream.peek() << "'";
-            reportError(errMsg.str(), line, col);
-            
-            while (programStream.peek() != EOF && 
-                !std::isspace(programStream.peek())) {
-              programStream.get();
-              ++col;
-            }
+            // TODO: raise error
+            programStream.get();
             break;
           }
 
           std::string tokenString;
+          bool isInt = true;
+          
+          //iassert (std::isdigit(programStream.peek()) || 
+          //  programStream.peek() == '.');
           while (std::isdigit(programStream.peek())) {
             tokenString += programStream.get();
-            ++col;
           }
 
           if (programStream.peek() == '.') {
-            newToken.type = Token::Type::FLOAT_LITERAL;
+            isInt = false;
             tokenString += programStream.get();
-            ++col;
 
             if (!std::isdigit(programStream.peek())) {
-              std::stringstream errMsg;
-              errMsg << "unexpected symbol '" 
-                     << (char)programStream.peek() << "'";
-              reportError(errMsg.str(), line, col);
-              
-              while (programStream.peek() != EOF && 
-                  !std::isspace(programStream.peek())) {
-                programStream.get();
-                ++col;
-              }
+              // TODO: raise error
               break;
             }
             tokenString += programStream.get();
-            ++col;
 
             while (std::isdigit(programStream.peek())) {
               tokenString += programStream.get();
-              ++col;
             }
           }
 
           if (programStream.peek() == 'e' || programStream.peek() == 'E') {
-            newToken.type = Token::Type::FLOAT_LITERAL;
+            isInt = false;
             tokenString += programStream.get();
-            ++col;
 
             if (programStream.peek() == '+' || programStream.peek() == '-') {
               tokenString += programStream.get();
-              ++col;
             }
 
             if (!std::isdigit(programStream.peek())) {
-              std::stringstream errMsg;
-              errMsg << "unexpected symbol '" 
-                     << (char)programStream.peek() << "'";
-              reportError(errMsg.str(), line, col);
-              
-              while (programStream.peek() != EOF && 
-                  !std::isspace(programStream.peek())) {
-                programStream.get();
-                ++col;
-              }
+              // TODO: raise error
               break;
             }
             tokenString += programStream.get();
-            ++col;
 
             while (std::isdigit(programStream.peek())) {
               tokenString += programStream.get();
-              ++col;
             }
           }
 
           char *end;
-          if (newToken.type == Token::Type::INT_LITERAL) {
-            newToken.num = std::strtol(tokenString.c_str(), &end, 0);
+          if (isInt) {
+            int num = std::strtol(tokenString.c_str(), &end, 0);
+            // iassert(end == nullptr);
+            tokens.addToken(Token(num));
           } else {
-            newToken.fnum = std::strtod(tokenString.c_str(), &end);
+            double fnum = std::strtod(tokenString.c_str(), &end);
+            // iassert(end == nullptr);
+            tokens.addToken(Token(fnum));
           }
-          newToken.lineEnd = line;
-          newToken.colEnd = col - 1;
-          tokens.addToken(newToken);
+
           break;
         }
       }
@@ -406,10 +607,10 @@ TokenStream ScannerNew::lex(std::istream &programStream) {
   }
 
   if (state != ScanState::INITIAL) {
-    reportError("unclosed test", line, col);
+    // TODO: raise error
   }
 
-  tokens.addToken(Token::Type::END, line, col);
+  tokens.addToken(Token(TokenType::END));
   return tokens;
 }
 
