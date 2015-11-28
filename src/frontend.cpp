@@ -1,20 +1,27 @@
 #include "frontend.h"
 
 #include <sstream>
+#include <iostream>
 
 #include "program_context.h"
 #include "error.h"
 #include "parser/scanner.h"
 #include "parser/parser.h"
+#include "scanner.h"
+#include "parser.h"
 
 using namespace simit::internal;
 
 // Frontend
 int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
                           std::vector<ParseError> *errors) {
-  Scanner scanner(&programStream);
-  Parser parser(&scanner, ctx, errors);
-  return parser.parse();
+  //std::cout << ScannerNew::lex(programStream);
+  TokenList tokens = ScannerNew::lex(programStream);
+  ParserNew().parse(tokens, ctx, errors);
+  return 0;
+  //Scanner scanner(&programStream);
+  //Parser parser(&scanner, ctx, errors);
+  //return parser.parse();
 }
 
 int Frontend::parseString(const std::string &programString, ProgramContext *ctx,
