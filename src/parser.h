@@ -30,6 +30,33 @@ private:
     Argument(ir::Var var, bool isInout) : var(var), isInout(isInout) {}
   };
 
+  struct ForDomain {
+    enum class Type {DOMAIN, RANGE};
+
+    static ForDomain make(ir::IndexSet domain) {
+      ForDomain newRange;
+
+      newRange.type = Type::DOMAIN;
+      newRange.domain = domain;
+      
+      return newRange;
+    }
+    static ForDomain make(ir::Expr lower, ir::Expr upper) {
+      ForDomain newRange;
+
+      newRange.type = Type::RANGE;
+      newRange.lower = lower;
+      newRange.upper = upper;
+
+      return newRange;
+    }
+
+    Type type;
+    ir::IndexSet domain;
+    ir::Expr lower;
+    ir::Expr upper;
+  };
+
   class CallMap {
     public:
       struct Entry {
@@ -180,7 +207,7 @@ private:
   void parseIfStmt();
   ir::Stmt parseElseClause();
   void parseForStmt();
-  ir::Stmt parseForStmtRange();
+  ForDomain parseForStmtRange();
   void parsePrintStmt();
   void parseExprOrAssignStmt();
   ir::Expr parseExpr(CallMap &);
@@ -222,8 +249,8 @@ private:
   int parseSignedIntLiteral();
   double parseSignedFloatLiteral();
   void parseTest();
-  void parseSystemGenerator();
-  void parseExternAssert();
+  //void parseSystemGenerator();
+  //void parseExternAssert();
 
   void checkValidSubexpr(const ir::Expr, const CallMap &);
   void checkValidReadExpr(const ir::Expr);
@@ -234,7 +261,6 @@ private:
 
   inline Token consume(TokenType type) { 
     Token token = peek();
-    std::cout << token << " " << Token(type) << std::endl;
     if (!tokens.consume(type)) {
       throw ParseException();
     }
