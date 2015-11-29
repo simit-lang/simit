@@ -140,7 +140,10 @@ void ParserNew::parseProcedure() {
   ctx->scope();
   if (peek().type == TokenType::LP) {
     switch (peek(1).type) {
-      case TokenType::VAR:
+      case TokenType::IDENT:
+        if (peek(2).type != TokenType::COL) {
+          break;
+        }
       case TokenType::INOUT:
       {
         const Func header = parseArgsAndResults();
@@ -1716,7 +1719,7 @@ ParserNew::TensorValues ParserNew::parseDenseTensorLiteral() {
 ParserNew::TensorValues ParserNew::parseDenseTensorLiteralInner() {
   if (peek().type == TokenType::LB) {
     TensorValues tensor = parseDenseTensorLiteral();
-    tensor.addDimension();
+    bool addDimension = true;
     
     while (true) {
       switch (peek().type) {
@@ -1724,6 +1727,11 @@ ParserNew::TensorValues ParserNew::parseDenseTensorLiteralInner() {
           consume(TokenType::COMMA);
         case TokenType::LB:
         {
+          if (addDimension) {
+            tensor.addDimension();
+            addDimension = false;
+          }
+
           const TensorValues right = parseDenseTensorLiteral();
           tensor.merge(right);
           break;
@@ -1739,10 +1747,16 @@ ParserNew::TensorValues ParserNew::parseDenseTensorLiteralInner() {
 
 ParserNew::TensorValues ParserNew::parseDenseMatrixLiteral() {
   TensorValues mat = parseDenseVectorLiteral();
-  mat.addDimension();
+  bool addDimension = true;
   
   while (peek().type == TokenType::SEMICOL) {
     consume(TokenType::SEMICOL);
+
+    if (addDimension) {
+      mat.addDimension();
+      addDimension = false;
+    }
+
     const TensorValues right = parseDenseVectorLiteral();
     mat.merge(right);
   }
