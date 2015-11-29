@@ -6,7 +6,6 @@ namespace internal {
 
 using namespace simit::ir;
 
-#if 1
 void ParserNew::parse(const TokenList &tokens, ProgramContext *ctx, 
                       std::vector<ParseError> *errors) {
   this->tokens = tokens;
@@ -171,8 +170,6 @@ void ParserNew::parseProcedure() {
 }
 
 Func ParserNew::parseArgsAndResults() {
-  consume(TokenType::LP);
-  
   const std::vector<Argument> arguments = parseArguments();
   std::vector<Var> args;
   for (const Argument &arg : arguments) {
@@ -181,8 +178,6 @@ Func ParserNew::parseArgsAndResults() {
     ctx->addSymbol(var.getName(), var, access);
     args.push_back(var);
   }
-
-  consume(TokenType::RP);
   
   const std::vector<Var> results = parseResults();
   for (const Var &res : results) {
@@ -194,16 +189,22 @@ Func ParserNew::parseArgsAndResults() {
 
 std::vector<ParserNew::Argument> ParserNew::parseArguments() {
   std::vector<Argument> arguments;
-
-  const Argument argument = parseArgumentDecl();
-  arguments.push_back(argument);
   
-  while (peek().type == TokenType::COMMA) {
-    consume(TokenType::COMMA);
+  consume(TokenType::LP);
 
+  if (peek().type != TokenType::RP) {
     const Argument argument = parseArgumentDecl();
     arguments.push_back(argument);
+    
+    while (peek().type == TokenType::COMMA) {
+      consume(TokenType::COMMA);
+  
+      const Argument argument = parseArgumentDecl();
+      arguments.push_back(argument);
+    }
   }
+
+  consume(TokenType::RP);
 
   return arguments;
 }
@@ -392,7 +393,9 @@ void ParserNew::parseWhileStmt() {
   }
 
   const std::vector<Stmt> callStmts = liftCallsAndMaps(calls);
-  const Stmt newBody = Block::make(body, Block::make(callStmts));
+  const Stmt updateCalls = callStmts.empty() ? Pass::make() : 
+                           Block::make(callStmts);
+  const Stmt newBody = Block::make(body, updateCalls);
   ctx->addStatement(While::make(cond, newBody));
 }
 
@@ -490,26 +493,33 @@ void ParserNew::parseForStmt() {
 
   consume(TokenType::IN);
 
-  const Stmt range = parseForStmtRange();
+  const ForDomain range = parseForStmtRange();
   const Stmt body = parseStmtBlock();
 
   ctx->unscope();
   consume(TokenType::BLOCKEND);
 
-  if (isa<For>(range)) {
-    const For *forStmtRange = to<For>(range);
-    const Stmt forDomain = For::make(loopVar, forStmtRange->domain, body);
-    ctx->addStatement(forDomain);
-  } else {
-    //iassert(isa<ForRange>(range));
-    const ForRange *forStmtRange = to<ForRange>(range); 
-    const Stmt forRange = ForRange::make(loopVar, forStmtRange->start, 
-                                         forStmtRange->end, body);
-    ctx->addStatement(forRange);
+  switch (range.type) {
+    case ForDomain::Type::DOMAIN:
+    {
+      const Stmt forDomain = For::make(loopVar, range.domain, body);
+      ctx->addStatement(forDomain);
+      break;
+    }
+    case ForDomain::Type::RANGE:
+    {
+      const Stmt forRange = ForRange::make(loopVar, range.lower,
+                                           range.upper, body);
+      ctx->addStatement(forRange);
+      break;
+    }
+    default:
+      // iassert(false);
+      break;
   }
 }
 
-Stmt ParserNew::parseForStmtRange() {
+ParserNew::ForDomain ParserNew::parseForStmtRange() {
   // index_set
   switch (peek().type) {
     case TokenType::INT_LITERAL:
@@ -524,8 +534,7 @@ Stmt ParserNew::parseForStmtRange() {
         // TODO: raise error?
       }
 
-      const Stmt forRange = For::make(Var(), domain, Stmt());
-      return forRange;
+      return ForDomain::make(domain);
     }
     default:
       break;
@@ -547,8 +556,8 @@ Stmt ParserNew::parseForStmtRange() {
 
   liftCallsAndMaps(lowerCalls);
   liftCallsAndMaps(upperCalls);
-  const Stmt forRange = ForRange::make(Var(), lower, upper, Stmt());
-  return forRange;
+  
+  return ForDomain::make(lower, upper);
 }
 
 void ParserNew::parsePrintStmt() {
@@ -566,7 +575,6 @@ void ParserNew::parsePrintStmt() {
 }
 
 void ParserNew::parseExprOrAssignStmt() {
-  std::cout << "peek = " << peek() << std::endl;
   if (peek().type != TokenType::SEMICOL) {
     CallMap calls;
     std::vector<Expr> lhs;
@@ -598,7 +606,6 @@ void ParserNew::parseExprOrAssignStmt() {
     emitAssign(lhs, expr, calls);
   }
 
-  std::cout << "end = " << peek() << std::endl;
   consume(TokenType::SEMICOL);
 }
 
@@ -882,9 +889,7 @@ Expr ParserNew::parseSolveExpr(CallMap &calls) {
 }
 
 Expr ParserNew::parseAddExpr(CallMap &calls) {
-  std::cout << "first = " << peek() << std::endl;
   Expr expr = parseMulExpr(calls);
-  std::cout << "next' = " << peek() << std::endl;
 
   while (true) {
     switch (peek().type) {
@@ -892,7 +897,6 @@ Expr ParserNew::parseAddExpr(CallMap &calls) {
       {
         consume(TokenType::PLUS);
        
-        std::cout << "next = " << peek() << std::endl;
         const Expr rhs = parseMulExpr(calls);
       
         checkValidSubexpr(expr, calls);
@@ -1695,6 +1699,7 @@ Expr ParserNew::parseSignedNumLiteral() {
           throw ParseException();
           break;
       }
+      break;
     default:
       throw ParseException();
       break;
@@ -1787,6 +1792,7 @@ ParserNew::TensorValues ParserNew::parseDenseVectorLiteral() {
           throw ParseException();
           break;
       }
+      break;
     default:
       throw ParseException();
       break;
@@ -1876,50 +1882,62 @@ double ParserNew::parseSignedFloatLiteral() {
 }
 
 void ParserNew::parseTest() {
-  //consume(TokenType::TEST);
-  //consume(TokenType::IDENT);
-  //switch (peek().type) {
-  //  case TokenType::LP:
-  //    parseOptionalExprList();
-  //    consume(TokenType::EQ);
-  //    parseTensorLiteral();
-  //    consume(TokenType::SEMICOL);
-  //    break;
-  //  case TokenType::ASSIGN:
-  //    consume(TokenType::ASSIGN);
-  //    parseSystemGenerator();
-  //    consume(TokenType::COL);
-  //    parseExternAssert();
-  //    break;
-  //  default:
-  //    throw ParseException();
-  //    break;
-  //}
-}
+  consume(TokenType::TEST);
 
-void ParserNew::parseSystemGenerator() {
+  const Token identToken = consume(TokenType::IDENT);
+  const std::string name = identToken.str;
+
   switch (peek().type) {
-    case TokenType::IDENT:
-      consume(TokenType::IDENT);
+    case TokenType::LP:
+    {
+      // TODO: replace with literal list rule?
+      CallMap calls;
+      const std::vector<Expr> args = parseOptionalExprList(calls);
+
+      consume(TokenType::EQ);
+
+      const Expr expected = parseTensorLiteral();
+
+      consume(TokenType::SEMICOL);
+
+      ctx->addTest(new FunctionTest(name, args, {expected}));
       break;
-    case TokenType::INT_LITERAL:
-      consume(TokenType::INT_LITERAL);
-      break;
+    }
+    case TokenType::ASSIGN:
+//    consume(TokenType::ASSIGN);
+//    parseSystemGenerator();
+//    consume(TokenType::COL);
+//    parseExternAssert();
+//    break;
     default:
       throw ParseException();
       break;
   }
 }
 
-void ParserNew::parseExternAssert() {
-  consume(TokenType::IDENT);
-  consume(TokenType::PERIOD);
-  consume(TokenType::IDENT);
-  consume(TokenType::ASSIGN);
-  parseTensorLiteral();
-  consume(TokenType::RARROW);
-  parseTensorLiteral();
-}
+//void ParserNew::parseSystemGenerator() {
+//  switch (peek().type) {
+//    case TokenType::IDENT:
+//      consume(TokenType::IDENT);
+//      break;
+//    case TokenType::INT_LITERAL:
+//      consume(TokenType::INT_LITERAL);
+//      break;
+//    default:
+//      throw ParseException();
+//      break;
+//  }
+//}
+//
+//void ParserNew::parseExternAssert() {
+//  consume(TokenType::IDENT);
+//  consume(TokenType::PERIOD);
+//  consume(TokenType::IDENT);
+//  consume(TokenType::ASSIGN);
+//  parseTensorLiteral();
+//  consume(TokenType::RARROW);
+//  parseTensorLiteral();
+//}
 
 void ParserNew::checkValidSubexpr(const Expr expr, const CallMap &calls) {
   if (!isa<VarExpr>(expr)) return;
@@ -2128,8 +2146,6 @@ std::vector<Stmt> ParserNew::liftCallsAndMaps(const CallMap &calls,
 
   return stmts;
 }
-
-#endif
 
 }
 }
