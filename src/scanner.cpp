@@ -444,6 +444,7 @@ TokenList ScannerNew::lex(std::istream &programStream) {
                   if (programStream.peek() == '%') {
                     programStream.get();
                     if (programStream.peek() == '}') {
+                      programStream.get();
                       // TODO: emit COMMENT token
                       break;
                     } else {
