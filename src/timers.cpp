@@ -73,12 +73,12 @@ double getTimingPercentage(int index) {
   return getTime(index) * 100.0 / getTotalTime(); 
 }
 
+// Singleton
 class InsertTimers : public IRRewriter {
   using IRRewriter::visit;
   public: 
     static InsertTimers& getInstance() {
-            static InsertTimers instance; // Guaranteed to be destroyed.
-                                  // Instantiated on first use.
+            static InsertTimers instance; 
             return instance;
     }
     
@@ -126,6 +126,7 @@ class InsertTimers : public IRRewriter {
       Expr start = rewrite(op->condition);
       Stmt thenBody = rewrite(op->thenBody);
       Stmt elseBody = rewrite(op->elseBody);
+      
       stmt = IfThenElse::make(op->condition, thenBody, elseBody);
     }
     
@@ -142,6 +143,7 @@ class InsertTimers : public IRRewriter {
       
       stmt = For::make(op->var, op->domain, body);
     }
+
   private:
     int counter = 0;
     InsertTimers() {};
@@ -150,7 +152,8 @@ class InsertTimers : public IRRewriter {
 
     Var initTimer(string line, Stmt& stmt) {
       addTimedLine(line);
-      Var timeStartVar = Var("simit_internal_time_start_" + simit::util::toString(counter), Float);
+      Var timeStartVar = Var("simit_internal_time_start_" + 
+          simit::util::toString(counter), Float);
       Expr timeStart = Call::make(intrinsics::simitClock(), {});
       Stmt timeStartStmt = AssignStmt::make(timeStartVar, timeStart);
       stmt = Block::make(timeStartStmt, stmt);
@@ -158,17 +161,12 @@ class InsertTimers : public IRRewriter {
     }
 
     void storeTimer(Stmt& stmt, Var& timeStartVar) {
-      Var time = Var("simit_internal_time_temp_" + simit::util::toString(counter), Float);
-      Expr subtraction = Sub::make(Call::make(intrinsics::simitClock(), {}), VarExpr::make(timeStartVar));
-      Expr store = Call::make(intrinsics::simitStoreTime(), {counter, subtraction});
-      Stmt storeStmt = AssignStmt::make(time, store);
-      stmt = Block::make(stmt, storeStmt);
+      Expr subtraction = Sub::make(Call::make(intrinsics::simitClock(), {}),
+          VarExpr::make(timeStartVar));
+      Stmt store = CallStmt::make({}, intrinsics::simitStoreTime(), 
+          {counter, subtraction});
+      stmt = Block::make(stmt, store);
       counter++;
-      
-      // Expr subtraction = Sub::make(Call::make(intrinsics::simitClock(), {}), VarExpr::make(timeStartVar));
-      // Stmt store = CallStmt::make(intrinsics::simitStoreTime(), {counter, subtraction});
-      // stmt = Block::make(stmt, store);
-      // counter++;
     }
 };
 
