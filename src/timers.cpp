@@ -143,19 +143,21 @@ class InsertTimers : public IRRewriter {
       
       stmt = For::make(op->var, op->domain, body);
     }
-
+  
+    Var getTimeVar() {
+      return timeStartVar;
+    }
   private:
     int counter = 0;
+    Var timeStartVar = Var("simit_internal_time_var", Float);
     InsertTimers() {};
     InsertTimers(InsertTimers const&)    = delete;
     void operator=(InsertTimers const&)  = delete;
 
     Var initTimer(string line, Stmt& stmt) {
       addTimedLine(line);
-      Var timeStartVar = Var("simit_internal_time_start_" + 
-          simit::util::toString(counter), Float);
       Expr timeStart = Call::make(intrinsics::simitClock(), {});
-      Stmt timeStartStmt = AssignStmt::make(timeStartVar, timeStart);
+      Stmt timeStartStmt = AssignStmt::make(getTimeVar(), timeStart);
       stmt = Block::make(timeStartStmt, stmt);
       return timeStartVar;
     }
@@ -171,9 +173,11 @@ class InsertTimers : public IRRewriter {
 };
 
 Func insertTimers(Func func) {
-  func = InsertTimers::getInstance().rewrite(func);
-  func = insertVarDecls(func);
-  return func;
+  Var timeStartVar = InsertTimers::getInstance().getTimeVar();
+  Func timerFunc = Func(func, Block::make(VarDecl::make(timeStartVar), 
+        func.getBody()));
+  timerFunc = InsertTimers::getInstance().rewrite(timerFunc);
+  return timerFunc;
 }
 
 }}
