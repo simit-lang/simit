@@ -21,6 +21,8 @@ typedef float simit_float;
 typedef double simit_float;
 #endif
 
+void printTimes();
+
 inline std::string toLower(std::string str) {
   std::transform(str.begin(), str.end(), str.begin(), ::tolower);
   return str;

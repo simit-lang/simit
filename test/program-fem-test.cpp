@@ -95,7 +95,7 @@ TEST(Program, femTet) {
   for (size_t i=0; i < nSteps; ++i) {
     m_timeStepper.runSafe();
   }
-
+  printTimes();
   // Check outputs
   SIMIT_ASSERT_FLOAT_EQ(0.010771915616785779,  x.get(vertRefs[100])(0));
   SIMIT_ASSERT_FLOAT_EQ(0.058853573999788439,  x.get(vertRefs[100])(1));
