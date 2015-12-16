@@ -6,6 +6,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <Eigen/IterativeLinearSolvers>
+#include <time.h>
+#include <vector>
 
 extern "C" {
 
@@ -101,6 +103,7 @@ void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
 #endif
 
 extern "C" {
+
 
 int loc(int v0, int v1, int *neighbors_start, int *neighbors) {
   int l = neighbors_start[v0];
@@ -217,5 +220,18 @@ void inv3_f32(float * a, float * inv){
   inv[7] = cof12 * determ;
   inv[8] = cof22 * determ;
 }
+
+double simitClock() {
+  struct timespec tv;
+  clock_gettime(CLOCK_MONOTONIC, &tv);
+  return (((double) tv.tv_sec) + (double) (tv.tv_nsec / 1000000000.0));
+}
+
+#include "timers.h"
+#include "stdio.h"
+void simitStoreTime(int i, double value) {
+  simit::ir::storeTime(i, value);
+}
+
 }
 #endif

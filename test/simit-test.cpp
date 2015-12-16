@@ -7,6 +7,7 @@
 #include "program.h"
 #include "init.h"
 #include "ir.h"
+#include "timers.h"
 #include "util/util.h"
 
 #include "program.h"
@@ -42,6 +43,55 @@ public:
   }
 };
 #endif
+
+const int LINE_LIMIT = 80;
+void printTimes() {
+  FILE *f;
+  size_t len;
+  char *line;
+  
+  unsigned int counter = 1;
+  double percentageSum = 0.0;
+  for (auto line: simit::ir::getSourceLines()) {
+    size_t first = line.find_first_not_of(' ');
+    size_t last = line.find_last_not_of('\n');
+    std::string test = "";
+    if ( first != last ) {
+      test = line.substr(first, (last-first+1));
+      line = line.substr(0, (last+1));
+    }
+    int index = simit::ir::getTimedLineIndex(test);
+    if ( index >= 0) {
+      double percentage = simit::ir::getTimingPercentage(index);
+      percentageSum += percentage;
+      double time = simit::ir::getTime(index);
+      unsigned long long int timerCount = simit::ir::getCounter(index);
+      if (line.length() < LINE_LIMIT) {
+        line.append(LINE_LIMIT - line.length(), ' '); 
+        printf("%s (%f%s, %llu)\n", line.c_str(), percentage , "%", timerCount);
+      } else {
+        printf("%s (%f%s, %llu)\n", line.substr(0,LINE_LIMIT).c_str(), percentage, "%", timerCount);
+        for (unsigned x=LINE_LIMIT; x < line.length(); x+= LINE_LIMIT) {
+          printf("\t %s\n",line.substr(x, LINE_LIMIT).c_str());
+        }
+      }
+    } else {
+      if (line.length() < LINE_LIMIT) {
+        line.append(LINE_LIMIT - line.length(), ' '); 
+        printf("%s\n", line.c_str());
+      } else {
+        printf("%s\n", line.substr(0,LINE_LIMIT).c_str());
+        for (unsigned x=LINE_LIMIT; x < line.length(); x+= LINE_LIMIT) {
+          printf("\t %s\n",line.substr(x, LINE_LIMIT).c_str());
+        }
+      }
+    }
+    counter++;
+  }
+ 
+  printf("Percentage Sum: %f\n", percentageSum); 
+  printf("Total Time: %f (seconds)\n", simit::ir::getTotalTime());
+}
 
 int main(int argc, char **argv) {
   // Get optional LLVM opt-style arguments from the SIMIT_LLVM_DEBUG_ARGS
@@ -95,7 +145,6 @@ int main(int argc, char **argv) {
       }
     }
   }
-
 
 #ifdef F32
   // Add F32 test environemnt
