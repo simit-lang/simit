@@ -12,6 +12,54 @@
 using namespace std;
 
 namespace simit {
+
+void printTimes() {
+  const int LINE_LIMIT = 80;
+  double percentageSum = 0.0;
+  
+  for (auto line: simit::ir::TimerStorage::getInstance().getSourceLines()) {
+    size_t first = line.find_first_not_of(' ');
+    size_t last = line.find_last_not_of('\n');
+    std::string test = "";
+    if ( first != last ) {
+      test = line.substr(first, (last-first+1));
+      line = line.substr(0, (last+1));
+    }
+    int index = simit::ir::TimerStorage::getInstance().getTimedLineIndex(test);
+    if ( index >= 0) {
+      double percentage = 
+        simit::ir::TimerStorage::getInstance().getTimingPercentage(index);
+      percentageSum += percentage;
+      double time = simit::ir::TimerStorage::getInstance().getTime(index);
+      unsigned long long int timerCount = 
+        simit::ir::TimerStorage::getInstance().getCounter(index);
+      if (line.length() < LINE_LIMIT) {
+        line.append(LINE_LIMIT - line.length(), ' '); 
+        printf("%s (%f%s, %llu)\n", line.c_str(), percentage , "%", timerCount);
+      } else {
+        printf("%s (%f%s, %llu)\n", line.substr(0,LINE_LIMIT).c_str(), percentage, "%", timerCount);
+        for (unsigned x=LINE_LIMIT; x < line.length(); x+= LINE_LIMIT) {
+          printf("\t %s\n",line.substr(x, LINE_LIMIT).c_str());
+        }
+      }
+    } else {
+      if (line.length() < LINE_LIMIT) {
+        line.append(LINE_LIMIT - line.length(), ' '); 
+        printf("%s\n", line.c_str());
+      } else {
+        printf("%s\n", line.substr(0,LINE_LIMIT).c_str());
+        for (unsigned x=LINE_LIMIT; x < line.length(); x+= LINE_LIMIT) {
+          printf("\t %s\n",line.substr(x, LINE_LIMIT).c_str());
+        }
+      }
+    }
+  }
+ 
+  printf("Percentage Sum: %f\n", percentageSum); 
+  printf("Total Time: %f (seconds)\n", 
+      simit::ir::TimerStorage::getInstance().getTotalTime());
+}
+
 namespace ir {
 
 // Singleton

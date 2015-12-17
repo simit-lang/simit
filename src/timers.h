@@ -4,6 +4,7 @@
 #include "ir.h"
 
 namespace simit {
+  void printTimes();
 namespace ir {
   Func insertTimers(Func func);
   
