@@ -52,7 +52,7 @@ void printTimes() {
   
   unsigned int counter = 1;
   double percentageSum = 0.0;
-  for (auto line: simit::ir::getSourceLines()) {
+  for (auto line: simit::ir::TimerStorage::getInstance().getSourceLines()) {
     size_t first = line.find_first_not_of(' ');
     size_t last = line.find_last_not_of('\n');
     std::string test = "";
@@ -60,12 +60,14 @@ void printTimes() {
       test = line.substr(first, (last-first+1));
       line = line.substr(0, (last+1));
     }
-    int index = simit::ir::getTimedLineIndex(test);
+    int index = simit::ir::TimerStorage::getInstance().getTimedLineIndex(test);
     if ( index >= 0) {
-      double percentage = simit::ir::getTimingPercentage(index);
+      double percentage = 
+        simit::ir::TimerStorage::getInstance().getTimingPercentage(index);
       percentageSum += percentage;
-      double time = simit::ir::getTime(index);
-      unsigned long long int timerCount = simit::ir::getCounter(index);
+      double time = simit::ir::TimerStorage::getInstance().getTime(index);
+      unsigned long long int timerCount = 
+        simit::ir::TimerStorage::getInstance().getCounter(index);
       if (line.length() < LINE_LIMIT) {
         line.append(LINE_LIMIT - line.length(), ' '); 
         printf("%s (%f%s, %llu)\n", line.c_str(), percentage , "%", timerCount);
@@ -90,7 +92,8 @@ void printTimes() {
   }
  
   printf("Percentage Sum: %f\n", percentageSum); 
-  printf("Total Time: %f (seconds)\n", simit::ir::getTotalTime());
+  printf("Total Time: %f (seconds)\n", 
+      simit::ir::TimerStorage::getInstance().getTotalTime());
 }
 
 int main(int argc, char **argv) {

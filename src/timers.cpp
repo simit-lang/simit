@@ -14,72 +14,13 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-vector<string> sourceLines;
-vector<string>& getSourceLines() {
-  return sourceLines;
-}
-
-void addSourceLines(stringstream& ss) {
-  for (string line; getline(ss, line); sourceLines.push_back(line));
-}
-
-vector<string> timedLines;
-void addTimedLine(string line) {
-  timedLines.push_back(line);
-}
-
-int getTimedLineIndex(string line) {
-  int pos = find(timedLines.begin(), timedLines.end(), line.c_str()) - timedLines.begin();
-  if (pos >= timedLines.size()){
-    pos = -1;
-  }
-  return pos;
-}
-
-void printTimedLines() {
-  for (auto& line : timedLines) {
-    cout << line << endl;
-  }
-}
-
-vector<double> timerSums;
-vector<unsigned long long int> timerCount;
-void storeTime(int index, double time) {
-  while ( timerCount.size() < index + 1) {
-    timerCount.push_back(0);
-    timerSums.push_back(0);
-  }
-  timerCount[index] += 1;
-  timerSums[index] += time;
-}
-
-double getTime(int index) {
-  return timerSums[index];
-}
-
-unsigned long long int getCounter(int index) {
-  return timerCount[index];
-}
-
-double getTotalTime() {
-  double sum = 0;
-  for(auto const &time : timerSums) {
-    sum += time;
-  }
-  return sum;
-}
-
-double getTimingPercentage(int index) {
-  return getTime(index) * 100.0 / getTotalTime(); 
-}
-
 // Singleton
 class InsertTimers : public IRRewriter {
   using IRRewriter::visit;
   public: 
     static InsertTimers& getInstance() {
-            static InsertTimers instance; 
-            return instance;
+      static InsertTimers instance; 
+      return instance;
     }
     
     void visit(const TensorWrite *op) {
@@ -155,7 +96,7 @@ class InsertTimers : public IRRewriter {
     void operator=(InsertTimers const&)  = delete;
 
     Var initTimer(string line, Stmt& stmt) {
-      addTimedLine(line);
+      TimerStorage::getInstance().addTimedLine(line);
       Expr timeStart = Call::make(intrinsics::simitClock(), {});
       Stmt timeStartStmt = AssignStmt::make(getTimeVar(), timeStart);
       stmt = Block::make(timeStartStmt, stmt);

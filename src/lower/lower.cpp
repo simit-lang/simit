@@ -68,7 +68,7 @@ static inline
 void timingCallGraph(string headerText, Func func, bool print) {
   stringstream ss;
   simit::ir::IRPrinterCallGraph(ss).print(func);
-  addSourceLines(ss);
+  TimerStorage::getInstance().addSourceLines(ss);
 }
 
 static inline

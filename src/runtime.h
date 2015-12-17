@@ -230,7 +230,7 @@ double simitClock() {
 #include "timers.h"
 #include "stdio.h"
 void simitStoreTime(int i, double value) {
-  simit::ir::storeTime(i, value);
+  simit::ir::TimerStorage::getInstance().storeTime(i, value);
 }
 
 }
