@@ -10,6 +10,7 @@ namespace ir {
 /// is supported by backends. If `print` is true, then the IR will be printed
 /// to stdout between each lowering step.
 Func lower(Func func, bool print=false);
+Func lowerWithTimers(Func func, bool print=false);
 
 }}
 #endif

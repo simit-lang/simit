@@ -126,11 +126,6 @@ Func lower(Func func, bool print) {
   func = rewriteCallGraph(func, lowerTensorAccesses);
   printCallGraph("Lower Tensor Reads and Writes", func, print);
   
-  // Include Timers 
-  timingCallGraph("Insert Timers", func, print);
-  func = rewriteCallGraph(func, insertTimers);
-  printCallGraph("Insert Timers", func, print);
-
   // Lower to GPU Kernels
 #if GPU
   if (kBackend == "gpu") {
@@ -146,6 +141,14 @@ Func lower(Func func, bool print) {
     printCallGraph("Fuse Kernels", func, print);
   }
 #endif
+  return func;
+}
+
+Func lowerWithTimers(Func func, bool print) {
+  // Include Timers 
+  timingCallGraph("Insert Timers", func, print);
+  func = rewriteCallGraph(func, insertTimers);
+  printCallGraph("Insert Timers", func, print);
   return func;
 }
 

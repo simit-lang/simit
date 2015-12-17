@@ -78,7 +78,7 @@ TEST(Program, femTet) {
   
   simit::Program program;
   int errorCode = program.loadFile(TEST_FILE_NAME);
-  m_precomputation = program.compile("initializeTet");
+  m_precomputation = program.compileWithTimers("initializeTet");
   if(errorCode) { std::cout<<program.getDiagnostics().getMessage(); exit(0); }
   if(!m_precomputation.defined()) FAIL();
 
@@ -87,7 +87,7 @@ TEST(Program, femTet) {
   m_precomputation.init();
   m_precomputation.runSafe();
   
-  m_timeStepper = program.compile("main");
+  m_timeStepper = program.compileWithTimers("main");
   if(!m_timeStepper.defined()) FAIL();
   m_timeStepper.bind("verts", &m_verts);
   m_timeStepper.bind("tets", &m_tets);
