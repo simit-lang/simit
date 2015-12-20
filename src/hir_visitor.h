@@ -14,14 +14,12 @@ struct DynamicIndexSet;
 struct ElementType;
 struct Endpoint;
 struct SetType;
-struct TupleLength;
 struct TupleType;
-struct ScalarType;
-struct NDTensorType;
-struct Identifier;
-struct IdentDecl;
+struct ScalarTensorType;
+struct NonScalarTensorType;
 struct Field;
 struct ElementTypeDecl;
+struct IdentDecl;
 struct Argument;
 struct ExternDecl;
 struct FuncDecl;
@@ -59,16 +57,14 @@ struct ExpExpr;
 struct TransposeExpr;
 struct CallExpr;
 struct TensorReadExpr;
-struct TupleReadExpr;
 struct FieldReadExpr;
-struct ParenExpr;
 struct VarExpr;
 struct IntLiteral;
 struct FloatLiteral;
 struct BoolLiteral;
-struct IntVectorLiteral;
-struct FloatVectorLiteral;
-struct NDTensorLiteral;
+struct DenseIntVectorLiteral;
+struct DenseFloatVectorLiteral;
+struct DenseNDTensorLiteral;
 struct Test;
 
 class HIRVisitor {
@@ -81,14 +77,12 @@ public:
   virtual void visit(std::shared_ptr<ElementType> op) {}
   virtual void visit(std::shared_ptr<Endpoint> op) {}
   virtual void visit(std::shared_ptr<SetType>);
-  virtual void visit(std::shared_ptr<TupleLength> op) {}
   virtual void visit(std::shared_ptr<TupleType>);
-  virtual void visit(std::shared_ptr<ScalarType> op) {}
-  virtual void visit(std::shared_ptr<NDTensorType>);
-  virtual void visit(std::shared_ptr<Identifier> op) {}
-  virtual void visit(std::shared_ptr<IdentDecl>);
+  virtual void visit(std::shared_ptr<ScalarTensorType> op) {}
+  virtual void visit(std::shared_ptr<NonScalarTensorType>);
   virtual void visit(std::shared_ptr<Field>);
   virtual void visit(std::shared_ptr<ElementTypeDecl>);
+  virtual void visit(std::shared_ptr<IdentDecl>);
   virtual void visit(std::shared_ptr<Argument>);
   virtual void visit(std::shared_ptr<ExternDecl>);
   virtual void visit(std::shared_ptr<FuncDecl>);
@@ -107,6 +101,9 @@ public:
   virtual void visit(std::shared_ptr<Slice> op) {}
   virtual void visit(std::shared_ptr<ExprParam>);
   virtual void visit(std::shared_ptr<MapExpr>);
+  virtual void visit(std::shared_ptr<UnaryExpr>);
+  virtual void visit(std::shared_ptr<BinaryExpr>);
+  virtual void visit(std::shared_ptr<NaryExpr>);
   virtual void visit(std::shared_ptr<OrExpr>);
   virtual void visit(std::shared_ptr<AndExpr>);
   virtual void visit(std::shared_ptr<XorExpr>);
@@ -123,22 +120,15 @@ public:
   virtual void visit(std::shared_ptr<TransposeExpr>);
   virtual void visit(std::shared_ptr<CallExpr>);
   virtual void visit(std::shared_ptr<TensorReadExpr>);
-  virtual void visit(std::shared_ptr<TupleReadExpr>);
   virtual void visit(std::shared_ptr<FieldReadExpr>);
-  virtual void visit(std::shared_ptr<ParenExpr>);
   virtual void visit(std::shared_ptr<VarExpr> op) {}
   virtual void visit(std::shared_ptr<IntLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatLiteral> op) {}
   virtual void visit(std::shared_ptr<BoolLiteral> op) {}
-  virtual void visit(std::shared_ptr<IntVectorLiteral> op) {}
-  virtual void visit(std::shared_ptr<FloatVectorLiteral> op) {}
-  virtual void visit(std::shared_ptr<NDTensorLiteral>);
+  virtual void visit(std::shared_ptr<DenseIntVectorLiteral> op) {}
+  virtual void visit(std::shared_ptr<DenseFloatVectorLiteral> op) {}
+  virtual void visit(std::shared_ptr<DenseNDTensorLiteral>);
   virtual void visit(std::shared_ptr<Test>);
-
-private:
-  void visitUnaryExpr(std::shared_ptr<UnaryExpr>); 
-  void visitBinaryExpr(std::shared_ptr<BinaryExpr>); 
-  void visitNaryExpr(std::shared_ptr<NaryExpr>); 
 };
 
 }

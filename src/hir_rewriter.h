@@ -19,14 +19,12 @@ public:
   virtual void visit(ElementType::Ptr op) { node = op; }
   virtual void visit(Endpoint::Ptr op) { node = op; }
   virtual void visit(SetType::Ptr);
-  virtual void visit(TupleLength::Ptr op) { node = op; }
   virtual void visit(TupleType::Ptr);
-  virtual void visit(ScalarType::Ptr op) { node = op; }
-  virtual void visit(NDTensorType::Ptr);
-  virtual void visit(Identifier::Ptr op) { node = op; }
-  virtual void visit(IdentDecl::Ptr);
+  virtual void visit(ScalarTensorType::Ptr op) { node = op; }
+  virtual void visit(NonScalarTensorType::Ptr);
   virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
+  virtual void visit(IdentDecl::Ptr);
   virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
@@ -45,6 +43,9 @@ public:
   virtual void visit(Slice::Ptr op) { node = op; }
   virtual void visit(ExprParam::Ptr);
   virtual void visit(MapExpr::Ptr);
+  virtual void visit(UnaryExpr::Ptr);
+  virtual void visit(BinaryExpr::Ptr);
+  virtual void visit(NaryExpr::Ptr);
   virtual void visit(OrExpr::Ptr);
   virtual void visit(AndExpr::Ptr);
   virtual void visit(XorExpr::Ptr);
@@ -61,16 +62,14 @@ public:
   virtual void visit(TransposeExpr::Ptr);
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
-  virtual void visit(TupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
-  virtual void visit(ParenExpr::Ptr);
   virtual void visit(VarExpr::Ptr op) { node = op; }
   virtual void visit(IntLiteral::Ptr op) { node = op; }
   virtual void visit(FloatLiteral::Ptr op) { node = op; }
   virtual void visit(BoolLiteral::Ptr op) { node = op; }
-  virtual void visit(IntVectorLiteral::Ptr op) { node = op; }
-  virtual void visit(FloatVectorLiteral::Ptr op) { node = op; }
-  virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(DenseIntVectorLiteral::Ptr op) { node = op; }
+  virtual void visit(DenseFloatVectorLiteral::Ptr op) { node = op; }
+  virtual void visit(DenseNDTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
   template <typename T>
@@ -80,11 +79,6 @@ public:
     node.reset();
     return ret;
   }
-
-private:
-  virtual void visitUnaryExpr(UnaryExpr::Ptr);
-  virtual void visitBinaryExpr(BinaryExpr::Ptr);
-  virtual void visitNaryExpr(NaryExpr::Ptr);
 
 protected:
   HIRNode::Ptr node;  

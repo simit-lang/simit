@@ -15,6 +15,7 @@ void HIRPrinter::visit(Program::Ptr program) {
 
 void HIRPrinter::visit(StmtBlock::Ptr stmtBlock) {
   for (auto stmt : stmtBlock->stmts) {
+    printIndent();
     stmt->accept(this);
     oss << std::endl;
   }
@@ -58,36 +59,30 @@ void HIRPrinter::visit(SetType::Ptr type) {
   }
 }
 
-void HIRPrinter::visit(TupleLength::Ptr length) {
-  oss << length->val;
-}
-
 void HIRPrinter::visit(TupleType::Ptr type) {
   oss << "(";
   type->element->accept(this);
-  oss << " * ";
-  type->length->accept(this);
-  oss << ")";
+  oss << " * " << type->length << ")";
 }
 
-void HIRPrinter::visit(ScalarType::Ptr type) {
+void HIRPrinter::visit(ScalarTensorType::Ptr type) {
   switch (type->type) {
-    case ScalarType::Type::INT:
+    case ScalarTensorType::Type::INT:
       oss << "int";
       break;
-    case ScalarType::Type::FLOAT:
+    case ScalarTensorType::Type::FLOAT:
       oss << "float";
       break;
-    case ScalarType::Type::BOOL:
+    case ScalarTensorType::Type::BOOL:
       oss << "bool";
       break;
     default:
-      unreachable;
+      iassert(false);
       break;
   }
 }
 
-void HIRPrinter::visit(NDTensorType::Ptr type) {
+void HIRPrinter::visit(NonScalarTensorType::Ptr type) {
   oss << "tensor";
   if (type->indexSets.size() > 0) {
     oss << "[";
@@ -109,25 +104,14 @@ void HIRPrinter::visit(NDTensorType::Ptr type) {
   }
 }
 
-void HIRPrinter::visit(Identifier::Ptr ident) {
-  oss << ident->ident;
-}
-
-void HIRPrinter::visit(IdentDecl::Ptr decl) {
-  decl->name->accept(this);
-  oss << " : ";
-  decl->type->accept(this);
-}
-
 void HIRPrinter::visit(Field::Ptr field) {
-  field->field->accept(this);
+  oss << field->name << " : ";
+  field->type->accept(this);
   oss << ";";
 }
 
 void HIRPrinter::visit(ElementTypeDecl::Ptr decl) {
-  oss << "element ";
-  decl->name->accept(this);
-  oss << std::endl;
+  oss << "element " << decl->ident << std::endl;
   indent();
   for (auto field : decl->fields) {
     printIndent();
@@ -138,17 +122,21 @@ void HIRPrinter::visit(ElementTypeDecl::Ptr decl) {
   oss << "end";
 }
 
+void HIRPrinter::visit(IdentDecl::Ptr decl) {
+  oss << decl->ident << " : ";
+  decl->type->accept(this);
+}
+
 void HIRPrinter::visit(Argument::Ptr arg) {
   if (arg->inout) {
     oss << "inout ";
   }
-  visit(to<IdentDecl>(arg));
+  visit(static_cast<IdentDecl::Ptr>(arg));
 }
 
 void HIRPrinter::visit(ExternDecl::Ptr decl) {
   oss << "extern ";
   decl->var->accept(this);
-  oss << ";";
 }
 
 void HIRPrinter::visit(FuncDecl::Ptr decl) {
@@ -168,7 +156,6 @@ void HIRPrinter::visit(ConstDecl::Ptr decl) {
 }
 
 void HIRPrinter::visit(WhileStmt::Ptr stmt) {
-  printIndent();
   oss << "while ";
   stmt->cond->accept(this);
   oss << std::endl;
@@ -180,7 +167,6 @@ void HIRPrinter::visit(WhileStmt::Ptr stmt) {
 }
 
 void HIRPrinter::visit(DoWhileStmt::Ptr stmt) {
-  printIndent();
   oss << "do " << std::endl;
   indent();
   stmt->body->accept(this);
@@ -191,7 +177,6 @@ void HIRPrinter::visit(DoWhileStmt::Ptr stmt) {
 }
 
 void HIRPrinter::visit(IfStmt::Ptr stmt) {
-  printIndent();
   oss << "if ";
   stmt->cond->accept(this);
   oss << std::endl;
@@ -204,14 +189,13 @@ void HIRPrinter::visit(IfStmt::Ptr stmt) {
     indent();
     stmt->elseBody->accept(this);
     dedent();
-    oss << std::endl;
   }
   printIndent();
   oss << "end";
 }
 
 void HIRPrinter::visit(IndexSetDomain::Ptr domain) {
-  domain->set->accept(this);
+  domain->domain->accept(this);
 }
 
 void HIRPrinter::visit(RangeDomain::Ptr domain) {
@@ -221,10 +205,7 @@ void HIRPrinter::visit(RangeDomain::Ptr domain) {
 }
 
 void HIRPrinter::visit(ForStmt::Ptr stmt) {
-  printIndent();
-  oss << "for ";
-  stmt->loopVar->accept(this);
-  oss << " in ";
+  oss << "for " << stmt->loopVarName << " in ";
   stmt->domain->accept(this);
   oss << std::endl;
   indent();
@@ -258,8 +239,7 @@ void HIRPrinter::visit(AssignStmt::Ptr stmt) {
     printDelimiter = true;
   }
   oss << " = ";
-  stmt->expr->accept(this);
-  oss << ";";
+  visit(static_cast<ExprStmt::Ptr>(stmt));
 }
 
 void HIRPrinter::visit(Slice::Ptr slice) {
@@ -271,10 +251,8 @@ void HIRPrinter::visit(ExprParam::Ptr param) {
 }
 
 void HIRPrinter::visit(MapExpr::Ptr expr) {
-  oss << "map ";
-  expr->func->accept(this);
+  oss << "map " << expr->funcName;
   if (expr->partialActuals.size() > 0) {
-    oss << "(";
     bool printDelimiter = false;
     for (auto param : expr->partialActuals) {
       if (printDelimiter) {
@@ -283,10 +261,8 @@ void HIRPrinter::visit(MapExpr::Ptr expr) {
       param->accept(this);
       printDelimiter = true;
     }
-    oss << ")";
   }
-  oss << " to ";
-  expr->target->accept(this);
+  oss << " to " << expr->targetName;
   if (expr->op != MapExpr::ReductionOp::NONE) {
     oss << " reduce ";
     switch (expr->op) {
@@ -294,7 +270,7 @@ void HIRPrinter::visit(MapExpr::Ptr expr) {
         oss << "+";
         break;
       default:
-        unreachable;
+        iassert(false);
         break;
     }
   }
@@ -337,7 +313,7 @@ void HIRPrinter::visit(EqExpr::Ptr expr) {
         oss << " != ";
         break;
       default:
-        unreachable;
+        iassert(false);
         break;
     }
     oss << "(";
@@ -375,7 +351,7 @@ void HIRPrinter::visit(ElwiseDivExpr::Ptr expr) {
 }
 
 void HIRPrinter::visit(NegExpr::Ptr expr) {
-  printUnaryExpr(expr, expr->negate ? "-" : "+");
+  printUnaryExpr(expr, "-");
 }
 
 void HIRPrinter::visit(ExpExpr::Ptr expr) {
@@ -387,18 +363,13 @@ void HIRPrinter::visit(TransposeExpr::Ptr expr) {
 }
 
 void HIRPrinter::visit(CallExpr::Ptr expr) {
-  expr->func->accept(this);
-  oss << "(";
+  oss << expr->funcName << "(";
   bool printDelimiter = false;
-  for (auto arg : expr->arguments) {
+  for (auto operand : expr->operands) {
     if (printDelimiter) {
       oss << ", ";
     }
-    if (arg) {
-      arg->accept(this);
-    } else {
-      oss << "?";
-    }
+    operand->accept(this);
     printDelimiter = true;
   }
   oss << ")";
@@ -406,7 +377,7 @@ void HIRPrinter::visit(CallExpr::Ptr expr) {
 
 void HIRPrinter::visit(TensorReadExpr::Ptr expr) {
   expr->tensor->accept(this);
-  oss << "(";
+  oss << "[";
   bool printDelimiter = false;
   for (auto param : expr->indices) {
     if (printDelimiter) {
@@ -415,20 +386,12 @@ void HIRPrinter::visit(TensorReadExpr::Ptr expr) {
     param->accept(this);
     printDelimiter = true;
   }
-  oss << ")";
-}
-
-void HIRPrinter::visit(TupleReadExpr::Ptr expr) {
-  expr->tuple->accept(this);
-  oss << "(";
-  expr->index->accept(this);
-  oss << ")";
+  oss << "]";
 }
 
 void HIRPrinter::visit(FieldReadExpr::Ptr expr) {
   expr->setOrElem->accept(this);
-  oss << ".";
-  expr->field->accept(this);
+  oss << "." << expr->fieldName;
 }
 
 void HIRPrinter::visit(VarExpr::Ptr expr) {
@@ -447,7 +410,7 @@ void HIRPrinter::visit(BoolLiteral::Ptr expr) {
   printBoolean(expr->val);
 }
 
-void HIRPrinter::visit(IntVectorLiteral::Ptr expr) {
+void HIRPrinter::visit(DenseIntVectorLiteral::Ptr expr) {
   oss << "[";
   bool printDelimiter = false;
   for (auto val : expr->vals) {
@@ -458,12 +421,9 @@ void HIRPrinter::visit(IntVectorLiteral::Ptr expr) {
     printDelimiter = true;
   }
   oss << "]";
-  if (expr->transposed) {
-    oss << "'";
-  }
 }
 
-void HIRPrinter::visit(FloatVectorLiteral::Ptr expr) {
+void HIRPrinter::visit(DenseFloatVectorLiteral::Ptr expr) {
   oss << "[";
   bool printDelimiter = false;
   for (auto val : expr->vals) {
@@ -474,12 +434,9 @@ void HIRPrinter::visit(FloatVectorLiteral::Ptr expr) {
     printDelimiter = true;
   }
   oss << "]";
-  if (expr->transposed) {
-    oss << "'";
-  }
 }
 
-void HIRPrinter::visit(NDTensorLiteral::Ptr tensor) {
+void HIRPrinter::visit(DenseNDTensorLiteral::Ptr tensor) {
   oss << "[";
   bool printDelimiter = false;
   for (auto elem : tensor->elems) {
@@ -490,15 +447,10 @@ void HIRPrinter::visit(NDTensorLiteral::Ptr tensor) {
     printDelimiter = true;
   }
   oss << "]";
-  if (tensor->transposed) {
-    oss << "'";
-  }
 }
 
 void HIRPrinter::visit(Test::Ptr test) {
-  oss << "%! ";
-  test->func->accept(this);
-  oss << "(";
+  oss << "%! " << test->funcName << "(";
   bool printDelimiter = false;
   for (auto arg : test->args) {
     if (printDelimiter) {
@@ -513,9 +465,7 @@ void HIRPrinter::visit(Test::Ptr test) {
 }
 
 void HIRPrinter::printFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
-  oss << (isProc ? "proc " : "func ");
-  decl->name->accept(this);
-  oss << "(";
+  oss << (isProc ? "proc " : "func ") << decl->name << "(";
   bool printDelimiter = false;
   for (auto arg : decl->args) {
     if (printDelimiter) {
@@ -545,7 +495,6 @@ void HIRPrinter::printFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
 }
 
 void HIRPrinter::printVarOrConstDecl(VarDecl::Ptr decl, const bool isConst) {
-  printIndent();
   oss << (isConst ? "const " : "var ");
   decl->var->accept(this);
   if (decl->initVal) {

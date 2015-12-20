@@ -3,273 +3,125 @@
 
 #include <exception>
 #include <vector>
-#include <map>
 #include <utility>
 
 #include "scanner.h"
-#include "program_context.h"
+#include "hir.h"
 #include "error.h"
-#include "ir.h"
-#include "types.h"
-#include "domain.h"
 
 namespace simit { 
 namespace internal {
 
-class ParseException : public std::exception {};
-
 class ParserNew {
 public:
-  void parse(const TokenList &, ProgramContext *, std::vector<ParseError> *);
+  hir::Program::Ptr parse(const TokenStream &, std::vector<ParseError> *);
 
 private:
-  struct Argument {
-    ir::Var var;
-    bool isInout;
-
-    Argument(ir::Var var, bool isInout) : var(var), isInout(isInout) {}
-  };
-
-  struct ForDomain {
-    enum class Type {DOMAIN, RANGE};
-
-    static ForDomain make(ir::IndexSet domain) {
-      ForDomain newRange;
-
-      newRange.type = Type::DOMAIN;
-      newRange.domain = domain;
-      
-      return newRange;
-    }
-    static ForDomain make(ir::Expr lower, ir::Expr upper) {
-      ForDomain newRange;
-
-      newRange.type = Type::RANGE;
-      newRange.lower = lower;
-      newRange.upper = upper;
-
-      return newRange;
-    }
-
-    Type type;
-    ir::IndexSet domain;
-    ir::Expr lower;
-    ir::Expr upper;
-  };
-
-  class CallMap {
-    public:
-      struct Entry {
-        enum class Type {FUNC, MAP};
-
-        static Entry make(ir::Func func, std::vector<ir::Expr> actuals) {
-          Entry newEntry;
-          
-          newEntry.callType = Type::FUNC;
-          newEntry.func = func;
-          newEntry.actuals = actuals;
-
-          return newEntry;
-        }
-        static Entry make(ir::Func func, std::vector<ir::Expr> partial_actuals, 
-                          ir::Expr target, ir::Expr neighbors,
-                          ir::ReductionOperator reduction) {
-          Entry newEntry;
-
-          newEntry.callType = Type::MAP;
-          newEntry.func = func;
-          newEntry.actuals = partial_actuals;
-          newEntry.target = target;
-          newEntry.neighbors = neighbors;
-          newEntry.reduction = reduction;
-
-          return newEntry;
-        }
-
-        Type callType;
-        ir::Func func;
-        std::vector<ir::Expr> actuals;
-        ir::Expr target;
-        ir::Expr neighbors;
-        ir::ReductionOperator reduction;
-      };
-
-    public:
-      inline void add(ir::Var var, Entry entry) {
-        calls[var] = entry;
-        orderedCalls.push_back(std::make_pair(var, entry));
-      }
-      inline bool exists(ir::Var var) const { 
-        return calls.find(var) != calls.end();
-      }
-      inline const Entry get(ir::Var var) const { 
-        return calls.find(var)->second;
-      }
-      inline const std::list<std::pair<ir::Var, Entry>> &getAllInOrder() const {
-        return orderedCalls;
-      }
-
-    private:
-      std::map<ir::Var, Entry> calls;
-      std::list<std::pair<ir::Var, Entry>> orderedCalls;
-  };
-
-  struct TensorValues {
-      enum class Type {UNKNOWN, INT, FLOAT};
-
-      TensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
-
-      void addIntValue(const int &val) {
-        switch (type) {
-          case Type::UNKNOWN:
-            type = Type::INT;
-          case Type::INT:
-            break;
-          default:
-            // TODO: raise error
-            break;
-        }
-
-        intVals.push_back(val);
-        dimSizes[dimSizes.size()-1]++;
-      }
-      void addFloatValue(const double &val) {
-        switch (type) {
-          case Type::UNKNOWN:
-            type = Type::FLOAT;
-          case Type::FLOAT:
-            break;
-          default:
-            // TODO: raise error
-            break;
-        }
-
-        floatVals.push_back(val);
-        dimSizes[dimSizes.size() - 1]++;
-      }
-      void addDimension() { dimSizes.push_back(1); }
-
-      void merge(const TensorValues &other) {
-        if (type != other.type) {
-          // TODO: raise error
-        }
-
-        if (dimSizes.size() - 1 != other.dimSizes.size()) {
-          // TODO: raise error
-        }
-
-        for (unsigned int i = 0; i < dimSizes.size() - 1; ++i) {
-          if (dimSizes[i] != other.dimSizes[i]) {
-            // TODO: raise error
-          }
-        }
-
-        switch (type) {
-          case Type::INT:
-            intVals.insert(intVals.end(), other.intVals.begin(), 
-                           other.intVals.end());
-            break;
-          case Type::FLOAT:
-            floatVals.insert(floatVals.end(), other.floatVals.begin(), 
-                             other.floatVals.end());
-            break;
-          default:
-            break;
-        }
-        dimSizes[dimSizes.size() - 1]++;
-      }
-
-      std::vector<unsigned int> dimSizes;
-      std::vector<int>           intVals;
-      std::vector<double>      floatVals;
-      Type                          type;
-  };
+  class SyntaxError : public std::exception {};
   
-  void parseProgram();
-  void parseProgramElement();
-  void parseElementTypeDecl();
-  std::vector<ir::Field> parseFieldDeclList();
-  ir::Field parseFieldDecl();
-  void parseExternDecl();
-  void parseFunction();
-  void parseProcedure();
-  ir::Func parseArgsAndResults();
-  std::vector<Argument> parseArguments();
-  Argument parseArgumentDecl();
-  std::vector<ir::Var> parseResults();
-  ir::Stmt parseStmtBlock();
-  void parseStmt();
-  void parseVarDecl();
-  void parseConstDecl();
-  ir::Var parseIdentDecl();
-  void parseWhileStmt();
-  void parseDoUntilStmt();
-  void parseIfStmt();
-  ir::Stmt parseElseClause();
-  void parseForStmt();
-  ForDomain parseForStmtRange();
-  void parsePrintStmt();
-  void parseExprOrAssignStmt();
-  ir::Expr parseExpr(CallMap &);
-  ir::Expr parseMapExpr(CallMap &);
-  ir::Expr parseOrExpr(CallMap &);
-  ir::Expr parseAndExpr(CallMap &);
-  ir::Expr parseXorExpr(CallMap &);
-  ir::Expr parseEqExpr(CallMap &);
-  ir::Expr parseIneqExpr(CallMap &);
-  ir::Expr parseBooleanFactor(CallMap &);
-  ir::Expr parseSolveExpr(CallMap &);
-  ir::Expr parseAddExpr(CallMap &);
-  ir::Expr parseMulExpr(CallMap &);
-  ir::Expr parseNegExpr(CallMap &);
-  ir::Expr parseExpExpr(CallMap &);
-  ir::Expr parseTransposeExpr(CallMap &);
-  ir::Expr parseCallOrReadExpr(CallMap &);
-  ir::Expr parseFactor(CallMap &);
-  std::vector<ir::Expr> parseOptionalExprList(CallMap &);
-  std::vector<ir::Expr> parseExprList(CallMap &);
-  ir::Expr parseExprListElement(CallMap &);
-  ir::Type parseType();
-  ir::Type parseElementType();
-  ir::Type parseSetType();
-  std::vector<ir::Expr> parseEndpoints();
-  ir::Type parseTupleType();
-  ir::Type parseTensorType();
-  ir::Type parseTensorTypeStart();
-  std::vector<ir::IndexSet> parseIndexSets();
-  ir::IndexSet parseIndexSet();
-  ir::Expr parseTensorLiteral();
-  ir::Expr parseSignedNumLiteral();
-  TensorValues parseDenseTensorLiteral();
-  TensorValues parseDenseTensorLiteralInner();
-  TensorValues parseDenseMatrixLiteral();
-  TensorValues parseDenseVectorLiteral();
-  TensorValues parseDenseIntVectorLiteral();
-  TensorValues parseDenseFloatVectorLiteral();
+  hir::Program::Ptr parseProgram();
+  hir::HIRNode::Ptr parseProgramElement();
+  hir::ElementTypeDecl::Ptr parseElementTypeDecl();
+  std::vector<hir::Field::Ptr> parseFieldDeclList();
+  hir::Field::Ptr parseFieldDecl();
+  hir::ExternDecl::Ptr parseExternDecl();
+  hir::FuncDecl::Ptr parseFunction();
+  hir::ProcDecl::Ptr parseProcedure();
+  std::vector<hir::Argument::Ptr> parseArguments();
+  hir::Argument::Ptr parseArgumentDecl();
+  std::vector<hir::IdentDecl::Ptr> parseResults();
+  hir::StmtBlock::Ptr parseStmtBlock();
+  hir::Stmt::Ptr parseStmt();
+  hir::VarDecl::Ptr parseVarDecl();
+  hir::ConstDecl::Ptr parseConstDecl();
+  hir::IdentDecl::Ptr parseIdentDecl();
+  hir::WhileStmt::Ptr parseWhileStmt();
+  hir::DoWhileStmt::Ptr parseDoWhileStmt();
+  hir::IfStmt::Ptr parseIfStmt();
+  hir::Stmt::Ptr parseElseClause();
+  hir::ForStmt::Ptr parseForStmt();
+  hir::ForDomain::Ptr parseForDomain();
+  hir::PrintStmt::Ptr parsePrintStmt();
+  hir::ExprStmt::Ptr parseExprOrAssignStmt();
+  hir::Expr::Ptr parseExpr();
+  hir::Expr::Ptr parseMapExpr();
+  hir::Expr::Ptr parseOrExpr();
+  hir::Expr::Ptr parseAndExpr();
+  hir::Expr::Ptr parseXorExpr();
+  hir::Expr::Ptr parseEqExpr();
+  hir::Expr::Ptr parseTerm();
+  hir::Expr::Ptr parseSolveExpr();
+  hir::Expr::Ptr parseAddExpr();
+  hir::Expr::Ptr parseMulExpr();
+  hir::Expr::Ptr parseNegExpr();
+  hir::Expr::Ptr parseExpExpr();
+  hir::Expr::Ptr parseTransposeExpr();
+  hir::Expr::Ptr parseCallOrReadExpr();
+  hir::Expr::Ptr parseFactor();
+  std::vector<hir::ReadParam::Ptr> parseReadParams();
+  hir::ReadParam::Ptr parseReadParam();
+  std::vector<hir::Expr::Ptr> parseCallParams();
+  hir::Type::Ptr parseType();
+  hir::ElementType::Ptr parseElementType();
+  hir::SetType::Ptr parseSetType();
+  std::vector<hir::Endpoint::Ptr> parseEndpoints();
+  hir::TupleType::Ptr parseTupleType();
+  hir::TensorType::Ptr parseTensorType();
+  std::vector<hir::IndexSet::Ptr> parseIndexSets();
+  hir::IndexSet::Ptr parseIndexSet();
+  hir::Expr::Ptr parseTensorLiteral();
+  hir::TensorLiteral::Ptr parseSignedNumLiteral();
+  hir::DenseTensorLiteral::Ptr parseDenseTensorLiteral();
+  hir::DenseTensorLiteral::Ptr parseDenseTensorLiteralInner();
+  hir::DenseTensorLiteral::Ptr parseDenseMatrixLiteral();
+  hir::DenseTensorLiteral::Ptr parseDenseVectorLiteral();
+  hir::DenseIntVectorLiteral::Ptr parseDenseIntVectorLiteral();
+  hir::DenseFloatVectorLiteral::Ptr parseDenseFloatVectorLiteral();
   int parseSignedIntLiteral();
   double parseSignedFloatLiteral();
-  void parseTest();
+  hir::Test::Ptr parseTest();
   //void parseSystemGenerator();
   //void parseExternAssert();
 
-  void checkValidSubexpr(const ir::Expr, const CallMap &);
-  void checkValidReadExpr(const ir::Expr);
-  void checkValidWriteExpr(const ir::Expr);
-  void emitAssign(const std::vector<ir::Expr> &, ir::Expr, const CallMap &);
-  std::vector<ir::Stmt> liftCallsAndMaps(const CallMap &, 
-                                         const ir::Expr = ir::Expr());
+  inline void reportError(const Token token, const std::string msg) {
+    const unsigned lineNum = token.lineNum;
+    const unsigned colNum = token.colNum;
+    errors->push_back(ParseError(lineNum, colNum, lineNum, colNum, msg));
+  }
 
-  inline Token consume(TokenType type) { 
-    Token token = peek();
-    if (!tokens.consume(type)) {
-      throw ParseException();
+  inline void skipTo(std::vector<TokenType> types) {
+    while (peek().type != TokenType::END) {
+      bool inTypes = false;
+
+      for (auto &type : types) {
+        if (peek().type == type) {
+          inTypes = true;
+          break;
+        }
+      }
+
+      if (!inTypes) {
+        tokens.skip();
+      } else {
+        break;
+      }
     }
+  }
+  inline const Token consume(TokenType type) { 
+    const Token token = peek();
+    
+    //std::cout << token << " " << Token(type,0,0) << std::endl;
+    if (!tokens.consume(type)) {
+      reportError(token, "unexpected token");
+      throw SyntaxError();
+    }
+
     return token;
   }
-  inline Token peek(unsigned int k = 0) { return tokens.peek(k); }
+  inline bool tryconsume(TokenType type) { return tokens.consume(type); }
+  inline Token peek(unsigned k = 0) { return tokens.peek(k); }
 
-  TokenList tokens;
-  ProgramContext *ctx;
+  TokenStream tokens;
   std::vector<ParseError> *errors;
 };
 

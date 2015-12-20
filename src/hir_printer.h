@@ -21,14 +21,12 @@ public:
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
   virtual void visit(SetType::Ptr);
-  virtual void visit(TupleLength::Ptr);
   virtual void visit(TupleType::Ptr);
-  virtual void visit(ScalarType::Ptr);
-  virtual void visit(NDTensorType::Ptr);
-  virtual void visit(Identifier::Ptr);
-  virtual void visit(IdentDecl::Ptr);
+  virtual void visit(ScalarTensorType::Ptr);
+  virtual void visit(NonScalarTensorType::Ptr);
   virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
+  virtual void visit(IdentDecl::Ptr);
   virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
@@ -63,15 +61,14 @@ public:
   virtual void visit(TransposeExpr::Ptr);
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
-  virtual void visit(TupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(VarExpr::Ptr);
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
-  virtual void visit(IntVectorLiteral::Ptr);
-  virtual void visit(FloatVectorLiteral::Ptr);
-  virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(DenseIntVectorLiteral::Ptr);
+  virtual void visit(DenseFloatVectorLiteral::Ptr);
+  virtual void visit(DenseNDTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
 private:
