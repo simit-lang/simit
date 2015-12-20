@@ -1,142 +1,148 @@
+#include <memory>
+
 #include "parser.h"
 #include "scanner.h"
+#include "hir.h"
 
 namespace simit { 
 namespace internal {
 
-using namespace simit::ir;
-
-void ParserNew::parse(const TokenList &tokens, ProgramContext *ctx, 
-                      std::vector<ParseError> *errors) {
+hir::Program::Ptr ParserNew::parse(const TokenStream &tokens, 
+                                 std::vector<ParseError> *errors) {
   this->tokens = tokens;
-  this->ctx = ctx;
   this->errors = errors;
+  return parseProgram();
+}
+
+hir::Program::Ptr ParserNew::parseProgram() {
+  auto program = std::make_shared<hir::Program>();
   
-  parseProgram();
-}
-
-void ParserNew::parseProgram() {
   while (peek().type != TokenType::END) {
-    parseProgramElement();
+    const hir::HIRNode::Ptr element = parseProgramElement();
+    if (element) {
+      program->elems.push_back(element);
+    }
+  }
+  
+  return program;
+}
+
+hir::HIRNode::Ptr ParserNew::parseProgramElement() {
+  try {
+    switch (peek().type) {
+      case TokenType::TEST:
+        return parseTest();
+        break;
+      case TokenType::FUNC:
+        return parseFunction();
+        break;
+      case TokenType::PROC:
+        return parseProcedure();
+        break;
+      case TokenType::ELEMENT:
+        return parseElementTypeDecl();
+        break;
+      case TokenType::EXTERN:
+        return parseExternDecl();
+        break;
+      case TokenType::CONST:
+        return parseConstDecl();
+        break;
+      default:
+        reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+        throw SyntaxError();
+        break;
+    }
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::TEST, TokenType::FUNC, TokenType::PROC, 
+            TokenType::ELEMENT, TokenType::EXTERN, TokenType::CONST});
+    return hir::HIRNode::Ptr();
   }
 }
 
-void ParserNew::parseProgramElement() {
-  switch (peek().type) {
-    case TokenType::TEST:
-      parseTest();
-      break;
-    case TokenType::FUNC:
-      parseFunction();
-      break;
-    case TokenType::PROC:
-      parseProcedure();
-      break;
-    case TokenType::ELEMENT:
-      parseElementTypeDecl();
-      break;
-    case TokenType::EXTERN:
-      parseExternDecl();
-      break;
-    case TokenType::CONST:
-      parseConstDecl();
-      break;
-    default:
-      throw ParseException();
-      break;
-  }
-}
-
-void ParserNew::parseElementTypeDecl() {
+hir::ElementTypeDecl::Ptr ParserNew::parseElementTypeDecl() {
+  auto elemTypeDecl = std::make_shared<hir::ElementTypeDecl>();
+  
   consume(TokenType::ELEMENT);
   
-  const Token elementToken = consume(TokenType::IDENT);
-  const std::string name = elementToken.str;
-
-  std::vector<Field> fields = parseFieldDeclList();
+  const Token nameToken = consume(TokenType::IDENT);
+  elemTypeDecl->setLoc(nameToken);
+  elemTypeDecl->ident = nameToken.str;
+  
+  elemTypeDecl->fields = parseFieldDeclList();
 
   consume(TokenType::BLOCKEND);
   
-  if (ctx->containsElementType(name)) {
-    // TODO: raise error
-    //REPORT_ERROR("struct redefinition (" + name + ")", @element_type_decl);
-  }
-
-  ctx->addElementType(ElementType::make(name, fields));
+  return elemTypeDecl;
 }
 
-std::vector<Field> ParserNew::parseFieldDeclList() {
-  std::vector<Field> fields;
+std::vector<hir::Field::Ptr> ParserNew::parseFieldDeclList() {
+  std::vector<hir::Field::Ptr> fields;
 
   while (peek().type == TokenType::IDENT) {
-    const Field field = parseFieldDecl();
+    const hir::Field::Ptr field = parseFieldDecl();
     fields.push_back(field);
   }
 
   return fields;
 }
 
-Field ParserNew::parseFieldDecl() {
+hir::Field::Ptr ParserNew::parseFieldDecl() {
+  auto fieldDecl = std::make_shared<hir::Field>();
+
   const Token fieldToken = consume(TokenType::IDENT);
-  const std::string name = fieldToken.str;
+  fieldDecl->setLoc(fieldToken);
+  fieldDecl->name = fieldToken.str;
   
   consume(TokenType::COL);
   
-  const Type type = parseTensorType();
+  fieldDecl->type = parseTensorType();
   
   consume(TokenType::SEMICOL);
 
-  return Field(name, type);
+  return fieldDecl;
 }
 
-void ParserNew::parseExternDecl() {
+hir::ExternDecl::Ptr ParserNew::parseExternDecl() {
+  auto externDecl = std::make_shared<hir::ExternDecl>();
+
   consume(TokenType::EXTERN);
   
-  const Argument externVar = parseArgumentDecl();
+  externDecl->var = parseArgumentDecl();
+  externDecl->setLoc(externDecl->var);
   
   consume(TokenType::SEMICOL);
-  
-  ctx->addExtern(externVar.var);
-  ctx->addSymbol(externVar.var);
+ 
+  return externDecl;
 }
 
-void ParserNew::parseFunction() {
+hir::FuncDecl::Ptr ParserNew::parseFunction() {
+  auto funcDecl = std::make_shared<hir::FuncDecl>();
+
   consume(TokenType::FUNC);
 
-  const Token identToken = consume(TokenType::IDENT);
-  const std::string name = identToken.str;
- 
-  ctx->scope();
-  const Func header = parseArgsAndResults();
-  const Stmt body = parseStmtBlock();
-  ctx->unscope();
+  const Token nameToken = consume(TokenType::IDENT);
+  funcDecl->setLoc(nameToken);
+  funcDecl->name = nameToken.str;
+
+  funcDecl->args = parseArguments();
+  funcDecl->results = parseResults();
+  funcDecl->body = parseStmtBlock();
   
   consume(TokenType::BLOCKEND);
 
-  if (ctx->containsFunction(name)) {
-    // TODO: raise error
-    //  REPORT_ERROR("function redefinition (" + name + ")", @function);
-  }
-
-  const Func newFunc = Func(name, header.getArguments(), 
-                                    header.getResults(), body);
-  ctx->addFunction(newFunc);
+  return funcDecl;
 }
 
-void ParserNew::parseProcedure() {
+hir::ProcDecl::Ptr ParserNew::parseProcedure() {
+  auto procDecl = std::make_shared<hir::ProcDecl>();
+
   consume(TokenType::PROC);
 
-  const Token identToken = consume(TokenType::IDENT);
-  const std::string name = identToken.str;
-  if (ctx->containsFunction(name)) {
-    // TODO: raise error
-    //  REPORT_ERROR("function redefinition (" + name + ")", @function);
-  }
+  const Token nameToken = consume(TokenType::IDENT);
+  procDecl->setLoc(nameToken);
+  procDecl->name = nameToken.str;
 
-  std::vector<Var> arguments;
-  std::vector<Var> results;
-
-  ctx->scope();
   if (peek().type == TokenType::LP) {
     switch (peek(1).type) {
       case TokenType::IDENT:
@@ -144,64 +150,31 @@ void ParserNew::parseProcedure() {
           break;
         }
       case TokenType::INOUT:
-      {
-        const Func header = parseArgsAndResults();
-        arguments = header.getArguments();
-        results = header.getResults();
+        procDecl->args = parseArguments();
+        procDecl->results = parseResults();
         break;
-      }
       default:
         break;
     }
   }
 
-  const Stmt body = parseStmtBlock();
-  ctx->unscope();
-
-  consume(TokenType::BLOCKEND);
-    
-  for (auto &extPair : ctx->getExterns()) {
-    Var ext = ctx->getExtern(extPair.first);
-    arguments.push_back(ext);
-  }
-
-  const Func newProc = Func(name, arguments, results, body);
-  ctx->addFunction(newProc);
-}
-
-Func ParserNew::parseArgsAndResults() {
-  const std::vector<Argument> arguments = parseArguments();
-  std::vector<Var> args;
-  for (const Argument &arg : arguments) {
-    const Var var = arg.var;
-    auto access = arg.isInout ? Symbol::ReadWrite : Symbol::Read;
-    ctx->addSymbol(var.getName(), var, access);
-    args.push_back(var);
-  }
+  procDecl->body = parseStmtBlock();
   
-  const std::vector<Var> results = parseResults();
-  for (const Var &res : results) {
-    ctx->addSymbol(res.getName(), res, Symbol::ReadWrite);
-  }
-    
-  return Func("", args, results, Stmt());
+  consume(TokenType::BLOCKEND);
+
+  return procDecl;
 }
 
-std::vector<ParserNew::Argument> ParserNew::parseArguments() {
-  std::vector<Argument> arguments;
+std::vector<hir::Argument::Ptr> ParserNew::parseArguments() {
+  std::vector<hir::Argument::Ptr> arguments;
   
   consume(TokenType::LP);
 
   if (peek().type != TokenType::RP) {
-    const Argument argument = parseArgumentDecl();
-    arguments.push_back(argument);
-    
-    while (peek().type == TokenType::COMMA) {
-      consume(TokenType::COMMA);
-  
-      const Argument argument = parseArgumentDecl();
+    do {
+      const hir::Argument::Ptr argument = parseArgumentDecl();
       arguments.push_back(argument);
-    }
+    } while (tryconsume(TokenType::COMMA));
   }
 
   consume(TokenType::RP);
@@ -209,34 +182,34 @@ std::vector<ParserNew::Argument> ParserNew::parseArguments() {
   return arguments;
 }
 
-ParserNew::Argument ParserNew::parseArgumentDecl() {
-  bool isInout = false;
+hir::Argument::Ptr ParserNew::parseArgumentDecl() {
+  auto argDecl = std::make_shared<hir::Argument>();
+  argDecl->inout = false;
 
   if (peek().type == TokenType::INOUT) {
     consume(TokenType::INOUT);
-    isInout = true;
+    argDecl->inout = true;
   }
 
-  Var var = parseIdentDecl();
-  return Argument(var, isInout); 
+  const hir::IdentDecl::Ptr var = parseIdentDecl();
+  argDecl->setLoc(var);
+  argDecl->ident = var->ident;
+  argDecl->type = var->type;
+  
+  return argDecl;
 }
 
-std::vector<Var> ParserNew::parseResults() {
-  std::vector<Var> results;
+std::vector<hir::IdentDecl::Ptr> ParserNew::parseResults() {
+  std::vector<hir::IdentDecl::Ptr> results;
 
   if (peek().type == TokenType::RARROW) {
     consume(TokenType::RARROW);
     consume(TokenType::LP);
     
-    const Var result = parseIdentDecl();
-    results.push_back(result);
-
-    while (peek().type == TokenType::COMMA) {
-      consume(TokenType::COMMA);
-      
-      const Var result = parseIdentDecl();
+    do {
+      const hir::IdentDecl::Ptr result = parseIdentDecl();
       results.push_back(result);
-    }
+    } while (tryconsume(TokenType::COMMA));
 
     consume(TokenType::RP);
   }
@@ -244,283 +217,210 @@ std::vector<Var> ParserNew::parseResults() {
   return results;
 }
 
-Stmt ParserNew::parseStmtBlock() {
+hir::StmtBlock::Ptr ParserNew::parseStmtBlock() {
+  auto stmtBlock = std::make_shared<hir::StmtBlock>();
+  stmtBlock->setLoc(peek());
+
   while (true) {
     switch (peek().type) {
       case TokenType::BLOCKEND:
-      case TokenType::UNTIL:
       case TokenType::ELIF:
       case TokenType::ELSE:
       case TokenType::END:
-      {
-        const std::vector<Stmt> *stmts = ctx->getStatements();
-        const Stmt stmtBlock = (stmts->size() == 0) ? Pass::make() : 
-                                   Block::make(*stmts);
         return stmtBlock;
-      }
       default:
-        parseStmt();
+      {
+        const hir::Stmt::Ptr stmt = parseStmt();
+        if (stmt) {
+          stmtBlock->stmts.push_back(stmt);
+        }
         break;
+      }
     }
   }
 }
 
-void ParserNew::parseStmt() {
+hir::Stmt::Ptr ParserNew::parseStmt() {
   switch (peek().type) {
     case TokenType::VAR:
-      parseVarDecl();
-      break;
+      return parseVarDecl();
     case TokenType::CONST:
-      parseConstDecl();
-      break;
+      return parseConstDecl();
     case TokenType::IF:
-      parseIfStmt();
-      break;
+      return parseIfStmt();
     case TokenType::WHILE:
-      parseWhileStmt();
-      break;
+      return parseWhileStmt();
     case TokenType::DO:
-      parseDoUntilStmt();
-      break;
+      return parseDoWhileStmt();
     case TokenType::FOR:
-      parseForStmt();
-      break;
+      return parseForStmt();
     case TokenType::PRINT:
-      parsePrintStmt();
-      break;
+      return parsePrintStmt();
     default:
-      parseExprOrAssignStmt();
-      break;
+      return parseExprOrAssignStmt();
   }
 }
 
-void ParserNew::parseVarDecl() {
-  consume(TokenType::VAR);
-  
-  const Var var = parseIdentDecl();
-
-  CallMap calls;
-  Expr initVal;
-  if (peek().type == TokenType::ASSIGN) {
-    consume(TokenType::ASSIGN);
+hir::VarDecl::Ptr ParserNew::parseVarDecl() {
+  try {
+    consume(TokenType::VAR);
     
-    initVal = parseExpr(calls);
-  }
+    auto varDecl = std::make_shared<hir::VarDecl>();
+    varDecl->var = parseIdentDecl();
+  
+    if (peek().type == TokenType::ASSIGN) {
+      consume(TokenType::ASSIGN);
+      varDecl->initVal = parseExpr();
+    }
+  
+    consume(TokenType::SEMICOL);
 
-  consume(TokenType::SEMICOL);
-
-  if (ctx->hasSymbol(var.getName())) {
-    // TODO: raise error
-    //REPORT_ERROR("variable redeclaration", @var_decl);
-  }
-
-  ctx->addSymbol(var.getName(), var, Symbol::ReadWrite);
-  ctx->addStatement(VarDecl::make(var));
-
-  if (initVal.defined()) {
-    emitAssign({VarExpr::make(var)}, initVal, calls);
+    return varDecl;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::SEMICOL});
+    return hir::VarDecl::Ptr();
   }
 }
 
-void ParserNew::parseConstDecl() {
-  consume(TokenType::CONST);
+hir::ConstDecl::Ptr ParserNew::parseConstDecl() {
+  try {
+    consume(TokenType::CONST);
+    
+    auto constDecl = std::make_shared<hir::ConstDecl>();
+    constDecl->var = parseIdentDecl();
+  
+    consume(TokenType::ASSIGN);
+    constDecl->initVal = parseExpr();
+  
+    consume(TokenType::SEMICOL);
 
-  const Var var = parseIdentDecl();
-  
-  consume(TokenType::ASSIGN);
-  
-  // TODO: support initialization of constants at runtime?
-  const Expr literalExpr = parseTensorLiteral();
-  
-  consume(TokenType::SEMICOL);
-
-  if (ctx->hasSymbol(var.getName())) {
-    // TODO: raise error?
-    //REPORT_ERROR("variable redeclaration", @var_decl);
+    return constDecl;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::SEMICOL});
+    return hir::ConstDecl::Ptr();
   }
-
-  const Type type = var.getType();
-  const auto *tensorType = type.toTensor();
-
-  // TODO: raise error?
-  //iassert(literalExpr.type().isTensor())
-  //    << "Only tensor literals are currently supported";
-  auto litType = literalExpr.type();
-
-  // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
-  // cast $tensor_literal to a 1xn matrix.
-  const auto *litTensorType = litType.toTensor();
-  if (tensorType->order() == 2 && litTensorType->order() == 1) {
-    const_cast<Literal*>(to<Literal>(literalExpr))->cast(type);
-  }
-
-  // TODO: check type equality
-  // Typecheck: value and literal types must be equivalent.
-  //CHECK_TYPE_EQUALITY(type, literalExpr.type(), @2);
-
-  ctx->addConstant(var, literalExpr);
-  ctx->addSymbol(var);
 }
 
-Var ParserNew::parseIdentDecl() {
-  const Token varToken = consume(TokenType::IDENT);
-  const std::string name = varToken.str;
+hir::IdentDecl::Ptr ParserNew::parseIdentDecl() {
+  auto identDecl = std::make_shared<hir::IdentDecl>();
+
+  const Token identToken = consume(TokenType::IDENT);
+  identDecl->setLoc(identToken);
+  identDecl->ident = identToken.str;
 
   consume(TokenType::COL);
   
-  const Type type = parseType();
-  return Var(name, type);
+  identDecl->type = parseType();
+  
+  return identDecl;
 }
 
-void ParserNew::parseWhileStmt() {
-  consume(TokenType::WHILE);
-  
-  CallMap calls;
-  const Expr cond = parseExpr(calls);
-  
-  ctx->scope();
-  const Stmt body = parseStmtBlock();
-  ctx->unscope();
+hir::WhileStmt::Ptr ParserNew::parseWhileStmt() {
+  try {
+    consume(TokenType::WHILE);
+    
+    auto whileStmt = std::make_shared<hir::WhileStmt>();
+    whileStmt->cond = parseExpr();
+    whileStmt->body = parseStmtBlock();
 
-  consume(TokenType::BLOCKEND);
-  
-  checkValidSubexpr(cond, calls);
-  checkValidReadExpr(cond);
-  if (!isScalar(cond.type()) ||
-      !cond.type().toTensor()->componentType.isBoolean()) {
-    // TODO: raise error
-    //REPORT_ERROR("conditional expression is not boolean", @expr);
+    consume(TokenType::BLOCKEND);
+
+    return whileStmt;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::BLOCKEND});
+    return hir::WhileStmt::Ptr();
   }
-
-  const std::vector<Stmt> callStmts = liftCallsAndMaps(calls);
-  const Stmt updateCalls = callStmts.empty() ? Pass::make() : 
-                           Block::make(callStmts);
-  const Stmt newBody = Block::make(body, updateCalls);
-  ctx->addStatement(While::make(cond, newBody));
 }
 
-void ParserNew::parseDoUntilStmt() {
-  // TODO: implement
-  //consume(TokenType::DO);
-  //parseStmtBlock();
-  //consume(TokenType::UNTIL);
-  //parseExpr();
+hir::DoWhileStmt::Ptr ParserNew::parseDoWhileStmt() {
+  try {
+    consume(TokenType::DO);
+    
+    auto doWhileStmt = std::make_shared<hir::DoWhileStmt>();
+    doWhileStmt->body = parseStmtBlock();
+
+    consume(TokenType::BLOCKEND);
+    consume(TokenType::WHILE);
+
+    doWhileStmt->cond = parseExpr();
+
+    return doWhileStmt;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::BLOCKEND, TokenType::ELIF, TokenType::ELSE, 
+            TokenType::END, TokenType::VAR, TokenType::CONST, TokenType::IF,
+            TokenType::WHILE, TokenType::DO, TokenType::FOR, TokenType::PRINT});
+    return hir::DoWhileStmt::Ptr();
+  }
 }
 
-void ParserNew::parseIfStmt() {
-  consume(TokenType::IF);
+hir::IfStmt::Ptr ParserNew::parseIfStmt() {
+  try {
+    consume(TokenType::IF);
+    
+    auto ifStmt = std::make_shared<hir::IfStmt>();
+    ifStmt->cond = parseExpr();
+    ifStmt->ifBody = parseStmtBlock();
+    ifStmt->elseBody = parseElseClause();
 
-  CallMap calls;
-  const Expr cond = parseExpr(calls);
-  
-  ctx->scope();
-  const Stmt ifBody = parseStmtBlock();
-  ctx->unscope();
+    consume(TokenType::BLOCKEND);
 
-  const Stmt elseBody = parseElseClause();
-
-  consume(TokenType::BLOCKEND);
-  
-  checkValidSubexpr(cond, calls);
-  checkValidReadExpr(cond);
-
-  liftCallsAndMaps(calls);
-  ctx->addStatement(IfThenElse::make(cond, ifBody, elseBody));
+    return ifStmt;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::BLOCKEND});
+    return hir::IfStmt::Ptr();
+  }
 }
 
-Stmt ParserNew::parseElseClause() {
-  ir::Stmt elseClause = Pass::make();
+hir::Stmt::Ptr ParserNew::parseElseClause() {
+  try {
+    switch (peek().type) {
+      case TokenType::ELSE:
+        consume(TokenType::ELSE);
+        return parseStmtBlock();
+      case TokenType::ELIF:
+      {
+        consume(TokenType::ELIF);
+    
+        auto elifClause = std::make_shared<hir::IfStmt>();
+        elifClause->cond = parseExpr();
+        elifClause->ifBody = parseStmtBlock();
+        elifClause->elseBody = parseElseClause();
 
-  switch (peek().type) {
-    case TokenType::ELSE:
-    {
-      consume(TokenType::ELSE);
-      
-      ctx->scope();
-      elseClause = parseStmtBlock();
-      ctx->unscope();
-
-      break;
-    }
-    case TokenType::ELIF:
-    {
-      consume(TokenType::ELIF);
-      ctx->scope();
-
-      CallMap calls;
-      const Expr cond = parseExpr(calls);
-  
-      ctx->scope();
-      const Stmt ifBody = parseStmtBlock();
-      ctx->unscope();
-      
-      const Stmt elseBody = parseElseClause();
-
-      checkValidSubexpr(cond, calls);
-      checkValidReadExpr(cond);
-      if (!isScalar(cond.type()) ||
-          !cond.type().toTensor()->componentType.isBoolean()) {
-        // TODO: raise error
-        //  REPORT_ERROR("conditional expression is not boolean", @expr);
+        return elifClause;
       }
-
-      liftCallsAndMaps(calls);
-      ctx->addStatement(IfThenElse::make(cond, ifBody, elseBody));
-      const std::vector<Stmt> *stmts = ctx->getStatements();
-      elseClause = Block::make(*stmts);
-
-      ctx->unscope();
-      break;
+      default:
+        return hir::Stmt::Ptr();
     }
-    default:
-      break;
-  }
-
-  return elseClause;
-}
-
-void ParserNew::parseForStmt() {
-  consume(TokenType::FOR); 
-  ctx->scope();
-
-  const Token identToken = consume(TokenType::IDENT);
-  const std::string loopVarName = identToken.str;
-  const Var loopVar = Var(loopVarName, ir::Int);
-  
-  // If we need to write to loop variables, then that should be added as a
-  // separate loop structure (that can't be vectorized easily)
-  ctx->addSymbol(loopVarName, loopVar, Symbol::Read);
-
-  consume(TokenType::IN);
-
-  const ForDomain range = parseForStmtRange();
-  const Stmt body = parseStmtBlock();
-
-  ctx->unscope();
-  consume(TokenType::BLOCKEND);
-
-  switch (range.type) {
-    case ForDomain::Type::DOMAIN:
-    {
-      const Stmt forDomain = For::make(loopVar, range.domain, body);
-      ctx->addStatement(forDomain);
-      break;
-    }
-    case ForDomain::Type::RANGE:
-    {
-      const Stmt forRange = ForRange::make(loopVar, range.lower,
-                                           range.upper, body);
-      ctx->addStatement(forRange);
-      break;
-    }
-    default:
-      // iassert(false);
-      break;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::ELIF, TokenType::ELSE, TokenType::BLOCKEND});
+    return std::make_shared<hir::StmtBlock>();
   }
 }
 
-ParserNew::ForDomain ParserNew::parseForStmtRange() {
-  // index_set
+hir::ForStmt::Ptr ParserNew::parseForStmt() {
+  try {
+    consume(TokenType::FOR);
+
+    auto forStmt = std::make_shared<hir::ForStmt>();
+
+    const Token loopVarToken = consume(TokenType::IDENT);
+    forStmt->loopVarName = loopVarToken.str;
+
+    consume(TokenType::IN);
+
+    forStmt->domain = parseForDomain();
+    forStmt->body = parseStmtBlock();
+
+    consume(TokenType::BLOCKEND);
+
+    return forStmt;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::BLOCKEND});
+    return hir::ForStmt::Ptr();
+  }
+}
+
+hir::ForDomain::Ptr ParserNew::parseForDomain() {
   switch (peek().type) {
     case TokenType::INT_LITERAL:
     case TokenType::IDENT:
@@ -529,737 +429,368 @@ ParserNew::ForDomain ParserNew::parseForStmtRange() {
       }
     case TokenType::STAR:
     {
-      IndexSet domain = parseIndexSet();
-      if (domain.getKind() != IndexSet::Set) {
-        // TODO: raise error?
-      }
-
-      return ForDomain::make(domain);
+      auto indexSetDomain = std::make_shared<hir::IndexSetDomain>();
+      indexSetDomain->domain = parseIndexSet();
+      return indexSetDomain;
     }
     default:
       break;
   }
 
-  CallMap lowerCalls;
-  const Expr lower = parseExpr(lowerCalls);
+  auto rangeDomain = std::make_shared<hir::RangeDomain>();
+  rangeDomain->lower = parseExpr();
 
   consume(TokenType::COL);
 
-  CallMap upperCalls;
-  const Expr upper = parseExpr(upperCalls);
-  
-  // TODO: check range is valid?
-  checkValidSubexpr(lower, lowerCalls);
-  checkValidSubexpr(upper, upperCalls);
-  checkValidReadExpr(lower);
-  checkValidReadExpr(upper);
-
-  liftCallsAndMaps(lowerCalls);
-  liftCallsAndMaps(upperCalls);
-  
-  return ForDomain::make(lower, upper);
+  rangeDomain->upper = parseExpr();
+  return rangeDomain;
 }
 
-void ParserNew::parsePrintStmt() {
-  consume(TokenType::PRINT);
-  
-  CallMap calls;
-  const Expr expr = parseExpr(calls);
+hir::PrintStmt::Ptr ParserNew::parsePrintStmt() {
+  try {
+    consume(TokenType::PRINT);
+    
+    auto printStmt = std::make_shared<hir::PrintStmt>();
+    printStmt->expr = parseExpr();
 
-  checkValidSubexpr(expr, calls);
-  checkValidReadExpr(expr);
-
-  liftCallsAndMaps(calls);
-  const Stmt printStmt = Print::make(expr);
-  ctx->addStatement(printStmt);
+    return printStmt;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::SEMICOL});
+    return hir::PrintStmt::Ptr();
+  }
 }
 
-void ParserNew::parseExprOrAssignStmt() {
-  if (peek().type != TokenType::SEMICOL) {
-    CallMap calls;
-    std::vector<Expr> lhs;
+hir::ExprStmt::Ptr ParserNew::parseExprOrAssignStmt() {
+  try {
+    hir::ExprStmt::Ptr stmt;
 
-    Expr expr = parseExpr(calls);
-    switch (peek().type) {
-      case TokenType::COMMA:
-      case TokenType::ASSIGN:
-      {
-        lhs.push_back(expr);
-
-        while (peek().type == TokenType::COMMA) {
-          consume(TokenType::COMMA);
+    if (peek().type != TokenType::SEMICOL) {
+      hir::Expr::Ptr expr = parseExpr();
+      
+      switch (peek().type) {
+        case TokenType::COMMA:
+        case TokenType::ASSIGN:
+        {
+          auto assignStmt = std::make_shared<hir::AssignStmt>();
+          assignStmt->lhs.push_back(expr);
+  
+          while (peek().type == TokenType::COMMA) {
+            consume(TokenType::COMMA);
+  
+            expr = parseExpr();
+            assignStmt->lhs.push_back(expr);
+          }
+  
+          consume(TokenType::ASSIGN);
           
-          expr = parseExpr(calls);
-          lhs.push_back(expr);
+          assignStmt->expr = parseExpr();
+          stmt = assignStmt;
+          break;
         }
-
-        consume(TokenType::ASSIGN);
-        
-        //iassert(calls.empty());
-        expr = parseExpr(calls);
-        break;
+        default:
+          stmt = std::make_shared<hir::ExprStmt>();
+          stmt->expr = expr;
+          break;
       }
-      default:
-        break;
     }
+    
+    consume(TokenType::SEMICOL);
 
-    emitAssign(lhs, expr, calls);
+    return stmt;
+  } catch (const SyntaxError &) {
+    skipTo({TokenType::SEMICOL});
+    return hir::ExprStmt::Ptr();
   }
-
-  consume(TokenType::SEMICOL);
 }
 
-Expr ParserNew::parseExpr(CallMap &calls) {
-  if (peek().type == TokenType::MAP) {
-    return parseMapExpr(calls);
-  }
-
-  return parseOrExpr(calls);
+hir::Expr::Ptr ParserNew::parseExpr() {
+  return (peek().type == TokenType::MAP) ? parseMapExpr() : parseOrExpr();
 }
 
-Expr ParserNew::parseMapExpr(CallMap &calls) {
+hir::Expr::Ptr ParserNew::parseMapExpr() {
+  auto mapExpr = std::make_shared<hir::MapExpr>();
+  mapExpr->setLoc(peek());
+
   consume(TokenType::MAP);
   
   const Token funcToken = consume(TokenType::IDENT);
-  const std::string funcName = funcToken.str;
+  mapExpr->setFuncNameLoc(funcToken);
+  mapExpr->funcName = funcToken.str;
  
-  std::vector<Expr> partialActuals;
   if (peek().type == TokenType::LP) {
-    partialActuals = parseOptionalExprList(calls); 
+    mapExpr->partialActuals = parseCallParams();
   }
 
   consume(TokenType::TO);
   
   const Token targetToken = consume(TokenType::IDENT);
-  const std::string targetName = targetToken.str;
+  mapExpr->setTargetNameLoc(targetToken);
+  mapExpr->targetName = targetToken.str;
   
-  ReductionOperator reduction = ReductionOperator::Undefined;
   if (peek().type == TokenType::REDUCE) {
     consume(TokenType::REDUCE);
     consume(TokenType::PLUS);
 
-    reduction = ReductionOperator::Sum;
-  }
-    
-  if (!ctx->containsFunction(funcName)) {
-    // TODO: raise error
-    //REPORT_ERROR("undefined function '" + funcName + "'", @func);
-  }
-  const Func func = ctx->getFunction(funcName);
-  const std::vector<Var> results = func.getResults();
-
-  if (!ctx->hasSymbol(targetName)) {
-    // TODO: raise error
-    //REPORT_ERROR("undefined set '" + targetName + "'", @target);
-  }
-  const Expr target = ctx->getSymbol(targetName).getExpr();
-
-  if (!target.type().isSet()) {
-    // TODO: raise error
-    //REPORT_ERROR("maps can only be applied to sets", @target);
+    mapExpr->op = hir::MapExpr::ReductionOp::SUM;
+  } else {
+    mapExpr->op = hir::MapExpr::ReductionOp::NONE;
   }
 
-  // Get endpoints
-  std::vector<Expr> endpoints;
-  for (Expr *endpoint : target.type().toSet()->endpointSets) {
-    endpoints.push_back(*endpoint);
-  }
-
-  const size_t numFormals = func.getArguments().size();
-  const size_t numActuals = partialActuals.size() + 1 + 
-                            (endpoints.size() >0 ? 1 : 0);
-  if (!(numFormals == numActuals ||
-        (endpoints.size() > 0 && numFormals == numActuals - 1))) {
-    // TODO: raise error
-    //REPORT_ERROR("the number of actuals (" + to_string(numActuals) +
-    //             ") does not match the number of formals accepted by " +
-    //             func.getName() + " (" +
-    //             to_string(func.getArguments().size()) + ")", @1);
-  }
-
-  if (target.type().toSet()->elementType != 
-      func.getArguments()[partialActuals.size()].getType()){
-    // TODO: raise error
-    //REPORT_ERROR("the mapped set's element type is different from the mapped "
-    //             "function's target argument", @target);
-  }
-
-  // We assume the edge set is homogeneous for now
-  const Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : Expr();
-
-  const Type type = (results.size() == 1) ? 
-                        results[0].getType() : Type();
-  const Var tmp = ctx->getBuilder()->temporary(type);;
-  const CallMap::Entry callEntry = CallMap::Entry::make(func, partialActuals, 
-                                                        target, endpoint,
-                                                        reduction);
-  calls.add(tmp, callEntry);
-  return Expr(VarExpr::make(tmp)); 
+  return mapExpr;
 }
 
-Expr ParserNew::parseOrExpr(CallMap &calls) {
-  Expr expr = parseAndExpr(calls);
+hir::Expr::Ptr ParserNew::parseOrExpr() {
+  hir::Expr::Ptr expr = parseAndExpr(); 
 
   while (peek().type == TokenType::OR) {
     consume(TokenType::OR);
-    
-    const Expr rhs = parseAndExpr(calls);
 
-    checkValidSubexpr(expr, calls);
-    checkValidSubexpr(rhs, calls);
-    // TODO: undeclared var use probably needs to be checked here as well
-    // TODO: check operands are booleans
-
-    expr = Expr(Or::make(expr, rhs));
+    auto orExpr = std::make_shared<hir::OrExpr>();
+    orExpr->setLoc(expr);
+    orExpr->lhs = expr;
+    orExpr->rhs = parseAndExpr();
+    expr = orExpr;
   }
 
   return expr;
 }
 
-Expr ParserNew::parseAndExpr(CallMap &calls) {
-  Expr expr = parseXorExpr(calls);
+hir::Expr::Ptr ParserNew::parseAndExpr() {
+  hir::Expr::Ptr expr = parseXorExpr(); 
 
   while (peek().type == TokenType::AND) {
     consume(TokenType::AND);
-    
-    const Expr rhs = parseXorExpr(calls);
-    
-    checkValidSubexpr(expr, calls);
-    checkValidSubexpr(rhs, calls);
-    // TODO: undeclared var use probably needs to be checked here as well
-    // TODO: check operands are booleans
 
-    expr = Expr(And::make(expr, rhs));
+    auto andExpr = std::make_shared<hir::AndExpr>();
+    andExpr->setLoc(expr);
+    andExpr->lhs = expr;
+    andExpr->rhs = parseXorExpr();
+    expr = andExpr;
   }
 
   return expr;
 }
 
-Expr ParserNew::parseXorExpr(CallMap &calls) {
-  Expr expr = parseEqExpr(calls);
+hir::Expr::Ptr ParserNew::parseXorExpr() {
+  hir::Expr::Ptr expr = parseEqExpr(); 
 
   while (peek().type == TokenType::XOR) {
     consume(TokenType::XOR);
-    
-    const Expr rhs = parseEqExpr(calls);
-    
-    checkValidSubexpr(expr, calls);
-    checkValidSubexpr(rhs, calls);
-    // TODO: undeclared var use probably needs to be checked here as well
-    // TODO: check operands are booleans
 
-    expr = Expr(Xor::make(expr, rhs));
+    auto xorExpr = std::make_shared<hir::XorExpr>();
+    xorExpr->setLoc(expr);
+    xorExpr->lhs = expr;
+    xorExpr->rhs = parseEqExpr();
+    expr = xorExpr;
   }
 
   return expr;
 }
 
-Expr ParserNew::parseEqExpr(CallMap &calls) {
-  Expr expr = parseIneqExpr(calls);
+hir::Expr::Ptr ParserNew::parseEqExpr() {
+  auto expr = std::make_shared<hir::EqExpr>();
+  expr->setLoc(peek());
 
-  switch (peek().type) {
-    case TokenType::EQ:
-    {
-      consume(TokenType::EQ);
-      
-      const Expr rhs = parseIneqExpr(calls);
-    
-      checkValidSubexpr(expr, calls);
-      checkValidSubexpr(rhs, calls);
-      // TODO: undeclared var use probably needs to be checked here as well
-      // TODO: type equality needs to be checked here
-
-      expr = Expr(Eq::make(expr, rhs));
-      break;
-    }
-    case TokenType::NE:
-    {
-      consume(TokenType::NE);
-      
-      const Expr rhs = parseIneqExpr(calls);
-      
-      checkValidSubexpr(expr, calls);
-      checkValidSubexpr(rhs, calls);
-      // TODO: undeclared var use probably needs to be checked here as well
-      // TODO: type equality needs to be checked here
-
-      expr = Expr(Ne::make(expr, rhs));
-      break;
-    }
-    default:
-      break;
-  }
-
-  return expr;
-}
-
-Expr ParserNew::parseIneqExpr(CallMap &calls) {
-  Expr expr = parseBooleanFactor(calls);
-
-  switch (peek().type) {
-    case TokenType::RA:
-    {
-      consume(TokenType::RA);
-
-      const Expr rhs = parseBooleanFactor(calls);
-      
-      checkValidSubexpr(expr, calls);
-      checkValidSubexpr(rhs, calls);
-      // TODO: undeclared var use probably needs to be checked here as well
-      // TODO: type equality needs to be checked here
-
-      expr = Expr(Gt::make(expr, rhs));
-      break;
-    }
-    case TokenType::LA:
-    {
-      consume(TokenType::LA);
-      
-      const Expr rhs = parseBooleanFactor(calls);
-      
-      checkValidSubexpr(expr, calls);
-      checkValidSubexpr(rhs, calls);
-      // TODO: undeclared var use probably needs to be checked here as well
-      // TODO: type equality needs to be checked here
-
-      expr = Expr(Lt::make(expr, rhs));
-      break;
-    }
-    case TokenType::LE:
-    {
-      consume(TokenType::LE);
-      
-      const Expr rhs = parseBooleanFactor(calls);
-      
-      checkValidSubexpr(expr, calls);
-      checkValidSubexpr(rhs, calls);
-      // TODO: undeclared var use probably needs to be checked here as well
-      // TODO: type equality needs to be checked here
-
-      expr = Expr(Le::make(expr, rhs));
-      break;
-    }
-    case TokenType::GE:
-    {
-      consume(TokenType::GE);
-      
-      const Expr rhs = parseBooleanFactor(calls);
-      
-      checkValidSubexpr(expr, calls);
-      checkValidSubexpr(rhs, calls);
-      // TODO: undeclared var use probably needs to be checked here as well
-      // TODO: type equality needs to be checked here
-
-      expr = Expr(Ge::make(expr, rhs));
-      break;
-    }
-    default:
-      break;
-  }
-
-  return expr;
-}
-
-Expr ParserNew::parseBooleanFactor(CallMap &calls) {
-  if (peek().type == TokenType::NOT) {
-    consume(TokenType::NOT);
-    
-    const Expr expr = parseBooleanFactor(calls);
-
-    checkValidSubexpr(expr, calls);
-    // TODO: undeclared var use probably needs to be checked here as well
-    // TODO: check operand is boolean
-    
-    return Expr(Not::make(expr));
-  }
-
-  return parseSolveExpr(calls);
-}
-
-Expr ParserNew::parseSolveExpr(CallMap &calls) {
-  Expr expr = parseAddExpr(calls);
-
-  while (peek().type == TokenType::BACKSLASH) {
-    // TODO: raise unsupported error?
-    consume(TokenType::BACKSLASH);
-    parseAddExpr(calls);
-  }
-
-  return expr;
-}
-
-Expr ParserNew::parseAddExpr(CallMap &calls) {
-  Expr expr = parseMulExpr(calls);
+  const hir::Expr::Ptr operand = parseTerm();
+  expr->operands.push_back(operand);
 
   while (true) {
     switch (peek().type) {
-      case TokenType::PLUS:
-      {
-        consume(TokenType::PLUS);
-       
-        const Expr rhs = parseMulExpr(calls);
-      
-        checkValidSubexpr(expr, calls);
-        checkValidSubexpr(rhs, calls);
-        // TODO: undeclared var use probably needs to be checked here as well
-        //CHECK_IS_TENSOR(l, @1);
-        //CHECK_IS_TENSOR(r, @3);
-
-        expr = ctx->getBuilder()->binaryElwiseExpr(expr, IRBuilder::Add, rhs);
+      case TokenType::EQ:
+        consume(TokenType::EQ);
+        expr->ops.push_back(hir::EqExpr::Op::EQ);
         break;
-      }
-      case TokenType::MINUS:
-      {
-        consume(TokenType::MINUS);
-        
-        const Expr rhs = parseMulExpr(calls);
-      
-        checkValidSubexpr(expr, calls);
-        checkValidSubexpr(rhs, calls);
-        // TODO: undeclared var use probably needs to be checked here as well
-        //CHECK_IS_TENSOR(l, @1);
-        //CHECK_IS_TENSOR(r, @3);
-
-        expr = ctx->getBuilder()->binaryElwiseExpr(expr, IRBuilder::Sub, rhs);
+      case TokenType::NE:
+        consume(TokenType::NE);
+        expr->ops.push_back(hir::EqExpr::Op::NE);
         break;
-      }
+      case TokenType::RA:
+        consume(TokenType::RA);
+        expr->ops.push_back(hir::EqExpr::Op::GT);
+        break;
+      case TokenType::LA:
+        consume(TokenType::LA);
+        expr->ops.push_back(hir::EqExpr::Op::LT);
+        break;
+      case TokenType::GE:
+        consume(TokenType::GE);
+        expr->ops.push_back(hir::EqExpr::Op::GE);
+        break;
+      case TokenType::LE:
+        consume(TokenType::LE);
+        expr->ops.push_back(hir::EqExpr::Op::LE);
+        break;
       default:
-        return expr;
+        return (expr->operands.size() == 1) ? expr->operands[0] : expr;
     }
+   
+    const hir::Expr::Ptr operand = parseTerm();
+    expr->operands.push_back(operand);
   }
 }
 
-Expr ParserNew::parseMulExpr(CallMap &calls) {
-  Expr expr = parseNegExpr(calls);
-  IRBuilder *builder = ctx->getBuilder();
+hir::Expr::Ptr ParserNew::parseTerm() {
+  if (peek().type == TokenType::NOT) {
+    auto notExpr = std::make_shared<hir::NotExpr>();
+    notExpr->setLoc(peek());
+
+    consume(TokenType::NOT);
+   
+    notExpr->operand = parseTerm();
+    return notExpr;
+  }
+
+  return parseSolveExpr();
+}
+
+hir::Expr::Ptr ParserNew::parseSolveExpr() {
+  hir::Expr::Ptr expr = parseAddExpr();
+
+  //while (peek().type == TokenType::BACKSLASH) {
+    // TODO: raise unsupported error?
+  //  consume(TokenType::BACKSLASH);
+  //  parseAddExpr(calls);
+  //}
+
+  return expr;
+}
+
+hir::Expr::Ptr ParserNew::parseAddExpr() {
+  hir::Expr::Ptr expr = parseMulExpr();
 
   while (true) {
+    hir::BinaryExpr::Ptr addExpr;
+
+    switch (peek().type) {
+      case TokenType::PLUS:
+        consume(TokenType::PLUS);
+        addExpr = std::make_shared<hir::AddExpr>();
+        break;
+      case TokenType::MINUS:
+        consume(TokenType::MINUS);
+        addExpr = std::make_shared<hir::SubExpr>();
+        break;
+      default:
+        return expr;
+    }
+    
+    addExpr->setLoc(expr);
+    addExpr->lhs = expr;
+    addExpr->rhs = parseMulExpr();
+    expr = addExpr;
+  }
+}
+
+hir::Expr::Ptr ParserNew::parseMulExpr() {
+  hir::Expr::Ptr expr = parseNegExpr();
+
+  while (true) {
+    hir::BinaryExpr::Ptr mulExpr;
+
     switch (peek().type) {
       case TokenType::STAR:
-      {
         consume(TokenType::STAR);
-    
-        const Expr rhs = parseNegExpr(calls);
-        
-        checkValidSubexpr(expr, calls);
-        checkValidSubexpr(rhs, calls);
-        // TODO: undeclared var use probably needs to be checked here as well
-        //CHECK_IS_TENSOR(l, @1);
-        //CHECK_IS_TENSOR(r, @3);
-    
-        const auto ltype = expr.type().toTensor();
-        const auto rtype = rhs.type().toTensor();
-        const auto ldimensions = ltype->getDimensions();
-        const auto rdimensions = rtype->getDimensions();
-    
-        if (ltype->order() == 0 || rtype->order() == 0) {
-          // Scale
-          expr = builder->binaryElwiseExpr(expr, IRBuilder::Mul, rhs);
-        } else if (ltype->order() == 1 && rtype->order() == 1) {
-          // Vector-Vector Multiplication (inner and outer product)
-          if (!ltype->isColumnVector) {
-            // Inner product
-            if (!rtype->isColumnVector) {
-              // TODO: raise error
-              //REPORT_ERROR("cannot multiply two row vectors", @2);
-            } else if (expr.type() != rhs.type()) {
-              // TODO: raise error
-              //REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
-            }
-            
-            expr = builder->innerProduct(expr, rhs);
-          } else {
-            // Outer product (l is a column vector)
-            if (rtype->isColumnVector) {
-              // TODO: raise error
-              //REPORT_ERROR("cannot multiply two column vectors", @2);
-            } else if (expr.type() != rhs.type()) {
-              // TODO: raise error
-              //REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
-            }
-
-            expr = builder->outerProduct(expr, rhs);
-          }
-        } else if (ltype->order() == 2 && rtype->order() == 1) {
-          // Matrix-Vector
-          // TODO: Figure out how column vectors should be handled here
-          if (ldimensions[1] != rdimensions[0]){
-            // TODO: raise error
-            //REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
-          }
-
-          expr = builder->gemv(expr, rhs);
-        } else if (ltype->order() == 1 && rtype->order() == 2) {
-          // Vector-Matrix
-          // TODO: Figure out how column vectors should be handled here
-          if (ldimensions[0] != rdimensions[0]) {
-            // TODO: raise error
-            //REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
-          }
-
-          expr = builder->gevm(expr, rhs);
-        } else if (ltype->order() == 2 && rtype->order() == 2) {
-          // Matrix-Matrix
-          if (ldimensions[1] != rdimensions[0]){
-            // TODO: raise error
-            //REPORT_TYPE_MISSMATCH(l.type(), r.type(), @2);
-          }
-
-          expr = builder->gemm(expr, rhs);
-        } else {
-          // TODO: raise error
-          // REPORT_ERROR("cannot multiply >2-order tensors using *", @2);
-        }
-
+        mulExpr = std::make_shared<hir::MulExpr>();
         break;
-      }
       case TokenType::SLASH:
-      {
         consume(TokenType::SLASH);
-        
-        const Expr rhs = parseNegExpr(calls);
-      
-        checkValidSubexpr(expr, calls);
-        checkValidSubexpr(rhs, calls);
-        // TODO: undeclared var use probably needs to be checked here as well
-        //CHECK_IS_TENSOR(l, @1);
-        //CHECK_IS_TENSOR(r, @3);
-        const auto ltype = expr.type().toTensor();
-        const auto rtype = rhs.type().toTensor();
-        if (ltype->order() > 0 && rtype->order() > 0) {
-          // TODO: raise error
-        }
-
-        expr = builder->binaryElwiseExpr(expr, IRBuilder::Div, rhs);
+        mulExpr = std::make_shared<hir::DivExpr>();
         break;
-      }
       case TokenType::DOTSTAR:
-      {
         consume(TokenType::DOTSTAR);
-        
-        const Expr rhs = parseNegExpr(calls);
-      
-        checkValidSubexpr(expr, calls);
-        checkValidSubexpr(rhs, calls);
-        // TODO: undeclared var use probably needs to be checked here as well
-        //CHECK_IS_TENSOR(l, @1);
-        //CHECK_IS_TENSOR(r, @3);
-
-        expr = builder->binaryElwiseExpr(expr, IRBuilder::Mul, rhs);
+        mulExpr = std::make_shared<hir::ElwiseMulExpr>();
         break;
-      }
       case TokenType::DOTSLASH:
-      {
         consume(TokenType::DOTSLASH);
+        mulExpr = std::make_shared<hir::ElwiseDivExpr>();
+        break;
+      default:
+        return expr;
+    }
         
-        const Expr rhs = parseNegExpr(calls);
-      
-        checkValidSubexpr(expr, calls);
-        checkValidSubexpr(rhs, calls);
-        // TODO: undeclared var use probably needs to be checked here as well
-        //CHECK_IS_TENSOR(l, @1);
-        //CHECK_IS_TENSOR(r, @3);
-
-        expr = builder->binaryElwiseExpr(expr, IRBuilder::Div, rhs);
-        break;
-      }
-      default:
-        return expr;
-    }
+    mulExpr->setLoc(expr);
+    mulExpr->lhs = expr;
+    mulExpr->rhs = parseNegExpr();
+    expr = mulExpr;
   }
 }
 
-Expr ParserNew::parseNegExpr(CallMap &calls) {
-  bool neg = false;
-  bool checkType = false;
+hir::Expr::Ptr ParserNew::parseNegExpr() {
+  auto negExpr = std::make_shared<hir::NegExpr>();
+  negExpr->setLoc(peek());
 
-  while (true) {
-    switch (peek().type) {
-      case TokenType::MINUS:
-        consume(TokenType::MINUS);
-        neg = !neg;
-        checkType = true;
-        break;
-      case TokenType::PLUS:
-        consume(TokenType::PLUS);
-        checkType = true;
-        break;
-      default:
-      {
-        Expr expr = parseExpExpr(calls);
-
-        if (checkType) {
-          // TODO: CHECK_IS_TENSOR(expr, @2);
-        }
-
-        if (neg) {
-          expr = ctx->getBuilder()->unaryElwiseExpr(IRBuilder::Neg, expr);
-        }
-        return expr;
-      }
-    }
+  switch (peek().type) {
+    case TokenType::MINUS:
+      consume(TokenType::MINUS);
+      negExpr->negate = true;
+      break;
+    case TokenType::PLUS:
+      consume(TokenType::PLUS);
+      negExpr->negate = false;
+      break;
+    default:
+      return parseExpExpr();
   }
+
+  negExpr->operand = parseExpExpr();
+  return negExpr;
 }
 
-Expr ParserNew::parseExpExpr(CallMap &calls) {
-  Expr expr = parseTransposeExpr(calls);
+hir::Expr::Ptr ParserNew::parseExpExpr() {
+  hir::Expr::Ptr expr = parseTransposeExpr();
 
-  while (peek().type == TokenType::EXP) {
-    // TODO: raise unsupported exception?
+  if (peek().type == TokenType::EXP) {
     consume(TokenType::EXP);
-    parseExpExpr(calls);
+
+    auto expExpr = std::make_shared<hir::ExpExpr>();
+    expExpr->setLoc(expr);
+    expExpr->lhs = expr;
+    expExpr->rhs = parseExpExpr();
+    expr = expExpr;
   }
 
   return expr;
 }
 
-Expr ParserNew::parseTransposeExpr(CallMap &calls) {
-  IRBuilder *builder = ctx->getBuilder();
-  Expr expr = parseCallOrReadExpr(calls);
+hir::Expr::Ptr ParserNew::parseTransposeExpr() {
+  hir::Expr::Ptr expr = parseCallOrReadExpr();
 
   if (peek().type == TokenType::TRANSPOSE) {
     consume(TokenType::TRANSPOSE);
     
-    // TODO: CHECK_IS_TENSOR(expr, @2);
-    
-    const auto type = expr.type().toTensor();
-    switch (type->order()) {
-      case 0:
-        // OPT: This might lead to redundant code to be removed in later pass
-        expr = builder->unaryElwiseExpr(IRBuilder::None, expr);
-        break;
-      case 1:
-        // OPT: This might lead to redundant code to be removed in later pass
-        expr = builder->unaryElwiseExpr(IRBuilder::None, expr);
-        if (!type->isColumnVector) {
-          const Type transposedVector = ir::TensorType::make(
-            type->componentType, type->getDimensions(), !type->isColumnVector);
-          const_cast<ExprNodeBase*>(to<ExprNodeBase>(expr))->type = 
-            transposedVector;
-        }
-        break;
-      case 2:
-        expr = builder->transposedMatrix(expr);
-        break;
-      default:
-        // TODO: raise error
-        //REPORT_ERROR("cannot transpose >2-order tensors using '", @1);
-        break;
-    }
+    auto transposeExpr = std::make_shared<hir::TransposeExpr>();
+    transposeExpr->setLoc(expr);
+    transposeExpr->operand = expr;
+    expr = transposeExpr; 
   }
 
   return expr;
 }
 
-Expr ParserNew::parseCallOrReadExpr(CallMap &calls) {
-  Expr expr;
-  
-  if (peek().type == TokenType::IDENT && ctx->containsFunction(peek().str)) {
-    const Token funcToken = consume(TokenType::IDENT);
-    const Func func = ctx->getFunction(funcToken.str);
-    const std::vector<Var> results = func.getResults();
-
-    const std::vector<Expr> arguments = parseOptionalExprList(calls);
-
-    const Type type = (results.size() == 1) ? results[0].getType() : Type();
-    const Var tmp = ctx->getBuilder()->temporary(type);
-    const CallMap::Entry callEntry = CallMap::Entry::make(func, arguments);
-    calls.add(tmp, callEntry);
-    expr = Expr(VarExpr::make(tmp)); 
-  } else {
-    expr = parseFactor(calls);
-  }
+hir::Expr::Ptr ParserNew::parseCallOrReadExpr() {
+  hir::Expr::Ptr expr = parseFactor();
 
   while (true) {
     switch (peek().type) {
       case TokenType::LP:
       {
-        checkValidSubexpr(expr, calls);
-        
-        const std::vector<Expr> indices = parseOptionalExprList(calls);
-
-        // The parenthesis read can be a read from a tensor or a tuple.
-        if (expr.type().isTensor()) {
-          // check if we need to turn this into an index expression
-         
-          bool containsSlices = false;
-          for (auto arg : indices) {
-            if (isa<VarExpr>(arg) && 
-                to<VarExpr>(arg)->var.getName() == ":") {
-              containsSlices = true;
-            }
-          }
-
-          if (containsSlices) {
-            // We will construct an index expression.
-            // first, we build IndexVars
-            std::vector<IndexVar> allivars;
-            std::vector<IndexVar> freeVars;
-            std::vector<IndexDomain> dimensions =
-                expr.type().toTensor()->getDimensions();
-
-            unsigned int i = 0;
-            for (auto &arg : indices) {
-              if (isa<VarExpr>(arg) && 
-                  to<VarExpr>(arg)->var.getName() == ":") {
-                auto iv = IndexVar("tmpfree" + std::to_string(i),
-                                       dimensions[i]);
-                allivars.push_back(iv);
-                freeVars.push_back(iv);
-              } else {
-                auto iv = IndexVar("tmpfixed" + std::to_string(i),
-                                       dimensions[i], new Expr(arg));
-                allivars.push_back(iv);
-              }
-              ++i;
-            }
-
-            // now construct an index expression
-            expr = Expr(IndexExpr::make(freeVars,
-                    IndexedTensor::make(expr, allivars)));
-          } else {
-            expr = Expr(TensorRead::make(expr, indices));
-          }
-        } else if (expr.type().isTuple()) {
-          if (indices.size() != 1) {
-            // TODO: raise error
-            //REPORT_ERROR("reading a tuple requires exactly one index", @3);
-          }
-          expr = Expr(TupleRead::make(expr, indices[0]));
-        } else {
-          // TODO: raise error
-          //REPORT_ERROR("can only access components in tensors and tuples", @1);
-        }
+        auto tensorRead = std::make_shared<hir::TensorReadExpr>();
+        tensorRead->setLoc(expr);
+        tensorRead->tensor = expr;
+        tensorRead->indices = parseReadParams();
+        expr = tensorRead;
         break;
       }
       case TokenType::PERIOD:
       {
-        checkValidSubexpr(expr, calls);
-
-        const Type type = expr.type();
-        const ElementType *elemType = nullptr;
-        if (expr.type().isElement()) {
-          elemType = expr.type().toElement();
-        } else if (expr.type().isSet()) {
-          const SetType *setType = expr.type().toSet();
-          elemType = setType->elementType.toElement();
-        } else {
-          // TODO: raise error
-          //std::stringstream errorStr;
-          //errorStr << "only elements and sets have fields";
-          //REPORT_ERROR(errorStr.str(), @1);
-        }
-
         consume(TokenType::PERIOD);
         const Token fieldToken = consume(TokenType::IDENT);
-        const std::string fieldName = fieldToken.str;
-        if (!elemType->hasField(fieldName)) {
-          // TODO: raise error
-          //REPORT_ERROR("undefined field '" + toString(elemOrSet)+"."+fieldName+ "'",
-          //         @fieldName);
-        }
-
-        expr = Expr(FieldRead::make(expr, fieldName));
+        
+        auto fieldRead = std::make_shared<hir::FieldReadExpr>();
+        fieldRead->setLoc(fieldToken);
+        fieldRead->setOrElem = expr;
+        fieldRead->fieldName = fieldToken.str;
+        expr = fieldRead;
         break;
       }
       default:
@@ -1268,32 +799,27 @@ Expr ParserNew::parseCallOrReadExpr(CallMap &calls) {
   }
 }
 
-Expr ParserNew::parseFactor(CallMap &calls) {
-  Expr factor;
+hir::Expr::Ptr ParserNew::parseFactor() {
+  hir::Expr::Ptr factor;
 
   switch (peek().type) {
     case TokenType::LP:
-      consume(TokenType::LP);
-      factor = parseExpr(calls);
+    {
+      const Token leftParen = consume(TokenType::LP);
+      
+      factor = parseExpr();
+      factor->setLoc(leftParen);
+      
       consume(TokenType::RP);
       break;
+    }
     case TokenType::IDENT:
     {
       const Token identToken = consume(TokenType::IDENT);
-      const std::string ident = identToken.str;
-      
-      factor = ctx->hasSymbol(ident) ? 
-               Expr(ctx->getSymbol(ident).getExpr()) :
-               VarExpr::make(Var(ident, Type()));
-      // TODO: only check after expression has been fully compiled, at use
-      //if (!ctx->hasSymbol(ident)) {
-        // TODO: raise error
-        //REPORT_ERROR(ident + " is not defined in scope", @1);
-      //}
-      //if (!symbol.isReadable()) {
-        // TODO: raise error
-        //REPORT_ERROR(ident + " is not readable", @1);
-      //}
+      auto var = std::make_shared<hir::VarExpr>(); 
+      var->setLoc(identToken);
+      var->ident = identToken.str;
+      factor = var;
       break;
     }
     case TokenType::INT_LITERAL:
@@ -1305,58 +831,65 @@ Expr ParserNew::parseFactor(CallMap &calls) {
       factor = parseTensorLiteral();
       break;
     default:
-      throw ParseException();
+      reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+      throw SyntaxError();
       break;
   }
 
   return factor;
 }
 
-std::vector<Expr> ParserNew::parseOptionalExprList(CallMap &calls) {
-  if (peek(1).type == TokenType::RP) {
-    consume(TokenType::LP);
-    consume(TokenType::RP);
-    
-    return std::vector<Expr>();
-  }
+std::vector<hir::ReadParam::Ptr> ParserNew::parseReadParams() {
+  std::vector<hir::ReadParam::Ptr> readParams;
 
   consume(TokenType::LP);
 
-  const std::vector<Expr> exprs = parseExprList(calls);
+  if (peek().type != TokenType::RP) {
+    do {
+      const hir::ReadParam::Ptr param = parseReadParam();
+      readParams.push_back(param);
+    } while (tryconsume(TokenType::COMMA));
+  }
   
   consume(TokenType::RP);
-  
-  return exprs;
+
+  return readParams;
 }
 
-std::vector<Expr> ParserNew::parseExprList(CallMap &calls) {
-  std::vector<Expr> exprs;
-
-  const Expr expr = parseExprListElement(calls);
-  exprs.push_back(expr);
-
-  while (peek().type == TokenType::COMMA) {
-    consume(TokenType::COMMA);
-    
-    const Expr expr = parseExprListElement(calls);
-    exprs.push_back(expr);
-  }
-
-  return exprs;
-}
-
-Expr ParserNew::parseExprListElement(CallMap &calls) {
+hir::ReadParam::Ptr ParserNew::parseReadParam() {
   if (peek().type == TokenType::COL) {
-    consume(TokenType::COL);
-
-    return Expr(VarExpr::make(Var(":", Type())));
+    const Token colToken = consume(TokenType::COL);
+    auto slice = std::make_shared<hir::Slice>();
+    slice->setLoc(colToken);
+    return slice;
   }
 
-  return parseExpr(calls);
+  auto param = std::make_shared<hir::ExprParam>();
+  param->setLoc(peek());
+  param->expr = parseExpr();
+  
+  return param;
 }
 
-Type ParserNew::parseType() {
-  Type type;
+std::vector<hir::Expr::Ptr> ParserNew::parseCallParams() {
+  std::vector<hir::Expr::Ptr> callParams;
+
+  consume(TokenType::LP);
+
+  if (peek().type != TokenType::RP) {
+    do {
+      const hir::Expr::Ptr param = parseExpr();
+      callParams.push_back(param);
+    } while (tryconsume(TokenType::COMMA));
+  }
+  
+  consume(TokenType::RP);
+
+  return callParams;
+}
+
+hir::Type::Ptr ParserNew::parseType() {
+  hir::Type::Ptr type;
 
   switch (peek().type) {
     case TokenType::IDENT:
@@ -1376,241 +909,192 @@ Type ParserNew::parseType() {
       type = parseTensorType();
       break;
     default:
-      throw ParseException();
+      reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+      throw SyntaxError();
       break;
   }
 
   return type;
 }
 
-Type ParserNew::parseElementType() {
+hir::ElementType::Ptr ParserNew::parseElementType() {
+  auto elementType = std::make_shared<hir::ElementType>();
+
   const Token typeToken = consume(TokenType::IDENT);
-  const std::string name = typeToken.str;
+  elementType->setLoc(typeToken);
+  elementType->ident = typeToken.str;
 
-  if (!ctx->containsElementType(name)) {
-    // TODO: raise error
-    //REPORT_ERROR("undefined element type '" + name + "'" , @1);
-  }
-
-  return Type(ctx->getElementType(name));
+  return elementType;
 }
 
-Type ParserNew::parseSetType() {
+hir::SetType::Ptr ParserNew::parseSetType() {
+  auto setType = std::make_shared<hir::SetType>();
+  setType->setLoc(peek());
+
   consume(TokenType::SET);
   consume(TokenType::LC);
   
-  const Type elementType = parseElementType();
+  setType->element = parseElementType();
   
   consume(TokenType::RC);
 
-  std::vector<Expr> endpoints;
   if (peek().type == TokenType::LP) {
     consume(TokenType::LP);
-    
-    endpoints = parseEndpoints();
-    
+    setType->endpoints = parseEndpoints();
     consume(TokenType::RP);
   }
 
-  // TODO: Add endpoint information to set type
-  return Type(SetType::make(elementType, endpoints));
+  return setType;
 }
 
-std::vector<Expr> ParserNew::parseEndpoints() {
-  std::vector<Expr> endpoints;
+std::vector<hir::Endpoint::Ptr> ParserNew::parseEndpoints() {
+  std::vector<hir::Endpoint::Ptr> endpoints;
   
-  const Token endpointToken = consume(TokenType::IDENT);
-  const std::string name = endpointToken.str;
-  if (!ctx->hasSymbol(name)) {
-    // TODO: raise error
-    //REPORT_ERROR("undefined set type '" + name + "'" , @1);
-  }
-  endpoints.push_back(ctx->getSymbol(name).getExpr());
-
-  while (peek().type == TokenType::COMMA) {
-    consume(TokenType::COMMA);
-    
+  do {
     const Token endpointToken = consume(TokenType::IDENT);
-    const std::string name = endpointToken.str;
-    if (!ctx->hasSymbol(name)) {
-      // TODO: raise error
-      //REPORT_ERROR("undefined set type '" + name + "'" , @1);
-    }
-    endpoints.push_back(ctx->getSymbol(name).getExpr());
-  }
+    auto endpoint = std::make_shared<hir::Endpoint>();
+    endpoint->setLoc(endpointToken);
+    endpoint->setName = endpointToken.str;
+    endpoints.push_back(endpoint);
+  } while (tryconsume(TokenType::COMMA));
 
   return endpoints;
 }
 
-Type ParserNew::parseTupleType() {
+hir::TupleType::Ptr ParserNew::parseTupleType() {
+  auto tupleType = std::make_shared<hir::TupleType>();
+
   consume(TokenType::LP);
   
-  const Type elementType = parseElementType();
+  tupleType->element = parseElementType();
   
   consume(TokenType::STAR);
   
   const Token intToken = consume(TokenType::INT_LITERAL);
+  tupleType->setLoc(intToken);
+  tupleType->length = intToken.num;
   
   consume(TokenType::RP);
   
-  const int size = intToken.num;
-  if (size < 1) {
-    // TODO: raise error
-    //REPORT_ERROR("Must be 1 or greater", @3);
-  }
-
-  return Type(TupleType::make(elementType, size));
+  return tupleType;
 }
 
-Type ParserNew::parseTensorType() {
-  Type type = parseTensorTypeStart();
-
-  if (peek().type == TokenType::TRANSPOSE) {
-    consume(TokenType::TRANSPOSE);
-
-    const auto tensorType = type.toTensor();
-    const auto dimensions = tensorType->getDimensions();
-    const auto componentType = tensorType->componentType;
-    type = Type(ir::TensorType::make(componentType, dimensions, true));
+hir::TensorType::Ptr ParserNew::parseTensorType() {
+  hir::TensorType::Ptr tensorType;
+  
+  if (peek().type == TokenType::TENSOR) {
+    tensorType = std::make_shared<hir::NonScalarTensorType>();
+  } else {
+    tensorType = std::make_shared<hir::ScalarTensorType>();
   }
-
-  return type;
-}
-
-Type ParserNew::parseTensorTypeStart() {
-  ScalarType componentType;
+  tensorType->setLoc(peek());
 
   switch (peek().type) {
     case TokenType::INT:
       consume(TokenType::INT);
-      componentType = ScalarType(ScalarType::Int);
+      hir::to<hir::ScalarTensorType>(tensorType)->type = 
+        hir::ScalarTensorType::Type::INT;
       break;
     case TokenType::FLOAT:
       consume(TokenType::FLOAT);
-      componentType = ScalarType(ScalarType::Float);
+      hir::to<hir::ScalarTensorType>(tensorType)->type = 
+        hir::ScalarTensorType::Type::FLOAT;
       break;
     case TokenType::BOOL:
       consume(TokenType::BOOL);
-      componentType = ScalarType(ScalarType::Boolean);
+      hir::to<hir::ScalarTensorType>(tensorType)->type = 
+        hir::ScalarTensorType::Type::BOOL;
       break;
-    case TokenType::STRING:
-      consume(TokenType::STRING);
-      // TODO: raise error?
-      return Type();
+    //case TokenType::STRING:
+    //  consume(TokenType::STRING);
+    //  // TODO: raise error?
+    //  return Type();
     case TokenType::TENSOR:
     {
+      const auto nonScalarTensorType = 
+        hir::to<hir::NonScalarTensorType>(tensorType);
+      
       consume(TokenType::TENSOR);
       
-      std::vector<IndexSet> indexSets;
       if (peek().type == TokenType::LB) {
         consume(TokenType::LB);
-        indexSets = parseIndexSets();
+        nonScalarTensorType->indexSets = parseIndexSets();
         consume(TokenType::RB);
       }
 
       consume(TokenType::LP);
-      const Type blockType = parseTensorType();
+      nonScalarTensorType->blockType = parseTensorType();
       consume(TokenType::RP);
-
-      if (indexSets.empty()) {
-        return blockType;
+  
+      if (peek().type == TokenType::TRANSPOSE) {
+        consume(TokenType::TRANSPOSE);
+        nonScalarTensorType->transposed = true;
       } else {
-        const auto blockTensorType = blockType.toTensor();
-        const auto componentType = blockTensorType->componentType;
-        const auto blockDimensions = blockTensorType->getDimensions();
-    
-        std::vector<IndexDomain> dimensions;
-        if (blockTensorType->order() == 0) {
-          for (size_t i = 0; i< indexSets.size(); ++i) {
-            dimensions.push_back(IndexDomain(indexSets[i]));
-          }
-        } else {
-          // TODO: Handle the following cases where there there are more inner than
-          //       outer dimensions (e.g. a vector of matrixes) and where there are
-          //       more outer than inner dimensions (e.g. a matrix of vectors)
-          //       gracefully by padding with '1'-dimensions.
-          // TODO: Handle case where there are more block than outer dimensions
-          // TODO: Handle case where there are more outer than block dimensions
-          // TODO: Remove below error
-    //      if (blockType->order() != outerDimensions->size()) {
-    //        REPORT_ERROR("Blocktype order (" + to_string(blockType->order()) +
-    //                     ") differ from number of dimensions", @index_sets);
-    //      }
-    
-    //      iassert(blockDimensions.size() == outerDimensions->size());
-          for (size_t i = 0; i< indexSets.size(); ++i) {
-            std::vector<IndexSet> dimension;
-            dimension.push_back(indexSets[i]);
-            dimension.insert(dimension.end(),
-                             blockDimensions[i].getIndexSets().begin(),
-                             blockDimensions[i].getIndexSets().end());
-    
-            dimensions.push_back(IndexDomain(dimension));
-          }
-        }
-    
-        return Type(ir::TensorType::make(componentType, dimensions));
+        nonScalarTensorType->transposed = false;
       }
+
+      break;
     }
     default:
-      throw ParseException();
-      return Type();
+      reportError(peek(), "unexpected token"); // TODO: print symbol
+      throw SyntaxError();
+      break;
   }
 
-  return Type(ir::TensorType::make(componentType));
+  return tensorType;
 }
 
-std::vector<IndexSet> ParserNew::parseIndexSets() {
-  std::vector<IndexSet> indexSets;
+std::vector<hir::IndexSet::Ptr> ParserNew::parseIndexSets() {
+  std::vector<hir::IndexSet::Ptr> indexSets;
 
-  const IndexSet indexSet = parseIndexSet();
-  indexSets.push_back(indexSet);
-
-  while (peek().type == TokenType::COMMA) {
-    consume(TokenType::COMMA);
-    
-    const IndexSet indexSet = parseIndexSet();
+  do {
+    const hir::IndexSet::Ptr indexSet = parseIndexSet();
     indexSets.push_back(indexSet);
-  }
+  } while (tryconsume(TokenType::COMMA));
 
   return indexSets;
 }
 
-IndexSet ParserNew::parseIndexSet() {
+hir::IndexSet::Ptr ParserNew::parseIndexSet() {
+  hir::IndexSet::Ptr indexSet;
+
   switch (peek().type) {
     case TokenType::INT_LITERAL:
     {
       const Token intToken = consume(TokenType::INT_LITERAL);
-      return IndexSet(intToken.num);
+      auto rangeIndexSet = std::make_shared<hir::RangeIndexSet>();
+      rangeIndexSet->range = intToken.num;
+      rangeIndexSet->setLoc(intToken);
+      indexSet = rangeIndexSet;
+      break;
     }
     case TokenType::IDENT:
     {
       const Token identToken = consume(TokenType::IDENT);
-      const std::string setName = identToken.str;
-      if (!ctx->hasSymbol(setName)) {
-        // TODO: raise error
-        //REPORT_ERROR("the set has not been declared", @1);
-      }
-
-      const Expr set = ctx->getSymbol(setName).getExpr();
-      if (!set.type().isSet()) {
-        // TODO: raise error
-        //REPORT_ERROR("an index set must be a set, a range or dynamic (*)", @1);
-      }
-
-      return IndexSet(set);
+      auto setIndexSet = std::make_shared<hir::SetIndexSet>();
+      setIndexSet->setName = identToken.str;
+      setIndexSet->setLoc(identToken);
+      indexSet = setIndexSet;
+      break;
     }
     case TokenType::STAR:
-      consume(TokenType::STAR);
-      return IndexSet();
+    {
+      const Token starToken = consume(TokenType::STAR);
+      indexSet = std::make_shared<hir::DynamicIndexSet>();
+      indexSet->setLoc(starToken);
+      break;
+    }
     default:
-      throw ParseException();
-      return IndexSet();
+      reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+      throw SyntaxError();
+      break;
   }
+
+  return indexSet;
 }
 
-Expr ParserNew::parseTensorLiteral() {
-  Expr literal;
+hir::Expr::Ptr ParserNew::parseTensorLiteral() {
+  hir::Expr::Ptr literal;
 
   switch (peek().type) {
     case TokenType::INT_LITERAL:
@@ -1620,64 +1104,64 @@ Expr ParserNew::parseTensorLiteral() {
       literal = parseSignedNumLiteral();
       break;
     case TokenType::TRUE:
-      consume(TokenType::TRUE);
-      literal = Literal::make(true);
-      break;
     case TokenType::FALSE:
-      consume(TokenType::FALSE);
-      literal = Literal::make(false);
+    {
+      const bool boolVal = tryconsume(TokenType::TRUE);
+      if (!boolVal) {
+        consume(TokenType::FALSE);
+      }
+
+      auto boolLiteral = std::make_shared<hir::BoolLiteral>();
+      boolLiteral->val = boolVal;
+      literal = boolLiteral;
+      
       break;
+    }
     case TokenType::LB:
     {
-      const TensorValues values = parseDenseTensorLiteral();
-      const auto idoms = std::vector<IndexDomain>(values.dimSizes.rbegin(),
-                                                  values.dimSizes.rend());
-      const ScalarType elemType = (values.type == TensorValues::Type::INT) ?
-                                  ScalarType::Int : ScalarType::Float;
-      const Type type = ir::TensorType::make(elemType, idoms);
-      const void *data = (values.type == TensorValues::Type::INT) ? 
-                         static_cast<const void*>(values.intVals.data()) :
-                         static_cast<const void*>(values.floatVals.data());
-      literal = Literal::make(type, const_cast<void*>(data));
+      literal = parseDenseTensorLiteral();
 
       if (peek().type == TokenType::TRANSPOSE) {
         consume(TokenType::TRANSPOSE);
-    
-        //iassert(vec.type().isTensor());
-        const auto ttype = literal.type().toTensor();
-        //iassert(ttype->order() == 1);
-        const Type transposedVector = ir::TensorType::make(
-          ttype->componentType, ttype->getDimensions(), !ttype->isColumnVector);
-        const_cast<ExprNodeBase*>(to<ExprNodeBase>(literal))->type = 
-          transposedVector;
+        
+        auto transposedLiteral = std::make_shared<hir::TransposeExpr>();
+        transposedLiteral->setLoc(literal);
+        transposedLiteral->operand = literal;
+        literal = transposedLiteral;
       }
+
       break;
     }
     case TokenType::STRING_LITERAL:
       //consume(TokenType::STRING_LITERAL);
       //break;
     default:
-      throw ParseException();
+      reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+      throw SyntaxError();
       break;
   }
 
   return literal;
 }
 
-Expr ParserNew::parseSignedNumLiteral() {
-  Expr literal;
+hir::TensorLiteral::Ptr ParserNew::parseSignedNumLiteral() {
+  hir::TensorLiteral::Ptr literal;
 
   switch (peek().type) {
     case TokenType::INT_LITERAL:
     {
-      const int val = parseSignedIntLiteral();
-      literal = Literal::make(val);
+      auto intLiteral = std::make_shared<hir::IntLiteral>();
+      intLiteral->setLoc(peek());
+      intLiteral->val = parseSignedIntLiteral();
+      literal = intLiteral;
       break;
     }
     case TokenType::FLOAT_LITERAL:
     {
-      const double val = parseSignedFloatLiteral();
-      literal = Literal::make(val);
+      auto floatLiteral = std::make_shared<hir::FloatLiteral>();
+      floatLiteral->setLoc(peek());
+      floatLiteral->val = parseSignedFloatLiteral();
+      literal = floatLiteral;
       break;
     }
     case TokenType::PLUS:
@@ -1685,64 +1169,64 @@ Expr ParserNew::parseSignedNumLiteral() {
       switch (peek(1).type) {
         case TokenType::INT_LITERAL:
         {
-          const int val = parseSignedIntLiteral();
-          literal = Literal::make(val);
+          auto intLiteral = std::make_shared<hir::IntLiteral>();
+          intLiteral->setLoc(peek());
+          intLiteral->val = parseSignedIntLiteral();
+          literal = intLiteral;
           break;
         }
         case TokenType::FLOAT_LITERAL:
         {
-          const double val = parseSignedFloatLiteral();
-          literal = Literal::make(val);
+          auto floatLiteral = std::make_shared<hir::FloatLiteral>();
+          floatLiteral->setLoc(peek());
+          floatLiteral->val = parseSignedFloatLiteral();
+          literal = floatLiteral;
           break;
         }
         default:
-          throw ParseException();
+          reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+          throw SyntaxError();
           break;
       }
       break;
     default:
-      throw ParseException();
+      reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+      throw SyntaxError();
       break;
   }
 
   return literal;
 }
 
-ParserNew::TensorValues ParserNew::parseDenseTensorLiteral() {
-  consume(TokenType::LB);
-
-  TensorValues tensor = parseDenseTensorLiteralInner();
+hir::DenseTensorLiteral::Ptr ParserNew::parseDenseTensorLiteral() {
+  const Token bracketToken = consume(TokenType::LB);
+  
+  hir::DenseTensorLiteral::Ptr tensor = parseDenseTensorLiteralInner();
+  tensor->setLoc(bracketToken);
   
   consume(TokenType::RB);
   
-  //if (peek().type == TokenType::TRANSPOSE) {
-  //  consume(TokenType::TRANSPOSE);
-  //}
   return tensor;
 }
 
-ParserNew::TensorValues ParserNew::parseDenseTensorLiteralInner() {
+hir::DenseTensorLiteral::Ptr ParserNew::parseDenseTensorLiteralInner() {
   if (peek().type == TokenType::LB) {
-    TensorValues tensor = parseDenseTensorLiteral();
-    bool addDimension = true;
+    auto tensor = std::make_shared<hir::DenseNDTensorLiteral>();
+    tensor->setLoc(peek());
+
+    hir::DenseTensorLiteral::Ptr elem = parseDenseTensorLiteral();
+    tensor->elems.push_back(elem);
     
     while (true) {
       switch (peek().type) {
         case TokenType::COMMA:
           consume(TokenType::COMMA);
         case TokenType::LB:
-        {
-          if (addDimension) {
-            tensor.addDimension();
-            addDimension = false;
-          }
-
-          const TensorValues right = parseDenseTensorLiteral();
-          tensor.merge(right);
+          elem = parseDenseTensorLiteral();
+          tensor->elems.push_back(elem);
           break;
-        }
         default:
-          return tensor;
+          return (tensor->elems.size() == 1) ? tensor->elems[0] : tensor;
       }
     }
   }
@@ -1750,27 +1234,20 @@ ParserNew::TensorValues ParserNew::parseDenseTensorLiteralInner() {
   return parseDenseMatrixLiteral();
 }
 
-ParserNew::TensorValues ParserNew::parseDenseMatrixLiteral() {
-  TensorValues mat = parseDenseVectorLiteral();
-  bool addDimension = true;
+hir::DenseTensorLiteral::Ptr ParserNew::parseDenseMatrixLiteral() {
+  auto mat = std::make_shared<hir::DenseNDTensorLiteral>();
+  mat->setLoc(peek());
   
-  while (peek().type == TokenType::SEMICOL) {
-    consume(TokenType::SEMICOL);
+  do {
+    const hir::DenseTensorLiteral::Ptr vec = parseDenseVectorLiteral();
+    mat->elems.push_back(vec);
+  } while (tryconsume(TokenType::SEMICOL));
 
-    if (addDimension) {
-      mat.addDimension();
-      addDimension = false;
-    }
-
-    const TensorValues right = parseDenseVectorLiteral();
-    mat.merge(right);
-  }
-
-  return mat;
+  return (mat->elems.size() == 1) ? mat->elems[0] : mat;
 }
 
-ParserNew::TensorValues ParserNew::parseDenseVectorLiteral() {
-  TensorValues vec;
+hir::DenseTensorLiteral::Ptr ParserNew::parseDenseVectorLiteral() {
+  hir::DenseTensorLiteral::Ptr vec;
 
   switch (peek().type) {
     case TokenType::INT_LITERAL:
@@ -1789,23 +1266,26 @@ ParserNew::TensorValues ParserNew::parseDenseVectorLiteral() {
           vec = parseDenseFloatVectorLiteral();
           break;
         default:
-          throw ParseException();
+          reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+          throw SyntaxError();
           break;
       }
       break;
     default:
-      throw ParseException();
+      reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+      throw SyntaxError();
       break;
   }
 
   return vec;
 }
 
-ParserNew::TensorValues ParserNew::parseDenseIntVectorLiteral() {
-  TensorValues vec;
+hir::DenseIntVectorLiteral::Ptr ParserNew::parseDenseIntVectorLiteral() {
+  auto vec = std::make_shared<hir::DenseIntVectorLiteral>();
+  vec->setLoc(peek());
 
   int elem = parseSignedIntLiteral();
-  vec.addIntValue(elem);
+  vec->vals.push_back(elem);
 
   while (true) {
     switch (peek().type) {
@@ -1815,7 +1295,7 @@ ParserNew::TensorValues ParserNew::parseDenseIntVectorLiteral() {
       case TokenType::MINUS:
       case TokenType::INT_LITERAL:
         elem = parseSignedIntLiteral();
-        vec.addIntValue(elem);
+        vec->vals.push_back(elem);
         break;
       default:
         return vec;
@@ -1823,11 +1303,12 @@ ParserNew::TensorValues ParserNew::parseDenseIntVectorLiteral() {
   }
 }
 
-ParserNew::TensorValues ParserNew::parseDenseFloatVectorLiteral() {
-  TensorValues vec;
+hir::DenseFloatVectorLiteral::Ptr ParserNew::parseDenseFloatVectorLiteral() {
+  auto vec = std::make_shared<hir::DenseFloatVectorLiteral>();
+  vec->setLoc(peek());
 
   double elem = parseSignedFloatLiteral();
-  vec.addFloatValue(elem);
+  vec->vals.push_back(elem);
 
   while (true) {
     switch (peek().type) {
@@ -1837,7 +1318,7 @@ ParserNew::TensorValues ParserNew::parseDenseFloatVectorLiteral() {
       case TokenType::MINUS:
       case TokenType::FLOAT_LITERAL:
         elem = parseSignedFloatLiteral();
-        vec.addFloatValue(elem);
+        vec->vals.push_back(elem);
         break;
       default:
         return vec;
@@ -1881,26 +1362,24 @@ double ParserNew::parseSignedFloatLiteral() {
   return (coeff * consume(TokenType::FLOAT_LITERAL).fnum);
 }
 
-void ParserNew::parseTest() {
+hir::Test::Ptr ParserNew::parseTest() {
+  auto test = std::make_shared<hir::Test>();
+
   consume(TokenType::TEST);
 
-  const Token identToken = consume(TokenType::IDENT);
-  const std::string name = identToken.str;
+  const Token funcToken = consume(TokenType::IDENT);
+  test->setLoc(funcToken);
+  test->funcName = funcToken.str;
 
   switch (peek().type) {
     case TokenType::LP:
     {
-      // TODO: replace with literal list rule?
-      CallMap calls;
-      const std::vector<Expr> args = parseOptionalExprList(calls);
-
+      test->args = parseCallParams();
+      
       consume(TokenType::EQ);
-
-      const Expr expected = parseTensorLiteral();
-
+      test->expected = parseTensorLiteral();
+      
       consume(TokenType::SEMICOL);
-
-      ctx->addTest(new FunctionTest(name, args, {expected}));
       break;
     }
     case TokenType::ASSIGN:
@@ -1910,9 +1389,12 @@ void ParserNew::parseTest() {
 //    parseExternAssert();
 //    break;
     default:
-      throw ParseException();
+      reportError(peek(), "unexpected symbol: "); // TODO: print symbol
+      throw SyntaxError();
       break;
   }
+
+  return test;
 }
 
 //void ParserNew::parseSystemGenerator() {
@@ -1938,214 +1420,6 @@ void ParserNew::parseTest() {
 //  consume(TokenType::RARROW);
 //  parseTensorLiteral();
 //}
-
-void ParserNew::checkValidSubexpr(const Expr expr, const CallMap &calls) {
-  if (!isa<VarExpr>(expr)) return;
-  if (!calls.exists(to<VarExpr>(expr)->var)) return;
-
-  //const Stmt stmt = calls.get(to<VarExpr>(expr)->var);
-  //if (isa<CallStmt>(stmt)) {
-    //const CallStmt *callStmt = to<CallStmt>(stmt);
-    // TODO: raise error if # results != 1
-  //} else if (isa<Map>(stmt)) {
-    //const Map *mapStmt = to<Map>(stmt);
-    // TODO: raise error if # results != 1
-  //}
-}
-
-void ParserNew::checkValidReadExpr(const Expr expr) {
-  // TODO: check symbols readable
-}
-
-void ParserNew::checkValidWriteExpr(const Expr expr) {
-           // if (!symbol.isWritable()) {
-              // TODO: raise error
-              //REPORT_ERROR(varName + " is constant", @idents);
-           // }
-}
-
-void ParserNew::emitAssign(const std::vector<Expr> &lhs, Expr expr, 
-                           const CallMap &calls) {
-  const bool exprIsCallOrMap = isa<VarExpr>(expr) && 
-                               calls.exists(to<VarExpr>(expr)->var);
-
-  if (lhs.size() > 0 || exprIsCallOrMap) {
-    liftCallsAndMaps(calls, expr);
-  } else {
-    liftCallsAndMaps(calls);
-  }
-
-  checkValidReadExpr(expr);
-  for (unsigned int i = 0; i < lhs.size(); ++i) {
-    checkValidWriteExpr(lhs[i]);
-  }
-
-  if (exprIsCallOrMap) {
-    const CallMap::Entry callEntry = calls.get(to<VarExpr>(expr)->var);
-    const std::vector<Var> retVals = callEntry.func.getResults(); 
-   
-    if (lhs.size() != retVals.size()) {
-      // TODO: raise error
-    }
-
-    std::vector<Var> results;
-    for (unsigned int i = 0; i < lhs.size(); ++i) {
-      if (isa<VarExpr>(lhs[i])) {
-        Var var = to<VarExpr>(lhs[i])->var;
-        const std::string varName = var.getName();
-
-        if (ctx->hasSymbol(varName)) {
-          Symbol symbol = ctx->getSymbol(varName);
-          // TODO: check type equality
-          // CHECK_TYPE_EQUALITY(symbol.getVar().getType(), value.type(), @2);
-        } else {
-          var = Var(varName, retVals[i].getType());
-          ctx->addSymbol(varName, var, Symbol::ReadWrite);
-          ctx->addStatement(VarDecl::make(var));
-        }
-
-        results.push_back(var);
-      } else {
-        const Var tmp = ctx->getBuilder()->temporary(retVals[i].getType());
-        ctx->addSymbol(tmp.getName(), tmp, Symbol::ReadWrite);
-        ctx->addStatement(VarDecl::make(tmp));
-        results.push_back(tmp);
-      }
-    }
-      
-    switch (callEntry.callType) {
-      case CallMap::Entry::Type::FUNC:
-      {
-        const Stmt newCallStmt = CallStmt::make(results, callEntry.func, 
-                                                callEntry.actuals);
-        ctx->addStatement(newCallStmt);
-        break;
-      }
-      case CallMap::Entry::Type::MAP:
-      {
-        const Stmt newMapStmt = Map::make(results, callEntry.func, 
-                                          callEntry.actuals, callEntry.target,
-                                          callEntry.neighbors, 
-                                          callEntry.reduction);
-        ctx->addStatement(newMapStmt);
-        break;
-      }
-      default:
-        break;
-    }
-    
-    for (unsigned int i = 0; i < lhs.size(); ++i) {
-      const Expr tmpVarExpr = VarExpr::make(results[i]);
-      if (isa<FieldRead>(lhs[i])) {
-        const FieldRead *fieldRead = to<FieldRead>(lhs[i]);
-        // TODO: check equal types
-        const Stmt fieldWrite = FieldWrite::make(fieldRead->elementOrSet, 
-                                                 fieldRead->fieldName, 
-                                                 tmpVarExpr);
-        ctx->addStatement(fieldWrite);
-      } else if (isa<TensorRead>(lhs[i])) {
-        const TensorRead *tensorRead = to<TensorRead>(lhs[i]);
-        // TODO: check equal types
-        const Stmt tensorWrite = TensorWrite::make(tensorRead->tensor,
-                                                   tensorRead->indices,
-                                                   tmpVarExpr);
-        ctx->addStatement(tensorWrite);
-      }
-    }
-  } else {
-    switch (lhs.size()) {
-      case 0:
-        break;
-      case 1:
-        if (isa<FieldRead>(lhs[0])) {
-          const FieldRead *fieldRead = to<FieldRead>(lhs[0]);
-          // TODO: check equal types
-          const Stmt fieldWrite = FieldWrite::make(fieldRead->elementOrSet, 
-                                                   fieldRead->fieldName, 
-                                                   expr);
-          ctx->addStatement(fieldWrite);
-        } else if (isa<TensorRead>(lhs[0])) {
-          const TensorRead *tensorRead = to<TensorRead>(lhs[0]);
-          // TODO: check equal types
-          const Stmt tensorWrite = TensorWrite::make(tensorRead->tensor, 
-                                                     tensorRead->indices, 
-                                                     expr);
-          ctx->addStatement(tensorWrite);
-        } else {
-          // iassert(isa<VarExpr>(lhs[0]);
-          Var var = to<VarExpr>(lhs[0])->var;
-          const std::string varName = var.getName();
-      
-          if (ctx->hasSymbol(varName)) {
-            Symbol symbol = ctx->getSymbol(varName);
-            // TODO: check type equality
-            //CHECK_TYPE_EQUALITY(symbol.getVar().getType(), value.type(), @expr);
-          } else {
-            var = Var(varName, expr.type());
-            ctx->addSymbol(varName, var, Symbol::ReadWrite);
-          }
-      
-          // TODO: This should be dealt with inside the ident_expr rule?
-          if (isa<VarExpr>(expr) && expr.type().isTensor()) {
-            // The statement assign a tensor to a tensor, so we change it to an
-            // assignment index expr
-            expr = ctx->getBuilder()->unaryElwiseExpr(IRBuilder::None, expr);
-          }
-      
-          ctx->addStatement(AssignStmt::make(var, expr));
-        }
-        break;
-      default:
-        // TODO: raise error
-        //REPORT_ERROR("can only assign the results of calls and maps to "
-        //           "multiple variables", @idents);
-        break;
-    }
-  }
-}
-
-std::vector<Stmt> ParserNew::liftCallsAndMaps(const CallMap &calls, 
-                                                  const Expr expr) {
-  std::vector<Stmt> stmts;
-
-  for (auto it = calls.getAllInOrder().cbegin(); 
-      it != calls.getAllInOrder().cend(); ++it) {
-    const Var tmp = it->first;
-    if (isa<VarExpr>(expr) && to<VarExpr>(expr)->var == tmp) continue;
-
-    const CallMap::Entry callEntry = it->second;
-    switch (callEntry.callType) {
-      case CallMap::Entry::Type::FUNC:
-      {
-        ctx->addSymbol(tmp.getName(), tmp, Symbol::ReadWrite);
-        ctx->addStatement(VarDecl::make(tmp));
-        
-        const Stmt newCallStmt = CallStmt::make({tmp}, callEntry.func, 
-                                                callEntry.actuals);
-        ctx->addStatement(newCallStmt);
-        stmts.push_back(newCallStmt);
-        break;
-      }
-      case CallMap::Entry::Type::MAP:
-      {
-        ctx->addSymbol(tmp.getName(), tmp, Symbol::ReadWrite);
-        ctx->addStatement(VarDecl::make(tmp));
-        
-        const Stmt newMapStmt = Map::make({tmp}, callEntry.func, 
-                                          callEntry.actuals, callEntry.target,
-                                          callEntry.neighbors, 
-                                          callEntry.reduction);
-        ctx->addStatement(newMapStmt);
-        stmts.push_back(newMapStmt);
-        break;
-      }
-      default:
-        break;
-    }
-  }
-
-  return stmts;
-}
 
 }
 }

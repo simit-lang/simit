@@ -37,7 +37,6 @@ enum class TokenType {
   REDUCE,
   WHILE,
   DO,
-  UNTIL,
   IF,
   ELIF,
   ELSE,
@@ -81,6 +80,19 @@ enum class TokenType {
 };
 
 struct Token {
+  Token() : Token(0, 0) {}
+  Token(unsigned lineNum, unsigned colNum) : 
+    type(TokenType::UNKNOWN), lineNum(lineNum), colNum(colNum) {}
+  Token(TokenType type, unsigned lineNum, unsigned colNum) : 
+    type(type), lineNum(lineNum), colNum(colNum) {}
+  Token(int num, unsigned lineNum, unsigned colNum) : 
+    type(TokenType::INT_LITERAL), num(num), lineNum(lineNum), colNum(colNum) {}
+  Token(double fnum, unsigned lineNum, unsigned colNum) : 
+    type(TokenType::FLOAT_LITERAL), fnum(fnum), lineNum(lineNum), 
+    colNum(colNum) {}
+
+  friend std::ostream &operator <<(std::ostream &, Token);
+  
   TokenType type;
   union {
     int num;
@@ -88,20 +100,19 @@ struct Token {
     bool boolean;
   };
   std::string str;
-
-  Token() : type(TokenType::UNKNOWN) {}
-  Token(TokenType type) : type(type) {}
-  Token(int num) : type(TokenType::INT_LITERAL), num(num) {}
-  Token(double fnum) : type(TokenType::FLOAT_LITERAL), fnum(fnum) {}
-
-  friend std::ostream &operator <<(std::ostream &, Token);
+  unsigned lineNum;
+  unsigned colNum;
 };
 
-class TokenList {
+class TokenStream {
   public:
     inline void addToken(Token newToken) { tokens.push_back(newToken); }
-    inline void addToken(TokenType type) { tokens.push_back(Token(type)); }
+    inline void addToken(TokenType type, unsigned lineNum, 
+                         unsigned colNum) {
+      tokens.push_back(Token(type, lineNum, colNum));
+    }
 
+    inline void skip() { tokens.pop_front(); }
     inline bool consume(TokenType type) {
       if (tokens.front().type == type) {
         tokens.pop_front();
@@ -110,16 +121,16 @@ class TokenList {
 
       return false;
     }
-    inline Token peek(unsigned int k) {
+    inline Token peek(unsigned k) {
       if (k == 0) return tokens.front();
 
       std::list<Token>::const_iterator it = tokens.cbegin();
-      for (unsigned int i = 0; i < k && it != tokens.cend(); ++i, ++it) {}
-      return (it == tokens.cend()) ? Token(TokenType::END) : *it;
+      for (unsigned i = 0; i < k && it != tokens.cend(); ++i, ++it) {}
+      return (it == tokens.cend()) ? Token(TokenType::END, -1, -1) : *it;
     }
 
 
-    friend std::ostream &operator <<(std::ostream &, TokenList);
+    friend std::ostream &operator <<(std::ostream &, TokenStream);
 
   private:
     std::list<Token> tokens;
@@ -127,7 +138,7 @@ class TokenList {
 
 class ScannerNew {
 public:
-  static TokenList lex(std::istream &);
+  static TokenStream lex(std::istream &);
 
 private:
   enum class ScanState {
