@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.4.
+// A Bison parser, made by GNU Bison 3.0.2.
 
 // Stack handling for Bison parsers in C++
 
-// Copyright (C) 2002-2015 Free Software Foundation, Inc.
+// Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -54,12 +54,12 @@ namespace  simit { namespace internal  {
     stack ()
       : seq_ ()
     {
-      seq_.reserve (200);
     }
 
     stack (unsigned int n)
       : seq_ (n)
-    {}
+    {
+    }
 
     inline
     T&
@@ -136,7 +136,8 @@ namespace  simit { namespace internal  {
     slice (const S& stack, unsigned int range)
       : stack_ (stack)
       , range_ (range)
-    {}
+    {
+    }
 
     inline
     const T&

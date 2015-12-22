@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.4.
+// A Bison parser, made by GNU Bison 3.0.2.
 
 // Positions for Bison parsers in C++
 
-// Copyright (C) 2002-2015 Free Software Foundation, Inc.
+// Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -114,7 +114,7 @@ namespace  simit { namespace internal  {
     }
   };
 
-  /// Add \a width columns, in place.
+  /// Add and assign a position.
   inline position&
   operator+= (position& res, int width)
   {
@@ -122,21 +122,21 @@ namespace  simit { namespace internal  {
     return res;
   }
 
-  /// Add \a width columns.
+  /// Add two position objects.
   inline position
   operator+ (position res, int width)
   {
     return res += width;
   }
 
-  /// Subtract \a width columns, in place.
+  /// Add and assign a position.
   inline position&
   operator-= (position& res, int width)
   {
     return res += -width;
   }
 
-  /// Subtract \a width columns.
+  /// Add two position objects.
   inline position
   operator- (position res, int width)
   {

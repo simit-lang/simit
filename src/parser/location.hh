@@ -1,8 +1,8 @@
-// A Bison parser, made by GNU Bison 3.0.4.
+// A Bison parser, made by GNU Bison 3.0.2.
 
 // Locations for Bison parsers in C++
 
-// Copyright (C) 2002-2015 Free Software Foundation, Inc.
+// Copyright (C) 2002-2013 Free Software Foundation, Inc.
 
 // This program is free software: you can redistribute it and/or modify
 // it under the terms of the GNU General Public License as published by
@@ -111,42 +111,36 @@ namespace  simit { namespace internal  {
     position end;
   };
 
-  /// Join two locations, in place.
-  inline location& operator+= (location& res, const location& end)
+  /// Join two location objects to create a location.
+  inline location operator+ (location res, const location& end)
   {
     res.end = end.end;
     return res;
   }
 
-  /// Join two locations.
-  inline location operator+ (location res, const location& end)
-  {
-    return res += end;
-  }
-
-  /// Add \a width columns to the end position, in place.
+  /// Change end position in place.
   inline location& operator+= (location& res, int width)
   {
     res.columns (width);
     return res;
   }
 
-  /// Add \a width columns to the end position.
+  /// Change end position.
   inline location operator+ (location res, int width)
   {
     return res += width;
   }
 
-  /// Subtract \a width columns to the end position, in place.
+  /// Change end position in place.
   inline location& operator-= (location& res, int width)
   {
     return res += -width;
   }
 
-  /// Subtract \a width columns to the end position.
-  inline location operator- (location res, int width)
+  /// Change end position.
+  inline location operator- (const location& begin, int width)
   {
-    return res -= width;
+    return begin + -width;
   }
 
   /// Compare two location objects.
@@ -174,7 +168,8 @@ namespace  simit { namespace internal  {
   operator<< (std::basic_ostream<YYChar>& ostr, const location& loc)
   {
     unsigned int end_col = 0 < loc.end.column ? loc.end.column - 1 : 0;
-    ostr << loc.begin;
+    ostr << loc.begin// << "(" << loc.end << ") "
+;
     if (loc.end.filename
         && (!loc.begin.filename
             || *loc.begin.filename != *loc.end.filename))

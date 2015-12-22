@@ -137,6 +137,13 @@ public:
     fieldNames[name] = fields.size()-1;
     return FieldRef<T, dimensions...>(fieldData);
   }
+ 
+  // Added for reordering
+  template <typename T, int... dimensions>
+  FieldRef<T, dimensions...> addSpatialField(const std::string &name) {
+    spatialFieldName = name;
+    return addField<T, dimensions...>(name);
+  }
 
   /// Get a Field corresponding to the string fieldName
   template <typename T, int... dimensions>
@@ -386,7 +393,6 @@ public:
     return set.streamOut(os);
   }
 
-private:
   // A field on the members of the Set.
   // Invariant: elements < capacity
   struct FieldData {
@@ -449,8 +455,18 @@ private:
     FieldData& operator=(const FieldData& f);
   };
 
+  // Added getters for reordering
+  inline int* getEndpointsPtr() { return endpoints; }
+  inline int getFieldIndex(std::string name) { return fieldNames[name]; } 
+  inline std::vector<FieldData*>& getFields() { return fields; } 
+  inline std::string getSpatialFieldName() const { return spatialFieldName; }
+  inline bool hasSpatialField() const { return !spatialFieldName.empty(); }
+
+private:
+
   // Set data
   std::string name;
+  std::string spatialFieldName;
   int numElements;                           // number of elements in the set
   std::vector<const Set*> endpointSets;      // the sets the endpoints belong to
   int* endpoints;                            // the endpoints of edge elements
@@ -459,10 +475,8 @@ private:
   static const int capacityIncrement = 1024; // increment for capacity increases
 
   mutable internal::NeighborIndex *neighbors;// neighbor index (lazily created)
-
   std::map<std::string, int> fieldNames;     // name to field lookups
   std::vector<FieldData*> fields;            // fields of elements in the set
-
 
   /// disable copy constructors
   Set(const Set& s);
@@ -675,6 +689,16 @@ class FieldRefBaseParameterized : public FieldRefBase {
       elemData[i++] = val;
     }
   }
+  
+  void set(ElementRef element, std::vector<float> values) {
+    iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
+        << "Incorrect number of init values : " << (TensorRef<T,dimensions...>::getSize());
+    T *elemData = this->getElemDataPtr(element);
+    size_t i=0;
+    for (T val : values) {
+      elemData[i++] = val;
+    }
+  }
 
  protected:
   inline T *getElemDataPtr(ElementRef element) const {
@@ -881,7 +905,6 @@ private:
 
 Box createBox(Set *vertices, Set *edges,
               unsigned numX, unsigned numY, unsigned numZ);
-
 
 } // namespace simit
 
