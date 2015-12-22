@@ -76,6 +76,9 @@ TEST(Program, reorderFemTet) {
     l.set(t,lval);    
   }
   
+  vector<int> newOrdering;
+  reorder(m_tets, m_verts, newOrdering);
+  
   std::string filename = std::string(TEST_INPUT_DIR) + "/" +
                          toLower(test_info_->test_case_name()) + "/" +
                          "femTet.sim";
@@ -102,15 +105,19 @@ TEST(Program, reorderFemTet) {
   }
   m_timeStepper.mapArgs();
 
+  int one = newOrdering[100];
+  int two = newOrdering[200];
+  int three = newOrdering[300];
+
   // Check outputs
-  SIMIT_ASSERT_FLOAT_EQ(0.010771915616785779,  x.get(vertRefs[100])(0));
-  SIMIT_ASSERT_FLOAT_EQ(0.058853573999788439,  x.get(vertRefs[100])(1));
-  SIMIT_ASSERT_FLOAT_EQ(0.030899457015375883,  x.get(vertRefs[100])(2));
-  SIMIT_ASSERT_FLOAT_EQ(0.0028221631202928516, x.get(vertRefs[200])(0));
-  SIMIT_ASSERT_FLOAT_EQ(0.017969982607667911,  x.get(vertRefs[200])(1));
-  SIMIT_ASSERT_FLOAT_EQ(0.012885386063393013,  x.get(vertRefs[200])(2));
-  SIMIT_ASSERT_FLOAT_EQ(0.02411959295647129,   x.get(vertRefs[300])(0));
-  SIMIT_ASSERT_FLOAT_EQ(0.052036155669135678,  x.get(vertRefs[300])(1));
-  SIMIT_ASSERT_FLOAT_EQ(0.030173075240629205,  x.get(vertRefs[300])(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.010771915616785779,  x.get(vertRefs[one])(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.058853573999788439,  x.get(vertRefs[one])(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.030899457015375883,  x.get(vertRefs[one])(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.0028221631202928516, x.get(vertRefs[two])(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.017969982607667911,  x.get(vertRefs[two])(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.012885386063393013,  x.get(vertRefs[two])(2));
+  SIMIT_ASSERT_FLOAT_EQ(0.02411959295647129,   x.get(vertRefs[three])(0));
+  SIMIT_ASSERT_FLOAT_EQ(0.052036155669135678,  x.get(vertRefs[three])(1));
+  SIMIT_ASSERT_FLOAT_EQ(0.030173075240629205,  x.get(vertRefs[three])(2));
 }
 
