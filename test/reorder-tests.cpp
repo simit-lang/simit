@@ -3,6 +3,7 @@
 #include <iostream>
 
 #include "graph.h"
+#include "reorder.h"
 #include "program.h"
 #include "error.h"
 #include "mesh.h"
