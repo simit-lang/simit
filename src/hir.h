@@ -68,19 +68,12 @@ struct StmtBlock : public Stmt {
 };
 
 struct Expr : public HIRNode {
-  ir::Type type;
-
   typedef std::shared_ptr<Expr> Ptr;
 };
 
 struct IndexSet : public HIRNode {
   typedef std::shared_ptr<IndexSet> Ptr;
 };
-
-//struct IndexSets : public HIRNode {
-//  std::vector<IndexSetPtr> indexSets;
-//};
-//typedef std::shared_ptr<IndexSets> IndexSetsPtr;
 
 struct RangeIndexSet : public IndexSet {
   int range;
@@ -133,11 +126,6 @@ struct Endpoint : public HIRNode {
     visitor->visit(to<Endpoint>(shared_from_this()));
   }
 };
-
-//struct Endpoints : public HIRNode {
-//  std::vector<EndpointPtr> endpoints;
-//};
-//typdef std::shared_ptr<Endpoints> EndpointsPtr;
 
 struct SetType : public Type {
   ElementType::Ptr element;
@@ -222,11 +210,6 @@ struct IdentDecl : public HIRNode {
   }
 };
 
-//struct IdentDecls : public HIRNode {
-//  std::vector<IdentDeclPtr> identDecls;
-//};
-//typedef std::shared_ptr<IdentDecls> IdentDeclsPtr;
-
 struct Argument : public IdentDecl {
   bool inout;
   
@@ -236,11 +219,6 @@ struct Argument : public IdentDecl {
     visitor->visit(to<Argument>(shared_from_this()));
   }
 };
-
-//struct Arguments : public HIRNode {
-//  std::vector<ArgumentPtr> args;
-//};
-//typedef std::shared_ptr<Arguments> ArgumentsPtr;
 
 struct ExternDecl : public HIRNode {
   Argument::Ptr var;
@@ -328,7 +306,7 @@ struct ForDomain : public HIRNode {
 };
 
 struct IndexSetDomain : public ForDomain {
-  IndexSet::Ptr domain;
+  SetIndexSet::Ptr set;
 
   typedef std::shared_ptr<IndexSetDomain> Ptr;
 
@@ -392,6 +370,8 @@ struct AssignStmt : public ExprStmt {
 
 struct ReadParam : public HIRNode {
   typedef std::shared_ptr<ReadParam> Ptr;
+
+  virtual bool isSlice() { return false; }
 };
 
 struct Slice : public ReadParam {
@@ -400,6 +380,8 @@ struct Slice : public ReadParam {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<Slice>(shared_from_this()));
   }
+
+  virtual bool isSlice() { return true; }
 };
 
 struct ExprParam : public ReadParam {
@@ -662,37 +644,47 @@ struct BoolLiteral : public TensorLiteral {
 
 // TODO: StringLiteral?
 
-struct DenseTensorLiteral : public TensorLiteral {
-  typedef std::shared_ptr<DenseTensorLiteral> Ptr;
+struct DenseTensorElement : public HIRNode {
+  typedef std::shared_ptr<DenseTensorElement> Ptr;
 };
 
-struct DenseIntVectorLiteral : public DenseTensorLiteral {
+struct DenseIntVector : public DenseTensorElement {
   std::vector<int> vals;
   
-  typedef std::shared_ptr<DenseIntVectorLiteral> Ptr;
+  typedef std::shared_ptr<DenseIntVector> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DenseIntVectorLiteral>(shared_from_this()));
+    visitor->visit(to<DenseIntVector>(shared_from_this()));
   }
 };
 
-struct DenseFloatVectorLiteral : public DenseTensorLiteral {
+struct DenseFloatVector : public DenseTensorElement {
   std::vector<double> vals;
   
-  typedef std::shared_ptr<DenseFloatVectorLiteral> Ptr;
+  typedef std::shared_ptr<DenseFloatVector> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DenseFloatVectorLiteral>(shared_from_this()));
+    visitor->visit(to<DenseFloatVector>(shared_from_this()));
   }
 };
 
-struct DenseNDTensorLiteral : public DenseTensorLiteral {
-  std::vector<DenseTensorLiteral::Ptr> elems;
+struct DenseNDTensor : public DenseTensorElement {
+  std::vector<DenseTensorElement::Ptr> elems;
   
-  typedef std::shared_ptr<DenseNDTensorLiteral> Ptr;
+  typedef std::shared_ptr<DenseNDTensor> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DenseNDTensorLiteral>(shared_from_this()));
+    visitor->visit(to<DenseNDTensor>(shared_from_this()));
+  }
+};
+
+struct DenseTensorLiteral : public TensorLiteral {
+  DenseTensorElement::Ptr tensor;
+
+  typedef std::shared_ptr<DenseTensorLiteral> Ptr;
+  
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<DenseTensorLiteral>(shared_from_this()));
   }
 };
 

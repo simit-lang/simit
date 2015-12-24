@@ -19,7 +19,9 @@ public:
   IREmitter(internal::ProgramContext *ctx) : 
     retField(ir::Field("", ir::Type())), ctx(ctx) {}
 
-  void emitIR(Program::Ptr program) { program->accept(this); }
+  inline void emitIR(Program::Ptr program) {
+    program->accept(this);
+  }
 
 private:
   virtual void visit(StmtBlock::Ptr);
@@ -30,10 +32,12 @@ private:
   virtual void visit(Endpoint::Ptr);
   virtual void visit(SetType::Ptr);
   virtual void visit(TupleType::Ptr);
-  virtual void visit(ScalarType::Ptr);
-  virtual void visit(NDTensorType::Ptr);
-  virtual void visit(IdentDecl::Ptr);
+  virtual void visit(ScalarTensorType::Ptr);
+  virtual void visit(NonScalarTensorType::Ptr);
+  virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
+  virtual void visit(IdentDecl::Ptr);
+  virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(ProcDecl::Ptr);
@@ -48,6 +52,7 @@ private:
   virtual void visit(PrintStmt::Ptr);
   virtual void visit(ExprStmt::Ptr);
   virtual void visit(AssignStmt::Ptr);
+  virtual void visit(Slice::Ptr);
   virtual void visit(ExprParam::Ptr);
   virtual void visit(MapExpr::Ptr);
   virtual void visit(OrExpr::Ptr);
@@ -66,41 +71,97 @@ private:
   virtual void visit(TransposeExpr::Ptr);
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
-  virtual void visit(TupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(VarExpr::Ptr);
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
-  virtual void visit(IntVectorLiteral::Ptr);
-  virtual void visit(FloatVectorLiteral::Ptr);
-  virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(DenseIntVector::Ptr);
+  virtual void visit(DenseFloatVector::Ptr);
+  virtual void visit(DenseNDTensor::Ptr);
+  virtual void visit(DenseTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
 private:
   struct Domain {
-    enum class Type {UNKNOWN, SET, RANGE};
+    enum class Type {SET, RANGE};
 
-    Domain() = default;
-    Domain(ir::IndexSet set) : type(Type::SET), set(set) {}
-    Domain(ir::Expr lower, ir::Expr upper) : 
-        type(Type::RANGE), lower(lower), upper(upper) {}
+    static Domain make(ir::IndexSet set) {
+      Domain newRange;
 
-    Type         type;
+      newRange.type = Type::SET;
+      newRange.set = set;
+      
+      return newRange;
+    }
+    static Domain make(ir::Expr lower, ir::Expr upper) {
+      Domain newRange;
+
+      newRange.type = Type::RANGE;
+      newRange.lower = lower;
+      newRange.upper = upper;
+
+      return newRange;
+    }
+
+    Type type;
     ir::IndexSet set;
-    ir::Expr     lower;
-    ir::Expr     upper;
+    ir::Expr lower;
+    ir::Expr upper;
   };
   
-  struct DenseTensorValues {
+  struct TensorValues {
     enum class Type {UNKNOWN, INT, FLOAT};
 
-    DenseTensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
+    TensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
 
-    void addDimension() { dimSizes.push_back(1); }
-    void addIntValues(const std::vector<int> &);
-    void addFloatValues(const std::vector<double> &);
-    void merge(const DenseTensorValues &);
+    inline void addDimension() { dimSizes.push_back(1); }
+    void addIntValue(const int &val) {
+      if (type == Type::UNKNOWN) {
+        type = Type::INT;
+      }
+      iassert(type == Type::INT);
+      intVals.push_back(val);
+      dimSizes[dimSizes.size() - 1]++;
+    }
+    void addFloatValue(const double &val) {
+      if (type == Type::UNKNOWN) {
+        type = Type::FLOAT;
+      }
+      iassert(type == Type::FLOAT);
+      floatVals.push_back(val);
+      dimSizes[dimSizes.size() - 1]++;
+    }
+    void merge(const TensorValues &other) {
+      iassert(type == other.type);
+      iassert(dimSizes.size() - 1 == other.dimSizes.size());
+      switch (type) {
+        case Type::INT:
+          intVals.insert(intVals.end(), other.intVals.begin(), 
+                         other.intVals.end());
+          break;
+        case Type::FLOAT:
+          floatVals.insert(floatVals.end(), other.floatVals.begin(), 
+                           other.floatVals.end());
+          break;
+        default:
+          break;
+      }
+      dimSizes[dimSizes.size() - 1]++;
+    }
+  
+    ir::Expr getLiteral() {
+      const auto idoms = std::vector<ir::IndexDomain>(dimSizes.rbegin(),
+                                                      dimSizes.rend());
+      const ir::ScalarType elemType = (type == TensorValues::Type::INT) ?
+                                      ir::ScalarType::Int : 
+                                      ir::ScalarType::Float;
+      const ir::Type tensorType = ir::TensorType::make(elemType, idoms);
+      const void *data = (type == TensorValues::Type::INT) ? 
+                         static_cast<const void*>(intVals.data()) :
+                         static_cast<const void*>(floatVals.data());
+      return ir::Literal::make(tensorType, const_cast<void*>(data));
+    }
 
     std::vector<unsigned> dimSizes;
     std::vector<int>       intVals;
@@ -108,68 +169,63 @@ private:
     Type                      type;
   };
 
-private:
-  ir::Expr emitExpr(HIRNode::Ptr ptr) {
-    retExpr = ir::Expr();
+  inline ir::Expr emitExpr(HIRNode::Ptr ptr) {
     ptr->accept(this);
-    const ir::Expr ret = retExpr;
+    ir::Expr ret = retExpr;
     retExpr = ir::Expr();
     return ret;
   }
-  ir::Stmt emitStmt(Stmt::Ptr ptr) {
-    retStmt = ir::Stmt();
+  inline ir::Stmt emitStmt(Stmt::Ptr ptr) {
     ptr->accept(this);
-    const ir::Stmt ret = retStmt;
+    ir::Stmt ret = retStmt;
     retStmt = ir::Stmt();
     return ret;
   }
-  ir::Type emitType(Type::Ptr ptr) {
-    retType = ir::Type();
+  inline ir::Type emitType(Type::Ptr ptr) {
     ptr->accept(this);
-    const ir::Type ret = retType;
+    ir::Type ret = retType;
     retType = ir::Type();
     return ret;
   }
-  ir::IndexSet emitIndexSet(IndexSet::Ptr ptr) {
-    retIndexSet = ir::IndexSet();
+  inline ir::IndexSet emitIndexSet(IndexSet::Ptr ptr) {
     ptr->accept(this);
-    const ir::IndexSet ret = retIndexSet;
-    retIndexSet = ir::IndexSet();
-    return ret;
+    return retIndexSet;
   }
-  ir::Field emitField(Field::Ptr ptr) {
-    retField = ir::Field("", ir::Type());
+  inline ir::Field emitField(Field::Ptr ptr) {
     ptr->accept(this);
-    const ir::Field ret = retField;
-    retField = ir::Field("", ir::Type());
-    return ret;
+    return retField;
   }
-  ir::Var emitVar(IdentDecl::Ptr ptr) {
-    retVar = ir::Var();
+  inline ir::Var emitVar(IdentDecl::Ptr ptr) {
     ptr->accept(this);
-    const ir::Var ret = retVar;
+    ir::Var ret = retVar;
     retVar = ir::Var();
     return ret;
   }
-  Domain emitDomain(ForDomain::Ptr ptr) {
-    retDomain = Domain();
+  inline TensorValues emitTensorVals(DenseTensorElement::Ptr ptr) {
     ptr->accept(this);
-    const Domain ret = retDomain;
+    TensorValues ret = retTensorVals;
+    retTensorVals = TensorValues();
+    return ret;
+  }
+  inline Domain emitDomain(ForDomain::Ptr ptr) {
+    ptr->accept(this);
+    Domain ret = retDomain;
     retDomain = Domain();
     return ret;
   }
  
-  void addFuncOrProc(FuncDecl::Ptr, bool = false);
-  void addVarOrConst(VarDecl::Ptr, bool = false);
-  void addWhileOrDoWhile(WhileStmt::Ptr, bool = false);
+  void addFuncOrProc(FuncDecl::Ptr, const bool = false);
+  void addVarOrConst(VarDecl::Ptr, const bool = false);
+  void addWhileOrDoWhile(WhileStmt::Ptr, const bool = false);
   void addAssign(const std::vector<ir::Expr> &, ir::Expr);
 
-  void              emitDenseTensorLiteral(DenseTensorLiteral::Ptr);
-  DenseTensorValues emitTensorValues(DenseTensorLiteral::Ptr);
+  inline ir::Stmt getCallStmts() {
+    const ir::Stmt callStmts = calls.empty() ? ir::Stmt() : 
+                               ir::Block::make(calls);
+    calls.clear();
+    return callStmts;
+  }
 
-  ir::Stmt getCallStmts();
-
-private:
   std::vector<ir::Stmt> calls;
 
   ir::Expr retExpr;
@@ -178,6 +234,7 @@ private:
   ir::IndexSet retIndexSet;
   ir::Field retField;
   ir::Var retVar;
+  TensorValues retTensorVals;
   Domain retDomain;
 
   internal::ProgramContext *ctx;

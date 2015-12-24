@@ -13,30 +13,36 @@
 #include "hir_visitor.h"
 #include "hir_rewriter.h"
 #include "func_call_rewriter.h"
+#include "ir_emitter.h"
 
 using namespace simit::internal;
 
 // Frontend
 int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
                           std::vector<ParseError> *errors) {
-#if 0
+#if 1
+  // Lexical and syntactic analyses.
   TokenStream tokens = ScannerNew::lex(programStream);
   hir::Program::Ptr program = ParserNew().parse(tokens, errors);
-  std::cout << "after parse" << std::endl;
-  std::cout << *program;
-  //hir::HIRPrinter visitor(std::cout);
-  //visitor.visit(program);
-  std::cout << "before rewrite" << std::endl;
+
+  // Semantic analyses.
   program = hir::FuncCallRewriter(errors).rewrite<hir::Program>(program);
-  std::cout << "after rewrite" << std::endl;
-  std::cout << *program;
-  return 1;
-  //return (errors->size() == 0 ? 0 : 1);
-  //std::cout << ScannerNew::lex(programStream);
+  
+  // IR generation.
+  hir::IREmitter(ctx).emitIR(program);
+  //for (const auto &func : ctx->getFunctions()) {
+  //  std::cout << func.second << std::endl;
+  //}
+
+  return (errors->size() == 0 ? 0 : 1);
 #else
   Scanner scanner(&programStream);
   Parser parser(&scanner, ctx, errors);
-  return parser.parse();
+  int ret = parser.parse();
+  for (const auto &func : ctx->getFunctions()) {
+    std::cout << func.second << std::endl;
+  }
+  return ret;
 #endif
 }
 

@@ -23,6 +23,7 @@ void IREmitter::visit(RangeIndexSet::Ptr set) {
 }
 
 void IREmitter::visit(SetIndexSet::Ptr set) {
+  iassert(ctx->hasSymbol(set->setName));
   const ir::Expr setExpr = ctx->getSymbol(set->setName).getExpr();
   
   iassert(setExpr.type().isSet());
@@ -39,6 +40,7 @@ void IREmitter::visit(ElementType::Ptr set) {
 }
 
 void IREmitter::visit(Endpoint::Ptr end) {
+  iassert(ctx->hasSymbol(end->setName));
   retExpr = ctx->getSymbol(end->setName).getExpr();
 }
 
@@ -51,35 +53,38 @@ void IREmitter::visit(SetType::Ptr type) {
     endpoints.push_back(endpoint);
   }
 
-  retType = ir::SetType::make(elementType, endpoints);
+  retType = ir::Type(ir::SetType::make(elementType, endpoints));
 }
 
 void IREmitter::visit(TupleType::Ptr type) {
-  const ir::Type elementType = emitType(type->element);
-  
   iassert(type->length > 0);
-  retType = ir::TupleType::make(elementType, type->length->val);
+  const ir::Type elementType = emitType(type->element);
+  retType = ir::Type(ir::TupleType::make(elementType, type->length));
 }
 
-void IREmitter::visit(ScalarType::Ptr type) {
+void IREmitter::visit(ScalarTensorType::Ptr type) {
+  ir::ScalarType componentType;
+  
   switch (type->type) {
-    case ScalarType::Type::INT:
-      retType = ir::Int;
+    case ScalarTensorType::Type::INT:
+      componentType = ir::ScalarType(ir::ScalarType::Int);
       break;
-    case ScalarType::Type::FLOAT:
-      retType = ir::Float;
+    case ScalarTensorType::Type::FLOAT:
+      componentType = ir::ScalarType(ir::ScalarType::Float);
       break;
-    case ScalarType::Type::BOOL:
-      retType = ir::Boolean;
+    case ScalarTensorType::Type::BOOL:
+      componentType = ir::ScalarType(ir::ScalarType::Boolean);
       break;
     default:
-      unreachable;
+      iassert(false);
       break;
   }
+  
+  retType = ir::Type(ir::TensorType::make(componentType));
 }
 
-void IREmitter::visit(NDTensorType::Ptr type) {
-  const ir::Type blockType = emitType(type->blockType);
+void IREmitter::visit(NonScalarTensorType::Ptr type) {
+  ir::Type blockType = emitType(type->blockType);
 
   std::vector<ir::IndexSet> indexSets;
   for (auto is : type->indexSets) {
@@ -110,25 +115,24 @@ void IREmitter::visit(NDTensorType::Ptr type) {
       }
     }
   
-    retType = ir::TensorType::make(componentType, dimensions);
+    retType = ir::Type(ir::TensorType::make(componentType, dimensions));
   }
 
   if (type->transposed) {
     const auto tensorType = retType.toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto componentType = tensorType->componentType;
-    retType = ir::TensorType::make(componentType, dimensions, true);
+    retType = ir::Type(ir::TensorType::make(componentType, dimensions, true));
   }
 }
 
-void IREmitter::visit(IdentDecl::Ptr decl) {
-  const ir::Type type = emitType(decl->type);
-  retVar = ir::Var(decl->name->ident, type);
-  retField = ir::Field(decl->name->ident, type);
+void IREmitter::visit(Field::Ptr field) {
+  const ir::Type type = emitType(field->type);
+  retField = ir::Field(field->name, type);
 }
 
 void IREmitter::visit(ElementTypeDecl::Ptr decl) {
-  iassert(!ctx->containsElementType(decl->name->ident));
+  iassert(!ctx->containsElementType(decl->ident));
   
   std::vector<ir::Field> fields;
   for (auto f : decl->fields) {
@@ -136,7 +140,16 @@ void IREmitter::visit(ElementTypeDecl::Ptr decl) {
     fields.push_back(field);
   }
 
-  ctx->addElementType(ir::ElementType::make(decl->name->ident, fields));
+  ctx->addElementType(ir::ElementType::make(decl->ident, fields));
+}
+
+void IREmitter::visit(IdentDecl::Ptr decl) {
+  const ir::Type type = emitType(decl->type);
+  retVar = ir::Var(decl->ident, type);
+}
+
+void IREmitter::visit(Argument::Ptr arg) {
+  visit(to<IdentDecl>(arg));
 }
 
 void IREmitter::visit(ExternDecl::Ptr decl) {
@@ -198,39 +211,31 @@ void IREmitter::visit(IfStmt::Ptr stmt) {
 
 void IREmitter::visit(IndexSetDomain::Ptr domain) {
   const ir::IndexSet set = emitIndexSet(domain->set);
-  retDomain = Domain(set);
+  retDomain = Domain::make(set);
 }
 
 void IREmitter::visit(RangeDomain::Ptr domain) {
-  ir::Stmt callStmts;
-
   const ir::Expr lower = emitExpr(domain->lower);
-  callStmts = getCallStmts();
-  
-  if (callStmts.defined()) {
-    ctx->addStatement(callStmts);
-  }
+  ctx->addStatement(getCallStmts());
 
   const ir::Expr upper = emitExpr(domain->upper);
-  callStmts = getCallStmts();
+  ctx->addStatement(getCallStmts());
 
-  if (callStmts.defined()) {
-    ctx->addStatement(callStmts);
-  }
-
-  retDomain = Domain(lower, upper);
+  retDomain = Domain::make(lower, upper);
 }
 
 void IREmitter::visit(ForStmt::Ptr stmt) {
+  const ir::Var loopVar = ir::Var(stmt->loopVarName, ir::Int);
+  
   ctx->scope();
-  const Domain domain = emitDomain(stmt->domain);
 
   // If we need to write to loop variables, then that should be added as a
   // separate loop structure (that can't be vectorized easily)
-  const ir::Var loopVar = ir::Var(stmt->loopVar->ident, ir::Int);
-  ctx->addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
+  ctx->addSymbol(stmt->loopVarName, loopVar, internal::Symbol::Read);
  
+  const Domain domain = emitDomain(stmt->domain);
   const ir::Stmt body = emitStmt(stmt->body);
+
   ctx->unscope();
   
   ir::Stmt forStmt;
@@ -242,7 +247,7 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
       forStmt = ir::ForRange::make(loopVar, domain.lower, domain.upper, body);
       break;
     default:
-      unreachable;
+      iassert(false);
       break;
   }
   ctx->addStatement(forStmt);
@@ -274,15 +279,20 @@ void IREmitter::visit(AssignStmt::Ptr stmt) {
   addAssign(targets, expr);
 }
 
+void IREmitter::visit(Slice::Ptr slice) {
+  retExpr = ir::VarExpr::make(ir::Var(":", ir::Type()));
+}
+
 void IREmitter::visit(ExprParam::Ptr param) {
   retExpr = emitExpr(param->expr);
 }
 
 void IREmitter::visit(MapExpr::Ptr expr) {
-  const ir::Func func = ctx->getFunction(expr->func->ident);
+  const ir::Func func = ctx->getFunction(expr->funcName);
   const std::vector<ir::Var> results = func.getResults();
 
-  const ir::Expr target = ctx->getSymbol(expr->target->ident).getExpr();
+  iassert(ctx->hasSymbol(expr->targetName));
+  const ir::Expr target = ctx->getSymbol(expr->targetName).getExpr();
  
   std::vector<ir::Expr> partialActuals;
   for (auto actual : expr->partialActuals) {
@@ -305,13 +315,14 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   for (ir::Expr *endpoint : target.type().toSet()->endpointSets) {
     endpoints.push_back(*endpoint);
   }
+
+  // We assume the edge set is homogeneous for now
+  const ir::Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : ir::Expr();
   
   const auto type = (results.size() == 1) ? results[0].getType() : ir::Type();
   const ir::Var tmp = ctx->getBuilder()->temporary(type);
   retExpr = ir::VarExpr::make(tmp);
-
-  // TODO: Should eventually support heterogeneous edge sets.
-  const ir::Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : ir::Expr();
+ 
   const ir::Stmt mapStmt = ir::Map::make({tmp}, func, partialActuals, target,
                                          endpoint, reduction);
   calls.push_back(mapStmt);
@@ -364,7 +375,7 @@ void IREmitter::visit(EqExpr::Ptr expr) {
         cmpExpr = ir::Ne::make(lhs, rhs);
         break;
       default:
-        unreachable;
+        iassert(false);
         break;
     }
 
@@ -409,9 +420,8 @@ void IREmitter::visit(MulExpr::Ptr expr) {
   } else if (ltype->order() == 1 && rtype->order() == 1) {
     // Vector-Vector Multiplication (inner and outer product)
     iassert(lhs.type() == rhs.type());
-    const bool emitOuterProduct = 
-        expr->lhs->type.at(0).toTensor()->isColumnVector;
-    retExpr = emitOuterProduct ? builder->outerProduct(lhs, rhs) :
+    iassert(ltype->isColumnVector != rtype->isColumnVector);
+    retExpr = (ltype->isColumnVector) ? builder->outerProduct(lhs, rhs) :
               builder->innerProduct(lhs, rhs);
   } else if (ltype->order() == 2 && rtype->order() == 1) {
     // Matrix-Vector
@@ -448,56 +458,57 @@ void IREmitter::visit(ElwiseDivExpr::Ptr expr) {
 
 void IREmitter::visit(NegExpr::Ptr expr) {
   const ir::Expr operand = emitExpr(expr->operand);
-  iassert(!ir::isa<ir::Literal>(operand));
+  // TODO: Handle int/float literals as special case
   retExpr = !expr->negate ? operand : 
             ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Neg, operand);
 }
 
 void IREmitter::visit(ExpExpr::Ptr expr) {
-  // TODO: Implement.
-  not_supported_yet;
+  // TODO: implement
+  iassert(false);
 }
 
 void IREmitter::visit(TransposeExpr::Ptr expr) {
   ir::IRBuilder *builder = ctx->getBuilder();
 
   ir::Expr operand = emitExpr(expr->operand);
-  const ir::TensorType *type = operand.type().toTensor();
+  const auto type = operand.type().toTensor();
 
-  iassert(type->order() > 1 || !ir::isa<ir::Literal>(operand));
   switch (type->order()) {
     case 0:
       // OPT: This might lead to redundant code to be removed in later pass
-      retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
+      retExpr = ir::isa<ir::Literal>(operand) ? operand :
+                builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
       break;
     case 1:
     {
       // OPT: This might lead to redundant code to be removed in later pass
-      retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
-      const bool isColumnVector = expr->type.at(0).toTensor()->isColumnVector;
+      if (!ir::isa<ir::Literal>(operand)) {
+        operand = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
+      }
       const ir::Type transposedVector = ir::TensorType::make(
-          type->componentType, type->getDimensions(), isColumnVector);
-      const_cast<ir::ExprNodeBase *>(to<ir::ExprNodeBase>(retExpr))->type = 
-          transposedVector;
+        type->componentType, type->getDimensions(), !type->isColumnVector);
+      const_cast<ir::ExprNodeBase *>(to<ir::ExprNodeBase>(operand))->type = 
+        transposedVector;
+      retExpr = operand;
       break;
     }
     case 2:
       retExpr = builder->transposedMatrix(operand);
       break;
     default:
-      unreachable;
+      iassert(false);
       break;
   }
 }
 
 void IREmitter::visit(CallExpr::Ptr expr) {
-  const ir::Func func = ctx->getFunction(expr->func->ident);
+  const ir::Func func = ctx->getFunction(expr->funcName);
   const std::vector<ir::Var> results = func.getResults();
 
   std::vector<ir::Expr> arguments;
-  for (auto argument : expr->arguments) {
-    iassert((bool)argument);
-    const ir::Expr arg = emitExpr(argument);
+  for (auto operand : expr->operands) {
+    const ir::Expr arg = emitExpr(operand);
     arguments.push_back(arg);
   }
 
@@ -510,54 +521,51 @@ void IREmitter::visit(CallExpr::Ptr expr) {
 }
 
 void IREmitter::visit(TensorReadExpr::Ptr expr) {
-  const ir::Expr tensor = emitExpr(expr->tensor);
-  iassert(tensor.type().isTensor());
+  const ir::Expr lhs = emitExpr(expr->tensor);
+  iassert(lhs.type().isTensor() || lhs.type().isTuple());
 
   std::vector<ir::Expr> indices;
   bool containsSlices = false;
   for (auto param : expr->indices) {
     const ir::Expr arg = emitExpr(param);
     indices.push_back(arg);
-    if (param->isSlice()) {
-      containsSlices = true;
-    }
+    containsSlices = containsSlices || param->isSlice();
   }
 
-  if (containsSlices) {
-    // We will construct an index expression. First, we built IndexVars.
-    std::vector<ir::IndexVar> allivars;
-    std::vector<ir::IndexVar> freeVars;
-    std::vector<ir::IndexDomain> dimensions = 
-      tensor.type().toTensor()->getDimensions();
+  // The parenthesis read can be a read from a tensor or a tuple.
+  if (lhs.type().isTensor()) {
+    if (containsSlices) {
+      // We will construct an index expression. First, we built IndexVars.
+      std::vector<ir::IndexVar> allivars;
+      std::vector<ir::IndexVar> freeVars;
+      std::vector<ir::IndexDomain> dimensions = 
+        lhs.type().toTensor()->getDimensions();
 
-    unsigned i = 0;
-    for (auto &arg : indices) {
-      if (expr->indices[i]->isSlice()) {
-        auto iv = ir::IndexVar("@tmpfree" + std::to_string(i), dimensions[i]);
-        allivars.push_back(iv);
-        freeVars.push_back(iv);
-      } else {
-        auto iv = ir::IndexVar("@tmpfixed" + std::to_string(i),
-                               dimensions[i], new ir::Expr(arg));
-        allivars.push_back(iv);
+      unsigned i = 0;
+      for (auto &arg : indices) {
+        if (expr->indices[i]->isSlice()) {
+          auto iv = ir::IndexVar("tmpfree" + std::to_string(i), dimensions[i]);
+          allivars.push_back(iv);
+          freeVars.push_back(iv);
+        } else {
+          auto iv = ir::IndexVar("tmpfixed" + std::to_string(i),
+                                 dimensions[i], new ir::Expr(arg));
+          allivars.push_back(iv);
+        }
+        ++i;
       }
-      ++i;
+
+      // Now construct an index expression.
+      retExpr = ir::IndexExpr::make(freeVars,
+                                    ir::IndexedTensor::make(lhs, allivars));
+    } else {
+      retExpr = ir::TensorRead::make(lhs, indices);
     }
-
-    // Now construct an index expression.
-    retExpr = ir::IndexExpr::make(freeVars,
-                                  ir::IndexedTensor::make(tensor, allivars));
-  } else {
-    retExpr = ir::TensorRead::make(tensor, indices);
+  } else if (lhs.type().isTuple()) {
+    iassert(!containsSlices);
+    iassert(indices.size() == 1);
+    retExpr = ir::TupleRead::make(lhs, indices[0]);
   }
-}
-
-void IREmitter::visit(TupleReadExpr::Ptr expr) {
-  const ir::Expr tuple = emitExpr(expr->tuple);
-  const ir::Expr index = emitExpr(expr->index);
-
-  iassert(tuple.type().isTuple());
-  retExpr = ir::TupleRead::make(tuple, index);
 }
 
 void IREmitter::visit(FieldReadExpr::Ptr expr) {
@@ -568,8 +576,8 @@ void IREmitter::visit(FieldReadExpr::Ptr expr) {
   const ir::ElementType *elemType = type.isElement() ? type.toElement() :
                                     type.toSet()->elementType.toElement();
  
-  iassert(elemType->hasField(expr->field->ident));
-  retExpr = ir::FieldRead::make(lhs, expr->field->ident);
+  iassert(elemType->hasField(expr->fieldName));
+  retExpr = ir::FieldRead::make(lhs, expr->fieldName);
 }
 
 void IREmitter::visit(VarExpr::Ptr expr) {
@@ -590,54 +598,35 @@ void IREmitter::visit(BoolLiteral::Ptr expr) {
   retExpr = ir::Literal::make(expr->val);
 }
 
-void IREmitter::visit(IntVectorLiteral::Ptr expr) {
-  emitDenseTensorLiteral(expr);
+void IREmitter::visit(DenseIntVector::Ptr expr) {
+  for (auto val : expr->vals) {
+    retTensorVals.addIntValue(val);
+  }
 }
 
-void IREmitter::visit(FloatVectorLiteral::Ptr expr) {
-  emitDenseTensorLiteral(expr);
+void IREmitter::visit(DenseFloatVector::Ptr expr) {
+  for (auto val : expr->vals) {
+    retTensorVals.addFloatValue(val);
+  }
 }
 
-void IREmitter::visit(NDTensorLiteral::Ptr expr) {
-  emitDenseTensorLiteral(expr);
-}
+void IREmitter::visit(DenseNDTensor::Ptr tensor) {
+  iassert(tensor->elems.size() > 1);
+  
+  TensorValues tensorVals = emitTensorVals(tensor->elems[0]);
+  tensorVals.addDimension();
 
-void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
-  const DenseTensorValues tensorVals = emitTensorValues(tensor);
-  const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(),
-                                           tensorVals.dimSizes.rend());
-  const auto elemType = (tensorVals.type == DenseTensorValues::Type::INT) ?
-                        ir::ScalarType::Int : ir::ScalarType::Float;
-  
-  const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
-                                                   tensor->transposed);
-  const void *data = (tensorVals.type == DenseTensorValues::Type::INT) ? 
-                     static_cast<const void *>(tensorVals.intVals.data()) :
-                     static_cast<const void *>(tensorVals.floatVals.data());
-  retExpr = ir::Literal::make(tensorType, const_cast<void *>(data));
-}
-
-IREmitter::DenseTensorValues 
-    IREmitter::emitTensorValues(DenseTensorLiteral::Ptr lit) {
-  DenseTensorValues tensorVals;
-  
-  if (isa<IntVectorLiteral>(lit)) {
-    tensorVals.addIntValues(to<IntVectorLiteral>(lit)->vals);
-  } else if (isa<FloatVectorLiteral>(lit)) {
-    tensorVals.addFloatValues(to<FloatVectorLiteral>(lit)->vals);
-  } else {
-    const auto ndTensorLit = to<NDTensorLiteral>(lit);
-  
-    tensorVals = emitTensorValues(ndTensorLit->elems[0]);
-    tensorVals.addDimension();
-  
-    for (unsigned i = 1; i < ndTensorLit->elems.size(); ++i) {
-      const DenseTensorValues right = emitTensorValues(ndTensorLit->elems[i]);
-      tensorVals.merge(right);
-    }
+  for (unsigned i = 1; i < tensor->elems.size(); ++i) {
+    const TensorValues right = emitTensorVals(tensor->elems[i]);
+    tensorVals.merge(right);
   }
 
-  return tensorVals;
+  retTensorVals = tensorVals;
+}
+
+void IREmitter::visit(DenseTensorLiteral::Ptr tensor) {
+  TensorValues tensorVals = emitTensorVals(tensor->tensor);
+  retExpr = tensorVals.getLiteral();
 }
 
 void IREmitter::visit(Test::Ptr test) {
@@ -650,48 +639,10 @@ void IREmitter::visit(Test::Ptr test) {
   const ir::Expr expected = emitExpr(test->expected);
 
   iassert(calls.empty());
-  ctx->addTest(new internal::FunctionTest(test->func->ident, args, {expected}));
+  ctx->addTest(new internal::FunctionTest(test->funcName, args, {expected}));
 }
 
-void IREmitter::DenseTensorValues::addIntValues(const std::vector<int> &vals) {
-  iassert(type != Type::FLOAT);
-  type = Type::INT;
-  
-  intVals.insert(intVals.end(), vals.begin(), vals.end());
-  dimSizes[dimSizes.size() - 1] += vals.size();
-}
-
-void IREmitter::DenseTensorValues::addFloatValues(
-    const std::vector<double> &vals) {
-  iassert(type != Type::INT);
-  type = Type::FLOAT;
-  
-  floatVals.insert(floatVals.end(), vals.begin(), vals.end());
-  dimSizes[dimSizes.size() - 1] += vals.size();
-}
-
-void IREmitter::DenseTensorValues::merge(
-    const IREmitter::DenseTensorValues &other) {
-  iassert(type == other.type);
-  iassert(dimSizes.size() - 1 == other.dimSizes.size());
-
-  switch (type) {
-    case Type::INT:
-      intVals.insert(intVals.end(), other.intVals.begin(), 
-                     other.intVals.end());
-      break;
-    case Type::FLOAT:
-      floatVals.insert(floatVals.end(), other.floatVals.begin(), 
-                       other.floatVals.end());
-      break;
-    default:
-      unreachable;
-      break;
-  }
-  ++dimSizes[dimSizes.size() - 1];
-}
-
-void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, bool isProc) {
+void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
   ctx->scope();
 
   std::vector<ir::Var> arguments;
@@ -706,11 +657,12 @@ void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, bool isProc) {
   std::vector<ir::Var> results;
   for (auto res : decl->results) {
     const ir::Var result = emitVar(res);
-    ctx->addSymbol(result);
+    ctx->addSymbol(result.getName(), result, internal::Symbol::ReadWrite);
     results.push_back(result);
   }
 
   const ir::Stmt body = emitStmt(decl->body);
+
   ctx->unscope();
 
   if (isProc) {
@@ -720,20 +672,32 @@ void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, bool isProc) {
     }
   }
 
-  iassert(!ctx->containsFunction(decl->name->ident));
-  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body));
+  iassert(!ctx->containsFunction(decl->name));
+  const ir::Func newFunc = ir::Func(decl->name, arguments, results, body);
+  ctx->addFunction(newFunc);
 }
 
-void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
+void IREmitter::addVarOrConst(VarDecl::Ptr decl, const bool isConst) {
   const ir::Var var = emitVar(decl->var);
   
-  iassert(!ctx->hasSymbol(var.getName(), true));
+  iassert(!ctx->hasSymbol(var.getName()));
   const auto access = isConst ? internal::Symbol::Read : 
                       internal::Symbol::ReadWrite;
   ctx->addSymbol(var.getName(), var, access);
 
   const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
-  if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr)) {
+  if (isConst && initExpr.defined() &&  ir::isa<ir::Literal>(initExpr)) {
+    const ir::Type type = var.getType();
+    const ir::Type litType = initExpr.type();
+    const auto *tensorType = type.toTensor();
+    const auto *litTensorType = litType.toTensor();
+  
+    // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
+    // cast $tensor_literal to a 1xn matrix.
+    if (tensorType->order() == 2 && litTensorType->order() == 1) {
+      const_cast<ir::Literal *>(ir::to<ir::Literal>(initExpr))->cast(type);
+    }
+  
     ctx->addConstant(var, initExpr);
   } else {
     ctx->addStatement(ir::VarDecl::make(var));
@@ -746,7 +710,7 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   }
 }
 
-void IREmitter::addWhileOrDoWhile(WhileStmt::Ptr stmt, bool isDoWhile) {
+void IREmitter::addWhileOrDoWhile(WhileStmt::Ptr stmt, const bool isDoWhile) {
   const ir::Expr cond = emitExpr(stmt->cond);
   const ir::Stmt callStmts = getCallStmts();
   
@@ -789,37 +753,35 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
   }
 
   if (topLevelStmt.defined()) {
-    const bool isCallStmt = ir::isa<ir::CallStmt>(topLevelStmt);
-    const std::vector<ir::Var> retVals = isCallStmt ? 
+    const std::vector<ir::Var> retVals = ir::isa<ir::CallStmt>(topLevelStmt) ? 
       ir::to<ir::CallStmt>(topLevelStmt)->callee.getResults() :
       ir::to<ir::Map>(topLevelStmt)->function.getResults();
-    
-    iassert(lhs.size() <= retVals.size());
+    iassert(lhs.size() == retVals.size() || lhs.size() == 0); 
 
     std::vector<ir::Var> results;
-    for (unsigned i = 0; i < retVals.size(); ++i) {
+    for (unsigned int i = 0; i < retVals.size(); ++i) {
       if (i < lhs.size() && ir::isa<ir::VarExpr>(lhs[i])) {
         ir::Var var = ir::to<ir::VarExpr>(lhs[i])->var;
         const std::string varName = var.getName();
 
         if (!ctx->hasSymbol(varName)) {
           var = ir::Var(varName, retVals[i].getType());
-          ctx->addSymbol(var);
+          ctx->addSymbol(varName, var, internal::Symbol::ReadWrite);
           ctx->addStatement(ir::VarDecl::make(var));
         }
 
         results.push_back(var);
       } else {
         const ir::Var tmp = ctx->getBuilder()->temporary(retVals[i].getType());
-        ctx->addSymbol(tmp);
+        ctx->addSymbol(tmp.getName(), tmp, internal::Symbol::ReadWrite);
         ctx->addStatement(ir::VarDecl::make(tmp));
         results.push_back(tmp);
       }
     }
       
-    if (isCallStmt) {
+    if (ir::isa<ir::CallStmt>(topLevelStmt)) {
       auto callStmt = const_cast<ir::CallStmt *>(
-          ir::to<ir::CallStmt>(topLevelStmt));
+        ir::to<ir::CallStmt>(topLevelStmt));
       callStmt->results = results;
       ctx->addStatement(callStmt);
     } else {
@@ -829,30 +791,20 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     }
     
     for (unsigned int i = 0; i < lhs.size(); ++i) {
-      ir::Expr tmpExpr = ir::VarExpr::make(results[i]);
-      if (!isScalar(tmpExpr.type())) {
-        tmpExpr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None, 
-                                                     tmpExpr);
-      }
-      
+      const ir::Expr tmpVarExpr = ir::VarExpr::make(results[i]);
       if (ir::isa<ir::FieldRead>(lhs[i])) {
         const ir::FieldRead *fieldRead = ir::to<ir::FieldRead>(lhs[i]);
         const ir::Stmt fieldWrite = ir::FieldWrite::make(
-          fieldRead->elementOrSet, fieldRead->fieldName, tmpExpr);
+          fieldRead->elementOrSet, fieldRead->fieldName, tmpVarExpr);
         ctx->addStatement(fieldWrite);
       } else if (ir::isa<ir::TensorRead>(lhs[i])) {
         const ir::TensorRead *tensorRead = ir::to<ir::TensorRead>(lhs[i]);
         const ir::Stmt tensorWrite = ir::TensorWrite::make(tensorRead->tensor,
-          tensorRead->indices, tmpExpr);
+          tensorRead->indices, tmpVarExpr);
         ctx->addStatement(tensorWrite);
       }
     }
   } else if (lhs.size() == 1) {
-    if (!ir::isa<ir::IndexExpr>(expr) && !isScalar(expr.type())) {
-      // Assigning a tensor, so we change it to an assignment index expr.
-      expr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None, expr);
-    }
-
     if (ir::isa<ir::FieldRead>(lhs[0])) {
       const ir::FieldRead *fieldRead = ir::to<ir::FieldRead>(lhs[0]);
       const ir::Stmt fieldWrite = ir::FieldWrite::make(
@@ -872,22 +824,17 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
         ctx->addSymbol(varName, var, internal::Symbol::ReadWrite);
       }
   
+      if (ir::isa<ir::VarExpr>(expr) && expr.type().isTensor()) {
+        // The statement assign a tensor to a tensor, so we change it to an
+        // assignment index expr.
+        expr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None, expr);
+      }
+  
       ctx->addStatement(ir::AssignStmt::make(var, expr));
     }
   } else {
     iassert(lhs.size() == 0);
   }
-}
-
-ir::Stmt IREmitter::getCallStmts() {
-  if (calls.empty()) {
-    return ir::Stmt();
-  }
-
-  const ir::Stmt callStmts = ir::Block::make(calls);
-  
-  calls.clear();
-  return callStmts;
 }
 
 }

@@ -49,7 +49,7 @@ void HIRVisitor::visit(IdentDecl::Ptr decl) {
 }
 
 void HIRVisitor::visit(Argument::Ptr arg) {
-  visit(static_cast<IdentDecl::Ptr>(arg));
+  visit(to<IdentDecl>(arg));
 }
 
 void HIRVisitor::visit(ExternDecl::Ptr decl) {
@@ -67,7 +67,7 @@ void HIRVisitor::visit(FuncDecl::Ptr decl) {
 }
 
 void HIRVisitor::visit(ProcDecl::Ptr decl) {
-  visit(static_cast<FuncDecl::Ptr>(decl)); 
+  visit(to<FuncDecl>(decl)); 
 }
 
 void HIRVisitor::visit(VarDecl::Ptr decl) {
@@ -78,7 +78,7 @@ void HIRVisitor::visit(VarDecl::Ptr decl) {
 }
 
 void HIRVisitor::visit(ConstDecl::Ptr decl) {
-  visit(static_cast<VarDecl::Ptr>(decl));
+  visit(to<VarDecl>(decl));
 }
 
 void HIRVisitor::visit(WhileStmt::Ptr stmt) {
@@ -87,7 +87,7 @@ void HIRVisitor::visit(WhileStmt::Ptr stmt) {
 }
 
 void HIRVisitor::visit(DoWhileStmt::Ptr stmt) {
-  visit(static_cast<WhileStmt::Ptr>(stmt));
+  visit(to<WhileStmt>(stmt));
 }
 
 void HIRVisitor::visit(IfStmt::Ptr stmt) {
@@ -99,7 +99,7 @@ void HIRVisitor::visit(IfStmt::Ptr stmt) {
 }
 
 void HIRVisitor::visit(IndexSetDomain::Ptr domain) {
-  domain->domain->accept(this);
+  domain->set->accept(this);
 }
 
 void HIRVisitor::visit(RangeDomain::Ptr domain) {
@@ -124,7 +124,7 @@ void HIRVisitor::visit(AssignStmt::Ptr stmt) {
   for (auto lhs : stmt->lhs) {
     lhs->accept(this);
   }
-  visit(static_cast<ExprStmt::Ptr>(stmt));
+  visit(to<ExprStmt>(stmt));
 }
 
 void HIRVisitor::visit(ExprParam::Ptr param) {
@@ -153,63 +153,63 @@ void HIRVisitor::visit(NaryExpr::Ptr expr) {
 }
 
 void HIRVisitor::visit(OrExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(AndExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(XorExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(EqExpr::Ptr expr) {
-  visit(static_cast<NaryExpr::Ptr>(expr));
+  visit(to<NaryExpr>(expr));
 }
 
 void HIRVisitor::visit(NotExpr::Ptr expr) {
-  visit(static_cast<UnaryExpr::Ptr>(expr));
+  visit(to<UnaryExpr>(expr));
 }
 
 void HIRVisitor::visit(AddExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(SubExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(MulExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(DivExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(ElwiseMulExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(ElwiseDivExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(NegExpr::Ptr expr) {
-  visit(static_cast<UnaryExpr::Ptr>(expr));
+  visit(to<UnaryExpr>(expr));
 }
 
 void HIRVisitor::visit(ExpExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRVisitor::visit(TransposeExpr::Ptr expr) {
-  visit(static_cast<UnaryExpr::Ptr>(expr));
+  visit(to<UnaryExpr>(expr));
 }
 
 void HIRVisitor::visit(CallExpr::Ptr expr) {
-  visit(static_cast<NaryExpr::Ptr>(expr));
+  visit(to<NaryExpr>(expr));
 }
 
 void HIRVisitor::visit(TensorReadExpr::Ptr expr) {
@@ -223,10 +223,14 @@ void HIRVisitor::visit(FieldReadExpr::Ptr expr) {
   expr->setOrElem->accept(this);
 }
 
-void HIRVisitor::visit(DenseNDTensorLiteral::Ptr tensor) {
+void HIRVisitor::visit(DenseNDTensor::Ptr tensor) {
   for (auto elem : tensor->elems) {
     elem->accept(this);
   }
+}
+
+void HIRVisitor::visit(DenseTensorLiteral::Ptr tensor) {
+  tensor->tensor->accept(this);
 }
 
 void HIRVisitor::visit(Test::Ptr test) {
