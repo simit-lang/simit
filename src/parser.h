@@ -71,12 +71,12 @@ private:
   hir::IndexSet::Ptr parseIndexSet();
   hir::Expr::Ptr parseTensorLiteral();
   hir::TensorLiteral::Ptr parseSignedNumLiteral();
-  hir::DenseTensorLiteral::Ptr parseDenseTensorLiteral();
-  hir::DenseTensorLiteral::Ptr parseDenseTensorLiteralInner();
-  hir::DenseTensorLiteral::Ptr parseDenseMatrixLiteral();
-  hir::DenseTensorLiteral::Ptr parseDenseVectorLiteral();
-  hir::DenseIntVectorLiteral::Ptr parseDenseIntVectorLiteral();
-  hir::DenseFloatVectorLiteral::Ptr parseDenseFloatVectorLiteral();
+  hir::DenseTensorElement::Ptr parseDenseTensorLiteral();
+  hir::DenseTensorElement::Ptr parseDenseTensorLiteralInner();
+  hir::DenseTensorElement::Ptr parseDenseMatrixLiteral();
+  hir::DenseTensorElement::Ptr parseDenseVectorLiteral();
+  hir::DenseIntVector::Ptr parseDenseIntVectorLiteral();
+  hir::DenseFloatVector::Ptr parseDenseFloatVectorLiteral();
   int parseSignedIntLiteral();
   double parseSignedFloatLiteral();
   hir::Test::Ptr parseTest();
