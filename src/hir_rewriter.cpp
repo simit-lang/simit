@@ -114,7 +114,7 @@ void HIRRewriter::visit(IfStmt::Ptr stmt) {
 }
 
 void HIRRewriter::visit(IndexSetDomain::Ptr domain) {
-  domain->domain = rewrite<IndexSet>(domain->domain);
+  domain->set = rewrite<SetIndexSet>(domain->set);
   node = domain;
 }
 
@@ -251,10 +251,15 @@ void HIRRewriter::visit(FieldReadExpr::Ptr expr) {
   node = expr;
 }
 
-void HIRRewriter::visit(DenseNDTensorLiteral::Ptr tensor) {
+void HIRRewriter::visit(DenseNDTensor::Ptr tensor) {
   for (unsigned i = 0; i < tensor->elems.size(); ++i) {
-    tensor->elems[i] = rewrite<DenseTensorLiteral>(tensor->elems[i]);
+    tensor->elems[i] = rewrite<DenseTensorElement>(tensor->elems[i]);
   }
+  node = tensor;
+}
+
+void HIRRewriter::visit(DenseTensorLiteral::Ptr tensor) {
+  tensor->tensor = rewrite<DenseTensorElement>(tensor->tensor);
   node = tensor;
 }
 
