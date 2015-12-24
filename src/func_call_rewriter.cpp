@@ -5,27 +5,26 @@
 
 #include "func_call_rewriter.h"
 #include "hir.h"
+#include "ir.h"
+#include "program_context.h"
 
 namespace simit {
 namespace hir {
 
 void FuncCallRewriter::visit(FuncDecl::Ptr decl) {
-  funcs.insert(decl->name);
+  ctx.addFunction(ir::Func(decl->name, {}, {}, ir::Stmt()));
   HIRRewriter::visit(decl);
 }
 
 void FuncCallRewriter::visit(TensorReadExpr::Ptr expr) {
-  for (unsigned i = 0; i < expr->indices.size(); ++i) {
-    expr->indices[i] = rewrite<ReadParam>(expr->indices[i]);
-  }
-
-  node = expr;
+  HIRRewriter::visit(expr);
+  
   if (!isa<VarExpr>(expr->tensor)) {
     return;
   }
   
   const auto var = to<VarExpr>(expr->tensor);
-  if (funcs.find(var->ident) == funcs.end()) {
+  if (!ctx.containsFunction(var->ident)) {
     return;
   }
 

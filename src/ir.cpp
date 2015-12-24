@@ -852,7 +852,7 @@ Stmt Map::make(std::vector<Var> vars,
                ReductionOperator reduction) {
   iassert(target.type().isSet());
   iassert(!neighbors.defined() || neighbors.type().isSet());
-  iassert(vars.size() == function.getResults().size());
+  //iassert(vars.size() == function.getResults().size());
   Map *node = new Map;
   node->vars = vars;
   node->function = function;

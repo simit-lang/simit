@@ -59,6 +59,16 @@ Func insertVarDecls(Func func) {
         }
       }
     }
+
+    void visit(const CallStmt *op) {
+      stmt = op;
+      for (auto &var : op->results) {
+        if (declared.find(var) == declared.end()) {
+          stmt = Block::make(VarDecl::make(var), stmt);
+          declared.insert(var);
+        }
+      }
+    }
   };
   return InsertVarDeclsRewriter().rewrite(func);
 }
