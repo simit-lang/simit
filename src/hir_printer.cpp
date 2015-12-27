@@ -130,7 +130,7 @@ void HIRPrinter::visit(Argument::Ptr arg) {
   if (arg->inout) {
     oss << "inout ";
   }
-  visit(static_cast<IdentDecl::Ptr>(arg));
+  visit(to<IdentDecl>(arg));
 }
 
 void HIRPrinter::visit(ExternDecl::Ptr decl) {
