@@ -269,7 +269,9 @@ hir::VarDecl::Ptr ParserNew::parseVarDecl() {
     varDecl->var = parseIdentDecl();
   
     if (peek().type == TokenType::ASSIGN) {
-      consume(TokenType::ASSIGN);
+      const Token assignToken = consume(TokenType::ASSIGN);
+      varDecl->setLoc(assignToken);
+
       varDecl->initVal = parseExpr();
     }
   
@@ -289,7 +291,9 @@ hir::ConstDecl::Ptr ParserNew::parseConstDecl() {
     auto constDecl = std::make_shared<hir::ConstDecl>();
     constDecl->var = parseIdentDecl();
   
-    consume(TokenType::ASSIGN);
+    const Token assignToken = consume(TokenType::ASSIGN);
+    constDecl->setLoc(assignToken);
+
     constDecl->initVal = parseExpr();
   
     consume(TokenType::SEMICOL);
@@ -476,7 +480,8 @@ hir::ExprStmt::Ptr ParserNew::parseExprOrAssignStmt() {
             assignStmt->lhs.push_back(expr);
           }
   
-          consume(TokenType::ASSIGN);
+          const Token assignToken = consume(TokenType::ASSIGN);
+          assignStmt->setLoc(assignToken);
           
           assignStmt->expr = parseExpr();
           stmt = assignStmt;
