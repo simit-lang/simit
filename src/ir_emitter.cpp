@@ -23,7 +23,6 @@ void IREmitter::visit(RangeIndexSet::Ptr set) {
 }
 
 void IREmitter::visit(SetIndexSet::Ptr set) {
-  iassert(ctx->hasSymbol(set->setName));
   const ir::Expr setExpr = ctx->getSymbol(set->setName).getExpr();
   
   iassert(setExpr.type().isSet());
@@ -40,7 +39,6 @@ void IREmitter::visit(ElementType::Ptr set) {
 }
 
 void IREmitter::visit(Endpoint::Ptr end) {
-  iassert(ctx->hasSymbol(end->setName));
   retExpr = ctx->getSymbol(end->setName).getExpr();
 }
 
@@ -84,7 +82,7 @@ void IREmitter::visit(ScalarTensorType::Ptr type) {
 }
 
 void IREmitter::visit(NonScalarTensorType::Ptr type) {
-  ir::Type blockType = emitType(type->blockType);
+  const ir::Type blockType = emitType(type->blockType);
 
   std::vector<ir::IndexSet> indexSets;
   for (auto is : type->indexSets) {
@@ -225,15 +223,15 @@ void IREmitter::visit(RangeDomain::Ptr domain) {
 }
 
 void IREmitter::visit(ForStmt::Ptr stmt) {
-  const ir::Var loopVar = ir::Var(stmt->loopVarName, ir::Int);
-  
   ctx->scope();
+  
+  const Domain domain = emitDomain(stmt->domain);
 
   // If we need to write to loop variables, then that should be added as a
   // separate loop structure (that can't be vectorized easily)
+  const ir::Var loopVar = ir::Var(stmt->loopVarName, ir::Int);
   ctx->addSymbol(stmt->loopVarName, loopVar, internal::Symbol::Read);
  
-  const Domain domain = emitDomain(stmt->domain);
   const ir::Stmt body = emitStmt(stmt->body);
 
   ctx->unscope();
@@ -291,7 +289,6 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   const ir::Func func = ctx->getFunction(expr->funcName);
   const std::vector<ir::Var> results = func.getResults();
 
-  iassert(ctx->hasSymbol(expr->targetName));
   const ir::Expr target = ctx->getSymbol(expr->targetName).getExpr();
  
   std::vector<ir::Expr> partialActuals;
@@ -421,7 +418,7 @@ void IREmitter::visit(MulExpr::Ptr expr) {
     // Vector-Vector Multiplication (inner and outer product)
     iassert(lhs.type() == rhs.type());
     iassert(ltype->isColumnVector != rtype->isColumnVector);
-    retExpr = (ltype->isColumnVector) ? builder->outerProduct(lhs, rhs) :
+    retExpr = ltype->isColumnVector ? builder->outerProduct(lhs, rhs) :
               builder->innerProduct(lhs, rhs);
   } else if (ltype->order() == 2 && rtype->order() == 1) {
     // Matrix-Vector
@@ -458,7 +455,6 @@ void IREmitter::visit(ElwiseDivExpr::Ptr expr) {
 
 void IREmitter::visit(NegExpr::Ptr expr) {
   const ir::Expr operand = emitExpr(expr->operand);
-  // TODO: Handle int/float literals as special case
   retExpr = !expr->negate ? operand : 
             ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Neg, operand);
 }
@@ -474,6 +470,7 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
   ir::Expr operand = emitExpr(expr->operand);
   const auto type = operand.type().toTensor();
 
+  // TODO: Literals should be handled by separate semantic analysis pass
   switch (type->order()) {
     case 0:
       // OPT: This might lead to redundant code to be removed in later pass
@@ -529,7 +526,9 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
   for (auto param : expr->indices) {
     const ir::Expr arg = emitExpr(param);
     indices.push_back(arg);
-    containsSlices = containsSlices || param->isSlice();
+    if (param->isSlice()) {
+      containsSlices = true;
+    }
   }
 
   // The parenthesis read can be a read from a tensor or a tuple.
@@ -599,12 +598,14 @@ void IREmitter::visit(BoolLiteral::Ptr expr) {
 }
 
 void IREmitter::visit(DenseIntVector::Ptr expr) {
+  // TODO: Optimize.
   for (auto val : expr->vals) {
     retTensorVals.addIntValue(val);
   }
 }
 
 void IREmitter::visit(DenseFloatVector::Ptr expr) {
+  // TODO: Optimize.
   for (auto val : expr->vals) {
     retTensorVals.addFloatValue(val);
   }
@@ -673,8 +674,7 @@ void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
   }
 
   iassert(!ctx->containsFunction(decl->name));
-  const ir::Func newFunc = ir::Func(decl->name, arguments, results, body);
-  ctx->addFunction(newFunc);
+  ctx->addFunction(ir::Func(decl->name, arguments, results, body));
 }
 
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, const bool isConst) {
@@ -686,18 +686,7 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, const bool isConst) {
   ctx->addSymbol(var.getName(), var, access);
 
   const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
-  if (isConst && initExpr.defined() &&  ir::isa<ir::Literal>(initExpr)) {
-    const ir::Type type = var.getType();
-    const ir::Type litType = initExpr.type();
-    const auto *tensorType = type.toTensor();
-    const auto *litTensorType = litType.toTensor();
-  
-    // If tensor_type is a 1xn matrix and $tensor_literal is a vector then we
-    // cast $tensor_literal to a 1xn matrix.
-    if (tensorType->order() == 2 && litTensorType->order() == 1) {
-      const_cast<ir::Literal *>(ir::to<ir::Literal>(initExpr))->cast(type);
-    }
-  
+  if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr)) {
     ctx->addConstant(var, initExpr);
   } else {
     ctx->addStatement(ir::VarDecl::make(var));
@@ -753,33 +742,35 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
   }
 
   if (topLevelStmt.defined()) {
-    const std::vector<ir::Var> retVals = ir::isa<ir::CallStmt>(topLevelStmt) ? 
+    const bool isCallStmt = ir::isa<ir::CallStmt>(topLevelStmt);
+    const std::vector<ir::Var> retVals = isCallStmt ? 
       ir::to<ir::CallStmt>(topLevelStmt)->callee.getResults() :
       ir::to<ir::Map>(topLevelStmt)->function.getResults();
-    iassert(lhs.size() == retVals.size() || lhs.size() == 0); 
+    
+    iassert(lhs.size() <= retVals.size());
 
     std::vector<ir::Var> results;
-    for (unsigned int i = 0; i < retVals.size(); ++i) {
+    for (unsigned i = 0; i < retVals.size(); ++i) {
       if (i < lhs.size() && ir::isa<ir::VarExpr>(lhs[i])) {
         ir::Var var = ir::to<ir::VarExpr>(lhs[i])->var;
         const std::string varName = var.getName();
 
         if (!ctx->hasSymbol(varName)) {
           var = ir::Var(varName, retVals[i].getType());
-          ctx->addSymbol(varName, var, internal::Symbol::ReadWrite);
+          ctx->addSymbol(var);
           ctx->addStatement(ir::VarDecl::make(var));
         }
 
         results.push_back(var);
       } else {
         const ir::Var tmp = ctx->getBuilder()->temporary(retVals[i].getType());
-        ctx->addSymbol(tmp.getName(), tmp, internal::Symbol::ReadWrite);
+        ctx->addSymbol(tmp);
         ctx->addStatement(ir::VarDecl::make(tmp));
         results.push_back(tmp);
       }
     }
       
-    if (ir::isa<ir::CallStmt>(topLevelStmt)) {
+    if (isCallStmt) {
       auto callStmt = const_cast<ir::CallStmt *>(
         ir::to<ir::CallStmt>(topLevelStmt));
       callStmt->results = results;

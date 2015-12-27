@@ -14,6 +14,7 @@
 #include "hir_rewriter.h"
 #include "func_call_rewriter.h"
 #include "ir_emitter.h"
+#include "type_checker.h"
 
 using namespace simit::internal;
 
@@ -27,6 +28,17 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
 
   // Semantic analyses.
   program = hir::FuncCallRewriter(errors).rewrite<hir::Program>(program);
+  // TODO: Constant folding.
+  // TODO: Check for references to undeclared identifiers, redefinition.
+  // TODO: Check for invalid assignment targets.
+  // TODO: Check for invalid declarations. (Maybe should be enforced by grammar?)
+  hir::TypeChecker(errors).typeCheck(program);
+  // TODO: Type checking.
+  // TODO: Access checking.
+  
+  if (errors->size() > 0) {
+    return 1;
+  }
   
   // IR generation.
   hir::IREmitter(ctx).emitIR(program);
