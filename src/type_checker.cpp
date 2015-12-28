@@ -1,7 +1,7 @@
-#if 1
 #include <memory>
 #include <vector>
 #include <iostream>
+#include <algorithm>
 
 #include "type_checker.h"
 #include "program_context.h"
@@ -209,31 +209,11 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
 }
 
 void TypeChecker::visit(VarDecl::Ptr decl) {
-  const ir::Var var = getVar(decl->var);
-  iassert(!ctx.hasSymbol(var.getName()));
-  ctx.addSymbol(var);
+  typeCheckVarOrConstDecl(decl);
+}
 
-  if (!decl->initVal) {
-    return;
-  }
-
-  const TypePtr initValType = inferType(decl->initVal);
-  if (initValType && (initValType->size() != 1 || 
-      !compareTypes(var.getType(), initValType->at(0)))) {
-    // Allow initialization of tensors with scalars.
-    // TODO: Check that scalar is zero?
-    if (var.getType().isTensor() && isScalar(initValType->at(0)) && 
-        var.getType().toTensor()->componentType == 
-        initValType->at(0).toTensor()->componentType) {
-      return;
-    }
-
-    std::stringstream errMsg;
-    errMsg << "attempting to initialize a variable or constant of type \'"
-          << typeString(var.getType()) << "\' with an expression of type "
-          << typeString(initValType);
-    reportError(errMsg.str(), decl);
-  }
+void TypeChecker::visit(ConstDecl::Ptr decl) {
+  typeCheckVarOrConstDecl(decl, true);
 }
 
 void TypeChecker::visit(WhileStmt::Ptr stmt) {
@@ -371,7 +351,9 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
     }
   }
 
-  if (!exprType) return;
+  if (!exprType) {
+    return;
+  }
 
   if (stmt->lhs.size() != exprType->size()) {
     std::stringstream errMsg;
@@ -389,9 +371,9 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
           lhsType[i].toTensor()->componentType != 
           exprType->at(i).toTensor()->componentType) {
         std::stringstream errMsg;
-        errMsg << "cannot assign a value of type " 
-               << typeString(exprType->at(i)) << " to a target of type " 
-               << typeString(lhsType[i]);
+        errMsg << "cannot assign a value of type \'" 
+               << typeString(exprType->at(i)) << "\' to a target of type \'" 
+               << typeString(lhsType[i]) << "\'";
         reportError(errMsg.str(), stmt->lhs[i]);
       }
     }
@@ -891,7 +873,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   } else if (lhsType->at(0).isTuple()) {
     if (expr->indices.size() != 1) {
       std::stringstream errMsg;
-      errMsg << "tuple access expected exactly one index but got " 
+      errMsg << "tuple access expects exactly one index but got " 
              << expr->indices.size();
       reportError(errMsg.str(), expr);
       return;
@@ -1015,13 +997,14 @@ void TypeChecker::visit(DenseNDTensor::Ptr lit) {
 void TypeChecker::visit(DenseTensorLiteral::Ptr lit) {
   try {
     TensorValues tensorVals = getTensorVals(lit->tensor);
-    const auto idoms = std::vector<ir::IndexDomain>(
-        tensorVals.dimSizes.rbegin(), tensorVals.dimSizes.rend());
-    const ir::ScalarType elemType = 
-        (tensorVals.type == TensorValues::Type::INT) ?
-        ir::ScalarType::Int : ir::ScalarType::Float;
+    const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(), 
+                                             tensorVals.dimSizes.rend());
+    const auto elemType = (tensorVals.type == TensorValues::Type::INT) ?
+                          ir::ScalarType::Int : ir::ScalarType::Float;
+    iassert(idoms.size() == 1 || !lit->transposed);
+
     retType = std::make_shared<Type>();
-    retType->push_back(ir::TensorType::make(elemType, idoms));
+    retType->push_back(ir::TensorType::make(elemType, idoms, lit->transposed));
   } catch (std::exception &err) {
     reportError(std::string(err.what()), lit);
   }
@@ -1043,6 +1026,74 @@ void TypeChecker::visit(DenseTensorLiteral::Ptr lit) {
     reportError(msg, test->expected);
   }
 }*/
+
+void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, 
+                                          const bool isConst) {
+  const ir::Var var = getVar(decl->var);
+  iassert(!ctx.hasSymbol(var.getName()));
+  ctx.addSymbol(var);
+
+  if (!decl->initVal) {
+    return;
+  }
+
+  const ir::Type varType = var.getType();
+  const TypePtr initValType = inferType(decl->initVal);
+  if (!initValType || (initValType->size() == 1 && 
+      compareTypes(varType, initValType->at(0)))) {
+    // Initial value type matches declared variable/constant type.
+    return;
+  }
+
+  std::stringstream errMsg;
+  errMsg << "attempting to initialize a variable or constant of type \'"
+         << typeString(var.getType()) << "\' with an expression of type "
+         << typeString(initValType);
+
+  iassert(varType.isTensor());
+  if (initValType->size() != 1 || !initValType->at(0).isTensor()) {
+    reportError(errMsg.str(), decl);
+    return;
+  }
+
+  // Check if attempting to initialize a tensor with a scalar.
+  const ir::Type initIRType = initValType->at(0);
+  const auto varTensorType = varType.toTensor();
+  const auto initTensorType = initIRType.toTensor();
+  if (isScalar(initIRType) && 
+      varTensorType->componentType == initTensorType->componentType) {
+    // TODO: Verify that initial value is zero?
+    return;
+  }
+
+  // Check if initial value type is equivalent to declared constant type.
+  const ir::Type varBlockType = varTensorType->getBlockType();
+  const ir::Type initBlockType = initTensorType->getBlockType();
+  if (isConst && compareTypes(varBlockType, initBlockType)) {
+    const auto varDims = varTensorType->getOuterDimensions();
+    const auto initDims = initTensorType->getOuterDimensions();
+
+    // Search for first "non-trivial" dimensions of both types.
+    std::vector<ir::IndexSet>::const_iterator varDimsIt = varDims.begin();
+    for (; varDimsIt != varDims.end(); ++varDimsIt) {
+      if (*varDimsIt != ir::IndexSet(1)) {
+        break;
+      }
+    }
+    std::vector<ir::IndexSet>::const_iterator initDimsIt = initDims.begin();
+    for (; initDimsIt != initDims.end(); ++initDimsIt) {
+      if (*initDimsIt != ir::IndexSet(1)) {
+        break;
+      }
+    }
+    
+    if (std::equal(varDimsIt, varDims.end(), initDimsIt)) {
+      return;
+    }
+  }
+
+  reportError(errMsg.str(), decl);
+}
 
 void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
   const TypePtr lhsType = inferType(expr->lhs);
@@ -1131,4 +1182,3 @@ void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
 
 }
 }
-#endif
