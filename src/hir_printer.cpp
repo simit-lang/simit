@@ -455,6 +455,13 @@ void HIRPrinter::visit(DenseNDTensor::Ptr tensor) {
   oss << "]";
 }
 
+void HIRPrinter::visit(DenseTensorLiteral::Ptr tensor) {
+  tensor->tensor->accept(this);
+  if (tensor->transposed) {
+    oss << "'";
+  }
+}
+
 void HIRPrinter::visit(Test::Ptr test) {
   oss << "%! " << test->funcName << "(";
   bool printDelimiter = false;

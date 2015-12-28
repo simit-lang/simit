@@ -677,6 +677,7 @@ struct DenseNDTensor : public DenseTensorElement {
 
 struct DenseTensorLiteral : public TensorLiteral {
   DenseTensorElement::Ptr tensor;
+  bool transposed;
 
   typedef std::shared_ptr<DenseTensorLiteral> Ptr;
   

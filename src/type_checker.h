@@ -43,6 +43,7 @@ private:
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
+  virtual void visit(ConstDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);
   virtual void visit(IndexSetDomain::Ptr);
@@ -78,6 +79,7 @@ private:
   virtual void visit(DenseFloatVector::Ptr);
   virtual void visit(DenseNDTensor::Ptr);
   virtual void visit(DenseTensorLiteral::Ptr);
+  //virtual void visit(Test::Ptr);
 
 private:
   typedef std::vector<ir::Type> Type;
@@ -140,7 +142,8 @@ private:
     std::vector<unsigned> dimSizes;
     Type                      type;
   };
-  
+ 
+  void typeCheckVarOrConstDecl(VarDecl::Ptr, const bool = false);
   void typeCheckBinaryElwise(BinaryExpr::Ptr);
   void typeCheckBinaryBoolean(BinaryExpr::Ptr);
 

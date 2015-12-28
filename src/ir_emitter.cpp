@@ -455,6 +455,7 @@ void IREmitter::visit(ElwiseDivExpr::Ptr expr) {
 
 void IREmitter::visit(NegExpr::Ptr expr) {
   const ir::Expr operand = emitExpr(expr->operand);
+  iassert(!ir::isa<ir::Literal>(operand));
   retExpr = !expr->negate ? operand : 
             ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::Neg, operand);
 }
@@ -468,26 +469,22 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
   ir::IRBuilder *builder = ctx->getBuilder();
 
   ir::Expr operand = emitExpr(expr->operand);
-  const auto type = operand.type().toTensor();
+  const ir::TensorType *type = operand.type().toTensor();
 
-  // TODO: Literals should be handled by separate semantic analysis pass
+  iassert(type->order() > 1 || !ir::isa<ir::Literal>(operand));
   switch (type->order()) {
     case 0:
       // OPT: This might lead to redundant code to be removed in later pass
-      retExpr = ir::isa<ir::Literal>(operand) ? operand :
-                builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
+      retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
       break;
     case 1:
     {
       // OPT: This might lead to redundant code to be removed in later pass
-      if (!ir::isa<ir::Literal>(operand)) {
-        operand = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
-      }
+      retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
       const ir::Type transposedVector = ir::TensorType::make(
         type->componentType, type->getDimensions(), !type->isColumnVector);
-      const_cast<ir::ExprNodeBase *>(to<ir::ExprNodeBase>(operand))->type = 
+      const_cast<ir::ExprNodeBase *>(to<ir::ExprNodeBase>(retExpr))->type = 
         transposedVector;
-      retExpr = operand;
       break;
     }
     case 2:
@@ -626,8 +623,17 @@ void IREmitter::visit(DenseNDTensor::Ptr tensor) {
 }
 
 void IREmitter::visit(DenseTensorLiteral::Ptr tensor) {
-  TensorValues tensorVals = emitTensorVals(tensor->tensor);
-  retExpr = tensorVals.getLiteral();
+  const TensorValues tensorVals = emitTensorVals(tensor->tensor);
+  const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(),
+                                           tensorVals.dimSizes.rend());
+  const ir::ScalarType elemType = (tensorVals.type == TensorValues::Type::INT) ?
+                                  ir::ScalarType::Int : ir::ScalarType::Float;
+  const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
+                                                   tensor->transposed);
+  const void *data = (tensorVals.type == TensorValues::Type::INT) ? 
+                     static_cast<const void *>(tensorVals.intVals.data()) :
+                     static_cast<const void *>(tensorVals.floatVals.data());
+  retExpr = ir::Literal::make(tensorType, const_cast<void *>(data));
 }
 
 void IREmitter::visit(Test::Ptr test) {
