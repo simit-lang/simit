@@ -70,7 +70,6 @@ private:
   std::vector<hir::IndexSet::Ptr> parseIndexSets();
   hir::IndexSet::Ptr parseIndexSet();
   hir::Expr::Ptr parseTensorLiteral();
-  hir::TensorLiteral::Ptr parseSignedNumLiteral();
   hir::DenseTensorElement::Ptr parseDenseTensorLiteral();
   hir::DenseTensorElement::Ptr parseDenseTensorLiteralInner();
   hir::DenseTensorElement::Ptr parseDenseMatrixLiteral();

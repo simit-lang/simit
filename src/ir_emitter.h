@@ -149,19 +149,6 @@ private:
       }
       dimSizes[dimSizes.size() - 1]++;
     }
-  
-    ir::Expr getLiteral() {
-      const auto idoms = std::vector<ir::IndexDomain>(dimSizes.rbegin(),
-                                                      dimSizes.rend());
-      const ir::ScalarType elemType = (type == TensorValues::Type::INT) ?
-                                      ir::ScalarType::Int : 
-                                      ir::ScalarType::Float;
-      const ir::Type tensorType = ir::TensorType::make(elemType, idoms);
-      const void *data = (type == TensorValues::Type::INT) ? 
-                         static_cast<const void*>(intVals.data()) :
-                         static_cast<const void*>(floatVals.data());
-      return ir::Literal::make(tensorType, const_cast<void*>(data));
-    }
 
     std::vector<unsigned> dimSizes;
     std::vector<int>       intVals;

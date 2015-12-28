@@ -1098,23 +1098,39 @@ hir::Expr::Ptr ParserNew::parseTensorLiteral() {
 
   switch (peek().type) {
     case TokenType::INT_LITERAL:
-    case TokenType::FLOAT_LITERAL:
-    case TokenType::PLUS:
-    case TokenType::MINUS:
-      literal = parseSignedNumLiteral();
+    {
+      const Token intToken = consume(TokenType::INT_LITERAL);
+      auto intLiteral = std::make_shared<hir::IntLiteral>();
+      intLiteral->setLoc(intToken);
+      intLiteral->val = intToken.num;
+      literal = intLiteral;
       break;
+    }
+    case TokenType::FLOAT_LITERAL:
+    {
+      const Token floatToken = consume(TokenType::FLOAT_LITERAL);
+      auto floatLiteral = std::make_shared<hir::FloatLiteral>();
+      floatLiteral->setLoc(floatToken);
+      floatLiteral->val = floatToken.fnum;
+      literal = floatLiteral;
+      break;
+    }
     case TokenType::TRUE:
+    {
+      const Token trueToken = consume(TokenType::TRUE);
+      auto trueLiteral = std::make_shared<hir::BoolLiteral>();
+      trueLiteral->setLoc(trueToken);
+      trueLiteral->val = true;
+      literal = trueLiteral;
+      break;
+    }
     case TokenType::FALSE:
     {
-      const bool boolVal = tryconsume(TokenType::TRUE);
-      if (!boolVal) {
-        consume(TokenType::FALSE);
-      }
-
-      auto boolLiteral = std::make_shared<hir::BoolLiteral>();
-      boolLiteral->val = boolVal;
-      literal = boolLiteral;
-      
+      const Token falseToken = consume(TokenType::FALSE);
+      auto falseLiteral = std::make_shared<hir::BoolLiteral>();
+      falseLiteral->setLoc(falseToken);
+      falseLiteral->val = false;
+      literal = falseLiteral;
       break;
     }
     case TokenType::LB:
@@ -1123,76 +1139,13 @@ hir::Expr::Ptr ParserNew::parseTensorLiteral() {
       const auto tensorLiteral = std::make_shared<hir::DenseTensorLiteral>();
       tensorLiteral->setLoc(tensorElem);
       tensorLiteral->tensor = tensorElem;
+      tensorLiteral->transposed = false;
       literal = tensorLiteral;
-
-      if (peek().type == TokenType::TRANSPOSE) {
-        consume(TokenType::TRANSPOSE);
-        
-        auto transposedLiteral = std::make_shared<hir::TransposeExpr>();
-        transposedLiteral->setLoc(literal);
-        transposedLiteral->operand = literal;
-        literal = transposedLiteral;
-      }
-
       break;
     }
     case TokenType::STRING_LITERAL:
       //consume(TokenType::STRING_LITERAL);
       //break;
-    default:
-      reportError(peek(), "unexpected symbol: "); // TODO: print symbol
-      throw SyntaxError();
-      break;
-  }
-
-  return literal;
-}
-
-hir::TensorLiteral::Ptr ParserNew::parseSignedNumLiteral() {
-  hir::TensorLiteral::Ptr literal;
-
-  switch (peek().type) {
-    case TokenType::INT_LITERAL:
-    {
-      auto intLiteral = std::make_shared<hir::IntLiteral>();
-      intLiteral->setLoc(peek());
-      intLiteral->val = parseSignedIntLiteral();
-      literal = intLiteral;
-      break;
-    }
-    case TokenType::FLOAT_LITERAL:
-    {
-      auto floatLiteral = std::make_shared<hir::FloatLiteral>();
-      floatLiteral->setLoc(peek());
-      floatLiteral->val = parseSignedFloatLiteral();
-      literal = floatLiteral;
-      break;
-    }
-    case TokenType::PLUS:
-    case TokenType::MINUS:
-      switch (peek(1).type) {
-        case TokenType::INT_LITERAL:
-        {
-          auto intLiteral = std::make_shared<hir::IntLiteral>();
-          intLiteral->setLoc(peek());
-          intLiteral->val = parseSignedIntLiteral();
-          literal = intLiteral;
-          break;
-        }
-        case TokenType::FLOAT_LITERAL:
-        {
-          auto floatLiteral = std::make_shared<hir::FloatLiteral>();
-          floatLiteral->setLoc(peek());
-          floatLiteral->val = parseSignedFloatLiteral();
-          literal = floatLiteral;
-          break;
-        }
-        default:
-          reportError(peek(), "unexpected symbol: "); // TODO: print symbol
-          throw SyntaxError();
-          break;
-      }
-      break;
     default:
       reportError(peek(), "unexpected symbol: "); // TODO: print symbol
       throw SyntaxError();
@@ -1381,7 +1334,7 @@ hir::Test::Ptr ParserNew::parseTest() {
       test->args = parseCallParams();
       
       consume(TokenType::EQ);
-      test->expected = parseTensorLiteral();
+      test->expected = parseExpr();
       
       consume(TokenType::SEMICOL);
       break;
