@@ -69,6 +69,7 @@ public:
   virtual void visit(DenseIntVector::Ptr);
   virtual void visit(DenseFloatVector::Ptr);
   virtual void visit(DenseNDTensor::Ptr);
+  virtual void visit(DenseTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
 private:

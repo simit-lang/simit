@@ -8,7 +8,7 @@ namespace simit {
 namespace hir {
 
 class ConstantFolding : public HIRRewriter {
-private:
+public:
   virtual void visit(NegExpr::Ptr);
   virtual void visit(TransposeExpr::Ptr);
 };
