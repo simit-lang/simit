@@ -4,6 +4,7 @@
 #include <string>
 #include <vector>
 #include <memory>
+#include <iostream>
 
 #include "types.h"
 #include "scanner.h"
@@ -17,6 +18,8 @@ struct HIRNode : public std::enable_shared_from_this<HIRNode> {
   unsigned int colNum;
 
   typedef std::shared_ptr<HIRNode> Ptr;
+
+  HIRNode() : lineNum(0), colNum(0) {}
 
   virtual void accept(HIRVisitor *) = 0; 
 
@@ -39,7 +42,7 @@ inline bool isa(HIRNode::Ptr ptr) {
 
 template <typename T>
 inline const std::shared_ptr<T> to(HIRNode::Ptr ptr) {
-  iassert(isa<T>(ptr)) << "Wrong type";
+  iassert(isa<T>(ptr)) << "wrong type";
   return std::static_pointer_cast<T>(ptr);
 }
 
