@@ -21,7 +21,9 @@ namespace hir {
 class TypeChecker : public HIRVisitor {
 public:
   TypeChecker(std::vector<ParseError> *errors) : 
-    retField(ir::Field("", ir::Type())), errors(errors) {}
+    retField(ir::Field("", ir::Type())), 
+    skipCheckDeclared(false),
+    errors(errors) {}
 
   inline void typeCheck(Program::Ptr program) {
     program->accept(this);
@@ -50,7 +52,6 @@ private:
   virtual void visit(RangeDomain::Ptr);
   virtual void visit(ForStmt::Ptr);
   virtual void visit(PrintStmt::Ptr);
-  virtual void visit(ExprStmt::Ptr);
   virtual void visit(AssignStmt::Ptr);
   virtual void visit(ExprParam::Ptr);
   virtual void visit(MapExpr::Ptr);
@@ -81,7 +82,6 @@ private:
   virtual void visit(DenseTensorLiteral::Ptr);
   //virtual void visit(Test::Ptr);
 
-private:
   typedef std::vector<ir::Type> Type;
   typedef std::shared_ptr<Type> TypePtr;
   typedef std::shared_ptr<ir::IndexSet> IndexSetPtr;
@@ -146,6 +146,16 @@ private:
   void typeCheckVarOrConstDecl(VarDecl::Ptr, const bool = false);
   void typeCheckBinaryElwise(BinaryExpr::Ptr);
   void typeCheckBinaryBoolean(BinaryExpr::Ptr);
+
+  void markCheckWritable(HIRNode::Ptr node) {
+    if (isa<VarExpr>(node)) {
+      checkWritable = node;
+    } else if (isa<TensorReadExpr>(node)) {
+      markCheckWritable(to<TensorReadExpr>(node)->tensor);
+    } else if (isa<FieldReadExpr>(node)) {
+      markCheckWritable(to<FieldReadExpr>(node)->setOrElem);
+    }
+  }
 
   inline TypePtr inferType(Expr::Ptr ptr) {
     retType.reset();
@@ -220,10 +230,22 @@ private:
     oss << "\'";
     return oss.str();
   }
-  inline void reportError(std::string msg, HIRNode::Ptr loc) {
+  inline void reportError(const std::string msg, HIRNode::Ptr loc) {
     const auto err = ParseError(loc->lineNum, loc->colNum, 
                                 loc->lineNum, loc->colNum, msg);
     errors->push_back(err);
+  }
+  inline void reportUndeclared(const std::string type, const std::string ident, 
+                               HIRNode::Ptr loc) {
+    std::stringstream errMsg;
+    errMsg << "undeclared " << type << " \'" << ident << "\'";
+    reportError(errMsg.str(), loc);
+  }
+  inline void reportMultipleDefs(const std::string type,
+                                 const std::string ident, HIRNode::Ptr loc) {
+    std::stringstream errMsg;
+    errMsg << "multiple definitions of " << type << " \'" << ident << "\'";
+    reportError(errMsg.str(), loc);
   }
 
   TypePtr retType;
@@ -233,7 +255,9 @@ private:
   ir::Field retField;
   ir::Var retVar;
   TensorValues retTensorVals;
-  
+ 
+  bool skipCheckDeclared;
+  HIRNode::Ptr checkWritable;
   internal::ProgramContext ctx;
   std::vector<ParseError> *errors;
 };
