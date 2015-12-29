@@ -16,7 +16,7 @@ ParseError::~ParseError() {
 }
 
 std::string ParseError::toString() const {
-  return "Error: " + msg + " at " + to_string(firstLine) + ":" +
+  return "error: " + msg + ", at " + to_string(firstLine) + ":" +
          to_string(firstColumn);
 }
 

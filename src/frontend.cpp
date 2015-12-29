@@ -30,7 +30,6 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   // Semantic analyses.
   program = hir::FuncCallRewriter(errors).rewrite<hir::Program>(program);
   program = hir::ConstantFolding().rewrite<hir::Program>(program);
-  // TODO: Check for references to undeclared identifiers, redefinition, permission.
   // TODO: Check for invalid declarations. (Maybe should be enforced by grammar?)
   hir::TypeChecker(errors).typeCheck(program);
   // TODO: Rewrite tuple reads.

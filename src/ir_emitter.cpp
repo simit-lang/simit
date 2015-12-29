@@ -664,7 +664,7 @@ void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
   std::vector<ir::Var> results;
   for (auto res : decl->results) {
     const ir::Var result = emitVar(res);
-    ctx->addSymbol(result.getName(), result, internal::Symbol::ReadWrite);
+    ctx->addSymbol(result);
     results.push_back(result);
   }
 
@@ -686,7 +686,7 @@ void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, const bool isConst) {
   const ir::Var var = emitVar(decl->var);
   
-  iassert(!ctx->hasSymbol(var.getName()));
+  iassert(!ctx->hasSymbol(var.getName(), true));
   const auto access = isConst ? internal::Symbol::Read : 
                       internal::Symbol::ReadWrite;
   ctx->addSymbol(var.getName(), var, access);

@@ -95,8 +95,8 @@ public:
     return exprSymtable.get(name);
   }
 
-  bool hasSymbol(const std::string &name) {
-    return exprSymtable.contains(name);
+  bool hasSymbol(const std::string &name, bool currentScopeOnly = false) {
+    return exprSymtable.contains(name, currentScopeOnly);
   }
 
   void addFunction(ir::Func f) {
