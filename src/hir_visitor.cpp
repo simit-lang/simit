@@ -25,6 +25,7 @@ void HIRVisitor::visit(SetType::Ptr type) {
 
 void HIRVisitor::visit(TupleType::Ptr type) {
   type->element->accept(this);
+  type->length->accept(this);
 }
 
 void HIRVisitor::visit(NonScalarTensorType::Ptr type) {
@@ -35,16 +36,19 @@ void HIRVisitor::visit(NonScalarTensorType::Ptr type) {
 }
 
 void HIRVisitor::visit(Field::Ptr field) {
+  field->name->accept(this);
   field->type->accept(this);
 }
 
 void HIRVisitor::visit(ElementTypeDecl::Ptr decl) {
+  decl->name->accept(this);
   for (auto field : decl->fields) {
     field->accept(this);
   }
 }
 
 void HIRVisitor::visit(IdentDecl::Ptr decl) {
+  decl->name->accept(this);
   decl->type->accept(this);
 }
 
@@ -57,6 +61,7 @@ void HIRVisitor::visit(ExternDecl::Ptr decl) {
 }
 
 void HIRVisitor::visit(FuncDecl::Ptr decl) {
+  decl->name->accept(this);
   for (auto arg : decl->args) {
     arg->accept(this);
   }
@@ -108,6 +113,7 @@ void HIRVisitor::visit(RangeDomain::Ptr domain) {
 }
 
 void HIRVisitor::visit(ForStmt::Ptr stmt) {
+  stmt->loopVar->accept(this);
   stmt->domain->accept(this);
   stmt->body->accept(this);
 }
@@ -132,9 +138,11 @@ void HIRVisitor::visit(ExprParam::Ptr param) {
 }
 
 void HIRVisitor::visit(MapExpr::Ptr expr) {
+  expr->func->accept(this);
   for (auto param : expr->partialActuals) {
     param->accept(this);
   }
+  expr->target->accept(this);
 }
 
 void HIRVisitor::visit(UnaryExpr::Ptr expr) {
@@ -209,6 +217,7 @@ void HIRVisitor::visit(TransposeExpr::Ptr expr) {
 }
 
 void HIRVisitor::visit(CallExpr::Ptr expr) {
+  expr->func->accept(this);
   visit(to<NaryExpr>(expr));
 }
 
@@ -221,6 +230,11 @@ void HIRVisitor::visit(TensorReadExpr::Ptr expr) {
 
 void HIRVisitor::visit(FieldReadExpr::Ptr expr) {
   expr->setOrElem->accept(this);
+  expr->field->accept(this);
+}
+
+void HIRVisitor::visit(ParenExpr::Ptr expr) {
+  expr->expr->accept(this);
 }
 
 void HIRVisitor::visit(DenseNDTensor::Ptr tensor) {
@@ -234,6 +248,7 @@ void HIRVisitor::visit(DenseTensorLiteral::Ptr tensor) {
 }
 
 void HIRVisitor::visit(Test::Ptr test) {
+  test->func->accept(this);
   for (auto arg : test->args) {
     arg->accept(this);
   }

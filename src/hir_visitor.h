@@ -14,9 +14,11 @@ struct DynamicIndexSet;
 struct ElementType;
 struct Endpoint;
 struct SetType;
+struct TupleLength;
 struct TupleType;
 struct ScalarTensorType;
 struct NonScalarTensorType;
+struct Identifier;
 struct Field;
 struct ElementTypeDecl;
 struct IdentDecl;
@@ -58,6 +60,7 @@ struct TransposeExpr;
 struct CallExpr;
 struct TensorReadExpr;
 struct FieldReadExpr;
+struct ParenExpr;
 struct VarExpr;
 struct IntLiteral;
 struct FloatLiteral;
@@ -78,9 +81,11 @@ public:
   virtual void visit(std::shared_ptr<ElementType> op) {}
   virtual void visit(std::shared_ptr<Endpoint> op) {}
   virtual void visit(std::shared_ptr<SetType>);
+  virtual void visit(std::shared_ptr<TupleLength> op) {}
   virtual void visit(std::shared_ptr<TupleType>);
   virtual void visit(std::shared_ptr<ScalarTensorType> op) {}
   virtual void visit(std::shared_ptr<NonScalarTensorType>);
+  virtual void visit(std::shared_ptr<Identifier> op) {}
   virtual void visit(std::shared_ptr<Field>);
   virtual void visit(std::shared_ptr<ElementTypeDecl>);
   virtual void visit(std::shared_ptr<IdentDecl>);
@@ -122,6 +127,7 @@ public:
   virtual void visit(std::shared_ptr<CallExpr>);
   virtual void visit(std::shared_ptr<TensorReadExpr>);
   virtual void visit(std::shared_ptr<FieldReadExpr>);
+  virtual void visit(std::shared_ptr<ParenExpr>);
   virtual void visit(std::shared_ptr<VarExpr> op) {}
   virtual void visit(std::shared_ptr<IntLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatLiteral> op) {}

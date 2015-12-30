@@ -4,10 +4,14 @@
 #include <list>
 #include <sstream>
 #include <string>
+#include <vector>
+
+#include "error.h"
 
 namespace simit { 
 namespace internal {
 
+// TODO: move into Token class.
 enum class TokenType {
   END,
   UNKNOWN,
@@ -80,19 +84,6 @@ enum class TokenType {
 };
 
 struct Token {
-  Token() : Token(0, 0) {}
-  Token(unsigned lineNum, unsigned colNum) : 
-    type(TokenType::UNKNOWN), lineNum(lineNum), colNum(colNum) {}
-  Token(TokenType type, unsigned lineNum, unsigned colNum) : 
-    type(type), lineNum(lineNum), colNum(colNum) {}
-  Token(int num, unsigned lineNum, unsigned colNum) : 
-    type(TokenType::INT_LITERAL), num(num), lineNum(lineNum), colNum(colNum) {}
-  Token(double fnum, unsigned lineNum, unsigned colNum) : 
-    type(TokenType::FLOAT_LITERAL), fnum(fnum), lineNum(lineNum), 
-    colNum(colNum) {}
-
-  friend std::ostream &operator <<(std::ostream &, Token);
-  
   TokenType type;
   union {
     int num;
@@ -100,45 +91,65 @@ struct Token {
     bool boolean;
   };
   std::string str;
-  unsigned lineNum;
-  unsigned colNum;
+  unsigned lineBegin;
+  unsigned colBegin;
+  unsigned lineEnd;
+  unsigned colEnd;
+ 
+  friend std::ostream &operator <<(std::ostream &, Token);
 };
 
 class TokenStream {
-  public:
-    inline void addToken(Token newToken) { tokens.push_back(newToken); }
-    inline void addToken(TokenType type, unsigned lineNum, 
-                         unsigned colNum) {
-      tokens.push_back(Token(type, lineNum, colNum));
+public:
+  inline void addToken(Token newToken) { tokens.push_back(newToken); }
+  inline void addToken(TokenType type, unsigned line, 
+                       unsigned col, unsigned len = 1) {
+    Token newToken;
+    newToken.type = type;
+    newToken.lineBegin = line;
+    newToken.colBegin = col;
+    newToken.lineEnd = line;
+    newToken.colEnd = col + len - 1;
+    tokens.push_back(newToken);
+  }
+
+  inline void skip() { tokens.pop_front(); }
+  inline bool consume(TokenType type) {
+    if (tokens.front().type == type) {
+      tokens.pop_front();
+      return true;
+    }
+    return false;
+  }
+  inline Token peek(unsigned k) {
+    if (k == 0) {
+      return tokens.front();
     }
 
-    inline void skip() { tokens.pop_front(); }
-    inline bool consume(TokenType type) {
-      if (tokens.front().type == type) {
-        tokens.pop_front();
-        return true;
-      }
+    std::list<Token>::const_iterator it = tokens.cbegin();
+    for (unsigned i = 0; i < k && it != tokens.cend(); ++i, ++it) {}
 
-      return false;
-    }
-    inline Token peek(unsigned k) {
-      if (k == 0) return tokens.front();
-
-      std::list<Token>::const_iterator it = tokens.cbegin();
-      for (unsigned i = 0; i < k && it != tokens.cend(); ++i, ++it) {}
-      return (it == tokens.cend()) ? Token(TokenType::END, -1, -1) : *it;
+    if (it == tokens.cend()) {
+      Token endToken = Token();
+      endToken.type = TokenType::END;
+      return endToken;
     }
 
+    return *it;
+  }
 
-    friend std::ostream &operator <<(std::ostream &, TokenStream);
 
-  private:
-    std::list<Token> tokens;
+  friend std::ostream &operator <<(std::ostream &, TokenStream);
+
+private:
+  std::list<Token> tokens;
 };
 
 class ScannerNew {
 public:
-  static TokenStream lex(std::istream &);
+  ScannerNew(std::vector<ParseError> *errors) : errors(errors) {}
+
+  TokenStream lex(std::istream &);
 
 private:
   enum class ScanState {
@@ -147,7 +158,13 @@ private:
     MLTEST
   };
   
-  static TokenType getTokenType(std::string);
+  TokenType getTokenType(const std::string);
+  
+  void reportError(const std::string msg, unsigned line, unsigned col) {
+    errors->push_back(ParseError(line, col, line, col, msg));
+  }
+
+  std::vector<ParseError> *errors;
 };
 
 }

@@ -21,9 +21,11 @@ public:
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
   virtual void visit(SetType::Ptr);
+  virtual void visit(TupleLength::Ptr);
   virtual void visit(TupleType::Ptr);
   virtual void visit(ScalarTensorType::Ptr);
   virtual void visit(NonScalarTensorType::Ptr);
+  virtual void visit(Identifier::Ptr);
   virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(IdentDecl::Ptr);
