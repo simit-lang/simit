@@ -273,6 +273,11 @@ inline bool isBoolean(Type type) {
   return isScalar(type) && type.toTensor()->getComponentType().isBoolean();
 }
 
+inline bool isInt(Type type) {
+  return type.kind()==Type::Tensor && type.toTensor()->order() == 0 &&
+      type.toTensor()->componentType.isInt();
+}
+
 /// A system tensor is a tensor whose dimensions contain at least one set.
 inline bool isSystemTensorType(const TensorType* type) {
   return type->hasSystemDimensions();

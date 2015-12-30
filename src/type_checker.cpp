@@ -77,10 +77,11 @@ void TypeChecker::visit(SetType::Ptr type) {
 void TypeChecker::visit(TupleType::Ptr type) {
   const ir::Type elementType = getIRType(type->element);
 
-  if (type->length < 1) {
-    reportError("tuple must have length greater than or equal to one", type);
+  if (type->length->val < 1) {
+    const auto msg = "tuple must have length greater than or equal to one";
+    reportError(msg, type->length);
   } else if (elementType.defined()) {
-    retIRType = ir::Type(ir::TupleType::make(elementType, type->length));
+    retIRType = ir::Type(ir::TupleType::make(elementType, type->length->val));
   }
 }
 
@@ -158,7 +159,7 @@ void TypeChecker::visit(NonScalarTensorType::Ptr type) {
 
 void TypeChecker::visit(Field::Ptr field) {
   const ir::Type type = getIRType(field->type);
-  retField = ir::Field(field->name, type);
+  retField = ir::Field(field->name->ident, type);
 }
 
 void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
@@ -168,16 +169,17 @@ void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
     fields.push_back(field);
   }
 
-  if (ctx.containsElementType(decl->ident)) {
-    reportMultipleDefs("element type", decl->ident, decl);
+  const std::string name = decl->name->ident;
+  if (ctx.containsElementType(name)) {
+    reportMultipleDefs("element type", name, decl);
   } else {
-    ctx.addElementType(ir::ElementType::make(decl->ident, fields));
+    ctx.addElementType(ir::ElementType::make(name, fields));
   }
 }
 
 void TypeChecker::visit(IdentDecl::Ptr decl) {
   const ir::Type type = getIRType(decl->type);
-  retVar = ir::Var(decl->ident, type);
+  retVar = ir::Var(decl->name->ident, type);
 }
 
 void TypeChecker::visit(ExternDecl::Ptr decl) {
@@ -212,10 +214,11 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
   decl->body->accept(this);
   ctx.unscope();
 
-  if (ctx.containsFunction(decl->name)) {
-    reportMultipleDefs("function or procedure", decl->name, decl);
+  const std::string name = decl->name->ident;
+  if (ctx.containsFunction(name)) {
+    reportMultipleDefs("function or procedure", name, decl);
   } else {
-    ctx.addFunction(ir::Func(decl->name, arguments, results, ir::Stmt()));
+    ctx.addFunction(ir::Func(name, arguments, results, ir::Stmt()));
   }
 }
 
@@ -234,8 +237,7 @@ void TypeChecker::visit(WhileStmt::Ptr stmt) {
   stmt->body->accept(this);
   ctx.unscope();
 
-  if (condType && (condType->size() != 1 || !isScalar((*condType)[0]) || 
-      !(*condType)[0].toTensor()->componentType.isBoolean())) {
+  if (condType && (condType->size() != 1 || !isBoolean(condType->at(0)))) {
     std::stringstream errMsg;
     errMsg << "expected a boolean conditional expression but got an "
            << "expression of type " << typeString(condType);
@@ -256,8 +258,7 @@ void TypeChecker::visit(IfStmt::Ptr stmt) {
     ctx.unscope();
   }
 
-  if (condType && (condType->size() != 1 || !isScalar((*condType)[0]) || 
-      !(*condType)[0].toTensor()->componentType.isBoolean())) {
+  if (condType && (condType->size() != 1 || !isBoolean(condType->at(0)))) {
     std::stringstream errMsg;
     errMsg << "expected a boolean conditional expression but got an "
            << "expression of type " << typeString(condType);
@@ -277,15 +278,13 @@ void TypeChecker::visit(RangeDomain::Ptr domain) {
   const TypePtr lowerType = inferType(domain->lower);
   const TypePtr upperType = inferType(domain->upper);
 
-  if (lowerType && (lowerType->size() != 1 || !isScalar((*lowerType)[0]) ||  
-      !(*lowerType)[0].toTensor()->componentType.isInt())) {
+  if (lowerType && (lowerType->size() != 1 || !isInt(lowerType->at(0)))) {
     std::stringstream errMsg;
     errMsg << "expected lower bound of for-loop range to be integral but got "
            << "an expression of type " << typeString(lowerType);
     reportError(errMsg.str(), domain->lower);
   }
-  if (upperType && (upperType->size() != 1 || !isScalar((*upperType)[0]) ||  
-      !(*upperType)[0].toTensor()->componentType.isInt())) {
+  if (upperType && (upperType->size() != 1 || !isInt(upperType->at(0)))) {
     std::stringstream errMsg;
     errMsg << "expected upper bound of for-loop range to be integral but got "
            << "an expression of type " << typeString(upperType);
@@ -297,8 +296,8 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
   ctx.scope();
   stmt->domain->accept(this);
   
-  const ir::Var loopVar = ir::Var(stmt->loopVarName, ir::Int);
-  ctx.addSymbol(stmt->loopVarName, loopVar, internal::Symbol::Read);
+  const ir::Var loopVar = ir::Var(stmt->loopVar->ident, ir::Int);
+  ctx.addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
   
   stmt->body->accept(this);
   ctx.unscope();
@@ -307,7 +306,7 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
 void TypeChecker::visit(PrintStmt::Ptr stmt) {
   const TypePtr exprType = inferType(stmt->expr);
 
-  if (exprType && (exprType->size() != 1 || !(*exprType)[0].isTensor())) {
+  if (exprType && (exprType->size() != 1 || !exprType->at(0).isTensor())) {
     std::stringstream errMsg;
     errMsg << "cannot print an expression of type " << typeString(exprType);
     reportError(errMsg.str(), stmt->expr);
@@ -376,8 +375,7 @@ void TypeChecker::visit(ExprParam::Ptr param) {
     return;
   }
 
-  if (exprType->size() != 1 || !isScalar((*exprType)[0]) ||  
-      !(*exprType)[0].toTensor()->componentType.isInt()) {
+  if (exprType->size() != 1 || !isInt(exprType->at(0))) {
     std::stringstream errMsg;
     errMsg << "expected an integral tensor index but got an index of type "
            << typeString(exprType);
@@ -412,11 +410,21 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
       typeChecked = false;
     }
   }
-
-  iassert(ctx.containsFunction(expr->funcName));
-  const ir::Func func = ctx.getFunction(expr->funcName);
   
-  const ir::Expr target = ctx.getSymbol(expr->targetName).getExpr();
+  ir::Func func;
+  const std::string funcName = expr->func->ident;
+  if (ctx.containsFunction(funcName)) {
+    func = ctx.getFunction(funcName);
+    
+    retType = std::make_shared<Type>();
+    for (const auto &res : func.getResults()) {
+      retType->push_back(res.getType());
+    }
+  } else {
+    reportUndeclared("function", funcName, expr->func);
+  }
+  
+  const ir::Expr target = ctx.getSymbol(expr->target->ident).getExpr();
   if (target.type().isSet()) {
     const ir::SetType *targetSet = target.type().toSet();
     actualsType.push_back(targetSet->elementType);
@@ -424,15 +432,7 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
     }
     // TODO: Check arguments.
   } else {
-    const auto err = ParseError(expr->targetNameLineNum, expr->targetNameColNum, 
-                                expr->targetNameLineNum, expr->targetNameColNum, 
-                                "map can only be applied to sets");
-    errors->push_back(err);
-  }
-
-  retType = std::make_shared<Type>();
-  for (const auto &res : func.getResults()) {
-    retType->push_back(res.getType());
+    reportError("map operation can only be applied to sets", expr->target);
   }
 }
 
@@ -482,8 +482,7 @@ void TypeChecker::visit(EqExpr::Ptr expr) {
 void TypeChecker::visit(NotExpr::Ptr expr) {
   const TypePtr opndType = inferType(expr->operand);
 
-  if (opndType && (opndType->size() != 1 || !isScalar((*opndType)[0]) || 
-      !(*opndType)[0].toTensor()->componentType.isBoolean())) {
+  if (opndType && (opndType->size() != 1 || !isBoolean(opndType->at(0)))) {
     std::stringstream errMsg;
     errMsg << "expected a boolean operand but got an operand of type "
            << typeString(opndType);
@@ -522,7 +521,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     reportError(errMsg.str(), expr->rhs);
     typeChecked = false;
   }
-  
+ 
   if (!typeChecked) {
     return;
   }
@@ -678,7 +677,7 @@ void TypeChecker::visit(NegExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(ExpExpr::Ptr expr) {
-  // TODO: implement
+  // TODO: Implement.
   iassert(false);
 }
 
@@ -689,8 +688,8 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
     return;
   }
 
-  if (opndType->size() != 1 || !(*opndType)[0].isTensor() || 
-      (*opndType)[0].toTensor()->order() > 2) {
+  if (opndType->size() != 1 || !opndType->at(0).isTensor() || 
+      opndType->at(0).toTensor()->order() > 2) {
     std::stringstream errMsg;
     errMsg << "operand of tensor transpose must be a tensor of order 2 or "
            << "less, but got an operand of type " << typeString(opndType);
@@ -698,7 +697,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
     return;
   }
 
-  const ir::TensorType *tensorType = (*opndType)[0].toTensor();
+  const ir::TensorType *tensorType = opndType->at(0).toTensor();
   const std::vector<ir::IndexDomain> dimensions = tensorType->getDimensions();
   switch (tensorType->order()) {
     case 0:
@@ -727,8 +726,8 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(CallExpr::Ptr expr) {
-  iassert(ctx.containsFunction(expr->funcName));
-  const ir::Func func = ctx.getFunction(expr->funcName);
+  iassert(ctx.containsFunction(expr->func->ident));
+  const ir::Func func = ctx.getFunction(expr->func->ident);
 
   if (expr->operands.size() != func.getArguments().size()) {
     if (func.getKind() != ir::Func::Intrinsic) { 
@@ -772,7 +771,9 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   const TypePtr lhsType = inferType(expr->tensor);
 
-  if (!lhsType) return;
+  if (!lhsType) {
+    return;
+  }
 
   if (lhsType->size() != 1) {
     const auto msg = "can only access elements of a single tensor or tuple";
@@ -859,7 +860,9 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   const TypePtr lhsType = inferType(expr->setOrElem);
 
-  if (!lhsType) return;
+  if (!lhsType) {
+    return;
+  }
 
   if (lhsType->size() != 1) {
     const auto msg = "can only access fields of a single set or element";
@@ -867,8 +870,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
     return;
   }
 
-  const ir::Type type = (*lhsType)[0];
-
+  const ir::Type type = lhsType->at(0);
   const ir::ElementType *elemType = nullptr;
   if (type.isElement()) {
     elemType = type.toElement();
@@ -882,20 +884,21 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
     return;
   }
 
-  if (!elemType->hasField(expr->fieldName)) {
+  const std::string fieldName = expr->field->ident;
+  if (!elemType->hasField(fieldName)) {
     std::stringstream errMsg;
-    errMsg << "undefined field \'" << expr->fieldName << "\'";
-    reportError(errMsg.str(), expr);
+    errMsg << "undefined field \'" << fieldName << "\'";
+    reportError(errMsg.str(), expr->field);
     return;
   }
 
   retType = std::make_shared<Type>();
   if (type.isElement()) {
-    retType->push_back(elemType->field(expr->fieldName).type);
+    retType->push_back(elemType->field(fieldName).type);
   } else {
     const std::string varName = to<VarExpr>(expr->setOrElem)->ident;
     const ir::Expr setExpr = ctx.getSymbol(varName).getExpr();
-    retType->push_back(getFieldType(setExpr, expr->fieldName));
+    retType->push_back(getFieldType(setExpr, fieldName));
   }
 }
 
@@ -1070,14 +1073,14 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
   const TypePtr rhsType = inferType(expr->rhs);
 
   bool typeChecked = (bool)lhsType && (bool)rhsType;
-  if (lhsType && (lhsType->size() != 1 || !(*lhsType)[0].isTensor())) {
+  if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor())) {
     std::stringstream errMsg;
     errMsg << "expected left operand of element-wise operation to be a tensor "
            << "but got an operand of type " << typeString(lhsType);
     reportError(errMsg.str(), expr->lhs);
     typeChecked = false;
   }
-  if (rhsType && (rhsType->size() != 1 || !(*rhsType)[0].isTensor())) {
+  if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor())) {
     std::stringstream errMsg;
     errMsg << "expected right operand of element-wise operation to be a tensor "
            << "but got an operand of type " << typeString(rhsType);
@@ -1089,13 +1092,13 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
     return;
   }
 
-  const ir::TensorType *ltype = (*lhsType)[0].toTensor();
-  const ir::TensorType *rtype = (*rhsType)[0].toTensor();
+  const ir::TensorType *ltype = lhsType->at(0).toTensor();
+  const ir::TensorType *rtype = rhsType->at(0).toTensor();
   const unsigned lhsOrder = ltype->order();
   const unsigned rhsOrder = rtype->order();
   const bool hasScalarOperand = (lhsOrder == 0 || rhsOrder == 0);
   if (hasScalarOperand ? (ltype->componentType != rtype->componentType) : 
-      !compareTypes((*lhsType)[0], (*rhsType)[0])) {
+      !compareTypes(lhsType->at(0), rhsType->at(0))) {
     std::stringstream errMsg;
     errMsg << "cannot perform element-wise operation on tensors of type "
            << typeString(lhsType) << " and type " << typeString(rhsType);
@@ -1109,15 +1112,13 @@ void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
   const TypePtr lhsType = inferType(expr->lhs);
   const TypePtr rhsType = inferType(expr->rhs);
 
-  if (lhsType && (lhsType->size() != 1 || !isScalar((*lhsType)[0]) || 
-      !(*lhsType)[0].toTensor()->componentType.isBoolean())) {
+  if (lhsType && (lhsType->size() != 1 || !isBoolean(lhsType->at(0)))) {
     std::stringstream errMsg;
     errMsg << "expected left operand of boolean operation to be a boolean "
            << "but got an operand of type " << typeString(lhsType);
     reportError(errMsg.str(), expr->lhs);
   }
-  if (rhsType && (rhsType->size() != 1 || !isScalar((*rhsType)[0]) || 
-      !(*rhsType)[0].toTensor()->componentType.isBoolean())) {
+  if (rhsType && (rhsType->size() != 1 || !isBoolean(rhsType->at(0)))) {
     std::stringstream errMsg;
     errMsg << "expected right operand of boolean operation to be a boolean "
            << "but got an operand of type " << typeString(rhsType);

@@ -24,8 +24,8 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
                           std::vector<ParseError> *errors) {
 #if 1
   // Lexical and syntactic analyses.
-  TokenStream tokens = ScannerNew::lex(programStream);
-  hir::Program::Ptr program = ParserNew().parse(tokens, errors);
+  TokenStream tokens = ScannerNew(errors).lex(programStream);
+  hir::Program::Ptr program = ParserNew(errors).parse(tokens);
 
   // Semantic analyses.
   program = hir::FuncCallRewriter(errors).rewrite<hir::Program>(program);
@@ -34,8 +34,9 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   hir::TypeChecker(errors).typeCheck(program);
   // TODO: Rewrite tuple reads.
   // TODO: Check for invalid assignment targets.
-  
-  if (errors->size() > 0) {
+
+  // Only emit IR if no syntactic or semantic error was found.
+  if (!errors->empty()) {
     return 1;
   }
   
@@ -44,15 +45,14 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   //for (const auto &func : ctx->getFunctions()) {
   //  std::cout << func.second << std::endl;
   //}
-
-  return (errors->size() == 0 ? 0 : 1);
+  return 0;
 #else
   Scanner scanner(&programStream);
   Parser parser(&scanner, ctx, errors);
   int ret = parser.parse();
-  for (const auto &func : ctx->getFunctions()) {
-    std::cout << func.second << std::endl;
-  }
+  //for (const auto &func : ctx->getFunctions()) {
+  //  std::cout << func.second << std::endl;
+  //}
   return ret;
 #endif
 }

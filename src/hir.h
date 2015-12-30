@@ -14,22 +14,41 @@ namespace simit {
 namespace hir {
 
 struct HIRNode : public std::enable_shared_from_this<HIRNode> {
-  unsigned int lineNum;
-  unsigned int colNum;
+protected:
+  unsigned lineBegin;
+  unsigned colBegin;
+  unsigned lineEnd;
+  unsigned colEnd;
 
+public:
   typedef std::shared_ptr<HIRNode> Ptr;
 
-  HIRNode() : lineNum(0), colNum(0) {}
+  HIRNode() : lineBegin(0), colBegin(0), lineEnd(0), colEnd(0) {}
 
   virtual void accept(HIRVisitor *) = 0; 
 
-  inline void setLoc(const internal::Token &token) {
-    lineNum = token.lineNum;
-    colNum = token.colNum;
+  virtual unsigned getLineBegin() { return lineBegin; }
+  virtual unsigned getColBegin() { return colBegin; }
+  virtual unsigned getLineEnd() { return lineEnd; }
+  virtual unsigned getColEnd() { return colEnd; }
+
+  void setBeginLoc(const internal::Token &token) {
+    lineBegin = token.lineBegin;
+    colBegin = token.colBegin;
   }
-  inline void setLoc(const std::shared_ptr<HIRNode> &node) {
-    lineNum = node->lineNum;
-    colNum = node->colNum;
+  void setEndLoc(const internal::Token &token) {
+    lineEnd = token.lineEnd;
+    colEnd = token.colEnd;
+  }
+  void setLoc(const internal::Token &token) {
+    setBeginLoc(token);
+    setEndLoc(token);
+  }
+  void setLoc(const HIRNode::Ptr node) {
+    lineBegin = node->lineBegin;
+    colBegin = node->colBegin;
+    lineEnd = node->lineEnd;
+    colEnd = node->colEnd;
   }
 
   friend std::ostream &operator<<(std::ostream &, HIRNode &);
@@ -141,9 +160,19 @@ struct SetType : public Type {
   }
 };
 
+struct TupleLength : public HIRNode {
+  int val;
+
+  typedef std::shared_ptr<TupleLength> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<TupleLength>(shared_from_this()));
+  }
+};
+
 struct TupleType : public Type {
   ElementType::Ptr element;
-  int length;
+  TupleLength::Ptr length;
   
   typedef std::shared_ptr<TupleType> Ptr;
   
@@ -180,8 +209,18 @@ struct NonScalarTensorType : public TensorType {
   }
 };
 
+struct Identifier : public HIRNode {
+  std::string ident;
+
+  typedef std::shared_ptr<Identifier> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<Identifier>(shared_from_this()));
+  }
+};
+
 struct Field : public HIRNode {
-  std::string name;
+  Identifier::Ptr name;
   TensorType::Ptr type;
   
   typedef std::shared_ptr<Field> Ptr;
@@ -189,10 +228,13 @@ struct Field : public HIRNode {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<Field>(shared_from_this()));
   }
+
+  virtual unsigned getLineBegin() { return name->getLineBegin(); }
+  virtual unsigned getColBegin() { return name->getColBegin(); }
 };
 
 struct ElementTypeDecl : public HIRNode {
-  std::string ident;
+  Identifier::Ptr name;
   std::vector<Field::Ptr> fields; 
   
   typedef std::shared_ptr<ElementTypeDecl> Ptr;
@@ -203,7 +245,7 @@ struct ElementTypeDecl : public HIRNode {
 };
 
 struct IdentDecl : public HIRNode {
-  std::string ident;
+  Identifier::Ptr name;
   Type::Ptr type;
   
   typedef std::shared_ptr<IdentDecl> Ptr;
@@ -211,6 +253,11 @@ struct IdentDecl : public HIRNode {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<IdentDecl>(shared_from_this()));
   }
+  
+  virtual unsigned getLineBegin() { return name->getLineBegin(); }
+  virtual unsigned getColBegin() { return name->getColBegin(); }
+  virtual unsigned getLineEnd() { return type->getLineEnd(); }
+  virtual unsigned getColEnd() { return type->getColEnd(); }
 };
 
 struct Argument : public IdentDecl {
@@ -234,7 +281,7 @@ struct ExternDecl : public HIRNode {
 };
 
 struct FuncDecl : public HIRNode {
-  std::string name;
+  Identifier::Ptr name;
   std::vector<Argument::Ptr> args;
   std::vector<IdentDecl::Ptr> results;
   StmtBlock::Ptr body;
@@ -290,6 +337,9 @@ struct DoWhileStmt : public WhileStmt {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<DoWhileStmt>(shared_from_this()));
   }
+
+  virtual unsigned getLineEnd() { return cond->getLineEnd(); }
+  virtual unsigned getColEnd() { return cond->getColEnd(); }
 };
 
 struct IfStmt : public Stmt {
@@ -301,6 +351,13 @@ struct IfStmt : public Stmt {
   
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<IfStmt>(shared_from_this()));
+  }
+
+  virtual unsigned getLineEnd() {
+    return (lineEnd == 0) ? elseBody->getLineEnd() : lineEnd;
+  }
+  virtual unsigned getColEnd() {
+    return (lineEnd == 0) ? elseBody->getColEnd() : colEnd;
   }
 };
 
@@ -316,6 +373,11 @@ struct IndexSetDomain : public ForDomain {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<IndexSetDomain>(shared_from_this()));
   }
+
+  virtual unsigned getLineBegin() { return set->getLineBegin(); }
+  virtual unsigned getColBegin() { return set->getColBegin(); }
+  virtual unsigned getLineEnd() { return set->getLineEnd(); }
+  virtual unsigned getColEnd() { return set->getColEnd(); }
 };
 
 struct RangeDomain : public ForDomain {
@@ -327,10 +389,15 @@ struct RangeDomain : public ForDomain {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<RangeDomain>(shared_from_this()));
   }
+  
+  virtual unsigned getLineBegin() { return lower->getLineBegin(); }
+  virtual unsigned getColBegin() { return lower->getColBegin(); }
+  virtual unsigned getLineEnd() { return upper->getLineEnd(); }
+  virtual unsigned getColEnd() { return upper->getColEnd(); }
 };
 
 struct ForStmt : public Stmt {
-  std::string loopVarName;
+  Identifier::Ptr loopVar;
   ForDomain::Ptr domain;
   StmtBlock::Ptr body;
   
@@ -359,6 +426,9 @@ struct ExprStmt : public Stmt {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<ExprStmt>(shared_from_this()));
   }
+
+  virtual unsigned getLineBegin() { return expr->getLineBegin(); }
+  virtual unsigned getColBegin() { return expr->getColBegin(); }
 };
 
 struct AssignStmt : public ExprStmt {
@@ -369,6 +439,9 @@ struct AssignStmt : public ExprStmt {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<AssignStmt>(shared_from_this()));
   }
+
+  virtual unsigned getLineBegin() { return lhs.front()->getLineBegin(); }
+  virtual unsigned getColBegin() { return lhs.front()->getColBegin(); }
 };
 
 struct ReadParam : public HIRNode {
@@ -395,34 +468,32 @@ struct ExprParam : public ReadParam {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<ExprParam>(shared_from_this()));
   }
+  
+  virtual unsigned getLineBegin() { return expr->getLineBegin(); }
+  virtual unsigned getColBegin() { return expr->getColBegin(); }
+  virtual unsigned getLineEnd() { return expr->getLineEnd(); }
+  virtual unsigned getColEnd() { return expr->getColEnd(); }
 };
 
 struct MapExpr : public Expr {
   enum class ReductionOp {SUM, NONE};
 
-  std::string funcName;
+  Identifier::Ptr func;
   std::vector<Expr::Ptr> partialActuals;
-  std::string targetName;
+  Identifier::Ptr target;
   ReductionOp op;
 
-  unsigned int funcNameLineNum;
-  unsigned int funcNameColNum;
-  unsigned int targetNameLineNum;
-  unsigned int targetNameColNum;
- 
   typedef std::shared_ptr<MapExpr> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<MapExpr>(shared_from_this()));
   }
-  
-  inline void setFuncNameLoc(const internal::Token &token) {
-    funcNameLineNum = token.lineNum;
-    funcNameColNum = token.colNum;
+
+  virtual unsigned getLineEnd() {
+    return (op == ReductionOp::NONE) ? target->getLineEnd() : lineEnd;
   }
-  inline void setTargetNameLoc(const internal::Token &token) {
-    targetNameLineNum = token.lineNum;
-    targetNameColNum = token.colNum;
+  virtual unsigned getColEnd() {
+    return (op == ReductionOp::NONE) ? target->getColEnd() : colEnd;
   }
 };
 
@@ -437,6 +508,11 @@ struct BinaryExpr : public Expr {
   Expr::Ptr rhs;
 
   typedef std::shared_ptr<BinaryExpr> Ptr;
+  
+  virtual unsigned getLineBegin() { return lhs->getLineBegin(); }
+  virtual unsigned getColBegin() { return lhs->getColBegin(); }
+  virtual unsigned getLineEnd() { return rhs->getLineEnd(); }
+  virtual unsigned getColEnd() { return rhs->getColEnd(); }
 };
 typedef std::shared_ptr<BinaryExpr> BinaryExprPtr;
 
@@ -480,6 +556,11 @@ struct EqExpr : public NaryExpr {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<EqExpr>(shared_from_this()));
   }
+  
+  virtual unsigned getLineBegin() { return operands.front()->getLineBegin(); }
+  virtual unsigned getColBegin() { return operands.front()->getColBegin(); }
+  virtual unsigned getLineEnd() { return operands.back()->getLineEnd(); }
+  virtual unsigned getColEnd() { return operands.back()->getColEnd(); }
 };
 
 struct NotExpr : public UnaryExpr {
@@ -488,9 +569,10 @@ struct NotExpr : public UnaryExpr {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<NotExpr>(shared_from_this()));
   }
-};
 
-// TODO: SolveExpr?
+  virtual unsigned getLineEnd() { return operand->getLineEnd(); }
+  virtual unsigned getColEnd() { return operand->getColEnd(); }
+};
 
 struct AddExpr : public BinaryExpr {
   typedef std::shared_ptr<AddExpr> Ptr;
@@ -548,6 +630,9 @@ struct NegExpr : public UnaryExpr {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<NegExpr>(shared_from_this()));
   }
+
+  virtual unsigned getLineEnd() { return operand->getLineEnd(); }
+  virtual unsigned getColEnd() { return operand->getColEnd(); }
 };
 
 struct ExpExpr : public BinaryExpr {
@@ -564,16 +649,22 @@ struct TransposeExpr : public UnaryExpr {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<TransposeExpr>(shared_from_this()));
   }
+
+  virtual unsigned getLineBegin() { return operand->getLineBegin(); }
+  virtual unsigned getColBegin() { return operand->getColBegin(); }
 };
 
 struct CallExpr : public NaryExpr {
-  std::string funcName;
+  Identifier::Ptr func;
   
   typedef std::shared_ptr<CallExpr> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<CallExpr>(shared_from_this()));
   }
+
+  virtual unsigned getLineBegin() { return func->getLineBegin(); }
+  virtual unsigned getColBegin() { return func->getColBegin(); }
 };
 
 struct TensorReadExpr : public Expr {
@@ -585,16 +676,34 @@ struct TensorReadExpr : public Expr {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<TensorReadExpr>(shared_from_this()));
   }
+  
+  virtual unsigned getLineBegin() { return tensor->getLineBegin(); }
+  virtual unsigned getColBegin() { return tensor->getColBegin(); }
 };
 
 struct FieldReadExpr : public Expr {
   Expr::Ptr setOrElem;
-  std::string fieldName;
+  Identifier::Ptr field;
   
   typedef std::shared_ptr<FieldReadExpr> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<FieldReadExpr>(shared_from_this()));
+  }
+  
+  virtual unsigned getLineBegin() { return setOrElem->getLineBegin(); }
+  virtual unsigned getColBegin() { return setOrElem->getColBegin(); }
+  virtual unsigned getLineEnd() { return field->getLineEnd(); }
+  virtual unsigned getColEnd() { return field->getColEnd(); }
+};
+
+struct ParenExpr : public Expr {
+  Expr::Ptr expr;
+
+  typedef std::shared_ptr<ParenExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<ParenExpr>(shared_from_this()));
   }
 };
 
@@ -642,8 +751,6 @@ struct BoolLiteral : public TensorLiteral {
   }
 };
 
-// TODO: StringLiteral?
-
 struct DenseTensorElement : public HIRNode {
   typedef std::shared_ptr<DenseTensorElement> Ptr;
 };
@@ -687,10 +794,15 @@ struct DenseTensorLiteral : public TensorLiteral {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<DenseTensorLiteral>(shared_from_this()));
   }
+
+  virtual unsigned getLineBegin() { return tensor->getLineBegin(); }
+  virtual unsigned getColBegin() { return tensor->getColBegin(); }
+  virtual unsigned getLineEnd() { return tensor->getLineEnd(); }
+  virtual unsigned getColEnd() { return tensor->getColEnd(); }
 };
 
 struct Test : public HIRNode {
-  std::string funcName;
+  Identifier::Ptr func;
   std::vector<Expr::Ptr> args;
   Expr::Ptr expected;
   

@@ -28,6 +28,7 @@ void HIRRewriter::visit(SetType::Ptr type) {
 
 void HIRRewriter::visit(TupleType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
+  type->length = rewrite<TupleLength>(type->length);
   node = type;
 }
 
@@ -40,11 +41,13 @@ void HIRRewriter::visit(NonScalarTensorType::Ptr type) {
 }
 
 void HIRRewriter::visit(Field::Ptr field) {
+  field->name = rewrite<Identifier>(field->name);
   field->type = rewrite<TensorType>(field->type);
   node = field;
 }
 
 void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
+  decl->name = rewrite<Identifier>(decl->name);
   for (unsigned i = 0; i < decl->fields.size(); ++i) {
     decl->fields[i] = rewrite<Field>(decl->fields[i]);
   }
@@ -52,12 +55,13 @@ void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
 }
 
 void HIRRewriter::visit(IdentDecl::Ptr decl) {
+  decl->name = rewrite<Identifier>(decl->name);
   decl->type = rewrite<Type>(decl->type);
   node = decl;
 }
 
 void HIRRewriter::visit(Argument::Ptr arg) {
-  visit(static_cast<IdentDecl::Ptr>(arg));
+  visit(to<IdentDecl>(arg));
 }
 
 void HIRRewriter::visit(ExternDecl::Ptr decl) {
@@ -66,6 +70,7 @@ void HIRRewriter::visit(ExternDecl::Ptr decl) {
 }
 
 void HIRRewriter::visit(FuncDecl::Ptr decl) {
+  decl->name = rewrite<Identifier>(decl->name);
   for (unsigned i = 0; i < decl->args.size(); ++i) {
     decl->args[i] = rewrite<Argument>(decl->args[i]);
   }
@@ -77,7 +82,7 @@ void HIRRewriter::visit(FuncDecl::Ptr decl) {
 }
 
 void HIRRewriter::visit(ProcDecl::Ptr decl) {
-  visit(static_cast<FuncDecl::Ptr>(decl)); 
+  visit(to<FuncDecl>(decl)); 
 }
 
 void HIRRewriter::visit(VarDecl::Ptr decl) {
@@ -89,8 +94,7 @@ void HIRRewriter::visit(VarDecl::Ptr decl) {
 }
 
 void HIRRewriter::visit(ConstDecl::Ptr decl) {
-  visit(static_cast<VarDecl::Ptr>(decl));
-  node = decl;
+  visit(to<VarDecl>(decl));
 }
 
 void HIRRewriter::visit(WhileStmt::Ptr stmt) {
@@ -100,8 +104,7 @@ void HIRRewriter::visit(WhileStmt::Ptr stmt) {
 }
 
 void HIRRewriter::visit(DoWhileStmt::Ptr stmt) {
-  visit(static_cast<WhileStmt::Ptr>(stmt));
-  node = stmt;
+  visit(to<WhileStmt>(stmt));
 }
 
 void HIRRewriter::visit(IfStmt::Ptr stmt) {
@@ -125,6 +128,7 @@ void HIRRewriter::visit(RangeDomain::Ptr domain) {
 }
 
 void HIRRewriter::visit(ForStmt::Ptr stmt) {
+  stmt->loopVar = rewrite<Identifier>(stmt->loopVar);
   stmt->domain = rewrite<ForDomain>(stmt->domain);
   stmt->body = rewrite<StmtBlock>(stmt->body);
   node = stmt;
@@ -144,7 +148,7 @@ void HIRRewriter::visit(AssignStmt::Ptr stmt) {
   for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
     stmt->lhs[i] = rewrite<Expr>(stmt->lhs[i]);
   }
-  visit(static_cast<ExprStmt::Ptr>(stmt));
+  stmt->expr = rewrite<Expr>(stmt->expr);
   node = stmt;
 }
 
@@ -154,9 +158,11 @@ void HIRRewriter::visit(ExprParam::Ptr param) {
 }
 
 void HIRRewriter::visit(MapExpr::Ptr expr) {
+  expr->func = rewrite<Identifier>(expr->func); 
   for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
     expr->partialActuals[i] = rewrite<Expr>(expr->partialActuals[i]);
   }
+  expr->target = rewrite<Identifier>(expr->target);
   node = expr;
 }
 
@@ -179,63 +185,67 @@ void HIRRewriter::visit(NaryExpr::Ptr expr) {
 }
 
 void HIRRewriter::visit(OrExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(AndExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(XorExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(EqExpr::Ptr expr) {
-  visit(static_cast<NaryExpr::Ptr>(expr));
+  visit(to<NaryExpr>(expr));
 }
 
 void HIRRewriter::visit(NotExpr::Ptr expr) {
-  visit(static_cast<UnaryExpr::Ptr>(expr));
+  visit(to<UnaryExpr>(expr));
 }
 
 void HIRRewriter::visit(AddExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(SubExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(MulExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(DivExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(ElwiseMulExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(ElwiseDivExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(NegExpr::Ptr expr) {
-  visit(static_cast<UnaryExpr::Ptr>(expr));
+  visit(to<UnaryExpr>(expr));
 }
 
 void HIRRewriter::visit(ExpExpr::Ptr expr) {
-  visit(static_cast<BinaryExpr::Ptr>(expr));
+  visit(to<BinaryExpr>(expr));
 }
 
 void HIRRewriter::visit(TransposeExpr::Ptr expr) {
-  visit(static_cast<UnaryExpr::Ptr>(expr));
+  visit(to<UnaryExpr>(expr));
 }
 
 void HIRRewriter::visit(CallExpr::Ptr expr) {
-  visit(static_cast<NaryExpr::Ptr>(expr));
+  expr->func = rewrite<Identifier>(expr->func);
+  for (unsigned i = 0; i < expr->operands.size(); ++i) {
+    expr->operands[i] = rewrite<Expr>(expr->operands[i]);
+  }
+  node = expr;
 }
 
 void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
@@ -248,6 +258,12 @@ void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
 
 void HIRRewriter::visit(FieldReadExpr::Ptr expr) {
   expr->setOrElem = rewrite<Expr>(expr->setOrElem);
+  expr->field = rewrite<Identifier>(expr->field);
+  node = expr;
+}
+
+void HIRRewriter::visit(ParenExpr::Ptr expr) {
+  expr->expr = rewrite<Expr>(expr->expr);
   node = expr;
 }
 
@@ -264,6 +280,7 @@ void HIRRewriter::visit(DenseTensorLiteral::Ptr tensor) {
 }
 
 void HIRRewriter::visit(Test::Ptr test) {
+  test->func = rewrite<Identifier>(test->func);
   for (unsigned i = 0; i < test->args.size(); ++i) {
     test->args[i] = rewrite<Expr>(test->args[i]);
   }
