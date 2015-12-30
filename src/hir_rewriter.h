@@ -19,9 +19,11 @@ public:
   virtual void visit(ElementType::Ptr op) { node = op; }
   virtual void visit(Endpoint::Ptr op) { node = op; }
   virtual void visit(SetType::Ptr);
+  virtual void visit(TupleLength::Ptr op) { node = op; }
   virtual void visit(TupleType::Ptr);
   virtual void visit(ScalarTensorType::Ptr op) { node = op; }
   virtual void visit(NonScalarTensorType::Ptr);
+  virtual void visit(Identifier::Ptr op) { node = op; }
   virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(IdentDecl::Ptr);
@@ -63,6 +65,7 @@ public:
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
+  virtual void visit(ParenExpr::Ptr);
   virtual void visit(VarExpr::Ptr op) { node = op; }
   virtual void visit(IntLiteral::Ptr op) { node = op; }
   virtual void visit(FloatLiteral::Ptr op) { node = op; }

@@ -57,7 +57,7 @@ void IREmitter::visit(SetType::Ptr type) {
 void IREmitter::visit(TupleType::Ptr type) {
   iassert(type->length > 0);
   const ir::Type elementType = emitType(type->element);
-  retType = ir::Type(ir::TupleType::make(elementType, type->length));
+  retType = ir::Type(ir::TupleType::make(elementType, type->length->val));
 }
 
 void IREmitter::visit(ScalarTensorType::Ptr type) {
@@ -126,11 +126,11 @@ void IREmitter::visit(NonScalarTensorType::Ptr type) {
 
 void IREmitter::visit(Field::Ptr field) {
   const ir::Type type = emitType(field->type);
-  retField = ir::Field(field->name, type);
+  retField = ir::Field(field->name->ident, type);
 }
 
 void IREmitter::visit(ElementTypeDecl::Ptr decl) {
-  iassert(!ctx->containsElementType(decl->ident));
+  iassert(!ctx->containsElementType(decl->name->ident));
   
   std::vector<ir::Field> fields;
   for (auto f : decl->fields) {
@@ -138,16 +138,12 @@ void IREmitter::visit(ElementTypeDecl::Ptr decl) {
     fields.push_back(field);
   }
 
-  ctx->addElementType(ir::ElementType::make(decl->ident, fields));
+  ctx->addElementType(ir::ElementType::make(decl->name->ident, fields));
 }
 
 void IREmitter::visit(IdentDecl::Ptr decl) {
   const ir::Type type = emitType(decl->type);
-  retVar = ir::Var(decl->ident, type);
-}
-
-void IREmitter::visit(Argument::Ptr arg) {
-  visit(to<IdentDecl>(arg));
+  retVar = ir::Var(decl->name->ident, type);
 }
 
 void IREmitter::visit(ExternDecl::Ptr decl) {
@@ -229,8 +225,8 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
 
   // If we need to write to loop variables, then that should be added as a
   // separate loop structure (that can't be vectorized easily)
-  const ir::Var loopVar = ir::Var(stmt->loopVarName, ir::Int);
-  ctx->addSymbol(stmt->loopVarName, loopVar, internal::Symbol::Read);
+  const ir::Var loopVar = ir::Var(stmt->loopVar->ident, ir::Int);
+  ctx->addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
  
   const ir::Stmt body = emitStmt(stmt->body);
 
@@ -277,19 +273,15 @@ void IREmitter::visit(AssignStmt::Ptr stmt) {
   addAssign(targets, expr);
 }
 
-void IREmitter::visit(Slice::Ptr slice) {
-  retExpr = ir::VarExpr::make(ir::Var(":", ir::Type()));
-}
-
 void IREmitter::visit(ExprParam::Ptr param) {
   retExpr = emitExpr(param->expr);
 }
 
 void IREmitter::visit(MapExpr::Ptr expr) {
-  const ir::Func func = ctx->getFunction(expr->funcName);
+  const ir::Func func = ctx->getFunction(expr->func->ident);
   const std::vector<ir::Var> results = func.getResults();
 
-  const ir::Expr target = ctx->getSymbol(expr->targetName).getExpr();
+  const ir::Expr target = ctx->getSymbol(expr->target->ident).getExpr();
  
   std::vector<ir::Expr> partialActuals;
   for (auto actual : expr->partialActuals) {
@@ -497,7 +489,7 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
 }
 
 void IREmitter::visit(CallExpr::Ptr expr) {
-  const ir::Func func = ctx->getFunction(expr->funcName);
+  const ir::Func func = ctx->getFunction(expr->func->ident);
   const std::vector<ir::Var> results = func.getResults();
 
   std::vector<ir::Expr> arguments;
@@ -572,8 +564,8 @@ void IREmitter::visit(FieldReadExpr::Ptr expr) {
   const ir::ElementType *elemType = type.isElement() ? type.toElement() :
                                     type.toSet()->elementType.toElement();
  
-  iassert(elemType->hasField(expr->fieldName));
-  retExpr = ir::FieldRead::make(lhs, expr->fieldName);
+  iassert(elemType->hasField(expr->field->ident));
+  retExpr = ir::FieldRead::make(lhs, expr->field->ident);
 }
 
 void IREmitter::visit(VarExpr::Ptr expr) {
@@ -646,7 +638,7 @@ void IREmitter::visit(Test::Ptr test) {
   const ir::Expr expected = emitExpr(test->expected);
 
   iassert(calls.empty());
-  ctx->addTest(new internal::FunctionTest(test->funcName, args, {expected}));
+  ctx->addTest(new internal::FunctionTest(test->func->ident, args, {expected}));
 }
 
 void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
@@ -679,8 +671,8 @@ void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
     }
   }
 
-  iassert(!ctx->containsFunction(decl->name));
-  ctx->addFunction(ir::Func(decl->name, arguments, results, body));
+  iassert(!ctx->containsFunction(decl->name->ident));
+  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body));
 }
 
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, const bool isConst) {

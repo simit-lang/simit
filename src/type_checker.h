@@ -25,7 +25,7 @@ public:
     skipCheckDeclared(false),
     errors(errors) {}
 
-  inline void typeCheck(Program::Ptr program) {
+  void typeCheck(Program::Ptr program) {
     program->accept(this);
   }
 
@@ -102,7 +102,7 @@ private:
 
     TensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
 
-    inline void addDimension() { dimSizes.push_back(1); }
+    void addDimension() { dimSizes.push_back(1); }
     void addIntValues(const unsigned len) {
       switch (type) {
         case Type::FLOAT:
@@ -157,43 +157,57 @@ private:
     }
   }
 
-  inline TypePtr inferType(Expr::Ptr ptr) {
+  TypePtr inferType(Expr::Ptr ptr) {
     retType.reset();
     ptr->accept(this);
-    return retType;
+    const TypePtr ret = retType;
+    retType.reset();
+    return ret;
   }
-  inline IndexSetPtr getIndexSet(IndexSet::Ptr ptr) {
+  IndexSetPtr getIndexSet(IndexSet::Ptr ptr) {
     retIndexSet.reset();
     ptr->accept(this);
-    return retIndexSet;
+    const IndexSetPtr ret = retIndexSet;
+    retIndexSet.reset();
+    return ret;
   }
-  inline ir::Expr getExpr(Endpoint::Ptr ptr) {
+  ir::Expr getExpr(Endpoint::Ptr ptr) {
     retExpr = ir::Expr();
     ptr->accept(this);
-    return retExpr;
+    const ir::Expr ret = retExpr;
+    retExpr = ir::Expr();
+    return ret;
   }
-  inline ir::Type getIRType(hir::Type::Ptr ptr) {
+  ir::Type getIRType(hir::Type::Ptr ptr) {
     retIRType = ir::Type();
     ptr->accept(this);
-    return retIRType;
+    const ir::Type ret = retIRType;
+    retIRType = ir::Type();
+    return ret;
   }
-  inline ir::Field getField(Field::Ptr ptr) {
+  ir::Field getField(Field::Ptr ptr) {
     retField = ir::Field("", ir::Type());
     ptr->accept(this);
-    return retField;
+    const ir::Field ret = retField;
+    retField = ir::Field("", ir::Type());
+    return ret;
   }
-  inline ir::Var getVar(IdentDecl::Ptr ptr) {
+  ir::Var getVar(IdentDecl::Ptr ptr) {
     retVar = ir::Var();
     ptr->accept(this);
-    return retVar;
+    const ir::Var ret = retVar;
+    retVar = ir::Var();
+    return ret;
   }
-  inline TensorValues getTensorVals(DenseTensorElement::Ptr ptr) {
+  TensorValues getTensorVals(DenseTensorElement::Ptr ptr) {
     retTensorVals = TensorValues();
     ptr->accept(this);
-    return retTensorVals;
+    const TensorValues ret = retTensorVals;
+    retTensorVals = TensorValues();
+    return ret;
   }
 
-  inline bool compareTypes(const ir::Type &l, const ir::Type &r) {
+  bool compareTypes(const ir::Type &l, const ir::Type &r) {
     return (l.kind() == r.kind() && l == r);
   }
   std::string typeString(const ir::Type &type) {
@@ -230,19 +244,19 @@ private:
     oss << "\'";
     return oss.str();
   }
-  inline void reportError(const std::string msg, HIRNode::Ptr loc) {
-    const auto err = ParseError(loc->lineNum, loc->colNum, 
-                                loc->lineNum, loc->colNum, msg);
+  void reportError(const std::string msg, HIRNode::Ptr loc) {
+    const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
+                                loc->getLineEnd(), loc->getColEnd(), msg);
     errors->push_back(err);
   }
-  inline void reportUndeclared(const std::string type, const std::string ident, 
-                               HIRNode::Ptr loc) {
+  void reportUndeclared(const std::string type, const std::string ident, 
+                        HIRNode::Ptr loc) {
     std::stringstream errMsg;
     errMsg << "undeclared " << type << " \'" << ident << "\'";
     reportError(errMsg.str(), loc);
   }
-  inline void reportMultipleDefs(const std::string type,
-                                 const std::string ident, HIRNode::Ptr loc) {
+  void reportMultipleDefs(const std::string type, const std::string ident, 
+                          HIRNode::Ptr loc) {
     std::stringstream errMsg;
     errMsg << "multiple definitions of " << type << " \'" << ident << "\'";
     reportError(errMsg.str(), loc);

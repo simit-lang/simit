@@ -14,7 +14,12 @@ namespace internal {
 
 class ParserNew {
 public:
-  hir::Program::Ptr parse(const TokenStream &, std::vector<ParseError> *);
+  ParserNew(std::vector<ParseError> *errors) : errors(errors) {}
+
+  hir::Program::Ptr parse(const TokenStream &tokens) {
+    this->tokens = tokens;
+    return parseProgram();
+  }
 
 private:
   class SyntaxError : public std::exception {};
@@ -65,6 +70,7 @@ private:
   hir::ElementType::Ptr parseElementType();
   hir::SetType::Ptr parseSetType();
   std::vector<hir::Endpoint::Ptr> parseEndpoints();
+  hir::TupleLength::Ptr parseTupleLength();
   hir::TupleType::Ptr parseTupleType();
   hir::TensorType::Ptr parseTensorType();
   std::vector<hir::IndexSet::Ptr> parseIndexSets();
@@ -79,16 +85,17 @@ private:
   int parseSignedIntLiteral();
   double parseSignedFloatLiteral();
   hir::Test::Ptr parseTest();
-  //void parseSystemGenerator();
-  //void parseExternAssert();
+  hir::Identifier::Ptr parseIdent();
 
-  inline void reportError(const Token token, const std::string msg) {
-    const unsigned lineNum = token.lineNum;
-    const unsigned colNum = token.colNum;
-    errors->push_back(ParseError(lineNum, colNum, lineNum, colNum, msg));
+  void reportError(const Token token, const std::string msg) {
+    const unsigned lineBegin = token.lineBegin;
+    const unsigned colBegin = token.colBegin;
+    const unsigned lineEnd = token.lineEnd;
+    const unsigned colEnd = token.colEnd;
+    errors->push_back(ParseError(lineBegin, colBegin, lineEnd, colEnd, msg));
   }
 
-  inline void skipTo(std::vector<TokenType> types) {
+  void skipTo(std::vector<TokenType> types) {
     while (peek().type != TokenType::END) {
       bool inTypes = false;
 
@@ -106,10 +113,9 @@ private:
       }
     }
   }
-  inline const Token consume(TokenType type) { 
+  const Token consume(TokenType type) { 
     const Token token = peek();
     
-    //std::cout << token << " " << Token(type,0,0) << std::endl;
     if (!tokens.consume(type)) {
       reportError(token, "unexpected token");
       throw SyntaxError();
@@ -117,8 +123,8 @@ private:
 
     return token;
   }
-  inline bool tryconsume(TokenType type) { return tokens.consume(type); }
-  inline Token peek(unsigned k = 0) { return tokens.peek(k); }
+  bool tryconsume(TokenType type) { return tokens.consume(type); }
+  Token peek(unsigned k = 0) { return tokens.peek(k); }
 
   TokenStream tokens;
   std::vector<ParseError> *errors;

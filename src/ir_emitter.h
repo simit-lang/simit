@@ -37,7 +37,6 @@ private:
   virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(IdentDecl::Ptr);
-  virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(ProcDecl::Ptr);
@@ -52,7 +51,6 @@ private:
   virtual void visit(PrintStmt::Ptr);
   virtual void visit(ExprStmt::Ptr);
   virtual void visit(AssignStmt::Ptr);
-  virtual void visit(Slice::Ptr);
   virtual void visit(ExprParam::Ptr);
   virtual void visit(MapExpr::Ptr);
   virtual void visit(OrExpr::Ptr);

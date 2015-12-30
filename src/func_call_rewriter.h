@@ -20,6 +20,12 @@ public:
   virtual void visit(TensorReadExpr::Ptr);
 
 private:
+  void reportError(const std::string msg, HIRNode::Ptr loc) {
+    const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
+                                loc->getLineEnd(), loc->getColEnd(), msg);
+    errors->push_back(err);
+  }
+
   internal::ProgramContext ctx;
   std::vector<ParseError> *errors;
 };

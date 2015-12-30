@@ -18,8 +18,17 @@ ParseError::~ParseError() {
 }
 
 std::string ParseError::toString() const {
-  return "error: " + msg + ", at " + to_string(firstLine) + ":" +
-         to_string(firstColumn);
+  std::stringstream oss;
+  oss << "error: " << msg << ", at " << to_string(firstLine) << ":" 
+      << to_string(firstColumn);
+  if (firstLine != lastLine || firstColumn != lastColumn) {
+    oss << "-";
+    if (firstLine != lastLine) {
+      oss << to_string(lastLine) << ":";
+    }
+    oss << lastColumn;
+  }
+  return oss.str();
 }
 
 // class Diagnostics
