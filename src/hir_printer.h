@@ -63,6 +63,7 @@ public:
   virtual void visit(TransposeExpr::Ptr);
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
+  virtual void visit(TupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(VarExpr::Ptr);
   virtual void visit(IntLiteral::Ptr);

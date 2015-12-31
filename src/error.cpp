@@ -19,7 +19,7 @@ ParseError::~ParseError() {
 
 std::string ParseError::toString() const {
   std::stringstream oss;
-  oss << "error: " << msg << ", at " << to_string(firstLine) << ":" 
+  oss << "Error: " << msg << ", at " << to_string(firstLine) << ":" 
       << to_string(firstColumn);
   if (firstLine != lastLine || firstColumn != lastColumn) {
     oss << "-";

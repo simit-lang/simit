@@ -2,6 +2,7 @@
 
 #include <sstream>
 #include <iostream>
+#include <algorithm>
 
 #include "program_context.h"
 #include "error.h"
@@ -16,6 +17,8 @@
 #include "ir_emitter.h"
 #include "type_checker.h"
 #include "const_fold.h"
+#include "tuple_read_rewriter.h"
+#include "assign_checker.h"
 
 using namespace simit::internal;
 
@@ -31,12 +34,13 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   program = hir::FuncCallRewriter(errors).rewrite<hir::Program>(program);
   program = hir::ConstantFolding().rewrite<hir::Program>(program);
   // TODO: Check for invalid declarations. (Maybe should be enforced by grammar?)
-  hir::TypeChecker(errors).typeCheck(program);
-  // TODO: Rewrite tuple reads.
-  // TODO: Check for invalid assignment targets.
+  hir::TypeChecker(errors).check(program);
+  program = hir::TupleReadRewriter().rewrite<hir::Program>(program);
+  hir::AssignChecker(errors).check(program);
 
   // Only emit IR if no syntactic or semantic error was found.
   if (!errors->empty()) {
+    std::stable_sort(errors->begin(), errors->end());
     return 1;
   }
   
@@ -49,11 +53,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
 #else
   Scanner scanner(&programStream);
   Parser parser(&scanner, ctx, errors);
-  int ret = parser.parse();
-  //for (const auto &func : ctx->getFunctions()) {
-  //  std::cout << func.second << std::endl;
-  //}
-  return ret;
+  return parser.parse();
 #endif
 }
 

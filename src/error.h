@@ -26,6 +26,10 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const ParseError &obj) {
     return os << obj.toString();
   }
+  bool operator<(const ParseError &rhs) const {
+    return ((firstLine < rhs.firstLine) || 
+           ((firstLine == rhs.firstLine) && (firstColumn < rhs.firstColumn)));
+  }
 
 private:
   int firstLine;
