@@ -13,8 +13,7 @@ namespace hir {
 
 class FuncCallRewriter : public HIRRewriter {
 public:
-  FuncCallRewriter(std::vector<ParseError> *errors) : 
-    errors(errors) {}
+  FuncCallRewriter(std::vector<ParseError> *errors) : errors(errors) {}
   
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(TensorReadExpr::Ptr);

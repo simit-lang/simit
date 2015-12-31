@@ -1,8 +1,6 @@
 #ifndef SIMIT_ASSIGN_CHECKER_H
 #define SIMIT_ASSIGN_CHECKER_H
 
-#include <vector>
-
 #include "hir.h"
 #include "hir_visitor.h"
 #include "error.h"
@@ -21,9 +19,12 @@ private:
 
   void checkTarget(Expr::Ptr);
 
-  void reportError(std::string, HIRNode::Ptr);
+  void reportError(const std::string msg, HIRNode::Ptr loc) {
+    const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
+                                loc->getLineEnd(), loc->getColEnd(), msg);
+    errors->push_back(err);
+  }
 
-private:
   std::vector<ParseError> *errors;
 };
 

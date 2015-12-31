@@ -90,6 +90,10 @@ struct StmtBlock : public Stmt {
 };
 
 struct Expr : public HIRNode {
+  typedef std::vector<ir::Type> Type;
+
+  Type type;
+
   typedef std::shared_ptr<Expr> Ptr;
 };
 
@@ -221,7 +225,7 @@ struct Identifier : public HIRNode {
 
 struct Field : public HIRNode {
   Identifier::Ptr name;
-  TensorType::Ptr type;
+  Type::Ptr type;
   
   typedef std::shared_ptr<Field> Ptr;
   
@@ -679,6 +683,20 @@ struct TensorReadExpr : public Expr {
   
   virtual unsigned getLineBegin() { return tensor->getLineBegin(); }
   virtual unsigned getColBegin() { return tensor->getColBegin(); }
+};
+
+struct TupleReadExpr : public Expr {
+  Expr::Ptr tuple;
+  Expr::Ptr index;
+
+  typedef std::shared_ptr<TupleReadExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<TupleReadExpr>(shared_from_this()));
+  }
+
+  virtual unsigned getLineBegin() { return tuple->getLineBegin(); }
+  virtual unsigned getColBegin() { return tuple->getColBegin(); }
 };
 
 struct FieldReadExpr : public Expr {

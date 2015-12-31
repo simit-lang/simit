@@ -69,6 +69,7 @@ private:
   virtual void visit(TransposeExpr::Ptr);
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
+  virtual void visit(TupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(VarExpr::Ptr);
   virtual void visit(IntLiteral::Ptr);
@@ -155,46 +156,58 @@ private:
   };
 
   inline ir::Expr emitExpr(HIRNode::Ptr ptr) {
+    retExpr = ir::Expr();
     ptr->accept(this);
-    ir::Expr ret = retExpr;
+    const ir::Expr ret = retExpr;
     retExpr = ir::Expr();
     return ret;
   }
   inline ir::Stmt emitStmt(Stmt::Ptr ptr) {
+    retStmt = ir::Stmt();
     ptr->accept(this);
-    ir::Stmt ret = retStmt;
+    const ir::Stmt ret = retStmt;
     retStmt = ir::Stmt();
     return ret;
   }
   inline ir::Type emitType(Type::Ptr ptr) {
+    retType = ir::Type();
     ptr->accept(this);
-    ir::Type ret = retType;
+    const ir::Type ret = retType;
     retType = ir::Type();
     return ret;
   }
   inline ir::IndexSet emitIndexSet(IndexSet::Ptr ptr) {
+    retIndexSet = ir::IndexSet();
     ptr->accept(this);
-    return retIndexSet;
+    const ir::IndexSet ret = retIndexSet;
+    retIndexSet = ir::IndexSet();
+    return ret;
   }
   inline ir::Field emitField(Field::Ptr ptr) {
+    retField = ir::Field("", ir::Type());
     ptr->accept(this);
-    return retField;
+    const ir::Field ret = retField;
+    retField = ir::Field("", ir::Type());
+    return ret;
   }
   inline ir::Var emitVar(IdentDecl::Ptr ptr) {
+    retVar = ir::Var();
     ptr->accept(this);
-    ir::Var ret = retVar;
+    const ir::Var ret = retVar;
     retVar = ir::Var();
     return ret;
   }
   inline TensorValues emitTensorVals(DenseTensorElement::Ptr ptr) {
+    retTensorVals = TensorValues();
     ptr->accept(this);
-    TensorValues ret = retTensorVals;
+    const TensorValues ret = retTensorVals;
     retTensorVals = TensorValues();
     return ret;
   }
   inline Domain emitDomain(ForDomain::Ptr ptr) {
+    retDomain = Domain();
     ptr->accept(this);
-    Domain ret = retDomain;
+    const Domain ret = retDomain;
     retDomain = Domain();
     return ret;
   }
