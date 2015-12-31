@@ -42,7 +42,7 @@ void HIRRewriter::visit(NonScalarTensorType::Ptr type) {
 
 void HIRRewriter::visit(Field::Ptr field) {
   field->name = rewrite<Identifier>(field->name);
-  field->type = rewrite<TensorType>(field->type);
+  field->type = rewrite<Type>(field->type);
   node = field;
 }
 
@@ -253,6 +253,12 @@ void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
   for (unsigned i = 0; i < expr->indices.size(); ++i) {
     expr->indices[i] = rewrite<ReadParam>(expr->indices[i]);
   }
+  node = expr;
+}
+
+void HIRRewriter::visit(TupleReadExpr::Ptr expr) {
+  expr->tuple = rewrite<Expr>(expr->tuple);
+  expr->index = rewrite<Expr>(expr->index);
   node = expr;
 }
 

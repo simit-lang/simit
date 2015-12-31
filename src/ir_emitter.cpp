@@ -74,7 +74,7 @@ void IREmitter::visit(ScalarTensorType::Ptr type) {
       componentType = ir::ScalarType(ir::ScalarType::Boolean);
       break;
     default:
-      iassert(false);
+      unreachable;
       break;
   }
   
@@ -241,7 +241,7 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
       forStmt = ir::ForRange::make(loopVar, domain.lower, domain.upper, body);
       break;
     default:
-      iassert(false);
+      unreachable;
       break;
   }
   ctx->addStatement(forStmt);
@@ -364,7 +364,7 @@ void IREmitter::visit(EqExpr::Ptr expr) {
         cmpExpr = ir::Ne::make(lhs, rhs);
         break;
       default:
-        iassert(false);
+        unreachable;
         break;
     }
 
@@ -453,8 +453,8 @@ void IREmitter::visit(NegExpr::Ptr expr) {
 }
 
 void IREmitter::visit(ExpExpr::Ptr expr) {
-  // TODO: implement
-  iassert(false);
+  // TODO: Implement.
+  not_supported_yet;
 }
 
 void IREmitter::visit(TransposeExpr::Ptr expr) {
@@ -483,7 +483,7 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
       retExpr = builder->transposedMatrix(operand);
       break;
     default:
-      iassert(false);
+      unreachable;
       break;
   }
 }
@@ -507,8 +507,8 @@ void IREmitter::visit(CallExpr::Ptr expr) {
 }
 
 void IREmitter::visit(TensorReadExpr::Ptr expr) {
-  const ir::Expr lhs = emitExpr(expr->tensor);
-  iassert(lhs.type().isTensor() || lhs.type().isTuple());
+  const ir::Expr tensor = emitExpr(expr->tensor);
+  iassert(tensor.type().isTensor());
 
   std::vector<ir::Expr> indices;
   bool containsSlices = false;
@@ -520,40 +520,41 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
     }
   }
 
-  // The parenthesis read can be a read from a tensor or a tuple.
-  if (lhs.type().isTensor()) {
-    if (containsSlices) {
-      // We will construct an index expression. First, we built IndexVars.
-      std::vector<ir::IndexVar> allivars;
-      std::vector<ir::IndexVar> freeVars;
-      std::vector<ir::IndexDomain> dimensions = 
-        lhs.type().toTensor()->getDimensions();
+  if (containsSlices) {
+    // We will construct an index expression. First, we built IndexVars.
+    std::vector<ir::IndexVar> allivars;
+    std::vector<ir::IndexVar> freeVars;
+    std::vector<ir::IndexDomain> dimensions = 
+      tensor.type().toTensor()->getDimensions();
 
-      unsigned i = 0;
-      for (auto &arg : indices) {
-        if (expr->indices[i]->isSlice()) {
-          auto iv = ir::IndexVar("tmpfree" + std::to_string(i), dimensions[i]);
-          allivars.push_back(iv);
-          freeVars.push_back(iv);
-        } else {
-          auto iv = ir::IndexVar("tmpfixed" + std::to_string(i),
-                                 dimensions[i], new ir::Expr(arg));
-          allivars.push_back(iv);
-        }
-        ++i;
+    unsigned i = 0;
+    for (auto &arg : indices) {
+      if (expr->indices[i]->isSlice()) {
+        auto iv = ir::IndexVar("tmpfree" + std::to_string(i), dimensions[i]);
+        allivars.push_back(iv);
+        freeVars.push_back(iv);
+      } else {
+        auto iv = ir::IndexVar("tmpfixed" + std::to_string(i),
+                               dimensions[i], new ir::Expr(arg));
+        allivars.push_back(iv);
       }
-
-      // Now construct an index expression.
-      retExpr = ir::IndexExpr::make(freeVars,
-                                    ir::IndexedTensor::make(lhs, allivars));
-    } else {
-      retExpr = ir::TensorRead::make(lhs, indices);
+      ++i;
     }
-  } else if (lhs.type().isTuple()) {
-    iassert(!containsSlices);
-    iassert(indices.size() == 1);
-    retExpr = ir::TupleRead::make(lhs, indices[0]);
+
+    // Now construct an index expression.
+    retExpr = ir::IndexExpr::make(freeVars,
+                                  ir::IndexedTensor::make(tensor, allivars));
+  } else {
+    retExpr = ir::TensorRead::make(tensor, indices);
   }
+}
+
+void IREmitter::visit(TupleReadExpr::Ptr expr) {
+  const ir::Expr tuple = emitExpr(expr->tuple);
+  const ir::Expr index = emitExpr(expr->index);
+
+  iassert(tuple.type().isTuple());
+  retExpr = ir::TupleRead::make(tuple, index);
 }
 
 void IREmitter::visit(FieldReadExpr::Ptr expr) {

@@ -1,31 +1,30 @@
-#ifndef SIMIT_FUNC_CALL_REWRITER_H
-#define SIMIT_FUNC_CALL_REWRITER_H
-
-#include <vector>
+#ifndef SIMIT_ASSIGN_CHECKER_H
+#define SIMIT_ASSIGN_CHECKER_H
 
 #include "hir.h"
-#include "hir_rewriter.h"
+#include "hir_visitor.h"
 #include "error.h"
-#include "program_context.h"
 
 namespace simit {
 namespace hir {
 
-class FuncCallRewriter : public HIRRewriter {
+class AssignChecker : public HIRVisitor {
 public:
-  FuncCallRewriter(std::vector<ParseError> *errors) : errors(errors) {}
-  
-  virtual void visit(FuncDecl::Ptr);
-  virtual void visit(TensorReadExpr::Ptr);
+  AssignChecker(std::vector<ParseError> *errors) : errors(errors) {}
+
+  void check(Program::Ptr program) { program->accept(this); }
 
 private:
+  virtual void visit(AssignStmt::Ptr);
+
+  void checkTarget(Expr::Ptr);
+
   void reportError(const std::string msg, HIRNode::Ptr loc) {
     const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
                                 loc->getLineEnd(), loc->getColEnd(), msg);
     errors->push_back(err);
   }
 
-  internal::ProgramContext ctx;
   std::vector<ParseError> *errors;
 };
 

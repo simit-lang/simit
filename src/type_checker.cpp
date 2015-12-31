@@ -98,7 +98,7 @@ void TypeChecker::visit(ScalarTensorType::Ptr type) {
       componentType = ir::ScalarType(ir::ScalarType::Boolean);
       break;
     default:
-      iassert(false);
+      unreachable;
       break;
   }
   
@@ -159,6 +159,8 @@ void TypeChecker::visit(NonScalarTensorType::Ptr type) {
 
 void TypeChecker::visit(Field::Ptr field) {
   const ir::Type type = getIRType(field->type);
+  iassert(type.isTensor());
+  
   retField = ir::Field(field->name->ident, type);
 }
 
@@ -678,7 +680,7 @@ void TypeChecker::visit(NegExpr::Ptr expr) {
 
 void TypeChecker::visit(ExpExpr::Ptr expr) {
   // TODO: Implement.
-  iassert(false);
+  not_supported_yet; 
 }
 
 void TypeChecker::visit(TransposeExpr::Ptr expr) {
@@ -720,7 +722,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
       break;
     }
     default:
-      iassert(false);
+      unreachable;
       break;
   }
 }
@@ -829,22 +831,18 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       errMsg << "tuple access expects exactly one index but got " 
              << expr->indices.size();
       reportError(errMsg.str(), expr);
-      return;
-    }
-
-    if (expr->indices[0]->isSlice()) {
+    } else if (expr->indices[0]->isSlice()) {
       reportError("tuple access requires an integral index", expr->indices[0]);
       return;
-    }
-
-    const Expr::Ptr indexExpr = to<ExprParam>(expr->indices[0])->expr;
-    const TypePtr indexType = inferType(indexExpr);
-    if (indexType->size() != 1 || !isScalar(indexType->at(0)) ||
-        !indexType->at(0).toTensor()->componentType.isInt()) {
-      std::stringstream errMsg;
-      errMsg << "expected an integral index but got an index of type " 
-             << typeString(indexType);
-      reportError(errMsg.str(), expr->indices[0]);
+    } else {
+      const Expr::Ptr indexExpr = to<ExprParam>(expr->indices[0])->expr;
+      const TypePtr indexType = inferType(indexExpr);
+      if (indexType->size() != 1 || !isInt(indexType->at(0))) {
+        std::stringstream errMsg;
+        errMsg << "tuple access expects an integral index but got an index of " 
+               << "type " << typeString(indexType);
+        reportError(errMsg.str(), expr->indices[0]);
+      }
     }
 
     retType = std::make_shared<Type>();
@@ -855,6 +853,11 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
            << typeString(lhsType);
     reportError(errMsg.str(), expr->tensor);
   }
+}
+
+void TypeChecker::visit(TupleReadExpr::Ptr expr) {
+  // Tuple reads are parsed as tensor reads during parsing.
+  unreachable;
 }
 
 void TypeChecker::visit(FieldReadExpr::Ptr expr) {
@@ -981,8 +984,7 @@ void TypeChecker::visit(DenseTensorLiteral::Ptr lit) {
   }
 }
 
-// TODO: Remove or move to separate semantic analysis pass.
-/*void TypeChecker::visit(Test::Ptr test) {
+void TypeChecker::visit(Test::Ptr test) {
   const auto msg = "non-literal values for tests are currently unsupported";
   
   for (auto arg : test->args) {
@@ -996,7 +998,7 @@ void TypeChecker::visit(DenseTensorLiteral::Ptr lit) {
   if (!isa<TensorLiteral>(test->expected)) {
     reportError(msg, test->expected);
   }
-}*/
+}
 
 void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, 
                                           const bool isConst) {
