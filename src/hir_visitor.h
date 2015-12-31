@@ -59,6 +59,7 @@ struct ExpExpr;
 struct TransposeExpr;
 struct CallExpr;
 struct TensorReadExpr;
+struct TupleReadExpr;
 struct FieldReadExpr;
 struct ParenExpr;
 struct VarExpr;
@@ -126,6 +127,7 @@ public:
   virtual void visit(std::shared_ptr<TransposeExpr>);
   virtual void visit(std::shared_ptr<CallExpr>);
   virtual void visit(std::shared_ptr<TensorReadExpr>);
+  virtual void visit(std::shared_ptr<TupleReadExpr>);
   virtual void visit(std::shared_ptr<FieldReadExpr>);
   virtual void visit(std::shared_ptr<ParenExpr>);
   virtual void visit(std::shared_ptr<VarExpr> op) {}

@@ -228,6 +228,11 @@ void HIRVisitor::visit(TensorReadExpr::Ptr expr) {
   }
 }
 
+void HIRVisitor::visit(TupleReadExpr::Ptr expr) {
+  expr->tuple->accept(this);
+  expr->index->accept(this);
+}
+
 void HIRVisitor::visit(FieldReadExpr::Ptr expr) {
   expr->setOrElem->accept(this);
   expr->field->accept(this);

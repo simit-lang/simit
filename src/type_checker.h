@@ -25,9 +25,7 @@ public:
     skipCheckDeclared(false),
     errors(errors) {}
 
-  void typeCheck(Program::Ptr program) {
-    program->accept(this);
-  }
+  void check(Program::Ptr program) { program->accept(this); }
 
 private:
   virtual void visit(RangeIndexSet::Ptr);
@@ -71,6 +69,7 @@ private:
   virtual void visit(TransposeExpr::Ptr);
   virtual void visit(CallExpr::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
+  virtual void visit(TupleReadExpr::Ptr);
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(VarExpr::Ptr);
   virtual void visit(IntLiteral::Ptr);
@@ -80,7 +79,7 @@ private:
   virtual void visit(DenseFloatVector::Ptr);
   virtual void visit(DenseNDTensor::Ptr);
   virtual void visit(DenseTensorLiteral::Ptr);
-  //virtual void visit(Test::Ptr);
+  virtual void visit(Test::Ptr);
 
   typedef std::vector<ir::Type> Type;
   typedef std::shared_ptr<Type> TypePtr;
@@ -162,6 +161,9 @@ private:
     ptr->accept(this);
     const TypePtr ret = retType;
     retType.reset();
+    if (ret) {
+      ptr->type = *ret;
+    }
     return ret;
   }
   IndexSetPtr getIndexSet(IndexSet::Ptr ptr) {

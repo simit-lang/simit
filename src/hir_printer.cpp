@@ -82,7 +82,7 @@ void HIRPrinter::visit(ScalarTensorType::Ptr type) {
       oss << "bool";
       break;
     default:
-      iassert(false);
+      unreachable;
       break;
   }
 }
@@ -296,7 +296,7 @@ void HIRPrinter::visit(MapExpr::Ptr expr) {
         oss << "+";
         break;
       default:
-        iassert(false);
+        unreachable;
         break;
     }
   }
@@ -339,7 +339,7 @@ void HIRPrinter::visit(EqExpr::Ptr expr) {
         oss << " != ";
         break;
       default:
-        iassert(false);
+        unreachable;
         break;
     }
     oss << "(";
@@ -404,7 +404,7 @@ void HIRPrinter::visit(CallExpr::Ptr expr) {
 
 void HIRPrinter::visit(TensorReadExpr::Ptr expr) {
   expr->tensor->accept(this);
-  oss << "[";
+  oss << "(";
   bool printDelimiter = false;
   for (auto param : expr->indices) {
     if (printDelimiter) {
@@ -413,7 +413,14 @@ void HIRPrinter::visit(TensorReadExpr::Ptr expr) {
     param->accept(this);
     printDelimiter = true;
   }
-  oss << "]";
+  oss << ")";
+}
+
+void HIRPrinter::visit(TupleReadExpr::Ptr expr) {
+  expr->tuple->accept(this);
+  oss << "(";
+  expr->index->accept(this);
+  oss << ")";
 }
 
 void HIRPrinter::visit(FieldReadExpr::Ptr expr) {
