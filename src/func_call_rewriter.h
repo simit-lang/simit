@@ -15,10 +15,10 @@ class FuncCallRewriter : public HIRRewriter {
 public:
   FuncCallRewriter(std::vector<ParseError> *errors) : errors(errors) {}
   
+private:
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(TensorReadExpr::Ptr);
 
-private:
   void reportError(const std::string msg, HIRNode::Ptr loc) {
     const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
                                 loc->getLineEnd(), loc->getColEnd(), msg);

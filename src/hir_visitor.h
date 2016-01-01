@@ -19,9 +19,9 @@ struct TupleType;
 struct ScalarTensorType;
 struct NonScalarTensorType;
 struct Identifier;
+struct IdentDecl;
 struct Field;
 struct ElementTypeDecl;
-struct IdentDecl;
 struct Argument;
 struct ExternDecl;
 struct FuncDecl;
@@ -87,9 +87,9 @@ public:
   virtual void visit(std::shared_ptr<ScalarTensorType> op) {}
   virtual void visit(std::shared_ptr<NonScalarTensorType>);
   virtual void visit(std::shared_ptr<Identifier> op) {}
+  virtual void visit(std::shared_ptr<IdentDecl>);
   virtual void visit(std::shared_ptr<Field>);
   virtual void visit(std::shared_ptr<ElementTypeDecl>);
-  virtual void visit(std::shared_ptr<IdentDecl>);
   virtual void visit(std::shared_ptr<Argument>);
   virtual void visit(std::shared_ptr<ExternDecl>);
   virtual void visit(std::shared_ptr<FuncDecl>);

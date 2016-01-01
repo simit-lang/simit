@@ -82,9 +82,7 @@ std::vector<hir::Field::Ptr> ParserNew::parseFieldDeclList() {
 hir::Field::Ptr ParserNew::parseFieldDecl() {
   auto fieldDecl = std::make_shared<hir::Field>();
   
-  fieldDecl->name = parseIdent();
-  consume(TokenType::COL);
-  fieldDecl->type = parseTensorType();
+  fieldDecl->field = parseTensorDecl();
   
   const Token endToken = consume(TokenType::SEMICOL);
   fieldDecl->setEndLoc(endToken);
@@ -247,7 +245,7 @@ hir::VarDecl::Ptr ParserNew::parseVarDecl() {
     const Token varToken = consume(TokenType::VAR);
     varDecl->setBeginLoc(varToken);
     
-    varDecl->var = parseIdentDecl();
+    varDecl->var = parseTensorDecl();
     if (tryconsume(TokenType::ASSIGN)) {
       varDecl->initVal = parseExpr();
     }
@@ -269,7 +267,7 @@ hir::ConstDecl::Ptr ParserNew::parseConstDecl() {
     const Token constToken = consume(TokenType::CONST);
     constDecl->setBeginLoc(constToken);
     
-    constDecl->var = parseIdentDecl();
+    constDecl->var = parseTensorDecl();
     consume(TokenType::ASSIGN);
     constDecl->initVal = parseExpr();
   
@@ -291,6 +289,19 @@ hir::IdentDecl::Ptr ParserNew::parseIdentDecl() {
   identDecl->type = parseType();
   
   return identDecl;
+}
+
+// This rule is needed to prohibit declaration of non-tensor variables and 
+// fields, which are currently unsupported. Probably want to replace with 
+// ident_decl rule at some point in the future.
+hir::IdentDecl::Ptr ParserNew::parseTensorDecl() {
+  auto tensorDecl = std::make_shared<hir::IdentDecl>();
+
+  tensorDecl->name = parseIdent();
+  consume(TokenType::COL);
+  tensorDecl->type = parseTensorType();
+  
+  return tensorDecl;
 }
 
 hir::WhileStmt::Ptr ParserNew::parseWhileStmt() {

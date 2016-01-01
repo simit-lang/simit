@@ -40,6 +40,7 @@ private:
   hir::VarDecl::Ptr parseVarDecl();
   hir::ConstDecl::Ptr parseConstDecl();
   hir::IdentDecl::Ptr parseIdentDecl();
+  hir::IdentDecl::Ptr parseTensorDecl();
   hir::WhileStmt::Ptr parseWhileStmt();
   hir::DoWhileStmt::Ptr parseDoWhileStmt();
   hir::IfStmt::Ptr parseIfStmt();
