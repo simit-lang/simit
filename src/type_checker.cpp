@@ -11,7 +11,6 @@
 #include "ir.h"
 #include "hir.h"
 
-// TODO: Refactor to reduce code duplication.
 namespace simit {
 namespace hir {
 
@@ -111,7 +110,7 @@ void TypeChecker::visit(NonScalarTensorType::Ptr type) {
 
   std::vector<ir::IndexSet> indexSets;
   for (auto is : type->indexSets) {
-    const IndexSetPtr indexSet = getIndexSet(is);
+    const Ptr<ir::IndexSet> indexSet = getIndexSet(is);
     if (indexSet) {
       indexSets.push_back(*indexSet);
     } else {
@@ -157,11 +156,18 @@ void TypeChecker::visit(NonScalarTensorType::Ptr type) {
   }
 }
 
+void TypeChecker::visit(IdentDecl::Ptr decl) {
+  const ir::Type type = getIRType(decl->type);
+  retVar = ir::Var(decl->name->ident, type);
+  retField = ir::Field(decl->name->ident, type);
+}
+
 void TypeChecker::visit(Field::Ptr field) {
-  const ir::Type type = getIRType(field->type);
-  iassert(type.isTensor());
-  
-  retField = ir::Field(field->name->ident, type);
+  // Let visit method for IdentDecl node take care of field creation.
+  HIRVisitor::visit(field);
+
+  iassert(retField.name != "");
+  iassert(retField.type.isTensor());
 }
 
 void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
@@ -177,11 +183,6 @@ void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
   } else {
     ctx.addElementType(ir::ElementType::make(name, fields));
   }
-}
-
-void TypeChecker::visit(IdentDecl::Ptr decl) {
-  const ir::Type type = getIRType(decl->type);
-  retVar = ir::Var(decl->name->ident, type);
 }
 
 void TypeChecker::visit(ExternDecl::Ptr decl) {
@@ -233,7 +234,7 @@ void TypeChecker::visit(ConstDecl::Ptr decl) {
 }
 
 void TypeChecker::visit(WhileStmt::Ptr stmt) {
-  const TypePtr condType = inferType(stmt->cond);
+  const Ptr<Expr::Type> condType = inferType(stmt->cond);
  
   ctx.scope();
   stmt->body->accept(this);
@@ -248,7 +249,7 @@ void TypeChecker::visit(WhileStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(IfStmt::Ptr stmt) {
-  const TypePtr condType = inferType(stmt->cond);
+  const Ptr<Expr::Type> condType = inferType(stmt->cond);
   
   ctx.scope();
   stmt->ifBody->accept(this);
@@ -269,7 +270,7 @@ void TypeChecker::visit(IfStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(IndexSetDomain::Ptr domain) {
-  const IndexSetPtr set = getIndexSet(domain->set);
+  const Ptr<ir::IndexSet> set = getIndexSet(domain->set);
 
   if (set && set->getKind() != ir::IndexSet::Set) {
     reportError("for-loop cannot iterate over a non-set domain", domain);
@@ -277,8 +278,8 @@ void TypeChecker::visit(IndexSetDomain::Ptr domain) {
 }
 
 void TypeChecker::visit(RangeDomain::Ptr domain) {
-  const TypePtr lowerType = inferType(domain->lower);
-  const TypePtr upperType = inferType(domain->upper);
+  const Ptr<Expr::Type> lowerType = inferType(domain->lower);
+  const Ptr<Expr::Type> upperType = inferType(domain->upper);
 
   if (lowerType && (lowerType->size() != 1 || !isInt(lowerType->at(0)))) {
     std::stringstream errMsg;
@@ -306,7 +307,7 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(PrintStmt::Ptr stmt) {
-  const TypePtr exprType = inferType(stmt->expr);
+  const Ptr<Expr::Type> exprType = inferType(stmt->expr);
 
   if (exprType && (exprType->size() != 1 || !exprType->at(0).isTensor())) {
     std::stringstream errMsg;
@@ -316,14 +317,14 @@ void TypeChecker::visit(PrintStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(AssignStmt::Ptr stmt) {
-  const TypePtr exprType = inferType(stmt->expr);
+  const Ptr<Expr::Type> exprType = inferType(stmt->expr);
 
-  Type lhsType;
+  Expr::Type lhsType;
   for (auto lhs : stmt->lhs) {
     markCheckWritable(lhs);
     skipCheckDeclared = isa<VarExpr>(lhs);
     
-    const TypePtr ltype = inferType(lhs);
+    const Ptr<Expr::Type> ltype = inferType(lhs);
     if (ltype && ltype->size() == 1) {
       lhsType.push_back(ltype->at(0));
     } else {
@@ -371,7 +372,7 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(ExprParam::Ptr param) {
-  const TypePtr exprType = inferType(param->expr);
+  const Ptr<Expr::Type> exprType = inferType(param->expr);
 
   if (!exprType) {
     return;
@@ -388,10 +389,10 @@ void TypeChecker::visit(ExprParam::Ptr param) {
 }
 
 void TypeChecker::visit(MapExpr::Ptr expr) {
-  Type actualsType;
+  Expr::Type actualsType;
   bool typeChecked = true;
   for (auto param : expr->partialActuals) {
-    const TypePtr paramType = inferType(param);
+    const Ptr<Expr::Type> paramType = inferType(param);
 
     if (!paramType) {
       typeChecked = false;
@@ -418,7 +419,7 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
   if (ctx.containsFunction(funcName)) {
     func = ctx.getFunction(funcName);
     
-    retType = std::make_shared<Type>();
+    retType = std::make_shared<Expr::Type>();
     for (const auto &res : func.getResults()) {
       retType->push_back(res.getType());
     }
@@ -451,9 +452,9 @@ void TypeChecker::visit(XorExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(EqExpr::Ptr expr) {
-  TypePtr repType;
+  Ptr<Expr::Type> repType;
   for (const auto operand : expr->operands) {
-    const TypePtr opndType = inferType(operand);
+    const Ptr<Expr::Type> opndType = inferType(operand);
     
     if (!opndType) {
       continue;
@@ -476,13 +477,13 @@ void TypeChecker::visit(EqExpr::Ptr expr) {
     }
   }
   
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
   retType->push_back(ir::Type(ir::TensorType::make(componentType)));
 }
 
 void TypeChecker::visit(NotExpr::Ptr expr) {
-  const TypePtr opndType = inferType(expr->operand);
+  const Ptr<Expr::Type> opndType = inferType(expr->operand);
 
   if (opndType && (opndType->size() != 1 || !isBoolean(opndType->at(0)))) {
     std::stringstream errMsg;
@@ -491,7 +492,7 @@ void TypeChecker::visit(NotExpr::Ptr expr) {
     reportError(errMsg.str(), expr->operand);
   }
 
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
   retType->push_back(ir::Type(ir::TensorType::make(componentType)));
 }
@@ -505,8 +506,8 @@ void TypeChecker::visit(SubExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(MulExpr::Ptr expr) {
-  const TypePtr lhsType = inferType(expr->lhs);
-  const TypePtr rhsType = inferType(expr->rhs);
+  const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
+  const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
 
   bool typeChecked = (bool)lhsType && (bool)rhsType;
   if (lhsType && (lhsType->size() != 1 || !(*lhsType)[0].isTensor())) {
@@ -542,7 +543,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     } else {
       const auto tensorType = (ltype->order() > 0) ? lhsType->at(0) : 
                               rhsType->at(0);
-      retType = std::make_shared<Type>();
+      retType = std::make_shared<Expr::Type>();
       retType->push_back(tensorType);
     }
   } else if (ltype->order() == 1 && rtype->order() == 1) {
@@ -563,7 +564,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
         dom.push_back(rdimensions[0]);
       }
       const auto tensorType = ir::TensorType::make(ltype->componentType, dom);
-      retType = std::make_shared<Type>();
+      retType = std::make_shared<Expr::Type>();
       retType->push_back(ir::Type(tensorType));  
     }
   } else if (ltype->order() == 2 && rtype->order() == 1) {
@@ -579,7 +580,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     } else {
       const auto tensorType = ir::TensorType::make(ltype->componentType, 
                                                    {ldimensions[0]}, true);
-      retType = std::make_shared<Type>();
+      retType = std::make_shared<Expr::Type>();
       retType->push_back(ir::Type(tensorType));
     }
   } else if (ltype->order() == 1 && rtype->order() == 2) {
@@ -595,7 +596,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     } else {
       const auto tensorType = ir::TensorType::make(ltype->componentType, 
                                                    {rdimensions[1]});
-      retType = std::make_shared<Type>();
+      retType = std::make_shared<Expr::Type>();
       retType->push_back(ir::Type(tensorType));
     }
   } else if (ltype->order() == 2 && rtype->order() == 2) {
@@ -609,7 +610,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     } else {
       const std::vector<ir::IndexDomain> dom = {ldimensions[0], rdimensions[1]};
       const auto tensorType = ir::TensorType::make(ltype->componentType, dom);
-      retType = std::make_shared<Type>();
+      retType = std::make_shared<Expr::Type>();
       retType->push_back(ir::Type(tensorType));
     }
   } else {
@@ -618,8 +619,8 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(DivExpr::Ptr expr) {
-  const TypePtr lhsType = inferType(expr->lhs);
-  const TypePtr rhsType = inferType(expr->rhs);
+  const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
+  const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
 
   bool typeChecked = (bool)lhsType && (bool)rhsType;
   if (lhsType && (lhsType->size() != 1 || !(*lhsType)[0].isTensor())) {
@@ -662,7 +663,7 @@ void TypeChecker::visit(ElwiseDivExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(NegExpr::Ptr expr) {
-  const TypePtr opndType = inferType(expr->operand);
+  const Ptr<Expr::Type> opndType = inferType(expr->operand);
 
   if (!opndType) {
     return;
@@ -684,7 +685,7 @@ void TypeChecker::visit(ExpExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(TransposeExpr::Ptr expr) {
-  const TypePtr opndType = inferType(expr->operand);
+  const Ptr<Expr::Type> opndType = inferType(expr->operand);
 
   if (!opndType) {
     return;
@@ -709,7 +710,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
     {
       const auto exprType = ir::TensorType::make(tensorType->componentType, 
           dimensions, !tensorType->isColumnVector);
-      retType = std::make_shared<Type>();
+      retType = std::make_shared<Expr::Type>();
       retType->push_back(ir::Type(exprType));
       break;
     }
@@ -717,7 +718,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
     {
       const auto exprType = ir::TensorType::make(
           tensorType->componentType, {dimensions[1], dimensions[0]});
-      retType = std::make_shared<Type>();
+      retType = std::make_shared<Expr::Type>();
       retType->push_back(ir::Type(exprType));
       break;
     }
@@ -741,7 +742,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   } else {
     for (unsigned i = 0; i < expr->operands.size(); ++i) {
       const Expr::Ptr operand = expr->operands[i];
-      const TypePtr argType = inferType(operand);
+      const Ptr<Expr::Type> argType = inferType(operand);
   
       if (!argType) {
         continue;
@@ -764,14 +765,14 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
   }
 
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   for (const auto &res : func.getResults()) {
     retType->push_back(res.getType());
   }
 }
 
 void TypeChecker::visit(TensorReadExpr::Ptr expr) {
-  const TypePtr lhsType = inferType(expr->tensor);
+  const Ptr<Expr::Type> lhsType = inferType(expr->tensor);
 
   if (!lhsType) {
     return;
@@ -802,7 +803,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
         dims.push_back(tensorType->getDimensions()[i]);
       } else {
         const Expr::Ptr paramExpr = to<ExprParam>(param)->expr;
-        const TypePtr paramType = inferType(paramExpr);
+        const Ptr<Expr::Type> paramType = inferType(paramExpr);
 
         if (!paramType) {
           continue;
@@ -819,7 +820,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       }
     }
 
-    retType = std::make_shared<Type>();
+    retType = std::make_shared<Expr::Type>();
     if (dims.empty()) {
       retType->push_back(tensorType->getBlockType());
     } else {
@@ -836,7 +837,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       return;
     } else {
       const Expr::Ptr indexExpr = to<ExprParam>(expr->indices[0])->expr;
-      const TypePtr indexType = inferType(indexExpr);
+      const Ptr<Expr::Type> indexType = inferType(indexExpr);
       if (indexType->size() != 1 || !isInt(indexType->at(0))) {
         std::stringstream errMsg;
         errMsg << "tuple access expects an integral index but got an index of " 
@@ -845,7 +846,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       }
     }
 
-    retType = std::make_shared<Type>();
+    retType = std::make_shared<Expr::Type>();
     retType->push_back(lhsType->at(0).toTuple()->elementType);
   } else {
     std::stringstream errMsg;
@@ -861,7 +862,7 @@ void TypeChecker::visit(TupleReadExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(FieldReadExpr::Ptr expr) {
-  const TypePtr lhsType = inferType(expr->setOrElem);
+  const Ptr<Expr::Type> lhsType = inferType(expr->setOrElem);
 
   if (!lhsType) {
     return;
@@ -895,7 +896,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
     return;
   }
 
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   if (type.isElement()) {
     retType->push_back(elemType->field(fieldName).type);
   } else {
@@ -924,24 +925,24 @@ void TypeChecker::visit(VarExpr::Ptr expr) {
     reportError(errMsg.str(), expr);
   }
 
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   retType->push_back(varSym.getExpr().type());
 }
 
 void TypeChecker::visit(IntLiteral::Ptr lit) {
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Int);
   retType->push_back(ir::Type(ir::TensorType::make(componentType)));
 }
 
 void TypeChecker::visit(FloatLiteral::Ptr lit) {
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Float);
   retType->push_back(ir::Type(ir::TensorType::make(componentType)));
 }
 
 void TypeChecker::visit(BoolLiteral::Ptr lit) {
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
   retType->push_back(ir::Type(ir::TensorType::make(componentType)));
 }
@@ -977,7 +978,7 @@ void TypeChecker::visit(DenseTensorLiteral::Ptr lit) {
                           ir::ScalarType::Int : ir::ScalarType::Float;
     iassert(idoms.size() == 1 || !lit->transposed);
 
-    retType = std::make_shared<Type>();
+    retType = std::make_shared<Expr::Type>();
     retType->push_back(ir::TensorType::make(elemType, idoms, lit->transposed));
   } catch (std::exception &err) {
     reportError(std::string(err.what()), lit);
@@ -1003,7 +1004,8 @@ void TypeChecker::visit(Test::Ptr test) {
 void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, 
                                           const bool isConst) {
   const ir::Var var = getVar(decl->var);
-  const TypePtr initType = decl->initVal ? inferType(decl->initVal) : TypePtr();
+  const auto initType = decl->initVal ? inferType(decl->initVal) : 
+                        Ptr<Expr::Type>();
 
   if (ctx.hasSymbol(var.getName(), true)) {
     reportMultipleDefs("variable or constant", var.getName(), decl);
@@ -1071,8 +1073,8 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl,
 }
 
 void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
-  const TypePtr lhsType = inferType(expr->lhs);
-  const TypePtr rhsType = inferType(expr->rhs);
+  const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
+  const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
 
   bool typeChecked = (bool)lhsType && (bool)rhsType;
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor())) {
@@ -1111,8 +1113,8 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
 }
 
 void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
-  const TypePtr lhsType = inferType(expr->lhs);
-  const TypePtr rhsType = inferType(expr->rhs);
+  const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
+  const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
 
   if (lhsType && (lhsType->size() != 1 || !isBoolean(lhsType->at(0)))) {
     std::stringstream errMsg;
@@ -1127,7 +1129,7 @@ void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
     reportError(errMsg.str(), expr->rhs);
   }
 
-  retType = std::make_shared<Type>();
+  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
   retType->push_back(ir::Type(ir::TensorType::make(componentType)));
 }

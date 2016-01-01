@@ -37,9 +37,9 @@ private:
   virtual void visit(TupleType::Ptr);
   virtual void visit(ScalarTensorType::Ptr);
   virtual void visit(NonScalarTensorType::Ptr);
+  virtual void visit(IdentDecl::Ptr);
   virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
-  virtual void visit(IdentDecl::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
@@ -81,9 +81,7 @@ private:
   virtual void visit(DenseTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
-  typedef std::vector<ir::Type> Type;
-  typedef std::shared_ptr<Type> TypePtr;
-  typedef std::shared_ptr<ir::IndexSet> IndexSetPtr;
+  template <typename T> using Ptr = std::shared_ptr<T>;
 
   class DimError : public std::exception {
     const char *what() const noexcept {
@@ -156,20 +154,20 @@ private:
     }
   }
 
-  TypePtr inferType(Expr::Ptr ptr) {
+  Ptr<Expr::Type> inferType(Expr::Ptr ptr) {
     retType.reset();
     ptr->accept(this);
-    const TypePtr ret = retType;
+    const Ptr<Expr::Type> ret = retType;
     retType.reset();
     if (ret) {
       ptr->type = *ret;
     }
     return ret;
   }
-  IndexSetPtr getIndexSet(IndexSet::Ptr ptr) {
+  Ptr<ir::IndexSet> getIndexSet(IndexSet::Ptr ptr) {
     retIndexSet.reset();
     ptr->accept(this);
-    const IndexSetPtr ret = retIndexSet;
+    const Ptr<ir::IndexSet> ret = retIndexSet;
     retIndexSet.reset();
     return ret;
   }
@@ -220,7 +218,7 @@ private:
     }
     return oss.str();
   }
-  std::string typeString(const TypePtr &type) {
+  std::string typeString(const Ptr<Expr::Type> &type) {
     if (type->size() == 0) {
       return "none";
     }
@@ -264,8 +262,8 @@ private:
     reportError(errMsg.str(), loc);
   }
 
-  TypePtr retType;
-  IndexSetPtr retIndexSet;
+  Ptr<Expr::Type> retType;
+  Ptr<ir::IndexSet> retIndexSet;
   ir::Expr retExpr;
   ir::Type retIRType;
   ir::Field retField;

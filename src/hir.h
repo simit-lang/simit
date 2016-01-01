@@ -223,31 +223,6 @@ struct Identifier : public HIRNode {
   }
 };
 
-struct Field : public HIRNode {
-  Identifier::Ptr name;
-  Type::Ptr type;
-  
-  typedef std::shared_ptr<Field> Ptr;
-  
-  virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<Field>(shared_from_this()));
-  }
-
-  virtual unsigned getLineBegin() { return name->getLineBegin(); }
-  virtual unsigned getColBegin() { return name->getColBegin(); }
-};
-
-struct ElementTypeDecl : public HIRNode {
-  Identifier::Ptr name;
-  std::vector<Field::Ptr> fields; 
-  
-  typedef std::shared_ptr<ElementTypeDecl> Ptr;
-  
-  virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ElementTypeDecl>(shared_from_this()));
-  }
-};
-
 struct IdentDecl : public HIRNode {
   Identifier::Ptr name;
   Type::Ptr type;
@@ -262,6 +237,30 @@ struct IdentDecl : public HIRNode {
   virtual unsigned getColBegin() { return name->getColBegin(); }
   virtual unsigned getLineEnd() { return type->getLineEnd(); }
   virtual unsigned getColEnd() { return type->getColEnd(); }
+};
+
+struct Field : public HIRNode {
+  IdentDecl::Ptr field;
+  
+  typedef std::shared_ptr<Field> Ptr;
+  
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<Field>(shared_from_this()));
+  }
+
+  virtual unsigned getLineBegin() { return field->getLineBegin(); }
+  virtual unsigned getColBegin() { return field->getColBegin(); }
+};
+
+struct ElementTypeDecl : public HIRNode {
+  Identifier::Ptr name;
+  std::vector<Field::Ptr> fields; 
+  
+  typedef std::shared_ptr<ElementTypeDecl> Ptr;
+  
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<ElementTypeDecl>(shared_from_this()));
+  }
 };
 
 struct Argument : public IdentDecl {
