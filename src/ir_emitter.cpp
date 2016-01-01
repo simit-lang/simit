@@ -124,10 +124,17 @@ void IREmitter::visit(NonScalarTensorType::Ptr type) {
   }
 }
 
-void IREmitter::visit(Field::Ptr field) {
+void IREmitter::visit(IdentDecl::Ptr decl) {
+  const ir::Type type = emitType(decl->type);
+  retVar = ir::Var(decl->name->ident, type);
+  retField = ir::Field(decl->name->ident, type);
+}
+
+/*void IREmitter::visit(Field::Ptr field) {
+  const ir::Var field = emitVar(field->field);
   const ir::Type type = emitType(field->type);
   retField = ir::Field(field->name->ident, type);
-}
+}*/
 
 void IREmitter::visit(ElementTypeDecl::Ptr decl) {
   iassert(!ctx->containsElementType(decl->name->ident));
@@ -139,11 +146,6 @@ void IREmitter::visit(ElementTypeDecl::Ptr decl) {
   }
 
   ctx->addElementType(ir::ElementType::make(decl->name->ident, fields));
-}
-
-void IREmitter::visit(IdentDecl::Ptr decl) {
-  const ir::Type type = emitType(decl->type);
-  retVar = ir::Var(decl->name->ident, type);
 }
 
 void IREmitter::visit(ExternDecl::Ptr decl) {

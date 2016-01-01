@@ -8,7 +8,7 @@ namespace simit {
 namespace hir {
 
 class TupleReadRewriter : public HIRRewriter {
-public:
+private:
   virtual void visit(TensorReadExpr::Ptr);
 };
 

@@ -34,9 +34,8 @@ private:
   virtual void visit(TupleType::Ptr);
   virtual void visit(ScalarTensorType::Ptr);
   virtual void visit(NonScalarTensorType::Ptr);
-  virtual void visit(Field::Ptr);
-  virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(IdentDecl::Ptr);
+  virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(ProcDecl::Ptr);
