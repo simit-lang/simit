@@ -40,9 +40,14 @@ void HIRRewriter::visit(NonScalarTensorType::Ptr type) {
   node = type;
 }
 
+void HIRRewriter::visit(IdentDecl::Ptr decl) {
+  decl->name = rewrite<Identifier>(decl->name);
+  decl->type = rewrite<Type>(decl->type);
+  node = decl;
+}
+
 void HIRRewriter::visit(Field::Ptr field) {
-  field->name = rewrite<Identifier>(field->name);
-  field->type = rewrite<Type>(field->type);
+  field->field = rewrite<IdentDecl>(field->field);
   node = field;
 }
 
@@ -51,12 +56,6 @@ void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
   for (unsigned i = 0; i < decl->fields.size(); ++i) {
     decl->fields[i] = rewrite<Field>(decl->fields[i]);
   }
-  node = decl;
-}
-
-void HIRRewriter::visit(IdentDecl::Ptr decl) {
-  decl->name = rewrite<Identifier>(decl->name);
-  decl->type = rewrite<Type>(decl->type);
   node = decl;
 }
 

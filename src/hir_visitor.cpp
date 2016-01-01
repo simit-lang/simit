@@ -35,9 +35,13 @@ void HIRVisitor::visit(NonScalarTensorType::Ptr type) {
   type->blockType->accept(this);
 }
 
+void HIRVisitor::visit(IdentDecl::Ptr decl) {
+  decl->name->accept(this);
+  decl->type->accept(this);
+}
+
 void HIRVisitor::visit(Field::Ptr field) {
-  field->name->accept(this);
-  field->type->accept(this);
+  field->field->accept(this);
 }
 
 void HIRVisitor::visit(ElementTypeDecl::Ptr decl) {
@@ -45,11 +49,6 @@ void HIRVisitor::visit(ElementTypeDecl::Ptr decl) {
   for (auto field : decl->fields) {
     field->accept(this);
   }
-}
-
-void HIRVisitor::visit(IdentDecl::Ptr decl) {
-  decl->name->accept(this);
-  decl->type->accept(this);
 }
 
 void HIRVisitor::visit(Argument::Ptr arg) {

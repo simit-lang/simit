@@ -113,10 +113,14 @@ void HIRPrinter::visit(Identifier::Ptr ident) {
   oss << ident->ident;
 }
 
-void HIRPrinter::visit(Field::Ptr field) {
-  field->name->accept(this);
+void HIRPrinter::visit(IdentDecl::Ptr decl) {
+  decl->name->accept(this);
   oss << " : ";
-  field->type->accept(this);
+  decl->type->accept(this);
+}
+
+void HIRPrinter::visit(Field::Ptr field) {
+  field->field->accept(this);
   oss << ";";
 }
 
@@ -132,12 +136,6 @@ void HIRPrinter::visit(ElementTypeDecl::Ptr decl) {
   }
   dedent();
   oss << "end";
-}
-
-void HIRPrinter::visit(IdentDecl::Ptr decl) {
-  decl->name->accept(this);
-  oss << " : ";
-  decl->type->accept(this);
 }
 
 void HIRPrinter::visit(Argument::Ptr arg) {
