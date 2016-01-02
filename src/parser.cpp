@@ -765,7 +765,9 @@ hir::Expr::Ptr ParserNew::parseCallOrReadExpr() {
         
         consume(TokenType::LP);
         tensorRead->tensor = expr;
-        tensorRead->indices = parseReadParams();
+        if (peek().type != TokenType::RP) {
+          tensorRead->indices = parseReadParams();
+        }
         
         const Token rightParenToken = consume(TokenType::RP);
         tensorRead->setEndLoc(rightParenToken);
@@ -983,51 +985,51 @@ hir::TupleType::Ptr ParserNew::parseTupleType() {
 hir::TensorType::Ptr ParserNew::parseTensorType() {
   hir::TensorType::Ptr tensorType;
   if (peek().type == TokenType::TENSOR) {
-    tensorType = std::make_shared<hir::NonScalarTensorType>();
+    tensorType = std::make_shared<hir::NDTensorType>();
   } else {
-    tensorType = std::make_shared<hir::ScalarTensorType>();
+    tensorType = std::make_shared<hir::ScalarType>();
   }
 
   tensorType->setLoc(peek());
   switch (peek().type) {
     case TokenType::INT:
       consume(TokenType::INT);
-      hir::to<hir::ScalarTensorType>(tensorType)->type = 
-          hir::ScalarTensorType::Type::INT;
+      hir::to<hir::ScalarType>(tensorType)->type = 
+          hir::ScalarType::Type::INT;
       break;
     case TokenType::FLOAT:
       consume(TokenType::FLOAT);
-      hir::to<hir::ScalarTensorType>(tensorType)->type = 
-          hir::ScalarTensorType::Type::FLOAT;
+      hir::to<hir::ScalarType>(tensorType)->type = 
+          hir::ScalarType::Type::FLOAT;
       break;
     case TokenType::BOOL:
       consume(TokenType::BOOL);
-      hir::to<hir::ScalarTensorType>(tensorType)->type = 
-          hir::ScalarTensorType::Type::BOOL;
+      hir::to<hir::ScalarType>(tensorType)->type = 
+          hir::ScalarType::Type::BOOL;
       break;
     case TokenType::TENSOR:
     {
-      const auto nonScalarTensorType = 
-        hir::to<hir::NonScalarTensorType>(tensorType);
+      const auto ndTensorType = 
+        hir::to<hir::NDTensorType>(tensorType);
       
       consume(TokenType::TENSOR);
       if (tryconsume(TokenType::LB)) {
-        nonScalarTensorType->indexSets = parseIndexSets();
+        ndTensorType->indexSets = parseIndexSets();
         consume(TokenType::RB);
       }
       consume(TokenType::LP);
-      nonScalarTensorType->blockType = parseTensorType();
+      ndTensorType->blockType = parseTensorType();
       
       const Token rightParenToken = consume(TokenType::RP);
-      nonScalarTensorType->setEndLoc(rightParenToken);
+      ndTensorType->setEndLoc(rightParenToken);
   
       if (peek().type == TokenType::TRANSPOSE) {
         const Token transposeToken = consume(TokenType::TRANSPOSE);
-        nonScalarTensorType->setEndLoc(transposeToken);
+        ndTensorType->setEndLoc(transposeToken);
 
-        nonScalarTensorType->transposed = true;
+        ndTensorType->transposed = true;
       } else {
-        nonScalarTensorType->transposed = false;
+        ndTensorType->transposed = false;
       }
       break;
     }

@@ -9,7 +9,7 @@
 namespace simit {
 namespace hir {
 
-unsigned PadTensorBlocks::getMaxDim(TensorType::Ptr type) {
+unsigned PadTensorBlocks::getMaxDim(const TensorType::Ptr type) {
   if (!isa<NDTensorType>(type)) {
     return 0;
   }
@@ -19,7 +19,7 @@ unsigned PadTensorBlocks::getMaxDim(TensorType::Ptr type) {
   return std::max(maxDim, (unsigned)tensorType->indexSets.size());
 }
 
-void PadTensorBlocks::padBlocks(TensorType::Ptr type, unsigned maxDim) {
+void PadTensorBlocks::padBlocks(TensorType::Ptr type, const unsigned maxDim) {
   if (!isa<NDTensorType>(type)) {
     return;
   }
