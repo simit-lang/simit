@@ -28,7 +28,7 @@ void HIRVisitor::visit(TupleType::Ptr type) {
   type->length->accept(this);
 }
 
-void HIRVisitor::visit(NonScalarTensorType::Ptr type) {
+void HIRVisitor::visit(NDTensorType::Ptr type) {
   for (auto indexSet : type->indexSets) {
     indexSet->accept(this);
   }

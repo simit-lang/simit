@@ -60,17 +60,17 @@ void IREmitter::visit(TupleType::Ptr type) {
   retType = ir::Type(ir::TupleType::make(elementType, type->length->val));
 }
 
-void IREmitter::visit(ScalarTensorType::Ptr type) {
+void IREmitter::visit(ScalarType::Ptr type) {
   ir::ScalarType componentType;
   
   switch (type->type) {
-    case ScalarTensorType::Type::INT:
+    case ScalarType::Type::INT:
       componentType = ir::ScalarType(ir::ScalarType::Int);
       break;
-    case ScalarTensorType::Type::FLOAT:
+    case ScalarType::Type::FLOAT:
       componentType = ir::ScalarType(ir::ScalarType::Float);
       break;
-    case ScalarTensorType::Type::BOOL:
+    case ScalarType::Type::BOOL:
       componentType = ir::ScalarType(ir::ScalarType::Boolean);
       break;
     default:
@@ -81,7 +81,7 @@ void IREmitter::visit(ScalarTensorType::Ptr type) {
   retType = ir::Type(ir::TensorType::make(componentType));
 }
 
-void IREmitter::visit(NonScalarTensorType::Ptr type) {
+void IREmitter::visit(NDTensorType::Ptr type) {
   const ir::Type blockType = emitType(type->blockType);
 
   std::vector<ir::IndexSet> indexSets;
@@ -129,12 +129,6 @@ void IREmitter::visit(IdentDecl::Ptr decl) {
   retVar = ir::Var(decl->name->ident, type);
   retField = ir::Field(decl->name->ident, type);
 }
-
-/*void IREmitter::visit(Field::Ptr field) {
-  const ir::Var field = emitVar(field->field);
-  const ir::Type type = emitType(field->type);
-  retField = ir::Field(field->name->ident, type);
-}*/
 
 void IREmitter::visit(ElementTypeDecl::Ptr decl) {
   iassert(!ctx->containsElementType(decl->name->ident));
@@ -590,17 +584,11 @@ void IREmitter::visit(BoolLiteral::Ptr expr) {
 }
 
 void IREmitter::visit(DenseIntVector::Ptr expr) {
-  // TODO: Optimize.
-  for (auto val : expr->vals) {
-    retTensorVals.addIntValue(val);
-  }
+  retTensorVals.addIntValues(expr->vals);
 }
 
 void IREmitter::visit(DenseFloatVector::Ptr expr) {
-  // TODO: Optimize.
-  for (auto val : expr->vals) {
-    retTensorVals.addFloatValue(val);
-  }
+  retTensorVals.addFloatValues(expr->vals);
 }
 
 void IREmitter::visit(DenseNDTensor::Ptr tensor) {

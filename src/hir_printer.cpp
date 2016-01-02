@@ -70,15 +70,15 @@ void HIRPrinter::visit(TupleType::Ptr type) {
   oss << ")";
 }
 
-void HIRPrinter::visit(ScalarTensorType::Ptr type) {
+void HIRPrinter::visit(ScalarType::Ptr type) {
   switch (type->type) {
-    case ScalarTensorType::Type::INT:
+    case ScalarType::Type::INT:
       oss << "int";
       break;
-    case ScalarTensorType::Type::FLOAT:
+    case ScalarType::Type::FLOAT:
       oss << "float";
       break;
-    case ScalarTensorType::Type::BOOL:
+    case ScalarType::Type::BOOL:
       oss << "bool";
       break;
     default:
@@ -87,7 +87,7 @@ void HIRPrinter::visit(ScalarTensorType::Ptr type) {
   }
 }
 
-void HIRPrinter::visit(NonScalarTensorType::Ptr type) {
+void HIRPrinter::visit(NDTensorType::Ptr type) {
   oss << "tensor";
   if (type->indexSets.size() > 0) {
     oss << "[";

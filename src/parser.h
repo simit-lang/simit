@@ -89,39 +89,27 @@ private:
   hir::Identifier::Ptr parseIdent();
 
   void reportError(const Token token, const std::string msg) {
-    const unsigned lineBegin = token.lineBegin;
-    const unsigned colBegin = token.colBegin;
-    const unsigned lineEnd = token.lineEnd;
-    const unsigned colEnd = token.colEnd;
-    errors->push_back(ParseError(lineBegin, colBegin, lineEnd, colEnd, msg));
+    const auto err = ParseError(token.lineBegin, token.colBegin, 
+                                token.lineEnd, token.colEnd, msg);
+    errors->push_back(err);
   }
 
   void skipTo(std::vector<TokenType> types) {
     while (peek().type != TokenType::END) {
-      bool inTypes = false;
-
       for (auto &type : types) {
         if (peek().type == type) {
-          inTypes = true;
-          break;
+          return;
         }
       }
-
-      if (!inTypes) {
-        tokens.skip();
-      } else {
-        break;
-      }
+      tokens.skip();
     }
   }
   const Token consume(TokenType type) { 
     const Token token = peek();
-    
     if (!tokens.consume(type)) {
       reportError(token, "unexpected token");
       throw SyntaxError();
     }
-
     return token;
   }
   bool tryconsume(TokenType type) { return tokens.consume(type); }

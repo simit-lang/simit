@@ -19,6 +19,7 @@
 #include "const_fold.h"
 #include "tuple_read_rewriter.h"
 #include "assign_checker.h"
+#include "pad_tensor_blocks.h"
 
 using namespace simit::internal;
 
@@ -33,6 +34,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   // Semantic analyses.
   program = hir::FuncCallRewriter(errors).rewrite<hir::Program>(program);
   program = hir::ConstantFolding().rewrite<hir::Program>(program);
+  // hir::PadTensorBlocks().pad(program);
   hir::TypeChecker(errors).check(program);
   program = hir::TupleReadRewriter().rewrite<hir::Program>(program);
   hir::AssignChecker(errors).check(program);

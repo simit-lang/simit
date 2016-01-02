@@ -84,16 +84,16 @@ void TypeChecker::visit(TupleType::Ptr type) {
   }
 }
 
-void TypeChecker::visit(ScalarTensorType::Ptr type) {
+void TypeChecker::visit(ScalarType::Ptr type) {
   ir::ScalarType componentType;
   switch (type->type) {
-    case ScalarTensorType::Type::INT:
+    case ScalarType::Type::INT:
       componentType = ir::ScalarType(ir::ScalarType::Int);
       break;
-    case ScalarTensorType::Type::FLOAT:
+    case ScalarType::Type::FLOAT:
       componentType = ir::ScalarType(ir::ScalarType::Float);
       break;
-    case ScalarTensorType::Type::BOOL:
+    case ScalarType::Type::BOOL:
       componentType = ir::ScalarType(ir::ScalarType::Boolean);
       break;
     default:
@@ -104,7 +104,7 @@ void TypeChecker::visit(ScalarTensorType::Ptr type) {
   retIRType = ir::Type(ir::TensorType::make(componentType));
 }
 
-void TypeChecker::visit(NonScalarTensorType::Ptr type) {
+void TypeChecker::visit(NDTensorType::Ptr type) {
   const ir::Type blockType = getIRType(type->blockType);
   bool typeChecked = blockType.defined();
 
@@ -134,8 +134,8 @@ void TypeChecker::visit(NonScalarTensorType::Ptr type) {
       for (size_t i = 0; i< indexSets.size(); ++i) {
         dimensions.push_back(ir::IndexDomain(indexSets[i]));
       }
-    } else {
-      for (size_t i = 0; i< indexSets.size(); ++i) {
+    } else if (blockTensorType->order() == indexSets.size()) {
+      for (size_t i = 0; i < indexSets.size(); ++i) {
         std::vector<ir::IndexSet> dimension;
         dimension.push_back(indexSets[i]);
         dimension.insert(dimension.end(),
@@ -143,16 +143,21 @@ void TypeChecker::visit(NonScalarTensorType::Ptr type) {
                          blockDimensions[i].getIndexSets().end());
         dimensions.push_back(ir::IndexDomain(dimension));
       }
+    } else {
+      const auto msg = "blocked tensors with non-scalar blocks must have "
+                       "same number of dimensions as its blocks";
+      reportError(msg, type);
+      return;
     }
   
-    retIRType = ir::Type(ir::TensorType::make(componentType, dimensions));
+    retIRType = ir::TensorType::make(componentType, dimensions);
   }
 
   if (type->transposed) {
     const auto tensorType = retIRType.toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto componentType = tensorType->componentType;
-    retIRType = ir::Type(ir::TensorType::make(componentType, dimensions, true));
+    retIRType = ir::TensorType::make(componentType, dimensions, true);
   }
 }
 
@@ -389,7 +394,7 @@ void TypeChecker::visit(ExprParam::Ptr param) {
 }
 
 void TypeChecker::visit(MapExpr::Ptr expr) {
-  Expr::Type actualsType;
+  std::vector<ir::Type> actualsType;
   bool typeChecked = true;
   for (auto param : expr->partialActuals) {
     const Ptr<Expr::Type> paramType = inferType(param);
@@ -786,7 +791,6 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 
   if (lhsType->at(0).isTensor()) {
     const ir::TensorType *tensorType = lhsType->at(0).toTensor();
-   
     if (tensorType->getDimensions().size() != expr->indices.size()) {
       std::stringstream errMsg;
       errMsg << "tensor access expected " << tensorType->getDimensions().size()
@@ -807,7 +811,17 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 
         if (!paramType) {
           continue;
-        }
+        } else if (paramType->size() != 1) {
+          std::stringstream errMsg;
+          if (paramType->size() == 0) {
+            errMsg << "must pass a value as index";
+          } else {
+            errMsg << "cannot pass multiple values of types " 
+                   << typeString(paramType) << " as a single index";
+          }
+          reportError(errMsg.str(), param);
+          continue;
+        } //else if (paramType->at(0)
 
         // TODO: Check arguments.
         /*if (paramType->size() != 1 || !isScalar(paramType->at(0)) ||
