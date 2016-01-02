@@ -11,84 +11,82 @@
 namespace simit { 
 namespace internal {
 
-// TODO: move into Token class.
-enum class TokenType {
-  END,
-  UNKNOWN,
-  INT_LITERAL,
-  FLOAT_LITERAL,
-  STRING_LITERAL,
-  IDENT,
-  AND,
-  OR,
-  NEG,
-  INT,
-  FLOAT,
-  BOOL,
-  STRING,
-  TENSOR,
-  ELEMENT,
-  SET,
-  VAR,
-  CONST,
-  EXTERN,
-  PROC,
-  FUNC,
-  INOUT,
-  MAP,
-  TO,
-  WITH,
-  REDUCE,
-  WHILE,
-  DO,
-  IF,
-  ELIF,
-  ELSE,
-  FOR,
-  IN,
-  BLOCKEND,
-  RETURN,
-  TEST,
-  PRINT,
-  RARROW,
-  LP,
-  RP,
-  LB,
-  RB,
-  LC,
-  RC,
-  LA,
-  RA,
-  COMMA,
-  PERIOD,
-  COL,
-  SEMICOL,
-  ASSIGN,
-  PLUS,
-  MINUS,
-  STAR,
-  SLASH,
-  DOTSTAR,
-  DOTSLASH,
-  EXP,
-  TRANSPOSE,
-  BACKSLASH,
-  EQ,
-  NE,
-  LE,
-  GE,
-  NOT,
-  XOR,
-  TRUE,
-  FALSE
-};
-
 struct Token {
-  TokenType type;
+  enum class Type {
+    END,
+    UNKNOWN,
+    INT_LITERAL,
+    FLOAT_LITERAL,
+    STRING_LITERAL,
+    IDENT,
+    AND,
+    OR,
+    NEG,
+    INT,
+    FLOAT,
+    BOOL,
+    STRING,
+    TENSOR,
+    ELEMENT,
+    SET,
+    VAR,
+    CONST,
+    EXTERN,
+    PROC,
+    FUNC,
+    INOUT,
+    MAP,
+    TO,
+    WITH,
+    REDUCE,
+    WHILE,
+    DO,
+    IF,
+    ELIF,
+    ELSE,
+    FOR,
+    IN,
+    BLOCKEND,
+    RETURN,
+    TEST,
+    PRINT,
+    RARROW,
+    LP,
+    RP,
+    LB,
+    RB,
+    LC,
+    RC,
+    LA,
+    RA,
+    COMMA,
+    PERIOD,
+    COL,
+    SEMICOL,
+    ASSIGN,
+    PLUS,
+    MINUS,
+    STAR,
+    SLASH,
+    DOTSTAR,
+    DOTSLASH,
+    EXP,
+    TRANSPOSE,
+    BACKSLASH,
+    EQ,
+    NE,
+    LE,
+    GE,
+    NOT,
+    XOR,
+    TRUE,
+    FALSE
+  };
+
+  Type type;
   union {
     int num;
     double fnum;
-    bool boolean;
   };
   std::string str;
   unsigned lineBegin;
@@ -96,13 +94,16 @@ struct Token {
   unsigned lineEnd;
   unsigned colEnd;
  
-  friend std::ostream &operator <<(std::ostream &, Token);
+  static std::string tokenTypeString(const Token::Type);
+  
+  std::string toString() const;
+  friend std::ostream &operator <<(std::ostream &, const Token &);
 };
 
 class TokenStream {
 public:
   inline void addToken(Token newToken) { tokens.push_back(newToken); }
-  inline void addToken(TokenType type, unsigned line, 
+  inline void addToken(Token::Type type, unsigned line, 
                        unsigned col, unsigned len = 1) {
     Token newToken;
     newToken.type = type;
@@ -114,7 +115,7 @@ public:
   }
 
   inline void skip() { tokens.pop_front(); }
-  inline bool consume(TokenType type) {
+  inline bool consume(Token::Type type) {
     if (tokens.front().type == type) {
       tokens.pop_front();
       return true;
@@ -131,7 +132,7 @@ public:
 
     if (it == tokens.cend()) {
       Token endToken = Token();
-      endToken.type = TokenType::END;
+      endToken.type = Token::Type::END;
       return endToken;
     }
 
@@ -152,13 +153,9 @@ public:
   TokenStream lex(std::istream &);
 
 private:
-  enum class ScanState {
-    INITIAL,
-    SLTEST,
-    MLTEST
-  };
+  enum class ScanState { INITIAL, SLTEST, MLTEST };
   
-  TokenType getTokenType(const std::string);
+  Token::Type getTokenType(const std::string);
   
   void reportError(const std::string msg, unsigned line, unsigned col) {
     errors->push_back(ParseError(line, col, line, col, msg));
