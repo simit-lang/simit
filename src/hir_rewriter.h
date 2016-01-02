@@ -71,10 +71,9 @@ public:
   virtual void visit(IntLiteral::Ptr op) { node = op; }
   virtual void visit(FloatLiteral::Ptr op) { node = op; }
   virtual void visit(BoolLiteral::Ptr op) { node = op; }
-  virtual void visit(DenseIntVector::Ptr op) { node = op; }
-  virtual void visit(DenseFloatVector::Ptr op) { node = op; }
-  virtual void visit(DenseNDTensor::Ptr);
-  virtual void visit(DenseTensorLiteral::Ptr);
+  virtual void visit(IntVectorLiteral::Ptr op) { node = op; }
+  virtual void visit(FloatVectorLiteral::Ptr op) { node = op; }
+  virtual void visit(NDTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
   template <typename T>

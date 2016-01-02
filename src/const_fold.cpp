@@ -11,35 +11,37 @@ namespace hir {
 void ConstantFolding::visit(NegExpr::Ptr expr) {
   expr->operand = rewrite<Expr>(expr->operand);
   if (isa<IntLiteral>(expr->operand)) {
-    const auto negOperand = to<IntLiteral>(expr->operand);
-    negOperand->val *= -1;
-    node = negOperand;
+    const auto operand = to<IntLiteral>(expr->operand);
+    operand->val *= -1;
+    node = operand;
     return;
   } else if (isa<FloatLiteral>(expr->operand)) {
-    const auto negOperand = to<FloatLiteral>(expr->operand);
-    negOperand->val *= -1.0;
-    node = negOperand;
+    const auto operand = to<FloatLiteral>(expr->operand);
+    operand->val *= -1.0;
+    node = operand;
     return;
   } else if (isa<DenseTensorLiteral>(expr->operand)) {
-    class NegateTensor : public HIRRewriter {
+    class NegateTensorLiteral : public HIRVisitor {
       public:
-        virtual void visit(DenseIntVector::Ptr vec) {
+        void negate(DenseTensorLiteral::Ptr tensor) {
+          tensor->accept(this);
+        }
+
+      private:
+        virtual void visit(IntVectorLiteral::Ptr vec) {
           for (unsigned i = 0; i < vec->vals.size(); ++i) {
             vec->vals[i] *= -1;
           }
-          node = vec;
         }
-        virtual void visit(DenseFloatVector::Ptr vec) {
+        virtual void visit(FloatVectorLiteral::Ptr vec) {
           for (unsigned i = 0; i < vec->vals.size(); ++i) {
             vec->vals[i] *= -1.0;
           }
-          node = vec;
         }
     };
-    const auto negOperand = to<DenseTensorLiteral>(expr->operand);
-    negOperand->tensor = 
-        NegateTensor().rewrite<DenseTensorElement>(negOperand->tensor);
-    node = negOperand;
+    const auto operand = to<DenseTensorLiteral>(expr->operand);
+    NegateTensorLiteral().negate(operand);
+    node = operand;
     return;
   }
   node = expr;
@@ -51,11 +53,10 @@ void ConstantFolding::visit(TransposeExpr::Ptr expr) {
     node = expr->operand;
     return;
   } else if (isa<DenseTensorLiteral>(expr->operand)) {
-    const auto transposedOperand = to<DenseTensorLiteral>(expr->operand);
-    if (isa<DenseIntVector>(transposedOperand->tensor) || 
-        isa<DenseFloatVector>(transposedOperand->tensor)) {
-      transposedOperand->transposed = !transposedOperand->transposed;
-      node = transposedOperand;
+    const auto operand = to<DenseTensorLiteral>(expr->operand);
+    if (isa<IntVectorLiteral>(operand) || isa<FloatVectorLiteral>(operand)) {
+      operand->transposed = !operand->transposed;
+      node = operand;
       return;
     }
   }

@@ -241,14 +241,10 @@ void HIRVisitor::visit(ParenExpr::Ptr expr) {
   expr->expr->accept(this);
 }
 
-void HIRVisitor::visit(DenseNDTensor::Ptr tensor) {
+void HIRVisitor::visit(NDTensorLiteral::Ptr tensor) {
   for (auto elem : tensor->elems) {
     elem->accept(this);
   }
-}
-
-void HIRVisitor::visit(DenseTensorLiteral::Ptr tensor) {
-  tensor->tensor->accept(this);
 }
 
 void HIRVisitor::visit(Test::Ptr test) {

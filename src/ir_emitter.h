@@ -74,10 +74,9 @@ private:
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
-  virtual void visit(DenseIntVector::Ptr);
-  virtual void visit(DenseFloatVector::Ptr);
-  virtual void visit(DenseNDTensor::Ptr);
-  virtual void visit(DenseTensorLiteral::Ptr);
+  virtual void visit(IntVectorLiteral::Ptr);
+  virtual void visit(FloatVectorLiteral::Ptr);
+  virtual void visit(NDTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
 private:
@@ -108,10 +107,10 @@ private:
     ir::Expr upper;
   };
   
-  struct TensorValues {
+  struct DenseTensorValues {
     enum class Type {UNKNOWN, INT, FLOAT};
 
-    TensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
+    DenseTensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
 
     inline void addDimension() { dimSizes.push_back(1); }
     void addIntValues(const std::vector<int> &vals) {
@@ -126,7 +125,7 @@ private:
       floatVals.insert(floatVals.end(), vals.begin(), vals.end());
       dimSizes[dimSizes.size() - 1] += vals.size();
     }
-    void merge(const TensorValues &other) {
+    void merge(const DenseTensorValues &other) {
       iassert(type == other.type);
       iassert(dimSizes.size() - 1 == other.dimSizes.size());
       switch (type) {
@@ -193,13 +192,6 @@ private:
     retVar = ir::Var();
     return ret;
   }
-  inline TensorValues emitTensorVals(DenseTensorElement::Ptr ptr) {
-    retTensorVals = TensorValues();
-    ptr->accept(this);
-    const TensorValues ret = retTensorVals;
-    retTensorVals = TensorValues();
-    return ret;
-  }
   inline Domain emitDomain(ForDomain::Ptr ptr) {
     retDomain = Domain();
     ptr->accept(this);
@@ -213,7 +205,10 @@ private:
   void addWhileOrDoWhile(WhileStmt::Ptr, const bool = false);
   void addAssign(const std::vector<ir::Expr> &, ir::Expr);
 
-  inline ir::Stmt getCallStmts() {
+  void emitDenseTensorLiteral(DenseTensorLiteral::Ptr);
+  DenseTensorValues emitTensorValues(DenseTensorLiteral::Ptr);
+
+  ir::Stmt getCallStmts() {
     const ir::Stmt callStmts = calls.empty() ? ir::Stmt() : 
                                ir::Block::make(calls);
     calls.clear();
@@ -228,7 +223,6 @@ private:
   ir::IndexSet retIndexSet;
   ir::Field retField;
   ir::Var retVar;
-  TensorValues retTensorVals;
   Domain retDomain;
 
   internal::ProgramContext *ctx;
