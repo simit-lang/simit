@@ -23,8 +23,8 @@ public:
   virtual void visit(SetType::Ptr);
   virtual void visit(TupleLength::Ptr);
   virtual void visit(TupleType::Ptr);
-  virtual void visit(ScalarTensorType::Ptr);
-  virtual void visit(NonScalarTensorType::Ptr);
+  virtual void visit(ScalarType::Ptr);
+  virtual void visit(NDTensorType::Ptr);
   virtual void visit(Identifier::Ptr);
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(Field::Ptr);

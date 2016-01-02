@@ -189,27 +189,27 @@ struct TensorType : public Type {
   typedef std::shared_ptr<TensorType> Ptr;
 };
 
-struct ScalarTensorType : public TensorType {
+struct ScalarType : public TensorType {
   enum class Type {INT, FLOAT, BOOL};
 
   Type type;
   
-  typedef std::shared_ptr<ScalarTensorType> Ptr;
+  typedef std::shared_ptr<ScalarType> Ptr;
   
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ScalarTensorType>(shared_from_this()));
+    visitor->visit(to<ScalarType>(shared_from_this()));
   }
 };
 
-struct NonScalarTensorType : public TensorType {
+struct NDTensorType : public TensorType {
   std::vector<IndexSet::Ptr> indexSets;
   TensorType::Ptr blockType;  
   bool transposed;
   
-  typedef std::shared_ptr<NonScalarTensorType> Ptr;
+  typedef std::shared_ptr<NDTensorType> Ptr;
   
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<NonScalarTensorType>(shared_from_this()));
+    visitor->visit(to<NDTensorType>(shared_from_this()));
   }
 };
 

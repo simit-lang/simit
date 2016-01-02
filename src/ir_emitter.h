@@ -32,8 +32,8 @@ private:
   virtual void visit(Endpoint::Ptr);
   virtual void visit(SetType::Ptr);
   virtual void visit(TupleType::Ptr);
-  virtual void visit(ScalarTensorType::Ptr);
-  virtual void visit(NonScalarTensorType::Ptr);
+  virtual void visit(ScalarType::Ptr);
+  virtual void visit(NDTensorType::Ptr);
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(ExternDecl::Ptr);
@@ -114,21 +114,17 @@ private:
     TensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
 
     inline void addDimension() { dimSizes.push_back(1); }
-    void addIntValue(const int &val) {
-      if (type == Type::UNKNOWN) {
-        type = Type::INT;
-      }
-      iassert(type == Type::INT);
-      intVals.push_back(val);
-      dimSizes[dimSizes.size() - 1]++;
+    void addIntValues(const std::vector<int> &vals) {
+      iassert(type != Type::FLOAT);
+      type = Type::INT;
+      intVals.insert(intVals.end(), vals.begin(), vals.end());
+      dimSizes[dimSizes.size() - 1] += vals.size();
     }
-    void addFloatValue(const double &val) {
-      if (type == Type::UNKNOWN) {
-        type = Type::FLOAT;
-      }
-      iassert(type == Type::FLOAT);
-      floatVals.push_back(val);
-      dimSizes[dimSizes.size() - 1]++;
+    void addFloatValues(const std::vector<double> &vals) {
+      iassert(type != Type::INT);
+      type = Type::FLOAT;
+      floatVals.insert(floatVals.end(), vals.begin(), vals.end());
+      dimSizes[dimSizes.size() - 1] += vals.size();
     }
     void merge(const TensorValues &other) {
       iassert(type == other.type);
@@ -143,6 +139,7 @@ private:
                            other.floatVals.end());
           break;
         default:
+          unreachable;
           break;
       }
       dimSizes[dimSizes.size() - 1]++;
