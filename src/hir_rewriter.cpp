@@ -32,7 +32,7 @@ void HIRRewriter::visit(TupleType::Ptr type) {
   node = type;
 }
 
-void HIRRewriter::visit(NonScalarTensorType::Ptr type) {
+void HIRRewriter::visit(NDTensorType::Ptr type) {
   for (unsigned i = 0; i < type->indexSets.size(); ++i) {
     type->indexSets[i] = rewrite<IndexSet>(type->indexSets[i]);
   }

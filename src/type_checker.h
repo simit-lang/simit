@@ -35,8 +35,8 @@ private:
   virtual void visit(Endpoint::Ptr);
   virtual void visit(SetType::Ptr);
   virtual void visit(TupleType::Ptr);
-  virtual void visit(ScalarTensorType::Ptr);
-  virtual void visit(NonScalarTensorType::Ptr);
+  virtual void visit(ScalarType::Ptr);
+  virtual void visit(NDTensorType::Ptr);
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(Field::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
@@ -101,36 +101,23 @@ private:
 
     void addDimension() { dimSizes.push_back(1); }
     void addIntValues(const unsigned len) {
-      switch (type) {
-        case Type::FLOAT:
-          throw TypeError();
-          break;
-        case Type::UNKNOWN:
-          type = Type::INT;
-          break;
-        default:
-          break;
+      if (type == Type::FLOAT) {
+        throw TypeError();
       }
+      type = Type::INT;
       dimSizes[dimSizes.size() - 1] += len;
     }
     void addFloatValues(const unsigned len) {
-      switch (type) {
-        case Type::INT:
-          throw TypeError();
-          break;
-        case Type::UNKNOWN:
-          type = Type::FLOAT;
-          break;
-        default:
-          break;
+      if (type == Type::INT) {
+        throw TypeError();
       }
+      type = Type::FLOAT;
       dimSizes[dimSizes.size() - 1] += len;
     }
     void merge(const TensorValues &other) {
       if (type != other.type) {
         throw TypeError();
-      }
-      if (dimSizes.size() - 1 != other.dimSizes.size()) {
+      } else if (dimSizes.size() - 1 != other.dimSizes.size()) {
         throw DimError();
       }
       dimSizes[dimSizes.size() - 1]++;

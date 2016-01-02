@@ -16,8 +16,8 @@ struct Endpoint;
 struct SetType;
 struct TupleLength;
 struct TupleType;
-struct ScalarTensorType;
-struct NonScalarTensorType;
+struct ScalarType;
+struct NDTensorType;
 struct Identifier;
 struct IdentDecl;
 struct Field;
@@ -84,8 +84,8 @@ public:
   virtual void visit(std::shared_ptr<SetType>);
   virtual void visit(std::shared_ptr<TupleLength> op) {}
   virtual void visit(std::shared_ptr<TupleType>);
-  virtual void visit(std::shared_ptr<ScalarTensorType> op) {}
-  virtual void visit(std::shared_ptr<NonScalarTensorType>);
+  virtual void visit(std::shared_ptr<ScalarType> op) {}
+  virtual void visit(std::shared_ptr<NDTensorType>);
   virtual void visit(std::shared_ptr<Identifier> op) {}
   virtual void visit(std::shared_ptr<IdentDecl>);
   virtual void visit(std::shared_ptr<Field>);
