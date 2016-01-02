@@ -1145,15 +1145,8 @@ hir::Expr::Ptr ParserNew::parseTensorLiteral() {
       break;
     }
     case TokenType::LB:
-    {
-      const auto tensorLiteral = std::make_shared<hir::DenseTensorLiteral>();
-      
-      tensorLiteral->tensor = parseDenseTensorLiteral();
-      tensorLiteral->transposed = false;
-      
-      literal = tensorLiteral;
+      literal = parseDenseTensorLiteral();
       break;
-    }
     case TokenType::STRING_LITERAL:
       // TODO: Implement.
     default:
@@ -1165,9 +1158,9 @@ hir::Expr::Ptr ParserNew::parseTensorLiteral() {
   return literal;
 }
 
-hir::DenseTensorElement::Ptr ParserNew::parseDenseTensorLiteral() {
+hir::DenseTensorLiteral::Ptr ParserNew::parseDenseTensorLiteral() {
   const Token leftBracketToken = consume(TokenType::LB);
-  hir::DenseTensorElement::Ptr tensor = parseDenseTensorLiteralInner();
+  hir::DenseTensorLiteral::Ptr tensor = parseDenseTensorLiteralInner();
   const Token rightBracketToken = consume(TokenType::RB);
   
   tensor->setBeginLoc(leftBracketToken);
@@ -1176,11 +1169,12 @@ hir::DenseTensorElement::Ptr ParserNew::parseDenseTensorLiteral() {
   return tensor;
 }
 
-hir::DenseTensorElement::Ptr ParserNew::parseDenseTensorLiteralInner() {
+hir::DenseTensorLiteral::Ptr ParserNew::parseDenseTensorLiteralInner() {
   if (peek().type == TokenType::LB) {
-    auto tensor = std::make_shared<hir::DenseNDTensor>();
+    auto tensor = std::make_shared<hir::NDTensorLiteral>();
+    tensor->transposed = false;
 
-    hir::DenseTensorElement::Ptr elem = parseDenseTensorLiteral();
+    hir::DenseTensorLiteral::Ptr elem = parseDenseTensorLiteral();
     tensor->elems.push_back(elem);
     
     while (true) {
@@ -1192,7 +1186,7 @@ hir::DenseTensorElement::Ptr ParserNew::parseDenseTensorLiteralInner() {
           tensor->elems.push_back(elem);
           break;
         default:
-          return (tensor->elems.size() == 1) ? tensor->elems[0] : tensor;
+          return tensor;
       }
     }
   }
@@ -1200,19 +1194,20 @@ hir::DenseTensorElement::Ptr ParserNew::parseDenseTensorLiteralInner() {
   return parseDenseMatrixLiteral();
 }
 
-hir::DenseTensorElement::Ptr ParserNew::parseDenseMatrixLiteral() {
-  auto mat = std::make_shared<hir::DenseNDTensor>();
+hir::DenseTensorLiteral::Ptr ParserNew::parseDenseMatrixLiteral() {
+  auto mat = std::make_shared<hir::NDTensorLiteral>();
+  mat->transposed = false;
   
   do {
-    const hir::DenseTensorElement::Ptr vec = parseDenseVectorLiteral();
+    const hir::DenseTensorLiteral::Ptr vec = parseDenseVectorLiteral();
     mat->elems.push_back(vec);
   } while (tryconsume(TokenType::SEMICOL));
 
   return (mat->elems.size() == 1) ? mat->elems[0] : mat;
 }
 
-hir::DenseTensorElement::Ptr ParserNew::parseDenseVectorLiteral() {
-  hir::DenseTensorElement::Ptr vec;
+hir::DenseTensorLiteral::Ptr ParserNew::parseDenseVectorLiteral() {
+  hir::DenseTensorLiteral::Ptr vec;
   switch (peek().type) {
     case TokenType::INT_LITERAL:
       vec = parseDenseIntVectorLiteral();
@@ -1244,8 +1239,9 @@ hir::DenseTensorElement::Ptr ParserNew::parseDenseVectorLiteral() {
   return vec;
 }
 
-hir::DenseIntVector::Ptr ParserNew::parseDenseIntVectorLiteral() {
-  auto vec = std::make_shared<hir::DenseIntVector>();
+hir::IntVectorLiteral::Ptr ParserNew::parseDenseIntVectorLiteral() {
+  auto vec = std::make_shared<hir::IntVectorLiteral>();
+  vec->transposed = false;
 
   int elem = parseSignedIntLiteral();
   vec->vals.push_back(elem);
@@ -1266,8 +1262,9 @@ hir::DenseIntVector::Ptr ParserNew::parseDenseIntVectorLiteral() {
   }
 }
 
-hir::DenseFloatVector::Ptr ParserNew::parseDenseFloatVectorLiteral() {
-  auto vec = std::make_shared<hir::DenseFloatVector>();
+hir::FloatVectorLiteral::Ptr ParserNew::parseDenseFloatVectorLiteral() {
+  auto vec = std::make_shared<hir::FloatVectorLiteral>();
+  vec->transposed = false;
 
   double elem = parseSignedFloatLiteral();
   vec->vals.push_back(elem);
