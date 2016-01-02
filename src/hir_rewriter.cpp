@@ -272,15 +272,10 @@ void HIRRewriter::visit(ParenExpr::Ptr expr) {
   node = expr;
 }
 
-void HIRRewriter::visit(DenseNDTensor::Ptr tensor) {
+void HIRRewriter::visit(NDTensorLiteral::Ptr tensor) {
   for (unsigned i = 0; i < tensor->elems.size(); ++i) {
-    tensor->elems[i] = rewrite<DenseTensorElement>(tensor->elems[i]);
+    tensor->elems[i] = rewrite<DenseTensorLiteral>(tensor->elems[i]);
   }
-  node = tensor;
-}
-
-void HIRRewriter::visit(DenseTensorLiteral::Ptr tensor) {
-  tensor->tensor = rewrite<DenseTensorElement>(tensor->tensor);
   node = tensor;
 }
 

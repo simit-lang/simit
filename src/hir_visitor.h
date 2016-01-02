@@ -66,10 +66,9 @@ struct VarExpr;
 struct IntLiteral;
 struct FloatLiteral;
 struct BoolLiteral;
-struct DenseIntVector;
-struct DenseFloatVector;
-struct DenseNDTensor;
-struct DenseTensorLiteral;
+struct IntVectorLiteral;
+struct FloatVectorLiteral;
+struct NDTensorLiteral;
 struct Test;
 
 class HIRVisitor {
@@ -134,10 +133,9 @@ public:
   virtual void visit(std::shared_ptr<IntLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatLiteral> op) {}
   virtual void visit(std::shared_ptr<BoolLiteral> op) {}
-  virtual void visit(std::shared_ptr<DenseIntVector> op) {}
-  virtual void visit(std::shared_ptr<DenseFloatVector> op) {}
-  virtual void visit(std::shared_ptr<DenseNDTensor>);
-  virtual void visit(std::shared_ptr<DenseTensorLiteral>);
+  virtual void visit(std::shared_ptr<IntVectorLiteral> op) {}
+  virtual void visit(std::shared_ptr<FloatVectorLiteral> op) {}
+  virtual void visit(std::shared_ptr<NDTensorLiteral>);
   virtual void visit(std::shared_ptr<Test>);
 };
 

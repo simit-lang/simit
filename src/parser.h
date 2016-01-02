@@ -77,12 +77,12 @@ private:
   std::vector<hir::IndexSet::Ptr> parseIndexSets();
   hir::IndexSet::Ptr parseIndexSet();
   hir::Expr::Ptr parseTensorLiteral();
-  hir::DenseTensorElement::Ptr parseDenseTensorLiteral();
-  hir::DenseTensorElement::Ptr parseDenseTensorLiteralInner();
-  hir::DenseTensorElement::Ptr parseDenseMatrixLiteral();
-  hir::DenseTensorElement::Ptr parseDenseVectorLiteral();
-  hir::DenseIntVector::Ptr parseDenseIntVectorLiteral();
-  hir::DenseFloatVector::Ptr parseDenseFloatVectorLiteral();
+  hir::DenseTensorLiteral::Ptr parseDenseTensorLiteral();
+  hir::DenseTensorLiteral::Ptr parseDenseTensorLiteralInner();
+  hir::DenseTensorLiteral::Ptr parseDenseMatrixLiteral();
+  hir::DenseTensorLiteral::Ptr parseDenseVectorLiteral();
+  hir::IntVectorLiteral::Ptr parseDenseIntVectorLiteral();
+  hir::FloatVectorLiteral::Ptr parseDenseFloatVectorLiteral();
   int parseSignedIntLiteral();
   double parseSignedFloatLiteral();
   hir::Test::Ptr parseTest();

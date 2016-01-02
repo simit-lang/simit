@@ -443,7 +443,7 @@ void HIRPrinter::visit(BoolLiteral::Ptr expr) {
   printBoolean(expr->val);
 }
 
-void HIRPrinter::visit(DenseIntVector::Ptr expr) {
+void HIRPrinter::visit(IntVectorLiteral::Ptr expr) {
   oss << "[";
   bool printDelimiter = false;
   for (auto val : expr->vals) {
@@ -454,9 +454,12 @@ void HIRPrinter::visit(DenseIntVector::Ptr expr) {
     printDelimiter = true;
   }
   oss << "]";
+  if (expr->transposed) {
+    oss << "'";
+  }
 }
 
-void HIRPrinter::visit(DenseFloatVector::Ptr expr) {
+void HIRPrinter::visit(FloatVectorLiteral::Ptr expr) {
   oss << "[";
   bool printDelimiter = false;
   for (auto val : expr->vals) {
@@ -467,9 +470,12 @@ void HIRPrinter::visit(DenseFloatVector::Ptr expr) {
     printDelimiter = true;
   }
   oss << "]";
+  if (expr->transposed) {
+    oss << "'";
+  }
 }
 
-void HIRPrinter::visit(DenseNDTensor::Ptr tensor) {
+void HIRPrinter::visit(NDTensorLiteral::Ptr tensor) {
   oss << "[";
   bool printDelimiter = false;
   for (auto elem : tensor->elems) {
@@ -480,10 +486,6 @@ void HIRPrinter::visit(DenseNDTensor::Ptr tensor) {
     printDelimiter = true;
   }
   oss << "]";
-}
-
-void HIRPrinter::visit(DenseTensorLiteral::Ptr tensor) {
-  tensor->tensor->accept(this);
   if (tensor->transposed) {
     oss << "'";
   }

@@ -768,54 +768,40 @@ struct BoolLiteral : public TensorLiteral {
   }
 };
 
-struct DenseTensorElement : public HIRNode {
-  typedef std::shared_ptr<DenseTensorElement> Ptr;
-};
-
-struct DenseIntVector : public DenseTensorElement {
-  std::vector<int> vals;
-  
-  typedef std::shared_ptr<DenseIntVector> Ptr;
-
-  virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DenseIntVector>(shared_from_this()));
-  }
-};
-
-struct DenseFloatVector : public DenseTensorElement {
-  std::vector<double> vals;
-  
-  typedef std::shared_ptr<DenseFloatVector> Ptr;
-
-  virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DenseFloatVector>(shared_from_this()));
-  }
-};
-
-struct DenseNDTensor : public DenseTensorElement {
-  std::vector<DenseTensorElement::Ptr> elems;
-  
-  typedef std::shared_ptr<DenseNDTensor> Ptr;
-
-  virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DenseNDTensor>(shared_from_this()));
-  }
-};
-
 struct DenseTensorLiteral : public TensorLiteral {
-  DenseTensorElement::Ptr tensor;
   bool transposed;
 
   typedef std::shared_ptr<DenseTensorLiteral> Ptr;
-  
-  virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<DenseTensorLiteral>(shared_from_this()));
-  }
+};
 
-  virtual unsigned getLineBegin() { return tensor->getLineBegin(); }
-  virtual unsigned getColBegin() { return tensor->getColBegin(); }
-  virtual unsigned getLineEnd() { return tensor->getLineEnd(); }
-  virtual unsigned getColEnd() { return tensor->getColEnd(); }
+struct IntVectorLiteral : public DenseTensorLiteral {
+  std::vector<int> vals;
+  
+  typedef std::shared_ptr<IntVectorLiteral> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<IntVectorLiteral>(shared_from_this()));
+  }
+};
+
+struct FloatVectorLiteral : public DenseTensorLiteral {
+  std::vector<double> vals;
+  
+  typedef std::shared_ptr<FloatVectorLiteral> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<FloatVectorLiteral>(shared_from_this()));
+  }
+};
+
+struct NDTensorLiteral : public DenseTensorLiteral {
+  std::vector<DenseTensorLiteral::Ptr> elems;
+  
+  typedef std::shared_ptr<NDTensorLiteral> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<NDTensorLiteral>(shared_from_this()));
+  }
 };
 
 struct Test : public HIRNode {
