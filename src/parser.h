@@ -4,6 +4,8 @@
 #include <exception>
 #include <vector>
 #include <utility>
+#include <string>
+#include <iostream>
 
 #include "scanner.h"
 #include "hir.h"
@@ -88,14 +90,16 @@ private:
   hir::Test::Ptr parseTest();
   hir::Identifier::Ptr parseIdent();
 
-  void reportError(const Token token, const std::string msg) {
+  void reportError(const Token token, const std::string expected) {
+    std::stringstream errMsg;
+    errMsg << "expected " << expected << " but got " << token.toString();
     const auto err = ParseError(token.lineBegin, token.colBegin, 
-                                token.lineEnd, token.colEnd, msg);
+                                token.lineEnd, token.colEnd, errMsg.str());
     errors->push_back(err);
   }
 
-  void skipTo(std::vector<TokenType> types) {
-    while (peek().type != TokenType::END) {
+  void skipTo(std::vector<Token::Type> types) {
+    while (peek().type != Token::Type::END) {
       for (auto &type : types) {
         if (peek().type == type) {
           return;
@@ -104,15 +108,15 @@ private:
       tokens.skip();
     }
   }
-  const Token consume(TokenType type) { 
+  const Token consume(Token::Type type) { 
     const Token token = peek();
     if (!tokens.consume(type)) {
-      reportError(token, "unexpected token");
+      reportError(token, Token::tokenTypeString(type));
       throw SyntaxError();
     }
     return token;
   }
-  bool tryconsume(TokenType type) { return tokens.consume(type); }
+  bool tryconsume(Token::Type type) { return tokens.consume(type); }
   Token peek(unsigned k = 0) { return tokens.peek(k); }
 
   TokenStream tokens;

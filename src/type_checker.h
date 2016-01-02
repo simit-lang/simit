@@ -205,7 +205,7 @@ private:
     }
 
     std::stringstream oss;
-    oss << "\'";
+    oss << "'";
     if (type->size() > 1) {
       oss << "(";
     }
@@ -222,7 +222,7 @@ private:
     if (type->size() > 1) {
       oss << ")";
     }
-    oss << "\'";
+    oss << "'";
     return oss.str();
   }
   void reportError(const std::string msg, HIRNode::Ptr loc) {
@@ -233,13 +233,13 @@ private:
   void reportUndeclared(const std::string type, const std::string ident, 
                         HIRNode::Ptr loc) {
     std::stringstream errMsg;
-    errMsg << "undeclared " << type << " \'" << ident << "\'";
+    errMsg << "undeclared " << type << " '" << ident << "'";
     reportError(errMsg.str(), loc);
   }
   void reportMultipleDefs(const std::string type, const std::string ident, 
                           HIRNode::Ptr loc) {
     std::stringstream errMsg;
-    errMsg << "multiple definitions of " << type << " \'" << ident << "\'";
+    errMsg << "multiple definitions of " << type << " '" << ident << "'";
     reportError(errMsg.str(), loc);
   }
 
