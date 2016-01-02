@@ -961,34 +961,24 @@ void TypeChecker::visit(BoolLiteral::Ptr lit) {
   retType->push_back(ir::Type(ir::TensorType::make(componentType)));
 }
 
-void TypeChecker::visit(DenseIntVector::Ptr lit) {
-  retTensorVals.addIntValues(lit->vals.size()); 
+void TypeChecker::visit(IntVectorLiteral::Ptr lit) {
+  typeCheckDenseTensorLiteral(lit);
 }
 
-void TypeChecker::visit(DenseFloatVector::Ptr lit) {
-  retTensorVals.addFloatValues(lit->vals.size()); 
+void TypeChecker::visit(FloatVectorLiteral::Ptr lit) {
+  typeCheckDenseTensorLiteral(lit);
 }
 
-void TypeChecker::visit(DenseNDTensor::Ptr lit) {
-  iassert(lit->elems.size() > 1);
-  
-  TensorValues tensorVals = getTensorVals(lit->elems[0]);
-  tensorVals.addDimension();
-
-  for (unsigned i = 1; i < lit->elems.size(); ++i) {
-    const TensorValues right = getTensorVals(lit->elems[i]);
-    tensorVals.merge(right);
-  }
-
-  retTensorVals = tensorVals;
+void TypeChecker::visit(NDTensorLiteral::Ptr lit) {
+  typeCheckDenseTensorLiteral(lit);
 }
 
-void TypeChecker::visit(DenseTensorLiteral::Ptr lit) {
+void TypeChecker::typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr lit) {
   try {
-    TensorValues tensorVals = getTensorVals(lit->tensor);
-    const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(), 
-                                             tensorVals.dimSizes.rend());
-    const auto elemType = (tensorVals.type == TensorValues::Type::INT) ?
+    const DenseTensorType tensorType = getDenseTensorType(lit);
+    const std::vector<ir::IndexDomain> idoms(tensorType.dimSizes.rbegin(), 
+                                             tensorType.dimSizes.rend());
+    const auto elemType = (tensorType.type == DenseTensorType::Type::INT) ?
                           ir::ScalarType::Int : ir::ScalarType::Float;
     iassert(idoms.size() == 1 || !lit->transposed);
 
@@ -997,6 +987,30 @@ void TypeChecker::visit(DenseTensorLiteral::Ptr lit) {
   } catch (std::exception &err) {
     reportError(std::string(err.what()), lit);
   }
+}
+
+TypeChecker::DenseTensorType 
+    TypeChecker::getDenseTensorType(DenseTensorLiteral::Ptr lit) {
+  DenseTensorType tensorType;
+  
+  if (isa<IntVectorLiteral>(lit)) {
+    tensorType.addIntValues(to<IntVectorLiteral>(lit)->vals.size());
+  } else if (isa<FloatVectorLiteral>(lit)) {
+    tensorType.addFloatValues(to<FloatVectorLiteral>(lit)->vals.size());
+  } else {
+    const auto ndTensorLit = to<NDTensorLiteral>(lit);
+    iassert(!ndTensorLit->transposed);
+  
+    tensorType = getDenseTensorType(ndTensorLit->elems[0]);
+    tensorType.addDimension();
+  
+    for (unsigned i = 1; i < ndTensorLit->elems.size(); ++i) {
+      const DenseTensorType right = getDenseTensorType(ndTensorLit->elems[i]);
+      tensorType.merge(right);
+    }
+  }
+
+  return tensorType;
 }
 
 void TypeChecker::visit(Test::Ptr test) {

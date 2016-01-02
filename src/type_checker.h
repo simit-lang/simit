@@ -75,10 +75,9 @@ private:
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
-  virtual void visit(DenseIntVector::Ptr);
-  virtual void visit(DenseFloatVector::Ptr);
-  virtual void visit(DenseNDTensor::Ptr);
-  virtual void visit(DenseTensorLiteral::Ptr);
+  virtual void visit(IntVectorLiteral::Ptr);
+  virtual void visit(FloatVectorLiteral::Ptr);
+  virtual void visit(NDTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
   template <typename T> using Ptr = std::shared_ptr<T>;
@@ -94,10 +93,10 @@ private:
     }
   };
 
-  struct TensorValues {
+  struct DenseTensorType {
     enum class Type {UNKNOWN, INT, FLOAT};
 
-    TensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
+    DenseTensorType() : dimSizes(1), type(Type::UNKNOWN) {};
 
     void addDimension() { dimSizes.push_back(1); }
     void addIntValues(const unsigned len) {
@@ -114,7 +113,7 @@ private:
       type = Type::FLOAT;
       dimSizes[dimSizes.size() - 1] += len;
     }
-    void merge(const TensorValues &other) {
+    void merge(const DenseTensorType &other) {
       if (type != other.type) {
         throw TypeError();
       } else if (dimSizes.size() - 1 != other.dimSizes.size()) {
@@ -130,6 +129,8 @@ private:
   void typeCheckVarOrConstDecl(VarDecl::Ptr, const bool = false);
   void typeCheckBinaryElwise(BinaryExpr::Ptr);
   void typeCheckBinaryBoolean(BinaryExpr::Ptr);
+  void typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
+  DenseTensorType getDenseTensorType(DenseTensorLiteral::Ptr);
 
   void markCheckWritable(HIRNode::Ptr node) {
     if (isa<VarExpr>(node)) {
@@ -184,13 +185,6 @@ private:
     ptr->accept(this);
     const ir::Var ret = retVar;
     retVar = ir::Var();
-    return ret;
-  }
-  TensorValues getTensorVals(DenseTensorElement::Ptr ptr) {
-    retTensorVals = TensorValues();
-    ptr->accept(this);
-    const TensorValues ret = retTensorVals;
-    retTensorVals = TensorValues();
     return ret;
   }
 
@@ -255,7 +249,6 @@ private:
   ir::Type retIRType;
   ir::Field retField;
   ir::Var retVar;
-  TensorValues retTensorVals;
  
   bool skipCheckDeclared;
   HIRNode::Ptr checkWritable;

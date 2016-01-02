@@ -69,10 +69,9 @@ public:
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
-  virtual void visit(DenseIntVector::Ptr);
-  virtual void visit(DenseFloatVector::Ptr);
-  virtual void visit(DenseNDTensor::Ptr);
-  virtual void visit(DenseTensorLiteral::Ptr);
+  virtual void visit(IntVectorLiteral::Ptr);
+  virtual void visit(FloatVectorLiteral::Ptr);
+  virtual void visit(NDTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
 private:

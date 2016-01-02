@@ -583,40 +583,54 @@ void IREmitter::visit(BoolLiteral::Ptr expr) {
   retExpr = ir::Literal::make(expr->val);
 }
 
-void IREmitter::visit(DenseIntVector::Ptr expr) {
-  retTensorVals.addIntValues(expr->vals);
+void IREmitter::visit(IntVectorLiteral::Ptr expr) {
+  emitDenseTensorLiteral(expr);
 }
 
-void IREmitter::visit(DenseFloatVector::Ptr expr) {
-  retTensorVals.addFloatValues(expr->vals);
+void IREmitter::visit(FloatVectorLiteral::Ptr expr) {
+  emitDenseTensorLiteral(expr);
 }
 
-void IREmitter::visit(DenseNDTensor::Ptr tensor) {
-  iassert(tensor->elems.size() > 1);
-  
-  TensorValues tensorVals = emitTensorVals(tensor->elems[0]);
-  tensorVals.addDimension();
-
-  for (unsigned i = 1; i < tensor->elems.size(); ++i) {
-    const TensorValues right = emitTensorVals(tensor->elems[i]);
-    tensorVals.merge(right);
-  }
-
-  retTensorVals = tensorVals;
+void IREmitter::visit(NDTensorLiteral::Ptr expr) {
+  emitDenseTensorLiteral(expr);
 }
 
-void IREmitter::visit(DenseTensorLiteral::Ptr tensor) {
-  const TensorValues tensorVals = emitTensorVals(tensor->tensor);
+void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
+  const DenseTensorValues tensorVals = emitTensorValues(tensor);
   const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(),
                                            tensorVals.dimSizes.rend());
-  const ir::ScalarType elemType = (tensorVals.type == TensorValues::Type::INT) ?
-                                  ir::ScalarType::Int : ir::ScalarType::Float;
+  const auto elemType = (tensorVals.type == DenseTensorValues::Type::INT) ?
+                        ir::ScalarType::Int : ir::ScalarType::Float;
+  
   const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
                                                    tensor->transposed);
-  const void *data = (tensorVals.type == TensorValues::Type::INT) ? 
+  const void *data = (tensorVals.type == DenseTensorValues::Type::INT) ? 
                      static_cast<const void *>(tensorVals.intVals.data()) :
                      static_cast<const void *>(tensorVals.floatVals.data());
   retExpr = ir::Literal::make(tensorType, const_cast<void *>(data));
+}
+
+IREmitter::DenseTensorValues 
+    IREmitter::emitTensorValues(DenseTensorLiteral::Ptr lit) {
+  DenseTensorValues tensorVals;
+  
+  if (isa<IntVectorLiteral>(lit)) {
+    tensorVals.addIntValues(to<IntVectorLiteral>(lit)->vals);
+  } else if (isa<FloatVectorLiteral>(lit)) {
+    tensorVals.addFloatValues(to<FloatVectorLiteral>(lit)->vals);
+  } else {
+    const auto ndTensorLit = to<NDTensorLiteral>(lit);
+  
+    tensorVals = emitTensorValues(ndTensorLit->elems[0]);
+    tensorVals.addDimension();
+  
+    for (unsigned i = 1; i < ndTensorLit->elems.size(); ++i) {
+      const DenseTensorValues right = emitTensorValues(ndTensorLit->elems[i]);
+      tensorVals.merge(right);
+    }
+  }
+
+  return tensorVals;
 }
 
 void IREmitter::visit(Test::Ptr test) {
