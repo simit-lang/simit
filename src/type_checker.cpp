@@ -360,9 +360,9 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
           lhsType[i].toTensor()->componentType != 
           exprType->at(i).toTensor()->componentType) {
         std::stringstream errMsg;
-        errMsg << "cannot assign a value of type \'" 
-               << typeString(exprType->at(i)) << "\' to a target of type \'" 
-               << typeString(lhsType[i]) << "\'";
+        errMsg << "cannot assign a value of type '" 
+               << typeString(exprType->at(i)) << "' to a target of type '" 
+               << typeString(lhsType[i]) << "'";
         reportError(errMsg.str(), stmt->lhs[i]);
       }
     }
@@ -762,9 +762,9 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 
       if (!compareTypes(argType->at(0), func.getArguments()[i].getType())) {
         std::stringstream errMsg;
-        errMsg << "expected argument of type \'" 
+        errMsg << "expected argument of type '" 
                << typeString(func.getArguments()[i].getType()) 
-               << "\' but got an argument of type " << typeString(argType);
+               << "' but got an argument of type " << typeString(argType);
         reportError(errMsg.str(), operand);
       }
     }
@@ -905,7 +905,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   const std::string fieldName = expr->field->ident;
   if (!elemType->hasField(fieldName)) {
     std::stringstream errMsg;
-    errMsg << "undefined field \'" << fieldName << "\'";
+    errMsg << "undefined field '" << fieldName << "'";
     reportError(errMsg.str(), expr->field);
     return;
   }
@@ -931,11 +931,11 @@ void TypeChecker::visit(VarExpr::Ptr expr) {
   const internal::Symbol varSym = ctx.getSymbol(expr->ident);
   if (expr == checkWritable && !varSym.isWritable()) {
     std::stringstream errMsg;
-    errMsg << "\'" << expr->ident << "\' is not writable";
+    errMsg << "'" << expr->ident << "' is not writable";
     reportError(errMsg.str(), expr);
   } else if (expr != checkWritable && !varSym.isReadable()) {
     std::stringstream errMsg;
-    errMsg << "\'" << expr->ident << "\' is not readable";
+    errMsg << "'" << expr->ident << "' is not readable";
     reportError(errMsg.str(), expr);
   }
 
@@ -1051,8 +1051,8 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl,
   }
 
   std::stringstream errMsg;
-  errMsg << "cannot initialize a variable or constant of type \'"
-         << typeString(var.getType()) << "\' with an expression of type "
+  errMsg << "cannot initialize a variable or constant of type '"
+         << typeString(var.getType()) << "' with an expression of type "
          << typeString(initType);
 
   iassert(varType.isTensor());
