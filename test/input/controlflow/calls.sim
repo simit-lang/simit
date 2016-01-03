@@ -70,3 +70,22 @@ end
 func caller(a : int) -> (b : int)
   b = f1(1) + f2(1);
 end
+
+%%% call-in-chained-eq
+%! caller(0) == 0;
+%! caller(1) == 1;
+%! caller(2) == 0;
+func callee(inout c : tensor[1](int)) -> (d : int)
+  d = c(0);
+  c(0) = c(0) + 1;
+end
+
+func caller(a : int) -> (b : int)
+  var t : tensor[1](int);
+  t(0) = a;
+  if 0 < callee(t) < 2
+    b = 1;
+  else
+    b = 0;
+  end
+end

@@ -32,8 +32,8 @@ private:
   std::vector<hir::Field::Ptr> parseFieldDeclList();
   hir::Field::Ptr parseFieldDecl();
   hir::ExternDecl::Ptr parseExternDecl();
-  hir::FuncDecl::Ptr parseFunction();
-  hir::ProcDecl::Ptr parseProcedure();
+  hir::FuncDecl::Ptr parseFuncDecl();
+  hir::ProcDecl::Ptr parseProcDecl();
   std::vector<hir::Argument::Ptr> parseArguments();
   hir::Argument::Ptr parseArgumentDecl();
   std::vector<hir::IdentDecl::Ptr> parseResults();
@@ -58,7 +58,6 @@ private:
   hir::Expr::Ptr parseXorExpr();
   hir::Expr::Ptr parseEqExpr();
   hir::Expr::Ptr parseTerm();
-  hir::Expr::Ptr parseSolveExpr();
   hir::Expr::Ptr parseAddExpr();
   hir::Expr::Ptr parseMulExpr();
   hir::Expr::Ptr parseNegExpr();
@@ -66,6 +65,7 @@ private:
   hir::Expr::Ptr parseTransposeExpr();
   hir::Expr::Ptr parseCallOrReadExpr();
   hir::Expr::Ptr parseFactor();
+  hir::Identifier::Ptr parseIdent();
   std::vector<hir::ReadParam::Ptr> parseReadParams();
   hir::ReadParam::Ptr parseReadParam();
   std::vector<hir::Expr::Ptr> parseCallParams();
@@ -88,7 +88,6 @@ private:
   int parseSignedIntLiteral();
   double parseSignedFloatLiteral();
   hir::Test::Ptr parseTest();
-  hir::Identifier::Ptr parseIdent();
 
   void reportError(const Token token, const std::string expected) {
     std::stringstream errMsg;

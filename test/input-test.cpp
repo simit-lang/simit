@@ -121,11 +121,14 @@ vector<ProgramTestParam> readTestsFromDir(const std::string &dirpath) {
   return testParams;
 }
 
-void runTest(ProgramTestParam param) {
+void runTest(ProgramTestParam param, bool shouldFail) {
   ASSERT_FALSE(param.failedIO) << "failed to read file " + param.path;
 
   Program program;
-  if (program.loadString(param.source) != 0) {
+  bool success;
+
+  success = (program.loadString(param.source) == 0);
+  if (!success && !shouldFail) {
     assert(program.hasErrors());
     for (auto &diag : program.getDiagnostics()) {
       ADD_FAILURE() << diag.getMessage();
@@ -135,6 +138,10 @@ void runTest(ProgramTestParam param) {
 //      unsigned int errorLine = param.line + error.getFirstLine() - 1;
 //      ADD_FAILURE_AT(errorFile.c_str(), errorLine) << error.getMessage();
     }
+    FAIL();
+    return;
+  } else if (success && shouldFail) {
+    assert(!program.hasErrors());
     FAIL();
     return;
   }
@@ -153,10 +160,10 @@ void runTest(ProgramTestParam param) {
   }
 }
 
-#define SIM_TEST_SUITE(name) \
+#define SIM_TEST_SUITE(name, shouldFail) \
   class name : public TestWithParam<ProgramTestParam> {}; \
   TEST_P(name, inputs) {                                  \
-    runTest(GetParam());                                  \
+    runTest(GetParam(), shouldFail);                      \
   }
 
 #define SIM_TEST(suite, name)                                                \
@@ -172,7 +179,7 @@ void runTest(ProgramTestParam param) {
 
 
 /* Tests */
-SIM_TEST_SUITE(elements)
+SIM_TEST_SUITE(elements, false)
 SIM_TEST(elements, blas0);
 SIM_TEST(elements, blas1);
 SIM_TEST(elements, blas2);
@@ -188,15 +195,20 @@ SIM_TEST(elements, springs);
 SIM_TEST(elements, fem);
 SIM_TEST(elements, fem_tensor);
 
-SIM_TEST_SUITE(declarations)
+SIM_TEST_SUITE(declarations, false)
 SIM_TEST(declarations, function_headers);
 SIM_TEST(declarations, objects);
 SIM_TEST(declarations, variables);
 SIM_TEST(declarations, misc);
 
-SIM_TEST_SUITE(controlflow)
+SIM_TEST_SUITE(controlflow, false)
 SIM_TEST(controlflow, map);
 SIM_TEST(controlflow, calls);
 SIM_TEST(controlflow, if_stmt);
 SIM_TEST(controlflow, loops);
 SIM_TEST(controlflow, boolean);
+
+SIM_TEST_SUITE(illegal, true);
+SIM_TEST(illegal, lexical);
+SIM_TEST(illegal, syntactic);
+SIM_TEST(illegal, semantic);

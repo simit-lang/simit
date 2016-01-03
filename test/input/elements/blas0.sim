@@ -11,6 +11,18 @@ func negi(a : int) -> (c : int)
   c = -a;
 end
 
+%%% neg-literal
+%! neg() == -1.0;
+func neg() -> (c : float)
+  c = --+-1.0;
+end
+
+%%% neg-int-literal
+%! neg() == -1;
+func neg() -> (c : int)
+  c = --+-1;
+end
+
 %%% add
 %! add(3.0, 2.0) == 5.0;
 func add(a : float, b : float) -> (c : float)

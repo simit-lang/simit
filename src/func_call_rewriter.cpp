@@ -36,19 +36,16 @@ void FuncCallRewriter::visit(TensorReadExpr::Ptr expr) {
   call->setLoc(expr);
   call->func = func;
 
-  bool validCall = true;
   for (auto param : expr->indices) {
     if (isa<ExprParam>(param)) {
-      call->operands.push_back(to<ExprParam>(param)->expr);
+      call->arguments.push_back(to<ExprParam>(param)->expr);
     } else {
       reportError("argument to function call must be an expression", param);
-      validCall = false; 
+      call->arguments.push_back(Expr::Ptr());
     }
   }
 
-  if (validCall) {
-    node = call;
-  }
+  node = call;
 }
 
 }

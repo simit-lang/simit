@@ -1,0 +1,18 @@
+%%% unrecog-sym-1
+proc main
+  @t;
+end
+
+%%% unrecog-sym-2
+proc main
+!
+end
+
+%%% invalid-num
+proc main
+  1.c;
+end
+
+%%% unclosed-comment
+%{ 
+
