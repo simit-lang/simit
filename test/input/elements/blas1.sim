@@ -4,6 +4,12 @@ func neg(a : tensor[3](float)) -> (c : tensor[3](float))
   c = -a;
 end
 
+%%% neg-literal
+%! neg() == -[0.0, 1.0, 2.0];
+func neg() -> (c : tensor[3](float))
+  c = -+--[0.0, 1.0, 2.0];
+end
+
 %%% scale
 %! scale(3.0, [0.0, 1.0, 4.0]) == [0.0, 3.0, 12.0];
 func scale(a : float, b : tensor[3](float)) -> (c : tensor[3](float))

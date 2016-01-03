@@ -12,12 +12,16 @@ void ConstantFolding::visit(NegExpr::Ptr expr) {
   expr->operand = rewrite<Expr>(expr->operand);
   if (isa<IntLiteral>(expr->operand)) {
     const auto operand = to<IntLiteral>(expr->operand);
-    operand->val *= -1;
+    if (expr->negate) {
+      operand->val *= -1;
+    }
     node = operand;
     return;
   } else if (isa<FloatLiteral>(expr->operand)) {
     const auto operand = to<FloatLiteral>(expr->operand);
-    operand->val *= -1.0;
+    if (expr->negate) {
+      operand->val *= -1.0;
+    }
     node = operand;
     return;
   } else if (isa<DenseTensorLiteral>(expr->operand)) {
@@ -40,7 +44,9 @@ void ConstantFolding::visit(NegExpr::Ptr expr) {
         }
     };
     const auto operand = to<DenseTensorLiteral>(expr->operand);
-    NegateTensorLiteral().negate(operand);
+    if (expr->negate) {
+      NegateTensorLiteral().negate(operand);
+    }
     node = operand;
     return;
   }

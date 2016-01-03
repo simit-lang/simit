@@ -144,80 +144,69 @@ void HIRVisitor::visit(MapExpr::Ptr expr) {
   expr->target->accept(this);
 }
 
-void HIRVisitor::visit(UnaryExpr::Ptr expr) {
-  expr->operand->accept(this);
-}
-
-void HIRVisitor::visit(BinaryExpr::Ptr expr) {
-  expr->lhs->accept(this);
-  expr->rhs->accept(this);
-}
-
-void HIRVisitor::visit(NaryExpr::Ptr expr) {
-  for (auto operand : expr->operands) {
-    operand->accept(this);
-  }
-}
-
 void HIRVisitor::visit(OrExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(AndExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(XorExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(EqExpr::Ptr expr) {
-  visit(to<NaryExpr>(expr));
+  visitNaryExpr(expr);
 }
 
 void HIRVisitor::visit(NotExpr::Ptr expr) {
-  visit(to<UnaryExpr>(expr));
+  visitUnaryExpr(expr);
 }
 
 void HIRVisitor::visit(AddExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(SubExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(MulExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(DivExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(ElwiseMulExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(ElwiseDivExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(NegExpr::Ptr expr) {
-  visit(to<UnaryExpr>(expr));
+  visitUnaryExpr(expr);
 }
 
 void HIRVisitor::visit(ExpExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRVisitor::visit(TransposeExpr::Ptr expr) {
-  visit(to<UnaryExpr>(expr));
+  visitUnaryExpr(expr);
 }
 
 void HIRVisitor::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
-  visit(to<NaryExpr>(expr));
+  for (auto arg : expr->arguments) {
+    if (arg) {
+      arg->accept(this);
+    }
+  }
 }
 
 void HIRVisitor::visit(TensorReadExpr::Ptr expr) {
@@ -253,6 +242,21 @@ void HIRVisitor::visit(Test::Ptr test) {
     arg->accept(this);
   }
   test->expected->accept(this);
+}
+
+void HIRVisitor::visitUnaryExpr(UnaryExpr::Ptr expr) {
+  expr->operand->accept(this);
+}
+
+void HIRVisitor::visitBinaryExpr(BinaryExpr::Ptr expr) {
+  expr->lhs->accept(this);
+  expr->rhs->accept(this);
+}
+
+void HIRVisitor::visitNaryExpr(NaryExpr::Ptr expr) {
+  for (auto operand : expr->operands) {
+    operand->accept(this);
+  }
 }
 
 }
