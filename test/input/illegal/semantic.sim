@@ -14,33 +14,6 @@ proc main
   foo();
 end
 
-%%% bad-call-3
-func foo(i : int)
-end
-
-proc main
-  foo(1.0);
-end
-
-%%% bad-call-4
-func foo(i : int)
-end
-
-func bar() -> (i : int, j : int)
-end
-
-func bazz()
-end
-
-proc main
-  foo(bar()) + foo(bazz());
-end
-
-%%% bad-call-5
-proc main
-  cos(2.0, 3.0);
-end
-
 %%% bad-assign-1
 proc main
   1 = 1;
@@ -55,24 +28,12 @@ func foo(inout a : (E * 2))
   a(1).f = 1;
 end
 
-%%% bad-set-type
-element E
-end
-
-extern t : int;
-extern V : set{E}(t);
-
-%%% bad-tensor-type-1
+%%% bad-tensor-type
 element E
 end
 
 proc main
   var t : tensor[E](int);
-end
-
-%%% bad-tensor-type-2
-proc main
-  var t : tensor[2,2](int)';
 end
 
 %%% bad-tuple-type-1
@@ -170,11 +131,11 @@ proc main
   t = bazz();
 end
 
-%%% bad-tensor-access
-proc main
-  var t : tensor[1](int);
-  t(1.0);
-end
+%FIXME: bad-tensor-access
+%proc main
+%  var t : tensor[1](int);
+%  t(1.0);
+%end
 
 %%% bad-tensor-access-2
 func fizz()
@@ -216,23 +177,12 @@ func f(a : (E * 2))
   a(:);
 end
 
-%%% bad-tuple-access-3
+%%% bad-tuple-access-1
 element E
 end
 
 func f(a : (E * 2))
   a(0.0 + 1.0);
-end
-
-%%% bad-tuple-access-4
-element E
-end
-
-func fizz()
-end
-
-func f(a : (E * 2))
-  a(fizz());
 end
 
 %%% bad-access
@@ -267,17 +217,6 @@ end
 
 func foo(a : E)
   a.e;
-end
-
-%%% bad-field-read-4
-element G
-  f : tensor[2,2](int);
-end
-
-extern S : set{G};
-
-proc main
-  S.f;
 end
 
 %%% write-to-readonly
@@ -359,27 +298,6 @@ proc main
   1.0 * 2;
 end
 
-%%% bad-mul-8
-proc main
-  [1 2] * [1 2 3]';
-end
-
-%%% bad-mul-9
-proc main
-  [1 2; 3 4] * [1 2];
-end
-
-%%% bad-mul-10
-proc main
-  [1 2]' * [1 2; 3 4];
-end
-
-%%% bad-mul-11
-proc main
-  v = [1 2]';
-  (v + v) * [1 2; 3 4];
-end
-
 %%% bad-div-1
 proc main
   M = [[[1 2],[3 4]],[[5 6], [7 8]]];
@@ -390,100 +308,4 @@ end
 proc main
   M = [[[1 2],[3 4]],[[5 6], [7 8]]];
   M / 2.0;
-end
-
-%%% bad-map-1
-element E
-end
-
-extern V : set{E};
-extern U : set{E}(V,V);
-
-func f(v : E, u : (E * 1))
-end
-
-proc main
-  map f to U;
-end
-
-%%% bad-map-2
-element E
-end
-
-extern V : set{E};
-extern U : set{E}(V,V);
-
-func g(u : (E * 2))
-end
-
-proc main
-  map g to U;
-end
-
-%%% bad-map-3
-element E
-end
-
-extern V : set{E};
-extern U : set{E}(V,V);
-
-func h(f : float, v : E, u : (E * 2))
-end
-
-proc main
-  map h to U;
-end
-
-%%% bad-map-4
-element E
-end
-
-extern V : set{E};
-extern U : set{E}(V,V);
-
-func h(f : float, v : E, u : (E * 2))
-end
-
-proc main
-  map h(1) to U;
-end
-
-%%% bad-map-5
-func h(f : float)
-end
-
-proc main
-  t = 1.0;
-  map h to t; 
-end
-
-%%% undeclared-var
-proc main
-  z * z - 2;
-end
-
-%%% bad-and
-proc main
-  1 and 2;
-end
-
-%%% bad-eq-1
-proc main
-  s = [1 2];
-  s == s;
-end
-
-%%% bad-eq-2
-proc main
-  1 == 2 == 2.0;
-end
-
-%%% bad-not
-proc main
-  not 1;
-end
-
-%%% bad-neg
-proc main
-  -true;
 end

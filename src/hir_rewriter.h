@@ -45,9 +45,6 @@ public:
   virtual void visit(Slice::Ptr op) { node = op; }
   virtual void visit(ExprParam::Ptr);
   virtual void visit(MapExpr::Ptr);
-  virtual void visit(UnaryExpr::Ptr);
-  virtual void visit(BinaryExpr::Ptr);
-  virtual void visit(NaryExpr::Ptr);
   virtual void visit(OrExpr::Ptr);
   virtual void visit(AndExpr::Ptr);
   virtual void visit(XorExpr::Ptr);
@@ -83,6 +80,11 @@ public:
     node.reset();
     return ret;
   }
+
+private:
+  virtual void visitUnaryExpr(UnaryExpr::Ptr);
+  virtual void visitBinaryExpr(BinaryExpr::Ptr);
+  virtual void visitNaryExpr(NaryExpr::Ptr);
 
 protected:
   HIRNode::Ptr node;  

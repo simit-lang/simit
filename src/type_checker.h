@@ -46,12 +46,10 @@ private:
   virtual void visit(ConstDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);
-  virtual void visit(IndexSetDomain::Ptr);
   virtual void visit(RangeDomain::Ptr);
   virtual void visit(ForStmt::Ptr);
   virtual void visit(PrintStmt::Ptr);
   virtual void visit(AssignStmt::Ptr);
-  virtual void visit(ExprParam::Ptr);
   virtual void visit(MapExpr::Ptr);
   virtual void visit(OrExpr::Ptr);
   virtual void visit(AndExpr::Ptr);
@@ -118,6 +116,12 @@ private:
         throw TypeError();
       } else if (dimSizes.size() - 1 != other.dimSizes.size()) {
         throw DimError();
+      } else {
+        for (unsigned i = 0; i < dimSizes.size() - 1; ++i) {
+          if (dimSizes[i] != other.dimSizes[i]) {
+            throw DimError();
+          }
+        }
       }
       dimSizes[dimSizes.size() - 1]++;
     }
@@ -205,7 +209,6 @@ private:
     }
 
     std::stringstream oss;
-    oss << "'";
     if (type->size() > 1) {
       oss << "(";
     }
@@ -215,14 +218,13 @@ private:
       if (printDelimiter) {
         oss << ", ";
       }
-      oss << typeString(compType);
+      oss << "'" << typeString(compType) << "'";
       printDelimiter = true;
     }
 
     if (type->size() > 1) {
       oss << ")";
     }
-    oss << "'";
     return oss.str();
   }
   void reportError(const std::string msg, HIRNode::Ptr loc) {

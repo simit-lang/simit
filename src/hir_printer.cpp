@@ -390,11 +390,15 @@ void HIRPrinter::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
   oss << "(";
   bool printDelimiter = false;
-  for (auto operand : expr->operands) {
+  for (auto arg : expr->arguments) {
     if (printDelimiter) {
       oss << ", ";
     }
-    operand->accept(this);
+    if (arg) {
+      arg->accept(this);
+    } else {
+      oss << "?";
+    }
     printDelimiter = true;
   }
   oss << ")";

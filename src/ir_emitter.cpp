@@ -489,8 +489,9 @@ void IREmitter::visit(CallExpr::Ptr expr) {
   const std::vector<ir::Var> results = func.getResults();
 
   std::vector<ir::Expr> arguments;
-  for (auto operand : expr->operands) {
-    const ir::Expr arg = emitExpr(operand);
+  for (auto argument : expr->arguments) {
+    iassert((bool)argument);
+    const ir::Expr arg = emitExpr(argument);
     arguments.push_back(arg);
   }
 
