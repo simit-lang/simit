@@ -165,84 +165,68 @@ void HIRRewriter::visit(MapExpr::Ptr expr) {
   node = expr;
 }
 
-void HIRRewriter::visit(UnaryExpr::Ptr expr) {
-  expr->operand = rewrite<Expr>(expr->operand);
-  node = expr;
-}
-
-void HIRRewriter::visit(BinaryExpr::Ptr expr) {
-  expr->lhs = rewrite<Expr>(expr->lhs);
-  expr->rhs = rewrite<Expr>(expr->rhs);
-  node = expr;
-}
-
-void HIRRewriter::visit(NaryExpr::Ptr expr) {
-  for (unsigned i = 0; i < expr->operands.size(); ++i) {
-    expr->operands[i] = rewrite<Expr>(expr->operands[i]);
-  }
-  node = expr;
-}
-
 void HIRRewriter::visit(OrExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(AndExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(XorExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(EqExpr::Ptr expr) {
-  visit(to<NaryExpr>(expr));
+  visitNaryExpr(expr);
 }
 
 void HIRRewriter::visit(NotExpr::Ptr expr) {
-  visit(to<UnaryExpr>(expr));
+  visitUnaryExpr(expr);
 }
 
 void HIRRewriter::visit(AddExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(SubExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(MulExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(DivExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(ElwiseMulExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(ElwiseDivExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(NegExpr::Ptr expr) {
-  visit(to<UnaryExpr>(expr));
+  visitUnaryExpr(expr);
 }
 
 void HIRRewriter::visit(ExpExpr::Ptr expr) {
-  visit(to<BinaryExpr>(expr));
+  visitBinaryExpr(expr);
 }
 
 void HIRRewriter::visit(TransposeExpr::Ptr expr) {
-  visit(to<UnaryExpr>(expr));
+  visitUnaryExpr(expr);
 }
 
 void HIRRewriter::visit(CallExpr::Ptr expr) {
   expr->func = rewrite<Identifier>(expr->func);
-  for (unsigned i = 0; i < expr->operands.size(); ++i) {
-    expr->operands[i] = rewrite<Expr>(expr->operands[i]);
+  for (unsigned i = 0; i < expr->arguments.size(); ++i) {
+    if (expr->arguments[i]) {
+      expr->arguments[i] = rewrite<Expr>(expr->arguments[i]);
+    }
   }
   node = expr;
 }
@@ -286,6 +270,24 @@ void HIRRewriter::visit(Test::Ptr test) {
   }
   test->expected = rewrite<Expr>(test->expected);
   node = test;
+}
+
+void HIRRewriter::visitUnaryExpr(UnaryExpr::Ptr expr) {
+  expr->operand = rewrite<Expr>(expr->operand);
+  node = expr;
+}
+
+void HIRRewriter::visitBinaryExpr(BinaryExpr::Ptr expr) {
+  expr->lhs = rewrite<Expr>(expr->lhs);
+  expr->rhs = rewrite<Expr>(expr->rhs);
+  node = expr;
+}
+
+void HIRRewriter::visitNaryExpr(NaryExpr::Ptr expr) {
+  for (unsigned i = 0; i < expr->operands.size(); ++i) {
+    expr->operands[i] = rewrite<Expr>(expr->operands[i]);
+  }
+  node = expr;
 }
 
 }

@@ -657,8 +657,9 @@ struct TransposeExpr : public UnaryExpr {
   virtual unsigned getColBegin() { return operand->getColBegin(); }
 };
 
-struct CallExpr : public NaryExpr {
+struct CallExpr : public Expr {
   Identifier::Ptr func;
+  std::vector<Expr::Ptr> arguments;
   
   typedef std::shared_ptr<CallExpr> Ptr;
 

@@ -69,7 +69,7 @@ void TypeChecker::visit(SetType::Ptr type) {
   }
 
   if (typeChecked) {
-    retIRType = ir::Type(ir::SetType::make(elementType, endpoints));
+    retIRType = ir::SetType::make(elementType, endpoints);
   }
 }
 
@@ -80,7 +80,7 @@ void TypeChecker::visit(TupleType::Ptr type) {
     const auto msg = "tuple must have length greater than or equal to one";
     reportError(msg, type->length);
   } else if (elementType.defined()) {
-    retIRType = ir::Type(ir::TupleType::make(elementType, type->length->val));
+    retIRType = ir::TupleType::make(elementType, type->length->val);
   }
 }
 
@@ -101,7 +101,7 @@ void TypeChecker::visit(ScalarType::Ptr type) {
       break;
   }
   
-  retIRType = ir::Type(ir::TensorType::make(componentType));
+  retIRType = ir::TensorType::make(componentType);
 }
 
 void TypeChecker::visit(NDTensorType::Ptr type) {
@@ -274,14 +274,6 @@ void TypeChecker::visit(IfStmt::Ptr stmt) {
   }
 }
 
-void TypeChecker::visit(IndexSetDomain::Ptr domain) {
-  const Ptr<ir::IndexSet> set = getIndexSet(domain->set);
-
-  if (set && set->getKind() != ir::IndexSet::Set) {
-    reportError("for-loop cannot iterate over a non-set domain", domain);
-  }
-}
-
 void TypeChecker::visit(RangeDomain::Ptr domain) {
   const Ptr<Expr::Type> lowerType = inferType(domain->lower);
   const Ptr<Expr::Type> upperType = inferType(domain->upper);
@@ -355,7 +347,6 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
   for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
     if (lhsType[i].defined() && !compareTypes(lhsType[i], exprType->at(i))) {
       // Allow initialization of tensors with scalars.
-      // TODO: Check that scalar is zero?
       if (!lhsType[i].isTensor() || !isScalar(exprType->at(i)) || 
           lhsType[i].toTensor()->componentType != 
           exprType->at(i).toTensor()->componentType) {
@@ -373,23 +364,6 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
         ctx.addSymbol(ir::Var(varName, exprType->at(i)));
       }
     }
-  }
-}
-
-void TypeChecker::visit(ExprParam::Ptr param) {
-  const Ptr<Expr::Type> exprType = inferType(param->expr);
-
-  if (!exprType) {
-    return;
-  }
-
-  if (exprType->size() != 1 || !isInt(exprType->at(0))) {
-    std::stringstream errMsg;
-    errMsg << "expected an integral tensor index but got an index of type "
-           << typeString(exprType);
-    reportError(errMsg.str(), param->expr);
-  } else {
-    retType = exprType;
   }
 }
 
@@ -484,7 +458,7 @@ void TypeChecker::visit(EqExpr::Ptr expr) {
   
   retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
-  retType->push_back(ir::Type(ir::TensorType::make(componentType)));
+  retType->push_back(ir::TensorType::make(componentType));
 }
 
 void TypeChecker::visit(NotExpr::Ptr expr) {
@@ -499,7 +473,7 @@ void TypeChecker::visit(NotExpr::Ptr expr) {
 
   retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
-  retType->push_back(ir::Type(ir::TensorType::make(componentType)));
+  retType->push_back(ir::TensorType::make(componentType));
 }
 
 void TypeChecker::visit(AddExpr::Ptr expr) {
@@ -515,17 +489,21 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
   const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
 
   bool typeChecked = (bool)lhsType && (bool)rhsType;
-  if (lhsType && (lhsType->size() != 1 || !(*lhsType)[0].isTensor())) {
+  if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
+      lhsType->at(0).toTensor()->componentType.isBoolean())) {
     std::stringstream errMsg;
     errMsg << "expected left operand of multiplication operation to be a "
-           << "tensor but got an operand of type " << typeString(lhsType);
+           << "numeric tensor but got an operand of type " 
+           << typeString(lhsType);
     reportError(errMsg.str(), expr->lhs);
     typeChecked = false;
   }
-  if (rhsType && (rhsType->size() != 1 || !(*rhsType)[0].isTensor())) {
+  if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
+      rhsType->at(0).toTensor()->componentType.isBoolean())) {
     std::stringstream errMsg;
     errMsg << "expected right operand of multiplication operation to be a "
-           << "tensor but got an operand of type " << typeString(rhsType);
+           << "numeric tensor but got an operand of type " 
+           << typeString(rhsType);
     reportError(errMsg.str(), expr->rhs);
     typeChecked = false;
   }
@@ -534,10 +512,20 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     return;
   }
 
-  const ir::TensorType *ltype = (*lhsType)[0].toTensor();
-  const ir::TensorType *rtype = (*rhsType)[0].toTensor();
+  const ir::TensorType *ltype = lhsType->at(0).toTensor();
+  const ir::TensorType *rtype = rhsType->at(0).toTensor();
   const std::vector<ir::IndexDomain> ldimensions = ltype->getDimensions();
   const std::vector<ir::IndexDomain> rdimensions = rtype->getDimensions();
+
+  if (ltype->componentType != rtype->componentType) {
+    std::stringstream errMsg;
+    errMsg << "cannot multiply tensors containing elements of type '"
+           << ltype->componentType << "' and type '"
+           << rtype->componentType << "'";
+    reportError(errMsg.str(), expr);
+    return;
+  }
+
   if (ltype->order() == 0 || rtype->order() == 0) {
     // Scale
     if (ltype->componentType != rtype->componentType) {
@@ -557,7 +545,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
       reportError("cannot multiply two column vectors", expr);
     } else if (!ltype->isColumnVector && !rtype->isColumnVector) {
       reportError("cannot multiply two row vectors", expr);
-    } else if (!compareTypes((*lhsType)[0], (*rhsType)[0])) {
+    } else if (!compareTypes(lhsType->at(0), rhsType->at(0))) {
       std::stringstream errMsg;
       errMsg << "cannot multiply vectors of type " << typeString(lhsType) 
              << " and type " << typeString(rhsType);
@@ -568,9 +556,9 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
         dom.push_back(ldimensions[0]);
         dom.push_back(rdimensions[0]);
       }
-      const auto tensorType = ir::TensorType::make(ltype->componentType, dom);
+
       retType = std::make_shared<Expr::Type>();
-      retType->push_back(ir::Type(tensorType));  
+      retType->push_back(ir::TensorType::make(ltype->componentType, dom));
     }
   } else if (ltype->order() == 2 && rtype->order() == 1) {
     // Matrix-Vector
@@ -586,7 +574,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
       const auto tensorType = ir::TensorType::make(ltype->componentType, 
                                                    {ldimensions[0]}, true);
       retType = std::make_shared<Expr::Type>();
-      retType->push_back(ir::Type(tensorType));
+      retType->push_back(tensorType);
     }
   } else if (ltype->order() == 1 && rtype->order() == 2) {
     // Vector-Matrix
@@ -602,7 +590,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
       const auto tensorType = ir::TensorType::make(ltype->componentType, 
                                                    {rdimensions[1]});
       retType = std::make_shared<Expr::Type>();
-      retType->push_back(ir::Type(tensorType));
+      retType->push_back(tensorType);
     }
   } else if (ltype->order() == 2 && rtype->order() == 2) {
     // Matrix-Matrix
@@ -614,9 +602,8 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
       reportError(errMsg.str(), expr);
     } else {
       const std::vector<ir::IndexDomain> dom = {ldimensions[0], rdimensions[1]};
-      const auto tensorType = ir::TensorType::make(ltype->componentType, dom);
       retType = std::make_shared<Expr::Type>();
-      retType->push_back(ir::Type(tensorType));
+      retType->push_back(ir::TensorType::make(ltype->componentType, dom));
     }
   } else {
     reportError("cannot multiply tensors of order 3 or greater using *", expr);
@@ -628,35 +615,48 @@ void TypeChecker::visit(DivExpr::Ptr expr) {
   const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
 
   bool typeChecked = (bool)lhsType && (bool)rhsType;
-  if (lhsType && (lhsType->size() != 1 || !(*lhsType)[0].isTensor())) {
+  if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
+      lhsType->at(0).toTensor()->componentType.isBoolean())) {
     std::stringstream errMsg;
-    errMsg << "expected left operand of division operation to be a tensor "
-           << "but got an operand of type " << typeString(lhsType);
+    errMsg << "expected left operand of division operation to be a numeric "
+           << "tensor but got an operand of type " << typeString(lhsType);
     reportError(errMsg.str(), expr->lhs);
     typeChecked = false;
   }
-  if (rhsType && (rhsType->size() != 1 || !(*rhsType)[0].isTensor())) {
+  if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
+      rhsType->at(0).toTensor()->componentType.isBoolean())) {
     std::stringstream errMsg;
-    errMsg << "expected right operand of division operation to be a tensor "
-           << "but got an operand of type " << typeString(rhsType);
+    errMsg << "expected right operand of division operation to be a numeric "
+           << "tensor but got an operand of type " << typeString(rhsType);
     reportError(errMsg.str(), expr->rhs);
     typeChecked = false;
   }
  
-  if (!typeChecked) return;
+  if (!typeChecked) {
+    return;
+  }
+  
+  const ir::TensorType *ltype = lhsType->at(0).toTensor();
+  const ir::TensorType *rtype = rhsType->at(0).toTensor();
 
-  const unsigned lhsOrder = (*lhsType)[0].toTensor()->order();
-  const unsigned rhsOrder = (*rhsType)[0].toTensor()->order();
-  if (lhsOrder > 0 && rhsOrder > 0) {
+  if (ltype->componentType != rtype->componentType) {
+    std::stringstream errMsg;
+    errMsg << "cannot divide tensors containing elements of type '"
+           << ltype->componentType << "' and type '"
+           << rtype->componentType << "'";
+    reportError(errMsg.str(), expr);
+    return;
+  }
+
+  if (ltype->order() > 0 && rtype->order() > 0) {
     std::stringstream errMsg;
     errMsg << "division of a non-scalar tensor of type " << typeString(lhsType)
            << " by a non-scalar tensor of type " << typeString(rhsType)
            << " is not supported";
     reportError(errMsg.str(), expr);
-    return;
+  } else {
+    retType = (ltype->order() > 0) ? lhsType : rhsType;
   }
-
-  retType = (lhsOrder > 0) ? lhsType : rhsType;
 }
 
 void TypeChecker::visit(ElwiseMulExpr::Ptr expr) {
@@ -674,7 +674,7 @@ void TypeChecker::visit(NegExpr::Ptr expr) {
     return;
   }
 
-  if (opndType->size() != 1 || !(*opndType)[0].isTensor()) {
+  if (opndType->size() != 1 || !opndType->at(0).isTensor()) {
     std::stringstream errMsg;
     errMsg << "expected operand of tensor negation to be a tensor but got an "
            << "operand of type " << typeString(opndType);
@@ -716,7 +716,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
       const auto exprType = ir::TensorType::make(tensorType->componentType, 
           dimensions, !tensorType->isColumnVector);
       retType = std::make_shared<Expr::Type>();
-      retType->push_back(ir::Type(exprType));
+      retType->push_back(exprType);
       break;
     }
     case 2:
@@ -724,7 +724,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
       const auto exprType = ir::TensorType::make(
           tensorType->componentType, {dimensions[1], dimensions[0]});
       retType = std::make_shared<Expr::Type>();
-      retType->push_back(ir::Type(exprType));
+      retType->push_back(exprType);
       break;
     }
     default:
@@ -737,18 +737,21 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   iassert(ctx.containsFunction(expr->func->ident));
   const ir::Func func = ctx.getFunction(expr->func->ident);
 
-  if (expr->operands.size() != func.getArguments().size()) {
+  if (expr->arguments.size() != func.getArguments().size()) {
     if (func.getKind() != ir::Func::Intrinsic) { 
       std::stringstream errMsg;
-      errMsg << "passed in " << expr->operands.size() << " arguments but "
+      errMsg << "passed in " << expr->arguments.size() << " arguments but "
              << "function expects " << func.getArguments().size();
       reportError(errMsg.str(), expr);
     } // TODO: Special handling for intrinsics?
   } else {
-    for (unsigned i = 0; i < expr->operands.size(); ++i) {
-      const Expr::Ptr operand = expr->operands[i];
-      const Ptr<Expr::Type> argType = inferType(operand);
-  
+    for (unsigned i = 0; i < expr->arguments.size(); ++i) {
+      const Expr::Ptr argument = expr->arguments[i];
+      if (!argument) {
+        continue;
+      }
+
+      const Ptr<Expr::Type> argType = inferType(argument);
       if (!argType) {
         continue;
       }
@@ -756,7 +759,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       if (argType->size() != 1) {
         std::stringstream errMsg;
         errMsg << argType->size() << " values passed in as one argument";
-        reportError(errMsg.str(), operand);
+        reportError(errMsg.str(), argument);
         continue;
       }
 
@@ -765,7 +768,7 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
         errMsg << "expected argument of type '" 
                << typeString(func.getArguments()[i].getType()) 
                << "' but got an argument of type " << typeString(argType);
-        reportError(errMsg.str(), operand);
+        reportError(errMsg.str(), argument);
       }
     }
   }
@@ -802,7 +805,6 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     std::vector<ir::IndexDomain> dims;
     for (unsigned i = 0; i < expr->indices.size(); ++i) {
       const ReadParam::Ptr param = expr->indices[i];
-
       if (param->isSlice()) {
         dims.push_back(tensorType->getDimensions()[i]);
       } else {
@@ -944,21 +946,21 @@ void TypeChecker::visit(VarExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(IntLiteral::Ptr lit) {
-  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Int);
-  retType->push_back(ir::Type(ir::TensorType::make(componentType)));
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(ir::TensorType::make(componentType));
 }
 
 void TypeChecker::visit(FloatLiteral::Ptr lit) {
-  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Float);
-  retType->push_back(ir::Type(ir::TensorType::make(componentType)));
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(ir::TensorType::make(componentType));
 }
 
 void TypeChecker::visit(BoolLiteral::Ptr lit) {
-  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
-  retType->push_back(ir::Type(ir::TensorType::make(componentType)));
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(ir::TensorType::make(componentType));
 }
 
 void TypeChecker::visit(IntVectorLiteral::Ptr lit) {
@@ -1014,18 +1016,16 @@ TypeChecker::DenseTensorType
 }
 
 void TypeChecker::visit(Test::Ptr test) {
-  const auto msg = "non-literal values for tests are currently unsupported";
-  
   for (auto arg : test->args) {
     arg->accept(this);
     if (!isa<TensorLiteral>(arg)) {
-      reportError(msg, arg);
+      reportError("input to test must be a literal", arg);
     }
   }
 
   test->expected->accept(this);
   if (!isa<TensorLiteral>(test->expected)) {
-    reportError(msg, test->expected);
+    reportError("expected value for test must be a literal", test->expected);
   }
 }
 
@@ -1103,19 +1103,23 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl,
 void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
   const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
   const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
-
   bool typeChecked = (bool)lhsType && (bool)rhsType;
-  if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor())) {
+
+  if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
+      lhsType->at(0).toTensor()->componentType.isBoolean())) {
     std::stringstream errMsg;
-    errMsg << "expected left operand of element-wise operation to be a tensor "
-           << "but got an operand of type " << typeString(lhsType);
+    errMsg << "expected left operand of element-wise operation to be a "
+           << "numeric tensor but got an operand of type " 
+           << typeString(lhsType);
     reportError(errMsg.str(), expr->lhs);
     typeChecked = false;
   }
-  if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor())) {
+  if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
+      rhsType->at(0).toTensor()->componentType.isBoolean())) {
     std::stringstream errMsg;
-    errMsg << "expected right operand of element-wise operation to be a tensor "
-           << "but got an operand of type " << typeString(rhsType);
+    errMsg << "expected right operand of element-wise operation to be a "
+           << "numeric tensor but got an operand of type " 
+           << typeString(rhsType);
     reportError(errMsg.str(), expr->rhs);
     typeChecked = false;
   }
@@ -1129,6 +1133,7 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
   const unsigned lhsOrder = ltype->order();
   const unsigned rhsOrder = rtype->order();
   const bool hasScalarOperand = (lhsOrder == 0 || rhsOrder == 0);
+
   if (hasScalarOperand ? (ltype->componentType != rtype->componentType) : 
       !compareTypes(lhsType->at(0), rhsType->at(0))) {
     std::stringstream errMsg;
@@ -1157,9 +1162,9 @@ void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
     reportError(errMsg.str(), expr->rhs);
   }
 
-  retType = std::make_shared<Expr::Type>();
   const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
-  retType->push_back(ir::Type(ir::TensorType::make(componentType)));
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(ir::TensorType::make(componentType));
 }
 
 }
