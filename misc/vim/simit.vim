@@ -11,7 +11,7 @@ endif
 syn keyword simitType         float int boolean vector matrix tensor
 syn keyword simitStatement    element set func proc
 syn keyword simitConditional  if elseif else end
-syn keyword simitRepeat       for in while
+syn keyword simitRepeat       for in while do
 syn keyword simitStorageClass const extern
 syn keyword simitFunc         map to reduce
 
@@ -61,6 +61,7 @@ if version >= 508 || !exists("did_simit_syntax_inits")
 
   HiLink simitTransposeOperator  simitOperator
   HiLink simitConditional        Conditional
+  HiLink simitRepeat             Repeat
   HiLink simitTodo               Todo
   HiLink simitDelimiter          Identifier
   HiLink simitNumber             Number

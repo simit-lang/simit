@@ -11,6 +11,7 @@ const mat11  : tensor[1,1](float)   =  [1.0];
 const mat12  : tensor[1,2](float)   =  [2.0, 3.0];
 const mat21  : tensor[2,1](float)   =  [2.0; 3.0];
 const ten111 : tensor[1,1,1](float) = [[1.0]];
+const ten121 : tensor[1,2,1](float) =  [2.0; 3.0];
 
 %%% int-consts 
 const s      : int = 11;
@@ -23,6 +24,7 @@ const mat11  : tensor[1,1](int)   =  [1];
 const mat12  : tensor[1,2](int)   =  [2, 3];
 const mat21  : tensor[2,1](int)   =  [2; 3];
 const ten111 : tensor[1,1,1](int) = [[1]];
+const ten121 : tensor[1,2,1](int) =  [2; 3];
 
 %%% bool-consts
 const st     : bool = true; 

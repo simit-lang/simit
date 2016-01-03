@@ -47,9 +47,6 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   
   // IR generation.
   hir::IREmitter(ctx).emitIR(program);
-  //for (const auto &func : ctx->getFunctions()) {
-  //  std::cout << func.second << std::endl;
-  //}
   return 0;
 #else
   Scanner scanner(&programStream);
