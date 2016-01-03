@@ -1288,7 +1288,15 @@ llvm::Value* GPUBackend::makeGlobalTensor(ir::Var var) {
 
   // Add to env as a temporary so we can allocate memory appropriately
   ir::Environment& env = irFunc.getEnvironment();
-  env.addTemporary(var);
+  // HACK: Insert into env with the correct global name, in case of
+  // global name conflicts
+  if (llvmGlobal->getName() != var.getName()) {
+    ir::Var newVar(llvmGlobal->getName(), var.getType());
+    env.addTemporary(newVar);
+  }
+  else {
+    env.addTemporary(var);
+  }
 
   return llvmTmp;
 }

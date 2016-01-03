@@ -188,6 +188,10 @@ struct ErrorReport {
     Dummy &operator<<(T x) {
       return *this;
     }
+    // Support for manipulators, such as std::endl
+    Dummy &operator<<(std::ostream& (*manip)(std::ostream&)) {
+      return *this;
+    }
   };
 
   #define iassert(c) simit::internal::Dummy()
