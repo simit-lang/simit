@@ -43,6 +43,20 @@ func caller(a : tensor[2](float)) -> (b : tensor[2](float))
   b(1) = a(1) * 5.0;
 end
 
+%%% call-unused-result
+%! caller(1) == 2;
+func callee(inout c : tensor[1](int)) -> (d : int)
+  d = c(0);
+  c(0) = c(0) + 1;
+end
+
+func caller(a : int) -> (b : int)
+  var t : tensor[1](int);
+  t(0) = a;
+  callee(t);
+  b = t(0);
+end
+
 %%% call-tree
 %! caller(1) == 8;
 func f1(i : int) -> (b : int)

@@ -22,9 +22,9 @@ func compute_mass_damping(p : Point) ->
   I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
   mass = p.m;
   if p.fixed
-    MD(p) = 1.0;
+    MD(p,p) = 1.0;
   else
-    MD(p) = (mass + h*viscous)*I;
+    MD(p,p) = (mass + h*viscous)*I;
     fmg(p) = mass*p.v + h*mass*grav;
   end
 end

@@ -11,9 +11,9 @@ namespace simit {
 namespace hir {
 
 void FuncCallRewriter::visit(FuncDecl::Ptr decl) {
-  ctx.addFunction(ir::Func(decl->name->ident, {}, {}, ir::Stmt()));
-  
   HIRRewriter::visit(decl);
+  
+  ctx.addFunction(ir::Func(decl->name->ident, {}, {}, ir::Stmt()));
 }
 
 void FuncCallRewriter::visit(TensorReadExpr::Ptr expr) {
