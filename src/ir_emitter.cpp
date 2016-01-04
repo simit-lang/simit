@@ -300,14 +300,13 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   for (ir::Expr *endpoint : target.type().toSet()->endpointSets) {
     endpoints.push_back(*endpoint);
   }
-
-  // We assume the edge set is homogeneous for now
-  const ir::Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : ir::Expr();
   
   const auto type = (results.size() == 1) ? results[0].getType() : ir::Type();
   const ir::Var tmp = ctx->getBuilder()->temporary(type);
   retExpr = ir::VarExpr::make(tmp);
- 
+
+  // TODO: Should eventually support heterogeneous edge sets.
+  const ir::Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : ir::Expr();
   const ir::Stmt mapStmt = ir::Map::make({tmp}, func, partialActuals, target,
                                          endpoint, reduction);
   calls.push_back(mapStmt);
