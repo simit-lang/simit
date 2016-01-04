@@ -57,12 +57,19 @@ void TypeChecker::visit(SetType::Ptr type) {
   const ir::Type elementType = getIRType(type->element);
   bool typeChecked = elementType.defined();
 
-  // TODO: Check for heterogeneous edge sets.
   std::vector<ir::Expr> endpoints;
   for (auto end : type->endpoints) {
     const ir::Expr endpoint = getExpr(end);
     if (endpoint.defined()) {
-      endpoints.push_back(endpoint);
+      if (endpoint.type().isSet()) {
+        endpoints.push_back(endpoint);
+      } else {
+        std::stringstream errMsg;
+        errMsg << "expected endpoint to be of set type but got an endpoint of "
+               << "type '" << typeString(endpoint.type()) << "'";
+        reportError(errMsg.str(), end);
+        typeChecked = false;
+      }
     } else {
       typeChecked = false;
     }
@@ -368,28 +375,24 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(MapExpr::Ptr expr) {
-  std::vector<ir::Type> actualsType;
-  bool typeChecked = true;
-  for (auto param : expr->partialActuals) {
+  std::vector<ir::Type> actualsType(expr->partialActuals.size());
+  for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
+    const Expr::Ptr param = expr->partialActuals[i];
     const Ptr<Expr::Type> paramType = inferType(param);
 
     if (!paramType) {
-      typeChecked = false;
       continue;
     }
 
-    if (paramType->size() == 1) {
-      actualsType.push_back(paramType->at(0));
-    } else {
+    if (paramType->size() == 0) {
+      reportError("must pass in a value as argument", param);
+    } else if (paramType->size() != 1) {
       std::stringstream errMsg;
-      if (paramType->size() == 0) {
-        errMsg << "must pass a value as argument";
-      } else {
-        errMsg << "cannot pass multiple values of types " 
-               << typeString(paramType) << " as a single argument";
-      }
+      errMsg << "cannot pass in multiple values of types " 
+             << typeString(paramType) << " as a single argument";
       reportError(errMsg.str(), param);
-      typeChecked = false;
+    } else {
+      actualsType[i] = paramType->at(0);
     }
   }
   
@@ -407,14 +410,49 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
   }
   
   const ir::Expr target = ctx.getSymbol(expr->target->ident).getExpr();
-  if (target.type().isSet()) {
-    const ir::SetType *targetSet = target.type().toSet();
-    actualsType.push_back(targetSet->elementType);
-    if (targetSet->endpointSets.size() > 0) {
-    }
-    // TODO: Check arguments.
-  } else {
+  if (!target.type().isSet()) {
     reportError("map operation can only be applied to sets", expr->target);
+  } else if (func.defined()) {
+    const ir::SetType *targetSetType = target.type().toSet();
+    actualsType.push_back(targetSetType->elementType);
+    
+    const auto funcArgs = func.getArguments();
+    if (targetSetType->endpointSets.size() > 0 && 
+        actualsType.size() != funcArgs.size()) {
+      // TODO: Should eventually support heterogeneous edge sets.
+      const auto neighborSetType = 
+          targetSetType->endpointSets[0]->type().toSet();
+      const auto neighborsType = ir::TupleType::make(
+          neighborSetType->elementType, targetSetType->endpointSets.size());
+      actualsType.push_back(neighborsType);
+    }
+   
+    if (actualsType.size() != funcArgs.size()) {
+      std::stringstream errMsg;
+      errMsg << "map operation passes " << actualsType.size() << " arguments "
+             << "to assembly function but function '" << func.getName()
+             << "' expects " << funcArgs.size() << " arguments";
+      reportError(errMsg.str(), expr);
+    } else {
+      for (unsigned i = 0; i < actualsType.size(); ++i) {
+        if (!actualsType[i].defined() || !funcArgs[i].getType().defined()) {
+          continue;
+        }
+        
+        if (!compareTypes(actualsType[i], funcArgs[i].getType())) {
+          std::stringstream errMsg;
+          errMsg << "map operation passes argument of type '"
+                 << typeString(actualsType[i]) << "' to assembly function but "
+                 << "function '" << func.getName() << "' expects argument of "
+                 << "type '" << typeString(funcArgs[i].getType());
+          if (i < expr->partialActuals.size()) {
+            reportError(errMsg.str(), expr->partialActuals[i]);
+          } else {
+            reportError(errMsg.str(), expr->target);
+          }
+        }
+      }
+    }
   }
 }
 
@@ -736,14 +774,18 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
 void TypeChecker::visit(CallExpr::Ptr expr) {
   iassert(ctx.containsFunction(expr->func->ident));
   const ir::Func func = ctx.getFunction(expr->func->ident);
+  const auto funcArgs = func.getArguments();
 
-  if (expr->arguments.size() != func.getArguments().size()) {
-    if (func.getKind() != ir::Func::Intrinsic) { 
+  if (expr->arguments.size() != funcArgs.size()) {
+    if (func.getKind() == ir::Func::Intrinsic && funcArgs.size() == 0) {
+      // TODO: Special handling for intrinsics.
+    } else {
       std::stringstream errMsg;
       errMsg << "passed in " << expr->arguments.size() << " arguments but "
-             << "function expects " << func.getArguments().size();
+             << "function '" << func.getName() << "' expects " 
+             << funcArgs.size();
       reportError(errMsg.str(), expr);
-    } // TODO: Special handling for intrinsics?
+    }
   } else {
     for (unsigned i = 0; i < expr->arguments.size(); ++i) {
       const Expr::Ptr argument = expr->arguments[i];
@@ -756,14 +798,15 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
         continue;
       }
   
-      if (argType->size() != 1) {
+      if (argType->size() == 0) {
+        reportError("must pass in a value as argument", argument);
+      } else if (argType->size() != 1) {
         std::stringstream errMsg;
-        errMsg << argType->size() << " values passed in as one argument";
+        errMsg << "cannot pass in multiple values of types "
+               << typeString(argType) << " as a single argument";
         reportError(errMsg.str(), argument);
-        continue;
-      }
-
-      if (!compareTypes(argType->at(0), func.getArguments()[i].getType())) {
+      } else if (funcArgs[i].getType().defined() && 
+          !compareTypes(argType->at(0), funcArgs[i].getType())) {
         std::stringstream errMsg;
         errMsg << "expected argument of type '" 
                << typeString(func.getArguments()[i].getType()) 
@@ -794,9 +837,12 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 
   if (lhsType->at(0).isTensor()) {
     const ir::TensorType *tensorType = lhsType->at(0).toTensor();
+    const auto dimensions = tensorType->getDimensions();
+    const auto outerDims = tensorType->getOuterDimensions();
+
     if (tensorType->getDimensions().size() != expr->indices.size()) {
       std::stringstream errMsg;
-      errMsg << "tensor access expected " << tensorType->getDimensions().size()
+      errMsg << "tensor access expected " << dimensions.size()
              << " indices but got " << expr->indices.size();
       reportError(errMsg.str(), expr);
       return;
@@ -813,7 +859,9 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 
         if (!paramType) {
           continue;
-        } else if (paramType->size() != 1) {
+        }
+        
+        if (paramType->size() != 1) {
           std::stringstream errMsg;
           if (paramType->size() == 0) {
             errMsg << "must pass a value as index";
@@ -822,17 +870,33 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
                    << typeString(paramType) << " as a single index";
           }
           reportError(errMsg.str(), param);
-          continue;
-        } //else if (paramType->at(0)
-
-        // TODO: Check arguments.
-        /*if (paramType->size() != 1 || !isScalar(paramType->at(0)) ||
-            !paramType->at(0).toTensor()->componentType.isInt()) {
-          std::stringstream errMsg;
-          errMsg << "expected an integral index but got an index of type " 
-                 << typeString(paramType);
-          reportError(errMsg.str(), param);
-        }*/
+        } else {
+          switch (outerDims[i].getKind()) {
+            case ir::IndexSet::Range:
+              if (!isInt(paramType->at(0))) {
+                std::stringstream errMsg;
+                errMsg << "expected an integral index but got an index of type " 
+                       << typeString(paramType);
+                reportError(errMsg.str(), param);
+              }
+              break;
+            case ir::IndexSet::Set:
+            {
+              const auto setType = outerDims[i].getSet().type().toSet();
+              if (!isInt(paramType->at(0)) && 
+                  !compareTypes(setType->elementType, paramType->at(0))) {
+                std::stringstream errMsg;
+                errMsg << "expected an integral index or an index of type "
+                       << typeString(setType->elementType) << " but got an "
+                       << "index of type " << typeString(paramType);
+                reportError(errMsg.str(), param);
+              }
+              break;
+            }
+            default:
+              break;
+          }
+        }
       }
     }
 
@@ -1067,7 +1131,6 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl,
   const auto initTensorType = initIRType.toTensor();
   if (isScalar(initIRType) && 
       varTensorType->componentType == initTensorType->componentType) {
-    // TODO: Verify that initial value is zero?
     return;
   }
 

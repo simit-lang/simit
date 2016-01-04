@@ -14,6 +14,19 @@ proc main
   foo();
 end
 
+%%% bad-call-3
+func foo(i : int)
+end
+
+proc main
+  foo(1.0);
+end
+
+%%% bad-call-4
+proc main
+  cos(2.0, 3.0);
+end
+
 %%% bad-assign-1
 proc main
   1 = 1;
@@ -27,6 +40,13 @@ end
 func foo(inout a : (E * 2))
   a(1).f = 1;
 end
+
+%%% bad-set-type
+element E
+end
+
+extern t : int;
+extern V : set{E}(t);
 
 %%% bad-tensor-type
 element E
@@ -131,11 +151,11 @@ proc main
   t = bazz();
 end
 
-%FIXME: bad-tensor-access
-%proc main
-%  var t : tensor[1](int);
-%  t(1.0);
-%end
+%%% bad-tensor-access
+proc main
+  var t : tensor[1](int);
+  t(1.0);
+end
 
 %%% bad-tensor-access-2
 func fizz()
@@ -308,4 +328,60 @@ end
 proc main
   M = [[[1 2],[3 4]],[[5 6], [7 8]]];
   M / 2.0;
+end
+
+%%% bad-map-1
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V,V);
+
+func f(v : E, u : (E * 1))
+end
+
+proc main
+  map f to U;
+end
+
+%%% bad-map-2
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V,V);
+
+func g(u : (E * 2))
+end
+
+proc main
+  map g to U;
+end
+
+%%% bad-map-3
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V,V);
+
+func h(f : float, v : E, u : (E * 2))
+end
+
+proc main
+  map h to U;
+end
+
+%%% bad-map-4
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V,V);
+
+func h(f : float, v : E, u : (E * 2))
+end
+
+proc main
+  map h(1) to U;
 end
