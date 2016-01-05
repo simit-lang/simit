@@ -8,12 +8,12 @@ elseif exists("b:current_syntax")
   finish
 endif
 
-syn keyword simitType         float int boolean vector matrix tensor
-syn keyword simitStatement    element set func proc
-syn keyword simitConditional  if elseif else end
+syn keyword simitType         float int boolean vector matrix tensor set inout
+syn keyword simitStatement    element func proc
+syn keyword simitConditional  if elif else end
 syn keyword simitRepeat       for in while do
-syn keyword simitStorageClass const extern
-syn keyword simitFunc         map to reduce
+syn keyword simitStorageClass const extern var
+syn keyword simitFunc         map to reduce print
 
 syn keyword simitTodo         contained  TODO NOTE FIXME XXX
 
