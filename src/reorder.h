@@ -19,10 +19,6 @@ namespace simit {
     int fieldIndex = vertexSet.getFieldIndex("x");
     T* spatialData = static_cast<T*>(fields[fieldIndex]->data);
     
-    // std::ofstream output;
-    // output.open("/data/scratch/ptew/simit/test/input/program/fem/dragon-hilbert-edge-reorderd.ele");
-    // output << edgeset.getsize() << " 3 0 0\n"; 
-
     int dim = 3;
     int cardinality = edgeSet.getCardinality(); 
     std::vector<float> sum(3,0);
@@ -35,18 +31,18 @@ namespace simit {
       edgeSpatialField.set(element, sum);
       std::fill(sum.begin(), sum.end(), 0);
     }
-    // output.close();
   }
   
   template<typename T>
-  void reorderFieldData(T* data, const std::vector<int>& vertexOrdering, const int capacity, const int typeSize) {
+  void reorderFieldData(T* data, const std::vector<int>& vertexOrdering, const int typeSize) {
+    const int capacity = vertexOrdering.size(); 
     T* newData = static_cast<T*>(malloc(capacity * typeSize));
     int dim = typeSize/sizeof(T);
     assert(dim > 0);
 
-    for ( int i=0; i<vertexOrdering.size(); ++i) {
+    for ( int i=0; i < capacity; ++i) {
       for ( int x=0; x<dim; ++x) {
-        assert(vertexOrdering[i]*dim + x < vertexOrdering.size() * dim);
+        assert(vertexOrdering[i]*dim + x < capacity * dim);
         newData[vertexOrdering[i]*dim+x] = data[i*dim+x];
       }
     }
@@ -54,5 +50,32 @@ namespace simit {
     memcpy(data, newData, capacity * typeSize); 
     delete newData;
   }
+
+  namespace hilbert {
+    
+    typedef uint64_t vid_t;  // vertex id type
+
+    struct edges_t {
+      vid_t cntEdges;
+      vid_t * edges;
+    };
+    typedef struct edges_t edges_t;
+
+    struct vertex_t {
+      vid_t id;
+      vid_t hilbertId;
+      double x;
+      double y;
+      double z;
+      void * data;
+      edges_t edgeData;
+    };
+    typedef struct vertex_t vertex_t;
+
+    typedef std::pair<vid_t, vid_t> edge_t;
+
+    void hilbertReorder(Set& vertexSet, std::vector<int>& vertexOrdering, int vertexCount);
+  } // namespace simit::hilbert
+
 } // namespace simit 
 #endif
