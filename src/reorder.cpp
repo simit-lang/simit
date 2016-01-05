@@ -1,6 +1,8 @@
+
 #include "reorder.h"
 
 #include "graph.h"
+#include "hilbert-reorder.h"
 #include <algorithm>
 #include <map>
 #include <vector>
@@ -179,12 +181,17 @@ namespace simit {
   }
 
   void reorder(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
+    
     //cout << "Score Pre Reorder" << endl;
     //cout << "Total edge distance: " << scoreEdges(edgeSet.getEndpointsPtr(), getSize(), getCardinality()) << endl;
+    
     // Get new vertex ordering based on given heuristic 
     iassert(vertexOrdering.size() == 0);
-    bfs(vertexOrdering, edgeSet.getEndpointsPtr(), vertexSet.getSize(), edgeSet.getCardinality());
+    //bfs(vertexOrdering, edgeSet.getEndpointsPtr(), vertexSet.getSize(), edgeSet.getCardinality());
+    hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
+    
     //vertexDegreeReordering(vertexOrdering, edgeSet.getEndpointsPtr(), getSize(), getCardinality());
+    
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     
     // Reset Endpoints to reflect reordering
@@ -219,35 +226,35 @@ namespace simit {
       }
     }
     
-    vector<int> edgeOrdering;
-    //cout << "Score before : " << scoreEdges(edgeSet.getEndpointsPtr(),edgeSet.getSize(), edgeSet.getCardinality()) << endl;
-    edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
-    iassert(edgeOrdering.size() == edgeSet.getSize()); 
-    reorderEdges(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality()); 
-    //cout << "Score after : " << scoreEdges(edgeSet.getEndpointsPtr(),edgeSet.getSize(), edgeSet.getCardinality()) << endl;
-    
-    for (auto f : edgeSet.getFields()) {
-      switch (f->type->getComponentType()) {
-        case ComponentType::Float: {
-          float* data = static_cast<float *>(f->data);
-          reorderFieldData(data, edgeOrdering, edgeSet.getSize(), f->sizeOfType);
-          break;
-        }
-        case ComponentType::Double: {
-          double* data = static_cast<double *>(f->data);
-          reorderFieldData(data, edgeOrdering, edgeSet.getSize(), f->sizeOfType);
-          break;
-        }
-        case ComponentType::Int: {
-          int* data = static_cast<int *>(f->data);
-          reorderFieldData(data, edgeOrdering, edgeSet.getSize(), f->sizeOfType);
-          break;
-        }
-        case ComponentType::Boolean: {
-          bool* data = static_cast<bool *>(f->data);
-          reorderFieldData(data, edgeOrdering, edgeSet.getSize(), f->sizeOfType);
-        }
-      }
-    }
+    // vector<int> edgeOrdering;
+    // //cout << "Score before : " << scoreEdges(edgeSet.getEndpointsPtr(),edgeSet.getSize(), edgeSet.getCardinality()) << endl;
+    // edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
+    // iassert(edgeOrdering.size() == edgeSet.getSize()); 
+    // reorderEdges(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality()); 
+    // //cout << "Score after : " << scoreEdges(edgeSet.getEndpointsPtr(),edgeSet.getSize(), edgeSet.getCardinality()) << endl;
+    // 
+    // for (auto f : edgeSet.getFields()) {
+    //   switch (f->type->getComponentType()) {
+    //     case ComponentType::Float: {
+    //       float* data = static_cast<float *>(f->data);
+    //       reorderFieldData(data, edgeOrdering, edgeSet.getSize(), f->sizeOfType);
+    //       break;
+    //     }
+    //     case ComponentType::Double: {
+    //       double* data = static_cast<double *>(f->data);
+    //       reorderFieldData(data, edgeOrdering, edgeSet.getSize(), f->sizeOfType);
+    //       break;
+    //     }
+    //     case ComponentType::Int: {
+    //       int* data = static_cast<int *>(f->data);
+    //       reorderFieldData(data, edgeOrdering, edgeSet.getSize(), f->sizeOfType);
+    //       break;
+    //     }
+    //     case ComponentType::Boolean: {
+    //       bool* data = static_cast<bool *>(f->data);
+    //       reorderFieldData(data, edgeOrdering, edgeSet.getSize(), f->sizeOfType);
+    //     }
+    //   }
+    // }
   }
 }

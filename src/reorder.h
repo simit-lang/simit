@@ -19,9 +19,9 @@ namespace simit {
     int fieldIndex = vertexSet.getFieldIndex("x");
     T* spatialData = static_cast<T*>(fields[fieldIndex]->data);
     
-    std::ofstream output;
-    output.open("/data/scratch/ptew/simit/test/input/program/fem/dragon-hilbert-edge-reorderd.ele");
-    output << edgeSet.getSize() << " 3 0 0\n"; 
+    // std::ofstream output;
+    // output.open("/data/scratch/ptew/simit/test/input/program/fem/dragon-hilbert-edge-reorderd.ele");
+    // output << edgeset.getsize() << " 3 0 0\n"; 
 
     int dim = 3;
     int cardinality = edgeSet.getCardinality(); 
@@ -31,28 +31,11 @@ namespace simit {
         for (int z=0; z < dim; ++z) {
           sum[z] += spatialData[endpoint.getIdent()*dim + z]/edgeSet.getCardinality();
         }
-        //if ( element.getIdent() < 5 ) {
-        //  std::cout << spatialData[endpoint.getIdent()*dim + 0] << ", ";
-        //  std::cout << spatialData[endpoint.getIdent()*dim + 1] << ", ";
-        //  std::cout << spatialData[endpoint.getIdent()*dim + 2];
-        //  std::cout << " + " << std::endl;
-        //}
       }
       edgeSpatialField.set(element, sum);
-      //if ( element.getIdent() < 5 ) {
-      //  std::cout << "==========================" << std::endl;
-      //  std::cout << sum[0] << ", ";
-      //  std::cout << sum[1] << ", ";
-      //  std::cout << sum[2];
-      //  std::cout << "\n" << std::endl;
-      //}
       std::fill(sum.begin(), sum.end(), 0);
     }
-    output.close();
-    //float* data = static_cast<float *>(edgeSet.getFieldData(name));
-    //std::cout << "0: " << data[0] << std::endl;
-    //std::cout << "1: " << data[1] << std::endl;
-    //std::cout << "2: " << data[2] << std::endl;
+    // output.close();
   }
   
   template<typename T>
