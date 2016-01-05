@@ -193,19 +193,21 @@ private:
   }
 
   bool compareTypes(const ir::Type &l, const ir::Type &r) {
+    iassert(l.defined() && r.defined());
     return (l.kind() == r.kind() && l == r);
   }
   std::string typeString(const ir::Type &type) {
     std::stringstream oss;
-    oss << type;
+    oss << "'" << type;
     if (type.isTensor() && type.toTensor()->isColumnVector) {
       oss << "'";
     }
+    oss << "'";
     return oss.str();
   }
   std::string typeString(const Ptr<Expr::Type> &type) {
     if (type->size() == 0) {
-      return "none";
+      return "void";
     }
 
     std::stringstream oss;
@@ -218,7 +220,7 @@ private:
       if (printDelimiter) {
         oss << ", ";
       }
-      oss << "'" << typeString(compType) << "'";
+      oss << typeString(compType);
       printDelimiter = true;
     }
 

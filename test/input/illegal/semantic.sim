@@ -23,6 +23,17 @@ proc main
 end
 
 %%% bad-call-4
+func foo(i : int)
+end
+
+func bar() -> (i : int, j : int)
+end
+
+proc main
+  foo(bar());
+end
+
+%%% bad-call-5
 proc main
   cos(2.0, 3.0);
 end
@@ -197,12 +208,23 @@ func f(a : (E * 2))
   a(:);
 end
 
-%%% bad-tuple-access-1
+%%% bad-tuple-access-3
 element E
 end
 
 func f(a : (E * 2))
   a(0.0 + 1.0);
+end
+
+%%% bad-tuple-access-4
+element E
+end
+
+func fizz()
+end
+
+func f(a : (E * 2))
+  a(fizz());
 end
 
 %%% bad-access
@@ -318,6 +340,11 @@ proc main
   1.0 * 2;
 end
 
+%%% bad-mul-8
+proc main
+  [1 2] * [1 2 3]';
+end
+
 %%% bad-div-1
 proc main
   M = [[[1 2],[3 4]],[[5 6], [7 8]]];
@@ -384,4 +411,44 @@ end
 
 proc main
   map h(1) to U;
+end
+
+%%% bad-map-5
+func h(f : float)
+end
+
+proc main
+  t = 1.0;
+  map h to t; 
+end
+
+%%% undeclared-var
+proc main
+  z * z - 2;
+end
+
+%%% bad-and
+proc main
+  1 and 2;
+end
+
+%%% bad-eq-1
+proc main
+  s = [1 2];
+  s == s;
+end
+
+%%% bad-eq-2
+proc main
+  1 == 2 == 2.0;
+end
+
+%%% bad-not
+proc main
+  not 1;
+end
+
+%%% bad-neg
+proc main
+  -true;
 end
