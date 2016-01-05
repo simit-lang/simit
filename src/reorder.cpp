@@ -19,6 +19,8 @@
 
 using namespace std;
 namespace simit {
+
+  // ---------- Hilbert Reordering Heuristic ----------
   namespace hilbert {
     // This function populates the hilbertId field of each vertex_t in nodes, by
     // remapping every vertex onto an n^3 lattice using appropriate scaling factors,
@@ -173,7 +175,8 @@ namespace simit {
 
     }
   } // namespace simit::hilbert
-  
+ 
+  // ---------- Simit Level Reordering Heuristics ----------
   void bfs(vector<int>& vertexOrdering, int* endpoints, int size, int cardinality)
   {
     list<int> queue;
