@@ -82,14 +82,6 @@ func compute_force(h:float, e : Tet, v : (Vert*4)) -> (f : tensor[verts](tensor[
   
 end
 
-func sliceMat(Kb:tensor[4,3,3](float), ii:int)->(K:tensor[3,3](float))
-  for jj in 0:3
-    for kk in 0:3
-      K(jj,kk) = Kb(ii,jj,kk);
-    end
-  end
-end
-
 func compute_stiffness(h:float, e : Tet, v : (Vert*4)) ->
      (K : tensor[verts,verts](tensor[3,3](float)))
   var Ds :tensor[3,3](float);
@@ -132,7 +124,7 @@ func compute_stiffness(h:float, e : Tet, v : (Vert*4)) ->
         c1 = v(jj).c;
         c2 = v(row).c;
         if(c1<=0) and (c2<=0)
-          K(v(jj) , v(row)) = -(h*h*sliceMat(Kb,jj));
+          K(v(jj) , v(row)) = -(h*h*Kb(jj,:,:));
         end
     end
   end
