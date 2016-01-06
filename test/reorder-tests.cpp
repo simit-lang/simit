@@ -1,6 +1,5 @@
 #include "simit-test.h"
 
-#include <iostream>
 
 #include "graph.h"
 #include "reorder.h"
@@ -8,8 +7,29 @@
 #include "error.h"
 #include "mesh.h"
 
+#include <iostream>
+#include <ostream>
+
 using namespace std;
 using namespace simit;
+
+void vertexDataChecks(FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs, 
+    FieldRef<simit_float,3>& reorder_x, vector<ElementRef>& reorder_vertRefs,
+    vector<int>& newOrdering) {
+
+  for (int i = 0; i < newOrdering.size(); ++i) {
+    SIMIT_ASSERT_FLOAT_EQ(x.get(vertRefs[newOrdering[i]])(0), reorder_x.get(reorder_vertRefs[i])(0));
+    SIMIT_ASSERT_FLOAT_EQ(x.get(vertRefs[newOrdering[i]])(1), reorder_x.get(reorder_vertRefs[i])(1));
+    SIMIT_ASSERT_FLOAT_EQ(x.get(vertRefs[newOrdering[i]])(2), reorder_x.get(reorder_vertRefs[i])(2));
+  }
+}
+
+void outputResults(ostream& os, FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs) {
+  int counter = 0;
+  for (auto& vert : vertRefs) {
+    os << counter++ << " " << x.get(vert)(0) << " " << x.get(vert)(1) << " " << x.get(vert)(2) << endl;
+  }
+}
 
 FieldRef<simit_float,3> initializeTest(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
   FieldRef<simit_float,3>  x = m_verts.addSpatialField<simit_float,3>("x");
@@ -133,6 +153,9 @@ TEST(Program, reorderDragonRandom) {
   string prefix="/data/scratch/ptew/random-graphs/dragon.0";
   string nodeFile = prefix + ".node";
   string eleFile = prefix + ".ele";
+  string filename = string(TEST_INPUT_DIR) + "/" +
+                         toLower(test_info_->test_case_name()) + "/" +
+                         "femTet.sim";
   size_t nSteps = 10;
   MeshVol mv;
   mv.loadTet(nodeFile.c_str(), eleFile.c_str());
@@ -142,11 +165,20 @@ TEST(Program, reorderDragonRandom) {
   
   FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
   
+  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  
+  MeshVol reorder_mv;
+  reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set reorder_m_verts;
+  Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
+  vector<ElementRef> reorder_vertRefs;
+  
+  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  
   vector<int> newOrdering;
   reorder(m_tets, m_verts, newOrdering);
     
-  string filename = string(TEST_INPUT_DIR) + "/" +
-                         toLower(test_info_->test_case_name()) + "/" +
-                         "femTet.sim";
-  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  
+  vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, newOrdering);
 }
