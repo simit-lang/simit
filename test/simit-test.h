@@ -43,6 +43,8 @@ inline std::string toLower(std::string str) {
 #define SIMIT_ASSERT_FLOAT_EQ(a, b) ASSERT_NEAR(a, b, 0.0000000000001)
 #endif
 
+#define SIMIT_ASSERT_FLOAT_NEAR_EQ(a, b) ASSERT_NEAR(a, b, 0.00001)
+
 std::unique_ptr<simit::backend::Backend> getTestBackend();
 
 simit::Function loadFunction(std::string fileName, std::string funcName="main");

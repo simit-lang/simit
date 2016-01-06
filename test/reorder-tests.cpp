@@ -9,6 +9,7 @@
 
 #include <iostream>
 #include <ostream>
+#include <ctime>
 
 using namespace std;
 using namespace simit;
@@ -18,9 +19,9 @@ void vertexDataChecks(FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs,
     vector<int>& newOrdering) {
 
   for (int i = 0; i < newOrdering.size(); ++i) {
-    SIMIT_ASSERT_FLOAT_EQ(x.get(vertRefs[newOrdering[i]])(0), reorder_x.get(reorder_vertRefs[i])(0));
-    SIMIT_ASSERT_FLOAT_EQ(x.get(vertRefs[newOrdering[i]])(1), reorder_x.get(reorder_vertRefs[i])(1));
-    SIMIT_ASSERT_FLOAT_EQ(x.get(vertRefs[newOrdering[i]])(2), reorder_x.get(reorder_vertRefs[i])(2));
+    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(0), reorder_x.get(reorder_vertRefs[newOrdering[i]])(0));
+    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(1), reorder_x.get(reorder_vertRefs[newOrdering[i]])(1));
+    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(2), reorder_x.get(reorder_vertRefs[newOrdering[i]])(2));
   }
 }
 
@@ -111,7 +112,7 @@ void loadAndRunTest(string& filename, Set& m_verts, Set& m_tets, const int nStep
   m_timeStepper.mapArgs();
 }
 
-TEST(Program, reorderFemTet) {
+TEST(Program, reorderFemSpecificTest) {
   string dir(TEST_INPUT_DIR);
   string prefix=dir+"/program/fem/bar2k";
   string nodeFile = prefix + ".node";
@@ -149,7 +150,56 @@ TEST(Program, reorderFemTet) {
   SIMIT_ASSERT_FLOAT_EQ(0.030173075240629205,  x.get(vertRefs[three])(2));
 }
 
-TEST(Program, reorderDragonRandom) {
+TEST(Program, reorderFemTest) {
+  string dir(TEST_INPUT_DIR);
+  string prefix=dir+"/program/fem/bar2k";
+  string nodeFile = prefix + ".node";
+  string eleFile = prefix + ".ele";
+  string filename = string(TEST_INPUT_DIR) + "/" +
+                         toLower(test_info_->test_case_name()) + "/" +
+                         "femTet.sim";
+  size_t nSteps = 10;
+  MeshVol mv;
+  mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set m_verts;
+  Set m_tets(m_verts,m_verts,m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  
+  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  
+  clock_t begin = clock();
+  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  clock_t end = clock(); 
+  double randomTime = double(end - begin) / CLOCKS_PER_SEC;
+  
+  cout << "Random Ordering took:  " << randomTime << " seconds" << endl;
+  MeshVol reorder_mv;
+  reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set reorder_m_verts;
+  Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
+  vector<ElementRef> reorder_vertRefs;
+  
+  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  
+  begin = clock();
+  vector<int> newOrdering;
+  reorder(reorder_m_tets, reorder_m_verts, newOrdering);
+  end = clock();
+  double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Reordering took:       " << reorderTime << " seconds" << endl;
+  
+  begin = clock();
+  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  end = clock();
+  double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
+  cout << "Reordering Percentage: " << (reorderTime / reorderedTime) * 100 << "%" << endl;
+  cout << "Reordering Speedup:    " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
+  
+  vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, newOrdering);
+}
+
+TEST(Program, reorderDragon0) {
   string prefix="/data/scratch/ptew/random-graphs/dragon.0";
   string nodeFile = prefix + ".node";
   string eleFile = prefix + ".ele";
@@ -165,8 +215,12 @@ TEST(Program, reorderDragonRandom) {
   
   FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
   
+  clock_t begin = clock();
   loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  clock_t end = clock(); 
+  double randomTime = double(end - begin) / CLOCKS_PER_SEC;
   
+  cout << "Random Ordering took:  " << randomTime << " seconds" << endl;
   MeshVol reorder_mv;
   reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
   Set reorder_m_verts;
@@ -175,10 +229,164 @@ TEST(Program, reorderDragonRandom) {
   
   FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
   
+  begin = clock();
   vector<int> newOrdering;
-  reorder(m_tets, m_verts, newOrdering);
-    
+  reorder(reorder_m_tets, reorder_m_verts, newOrdering);
+  end = clock();
+  double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Reordering took:       " << reorderTime << " seconds" << endl;
+  
+  begin = clock();
   loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  end = clock();
+  double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
+  cout << "Reordering Percentage: " << (reorderTime / reorderedTime) * 100 << "%" << endl;
+  cout << "Reordering Speedup:    " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
+  
+  vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, newOrdering);
+}
+
+TEST(Program, reorderDragon1) {
+  string prefix="/data/scratch/ptew/random-graphs/dragon.1";
+  string nodeFile = prefix + ".node";
+  string eleFile = prefix + ".ele";
+  string filename = string(TEST_INPUT_DIR) + "/" +
+                         toLower(test_info_->test_case_name()) + "/" +
+                         "femTet.sim";
+  size_t nSteps = 10;
+  MeshVol mv;
+  mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set m_verts;
+  Set m_tets(m_verts,m_verts,m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  
+  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  
+  clock_t begin = clock();
+  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  clock_t end = clock(); 
+  double randomTime = double(end - begin) / CLOCKS_PER_SEC;
+  
+  cout << "Random Ordering took:  " << randomTime << " seconds" << endl;
+  MeshVol reorder_mv;
+  reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set reorder_m_verts;
+  Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
+  vector<ElementRef> reorder_vertRefs;
+  
+  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  
+  begin = clock();
+  vector<int> newOrdering;
+  reorder(reorder_m_tets, reorder_m_verts, newOrdering);
+  end = clock();
+  double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Reordering took:       " << reorderTime << " seconds" << endl;
+  
+  begin = clock();
+  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  end = clock();
+  double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
+  cout << "Reordering Percentage: " << (reorderTime / reorderedTime) * 100 << "%" << endl;
+  cout << "Reordering Speedup:    " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
+  
+  vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, newOrdering);
+}
+
+TEST(Program, reorderDragon2) {
+  string prefix="/data/scratch/ptew/random-graphs/dragon.2";
+  string nodeFile = prefix + ".node";
+  string eleFile = prefix + ".ele";
+  string filename = string(TEST_INPUT_DIR) + "/" +
+                         toLower(test_info_->test_case_name()) + "/" +
+                         "femTet.sim";
+  size_t nSteps = 10;
+  MeshVol mv;
+  mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set m_verts;
+  Set m_tets(m_verts,m_verts,m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  
+  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  
+  clock_t begin = clock();
+  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  clock_t end = clock(); 
+  double randomTime = double(end - begin) / CLOCKS_PER_SEC;
+  
+  cout << "Random Ordering took:  " << randomTime << " seconds" << endl;
+  MeshVol reorder_mv;
+  reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set reorder_m_verts;
+  Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
+  vector<ElementRef> reorder_vertRefs;
+  
+  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  
+  begin = clock();
+  vector<int> newOrdering;
+  reorder(reorder_m_tets, reorder_m_verts, newOrdering);
+  end = clock();
+  double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Reordering took:       " << reorderTime << " seconds" << endl;
+  
+  begin = clock();
+  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  end = clock();
+  double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
+  cout << "Reordering Percentage: " << (reorderTime / reorderedTime) * 100 << "%" << endl;
+  cout << "Reordering Speedup:    " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
+  
+  vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, newOrdering);
+}
+
+TEST(Program, reorderDragon3) {
+  string prefix="/data/scratch/ptew/random-graphs/dragon.3";
+  string nodeFile = prefix + ".node";
+  string eleFile = prefix + ".ele";
+  string filename = string(TEST_INPUT_DIR) + "/" +
+                         toLower(test_info_->test_case_name()) + "/" +
+                         "femTet.sim";
+  size_t nSteps = 10;
+  MeshVol mv;
+  mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set m_verts;
+  Set m_tets(m_verts,m_verts,m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  
+  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  
+  clock_t begin = clock();
+  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  clock_t end = clock(); 
+  double randomTime = double(end - begin) / CLOCKS_PER_SEC;
+  
+  cout << "Random Ordering took:  " << randomTime << " seconds" << endl;
+  MeshVol reorder_mv;
+  reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set reorder_m_verts;
+  Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
+  vector<ElementRef> reorder_vertRefs;
+  
+  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  
+  begin = clock();
+  vector<int> newOrdering;
+  reorder(reorder_m_tets, reorder_m_verts, newOrdering);
+  end = clock();
+  double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Reordering took:       " << reorderTime << " seconds" << endl;
+  
+  begin = clock();
+  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  end = clock();
+  double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
+  cout << "Reordering Percentage: " << (reorderTime / reorderedTime) * 100 << "%" << endl;
+  cout << "Reordering Speedup:    " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
   
   vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, newOrdering);
 }
