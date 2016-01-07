@@ -143,3 +143,21 @@ simit::Function loadFunction(std::string fileName, std::string funcName="main"){
 
   return f;
 }
+
+simit::Function loadFunctionWithTimers(std::string fileName, std::string funcName="main"){
+  simit::Program program;
+  int errorCode = program.loadFile(fileName);
+  if (errorCode) {
+    std::cerr << program.getDiagnostics().getMessage();
+    return simit::Function();
+  }
+
+  simit::Function f = program.compileWithTimers(funcName);
+  
+  if (!f.defined()) {
+    std::cerr << program.getDiagnostics().getMessage();
+  }
+
+  return f;
+}
+
