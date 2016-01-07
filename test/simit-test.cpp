@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "timers.h"
 #include "program.h"
 #include "init.h"
 #include "ir.h"
@@ -107,7 +108,11 @@ int main(int argc, char **argv) {
 
   simit::init(simitBackend, floatSize);
 
-  return RUN_ALL_TESTS();
+  int returnValue = RUN_ALL_TESTS();
+#ifdef PROFILE
+  simit::printTimes(); 
+#endif
+  return returnValue;
 }
 
 namespace simit {
@@ -127,7 +132,11 @@ simit::Function loadFunction(std::string fileName, std::string funcName="main"){
     return simit::Function();
   }
 
+#ifdef PROFILE
+  simit::Function f = program.compileWithTimers(funcName);
+#else
   simit::Function f = program.compile(funcName);
+#endif
   if (!f.defined()) {
     std::cerr << program.getDiagnostics().getMessage();
   }

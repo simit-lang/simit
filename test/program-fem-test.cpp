@@ -76,18 +76,14 @@ TEST(Program, femTet) {
     l.set(t,lval);    
   }
   
-  simit::Program program;
-  int errorCode = program.loadFile(TEST_FILE_NAME);
-  m_precomputation = program.compileWithTimers("initializeTet");
-  if(errorCode) { std::cout<<program.getDiagnostics().getMessage(); exit(0); }
-  if(!m_precomputation.defined()) FAIL();
+  m_precomputation = loadFunction(TEST_FILE_NAME, "initializeTet");
 
   m_precomputation.bind("verts", &m_verts);
   m_precomputation.bind("tets", &m_tets);
   m_precomputation.init();
   m_precomputation.runSafe();
   
-  m_timeStepper = program.compileWithTimers("main");
+  m_timeStepper = loadFunction(TEST_FILE_NAME, "main");
   if(!m_timeStepper.defined()) FAIL();
   m_timeStepper.bind("verts", &m_verts);
   m_timeStepper.bind("tets", &m_tets);
@@ -96,7 +92,7 @@ TEST(Program, femTet) {
   for (size_t i=0; i < nSteps; ++i) {
     m_timeStepper.runSafe();
   }
-  simit::printTimes();
+  
   // Check outputs
   SIMIT_ASSERT_FLOAT_EQ(0.010771915616785779,  x.get(vertRefs[100])(0));
   SIMIT_ASSERT_FLOAT_EQ(0.058853573999788439,  x.get(vertRefs[100])(1));

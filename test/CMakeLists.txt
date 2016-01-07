@@ -1,5 +1,6 @@
 set(TESTS simit-test)
 set(TESTS_F32 simit-test-f32)
+set(TESTS_PROFILE simit-profile)
 
 file(GLOB GTEST_SOURCE gtest/gtest-all.cc)
 file(GLOB GTEST_HEADER gtest/gtest.h)
@@ -20,6 +21,12 @@ target_link_libraries(${TESTS_F32} pthread)
 set_target_properties(${TESTS_F32} PROPERTIES COMPILE_DEFINITIONS F32)
 target_link_libraries(${TESTS_F32} ${PROJECT_NAME})
 
+add_executable(${TESTS_PROFILE} ${SOURCES} ${HEADERS})
+target_link_libraries(${TESTS_PROFILE} gtest)
+target_link_libraries(${TESTS_PROFILE} pthread)
+set_target_properties(${TESTS_PROFILE} PROPERTIES COMPILE_DEFINITIONS PROFILE)
+target_link_libraries(${TESTS_PROFILE} ${PROJECT_NAME})
+
 set(SIMIT_TEST_INPUT_DIR ${SIMIT_TEST_DIR}/input)
 add_definitions(-DTEST_INPUT_DIR="${SIMIT_TEST_INPUT_DIR}")
 add_definitions(-DEXAMPLES_DIR="${SIMIT_EXAMPLES_DIR}")
@@ -36,6 +43,8 @@ if ($ENV{SIMIT_TEST_VIZ})
     target_link_libraries(${TESTS} ${PROJECT_NAME}viz)
     target_link_libraries(${TESTS_F32} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} )
     target_link_libraries(${TESTS_F32} ${PROJECT_NAME}viz)
+    target_link_libraries(${TESTS_PROFILE} ${OPENGL_LIBRARIES} ${GLUT_LIBRARY} )
+    target_link_libraries(${TESTS_PROFILE} ${PROJECT_NAME}viz)
   endif ()
 endif ()
 
