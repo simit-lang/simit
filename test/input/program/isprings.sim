@@ -79,11 +79,11 @@ proc main
 
   % We should not be resetting vguess to zero every time step
   vguess = points.v;
-  var v : tensor[points](tensor[3](float));
+  var v : tensor[points](tensor[3](float))';
 
   tol = 1e-5;
   maxiters = 25;
-  r = f - (MDK*vguess);
+  r = f' - MDK*vguess;
   p = r;
   iter = 0;
   v = vguess;

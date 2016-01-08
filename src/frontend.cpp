@@ -8,6 +8,7 @@
 #include "error.h"
 #include "parser/scanner.h"
 #include "parser/parser.h"
+#include "token.h"
 #include "scanner.h"
 #include "parser.h"
 #include "hir.h"

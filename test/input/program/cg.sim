@@ -29,8 +29,8 @@ proc main
 
   A = I - 0.01 * A;
 
-  var xguess : tensor[points](float) = 0.0;
-  var x : tensor[points](float);
+  var xguess : tensor[points](float)' = 0.0;
+  var x : tensor[points](float)';
 
 % begin inlined CG
   tol = 1e-6;

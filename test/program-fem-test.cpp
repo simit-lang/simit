@@ -77,8 +77,8 @@ TEST(Program, femTet) {
   
   simit::Program program;
   int errorCode = program.loadFile(TEST_FILE_NAME);
+  if(errorCode) { std::cout<<program.getDiagnostics().getMessage(); FAIL(); }
   m_precomputation = program.compile("initializeTet");
-  if(errorCode) { std::cout<<program.getDiagnostics().getMessage(); exit(0); }
   if(!m_precomputation.defined()) FAIL();
 
   m_precomputation.bind("verts", &m_verts);

@@ -32,24 +32,10 @@ public:
   virtual unsigned getLineEnd() { return lineEnd; }
   virtual unsigned getColEnd() { return colEnd; }
 
-  void setBeginLoc(const internal::Token &token) {
-    lineBegin = token.lineBegin;
-    colBegin = token.colBegin;
-  }
-  void setEndLoc(const internal::Token &token) {
-    lineEnd = token.lineEnd;
-    colEnd = token.colEnd;
-  }
-  void setLoc(const internal::Token &token) {
-    setBeginLoc(token);
-    setEndLoc(token);
-  }
-  void setLoc(const HIRNode::Ptr node) {
-    lineBegin = node->lineBegin;
-    colBegin = node->colBegin;
-    lineEnd = node->lineEnd;
-    colEnd = node->colEnd;
-  }
+  void setBeginLoc(const internal::Token &);
+  void setEndLoc(const internal::Token &);
+  void setLoc(const internal::Token &);
+  void setLoc(HIRNode::Ptr);
 
   friend std::ostream &operator<<(std::ostream &, HIRNode &);
 };
@@ -61,7 +47,7 @@ inline bool isa(HIRNode::Ptr ptr) {
 
 template <typename T>
 inline const std::shared_ptr<T> to(HIRNode::Ptr ptr) {
-  iassert(isa<T>(ptr)) << "wrong type";
+  iassert(isa<T>(ptr));
   return std::static_pointer_cast<T>(ptr);
 }
 

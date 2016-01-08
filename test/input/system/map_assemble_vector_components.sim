@@ -8,7 +8,7 @@ end
 extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
-func f(s : Spring, p : (Point*2)) -> (X : tensor[points](tensor[2](float)))
+func f(s : Spring, p : (Point*2)) -> (X : tensor[points](tensor[2](float))')
   X(p(0))(0) = 42.0; 
 end
 

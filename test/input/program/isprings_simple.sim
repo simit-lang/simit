@@ -88,14 +88,14 @@ proc main
 
   %r = f - MK*v;
   MKv = MK * points.v;
-  r = f - MKv;
+  r = f - MKv';
 
   r2old = r*r';
 
-  Ap = MK*r;
+  Ap = MK*r';
   rap = r*Ap;
   a = r2old/rap;
-  ap = a*r;
+  ap = a*r';
 
   v = points.v + ap;
   points.v2 = v;

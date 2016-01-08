@@ -48,6 +48,12 @@ void FuncCallRewriter::visit(TensorReadExpr::Ptr expr) {
   node = call;
 }
 
+void FuncCallRewriter::reportError(std::string msg, HIRNode::Ptr loc) {
+  const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
+                              loc->getLineEnd(), loc->getColEnd(), msg);
+  errors->push_back(err);
+}
+
 }
 }
 
