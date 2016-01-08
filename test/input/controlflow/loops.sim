@@ -33,6 +33,16 @@ func empty_for() -> (a : int)
   end
 end
 
+%%% empty_body
+%! empty_body() == 0;
+func empty_body() -> (a : int)
+  a = 0;
+  for i in 0:1
+    for j in 0:1
+    end
+  end
+end
+
 %%% while
 %! f(5) == 10;
 func f(p : int) -> (r : int)

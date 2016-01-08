@@ -111,9 +111,10 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
     const ElementType *elemType = setType->elementType.toElement();
 
     const TensorType *elemFieldType= elemType->field(fieldName).type.toTensor();
+    const ScalarType componentType = elemFieldType->componentType; 
 
-    // The type of a set field is:
-    // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))`
+    // The type of a set field is 
+    // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))'`
     vector<IndexDomain> dimensions;
     if (elemFieldType->order() == 0) {
       dimensions.push_back(IndexDomain(IndexSet(elementOrSet)));
@@ -128,7 +129,7 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
         dimensions[i] = dimensions[i] * elemFieldDimensions[i];
       }
     }
-    fieldType = TensorType::make(elemFieldType->componentType, dimensions);
+    fieldType = TensorType::make(componentType, dimensions, true); 
   }
   return fieldType;
 }

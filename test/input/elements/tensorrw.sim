@@ -26,3 +26,16 @@ func writebig(a : tensor[2,3](float), b : int, c : int, d : float) -> (e : tenso
   e = a;
   e(b,c) = d;
 end
+
+%%% tensor-write-block
+%! writeblock([1.0, 2.0; 3.0, 4.0]) == [1.0, 2.0; 3.0, 4.0];
+func writeblock(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+  var t : tensor[3,3](tensor[2,2](float));
+  for i in 0:2
+    for j in 0:2
+      t(i,j) = [0.0 0.0; 0.0 0.0];
+    end
+  end
+  t(1,2) = a;
+  b = t(1,2);
+end

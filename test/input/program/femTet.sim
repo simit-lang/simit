@@ -8,9 +8,9 @@ element Tet
 end
 
 element Vert
-  x  : tensor[3](float);
-  v  : tensor[3](float);
-  fe : tensor[3](float);
+  x  : tensor[3](float)';
+  v  : tensor[3](float)';
+  fe : tensor[3](float)';
   c  : int;
   m : float;
 end
@@ -43,11 +43,11 @@ func compute_mass(v : Vert) ->
   M(v,v) = v.m *eye3;
 end
 
-func compute_force(h:float, e : Tet, v : (Vert*4)) -> (f : tensor[verts](tensor[3](float)))
+func compute_force(h:float, e : Tet, v : (Vert*4)) -> (f : tensor[verts](tensor[3](float))')
   var Ds :tensor[3,3](float);
   rho = 1000.0;
   m = 0.25 * rho * e.W;
-  grav = [0.0, -10.0, 0.0];
+  grav = [0.0, -10.0, 0.0]';
   fg = m*grav;
   for ii in 0:3
     for jj in 0:3
@@ -138,7 +138,7 @@ func compute_stiffness(h:float, e : Tet, v : (Vert*4)) ->
 end
 
 func precomputeTetMat(inout t : Tet, v : (Vert*4))
-    ->(m:tensor[verts](float))
+    ->(m:tensor[verts](float)')
   var M:tensor[3,3](float);
   for ii in 0:3
     for jj in 0:3
@@ -176,15 +176,15 @@ proc main
   iter = 0;
   x = xguess;
   
-  normr2 = r * r';
+  normr2 = r' * r;
   while (normr2 > tol) and (iter < maxiters)
     Ap = A * p;
-    denom = p * Ap;
+    denom = p' * Ap;
     alpha = normr2 / denom;
     x = x + alpha * p;
     normr2old = normr2;
     r = r - alpha * Ap;
-    normr2 = r * r';
+    normr2 = r' * r;
     beta = normr2 / normr2old;
     p = r + beta * p;
     iter = iter + 1;

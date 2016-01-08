@@ -62,4 +62,16 @@ func f(a : float) -> (c : float)
   var b : tensor[3](float) = [42.0, 42.0, 42.0];
   b(1) = a;
   c = b(0) + b(1) + b(2);
-end 
+end
+
+%%% local-scope
+%! f(1) == 1;
+func f(a : int) -> (c : int)
+  var b : tensor[2,2](int);
+  b(1,1) = a;
+  do
+    var b : tensor[3,3](float);
+    b = 0.0;
+  end while false;
+  c = b(1,1);
+end

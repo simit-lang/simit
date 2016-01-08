@@ -16,8 +16,9 @@ private:
     padBlocks(type, getMaxDim(type));
   }
 
-  unsigned getMaxDim(const TensorType::Ptr);
-  void padBlocks(TensorType::Ptr, const unsigned);
+  static unsigned getMaxDim(TensorType::Ptr);
+  
+  void padBlocks(TensorType::Ptr, unsigned);
 };
 
 }

@@ -20,6 +20,6 @@ end
 
 proc main 
   A = map dist_a to springs reduce +;
-  points.c = A(1,:);
+  points.c = A(1,:)';
   points.d = A(:,2);
 end
