@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "ir.h"
-#include "frontend.h"
+#include "frontend/frontend.h"
 #include "util/util.h"
 #include "error.h"
 #include "program_context.h"
