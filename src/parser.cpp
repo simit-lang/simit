@@ -12,6 +12,11 @@ namespace internal {
 // here to denote zero or more instances of the enclosing term, while '[]' is 
 // used to denote zero or one instance of the enclosing term.
 
+hir::Program::Ptr ParserNew::parse(const TokenStream &tokens) {
+  this->tokens = tokens;
+  return parseProgram();
+}
+
 // program: {program_element}
 hir::Program::Ptr ParserNew::parseProgram() {
   auto program = std::make_shared<hir::Program>();
@@ -1059,59 +1064,78 @@ hir::TupleType::Ptr ParserNew::parseTupleType() {
   return tupleType;
 }
 
-// tensor_type: 'int' | 'float' | 'bool' 
-//            | 'tensor' ['[' index_sets ']'] '(' tensor_type ')' [''']
+// tensor_type: scalar_type | (tensor_block_type ['''])
 hir::TensorType::Ptr ParserNew::parseTensorType() {
-  hir::TensorType::Ptr tensorType;
-  if (peek().type == Token::Type::TENSOR) {
-    tensorType = std::make_shared<hir::NDTensorType>();
-  } else {
-    tensorType = std::make_shared<hir::ScalarType>();
+  switch (peek().type) {
+    case Token::Type::INT:
+    case Token::Type::FLOAT:
+    case Token::Type::BOOL:
+      return parseScalarType();
+    default:
+      break;
   }
 
-  tensorType->setLoc(peek());
+  hir::NDTensorType::Ptr tensorType = parseTensorBlockType();
+  
+  if (peek().type == Token::Type::TRANSPOSE) {
+    const Token transposeToken = consume(Token::Type::TRANSPOSE);
+    tensorType->setEndLoc(transposeToken);
+    tensorType->transposed = true;
+  }
+
+  return tensorType;
+}
+
+// tensor_block_type:
+//     'tensor' ['[' index_sets ']'] '(' (tensor_block_type | scalar_type) ')'
+hir::NDTensorType::Ptr ParserNew::parseTensorBlockType() {
+  auto tensorType = std::make_shared<hir::NDTensorType>();
+  tensorType->transposed = false;
+
+  const Token tensorToken = consume(Token::Type::TENSOR);
+  tensorType->setBeginLoc(tensorToken);
+
+  if (tryconsume(Token::Type::LB)) {
+    tensorType->indexSets = parseIndexSets();
+    consume(Token::Type::RB);
+  }
+
+  consume(Token::Type::LP);
+  switch (peek().type) {
+    case Token::Type::INT:
+    case Token::Type::FLOAT:
+    case Token::Type::BOOL:
+      tensorType->blockType = parseScalarType();
+      break;
+    default:
+      tensorType->blockType = parseTensorBlockType();
+      break;
+  }
+      
+  const Token rightParenToken = consume(Token::Type::RP);
+  tensorType->setEndLoc(rightParenToken);
+
+  return tensorType;
+}
+
+// scalar_type: 'int' | 'float' | 'bool'
+hir::ScalarType::Ptr ParserNew::parseScalarType() {
+  auto scalarType = std::make_shared<hir::ScalarType>();
+
+  scalarType->setLoc(peek());
   switch (peek().type) {
     case Token::Type::INT:
       consume(Token::Type::INT);
-      hir::to<hir::ScalarType>(tensorType)->type = 
-          hir::ScalarType::Type::INT;
+      scalarType->type = hir::ScalarType::Type::INT;
       break;
     case Token::Type::FLOAT:
       consume(Token::Type::FLOAT);
-      hir::to<hir::ScalarType>(tensorType)->type = 
-          hir::ScalarType::Type::FLOAT;
+      scalarType->type = hir::ScalarType::Type::FLOAT;
       break;
     case Token::Type::BOOL:
       consume(Token::Type::BOOL);
-      hir::to<hir::ScalarType>(tensorType)->type = 
-          hir::ScalarType::Type::BOOL;
+      scalarType->type = hir::ScalarType::Type::BOOL;
       break;
-    case Token::Type::TENSOR:
-    {
-      const auto ndTensorType = 
-        hir::to<hir::NDTensorType>(tensorType);
-      
-      consume(Token::Type::TENSOR);
-      if (tryconsume(Token::Type::LB)) {
-        ndTensorType->indexSets = parseIndexSets();
-        consume(Token::Type::RB);
-      }
-      consume(Token::Type::LP);
-      ndTensorType->blockType = parseTensorType();
-      
-      const Token rightParenToken = consume(Token::Type::RP);
-      ndTensorType->setEndLoc(rightParenToken);
-  
-      if (peek().type == Token::Type::TRANSPOSE) {
-        const Token transposeToken = consume(Token::Type::TRANSPOSE);
-        ndTensorType->setEndLoc(transposeToken);
-
-        ndTensorType->transposed = true;
-      } else {
-        ndTensorType->transposed = false;
-      }
-      break;
-    }
     case Token::Type::STRING:
       // TODO: Implement.
     default:
@@ -1120,7 +1144,7 @@ hir::TensorType::Ptr ParserNew::parseTensorType() {
       break;
   }
 
-  return tensorType;
+  return scalarType;
 }
 
 // index_sets: index_set {',' index_set}
@@ -1439,6 +1463,37 @@ hir::Test::Ptr ParserNew::parseTest() {
   }
 
   return test;
+}
+  
+void ParserNew::reportError(const Token &token, std::string expected) {
+  std::stringstream errMsg;
+  errMsg << "expected " << expected << " but got " << token.toString();
+
+  const auto err = ParseError(token.lineBegin, token.colBegin, 
+                              token.lineEnd, token.colEnd, errMsg.str());
+  errors->push_back(err);
+}
+  
+void ParserNew::skipTo(std::vector<Token::Type> types) {
+  while (peek().type != Token::Type::END) {
+    for (const auto type : types) {
+      if (peek().type == type) {
+        return;
+      }
+    }
+    tokens.skip();
+  }
+}
+  
+Token ParserNew::consume(Token::Type type) { 
+  const Token token = peek();
+  
+  if (!tokens.consume(type)) {
+    reportError(token, Token::tokenTypeString(type));
+    throw SyntaxError();
+  }
+
+  return token;
 }
 
 }

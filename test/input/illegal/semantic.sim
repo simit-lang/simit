@@ -29,8 +29,11 @@ end
 func bar() -> (i : int, j : int)
 end
 
+func bazz()
+end
+
 proc main
-  foo(bar());
+  foo(bar()) + foo(bazz());
 end
 
 %%% bad-call-5
@@ -59,12 +62,17 @@ end
 extern t : int;
 extern V : set{E}(t);
 
-%%% bad-tensor-type
+%%% bad-tensor-type-1
 element E
 end
 
 proc main
   var t : tensor[E](int);
+end
+
+%%% bad-tensor-type-2
+proc main
+  var t : tensor[2,2](int)';
 end
 
 %%% bad-tuple-type-1
@@ -261,6 +269,17 @@ func foo(a : E)
   a.e;
 end
 
+%%% bad-field-read-4
+element G
+  f : tensor[2,2](int);
+end
+
+extern S : set{G};
+
+proc main
+  S.f;
+end
+
 %%% write-to-readonly
 func foo(i : int)
   i = 1;
@@ -343,6 +362,22 @@ end
 %%% bad-mul-8
 proc main
   [1 2] * [1 2 3]';
+end
+
+%%% bad-mul-9
+proc main
+  [1 2; 3 4] * [1 2];
+end
+
+%%% bad-mul-10
+proc main
+  [1 2]' * [1 2; 3 4];
+end
+
+%%% bad-mul-11
+proc main
+  v = [1 2]';
+  (v + v) * [1 2; 3 4];
 end
 
 %%% bad-div-1

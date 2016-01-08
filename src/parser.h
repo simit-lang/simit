@@ -7,7 +7,7 @@
 #include <string>
 #include <iostream>
 
-#include "scanner.h"
+#include "token.h"
 #include "hir.h"
 #include "error.h"
 
@@ -18,106 +18,86 @@ class ParserNew {
 public:
   ParserNew(std::vector<ParseError> *errors) : errors(errors) {}
 
-  hir::Program::Ptr parse(const TokenStream &tokens) {
-    this->tokens = tokens;
-    return parseProgram();
-  }
+  hir::Program::Ptr parse(const TokenStream &);
 
 private:
   class SyntaxError : public std::exception {};
-  
-  hir::Program::Ptr parseProgram();
-  hir::HIRNode::Ptr parseProgramElement();
-  hir::ElementTypeDecl::Ptr parseElementTypeDecl();
-  std::vector<hir::Field::Ptr> parseFieldDeclList();
-  hir::Field::Ptr parseFieldDecl();
-  hir::ExternDecl::Ptr parseExternDecl();
-  hir::FuncDecl::Ptr parseFuncDecl();
-  hir::ProcDecl::Ptr parseProcDecl();
-  std::vector<hir::Argument::Ptr> parseArguments();
-  hir::Argument::Ptr parseArgumentDecl();
+
+private:
+  hir::Program::Ptr                parseProgram();
+  hir::HIRNode::Ptr                parseProgramElement();
+  hir::ElementTypeDecl::Ptr        parseElementTypeDecl();
+  std::vector<hir::Field::Ptr>     parseFieldDeclList();
+  hir::Field::Ptr                  parseFieldDecl();
+  hir::ExternDecl::Ptr             parseExternDecl();
+  hir::FuncDecl::Ptr               parseFuncDecl();
+  hir::ProcDecl::Ptr               parseProcDecl();
+  std::vector<hir::Argument::Ptr>  parseArguments();
+  hir::Argument::Ptr               parseArgumentDecl();
   std::vector<hir::IdentDecl::Ptr> parseResults();
-  hir::StmtBlock::Ptr parseStmtBlock();
-  hir::Stmt::Ptr parseStmt();
-  hir::VarDecl::Ptr parseVarDecl();
-  hir::ConstDecl::Ptr parseConstDecl();
-  hir::IdentDecl::Ptr parseIdentDecl();
-  hir::IdentDecl::Ptr parseTensorDecl();
-  hir::WhileStmt::Ptr parseWhileStmt();
-  hir::DoWhileStmt::Ptr parseDoWhileStmt();
-  hir::IfStmt::Ptr parseIfStmt();
-  hir::Stmt::Ptr parseElseClause();
-  hir::ForStmt::Ptr parseForStmt();
-  hir::ForDomain::Ptr parseForDomain();
-  hir::PrintStmt::Ptr parsePrintStmt();
-  hir::ExprStmt::Ptr parseExprOrAssignStmt();
-  hir::Expr::Ptr parseExpr();
-  hir::Expr::Ptr parseMapExpr();
-  hir::Expr::Ptr parseOrExpr();
-  hir::Expr::Ptr parseAndExpr();
-  hir::Expr::Ptr parseXorExpr();
-  hir::Expr::Ptr parseEqExpr();
-  hir::Expr::Ptr parseTerm();
-  hir::Expr::Ptr parseAddExpr();
-  hir::Expr::Ptr parseMulExpr();
-  hir::Expr::Ptr parseNegExpr();
-  hir::Expr::Ptr parseExpExpr();
-  hir::Expr::Ptr parseTransposeExpr();
-  hir::Expr::Ptr parseCallOrReadExpr();
-  hir::Expr::Ptr parseFactor();
-  hir::Identifier::Ptr parseIdent();
+  hir::StmtBlock::Ptr              parseStmtBlock();
+  hir::Stmt::Ptr                   parseStmt();
+  hir::VarDecl::Ptr                parseVarDecl();
+  hir::ConstDecl::Ptr              parseConstDecl();
+  hir::IdentDecl::Ptr              parseIdentDecl();
+  hir::IdentDecl::Ptr              parseTensorDecl();
+  hir::WhileStmt::Ptr              parseWhileStmt();
+  hir::DoWhileStmt::Ptr            parseDoWhileStmt();
+  hir::IfStmt::Ptr                 parseIfStmt();
+  hir::Stmt::Ptr                   parseElseClause();
+  hir::ForStmt::Ptr                parseForStmt();
+  hir::ForDomain::Ptr              parseForDomain();
+  hir::PrintStmt::Ptr              parsePrintStmt();
+  hir::ExprStmt::Ptr               parseExprOrAssignStmt();
+  hir::Expr::Ptr                   parseExpr();
+  hir::Expr::Ptr                   parseMapExpr();
+  hir::Expr::Ptr                   parseOrExpr();
+  hir::Expr::Ptr                   parseAndExpr();
+  hir::Expr::Ptr                   parseXorExpr();
+  hir::Expr::Ptr                   parseEqExpr();
+  hir::Expr::Ptr                   parseTerm();
+  hir::Expr::Ptr                   parseAddExpr();
+  hir::Expr::Ptr                   parseMulExpr();
+  hir::Expr::Ptr                   parseNegExpr();
+  hir::Expr::Ptr                   parseExpExpr();
+  hir::Expr::Ptr                   parseTransposeExpr();
+  hir::Expr::Ptr                   parseCallOrReadExpr();
+  hir::Expr::Ptr                   parseFactor();
+  hir::Identifier::Ptr             parseIdent();
   std::vector<hir::ReadParam::Ptr> parseReadParams();
-  hir::ReadParam::Ptr parseReadParam();
-  std::vector<hir::Expr::Ptr> parseCallParams();
-  hir::Type::Ptr parseType();
-  hir::ElementType::Ptr parseElementType();
-  hir::SetType::Ptr parseSetType();
-  std::vector<hir::Endpoint::Ptr> parseEndpoints();
-  hir::TupleLength::Ptr parseTupleLength();
-  hir::TupleType::Ptr parseTupleType();
-  hir::TensorType::Ptr parseTensorType();
-  std::vector<hir::IndexSet::Ptr> parseIndexSets();
-  hir::IndexSet::Ptr parseIndexSet();
-  hir::Expr::Ptr parseTensorLiteral();
-  hir::DenseTensorLiteral::Ptr parseDenseTensorLiteral();
-  hir::DenseTensorLiteral::Ptr parseDenseTensorLiteralInner();
-  hir::DenseTensorLiteral::Ptr parseDenseMatrixLiteral();
-  hir::DenseTensorLiteral::Ptr parseDenseVectorLiteral();
-  hir::IntVectorLiteral::Ptr parseDenseIntVectorLiteral();
-  hir::FloatVectorLiteral::Ptr parseDenseFloatVectorLiteral();
-  int parseSignedIntLiteral();
-  double parseSignedFloatLiteral();
-  hir::Test::Ptr parseTest();
+  hir::ReadParam::Ptr              parseReadParam();
+  std::vector<hir::Expr::Ptr>      parseCallParams();
+  hir::Type::Ptr                   parseType();
+  hir::ElementType::Ptr            parseElementType();
+  hir::SetType::Ptr                parseSetType();
+  std::vector<hir::Endpoint::Ptr>  parseEndpoints();
+  hir::TupleLength::Ptr            parseTupleLength();
+  hir::TupleType::Ptr              parseTupleType();
+  hir::TensorType::Ptr             parseTensorType();
+  hir::NDTensorType::Ptr           parseTensorBlockType();
+  hir::ScalarType::Ptr             parseScalarType();
+  std::vector<hir::IndexSet::Ptr>  parseIndexSets();
+  hir::IndexSet::Ptr               parseIndexSet();
+  hir::Expr::Ptr                   parseTensorLiteral();
+  hir::DenseTensorLiteral::Ptr     parseDenseTensorLiteral();
+  hir::DenseTensorLiteral::Ptr     parseDenseTensorLiteralInner();
+  hir::DenseTensorLiteral::Ptr     parseDenseMatrixLiteral();
+  hir::DenseTensorLiteral::Ptr     parseDenseVectorLiteral();
+  hir::IntVectorLiteral::Ptr       parseDenseIntVectorLiteral();
+  hir::FloatVectorLiteral::Ptr     parseDenseFloatVectorLiteral();
+  int                              parseSignedIntLiteral();
+  double                           parseSignedFloatLiteral();
+  hir::Test::Ptr                   parseTest();
 
-  void reportError(const Token token, const std::string expected) {
-    std::stringstream errMsg;
-    errMsg << "expected " << expected << " but got " << token.toString();
-    const auto err = ParseError(token.lineBegin, token.colBegin, 
-                                token.lineEnd, token.colEnd, errMsg.str());
-    errors->push_back(err);
-  }
+  void reportError(const Token &, std::string);
 
-  void skipTo(std::vector<Token::Type> types) {
-    while (peek().type != Token::Type::END) {
-      for (auto &type : types) {
-        if (peek().type == type) {
-          return;
-        }
-      }
-      tokens.skip();
-    }
-  }
-  const Token consume(Token::Type type) { 
-    const Token token = peek();
-    if (!tokens.consume(type)) {
-      reportError(token, Token::tokenTypeString(type));
-      throw SyntaxError();
-    }
-    return token;
-  }
-  bool tryconsume(Token::Type type) { return tokens.consume(type); }
-  Token peek(unsigned k = 0) { return tokens.peek(k); }
+  Token peek(unsigned k = 0) const { return tokens.peek(k); }
+  
+  void  skipTo(std::vector<Token::Type>);
+  Token consume(Token::Type); 
+  bool  tryconsume(Token::Type type) { return tokens.consume(type); }
 
+private:
   TokenStream tokens;
   std::vector<ParseError> *errors;
 };
