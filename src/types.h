@@ -274,13 +274,7 @@ inline bool isBoolean(Type type) {
 }
 
 inline bool isInt(Type type) {
-  return type.kind()==Type::Tensor && type.toTensor()->order() == 0 &&
-      type.toTensor()->componentType.isInt();
-}
-
-inline bool isInt(Type type) {
-  return type.kind()==Type::Tensor && type.toTensor()->order() == 0 &&
-      type.toTensor()->componentType.isInt();
+  return isScalar(type) && type.toTensor()->getComponentType().isInt();
 }
 
 /// A system tensor is a tensor whose dimensions contain at least one set.

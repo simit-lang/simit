@@ -111,7 +111,7 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
     const ElementType *elemType = setType->elementType.toElement();
 
     const TensorType *elemFieldType= elemType->field(fieldName).type.toTensor();
-    const ScalarType componentType = elemFieldType->componentType; 
+    const ScalarType componentType = elemFieldType->getComponentType(); 
 
     // The type of a set field is 
     // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))'`

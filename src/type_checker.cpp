@@ -153,7 +153,7 @@ void TypeChecker::visit(NDTensorType::Ptr type) {
     ndTensorType = blockType;
   } else {
     const auto blockTensorType = blockType.toTensor();
-    const auto componentType = blockTensorType->componentType;
+    const auto componentType = blockTensorType->getComponentType();
     const auto blockDimensions = blockTensorType->getDimensions();
  
     // Check that tensor type has same number of dimensions as inner block.
@@ -184,7 +184,7 @@ void TypeChecker::visit(NDTensorType::Ptr type) {
   if (type->transposed) {
     const auto tensorType = ndTensorType.toTensor();
     const auto dimensions = tensorType->getDimensions();
-    const auto componentType = tensorType->componentType;
+    const auto componentType = tensorType->getComponentType();
 
     // Check that column vector type is of order 1.
     if (dimensions.size() != 1) {
@@ -427,8 +427,8 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
       if (lhsType[i].defined() && !compareTypes(lhsType[i], exprType->at(i))) {
         // Allow initialization of tensors with scalars.
         if (!lhsType[i].isTensor() || !isScalar(exprType->at(i)) || 
-            lhsType[i].toTensor()->componentType != 
-            exprType->at(i).toTensor()->componentType) {
+            lhsType[i].toTensor()->getComponentType() != 
+            exprType->at(i).toTensor()->getComponentType()) {
           std::stringstream errMsg;
           errMsg << "cannot assign a value of type " 
                  << typeString(exprType->at(i)) << " to a target of type " 
@@ -630,7 +630,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
 
   // Check that operands of multiplication operation are numeric tensors.
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      lhsType->at(0).toTensor()->componentType.isBoolean())) {
+      lhsType->at(0).toTensor()->getComponentType().isBoolean())) {
     std::stringstream errMsg;
     errMsg << "expected left operand of multiplication operation to be a "
            << "numeric tensor but got an operand of type " 
@@ -639,7 +639,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     typeChecked = false;
   }
   if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      rhsType->at(0).toTensor()->componentType.isBoolean())) {
+      rhsType->at(0).toTensor()->getComponentType().isBoolean())) {
     std::stringstream errMsg;
     errMsg << "expected right operand of multiplication operation to be a "
            << "numeric tensor but got an operand of type " 
@@ -661,11 +661,11 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
 
   // Check that operands of multiplication operation contain elements 
   // of the same type.
-  if (ltype->componentType != rtype->componentType) {
+  if (ltype->getComponentType() != rtype->getComponentType()) {
     std::stringstream errMsg;
     errMsg << "cannot multiply tensors containing elements of type '"
-           << ltype->componentType << "' and type '"
-           << rtype->componentType << "'";
+           << ltype->getComponentType() << "' and type '"
+           << rtype->getComponentType() << "'";
     reportError(errMsg.str(), expr);
     return;
   }
@@ -697,7 +697,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     }
 
     retType = std::make_shared<Expr::Type>();
-    retType->push_back(ir::TensorType::make(ltype->componentType, dom));
+    retType->push_back(ir::TensorType::make(ltype->getComponentType(), dom));
   } else if (lhsOrder == 2 && rhsOrder == 1) {
     // Check dimensions of operands for matrix-vector multiplication.
     if (ldimensions[1] != rdimensions[0]) {
@@ -710,14 +710,14 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
       reportError("Cannot multiply a matrix by a row vector", expr);
     }
     
-    const auto tensorType = ir::TensorType::make(ltype->componentType, 
+    const auto tensorType = ir::TensorType::make(ltype->getComponentType(), 
                                                  {ldimensions[0]}, true);
     retType = std::make_shared<Expr::Type>();
     retType->push_back(tensorType);
   } else if (lhsOrder == 1 && rhsOrder == 2) {
     // Check dimensions of operands for vector-matrix multiplication.
     if (ldimensions[0] != rdimensions[0] || 
-        ltype->componentType != rtype->componentType) {
+        ltype->getComponentType() != rtype->getComponentType()) {
       std::stringstream errMsg;
       errMsg << "cannot multiply a vector of type " << typeString(lhsType)
              << " by a matrix of type " << typeString(rhsType);
@@ -727,7 +727,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
       reportError("Cannot multiply a column vector by a matrix", expr);
     }
 
-    const auto tensorType = ir::TensorType::make(ltype->componentType, 
+    const auto tensorType = ir::TensorType::make(ltype->getComponentType(), 
                                                  {rdimensions[1]});
     retType = std::make_shared<Expr::Type>();
     retType->push_back(tensorType);
@@ -743,7 +743,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     
     const std::vector<ir::IndexDomain> dom = {ldimensions[0], rdimensions[1]};
     retType = std::make_shared<Expr::Type>();
-    retType->push_back(ir::TensorType::make(ltype->componentType, dom));
+    retType->push_back(ir::TensorType::make(ltype->getComponentType(), dom));
   } else {
     reportError("cannot multiply tensors of order 3 or greater using *", expr);
   }
@@ -756,7 +756,7 @@ void TypeChecker::visit(DivExpr::Ptr expr) {
 
   // Check that operands of division operation are numeric tensors.
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      lhsType->at(0).toTensor()->componentType.isBoolean())) {
+      lhsType->at(0).toTensor()->getComponentType().isBoolean())) {
     std::stringstream errMsg;
     errMsg << "expected left operand of division operation to be a numeric "
            << "tensor but got an operand of type " << typeString(lhsType);
@@ -764,7 +764,7 @@ void TypeChecker::visit(DivExpr::Ptr expr) {
     typeChecked = false;
   }
   if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      rhsType->at(0).toTensor()->componentType.isBoolean())) {
+      rhsType->at(0).toTensor()->getComponentType().isBoolean())) {
     std::stringstream errMsg;
     errMsg << "expected right operand of division operation to be a numeric "
            << "tensor but got an operand of type " << typeString(rhsType);
@@ -780,11 +780,11 @@ void TypeChecker::visit(DivExpr::Ptr expr) {
   const ir::TensorType *rtype = rhsType->at(0).toTensor();
 
   // Check that operands of division operation contain elements of same type.
-  if (ltype->componentType != rtype->componentType) {
+  if (ltype->getComponentType() != rtype->getComponentType()) {
     std::stringstream errMsg;
     errMsg << "cannot divide tensors containing elements of type '"
-           << ltype->componentType << "' and type '"
-           << rtype->componentType << "'";
+           << ltype->getComponentType() << "' and type '"
+           << rtype->getComponentType() << "'";
     reportError(errMsg.str(), expr);
     return;
   }
@@ -820,7 +820,7 @@ void TypeChecker::visit(NegExpr::Ptr expr) {
 
   // Check that operand of negation operation is a numeric tensor.
   if (opndType->size() != 1 || !opndType->at(0).isTensor() ||
-      opndType->at(0).toTensor()->componentType.isBoolean()) {
+      opndType->at(0).toTensor()->getComponentType().isBoolean()) {
     std::stringstream errMsg;
     errMsg << "expected operand of tensor negation to be a numeric tensor but "
            << "got an operand of type " << typeString(opndType);
@@ -861,7 +861,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
       break;
     case 1:
     {
-      const auto exprType = ir::TensorType::make(tensorType->componentType, 
+      const auto exprType = ir::TensorType::make(tensorType->getComponentType(), 
           dimensions, !tensorType->isColumnVector);
       retType = std::make_shared<Expr::Type>();
       retType->push_back(exprType);
@@ -870,7 +870,7 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
     case 2:
     {
       const auto exprType = ir::TensorType::make(
-          tensorType->componentType, {dimensions[1], dimensions[0]});
+          tensorType->getComponentType(), {dimensions[1], dimensions[0]});
       retType = std::make_shared<Expr::Type>();
       retType->push_back(exprType);
       break;
@@ -1045,8 +1045,8 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     } else {
       const bool isColumnVector = (dims.size() == 1 && 
                                   !expr->indices.back()->isSlice());
-      const auto retTensorType = ir::TensorType::make(tensorType->componentType, 
-                                                      dims, isColumnVector);
+      const auto retTensorType = ir::TensorType::make(
+          tensorType->getComponentType(), dims, isColumnVector);
       retType->push_back(retTensorType);
     }
   } else if (lhsType->at(0).isTuple()) {
@@ -1313,7 +1313,7 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst) {
   const auto varTensorType = varType.toTensor();
   const auto initTensorType = initIRType.toTensor();
   if (isScalar(initIRType) && 
-      varTensorType->componentType == initTensorType->componentType) {
+      varTensorType->getComponentType() == initTensorType->getComponentType()) {
     return;
   }
 
@@ -1353,7 +1353,7 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
 
   // Check that operands of element-wise operation are numeric tensors.
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      lhsType->at(0).toTensor()->componentType.isBoolean())) {
+      lhsType->at(0).toTensor()->getComponentType().isBoolean())) {
     std::stringstream errMsg;
     errMsg << "expected left operand of element-wise operation to be a "
            << "numeric tensor but got an operand of type " 
@@ -1362,7 +1362,7 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
     typeChecked = false;
   }
   if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      rhsType->at(0).toTensor()->componentType.isBoolean())) {
+      rhsType->at(0).toTensor()->getComponentType().isBoolean())) {
     std::stringstream errMsg;
     errMsg << "expected right operand of element-wise operation to be a "
            << "numeric tensor but got an operand of type " 
@@ -1377,13 +1377,13 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
 
   const ir::TensorType *ltype = lhsType->at(0).toTensor();
   const ir::TensorType *rtype = rhsType->at(0).toTensor();
-  const unsigned lhsOrder = ltype->order();
-  const unsigned rhsOrder = rtype->order();
-  const bool hasScalarOperand = (lhsOrder == 0 || rhsOrder == 0);
+  const auto lComponentType = ltype->getComponentType();
+  const auto rComponentType = rtype->getComponentType();
+  const bool hasScalarOperand = (ltype->order() == 0 || rtype->order() == 0);
 
   // Check that operands are compatible (i.e. contain elements of same type 
   // if one operand is scalar, or also have same dimensions otherwise).
-  if (hasScalarOperand ? (ltype->componentType != rtype->componentType) : 
+  if (hasScalarOperand ? (lComponentType != rComponentType) : 
       !compareTypes(lhsType->at(0), rhsType->at(0))) {
     std::stringstream errMsg;
     errMsg << "cannot perform element-wise operation on tensors of type "
@@ -1392,7 +1392,7 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
     return;
   }
   
-  retType = (lhsOrder > 0) ? lhsType : rhsType;
+  retType = (ltype->order() > 0) ? lhsType : rhsType;
 }
 
 void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {

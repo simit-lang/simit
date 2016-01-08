@@ -91,7 +91,7 @@ void IREmitter::visit(NDTensorType::Ptr type) {
     retType = blockType;
   } else {
     const auto blockTensorType = blockType.toTensor();
-    const auto componentType = blockTensorType->componentType;
+    const auto componentType = blockTensorType->getComponentType();
     const auto blockDimensions = blockTensorType->getDimensions();
   
     std::vector<ir::IndexDomain> dimensions;
@@ -116,7 +116,7 @@ void IREmitter::visit(NDTensorType::Ptr type) {
   if (type->transposed) {
     const auto tensorType = retType.toTensor();
     const auto dimensions = tensorType->getDimensions();
-    const auto componentType = tensorType->componentType;
+    const auto componentType = tensorType->getComponentType();
     retType = ir::TensorType::make(componentType, dimensions, true);
   }
 }
@@ -474,11 +474,12 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
     {
       // OPT: This might lead to redundant code to be removed in later pass
       retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
+      auto retExprNode = const_cast<ir::ExprNode *>(to<ir::ExprNode>(retExpr));
+      
       const bool isColumnVector = expr->type.at(0).toTensor()->isColumnVector;
-      const ir::Type transposedVector = ir::TensorType::make(
-          type->componentType, type->getDimensions(), isColumnVector);
-      const_cast<ir::ExprNodeBase *>(to<ir::ExprNodeBase>(retExpr))->type = 
-          transposedVector;
+      retExprNode->type = ir::TensorType::make(type->getComponentType(), 
+                                               type->getDimensions(), 
+                                               isColumnVector);
       break;
     }
     case 2:
