@@ -8,7 +8,7 @@
 #include "program.h"
 #include "error.h"
 #include "util/util.h"
-#include "frontend.h"
+#include "frontend/frontend.h"
 #include "backend/llvm/llvm_backend.h"
 
 using namespace simit;

@@ -6,8 +6,6 @@
 
 #include "program_context.h"
 #include "error.h"
-#include "parser/scanner.h"
-#include "parser/parser.h"
 #include "token.h"
 #include "scanner.h"
 #include "parser.h"
@@ -27,7 +25,6 @@ using namespace simit::internal;
 // Frontend
 int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
                           std::vector<ParseError> *errors) {
-#if 1
   // Lexical and syntactic analyses.
   TokenStream tokens = ScannerNew(errors).lex(programStream);
   hir::Program::Ptr program = ParserNew(errors).parse(tokens);
@@ -49,11 +46,6 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   // IR generation.
   hir::IREmitter(ctx).emitIR(program);
   return 0;
-#else
-  Scanner scanner(&programStream);
-  Parser parser(&scanner, ctx, errors);
-  return parser.parse();
-#endif
 }
 
 int Frontend::parseString(const std::string &programString, ProgramContext *ctx,
