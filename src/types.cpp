@@ -87,7 +87,8 @@ Type TensorType::getBlockType() const {
         blockDimensions.push_back(IndexDomain(blockNests));
       }
     }
-    blockType = TensorType::make(componentType, blockDimensions);
+    blockType = TensorType::make(componentType, blockDimensions, 
+                                 isColumnVector);
   }
   iassert(blockType.defined());
 
@@ -157,6 +158,8 @@ SetType::~SetType() {
 
 // Free operator functions
 bool operator==(const Type& l, const Type& r) {
+  iassert(l.defined() && r.defined());
+
   if (l.kind() != r.kind()) {
     return false;
   }
@@ -288,6 +291,9 @@ std::ostream& operator<<(std::ostream& os, const TensorType& type) {
     os << "tensor";
     os << "[" << util::join(type.getOuterDimensions(), ",") << "]";
     os << "(" << type.getBlockType() << ")";
+    if (type.isColumnVector) {
+      os << "'";
+    }
   }
   return os;
 }

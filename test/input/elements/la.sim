@@ -5,8 +5,8 @@ func outer_mul(a : tensor[3](float), b : tensor[3](float)) -> (c : tensor[3](flo
 end
 
 %%% vec-sub-gemv
-%! f([1.0, 2.0], [3.0, 4.0; 5.0, 6.0], [7.0, 8.0]) == [-52.0, -81.0];
-func f(c : tensor[2](float), A : tensor[2,2](float), b : tensor[2](float)) -> (d : tensor[2](float))
+%! f([1.0, 2.0]', [3.0, 4.0; 5.0, 6.0], [7.0, 8.0]') == [-52.0, -81.0]';
+func f(c : tensor[2](float)', A : tensor[2,2](float), b : tensor[2](float)') -> (d : tensor[2](float)')
   d = c - A*b;
 end
 

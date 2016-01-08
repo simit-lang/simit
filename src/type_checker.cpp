@@ -112,23 +112,20 @@ void TypeChecker::visit(TupleType::Ptr type) {
 }
 
 void TypeChecker::visit(ScalarType::Ptr type) {
-  ir::ScalarType componentType;
   switch (type->type) {
     case ScalarType::Type::INT:
-      componentType = ir::ScalarType(ir::ScalarType::Int);
+      retIRType = ir::Int;
       break;
     case ScalarType::Type::FLOAT:
-      componentType = ir::ScalarType(ir::ScalarType::Float);
+      retIRType = ir::Float;
       break;
     case ScalarType::Type::BOOL:
-      componentType = ir::ScalarType(ir::ScalarType::Boolean);
+      retIRType = ir::Boolean;
       break;
     default:
       unreachable;
       break;
   }
-  
-  retIRType = ir::TensorType::make(componentType);
 }
 
 void TypeChecker::visit(NDTensorType::Ptr type) {
@@ -151,8 +148,9 @@ void TypeChecker::visit(NDTensorType::Ptr type) {
     return;
   }
 
+  ir::Type ndTensorType;
   if (indexSets.empty()) {
-    retIRType = blockType;
+    ndTensorType = blockType;
   } else {
     const auto blockTensorType = blockType.toTensor();
     const auto componentType = blockTensorType->componentType;
@@ -174,41 +172,55 @@ void TypeChecker::visit(NDTensorType::Ptr type) {
         dimensions.push_back(ir::IndexDomain(dimension));
       }
     } else {
-      const auto msg = "blocked tensors with non-scalar blocks must have "
-                       "same number of dimensions as its blocks";
+      const auto msg = "blocked tensor type must contain same number "
+                       "of dimensions as its blocks";
       reportError(msg, type);
       return;
     }
   
-    retIRType = ir::TensorType::make(componentType, dimensions);
+    ndTensorType = ir::TensorType::make(componentType, dimensions);
   }
 
   if (type->transposed) {
-    const auto tensorType = retIRType.toTensor();
+    const auto tensorType = ndTensorType.toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto componentType = tensorType->componentType;
-    retIRType = ir::TensorType::make(componentType, dimensions, true);
+
+    // Check that column vector type is of order 1.
+    if (dimensions.size() != 1) {
+      std::stringstream errMsg;
+      errMsg << "tensor type declared with " << dimensions.size() 
+             << " dimensions but column vector type must strictly contain one";
+      reportError(errMsg.str(), type);
+      return;
+    }
+
+    ndTensorType = ir::TensorType::make(componentType, dimensions, true);
   }
+
+  retIRType = ndTensorType;
 }
 
 void TypeChecker::visit(IdentDecl::Ptr decl) {
   const ir::Type type = getIRType(decl->type);
   retVar = ir::Var(decl->name->ident, type);
-  retField = ir::Field(decl->name->ident, type);
 }
 
 void TypeChecker::visit(Field::Ptr field) {
-  // Let visit method for IdentDecl node take care of field creation.
-  HIRVisitor::visit(field);
-
-  iassert(retField.name != "");
-  iassert(retField.type.isTensor());
+  const IdentDecl::Ptr fieldDecl = field->field;
+  const ir::Type type = getIRType(fieldDecl->type);
+  retField = ir::Field(fieldDecl->name->ident, type);
 }
 
 void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
   std::vector<ir::Field> fields;
   for (auto f : decl->fields) {
     const ir::Field field = getField(f);
+
+    if (!field.type.defined()) {
+      continue;
+    }
+
     fields.push_back(field);
   }
 
@@ -375,6 +387,7 @@ void TypeChecker::visit(PrintStmt::Ptr stmt) {
 
 void TypeChecker::visit(AssignStmt::Ptr stmt) {
   const Ptr<Expr::Type> exprType = inferType(stmt->expr);
+  bool typeChecked = (bool)exprType;
 
   Expr::Type lhsType;
   for (auto lhs : stmt->lhs) {
@@ -396,42 +409,44 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
     skipCheckDeclared = false;
   }
 
-  if (!exprType) {
-    return;
-  }
-
   // Check that number of values returned by expression on right-hand side
   // (may not equal to one if it is a map operation or function call) is equal 
   // to number of assignment targets.
-  if (stmt->lhs.size() != exprType->size()) {
+  if (typeChecked && stmt->lhs.size() != exprType->size()) {
     std::stringstream errMsg;
     errMsg << "cannot assign an expression returning " << exprType->size()
            << " values to " << stmt->lhs.size() << " targets";
     reportError(errMsg.str(), stmt);
-    return;
+    typeChecked = false;
   }
 
-  for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
-    // Check that type of value returned by expression on right-hand side 
-    // corresponds to type of target on left-hand side.
-    if (lhsType[i].defined() && !compareTypes(lhsType[i], exprType->at(i))) {
-      // Allow initialization of tensors with scalars.
-      if (!lhsType[i].isTensor() || !isScalar(exprType->at(i)) || 
-          lhsType[i].toTensor()->componentType != 
-          exprType->at(i).toTensor()->componentType) {
-        std::stringstream errMsg;
-        errMsg << "cannot assign a value of type " 
-               << typeString(exprType->at(i)) << " to a target of type " 
-               << typeString(lhsType[i]);
-        reportError(errMsg.str(), stmt->lhs[i]);
+  if (typeChecked) {
+    for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
+      // Check that type of value returned by expression on right-hand side 
+      // corresponds to type of target on left-hand side.
+      if (lhsType[i].defined() && !compareTypes(lhsType[i], exprType->at(i))) {
+        // Allow initialization of tensors with scalars.
+        if (!lhsType[i].isTensor() || !isScalar(exprType->at(i)) || 
+            lhsType[i].toTensor()->componentType != 
+            exprType->at(i).toTensor()->componentType) {
+          std::stringstream errMsg;
+          errMsg << "cannot assign a value of type " 
+                 << typeString(exprType->at(i)) << " to a target of type " 
+                 << typeString(lhsType[i]);
+          reportError(errMsg.str(), stmt->lhs[i]);
+          typeChecked = false;
+        }
       }
     }
-    
+  }
+  
+  for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
     // Mark target variable as having been declared if necessary.
     if (isa<VarExpr>(stmt->lhs[i])) {
       const std::string varName = to<VarExpr>(stmt->lhs[i])->ident;
       if (!ctx.hasSymbol(varName)) {
-        ctx.addSymbol(ir::Var(varName, exprType->at(i)));
+        const ir::Type varType = typeChecked ? exprType->at(i) : ir::Type();
+        ctx.addSymbol(ir::Var(varName, varType));
       }
     }
   }
@@ -447,12 +462,12 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
       continue;
     }
 
-    // Check that argument is a single value (e.g. not output of void function).
+    // Check that argument is a single non-void value.
     if (paramType->size() == 0) {
-      reportError("must pass in a value as argument", param);
+      reportError("must pass a non-void value as argument", param);
     } else if (paramType->size() != 1) {
       std::stringstream errMsg;
-      errMsg << "cannot pass in multiple values of types " 
+      errMsg << "cannot pass multiple values of types " 
              << typeString(paramType) << " as a single argument";
       reportError(errMsg.str(), param);
     } else {
@@ -582,8 +597,7 @@ void TypeChecker::visit(EqExpr::Ptr expr) {
   }
   
   retType = std::make_shared<Expr::Type>();
-  const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
-  retType->push_back(ir::TensorType::make(componentType));
+  retType->push_back(ir::Boolean);
 }
 
 void TypeChecker::visit(NotExpr::Ptr expr) {
@@ -598,8 +612,7 @@ void TypeChecker::visit(NotExpr::Ptr expr) {
   }
 
   retType = std::make_shared<Expr::Type>();
-  const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
-  retType->push_back(ir::TensorType::make(componentType));
+  retType->push_back(ir::Boolean);
 }
 
 void TypeChecker::visit(AddExpr::Ptr expr) {
@@ -693,8 +706,8 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
              << " by a vector of type " << typeString(rhsType);
       reportError(errMsg.str(), expr);
       return;
-    //} else if (!rtype->isColumnVector) {
-    //  reportError("Cannot multiply a matrix by a row vector", expr);
+    } else if (!rtype->isColumnVector) {
+      reportError("Cannot multiply a matrix by a row vector", expr);
     }
     
     const auto tensorType = ir::TensorType::make(ltype->componentType, 
@@ -710,8 +723,8 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
              << " by a matrix of type " << typeString(rhsType);
       reportError(errMsg.str(), expr);
       return;
-    //} else if (ltype->isColumnVector) {
-    //  reportError("Cannot multiply a column vector by a matrix", expr);
+    } else if (ltype->isColumnVector) {
+      reportError("Cannot multiply a column vector by a matrix", expr);
     }
 
     const auto tensorType = ir::TensorType::make(ltype->componentType, 
@@ -874,6 +887,18 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   const ir::Func func = ctx.getFunction(expr->func->ident);
   const auto funcArgs = func.getArguments();
 
+  std::vector<Ptr<Expr::Type>> argTypes(expr->arguments.size());
+  for (unsigned i = 0; i < expr->arguments.size(); ++i) {
+    const Expr::Ptr argument = expr->arguments[i];
+     
+    if (!argument) {
+      // Not a valid argument.
+      continue;
+    }
+
+    argTypes[i] = inferType(argument);
+  }
+
   if (expr->arguments.size() != funcArgs.size()) {
     if (func.getKind() == ir::Func::Intrinsic && funcArgs.size() == 0) {
       // TODO: Special handling for intrinsics.
@@ -887,30 +912,26 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   } else {
     for (unsigned i = 0; i < expr->arguments.size(); ++i) {
       const Expr::Ptr argument = expr->arguments[i];
-       
-      if (!argument) {
-        // Not a valid argument.
-        continue;
-      }
-
-      const Ptr<Expr::Type> argType = inferType(argument);
+      const Ptr<Expr::Type> argType = argTypes[i];
       
       if (!argType) {
         // Could not infer argument type.
         continue;
       }
   
-      // Check that argument is a single value.
+      // Check that argument is a single non-void value.
       if (argType->size() == 0) {
-        reportError("must pass in a value as argument", argument);
+        reportError("must pass a non-void value as argument", argument);
+        continue;
       } else if (argType->size() != 1) {
         std::stringstream errMsg;
-        errMsg << "cannot pass in multiple values of types "
+        errMsg << "cannot pass multiple values of types "
                << typeString(argType) << " as a single argument";
         reportError(errMsg.str(), argument);
+        continue;
       }
-      
-      // Check that type of argument is type expected by callee.
+ 
+      // Check that argument is of type expected by callee.
       if (!compareTypes(argType->at(0), funcArgs[i].getType())) {
         std::stringstream errMsg;
         errMsg << "expected argument of type " 
@@ -959,57 +980,57 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
 
     std::vector<ir::IndexDomain> dims;
     for (unsigned i = 0; i < expr->indices.size(); ++i) {
-      const ReadParam::Ptr param = expr->indices[i];
+      const ReadParam::Ptr index = expr->indices[i];
 
-      if (param->isSlice()) {
+      if (index->isSlice()) {
         dims.push_back(tensorType->getDimensions()[i]);
         continue;
       }
 
-      const Expr::Ptr paramExpr = to<ExprParam>(param)->expr;
-      const Ptr<Expr::Type> paramType = inferType(paramExpr);
+      const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
+      const Ptr<Expr::Type> indexType = inferType(indexExpr);
 
-      if (!paramType) {
+      if (!indexType) {
         continue;
       }
       
-      // Check that argument is a single value.
-      if (paramType->size() == 0) {
-        reportError("must pass in a value as index" , param);
+      // Check that index is a single value.
+      if (indexType->size() == 0) {
+        reportError("must pass a non-void value as index" , index);
         continue;
-      } else if (paramType->size() != 1) {
+      } else if (indexType->size() != 1) {
         std::stringstream errMsg;
         errMsg << "cannot pass multiple values of types " 
-               << typeString(paramType) << " as a single index";
-        reportError(errMsg.str(), param);
+               << typeString(indexType) << " as a single index";
+        reportError(errMsg.str(), index);
         continue;
       }
-     
-      // Check that index is of the right type for tensor being accessed.
+
+      // Check that index is of right type.
       switch (outerDims[i].getKind()) {
         case ir::IndexSet::Range:
-          if (!isInt(paramType->at(0))) {
+          if (!isInt(indexType->at(0))) {
             std::stringstream errMsg;
             errMsg << "expected an integral index but got an index of type " 
-                   << typeString(paramType);
-            reportError(errMsg.str(), param);
+                   << typeString(indexType);
+            reportError(errMsg.str(), index);
           }
           break;
         case ir::IndexSet::Set:
         {
           const auto setType = outerDims[i].getSet().type().toSet();
-         
-          // Always allow integral index.
-          if (isInt(paramType->at(0))) {
+
+          // Allow integral indices.
+          if (isInt(indexType->at(0))) {
             break;
           }
 
-          if (!compareTypes(setType->elementType, paramType->at(0))) {
+          if (!compareTypes(setType->elementType, indexType->at(0))) {
             std::stringstream errMsg;
             errMsg << "expected an integral index or an index of type "
                    << typeString(setType->elementType) << " but got an "
-                   << "index of type " << typeString(paramType);
-            reportError(errMsg.str(), param);
+                   << "index of type " << typeString(indexType);
+            reportError(errMsg.str(), index);
           }
           break;
         }
@@ -1022,7 +1043,11 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     if (dims.empty()) {
       retType->push_back(tensorType->getBlockType());
     } else {
-      retType->push_back(ir::TensorType::make(tensorType->componentType, dims));
+      const bool isColumnVector = (dims.size() == 1 && 
+                                  !expr->indices.back()->isSlice());
+      const auto retTensorType = ir::TensorType::make(tensorType->componentType, 
+                                                      dims, isColumnVector);
+      retType->push_back(retTensorType);
     }
   } else if (lhsType->at(0).isTuple()) {
     // Check that tuple read is indexed by an integral index.
@@ -1100,14 +1125,25 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
     return;
   }
 
-  retType = std::make_shared<Expr::Type>();
   if (type.isElement()) {
+    retType = std::make_shared<Expr::Type>();
     retType->push_back(elemType->field(fieldName).type);
-  } else {
-    const std::string varName = to<VarExpr>(expr->setOrElem)->ident;
-    const ir::Expr setExpr = ctx.getSymbol(varName).getExpr();
-    retType->push_back(getFieldType(setExpr, fieldName));
+    return;
   }
+  
+  const std::string varName = to<VarExpr>(expr->setOrElem)->ident;
+  const ir::Expr setExpr = ctx.getSymbol(varName).getExpr();
+  const ir::Type fieldType = getFieldType(setExpr, fieldName);
+
+  // Check that set field is a scalar or vector.
+  if (fieldType.toTensor()->order() > 1) {
+    const auto msg = "cannot read from non-scalar and non-vector set fields";
+    reportError(msg, expr);
+    return;
+  }
+
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(fieldType);
 }
 
 void TypeChecker::visit(VarExpr::Ptr expr) {
@@ -1132,26 +1168,29 @@ void TypeChecker::visit(VarExpr::Ptr expr) {
     reportError(errMsg.str(), expr);
   }
 
+  const ir::Type varType = varSym.getExpr().type();
+
+  if (!varType.defined()) {
+    return;
+  }
+
   retType = std::make_shared<Expr::Type>();
   retType->push_back(varSym.getExpr().type());
 }
 
 void TypeChecker::visit(IntLiteral::Ptr lit) {
   retType = std::make_shared<Expr::Type>();
-  const auto componentType = ir::ScalarType(ir::ScalarType::Int);
-  retType->push_back(ir::TensorType::make(componentType));
+  retType->push_back(ir::Int);
 }
 
 void TypeChecker::visit(FloatLiteral::Ptr lit) {
   retType = std::make_shared<Expr::Type>();
-  const auto componentType = ir::ScalarType(ir::ScalarType::Float);
-  retType->push_back(ir::TensorType::make(componentType));
+  retType->push_back(ir::Float);
 }
 
 void TypeChecker::visit(BoolLiteral::Ptr lit) {
   retType = std::make_shared<Expr::Type>();
-  const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
-  retType->push_back(ir::TensorType::make(componentType));
+  retType->push_back(ir::Boolean);
 }
 
 void TypeChecker::visit(IntVectorLiteral::Ptr lit) {
@@ -1226,8 +1265,7 @@ void TypeChecker::visit(Test::Ptr test) {
   }
 }
 
-void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, 
-                                          const bool isConst) {
+void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst) {
   const ir::Var var = getVar(decl->var);
   const ir::Type varType = var.getType();
   
@@ -1237,18 +1275,20 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl,
   }
 
   // Check that variable/constant hasn't already been declared in current scope.
-  if (ctx.hasSymbol(var.getName(), true)) {
+  if (ctx.hasSymbol(var.getName(), true) && 
+      ctx.getSymbol(var.getName()).getExpr().type().defined()) {
     reportMultipleDefs("variable or constant", var.getName(), decl);
     return;
   }
-    
-  if (!varType.defined()) {
-    return;
-  }
-
+  
+  // Record declaration of variable/constant in symbol table.
   const auto access = isConst ? internal::Symbol::Read : 
                       internal::Symbol::ReadWrite;
   ctx.addSymbol(var.getName(), var, access);
+
+  if (!varType.defined()) {
+    return;
+  }
 
   // Check that initial value type matches declared variable/constant type.
   if (!initType || (initType->size() == 1 && 
@@ -1374,8 +1414,116 @@ void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
   }
 
   retType = std::make_shared<Expr::Type>();
-  const auto componentType = ir::ScalarType(ir::ScalarType::Boolean);
-  retType->push_back(ir::TensorType::make(componentType));
+  retType->push_back(ir::Boolean);
+}
+
+void TypeChecker::DenseTensorType::addIntValues(unsigned len) {
+  if (type == Type::FLOAT) {
+    throw TypeError();
+  }
+
+  type = Type::INT;
+  dimSizes[dimSizes.size() - 1] += len;
+}
+
+void TypeChecker::DenseTensorType::addFloatValues(unsigned len) {
+  if (type == Type::INT) {
+    throw TypeError();
+  }
+
+  type = Type::FLOAT;
+  dimSizes[dimSizes.size() - 1] += len;
+}
+
+void TypeChecker::DenseTensorType::merge(const DenseTensorType &other) {
+  if (type != other.type) {
+    throw TypeError();
+  }
+  
+  if (dimSizes.size() - 1 != other.dimSizes.size()) {
+    throw DimError();
+  }
+
+  for (unsigned i = 0; i < dimSizes.size() - 1; ++i) {
+    if (dimSizes[i] != other.dimSizes[i]) {
+      throw DimError();
+    }
+  }
+  
+  ++dimSizes[dimSizes.size() - 1];
+}
+
+void TypeChecker::markCheckWritable(HIRNode::Ptr node) {
+  if (isa<VarExpr>(node)) {
+    checkWritable = node;
+  } else if (isa<TensorReadExpr>(node)) {
+    markCheckWritable(to<TensorReadExpr>(node)->tensor);
+  } else if (isa<FieldReadExpr>(node)) {
+    markCheckWritable(to<FieldReadExpr>(node)->setOrElem);
+  }
+}
+
+bool TypeChecker::compareTypes(const ir::Type &l, const ir::Type &r) {
+  iassert(l.defined() && r.defined());
+
+  if (l.isTensor() && r.isTensor()) {
+    const auto ltype = l.toTensor();
+    const auto rtype = r.toTensor();
+    return (*ltype == *rtype && ltype->isColumnVector == rtype->isColumnVector);
+  }
+
+  return (l == r);
+}
+
+std::string TypeChecker::typeString(const ir::Type &type) {
+  std::stringstream oss;
+  oss << "'" << type << "'";
+  return oss.str();
+}
+
+std::string TypeChecker::typeString(const Ptr<Expr::Type> &type) {
+  if (type->size() == 0) {
+    return "void";
+  }
+
+  std::stringstream oss;
+  if (type->size() > 1) {
+    oss << "(";
+  }
+  
+  bool printDelimiter = false;
+  for (const auto compType : *type) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+    oss << typeString(compType);
+    printDelimiter = true;
+  }
+
+  if (type->size() > 1) {
+    oss << ")";
+  }
+  return oss.str();
+}
+
+void TypeChecker::reportError(std::string msg, HIRNode::Ptr loc) {
+  const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
+                              loc->getLineEnd(), loc->getColEnd(), msg);
+  errors->push_back(err);
+}
+
+void TypeChecker::reportUndeclared(std::string type, std::string ident,
+                                   HIRNode::Ptr loc) {
+  std::stringstream errMsg;
+  errMsg << "undeclared " << type << " '" << ident << "'";
+  reportError(errMsg.str(), loc);
+}
+
+void TypeChecker::reportMultipleDefs(std::string type, std::string ident, 
+                                     HIRNode::Ptr loc) {
+  std::stringstream errMsg;
+  errMsg << "multiple definitions of " << type << " '" << ident << "'";
+  reportError(errMsg.str(), loc);
 }
 
 }

@@ -6,6 +6,6 @@ end
 extern points : set{Point};
 
 proc main 
-  s = points.x * points.x';
+  s = points.x' * points.x;
   points.z = s + points.z;
 end

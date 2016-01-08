@@ -78,17 +78,14 @@ private:
   virtual void visit(NDTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
+private:
   template <typename T> using Ptr = std::shared_ptr<T>;
 
   class DimError : public std::exception {
-    const char *what() const noexcept {
-      return "mismatched dimension sizes";
-    }
+    const char *what() const noexcept { return "mismatched dimension sizes"; }
   };
   class TypeError : public std::exception {
-    const char *what() const noexcept {
-      return "mismatched element types";
-    }
+    const char *what() const noexcept { return "mismatched element types"; }
   };
 
   struct DenseTensorType {
@@ -97,54 +94,22 @@ private:
     DenseTensorType() : dimSizes(1), type(Type::UNKNOWN) {};
 
     void addDimension() { dimSizes.push_back(1); }
-    void addIntValues(const unsigned len) {
-      if (type == Type::FLOAT) {
-        throw TypeError();
-      }
-      type = Type::INT;
-      dimSizes[dimSizes.size() - 1] += len;
-    }
-    void addFloatValues(const unsigned len) {
-      if (type == Type::INT) {
-        throw TypeError();
-      }
-      type = Type::FLOAT;
-      dimSizes[dimSizes.size() - 1] += len;
-    }
-    void merge(const DenseTensorType &other) {
-      if (type != other.type) {
-        throw TypeError();
-      } else if (dimSizes.size() - 1 != other.dimSizes.size()) {
-        throw DimError();
-      } else {
-        for (unsigned i = 0; i < dimSizes.size() - 1; ++i) {
-          if (dimSizes[i] != other.dimSizes[i]) {
-            throw DimError();
-          }
-        }
-      }
-      dimSizes[dimSizes.size() - 1]++;
-    }
+    void addIntValues(unsigned);
+    void addFloatValues(unsigned);
+    void merge(const DenseTensorType &);
 
     std::vector<unsigned> dimSizes;
     Type                      type;
   };
- 
-  void typeCheckVarOrConstDecl(VarDecl::Ptr, const bool = false);
-  void typeCheckBinaryElwise(BinaryExpr::Ptr);
-  void typeCheckBinaryBoolean(BinaryExpr::Ptr);
-  void typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
+
+private:
+  void            typeCheckVarOrConstDecl(VarDecl::Ptr, bool = false);
+  void            typeCheckBinaryElwise(BinaryExpr::Ptr);
+  void            typeCheckBinaryBoolean(BinaryExpr::Ptr);
+  void            typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
   DenseTensorType getDenseTensorType(DenseTensorLiteral::Ptr);
 
-  void markCheckWritable(HIRNode::Ptr node) {
-    if (isa<VarExpr>(node)) {
-      checkWritable = node;
-    } else if (isa<TensorReadExpr>(node)) {
-      markCheckWritable(to<TensorReadExpr>(node)->tensor);
-    } else if (isa<FieldReadExpr>(node)) {
-      markCheckWritable(to<FieldReadExpr>(node)->setOrElem);
-    }
-  }
+  void markCheckWritable(HIRNode::Ptr);
 
   Ptr<Expr::Type> inferType(Expr::Ptr ptr) {
     retType.reset();
@@ -192,61 +157,16 @@ private:
     return ret;
   }
 
-  bool compareTypes(const ir::Type &l, const ir::Type &r) {
-    iassert(l.defined() && r.defined());
-    return (l.kind() == r.kind() && l == r);
-  }
-  std::string typeString(const ir::Type &type) {
-    std::stringstream oss;
-    oss << "'" << type;
-    if (type.isTensor() && type.toTensor()->isColumnVector) {
-      oss << "'";
-    }
-    oss << "'";
-    return oss.str();
-  }
-  std::string typeString(const Ptr<Expr::Type> &type) {
-    if (type->size() == 0) {
-      return "void";
-    }
+  static bool compareTypes(const ir::Type &, const ir::Type &);
+  
+  static std::string typeString(const ir::Type &);
+  static std::string typeString(const Ptr<Expr::Type> &);
+  
+  void reportError(std::string, HIRNode::Ptr);
+  void reportUndeclared(std::string, std::string, HIRNode::Ptr);
+  void reportMultipleDefs(std::string, std::string, HIRNode::Ptr);
 
-    std::stringstream oss;
-    if (type->size() > 1) {
-      oss << "(";
-    }
-    
-    bool printDelimiter = false;
-    for (const auto compType : *type) {
-      if (printDelimiter) {
-        oss << ", ";
-      }
-      oss << typeString(compType);
-      printDelimiter = true;
-    }
-
-    if (type->size() > 1) {
-      oss << ")";
-    }
-    return oss.str();
-  }
-  void reportError(const std::string msg, HIRNode::Ptr loc) {
-    const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
-                                loc->getLineEnd(), loc->getColEnd(), msg);
-    errors->push_back(err);
-  }
-  void reportUndeclared(const std::string type, const std::string ident, 
-                        HIRNode::Ptr loc) {
-    std::stringstream errMsg;
-    errMsg << "undeclared " << type << " '" << ident << "'";
-    reportError(errMsg.str(), loc);
-  }
-  void reportMultipleDefs(const std::string type, const std::string ident, 
-                          HIRNode::Ptr loc) {
-    std::stringstream errMsg;
-    errMsg << "multiple definitions of " << type << " '" << ident << "'";
-    reportError(errMsg.str(), loc);
-  }
-
+private:
   Ptr<Expr::Type> retType;
   Ptr<ir::IndexSet> retIndexSet;
   ir::Expr retExpr;

@@ -19,9 +19,7 @@ public:
   IREmitter(internal::ProgramContext *ctx) : 
     retField(ir::Field("", ir::Type())), ctx(ctx) {}
 
-  inline void emitIR(Program::Ptr program) {
-    program->accept(this);
-  }
+  void emitIR(Program::Ptr program) { program->accept(this); }
 
 private:
   virtual void visit(StmtBlock::Ptr);
@@ -81,30 +79,17 @@ private:
 
 private:
   struct Domain {
-    enum class Type {SET, RANGE};
+    enum class Type {UNKNOWN, SET, RANGE};
 
-    static Domain make(ir::IndexSet set) {
-      Domain newRange;
+    Domain() = default;
+    Domain(ir::IndexSet set) : type(Type::SET), set(set) {}
+    Domain(ir::Expr lower, ir::Expr upper) : 
+        type(Type::RANGE), lower(lower), upper(upper) {}
 
-      newRange.type = Type::SET;
-      newRange.set = set;
-      
-      return newRange;
-    }
-    static Domain make(ir::Expr lower, ir::Expr upper) {
-      Domain newRange;
-
-      newRange.type = Type::RANGE;
-      newRange.lower = lower;
-      newRange.upper = upper;
-
-      return newRange;
-    }
-
-    Type type;
+    Type         type;
     ir::IndexSet set;
-    ir::Expr lower;
-    ir::Expr upper;
+    ir::Expr     lower;
+    ir::Expr     upper;
   };
   
   struct DenseTensorValues {
@@ -112,37 +97,10 @@ private:
 
     DenseTensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
 
-    inline void addDimension() { dimSizes.push_back(1); }
-    void addIntValues(const std::vector<int> &vals) {
-      iassert(type != Type::FLOAT);
-      type = Type::INT;
-      intVals.insert(intVals.end(), vals.begin(), vals.end());
-      dimSizes[dimSizes.size() - 1] += vals.size();
-    }
-    void addFloatValues(const std::vector<double> &vals) {
-      iassert(type != Type::INT);
-      type = Type::FLOAT;
-      floatVals.insert(floatVals.end(), vals.begin(), vals.end());
-      dimSizes[dimSizes.size() - 1] += vals.size();
-    }
-    void merge(const DenseTensorValues &other) {
-      iassert(type == other.type);
-      iassert(dimSizes.size() - 1 == other.dimSizes.size());
-      switch (type) {
-        case Type::INT:
-          intVals.insert(intVals.end(), other.intVals.begin(), 
-                         other.intVals.end());
-          break;
-        case Type::FLOAT:
-          floatVals.insert(floatVals.end(), other.floatVals.begin(), 
-                           other.floatVals.end());
-          break;
-        default:
-          unreachable;
-          break;
-      }
-      dimSizes[dimSizes.size() - 1]++;
-    }
+    void addDimension() { dimSizes.push_back(1); }
+    void addIntValues(const std::vector<int> &);
+    void addFloatValues(const std::vector<double> &);
+    void merge(const DenseTensorValues &);
 
     std::vector<unsigned> dimSizes;
     std::vector<int>       intVals;
@@ -150,49 +108,50 @@ private:
     Type                      type;
   };
 
-  inline ir::Expr emitExpr(HIRNode::Ptr ptr) {
+private:
+  ir::Expr emitExpr(HIRNode::Ptr ptr) {
     retExpr = ir::Expr();
     ptr->accept(this);
     const ir::Expr ret = retExpr;
     retExpr = ir::Expr();
     return ret;
   }
-  inline ir::Stmt emitStmt(Stmt::Ptr ptr) {
+  ir::Stmt emitStmt(Stmt::Ptr ptr) {
     retStmt = ir::Stmt();
     ptr->accept(this);
     const ir::Stmt ret = retStmt;
     retStmt = ir::Stmt();
     return ret;
   }
-  inline ir::Type emitType(Type::Ptr ptr) {
+  ir::Type emitType(Type::Ptr ptr) {
     retType = ir::Type();
     ptr->accept(this);
     const ir::Type ret = retType;
     retType = ir::Type();
     return ret;
   }
-  inline ir::IndexSet emitIndexSet(IndexSet::Ptr ptr) {
+  ir::IndexSet emitIndexSet(IndexSet::Ptr ptr) {
     retIndexSet = ir::IndexSet();
     ptr->accept(this);
     const ir::IndexSet ret = retIndexSet;
     retIndexSet = ir::IndexSet();
     return ret;
   }
-  inline ir::Field emitField(Field::Ptr ptr) {
+  ir::Field emitField(Field::Ptr ptr) {
     retField = ir::Field("", ir::Type());
     ptr->accept(this);
     const ir::Field ret = retField;
     retField = ir::Field("", ir::Type());
     return ret;
   }
-  inline ir::Var emitVar(IdentDecl::Ptr ptr) {
+  ir::Var emitVar(IdentDecl::Ptr ptr) {
     retVar = ir::Var();
     ptr->accept(this);
     const ir::Var ret = retVar;
     retVar = ir::Var();
     return ret;
   }
-  inline Domain emitDomain(ForDomain::Ptr ptr) {
+  Domain emitDomain(ForDomain::Ptr ptr) {
     retDomain = Domain();
     ptr->accept(this);
     const Domain ret = retDomain;
@@ -200,21 +159,17 @@ private:
     return ret;
   }
  
-  void addFuncOrProc(FuncDecl::Ptr, const bool = false);
-  void addVarOrConst(VarDecl::Ptr, const bool = false);
-  void addWhileOrDoWhile(WhileStmt::Ptr, const bool = false);
+  void addFuncOrProc(FuncDecl::Ptr, bool = false);
+  void addVarOrConst(VarDecl::Ptr, bool = false);
+  void addWhileOrDoWhile(WhileStmt::Ptr, bool = false);
   void addAssign(const std::vector<ir::Expr> &, ir::Expr);
 
-  void emitDenseTensorLiteral(DenseTensorLiteral::Ptr);
+  void              emitDenseTensorLiteral(DenseTensorLiteral::Ptr);
   DenseTensorValues emitTensorValues(DenseTensorLiteral::Ptr);
 
-  ir::Stmt getCallStmts() {
-    const ir::Stmt callStmts = calls.empty() ? ir::Stmt() : 
-                               ir::Block::make(calls);
-    calls.clear();
-    return callStmts;
-  }
+  ir::Stmt getCallStmts();
 
+private:
   std::vector<ir::Stmt> calls;
 
   ir::Expr retExpr;
