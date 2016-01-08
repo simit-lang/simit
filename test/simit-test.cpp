@@ -29,6 +29,8 @@ void ParseEnvironmentOptions(const char *progName, const char *envvar,
                              const char *Overview = nullptr);
 }}
 
+static bool PROFILE(false);
+
 #ifdef F32
 // F32 environment setup
 class F32Environment : public ::testing::Environment {
@@ -52,21 +54,23 @@ int main(int argc, char **argv) {
   // the tests using that argument surrounded by wildcards.
   size_t lastArgLen = strlen(argv[argc-1]);
   std::string filter;
+  std::cout << argv[argc-1] << std::endl;
   if (argc > 1 &&
       (lastArgLen == 1 ||
-       (lastArgLen >= 2 && std::string(argv[argc-1]).substr(0,2) != "--"))) {
-    filter = std::string(argv[1]);
+       (lastArgLen >= 2 && 
+        (std::string(argv[argc-1]).substr(0,2) != "--" || simit::util::split(argv[argc-1],"=")[0] == "--profile")))) {
+      filter = std::string(argv[1]);
 
-    char *dotPtr = strchr(argv[1], '.');
-    if (!dotPtr) {
-      filter = "*" + filter + "*";
-    }
-    else if (dotPtr[1] == '\0') {
-      filter = filter + "*";
-    }
+      char *dotPtr = strchr(argv[1], '.');
+      if (!dotPtr) {
+        filter = "*" + filter + "*";
+      }
+      else if (dotPtr[1] == '\0') {
+        filter = filter + "*";
+      }
 
-    filter = std::string("--gtest_filter=") + filter;
-    argv[1] = (char*)filter.c_str();
+      filter = std::string("--gtest_filter=") + filter;
+      argv[1] = (char*)filter.c_str();
   }
 
   ::testing::InitGoogleTest(&argc, argv);
@@ -77,14 +81,19 @@ int main(int argc, char **argv) {
     std::string arg = argv[i];
     if (arg.substr(0,2) == "--") {
       std::vector<std::string> keyValPair = simit::util::split(arg, "=");
-      if (keyValPair.size() == 1) {
-        std::cerr << "Unrecognized arg: " << arg << std::endl;
-        return 1;
+      if (keyValPair.size() == 1 ) {
+        if (keyValPair[0] == "--profile") {
+          PROFILE = true;
+        }
+        else {
+          std::cerr << "Unrecognized arg: " << arg << std::endl;
+          return 1;
+        }
       }
       else if (keyValPair.size() == 2) {
         if (keyValPair[0] == "--backend") {
           simitBackend = keyValPair[1];
-        }
+        } 
         else {
           std::cerr << "Unrecognized arg: " << keyValPair[0] << std::endl;
           return 1;
@@ -109,9 +118,10 @@ int main(int argc, char **argv) {
   simit::init(simitBackend, floatSize);
 
   int returnValue = RUN_ALL_TESTS();
-#ifdef PROFILE
-  simit::printTimes(); 
-#endif
+  
+  if (PROFILE) {
+    simit::printTimes(); 
+  }
   return returnValue;
 }
 
@@ -131,12 +141,14 @@ simit::Function loadFunction(std::string fileName, std::string funcName="main"){
     std::cerr << program.getDiagnostics().getMessage();
     return simit::Function();
   }
+  
+  simit::Function f;
+  if (PROFILE) {
+    f = program.compileWithTimers(funcName);
+  } else {
+    f = program.compile(funcName);
+  }
 
-#ifdef PROFILE
-  simit::Function f = program.compileWithTimers(funcName);
-#else
-  simit::Function f = program.compile(funcName);
-#endif
   if (!f.defined()) {
     std::cerr << program.getDiagnostics().getMessage();
   }
