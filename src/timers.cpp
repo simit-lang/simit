@@ -55,9 +55,8 @@ void printTimes() {
     }
   }
  
-  printf("Percentage Sum: %f\n", percentageSum); 
   printf("Total Time: %f (seconds)\n", 
-      simit::ir::TimerStorage::getInstance().getTotalTime());
+      simit::ir::TimerStorage::getInstance().getTotalTime() / 1000000.0);
 }
 
 namespace ir {

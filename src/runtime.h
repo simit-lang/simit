@@ -33,6 +33,10 @@ float det3_f32(float* a);
 void inv3_f64(double* a, double* inv);
 void inv3_f32(float* a, float* inv);
 
+void simitStoreTime(int i, double value);
+double simitClock();
+
+
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f32
 void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
                  int* row_start, int* col_idx,
@@ -221,10 +225,7 @@ void inv3_f32(float * a, float * inv){
   inv[8] = cof22 * determ;
 }
 
-double simitClock() {
-  struct timespec tv;
-  clock_gettime(CLOCK_MONOTONIC, &tv);
-  return (((double) tv.tv_sec) + (double) (tv.tv_nsec / 1000000000.0));
+
 }
 
 #include "timers.h"
@@ -233,5 +234,11 @@ void simitStoreTime(int i, double value) {
   simit::ir::TimerStorage::getInstance().storeTime(i, value);
 }
 
+#include <chrono>
+double simitClock() {
+  using namespace std::chrono;
+  auto t = high_resolution_clock::now();
+  time_point<high_resolution_clock,microseconds> usec = time_point_cast<microseconds>(t);
+  return (double)(usec.time_since_epoch().count());
 }
 #endif

@@ -54,7 +54,6 @@ int main(int argc, char **argv) {
   // the tests using that argument surrounded by wildcards.
   size_t lastArgLen = strlen(argv[argc-1]);
   std::string filter;
-  std::cout << argv[argc-1] << std::endl;
   if (argc > 1 &&
       (lastArgLen == 1 ||
        (lastArgLen >= 2 && 
