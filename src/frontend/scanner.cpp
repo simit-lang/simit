@@ -9,7 +9,7 @@
 namespace simit { 
 namespace internal {
 
-Token::Type ScannerNew::getTokenType(const std::string token) {
+Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "int") return Token::Type::INT;
   if (token == "float") return Token::Type::FLOAT;
   if (token == "bool") return Token::Type::BOOL;
@@ -50,7 +50,7 @@ Token::Type ScannerNew::getTokenType(const std::string token) {
   return Token::Type::IDENT;
 }
 
-TokenStream ScannerNew::lex(std::istream &programStream) {
+TokenStream Scanner::lex(std::istream &programStream) {
   TokenStream tokens;
   unsigned line = 1;
   unsigned col = 1;

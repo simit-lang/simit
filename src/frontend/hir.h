@@ -13,6 +13,7 @@
 namespace simit {
 namespace hir {
 
+// Base class for higher-level intermediate representation used by frontend.
 struct HIRNode : public std::enable_shared_from_this<HIRNode> {
 protected:
   unsigned lineBegin;
@@ -140,7 +141,7 @@ struct Endpoint : public HIRNode {
 };
 
 struct SetType : public Type {
-  ElementType::Ptr element;
+  ElementType::Ptr           element;
   std::vector<Endpoint::Ptr> endpoints;
   
   typedef std::shared_ptr<SetType> Ptr;
@@ -189,8 +190,8 @@ struct ScalarType : public TensorType {
 
 struct NDTensorType : public TensorType {
   std::vector<IndexSet::Ptr> indexSets;
-  TensorType::Ptr blockType;  
-  bool transposed;
+  TensorType::Ptr            blockType;
+  bool                       columnVector;
   
   typedef std::shared_ptr<NDTensorType> Ptr;
   
@@ -211,7 +212,7 @@ struct Identifier : public HIRNode {
 
 struct IdentDecl : public HIRNode {
   Identifier::Ptr name;
-  Type::Ptr type;
+  Type::Ptr       type;
   
   typedef std::shared_ptr<IdentDecl> Ptr;
   
@@ -239,7 +240,7 @@ struct Field : public HIRNode {
 };
 
 struct ElementTypeDecl : public HIRNode {
-  Identifier::Ptr name;
+  Identifier::Ptr         name;
   std::vector<Field::Ptr> fields; 
   
   typedef std::shared_ptr<ElementTypeDecl> Ptr;
@@ -270,10 +271,10 @@ struct ExternDecl : public HIRNode {
 };
 
 struct FuncDecl : public HIRNode {
-  Identifier::Ptr name;
-  std::vector<Argument::Ptr> args;
+  Identifier::Ptr             name;
+  std::vector<Argument::Ptr>  args;
   std::vector<IdentDecl::Ptr> results;
-  StmtBlock::Ptr body;
+  StmtBlock::Ptr              body;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   
@@ -292,7 +293,7 @@ struct ProcDecl : public FuncDecl {
 
 struct VarDecl : public Stmt {
   IdentDecl::Ptr var;
-  Expr::Ptr initVal;
+  Expr::Ptr      initVal;
  
   typedef std::shared_ptr<VarDecl> Ptr;
 
@@ -310,7 +311,7 @@ struct ConstDecl : public VarDecl {
 };
 
 struct WhileStmt : public Stmt {
-  Expr::Ptr cond;
+  Expr::Ptr      cond;
   StmtBlock::Ptr body;
   
   typedef std::shared_ptr<WhileStmt> Ptr;
@@ -387,8 +388,8 @@ struct RangeDomain : public ForDomain {
 
 struct ForStmt : public Stmt {
   Identifier::Ptr loopVar;
-  ForDomain::Ptr domain;
-  StmtBlock::Ptr body;
+  ForDomain::Ptr  domain;
+  StmtBlock::Ptr  body;
   
   typedef std::shared_ptr<ForStmt> Ptr;
   
@@ -467,10 +468,10 @@ struct ExprParam : public ReadParam {
 struct MapExpr : public Expr {
   enum class ReductionOp {SUM, NONE};
 
-  Identifier::Ptr func;
+  Identifier::Ptr        func;
   std::vector<Expr::Ptr> partialActuals;
-  Identifier::Ptr target;
-  ReductionOp op;
+  Identifier::Ptr        target;
+  ReductionOp            op;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 
@@ -644,7 +645,7 @@ struct TransposeExpr : public UnaryExpr {
 };
 
 struct CallExpr : public Expr {
-  Identifier::Ptr func;
+  Identifier::Ptr        func;
   std::vector<Expr::Ptr> arguments;
   
   typedef std::shared_ptr<CallExpr> Ptr;
@@ -658,7 +659,7 @@ struct CallExpr : public Expr {
 };
 
 struct TensorReadExpr : public Expr {
-  Expr::Ptr tensor;
+  Expr::Ptr                   tensor;
   std::vector<ReadParam::Ptr> indices;
   
   typedef std::shared_ptr<TensorReadExpr> Ptr;
@@ -686,7 +687,7 @@ struct TupleReadExpr : public Expr {
 };
 
 struct FieldReadExpr : public Expr {
-  Expr::Ptr setOrElem;
+  Expr::Ptr       setOrElem;
   Identifier::Ptr field;
   
   typedef std::shared_ptr<FieldReadExpr> Ptr;
@@ -792,9 +793,9 @@ struct NDTensorLiteral : public DenseTensorLiteral {
 };
 
 struct Test : public HIRNode {
-  Identifier::Ptr func;
+  Identifier::Ptr        func;
   std::vector<Expr::Ptr> args;
-  Expr::Ptr expected;
+  Expr::Ptr              expected;
   
   typedef std::shared_ptr<Test> Ptr;
   

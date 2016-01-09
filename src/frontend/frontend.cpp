@@ -26,8 +26,8 @@ using namespace simit::internal;
 int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
                           std::vector<ParseError> *errors) {
   // Lexical and syntactic analyses.
-  TokenStream tokens = ScannerNew(errors).lex(programStream);
-  hir::Program::Ptr program = ParserNew(errors).parse(tokens);
+  TokenStream tokens = Scanner(errors).lex(programStream);
+  hir::Program::Ptr program = Parser(errors).parse(tokens);
 
   // Semantic analyses.
   program = hir::FuncCallRewriter(errors).rewrite<hir::Program>(program);

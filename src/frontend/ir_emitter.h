@@ -14,6 +14,7 @@
 namespace simit {
 namespace hir {
 
+// Handles translation from higher-level IR to Simit IR.
 class IREmitter : public HIRVisitor {
 public:
   IREmitter(internal::ProgramContext *ctx) : 
@@ -91,7 +92,8 @@ private:
     ir::Expr     lower;
     ir::Expr     upper;
   };
-  
+
+  // Used to build up dense tensor literals.
   struct DenseTensorValues {
     enum class Type {UNKNOWN, INT, FLOAT};
 
@@ -170,15 +172,18 @@ private:
   ir::Stmt getCallStmts();
 
 private:
+  // Used during IR generation to store call and map statements that have to be 
+  // emitted before an expression can be fully evaluated at runtime. Needed to 
+  // get around lack of call and map expressions.
   std::vector<ir::Stmt> calls;
 
-  ir::Expr retExpr;
-  ir::Stmt retStmt;
-  ir::Type retType;
+  ir::Expr     retExpr;
+  ir::Stmt     retStmt;
+  ir::Type     retType;
   ir::IndexSet retIndexSet;
-  ir::Field retField;
-  ir::Var retVar;
-  Domain retDomain;
+  ir::Field    retField;
+  ir::Var      retVar;
+  Domain       retDomain;
 
   internal::ProgramContext *ctx;
 };

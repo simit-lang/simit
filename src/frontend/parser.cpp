@@ -12,13 +12,13 @@ namespace internal {
 // here to denote zero or more instances of the enclosing term, while '[]' is 
 // used to denote zero or one instance of the enclosing term.
 
-hir::Program::Ptr ParserNew::parse(const TokenStream &tokens) {
+hir::Program::Ptr Parser::parse(const TokenStream &tokens) {
   this->tokens = tokens;
   return parseProgram();
 }
 
 // program: {program_element}
-hir::Program::Ptr ParserNew::parseProgram() {
+hir::Program::Ptr Parser::parseProgram() {
   auto program = std::make_shared<hir::Program>();
   
   while (peek().type != Token::Type::END) {
@@ -33,7 +33,7 @@ hir::Program::Ptr ParserNew::parseProgram() {
 
 // program_element: element_type_decl | extern_decl | const_decl
 //                | func_decl | proc_decl | test
-hir::HIRNode::Ptr ParserNew::parseProgramElement() {
+hir::HIRNode::Ptr Parser::parseProgramElement() {
   try {
     switch (peek().type) {
       case Token::Type::TEST:
@@ -67,7 +67,7 @@ hir::HIRNode::Ptr ParserNew::parseProgramElement() {
 }
 
 // element_type_decl: 'element' ident field_decl_list 'end'
-hir::ElementTypeDecl::Ptr ParserNew::parseElementTypeDecl() {
+hir::ElementTypeDecl::Ptr Parser::parseElementTypeDecl() {
   auto elemTypeDecl = std::make_shared<hir::ElementTypeDecl>();
   
   const Token elementToken = consume(Token::Type::ELEMENT);
@@ -83,7 +83,7 @@ hir::ElementTypeDecl::Ptr ParserNew::parseElementTypeDecl() {
 }
 
 // field_decl_list: {field_decl}
-std::vector<hir::Field::Ptr> ParserNew::parseFieldDeclList() {
+std::vector<hir::Field::Ptr> Parser::parseFieldDeclList() {
   std::vector<hir::Field::Ptr> fields;
 
   while (peek().type == Token::Type::IDENT) {
@@ -95,7 +95,7 @@ std::vector<hir::Field::Ptr> ParserNew::parseFieldDeclList() {
 }
 
 // field_decl: tensor_decl ';'
-hir::Field::Ptr ParserNew::parseFieldDecl() {
+hir::Field::Ptr Parser::parseFieldDecl() {
   auto fieldDecl = std::make_shared<hir::Field>();
   
   fieldDecl->field = parseTensorDecl();
@@ -107,7 +107,7 @@ hir::Field::Ptr ParserNew::parseFieldDecl() {
 }
 
 // extern_decl: 'extern' argument_decl ';'
-hir::ExternDecl::Ptr ParserNew::parseExternDecl() {
+hir::ExternDecl::Ptr Parser::parseExternDecl() {
   auto externDecl = std::make_shared<hir::ExternDecl>();
   
   const Token externToken = consume(Token::Type::EXTERN);
@@ -122,7 +122,7 @@ hir::ExternDecl::Ptr ParserNew::parseExternDecl() {
 }
 
 // func_decl: 'func' ident arguments results stmt_block 'end'
-hir::FuncDecl::Ptr ParserNew::parseFuncDecl() {
+hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   auto funcDecl = std::make_shared<hir::FuncDecl>();
 
   const Token funcToken = consume(Token::Type::FUNC);
@@ -140,7 +140,7 @@ hir::FuncDecl::Ptr ParserNew::parseFuncDecl() {
 }
 
 // proc_decl: 'proc' ident [arguments results] stmt_block 'end'
-hir::ProcDecl::Ptr ParserNew::parseProcDecl() {
+hir::ProcDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::ProcDecl>();
 
   const Token procToken = consume(Token::Type::PROC);
@@ -170,7 +170,7 @@ hir::ProcDecl::Ptr ParserNew::parseProcDecl() {
 }
 
 // arguments: '(' [argument_decl {',' argument_decl}] ')'
-std::vector<hir::Argument::Ptr> ParserNew::parseArguments() {
+std::vector<hir::Argument::Ptr> Parser::parseArguments() {
   std::vector<hir::Argument::Ptr> arguments;
   
   consume(Token::Type::LP);
@@ -186,7 +186,7 @@ std::vector<hir::Argument::Ptr> ParserNew::parseArguments() {
 }
 
 // argument_decl: ['inout'] ident_decl
-hir::Argument::Ptr ParserNew::parseArgumentDecl() {
+hir::Argument::Ptr Parser::parseArgumentDecl() {
   auto argDecl = std::make_shared<hir::Argument>();
   
   argDecl->inout = false;
@@ -202,7 +202,7 @@ hir::Argument::Ptr ParserNew::parseArgumentDecl() {
 }
 
 // results: ['->' '(' ident_decl {',' ident_decl} ')']
-std::vector<hir::IdentDecl::Ptr> ParserNew::parseResults() {
+std::vector<hir::IdentDecl::Ptr> Parser::parseResults() {
   std::vector<hir::IdentDecl::Ptr> results;
 
   if (tryconsume(Token::Type::RARROW)) {
@@ -218,7 +218,7 @@ std::vector<hir::IdentDecl::Ptr> ParserNew::parseResults() {
 }
 
 // stmt_block: {stmt}
-hir::StmtBlock::Ptr ParserNew::parseStmtBlock() {
+hir::StmtBlock::Ptr Parser::parseStmtBlock() {
   auto stmtBlock = std::make_shared<hir::StmtBlock>();
 
   while (true) {
@@ -242,7 +242,7 @@ hir::StmtBlock::Ptr ParserNew::parseStmtBlock() {
 
 // stmt: var_decl | const_decl | if_stmt | while_stmt | do_while_stmt 
 //     | for_stmt | print_stmt | expr_or_assign_stmt
-hir::Stmt::Ptr ParserNew::parseStmt() {
+hir::Stmt::Ptr Parser::parseStmt() {
   switch (peek().type) {
     case Token::Type::VAR:
       return parseVarDecl();
@@ -264,7 +264,7 @@ hir::Stmt::Ptr ParserNew::parseStmt() {
 }
 
 // var_decl: 'var' tensor_decl ['=' expr] ';'
-hir::VarDecl::Ptr ParserNew::parseVarDecl() {
+hir::VarDecl::Ptr Parser::parseVarDecl() {
   try {
     auto varDecl = std::make_shared<hir::VarDecl>();
     
@@ -289,7 +289,7 @@ hir::VarDecl::Ptr ParserNew::parseVarDecl() {
 }
 
 // const_decl: 'const' tensor_decl '=' expr ';'
-hir::ConstDecl::Ptr ParserNew::parseConstDecl() {
+hir::ConstDecl::Ptr Parser::parseConstDecl() {
   try {
     auto constDecl = std::make_shared<hir::ConstDecl>();
     
@@ -313,7 +313,7 @@ hir::ConstDecl::Ptr ParserNew::parseConstDecl() {
 }
 
 // ident_decl: ident ':' type
-hir::IdentDecl::Ptr ParserNew::parseIdentDecl() {
+hir::IdentDecl::Ptr Parser::parseIdentDecl() {
   auto identDecl = std::make_shared<hir::IdentDecl>();
 
   identDecl->name = parseIdent();
@@ -327,7 +327,7 @@ hir::IdentDecl::Ptr ParserNew::parseIdentDecl() {
 // This rule is needed to prohibit declaration of non-tensor variables and 
 // fields, which are currently unsupported. Probably want to replace with 
 // ident_decl rule at some point in the future.
-hir::IdentDecl::Ptr ParserNew::parseTensorDecl() {
+hir::IdentDecl::Ptr Parser::parseTensorDecl() {
   auto tensorDecl = std::make_shared<hir::IdentDecl>();
 
   tensorDecl->name = parseIdent();
@@ -338,7 +338,7 @@ hir::IdentDecl::Ptr ParserNew::parseTensorDecl() {
 }
 
 // while_stmt: 'while' expr stmt_block 'end'
-hir::WhileStmt::Ptr ParserNew::parseWhileStmt() {
+hir::WhileStmt::Ptr Parser::parseWhileStmt() {
   try {
     auto whileStmt = std::make_shared<hir::WhileStmt>();
     
@@ -361,7 +361,7 @@ hir::WhileStmt::Ptr ParserNew::parseWhileStmt() {
 }
 
 // do_while_stmt: 'do' stmt_block 'end' 'while' expr
-hir::DoWhileStmt::Ptr ParserNew::parseDoWhileStmt() {
+hir::DoWhileStmt::Ptr Parser::parseDoWhileStmt() {
   try {
     auto doWhileStmt = std::make_shared<hir::DoWhileStmt>();
     
@@ -384,7 +384,7 @@ hir::DoWhileStmt::Ptr ParserNew::parseDoWhileStmt() {
 }
 
 // if_stmt: 'if' expr stmt_block else_clause 'end'
-hir::IfStmt::Ptr ParserNew::parseIfStmt() {
+hir::IfStmt::Ptr Parser::parseIfStmt() {
   try {
     auto ifStmt = std::make_shared<hir::IfStmt>();
     
@@ -410,7 +410,7 @@ hir::IfStmt::Ptr ParserNew::parseIfStmt() {
 }
 
 // else_clause: [('else' stmt_block) | ('elif' expr stmt_block else_clause)]
-hir::Stmt::Ptr ParserNew::parseElseClause() {
+hir::Stmt::Ptr Parser::parseElseClause() {
   switch (peek().type) {
     case Token::Type::ELSE:
       consume(Token::Type::ELSE);
@@ -439,7 +439,7 @@ hir::Stmt::Ptr ParserNew::parseElseClause() {
 }
 
 // for_stmt: 'for' ident 'in' for_domain stmt_block 'end'
-hir::ForStmt::Ptr ParserNew::parseForStmt() {
+hir::ForStmt::Ptr Parser::parseForStmt() {
   try {
     auto forStmt = std::make_shared<hir::ForStmt>();
 
@@ -464,7 +464,7 @@ hir::ForStmt::Ptr ParserNew::parseForStmt() {
 }
 
 // for_domain: ident | (expr ':' expr)
-hir::ForDomain::Ptr ParserNew::parseForDomain() {
+hir::ForDomain::Ptr Parser::parseForDomain() {
   if (peek().type == Token::Type::IDENT && peek(1).type != Token::Type::COL) {
     auto setIndexSet = std::make_shared<hir::SetIndexSet>();
     
@@ -488,7 +488,7 @@ hir::ForDomain::Ptr ParserNew::parseForDomain() {
 }
 
 // print_stmt: 'print' expr ';'
-hir::PrintStmt::Ptr ParserNew::parsePrintStmt() {
+hir::PrintStmt::Ptr Parser::parsePrintStmt() {
   try {
     auto printStmt = std::make_shared<hir::PrintStmt>();
     
@@ -510,7 +510,7 @@ hir::PrintStmt::Ptr ParserNew::parsePrintStmt() {
 }
 
 // expr_or_assign_stmt: [[expr {',' expr} '='] expr] ';'
-hir::ExprStmt::Ptr ParserNew::parseExprOrAssignStmt() {
+hir::ExprStmt::Ptr Parser::parseExprOrAssignStmt() {
   try {
     hir::ExprStmt::Ptr stmt;
 
@@ -556,12 +556,12 @@ hir::ExprStmt::Ptr ParserNew::parseExprOrAssignStmt() {
 }
 
 // expr: map_expr | or_expr
-hir::Expr::Ptr ParserNew::parseExpr() {
+hir::Expr::Ptr Parser::parseExpr() {
   return (peek().type == Token::Type::MAP) ? parseMapExpr() : parseOrExpr();
 }
 
 // map_expr: 'map' ident [call_params] 'to' ident ['reduce' '+']
-hir::Expr::Ptr ParserNew::parseMapExpr() {
+hir::Expr::Ptr Parser::parseMapExpr() {
   auto mapExpr = std::make_shared<hir::MapExpr>();
 
   const Token mapToken = consume(Token::Type::MAP);
@@ -590,7 +590,7 @@ hir::Expr::Ptr ParserNew::parseMapExpr() {
 }
 
 // or_expr: and_expr {'or' and_expr}
-hir::Expr::Ptr ParserNew::parseOrExpr() {
+hir::Expr::Ptr Parser::parseOrExpr() {
   hir::Expr::Ptr expr = parseAndExpr(); 
 
   while (tryconsume(Token::Type::OR)) {
@@ -606,7 +606,7 @@ hir::Expr::Ptr ParserNew::parseOrExpr() {
 }
 
 // and_expr: xor_expr {'and' xor_expr}
-hir::Expr::Ptr ParserNew::parseAndExpr() {
+hir::Expr::Ptr Parser::parseAndExpr() {
   hir::Expr::Ptr expr = parseXorExpr(); 
 
   while (tryconsume(Token::Type::AND)) {
@@ -622,7 +622,7 @@ hir::Expr::Ptr ParserNew::parseAndExpr() {
 }
 
 // xor_expr: eq_expr {'xor' eq_expr}
-hir::Expr::Ptr ParserNew::parseXorExpr() {
+hir::Expr::Ptr Parser::parseXorExpr() {
   hir::Expr::Ptr expr = parseEqExpr(); 
 
   while (tryconsume(Token::Type::XOR)) {
@@ -638,7 +638,7 @@ hir::Expr::Ptr ParserNew::parseXorExpr() {
 }
 
 // eq_expr: term {('==' | '!=' | '>' | '<' | '>=' | '<=') term}
-hir::Expr::Ptr ParserNew::parseEqExpr() {
+hir::Expr::Ptr Parser::parseEqExpr() {
   auto expr = std::make_shared<hir::EqExpr>();
 
   const hir::Expr::Ptr operand = parseTerm();
@@ -680,7 +680,7 @@ hir::Expr::Ptr ParserNew::parseEqExpr() {
 }
 
 // term: ('not' term) | add_expr
-hir::Expr::Ptr ParserNew::parseTerm() {
+hir::Expr::Ptr Parser::parseTerm() {
   if (peek().type == Token::Type::NOT) {
     auto notExpr = std::make_shared<hir::NotExpr>();
 
@@ -695,7 +695,7 @@ hir::Expr::Ptr ParserNew::parseTerm() {
 }
 
 // add_expr : mul_expr {('+' | '-') mul_expr}
-hir::Expr::Ptr ParserNew::parseAddExpr() {
+hir::Expr::Ptr Parser::parseAddExpr() {
   hir::Expr::Ptr expr = parseMulExpr();
   
   while (true) {
@@ -721,7 +721,7 @@ hir::Expr::Ptr ParserNew::parseAddExpr() {
 }
 
 // mul_expr: neg_expr {('*' | '/' | '.*' | './') neg_expr}
-hir::Expr::Ptr ParserNew::parseMulExpr() {
+hir::Expr::Ptr Parser::parseMulExpr() {
   hir::Expr::Ptr expr = parseNegExpr();
   
   while (true) {
@@ -755,7 +755,7 @@ hir::Expr::Ptr ParserNew::parseMulExpr() {
 }
 
 // neg_expr: (('+' | '-') neg_expr) | exp_expr
-hir::Expr::Ptr ParserNew::parseNegExpr() {
+hir::Expr::Ptr Parser::parseNegExpr() {
   auto negExpr = std::make_shared<hir::NegExpr>();
 
   switch (peek().type) {
@@ -782,7 +782,7 @@ hir::Expr::Ptr ParserNew::parseNegExpr() {
 }
 
 // exp_expr: transpose_expr ['^' exp_expr]
-hir::Expr::Ptr ParserNew::parseExpExpr() {
+hir::Expr::Ptr Parser::parseExpExpr() {
   hir::Expr::Ptr expr = parseTransposeExpr();
 
   if (tryconsume(Token::Type::EXP)) {
@@ -798,7 +798,7 @@ hir::Expr::Ptr ParserNew::parseExpExpr() {
 }
 
 // transpose_expr: call_or_read_expr {'''}
-hir::Expr::Ptr ParserNew::parseTransposeExpr() {
+hir::Expr::Ptr Parser::parseTransposeExpr() {
   hir::Expr::Ptr expr = parseCallOrReadExpr();
 
   while (peek().type == Token::Type::TRANSPOSE) {
@@ -815,7 +815,7 @@ hir::Expr::Ptr ParserNew::parseTransposeExpr() {
 }
 
 // call_or_read_expr: factor {('(' [read_params] ')') | ('.' ident)}
-hir::Expr::Ptr ParserNew::parseCallOrReadExpr() {
+hir::Expr::Ptr Parser::parseCallOrReadExpr() {
   hir::Expr::Ptr expr = parseFactor();
 
   while (true) {
@@ -854,7 +854,7 @@ hir::Expr::Ptr ParserNew::parseCallOrReadExpr() {
 }
 
 // factor: ('(' expr ')') | ident | tensor_literal
-hir::Expr::Ptr ParserNew::parseFactor() {
+hir::Expr::Ptr Parser::parseFactor() {
   hir::Expr::Ptr factor;
   switch (peek().type) {
     case Token::Type::LP:
@@ -901,7 +901,7 @@ hir::Expr::Ptr ParserNew::parseFactor() {
 }
 
 // ident: IDENT
-hir::Identifier::Ptr ParserNew::parseIdent() {
+hir::Identifier::Ptr Parser::parseIdent() {
   auto ident = std::make_shared<hir::Identifier>();
   
   const Token identToken = consume(Token::Type::IDENT);
@@ -912,7 +912,7 @@ hir::Identifier::Ptr ParserNew::parseIdent() {
 }
 
 // read_params: read_param {',' read_param}
-std::vector<hir::ReadParam::Ptr> ParserNew::parseReadParams() {
+std::vector<hir::ReadParam::Ptr> Parser::parseReadParams() {
   std::vector<hir::ReadParam::Ptr> readParams;
 
   do {
@@ -924,7 +924,7 @@ std::vector<hir::ReadParam::Ptr> ParserNew::parseReadParams() {
 }
 
 // read_param: ':' | expr
-hir::ReadParam::Ptr ParserNew::parseReadParam() {
+hir::ReadParam::Ptr Parser::parseReadParam() {
   if (peek().type == Token::Type::COL) {
     auto slice = std::make_shared<hir::Slice>();
     
@@ -941,7 +941,7 @@ hir::ReadParam::Ptr ParserNew::parseReadParam() {
 }
 
 // call_params: '(' [expr {',' expr}] ')'
-std::vector<hir::Expr::Ptr> ParserNew::parseCallParams() {
+std::vector<hir::Expr::Ptr> Parser::parseCallParams() {
   std::vector<hir::Expr::Ptr> callParams;
 
   consume(Token::Type::LP);
@@ -957,7 +957,7 @@ std::vector<hir::Expr::Ptr> ParserNew::parseCallParams() {
 }
 
 // type: element_type | set_type | tuple_type | tensor_type
-hir::Type::Ptr ParserNew::parseType() {
+hir::Type::Ptr Parser::parseType() {
   hir::Type::Ptr type;
   switch (peek().type) {
     case Token::Type::IDENT:
@@ -986,7 +986,7 @@ hir::Type::Ptr ParserNew::parseType() {
 }
 
 // element_type: ident
-hir::ElementType::Ptr ParserNew::parseElementType() {
+hir::ElementType::Ptr Parser::parseElementType() {
   auto elementType = std::make_shared<hir::ElementType>();
 
   const Token typeToken = consume(Token::Type::IDENT);
@@ -997,7 +997,7 @@ hir::ElementType::Ptr ParserNew::parseElementType() {
 }
 
 // set_type: 'set' '{' element_type '}' ['(' endpoints ')']
-hir::SetType::Ptr ParserNew::parseSetType() {
+hir::SetType::Ptr Parser::parseSetType() {
   auto setType = std::make_shared<hir::SetType>();
 
   const Token setToken = consume(Token::Type::SET);
@@ -1020,7 +1020,7 @@ hir::SetType::Ptr ParserNew::parseSetType() {
 }
 
 // endpoints: ident {',' ident}
-std::vector<hir::Endpoint::Ptr> ParserNew::parseEndpoints() {
+std::vector<hir::Endpoint::Ptr> Parser::parseEndpoints() {
   std::vector<hir::Endpoint::Ptr> endpoints;
   
   do {
@@ -1037,7 +1037,7 @@ std::vector<hir::Endpoint::Ptr> ParserNew::parseEndpoints() {
 }
 
 // tuple_length: INT_LITERAL
-hir::TupleLength::Ptr ParserNew::parseTupleLength() {
+hir::TupleLength::Ptr Parser::parseTupleLength() {
   auto tupleLength = std::make_shared<hir::TupleLength>();
 
   const Token intToken = consume(Token::Type::INT_LITERAL);
@@ -1048,7 +1048,7 @@ hir::TupleLength::Ptr ParserNew::parseTupleLength() {
 }
 
 // tuple_type: '(' element_type '*' tuple_length ')'
-hir::TupleType::Ptr ParserNew::parseTupleType() {
+hir::TupleType::Ptr Parser::parseTupleType() {
   auto tupleType = std::make_shared<hir::TupleType>();
 
   const Token leftParenToken = consume(Token::Type::LP);
@@ -1065,7 +1065,7 @@ hir::TupleType::Ptr ParserNew::parseTupleType() {
 }
 
 // tensor_type: scalar_type | (tensor_block_type ['''])
-hir::TensorType::Ptr ParserNew::parseTensorType() {
+hir::TensorType::Ptr Parser::parseTensorType() {
   switch (peek().type) {
     case Token::Type::INT:
     case Token::Type::FLOAT:
@@ -1080,7 +1080,7 @@ hir::TensorType::Ptr ParserNew::parseTensorType() {
   if (peek().type == Token::Type::TRANSPOSE) {
     const Token transposeToken = consume(Token::Type::TRANSPOSE);
     tensorType->setEndLoc(transposeToken);
-    tensorType->transposed = true;
+    tensorType->columnVector = true;
   }
 
   return tensorType;
@@ -1088,9 +1088,9 @@ hir::TensorType::Ptr ParserNew::parseTensorType() {
 
 // tensor_block_type:
 //     'tensor' ['[' index_sets ']'] '(' (tensor_block_type | scalar_type) ')'
-hir::NDTensorType::Ptr ParserNew::parseTensorBlockType() {
+hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   auto tensorType = std::make_shared<hir::NDTensorType>();
-  tensorType->transposed = false;
+  tensorType->columnVector = false;
 
   const Token tensorToken = consume(Token::Type::TENSOR);
   tensorType->setBeginLoc(tensorToken);
@@ -1119,7 +1119,7 @@ hir::NDTensorType::Ptr ParserNew::parseTensorBlockType() {
 }
 
 // scalar_type: 'int' | 'float' | 'bool'
-hir::ScalarType::Ptr ParserNew::parseScalarType() {
+hir::ScalarType::Ptr Parser::parseScalarType() {
   auto scalarType = std::make_shared<hir::ScalarType>();
 
   scalarType->setLoc(peek());
@@ -1148,7 +1148,7 @@ hir::ScalarType::Ptr ParserNew::parseScalarType() {
 }
 
 // index_sets: index_set {',' index_set}
-std::vector<hir::IndexSet::Ptr> ParserNew::parseIndexSets() {
+std::vector<hir::IndexSet::Ptr> Parser::parseIndexSets() {
   std::vector<hir::IndexSet::Ptr> indexSets;
 
   do {
@@ -1160,7 +1160,7 @@ std::vector<hir::IndexSet::Ptr> ParserNew::parseIndexSets() {
 }
 
 // index_set: INT_LITERAL | IDENT | '*'
-hir::IndexSet::Ptr ParserNew::parseIndexSet() {
+hir::IndexSet::Ptr Parser::parseIndexSet() {
   hir::IndexSet::Ptr indexSet;
   switch (peek().type) {
     case Token::Type::INT_LITERAL:
@@ -1204,7 +1204,7 @@ hir::IndexSet::Ptr ParserNew::parseIndexSet() {
 
 // tensor_literal: INT_LITERAL | FLOAT_LITERAL | 'true' | 'false'
 //               | dense_tensor_literal
-hir::Expr::Ptr ParserNew::parseTensorLiteral() {
+hir::Expr::Ptr Parser::parseTensorLiteral() {
   hir::Expr::Ptr literal;
   switch (peek().type) {
     case Token::Type::INT_LITERAL:
@@ -1266,7 +1266,7 @@ hir::Expr::Ptr ParserNew::parseTensorLiteral() {
 }
 
 // dense_tensor_literal: '[' dense_tensor_literal_inner ']'
-hir::DenseTensorLiteral::Ptr ParserNew::parseDenseTensorLiteral() {
+hir::DenseTensorLiteral::Ptr Parser::parseDenseTensorLiteral() {
   const Token leftBracketToken = consume(Token::Type::LB);
   hir::DenseTensorLiteral::Ptr tensor = parseDenseTensorLiteralInner();
   const Token rightBracketToken = consume(Token::Type::RB);
@@ -1279,7 +1279,7 @@ hir::DenseTensorLiteral::Ptr ParserNew::parseDenseTensorLiteral() {
 
 // dense_tensor_literal_inner: dense_tensor_literal {[','] dense_tensor_literal}
 //                           | dense_matrix_literal
-hir::DenseTensorLiteral::Ptr ParserNew::parseDenseTensorLiteralInner() {
+hir::DenseTensorLiteral::Ptr Parser::parseDenseTensorLiteralInner() {
   if (peek().type == Token::Type::LB) {
     auto tensor = std::make_shared<hir::NDTensorLiteral>();
     tensor->transposed = false;
@@ -1305,7 +1305,7 @@ hir::DenseTensorLiteral::Ptr ParserNew::parseDenseTensorLiteralInner() {
 }
 
 // dense_matrix_literal: dense_vector_literal {';' dense_vector_literal}
-hir::DenseTensorLiteral::Ptr ParserNew::parseDenseMatrixLiteral() {
+hir::DenseTensorLiteral::Ptr Parser::parseDenseMatrixLiteral() {
   auto mat = std::make_shared<hir::NDTensorLiteral>();
   mat->transposed = false;
   
@@ -1318,7 +1318,7 @@ hir::DenseTensorLiteral::Ptr ParserNew::parseDenseMatrixLiteral() {
 }
 
 // dense_vector_literal: dense_int_vector_literal | dense_float_vector_literal
-hir::DenseTensorLiteral::Ptr ParserNew::parseDenseVectorLiteral() {
+hir::DenseTensorLiteral::Ptr Parser::parseDenseVectorLiteral() {
   hir::DenseTensorLiteral::Ptr vec;
   switch (peek().type) {
     case Token::Type::INT_LITERAL:
@@ -1352,7 +1352,7 @@ hir::DenseTensorLiteral::Ptr ParserNew::parseDenseVectorLiteral() {
 }
 
 // dense_int_vector_literal: signed_int_literal {[','] signed_int_literal}
-hir::IntVectorLiteral::Ptr ParserNew::parseDenseIntVectorLiteral() {
+hir::IntVectorLiteral::Ptr Parser::parseDenseIntVectorLiteral() {
   auto vec = std::make_shared<hir::IntVectorLiteral>();
   vec->transposed = false;
 
@@ -1376,7 +1376,7 @@ hir::IntVectorLiteral::Ptr ParserNew::parseDenseIntVectorLiteral() {
 }
 
 // dense_float_vector_literal: signed_float_literal {[','] signed_float_literal}
-hir::FloatVectorLiteral::Ptr ParserNew::parseDenseFloatVectorLiteral() {
+hir::FloatVectorLiteral::Ptr Parser::parseDenseFloatVectorLiteral() {
   auto vec = std::make_shared<hir::FloatVectorLiteral>();
   vec->transposed = false;
 
@@ -1400,7 +1400,7 @@ hir::FloatVectorLiteral::Ptr ParserNew::parseDenseFloatVectorLiteral() {
 }
 
 // signed_int_literal: ['+' | '-'] INT_LITERAL
-int ParserNew::parseSignedIntLiteral() {
+int Parser::parseSignedIntLiteral() {
   int coeff = 1;
   switch (peek().type) {
     case Token::Type::PLUS:
@@ -1418,7 +1418,7 @@ int ParserNew::parseSignedIntLiteral() {
 }
 
 // signed_float_literal: ['+' | '-'] FLOAT_LITERAL
-double ParserNew::parseSignedFloatLiteral() {
+double Parser::parseSignedFloatLiteral() {
   double coeff = 1.0;
   switch (peek().type) {
     case Token::Type::PLUS:
@@ -1436,7 +1436,7 @@ double ParserNew::parseSignedFloatLiteral() {
 }
 
 // '%!' ident call_params '==' expr ';'
-hir::Test::Ptr ParserNew::parseTest() {
+hir::Test::Ptr Parser::parseTest() {
   auto test = std::make_shared<hir::Test>();
 
   const Token testToken = consume(Token::Type::TEST);
@@ -1465,7 +1465,7 @@ hir::Test::Ptr ParserNew::parseTest() {
   return test;
 }
   
-void ParserNew::reportError(const Token &token, std::string expected) {
+void Parser::reportError(const Token &token, std::string expected) {
   std::stringstream errMsg;
   errMsg << "expected " << expected << " but got " << token.toString();
 
@@ -1474,7 +1474,7 @@ void ParserNew::reportError(const Token &token, std::string expected) {
   errors->push_back(err);
 }
   
-void ParserNew::skipTo(std::vector<Token::Type> types) {
+void Parser::skipTo(std::vector<Token::Type> types) {
   while (peek().type != Token::Type::END) {
     for (const auto type : types) {
       if (peek().type == type) {
@@ -1485,7 +1485,7 @@ void ParserNew::skipTo(std::vector<Token::Type> types) {
   }
 }
   
-Token ParserNew::consume(Token::Type type) { 
+Token Parser::consume(Token::Type type) { 
   const Token token = peek();
   
   if (!tokens.consume(type)) {

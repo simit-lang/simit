@@ -82,16 +82,16 @@ public:
   };
 
 public:
-  Type type;
+  Type        type;
   union {
-    int num;
-    double fnum;
+    int       num;
+    double    fnum;
   };
   std::string str;
-  unsigned lineBegin;
-  unsigned colBegin;
-  unsigned lineEnd;
-  unsigned colEnd;
+  unsigned    lineBegin;
+  unsigned    colBegin;
+  unsigned    lineEnd;
+  unsigned    colEnd;
 
 public:
   static std::string tokenTypeString(Token::Type);

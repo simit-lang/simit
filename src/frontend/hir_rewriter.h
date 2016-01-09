@@ -74,7 +74,8 @@ public:
   virtual void visit(Test::Ptr);
 
   template <typename T>
-  inline std::shared_ptr<T> rewrite(std::shared_ptr<T> ptr) {
+  std::shared_ptr<T> rewrite(std::shared_ptr<T> ptr) {
+    node.reset();
     ptr->accept(this);
     auto ret = std::static_pointer_cast<T>(node);
     node.reset();

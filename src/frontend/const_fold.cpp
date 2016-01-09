@@ -10,6 +10,7 @@ namespace hir {
 
 void ConstantFolding::visit(NegExpr::Ptr expr) {
   expr->operand = rewrite<Expr>(expr->operand);
+  
   if (isa<IntLiteral>(expr->operand)) {
     const auto operand = to<IntLiteral>(expr->operand);
     if (expr->negate) {
@@ -25,6 +26,7 @@ void ConstantFolding::visit(NegExpr::Ptr expr) {
     node = operand;
     return;
   } else if (isa<DenseTensorLiteral>(expr->operand)) {
+    // Helper visitor for negating all elements in tensor literal.
     class NegateTensorLiteral : public HIRVisitor {
       public:
         void negate(DenseTensorLiteral::Ptr tensor) {
@@ -50,11 +52,13 @@ void ConstantFolding::visit(NegExpr::Ptr expr) {
     node = operand;
     return;
   }
+
   node = expr;
 }
 
 void ConstantFolding::visit(TransposeExpr::Ptr expr) {
   expr->operand = rewrite<Expr>(expr->operand);
+  
   if (isa<IntLiteral>(expr->operand) || isa<FloatLiteral>(expr->operand)) {
     node = expr->operand;
     return;
@@ -66,6 +70,7 @@ void ConstantFolding::visit(TransposeExpr::Ptr expr) {
       return;
     }
   }
+
   node = expr;
 }
 

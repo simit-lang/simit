@@ -86,7 +86,7 @@ private:
   void printBinaryExpr(BinaryExpr::Ptr, const std::string);
 
   std::ostream &oss;
-  unsigned int indentLevel;
+  unsigned      indentLevel;
 };
 
 }

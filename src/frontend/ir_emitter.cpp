@@ -113,7 +113,7 @@ void IREmitter::visit(NDTensorType::Ptr type) {
     retType = ir::TensorType::make(componentType, dimensions);
   }
 
-  if (type->transposed) {
+  if (type->columnVector) {
     const auto tensorType = retType.toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto componentType = tensorType->getComponentType();
@@ -187,7 +187,9 @@ void IREmitter::visit(IfStmt::Ptr stmt) {
   const ir::Stmt ifStmt = elseBody.defined() ? 
                           ir::IfThenElse::make(cond, ifBody, elseBody) : 
                           ir::IfThenElse::make(cond, ifBody);
- 
+
+  // Function calls and maps in if-statement condition need to be evaluated 
+  // before condition expression is evaluated.
   if (callStmts.defined()) {
     ctx->addStatement(callStmts);
   }
@@ -302,10 +304,13 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   
   std::vector<ir::Expr> endpoints;
   iassert(target.type().isSet());
-  for (ir::Expr *endpoint : target.type().toSet()->endpointSets) {
+  for (const ir::Expr *endpoint : target.type().toSet()->endpointSets) {
     endpoints.push_back(*endpoint);
   }
-  
+
+  // Map expressions are translated to map statements whose values are stored 
+  // in temporary variables. Within the original expression in which the map 
+  // appeared, the map is replaced with a read of the temporary variable.
   const auto type = (results.size() == 1) ? results[0].getType() : ir::Type();
   const ir::Var tmp = ctx->getBuilder()->temporary(type);
   retExpr = ir::VarExpr::make(tmp);
@@ -339,6 +344,9 @@ void IREmitter::visit(EqExpr::Ptr expr) {
   iassert(expr->operands.size() > 1);
   ir::Expr lhs = emitExpr(expr->operands[0]);
 
+  // Chained (n-ary) comparison operations are translated to conjunction of 
+  // binary comparison operations. Since function calls are lifted up, the 
+  // emitted program would behave as if each operand is evaluated only once.
   ir::Expr eqExpr;
   for (unsigned i = 0; i < expr->ops.size(); ++i) {
     const ir::Expr rhs = emitExpr(expr->operands[i + 1]);
@@ -409,10 +417,11 @@ void IREmitter::visit(MulExpr::Ptr expr) {
   } else if (ltype->order() == 1 && rtype->order() == 1) {
     // Vector-Vector Multiplication (inner and outer product)
     iassert(lhs.type() == rhs.type());
-    const bool emitOuterProduct = 
-        expr->lhs->type.at(0).toTensor()->isColumnVector;
-    retExpr = emitOuterProduct ? builder->outerProduct(lhs, rhs) :
-              builder->innerProduct(lhs, rhs);
+    if (expr->lhs->type.at(0).toTensor()->isColumnVector) {
+      retExpr = builder->outerProduct(lhs, rhs);
+    } else {
+      retExpr = builder->innerProduct(lhs, rhs);
+    }
   } else if (ltype->order() == 2 && rtype->order() == 1) {
     // Matrix-Vector
     iassert(ldimensions[1] == rdimensions[0]);
@@ -464,7 +473,6 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
   ir::Expr operand = emitExpr(expr->operand);
   const ir::TensorType *type = operand.type().toTensor();
 
-  iassert(type->order() > 1 || !ir::isa<ir::Literal>(operand));
   switch (type->order()) {
     case 0:
       // OPT: This might lead to redundant code to be removed in later pass
@@ -502,6 +510,9 @@ void IREmitter::visit(CallExpr::Ptr expr) {
     arguments.push_back(arg);
   }
 
+  // Function calls are translated to call statements whose values are stored 
+  // in temporary variables. Within the original expression in which the call 
+  // appeared, the call is replaced with a read of the temporary variable.
   const auto type = (results.size() == 1) ? results[0].getType() : ir::Type();
   const ir::Var tmp = ctx->getBuilder()->temporary(type);
   retExpr = ir::VarExpr::make(tmp);
@@ -524,6 +535,7 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
     }
   }
 
+  // If expression is a tensor slice, then translate to index expression.
   if (containsSlices) {
     // We will construct an index expression. First, we built IndexVars.
     std::vector<ir::IndexVar> allivars;
@@ -735,6 +747,7 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
 
   const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
   if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr)) {
+    // Optimization to avoid having to initialize constant multiple times.
     ctx->addConstant(var, initExpr);
   } else {
     ctx->addStatement(ir::VarDecl::make(var));
@@ -797,6 +810,10 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     
     iassert(lhs.size() <= retVals.size());
 
+    // If target of assignment is a variable, then have function call or map 
+    // statement directly store into that variable. If target of assignment is 
+    // not a variable (e.g. field element) or if statement is not an 
+    // assignment, then store the result into a temporary variable.
     std::vector<ir::Var> results;
     for (unsigned i = 0; i < retVals.size(); ++i) {
       if (i < lhs.size() && ir::isa<ir::VarExpr>(lhs[i])) {
@@ -817,7 +834,8 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
         results.push_back(tmp);
       }
     }
-      
+    
+    // Emit call or map statement.
     if (isCallStmt) {
       auto callStmt = const_cast<ir::CallStmt *>(
           ir::to<ir::CallStmt>(topLevelStmt));
@@ -829,9 +847,12 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       ctx->addStatement(mapStmt);
     }
     
+    // If target of assignment is a field or tensor element, then have output 
+    // of function call or map statement copied over from temporary variable.
     for (unsigned int i = 0; i < lhs.size(); ++i) {
       ir::Expr tmpExpr = ir::VarExpr::make(results[i]);
       if (!isScalar(tmpExpr.type())) {
+        // Needed to handle assignment of non-scalar tensors.
         tmpExpr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None, 
                                                      tmpExpr);
       }
@@ -850,7 +871,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     }
   } else if (lhs.size() == 1) {
     if (!ir::isa<ir::IndexExpr>(expr) && !isScalar(expr.type())) {
-      // Assigning a tensor, so we change it to an assignment index expr.
+      // Needed to handle assignment of non-scalar tensors.
       expr = ctx->getBuilder()->unaryElwiseExpr(ir::IRBuilder::None, expr);
     }
 
@@ -867,7 +888,8 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     } else {
       ir::Var var = ir::to<ir::VarExpr>(lhs[0])->var;
       const std::string varName = var.getName();
-  
+
+      // Target variable might not have been declared.
       if (!ctx->hasSymbol(varName)) {
         var = ir::Var(varName, expr.type());
         ctx->addSymbol(varName, var, internal::Symbol::ReadWrite);
