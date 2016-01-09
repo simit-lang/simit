@@ -85,7 +85,7 @@ void IRPrinter::visit(const Literal *op) {
           }
           else {
             os << "[" << idata[0];
-            for (size_t i=0; i < size; ++i) {
+            for (size_t i=1; i < size; ++i) {
               os << ", " << idata[i];
             }
             os << "]";
