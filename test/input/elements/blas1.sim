@@ -58,6 +58,12 @@ func inner(a : tensor[3](float), b : tensor[3](float)) -> (c : float)
   c = a * b';
 end
 
+%%% inner-int
+%! innerint([0, 1, 2], [3, 4, 5]') == 14; 
+func innerint(a : tensor[3](int), b : tensor[3](int)) -> (c : int)
+  c = a * b';
+end
+
 %%% outer
 %! outer([0.0, 2.0]', [3.0, 4.0]) == [0.0, 0.0; 6.0, 8.0];
 func outer(a : tensor[2](float)', b : tensor[2](float)) -> (c : tensor[2,2](float))
