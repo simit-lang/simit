@@ -18,6 +18,8 @@
 namespace simit {
 namespace hir {
 
+// Type checking pass for identifying type errors, redefinitions, and 
+// undeclared identifiers.
 class TypeChecker : public HIRVisitor {
 public:
   TypeChecker(std::vector<ParseError> *errors) : 
@@ -167,15 +169,15 @@ private:
   void reportMultipleDefs(std::string, std::string, HIRNode::Ptr);
 
 private:
-  Ptr<Expr::Type> retType;
+  Ptr<Expr::Type>   retType;
   Ptr<ir::IndexSet> retIndexSet;
-  ir::Expr retExpr;
-  ir::Type retIRType;
-  ir::Field retField;
-  ir::Var retVar;
+  ir::Expr          retExpr;
+  ir::Type          retIRType;
+  ir::Field         retField;
+  ir::Var           retVar;
  
-  bool skipCheckDeclared;
-  HIRNode::Ptr checkWritable;
+  bool                     skipCheckDeclared;
+  HIRNode::Ptr             checkWritable;
   internal::ProgramContext ctx;
   std::vector<ParseError> *errors;
 };

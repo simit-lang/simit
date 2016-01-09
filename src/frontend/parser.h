@@ -14,9 +14,9 @@
 namespace simit { 
 namespace internal {
 
-class ParserNew {
+class Parser {
 public:
-  ParserNew(std::vector<ParseError> *errors) : errors(errors) {}
+  Parser(std::vector<ParseError> *errors) : errors(errors) {}
 
   hir::Program::Ptr parse(const TokenStream &);
 
@@ -98,7 +98,7 @@ private:
   bool  tryconsume(Token::Type type) { return tokens.consume(type); }
 
 private:
-  TokenStream tokens;
+  TokenStream              tokens;
   std::vector<ParseError> *errors;
 };
 

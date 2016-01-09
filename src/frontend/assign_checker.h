@@ -10,6 +10,7 @@
 namespace simit {
 namespace hir {
 
+// Analysis for verifying that assignment targets are valid.
 class AssignChecker : public HIRVisitor {
 public:
   AssignChecker(std::vector<ParseError> *errors) : errors(errors) {}

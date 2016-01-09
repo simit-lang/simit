@@ -7,6 +7,9 @@
 namespace simit {
 namespace hir {
 
+// Experimental pass for padding tensor type dimensions in order to support 
+// tensor types containing blocks of different order. Disabled for now since 
+// current type system is too strict for this to be useful.
 class PadTensorBlocks : public HIRVisitor {
 public:
   void pad(Program::Ptr program) { program->accept(this); }

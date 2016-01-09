@@ -11,6 +11,9 @@
 namespace simit {
 namespace hir {
 
+// Analysis for identifying all function calls and rewriting the higher-level 
+// IR appropriately. Needed since Simit grammar cannot distinguish between 
+// function calls and tensor reads.
 class FuncCallRewriter : public HIRRewriter {
 public:
   FuncCallRewriter(std::vector<ParseError> *errors) : errors(errors) {}

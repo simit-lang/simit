@@ -181,7 +181,7 @@ void TypeChecker::visit(NDTensorType::Ptr type) {
     ndTensorType = ir::TensorType::make(componentType, dimensions);
   }
 
-  if (type->transposed) {
+  if (type->columnVector) {
     const auto tensorType = ndTensorType.toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto componentType = tensorType->getComponentType();

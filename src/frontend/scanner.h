@@ -11,9 +11,9 @@
 namespace simit { 
 namespace internal {
 
-class ScannerNew {
+class Scanner {
 public:
-  ScannerNew(std::vector<ParseError> *errors) : errors(errors) {}
+  Scanner(std::vector<ParseError> *errors) : errors(errors) {}
 
   TokenStream lex(std::istream &);
 

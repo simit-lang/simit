@@ -7,6 +7,8 @@
 namespace simit {
 namespace hir {
 
+// Constant folding pass for taking care of negation and transpose of dense 
+// tensor literals. Needed since tests can only have literals as operands.
 class ConstantFolding : public HIRRewriter {
 private:
   virtual void visit(NegExpr::Ptr);

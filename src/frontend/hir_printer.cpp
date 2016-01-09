@@ -104,7 +104,7 @@ void HIRPrinter::visit(NDTensorType::Ptr type) {
   oss << "(";
   type->blockType->accept(this);
   oss << ")";
-  if (type->transposed) {
+  if (type->columnVector) {
     oss << "'";
   }
 }
