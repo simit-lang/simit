@@ -230,8 +230,8 @@ void HIRVisitor::visit(ParenExpr::Ptr expr) {
   expr->expr->accept(this);
 }
 
-void HIRVisitor::visit(NDTensorLiteral::Ptr tensor) {
-  for (auto elem : tensor->elems) {
+void HIRVisitor::visit(NDTensorLiteral::Ptr lit) {
+  for (auto elem : lit->elems) {
     elem->accept(this);
   }
 }

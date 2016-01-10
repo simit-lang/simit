@@ -431,26 +431,26 @@ void HIRPrinter::visit(FieldReadExpr::Ptr expr) {
   expr->field->accept(this);
 }
 
-void HIRPrinter::visit(VarExpr::Ptr expr) {
-  oss << expr->ident;
+void HIRPrinter::visit(VarExpr::Ptr lit) {
+  oss << lit->ident;
 }
 
-void HIRPrinter::visit(IntLiteral::Ptr expr) {
-  oss << expr->val;
+void HIRPrinter::visit(IntLiteral::Ptr lit) {
+  oss << lit->val;
 }
 
-void HIRPrinter::visit(FloatLiteral::Ptr expr) {
-  oss << expr->val;
+void HIRPrinter::visit(FloatLiteral::Ptr lit) {
+  oss << lit->val;
 }
 
-void HIRPrinter::visit(BoolLiteral::Ptr expr) {
-  printBoolean(expr->val);
+void HIRPrinter::visit(BoolLiteral::Ptr lit) {
+  printBoolean(lit->val);
 }
 
-void HIRPrinter::visit(IntVectorLiteral::Ptr expr) {
+void HIRPrinter::visit(IntVectorLiteral::Ptr lit) {
   oss << "[";
   bool printDelimiter = false;
-  for (auto val : expr->vals) {
+  for (auto val : lit->vals) {
     if (printDelimiter) {
       oss << ", ";
     }
@@ -458,15 +458,15 @@ void HIRPrinter::visit(IntVectorLiteral::Ptr expr) {
     printDelimiter = true;
   }
   oss << "]";
-  if (expr->transposed) {
+  if (lit->transposed) {
     oss << "'";
   }
 }
 
-void HIRPrinter::visit(FloatVectorLiteral::Ptr expr) {
+void HIRPrinter::visit(FloatVectorLiteral::Ptr lit) {
   oss << "[";
   bool printDelimiter = false;
-  for (auto val : expr->vals) {
+  for (auto val : lit->vals) {
     if (printDelimiter) {
       oss << ", ";
     }
@@ -474,15 +474,15 @@ void HIRPrinter::visit(FloatVectorLiteral::Ptr expr) {
     printDelimiter = true;
   }
   oss << "]";
-  if (expr->transposed) {
+  if (lit->transposed) {
     oss << "'";
   }
 }
 
-void HIRPrinter::visit(NDTensorLiteral::Ptr tensor) {
+void HIRPrinter::visit(NDTensorLiteral::Ptr lit) {
   oss << "[";
   bool printDelimiter = false;
-  for (auto elem : tensor->elems) {
+  for (auto elem : lit->elems) {
     if (printDelimiter) {
       oss << ", ";
     }
@@ -490,7 +490,7 @@ void HIRPrinter::visit(NDTensorLiteral::Ptr tensor) {
     printDelimiter = true;
   }
   oss << "]";
-  if (tensor->transposed) {
+  if (lit->transposed) {
     oss << "'";
   }
 }
