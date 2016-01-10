@@ -1,0 +1,32 @@
+element Tet
+  x  : tensor[3](float);
+end
+
+element Vert
+  x  : tensor[3](float);
+  a  : tensor[3](float);
+end
+
+extern verts : set{Vert};
+extern tets : set{Tet}(verts, verts, verts, verts);
+
+func compute_avg(d : float, e : Tet, v : (Vert*4)) ->
+     (A : tensor[verts](tensor[3](float)))
+  var avg :tensor[3](float);
+
+  for ii in 0:4
+    for jj in 0:3
+      avg(jj) = avg(jj) + v(ii).x(jj) * d/4.0;
+    end
+  end
+
+  for ii in 0:4
+    A(v(ii)) = avg/4.0;
+  end
+end
+
+
+proc main
+  d = 0.1;
+  A = map compute_avg(d) to tets reduce +;
+end
