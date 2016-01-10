@@ -406,7 +406,7 @@ namespace simit {
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
     auto end  = clock(); 
-    cout << "Hilbert reordering time: " << double(end - start)/ CLOCKS_PER_SEC << endl;
+    cout << "Hilbert reorder took:    " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
 
     start = clock();
     // hilbert::hilbertReorder(edgeSet, edgeOrdering, edgeSet.getSize());
@@ -414,7 +414,7 @@ namespace simit {
     iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
     reorderEdgeSet(edgeSet, edgeOrdering);
     end = clock();
-    cout << "Edge Sum reordering time: " << double(end - start)/ CLOCKS_PER_SEC << endl;
+    cout << "EdgeSum reorder took:    " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
     // vector<int> edgeOrdering;
     // iassert(edgeOrdering.size() == edgeSet.getSize()); 
     // reorderEdgeSet(edgeSet, edgeOrdering);
