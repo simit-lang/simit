@@ -32,7 +32,7 @@ void outputResults(ostream& os, FieldRef<simit_float,3>& x, vector<ElementRef>& 
   }
 }
 
-FieldRef<simit_float,3> initializeTest(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
+FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
   FieldRef<simit_float,3>  x = m_verts.addSpatialField<simit_float,3>("x");
   FieldRef<simit_float,3>  v = m_verts.addField<simit_float,3>("v");
   //external forces
@@ -85,7 +85,7 @@ FieldRef<simit_float,3> initializeTest(MeshVol& mv, Set& m_verts, Set& m_tets, v
   return x;
 }
 
-void loadAndRunTest(string& filename, Set& m_verts, Set& m_tets, const int nSteps) {
+void loadAndRunFem(string& filename, Set& m_verts, Set& m_tets, const int nSteps) {
   Function m_precomputation;
   Function m_timeStepper;
   m_precomputation = loadFunction(filename, "initializeTet");
@@ -112,6 +112,49 @@ void loadAndRunTest(string& filename, Set& m_verts, Set& m_tets, const int nStep
   m_timeStepper.mapArgs();
 }
 
+  
+FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
+  simit::FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
+  simit::FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
+  
+  simit::FieldRef<simit_float,3>    tx = m_tets.addField<simit_float,3>("x");
+  
+  for(unsigned int ii =0 ;ii<mv.v.size(); ii++){
+    vertRefs.push_back(m_verts.add());
+    simit::ElementRef p = vertRefs.back();
+    x.set(p, {static_cast<simit_float>(mv.v[ii][0]),
+              static_cast<simit_float>(mv.v[ii][1]),
+              static_cast<simit_float>(mv.v[ii][2])});
+    a.set(p, {static_cast<simit_float>(mv.v[ii][0]),
+              static_cast<simit_float>(mv.v[ii][1]),
+              static_cast<simit_float>(mv.v[ii][2])});
+  }
+  
+  for(unsigned int ii =0 ;ii<mv.e.size(); ii++){
+    simit::ElementRef t = m_tets.add(
+      vertRefs[mv.e[ii][0]],vertRefs[mv.e[ii][1]],
+      vertRefs[mv.e[ii][2]],vertRefs[mv.e[ii][3]]
+    );
+    tx.set(t, {static_cast<simit_float>(0.0),
+              static_cast<simit_float>(0.0),
+              static_cast<simit_float>(0.0)});
+  }
+
+  return x;
+} 
+  
+void loadAndRunAverage(string& filename, Set& m_verts, Set& m_tets, const int nSteps) {
+  Function m_timeStepper = loadFunction(filename, "main");
+  m_timeStepper.bind("verts", &m_verts);
+  m_timeStepper.bind("tets", &m_tets);
+  m_timeStepper.init();
+  
+  for (size_t i=0; i < nSteps; ++i) {
+    m_timeStepper.runSafe();
+  }
+  m_timeStepper.mapArgs();
+}
+
 TEST(Program, reorderFemSpecificTest) {
   string dir(TEST_INPUT_DIR);
   string prefix=dir+"/program/fem/bar2k";
@@ -124,7 +167,7 @@ TEST(Program, reorderFemSpecificTest) {
   Set m_tets(m_verts,m_verts,m_verts,m_verts);
   vector<ElementRef> vertRefs;
   
-  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  FieldRef<simit_float,3> x = initializeFem(mv, m_verts, m_tets, vertRefs); 
   
   vector<int> newOrdering;
   reorder(m_tets, m_verts, newOrdering);
@@ -132,7 +175,7 @@ TEST(Program, reorderFemSpecificTest) {
   string filename = string(TEST_INPUT_DIR) + "/" +
                          toLower(test_info_->test_case_name()) + "/" +
                          "femTet.sim";
-  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  loadAndRunFem(filename, m_verts, m_tets, nSteps); 
 
   int one = newOrdering[100];
   int two = newOrdering[200];
@@ -165,10 +208,10 @@ TEST(Program, reorderFemTest) {
   Set m_tets(m_verts,m_verts,m_verts,m_verts);
   vector<ElementRef> vertRefs;
   
-  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  FieldRef<simit_float,3> x = initializeFem(mv, m_verts, m_tets, vertRefs); 
   
   clock_t begin = clock();
-  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  loadAndRunFem(filename, m_verts, m_tets, nSteps); 
   clock_t end = clock(); 
   double randomTime = double(end - begin) / CLOCKS_PER_SEC;
   
@@ -179,7 +222,7 @@ TEST(Program, reorderFemTest) {
   Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
   vector<ElementRef> reorder_vertRefs;
   
-  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  FieldRef<simit_float,3> reorder_x = initializeFem(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
   
   begin = clock();
   vector<int> newOrdering;
@@ -189,7 +232,7 @@ TEST(Program, reorderFemTest) {
   cout << "Reordering took:       " << reorderTime << " seconds" << endl;
   
   begin = clock();
-  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  loadAndRunFem(filename, reorder_m_verts, reorder_m_tets, nSteps); 
   end = clock();
   double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
   cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
@@ -213,10 +256,10 @@ TEST(Program, reorderDragon0) {
   Set m_tets(m_verts,m_verts,m_verts,m_verts);
   vector<ElementRef> vertRefs;
   
-  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  FieldRef<simit_float,3> x = initializeFem(mv, m_verts, m_tets, vertRefs); 
   
   clock_t begin = clock();
-  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  loadAndRunFem(filename, m_verts, m_tets, nSteps); 
   clock_t end = clock(); 
   double randomTime = double(end - begin) / CLOCKS_PER_SEC;
   
@@ -227,7 +270,7 @@ TEST(Program, reorderDragon0) {
   Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
   vector<ElementRef> reorder_vertRefs;
   
-  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  FieldRef<simit_float,3> reorder_x = initializeFem(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
   
   begin = clock();
   vector<int> newOrdering;
@@ -237,7 +280,7 @@ TEST(Program, reorderDragon0) {
   cout << "Reordering took:       " << reorderTime << " seconds" << endl;
   
   begin = clock();
-  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  loadAndRunFem(filename, reorder_m_verts, reorder_m_tets, nSteps); 
   end = clock();
   double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
   cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
@@ -261,10 +304,10 @@ TEST(Program, reorderDragon1) {
   Set m_tets(m_verts,m_verts,m_verts,m_verts);
   vector<ElementRef> vertRefs;
   
-  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  FieldRef<simit_float,3> x = initializeFem(mv, m_verts, m_tets, vertRefs); 
   
   clock_t begin = clock();
-  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  loadAndRunFem(filename, m_verts, m_tets, nSteps); 
   clock_t end = clock(); 
   double randomTime = double(end - begin) / CLOCKS_PER_SEC;
   
@@ -275,7 +318,7 @@ TEST(Program, reorderDragon1) {
   Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
   vector<ElementRef> reorder_vertRefs;
   
-  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  FieldRef<simit_float,3> reorder_x = initializeFem(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
   
   begin = clock();
   vector<int> newOrdering;
@@ -285,7 +328,7 @@ TEST(Program, reorderDragon1) {
   cout << "Reordering took:       " << reorderTime << " seconds" << endl;
   
   begin = clock();
-  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  loadAndRunFem(filename, reorder_m_verts, reorder_m_tets, nSteps); 
   end = clock();
   double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
   cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
@@ -309,10 +352,10 @@ TEST(Program, reorderDragon2) {
   Set m_tets(m_verts,m_verts,m_verts,m_verts);
   vector<ElementRef> vertRefs;
   
-  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  FieldRef<simit_float,3> x = initializeFem(mv, m_verts, m_tets, vertRefs); 
   
   clock_t begin = clock();
-  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  loadAndRunFem(filename, m_verts, m_tets, nSteps); 
   clock_t end = clock(); 
   double randomTime = double(end - begin) / CLOCKS_PER_SEC;
   
@@ -323,7 +366,7 @@ TEST(Program, reorderDragon2) {
   Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
   vector<ElementRef> reorder_vertRefs;
   
-  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  FieldRef<simit_float,3> reorder_x = initializeFem(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
   
   begin = clock();
   vector<int> newOrdering;
@@ -333,7 +376,7 @@ TEST(Program, reorderDragon2) {
   cout << "Reordering took:       " << reorderTime << " seconds" << endl;
   
   begin = clock();
-  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  loadAndRunFem(filename, reorder_m_verts, reorder_m_tets, nSteps); 
   end = clock();
   double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
   cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
@@ -357,10 +400,10 @@ TEST(Program, reorderDragon3) {
   Set m_tets(m_verts,m_verts,m_verts,m_verts);
   vector<ElementRef> vertRefs;
   
-  FieldRef<simit_float,3> x = initializeTest(mv, m_verts, m_tets, vertRefs); 
+  FieldRef<simit_float,3> x = initializeFem(mv, m_verts, m_tets, vertRefs); 
   
   clock_t begin = clock();
-  loadAndRunTest(filename, m_verts, m_tets, nSteps); 
+  loadAndRunFem(filename, m_verts, m_tets, nSteps); 
   clock_t end = clock(); 
   double randomTime = double(end - begin) / CLOCKS_PER_SEC;
   
@@ -371,7 +414,7 @@ TEST(Program, reorderDragon3) {
   Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
   vector<ElementRef> reorder_vertRefs;
   
-  FieldRef<simit_float,3> reorder_x = initializeTest(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  FieldRef<simit_float,3> reorder_x = initializeFem(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
   
   begin = clock();
   vector<int> newOrdering;
@@ -381,7 +424,7 @@ TEST(Program, reorderDragon3) {
   cout << "Reordering took:       " << reorderTime << " seconds" << endl;
   
   begin = clock();
-  loadAndRunTest(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  loadAndRunFem(filename, reorder_m_verts, reorder_m_tets, nSteps); 
   end = clock();
   double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
   cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
@@ -389,4 +432,50 @@ TEST(Program, reorderDragon3) {
   cout << "Reordering Speedup:    " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
   
   vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, newOrdering);
+}
+
+TEST(Program, reorderAvergage) {
+  string prefix="/data/scratch/ptew/random-graphs/dragon.1";
+  string nodeFile = prefix + ".node";
+  string eleFile = prefix + ".ele";
+  string filename = string(TEST_INPUT_DIR) + "/" +
+                         toLower(test_info_->test_case_name()) + "/" +
+                         "averageTet.sim";
+  size_t nSteps = 100;
+  MeshVol mv;
+  mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set m_verts;
+  Set m_tets(m_verts,m_verts,m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  
+  FieldRef<simit_float,3> x = initializeAverage(mv, m_verts, m_tets, vertRefs); 
+  
+  clock_t begin = clock();
+  loadAndRunAverage(filename, m_verts, m_tets, nSteps); 
+  clock_t end = clock(); 
+  double randomTime = double(end - begin) / CLOCKS_PER_SEC;
+  
+  cout << "Random Ordering took:  " << randomTime << " seconds" << endl;
+  MeshVol reorder_mv;
+  reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
+  Set reorder_m_verts;
+  Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
+  vector<ElementRef> reorder_vertRefs;
+  
+  FieldRef<simit_float,3> reorder_x = initializeAverage(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  
+  begin = clock();
+  vector<int> newOrdering;
+  reorder(reorder_m_tets, reorder_m_verts, newOrdering);
+  end = clock();
+  double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Reordering took:       " << reorderTime << " seconds" << endl;
+  
+  begin = clock();
+  loadAndRunAverage(filename, reorder_m_verts, reorder_m_tets, nSteps); 
+  end = clock();
+  double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
+  cout << "Hilbert Ordering took: " << reorderedTime << " seconds" << endl;
+  cout << "Reordering Percentage: " << (reorderTime / reorderedTime) * 100 << "%" << endl;
+  cout << "Reordering Speedup:    " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
 }
