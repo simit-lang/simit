@@ -591,28 +591,28 @@ void IREmitter::visit(VarExpr::Ptr expr) {
             ir::VarExpr::make(ir::Var(expr->ident, ir::Type()));
 }
 
-void IREmitter::visit(IntLiteral::Ptr expr) {
-  retExpr = ir::Literal::make(expr->val);
+void IREmitter::visit(IntLiteral::Ptr lit) {
+  retExpr = ir::Literal::make(lit->val);
 }
 
-void IREmitter::visit(FloatLiteral::Ptr expr) {
-  retExpr = ir::Literal::make(expr->val);
+void IREmitter::visit(FloatLiteral::Ptr lit) {
+  retExpr = ir::Literal::make(lit->val);
 }
 
-void IREmitter::visit(BoolLiteral::Ptr expr) {
-  retExpr = ir::Literal::make(expr->val);
+void IREmitter::visit(BoolLiteral::Ptr lit) {
+  retExpr = ir::Literal::make(lit->val);
 }
 
-void IREmitter::visit(IntVectorLiteral::Ptr expr) {
-  emitDenseTensorLiteral(expr);
+void IREmitter::visit(IntVectorLiteral::Ptr lit) {
+  emitDenseTensorLiteral(lit);
 }
 
-void IREmitter::visit(FloatVectorLiteral::Ptr expr) {
-  emitDenseTensorLiteral(expr);
+void IREmitter::visit(FloatVectorLiteral::Ptr lit) {
+  emitDenseTensorLiteral(lit);
 }
 
-void IREmitter::visit(NDTensorLiteral::Ptr expr) {
-  emitDenseTensorLiteral(expr);
+void IREmitter::visit(NDTensorLiteral::Ptr lit) {
+  emitDenseTensorLiteral(lit);
 }
 
 void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {

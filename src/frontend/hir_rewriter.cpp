@@ -256,11 +256,11 @@ void HIRRewriter::visit(ParenExpr::Ptr expr) {
   node = expr;
 }
 
-void HIRRewriter::visit(NDTensorLiteral::Ptr tensor) {
-  for (unsigned i = 0; i < tensor->elems.size(); ++i) {
-    tensor->elems[i] = rewrite<DenseTensorLiteral>(tensor->elems[i]);
+void HIRRewriter::visit(NDTensorLiteral::Ptr lit) {
+  for (unsigned i = 0; i < lit->elems.size(); ++i) {
+    lit->elems[i] = rewrite<DenseTensorLiteral>(lit->elems[i]);
   }
-  node = tensor;
+  node = lit;
 }
 
 void HIRRewriter::visit(Test::Ptr test) {
