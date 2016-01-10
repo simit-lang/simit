@@ -139,12 +139,14 @@ class InsertTemporaries : public IRRewriter {
       return;
     }
 
-    std::vector<Stmt> stmts;
-
     Var tmp(names.getName(), op->expr.type());
-    stmts.push_back(AssignStmt::make(tmp, op->expr));
+    Expr val = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->expr);
+
+    std::vector<Stmt> stmts;
+    stmts.push_back(AssignStmt::make(tmp, val));
     stmts.push_back(Print::make(exprLabel));
     stmts.push_back(Print::make(tmp));
+
     stmt = Block::make(stmts);
   }
 };
