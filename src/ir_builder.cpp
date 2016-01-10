@@ -54,8 +54,8 @@ Expr IRBuilder::unaryElwiseExpr(UnaryOperator op, Expr e) {
       break;
   }
   iassert(val.defined());
-
-  return IndexExpr::make(indexVars, val);
+ 
+  return IndexExpr::make(indexVars, val, e.type().toTensor()->isColumnVector);
 }
 
 Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
@@ -113,7 +113,8 @@ Expr IRBuilder::binaryElwiseExpr(Expr l, BinaryOperator op, Expr r) {
   }
   iassert(val.defined());
 
-  return IndexExpr::make(indexVars, val);
+  const bool isColumnVector = tensor.type().toTensor()->isColumnVector;
+  return IndexExpr::make(indexVars, val, isColumnVector);
 }
 
 Expr IRBuilder::innerProduct(Expr l, Expr r) {
@@ -162,12 +163,7 @@ Expr IRBuilder::gemv(Expr l, Expr r) {
   Expr b = IndexedTensor::make(r, {j});
   Expr val = Mul::make(a, b);
 
-  Expr gemv = IndexExpr::make({i}, val);
-
-  // This is a hack and we should find another solution.
-  const_cast<TensorType*>(gemv.type().toTensor())->isColumnVector = true;
-
-  return gemv;
+  return IndexExpr::make({i}, val, true);
 }
 
 Expr IRBuilder::gevm(Expr l, Expr r) {

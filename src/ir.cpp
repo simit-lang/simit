@@ -139,13 +139,16 @@ Type getBlockType(Expr tensor) {
   return tensor.type().toTensor()->getBlockType();
 }
 
-Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
+Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr, 
+                      bool isColumnVector) {
   iassert(isScalar(expr.type()));
   std::vector<IndexDomain> dimensions;
   for (auto &indexVar : lhsIndexVars) {
     dimensions.push_back(indexVar.getDomain());
   }
-  return TensorType::make(expr.type().toTensor()->getComponentType(), dimensions);
+
+  const auto componentType = expr.type().toTensor()->getComponentType();
+  return TensorType::make(componentType, dimensions, isColumnVector);
 }
 
 // enum CompoundOperator
@@ -831,7 +834,8 @@ std::vector<IndexVar> IndexExpr::domain() const {
   return DomainGatherer().getDomain(*this);
 }
 
-Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value) {
+Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value,
+                     bool isColumnVector) {
   iassert(isScalar(value.type())) << value << " : " << value.type();
 #ifdef SIMIT_ASSERTS
   for (auto &idxVar : resultVars) {  // No reduction variables on lhs
@@ -840,7 +844,7 @@ Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value) {
 #endif
 
   IndexExpr *node = new IndexExpr;
-  node->type = getIndexExprType(resultVars, value);
+  node->type = getIndexExprType(resultVars, value, isColumnVector);
   node->resultVars = resultVars;
   node->value = value;
   return node;
