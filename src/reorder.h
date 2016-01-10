@@ -11,17 +11,17 @@
 namespace simit {
   
   void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& vertexOrdering);
+  void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& edgeOrdering, std::vector<int>& vertexOrdering);
  
   template<typename T, int... dimensions>
-  void populateEdgeSetSpatialField(Set& edgeSet, Set& vertexSet,FieldRef<T, dimensions...>& edgeSpatialField, FieldRef<T, dimensions...>& spatialField, std::string& name) {
-    //FieldRef<T, dimensions...> edgeSpatialField = edgeSet.addSpatialField<T, dimensions...>(name);
+  void populateSpatialField(Set& edgeSet, Set& vertexSet, FieldRef<T, dimensions...>& edgeSpatialField, std::string vertexSpatialFieldName) {
     auto& fields = vertexSet.getFields();
-    int fieldIndex = vertexSet.getFieldIndex("x");
+    int fieldIndex = vertexSet.getFieldIndex(vertexSpatialFieldName);
     T* spatialData = static_cast<T*>(fields[fieldIndex]->data);
     
     int dim = 3;
     int cardinality = edgeSet.getCardinality(); 
-    std::vector<float> sum(3,0);
+    std::vector<float> sum(dim,0);
     for (auto& element : edgeSet) {
       for (auto& endpoint : edgeSet.getEndpoints(element)) {
         for (int z=0; z < dim; ++z) {
@@ -39,7 +39,6 @@ namespace simit {
     T* newData = static_cast<T*>(malloc(capacity * typeSize));
     int dim = typeSize/sizeof(T);
     assert(dim > 0);
-
     for ( int i=0; i < capacity; ++i) {
       for ( int x=0; x<dim; ++x) {
         assert(vertexOrdering[i]*dim + x < capacity * dim);

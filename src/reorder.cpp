@@ -12,6 +12,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
+#include <ctime>
 #include <climits>
 #include <cfloat>
 #include <string>
@@ -395,6 +396,30 @@ namespace simit {
     reorderFields(vertexSet.getFields(), vertexOrdering);
   }
   
+  void reorder(Set& edgeSet, Set& vertexSet, vector<int>& edgeOrdering, vector<int>& vertexOrdering) {
+    iassert(vertexOrdering.size() == 0);
+    
+    // Get new vertex ordering based on given heuristic 
+    // bfs(vertexOrdering, edgeSet.getEndpointsPtr(), vertexSet.getSize(), edgeSet.getCardinality());
+    auto start = clock(); 
+    hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
+    iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
+    reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
+    auto end  = clock(); 
+    cout << "Hilbert reordering time: " << double(end - start)/ CLOCKS_PER_SEC << endl;
+
+    start = clock();
+    // hilbert::hilbertReorder(edgeSet, edgeOrdering, edgeSet.getSize());
+    edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
+    iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
+    reorderEdgeSet(edgeSet, edgeOrdering);
+    end = clock();
+    cout << "Edge Sum reordering time: " << double(end - start)/ CLOCKS_PER_SEC << endl;
+    // vector<int> edgeOrdering;
+    // iassert(edgeOrdering.size() == edgeSet.getSize()); 
+    // reorderEdgeSet(edgeSet, edgeOrdering);
+  }
+  
   void reorder(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
     iassert(vertexOrdering.size() == 0);
     
@@ -403,7 +428,7 @@ namespace simit {
     hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
-
+   
     // vector<int> edgeOrdering;
     // edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
     // iassert(edgeOrdering.size() == edgeSet.getSize()); 
