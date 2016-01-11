@@ -71,7 +71,8 @@ func f(a : int) -> (c : int)
   b(1,1) = a;
   do
     var b : tensor[3,3](float);
-    b = 0.0;
+    b(1,1) = 0.0;
+    b(2,2) = -1.0;
   end while false;
   c = b(1,1);
 end

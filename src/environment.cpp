@@ -169,6 +169,10 @@ void Environment::addTemporary(const Var& var) {
   content->temporarySet.insert(var);
 }
 
+Var Environment::createTemporary(const Type &type, const std::string name) {
+  return Var(names.getName(name), type);
+}
+
 void Environment::addTensorIndex(const pe::PathExpression& pexpr,
                                  const Var& var) {
   iassert(pexpr.defined())

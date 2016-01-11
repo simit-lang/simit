@@ -397,7 +397,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
         // Sparse output
         IndexDomain workspaceDomain = type->getDimensions()[1]; // Row workspace
         Type workspaceType = TensorType::make(workspaceCType,{workspaceDomain});
-        workspace = Var("workspace", workspaceType);
+        workspace = environment->createTemporary(workspaceType, "@workspace");
         environment->addTemporary(workspace);
         storage->add(workspace, TensorStorage::Kind::Dense);
       }
@@ -413,7 +413,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       for (const SubsetLoop& subsetLoop : subsetLoops) {
         Stmt loopStmt = createSubsetLoopStmt(workspace, inductionVar, blockSize,
                                              subsetLoop, environment);
-        string comment = "workspace " +
+        string comment = workspace.getName() + " " +
             util::toString(subsetLoop.getCompoundOperator())+"= " +
             tensorSliceString(subsetLoop.getIndexExpression(), indexVar);
         loopStatements.push_back(Comment::make(comment, loopStmt, false, true));
@@ -460,7 +460,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       Stmt loopStmt = createSubsetLoopStmt(inductionVar, {resultIndexVar},body);
       string comment = toString(target)
                      + tensorSliceString(resultVars, loop.getIndexVar())
-                     + " = workspace";
+                     + " = " + workspace.getName();
       loopStatements.push_back(Comment::make(comment, loopStmt, false, true));
 
       loopNest = Block::make(loopStatements);
