@@ -3,6 +3,7 @@
 
 #include "graph.h"
 #include "hilbert.h"
+#include <omp.h>
 #include <algorithm>
 #include <map>
 #include <vector>
@@ -281,12 +282,11 @@ namespace simit {
   void edgeSumReordering(int* endpoints, vector<int>& edgeOrdering, const int size, const int cardinality) {
     assert(edgeOrdering.size() == 0);
     unordered_map<int,int> edgeSum;
-
-    int sum;
-    int edgeIndex; 
+    
+    #pragma omp parallel for
     for (int i=0; i < size; ++i) {
-      edgeIndex = i * cardinality;
-      sum = 0;
+      int edgeIndex = i * cardinality;
+      int sum = 0;
       for (int elementIndex=0; elementIndex < cardinality; ++elementIndex) {
         sum += endpoints[edgeIndex + elementIndex];
       }
