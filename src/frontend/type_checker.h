@@ -4,7 +4,6 @@
 #include <vector>
 #include <memory>
 #include <string>
-#include <iostream>
 #include <exception>
 
 #include "hir.h"
@@ -78,7 +77,6 @@ private:
   virtual void visit(IntVectorLiteral::Ptr);
   virtual void visit(FloatVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
-  virtual void visit(Test::Ptr);
 
 private:
   template <typename T> using Ptr = std::shared_ptr<T>;

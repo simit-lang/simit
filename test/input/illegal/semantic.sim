@@ -110,6 +110,9 @@ proc main
   var v : int;
 end
 
+%%% bad-decl
+const x : int = 1 + 2;
+
 %%% bad-cond-1
 proc main
   while 1

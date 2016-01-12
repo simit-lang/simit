@@ -1245,25 +1245,9 @@ TypeChecker::DenseTensorType
   return tensorType;
 }
 
-void TypeChecker::visit(Test::Ptr test) {
-  for (auto arg : test->args) {
-    inferType(arg);
-  
-    // Check for non-literal arguments, which are unsupported for tests.
-    // Might want to remove this constraint at some point.
-    if (!isa<TensorLiteral>(arg)) {
-      reportError("input to test must be a literal", arg);
-    }
-  }
-
-  inferType(test->expected);
-
-  // Check for non-literal expected value.
-  // Might want to remove this constraint at some point.
-  if (!isa<TensorLiteral>(test->expected)) {
-    reportError("expected value for test must be a literal", test->expected);
-  }
-}
+// TODO: Implement type checking for tests. Since tests can reference functions 
+//       that have not yet been declared, this would have to be done as a 
+//       separate pass after the main type checking pass.
 
 void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst) {
   const ir::Var var = getVar(decl->var);
