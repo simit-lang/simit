@@ -41,6 +41,17 @@ proc main
   cos(2.0, 3.0);
 end
 
+%%% bad-call-6
+func g(inout a : tensor[1](int)) -> (f : int)
+  a(0) = 2;
+end
+
+const x : tensor[1](int) = [1];
+
+proc main
+  g(x);
+end
+
 %%% bad-assign-1
 proc main
   1 = 1;
@@ -53,6 +64,18 @@ end
 
 func foo(inout a : (E * 2))
   a(1).f = 1;
+end
+
+%%% bad-assign-3
+proc main
+  const x : int = 1;
+  x = 2;
+end
+
+%%% bad-assign-4
+proc main
+  const x : tensor[1](int) = [1];
+  x(0) = 2;
 end
 
 %%% bad-set-type

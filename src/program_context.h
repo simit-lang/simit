@@ -34,6 +34,7 @@ public:
 
   ir::Var getVar() const {return var;}
   ir::Expr getExpr() const {return expr;}
+  Access getAccess() const {return access;}
 
 private:
   ir::Var var;
