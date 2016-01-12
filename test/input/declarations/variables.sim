@@ -76,3 +76,10 @@ func f(a : int) -> (c : int)
   end while false;
   c = b(1,1);
 end
+
+%%% local-const
+%! f(1) == 1;
+func f(a : int) -> (c : int)
+  const b : tensor[2](int) = 0;
+  c = b(0) + a;
+end

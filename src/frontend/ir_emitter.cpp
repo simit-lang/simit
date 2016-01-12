@@ -746,7 +746,8 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   ctx->addSymbol(var.getName(), var, access);
 
   const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
-  if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr)) {
+  if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr) && 
+      var.getType() == initExpr.type()) {
     // Optimization to avoid having to initialize constant multiple times.
     ctx->addConstant(var, initExpr);
   } else {

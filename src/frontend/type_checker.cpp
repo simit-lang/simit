@@ -14,6 +14,16 @@
 namespace simit {
 namespace hir {
 
+void TypeChecker::visit(Program::Ptr program) {
+  for (auto elem : program->elems) {
+    if (isa<ConstDecl>(elem)) {
+      typeCheckVarOrConstDecl(to<ConstDecl>(elem), true, true);
+    } else {
+      elem->accept(this);
+    }
+  }
+}
+
 void TypeChecker::visit(RangeIndexSet::Ptr set) {
   retIndexSet = std::make_shared<ir::IndexSet>(set->range);
 }
@@ -513,14 +523,27 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
   actualsType.push_back(targetSetType->elementType);
   
   const auto funcArgs = func.getArguments();
-  if (targetSetType->endpointSets.size() > 0 && 
-      actualsType.size() != funcArgs.size()) {
-    // TODO: Should eventually support heterogeneous edge sets.
+  
+  if (targetSetType->endpointSets.size() > 0) {
     const auto neighborSetType = 
         targetSetType->endpointSets[0]->type().toSet();
-    const auto neighborsType = ir::TupleType::make(
-        neighborSetType->elementType, targetSetType->endpointSets.size());
-    actualsType.push_back(neighborsType);
+    
+    // Check for heterogeneous edge sets.
+    for (unsigned i = 1; i < targetSetType->endpointSets.size(); ++i) {
+      if (targetSetType->endpointSets[i]->type().toSet() != neighborSetType) {
+        const auto msg = "map operation is currently unsupported for "
+                         "heterogeneous edge sets";
+        reportError(msg, expr->target);
+        return;
+      }
+    }
+    
+    if (actualsType.size() != funcArgs.size()) {
+      // TODO: Should eventually support heterogeneous edge sets.
+      const auto neighborsType = ir::TupleType::make(
+          neighborSetType->elementType, targetSetType->endpointSets.size());
+      actualsType.push_back(neighborsType);
+    }
   }
  
   // Check that assembly function accepts right number of arguments.
@@ -1249,7 +1272,8 @@ TypeChecker::DenseTensorType
 //       that have not yet been declared, this would have to be done as a 
 //       separate pass after the main type checking pass.
 
-void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst) {
+void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst, 
+                                          bool isGlobal) {
   const ir::Var var = getVar(decl->var);
   const ir::Type varType = var.getType();
   
@@ -1292,18 +1316,29 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst) {
     return;
   }
 
-  // Check if attempting to initialize a tensor with a scalar.
   const ir::Type initIRType = initType->at(0);
-  const auto varTensorType = varType.toTensor();
-  const auto initTensorType = initIRType.toTensor();
-  if (isScalar(initIRType) && 
-      varTensorType->getComponentType() == initTensorType->getComponentType()) {
+  const ir::TensorType *varTensorType = varType.toTensor();
+  const ir::TensorType *initTensorType = initIRType.toTensor();
+  const ir::ScalarType varComponentType = varTensorType->getComponentType();
+  const ir::ScalarType initComponentType = initTensorType->getComponentType();
+  
+  // Check if attempting to initialize a local tensor with a scalar.
+  if (isScalar(initIRType) && varComponentType == initComponentType) {
+    // TODO: It might be useful to be able to initialize non-scalar global 
+    //       tensors by scalar values. We prohibit this for now because it 
+    //       is not supported by the backend.
+    if (isGlobal) {
+      const auto msg = "cannot initialize a non-scalar global constant "
+                       "by a scalar value";
+      reportError(msg, decl);
+    }
     return;
   }
 
-  // Check if initial value type is equivalent to declared constant type.
   const ir::Type varBlockType = varTensorType->getBlockType();
   const ir::Type initBlockType = initTensorType->getBlockType();
+  
+  // Check if initial value type is equivalent to declared constant type.
   if (isConst && compareTypes(varBlockType, initBlockType)) {
     const auto varDims = varTensorType->getOuterDimensions();
     const auto initDims = initTensorType->getOuterDimensions();
