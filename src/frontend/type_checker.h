@@ -29,6 +29,7 @@ public:
   void check(Program::Ptr program) { program->accept(this); }
 
 private:
+  virtual void visit(Program::Ptr);
   virtual void visit(RangeIndexSet::Ptr);
   virtual void visit(SetIndexSet::Ptr);
   virtual void visit(DynamicIndexSet::Ptr);
@@ -103,10 +104,11 @@ private:
   };
 
 private:
-  void            typeCheckVarOrConstDecl(VarDecl::Ptr, bool = false);
-  void            typeCheckBinaryElwise(BinaryExpr::Ptr);
-  void            typeCheckBinaryBoolean(BinaryExpr::Ptr);
-  void            typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
+  void typeCheckVarOrConstDecl(VarDecl::Ptr, bool = false, bool = false);
+  void typeCheckBinaryElwise(BinaryExpr::Ptr);
+  void typeCheckBinaryBoolean(BinaryExpr::Ptr);
+  void typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
+
   DenseTensorType getDenseTensorType(DenseTensorLiteral::Ptr);
 
   void markCheckWritable(HIRNode::Ptr);
