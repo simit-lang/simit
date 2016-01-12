@@ -17,7 +17,6 @@
 #include "const_checker.h"
 #include "type_checker.h"
 #include "tuple_read_rewriter.h"
-#include "assign_checker.h"
 #include "ir_emitter.h"
 
 using namespace simit::internal;
@@ -36,7 +35,6 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   hir::ConstChecker(errors).check(program);
   hir::TypeChecker(errors).check(program);
   program = hir::TupleReadRewriter().rewrite<hir::Program>(program);
-  hir::AssignChecker(errors).check(program);
 
   // Only emit IR if no syntactic or semantic error was found.
   if (!errors->empty()) {

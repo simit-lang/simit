@@ -271,8 +271,12 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
       continue;
     }
 
-    const auto access = arg->inout ? internal::Symbol::ReadWrite : 
-                        internal::Symbol::Read;
+    internal::Symbol::Access access = internal::Symbol::Read;
+    if (arg->inout) {
+      access = internal::Symbol::ReadWrite;
+      writableArgs.insert(argVar);
+    }
+    
     ctx.addSymbol(argVar.getName(), argVar, access);
     arguments.push_back(argVar);
   }
@@ -401,11 +405,8 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
 
   Expr::Type lhsType;
   for (auto lhs : stmt->lhs) {
-    // We want to check that target variable is *writable* (rather than 
-    // readable, which is the default check). Additionally, if assignment is 
-    // directly to a variable, then it is not required that the variable be 
-    // declared beforehand.
-    markCheckWritable(lhs);
+    // If assigning directly to a variable, then the variable does not have to 
+    // be declared beforehand, so skip that check later.
     skipCheckDeclared = isa<VarExpr>(lhs);
     
     const Ptr<Expr::Type> ltype = inferType(lhs);
@@ -415,7 +416,6 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
       lhsType.push_back(ir::Type());
     }
     
-    checkWritable.reset();
     skipCheckDeclared = false;
   }
 
@@ -446,6 +446,16 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
           reportError(errMsg.str(), stmt->lhs[i]);
           typeChecked = false;
         }
+      }
+
+      // Check that target is writable.
+      switch (stmt->lhs[i]->access) {
+        case internal::Symbol::Write:
+        case internal::Symbol::ReadWrite:
+          break;
+        default:
+          reportError("assignment target is not writable", stmt->lhs[i]);
+          break;
       }
     }
   }
@@ -573,6 +583,20 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
         reportError(errMsg.str(), expr->partialActuals[i]);
       } else {
         reportError(errMsg.str(), expr->target);
+      }
+    }
+    
+    // Check that read-only variable is not passed in as inout argument.
+    if (i < expr->partialActuals.size() && 
+        writableArgs.find(funcArgs[i]) != writableArgs.end()) {
+      const Expr::Ptr param = expr->partialActuals[i];
+      switch (param->access) {
+        case internal::Symbol::Write:
+        case internal::Symbol::ReadWrite:
+          break;
+        default:
+          reportError("cannot pass a read-only value as inout argument", param);
+          break;
       }
     }
   }
@@ -962,6 +986,21 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
                << "of type " << typeString(argType);
         reportError(errMsg.str(), argument);
       }
+
+      // Check that read-only variable is not passed in as inout argument.
+      if (writableArgs.find(funcArgs[i]) != writableArgs.end()) {
+        switch (argument->access) {
+          case internal::Symbol::Write:
+          case internal::Symbol::ReadWrite:
+            break;
+          default:
+          {
+            const auto msg = "cannot pass a read-only value as inout argument";
+            reportError(msg, argument);
+            break;
+          }
+        }
+      }
     }
   }
 
@@ -975,6 +1014,7 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   const Ptr<Expr::Type> lhsType = inferType(expr->tensor);
 
   if (!lhsType) {
+    expr->access = expr->tensor->access;
     return;
   }
 
@@ -983,11 +1023,15 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   if (lhsType->size() != 1) {
     const auto msg = "can only access elements of a single tensor or tuple";
     reportError(msg, expr->tensor);
+    
+    expr->access = expr->tensor->access;
     return;
   }
 
   // Check that program only ever attempts to read from tensors or tuples.
   if (lhsType->at(0).isTensor()) {
+    expr->access = expr->tensor->access;
+
     const ir::TensorType *tensorType = lhsType->at(0).toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto outerDims = tensorType->getOuterDimensions();
@@ -1110,6 +1154,7 @@ void TypeChecker::visit(TupleReadExpr::Ptr expr) {
 
 void TypeChecker::visit(FieldReadExpr::Ptr expr) {
   const Ptr<Expr::Type> lhsType = inferType(expr->setOrElem);
+  expr->access = expr->setOrElem->access;
 
   if (!lhsType) {
     return;
@@ -1175,30 +1220,21 @@ void TypeChecker::visit(VarExpr::Ptr expr) {
     if (!skipCheckDeclared) {
       reportUndeclared("variable or constant", expr->ident, expr);
     }
+
+    expr->access = internal::Symbol::ReadWrite;
     return;
   }
   
   const internal::Symbol varSym = ctx.getSymbol(expr->ident);
-
-  // Check that variable access has appropriate permission.
-  if (expr == checkWritable && !varSym.isWritable()) {
-    std::stringstream errMsg;
-    errMsg << "'" << expr->ident << "' is not writable";
-    reportError(errMsg.str(), expr);
-  } else if (expr != checkWritable && !varSym.isReadable()) {
-    std::stringstream errMsg;
-    errMsg << "'" << expr->ident << "' is not readable";
-    reportError(errMsg.str(), expr);
-  }
-
   const ir::Type varType = varSym.getExpr().type();
+  expr->access = varSym.getAccess();
 
   if (!varType.defined()) {
     return;
   }
 
   retType = std::make_shared<Expr::Type>();
-  retType->push_back(varSym.getExpr().type());
+  retType->push_back(varType);
 }
 
 void TypeChecker::visit(IntLiteral::Ptr lit) {
@@ -1470,16 +1506,6 @@ void TypeChecker::DenseTensorType::merge(const DenseTensorType &other) {
   }
   
   ++dimSizes[dimSizes.size() - 1];
-}
-
-void TypeChecker::markCheckWritable(HIRNode::Ptr node) {
-  if (isa<VarExpr>(node)) {
-    checkWritable = node;
-  } else if (isa<TensorReadExpr>(node)) {
-    markCheckWritable(to<TensorReadExpr>(node)->tensor);
-  } else if (isa<FieldReadExpr>(node)) {
-    markCheckWritable(to<FieldReadExpr>(node)->setOrElem);
-  }
 }
 
 bool TypeChecker::compareTypes(const ir::Type &l, const ir::Type &r) {

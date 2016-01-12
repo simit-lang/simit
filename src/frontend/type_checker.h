@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <exception>
+#include <set>
 
 #include "hir.h"
 #include "hir_visitor.h"
@@ -111,8 +112,6 @@ private:
 
   DenseTensorType getDenseTensorType(DenseTensorLiteral::Ptr);
 
-  void markCheckWritable(HIRNode::Ptr);
-
   Ptr<Expr::Type> inferType(Expr::Ptr ptr) {
     retType.reset();
     ptr->accept(this);
@@ -177,7 +176,7 @@ private:
   ir::Var           retVar;
  
   bool                     skipCheckDeclared;
-  HIRNode::Ptr             checkWritable;
+  std::set<ir::Var>        writableArgs;
   internal::ProgramContext ctx;
   std::vector<ParseError> *errors;
 };

@@ -38,9 +38,10 @@ func callee(inout c : tensor[2](float))
 end
 
 func caller(a : tensor[2](float)) -> (b : tensor[2](float))
-  callee(a);
-  b(0) = a(0) * 4.0;
-  b(1) = a(1) * 5.0;
+  d = a;
+  callee(d);
+  b(0) = d(0) * 4.0;
+  b(1) = d(1) * 5.0;
 end
 
 %%% call-unused-result

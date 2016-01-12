@@ -9,6 +9,7 @@
 #include "types.h"
 #include "scanner.h"
 #include "hir_visitor.h"
+#include "program_context.h"
 
 namespace simit {
 namespace hir {
@@ -79,9 +80,12 @@ struct StmtBlock : public Stmt {
 struct Expr : public HIRNode {
   typedef std::vector<ir::Type> Type;
 
-  Type type;
+  Type                     type;
+  internal::Symbol::Access access;
 
   typedef std::shared_ptr<Expr> Ptr;
+
+  Expr() : access(internal::Symbol::Read) {}
 };
 
 struct IndexSet : public HIRNode {
