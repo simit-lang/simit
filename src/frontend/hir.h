@@ -86,6 +86,9 @@ struct Expr : public HIRNode {
   typedef std::shared_ptr<Expr> Ptr;
 
   Expr() : access(internal::Symbol::Read) {}
+
+  bool isReadable();
+  bool isWritable();
 };
 
 struct IndexSet : public HIRNode {
