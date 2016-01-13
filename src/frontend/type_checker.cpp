@@ -449,13 +449,8 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
       }
 
       // Check that target is writable.
-      switch (stmt->lhs[i]->access) {
-        case internal::Symbol::Write:
-        case internal::Symbol::ReadWrite:
-          break;
-        default:
-          reportError("assignment target is not writable", stmt->lhs[i]);
-          break;
+      if (!stmt->lhs[i]->isWritable()) {
+        reportError("assignment target is not writable", stmt->lhs[i]);
       }
     }
   }
@@ -586,17 +581,14 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
       }
     }
     
-    // Check that read-only variable is not passed in as inout argument.
+    // Check that inout argument is writable variable.
     if (i < expr->partialActuals.size() && 
         writableArgs.find(funcArgs[i]) != writableArgs.end()) {
       const Expr::Ptr param = expr->partialActuals[i];
-      switch (param->access) {
-        case internal::Symbol::Write:
-        case internal::Symbol::ReadWrite:
-          break;
-        default:
-          reportError("cannot pass a read-only value as inout argument", param);
-          break;
+      
+      if (!isa<VarExpr>(param) || !param->isWritable()) {
+        const auto msg = "inout argument must be a writable variable";
+        reportError(msg, expr->partialActuals[i]);
       }
     }
   }
@@ -987,19 +979,11 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
         reportError(errMsg.str(), argument);
       }
 
-      // Check that read-only variable is not passed in as inout argument.
-      if (writableArgs.find(funcArgs[i]) != writableArgs.end()) {
-        switch (argument->access) {
-          case internal::Symbol::Write:
-          case internal::Symbol::ReadWrite:
-            break;
-          default:
-          {
-            const auto msg = "cannot pass a read-only value as inout argument";
-            reportError(msg, argument);
-            break;
-          }
-        }
+      // Check that inout argument is writable variable.
+      if (writableArgs.find(funcArgs[i]) != writableArgs.end() && 
+          (!isa<VarExpr>(argument) || !argument->isWritable())) {
+        const auto msg = "inout argument must be a writable variable";
+        reportError(msg, argument);
       }
     }
   }
