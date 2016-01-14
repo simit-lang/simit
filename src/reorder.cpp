@@ -1,4 +1,3 @@
-
 #include "reorder.h"
 
 #include "graph.h"
@@ -256,7 +255,46 @@ namespace simit {
           return left.second > right.second;
       }
   };
+  
+  struct edgeCompare{
+    bool operator()(pair<int,vector<int>> const&left, 
+                    pair<int,vector<int>> const&right) const {
+      for (int i=0; i < left.second.size(); ++i) {
+        if (left.second[i] != right.second[i]) {
+          return left.second[i] < right.second[i]; 
+        }
+      }
+      return true;
+      // cout << left.second[0] << " : " << right.second[0] << " : " << (left.second[0] < right.second[0]) << endl;
+      // return left.second[0] < right.second[0];
+    }
+  };
+  
+  
+  // struct edgeCompare{
+  //   edgeCompare(int* endpoints, const int cardinality) : endpoints(endpoints), cardinality(cardinality) {
+  //   }
+  //   
+  //   bool operator()(int const&left, 
+  //                   int const&right) const {
+  //     return left < right;
+  //     // int leftID;
+  //     // int rightID;
+  //     // for (int i=0; i < cardinality; ++i) {
+  //     //   leftID = endpoints[left + i];
+  //     //   rightID = endpoints[right + i];
+  //     //   if ( leftID != rightID ) {
+  //     //     return leftID < rightID;
+  //     //   }
+  //     // }
 
+  //     // return true;
+  //   }
+  //   private:
+  //     int* endpoints;
+  //     const int cardinality;
+  // };
+  
   void vertexDegreeReordering(vector<int>& vertexOrdering, int* endpoints, int size, int cardinality) {
     unordered_map<int,int> degrees;
     int edgeIndex;
@@ -301,10 +339,31 @@ namespace simit {
     }
   }
   
+  void edgeVertexSortReordering(int* endpoints, vector<int>& edgeOrdering, const int size, const int cardinality) {
+    assert(edgeOrdering.size() == 0);
+    
+    vector<pair<int,vector<int>>> edgeEndpoints;
+    for (int index = 0; index < size; ++index) {
+      vector<int> ends;
+      for (int i=0; i < cardinality; ++i) {
+        ends.push_back(endpoints[index*cardinality+i]); 
+      }
+      sort(ends.begin(), ends.end());
+      pair<int, vector<int>> p (index, ends);
+      edgeEndpoints.push_back(p);
+    }
+    
+    sort(edgeEndpoints.begin(), edgeEndpoints.end(), edgeCompare());
+    int count = 0;
+    for (auto& p : edgeEndpoints) {
+      edgeOrdering.push_back(p.first);
+    }
+  }
+  
   // ---------- Ordering Evaluation Heuristics ----------
   int scoreEdges(const int* endpoints, const int size, const int cardinality) {
-    unordered_map<int,vector<int>> distances;
-    unordered_map<int,int> firstOccurrence;
+    unordered_map<long,vector<long>> distances;
+    unordered_map<long,long> firstOccurrence;
 
     for (int edgeIndex=0; edgeIndex < size * cardinality; edgeIndex += cardinality) {
       for (int elementIndex=0; elementIndex < cardinality; ++elementIndex) {
@@ -313,12 +372,12 @@ namespace simit {
           distances[endpoints[edgeIndex + elementIndex]].push_back( edgeIndex - search->second );
         } else {
           firstOccurrence[endpoints[edgeIndex + elementIndex]] = edgeIndex;
-          distances[endpoints[edgeIndex + elementIndex]] = vector<int>();
+          distances[endpoints[edgeIndex + elementIndex]] = vector<long>();
         }
       }
     }
 
-    int distanceSum = 0;
+    long distanceSum = 0;
     for ( auto& distMapping : distances ) {
       int distCount = distMapping.second.size();
       for (int offset=0; offset < distCount - 1; ++offset) {
@@ -400,7 +459,6 @@ namespace simit {
     iassert(vertexOrdering.size() == 0);
     
     // Get new vertex ordering based on given heuristic 
-    // bfs(vertexOrdering, edgeSet.getEndpointsPtr(), vertexSet.getSize(), edgeSet.getCardinality());
     auto start = clock(); 
     hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
@@ -410,11 +468,12 @@ namespace simit {
 
     start = clock();
     // hilbert::hilbertReorder(edgeSet, edgeOrdering, edgeSet.getSize());
-    edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
+    //edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
+    edgeVertexSortReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
     iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
     reorderEdgeSet(edgeSet, edgeOrdering);
     end = clock();
-    cout << "EdgeSum reorder took:    " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
+    cout << "Edge reorder took:       " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
     // vector<int> edgeOrdering;
     // iassert(edgeOrdering.size() == edgeSet.getSize()); 
     // reorderEdgeSet(edgeSet, edgeOrdering);
@@ -434,5 +493,4 @@ namespace simit {
     // iassert(edgeOrdering.size() == edgeSet.getSize()); 
     // reorderEdgeSet(edgeSet, edgeOrdering);
   }
-
 }
