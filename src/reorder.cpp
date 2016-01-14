@@ -256,44 +256,36 @@ namespace simit {
       }
   };
   
+  int qsortCompare( const void* a, const void* b) {
+       int int_a = * ( (int*) a );
+       int int_b = * ( (int*) b );
+
+       if ( int_a == int_b ) return 0;
+       else if ( int_a < int_b ) return -1;
+       else return 1;
+  } 
+
   struct edgeCompare{
-    bool operator()(pair<int,vector<int>> const&left, 
-                    pair<int,vector<int>> const&right) const {
-      for (int i=0; i < left.second.size(); ++i) {
-        if (left.second[i] != right.second[i]) {
-          return left.second[i] < right.second[i]; 
+    edgeCompare(int* endpoints, const int cardinality) : 
+      endpoints(endpoints),
+      cardinality(cardinality)
+      {}
+    
+    bool operator()(int const&left, 
+                    int const&right) const {
+      for (int i=0; i < cardinality; ++i) {
+        int leftID = endpoints[left*cardinality + i];
+        int rightID = endpoints[right*cardinality + i];
+        if (leftID != rightID) {
+          return leftID < rightID; 
         }
       }
       return true;
-      // cout << left.second[0] << " : " << right.second[0] << " : " << (left.second[0] < right.second[0]) << endl;
-      // return left.second[0] < right.second[0];
     }
+    private:
+      int* endpoints;
+      const int cardinality;
   };
-  
-  
-  // struct edgeCompare{
-  //   edgeCompare(int* endpoints, const int cardinality) : endpoints(endpoints), cardinality(cardinality) {
-  //   }
-  //   
-  //   bool operator()(int const&left, 
-  //                   int const&right) const {
-  //     return left < right;
-  //     // int leftID;
-  //     // int rightID;
-  //     // for (int i=0; i < cardinality; ++i) {
-  //     //   leftID = endpoints[left + i];
-  //     //   rightID = endpoints[right + i];
-  //     //   if ( leftID != rightID ) {
-  //     //     return leftID < rightID;
-  //     //   }
-  //     // }
-
-  //     // return true;
-  //   }
-  //   private:
-  //     int* endpoints;
-  //     const int cardinality;
-  // };
   
   void vertexDegreeReordering(vector<int>& vertexOrdering, int* endpoints, int size, int cardinality) {
     unordered_map<int,int> degrees;
@@ -321,7 +313,6 @@ namespace simit {
     assert(edgeOrdering.size() == 0);
     unordered_map<int,int> edgeSum;
     
-    #pragma omp parallel for
     for (int i=0; i < size; ++i) {
       int edgeIndex = i * cardinality;
       int sum = 0;
@@ -338,26 +329,17 @@ namespace simit {
       edgeOrdering.push_back(p.first);
     }
   }
-  
+
   void edgeVertexSortReordering(int* endpoints, vector<int>& edgeOrdering, const int size, const int cardinality) {
     assert(edgeOrdering.size() == 0);
+    edgeOrdering.resize(size);
     
-    vector<pair<int,vector<int>>> edgeEndpoints;
-    for (int index = 0; index < size; ++index) {
-      vector<int> ends;
-      for (int i=0; i < cardinality; ++i) {
-        ends.push_back(endpoints[index*cardinality+i]); 
-      }
-      sort(ends.begin(), ends.end());
-      pair<int, vector<int>> p (index, ends);
-      edgeEndpoints.push_back(p);
-    }
+    for (int index=0; index < size; ++index) {
+      edgeOrdering[index] = index;
+      qsort(endpoints + index*cardinality, cardinality, sizeof(int), qsortCompare);
+    } 
     
-    sort(edgeEndpoints.begin(), edgeEndpoints.end(), edgeCompare());
-    int count = 0;
-    for (auto& p : edgeEndpoints) {
-      edgeOrdering.push_back(p.first);
-    }
+    sort(edgeOrdering.begin(), edgeOrdering.end(), edgeCompare(endpoints, cardinality));
   }
   
   // ---------- Ordering Evaluation Heuristics ----------
