@@ -29,7 +29,7 @@ namespace ir {
     }
 
     inline int getTimedLineIndex(std::string line) {
-      int pos = find(timedLines.begin(), timedLines.end(), 
+      size_t pos = find(timedLines.begin(), timedLines.end(),
           line.c_str()) - timedLines.begin();
       if (pos >= timedLines.size()){
         pos = -1;
@@ -43,8 +43,8 @@ namespace ir {
       }
     }
 
-    inline void storeTime(int index, double time) {
-      while ( timerCount.size() < index + 1) {
+    inline void storeTime(size_t index, double time) {
+      while (timerCount.size() < index + 1) {
         timerCount.push_back(0);
         timerSums.push_back(0);
       }
