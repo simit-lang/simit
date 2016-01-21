@@ -234,8 +234,11 @@ void IRPrinter::visit(const AssignStmt *op) {
 
 void IRPrinter::visit(const CallStmt *op) {
   indent();
-  os << util::join(op->results) << " = " << op->callee.getName()
-     << "(" << util::join(op->actuals) << ")" << ";";
+  if (!op->results.empty()) {
+    os << util::join(op->results) << " = "; 
+  }
+  os << op->callee.getName() << "(" << 
+    util::join(op->actuals) << ")" << ";";
 }
 
 void IRPrinter::visit(const TupleRead *op) {

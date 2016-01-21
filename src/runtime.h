@@ -6,6 +6,8 @@
 #include <Eigen/Dense>
 #include <Eigen/Sparse>
 #include <Eigen/IterativeLinearSolvers>
+#include <time.h>
+#include <vector>
 
 extern "C" {
 
@@ -30,6 +32,10 @@ double det3_f64(double* a);
 float det3_f32(float* a);
 void inv3_f64(double* a, double* inv);
 void inv3_f32(float* a, float* inv);
+
+void simitStoreTime(int i, double value);
+double simitClock();
+
 
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f32
 void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
@@ -101,6 +107,7 @@ void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
 #endif
 
 extern "C" {
+
 
 int loc(int v0, int v1, int *neighbors_start, int *neighbors) {
   int l = neighbors_start[v0];
@@ -217,5 +224,21 @@ void inv3_f32(float * a, float * inv){
   inv[7] = cof12 * determ;
   inv[8] = cof22 * determ;
 }
+
+
+}
+
+#include "timers.h"
+#include "stdio.h"
+void simitStoreTime(int i, double value) {
+  simit::ir::TimerStorage::getInstance().storeTime(i, value);
+}
+
+#include <chrono>
+double simitClock() {
+  using namespace std::chrono;
+  auto t = high_resolution_clock::now();
+  time_point<high_resolution_clock,microseconds> usec = time_point_cast<microseconds>(t);
+  return (double)(usec.time_since_epoch().count());
 }
 #endif
