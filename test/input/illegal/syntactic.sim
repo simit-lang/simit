@@ -118,6 +118,26 @@ proc main
   var a : tensor(tensor);
 end
 
+%%% bad-vector-type-1
+proc main
+  var a : vector[2,2](int);
+end
+
+%%% bad-vector-type-2
+proc main
+  var a : vector[2](tensor[2,2](float));
+end
+
+%%% bad-matrix-type-1
+proc main
+  var a : matrix[2](int);
+end
+
+%%% bad-matrix-type-2
+proc main
+  var a : matrix[2,2](tensor[2](float));
+end
+
 %%% bad-set-type-1
 element E
 end

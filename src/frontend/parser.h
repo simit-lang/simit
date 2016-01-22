@@ -74,6 +74,8 @@ private:
   hir::TupleLength::Ptr            parseTupleLength();
   hir::TupleType::Ptr              parseTupleType();
   hir::TensorType::Ptr             parseTensorType();
+  hir::NDTensorType::Ptr           parseVectorBlockType();
+  hir::NDTensorType::Ptr           parseMatrixBlockType();
   hir::NDTensorType::Ptr           parseTensorBlockType();
   hir::ScalarType::Ptr             parseScalarType();
   std::vector<hir::IndexSet::Ptr>  parseIndexSets();

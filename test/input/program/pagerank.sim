@@ -22,7 +22,7 @@ func pagerank_matrix(link : Link, p : (Page*2))
   A(p(1),p(0)) = damping_factor / p(0).outlinks;
 end
 
-proc main
+export func main
   c = map outlinks to links reduce +;
   pages.outlinks = c;
   A = map pagerank_matrix to links reduce +;

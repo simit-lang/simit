@@ -15,13 +15,14 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "bool") return Token::Type::BOOL;
   if (token == "string") return Token::Type::STRING;
   if (token == "tensor") return Token::Type::TENSOR;
-  if (token == "matrix") return Token::Type::TENSOR;
-  if (token == "vector") return Token::Type::TENSOR;
+  if (token == "matrix") return Token::Type::MATRIX;
+  if (token == "vector") return Token::Type::VECTOR;
   if (token == "element") return Token::Type::ELEMENT;
   if (token == "set") return Token::Type::SET;
   if (token == "var") return Token::Type::VAR;
   if (token == "const") return Token::Type::CONST;
   if (token == "extern") return Token::Type::EXTERN;
+  if (token == "export") return Token::Type::EXPORT;
   if (token == "proc") return Token::Type::PROC;
   if (token == "func") return Token::Type::FUNC;
   if (token == "inout") return Token::Type::INOUT;

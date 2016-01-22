@@ -39,6 +39,10 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'string'";
     case Token::Type::TENSOR:
       return "'tensor'";
+    case Token::Type::MATRIX:
+      return "'matrix'";
+    case Token::Type::VECTOR:
+      return "'vector'";
     case Token::Type::ELEMENT:
       return "'element'";
     case Token::Type::SET:

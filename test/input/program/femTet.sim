@@ -156,11 +156,11 @@ func precomputeTetMat(inout t : Tet, v : (Vert*4))
   end
 end
 
-proc initializeTet
+export func initializeTet
   verts.m = map precomputeTetMat to tets;
 end
 
-proc main
+export func main
   h=0.01;
   
   f = map compute_force(h) to tets reduce +;
