@@ -1,5 +1,5 @@
 element Point
-  x : tensor[3](float)';
+  x : tensor[3](float);
   v : tensor[3](float);
 
   fs : tensor[3](float);
@@ -17,14 +17,14 @@ extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
 func distribute_masses(s : Spring, p : (Point*2)) ->
-    (M : tensor[points](tensor[3](float))')
+    (M : tensor[points](tensor[3](float)))
   eye = [1.0, 1.0, 1.0]';
   M(p(0)) = 0.5*s.m*eye;
   M(p(1)) = 0.5*s.m*eye;
 end
 
 func distribute_gravity(s : Spring, p : (Point*2)) ->
-    (f : tensor[points](tensor[3](float))')
+    (f : tensor[points](tensor[3](float)))
   grav = [0.0, 0.0, -9.81]';
   halfm = 0.5*s.m*grav;
   f(p(0)) = halfm;
@@ -32,7 +32,7 @@ func distribute_gravity(s : Spring, p : (Point*2)) ->
 end
 
 func compute_stiffness(s : Spring, p : (Point*2)) ->
-    (f : tensor[points](tensor[3](float))')
+    (f : tensor[points](tensor[3](float)))
   stiffness = 3.0;
   dx = p(1).x - p(0).x;
   l = norm(dx);

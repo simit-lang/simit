@@ -114,7 +114,9 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
     const ScalarType componentType = elemFieldType->getComponentType(); 
 
     // The type of a set field is 
-    // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))'`
+    // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))[']`
+    // If the element field is a row vector, then the set field is also a row 
+    // vector. Otherwise, the set field is a column vector.
     vector<IndexDomain> dimensions;
     if (elemFieldType->order() == 0) {
       dimensions.push_back(IndexDomain(IndexSet(elementOrSet)));
@@ -129,7 +131,10 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
         dimensions[i] = dimensions[i] * elemFieldDimensions[i];
       }
     }
-    fieldType = TensorType::make(componentType, dimensions, true); 
+
+    const bool isColumnVector = (elemFieldType->getDimensions().size() == 0 || 
+                                elemFieldType->isColumnVector);
+    fieldType = TensorType::make(componentType, dimensions, isColumnVector);
   }
   return fieldType;
 }

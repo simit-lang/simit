@@ -8,6 +8,7 @@
 #include "tensor.h"
 
 #include "ir.h"
+#include "types.h"
 #include "program_context.h"
 #include "backend/backend_function.h"
 #include "program.h"
@@ -61,7 +62,11 @@ public:
     }
     for (auto pair : util::zip(actuals, func.getArguments())) {
       iassert(ir::isa<ir::Literal>(pair.first));
-      if (pair.first.type() != pair.second.getType()) {
+      const auto actualType = pair.first.type();
+      const auto argType = pair.second.getType();
+      if (actualType != argType || (actualType.isTensor() &&
+          actualType.toTensor()->isColumnVector != 
+          argType.toTensor()->isColumnVector)) {
         diags->report() << "The actual types do not match the formal types.";
         return false;
       }

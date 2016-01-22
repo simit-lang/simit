@@ -187,25 +187,23 @@ void TypeChecker::visit(NDTensorType::Ptr type) {
       reportError(msg, type);
       return;
     }
-  
-    ndTensorType = ir::TensorType::make(componentType, dimensions);
+ 
+    ndTensorType = ir::TensorType::make(componentType, dimensions,
+                                        dimensions.size() == 1);
   }
 
-  if (type->columnVector) {
+  if (type->transposed) {
     const auto tensorType = ndTensorType.toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto componentType = tensorType->getComponentType();
 
-    // Check that column vector type is of order 1.
+    // Check that transposed type is a vector.
     if (dimensions.size() != 1) {
-      std::stringstream errMsg;
-      errMsg << "tensor type declared with " << dimensions.size() 
-             << " dimensions but column vector type must strictly contain one";
-      reportError(errMsg.str(), type);
+      reportError("transposed type must be a vector", type);
       return;
     }
 
-    ndTensorType = ir::TensorType::make(componentType, dimensions, true);
+    ndTensorType = ir::TensorType::make(componentType, dimensions);
   }
 
   retIRType = ndTensorType;
@@ -268,7 +266,6 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
 
     if (!argVar.getType().defined()) {
       typeChecked = false;
-      continue;
     }
 
     internal::Symbol::Access access = internal::Symbol::Read;
@@ -287,7 +284,6 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
 
     if (!result.getType().defined()) {
       typeChecked = false;
-      continue;
     }
 
     ctx.addSymbol(result);
@@ -581,14 +577,13 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
       }
     }
     
-    // Check that inout argument is writable variable.
+    // Check that inout argument is writable.
     if (i < expr->partialActuals.size() && 
         writableArgs.find(funcArgs[i]) != writableArgs.end()) {
       const Expr::Ptr param = expr->partialActuals[i];
       
-      if (!isa<VarExpr>(param) || !param->isWritable()) {
-        const auto msg = "inout argument must be a writable variable";
-        reportError(msg, expr->partialActuals[i]);
+      if (!param->isWritable()) {
+        reportError("inout argument must be writable", param);
       }
     }
   }
@@ -921,7 +916,9 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(CallExpr::Ptr expr) {
-  iassert(ctx.containsFunction(expr->func->ident));
+  if (!ctx.containsFunction(expr->func->ident)) {
+    return;
+  }
   
   const ir::Func func = ctx.getFunction(expr->func->ident);
   const auto funcArgs = func.getArguments();
@@ -979,11 +976,10 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
         reportError(errMsg.str(), argument);
       }
 
-      // Check that inout argument is writable variable.
+      // Check that inout argument is writable.
       if (writableArgs.find(funcArgs[i]) != writableArgs.end() && 
           (!isa<VarExpr>(argument) || !argument->isWritable())) {
-        const auto msg = "inout argument must be a writable variable";
-        reportError(msg, argument);
+        reportError("inout argument must be writable", argument);
       }
     }
   }
@@ -1287,10 +1283,6 @@ TypeChecker::DenseTensorType
 
   return tensorType;
 }
-
-// TODO: Implement type checking for tests. Since tests can reference functions 
-//       that have not yet been declared, this would have to be done as a 
-//       separate pass after the main type checking pass.
 
 void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst, 
                                           bool isGlobal) {

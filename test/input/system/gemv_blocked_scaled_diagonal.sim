@@ -7,7 +7,7 @@ end
 extern points  : set{Point};
 
 func fd(p : Point) -> (A : tensor[points,points](tensor[2,2](float)))
-  A(p,p) = p.a' * p.a;
+  A(p,p) = p.a * p.a';
 end
 
 proc main 

@@ -12,10 +12,10 @@ extern springs : set{Spring}(points,points);
 
 func dist_a(s : Spring, p : (Point*2)) ->
     (M : tensor[points,points](tensor[2,2](float)))
-  M(p(0),p(0)) = p(0).x' * p(1).x;
-  M(p(0),p(1)) = p(0).x' * p(1).x;
-  M(p(1),p(0)) = p(0).x' * p(1).x;
-  M(p(1),p(1)) = p(0).x' * p(1).x;
+  M(p(0),p(0)) = p(0).x * p(1).x';
+  M(p(0),p(1)) = p(0).x * p(1).x';
+  M(p(1),p(0)) = p(0).x * p(1).x';
+  M(p(1),p(1)) = p(0).x * p(1).x';
 end
 
 proc main 

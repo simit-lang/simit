@@ -1,6 +1,6 @@
 %%% tensor-read
 %! read([0.0, 1.0, 2.0], 1) == 1.0;
-func read(a : tensor[3](float), b : int) -> (c : float)
+func read(a : tensor[3](float)', b : int) -> (c : float)
   c = a(b);
 end
 
@@ -14,7 +14,7 @@ end
 
 %%% tensor-write
 %! write([0.0, 1.0, 2.0], 1, 5.0) == [0.0, 5.0, 2.0];
-func write(a : tensor[3](float), b : int, c : float) -> (d : tensor[3](float))
+func write(a : tensor[3](float)', b : int, c : float) -> (d : tensor[3](float)')
   d = a;
   d(b) = c;
 end
