@@ -43,6 +43,7 @@ hir::HIRNode::Ptr Parser::parseProgramElement() {
         return parseFuncDecl();
         break;
       case Token::Type::PROC:
+      case Token::Type::EXPORT:
         return parseProcDecl();
         break;
       case Token::Type::ELEMENT:
@@ -61,7 +62,8 @@ hir::HIRNode::Ptr Parser::parseProgramElement() {
     }
   } catch (const SyntaxError &) {
     skipTo({Token::Type::TEST, Token::Type::FUNC, Token::Type::PROC, 
-            Token::Type::ELEMENT, Token::Type::EXTERN, Token::Type::CONST});
+            Token::Type::EXPORT, Token::Type::ELEMENT, Token::Type::EXTERN, 
+            Token::Type::CONST});
     return hir::HIRNode::Ptr();
   }
 }
@@ -139,12 +141,16 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   return funcDecl;
 }
 
-// proc_decl: 'proc' ident [arguments results] stmt_block 'end'
+// proc_decl: 
+//     ('proc' | ('export' 'func')) ident [arguments results] stmt_block 'end'
 hir::ProcDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::ProcDecl>();
 
-  const Token procToken = consume(Token::Type::PROC);
-  procDecl->setBeginLoc(procToken);
+  procDecl->setBeginLoc(peek());
+  if (!tryconsume(Token::Type::PROC)) {
+    consume(Token::Type::EXPORT);
+    consume(Token::Type::FUNC);
+  }
 
   procDecl->name = parseIdent();
   if (peek().type == Token::Type::LP) {
@@ -1064,24 +1070,102 @@ hir::TupleType::Ptr Parser::parseTupleType() {
   return tupleType;
 }
 
-// tensor_type: scalar_type | (tensor_block_type ['''])
+// tensor_type: scalar_type
+//            | matrix_block_type
+//            | (vector_block_type | tensor_block_type) [''']
 hir::TensorType::Ptr Parser::parseTensorType() {
+  hir::NDTensorType::Ptr tensorType;
   switch (peek().type) {
     case Token::Type::INT:
     case Token::Type::FLOAT:
     case Token::Type::BOOL:
       return parseScalarType();
+    case Token::Type::MATRIX:
+      return parseMatrixBlockType();
+    case Token::Type::VECTOR:
+      tensorType = parseVectorBlockType();
+      break;
     default:
+      tensorType = parseTensorBlockType();
       break;
   }
-
-  hir::NDTensorType::Ptr tensorType = parseTensorBlockType();
   
   if (peek().type == Token::Type::TRANSPOSE) {
     const Token transposeToken = consume(Token::Type::TRANSPOSE);
     tensorType->setEndLoc(transposeToken);
     tensorType->transposed = true;
   }
+
+  return tensorType;
+}
+
+// vector_block_type:
+//     'vector' ['[' index_set ']'] '(' (vector_block_type | scalar_type) ')'
+hir::NDTensorType::Ptr Parser::parseVectorBlockType() {
+  auto tensorType = std::make_shared<hir::NDTensorType>();
+  tensorType->transposed = false;
+
+  const Token tensorToken = consume(Token::Type::VECTOR);
+  tensorType->setBeginLoc(tensorToken);
+
+  if (tryconsume(Token::Type::LB)) {
+    const hir::IndexSet::Ptr indexSet = parseIndexSet();
+    tensorType->indexSets.push_back(indexSet);
+    consume(Token::Type::RB);
+  }
+
+  consume(Token::Type::LP);
+  switch (peek().type) {
+    case Token::Type::INT:
+    case Token::Type::FLOAT:
+    case Token::Type::BOOL:
+      tensorType->blockType = parseScalarType();
+      break;
+    default:
+      tensorType->blockType = parseVectorBlockType();
+      break;
+  }
+      
+  const Token rightParenToken = consume(Token::Type::RP);
+  tensorType->setEndLoc(rightParenToken);
+
+  return tensorType;
+}
+
+// matrix_block_type:
+//     'matrix' ['[' index_set ',' index_set ']'] 
+//     '(' (matrix_block_type | scalar_type) ')'
+hir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
+  auto tensorType = std::make_shared<hir::NDTensorType>();
+  tensorType->transposed = false;
+
+  const Token tensorToken = consume(Token::Type::MATRIX);
+  tensorType->setBeginLoc(tensorToken);
+
+  if (tryconsume(Token::Type::LB)) {
+    hir::IndexSet::Ptr indexSet = parseIndexSet();
+    tensorType->indexSets.push_back(indexSet);
+    consume(Token::Type::COMMA);
+
+    indexSet = parseIndexSet();
+    tensorType->indexSets.push_back(indexSet);
+    consume(Token::Type::RB);
+  }
+
+  consume(Token::Type::LP);
+  switch (peek().type) {
+    case Token::Type::INT:
+    case Token::Type::FLOAT:
+    case Token::Type::BOOL:
+      tensorType->blockType = parseScalarType();
+      break;
+    default:
+      tensorType->blockType = parseMatrixBlockType();
+      break;
+  }
+      
+  const Token rightParenToken = consume(Token::Type::RP);
+  tensorType->setEndLoc(rightParenToken);
 
   return tensorType;
 }

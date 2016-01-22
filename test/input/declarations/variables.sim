@@ -2,9 +2,9 @@
 const s       : float = 0.011;
 const s2      : float = 1.0e3;
 const s3      : float = 1e3;
-const colvec3 : tensor[3](float)     =  [0.0, 1.0, 2.0]';
-const rowvec3 : tensor[3](float)'    =  [0.0, 1.0, 2.0];
-const mat22   : tensor[2,2](float)   =  [0.0, 1.0; 2.0, 3.0];
+const colvec3 : vector[3](float)     =  [0.0, 1.0, 2.0]';
+const rowvec3 : vector[3](float)'    =  [0.0, 1.0, 2.0];
+const mat22   : matrix[2,2](float)   =  [0.0, 1.0; 2.0, 3.0];
 const ten222  : tensor[2,2,2](float) = [[0.0, 1.0; 2.0, 3.0], [4.0, 5.0; 6.0, 7.0]];
 
 const colvec1 : tensor[1](float)     =  [1.0]';
@@ -17,9 +17,9 @@ const ten121  : tensor[1,2,1](float) =  [2.0; 3.0];
 
 %%% int-consts 
 const s       : int = 11;
-const colvec3 : tensor[3](int)     =  [0, 1, 2]';
-const rowvec3 : tensor[3](int)'    =  [0, 1, 2];
-const mat22   : tensor[2,2](int)   =  [0, 1; 2, 3];
+const colvec3 : vector[3](int)     =  [0, 1, 2]';
+const rowvec3 : vector[3](int)'    =  [0, 1, 2];
+const mat22   : matrix[2,2](int)   =  [0, 1; 2, 3];
 const ten222  : tensor[2,2,2](int) = [[0, 1; 2, 3], [4, 5; 6, 7]];
 
 const colvec1 : tensor[1](int)     =  [1]';

@@ -68,7 +68,7 @@ func compute_elasticity(s: Spring, p : (Point*2)) ->
   end
 end
 
-proc main
+export func main
   h = 1.0e-2;
 
   MD, fmg = map compute_mass_damping to points reduce +;

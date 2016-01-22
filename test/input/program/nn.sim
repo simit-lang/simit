@@ -25,7 +25,7 @@ func wMat(e:Edge, n:(Node*2)) -> (W:tensor[nodes, nodes](float))
   W(n(1),n(0)) = e.w;
 end
 
-proc main
+export func main
 %  i1 = nodes.inv;
 
   W = map wMat to edges reduce +;
