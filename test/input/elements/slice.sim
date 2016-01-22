@@ -1,12 +1,12 @@
 %%% slice-row
 %! f([1.0, 2.0; 3.0, 4.0; 5.0, 6.0]) == [3.0, 4.0];
-func f(a : tensor[3,2](float)) -> (b : tensor[2](float))
+func f(a : tensor[3,2](float)) -> (b : tensor[2](float)')
   b = a(1,:);
 end
 
 %%% slice-col
 %! f([1.0, 2.0; 3.0, 4.0; 5.0, 6.0]) == [2.0, 4.0, 6.0];
-func f(a : tensor[3,2](float)) -> (b : tensor[3](float))
+func f(a : tensor[3,2](float)) -> (b : tensor[3](float)')
   b = a(:,1)';
 end
 
@@ -28,14 +28,14 @@ end
 
 %%% slice-row-var
 %! f([1.0, 2.0; 3.0, 4.0; 5.0, 6.0]) == [5.0, 6.0];
-func f(a : tensor[3,2](float)) -> (b : tensor[2](float))
+func f(a : tensor[3,2](float)) -> (b : tensor[2](float)')
   c = 2;
   b = a(c,:);
 end
 
 %%%- slice-row-var-plus1
 %! f([1.0, 2.0; 3.0, 4.0; 5.0, 6.0]) == [5.0, 6.0];
-func f(a : tensor[3,2](float)) -> (b : tensor[2](float))
+func f(a : tensor[3,2](float)) -> (b : tensor[2](float)')
   c = 1;
   b = a(c+1,:);
 end

@@ -8,9 +8,9 @@ element Tet
 end
 
 element Vert
-  x  : tensor[3](float)';
-  v  : tensor[3](float)';
-  fe : tensor[3](float)';
+  x  : tensor[3](float);
+  v  : tensor[3](float);
+  fe : tensor[3](float);
   c  : int;
   m : float;
 end
@@ -43,7 +43,7 @@ func compute_mass(v : Vert) ->
   M(v,v) = v.m *eye3;
 end
 
-func compute_force(h:float, e : Tet, v : (Vert*4)) -> (f : tensor[verts](tensor[3](float))')
+func compute_force(h:float, e : Tet, v : (Vert*4)) -> (f : tensor[verts](tensor[3](float)))
   var Ds :tensor[3,3](float);
   rho = 1000.0;
   m = 0.25 * rho * e.W;
@@ -138,7 +138,7 @@ func compute_stiffness(h:float, e : Tet, v : (Vert*4)) ->
 end
 
 func precomputeTetMat(inout t : Tet, v : (Vert*4))
-    ->(m:tensor[verts](float)')
+    ->(m:tensor[verts](float))
   var M:tensor[3,3](float);
   for ii in 0:3
     for jj in 0:3
@@ -157,8 +157,7 @@ func precomputeTetMat(inout t : Tet, v : (Vert*4))
 end
 
 proc initializeTet
-  m = map precomputeTetMat to tets;
-  verts.m = m;
+  verts.m = map precomputeTetMat to tets;
 end
 
 proc main

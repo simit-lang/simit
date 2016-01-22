@@ -21,7 +21,6 @@ extern springs : set{Spring}(points,points);
 func compute_MK(s: Spring, p : (Point*2)) ->
     (MK : tensor[points,points](tensor[3,3](float)))
   I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  grav = [0.0, 0.0, -9.81];
   h = 1e-1;
   k = s.k;
   l0 = s.l0;
@@ -37,8 +36,8 @@ func compute_MK(s: Spring, p : (Point*2)) ->
   l = norm(dx);
 
   % Stiffness matrix
-  dxtdx = dx*dx';
-  dxdxt = dx'*dx;
+  dxtdx = dx'*dx;
+  dxdxt = dx*dx';
   K = h*h*k/(l0*l0*l*l)*(dxdxt + (l-l0)/l*(dxtdx*I - dxdxt));
 
   MK(p(0),p(0)) = M00 + K;
@@ -50,7 +49,7 @@ end
 func compute_f(s: Spring, p : (Point*2)) ->
     (f : tensor[points](tensor[3](float)))
   I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
-  grav = [0.0, 0.0, -9.81];
+  grav = [0.0, 0.0, -9.81]';
   h = 1e-1;
   k = s.k;
   l0 = s.l0;
@@ -81,21 +80,19 @@ end
 proc main
   h = 1e-1;
 
-  fm = map compute_f to springs reduce +;
-  f = fm;
-
+  f = map compute_f to springs reduce +;
   MK = map compute_MK to springs reduce +;
 
   %r = f - MK*v;
   MKv = MK * points.v;
-  r = f - MKv';
+  r = f - MKv;
 
-  r2old = r*r';
+  r2old = r'*r;
 
-  Ap = MK*r';
-  rap = r*Ap;
+  Ap = MK*r;
+  rap = r'*Ap;
   a = r2old/rap;
-  ap = a*r';
+  ap = a*r;
 
   v = points.v + ap;
   points.v2 = v;

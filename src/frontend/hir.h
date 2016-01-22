@@ -198,7 +198,7 @@ struct ScalarType : public TensorType {
 struct NDTensorType : public TensorType {
   std::vector<IndexSet::Ptr> indexSets;
   TensorType::Ptr            blockType;
-  bool                       columnVector;
+  bool                       transposed;
   
   typedef std::shared_ptr<NDTensorType> Ptr;
   

@@ -110,14 +110,15 @@ void IREmitter::visit(NDTensorType::Ptr type) {
       }
     }
   
-    retType = ir::TensorType::make(componentType, dimensions);
+    retType = ir::TensorType::make(componentType, dimensions, 
+                                   dimensions.size() == 1);
   }
 
-  if (type->columnVector) {
+  if (type->transposed) {
     const auto tensorType = retType.toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto componentType = tensorType->getComponentType();
-    retType = ir::TensorType::make(componentType, dimensions, true);
+    retType = ir::TensorType::make(componentType, dimensions);
   }
 }
 
@@ -861,12 +862,12 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       if (ir::isa<ir::FieldRead>(lhs[i])) {
         const ir::FieldRead *fieldRead = ir::to<ir::FieldRead>(lhs[i]);
         const ir::Stmt fieldWrite = ir::FieldWrite::make(
-          fieldRead->elementOrSet, fieldRead->fieldName, tmpExpr);
+            fieldRead->elementOrSet, fieldRead->fieldName, tmpExpr);
         ctx->addStatement(fieldWrite);
       } else if (ir::isa<ir::TensorRead>(lhs[i])) {
         const ir::TensorRead *tensorRead = ir::to<ir::TensorRead>(lhs[i]);
-        const ir::Stmt tensorWrite = ir::TensorWrite::make(tensorRead->tensor,
-          tensorRead->indices, tmpExpr);
+        const ir::Stmt tensorWrite = ir::TensorWrite::make(
+            tensorRead->tensor, tensorRead->indices, tmpExpr);
         ctx->addStatement(tensorWrite);
       }
     }
@@ -879,12 +880,12 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
     if (ir::isa<ir::FieldRead>(lhs[0])) {
       const ir::FieldRead *fieldRead = ir::to<ir::FieldRead>(lhs[0]);
       const ir::Stmt fieldWrite = ir::FieldWrite::make(
-        fieldRead->elementOrSet, fieldRead->fieldName, expr);
+          fieldRead->elementOrSet, fieldRead->fieldName, expr);
       ctx->addStatement(fieldWrite);
     } else if (ir::isa<ir::TensorRead>(lhs[0])) {
       const ir::TensorRead *tensorRead = ir::to<ir::TensorRead>(lhs[0]);
-      const ir::Stmt tensorWrite = ir::TensorWrite::make(tensorRead->tensor, 
-        tensorRead->indices, expr);
+      const ir::Stmt tensorWrite = ir::TensorWrite::make(
+          tensorRead->tensor, tensorRead->indices, expr);
       ctx->addStatement(tensorWrite);
     } else {
       ir::Var var = ir::to<ir::VarExpr>(lhs[0])->var;

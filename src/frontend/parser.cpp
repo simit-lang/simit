@@ -1080,7 +1080,7 @@ hir::TensorType::Ptr Parser::parseTensorType() {
   if (peek().type == Token::Type::TRANSPOSE) {
     const Token transposeToken = consume(Token::Type::TRANSPOSE);
     tensorType->setEndLoc(transposeToken);
-    tensorType->columnVector = true;
+    tensorType->transposed = true;
   }
 
   return tensorType;
@@ -1090,7 +1090,7 @@ hir::TensorType::Ptr Parser::parseTensorType() {
 //     'tensor' ['[' index_sets ']'] '(' (tensor_block_type | scalar_type) ')'
 hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   auto tensorType = std::make_shared<hir::NDTensorType>();
-  tensorType->columnVector = false;
+  tensorType->transposed = false;
 
   const Token tensorToken = consume(Token::Type::TENSOR);
   tensorType->setBeginLoc(tensorToken);

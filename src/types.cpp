@@ -291,7 +291,7 @@ std::ostream& operator<<(std::ostream& os, const TensorType& type) {
     os << "tensor";
     os << "[" << util::join(type.getOuterDimensions(), ",") << "]";
     os << "(" << type.getBlockType() << ")";
-    if (type.isColumnVector) {
+    if (type.getDimensions().size() == 1 && !type.isColumnVector) {
       os << "'";
     }
   }
