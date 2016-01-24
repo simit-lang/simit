@@ -1,6 +1,6 @@
 " Vim syntax file
 " Language: Simit	
-" Last Change: 03 January 2016	
+" Last Change: 23 January 2016	
 
 if version < 600
   syntax clear
@@ -9,7 +9,7 @@ elseif exists("b:current_syntax")
 endif
 
 syn keyword simitType         float int boolean vector matrix tensor set inout
-syn keyword simitStatement    element func proc
+syn keyword simitStatement    element func proc export
 syn keyword simitConditional  if elif else end
 syn keyword simitRepeat       for in while do
 syn keyword simitStorageClass const extern var
