@@ -936,14 +936,6 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   const ir::Func func = ctx.getFunction(funcName);
   const std::vector<ir::Var> funcArgs = func.getArguments();
 
-  // Check for calls to intrinsics that users should not explicitly call.
-  if (funcName == "loc") {
-    std::stringstream errMsg;
-    errMsg << "function '" << funcName << "' cannot be explicitly called";
-    reportError(errMsg.str(), expr->func);
-    return;
-  }
-
   if (expr->arguments.size() != funcArgs.size()) {
     std::stringstream errMsg;
     errMsg << "passed in " << expr->arguments.size() << " arguments "
