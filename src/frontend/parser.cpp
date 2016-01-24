@@ -1115,15 +1115,10 @@ hir::NDTensorType::Ptr Parser::parseVectorBlockType() {
   }
 
   consume(Token::Type::LP);
-  switch (peek().type) {
-    case Token::Type::INT:
-    case Token::Type::FLOAT:
-    case Token::Type::BOOL:
-      tensorType->blockType = parseScalarType();
-      break;
-    default:
-      tensorType->blockType = parseVectorBlockType();
-      break;
+  if (peek().type == Token::Type::VECTOR) {
+    tensorType->blockType = parseVectorBlockType();
+  } else {
+    tensorType->blockType = parseScalarType();
   }
       
   const Token rightParenToken = consume(Token::Type::RP);
@@ -1153,17 +1148,12 @@ hir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
   }
 
   consume(Token::Type::LP);
-  switch (peek().type) {
-    case Token::Type::INT:
-    case Token::Type::FLOAT:
-    case Token::Type::BOOL:
-      tensorType->blockType = parseScalarType();
-      break;
-    default:
-      tensorType->blockType = parseMatrixBlockType();
-      break;
+  if (peek().type == Token::Type::MATRIX) {
+    tensorType->blockType = parseMatrixBlockType();
+  } else {
+    tensorType->blockType = parseScalarType();
   }
-      
+
   const Token rightParenToken = consume(Token::Type::RP);
   tensorType->setEndLoc(rightParenToken);
 
@@ -1185,17 +1175,12 @@ hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   }
 
   consume(Token::Type::LP);
-  switch (peek().type) {
-    case Token::Type::INT:
-    case Token::Type::FLOAT:
-    case Token::Type::BOOL:
-      tensorType->blockType = parseScalarType();
-      break;
-    default:
-      tensorType->blockType = parseTensorBlockType();
-      break;
+  if (peek().type == Token::Type::TENSOR) {
+    tensorType->blockType = parseTensorBlockType();
+  } else {
+    tensorType->blockType = parseScalarType();
   }
-      
+ 
   const Token rightParenToken = consume(Token::Type::RP);
   tensorType->setEndLoc(rightParenToken);
 

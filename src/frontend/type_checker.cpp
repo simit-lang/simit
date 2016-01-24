@@ -664,7 +664,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
 
   // Check that operands of multiplication operation are numeric tensors.
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      lhsType->at(0).toTensor()->getComponentType().isBoolean())) {
+      !lhsType->at(0).toTensor()->getComponentType().isNumeric())) {
     std::stringstream errMsg;
     errMsg << "expected left operand of multiplication operation to be a "
            << "numeric tensor but got an operand of type " 
@@ -673,7 +673,7 @@ void TypeChecker::visit(MulExpr::Ptr expr) {
     typeChecked = false;
   }
   if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      rhsType->at(0).toTensor()->getComponentType().isBoolean())) {
+      !rhsType->at(0).toTensor()->getComponentType().isNumeric())) {
     std::stringstream errMsg;
     errMsg << "expected right operand of multiplication operation to be a "
            << "numeric tensor but got an operand of type " 
@@ -790,7 +790,7 @@ void TypeChecker::visit(DivExpr::Ptr expr) {
 
   // Check that operands of division operation are numeric tensors.
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      lhsType->at(0).toTensor()->getComponentType().isBoolean())) {
+      !lhsType->at(0).toTensor()->getComponentType().isNumeric())) {
     std::stringstream errMsg;
     errMsg << "expected left operand of division operation to be a numeric "
            << "tensor but got an operand of type " << typeString(lhsType);
@@ -798,7 +798,7 @@ void TypeChecker::visit(DivExpr::Ptr expr) {
     typeChecked = false;
   }
   if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      rhsType->at(0).toTensor()->getComponentType().isBoolean())) {
+      !rhsType->at(0).toTensor()->getComponentType().isNumeric())) {
     std::stringstream errMsg;
     errMsg << "expected right operand of division operation to be a numeric "
            << "tensor but got an operand of type " << typeString(rhsType);
@@ -854,7 +854,7 @@ void TypeChecker::visit(NegExpr::Ptr expr) {
 
   // Check that operand of negation operation is a numeric tensor.
   if (opndType->size() != 1 || !opndType->at(0).isTensor() ||
-      opndType->at(0).toTensor()->getComponentType().isBoolean()) {
+      !opndType->at(0).toTensor()->getComponentType().isNumeric()) {
     std::stringstream errMsg;
     errMsg << "expected operand of tensor negation to be a numeric tensor but "
            << "got an operand of type " << typeString(opndType);
@@ -916,13 +916,6 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(CallExpr::Ptr expr) {
-  if (!ctx.containsFunction(expr->func->ident)) {
-    return;
-  }
-  
-  const ir::Func func = ctx.getFunction(expr->func->ident);
-  const auto funcArgs = func.getArguments();
-
   std::vector<Ptr<Expr::Type>> argTypes(expr->arguments.size());
   for (unsigned i = 0; i < expr->arguments.size(); ++i) {
     const Expr::Ptr argument = expr->arguments[i];
@@ -934,17 +927,28 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 
     argTypes[i] = inferType(argument);
   }
+  
+  if (!ctx.containsFunction(expr->func->ident)) {
+    return;
+  }
+
+  const std::string funcName = expr->func->ident;
+  const ir::Func func = ctx.getFunction(funcName);
+  const std::vector<ir::Var> funcArgs = func.getArguments();
+
+  // Check for calls to intrinsics that users should not explicitly call.
+  if (funcName == "loc") {
+    std::stringstream errMsg;
+    errMsg << "function '" << funcName << "' cannot be explicitly called";
+    reportError(errMsg.str(), expr->func);
+    return;
+  }
 
   if (expr->arguments.size() != funcArgs.size()) {
-    if (func.getKind() == ir::Func::Intrinsic && funcArgs.size() == 0) {
-      // TODO: Special handling for intrinsics.
-    } else {
-      std::stringstream errMsg;
-      errMsg << "passed in " << expr->arguments.size() << " arguments "
-             << "but function '" << func.getName() << "' expects " 
-             << funcArgs.size();
-      reportError(errMsg.str(), expr);
-    }
+    std::stringstream errMsg;
+    errMsg << "passed in " << expr->arguments.size() << " arguments "
+           << "but function '" << funcName << "' expects " << funcArgs.size();
+    reportError(errMsg.str(), expr);
   } else {
     for (unsigned i = 0; i < expr->arguments.size(); ++i) {
       const Expr::Ptr argument = expr->arguments[i];
@@ -966,20 +970,64 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
         reportError(errMsg.str(), argument);
         continue;
       }
- 
-      // Check that argument is of type expected by callee.
-      if (!compareTypes(argType->at(0), funcArgs[i].getType())) {
-        std::stringstream errMsg;
-        errMsg << "expected argument of type " 
-               << typeString(funcArgs[i].getType()) << " but got an argument "
-               << "of type " << typeString(argType);
-        reportError(errMsg.str(), argument);
-      }
 
-      // Check that inout argument is writable.
-      if (writableArgs.find(funcArgs[i]) != writableArgs.end() && 
-          (!isa<VarExpr>(argument) || !argument->isWritable())) {
-        reportError("inout argument must be writable", argument);
+      if (funcName == "norm") {
+        // Check that argument to norm intrinsic is a numeric vector.
+        if (!argType->at(0).isTensor() || 
+            argType->at(0).toTensor()->getDimensions().size() != 1 ||
+            !argType->at(0).toTensor()->getComponentType().isNumeric()) {
+          reportError("argument must be a numeric vector", argument);
+        }
+      } else if (funcName == "dot") {
+        if (i == 0) {
+          // Check that first argument to dot intrinsic is a numeric vector.
+          if (!argType->at(0).isTensor() || 
+              argType->at(0).toTensor()->getDimensions().size() != 1 ||
+              !argType->at(0).toTensor()->getComponentType().isNumeric()) {
+            reportError("argument must be a numeric vector", argument);
+          }
+        } else {
+          // Check that second argument to dot intrinsic is a numeric vector of 
+          // same length as first argument.
+          if (argTypes[0] && argTypes[0]->size() == 1 && 
+              argType->at(0) != argTypes[0]->at(0)) {
+            std::stringstream errMsg;
+            errMsg << "cannot call function 'dot' on arguments of type "
+                   << typeString(argTypes[0]->at(0)) << " and type "
+                   << typeString(argType->at(0));
+            reportError(errMsg.str(), expr);
+          }
+        }
+      } else if (funcName == "solve") {
+        // TODO: Should check dimensions of arguments.
+        switch (i) {
+          case 0:
+          case 1:
+            break;
+          case 2:
+            // Check that third argument is writable.
+            if (!argument->isWritable()) {
+              reportError("inout argument must be writable", argument);
+            }
+            break;
+          default:
+            unreachable;
+        }
+      } else {
+        // Check that argument is of type expected by callee.
+        if (!compareTypes(argType->at(0), funcArgs[i].getType())) {
+          std::stringstream errMsg;
+          errMsg << "expected argument of type " 
+                 << typeString(funcArgs[i].getType()) << " but got an "
+                 << "argument of type " << typeString(argType);
+          reportError(errMsg.str(), argument);
+        }
+
+        // Check that inout argument is writable.
+        if (writableArgs.find(funcArgs[i]) != writableArgs.end() && 
+            !argument->isWritable()) {
+          reportError("inout argument must be writable", argument);
+        }
       }
     }
   }
@@ -1384,7 +1432,7 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
 
   // Check that operands of element-wise operation are numeric tensors.
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      lhsType->at(0).toTensor()->getComponentType().isBoolean())) {
+      !lhsType->at(0).toTensor()->getComponentType().isNumeric())) {
     std::stringstream errMsg;
     errMsg << "expected left operand of element-wise operation to be a "
            << "numeric tensor but got an operand of type " 
@@ -1393,7 +1441,7 @@ void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
     typeChecked = false;
   }
   if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      rhsType->at(0).toTensor()->getComponentType().isBoolean())) {
+      !rhsType->at(0).toTensor()->getComponentType().isNumeric())) {
     std::stringstream errMsg;
     errMsg << "expected right operand of element-wise operation to be a "
            << "numeric tensor but got an operand of type " 

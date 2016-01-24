@@ -97,6 +97,7 @@ struct ScalarType {
   bool isInt () const { return kind == Int; }
   bool isFloat() const { return kind == Float; }
   bool isBoolean() const { return kind == Boolean; }
+  bool isNumeric() const { return kind == Int || kind == Float; }
 };
 
 /** Helper to convert from C++ type to Simit Type. */

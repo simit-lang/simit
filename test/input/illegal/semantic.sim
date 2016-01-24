@@ -42,6 +42,33 @@ proc main
 end
 
 %%% bad-call-6
+proc main
+  var t : matrix[2,2](float);
+  norm(t);
+end
+
+%%% bad-call-7
+proc main
+  var t : matrix[2,2](float);
+  dot(t, t);
+end
+
+%%% bad-call-8
+proc main
+  var u : vector[3](float);
+  var v : vector[2](float);
+  dot(u, v);
+end
+
+%%% bad-call-9
+proc main
+  var M : matrix[3,3](float);
+  var y : vector[3](float);
+  const x : vector[3](float) = 0.0;
+  solve(M, y, x);
+end
+
+%%% bad-call-10
 func g(inout a : tensor[1](int)) -> (f : int)
   a(0) = 2;
 end
