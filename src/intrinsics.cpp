@@ -99,7 +99,7 @@ void powInit() {
 static Func normVar;
 void normInit() {
   normVar = Func("norm",
-                 {},
+                 {Var()},
                  {Var("r", Float)},
                  Func::Intrinsic);
 }
@@ -107,7 +107,7 @@ void normInit() {
 static Func dotVar;
 void dotInit() {
   dotVar = Func("dot",
-                {},
+                {Var(), Var()},
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
@@ -116,7 +116,8 @@ void dotInit() {
 static Func detVar;
 void detInit() {
   detVar = Func("det",
-                {},
+                {Var("m", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
@@ -124,7 +125,8 @@ void detInit() {
 static Func invVar;
 void invInit() {
   invVar = Func("inv",
-                {},
+                {Var("m", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
                 {Var("r", TensorType::make(ScalarType::Float,
                                            {IndexDomain(3),IndexDomain(3)}))},
                 Func::Intrinsic);
@@ -133,7 +135,7 @@ void invInit() {
 static Func solveVar;
 void solveInit() {
   solveVar = Func("solve",
-                  {},
+                  {Var(), Var(), Var()},
                   {Var("r", Float)},
                   Func::Intrinsic);
 }
