@@ -148,6 +148,22 @@ void locInit() {
                 Func::Intrinsic);
 }
 
+static Func simitClockVar;
+void simitClockInit() {
+  simitClockVar = Func("simitClock",
+                {},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+
+static Func simitStoreTimeVar;
+void simitStoreTimeInit() {
+  simitStoreTimeVar = Func("simitStoreTime",
+                {Var("i", Int), Var("val", Float)},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+
 // We lazily initialize all the intrinsics. No need to call all the constructors
 // unless we will use them.
 
@@ -270,6 +286,21 @@ const Func& loc() {
   return locVar;
 }
 
+const Func& simitClock() {
+  if (!simitClockVar.defined()) {
+    simitClockInit();
+  }
+  return simitClockVar;
+}
+
+const Func& simitStoreTime() {
+  if (!simitStoreTimeVar.defined()) {
+    simitStoreTimeInit();
+  }
+  return simitStoreTimeVar;
+}
+
+
 const std::map<std::string,Func> &byNames() {
   static std::map<std::string,Func> byNameMap;
   if (byNameMap.size() == 0) {
@@ -289,6 +320,8 @@ const std::map<std::string,Func> &byNames() {
     detInit();
     invInit();
     solveInit();
+    simitClockInit();
+    simitStoreTimeInit();
     byNameMap.insert({{"mod",modVar},
                       {"sin",sinVar},
                       {"cos",cosVar},
@@ -304,7 +337,9 @@ const std::map<std::string,Func> &byNames() {
                       {"dot",dotVar},
                       {"det",detVar},
                       {"inv",invVar},
-                      {"solve",solveVar}});
+                      {"solve",solveVar},
+                      {"simitClock",simitClockVar},
+                      {"simitStoreTime",simitStoreTimeVar}});
   }
   return byNameMap;
 }

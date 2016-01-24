@@ -371,7 +371,7 @@ void LLVMBackend::compile(const ir::Call& call) {
     argTypes.push_back(llvmType(ctype));
     args.push_back(compile(a));
   }
-
+  
   // these are intrinsic functions
   // first, see if this is an LLVM intrinsic
   auto foundIntrinsic = llvmIntrinsicByName.find(call.func);
@@ -458,6 +458,14 @@ void LLVMBackend::compile(const ir::Call& call) {
     std::string funcName = ir::ScalarType::singleFloat() ?
         "dot_f32" : "dot_f64";
     val = emitCall(funcName, args, llvmFloatType());
+    return;
+  }
+  else if (call.func == ir::intrinsics::simitClock()) {
+    val = emitCall("simitClock", args, llvmFloatType());
+    return;
+  }
+  else if (call.func == ir::intrinsics::simitStoreTime()) {
+    val = emitCall("simitStoreTime", args);
     return;
   }
   // if not an intrinsic function, try to find it in the module
@@ -809,6 +817,12 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     }
     else if (callStmt.callee == ir::intrinsics::loc()) {
       call = emitCall("loc", args, LLVM_INT);
+    }
+    else if (callStmt.callee == ir::intrinsics::simitClock()) {
+      call = emitCall("simitClock", args, llvmFloatType());
+    }
+    else if (callStmt.callee == ir::intrinsics::simitStoreTime()) {
+      call = emitCall("simitStoreTime", args); 
     }
     else {
       ierror << "intrinsic " << callStmt.callee.getName() << " not found";

@@ -46,6 +46,7 @@ public:
   /// Compile and return a runnable function, or an undefined function if an
   /// error occured.
   Function compile(const std::string &function);
+  Function compileWithTimers(const std::string &function);
 
   /// Verify the program by executing in-code comment tests.
   int verify();
