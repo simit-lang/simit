@@ -746,15 +746,19 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
                       internal::Symbol::ReadWrite;
   ctx->addSymbol(var.getName(), var, access);
 
+  iassert(decl->initVal || !isConst);
   const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
+  
   if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr) && 
-      var.getType() == initExpr.type()) {
-    // Optimization to avoid having to initialize constant multiple times.
+      (isScalar(var.getType()) || !isScalar(initExpr.type()))) {
+    // Optimization to avoid having to initialize constant multiple times. This 
+    // can be performed as long as constant is a literal, assuming that the 
+    // constant is scalar or that it is initialized to a non-scalar (i.e. as 
+    // long as a non-scalar constant is not initialized to a constant).
     ctx->addConstant(var, initExpr);
   } else {
     ctx->addStatement(ir::VarDecl::make(var));
     
-    iassert(decl->initVal || !isConst);
     if (decl->initVal) {
       addAssign({ir::VarExpr::make(var)}, initExpr);
       calls.clear();

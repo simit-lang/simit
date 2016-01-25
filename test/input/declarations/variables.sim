@@ -34,13 +34,21 @@ const ten121  : tensor[1,2,1](int) =  [2; 3];
 const st     : bool = true; 
 const sf     : bool = false; 
 
-%%% const-use
+%%% const-use-1
 %! f() == 6.1;
 const s : float = 0.1;
 const v : tensor[3](float)' =  [1.0, 2.0, 3.0];
 
 func f() -> (r : float)
   r = s + v(0) + v(1) + v(2); 
+end
+
+%%% const-use-2
+%! f() == 1;
+const ten111  : tensor[1,1,1](int) = [[1]];
+
+func f() -> (r : int)
+  r = ten111(0,0,0);
 end
 
 %%% local-var-decl
