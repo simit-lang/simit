@@ -441,7 +441,8 @@ void IRRewriter::visit(const IndexExpr *op) {
     expr = op;
   }
   else {
-    expr = IndexExpr::make(op->resultVars, value);
+    const bool isColumnVector = op->type.toTensor()->isColumnVector;
+    expr = IndexExpr::make(op->resultVars, value, isColumnVector);
   }
 }
 

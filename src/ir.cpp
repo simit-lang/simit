@@ -111,9 +111,12 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
     const ElementType *elemType = setType->elementType.toElement();
 
     const TensorType *elemFieldType= elemType->field(fieldName).type.toTensor();
+    const ScalarType componentType = elemFieldType->getComponentType(); 
 
-    // The type of a set field is:
-    // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))`
+    // The type of a set field is 
+    // `tensor[set](tensor[elementFieldDimensions](elemFieldComponentType))[']`
+    // If the element field is a row vector, then the set field is also a row 
+    // vector. Otherwise, the set field is a column vector.
     vector<IndexDomain> dimensions;
     if (elemFieldType->order() == 0) {
       dimensions.push_back(IndexDomain(IndexSet(elementOrSet)));
@@ -128,7 +131,10 @@ Type getFieldType(Expr elementOrSet, std::string fieldName) {
         dimensions[i] = dimensions[i] * elemFieldDimensions[i];
       }
     }
-    fieldType = TensorType::make(elemFieldType->getComponentType(), dimensions);
+
+    const bool isColumnVector = (elemFieldType->getDimensions().size() == 0 || 
+                                elemFieldType->isColumnVector);
+    fieldType = TensorType::make(componentType, dimensions, isColumnVector);
   }
   return fieldType;
 }
@@ -138,13 +144,16 @@ Type getBlockType(Expr tensor) {
   return tensor.type().toTensor()->getBlockType();
 }
 
-Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr) {
+Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr, 
+                      bool isColumnVector) {
   iassert(isScalar(expr.type()));
   std::vector<IndexDomain> dimensions;
   for (auto &indexVar : lhsIndexVars) {
     dimensions.push_back(indexVar.getDomain());
   }
-  return TensorType::make(expr.type().toTensor()->getComponentType(), dimensions);
+
+  const auto componentType = expr.type().toTensor()->getComponentType();
+  return TensorType::make(componentType, dimensions, isColumnVector);
 }
 
 // enum CompoundOperator
@@ -830,7 +839,8 @@ std::vector<IndexVar> IndexExpr::domain() const {
   return DomainGatherer().getDomain(*this);
 }
 
-Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value) {
+Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value,
+                     bool isColumnVector) {
   iassert(isScalar(value.type())) << value << " : " << value.type();
 #ifdef SIMIT_ASSERTS
   for (auto &idxVar : resultVars) {  // No reduction variables on lhs
@@ -839,7 +849,7 @@ Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value) {
 #endif
 
   IndexExpr *node = new IndexExpr;
-  node->type = getIndexExprType(resultVars, value);
+  node->type = getIndexExprType(resultVars, value, isColumnVector);
   node->resultVars = resultVars;
   node->value = value;
   return node;
@@ -852,7 +862,7 @@ Stmt Map::make(std::vector<Var> vars,
                ReductionOperator reduction) {
   iassert(target.type().isSet());
   iassert(!neighbors.defined() || neighbors.type().isSet());
-  iassert(vars.size() == function.getResults().size());
+  //iassert(vars.size() == function.getResults().size());
   Map *node = new Map;
   node->vars = vars;
   node->function = function;

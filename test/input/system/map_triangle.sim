@@ -7,7 +7,7 @@ element Vert
 end
 
 extern verts : set{Vert};
-extern trigs : set{Trig}(verts, verts);
+extern trigs : set{Trig}(verts, verts, verts);
 
 func dist(t : Trig, v : (Vert*3)) -> ( R : tensor[verts](float))
   R(v(0)) = t.a;

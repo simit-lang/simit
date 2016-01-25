@@ -78,8 +78,6 @@ private:
       return Block::make(printIndent(indentLevel), Print::make(tensorExpr));
     }
 
-    Stmt printTensorStmt;
-    
     std::vector<IndexSet> dimensions = tensor->getOuterDimensions();
     iassert(order == dimensions.size());
 
@@ -87,118 +85,16 @@ private:
       TensorStorage::Kind::Dense : 
       storage.getStorage(to<VarExpr>(tensorExpr)->var);
 
+    std::vector<Expr> tensorReadIndices;
+    TensorIndexVar *tiVar = nullptr;
+    Var inductionVar(names.getName(), Int);
+    Var tensorReadIndex;
+    Stmt printTensorStmt;
+
     switch (tensorStorage.getKind()) {
       case TensorStorage::Kind::Dense: {
-        std::vector<Expr> tensorReadIndices;
-      
         for (size_t i = 0; i < order; ++i) {
           tensorReadIndices.push_back(Var(names.getName(), Int));
-        }
-
-        Expr readElement = TensorRead::make(tensorExpr, tensorReadIndices);
-       
-        // Emit code for printing "large" dense tensors; each element of 
-        // outermost tensor is printed on separate lines.
-        Var shouldPrintNewline = Var(names.getName(), Boolean);
-        Stmt maybePrintNewline = IfThenElse::make(
-          VarExpr::make(shouldPrintNewline), printNewline,
-          AssignStmt::make(shouldPrintNewline, Literal::make(true)));
-        Stmt printLargeTensor = isInnermost(tensor) ? Print::make(readElement) :
-                                printTensor(readElement, indentLevel + 1);
-        if (isInnermost(tensor)) {
-          printLargeTensor = Block::make({maybePrintNewline, 
-                                          printIndent(indentLevel),
-                                          printIndices(tensorReadIndices),
-                                          printEqual, printLargeTensor}); 
-        } else {
-          printLargeTensor = Block::make({maybePrintNewline, 
-                                          printIndent(indentLevel),
-                                          printIndices(tensorReadIndices),
-                                          printEqual, printNewline, 
-                                          printLargeTensor});
-        }
-        printLargeTensor = ForRange::make(
-          to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
-          Length::make(dimensions[order - 1]), printLargeTensor);
-        if (order >= 2) {
-          for (size_t i = 0; i <= order - 2; ++i) {
-            const size_t idx = order - 2 - i;
-            Var index = to<VarExpr>(tensorReadIndices[idx])->var;
-            printLargeTensor = ForRange::make(index, Literal::make(0), 
-                                             Length::make(dimensions[idx]), 
-                                             printLargeTensor);
-          }
-        }
-        printLargeTensor = Block::make(
-          AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
-          printLargeTensor);
-
-        if (isInnermost(tensor)) {
-          if (order == 1 && tensor->isColumnVector) {
-            // Emit code for printing tensor as column vector if applicable; 
-            // as with "large" tensors, each element is printed on a separate 
-            // line, except without indices printed as well.
-            printTensorStmt = ForRange::make(
-              to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
-              Length::make(dimensions[order - 1]), 
-              Block::make({maybePrintNewline, printIndent(indentLevel),
-                           Print::make(readElement, "12.5")})); 
-            printTensorStmt = Block::make(
-              AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
-              printTensorStmt);
-          } else {
-            // If dense tensor is innermost and not a column vector, then emit 
-            // code for printing "small" tensors; matrices and row vectors are 
-            // printed in typical format, while higher-order tensors are 
-            // "sliced" up into individual matrices.
-            Expr printIndentCond = Eq::make(
-              to<VarExpr>(tensorReadIndices[order - 1]), Literal::make(0));
-            Stmt maybePrintIndent = IfThenElse::make(printIndentCond,
-              printIndent(indentLevel + ((order >= 3) ? 1 : 0)));
-            Stmt printSmallTensor = ForRange::make(
-              to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
-              Length::make(dimensions[order - 1]), 
-              Block::make({maybePrintIndent, 
-                           Print::make(readElement, "12.5"), printSpace})); 
-            if (order >= 2) {
-              printSmallTensor = ForRange::make(
-                to<VarExpr>(tensorReadIndices[order - 2])->var, 
-                Literal::make(0), Length::make(dimensions[order - 2]), 
-                Block::make(maybePrintNewline, printSmallTensor));
-              printSmallTensor = Block::make(
-                AssignStmt::make(shouldPrintNewline, Literal::make(false)),
-                printSmallTensor);
-            }
-            if (order >= 3) {
-              Var shouldPrintNewline = Var(names.getName(), Boolean);
-              Stmt maybePrintNewline = IfThenElse::make(
-                VarExpr::make(shouldPrintNewline), printNewline,
-                AssignStmt::make(shouldPrintNewline, Literal::make(true)));
-              Stmt printIndicesStmt = printIndices(tensorReadIndices, 2);
-              printSmallTensor = Block::make({maybePrintNewline,
-                                              printIndent(indentLevel),
-                                              printIndicesStmt,
-                                              printSpace, printEqual, 
-                                              printNewline, printSmallTensor});
-              for (size_t i = 0; i <= order - 3; ++i) {
-                const size_t idx = order - 3 - i;
-                Var index = to<VarExpr>(tensorReadIndices[idx])->var;
-                printSmallTensor = ForRange::make(index, Literal::make(0), 
-                                                  Length::make(dimensions[idx]), 
-                                                  printSmallTensor);
-              }
-              printSmallTensor = Block::make(
-                AssignStmt::make(shouldPrintNewline, Literal::make(false)),
-                printSmallTensor);
-            }
-
-            Expr isSmallTensor = Le::make(Length::make(dimensions[order - 1]),
-                                          Literal::make(7));
-            printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
-                                               printLargeTensor);
-          }
-        } else {
-          printTensorStmt = printLargeTensor;
         }
 
         break;
@@ -220,67 +116,194 @@ private:
         Expr coordArray = tensorIndex.getCoordArray();
         Expr sinkArray = tensorIndex.getSinkArray();
 
-        Var inductionVar(names.getName(), Int);
-        TensorIndexVar tiVar(inductionVar.getName(), tensorVar.getName(), 
-                             inductionVar, tensorIndex);
-        std::vector<Expr> tensorReadIndices = {VarExpr::make(inductionVar), 
-          VarExpr::make(tiVar.getSinkVar())};
+        tiVar = new TensorIndexVar(inductionVar.getName(), tensorVar.getName(), 
+                                   inductionVar, tensorIndex);
+        tensorReadIndices.push_back(VarExpr::make(inductionVar)); 
+        tensorReadIndices.push_back(VarExpr::make(tiVar->getSinkVar()));
         
-        Expr readElement = TensorRead::make(tensorExpr, tensorReadIndices);
-        
-        // Emit code for printing "large" indexed tensors; each element of 
-        // outermost tensor is printed on separate lines.
-        Var shouldPrintNewline = Var(names.getName(), Boolean);
-        Stmt maybePrintNewline = IfThenElse::make(
-          VarExpr::make(shouldPrintNewline), printNewline,
-          AssignStmt::make(shouldPrintNewline, Literal::make(true)));
-        Stmt printLargeTensor = isInnermost(tensor) ? Print::make(readElement) :
-                                printTensor(readElement, indentLevel + 1);
-        if (isInnermost(tensor)) {
-          printLargeTensor = Block::make({tiVar.initSinkVar(), 
-                                          maybePrintNewline,
-                                          printIndent(indentLevel),
-                                          printIndices(tensorReadIndices),
-                                          printEqual, printLargeTensor}); 
-        } else {
-          printLargeTensor = Block::make({tiVar.initSinkVar(), 
-                                          maybePrintNewline,
-                                          printIndent(indentLevel),
-                                          printIndices(tensorReadIndices),
-                                          printEqual, printNewline, 
-                                          printLargeTensor});
+        break;
+      }
+      case TensorStorage::Kind::Diagonal: {
+        iassert(order == dimensions.size());
+
+        // Expand indices of element being read.
+        tensorReadIndex = Var(names.getName(), Int);
+        for (size_t i = 0; i < order; ++i) {
+          tensorReadIndices.push_back(tensorReadIndex);
         }
-        printLargeTensor = ForRange::make(tiVar.getCoordVar(), 
-                                          tiVar.loadCoord(), 
-                                          tiVar.loadCoord(1), printLargeTensor);
+
+        break;
+      }
+      default:
+        iassert(false);
+        break;
+    }
+    
+    // Emit code for reading a single tensor component.
+    Expr readElement = TensorRead::make(tensorExpr, tensorReadIndices);
+    Stmt printElementFormatted = Print::make(readElement, "12.5");
+  
+    Var shouldPrintNewline = Var(names.getName(), Boolean);
+    Stmt maybePrintNewline = IfThenElse::make(
+      VarExpr::make(shouldPrintNewline), printNewline,
+      AssignStmt::make(shouldPrintNewline, Literal::make(true)));
+
+    // Handle printing for (innermost) column vectors as a special case. Each 
+    // element is printed on a separate line, without indices printed as well.
+    if (tensorStorage.getKind() == TensorStorage::Kind::Dense &&
+        isInnermost(tensor) && order == 1 && tensor->isColumnVector) {
+      printTensorStmt = ForRange::make(
+        to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
+        Length::make(dimensions[order - 1]), 
+        Block::make({maybePrintNewline, printIndent(indentLevel),
+                     printElementFormatted})); 
+      printTensorStmt = Block::make(
+        AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
+        printTensorStmt);
+
+      return printTensorStmt;
+    }
+    
+    // Emit code for printing "large" tensors; each component of outermost 
+    // tensor is to be printed on a separate line.
+    Stmt printLargeTensor = isInnermost(tensor) ? Print::make(readElement) :
+                            printTensor(readElement, indentLevel + 1);
+
+    std::vector<Stmt> printLineStmts;
+    if (tensorStorage.getKind() == TensorStorage::Kind::Indexed) {
+      printLineStmts.push_back(tiVar->initSinkVar());
+    }
+    printLineStmts.push_back(maybePrintNewline);
+    printLineStmts.push_back(printIndent(indentLevel));
+    printLineStmts.push_back(printIndices(tensorReadIndices));
+    printLineStmts.push_back(printEqual);
+    if (!isInnermost(tensor)) {
+      printLineStmts.push_back(printNewline);
+    }
+    printLineStmts.push_back(printLargeTensor);
+    printLargeTensor = Block::make(printLineStmts);
+
+    switch (tensorStorage.getKind()) {
+      case TensorStorage::Kind::Dense: {
+        printLargeTensor = ForRange::make(
+          to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
+          Length::make(dimensions[order - 1]), printLargeTensor);
+        if (order >= 2) {
+          for (size_t i = 0; i <= order - 2; ++i) {
+            const size_t idx = order - 2 - i;
+            Var index = to<VarExpr>(tensorReadIndices[idx])->var;
+            printLargeTensor = ForRange::make(index, Literal::make(0), 
+                                              Length::make(dimensions[idx]), 
+                                              printLargeTensor);
+          }
+        }
+
+        break;
+      }
+      case TensorStorage::Kind::Indexed: {
+        printLargeTensor = ForRange::make(tiVar->getCoordVar(),  
+                                          tiVar->loadCoord(), 
+                                          tiVar->loadCoord(1), 
+                                          printLargeTensor);
         printLargeTensor = ForRange::make(inductionVar, Literal::make(0), 
                                           Length::make(dimensions[0]), 
                                           printLargeTensor);
-        printLargeTensor = Block::make(
-          AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
-          printLargeTensor);
 
-        // If tensor is innermost, emit code for printing "small" tensors.
-        if (isInnermost(tensor)) {
-          Var columnVar = Var(names.getName(), Int);
+        break;
+      }
+      case TensorStorage::Kind::Diagonal: {
+        printLargeTensor = ForRange::make(tensorReadIndex, Literal::make(0), 
+                                          Length::make(dimensions[0]), 
+                                          printLargeTensor);
+
+        break;
+      }
+      default:
+        iassert(false);
+        break;
+    }
+
+    printLargeTensor = Block::make(
+      AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
+      printLargeTensor);
+
+    Stmt printSmallTensor = Stmt();
+
+    // Emit code for printing "small" tensors; vectors and matrices are 
+    // formatted as such when printed.
+    if (isInnermost(tensor)) {
+      switch (tensorStorage.getKind()) {
+        case TensorStorage::Kind::Dense: {
+          // Column vector printing should have already been handled as a 
+          // separate case.
+          iassert(order != 1 || !tensor->isColumnVector);
+
+          Expr printIndentCond = Eq::make(
+            to<VarExpr>(tensorReadIndices[order - 1]), Literal::make(0));
+          Stmt maybePrintIndent = IfThenElse::make(printIndentCond,
+            printIndent(indentLevel + ((order >= 3) ? 1 : 0)));
+
+          printSmallTensor = ForRange::make(
+            to<VarExpr>(tensorReadIndices[order - 1])->var, Literal::make(0), 
+            Length::make(dimensions[order - 1]), 
+            Block::make({maybePrintIndent, printElementFormatted, printSpace})); 
+          if (order >= 2) {
+            printSmallTensor = ForRange::make(
+              to<VarExpr>(tensorReadIndices[order - 2])->var, 
+              Literal::make(0), Length::make(dimensions[order - 2]), 
+              Block::make(maybePrintNewline, printSmallTensor));
+            printSmallTensor = Block::make(
+              AssignStmt::make(shouldPrintNewline, Literal::make(false)),
+              printSmallTensor);
+          }
+          if (order >= 3) {
+            Var shouldPrintNewline(names.getName(), Boolean);
+            Stmt maybePrintNewline = IfThenElse::make(
+              VarExpr::make(shouldPrintNewline), printNewline,
+              AssignStmt::make(shouldPrintNewline, Literal::make(true)));
+            Stmt printIndicesStmt = printIndices(tensorReadIndices, 2);
+
+            printSmallTensor = Block::make({maybePrintNewline,
+                                            printIndent(indentLevel),
+                                            printIndicesStmt, printSpace,
+                                            printEqual, printNewline,
+                                            printSmallTensor});
+            for (size_t i = 0; i <= order - 3; ++i) {
+              const size_t idx = order - 3 - i;
+              Var index = to<VarExpr>(tensorReadIndices[idx])->var;
+              printSmallTensor = ForRange::make(index, Literal::make(0), 
+                                                Length::make(dimensions[idx]), 
+                                                printSmallTensor);
+            }
+            printSmallTensor = Block::make(
+              AssignStmt::make(shouldPrintNewline, Literal::make(false)),
+              printSmallTensor);
+          }
+
+          break;
+        }
+        case TensorStorage::Kind::Indexed: {
+          Var columnVar(names.getName(), Int);
+
           Stmt initColumnVar = AssignStmt::make(columnVar, Literal::make(0));
           Stmt incColumnVar = AssignStmt::make(columnVar, 
             Add::make(VarExpr::make(columnVar), Literal::make(1)));
           Stmt printBlankElement = Block::make({printBlank, printSpace, 
                                                 incColumnVar});
           Stmt printBlanks = While::make(
-            Lt::make(VarExpr::make(columnVar), tiVar.getSinkVar()), 
+            Lt::make(VarExpr::make(columnVar), tiVar->getSinkVar()), 
             printBlankElement);
           Stmt printBlanksEnd = While::make(
             Lt::make(VarExpr::make(columnVar), Length::make(dimensions[1])), 
             printBlankElement);
-          Stmt printSmallTensor = Block::make({tiVar.initSinkVar(), printBlanks,
-                                               incColumnVar, 
-                                               Print::make(readElement, "12.5"), 
+          
+          printSmallTensor = Block::make({tiVar->initSinkVar(), 
+                                               printBlanks, incColumnVar, 
+                                               printElementFormatted, 
                                                printSpace});
-          printSmallTensor = ForRange::make(tiVar.getCoordVar(), 
-                                            tiVar.loadCoord(), 
-                                            tiVar.loadCoord(1), 
+          printSmallTensor = ForRange::make(tiVar->getCoordVar(), 
+                                            tiVar->loadCoord(), 
+                                            tiVar->loadCoord(1), 
                                             printSmallTensor);
           printSmallTensor = Block::make({initColumnVar, maybePrintNewline,
                                           printIndent(indentLevel), 
@@ -292,93 +315,54 @@ private:
             AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
             printSmallTensor);
 
-          Expr isSmallTensor = Le::make(Length::make(dimensions[order - 1]),
-                                        Literal::make(7));
-          printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
-                                             printLargeTensor);
-        } else {
-          printTensorStmt = printLargeTensor;
+          break;
         }
+        case TensorStorage::Kind::Diagonal: {
+          if (order == 2) {
+            Stmt printBlankElement = Block::make(printBlank, printSpace);
+            Stmt printStartBlanks = ForRange::make(inductionVar, 
+                                                   Literal::make(0),
+                                                   tensorReadIndex, 
+                                                   printBlankElement);
+            Stmt printEndBlanks = ForRange::make(inductionVar, 
+              Add::make(VarExpr::make(tensorReadIndex), Literal::make(1)),
+              Length::make(dimensions[0]), printBlankElement);
+            
+            printSmallTensor = Block::make({maybePrintNewline,
+                                            printIndent(indentLevel),
+                                            printStartBlanks, 
+                                            printElementFormatted,
+                                            printSpace, printEndBlanks});
+            printSmallTensor = ForRange::make(tensorReadIndex, 
+                                              Literal::make(0),
+                                              Length::make(dimensions[0]),
+                                              printSmallTensor);
+            printSmallTensor = Block::make(
+              AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
+              printSmallTensor);
+          }
 
-        break;
+          break;
+        }
+        default:
+          iassert(false);
+          break;
       }
-      case TensorStorage::Kind::Diagonal: {
-        std::vector<Expr> tensorReadIndices;
-       
-        iassert(order == dimensions.size());
+    }
 
-        // Expand indices of element being read.
-        Var tensorReadIndex = Var(names.getName(), Int);
-        for (size_t i = 0; i < order; ++i) {
-          tensorReadIndices.push_back(tensorReadIndex);
-        }
+    // If a tensor can be printed as a "large" or "small" tensor, then emit 
+    // code that selects between two at runtime based on tensor size.
+    if (printSmallTensor.defined()) {
+      Expr isSmallTensor = Le::make(Length::make(dimensions[order - 1]),
+                                    Literal::make(7));
+      printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
+                                         printLargeTensor);
+    } else {
+      printTensorStmt = printLargeTensor;
+    }
 
-        Expr readElement = TensorRead::make(tensorExpr, tensorReadIndices);
-        
-        // Emit code for printing "large" diagonal tensors; each element of 
-        // outermost tensor is printed on separate lines.
-        Var shouldPrintNewline = Var(names.getName(), Boolean);
-        Stmt maybePrintNewline = IfThenElse::make(
-          VarExpr::make(shouldPrintNewline), printNewline,
-          AssignStmt::make(shouldPrintNewline, Literal::make(true)));
-        Stmt printLargeTensor = isInnermost(tensor) ? Print::make(readElement) :
-                                printTensor(readElement, indentLevel + 1);
-        if (isInnermost(tensor)) {
-          printLargeTensor = Block::make({maybePrintNewline, 
-                                          printIndent(indentLevel),
-                                          printIndices(tensorReadIndices),
-                                          printEqual, printLargeTensor}); 
-        } else {
-          printLargeTensor = Block::make({maybePrintNewline, 
-                                          printIndent(indentLevel),
-                                          printIndices(tensorReadIndices),
-                                          printEqual, printNewline, 
-                                          printLargeTensor});
-        }
-        printLargeTensor = ForRange::make(tensorReadIndex, Literal::make(0), 
-                                          Length::make(dimensions[0]), 
-                                          printLargeTensor);
-        printLargeTensor = Block::make(
-          AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
-          printLargeTensor);
-
-        // If tensor is innermost and second-order (i.e. a matrix), then emit 
-        // code for printing "small" tensors.
-        if (isInnermost(tensor) && order == 2) {
-          Var inductionVar = Var(names.getName(), Int);
-          Stmt printBlankElement = Block::make(printBlank, printSpace);
-          Stmt printStartBlanks = ForRange::make(inductionVar, Literal::make(0),
-                                                 tensorReadIndex, 
-                                                 printBlankElement);
-          Stmt printEndBlanks = ForRange::make(inductionVar, 
-            Add::make(VarExpr::make(tensorReadIndex), Literal::make(1)),
-            Length::make(dimensions[0]), printBlankElement);
-          Stmt printSmallTensor = Block::make({maybePrintNewline,
-                                               printIndent(indentLevel),
-                                               printStartBlanks, 
-                                               Print::make(readElement, "12.5"),
-                                               printSpace, printEndBlanks});
-          printSmallTensor = ForRange::make(tensorReadIndex, 
-                                            Literal::make(0),
-                                            Length::make(dimensions[0]),
-                                            printSmallTensor);
-          printSmallTensor = Block::make(
-            AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
-            printSmallTensor);
-
-          Expr isSmallTensor = Le::make(Length::make(dimensions[1]),
-                                        Literal::make(7));
-          printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
-                                             printLargeTensor);
-        } else {
-          printTensorStmt = printLargeTensor;
-        }
-
-        break;
-      }
-      default:
-        iassert(false);
-        break;
+    if (tiVar != nullptr) {
+      delete tiVar;
     }
 
     return printTensorStmt;

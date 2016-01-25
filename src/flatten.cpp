@@ -131,7 +131,6 @@ private:
     expr = Sub::make(ab.first, ab.second);
   }
 
-  // TODO: Add .* amd ./ too
   void visit(const Add *op) {
     iassert(isScalar(op->a.type()));
     iassert(isScalar(op->b.type()));
@@ -141,6 +140,28 @@ private:
 
     pair<Expr,Expr> ab = spillAsNeeded(a, b);
     expr = Add::make(ab.first, ab.second);
+  }
+  
+  void visit(const Mul *op) {
+    iassert(isScalar(op->a.type()));
+    iassert(isScalar(op->b.type()));
+
+    Expr a = rewrite(op->a);
+    Expr b = rewrite(op->b);
+
+    pair<Expr,Expr> ab = spillAsNeeded(a, b);
+    expr = Mul::make(ab.first, ab.second);
+  }
+
+  void visit(const Div *op) {
+    iassert(isScalar(op->a.type()));
+    iassert(isScalar(op->b.type()));
+
+    Expr a = rewrite(op->a);
+    Expr b = rewrite(op->b);
+
+    pair<Expr,Expr> ab = spillAsNeeded(a, b);
+    expr = Div::make(ab.first, ab.second);
   }
 
   void visit(const CallStmt *op) {
@@ -169,12 +190,24 @@ private:
       const IndexExpr *indexExpr = to<IndexExpr>(tensor);
       iassert(indexExpr->resultVars.size() == op->indexVars.size());
 
+      bool containsReduction = false;
       map<IndexVar,IndexVar> substitutions;
       for (size_t i=0; i < indexExpr->resultVars.size(); ++i) {
         pair<IndexVar,IndexVar> sub(indexExpr->resultVars[i], op->indexVars[i]);
         substitutions.insert(sub);
+
+        if (op->indexVars[i].isReductionVar()) {
+          containsReduction = true;
+        }
       }
-      expr = substitute(substitutions, indexExpr->value);
+
+      if (containsReduction) {
+        Var tmp(tmpNameGen(), tensor.type());
+        stmts.push_back(AssignStmt::make(tmp, tensor));
+        expr = IndexedTensor::make(VarExpr::make(tmp), op->indexVars);
+      } else {
+        expr = substitute(substitutions, indexExpr->value);
+      }
     }
     else {
       IRRewriter::visit(op);

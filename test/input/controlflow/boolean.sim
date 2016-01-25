@@ -82,6 +82,24 @@ func f(p : int) -> (r : int)
   end
 end
 
+%%% chained-le-lt
+%! f(-1) == 5;
+%! f(0) == 1;
+%! f(1) == 1;
+%! f(2) == 3;
+%! f(3) == 3;
+%! f(4) == 5;
+%! f(5) == 5;
+func f(p : int) -> (r : int)
+  if 0 <= p < 2
+    r = 1;
+  elif 2 <= p < 4
+    r = 3;
+  else
+    r = 5;
+  end
+end
+
 %%% and
 %! f(42, 3) == 1;
 %! f(42, 0) == 2;

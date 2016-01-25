@@ -18,13 +18,13 @@ func compute_mass_damping(p : Point) ->
      fmg : tensor[points](tensor[3](float)))
   h = 1.0e-2;
   viscous = 1.0e-1;
-  grav = [0.0, 0.0, -9.81];
+  grav = [0.0, 0.0, -9.81]';
   I = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
   mass = p.m;
   if p.fixed
-    MD(p) = 1.0;
+    MD(p,p) = 1.0;
   else
-    MD(p) = (mass + h*viscous)*I;
+    MD(p,p) = (mass + h*viscous)*I;
     fmg(p) = mass*p.v + h*mass*grav;
   end
 end
@@ -50,8 +50,8 @@ func compute_elasticity(s: Spring, p : (Point*2)) ->
     fe(p(1)) = fe1;
   end
   % Stiffness matrix
-  dxtdx = dx*dx';
-  dxdxt = dx'*dx;
+  dxtdx = dx'*dx;
+  dxdxt = dx*dx';
   k = h*h*stiffness/(l0*l0*l*l)*(dxdxt + (l-l0)/l*(dxtdx*I - dxdxt));
   if free0 and free1
     K(p(0),p(0)) =  k;
@@ -68,7 +68,7 @@ func compute_elasticity(s: Spring, p : (Point*2)) ->
   end
 end
 
-proc main
+export func main
   h = 1.0e-2;
 
   MD, fmg = map compute_mass_damping to points reduce +;
@@ -83,7 +83,7 @@ proc main
 
   tol = 1e-5;
   maxiters = 25;
-  r = f - (MDK*vguess);
+  r = f - MDK*vguess;
   p = r;
   iter = 0;
   v = vguess;

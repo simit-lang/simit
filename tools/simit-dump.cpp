@@ -7,7 +7,7 @@
 #include "lower/lower.h"
 #include "temps.h"
 #include "flatten.h"
-#include "frontend.h"
+#include "frontend/frontend.h"
 #include "program_context.h"
 #include "error.h"
 #include "util/util.h"

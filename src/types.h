@@ -97,6 +97,7 @@ struct ScalarType {
   bool isInt () const { return kind == Int; }
   bool isFloat() const { return kind == Float; }
   bool isBoolean() const { return kind == Boolean; }
+  bool isNumeric() const { return kind == Int || kind == Float; }
 };
 
 /** Helper to convert from C++ type to Simit Type. */
@@ -271,6 +272,10 @@ inline bool isScalar(Type type) {
 
 inline bool isBoolean(Type type) {
   return isScalar(type) && type.toTensor()->getComponentType().isBoolean();
+}
+
+inline bool isInt(Type type) {
+  return isScalar(type) && type.toTensor()->getComponentType().isInt();
 }
 
 /// A system tensor is a tensor whose dimensions contain at least one set.
