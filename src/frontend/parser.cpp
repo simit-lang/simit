@@ -108,14 +108,14 @@ hir::Field::Ptr Parser::parseFieldDecl() {
   return fieldDecl;
 }
 
-// extern_decl: 'extern' argument_decl ';'
+// extern_decl: 'extern' ident_decl ';'
 hir::ExternDecl::Ptr Parser::parseExternDecl() {
   auto externDecl = std::make_shared<hir::ExternDecl>();
   
   const Token externToken = consume(Token::Type::EXTERN);
   externDecl->setBeginLoc(externToken);
   
-  externDecl->var = parseArgumentDecl();
+  externDecl->var = parseIdentDecl();
   
   const Token endToken = consume(Token::Type::SEMICOL);
   externDecl->setEndLoc(endToken);
@@ -196,14 +196,13 @@ hir::Argument::Ptr Parser::parseArgumentDecl() {
   auto argDecl = std::make_shared<hir::Argument>();
   
   argDecl->inout = false;
-  if (tryconsume(Token::Type::INOUT)) {
+  if (peek().type == Token::Type::INOUT) {
+    const Token inoutToken = consume(Token::Type::INOUT);
+    argDecl->setBeginLoc(inoutToken);
     argDecl->inout = true;
   }
 
-  const hir::IdentDecl::Ptr var = parseIdentDecl();
-  argDecl->name = var->name;
-  argDecl->type = var->type;
-  
+  argDecl->arg = parseIdentDecl();
   return argDecl;
 }
 

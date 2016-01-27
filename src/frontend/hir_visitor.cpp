@@ -52,7 +52,7 @@ void HIRVisitor::visit(ElementTypeDecl::Ptr decl) {
 }
 
 void HIRVisitor::visit(Argument::Ptr arg) {
-  visit(to<IdentDecl>(arg));
+  arg->arg->accept(this);
 }
 
 void HIRVisitor::visit(ExternDecl::Ptr decl) {

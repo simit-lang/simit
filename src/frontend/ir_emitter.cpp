@@ -710,7 +710,7 @@ void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, bool isProc) {
 
   std::vector<ir::Var> arguments;
   for (auto arg : decl->args) {
-    const ir::Var argVar = emitVar(arg);
+    const ir::Var argVar = emitVar(arg->arg);
     const auto access = arg->inout ? internal::Symbol::ReadWrite : 
                         internal::Symbol::Read;
     ctx->addSymbol(argVar.getName(), argVar, access);

@@ -18,6 +18,9 @@ end
 func foo(i : int) -> (inout r : int)
 end
 
+%%% inout-extern
+extern inout i : int;
+
 %%% var-tuple
 proc main
   var t : int;

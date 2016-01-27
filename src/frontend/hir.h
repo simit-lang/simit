@@ -257,18 +257,28 @@ struct ElementTypeDecl : public HIRNode {
   }
 };
 
-struct Argument : public IdentDecl {
-  bool inout;
+struct Argument : public HIRNode {
+  IdentDecl::Ptr arg;
+  bool           inout;
   
   typedef std::shared_ptr<Argument> Ptr;
   
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<Argument>(shared_from_this()));
   }
+  
+  virtual unsigned getLineBegin() {
+    return (lineBegin == 0) ? arg->getLineBegin() : lineBegin;
+  }
+  virtual unsigned getColBegin() {
+    return (lineBegin == 0) ? arg->getColBegin() : colBegin;
+  }
+  virtual unsigned getLineEnd() { return arg->getLineEnd(); }
+  virtual unsigned getColEnd() { return arg->getColEnd(); }
 };
 
 struct ExternDecl : public HIRNode {
-  Argument::Ptr var;
+  IdentDecl::Ptr var;
   
   typedef std::shared_ptr<ExternDecl> Ptr;
   

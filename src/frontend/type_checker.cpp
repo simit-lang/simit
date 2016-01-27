@@ -262,7 +262,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
 
   std::vector<ir::Var> arguments;
   for (auto arg : decl->args) {
-    const ir::Var argVar = getVar(arg);
+    const ir::Var argVar = getVar(arg->arg);
 
     if (!argVar.getType().defined()) {
       typeChecked = false;

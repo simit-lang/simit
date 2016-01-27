@@ -60,11 +60,12 @@ void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
 }
 
 void HIRRewriter::visit(Argument::Ptr arg) {
-  visit(to<IdentDecl>(arg));
+  arg->arg = rewrite<IdentDecl>(arg->arg);
+  node = arg;
 }
 
 void HIRRewriter::visit(ExternDecl::Ptr decl) {
-  decl->var = rewrite<Argument>(decl->var);
+  decl->var = rewrite<IdentDecl>(decl->var);
   node = decl;
 }
 
