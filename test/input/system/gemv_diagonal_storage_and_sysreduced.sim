@@ -36,5 +36,6 @@ proc main
     if i == 0
       points.c(p) = C(p,p)(1,1);
     end
+    i = i + 1;
   end
 end
