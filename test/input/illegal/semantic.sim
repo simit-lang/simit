@@ -253,6 +253,30 @@ proc main
   t(1,2);
 end
 
+%%% bad-tensor-access-5
+element A
+end
+
+element B
+end
+
+extern X : set{A};
+extern Y : set{B};
+
+func f(a : B) -> (t : tensor[X,X](int))
+  t(a,a) = 0;
+end
+
+%%% bad-tensor-access-6
+element A
+end
+
+extern X : set{A};
+
+func f(a : A) -> (t : tensor[X,X](int))
+  t(0,0) = 0;
+end
+
 %%% bad-tuple-access-1
 element e
 end
@@ -368,6 +392,18 @@ end
 %%% bad-add-2
 proc main
   true - false;
+end
+
+%%% bad-add-3
+element E
+end
+
+extern S : set{E};
+
+export func main
+  for i in S
+    i + 1;
+  end
 end
 
 %%% bad-mul-1
