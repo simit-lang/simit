@@ -10,5 +10,7 @@ namespace ir {
 /// on the storage scheme of the 
 Func lowerTensorAccesses(Func func);
 
+Func lowerFieldAccesses(Func func);
+
 }}
 #endif

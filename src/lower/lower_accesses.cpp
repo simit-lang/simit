@@ -7,6 +7,7 @@
 #include "path_expressions.h"
 #include "tensor_index.h"
 #include "util/util.h"
+#include "var_replace_rewriter.h"
 
 using namespace std;
 using simit::util::quote;
@@ -212,8 +213,50 @@ private:
   }
 };
 
+class LowerFieldAccesses : public IRRewriter {
+  using IRRewriter::visit;
+
+  class LowerFieldAccessesInForStmt : public IRRewriter {
+    public:
+      LowerFieldAccessesInForStmt(const For *forStmt) : 
+        loopVar(forStmt->var), set(forStmt->domain.indexSet.getSet()) {}
+
+    private:
+      using IRRewriter::visit;
+
+      Var loopVar;
+      Expr set;
+
+      void visit(const FieldRead *op) {
+        if (isa<VarExpr>(op->elementOrSet) &&
+            to<VarExpr>(op->elementOrSet)->var == loopVar) {
+          Expr setFieldRead = FieldRead::make(set, op->fieldName);
+          expr = TensorRead::make(setFieldRead, {loopVar});
+        } else {
+          IRRewriter::visit(op);
+        }
+      }
+  };
+
+  void visit(const For *op) {
+    if (op->domain.kind == ForDomain::IndexSet) {
+      const Stmt body = rewrite(op->body);
+      const Stmt newBody = LowerFieldAccessesInForStmt(op).rewrite(body);
+      const Stmt forLoop = For::make(op->var, op->domain, newBody);
+      
+      stmt = replaceVar(forLoop, op->var, Var(op->var.getName(), Int));
+    } else {
+      IRRewriter::visit(op);
+    }
+  }
+};
+
 Func lowerTensorAccesses(Func func) {
   return LowerTensorAccesses(func.getStorage()).rewrite(func);
+}
+
+Func lowerFieldAccesses(Func func) {
+  return LowerFieldAccesses().rewrite(func);
 }
 
 }}

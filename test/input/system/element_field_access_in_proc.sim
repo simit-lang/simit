@@ -1,0 +1,24 @@
+element Vertex
+  a : float;
+  b : float;
+end
+
+element Edge
+  e : float;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+export func main
+  i = 0.0;
+  for p in V
+    i = i + p.b;
+    for p in E
+      i = i + p.e;
+    end
+  end
+  for p in V
+    V.a(p) = i;
+  end
+end

@@ -29,6 +29,22 @@ public:
     }
   }
 
+  void visit(const IndexedTensor *op) {
+    Expr tensor = rewrite(op->tensor);
+  
+    std::vector<IndexVar> indexVars;
+    for (const auto iv : op->indexVars) {
+      if (iv.getFixedExpr() != nullptr) {
+        Expr *fixedExpr = new Expr(rewrite(*iv.getFixedExpr()));
+        indexVars.push_back(IndexVar(iv.getName(), iv.getDomain(), fixedExpr));
+      } else {
+        indexVars.push_back(iv);
+      }
+    }
+
+    expr = IndexedTensor::make(tensor, indexVars);
+  }
+
   void visit(const AssignStmt *op) {
     Expr value = rewrite(op->value);
     if (op->var == init) {
