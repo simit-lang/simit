@@ -80,11 +80,6 @@ if ($ENV{SIMIT_CUDA_ENABLE})
   find_package(CUDA)
 endif ()
 
-if (OPENMP_FOUND)
-  set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-  set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-endif()
-
 add_subdirectory(src)
 add_subdirectory(test)
 add_subdirectory(tools)
