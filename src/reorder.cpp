@@ -273,6 +273,7 @@ namespace simit {
     
     bool operator()(int const&left, 
                     int const&right) const {
+      
       for (int i=0; i < cardinality; ++i) {
         int leftID = endpoints[left*cardinality + i];
         int rightID = endpoints[right*cardinality + i];
@@ -333,13 +334,16 @@ namespace simit {
   void edgeVertexSortReordering(int* endpoints, vector<int>& edgeOrdering, const int size, const int cardinality) {
     assert(edgeOrdering.size() == 0);
     edgeOrdering.resize(size);
-    
+    int* sortableEndpoints = static_cast<int *>(malloc(size * cardinality * sizeof(int)));
+    memcpy(sortableEndpoints, endpoints, size * cardinality * sizeof(int));
+
     for (int index=0; index < size; ++index) {
       edgeOrdering[index] = index;
-      qsort(endpoints + index*cardinality, cardinality, sizeof(int), qsortCompare);
+      qsort(sortableEndpoints+ index*cardinality, cardinality, sizeof(int), qsortCompare);
     } 
     
-    sort(edgeOrdering.begin(), edgeOrdering.end(), edgeCompare(endpoints, cardinality));
+    sort(edgeOrdering.begin(), edgeOrdering.end(), edgeCompare(sortableEndpoints, cardinality));
+    free(sortableEndpoints);
   }
   
   // ---------- Ordering Evaluation Heuristics ----------
@@ -418,7 +422,7 @@ namespace simit {
       memcpy(newEndpoints + edgeIndex * cardinality, endpoints + edgeOrdering[edgeIndex] * cardinality, cardinality * sizeof(int));
     }
     memcpy(endpoints, newEndpoints, size * cardinality * sizeof(int));
-    delete newEndpoints;
+    free(newEndpoints);
 
     assert(size == edgeOrdering.size());
     
@@ -447,7 +451,17 @@ namespace simit {
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
     auto end  = clock(); 
     cout << "Hilbert reorder took:    " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
-
+    
+    // int* endpoints = edgeSet.getEndpointsPtr();
+    // auto size = edgeSet.getSize();
+    // auto cardinality = edgeSet.getCardinality();
+    // for (int i=0; i < size; ++i) {
+    //   cout << i;
+    //   for (int j=0; j < cardinality; ++j) {
+    //     cout << " : " <<  endpoints[i*cardinality + j];
+    //   }
+    //   cout << endl;
+    // }
     start = clock();
     // hilbert::hilbertReorder(edgeSet, edgeOrdering, edgeSet.getSize());
     //edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
@@ -455,10 +469,14 @@ namespace simit {
     iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
     reorderEdgeSet(edgeSet, edgeOrdering);
     end = clock();
-    cout << "Edge reorder took:       " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
-    // vector<int> edgeOrdering;
-    // iassert(edgeOrdering.size() == edgeSet.getSize()); 
-    // reorderEdgeSet(edgeSet, edgeOrdering);
+    // cout << "Edge reorder took:       " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
+    // for (int i=0; i < size; ++i) {
+    //   cout << i;
+    //   for (int j=0; j < cardinality; ++j) {
+    //     cout << " : " <<  endpoints[i*cardinality + j];
+    //   }
+    //   cout << endl;
+    // }
   }
   
   void reorder(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
@@ -469,10 +487,5 @@ namespace simit {
     hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
-   
-    // vector<int> edgeOrdering;
-    // edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
-    // iassert(edgeOrdering.size() == edgeSet.getSize()); 
-    // reorderEdgeSet(edgeSet, edgeOrdering);
   }
 }

@@ -47,7 +47,7 @@ namespace simit {
     }
 
     memcpy(data, newData, capacity * typeSize); 
-    delete newData;
+    free(newData);
   }
 
   namespace hilbert {
