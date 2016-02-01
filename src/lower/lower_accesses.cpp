@@ -1,6 +1,7 @@
 #include "lower_accesses.h"
 
 #include <algorithm>
+#include <map>
 
 #include "ir_rewriter.h"
 #include "intrinsics.h"
@@ -213,50 +214,59 @@ private:
   }
 };
 
-class LowerFieldAccesses : public IRRewriter {
-  using IRRewriter::visit;
-
-  class LowerFieldAccessesInForStmt : public IRRewriter {
-    public:
-      LowerFieldAccessesInForStmt(const For *forStmt) : 
-        loopVar(forStmt->var), set(forStmt->domain.indexSet.getSet()) {}
-
-    private:
-      using IRRewriter::visit;
-
-      Var loopVar;
-      Expr set;
-
-      void visit(const FieldRead *op) {
-        if (isa<VarExpr>(op->elementOrSet) &&
-            to<VarExpr>(op->elementOrSet)->var == loopVar) {
-          Expr setFieldRead = FieldRead::make(set, op->fieldName);
-          expr = TensorRead::make(setFieldRead, {loopVar});
-        } else {
-          IRRewriter::visit(op);
-        }
-      }
-  };
-
-  void visit(const For *op) {
-    if (op->domain.kind == ForDomain::IndexSet) {
-      const Stmt body = rewrite(op->body);
-      const Stmt newBody = LowerFieldAccessesInForStmt(op).rewrite(body);
-      const Stmt forLoop = For::make(op->var, op->domain, newBody);
-      
-      stmt = replaceVar(forLoop, op->var, Var(op->var.getName(), Int));
-    } else {
-      IRRewriter::visit(op);
-    }
-  }
-};
-
 Func lowerTensorAccesses(Func func) {
   return LowerTensorAccesses(func.getStorage()).rewrite(func);
 }
 
 Func lowerFieldAccesses(Func func) {
-  return LowerFieldAccesses().rewrite(func);
+  class FindElementVars : public IRVisitor {
+    public:
+      FindElementVars(std::map<Var, Expr> &elemVars) : elemVars(elemVars) {} 
+  
+    private:
+      using IRVisitor::visit;
+
+      void visit(const For *op) {
+        IRVisitor::visit(op); 
+        if (op->domain.kind == ForDomain::IndexSet) {
+          elemVars[op->var] = op->domain.indexSet.getSet();
+        }
+      }
+
+      std::map<Var, Expr> &elemVars;
+  };
+
+  class LowerFieldAccesses : public IRRewriter {
+    public:
+      LowerFieldAccesses(const std::map<Var, Expr> &elemVars) : 
+        elemVars(elemVars) {}
+
+    private:
+      using IRRewriter::visit;
+
+      void visit(const FieldRead *op) {
+        IRRewriter::visit(op);
+        for (const auto &kv : elemVars) {
+          if (isa<VarExpr>(op->elementOrSet) &&
+              to<VarExpr>(op->elementOrSet)->var == kv.first) {
+            Expr setFieldRead = FieldRead::make(kv.second, op->fieldName);
+            expr = TensorRead::make(setFieldRead, {kv.first});
+          }
+        }
+      }
+
+      const std::map<Var, Expr> &elemVars;
+  };
+
+  std::map<Var, Expr> elemVars;
+  FindElementVars elemVarsFinder(elemVars);
+  func.accept(&elemVarsFinder);
+
+  func = LowerFieldAccesses(elemVars).rewrite(func);
+  for (const auto &kv : elemVars) {
+    func = replaceVar(func, kv.first, Var(kv.first.getName(), Int));
+  }
+  return func;
 }
 
 }}

@@ -106,4 +106,8 @@ Stmt replaceVar(Stmt stmt, Var init, Var final) {
   return VarReplaceRewriter(init, final).rewrite(stmt);
 }
 
+Func replaceVar(Func func, Var init, Var final) {
+  return VarReplaceRewriter(init, final).rewrite(func);
+}
+
 }}  // namespace simit::ir

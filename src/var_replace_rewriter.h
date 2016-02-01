@@ -7,6 +7,7 @@ namespace simit {
 namespace ir {
 
 Stmt replaceVar(Stmt stmt, Var init, Var final);
+Func replaceVar(Func func, Var init, Var final);
 
 }}  // namespace simit::ir
 
