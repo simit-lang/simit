@@ -452,11 +452,9 @@ namespace simit {
     reorderEdgeSet(edgeSet, edgeOrdering);
   }
   
-  void reorder(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
-    iassert(vertexOrdering.size() == 0);
-    
-    hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
-    iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
-    reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
+  void reorder(Set& edgeSet, Set& vertexSet) {
+    vector<int> vertexOrdering;
+    vector<int> edgeOrdering;
+    reorder(edgeSet, vertexSet, edgeOrdering, vertexOrdering);
   }
 }

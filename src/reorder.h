@@ -10,7 +10,7 @@
 
 namespace simit {
   
-  void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& vertexOrdering);
+  void reorder(Set& edgeSet, Set& vertexSet);
   void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& edgeOrdering, std::vector<int>& vertexOrdering);
  
   template<typename T, int... dimensions>
