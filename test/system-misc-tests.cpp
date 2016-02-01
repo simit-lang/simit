@@ -507,6 +507,7 @@ TEST(System, DISABLED_map_vec_assign) {
   SIMIT_ASSERT_FLOAT_EQ(9.1, x(p2)(2));
 }
 
+#ifdef EIGEN
 TEST(System, solve_external) {
   // Points
   Set points;
@@ -611,6 +612,7 @@ TEST(System, solve_external_blocked) {
   ASSERT_NEAR(2.0, c2(0), 1.0);
   ASSERT_NEAR(4.0, c2(1), 1.0);
 }
+#endif
 
 TEST(System, DISABLED_if_reassign) {
   // Points

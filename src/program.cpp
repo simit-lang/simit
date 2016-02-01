@@ -4,7 +4,7 @@
 #include <vector>
 
 #include "ir.h"
-#include "frontend.h"
+#include "frontend/frontend.h"
 #include "util/util.h"
 #include "error.h"
 #include "program_context.h"
@@ -25,15 +25,21 @@ const std::vector<std::string> VALID_BACKENDS = {
 };
 std::string kBackend;
 
-static Function compile(ir::Func func, backend::Backend *backend) {
+static Function compile(ir::Func func, backend::Backend *backend, bool addTimers) {
   ir::Storage storage;
   // Fill in storage path expressions, etc.
   /// map<Var,pe::PathExpressions> pes = assignPathExpressions(func);
   /// storage.addPathExpressions(pes);
   func = lower(func);
+  if (addTimers) {
+    func = lowerWithTimers(func);
+  }
   return Function(backend->compile(func, storage));
 }
 
+static Function compile(ir::Func func, backend::Backend *backend) {
+  return simit::compile(func, backend, false);
+}
 
 // class ProgramContent
 struct Program::ProgramContent {
@@ -95,6 +101,16 @@ Function Program::compile(const std::string &function) {
     return NULL;
   }
   return simit::compile(simitFunc, content->backend);
+}
+
+Function Program::compileWithTimers(const std::string &function) {
+  ir::Func simitFunc = content->ctx.getFunction(function);
+  if (!simitFunc.defined()) {
+    content->diags.report() << "Attempting to compile an unknown function ("
+                            << function << ")";
+    return NULL;
+  }
+  return simit::compile(simitFunc, content->backend, true);
 }
 
 int Program::verify() {

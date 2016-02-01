@@ -5,6 +5,7 @@
 #include <map>
 #include <ostream>
 #include "var.h"
+#include "util/name_generator.h"
 
 namespace simit {
 namespace pe {
@@ -106,6 +107,9 @@ public:
 
   /// Insert a temporary into the environment.
   void addTemporary(const Var& var);
+  
+  /// Create a temporary variable.
+  Var createTemporary(const Type &type, const std::string name="@tmp");
 
   /// Add a tensor index described by the given path expression to the
   /// environment, and associate it with var.
@@ -114,6 +118,8 @@ public:
 private:
   struct Content;
   Content* content;
+  
+  util::NameGenerator names;
 };
 
 std::ostream& operator<<(std::ostream&, const Environment&);

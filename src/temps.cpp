@@ -2,6 +2,7 @@
 
 #include <string>
 
+#include "flatten.h"
 #include "ir.h"
 #include "ir_builder.h"
 #include "ir_rewriter.h"
@@ -139,12 +140,14 @@ class InsertTemporaries : public IRRewriter {
       return;
     }
 
-    std::vector<Stmt> stmts;
-
     Var tmp(names.getName(), op->expr.type());
-    stmts.push_back(AssignStmt::make(tmp, op->expr));
+    Expr val = IRBuilder().unaryElwiseExpr(IRBuilder::None, op->expr);
+
+    std::vector<Stmt> stmts;
+    stmts.push_back(flattenIndexExpressions(AssignStmt::make(tmp, val)));
     stmts.push_back(Print::make(exprLabel));
     stmts.push_back(Print::make(tmp));
+
     stmt = Block::make(stmts);
   }
 };

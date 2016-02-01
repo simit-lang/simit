@@ -30,6 +30,8 @@ const Func& det();
 const Func& inv();
 const Func& solve();
 const Func& loc();
+const Func& simitClock();
+const Func& simitStoreTime();
 
 const Func& byName(const std::string& name);
 const std::map<std::string,Func> &byNames();

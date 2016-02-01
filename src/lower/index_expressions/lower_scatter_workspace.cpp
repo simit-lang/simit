@@ -150,8 +150,9 @@ Stmt updateSinkInductionVars(const vector<TensorIndexVar> &tensorIndexVars) {
   return Block::make(initSinkInductionVarStmts);
 }
 
-static Stmt createFastForwardLoop(const TensorIndexVar &tensorIndexVar) {
-  Var inductionVar = tensorIndexVar.getSourceVar();
+static
+Stmt
+createFastForwardLoop(const TensorIndexVar &tensorIndexVar, Var inductionVar) {
   Var sinkVar = tensorIndexVar.getSinkVar();
 
   Expr fastForwardCondition = Lt::make(sinkVar, inductionVar);
@@ -226,8 +227,10 @@ static Stmt createSubsetLoopStmt(const Var &inductionVar,
     if (tensorIndexVars.size() == 2) {
       Var sinkVar0 = tensorIndexVars[0].getSinkVar();
       Expr fastForwardCondition = Lt::make(sinkVar0, inductionVar);
-      Stmt fastForwardSinkVar0 = createFastForwardLoop(tensorIndexVars[0]);
-      Stmt fastForwardSinkVar1 = createFastForwardLoop(tensorIndexVars[1]);
+      Stmt fastForwardSinkVar0 = createFastForwardLoop(tensorIndexVars[0],
+                                                       inductionVar);
+      Stmt fastForwardSinkVar1 = createFastForwardLoop(tensorIndexVars[1],
+                                                       inductionVar);
       Stmt fastForwardIfLess = IfThenElse::make(fastForwardCondition,
                                                 fastForwardSinkVar0,
                                                 fastForwardSinkVar1);
@@ -238,7 +241,8 @@ static Stmt createSubsetLoopStmt(const Var &inductionVar,
       for (auto& tensorIndexVar : tensorIndexVars) {
         Var sinkVar = tensorIndexVar.getSinkVar();
         Expr fastForwardCondition = Lt::make(sinkVar, inductionVar);
-        Stmt fastForwardSinkVar = createFastForwardLoop(tensorIndexVar);
+        Stmt fastForwardSinkVar = createFastForwardLoop(tensorIndexVar,
+                                                        inductionVar);
         Stmt fastForwardIfLess = IfThenElse::make(fastForwardCondition,
                                                   fastForwardSinkVar);
         fastForwardLoops.push_back(fastForwardIfLess);
@@ -393,7 +397,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
         // Sparse output
         IndexDomain workspaceDomain = type->getDimensions()[1]; // Row workspace
         Type workspaceType = TensorType::make(workspaceCType,{workspaceDomain});
-        workspace = Var("workspace", workspaceType);
+        workspace = environment->createTemporary(workspaceType, "@workspace");
         environment->addTemporary(workspace);
         storage->add(workspace, TensorStorage::Kind::Dense);
       }
@@ -409,7 +413,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       for (const SubsetLoop& subsetLoop : subsetLoops) {
         Stmt loopStmt = createSubsetLoopStmt(workspace, inductionVar, blockSize,
                                              subsetLoop, environment);
-        string comment = "workspace " +
+        string comment = workspace.getName() + " " +
             util::toString(subsetLoop.getCompoundOperator())+"= " +
             tensorSliceString(subsetLoop.getIndexExpression(), indexVar);
         loopStatements.push_back(Comment::make(comment, loopStmt, false, true));
@@ -456,7 +460,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       Stmt loopStmt = createSubsetLoopStmt(inductionVar, {resultIndexVar},body);
       string comment = toString(target)
                      + tensorSliceString(resultVars, loop.getIndexVar())
-                     + " = workspace";
+                     + " = " + workspace.getName();
       loopStatements.push_back(Comment::make(comment, loopStmt, false, true));
 
       loopNest = Block::make(loopStatements);

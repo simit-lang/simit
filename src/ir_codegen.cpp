@@ -17,15 +17,60 @@ Stmt initializeLhsToZero(Stmt stmt) {
     using IRRewriter::visit;
     
     void visit(const AssignStmt *op) {
-      stmt = AssignStmt::make(op->var, 0.0);
+      Expr zeroVal;
+      switch (op->var.getType().toTensor()->getComponentType().kind) {
+        case ScalarType::Int:
+          zeroVal = Literal::make(0);
+          break;
+        case ScalarType::Float:
+          zeroVal = Literal::make(0.0);
+          break;
+        case ScalarType::Boolean:
+          zeroVal = Literal::make(false);
+          break;
+        default:
+          unreachable;
+          break;
+      }
+      stmt = AssignStmt::make(op->var, zeroVal);
     }
 
     void visit(const FieldWrite *op) {
+      Expr zeroVal;
+      switch (op->value.type().toTensor()->getComponentType().kind) {
+        case ScalarType::Int:
+          zeroVal = Literal::make(0);
+          break;
+        case ScalarType::Float:
+          zeroVal = Literal::make(0.0);
+          break;
+        case ScalarType::Boolean:
+          zeroVal = Literal::make(false);
+          break;
+        default:
+          unreachable;
+          break;
+      }
       stmt = FieldWrite::make(op->elementOrSet, op->fieldName, 0.0);
     }
 
     void visit(const TensorWrite *op) {
-      stmt = TensorWrite::make(op->tensor, op->indices, 0.0);
+      Expr zeroVal;
+      switch (op->value.type().toTensor()->getComponentType().kind) {
+        case ScalarType::Int:
+          zeroVal = Literal::make(0);
+          break;
+        case ScalarType::Float:
+          zeroVal = Literal::make(0.0);
+          break;
+        case ScalarType::Boolean:
+          zeroVal = Literal::make(false);
+          break;
+        default:
+          unreachable;
+          break;
+      }
+      stmt = TensorWrite::make(op->tensor, op->indices, zeroVal);
     }
   };
   return ReplaceRhsWithZero().rewrite(stmt);

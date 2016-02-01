@@ -56,7 +56,7 @@ public:
   Expr transposedMatrix(Expr mat);
 
   /// Create a temporary variable
-  Var temporary(Type type, std::string name="tmp");
+  Var temporary(Type type, std::string name="@tmp");
 
 
 private:

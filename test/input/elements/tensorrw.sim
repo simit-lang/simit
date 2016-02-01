@@ -1,6 +1,6 @@
 %%% tensor-read
 %! read([0.0, 1.0, 2.0], 1) == 1.0;
-func read(a : tensor[3](float), b : int) -> (c : float)
+func read(a : tensor[3](float)', b : int) -> (c : float)
   c = a(b);
 end
 
@@ -14,7 +14,7 @@ end
 
 %%% tensor-write
 %! write([0.0, 1.0, 2.0], 1, 5.0) == [0.0, 5.0, 2.0];
-func write(a : tensor[3](float), b : int, c : float) -> (d : tensor[3](float))
+func write(a : tensor[3](float)', b : int, c : float) -> (d : tensor[3](float)')
   d = a;
   d(b) = c;
 end
@@ -25,4 +25,17 @@ end
 func writebig(a : tensor[2,3](float), b : int, c : int, d : float) -> (e : tensor[2,3](float))
   e = a;
   e(b,c) = d;
+end
+
+%%% tensor-write-block
+%! writeblock([1.0, 2.0; 3.0, 4.0]) == [1.0, 2.0; 3.0, 4.0];
+func writeblock(a : tensor[2,2](float)) -> (b : tensor[2,2](float))
+  var t : tensor[3,3](tensor[2,2](float));
+  for i in 0:2
+    for j in 0:2
+      t(i,j) = [0.0 0.0; 0.0 0.0];
+    end
+  end
+  t(1,2) = a;
+  b = t(1,2);
 end

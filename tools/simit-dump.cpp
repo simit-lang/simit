@@ -7,7 +7,7 @@
 #include "lower/lower.h"
 #include "temps.h"
 #include "flatten.h"
-#include "frontend.h"
+#include "frontend/frontend.h"
 #include "program_context.h"
 #include "error.h"
 #include "util/util.h"
@@ -113,7 +113,10 @@ int main(int argc, const char* argv[]) {
     return 3;
   }
   if (!(emitSimit || emitLLVM || emitGPU)) {
-    emitSimit = emitLLVM = emitGPU = true;
+    emitSimit = emitLLVM = true;
+#ifdef GPU
+    emitGPU = true;
+#endif
   }
   if (emitGPU && gpuOutFile == "") {
     gpuOutFile = sourceFile + ".out";

@@ -99,7 +99,7 @@ void powInit() {
 static Func normVar;
 void normInit() {
   normVar = Func("norm",
-                 {},
+                 {Var()},
                  {Var("r", Float)},
                  Func::Intrinsic);
 }
@@ -107,7 +107,7 @@ void normInit() {
 static Func dotVar;
 void dotInit() {
   dotVar = Func("dot",
-                {},
+                {Var(), Var()},
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
@@ -116,7 +116,8 @@ void dotInit() {
 static Func detVar;
 void detInit() {
   detVar = Func("det",
-                {},
+                {Var("m", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
@@ -124,7 +125,8 @@ void detInit() {
 static Func invVar;
 void invInit() {
   invVar = Func("inv",
-                {},
+                {Var("m", TensorType::make(ScalarType::Float,
+                                           {IndexDomain(3),IndexDomain(3)}))},
                 {Var("r", TensorType::make(ScalarType::Float,
                                            {IndexDomain(3),IndexDomain(3)}))},
                 Func::Intrinsic);
@@ -133,7 +135,7 @@ void invInit() {
 static Func solveVar;
 void solveInit() {
   solveVar = Func("solve",
-                  {},
+                  {Var(), Var(), Var()},
                   {Var("r", Float)},
                   Func::Intrinsic);
 }
@@ -143,6 +145,22 @@ void locInit() {
   locVar = Func("loc",
                 {},
                 {Var("r", Int)},
+                Func::Intrinsic);
+}
+
+static Func simitClockVar;
+void simitClockInit() {
+  simitClockVar = Func("simitClock",
+                {},
+                {Var("r", Float)},
+                Func::Intrinsic);
+}
+
+static Func simitStoreTimeVar;
+void simitStoreTimeInit() {
+  simitStoreTimeVar = Func("simitStoreTime",
+                {Var("i", Int), Var("val", Float)},
+                {Var("r", Float)},
                 Func::Intrinsic);
 }
 
@@ -268,6 +286,21 @@ const Func& loc() {
   return locVar;
 }
 
+const Func& simitClock() {
+  if (!simitClockVar.defined()) {
+    simitClockInit();
+  }
+  return simitClockVar;
+}
+
+const Func& simitStoreTime() {
+  if (!simitStoreTimeVar.defined()) {
+    simitStoreTimeInit();
+  }
+  return simitStoreTimeVar;
+}
+
+
 const std::map<std::string,Func> &byNames() {
   static std::map<std::string,Func> byNameMap;
   if (byNameMap.size() == 0) {
@@ -287,6 +320,8 @@ const std::map<std::string,Func> &byNames() {
     detInit();
     invInit();
     solveInit();
+    simitClockInit();
+    simitStoreTimeInit();
     byNameMap.insert({{"mod",modVar},
                       {"sin",sinVar},
                       {"cos",cosVar},
@@ -302,7 +337,9 @@ const std::map<std::string,Func> &byNames() {
                       {"dot",dotVar},
                       {"det",detVar},
                       {"inv",invVar},
-                      {"solve",solveVar}});
+                      {"solve",solveVar},
+                      {"simitClock",simitClockVar},
+                      {"simitStoreTime",simitStoreTimeVar}});
   }
   return byNameMap;
 }

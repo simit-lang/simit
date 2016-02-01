@@ -41,7 +41,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   ScalarType tensorCType = type->getComponentType();
   Type workspaceType = TensorType::make(tensorCType, workspaceDomains);
 
-  workspace = Var("workspace", workspaceType);
+  workspace = env->createTemporary(workspaceType, "@workspace");
   env->addTemporary(workspace);
   storage->add(workspace, TensorStorage::Kind::Dense);
 

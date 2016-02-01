@@ -1,0 +1,167 @@
+%%% global-var-decl
+var t : int;
+const c : int = 1;
+
+%%% tuple-field
+element E
+  t : int;
+  v : (int * 2);
+end
+
+%%% bad-func-decl
+func foo
+end
+proc bar
+end
+
+%%% inout-result
+func foo(i : int) -> (inout r : int)
+end
+
+%%% inout-extern
+extern inout i : int;
+
+%%% var-tuple
+proc main
+  var t : int;
+  var u : (int * 2);
+end
+
+%%% uninitialized-const
+const c : int;
+const d : int = 1;
+
+%%% bad-whiles
+proc main
+  while while
+  end
+  while while
+  end
+end
+
+%%% bad-do-whiles
+proc main
+  do
+    i = 1;
+  end while =
+  do
+    i = 1;
+  end while =
+end
+
+%%% bad-ifs
+proc main
+  if set
+  end
+  if int
+  end
+end
+
+%%% bad-elifs
+proc main
+  if true
+    i = 1;
+  elif =
+  elif set
+  end
+end
+
+%%% bad-if-elif
+proc main
+  if set
+  elif set
+  end
+end
+
+%%% bad-fors
+proc main
+  for i 1:2
+  end
+  for i 1:2
+  end
+end
+
+%%% bad-prints
+proc main
+  print ; 
+  print ; 
+end
+
+%%% bad-assign-1
+proc main
+  = 1;
+end
+
+%%% bad-assign-2
+proc
+  () = 1;
+end
+
+%%% bad-expr-1
+proc main
+  1 + * 2;
+end
+
+%%% bad-expr-2
+proc main
+  1 and or 2;
+end
+
+%%% bad-type
+func f(a : 1)
+end
+
+%%% bad-tensor-type-1
+proc main
+  var a : 1;
+end
+
+%%% bad-tensor-type-2
+proc main
+  var a : tensor(tensor);
+end
+
+%%% bad-vector-type-1
+proc main
+  var a : vector[2,2](int);
+end
+
+%%% bad-vector-type-2
+proc main
+  var a : vector[2](tensor[2,2](float));
+end
+
+%%% bad-matrix-type-1
+proc main
+  var a : matrix[2](int);
+end
+
+%%% bad-matrix-type-2
+proc main
+  var a : matrix[2,2](tensor[2](float));
+end
+
+%%% bad-set-type-1
+element E
+end
+
+extern A : set{1}; 
+
+%%% bad-set-type-2
+element E
+end
+
+extern A : set{E};
+extern B : set{E}(int);
+
+%%% bad-tuple-type
+element E
+end
+
+func f(a : (E * E))
+end
+
+%%% bad-tensor-lit
+proc main
+  v = [1 2[;
+end

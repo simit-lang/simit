@@ -1,64 +1,3 @@
-# Parser and scanner
-set(SIMIT_PARSER_SOURCE_DIR ${SIMIT_SOURCE_DIR}/parser)
-include_directories ("${SIMIT_PARSER_SOURCE_DIR}")
-
-#add_definitions(-DWITH_EXCEPTIONS)
-
-SET(PARSER_INPUT   parser.ypp)
-SET(PARSER_HEADER  parser.h)
-SET(PARSER         parser.cpp)
-SET(SCANNER_INPUT  scanner.flex)
-SET(SCANNER_HEADER scanner.h)
-SET(SCANNER        scanner.cpp)
-
-if (DEFINED ENV{BISON_PATH})
-  set(BISON_FOUND 1)
-  set(BISON_EXECUTABLE $ENV{BISON_PATH})
-else()
-  FIND_PACKAGE(BISON 3.0.0)
-endif()
-
-if (BISON_FOUND)
-  if ($ENV{SIMIT_PARSER_DEBUG})
-    message("Warning: Parser files will have line directive absolute paths")
-    ADD_CUSTOM_COMMAND(
-      OUTPUT ${SIMIT_PARSER_SOURCE_DIR}/${PARSER}
-      COMMAND ${BISON_EXECUTABLE}
-              --defines=${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER}
-              --output=${SIMIT_PARSER_SOURCE_DIR}/${PARSER}
-              ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT}
-      MAIN_DEPENDENCY ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT}
-      COMMENT "Generating parser.cpp"
-    )
-  else()
-    ADD_CUSTOM_COMMAND(
-      OUTPUT ${SIMIT_PARSER_SOURCE_DIR}/${PARSER}
-      COMMAND ${BISON_EXECUTABLE}
-              --defines=${PARSER_HEADER}
-              --output=${PARSER}
-              --no-lines
-              ${PARSER_INPUT}
-      MAIN_DEPENDENCY ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT}
-      WORKING_DIRECTORY ${SIMIT_PARSER_SOURCE_DIR}
-      COMMENT "Generating parser.cpp"
-    )
-  endif()
-endif()
-
-FIND_PACKAGE(FLEX 2.5.37 EXACT)
-IF(FLEX_FOUND)
-  ADD_CUSTOM_COMMAND(
-    OUTPUT ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER}
-    COMMAND ${FLEX_EXECUTABLE}
-            --outfile=${SCANNER}
-            ${SCANNER_INPUT}
-    MAIN_DEPENDENCY ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_INPUT}
-    WORKING_DIRECTORY ${SIMIT_PARSER_SOURCE_DIR}
-    COMMENT "Generating scanner.cpp"
-  )
-ENDIF()
-
-
 # Simit
 set(SIMIT_SOURCE_DIRS . util)
 
@@ -67,16 +6,17 @@ foreach(dir ${SIMIT_SOURCE_DIRS})
   file(GLOB SIMIT_SOURCES ${SIMIT_SOURCES} ${dir}/*.cpp)
 endforeach()
 
-set(SIMIT_HEADERS ${SIMIT_HEADERS} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_HEADER} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_HEADER})
-set(SIMIT_SOURCES ${SIMIT_SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER}  ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER})
+set(SIMIT_HEADERS ${SIMIT_HEADERS})
+set(SIMIT_SOURCES ${SIMIT_SOURCES})
 
 add_subdirectory(backend)
+add_subdirectory(frontend)
 add_subdirectory(lower)
 add_subdirectory(visualizer)
 
 add_definitions(${SIMIT_DEFINITIONS})
 include_directories(${SIMIT_INCLUDE_DIRS})
-add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${SIMIT_HEADERS} ${SIMIT_SOURCES} ${SIMIT_PARSER_SOURCE_DIR}/${PARSER_INPUT} ${SIMIT_PARSER_SOURCE_DIR}/${SCANNER_INPUT})
+add_library(${PROJECT_NAME} ${SIMIT_LIBRARY_TYPE} ${SIMIT_HEADERS} ${SIMIT_SOURCES})
 target_link_libraries(${PROJECT_NAME} ${SIMIT_LIBRARIES})
 
 

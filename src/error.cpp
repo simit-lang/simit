@@ -1,3 +1,5 @@
+#include <iostream>
+
 #include "error.h"
 
 using namespace std;
@@ -16,8 +18,17 @@ ParseError::~ParseError() {
 }
 
 std::string ParseError::toString() const {
-  return "Error: " + msg + " at " + to_string(firstLine) + ":" +
-         to_string(firstColumn) + "\n";
+  std::stringstream oss;
+  oss << "Error: " << msg << ", at " << to_string(firstLine) << ":" 
+      << to_string(firstColumn);
+  if (firstLine != lastLine || firstColumn != lastColumn) {
+    oss << "-";
+    if (firstLine != lastLine) {
+      oss << to_string(lastLine) << ":";
+    }
+    oss << lastColumn;
+  }
+  return oss.str();
 }
 
 // class Diagnostics

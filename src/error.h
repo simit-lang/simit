@@ -26,6 +26,10 @@ public:
   friend std::ostream &operator<<(std::ostream &os, const ParseError &obj) {
     return os << obj.toString();
   }
+  bool operator<(const ParseError &rhs) const {
+    return ((firstLine < rhs.firstLine) || 
+           ((firstLine == rhs.firstLine) && (firstColumn < rhs.firstColumn)));
+  }
 
 private:
   int firstLine;
@@ -186,6 +190,10 @@ struct ErrorReport {
   struct Dummy {
     template<typename T>
     Dummy &operator<<(T x) {
+      return *this;
+    }
+    // Support for manipulators, such as std::endl
+    Dummy &operator<<(std::ostream& (*manip)(std::ostream&)) {
       return *this;
     }
   };

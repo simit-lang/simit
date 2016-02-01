@@ -1,6 +1,7 @@
 #include "lower.h"
 
 #include <map>
+#include <fstream>
 
 #include "lower_maps.h"
 #include "index_expressions/lower_index_expressions.h"
@@ -9,6 +10,7 @@
 #include "lower_prints.h"
 
 #include "storage.h"
+#include "timers.h"
 #include "temps.h"
 #include "flatten.h"
 #include "ir_rewriter.h"
@@ -60,6 +62,13 @@ void visitCallGraph(Func func, const function<void(Func)>& visitRule) {
   };
   Visitor visitor(visitRule);
   func.accept(&visitor);
+}
+
+static inline
+void timingCallGraph(string headerText, Func func, bool print) {
+  stringstream ss;
+  simit::ir::IRPrinterCallGraph(ss).print(func);
+  TimerStorage::getInstance().addSourceLines(ss);
 }
 
 static inline
@@ -116,7 +125,7 @@ Func lower(Func func, bool print) {
   // Lower Tensor Reads and Writes
   func = rewriteCallGraph(func, lowerTensorAccesses);
   printCallGraph("Lower Tensor Reads and Writes", func, print);
-
+  
   // Lower to GPU Kernels
 #if GPU
   if (kBackend == "gpu") {
@@ -132,6 +141,14 @@ Func lower(Func func, bool print) {
     printCallGraph("Fuse Kernels", func, print);
   }
 #endif
+  return func;
+}
+
+Func lowerWithTimers(Func func, bool print) {
+  // Include Timers 
+  timingCallGraph("Insert Timers", func, print);
+  func = rewriteCallGraph(func, insertTimers);
+  printCallGraph("Insert Timers", func, print);
   return func;
 }
 

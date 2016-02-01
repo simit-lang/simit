@@ -114,7 +114,8 @@ inline const S* to(Stmt s) {
 // Type compute functions
 Type getFieldType(Expr elementOrSet, std::string fieldName);
 Type getBlockType(Expr tensor);
-Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr);
+Type getIndexExprType(std::vector<IndexVar> lhsIndexVars, Expr expr, 
+                      bool isColumnVector);
 
 
 /// CompoundOperator used with AssignStmt, TensorWrite, FieldWrite and Store.
@@ -465,7 +466,8 @@ struct IndexExpr : public ExprNode {
   Expr value;
   std::vector<IndexVar> domain() const;
 
-  static Expr make(std::vector<IndexVar> resultVars, Expr value);
+  static Expr make(std::vector<IndexVar> resultVars, Expr value, 
+                   bool isColumnVector = false);
   void accept(IRVisitorStrict *v) const {v->visit((const IndexExpr*)this);}
 };
 

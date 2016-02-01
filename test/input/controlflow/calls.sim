@@ -10,22 +10,22 @@ end
 
 %%% call-vector
 %! caller([1.0, 2.0]) == [9.0, 12.0];
-func callee(c : tensor[2](float)) -> (d : tensor[2](float))
+func callee(c : tensor[2](float)') -> (d : tensor[2](float)')
   d = c + [5.0, 6.0];
 end
 
-func caller(a : tensor[2](float)) -> (b : tensor[2](float))
+func caller(a : tensor[2](float)') -> (b : tensor[2](float)')
   b = callee(a) + [3.0, 4.0];
 end
 
 %%% call-two-results
 %! caller([1.0, 2.0]) == [8.0, 3.0]; 
-func callee(c : tensor[2](float)) -> (d : float, e : float)
+func callee(c : tensor[2](float)') -> (d : float, e : float)
   d = c(0) * 3.0;
   e = c(1) * 4.0;
 end
 
-func caller(a : tensor[2](float)) -> (b : tensor[2](float))
+func caller(a : tensor[2](float)') -> (b : tensor[2](float)')
   f, g = callee(a);
   b(0) = g;
   b(1) = f;
@@ -33,14 +33,29 @@ end
 
 %%% call-no-results
 %! caller([1.0, 2.0]) == [12.0, 10.0];
-func callee(inout c : tensor[2](float))
+func callee(inout c : tensor[2](float)')
   c(0) = c(0) * 3.0;
 end
 
-func caller(a : tensor[2](float)) -> (b : tensor[2](float))
-  callee(a);
-  b(0) = a(0) * 4.0;
-  b(1) = a(1) * 5.0;
+func caller(a : tensor[2](float)') -> (b : tensor[2](float)')
+  d = a;
+  callee(d);
+  b(0) = d(0) * 4.0;
+  b(1) = d(1) * 5.0;
+end
+
+%%% call-unused-result
+%! caller(1) == 2;
+func callee(inout c : tensor[1](int)) -> (d : int)
+  d = c(0);
+  c(0) = c(0) + 1;
+end
+
+func caller(a : int) -> (b : int)
+  var t : tensor[1](int);
+  t(0) = a;
+  callee(t);
+  b = t(0);
 end
 
 %%% call-tree
@@ -55,4 +70,23 @@ end
 
 func caller(a : int) -> (b : int)
   b = f1(1) + f2(1);
+end
+
+%%% call-in-chained-eq
+%! caller(0) == 0;
+%! caller(1) == 1;
+%! caller(2) == 0;
+func callee(inout c : tensor[1](int)) -> (d : int)
+  d = c(0);
+  c(0) = c(0) + 1;
+end
+
+func caller(a : int) -> (b : int)
+  var t : tensor[1](int);
+  t(0) = a;
+  if 0 < callee(t) < 2
+    b = 1;
+  else
+    b = 0;
+  end
 end
