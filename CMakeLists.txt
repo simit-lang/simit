@@ -61,7 +61,7 @@ else()
   set(C_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-unused-local-typedef -Wno-missing-field-initializers -Wmissing-declarations -Woverloaded-virtual -pedantic-errors -Wno-deprecated")
 endif()
 set(CMAKE_C_FLAGS "${C_CXX_FLAGS}")
-set(CMAKE_CXX_FLAGS "${C_CXX_FLAGS} -std=c++11 -fopenmp")
+set(CMAKE_CXX_FLAGS "${C_CXX_FLAGS} -std=c++11")
 
 set(SIMIT_SOURCE_DIR    ${CMAKE_CURRENT_LIST_DIR}/src)
 set(SIMIT_TEST_DIR      ${CMAKE_CURRENT_LIST_DIR}/test)
