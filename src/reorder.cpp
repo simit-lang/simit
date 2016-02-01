@@ -166,8 +166,6 @@ namespace simit {
       const int hilbertBits = 8;  
       loadNodes(vertexSet, &nodes, cntNodes);
 
-      //assignBfsIds(nodes, cntNodes);
-      //assignRandomIds(nodes, cntNodes);
       assignHilbertIds(nodes, cntNodes, hilbertBits);
 
       stable_sort(nodes, nodes + cntNodes, vertexComparator);
@@ -445,45 +443,18 @@ namespace simit {
     iassert(vertexOrdering.size() == 0);
     
     // Get new vertex ordering based on given heuristic 
-    auto start = clock(); 
     hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
-    auto end  = clock(); 
-    cout << "Hilbert reorder took:    " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
-    
-    // int* endpoints = edgeSet.getEndpointsPtr();
-    // auto size = edgeSet.getSize();
-    // auto cardinality = edgeSet.getCardinality();
-    // for (int i=0; i < size; ++i) {
-    //   cout << i;
-    //   for (int j=0; j < cardinality; ++j) {
-    //     cout << " : " <<  endpoints[i*cardinality + j];
-    //   }
-    //   cout << endl;
-    // }
-    start = clock();
-    // hilbert::hilbertReorder(edgeSet, edgeOrdering, edgeSet.getSize());
-    //edgeSumReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
     edgeVertexSortReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
+    
     iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
     reorderEdgeSet(edgeSet, edgeOrdering);
-    end = clock();
-    // cout << "Edge reorder took:       " << double(end - start)/ CLOCKS_PER_SEC << " seconds" << endl;
-    // for (int i=0; i < size; ++i) {
-    //   cout << i;
-    //   for (int j=0; j < cardinality; ++j) {
-    //     cout << " : " <<  endpoints[i*cardinality + j];
-    //   }
-    //   cout << endl;
-    // }
   }
   
   void reorder(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
     iassert(vertexOrdering.size() == 0);
     
-    // Get new vertex ordering based on given heuristic 
-    // bfs(vertexOrdering, edgeSet.getEndpointsPtr(), vertexSet.getSize(), edgeSet.getCardinality());
     hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
