@@ -184,7 +184,7 @@ struct TensorType : public Type {
 };
 
 struct ScalarType : public TensorType {
-  enum class Type {INT, FLOAT, BOOL};
+  enum class Type {INT, FLOAT, BOOL, STRING};
 
   Type type;
   
@@ -770,6 +770,16 @@ struct BoolLiteral : public TensorLiteral {
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<BoolLiteral>(shared_from_this()));
+  }
+};
+
+struct StringLiteral : public TensorLiteral {
+  std::string val;
+  
+  typedef std::shared_ptr<StringLiteral> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<StringLiteral>(shared_from_this()));
   }
 };
 

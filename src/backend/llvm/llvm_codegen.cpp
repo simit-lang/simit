@@ -63,6 +63,8 @@ llvm::Constant* llvmVal(const TensorType& type, const void *data) {
       }
     case ScalarType::Boolean:
       return llvmBool(static_cast<const bool*>(data)[0]);
+    case ScalarType::String:
+      break;
   }
   ierror;
   return nullptr;

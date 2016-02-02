@@ -68,6 +68,7 @@ public:
   virtual void visit(IntLiteral::Ptr op) { node = op; }
   virtual void visit(FloatLiteral::Ptr op) { node = op; }
   virtual void visit(BoolLiteral::Ptr op) { node = op; }
+  virtual void visit(StringLiteral::Ptr op) { node = op; }
   virtual void visit(IntVectorLiteral::Ptr op) { node = op; }
   virtual void visit(FloatVectorLiteral::Ptr op) { node = op; }
   virtual void visit(NDTensorLiteral::Ptr);

@@ -77,6 +77,7 @@ private:
   hir::NDTensorType::Ptr           parseVectorBlockType();
   hir::NDTensorType::Ptr           parseMatrixBlockType();
   hir::NDTensorType::Ptr           parseTensorBlockType();
+  hir::ScalarType::Ptr             parseTensorComponentType();
   hir::ScalarType::Ptr             parseScalarType();
   std::vector<hir::IndexSet::Ptr>  parseIndexSets();
   hir::IndexSet::Ptr               parseIndexSet();

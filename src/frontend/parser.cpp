@@ -1078,6 +1078,7 @@ hir::TensorType::Ptr Parser::parseTensorType() {
     case Token::Type::INT:
     case Token::Type::FLOAT:
     case Token::Type::BOOL:
+    case Token::Type::STRING:
       return parseScalarType();
     case Token::Type::MATRIX:
       return parseMatrixBlockType();
@@ -1099,7 +1100,8 @@ hir::TensorType::Ptr Parser::parseTensorType() {
 }
 
 // vector_block_type:
-//     'vector' ['[' index_set ']'] '(' (vector_block_type | scalar_type) ')'
+//     'vector' ['[' index_set ']'] 
+//     '(' (vector_block_type | tensor_component_type) ')'
 hir::NDTensorType::Ptr Parser::parseVectorBlockType() {
   auto tensorType = std::make_shared<hir::NDTensorType>();
   tensorType->transposed = false;
@@ -1128,7 +1130,7 @@ hir::NDTensorType::Ptr Parser::parseVectorBlockType() {
 
 // matrix_block_type:
 //     'matrix' ['[' index_set ',' index_set ']'] 
-//     '(' (matrix_block_type | scalar_type) ')'
+//     '(' (matrix_block_type | tensor_component_type) ')'
 hir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
   auto tensorType = std::make_shared<hir::NDTensorType>();
   tensorType->transposed = false;
@@ -1160,7 +1162,8 @@ hir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
 }
 
 // tensor_block_type:
-//     'tensor' ['[' index_sets ']'] '(' (tensor_block_type | scalar_type) ')'
+//     'tensor' ['[' index_sets ']'] 
+//     '(' (tensor_block_type | tensor_component_type) ')'
 hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   auto tensorType = std::make_shared<hir::NDTensorType>();
   tensorType->transposed = false;
@@ -1186,8 +1189,8 @@ hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   return tensorType;
 }
 
-// scalar_type: 'int' | 'float' | 'bool'
-hir::ScalarType::Ptr Parser::parseScalarType() {
+// tensor_component_type: 'int' | 'float' | 'bool'
+hir::ScalarType::Ptr Parser::parseTensorComponentType() {
   auto scalarType = std::make_shared<hir::ScalarType>();
 
   scalarType->setLoc(peek());
@@ -1207,12 +1210,26 @@ hir::ScalarType::Ptr Parser::parseScalarType() {
     case Token::Type::STRING:
       // TODO: Implement.
     default:
-      reportError(peek(), "a tensor type identifier");
+      reportError(peek(), "a tensor component type identifier");
       throw SyntaxError();
       break;
   }
 
   return scalarType;
+}
+
+hir::ScalarType::Ptr Parser::parseScalarType() {
+  if (peek().type == Token::Type::STRING) {
+    auto stringType = std::make_shared<hir::ScalarType>();
+    
+    const Token stringToken = consume(Token::Type::STRING);
+    stringType->setLoc(stringToken);
+    stringType->type = hir::ScalarType::Type::STRING;
+    
+    return stringType;
+  }
+
+  return parseTensorComponentType();
 }
 
 // index_sets: index_set {',' index_set}
@@ -1319,11 +1336,20 @@ hir::Expr::Ptr Parser::parseTensorLiteral() {
       literal = falseLiteral;
       break;
     }
+    case Token::Type::STRING_LITERAL:
+    {
+      auto stringLiteral = std::make_shared<hir::StringLiteral>();
+
+      const Token stringToken = consume(Token::Type::STRING_LITERAL);
+      stringLiteral->setLoc(stringToken);
+      stringLiteral->val = stringToken.str;
+
+      literal = stringLiteral;
+      break;
+    }
     case Token::Type::LB:
       literal = parseDenseTensorLiteral();
       break;
-    case Token::Type::STRING_LITERAL:
-      // TODO: Implement.
     default:
       reportError(peek(), "a tensor literal");
       throw SyntaxError();

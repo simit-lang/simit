@@ -136,6 +136,7 @@ struct Literal : public ExprNode {
   static Expr make(int val);
   static Expr make(double val);
   static Expr make(bool val);
+  static Expr make(std::string val);
   static Expr make(Type type, void* values);
   static Expr make(Type type, std::vector<double> values);
   ~Literal();
@@ -398,7 +399,6 @@ struct Block : public StmtNode {
 
 struct Print : public StmtNode {
   Expr expr;
-  std::string str;
   std::string format;
   static Stmt make(Expr expr, std::string format="");
   static Stmt make(std::string str);

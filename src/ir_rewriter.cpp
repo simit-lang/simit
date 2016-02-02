@@ -350,15 +350,11 @@ void IRRewriter::visit(const Block *op) {
 }
 
 void IRRewriter::visit(const Print *op) {
-  if (op-expr.defined()) {
-    Expr expr = rewrite(op->expr);
-    if (expr == op->expr) {
-      stmt = op;
-    } else {
-      stmt = Print::make(expr, op->format);
-    }
-  } else {
+  Expr expr = rewrite(op->expr);
+  if (expr == op->expr) {
     stmt = op;
+  } else {
+    stmt = Print::make(expr, op->format);
   }
 }
 

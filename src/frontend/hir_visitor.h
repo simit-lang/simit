@@ -66,6 +66,7 @@ struct VarExpr;
 struct IntLiteral;
 struct FloatLiteral;
 struct BoolLiteral;
+struct StringLiteral;
 struct IntVectorLiteral;
 struct FloatVectorLiteral;
 struct NDTensorLiteral;
@@ -130,6 +131,7 @@ public:
   virtual void visit(std::shared_ptr<IntLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatLiteral> op) {}
   virtual void visit(std::shared_ptr<BoolLiteral> op) {}
+  virtual void visit(std::shared_ptr<StringLiteral> op) {}
   virtual void visit(std::shared_ptr<IntVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<NDTensorLiteral>);

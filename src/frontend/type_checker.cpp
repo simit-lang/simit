@@ -132,6 +132,9 @@ void TypeChecker::visit(ScalarType::Ptr type) {
     case ScalarType::Type::BOOL:
       retIRType = ir::Boolean;
       break;
+    case ScalarType::Type::STRING:
+      retIRType = ir::String;
+      break;
     default:
       unreachable;
       break;
@@ -1275,6 +1278,11 @@ void TypeChecker::visit(FloatLiteral::Ptr lit) {
 void TypeChecker::visit(BoolLiteral::Ptr lit) {
   retType = std::make_shared<Expr::Type>();
   retType->push_back(ir::Boolean);
+}
+
+void TypeChecker::visit(StringLiteral::Ptr lit) {
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(ir::String);
 }
 
 void TypeChecker::visit(IntVectorLiteral::Ptr lit) {

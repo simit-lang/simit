@@ -124,19 +124,8 @@ class InsertTemporaries : public IRRewriter {
   }
 
   void visit(const Print *op) {
-    if (!op->expr.defined()) {
-      stmt = op;
-      return;
-    }
-
-    std::stringstream oss;
-    std::string exprLabel;
-
-    oss << op->expr;
-    exprLabel = oss.str() + " = \n";
-
     if (isa<VarExpr>(op->expr)) {
-      stmt = Block::make(Print::make(exprLabel), Print::make(op->expr));
+      stmt = op;
       return;
     }
 
@@ -145,7 +134,6 @@ class InsertTemporaries : public IRRewriter {
 
     std::vector<Stmt> stmts;
     stmts.push_back(flattenIndexExpressions(AssignStmt::make(tmp, val)));
-    stmts.push_back(Print::make(exprLabel));
     stmts.push_back(Print::make(tmp));
 
     stmt = Block::make(stmts);

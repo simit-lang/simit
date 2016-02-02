@@ -7,6 +7,7 @@
 #include "inline.h"
 #include "path_expressions.h"
 #include "tensor_index.h"
+#include "types.h"
 #include "index_expressions/loops.h"
 #include "util/name_generator.h"
 #include "util/util.h"
@@ -372,13 +373,9 @@ private:
     Expr tensorExpr = op->expr;
 
     // If printing string, no lowering needed.
-    if (!tensorExpr.defined()) {
-      stmt = Print::make(op->str);
-      return;
-    }
-
-    iassert(tensorExpr.type().isTensor());
-    stmt = Block::make(printTensor(tensorExpr, 1), printNewline);
+    const auto componentType = tensorExpr.type().toTensor()->getComponentType();
+    stmt = (componentType == ScalarType::String) ? op : 
+           Block::make(printTensor(tensorExpr, 1), printNewline);
   }
   
   void visit(const Func* f) {

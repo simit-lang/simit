@@ -162,7 +162,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
       symtable.insert(global.first, compile(global.second));
     }
 
-    // LLVM does not de-allocate any stack memory until a functoin returns, so
+    // LLVM does not de-allocate any stack memory until a function returns, so
     // we must make sure to not allocate stack memory inside a loop. To do this
     // we move all the var decls to the front of the function body
     Stmt body = moveVarDeclsToFront(f.getBody());
@@ -292,6 +292,12 @@ void LLVMBackend::compile(const ir::Literal& literal) {
         val = llvm::ConstantInt::get(LLVM_BOOL, llvm::APInt(1, data, false));
         break;
       }
+      case ScalarType::String: {
+        iassert(ctype.bytes() == sizeof(char));
+        std::string data((const char *)literal.data);
+        val = emitGlobalString(data);
+        break;
+      }
       default: unreachable;
     }
   }
@@ -314,21 +320,26 @@ void LLVMBackend::compile(const ir::VarExpr& varExpr) {
 
   // Globals are stored as pointer-pointers so we must load them
   if (util::contains(globals, varExpr.var)) {
-      val = builder->CreateLoad(val, ptrName);
-      // Cast non-generic address spaces into generic
-      if (val->getType()->isPointerTy() &&
-          val->getType()->getPointerAddressSpace() != 0) {
-        llvm::Type* eltTy = val->getType()->getPointerElementType();
-        val = builder->CreateAddrSpaceCast(val, eltTy->getPointerTo(0));
-      }
+    val = builder->CreateLoad(val, ptrName);
+    // Cast non-generic address spaces into generic
+    if (val->getType()->isPointerTy() &&
+        val->getType()->getPointerAddressSpace() != 0) {
+      llvm::Type* eltTy = val->getType()->getPointerElementType();
+      val = builder->CreateAddrSpaceCast(val, eltTy->getPointerTo(0));
+    }
   }
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
   // in which case we must load the value.  This case arises because we keep
   // many scalars on the stack.  An exceptions to this are loop variables,
   // which is why we can't assume Simit scalars are always kept on the stack.
-  if (isScalar(varExpr.type) && val->getType()->isPointerTy()) {
-    val = builder->CreateLoad(val, valName);
+  //if (isScalar(varExpr.type) && val->getType()->isPointerTy()) {
+  if (isScalar(varExpr.type)) {
+    iassert(!isString(varExpr.type) || val->getType()->isPointerTy());
+    if (val->getType()->isPointerTy() && (!isString(varExpr.type) || 
+        val->getType()->getContainedType(0)->isPointerTy())) {
+      val = builder->CreateLoad(val, valName);
+    }
   }
 }
 
@@ -508,7 +519,8 @@ void LLVMBackend::compile(const ir::Neg& negExpr) {
       val = builder->CreateFNeg(a);
       break;
     case ScalarType::Boolean:
-      iassert(false) << "Cannot negate a boolean value.";
+    case ScalarType::String:
+      iassert(false) << "Cannot negate a boolean or string value.";
   }
 }
 
@@ -526,7 +538,8 @@ void LLVMBackend::compile(const ir::Add& addExpr) {
       val = builder->CreateFAdd(a, b);
       break;
     case ScalarType::Boolean:
-      ierror << "Cannot add boolean values.";
+    case ScalarType::String:
+      ierror << "Cannot add boolean or string values.";
       break;
   }
 }
@@ -545,7 +558,8 @@ void LLVMBackend::compile(const ir::Sub& subExpr) {
       val = builder->CreateFSub(a, b);
       break;
     case ScalarType::Boolean:
-      iassert(false) << "Cannot subtract boolean values.";
+    case ScalarType::String:
+      iassert(false) << "Cannot subtract boolean or string values.";
   }
 }
 
@@ -563,7 +577,8 @@ void LLVMBackend::compile(const ir::Mul& mulExpr) {
       val = builder->CreateFMul(a, b);
       break;
     case ScalarType::Boolean:
-      iassert(false) << "Cannot multiply boolean values.";
+    case ScalarType::String:
+      iassert(false) << "Cannot multiply boolean or string values.";
   }
 }
 
@@ -583,7 +598,8 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
       val = builder->CreateFDiv(a, b);
       break;
     case ScalarType::Boolean:
-      iassert(false) << "Cannot divide boolean values.";
+    case ScalarType::String:
+      iassert(false) << "Cannot divide boolean or string values.";
   }
 }
 
@@ -1118,11 +1134,6 @@ void LLVMBackend::compile(const ir::While& whileLoop) {
 void LLVMBackend::compile(const ir::Print& print) {
   std::vector<llvm::Value*> args;
   
-  if (!print.expr.defined()) {
-    emitPrintf(print.str, args);
-    return;
-  }
-
   llvm::Value *result = compile(print.expr);
   Type type = print.expr.type();
 
@@ -1130,12 +1141,17 @@ void LLVMBackend::compile(const ir::Print& print) {
 
   const TensorType *tensor = type.toTensor();
   ScalarType scalarType = tensor->getComponentType();
-  std::string specifier = std::string("%") + print.format +
-                          (scalarType.kind == ScalarType::Float? "g" : "d");
 
-  std::string format = specifier;
-  args.push_back(result);
-  emitPrintf(format, args);
+  if (scalarType == ScalarType::String) {
+    emitPrintf(result, {});
+  } else {
+    std::string specifier = std::string("%") + print.format +
+                            (scalarType.kind == ScalarType::Float? "g" : "d");
+
+    std::string format = specifier;
+    args.push_back(result);
+    emitPrintf(format, args);
+  }
 }
 
 
@@ -1355,8 +1371,7 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
   return llvmFunc;
 }
 
-void LLVMBackend::emitPrintf(std::string format,
-                             std::vector<llvm::Value*> args) {
+void LLVMBackend::emitPrintf(llvm::Value *str, std::vector<llvm::Value*> args) {
   llvm::Function *printfFunc = module->getFunction("printf");
   if (printfFunc == nullptr) {
     std::vector<llvm::Type*> printfArgTypes;
@@ -1370,8 +1385,6 @@ void LLVMBackend::emitPrintf(std::string format,
     printfFunc->setCallingConv(llvm::CallingConv::C);
   }
 
-  llvm::Value *str = emitGlobalString(format);
-
   std::vector<llvm::Value*> printfArgs;
   for (size_t i = 0; i < args.size(); i++) {
     // printf requires float varargs be promoted to doubles!
@@ -1383,6 +1396,11 @@ void LLVMBackend::emitPrintf(std::string format,
   printfArgs.insert(printfArgs.end(), args.begin(), args.end());
 
   builder->CreateCall(printfFunc, printfArgs);
+}
+
+void LLVMBackend::emitPrintf(std::string format,
+                             std::vector<llvm::Value*> args) {
+  emitPrintf(emitGlobalString(format), args);
 }
 
 void LLVMBackend::emitGlobals(const ir::Environment& env) {

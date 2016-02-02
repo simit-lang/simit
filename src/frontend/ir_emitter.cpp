@@ -72,6 +72,9 @@ void IREmitter::visit(ScalarType::Ptr type) {
     case ScalarType::Type::BOOL:
       retType = ir::Boolean;
       break;
+    case ScalarType::Type::STRING:
+      retType = ir::String;
+      break;
     default:
       unreachable;
       break;
@@ -616,6 +619,10 @@ void IREmitter::visit(FloatLiteral::Ptr lit) {
 }
 
 void IREmitter::visit(BoolLiteral::Ptr lit) {
+  retExpr = ir::Literal::make(lit->val);
+}
+
+void IREmitter::visit(StringLiteral::Ptr lit) {
   retExpr = ir::Literal::make(lit->val);
 }
 

@@ -38,6 +38,8 @@ syn match simitSemicolon          ";"
 syn match simitComment            "%.*$" contains=simitTodo,simitTab
 syn region simitBlockComment      start=+%{+    end=+%}+ contains=simitBlockComment
 
+syn region simitString start=+\v"+ skip=+\v\\.+ end=+\v"+
+
 " linear algebra
 syn keyword simitFunc     norm cross dot trace eye      
 " trig
@@ -71,6 +73,7 @@ if version >= 508 || !exists("did_simit_syntax_inits")
   HiLink simitSemicolon          SpecialChar
   HiLink simitComment            Comment
   HiLink simitBlockComment       Comment
+  HiLink simitString             String
   HiLink simitBoolean            Boolean
   HiLink simitStorageClass       StorageClass
 

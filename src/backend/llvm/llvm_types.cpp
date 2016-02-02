@@ -102,6 +102,8 @@ llvm::Type* llvmType(ScalarType stype) {
       return llvmFloatType();
     case ScalarType::Boolean:
       return LLVM_BOOL;
+    case ScalarType::String:
+      return LLVM_INT8_PTR;
   }
   unreachable;
   return nullptr;
@@ -124,6 +126,8 @@ llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
       return llvmFloatPtrType(addrspace);
     case ScalarType::Boolean:
       return llvm::Type::getInt1PtrTy(LLVM_CTX, addrspace);
+    case ScalarType::String:
+      break;
   }
   unreachable;
   return nullptr;

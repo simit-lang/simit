@@ -146,7 +146,10 @@ protected:
   /// and in `symtable` appropriately.
   virtual void emitGlobals(const ir::Environment& env);
 
-  virtual void emitPrintf(std::string format, std::vector<llvm::Value*> args={});
+  virtual void emitPrintf(llvm::Value *str, 
+                          std::vector<llvm::Value*> args={});
+  virtual void emitPrintf(std::string format, 
+                          std::vector<llvm::Value*> args={});
 
   /// Emit a memcpy instruction
   virtual void emitMemCpy(llvm::Value *dst, llvm::Value *src,

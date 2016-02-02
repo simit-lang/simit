@@ -36,7 +36,11 @@ ComponentType convert(ScalarType scalarType) {
       return ComponentType::Int;
     case ScalarType::Boolean:
       return ComponentType::Boolean;
+    case ScalarType::String:
+      break;
   }
+  unreachable;
+  return ComponentType::Int;
 }
 
 vector<IndexDomain> getUnblockedDimensions(const simit::TensorType &tensorType){

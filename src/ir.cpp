@@ -211,6 +211,16 @@ Expr Literal::make(bool val) {
   return make(Boolean, &val);
 }
 
+Expr Literal::make(std::string val) {
+  Literal *node = new Literal;
+  node->type = String;
+  node->size = sizeof(char) * (val.length() + 1);
+  node->data = malloc(node->size);
+  val.copy((char *)node->data, val.length());
+  ((char *)(node->data))[node->size - 1] = '\0';
+  return node;
+}
+
 Expr Literal::make(Type type, void* values) {
   iassert(type.isTensor()) << "only tensor literals are supported for now";
   const TensorType *ttype = type.toTensor();
@@ -257,6 +267,8 @@ Expr Literal::make(Type type, void* values) {
           util::zero<double>(node->data, size);
         }
         break;
+      case ir::ScalarType::String:
+        unreachable;
     }
   }
   return node;
@@ -312,6 +324,9 @@ bool operator==(const Literal& l, const Literal& r) {
     }
     case ir::ScalarType::Boolean: {
       return util::compare<bool>(l.data, r.data, size);
+    }
+    case ir::ScalarType::String: {
+      return (std::strcmp((const char *)l.data, (const char *)r.data) == 0);
     }
   }
   return true;
@@ -721,9 +736,7 @@ Stmt Print::make(Expr expr, std::string format) {
 }
 
 Stmt Print::make(std::string str) {
-  Print *node = new Print;
-  node->str = str;
-  return node;
+  return Print::make(Literal::make(str));
 }
 
 // struct Comment
