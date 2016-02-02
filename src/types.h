@@ -66,7 +66,7 @@ private:
 };
 
 struct ScalarType {
-  enum Kind {Float, Int, Boolean};
+  enum Kind {Float, Int, Boolean, Complex};
 
   ScalarType() : kind(Int) {}
   ScalarType(Kind kind) : kind(kind) {}
@@ -88,6 +88,10 @@ struct ScalarType {
     else if (isBoolean()) {
       return (unsigned int)sizeof(bool);
     }
+    else if (isComplex()) {
+      // Use the precision defined by floatBytes
+      return floatBytes*2;
+    }
     else {
       iassert(isFloat());
       return floatBytes;
@@ -97,7 +101,10 @@ struct ScalarType {
   bool isInt () const { return kind == Int; }
   bool isFloat() const { return kind == Float; }
   bool isBoolean() const { return kind == Boolean; }
-  bool isNumeric() const { return kind == Int || kind == Float; }
+  bool isComplex() const { return kind == Complex; }
+  bool isNumeric() const {
+    return kind == Int || kind == Float || kind == Complex;
+  }
 };
 
 /** Helper to convert from C++ type to Simit Type. */
@@ -120,6 +127,14 @@ template<> inline ScalarType typeOf<double>() {
 
 template<> inline ScalarType typeOf<bool>() {
   return ScalarType::Boolean;
+}
+
+template<> inline ScalarType typeOf<std::pair<float,float>>() {
+  return ScalarType::Complex;
+}
+
+template<> inline ScalarType typeOf<std::pair<double,double>>() {
+  return ScalarType::Complex;
 }
 
 
@@ -332,6 +347,7 @@ std::ostream& operator<<(std::ostream&, const ArrayType&);
 const Type Int = TensorType::make(ScalarType(ScalarType::Int));
 const Type Float = TensorType::make(ScalarType(ScalarType::Float));
 const Type Boolean = TensorType::make(ScalarType(ScalarType::Boolean));
+const Type Complex = TensorType::make(ScalarType(ScalarType::Complex));
 
 }}
 

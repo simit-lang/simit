@@ -76,8 +76,10 @@ private:
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
+  virtual void visit(ComplexLiteral::Ptr);
   virtual void visit(IntVectorLiteral::Ptr);
   virtual void visit(FloatVectorLiteral::Ptr);
+  virtual void visit(ComplexVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
 
 private:
@@ -91,13 +93,14 @@ private:
   };
 
   struct DenseTensorType {
-    enum class Type {UNKNOWN, INT, FLOAT};
+    enum class Type {UNKNOWN, INT, FLOAT, COMPLEX};
 
     DenseTensorType() : dimSizes(1), type(Type::UNKNOWN) {};
 
     void addDimension() { dimSizes.push_back(1); }
     void addIntValues(unsigned);
     void addFloatValues(unsigned);
+    void addComplexValues(unsigned);
     void merge(const DenseTensorType &);
 
     std::vector<unsigned> dimSizes;

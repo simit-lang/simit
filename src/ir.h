@@ -50,6 +50,7 @@ public:
 
   Expr(int val);
   Expr(double val);
+  Expr(std::pair<double,double> val);
 
   Type type() const {return static_cast<const ExprNode*>(ptr)->type;}
 
@@ -136,6 +137,7 @@ struct Literal : public ExprNode {
   static Expr make(int val);
   static Expr make(double val);
   static Expr make(bool val);
+  static Expr make(std::pair<double,double> val);
   static Expr make(Type type, void* values);
   static Expr make(Type type, std::vector<double> values);
   ~Literal();

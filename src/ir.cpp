@@ -29,11 +29,11 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node) {
 // class Expr
 Expr::Expr(const Var &var) : Expr(VarExpr::make(var)) {}
 
-Expr::Expr(int val) : IRHandle(Literal::make(val)) {
-}
+Expr::Expr(int val) : IRHandle(Literal::make(val)) {}
 
-Expr::Expr(double val) : IRHandle(Literal::make(val)) {
-}
+Expr::Expr(double val) : IRHandle(Literal::make(val)) {}
+
+Expr::Expr(std::pair<double,double> val) : IRHandle(Literal::make(val)) {}
 
 Expr Expr::operator()(const std::vector<IndexVar> &indexVars) const {
   return IndexedTensor::make(*this, indexVars);
@@ -211,6 +211,22 @@ Expr Literal::make(bool val) {
   return make(Boolean, &val);
 }
 
+Expr Literal::make(std::pair<double,double> val) {
+  // Choose appropriate precision
+  if (ScalarType::singleFloat()) {
+    float vals[2];
+    vals[0] = (float) val.first;
+    vals[1] = (float) val.second;
+    return make(Complex, vals);
+  }
+  else {
+    double vals[2];
+    vals[0] = val.first;
+    vals[1] = val.second;
+    return make(Complex, vals);
+  }
+}
+
 Expr Literal::make(Type type, void* values) {
   iassert(type.isTensor()) << "only tensor literals are supported for now";
   const TensorType *ttype = type.toTensor();
@@ -257,6 +273,15 @@ Expr Literal::make(Type type, void* values) {
           util::zero<double>(node->data, size);
         }
         break;
+      case ir::ScalarType::Complex:
+        if (ir::ScalarType::singleFloat()) {
+          iassert(ir::ScalarType::floatBytes == sizeof(float));
+          util::zero<float>(node->data, size);
+        }
+        else {
+          iassert(ir::ScalarType::floatBytes == sizeof(double));
+          util::zero<double>(node->data, size);
+        }
     }
   }
   return node;

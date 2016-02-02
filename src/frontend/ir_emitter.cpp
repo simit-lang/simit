@@ -72,6 +72,9 @@ void IREmitter::visit(ScalarType::Ptr type) {
     case ScalarType::Type::BOOL:
       retType = ir::Boolean;
       break;
+    case ScalarType::Type::COMPLEX:
+      retType = ir::Complex;
+      break;
     default:
       unreachable;
       break;
@@ -604,11 +607,19 @@ void IREmitter::visit(BoolLiteral::Ptr lit) {
   retExpr = ir::Literal::make(lit->val);
 }
 
+void IREmitter::visit(ComplexLiteral::Ptr lit) {
+  retExpr = ir::Literal::make(lit->val);
+}
+
 void IREmitter::visit(IntVectorLiteral::Ptr lit) {
   emitDenseTensorLiteral(lit);
 }
 
 void IREmitter::visit(FloatVectorLiteral::Ptr lit) {
+  emitDenseTensorLiteral(lit);
+}
+
+void IREmitter::visit(ComplexVectorLiteral::Ptr lit) {
   emitDenseTensorLiteral(lit);
 }
 
@@ -620,14 +631,27 @@ void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
   const DenseTensorValues tensorVals = emitTensorValues(tensor);
   const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(),
                                            tensorVals.dimSizes.rend());
-  const auto elemType = (tensorVals.type == DenseTensorValues::Type::INT) ?
-                        ir::ScalarType::Int : ir::ScalarType::Float;
-  
+  ir::ScalarType::Kind elemType;
+  const void *data;
+  switch (tensorVals.type) {
+    case DenseTensorValues::Type::INT:
+      elemType = ir::ScalarType::Int;
+      data = static_cast<const void *>(tensorVals.intVals.data());
+      break;
+    case DenseTensorValues::Type::FLOAT:
+      elemType = ir::ScalarType::Float;
+      data = static_cast<const void *>(tensorVals.floatVals.data());
+      break;
+    case DenseTensorValues::Type::COMPLEX:
+      elemType = ir::ScalarType::Complex;
+      data = static_cast<const void *>(tensorVals.complexVals.data());
+      break;
+    default:
+      elemType = ir::ScalarType::Float;
+      data = static_cast<const void *>(tensorVals.floatVals.data());
+  }
   const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
                                                    tensor->transposed);
-  const void *data = (tensorVals.type == DenseTensorValues::Type::INT) ? 
-                     static_cast<const void *>(tensorVals.intVals.data()) :
-                     static_cast<const void *>(tensorVals.floatVals.data());
   retExpr = ir::Literal::make(tensorType, const_cast<void *>(data));
 }
 
@@ -639,6 +663,8 @@ IREmitter::DenseTensorValues
     tensorVals.addIntValues(to<IntVectorLiteral>(lit)->vals);
   } else if (isa<FloatVectorLiteral>(lit)) {
     tensorVals.addFloatValues(to<FloatVectorLiteral>(lit)->vals);
+  } else if (isa<ComplexVectorLiteral>(lit)) {
+    tensorVals.addComplexValues(to<ComplexVectorLiteral>(lit)->vals);
   } else {
     const auto ndTensorLit = to<NDTensorLiteral>(lit);
   
@@ -677,10 +703,23 @@ void IREmitter::DenseTensorValues::addIntValues(const std::vector<int> &vals) {
 
 void IREmitter::DenseTensorValues::addFloatValues(
     const std::vector<double> &vals) {
-  iassert(type != Type::INT);
+  iassert(type == Type::FLOAT || type == Type::UNKNOWN);
   type = Type::FLOAT;
   
   floatVals.insert(floatVals.end(), vals.begin(), vals.end());
+  dimSizes[dimSizes.size() - 1] += vals.size();
+}
+
+void IREmitter::DenseTensorValues::addComplexValues(
+    const std::vector<std::pair<double,double>> &vals) {
+  iassert(type == Type::COMPLEX || type == Type::UNKNOWN);
+  type = Type::COMPLEX;
+
+  // Flatten pairs
+  for (auto p : vals) {
+    complexVals.push_back(p.first);
+    complexVals.push_back(p.second);
+  }
   dimSizes[dimSizes.size() - 1] += vals.size();
 }
 
@@ -697,6 +736,10 @@ void IREmitter::DenseTensorValues::merge(
     case Type::FLOAT:
       floatVals.insert(floatVals.end(), other.floatVals.begin(), 
                        other.floatVals.end());
+      break;
+    case Type::COMPLEX:
+      complexVals.insert(complexVals.end(), other.complexVals.begin(),
+                         other.complexVals.end());
       break;
     default:
       unreachable;
