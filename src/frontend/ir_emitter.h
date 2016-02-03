@@ -37,7 +37,6 @@ private:
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
-  virtual void visit(ProcDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
@@ -162,7 +161,6 @@ private:
     return ret;
   }
  
-  void addFuncOrProc(FuncDecl::Ptr, bool = false);
   void addVarOrConst(VarDecl::Ptr, bool = false);
   void addWhileOrDoWhile(WhileStmt::Ptr, bool = false);
   void addAssign(const std::vector<ir::Expr> &, ir::Expr);

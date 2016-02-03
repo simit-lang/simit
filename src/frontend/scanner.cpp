@@ -40,6 +40,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "end") return Token::Type::BLOCKEND;
   if (token == "return") return Token::Type::RETURN;
   if (token == "print") return Token::Type::PRINT;
+  if (token == "println") return Token::Type::PRINTLN;
   if (token == "and") return Token::Type::AND; 
   if (token == "or") return Token::Type::OR;
   if (token == "not") return Token::Type::NOT;
@@ -320,10 +321,13 @@ TokenStream Scanner::lex(std::istream &programStream) {
                   escapedChar = "\\";
                   break;
                 case '\'':
-                  escapedChar = "'";
+                  escapedChar = "\'";
                   break;
                 case '"':
                   escapedChar = "\"";
+                  break;
+                case '?':
+                  escapedChar = "\?";
                   break;
                 default:
                   reportError("unrecognized escape sequence", line, col);

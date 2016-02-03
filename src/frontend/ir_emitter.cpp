@@ -150,11 +150,36 @@ void IREmitter::visit(ExternDecl::Ptr decl) {
 }
 
 void IREmitter::visit(FuncDecl::Ptr decl) {
-  addFuncOrProc(decl);
-}
+  ctx->scope();
 
-void IREmitter::visit(ProcDecl::Ptr decl) {
-  addFuncOrProc(decl, true);
+  std::vector<ir::Var> arguments;
+  for (auto arg : decl->args) {
+    const ir::Var argVar = emitVar(arg->arg);
+    const auto access = arg->isInOut() ? internal::Symbol::ReadWrite : 
+                        internal::Symbol::Read;
+    ctx->addSymbol(argVar.getName(), argVar, access);
+    arguments.push_back(argVar);
+  }
+  
+  std::vector<ir::Var> results;
+  for (auto res : decl->results) {
+    const ir::Var result = emitVar(res);
+    ctx->addSymbol(result);
+    results.push_back(result);
+  }
+
+  const ir::Stmt body = emitStmt(decl->body);
+  ctx->unscope();
+
+  if (decl->exported) {
+    for (auto &extPair : ctx->getExterns()) {
+      const ir::Var ext = ctx->getExtern(extPair.first);
+      arguments.push_back(ext);
+    }
+  }
+
+  iassert(!ctx->containsFunction(decl->name->ident));
+  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body));
 }
 
 void IREmitter::visit(VarDecl::Ptr decl) {
@@ -270,13 +295,19 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
 }
 
 void IREmitter::visit(PrintStmt::Ptr stmt) {
-  const ir::Expr expr = emitExpr(stmt->expr);
-  const ir::Stmt callStmts = getCallStmts();
+  for (const auto arg : stmt->arguments) {
+    const ir::Expr expr = emitExpr(arg);
+    const ir::Stmt callStmts = getCallStmts();
  
-  if (callStmts.defined()) {
-    ctx->addStatement(callStmts);
+    if (callStmts.defined()) {
+      ctx->addStatement(callStmts);
+    }
+    ctx->addStatement(ir::Print::make(expr));
   }
-  ctx->addStatement(ir::Print::make(expr));
+
+  if (stmt->printNewline) {
+    ctx->addStatement(ir::Print::make("\n"));
+  }
 }
 
 void IREmitter::visit(ExprStmt::Ptr stmt) {
@@ -725,39 +756,6 @@ void IREmitter::DenseTensorValues::merge(
       break;
   }
   ++dimSizes[dimSizes.size() - 1];
-}
-
-void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, bool isProc) {
-  ctx->scope();
-
-  std::vector<ir::Var> arguments;
-  for (auto arg : decl->args) {
-    const ir::Var argVar = emitVar(arg->arg);
-    const auto access = arg->inout ? internal::Symbol::ReadWrite : 
-                        internal::Symbol::Read;
-    ctx->addSymbol(argVar.getName(), argVar, access);
-    arguments.push_back(argVar);
-  }
-  
-  std::vector<ir::Var> results;
-  for (auto res : decl->results) {
-    const ir::Var result = emitVar(res);
-    ctx->addSymbol(result);
-    results.push_back(result);
-  }
-
-  const ir::Stmt body = emitStmt(decl->body);
-  ctx->unscope();
-
-  if (isProc) {
-    for (auto &extPair : ctx->getExterns()) {
-      const ir::Var ext = ctx->getExtern(extPair.first);
-      arguments.push_back(ext);
-    }
-  }
-
-  iassert(!ctx->containsFunction(decl->name->ident));
-  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body));
 }
 
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {

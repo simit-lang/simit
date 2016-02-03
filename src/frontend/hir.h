@@ -259,7 +259,6 @@ struct ElementTypeDecl : public HIRNode {
 
 struct Argument : public HIRNode {
   IdentDecl::Ptr arg;
-  bool           inout;
   
   typedef std::shared_ptr<Argument> Ptr;
   
@@ -267,14 +266,25 @@ struct Argument : public HIRNode {
     visitor->visit(to<Argument>(shared_from_this()));
   }
   
-  virtual unsigned getLineBegin() {
-    return (lineBegin == 0) ? arg->getLineBegin() : lineBegin;
-  }
-  virtual unsigned getColBegin() {
-    return (lineBegin == 0) ? arg->getColBegin() : colBegin;
-  }
+  virtual unsigned getLineBegin() { return arg->getLineBegin(); }
+  virtual unsigned getColBegin() { return arg->getColBegin(); }
   virtual unsigned getLineEnd() { return arg->getLineEnd(); }
   virtual unsigned getColEnd() { return arg->getColEnd(); }
+
+  virtual bool isInOut() { return false; }
+};
+
+struct InOutArgument : public Argument {
+  typedef std::shared_ptr<InOutArgument> Ptr;
+  
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<InOutArgument>(shared_from_this()));
+  }
+  
+  virtual unsigned getLineBegin() { return arg->getLineBegin(); }
+  virtual unsigned getColBegin() { return arg->getColBegin(); }
+
+  virtual bool isInOut() { return true; }
 };
 
 struct ExternDecl : public HIRNode {
@@ -292,19 +302,12 @@ struct FuncDecl : public HIRNode {
   std::vector<Argument::Ptr>  args;
   std::vector<IdentDecl::Ptr> results;
   StmtBlock::Ptr              body;
+  bool                        exported;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<FuncDecl>(shared_from_this()));
-  }
-};
-
-struct ProcDecl : public FuncDecl {
-  typedef std::shared_ptr<ProcDecl> Ptr;
-  
-  virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ProcDecl>(shared_from_this()));
   }
 };
 
@@ -416,7 +419,8 @@ struct ForStmt : public Stmt {
 };
 
 struct PrintStmt : public Stmt {
-  Expr::Ptr expr;
+  std::vector<Expr::Ptr> arguments;
+  bool                   printNewline;
   
   typedef std::shared_ptr<PrintStmt> Ptr;
   

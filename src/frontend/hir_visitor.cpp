@@ -55,6 +55,10 @@ void HIRVisitor::visit(Argument::Ptr arg) {
   arg->arg->accept(this);
 }
 
+void HIRVisitor::visit(InOutArgument::Ptr arg) {
+  visit(to<Argument>(arg)); 
+}
+
 void HIRVisitor::visit(ExternDecl::Ptr decl) {
   decl->var->accept(this);
 }
@@ -68,10 +72,6 @@ void HIRVisitor::visit(FuncDecl::Ptr decl) {
     result->accept(this);
   }
   decl->body->accept(this);
-}
-
-void HIRVisitor::visit(ProcDecl::Ptr decl) {
-  visit(to<FuncDecl>(decl)); 
 }
 
 void HIRVisitor::visit(VarDecl::Ptr decl) {
@@ -118,7 +118,9 @@ void HIRVisitor::visit(ForStmt::Ptr stmt) {
 }
 
 void HIRVisitor::visit(PrintStmt::Ptr stmt) {
-  stmt->expr->accept(this);
+  for (auto arg : stmt->arguments) {
+    arg->accept(this);
+  }
 }
 
 void HIRVisitor::visit(ExprStmt::Ptr stmt) {

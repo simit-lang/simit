@@ -89,6 +89,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'test'";
     case Token::Type::PRINT:
       return "'print'";
+    case Token::Type::PRINTLN:
+      return "'println'";
     case Token::Type::RARROW:
       return "'->'";
     case Token::Type::LP:

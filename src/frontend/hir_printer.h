@@ -32,7 +32,6 @@ public:
   virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
-  virtual void visit(ProcDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
@@ -80,7 +79,6 @@ private:
   void printIndent() { oss << std::string(2 * indentLevel, ' '); }
   void printBoolean(bool val) { oss << (val ? "true" : "false"); }
   
-  void printFuncOrProc(FuncDecl::Ptr, const bool = false);
   void printVarOrConstDecl(VarDecl::Ptr, const bool = false);
   void printUnaryExpr(UnaryExpr::Ptr, const std::string, const bool = false);
   void printBinaryExpr(BinaryExpr::Ptr, const std::string);

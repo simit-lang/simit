@@ -126,6 +126,7 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
 // func_decl: 'func' ident arguments results stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   auto funcDecl = std::make_shared<hir::FuncDecl>();
+  funcDecl->exported = false;
 
   const Token funcToken = consume(Token::Type::FUNC);
   funcDecl->setBeginLoc(funcToken);
@@ -143,8 +144,9 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
 
 // proc_decl: 
 //     ('proc' | ('export' 'func')) ident [arguments results] stmt_block 'end'
-hir::ProcDecl::Ptr Parser::parseProcDecl() {
-  auto procDecl = std::make_shared<hir::ProcDecl>();
+hir::FuncDecl::Ptr Parser::parseProcDecl() {
+  auto procDecl = std::make_shared<hir::FuncDecl>();
+  procDecl->exported = true;
 
   procDecl->setBeginLoc(peek());
   if (!tryconsume(Token::Type::PROC)) {
@@ -195,11 +197,11 @@ std::vector<hir::Argument::Ptr> Parser::parseArguments() {
 hir::Argument::Ptr Parser::parseArgumentDecl() {
   auto argDecl = std::make_shared<hir::Argument>();
   
-  argDecl->inout = false;
   if (peek().type == Token::Type::INOUT) {
     const Token inoutToken = consume(Token::Type::INOUT);
+
+    argDecl = std::make_shared<hir::InOutArgument>();
     argDecl->setBeginLoc(inoutToken);
-    argDecl->inout = true;
   }
 
   argDecl->arg = parseIdentDecl();
@@ -262,6 +264,7 @@ hir::Stmt::Ptr Parser::parseStmt() {
     case Token::Type::FOR:
       return parseForStmt();
     case Token::Type::PRINT:
+    case Token::Type::PRINTLN:
       return parsePrintStmt();
     default:
       return parseExprOrAssignStmt();
@@ -492,16 +495,26 @@ hir::ForDomain::Ptr Parser::parseForDomain() {
   return rangeDomain;
 }
 
-// print_stmt: 'print' expr ';'
+// print_stmt: ('print' | 'println') expr {',' expr} ';'
 hir::PrintStmt::Ptr Parser::parsePrintStmt() {
   try {
     auto printStmt = std::make_shared<hir::PrintStmt>();
-    
-    const Token printToken = consume(Token::Type::PRINT);
-    printStmt->setBeginLoc(printToken);
-    
-    printStmt->expr = parseExpr();
 
+    if (peek().type == Token::Type::PRINT) {
+      const Token printToken = consume(Token::Type::PRINT);
+      printStmt->setBeginLoc(printToken);
+      printStmt->printNewline = false;
+    } else {
+      const Token printlnToken = consume(Token::Type::PRINTLN);
+      printStmt->setBeginLoc(printlnToken);
+      printStmt->printNewline = true;
+    }
+    
+    do {
+      const hir::Expr::Ptr arg = parseExpr();
+      printStmt->arguments.push_back(arg);
+    } while (tryconsume(Token::Type::COMMA));
+   
     const Token endToken = consume(Token::Type::SEMICOL);
     printStmt->setEndLoc(endToken);
 

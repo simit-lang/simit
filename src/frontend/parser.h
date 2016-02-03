@@ -31,7 +31,7 @@ private:
   hir::Field::Ptr                  parseFieldDecl();
   hir::ExternDecl::Ptr             parseExternDecl();
   hir::FuncDecl::Ptr               parseFuncDecl();
-  hir::ProcDecl::Ptr               parseProcDecl();
+  hir::FuncDecl::Ptr               parseProcDecl();
   std::vector<hir::Argument::Ptr>  parseArguments();
   hir::Argument::Ptr               parseArgumentDecl();
   std::vector<hir::IdentDecl::Ptr> parseResults();

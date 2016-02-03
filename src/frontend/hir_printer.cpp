@@ -139,7 +139,7 @@ void HIRPrinter::visit(ElementTypeDecl::Ptr decl) {
 }
 
 void HIRPrinter::visit(Argument::Ptr arg) {
-  if (arg->inout) {
+  if (arg->isInOut()) {
     oss << "inout ";
   }
   arg->arg->accept(this);
@@ -152,11 +152,38 @@ void HIRPrinter::visit(ExternDecl::Ptr decl) {
 }
 
 void HIRPrinter::visit(FuncDecl::Ptr decl) {
-  printFuncOrProc(decl);
-}
-
-void HIRPrinter::visit(ProcDecl::Ptr decl) {
-  printFuncOrProc(decl, true);
+  if (decl->exported) {
+    oss << "export ";
+  }
+  oss << "func ";
+  decl->name->accept(this);
+  oss << "(";
+  bool printDelimiter = false;
+  for (auto arg : decl->args) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+    arg->accept(this);
+    printDelimiter = true;
+  }
+  oss << ") ";
+  if (decl->results.size() > 0) {
+    oss << "-> (";
+    printDelimiter = false;
+    for (auto result : decl->results) {
+      if (printDelimiter) {
+        oss << ", ";
+      }
+      result->accept(this);
+      printDelimiter = true;
+    }
+    oss << ")";
+  }
+  oss << std::endl;
+  indent();
+  decl->body->accept(this);
+  dedent();
+  oss << "end";
 }
 
 void HIRPrinter::visit(VarDecl::Ptr decl) {
@@ -236,8 +263,15 @@ void HIRPrinter::visit(ForStmt::Ptr stmt) {
 
 void HIRPrinter::visit(PrintStmt::Ptr stmt) {
   printIndent();
-  oss << "print ";
-  stmt->expr->accept(this);
+  oss << (stmt->printNewline ? "println " : "print ");
+  bool printDelimiter = false;
+  for (auto arg : stmt->arguments) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+    arg->accept(this);
+    printDelimiter = true;
+  }
   oss << ";";
 }
 
@@ -510,38 +544,6 @@ void HIRPrinter::visit(Test::Ptr test) {
   oss << ") == ";
   test->expected->accept(this);
   oss << ";";
-}
-
-void HIRPrinter::printFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
-  oss << (isProc ? "proc " : "func ");
-  decl->name->accept(this);
-  oss << "(";
-  bool printDelimiter = false;
-  for (auto arg : decl->args) {
-    if (printDelimiter) {
-      oss << ", ";
-    }
-    arg->accept(this);
-    printDelimiter = true;
-  }
-  oss << ") ";
-  if (decl->results.size() > 0) {
-    oss << "-> (";
-    printDelimiter = false;
-    for (auto result : decl->results) {
-      if (printDelimiter) {
-        oss << ", ";
-      }
-      result->accept(this);
-      printDelimiter = true;
-    }
-    oss << ")";
-  }
-  oss << std::endl;
-  indent();
-  decl->body->accept(this);
-  dedent();
-  oss << "end";
 }
 
 void HIRPrinter::printVarOrConstDecl(VarDecl::Ptr decl, const bool isConst) {

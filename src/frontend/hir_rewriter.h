@@ -11,6 +11,8 @@ namespace hir {
 
 class HIRRewriter : public HIRVisitor {
 public:
+  using HIRVisitor::visit;
+
   virtual void visit(Program::Ptr);
   virtual void visit(StmtBlock::Ptr);
   virtual void visit(RangeIndexSet::Ptr op) { node = op; }
@@ -30,11 +32,8 @@ public:
   virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
-  virtual void visit(ProcDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
-  virtual void visit(ConstDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
-  virtual void visit(DoWhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);
   virtual void visit(IndexSetDomain::Ptr);
   virtual void visit(RangeDomain::Ptr);

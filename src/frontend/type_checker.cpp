@@ -272,7 +272,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     }
 
     internal::Symbol::Access access = internal::Symbol::Read;
-    if (arg->inout) {
+    if (arg->isInOut()) {
       access = internal::Symbol::ReadWrite;
       writableArgs.insert(argVar);
     }
@@ -399,13 +399,15 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(PrintStmt::Ptr stmt) {
-  const Ptr<Expr::Type> exprType = inferType(stmt->expr);
+  for (const auto arg : stmt->arguments) {
+    const Ptr<Expr::Type> argType = inferType(arg);
 
-  // Check that print statement is printing a tensor.
-  if (exprType && (exprType->size() != 1 || !exprType->at(0).isTensor())) {
-    std::stringstream errMsg;
-    errMsg << "cannot print an expression of type " << typeString(exprType);
-    reportError(errMsg.str(), stmt->expr);
+    // Check that print statement is printing a tensor.
+    if (argType && (argType->size() != 1 || !argType->at(0).isTensor())) {
+      std::stringstream errMsg;
+      errMsg << "cannot print an expression of type " << typeString(argType);
+      reportError(errMsg.str(), arg);
+    }
   }
 }
 

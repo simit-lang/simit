@@ -81,10 +81,6 @@ void HIRRewriter::visit(FuncDecl::Ptr decl) {
   node = decl;
 }
 
-void HIRRewriter::visit(ProcDecl::Ptr decl) {
-  visit(to<FuncDecl>(decl)); 
-}
-
 void HIRRewriter::visit(VarDecl::Ptr decl) {
   decl->var = rewrite<IdentDecl>(decl->var);
   if (decl->initVal) {
@@ -93,18 +89,10 @@ void HIRRewriter::visit(VarDecl::Ptr decl) {
   node = decl;
 }
 
-void HIRRewriter::visit(ConstDecl::Ptr decl) {
-  visit(to<VarDecl>(decl));
-}
-
 void HIRRewriter::visit(WhileStmt::Ptr stmt) {
   stmt->cond = rewrite<Expr>(stmt->cond);
   stmt->body = rewrite<StmtBlock>(stmt->body);
   node = stmt;
-}
-
-void HIRRewriter::visit(DoWhileStmt::Ptr stmt) {
-  visit(to<WhileStmt>(stmt));
 }
 
 void HIRRewriter::visit(IfStmt::Ptr stmt) {
@@ -135,7 +123,9 @@ void HIRRewriter::visit(ForStmt::Ptr stmt) {
 }
 
 void HIRRewriter::visit(PrintStmt::Ptr stmt) {
-  stmt->expr = rewrite<Expr>(stmt->expr);
+  for (auto &arg : stmt->arguments) {
+    arg = rewrite<Expr>(arg);
+  }
   node = stmt;
 }
 
