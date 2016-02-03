@@ -182,6 +182,8 @@ FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets
               static_cast<simit_float>(0.0),
               static_cast<simit_float>(0.0)});
   }
+  
+  populateSpatialField(m_tets, m_verts, tx, "x");
 
   return tx;
 } 
