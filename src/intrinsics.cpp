@@ -148,6 +148,14 @@ void locInit() {
                 Func::Intrinsic);
 }
 
+static Func strcmpVar;
+void strcmpInit() {
+  strcmpVar = Func("strcmp",
+                   {Var("s", String), Var("t", String)},
+                   {Var("r", Int)},
+                   Func::Intrinsic);
+}
+
 static Func simitClockVar;
 void simitClockInit() {
   simitClockVar = Func("simitClock",
@@ -284,6 +292,13 @@ const Func& loc() {
     locInit();
   }
   return locVar;
+}
+
+const Func& strcmp() {
+  if (!strcmpVar.defined()) {
+    strcmpInit();
+  }
+  return strcmpVar;
 }
 
 const Func& simitClock() {

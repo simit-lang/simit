@@ -834,6 +834,9 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     else if (callStmt.callee == ir::intrinsics::loc()) {
       call = emitCall("loc", args, LLVM_INT);
     }
+    else if (callStmt.callee == ir::intrinsics::strcmp()) {
+      call = emitCall("strcmp", args, LLVM_INT);
+    }
     else if (callStmt.callee == ir::intrinsics::simitClock()) {
       call = emitCall("simitClock", args, llvmFloatType());
     }

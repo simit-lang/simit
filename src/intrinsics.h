@@ -30,6 +30,7 @@ const Func& det();
 const Func& inv();
 const Func& solve();
 const Func& loc();
+const Func& strcmp();
 const Func& simitClock();
 const Func& simitStoreTime();
 
