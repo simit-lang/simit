@@ -265,7 +265,7 @@ void HIRPrinter::visit(PrintStmt::Ptr stmt) {
   printIndent();
   oss << (stmt->printNewline ? "println " : "print ");
   bool printDelimiter = false;
-  for (auto arg : stmt->arguments) {
+  for (auto arg : stmt->args) {
     if (printDelimiter) {
       oss << ", ";
     }
@@ -424,7 +424,7 @@ void HIRPrinter::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
   oss << "(";
   bool printDelimiter = false;
-  for (auto arg : expr->arguments) {
+  for (auto arg : expr->args) {
     if (printDelimiter) {
       oss << ", ";
     }

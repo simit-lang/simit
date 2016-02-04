@@ -399,7 +399,7 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(PrintStmt::Ptr stmt) {
-  for (const auto arg : stmt->arguments) {
+  for (const auto arg : stmt->args) {
     const Ptr<Expr::Type> argType = inferType(arg);
 
     // Check that print statement is printing a tensor.
@@ -932,16 +932,11 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(CallExpr::Ptr expr) {
-  std::vector<Ptr<Expr::Type>> argTypes(expr->arguments.size());
-  for (unsigned i = 0; i < expr->arguments.size(); ++i) {
-    const Expr::Ptr argument = expr->arguments[i];
-     
-    if (!argument) {
-      // Not a valid argument.
-      continue;
+  std::vector<Ptr<Expr::Type>> argTypes(expr->args.size());
+  for (unsigned i = 0; i < expr->args.size(); ++i) {
+    if (expr->args[i]) {
+      argTypes[i] = inferType(expr->args[i]);
     }
-
-    argTypes[i] = inferType(argument);
   }
   
   if (!ctx.containsFunction(expr->func->ident)) {
@@ -952,14 +947,14 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   const ir::Func func = ctx.getFunction(funcName);
   const std::vector<ir::Var> funcArgs = func.getArguments();
 
-  if (expr->arguments.size() != funcArgs.size()) {
+  if (expr->args.size() != funcArgs.size()) {
     std::stringstream errMsg;
-    errMsg << "passed in " << expr->arguments.size() << " arguments "
+    errMsg << "passed in " << expr->args.size() << " arguments "
            << "but function '" << funcName << "' expects " << funcArgs.size();
     reportError(errMsg.str(), expr);
   } else {
-    for (unsigned i = 0; i < expr->arguments.size(); ++i) {
-      const Expr::Ptr argument = expr->arguments[i];
+    for (unsigned i = 0; i < expr->args.size(); ++i) {
+      const Expr::Ptr argument = expr->args[i];
       const Ptr<Expr::Type> argType = argTypes[i];
       
       if (!argType) {

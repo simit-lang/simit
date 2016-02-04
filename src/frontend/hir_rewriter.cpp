@@ -4,24 +4,23 @@ namespace simit {
 namespace hir {
 
 void HIRRewriter::visit(Program::Ptr program) {
-  for (unsigned i = 0; i < program->elems.size(); ++i) {
-    const auto elem = program->elems[i];
-    program->elems[i] = rewrite<HIRNode>(elem);
+  for (auto &elem : program->elems) {
+    elem = rewrite<HIRNode>(elem);
   }
   node = program;
 }
 
 void HIRRewriter::visit(StmtBlock::Ptr stmtBlock) {
-  for (unsigned i = 0; i < stmtBlock->stmts.size(); ++i) {
-    stmtBlock->stmts[i] = rewrite<Stmt>(stmtBlock->stmts[i]);
+  for (auto &stmt : stmtBlock->stmts) {
+    stmt = rewrite<Stmt>(stmt);
   }
   node = stmtBlock;
 }
 
 void HIRRewriter::visit(SetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
-  for (unsigned i = 0; i < type->endpoints.size(); ++i) {
-    type->endpoints[i] = rewrite<Endpoint>(type->endpoints[i]);
+  for (auto &endpoint : type->endpoints) {
+    endpoint = rewrite<Endpoint>(endpoint);
   }
   node = type;
 }
@@ -33,8 +32,8 @@ void HIRRewriter::visit(TupleType::Ptr type) {
 }
 
 void HIRRewriter::visit(NDTensorType::Ptr type) {
-  for (unsigned i = 0; i < type->indexSets.size(); ++i) {
-    type->indexSets[i] = rewrite<IndexSet>(type->indexSets[i]);
+  for (auto &is : type->indexSets) {
+    is = rewrite<IndexSet>(is);
   }
   type->blockType = rewrite<TensorType>(type->blockType);
   node = type;
@@ -53,8 +52,8 @@ void HIRRewriter::visit(Field::Ptr field) {
 
 void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
-  for (unsigned i = 0; i < decl->fields.size(); ++i) {
-    decl->fields[i] = rewrite<Field>(decl->fields[i]);
+  for (auto &field : decl->fields) {
+    field = rewrite<Field>(field);
   }
   node = decl;
 }
@@ -71,11 +70,11 @@ void HIRRewriter::visit(ExternDecl::Ptr decl) {
 
 void HIRRewriter::visit(FuncDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
-  for (unsigned i = 0; i < decl->args.size(); ++i) {
-    decl->args[i] = rewrite<Argument>(decl->args[i]);
+  for (auto &arg : decl->args) {
+    arg = rewrite<Argument>(arg);
   }
-  for (unsigned i = 0; i < decl->results.size(); ++i) {
-    decl->results[i] = rewrite<IdentDecl>(decl->results[i]);
+  for (auto &result : decl->results) {
+    result = rewrite<IdentDecl>(result);
   }
   decl->body = rewrite<StmtBlock>(decl->body);
   node = decl;
@@ -123,7 +122,7 @@ void HIRRewriter::visit(ForStmt::Ptr stmt) {
 }
 
 void HIRRewriter::visit(PrintStmt::Ptr stmt) {
-  for (auto &arg : stmt->arguments) {
+  for (auto &arg : stmt->args) {
     arg = rewrite<Expr>(arg);
   }
   node = stmt;
@@ -135,8 +134,8 @@ void HIRRewriter::visit(ExprStmt::Ptr stmt) {
 }
 
 void HIRRewriter::visit(AssignStmt::Ptr stmt) {
-  for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
-    stmt->lhs[i] = rewrite<Expr>(stmt->lhs[i]);
+  for (auto &lhs : stmt->lhs) {
+    lhs = rewrite<Expr>(lhs);
   }
   stmt->expr = rewrite<Expr>(stmt->expr);
   node = stmt;
@@ -148,9 +147,9 @@ void HIRRewriter::visit(ExprParam::Ptr param) {
 }
 
 void HIRRewriter::visit(MapExpr::Ptr expr) {
-  expr->func = rewrite<Identifier>(expr->func); 
-  for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
-    expr->partialActuals[i] = rewrite<Expr>(expr->partialActuals[i]);
+  expr->func = rewrite<Identifier>(expr->func);
+  for (auto &arg : expr->partialActuals) {
+    arg = rewrite<Expr>(arg);
   }
   expr->target = rewrite<Identifier>(expr->target);
   node = expr;
@@ -214,9 +213,9 @@ void HIRRewriter::visit(TransposeExpr::Ptr expr) {
 
 void HIRRewriter::visit(CallExpr::Ptr expr) {
   expr->func = rewrite<Identifier>(expr->func);
-  for (unsigned i = 0; i < expr->arguments.size(); ++i) {
-    if (expr->arguments[i]) {
-      expr->arguments[i] = rewrite<Expr>(expr->arguments[i]);
+  for (auto &arg : expr->args) {
+    if (arg) {
+      arg = rewrite<Expr>(arg);
     }
   }
   node = expr;
@@ -224,8 +223,8 @@ void HIRRewriter::visit(CallExpr::Ptr expr) {
 
 void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
   expr->tensor = rewrite<Expr>(expr->tensor);
-  for (unsigned i = 0; i < expr->indices.size(); ++i) {
-    expr->indices[i] = rewrite<ReadParam>(expr->indices[i]);
+  for (auto &index : expr->indices) {
+    index = rewrite<ReadParam>(index);
   }
   node = expr;
 }
@@ -248,16 +247,16 @@ void HIRRewriter::visit(ParenExpr::Ptr expr) {
 }
 
 void HIRRewriter::visit(NDTensorLiteral::Ptr lit) {
-  for (unsigned i = 0; i < lit->elems.size(); ++i) {
-    lit->elems[i] = rewrite<DenseTensorLiteral>(lit->elems[i]);
+  for (auto &elem : lit->elems) {
+    elem = rewrite<DenseTensorLiteral>(elem);
   }
   node = lit;
 }
 
 void HIRRewriter::visit(Test::Ptr test) {
   test->func = rewrite<Identifier>(test->func);
-  for (unsigned i = 0; i < test->args.size(); ++i) {
-    test->args[i] = rewrite<Expr>(test->args[i]);
+  for (auto &arg : test->args) {
+    arg = rewrite<Expr>(arg);
   }
   test->expected = rewrite<Expr>(test->expected);
   node = test;
@@ -275,8 +274,8 @@ void HIRRewriter::visitBinaryExpr(BinaryExpr::Ptr expr) {
 }
 
 void HIRRewriter::visitNaryExpr(NaryExpr::Ptr expr) {
-  for (unsigned i = 0; i < expr->operands.size(); ++i) {
-    expr->operands[i] = rewrite<Expr>(expr->operands[i]);
+  for (auto &operand : expr->operands) {
+    operand = rewrite<Expr>(operand);
   }
   node = expr;
 }

@@ -419,7 +419,7 @@ struct ForStmt : public Stmt {
 };
 
 struct PrintStmt : public Stmt {
-  std::vector<Expr::Ptr> arguments;
+  std::vector<Expr::Ptr> args;
   bool                   printNewline;
   
   typedef std::shared_ptr<PrintStmt> Ptr;
@@ -667,7 +667,7 @@ struct TransposeExpr : public UnaryExpr {
 
 struct CallExpr : public Expr {
   Identifier::Ptr        func;
-  std::vector<Expr::Ptr> arguments;
+  std::vector<Expr::Ptr> args;
   
   typedef std::shared_ptr<CallExpr> Ptr;
 

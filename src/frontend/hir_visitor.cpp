@@ -118,7 +118,7 @@ void HIRVisitor::visit(ForStmt::Ptr stmt) {
 }
 
 void HIRVisitor::visit(PrintStmt::Ptr stmt) {
-  for (auto arg : stmt->arguments) {
+  for (auto arg : stmt->args) {
     arg->accept(this);
   }
 }
@@ -204,7 +204,7 @@ void HIRVisitor::visit(TransposeExpr::Ptr expr) {
 
 void HIRVisitor::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
-  for (auto arg : expr->arguments) {
+  for (auto arg : expr->args) {
     if (arg) {
       arg->accept(this);
     }

@@ -295,7 +295,7 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
 }
 
 void IREmitter::visit(PrintStmt::Ptr stmt) {
-  for (const auto arg : stmt->arguments) {
+  for (const auto arg : stmt->args) {
     const ir::Expr expr = emitExpr(arg);
     const ir::Stmt callStmts = getCallStmts();
  
@@ -554,7 +554,7 @@ void IREmitter::visit(CallExpr::Ptr expr) {
   const std::vector<ir::Var> results = func.getResults();
 
   std::vector<ir::Expr> arguments;
-  for (auto argument : expr->arguments) {
+  for (auto argument : expr->args) {
     iassert((bool)argument);
     const ir::Expr arg = emitExpr(argument);
     arguments.push_back(arg);

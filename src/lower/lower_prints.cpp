@@ -142,7 +142,9 @@ private:
     
     // Emit code for reading a single tensor component.
     Expr readElement = TensorRead::make(tensorExpr, tensorReadIndices);
-    Stmt printElementFormatted = Print::make(readElement, "12.5");
+    const std::string format = tensor->getComponentType() == ScalarType::Int ?
+                               "13" : "13.5";
+    Stmt printElementFormatted = Print::make(readElement, format);
   
     Var shouldPrintNewline = Var(names.getName(), Boolean);
     Stmt maybePrintNewline = IfThenElse::make(
@@ -355,7 +357,7 @@ private:
     // code that selects between two at runtime based on tensor size.
     if (printSmallTensor.defined()) {
       Expr isSmallTensor = Le::make(Length::make(dimensions[order - 1]),
-                                    Literal::make(7));
+                                    Literal::make(6));
       printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
                                          printLargeTensor);
     } else {
@@ -375,7 +377,7 @@ private:
     // If printing string, no lowering needed.
     const auto componentType = tensorExpr.type().toTensor()->getComponentType();
     stmt = (componentType == ScalarType::String) ? op : 
-           Block::make(printTensor(tensorExpr, 1), printNewline);
+           printTensor(tensorExpr, 0);
   }
   
   void visit(const Func* f) {

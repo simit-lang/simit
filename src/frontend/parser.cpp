@@ -512,7 +512,7 @@ hir::PrintStmt::Ptr Parser::parsePrintStmt() {
     
     do {
       const hir::Expr::Ptr arg = parseExpr();
-      printStmt->arguments.push_back(arg);
+      printStmt->args.push_back(arg);
     } while (tryconsume(Token::Type::COMMA));
    
     const Token endToken = consume(Token::Type::SEMICOL);
@@ -1231,6 +1231,7 @@ hir::ScalarType::Ptr Parser::parseTensorComponentType() {
   return scalarType;
 }
 
+// scalar_type: 'string' | tensor_component_type
 hir::ScalarType::Ptr Parser::parseScalarType() {
   if (peek().type == Token::Type::STRING) {
     auto stringType = std::make_shared<hir::ScalarType>();

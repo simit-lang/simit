@@ -38,10 +38,10 @@ void FuncCallRewriter::visit(TensorReadExpr::Ptr expr) {
 
   for (auto param : expr->indices) {
     if (isa<ExprParam>(param)) {
-      call->arguments.push_back(to<ExprParam>(param)->expr);
+      call->args.push_back(to<ExprParam>(param)->expr);
     } else {
       reportError("argument to function call must be an expression", param);
-      call->arguments.push_back(Expr::Ptr());
+      call->args.push_back(Expr::Ptr());
     }
   }
 
