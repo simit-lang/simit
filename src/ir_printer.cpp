@@ -4,6 +4,7 @@
 #include "util/util.h"
 
 #include <regex>
+#include <sstream>
 
 #ifdef GPU
 #include "backend/gpu/gpu_ir.h"
@@ -63,6 +64,12 @@ static inline string bool_to_string(bool value) {
   }
 }
 
+static inline string complex_to_string(double_complex c) {
+  stringstream ss;
+  ss << "<" << c.real << "," << c.imag << ">";
+  return ss.str();
+}
+
 void IRPrinter::visit(const Literal *op) {
   clearSkipParen();
 
@@ -114,6 +121,19 @@ void IRPrinter::visit(const Literal *op) {
             os << "[" + bool_to_string(bdata[0]);
             for (size_t i=1; i < size; ++i) {
               os << ", " + bool_to_string(bdata[i]);
+            }
+            os << "]";
+          }
+          break;
+        }
+        case ScalarType::Complex: {
+          if (size == 1) {
+            os << complex_to_string(op->getComplexVal(0));
+          }
+          else {
+            os << "[" + complex_to_string(op->getComplexVal(0));
+            for (size_t i=1; i < size; ++i) {
+              os << ", " + complex_to_string(op->getComplexVal(i));
             }
             os << "]";
           }

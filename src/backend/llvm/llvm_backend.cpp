@@ -292,6 +292,13 @@ void LLVMBackend::compile(const ir::Literal& literal) {
         val = llvm::ConstantInt::get(LLVM_BOOL, llvm::APInt(1, data, false));
         break;
       }
+      case ScalarType::Complex: {
+        iassert(ctype.bytes() == ScalarType::floatBytes*2)
+          << "Only " << ScalarType::floatBytes
+          << "-byte float mode allowed by current float setting";
+        val = llvmComplex(literal.getFloatVal(0), literal.getFloatVal(1));
+        break;
+      }
       default: unreachable;
     }
   }
@@ -509,6 +516,15 @@ void LLVMBackend::compile(const ir::Neg& negExpr) {
       break;
     case ScalarType::Boolean:
       iassert(false) << "Cannot negate a boolean value.";
+      break;
+    case ScalarType::Complex:
+      llvm::Value *real = builder->CreateExtractValue(a, 0, "real");
+      llvm::Value *imag = builder->CreateExtractValue(a, 1, "imag");
+      llvm::Value *realNeg = builder->CreateFNeg(real);
+      llvm::Value *imagNeg = builder->CreateFNeg(imag);
+      llvm::Value *aPrime = builder->CreateInsertValue(a, realNeg, 0);
+      val = builder->CreateInsertValue(aPrime, imagNeg, 1);
+      break;
   }
 }
 
@@ -527,6 +543,16 @@ void LLVMBackend::compile(const ir::Add& addExpr) {
       break;
     case ScalarType::Boolean:
       ierror << "Cannot add boolean values.";
+      break;
+    case ScalarType::Complex:
+      llvm::Value *realA = builder->CreateExtractValue(a, 0, "real");
+      llvm::Value *imagA = builder->CreateExtractValue(a, 1, "imag");
+      llvm::Value *realB = builder->CreateExtractValue(b, 0, "real");
+      llvm::Value *imagB = builder->CreateExtractValue(b, 1, "imag");
+      llvm::Value *real = builder->CreateFAdd(realA, realB);
+      llvm::Value *imag = builder->CreateFAdd(imagA, imagB);
+      llvm::Value *partial = builder->CreateInsertValue(a, real, 0);
+      val = builder->CreateInsertValue(partial, imag, 1);
       break;
   }
 }
@@ -1130,8 +1156,19 @@ void LLVMBackend::compile(const ir::Print& print) {
 
   const TensorType *tensor = type.toTensor();
   ScalarType scalarType = tensor->getComponentType();
-  std::string specifier = std::string("%") + print.format +
-                          (scalarType.kind == ScalarType::Float? "g" : "d");
+  std::string specifier; ;
+  switch (scalarType.kind) {
+    case ScalarType::Float:
+      specifier = std::string("%") + print.format + "g";
+      break;
+    case ScalarType::Complex:
+      specifier = std::string("<%") + print.format + "g,%g>";
+      break;
+    case ScalarType::Boolean:
+    case ScalarType::Int:
+      specifier = std::string("%") + print.format + "d";
+      break;
+  }
 
   std::string format = specifier;
   args.push_back(result);
@@ -1371,6 +1408,16 @@ void LLVMBackend::emitPrintf(std::string format,
   }
 
   llvm::Value *str = emitGlobalString(format);
+
+  // Split any complex structs into two doubles
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (args[i]->getType()->isStructTy()) {
+      llvm::Value *real = builder->CreateExtractElement(args[i], llvmInt(0), "real");
+      llvm::Value *imag = builder->CreateExtractElement(args[i], llvmInt(1), "imag");
+      args[i] = real;
+      args.insert(args.begin()+i+1, imag);
+    }
+  }
 
   std::vector<llvm::Value*> printfArgs;
   for (size_t i = 0; i < args.size(); i++) {

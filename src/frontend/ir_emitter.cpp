@@ -711,14 +711,14 @@ void IREmitter::DenseTensorValues::addFloatValues(
 }
 
 void IREmitter::DenseTensorValues::addComplexValues(
-    const std::vector<std::pair<double,double>> &vals) {
+    const std::vector<double_complex> &vals) {
   iassert(type == Type::COMPLEX || type == Type::UNKNOWN);
   type = Type::COMPLEX;
 
   // Flatten pairs
   for (auto p : vals) {
-    complexVals.push_back(p.first);
-    complexVals.push_back(p.second);
+    complexVals.push_back(p.real);
+    complexVals.push_back(p.imag);
   }
   dimSizes[dimSizes.size() - 1] += vals.size();
 }

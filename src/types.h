@@ -8,6 +8,7 @@
 #include <map>
 #include <iostream>
 
+#include "complex_types.h"
 #include "domain.h"
 
 // TODO: Refactor the type system:
@@ -129,11 +130,11 @@ template<> inline ScalarType typeOf<bool>() {
   return ScalarType::Boolean;
 }
 
-template<> inline ScalarType typeOf<std::pair<float,float>>() {
+template<> inline ScalarType typeOf<float_complex>() {
   return ScalarType::Complex;
 }
 
-template<> inline ScalarType typeOf<std::pair<double,double>>() {
+template<> inline ScalarType typeOf<double_complex>() {
   return ScalarType::Complex;
 }
 

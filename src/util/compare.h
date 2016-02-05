@@ -3,6 +3,8 @@
 
 #include <cstddef>
 
+#include "complex_types.h"
+
 namespace simit {
 namespace util {
 
@@ -32,6 +34,30 @@ template <> inline
 bool compare<double>(const double* ldata, const double* rdata, size_t num) {
   for (size_t i=0; i < num; ++i) {
     if (!util::almostEqual(ldata[i], rdata[i], 0.001)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <> inline
+bool compare<float_complex>(const float_complex* ldata,
+                            const float_complex* rdata, size_t num) {
+  for (size_t i=0; i < num; ++i) {
+    if (!util::almostEqual(ldata[i].real, rdata[i].real, 0.001f) ||
+        !util::almostEqual(ldata[i].imag, rdata[i].imag, 0.001f)) {
+      return false;
+    }
+  }
+  return true;
+}
+
+template <> inline
+bool compare<double_complex>(const double_complex* ldata,
+                             const double_complex* rdata, size_t num) {
+  for (size_t i=0; i < num; ++i) {
+    if (!util::almostEqual(ldata[i].real, rdata[i].real, 0.001) ||
+        !util::almostEqual(ldata[i].imag, rdata[i].imag, 0.001)) {
       return false;
     }
   }

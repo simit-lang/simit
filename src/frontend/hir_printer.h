@@ -81,8 +81,8 @@ private:
   void dedent() { --indentLevel; }
   void printIndent() { oss << std::string(2 * indentLevel, ' '); }
   void printBoolean(bool val) { oss << (val ? "true" : "false"); }
-  void printComplex(std::pair<double,double> val) {
-    oss << "<" << val.first << "," << val.second << ">";
+  void printComplex(double_complex val) {
+    oss << "<" << val.real << "," << val.imag << ">";
   }
   
   void printFuncOrProc(FuncDecl::Ptr, const bool = false);

@@ -30,6 +30,11 @@ llvm::Constant* llvmBool(bool val) {
   return llvm::ConstantInt::get(LLVM_CTX, llvm::APInt(1, intVal, false));
 }
 
+llvm::Constant* llvmComplex(double real, double imag) {
+  return llvm::ConstantStruct::get(llvmComplexType(),
+                                   llvmFP(real), llvmFP(imag));
+}
+
 llvm::Constant *llvmPtr(llvm::PointerType* type, const void* data) {
   llvm::Constant* c = (sizeof(void*) == 4)
       ? llvm::ConstantInt::get(llvm::Type::getInt32Ty(LLVM_CTX),
@@ -63,6 +68,15 @@ llvm::Constant* llvmVal(const TensorType& type, const void *data) {
       }
     case ScalarType::Boolean:
       return llvmBool(static_cast<const bool*>(data)[0]);
+    case ScalarType::Complex:
+      if (ir::ScalarType::singleFloat()) {
+        return llvmComplex(static_cast<const float*>(data)[0],
+                           static_cast<const float*>(data)[1]);
+      }
+      else {
+        return llvmComplex(static_cast<const double*>(data)[0],
+                           static_cast<const double*>(data)[1]);
+      }
   }
   ierror;
   return nullptr;

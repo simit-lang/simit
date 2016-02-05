@@ -774,7 +774,7 @@ struct BoolLiteral : public TensorLiteral {
 };
 
 struct ComplexLiteral : public TensorLiteral {
-  std::pair<double,double> val;
+  double_complex val;
 
   typedef std::shared_ptr<ComplexLiteral> Ptr;
 
@@ -810,7 +810,7 @@ struct FloatVectorLiteral : public DenseTensorLiteral {
 };
 
 struct ComplexVectorLiteral : public DenseTensorLiteral {
-  std::vector<std::pair<double,double>> vals;
+  std::vector<double_complex> vals;
 
   typedef std::shared_ptr<ComplexVectorLiteral> Ptr;
 

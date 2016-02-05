@@ -22,6 +22,7 @@ llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
 llvm::Constant*    llvmFP(double val, unsigned bits=64);
 llvm::Constant*    llvmBool(bool val);
+llvm::Constant*    llvmComplex(double real, double imag);
 
 // Simit-specific utilities
 

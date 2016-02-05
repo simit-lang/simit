@@ -90,7 +90,7 @@ private:
   hir::ComplexVectorLiteral::Ptr   parseDenseComplexVectorLiteral();
   int                              parseSignedIntLiteral();
   double                           parseSignedFloatLiteral();
-  std::pair<double,double>         parseComplexLiteral();
+  double_complex                   parseComplexLiteral();
   hir::Test::Ptr                   parseTest();
 
   void reportError(const Token &, std::string);

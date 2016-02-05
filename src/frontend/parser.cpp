@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "scanner.h"
 #include "hir.h"
+#include "complex_types.h"
 
 namespace simit { 
 namespace internal {
@@ -1331,7 +1332,7 @@ hir::Expr::Ptr Parser::parseTensorLiteral() {
       const Token laToken = peek();
       
       auto complexLiteral = std::make_shared<hir::ComplexLiteral>();
-      std::pair<double,double> complexVal = parseComplexLiteral();
+      double_complex complexVal = parseComplexLiteral();
       complexLiteral->setLoc(laToken);
       complexLiteral->val = complexVal;
 
@@ -1495,7 +1496,7 @@ hir::ComplexVectorLiteral::Ptr Parser::parseDenseComplexVectorLiteral() {
   auto vec = std::make_shared<hir::ComplexVectorLiteral>();
   vec->transposed = false;
 
-  std::pair<double,double> elem = parseComplexLiteral();
+  double_complex elem = parseComplexLiteral();
   vec->vals.push_back(elem);
 
   while (true) {
@@ -1549,13 +1550,13 @@ double Parser::parseSignedFloatLiteral() {
 }
 
 // complex_literal: '<' signed_float_literal ',' signed_float_literal '>'
-std::pair<double,double> Parser::parseComplexLiteral() {
+double_complex Parser::parseComplexLiteral() {
   consume(Token::Type::LA);
-  double val1 = parseSignedFloatLiteral();
+  double real = parseSignedFloatLiteral();
   consume(Token::Type::COMMA);
-  double val2 = parseSignedFloatLiteral();
+  double imag = parseSignedFloatLiteral();
   consume(Token::Type::RA);
-  return std::make_pair(val1, val2);
+  return double_complex(real, imag);
 }
 
 // '%!' ident call_params '==' expr ';'

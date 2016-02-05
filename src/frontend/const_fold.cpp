@@ -28,8 +28,8 @@ void ConstantFolding::visit(NegExpr::Ptr expr) {
   } else if (isa<ComplexLiteral>(expr->operand)) {
     const auto operand = to<ComplexLiteral>(expr->operand);
     if (expr->negate) {
-      operand->val.first *= -1.0;
-      operand->val.second *= -1.0;
+      operand->val.real *= -1.0;
+      operand->val.imag *= -1.0;
     }
     node = operand;
   } else if (isa<DenseTensorLiteral>(expr->operand)) {
@@ -53,8 +53,8 @@ void ConstantFolding::visit(NegExpr::Ptr expr) {
         }
         virtual void visit(ComplexVectorLiteral::Ptr vec) {
           for (unsigned i = 0; i < vec->vals.size(); ++i) {
-            vec->vals[i].first *= -1.0;
-            vec->vals[i].second *= -1.0;
+            vec->vals[i].real *= -1.0;
+            vec->vals[i].imag *= -1.0;
           }
         }
     };

@@ -104,7 +104,7 @@ private:
     void addDimension() { dimSizes.push_back(1); }
     void addIntValues(const std::vector<int> &);
     void addFloatValues(const std::vector<double> &);
-    void addComplexValues(const std::vector<std::pair<double,double>> &);
+    void addComplexValues(const std::vector<double_complex> &);
     void merge(const DenseTensorValues &);
 
     std::vector<unsigned> dimSizes;
