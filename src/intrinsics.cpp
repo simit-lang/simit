@@ -148,11 +148,43 @@ void locInit() {
                 Func::Intrinsic);
 }
 
+static Func freeVar;
+void freeInit() {
+  freeVar = Func("free",
+                 {Var("s", String)},
+                 {},
+                 Func::Intrinsic);
+}
+
+static Func mallocVar;
+void mallocInit() {
+  mallocVar = Func("malloc",
+                   {Var("s", Int)},
+                   {Var("r", String)},
+                   Func::Intrinsic);
+}
+
 static Func strcmpVar;
 void strcmpInit() {
   strcmpVar = Func("strcmp",
                    {Var("s", String), Var("t", String)},
                    {Var("r", Int)},
+                   Func::Intrinsic);
+}
+
+static Func strlenVar;
+void strlenInit() {
+  strlenVar = Func("strlen",
+                   {Var("s", String)},
+                   {Var("r", Int)},
+                   Func::Intrinsic);
+}
+
+static Func strcpyVar;
+void strcpyInit() {
+  strcpyVar = Func("strcpy",
+                   {Var("s", String), Var("t", String)},
+                   {Var("r", String)},
                    Func::Intrinsic);
 }
 
@@ -294,11 +326,39 @@ const Func& loc() {
   return locVar;
 }
 
+const Func& free() {
+  if (!freeVar.defined()) {
+    freeInit();
+  }
+  return freeVar;
+}
+
+const Func& malloc() {
+  if (!mallocVar.defined()) {
+    mallocInit();
+  }
+  return mallocVar;
+}
+
 const Func& strcmp() {
   if (!strcmpVar.defined()) {
     strcmpInit();
   }
   return strcmpVar;
+}
+
+const Func& strlen() {
+  if (!strlenVar.defined()) {
+    strlenInit();
+  }
+  return strlenVar;
+}
+
+const Func& strcpy() {
+  if (!strcpyVar.defined()) {
+    strcpyInit();
+  }
+  return strcpyVar;
 }
 
 const Func& simitClock() {

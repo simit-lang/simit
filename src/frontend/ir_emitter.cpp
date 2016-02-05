@@ -168,7 +168,9 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
     results.push_back(result);
   }
 
-  const ir::Stmt body = emitStmt(decl->body);
+  ir::Stmt body = emitStmt(decl->body);
+  body = ir::Scope::make(body);
+
   ctx->unscope();
 
   if (decl->exported) {
@@ -767,7 +769,7 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   ctx->addSymbol(var.getName(), var, access);
 
   iassert(decl->initVal || !isConst);
-  const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
+  auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
   
   if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr) && 
       (isScalar(var.getType()) || !isScalar(initExpr.type()))) {
@@ -778,8 +780,13 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
     ctx->addConstant(var, initExpr);
   } else {
     ctx->addStatement(ir::VarDecl::make(var));
-    
-    if (decl->initVal) {
+  
+    // Ensure string variables are always initialized.
+    if (isString(var.getType()) && !initExpr.defined()) {
+      initExpr = ir::Literal::make(std::string(""));
+    }
+
+    if (initExpr.defined()) {
       addAssign({ir::VarExpr::make(var)}, initExpr);
       calls.clear();
     }

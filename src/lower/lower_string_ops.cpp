@@ -6,6 +6,8 @@
 #include "types.h"
 
 #include <vector>
+#include <stack>
+#include <set>
 
 namespace simit {
 namespace ir {
@@ -116,16 +118,88 @@ private:
 
   void visit(const Gt* op) {
     if (isString(op->a.type())) {
-    lowerStringCompare(CompareOp::GT, op->a, op->b);
+      lowerStringCompare(CompareOp::GT, op->a, op->b);
+    } else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const AssignStmt *op) {
+    if (isString(op->var.getType())) {
+      iassert(isString(op->value.type()));
+
+      Stmt freeStmt = CallStmt::make({}, intrinsics::free(), 
+                                     {VarExpr::make(op->var)});
+      stmts.push_back(freeStmt);
+
+      Var len("len", Int);
+      Stmt lenStmt = CallStmt::make({len}, intrinsics::strlen(), {op->value});
+      stmts.push_back(lenStmt);
+      
+      Expr lenExpr = Add::make(VarExpr::make(len), Literal::make(1));
+      Stmt mallocStmt = CallStmt::make({op->var}, intrinsics::malloc(), 
+                                       {lenExpr});
+      stmts.push_back(mallocStmt);
+
+      stmt = CallStmt::make({op->var}, intrinsics::strcpy(), 
+                            {VarExpr::make(op->var), op->value});
     } else {
       IRRewriter::visit(op);
     }
   }
 };
 
+class InsertStringFrees : public IRRewriter {
+public:
+  using IRRewriter::rewrite;
+
+  Stmt rewrite(Stmt s) {
+    if (s.defined()) {
+      s.accept(this);
+      stmts.push_back(stmt);
+      s = (stmts.size() > 0) ? Block::make(stmts) : stmt;
+      stmts.clear();
+    }
+    else {
+      s = Stmt();
+    }
+    expr = Expr();
+    stmt = Stmt();
+    return s;
+  }
+
+private:
+  std::vector<Stmt> stmts;
+  std::stack<std::set<Var>> stringVars;
+  
+  using IRRewriter::visit;
+ 
+  void visit(const VarDecl *op) {
+    IRRewriter::visit(op);
+    if (isString(op->var.getType())) {
+      stringVars.top().insert(op->var);
+    }
+  }
+
+  void visit(const Scope* op) {
+    stringVars.emplace();
+
+    Stmt scopedStmt = rewrite(op->scopedStmt);
+    for (const auto var : stringVars.top()) {
+      const Stmt freeStmt = CallStmt::make({}, intrinsics::free(), 
+                                           {VarExpr::make(var)});
+      scopedStmt = Block::make(scopedStmt, freeStmt);
+    }
+
+    stringVars.pop();
+    stmt = Scope::make(scopedStmt);
+  }
+};
+
 Func lowerStringOps(Func func) {
   func = LowerStringOps().rewrite(func);
   func = insertVarDecls(func);
+  func = InsertStringFrees().rewrite(func);
   return func;
 }
 

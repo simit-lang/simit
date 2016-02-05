@@ -124,7 +124,7 @@ class InsertTemporaries : public IRRewriter {
   }
 
   void visit(const Print *op) {
-    if (isa<VarExpr>(op->expr)) {
+    if (isa<VarExpr>(op->expr) || isString(op->expr.type())) {
       stmt = op;
       return;
     }

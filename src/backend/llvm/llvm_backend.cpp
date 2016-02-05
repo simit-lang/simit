@@ -175,17 +175,15 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   iassert(llvmFunc);
 
 
-  // Declare malloc and free
+  // Declare malloc and free if necessary
   llvm::FunctionType *m =
       llvm::FunctionType::get(LLVM_INT8_PTR, {LLVM_INT}, false);
   llvm::Function *malloc =
-      llvm::Function::Create(m, llvm::Function::ExternalLinkage, "malloc",
-                             module);
+      llvm::cast<llvm::Function>(module->getOrInsertFunction("malloc", m));
   llvm::FunctionType *f =
       llvm::FunctionType::get(LLVM_VOID, {LLVM_INT8_PTR}, false);
   llvm::Function *free =
-      llvm::Function::Create(f, llvm::Function::ExternalLinkage, "free",
-                             module);
+      llvm::cast<llvm::Function>(module->getOrInsertFunction("free", f));
 
 
   // Create initialization function
@@ -681,6 +679,12 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
   if (isScalar(var.getType())) {
     ScalarType type = var.getType().toTensor()->getComponentType();
     llvmVar = builder->CreateAlloca(llvmType(type),nullptr,var.getName());
+
+    if (isString(var.getType())) {
+      // Initialize pointer to null.
+      llvm::Value *valuePtr = defaultInitializer(llvmType(ScalarType::String));
+      builder->CreateStore(valuePtr, llvmVar);
+    }
   }
   else {
     llvmVar = makeGlobalTensor(varDecl.var);
@@ -834,8 +838,20 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     else if (callStmt.callee == ir::intrinsics::loc()) {
       call = emitCall("loc", args, LLVM_INT);
     }
+    else if (callStmt.callee == ir::intrinsics::free()) {
+      call = emitCall("free", args, LLVM_VOID);
+    }
+    else if (callStmt.callee == ir::intrinsics::malloc()) {
+      call = emitCall("malloc", args, LLVM_INT8_PTR);
+    }
     else if (callStmt.callee == ir::intrinsics::strcmp()) {
       call = emitCall("strcmp", args, LLVM_INT);
+    }
+    else if (callStmt.callee == ir::intrinsics::strlen()) {
+      call = emitCall("strlen", args, LLVM_INT);
+    }
+    else if (callStmt.callee == ir::intrinsics::strcpy()) {
+      call = emitCall("strcpy", args, LLVM_INT8_PTR);
     }
     else if (callStmt.callee == ir::intrinsics::simitClock()) {
       call = emitCall("simitClock", args, llvmFloatType());
