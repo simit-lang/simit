@@ -13,6 +13,23 @@ using namespace simit::ir;
 namespace simit {
 namespace backend {
 
+/// SimitIRBuilder
+llvm::Value *SimitIRBuilder::CreateComplex(
+    llvm::Value *real, llvm::Value *imag) {
+  llvm::Value *zero = llvmComplex(0, 0);
+  llvm::Value *partial = CreateInsertValue(zero, real, 0);
+  return CreateInsertValue(partial, imag, 1);
+}
+
+llvm::Value *SimitIRBuilder::ComplexGetReal(llvm::Value *c) {
+  return CreateExtractValue(c, 0, "real");
+}
+
+llvm::Value *SimitIRBuilder::ComplexGetImag(llvm::Value *c) {
+  return CreateExtractValue(c, 1, "imag");
+}
+
+
 llvm::ConstantInt *llvmInt(long long int val, unsigned bits) {
   return llvm::ConstantInt::get(LLVM_CTX, llvm::APInt(bits, val, true));
 }

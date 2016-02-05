@@ -31,11 +31,11 @@ class Function;
 class DataLayout;
 }
 
-typedef llvm::IRBuilder<true, llvm::ConstantFolder,
-                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
 
 namespace simit {
 namespace backend {
+
+class SimitIRBuilder;
 
 extern const std::string VAL_SUFFIX;
 extern const std::string PTR_SUFFIX;
@@ -61,7 +61,7 @@ protected:
 
   llvm::Module *module;
   std::unique_ptr<llvm::DataLayout> dataLayout;
-  std::unique_ptr<LLVMIRBuilder> builder;
+  std::unique_ptr<SimitIRBuilder> builder;
 
   using BackendImpl::compile;
   virtual Function* compile(ir::Func func, const ir::Storage& storage);

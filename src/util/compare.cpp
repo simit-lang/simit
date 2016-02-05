@@ -39,4 +39,13 @@ bool almostEqual(float a, float b, float maxRelativeError) {
   return false;
 }
 
+bool almostEqual(double_complex a, double_complex b, double maxRelativeError) {
+  return (almostEqual(a.real, b.real, maxRelativeError) &&
+          almostEqual(a.imag, b.imag, maxRelativeError));
+}
+bool almostEqual(float_complex a, float_complex b, float maxRelativeError) {
+  return (almostEqual(a.real, b.real, maxRelativeError) &&
+          almostEqual(a.imag, b.imag, maxRelativeError));
+}
+
 }}
