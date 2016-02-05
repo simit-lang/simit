@@ -992,6 +992,8 @@ hir::Type::Ptr Parser::parseType() {
     case Token::Type::BOOL:
     case Token::Type::STRING:
     case Token::Type::TENSOR:
+    case Token::Type::MATRIX:
+    case Token::Type::VECTOR:
       type = parseTensorType();
       break;
     default:

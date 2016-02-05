@@ -33,6 +33,7 @@ public:
 
 private:
   std::vector<Stmt> stmts;
+  std::stack<std::set<Var>> stringVars;
   
   using IRRewriter::visit;
 
@@ -147,6 +148,27 @@ private:
       IRRewriter::visit(op);
     }
   }
+  
+  void visit(const VarDecl *op) {
+    IRRewriter::visit(op);
+    if (isString(op->var.getType())) {
+      stringVars.top().insert(op->var);
+    }
+  }
+
+  void visit(const Scope* op) {
+    stringVars.emplace();
+
+    Stmt scopedStmt = rewrite(op->scopedStmt);
+    for (const auto var : stringVars.top()) {
+      const Stmt freeStmt = CallStmt::make({}, intrinsics::free(), 
+                                           {VarExpr::make(var)});
+      scopedStmt = Block::make(scopedStmt, freeStmt);
+    }
+
+    stringVars.pop();
+    stmt = Scope::make(scopedStmt);
+  }
 };
 
 class InsertStringFrees : public IRRewriter {
@@ -174,32 +196,10 @@ private:
   
   using IRRewriter::visit;
  
-  void visit(const VarDecl *op) {
-    IRRewriter::visit(op);
-    if (isString(op->var.getType())) {
-      stringVars.top().insert(op->var);
-    }
-  }
-
-  void visit(const Scope* op) {
-    stringVars.emplace();
-
-    Stmt scopedStmt = rewrite(op->scopedStmt);
-    for (const auto var : stringVars.top()) {
-      const Stmt freeStmt = CallStmt::make({}, intrinsics::free(), 
-                                           {VarExpr::make(var)});
-      scopedStmt = Block::make(scopedStmt, freeStmt);
-    }
-
-    stringVars.pop();
-    stmt = Scope::make(scopedStmt);
-  }
 };
 
 Func lowerStringOps(Func func) {
   func = LowerStringOps().rewrite(func);
-  func = insertVarDecls(func);
-  func = InsertStringFrees().rewrite(func);
   return func;
 }
 

@@ -13,11 +13,11 @@ syn keyword simitStatement    element func proc export
 syn keyword simitConditional  if elif else end
 syn keyword simitRepeat       for in while do
 syn keyword simitStorageClass const extern var
-syn keyword simitFunc         map to reduce print
+syn keyword simitFunc         map to reduce print println
 
 syn keyword simitTodo         contained  TODO NOTE FIXME XXX
 
-syn match  simitRelationalOperator "\(==\|\~=\|>=\|<=\|=\~\|>\|<\|=\)"
+syn match  simitRelationalOperator "\(==\|\!=\|>=\|<=\|=\~\|>\|<\|=\)"
 syn match simitArithmeticOperator  "[-+]"
 syn match simitArithmeticOperator  "\.\=[*/\\^]"
 syn match simitRangeOperator       ":"

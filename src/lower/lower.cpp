@@ -15,6 +15,7 @@
 #include "temps.h"
 #include "flatten.h"
 #include "ir_rewriter.h"
+#include "ir_transforms.h"
 #include "ir_printer.h"
 #include "path_expressions.h"
 
@@ -128,6 +129,9 @@ Func lower(Func func, bool print) {
   // Lower Index Expressions
   func = rewriteCallGraph(func, lowerIndexExpressions);
   printCallGraph("Lower Index Expressions", func, print);
+
+  // Insert variable declarations
+  func = insertVarDecls(func);
 
   // Lower Tensor Reads and Writes
   func = rewriteCallGraph(func, lowerTensorAccesses);

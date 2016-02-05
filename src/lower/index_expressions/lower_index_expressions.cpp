@@ -264,7 +264,6 @@ Func lowerIndexExpressions(Func func) {
     }
   };
   func = LowerIndexExpressionsRewriter().lower(func);
-  func = insertVarDecls(func);
 
   return func;
 }
