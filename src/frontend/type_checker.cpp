@@ -460,6 +460,15 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
         }
       }
 
+      // Check that expression on right-hand side returns only tensors.
+      // TODO: Remove once support for assignment of non-tensors is added.
+      if (!exprType->at(i).isTensor()) {
+        std::stringstream errMsg;
+        errMsg << "cannot assign a non-tensor value of type "
+               << typeString(exprType->at(i)) << " to a variable";
+        reportError(errMsg.str(), stmt->expr);
+      }
+
       // Check that target is writable.
       if (!stmt->lhs[i]->isWritable()) {
         reportError("assignment target is not writable", stmt->lhs[i]);
@@ -593,13 +602,22 @@ void TypeChecker::visit(MapExpr::Ptr expr) {
       }
     }
     
-    // Check that inout argument is writable.
-    if (i < expr->partialActuals.size() && 
-        writableArgs.find(funcArgs[i]) != writableArgs.end()) {
+    if (i < expr->partialActuals.size()) { 
       const Expr::Ptr param = expr->partialActuals[i];
-      
-      if (!param->isWritable()) {
+
+      // Check that inout argument is writable.
+      if (writableArgs.find(funcArgs[i]) != writableArgs.end() && 
+          !param->isWritable()) {
         reportError("inout argument must be writable", param);
+      }
+
+      // Check that additional argument is a tensor.
+      // TODO: Remove once support for passing non-tensor arguments is added.
+      if (!actualsType[i].isTensor()) {
+        std::stringstream errMsg;
+        errMsg << "expected argument to be a tensor but got an argument "
+               << "of type " << typeString(actualsType[i]);
+        reportError(errMsg.str(), param);
       }
     }
   }
@@ -970,6 +988,16 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
         std::stringstream errMsg;
         errMsg << "cannot pass multiple values of types "
                << typeString(argType) << " as a single argument";
+        reportError(errMsg.str(), argument);
+        continue;
+      }
+
+      // Check that argument is a tensor.
+      // TODO: Remove once support for passing non-tensor arguments is added.
+      if (!argType->at(0).isTensor()) {
+        std::stringstream errMsg;
+        errMsg << "expected argument to be a tensor but got an argument "
+               << "of type " << typeString(argType->at(0));
         reportError(errMsg.str(), argument);
         continue;
       }
