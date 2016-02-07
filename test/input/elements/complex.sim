@@ -22,3 +22,15 @@ end
 func dodiv(a : complex, b : complex) -> (c : complex)
   c = a / b;
 end
+
+%%% vector-add
+%! vadd([<1.0,2.0>,<3.0,4.0>]', [<0.1,0.2>,<0.3,0.4>]') == [<1.1,2.2>,<3.3,4.4>]';
+func vadd(a : tensor[2](complex), b : tensor[2](complex)) -> (c : tensor[2](complex))
+  c = a + b;
+end
+
+%%% vector-dot
+%! vdot([<1.0,2.0>,<3.0,4.0>]', [<0.1,0.2>,<0.3,0.4>]') == <-1.0,2.8>;
+func vdot(a : tensor[2](complex), b : tensor[2](complex)) -> (c : complex)
+  c = a' * b;
+end
