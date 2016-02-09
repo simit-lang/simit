@@ -107,7 +107,7 @@ private:
 
 private:
   void typeCheckVarOrConstDecl(VarDecl::Ptr, bool = false, bool = false);
-  void typeCheckBinaryElwise(BinaryExpr::Ptr);
+  void typeCheckBinaryElwise(BinaryExpr::Ptr, bool = false);
   void typeCheckBinaryBoolean(BinaryExpr::Ptr);
   void typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
 

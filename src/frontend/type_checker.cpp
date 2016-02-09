@@ -684,7 +684,7 @@ void TypeChecker::visit(NotExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(AddExpr::Ptr expr) {
-  typeCheckBinaryElwise(expr); 
+  typeCheckBinaryElwise(expr, true); 
 }
 
 void TypeChecker::visit(SubExpr::Ptr expr) {
@@ -1455,27 +1455,30 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
   reportError(errMsg.str(), decl);
 }
 
-void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
+void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr, 
+                                        bool allowStringOperands) {
   const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
   const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
   bool typeChecked = (bool)lhsType && (bool)rhsType;
 
   // Check that operands of element-wise operation are numeric tensors.
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      !lhsType->at(0).toTensor()->getComponentType().isNumeric())) {
+      (!lhsType->at(0).toTensor()->getComponentType().isNumeric() && 
+      (!allowStringOperands || !isString(lhsType->at(0)))))) {
     std::stringstream errMsg;
     errMsg << "expected left operand of element-wise operation to be a "
-           << "numeric tensor but got an operand of type " 
-           << typeString(lhsType);
+           << "numeric tensor " << (allowStringOperands ? "or string " : "")
+           << "but got an operand of type " << typeString(lhsType);
     reportError(errMsg.str(), expr->lhs);
     typeChecked = false;
   }
   if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      !rhsType->at(0).toTensor()->getComponentType().isNumeric())) {
+      (!rhsType->at(0).toTensor()->getComponentType().isNumeric() && 
+      (!allowStringOperands || !isString(rhsType->at(0)))))) {
     std::stringstream errMsg;
     errMsg << "expected right operand of element-wise operation to be a "
-           << "numeric tensor but got an operand of type " 
-           << typeString(rhsType);
+           << "numeric tensor " << (allowStringOperands ? "or string " : "")
+           << "but got an operand of type " << typeString(rhsType);
     reportError(errMsg.str(), expr->rhs);
     typeChecked = false;
   }

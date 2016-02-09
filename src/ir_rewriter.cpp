@@ -22,6 +22,10 @@ Expr IRRewriter::rewrite(Expr e) {
 Stmt IRRewriter::rewrite(Stmt s) {
   if (s.defined()) {
     s.accept(this);
+    Stmt spilledStmts = getSpilledStmts();
+    if (spilledStmts.defined()) {
+      stmt = Block::make(spilledStmts, stmt);
+    }
     s = stmt;
   }
   else {
@@ -267,6 +271,7 @@ void IRRewriter::visit(const Scope *op) {
 
 void IRRewriter::visit(const IfThenElse *op) {
   Expr condition = rewrite(op->condition);
+  Stmt spilledCond = getSpilledStmts();
   Stmt thenBody = rewrite(op->thenBody);
   Stmt elseBody = rewrite(op->elseBody);
   if (condition == op->condition && thenBody == op->thenBody &&
@@ -279,12 +284,16 @@ void IRRewriter::visit(const IfThenElse *op) {
     } else {
       stmt = IfThenElse::make(condition, thenBody);
     }
+    if (spilledCond.defined()) {
+      stmt = Block::make(spilledCond, stmt);
+    }
   }
 }
 
 void IRRewriter::visit(const ForRange *op) {
   Expr start = rewrite(op->start);
   Expr end = rewrite(op->end);
+  Stmt spilledBounds = getSpilledStmts();
   Stmt body = rewrite(op->body);
   
   if (body == op->body && start == op->start && end == op->end) {
@@ -292,6 +301,9 @@ void IRRewriter::visit(const ForRange *op) {
   }
   else {
     stmt = ForRange::make(op->var, start, end, body);
+    if (spilledBounds.defined()) {
+      stmt = Block::make(spilledBounds, stmt);
+    }
   }
 }
 
@@ -307,13 +319,20 @@ void IRRewriter::visit(const For *op) {
 
 void IRRewriter::visit(const While *op) {
   Expr condition = rewrite(op->condition);
+  Stmt spilledCond = getSpilledStmts();
   Stmt body = rewrite(op->body);
   
   if (condition == op->condition && body == op->body) {
     stmt = op;
   }
   else {
+    if (spilledCond.defined()) {
+      body = Block::make(body, spilledCond);
+    }
     stmt = While::make(condition, body);
+    if (spilledCond.defined()) {
+      stmt = Block::make(spilledCond, stmt);
+    }
   }
 }
 

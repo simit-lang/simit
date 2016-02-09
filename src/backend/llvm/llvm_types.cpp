@@ -127,7 +127,10 @@ llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
     case ScalarType::Boolean:
       return llvm::Type::getInt1PtrTy(LLVM_CTX, addrspace);
     case ScalarType::String:
-      break;
+    {
+      const auto charPtrType = llvm::Type::getInt8PtrTy(LLVM_CTX, addrspace);
+      return llvm::PointerType::get(charPtrType, addrspace);
+    }
   }
   unreachable;
   return nullptr;

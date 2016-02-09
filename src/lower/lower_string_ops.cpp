@@ -13,26 +13,7 @@ namespace simit {
 namespace ir {
 
 class LowerStringOps : public IRRewriter {
-public:
-  using IRRewriter::rewrite;
-
-  Stmt rewrite(Stmt s) {
-    if (s.defined()) {
-      s.accept(this);
-      stmts.push_back(stmt);
-      s = (stmts.size() > 0) ? Block::make(stmts) : stmt;
-      stmts.clear();
-    }
-    else {
-      s = Stmt();
-    }
-    expr = Expr();
-    stmt = Stmt();
-    return s;
-  }
-
 private:
-  std::vector<Stmt> stmts;
   std::stack<std::set<Var>> stringVars;
   
   using IRRewriter::visit;
@@ -77,7 +58,7 @@ private:
     }
   }
 
-  void visit(const Eq* op) {
+  void visit(const Eq *op) {
     if (isString(op->a.type())) {
       lowerStringCompare(CompareOp::EQ, op->a, op->b);
     } else {
@@ -85,7 +66,7 @@ private:
     }
   }
 
-  void visit(const Ne* op) {
+  void visit(const Ne *op) {
     if (isString(op->a.type())) {
       lowerStringCompare(CompareOp::NE, op->a, op->b);
     } else {
@@ -93,7 +74,7 @@ private:
     }
   }
 
-  void visit(const Le* op) {
+  void visit(const Le *op) {
     if (isString(op->a.type())) {
       lowerStringCompare(CompareOp::LE, op->a, op->b);
     } else {
@@ -101,7 +82,7 @@ private:
     }
   }
 
-  void visit(const Lt* op) {
+  void visit(const Lt *op) {
     if (isString(op->a.type())) {
       lowerStringCompare(CompareOp::LT, op->a, op->b);
     } else {
@@ -109,7 +90,7 @@ private:
     }
   }
 
-  void visit(const Ge* op) {
+  void visit(const Ge *op) {
     if (isString(op->a.type())) {
       lowerStringCompare(CompareOp::GE, op->a, op->b);
     } else {
@@ -117,9 +98,17 @@ private:
     }
   }
 
-  void visit(const Gt* op) {
+  void visit(const Gt *op) {
     if (isString(op->a.type())) {
       lowerStringCompare(CompareOp::GT, op->a, op->b);
+    } else {
+      IRRewriter::visit(op);
+    }
+  }
+
+  void visit(const Add *op) {
+    if (isString(op->a.type())) {
+      iassert(isString(op->b.type()));
     } else {
       IRRewriter::visit(op);
     }
@@ -156,7 +145,7 @@ private:
     }
   }
 
-  void visit(const Scope* op) {
+  void visit(const Scope *op) {
     stringVars.emplace();
 
     Stmt scopedStmt = rewrite(op->scopedStmt);
@@ -200,6 +189,7 @@ private:
 
 Func lowerStringOps(Func func) {
   func = LowerStringOps().rewrite(func);
+  func = insertVarDecls(func);
   return func;
 }
 
