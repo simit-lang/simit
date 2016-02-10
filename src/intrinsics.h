@@ -35,6 +35,7 @@ const Func& malloc();
 const Func& strcmp();
 const Func& strlen();
 const Func& strcpy();
+const Func& strcat();
 const Func& simitClock();
 const Func& simitStoreTime();
 

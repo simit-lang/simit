@@ -188,6 +188,14 @@ void strcpyInit() {
                    Func::Intrinsic);
 }
 
+static Func strcatVar;
+void strcatInit() {
+  strcatVar = Func("strcat",
+                   {Var("s", String), Var("t", String)},
+                   {Var("r", String)},
+                   Func::Intrinsic);
+}
+
 static Func simitClockVar;
 void simitClockInit() {
   simitClockVar = Func("simitClock",
@@ -359,6 +367,13 @@ const Func& strcpy() {
     strcpyInit();
   }
   return strcpyVar;
+}
+
+const Func& strcat() {
+  if (!strcatVar.defined()) {
+    strcatInit();
+  }
+  return strcatVar;
 }
 
 const Func& simitClock() {

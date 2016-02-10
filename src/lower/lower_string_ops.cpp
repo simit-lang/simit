@@ -13,7 +13,6 @@ namespace simit {
 namespace ir {
 
 class LowerStringOps : public IRRewriter {
-private:
   std::stack<std::set<Var>> stringVars;
   
   using IRRewriter::visit;
@@ -106,9 +105,63 @@ private:
     }
   }
 
+  void lowerStringConcat(Var target, Expr op) {
+    class GetOperands : public IRVisitor {
+      public:
+        GetOperands(std::vector<Expr> &operands) : operands(operands) {}
+
+      private:
+        std::vector<Expr> &operands;
+
+        void visit(const Literal *op) {
+          operands.push_back(op);
+        }
+
+        void visit(const VarExpr *op) {
+          operands.push_back(op);
+        }
+    };
+
+    std::vector<Expr> operands;
+    GetOperands getOps(operands);
+    op.accept(&getOps);
+
+    Expr lenExpr = Literal::make(1);
+    for (const auto opnd : operands) {
+      Var len("len", Int);
+      Stmt lenStmt = CallStmt::make({len}, intrinsics::strlen(), {opnd});
+      stmts.push_back(lenStmt);
+      
+      lenExpr = Add::make(lenExpr, VarExpr::make(len));
+    }
+    
+    Expr targetExpr = VarExpr::make(target);
+    Stmt freeStmt = CallStmt::make({}, intrinsics::free(), {targetExpr});
+    stmts.push_back(freeStmt);
+
+    Stmt mallocStmt = CallStmt::make({target}, intrinsics::malloc(), {lenExpr});
+    stmts.push_back(mallocStmt);
+
+    Stmt cpyStmt = CallStmt::make({target}, intrinsics::strcpy(), 
+                                  {targetExpr, operands[0]});
+    stmts.push_back(cpyStmt);
+
+    for (unsigned i = 1; i < operands.size(); ++i) {
+      Stmt catStmt = CallStmt::make({target}, intrinsics::strcat(),
+                                    {targetExpr, operands[i]});
+      stmts.push_back(catStmt);
+    }
+  }
+
   void visit(const Add *op) {
     if (isString(op->a.type())) {
       iassert(isString(op->b.type()));
+
+      Var tmp("tmp", String);
+      stringVars.top().insert(tmp);
+
+      lowerStringConcat(tmp, op);
+      expr = VarExpr::make(tmp);
     } else {
       IRRewriter::visit(op);
     }
@@ -117,22 +170,7 @@ private:
   void visit(const AssignStmt *op) {
     if (isString(op->var.getType())) {
       iassert(isString(op->value.type()));
-
-      Stmt freeStmt = CallStmt::make({}, intrinsics::free(), 
-                                     {VarExpr::make(op->var)});
-      stmts.push_back(freeStmt);
-
-      Var len("len", Int);
-      Stmt lenStmt = CallStmt::make({len}, intrinsics::strlen(), {op->value});
-      stmts.push_back(lenStmt);
-      
-      Expr lenExpr = Add::make(VarExpr::make(len), Literal::make(1));
-      Stmt mallocStmt = CallStmt::make({op->var}, intrinsics::malloc(), 
-                                       {lenExpr});
-      stmts.push_back(mallocStmt);
-
-      stmt = CallStmt::make({op->var}, intrinsics::strcpy(), 
-                            {VarExpr::make(op->var), op->value});
+      lowerStringConcat(op->var, op->value);
     } else {
       IRRewriter::visit(op);
     }
@@ -158,33 +196,6 @@ private:
     stringVars.pop();
     stmt = Scope::make(scopedStmt);
   }
-};
-
-class InsertStringFrees : public IRRewriter {
-public:
-  using IRRewriter::rewrite;
-
-  Stmt rewrite(Stmt s) {
-    if (s.defined()) {
-      s.accept(this);
-      stmts.push_back(stmt);
-      s = (stmts.size() > 0) ? Block::make(stmts) : stmt;
-      stmts.clear();
-    }
-    else {
-      s = Stmt();
-    }
-    expr = Expr();
-    stmt = Stmt();
-    return s;
-  }
-
-private:
-  std::vector<Stmt> stmts;
-  std::stack<std::set<Var>> stringVars;
-  
-  using IRRewriter::visit;
- 
 };
 
 Func lowerStringOps(Func func) {

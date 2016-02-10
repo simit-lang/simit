@@ -780,11 +780,6 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
     ctx->addConstant(var, initExpr);
   } else {
     ctx->addStatement(ir::VarDecl::make(var));
-  
-    // Ensure string variables are always initialized.
-    if (isString(var.getType()) && !initExpr.defined()) {
-      initExpr = ir::Literal::make(std::string(""));
-    }
 
     if (initExpr.defined()) {
       addAssign({ir::VarExpr::make(var)}, initExpr);

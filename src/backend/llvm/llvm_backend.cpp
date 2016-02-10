@@ -853,6 +853,9 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     else if (callStmt.callee == ir::intrinsics::strcpy()) {
       call = emitCall("strcpy", args, LLVM_INT8_PTR);
     }
+    else if (callStmt.callee == ir::intrinsics::strcat()) {
+      call = emitCall("strcat", args, LLVM_INT8_PTR);
+    }
     else if (callStmt.callee == ir::intrinsics::simitClock()) {
       call = emitCall("simitClock", args, llvmFloatType());
     }
