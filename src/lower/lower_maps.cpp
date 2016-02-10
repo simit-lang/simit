@@ -112,6 +112,7 @@ private:
 Func lowerMaps(Func func) {
   Stmt body = LowerMaps(&func.getStorage()).rewrite(func.getBody());
   func = Func(func, body);
+  func = insertVarDecls(func);
   return func;
 }
 

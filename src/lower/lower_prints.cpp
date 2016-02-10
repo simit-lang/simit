@@ -390,7 +390,7 @@ private:
 
 Func lowerPrints(Func func) {
   func = LowerPrints(func).rewrite(func);
-//  func = insertVarDecls(func);
+  func = insertVarDecls(func);
   return func;
 }
 

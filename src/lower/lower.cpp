@@ -130,9 +130,6 @@ Func lower(Func func, bool print) {
   func = rewriteCallGraph(func, lowerIndexExpressions);
   printCallGraph("Lower Index Expressions", func, print);
 
-  // Insert variable declarations
-  func = insertVarDecls(func);
-
   // Lower Tensor Reads and Writes
   func = rewriteCallGraph(func, lowerTensorAccesses);
   printCallGraph("Lower Tensor Reads and Writes", func, print);
