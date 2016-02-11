@@ -42,8 +42,8 @@ hir::HIRNode::Ptr Parser::parseProgramElement() {
       case Token::Type::FUNC:
         return parseFuncDecl();
         break;
-      case Token::Type::PROC:
       case Token::Type::EXPORT:
+      case Token::Type::PROC:
         return parseProcDecl();
         break;
       case Token::Type::ELEMENT:
@@ -130,7 +130,7 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
 
   const Token funcToken = consume(Token::Type::FUNC);
   funcDecl->setBeginLoc(funcToken);
-
+  
   funcDecl->name = parseIdent();
   funcDecl->args = parseArguments();
   funcDecl->results = parseResults();
@@ -148,7 +148,9 @@ hir::FuncDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::FuncDecl>();
   procDecl->exported = true;
 
-  procDecl->setBeginLoc(peek());
+  const Token procToken = peek();
+  procDecl->setBeginLoc(procToken);
+
   if (!tryconsume(Token::Type::PROC)) {
     consume(Token::Type::EXPORT);
     consume(Token::Type::FUNC);
@@ -161,6 +163,7 @@ hir::FuncDecl::Ptr Parser::parseProcDecl() {
         if (peek(2).type != Token::Type::COL) {
           break;
         }
+      case Token::Type::RP:
       case Token::Type::INOUT:
         procDecl->args = parseArguments();
         procDecl->results = parseResults();
@@ -1208,7 +1211,9 @@ hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
 hir::ScalarType::Ptr Parser::parseTensorComponentType() {
   auto scalarType = std::make_shared<hir::ScalarType>();
 
-  scalarType->setLoc(peek());
+  const Token typeToken = peek();
+  scalarType->setLoc(typeToken);
+
   switch (peek().type) {
     case Token::Type::INT:
       consume(Token::Type::INT);
