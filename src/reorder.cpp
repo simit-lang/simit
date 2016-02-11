@@ -346,6 +346,15 @@ namespace simit {
   }
   
   // ---------- Strip Reordering ----------
+  int numberOfUnvisited(const vector<bool>& visited, const vector<int>& edges) {
+    int sum = 0;
+    for (auto& edge : edges) {
+      if ( !visited[edge] ) {
+        sum++;
+      }
+    }
+    return sum;
+  }
 
   struct BestUnvisited{
     BestUnvisited(vector<bool>& visited) : 
@@ -354,20 +363,11 @@ namespace simit {
     
     bool operator()(pair<int, vector<int>> const&left, 
                     pair<int, vector<int>> const&right) const {
-      return numberOfUnvisited(left.second) < numberOfUnvisited(right.second);  
+      return numberOfUnvisited(visited, left.second) < numberOfUnvisited(visited, right.second);  
     }
     
     private:
-      vector<bool>& visited;
-      int numberOfUnvisited(const vector<int>& edges) {
-        int sum = 0;
-        for (auto& edge : edges) {
-          if ( !visited[edge] ) {
-            sum++;
-          }
-        }
-        return sum;
-      }
+      const vector<bool>& visited;
   };
   
   struct CounterClockwise{
@@ -378,10 +378,16 @@ namespace simit {
     
     CounterClockwise(FieldRef<double,3>& spatialField, int currentEdge) : 
       spatialField(spatialField),
-      x(spatialField[currentEdge][0]),
+      x(spatialFieldcurrentEdge][0]),
       y(spatialField[currentEdge][1]),
       z(spatialField[currentEdge][2])
-      {}
+      {
+      this.spatialField = spatialField;
+      spatialFieldgetFieldData
+      this.x = ;
+      this.y = ;
+      thix.z = ;
+      }
     
     bool operator()(int const&left, 
                     int const&right) const {
