@@ -49,7 +49,7 @@ llvm::Constant* llvmBool(bool val) {
 
 llvm::Constant* llvmComplex(double real, double imag) {
   return llvm::ConstantStruct::get(llvmComplexType(),
-                                   llvmFP(real), llvmFP(imag));
+                                   llvmFP(real), llvmFP(imag), nullptr);
 }
 
 llvm::Constant *llvmPtr(llvm::PointerType* type, const void* data) {
