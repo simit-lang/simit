@@ -2,7 +2,6 @@
 
 #include "graph.h"
 #include "hilbert.h"
-#include <omp.h>
 #include <algorithm>
 #include <map>
 #include <vector>
