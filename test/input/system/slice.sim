@@ -20,6 +20,13 @@ end
 
 proc main 
   A = map dist_a to springs reduce +;
-  points.c = A(1,:)';
-  points.d = A(:,2);
+  i = 0;
+  for p in points
+    if i == 1
+      points.c = A(p,:)';
+    elif i == 2
+      points.d = A(:,p);
+    end
+    i = i + 1;
+  end
 end

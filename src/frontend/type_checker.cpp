@@ -375,9 +375,20 @@ void TypeChecker::visit(RangeDomain::Ptr domain) {
 
 void TypeChecker::visit(ForStmt::Ptr stmt) {
   ctx.scope();
-  stmt->domain->accept(this);
-  
-  const ir::Var loopVar = ir::Var(stmt->loopVar->ident, ir::Int);
+ 
+  ir::Type loopVarType;
+  if (isa<IndexSetDomain>(stmt->domain)) {
+    const auto setDomain = to<IndexSetDomain>(stmt->domain);
+    const Ptr<ir::IndexSet> indexSet = getIndexSet(setDomain->set);
+    if (indexSet) {
+      loopVarType = indexSet->getSet().type().toSet()->elementType;
+    }
+  } else {
+    stmt->domain->accept(this);
+    loopVarType = ir::Int;
+  }
+
+  const ir::Var loopVar = ir::Var(stmt->loopVar->ident, loopVarType);
   ctx.addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
   
   stmt->body->accept(this);
@@ -1106,15 +1117,9 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
         case ir::IndexSet::Set:
         {
           const auto setType = outerDims[i].getSet().type().toSet();
-
-          // Allow integral indices.
-          if (isInt(indexType->at(0))) {
-            break;
-          }
-
           if (!compareTypes(setType->elementType, indexType->at(0))) {
             std::stringstream errMsg;
-            errMsg << "expected an integral index or an index of type "
+            errMsg << "expected an index of type "
                    << typeString(setType->elementType) << " but got an "
                    << "index of type " << typeString(indexType);
             reportError(errMsg.str(), index);

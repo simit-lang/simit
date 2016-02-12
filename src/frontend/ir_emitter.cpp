@@ -228,9 +228,24 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
   ctx->scope();
   const Domain domain = emitDomain(stmt->domain);
 
+  ir::Var loopVar;
+  switch (domain.type) {
+    case Domain::Type::SET:
+    {
+      const ir::Type elemType = domain.set.getSet().type().toSet()->elementType;
+      loopVar = ir::Var(stmt->loopVar->ident, elemType);
+      break;
+    }
+    case Domain::Type::RANGE:
+      loopVar = ir::Var(stmt->loopVar->ident, ir::Int);
+      break;
+    default:
+      unreachable;
+      break;
+  }
+
   // If we need to write to loop variables, then that should be added as a
   // separate loop structure (that can't be vectorized easily)
-  const ir::Var loopVar = ir::Var(stmt->loopVar->ident, ir::Int);
   ctx->addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
  
   const ir::Stmt body = emitStmt(stmt->body);
