@@ -10,6 +10,7 @@
 #include "func.h"
 #include "ir_visitor.h"
 #include "indexvar.h"
+#include "complex_types.h"
 
 namespace simit {
 namespace ir {
@@ -50,6 +51,7 @@ public:
 
   Expr(int val);
   Expr(double val);
+  Expr(double_complex val);
 
   Type type() const {return static_cast<const ExprNode*>(ptr)->type;}
 
@@ -131,11 +133,13 @@ struct Literal : public ExprNode {
 
   void cast(Type type);
   double getFloatVal(int index) const;
+  double_complex getComplexVal(int index) const;
 
   static Expr make(Type type);
   static Expr make(int val);
   static Expr make(double val);
   static Expr make(bool val);
+  static Expr make(double_complex val);
   static Expr make(Type type, void* values);
   static Expr make(Type type, std::vector<double> values);
   ~Literal();

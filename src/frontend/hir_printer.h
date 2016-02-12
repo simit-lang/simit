@@ -69,8 +69,10 @@ public:
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
+  virtual void visit(ComplexLiteral::Ptr);
   virtual void visit(IntVectorLiteral::Ptr);
   virtual void visit(FloatVectorLiteral::Ptr);
+  virtual void visit(ComplexVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
   virtual void visit(Test::Ptr);
 
@@ -79,6 +81,9 @@ private:
   void dedent() { --indentLevel; }
   void printIndent() { oss << std::string(2 * indentLevel, ' '); }
   void printBoolean(bool val) { oss << (val ? "true" : "false"); }
+  void printComplex(double_complex val) {
+    oss << "<" << val.real << "," << val.imag << ">";
+  }
   
   void printFuncOrProc(FuncDecl::Ptr, const bool = false);
   void printVarOrConstDecl(VarDecl::Ptr, const bool = false);

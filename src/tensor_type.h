@@ -6,11 +6,12 @@
 
 #include "error.h"
 #include "types.h"
+#include "complex_types.h"
 
 namespace simit {
 
 /** The types of supported tensor components. */
-enum class ComponentType {Float, Double, Int, Boolean };
+enum class ComponentType {Float, Double, Int, Boolean, FloatComplex, DoubleComplex};
 
 /** Helper to convert from C++ type to Simit Type. */
 template<typename T> inline ComponentType typeOf() {
@@ -34,6 +35,14 @@ template<> inline ComponentType typeOf<bool>() {
   return ComponentType::Boolean;
 }
 
+template<> inline ComponentType typeOf<float_complex>() {
+  return ComponentType::FloatComplex;
+}
+
+template<> inline ComponentType typeOf<double_complex>() {
+  return ComponentType::DoubleComplex;
+}
+
 inline std::size_t componentSize(ComponentType ct) {
   switch (ct) {
     case ComponentType::Float:
@@ -44,6 +53,10 @@ inline std::size_t componentSize(ComponentType ct) {
       return sizeof(int);
     case ComponentType::Boolean:
       return sizeof(bool);
+    case ComponentType::FloatComplex:
+      return sizeof(float_complex);
+    case ComponentType::DoubleComplex:
+      return sizeof(double_complex);
   }
   unreachable;
   return 0;

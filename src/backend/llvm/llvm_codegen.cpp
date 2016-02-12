@@ -13,6 +13,23 @@ using namespace simit::ir;
 namespace simit {
 namespace backend {
 
+/// SimitIRBuilder
+llvm::Value *SimitIRBuilder::CreateComplex(
+    llvm::Value *real, llvm::Value *imag) {
+  llvm::Value *zero = llvmComplex(0, 0);
+  llvm::Value *partial = CreateInsertValue(zero, real, 0);
+  return CreateInsertValue(partial, imag, 1);
+}
+
+llvm::Value *SimitIRBuilder::ComplexGetReal(llvm::Value *c) {
+  return CreateExtractValue(c, 0, "real");
+}
+
+llvm::Value *SimitIRBuilder::ComplexGetImag(llvm::Value *c) {
+  return CreateExtractValue(c, 1, "imag");
+}
+
+
 llvm::ConstantInt *llvmInt(long long int val, unsigned bits) {
   return llvm::ConstantInt::get(LLVM_CTX, llvm::APInt(bits, val, true));
 }
@@ -28,6 +45,11 @@ llvm::Constant *llvmFP(double val, unsigned bits) {
 llvm::Constant* llvmBool(bool val) {
   int intVal = (val) ? 1 : 0;
   return llvm::ConstantInt::get(LLVM_CTX, llvm::APInt(1, intVal, false));
+}
+
+llvm::Constant* llvmComplex(double real, double imag) {
+  return llvm::ConstantStruct::get(llvmComplexType(),
+                                   llvmFP(real), llvmFP(imag), nullptr);
 }
 
 llvm::Constant *llvmPtr(llvm::PointerType* type, const void* data) {
@@ -63,6 +85,15 @@ llvm::Constant* llvmVal(const TensorType& type, const void *data) {
       }
     case ScalarType::Boolean:
       return llvmBool(static_cast<const bool*>(data)[0]);
+    case ScalarType::Complex:
+      if (ir::ScalarType::singleFloat()) {
+        return llvmComplex(static_cast<const float*>(data)[0],
+                           static_cast<const float*>(data)[1]);
+      }
+      else {
+        return llvmComplex(static_cast<const double*>(data)[0],
+                           static_cast<const double*>(data)[1]);
+      }
   }
   ierror;
   return nullptr;

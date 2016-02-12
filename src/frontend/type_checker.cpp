@@ -132,6 +132,9 @@ void TypeChecker::visit(ScalarType::Ptr type) {
     case ScalarType::Type::BOOL:
       retIRType = ir::Boolean;
       break;
+    case ScalarType::Type::COMPLEX:
+      retIRType = ir::Complex;
+      break;
     default:
       unreachable;
       break;
@@ -1277,11 +1280,20 @@ void TypeChecker::visit(BoolLiteral::Ptr lit) {
   retType->push_back(ir::Boolean);
 }
 
+void TypeChecker::visit(ComplexLiteral::Ptr lit) {
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(ir::Complex);
+}
+
 void TypeChecker::visit(IntVectorLiteral::Ptr lit) {
   typeCheckDenseTensorLiteral(lit);
 }
 
 void TypeChecker::visit(FloatVectorLiteral::Ptr lit) {
+  typeCheckDenseTensorLiteral(lit);
+}
+
+void TypeChecker::visit(ComplexVectorLiteral::Ptr lit) {
   typeCheckDenseTensorLiteral(lit);
 }
 
@@ -1294,8 +1306,20 @@ void TypeChecker::typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr lit) {
     const DenseTensorType tensorType = getDenseTensorType(lit);
     const std::vector<ir::IndexDomain> idoms(tensorType.dimSizes.rbegin(), 
                                              tensorType.dimSizes.rend());
-    const auto elemType = (tensorType.type == DenseTensorType::Type::INT) ?
-                          ir::ScalarType::Int : ir::ScalarType::Float;
+    ir::ScalarType::Kind elemType;
+    switch (tensorType.type) {
+      case DenseTensorType::Type::INT:
+        elemType = ir::ScalarType::Int;
+        break;
+      case DenseTensorType::Type::FLOAT:
+        elemType = ir::ScalarType::Float;
+        break;
+      case DenseTensorType::Type::COMPLEX:
+        elemType = ir::ScalarType::Complex;
+        break;
+      default:
+        elemType = ir::ScalarType::Float;
+    }
     iassert(idoms.size() == 1 || !lit->transposed);
 
     retType = std::make_shared<Expr::Type>();
@@ -1313,6 +1337,8 @@ TypeChecker::DenseTensorType
     tensorType.addIntValues(to<IntVectorLiteral>(lit)->vals.size());
   } else if (isa<FloatVectorLiteral>(lit)) {
     tensorType.addFloatValues(to<FloatVectorLiteral>(lit)->vals.size());
+  } else if (isa<ComplexVectorLiteral>(lit)) {
+    tensorType.addComplexValues(to<ComplexVectorLiteral>(lit)->vals.size());
   } else {
     const auto ndTensorLit = to<NDTensorLiteral>(lit);
     iassert(!ndTensorLit->transposed);
@@ -1494,7 +1520,7 @@ void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
 }
 
 void TypeChecker::DenseTensorType::addIntValues(unsigned len) {
-  if (type == Type::FLOAT) {
+  if (type != Type::INT && type != Type::UNKNOWN) {
     throw TypeError();
   }
 
@@ -1503,11 +1529,20 @@ void TypeChecker::DenseTensorType::addIntValues(unsigned len) {
 }
 
 void TypeChecker::DenseTensorType::addFloatValues(unsigned len) {
-  if (type == Type::INT) {
+  if (type != Type::FLOAT && type != Type::UNKNOWN) {
     throw TypeError();
   }
 
   type = Type::FLOAT;
+  dimSizes[dimSizes.size() - 1] += len;
+}
+
+void TypeChecker::DenseTensorType::addComplexValues(unsigned len) {
+  if (type != Type::COMPLEX && type != Type::UNKNOWN) {
+    throw TypeError();
+  }
+
+  type = Type::COMPLEX;
   dimSizes[dimSizes.size() - 1] += len;
 }
 

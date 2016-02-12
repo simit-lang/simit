@@ -81,6 +81,9 @@ void HIRPrinter::visit(ScalarType::Ptr type) {
     case ScalarType::Type::BOOL:
       oss << "bool";
       break;
+    case ScalarType::Type::COMPLEX:
+      oss << "complex";
+      break;
     default:
       unreachable;
       break;
@@ -447,6 +450,10 @@ void HIRPrinter::visit(BoolLiteral::Ptr lit) {
   printBoolean(lit->val);
 }
 
+void HIRPrinter::visit(ComplexLiteral::Ptr lit) {
+  printComplex(lit->val);
+}
+
 void HIRPrinter::visit(IntVectorLiteral::Ptr lit) {
   oss << "[";
   bool printDelimiter = false;
@@ -471,6 +478,22 @@ void HIRPrinter::visit(FloatVectorLiteral::Ptr lit) {
       oss << ", ";
     }
     oss << val;
+    printDelimiter = true;
+  }
+  oss << "]";
+  if (lit->transposed) {
+    oss << "'";
+  }
+}
+
+void HIRPrinter::visit(ComplexVectorLiteral::Ptr lit) {
+  oss << "[";
+  bool printDelimiter = false;
+  for (auto val : lit->vals) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+    printComplex(val);
     printDelimiter = true;
   }
   oss << "]";

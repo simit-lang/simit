@@ -188,6 +188,17 @@ public:
         case ComponentType::Boolean: {
           bool* data = (bool*)f->data;
           data[element.ident] = data[numElements-1];
+          break;
+        }
+        case ComponentType::FloatComplex: {
+          float_complex* data = (float_complex*)f->data;
+          data[element.ident] = data[numElements-1];
+          break;
+        }
+        case ComponentType::DoubleComplex: {
+          double_complex* data = (double_complex*)f->data;
+          data[element.ident] = data[numElements-1];
+          break;
         }
       }
     }

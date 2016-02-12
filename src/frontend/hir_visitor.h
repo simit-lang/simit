@@ -66,8 +66,10 @@ struct VarExpr;
 struct IntLiteral;
 struct FloatLiteral;
 struct BoolLiteral;
+struct ComplexLiteral;
 struct IntVectorLiteral;
 struct FloatVectorLiteral;
+struct ComplexVectorLiteral;
 struct NDTensorLiteral;
 struct Test;
 
@@ -130,8 +132,10 @@ public:
   virtual void visit(std::shared_ptr<IntLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatLiteral> op) {}
   virtual void visit(std::shared_ptr<BoolLiteral> op) {}
+  virtual void visit(std::shared_ptr<ComplexLiteral> op) {}
   virtual void visit(std::shared_ptr<IntVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatVectorLiteral> op) {}
+  virtual void visit(std::shared_ptr<ComplexVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<NDTensorLiteral>);
   virtual void visit(std::shared_ptr<Test>);
 
