@@ -284,6 +284,26 @@ TEST(Program, reorderFemSpecificTest) {
   SIMIT_ASSERT_FLOAT_EQ(0.030173075240629205,  x.get(vertRefs[three])(2));
 }
 
+TEST(Program, reorderSquare) {
+  string dir(TEST_INPUT_DIR);
+  string prefix=dir+"/program/fem/square";
+  string filename = string(TEST_INPUT_DIR) + "/" +
+                         toLower(test_info_->test_case_name()) + "/" +
+                         "femTet.sim";
+  size_t nSteps = 10;
+  femTest(filename, prefix, nSteps);
+}
+
+TEST(Program, reorderCube) {
+  string dir(TEST_INPUT_DIR);
+  string prefix=dir+"/program/fem/cube";
+  string filename = string(TEST_INPUT_DIR) + "/" +
+                         toLower(test_info_->test_case_name()) + "/" +
+                         "femTet.sim";
+  size_t nSteps = 10;
+  femTest(filename, prefix, nSteps);
+}
+
 TEST(Program, reorderFemTest) {
   string dir(TEST_INPUT_DIR);
   string prefix=dir+"/program/fem/bar2k";

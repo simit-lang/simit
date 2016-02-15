@@ -17,7 +17,7 @@
 #include <cfloat>
 #include <string>
 #include <algorithm>
-#include <queue>
+#include <deque>
 
 using namespace std;
 namespace simit {
@@ -346,15 +346,6 @@ namespace simit {
   }
   
   // ---------- Strip Reordering ----------
-  int numberOfUnvisited(const vector<bool>& visited, const vector<int>& edges) {
-    int sum = 0;
-    for (auto& edge : edges) {
-      if ( !visited[edge] ) {
-        sum++;
-      }
-    }
-    return sum;
-  }
 
   struct BestUnvisited{
     BestUnvisited(vector<bool>& visited) : 
@@ -363,109 +354,110 @@ namespace simit {
     
     bool operator()(pair<int, vector<int>> const&left, 
                     pair<int, vector<int>> const&right) const {
-      return numberOfUnvisited(visited, left.second) < numberOfUnvisited(visited, right.second);  
+      if (visited[left.first]) {
+        return false;
+      }
+      return numberOfUnvisited(left.second) < numberOfUnvisited(right.second);  
     }
     
     private:
       const vector<bool>& visited;
+      int numberOfUnvisited(const vector<int>& edges) const {
+        int sum = 0;
+        for (auto& edge : edges) {
+          if ( !visited[edge] ) {
+            sum++;
+          }
+        }
+        return sum;
+      }
   };
   
   struct CounterClockwise{
-    const FieldRef<double,3>& spatialField;
-    double x;
-    double y;
-    double z;
+    const double* spatialData;
+    const double x;
+    const double y;
+    const double z;
     
-    CounterClockwise(FieldRef<double,3>& spatialField, int currentEdge) : 
-      spatialField(spatialField),
-      x(spatialFieldcurrentEdge][0]),
-      y(spatialField[currentEdge][1]),
-      z(spatialField[currentEdge][2])
-      {
-      this.spatialField = spatialField;
-      spatialFieldgetFieldData
-      this.x = ;
-      this.y = ;
-      thix.z = ;
-      }
+    CounterClockwise(double* spatialData, int currentEdge) : 
+      spatialData(spatialData),
+      x(spatialData[currentEdge*3]),
+      y(spatialData[currentEdge*3+1]),
+      z(spatialData[currentEdge*3+2])
+    {}
     
-    bool operator()(int const&left, 
-                    int const&right) const {
-      return angle(left) < angle(right); 
+    bool operator()(const int left, 
+                    const int right) const {
+      return angle(left) > angle(right); 
     }
     
-    private:
-      double angle(int const& edge) {
-        double edgeX = spatialField[edge][0];
-        double edgeY = spatialField[edge][1];
-        double edgeZ = spatialField[edge][2];
-        if (edgeX == x) {
-          return 0.0;
-        } else {
-          return 90.0 - (atan2(edgeY - y, edgeX - x) * 180.0 / M_PI);
-        }
+    double angle(const int edge) const {
+      double edgeX = spatialData[edge*3];
+      double edgeY = spatialData[edge*3+1];
+      double edgeZ = spatialData[edge*3+2]; 
+      if (edgeX == x) {
+        return 0.0;
+      } else {
+        return 90.0 - (atan2(edgeY - y, edgeX - x) * 180.0 / M_PI);
       }
+    }
   };
   
-  bool addNeighborsByCC(Set& edgeSet, vector<int>& neighbors, queue<int>& edgeQueue, vector<bool> visited, const int currentEdge) {
-    const FieldRef<double, 3>& spatialField = edgeSet.getField<double,3>(edgeSet.getSpatialFieldName());
-    sort(neighbors.begin(), neighbors.end(), CounterClockwise(spatialField, currentEdge));
+  bool addNeighborsByCC(double* spatialData, vector<int>& neighbors, deque<int>& edgeQueue, vector<bool> visited, const int currentEdge) {
+    sort(neighbors.begin(), neighbors.end(), CounterClockwise(spatialData, currentEdge));
+    bool added = false;
     for (auto& neighbor : neighbors) {
       if (!visited[neighbor]) {
-        edgeQueue.push(neighbor);
+        edgeQueue.push_front(neighbor);
+        added = true;
       }
     }
+    return added;
   }
 
   void greedyStripReordering(Set& edgeSet, vector<int>& edgeReordering, map<int, vector<int>> edgeNeighbors) {
     assert(edgeReordering.size() == 0);
     int STRIP_SIZE = 64;
     int currentEdge = -1;
+    vector<int> currentNeighbors;
     vector<bool> visited(edgeSet.getSize(), false);
-    while (edgeReordering.size() <= edgeSet.getSize()) {
-      if (currentEdge >= 0 || visited[currentEdge]) {
+    
+    auto& edgeFields = edgeSet.getFields();
+    int spatialFieldIndex = edgeSet.getFieldIndex(edgeSet.getSpatialFieldName());
+    double * edgeSpatialData = static_cast<double*>(edgeFields[spatialFieldIndex]->data); 
+    while (edgeReordering.size() < edgeSet.getSize()) {
+      cout << "Edges Reordered: " << edgeReordering.size() << endl;
+      while (currentEdge < 0 || visited[currentEdge]) {
         currentEdge = min_element(edgeNeighbors.begin(), edgeNeighbors.end(), BestUnvisited(visited))->first;
-      } else {
-        int stripLength = 0;  
-        queue<int> edgeQueue;
-        bool buildStrip = true;
-
-        while (buildStrip) {
-          if (stripLength == STRIP_SIZE) {
-            if (visited[currentEdge]) {
-              currentEdge = edgeQueue.front();
-              edgeQueue.pop();
-              while (visited[currentEdge] && !edgeQueue.empty()) {
-                currentEdge = edgeQueue.front();
-                edgeQueue.pop();
-              }   
-            }
-            buildStrip = false;
-          }
-        }
+        currentNeighbors = edgeNeighbors[currentEdge];
+        edgeNeighbors.erase(currentEdge);
+      }
+        
+      assert(!visited[currentEdge]);
+      int stripLength = 0;
+      deque<int> edgeQueue;
+      bool buildStrip = true;
+      while (buildStrip && !visited[currentEdge]) {
+        buildStrip = stripLength != STRIP_SIZE;
 
         if (buildStrip) {
-          assert(!visited[currentEdge]);
           visited[currentEdge] = true;
           edgeReordering.push_back(currentEdge);
           stripLength++;
           
           // This might be wrong. Is correct if the queue is empty before this.
-          if (addNeighborsByCC(edgeSet, edgeNeighbors[currentEdge], edgeQueue, visited, currentEdge)){
+          buildStrip = addNeighborsByCC(edgeSpatialData, currentNeighbors, edgeQueue, visited, currentEdge);
+          if (!edgeQueue.empty()) {
             currentEdge = edgeQueue.front();
-            edgeQueue.pop();
-          } else {
-            if (!edgeQueue.empty()) {
+            edgeQueue.pop_front();
+            while (visited[currentEdge] && !edgeQueue.empty()) {
               currentEdge = edgeQueue.front();
-              edgeQueue.pop();
-              while (visited[currentEdge] && !edgeQueue.empty()) {
-                currentEdge = edgeQueue.front();
-                edgeQueue.pop();
-              }   
-            }
-            buildStrip = false;
+              edgeQueue.pop_front();
+            }   
           }
-        }
+          currentNeighbors = edgeNeighbors[currentEdge];
+          edgeNeighbors.erase(currentEdge);
+        } 
       }
     }
   }
@@ -474,6 +466,7 @@ namespace simit {
     int* endpoints = edgeSet.getEndpointsPtr();
     int size = edgeSet.getSize();
     int cardinality = edgeSet.getCardinality();
+    
     map<int,vector<int>> vertexToEdgeMap;
     for (int i=0; i < size; ++i) {
       for (int j=0; j < cardinality; ++j) {
@@ -491,35 +484,35 @@ namespace simit {
         vertexToEdgeMap[vertex].push_back(i);
       }
     }
-
+    
+    // Build map of edge id's to vector of neighbor id's
+    // Neighbor is another edge that shares 2 or more vertices
     map<int, vector<int>> edgeNeighbors;
     for (int i=0; i < size; ++i) {
       vector<int> neighbors;
+      map<int,int> sharedVertexCounts;
       for (int j=0; j < cardinality; ++j) {
-        map<int,int> neighborCounts;
-        for (auto& neighbor : vertexToEdgeMap[endpoints[i*cardinality+j]]) {
-          if (neighborCounts.find(neighbor) != neighborCounts.end()) {
-            neighborCounts[neighbor]++; 
+        // Iterate through the edges that share a vertex with current edge
+        for (auto& connectedEdge : vertexToEdgeMap[endpoints[i*cardinality+j]]) {
+          if (i != connectedEdge && sharedVertexCounts.find(connectedEdge) != sharedVertexCounts.end()) {
+            sharedVertexCounts[connectedEdge]++; 
           } else {
-            neighborCounts[neighbor] = 1;
+            sharedVertexCounts[connectedEdge] = 1;
           }
         }
-        
-        for (auto& neighbor : neighborCounts) {
-          if (neighbor.second >= 2) {
-            neighbors.push_back(neighbor.first);
-          }
+      }
+      
+      for (auto& edge : sharedVertexCounts) {
+        if (edge.second >= 2) {
+          neighbors.push_back(edge.first);
         }
       }
       edgeNeighbors[i] = neighbors;
     }
     
     greedyStripReordering(edgeSet, edgeReordering, edgeNeighbors);
-
   }
 
-
-  
   // ---------- Ordering Evaluation Heuristics ----------
   int scoreEdges(const int* endpoints, const int size, const int cardinality) {
     unordered_map<long,vector<long>> distances;
@@ -622,8 +615,9 @@ namespace simit {
     hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
+
     edgeVertexSortReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
-    
+    stripReordering(edgeSet, edgeOrdering);
     iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
     reorderEdgeSet(edgeSet, edgeOrdering);
   }
