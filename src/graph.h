@@ -139,10 +139,12 @@ public:
   }
  
   // Added for reordering
-  template <typename T, int... dimensions>
-  FieldRef<T, dimensions...> addSpatialField(const std::string &name) {
+  void setSpatialField(const std::string &name) {
+    // need to check if the field actually exists because maps just add an entry
+    // if none exists
+    uassert(fieldNames.find(name) != fieldNames.end())
+        << "Invalid field name setting spatial field";
     spatialFieldName = name;
-    return addField<T, dimensions...>(name);
   }
 
   /// Get a Field corresponding to the string fieldName

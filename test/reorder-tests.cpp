@@ -33,7 +33,7 @@ void outputResults(ostream& os, FieldRef<simit_float,3>& x, vector<ElementRef>& 
 }
 
 FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
-  FieldRef<simit_float,3>  x = m_verts.addSpatialField<simit_float,3>("x");
+  FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
   FieldRef<simit_float,3>  v = m_verts.addField<simit_float,3>("v");
   //external forces
   FieldRef<simit_float,3> fe = m_verts.addField<simit_float,3>("fe");
@@ -45,7 +45,7 @@ FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, ve
   FieldRef<simit_float>    l = m_tets.addField<simit_float>("l");
   FieldRef<simit_float>    W = m_tets.addField<simit_float>("W");
   FieldRef<simit_float,3,3>B = m_tets.addField<simit_float,3,3>("B");
-  FieldRef<simit_float,3>  tx = m_tets.addSpatialField<simit_float,3>("x");
+  FieldRef<simit_float,3>  tx = m_tets.addField<simit_float,3>("x");
   
   simit_float uval, lval;
   //Youngs modulus and poisson's ratio
@@ -140,9 +140,11 @@ void femTest(string& filename, string& prefix, int nSteps) {
   
   FieldRef<simit_float,3> reorder_x = initializeFem(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
   
-  begin = clock();
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
+  reorder_m_verts.setSpatialField("x");
+  reorder_m_tets.setSpatialField("x");
+  begin = clock();
   reorder(reorder_m_tets, reorder_m_verts, edgeOrdering, vertexOrdering);
   end = clock();
   double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
@@ -160,10 +162,10 @@ void femTest(string& filename, string& prefix, int nSteps) {
 }
   
 FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
-  simit::FieldRef<simit_float,3>  x = m_verts.addSpatialField<simit_float,3>("x");
+  simit::FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
   simit::FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
   
-  simit::FieldRef<simit_float,3>    tx = m_tets.addSpatialField<simit_float,3>("x");
+  simit::FieldRef<simit_float,3>    tx = m_tets.addField<simit_float,3>("x");
   
   for(unsigned int ii =0 ;ii<mv.v.size(); ii++){
     vertRefs.push_back(m_verts.add());
@@ -228,9 +230,11 @@ void averageTest(string& filename, string& prefix, int nSteps) {
   
   FieldRef<simit_float,3> reorder_edge_x = initializeAverage(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
   
-  begin = clock();
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
+  m_verts.setSpatialField("x");
+  m_tets.setSpatialField("x");
+  begin = clock();
   reorder(reorder_m_tets, reorder_m_verts, edgeOrdering, vertexOrdering);
   end = clock();
   double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
@@ -261,7 +265,8 @@ TEST(Program, reorderFemSpecificTest) {
   
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
-  //reorder(m_tets, m_verts, newOrdering);
+  m_verts.setSpatialField("x");
+  m_tets.setSpatialField("x");
   reorder(m_tets, m_verts, edgeOrdering, vertexOrdering);
     
   string filename = string(TEST_INPUT_DIR) + "/" +

@@ -2,17 +2,13 @@
 
 #include "graph.h"
 #include "hilbert.h"
-#include <omp.h>
-#include <algorithm>
+
 #include <map>
 #include <vector>
 #include <list>
-#include <unordered_map>
-
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
-#include <ctime>
 #include <climits>
 #include <cfloat>
 #include <string>
@@ -168,7 +164,7 @@ namespace simit {
   };
   
   void vertexDegreeReordering(vector<int>& vertexOrdering, int* endpoints, int size, int cardinality) {
-    unordered_map<int,int> degrees;
+    map<int,int> degrees;
     int edgeIndex;
 
     for (int i=0; i < size; ++i) {
@@ -191,7 +187,7 @@ namespace simit {
 
   void edgeSumReordering(int* endpoints, vector<int>& edgeOrdering, const int size, const int cardinality) {
     assert(edgeOrdering.size() == 0);
-    unordered_map<int,int> edgeSum;
+    map<int,int> edgeSum;
     
     for (int i=0; i < size; ++i) {
       int edgeIndex = i * cardinality;
@@ -395,8 +391,8 @@ namespace simit {
 
   // ---------- Ordering Evaluation Heuristics ----------
   int scoreEdges(const int* endpoints, const int size, const int cardinality) {
-    unordered_map<long,vector<long>> distances;
-    unordered_map<long,long> firstOccurrence;
+    map<long,vector<long>> distances;
+    map<long,long> firstOccurrence;
 
     for (int edgeIndex=0; edgeIndex < size * cardinality; edgeIndex += cardinality) {
       for (int elementIndex=0; elementIndex < cardinality; ++elementIndex) {
@@ -488,7 +484,10 @@ namespace simit {
   }
   
   void reorder(Set& edgeSet, Set& vertexSet, vector<int>& edgeOrdering, vector<int>& vertexOrdering) {
-    iassert(vertexOrdering.size() == 0);
+    iassert(vertexOrdering.size() == 0) << "Vertex Ordering needs to be initially empty";
+    iassert(edgeOrdering.size() == 0) << "Edge Ordering needs to be initially empty";
+    iassert(vertexSet.hasSpatialField()) << "Vertex Set must have a spatial field set prior to reordering";
+    iassert(edgeSet.hasSpatialField()) << "Edge Set must have a spatial field set prior to reordering";
     
     // Get new vertex ordering based on given heuristic 
     hilbert::hilbertReorder(vertexSet, vertexOrdering);
