@@ -5,6 +5,7 @@ element Tet
   W : float;
   %precomputed matrix
   B : tensor[3,3](float);
+  x  : tensor[3](float);
 end
 
 element Vert

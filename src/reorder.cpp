@@ -73,60 +73,6 @@ namespace simit {
       }
     }
 
-    void bfs(vertex_t * const nodes, const int cntNodes, const vid_t source) {
-      for (int i = 0; i < cntNodes; i++) {
-        nodes[i].hilbertId = 0;
-      }
-
-      vid_t *bfs_q = new (std::nothrow) vid_t[cntNodes];
-      bfs_q[0] = source;
-      vid_t cur_q_ptr = 0;
-      nodes[source].hilbertId = 1;
-      vid_t cur_dist = 2;
-      vid_t next_batch_start_index = 1;
-      vid_t append_q_ptr = 1;
-
-      bool done = false;
-      while (!done) {
-        done = true;
-        while (cur_q_ptr != next_batch_start_index) {
-          vid_t vid = bfs_q[cur_q_ptr];
-          vid_t *edges = nodes[vid].edgeData.edges;
-          for (vid_t e = 0; e < nodes[vid].edgeData.cntEdges; e++) {
-            if (nodes[edges[e]].hilbertId == 0) {
-              nodes[edges[e]].hilbertId = cur_dist;
-              bfs_q[append_q_ptr++] = edges[e];
-            }
-          }
-          cur_q_ptr++;
-        }
-        // we added more nodes to the queue
-        if (next_batch_start_index < append_q_ptr) {
-          done = false;
-        }
-        // start of the next distance (from the BFS root) in the BFS queue
-        next_batch_start_index = append_q_ptr;
-        cur_dist++;
-      }
-
-      delete bfs_q;
-    }
-
-    void assignBfsIds(vertex_t * const nodes, const int cntNodes) {
-      bfs(nodes, cntNodes, 0);
-    }
-
-    void assignRandomIds(vertex_t * const nodes, const int cntNodes) {
-      vector<int> ordering;
-      for (int i = 0; i < cntNodes; i++) {
-        ordering.push_back(i);
-      }
-      random_shuffle(ordering.begin(), ordering.end());
-      for (int i = 0; i < cntNodes; i++) {
-        nodes[i].hilbertId = ordering[i];
-      }
-    }
-
     bool vertexComparator(const vertex_t& a, const vertex_t& b) {
       if (a.hilbertId != b.hilbertId) {
         return a.hilbertId < b.hilbertId;
@@ -146,7 +92,7 @@ namespace simit {
     }
 
     void loadNodes(Set& vertexSet, vertex_t ** outNodes, int numNodes) {
-      vertex_t * nodes = new (std::nothrow) vertex_t[numNodes];
+      vertex_t * nodes = new (nothrow) vertex_t[numNodes];
       
       auto& fields = vertexSet.getFields();
       int fieldIndex = vertexSet.getFieldIndex(vertexSet.getSpatialFieldName());
@@ -162,85 +108,19 @@ namespace simit {
       *outNodes = nodes;
     }
 
-    void hilbertReorder(Set& vertexSet, vector<int>& vertexOrdering, int cntNodes) {
+    void hilbertReorder(Set& vertexSet, vector<int>& vertexOrdering) {
       vertex_t * nodes;
       const int hilbertBits = 8;  
+      int cntNodes = vertexSet.getSize();
       loadNodes(vertexSet, &nodes, cntNodes);
 
       assignHilbertIds(nodes, cntNodes, hilbertBits);
-
       stable_sort(nodes, nodes + cntNodes, vertexComparator);
-
       createIdTranslationMapping(nodes, vertexOrdering, cntNodes);
-
     }
   } // namespace simit::hilbert
  
   // ---------- Simit Level Reordering Heuristics ----------
-  void bfs(vector<int>& vertexOrdering, int* endpoints, int size, int cardinality)
-  {
-    list<int> queue;
-    vertexOrdering.resize(size);
-    vector<bool> visited(size);
-    iassert(visited.size() == size);
-    iassert(vertexOrdering.size() == size);
-    
-    for (int i=0; i < size; i++) 
-    {
-      visited[i] = false;
-    }
-    
-    // Element id of the starting vertex
-    int vertex = 0; 
-    int counter = 0; 
-    int endpoint;
-    
-    // Add the starting vertex to the queue
-    visited[vertex] = true;
-    queue.push_back(vertex);
-    vertexOrdering[vertex] = counter++;
-    iassert(vertexOrdering[vertex] < size);
-    iassert(vertexOrdering[vertex] == 0);
-
-    while (!queue.empty()) 
-    {
-      vertex = queue.front();
-      iassert(visited[vertex]);
-      queue.pop_front();
-
-      for (int i=0; i<cardinality; ++i) {
-        endpoint = endpoints[vertex * cardinality + i];
-        
-        if (!visited[endpoint])
-        {
-          visited[endpoint] = true;
-          queue.push_back(endpoint);
-          vertexOrdering[endpoint] = counter++;
-          iassert(vertexOrdering[endpoint] < size);
-        }
-      }
-    }
-
-    for (int vertex=0; vertex < size; ++vertex) {
-      if (!visited[vertex])
-      {
-        visited[vertex] = true;
-        vertexOrdering[vertex] = counter++;
-        iassert(vertexOrdering[vertex] < size);
-        for (int i=0; i<cardinality; ++i) {
-          endpoint = endpoints[vertex * cardinality + i];
-          if (!visited[endpoint])
-          {
-            visited[endpoint] = true;
-            vertexOrdering[endpoint] = counter++;
-            iassert(vertexOrdering[endpoint] < size)
-                << vertexOrdering[endpoint] << " < " << size;
-          }
-        }
-      } 
-    }
-  }
-
   struct ascendingCompare {
       bool operator()(pair< int, int> const&left, 
                       pair< int, int> const&right) const {
@@ -347,7 +227,7 @@ namespace simit {
   
   // ---------- Strip Reordering ----------
 
-  struct BestUnvisited{
+  struct BestUnvisited {
     BestUnvisited(vector<bool>& visited) : 
       visited(visited)
       {}
@@ -365,7 +245,7 @@ namespace simit {
       int numberOfUnvisited(const vector<int>& edges) const {
         int sum = 0;
         for (auto& edge : edges) {
-          if ( !visited[edge] ) {
+          if (!visited[edge]) {
             sum++;
           }
         }
@@ -373,7 +253,7 @@ namespace simit {
       }
   };
   
-  struct CounterClockwise{
+  struct CounterClockwise {
     const double* spatialData;
     const double x;
     const double y;
@@ -426,7 +306,6 @@ namespace simit {
     int spatialFieldIndex = edgeSet.getFieldIndex(edgeSet.getSpatialFieldName());
     double * edgeSpatialData = static_cast<double*>(edgeFields[spatialFieldIndex]->data); 
     while (edgeReordering.size() < edgeSet.getSize()) {
-      cout << "Edges Reordered: " << edgeReordering.size() << endl;
       while (currentEdge < 0 || visited[currentEdge]) {
         currentEdge = min_element(edgeNeighbors.begin(), edgeNeighbors.end(), BestUnvisited(visited))->first;
         currentNeighbors = edgeNeighbors[currentEdge];
@@ -502,6 +381,7 @@ namespace simit {
         }
       }
       
+      // Add edges to neighbor list if they share more than 2 verts.
       for (auto& edge : sharedVertexCounts) {
         if (edge.second >= 2) {
           neighbors.push_back(edge.first);
@@ -509,7 +389,7 @@ namespace simit {
       }
       edgeNeighbors[i] = neighbors;
     }
-    
+   
     greedyStripReordering(edgeSet, edgeReordering, edgeNeighbors);
   }
 
@@ -548,7 +428,6 @@ namespace simit {
   }
   
   // ---------- Reordering Helper Functions ----------
-  
   void reorderFields(vector<Set::FieldData*>& fields, const vector<int>& ordering) {
     for (auto f : fields) {
       switch (f->type->getComponentType()) {
@@ -583,28 +462,28 @@ namespace simit {
     int* newEndpoints = static_cast<int *>(malloc(size * cardinality * sizeof(int)));
     memcpy(newEndpoints, endpoints, size * cardinality * sizeof(int));
 
-    for (int edgeIndex=0; edgeIndex< size; ++edgeIndex) {
+    for (int edgeIndex=0; edgeIndex < size; ++edgeIndex) {
       iassert(edgeIndex < edgeOrdering.size());
       iassert(edgeOrdering[edgeIndex] < (size - 1) * cardinality * sizeof(int));
       memcpy(newEndpoints + edgeIndex * cardinality, endpoints + edgeOrdering[edgeIndex] * cardinality, cardinality * sizeof(int));
     }
     memcpy(endpoints, newEndpoints, size * cardinality * sizeof(int));
     free(newEndpoints);
-
-    assert(size == edgeOrdering.size());
     
+    iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
     reorderFields(edgeSet.getFields(), edgeOrdering);
   }
 
   void reorderVertexSet(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
     // Reset Endpoints to reflect reordering
-    //    Vertex ordering maps old to new identity 
-    //    This itertates over all enpoints 'translating' old to new
+    // Vertex ordering maps old to new identity 
+    // This itertates over all enpoints translating from old to new
     for (int i=0; i < edgeSet.getSize() * edgeSet.getCardinality(); ++i) {
       iassert(vertexOrdering[edgeSet.getEndpointsPtr()[i]] < vertexSet.getSize());
       edgeSet.getEndpointsPtr()[i] = vertexOrdering[edgeSet.getEndpointsPtr()[i]]; 
     }
     
+    iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderFields(vertexSet.getFields(), vertexOrdering);
   }
   
@@ -612,13 +491,12 @@ namespace simit {
     iassert(vertexOrdering.size() == 0);
     
     // Get new vertex ordering based on given heuristic 
-    hilbert::hilbertReorder(vertexSet, vertexOrdering, vertexSet.getSize());
-    iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
+    hilbert::hilbertReorder(vertexSet, vertexOrdering);
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
 
-    edgeVertexSortReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
+    // Get new edge ordering based on given heuristic 
+    // edgeVertexSortReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
     stripReordering(edgeSet, edgeOrdering);
-    iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
     reorderEdgeSet(edgeSet, edgeOrdering);
   }
   

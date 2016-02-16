@@ -39,8 +39,8 @@ namespace simit {
     T* newData = static_cast<T*>(malloc(capacity * typeSize));
     int dim = typeSize/sizeof(T);
     assert(dim > 0);
-    for ( int i=0; i < capacity; ++i) {
-      for ( int x=0; x<dim; ++x) {
+    for (int i=0; i < capacity; ++i) {
+      for (int x=0; x < dim; ++x) {
         assert(vertexOrdering[i]*dim + x < capacity * dim);
         newData[vertexOrdering[i]*dim+x] = data[i*dim+x];
       }

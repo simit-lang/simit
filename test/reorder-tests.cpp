@@ -45,6 +45,7 @@ FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, ve
   FieldRef<simit_float>    l = m_tets.addField<simit_float>("l");
   FieldRef<simit_float>    W = m_tets.addField<simit_float>("W");
   FieldRef<simit_float,3,3>B = m_tets.addField<simit_float,3,3>("B");
+  FieldRef<simit_float,3>  tx = m_tets.addSpatialField<simit_float,3>("x");
   
   simit_float uval, lval;
   //Youngs modulus and poisson's ratio
@@ -81,6 +82,8 @@ FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, ve
     u.set(t,uval);
     l.set(t,lval);    
   }
+  
+  populateSpatialField(m_tets, m_verts, tx, "x");
   
   return x;
 }
@@ -228,9 +231,7 @@ void averageTest(string& filename, string& prefix, int nSteps) {
   begin = clock();
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
-  // populateSpatialField(reorder_m_tets, reorder_m_verts, reorder_edge_x, "x");
   reorder(reorder_m_tets, reorder_m_verts, edgeOrdering, vertexOrdering);
-  //reorder(reorder_m_tets, reorder_m_verts, vertexOrdering);
   end = clock();
   double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
   cout << "Reordering took:         " << reorderTime << " seconds" << endl;
