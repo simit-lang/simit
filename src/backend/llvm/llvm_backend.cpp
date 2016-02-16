@@ -54,9 +54,6 @@ using namespace simit::ir;
 namespace simit {
 namespace backend {
 
-typedef llvm::IRBuilder<true, llvm::ConstantFolder,
-                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
-
 const std::string VAL_SUFFIX(".val");
 const std::string PTR_SUFFIX(".ptr");
 const std::string LEN_SUFFIX(".len");
@@ -69,7 +66,7 @@ shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
   return engineBuilder;
 }
 
-LLVMBackend::LLVMBackend() : builder(new LLVMIRBuilder(LLVM_CTX)) {
+LLVMBackend::LLVMBackend() : builder(new SimitIRBuilder(LLVM_CTX)) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
     llvmInitialized = true;
@@ -292,6 +289,13 @@ void LLVMBackend::compile(const ir::Literal& literal) {
         val = llvm::ConstantInt::get(LLVM_BOOL, llvm::APInt(1, data, false));
         break;
       }
+      case ScalarType::Complex: {
+        iassert(ctype.bytes() == ScalarType::floatBytes*2)
+          << "Only " << ScalarType::floatBytes
+          << "-byte float mode allowed by current float setting";
+        val = llvmComplex(literal.getFloatVal(0), literal.getFloatVal(1));
+        break;
+      }
       default: unreachable;
     }
   }
@@ -509,6 +513,12 @@ void LLVMBackend::compile(const ir::Neg& negExpr) {
       break;
     case ScalarType::Boolean:
       iassert(false) << "Cannot negate a boolean value.";
+      break;
+    case ScalarType::Complex:
+      llvm::Value *realNeg = builder->CreateFNeg(builder->ComplexGetReal(a));
+      llvm::Value *imagNeg = builder->CreateFNeg(builder->ComplexGetImag(a));
+      val = builder->CreateComplex(realNeg, imagNeg);
+      break;
   }
 }
 
@@ -528,6 +538,15 @@ void LLVMBackend::compile(const ir::Add& addExpr) {
     case ScalarType::Boolean:
       ierror << "Cannot add boolean values.";
       break;
+    case ScalarType::Complex:
+      llvm::Value *realA = builder->ComplexGetReal(a);
+      llvm::Value *imagA = builder->ComplexGetImag(a);
+      llvm::Value *realB = builder->ComplexGetReal(b);
+      llvm::Value *imagB = builder->ComplexGetImag(b);
+      llvm::Value *real = builder->CreateFAdd(realA, realB);
+      llvm::Value *imag = builder->CreateFAdd(imagA, imagB);
+      val = builder->CreateComplex(real, imag);
+      break;
   }
 }
 
@@ -546,6 +565,16 @@ void LLVMBackend::compile(const ir::Sub& subExpr) {
       break;
     case ScalarType::Boolean:
       iassert(false) << "Cannot subtract boolean values.";
+      break;
+    case ScalarType::Complex:
+      llvm::Value *realA = builder->ComplexGetReal(a);
+      llvm::Value *imagA = builder->ComplexGetImag(a);
+      llvm::Value *realB = builder->ComplexGetReal(b);
+      llvm::Value *imagB = builder->ComplexGetImag(b);
+      llvm::Value *real = builder->CreateFSub(realA, realB);
+      llvm::Value *imag = builder->CreateFSub(imagA, imagB);
+      val = builder->CreateComplex(real, imag);
+      break;
   }
 }
 
@@ -564,6 +593,19 @@ void LLVMBackend::compile(const ir::Mul& mulExpr) {
       break;
     case ScalarType::Boolean:
       iassert(false) << "Cannot multiply boolean values.";
+    case ScalarType::Complex:
+      llvm::Value *realA = builder->ComplexGetReal(a);
+      llvm::Value *imagA = builder->ComplexGetImag(a);
+      llvm::Value *realB = builder->ComplexGetReal(b);
+      llvm::Value *imagB = builder->ComplexGetImag(b);
+      llvm::Value *real = builder->CreateFSub(
+          builder->CreateFMul(realA, realB),
+          builder->CreateFMul(imagA, imagB));
+      llvm::Value *imag = builder->CreateFAdd(
+          builder->CreateFMul(realA, imagB),
+          builder->CreateFMul(imagA, realB));
+      val = builder->CreateComplex(real, imag);
+      break;
   }
 }
 
@@ -584,6 +626,26 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
       break;
     case ScalarType::Boolean:
       iassert(false) << "Cannot divide boolean values.";
+      break;
+    case ScalarType::Complex:
+      // Computed using the naive ((ac+bd)/(c^2+d^2), (bc-ad)/(c^2+d^2))
+      llvm::Value *realA = builder->ComplexGetReal(a);
+      llvm::Value *imagA = builder->ComplexGetImag(a);
+      llvm::Value *realB = builder->ComplexGetReal(b);
+      llvm::Value *imagB = builder->ComplexGetImag(b);
+      llvm::Value *denom = builder->CreateFAdd(
+          builder->CreateFMul(realB, realB),
+          builder->CreateFMul(imagB, imagB));
+      llvm::Value *num1 = builder->CreateFAdd(
+          builder->CreateFMul(realA, realB),
+          builder->CreateFMul(imagA, imagB));
+      llvm::Value *num2 = builder->CreateFSub(
+          builder->CreateFMul(imagA, realB),
+          builder->CreateFMul(realA, imagB));
+      llvm::Value *real = builder->CreateFDiv(num1, denom);
+      llvm::Value *imag = builder->CreateFDiv(num2, denom);
+      val = builder->CreateComplex(real, imag);
+      break;
   }
 }
 
@@ -606,10 +668,16 @@ void LLVMBackend::compile(Type op) {                                           \
   llvm::Value *b = compile(op.b);                                              \
                                                                                \
   const TensorType *ttype = op.a.type().toTensor();                            \
-  if (ttype->getComponentType() == ScalarType::Float) {                        \
-    val = builder->float_cmp(a, b);                                            \
-  } else {                                                                     \
-    val = builder->int_cmp(a, b);                                              \
+  switch (ttype->getComponentType().kind) {                                    \
+    case ScalarType::Float:                                                    \
+      val = builder->float_cmp(a, b);                                          \
+      break;                                                                   \
+    case ScalarType::Int:                                                      \
+    case ScalarType::Boolean:                                                  \
+      val = builder->int_cmp(a, b);                                            \
+      break;                                                                   \
+    default:                                                                   \
+      not_supported_yet;                                                       \
   }                                                                            \
 }
 
@@ -1130,8 +1198,19 @@ void LLVMBackend::compile(const ir::Print& print) {
 
   const TensorType *tensor = type.toTensor();
   ScalarType scalarType = tensor->getComponentType();
-  std::string specifier = std::string("%") + print.format +
-                          (scalarType.kind == ScalarType::Float? "g" : "d");
+  std::string specifier; ;
+  switch (scalarType.kind) {
+    case ScalarType::Float:
+      specifier = std::string("%") + print.format + "g";
+      break;
+    case ScalarType::Complex:
+      specifier = std::string("<%") + print.format + "g,%g>";
+      break;
+    case ScalarType::Boolean:
+    case ScalarType::Int:
+      specifier = std::string("%") + print.format + "d";
+      break;
+  }
 
   std::string format = specifier;
   args.push_back(result);
@@ -1372,6 +1451,16 @@ void LLVMBackend::emitPrintf(std::string format,
 
   llvm::Value *str = emitGlobalString(format);
 
+  // Split any complex structs into two doubles
+  for (size_t i = 0; i < args.size(); ++i) {
+    if (args[i]->getType()->isStructTy()) {
+      llvm::Value *real = builder->CreateExtractElement(args[i], llvmInt(0), "real");
+      llvm::Value *imag = builder->CreateExtractElement(args[i], llvmInt(1), "imag");
+      args[i] = real;
+      args.insert(args.begin()+i+1, imag);
+    }
+  }
+
   std::vector<llvm::Value*> printfArgs;
   for (size_t i = 0; i < args.size(); i++) {
     // printf requires float varargs be promoted to doubles!
@@ -1468,6 +1557,8 @@ void LLVMBackend::emitAssign(Var var, const Expr& value) {
         // Assigning 0 to a tensor (memset)
         if ((sType.kind == ScalarType::Float &&
              to<Literal>(value)->getFloatVal(0) == 0.0) ||
+            (sType.kind == ScalarType::Complex &&
+             to<Literal>(value)->getComplexVal(0) == double_complex(0,0)) ||
             (sType.kind == ScalarType::Int &&
              ((int*)to<Literal>(value)->data)[0] == 0)) {
           emitMemSet(varPtr, llvmInt(0,8), size, componentSize);

@@ -6,6 +6,7 @@
 
 #include "llvm/IR/Function.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/IRBuilder.h"
 
 #include "llvm_defines.h"
 
@@ -18,10 +19,22 @@ class Var;
 
 namespace backend {
 
+typedef llvm::IRBuilder<true, llvm::ConstantFolder,
+                        llvm::IRBuilderDefaultInserter<true>> LLVMIRBuilder;
+
+class SimitIRBuilder : public LLVMIRBuilder {
+public:
+  SimitIRBuilder(llvm::LLVMContext &C) : LLVMIRBuilder(C) {}
+  llvm::Value* CreateComplex(llvm::Value *real, llvm::Value *imag);
+  llvm::Value* ComplexGetReal(llvm::Value *c);
+  llvm::Value* ComplexGetImag(llvm::Value *c);
+};
+
 llvm::ConstantInt* llvmInt(long long int val, unsigned bits=32);
 llvm::ConstantInt* llvmUInt(long long unsigned int val, unsigned bits=32);
 llvm::Constant*    llvmFP(double val, unsigned bits=64);
 llvm::Constant*    llvmBool(bool val);
+llvm::Constant*    llvmComplex(double real, double imag);
 
 // Simit-specific utilities
 

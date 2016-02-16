@@ -29,6 +29,10 @@ bool compareTensors(const TensorType& ltype, const void *ldata,
       return util::compare<int>(ldata, rdata, ltype.getSize());
     case ComponentType::Boolean:
       return util::compare<bool>(ldata, rdata, ltype.getSize());
+    case ComponentType::FloatComplex:
+      return util::compare<float_complex>(ldata, rdata, ltype.getSize());
+    case ComponentType::DoubleComplex:
+      return util::compare<double_complex>(ldata, rdata, ltype.getSize());
   }
 }
 

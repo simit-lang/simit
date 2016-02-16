@@ -28,6 +28,9 @@ Stmt initializeLhsToZero(Stmt stmt) {
         case ScalarType::Boolean:
           zeroVal = Literal::make(false);
           break;
+        case ScalarType::Complex:
+          zeroVal = Literal::make(double_complex(0.0, 0.0));
+          break;
         default:
           unreachable;
           break;
@@ -47,6 +50,9 @@ Stmt initializeLhsToZero(Stmt stmt) {
         case ScalarType::Boolean:
           zeroVal = Literal::make(false);
           break;
+        case ScalarType::Complex:
+          zeroVal = Literal::make(double_complex(0.0, 0.0));
+          break;
         default:
           unreachable;
           break;
@@ -65,6 +71,9 @@ Stmt initializeLhsToZero(Stmt stmt) {
           break;
         case ScalarType::Boolean:
           zeroVal = Literal::make(false);
+          break;
+        case ScalarType::Complex:
+          zeroVal = Literal::make(double_complex(0.0, 0.0));
           break;
         default:
           unreachable;

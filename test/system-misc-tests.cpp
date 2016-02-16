@@ -7,6 +7,36 @@
 using namespace std;
 using namespace simit;
 
+TEST(System, element_field_access_in_proc) {
+  Set V;
+  FieldRef<simit_float> a = V.addField<simit_float>("a");
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b.set(v0, 1.0);
+  b.set(v1, 2.0);
+  b.set(v2, 3.0);
+  
+  Set E(V,V);
+  FieldRef<simit_float> e = E.addField<simit_float>("e");
+  ElementRef e0 = E.add(v0,v1);
+  ElementRef e1 = E.add(v1,v2);
+  e.set(e0, 4.0);
+  e.set(e1, 5.0);
+  
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("V", &V);
+  func.bind("E", &E);
+
+  func.runSafe();
+  
+  ASSERT_EQ(33.0, a.get(v0));
+}
+
 TEST(System, map_triangle) {
   simit::Set verts;
   simit::FieldRef<simit_float> b = verts.addField<simit_float>("b");

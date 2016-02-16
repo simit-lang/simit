@@ -113,7 +113,10 @@ Func lower(Func func, bool print) {
 
   func = rewriteCallGraph(func, lowerPrints);
   printCallGraph("Lower Prints", func, print);
-  
+
+  func = rewriteCallGraph(func, lowerFieldAccesses);
+  printCallGraph("Lower Field Accesses", func, print);
+
   // Lower maps
   func = rewriteCallGraph(func, lowerMaps);
   printCallGraph("Lower Maps", func, print);

@@ -55,6 +55,12 @@ void Function::bind(const std::string& name, simit::Set *set) {
       case ComponentType::Boolean:
         setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Boolean);
         break;
+      case ComponentType::FloatComplex:
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Complex);
+        break;
+      case ComponentType::DoubleComplex:
+        setFieldTypeComponentType = ir::ScalarType(ir::ScalarType::Complex);
+        break;
     }
 
     uassert(setFieldTypeComponentType == elemFieldType->getComponentType())
