@@ -54,7 +54,14 @@ Stmt Func::getBody() const {
 }
 
 void Func::accept(IRVisitorStrict *visitor) const {
-  visitor->visit(this);
+  try {
+    visitor->visit(this);
+  }
+  catch (SimitException &ex) {
+    ex.addContext("... accepting: ");
+    ex.errStream << *this;
+    throw;
+  }
 }
 
 std::ostream &operator<<(std::ostream& os, const Func& func) {

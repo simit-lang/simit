@@ -22,7 +22,7 @@ public:
     else if (!cutoff) {
       if (cutoffEnabled && c == '\n') {
         cutoff = true;
-        const std::string cutoffText = " [...]\n";
+        const std::string cutoffText = " [...]";
         dest->sputn(cutoffText.c_str(), cutoffText.size());
         return traits_type::to_int_type(c);
       }
@@ -66,10 +66,10 @@ public:
 
   // Resets context stream cutoff, and inserts string context description
   void addContext(std::string contextDesc) {
+    errStreambuf.setCutoff(false);
     errStream << std::endl;
     errStreambuf.setCutoff(true);
     errStream << contextDesc;
-    errStreambuf.setCutoff(false);
   }
 
   // Writable error stream with an underlying buffer which cuts off at newlines
