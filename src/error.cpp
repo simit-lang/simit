@@ -49,7 +49,7 @@ void ErrorReport::explode() {
 
   std::cerr << msg->str() << "\n";
   delete msg;
-  throw;
+  throw SimitException();
   exit(1);
 }
 
