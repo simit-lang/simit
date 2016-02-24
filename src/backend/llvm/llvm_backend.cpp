@@ -385,6 +385,8 @@ void LLVMBackend::compile(const ir::Call& call) {
     args.push_back(compile(a));
   }
   
+  std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
+
   // these are intrinsic functions
   // first, see if this is an LLVM intrinsic
   auto foundIntrinsic = llvmIntrinsicByName.find(call.func);
@@ -398,8 +400,7 @@ void LLVMBackend::compile(const ir::Call& call) {
            call.func == ir::intrinsics::asin()  ||
            call.func == ir::intrinsics::acos()) {
     auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes, false);
-    std::string funcName = call.func.getName() +
-        (ir::ScalarType::singleFloat() ? "_f32" : "_f64");
+    std::string funcName = call.func.getName() + floatTypeName;
     fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
         funcName,ftype));
   }
@@ -429,9 +430,8 @@ void LLVMBackend::compile(const ir::Call& call) {
       val = builder->CreateCall(sqrt, sum);
     } else {
       args.push_back(emitComputeLen(dimensions[0]));
-      std::string funcName = ir::ScalarType::singleFloat() ?
-          "norm_f32" : "norm_f64";
-      val = emitCall(funcName, args, llvmFloatType());
+      std::string fName = "norm" + floatTypeName;
+      val = emitCall(fName, args, llvmFloatType());
     }
     
     return;
@@ -449,10 +449,9 @@ void LLVMBackend::compile(const ir::Call& call) {
     args.push_back(emitComputeLen(dimensions[1]));
 
     auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes2, false);
-    std::string funcName = ir::ScalarType::singleFloat() ?
-        "cMatSolve_f32" : "cMatSolve_f64";
+    std::string fName = "cMatSolve" + floatTypeName;
     fun = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction(funcName, ftype));
+        module->getOrInsertFunction(fName, ftype));
   }
   else if (call.func == ir::intrinsics::loc()) {
     val = emitCall("loc", args, LLVM_INT);
@@ -468,9 +467,20 @@ void LLVMBackend::compile(const ir::Call& call) {
     uassert(type1Dimensions[0] == type2Dimensions[0]) <<
         "dimension mismatch in dot product";
     args.push_back(emitComputeLen(type1Dimensions[0]));
-    std::string funcName = ir::ScalarType::singleFloat() ?
-        "dot_f32" : "dot_f64";
-    val = emitCall(funcName, args, llvmFloatType());
+    std::string fName = "dot" + floatTypeName;
+    val = emitCall(fName, args, llvmFloatType());
+    return;
+  }
+  else if (call.func == ir::intrinsics::createComplex()) {
+    val = builder->CreateComplex(args[0], args[1]);
+    return;
+  }
+  else if (call.func == ir::intrinsics::complexNorm()) {
+    std::string fname = "complexNorm" + floatTypeName;
+    val = emitCall(fname, {
+        builder->ComplexGetReal(args[0]),
+        builder->ComplexGetImag(args[1])
+    }, llvmFloatType());
     return;
   }
   else if (call.func == ir::intrinsics::simitClock()) {
@@ -929,6 +939,16 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     }
     else if (callStmt.callee == ir::intrinsics::strcat()) {
       call = emitCall("strcat", args, LLVM_INT8_PTR);
+    }
+    else if (callStmt.callee == ir::intrinsics::createComplex()) {
+      call = builder->CreateComplex(args[0], args[1]);
+    }
+    else if (callStmt.callee == ir::intrinsics::complexNorm()) {
+      std::string fname = "complexNorm" + floatTypeName;
+      call = emitCall(fname, {
+        builder->ComplexGetReal(args[0]),
+        builder->ComplexGetImag(args[1])
+      }, llvmFloatType());
     }
     else if (callStmt.callee == ir::intrinsics::simitClock()) {
       call = emitCall("simitClock", args, llvmFloatType());

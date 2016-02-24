@@ -196,6 +196,22 @@ void strcatInit() {
                    Func::Intrinsic);
 }
 
+static Func createComplexVar;
+void createComplexInit() {
+  createComplexVar = Func("createComplex",
+                          {Var("real", Float), Var("imag", Float)},
+                          {Var("r", Complex)},
+                          Func::Intrinsic);
+}
+
+static Func complexNormVar;
+void complexNormInit() {
+  complexNormVar = Func("complexNorm",
+                        {Var("c", Complex)},
+                        {Var("r", Float)},
+                        Func::Intrinsic);
+}
+
 static Func simitClockVar;
 void simitClockInit() {
   simitClockVar = Func("simitClock",
@@ -376,6 +392,20 @@ const Func& strcat() {
   return strcatVar;
 }
 
+const Func& createComplex() {
+  if (!createComplexVar.defined()) {
+    createComplexInit();
+  }
+  return createComplexVar;
+}
+
+const Func& complexNorm() {
+  if (!complexNormVar.defined()) {
+    complexNormInit();
+  }
+  return complexNormVar;
+}
+
 const Func& simitClock() {
   if (!simitClockVar.defined()) {
     simitClockInit();
@@ -410,6 +440,8 @@ const std::map<std::string,Func> &byNames() {
     detInit();
     invInit();
     solveInit();
+    createComplexInit();
+    complexNormInit();
     simitClockInit();
     simitStoreTimeInit();
     byNameMap.insert({{"mod",modVar},
@@ -428,6 +460,8 @@ const std::map<std::string,Func> &byNames() {
                       {"det",detVar},
                       {"inv",invVar},
                       {"solve",solveVar},
+                      {"createComplex",createComplexVar},
+                      {"complexNorm",complexNormVar},
                       {"simitClock",simitClockVar},
                       {"simitStoreTime",simitStoreTimeVar}});
   }

@@ -32,6 +32,8 @@ double det3_f64(double* a);
 float det3_f32(float* a);
 void inv3_f64(double* a, double* inv);
 void inv3_f32(float* a, float* inv);
+double complexNorm_f64(double r, double i);
+float complexNorm_f32(float r, float i);  
 
 void simitStoreTime(int i, double value);
 double simitClock();
@@ -225,6 +227,13 @@ void inv3_f32(float * a, float * inv){
   inv[8] = cof22 * determ;
 }
 
+double complexNorm_f64(double r, double i) {
+  return sqrt(r*r+i*i);
+}
+
+float complexNorm_f32(float r, float i) {
+  return sqrt(r*r+i*i);
+}
 
 }
 

@@ -36,6 +36,8 @@ const Func& strcmp();
 const Func& strlen();
 const Func& strcpy();
 const Func& strcat();
+const Func& createComplex();
+const Func& complexNorm();
 const Func& simitClock();
 const Func& simitStoreTime();
 
