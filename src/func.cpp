@@ -59,7 +59,7 @@ void Func::accept(IRVisitorStrict *visitor) const {
   }
   catch (SimitException &ex) {
     ex.addContext("... accepting: ");
-    ex.errStream << *this;
+    ex.errStream << "func " << getName();
     throw;
   }
 }
