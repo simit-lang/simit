@@ -479,7 +479,7 @@ void LLVMBackend::compile(const ir::Call& call) {
     std::string fname = "complexNorm" + floatTypeName;
     val = emitCall(fname, {
         builder->ComplexGetReal(args[0]),
-        builder->ComplexGetImag(args[1])
+        builder->ComplexGetImag(args[0])
     }, llvmFloatType());
     return;
   }
@@ -947,7 +947,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       std::string fname = "complexNorm" + floatTypeName;
       call = emitCall(fname, {
         builder->ComplexGetReal(args[0]),
-        builder->ComplexGetImag(args[1])
+        builder->ComplexGetImag(args[0])
       }, llvmFloatType());
     }
     else if (callStmt.callee == ir::intrinsics::simitClock()) {
