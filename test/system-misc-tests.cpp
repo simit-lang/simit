@@ -227,6 +227,32 @@ TEST(System, map_one_set) {
   SIMIT_ASSERT_FLOAT_EQ(6, a.get(p2));
 }
 
+TEST(System, map_env_folding) {
+  // Points
+  Set points;
+  FieldRef<simit_float> a = points.addField<simit_float>("a");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  a.set(p0, 1.0);
+  a.set(p1, 2.0);
+  a.set(p2, 3.0);
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points", &points);
+  func.runSafe();
+
+  // Check outputs
+  SIMIT_ASSERT_FLOAT_EQ(5.0, a.get(p0));
+  SIMIT_ASSERT_FLOAT_EQ(5.0, a.get(p1));
+  SIMIT_ASSERT_FLOAT_EQ(5.0, a.get(p2));
+}
+
 TEST(System, DISABLED_map_one_set_const_ref) {
   // Points
   Set points;
