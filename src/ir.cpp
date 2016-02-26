@@ -198,26 +198,26 @@ double_complex Literal::getComplexVal(int index) const {
 }
 
 Expr Literal::make(Type type) {
-  return Literal::make(type, nullptr);
+  return Literal::make(type, nullptr, 0);
 }
 
 Expr Literal::make(int val) {
-  return make(Int, &val);
+  return make(Int, &val, sizeof(int));
 }
 
 Expr Literal::make(double val) {
   // Choose appropriate precision
   if (ScalarType::singleFloat()) {
     float floatVal = (float) val;
-    return make(Float, &floatVal);
+    return make(Float, &floatVal, sizeof(float));
   }
   else {
-    return make(Float, &val);
+    return make(Float, &val, sizeof(double));
   }
 }
 
 Expr Literal::make(bool val) {
-  return make(Boolean, &val);
+  return make(Boolean, &val, sizeof(bool));
 }
 
 Expr Literal::make(std::string val) {
@@ -236,14 +236,14 @@ Expr Literal::make(double_complex val) {
     float_complex floatVal;
     floatVal.real = (float) val.real;
     floatVal.imag = (float) val.imag;
-    return make(Complex, &floatVal);
+    return make(Complex, &floatVal, sizeof(float_complex));
   }
   else {
-    return make(Complex, &val);
+    return make(Complex, &val, sizeof(double_complex));
   }
 }
 
-Expr Literal::make(Type type, void* values) {
+Expr Literal::make(Type type, void* values, size_t bufSize) {
   iassert(type.isTensor()) << "only tensor literals are supported for now";
   const TensorType *ttype = type.toTensor();
 
@@ -268,6 +268,9 @@ Expr Literal::make(Type type, void* values) {
   node->size = sizeInBytes;
   node->data = malloc(node->size);
   if (values != nullptr) {
+    iassert(node->size <= bufSize)
+        << "bufSize too small for desired type: " << type
+        << ", needed " << sizeInBytes << ", got " << bufSize;
     memcpy(node->data, values, node->size);
   }
   else {
@@ -320,10 +323,12 @@ Expr Literal::make(Type type, std::vector<double> values) {
     for (double val : values) {
       floatValues.push_back(val);
     }
-    return Literal::make(type, floatValues.data());
+    return Literal::make(type, floatValues.data(),
+                         util::getVectorSize(floatValues));
   }
   else {
-    return Literal::make(type, values.data());
+    return Literal::make(type, values.data(),
+                         util::getVectorSize(values));
   }
 }
 

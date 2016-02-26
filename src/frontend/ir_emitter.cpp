@@ -688,33 +688,38 @@ void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
   const DenseTensorValues tensorVals = emitTensorValues(tensor);
   const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(),
                                            tensorVals.dimSizes.rend());
+  ir::ScalarType::Kind elemType;
+  const void *data;
+  size_t dataSize = 0;
   switch (tensorVals.type) {
     case DenseTensorValues::Type::INT:
     {
-      const auto tensorType = ir::TensorType::make(ir::ScalarType::Int, 
-                                                   idoms, tensor->transposed);
-      const void *data = static_cast<const void *>(tensorVals.intVals.data());
-      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data));
+      elemType = ir::ScalarType::Int;
+      data = static_cast<const void *>(tensorVals.intVals.data());
+      dataSize = util::getVectorSize(tensorVals.intVals);
       break;
     }
     case DenseTensorValues::Type::FLOAT:
     {
-      const auto tensorType = ir::TensorType::make(ir::ScalarType::Float, 
-                                                   idoms, tensor->transposed);
-      retExpr = ir::Literal::make(tensorType, tensorVals.floatVals);
+      elemType = ir::ScalarType::Float;
+      data = static_cast<const void *>(tensorVals.floatVals.data());
+      dataSize = util::getVectorSize(tensorVals.floatVals);
       break;
     }
     case DenseTensorValues::Type::COMPLEX:
     {
-      const auto tensorType = ir::TensorType::make(ir::ScalarType::Complex, 
-                                                   idoms, tensor->transposed);
-      retExpr = ir::Literal::make(tensorType, tensorVals.complexVals);
+      elemType = ir::ScalarType::Complex;
+      data = static_cast<const void *>(tensorVals.complexVals.data());
+      dataSize = util::getVectorSize(tensorVals.complexVals);
       break;
     }
     default:
       unreachable;
       break;
   }
+  const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
+                                                   tensor->transposed);
+  retExpr = ir::Literal::make(tensorType, const_cast<void *>(data), dataSize);
 }
 
 IREmitter::DenseTensorValues 

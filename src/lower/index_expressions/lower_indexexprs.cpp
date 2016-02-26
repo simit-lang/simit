@@ -301,8 +301,8 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
 
   Type rvarType = rvar.getType();
   Stmt rvarDecl = VarDecl::make(rvar);
-  Stmt rvarInit =
-      Block::make(rvarDecl, AssignStmt::make(rvar,Literal::make(rvarType,0)));
+  Stmt rvarInitZero = initializeLhsToZero(AssignStmt::make(rvar,rvar));
+  Stmt rvarInit = Block::make(rvarDecl, rvarInitZero);
 
   loopNest = Block::make(rvarInit, loopNest);
 
