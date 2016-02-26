@@ -23,7 +23,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
@@ -69,6 +69,7 @@ shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
 LLVMBackend::LLVMBackend() : builder(new SimitIRBuilder(LLVM_CTX)) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
     llvmInitialized = true;
   }
 }
@@ -184,7 +185,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
 
 
   // Create initialization function
-  emitEmptyFunction(func.getName()+".init", func.getArguments(),
+  emitEmptyFunction(func.getName()+"_init", func.getArguments(),
                     func.getResults(), true);
   for (auto &buffer : buffers) {
     const Var&   bufferVar = buffer.first;
@@ -208,7 +209,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
 
 
   // Create de-initialization function
-  emitEmptyFunction(func.getName()+".deinit", func.getArguments(),
+  emitEmptyFunction(func.getName()+"_deinit", func.getArguments(),
                     func.getResults(), true);
   for (auto &buffer : buffers) {
     Var var = buffer.first;

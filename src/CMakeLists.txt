@@ -63,7 +63,7 @@ endif()
 
 set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS ${LLVM_LDFLAGS})
 
-set(LLVM_COMPONENTS core jit x86 bitwriter ipo)
+set(LLVM_COMPONENTS core mcjit x86 bitwriter ipo)
 
 execute_process(COMMAND ${LLVM_CONFIG} --libnames ${LLVM_COMPONENTS} OUTPUT_VARIABLE LLVM_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
 separate_arguments(LLVM_LIBS)  # Turn the space-separate string into a ;-separated list

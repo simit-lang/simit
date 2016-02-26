@@ -60,6 +60,7 @@ class LLVMFunction : public backend::Function {
 
   llvm::Function*                        llvmFunc;
   llvm::Module*                          module;
+  llvm::Module*                          harnessModule;
   ir::Storage storage;
 
   /// Function actual storage
@@ -77,14 +78,20 @@ class LLVMFunction : public backend::Function {
  private:
   std::shared_ptr<llvm::EngineBuilder>   engineBuilder;
   std::shared_ptr<llvm::ExecutionEngine> executionEngine;
+  std::unique_ptr<llvm::EngineBuilder>    harnessEngineBuilder;
+  std::unique_ptr<llvm::ExecutionEngine> harnessExecEngine;
 
   /// Temporaries
   std::map<std::string, void**> temporaryPtrs;
 
   FuncType deinit;
 
-  FuncType createHarness(const std::string& name,
-                         const llvm::SmallVector<llvm::Value*,8>& args);
+  // MCJIT does not allow module modification after code generation. Instead,
+  // create all harness functions in the harness module first, then fetch
+  // generated addresses using getHarnessFunctionAddress.
+  void createHarness(const std::string& name,
+                     const llvm::SmallVector<llvm::Value*,8>& args);
+  FuncType getHarnessFunctionAddress(const std::string& name);
 
   llvm::Function* getInitFunc() const;
   llvm::Function* getDeinitFunc() const;
