@@ -6,13 +6,12 @@ end
 extern points  : set{Point};
 
 func sum_vector(vec : tensor[3](tensor[3](float))) -> (out : float)
-  var tmp : float = 0.0;
+  out = 0.0;
   for ii in 0:3
     for jj in 0:3
-      tmp = tmp + vec(ii)(jj);
+      out = out + vec(ii)(jj);
     end
   end
-  out = tmp;
 end
 
 func build_blocked(point : Point)

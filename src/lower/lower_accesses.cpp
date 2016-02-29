@@ -51,10 +51,7 @@ static Expr createLoadExpr(Expr tensor, Expr index) {
     const Load *load = to<Load>(tensor);
     iassert(load->buffer.type().isTensor());
 
-    Type blockType = load->buffer.type().toTensor()->getBlockType();
-    Expr len  = createLengthComputation(blockType.toTensor()->getDimensions());
-
-    index = Add::make(Mul::make(load->index, len), index);
+    index = Add::make(load->index, index);
     return Load::make(load->buffer, index);
   }
   else {
@@ -73,10 +70,7 @@ static Stmt createStoreStmt(Expr tensor, Expr index, Expr value,
     const Load *load = to<Load>(tensor);
     iassert(load->buffer.type().isTensor());
 
-    Type blockType = load->buffer.type().toTensor()->getBlockType();
-    Expr len  = createLengthComputation(blockType.toTensor()->getDimensions());
-
-    index = Add::make(Mul::make(load->index, len), index);
+    index = Add::make(load->index, index);
     return Store::make(load->buffer, index, value, cop);
   }
   else {
@@ -135,20 +129,31 @@ private:
       case TensorStorage::Kind::Dense: {
         iassert(indices.size() > 0);
         const TensorType *type = tensor.type().toTensor();
-        vector<IndexDomain> dimensions = type->getDimensions();
+        vector<IndexSet> outerDims = type->getOuterDimensions();
+        Type blockType = type->getBlockType();
+        Expr blockSize = Literal::make(1);
+        if (blockType.toTensor()->getDimensions().size() > 0) {
+          blockSize = createLengthComputation(
+              blockType.toTensor()->getDimensions());
+        }
+        vector<Expr> outerSizes;
+        for (const IndexSet& is : outerDims) {
+          outerSizes.push_back(createLengthComputation(is));
+        }
 
         // It simplifies the logic to generate the inner index first
         reverse(indices.begin(), indices.end());
+        reverse(outerSizes.begin(), outerSizes.end());
+        iassert(indices.size() == outerSizes.size())
+            << "Must index completely into tensor block to generate "
+            << "a flattened access: " << tensor;
 
         index = rewrite(indices[0]);
-
+        Expr subSize = outerSizes[0];
         for (size_t i=1; i < indices.size(); ++i) {
-          Expr stride = getDimSize(indices.size()-i, dimensions);
-          for (size_t j=i-1; j > 0; --j) {
-            stride = Mul::make(getDimSize(indices.size()-j,dimensions), stride);
-          }
-          Expr idx = Mul::make(rewrite(indices[i]), stride);
+          Expr idx = Mul::make(rewrite(indices[i]), subSize);
           index = Add::make(idx, index);
+          subSize = Mul::make(outerSizes[i], subSize);
         }
         break;
       }
@@ -194,6 +199,16 @@ private:
         ierror;
         break;
     }
+
+    // Multiply in inner block size
+    Type blockType = tensor.type().toTensor()->getBlockType();
+    Expr blockSize = Literal::make(1);
+    if (blockType.toTensor()->getDimensions().size() > 0) {
+      blockSize = createLengthComputation(
+          blockType.toTensor()->getDimensions());
+    }
+    index = Mul::make(index, blockSize);
+        
     iassert(index.defined());
     return index;
   }

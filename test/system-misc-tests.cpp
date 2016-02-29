@@ -191,9 +191,9 @@ TEST(System, map_assemble_blocked) {
   func.runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ(1.0, z.get(p0));
-  ASSERT_EQ(1.0, z.get(p1));
-  ASSERT_EQ(1.0, z.get(p2));
+  ASSERT_EQ(81.0, z.get(p0));
+  ASSERT_EQ(324.0, z.get(p1));
+  ASSERT_EQ(729.0, z.get(p2));
 }
 
 TEST(System, DISABLED_map_assemble_fem) {

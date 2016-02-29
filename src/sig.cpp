@@ -204,8 +204,9 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
       Expr setExpr;
       if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
         const Var &var = to<VarExpr>(op->tensor)->var;
-        iassert(storage.hasStorage(var)) << "No storage descriptor found for"
-                                         << var << "in" << util::toString(*op);
+        iassert(storage.hasStorage(var)) << "No storage descriptor found for "
+                                         << var << " in "
+                                         << util::toString(*op);
         if (storage.getStorage(var).isSystem()) {
           tensorVar = var;
           setExpr = storage.getStorage(var).getSystemTargetSet();
