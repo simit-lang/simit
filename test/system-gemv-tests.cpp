@@ -194,7 +194,7 @@ TEST(System, gemv_diagonal) {
   ASSERT_EQ(6.0, c.get(p2));
 }
 
-TEST(System, gemv_diagonal_func) {
+TEST(System, DISABLED_gemv_diagonal_func) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
