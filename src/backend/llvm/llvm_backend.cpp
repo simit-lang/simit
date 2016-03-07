@@ -1247,7 +1247,7 @@ void LLVMBackend::compile(const ir::Print& print) {
         specifier = std::string("%") + print.format + "g";
         break;
       case ScalarType::Complex:
-        specifier = std::string("<%") + print.format + "g,%g>";
+        specifier = std::string("%") + print.format + "<%g,%g>";
         break;
       case ScalarType::Boolean:
       case ScalarType::Int:
