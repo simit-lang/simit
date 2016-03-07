@@ -104,3 +104,20 @@ func f() -> (r : int)
     end
   end while false
 end
+
+%%% string-func
+%! f() == 1;
+
+func g(s : string, t : string) -> (r : string)
+  r = s + t;
+end
+
+func f() -> (r : int)
+  s1 = "s1";
+  s2 = "s2";
+  if g(s1, s2) == "s1s2"
+    r = 1;
+  else
+    r = 0;
+  end
+end
