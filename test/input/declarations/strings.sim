@@ -121,3 +121,19 @@ func f() -> (r : int)
     r = 0;
   end
 end
+
+%%% string-copy
+%! f() == 1;
+
+func f() -> (r : int)
+  var s : string;
+  do
+    var t : string = "foo" + "bar";
+    s = t;
+  end while false;
+  if s == "foobar"
+    r = 1;
+  else
+    r = 0;
+  end
+end
