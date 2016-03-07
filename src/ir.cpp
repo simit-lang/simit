@@ -29,11 +29,11 @@ std::ostream &operator<<(std::ostream &os, const IRNode &node) {
 // class Expr
 Expr::Expr(const Var &var) : Expr(VarExpr::make(var)) {}
 
-Expr::Expr(int val) : IRHandle(Literal::make(val)) {
-}
+Expr::Expr(int val) : IRHandle(Literal::make(val)) {}
 
-Expr::Expr(double val) : IRHandle(Literal::make(val)) {
-}
+Expr::Expr(double val) : IRHandle(Literal::make(val)) {}
+
+Expr::Expr(double_complex val) : IRHandle(Literal::make(val)) {}
 
 Expr Expr::operator()(const std::vector<IndexVar> &indexVars) const {
   return IndexedTensor::make(*this, indexVars);
@@ -188,6 +188,15 @@ double Literal::getFloatVal(int index) const {
   }
 }
 
+double_complex Literal::getComplexVal(int index) const {
+  if (ScalarType::singleFloat()) {
+    return ((float_complex*)data)[index];
+  }
+  else {
+    return ((double_complex*)data)[index];
+  }
+}
+
 Expr Literal::make(Type type) {
   return Literal::make(type, nullptr);
 }
@@ -219,6 +228,19 @@ Expr Literal::make(std::string val) {
   val.copy((char *)node->data, val.length());
   ((char *)(node->data))[node->size - 1] = '\0';
   return node;
+}
+
+Expr Literal::make(double_complex val) {
+  // Choose appropriate precision
+  if (ScalarType::singleFloat()) {
+    float_complex floatVal;
+    floatVal.real = (float) val.real;
+    floatVal.imag = (float) val.imag;
+    return make(Complex, &floatVal);
+  }
+  else {
+    return make(Complex, &val);
+  }
 }
 
 Expr Literal::make(Type type, void* values) {
@@ -258,6 +280,16 @@ Expr Literal::make(Type type, void* values) {
         util::zero<int>(node->data, size);
         break;
       case ir::ScalarType::Float:
+        if (ir::ScalarType::singleFloat()) {
+          iassert(ir::ScalarType::floatBytes == sizeof(float));
+          util::zero<float>(node->data, size);
+        }
+        else {
+          iassert(ir::ScalarType::floatBytes == sizeof(double));
+          util::zero<double>(node->data, size);
+        }
+        break;
+      case ir::ScalarType::Complex:
         if (ir::ScalarType::singleFloat()) {
           iassert(ir::ScalarType::floatBytes == sizeof(float));
           util::zero<float>(node->data, size);
@@ -315,18 +347,30 @@ bool operator==(const Literal& l, const Literal& r) {
       return util::compare<int>(l.data, r.data, size);
     }
     case ir::ScalarType::Float: {
-      if (ir::ScalarType::floatBytes == sizeof(float)) {
+      if (ir::ScalarType::singleFloat()) {
         return util::compare<float>(l.data, r.data, size);
       }
-      else if (ir::ScalarType::floatBytes == sizeof(double)) {
+      else {
         return util::compare<double>(l.data, r.data, size);
       }
     }
     case ir::ScalarType::Boolean: {
       return util::compare<bool>(l.data, r.data, size);
     }
+    case ir::ScalarType::Complex: {
+      if (ir::ScalarType::singleFloat()) {
+        return util::compare<float_complex>(l.data, r.data, size);
+      }
+      else {
+        return util::compare<double_complex>(l.data, r.data, size);
+      }
+    }
     case ir::ScalarType::String: {
       return (std::strcmp((const char *)l.data, (const char *)r.data) == 0);
+    }
+    default: {
+      not_supported_yet;
+      return false;
     }
   }
   return true;

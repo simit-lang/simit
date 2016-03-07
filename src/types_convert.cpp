@@ -8,6 +8,7 @@ namespace ir {
 ScalarType convert(ComponentType componentType) {
   switch (componentType) {
     case ComponentType::Float:
+      iassert(ir::ScalarType::floatBytes == sizeof(float));
       return ScalarType::Float;
     case ComponentType::Double:
       iassert(ir::ScalarType::floatBytes == sizeof(double));
@@ -16,6 +17,12 @@ ScalarType convert(ComponentType componentType) {
       return ScalarType::Int;
     case ComponentType::Boolean:
       return ScalarType::Boolean;
+    case ComponentType::FloatComplex:
+      iassert(ir::ScalarType::floatBytes == sizeof(float));
+      return ScalarType::Complex;
+    case ComponentType::DoubleComplex:
+      iassert(ir::ScalarType::floatBytes == sizeof(double));
+      return ScalarType::Complex;
   }
 }
 
@@ -36,6 +43,17 @@ ComponentType convert(ScalarType scalarType) {
       return ComponentType::Int;
     case ScalarType::Boolean:
       return ComponentType::Boolean;
+    case ScalarType::Complex:
+      if (ir::ScalarType::floatBytes == sizeof(float)) {
+        return ComponentType::FloatComplex;
+      }
+      else if (ir::ScalarType::floatBytes == sizeof(double)) {
+        return ComponentType::DoubleComplex;
+      }
+      else {
+        not_supported_yet;
+        return ComponentType::DoubleComplex;
+      }
     case ScalarType::String:
       break;
   }

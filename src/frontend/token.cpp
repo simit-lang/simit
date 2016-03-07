@@ -35,6 +35,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'float'";
     case Token::Type::BOOL:
       return "'bool'";
+    case Token::Type::COMPLEX:
+      return "'complex'";
     case Token::Type::STRING:
       return "'string'";
     case Token::Type::TENSOR:

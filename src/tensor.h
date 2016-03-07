@@ -125,42 +125,60 @@ private:
 
 
 /// Helper typedefs
-typedef Tensor<float>  Float;
-typedef Tensor<double> Double;
-typedef Tensor<int>    Int;
-typedef Tensor<bool>   Bool;
+typedef Tensor<float>          Float;
+typedef Tensor<double>         Double;
+typedef Tensor<int>            Int;
+typedef Tensor<bool>           Bool;
+typedef Tensor<float_complex>  FloatComplex;
+typedef Tensor<double_complex> DoubleComplex;
 
-typedef Tensor<float,2>  Vector2f;
-typedef Tensor<float,3>  Vector3f;
-typedef Tensor<float,4>  Vector4f;
+typedef Tensor<float,2>          Vector2f;
+typedef Tensor<float,3>          Vector3f;
+typedef Tensor<float,4>          Vector4f;
 
-typedef Tensor<double,2> Vector2d;
-typedef Tensor<double,3> Vector3d;
-typedef Tensor<double,4> Vector4d;
+typedef Tensor<double,2>         Vector2d;
+typedef Tensor<double,3>         Vector3d;
+typedef Tensor<double,4>         Vector4d;
 
-typedef Tensor<int,2>    Vector2i;
-typedef Tensor<int,3>    Vector3i;
-typedef Tensor<int,4>    Vector4i;
+typedef Tensor<int,2>            Vector2i;
+typedef Tensor<int,3>            Vector3i;
+typedef Tensor<int,4>            Vector4i;
 
-typedef Tensor<bool,2>   Vector2b;
-typedef Tensor<bool,3>   Vector3b;
-typedef Tensor<bool,4>   Vector4b;
+typedef Tensor<bool,2>           Vector2b;
+typedef Tensor<bool,3>           Vector3b;
+typedef Tensor<bool,4>           Vector4b;
 
-typedef Tensor<float,2,2>  Matrix2f;
-typedef Tensor<float,3,3>  Matrix3f;
-typedef Tensor<float,4,4>  Matrix4f;
+typedef Tensor<float_complex,2>  Vector2fc;
+typedef Tensor<float_complex,3>  Vector3fc;
+typedef Tensor<float_complex,4>  Vector4fc;
 
-typedef Tensor<double,2,2> Matrix2d;
-typedef Tensor<double,3,3> Matrix3d;
-typedef Tensor<double,4,4> Matrix4d;
+typedef Tensor<double_complex,2> Vector2dc;
+typedef Tensor<double_complex,3> Vector3dc;
+typedef Tensor<double_complex,4> Vector4dc;
 
-typedef Tensor<int,2,2>    Matrix2i;
-typedef Tensor<int,3,3>    Matrix3i;
-typedef Tensor<int,4,4>    Matrix4i;
+typedef Tensor<float,2,2>          Matrix2f;
+typedef Tensor<float,3,3>          Matrix3f;
+typedef Tensor<float,4,4>          Matrix4f;
 
-typedef Tensor<bool,2,2>   Matrix2b;
-typedef Tensor<bool,3,3>   Matrix3b;
-typedef Tensor<bool,4,4>   Matrix4b;
+typedef Tensor<double,2,2>         Matrix2d;
+typedef Tensor<double,3,3>         Matrix3d;
+typedef Tensor<double,4,4>         Matrix4d;
+
+typedef Tensor<int,2,2>            Matrix2i;
+typedef Tensor<int,3,3>            Matrix3i;
+typedef Tensor<int,4,4>            Matrix4i;
+
+typedef Tensor<bool,2,2>           Matrix2b;
+typedef Tensor<bool,3,3>           Matrix3b;
+typedef Tensor<bool,4,4>           Matrix4b;
+
+typedef Tensor<float_complex,2,2>  Matrix2fc;
+typedef Tensor<float_complex,3,3>  Matrix3fc;
+typedef Tensor<float_complex,4,4>  Matrix4fc;
+
+typedef Tensor<double_complex,2,2> Matrix2dc;
+typedef Tensor<double_complex,3,3> Matrix3dc;
+typedef Tensor<double_complex,4,4> Matrix4dc;
 
 
 /// Compare two tensor data pointers.

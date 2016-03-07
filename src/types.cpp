@@ -282,6 +282,9 @@ std::ostream& operator<<(std::ostream& os, const ScalarType& type) {
     case ScalarType::String:
       os << "string";
       break;
+    case ScalarType::Complex:
+      os << "complex";
+      break;
   }
   return os;
 }

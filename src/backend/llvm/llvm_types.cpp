@@ -102,6 +102,8 @@ llvm::Type* llvmType(ScalarType stype) {
       return llvmFloatType();
     case ScalarType::Boolean:
       return LLVM_BOOL;
+    case ScalarType::Complex:
+      return llvmComplexType();
     case ScalarType::String:
       return LLVM_INT8_PTR;
   }
@@ -118,6 +120,12 @@ llvm::Type *llvmFloatType() {
   }
 }
 
+llvm::StructType *llvmComplexType() {
+  vector<llvm::Type*> fieldTypes = {llvmFloatType(), llvmFloatType()};
+  const bool packed = true;
+  return llvm::StructType::get(LLVM_CTX, fieldTypes, packed);
+}
+
 llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
   switch (stype.kind) {
     case ScalarType::Int:
@@ -126,6 +134,8 @@ llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
       return llvmFloatPtrType(addrspace);
     case ScalarType::Boolean:
       return llvm::Type::getInt1PtrTy(LLVM_CTX, addrspace);
+    case ScalarType::Complex:
+      return llvmComplexPtrType(addrspace);
     case ScalarType::String:
     {
       const auto charPtrType = llvm::Type::getInt8PtrTy(LLVM_CTX, addrspace);
@@ -143,6 +153,10 @@ llvm::PointerType *llvmFloatPtrType(unsigned addrspace) {
   else {
     return llvm::Type::getDoublePtrTy(LLVM_CTX, addrspace);
   }
+}
+
+llvm::PointerType *llvmComplexPtrType(unsigned addrspace) {
+  return llvm::PointerType::get(llvmComplexType(), addrspace);
 }
 
 }}

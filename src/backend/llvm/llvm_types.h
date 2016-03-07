@@ -48,5 +48,8 @@ llvm::PointerType* llvmPtrType(ir::ScalarType stype, unsigned addrspace);
 llvm::PointerType* llvmFloatPtrType(unsigned addrspace=0);
 llvm::Type*        llvmFloatType();
 
+llvm::PointerType* llvmComplexPtrType(unsigned addrspace=0);
+llvm::StructType*  llvmComplexType();
+
 }}
 #endif

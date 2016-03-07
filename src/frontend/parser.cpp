@@ -4,6 +4,7 @@
 #include "parser.h"
 #include "scanner.h"
 #include "hir.h"
+#include "complex_types.h"
 
 namespace simit { 
 namespace internal {
@@ -952,6 +953,7 @@ hir::Expr::Ptr Parser::parseFactor() {
     case Token::Type::TRUE:
     case Token::Type::FALSE:
     case Token::Type::LB:
+    case Token::Type::LA:
       factor = parseTensorLiteral();
       break;
     default:
@@ -1035,6 +1037,7 @@ hir::Type::Ptr Parser::parseType() {
     case Token::Type::INT:
     case Token::Type::FLOAT:
     case Token::Type::BOOL:
+    case Token::Type::COMPLEX:
     case Token::Type::STRING:
     case Token::Type::TENSOR:
     case Token::Type::MATRIX:
@@ -1138,6 +1141,7 @@ hir::TensorType::Ptr Parser::parseTensorType() {
     case Token::Type::INT:
     case Token::Type::FLOAT:
     case Token::Type::BOOL:
+    case Token::Type::COMPLEX:
     case Token::Type::STRING:
       return parseScalarType();
     case Token::Type::MATRIX:
@@ -1249,7 +1253,7 @@ hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   return tensorType;
 }
 
-// tensor_component_type: 'int' | 'float' | 'bool'
+// tensor_component_type: 'int' | 'float' | 'bool' | 'complex'
 hir::ScalarType::Ptr Parser::parseTensorComponentType() {
   auto scalarType = std::make_shared<hir::ScalarType>();
 
@@ -1268,6 +1272,10 @@ hir::ScalarType::Ptr Parser::parseTensorComponentType() {
     case Token::Type::BOOL:
       consume(Token::Type::BOOL);
       scalarType->type = hir::ScalarType::Type::BOOL;
+      break;
+    case Token::Type::COMPLEX:
+      consume(Token::Type::COMPLEX);
+      scalarType->type = hir::ScalarType::Type::COMPLEX;
       break;
     case Token::Type::STRING:
       // TODO: Implement.
@@ -1351,7 +1359,7 @@ hir::IndexSet::Ptr Parser::parseIndexSet() {
 }
 
 // tensor_literal: INT_LITERAL | FLOAT_LITERAL | 'true' | 'false'
-//               | dense_tensor_literal
+//               | STRING_LITERAL | complex_literal | dense_tensor_literal
 hir::Expr::Ptr Parser::parseTensorLiteral() {
   hir::Expr::Ptr literal;
   switch (peek().type) {
@@ -1408,6 +1416,18 @@ hir::Expr::Ptr Parser::parseTensorLiteral() {
       stringLiteral->val = stringToken.str;
 
       literal = stringLiteral;
+      break;
+    }
+    case Token::Type::LA:
+    {
+      const Token laToken = peek();
+      
+      auto complexLiteral = std::make_shared<hir::ComplexLiteral>();
+      double_complex complexVal = parseComplexLiteral();
+      complexLiteral->setLoc(laToken);
+      complexLiteral->val = complexVal;
+
+      literal = complexLiteral;
       break;
     }
     case Token::Type::LB:
@@ -1475,6 +1495,7 @@ hir::DenseTensorLiteral::Ptr Parser::parseDenseMatrixLiteral() {
 }
 
 // dense_vector_literal: dense_int_vector_literal | dense_float_vector_literal
+//                     | dense_complex_vector_literal
 hir::DenseTensorLiteral::Ptr Parser::parseDenseVectorLiteral() {
   hir::DenseTensorLiteral::Ptr vec;
   switch (peek().type) {
@@ -1498,6 +1519,9 @@ hir::DenseTensorLiteral::Ptr Parser::parseDenseVectorLiteral() {
           throw SyntaxError();
           break;
       }
+      break;
+    case Token::Type::LA:
+      vec = parseDenseComplexVectorLiteral();
       break;
     default:
       reportError(peek(), "a vector literal");
@@ -1556,6 +1580,28 @@ hir::FloatVectorLiteral::Ptr Parser::parseDenseFloatVectorLiteral() {
   }
 }
 
+// dense_complex_vector_literal: complex_literal {[','] complex_literal}
+hir::ComplexVectorLiteral::Ptr Parser::parseDenseComplexVectorLiteral() {
+  auto vec = std::make_shared<hir::ComplexVectorLiteral>();
+  vec->transposed = false;
+
+  double_complex elem = parseComplexLiteral();
+  vec->vals.push_back(elem);
+
+  while (true) {
+    switch(peek().type) {
+      case Token::Type::COMMA:
+        consume(Token::Type::COMMA);
+      case Token::Type::LA:
+        elem = parseComplexLiteral();
+        vec->vals.push_back(elem);
+        break;
+      default:
+        return vec;
+    }
+  }
+}
+
 // signed_int_literal: ['+' | '-'] INT_LITERAL
 int Parser::parseSignedIntLiteral() {
   int coeff = 1;
@@ -1590,6 +1636,16 @@ double Parser::parseSignedFloatLiteral() {
   }
 
   return (coeff * consume(Token::Type::FLOAT_LITERAL).fnum);
+}
+
+// complex_literal: '<' signed_float_literal ',' signed_float_literal '>'
+double_complex Parser::parseComplexLiteral() {
+  consume(Token::Type::LA);
+  double real = parseSignedFloatLiteral();
+  consume(Token::Type::COMMA);
+  double imag = parseSignedFloatLiteral();
+  consume(Token::Type::RA);
+  return double_complex(real, imag);
 }
 
 // '%!' ident call_params '==' expr ';'

@@ -23,13 +23,11 @@ func pagerank_matrix(link : Link, p : (Page*2))
 end
 
 export func main
-  c = map outlinks to links reduce +;
-  pages.outlinks = c;
+  pages.outlinks = map outlinks to links reduce +;
   A = map pagerank_matrix to links reduce +;
 
-  var pr : tensor[pages](float) = 1.0;
+  pages.pr = 1.0;
   for i in 0:iterations
-    pr = A*pr + (1.0 - damping_factor);
+    pages.pr = A * pages.pr + (1.0 - damping_factor);
   end
-  pages.pr = pr;
 end

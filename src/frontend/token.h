@@ -23,6 +23,7 @@ public:
     INT,
     FLOAT,
     BOOL,
+    COMPLEX,
     STRING,
     TENSOR,
     MATRIX,

@@ -184,7 +184,7 @@ struct TensorType : public Type {
 };
 
 struct ScalarType : public TensorType {
-  enum class Type {INT, FLOAT, BOOL, STRING};
+  enum class Type {INT, FLOAT, BOOL, COMPLEX, STRING};
 
   Type type;
   
@@ -782,6 +782,16 @@ struct BoolLiteral : public TensorLiteral {
   }
 };
 
+struct ComplexLiteral : public TensorLiteral {
+  double_complex val;
+
+  typedef std::shared_ptr<ComplexLiteral> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<ComplexLiteral>(shared_from_this()));
+  }
+};
+
 struct StringLiteral : public TensorLiteral {
   std::string val;
   
@@ -815,6 +825,16 @@ struct FloatVectorLiteral : public DenseTensorLiteral {
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<FloatVectorLiteral>(shared_from_this()));
+  }
+};
+
+struct ComplexVectorLiteral : public DenseTensorLiteral {
+  std::vector<double_complex> vals;
+
+  typedef std::shared_ptr<ComplexVectorLiteral> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<ComplexVectorLiteral>(shared_from_this()));
   }
 };
 

@@ -13,6 +13,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "int") return Token::Type::INT;
   if (token == "float") return Token::Type::FLOAT;
   if (token == "bool") return Token::Type::BOOL;
+  if (token == "complex") return Token::Type::COMPLEX;
   if (token == "string") return Token::Type::STRING;
   if (token == "tensor") return Token::Type::TENSOR;
   if (token == "matrix") return Token::Type::MATRIX;

@@ -17,6 +17,12 @@ std::ostream& operator<<(std::ostream& os, ComponentType componentType) {
     case ComponentType::Boolean:
       os << "bool";
       break;
+    case ComponentType::FloatComplex:
+      os << "float_complex";
+      break;
+    case ComponentType::DoubleComplex:
+      os << "double_complex";
+      break;
   }
   return os;
 }

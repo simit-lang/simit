@@ -72,9 +72,11 @@ private:
   virtual void visit(IntLiteral::Ptr);
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
+  virtual void visit(ComplexLiteral::Ptr);
   virtual void visit(StringLiteral::Ptr);
   virtual void visit(IntVectorLiteral::Ptr);
   virtual void visit(FloatVectorLiteral::Ptr);
+  virtual void visit(ComplexVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
   virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
@@ -96,19 +98,21 @@ private:
 
   // Used to build up dense tensor literals.
   struct DenseTensorValues {
-    enum class Type {UNKNOWN, INT, FLOAT};
+    enum class Type {UNKNOWN, INT, FLOAT, COMPLEX};
 
     DenseTensorValues() : dimSizes(1), type(Type::UNKNOWN) {};
 
     void addDimension() { dimSizes.push_back(1); }
     void addIntValues(const std::vector<int> &);
     void addFloatValues(const std::vector<double> &);
+    void addComplexValues(const std::vector<double_complex> &);
     void merge(const DenseTensorValues &);
 
     std::vector<unsigned> dimSizes;
-    std::vector<int>       intVals;
-    std::vector<double>  floatVals;
-    Type                      type;
+    std::vector<int>      intVals;
+    std::vector<double>   floatVals;
+    std::vector<double>   complexVals; // pairs are flattened to pass as void*
+    Type                  type;
   };
 
 private:
