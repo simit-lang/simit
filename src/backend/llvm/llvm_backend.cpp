@@ -1497,8 +1497,8 @@ void LLVMBackend::emitPrintf(llvm::Value *str, std::vector<llvm::Value*> args) {
   // Split any complex structs into two doubles
   for (size_t i = 0; i < args.size(); ++i) {
     if (args[i]->getType()->isStructTy()) {
-      llvm::Value *real = builder->CreateExtractElement(args[i], llvmInt(0), "real");
-      llvm::Value *imag = builder->CreateExtractElement(args[i], llvmInt(1), "imag");
+      llvm::Value *real = builder->ComplexGetReal(args[i]);
+      llvm::Value *imag = builder->ComplexGetImag(args[i]);
       args[i] = real;
       args.insert(args.begin()+i+1, imag);
     }
