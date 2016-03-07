@@ -36,6 +36,7 @@ public:
     PROC,
     FUNC,
     INOUT,
+    APPLY,
     MAP,
     TO,
     WITH,

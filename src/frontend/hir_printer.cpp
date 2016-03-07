@@ -305,33 +305,7 @@ void HIRPrinter::visit(ExprParam::Ptr param) {
 }
 
 void HIRPrinter::visit(MapExpr::Ptr expr) {
-  oss << "map ";
-  expr->func->accept(this);
-  if (expr->partialActuals.size() > 0) {
-    oss << "(";
-    bool printDelimiter = false;
-    for (auto param : expr->partialActuals) {
-      if (printDelimiter) {
-        oss << ", ";
-      }
-      param->accept(this);
-      printDelimiter = true;
-    }
-    oss << ")";
-  }
-  oss << " to ";
-  expr->target->accept(this);
-  if (expr->op != MapExpr::ReductionOp::NONE) {
-    oss << " reduce ";
-    switch (expr->op) {
-      case MapExpr::ReductionOp::SUM:
-        oss << "+";
-        break;
-      default:
-        unreachable;
-        break;
-    }
-  }
+  printMapOrApply(expr);
 }
 
 void HIRPrinter::visit(OrExpr::Ptr expr) {
@@ -529,6 +503,11 @@ void HIRPrinter::visit(NDTensorLiteral::Ptr lit) {
   }
 }
 
+void HIRPrinter::visit(ApplyStmt::Ptr stmt) {
+  printMapOrApply(stmt->map, true);
+  oss << ";";
+}
+
 void HIRPrinter::visit(Test::Ptr test) {
   oss << "%! ";
   test->func->accept(this);
@@ -555,6 +534,36 @@ void HIRPrinter::printVarOrConstDecl(VarDecl::Ptr decl, const bool isConst) {
     decl->initVal->accept(this);
   }
   oss << ";";
+}
+
+void HIRPrinter::printMapOrApply(MapExpr::Ptr expr, const bool isApply) {
+  oss << (isApply ? "apply " : "map ");
+  expr->func->accept(this);
+  if (expr->partialActuals.size() > 0) {
+    oss << "(";
+    bool printDelimiter = false;
+    for (auto param : expr->partialActuals) {
+      if (printDelimiter) {
+        oss << ", ";
+      }
+      param->accept(this);
+      printDelimiter = true;
+    }
+    oss << ")";
+  }
+  oss << " to ";
+  expr->target->accept(this);
+  if (expr->getReductionOp() != MapExpr::ReductionOp::NONE) {
+    oss << " reduce ";
+    switch (expr->getReductionOp()) {
+      case MapExpr::ReductionOp::SUM:
+        oss << "+";
+        break;
+      default:
+        unreachable;
+        break;
+    }
+  }
 }
 
 void HIRPrinter::printUnaryExpr(UnaryExpr::Ptr expr, const std::string op, 

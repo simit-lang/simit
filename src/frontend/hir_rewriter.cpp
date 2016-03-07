@@ -253,6 +253,11 @@ void HIRRewriter::visit(NDTensorLiteral::Ptr lit) {
   node = lit;
 }
 
+void HIRRewriter::visit(ApplyStmt::Ptr stmt) {
+  stmt->map = rewrite<MapExpr>(stmt->map);
+  node = stmt;
+}
+
 void HIRRewriter::visit(Test::Ptr test) {
   test->func = rewrite<Identifier>(test->func);
   for (auto &arg : test->args) {

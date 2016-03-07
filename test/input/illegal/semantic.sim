@@ -588,6 +588,19 @@ export func main
   end
 end
 
+%%% bad-apply
+element V
+end
+
+extern S : set{V};
+
+func f(inout v : V) -> (r : int)
+end
+
+proc main
+  apply f to S;
+end
+
 %%% undeclared-var
 proc main
   z * z - 2;

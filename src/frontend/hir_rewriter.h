@@ -71,6 +71,7 @@ public:
   virtual void visit(IntVectorLiteral::Ptr op) { node = op; }
   virtual void visit(FloatVectorLiteral::Ptr op) { node = op; }
   virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
   template <typename T>

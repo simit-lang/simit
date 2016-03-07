@@ -281,8 +281,8 @@ struct InOutArgument : public Argument {
     visitor->visit(to<InOutArgument>(shared_from_this()));
   }
   
-  virtual unsigned getLineBegin() { return arg->getLineBegin(); }
-  virtual unsigned getColBegin() { return arg->getColBegin(); }
+  virtual unsigned getLineBegin() { return HIRNode::getLineBegin(); }
+  virtual unsigned getColBegin() { return HIRNode::getColBegin(); }
 
   virtual bool isInOut() { return true; }
 };
@@ -361,13 +361,6 @@ struct IfStmt : public Stmt {
   
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<IfStmt>(shared_from_this()));
-  }
-
-  virtual unsigned getLineEnd() {
-    return (lineEnd == 0) ? elseBody->getLineEnd() : lineEnd;
-  }
-  virtual unsigned getColEnd() {
-    return (lineEnd == 0) ? elseBody->getColEnd() : colEnd;
   }
 };
 
@@ -487,12 +480,11 @@ struct ExprParam : public ReadParam {
 };
 
 struct MapExpr : public Expr {
-  enum class ReductionOp {SUM, NONE};
-
+  enum class ReductionOp {NONE, SUM};
+  
   Identifier::Ptr        func;
   std::vector<Expr::Ptr> partialActuals;
   Identifier::Ptr        target;
-  ReductionOp            op;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 
@@ -500,12 +492,25 @@ struct MapExpr : public Expr {
     visitor->visit(to<MapExpr>(shared_from_this()));
   }
 
-  virtual unsigned getLineEnd() {
-    return (op == ReductionOp::NONE) ? target->getLineEnd() : lineEnd;
+  virtual unsigned getLineEnd() { return target->getLineEnd(); }
+  virtual unsigned getColEnd() { return target->getColEnd(); }
+
+  virtual ReductionOp getReductionOp() { return ReductionOp::NONE; }
+};
+
+struct ReducedMapExpr : public MapExpr {
+  MapExpr::ReductionOp op;
+
+  typedef std::shared_ptr<ReducedMapExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<ReducedMapExpr>(shared_from_this()));
   }
-  virtual unsigned getColEnd() {
-    return (op == ReductionOp::NONE) ? target->getColEnd() : colEnd;
-  }
+
+  virtual unsigned getLineBegin() { return HIRNode::getLineBegin(); }
+  virtual unsigned getColBegin() { return HIRNode::getColBegin(); }
+
+  virtual MapExpr::ReductionOp getReductionOp() { return op; }
 };
 
 struct UnaryExpr : public Expr {
@@ -821,6 +826,19 @@ struct NDTensorLiteral : public DenseTensorLiteral {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<NDTensorLiteral>(shared_from_this()));
   }
+};
+
+struct ApplyStmt : public Stmt {
+  MapExpr::Ptr map;
+  
+  typedef std::shared_ptr<ApplyStmt> Ptr;
+  
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<ApplyStmt>(shared_from_this()));
+  }
+
+  virtual unsigned getLineBegin() { return map->getLineBegin(); }
+  virtual unsigned getColBegin() { return map->getColBegin(); }
 };
 
 struct Test : public HIRNode {

@@ -76,6 +76,7 @@ private:
   virtual void visit(IntVectorLiteral::Ptr);
   virtual void visit(FloatVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
 private:

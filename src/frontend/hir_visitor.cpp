@@ -146,6 +146,10 @@ void HIRVisitor::visit(MapExpr::Ptr expr) {
   expr->target->accept(this);
 }
 
+void HIRVisitor::visit(ReducedMapExpr::Ptr expr) {
+  visit(to<MapExpr>(expr));
+}
+
 void HIRVisitor::visit(OrExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
@@ -236,6 +240,10 @@ void HIRVisitor::visit(NDTensorLiteral::Ptr lit) {
   for (auto elem : lit->elems) {
     elem->accept(this);
   }
+}
+
+void HIRVisitor::visit(ApplyStmt::Ptr stmt) {
+  stmt->map->accept(this);
 }
 
 void HIRVisitor::visit(Test::Ptr test) {

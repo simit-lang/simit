@@ -40,6 +40,7 @@ struct AssignStmt;
 struct Slice;
 struct ExprParam;
 struct MapExpr;
+struct ReducedMapExpr;
 struct UnaryExpr;
 struct BinaryExpr;
 struct NaryExpr;
@@ -70,6 +71,7 @@ struct StringLiteral;
 struct IntVectorLiteral;
 struct FloatVectorLiteral;
 struct NDTensorLiteral;
+struct ApplyStmt;
 struct Test;
 
 class HIRVisitor {
@@ -108,6 +110,7 @@ public:
   virtual void visit(std::shared_ptr<Slice> op) {}
   virtual void visit(std::shared_ptr<ExprParam>);
   virtual void visit(std::shared_ptr<MapExpr>);
+  virtual void visit(std::shared_ptr<ReducedMapExpr>);
   virtual void visit(std::shared_ptr<OrExpr>);
   virtual void visit(std::shared_ptr<AndExpr>);
   virtual void visit(std::shared_ptr<XorExpr>);
@@ -135,6 +138,7 @@ public:
   virtual void visit(std::shared_ptr<IntVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<NDTensorLiteral>);
+  virtual void visit(std::shared_ptr<ApplyStmt>);
   virtual void visit(std::shared_ptr<Test>);
 
 private:

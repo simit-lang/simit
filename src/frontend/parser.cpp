@@ -251,7 +251,7 @@ hir::StmtBlock::Ptr Parser::parseStmtBlock() {
 }
 
 // stmt: var_decl | const_decl | if_stmt | while_stmt | do_while_stmt 
-//     | for_stmt | print_stmt | expr_or_assign_stmt
+//     | for_stmt | print_stmt | apply_stmt | expr_or_assign_stmt
 hir::Stmt::Ptr Parser::parseStmt() {
   switch (peek().type) {
     case Token::Type::VAR:
@@ -269,6 +269,8 @@ hir::Stmt::Ptr Parser::parseStmt() {
     case Token::Type::PRINT:
     case Token::Type::PRINTLN:
       return parsePrintStmt();
+    case Token::Type::APPLY:
+      return parseApplyStmt();
     default:
       return parseExprOrAssignStmt();
   }
@@ -389,7 +391,7 @@ hir::DoWhileStmt::Ptr Parser::parseDoWhileStmt() {
     skipTo({Token::Type::BLOCKEND, Token::Type::ELIF, Token::Type::ELSE, 
             Token::Type::END, Token::Type::VAR, Token::Type::CONST, 
             Token::Type::IF, Token::Type::WHILE, Token::Type::DO, 
-            Token::Type::FOR, Token::Type::PRINT});
+            Token::Type::FOR, Token::Type::PRINT, Token::Type::PRINTLN});
     return hir::DoWhileStmt::Ptr();
   }
 }
@@ -530,6 +532,35 @@ hir::PrintStmt::Ptr Parser::parsePrintStmt() {
   }
 }
 
+// apply_stmt: apply ident [call_params] 'to' ident ';'
+hir::ApplyStmt::Ptr Parser::parseApplyStmt() {
+  try {
+    auto applyStmt = std::make_shared<hir::ApplyStmt>();
+    applyStmt->map = std::make_shared<hir::MapExpr>();
+
+    const Token applyToken = consume(Token::Type::APPLY);
+    applyStmt->map->setBeginLoc(applyToken);
+ 
+    applyStmt->map->func = parseIdent();
+    if (peek().type == Token::Type::LP) {
+      applyStmt->map->partialActuals = parseCallParams();
+    }
+    
+    consume(Token::Type::TO);
+    applyStmt->map->target = parseIdent();
+    
+    const Token endToken = consume(Token::Type::SEMICOL);
+    applyStmt->setEndLoc(endToken);
+
+    return applyStmt;
+  } catch (const SyntaxError &) {
+    skipTo({Token::Type::SEMICOL});
+    
+    consume(Token::Type::SEMICOL);
+    return hir::ApplyStmt::Ptr();
+  }
+}
+
 // expr_or_assign_stmt: [[expr {',' expr} '='] expr] ';'
 hir::ExprStmt::Ptr Parser::parseExprOrAssignStmt() {
   try {
@@ -582,30 +613,41 @@ hir::Expr::Ptr Parser::parseExpr() {
 }
 
 // map_expr: 'map' ident [call_params] 'to' ident ['reduce' '+']
-hir::Expr::Ptr Parser::parseMapExpr() {
-  auto mapExpr = std::make_shared<hir::MapExpr>();
-
+hir::MapExpr::Ptr Parser::parseMapExpr() {
   const Token mapToken = consume(Token::Type::MAP);
-  mapExpr->setBeginLoc(mapToken);
- 
-  mapExpr->func = parseIdent();
+  const hir::Identifier::Ptr func = parseIdent();
+  
+  std::vector<hir::Expr::Ptr> partialActuals;
   if (peek().type == Token::Type::LP) {
-    mapExpr->partialActuals = parseCallParams();
+    partialActuals = parseCallParams();
   }
   
   consume(Token::Type::TO);
-  mapExpr->target = parseIdent();
-  
+  const hir::Identifier::Ptr target = parseIdent();
+ 
   if (peek().type == Token::Type::REDUCE) {
     consume(Token::Type::REDUCE);
     
+    const auto mapExpr = std::make_shared<hir::ReducedMapExpr>();
+    mapExpr->setBeginLoc(mapToken);
+    
+    mapExpr->func = func;
+    mapExpr->partialActuals = partialActuals;
+    mapExpr->target = target;
+    mapExpr->op = hir::MapExpr::ReductionOp::SUM;
+
     const Token plusToken = consume(Token::Type::PLUS);
     mapExpr->setEndLoc(plusToken);
 
-    mapExpr->op = hir::MapExpr::ReductionOp::SUM;
-  } else {
-    mapExpr->op = hir::MapExpr::ReductionOp::NONE;
+    return mapExpr;
   }
+  
+  const auto mapExpr = std::make_shared<hir::MapExpr>();
+  mapExpr->setBeginLoc(mapToken);
+
+  mapExpr->func = func;
+  mapExpr->partialActuals = partialActuals;
+  mapExpr->target = target;
 
   return mapExpr;
 }

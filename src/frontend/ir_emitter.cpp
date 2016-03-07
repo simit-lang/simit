@@ -345,7 +345,7 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   }
   
   ir::ReductionOperator reduction;
-  switch (expr->op) {
+  switch (expr->getReductionOp()) {
     case MapExpr::ReductionOp::SUM:
       reduction = ir::ReductionOperator::Sum;
       break;
@@ -707,6 +707,11 @@ IREmitter::DenseTensorValues
   }
 
   return tensorVals;
+}
+
+void IREmitter::visit(ApplyStmt::Ptr stmt) {
+  const ir::Expr expr = emitExpr(stmt->map);
+  addAssign({}, expr);
 }
 
 void IREmitter::visit(Test::Ptr test) {

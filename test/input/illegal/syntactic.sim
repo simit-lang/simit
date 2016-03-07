@@ -165,3 +165,16 @@ end
 proc main
   v = [1 2[;
 end
+
+%%% bad-apply
+element V
+end
+
+extern S : set{V};
+
+func f(inout v : V)
+end
+
+proc main
+  apply f to S reduce +;
+end

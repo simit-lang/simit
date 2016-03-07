@@ -48,9 +48,10 @@ private:
   hir::ForStmt::Ptr                parseForStmt();
   hir::ForDomain::Ptr              parseForDomain();
   hir::PrintStmt::Ptr              parsePrintStmt();
+  hir::ApplyStmt::Ptr              parseApplyStmt();
   hir::ExprStmt::Ptr               parseExprOrAssignStmt();
   hir::Expr::Ptr                   parseExpr();
-  hir::Expr::Ptr                   parseMapExpr();
+  hir::MapExpr::Ptr                parseMapExpr();
   hir::Expr::Ptr                   parseOrExpr();
   hir::Expr::Ptr                   parseAndExpr();
   hir::Expr::Ptr                   parseXorExpr();

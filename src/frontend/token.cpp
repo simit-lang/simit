@@ -59,6 +59,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'func'";
     case Token::Type::INOUT:
       return "'inout'";
+    case Token::Type::APPLY:
+      return "'apply'";
     case Token::Type::MAP:
       return "'map'";
     case Token::Type::TO:

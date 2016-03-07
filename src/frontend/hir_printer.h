@@ -71,6 +71,7 @@ public:
   virtual void visit(IntVectorLiteral::Ptr);
   virtual void visit(FloatVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
 private:
@@ -80,6 +81,7 @@ private:
   void printBoolean(bool val) { oss << (val ? "true" : "false"); }
   
   void printVarOrConstDecl(VarDecl::Ptr, const bool = false);
+  void printMapOrApply(MapExpr::Ptr, const bool = false);
   void printUnaryExpr(UnaryExpr::Ptr, const std::string, const bool = false);
   void printBinaryExpr(BinaryExpr::Ptr, const std::string);
 
