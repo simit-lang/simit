@@ -576,10 +576,10 @@ void HIRPrinter::printMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   }
   oss << " to ";
   expr->target->accept(this);
-  if (expr->getReductionOp() != MapExpr::ReductionOp::NONE) {
+  if (expr->isReduced()) {
     oss << " reduce ";
-    switch (expr->getReductionOp()) {
-      case MapExpr::ReductionOp::SUM:
+    switch (to<ReducedMapExpr>(expr)->op) {
+      case ReducedMapExpr::ReductionOp::SUM:
         oss << "+";
         break;
       default:

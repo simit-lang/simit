@@ -41,6 +41,7 @@ struct Slice;
 struct ExprParam;
 struct MapExpr;
 struct ReducedMapExpr;
+struct UnreducedMapExpr;
 struct UnaryExpr;
 struct BinaryExpr;
 struct NaryExpr;
@@ -113,6 +114,7 @@ public:
   virtual void visit(std::shared_ptr<ExprParam>);
   virtual void visit(std::shared_ptr<MapExpr>);
   virtual void visit(std::shared_ptr<ReducedMapExpr>);
+  virtual void visit(std::shared_ptr<UnreducedMapExpr>);
   virtual void visit(std::shared_ptr<OrExpr>);
   virtual void visit(std::shared_ptr<AndExpr>);
   virtual void visit(std::shared_ptr<XorExpr>);

@@ -150,6 +150,10 @@ void HIRVisitor::visit(ReducedMapExpr::Ptr expr) {
   visit(to<MapExpr>(expr));
 }
 
+void HIRVisitor::visit(UnreducedMapExpr::Ptr expr) {
+  visit(to<MapExpr>(expr));
+}
+
 void HIRVisitor::visit(OrExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }

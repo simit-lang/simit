@@ -254,7 +254,7 @@ void HIRRewriter::visit(NDTensorLiteral::Ptr lit) {
 }
 
 void HIRRewriter::visit(ApplyStmt::Ptr stmt) {
-  stmt->map = rewrite<MapExpr>(stmt->map);
+  stmt->map = rewrite<UnreducedMapExpr>(stmt->map);
   node = stmt;
 }
 

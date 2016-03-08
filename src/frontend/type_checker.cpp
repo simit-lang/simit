@@ -1204,7 +1204,6 @@ void TypeChecker::visit(NDTensorLiteral::Ptr lit) {
 }
 
 void TypeChecker::visit(ApplyStmt::Ptr stmt) {
-  iassert(stmt->map->getReductionOp() == MapExpr::ReductionOp::NONE);
   typeCheckMapOrApply(stmt->map, true);
 }
 

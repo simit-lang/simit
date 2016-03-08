@@ -537,7 +537,7 @@ hir::PrintStmt::Ptr Parser::parsePrintStmt() {
 hir::ApplyStmt::Ptr Parser::parseApplyStmt() {
   try {
     auto applyStmt = std::make_shared<hir::ApplyStmt>();
-    applyStmt->map = std::make_shared<hir::MapExpr>();
+    applyStmt->map = std::make_shared<hir::UnreducedMapExpr>();
 
     const Token applyToken = consume(Token::Type::APPLY);
     applyStmt->map->setBeginLoc(applyToken);
@@ -635,7 +635,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
     mapExpr->func = func;
     mapExpr->partialActuals = partialActuals;
     mapExpr->target = target;
-    mapExpr->op = hir::MapExpr::ReductionOp::SUM;
+    mapExpr->op = hir::ReducedMapExpr::ReductionOp::SUM;
 
     const Token plusToken = consume(Token::Type::PLUS);
     mapExpr->setEndLoc(plusToken);
@@ -643,7 +643,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
     return mapExpr;
   }
   
-  const auto mapExpr = std::make_shared<hir::MapExpr>();
+  const auto mapExpr = std::make_shared<hir::UnreducedMapExpr>();
   mapExpr->setBeginLoc(mapToken);
 
   mapExpr->func = func;

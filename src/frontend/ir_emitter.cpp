@@ -347,14 +347,16 @@ void IREmitter::visit(MapExpr::Ptr expr) {
     partialActuals.push_back(param);
   }
   
-  ir::ReductionOperator reduction;
-  switch (expr->getReductionOp()) {
-    case MapExpr::ReductionOp::SUM:
-      reduction = ir::ReductionOperator::Sum;
-      break;
-    default:
-      reduction = ir::ReductionOperator::Undefined;
-      break;
+  ir::ReductionOperator reduction = ir::ReductionOperator::Undefined;
+  if (expr->isReduced()) {
+    switch (to<ReducedMapExpr>(expr)->op) {
+      case ReducedMapExpr::ReductionOp::SUM:
+        reduction = ir::ReductionOperator::Sum;
+        break;
+      default:
+        not_supported_yet;
+        break;
+    }
   }
   
   std::vector<ir::Expr> endpoints;

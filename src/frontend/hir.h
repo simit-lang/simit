@@ -480,8 +480,6 @@ struct ExprParam : public ReadParam {
 };
 
 struct MapExpr : public Expr {
-  enum class ReductionOp {NONE, SUM};
-  
   Identifier::Ptr        func;
   std::vector<Expr::Ptr> partialActuals;
   Identifier::Ptr        target;
@@ -492,14 +490,13 @@ struct MapExpr : public Expr {
     visitor->visit(to<MapExpr>(shared_from_this()));
   }
 
-  virtual unsigned getLineEnd() { return target->getLineEnd(); }
-  virtual unsigned getColEnd() { return target->getColEnd(); }
-
-  virtual ReductionOp getReductionOp() { return ReductionOp::NONE; }
+  virtual bool isReduced() = 0;
 };
 
 struct ReducedMapExpr : public MapExpr {
-  MapExpr::ReductionOp op;
+  enum class ReductionOp {SUM};
+  
+  ReductionOp op;
 
   typedef std::shared_ptr<ReducedMapExpr> Ptr;
 
@@ -507,11 +504,22 @@ struct ReducedMapExpr : public MapExpr {
     visitor->visit(to<ReducedMapExpr>(shared_from_this()));
   }
 
-  virtual unsigned getLineBegin() { return HIRNode::getLineBegin(); }
-  virtual unsigned getColBegin() { return HIRNode::getColBegin(); }
-
-  virtual MapExpr::ReductionOp getReductionOp() { return op; }
+  virtual bool isReduced() { return true; }
 };
+
+struct UnreducedMapExpr : public MapExpr {
+  typedef std::shared_ptr<UnreducedMapExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<UnreducedMapExpr>(shared_from_this()));
+  }
+  
+  virtual unsigned getLineEnd() { return target->getLineEnd(); }
+  virtual unsigned getColEnd() { return target->getColEnd(); }
+
+  virtual bool isReduced() { return false; }
+};
+
 
 struct UnaryExpr : public Expr {
   Expr::Ptr operand;
@@ -849,7 +857,7 @@ struct NDTensorLiteral : public DenseTensorLiteral {
 };
 
 struct ApplyStmt : public Stmt {
-  MapExpr::Ptr map;
+  UnreducedMapExpr::Ptr map;
   
   typedef std::shared_ptr<ApplyStmt> Ptr;
   
