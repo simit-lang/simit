@@ -37,7 +37,6 @@ private:
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
-  virtual void visit(ProcDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
@@ -74,10 +73,12 @@ private:
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
   virtual void visit(ComplexLiteral::Ptr);
+  virtual void visit(StringLiteral::Ptr);
   virtual void visit(IntVectorLiteral::Ptr);
   virtual void visit(FloatVectorLiteral::Ptr);
   virtual void visit(ComplexVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
 private:
@@ -165,7 +166,6 @@ private:
     return ret;
   }
  
-  void addFuncOrProc(FuncDecl::Ptr, bool = false);
   void addVarOrConst(VarDecl::Ptr, bool = false);
   void addWhileOrDoWhile(WhileStmt::Ptr, bool = false);
   void addAssign(const std::vector<ir::Expr> &, ir::Expr);

@@ -135,6 +135,9 @@ void TypeChecker::visit(ScalarType::Ptr type) {
     case ScalarType::Type::COMPLEX:
       retIRType = ir::Complex;
       break;
+    case ScalarType::Type::STRING:
+      retIRType = ir::String;
+      break;
     default:
       unreachable;
       break;
@@ -272,7 +275,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     }
 
     internal::Symbol::Access access = internal::Symbol::Read;
-    if (arg->inout) {
+    if (arg->isInOut()) {
       access = internal::Symbol::ReadWrite;
       writableArgs.insert(argVar);
     }
@@ -399,13 +402,15 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(PrintStmt::Ptr stmt) {
-  const Ptr<Expr::Type> exprType = inferType(stmt->expr);
+  for (const auto arg : stmt->args) {
+    const Ptr<Expr::Type> argType = inferType(arg);
 
-  // Check that print statement is printing a tensor.
-  if (exprType && (exprType->size() != 1 || !exprType->at(0).isTensor())) {
-    std::stringstream errMsg;
-    errMsg << "cannot print an expression of type " << typeString(exprType);
-    reportError(errMsg.str(), stmt->expr);
+    // Check that print statement is printing a tensor.
+    if (argType && (argType->size() != 1 || !argType->at(0).isTensor())) {
+      std::stringstream errMsg;
+      errMsg << "cannot print an expression of type " << typeString(argType);
+      reportError(errMsg.str(), arg);
+    }
   }
 }
 
@@ -458,6 +463,15 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
         }
       }
 
+      // Check that expression on right-hand side returns only tensors.
+      // TODO: Remove once support for assignment of non-tensors is added.
+      if (!exprType->at(i).isTensor()) {
+        std::stringstream errMsg;
+        errMsg << "cannot assign a non-tensor value of type "
+               << typeString(exprType->at(i)) << " to a variable";
+        reportError(errMsg.str(), stmt->expr);
+      }
+
       // Check that target is writable.
       if (!stmt->lhs[i]->isWritable()) {
         reportError("assignment target is not writable", stmt->lhs[i]);
@@ -478,129 +492,7 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
 }
 
 void TypeChecker::visit(MapExpr::Ptr expr) {
-  std::vector<ir::Type> actualsType(expr->partialActuals.size());
-  for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
-    const Expr::Ptr param = expr->partialActuals[i];
-    const Ptr<Expr::Type> paramType = inferType(param);
-
-    if (!paramType) {
-      continue;
-    }
-
-    // Check that argument is a single non-void value.
-    if (paramType->size() == 0) {
-      reportError("must pass a non-void value as argument", param);
-    } else if (paramType->size() != 1) {
-      std::stringstream errMsg;
-      errMsg << "cannot pass multiple values of types " 
-             << typeString(paramType) << " as a single argument";
-      reportError(errMsg.str(), param);
-    } else {
-      actualsType[i] = paramType->at(0);
-    }
-  }
-  
-  const std::string funcName = expr->func->ident;
-  const std::string targetName = expr->target->ident;
-
-  // Check that assembly function has been declared.
-  ir::Func func;
-  if (!ctx.containsFunction(funcName)) {
-    reportUndeclared("function", funcName, expr->func);
-  } else {
-    func = ctx.getFunction(funcName);
-   
-    retType = std::make_shared<Expr::Type>();
-    for (const auto &res : func.getResults()) {
-      retType->push_back(res.getType());
-    }
-  }
-
-  ir::Expr target;
-  if (!ctx.hasSymbol(targetName)) {
-    reportUndeclared("set", targetName, expr->target);
-  } else {
-    target = ctx.getSymbol(expr->target->ident).getExpr();
-
-    // Check that map operation is applied to set.
-    if (!target.type().isSet()) {
-      reportError("map operation can only be applied to sets", expr->target);
-      target = ir::Expr();
-    }
-  }
-
-  if (!func.defined() || !target.defined()) {
-    return;
-  }
-
-  // Infer assembly function's required argument types.
-  const ir::SetType *targetSetType = target.type().toSet();
-  actualsType.push_back(targetSetType->elementType);
-  
-  const auto funcArgs = func.getArguments();
-  
-  if (targetSetType->endpointSets.size() > 0) {
-    const auto neighborSetType = 
-        targetSetType->endpointSets[0]->type().toSet();
-    
-    // Check for heterogeneous edge sets.
-    for (unsigned i = 1; i < targetSetType->endpointSets.size(); ++i) {
-      if (targetSetType->endpointSets[i]->type().toSet() != neighborSetType) {
-        const auto msg = "map operation is currently unsupported for "
-                         "heterogeneous edge sets";
-        reportError(msg, expr->target);
-        return;
-      }
-    }
-    
-    if (actualsType.size() != funcArgs.size()) {
-      // TODO: Should eventually support heterogeneous edge sets.
-      const auto neighborsType = ir::TupleType::make(
-          neighborSetType->elementType, targetSetType->endpointSets.size());
-      actualsType.push_back(neighborsType);
-    }
-  }
- 
-  // Check that assembly function accepts right number of arguments.
-  if (actualsType.size() != funcArgs.size()) {
-    std::stringstream errMsg;
-    errMsg << "map operation passes " << actualsType.size() << " arguments "
-           << "to assembly function but function '" << func.getName()
-           << "' expects " << funcArgs.size() << " arguments";
-    reportError(errMsg.str(), expr);
-    return;
-  }
-
-  for (unsigned i = 0; i < actualsType.size(); ++i) {
-    if (!actualsType[i].defined() || !funcArgs[i].getType().defined()) {
-      continue;
-    }
-    
-    // Check that type of argument that will be passed to assembly function 
-    // is type expected by function.
-    if (!compareTypes(actualsType[i], funcArgs[i].getType())) {
-      std::stringstream errMsg;
-      errMsg << "map operation passes argument of type "
-             << typeString(actualsType[i]) << " to assembly function but "
-             << "function '" << func.getName() << "' expects argument of "
-             << "type " << typeString(funcArgs[i].getType());
-      if (i < expr->partialActuals.size()) {
-        reportError(errMsg.str(), expr->partialActuals[i]);
-      } else {
-        reportError(errMsg.str(), expr->target);
-      }
-    }
-    
-    // Check that inout argument is writable.
-    if (i < expr->partialActuals.size() && 
-        writableArgs.find(funcArgs[i]) != writableArgs.end()) {
-      const Expr::Ptr param = expr->partialActuals[i];
-      
-      if (!param->isWritable()) {
-        reportError("inout argument must be writable", param);
-      }
-    }
-  }
+  typeCheckMapOrApply(expr);
 }
 
 void TypeChecker::visit(OrExpr::Ptr expr) {
@@ -664,7 +556,7 @@ void TypeChecker::visit(NotExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(AddExpr::Ptr expr) {
-  typeCheckBinaryElwise(expr); 
+  typeCheckBinaryElwise(expr, true); 
 }
 
 void TypeChecker::visit(SubExpr::Ptr expr) {
@@ -930,16 +822,11 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(CallExpr::Ptr expr) {
-  std::vector<Ptr<Expr::Type>> argTypes(expr->arguments.size());
-  for (unsigned i = 0; i < expr->arguments.size(); ++i) {
-    const Expr::Ptr argument = expr->arguments[i];
-     
-    if (!argument) {
-      // Not a valid argument.
-      continue;
+  std::vector<Ptr<Expr::Type>> argTypes(expr->args.size());
+  for (unsigned i = 0; i < expr->args.size(); ++i) {
+    if (expr->args[i]) {
+      argTypes[i] = inferType(expr->args[i]);
     }
-
-    argTypes[i] = inferType(argument);
   }
   
   if (!ctx.containsFunction(expr->func->ident)) {
@@ -950,14 +837,14 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   const ir::Func func = ctx.getFunction(funcName);
   const std::vector<ir::Var> funcArgs = func.getArguments();
 
-  if (expr->arguments.size() != funcArgs.size()) {
+  if (expr->args.size() != funcArgs.size()) {
     std::stringstream errMsg;
-    errMsg << "passed in " << expr->arguments.size() << " arguments "
+    errMsg << "passed in " << expr->args.size() << " arguments "
            << "but function '" << funcName << "' expects " << funcArgs.size();
     reportError(errMsg.str(), expr);
   } else {
-    for (unsigned i = 0; i < expr->arguments.size(); ++i) {
-      const Expr::Ptr argument = expr->arguments[i];
+    for (unsigned i = 0; i < expr->args.size(); ++i) {
+      const Expr::Ptr argument = expr->args[i];
       const Ptr<Expr::Type> argType = argTypes[i];
       
       if (!argType) {
@@ -973,6 +860,16 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
         std::stringstream errMsg;
         errMsg << "cannot pass multiple values of types "
                << typeString(argType) << " as a single argument";
+        reportError(errMsg.str(), argument);
+        continue;
+      }
+
+      // Check that argument is a tensor.
+      // TODO: Remove once support for passing non-tensor arguments is added.
+      if (!argType->at(0).isTensor()) {
+        std::stringstream errMsg;
+        errMsg << "expected argument to be a tensor but got an argument "
+               << "of type " << typeString(argType->at(0));
         reportError(errMsg.str(), argument);
         continue;
       }
@@ -1285,6 +1182,11 @@ void TypeChecker::visit(ComplexLiteral::Ptr lit) {
   retType->push_back(ir::Complex);
 }
 
+void TypeChecker::visit(StringLiteral::Ptr lit) {
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(ir::String);
+}
+
 void TypeChecker::visit(IntVectorLiteral::Ptr lit) {
   typeCheckDenseTensorLiteral(lit);
 }
@@ -1299,6 +1201,10 @@ void TypeChecker::visit(ComplexVectorLiteral::Ptr lit) {
 
 void TypeChecker::visit(NDTensorLiteral::Ptr lit) {
   typeCheckDenseTensorLiteral(lit);
+}
+
+void TypeChecker::visit(ApplyStmt::Ptr stmt) {
+  typeCheckMapOrApply(stmt->map, true);
 }
 
 void TypeChecker::typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr lit) {
@@ -1448,27 +1354,181 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
   reportError(errMsg.str(), decl);
 }
 
-void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr) {
+void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
+  const std::string opString = isApply ? "apply" : "map";
+
+  std::vector<ir::Type> actualsType(expr->partialActuals.size());
+  for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
+    const Expr::Ptr param = expr->partialActuals[i];
+    const Ptr<Expr::Type> paramType = inferType(param);
+
+    if (!paramType) {
+      continue;
+    }
+
+    // Check that argument is a single non-void value.
+    if (paramType->size() == 0) {
+      reportError("must pass a non-void value as argument", param);
+    } else if (paramType->size() != 1) {
+      std::stringstream errMsg;
+      errMsg << "cannot pass multiple values of types " 
+             << typeString(paramType) << " as a single argument";
+      reportError(errMsg.str(), param);
+    } else {
+      actualsType[i] = paramType->at(0);
+    }
+  }
+  
+  const std::string funcName = expr->func->ident;
+  const std::string targetName = expr->target->ident;
+  
+  ir::Func func;
+  ir::Expr target;
+  bool typeChecked = true;
+
+  // Check that assembly function has been declared.
+  if (!ctx.containsFunction(funcName)) {
+    reportUndeclared("function", funcName, expr->func);
+    typeChecked = false;
+  } else {
+    func = ctx.getFunction(funcName);
+    
+    if (isApply && func.getResults().size() > 0) {
+      reportError("cannot apply a non-void function", expr->func);
+      typeChecked = false;
+    }
+
+    // Infer map operation return type.
+    retType = std::make_shared<Expr::Type>();
+    for (const auto &res : func.getResults()) {
+      retType->push_back(res.getType());
+    }
+  }
+
+  // Check that target set has been declared.
+  if (!ctx.hasSymbol(targetName)) {
+    reportUndeclared("set", targetName, expr->target);
+    typeChecked = false;
+  } else {
+    target = ctx.getSymbol(expr->target->ident).getExpr();
+
+    // Check that map operation is applied to set.
+    if (!target.type().isSet()) {
+      std::stringstream errMsg;
+      errMsg << opString << " operation can only be applied to sets";
+      reportError(errMsg.str(), expr->target);
+      typeChecked = false;
+    }
+  }
+
+  if (!typeChecked) {
+    return;
+  }
+
+  // Infer assembly function's required argument types.
+  const ir::SetType *targetSetType = target.type().toSet();
+  actualsType.push_back(targetSetType->elementType);
+  
+  const auto funcArgs = func.getArguments();
+  
+  if (targetSetType->endpointSets.size() > 0) {
+    const auto neighborSetType = 
+        targetSetType->endpointSets[0]->type().toSet();
+    
+    // Check for heterogeneous edge sets.
+    for (unsigned i = 1; i < targetSetType->endpointSets.size(); ++i) {
+      if (targetSetType->endpointSets[i]->type().toSet() != neighborSetType) {
+        std::stringstream errMsg;
+        errMsg << opString << " operation is currently unsupported for "
+               << "heterogeneous edge sets";
+        reportError(errMsg.str(), expr->target);
+        return;
+      }
+    }
+    
+    if (actualsType.size() != funcArgs.size()) {
+      // TODO: Should eventually support heterogeneous edge sets.
+      const auto neighborsType = ir::TupleType::make(
+          neighborSetType->elementType, targetSetType->endpointSets.size());
+      actualsType.push_back(neighborsType);
+    }
+  }
+ 
+  // Check that assembly function accepts right number of arguments.
+  if (actualsType.size() != funcArgs.size()) {
+    std::stringstream errMsg;
+    errMsg << opString << " operation passes " << actualsType.size() 
+           << " arguments to assembly function but function '" << func.getName()
+           << "' expects " << funcArgs.size() << " arguments";
+    reportError(errMsg.str(), expr);
+    return;
+  }
+
+  for (unsigned i = 0; i < actualsType.size(); ++i) {
+    if (!actualsType[i].defined() || !funcArgs[i].getType().defined()) {
+      continue;
+    }
+    
+    // Check that type of argument that will be passed to assembly function 
+    // is type expected by function.
+    if (!compareTypes(actualsType[i], funcArgs[i].getType())) {
+      std::stringstream errMsg;
+      errMsg << opString << " operation passes argument of type "
+             << typeString(actualsType[i]) << " to assembly function but "
+             << "function '" << func.getName() << "' expects argument of "
+             << "type " << typeString(funcArgs[i].getType());
+      if (i < expr->partialActuals.size()) {
+        reportError(errMsg.str(), expr->partialActuals[i]);
+      } else {
+        reportError(errMsg.str(), expr->target);
+      }
+    }
+    
+    if (i < expr->partialActuals.size()) { 
+      const Expr::Ptr param = expr->partialActuals[i];
+
+      // Check that inout argument is writable.
+      if (writableArgs.find(funcArgs[i]) != writableArgs.end() && 
+          !param->isWritable()) {
+        reportError("inout argument must be writable", param);
+      }
+
+      // Check that additional argument is a tensor.
+      // TODO: Remove once support for passing non-tensor arguments is added.
+      if (!actualsType[i].isTensor()) {
+        std::stringstream errMsg;
+        errMsg << "expected argument to be a tensor but got an argument "
+               << "of type " << typeString(actualsType[i]);
+        reportError(errMsg.str(), param);
+      }
+    }
+  }
+}
+
+void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr, 
+                                        bool allowStringOperands) {
   const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
   const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
   bool typeChecked = (bool)lhsType && (bool)rhsType;
 
   // Check that operands of element-wise operation are numeric tensors.
   if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      !lhsType->at(0).toTensor()->getComponentType().isNumeric())) {
+      (!lhsType->at(0).toTensor()->getComponentType().isNumeric() && 
+      (!allowStringOperands || !isString(lhsType->at(0)))))) {
     std::stringstream errMsg;
     errMsg << "expected left operand of element-wise operation to be a "
-           << "numeric tensor but got an operand of type " 
-           << typeString(lhsType);
+           << "numeric tensor " << (allowStringOperands ? "or string " : "")
+           << "but got an operand of type " << typeString(lhsType);
     reportError(errMsg.str(), expr->lhs);
     typeChecked = false;
   }
   if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      !rhsType->at(0).toTensor()->getComponentType().isNumeric())) {
+      (!rhsType->at(0).toTensor()->getComponentType().isNumeric() && 
+      (!allowStringOperands || !isString(rhsType->at(0)))))) {
     std::stringstream errMsg;
     errMsg << "expected right operand of element-wise operation to be a "
-           << "numeric tensor but got an operand of type " 
-           << typeString(rhsType);
+           << "numeric tensor " << (allowStringOperands ? "or string " : "")
+           << "but got an operand of type " << typeString(rhsType);
     reportError(errMsg.str(), expr->rhs);
     typeChecked = false;
   }

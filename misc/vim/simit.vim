@@ -1,6 +1,6 @@
 " Vim syntax file
 " Language: Simit	
-" Last Change: 30 January 2016	
+" Last Change: 6 March 2016	
 
 if version < 600
   syntax clear
@@ -8,16 +8,16 @@ elseif exists("b:current_syntax")
   finish
 endif
 
-syn keyword simitType         float int bool vector matrix tensor set inout
+syn keyword simitType         float int bool vector matrix tensor string set inout
 syn keyword simitStatement    element func proc export
 syn keyword simitConditional  if elif else end
 syn keyword simitRepeat       for in while do
 syn keyword simitStorageClass const extern var
-syn keyword simitFunc         map to reduce print
+syn keyword simitFunc         apply map to reduce print println
 
 syn keyword simitTodo         contained  TODO NOTE FIXME XXX
 
-syn match  simitRelationalOperator "\(==\|\~=\|>=\|<=\|=\~\|>\|<\|=\)"
+syn match  simitRelationalOperator "\(==\|\!=\|>=\|<=\|=\~\|>\|<\|=\)"
 syn match simitArithmeticOperator  "[-+]"
 syn match simitArithmeticOperator  "\.\=[*/\\^]"
 syn match simitRangeOperator       ":"
@@ -37,6 +37,8 @@ syn match simitSemicolon          ";"
 
 syn match simitComment            "%.*$" contains=simitTodo,simitTab
 syn region simitBlockComment      start=+%{+    end=+%}+ contains=simitBlockComment
+
+syn region simitString start=+\v"+ skip=+\v\\.+ end=+\v"+
 
 " linear algebra
 syn keyword simitFunc     norm cross dot trace eye      
@@ -71,6 +73,7 @@ if version >= 508 || !exists("did_simit_syntax_inits")
   HiLink simitSemicolon          SpecialChar
   HiLink simitComment            Comment
   HiLink simitBlockComment       Comment
+  HiLink simitString             String
   HiLink simitBoolean            Boolean
   HiLink simitStorageClass       StorageClass
 

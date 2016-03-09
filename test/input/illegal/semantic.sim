@@ -79,6 +79,21 @@ proc main
   g(x);
 end
 
+%%% bad-call-11
+element E
+end
+
+extern elems : set{E};
+
+func f(e : E)
+end
+
+export func main
+  for e in elems
+    f(e);
+  end
+end
+
 %%% bad-assign-1
 proc main
   1 = 1;
@@ -103,6 +118,18 @@ end
 proc main
   const x : tensor[1](int) = [1];
   x(0) = 2;
+end
+
+%%% bad-assign-5
+element E
+end
+
+extern elems : set{E};
+
+proc main
+  for e in elems
+    ep = e;
+  end
 end
 
 %%% bad-set-type
@@ -544,6 +571,34 @@ end
 proc main
   t = 1.0;
   map h to t; 
+end
+
+%%% bad-map-6
+element E
+end
+
+extern elems : set{E};
+
+func foo(e : E, f : E)
+end
+
+export func main
+  for e in elems
+    map foo(e) to elems;
+  end
+end
+
+%%% bad-apply
+element V
+end
+
+extern S : set{V};
+
+func f(inout v : V) -> (r : int)
+end
+
+proc main
+  apply f to S;
 end
 
 %%% undeclared-var

@@ -44,30 +44,9 @@ public:
   }
 
 private:
-  std::vector<Stmt> stmts;
   IRBuilder builder;
   
-  using IRRewriter::rewrite;
   using IRRewriter::visit;
-
-  Expr rewrite(Expr e) {
-    return IRRewriter::rewrite(e);
-  }
-
-  Stmt rewrite(Stmt s) {
-    if (s.defined()) {
-      s.accept(this);
-      stmts.push_back(stmt);
-      s = (stmts.size() > 0) ? Block::make(stmts) : stmt;
-      stmts.clear();
-    }
-    else {
-      s = Stmt();
-    }
-    expr = Expr();
-    stmt = Stmt();
-    return s;
-  }
 
   Expr spill(Expr a) {  
     // If it is an index expression

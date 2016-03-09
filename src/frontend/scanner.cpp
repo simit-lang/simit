@@ -27,6 +27,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "proc") return Token::Type::PROC;
   if (token == "func") return Token::Type::FUNC;
   if (token == "inout") return Token::Type::INOUT;
+  if (token == "apply") return Token::Type::APPLY;
   if (token == "map") return Token::Type::MAP;
   if (token == "to") return Token::Type::TO;
   if (token == "with") return Token::Type::WITH;
@@ -41,6 +42,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "end") return Token::Type::BLOCKEND;
   if (token == "return") return Token::Type::RETURN;
   if (token == "print") return Token::Type::PRINT;
+  if (token == "println") return Token::Type::PRINTLN;
   if (token == "and") return Token::Type::AND; 
   if (token == "or") return Token::Type::OR;
   if (token == "not") return Token::Type::NOT;
@@ -216,6 +218,8 @@ TokenStream Scanner::lex(std::istream &programStream) {
                 state = ScanState::MLTEST;
                 col += 2;
               } else {
+                ++col;
+
                 std::string comment;
                 while (programStream.peek() != EOF) {
                   if (programStream.peek() == '%') {
@@ -278,6 +282,84 @@ TokenStream Scanner::lex(std::istream &programStream) {
             }
           }
           break;
+        case '"':
+        {
+          Token newToken;
+          newToken.type = Token::Type::STRING_LITERAL;
+          newToken.lineBegin = line;
+          newToken.colBegin = col;
+          
+          programStream.get();
+          ++col;
+
+          while (programStream.peek() != EOF && programStream.peek() != '"') {
+            if (programStream.peek() == '\\') {
+              programStream.get();
+
+              std::string escapedChar = "";
+              switch (programStream.peek()) {
+                case 'a':
+                  escapedChar = "\a";
+                  break;
+                case 'b':
+                  escapedChar = "\b";
+                  break;
+                case 'f':
+                  escapedChar = "\f";
+                  break;
+                case 'n':
+                  escapedChar = "\n";
+                  break;
+                case 'r':
+                  escapedChar = "\r";
+                  break;
+                case 't':
+                  escapedChar = "\t";
+                  break;
+                case 'v':
+                  escapedChar = "\v";
+                  break;
+                case '\\':
+                  escapedChar = "\\";
+                  break;
+                case '\'':
+                  escapedChar = "\'";
+                  break;
+                case '"':
+                  escapedChar = "\"";
+                  break;
+                case '?':
+                  escapedChar = "\?";
+                  break;
+                default:
+                  reportError("unrecognized escape sequence", line, col);
+                  ++col;
+                  break;
+              }
+
+              if (escapedChar != "") {
+                newToken.str += escapedChar;
+                programStream.get();
+                col += 2;
+              }
+            } else {
+              newToken.str += programStream.get();
+              ++col;
+            }
+          }
+          
+          newToken.lineEnd = line;
+          newToken.colEnd = col;
+          tokens.addToken(newToken);
+
+          if (programStream.peek() == '"') {
+            programStream.get();
+            ++col;
+          } else {
+            reportError("unclosed string literal", line, col);
+          }
+          break;
+        }
         case '\n':
           programStream.get();
           if (state == ScanState::SLTEST) {

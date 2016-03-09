@@ -201,6 +201,7 @@ SIM_TEST(declarations, function_headers);
 SIM_TEST(declarations, objects);
 SIM_TEST(declarations, variables);
 SIM_TEST(declarations, misc);
+SIM_TEST(declarations, strings);
 
 SIM_TEST_SUITE(controlflow, false)
 SIM_TEST(controlflow, map);

@@ -11,13 +11,25 @@ func f(p1 : tensor(int), p2 : tensor(int)) -> (r1 : tensor(int), r2 : tensor(int
 end
 
 %%% vector-3
-func f(p : tensor[3](float)) -> (r : tensor[3](float))
+func f(p1 : tensor[3](float), p2 : vector[3](float)) -> (r1 : tensor[3](float), r2 : vector[3](float))
 end
 
 %%% matrix-3x4
-func f(p : tensor[3,4](float)) -> (r : tensor[3,4](float))
+func f(p1 : tensor[3,4](float), p2 : matrix[3,4](float)) -> (r1 : matrix[3,4](float), r2 : matrix[3,4](float))
 end
 
 %%% inout
 func f(inout p : tensor[3](float))
+end
+
+%%% proc
+proc main
+end
+
+%%% export-func-1
+export func main
+end
+
+%%% export-func-2
+export func main()
 end

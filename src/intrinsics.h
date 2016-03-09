@@ -30,6 +30,12 @@ const Func& det();
 const Func& inv();
 const Func& solve();
 const Func& loc();
+const Func& free();
+const Func& malloc();
+const Func& strcmp();
+const Func& strlen();
+const Func& strcpy();
+const Func& strcat();
 const Func& simitClock();
 const Func& simitStoreTime();
 

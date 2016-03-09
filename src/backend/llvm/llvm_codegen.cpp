@@ -94,6 +94,8 @@ llvm::Constant* llvmVal(const TensorType& type, const void *data) {
         return llvmComplex(static_cast<const double*>(data)[0],
                            static_cast<const double*>(data)[1]);
       }
+    case ScalarType::String:
+      break;
   }
   ierror;
   return nullptr;

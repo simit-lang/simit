@@ -61,6 +61,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'func'";
     case Token::Type::INOUT:
       return "'inout'";
+    case Token::Type::APPLY:
+      return "'apply'";
     case Token::Type::MAP:
       return "'map'";
     case Token::Type::TO:
@@ -91,6 +93,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'test'";
     case Token::Type::PRINT:
       return "'print'";
+    case Token::Type::PRINTLN:
+      return "'println'";
     case Token::Type::RARROW:
       return "'->'";
     case Token::Type::LP:

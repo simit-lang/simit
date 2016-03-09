@@ -43,8 +43,8 @@ hir::HIRNode::Ptr Parser::parseProgramElement() {
       case Token::Type::FUNC:
         return parseFuncDecl();
         break;
-      case Token::Type::PROC:
       case Token::Type::EXPORT:
+      case Token::Type::PROC:
         return parseProcDecl();
         break;
       case Token::Type::ELEMENT:
@@ -127,10 +127,11 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
 // func_decl: 'func' ident arguments results stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   auto funcDecl = std::make_shared<hir::FuncDecl>();
+  funcDecl->exported = false;
 
   const Token funcToken = consume(Token::Type::FUNC);
   funcDecl->setBeginLoc(funcToken);
-
+  
   funcDecl->name = parseIdent();
   funcDecl->args = parseArguments();
   funcDecl->results = parseResults();
@@ -144,10 +145,13 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
 
 // proc_decl: 
 //     ('proc' | ('export' 'func')) ident [arguments results] stmt_block 'end'
-hir::ProcDecl::Ptr Parser::parseProcDecl() {
-  auto procDecl = std::make_shared<hir::ProcDecl>();
+hir::FuncDecl::Ptr Parser::parseProcDecl() {
+  auto procDecl = std::make_shared<hir::FuncDecl>();
+  procDecl->exported = true;
 
-  procDecl->setBeginLoc(peek());
+  const Token procToken = peek();
+  procDecl->setBeginLoc(procToken);
+
   if (!tryconsume(Token::Type::PROC)) {
     consume(Token::Type::EXPORT);
     consume(Token::Type::FUNC);
@@ -160,6 +164,7 @@ hir::ProcDecl::Ptr Parser::parseProcDecl() {
         if (peek(2).type != Token::Type::COL) {
           break;
         }
+      case Token::Type::RP:
       case Token::Type::INOUT:
         procDecl->args = parseArguments();
         procDecl->results = parseResults();
@@ -196,11 +201,11 @@ std::vector<hir::Argument::Ptr> Parser::parseArguments() {
 hir::Argument::Ptr Parser::parseArgumentDecl() {
   auto argDecl = std::make_shared<hir::Argument>();
   
-  argDecl->inout = false;
   if (peek().type == Token::Type::INOUT) {
     const Token inoutToken = consume(Token::Type::INOUT);
+
+    argDecl = std::make_shared<hir::InOutArgument>();
     argDecl->setBeginLoc(inoutToken);
-    argDecl->inout = true;
   }
 
   argDecl->arg = parseIdentDecl();
@@ -247,7 +252,7 @@ hir::StmtBlock::Ptr Parser::parseStmtBlock() {
 }
 
 // stmt: var_decl | const_decl | if_stmt | while_stmt | do_while_stmt 
-//     | for_stmt | print_stmt | expr_or_assign_stmt
+//     | for_stmt | print_stmt | apply_stmt | expr_or_assign_stmt
 hir::Stmt::Ptr Parser::parseStmt() {
   switch (peek().type) {
     case Token::Type::VAR:
@@ -263,7 +268,10 @@ hir::Stmt::Ptr Parser::parseStmt() {
     case Token::Type::FOR:
       return parseForStmt();
     case Token::Type::PRINT:
+    case Token::Type::PRINTLN:
       return parsePrintStmt();
+    case Token::Type::APPLY:
+      return parseApplyStmt();
     default:
       return parseExprOrAssignStmt();
   }
@@ -384,7 +392,7 @@ hir::DoWhileStmt::Ptr Parser::parseDoWhileStmt() {
     skipTo({Token::Type::BLOCKEND, Token::Type::ELIF, Token::Type::ELSE, 
             Token::Type::END, Token::Type::VAR, Token::Type::CONST, 
             Token::Type::IF, Token::Type::WHILE, Token::Type::DO, 
-            Token::Type::FOR, Token::Type::PRINT});
+            Token::Type::FOR, Token::Type::PRINT, Token::Type::PRINTLN});
     return hir::DoWhileStmt::Ptr();
   }
 }
@@ -493,16 +501,26 @@ hir::ForDomain::Ptr Parser::parseForDomain() {
   return rangeDomain;
 }
 
-// print_stmt: 'print' expr ';'
+// print_stmt: ('print' | 'println') expr {',' expr} ';'
 hir::PrintStmt::Ptr Parser::parsePrintStmt() {
   try {
     auto printStmt = std::make_shared<hir::PrintStmt>();
-    
-    const Token printToken = consume(Token::Type::PRINT);
-    printStmt->setBeginLoc(printToken);
-    
-    printStmt->expr = parseExpr();
 
+    if (peek().type == Token::Type::PRINT) {
+      const Token printToken = consume(Token::Type::PRINT);
+      printStmt->setBeginLoc(printToken);
+      printStmt->printNewline = false;
+    } else {
+      const Token printlnToken = consume(Token::Type::PRINTLN);
+      printStmt->setBeginLoc(printlnToken);
+      printStmt->printNewline = true;
+    }
+    
+    do {
+      const hir::Expr::Ptr arg = parseExpr();
+      printStmt->args.push_back(arg);
+    } while (tryconsume(Token::Type::COMMA));
+   
     const Token endToken = consume(Token::Type::SEMICOL);
     printStmt->setEndLoc(endToken);
 
@@ -512,6 +530,35 @@ hir::PrintStmt::Ptr Parser::parsePrintStmt() {
     
     consume(Token::Type::SEMICOL);
     return hir::PrintStmt::Ptr();
+  }
+}
+
+// apply_stmt: apply ident [call_params] 'to' ident ';'
+hir::ApplyStmt::Ptr Parser::parseApplyStmt() {
+  try {
+    auto applyStmt = std::make_shared<hir::ApplyStmt>();
+    applyStmt->map = std::make_shared<hir::UnreducedMapExpr>();
+
+    const Token applyToken = consume(Token::Type::APPLY);
+    applyStmt->map->setBeginLoc(applyToken);
+ 
+    applyStmt->map->func = parseIdent();
+    if (peek().type == Token::Type::LP) {
+      applyStmt->map->partialActuals = parseCallParams();
+    }
+    
+    consume(Token::Type::TO);
+    applyStmt->map->target = parseIdent();
+    
+    const Token endToken = consume(Token::Type::SEMICOL);
+    applyStmt->setEndLoc(endToken);
+
+    return applyStmt;
+  } catch (const SyntaxError &) {
+    skipTo({Token::Type::SEMICOL});
+    
+    consume(Token::Type::SEMICOL);
+    return hir::ApplyStmt::Ptr();
   }
 }
 
@@ -567,30 +614,41 @@ hir::Expr::Ptr Parser::parseExpr() {
 }
 
 // map_expr: 'map' ident [call_params] 'to' ident ['reduce' '+']
-hir::Expr::Ptr Parser::parseMapExpr() {
-  auto mapExpr = std::make_shared<hir::MapExpr>();
-
+hir::MapExpr::Ptr Parser::parseMapExpr() {
   const Token mapToken = consume(Token::Type::MAP);
-  mapExpr->setBeginLoc(mapToken);
- 
-  mapExpr->func = parseIdent();
+  const hir::Identifier::Ptr func = parseIdent();
+  
+  std::vector<hir::Expr::Ptr> partialActuals;
   if (peek().type == Token::Type::LP) {
-    mapExpr->partialActuals = parseCallParams();
+    partialActuals = parseCallParams();
   }
   
   consume(Token::Type::TO);
-  mapExpr->target = parseIdent();
-  
+  const hir::Identifier::Ptr target = parseIdent();
+ 
   if (peek().type == Token::Type::REDUCE) {
     consume(Token::Type::REDUCE);
     
+    const auto mapExpr = std::make_shared<hir::ReducedMapExpr>();
+    mapExpr->setBeginLoc(mapToken);
+    
+    mapExpr->func = func;
+    mapExpr->partialActuals = partialActuals;
+    mapExpr->target = target;
+    mapExpr->op = hir::ReducedMapExpr::ReductionOp::SUM;
+
     const Token plusToken = consume(Token::Type::PLUS);
     mapExpr->setEndLoc(plusToken);
 
-    mapExpr->op = hir::MapExpr::ReductionOp::SUM;
-  } else {
-    mapExpr->op = hir::MapExpr::ReductionOp::NONE;
+    return mapExpr;
   }
+  
+  const auto mapExpr = std::make_shared<hir::UnreducedMapExpr>();
+  mapExpr->setBeginLoc(mapToken);
+
+  mapExpr->func = func;
+  mapExpr->partialActuals = partialActuals;
+  mapExpr->target = target;
 
   return mapExpr;
 }
@@ -982,6 +1040,8 @@ hir::Type::Ptr Parser::parseType() {
     case Token::Type::COMPLEX:
     case Token::Type::STRING:
     case Token::Type::TENSOR:
+    case Token::Type::MATRIX:
+    case Token::Type::VECTOR:
       type = parseTensorType();
       break;
     default:
@@ -1082,6 +1142,7 @@ hir::TensorType::Ptr Parser::parseTensorType() {
     case Token::Type::FLOAT:
     case Token::Type::BOOL:
     case Token::Type::COMPLEX:
+    case Token::Type::STRING:
       return parseScalarType();
     case Token::Type::MATRIX:
       return parseMatrixBlockType();
@@ -1103,7 +1164,8 @@ hir::TensorType::Ptr Parser::parseTensorType() {
 }
 
 // vector_block_type:
-//     'vector' ['[' index_set ']'] '(' (vector_block_type | scalar_type) ')'
+//     'vector' ['[' index_set ']'] 
+//     '(' (vector_block_type | tensor_component_type) ')'
 hir::NDTensorType::Ptr Parser::parseVectorBlockType() {
   auto tensorType = std::make_shared<hir::NDTensorType>();
   tensorType->transposed = false;
@@ -1132,7 +1194,7 @@ hir::NDTensorType::Ptr Parser::parseVectorBlockType() {
 
 // matrix_block_type:
 //     'matrix' ['[' index_set ',' index_set ']'] 
-//     '(' (matrix_block_type | scalar_type) ')'
+//     '(' (matrix_block_type | tensor_component_type) ')'
 hir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
   auto tensorType = std::make_shared<hir::NDTensorType>();
   tensorType->transposed = false;
@@ -1164,7 +1226,8 @@ hir::NDTensorType::Ptr Parser::parseMatrixBlockType() {
 }
 
 // tensor_block_type:
-//     'tensor' ['[' index_sets ']'] '(' (tensor_block_type | scalar_type) ')'
+//     'tensor' ['[' index_sets ']'] 
+//     '(' (tensor_block_type | tensor_component_type) ')'
 hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   auto tensorType = std::make_shared<hir::NDTensorType>();
   tensorType->transposed = false;
@@ -1190,11 +1253,13 @@ hir::NDTensorType::Ptr Parser::parseTensorBlockType() {
   return tensorType;
 }
 
-// scalar_type: 'int' | 'float' | 'bool' | 'complex'
-hir::ScalarType::Ptr Parser::parseScalarType() {
+// tensor_component_type: 'int' | 'float' | 'bool' | 'complex'
+hir::ScalarType::Ptr Parser::parseTensorComponentType() {
   auto scalarType = std::make_shared<hir::ScalarType>();
 
-  scalarType->setLoc(peek());
+  const Token typeToken = peek();
+  scalarType->setLoc(typeToken);
+
   switch (peek().type) {
     case Token::Type::INT:
       consume(Token::Type::INT);
@@ -1215,12 +1280,27 @@ hir::ScalarType::Ptr Parser::parseScalarType() {
     case Token::Type::STRING:
       // TODO: Implement.
     default:
-      reportError(peek(), "a tensor type identifier");
+      reportError(peek(), "a tensor component type identifier");
       throw SyntaxError();
       break;
   }
 
   return scalarType;
+}
+
+// scalar_type: 'string' | tensor_component_type
+hir::ScalarType::Ptr Parser::parseScalarType() {
+  if (peek().type == Token::Type::STRING) {
+    auto stringType = std::make_shared<hir::ScalarType>();
+    
+    const Token stringToken = consume(Token::Type::STRING);
+    stringType->setLoc(stringToken);
+    stringType->type = hir::ScalarType::Type::STRING;
+    
+    return stringType;
+  }
+
+  return parseTensorComponentType();
 }
 
 // index_sets: index_set {',' index_set}
@@ -1279,7 +1359,7 @@ hir::IndexSet::Ptr Parser::parseIndexSet() {
 }
 
 // tensor_literal: INT_LITERAL | FLOAT_LITERAL | 'true' | 'false'
-//               | complex_literal | dense_tensor_literal
+//               | STRING_LITERAL | complex_literal | dense_tensor_literal
 hir::Expr::Ptr Parser::parseTensorLiteral() {
   hir::Expr::Ptr literal;
   switch (peek().type) {
@@ -1327,6 +1407,17 @@ hir::Expr::Ptr Parser::parseTensorLiteral() {
       literal = falseLiteral;
       break;
     }
+    case Token::Type::STRING_LITERAL:
+    {
+      auto stringLiteral = std::make_shared<hir::StringLiteral>();
+
+      const Token stringToken = consume(Token::Type::STRING_LITERAL);
+      stringLiteral->setLoc(stringToken);
+      stringLiteral->val = stringToken.str;
+
+      literal = stringLiteral;
+      break;
+    }
     case Token::Type::LA:
     {
       const Token laToken = peek();
@@ -1342,8 +1433,6 @@ hir::Expr::Ptr Parser::parseTensorLiteral() {
     case Token::Type::LB:
       literal = parseDenseTensorLiteral();
       break;
-    case Token::Type::STRING_LITERAL:
-      // TODO: Implement.
     default:
       reportError(peek(), "a tensor literal");
       throw SyntaxError();

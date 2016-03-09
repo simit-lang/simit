@@ -23,9 +23,9 @@ struct IdentDecl;
 struct Field;
 struct ElementTypeDecl;
 struct Argument;
+struct InOutArgument;
 struct ExternDecl;
 struct FuncDecl;
-struct ProcDecl;
 struct VarDecl;
 struct ConstDecl;
 struct WhileStmt;
@@ -40,6 +40,8 @@ struct AssignStmt;
 struct Slice;
 struct ExprParam;
 struct MapExpr;
+struct ReducedMapExpr;
+struct UnreducedMapExpr;
 struct UnaryExpr;
 struct BinaryExpr;
 struct NaryExpr;
@@ -67,10 +69,12 @@ struct IntLiteral;
 struct FloatLiteral;
 struct BoolLiteral;
 struct ComplexLiteral;
+struct StringLiteral;
 struct IntVectorLiteral;
 struct FloatVectorLiteral;
 struct ComplexVectorLiteral;
 struct NDTensorLiteral;
+struct ApplyStmt;
 struct Test;
 
 class HIRVisitor {
@@ -92,9 +96,9 @@ public:
   virtual void visit(std::shared_ptr<Field>);
   virtual void visit(std::shared_ptr<ElementTypeDecl>);
   virtual void visit(std::shared_ptr<Argument>);
+  virtual void visit(std::shared_ptr<InOutArgument>);
   virtual void visit(std::shared_ptr<ExternDecl>);
   virtual void visit(std::shared_ptr<FuncDecl>);
-  virtual void visit(std::shared_ptr<ProcDecl>);
   virtual void visit(std::shared_ptr<VarDecl>);
   virtual void visit(std::shared_ptr<ConstDecl>);
   virtual void visit(std::shared_ptr<WhileStmt>);
@@ -109,6 +113,8 @@ public:
   virtual void visit(std::shared_ptr<Slice> op) {}
   virtual void visit(std::shared_ptr<ExprParam>);
   virtual void visit(std::shared_ptr<MapExpr>);
+  virtual void visit(std::shared_ptr<ReducedMapExpr>);
+  virtual void visit(std::shared_ptr<UnreducedMapExpr>);
   virtual void visit(std::shared_ptr<OrExpr>);
   virtual void visit(std::shared_ptr<AndExpr>);
   virtual void visit(std::shared_ptr<XorExpr>);
@@ -133,10 +139,12 @@ public:
   virtual void visit(std::shared_ptr<FloatLiteral> op) {}
   virtual void visit(std::shared_ptr<BoolLiteral> op) {}
   virtual void visit(std::shared_ptr<ComplexLiteral> op) {}
+  virtual void visit(std::shared_ptr<StringLiteral> op) {}
   virtual void visit(std::shared_ptr<IntVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<FloatVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<ComplexVectorLiteral> op) {}
   virtual void visit(std::shared_ptr<NDTensorLiteral>);
+  virtual void visit(std::shared_ptr<ApplyStmt>);
   virtual void visit(std::shared_ptr<Test>);
 
 private:

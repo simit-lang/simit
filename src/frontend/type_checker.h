@@ -77,10 +77,12 @@ private:
   virtual void visit(FloatLiteral::Ptr);
   virtual void visit(BoolLiteral::Ptr);
   virtual void visit(ComplexLiteral::Ptr);
+  virtual void visit(StringLiteral::Ptr);
   virtual void visit(IntVectorLiteral::Ptr);
   virtual void visit(FloatVectorLiteral::Ptr);
   virtual void visit(ComplexVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(ApplyStmt::Ptr);
 
 private:
   template <typename T> using Ptr = std::shared_ptr<T>;
@@ -109,7 +111,8 @@ private:
 
 private:
   void typeCheckVarOrConstDecl(VarDecl::Ptr, bool = false, bool = false);
-  void typeCheckBinaryElwise(BinaryExpr::Ptr);
+  void typeCheckMapOrApply(MapExpr::Ptr, bool = false);
+  void typeCheckBinaryElwise(BinaryExpr::Ptr, bool = false);
   void typeCheckBinaryBoolean(BinaryExpr::Ptr);
   void typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
 

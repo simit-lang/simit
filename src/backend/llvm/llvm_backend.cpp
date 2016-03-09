@@ -159,7 +159,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
       symtable.insert(global.first, compile(global.second));
     }
 
-    // LLVM does not de-allocate any stack memory until a functoin returns, so
+    // LLVM does not de-allocate any stack memory until a function returns, so
     // we must make sure to not allocate stack memory inside a loop. To do this
     // we move all the var decls to the front of the function body
     Stmt body = moveVarDeclsToFront(f.getBody());
@@ -172,17 +172,15 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   iassert(llvmFunc);
 
 
-  // Declare malloc and free
+  // Declare malloc and free if necessary
   llvm::FunctionType *m =
       llvm::FunctionType::get(LLVM_INT8_PTR, {LLVM_INT}, false);
   llvm::Function *malloc =
-      llvm::Function::Create(m, llvm::Function::ExternalLinkage, "malloc",
-                             module);
+      llvm::cast<llvm::Function>(module->getOrInsertFunction("malloc", m));
   llvm::FunctionType *f =
       llvm::FunctionType::get(LLVM_VOID, {LLVM_INT8_PTR}, false);
   llvm::Function *free =
-      llvm::Function::Create(f, llvm::Function::ExternalLinkage, "free",
-                             module);
+      llvm::cast<llvm::Function>(module->getOrInsertFunction("free", f));
 
 
   // Create initialization function
@@ -296,6 +294,12 @@ void LLVMBackend::compile(const ir::Literal& literal) {
         val = llvmComplex(literal.getFloatVal(0), literal.getFloatVal(1));
         break;
       }
+      case ScalarType::String: {
+        iassert(ctype.bytes() == sizeof(char));
+        std::string data((const char *)literal.data);
+        val = emitGlobalString(data);
+        break;
+      }
       default: unreachable;
     }
   }
@@ -318,21 +322,26 @@ void LLVMBackend::compile(const ir::VarExpr& varExpr) {
 
   // Globals are stored as pointer-pointers so we must load them
   if (util::contains(globals, varExpr.var)) {
-      val = builder->CreateLoad(val, ptrName);
-      // Cast non-generic address spaces into generic
-      if (val->getType()->isPointerTy() &&
-          val->getType()->getPointerAddressSpace() != 0) {
-        llvm::Type* eltTy = val->getType()->getPointerElementType();
-        val = builder->CreateAddrSpaceCast(val, eltTy->getPointerTo(0));
-      }
+    val = builder->CreateLoad(val, ptrName);
+    // Cast non-generic address spaces into generic
+    if (val->getType()->isPointerTy() &&
+        val->getType()->getPointerAddressSpace() != 0) {
+      llvm::Type* eltTy = val->getType()->getPointerElementType();
+      val = builder->CreateAddrSpaceCast(val, eltTy->getPointerTo(0));
+    }
   }
 
   // Special case: check if the symbol is a scalar and the llvm value is a ptr,
   // in which case we must load the value.  This case arises because we keep
   // many scalars on the stack.  An exceptions to this are loop variables,
   // which is why we can't assume Simit scalars are always kept on the stack.
-  if (isScalar(varExpr.type) && val->getType()->isPointerTy()) {
-    val = builder->CreateLoad(val, valName);
+  //if (isScalar(varExpr.type) && val->getType()->isPointerTy()) {
+  if (isScalar(varExpr.type)) {
+    iassert(!isString(varExpr.type) || val->getType()->isPointerTy());
+    if (val->getType()->isPointerTy() && (!isString(varExpr.type) || 
+        val->getType()->getContainedType(0)->isPointerTy())) {
+      val = builder->CreateLoad(val, valName);
+    }
   }
 }
 
@@ -511,13 +520,15 @@ void LLVMBackend::compile(const ir::Neg& negExpr) {
     case ScalarType::Float:
       val = builder->CreateFNeg(a);
       break;
-    case ScalarType::Boolean:
-      iassert(false) << "Cannot negate a boolean value.";
-      break;
-    case ScalarType::Complex:
+    case ScalarType::Complex: {
       llvm::Value *realNeg = builder->CreateFNeg(builder->ComplexGetReal(a));
       llvm::Value *imagNeg = builder->CreateFNeg(builder->ComplexGetImag(a));
       val = builder->CreateComplex(realNeg, imagNeg);
+      break;
+    }
+    case ScalarType::Boolean:
+    case ScalarType::String:
+      ierror << "Cannot negate a boolean or string value.";
       break;
   }
 }
@@ -535,10 +546,7 @@ void LLVMBackend::compile(const ir::Add& addExpr) {
     case ScalarType::Float:
       val = builder->CreateFAdd(a, b);
       break;
-    case ScalarType::Boolean:
-      ierror << "Cannot add boolean values.";
-      break;
-    case ScalarType::Complex:
+    case ScalarType::Complex: {
       llvm::Value *realA = builder->ComplexGetReal(a);
       llvm::Value *imagA = builder->ComplexGetImag(a);
       llvm::Value *realB = builder->ComplexGetReal(b);
@@ -546,6 +554,11 @@ void LLVMBackend::compile(const ir::Add& addExpr) {
       llvm::Value *real = builder->CreateFAdd(realA, realB);
       llvm::Value *imag = builder->CreateFAdd(imagA, imagB);
       val = builder->CreateComplex(real, imag);
+      break;
+    }
+    case ScalarType::Boolean:
+    case ScalarType::String:
+      ierror << "Cannot add boolean or string values.";
       break;
   }
 }
@@ -563,10 +576,7 @@ void LLVMBackend::compile(const ir::Sub& subExpr) {
     case ScalarType::Float:
       val = builder->CreateFSub(a, b);
       break;
-    case ScalarType::Boolean:
-      iassert(false) << "Cannot subtract boolean values.";
-      break;
-    case ScalarType::Complex:
+    case ScalarType::Complex: {
       llvm::Value *realA = builder->ComplexGetReal(a);
       llvm::Value *imagA = builder->ComplexGetImag(a);
       llvm::Value *realB = builder->ComplexGetReal(b);
@@ -574,6 +584,11 @@ void LLVMBackend::compile(const ir::Sub& subExpr) {
       llvm::Value *real = builder->CreateFSub(realA, realB);
       llvm::Value *imag = builder->CreateFSub(imagA, imagB);
       val = builder->CreateComplex(real, imag);
+      break;
+    }
+    case ScalarType::Boolean:
+    case ScalarType::String:
+      ierror << "Cannot subtract boolean or string values.";
       break;
   }
 }
@@ -591,9 +606,7 @@ void LLVMBackend::compile(const ir::Mul& mulExpr) {
     case ScalarType::Float:
       val = builder->CreateFMul(a, b);
       break;
-    case ScalarType::Boolean:
-      iassert(false) << "Cannot multiply boolean values.";
-    case ScalarType::Complex:
+    case ScalarType::Complex: {
       llvm::Value *realA = builder->ComplexGetReal(a);
       llvm::Value *imagA = builder->ComplexGetImag(a);
       llvm::Value *realB = builder->ComplexGetReal(b);
@@ -605,6 +618,11 @@ void LLVMBackend::compile(const ir::Mul& mulExpr) {
           builder->CreateFMul(realA, imagB),
           builder->CreateFMul(imagA, realB));
       val = builder->CreateComplex(real, imag);
+      break;
+    }
+    case ScalarType::Boolean:
+    case ScalarType::String:
+      ierror << "Cannot multiply boolean or string values.";
       break;
   }
 }
@@ -624,10 +642,7 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
     case ScalarType::Float:
       val = builder->CreateFDiv(a, b);
       break;
-    case ScalarType::Boolean:
-      iassert(false) << "Cannot divide boolean values.";
-      break;
-    case ScalarType::Complex:
+    case ScalarType::Complex: {
       // Computed using the naive ((ac+bd)/(c^2+d^2), (bc-ad)/(c^2+d^2))
       llvm::Value *realA = builder->ComplexGetReal(a);
       llvm::Value *imagA = builder->ComplexGetImag(a);
@@ -645,6 +660,11 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
       llvm::Value *real = builder->CreateFDiv(num1, denom);
       llvm::Value *imag = builder->CreateFDiv(num2, denom);
       val = builder->CreateComplex(real, imag);
+      break;
+    }
+    case ScalarType::Boolean:
+    case ScalarType::String:
+      ierror << "Cannot divide boolean or string values.";
       break;
   }
 }
@@ -733,6 +753,12 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
   if (isScalar(var.getType())) {
     ScalarType type = var.getType().toTensor()->getComponentType();
     llvmVar = builder->CreateAlloca(llvmType(type),nullptr,var.getName());
+
+    if (isString(var.getType())) {
+      // Initialize pointer to null.
+      llvm::Value *valuePtr = defaultInitializer(llvmType(ScalarType::String));
+      builder->CreateStore(valuePtr, llvmVar);
+    }
   }
   else {
     llvmVar = makeGlobalTensor(varDecl.var);
@@ -885,6 +911,24 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     }
     else if (callStmt.callee == ir::intrinsics::loc()) {
       call = emitCall("loc", args, LLVM_INT);
+    }
+    else if (callStmt.callee == ir::intrinsics::free()) {
+      call = emitCall("free", args, LLVM_VOID);
+    }
+    else if (callStmt.callee == ir::intrinsics::malloc()) {
+      call = emitCall("malloc", args, LLVM_INT8_PTR);
+    }
+    else if (callStmt.callee == ir::intrinsics::strcmp()) {
+      call = emitCall("strcmp", args, LLVM_INT);
+    }
+    else if (callStmt.callee == ir::intrinsics::strlen()) {
+      call = emitCall("strlen", args, LLVM_INT);
+    }
+    else if (callStmt.callee == ir::intrinsics::strcpy()) {
+      call = emitCall("strcpy", args, LLVM_INT8_PTR);
+    }
+    else if (callStmt.callee == ir::intrinsics::strcat()) {
+      call = emitCall("strcat", args, LLVM_INT8_PTR);
     }
     else if (callStmt.callee == ir::intrinsics::simitClock()) {
       call = emitCall("simitClock", args, llvmFloatType());
@@ -1186,11 +1230,6 @@ void LLVMBackend::compile(const ir::While& whileLoop) {
 void LLVMBackend::compile(const ir::Print& print) {
   std::vector<llvm::Value*> args;
   
-  if (!print.expr.defined()) {
-    emitPrintf(print.str, args);
-    return;
-  }
-
   llvm::Value *result = compile(print.expr);
   Type type = print.expr.type();
 
@@ -1198,23 +1237,30 @@ void LLVMBackend::compile(const ir::Print& print) {
 
   const TensorType *tensor = type.toTensor();
   ScalarType scalarType = tensor->getComponentType();
-  std::string specifier; ;
-  switch (scalarType.kind) {
-    case ScalarType::Float:
-      specifier = std::string("%") + print.format + "g";
-      break;
-    case ScalarType::Complex:
-      specifier = std::string("<%") + print.format + "g,%g>";
-      break;
-    case ScalarType::Boolean:
-    case ScalarType::Int:
-      specifier = std::string("%") + print.format + "d";
-      break;
-  }
 
-  std::string format = specifier;
-  args.push_back(result);
-  emitPrintf(format, args);
+  if (scalarType == ScalarType::String) {
+    emitPrintf(result, {});
+  } else {
+    std::string specifier;
+    switch (scalarType.kind) {
+      case ScalarType::Float:
+        specifier = std::string("%") + print.format + "g";
+        break;
+      case ScalarType::Complex:
+        specifier = std::string("%") + print.format + "<%g,%g>";
+        break;
+      case ScalarType::Boolean:
+      case ScalarType::Int:
+        specifier = std::string("%") + print.format + "d";
+        break;
+      case ScalarType::String:
+        iassert(false);
+        break;
+    }
+
+    args.push_back(result);
+    emitPrintf(specifier, args);
+  }
 }
 
 
@@ -1434,8 +1480,7 @@ llvm::Function *LLVMBackend::emitEmptyFunction(const string &name,
   return llvmFunc;
 }
 
-void LLVMBackend::emitPrintf(std::string format,
-                             std::vector<llvm::Value*> args) {
+void LLVMBackend::emitPrintf(llvm::Value *str, std::vector<llvm::Value*> args) {
   llvm::Function *printfFunc = module->getFunction("printf");
   if (printfFunc == nullptr) {
     std::vector<llvm::Type*> printfArgTypes;
@@ -1449,13 +1494,11 @@ void LLVMBackend::emitPrintf(std::string format,
     printfFunc->setCallingConv(llvm::CallingConv::C);
   }
 
-  llvm::Value *str = emitGlobalString(format);
-
   // Split any complex structs into two doubles
   for (size_t i = 0; i < args.size(); ++i) {
     if (args[i]->getType()->isStructTy()) {
-      llvm::Value *real = builder->CreateExtractElement(args[i], llvmInt(0), "real");
-      llvm::Value *imag = builder->CreateExtractElement(args[i], llvmInt(1), "imag");
+      llvm::Value *real = builder->ComplexGetReal(args[i]);
+      llvm::Value *imag = builder->ComplexGetImag(args[i]);
       args[i] = real;
       args.insert(args.begin()+i+1, imag);
     }
@@ -1472,6 +1515,11 @@ void LLVMBackend::emitPrintf(std::string format,
   printfArgs.insert(printfArgs.end(), args.begin(), args.end());
 
   builder->CreateCall(printfFunc, printfArgs);
+}
+
+void LLVMBackend::emitPrintf(std::string format,
+                             std::vector<llvm::Value*> args) {
+  emitPrintf(emitGlobalString(format), args);
 }
 
 void LLVMBackend::emitGlobals(const ir::Environment& env) {

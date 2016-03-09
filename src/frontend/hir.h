@@ -184,7 +184,7 @@ struct TensorType : public Type {
 };
 
 struct ScalarType : public TensorType {
-  enum class Type {INT, FLOAT, BOOL, COMPLEX};
+  enum class Type {INT, FLOAT, BOOL, COMPLEX, STRING};
 
   Type type;
   
@@ -259,7 +259,6 @@ struct ElementTypeDecl : public HIRNode {
 
 struct Argument : public HIRNode {
   IdentDecl::Ptr arg;
-  bool           inout;
   
   typedef std::shared_ptr<Argument> Ptr;
   
@@ -267,14 +266,25 @@ struct Argument : public HIRNode {
     visitor->visit(to<Argument>(shared_from_this()));
   }
   
-  virtual unsigned getLineBegin() {
-    return (lineBegin == 0) ? arg->getLineBegin() : lineBegin;
-  }
-  virtual unsigned getColBegin() {
-    return (lineBegin == 0) ? arg->getColBegin() : colBegin;
-  }
+  virtual unsigned getLineBegin() { return arg->getLineBegin(); }
+  virtual unsigned getColBegin() { return arg->getColBegin(); }
   virtual unsigned getLineEnd() { return arg->getLineEnd(); }
   virtual unsigned getColEnd() { return arg->getColEnd(); }
+
+  virtual bool isInOut() { return false; }
+};
+
+struct InOutArgument : public Argument {
+  typedef std::shared_ptr<InOutArgument> Ptr;
+  
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<InOutArgument>(shared_from_this()));
+  }
+  
+  virtual unsigned getLineBegin() { return HIRNode::getLineBegin(); }
+  virtual unsigned getColBegin() { return HIRNode::getColBegin(); }
+
+  virtual bool isInOut() { return true; }
 };
 
 struct ExternDecl : public HIRNode {
@@ -292,19 +302,12 @@ struct FuncDecl : public HIRNode {
   std::vector<Argument::Ptr>  args;
   std::vector<IdentDecl::Ptr> results;
   StmtBlock::Ptr              body;
+  bool                        exported;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<FuncDecl>(shared_from_this()));
-  }
-};
-
-struct ProcDecl : public FuncDecl {
-  typedef std::shared_ptr<ProcDecl> Ptr;
-  
-  virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<ProcDecl>(shared_from_this()));
   }
 };
 
@@ -359,13 +362,6 @@ struct IfStmt : public Stmt {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<IfStmt>(shared_from_this()));
   }
-
-  virtual unsigned getLineEnd() {
-    return (lineEnd == 0) ? elseBody->getLineEnd() : lineEnd;
-  }
-  virtual unsigned getColEnd() {
-    return (lineEnd == 0) ? elseBody->getColEnd() : colEnd;
-  }
 };
 
 struct ForDomain : public HIRNode {
@@ -416,7 +412,8 @@ struct ForStmt : public Stmt {
 };
 
 struct PrintStmt : public Stmt {
-  Expr::Ptr expr;
+  std::vector<Expr::Ptr> args;
+  bool                   printNewline;
   
   typedef std::shared_ptr<PrintStmt> Ptr;
   
@@ -483,12 +480,9 @@ struct ExprParam : public ReadParam {
 };
 
 struct MapExpr : public Expr {
-  enum class ReductionOp {SUM, NONE};
-
   Identifier::Ptr        func;
   std::vector<Expr::Ptr> partialActuals;
   Identifier::Ptr        target;
-  ReductionOp            op;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 
@@ -496,13 +490,36 @@ struct MapExpr : public Expr {
     visitor->visit(to<MapExpr>(shared_from_this()));
   }
 
-  virtual unsigned getLineEnd() {
-    return (op == ReductionOp::NONE) ? target->getLineEnd() : lineEnd;
-  }
-  virtual unsigned getColEnd() {
-    return (op == ReductionOp::NONE) ? target->getColEnd() : colEnd;
-  }
+  virtual bool isReduced() = 0;
 };
+
+struct ReducedMapExpr : public MapExpr {
+  enum class ReductionOp {SUM};
+  
+  ReductionOp op;
+
+  typedef std::shared_ptr<ReducedMapExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<ReducedMapExpr>(shared_from_this()));
+  }
+
+  virtual bool isReduced() { return true; }
+};
+
+struct UnreducedMapExpr : public MapExpr {
+  typedef std::shared_ptr<UnreducedMapExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<UnreducedMapExpr>(shared_from_this()));
+  }
+  
+  virtual unsigned getLineEnd() { return target->getLineEnd(); }
+  virtual unsigned getColEnd() { return target->getColEnd(); }
+
+  virtual bool isReduced() { return false; }
+};
+
 
 struct UnaryExpr : public Expr {
   Expr::Ptr operand;
@@ -663,7 +680,7 @@ struct TransposeExpr : public UnaryExpr {
 
 struct CallExpr : public Expr {
   Identifier::Ptr        func;
-  std::vector<Expr::Ptr> arguments;
+  std::vector<Expr::Ptr> args;
   
   typedef std::shared_ptr<CallExpr> Ptr;
 
@@ -783,6 +800,16 @@ struct ComplexLiteral : public TensorLiteral {
   }
 };
 
+struct StringLiteral : public TensorLiteral {
+  std::string val;
+  
+  typedef std::shared_ptr<StringLiteral> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<StringLiteral>(shared_from_this()));
+  }
+};
+
 struct DenseTensorLiteral : public TensorLiteral {
   bool transposed;
 
@@ -827,6 +854,19 @@ struct NDTensorLiteral : public DenseTensorLiteral {
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<NDTensorLiteral>(shared_from_this()));
   }
+};
+
+struct ApplyStmt : public Stmt {
+  UnreducedMapExpr::Ptr map;
+  
+  typedef std::shared_ptr<ApplyStmt> Ptr;
+  
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<ApplyStmt>(shared_from_this()));
+  }
+
+  virtual unsigned getLineBegin() { return map->getLineBegin(); }
+  virtual unsigned getColBegin() { return map->getColBegin(); }
 };
 
 struct Test : public HIRNode {

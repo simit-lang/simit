@@ -104,6 +104,8 @@ llvm::Type* llvmType(ScalarType stype) {
       return LLVM_BOOL;
     case ScalarType::Complex:
       return llvmComplexType();
+    case ScalarType::String:
+      return LLVM_INT8_PTR;
   }
   unreachable;
   return nullptr;
@@ -134,6 +136,11 @@ llvm::PointerType *llvmPtrType(ScalarType stype, unsigned addrspace) {
       return llvm::Type::getInt1PtrTy(LLVM_CTX, addrspace);
     case ScalarType::Complex:
       return llvmComplexPtrType(addrspace);
+    case ScalarType::String:
+    {
+      const auto charPtrType = llvm::Type::getInt8PtrTy(LLVM_CTX, addrspace);
+      return llvm::PointerType::get(charPtrType, addrspace);
+    }
   }
   unreachable;
   return nullptr;

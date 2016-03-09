@@ -4,6 +4,7 @@
 #include "util/util.h"
 
 #include <regex>
+#include <string>
 #include <sstream>
 
 #ifdef GPU
@@ -137,6 +138,11 @@ void IRPrinter::visit(const Literal *op) {
             }
             os << "]";
           }
+          break;
+        }
+        case ScalarType::String: {
+          const char *sdata = static_cast<const char*>(op->data);
+          os << "\"" << std::string(sdata) << "\"";
           break;
         }
 
@@ -448,27 +454,12 @@ void IRPrinter::visit(const Block *op) {
 void IRPrinter::visit(const Print *op) {
   indent();
   os << "print ";
-  if (op->expr.defined()) {
-    if (op->format != "") {
-      os << "(";
-      print(op->expr);
-      os << ", \"" << op->format << "\")";
-    } else {
-      print(op->expr);
-    }
+  if (op->format != "") {
+    os << "(";
+    print(op->expr);
+    os << ", \"" << op->format << "\")";
   } else {
-    std::stringstream oss;
-    for (size_t i = 0; i < op->str.size(); ++i) {
-      switch (op->str[i]) {
-        case '\n':
-          oss << "\\n";
-          break;
-        default:
-          oss << op->str[i];
-          break;
-      }
-    }
-    os << "\"" << oss.str() << "\"";
+    print(op->expr);
   }
   os << ";";
 }

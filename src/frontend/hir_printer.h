@@ -32,7 +32,6 @@ public:
   virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
-  virtual void visit(ProcDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
@@ -74,6 +73,7 @@ public:
   virtual void visit(FloatVectorLiteral::Ptr);
   virtual void visit(ComplexVectorLiteral::Ptr);
   virtual void visit(NDTensorLiteral::Ptr);
+  virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
 private:
@@ -85,8 +85,8 @@ private:
     oss << "<" << val.real << "," << val.imag << ">";
   }
   
-  void printFuncOrProc(FuncDecl::Ptr, const bool = false);
   void printVarOrConstDecl(VarDecl::Ptr, const bool = false);
+  void printMapOrApply(MapExpr::Ptr, const bool = false);
   void printUnaryExpr(UnaryExpr::Ptr, const std::string, const bool = false);
   void printBinaryExpr(BinaryExpr::Ptr, const std::string);
 

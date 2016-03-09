@@ -1,0 +1,139 @@
+%%% string-vars-and-const
+const s1 : string = "s1";
+
+export func main()
+  var s2 : string = "s2";
+  do
+    s3 = "s3";
+    s4 = s3;
+    s5 = s2;
+    s6 = s1;
+  end while false
+end
+
+%%% string-eq
+%! f() == 2;
+const s1 : string = "s1";
+
+func f() -> (r : int)
+  s2 = "s1";
+  s3 = "s2";
+  r = 0;
+  if s2 == s1
+    r = r + 1;
+  end
+  if not (s3 == s1)
+    r = r + 1;
+  end
+end
+
+%%% string-ne
+%! f() == 2;
+const s1 : string = "s1";
+
+func f() -> (r : int)
+  s2 = "s1";
+  s3 = "s2";
+  r = 0;
+  if s3 != s1
+    r = r + 1;
+  end
+  if not (s2 != s1)
+    r = r + 1;
+  end
+end
+
+%%% string-le-lt-ge-gt
+%! f() == 12;
+const s1 : string = "s1";
+
+func f() -> (r : int)
+  s2 = "s0";
+  s3 = "s1";
+  s4 = "s2";
+  r = 0;
+  if not (s1 < s2)
+    r = r + 1;
+  end
+  if not (s1 < s3)
+    r = r + 1;
+  end
+  if s1 < s4
+    r = r + 1;
+  end
+  if not (s1 <= s2)
+    r = r + 1;
+  end
+  if s1 <= s3
+    r = r + 1;
+  end
+  if s1 <= s4
+    r = r + 1;
+  end
+  if s1 > s2
+    r = r + 1;
+  end
+  if not (s1 > s3)
+    r = r + 1;
+  end
+  if not (s1 > s4)
+    r = r + 1;
+  end
+  if s1 >= s2
+    r = r + 1;
+  end
+  if s1 >= s3
+    r = r + 1;
+  end
+  if not (s1 >= s4)
+    r = r + 1;
+  end
+end
+
+%%% string-concat
+%! f() == 1;
+const s1 : string = "s1";
+
+func f() -> (r : int)
+  do
+    s2 = s1 + s1 + "s3";
+    if s2 == "s1s1s3"
+      r = 1;
+    else
+      r = 0;
+    end
+  end while false
+end
+
+%%% string-func
+%! f() == 1;
+
+func g(s : string, t : string) -> (r : string)
+  r = s + t;
+end
+
+func f() -> (r : int)
+  s1 = "s1";
+  s2 = "s2";
+  if g(s1, s2) == "s1s2"
+    r = 1;
+  else
+    r = 0;
+  end
+end
+
+%%% string-copy
+%! f() == 1;
+
+func f() -> (r : int)
+  var s : string;
+  do
+    var t : string = "foo" + "bar";
+    s = t;
+  end while false;
+  if s == "foobar"
+    r = 1;
+  else
+    r = 0;
+  end
+end

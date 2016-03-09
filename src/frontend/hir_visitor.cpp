@@ -55,6 +55,10 @@ void HIRVisitor::visit(Argument::Ptr arg) {
   arg->arg->accept(this);
 }
 
+void HIRVisitor::visit(InOutArgument::Ptr arg) {
+  visit(to<Argument>(arg)); 
+}
+
 void HIRVisitor::visit(ExternDecl::Ptr decl) {
   decl->var->accept(this);
 }
@@ -68,10 +72,6 @@ void HIRVisitor::visit(FuncDecl::Ptr decl) {
     result->accept(this);
   }
   decl->body->accept(this);
-}
-
-void HIRVisitor::visit(ProcDecl::Ptr decl) {
-  visit(to<FuncDecl>(decl)); 
 }
 
 void HIRVisitor::visit(VarDecl::Ptr decl) {
@@ -118,7 +118,9 @@ void HIRVisitor::visit(ForStmt::Ptr stmt) {
 }
 
 void HIRVisitor::visit(PrintStmt::Ptr stmt) {
-  stmt->expr->accept(this);
+  for (auto arg : stmt->args) {
+    arg->accept(this);
+  }
 }
 
 void HIRVisitor::visit(ExprStmt::Ptr stmt) {
@@ -142,6 +144,14 @@ void HIRVisitor::visit(MapExpr::Ptr expr) {
     param->accept(this);
   }
   expr->target->accept(this);
+}
+
+void HIRVisitor::visit(ReducedMapExpr::Ptr expr) {
+  visit(to<MapExpr>(expr));
+}
+
+void HIRVisitor::visit(UnreducedMapExpr::Ptr expr) {
+  visit(to<MapExpr>(expr));
 }
 
 void HIRVisitor::visit(OrExpr::Ptr expr) {
@@ -202,7 +212,7 @@ void HIRVisitor::visit(TransposeExpr::Ptr expr) {
 
 void HIRVisitor::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
-  for (auto arg : expr->arguments) {
+  for (auto arg : expr->args) {
     if (arg) {
       arg->accept(this);
     }
@@ -234,6 +244,10 @@ void HIRVisitor::visit(NDTensorLiteral::Ptr lit) {
   for (auto elem : lit->elems) {
     elem->accept(this);
   }
+}
+
+void HIRVisitor::visit(ApplyStmt::Ptr stmt) {
+  stmt->map->accept(this);
 }
 
 void HIRVisitor::visit(Test::Ptr test) {

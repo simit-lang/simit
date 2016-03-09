@@ -8,12 +8,14 @@
 
 #include "lower_accesses.h"
 #include "lower_prints.h"
+#include "lower_string_ops.h"
 
 #include "storage.h"
 #include "timers.h"
 #include "temps.h"
 #include "flatten.h"
 #include "ir_rewriter.h"
+#include "ir_transforms.h"
 #include "ir_printer.h"
 #include "path_expressions.h"
 
@@ -110,6 +112,9 @@ Func lower(Func func, bool print) {
     });
     cout << endl;
   }
+
+  func = rewriteCallGraph(func, lowerStringOps);
+  printCallGraph("Lower String Operations", func, print);
 
   func = rewriteCallGraph(func, lowerPrints);
   printCallGraph("Lower Prints", func, print);

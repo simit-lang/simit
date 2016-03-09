@@ -54,7 +54,11 @@ ComponentType convert(ScalarType scalarType) {
         not_supported_yet;
         return ComponentType::DoubleComplex;
       }
+    case ScalarType::String:
+      break;
   }
+  unreachable;
+  return ComponentType::Int;
 }
 
 vector<IndexDomain> getUnblockedDimensions(const simit::TensorType &tensorType){

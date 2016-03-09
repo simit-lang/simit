@@ -67,7 +67,7 @@ private:
 };
 
 struct ScalarType {
-  enum Kind {Float, Int, Boolean, Complex};
+  enum Kind {Float, Int, Boolean, Complex, String};
 
   ScalarType() : kind(Int) {}
   ScalarType(Kind kind) : kind(kind) {}
@@ -93,6 +93,9 @@ struct ScalarType {
       // Use the precision defined by floatBytes
       return floatBytes*2;
     }
+    else if (isString()) {
+      return (unsigned int)sizeof(char);
+    }
     else {
       iassert(isFloat());
       return floatBytes;
@@ -102,6 +105,7 @@ struct ScalarType {
   bool isInt () const { return kind == Int; }
   bool isFloat() const { return kind == Float; }
   bool isBoolean() const { return kind == Boolean; }
+  bool isString() const { return kind == String; }
   bool isComplex() const { return kind == Complex; }
   bool isNumeric() const {
     return kind == Int || kind == Float || kind == Complex;
@@ -294,6 +298,10 @@ inline bool isInt(Type type) {
   return isScalar(type) && type.toTensor()->getComponentType().isInt();
 }
 
+inline bool isString(Type type) {
+  return isScalar(type) && type.toTensor()->getComponentType().isString();
+}
+
 /// A system tensor is a tensor whose dimensions contain at least one set.
 inline bool isSystemTensorType(const TensorType* type) {
   return type->hasSystemDimensions();
@@ -349,6 +357,7 @@ const Type Int = TensorType::make(ScalarType(ScalarType::Int));
 const Type Float = TensorType::make(ScalarType(ScalarType::Float));
 const Type Boolean = TensorType::make(ScalarType(ScalarType::Boolean));
 const Type Complex = TensorType::make(ScalarType(ScalarType::Complex));
+const Type String = TensorType::make(ScalarType(ScalarType::String));
 
 }}
 

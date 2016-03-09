@@ -7,6 +7,7 @@
 #include "inline.h"
 #include "path_expressions.h"
 #include "tensor_index.h"
+#include "types.h"
 #include "index_expressions/loops.h"
 #include "util/name_generator.h"
 #include "util/util.h"
@@ -141,7 +142,9 @@ private:
     
     // Emit code for reading a single tensor component.
     Expr readElement = TensorRead::make(tensorExpr, tensorReadIndices);
-    Stmt printElementFormatted = Print::make(readElement, "12.5");
+    const std::string format = tensor->getComponentType() == ScalarType::Int ?
+                               "13" : "13.5";
+    Stmt printElementFormatted = Print::make(readElement, format);
   
     Var shouldPrintNewline = Var(names.getName(), Boolean);
     Stmt maybePrintNewline = IfThenElse::make(
@@ -354,7 +357,7 @@ private:
     // code that selects between two at runtime based on tensor size.
     if (printSmallTensor.defined()) {
       Expr isSmallTensor = Le::make(Length::make(dimensions[order - 1]),
-                                    Literal::make(7));
+                                    Literal::make(6));
       printTensorStmt = IfThenElse::make(isSmallTensor, printSmallTensor,
                                          printLargeTensor);
     } else {
@@ -372,13 +375,9 @@ private:
     Expr tensorExpr = op->expr;
 
     // If printing string, no lowering needed.
-    if (!tensorExpr.defined()) {
-      stmt = Print::make(op->str);
-      return;
-    }
-
-    iassert(tensorExpr.type().isTensor());
-    stmt = Block::make(printTensor(tensorExpr, 1), printNewline);
+    const auto componentType = tensorExpr.type().toTensor()->getComponentType();
+    stmt = (componentType == ScalarType::String) ? op : 
+           printTensor(tensorExpr, 0);
   }
   
   void visit(const Func* f) {

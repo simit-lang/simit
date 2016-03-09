@@ -31,7 +31,7 @@ private:
   hir::Field::Ptr                  parseFieldDecl();
   hir::ExternDecl::Ptr             parseExternDecl();
   hir::FuncDecl::Ptr               parseFuncDecl();
-  hir::ProcDecl::Ptr               parseProcDecl();
+  hir::FuncDecl::Ptr               parseProcDecl();
   std::vector<hir::Argument::Ptr>  parseArguments();
   hir::Argument::Ptr               parseArgumentDecl();
   std::vector<hir::IdentDecl::Ptr> parseResults();
@@ -48,9 +48,10 @@ private:
   hir::ForStmt::Ptr                parseForStmt();
   hir::ForDomain::Ptr              parseForDomain();
   hir::PrintStmt::Ptr              parsePrintStmt();
+  hir::ApplyStmt::Ptr              parseApplyStmt();
   hir::ExprStmt::Ptr               parseExprOrAssignStmt();
   hir::Expr::Ptr                   parseExpr();
-  hir::Expr::Ptr                   parseMapExpr();
+  hir::MapExpr::Ptr                parseMapExpr();
   hir::Expr::Ptr                   parseOrExpr();
   hir::Expr::Ptr                   parseAndExpr();
   hir::Expr::Ptr                   parseXorExpr();
@@ -77,6 +78,7 @@ private:
   hir::NDTensorType::Ptr           parseVectorBlockType();
   hir::NDTensorType::Ptr           parseMatrixBlockType();
   hir::NDTensorType::Ptr           parseTensorBlockType();
+  hir::ScalarType::Ptr             parseTensorComponentType();
   hir::ScalarType::Ptr             parseScalarType();
   std::vector<hir::IndexSet::Ptr>  parseIndexSets();
   hir::IndexSet::Ptr               parseIndexSet();

@@ -142,7 +142,7 @@ void HIRPrinter::visit(ElementTypeDecl::Ptr decl) {
 }
 
 void HIRPrinter::visit(Argument::Ptr arg) {
-  if (arg->inout) {
+  if (arg->isInOut()) {
     oss << "inout ";
   }
   arg->arg->accept(this);
@@ -155,11 +155,38 @@ void HIRPrinter::visit(ExternDecl::Ptr decl) {
 }
 
 void HIRPrinter::visit(FuncDecl::Ptr decl) {
-  printFuncOrProc(decl);
-}
-
-void HIRPrinter::visit(ProcDecl::Ptr decl) {
-  printFuncOrProc(decl, true);
+  if (decl->exported) {
+    oss << "export ";
+  }
+  oss << "func ";
+  decl->name->accept(this);
+  oss << "(";
+  bool printDelimiter = false;
+  for (auto arg : decl->args) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+    arg->accept(this);
+    printDelimiter = true;
+  }
+  oss << ") ";
+  if (decl->results.size() > 0) {
+    oss << "-> (";
+    printDelimiter = false;
+    for (auto result : decl->results) {
+      if (printDelimiter) {
+        oss << ", ";
+      }
+      result->accept(this);
+      printDelimiter = true;
+    }
+    oss << ")";
+  }
+  oss << std::endl;
+  indent();
+  decl->body->accept(this);
+  dedent();
+  oss << "end";
 }
 
 void HIRPrinter::visit(VarDecl::Ptr decl) {
@@ -239,8 +266,15 @@ void HIRPrinter::visit(ForStmt::Ptr stmt) {
 
 void HIRPrinter::visit(PrintStmt::Ptr stmt) {
   printIndent();
-  oss << "print ";
-  stmt->expr->accept(this);
+  oss << (stmt->printNewline ? "println " : "print ");
+  bool printDelimiter = false;
+  for (auto arg : stmt->args) {
+    if (printDelimiter) {
+      oss << ", ";
+    }
+    arg->accept(this);
+    printDelimiter = true;
+  }
   oss << ";";
 }
 
@@ -274,33 +308,7 @@ void HIRPrinter::visit(ExprParam::Ptr param) {
 }
 
 void HIRPrinter::visit(MapExpr::Ptr expr) {
-  oss << "map ";
-  expr->func->accept(this);
-  if (expr->partialActuals.size() > 0) {
-    oss << "(";
-    bool printDelimiter = false;
-    for (auto param : expr->partialActuals) {
-      if (printDelimiter) {
-        oss << ", ";
-      }
-      param->accept(this);
-      printDelimiter = true;
-    }
-    oss << ")";
-  }
-  oss << " to ";
-  expr->target->accept(this);
-  if (expr->op != MapExpr::ReductionOp::NONE) {
-    oss << " reduce ";
-    switch (expr->op) {
-      case MapExpr::ReductionOp::SUM:
-        oss << "+";
-        break;
-      default:
-        unreachable;
-        break;
-    }
-  }
+  printMapOrApply(expr);
 }
 
 void HIRPrinter::visit(OrExpr::Ptr expr) {
@@ -393,7 +401,7 @@ void HIRPrinter::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
   oss << "(";
   bool printDelimiter = false;
-  for (auto arg : expr->arguments) {
+  for (auto arg : expr->args) {
     if (printDelimiter) {
       oss << ", ";
     }
@@ -518,6 +526,11 @@ void HIRPrinter::visit(NDTensorLiteral::Ptr lit) {
   }
 }
 
+void HIRPrinter::visit(ApplyStmt::Ptr stmt) {
+  printMapOrApply(stmt->map, true);
+  oss << ";";
+}
+
 void HIRPrinter::visit(Test::Ptr test) {
   oss << "%! ";
   test->func->accept(this);
@@ -535,38 +548,6 @@ void HIRPrinter::visit(Test::Ptr test) {
   oss << ";";
 }
 
-void HIRPrinter::printFuncOrProc(FuncDecl::Ptr decl, const bool isProc) {
-  oss << (isProc ? "proc " : "func ");
-  decl->name->accept(this);
-  oss << "(";
-  bool printDelimiter = false;
-  for (auto arg : decl->args) {
-    if (printDelimiter) {
-      oss << ", ";
-    }
-    arg->accept(this);
-    printDelimiter = true;
-  }
-  oss << ") ";
-  if (decl->results.size() > 0) {
-    oss << "-> (";
-    printDelimiter = false;
-    for (auto result : decl->results) {
-      if (printDelimiter) {
-        oss << ", ";
-      }
-      result->accept(this);
-      printDelimiter = true;
-    }
-    oss << ")";
-  }
-  oss << std::endl;
-  indent();
-  decl->body->accept(this);
-  dedent();
-  oss << "end";
-}
-
 void HIRPrinter::printVarOrConstDecl(VarDecl::Ptr decl, const bool isConst) {
   printIndent();
   oss << (isConst ? "const " : "var ");
@@ -576,6 +557,36 @@ void HIRPrinter::printVarOrConstDecl(VarDecl::Ptr decl, const bool isConst) {
     decl->initVal->accept(this);
   }
   oss << ";";
+}
+
+void HIRPrinter::printMapOrApply(MapExpr::Ptr expr, const bool isApply) {
+  oss << (isApply ? "apply " : "map ");
+  expr->func->accept(this);
+  if (expr->partialActuals.size() > 0) {
+    oss << "(";
+    bool printDelimiter = false;
+    for (auto param : expr->partialActuals) {
+      if (printDelimiter) {
+        oss << ", ";
+      }
+      param->accept(this);
+      printDelimiter = true;
+    }
+    oss << ")";
+  }
+  oss << " to ";
+  expr->target->accept(this);
+  if (expr->isReduced()) {
+    oss << " reduce ";
+    switch (to<ReducedMapExpr>(expr)->op) {
+      case ReducedMapExpr::ReductionOp::SUM:
+        oss << "+";
+        break;
+      default:
+        unreachable;
+        break;
+    }
+  }
 }
 
 void HIRPrinter::printUnaryExpr(UnaryExpr::Ptr expr, const std::string op, 

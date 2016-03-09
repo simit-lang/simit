@@ -75,6 +75,9 @@ void IREmitter::visit(ScalarType::Ptr type) {
     case ScalarType::Type::COMPLEX:
       retType = ir::Complex;
       break;
+    case ScalarType::Type::STRING:
+      retType = ir::String;
+      break;
     default:
       unreachable;
       break;
@@ -150,11 +153,38 @@ void IREmitter::visit(ExternDecl::Ptr decl) {
 }
 
 void IREmitter::visit(FuncDecl::Ptr decl) {
-  addFuncOrProc(decl);
-}
+  ctx->scope();
 
-void IREmitter::visit(ProcDecl::Ptr decl) {
-  addFuncOrProc(decl, true);
+  std::vector<ir::Var> arguments;
+  for (auto arg : decl->args) {
+    const ir::Var argVar = emitVar(arg->arg);
+    const auto access = arg->isInOut() ? internal::Symbol::ReadWrite : 
+                        internal::Symbol::Read;
+    ctx->addSymbol(argVar.getName(), argVar, access);
+    arguments.push_back(argVar);
+  }
+  
+  std::vector<ir::Var> results;
+  for (auto res : decl->results) {
+    const ir::Var result = emitVar(res);
+    ctx->addSymbol(result);
+    results.push_back(result);
+  }
+
+  ir::Stmt body = emitStmt(decl->body);
+  body = ir::Scope::make(body);
+
+  ctx->unscope();
+
+  if (decl->exported) {
+    for (auto &extPair : ctx->getExterns()) {
+      const ir::Var ext = ctx->getExtern(extPair.first);
+      arguments.push_back(ext);
+    }
+  }
+
+  iassert(!ctx->containsFunction(decl->name->ident));
+  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body));
 }
 
 void IREmitter::visit(VarDecl::Ptr decl) {
@@ -270,13 +300,19 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
 }
 
 void IREmitter::visit(PrintStmt::Ptr stmt) {
-  const ir::Expr expr = emitExpr(stmt->expr);
-  const ir::Stmt callStmts = getCallStmts();
+  for (const auto arg : stmt->args) {
+    const ir::Expr expr = emitExpr(arg);
+    const ir::Stmt callStmts = getCallStmts();
  
-  if (callStmts.defined()) {
-    ctx->addStatement(callStmts);
+    if (callStmts.defined()) {
+      ctx->addStatement(callStmts);
+    }
+    ctx->addStatement(ir::Print::make(expr));
   }
-  ctx->addStatement(ir::Print::make(expr));
+
+  if (stmt->printNewline) {
+    ctx->addStatement(ir::Print::make("\n"));
+  }
 }
 
 void IREmitter::visit(ExprStmt::Ptr stmt) {
@@ -311,14 +347,16 @@ void IREmitter::visit(MapExpr::Ptr expr) {
     partialActuals.push_back(param);
   }
   
-  ir::ReductionOperator reduction;
-  switch (expr->op) {
-    case MapExpr::ReductionOp::SUM:
-      reduction = ir::ReductionOperator::Sum;
-      break;
-    default:
-      reduction = ir::ReductionOperator::Undefined;
-      break;
+  ir::ReductionOperator reduction = ir::ReductionOperator::Undefined;
+  if (expr->isReduced()) {
+    switch (to<ReducedMapExpr>(expr)->op) {
+      case ReducedMapExpr::ReductionOp::SUM:
+        reduction = ir::ReductionOperator::Sum;
+        break;
+      default:
+        not_supported_yet;
+        break;
+    }
   }
   
   std::vector<ir::Expr> endpoints;
@@ -523,7 +561,7 @@ void IREmitter::visit(CallExpr::Ptr expr) {
   const std::vector<ir::Var> results = func.getResults();
 
   std::vector<ir::Expr> arguments;
-  for (auto argument : expr->arguments) {
+  for (auto argument : expr->args) {
     iassert((bool)argument);
     const ir::Expr arg = emitExpr(argument);
     arguments.push_back(arg);
@@ -626,6 +664,10 @@ void IREmitter::visit(ComplexLiteral::Ptr lit) {
   retExpr = ir::Literal::make(lit->val);
 }
 
+void IREmitter::visit(StringLiteral::Ptr lit) {
+  retExpr = ir::Literal::make(lit->val);
+}
+
 void IREmitter::visit(IntVectorLiteral::Ptr lit) {
   emitDenseTensorLiteral(lit);
 }
@@ -693,6 +735,11 @@ IREmitter::DenseTensorValues
   }
 
   return tensorVals;
+}
+
+void IREmitter::visit(ApplyStmt::Ptr stmt) {
+  const ir::Expr expr = emitExpr(stmt->map);
+  addAssign({}, expr);
 }
 
 void IREmitter::visit(Test::Ptr test) {
@@ -763,39 +810,6 @@ void IREmitter::DenseTensorValues::merge(
   ++dimSizes[dimSizes.size() - 1];
 }
 
-void IREmitter::addFuncOrProc(FuncDecl::Ptr decl, bool isProc) {
-  ctx->scope();
-
-  std::vector<ir::Var> arguments;
-  for (auto arg : decl->args) {
-    const ir::Var argVar = emitVar(arg->arg);
-    const auto access = arg->inout ? internal::Symbol::ReadWrite : 
-                        internal::Symbol::Read;
-    ctx->addSymbol(argVar.getName(), argVar, access);
-    arguments.push_back(argVar);
-  }
-  
-  std::vector<ir::Var> results;
-  for (auto res : decl->results) {
-    const ir::Var result = emitVar(res);
-    ctx->addSymbol(result);
-    results.push_back(result);
-  }
-
-  const ir::Stmt body = emitStmt(decl->body);
-  ctx->unscope();
-
-  if (isProc) {
-    for (auto &extPair : ctx->getExterns()) {
-      const ir::Var ext = ctx->getExtern(extPair.first);
-      arguments.push_back(ext);
-    }
-  }
-
-  iassert(!ctx->containsFunction(decl->name->ident));
-  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body));
-}
-
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   const ir::Var var = emitVar(decl->var);
   
@@ -805,7 +819,7 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   ctx->addSymbol(var.getName(), var, access);
 
   iassert(decl->initVal || !isConst);
-  const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
+  auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
   
   if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr) && 
       (isScalar(var.getType()) || !isScalar(initExpr.type()))) {
@@ -816,8 +830,8 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
     ctx->addConstant(var, initExpr);
   } else {
     ctx->addStatement(ir::VarDecl::make(var));
-    
-    if (decl->initVal) {
+
+    if (initExpr.defined()) {
       addAssign({ir::VarExpr::make(var)}, initExpr);
       calls.clear();
     }
