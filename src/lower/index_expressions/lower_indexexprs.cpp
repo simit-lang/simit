@@ -407,7 +407,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       auto rewritten = rewrite(op->value);
 
       if (rewritten != op->value) {
-        stmt = TensorWrite::make(op->tensor, op->indices, rewrite(op->value));
+        stmt = TensorWrite::make(op->tensor, op->indices, rewritten);
       }
       else {
         stmt = op;
@@ -416,7 +416,8 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
     }
 
     Expr liftDiagonalExpression(Expr exprToCheck, Expr otherExpr, Expr op,
-        Expr containingToCheck=Expr(), Expr containingOther=Expr()) {
+                                vector<Expr> containingToCheck={},
+                                vector<Expr> containingOther={}) {
       
       auto tensor = to<TensorRead>(exprToCheck)->tensor;
 
@@ -426,8 +427,10 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
             << "we only support one level of blocking" << otherExpr;
         
         auto otherTensor = to<TensorRead>(otherExpr)->tensor;
+        containingToCheck.push_back(exprToCheck);
+        containingOther.push_back(otherExpr);
         return liftDiagonalExpression(tensor, otherTensor, op,
-                                      exprToCheck, otherExpr);
+                                      containingToCheck, containingOther);
       }
       
       TensorStorage::Kind storageKind =
@@ -445,19 +448,30 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         auto newRead = TensorRead::make(tensor,newIndices);
         Expr newWriteTensor = currentTensorWrite->tensor;
         
-        
-        if (containingToCheck.defined()) {
+        if (containingToCheck.size() > 0) {
           // we will make a loop over the innermost indices
           // we find out which ones by looking at the containing expression's
           // indices
-          auto containingTensorExpr = to<TensorRead>(containingToCheck);
-          newRead = TensorRead::make(newRead, containingTensorExpr->indices);
+          for (int i = containingToCheck.size()-1; i >= 0; --i) {
+            auto containingTensorExpr = to<TensorRead>(containingToCheck[i]);
+            newRead = TensorRead::make(newRead, containingTensorExpr->indices);
+          }
 
           // we also need to change the write such that the new write indices go
           // outermost
           iassert(isa<TensorRead>(newWriteTensor));
-          
-          newWriteTensor = TensorRead::make(to<TensorRead>(newWriteTensor)->tensor, newWriteIndices);
+
+          while (!isa<VarExpr>(newWriteTensor)) {
+            newWriteTensor = to<TensorRead>(newWriteTensor)->tensor;
+          }
+          newWriteTensor = TensorRead::make(newWriteTensor, newWriteIndices);
+          // Index by all but the last containing index (which will become the
+          // TensorWrite index)
+          for (int i = containingToCheck.size()-1; i >= 1; --i) {
+            auto containingTensorExpr = to<TensorRead>(containingToCheck[i]);
+            newWriteTensor = TensorRead::make(newWriteTensor,
+                                              containingTensorExpr->indices);
+          }
           newWriteIndices = currentTensorWrite->indices;
         }
         Stmt liftedStmt;
@@ -465,11 +479,15 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         liftedStmt = TensorWrite::make(newWriteTensor, newWriteIndices,
                           newRead);
         
-        if (containingToCheck.defined()) {
-          auto containingTensorExpr = to<TensorRead>(containingToCheck);
+        if (containingToCheck.size() > 0) {
+          size_t totalIndices = 0;
+          for (Expr e : containingToCheck) {
+            auto containingTensorExpr = to<TensorRead>(e);
+            totalIndices += containingTensorExpr->indices.size();
+          }
           size_t i = 0;
           for (auto lv=loopVars.rbegin();
-               i<containingTensorExpr->indices.size() &&
+               i<totalIndices &&
                lv != loopVars.rend();
                lv++) {
             liftedStmt = For::make(Var(lv->getVar()), ForDomain(lv->getDomain()), liftedStmt);
@@ -482,10 +500,11 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         Expr lhsRead = TensorRead::make(currentTensorWrite->tensor,
                                         currentTensorWrite->indices);
         
-        if (containingOther.defined()) {
-          auto containingTensorExpr = to<TensorRead>(containingOther);
-          otherExpr = TensorRead::make(otherExpr, containingTensorExpr->indices);
-          
+        if (containingOther.size() > 0) {
+          for (int i = containingOther.size()-1; i >= 0; --i) {
+            auto containingTensorExpr = to<TensorRead>(containingOther[i]);
+            otherExpr = TensorRead::make(otherExpr, containingTensorExpr->indices);
+          }
         }
         Expr rhs;
         if (isa<Add>(op)) {
@@ -509,7 +528,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       //
       // E.g. `C(i,j) = A(i,j) + B(i,j)`, where B is system reduced, becomes:
       // for i in points:
-      //   C(loc(i,j)) = A(i)
+      //   C(loc(i,i)) = A(i)
       //   for ij in neighbors.start[i]:neighbors.start[i+1]:
       //     C(ij) += B(ij)
 
@@ -529,6 +548,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         expr = liftDiagonalExpression(op->a, op->b, op);
       }
       else if (isa<TensorRead>(op->b)) {
+        // Sketchy on non-commutative op?
         expr = liftDiagonalExpression(op->b, op->a, op);
       }
       else {
