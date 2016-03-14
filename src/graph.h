@@ -139,11 +139,12 @@ public:
   }
  
   // Added for reordering
-  void setSpatialField(const std::string &name) {
-    // need to check if the field actually exists because maps just add an entry
-    // if none exists
+  void setSpatialField(const std::string& name) {
     uassert(fieldNames.find(name) != fieldNames.end())
         << "Invalid field name setting spatial field";
+    FieldData *fieldData = fields[fieldNames[name]];
+    uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. Currently order:" << fieldData->type->getOrder();
+    uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D in order 1. Currently: " << fieldData->type->getDimension(0); 
     spatialFieldName = name;
   }
 
