@@ -1,19 +1,14 @@
 #include "reorder.h"
-
 #include "graph.h"
 #include "hilbert.h"
 
-#include <map>
 #include <vector>
-#include <list>
 #include <cstdio>
 #include <cstdlib>
 #include <cmath>
 #include <climits>
 #include <cfloat>
 #include <string>
-#include <algorithm>
-#include <deque>
 
 using namespace std;
 namespace simit {
@@ -52,7 +47,6 @@ namespace simit {
       // This mapping is the following: for the T axis,
       // tLattice = round((t - tMin) * (hilbertGridN - 1) / tMax);
 
-      #pragma omp parallel for
       for (int i = 0; i < cntNodes; ++i) {
         bitmask_t latticeCoords[3];
         bitmask_t hilbertIndex;
@@ -81,7 +75,6 @@ namespace simit {
       assert(vertexOrdering.size() != 0);
       vertexOrdering.resize(cntNodes);
 
-      #pragma omp parallel for
       for (int i = 0; i < cntNodes; ++i) {
         vertexOrdering[reorderedNodes[i].id] = i;
       }
@@ -117,20 +110,6 @@ namespace simit {
   } // namespace simit::hilbert
  
   // ---------- Simit Level Reordering Heuristics ----------
-  struct ascendingCompare {
-      bool operator()(pair< int, int> const&left, 
-                      pair< int, int> const&right) const {
-          return left.second < right.second;
-      }
-  };
-  
-  struct descendingCompare {
-      bool operator()(pair< int, int> const&left, 
-                      pair< int, int> const&right) const {
-          return left.second > right.second;
-      }
-  };
-  
   int qsortCompare( const void* a, const void* b) {
        int int_a = * ( (int*) a );
        int int_b = * ( (int*) b );
@@ -139,7 +118,7 @@ namespace simit {
        else if ( int_a < int_b ) return -1;
        else return 1;
   } 
-
+  
   struct edgeCompare{
     edgeCompare(int* endpoints, const int cardinality) : 
       endpoints(endpoints),
@@ -162,51 +141,12 @@ namespace simit {
       int* endpoints;
       const int cardinality;
   };
-  
-  void vertexDegreeReordering(vector<int>& vertexOrdering, int* endpoints, int size, int cardinality) {
-    map<int,int> degrees;
-    int edgeIndex;
 
-    for (int i=0; i < size; ++i) {
-      edgeIndex = i * cardinality;
-      for (int elementIndex=0; elementIndex < cardinality; ++elementIndex) {
-        auto search = degrees.find(endpoints[edgeIndex*cardinality + elementIndex]);
-        if ( search == degrees.end() ) {
-          degrees[endpoints[edgeIndex*cardinality + elementIndex]] = 0;
-        } 
-        degrees[endpoints[edgeIndex*cardinality + elementIndex]] += 1;
-      }
-    }
-    vector<pair<int, int> > degreeVec(degrees.begin(), degrees.end());
-    sort(degreeVec.begin(), degreeVec.end(), descendingCompare());
+  void edgeVertexSortReordering(Set& edgeSet, vector<int>& edgeOrdering) {
+    int* endpoints = edgeSet.getEndpointsPtr();
+    const int size = edgeSet.getSize();
+    const int cardinality = edgeSet.getCardinality();
     
-    for (auto& p : degreeVec) {
-      vertexOrdering.push_back(p.first);
-    }
-  }
-
-  void edgeSumReordering(int* endpoints, vector<int>& edgeOrdering, const int size, const int cardinality) {
-    assert(edgeOrdering.size() == 0);
-    map<int,int> edgeSum;
-    
-    for (int i=0; i < size; ++i) {
-      int edgeIndex = i * cardinality;
-      int sum = 0;
-      for (int elementIndex=0; elementIndex < cardinality; ++elementIndex) {
-        sum += endpoints[edgeIndex + elementIndex];
-      }
-      edgeSum[i] = sum;
-    }
-    
-    vector<pair<int, int> > sumVec(edgeSum.begin(), edgeSum.end());
-    sort(sumVec.begin(), sumVec.end(), ascendingCompare());
-
-    for (auto& p : sumVec) {
-      edgeOrdering.push_back(p.first);
-    }
-  }
-
-  void edgeVertexSortReordering(int* endpoints, vector<int>& edgeOrdering, const int size, const int cardinality) {
     assert(edgeOrdering.size() == 0);
     edgeOrdering.resize(size);
     int* sortableEndpoints = static_cast<int *>(malloc(size * cardinality * sizeof(int)));
@@ -220,209 +160,7 @@ namespace simit {
     sort(edgeOrdering.begin(), edgeOrdering.end(), edgeCompare(sortableEndpoints, cardinality));
     free(sortableEndpoints);
   }
-  
-  // ---------- Strip Reordering ----------
 
-  struct BestUnvisited {
-    BestUnvisited(vector<bool>& visited) : 
-      visited(visited)
-      {}
-    
-    bool operator()(pair<int, vector<int>> const&left, 
-                    pair<int, vector<int>> const&right) const {
-      if (visited[left.first]) {
-        return false;
-      }
-      return numberOfUnvisited(left.second) < numberOfUnvisited(right.second);  
-    }
-    
-    private:
-      const vector<bool>& visited;
-      int numberOfUnvisited(const vector<int>& edges) const {
-        int sum = 0;
-        for (auto& edge : edges) {
-          if (!visited[edge]) {
-            sum++;
-          }
-        }
-        return sum;
-      }
-  };
-  
-  struct CounterClockwise {
-    const double* spatialData;
-    const double x;
-    const double y;
-    const double z;
-    
-    CounterClockwise(double* spatialData, int currentEdge) : 
-      spatialData(spatialData),
-      x(spatialData[currentEdge*3]),
-      y(spatialData[currentEdge*3+1]),
-      z(spatialData[currentEdge*3+2])
-    {}
-    
-    bool operator()(const int left, 
-                    const int right) const {
-      return angle(left) > angle(right); 
-    }
-    
-    double angle(const int edge) const {
-      double edgeX = spatialData[edge*3];
-      double edgeY = spatialData[edge*3+1];
-      double edgeZ = spatialData[edge*3+2]; 
-      if (edgeX == x) {
-        return 0.0;
-      } else {
-        return 90.0 - (atan2(edgeY - y, edgeX - x) * 180.0 / M_PI);
-      }
-    }
-  };
-  
-  bool addNeighborsByCC(double* spatialData, vector<int>& neighbors, deque<int>& edgeQueue, vector<bool> visited, const int currentEdge) {
-    sort(neighbors.begin(), neighbors.end(), CounterClockwise(spatialData, currentEdge));
-    bool added = false;
-    for (auto& neighbor : neighbors) {
-      if (!visited[neighbor]) {
-        edgeQueue.push_front(neighbor);
-        added = true;
-      }
-    }
-    return added;
-  }
-
-  void greedyStripReordering(Set& edgeSet, vector<int>& edgeReordering, map<int, vector<int>> edgeNeighbors) {
-    assert(edgeReordering.size() == 0);
-    int STRIP_SIZE = 64;
-    int currentEdge = -1;
-    vector<int> currentNeighbors;
-    vector<bool> visited(edgeSet.getSize(), false);
-    
-    auto& edgeFields = edgeSet.getFields();
-    int spatialFieldIndex = edgeSet.getFieldIndex(edgeSet.getSpatialFieldName());
-    double * edgeSpatialData = static_cast<double*>(edgeFields[spatialFieldIndex]->data); 
-    while (edgeReordering.size() < edgeSet.getSize()) {
-      while (currentEdge < 0 || visited[currentEdge]) {
-        currentEdge = min_element(edgeNeighbors.begin(), edgeNeighbors.end(), BestUnvisited(visited))->first;
-        currentNeighbors = edgeNeighbors[currentEdge];
-        edgeNeighbors.erase(currentEdge);
-      }
-        
-      assert(!visited[currentEdge]);
-      int stripLength = 0;
-      deque<int> edgeQueue;
-      bool buildStrip = true;
-      while (buildStrip && !visited[currentEdge]) {
-        buildStrip = stripLength != STRIP_SIZE;
-
-        if (buildStrip) {
-          visited[currentEdge] = true;
-          edgeReordering.push_back(currentEdge);
-          stripLength++;
-          
-          // This might be wrong. Is correct if the queue is empty before this.
-          buildStrip = addNeighborsByCC(edgeSpatialData, currentNeighbors, edgeQueue, visited, currentEdge);
-          if (!edgeQueue.empty()) {
-            currentEdge = edgeQueue.front();
-            edgeQueue.pop_front();
-            while (visited[currentEdge] && !edgeQueue.empty()) {
-              currentEdge = edgeQueue.front();
-              edgeQueue.pop_front();
-            }   
-          }
-          currentNeighbors = edgeNeighbors[currentEdge];
-          edgeNeighbors.erase(currentEdge);
-        } 
-      }
-    }
-  }
-  
-  void stripReordering(Set& edgeSet, vector<int>& edgeReordering) {
-    int* endpoints = edgeSet.getEndpointsPtr();
-    int size = edgeSet.getSize();
-    int cardinality = edgeSet.getCardinality();
-    
-    map<int,vector<int>> vertexToEdgeMap;
-    for (int i=0; i < size; ++i) {
-      for (int j=0; j < cardinality; ++j) {
-        int vertex = endpoints[i*cardinality + j];
-        if (vertexToEdgeMap.find(vertex) == vertexToEdgeMap.end()){
-          vector<int> edges;
-          vertexToEdgeMap[vertex] = edges;
-        }
-      }
-    }
-    
-    for (int i=0; i < size; ++i) {
-      for (int j=0; j < cardinality; ++j) {
-        int vertex = endpoints[i*cardinality + j];
-        vertexToEdgeMap[vertex].push_back(i);
-      }
-    }
-    
-    // Build map of edge id's to vector of neighbor id's
-    // Neighbor is another edge that shares 2 or more vertices
-    map<int, vector<int>> edgeNeighbors;
-    for (int i=0; i < size; ++i) {
-      vector<int> neighbors;
-      map<int,int> sharedVertexCounts;
-      for (int j=0; j < cardinality; ++j) {
-        // Iterate through the edges that share a vertex with current edge
-        for (auto& connectedEdge : vertexToEdgeMap[endpoints[i*cardinality+j]]) {
-          if (i != connectedEdge && sharedVertexCounts.find(connectedEdge) != sharedVertexCounts.end()) {
-            sharedVertexCounts[connectedEdge]++; 
-          } else {
-            sharedVertexCounts[connectedEdge] = 1;
-          }
-        }
-      }
-      
-      // Add edges to neighbor list if they share more than 2 verts.
-      for (auto& edge : sharedVertexCounts) {
-        if (edge.second >= 2) {
-          neighbors.push_back(edge.first);
-        }
-      }
-      edgeNeighbors[i] = neighbors;
-    }
-   
-    greedyStripReordering(edgeSet, edgeReordering, edgeNeighbors);
-  }
-
-  // ---------- Ordering Evaluation Heuristics ----------
-  int scoreEdges(const int* endpoints, const int size, const int cardinality) {
-    map<long,vector<long>> distances;
-    map<long,long> firstOccurrence;
-
-    for (int edgeIndex=0; edgeIndex < size * cardinality; edgeIndex += cardinality) {
-      for (int elementIndex=0; elementIndex < cardinality; ++elementIndex) {
-        auto search = firstOccurrence.find(endpoints[edgeIndex + elementIndex]);
-        if ( search != firstOccurrence.end() ) {
-          distances[endpoints[edgeIndex + elementIndex]].push_back( edgeIndex - search->second );
-        } else {
-          firstOccurrence[endpoints[edgeIndex + elementIndex]] = edgeIndex;
-          distances[endpoints[edgeIndex + elementIndex]] = vector<long>();
-        }
-      }
-    }
-
-    long distanceSum = 0;
-    for ( auto& distMapping : distances ) {
-      int distCount = distMapping.second.size();
-      for (int offset=0; offset < distCount - 1; ++offset) {
-        for (int first=offset; first < distCount - 1; ++first) {
-          for (int second=first + 1; second < distCount; ++second) {
-            iassert( first < second );
-            iassert( distMapping.second[first] < distMapping.second[second]);
-            distanceSum += distMapping.second[second] - distMapping.second[first];
-          }
-        }
-      }
-    }
-    
-    return distanceSum;
-  }
-  
   // ---------- Reordering Helper Functions ----------
   void reorderFields(vector<Set::FieldData*>& fields, const vector<int>& ordering) {
     for (auto f : fields) {
@@ -487,15 +225,13 @@ namespace simit {
     iassert(vertexOrdering.size() == 0) << "Vertex Ordering needs to be initially empty";
     iassert(edgeOrdering.size() == 0) << "Edge Ordering needs to be initially empty";
     iassert(vertexSet.hasSpatialField()) << "Vertex Set must have a spatial field set prior to reordering";
-    iassert(edgeSet.hasSpatialField()) << "Edge Set must have a spatial field set prior to reordering";
     
     // Get new vertex ordering based on given heuristic 
     hilbert::hilbertReorder(vertexSet, vertexOrdering);
     reorderVertexSet(edgeSet, vertexSet, vertexOrdering);
 
     // Get new edge ordering based on given heuristic 
-    // edgeVertexSortReordering(edgeSet.getEndpointsPtr(), edgeOrdering, edgeSet.getSize(), edgeSet.getCardinality());
-    stripReordering(edgeSet, edgeOrdering);
+    edgeVertexSortReordering(edgeSet, edgeOrdering); 
     reorderEdgeSet(edgeSet, edgeOrdering);
   }
   

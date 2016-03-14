@@ -13,26 +13,6 @@ namespace simit {
   void reorder(Set& edgeSet, Set& vertexSet);
   void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& edgeOrdering, std::vector<int>& vertexOrdering);
  
-  template<typename T, int... dimensions>
-  void populateSpatialField(Set& edgeSet, Set& vertexSet, FieldRef<T, dimensions...>& edgeSpatialField, std::string vertexSpatialFieldName) {
-    auto& fields = vertexSet.getFields();
-    int fieldIndex = vertexSet.getFieldIndex(vertexSpatialFieldName);
-    T* spatialData = static_cast<T*>(fields[fieldIndex]->data);
-    
-    int dim = 3;
-    int cardinality = edgeSet.getCardinality(); 
-    std::vector<float> sum(dim,0);
-    for (auto& element : edgeSet) {
-      for (auto& endpoint : edgeSet.getEndpoints(element)) {
-        for (int z=0; z < dim; ++z) {
-          sum[z] += spatialData[endpoint.getIdent()*dim + z]/edgeSet.getCardinality();
-        }
-      }
-      edgeSpatialField.set(element, sum);
-      std::fill(sum.begin(), sum.end(), 0);
-    }
-  }
-  
   template<typename T>
   void reorderFieldData(T* data, const std::vector<int>& vertexOrdering, const int typeSize) {
     const int capacity = vertexOrdering.size(); 

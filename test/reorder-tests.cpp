@@ -45,7 +45,6 @@ FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, ve
   FieldRef<simit_float>    l = m_tets.addField<simit_float>("l");
   FieldRef<simit_float>    W = m_tets.addField<simit_float>("W");
   FieldRef<simit_float,3,3>B = m_tets.addField<simit_float,3,3>("B");
-  FieldRef<simit_float,3>  tx = m_tets.addField<simit_float,3>("x");
   
   simit_float uval, lval;
   //Youngs modulus and poisson's ratio
@@ -82,8 +81,6 @@ FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, ve
     u.set(t,uval);
     l.set(t,lval);    
   }
-  
-  populateSpatialField(m_tets, m_verts, tx, "x");
   
   return x;
 }
@@ -143,7 +140,6 @@ void femTest(string& filename, string& prefix, int nSteps) {
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
   reorder_m_verts.setSpatialField("x");
-  reorder_m_tets.setSpatialField("x");
   begin = clock();
   reorder(reorder_m_tets, reorder_m_verts, edgeOrdering, vertexOrdering);
   end = clock();
@@ -188,9 +184,7 @@ FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets
               static_cast<simit_float>(0.0)});
   }
   
-  populateSpatialField(m_tets, m_verts, tx, "x");
-
-  return tx;
+  return x;
 } 
   
 void loadAndRunAverage(string& filename, Set& m_verts, Set& m_tets, const int nSteps) {
@@ -232,8 +226,7 @@ void averageTest(string& filename, string& prefix, int nSteps) {
   
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
-  m_verts.setSpatialField("x");
-  m_tets.setSpatialField("x");
+  reorder_m_verts.setSpatialField("x");
   begin = clock();
   reorder(reorder_m_tets, reorder_m_verts, edgeOrdering, vertexOrdering);
   end = clock();
@@ -266,7 +259,6 @@ TEST(Program, reorderFemSpecificTest) {
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
   m_verts.setSpatialField("x");
-  m_tets.setSpatialField("x");
   reorder(m_tets, m_verts, edgeOrdering, vertexOrdering);
     
   string filename = string(TEST_INPUT_DIR) + "/" +
@@ -338,24 +330,6 @@ TEST(Program, reorderDragon1) {
   femTest(filename, prefix, nSteps);
 }
 
-TEST(Program, reorderDragon2) {
-  string prefix="/data/scratch/ptew/random-graphs/dragon.2";
-  string filename = string(TEST_INPUT_DIR) + "/" +
-                         toLower(test_info_->test_case_name()) + "/" +
-                         "femTet.sim";
-  size_t nSteps = 1;
-  femTest(filename, prefix, nSteps);
-}
-
-TEST(Program, reorderDragon3) {
-  string prefix="/data/scratch/ptew/random-graphs/dragon.3";
-  string filename = string(TEST_INPUT_DIR) + "/" +
-                         toLower(test_info_->test_case_name()) + "/" +
-                         "femTet.sim";
-  size_t nSteps = 1;
-  femTest(filename, prefix, nSteps);
-}
-
 TEST(Program, reorderAverage0) {
   string prefix="/data/scratch/ptew/random-graphs/dragon.0";
   string filename = string(TEST_INPUT_DIR) + "/" +
@@ -367,15 +341,6 @@ TEST(Program, reorderAverage0) {
 
 TEST(Program, reorderAverage1) {
   string prefix="/data/scratch/ptew/random-graphs/dragon.1";
-  string filename = string(TEST_INPUT_DIR) + "/" +
-                         toLower(test_info_->test_case_name()) + "/" +
-                         "averageTet.sim";
-  size_t nSteps = 100;
-  averageTest(filename, prefix, nSteps);
-}
-
-TEST(Program, reorderAverage2) {
-  string prefix="/data/scratch/ptew/random-graphs/dragon.2";
   string filename = string(TEST_INPUT_DIR) + "/" +
                          toLower(test_info_->test_case_name()) + "/" +
                          "averageTet.sim";
