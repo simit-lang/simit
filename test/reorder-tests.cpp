@@ -35,9 +35,9 @@ void outputResults(ostream& os, FieldRef<simit_float,3>& x, vector<ElementRef>& 
 FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
   FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
   FieldRef<simit_float,3>  v = m_verts.addField<simit_float,3>("v");
-  //external forces
+  // external forces
   FieldRef<simit_float,3> fe = m_verts.addField<simit_float,3>("fe");
-  //constraintss
+  // constraints
   FieldRef<int>       c = m_verts.addField<int>("c");
   FieldRef<simit_float>    m = m_verts.addField<simit_float>("m");
   
@@ -47,13 +47,13 @@ FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, ve
   FieldRef<simit_float,3,3>B = m_tets.addField<simit_float,3,3>("B");
   
   simit_float uval, lval;
-  //Youngs modulus and poisson's ratio
+  // Youngs modulus and poisson's ratio
   simit_float E = 5e3;
   simit_float nu = 0.45;
   uval = 0.5*E/nu;
   lval = E*nu/((1+nu)*(1-2*nu));
   
-  //create nodes, intial velocity and constraints
+  // create nodes, intial velocity and constraints
   simit_float initV[3]={0.1, 0.0, 0.1};
   simit_float eps = 0.0001;
 
@@ -313,16 +313,8 @@ TEST(Program, reorderFemTest) {
 }
 
 TEST(Program, reorderDragon0) {
-  string prefix="/data/scratch/ptew/random-graphs/dragon.0";
-  string filename = string(TEST_INPUT_DIR) + "/" +
-                         toLower(test_info_->test_case_name()) + "/" +
-                         "femTet.sim";
-  size_t nSteps = 1;
-  femTest(filename, prefix, nSteps);
-}
-
-TEST(Program, reorderDragon1) {
-  string prefix="/data/scratch/ptew/random-graphs/dragon.1";
+  string dir(TEST_INPUT_DIR);
+  string prefix=dir+"/program/fem/dragon.0";
   string filename = string(TEST_INPUT_DIR) + "/" +
                          toLower(test_info_->test_case_name()) + "/" +
                          "femTet.sim";
@@ -331,16 +323,8 @@ TEST(Program, reorderDragon1) {
 }
 
 TEST(Program, reorderAverage0) {
-  string prefix="/data/scratch/ptew/random-graphs/dragon.0";
-  string filename = string(TEST_INPUT_DIR) + "/" +
-                         toLower(test_info_->test_case_name()) + "/" +
-                         "averageTet.sim";
-  size_t nSteps = 100;
-  averageTest(filename, prefix, nSteps);
-}
-
-TEST(Program, reorderAverage1) {
-  string prefix="/data/scratch/ptew/random-graphs/dragon.1";
+  string dir(TEST_INPUT_DIR);
+  string prefix=dir+"/program/fem/dragon.0";
   string filename = string(TEST_INPUT_DIR) + "/" +
                          toLower(test_info_->test_case_name()) + "/" +
                          "averageTet.sim";
