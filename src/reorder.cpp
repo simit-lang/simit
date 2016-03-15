@@ -26,8 +26,7 @@ namespace simit {
       // along each axis: xMin, xMax, yMin, yMax, zMin, zMax.
 
       double xMin, xMax, yMin, yMax, zMin, zMax;
-      uint64_t hilbertGridN = 1 << hilbertBits;
-
+      uint64_t hilbertGridN = 1 << hilbertBits; 
       xMin = yMin = zMin = DBL_MAX;
       xMax = yMax = zMax = DBL_MIN;
       for (int i = 0; i < cntNodes; ++i) {

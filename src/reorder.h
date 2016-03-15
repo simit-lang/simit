@@ -10,6 +10,9 @@
 
 namespace simit {
   
+  void reorderVertexSet(Set& edgeSet, Set& vertexSet, std::vector<int>& vertexOrdering);
+  void reorderEdgeSet(Set& edgeSet, const std::vector<int>& edgeOrdering);
+
   void reorder(Set& edgeSet, Set& vertexSet);
   void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& edgeOrdering, std::vector<int>& vertexOrdering);
  

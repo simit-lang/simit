@@ -13,9 +13,7 @@
 
 using namespace std;
 using namespace simit;
-
-void vertexDataChecks(FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs, 
-    FieldRef<simit_float,3>& reorder_x, vector<ElementRef>& reorder_vertRefs,
+void vertexDataChecks(FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs, FieldRef<simit_float,3>& reorder_x, vector<ElementRef>& reorder_vertRefs,
     vector<int>& newOrdering) {
 
   for (int i = 0; i < newOrdering.size(); ++i) {
@@ -153,19 +151,17 @@ void femTest(string& filename, string& prefix, int nSteps) {
   cout << "Reordered Ordering took: " << reorderedTime << " seconds" << endl;
   cout << "Reordering Percentage:   " << (reorderTime / reorderedTime) * 100 << "%" << endl;
   cout << "Reordering Speedup:      " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
-  
   vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, vertexOrdering);
 }
   
 FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
-  simit::FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
-  simit::FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
-  
-  simit::FieldRef<simit_float,3>    tx = m_tets.addField<simit_float,3>("x");
+  FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
+  FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
+  FieldRef<simit_float,3>    tx = m_tets.addField<simit_float,3>("x");
   
   for(unsigned int ii =0 ;ii<mv.v.size(); ii++){
     vertRefs.push_back(m_verts.add());
-    simit::ElementRef p = vertRefs.back();
+    ElementRef p = vertRefs.back();
     x.set(p, {static_cast<simit_float>(mv.v[ii][0]),
               static_cast<simit_float>(mv.v[ii][1]),
               static_cast<simit_float>(mv.v[ii][2])});
@@ -175,7 +171,7 @@ FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets
   }
   
   for(unsigned int ii =0 ;ii<mv.e.size(); ii++){
-    simit::ElementRef t = m_tets.add(
+    ElementRef t = m_tets.add(
       vertRefs[mv.e[ii][0]],vertRefs[mv.e[ii][1]],
       vertRefs[mv.e[ii][2]],vertRefs[mv.e[ii][3]]
     );
@@ -240,6 +236,296 @@ void averageTest(string& filename, string& prefix, int nSteps) {
   cout << "Reordered Ordering took: " << reorderedTime << " seconds" << endl;
   cout << "Reordering Percentage:   " << (reorderTime / reorderedTime) * 100 << "%" << endl;
   cout << "Reordering Speedup:      " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
+}
+
+TEST(Program, reorder2D) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  Set m_verts;
+  Set m_edges(m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  FieldRef<simit_float,2>  x = m_verts.addField<simit_float,2>("x");
+  FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
+  FieldRef<simit_float,3>  tx = m_edges.addField<simit_float,3>("x");
+  ASSERT_DEATH(m_verts.setSpatialField("x"), "Spatial Data must be 3D in order 1. Currently: 2");
+}
+
+
+TEST(Program, reorder4D) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  Set m_verts;
+  Set m_edges(m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  FieldRef<simit_float,4>  x = m_verts.addField<simit_float,4>("x");
+  FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
+  FieldRef<simit_float,3>  tx = m_edges.addField<simit_float,3>("x");
+  ASSERT_DEATH(m_verts.setSpatialField("x"), "Spatial Data must be 3D in order 1. Currently: 4");
+}
+
+TEST(Program, reorderNoSpatialField) {
+  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
+  Set m_verts;
+  Set m_edges(m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
+  FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
+  FieldRef<simit_float,3>  tx = m_edges.addField<simit_float,3>("x");
+   
+  for(unsigned int ii =0 ;ii<3; ii++){
+    vertRefs.push_back(m_verts.add());
+    ElementRef p = vertRefs.back();
+    x.set(p, {static_cast<simit_float>(ii),
+              static_cast<simit_float>(ii),
+              static_cast<simit_float>(ii)});
+    a.set(p, {static_cast<simit_float>(3+ii),
+              static_cast<simit_float>(3+ii),
+              static_cast<simit_float>(3+ii)});
+  }
+    
+  ElementRef t = m_edges.add(vertRefs[0], vertRefs[1]);
+  tx.set(t, {static_cast<simit_float>(0.5),
+      static_cast<simit_float>(0.5),
+      static_cast<simit_float>(0.5)});
+  
+  t = m_edges.add(vertRefs[1], vertRefs[2]);
+  tx.set(t, {static_cast<simit_float>(1.5),
+              static_cast<simit_float>(1.5),
+              static_cast<simit_float>(1.5)});
+  
+  vector<int> vertexOrdering;
+  vector<int> edgeOrdering;
+  ASSERT_DEATH(reorder(m_edges, m_verts, edgeOrdering, vertexOrdering), "Condition failed: vertexSet.hasSpatialField()");
+}
+
+TEST(Program, reorderInt) {
+  Set m_verts;
+  Set m_edges(m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  vector<ElementRef> edgeRefs;
+  FieldRef<int,3>  x = m_verts.addField<int,3>("x");
+  FieldRef<int,4>  a = m_verts.addField<int,4>("a");
+  FieldRef<int,5>  tx = m_edges.addField<int,5>("x");
+  
+  Set reorder_m_verts;
+  Set reorder_m_edges(reorder_m_verts, reorder_m_verts);
+  vector<ElementRef> reorder_vertRefs;
+  vector<ElementRef> reorder_edgeRefs;
+  FieldRef<int,3>  reorder_x = reorder_m_verts.addField<int,3>("x");
+  FieldRef<int,4>  reorder_a = reorder_m_verts.addField<int,4>("a");
+  FieldRef<int,5>  reorder_tx = reorder_m_edges.addField<int,5>("x");
+   
+  for(unsigned int ii =0 ;ii<3; ii++) {
+    vertRefs.push_back(m_verts.add());
+    ElementRef p = vertRefs.back();
+    x.set(p, {static_cast<int>(ii),
+              static_cast<int>(ii),
+              static_cast<int>(ii)});
+    a.set(p, {static_cast<int>(3+ii),
+              static_cast<int>(3+ii),
+              static_cast<int>(3+ii),
+              static_cast<int>(3+ii)});
+    
+    reorder_vertRefs.push_back(reorder_m_verts.add());
+    p = reorder_vertRefs.back();
+    reorder_x.set(p, {static_cast<int>(ii),
+              static_cast<int>(ii),
+              static_cast<int>(ii)});
+    reorder_a.set(p, {static_cast<int>(3+ii),
+              static_cast<int>(3+ii),
+              static_cast<int>(3+ii),
+              static_cast<int>(3+ii)});
+  }
+   
+  ElementRef first = vertRefs[1];
+  ElementRef second = vertRefs[2];
+  edgeRefs.push_back(m_edges.add(first, second));
+  ElementRef p = edgeRefs.back();
+  tx.set(p, {static_cast<int>(20),
+            static_cast<int>(20),
+            static_cast<int>(20),
+            static_cast<int>(20),
+            static_cast<int>(20)});
+  
+  first = reorder_vertRefs[1];
+  second = reorder_vertRefs[2];
+  reorder_edgeRefs.push_back(reorder_m_edges.add(first, second));
+  p = reorder_edgeRefs.back();
+  reorder_tx.set(p, {static_cast<int>(20),
+            static_cast<int>(20),
+            static_cast<int>(20),
+            static_cast<int>(20),
+            static_cast<int>(20)});
+  
+  first = vertRefs[0];
+  second = vertRefs[1];
+  edgeRefs.push_back(m_edges.add(first, second));
+  p = edgeRefs.back();
+  tx.set(p, {static_cast<int>(10),
+            static_cast<int>(10),
+            static_cast<int>(10),
+            static_cast<int>(10),
+            static_cast<int>(10)});
+  
+  first = reorder_vertRefs[0];
+  second = reorder_vertRefs[1];
+  reorder_edgeRefs.push_back(reorder_m_edges.add(first, second));
+  p = reorder_edgeRefs.back();
+  reorder_tx.set(p, {static_cast<int>(10),
+            static_cast<int>(10),
+            static_cast<int>(10),
+            static_cast<int>(10),
+            static_cast<int>(10)});
+  
+  vector<int> vertexReordering {2, 0, 1};
+  vector<int> edgeReordering {1,0};
+  
+  reorderVertexSet(reorder_m_edges, reorder_m_verts, vertexReordering);
+  reorderEdgeSet(reorder_m_edges, edgeReordering);
+  
+  for (int i = 0; i < vertRefs.size(); ++i) {
+    for (int j =0; j < 3; ++j) {
+      auto incorrect = reorder_x.get(reorder_vertRefs[i])(j);
+      auto actual = reorder_x.get(reorder_vertRefs[vertexReordering[i]])(j);
+      auto expected = x.get(vertRefs[i])(j);
+      ASSERT_NE(incorrect, expected);
+      ASSERT_EQ(actual, expected); 
+    }
+  }
+  
+  for (int i = 0; i < vertRefs.size(); ++i) {
+    for (int j =0; j < 4; ++j) {
+      auto incorrect = reorder_a.get(reorder_vertRefs[i])(j);
+      auto actual = reorder_a.get(reorder_vertRefs[vertexReordering[i]])(j);
+      auto expected = a.get(vertRefs[i])(j);
+      ASSERT_NE(incorrect, expected);
+      ASSERT_EQ(actual, expected); 
+    }
+  }
+   
+  for (int i = 0; i < edgeRefs.size(); ++i) {
+    for (int j = 0; j < 5; ++j) {
+      auto incorrect = reorder_tx.get(reorder_edgeRefs[i])(j);
+      auto actual = reorder_tx.get(reorder_edgeRefs[edgeReordering[i]])(j);
+      auto expected = tx.get(edgeRefs[i])(j);
+      ASSERT_NE(incorrect, expected);
+      ASSERT_EQ(actual, expected); 
+    }
+  }
+}
+
+TEST(Program, reorderDouble) {
+  Set m_verts;
+  Set m_edges(m_verts,m_verts);
+  vector<ElementRef> vertRefs;
+  vector<ElementRef> edgeRefs;
+  FieldRef<double,3>  x = m_verts.addField<double,3>("x");
+  FieldRef<double,4>  a = m_verts.addField<double,4>("a");
+  FieldRef<double,5>  tx = m_edges.addField<double,5>("x");
+  
+  Set reorder_m_verts;
+  Set reorder_m_edges(reorder_m_verts, reorder_m_verts);
+  vector<ElementRef> reorder_vertRefs;
+  vector<ElementRef> reorder_edgeRefs;
+  FieldRef<double,3>  reorder_x = reorder_m_verts.addField<double,3>("x");
+  FieldRef<double,4>  reorder_a = reorder_m_verts.addField<double,4>("a");
+  FieldRef<double,5>  reorder_tx = reorder_m_edges.addField<double,5>("x");
+   
+  for(unsigned int ii =0 ;ii<3; ii++) {
+    vertRefs.push_back(m_verts.add());
+    ElementRef p = vertRefs.back();
+    x.set(p, {static_cast<double>(ii),
+              static_cast<double>(ii),
+              static_cast<double>(ii)});
+    a.set(p, {static_cast<double>(3+ii),
+              static_cast<double>(3+ii),
+              static_cast<double>(3+ii),
+              static_cast<double>(3+ii)});
+    
+    reorder_vertRefs.push_back(reorder_m_verts.add());
+    p = reorder_vertRefs.back();
+    reorder_x.set(p, {static_cast<double>(ii),
+              static_cast<double>(ii),
+              static_cast<double>(ii)});
+    reorder_a.set(p, {static_cast<double>(3+ii),
+              static_cast<double>(3+ii),
+              static_cast<double>(3+ii),
+              static_cast<double>(3+ii)});
+  }
+   
+  ElementRef first = vertRefs[1];
+  ElementRef second = vertRefs[2];
+  edgeRefs.push_back(m_edges.add(first, second));
+  ElementRef p = edgeRefs.back();
+  tx.set(p, {static_cast<double>(20),
+            static_cast<double>(20),
+            static_cast<double>(20),
+            static_cast<double>(20),
+            static_cast<double>(20)});
+  
+  first = reorder_vertRefs[1];
+  second = reorder_vertRefs[2];
+  reorder_edgeRefs.push_back(reorder_m_edges.add(first, second));
+  p = reorder_edgeRefs.back();
+  reorder_tx.set(p, {static_cast<double>(20),
+            static_cast<double>(20),
+            static_cast<double>(20),
+            static_cast<double>(20),
+            static_cast<double>(20)});
+  
+  first = vertRefs[0];
+  second = vertRefs[1];
+  edgeRefs.push_back(m_edges.add(first, second));
+  p = edgeRefs.back();
+  tx.set(p, {static_cast<double>(10),
+            static_cast<double>(10),
+            static_cast<double>(10),
+            static_cast<double>(10),
+            static_cast<double>(10)});
+  
+  first = reorder_vertRefs[0];
+  second = reorder_vertRefs[1];
+  reorder_edgeRefs.push_back(reorder_m_edges.add(first, second));
+  p = reorder_edgeRefs.back();
+  reorder_tx.set(p, {static_cast<double>(10),
+            static_cast<double>(10),
+            static_cast<double>(10),
+            static_cast<double>(10),
+            static_cast<double>(10)});
+  
+  vector<int> vertexReordering {2, 0, 1};
+  vector<int> edgeReordering {1,0};
+  
+  reorderVertexSet(reorder_m_edges, reorder_m_verts, vertexReordering);
+  reorderEdgeSet(reorder_m_edges, edgeReordering);
+  
+  for (int i = 0; i < vertRefs.size(); ++i) {
+    for (int j =0; j < 3; ++j) {
+      auto incorrect = reorder_x.get(reorder_vertRefs[i])(j);
+      auto actual = reorder_x.get(reorder_vertRefs[vertexReordering[i]])(j);
+      auto expected = x.get(vertRefs[i])(j);
+      ASSERT_NE(incorrect, expected);
+      SIMIT_ASSERT_FLOAT_EQ(actual, expected); 
+    }
+  }
+  
+  for (int i = 0; i < vertRefs.size(); ++i) {
+    for (int j =0; j < 4; ++j) {
+      auto incorrect = reorder_a.get(reorder_vertRefs[i])(j);
+      auto actual = reorder_a.get(reorder_vertRefs[vertexReordering[i]])(j);
+      auto expected = a.get(vertRefs[i])(j);
+      ASSERT_NE(incorrect, expected);
+      SIMIT_ASSERT_FLOAT_EQ(actual, expected); 
+    }
+  }
+   
+  for (int i = 0; i < edgeRefs.size(); ++i) {
+    for (int j = 0; j < 5; ++j) {
+      auto incorrect = reorder_tx.get(reorder_edgeRefs[i])(j);
+      auto actual = reorder_tx.get(reorder_edgeRefs[edgeReordering[i]])(j);
+      auto expected = tx.get(edgeRefs[i])(j);
+      ASSERT_NE(incorrect, expected);
+      SIMIT_ASSERT_FLOAT_EQ(actual, expected); 
+    }
+  }
 }
 
 TEST(Program, reorderFemSpecificTest) {
