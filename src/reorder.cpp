@@ -207,15 +207,18 @@ namespace simit {
     reorderFields(edgeSet.getFields(), edgeOrdering);
   }
 
+  void reorderEdgeSetByVertexOrdering(Set& edgeSet, const vector<int>& vertexOrdering) {
+    for (int i=0; i < edgeSet.getSize() * edgeSet.getCardinality(); ++i) {
+      edgeSet.getEndpointsPtr()[i] = vertexOrdering[edgeSet.getEndpointsPtr()[i]]; 
+    }
+  }
+    
   void reorderVertexSet(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
     // Reset Endpoints to reflect reordering
     // Vertex ordering maps old to new identity 
     // This itertates over all enpoints translating from old to new
-    for (int i=0; i < edgeSet.getSize() * edgeSet.getCardinality(); ++i) {
-      iassert(vertexOrdering[edgeSet.getEndpointsPtr()[i]] < vertexSet.getSize());
-      edgeSet.getEndpointsPtr()[i] = vertexOrdering[edgeSet.getEndpointsPtr()[i]]; 
-    }
-    
+    reorderEdgeSetByVertexOrdering(edgeSet, vertexOrdering); 
+
     iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderFields(vertexSet.getFields(), vertexOrdering);
   }
