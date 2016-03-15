@@ -126,7 +126,6 @@ void femTest(string& filename, string& prefix, int nSteps) {
   clock_t end = clock(); 
   double randomTime = double(end - begin) / CLOCKS_PER_SEC;
   
-  cout << "Random Ordering took:    " << randomTime << " seconds" << endl;
   MeshVol reorder_mv;
   reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
   Set reorder_m_verts;
@@ -142,15 +141,8 @@ void femTest(string& filename, string& prefix, int nSteps) {
   reorder(reorder_m_tets, reorder_m_verts, edgeOrdering, vertexOrdering);
   end = clock();
   double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
-  cout << "Reordering took:         " << reorderTime << " seconds" << endl;
   
-  begin = clock();
   loadAndRunFem(filename, reorder_m_verts, reorder_m_tets, nSteps); 
-  end = clock();
-  double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
-  cout << "Reordered Ordering took: " << reorderedTime << " seconds" << endl;
-  cout << "Reordering Percentage:   " << (reorderTime / reorderedTime) * 100 << "%" << endl;
-  cout << "Reordering Speedup:      " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
   vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, vertexOrdering);
 }
   
@@ -183,61 +175,6 @@ FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets
   return x;
 } 
   
-void loadAndRunAverage(string& filename, Set& m_verts, Set& m_tets, const int nSteps) {
-  Function m_timeStepper = loadFunction(filename, "main");
-  m_timeStepper.bind("verts", &m_verts);
-  m_timeStepper.bind("tets", &m_tets);
-  m_timeStepper.init();
-  
-  for (size_t i=0; i < nSteps; ++i) {
-    m_timeStepper.runSafe();
-  }
-  m_timeStepper.mapArgs();
-}
-
-void averageTest(string& filename, string& prefix, int nSteps) {
-  string nodeFile = prefix + ".node";
-  string eleFile = prefix + ".ele";
-  MeshVol mv;
-  mv.loadTet(nodeFile.c_str(), eleFile.c_str());
-  Set m_verts;
-  Set m_tets(m_verts,m_verts,m_verts,m_verts);
-  vector<ElementRef> vertRefs;
-  
-  FieldRef<simit_float,3> edge_x = initializeAverage(mv, m_verts, m_tets, vertRefs); 
-  
-  clock_t begin = clock();
-  loadAndRunAverage(filename, m_verts, m_tets, nSteps); 
-  clock_t end = clock(); 
-  double randomTime = double(end - begin) / CLOCKS_PER_SEC;
-  
-  cout << "Random Ordering took:    " << randomTime << " seconds" << endl;
-  MeshVol reorder_mv;
-  reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
-  Set reorder_m_verts;
-  Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
-  vector<ElementRef> reorder_vertRefs;
-  
-  FieldRef<simit_float,3> reorder_edge_x = initializeAverage(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
-  
-  vector<int> vertexOrdering;
-  vector<int> edgeOrdering;
-  reorder_m_verts.setSpatialField("x");
-  begin = clock();
-  reorder(reorder_m_tets, reorder_m_verts, edgeOrdering, vertexOrdering);
-  end = clock();
-  double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
-  cout << "Reordering took:         " << reorderTime << " seconds" << endl;
-  
-  begin = clock();
-  loadAndRunAverage(filename, reorder_m_verts, reorder_m_tets, nSteps); 
-  end = clock();
-  double reorderedTime = double(end - begin) / CLOCKS_PER_SEC;
-  cout << "Reordered Ordering took: " << reorderedTime << " seconds" << endl;
-  cout << "Reordering Percentage:   " << (reorderTime / reorderedTime) * 100 << "%" << endl;
-  cout << "Reordering Speedup:      " << ((randomTime - reorderedTime) / randomTime) * 100 << "%" << endl;
-}
-
 TEST(Program, reorder2D) {
   ::testing::FLAGS_gtest_death_test_style = "threadsafe";
   Set m_verts;
@@ -281,8 +218,7 @@ TEST(Program, reorderNoSpatialField) {
               static_cast<simit_float>(3+ii)});
   }
     
-  ElementRef t = m_edges.add(vertRefs[0], vertRefs[1]);
-  tx.set(t, {static_cast<simit_float>(0.5),
+  ElementRef t = m_edges.add(vertRefs[0], vertRefs[1]); tx.set(t, {static_cast<simit_float>(0.5),
       static_cast<simit_float>(0.5),
       static_cast<simit_float>(0.5)});
   
@@ -596,24 +532,4 @@ TEST(Program, reorderFemTest) {
                          "femTet.sim";
   size_t nSteps = 10;
   femTest(filename, prefix, nSteps);
-}
-
-TEST(Program, reorderDragon0) {
-  string dir(TEST_INPUT_DIR);
-  string prefix=dir+"/program/fem/dragon.0";
-  string filename = string(TEST_INPUT_DIR) + "/" +
-                         toLower(test_info_->test_case_name()) + "/" +
-                         "femTet.sim";
-  size_t nSteps = 1;
-  femTest(filename, prefix, nSteps);
-}
-
-TEST(Program, reorderAverage0) {
-  string dir(TEST_INPUT_DIR);
-  string prefix=dir+"/program/fem/dragon.0";
-  string filename = string(TEST_INPUT_DIR) + "/" +
-                         toLower(test_info_->test_case_name()) + "/" +
-                         "averageTet.sim";
-  size_t nSteps = 100;
-  averageTest(filename, prefix, nSteps);
 }
