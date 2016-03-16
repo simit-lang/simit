@@ -212,6 +212,30 @@ void complexNormInit() {
                         Func::Intrinsic);
 }
 
+static Func complexGetRealVar;
+void complexGetRealInit() {
+  complexGetRealVar = Func("complexGetReal",
+                           {Var("c", Complex)},
+                           {Var("r", Float)},
+                           Func::Intrinsic);
+}
+
+static Func complexGetImagVar;
+void complexGetImagInit() {
+  complexGetImagVar = Func("complexGetImag",
+                           {Var("c", Complex)},
+                           {Var("r", Float)},
+                           Func::Intrinsic);
+}
+
+static Func complexConjVar;
+void complexConjInit() {
+  complexConjVar = Func("complexConj",
+                        {Var("c", Complex)},
+                        {Var("r", Complex)},
+                        Func::Intrinsic);
+}
+
 static Func simitClockVar;
 void simitClockInit() {
   simitClockVar = Func("simitClock",
@@ -406,6 +430,27 @@ const Func& complexNorm() {
   return complexNormVar;
 }
 
+const Func& complexGetReal() {
+  if (!complexGetRealVar.defined()) {
+    complexGetRealInit();
+  }
+  return complexGetRealVar;
+}
+
+const Func& complexGetImag() {
+  if (!complexGetImagVar.defined()) {
+    complexGetImagInit();
+  }
+  return complexGetImagVar;
+}
+
+const Func& complexConj() {
+  if (!complexConjVar.defined()) {
+    complexConjInit();
+  }
+  return complexConjVar;
+}
+
 const Func& simitClock() {
   if (!simitClockVar.defined()) {
     simitClockInit();
@@ -442,6 +487,9 @@ const std::map<std::string,Func> &byNames() {
     solveInit();
     createComplexInit();
     complexNormInit();
+    complexGetRealInit();
+    complexGetImagInit();
+    complexConjInit();
     simitClockInit();
     simitStoreTimeInit();
     byNameMap.insert({{"mod",modVar},
@@ -462,6 +510,9 @@ const std::map<std::string,Func> &byNames() {
                       {"solve",solveVar},
                       {"createComplex",createComplexVar},
                       {"complexNorm",complexNormVar},
+                      {"complexGetReal",complexGetRealVar},
+                      {"complexGetImag",complexGetImagVar},
+                      {"complexConj",complexConjVar},
                       {"simitClock",simitClockVar},
                       {"simitStoreTime",simitStoreTimeVar}});
   }

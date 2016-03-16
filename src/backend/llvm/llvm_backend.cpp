@@ -484,6 +484,18 @@ void LLVMBackend::compile(const ir::Call& call) {
     }, llvmFloatType());
     return;
   }
+  else if (call.func == ir::intrinsics::complexGetReal()) {
+    val = builder->ComplexGetReal(args[0]);
+  }
+  else if (call.func == ir::intrinsics::complexGetImag()) {
+    val = builder->ComplexGetImag(args[0]);
+  }
+  else if (call.func == ir::intrinsics::complexConj()) {
+    val = builder->CreateComplex(
+        builder->ComplexGetReal(args[0]),
+        builder->CreateFNeg(builder->ComplexGetImag(args[0])));
+    return;
+  }
   else if (call.func == ir::intrinsics::simitClock()) {
     val = emitCall("simitClock", args, llvmFloatType());
     return;
@@ -950,6 +962,17 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
         builder->ComplexGetReal(args[0]),
         builder->ComplexGetImag(args[0])
       }, llvmFloatType());
+    }
+    else if (callStmt.callee == ir::intrinsics::complexGetReal()) {
+      call = builder->ComplexGetReal(args[0]);
+    }
+    else if (callStmt.callee == ir::intrinsics::complexGetImag()) {
+      call = builder->ComplexGetImag(args[0]);
+    }
+    else if (callStmt.callee == ir::intrinsics::complexConj()) {
+      call = builder->CreateComplex(
+          builder->ComplexGetReal(args[0]),
+          builder->CreateFNeg(builder->ComplexGetImag(args[0])));
     }
     else if (callStmt.callee == ir::intrinsics::simitClock()) {
       call = emitCall("simitClock", args, llvmFloatType());

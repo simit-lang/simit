@@ -1,3 +1,17 @@
+%%% getreal
+%! getreal(<1.0,2.0>) == 1.0;
+%! getreal(<-3.0,4.0>) == -3.0;
+func getreal(a : complex) -> (c : float)
+  c = complexGetReal(a);
+end
+
+%%% getimag
+%! getimag(<1.0,2.0>) == 2.0;
+%! getimag(<3.0,-4.0>) == -4.0;
+func getimag(a : complex) -> (c : float)
+  c = complexGetImag(a);
+end
+
 %%% add
 %! doadd(<1.0,2.0>,<3.0,4.0>) == <4.0,6.0>;
 %! doadd(<1.0,2.0>,<-3.0,-4.0>) == <-2.0,-2.0>;
@@ -21,6 +35,19 @@ end
 %! dodiv(<3.0,4.0>,<1.0,2.0>) == <2.2,-0.4>;
 func dodiv(a : complex, b : complex) -> (c : complex)
   c = a / b;
+end
+
+%%% complex-norm
+%! cnorm(<3.0,4.0>) == 5.0;
+func cnorm(a : complex) -> (c : float)
+  c = complexNorm(a);
+end
+
+%%% complex-conj
+%! cconj(<1.0,2.0>) == <1.0,-2.0>;
+%! cconj(<3.0,-4.0>) == <3.0,4.0>;
+func cconj(a : complex) -> (c : complex)
+  c = complexConj(a);
 end
 
 %%% vector-add
