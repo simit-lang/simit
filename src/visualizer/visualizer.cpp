@@ -144,7 +144,7 @@ GLuint createGLProgram(const string& vertexShaderStr,
     glGetShaderInfoLog(vertexShader, logSize, &logSize, &errorLog[0]);
     std::cerr << errorLog << std::endl;
     ierror << "Vertex shader failed to compile";
-    delete errorLog;
+    delete[] errorLog;
   }
   glCompileShader(fragmentShader);
   glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &success);
@@ -155,7 +155,7 @@ GLuint createGLProgram(const string& vertexShaderStr,
     glGetShaderInfoLog(fragmentShader, logSize, &logSize, &errorLog[0]);
     std::cerr << errorLog << std::endl;
     ierror << "Fragment shader failed to compile";
-    delete errorLog;
+    delete[] errorLog;
   }
 
   // Make and link the program

@@ -219,7 +219,7 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
     for (auto &var : map->vars) {
       iassert(var.getType().isTensor());
       const TensorType *type = var.getType().toTensor();
-      Expr zero = Literal::make(TensorType::make(type->getComponentType()),{0});
+      Expr zero = Literal::make(TensorType::make(type->getComponentType()),0);
       Stmt init = AssignStmt::make(var, zero);
       inlinedMap = Block::make(init, inlinedMap);
     }
