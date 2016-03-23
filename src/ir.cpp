@@ -307,9 +307,13 @@ Expr Literal::make(Type type, void* values) {
 }
 
 Expr Literal::make(Type type, std::vector<double> values) {
-  iassert(isScalar(type) || type.toTensor()->size() == values.size());
-  iassert(type.toTensor()->getComponentType().kind == ScalarType::Float)
-      << "Float array constructor must use float component type";
+  iassert(isScalar(type) || type.toTensor()->getComponentType().isFloat() && 
+          type.toTensor()->size() == values.size() || 
+          type.toTensor()->getComponentType().isComplex() && 
+          2 * type.toTensor()->size() == values.size());
+  iassert(type.toTensor()->getComponentType().isFloat() || 
+          type.toTensor()->getComponentType().isComplex())
+      << "Float array constructor must use float or complex component type";
   if (ScalarType::singleFloat()) {
     // Convert double vector to float vector
     std::vector<float> floatValues;

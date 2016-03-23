@@ -112,12 +112,7 @@ llvm::Type* llvmType(ScalarType stype) {
 }
 
 llvm::Type *llvmFloatType() {
-  if (ScalarType::singleFloat()) {
-    return LLVM_FLOAT;
-  }
-  else {
-    return LLVM_DOUBLE;
-  }
+  return ScalarType::singleFloat() ? LLVM_FLOAT : LLVM_DOUBLE;
 }
 
 llvm::StructType *llvmComplexType() {

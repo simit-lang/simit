@@ -80,8 +80,8 @@ TEST(System, map_assemble_from_literal_vector) {
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
 
-  x.set(p0, {0.0});
-  x.set(p1, {0.0});
+  x.set(p0, 0.0);
+  x.set(p1, 0.0);
 
   // Springs
   Set springs(points,points);
@@ -145,8 +145,8 @@ TEST(System, DISABLED_map_assemble_fem) {
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
 
-  x.set(p0, {1.0});
-  x.set(p1, {1.0});
+  x.set(p0, 1.0);
+  x.set(p1, 1.0);
 
   // Springs
   Set springs(points,points);

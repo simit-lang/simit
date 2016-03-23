@@ -635,10 +635,10 @@ void IREmitter::visit(FieldReadExpr::Ptr expr) {
   const ir::Type type = lhs.type();
 
   iassert(type.isElement() || type.isSet());
-  const ir::ElementType *elemType = type.isElement() ? type.toElement() :
-                                    type.toSet()->elementType.toElement();
- 
-  iassert(elemType->hasField(expr->field->ident));
+  iassert(type.isElement() && type.toElement()->hasField(expr->field->ident) || 
+          type.isSet() && 
+          type.toSet()->elementType.toElement()->hasField(expr->field->ident));
+
   retExpr = ir::FieldRead::make(lhs, expr->field->ident);
 }
 
@@ -688,28 +688,33 @@ void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
   const DenseTensorValues tensorVals = emitTensorValues(tensor);
   const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(),
                                            tensorVals.dimSizes.rend());
-  ir::ScalarType::Kind elemType;
-  const void *data;
   switch (tensorVals.type) {
     case DenseTensorValues::Type::INT:
-      elemType = ir::ScalarType::Int;
-      data = static_cast<const void *>(tensorVals.intVals.data());
+    {
+      const auto tensorType = ir::TensorType::make(ir::ScalarType::Int, 
+                                                   idoms, tensor->transposed);
+      const void *data = static_cast<const void *>(tensorVals.intVals.data());
+      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data));
       break;
+    }
     case DenseTensorValues::Type::FLOAT:
-      elemType = ir::ScalarType::Float;
-      data = static_cast<const void *>(tensorVals.floatVals.data());
+    {
+      const auto tensorType = ir::TensorType::make(ir::ScalarType::Float, 
+                                                   idoms, tensor->transposed);
+      retExpr = ir::Literal::make(tensorType, tensorVals.floatVals);
       break;
+    }
     case DenseTensorValues::Type::COMPLEX:
-      elemType = ir::ScalarType::Complex;
-      data = static_cast<const void *>(tensorVals.complexVals.data());
+    {
+      const auto tensorType = ir::TensorType::make(ir::ScalarType::Complex, 
+                                                   idoms, tensor->transposed);
+      retExpr = ir::Literal::make(tensorType, tensorVals.complexVals);
       break;
+    }
     default:
-      elemType = ir::ScalarType::Float;
-      data = static_cast<const void *>(tensorVals.floatVals.data());
+      unreachable;
+      break;
   }
-  const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
-                                                   tensor->transposed);
-  retExpr = ir::Literal::make(tensorType, const_cast<void *>(data));
 }
 
 IREmitter::DenseTensorValues 
