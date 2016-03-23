@@ -635,10 +635,10 @@ void IREmitter::visit(FieldReadExpr::Ptr expr) {
   const ir::Type type = lhs.type();
 
   iassert(type.isElement() || type.isSet());
-  const ir::ElementType *elemType = type.isElement() ? type.toElement() :
-                                    type.toSet()->elementType.toElement();
- 
-  iassert(elemType->hasField(expr->field->ident));
+  iassert(type.isElement() && type.toElement()->hasField(expr->field->ident) || 
+          type.isSet() && 
+          type.toSet()->elementType.toElement()->hasField(expr->field->ident));
+
   retExpr = ir::FieldRead::make(lhs, expr->field->ident);
 }
 
