@@ -187,8 +187,16 @@ proc main
   var v : int;
 end
 
-%%% bad-decl
+%%% bad-decl-1
 const x : int = 1 + 2;
+
+%%% bad-decl-2
+element E
+end
+
+func f(e : E)
+  var f = e;
+end
 
 %%% bad-cond-1
 proc main
@@ -384,9 +392,15 @@ proc main
   S.f;
 end
 
-%%% write-to-readonly
+%%% write-to-readonly-1
 func foo(i : int)
   i = 1;
+end
+
+%%% write-to-readonly-2
+func foo()
+  i = 1;
+  i = 2;
 end
 
 %%% bad-dense-tensor-1

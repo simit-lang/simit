@@ -2,6 +2,11 @@
 var t : int;
 const c : int = 1;
 
+%%% bad-var-decl
+export func main()
+  var i;
+end
+
 %%% tuple-field
 element E
   t : int;

@@ -51,6 +51,28 @@ const mat21   : tensor[2,1](complex) = [<1.0,2.0>; <3.0,4.0>];
 const ten111  : tensor[1,1,1](complex) = [[<1.0,2.0>]];
 const ten121  : tensor[1,2,1](complex) = [<1.0,2.0>; <3.0,4.0>];
 
+%%% inferred-consts
+const st = true;
+const sf = false;
+
+const intvec = [1 2 3];
+const floatvec = [1.0 2.0 3.0];
+
+export func main()
+  const b : bool = st and sf and intvec(1) == 2 and floatvec(1) == 2.0;
+end
+
+%%% inferred-vars
+export func main()
+  var st = true;
+  var sf = false;
+  
+  var intvec = [1 2 3];
+  var floatvec = [1.0 2.0 3.0];
+
+  var b : bool = st and sf and intvec(1) == 2 and floatvec(1) == 2.0;
+end
+
 %%% const-use-1
 %! f() == 6.1;
 const s : float = 0.1;

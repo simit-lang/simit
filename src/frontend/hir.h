@@ -312,9 +312,10 @@ struct FuncDecl : public HIRNode {
 };
 
 struct VarDecl : public Stmt {
-  IdentDecl::Ptr var;
-  Expr::Ptr      initVal;
- 
+  Identifier::Ptr name;
+  Type::Ptr       type;
+  Expr::Ptr       initVal;
+
   typedef std::shared_ptr<VarDecl> Ptr;
 
   virtual void accept(HIRVisitor *visitor) {

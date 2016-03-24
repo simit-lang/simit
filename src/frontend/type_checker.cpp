@@ -485,7 +485,8 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
       const std::string varName = to<VarExpr>(stmt->lhs[i])->ident;
       if (!ctx.hasSymbol(varName)) {
         const ir::Type varType = typeChecked ? exprType->at(i) : ir::Type();
-        ctx.addSymbol(ir::Var(varName, varType));
+        const auto var = ir::Var(varName, varType);
+        ctx.addSymbol(varName, var, internal::Symbol::Read);
       }
     }
   }
@@ -1263,43 +1264,66 @@ TypeChecker::DenseTensorType
 
 void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst, 
                                           bool isGlobal) {
-  const ir::Var var = getVar(decl->var);
-  const ir::Type varType = var.getType();
+  const std::string varName = decl->name->ident;
+  const std::string varDeclType = isConst ? "constant" : "variable";
+  
+  ir::Type varType;
+  if (decl->type) {
+    varType = getIRType(decl->type);
+  }
   
   Ptr<Expr::Type> initType;
   if (decl->initVal) {
     initType = inferType(decl->initVal);
+
+    // Infer variable type from initial value if not explicitly specified.
+    if (!decl->type && initType && initType->size() == 1) {
+      varType = initType->at(0);
+    }
   }
 
   // Check that variable/constant hasn't already been declared in current scope.
-  if (ctx.hasSymbol(var.getName(), true) && 
-      ctx.getSymbol(var.getName()).getExpr().type().defined()) {
-    reportMultipleDefs("variable or constant", var.getName(), decl);
+  if (ctx.hasSymbol(varName, true) && 
+      ctx.getSymbol(varName).getExpr().type().defined()) {
+    reportMultipleDefs(varDeclType, varName, decl);
     return;
   }
   
   // Record declaration of variable/constant in symbol table.
   const auto access = isConst ? internal::Symbol::Read : 
                       internal::Symbol::ReadWrite;
-  ctx.addSymbol(var.getName(), var, access);
+  const auto var = ir::Var(varName, varType);
+  ctx.addSymbol(varName, var, access);
 
+  // If type signature is invalid or type signature is unspecified and we 
+  // cannot infer type, then we are done. 
   if (!varType.defined()) {
     return;
   }
 
+  // Check that variable is a tensor.
+  if (!varType.isTensor()) {
+    std::stringstream errMsg;
+    errMsg << "cannot declare a non-tensor " << varDeclType;
+    reportError(errMsg.str(), decl);
+    return;
+  }
+
   // Check that initial value type matches declared variable/constant type.
+  // If this check completes successfully, then we are done. 
   if (!initType || (initType->size() == 1 && 
       compareTypes(varType, initType->at(0)))) {
     return;
   }
 
   std::stringstream errMsg;
-  errMsg << "cannot initialize a variable or constant of type "
+  errMsg << "cannot initialize a " << varDeclType << " of type "
          << typeString(var.getType()) << " with an expression of type "
          << typeString(initType);
 
-  // Check that initial value is of tensor type.
-  iassert(varType.isTensor());
+  // Check that initial value is of tensor type. If it is not, then there must 
+  // be an error since we require variables to be tensors (at least for the 
+  // time being). Otherwise, proceed to check legal special cases.
   if (initType->size() != 1 || !initType->at(0).isTensor()) {
     reportError(errMsg.str(), decl);
     return;
@@ -1351,6 +1375,7 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
     }
   }
 
+  // Initialization must be illegal, so report error.
   reportError(errMsg.str(), decl);
 }
 

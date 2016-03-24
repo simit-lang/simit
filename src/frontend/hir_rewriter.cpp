@@ -81,7 +81,10 @@ void HIRRewriter::visit(FuncDecl::Ptr decl) {
 }
 
 void HIRRewriter::visit(VarDecl::Ptr decl) {
-  decl->var = rewrite<IdentDecl>(decl->var);
+  decl->name = rewrite<Identifier>(decl->name);
+  if (decl->type) {
+    decl->type = rewrite<Type>(decl->type);
+  }
   if (decl->initVal) {
     decl->initVal = rewrite<Expr>(decl->initVal);
   }

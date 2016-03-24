@@ -551,7 +551,11 @@ void HIRPrinter::visit(Test::Ptr test) {
 void HIRPrinter::printVarOrConstDecl(VarDecl::Ptr decl, const bool isConst) {
   printIndent();
   oss << (isConst ? "const " : "var ");
-  decl->var->accept(this);
+  decl->name->accept(this);
+  if (decl->type) {
+    oss << " : ";
+    decl->type->accept(this);
+  }
   if (decl->initVal) {
     oss << " = ";
     decl->initVal->accept(this);

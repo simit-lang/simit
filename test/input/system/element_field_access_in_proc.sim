@@ -11,7 +11,7 @@ extern V : set{Vertex};
 extern E : set{Edge}(V,V);
 
 export func main
-  i = 0.0;
+  var i = 0.0;
   for p in V
     i = i + p.b;
     for p in E

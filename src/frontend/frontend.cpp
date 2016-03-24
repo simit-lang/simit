@@ -29,12 +29,12 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   hir::Program::Ptr program = Parser(errors).parse(tokens);
 
   // Semantic analyses.
-  program = hir::FuncCallRewriter(errors).rewrite<hir::Program>(program);
-  program = hir::ConstantFolding().rewrite<hir::Program>(program);
+  program = hir::FuncCallRewriter(errors).rewrite(program);
+  program = hir::ConstantFolding().rewrite(program);
   // hir::PadTensorBlocks().pad(program);
   hir::ConstChecker(errors).check(program);
   hir::TypeChecker(errors).check(program);
-  program = hir::TupleReadRewriter().rewrite<hir::Program>(program);
+  program = hir::TupleReadRewriter().rewrite(program);
 
   // Only emit IR if no syntactic or semantic error was found.
   if (!errors->empty()) {

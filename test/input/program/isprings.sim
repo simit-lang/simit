@@ -83,12 +83,12 @@ export func main
 
   tol = 1e-5;
   maxiters = 25;
-  r = f - MDK*vguess;
-  p = r;
-  iter = 0;
+  var r = f - MDK*vguess;
+  var p = r;
+  var iter = 0;
   v = vguess;
 
-  normr2 = dot(r, r);
+  var normr2 = dot(r, r);
   while (normr2 > tol) and (iter < maxiters)
     Ap = MDK * p;
     denom = dot(p, Ap);
