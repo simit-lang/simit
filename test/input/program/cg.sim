@@ -22,7 +22,7 @@ func eye(p : Point) -> (I : tensor[points,points](float))
   I(p,p) = 1.0;
 end
 
-export func main
+export func main()
   b = points.b;
   I = map eye to points reduce +;
   A = I - 0.01 * (map f to springs reduce +);

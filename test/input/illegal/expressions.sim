@@ -16,7 +16,7 @@ end
 
 extern S : set{E};
 
-export func main
+export func main()
   for i in S
     i + 1;
   end
@@ -171,7 +171,7 @@ extern elems : set{E};
 func foo(e : E, f : E)
 end
 
-export func main
+export func main()
   for e in elems
     map foo(e) to elems;
   end

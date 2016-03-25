@@ -88,7 +88,7 @@ extern elems : set{E};
 func f(e : E)
 end
 
-export func main
+export func main()
   for e in elems
     f(e);
   end

@@ -26,10 +26,7 @@ end
 proc main
 end
 
-%%% export-func-1
-export func main
-end
-
-%%% export-func-2
+%%% export-func
 export func main()
 end
+

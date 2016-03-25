@@ -54,6 +54,9 @@ proc main
 end
 
 %%% bad-decl-1
+% NOTE: At some point we will want to implement constant folding and 
+%       propagation in the compiler front end, which would handle this case.
+%       This test should be removed at that point.
 const x : int = 1 + 2;
 
 %%% bad-decl-2

@@ -40,10 +40,10 @@ hir::HIRNode::Ptr Parser::parseProgramElement() {
       case Token::Type::TEST:
         return parseTest();
         break;
+      case Token::Type::EXPORT:
       case Token::Type::FUNC:
         return parseFuncDecl();
         break;
-      case Token::Type::EXPORT:
       case Token::Type::PROC:
         return parseProcDecl();
         break;
@@ -124,13 +124,16 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
   return externDecl;
 }
 
-// func_decl: 'func' ident arguments results stmt_block 'end'
+// func_decl: ['export'] 'func' ident arguments results stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   auto funcDecl = std::make_shared<hir::FuncDecl>();
-  funcDecl->exported = false;
 
-  const Token funcToken = consume(Token::Type::FUNC);
+  const Token funcToken = peek();
   funcDecl->setBeginLoc(funcToken);
+  funcDecl->exported = (funcToken.type == Token::Type::EXPORT);
+  
+  tryconsume(Token::Type::EXPORT);
+  consume(Token::Type::FUNC);
   
   funcDecl->name = parseIdent();
   funcDecl->args = parseArguments();
@@ -143,19 +146,13 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   return funcDecl;
 }
 
-// proc_decl: 
-//     ('proc' | ('export' 'func')) ident [arguments results] stmt_block 'end'
+// proc_decl: 'proc' ident [arguments results] stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::FuncDecl>();
   procDecl->exported = true;
 
-  const Token procToken = peek();
+  const Token procToken = consume(Token::Type::PROC);
   procDecl->setBeginLoc(procToken);
-
-  if (!tryconsume(Token::Type::PROC)) {
-    consume(Token::Type::EXPORT);
-    consume(Token::Type::FUNC);
-  }
 
   procDecl->name = parseIdent();
   if (peek().type == Token::Type::LP) {

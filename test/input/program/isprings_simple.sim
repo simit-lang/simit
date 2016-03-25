@@ -77,7 +77,7 @@ func compute_f(s: Spring, p : (Point*2)) ->
   f(p(1)) = fm1 + fg - fs;
 end
 
-export func main
+export func main()
   h = 1e-1;
 
   f = map compute_f to springs reduce +;
