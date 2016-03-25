@@ -1,0 +1,145 @@
+%%% bad-tensor-read
+proc main
+  var t : tensor[1](int);
+  t(1.0);
+end
+
+%%% bad-tensor-read-2
+func fizz()
+end
+
+proc main
+  var t : tensor[1](int);
+  t(fizz());
+end
+
+%%% bad-tensor-read-3
+func buzz() -> (i : int, j : int)
+end
+
+proc main
+  var t : tensor[1](int);
+  t(buzz());
+end
+
+%%% bad-tensor-read-4
+proc main
+  var t : tensor[1](float);
+  t(1,2);
+end
+
+%%% bad-tensor-read-5
+element A
+end
+
+element B
+end
+
+extern X : set{A};
+extern Y : set{B};
+
+func f(a : B) -> (t : tensor[X,X](int))
+  t(a,a) = 0;
+end
+
+%%% bad-tensor-read-6
+element A
+end
+
+extern X : set{A};
+
+func f(a : A) -> (t : tensor[X,X](int))
+  t(0,0) = 0;
+end
+
+%%% bad-tuple-read-1
+element e
+end
+
+func f(a : (e * 2))
+  a(0,1);
+end
+
+%%% bad-tuple-read-2
+element E
+end
+
+func f(a : (E * 2))
+  a(:);
+end
+
+%%% bad-tuple-read-3
+element E
+end
+
+func f(a : (E * 2))
+  a(0.0 + 1.0);
+end
+
+%%% bad-tuple-read-4
+element E
+end
+
+func fizz()
+end
+
+func f(a : (E * 2))
+  a(fizz());
+end
+
+%%% bad-set-read
+element E
+end
+
+extern x : set{E};
+
+proc main
+  x(1);
+end
+
+%%% bad-field-read-1
+func buzz() -> (i : int, j : int)
+end
+
+proc main
+  buzz().t;
+end
+
+%%% bad-field-read-2
+func bar() -> (i : int)
+end
+
+proc main
+  bar().t;
+end
+
+%%% bad-field-read-3
+element E
+end
+
+func foo(a : E)
+  a.e;
+end
+
+%%% bad-field-read-4
+element G
+  f : tensor[2,2](int);
+end
+
+extern S : set{G};
+
+proc main
+  S.f;
+end
+
+%%% write-to-readonly-1
+func foo(i : int)
+  i = 1;
+end
+
+%%% write-to-readonly-2
+func foo()
+  i = 1;
+  i = 2;
+end
+

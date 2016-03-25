@@ -1,0 +1,91 @@
+%%% bad-set-type
+element E
+end
+
+extern t : int;
+extern V : set{E}(t);
+
+%%% bad-tensor-type-1
+element E
+end
+
+proc main
+  var t : tensor[E](int);
+end
+
+%%% bad-tensor-type-2
+proc main
+  var t : tensor[2,2](int)';
+end
+
+%%% bad-tuple-type-1
+func foo(a : (F * 2))
+end
+
+%%% bad-tuple-type-2
+element F
+end
+
+func foo(a : (F * 0))
+end
+
+%%% redeclaration-1
+element E
+end
+
+element E
+end
+
+%%% redeclaration-2
+extern v : int;
+extern v : int;
+
+%%% redeclaration-3
+proc main
+end
+
+proc main
+end
+
+%%% redeclaration-4
+proc main
+  var v : int;
+  var v : int;
+end
+
+%%% bad-decl-1
+const x : int = 1 + 2;
+
+%%% bad-decl-2
+element E
+end
+
+func f(e : E)
+  var f = e;
+end
+
+%%% undeclared-var
+proc main
+  z * z - 2;
+end
+
+%%% bad-init
+proc main
+  var t : int = 1.0;
+end
+
+%%% bad-dense-tensor-1
+proc main
+  t = [1, 2; 3];
+end
+
+%%% bad-dense-tensor-2
+proc main
+  t = [[1, 2], [1, 2; 3, 4]];
+end
+
+%%% bad-dense-tensor-3
+proc main
+  t = [0 1; 2.0 3.0];
+end
+
