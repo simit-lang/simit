@@ -62,13 +62,11 @@ func compute_force(h:float, e : Tet, v : (Vert*4)) -> (f : tensor[verts](tensor[
   for ii in 0:3
     fi = H(:,ii);
     
-    c = v(ii).c;
-    if (c <= 0)
+    if (v(ii).c <= 0)
       f(v(ii)) = h*fi ;
     end    
     
-    c = v(3).c;
-    if (c <= 0)
+    if (v(3).c <= 0)
       f(v(3))  = -h*fi;
     end
   end
@@ -156,11 +154,11 @@ func precomputeTetMat(inout t : Tet, v : (Vert*4))
   end
 end
 
-export func initializeTet
+export func initializeTet()
   verts.m = map precomputeTetMat to tets;
 end
 
-export func main
+export func main()
   h=0.01;
   
   f = map compute_force(h) to tets reduce +;
@@ -170,12 +168,12 @@ export func main
   
   tol = 1e-6;
   maxiters=100;
-  r = b - (A*xguess);
-  p = r;
-  iter = 0;
-  x = xguess;
+  var r = b - (A*xguess);
+  var p = r;
+  var iter = 0;
+  var x = xguess;
   
-  normr2 = r' * r;
+  var normr2 = r' * r;
   while (normr2 > tol) and (iter < maxiters)
     Ap = A * p;
     denom = p' * Ap;

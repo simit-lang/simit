@@ -77,13 +77,13 @@ func fe_stress(v0x : tensor[2](float)', v1x : tensor[2](float)', v2x : tensor[2]
   e2 = v2x - v1x;
   E0 = v1X - v0X;
   E1 = v2X - v0X;
-  F = [0.0, 0.0; 0.0, 0.0];
+  var F = [0.0, 0.0; 0.0, 0.0];
   F(0,0) = e0(0);
   F(0,1) = e0(1);
   F(1,0) = e1(0);
   F(1,1) = e1(1);
 
-  m = [0.0, 0.0; 0.0, 0.0];
+  var m = [0.0, 0.0; 0.0, 0.0];
   m(0,0) = E0(0);
   m(0,1) = E0(1);
   m(1,0) = E1(0);
@@ -91,7 +91,7 @@ func fe_stress(v0x : tensor[2](float)', v1x : tensor[2](float)', v2x : tensor[2]
 
   det2m = m(0,0) * m(1,1) - m(0,1) * m(1,0);
 
-  inv2m = [0.0, 0.0; 0.0, 0.0];
+  var inv2m = [0.0, 0.0; 0.0, 0.0];
 
   d = 1.0/det2m;
   inv2m(0,0) =  m(1,1);

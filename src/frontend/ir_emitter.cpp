@@ -816,16 +816,18 @@ void IREmitter::DenseTensorValues::merge(
 }
 
 void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
-  const ir::Var var = emitVar(decl->var);
+  iassert(decl->initVal || !isConst);
   
+  const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
+  const auto varType = decl->type ? emitType(decl->type) : initExpr.type();
+  
+  const auto var = ir::Var(decl->name->ident, varType);
   iassert(!ctx->hasSymbol(var.getName(), true));
+
   const auto access = isConst ? internal::Symbol::Read : 
                       internal::Symbol::ReadWrite;
   ctx->addSymbol(var.getName(), var, access);
 
-  iassert(decl->initVal || !isConst);
-  auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
-  
   if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr) && 
       (isScalar(var.getType()) || !isScalar(initExpr.type()))) {
     // Optimization to avoid having to initialize constant multiple times. This 
@@ -975,7 +977,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       // Target variable might not have been declared.
       if (!ctx->hasSymbol(varName)) {
         var = ir::Var(varName, expr.type());
-        ctx->addSymbol(varName, var, internal::Symbol::ReadWrite);
+        ctx->addSymbol(varName, var, internal::Symbol::Read);
       }
   
       ctx->addStatement(ir::AssignStmt::make(var, expr));

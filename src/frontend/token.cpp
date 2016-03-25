@@ -55,6 +55,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'const'";
     case Token::Type::EXTERN:
       return "'extern'";
+    case Token::Type::EXPORT:
+      return "'export'";
     case Token::Type::PROC:
       return "'proc'";
     case Token::Type::FUNC:

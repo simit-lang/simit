@@ -1,0 +1,205 @@
+%%% bad-add-1
+proc main
+  var t : tensor[2](int) = [1 2];
+  var v : tensor[2](float) = [3.0 4.0];
+  t + v;
+end
+
+%%% bad-add-2
+proc main
+  true - false;
+end
+
+%%% bad-add-3
+element E
+end
+
+extern S : set{E};
+
+export func main()
+  for i in S
+    i + 1;
+  end
+end
+
+%%% bad-mul-1
+proc main
+  t = [1 2];
+  t * t;
+end
+
+%%% bad-mul-2
+proc main
+  N = [1 2; 3 4];
+  M * N;
+end
+
+%%% bad-mul-3
+proc main
+  N = [1 2; 3 4];
+  t = [1 2 3]';
+  N * t;
+end
+
+%%% bad-mul-4
+proc main
+  N = [1 2; 3 4];
+  t = [1 2 3];
+  t * N;
+end
+
+%%% bad-mul-5
+proc main
+  M = [[[1 2],[3 4]],[[5 6], [7 8]]];
+  M * M;
+end
+
+%%% bad-mul-6
+proc main
+  true * false;
+end
+
+%%% bad-mul-7
+proc main
+  1.0 * 2;
+end
+
+%%% bad-mul-8
+proc main
+  [1 2] * [1 2 3]';
+end
+
+%%% bad-mul-9
+proc main
+  [1 2; 3 4] * [1 2];
+end
+
+%%% bad-mul-10
+proc main
+  [1 2]' * [1 2; 3 4];
+end
+
+%%% bad-mul-11
+proc main
+  v = [1 2]';
+  (v + v) * [1 2; 3 4];
+end
+
+%%% bad-div-1
+proc main
+  M = [[[1 2],[3 4]],[[5 6], [7 8]]];
+  M / true;
+end
+
+%%% bad-div-2
+proc main
+  M = [[[1 2],[3 4]],[[5 6], [7 8]]];
+  M / 2.0;
+end
+
+%%% bad-map-1
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V,V);
+
+func f(v : E, u : (E * 1))
+end
+
+proc main
+  map f to U;
+end
+
+%%% bad-map-2
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V,V);
+
+func g(u : (E * 2))
+end
+
+proc main
+  map g to U;
+end
+
+%%% bad-map-3
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V,V);
+
+func h(f : float, v : E, u : (E * 2))
+end
+
+proc main
+  map h to U;
+end
+
+%%% bad-map-4
+element E
+end
+
+extern V : set{E};
+extern U : set{E}(V,V);
+
+func h(f : float, v : E, u : (E * 2))
+end
+
+proc main
+  map h(1) to U;
+end
+
+%%% bad-map-5
+func h(f : float)
+end
+
+proc main
+  t = 1.0;
+  map h to t; 
+end
+
+%%% bad-map-6
+element E
+end
+
+extern elems : set{E};
+
+func foo(e : E, f : E)
+end
+
+export func main()
+  for e in elems
+    map foo(e) to elems;
+  end
+end
+
+%%% bad-and
+proc main
+  1 and 2;
+end
+
+%%% bad-eq-1
+proc main
+  s = [1 2];
+  s == s;
+end
+
+%%% bad-eq-2
+proc main
+  1 == 2 == 2.0;
+end
+
+%%% bad-not
+proc main
+  not 1;
+end
+
+%%% bad-neg
+proc main
+  -true;
+end
+

@@ -213,4 +213,7 @@ SIM_TEST(controlflow, boolean);
 SIM_TEST_SUITE(illegal, true);
 SIM_TEST(illegal, lexical);
 SIM_TEST(illegal, syntactic);
-SIM_TEST(illegal, semantic);
+SIM_TEST(illegal, statements);
+SIM_TEST(illegal, expressions);
+SIM_TEST(illegal, declarations);
+SIM_TEST(illegal, accesses);

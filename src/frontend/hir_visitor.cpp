@@ -75,7 +75,10 @@ void HIRVisitor::visit(FuncDecl::Ptr decl) {
 }
 
 void HIRVisitor::visit(VarDecl::Ptr decl) {
-  decl->var->accept(this);
+  decl->name->accept(this);
+  if (decl->type) {
+    decl->type->accept(this);
+  }
   if (decl->initVal) {
     decl->initVal->accept(this);
   }

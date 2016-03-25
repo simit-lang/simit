@@ -41,7 +41,7 @@ func compute_stiffness(s : Spring, p : (Point*2)) ->
   f(p(1)) = -f0;
 end
 
-export func main
+export func main()
   h = 0.01;
 
   fg = map distribute_gravity to springs reduce +;

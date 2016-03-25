@@ -74,7 +74,7 @@ end
 
 func g(p : int) -> (r : int)
   r = 1;
-  tmp = 0;
+  var tmp = 0;
   while f(tmp) < p
     r = 2 * r;
     tmp = tmp + 1;
@@ -91,7 +91,7 @@ end
 
 func g(p : int) -> (r : int)
   r = 1;
-  tmp = 0;
+  var tmp = 0;
   do
     r = 2 * r;
     tmp = tmp + 1;

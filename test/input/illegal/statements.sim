@@ -1,0 +1,207 @@
+%%% bad-call-1
+func foo(i : int)
+end
+
+proc main
+  foo(:);
+end
+
+%%% bad-call-2
+func foo(i : int)
+end
+
+proc main
+  foo();
+end
+
+%%% bad-call-3
+func foo(i : int)
+end
+
+proc main
+  foo(1.0);
+end
+
+%%% bad-call-4
+func foo(i : int)
+end
+
+func bar() -> (i : int, j : int)
+end
+
+func bazz()
+end
+
+proc main
+  foo(bar()) + foo(bazz());
+end
+
+%%% bad-call-5
+proc main
+  cos(2.0, 3.0);
+end
+
+%%% bad-call-6
+proc main
+  var t : matrix[2,2](float);
+  norm(t);
+end
+
+%%% bad-call-7
+proc main
+  var t : matrix[2,2](float);
+  dot(t, t);
+end
+
+%%% bad-call-8
+proc main
+  var u : vector[3](float);
+  var v : vector[2](float);
+  dot(u, v);
+end
+
+%%% bad-call-9
+proc main
+  var M : matrix[3,3](float);
+  var y : vector[3](float);
+  const x : vector[3](float) = 0.0;
+  solve(M, y, x);
+end
+
+%%% bad-call-10
+func g(inout a : tensor[1](int)) -> (f : int)
+  a(0) = 2;
+end
+
+const x : tensor[1](int) = [1];
+
+proc main
+  g(x);
+end
+
+%%% bad-call-11
+element E
+end
+
+extern elems : set{E};
+
+func f(e : E)
+end
+
+export func main()
+  for e in elems
+    f(e);
+  end
+end
+
+%%% bad-assign-1
+proc main
+  1 = 1;
+end
+
+%%% bad-assign-2
+element E
+  f : int;
+end
+
+func foo(inout a : (E * 2))
+  a(1).f = 1;
+end
+
+%%% bad-assign-3
+proc main
+  const x : int = 1;
+  x = 2;
+end
+
+%%% bad-assign-4
+proc main
+  const x : tensor[1](int) = [1];
+  x(0) = 2;
+end
+
+%%% bad-assign-5
+element E
+end
+
+extern elems : set{E};
+
+proc main
+  for e in elems
+    ep = e;
+  end
+end
+
+%%% bad-assign-6
+func bar() -> (i : int)
+end
+
+proc main
+  var t : float;
+  t = bar();
+end
+
+%%% bad-assign-7
+func bazz() -> (i : int, j : int)
+end
+
+proc main
+  t = bazz();
+end
+
+%%% bad-apply
+element V
+end
+
+extern S : set{V};
+
+func f(inout v : V) -> (r : int)
+end
+
+proc main
+  apply f to S;
+end
+
+%%% bad-cond-1
+proc main
+  while 1
+  end
+end
+
+%%% bad-cond-2
+proc main
+  if 1
+  end
+end
+
+%%% bad-cond-3
+proc main
+  if true
+  elif 1.0
+  elif 1.0 + 2.0
+  end
+end
+
+%%% bad-range-1
+proc main
+  var r : int;
+  for i in r
+  end
+end
+
+%%% bad-range-2
+proc main
+  for i in true:false
+  end
+end
+
+%%% bad-print
+element E
+end
+
+extern x : set{E};
+
+proc main
+  print x;
+end
+

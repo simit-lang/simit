@@ -76,7 +76,7 @@ public:
   virtual void visit(ApplyStmt::Ptr);
   virtual void visit(Test::Ptr);
 
-  template <typename T>
+  template <typename T = Program>
   std::shared_ptr<T> rewrite(std::shared_ptr<T> ptr) {
     node.reset();
     ptr->accept(this);

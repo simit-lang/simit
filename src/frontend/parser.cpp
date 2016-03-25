@@ -40,10 +40,10 @@ hir::HIRNode::Ptr Parser::parseProgramElement() {
       case Token::Type::TEST:
         return parseTest();
         break;
+      case Token::Type::EXPORT:
       case Token::Type::FUNC:
         return parseFuncDecl();
         break;
-      case Token::Type::EXPORT:
       case Token::Type::PROC:
         return parseProcDecl();
         break;
@@ -124,13 +124,16 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
   return externDecl;
 }
 
-// func_decl: 'func' ident arguments results stmt_block 'end'
+// func_decl: ['export'] 'func' ident arguments results stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   auto funcDecl = std::make_shared<hir::FuncDecl>();
-  funcDecl->exported = false;
 
-  const Token funcToken = consume(Token::Type::FUNC);
+  const Token funcToken = peek();
   funcDecl->setBeginLoc(funcToken);
+  funcDecl->exported = (funcToken.type == Token::Type::EXPORT);
+  
+  tryconsume(Token::Type::EXPORT);
+  consume(Token::Type::FUNC);
   
   funcDecl->name = parseIdent();
   funcDecl->args = parseArguments();
@@ -143,19 +146,13 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   return funcDecl;
 }
 
-// proc_decl: 
-//     ('proc' | ('export' 'func')) ident [arguments results] stmt_block 'end'
+// proc_decl: 'proc' ident [arguments results] stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::FuncDecl>();
   procDecl->exported = true;
 
-  const Token procToken = peek();
+  const Token procToken = consume(Token::Type::PROC);
   procDecl->setBeginLoc(procToken);
-
-  if (!tryconsume(Token::Type::PROC)) {
-    consume(Token::Type::EXPORT);
-    consume(Token::Type::FUNC);
-  }
 
   procDecl->name = parseIdent();
   if (peek().type == Token::Type::LP) {
@@ -277,16 +274,22 @@ hir::Stmt::Ptr Parser::parseStmt() {
   }
 }
 
-// var_decl: 'var' tensor_decl ['=' expr] ';'
+// var_decl: 'var' ident (('=' expr) | (':' tensor_type ['=' expr])) ';'
 hir::VarDecl::Ptr Parser::parseVarDecl() {
   try {
     auto varDecl = std::make_shared<hir::VarDecl>();
     
     const Token varToken = consume(Token::Type::VAR);
     varDecl->setBeginLoc(varToken);
-    
-    varDecl->var = parseTensorDecl();
-    if (tryconsume(Token::Type::ASSIGN)) {
+  
+    varDecl->name = parseIdent();
+    if (tryconsume(Token::Type::COL)) {
+      varDecl->type = parseTensorType();
+      if (tryconsume(Token::Type::ASSIGN)) {
+        varDecl->initVal = parseExpr();
+      }
+    } else {
+      consume(Token::Type::ASSIGN);
       varDecl->initVal = parseExpr();
     }
   
@@ -302,7 +305,7 @@ hir::VarDecl::Ptr Parser::parseVarDecl() {
   }
 }
 
-// const_decl: 'const' tensor_decl '=' expr ';'
+// const_decl: 'const' ident [':' tensor_type] '=' expr ';'
 hir::ConstDecl::Ptr Parser::parseConstDecl() {
   try {
     auto constDecl = std::make_shared<hir::ConstDecl>();
@@ -310,7 +313,10 @@ hir::ConstDecl::Ptr Parser::parseConstDecl() {
     const Token constToken = consume(Token::Type::CONST);
     constDecl->setBeginLoc(constToken);
     
-    constDecl->var = parseTensorDecl();
+    constDecl->name = parseIdent();
+    if (tryconsume(Token::Type::COL)) {
+      constDecl->type = parseTensorType();
+    }
     consume(Token::Type::ASSIGN);
     constDecl->initVal = parseExpr();
   
