@@ -1,0 +1,20 @@
+element Point
+  val : float;
+end
+
+element Edge
+end
+
+extern V : set{Point};
+extern E : set{Edge}(V,V);
+
+func swap(e : Edge, inout p : (Point*2))
+  tmp = p(0).val;
+  p(0).val = p(1).val;
+  p(1).val = tmp;
+end
+
+export func main()
+  apply swap to E;
+end
+
