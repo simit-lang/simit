@@ -175,63 +175,6 @@ FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets
   return x;
 } 
   
-TEST(Program, reorder2D) {
-  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-  Set m_verts;
-  Set m_edges(m_verts,m_verts);
-  vector<ElementRef> vertRefs;
-  FieldRef<simit_float,2>  x = m_verts.addField<simit_float,2>("x");
-  FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
-  FieldRef<simit_float,3>  tx = m_edges.addField<simit_float,3>("x");
-  ASSERT_DEATH(m_verts.setSpatialField("x"), "Spatial Data must be 3D in order 1. Currently: 2");
-}
-
-
-TEST(Program, reorder4D) {
-  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-  Set m_verts;
-  Set m_edges(m_verts,m_verts);
-  vector<ElementRef> vertRefs;
-  FieldRef<simit_float,4>  x = m_verts.addField<simit_float,4>("x");
-  FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
-  FieldRef<simit_float,3>  tx = m_edges.addField<simit_float,3>("x");
-  ASSERT_DEATH(m_verts.setSpatialField("x"), "Spatial Data must be 3D in order 1. Currently: 4");
-}
-
-TEST(Program, reorderNoSpatialField) {
-  ::testing::FLAGS_gtest_death_test_style = "threadsafe";
-  Set m_verts;
-  Set m_edges(m_verts,m_verts);
-  vector<ElementRef> vertRefs;
-  FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
-  FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
-  FieldRef<simit_float,3>  tx = m_edges.addField<simit_float,3>("x");
-   
-  for(unsigned int ii =0 ;ii<3; ii++){
-    vertRefs.push_back(m_verts.add());
-    ElementRef p = vertRefs.back();
-    x.set(p, {static_cast<simit_float>(ii),
-              static_cast<simit_float>(ii),
-              static_cast<simit_float>(ii)});
-    a.set(p, {static_cast<simit_float>(3+ii),
-              static_cast<simit_float>(3+ii),
-              static_cast<simit_float>(3+ii)});
-  }
-    
-  ElementRef t = m_edges.add(vertRefs[0], vertRefs[1]); tx.set(t, {static_cast<simit_float>(0.5),
-      static_cast<simit_float>(0.5),
-      static_cast<simit_float>(0.5)});
-  
-  t = m_edges.add(vertRefs[1], vertRefs[2]);
-  tx.set(t, {static_cast<simit_float>(1.5),
-              static_cast<simit_float>(1.5),
-              static_cast<simit_float>(1.5)});
-  
-  vector<int> vertexOrdering;
-  vector<int> edgeOrdering;
-  ASSERT_DEATH(reorder(m_edges, m_verts, edgeOrdering, vertexOrdering), "Condition failed: vertexSet.hasSpatialField()");
-}
-
 TEST(Program, reorderInt) {
   Set m_verts;
   Set m_edges(m_verts,m_verts);
