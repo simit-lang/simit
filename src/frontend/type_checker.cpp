@@ -944,9 +944,9 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 
 void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   const Ptr<Expr::Type> lhsType = inferType(expr->tensor);
+  expr->access = expr->tensor->access;
 
   if (!lhsType) {
-    expr->access = expr->tensor->access;
     return;
   }
 
@@ -955,15 +955,11 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
   if (lhsType->size() != 1) {
     const auto msg = "can only access elements of a single tensor or tuple";
     reportError(msg, expr->tensor);
-    
-    expr->access = expr->tensor->access;
     return;
   }
 
   // Check that program only ever attempts to read from tensors or tuples.
   if (lhsType->at(0).isTensor()) {
-    expr->access = expr->tensor->access;
-
     const ir::TensorType *tensorType = lhsType->at(0).toTensor();
     const auto dimensions = tensorType->getDimensions();
     const auto outerDims = tensorType->getOuterDimensions();

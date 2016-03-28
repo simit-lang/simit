@@ -7,6 +7,38 @@
 using namespace std;
 using namespace simit;
 
+TEST(System, swap) {
+  Set V;
+  FieldRef<simit_float> val = V.addField<simit_float>("val");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  ElementRef v3 = V.add();
+  val.set(v0, 1.0);
+  val.set(v1, 2.0);
+  val.set(v2, 3.0);
+  val.set(v3, 4.0);
+
+  Set E(V,V);
+  E.add(v0,v1);
+  E.add(v2,v3);
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("V", &V);
+  func.bind("E", &E);
+
+  func.runSafe();
+
+  // Check that inputs are swapped appropriately
+  ASSERT_EQ(2.0, val.get(v0));
+  ASSERT_EQ(1.0, val.get(v1));
+  ASSERT_EQ(4.0, val.get(v2));
+  ASSERT_EQ(3.0, val.get(v3));
+}
+
 TEST(System, element_field_access_in_proc) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");

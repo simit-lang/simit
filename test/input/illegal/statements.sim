@@ -100,27 +100,18 @@ proc main
 end
 
 %%% bad-assign-2
-element E
-  f : int;
-end
-
-func foo(inout a : (E * 2))
-  a(1).f = 1;
-end
-
-%%% bad-assign-3
 proc main
   const x : int = 1;
   x = 2;
 end
 
-%%% bad-assign-4
+%%% bad-assign-3
 proc main
   const x : tensor[1](int) = [1];
   x(0) = 2;
 end
 
-%%% bad-assign-5
+%%% bad-assign-4
 element E
 end
 
@@ -132,7 +123,7 @@ proc main
   end
 end
 
-%%% bad-assign-6
+%%% bad-assign-5
 func bar() -> (i : int)
 end
 
@@ -141,7 +132,7 @@ proc main
   t = bar();
 end
 
-%%% bad-assign-7
+%%% bad-assign-6
 func bazz() -> (i : int, j : int)
 end
 

@@ -61,10 +61,11 @@ void MapFunctionRewriter::visit(const FieldWrite *op) {
   else if(isa<TupleRead>(op->elementOrSet) &&
           isa<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple) &&
           to<VarExpr>(to<TupleRead>(op->elementOrSet)->tuple)->var==neighbors) {
-    //TODO: handle this case.
-    // Currently, our parser doesn't parse such statements, so these should not
-    // arise.
-    not_supported_yet;
+    expr = FieldRead::make(neighborSet, op->fieldName);
+    Expr setFieldRead = expr;
+
+    Expr index = IRRewriter::rewrite(op->elementOrSet);
+    stmt = TensorWrite::make(setFieldRead, {index}, rewrite(op->value));
   }
   else {
     // TODO: Handle the case where the target var was reassigned
