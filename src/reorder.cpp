@@ -196,7 +196,7 @@ namespace simit {
   }
   
   void reorderEdgeSet(Set& edgeSet, const vector<int>& edgeOrdering) {
-    iassert(edgeOrdering.size() == edgeSet.getSize()) << "Edge Mapping must be the same size as the edge set" << edgeOrdering.size() << " != " << edgeSet.getSize(); 
+    iassert(edgeOrdering.size() == (unsigned int) edgeSet.getSize()) << "Edge Mapping must be the same size as the edge set" << edgeOrdering.size() << " != " << edgeSet.getSize(); 
     int* endpoints = edgeSet.getEndpointsPtr();
     const unsigned int size = edgeSet.getSize();
     const int cardinality = edgeSet.getCardinality();
@@ -206,7 +206,7 @@ namespace simit {
 
     for (unsigned int edgeIndex=0; edgeIndex < size; ++edgeIndex) {
       iassert(edgeIndex < edgeOrdering.size());
-      iassert(edgeOrdering[edgeIndex] < (size - 1) * cardinality * sizeof(int));
+      iassert(edgeOrdering[edgeIndex] < (int) ((size - 1) * cardinality * sizeof(int)));
       memcpy(newEndpoints + edgeIndex * cardinality, endpoints + edgeOrdering[edgeIndex] * cardinality, cardinality * sizeof(int));
     }
     memcpy(endpoints, newEndpoints, size * cardinality * sizeof(int));
@@ -222,13 +222,13 @@ namespace simit {
   }
     
   void reorderVertexSet(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
-    iassert(vertexOrdering.size() == vertexSet.getSize()) << "Vertex Mapping must be the same size as the vertex set" << vertexOrdering.size() << " != " << vertexSet.getSize(); 
+    iassert(vertexOrdering.size() == (unsigned int) vertexSet.getSize()) << "Vertex Mapping must be the same size as the vertex set" << vertexOrdering.size() << " != " << vertexSet.getSize(); 
     // Reset Endpoints to reflect reordering
     // Vertex ordering maps old to new identity 
     // This itertates over all enpoints translating from old to new
     reorderEdgeSetByVertexOrdering(edgeSet, vertexOrdering); 
 
-    iassert(vertexOrdering.size() == vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
+    iassert(vertexOrdering.size() == (unsigned int) vertexSet.getSize()) << vertexOrdering.size() << ", " << vertexSet.getSize();
     reorderFields(vertexSet.getFields(), vertexOrdering);
   }
   
