@@ -54,12 +54,7 @@ set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/lib")
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin")
 
 set(OPTIMIZE "-O3" CACHE STRING "Optimization level")
-if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-# Turn off excessive warnings on Linux/GCC
-  set(C_CXX_FLAGS "-Wno-unused-parameter -Wno-missing-field-initializers -Wno-deprecated")
-else()
-  set(C_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-unused-local-typedef -Wno-missing-field-initializers -Wmissing-declarations -Woverloaded-virtual -pedantic-errors -Wno-deprecated")
-endif()
+set(C_CXX_FLAGS "-Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers -Wmissing-declarations -Woverloaded-virtual -pedantic-errors -Wno-deprecated")
 set(CMAKE_C_FLAGS "${C_CXX_FLAGS}")
 set(CMAKE_CXX_FLAGS "${C_CXX_FLAGS} -std=c++11")
 

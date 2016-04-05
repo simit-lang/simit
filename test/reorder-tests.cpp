@@ -7,16 +7,12 @@
 #include "error.h"
 #include "mesh.h"
 
-#include <iostream>
-#include <ostream>
-#include <ctime>
-
 using namespace std;
 using namespace simit;
 void vertexDataChecks(FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs, FieldRef<simit_float,3>& reorder_x, vector<ElementRef>& reorder_vertRefs,
     vector<int>& newOrdering) {
 
-  for (int i = 0; i < newOrdering.size(); ++i) {
+  for (unsigned int i = 0; i < newOrdering.size(); ++i) {
     SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(0), reorder_x.get(reorder_vertRefs[newOrdering[i]])(0));
     SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(1), reorder_x.get(reorder_vertRefs[newOrdering[i]])(1));
     SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(2), reorder_x.get(reorder_vertRefs[newOrdering[i]])(2));
@@ -83,7 +79,7 @@ FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, ve
   return x;
 }
 
-void loadAndRunFem(string& filename, Set& m_verts, Set& m_tets, const int nSteps) {
+void loadAndRunFem(string& filename, Set& m_verts, Set& m_tets, const unsigned int nSteps) {
   Function m_precomputation;
   Function m_timeStepper;
   m_precomputation = loadFunction(filename, "initializeTet");
@@ -93,7 +89,7 @@ void loadAndRunFem(string& filename, Set& m_verts, Set& m_tets, const int nSteps
   m_precomputation.init();
   m_precomputation.unmapArgs();
 
-  for (size_t i=0; i < nSteps; ++i) {
+  for (unsigned int i=0; i < nSteps; ++i) {
     m_precomputation.runSafe();
   }
   m_precomputation.mapArgs();  
@@ -104,13 +100,13 @@ void loadAndRunFem(string& filename, Set& m_verts, Set& m_tets, const int nSteps
   m_timeStepper.init();
   m_precomputation.unmapArgs();
 
-  for (size_t i=0; i < nSteps; ++i) {
+  for (unsigned int i=0; i < nSteps; ++i) {
     m_timeStepper.runSafe();
   }
   m_timeStepper.mapArgs();
 }
 
-void femTest(string& filename, string& prefix, int nSteps) {
+void femTest(string& filename, string& prefix, const unsigned int nSteps) {
   string nodeFile = prefix + ".node";
   string eleFile = prefix + ".ele";
   MeshVol mv;
@@ -120,11 +116,7 @@ void femTest(string& filename, string& prefix, int nSteps) {
   vector<ElementRef> vertRefs;
   
   FieldRef<simit_float,3> x = initializeFem(mv, m_verts, m_tets, vertRefs); 
-  
-  clock_t begin = clock();
   loadAndRunFem(filename, m_verts, m_tets, nSteps); 
-  clock_t end = clock(); 
-  double randomTime = double(end - begin) / CLOCKS_PER_SEC;
   
   MeshVol reorder_mv;
   reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
@@ -137,10 +129,7 @@ void femTest(string& filename, string& prefix, int nSteps) {
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
   reorder_m_verts.setSpatialField("x");
-  begin = clock();
   reorder(reorder_m_tets, reorder_m_verts, edgeOrdering, vertexOrdering);
-  end = clock();
-  double reorderTime = double(end - begin) / CLOCKS_PER_SEC;
   
   loadAndRunFem(filename, reorder_m_verts, reorder_m_tets, nSteps); 
   vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, vertexOrdering);
@@ -260,7 +249,7 @@ TEST(Program, reorderInt) {
   reorderVertexSet(reorder_m_edges, reorder_m_verts, vertexReordering);
   reorderEdgeSet(reorder_m_edges, edgeReordering);
   
-  for (int i = 0; i < vertRefs.size(); ++i) {
+  for (unsigned int i = 0; i < vertRefs.size(); ++i) {
     for (int j =0; j < 3; ++j) {
       auto incorrect = reorder_x.get(reorder_vertRefs[i])(j);
       auto actual = reorder_x.get(reorder_vertRefs[vertexReordering[i]])(j);
@@ -270,7 +259,7 @@ TEST(Program, reorderInt) {
     }
   }
   
-  for (int i = 0; i < vertRefs.size(); ++i) {
+  for (unsigned int i = 0; i < vertRefs.size(); ++i) {
     for (int j =0; j < 4; ++j) {
       auto incorrect = reorder_a.get(reorder_vertRefs[i])(j);
       auto actual = reorder_a.get(reorder_vertRefs[vertexReordering[i]])(j);
@@ -280,7 +269,7 @@ TEST(Program, reorderInt) {
     }
   }
    
-  for (int i = 0; i < edgeRefs.size(); ++i) {
+  for (unsigned int i = 0; i < edgeRefs.size(); ++i) {
     for (int j = 0; j < 5; ++j) {
       auto incorrect = reorder_tx.get(reorder_edgeRefs[i])(j);
       auto actual = reorder_tx.get(reorder_edgeRefs[edgeReordering[i]])(j);
@@ -376,7 +365,7 @@ TEST(Program, reorderDouble) {
   reorderVertexSet(reorder_m_edges, reorder_m_verts, vertexReordering);
   reorderEdgeSet(reorder_m_edges, edgeReordering);
   
-  for (int i = 0; i < vertRefs.size(); ++i) {
+  for (unsigned int i = 0; i < vertRefs.size(); ++i) {
     for (int j =0; j < 3; ++j) {
       auto incorrect = reorder_x.get(reorder_vertRefs[i])(j);
       auto actual = reorder_x.get(reorder_vertRefs[vertexReordering[i]])(j);
@@ -386,7 +375,7 @@ TEST(Program, reorderDouble) {
     }
   }
   
-  for (int i = 0; i < vertRefs.size(); ++i) {
+  for (unsigned int i = 0; i < vertRefs.size(); ++i) {
     for (int j =0; j < 4; ++j) {
       auto incorrect = reorder_a.get(reorder_vertRefs[i])(j);
       auto actual = reorder_a.get(reorder_vertRefs[vertexReordering[i]])(j);
@@ -396,7 +385,7 @@ TEST(Program, reorderDouble) {
     }
   }
    
-  for (int i = 0; i < edgeRefs.size(); ++i) {
+  for (unsigned int i = 0; i < edgeRefs.size(); ++i) {
     for (int j = 0; j < 5; ++j) {
       auto incorrect = reorder_tx.get(reorder_edgeRefs[i])(j);
       auto actual = reorder_tx.get(reorder_edgeRefs[edgeReordering[i]])(j);
@@ -453,7 +442,7 @@ TEST(Program, reorderSquare) {
   string filename = string(TEST_INPUT_DIR) + "/" +
                          toLower(test_info_->test_case_name()) + "/" +
                          "femTet.sim";
-  size_t nSteps = 10;
+  unsigned int nSteps = 10;
   femTest(filename, prefix, nSteps);
 }
 
@@ -463,7 +452,7 @@ TEST(Program, reorderCube) {
   string filename = string(TEST_INPUT_DIR) + "/" +
                          toLower(test_info_->test_case_name()) + "/" +
                          "femTet.sim";
-  size_t nSteps = 10;
+  unsigned int nSteps = 10;
   femTest(filename, prefix, nSteps);
 }
 
@@ -473,6 +462,6 @@ TEST(Program, reorderFemTest) {
   string filename = string(TEST_INPUT_DIR) + "/" +
                          toLower(test_info_->test_case_name()) + "/" +
                          "femTet.sim";
-  size_t nSteps = 10;
+  unsigned int nSteps = 10;
   femTest(filename, prefix, nSteps);
 }
