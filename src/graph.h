@@ -137,6 +137,18 @@ public:
     fieldNames[name] = fields.size()-1;
     return FieldRef<T, dimensions...>(fieldData);
   }
+ 
+  // Added for reordering
+  void setSpatialField(const std::string& name) {
+    uassert(fieldNames.find(name) != fieldNames.end())
+        << "Invalid field name setting spatial field";
+    FieldData *fieldData = fields[fieldNames[name]];
+    uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. \
+      Currently order:" << fieldData->type->getOrder();
+    uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D \
+      in order 1. Currently: " << fieldData->type->getDimension(0); 
+    spatialFieldName = name;
+  }
 
   /// Get a Field corresponding to the string fieldName
   template <typename T, int... dimensions>
@@ -155,14 +167,16 @@ public:
   /// The endpoints refer to the respective Sets they come from.
   template <typename ...Endpoints>
   ElementRef add(Endpoints... endpoints) {
-    iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of endpoints.";
-    if (numElements > capacity-1)
+    iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of \
+      endpoints.";
+    if (numElements > capacity-1) {
       increaseEdgeCapacity();
-    
+    }
     addEndpoints(0, endpoints...);
 
-    if (numElements > capacity-1)
+    if (numElements > capacity-1) {
       increaseCapacity();
+    }
     return ElementRef(numElements++);
   }
 
@@ -397,7 +411,6 @@ public:
     return set.streamOut(os);
   }
 
-private:
   // A field on the members of the Set.
   // Invariant: elements < capacity
   struct FieldData {
@@ -460,8 +473,18 @@ private:
     FieldData& operator=(const FieldData& f);
   };
 
+  // Added getters for reordering
+  inline int* getEndpointsPtr() { return endpoints; }
+  inline int getFieldIndex(std::string name) { return fieldNames[name]; } inline 
+    std::vector<FieldData*>& getFields() { return fields; } inline std::string 
+    getSpatialFieldName() const { return spatialFieldName; }
+  inline bool hasSpatialField() const { return !spatialFieldName.empty(); }
+
+private:
+
   // Set data
   std::string name;
+  std::string spatialFieldName;
   int numElements;                           // number of elements in the set
   std::vector<const Set*> endpointSets;      // the sets the endpoints belong to
   int* endpoints;                            // the endpoints of edge elements
@@ -470,10 +493,8 @@ private:
   static const int capacityIncrement = 1024; // increment for capacity increases
 
   mutable internal::NeighborIndex *neighbors;// neighbor index (lazily created)
-
   std::map<std::string, int> fieldNames;     // name to field lookups
   std::vector<FieldData*> fields;            // fields of elements in the set
-
 
   /// disable copy constructors
   Set(const Set& s);
@@ -686,6 +707,17 @@ class FieldRefBaseParameterized : public FieldRefBase {
       elemData[i++] = val;
     }
   }
+  
+  void set(ElementRef element, std::vector<float> values) {
+    iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
+        << "Incorrect number of init values : " << 
+        (TensorRef<T,dimensions...>::getSize());
+    T *elemData = this->getElemDataPtr(element);
+    size_t i=0;
+    for (T val : values) {
+      elemData[i++] = val;
+    }
+  }
 
  protected:
   inline T *getElemDataPtr(ElementRef element) const {
@@ -892,7 +924,6 @@ private:
 
 Box createBox(Set *vertices, Set *edges,
               unsigned numX, unsigned numY, unsigned numZ);
-
 
 } // namespace simit
 
