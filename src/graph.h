@@ -143,9 +143,11 @@ public:
     uassert(fieldNames.find(name) != fieldNames.end())
         << "Invalid field name setting spatial field";
     FieldData *fieldData = fields[fieldNames[name]];
-    uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. Currently order:" << fieldData->type->getOrder();
-    uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D in order 1. Currently: " << fieldData->type->getDimension(0); 
-    spatialFieldName = name;
+    uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. 
+      Currently order:" << fieldData->type->getOrder();
+    uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D 
+      in order 1. Currently: " << fieldData->type->getDimension(0); 
+      spatialFieldName = name;
   }
 
   /// Get a Field corresponding to the string fieldName
@@ -165,7 +167,8 @@ public:
   /// The endpoints refer to the respective Sets they come from.
   template <typename ...Endpoints>
   ElementRef add(Endpoints... endpoints) {
-    iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of endpoints.";
+    iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of 
+      endpoints.";
     if (numElements > capacity-1)
       increaseEdgeCapacity();
     
@@ -471,9 +474,9 @@ public:
 
   // Added getters for reordering
   inline int* getEndpointsPtr() { return endpoints; }
-  inline int getFieldIndex(std::string name) { return fieldNames[name]; } 
-  inline std::vector<FieldData*>& getFields() { return fields; } 
-  inline std::string getSpatialFieldName() const { return spatialFieldName; }
+  inline int getFieldIndex(std::string name) { return fieldNames[name]; } inline 
+    std::vector<FieldData*>& getFields() { return fields; } inline std::string 
+    getSpatialFieldName() const { return spatialFieldName; }
   inline bool hasSpatialField() const { return !spatialFieldName.empty(); }
 
 private:
@@ -706,7 +709,8 @@ class FieldRefBaseParameterized : public FieldRefBase {
   
   void set(ElementRef element, std::vector<float> values) {
     iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
-        << "Incorrect number of init values : " << (TensorRef<T,dimensions...>::getSize());
+        << "Incorrect number of init values : " << 
+        (TensorRef<T,dimensions...>::getSize());
     T *elemData = this->getElemDataPtr(element);
     size_t i=0;
     for (T val : values) {

@@ -516,8 +516,10 @@ getIEEEinitValues(double const* c1,
  *  nDims:      Number of coordinates.
  *  nBytes:     Number of bytes of storage/coordinate (hilbert_cmp only)
  *  nBits:      Number of bits/coordinate. (hilbert_cmp only)
- *  coord1:     Array of nDims nBytes-byte coordinates (or doubles for ieee_cmp).
- *  coord2:     Array of nDims nBytes-byte coordinates (or doubles for ieee_cmp).
+ *  coord1:     Array of nDims nBytes-byte coordinates (or doubles for 
+ *  ieee_cmp).
+ *  coord2:     Array of nDims nBytes-byte coordinates (or doubles for 
+ *  ieee_cmp).
  * Return value:
  *      -1, 0, or 1 according to whether
            coord1<coord2, coord1==coord2, coord1>coord2
@@ -535,7 +537,9 @@ hilbert_cmp_work(unsigned nDims, unsigned nBytes, unsigned nBits,
      BitReader getBits)
 {
   bitmask_t const one = 1;
-  bitmask_t const nd1Ones = ones(bitmask_t,nDims) >> 1; /* used in adjust_rotation macro */
+  bitmask_t const nd1Ones = ones(bitmask_t,nDims) >> 1; /* used in 
+                                                           adjust_rotation macro 
+                                                           */
   while (y-- > max)
     {
       bitmask_t reflection = getBits(nDims, nBytes, c1, y);
@@ -841,7 +845,8 @@ hilbert_ieee_box_pt(unsigned nDims,
  *  findPrev:   Is it a previous point that you want?
  *  coord1:     Array of nDims nBytes-byte coordinates - one corner of box
  *  coord2:     Array of nDims nBytes-byte coordinates - opposite corner
- *  point:      Array of nDims nBytes-byte coordinates - lower bound on point returned
+ *  point:      Array of nDims nBytes-byte coordinates - lower bound on point 
+ *  returned
  *
  * Output:
       if returns 1:

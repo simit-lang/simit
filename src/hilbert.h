@@ -16,14 +16,16 @@ extern "C" {
    * Inputs:
    *  nDims:      Number of coordinate axes.
    *  nBits:      Number of bits per axis.
-   *  index:      The index, contains nDims*nBits bits (so nDims*nBits must be <= 8*sizeof(bitmask_t)).
+   *  index:      The index, contains nDims*nBits bits (so nDims*nBits must be 
+   *  <= 8*sizeof(bitmask_t)).
    * Outputs:
    *  coord:      The list of nDims coordinates, each with nBits bits.
    * Assumptions:
    *      nDims*nBits <= (sizeof index) * (bits_per_byte)
    */
 
-  void hilbert_i2c(unsigned nDims, unsigned nBits, bitmask_t index, bitmask_t coord[]);
+  void hilbert_i2c(unsigned nDims, unsigned nBits, bitmask_t index, bitmask_t 
+      coord[]);
 
   /*****************************************************************
    * hilbert_c2i
@@ -39,7 +41,8 @@ extern "C" {
    *      nDims*nBits <= (sizeof bitmask_t) * (bits_per_byte)
    */
 
-  bitmask_t hilbert_c2i(unsigned nDims, unsigned nBits, bitmask_t const coord[]);
+  bitmask_t hilbert_c2i(unsigned nDims, unsigned nBits, bitmask_t const 
+      coord[]);
 
   /*****************************************************************
    * hilbert_cmp, hilbert_ieee_cmp
@@ -49,8 +52,10 @@ extern "C" {
    *  nDims:      Number of coordinates.
    *  nBytes:     Number of bytes of storage/coordinate (hilbert_cmp only)
    *  nBits:      Number of bits/coordinate. (hilbert_cmp only)
-   *  coord1:     Array of nDims nBytes-byte coordinates (or doubles for ieee_cmp).
-   *  coord2:     Array of nDims nBytes-byte coordinates (or doubles for ieee_cmp).
+   *  coord1:     Array of nDims nBytes-byte coordinates (or doubles for 
+   *  ieee_cmp).
+   *  coord2:     Array of nDims nBytes-byte coordinates (or doubles for 
+   *  ieee_cmp).
    * Return value:
    *      -1, 0, or 1 according to whether
              coord1<coord2, coord1==coord2, coord1>coord2
@@ -58,8 +63,10 @@ extern "C" {
    *      nBits <= (sizeof bitmask_t) * (bits_per_byte)
    */
 
-  int hilbert_cmp(unsigned nDims, unsigned nBytes, unsigned nBits, void const* coord1, void const* coord2);
-  int hilbert_ieee_cmp(unsigned nDims, double const* coord1, double const* coord2);
+  int hilbert_cmp(unsigned nDims, unsigned nBytes, unsigned nBits, void const* 
+      coord1, void const* coord2);
+  int hilbert_ieee_cmp(unsigned nDims, double const* coord1, double const* 
+      coord2);
 
   /*****************************************************************
    * hilbert_box_vtx
@@ -74,7 +81,8 @@ extern "C" {
    *  coord2:     Array of nDims nBytes-byte coordinates - opposite corner
    * Output:
    *      c1 and c2 modified to refer to selected corner
-   *      value returned is log2 of size of largest power-of-two-aligned box that
+   *      value returned is log2 of size of largest power-of-two-aligned box 
+   *      that
    *      contains the selected corner and no other corners
    * Assumptions:
    *      nBits <= (sizeof bitmask_t) * (bits_per_byte)
@@ -112,7 +120,8 @@ extern "C" {
   /*****************************************************************
    * hilbert_nextinbox
    *
-   * Determine the first point of a box after a given point to lie on a Hilbert curve
+   * Determine the first point of a box after a given point to lie on a Hilbert 
+   * curve
    * Inputs:
    *  nDims:      Number of coordinates.
    *  nBytes:     Number of bytes/coordinate.
@@ -120,7 +129,8 @@ extern "C" {
    *  findPrev:   Is the previous point sought?
    *  coord1:     Array of nDims nBytes-byte coordinates - one corner of box
    *  coord2:     Array of nDims nBytes-byte coordinates - opposite corner
-   *  point:      Array of nDims nBytes-byte coordinates - lower bound on point returned
+   *  point:      Array of nDims nBytes-byte coordinates - lower bound on point 
+   *  returned
    *
    * Output:
         if returns 1:

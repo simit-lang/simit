@@ -50,7 +50,8 @@ inline std::string toLower(std::string str) {
 std::unique_ptr<simit::backend::Backend> getTestBackend();
 
 simit::Function loadFunction(std::string fileName, std::string funcName="main");
-simit::Function loadFunctionWithTimers(std::string fileName, std::string funcName="main");
+simit::Function loadFunctionWithTimers(std::string fileName, std::string 
+    funcName="main");
 
 #define Vec3f TensorType::make(ScalarType::Float, {IndexDomain(3)})
 

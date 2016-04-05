@@ -9,24 +9,31 @@
 
 using namespace std;
 using namespace simit;
-void vertexDataChecks(FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs, FieldRef<simit_float,3>& reorder_x, vector<ElementRef>& reorder_vertRefs,
+void vertexDataChecks(FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs, 
+    FieldRef<simit_float,3>& reorder_x, vector<ElementRef>& reorder_vertRefs,
     vector<int>& newOrdering) {
 
   for (unsigned int i = 0; i < newOrdering.size(); ++i) {
-    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(0), reorder_x.get(reorder_vertRefs[newOrdering[i]])(0));
-    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(1), reorder_x.get(reorder_vertRefs[newOrdering[i]])(1));
-    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(2), reorder_x.get(reorder_vertRefs[newOrdering[i]])(2));
+    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(0), 
+        reorder_x.get(reorder_vertRefs[newOrdering[i]])(0));
+    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(1), 
+        reorder_x.get(reorder_vertRefs[newOrdering[i]])(1));
+    SIMIT_ASSERT_FLOAT_NEAR_EQ(x.get(vertRefs[i])(2), 
+        reorder_x.get(reorder_vertRefs[newOrdering[i]])(2));
   }
 }
 
-void outputResults(ostream& os, FieldRef<simit_float,3>& x, vector<ElementRef>& vertRefs) {
+void outputResults(ostream& os, FieldRef<simit_float,3>& x, vector<ElementRef>& 
+    vertRefs) {
   int counter = 0;
   for (auto& vert : vertRefs) {
-    os << counter++ << " " << x.get(vert)(0) << " " << x.get(vert)(1) << " " << x.get(vert)(2) << endl;
+    os << counter++ << " " << x.get(vert)(0) << " " << x.get(vert)(1) << " " << 
+      x.get(vert)(2) << endl;
   }
 }
 
-FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
+FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, 
+    vector<ElementRef>& vertRefs) {
   FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
   FieldRef<simit_float,3>  v = m_verts.addField<simit_float,3>("v");
   // external forces
@@ -73,13 +80,13 @@ FieldRef<simit_float,3> initializeFem(MeshVol& mv, Set& m_verts, Set& m_tets, ve
       vertRefs[mv.e[ii][2]],vertRefs[mv.e[ii][3]]
     );
     u.set(t,uval);
-    l.set(t,lval);    
-  }
+    l.set(t,lval);    }
   
   return x;
 }
 
-void loadAndRunFem(string& filename, Set& m_verts, Set& m_tets, const unsigned int nSteps) {
+void loadAndRunFem(string& filename, Set& m_verts, Set& m_tets, const unsigned 
+    int nSteps) {
   Function m_precomputation;
   Function m_timeStepper;
   m_precomputation = loadFunction(filename, "initializeTet");
@@ -121,10 +128,12 @@ void femTest(string& filename, string& prefix, const unsigned int nSteps) {
   MeshVol reorder_mv;
   reorder_mv.loadTet(nodeFile.c_str(), eleFile.c_str());
   Set reorder_m_verts;
-  Set reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
+  Set 
+    reorder_m_tets(reorder_m_verts,reorder_m_verts,reorder_m_verts,reorder_m_verts);
   vector<ElementRef> reorder_vertRefs;
   
-  FieldRef<simit_float,3> reorder_x = initializeFem(reorder_mv, reorder_m_verts, reorder_m_tets, reorder_vertRefs); 
+  FieldRef<simit_float,3> reorder_x = initializeFem(reorder_mv, reorder_m_verts, 
+      reorder_m_tets, reorder_vertRefs); 
   
   vector<int> vertexOrdering;
   vector<int> edgeOrdering;
@@ -135,7 +144,8 @@ void femTest(string& filename, string& prefix, const unsigned int nSteps) {
   vertexDataChecks(x, vertRefs, reorder_x, reorder_vertRefs, vertexOrdering);
 }
   
-FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& m_tets, vector<ElementRef>& vertRefs) {
+FieldRef<simit_float,3> initializeAverage(MeshVol& mv, Set& m_verts, Set& 
+    m_tets, vector<ElementRef>& vertRefs) {
   FieldRef<simit_float,3>  x = m_verts.addField<simit_float,3>("x");
   FieldRef<simit_float,3>  a = m_verts.addField<simit_float,3>("a");
   FieldRef<simit_float,3>    tx = m_tets.addField<simit_float,3>("x");
@@ -255,8 +265,7 @@ TEST(Program, reorderInt) {
       auto actual = reorder_x.get(reorder_vertRefs[vertexReordering[i]])(j);
       auto expected = x.get(vertRefs[i])(j);
       ASSERT_NE(incorrect, expected);
-      ASSERT_EQ(actual, expected); 
-    }
+      ASSERT_EQ(actual, expected); }
   }
   
   for (unsigned int i = 0; i < vertRefs.size(); ++i) {
@@ -265,8 +274,7 @@ TEST(Program, reorderInt) {
       auto actual = reorder_a.get(reorder_vertRefs[vertexReordering[i]])(j);
       auto expected = a.get(vertRefs[i])(j);
       ASSERT_NE(incorrect, expected);
-      ASSERT_EQ(actual, expected); 
-    }
+      ASSERT_EQ(actual, expected); }
   }
    
   for (unsigned int i = 0; i < edgeRefs.size(); ++i) {
@@ -275,8 +283,7 @@ TEST(Program, reorderInt) {
       auto actual = reorder_tx.get(reorder_edgeRefs[edgeReordering[i]])(j);
       auto expected = tx.get(edgeRefs[i])(j);
       ASSERT_NE(incorrect, expected);
-      ASSERT_EQ(actual, expected); 
-    }
+      ASSERT_EQ(actual, expected); }
   }
 }
 
@@ -371,8 +378,7 @@ TEST(Program, reorderDouble) {
       auto actual = reorder_x.get(reorder_vertRefs[vertexReordering[i]])(j);
       auto expected = x.get(vertRefs[i])(j);
       ASSERT_NE(incorrect, expected);
-      SIMIT_ASSERT_FLOAT_EQ(actual, expected); 
-    }
+      SIMIT_ASSERT_FLOAT_EQ(actual, expected); }
   }
   
   for (unsigned int i = 0; i < vertRefs.size(); ++i) {
@@ -381,8 +387,7 @@ TEST(Program, reorderDouble) {
       auto actual = reorder_a.get(reorder_vertRefs[vertexReordering[i]])(j);
       auto expected = a.get(vertRefs[i])(j);
       ASSERT_NE(incorrect, expected);
-      SIMIT_ASSERT_FLOAT_EQ(actual, expected); 
-    }
+      SIMIT_ASSERT_FLOAT_EQ(actual, expected); }
   }
    
   for (unsigned int i = 0; i < edgeRefs.size(); ++i) {
@@ -391,8 +396,7 @@ TEST(Program, reorderDouble) {
       auto actual = reorder_tx.get(reorder_edgeRefs[edgeReordering[i]])(j);
       auto expected = tx.get(edgeRefs[i])(j);
       ASSERT_NE(incorrect, expected);
-      SIMIT_ASSERT_FLOAT_EQ(actual, expected); 
-    }
+      SIMIT_ASSERT_FLOAT_EQ(actual, expected); }
   }
 }
 

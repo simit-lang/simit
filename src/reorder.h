@@ -8,19 +8,26 @@
 #include <iostream>
 #include <fstream>
 
-namespace simit {
-  
-  void reorderVertexSet(Set& edgeSet, Set& vertexSet, std::vector<int>& vertexOrdering);
-  void reorderEdgeSet(Set& edgeSet, const std::vector<int>& edgeOrdering);
-  void reorderEdgeSetByVertexOrdering(Set& edgeSet, const std::vector<int>& vertexOrdering);
-
+namespace simit { 
   void reorder(Set& edgeSet, Set& vertexSet);
-  void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& edgeOrdering, std::vector<int>& vertexOrdering);
+
+  void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& edgeOrdering, 
+      std::vector<int>& vertexOrdering);
+  
+  void reorderVertexSet(Set& edgeSet, Set& vertexSet, std::vector<int>& 
+      vertexOrdering);
+  
+  void reorderEdgeSet(Set& edgeSet, const std::vector<int>& edgeOrdering);
+
+  void reorderEdgeSetByVertexOrdering(Set& edgeSet, const std::vector<int>& 
+      vertexOrdering);
+
  
   template<typename T>
-  void reorderFieldData(T* data, const std::vector<int>& vertexOrdering, const int typeSize) {
-    const int capacity = vertexOrdering.size(); 
-    T* newData = static_cast<T*>(malloc(capacity * typeSize));
+  void reorderFieldData(T* data, const std::vector<int>& vertexOrdering, const 
+      int typeSize) {
+    const int capacity = vertexOrdering.size(); T* newData = 
+      static_cast<T*>(malloc(capacity * typeSize));
     int dim = typeSize/sizeof(T);
     assert(dim > 0);
     for (int i=0; i < capacity; ++i) {
@@ -30,8 +37,7 @@ namespace simit {
       }
     }
 
-    memcpy(data, newData, capacity * typeSize); 
-    free(newData);
+    memcpy(data, newData, capacity * typeSize); free(newData);
   }
 
   namespace hilbert {
@@ -57,8 +63,8 @@ namespace simit {
 
     typedef std::pair<vid_t, vid_t> edge_t;
 
-    void hilbertReorder(Set& vertexSet, std::vector<int>& vertexOrdering, int vertexCount);
+    void hilbertReorder(Set& vertexSet, std::vector<int>& vertexOrdering, int 
+        vertexCount);
   } // namespace simit::hilbert
 
-} // namespace simit 
-#endif
+} // namespace simit #endif
