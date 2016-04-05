@@ -71,7 +71,7 @@ namespace simit {
     }
 
     static void createIdTranslationMapping(vertex_t * reorderedNodes, vector<int>& vertexOrdering, int cntNodes) {
-      assert(vertexOrdering.size() != 0);
+      iassert(vertexOrdering.size() == 0);
       vertexOrdering.resize(cntNodes);
 
       for (int i = 0; i < cntNodes; ++i) {
