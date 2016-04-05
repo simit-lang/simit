@@ -183,6 +183,14 @@ namespace simit {
           bool* data = static_cast<bool *>(f->data);
           reorderFieldData(data, ordering, f->sizeOfType);
         }
+        case ComponentType::DoubleComplex: {
+          double_complex* data = static_cast<double_complex *>(f->data);
+          reorderFieldData(data, ordering, f->sizeOfType);
+        }
+        case ComponentType::FloatComplex: {
+          float_complex* data = static_cast<float_complex *>(f->data);
+          reorderFieldData(data, ordering, f->sizeOfType);
+        }
       }
     }
   }
