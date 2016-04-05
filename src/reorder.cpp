@@ -201,9 +201,9 @@ namespace simit {
   }
   
   void reorderEdgeSet(Set& edgeSet, const vector<int>& edgeOrdering) {
-    iassert(edgeOrdering.size() == (unsigned int) edgeSet.getSize()) << "Edge 
-      Mapping must be the same size as the edge set" << edgeOrdering.size() << " 
-      != " << edgeSet.getSize(); int* endpoints = edgeSet.getEndpointsPtr();
+    iassert(edgeOrdering.size() == (unsigned int) edgeSet.getSize()) << "Edge \
+      Mapping must be the same size as the edge set" << edgeOrdering.size() <<
+      " != " << edgeSet.getSize(); int* endpoints = edgeSet.getEndpointsPtr();
     const unsigned int size = edgeSet.getSize();
     const int cardinality = edgeSet.getCardinality();
 
@@ -248,7 +248,7 @@ namespace simit {
   
   void reorder(Set& edgeSet, Set& vertexSet, vector<int>& edgeOrdering, 
       vector<int>& vertexOrdering) {
-    iassert(vertexSet.hasSpatialField()) << "Vertex Set must have a spatial 
+    iassert(vertexSet.hasSpatialField()) << "Vertex Set must have a spatial \
       field set prior to reordering";
     vertexOrdering.clear();
     edgeOrdering.clear();

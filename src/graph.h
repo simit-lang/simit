@@ -143,11 +143,11 @@ public:
     uassert(fieldNames.find(name) != fieldNames.end())
         << "Invalid field name setting spatial field";
     FieldData *fieldData = fields[fieldNames[name]];
-    uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. 
+    uassert(fieldData->type->getOrder() == 1) << "Spatial Data must be order 1. \
       Currently order:" << fieldData->type->getOrder();
-    uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D 
+    uassert(fieldData->type->getDimension(0) == 3) << "Spatial Data must be 3D \
       in order 1. Currently: " << fieldData->type->getDimension(0); 
-      spatialFieldName = name;
+    spatialFieldName = name;
   }
 
   /// Get a Field corresponding to the string fieldName
@@ -167,15 +167,16 @@ public:
   /// The endpoints refer to the respective Sets they come from.
   template <typename ...Endpoints>
   ElementRef add(Endpoints... endpoints) {
-    iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of 
+    iassert(sizeof...(endpoints) == getCardinality()) <<"Wrong number of \
       endpoints.";
-    if (numElements > capacity-1)
+    if (numElements > capacity-1) {
       increaseEdgeCapacity();
-    
+    }
     addEndpoints(0, endpoints...);
 
-    if (numElements > capacity-1)
+    if (numElements > capacity-1) {
       increaseCapacity();
+    }
     return ElementRef(numElements++);
   }
 

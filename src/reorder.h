@@ -67,4 +67,5 @@ namespace simit {
         vertexCount);
   } // namespace simit::hilbert
 
-} // namespace simit #endif
+} // namespace simit 
+#endif
