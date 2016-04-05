@@ -188,6 +188,7 @@ namespace simit {
   }
   
   void reorderEdgeSet(Set& edgeSet, const vector<int>& edgeOrdering) {
+    iassert(edgeOrdering.size() == edgeSet.getSize()) << "Edge Mapping must be the same size as the edge set" << edgeOrdering.size() << " != " << edgeSet.getSize(); 
     int* endpoints = edgeSet.getEndpointsPtr();
     const int size = edgeSet.getSize();
     const int cardinality = edgeSet.getCardinality();
@@ -203,7 +204,6 @@ namespace simit {
     memcpy(endpoints, newEndpoints, size * cardinality * sizeof(int));
     free(newEndpoints);
     
-    iassert(edgeOrdering.size() == edgeSet.getSize()) << edgeOrdering.size() << ", " << edgeSet.getSize();
     reorderFields(edgeSet.getFields(), edgeOrdering);
   }
 
@@ -214,6 +214,7 @@ namespace simit {
   }
     
   void reorderVertexSet(Set& edgeSet, Set& vertexSet, vector<int>& vertexOrdering) {
+    iassert(vertexOrdering.size() == vertexSet.getSize()) << "Vertex Mapping must be the same size as the vertex set" << vertexOrdering.size() << " != " << vertexSet.getSize(); 
     // Reset Endpoints to reflect reordering
     // Vertex ordering maps old to new identity 
     // This itertates over all enpoints translating from old to new
@@ -224,9 +225,9 @@ namespace simit {
   }
   
   void reorder(Set& edgeSet, Set& vertexSet, vector<int>& edgeOrdering, vector<int>& vertexOrdering) {
-    iassert(vertexOrdering.size() == 0) << "Vertex Ordering needs to be initially empty";
-    iassert(edgeOrdering.size() == 0) << "Edge Ordering needs to be initially empty";
     iassert(vertexSet.hasSpatialField()) << "Vertex Set must have a spatial field set prior to reordering";
+    vertexOrdering.clear();
+    edgeOrdering.clear();
     
     // Get new vertex ordering based on given heuristic 
     hilbert::hilbertReorder(vertexSet, vertexOrdering);
