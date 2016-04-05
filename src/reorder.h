@@ -9,16 +9,25 @@
 #include <fstream>
 
 namespace simit { 
+  /// Reorders edge set and vertex set by hilbert reordering of the vertex set.
+  /// Vertex set must have a set spatial field in 3 dimensions.
   void reorder(Set& edgeSet, Set& vertexSet);
 
+  /// Reorders edge set and vertex set by hilbert reordering of the vertex set.
+  /// Vertex set must have a set spatial field in 3 dimensions.
+  /// The supplied edge and vertex ordering vectors are populated with the new 
+  /// mapping from old to new indices. 
   void reorder(Set& edgeSet, Set& vertexSet, std::vector<int>& edgeOrdering, 
       std::vector<int>& vertexOrdering);
   
+  /// Reorders edge set and vertex set by the supplied vertex ordering map.
   void reorderVertexSet(Set& edgeSet, Set& vertexSet, std::vector<int>& 
       vertexOrdering);
   
+  /// Reorders edge set by the supplied edge ordering map.
   void reorderEdgeSet(Set& edgeSet, const std::vector<int>& edgeOrdering);
 
+  /// Reorders edge set by the supplied vertex ordering map.
   void reorderEdgeSetByVertexOrdering(Set& edgeSet, const std::vector<int>& 
       vertexOrdering);
 
