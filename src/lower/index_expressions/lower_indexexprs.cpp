@@ -536,6 +536,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         expr = liftDiagonalExpression(op->a, op->b, op);
       }
       else if (isa<TensorRead>(op->b)) {
+        // Sketchy on non-commutative op?
         expr = liftDiagonalExpression(op->b, op->a, op);
       }
       else {
@@ -548,7 +549,6 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         expr = liftDiagonalExpression(op->a, op->b, op);
       }
       else if (isa<TensorRead>(op->b)) {
-        // Sketchy on non-commutative op?
         expr = liftDiagonalExpression(op->b, op->a, op);
       }
       else {

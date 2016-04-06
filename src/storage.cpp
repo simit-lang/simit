@@ -144,8 +144,11 @@ void Storage::add(const Var &tensor, TensorStorage tensorStorage) {
 
 void Storage::add(const Storage &other) {
   for (auto &var : other) {
-    iassert(!hasStorage(var)) << "Variable" << var << "already has storage";
-    add(var, other.getStorage(var));
+    // iassert(!hasStorage(var)) << "Variable " << var << " already has storage";
+    // TEMP: Hack to avoid issues with multiple copies of const global tensor
+    if (!hasStorage(var)) {
+      add(var, other.getStorage(var));
+    }
   }
 }
 
