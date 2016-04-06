@@ -332,6 +332,27 @@ Expr Literal::make(Type type, std::vector<double> values) {
   }
 }
 
+Expr Literal::make(Type type, std::vector<double_complex> values) {
+  iassert(isScalar(type) || 
+          type.toTensor()->getComponentType().isComplex() && 
+          2 * type.toTensor()->size() == values.size());
+  iassert(type.toTensor()->getComponentType().isComplex())
+      << "Complex array constructor must use complex component type";
+  if (ScalarType::singleFloat()) {
+    // Convert double vector to float vector
+    std::vector<float_complex> floatValues;
+    for (double_complex val : values) {
+      floatValues.push_back(float_complex(val.real, val.imag));
+    }
+    return Literal::make(type, floatValues.data(),
+                         util::getVectorSize(floatValues));
+  }
+  else {
+    return Literal::make(type, values.data(),
+                         util::getVectorSize(values));
+  }
+}
+
 Literal::~Literal() {
   free(data);
 }

@@ -697,29 +697,31 @@ void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
       elemType = ir::ScalarType::Int;
       data = static_cast<const void *>(tensorVals.intVals.data());
       dataSize = util::getVectorSize(tensorVals.intVals);
-      break;
+      const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
+                                                       tensor->transposed);
+      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data), dataSize);
+      return;
     }
     case DenseTensorValues::Type::FLOAT:
     {
       elemType = ir::ScalarType::Float;
-      data = static_cast<const void *>(tensorVals.floatVals.data());
-      dataSize = util::getVectorSize(tensorVals.floatVals);
-      break;
+      const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
+                                                       tensor->transposed);
+      retExpr = ir::Literal::make(tensorType, tensorVals.floatVals);
+      return;
     }
     case DenseTensorValues::Type::COMPLEX:
     {
       elemType = ir::ScalarType::Complex;
-      data = static_cast<const void *>(tensorVals.complexVals.data());
-      dataSize = util::getVectorSize(tensorVals.complexVals);
-      break;
+      const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
+                                                       tensor->transposed);
+      retExpr = ir::Literal::make(tensorType, tensorVals.complexVals);
+      return;
     }
     default:
       unreachable;
       break;
   }
-  const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
-                                                   tensor->transposed);
-  retExpr = ir::Literal::make(tensorType, const_cast<void *>(data), dataSize);
 }
 
 IREmitter::DenseTensorValues 

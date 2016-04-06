@@ -163,6 +163,7 @@ struct Literal : public ExprNode {
   static Expr make(double_complex val);
   static Expr make(Type type, void* values, size_t bufSize);
   static Expr make(Type type, std::vector<double> values);
+  static Expr make(Type type, std::vector<double_complex> values);
   ~Literal();
   void accept(IRVisitorStrict *v) const {v->visit((const Literal*)this);}
 };
