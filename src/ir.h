@@ -55,7 +55,16 @@ public:
 
   Type type() const {return static_cast<const ExprNode*>(ptr)->type;}
 
-  void accept(IRVisitorStrict *v) const {ptr->accept(v);}
+  void accept(IRVisitorStrict *v) const {
+    try {
+      ptr->accept(v);
+    }
+    catch (SimitException &ex) {
+      ex.addContext("... accepting: ");
+      ex.errStream << *ptr;
+      throw;
+    }
+  }
 
   Expr operator()(const std::vector<IndexVar> &indexVars) const;
 
@@ -93,7 +102,18 @@ public:
   Stmt() : IRHandle() {}
   Stmt(const StmtNode *stmt) : IRHandle(stmt) {}
 
-  void accept(IRVisitorStrict *v) const {ptr->accept(v);}
+  void accept(IRVisitorStrict *v) const {
+    try {
+      ptr->accept(v);
+    }
+    catch (SimitException &ex) {
+      if (!isa<Block>(*this) && !isa<Scope>(*this)) {
+        ex.addContext("... accepting: ");
+        ex.errStream << *ptr;
+      }
+      throw;
+    }
+  }
 
   template <typename S> friend bool isa(Stmt);
   template <typename S> friend const S* to(Stmt);
@@ -141,8 +161,9 @@ struct Literal : public ExprNode {
   static Expr make(bool val);
   static Expr make(std::string val);
   static Expr make(double_complex val);
-  static Expr make(Type type, void* values);
+  static Expr make(Type type, void* values, size_t bufSize);
   static Expr make(Type type, std::vector<double> values);
+  static Expr make(Type type, std::vector<double_complex> values);
   ~Literal();
   void accept(IRVisitorStrict *v) const {v->visit((const Literal*)this);}
 };

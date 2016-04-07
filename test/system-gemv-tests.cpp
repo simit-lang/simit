@@ -194,6 +194,45 @@ TEST(System, gemv_diagonal) {
   ASSERT_EQ(6.0, c.get(p2));
 }
 
+TEST(System, DISABLED_gemv_diagonal_func) {
+  // Points
+  Set points;
+  FieldRef<simit_float> b = points.addField<simit_float>("b");
+  FieldRef<simit_float> c = points.addField<simit_float>("c");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+
+  b.set(p0, 1.0);
+  b.set(p1, 2.0);
+  b.set(p2, 3.0);
+
+  // Springs
+  Set springs(points,points);
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
+
+  ElementRef s0 = springs.add(p0,p1);
+  ElementRef s1 = springs.add(p1,p2);
+
+  a.set(s0, 1.0);
+  a.set(s1, 2.0);
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points", &points);
+  func.bind("springs", &springs);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(1.0, c.get(p0));
+  ASSERT_EQ(6.0, c.get(p1));
+  ASSERT_EQ(6.0, c.get(p2));
+}
+
 TEST(System, gemv_diagonal_extraparams) {
   // Points
   Set points;

@@ -72,5 +72,10 @@ std::string trim(const std::string &str, const std::string &ws = " \t\n");
 template <typename T>
 std::string quote(const T& t) {return "'" + simit::util::toString(t) + "'";}
 
+template <typename T>
+size_t getVectorSize(std::vector<T> vec) {
+  return sizeof(T)*vec.size();
+}
+
 }}
 #endif

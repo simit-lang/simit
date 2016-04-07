@@ -1,0 +1,49 @@
+element Point
+  x : float;
+  z : float;
+end
+
+extern points  : set{Point};
+
+func sum_vector(vec : tensor[3](tensor[3](float))) -> (out : float)
+  out = 0.0;
+  for ii in 0:3
+    for jj in 0:3
+      out = out + vec(ii)(jj);
+    end
+  end
+end
+
+func build_blocked(point : Point)
+    -> (X : tensor[points,points](tensor[3,3](tensor[3,3](float))))
+  for ii in 0:3
+    for jj in 0:3
+      for i2 in 0:3
+        for j2 in 0:3
+          X(point,point)(ii,jj)(i2,j2) = point.x;
+        end
+      end
+    end
+  end
+end
+
+func promote(point : Point) -> (x : tensor[points](tensor[3](tensor[3](float))))
+  for ii in 0:3
+    for jj in 0:3
+      x(point)(ii)(jj) = point.x;
+    end
+  end
+end
+
+func sum_vectors(y : tensor[points](tensor[3](tensor[3](float))), point : Point)
+    -> (z : tensor[points](float))
+  var sum : float = sum_vector(y(point));
+  z(point) = sum;
+end
+
+proc main
+  X = map build_blocked to points;
+  vecx = map promote to points;
+  y = X * vecx;
+  points.z = map sum_vectors(y) to points;
+end

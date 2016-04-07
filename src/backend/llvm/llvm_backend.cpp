@@ -23,7 +23,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/TargetSelect.h"
-#include "llvm/ExecutionEngine/JIT.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 
 #include "llvm/PassManager.h"
 #include "llvm/Analysis/Passes.h"
@@ -69,6 +69,7 @@ shared_ptr<llvm::EngineBuilder> createEngineBuilder(llvm::Module *module) {
 LLVMBackend::LLVMBackend() : builder(new SimitIRBuilder(LLVM_CTX)) {
   if (!llvmInitialized) {
     llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
     llvmInitialized = true;
   }
 }
@@ -184,7 +185,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
 
 
   // Create initialization function
-  emitEmptyFunction(func.getName()+".init", func.getArguments(),
+  emitEmptyFunction(func.getName()+"_init", func.getArguments(),
                     func.getResults(), true);
   for (auto &buffer : buffers) {
     const Var&   bufferVar = buffer.first;
@@ -208,7 +209,7 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
 
 
   // Create de-initialization function
-  emitEmptyFunction(func.getName()+".deinit", func.getArguments(),
+  emitEmptyFunction(func.getName()+"_deinit", func.getArguments(),
                     func.getResults(), true);
   for (auto &buffer : buffers) {
     Var var = buffer.first;
@@ -385,6 +386,8 @@ void LLVMBackend::compile(const ir::Call& call) {
     args.push_back(compile(a));
   }
   
+  std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
+
   // these are intrinsic functions
   // first, see if this is an LLVM intrinsic
   auto foundIntrinsic = llvmIntrinsicByName.find(call.func);
@@ -398,8 +401,7 @@ void LLVMBackend::compile(const ir::Call& call) {
            call.func == ir::intrinsics::asin()  ||
            call.func == ir::intrinsics::acos()) {
     auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes, false);
-    std::string funcName = call.func.getName() +
-        (ir::ScalarType::singleFloat() ? "_f32" : "_f64");
+    std::string funcName = call.func.getName() + floatTypeName;
     fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
         funcName,ftype));
   }
@@ -429,9 +431,8 @@ void LLVMBackend::compile(const ir::Call& call) {
       val = builder->CreateCall(sqrt, sum);
     } else {
       args.push_back(emitComputeLen(dimensions[0]));
-      std::string funcName = ir::ScalarType::singleFloat() ?
-          "norm_f32" : "norm_f64";
-      val = emitCall(funcName, args, llvmFloatType());
+      std::string fName = "norm" + floatTypeName;
+      val = emitCall(fName, args, llvmFloatType());
     }
     
     return;
@@ -449,10 +450,9 @@ void LLVMBackend::compile(const ir::Call& call) {
     args.push_back(emitComputeLen(dimensions[1]));
 
     auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes2, false);
-    std::string funcName = ir::ScalarType::singleFloat() ?
-        "cMatSolve_f32" : "cMatSolve_f64";
+    std::string fName = "cMatSolve" + floatTypeName;
     fun = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction(funcName, ftype));
+        module->getOrInsertFunction(fName, ftype));
   }
   else if (call.func == ir::intrinsics::loc()) {
     val = emitCall("loc", args, LLVM_INT);
@@ -468,9 +468,32 @@ void LLVMBackend::compile(const ir::Call& call) {
     uassert(type1Dimensions[0] == type2Dimensions[0]) <<
         "dimension mismatch in dot product";
     args.push_back(emitComputeLen(type1Dimensions[0]));
-    std::string funcName = ir::ScalarType::singleFloat() ?
-        "dot_f32" : "dot_f64";
-    val = emitCall(funcName, args, llvmFloatType());
+    std::string fName = "dot" + floatTypeName;
+    val = emitCall(fName, args, llvmFloatType());
+    return;
+  }
+  else if (call.func == ir::intrinsics::createComplex()) {
+    val = builder->CreateComplex(args[0], args[1]);
+    return;
+  }
+  else if (call.func == ir::intrinsics::complexNorm()) {
+    std::string fname = "complexNorm" + floatTypeName;
+    val = emitCall(fname, {
+        builder->ComplexGetReal(args[0]),
+        builder->ComplexGetImag(args[0])
+    }, llvmFloatType());
+    return;
+  }
+  else if (call.func == ir::intrinsics::complexGetReal()) {
+    val = builder->ComplexGetReal(args[0]);
+  }
+  else if (call.func == ir::intrinsics::complexGetImag()) {
+    val = builder->ComplexGetImag(args[0]);
+  }
+  else if (call.func == ir::intrinsics::complexConj()) {
+    val = builder->CreateComplex(
+        builder->ComplexGetReal(args[0]),
+        builder->CreateFNeg(builder->ComplexGetImag(args[0])));
     return;
   }
   else if (call.func == ir::intrinsics::simitClock()) {
@@ -930,6 +953,27 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     else if (callStmt.callee == ir::intrinsics::strcat()) {
       call = emitCall("strcat", args, LLVM_INT8_PTR);
     }
+    else if (callStmt.callee == ir::intrinsics::createComplex()) {
+      call = builder->CreateComplex(args[0], args[1]);
+    }
+    else if (callStmt.callee == ir::intrinsics::complexNorm()) {
+      std::string fname = "complexNorm" + floatTypeName;
+      call = emitCall(fname, {
+        builder->ComplexGetReal(args[0]),
+        builder->ComplexGetImag(args[0])
+      }, llvmFloatType());
+    }
+    else if (callStmt.callee == ir::intrinsics::complexGetReal()) {
+      call = builder->ComplexGetReal(args[0]);
+    }
+    else if (callStmt.callee == ir::intrinsics::complexGetImag()) {
+      call = builder->ComplexGetImag(args[0]);
+    }
+    else if (callStmt.callee == ir::intrinsics::complexConj()) {
+      call = builder->CreateComplex(
+          builder->ComplexGetReal(args[0]),
+          builder->CreateFNeg(builder->ComplexGetImag(args[0])));
+    }
     else if (callStmt.callee == ir::intrinsics::simitClock()) {
       call = emitCall("simitClock", args, llvmFloatType());
     }
@@ -1237,6 +1281,19 @@ void LLVMBackend::compile(const ir::Print& print) {
 
   const TensorType *tensor = type.toTensor();
   ScalarType scalarType = tensor->getComponentType();
+  std::string specifier;
+  switch (scalarType.kind) {
+    case ScalarType::Float:
+      specifier = std::string("%") + print.format + "g";
+      break;
+    case ScalarType::Complex:
+      specifier = std::string("<%") + print.format + "g,%g>";
+      break;
+    case ScalarType::Boolean:
+    case ScalarType::Int:
+      specifier = std::string("%") + print.format + "d";
+      break;
+  }
 
   if (scalarType == ScalarType::String) {
     emitPrintf(result, {});

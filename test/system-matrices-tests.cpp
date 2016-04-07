@@ -49,6 +49,82 @@ TEST(System, add) {
   ASSERT_EQ(3.0, b.get(v2));
 }
 
+TEST(System, add_blocked) {
+  Set V;
+  FieldRef<simit_float> a = V.addField<simit_float>("a");
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b.set(v0, 1.0);
+  b.set(v1, 2.0);
+  b.set(v2, 3.0);
+
+  Set E(V,V);
+  FieldRef<simit_float> e = E.addField<simit_float>("e");
+  ElementRef e0 = E.add(v0,v1);
+  ElementRef e1 = E.add(v1,v2);
+  e.set(e0, 1.0);
+  e.set(e1, 2.0);
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("V", &V);
+  func.bind("E", &E);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(6.0, a.get(v0));
+  ASSERT_EQ(22.0, a.get(v1));
+  ASSERT_EQ(26.0, a.get(v2));
+
+  // Check that inputs are preserved
+  ASSERT_EQ(1.0, b.get(v0));
+  ASSERT_EQ(2.0, b.get(v1));
+  ASSERT_EQ(3.0, b.get(v2));
+}
+
+TEST(System, add_double_blocked) {
+  Set V;
+  FieldRef<simit_float> a = V.addField<simit_float>("a");
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b.set(v0, 1.0);
+  b.set(v1, 2.0);
+  b.set(v2, 3.0);
+
+  Set E(V,V);
+  FieldRef<simit_float> e = E.addField<simit_float>("e");
+  ElementRef e0 = E.add(v0,v1);
+  ElementRef e1 = E.add(v1,v2);
+  e.set(e0, 1.0);
+  e.set(e1, 2.0);
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("V", &V);
+  func.bind("E", &E);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  ASSERT_EQ(12.0, a.get(v0));
+  ASSERT_EQ(44.0, a.get(v1));
+  ASSERT_EQ(52.0, a.get(v2));
+
+  // Check that inputs are preserved
+  ASSERT_EQ(1.0, b.get(v0));
+  ASSERT_EQ(2.0, b.get(v1));
+  ASSERT_EQ(3.0, b.get(v2));
+}
+
 TEST(System, add_twice) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");

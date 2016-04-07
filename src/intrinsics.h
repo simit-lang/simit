@@ -36,6 +36,11 @@ const Func& strcmp();
 const Func& strlen();
 const Func& strcpy();
 const Func& strcat();
+const Func& createComplex();
+const Func& complexNorm();
+const Func& complexConj();
+const Func& complexGetReal();
+const Func& complexGetImag();
 const Func& simitClock();
 const Func& simitStoreTime();
 

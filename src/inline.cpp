@@ -5,6 +5,7 @@
 #include "temps.h"
 #include "flatten.h"
 #include "intrinsics.h"
+#include "ir_codegen.h"
 
 using namespace std;
 
@@ -219,9 +220,8 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   if (map->reduction.getKind() != ReductionOperator::Undefined) {
     for (auto &var : map->vars) {
       iassert(var.getType().isTensor());
-      const TensorType *type = var.getType().toTensor();
-      Expr zero = Literal::make(TensorType::make(type->getComponentType()),0);
-      Stmt init = AssignStmt::make(var, zero);
+      Stmt init = AssignStmt::make(var, var);
+      init = initializeLhsToZero(init);
       inlinedMap = Block::make(init, inlinedMap);
     }
   }

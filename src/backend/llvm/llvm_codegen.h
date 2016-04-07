@@ -53,6 +53,12 @@ llvm::Constant* llvmVal(const ir::Literal& literal);
 llvm::Constant* defaultInitializer(llvm::Type* type);
 
 /// Creates an llvm function prototype
+llvm::Function *createPrototypeLLVM(const std::string& name,
+                                    const std::vector<std::string>& argNames,
+                                    const std::vector<llvm::Type*>& argTypes,
+                                    llvm::Module* module,
+                                    bool externalLinkage,
+                                    bool doesNotThrow=true);
 llvm::Function* createPrototype(const std::string& name,
                                 const std::vector<ir::Var>& arguments,
                                 const std::vector<ir::Var>& results,

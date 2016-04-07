@@ -87,10 +87,12 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
 
 class LowerMaps : public IRRewriter {
 public:
-  LowerMaps(Storage *storage) : storage(storage) {}
+  LowerMaps(Storage *storage, Environment *env)
+      : storage(storage), env(env) {}
 
 private:
   Storage *storage;
+  Environment *env;
   
   using IRRewriter::visit;
 
@@ -106,11 +108,19 @@ private:
 
     // Add storage descriptor for the new tensors in the inlined map
     updateStorage(stmt, storage);
+    // Add storage from mapped Func's environment
+    Func noBody(op->function, Pass::make());
+    updateStorage(noBody, storage);
+    // Add constants from inlined map function into environment
+    for (auto &c : op->function.getEnvironment().getConstants()) {
+      env->addConstant(c.first, c.second);
+    }
   }
 };
 
 Func lowerMaps(Func func) {
-  Stmt body = LowerMaps(&func.getStorage()).rewrite(func.getBody());
+  Stmt body = LowerMaps(&func.getStorage(),&func.getEnvironment())
+      .rewrite(func.getBody());
   func = Func(func, body);
   func = insertVarDecls(func);
   return func;

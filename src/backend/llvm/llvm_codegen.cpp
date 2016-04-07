@@ -109,12 +109,12 @@ llvm::Constant* llvmVal(const Literal& literal) {
 llvm::Constant* initializer(llvm::Type* type);
 
 
-static llvm::Function *createPrototype(const std::string& name,
-                                       const vector<string>& argNames,
-                                       const vector<llvm::Type*>& argTypes,
-                                       llvm::Module* module,
-                                       bool externalLinkage,
-                                       bool doesNotThrow) {
+llvm::Function *createPrototypeLLVM(const std::string& name,
+                                    const vector<string>& argNames,
+                                    const vector<llvm::Type*>& argTypes,
+                                    llvm::Module* module,
+                                    bool externalLinkage,
+                                    bool doesNotThrow) {
   llvm::FunctionType *ft = llvm::FunctionType::get(LLVM_VOID, argTypes, false);
   auto linkage = externalLinkage ? llvm::Function::ExternalLinkage
                                  : llvm::Function::InternalLinkage;
@@ -194,8 +194,8 @@ llvm::Function* createPrototype(const std::string &name,
 
   assert(llvmArgNames.size() == llvmArgTypes.size());
 
-  return createPrototype(name, llvmArgNames, llvmArgTypes,
-                         module, externalLinkage, doesNotThrow);
+  return createPrototypeLLVM(name, llvmArgNames, llvmArgTypes,
+                             module, externalLinkage, doesNotThrow);
 }
 
 llvm::GlobalVariable* createGlobal(llvm::Module *module, const Var& var,

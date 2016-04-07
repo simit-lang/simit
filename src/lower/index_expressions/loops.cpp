@@ -271,12 +271,16 @@ private:
         environment->addExternMapping(tensor, ti.getCoordArray());
         environment->addExternMapping(tensor, ti.getSinkArray());
       }
-      else {
+      else if (ts.hasPathExpression()) {
         const pe::PathExpression pexpr = ts.getPathExpression();
         if (!environment->hasTensorIndex(pexpr)) {
           environment->addTensorIndex(pexpr, tensor);
         }
         ti = environment->getTensorIndex(pexpr);
+      }
+      else {
+        // No subset loops to create?
+        not_supported_yet;
       }
     }
     else {

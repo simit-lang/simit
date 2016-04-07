@@ -258,10 +258,6 @@ Func lowerIndexExpressions(Func func) {
       iassert_scalar(Expr(op));
       expr = rewrite(op->value);
     }
-
-    void visit(const IndexedTensor *op) {
-      expr = op->tensor;
-    }
   };
   func = LowerIndexExpressionsRewriter().lower(func);
   func = insertVarDecls(func);

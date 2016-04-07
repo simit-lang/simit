@@ -688,28 +688,35 @@ void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
   const DenseTensorValues tensorVals = emitTensorValues(tensor);
   const std::vector<ir::IndexDomain> idoms(tensorVals.dimSizes.rbegin(),
                                            tensorVals.dimSizes.rend());
+  ir::ScalarType::Kind elemType;
+  const void *data;
+  size_t dataSize = 0;
   switch (tensorVals.type) {
     case DenseTensorValues::Type::INT:
     {
-      const auto tensorType = ir::TensorType::make(ir::ScalarType::Int, 
-                                                   idoms, tensor->transposed);
-      const void *data = static_cast<const void *>(tensorVals.intVals.data());
-      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data));
-      break;
+      elemType = ir::ScalarType::Int;
+      data = static_cast<const void *>(tensorVals.intVals.data());
+      dataSize = util::getVectorSize(tensorVals.intVals);
+      const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
+                                                       tensor->transposed);
+      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data), dataSize);
+      return;
     }
     case DenseTensorValues::Type::FLOAT:
     {
-      const auto tensorType = ir::TensorType::make(ir::ScalarType::Float, 
-                                                   idoms, tensor->transposed);
+      elemType = ir::ScalarType::Float;
+      const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
+                                                       tensor->transposed);
       retExpr = ir::Literal::make(tensorType, tensorVals.floatVals);
-      break;
+      return;
     }
     case DenseTensorValues::Type::COMPLEX:
     {
-      const auto tensorType = ir::TensorType::make(ir::ScalarType::Complex, 
-                                                   idoms, tensor->transposed);
+      elemType = ir::ScalarType::Complex;
+      const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
+                                                       tensor->transposed);
       retExpr = ir::Literal::make(tensorType, tensorVals.complexVals);
-      break;
+      return;
     }
     default:
       unreachable;

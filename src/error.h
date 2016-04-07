@@ -1,6 +1,7 @@
 #ifndef SIMIT_DIAGNOSTICS_H
 #define SIMIT_DIAGNOSTICS_H
 
+#include <exception>
 #include <string>
 #include <vector>
 #include <iostream>
@@ -8,6 +9,76 @@
 #include "util/util.h"
 
 namespace simit {
+
+class CutOffStreambuf : public std::streambuf {
+public:
+  CutOffStreambuf(std::streambuf *dest) :
+      dest(dest), cutoff(false), cutoffEnabled(false) {}
+  
+  virtual int overflow(int c) {
+    if (c == EOF) {
+      return c;
+    }
+    else if (!cutoff) {
+      if (cutoffEnabled && c == '\n') {
+        cutoff = true;
+        const std::string cutoffText = " [...]";
+        dest->sputn(cutoffText.c_str(), cutoffText.size());
+        return traits_type::to_int_type(c);
+      }
+      else {
+        dest->sputc(c);
+        return traits_type::to_int_type(c);
+      }
+    }
+  }
+
+  void setCutoff(bool enabled) {
+    cutoff = false;
+    if (enabled) {
+      cutoffEnabled = true;
+    }
+    else {
+      cutoffEnabled = false;
+    }
+  }
+
+private:
+  std::streambuf *dest;
+  bool cutoff;
+  bool cutoffEnabled;
+};
+
+class SimitException : public std::exception {
+public:
+  SimitException() : errStreambuf(errString.rdbuf()),
+                     errStream(&errStreambuf) {}
+  SimitException(SimitException&& other) : // TODO: No string copy
+      errStreambuf(errString.rdbuf()),
+      errStream(&errStreambuf) {
+    // Inefficient copying
+    errString << other.errString.rdbuf();
+  }
+  
+  virtual const char* what() const throw() {
+    return errString.str().c_str();
+  }
+
+  // Resets context stream cutoff, and inserts string context description
+  void addContext(std::string contextDesc) {
+    errStreambuf.setCutoff(false);
+    errStream << std::endl;
+    errStreambuf.setCutoff(true);
+    errStream << contextDesc;
+  }
+
+  // Writable error stream with an underlying buffer which cuts off at newlines
+  std::ostream errStream;
+
+private:
+  std::stringstream errString;
+  CutOffStreambuf errStreambuf;
+};
 
 /// Provides information about errors that occur while loading Simit code.
 class ParseError {

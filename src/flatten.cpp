@@ -147,7 +147,11 @@ private:
     vector<Expr> actuals;
     bool changed = false;
     for (Expr actual : op->actuals) {
-      actual = rewrite(actual);
+      Expr newActual = rewrite(actual);
+      if (newActual != actual) {
+        changed = true;
+      }
+      actual = newActual;
 
       // Spill non-var higher-order tensor-typed expressions in function calls
       Type atype = actual.type();

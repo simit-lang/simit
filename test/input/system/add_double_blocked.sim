@@ -1,0 +1,61 @@
+element Vertex
+  a : float;
+  b : float;
+end
+
+element Edge
+  e : float;
+end
+
+extern V : set{Vertex};
+extern E : set{Edge}(V,V);
+
+func f(v : Vertex) -> (A : tensor[V,V](tensor[2,2](tensor[2,2](float))))
+  var I2 : tensor[2,2](tensor[2,2](float)) = 0.0;
+  for ii in 0:2
+    for jj in 0:2
+      I2(ii,ii)(jj,jj) = 1.0;
+    end
+  end
+  A(v, v) = v.b * I2;
+end
+
+func g(e : Edge, v : (Vertex*2)) -> (B : tensor[V,V](tensor[2,2](tensor[2,2](float))))
+  var I2 : tensor[2,2](tensor[2,2](float)) = 0.0;
+  for ii in 0:2
+    for jj in 0:2
+      I2(ii,ii)(jj,jj) = 1.0;
+    end
+  end
+  B(v(0), v(1)) = e.e * I2;
+  B(v(1), v(0)) = e.e * I2;
+end
+
+func promote(v : Vertex) -> (X : tensor[V](tensor[2](tensor[2](float))))
+  var unitVec : tensor[2](tensor[2](float)) = 0.0;
+  for ii in 0:2
+    for jj in 0:2
+      unitVec(ii)(jj) = 1.0;
+    end
+  end
+  X(v) = v.b * unitVec;
+end
+
+func sum_vectors(Y : tensor[V](tensor[2](tensor[2](float))), v : Vertex) -> (y : tensor[V](float))
+  var sum : float = 0.0;
+  for ii in 0:2
+    for jj in 0:2
+      sum = sum + Y(v)(ii)(jj);
+    end
+  end
+  y(v) = sum;
+end
+
+proc main
+  B = map f to V reduce +;
+  C = map g to E reduce +;
+  A = B + C;
+  X = map promote to V;
+  Y = A * X;
+  V.a = map sum_vectors(Y) to V;  
+end
