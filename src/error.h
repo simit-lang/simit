@@ -16,10 +16,7 @@ public:
       dest(dest), cutoff(false), cutoffEnabled(false) {}
   
   virtual int overflow(int c) {
-    if (c == EOF) {
-      return c;
-    }
-    else if (!cutoff) {
+    if (c != EOF && !cutoff) {
       if (cutoffEnabled && c == '\n') {
         cutoff = true;
         const std::string cutoffText = " [...]";
@@ -31,6 +28,7 @@ public:
         return traits_type::to_int_type(c);
       }
     }
+    return EOF;
   }
 
   void setCutoff(bool enabled) {
@@ -51,12 +49,12 @@ private:
 
 class SimitException : public std::exception {
 public:
-  SimitException() : errStreambuf(errString.rdbuf()),
-                     errStream(&errStreambuf) {}
-  SimitException(SimitException&& other) : // TODO: No string copy
-      errStreambuf(errString.rdbuf()),
-      errStream(&errStreambuf) {
-    // Inefficient copying
+  SimitException() : errStream(&errStreambuf),
+                     errStreambuf(errString.rdbuf()) {}
+
+  SimitException(SimitException&& other) : errStream(&errStreambuf),
+                                           errStreambuf(errString.rdbuf()) {
+    // TODO: No string copy (Inefficient copying)
     errString << other.errString.rdbuf();
   }
   
