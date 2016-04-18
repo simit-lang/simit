@@ -90,3 +90,14 @@ func caller(a : int) -> (b : int)
     b = 0;
   end
 end
+
+%%% call-non-var-tensor-arg
+%! caller([1.0, 2.0]) == [10.0, 13.0];
+func callee(c : tensor[2](float)') -> (d : tensor[2](float)')
+  d = c + [5.0, 6.0];
+end
+
+func caller(a : tensor[2](float)') -> (b : tensor[2](float)')
+  b = callee(a + 1.0) + [3.0, 4.0];
+end
+

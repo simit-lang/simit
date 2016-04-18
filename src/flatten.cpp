@@ -149,14 +149,17 @@ private:
     for (Expr actual : op->actuals) {
       Expr newActual = rewrite(actual);
       if (newActual != actual) {
+        actual = newActual;
         changed = true;
       }
-      actual = newActual;
 
       // Spill non-var higher-order tensor-typed expressions in function calls
       Type atype = actual.type();
       if ((atype.isTensor() && !isScalar(atype) && !isa<VarExpr>(actual)) ) {
         actual = spill(actual);
+        if (isa<IndexedTensor>(actual)) {
+          actual = to<IndexedTensor>(actual)->tensor;
+        }
         changed = true;
       }
       actuals.push_back(actual);
