@@ -178,9 +178,9 @@ TEST(System, map_assemble_blocked) {
   ElementRef p1 = points.add();
   ElementRef p2 = points.add();
 
-  x.set(p0, {1.0});
-  x.set(p1, {2.0});
-  x.set(p2, {3.0});
+  x.set(p0, 1.0);
+  x.set(p1, 2.0);
+  x.set(p2, 3.0);
 
   // Compile program and bind arguments
   Function func = loadFunction(TEST_FILE_NAME, "main");
