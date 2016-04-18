@@ -1281,19 +1281,6 @@ void LLVMBackend::compile(const ir::Print& print) {
 
   const TensorType *tensor = type.toTensor();
   ScalarType scalarType = tensor->getComponentType();
-  std::string specifier;
-  switch (scalarType.kind) {
-    case ScalarType::Float:
-      specifier = std::string("%") + print.format + "g";
-      break;
-    case ScalarType::Complex:
-      specifier = std::string("<%") + print.format + "g,%g>";
-      break;
-    case ScalarType::Boolean:
-    case ScalarType::Int:
-      specifier = std::string("%") + print.format + "d";
-      break;
-  }
 
   if (scalarType == ScalarType::String) {
     emitPrintf(result, {});
@@ -1311,7 +1298,7 @@ void LLVMBackend::compile(const ir::Print& print) {
         specifier = std::string("%") + print.format + "d";
         break;
       case ScalarType::String:
-        iassert(false);
+        unreachable;
         break;
     }
 
