@@ -1,0 +1,23 @@
+element Point
+  result : tensor[2](float);
+end
+
+element HyperEdge
+  dEnergy : tensor[6](float);
+end
+
+extern points     : set{Point};
+extern hyperedges : set{HyperEdge}(points,points,points);
+
+func create_dEnergy_matrix(tri : HyperEdge, p : (Point*3)) -> (dE : tensor[points](tensor[2](float)))
+  dE(p(0))(0) = tri.dEnergy(0) ;
+  dE(p(0))(1) = tri.dEnergy(1) ;
+  dE(p(1))(0) = tri.dEnergy(2) ;
+  dE(p(1))(1) = tri.dEnergy(3) ;
+  dE(p(2))(0) = tri.dEnergy(4) ;
+  dE(p(2))(1) = tri.dEnergy(5) ;
+end
+
+proc main 
+  points.result = map create_dEnergy_matrix to hyperedges reduce +;
+end

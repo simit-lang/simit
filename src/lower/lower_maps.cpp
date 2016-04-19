@@ -38,7 +38,20 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
     iassert(isa<TensorWrite>(stmt));
     const TensorWrite *tensorWrite = to<TensorWrite>(stmt);
     iassert(tensorWrite->value.type().isTensor());
-    if (isa<VarExpr>(op->tensor) && isResult(to<VarExpr>(op->tensor)->var)) {
+
+    Var targetVar;
+    match(op->tensor,
+      function<void(const TensorRead*,Matcher*)>([&](const TensorRead* op,
+                                                     Matcher* ctx){
+        ctx->match(op->tensor);
+      }),
+      std::function<void(const VarExpr*)>([&targetVar](const VarExpr* v) {
+        targetVar = v->var;
+      })
+    );
+    iassert(targetVar.defined());
+
+    if (isResult(targetVar)) {
       if (locs.defined() && op->indices.size() == 2) {
         iassert(endpoints.defined());
         iassert(op->indices.size() == 2);

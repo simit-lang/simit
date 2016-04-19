@@ -491,6 +491,52 @@ TEST(System, map_edgeset_no_endpoints_results) {
   ASSERT_EQ(4.0, (simit_float)a.get(s1));
 }
 
+TEST(System, assembly_vector_copy) {
+  Set points;
+  auto result = points.addField<simit_float,2>("result");
+
+  ElementRef p0 = points.add();
+  ElementRef p1 = points.add();
+  ElementRef p2 = points.add();
+  ElementRef p3 = points.add();
+
+  Set hyperedges(points,points,points);
+  auto dE = hyperedges.addField<simit_float,6>("dEnergy");
+
+  ElementRef h0 = hyperedges.add(p0,p1,p2);
+  ElementRef h1 = hyperedges.add(p2,p1,p3);
+
+  dE(h0) = { 1.0,  2.0,
+             3.0,  4.0,
+             5.0,  6.0};
+
+  dE(h1) = {10.0, 20.0,
+            30.0, 40.0,
+            50.0, 60.0};
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+
+  func.bind("points",     &points);
+  func.bind("hyperedges", &hyperedges);
+
+  func.runSafe();
+
+  // Check that outputs are correct
+  EXPECT_EQ(1.0, (simit_float)result.get(p0)(0));
+  EXPECT_EQ(2.0, (simit_float)result.get(p0)(1));
+
+  EXPECT_EQ(33.0, (simit_float)result.get(p1)(0));
+  EXPECT_EQ(44.0, (simit_float)result.get(p1)(1));
+
+  EXPECT_EQ(15.0, (simit_float)result.get(p2)(0));
+  EXPECT_EQ(26.0, (simit_float)result.get(p2)(1));
+
+  EXPECT_EQ(50.0, (simit_float)result.get(p3)(0));
+  EXPECT_EQ(60.0, (simit_float)result.get(p3)(1));
+}
+
 TEST(System, slice) {
   // Points
   Set points;

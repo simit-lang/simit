@@ -152,7 +152,7 @@ void PathExpressionBuilder::computePathExpression(Var target,
         peStack.push(PathExpression());
       }
     }),
-    function<void(const Add*, Matcher* ctx)>([&](const Add* op, Matcher* ctx) {
+    function<void(const Add*, Matcher*)>([&](const Add* op, Matcher* ctx) {
       ctx->match(op->a);
       PathExpression a = peStack.top();
       peStack.pop();

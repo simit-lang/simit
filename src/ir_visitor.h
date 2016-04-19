@@ -342,6 +342,18 @@ match(func,
   })
 );
 ~~~~~~~~~~~~~~~
+
+Alternatively, mathing rules can also accept a Context to be used to match
+sub-expressions:
+~~~~~~~~~~~~~~~{.cpp}
+match(func,
+  std:;function<void(const Add*,Matcher* ctx)>([&](const Add* op, Matcher* ctx){
+    ctx->match(op->a);
+  })
+);
+~~~~~~~~~~~~~~~
+
+function<void(const Add*, Matcher* ctx)>([&](const Add* op, Matcher* ctx) {
 **/
 template <class IR, class... Patterns>
 void match(IR ir, Patterns... patterns) {
