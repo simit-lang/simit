@@ -49,3 +49,10 @@ To build Simit's documentation do:
 
 This will create a doc directory containing HTML documentation.
 Open doc/index.html in your browser.
+
+SIMIT CONTINUOUS TESTING:
+=========================
+Simit is currently tested on a Jenkins instance located at
+http://128.52.181.113/. A test build is triggered on every push to master
+and each pull request. The status of the test is marked on the pull request
+in Github.
