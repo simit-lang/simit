@@ -114,7 +114,7 @@ Func LLVMBackend::makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
 
 Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   this->module = new llvm::Module("simit", LLVM_CTX);
-
+  std::cout << "Compiling " << func.getName() << std::endl;
   iassert(func.getBody().defined()) << "cannot compile an undefined function";
 
   this->dataLayout.reset(new llvm::DataLayout(module));
@@ -1002,14 +1002,20 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       callStmt.actuals.size() << " arguments, but expected " <<
       callStmt.callee.getArguments().size() << " arguments.";
     std::cout << callStmt.callee << std::endl;
-    //args.push_back(compile(callStmt.callee.getResults()[0]));
-    llvm::Value *llvmVar = symtable.get(callStmt.callee.getResults()[0]);
+
+    tassert(callStmt.results.size() == 1) <<
+      "Only single return values for externs supported right now";
+    
+    std::cout << callStmt.results[0] << std::endl;
+    llvm::Value *llvmVar = symtable.get(callStmt.results[0]);
     args.push_back(llvmVar);
-    std::cout << *args[2]<< std::endl;
+
+    std::cout << "type of return: " << callStmt.callee.getResults()[0].getType() << std::endl;
+
     argTypes.push_back(llvmFloatPtrType());
     std::cout << *argTypes[2] << std::endl;
     call = emitCall(callStmt.callee.getName(), args);
-    std::cout << *call << std::endl;
+    //std::cout << *call << std::endl;
     return;
   }
 

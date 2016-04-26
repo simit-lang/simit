@@ -237,6 +237,6 @@ TEST(Codegen, extern_func) {
   function.runSafe();
 
   SIMIT_ASSERT_FLOAT_EQ(1.0+4.0, cRes);
-
 }
+
 
