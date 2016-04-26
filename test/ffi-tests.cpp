@@ -37,9 +37,9 @@ TEST(ffi, extern_func) {
   simit::Function function = backend->compile(tst_func);
   
   
-  simit_float aArg = 1.0;
-  simit_float bArg = 4.0;
-  simit_float cRes = -1.0;
+  simit_float aArg = (simit_float)1.0;
+  simit_float bArg = (simit_float)4.0;
+  simit_float cRes = (simit_float)-1.0;
 
   function.bind("a", &aArg);
   function.bind("b", &bArg);
@@ -47,7 +47,7 @@ TEST(ffi, extern_func) {
 
   function.runSafe();
 
-  SIMIT_ASSERT_FLOAT_EQ(1.0+4.0, cRes);
+  SIMIT_EXPECT_FLOAT_EQ(1.0+4.0, cRes);
 }
 
 extern "C" void ext_vec3f_add(simit_float *a, simit_float *b, simit_float *c) {
@@ -98,8 +98,6 @@ extern "C" void ext_csr_gemv(simit_float* vals, int* row_start, int* col_idx,
   simit_float* csrVals;
   
   convert_to_csr(vals, row_start, col_idx, rows, cols, nnz, rowblock, colblock, &csrRowStart, &csrColIdx, &csrVals);
-  
-  std::cout << "Done with conversion.\n";
   
   // spmv
   for (int i=0; i<rows; i++) {
@@ -196,15 +194,15 @@ TEST(ffi, to_csr_from_blocked) {
   // Check that outputs are correct
   // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
   simit::TensorRef<simit_float,2> c0 = c.get(p0);
-  ASSERT_EQ(16.0, c0(0));
-  ASSERT_EQ(36.0, c0(1));
+  SIMIT_EXPECT_FLOAT_EQ(16.0, c0(0));
+  SIMIT_EXPECT_FLOAT_EQ(36.0, c0(1));
 
   simit::TensorRef<simit_float,2> c1 = c.get(p1);
-  ASSERT_EQ(116.0, c1(0));
-  ASSERT_EQ(172.0, c1(1));
+  SIMIT_EXPECT_FLOAT_EQ(116.0, c1(0));
+  SIMIT_EXPECT_FLOAT_EQ(172.0, c1(1));
 
   simit::TensorRef<simit_float,2> c2 = c.get(p2);
-  ASSERT_EQ(100.0, c2(0));
-  ASSERT_EQ(136.0, c2(1));
+  SIMIT_EXPECT_FLOAT_EQ(100.0, c2(0));
+  SIMIT_EXPECT_FLOAT_EQ(136.0, c2(1));
 }
 

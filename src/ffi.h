@@ -5,7 +5,7 @@
 
 
 extern "C" {
-
+/// Converts a Simit system tensor into a CSR matrix.
 void convert_to_csr(simit_float* bufferA,
                  int* row_start, int* col_idx,
                  int rows, int columns, int nnz, int bs_x, int bs_y,
@@ -20,9 +20,6 @@ void convert_to_csr(simit_float* bufferA,
          entries.push_back(std::tuple<int,int,simit_float>(i*bs_x+bi,
                                               col_idx[j]*bs_y+bj,
                                               bufferA[j*bs_x*bs_y+bs_x*bi+bj]));
-//         std::cout << i*bs_x+bi << "," << col_idx[j]*bs_y+bj << "," <<
-//                                              bufferA[j*bs_x*bs_y+bs_x*bi+bj] << std::endl;
-//         std::cout << "   j+bi*bj = " << j*bs_x*bs_y+bs_x*bi+bj << std::endl;
       }}
     }
   }
@@ -30,11 +27,6 @@ void convert_to_csr(simit_float* bufferA,
   // sort the tuples
   std::sort(entries.begin(), entries.end());
   
-  for (auto entry: entries)
-    std::cout << std::get<0>(entry) << "," << std::get<1>(entry) << "," << std::get<2>(entry) << std::endl;
-
-  std::cout << "------" << std::endl;
-
   // build the matrix
   *csrRowStart = (int*)malloc(sizeof(int)*rows);
   *csrColIdx = (int*)malloc(sizeof(int)*nnz*bs_x*bs_y);
@@ -55,7 +47,6 @@ void convert_to_csr(simit_float* bufferA,
     (*csrColIdx)[i] = std::get<1>(entries[l]);
     (*csrRowStart)[std::get<0>(entries[l])]++;
   }
-  
   
   // shift back row_start
   for (int i=rows; i>0; i--) (*csrRowStart)[i] = (*csrRowStart)[i-1];
