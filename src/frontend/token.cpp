@@ -49,6 +49,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'element'";
     case Token::Type::SET:
       return "'set'";
+    case Token::Type::LATTICE:
+      return "'lattice'";
     case Token::Type::VAR:
       return "'var'";
     case Token::Type::CONST:

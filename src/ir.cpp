@@ -179,6 +179,12 @@ void Literal::cast(Type type) {
   this->type = type;
 }
 
+int Literal::getIntVal(int index) const {
+  iassert(type.toTensor()->getComponentType().isInt())
+      << "getIntVal only valid for literals with int components";
+  return ((int*)data)[index];
+}
+
 double Literal::getFloatVal(int index) const {
   if (ScalarType::singleFloat()) {
     return ((float*)data)[index];
@@ -195,6 +201,15 @@ double_complex Literal::getComplexVal(int index) const {
   else {
     return ((double_complex*)data)[index];
   }
+}
+
+bool Literal::isAllZeros() const {
+  for (int i = 0; i < size; ++i) {
+    if (((uint8_t*)data)[i] != 0) {
+      return false;
+    }
+  }
+  return true;
 }
 
 Expr Literal::make(Type type) {
@@ -837,6 +852,35 @@ Expr TupleRead::make(Expr tuple, Expr index) {
   node->type = tuple.type().toTuple()->elementType;
   node->tuple = tuple;
   node->index = index;
+  return node;
+}
+
+// struct SetRead
+Expr SetRead::make(Expr set, std::vector<Expr> indices) {
+  iassert(set.type().isSet());
+  for (auto &index : indices) {
+    iassert(isScalar(index.type()));
+  }
+
+  if (set.type().toSet()->kind == SetType::Kind::Unstructured &&
+      set.type().toSet()->getCardinality() == 0) {
+    // TODO: Can't check dimensions of a free-standing unstructured
+    // set, we probably need to track this globally at some point.
+    // For now, this is checked during map lowering.
+  }
+  else if (set.type().toSet()->kind == SetType::Kind::LatticeLink) {
+    // Indices should index both the source offset and sink offset
+    // giving 2*dims indices.
+    iassert(indices.size() == set.type().toSet()->dimensions*2);
+  }
+  else {
+    not_supported_yet;
+  }
+
+  SetRead *node = new SetRead;
+  node->type = set.type().toSet()->elementType;
+  node->set = set;
+  node->indices = indices;
   return node;
 }
 

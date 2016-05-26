@@ -232,17 +232,36 @@ struct ElementType : TypeNode {
 /// The type of a Simit set.  If the set is an edge set then the vector
 /// endpointSets contains the sets each endpoint of an edge comes from.
 struct SetType : TypeNode {
+  enum Kind {Unstructured, LatticeLink};
   Type elementType;
+  Kind kind;
 
+  /// UNSTRUCTURED:
   /// Endpoint sets.  These are stored as pointers to break an include cycle
   /// between this file and ir.h.
   std::vector<Expr*> endpointSets;
-
+  /// Cardinality of unstructured edges.
   size_t getCardinality() const {return endpointSets.size();}
+
+  /// LATTICE LINK:
+  /// Dimensionality of the lattice. This set must be of size d_1 x d_2 x ...
+  /// d_Nd x d. This type of set forces a LATTICE structure, such that the point
+  /// in the underlying set at coordinate (... i_j, ...) neighbors points as
+  /// coordinates (... i_j-1, ...) and (... i_j+1 ...), for all possible j. The
+  /// determination of boundary conditions is also delegated to the lattice link
+  /// set definition, though we assume periodic for now.
+  size_t dimensions;
+  /// Underlying point set of the lattice. Elements of this edge set connect
+  /// neighboring grid points in the lattice.
+  IndexSet latticePointSet;
 
   // TODO: Add method to retrieve a set field (compute from elementType fields)
 
+  /// UNSTRUCTURED set factory
   static Type make(Type elementType, const std::vector<Expr>& endpointSets);
+  /// LATTICE LINK set factory
+  static Type make(Type elementType, IndexSet latticePointSet,
+                   size_t dimensions);
   ~SetType();
 };
 

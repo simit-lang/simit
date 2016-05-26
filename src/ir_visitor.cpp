@@ -194,6 +194,13 @@ void IRVisitor::visit(const TupleRead *op) {
   op->index.accept(this);
 }
 
+void IRVisitor::visit(const SetRead *op) {
+  op->set.accept(this);
+  for (auto &index : op->indices) {
+    index.accept(this);
+  }
+}
+
 void IRVisitor::visit(const TensorRead *op) {
   op->tensor.accept(this);
   for (auto &index : op->indices) {

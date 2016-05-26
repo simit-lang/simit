@@ -74,34 +74,76 @@ void TypeChecker::visit(SetType::Ptr type) {
   const ir::Type elementType = getIRType(type->element);
   bool typeChecked = elementType.defined();
 
-  std::vector<ir::Expr> endpoints;
-  for (auto end : type->endpoints) {
-    const ir::Expr endpoint = getExpr(end);
+  if (type->type == SetType::Type::UNSTRUCTURED) {
+    std::vector<ir::Expr> endpoints;
+    for (auto end : type->endpoints) {
+      const ir::Expr endpoint = getExpr(end);
     
-    if (!endpoint.defined()) {
-      typeChecked = false;
-      continue;
+      if (!endpoint.defined()) {
+        typeChecked = false;
+        continue;
+      }
+
+      // Check that endpoint is of set type.
+      if (!endpoint.type().isSet()) {
+        std::stringstream errMsg;
+        errMsg << "expected endpoint to be of set type but got an endpoint of "
+               << "type " << typeString(endpoint.type());
+        reportError(errMsg.str(), end);
+      
+        typeChecked = false;
+        continue;
+      }
+      
+      endpoints.push_back(endpoint);
     }
 
-    // Check that endpoint is of set type.
-    if (!endpoint.type().isSet()) {
-      std::stringstream errMsg;
-      errMsg << "expected endpoint to be of set type but got an endpoint of "
-             << "type " << typeString(endpoint.type());
-      reportError(errMsg.str(), end);
-      
-      typeChecked = false;
-      continue;
+    if (!typeChecked) {
+      return;
     }
-      
-    endpoints.push_back(endpoint);
-  }
-
-  if (!typeChecked) {
-    return;
-  }
  
-  retIRType = ir::SetType::make(elementType, endpoints);
+    retIRType = ir::SetType::make(elementType, endpoints);
+  }
+  else if (type->type == SetType::Type::LATTICE_LINK) {
+    const ir::Expr latticePointSet = getExpr(type->latticePointSet);
+    if (!latticePointSet.defined()) {
+      typeChecked = false;
+    }
+    // Check lattice point set is of set type.
+    else if (!latticePointSet.type().isSet()) {
+      std::stringstream errMsg;
+      errMsg << "expected lattice point type to be of set type but got "
+             << typeString(latticePointSet.type());
+      reportError(errMsg.str(), type->latticePointSet);
+      typeChecked = false;
+    }
+    // Check lattice point set is an unstructured set
+    else if (!latticePointSet.type().toSet()->kind ==
+             ir::SetType::Kind::Unstructured) {
+      std::stringstream errMsg;
+      errMsg << "expected lattice point set of Unstructured kind but got "
+             << latticePointSet.type().toSet()->kind;
+      reportError(errMsg.str(), type->latticePointSet);
+      typeChecked = false;
+    }
+    // Check lattice point set is cardinality zero
+    else if (!latticePointSet.type().toSet()->getCardinality() == 0) {
+      std::stringstream errMsg;
+      errMsg << "expected lattice point set of 0 cardinality, but got "
+             << latticePointSet.type().toSet()->getCardinality();
+      reportError(errMsg.str(), type->latticePointSet);
+      typeChecked = false;
+    }
+
+    if (!typeChecked) {
+      return;
+    }
+
+    retIRType = ir::SetType::make(elementType, latticePointSet, type->dimensions);
+  }
+  else {
+    unreachable;
+  }
 }
 
 void TypeChecker::visit(TupleType::Ptr type) {
@@ -1066,6 +1108,109 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     errMsg << "cannot access elements from objects of type " 
            << typeString(lhsType);
     reportError(errMsg.str(), expr->tensor);
+  }
+}
+
+void TypeChecker::visit(SetReadExpr::Ptr expr) {
+  const Ptr<Expr::Type> lhsType = inferType(expr->set);
+  expr->access = expr->set->access;
+
+  if (!lhsType) {
+    return;
+  }
+
+  // Check that program does not attempt to read from multiple values
+  // simultaneously
+  if (lhsType->size() != 1) {
+    const auto msg = "can only access elements of a single set";
+    reportError(msg, expr->set);
+    return;
+  }
+
+  if (lhsType->at(0).isSet()) {
+    // Case 1: Node set, single tuple index, DONT know dims
+    if (lhsType->at(0).toSet()->kind == ir::SetType::Kind::Unstructured) {
+      // TODO: No good way to check indices = #dims
+      bool typeChecked = true;
+      for (auto index : expr->indices) {
+        if (index->isSlice()) {
+          reportError("lattice point access expects integral indices", index);
+          typeChecked = false;
+        }
+      }
+
+      if (typeChecked) {
+        for (auto index : expr->indices) {
+          const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
+          const Ptr<Expr::Type> indexType = inferType(indexExpr);
+
+          if (indexType->size() != 1 || !isInt(indexType->at(0))) {
+            std::stringstream errMsg;
+            errMsg << "lattice point access expects an integral index but got "
+                   << "an index of type " << typeString(indexType);
+            reportError(errMsg.str(), index);
+            typeChecked = false;
+          }
+        }
+      }
+      if (typeChecked && !lhsType->at(0).toSet()->getCardinality() == 0) {
+        reportError("lattice point set cannot have non-zero cardinality",
+                    expr->set);
+        typeChecked = false;
+      }
+
+      retType = std::make_shared<Expr::Type>();
+      retType->push_back(lhsType->at(0).toSet()->elementType);
+    }
+    // Case 2: Lattice edge set, double set of indices (#indices = 2*dim)
+    else if (lhsType->at(0).toSet()->kind == ir::SetType::Kind::LatticeLink) {
+      // Check number of indices = 2*dim and all integral
+      int dims = lhsType->at(0).toSet()->dimensions;
+      if (expr->indices.size() != 2*dims) {
+        std::stringstream errMsg;
+        errMsg << "lattice edge set access expects number of indices to equal "
+               << "2*dimensions, but got " << expr->indices.size() << " vs "
+               << 2*dims;
+        reportError(errMsg.str(), expr->indices[0]);
+      }
+      else {
+        bool typeChecked = true;
+        for (auto index : expr->indices) {
+          if (index->isSlice()) {
+            reportError("lattice edge set access expects integral indices", index);
+            typeChecked = false;
+          }
+        }
+
+        if (typeChecked) {
+          for (auto index : expr->indices) {
+            const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
+            const Ptr<Expr::Type> indexType = inferType(indexExpr);
+
+            if (indexType->size() != 1 || !isInt(indexType->at(0))) {
+              std::stringstream errMsg;
+              errMsg << "lattice edge set access expects an integral index but "
+                     << "got an index of type " << typeString(indexType);
+              reportError(errMsg.str(), index);
+              typeChecked = false;
+            }
+          }
+        }
+      }
+
+      retType = std::make_shared<Expr::Type>();
+      retType->push_back(lhsType->at(0).toSet()->elementType);
+    }
+    else {
+      std::stringstream errMsg;
+      errMsg << "set type cannot be indexed: " << typeString(lhsType);
+      reportError(errMsg.str(), expr->set);
+    }
+  } else {
+    std::stringstream errMsg;
+    errMsg << "cannot access elements from objects of type "
+           << typeString(lhsType);
+    reportError(errMsg.str(), expr->set);
   }
 }
 

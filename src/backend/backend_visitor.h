@@ -167,6 +167,7 @@ private:
   void visit(const ir::IndexedTensor* op) {visitError("IndexedTensor", op);}
   void visit(const ir::Map* op)           {visitError("Map", op);}
   void visit(const ir::TensorWrite* op)   {visitError("TensorWrite", op);}
+  void visit(const ir::SetRead* op)       {visitError("SetRead", op);}
 };
 
 }}

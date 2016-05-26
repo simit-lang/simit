@@ -19,8 +19,16 @@ void HIRRewriter::visit(StmtBlock::Ptr stmtBlock) {
 
 void HIRRewriter::visit(SetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
-  for (auto &endpoint : type->endpoints) {
-    endpoint = rewrite<Endpoint>(endpoint);
+  if (type->type == SetType::Type::UNSTRUCTURED) {
+    for (auto &endpoint : type->endpoints) {
+      endpoint = rewrite<Endpoint>(endpoint);
+    }
+  }
+  else if (type->type == SetType::Type::LATTICE_LINK) {
+    type->latticePointSet = rewrite<Endpoint>(type->latticePointSet);
+  }
+  else {
+    unreachable;
   }
   node = type;
 }
@@ -226,6 +234,14 @@ void HIRRewriter::visit(CallExpr::Ptr expr) {
 
 void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
   expr->tensor = rewrite<Expr>(expr->tensor);
+  for (auto &index : expr->indices) {
+    index = rewrite<ReadParam>(index);
+  }
+  node = expr;
+}
+
+void HIRRewriter::visit(SetReadExpr::Ptr expr) {
+  expr->set = rewrite<Expr>(expr->set);
   for (auto &index : expr->indices) {
     index = rewrite<ReadParam>(index);
   }
