@@ -884,7 +884,8 @@ hir::Expr::Ptr Parser::parseTransposeExpr() {
   return expr;
 }
 
-// call_or_read_expr: factor {('(' [read_params] ')') | ('.' ident)}
+// call_or_read_expr: factor {('(' [read_params] ')') | ('[' [read_params] ']')
+//                            | ('.' ident)}
 hir::Expr::Ptr Parser::parseCallOrReadExpr() {
   hir::Expr::Ptr expr = parseFactor();
 
@@ -904,6 +905,22 @@ hir::Expr::Ptr Parser::parseCallOrReadExpr() {
         tensorRead->setEndLoc(rightParenToken);
 
         expr = tensorRead;
+        break;
+      }
+      case Token::Type::LB:
+      {
+        auto setRead = std::make_shared<hir::SetReadExpr>();
+
+        consume(Token::Type::LB);
+        setRead->set = expr;
+        if (peek().type != Token::Type::RB) {
+          setRead->indices = parseReadParams();
+        }
+
+        const Token rightBracketToken = consume(Token::Type::RB);
+        setRead->setEndLoc(rightBracketToken);
+
+        expr = setRead;
         break;
       }
       case Token::Type::PERIOD:
@@ -1027,7 +1044,8 @@ std::vector<hir::Expr::Ptr> Parser::parseCallParams() {
   return callParams;
 }
 
-// type: element_type | set_type | tuple_type | tensor_type
+// type: element_type | unstructured_set_type | lattice_link_set_type
+//     | tuple_type | tensor_type
 hir::Type::Ptr Parser::parseType() {
   hir::Type::Ptr type;
   switch (peek().type) {
@@ -1035,7 +1053,10 @@ hir::Type::Ptr Parser::parseType() {
       type = parseElementType();
       break;
     case Token::Type::SET:
-      type = parseSetType();
+      type = parseUnstructuredSetType();
+      break;
+    case Token::Type::LATTICE:
+      type = parseLatticeLinkSetType();
       break;
     case Token::Type::LP:
       type = parseTupleType();
@@ -1070,8 +1091,8 @@ hir::ElementType::Ptr Parser::parseElementType() {
   return elementType;
 }
 
-// set_type: 'set' '{' element_type '}' ['(' endpoints ')']
-hir::SetType::Ptr Parser::parseSetType() {
+// unstructured_set_type: 'set' '{' element_type '}' ['(' endpoints ')']
+hir::SetType::Ptr Parser::parseUnstructuredSetType() {
   auto setType = std::make_shared<hir::SetType>();
 
   const Token setToken = consume(Token::Type::SET);
@@ -1089,6 +1110,37 @@ hir::SetType::Ptr Parser::parseSetType() {
     const Token rightParenToken = consume(Token::Type::RP);
     setType->setEndLoc(rightParenToken);
   }
+
+  setType->type = hir::SetType::Type::UNSTRUCTURED;
+
+  return setType;
+}
+
+// lattice_link_set_type: 'lattice' '[' INT_LITERAL ']' '{' element_type '}' '(' IDENT ')'
+hir::SetType::Ptr Parser::parseLatticeLinkSetType() {
+  auto setType = std::make_shared<hir::SetType>();
+
+  const Token latticeToken = consume(Token::Type::LATTICE);
+  setType->setBeginLoc(latticeToken);
+
+  consume(Token::Type::LB);
+  const Token dimsToken = consume(Token::Type::INT_LITERAL);
+  setType->dimensions = dimsToken.num;
+  consume(Token::Type::RB);
+
+  consume(Token::Type::LC);
+  setType->element = parseElementType();
+  consume(Token::Type::RC);
+
+  consume(Token::Type::LP);
+  const Token latticePointSetToken = consume(Token::Type::IDENT);
+  auto latticePointSet = std::make_shared<hir::Endpoint>();
+  latticePointSet->setLoc(latticePointSetToken);
+  latticePointSet->setName = latticePointSetToken.str;
+  setType->latticePointSet = latticePointSet;
+  consume(Token::Type::RP);
+
+  setType->type = hir::SetType::Type::LATTICE_LINK;
 
   return setType;
 }

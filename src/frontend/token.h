@@ -30,6 +30,7 @@ public:
     VECTOR,
     ELEMENT,
     SET,
+    LATTICE,
     VAR,
     CONST,
     EXTERN,

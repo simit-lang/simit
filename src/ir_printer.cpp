@@ -275,6 +275,21 @@ void IRPrinter::visit(const TupleRead *op) {
   os << ")";
 }
 
+void IRPrinter::visit(const SetRead *op) {
+  clearSkipParen();
+  print(op->set);
+  os << "[";
+  auto indices = op->indices;
+  if (indices.size() > 0) {
+    print(indices[0]);
+  }
+  for (size_t i=1; i < indices.size(); ++i) {
+    os << ",";
+    print(indices[i]);
+  }
+  os << "]";
+}
+
 void IRPrinter::visit(const TensorRead *op) {
   clearSkipParen();
   print(op->tensor);

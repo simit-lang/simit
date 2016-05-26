@@ -148,8 +148,17 @@ struct Endpoint : public HIRNode {
 };
 
 struct SetType : public Type {
+  enum class Type {UNSTRUCTURED, LATTICE_LINK};
+
+  Type type;
   ElementType::Ptr           element;
+
+  /// UNSTRUCTURED type set
   std::vector<Endpoint::Ptr> endpoints;
+
+  /// LATTICE_LINK type set
+  size_t dimensions;
+  Endpoint::Ptr latticePointSet;
   
   typedef std::shared_ptr<SetType> Ptr;
   
@@ -705,6 +714,20 @@ struct TensorReadExpr : public Expr {
   
   virtual unsigned getLineBegin() { return tensor->getLineBegin(); }
   virtual unsigned getColBegin() { return tensor->getColBegin(); }
+};
+
+struct SetReadExpr : public Expr {
+  Expr::Ptr set;
+  std::vector<ReadParam::Ptr> indices;
+
+  typedef std::shared_ptr<SetReadExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<SetReadExpr>(shared_from_this()));
+  }
+
+  virtual unsigned getLineBegin() { return set->getLineBegin(); }
+  virtual unsigned getColBegin() { return set->getColBegin(); }
 };
 
 struct TupleReadExpr : public Expr {

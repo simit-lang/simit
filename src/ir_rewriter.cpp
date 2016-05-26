@@ -422,6 +422,24 @@ void IRRewriter::visit(const TupleRead *op) {
   }
 }
 
+void IRRewriter::visit(const SetRead *op) {
+  Expr set = rewrite(op->set);
+  std::vector<Expr> indices(op->indices.size());
+  bool indicesSame = true;
+  for (size_t i=0; i < op->indices.size(); ++i) {
+    indices[i] = rewrite(op->indices[i]);
+    if (indices[i] != op->indices[i]) {
+      indicesSame = false;
+    }
+  }
+  if (set == op->set && indicesSame) {
+    expr = op;
+  }
+  else {
+    expr = SetRead::make(set, indices);
+  }
+}
+
 void IRRewriter::visit(const TensorRead *op) {
   Expr tensor = rewrite(op->tensor);
   std::vector<Expr> indices(op->indices.size());

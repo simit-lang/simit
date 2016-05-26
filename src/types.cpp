@@ -139,6 +139,7 @@ bool TensorType::hasSystemDimensions() const {
 }
 
 // struct SetType
+// UNSTRUCTURED set factory
 Type SetType::make(Type elementType, const std::vector<Expr>& endpointSets) {
   iassert(elementType.isElement());
   SetType *type = new SetType;
@@ -146,6 +147,21 @@ Type SetType::make(Type elementType, const std::vector<Expr>& endpointSets) {
   for (auto& eps : endpointSets) {
     type->endpointSets.push_back(new Expr(eps));
   }
+  type->kind = SetType::Unstructured;
+  return type;
+}
+// LATTICE LINK set factory
+Type SetType::make(Type elementType, IndexSet latticePointSet,
+                   size_t dimensions) {
+  iassert(elementType.isElement());
+  iassert(latticePointSet.getKind() == IndexSet::Kind::Set);
+  iassert(latticePointSet.getSet().type().toSet()->kind == Unstructured);
+  iassert(latticePointSet.getSet().type().toSet()->getCardinality() == 0);
+  SetType *type = new SetType;
+  type->elementType = elementType;
+  type->latticePointSet = latticePointSet;
+  type->dimensions = dimensions;
+  type->kind = SetType::LatticeLink;
   return type;
 }
 
@@ -310,14 +326,24 @@ std::ostream& operator<<(std::ostream& os, const ElementType& type) {
 }
 
 std::ostream& operator<<(std::ostream& os, const SetType& type) {
-  os << "set{" << type.elementType.toElement()->name << "}";
+  if (type.kind == SetType::Unstructured) {
+    os << "set{" << type.elementType.toElement()->name << "}";
 
-  if (type.endpointSets.size() > 0) {
-    os << "(" << *type.endpointSets[0];
-    for (auto& epSet : util::excludeFirst(type.endpointSets)) {
-      os << ", " << *epSet;
+    if (type.endpointSets.size() > 0) {
+      os << "(" << *type.endpointSets[0];
+      for (auto& epSet : util::excludeFirst(type.endpointSets)) {
+        os << ", " << *epSet;
+      }
+      os << ")";
     }
-    os << ")";
+  }
+  else if (type.kind == SetType::LatticeLink) {
+    os << "lattice[" << type.dimensions << "]{"
+       << type.elementType.toElement()->name << "}("
+       << type.latticePointSet << ")";
+  }
+  else {
+    unreachable;
   }
 
   return os;

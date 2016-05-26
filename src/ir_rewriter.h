@@ -74,6 +74,7 @@ protected:
 
   /// High-level IRNodes that are lowered and never reach the backend
   virtual void visit(const TupleRead *op);
+  virtual void visit(const SetRead *op);
   virtual void visit(const TensorRead *op);
   virtual void visit(const TensorWrite *op);
   virtual void visit(const IndexedTensor *op);

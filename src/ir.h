@@ -152,8 +152,10 @@ struct Literal : public ExprNode {
   size_t size;
 
   void cast(Type type);
+  int getIntVal(int index) const;
   double getFloatVal(int index) const;
   double_complex getComplexVal(int index) const;
+  bool isAllZeros() const;
 
   static Expr make(Type type);
   static Expr make(int val);
@@ -452,6 +454,16 @@ struct TupleRead : public ExprNode {
   Expr tuple, index;
   static Expr make(Expr tuple, Expr index);
   void accept(IRVisitorStrict *v) const {v->visit((const TupleRead*)this);}
+};
+
+/// Expression that reads a set element, used by lattice graphs for stencil
+/// assembly using lattice offsets for element indexing.
+struct SetRead : public ExprNode {
+  Expr set;
+  std::vector<Expr> indices;
+
+  static Expr make(Expr set, std::vector<Expr> indices);
+  void accept(IRVisitorStrict *v) const {v->visit((const SetRead*)this);}
 };
 
 /// Expression that reads a tensor from an n-dimensional tensor location.

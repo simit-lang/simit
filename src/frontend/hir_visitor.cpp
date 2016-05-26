@@ -18,8 +18,16 @@ void HIRVisitor::visit(StmtBlock::Ptr stmtBlock) {
 
 void HIRVisitor::visit(SetType::Ptr type) {
   type->element->accept(this);
-  for (auto endpoint : type->endpoints) {
-    endpoint->accept(this);
+  if (type->type == SetType::Type::UNSTRUCTURED) {
+    for (auto endpoint : type->endpoints) {
+      endpoint->accept(this);
+    }
+  }
+  else if (type->type == SetType::Type::LATTICE_LINK) {
+    type->latticePointSet->accept(this);
+  }
+  else {
+    unreachable;
   }
 }
 
@@ -224,6 +232,13 @@ void HIRVisitor::visit(CallExpr::Ptr expr) {
 
 void HIRVisitor::visit(TensorReadExpr::Ptr expr) {
   expr->tensor->accept(this);
+  for (auto param : expr->indices) {
+    param->accept(this);
+  }
+}
+
+void HIRVisitor::visit(SetReadExpr::Ptr expr) {
+  expr->set->accept(this);
   for (auto param : expr->indices) {
     param->accept(this);
   }

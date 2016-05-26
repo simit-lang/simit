@@ -71,6 +71,7 @@ private:
   virtual void visit(const Pass *op);
 
   virtual void visit(const TupleRead *op);
+  virtual void visit(const SetRead *op);
   virtual void visit(const TensorRead *op);
   virtual void visit(const TensorWrite *op);
   virtual void visit(const IndexedTensor *op);

@@ -45,13 +45,22 @@ void IREmitter::visit(Endpoint::Ptr end) {
 void IREmitter::visit(SetType::Ptr type) {
   const ir::Type elementType = emitType(type->element);
 
-  std::vector<ir::Expr> endpoints;
-  for (auto end : type->endpoints) {
-    const ir::Expr endpoint = emitExpr(end);
-    endpoints.push_back(endpoint);
-  }
+  if (type->type == SetType::Type::UNSTRUCTURED) {
+    std::vector<ir::Expr> endpoints;
+    for (auto end : type->endpoints) {
+      const ir::Expr endpoint = emitExpr(end);
+      endpoints.push_back(endpoint);
+    }
 
-  retType = ir::SetType::make(elementType, endpoints);
+    retType = ir::SetType::make(elementType, endpoints);
+  }
+  else if (type->type == SetType::Type::LATTICE_LINK) {
+    const ir::Expr latticePointSet = emitExpr(type->latticePointSet);
+    retType = ir::SetType::make(elementType, latticePointSet, type->dimensions);
+  }
+  else {
+    unreachable;
+  }
 }
 
 void IREmitter::visit(TupleType::Ptr type) {
@@ -620,6 +629,19 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
   } else {
     retExpr = ir::TensorRead::make(tensor, indices);
   }
+}
+
+void IREmitter::visit(SetReadExpr::Ptr expr) {
+  const ir::Expr set = emitExpr(expr->set);
+  iassert(set.type().isSet());
+
+  std::vector<ir::Expr> indices;
+  for (auto param : expr->indices) {
+    const ir::Expr arg = emitExpr(param);
+    indices.push_back(arg);
+  }
+
+  retExpr = ir::SetRead::make(set, indices);
 }
 
 void IREmitter::visit(TupleReadExpr::Ptr expr) {
