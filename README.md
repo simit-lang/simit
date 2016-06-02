@@ -10,42 +10,51 @@ http://llvm.org/releases/download.html. You must then make sure llvm-config is
 available in your path.
 
 If you want to build LLVM yourself you can check it out using SVN:
-  svn co https://llvm.org/svn/llvm-project/llvm/branches/release_34/ llvm-3.4.2
+
+    svn co https://llvm.org/svn/llvm-project/llvm/branches/release_34/ llvm-3.4.2
 
 Then build it:
-  cd llvm-3.4.2
-  ./configure --disable-terminfo --enable-optimized --enable-assertions --enable-targets=x86
-  make -j8
+
+    cd llvm-3.4.2
+    ./configure --disable-terminfo --enable-optimized --enable-assertions --enable-targets=x86
+    make -j8
 
 Then set the LLVM_CONFIG environment variable to point to llvm-config:
-  export LLVM_CONFIG=<path to llvm>/Release+Asserts/bin/llvm-config
+
+    export LLVM_CONFIG=<path to llvm>/Release+Asserts/bin/llvm-config
 
 
 To perform an out-of-tree build of Simit do:
-  cd <simit-directory>
-  mkdir build
-  cd build
-  cmake ..
-  make -j8
+
+    cd <simit-directory>
+    mkdir build
+    cd build
+    cmake ..
+    make -j8
 
 To run the test suite do (all tests should pass):
-  cd <simit-directory>
-  ./build/bin/simit-test
+
+    cd <simit-directory>
+    ./build/bin/simit-test
 
 To check a Simit program do:
-  cd <simit-directory>
-  ./build/bin/simit-check <simit-program>
+
+    cd <simit-directory>
+    ./build/bin/simit-check <simit-program>
 
 For example:
-  ./build/bin/simit-check examples/springs.sim
+
+    ./build/bin/simit-check examples/springs.sim
 
 To make the Simit bin directory part of your PATH:
-  cd <simit-directory>
-  export PATH="$PATH:`pwd`/build/bin"
+
+    cd <simit-directory>
+    export PATH="$PATH:`pwd`/build/bin"
 
 To build Simit's documentation do:
-  cd <simit-directory>
-  doxygen
+
+    cd <simit-directory>
+    doxygen
 
 This will create a doc directory containing HTML documentation.
 Open doc/index.html in your browser.
