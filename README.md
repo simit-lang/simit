@@ -1,13 +1,13 @@
 Simit is a programming language designed to make it easier to write
 high-performance code to simulate sparse systems.
 
-BUILDING SIMIT:
-===============
-To build Simit you must install CMake 2.8.3 or later and LLVM 3.4.2.
-See http://www.cmake.org/cmake/resources/software.html for a copy of
-CMake. If your system does not have packages for LLVM you can
-download it at http://llvm.org/releases/download.html. You must then
-make sure llvm-config is available in your path.
+Building Simit
+==============
+To build Simit you must install CMake 2.8.3 or later and LLVM 3.4.2.  See
+http://www.cmake.org/cmake/resources/software.html for a copy of CMake. If your
+system does not have packages for LLVM you can download it at
+http://llvm.org/releases/download.html. You must then make sure llvm-config is
+available in your path.
 
 If you want to build LLVM yourself you can check it out using SVN:
   svn co https://llvm.org/svn/llvm-project/llvm/branches/release_34/ llvm-3.4.2
@@ -50,9 +50,9 @@ To build Simit's documentation do:
 This will create a doc directory containing HTML documentation.
 Open doc/index.html in your browser.
 
-SIMIT CONTINUOUS TESTING:
-=========================
+Simit Continuous Testing
+========================
 Simit is currently tested on a Jenkins instance located at
-http://128.52.181.113/. A test build is triggered on every push to master
-and each pull request. The status of the test is marked on the pull request
-in Github.
+http://128.52.181.113/. A test build is triggered on every push to master and
+each pull request. The status of the test is marked on the pull request in
+Github.
