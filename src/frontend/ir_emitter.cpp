@@ -182,9 +182,13 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
       arguments.push_back(ext);
     }
   }
-
+  
+  auto funcKind = decl->external ? ir::Func::Kind::External :
+    ir::Func::Kind::Internal;
+  
   iassert(!ctx->containsFunction(decl->name->ident));
-  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body));
+  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body,
+    funcKind));
 }
 
 void IREmitter::visit(VarDecl::Ptr decl) {

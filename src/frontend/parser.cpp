@@ -51,7 +51,7 @@ hir::HIRNode::Ptr Parser::parseProgramElement() {
         return parseElementTypeDecl();
         break;
       case Token::Type::EXTERN:
-        return parseExternDecl();
+        return parseExternFuncOrDecl();
         break;
       case Token::Type::CONST:
         return parseConstDecl();
@@ -109,6 +109,16 @@ hir::Field::Ptr Parser::parseFieldDecl() {
   return fieldDecl;
 }
 
+// extern_func_or_decl: extern_decl | extern_func_decl
+hir::HIRNode::Ptr Parser::parseExternFuncOrDecl() {
+  auto tokenAfterExtern = peek(1);
+
+  if (tokenAfterExtern.type == Token::Type::FUNC)
+    return parseExternFuncDecl();
+  else
+    return parseExternDecl();
+}
+
 // extern_decl: 'extern' ident_decl ';'
 hir::ExternDecl::Ptr Parser::parseExternDecl() {
   auto externDecl = std::make_shared<hir::ExternDecl>();
@@ -122,6 +132,27 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
   externDecl->setEndLoc(endToken);
  
   return externDecl;
+}
+
+// extern_func_decl: 'extern' 'func' ident arguments results ';'
+hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
+  auto externFuncDecl = std::make_shared<hir::FuncDecl>();
+  
+  const Token externToken = consume(Token::Type::EXTERN);
+  externFuncDecl->setBeginLoc(externToken);
+  consume(Token::Type::FUNC);
+  
+  externFuncDecl->name = parseIdent();
+  externFuncDecl->args = parseArguments();
+  externFuncDecl->results = parseResults();
+  // body is empty
+  externFuncDecl->body = std::make_shared<hir::StmtBlock>();
+  externFuncDecl->external = true;
+  
+  const Token endToken = consume(Token::Type::SEMICOL);
+  externFuncDecl->setEndLoc(endToken);
+  
+  return externFuncDecl;
 }
 
 // func_decl: ['export'] 'func' ident arguments results stmt_block 'end'
@@ -139,6 +170,7 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   funcDecl->args = parseArguments();
   funcDecl->results = parseResults();
   funcDecl->body = parseStmtBlock();
+  funcDecl->external = false;
   
   const Token endToken = consume(Token::Type::BLOCKEND);
   funcDecl->setEndLoc(endToken);

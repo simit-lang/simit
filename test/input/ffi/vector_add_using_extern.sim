@@ -1,0 +1,16 @@
+element Point
+  a : float;
+  b : float;
+  c : float;
+end
+
+extern points : set{Point};
+
+extern func ext_vec3f_add(a: tensor[points](float), b: tensor[points](float)) -> (c: tensor[points](float));
+
+export func main()
+  a = points.a;
+  b = points.b;
+  tmp = ext_vec3f_add(a, b);
+  points.c = tmp;
+end
