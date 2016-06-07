@@ -33,6 +33,7 @@ Token::Type Scanner::getTokenType(const std::string token) {
   if (token == "to") return Token::Type::TO;
   if (token == "with") return Token::Type::WITH;
   if (token == "reduce") return Token::Type::REDUCE;
+  if (token == "through") return Token::Type::THROUGH;
   if (token == "while") return Token::Type::WHILE;
   if (token == "do") return Token::Type::DO;
   if (token == "if") return Token::Type::IF;

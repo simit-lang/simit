@@ -163,6 +163,9 @@ void HIRRewriter::visit(MapExpr::Ptr expr) {
     arg = rewrite<Expr>(arg);
   }
   expr->target = rewrite<Identifier>(expr->target);
+  if (expr->through) {
+    expr->through = rewrite<Identifier>(expr->through);
+  }
   node = expr;
 }
 

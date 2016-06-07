@@ -482,6 +482,11 @@ void IRRewriter::visit(const IndexExpr *op) {
 void IRRewriter::visit(const Map *op) {
   Expr target = rewrite(op->target);
   Expr neighbors = (op->neighbors.defined()) ? rewrite(op->neighbors) : Expr();
+
+  Expr through;
+  if (op->through.defined()) {
+    through = rewrite(op->through);
+  }
   
   std::vector<Expr> partial_actuals(op->partial_actuals.size());
   bool actualsSame = true;
@@ -492,12 +497,13 @@ void IRRewriter::visit(const Map *op) {
     }
   }
 
-  if (target == op->target && neighbors == op->neighbors && actualsSame) {
+  if (target == op->target && neighbors == op->neighbors &&
+      through == op->through && actualsSame) {
     stmt = op;
   }
   else {
-    stmt = Map::make(op->vars, op->function, partial_actuals, target, neighbors,
-      op->reduction);
+    stmt = Map::make(op->vars, op->function, partial_actuals, target,
+                     neighbors, through, op->reduction);
   }
 }
 
@@ -577,7 +583,7 @@ void IRRewriterCallGraph::visit(const Map *op) {
 
   stmt = (function != op->function)
       ? Map::make(op->vars, function, op->partial_actuals,
-                  op->target, op->neighbors, op->reduction)
+                  op->target, op->neighbors, op->through, op->reduction)
       : op;
 }
 }} // namespace simit::ir

@@ -606,6 +606,10 @@ void HIRPrinter::printMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   }
   oss << " to ";
   expr->target->accept(this);
+  if (expr->through) {
+    oss << " through ";
+    expr->through->accept(this);
+  }
   if (expr->isReduced()) {
     oss << " reduce ";
     switch (to<ReducedMapExpr>(expr)->op) {

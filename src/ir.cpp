@@ -989,7 +989,7 @@ Expr IndexExpr::make(std::vector<IndexVar> resultVars, Expr value,
 // struct Map
 Stmt Map::make(std::vector<Var> vars,
                Func function, std::vector<Expr> partial_actuals,
-               Expr target, Expr neighbors,
+               Expr target, Expr neighbors, Expr through,
                ReductionOperator reduction) {
   iassert(target.type().isSet());
   iassert(!neighbors.defined() || neighbors.type().isSet());
@@ -1000,6 +1000,7 @@ Stmt Map::make(std::vector<Var> vars,
   node->partial_actuals = partial_actuals;
   node->target = target;
   node->neighbors = neighbors;
+  node->through = through;
   node->reduction = reduction;
   return node;
 }

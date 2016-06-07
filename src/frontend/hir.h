@@ -493,6 +493,7 @@ struct MapExpr : public Expr {
   Identifier::Ptr        func;
   std::vector<Expr::Ptr> partialActuals;
   Identifier::Ptr        target;
+  Identifier::Ptr        through;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 

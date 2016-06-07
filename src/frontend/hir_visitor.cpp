@@ -155,6 +155,9 @@ void HIRVisitor::visit(MapExpr::Ptr expr) {
     param->accept(this);
   }
   expr->target->accept(this);
+  if (expr->through) {
+    expr->through->accept(this);
+  }
 }
 
 void HIRVisitor::visit(ReducedMapExpr::Ptr expr) {

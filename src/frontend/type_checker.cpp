@@ -1550,6 +1550,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   
   ir::Func func;
   ir::Expr target;
+  ir::Expr through;
   bool typeChecked = true;
 
   // Check that assembly function has been declared.
@@ -1587,6 +1588,36 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
   }
 
+  // If through is declared, check that it is a lattice link set,
+  if (expr->through) {
+    if (!ctx.hasSymbol(expr->through->ident)) {
+      reportUndeclared("set", expr->through->ident, expr->through);
+    } else {
+      through = ctx.getSymbol(expr->through->ident).getExpr();
+
+      if (!through.type().isSet()) {
+        std::stringstream errMsg;
+        errMsg << opString << " operation can only be applied through sets";
+        reportError(errMsg.str(), expr->through);
+        typeChecked = false;
+      }
+      else if (!through.type().toSet()->kind == ir::SetType::LatticeLink) {
+        std::stringstream errMsg;
+        errMsg << opString << " operation can only be applied through lattice "
+               << "link sets";
+        reportError(errMsg.str(), expr->through);
+        typeChecked = false;
+      }
+      else if (through.type().toSet()->latticePointSet.getSet() != target) {
+        std::stringstream errMsg;
+        errMsg << opString << " operation can only be mapped through lattice "
+               << "link set with target " << target << " as an endpoint";
+        reportError(errMsg.str(), expr->through);
+        typeChecked = false;
+      }
+    }
+  }
+
   if (!typeChecked) {
     return;
   }
@@ -1618,6 +1649,13 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
           neighborSetType->elementType, targetSetType->endpointSets.size());
       actualsType.push_back(neighborsType);
     }
+  }
+
+  // Through declaration adds link and underlying point sets as arguments.
+  if (through.defined()) {
+    actualsType.push_back(through.type());
+    actualsType.push_back(through.type().toSet()->
+                          latticePointSet.getSet().type());
   }
  
   // Check that assembly function accepts right number of arguments.
