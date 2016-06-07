@@ -162,6 +162,11 @@ protected:
   /// Allocate a global pointer for a tensor, and add to the symtable
   /// and list of global buffers
   virtual llvm::Value *makeGlobalTensor(ir::Var var);
+  
+  /// Compile a single argument and add it to the vector args, as well as its
+  /// type to the vector of argument types.
+  void compileArgument(ir::Expr argument, std::vector<llvm::Type*>& argTypes,
+                       std::vector<llvm::Value*>& args);
 
   // TODO: Remove this function, once the old init system has been removed
   ir::Func makeSystemTensorsGlobalIfHasTensorIndex(ir::Func func);

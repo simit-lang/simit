@@ -1,23 +1,18 @@
 #ifndef SIMIT_RUNTIME_H
 #define SIMIT_RUNTIME_H
 
-#ifdef EIGEN
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-#include <Eigen/IterativeLinearSolvers>
 #include <time.h>
 #include <vector>
 
 extern "C" {
 
 // appease GCC
-void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
-                 int* row_start, int* col_idx,
-                 int rows, int columns, int nnz, int bs_x, int bs_y);
-void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
-                 int* row_start, int* col_idx,
-                 int rows, int columns, int nnz, int bs_x, int bs_y);
+void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
+                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   double* bufferX, double* bufferC);
+void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
+                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   float* bufferX, float* bufferC);
 int loc(int v0, int v1, int *neighbors_start, int *neighbors);
 
 double atan2_f64(double y, double x);
@@ -35,14 +30,40 @@ void inv3_f32(float* a, float* inv);
 double complexNorm_f64(double r, double i);
 float complexNorm_f32(float r, float i);  
 
+
 void simitStoreTime(int i, double value);
 double simitClock();
 
+// If Eigen is not detected, make solves just do a noop.
+// This is not a #else because we will in the future support more
+// solver backends.
+#ifndef EIGEN
+void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
+                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   double* bufferX, double* bufferC) {
+  return;
+}
 
+void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
+                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   float* bufferX, float* bufferC) {
+  return;
+}
+#endif
+} // extern "C"
+
+
+#ifdef EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+#include <Eigen/IterativeLinearSolvers>
+
+extern "C" {
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f32
-void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
-                 int* row_start, int* col_idx,
-                 int rows, int columns, int nnz, int bs_x, int bs_y) {
+void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
+                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   double* bufferX, double* bufferC) {
   using namespace Eigen;
 
   auto xvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferX, rows);
@@ -72,9 +93,9 @@ void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
 }
 
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f64
-void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
-                 int* row_start, int* col_idx,
-                 int rows, int columns, int nnz, int bs_x, int bs_y) {
+void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
+                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   float* bufferX, float* bufferC) {
   using namespace Eigen;
 
   auto xvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferX, rows);
@@ -103,10 +124,9 @@ void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
 #endif
   
 }
+} // extern "C"
+#endif // ifdef EIGEN
 
-
-}
-#endif
 
 extern "C" {
 

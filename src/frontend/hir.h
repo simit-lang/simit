@@ -303,6 +303,7 @@ struct FuncDecl : public HIRNode {
   std::vector<IdentDecl::Ptr> results;
   StmtBlock::Ptr              body;
   bool                        exported;
+  bool                        external;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   

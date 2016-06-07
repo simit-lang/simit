@@ -361,159 +361,26 @@ void LLVMBackend::compile(const ir::FieldRead& fieldRead) {
   val = emitFieldRead(fieldRead.elementOrSet, fieldRead.fieldName);
 }
 
+
 // TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt,
 //       and is only kept around to emit loc.
 void LLVMBackend::compile(const ir::Call& call) {
-  std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
-      {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
-       {ir::intrinsics::cos(), llvm::Intrinsic::cos},
-       {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
-       {ir::intrinsics::log(), llvm::Intrinsic::log},
-       {ir::intrinsics::exp(), llvm::Intrinsic::exp},
-       {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
+  iassert(call.func == ir::intrinsics::loc()) <<
+    "Only loc should use Call node";
 
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
-  llvm::Function *fun = nullptr;
 
   // compile arguments first
-  for (auto a: call.actuals) {
-    //FIX: remove once solve() is no longer needed
-    //iassert(isScalar(a.type()));
-    ScalarType ctype = a.type().isTensor() ? a.type().toTensor()->getComponentType()
-                                           : a.type().toArray()->elementType;
-    argTypes.push_back(llvmType(ctype));
-    args.push_back(compile(a));
+  for (Expr a: call.actuals) {
+    compileArgument(a, argTypes, args);
   }
-  
-  std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
-  // these are intrinsic functions
-  // first, see if this is an LLVM intrinsic
-  auto foundIntrinsic = llvmIntrinsicByName.find(call.func);
-  if (foundIntrinsic != llvmIntrinsicByName.end()) {
-    fun = llvm::Intrinsic::getDeclaration(module, foundIntrinsic->second,
-                                          argTypes);
-  }
-  // now check if it is an intrinsic from libm
-  else if (call.func == ir::intrinsics::atan2() ||
-           call.func == ir::intrinsics::tan()   ||
-           call.func == ir::intrinsics::asin()  ||
-           call.func == ir::intrinsics::acos()) {
-    auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes, false);
-    std::string funcName = call.func.getName() + floatTypeName;
-    fun= llvm::cast<llvm::Function>(module->getOrInsertFunction(
-        funcName,ftype));
-  }
-  else if (call.func == ir::intrinsics::norm()) {
-    iassert(args.size() == 1);
-    auto type = call.actuals[0].type().toTensor();
-    vector<IndexDomain> dimensions = type->getDimensions();
 
-    // special case for vec3f
-    if (dimensions[0].getSize() == 3) {
-      llvm::Value *x = args[0];
-
-      llvm::Value *x0 = loadFromArray(x, llvmInt(0));
-      llvm::Value *sum = builder->CreateFMul(x0, x0);
-
-      llvm::Value *x1 = loadFromArray(x, llvmInt(1));
-      llvm::Value *x1pow = builder->CreateFMul(x1, x1);
-      sum = builder->CreateFAdd(sum, x1pow);
-
-      llvm::Value *x2 = loadFromArray(x, llvmInt(2));
-      llvm::Value *x2pow = builder->CreateFMul(x2, x2);
-      sum = builder->CreateFAdd(sum, x2pow);
-
-      llvm::Function *sqrt =
-          llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::sqrt,
-                                          {llvmFloatType()});
-      val = builder->CreateCall(sqrt, sum);
-    } else {
-      args.push_back(emitComputeLen(dimensions[0]));
-      std::string fName = "norm" + floatTypeName;
-      val = emitCall(fName, args, llvmFloatType());
-    }
-    
-    return;
-  }
-  else if (call.func == ir::intrinsics::solve()) {
-    // FIX: compile is making these be LLVM_DOUBLE, but I need
-    // LLVM_DOUBLEPTR
-    std::vector<llvm::Type*> argTypes2 =
-        {llvmFloatPtrType(), llvmFloatPtrType(), llvmFloatPtrType(),
-         LLVM_INT, LLVM_INT};
-
-    auto type = call.actuals[0].type().toTensor();
-    vector<IndexDomain> dimensions = type->getDimensions();
-    args.push_back(emitComputeLen(dimensions[0]));
-    args.push_back(emitComputeLen(dimensions[1]));
-
-    auto ftype = llvm::FunctionType::get(llvmFloatType(), argTypes2, false);
-    std::string fName = "cMatSolve" + floatTypeName;
-    fun = llvm::cast<llvm::Function>(
-        module->getOrInsertFunction(fName, ftype));
-  }
-  else if (call.func == ir::intrinsics::loc()) {
+  if (call.func == ir::intrinsics::loc()) {
     val = emitCall("loc", args, LLVM_INT);
     return;
   }
-  else if (call.func == ir::intrinsics::dot()) {
-    // we need to add the vector length to the args
-    auto type1 = call.actuals[0].type().toTensor();
-    auto type2 = call.actuals[1].type().toTensor();
-    vector<IndexDomain> type1Dimensions = type1->getDimensions();
-    vector<IndexDomain> type2Dimensions = type2->getDimensions();
-
-    uassert(type1Dimensions[0] == type2Dimensions[0]) <<
-        "dimension mismatch in dot product";
-    args.push_back(emitComputeLen(type1Dimensions[0]));
-    std::string fName = "dot" + floatTypeName;
-    val = emitCall(fName, args, llvmFloatType());
-    return;
-  }
-  else if (call.func == ir::intrinsics::createComplex()) {
-    val = builder->CreateComplex(args[0], args[1]);
-    return;
-  }
-  else if (call.func == ir::intrinsics::complexNorm()) {
-    std::string fname = "complexNorm" + floatTypeName;
-    val = emitCall(fname, {
-        builder->ComplexGetReal(args[0]),
-        builder->ComplexGetImag(args[0])
-    }, llvmFloatType());
-    return;
-  }
-  else if (call.func == ir::intrinsics::complexGetReal()) {
-    val = builder->ComplexGetReal(args[0]);
-  }
-  else if (call.func == ir::intrinsics::complexGetImag()) {
-    val = builder->ComplexGetImag(args[0]);
-  }
-  else if (call.func == ir::intrinsics::complexConj()) {
-    val = builder->CreateComplex(
-        builder->ComplexGetReal(args[0]),
-        builder->CreateFNeg(builder->ComplexGetImag(args[0])));
-    return;
-  }
-  else if (call.func == ir::intrinsics::simitClock()) {
-    val = emitCall("simitClock", args, llvmFloatType());
-    return;
-  }
-  else if (call.func == ir::intrinsics::simitStoreTime()) {
-    val = emitCall("simitStoreTime", args);
-    return;
-  }
-  // if not an intrinsic function, try to find it in the module
-  else if (module->getFunction(call.func.getName())) {
-    fun = module->getFunction(call.func.getName());
-  }
-  else {
-    not_supported_yet << "Unsupported function call";
-  }
-  iassert(fun);
-
-  val = builder->CreateCall(fun, args);
 }
 
 
@@ -804,6 +671,69 @@ void LLVMBackend::compile(const ir::AssignStmt& assignStmt) {
   }
 }
 
+void LLVMBackend::compileArgument(Expr argument, std::vector<llvm::Type*>& argTypes,
+                     std::vector<llvm::Value*>& args) {
+    ScalarType ctype = argument.type().isTensor() ? argument.type().toTensor()->getComponentType()
+                                           : argument.type().toArray()->elementType;
+    argTypes.push_back(llvmType(ctype));
+    args.push_back(compile(argument));
+  
+    if (argument.type().isTensor() && argument.type().toTensor()->isSparse()) {
+      // we need to add additional arguments: the row_start and col_idx pointers,
+      // as well as the number of rows, columns, nonzeros, and blocksize.
+      auto type = argument.type().toTensor();
+      vector<IndexDomain> dimensions = type->getDimensions();
+      
+      // FIXME: shouldn't assume this is a var expression...
+      tassert(isa<VarExpr>(argument));
+      const TensorStorage& tensorStorage =
+          storage.getStorage(to<VarExpr>(argument)->var);
+      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
+      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
+
+      // Retrieve the size of the neighbor index, which is stored in the last
+      // element of neighbor start index.
+      llvm::Value *setSize =
+          builder->CreateExtractValue(storageSet, {0},
+                                      storageSet->getName()+LEN_SUFFIX);
+      
+      llvm::Value *row_start =
+          builder->CreateExtractValue(targetSet, {2}, "row_start");
+      llvm::Value *col_idx =
+          builder->CreateExtractValue(targetSet, {3}, "col_idx");
+      llvm::Value *neighborIndexSizeLoc =
+          builder->CreateInBoundsGEP(row_start, setSize,
+                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
+      llvm::Value *len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
+                                       "neighbors"+LEN_SUFFIX);
+      llvm::Value *blockSize_r;
+      llvm::Value *blockSize_c;
+      
+      // Determine block sizes
+      Type blockType = type->getBlockType();
+      vector<IndexDomain> blockDimensions =
+          blockType.toTensor()->getDimensions();
+      if (!isScalar(blockType)) {
+        // TODO: The following assumes all blocks are dense row major. The right
+        //       way to assign a storage order for every block in the tensor
+        //       represented by a TensorStorage.  Also assumes 2D blocks.
+        blockSize_r = emitComputeLen(blockDimensions[0]);
+        blockSize_c = emitComputeLen(blockDimensions[1]);
+      }
+      else {
+        blockSize_r = llvmInt(1);
+        blockSize_c = llvmInt(1);
+      }
+      args.push_back(row_start);
+      args.push_back(col_idx);
+      args.push_back(emitComputeLen(dimensions[0]));
+      args.push_back(emitComputeLen(dimensions[1]));
+      args.push_back(len);
+      args.push_back(blockSize_r);
+      args.push_back(blockSize_c);
+    }
+}
+
 void LLVMBackend::compile(const ir::CallStmt& callStmt) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
       {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
@@ -820,8 +750,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
 
   // compile arguments first
   for (auto a: callStmt.actuals) {
-    argTypes.push_back(llvmType(a.type().toTensor()->getComponentType()));
-    args.push_back(compile(a));
+    compileArgument(a, argTypes, args);
   }
 
   Func callee = callStmt.callee;
@@ -872,63 +801,6 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       call = emitCall(fname, args);
     }
     else if (callStmt.callee == ir::intrinsics::solve()) {
-    
-      // we need to add additional arguments: the row_start and col_idx pointers,
-      // as well as the number of rows, columns, nonzeros, and blocksize.
-      auto type = callStmt.actuals[0].type().toTensor();
-      vector<IndexDomain> dimensions = type->getDimensions();
-      
-      // FIXME: shouldn't assume this is a var expression...
-      tassert(isa<VarExpr>(callStmt.actuals[0]));
-      const TensorStorage& tensorStorage =
-          storage.getStorage(to<VarExpr>(callStmt.actuals[0])->var);
-      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
-      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
-
-      // Retrieve the size of the neighbor index, which is stored in the last
-      // element of neighbor start index.
-      llvm::Value *setSize =
-          builder->CreateExtractValue(storageSet, {0},
-                                      storageSet->getName()+LEN_SUFFIX);
-      
-      llvm::Value *row_start =
-          builder->CreateExtractValue(targetSet, {2}, "row_start");
-      llvm::Value *col_idx =
-          builder->CreateExtractValue(targetSet, {3}, "col_idx");
-    
-      
-      
-      llvm::Value *neighborIndexSizeLoc =
-          builder->CreateInBoundsGEP(row_start, setSize,
-                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
-      llvm::Value *len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
-                                       "neighbors"+LEN_SUFFIX);
-      llvm::Value *blockSize_r;
-      llvm::Value *blockSize_c;
-      
-      // Determine block sizes
-      Type blockType = type->getBlockType();
-      vector<IndexDomain> blockDimensions =
-          blockType.toTensor()->getDimensions();
-      if (!isScalar(blockType)) {
-        // TODO: The following assumes all blocks are dense row major. The right
-        //       way to assign a storage order for every block in the tensor
-        //       represented by a TensorStorage.  Also assumes 2D blocks.
-        blockSize_r = emitComputeLen(blockDimensions[0]);
-        blockSize_c = emitComputeLen(blockDimensions[1]);
-      }
-      else {
-        blockSize_r = llvmInt(1);
-        blockSize_c = llvmInt(1);
-      }
-      args.push_back(row_start);
-      args.push_back(col_idx);
-      args.push_back(emitComputeLen(dimensions[0]));
-      args.push_back(emitComputeLen(dimensions[1]));
-      args.push_back(len);
-      args.push_back(blockSize_r);
-      args.push_back(blockSize_c);
-
       std::string fname = "cMatSolve" + floatTypeName;
       call = emitCall(fname, args);
     }
@@ -992,6 +864,35 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
       builder->CreateStore(call, llvmVar);
     }
   }
+   // if it is an external call, just generate a call to it
+  else if (callStmt.callee.getKind() == Func::External) {
+    // ensure it is called with the correct number of arguments.
+    uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
+        "External function '" << callStmt.callee.getName() << "' called with " <<
+        callStmt.actuals.size() << " arguments, but expected " <<
+        callStmt.callee.getArguments().size() << " arguments.";
+    
+    tassert(callStmt.results.size() == 1) <<
+        "Only single return values for externs supported right now";
+    
+    tassert(!(callStmt.results[0].getType().isTensor() &&
+        callStmt.results[0].getType().toTensor()->isSparse())) <<
+        "Returning a sparse tensor from extern is not supported";
+    
+    llvm::Value *llvmVar = symtable.get(callStmt.results[0]);
+    args.push_back(llvmVar);
+
+    ScalarType element_type =
+        callStmt.results[0].getType().toTensor()->getComponentType();
+    // TODO: where is these addresspace parameter coming from?
+    auto ret_type = llvmPtrType(element_type, 0);
+
+    argTypes.push_back(ret_type);
+    call = emitCall(callStmt.callee.getName(), args);
+
+    return;
+  }
+
   // If not an intrinsic function, try to find it in the module
   else {
     if (module->getFunction(callStmt.callee.getName())) {
