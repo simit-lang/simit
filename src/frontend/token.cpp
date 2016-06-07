@@ -73,6 +73,8 @@ std::string Token::tokenTypeString(Token::Type type) {
       return "'to'";
     case Token::Type::WITH:
       return "'with'";
+    case Token::Type::THROUGH:
+      return "'through'";
     case Token::Type::REDUCE:
       return "'reduce'";
     case Token::Type::WHILE:

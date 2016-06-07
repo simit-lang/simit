@@ -619,7 +619,7 @@ hir::Expr::Ptr Parser::parseExpr() {
   return (peek().type == Token::Type::MAP) ? parseMapExpr() : parseOrExpr();
 }
 
-// map_expr: 'map' ident [call_params] 'to' ident ['reduce' '+']
+// map_expr: 'map' ident [call_params] 'to' ident ['through' ident] ['reduce' '+']
 hir::MapExpr::Ptr Parser::parseMapExpr() {
   const Token mapToken = consume(Token::Type::MAP);
   const hir::Identifier::Ptr func = parseIdent();
@@ -631,6 +631,13 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
   
   consume(Token::Type::TO);
   const hir::Identifier::Ptr target = parseIdent();
+
+  hir::Identifier::Ptr through;
+
+  if (peek().type == Token::Type::THROUGH) {
+    consume(Token::Type::THROUGH);
+    through = parseIdent();
+  }
  
   if (peek().type == Token::Type::REDUCE) {
     consume(Token::Type::REDUCE);
@@ -642,6 +649,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
     mapExpr->partialActuals = partialActuals;
     mapExpr->target = target;
     mapExpr->op = hir::ReducedMapExpr::ReductionOp::SUM;
+    mapExpr->through = through;
 
     const Token plusToken = consume(Token::Type::PLUS);
     mapExpr->setEndLoc(plusToken);
@@ -655,6 +663,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
   mapExpr->func = func;
   mapExpr->partialActuals = partialActuals;
   mapExpr->target = target;
+  mapExpr->through = through;
 
   return mapExpr;
 }
@@ -915,6 +924,12 @@ hir::Expr::Ptr Parser::parseCallOrReadExpr() {
         setRead->set = expr;
         if (peek().type != Token::Type::RB) {
           setRead->indices = parseReadParams();
+        }
+        if (peek().type == Token::Type::SEMICOL) {
+          consume(Token::Type::SEMICOL);
+          auto sink = parseReadParams();
+          std::copy(sink.begin(), sink.end(),
+                    std::back_inserter(setRead->indices));
         }
 
         const Token rightBracketToken = consume(Token::Type::RB);

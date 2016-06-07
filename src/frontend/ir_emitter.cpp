@@ -349,6 +349,10 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   const std::vector<ir::Var> results = func.getResults();
 
   const ir::Expr target = ctx->getSymbol(expr->target->ident).getExpr();
+  ir::Expr through;
+  if (expr->through) {
+    through = ctx->getSymbol(expr->through->ident).getExpr();
+  }
  
   std::vector<ir::Expr> partialActuals;
   for (auto actual : expr->partialActuals) {
@@ -384,7 +388,7 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   // TODO: Should eventually support heterogeneous edge sets.
   const ir::Expr endpoint = (endpoints.size() > 0) ? endpoints[0] : ir::Expr();
   const ir::Stmt mapStmt = ir::Map::make({tmp}, func, partialActuals, target,
-                                         endpoint, reduction);
+                                         endpoint, through, reduction);
   calls.push_back(mapStmt);
 }
 

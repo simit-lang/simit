@@ -42,6 +42,7 @@ public:
     MAP,
     TO,
     WITH,
+    THROUGH,
     REDUCE,
     WHILE,
     DO,
