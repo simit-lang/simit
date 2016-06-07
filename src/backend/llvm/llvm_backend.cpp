@@ -731,12 +731,8 @@ void LLVMBackend::compileArgument(Expr argument, std::vector<llvm::Type*>& argTy
       args.push_back(len);
       args.push_back(blockSize_r);
       args.push_back(blockSize_c);
-
-
     }
-
 }
-
 
 void LLVMBackend::compile(const ir::CallStmt& callStmt) {
   std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
@@ -872,21 +868,22 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
   else if (callStmt.callee.getKind() == Func::External) {
     // ensure it is called with the correct number of arguments.
     uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
-      "External function '" << callStmt.callee.getName() << "' called with " <<
-      callStmt.actuals.size() << " arguments, but expected " <<
-      callStmt.callee.getArguments().size() << " arguments.";
+        "External function '" << callStmt.callee.getName() << "' called with " <<
+        callStmt.actuals.size() << " arguments, but expected " <<
+        callStmt.callee.getArguments().size() << " arguments.";
     
     tassert(callStmt.results.size() == 1) <<
-      "Only single return values for externs supported right now";
+        "Only single return values for externs supported right now";
     
     tassert(!(callStmt.results[0].getType().isTensor() &&
-      callStmt.results[0].getType().toTensor()->isSparse())) <<
-      "Returning a sparse tensor from extern is not supported";
+        callStmt.results[0].getType().toTensor()->isSparse())) <<
+        "Returning a sparse tensor from extern is not supported";
     
     llvm::Value *llvmVar = symtable.get(callStmt.results[0]);
     args.push_back(llvmVar);
 
-    ScalarType element_type = callStmt.results[0].getType().toTensor()->getComponentType();
+    ScalarType element_type =
+        callStmt.results[0].getType().toTensor()->getComponentType();
     // TODO: where is these addresspace parameter coming from?
     auto ret_type = llvmPtrType(element_type, 0);
 

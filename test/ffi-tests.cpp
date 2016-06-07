@@ -97,7 +97,8 @@ extern "C" void ext_csr_gemv(simit_float* vals, int* row_start, int* col_idx,
   int* csrColIdx;
   simit_float* csrVals;
   
-  convert_to_csr(vals, row_start, col_idx, rows, cols, nnz, rowblock, colblock, &csrRowStart, &csrColIdx, &csrVals);
+  convertToCSR(vals, row_start, col_idx, rows, cols, nnz, rowblock, colblock,
+               &csrRowStart, &csrColIdx, &csrVals);
   
   // spmv
   for (int i=0; i<rows; i++) {
@@ -205,4 +206,3 @@ TEST(ffi, to_csr_from_blocked) {
   SIMIT_EXPECT_FLOAT_EQ(100.0, c2(0));
   SIMIT_EXPECT_FLOAT_EQ(136.0, c2(1));
 }
-
