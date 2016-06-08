@@ -109,12 +109,7 @@ public:
   template <typename ...Sets>
   Set(const Sets& ...sets) : Set("", sets...) {}
 
-  ~Set() {
-    for (auto f: fields) {
-      delete f;
-    }
-    free(endpoints);
-  }
+  ~Set();
   
   /// Return the number of elements in the Set
   inline int getSize() const { return numElements; }

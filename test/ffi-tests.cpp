@@ -96,7 +96,7 @@ extern "C" void ext_csr_gemv(simit_float* vals, int* row_start, int* col_idx,
   int* csrRowStart;
   int* csrColIdx;
   simit_float* csrVals;
-  
+
   convertToCSR(vals, row_start, col_idx, rows, cols, nnz, rowblock, colblock,
                &csrRowStart, &csrColIdx, &csrVals);
   

@@ -7,6 +7,17 @@ using namespace std;
 
 namespace simit {
 
+Set::~Set() {
+  for (auto f: fields) {
+    delete f;
+  }
+  free(endpoints);
+
+  if (this->neighbors != nullptr) {
+    delete this->neighbors;
+  }
+}
+
 void Set::increaseCapacity() {
   for (auto f : fields) {
     int typeSize = f->sizeOfType;

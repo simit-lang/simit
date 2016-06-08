@@ -23,7 +23,5 @@ end
 
 proc main 
   A = map dist_a to springs reduce +;
-  b = points.b;
-  c = ext_csr_gemv(A, b);
-  points.c = c;
+  points.c = ext_csr_gemv(A, points.b);
 end
