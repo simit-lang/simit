@@ -109,6 +109,7 @@ LLVMFunction::~LLVMFunction() {
     free(*tmpPtr.second);
     *tmpPtr.second = nullptr;
   }
+
 }
 
 void LLVMFunction::bind(const std::string& name, simit::Set* set) {

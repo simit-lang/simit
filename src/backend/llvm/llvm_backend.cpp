@@ -746,7 +746,6 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
   llvm::Function *fun = nullptr;
-  llvm::Value *call = nullptr;
 
   // compile arguments first
   for (auto a: callStmt.actuals) {
@@ -759,6 +758,8 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
         << "norm and dot should have been lowered";
 
     std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
+
+    llvm::Value *call = nullptr;
 
     // first, see if this is an LLVM intrinsic
     auto foundIntrinsic = llvmIntrinsicByName.find(callStmt.callee);
@@ -888,7 +889,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     auto ret_type = llvmPtrType(element_type, 0);
 
     argTypes.push_back(ret_type);
-    call = emitCall(callStmt.callee.getName(), args);
+    emitCall(callStmt.callee.getName(), args);
 
     return;
   }
@@ -903,7 +904,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
         args.push_back(llvmResult);
       }
       fun = module->getFunction(callStmt.callee.getName());
-      call = builder->CreateCall(fun, args);
+      builder->CreateCall(fun, args);
     }
     else {
       ierror << "function " << callStmt.callee.getName() << " not found in module";
