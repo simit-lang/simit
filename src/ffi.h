@@ -30,9 +30,9 @@ void convertToCSR(simit_float* bufferA,
   std::sort(entries.begin(), entries.end());
   
   // build the matrix
-  *csrRowStart = (int*)malloc(sizeof(int)*rows);
-  *csrColIdx = (int*)malloc(sizeof(int)*nnz*bs_x*bs_y);
-  *csrVals = (simit_float*)malloc(sizeof(simit_float)*nnz*bs_x*bs_y);
+  *csrRowStart = (int*)malloc((rows+1) * sizeof(int));
+  *csrColIdx = (int*)malloc(nnz*bs_x*bs_y * sizeof(int));
+  *csrVals = (simit_float*)malloc(nnz*bs_x*bs_y * sizeof(simit_float));
  
   // determine row lengths
   for (int i=0; i<=rows; i++)
