@@ -189,6 +189,37 @@ private:
         }
         break;
       }
+      case TensorStorage::Kind::Stencil: {
+        iassert(tensor.type().isTensor());
+        size_t order = tensor.type().toTensor()->order();
+        tassert(order == 2)
+            << "Only currently supports matrices in reduced form. "
+            << quote(tensor) << " has " << indices.size() << " dimensions";
+        iassert(indices.size() == 1 || indices.size() == order)
+            << "Must either supply one index per dimension or a single "
+            << "index (flattened)";
+
+        iassert(isa<VarExpr>(tensor));
+        const Var& var = to<VarExpr>(tensor)->var;
+
+        if (indices.size() == 1) {
+          index = rewrite(indices[0]);
+        }
+        else {
+          Expr i = rewrite(indices[0]);
+          Expr j = rewrite(indices[1]);
+
+          iassert(tensorStorage.hasStencil());
+          const Stencil stencil = tensorStorage.getStencil();
+          if (!environment.hasTensorIndex(stencil)) {
+            environment.addTensorIndex(stencil, var);
+          }
+          TensorIndex tensorIndex = environment.getTensorIndex(stencil);
+
+          
+        }
+        break;
+      }
       case TensorStorage::Kind::Diagonal:
         index = rewrite(indices[0]);
         break;
@@ -198,7 +229,11 @@ private:
       case TensorStorage::Kind::Undefined:
         ierror;
         break;
+      default:
+        unreachable;
+        break;
     }
+    iassert(index.defined());
 
     // Multiply in inner block size
     Type blockType = tensor.type().toTensor()->getBlockType();

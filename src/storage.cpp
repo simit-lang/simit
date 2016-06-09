@@ -28,6 +28,11 @@ struct TensorStorage::Content {
   string assemblyFunc;
   // string-based ref to output var, again avoiding dangling references
   string targetVar;
+  // fully resolve stencil structure: map from list of offsets to
+  // ``stencil index'', i.e. a labelling of the stencil offsets from 0 to
+  // the total size, defining an ordering of matrix elements in memory
+  bool stencilDefined;
+  Stencil stencil;
 
   pe::PathExpression pathExpression;
   map<pair<unsigned,unsigned>, TensorIndex> tensorIndices;
@@ -51,11 +56,11 @@ TensorStorage::TensorStorage(const Expr &targetSet, const Expr &storageSet)
   content->systemStorageSet = storageSet;
 }
 
-TensorStorage::TensorStorage(const Func &assemblyFunc, const Var &targetVar,
+TensorStorage::TensorStorage(string assemblyFunc, string targetVar,
                              const Expr &targetSet)
     : TensorStorage(Kind::Stencil) {
-  content->assemblyFunc = assemblyFunc.getName();
-  content->targetVar = targetVar.getName();
+  content->assemblyFunc = assemblyFunc;
+  content->targetVar = targetVar;
   content->systemTargetSet = targetSet;
 }
 
@@ -103,6 +108,19 @@ std::string TensorStorage::getStencilFunc() const {
 std::string TensorStorage::getStencilVar() const {
   iassert(content->kind == Kind::Stencil);
   return content->targetVar;
+}
+
+bool TensorStorage::hasStencil() const {
+  return content->stencilDefined;
+}
+
+const Stencil& TensorStorage::getStencil() const {
+  return content->stencil;
+}
+
+void TensorStorage::setStencil(const Stencil& stencil) {
+  content->stencil = stencil;
+  content->stencilDefined = true;
 }
 
 bool TensorStorage::hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const {
@@ -313,7 +331,8 @@ private:
         }
         else if (op->through.defined()) {
           // Stencil
-          storage->add(var, TensorStorage(op->function, var, op->target));
+          storage->add(var, TensorStorage(
+              op->function.getName(), var.getName(), op->target));
         }
         else {
           // Indexed
@@ -461,6 +480,15 @@ private:
                   TensorStorage(operandStorage.getSystemTargetSet(),
                                 operandStorage.getSystemStorageSet());
               break;
+            case TensorStorage::Kind::Stencil:
+              tensorStorage =
+                  TensorStorage(operandStorage.getStencilFunc(),
+                                operandStorage.getStencilVar(),
+                                operandStorage.getSystemTargetSet());
+              if (operandStorage.hasStencil()) {
+                tensorStorage.setStencil(operandStorage.getStencil());
+              }
+              break;
             case TensorStorage::Kind::Diagonal:
               tensorStorage =
                   TensorStorage(operandStorage.getSystemTargetSet());
@@ -468,6 +496,8 @@ private:
             case TensorStorage::Kind::Undefined:
               unreachable;
               break;
+            default:
+              unreachable;
           }
         }
       }

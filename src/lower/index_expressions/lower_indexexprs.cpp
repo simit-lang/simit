@@ -9,6 +9,7 @@
 #include "sig.h"
 #include "path_expressions.h"
 #include "tensor_index.h"
+#include "stencils.h"
 
 using namespace std;
 
@@ -374,6 +375,14 @@ TensorIndex getTensorIndexOfStatement(Stmt stmt, const Storage& storage,
           }
           tensorIndex = environment->getTensorIndex(pexpr);
         }
+        else if (tensorStorage.getKind() == TensorStorage::Kind::Stencil) {
+          iassert(tensorStorage.hasStencil());
+          const Stencil stencil = tensorStorage.getStencil();
+          if (!environment->hasTensorIndex(stencil)) {
+            environment->addTensorIndex(stencil, var);
+          }
+          tensorIndex = environment->getTensorIndex(stencil);
+        }
       }
     })
   );
@@ -591,33 +600,81 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
       TensorIndex tensorIndex = getTensorIndexOfStatement(stmt, storage,
                                                           environment);
-      iassert(tensorIndex.getSinkArray().defined())
-          << "Empty tensor index returned from: " << stmt;
+      cout << "Got tensor index: " << tensorIndex << endl;
 
-      Expr jRead = Load::make(tensorIndex.getSinkArray(), ij);
+      if (tensorIndex.getKind() == TensorIndex::PExpr) {
+        iassert(tensorIndex.getSinkArray().defined())
+            << "Empty pexpr tensor index returned from: " << stmt;
 
-      // for NeighborsOf, we need to check if this is the j we are looking
-      // for
-      if (loopVar->getDomain().kind == ForDomain::NeighborsOf) {
-        Expr jCond = Eq::make(j, loopVar->getDomain().indexSet.getSet());
-        loopNest = IfThenElse::make(jCond, loopNest, Pass::make());
+        Expr jRead = Load::make(tensorIndex.getSinkArray(), ij);
+
+        // for NeighborsOf, we need to check if this is the j we are looking
+        // for
+        if (loopVar->getDomain().kind == ForDomain::NeighborsOf) {
+          Expr jCond = Eq::make(j, loopVar->getDomain().indexSet.getSet());
+          loopNest = IfThenElse::make(jCond, loopNest, Pass::make());
+        }
+
+        loopNest = Block::make(AssignStmt::make(j, jRead), loopNest);
+
+        Expr start = Load::make(tensorIndex.getCoordArray(), i);
+        Expr stop = Load::make(tensorIndex.getCoordArray(), i+1);
+
+        // Rewrite accesses to SystemDiagonal tensors & lift out ops
+        DiagonalReadsRewriter drRewriter(storage, i, loopVars);
+        loopNest = drRewriter.doRewrite(loopNest);
+        if (drRewriter.liftedStmts.size() > 0) {
+          auto newBlock = Block::make(drRewriter.liftedStmts);
+          loopNest = Block::make(newBlock,
+                                 ForRange::make(ij, start, stop, loopNest));
+        }
+        else {
+          loopNest = ForRange::make(ij, start, stop, loopNest);
+        }
       }
+      else if (tensorIndex.getKind() == TensorIndex::Sten) {
+        const Stencil &stencil = tensorIndex.getStencil();
+        iassert(stencil.defined())
+            << "Empty stencil tensor index returned from: " << stmt;
 
-      loopNest = Block::make(AssignStmt::make(j, jRead), loopNest);
+        // Flip stencil layout map
+        map<int, vector<int> > flipped;
+        for (auto &kv : stencil.getLayout()) {
+          flipped[kv.second] = kv.first;
+        }
 
-      Expr start = Load::make(tensorIndex.getCoordArray(), i);
-      Expr stop = Load::make(tensorIndex.getCoordArray(), i+1);
+        // Use canonical memory ordering to infer j from stencil offsets
+        Expr latticeSet = stencil.getLatticeSet();
+        iassert(latticeSet.type().isSet());
+        int dims = latticeSet.type().toSet()->dimensions;
+        Expr totalOff = Literal::make(0);
+        // for (int i = dims-1; i >= 0; --i) {
+        // }
 
-      // Rewrite accesses to SystemDiagonal tensors & lift out ops
-      DiagonalReadsRewriter drRewriter(storage, i, loopVars);
-      loopNest = drRewriter.doRewrite(loopNest);
-      if (drRewriter.liftedStmts.size() > 0) {
-        auto newBlock = Block::make(drRewriter.liftedStmts);
-        loopNest = Block::make(newBlock,
-                               ForRange::make(ij, start, stop, loopNest));
+        // Use fixed stencil size to do an unrolled DIA-style loop for ij, j
+        int stencilSize = stencil.getLayout().size();
+        vector<Stmt> ijLoop;
+        for (int ijInd = 0; ijInd < stencilSize; ++ijInd) {
+          // Assign ij
+          ijLoop.push_back(AssignStmt::make(ij, stencilSize*i+ijInd));
+          // Compute and assign j
+          vector<int> offsets = flipped[ijInd];
+          Expr totalOff = Literal::make(0);
+          for (int d = dims-1; d >= 0; --d) {
+            int off = offsets[d];
+            Expr dimSize = IndexRead::make(latticeSet, IndexRead::LatticeDim, d);
+            totalOff = totalOff * dimSize + off;
+          }
+          ijLoop.push_back(AssignStmt::make(j, i+totalOff));
+          // Perform inner loop
+          ijLoop.push_back(loopNest);
+        }
+        loopNest = Block::make(ijLoop);
+        cout << "Made stencil loop nest: " << endl
+             << loopNest << endl;
       }
       else {
-        loopNest = ForRange::make(ij, start, stop, loopNest);
+        unreachable;
       }
     }
     else if (loopVar->getDomain().kind == ForDomain::Diagonal) {

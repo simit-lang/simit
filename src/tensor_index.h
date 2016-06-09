@@ -7,6 +7,7 @@
 
 #include "var.h"
 #include "path_expressions.h"
+#include "stencils.h"
 
 namespace simit {
 namespace ir {
@@ -15,20 +16,41 @@ namespace ir {
 /// expression.
 class TensorIndex {
 public:
+  enum Kind {PExpr, Sten};
+  
   TensorIndex() {}
 
   TensorIndex(std::string name, pe::PathExpression pexpr);
 
+  TensorIndex(std::string name, Stencil stencil);
+
   const std::string getName() const {return name;}
 
-  const pe::PathExpression& getPathExpression() const {return pexpr;}
+  const Kind getKind() const {return kind;}
 
-  const Var& getCoordArray() const {return coordArray;}
-  const Var& getSinkArray() const {return sinkArray;}
+  const pe::PathExpression& getPathExpression() const {
+    iassert(kind == PExpr);
+    return pexpr;
+  }
+  const Stencil& getStencil() const {
+    iassert(kind == Sten);
+    return stencil;
+  }
+
+  const Var& getCoordArray() const {
+    iassert(kind == PExpr);
+    return coordArray;
+  }
+  const Var& getSinkArray() const {
+    iassert(kind == PExpr);
+    return sinkArray;
+  }
 
 private:
+  Kind kind;
   std::string name;
   pe::PathExpression pexpr;
+  Stencil stencil;
   Var coordArray;
   Var sinkArray;
 };
