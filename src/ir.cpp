@@ -491,6 +491,20 @@ Expr IndexRead::make(Expr edgeSet, Kind kind) {
   return node;
 }
 
+Expr IndexRead::make(Expr edgeSet, Kind kind, int index) {
+  iassert(edgeSet.type().isSet());
+  iassert(edgeSet.type().toSet()->kind == SetType::LatticeLink);
+  iassert(kind == LatticeDim);
+
+  IndexRead *node = new IndexRead;
+  node->type = TensorType::make(ScalarType(ScalarType::Int));
+
+  node->edgeSet = edgeSet;
+  node->kind = kind;
+  node->index = index;
+  return node;
+}
+
 // struct Neg
 Expr Neg::make(Expr a) {
   iassert_scalar(a);

@@ -164,6 +164,7 @@ struct Literal : public ExprNode {
   static Expr make(std::string val);
   static Expr make(double_complex val);
   static Expr make(Type type, void* values, size_t bufSize);
+  static Expr make(Type type, std::vector<int> values);
   static Expr make(Type type, std::vector<double> values);
   static Expr make(Type type, std::vector<double_complex> values);
   ~Literal();
@@ -213,10 +214,13 @@ struct Length : public ExprNode {
 /// is the endpoints of the edges in the set.
 /// TODO DEPRECATED: This node has been deprecated with the old lowering pass
 struct IndexRead : public ExprNode {
-  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2 };
+  enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2, LatticeDim=3 };
   Expr edgeSet;
   Kind kind;
+  int index;
   static Expr make(Expr edgeSet, Kind kind);
+  // Read the index'th lattice dimensions. kind must be LatticeDim.
+  static Expr make(Expr edgeSet, Kind kind, int index);
   void accept(IRVisitorStrict *v) const {v->visit((const IndexRead*)this);}
 };
 

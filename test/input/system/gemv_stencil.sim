@@ -1,0 +1,31 @@
+element Point
+  a : float;
+end
+
+element Link
+  b : float;
+end
+
+extern points : set{Point};
+extern links : lattice[2]{Link}(points);
+
+func vonNeumann(g00 : Point,
+                l : lattice[2]{Link}(points),
+                g : set{Point})
+    -> (vnMat : tensor[points,points](float))
+    vnMat(g00,g[0,1]) = l[0,0;0,1].b;
+    vnMat(g00,g[0,-1]) = l[0,0;0,-1].b;
+    vnMat(g00,g[1,0]) = l[0,0;1,0].b;
+    vnMat(g00,g[-1,0]) = l[0,0;-1,0].b;
+end
+
+proc main
+  B = map vonNeumann to points through links;
+  var iter = 0;
+  var cond = iter < 100;
+  while cond
+    points.a = B*points.a;
+    iter = iter + 1;
+    cond = iter < 100;
+  end
+end

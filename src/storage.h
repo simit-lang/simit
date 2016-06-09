@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+#include <string>
 
 #include "intrusive_ptr.h"
 
@@ -39,6 +40,11 @@ public:
     /// A diagonal matrix.
     Diagonal,
 
+    /// A stencil matrix, whose non-zeros lie on a fixed number of diagonals.
+    /// The set of diagonals is based on the access pattern of the assembly
+    /// kernel.
+    Stencil,
+
     /// A system tensor whose contributions are stored on the target set that it
     /// was assembled from. That is, the tensor is stored prior to the map
     /// reduction, and any expression that uses the tensor must reduce it.
@@ -63,6 +69,13 @@ public:
   /// over. The 'storageSet' is the set the tensor is stored on.
   TensorStorage(const Expr &targetSet, const Expr &storageSet);
 
+  /// Create a stencil based storage descriptor. `assemblyFunc' is the stencil
+  /// assembly kernel whose access pattern determines the sparsity. `targetVar'
+  /// is the output variable within the assembly func whose sparsity is being
+  /// determined here.
+  TensorStorage(const Func &assemblyFunc, const Var &targetVar,
+                const Expr &targetSet);
+
   /// Retrieve the tensor storage type.
   Kind getKind() const;
 
@@ -76,6 +89,10 @@ public:
   bool hasPathExpression() const;
   const pe::PathExpression& getPathExpression() const;
   void setPathExpression(const pe::PathExpression& pathExpression);
+
+  /// Retrieve properties of the stencil storage
+  std::string getStencilFunc() const;
+  std::string getStencilVar() const;
 
   // TODO DEPRECATED: These live in the environment now
   bool hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const;

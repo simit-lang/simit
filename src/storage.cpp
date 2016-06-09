@@ -23,6 +23,12 @@ struct TensorStorage::Content {
   Expr systemTargetSet;
   Expr systemStorageSet;
 
+  /// The stencil assembly information for stencil-type storage
+  // string-based ref to func, to avoid dangling references to a rewritten Func
+  string assemblyFunc;
+  // string-based ref to output var, again avoiding dangling references
+  string targetVar;
+
   pe::PathExpression pathExpression;
   map<pair<unsigned,unsigned>, TensorIndex> tensorIndices;
 };
@@ -45,6 +51,15 @@ TensorStorage::TensorStorage(const Expr &targetSet, const Expr &storageSet)
   content->systemStorageSet = storageSet;
 }
 
+TensorStorage::TensorStorage(const Func &assemblyFunc, const Var &targetVar,
+                             const Expr &targetSet)
+    : TensorStorage(Kind::Stencil) {
+  content->assemblyFunc = assemblyFunc.getName();
+  content->targetVar = targetVar.getName();
+  content->systemTargetSet = targetSet;
+}
+
+
 TensorStorage::Kind TensorStorage::getKind() const {
   return content->kind;
 }
@@ -60,6 +75,7 @@ bool TensorStorage::isSystem() const {
     case Kind::Indexed:
     case Kind::Diagonal:
     case Kind::MatrixFree:
+    case Kind::Stencil:
       return true;
     case Kind::Undefined:
       ierror;
@@ -77,6 +93,16 @@ const pe::PathExpression& TensorStorage::getPathExpression() const {
 
 void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
   content->pathExpression = pathExpression;
+}
+
+std::string TensorStorage::getStencilFunc() const {
+  iassert(content->kind == Kind::Stencil);
+  return content->assemblyFunc;
+}
+
+std::string TensorStorage::getStencilVar() const {
+  iassert(content->kind == Kind::Stencil);
+  return content->targetVar;
 }
 
 bool TensorStorage::hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const {
@@ -120,12 +146,17 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
     case TensorStorage::Kind::Indexed:
       os << "Indexed";
       break;
+    case TensorStorage::Kind::Stencil:
+      os << "Stencil";
+      break;
     case TensorStorage::Kind::Diagonal:
       os << "Diagonal";
       break;
     case TensorStorage::Kind::MatrixFree:
       os << "Matrix-Free";
       break;
+    default:
+      unreachable;
   }
   return os;
 }
@@ -277,9 +308,15 @@ private:
         const TensorType* type = var.getType().toTensor();
 
         if (type->order() < 2) {
+          // Dense
           storage->add(var, TensorStorage(TensorStorage::Kind::Dense));
         }
+        else if (op->through.defined()) {
+          // Stencil
+          storage->add(var, TensorStorage(op->function, var, op->target));
+        }
         else {
+          // Indexed
           storage->add(var, TensorStorage(op->target));
         }
       }
