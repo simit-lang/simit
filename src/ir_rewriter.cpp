@@ -509,6 +509,19 @@ void IRRewriter::visit(const GPUKernel *op) {
 }
 #endif
 
+void IRRewriter::spill(Stmt stmt) {
+  spilledStmts.push_back(stmt);
+}
+
+Stmt IRRewriter::getSpilledStmts() {
+  Stmt spillBlock;
+  if (spilledStmts.size() > 0) {
+    spillBlock = Block::make(spilledStmts);
+    spilledStmts.clear();
+  }
+  return spillBlock;
+}
+
 
 // class IRRewriterCallGraph
 void IRRewriterCallGraph::visit(const Call *op) {
