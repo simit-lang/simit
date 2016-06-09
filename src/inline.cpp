@@ -148,6 +148,9 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
   const SetType* setType = map->target.type().toSet();
   int cardinality = setType->endpointSets.size();
   if (returnsMatrix && cardinality > 0) {
+    // Computes the return matrix locations of the endpoints of the edge being
+    // assembled.  These are stored in an array and used when storing values to
+    // the return matrix.
     Var i("i", Int);
     Var j("j", Int);
 
@@ -165,10 +168,15 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
 
     Expr nbrs_start = IndexRead::make(target, IndexRead::NeighborsStart);
     Expr nbrs = IndexRead::make(target, IndexRead::Neighbors);
-    Expr loc = Call::make(intrinsics::loc(), {Load::make(eps,i),
-                                              Load::make(eps,j),
-                                              nbrs_start, nbrs});
-    Stmt locsInit = TensorWrite::make(locs, {i,j}, loc);
+
+    Var locVar("locVar", Int);
+    Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
+                                  {Load::make(eps,i),
+                                   Load::make(eps,j),
+                                   nbrs_start, nbrs});
+
+    Stmt locsInit = Block::make({locStmt,
+                                TensorWrite::make(locs, {i,j}, locVar)});
 
     Stmt locsInitLoop = ForRange::make(j, 0, cardinality, locsInit);
     locsInitLoop      = ForRange::make(i, 0, cardinality, locsInitLoop);
@@ -225,10 +233,6 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
       inlinedMap = Block::make(init, inlinedMap);
     }
   }
-
-  // We flatten the statement after it has been inlined, since inlining may
-  // introduce additional nested index expressions
-  inlinedMap = flattenIndexExpressions(inlinedMap);
 
   return inlinedMap;
 }
