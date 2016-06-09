@@ -1,6 +1,7 @@
 #include "inline.h"
 
 #include <vector>
+#include <map>
 
 #include "temps.h"
 #include "flatten.h"
@@ -12,14 +13,19 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter);
+Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
+                       Storage* storage);
 
 Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
-                                        Var endpoints, Var locs) {
+                                        Storage *storage,
+                                        Var endpoints, Var locs,
+                                        std::map<vector<int>, Expr> clocs) {
   this->endpoints = endpoints;
   this->locs = locs;
+  this->clocs = clocs;
   this->reduction = map->reduction;
   this->targetLoopVar = targetLoopVar;
+  this->storage = storage;
 
   Func kernel = map->function;
   // TODO: revise this assert given map functions can have many params
@@ -33,14 +39,27 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
 
   this->targetSet = map->target;
   this->neighborSet = map->neighbors;
+  this->throughSet = map->through;
 
   iassert(kernel.getArguments().size() >= 1)
       << "The function must have a target argument";
 
-  this->target = kernel.getArguments()[map->partial_actuals.size()];
+  auto argIt = kernel.getArguments().begin()+map->partial_actuals.size();
+  this->target = *argIt++;
 
   if (kernel.getArguments().size() >= (2+map->partial_actuals.size())) {
-    this->neighbors = kernel.getArguments()[1+map->partial_actuals.size()];
+    // Bit hacky: distinguish between neighbors arg and through args
+    // Neighbors will be a tuple of elements, through args will be
+    // two sets.
+    auto maybeNeighbors = *argIt;
+    if (maybeNeighbors.getType().isTuple()) {
+      this->neighbors = maybeNeighbors;
+      argIt++;
+    }
+  }
+  if (this->throughSet.defined()) {
+    this->throughEdges = *argIt++;
+    this->throughPoints = *argIt++;
   }
 
   return rewrite(kernel.getBody());
@@ -48,6 +67,10 @@ Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
 
 bool MapFunctionRewriter::isResult(Var var) {
   return resultToMapVar.find(var) != resultToMapVar.end();
+}
+
+Var MapFunctionRewriter::getMapVar(Var resultVar) {
+  return resultToMapVar[resultVar];
 }
 
 void MapFunctionRewriter::visit(const FieldWrite *op) {
@@ -75,7 +98,6 @@ void MapFunctionRewriter::visit(const FieldWrite *op) {
   }
 }
 
-
 void MapFunctionRewriter::visit(const FieldRead *op) {
   // Read a field from the target set
   if (isa<VarExpr>(op->elementOrSet) &&
@@ -92,6 +114,26 @@ void MapFunctionRewriter::visit(const FieldRead *op) {
 
     Expr index = IRRewriter::rewrite(op->elementOrSet);
     expr = TensorRead::make(setFieldRead, {index});
+  }
+  // Read a field from a lattice offset element
+  else if (isa<SetRead>(op->elementOrSet) &&
+           isa<VarExpr>(to<SetRead>(op->elementOrSet)->set)) {
+    const SetRead *sr = to<SetRead>(op->elementOrSet);
+    // Lattice offset links
+    if (to<VarExpr>(sr->set)->var == throughEdges) {
+      Expr setFieldRead = FieldRead::make(throughEdges, op->fieldName);
+      Expr index = IRRewriter::rewrite(op->elementOrSet);
+      expr = TensorRead::make(setFieldRead, {index});
+    }
+    // Lattice offset points
+    else if (to<VarExpr>(sr->set)->var == throughPoints) {
+      Expr setFieldRead = FieldRead::make(throughPoints, op->fieldName);
+      Expr index = IRRewriter::rewrite(op->elementOrSet);
+      expr = TensorRead::make(setFieldRead, {index});
+    }
+    else {
+      not_supported_yet;
+    }
   }
   else {
     // TODO: Handle the case where the target var was reassigned
@@ -118,6 +160,62 @@ void MapFunctionRewriter::visit(const TupleRead *op) {
   }
 }
 
+void MapFunctionRewriter::visit(const SetRead *op) {
+  iassert(isa<VarExpr>(op->set)) << "Set read set must be a variable";
+  const Var& setVar = to<VarExpr>(op->set)->var;
+  int dims = throughEdges.getType().toSet()->dimensions;
+  if (setVar == throughEdges) {
+    iassert(op->indices.size() == dims*2);
+    // Index into link set assuming canonical ordering
+    vector<int> offsets = getOffsets(op->indices);
+    vector<int> srcOff, sinkOff;
+    int dir = -1;
+    bool srcBase;
+    for (int i = 0; i < dims; ++i) {
+      srcOff.push_back(offsets[i]);
+      sinkOff.push_back(offsets[dims+i]);
+      if (srcOff.back() != sinkOff.back()) {
+        iassert(dir == -1)
+            << "Cannot have multiple offsets in relative lattice indexing";
+        iassert(abs(srcOff.back() - sinkOff.back()) == 1)
+            << "Cannot offset by more than 1 in lattice link indexing";
+        dir = i;
+        srcBase = (srcOff.back() < sinkOff.back());
+      }
+    }
+    iassert(dir != -1) << "Must have an offset in lattice link indexing";
+    vector<int> index = srcBase ? srcOff : sinkOff;
+    index.push_back(dir); // Directional index outermost
+    // Convert index offsets to a single offset expr
+    Expr totalOff = index.back();
+    for (int i = dims-1; i >= 0; --i) {
+      int ind = index[i];
+      Expr dimSize = IndexRead::make(throughEdges, IndexRead::LatticeDim, i);
+      totalOff = totalOff * dimSize + ind;
+    }
+    // Rewrite into a bare index
+    // TODO: Modulus?
+    expr = targetLoopVar * dims + totalOff;
+  }
+  else if (setVar == throughPoints) {
+    iassert(op->indices.size() == dims);
+    vector<int> offsets = getOffsets(op->indices);
+    // Convert index offsets to a single offset expr
+    Expr totalOff = Literal::make(0);
+    for (int i = dims-1; i >= 0; --i) {
+      int ind = offsets[i];
+      Expr dimSize = IndexRead::make(throughEdges, IndexRead::LatticeDim, i);
+      totalOff = totalOff * dimSize + ind;
+    }
+    // Rewrite into a bare index
+    // TODO: Modulus?
+    expr = targetLoopVar + totalOff;
+  }
+  else {
+    not_supported_yet;
+  }
+}
+
 void MapFunctionRewriter::visit(const VarExpr *op) {
   if (op->var == target) {
     expr = targetLoopVar;
@@ -130,9 +228,85 @@ void MapFunctionRewriter::visit(const VarExpr *op) {
   }
 }
 
+bool isAllZeros(vector<int> offsets) {
+  for (int off : offsets) {
+    if (off != 0) return false;
+  }
+  return true;
+}
+
+vector<int> getOffsets(vector<Expr> offsets) {
+  vector<int> out;
+  for (Expr off : offsets) {
+    iassert(isa<Literal>(off));
+    out.push_back(to<Literal>(off)->getIntVal(0));
+  }
+  return out;
+}
+
+void buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
+                      std::map<vector<int>, Expr> &clocs) {
+  int stencilSize = 0;
+  Var tensorVar;
+  match(kernel,
+        function< void(const TensorWrite*,Matcher*) >(
+            [&](const TensorWrite* op, Matcher* ctx) {
+              tensorVar = Var();
+              ctx->match(op->tensor);
+              // Found a write to the stencil-assembled variable
+              if (tensorVar.defined() && tensorVar == stencilVar) {
+                tassert(op->indices.size() == 2)
+                    << "Stencil assembly must be of matrix";
+                auto row = op->indices[0];
+                auto col = op->indices[1];
+                iassert(row.type().isElement() &&
+                        col.type().isElement());
+                iassert(kernel.getArguments().size() >= 3)
+                    << "Kernel must have element, and two sets as arguments";
+                // The first argument to the kernel is an alias for points[0,0,...]
+                Var origin = kernel.getArguments()[0];
+                Var points = kernel.getArguments()[kernel.getArguments().size()-1];
+                Var links = kernel.getArguments()[kernel.getArguments().size()-2];
+                iassert(points.getType().isSet());
+                iassert(links.getType().isSet());
+                iassert(links.getType().toSet()->kind == SetType::LatticeLink);
+                int dims = links.getType().toSet()->dimensions;
+                // We assume row index normalization has been performed already
+                iassert((isa<VarExpr>(row) && to<VarExpr>(row)->var == origin) ||
+                        (isa<SetRead>(row) &&
+                         isAllZeros(getOffsets(to<SetRead>(row)->indices))));
+                // col index determines stencil structure
+                vector<int> offsets;
+                if (isa<VarExpr>(col)) {
+                  iassert(to<VarExpr>(col)->var == origin);
+                  offsets = vector<int>(dims);
+                }
+                else {
+                  iassert(isa<SetRead>(col));
+                  offsets = getOffsets(to<SetRead>(col)->indices);
+                }
+                // Add new offset to stencil
+                if (!clocs.count(offsets)) {
+                  clocs[offsets] = stencilSize;
+                  stencilSize++;
+                }
+              }
+            }),
+        function< void(const VarExpr*) >(
+            [&tensorVar](const VarExpr* v) {
+              tensorVar = v->var;
+            })
+        );
+  // Make locs relative to loop var
+  for (auto &kv : clocs) {
+    kv.second = loopVar*stencilSize + kv.second;
+  }
+}
+
 /// Inlines the mapped function with respect to the given loop variable over
 /// the target set, using the given rewriter.
-Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
+Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
+                       Storage* storage) {
   // Compute locations of the mapped edge
   bool returnsMatrix = false;
   for (auto& result : map->function.getResults()) {
@@ -147,7 +321,24 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
   iassert(map->target.type().isSet());
   const SetType* setType = map->target.type().toSet();
   int cardinality = setType->endpointSets.size();
+  // Map over edge set to build matrix
   if (returnsMatrix && cardinality > 0) {
+    /* Build IR for locs and eps:
+       var i : int;
+       var j : int;
+       var eps : tensor[card](int);
+       for i in 0:card
+         eps(i) = target.endpoints[lv*card + i];
+       end;
+
+       var locs : tensor[card,card](int);
+       for i in 0:card
+         for j in 0:card
+           locs(i,j) = loc(eps(i),eps(j),target.nbrs_start,target.nbrs);
+         end
+       end
+     */
+
     Var i("i", Int);
     Var j("j", Int);
 
@@ -178,14 +369,47 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
                                     VarDecl::make(locs),
                                     locsInitLoop});
 
-    return Block::make(computeLocs, rewriter.inlineMapFunc(map, lv, eps, locs));
+    return Block::make(computeLocs,
+                       rewriter.inlineMapFunc(map, lv, storage, eps, locs));
+  }
+  // Map through local coordinate structure to build matrix
+  // TODO: This branching should be handled in a less ad-hoc manner
+  else if (returnsMatrix && map->through.defined()) {
+    // If we're assemblying using local coordinate structure, we can build
+    // locs at compile time (clocs) and use this in lowering the map to generate
+    // the proper indices.
+    std::map<vector<int>, Expr> clocs;
+    Var stencilVar;
+    iassert(map->vars.size() == map->function.getResults().size());
+    for (int i = 0; i < map->vars.size(); ++i) {
+      auto var = map->vars[i];
+      auto res = map->function.getResults()[i];
+      iassert(storage->getStorage(var).getKind() == TensorStorage::Kind::Stencil ||
+              storage->getStorage(var).getKind() == TensorStorage::Kind::Diagonal ||
+              storage->getStorage(var).getKind() == TensorStorage::Kind::Dense);
+      if (storage->getStorage(var).getKind() == TensorStorage::Kind::Stencil) {
+        iassert(!stencilVar.defined());
+        iassert(storage->getStorage(var).getStencilFunc() ==
+                map->function.getName());
+        iassert(storage->getStorage(var).getStencilVar() ==
+                var.getName());
+        stencilVar = res;
+      }
+    }
+    // Must have exactly one stencil-assembled output
+    iassert(stencilVar.defined())
+        << "map with through must assemble exactly one stencil-assembled var";
+    // Build compile-time locs
+    buildStencilLocs(map->function, stencilVar, lv, clocs);
+    return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs);
   }
   else {
-    return rewriter.inlineMapFunc(map, lv);
+    return rewriter.inlineMapFunc(map, lv, storage);
   }
 }
 
-Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
+Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
+               Storage* storage) {
   Func kernel = map->function;
   kernel = insertTemporaries(kernel);
 
@@ -199,7 +423,7 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter) {
   Var loopVar(targetVar.getName(), Int);
   ForDomain domain(map->target);
 
-  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter);
+  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter, storage);
 
   Stmt inlinedMap;
   auto initializers = vector<Stmt>();

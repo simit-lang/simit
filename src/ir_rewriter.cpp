@@ -116,8 +116,11 @@ void IRRewriter::visit(const IndexRead *op) {
   if (edgeSet == op->edgeSet) {
     expr = op;
   }
-  else {
+  else if (op->kind != IndexRead::LatticeDim) {
     expr = IndexRead::make(edgeSet, op->kind);
+  }
+  else {
+    expr = IndexRead::make(edgeSet, op->kind, op->index);
   }
 }
 

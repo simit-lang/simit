@@ -203,6 +203,12 @@ void IRPrinter::visit(const IndexRead *op) {
     case IndexRead::Neighbors:
       os << "neighbors";
       break;
+    case IndexRead::LatticeDim:
+      os << "latticedim[" << op->index << "]";
+      break;
+    default:
+      not_supported_yet;
+      break;
   }
 }
 

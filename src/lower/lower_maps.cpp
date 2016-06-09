@@ -52,15 +52,58 @@ class LowerMapFunctionRewriter : public MapFunctionRewriter {
     iassert(targetVar.defined());
 
     if (isResult(targetVar)) {
-      if (locs.defined() && op->indices.size() == 2) {
-        iassert(endpoints.defined());
+      Var mapVar = getMapVar(targetVar);
+      if (storage->getStorage(mapVar).getKind() ==
+          TensorStorage::Kind::Indexed) {
+        iassert(locs.defined());
         iassert(op->indices.size() == 2);
+        iassert(endpoints.defined());
         vector<Expr> indices;
         for (auto& index : op->indices) {
           iassert(isa<TupleRead>(index)) << index;
           indices.push_back(to<TupleRead>(index)->index);
         }
         Expr index = TensorRead::make(locs, indices);
+
+        // Change assignments to result to compound  assignments, using the map
+        // reduction operator.
+        switch (reduction.getKind()) {
+          case ReductionOperator::Sum: {
+            stmt = TensorWrite::make(rewrite(op->tensor), {index},
+                                     rewrite(op->value), CompoundOperator::Add);
+            break;
+          }
+          case ReductionOperator::Undefined: {
+            stmt = TensorWrite::make(rewrite(op->tensor), {index},
+                                     rewrite(op->value));
+            break;
+          }
+        }
+      }
+      else if (storage->getStorage(mapVar).getKind() ==
+               TensorStorage::Kind::Stencil) {
+        uassert(clocs.size() != 0) << "Stencil-based assembly of size 0.";
+        iassert(op->indices.size() == 2);
+        // Row index must be normalized to zero
+        iassert((isa<VarExpr>(op->indices[0]) &&
+                 to<VarExpr>(op->indices[0])->var == target) ||
+                (isa<SetRead>(op->indices[0]) &&
+                 isAllZeros(getOffsets(to<SetRead>(op->indices[0])->indices))));
+        // Get col index
+        iassert(throughSet.type().toSet()->kind == SetType::LatticeLink);
+        int dims = throughSet.type().toSet()->dimensions;
+        Expr index;
+        if (isa<VarExpr>(op->indices[1])) {
+          vector<int> offsets(dims);
+          index = clocs[offsets];
+        }
+        else if (isa<SetRead>(op->indices[1])) {
+          vector<int> offsets = getOffsets(to<SetRead>(op->indices[1])->indices);
+          index = clocs[offsets];
+        }
+        else {
+          unreachable;
+        }
 
         // Change assignments to result to compound  assignments, using the map
         // reduction operator.
@@ -114,7 +157,7 @@ private:
         << "Every assembled tensor should have a storage descriptor";
 
     LowerMapFunctionRewriter mapFunctionRewriter;
-    stmt = inlineMap(op, mapFunctionRewriter);
+    stmt = inlineMap(op, mapFunctionRewriter, storage);
 
     // Add comment
     stmt = Comment::make(util::toString(*op), stmt, true);

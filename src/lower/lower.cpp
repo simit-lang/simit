@@ -9,6 +9,7 @@
 #include "lower_accesses.h"
 #include "lower_prints.h"
 #include "lower_string_ops.h"
+#include "lower_stencil_assemblies.h"
 
 #include "storage.h"
 #include "timers.h"
@@ -121,6 +122,10 @@ Func lower(Func func, bool print) {
 
   func = rewriteCallGraph(func, lowerFieldAccesses);
   printCallGraph("Lower Field Accesses", func, print);
+
+  // Lower stencil assemblies
+  func = rewriteCallGraph(func, lowerStencilAssemblies);
+  printCallGraph("Normalize Row Indices", func, print);
 
   // Lower maps
   func = rewriteCallGraph(func, lowerMaps);
