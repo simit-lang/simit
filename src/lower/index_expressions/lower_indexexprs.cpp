@@ -160,10 +160,18 @@ Stmt specialize(Stmt stmt, const LoopVars &loopVars) {
         tensor = tensorRead(tensor, indexVars, blockLevels-1);
       }
 
+      std::vector<Var> vars;
       std::vector<Expr> indexExprs;
       for (const IndexVar &iv : indexVars) {
         size_t lastLevel = iv.getNumBlockLevels()-1;
-        indexExprs.push_back(loopVars.getLoopVars(iv)[lastLevel].getVar());
+        Var var = loopVars.getLoopVars(iv)[lastLevel].getVar();
+        indexExprs.push_back(var);
+        vars.push_back(var);
+      }
+
+      Var coordVar = loopVars.getCoordVar(vars);
+      if (coordVar.defined()) {
+        return TensorWrite::make(tensor, {coordVar}, value, cop);
       }
 
       return TensorWrite::make(tensor, indexExprs, value, cop);
@@ -395,6 +403,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
     Stmt doRewrite(Stmt stmt) {
       return this->rewrite(stmt);
     }
+
   private:
     using IRRewriter::visit;
     const Storage &storage;
@@ -418,36 +427,39 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
     Expr liftDiagonalExpression(Expr exprToCheck, Expr otherExpr, Expr op,
                                 vector<Expr> containingToCheck={},
                                 vector<Expr> containingOther={}) {
-      
       auto tensor = to<TensorRead>(exprToCheck)->tensor;
 
       // If tensor is not a VarExpr, that means we have a hierarchical TensorRead
       if (!isa<VarExpr>(tensor)) {
         tassert(isa<TensorRead>(otherExpr))
             << "we only support one level of blocking" << otherExpr;
-        
+
         auto otherTensor = to<TensorRead>(otherExpr)->tensor;
         containingToCheck.push_back(exprToCheck);
         containingOther.push_back(otherExpr);
         return liftDiagonalExpression(tensor, otherTensor, op,
                                       containingToCheck, containingOther);
       }
-      
-      TensorStorage::Kind storageKind =
-          storage.getStorage(to<VarExpr>(tensor)->var).getKind();
+
+      TensorStorage tensorStorage= storage.getStorage(to<VarExpr>(tensor)->var);
+      TensorStorage::Kind storageKind = tensorStorage.getKind();
       
       if (storageKind == TensorStorage::Kind::Diagonal &&
           currentTensorWrite != nullptr) {
         std::vector<Expr> newIndices;
         newIndices.push_back(VarExpr::make(outerIndexVar));
 
+        // To store the diagonal input into the non-diagonal matrix we need
+        // to use loc to scan until we find the diagonal entry, e.g.:
+        // A(loc(n,n)) = I(n);
+        // We accomplish this by the access into A(n,n)
         std::vector<Expr> newWriteIndices;
-        for (auto x: currentTensorWrite->indices)
-          newWriteIndices.push_back(outerIndexVar);
-
+        newWriteIndices.push_back(outerIndexVar);
+        newWriteIndices.push_back(outerIndexVar);
+        
         auto newRead = TensorRead::make(tensor,newIndices);
         Expr newWriteTensor = currentTensorWrite->tensor;
-        
+
         if (containingToCheck.size() > 0) {
           // we will make a loop over the innermost indices
           // we find out which ones by looking at the containing expression's
@@ -465,6 +477,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
             newWriteTensor = to<TensorRead>(newWriteTensor)->tensor;
           }
           newWriteTensor = TensorRead::make(newWriteTensor, newWriteIndices);
+
           // Index by all but the last containing index (which will become the
           // TensorWrite index)
           for (int i = containingToCheck.size()-1; i >= 1; --i) {
@@ -478,7 +491,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         
         liftedStmt = TensorWrite::make(newWriteTensor, newWriteIndices,
                           newRead);
-        
+
         if (containingToCheck.size() > 0) {
           size_t totalIndices = 0;
           for (Expr e : containingToCheck) {
@@ -487,19 +500,18 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
           }
           size_t i = 0;
           for (auto lv=loopVars.rbegin();
-               i<totalIndices &&
-               lv != loopVars.rend();
+               i < totalIndices && lv != loopVars.rend();
                lv++) {
-            liftedStmt = For::make(Var(lv->getVar()), ForDomain(lv->getDomain()), liftedStmt);
+            liftedStmt = For::make(Var(lv->getVar()),
+                                   ForDomain(lv->getDomain()), liftedStmt);
             i++;
           }
-          
         }
         liftedStmts.push_back(liftedStmt);
 
         Expr lhsRead = TensorRead::make(currentTensorWrite->tensor,
                                         currentTensorWrite->indices);
-        
+
         if (containingOther.size() > 0) {
           for (int i = containingOther.size()-1; i >= 0; --i) {
             auto containingTensorExpr = to<TensorRead>(containingOther[i]);
@@ -508,10 +520,10 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         }
         Expr rhs;
         if (isa<Add>(op)) {
-          return Add::make(lhsRead, otherExpr);
+          rhs = Add::make(lhsRead, otherExpr);
         }
         else if (isa<Sub>(op)) {
-          return Sub::make(lhsRead, otherExpr);
+          rhs = Sub::make(lhsRead, otherExpr);
         }
         iassert(rhs.defined());
         return rhs;
@@ -596,8 +608,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
       Expr jRead = Load::make(tensorIndex.getSinkArray(), ij);
 
-      // for NeighborsOf, we need to check if this is the j we are looking
-      // for
+      // for NeighborsOf, we need to check if this is the j we are looking for
       if (loopVar->getDomain().kind == ForDomain::NeighborsOf) {
         Expr jCond = Eq::make(j, loopVar->getDomain().indexSet.getSet());
         loopNest = IfThenElse::make(jCond, loopNest, Pass::make());
@@ -608,9 +619,10 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       Expr start = Load::make(tensorIndex.getCoordArray(), i);
       Expr stop = Load::make(tensorIndex.getCoordArray(), i+1);
 
-      // Rewrite accesses to SystemDiagonal tensors & lift out ops
+      // Rewrite accesses to any SystemDiagonal tensors & lift out ops
       DiagonalReadsRewriter drRewriter(storage, i, loopVars);
       loopNest = drRewriter.doRewrite(loopNest);
+
       if (drRewriter.liftedStmts.size() > 0) {
         auto newBlock = Block::make(drRewriter.liftedStmts);
         loopNest = Block::make(newBlock,
@@ -625,7 +637,6 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       Var j = loopVar->getVar();
       
       loopNest = Block::make(AssignStmt::make(j, i), loopNest);
-      
     } else {
       not_supported_yet;
     }
