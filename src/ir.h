@@ -194,13 +194,6 @@ struct FieldRead : public ExprNode {
   void accept(IRVisitorStrict *v) const {v->visit((const FieldRead*)this);}
 };
 
-struct Call : public ExprNode {
-  Func func;
-  std::vector<Expr> actuals;
-  static Expr make(Func func, std::vector<Expr> actuals);
-  void accept(IRVisitorStrict *v) const {v->visit((const Call*)this);}
-};
-
 struct Length : public ExprNode {
   IndexSet indexSet;
   static Expr make(IndexSet indexSet);
@@ -336,6 +329,9 @@ struct FieldWrite : public StmtNode {
   void accept(IRVisitorStrict *v) const {v->visit((const FieldWrite*)this);}
 };
 
+/// Calls a function that may any number of arguments.
+/// NB: The reason why we don't have Call expressions is that functions may
+///     have more than one result.
 struct CallStmt : public StmtNode {
   std::vector<Var> results;
   Func callee;

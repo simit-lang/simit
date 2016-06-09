@@ -32,7 +32,6 @@ protected:
   virtual void visit(const VarExpr *op);
   virtual void visit(const Load *op);
   virtual void visit(const FieldRead *op);
-  virtual void visit(const Call *op);
   virtual void visit(const Length *op);
   virtual void visit(const IndexRead *op);
 
@@ -101,7 +100,6 @@ protected:
 
   using IRRewriter::visit;
 
-  virtual void visit(const Call *op);
   virtual void visit(const CallStmt *op);
   virtual void visit(const Map *op);
 };

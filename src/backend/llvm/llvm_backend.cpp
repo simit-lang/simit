@@ -361,29 +361,6 @@ void LLVMBackend::compile(const ir::FieldRead& fieldRead) {
   val = emitFieldRead(fieldRead.elementOrSet, fieldRead.fieldName);
 }
 
-
-// TODO: Get rid of Call expressions. This code is out of date, w.r.t CallStmt,
-//       and is only kept around to emit loc.
-void LLVMBackend::compile(const ir::Call& call) {
-  iassert(call.func == ir::intrinsics::loc()) <<
-    "Only loc should use Call node";
-
-  std::vector<llvm::Type*> argTypes;
-  std::vector<llvm::Value*> args;
-
-  // compile arguments first
-  for (Expr a: call.actuals) {
-    compileArgument(a, argTypes, args);
-  }
-
-
-  if (call.func == ir::intrinsics::loc()) {
-    val = emitCall("loc", args, LLVM_INT);
-    return;
-  }
-}
-
-
 void LLVMBackend::compile(const ir::Length& length) {
   val = emitComputeLen(length.indexSet);
 }

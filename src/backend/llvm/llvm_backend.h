@@ -71,7 +71,6 @@ protected:
   virtual void compile(const ir::VarExpr&);
   virtual void compile(const ir::Load&);
   virtual void compile(const ir::FieldRead&);
-  virtual void compile(const ir::Call&);
   virtual void compile(const ir::Length&);
   virtual void compile(const ir::IndexRead&);
 

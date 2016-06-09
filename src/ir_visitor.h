@@ -16,7 +16,6 @@ struct Literal;
 struct VarExpr;
 struct Load;
 struct FieldRead;
-struct Call;
 struct Length;
 struct IndexRead;
 
@@ -76,7 +75,6 @@ public:
   virtual void visit(const VarExpr* op) = 0;
   virtual void visit(const Load* op) = 0;
   virtual void visit(const FieldRead* op) = 0;
-  virtual void visit(const Call* op) = 0;
   virtual void visit(const Length* op) = 0;
   virtual void visit(const IndexRead* op) = 0;
 
@@ -143,7 +141,6 @@ public:
   virtual void visit(const VarExpr *op);
   virtual void visit(const Load *op);
   virtual void visit(const FieldRead *op);
-  virtual void visit(const Call *op);
   virtual void visit(const Length *op);
   virtual void visit(const IndexRead *op);
 
@@ -205,7 +202,6 @@ public:
 
   using IRVisitor::visit;
 
-  virtual void visit(const Call *op);
   virtual void visit(const CallStmt *op);
   virtual void visit(const Map *op);
 };
@@ -272,7 +268,6 @@ private:
   RULE(VarExpr)
   RULE(Load)
   RULE(FieldRead)
-  RULE(Call)
   RULE(Length)
   RULE(IndexRead)
 

@@ -179,11 +179,6 @@ void IRPrinter::visit(const FieldRead *op) {
   os << "." << op->fieldName;
 }
 
-void IRPrinter::visit(const Call *op) {
-  clearSkipParen();
-  os << op->func.getName() << "(" << util::join(op->actuals) << ")";
-}
-
 void IRPrinter::visit(const Length *op) {
   clearSkipParen();
   os << "length(" << op->indexSet << ")";
@@ -577,10 +572,6 @@ void IRPrinterCallGraph::print(const Func &func) {
   else {
     os << "Func()";
   }
-}
-
-void IRPrinterCallGraph::visit(const Call *op) {
-  op->func.accept(this);
 }
 
 void IRPrinterCallGraph::visit(const CallStmt *op) {
