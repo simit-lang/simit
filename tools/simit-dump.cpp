@@ -30,7 +30,7 @@ void printUsage() {
        << "-emit-gpu=<file>"    << endl
        << "-compile"            << endl
        << "-compile=<function>" << endl
-       << "-section=<section>";
+       << "-section=<section>"  << endl;
 }
 
 int main(int argc, const char* argv[]) {
@@ -231,7 +231,6 @@ int main(int argc, const char* argv[]) {
 
     // Emit and print llvm code
     // NB: The LLVM code gets further optimized at init time (OSR, etc.)
-
     if (emitLLVM || emitASM) {
       backend::Backend backend("llvm");
       simit::Function  llvmFunc(backend.compile(func));

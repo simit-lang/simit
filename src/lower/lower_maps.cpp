@@ -121,9 +121,11 @@ private:
 
     // Add storage descriptor for the new tensors in the inlined map
     updateStorage(stmt, storage);
+
     // Add storage from mapped Func's environment
     Func noBody(op->function, Pass::make());
     updateStorage(noBody, storage);
+
     // Add constants from inlined map function into environment
     for (auto &c : op->function.getEnvironment().getConstants()) {
       env->addConstant(c.first, c.second);

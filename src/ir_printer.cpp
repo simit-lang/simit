@@ -399,7 +399,7 @@ void IRPrinter::visit(const IfThenElse *op) {
 
 void IRPrinter::visit(const ForRange *op) {
   indent();
-  os << "for " << op->var << " in " << op->start << " : " << op->end << endl;
+  os << "for " << op->var << " in " << op->start << ":" << op->end << endl;
   ++indentation;
   print(op->body);
   --indentation;
