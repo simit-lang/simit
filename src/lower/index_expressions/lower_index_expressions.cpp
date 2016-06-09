@@ -56,8 +56,8 @@ inline bool isScale(const IndexExpr* iexpr) {
   return result;
 }
 
-inline bool doesOperandsHaveSameStructure(const IndexExpr* iexpr,
-                                          const Storage& storage) {
+inline bool doesOperandsHaveSameStructureOrIsDiagonal(const IndexExpr* iexpr,
+                                                      const Storage& storage) {
   bool result = true;
   pe::PathExpression pexpr;
   match(iexpr->value,
@@ -192,7 +192,8 @@ Func lowerIndexExpressions(Func func) {
 
       // Dispatch the index expression lowering to the correct lowering pass.
       enum Kind {Unknown, DenseResult, MatrixScale,
-                 MatrixElwiseWithSameStructure, MatrixElwise, MatrixMultiply};
+                 MatrixElwiseWithSameStructureOrDiagonal, MatrixElwise,
+                 MatrixMultiply};
       Kind kind = Unknown;
 
       iassert(iexpr->type.isTensor());
@@ -207,8 +208,8 @@ Func lowerIndexExpressions(Func func) {
         kind = MatrixScale;
       }
       else if (isElwise(iexpr)) {
-        kind = doesOperandsHaveSameStructure(iexpr, *storage)
-               ? MatrixElwiseWithSameStructure
+        kind = doesOperandsHaveSameStructureOrIsDiagonal(iexpr, *storage)
+               ? MatrixElwiseWithSameStructureOrDiagonal
                : MatrixElwise;
       }
       else if (isGemm(iexpr)) {
@@ -222,7 +223,7 @@ Func lowerIndexExpressions(Func func) {
       switch (kind) {
         case DenseResult:
         case MatrixScale:
-        case MatrixElwiseWithSameStructure:
+        case MatrixElwiseWithSameStructureOrDiagonal:
           stmt = lowerIndexStatement(op, &environment, *storage);
           break;
         case MatrixElwise:
