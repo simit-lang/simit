@@ -397,7 +397,8 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
 
-          if (storageKind == TensorStorage::Kind::Indexed) {
+          if (storageKind == TensorStorage::Kind::Indexed ||
+              storageKind == TensorStorage::Kind::Stencil) {
             // The ij var links i to j through the neighbors indices. E.g.
             // for i in points:
             //   pointsi = 0;

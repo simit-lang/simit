@@ -244,8 +244,9 @@ vector<int> getOffsets(vector<Expr> offsets) {
   return out;
 }
 
-void buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
-                      std::map<vector<int>, Expr> &clocs) {
+StencilContent* buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
+                                 std::map<vector<int>, Expr> &clocs) {
+  std::map<vector<int>, int> layout; // layout of stencil for the storage
   int stencilSize = 0;
   Var tensorVar;
   match(kernel,
@@ -286,8 +287,8 @@ void buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
                   offsets = getOffsets(to<SetRead>(col)->indices);
                 }
                 // Add new offset to stencil
-                if (!clocs.count(offsets)) {
-                  clocs[offsets] = stencilSize;
+                if (!layout.count(offsets)) {
+                  layout[offsets] = stencilSize;
                   stencilSize++;
                 }
               }
@@ -298,9 +299,12 @@ void buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
             })
         );
   // Make locs relative to loop var
-  for (auto &kv : clocs) {
-    kv.second = loopVar*stencilSize + kv.second;
+  for (auto &kv : layout) {
+    clocs[kv.first] = loopVar*stencilSize + kv.second;
   }
+  StencilContent *content = new StencilContent;
+  content->layout = layout;
+  return content;
 }
 
 /// Inlines the mapped function with respect to the given loop variable over
@@ -379,7 +383,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
     // locs at compile time (clocs) and use this in lowering the map to generate
     // the proper indices.
     std::map<vector<int>, Expr> clocs;
-    Var stencilVar;
+    Var stencilVar, mapVar;
     iassert(map->vars.size() == map->function.getResults().size());
     for (int i = 0; i < map->vars.size(); ++i) {
       auto var = map->vars[i];
@@ -393,6 +397,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
                 map->function.getName());
         iassert(storage->getStorage(var).getStencilVar() ==
                 var.getName());
+        mapVar = var;
         stencilVar = res;
       }
     }
@@ -400,7 +405,9 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
     iassert(stencilVar.defined())
         << "map with through must assemble exactly one stencil-assembled var";
     // Build compile-time locs
-    buildStencilLocs(map->function, stencilVar, lv, clocs);
+    StencilContent *s = buildStencilLocs(map->function, stencilVar, lv, clocs);
+    s->latticeSet = to<VarExpr>(map->through)->var; // assumes VarExpr
+    storage->getStorage(mapVar).setStencil(s);
     return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs);
   }
   else {

@@ -6,6 +6,7 @@
 #include <string>
 
 #include "intrusive_ptr.h"
+#include "stencils.h"
 
 namespace simit {
 namespace pe {
@@ -73,7 +74,7 @@ public:
   /// assembly kernel whose access pattern determines the sparsity. `targetVar'
   /// is the output variable within the assembly func whose sparsity is being
   /// determined here.
-  TensorStorage(const Func &assemblyFunc, const Var &targetVar,
+  TensorStorage(string assemblyFunc, string targetVar,
                 const Expr &targetSet);
 
   /// Retrieve the tensor storage type.
@@ -93,6 +94,10 @@ public:
   /// Retrieve properties of the stencil storage
   std::string getStencilFunc() const;
   std::string getStencilVar() const;
+  /// Stencil structure (built during assembly map lowering)
+  bool hasStencil() const;
+  const Stencil& getStencil() const;
+  void setStencil(const Stencil& stencil);
 
   // TODO DEPRECATED: These live in the environment now
   bool hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
