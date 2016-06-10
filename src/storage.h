@@ -17,9 +17,6 @@ class Stmt;
 class Expr;
 class TensorIndex;
 
-// TODO: Should we remove the whole system concept? This gives us Dense indices,
-//       PathExpression (reduced or unreduced) indices, Diagonal indices,
-//       Matrix-Free indices, ... .
 
 /// The storage arrangement of a tensor (e.g. dense or stored on a set).
 class TensorStorage {
@@ -29,24 +26,14 @@ public:
     Undefined,
 
     /// The dense tensor stored row major.
-    /// TODO: Add a tensor layout object that describes the layout (row, z, ...)
     Dense,
 
-    /// A sparse matrix, whose non-empty (non-zero) components are accessible
-    /// through a tensor index.
+    /// A sparse matrix whose non-zero components are accessible through a
+    /// tensor index.
     Indexed,
 
     /// A diagonal matrix.
-    Diagonal,
-
-    /// A system tensor whose contributions are stored on the target set that it
-    /// was assembled from. That is, the tensor is stored prior to the map
-    /// reduction, and any expression that uses the tensor must reduce it.
-    // Unreduced,
-
-    /// A system tensor that is never stored. Any index expressions that use
-    /// this tensor must be fused with the tensor assembly.
-    MatrixFree
+    Diagonal
   };
 
   /// Create an undefined tensor storage

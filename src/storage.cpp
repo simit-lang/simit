@@ -59,7 +59,6 @@ bool TensorStorage::isSystem() const {
       return false;
     case Kind::Indexed:
     case Kind::Diagonal:
-    case Kind::MatrixFree:
       return true;
     case Kind::Undefined:
       ierror;
@@ -96,7 +95,6 @@ void TensorStorage::addTensorIndex(Var tensor, unsigned srcDim,
   iassert(!hasTensorIndex(srcDim, sinkDim));
   content->tensorIndices.insert({{srcDim,sinkDim},
       TensorIndex(tensor.getName()+"_index", pe::PathExpression())});
-
 }
 
 const Expr &TensorStorage::getSystemTargetSet() const {
@@ -122,9 +120,6 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
       break;
     case TensorStorage::Kind::Diagonal:
       os << "Diagonal";
-      break;
-    case TensorStorage::Kind::MatrixFree:
-      os << "Matrix-Free";
       break;
   }
   return os;
@@ -398,7 +393,6 @@ private:
         {TensorStorage::Kind::Dense,      4},
         {TensorStorage::Kind::Indexed,    3},
         {TensorStorage::Kind::Diagonal,   2},
-        {TensorStorage::Kind::MatrixFree, 1},
         {TensorStorage::Kind::Undefined,  0}
       };
 
@@ -416,7 +410,6 @@ private:
         if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
           switch (operandStorage.getKind()) {
             case TensorStorage::Kind::Dense:
-            case TensorStorage::Kind::MatrixFree:
               tensorStorage = operandStorage.getKind();
               break;
             case TensorStorage::Kind::Indexed:

@@ -196,9 +196,6 @@ private:
       case TensorStorage::Kind::Diagonal:
         index = rewrite(indices[0]);
         break;
-      case TensorStorage::Kind::MatrixFree:
-        ierror << "Can't store to a matrix-free tensor.";
-        break;
       case TensorStorage::Kind::Undefined:
         ierror;
         break;
