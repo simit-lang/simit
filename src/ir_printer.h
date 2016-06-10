@@ -42,6 +42,7 @@ private:
   virtual void visit(const Sub *op);
   virtual void visit(const Mul *op);
   virtual void visit(const Div *op);
+  virtual void visit(const Rem *op);
 
   virtual void visit(const Not *op);
   virtual void visit(const Eq *op);

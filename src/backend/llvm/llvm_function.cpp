@@ -84,19 +84,27 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
   // Initialize tensorIndex ptrs
   for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
     uint64_t addr;
-    
-    const Var& coords = tensorIndex.getCoordArray();
-    addr = executionEngine->getGlobalValueAddress(coords.getName());
-    const uint32_t** coordsPtr = (const uint32_t**)addr;
-    *coordsPtr = nullptr;
 
-    const Var& sinks = tensorIndex.getSinkArray();
-    addr = executionEngine->getGlobalValueAddress(sinks.getName());
-    const uint32_t** sinksPtr = (const uint32_t**)addr;
-    *sinksPtr = nullptr;
+    if (tensorIndex.getKind() == TensorIndex::PExpr) {
+      const Var& coords = tensorIndex.getCoordArray();
+      addr = executionEngine->getGlobalValueAddress(coords.getName());
+      const uint32_t** coordsPtr = (const uint32_t**)addr;
+      *coordsPtr = nullptr;
 
-    const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
-    tensorIndexPtrs.insert({pexpr, {coordsPtr, sinksPtr}});
+      const Var& sinks = tensorIndex.getSinkArray();
+      addr = executionEngine->getGlobalValueAddress(sinks.getName());
+      const uint32_t** sinksPtr = (const uint32_t**)addr;
+      *sinksPtr = nullptr;
+
+      const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
+      tensorIndexPtrs.insert({pexpr, {coordsPtr, sinksPtr}});
+    }
+    else if (tensorIndex.getKind() == TensorIndex::Sten) {
+      // No need to build in-memory structures
+    }
+    else {
+      not_supported_yet;
+    }
   }
 
 }
@@ -123,13 +131,48 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
     globals[name] = std::unique_ptr<Actual>(new SetActual(set));
     const ir::SetType* setType = getGlobalType(name).toSet();
 
-    // Write set size to extern
-    iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
-    auto externSizePtr = (int*)externPtrs.at(name)[0];
-    *externSizePtr = set->getSize();
+    int *externSizePtr;
+    if (setType->kind == ir::SetType::Unstructured) {
+      // Write set size to extern
+      iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+      externSizePtr = (int*)externPtrs.at(name)[0];
+      *externSizePtr = set->getSize();
+      externSizePtr++;
+    }
+    else if (setType->kind == ir::SetType::LatticeLink) {
+      // Infer set sizes (TODO: add these to the runtime Set structure)
+      // We assume cubic for now.
+      int dims = setType->dimensions;
+      uassert(set->getSize() % dims == 0)
+          << "Number of set elements must be divisible by dims "
+          << set->getSize() << " for dims " << dims;
+      size_t nSites = set->getSize()/dims;
+      // Bit of a hack to efficiently guess the hypercubic side length
+      size_t sideGuess = pow(nSites, 1/(double)dims);
+      for (int i = 0; i < 3; ++i) {
+        if (pow(sideGuess, dims) == nSites) {
+          break;
+        }
+        sideGuess++;
+      }
+      if (pow(sideGuess, dims) != nSites) {
+        uerror << "Number of sitesx not properly hypercubic: " << nSites;
+      }
+      
+      // Write sizes in all dimensions to extern
+      iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+      externSizePtr = (int*)externPtrs.at(name)[0];
+      for (int i = 0; i < dims; ++i) {
+        *externSizePtr = sideGuess;
+        externSizePtr++;
+      }
+    }
+    else {
+      not_supported_yet;
+    }
 
     // Write field pointers to extern
-    void** externFieldsPtr = (void**)(externSizePtr + 1);
+    void** externFieldsPtr = (void**)(externSizePtr);
     for (auto& field : setType->elementType.toElement()->fields) {
       *externFieldsPtr = set->getFieldData(field.name);
       ++externFieldsPtr;
@@ -238,17 +281,33 @@ Function::FuncType LLVMFunction::init() {
             calloc(size(vecDimension) *blockSize, componentSize);
       }
       else if (order == 2) {
-        iassert(environment.hasTensorIndex(tmp))
-          << "No tensor index for: " << tmp;
-        const pe::PathExpression& pexpr =
-            environment.getTensorIndex(tmp).getPathExpression();
-        iassert(util::contains(pathIndices, pexpr));
         Type blockType = tensorType->getBlockType();
         size_t blockSize = blockType.toTensor()->size();
         size_t componentSize = tensorType->getComponentType().bytes();
-        size_t matSize = pathIndices.at(pexpr).numNeighbors() *
-                         blockSize * componentSize;
-        *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
+        iassert(environment.hasTensorIndex(tmp))
+          << "No tensor index for: " << tmp;
+        const TensorIndex& ti = environment.getTensorIndex(tmp);
+        if (ti.getKind() == TensorIndex::PExpr) {
+          const pe::PathExpression& pexpr = ti.getPathExpression();
+          iassert(util::contains(pathIndices, pexpr));
+          size_t matSize = pathIndices.at(pexpr).numNeighbors() *
+              blockSize * componentSize;
+          *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
+        }
+        else if (ti.getKind() == TensorIndex::Sten) {
+          auto iss = tensorType->getOuterDimensions();
+          iassert(iss.size() == 2);
+          iassert(iss[0] == iss[1])
+              << "Stencil tensor index must be for a homogeneous matrix";
+          size_t latticeSize = size(iss[0]);
+          const Stencil& stencil = ti.getStencil();
+          size_t matSize = stencil.getLayout().size() *
+              latticeSize * blockSize * componentSize;
+          *temporaryPtrs.at(tmp.getName()) = malloc(matSize);
+        }
+        else {
+          not_supported_yet;
+        }
       }
     }
     else {
@@ -307,21 +366,51 @@ Function::FuncType LLVMFunction::init() {
 
           vector<llvm::Constant*> setData;
 
-          // Set size
-          setData.push_back(llvmInt(set->getSize()));
+          if (setType->kind == SetType::Unstructured) {
+            // Set size
+            setData.push_back(llvmInt(set->getSize()));
 
-          // Edge indices (if the set is an edge set)
-          if (setType->endpointSets.size() > 0) {
-            // Endpoints index
-            setData.push_back(llvmPtr(LLVM_INT_PTR, set->getEndpointsData()));
+            // Edge indices (if the set is an edge set)
+            if (setType->endpointSets.size() > 0) {
+              // Endpoints index
+              setData.push_back(llvmPtr(LLVM_INT_PTR, set->getEndpointsData()));
 
-            // Edges index
-            // TODO
+              // Edges index
+              // TODO
 
-            // Neighbor index
-            const internal::NeighborIndex *nbrs = set->getNeighborIndex();
-            setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getStartIndex()));
-            setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getNeighborIndex()));
+              // Neighbor index
+              const internal::NeighborIndex *nbrs = set->getNeighborIndex();
+              setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getStartIndex()));
+              setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getNeighborIndex()));
+            }
+          }
+          else if (setType->kind == SetType::LatticeLink) {
+            // Infer set sizes (TODO: add these to the runtime Set structure)
+            // We assume cubic for now.
+            int dims = setType->dimensions;
+            uassert(set->getSize() % dims == 0)
+                << "Number of set elements must be divisible by dims "
+                << set->getSize() << " for dims " << dims;
+            size_t nSites = set->getSize()/dims;
+            // Bit of a hack to efficiently guess the hypercubic side length
+            size_t sideGuess = pow(nSites, 1/(double)dims);
+            for (int i = 0; i < 3; ++i) {
+              if (pow(sideGuess, dims) == nSites) {
+                break;
+              }
+              sideGuess++;
+            }
+            if (pow(sideGuess, dims) != nSites) {
+              uerror << "Number of sitesx not properly hypercubic: " << nSites;
+            }
+
+            // Add sizes in all dimensions to llvm set struct
+            for (int i = 0; i < dims; ++i) {
+              setData.push_back(llvmInt(sideGuess));
+            }
+          }
+          else {
+            not_supported_yet;
           }
 
           // Fields
@@ -405,19 +494,27 @@ void LLVMFunction::initIndices(pe::PathIndexBuilder& piBuilder,
                                const Environment& environment) {
   // Initialize indices
   for (const TensorIndex& tensorIndex : environment.getTensorIndices()) {
-    pe::PathExpression pexpr = tensorIndex.getPathExpression();
-    pe::PathIndex pidx = piBuilder.buildSegmented(pexpr, 0);
-    pathIndices.insert({pexpr, pidx});
+    if (tensorIndex.getKind() == TensorIndex::PExpr) {
+      pe::PathExpression pexpr = tensorIndex.getPathExpression();
+      pe::PathIndex pidx = piBuilder.buildSegmented(pexpr, 0);
+      pathIndices.insert({pexpr, pidx});
 
-    pair<const uint32_t**,const uint32_t**> ptrPair = tensorIndexPtrs.at(pexpr);
+      pair<const uint32_t**,const uint32_t**> ptrPair = tensorIndexPtrs.at(pexpr);
 
-    if (isa<pe::SegmentedPathIndex>(pidx)) {
-      const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
-      *ptrPair.first = spidx->getCoordData();
-      *ptrPair.second = spidx->getSinkData();
+      if (isa<pe::SegmentedPathIndex>(pidx)) {
+        const pe::SegmentedPathIndex* spidx = to<pe::SegmentedPathIndex>(pidx);
+        *ptrPair.first = spidx->getCoordData();
+        *ptrPair.second = spidx->getSinkData();
+      }
+      else {
+        not_supported_yet << "doesn't know how to initialize this pathindex type";
+      }
+    }
+    else if (tensorIndex.getKind() == TensorIndex::Sten) {
+      // No index to initialize
     }
     else {
-      not_supported_yet << "doesn't know how to initialize this pathindex type";
+      not_supported_yet;
     }
   }
 }

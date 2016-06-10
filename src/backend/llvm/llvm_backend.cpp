@@ -522,14 +522,30 @@ void LLVMBackend::compile(const ir::Length& length) {
 }
 
 void LLVMBackend::compile(const ir::IndexRead& indexRead) {
-  // TODO: Add support for different indices (contained in the Set type).
-  unsigned int indexLoc = 1 + indexRead.kind;
-
   iassert(indexRead.edgeSet.type().isSet());
-  iassert(indexRead.edgeSet.type().toSet()->endpointSets.size() > 0);
+  const SetType *setType = indexRead.edgeSet.type().toSet();
+  if (setType->kind == SetType::Unstructured) {
+    // TODO: Add support for different indices (contained in the Set type).
+    unsigned int indexLoc = 1 + indexRead.kind;
 
-  llvm::Value *edgesValue = compile(indexRead.edgeSet);
-  val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(indexRead));
+    iassert(setType->endpointSets.size() > 0);
+
+    llvm::Value *edgesValue = compile(indexRead.edgeSet);
+    val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(indexRead));
+  }
+  else if (setType->kind == SetType::LatticeLink) {
+    iassert(indexRead.kind == IndexRead::LatticeDim)
+        << "Only LatticeDim index read valid for lattice link sets";
+    iassert(indexRead.index < setType->dimensions)
+        << "Cannot read index " << indexRead.index << " for set with"
+        << "only dimensions " << setType->dimensions;
+    llvm::Value *edgesValue = compile(indexRead.edgeSet);
+    val = builder->CreateExtractValue(
+        edgesValue,{indexRead.index},util::toString(indexRead));
+  }
+  else {
+    not_supported_yet;
+  }
 }
 
 void LLVMBackend::compile(const ir::Neg& negExpr) {
@@ -690,6 +706,19 @@ void LLVMBackend::compile(const ir::Div& divExpr) {
       ierror << "Cannot divide boolean or string values.";
       break;
   }
+}
+
+void LLVMBackend::compile(const ir::Rem& remExpr) {
+  iassert(isScalar(remExpr.type));
+  iassert(isInt(remExpr.type));
+  iassert(isInt(remExpr.a.type()));
+  iassert(isInt(remExpr.b.type()));
+
+  llvm::Value *a = compile(remExpr.a);
+  llvm::Value *b = compile(remExpr.b);
+
+  // Use SRem to match the truncated semantics
+  val = builder->CreateSRem(a, b);
 }
 
 void LLVMBackend::compile(const ir::Not& notExpr) {
@@ -1335,9 +1364,18 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
   else {
     const SetType *setType = elemOrSet.type().toSet();
     elemType = setType->elementType.toElement();
-    fieldsOffset = 1; // jump over set size
-    if (setType->endpointSets.size() > 0) {
-      fieldsOffset += NUM_EDGE_INDEX_ELEMENTS; // jump over index pointers
+    if (setType->kind == SetType::Unstructured) {
+      fieldsOffset = 1; // jump over set size
+      if (setType->endpointSets.size() > 0) {
+        fieldsOffset += NUM_EDGE_INDEX_ELEMENTS; // jump over index pointers
+      }
+    }
+    else if (setType->kind == SetType::LatticeLink) {
+      // Jump over d sizes
+      fieldsOffset = setType->dimensions;
+    }
+    else {
+      not_supported_yet;
     }
   }
   assert(fieldsOffset >= 0);
@@ -1414,6 +1452,9 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       break;
     case TensorStorage::Kind::Undefined:
       ierror << "Can't compute the size of tensor with undefined storage";
+      break;
+    default:
+      unreachable;
       break;
   }
   iassert(len != nullptr);
@@ -1590,19 +1631,21 @@ void LLVMBackend::emitGlobals(const ir::Environment& env) {
 
   // Emit global tensor indices
   for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
-    const Var& coordArray = tensorIndex.getCoordArray();
-    llvm::GlobalVariable* coordPtr =
-        createGlobal(module, coordArray, llvm::GlobalValue::ExternalLinkage,
-                     globalAddrspace());
-    this->symtable.insert(coordArray, coordPtr);
-    this->globals.insert(coordArray);
+    if (tensorIndex.getKind() == TensorIndex::PExpr) {
+      const Var& coordArray = tensorIndex.getCoordArray();
+      llvm::GlobalVariable* coordPtr =
+          createGlobal(module, coordArray, llvm::GlobalValue::ExternalLinkage,
+                       globalAddrspace());
+      this->symtable.insert(coordArray, coordPtr);
+      this->globals.insert(coordArray);
 
-    const Var& sinkArray  = tensorIndex.getSinkArray();
-    llvm::GlobalVariable* sinkPtr =
-        createGlobal(module, sinkArray, llvm::GlobalValue::ExternalLinkage,
-                     globalAddrspace());
-    this->symtable.insert(sinkArray, sinkPtr);
-    this->globals.insert(sinkArray);
+      const Var& sinkArray  = tensorIndex.getSinkArray();
+      llvm::GlobalVariable* sinkPtr =
+          createGlobal(module, sinkArray, llvm::GlobalValue::ExternalLinkage,
+                       globalAddrspace());
+      this->symtable.insert(sinkArray, sinkPtr);
+      this->globals.insert(sinkArray);
+    }
   }
 }
 

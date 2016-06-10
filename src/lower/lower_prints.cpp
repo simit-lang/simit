@@ -124,6 +124,10 @@ private:
         
         break;
       }
+      case TensorStorage::Kind::Stencil: {
+        not_supported_yet;
+        break;
+      }
       case TensorStorage::Kind::Diagonal: {
         iassert(order == dimensions.size());
 
@@ -212,6 +216,10 @@ private:
                                           Length::make(dimensions[0]), 
                                           printLargeTensor);
 
+        break;
+      }
+      case TensorStorage::Kind::Stencil: {
+        not_supported_yet;
         break;
       }
       case TensorStorage::Kind::Diagonal: {
@@ -318,6 +326,10 @@ private:
             AssignStmt::make(shouldPrintNewline, Literal::make(false)), 
             printSmallTensor);
 
+          break;
+        }
+        case TensorStorage::Kind::Stencil: {
+          not_supported_yet;
           break;
         }
         case TensorStorage::Kind::Diagonal: {

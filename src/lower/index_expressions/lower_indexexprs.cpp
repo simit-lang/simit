@@ -256,8 +256,10 @@ Stmt reduce(Stmt loopNest, Stmt kernel, ReductionOperator reductionOperator) {
       if (op == rstmt) {
         iassert(op->value.type().isTensor());
         ScalarType ctype = op->value.type().toTensor()->getComponentType();
-        string reductionVarName = getReductionTmpName(op);
-        reductionVar = Var(reductionVarName, TensorType::make(ctype));
+        if (!reductionVar.defined()) {
+          string reductionVarName = getReductionTmpName(op);
+          reductionVar = Var(reductionVarName, TensorType::make(ctype));
+        }
         stmt = compoundAssign(reductionVar, rop, op->value);
 
         if (isa<TensorRead>(op->tensor)) {
@@ -600,8 +602,6 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
       TensorIndex tensorIndex = getTensorIndexOfStatement(stmt, storage,
                                                           environment);
-      cout << "Got tensor index: " << tensorIndex << endl;
-
       if (tensorIndex.getKind() == TensorIndex::PExpr) {
         iassert(tensorIndex.getSinkArray().defined())
             << "Empty pexpr tensor index returned from: " << stmt;
@@ -647,9 +647,6 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         Expr latticeSet = stencil.getLatticeSet();
         iassert(latticeSet.type().isSet());
         int dims = latticeSet.type().toSet()->dimensions;
-        Expr totalOff = Literal::make(0);
-        // for (int i = dims-1; i >= 0; --i) {
-        // }
 
         // Use fixed stencil size to do an unrolled DIA-style loop for ij, j
         int stencilSize = stencil.getLayout().size();
@@ -659,19 +656,22 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
           ijLoop.push_back(AssignStmt::make(ij, stencilSize*i+ijInd));
           // Compute and assign j
           vector<int> offsets = flipped[ijInd];
+          Expr totalSize(1);
           Expr totalOff = Literal::make(0);
           for (int d = dims-1; d >= 0; --d) {
             int off = offsets[d];
             Expr dimSize = IndexRead::make(latticeSet, IndexRead::LatticeDim, d);
+            totalSize = totalSize * dimSize;
             totalOff = totalOff * dimSize + off;
           }
-          ijLoop.push_back(AssignStmt::make(j, i+totalOff));
+          // Make total off positive modulo totalSize
+          totalOff = (totalOff % totalSize)+totalSize;
+          // Compute j modulo totalSize to ensure periodic boundary conditions
+          ijLoop.push_back(AssignStmt::make(j, (i+totalOff)%totalSize));
           // Perform inner loop
           ijLoop.push_back(loopNest);
         }
         loopNest = Block::make(ijLoop);
-        cout << "Made stencil loop nest: " << endl
-             << loopNest << endl;
       }
       else {
         unreachable;

@@ -84,6 +84,7 @@ Expr operator+(Expr, Expr);
 Expr operator-(Expr, Expr);
 Expr operator*(Expr, Expr);
 Expr operator/(Expr, Expr);
+Expr operator%(Expr, Expr);
 
 template <typename E>
 inline bool isa(Expr e) {
@@ -217,7 +218,7 @@ struct IndexRead : public ExprNode {
   enum Kind { Endpoints=0, NeighborsStart=1, Neighbors=2, LatticeDim=3 };
   Expr edgeSet;
   Kind kind;
-  int index;
+  unsigned int index;
   static Expr make(Expr edgeSet, Kind kind);
   // Read the index'th lattice dimensions. kind must be LatticeDim.
   static Expr make(Expr edgeSet, Kind kind, int index);
@@ -255,6 +256,17 @@ struct Mul : public BinaryExpr {
 struct Div : public BinaryExpr {
   static Expr make(Expr a, Expr b);
   void accept(IRVisitorStrict *v) const {v->visit((const Div*)this);}
+};
+
+// Remainder op with truncated semantics: the sign of the output matches
+// the sign of the dividend (not divisor). For example:
+// Rem(-3, 2) = -1
+// Rem(3, 2) = 1
+// Rem(3, -2) = 1
+// Rem (-3, -2) = -1
+struct Rem : public BinaryExpr {
+  static Expr make(Expr a, Expr b);
+  void accept(IRVisitorStrict *v) const {v->visit((const Rem*)this);}
 };
 
 struct Not : public UnaryExpr {

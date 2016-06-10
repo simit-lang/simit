@@ -238,6 +238,10 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
       SIG ig2 = create(op->b);
       sig = merge(ig1, ig2, SIG::Intersection, storage);
     }
+
+    void visit(const Rem *op) {
+      not_supported_yet;
+    }
   };
 
   return SIGBuilder(storage).create(stmt);

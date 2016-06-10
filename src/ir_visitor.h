@@ -28,6 +28,7 @@ struct Add;
 struct Sub;
 struct Mul;
 struct Div;
+struct Rem;
 
 struct Not;
 struct Eq;
@@ -86,6 +87,7 @@ public:
   virtual void visit(const Sub* op) = 0;
   virtual void visit(const Mul* op) = 0;
   virtual void visit(const Div* op) = 0;
+  virtual void visit(const Rem* op) = 0;
 
   virtual void visit(const Not* op) = 0;
   virtual void visit(const Eq* op) = 0;
@@ -157,6 +159,7 @@ public:
   virtual void visit(const Sub *op);
   virtual void visit(const Mul *op);
   virtual void visit(const Div *op);
+  virtual void visit(const Rem *op);
 
   virtual void visit(const Not *op);
   virtual void visit(const Eq *op);
@@ -287,6 +290,7 @@ private:
   RULE(Sub)
   RULE(Mul)
   RULE(Div)
+  RULE(Rem)
 
   RULE(Not)
   RULE(Eq)
