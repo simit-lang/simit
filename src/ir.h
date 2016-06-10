@@ -4,13 +4,13 @@
 #include <string>
 
 #include "intrusive_ptr.h"
-#include "uncopyable.h"
 #include "var.h"
 #include "types.h"
 #include "func.h"
 #include "ir_visitor.h"
 #include "indexvar.h"
 #include "complex_types.h"
+#include "interfaces/uncopyable.h"
 
 namespace simit {
 namespace ir {

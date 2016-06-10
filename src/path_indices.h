@@ -6,9 +6,9 @@
 #include <memory>
 #include <typeinfo>
 
-#include "printable.h"
 #include "graph.h"
 #include "path_expressions.h"
+#include "interfaces/printable.h"
 
 namespace simit {
 class Set;

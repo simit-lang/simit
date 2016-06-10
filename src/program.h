@@ -8,7 +8,7 @@
 
 #include "function.h"
 #include "init.h"
-#include "uncopyable.h"
+#include "interfaces/uncopyable.h"
 
 namespace simit {
 

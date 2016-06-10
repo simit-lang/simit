@@ -11,9 +11,9 @@
 
 #include "tensor_type.h"
 #include "variadic.h"
-#include "comparable.h"
 #include "error.h"
 #include "types.h"
+#include "interfaces/comparable.h"
 
 namespace simit {
 
