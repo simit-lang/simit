@@ -73,6 +73,7 @@ protected:
   virtual void compile(const ir::Sub&) = 0;
   virtual void compile(const ir::Mul&) = 0;
   virtual void compile(const ir::Div&) = 0;
+  virtual void compile(const ir::Rem&) = 0;
 
   virtual void compile(const ir::Not&) = 0;
   virtual void compile(const ir::Eq&) = 0;
@@ -129,6 +130,7 @@ private:
   void visit(const ir::Sub* op)        {compile(*op);}
   void visit(const ir::Mul* op)        {compile(*op);}
   void visit(const ir::Div* op)        {compile(*op);}
+  void visit(const ir::Rem* op)        {compile(*op);}
   void visit(const ir::Not* op)        {compile(*op);}
   void visit(const ir::Eq* op)         {compile(*op);}
   void visit(const ir::Ne* op)         {compile(*op);}

@@ -61,22 +61,35 @@ llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace,
   const ElementType *elemType = setType.elementType.toElement();
   vector<llvm::Type*> llvmFieldTypes;
 
-  // Set size
-  llvmFieldTypes.push_back(LLVM_INT);
+  if (setType.kind == SetType::Unstructured) {
+    // Set size
+    llvmFieldTypes.push_back(LLVM_INT);
 
-  // Edge indices (if the set is an edge set)
-  if (setType.endpointSets.size() > 0) {
-    // Endpoints
-    llvmFieldTypes.push_back(
-        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+    // Edge indices (if the set is an edge set)
+    if (setType.endpointSets.size() > 0) {
+      // Endpoints
+      llvmFieldTypes.push_back(
+          llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
 
-    // Neighbor Index
-    // row starts (block row)
-    llvmFieldTypes.push_back(
-        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
-    // col indexes (block column)
-    llvmFieldTypes.push_back(
-        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+      // Neighbor Index
+      // row starts (block row)
+      llvmFieldTypes.push_back(
+          llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+      // col indexes (block column)
+      llvmFieldTypes.push_back(
+          llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+    }
+  }
+  else if (setType.kind == SetType::LatticeLink) {
+    int dims = setType.dimensions;
+    // Dimension sizes
+    for (int i = 0; i < dims; ++i) {
+      llvmFieldTypes.push_back(LLVM_INT);
+    }
+    // NO edge indices
+  }
+  else {
+    not_supported_yet;
   }
 
   // Fields

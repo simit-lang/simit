@@ -65,6 +65,10 @@ Expr operator/(Expr a, Expr b) {
   return Div::make(a, b);
 }
 
+Expr operator%(Expr a, Expr b) {
+  return Rem::make(a, b);
+}
+
 // class Stmt
 std::ostream &operator<<(std::ostream &os, const Stmt &Stmt) {
   IRPrinter printer(os);
@@ -557,6 +561,18 @@ Expr Div::make(Expr a, Expr b) {
   iassert_types_equal(a,b);
 
   Div *node = new Div;
+  node->type = a.type();
+  node->a = a;
+  node->b = b;
+  return node;
+}
+
+// struct Rem
+Expr Rem::make(Expr a, Expr b) {
+  iassert_int_scalar(a);
+  iassert_types_equal(a,b);
+
+  Rem *node = new Rem;
   node->type = a.type();
   node->a = a;
   node->b = b;

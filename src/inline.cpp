@@ -121,13 +121,14 @@ void MapFunctionRewriter::visit(const FieldRead *op) {
     const SetRead *sr = to<SetRead>(op->elementOrSet);
     // Lattice offset links
     if (to<VarExpr>(sr->set)->var == throughEdges) {
-      Expr setFieldRead = FieldRead::make(throughEdges, op->fieldName);
+      Expr setFieldRead = FieldRead::make(throughSet, op->fieldName);
       Expr index = IRRewriter::rewrite(op->elementOrSet);
       expr = TensorRead::make(setFieldRead, {index});
     }
     // Lattice offset points
     else if (to<VarExpr>(sr->set)->var == throughPoints) {
-      Expr setFieldRead = FieldRead::make(throughPoints, op->fieldName);
+      Expr setFieldRead = FieldRead::make(
+          throughSet.type().toSet()->latticePointSet.getSet(), op->fieldName);
       Expr index = IRRewriter::rewrite(op->elementOrSet);
       expr = TensorRead::make(setFieldRead, {index});
     }
@@ -187,29 +188,35 @@ void MapFunctionRewriter::visit(const SetRead *op) {
     vector<int> index = srcBase ? srcOff : sinkOff;
     index.push_back(dir); // Directional index outermost
     // Convert index offsets to a single offset expr
+    Expr totalSize(1);
     Expr totalOff = index.back();
     for (int i = dims-1; i >= 0; --i) {
       int ind = index[i];
-      Expr dimSize = IndexRead::make(throughEdges, IndexRead::LatticeDim, i);
+      Expr dimSize = IndexRead::make(throughSet, IndexRead::LatticeDim, i);
+      totalSize = totalSize * dimSize;
       totalOff = totalOff * dimSize + ind;
     }
-    // Rewrite into a bare index
-    // TODO: Modulus?
-    expr = targetLoopVar * dims + totalOff;
+    // Make totalOff positive modulo totalSize
+    totalOff = (totalOff%totalSize)+totalSize;
+    // Rewrite into a bare index, modulo the set size (periodic boundary conditions).
+    expr = (targetLoopVar * dims + totalOff) % totalSize;
   }
   else if (setVar == throughPoints) {
     iassert(op->indices.size() == dims);
     vector<int> offsets = getOffsets(op->indices);
     // Convert index offsets to a single offset expr
+    Expr totalSize(1);
     Expr totalOff = Literal::make(0);
     for (int i = dims-1; i >= 0; --i) {
       int ind = offsets[i];
-      Expr dimSize = IndexRead::make(throughEdges, IndexRead::LatticeDim, i);
+      Expr dimSize = IndexRead::make(throughSet, IndexRead::LatticeDim, i);
+      totalSize = totalSize * dimSize;
       totalOff = totalOff * dimSize + ind;
     }
-    // Rewrite into a bare index
-    // TODO: Modulus?
-    expr = targetLoopVar + totalOff;
+    // Make totalOff positive modulo totalSize
+    totalOff = (totalOff%totalSize)+totalSize;
+    // Rewrite into a bare index, modulo the set size (periodic boundary conditions)
+    expr = (targetLoopVar + totalOff) % totalSize;
   }
   else {
     not_supported_yet;

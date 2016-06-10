@@ -254,6 +254,10 @@ private:
     visitBinaryIntersectionOperator(op);
   }
 
+  void visit(const Rem *op) {
+    not_supported_yet;
+  }
+
   void visit(const IndexedTensor *indexedTensor) {
     const vector<IndexVar>& indexVars = indexedTensor->indexVars;
     iassert(isa<VarExpr>(indexedTensor->tensor))

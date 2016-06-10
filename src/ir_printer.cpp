@@ -230,6 +230,7 @@ PRINT_VISIT_BINARY_OP(Add, +, op)
 PRINT_VISIT_BINARY_OP(Sub, -, op)
 PRINT_VISIT_BINARY_OP(Mul, *, op)
 PRINT_VISIT_BINARY_OP(Div, /, op)
+PRINT_VISIT_BINARY_OP(Rem, %, op)
 
 void IRPrinter::visit(const Not *op) {
   auto p = paren();

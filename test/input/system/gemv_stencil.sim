@@ -1,31 +1,34 @@
 element Point
-  a : float;
+  b : float;
+  c : float;
 end
 
 element Link
-  b : float;
+  a : float;
 end
 
 extern points : set{Point};
-extern links : lattice[2]{Link}(points);
+extern springs : lattice[1]{Link}(points);
 
+% func vonNeumann(g00 : Point,
+%                 l : lattice[2]{Link}(points),
+%                 g : set{Point})
+%     -> (vnMat : tensor[points,points](float))
+%     vnMat(g00,g[0,1]) = l[0,0;0,1].b;
+%     vnMat(g00,g[0,-1]) = l[0,0;0,-1].b;
+%     vnMat(g00,g[1,0]) = l[0,0;1,0].b;
+%     vnMat(g00,g[-1,0]) = l[0,0;-1,0].b;
+% end
 func vonNeumann(g00 : Point,
-                l : lattice[2]{Link}(points),
+                l : lattice[1]{Link}(points),
                 g : set{Point})
     -> (vnMat : tensor[points,points](float))
-    vnMat(g00,g[0,1]) = l[0,0;0,1].b;
-    vnMat(g00,g[0,-1]) = l[0,0;0,-1].b;
-    vnMat(g00,g[1,0]) = l[0,0;1,0].b;
-    vnMat(g00,g[-1,0]) = l[0,0;-1,0].b;
+    vnMat(g00,g00) = l[0;1].a + l[0;-1].a;
+    vnMat(g00,g[1]) = l[0;1].a;
+    vnMat(g00,g[-1]) = l[0;-1].a;
 end
 
 proc main
-  B = map vonNeumann to points through links;
-  var iter = 0;
-  var cond = iter < 100;
-  while cond
-    points.a = B*points.a;
-    iter = iter + 1;
-    cond = iter < 100;
-  end
+  B = map vonNeumann to points through springs;
+  points.c = B*points.b;
 end

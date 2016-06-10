@@ -199,6 +199,9 @@ void PathExpressionBuilder::computePathExpression(Var target,
 
       peStack.push(andPathExpressions(a, b, peVars, qvars));
       qvars.clear();
+    }),
+    function<void(const Rem*, Matcher* ctx)>([&](const Rem* op, Matcher* ctx) {
+      not_supported_yet;
     })
   );
 

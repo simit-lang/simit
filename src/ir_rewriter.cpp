@@ -162,6 +162,10 @@ void IRRewriter::visit(const Div *op) {
   expr = visitBinaryOp(op, this);
 }
 
+void IRRewriter::visit(const Rem *op) {
+  expr = visitBinaryOp(op, this);
+}
+
 void IRRewriter::visit(const Eq *op) {
   expr = visitBinaryOp(op, this);
 }

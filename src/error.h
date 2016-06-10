@@ -292,8 +292,12 @@ struct ErrorReport {
   iassert(a.type() == b.type()) << a.type() << " != " << b.type() << "\n"      \
                                 << #a << ": " << a << "\n" << #b << ": " << b
 
+#define iassert_int_scalar(a)                                                  \
+  iassert(isScalar(a.type()) && isInt(a.type()))                               \
+      << a << "must be an int scalar but is a" << a.type()
+
 #define iassert_boolean_scalar(a)                                              \
-  iassert(isScalar(a.type()))                                                  \
+  iassert(isScalar(a.type()) && isBoolean(a.type()))                           \
       << a << "must be a boolean scalar but is a" << a.type()
 
 // User asserts

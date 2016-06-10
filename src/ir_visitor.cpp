@@ -73,6 +73,10 @@ void IRVisitor::visit(const Div *op) {
   visit(static_cast<const BinaryExpr*>(op));
 }
 
+void IRVisitor::visit(const Rem *op) {
+  visit(static_cast<const BinaryExpr*>(op));
+}
+
 void IRVisitor::visit(const Not *op) {
   visit(static_cast<const UnaryExpr*>(op));
 }
