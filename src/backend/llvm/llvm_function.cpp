@@ -392,28 +392,16 @@ Function::FuncType LLVMFunction::init() {
             }
           }
           else if (setType->kind == SetType::LatticeLink) {
-            // Infer set sizes (TODO: add these to the runtime Set structure)
-            // We assume cubic for now.
-            int dims = setType->dimensions;
-            uassert(set->getSize() % dims == 0)
-                << "Number of set elements must be divisible by dims "
-                << set->getSize() << " for dims " << dims;
-            size_t nSites = set->getSize()/dims;
-            // Bit of a hack to efficiently guess the hypercubic side length
-            size_t sideGuess = pow(nSites, 1/(double)dims);
-            for (int i = 0; i < 3; ++i) {
-              if (pow(sideGuess, dims) == nSites) {
-                break;
-              }
-              sideGuess++;
-            }
-            if (pow(sideGuess, dims) != nSites) {
-              uerror << "Number of sitesx not properly hypercubic: " << nSites;
-            }
+            int ndims = setType->dimensions;
+            vector<int> dimensions = set->getDimensions();
+            uassert(dimensions.size() == ndims)
+                << "Lattice link set with wrong number of dimensions: "
+                << dimensions.size() << " passed, but " << ndims
+                << " required";
 
             // Add sizes in all dimensions to llvm set struct
-            for (int i = 0; i < dims; ++i) {
-              setData.push_back(llvmInt(sideGuess));
+            for (int i = 0; i < ndims; ++i) {
+              setData.push_back(llvmInt(dimensions[i]));
             }
           }
           else {

@@ -200,24 +200,34 @@ public:
     uassert(coords.size() == dimensions.size())
         << "Must provide number of coords equal to the number of dimensions";
     int index = 0;
+    int totalSize = 1;
     for (int i = dimensions.size()-1; i >= 0; --i) {
       index *= dimensions[i];
       index += coords[i];
+      totalSize *= dimensions[i];
     }
+    uassert(index >= 0 && index < totalSize)
+        << "Coordinates must not be negative and must fall within the "
+        << "lattice dimensions";
     return latticePoints[index];
   }
 
   /// Return the lattice link at the given location and direction.
-  inline ElementRef getLatticeLink(std::vector<int> coords) {
+  inline ElementRef getLatticeLink(std::vector<int> coords, int dir) {
     uassert(kind == LatticeLink)
         << "Cannot retrieve lattice link of non-lattice set";
-    uassert(coords.size() == dimensions.size()+1)
-        << "Must provide number of coords equal to dimensions plus 1";
-    int index = coords[dimensions.size()];
+    uassert(coords.size() == dimensions.size())
+        << "Must provide number of coords equal to dimensions";
+    int index = dir;
+    int totalSize = dimensions.size();
     for (int i = dimensions.size()-1; i >= 0; --i) {
       index *= dimensions[i];
       index += coords[i];
+      totalSize *= dimensions[i];
     }
+    uassert(index >= 0 && index < totalSize)
+        << "Coordinates must not be negative and must fall within the "
+        << "lattice dimensions";
     return latticeLinks[index];
   }
 

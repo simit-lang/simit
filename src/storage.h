@@ -75,7 +75,7 @@ public:
   /// is the output variable within the assembly func whose sparsity is being
   /// determined here.
   TensorStorage(string assemblyFunc, string targetVar,
-                const Expr &targetSet);
+                const Expr &targetSet, const Expr &throughSet);
 
   /// Retrieve the tensor storage type.
   Kind getKind() const;

@@ -387,7 +387,8 @@ struct ForRange : public StmtNode {
 };
 
 struct ForDomain {
-  enum Kind { IndexSet, Endpoints, Edges, Neighbors, NeighborsOf, Diagonal };
+  enum Kind { IndexSet, Endpoints, Edges, Neighbors, NeighborsOf,
+              Diagonal, Lattice };
   Kind kind;
 
   /// An index set
@@ -397,6 +398,10 @@ struct ForDomain {
   Expr set;
   Var var;
 
+  /// The list of lattice index vars for Lattice domains
+  vector<Var> latticeVars;
+  
+
   ForDomain() {}
   ForDomain(class IndexSet indexSet) : kind(IndexSet), indexSet(indexSet) {}
   ForDomain(Expr set, Var var, Kind kind) : kind(kind), set(set), var(var) {
@@ -405,6 +410,12 @@ struct ForDomain {
   ForDomain(Expr set, Var var, Kind kind, class IndexSet indexSet) : kind(kind),
       indexSet(indexSet), set(set), var(var)  {
     iassert(kind == NeighborsOf);
+  }
+  ForDomain(Expr set, Var var, int dims, string varName="")
+      : kind(Lattice), set(set), var(var) {
+    for (int i = 0; i < dims; ++i) {
+      latticeVars.push_back(Var(varName+"_d"+to_string(i), Int));
+    }
   }
 };
 std::ostream &operator<<(std::ostream &os, const ForDomain &);
