@@ -124,6 +124,19 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
   iassert(getBindableType(name).isSet());
 
   if (hasArg(name)) {
+    // Check set kinds match
+    const ir::SetType* setType = getArgType(name).toSet();
+    if (setType->kind == ir::SetType::Unstructured) {
+      uassert(set->getKind() == simit::Set::Unstructured)
+          << "Must bind an unstructured set to " << name;
+    }
+    else if (setType->kind == ir::SetType::LatticeLink) {
+      uassert(set->getKind() == simit::Set::LatticeLink)
+          << "Must bind a lattice link set to " << name;
+    }
+    else {
+      not_supported_yet;
+    }
     arguments[name] = std::unique_ptr<Actual>(new SetActual(set));
     initialized = false;
   }
@@ -133,6 +146,8 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
 
     int *externSizePtr;
     if (setType->kind == ir::SetType::Unstructured) {
+      uassert(set->getKind() == simit::Set::Unstructured)
+          << "Must bind an unstructured set to " << name;
       // Write set size to extern
       iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
       externSizePtr = (int*)externPtrs.at(name)[0];
@@ -140,30 +155,22 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
       externSizePtr++;
     }
     else if (setType->kind == ir::SetType::LatticeLink) {
+      uassert(set->getKind() == simit::Set::LatticeLink)
+          << "Must bind a lattie link set to " << name;
       // Infer set sizes (TODO: add these to the runtime Set structure)
       // We assume cubic for now.
-      int dims = setType->dimensions;
-      uassert(set->getSize() % dims == 0)
-          << "Number of set elements must be divisible by dims "
-          << set->getSize() << " for dims " << dims;
-      size_t nSites = set->getSize()/dims;
-      // Bit of a hack to efficiently guess the hypercubic side length
-      size_t sideGuess = pow(nSites, 1/(double)dims);
-      for (int i = 0; i < 3; ++i) {
-        if (pow(sideGuess, dims) == nSites) {
-          break;
-        }
-        sideGuess++;
-      }
-      if (pow(sideGuess, dims) != nSites) {
-        uerror << "Number of sitesx not properly hypercubic: " << nSites;
-      }
+      int ndims = setType->dimensions;
+      vector<int> dimensions = set->getDimensions();
+      uassert(dimensions.size() == ndims)
+          << "Lattice link set with wrong number of dimensions: "
+          << dimensions.size() << " passed, but " << ndims
+          << " required";
       
       // Write sizes in all dimensions to extern
       iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
       externSizePtr = (int*)externPtrs.at(name)[0];
-      for (int i = 0; i < dims; ++i) {
-        *externSizePtr = sideGuess;
+      for (int i = 0; i < ndims; ++i) {
+        *externSizePtr = dimensions[i];
         externSizePtr++;
       }
     }

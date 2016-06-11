@@ -62,9 +62,14 @@ TEST(System, gemv_stencil) {
   FieldRef<simit_float> b = points.addField<simit_float>("b");
   FieldRef<simit_float> c = points.addField<simit_float>("c");
 
-  ElementRef p0 = points.add();
-  ElementRef p1 = points.add();
-  ElementRef p2 = points.add();
+  // Springs
+  Set springs(points,{3});
+  FieldRef<simit_float> a = springs.addField<simit_float>("a");
+
+  // Build points
+  ElementRef p0 = springs.getLatticePoint({0});
+  ElementRef p1 = springs.getLatticePoint({1});
+  ElementRef p2 = springs.getLatticePoint({2});
 
   b.set(p0, 1.0);
   b.set(p1, 2.0);
@@ -74,13 +79,11 @@ TEST(System, gemv_stencil) {
   c.set(p0, 42.0);
   c.set(p2, 42.0);
 
-  // Springs
-  Set springs(points,points);
-  FieldRef<simit_float> a = springs.addField<simit_float>("a");
 
-  ElementRef s0 = springs.add(p0,p1);
-  ElementRef s1 = springs.add(p1,p2);
-  ElementRef s2 = springs.add(p2,p0);
+  // Build springs
+  ElementRef s0 = springs.getLatticeLink({0,0});
+  ElementRef s1 = springs.getLatticeLink({1,0});
+  ElementRef s2 = springs.getLatticeLink({2,0});
 
   a.set(s0, 1.0);
   a.set(s1, 2.0);
