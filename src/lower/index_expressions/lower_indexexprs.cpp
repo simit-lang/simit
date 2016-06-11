@@ -580,6 +580,15 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
   // Create loops (since we create the loops inside out, we must iterate over
   // the loop vars in reverse order)
   Stmt loopNest = kernel;
+  
+  // HACK: Extract loop vars corresponding to lattice loops
+  map<Var, const LoopVar*> latticeLoopVars;
+  for (auto loopVar=loopVars.begin(); loopVar!=loopVars.end(); ++loopVar) {
+    if (loopVar->getDomain().kind == ForDomain::Lattice) {
+      latticeLoopVars[loopVar->getDomain().var] = &(*loopVar);
+    }
+  }
+  
   for (auto loopVar=loopVars.rbegin(); loopVar!=loopVars.rend(); ++loopVar){
     if (loopVar->getDomain().kind == ForDomain::IndexSet) {
       // if this is a Single domain, don't generate a loop, just use an
@@ -590,8 +599,23 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         loopNest = Block::make(assign, loopNest);
       }
       else {
-      loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
+        loopNest = For::make(loopVar->getVar(), loopVar->getDomain(), loopNest);
       }
+    }
+    else if (loopVar->getDomain().kind == ForDomain::Lattice) {
+      int ndims = loopVar->getDomain().latticeVars.size();
+      // Add overall variable advancement
+      loopNest = Block::make(loopNest, AssignStmt::make(
+          loopVar->getDomain().var, 1, CompoundOperator::Add));
+      for (int i = 0; i < ndims; ++i) {
+        Expr dimSize = IndexRead::make(loopVar->getDomain().set,
+                                       IndexRead::LatticeDim, i);
+        loopNest = ForRange::make(loopVar->getDomain().latticeVars[i],
+                                  0, dimSize, loopNest);
+      }
+      // Zero out the overall variable
+      Stmt initVar = AssignStmt::make(loopVar->getDomain().var, 0);
+      loopNest = Block::make(initVar, loopNest);
     }
     else if (loopVar->getDomain().kind == ForDomain::Neighbors ||
              loopVar->getDomain().kind == ForDomain::NeighborsOf) {
@@ -648,6 +672,12 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         iassert(latticeSet.type().isSet());
         int dims = latticeSet.type().toSet()->dimensions;
 
+        // Fetch the full LoopVar corresponding to the i lattice loop
+        iassert(latticeLoopVars.count(i));
+        const LoopVar *latticeLoopVar = latticeLoopVars[i];
+        iassert(latticeLoopVar->getDomain().latticeVars.size() == dims);
+        const vector<Var> &latticeVars = latticeLoopVar->getDomain().latticeVars;
+
         // Use fixed stencil size to do an unrolled DIA-style loop for ij, j
         int stencilSize = stencil.getLayout().size();
         vector<Stmt> ijLoop;
@@ -656,18 +686,16 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
           ijLoop.push_back(AssignStmt::make(ij, stencilSize*i+ijInd));
           // Compute and assign j
           vector<int> offsets = flipped[ijInd];
-          Expr totalSize(1);
-          Expr totalOff = Literal::make(0);
+          Expr totalInd = Literal::make(0);
           for (int d = dims-1; d >= 0; --d) {
-            int off = offsets[d];
             Expr dimSize = IndexRead::make(latticeSet, IndexRead::LatticeDim, d);
-            totalSize = totalSize * dimSize;
-            totalOff = totalOff * dimSize + off;
+            Expr ind = ((latticeVars[d]+offsets[d])%dimSize+dimSize)%dimSize;
+            totalInd = totalInd * dimSize + ind;
           }
           // Make total off positive modulo totalSize
-          totalOff = (totalOff % totalSize)+totalSize;
+          // totalOff = (totalOff % totalSize)+totalSize;
           // Compute j modulo totalSize to ensure periodic boundary conditions
-          ijLoop.push_back(AssignStmt::make(j, (i+totalOff)%totalSize));
+          ijLoop.push_back(AssignStmt::make(j, totalInd));
           // Perform inner loop
           ijLoop.push_back(loopNest);
         }
@@ -683,7 +711,8 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
       
       loopNest = Block::make(AssignStmt::make(j, i), loopNest);
       
-    } else {
+    }
+    else {
       not_supported_yet;
     }
 

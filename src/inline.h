@@ -25,13 +25,15 @@ public:
   Stmt inlineMapFunc(const Map *map, Var targetLoopVar,
                      Storage *storage,
                      Var endpoints=Var(), Var locs=Var(),
-                     std::map<vector<int>, Expr> clocs={});
+                     std::map<vector<int>, Expr> clocs={},
+                     vector<Var> latticeIndexVars={});
 
 protected:
   std::map<Var,Var> resultToMapVar;
   Storage *storage;
 
   Expr targetLoopVar;
+  vector<Var> latticeIndexVars;
 
   // Arguments to map expr
   Expr targetSet;

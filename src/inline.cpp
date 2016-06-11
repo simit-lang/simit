@@ -13,18 +13,20 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
-                       Storage* storage);
+Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
+                       MapFunctionRewriter &rewriter, Storage* storage);
 
 Stmt MapFunctionRewriter::inlineMapFunc(const Map *map, Var targetLoopVar,
                                         Storage *storage,
                                         Var endpoints, Var locs,
-                                        std::map<vector<int>, Expr> clocs) {
+                                        std::map<vector<int>, Expr> clocs,
+                                        vector<Var> latticeIndexVars) {
   this->endpoints = endpoints;
   this->locs = locs;
   this->clocs = clocs;
   this->reduction = map->reduction;
   this->targetLoopVar = targetLoopVar;
+  this->latticeIndexVars = latticeIndexVars;
   this->storage = storage;
 
   Func kernel = map->function;
@@ -167,6 +169,7 @@ void MapFunctionRewriter::visit(const SetRead *op) {
   int dims = throughEdges.getType().toSet()->dimensions;
   if (setVar == throughEdges) {
     iassert(op->indices.size() == dims*2);
+    iassert(latticeIndexVars.size() == dims);
     // Index into link set assuming canonical ordering
     vector<int> offsets = getOffsets(op->indices);
     vector<int> srcOff, sinkOff;
@@ -188,35 +191,37 @@ void MapFunctionRewriter::visit(const SetRead *op) {
     vector<int> index = srcBase ? srcOff : sinkOff;
     index.push_back(dir); // Directional index outermost
     // Convert index offsets to a single offset expr
-    Expr totalSize(1);
-    Expr totalOff = index.back();
+    // Expr totalSize(dims);
+    Expr totalInd = index.back();
     for (int i = dims-1; i >= 0; --i) {
-      int ind = index[i];
       Expr dimSize = IndexRead::make(throughSet, IndexRead::LatticeDim, i);
-      totalSize = totalSize * dimSize;
-      totalOff = totalOff * dimSize + ind;
+      // TODO: Double modulus required by truncating style of mod semantics
+      Expr ind = ((latticeIndexVars[i] + index[i]) % dimSize + dimSize) % dimSize;
+      // totalSize = totalSize * dimSize;
+      totalInd = totalInd * dimSize + ind;
     }
     // Make totalOff positive modulo totalSize
-    totalOff = (totalOff%totalSize)+totalSize;
-    // Rewrite into a bare index, modulo the set size (periodic boundary conditions).
-    expr = (targetLoopVar * dims + totalOff) % totalSize;
+    // totalOff = (totalOff%totalSize)+totalSize;
+    expr = totalInd;
   }
   else if (setVar == throughPoints) {
     iassert(op->indices.size() == dims);
+    iassert(latticeIndexVars.size() == dims);
     vector<int> offsets = getOffsets(op->indices);
     // Convert index offsets to a single offset expr
     Expr totalSize(1);
-    Expr totalOff = Literal::make(0);
+    Expr totalInd = Literal::make(0);
     for (int i = dims-1; i >= 0; --i) {
-      int ind = offsets[i];
       Expr dimSize = IndexRead::make(throughSet, IndexRead::LatticeDim, i);
-      totalSize = totalSize * dimSize;
-      totalOff = totalOff * dimSize + ind;
+      // TODO: Double modulus required by truncating style of mod semantics
+      Expr ind = ((latticeIndexVars[i] + offsets[i]) % dimSize
+                  + dimSize) % dimSize;
+      totalInd = totalInd * dimSize + ind;
     }
     // Make totalOff positive modulo totalSize
-    totalOff = (totalOff%totalSize)+totalSize;
+    // totalOff = (totalOff%totalSize)+totalSize;
     // Rewrite into a bare index, modulo the set size (periodic boundary conditions)
-    expr = (targetLoopVar + totalOff) % totalSize;
+    expr = totalInd; //(targetLoopVar + totalOff) % totalSize;
   }
   else {
     not_supported_yet;
@@ -316,8 +321,8 @@ StencilContent* buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
 
 /// Inlines the mapped function with respect to the given loop variable over
 /// the target set, using the given rewriter.
-Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
-                       Storage* storage) {
+Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
+                       MapFunctionRewriter &rewriter, Storage* storage) {
   // Compute locations of the mapped edge
   bool returnsMatrix = false;
   for (auto& result : map->function.getResults()) {
@@ -334,6 +339,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
   int cardinality = setType->endpointSets.size();
   // Map over edge set to build matrix
   if (returnsMatrix && cardinality > 0) {
+    iassert(ivs.size() == 0);
     /* Build IR for locs and eps:
        var i : int;
        var j : int;
@@ -415,7 +421,8 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter,
     StencilContent *s = buildStencilLocs(map->function, stencilVar, lv, clocs);
     s->latticeSet = to<VarExpr>(map->through)->var; // assumes VarExpr
     storage->getStorage(mapVar).setStencil(s);
-    return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs);
+    iassert(ivs.size() > 0);
+    return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs, ivs);
   }
   else {
     return rewriter.inlineMapFunc(map, lv, storage);
@@ -435,9 +442,15 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
   Var targetVar = kernel.getArguments()[map->partial_actuals.size()];
   
   Var loopVar(targetVar.getName(), Int);
-  ForDomain domain(map->target);
+  int ndims = map->through.defined() ?
+      map->through.type().toSet()->dimensions : 0;
+  vector<Var> latticeIndexVars;
+  for (int i = 0; i < ndims; ++i) {
+    latticeIndexVars.emplace_back(targetVar.getName()+"_d"+to_string(i), Int);
+  }
 
-  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, rewriter, storage);
+  Stmt inlinedMapFunc = inlineMapFunction(map, loopVar, latticeIndexVars,
+                                          rewriter, storage);
 
   Stmt inlinedMap;
   auto initializers = vector<Stmt>();
@@ -447,12 +460,30 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
     initializers.push_back(AssignStmt::make(tvar, rval));
   }
 
+  Stmt loop;
+  if (!map->through.defined()) {
+    iassert(latticeIndexVars.size() == 0);
+    ForDomain domain(map->target);
+    loop = For::make(loopVar, domain, inlinedMapFunc);
+  }
+  else {
+    iassert(map->through.type().toSet()->kind == SetType::LatticeLink);
+    initializers.push_back(AssignStmt::make(loopVar, 0));
+    int dims = map->through.type().toSet()->dimensions;
+    loop = Block::make(inlinedMapFunc, AssignStmt::make(
+        loopVar, 1, CompoundOperator::Add));
+    for (int i = 0; i < dims; ++i) {
+      loop = ForRange::make(latticeIndexVars[i], 0, IndexRead::make(
+          map->through, IndexRead::LatticeDim, i), loop);
+    }
+  }
+  
   if (initializers.size() > 0) {
     auto initializersBlock = Block::make(initializers);
-    inlinedMap = Block::make(initializersBlock,
-                             For::make(loopVar, domain, inlinedMapFunc));
-  } else {
-    inlinedMap = For::make(loopVar, domain, inlinedMapFunc);
+    inlinedMap = Block::make(initializersBlock, loop);
+  }
+  else {
+    inlinedMap = loop;
   }
   
   if (map->reduction.getKind() != ReductionOperator::Undefined) {

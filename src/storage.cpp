@@ -57,11 +57,13 @@ TensorStorage::TensorStorage(const Expr &targetSet, const Expr &storageSet)
 }
 
 TensorStorage::TensorStorage(string assemblyFunc, string targetVar,
-                             const Expr &targetSet)
+                             const Expr &targetSet,
+                             const Expr &throughSet)
     : TensorStorage(Kind::Stencil) {
   content->assemblyFunc = assemblyFunc;
   content->targetVar = targetVar;
   content->systemTargetSet = targetSet;
+  content->systemStorageSet = throughSet;
 }
 
 
@@ -332,7 +334,7 @@ private:
         else if (op->through.defined()) {
           // Stencil
           storage->add(var, TensorStorage(
-              op->function.getName(), var.getName(), op->target));
+              op->function.getName(), var.getName(), op->target, op->through));
         }
         else {
           // Indexed
@@ -484,7 +486,8 @@ private:
               tensorStorage =
                   TensorStorage(operandStorage.getStencilFunc(),
                                 operandStorage.getStencilVar(),
-                                operandStorage.getSystemTargetSet());
+                                operandStorage.getSystemTargetSet(),
+                                operandStorage.getSystemStorageSet());
               if (operandStorage.hasStencil()) {
                 tensorStorage.setStencil(operandStorage.getStencil());
               }
