@@ -70,6 +70,9 @@ void HIRRewriter::visit(ExternDecl::Ptr decl) {
 
 void HIRRewriter::visit(FuncDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
+  for (auto &typeParam : decl->typeParams) {
+    typeParam = rewrite<GenericIndexSet>(typeParam);
+  }
   for (auto &arg : decl->args) {
     arg = rewrite<Argument>(arg);
   }

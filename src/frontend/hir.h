@@ -115,6 +115,16 @@ struct SetIndexSet : public IndexSet {
   }
 };
 
+struct GenericIndexSet : public IndexSet {
+  std::string setName;
+
+  typedef std::shared_ptr<GenericIndexSet> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<GenericIndexSet>(shared_from_this()));
+  }
+};
+
 struct DynamicIndexSet : public IndexSet {
   typedef std::shared_ptr<DynamicIndexSet> Ptr;
   
@@ -129,6 +139,7 @@ struct Type : public HIRNode {
 
 struct ElementType : public Type {
   std::string ident;
+  std::string setName;
   
   typedef std::shared_ptr<ElementType> Ptr;
   
@@ -298,12 +309,13 @@ struct ExternDecl : public HIRNode {
 };
 
 struct FuncDecl : public HIRNode {
-  Identifier::Ptr             name;
-  std::vector<Argument::Ptr>  args;
-  std::vector<IdentDecl::Ptr> results;
-  StmtBlock::Ptr              body;
-  bool                        exported;
-  bool                        external;
+  Identifier::Ptr                   name;
+  std::vector<GenericIndexSet::Ptr> typeParams;
+  std::vector<Argument::Ptr>        args;
+  std::vector<IdentDecl::Ptr>       results;
+  StmtBlock::Ptr                    body;
+  bool                              exported;
+  bool                              external;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   

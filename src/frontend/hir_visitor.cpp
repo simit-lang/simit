@@ -65,6 +65,9 @@ void HIRVisitor::visit(ExternDecl::Ptr decl) {
 
 void HIRVisitor::visit(FuncDecl::Ptr decl) {
   decl->name->accept(this);
+  for (auto typeParam : decl->typeParams) {
+    typeParam->accept(this);
+  }
   for (auto arg : decl->args) {
     arg->accept(this);
   }

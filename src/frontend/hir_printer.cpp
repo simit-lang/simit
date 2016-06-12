@@ -28,12 +28,19 @@ void HIRPrinter::visit(SetIndexSet::Ptr set) {
   oss << set->setName;
 }
 
+void HIRPrinter::visit(GenericIndexSet::Ptr set) {
+  oss << set->setName << "'";
+}
+
 void HIRPrinter::visit(DynamicIndexSet::Ptr set) {
   oss << "*";
 }
 
-void HIRPrinter::visit(ElementType::Ptr set) {
-  oss << set->ident;
+void HIRPrinter::visit(ElementType::Ptr type) {
+  oss << type->ident;
+  if (type->setName != "") {
+    oss << "{" << type->setName << "}";
+  }
 }
 
 void HIRPrinter::visit(Endpoint::Ptr end) {
@@ -160,6 +167,18 @@ void HIRPrinter::visit(FuncDecl::Ptr decl) {
   }
   oss << "func ";
   decl->name->accept(this);
+  if (decl->typeParams.size() > 0) {
+    oss << "<";
+    bool printDelimiter = false;
+    for (auto typeParam : decl->typeParams) {
+      if (printDelimiter) {
+        oss << ", ";
+      }
+      typeParam->accept(this);
+      printDelimiter = true;
+    }
+    oss << ">";
+  }
   oss << "(";
   bool printDelimiter = false;
   for (auto arg : decl->args) {
@@ -172,7 +191,7 @@ void HIRPrinter::visit(FuncDecl::Ptr decl) {
   oss << ") ";
   if (decl->results.size() > 0) {
     oss << "-> (";
-    printDelimiter = false;
+    bool printDelimiter = false;
     for (auto result : decl->results) {
       if (printDelimiter) {
         oss << ", ";

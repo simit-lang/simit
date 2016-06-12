@@ -11,6 +11,7 @@
 #include "parser.h"
 #include "hir.h"
 
+#include "type_param_rewriter.h"
 #include "func_call_rewriter.h"
 #include "const_fold.h"
 #include "pad_tensor_blocks.h"
@@ -29,10 +30,14 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   hir::Program::Ptr program = Parser(errors).parse(tokens);
 
   // Semantic analyses.
+  program = hir::TypeParamRewriter().rewrite(program);
+//  std::cout << *program << std::endl;
   program = hir::FuncCallRewriter(errors).rewrite(program);
   program = hir::ConstantFolding().rewrite(program);
   // hir::PadTensorBlocks().pad(program);
   hir::ConstChecker(errors).check(program);
+  //hir::InferElementSets().check(program);
+  //program = hir::SpecializeGenericFunctions().rewrite(program);
   hir::TypeChecker(errors).check(program);
   program = hir::TupleReadRewriter().rewrite(program);
 

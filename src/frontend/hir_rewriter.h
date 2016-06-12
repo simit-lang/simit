@@ -17,6 +17,7 @@ public:
   virtual void visit(StmtBlock::Ptr);
   virtual void visit(RangeIndexSet::Ptr op) { node = op; }
   virtual void visit(SetIndexSet::Ptr op) { node = op; }
+  virtual void visit(GenericIndexSet::Ptr op) { node = op; }
   virtual void visit(DynamicIndexSet::Ptr op) { node = op; }
   virtual void visit(ElementType::Ptr op) { node = op; }
   virtual void visit(Endpoint::Ptr op) { node = op; }

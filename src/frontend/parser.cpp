@@ -154,7 +154,8 @@ hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
   return externFuncDecl;
 }
 
-// func_decl: ['export'] 'func' ident arguments results stmt_block 'end'
+// func_decl: ['export'] 'func' ident type_params
+//            arguments results stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   auto funcDecl = std::make_shared<hir::FuncDecl>();
 
@@ -166,6 +167,7 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   consume(Token::Type::FUNC);
   
   funcDecl->name = parseIdent();
+  funcDecl->typeParams = parseTypeParams();
   funcDecl->args = parseArguments();
   funcDecl->results = parseResults();
   funcDecl->body = parseStmtBlock();
@@ -177,7 +179,7 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   return funcDecl;
 }
 
-// proc_decl: 'proc' ident [arguments results] stmt_block 'end'
+// proc_decl: 'proc' ident [type_params arguments results] stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::FuncDecl>();
   procDecl->exported = true;
@@ -194,6 +196,7 @@ hir::FuncDecl::Ptr Parser::parseProcDecl() {
         }
       case Token::Type::RP:
       case Token::Type::INOUT:
+        procDecl->typeParams = parseTypeParams();
         procDecl->args = parseArguments();
         procDecl->results = parseResults();
         break;
@@ -207,6 +210,32 @@ hir::FuncDecl::Ptr Parser::parseProcDecl() {
   procDecl->setEndLoc(endToken);
 
   return procDecl;
+}
+
+// type_params: ['<' type_param {',' type_param} '>']
+std::vector<hir::GenericIndexSet::Ptr> Parser::parseTypeParams() {
+  std::vector<hir::GenericIndexSet::Ptr> typeParams;
+
+  if (tryconsume(Token::Type::LA)) {
+    do {
+      const hir::GenericIndexSet::Ptr typeParam = parseTypeParam();
+      typeParams.push_back(typeParam);
+    } while (tryconsume(Token::Type::COMMA));
+    consume(Token::Type::RA);
+  }
+
+  return typeParams;
+}
+
+// type_param: ident
+hir::GenericIndexSet::Ptr Parser::parseTypeParam() {
+  auto typeParam = std::make_shared<hir::GenericIndexSet>();
+
+  const Token identToken = consume(Token::Type::IDENT);
+  typeParam->setLoc(identToken);
+  typeParam->setName = identToken.str;
+
+  return typeParam;
 }
 
 // arguments: '(' [argument_decl {',' argument_decl}] ')'
