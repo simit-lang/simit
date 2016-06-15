@@ -7,12 +7,12 @@
 extern "C" {
 
 // appease GCC
-void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int bs_x, int bs_y,
-                   double* bufferX, double* bufferC);
-void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int bs_x, int bs_y,
-                   float* bufferX, float* bufferC);
+void cMatSolve_f64(int N, int M, int Nb, int Mb,
+                   int* rowPtr, int* colIdx, double* A,
+                   double* x, double* b);
+void cMatSolve_f32(int N, int M, int Nb, int Mb,
+                   int* rowPtr, int* colIdx, float* A,
+                   float* x, float* b);
 int loc(int v0, int v1, int *neighbors_start, int *neighbors);
 
 double atan2_f64(double y, double x);
@@ -61,28 +61,29 @@ void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
 
 extern "C" {
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f32
-void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int bs_x, int bs_y,
-                   double* bufferX, double* bufferC) {
+void cMatSolve_f64(int N, int M, int Nb, int Mb,
+                   int* rowPtr, int* colIdx, double* A,
+                   double* x, double* b) {
   using namespace Eigen;
-  int nnz = row_start[rows/bs_x];
+  int nnz = rowPtr[N/Nb];
 
-  auto xvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferX, rows);
-  auto cvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferC, rows);
+  auto xvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(x, M);
+  auto cvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(b, N);
   
   // Construct the matrix
   std::vector<Triplet<double>> tripletList;
-  tripletList.reserve(nnz*bs_x*bs_y);
-  for (int i=0; i<rows/(bs_x); i++) {
-    for (int j=row_start[i]; j<row_start[i+1]; j++) {
-      for (int bi=0; bi<bs_x; bi++) {
-      for (int bj=0; bj<bs_y; bj++) {
-        tripletList.push_back(Triplet<double>(i*bs_x+bi, col_idx[j]*bs_y+bj,
-                                              bufferA[j*bs_x*bs_y+bi*bs_x+bj]));
-      }}
+  tripletList.reserve(nnz*Nb*Mb);
+  for (int i=0; i<N/(Nb); i++) {
+    for (int j=rowPtr[i]; j<rowPtr[i+1]; j++) {
+      for (int bi=0; bi<Nb; bi++) {
+        for (int bj=0; bj<Mb; bj++) {
+          tripletList.push_back(Triplet<double>(i*Nb+bi, colIdx[j]*Mb+bj,
+                                                A[j*Nb*Mb+bi*Nb+bj]));
+        }
+      }
     }
   }
-  SparseMatrix<double> mat(rows,columns);
+  SparseMatrix<double> mat(N,M);
   mat.setFromTriplets(tripletList.begin(), tripletList.end());
 
 #ifndef SIMIT_EXTERN_SOLVE_NOOP
@@ -94,28 +95,29 @@ void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
 }
 
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f64
-void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int bs_x, int bs_y,
-                   float* bufferX, float* bufferC) {
+void cMatSolve_f32(int N, int M, int Nb, int Mb,
+                   int* rowPtr, int* colIdx, float* A,
+                   float* x, float* b) {
   using namespace Eigen;
-  int nnz = row_start[rows/bs_x];
+  int nnz = rowPtr[N/Nb];
 
-  auto xvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferX, rows);
-  auto cvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferC, rows);
+  auto xvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(x, M);
+  auto cvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(b, N);
 
   // Construct the matrix
   std::vector<Triplet<float>> tripletList;
-  tripletList.reserve(nnz*bs_x*bs_y);
-  for (int i=0; i<rows/(bs_x); i++) {
-    for (int j=row_start[i]; j<row_start[i+1]; j++) {
-      for (int bi=0; bi<bs_x; bi++) {
-      for (int bj=0; bj<bs_y; bj++) {
-         tripletList.push_back(Triplet<float>(i*bs_x+bi, col_idx[j]*bs_y+bj,
-                                              bufferA[j*bs_x*bs_y+bi*bs_x+bj]));
-      }}
+  tripletList.reserve(nnz*Nb*Mb);
+  for (int i=0; i<N/(Nb); i++) {
+    for (int j=rowPtr[i]; j<rowPtr[i+1]; j++) {
+      for (int bi=0; bi<Nb; bi++) {
+        for (int bj=0; bj<Mb; bj++) {
+          tripletList.push_back(Triplet<float>(i*Nb+bi, colIdx[j]*Mb+bj,
+                                               A[j*Nb*Mb+bi*Nb+bj]));
+        }
+      }
     }
   }
-  SparseMatrix<float> mat(rows,columns);
+  SparseMatrix<float> mat(N,M);
   mat.setFromTriplets(tripletList.begin(), tripletList.end());
   
 #ifndef SIMIT_EXTERN_SOLVE_NOOP

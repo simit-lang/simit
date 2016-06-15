@@ -88,18 +88,18 @@ TEST(ffi, vector_add) {
   SIMIT_EXPECT_FLOAT_EQ(33.0, (int)c.get(p2));
 }
 
-extern "C" void gemv(simit_float* vals, int* row_start, int* col_idx,
-                     int rows, int cols, int rowblock, int colblock,
+extern "C" void gemv(int N, int M, int Nb, int Mb,
+                     int* row_start, int* col_idx, simit_float* vals,
                      simit_float* x, simit_float* y) {
   int* csrRowStart;
   int* csrColIdx;
   simit_float* csrVals;
 
-  convertToCSR(vals, row_start, col_idx, rows, cols, rowblock, colblock,
+  convertToCSR(vals, row_start, col_idx, N, M, Nb, Mb,
                &csrRowStart, &csrColIdx, &csrVals);
   
   // spmv
-  for (int i=0; i<rows; i++) {
+  for (int i=0; i<N; i++) {
     y[i] = 0;
     for (int j=csrRowStart[i]; j<csrRowStart[i+1]; j++) {
       y[i] += csrVals[j] * x[csrColIdx[j]];

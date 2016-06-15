@@ -653,49 +653,51 @@ void LLVMBackend::compileArgument(Expr argument, std::vector<llvm::Type*>& argTy
     ScalarType ctype = argument.type().isTensor() ? argument.type().toTensor()->getComponentType()
                                            : argument.type().toArray()->elementType;
     argTypes.push_back(llvmType(ctype));
-    args.push_back(compile(argument));
-  
+
+
     if (argument.type().isTensor() && argument.type().toTensor()->isSparse()) {
-      // we need to add additional arguments: the row_start and col_idx pointers,
-      // as well as the number of rows, columns, nonzeros, and blocksize.
+      // we need to add additional arguments: rowPtr and colIdx pointers,
+      // as well as the number of rows, columns and blocksize.
       auto type = argument.type().toTensor();
       vector<IndexDomain> dimensions = type->getDimensions();
-      
-      // FIXME: shouldn't assume this is a var expression...
+
       tassert(isa<VarExpr>(argument));
       const TensorStorage& tensorStorage =
           storage.getStorage(to<VarExpr>(argument)->var);
       llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
 
-      llvm::Value *row_start =
-          builder->CreateExtractValue(targetSet, {2}, "row_start");
-      llvm::Value *col_idx =
-          builder->CreateExtractValue(targetSet, {3}, "col_idx");
-      llvm::Value *blockSize_r;
-      llvm::Value *blockSize_c;
-      
-      // Determine block sizes
+      llvm::Value *rowPtr = builder->CreateExtractValue(targetSet,{2},"rowPtr");
+      llvm::Value *colIdx = builder->CreateExtractValue(targetSet,{3},"colIdx");
+      llvm::Value *Nb;
+      llvm::Value *Mb;
+
+      auto N = emitComputeLen(dimensions[0]);
+      auto M = emitComputeLen(dimensions[1]);
+
+      // get block sizes
       Type blockType = type->getBlockType();
-      vector<IndexDomain> blockDimensions =
-          blockType.toTensor()->getDimensions();
-      if (!isScalar(blockType)) {
-        // TODO: The following assumes all blocks are dense row major. The right
-        //       way to assign a storage order for every block in the tensor
-        //       represented by a TensorStorage.  Also assumes 2D blocks.
-        blockSize_r = emitComputeLen(blockDimensions[0]);
-        blockSize_c = emitComputeLen(blockDimensions[1]);
+      vector<IndexDomain> blockDimensions=blockType.toTensor()->getDimensions();
+      if (isScalar(blockType)) {
+        Nb = llvmInt(1);
+        Mb = llvmInt(1);
       }
       else {
-        blockSize_r = llvmInt(1);
-        blockSize_c = llvmInt(1);
+        Nb = emitComputeLen(blockDimensions[0]);
+        Mb = emitComputeLen(blockDimensions[1]);
       }
-      args.push_back(row_start);
-      args.push_back(col_idx);
-      args.push_back(emitComputeLen(dimensions[0]));
-      args.push_back(emitComputeLen(dimensions[1]));
-      args.push_back(blockSize_r);
-      args.push_back(blockSize_c);
+
+      // Argument list::
+      // - Type:    N, M, Nb, Mb,
+      // - Indices: rowPtr, colIdx,
+      // - Values:  vals
+      args.push_back(N);
+      args.push_back(M);
+      args.push_back(Nb);
+      args.push_back(Mb);
+      args.push_back(rowPtr);
+      args.push_back(colIdx);
     }
+    args.push_back(compile(argument));
 }
 
 void LLVMBackend::compile(const ir::CallStmt& callStmt) {
