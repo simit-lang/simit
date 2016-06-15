@@ -13,7 +13,7 @@ namespace simit {
 class SimitException : public std::exception {
 public:
   SimitException() {
-    errStringStream << std::endl;
+    errStringStream << "IR stack:" << std::endl;
   }
 
   SimitException(SimitException&& other) {
@@ -26,7 +26,7 @@ public:
 
   // Resets context stream cutoff, and inserts string context description
   void addContext(std::string contextDesc) {
-    errStringStream << util::split(contextDesc, "\n")[0] << std::endl;
+    errStringStream << util::split(contextDesc, "\n")[0];
   }
 
 private:

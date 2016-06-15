@@ -3486,11 +3486,10 @@ static std::string FormatCxxExceptionMessage(const char* description,
                                              const char* location) {
   Message message;
   if (description != NULL) {
-    message << "C++ exception with description \"" << description << "\"";
+    message << std::string(description);
   } else {
     message << "Unknown C++ exception";
   }
-  message << " thrown in " << location << ".";
 
   return message.GetString();
 }
@@ -3950,36 +3949,13 @@ static std::string FormatTestCaseCount(int test_case_count) {
   return FormatCountableNoun(test_case_count, "test case", "test cases");
 }
 
-// Converts a TestPartResult::Type enum to human-friendly string
-// representation.  Both kNonFatalFailure and kFatalFailure are translated
-// to "Failure", as the user usually doesn't care about the difference
-// between the two when viewing the test result.
-static const char * TestPartResultTypeToString(TestPartResult::Type type) {
-  switch (type) {
-    case TestPartResult::kSuccess:
-      return "Success";
-
-    case TestPartResult::kNonFatalFailure:
-    case TestPartResult::kFatalFailure:
-#ifdef _MSC_VER
-      return "error: ";
-#else
-      return "Failure\n";
-#endif
-    default:
-      return "Unknown result type";
-  }
-}
-
 namespace internal {
 
 // Prints a TestPartResult to an std::string.
 static std::string PrintTestPartResultToString(
     const TestPartResult& test_part_result) {
+
   return (Message()
-          << internal::FormatFileLocation(test_part_result.file_name(),
-                                          test_part_result.line_number())
-          << " " << TestPartResultTypeToString(test_part_result.type())
           << test_part_result.message()).GetString();
 }
 
