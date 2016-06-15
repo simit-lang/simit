@@ -26,7 +26,7 @@ public:
 
   // Resets context stream cutoff, and inserts string context description
   void addContext(std::string contextDesc) {
-    errStringStream << util::split(contextDesc, "\n")[0];
+    errStringStream << "... " << util::split(contextDesc, "\n")[0];
   }
 
 private:
