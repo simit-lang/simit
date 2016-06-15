@@ -117,7 +117,7 @@ int main(int argc, char **argv) {
   simit::init(simitBackend, floatSize);
 
   int returnValue = RUN_ALL_TESTS();
-  
+
   if (PROFILE) {
     simit::printTimes(); 
   }

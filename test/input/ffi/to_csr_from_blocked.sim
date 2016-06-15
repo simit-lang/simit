@@ -11,10 +11,9 @@ extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
 extern func ext_csr_gemv(A : tensor[points,points](tensor[2,2](float)), x : tensor[points](tensor[2](float)))
-	-> (y : tensor[points](tensor[2](float)));
+    -> (y : tensor[points](tensor[2](float)));
 
-func dist_a(s : Spring, p : (Point*2)) ->
-    (M : tensor[points,points](tensor[2,2](float)))
+func dist_a(s : Spring, p : (Point*2)) -> (M : tensor[points,points](tensor[2,2](float)))
   M(p(0),p(0)) = s.a;
   M(p(0),p(1)) = s.a;
   M(p(1),p(0)) = s.a;

@@ -712,14 +712,7 @@ void LLVMBackend::compileArgument(Expr argument, std::vector<llvm::Type*>& argTy
 }
 
 void LLVMBackend::compile(const ir::CallStmt& callStmt) {
-  std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
-      {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
-       {ir::intrinsics::cos(), llvm::Intrinsic::cos},
-       {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
-       {ir::intrinsics::log(), llvm::Intrinsic::log},
-       {ir::intrinsics::exp(), llvm::Intrinsic::exp},
-       {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
-  
+
   std::vector<llvm::Type*> argTypes;
   std::vector<llvm::Value*> args;
   llvm::Function *fun = nullptr;
@@ -734,11 +727,19 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     iassert(callee != ir::intrinsics::norm() && callee != ir::intrinsics::dot())
         << "norm and dot should have been lowered";
 
+    std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
+    {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
+      {ir::intrinsics::cos(), llvm::Intrinsic::cos},
+      {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
+      {ir::intrinsics::log(), llvm::Intrinsic::log},
+      {ir::intrinsics::exp(), llvm::Intrinsic::exp},
+      {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
+
     std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
     llvm::Value *call = nullptr;
 
-    // first, see if this is an LLVM intrinsic
+    // is it an LLVM intrinsic?
     auto foundIntrinsic = llvmIntrinsicByName.find(callStmt.callee);
     if (foundIntrinsic != llvmIntrinsicByName.end()) {
       iassert(callStmt.results.size() == 1);
@@ -748,7 +749,7 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
                                             {overloadType});
       call = builder->CreateCall(fun, args);
     }
-    // now check if it is an intrinsic from libm
+    // is it an intrinsic from libm?
     else if (callStmt.callee == ir::intrinsics::atan2() ||
              callStmt.callee == ir::intrinsics::tan()   ||
              callStmt.callee == ir::intrinsics::asin()  ||
@@ -850,28 +851,25 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
         callStmt.actuals.size() << " arguments, but expected " <<
         callStmt.callee.getArguments().size() << " arguments.";
     
-    tassert(callStmt.results.size() == 1) <<
-        "Only single return values for externs supported right now";
+    tassert(callStmt.results.size() <= 1) <<
+        "Only single or void return values for externs supported right now";
     
     tassert(!(callStmt.results[0].getType().isTensor() &&
         callStmt.results[0].getType().toTensor()->isSparse())) <<
         "Returning a sparse tensor from extern is not supported";
-    
-    llvm::Value *llvmVar = symtable.get(callStmt.results[0]);
-    args.push_back(llvmVar);
 
-    ScalarType element_type =
-        callStmt.results[0].getType().toTensor()->getComponentType();
-    // TODO: where is these addresspace parameter coming from?
-    auto ret_type = llvmPtrType(element_type, 0);
+    if (callStmt.results.size() > 0) {
+      llvm::Value *llvmVar = symtable.get(callStmt.results[0]);
+      ScalarType element_type =
+          callStmt.results[0].getType().toTensor()->getComponentType();
+      auto ret_type = llvmPtrType(element_type, globalAddrspace());
+      args.push_back(llvmVar);
+      argTypes.push_back(ret_type);
+    }
 
-    argTypes.push_back(ret_type);
     emitCall(callStmt.callee.getName(), args);
-
-    return;
   }
-
-  // If not an intrinsic function, try to find it in the module
+  // If not an intrinsic or an external function we try to find it in the module
   else {
     if (module->getFunction(callStmt.callee.getName())) {
       for (Var r : callStmt.results) {
