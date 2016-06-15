@@ -8,10 +8,10 @@ extern "C" {
 
 // appease GCC
 void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   int rows, int columns, int bs_x, int bs_y,
                    double* bufferX, double* bufferC);
 void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   int rows, int columns, int bs_x, int bs_y,
                    float* bufferX, float* bufferC);
 int loc(int v0, int v1, int *neighbors_start, int *neighbors);
 
@@ -62,9 +62,10 @@ void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
 extern "C" {
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f32
 void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   int rows, int columns, int bs_x, int bs_y,
                    double* bufferX, double* bufferC) {
   using namespace Eigen;
+  int nnz = row_start[rows]*bs_x*bs_y;
 
   auto xvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferX, rows);
   auto cvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferC, rows);
@@ -94,9 +95,10 @@ void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
 
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f64
 void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   int rows, int columns, int bs_x, int bs_y,
                    float* bufferX, float* bufferC) {
   using namespace Eigen;
+  int nnz = row_start[rows/bs_x];
 
   auto xvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferX, rows);
   auto cvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferC, rows);

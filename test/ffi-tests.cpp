@@ -89,13 +89,13 @@ TEST(ffi, vector_add) {
 }
 
 extern "C" void gemv(simit_float* vals, int* row_start, int* col_idx,
-                     int rows, int cols, int nnz, int rowblock, int colblock,
+                     int rows, int cols, int rowblock, int colblock,
                      simit_float* x, simit_float* y) {
   int* csrRowStart;
   int* csrColIdx;
   simit_float* csrVals;
 
-  convertToCSR(vals, row_start, col_idx, rows, cols, nnz, rowblock, colblock,
+  convertToCSR(vals, row_start, col_idx, rows, cols, rowblock, colblock,
                &csrRowStart, &csrColIdx, &csrVals);
   
   // spmv

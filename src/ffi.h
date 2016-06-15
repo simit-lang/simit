@@ -8,8 +8,10 @@ extern "C" {
 /// Converts a Simit blocked matrix into a CSR matrix.
 void convertToCSR(simit_float* bufferA,
                   int* row_start, int* col_idx,
-                  int rows, int columns, int nnz, int bs_x, int bs_y,
+                  int rows, int columns, int bs_x, int bs_y,
                   int** csrRowStart, int** csrColIdx, simit_float** csrVals) {
+  int nnz = row_start[rows/bs_x];
+
   // create tuples for each matrix entry
   std::vector<std::tuple<int,int,simit_float>> entries;
   entries.reserve(nnz*bs_x*bs_y);

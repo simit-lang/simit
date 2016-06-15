@@ -666,23 +666,11 @@ void LLVMBackend::compileArgument(Expr argument, std::vector<llvm::Type*>& argTy
       const TensorStorage& tensorStorage =
           storage.getStorage(to<VarExpr>(argument)->var);
       llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
-      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
 
-      // Retrieve the size of the neighbor index, which is stored in the last
-      // element of neighbor start index.
-      llvm::Value *setSize =
-          builder->CreateExtractValue(storageSet, {0},
-                                      storageSet->getName()+LEN_SUFFIX);
-      
       llvm::Value *row_start =
           builder->CreateExtractValue(targetSet, {2}, "row_start");
       llvm::Value *col_idx =
           builder->CreateExtractValue(targetSet, {3}, "col_idx");
-      llvm::Value *neighborIndexSizeLoc =
-          builder->CreateInBoundsGEP(row_start, setSize,
-                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
-      llvm::Value *len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
-                                       "neighbors"+LEN_SUFFIX);
       llvm::Value *blockSize_r;
       llvm::Value *blockSize_c;
       
@@ -705,7 +693,6 @@ void LLVMBackend::compileArgument(Expr argument, std::vector<llvm::Type*>& argTy
       args.push_back(col_idx);
       args.push_back(emitComputeLen(dimensions[0]));
       args.push_back(emitComputeLen(dimensions[1]));
-      args.push_back(len);
       args.push_back(blockSize_r);
       args.push_back(blockSize_c);
     }
@@ -729,11 +716,11 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
 
     std::map<Func, llvm::Intrinsic::ID> llvmIntrinsicByName =
     {{ir::intrinsics::sin(), llvm::Intrinsic::sin},
-      {ir::intrinsics::cos(), llvm::Intrinsic::cos},
-      {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
-      {ir::intrinsics::log(), llvm::Intrinsic::log},
-      {ir::intrinsics::exp(), llvm::Intrinsic::exp},
-      {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
+     {ir::intrinsics::cos(), llvm::Intrinsic::cos},
+     {ir::intrinsics::sqrt(),llvm::Intrinsic::sqrt},
+     {ir::intrinsics::log(), llvm::Intrinsic::log},
+     {ir::intrinsics::exp(), llvm::Intrinsic::exp},
+     {ir::intrinsics::pow(), llvm::Intrinsic::pow}};
 
     std::string floatTypeName = ir::ScalarType::singleFloat() ? "_f32" : "_f64";
 
@@ -853,7 +840,11 @@ void LLVMBackend::compile(const ir::CallStmt& callStmt) {
     
     tassert(callStmt.results.size() <= 1) <<
         "Only single or void return values for externs supported right now";
-    
+
+//    for (auto arg : args) {
+//      std::cout << *arg << std::endl;
+//    }
+
     tassert(!(callStmt.results[0].getType().isTensor() &&
         callStmt.results[0].getType().toTensor()->isSparse())) <<
         "Returning a sparse tensor from extern is not supported";
