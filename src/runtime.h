@@ -65,7 +65,7 @@ void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
                    int rows, int columns, int bs_x, int bs_y,
                    double* bufferX, double* bufferC) {
   using namespace Eigen;
-  int nnz = row_start[rows]*bs_x*bs_y;
+  int nnz = row_start[rows/bs_x];
 
   auto xvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferX, rows);
   auto cvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferC, rows);
