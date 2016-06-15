@@ -49,13 +49,13 @@ TEST(ffi, extern_func) {
   SIMIT_EXPECT_FLOAT_EQ(1.0+4.0, cRes);
 }
 
-extern "C" void ext_vec3f_add(simit_float *a, simit_float *b, simit_float *c) {
+extern "C" void vec3f_add(simit_float *a, simit_float *b, simit_float *c) {
   c[0] = a[0] + b[0];
   c[1] = a[1] + b[1];
   c[2] = a[2] + b[2];
 }
 
-TEST(ffi, vector_add_using_extern) {
+TEST(ffi, vector_add) {
   Set points;
   FieldRef<simit_float> a = points.addField<simit_float>("a");
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -88,9 +88,9 @@ TEST(ffi, vector_add_using_extern) {
   SIMIT_EXPECT_FLOAT_EQ(33.0, (int)c.get(p2));
 }
 
-extern "C" void ext_csr_gemv(simit_float* vals, int* row_start, int* col_idx,
-                             int rows, int cols, int nnz, int rowblock, int colblock,
-                             simit_float* x, simit_float* y) {
+extern "C" void gemv(simit_float* vals, int* row_start, int* col_idx,
+                     int rows, int cols, int nnz, int rowblock, int colblock,
+                     simit_float* x, simit_float* y) {
   int* csrRowStart;
   int* csrColIdx;
   simit_float* csrVals;
@@ -110,7 +110,7 @@ extern "C" void ext_csr_gemv(simit_float* vals, int* row_start, int* col_idx,
   free(csrVals);
 }
 
-TEST(ffi, to_csr) {
+TEST(ffi, gemv) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -153,7 +153,7 @@ TEST(ffi, to_csr) {
   
 }
 
-TEST(ffi, to_csr_from_blocked) {
+TEST(ffi, gemv_blocked) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");

@@ -10,7 +10,7 @@ end
 extern points  : set{Point};
 extern springs : set{Spring}(points,points);
 
-extern func ext_csr_gemv(A : tensor[points,points](float), x : tensor[points](float))
+extern func gemv(A : tensor[points,points](float), x : tensor[points](float))
     -> (y : tensor[points](float));
 
 func dist_a(s : Spring, p : (Point*2)) -> (A : tensor[points,points](float))
@@ -22,5 +22,5 @@ end
 
 proc main
   A = map dist_a to springs reduce +;
-  points.c = ext_csr_gemv(A, points.b);
+  points.c = gemv(A, points.b);
 end
