@@ -58,8 +58,7 @@ void Func::accept(IRVisitorStrict *visitor) const {
     visitor->visit(this);
   }
   catch (SimitException &ex) {
-    ex.addContext("... accepting: ");
-    ex.errStream << "func " << getName();
+    ex.addContext("... accepting: " + std::string("func ") + getName());
     throw;
   }
 }

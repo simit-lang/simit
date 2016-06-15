@@ -10,72 +10,27 @@
 
 namespace simit {
 
-class CutOffStreambuf : public std::streambuf {
-public:
-  CutOffStreambuf(std::streambuf *dest) :
-      dest(dest), cutoff(false), cutoffEnabled(false) {}
-  
-  virtual int overflow(int c) {
-    if (c != EOF && !cutoff) {
-      if (cutoffEnabled && c == '\n') {
-        cutoff = true;
-        const std::string cutoffText = " [...]";
-        dest->sputn(cutoffText.c_str(), cutoffText.size());
-        return traits_type::to_int_type(c);
-      }
-      else {
-        dest->sputc(c);
-        return traits_type::to_int_type(c);
-      }
-    }
-    return EOF;
-  }
-
-  void setCutoff(bool enabled) {
-    cutoff = false;
-    if (enabled) {
-      cutoffEnabled = true;
-    }
-    else {
-      cutoffEnabled = false;
-    }
-  }
-
-private:
-  std::streambuf *dest;
-  bool cutoff;
-  bool cutoffEnabled;
-};
-
 class SimitException : public std::exception {
 public:
-  SimitException() : errStream(&errStreambuf),
-                     errStreambuf(errString.rdbuf()) {}
+  SimitException() {
+    errStringStream << std::endl;
+  }
 
-  SimitException(SimitException&& other) : errStream(&errStreambuf),
-                                           errStreambuf(errString.rdbuf()) {
-    // TODO: No string copy (Inefficient copying)
-    errString << other.errString.rdbuf();
+  SimitException(SimitException&& other) {
+    errStringStream << other.errStringStream.str();
   }
   
   virtual const char* what() const throw() {
-    return errString.str().c_str();
+    return errStringStream.str().c_str();
   }
 
   // Resets context stream cutoff, and inserts string context description
   void addContext(std::string contextDesc) {
-    errStreambuf.setCutoff(false);
-    errStream << std::endl;
-    errStreambuf.setCutoff(true);
-    errStream << contextDesc;
+    errStringStream << util::split(contextDesc, "\n")[0] << std::endl;
   }
 
-  // Writable error stream with an underlying buffer which cuts off at newlines
-  std::ostream errStream;
-
 private:
-  std::stringstream errString;
-  CutOffStreambuf errStreambuf;
+  std::stringstream errStringStream;
 };
 
 /// Provides information about errors that occur while loading Simit code.

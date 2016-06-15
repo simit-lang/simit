@@ -60,8 +60,7 @@ public:
       ptr->accept(v);
     }
     catch (SimitException &ex) {
-      ex.addContext("... accepting: ");
-      ex.errStream << *ptr;
+      ex.addContext("... accepting: " + util::toString(*ptr));
       throw;
     }
   }
@@ -108,8 +107,7 @@ public:
     }
     catch (SimitException &ex) {
       if (!isa<Block>(*this) && !isa<Scope>(*this)) {
-        ex.addContext("... accepting: ");
-        ex.errStream << *ptr;
+        ex.addContext("... accepting: " + util::toString(*ptr));
       }
       throw;
     }
