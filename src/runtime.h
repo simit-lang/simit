@@ -39,13 +39,13 @@ double simitClock();
 // solver backends.
 #ifndef EIGEN
 void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   int rows, int columns, int bs_x, int bs_y,
                    double* bufferX, double* bufferC) {
   return;
 }
 
 void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int nnz, int bs_x, int bs_y,
+                   int rows, int columns, int bs_x, int bs_y,
                    float* bufferX, float* bufferC) {
   return;
 }
