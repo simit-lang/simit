@@ -4,23 +4,23 @@
 #include <tuple>
 
 
-extern "C" {
 /// Converts a Simit blocked matrix into a CSR matrix.
-void convertToCSR(simit_float* bufferA,
+template <typename Float>
+void convertToCSR(Float* bufferA,
                   int* row_start, int* col_idx,
                   int rows, int columns, int bs_x, int bs_y,
-                  int** csrRowStart, int** csrColIdx, simit_float** csrVals) {
+                  int** csrRowStart, int** csrColIdx, Float** csrVals) {
   int nnz = row_start[rows/bs_x];
 
   // create tuples for each matrix entry
-  std::vector<std::tuple<int,int,simit_float>> entries;
+  std::vector<std::tuple<int,int,Float>> entries;
   entries.reserve(nnz*bs_x*bs_y);
   for (int i=0; i<rows/bs_x; i++) {
     for (int j=row_start[i]; j<row_start[i+1]; j++) {
       for (int bi=0; bi<bs_x; bi++) {
         for (int bj=0; bj<bs_y; bj++) {
-          simit_float val = bufferA[j*bs_x*bs_y+bs_x*bi+bj];
-          entries.push_back(std::tuple<int,int,simit_float>(i*bs_x+bi,
+          Float val = bufferA[j*bs_x*bs_y+bs_x*bi+bj];
+          entries.push_back(std::tuple<int,int,Float>(i*bs_x+bi,
                                                             col_idx[j]*bs_y+bj,
                                                             val));
         }
@@ -34,7 +34,7 @@ void convertToCSR(simit_float* bufferA,
   // build the matrix
   *csrRowStart = (int*)malloc((rows+1) * sizeof(int));
   *csrColIdx = (int*)malloc(nnz*bs_x*bs_y * sizeof(int));
-  *csrVals = (simit_float*)malloc(nnz*bs_x*bs_y * sizeof(simit_float));
+  *csrVals = (Float*)malloc(nnz*bs_x*bs_y * sizeof(Float));
  
   // determine row lengths
   for (int i=0; i<=rows; i++)
@@ -57,6 +57,4 @@ void convertToCSR(simit_float* bufferA,
   
   (*csrRowStart)[0] = 0;
 }
-
-} // extern "C"
 #endif

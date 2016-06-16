@@ -16,7 +16,11 @@ using namespace testing;
 using namespace simit;
 using namespace simit::ir;
 
-extern "C" void test_ext_func(simit_float a, simit_float b, simit_float *c) {
+extern "C" void sadd(float a, float b, float *c) {
+  *c = a+b;
+}
+
+extern "C" void dadd(double a, double b, double *c) {
   *c = a+b;
 }
 
@@ -28,14 +32,13 @@ TEST(ffi, extern_func) {
   // this test is akin to declaring an external func called "test_ext_func"
   // and then creating another func "tst_func" that calls the external func.
   
-  Func ext_func = Func("test_ext_func", {a, b}, {c}, Func::External);
+  Func ext_func = Func("add", {a, b}, {c}, Func::External);
   Stmt call_to_ext_func = CallStmt::make({c}, ext_func, {a,b});
   Func tst_func = Func("test_extern_func", {a,b}, {c}, call_to_ext_func);
   
   unique_ptr<backend::Backend> backend = getTestBackend();
   Function function = backend->compile(tst_func);
-  
-  
+
   simit_float aArg = (simit_float)1.0;
   simit_float bArg = (simit_float)4.0;
   simit_float cRes = (simit_float)-1.0;
@@ -49,10 +52,18 @@ TEST(ffi, extern_func) {
   SIMIT_EXPECT_FLOAT_EQ(1.0+4.0, cRes);
 }
 
-extern "C" void vec3f_add(simit_float *a, simit_float *b, simit_float *c) {
-  c[0] = a[0] + b[0];
-  c[1] = a[1] + b[1];
-  c[2] = a[2] + b[2];
+template<typename Float>
+void vecadd(int aN, Float* a, int bN, Float* b, Float* c) {
+  iassert(aN == bN);
+  for (int i=0; i<aN; ++i) {
+    c[i] = a[i] + b[i];
+  }
+}
+extern "C" void svecadd(int aN, float* a, int bN, float* b, float* c) {
+  vecadd<float>(aN,a, bN,b, c);
+}
+extern "C" void dvecadd(int aN, double* a, int bN, double* b, double* c) {
+  vecadd<double>(aN,a, bN,b, c);
 }
 
 TEST(ffi, vector_add) {
@@ -65,18 +76,17 @@ TEST(ffi, vector_add) {
   a.set(p0, 42.0);
   b.set(p0, 24.0);
   c.set(p0, -1.0);
-  
+
   ElementRef p1 = points.add();
   a.set(p1, 20.0);
   b.set(p1, 14.0);
   c.set(p1, -1.0);
-  
+
   ElementRef p2 = points.add();
   a.set(p2, 12.0);
   b.set(p2, 21.0);
   c.set(p2, -1.0);
-  
-  
+
   Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
   func.bind("points", &points);
@@ -88,26 +98,36 @@ TEST(ffi, vector_add) {
   SIMIT_EXPECT_FLOAT_EQ(33.0, (int)c.get(p2));
 }
 
-extern "C" void gemv(int N, int M, int Nb, int Mb,
-                     int* row_start, int* col_idx, simit_float* vals,
-                     simit_float* x, simit_float* y) {
+template<typename Float>
+void gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
+          int cN, Float* c, Float* a) {
   int* csrRowStart;
   int* csrColIdx;
-  simit_float* csrVals;
+  Float* csrVals;
 
-  convertToCSR(vals, row_start, col_idx, N, M, Nb, Mb,
+  convertToCSR(B, BrowPtr, BcolIdx, BN, BM, BNN, BMM,
                &csrRowStart, &csrColIdx, &csrVals);
-  
+
   // spmv
-  for (int i=0; i<N; i++) {
-    y[i] = 0;
+  for (int i=0; i<BN; i++) {
+    a[i] = 0;
     for (int j=csrRowStart[i]; j<csrRowStart[i+1]; j++) {
-      y[i] += csrVals[j] * x[csrColIdx[j]];
+      a[i] += csrVals[j] * c[csrColIdx[j]];
     }
   }
   free(csrRowStart);
   free(csrColIdx);
   free(csrVals);
+}
+extern "C"
+void sgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, float* B,
+           int cN, float* c, float* a) {
+  gemv<float>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, a);
+}
+extern "C"
+void dgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, double* B,
+           int cN, double* c, double* a) {
+  gemv<double>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, a);
 }
 
 TEST(ffi, gemv) {

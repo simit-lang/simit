@@ -19,12 +19,7 @@ end
 
 proc main 
   A = map dist_a to springs reduce +;
-%  print A;
-  b = points.b;
   var c = points.c;
-  out = solve(A, b, c);
-%  points.c = A * c;
-  d = A * c;
-  points.c = d;
-
+  out = solve(A, points.b, c);
+  points.c = A * c;
 end

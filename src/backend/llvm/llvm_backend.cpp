@@ -648,19 +648,30 @@ void LLVMBackend::compile(const ir::AssignStmt& assignStmt) {
   }
 }
 
-std::vector<llvm::Value*>
-LLVMBackend::compileArguments(const std::vector<ir::Expr>& arguments) {
+std::vector<llvm::Value*> LLVMBackend::emitArgument(ir::Expr argument,
+                                                    bool includeVectorTypes) {
   std::vector<llvm::Value*> args;
-  for (auto argument : arguments) {
-    if (argument.type().isTensor() && argument.type().toTensor()->isSparse()) {
+
+  if (argument.type().isTensor() &&
+      argument.type().toTensor()->hasSystemDimensions()) {
+    auto type = argument.type().toTensor();
+    vector<IndexDomain> dimensions = type->getDimensions();
+
+    // Dense vectors and matrices
+    if (!argument.type().toTensor()->isSparse()) {
+      if (includeVectorTypes) {
+        auto N = emitComputeLen(dimensions[0]);
+        args.push_back(N);
+      }
+    }
+    // Sparse matrix
+    else {
       // we need to add additional arguments: rowPtr and colIdx pointers,
       // as well as the number of rows, columns and blocksize.
-      auto type = argument.type().toTensor();
-      vector<IndexDomain> dimensions = type->getDimensions();
-
       tassert(isa<VarExpr>(argument));
+
       const TensorStorage& tensorStorage =
-          storage.getStorage(to<VarExpr>(argument)->var);
+      storage.getStorage(to<VarExpr>(argument)->var);
       llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
 
       llvm::Value *rowPtr = builder->CreateExtractValue(targetSet,{2},"rowPtr");
@@ -694,13 +705,25 @@ LLVMBackend::compileArguments(const std::vector<ir::Expr>& arguments) {
       args.push_back(rowPtr);
       args.push_back(colIdx);
     }
-    args.push_back(compile(argument));
+  }
+
+  args.push_back(compile(argument));
+  return args;
+}
+
+std::vector<llvm::Value*>
+LLVMBackend::emitArguments(std::vector<ir::Expr> arguments,
+                              bool includeVectorTypes=false) {
+  std::vector<llvm::Value*> args;
+  for (auto argument : arguments) {
+    auto arg = emitArgument(argument, includeVectorTypes);
+    args.insert(args.end(), arg.begin(), arg.end());
   }
   return args;
 }
 
 void LLVMBackend::emitInternalCall(const ir::CallStmt& callStmt) {
-  auto args = compileArguments(callStmt.actuals);
+  auto args = emitArguments(callStmt.actuals);
 
   if (module->getFunction(callStmt.callee.getName())) {
     for (Var r : callStmt.results) {
@@ -711,13 +734,29 @@ void LLVMBackend::emitInternalCall(const ir::CallStmt& callStmt) {
     builder->CreateCall(fun, args);
   }
   else {
-    ierror << "function " << callStmt.callee.getName() <<
-        " not found in module";
+    ierror << "function " << callStmt.callee.getName()
+           << " not found in module";
   }
 }
 
+static bool hasFloatArgs(Func func) {
+  for (auto arg : func.getArguments()) {
+    if (arg.getType().isTensor() &&
+        arg.getType().toTensor()->getComponentType() == ScalarType::Float) {
+      return true;
+    }
+  }
+  for (auto res : func.getResults()) {
+    if (res.getType().isTensor() &&
+        res.getType().toTensor()->getComponentType() == ScalarType::Float) {
+      return true;
+    }
+  }
+  return false;
+}
+
 void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
-  auto args = compileArguments(callStmt.actuals);
+  auto args = emitArguments(callStmt.actuals, true);
 
   // ensure it is called with the correct number of arguments.
   uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
@@ -736,11 +775,17 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
     args.push_back(symtable.get(callStmt.results[0]));
   }
 
-  emitCall(callStmt.callee.getName(), args);
+  std::string name = callStmt.callee.getName();
+  if (hasFloatArgs(callStmt.callee)) {
+    std::string floatType = ir::ScalarType::singleFloat() ? "s" : "d";
+    name = floatType + name;
+  }
+
+  emitCall(name, args);
 }
 
 void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
-  auto args = compileArguments(callStmt.actuals);
+  auto args = emitArguments(callStmt.actuals);
 
   llvm::Function *fun = nullptr;
   Func callee = callStmt.callee;
@@ -784,25 +829,6 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     call = builder->CreateSRem(compile(callStmt.actuals[0]),
                                compile(callStmt.actuals[1]));
   }
-  else if (callee == ir::intrinsics::det()) {
-    iassert(args.size() == 1);
-    std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
-    call = emitCall(fname, args, llvmFloatType());
-  }
-  else if (callee == ir::intrinsics::inv()) {
-    iassert(args.size() == 1);
-
-    Var result = callStmt.results[0];
-    llvm::Value *llvmResult = symtable.get(result);
-    args.push_back(llvmResult);
-
-    std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
-    call = emitCall(fname, args);
-  }
-  else if (callStmt.callee == ir::intrinsics::solve()) {
-    std::string fname = "cMatSolve" + floatTypeName;
-    call = emitCall(fname, args);
-  }
   else if (callStmt.callee == ir::intrinsics::loc()) {
     call = emitCall("loc", args, LLVM_INT);
   }
@@ -824,13 +850,38 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   else if (callStmt.callee == ir::intrinsics::strcat()) {
     call = emitCall("strcat", args, LLVM_INT8_PTR);
   }
-  else if (callStmt.callee == ir::intrinsics::createComplex()) {
-    call = builder->CreateComplex(args[0], args[1]);
+  else if (callStmt.callee == ir::intrinsics::simitClock()) {
+    call = emitCall("simitClock", args, llvmFloatType());
+  }
+  else if (callStmt.callee == ir::intrinsics::simitStoreTime()) {
+    call = emitCall("simitStoreTime", args);
+  }
+  else if (callee == ir::intrinsics::det()) {
+    iassert(args.size() == 1);
+    std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
+    call = emitCall(fname, args, llvmFloatType());
+  }
+  else if (callee == ir::intrinsics::inv()) {
+    iassert(args.size() == 1);
+
+    Var result = callStmt.results[0];
+    llvm::Value *llvmResult = symtable.get(result);
+    args.push_back(llvmResult);
+
+    std::string fname = callStmt.callee.getName() + "3" + floatTypeName;
+    call = emitCall(fname, args);
+  }
+  else if (callStmt.callee == ir::intrinsics::solve()) {
+    std::string fname = "cMatSolve" + floatTypeName;
+    call = emitCall(fname, args);
   }
   else if (callStmt.callee == ir::intrinsics::complexNorm()) {
     std::string fname = "complexNorm" + floatTypeName;
     call = emitCall(fname, {builder->ComplexGetReal(args[0]),
-                            builder->ComplexGetImag(args[0])}, llvmFloatType());
+      builder->ComplexGetImag(args[0])}, llvmFloatType());
+  }
+  else if (callStmt.callee == ir::intrinsics::createComplex()) {
+    call = builder->CreateComplex(args[0], args[1]);
   }
   else if (callStmt.callee == ir::intrinsics::complexGetReal()) {
     call = builder->ComplexGetReal(args[0]);
@@ -842,12 +893,6 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     auto real = builder->ComplexGetReal(args[0]);
     auto imag = builder->CreateFNeg(builder->ComplexGetImag(args[0]));
     call = builder->CreateComplex(real, imag);
-  }
-  else if (callStmt.callee == ir::intrinsics::simitClock()) {
-    call = emitCall("simitClock", args, llvmFloatType());
-  }
-  else if (callStmt.callee == ir::intrinsics::simitStoreTime()) {
-    call = emitCall("simitStoreTime", args);
   }
   else {
     ierror << "intrinsic " << callStmt.callee.getName() << " not found";

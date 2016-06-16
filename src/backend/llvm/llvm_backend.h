@@ -164,7 +164,11 @@ protected:
   
   /// Compile a single argument and add it to the vector args, as well as its
   /// type to the vector of argument types.
-  std::vector<llvm::Value*> compileArguments(const std::vector<ir::Expr>& args);
+  std::vector<llvm::Value*> emitArgument(ir::Expr argument,
+                                         bool includeVectorTypes);
+
+  std::vector<llvm::Value*> emitArguments(std::vector<ir::Expr> arguments,
+                                          bool includeVectorTypes);
 
   void emitInternalCall(const ir::CallStmt& callStmt);
   void emitExternCall(const ir::CallStmt& callStmt);
