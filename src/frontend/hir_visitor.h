@@ -21,7 +21,7 @@ struct ScalarType;
 struct NDTensorType;
 struct Identifier;
 struct IdentDecl;
-struct Field;
+struct FieldDecl;
 struct ElementTypeDecl;
 struct Argument;
 struct InOutArgument;
@@ -96,7 +96,7 @@ public:
   virtual void visit(std::shared_ptr<NDTensorType>);
   virtual void visit(std::shared_ptr<Identifier> op) {}
   virtual void visit(std::shared_ptr<IdentDecl>);
-  virtual void visit(std::shared_ptr<Field>);
+  virtual void visit(std::shared_ptr<FieldDecl>);
   virtual void visit(std::shared_ptr<ElementTypeDecl>);
   virtual void visit(std::shared_ptr<Argument>);
   virtual void visit(std::shared_ptr<InOutArgument>);

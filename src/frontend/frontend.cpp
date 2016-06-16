@@ -31,7 +31,8 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
 
   // Semantic analyses.
   program = hir::TypeParamRewriter().rewrite(program);
-//  std::cout << *program << std::endl;
+  //std::cout << *program << std::endl;
+  //std::cout << *program->clone() << std::endl;
   program = hir::FuncCallRewriter(errors).rewrite(program);
   program = hir::ConstantFolding().rewrite(program);
   // hir::PadTensorBlocks().pad(program);

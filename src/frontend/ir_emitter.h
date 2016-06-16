@@ -145,7 +145,7 @@ private:
     retIndexSet = ir::IndexSet();
     return ret;
   }
-  ir::Field emitField(Field::Ptr ptr) {
+  ir::Field emitField(FieldDecl::Ptr ptr) {
     retField = ir::Field("", ir::Type());
     ptr->accept(this);
     const ir::Field ret = retField;

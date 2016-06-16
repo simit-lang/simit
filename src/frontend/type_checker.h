@@ -41,7 +41,7 @@ private:
   virtual void visit(ScalarType::Ptr);
   virtual void visit(NDTensorType::Ptr);
   virtual void visit(IdentDecl::Ptr);
-  virtual void visit(Field::Ptr);
+  virtual void visit(FieldDecl::Ptr);
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(ExternDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
@@ -149,7 +149,7 @@ private:
     retIRType = ir::Type();
     return ret;
   }
-  ir::Field getField(Field::Ptr ptr) {
+  ir::Field getField(FieldDecl::Ptr ptr) {
     retField = ir::Field("", ir::Type());
     ptr->accept(this);
     const ir::Field ret = retField;

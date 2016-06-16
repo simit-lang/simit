@@ -45,15 +45,15 @@ void HIRRewriter::visit(IdentDecl::Ptr decl) {
   node = decl;
 }
 
-void HIRRewriter::visit(Field::Ptr field) {
-  field->field = rewrite<IdentDecl>(field->field);
-  node = field;
+void HIRRewriter::visit(FieldDecl::Ptr decl) {
+  decl->field = rewrite<IdentDecl>(decl->field);
+  node = decl;
 }
 
 void HIRRewriter::visit(ElementTypeDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
   for (auto &field : decl->fields) {
-    field = rewrite<Field>(field);
+    field = rewrite<FieldDecl>(field);
   }
   node = decl;
 }

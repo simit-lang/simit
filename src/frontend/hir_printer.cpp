@@ -91,6 +91,9 @@ void HIRPrinter::visit(ScalarType::Ptr type) {
     case ScalarType::Type::COMPLEX:
       oss << "complex";
       break;
+    case ScalarType::Type::STRING:
+      oss << "string";
+      break;
     default:
       unreachable;
       break;
@@ -129,8 +132,8 @@ void HIRPrinter::visit(IdentDecl::Ptr decl) {
   decl->type->accept(this);
 }
 
-void HIRPrinter::visit(Field::Ptr field) {
-  field->field->accept(this);
+void HIRPrinter::visit(FieldDecl::Ptr decl) {
+  decl->field->accept(this);
   oss << ";";
 }
 

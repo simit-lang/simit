@@ -220,10 +220,10 @@ void TypeChecker::visit(IdentDecl::Ptr decl) {
   retVar = ir::Var(decl->name->ident, type);
 }
 
-void TypeChecker::visit(Field::Ptr field) {
-  const IdentDecl::Ptr fieldDecl = field->field;
-  const ir::Type type = getIRType(fieldDecl->type);
-  retField = ir::Field(fieldDecl->name->ident, type);
+void TypeChecker::visit(FieldDecl::Ptr decl) {
+  const IdentDecl::Ptr field = decl->field;
+  const ir::Type type = getIRType(field->type);
+  retField = ir::Field(field->name->ident, type);
 }
 
 void TypeChecker::visit(ElementTypeDecl::Ptr decl) {

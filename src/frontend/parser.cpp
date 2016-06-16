@@ -86,11 +86,11 @@ hir::ElementTypeDecl::Ptr Parser::parseElementTypeDecl() {
 }
 
 // field_decl_list: {field_decl}
-std::vector<hir::Field::Ptr> Parser::parseFieldDeclList() {
-  std::vector<hir::Field::Ptr> fields;
+std::vector<hir::FieldDecl::Ptr> Parser::parseFieldDeclList() {
+  std::vector<hir::FieldDecl::Ptr> fields;
 
   while (peek().type == Token::Type::IDENT) {
-    const hir::Field::Ptr field = parseFieldDecl();
+    const hir::FieldDecl::Ptr field = parseFieldDecl();
     fields.push_back(field);
   }
 
@@ -98,8 +98,8 @@ std::vector<hir::Field::Ptr> Parser::parseFieldDeclList() {
 }
 
 // field_decl: tensor_decl ';'
-hir::Field::Ptr Parser::parseFieldDecl() {
-  auto fieldDecl = std::make_shared<hir::Field>();
+hir::FieldDecl::Ptr Parser::parseFieldDecl() {
+  auto fieldDecl = std::make_shared<hir::FieldDecl>();
   
   fieldDecl->field = parseTensorDecl();
   

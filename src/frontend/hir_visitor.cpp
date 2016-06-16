@@ -40,8 +40,8 @@ void HIRVisitor::visit(IdentDecl::Ptr decl) {
   decl->type->accept(this);
 }
 
-void HIRVisitor::visit(Field::Ptr field) {
-  field->field->accept(this);
+void HIRVisitor::visit(FieldDecl::Ptr decl) {
+  decl->field->accept(this);
 }
 
 void HIRVisitor::visit(ElementTypeDecl::Ptr decl) {
