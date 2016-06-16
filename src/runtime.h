@@ -40,7 +40,7 @@ double simitClock();
 #ifndef EIGEN
 void cMatSolve_f64(int N, int M, int Nb, int Mb,
                    int* rowPtr, int* colIdx, double* A,
-                   double* x, double* b);
+                   double* x, double* b) {
   return;
 }
 
