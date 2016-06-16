@@ -167,8 +167,8 @@ protected:
   std::vector<llvm::Value*> compileArguments(const std::vector<ir::Expr>& args);
 
   void emitInternalCall(const ir::CallStmt& callStmt);
-  void emitIntrinsicCall(const ir::CallStmt& callStmt);
   void emitExternCall(const ir::CallStmt& callStmt);
+  void emitIntrinsicCall(const ir::CallStmt& callStmt);
 
   // TODO: Remove this function, once the old init system has been removed
   ir::Func makeSystemTensorsGlobalIfHasTensorIndex(ir::Func func);

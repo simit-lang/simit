@@ -716,6 +716,29 @@ void LLVMBackend::emitInternalCall(const ir::CallStmt& callStmt) {
   }
 }
 
+void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
+  auto args = compileArguments(callStmt.actuals);
+
+  // ensure it is called with the correct number of arguments.
+  uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
+      "External function '" << callStmt.callee.getName() << "' called with " <<
+  callStmt.actuals.size() << " arguments, but expected " <<
+  callStmt.callee.getArguments().size() << " arguments.";
+
+  tassert(callStmt.results.size() <= 1) <<
+      "Only single or void return values for externs supported right now";
+
+  tassert(!(callStmt.results[0].getType().isTensor() &&
+            callStmt.results[0].getType().toTensor()->isSparse())) <<
+      "Returning a sparse tensor from extern is not supported";
+
+  if (callStmt.results.size() > 0) {
+    args.push_back(symtable.get(callStmt.results[0]));
+  }
+
+  emitCall(callStmt.callee.getName(), args);
+}
+
 void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   auto args = compileArguments(callStmt.actuals);
 
@@ -837,29 +860,6 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     llvm::Value *llvmVar = symtable.get(var);
     builder->CreateStore(call, llvmVar);
   }
-}
-
-void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
-  auto args = compileArguments(callStmt.actuals);
-
-  // ensure it is called with the correct number of arguments.
-  uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
-      "External function '" << callStmt.callee.getName() << "' called with " <<
-  callStmt.actuals.size() << " arguments, but expected " <<
-  callStmt.callee.getArguments().size() << " arguments.";
-
-  tassert(callStmt.results.size() <= 1) <<
-      "Only single or void return values for externs supported right now";
-
-  tassert(!(callStmt.results[0].getType().isTensor() &&
-            callStmt.results[0].getType().toTensor()->isSparse())) <<
-      "Returning a sparse tensor from extern is not supported";
-
-  if (callStmt.results.size() > 0) {
-    args.push_back(symtable.get(callStmt.results[0]));
-  }
-
-  emitCall(callStmt.callee.getName(), args);
 }
 
 void LLVMBackend::compile(const ir::CallStmt& callStmt) {
