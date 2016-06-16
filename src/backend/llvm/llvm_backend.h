@@ -164,8 +164,11 @@ protected:
   
   /// Compile a single argument and add it to the vector args, as well as its
   /// type to the vector of argument types.
-  void compileArgument(ir::Expr argument, std::vector<llvm::Type*>& argTypes,
-                       std::vector<llvm::Value*>& args);
+  std::vector<llvm::Value*> compileArguments(const std::vector<ir::Expr>& args);
+
+  void emitInternalCall(const ir::CallStmt& callStmt);
+  void emitIntrinsicCall(const ir::CallStmt& callStmt);
+  void emitExternCall(const ir::CallStmt& callStmt);
 
   // TODO: Remove this function, once the old init system has been removed
   ir::Func makeSystemTensorsGlobalIfHasTensorIndex(ir::Func func);
