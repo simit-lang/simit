@@ -44,7 +44,7 @@ void cMatSolve_f64(int N, int M, int Nb, int Mb,
   return;
 }
 
-void cMatSolve_f64(int N, int M, int Nb, int Mb,
+void cMatSolve_f32(int N, int M, int Nb, int Mb,
                    int* rowPtr, int* colIdx, float* A,
                    float* x, float* b) {
   return;
