@@ -38,15 +38,15 @@ double simitClock();
 // This is not a #else because we will in the future support more
 // solver backends.
 #ifndef EIGEN
-void cMatSolve_f64(double* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int bs_x, int bs_y,
-                   double* bufferX, double* bufferC) {
+void cMatSolve_f64(int N, int M, int Nb, int Mb,
+                   int* rowPtr, int* colIdx, double* A,
+                   double* x, double* b);
   return;
 }
 
-void cMatSolve_f32(float* bufferA, int* row_start, int* col_idx,
-                   int rows, int columns, int bs_x, int bs_y,
-                   float* bufferX, float* bufferC) {
+void cMatSolve_f64(int N, int M, int Nb, int Mb,
+                   int* rowPtr, int* colIdx, float* A,
+                   float* x, float* b) {
   return;
 }
 #endif
