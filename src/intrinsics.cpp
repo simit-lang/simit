@@ -465,7 +465,6 @@ const Func& simitStoreTime() {
   return simitStoreTimeVar;
 }
 
-
 const std::map<std::string,Func> &byNames() {
   static std::map<std::string,Func> byNameMap;
   if (byNameMap.size() == 0) {
@@ -485,6 +484,13 @@ const std::map<std::string,Func> &byNames() {
     detInit();
     invInit();
     solveInit();
+    locInit();
+    freeInit();
+    mallocInit();
+    strcmpInit();
+    strlenInit();
+    strcpyInit();
+    strcatInit();
     createComplexInit();
     complexNormInit();
     complexGetRealInit();
@@ -508,6 +514,13 @@ const std::map<std::string,Func> &byNames() {
                       {"det",detVar},
                       {"inv",invVar},
                       {"solve",solveVar},
+                      {"loc", locVar},
+                      {"free", freeVar},
+                      {"malloc", mallocVar},
+                      {"strcmp", strcmpVar},
+                      {"strlen", strlenVar},
+                      {"strcpy", strcpyVar},
+                      {"strcat", strcatVar},
                       {"createComplex",createComplexVar},
                       {"complexNorm",complexNormVar},
                       {"complexGetReal",complexGetRealVar},
