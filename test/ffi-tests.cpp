@@ -49,6 +49,11 @@ TEST(ffi, scalar_add) {
   SIMIT_EXPECT_FLOAT_EQ(1.0+4.0, cRes);
 }
 
+extern "C" void snegtwo(float a, float b, float* c, float* d) {
+  *c = -a;
+  *d = -b;
+}
+
 extern "C" void dnegtwo(double a, double b, double* c, double* d) {
   *c = -a;
   *d = -b;
