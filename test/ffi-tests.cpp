@@ -53,17 +53,19 @@ TEST(ffi, extern_func) {
 }
 
 template<typename Float>
-void vecadd(int aN, Float* a, int bN, Float* b, Float* c) {
-  iassert(aN == bN);
+void vecadd(int aN, Float* a, int bN, Float* b, int cN, Float* c) {
+  iassert(aN == bN && bN == cN);
   for (int i=0; i<aN; ++i) {
     c[i] = a[i] + b[i];
   }
 }
-extern "C" void svecadd(int aN, float* a, int bN, float* b, float* c) {
-  vecadd<float>(aN,a, bN,b, c);
+extern "C"
+void svecadd(int aN, float* a, int bN, float* b, int cN, float* c) {
+  vecadd<float>(aN,a, bN,b, cN,c);
 }
-extern "C" void dvecadd(int aN, double* a, int bN, double* b, double* c) {
-  vecadd<double>(aN,a, bN,b, c);
+extern "C"
+void dvecadd(int aN, double* a, int bN, double* b, int cN, double* c) {
+  vecadd<double>(aN,a, bN,b, cN,c);
 }
 
 TEST(ffi, vector_add) {
@@ -100,7 +102,7 @@ TEST(ffi, vector_add) {
 
 template<typename Float>
 void gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
-          int cN, Float* c, Float* a) {
+          int cN, Float* c, int aN, Float* a) {
   int* csrRowStart;
   int* csrColIdx;
   Float* csrVals;
@@ -121,13 +123,13 @@ void gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
 }
 extern "C"
 void sgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, float* B,
-           int cN, float* c, float* a) {
-  gemv<float>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, a);
+           int cN, float* c, int aN, float* a) {
+  gemv<float>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
 }
 extern "C"
 void dgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, double* B,
-           int cN, double* c, double* a) {
-  gemv<double>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, a);
+           int cN, double* c, int aN, double* a) {
+  gemv<double>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
 }
 
 TEST(ffi, gemv) {

@@ -648,8 +648,8 @@ void LLVMBackend::compile(const ir::AssignStmt& assignStmt) {
   }
 }
 
-std::vector<llvm::Value*> LLVMBackend::emitArgument(ir::Expr argument,
-                                                    bool includeVectorTypes) {
+std::vector<llvm::Value*>
+LLVMBackend::emitArgument(ir::Expr argument, bool includeVectorTypes=false) {
   std::vector<llvm::Value*> args;
 
   if (argument.type().isTensor() &&
@@ -713,7 +713,7 @@ std::vector<llvm::Value*> LLVMBackend::emitArgument(ir::Expr argument,
 
 std::vector<llvm::Value*>
 LLVMBackend::emitArguments(std::vector<ir::Expr> arguments,
-                              bool includeVectorTypes=false) {
+                           bool includeVectorTypes=false) {
   std::vector<llvm::Value*> args;
   for (auto argument : arguments) {
     auto arg = emitArgument(argument, includeVectorTypes);
@@ -756,8 +756,6 @@ static bool hasFloatArgs(Func func) {
 }
 
 void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
-  auto args = emitArguments(callStmt.actuals, true);
-
   // ensure it is called with the correct number of arguments.
   uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
       "External function '" << callStmt.callee.getName() << "' called with " <<
@@ -771,10 +769,19 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
             callStmt.results[0].getType().toTensor()->isSparse())) <<
       "Returning a sparse tensor from extern is not supported";
 
+  // Arguments
+  auto args = emitArguments(callStmt.actuals, true);
+
+  // Results
   if (callStmt.results.size() > 0) {
-    args.push_back(symtable.get(callStmt.results[0]));
+    vector<Expr> resultExprs =
+        util::map(callStmt.results,
+                  (function<Expr(Var)>)[](Var var){return Expr(var);});
+    auto results = emitArguments(resultExprs, true);
+    args.insert(args.end(), results.begin(), results.end());
   }
 
+  // Function name
   std::string name = callStmt.callee.getName();
   if (hasFloatArgs(callStmt.callee)) {
     std::string floatType = ir::ScalarType::singleFloat() ? "s" : "d";
