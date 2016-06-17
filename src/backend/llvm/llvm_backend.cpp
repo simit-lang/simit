@@ -762,9 +762,6 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
   callStmt.actuals.size() << " arguments, but expected " <<
   callStmt.callee.getArguments().size() << " arguments.";
 
-  tassert(callStmt.results.size() <= 1) <<
-      "Only single or void return values for externs supported right now";
-
   tassert(!(callStmt.results[0].getType().isTensor() &&
             callStmt.results[0].getType().toTensor()->isSparse())) <<
       "Returning a sparse tensor from extern is not supported";

@@ -16,21 +16,18 @@ using namespace testing;
 using namespace simit;
 using namespace simit::ir;
 
-extern "C" void sadd(float a, float b, float *c) {
+extern "C" void sadd(float a, float b, float* c) {
   *c = a+b;
 }
 
-extern "C" void dadd(double a, double b, double *c) {
+extern "C" void dadd(double a, double b, double* c) {
   *c = a+b;
 }
 
-TEST(ffi, extern_func) {
+TEST(ffi, scalar_add) {
   Var a("a", ir::Float);
   Var b("b", ir::Float);
   Var c("c", ir::Float);
-  
-  // this test is akin to declaring an external func called "test_ext_func"
-  // and then creating another func "tst_func" that calls the external func.
   
   Func ext_func = Func("add", {a, b}, {c}, Func::External);
   Stmt call_to_ext_func = CallStmt::make({c}, ext_func, {a,b});
@@ -51,6 +48,41 @@ TEST(ffi, extern_func) {
 
   SIMIT_EXPECT_FLOAT_EQ(1.0+4.0, cRes);
 }
+
+extern "C" void dnegtwo(double a, double b, double* c, double* d) {
+  *c = -a;
+  *d = -b;
+}
+
+TEST(ffi, negtwo) {
+  Var a("a", ir::Float);
+  Var b("b", ir::Float);
+  Var c("c", ir::Float);
+  Var d("d", ir::Float);
+
+  Func ext_func = Func("negtwo", {a, b}, {c, d}, Func::External);
+  Stmt call_to_ext_func = CallStmt::make({c, d}, ext_func, {a,b});
+  Func tst_func = Func("test_extern_func", {a,b}, {c,d}, call_to_ext_func);
+
+  unique_ptr<backend::Backend> backend = getTestBackend();
+  Function function = backend->compile(tst_func);
+
+  simit_float aArg = (simit_float)1.0;
+  simit_float bArg = (simit_float)2.0;
+  simit_float cRes = (simit_float)0.0;
+  simit_float dRes = (simit_float)0.0;
+
+  function.bind("a", &aArg);
+  function.bind("b", &bArg);
+  function.bind("c", &cRes);
+  function.bind("d", &dRes);
+
+  function.runSafe();
+
+  SIMIT_EXPECT_FLOAT_EQ(-aArg, cRes);
+  SIMIT_EXPECT_FLOAT_EQ(-bArg, dRes);
+}
+
 
 template<typename Float>
 void vecadd(int aN, Float* a, int bN, Float* b, int cN, Float* c) {
