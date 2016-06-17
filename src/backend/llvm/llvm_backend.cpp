@@ -771,9 +771,10 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
 
   // Results
   if (callStmt.results.size() > 0) {
-    vector<Expr> resultExprs =
-        util::map(callStmt.results,
-                  (function<Expr(Var)>)[](Var var){return Expr(var);});
+    std::vector<Expr> resultExprs;
+    for (auto resultVar : callStmt.results) {
+      resultExprs.push_back(resultVar);
+    }
     auto results = emitArguments(resultExprs, true);
     args.insert(args.end(), results.begin(), results.end());
   }
