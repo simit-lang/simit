@@ -519,6 +519,10 @@ void IRPrinter::visit(const Func *func) {
     os << env << endl << endl;
   }
 
+  if (func->getKind() == Func::External) {
+    os << "extern ";
+  }
+
   os << "func " << func->getName() << "(";
   if (func->getArguments().size() > 0) {
     const Var &arg = func->getArguments()[0];
