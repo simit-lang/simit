@@ -296,7 +296,9 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     results.push_back(result);
   }
 
-  decl->body->accept(this);
+  if (decl->body != nullptr) {
+    decl->body->accept(this);
+  }
   ctx.unscope();
 
   if (!typeChecked) {

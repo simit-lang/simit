@@ -145,8 +145,7 @@ hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
   externFuncDecl->name = parseIdent();
   externFuncDecl->args = parseArguments();
   externFuncDecl->results = parseResults();
-  // body is empty
-  externFuncDecl->body = std::make_shared<hir::StmtBlock>();
+  externFuncDecl->body = nullptr;  // body is undefined (decls have no body)
   externFuncDecl->external = true;
   
   const Token endToken = consume(Token::Type::SEMICOL);

@@ -171,8 +171,11 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
     results.push_back(result);
   }
 
-  ir::Stmt body = emitStmt(decl->body);
-  body = ir::Scope::make(body);
+  ir::Stmt body;
+  if (decl->body != nullptr) {
+    body = emitStmt(decl->body);
+    body = ir::Scope::make(body);
+  }
 
   ctx->unscope();
 
