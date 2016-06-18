@@ -115,11 +115,11 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
     case TensorStorage::Kind::Dense:
       os << "Dense";
       break;
-    case TensorStorage::Kind::Indexed:
-      os << "Indexed";
-      break;
     case TensorStorage::Kind::Diagonal:
       os << "Diagonal";
+      break;
+    case TensorStorage::Kind::Indexed:
+      os << "Indexed";
       break;
   }
   return os;

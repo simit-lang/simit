@@ -42,6 +42,7 @@
 #include "ir_queries.h"
 #include "ir_transforms.h"
 #include "ir_rewriter.h" // TODO: Remove this header
+#include "environment.h"
 #include "tensor_index.h"
 #include "llvm_function.h"
 #include "macros.h"
@@ -132,8 +133,8 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
 //  func = makeSystemTensorsGlobal(func);
   func = makeSystemTensorsGlobalIfHasTensorIndex(func);
 
-  const Environment& env = func.getEnvironment();
-  emitGlobals(env);
+  this->environment = &func.getEnvironment();
+  emitGlobals(*this->environment);
 
   // Create compute functions
   vector<Func> callTree = getCallTree(func);
@@ -759,12 +760,8 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
   // ensure it is called with the correct number of arguments.
   uassert(callStmt.actuals.size() == callStmt.callee.getArguments().size()) <<
       "External function '" << callStmt.callee.getName() << "' called with " <<
-  callStmt.actuals.size() << " arguments, but expected " <<
-  callStmt.callee.getArguments().size() << " arguments.";
-
-  tassert(!(callStmt.results[0].getType().isTensor() &&
-            callStmt.results[0].getType().toTensor()->isSparse())) <<
-      "Returning a sparse tensor from extern is not supported";
+      callStmt.actuals.size() << " arguments, but expected " <<
+      callStmt.callee.getArguments().size() << " arguments.";
 
   // Arguments
   auto args = emitArguments(callStmt.actuals, true);
@@ -949,12 +946,6 @@ void LLVMBackend::compile(const ir::Store& store) {
 }
 
 void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
-  /// \todo field writes of scalars to tensors and tensors to tensors should be
-  ///       handled by the lowering so that we only write scalars to scalars
-  ///       in the backend
-//  iassert(isScalar(op.value.type()))
-//      << "assignment non-scalars should have been lowered by now";
-
   iassert(fieldWrite.value.type().isTensor());
   iassert(getFieldType(fieldWrite.elementOrSet,
                        fieldWrite.fieldName).isTensor());
@@ -1284,22 +1275,37 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       }
       break;
     }
-    case TensorStorage::Kind::Indexed: {
-      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
-      llvm::Value *storageSet = compile(tensorStorage.getSystemStorageSet());
+    case TensorStorage::Kind::Diagonal: {
+      iassert(dimensions.size() > 0);
 
-      // Retrieve the size of the neighbor index, which is stored in the last
-      // element of neighbor start index.
-      llvm::Value *setSize =
-          builder->CreateExtractValue(storageSet, {0},
-                                      storageSet->getName()+LEN_SUFFIX);
-      llvm::Value *neighborStartIndex =
-          builder->CreateExtractValue(targetSet, {2}, "neighbors.start");
-      llvm::Value *neighborIndexSizeLoc =
-          builder->CreateInBoundsGEP(neighborStartIndex, setSize,
-                                     "neighbors"+LEN_SUFFIX+PTR_SUFFIX);
-      len = builder->CreateAlignedLoad(neighborIndexSizeLoc, 8,
-                                       "neighbors"+LEN_SUFFIX);
+      // Just need one outer dimensions because diagonal implies square
+      len = emitComputeLen(tensorType->getOuterDimensions()[0]);
+
+      Type blockType = tensorType->getBlockType();
+      llvm::Value *blockLen =
+          emitComputeLen(blockType.toTensor(), TensorStorage::Kind::Dense);
+      len = builder->CreateMul(len, blockLen);
+      break;
+    }
+    case TensorStorage::Kind::Indexed: {
+      // We retrieve the number of non-zero blocks in the index, which is stored
+      // in the last (sentinel) entry of the coords/rowptr index array.
+
+      // We assume the sparse matrix is stored using the BCSR format, which
+      // means the size of the coords array is the size of the first matrix
+      // dimension + 1.
+      auto dimSize = emitComputeLen(tensorType->getOuterDimensions()[0]);
+
+      // Retrieve the index of this tensor from the environment
+      auto tensorIndex =
+          environment->getTensorIndex(tensorStorage.getPathExpression());
+
+      llvm::Value* coordArrayPtr = symtable.get(tensorIndex.getCoordArray());
+      llvm::Value* coordArray = builder->CreateAlignedLoad(coordArrayPtr, 8);
+      llvm::Value* coordArrayLast
+          = builder->CreateInBoundsGEP(coordArray, dimSize,
+                                       "coords"+LEN_SUFFIX+PTR_SUFFIX);
+      len = builder->CreateAlignedLoad(coordArrayLast, 8);
 
       // Multiply by block size
       Type blockType = tensorType->getBlockType();
@@ -1311,18 +1317,6 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
             emitComputeLen(blockType.toTensor(), TensorStorage::Kind::Dense);
         len = builder->CreateMul(len, blockSize);
       }
-      break;
-    }
-    case TensorStorage::Kind::Diagonal: {
-      iassert(dimensions.size() > 0);
-
-      // Just need one outer dimensions because diagonal
-      len = emitComputeLen(tensorType->getOuterDimensions()[0]);
-
-      Type blockType = tensorType->getBlockType();
-      llvm::Value *blockLen =
-          emitComputeLen(blockType.toTensor(), TensorStorage::Kind::Dense);
-      len = builder->CreateMul(len, blockLen);
       break;
     }
     case TensorStorage::Kind::Undefined:

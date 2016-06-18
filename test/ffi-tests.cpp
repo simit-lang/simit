@@ -169,7 +169,7 @@ void dgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, double* B,
   gemv<double>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
 }
 
-TEST(ffi, gemv) {
+TEST(DISABLED_ffi, gemv) {
   // Points
   Set points;
   FieldRef<simit_float> b = points.addField<simit_float>("b");
@@ -212,7 +212,7 @@ TEST(ffi, gemv) {
   
 }
 
-TEST(ffi, gemv_blocked) {
+TEST(DISABLED_ffi, gemv_blocked) {
   // Points
   Set points;
   FieldRef<simit_float,2> b = points.addField<simit_float,2>("b");

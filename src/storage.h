@@ -28,12 +28,12 @@ public:
     /// The dense tensor stored row major.
     Dense,
 
+    /// A diagonal matrix.
+    Diagonal,
+
     /// A sparse matrix whose non-zero components are accessible through a
     /// tensor index.
-    Indexed,
-
-    /// A diagonal matrix.
-    Diagonal
+    Indexed
   };
 
   /// Create an undefined tensor storage

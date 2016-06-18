@@ -9,7 +9,6 @@
 
 #include "backend/backend_impl.h"
 
-#include "environment.h"
 #include "storage.h"
 #include "var.h"
 #include "backend/backend_visitor.h"
@@ -33,6 +32,11 @@ class DataLayout;
 
 
 namespace simit {
+
+namespace ir {
+  class Environment;
+}
+
 namespace backend {
 
 class SimitIRBuilder;
@@ -56,8 +60,10 @@ protected:
 
   // Globally allocated buffers
   std::map<ir::Var, llvm::Value*> buffers;
-  ir::Storage storage;
+
   std::set<ir::Var> globals;
+  ir::Storage storage;
+  const ir::Environment* environment;
 
   llvm::Module *module;
   std::unique_ptr<llvm::DataLayout> dataLayout;
