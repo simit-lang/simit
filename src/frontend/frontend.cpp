@@ -16,6 +16,7 @@
 #include "const_fold.h"
 #include "pad_tensor_blocks.h"
 #include "const_checker.h"
+#include "specialize_generic_functions.h"
 #include "type_checker.h"
 #include "tuple_read_rewriter.h"
 #include "ir_emitter.h"
@@ -38,7 +39,9 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   // hir::PadTensorBlocks().pad(program);
   hir::ConstChecker(errors).check(program);
   //hir::InferElementSets().check(program);
-  //program = hir::SpecializeGenericFunctions().rewrite(program);
+  std::cout << *program << std::endl;
+  hir::SpecializeGenericFunctions().specialize(program);
+  std::cout << *program << std::endl;
   hir::TypeChecker(errors).check(program);
   program = hir::TupleReadRewriter().rewrite(program);
 

@@ -262,12 +262,22 @@ void TypeChecker::visit(ExternDecl::Ptr decl) {
 }
 
 void TypeChecker::visit(FuncDecl::Ptr decl) {
-  bool typeChecked = true;
+  if (!decl->doTypeCheck) {
+    return;
+  }
 
   ctx.scope();
+  for (const auto typeParam : decl->typeParams) {
+    const auto genericElem = ir::ElementType::make(typeParam->setName, {});
+    const auto genericSet = ir::SetType::make(genericElem, {});
+    const auto genericVar = ir::Var(typeParam->setName, genericSet);
+    ctx.addSymbol(genericVar);
+  }
+
+  bool typeChecked = true;
 
   std::vector<ir::Var> arguments;
-  for (auto arg : decl->args) {
+  for (const auto arg : decl->args) {
     const ir::Var argVar = getVar(arg->arg);
 
     if (!argVar.getType().defined()) {
@@ -285,7 +295,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
   }
   
   std::vector<ir::Var> results;
-  for (auto res : decl->results) {
+  for (const auto res : decl->results) {
     const ir::Var result = getVar(res);
 
     if (!result.getType().defined()) {

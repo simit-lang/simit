@@ -16,6 +16,10 @@ void HIRVisitor::visit(StmtBlock::Ptr stmtBlock) {
   }
 }
 
+void HIRVisitor::visit(GenericIndexSet::Ptr set) {
+  visit(to<SetIndexSet>(set));
+}
+
 void HIRVisitor::visit(SetType::Ptr type) {
   type->element->accept(this);
   for (auto endpoint : type->endpoints) {

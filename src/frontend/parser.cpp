@@ -162,6 +162,7 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   const Token funcToken = peek();
   funcDecl->setBeginLoc(funcToken);
   funcDecl->exported = (funcToken.type == Token::Type::EXPORT);
+  funcDecl->doTypeCheck = true;
   
   tryconsume(Token::Type::EXPORT);
   consume(Token::Type::FUNC);
@@ -183,6 +184,7 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
 hir::FuncDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::FuncDecl>();
   procDecl->exported = true;
+  procDecl->doTypeCheck = true;
 
   const Token procToken = consume(Token::Type::PROC);
   procDecl->setBeginLoc(procToken);

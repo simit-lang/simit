@@ -85,7 +85,7 @@ public:
   virtual void visit(std::shared_ptr<StmtBlock>);
   virtual void visit(std::shared_ptr<RangeIndexSet> op) {}
   virtual void visit(std::shared_ptr<SetIndexSet> op) {}
-  virtual void visit(std::shared_ptr<GenericIndexSet> op) {}
+  virtual void visit(std::shared_ptr<GenericIndexSet>);
   virtual void visit(std::shared_ptr<DynamicIndexSet> op) {}
   virtual void visit(std::shared_ptr<ElementType> op) {}
   virtual void visit(std::shared_ptr<Endpoint> op) {}
