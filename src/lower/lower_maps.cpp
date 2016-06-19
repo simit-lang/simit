@@ -122,6 +122,15 @@ private:
     // Add storage descriptor for the new tensors in the inlined map
     updateStorage(stmt, storage);
 
+    // Add result variable indices to the environment
+    for (auto result : op->vars) {
+      auto tensorStorage = storage->getStorage(result);
+      if (tensorStorage.getKind() == TensorStorage::Indexed) {
+        auto& pexpr = tensorStorage.getPathExpression();
+        env->addTensorIndex(pexpr, result);
+      }
+    }
+
     // Add storage from mapped Func's environment
     Func noBody(op->function, Pass::make());
     updateStorage(noBody, storage);
