@@ -9,8 +9,7 @@ namespace ir {
 /// Optimize and lower `func` into the low level part of the Simit IR, that is
 /// is supported by backends. If `print` is true, then the IR will be printed
 /// to stdout between each lowering step.
-Func lower(Func func, bool print=false);
-Func lowerWithTimers(Func func, bool print=false);
+Func lower(Func func, bool print=false, bool time=false);
 
 }}
 #endif

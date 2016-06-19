@@ -12,7 +12,7 @@ namespace ir {
 class Environment;
 class Storage;
 
-/// An index variable loop is a loop associated with a n index variable. An
+/// An index variable loop is a loop associated with an index variable. An
 /// index variable loop can be linked to another index variable loop, which
 /// means that only some of the index variable values need to be traversed, as
 /// determined by tensor indices.

@@ -67,7 +67,7 @@ void visitCallGraph(Func func, const function<void(Func)>& visitRule) {
 }
 
 static inline
-void timingCallGraph(string headerText, Func func, bool print) {
+void printTimedCallGraph(string headerText, Func func, bool print) {
   stringstream ss;
   simit::ir::IRPrinterCallGraph(ss).print(func);
   TimerStorage::getInstance().addSourceLines(ss);
@@ -82,7 +82,7 @@ void printCallGraph(string headerText, Func func, bool print) {
   }
 }
 
-Func lower(Func func, bool print) {
+Func lower(Func func, bool print, bool time) {
 #ifdef GPU
   // Rewrite system assignments
   if (kBackend == "gpu") {
@@ -133,7 +133,13 @@ Func lower(Func func, bool print) {
   // Lower Tensor Reads and Writes
   func = rewriteCallGraph(func, lowerTensorAccesses);
   printCallGraph("Lower Tensor Reads and Writes", func, print);
-  
+
+  if (time) {
+    printTimedCallGraph("Insert Timers", func, print);
+    func = rewriteCallGraph(func, insertTimers);
+    printCallGraph("Insert Timers", func, print);
+  }
+
   // Lower to GPU Kernels
 #if GPU
   if (kBackend == "gpu") {
@@ -149,14 +155,6 @@ Func lower(Func func, bool print) {
     printCallGraph("Fuse Kernels", func, print);
   }
 #endif
-  return func;
-}
-
-Func lowerWithTimers(Func func, bool print) {
-  // Include Timers 
-  timingCallGraph("Insert Timers", func, print);
-  func = rewriteCallGraph(func, insertTimers);
-  printCallGraph("Insert Timers", func, print);
   return func;
 }
 

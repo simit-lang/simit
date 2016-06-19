@@ -119,7 +119,7 @@ int main(int argc, char **argv) {
   int returnValue = RUN_ALL_TESTS();
 
   if (PROFILE) {
-    simit::printTimes(); 
+    simit::ir::printTimes();
   }
   return returnValue;
 }
