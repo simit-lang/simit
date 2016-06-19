@@ -21,7 +21,7 @@ class TensorIndex;
 /// The storage arrangement of a tensor (e.g. dense or stored on a set).
 class TensorStorage {
 public:
-  enum class Kind {
+  enum Kind {
     /// Undefined storage.
     Undefined,
 
@@ -42,13 +42,8 @@ public:
   /// Create a tensor storage descriptor.
   TensorStorage(Kind kind);
 
-  /// Create a system diagonal storage descriptor.
-  TensorStorage(const Expr &targetSet);
-
-  /// Create a system tensor reduced storage descriptor. The 'targetSet'
-  /// argument is the the set that the system tensor was created by mapping
-  /// over. The 'storageSet' is the set the tensor is stored on.
-  TensorStorage(const Expr &targetSet, const Expr &storageSet);
+  /// Create a diagonal or indexed storage descriptor.
+  TensorStorage(Kind kind, const Expr &targetSet);
 
   /// Retrieve the tensor storage type.
   Kind getKind() const;
@@ -71,7 +66,6 @@ public:
 
   // TODO DEPRECATED: These should not be needed with the new TensorIndex system
   const Expr &getSystemTargetSet() const;
-  const Expr &getSystemStorageSet() const;
 
 private:
   struct Content;

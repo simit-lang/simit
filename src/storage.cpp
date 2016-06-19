@@ -21,7 +21,6 @@ struct TensorStorage::Content {
   /// The target set that was used to assemble the system if the tensor is
   /// stored on a system, undefined otherwise.
   Expr systemTargetSet;
-  Expr systemStorageSet;
 
   pe::PathExpression pathExpression;
   map<pair<unsigned,unsigned>, TensorIndex> tensorIndices;
@@ -34,15 +33,9 @@ TensorStorage::TensorStorage(Kind kind) : content(new Content) {
   content->kind = kind;
 }
 
-TensorStorage::TensorStorage(const Expr &targetSet)
-    : TensorStorage(Kind::Diagonal) {
+TensorStorage::TensorStorage(Kind kind, const Expr &targetSet)
+    : TensorStorage(kind) {
   content->systemTargetSet = targetSet;
-}
-
-TensorStorage::TensorStorage(const Expr &targetSet, const Expr &storageSet)
-    : TensorStorage(Kind::Indexed) {
-  content->systemTargetSet = targetSet;
-  content->systemStorageSet = storageSet;
 }
 
 TensorStorage::Kind TensorStorage::getKind() const {
@@ -100,11 +93,6 @@ void TensorStorage::addTensorIndex(Var tensor, unsigned srcDim,
 const Expr &TensorStorage::getSystemTargetSet() const {
   iassert(isSystem()) << "System storages require the target set be provided";
   return content->systemTargetSet;
-}
-
-const Expr &TensorStorage::getSystemStorageSet() const {
-  iassert(isSystem()) << "System storages require the storage set be provided";
-  return content->systemStorageSet;
 }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
@@ -275,7 +263,7 @@ private:
           storage->add(var, TensorStorage(TensorStorage::Kind::Dense));
         }
         else {
-          storage->add(var, TensorStorage(op->target));
+          storage->add(var, TensorStorage(TensorStorage::Diagonal, op->target));
         }
       }
     }
@@ -294,7 +282,7 @@ private:
           }
           else {
             if (op->neighbors.defined()) {
-              tensorStorage = TensorStorage(op->target, op->neighbors);
+              tensorStorage = TensorStorage(TensorStorage::Indexed, op->target);
 
               // Add path expression
               tassert(tensorType->order() == 2)
@@ -303,7 +291,7 @@ private:
               tensorStorage.setPathExpression(peBuilder.getPathExpression(var));
             }
             else {
-              tensorStorage = TensorStorage(op->target);
+              tensorStorage = TensorStorage(TensorStorage::Diagonal,op->target);
             }
           }
           iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
@@ -413,13 +401,12 @@ private:
               tensorStorage = operandStorage.getKind();
               break;
             case TensorStorage::Kind::Indexed:
-              tensorStorage =
-                  TensorStorage(operandStorage.getSystemTargetSet(),
-                                operandStorage.getSystemStorageSet());
+              tensorStorage= TensorStorage(TensorStorage::Indexed,
+                                           operandStorage.getSystemTargetSet());
               break;
             case TensorStorage::Kind::Diagonal:
-              tensorStorage =
-                  TensorStorage(operandStorage.getSystemTargetSet());
+              tensorStorage = TensorStorage(TensorStorage::Diagonal,
+                                            operandStorage.getSystemTargetSet());
               break;
             case TensorStorage::Kind::Undefined:
               unreachable;
