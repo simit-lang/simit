@@ -2,7 +2,20 @@
 #define SIMIT_FFI_H
 
 #include <tuple>
+#include <cstdlib>
 
+namespace simit {
+namespace ffi {
+
+extern "C" inline
+void* simit_malloc(std::size_t size) {
+  return malloc(size);
+}
+
+extern "C" inline
+void simit_free(void* ptr) {
+  return free(ptr);
+}
 
 /// Converts a Simit blocked matrix into a CSR matrix.
 template <typename Float>
@@ -57,4 +70,6 @@ void convertToCSR(Float* bufferA,
   
   (*csrRowStart)[0] = 0;
 }
+
+}}
 #endif
