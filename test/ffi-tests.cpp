@@ -15,12 +15,27 @@ using namespace std;
 using namespace testing;
 using namespace simit;
 using namespace simit::ir;
+using namespace simit::ffi;
 
-extern "C" void sadd(float a, float b, float* c) {
-  *c = a+b;
+static bool noargsVisited = false;
+extern "C" void noargs() {
+  noargsVisited = true;
 }
 
-extern "C" void dadd(double a, double b, double* c) {
+TEST(ffi, noargs) {
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.runSafe();
+  ASSERT_TRUE(noargsVisited);
+  noargsVisited = false;
+}
+
+extern "C"
+void sadd(float a, float b, float* c) {
+  *c = a+b;
+}
+extern "C"
+void dadd(double a, double b, double* c) {
   *c = a+b;
 }
 
@@ -49,17 +64,18 @@ TEST(ffi, scalar_add) {
   SIMIT_EXPECT_FLOAT_EQ(1.0+4.0, cRes);
 }
 
-extern "C" void snegtwo(float a, float b, float* c, float* d) {
+extern "C"
+void snegtwo(float a, float b, float* c, float* d) {
+  *c = -a;
+  *d = -b;
+}
+extern "C"
+void dnegtwo(double a, double b, double* c, double* d) {
   *c = -a;
   *d = -b;
 }
 
-extern "C" void dnegtwo(double a, double b, double* c, double* d) {
-  *c = -a;
-  *d = -b;
-}
-
-TEST(ffi, negtwo) {
+TEST(ffi, scalar_neg_two) {
   Var a("a", ir::Float);
   Var b("b", ir::Float);
   Var c("c", ir::Float);
@@ -87,7 +103,6 @@ TEST(ffi, negtwo) {
   SIMIT_EXPECT_FLOAT_EQ(-aArg, cRes);
   SIMIT_EXPECT_FLOAT_EQ(-bArg, dRes);
 }
-
 
 template<typename Float>
 void vecadd(int aN, Float* a, int bN, Float* b, int cN, Float* c) {
@@ -144,8 +159,8 @@ void gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
   int* csrColIdx;
   Float* csrVals;
 
-  convertToCSR(B, BrowPtr, BcolIdx, BN, BM, BNN, BMM,
-               &csrRowStart, &csrColIdx, &csrVals);
+  simit::ffi::convertToCSR(B, BrowPtr, BcolIdx, BN, BM, BNN, BMM,
+                           &csrRowStart, &csrColIdx, &csrVals);
 
   // spmv
   for (int i=0; i<BN; i++) {
@@ -261,16 +276,81 @@ TEST(ffi, gemv_blocked) {
   SIMIT_EXPECT_FLOAT_EQ(136.0, c2(1));
 }
 
-static bool noargsVisited = false;
-extern "C" void noargs() {
-  noargsVisited = true;
+
+// Tests that use Eigen
+#ifdef EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+#include <Eigen/IterativeLinearSolvers>
+
+template<typename Float>
+Eigen::SparseMatrix<Float,Eigen::RowMajor>
+csr2eigen(int N, int M, int* rowPtr, int* colIdx, Float* vals) {
+  std::vector< Eigen::Triplet<double>> coords;
+  coords.reserve(rowPtr[N]);
+  for (int i=0; i<N; ++i) {
+    for (int ij=rowPtr[i]; ij<rowPtr[i+1]; ++ij) {
+      int j = colIdx[ij];
+      coords.push_back({i,j,vals[ij]});
+    }
+  }
+  Eigen::SparseMatrix<Float,Eigen::RowMajor> mat(N, M);
+  mat.setFromTriplets(coords.begin(), coords.end());
+  mat.makeCompressed();
+  return mat;
 }
 
-TEST(ffi, noargs) {
+extern "C" void dmatrix_neg(int Bn,int Bm,int Bnn,int Bmm,
+                            int* BrowPtr, int* BcolIdx, double* B,
+                            int An,int Am,int Ann,int Amm,
+                            int** ArowPtr, int** AcolIdx, double** A) {
+
+  auto mat = csr2eigen(Bn, Bm, BrowPtr, BcolIdx, B);
+  mat = -mat;
+  mat.makeCompressed();
+
+  auto nnz = mat.nonZeros();
+  *ArowPtr = static_cast<int*>(ffi::simit_malloc((An+1) * sizeof(int)));
+  *AcolIdx = static_cast<int*>(ffi::simit_malloc(   nnz * sizeof(int)));
+  *A    = static_cast<double*>(ffi::simit_malloc(   nnz * sizeof(double)));
+}
+
+
+TEST(DISABLED_ffi, matrix_neg) {
+  Set V;
+  FieldRef<simit_float> a = V.addField<simit_float>("a");
+  FieldRef<simit_float> b = V.addField<simit_float>("b");
+  ElementRef v0 = V.add();
+  ElementRef v1 = V.add();
+  ElementRef v2 = V.add();
+  b(v0) = 1.0;
+  b(v1) = 2.0;
+  b(v2) = 3.0;
+
+  Set E(V,V);
+  FieldRef<simit_float> e = E.addField<simit_float>("e");
+  ElementRef e0 = E.add(v0,v1);
+  ElementRef e1 = E.add(v1,v2);
+  e(e0) = 1.0;
+  e(e1) = 2.0;
+
+  // Compile program and bind arguments
   Function func = loadFunction(TEST_FILE_NAME, "main");
   if (!func.defined()) FAIL();
+  func.bind("V", &V);
+  func.bind("E", &E);
   func.runSafe();
-  ASSERT_TRUE(noargsVisited);
-  noargsVisited = false;
+
+  // Check that inputs are preserved
+  ASSERT_EQ(1.0, b(v0));
+  ASSERT_EQ(2.0, b(v1));
+  ASSERT_EQ(3.0, b(v2));
+
+  // Check that outputs are correct
+  ASSERT_EQ(-3.0, a(v0));
+  ASSERT_EQ(-11.0, a(v1));
+  ASSERT_EQ(-10.0, a(v2));
 }
 
+#endif
