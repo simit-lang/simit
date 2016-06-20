@@ -671,26 +671,29 @@ LLVMBackend::emitArgument(ir::Expr argument, bool includeVectorTypes=false) {
       // as well as the number of rows, columns and blocksize.
       tassert(isa<VarExpr>(argument));
 
-      const TensorStorage& tensorStorage =
-      storage.getStorage(to<VarExpr>(argument)->var);
-      llvm::Value *targetSet = compile(tensorStorage.getSystemTargetSet());
+      auto tensorStorage = storage.getStorage(to<VarExpr>(argument)->var);
+      auto tensorIndex =
+          environment->getTensorIndex(tensorStorage.getPathExpression());
 
-      llvm::Value *rowPtr = builder->CreateExtractValue(targetSet,{2},"rowPtr");
-      llvm::Value *colIdx = builder->CreateExtractValue(targetSet,{3},"colIdx");
-      llvm::Value *Nb;
-      llvm::Value *Mb;
+      llvm::Value* rowPtrPtr = symtable.get(tensorIndex.getCoordArray());
+      llvm::Value* rowPtr = builder->CreateAlignedLoad(rowPtrPtr, 8);
+
+      llvm::Value* colIdxPtr = symtable.get(tensorIndex.getSinkArray());
+      llvm::Value* colIdx = builder->CreateAlignedLoad(colIdxPtr, 8);
 
       auto N = emitComputeLen(dimensions[0]);
       auto M = emitComputeLen(dimensions[1]);
 
       // get block sizes
+      llvm::Value* Nb;
+      llvm::Value* Mb;
       Type blockType = type->getBlockType();
-      vector<IndexDomain> blockDimensions=blockType.toTensor()->getDimensions();
       if (isScalar(blockType)) {
         Nb = llvmInt(1);
         Mb = llvmInt(1);
       }
       else {
+        auto blockDimensions = blockType.toTensor()->getDimensions();
         Nb = emitComputeLen(blockDimensions[0]);
         Mb = emitComputeLen(blockDimensions[1]);
       }
