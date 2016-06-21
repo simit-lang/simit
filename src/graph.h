@@ -786,12 +786,14 @@ class FieldRef<T> : public FieldRefBaseParameterized<T> {
 template <typename ComponentType, int... Dimensions>
 class TensorRef
     : public interfaces::Comparable<TensorRef<ComponentType,Dimensions...>> {
- public:
+public:
   static size_t getOrder() {
     return sizeof...(Dimensions);
   }
 
-  static size_t getSize() {return util::product<Dimensions...>::value;}
+  static size_t getSize() {
+    return util::product<Dimensions...>::value;
+  }
 
   inline TensorRef<ComponentType>& operator=(ComponentType val) {
     static_assert(sizeof...(Dimensions) == 0,
@@ -808,12 +810,6 @@ class TensorRef
       data[i++] = val;
     }
     return *this;
-  }
-
-  inline operator ComponentType() const {
-    static_assert(sizeof...(Dimensions) == 0,
-                  "Can only convert scalar tensors to scalar values.");
-    return data[0];
   }
 
   template <typename... Indices>
@@ -838,12 +834,53 @@ class TensorRef
     return l.data < r.data;
   }
 
- private:
+private:
   inline TensorRef(ComponentType *data) : data(data) {}
   ComponentType *data;
 
   friend class FieldRefBaseParameterized<ComponentType, Dimensions...>;
 };
+
+/// Scalar tensor.
+template <typename ComponentType>
+class TensorRef<ComponentType>
+    :  public interfaces::Comparable<TensorRef<ComponentType>> {
+public:
+  static size_t getOrder() {
+    return 0;
+  }
+
+  static size_t getSize() {
+    return 1;
+  }
+
+  inline operator ComponentType() const {
+    return *data;
+  }
+
+  inline TensorRef<ComponentType>&
+  operator=(ComponentType val) {
+    data[0] = val;
+    return *this;
+  }
+
+  friend bool operator==(const TensorRef& l, const TensorRef& r){
+    return l.data == r.data;
+  }
+
+  friend bool operator<(const TensorRef& l, const TensorRef& r){
+    return l.data < r.data;
+  }
+
+private:
+  inline TensorRef(ComponentType *data) : data(data) {}
+  ComponentType* data;
+
+  friend class FieldRefBaseParameterized<ComponentType>;
+};
+
+
+// Print
 
 template <typename T, int... dims>
 std::ostream &operator<<(std::ostream &os, const TensorRef<T, dims...> & t) {
@@ -888,6 +925,10 @@ std::ostream &operator<<(std::ostream &os, const TensorRef<T, size> &t) {
   return os << "]";
 }
 
+//template <typename T>
+//std::ostream &operator<<(std::ostream& os, const TensorRef<T>& t) {
+//  return os << static_cast<T>(t);
+//}
 
 // Graph generators
 void createElements(Set *elements, unsigned num);
