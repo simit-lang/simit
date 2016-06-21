@@ -168,13 +168,13 @@ protected:
   /// and list of global buffers
   virtual llvm::Value *makeGlobalTensor(ir::Var var);
   
-  /// Compile a single argument and add it to the vector args, as well as its
-  /// type to the vector of argument types.
+  /// Compile a single argument and return its llvm values
   std::vector<llvm::Value*> emitArgument(ir::Expr argument,
-                                         bool includeVectorTypes);
+                                         bool excludeStaticTypes);
 
+  /// Compile several arguments and return their llvm values
   std::vector<llvm::Value*> emitArguments(std::vector<ir::Expr> arguments,
-                                          bool includeVectorTypes);
+                                          bool excludeStaticTypes);
 
   void emitInternalCall(const ir::CallStmt& callStmt);
   void emitExternCall(const ir::CallStmt& callStmt);

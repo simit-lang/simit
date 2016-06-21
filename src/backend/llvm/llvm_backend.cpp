@@ -152,9 +152,9 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
     // Emit function
     symtable.scope(); // put function arguments in new scope
 
-    bool external = (f == func);
+    bool exported = (f == func);
     llvmFunc = emitEmptyFunction(f.getName(), f.getArguments(),
-                                 f.getResults(), external);
+                                 f.getResults(), exported);
 
     // Add constants to symbol table
     for (auto &global : f.getEnvironment().getConstants()) {
@@ -650,23 +650,15 @@ void LLVMBackend::compile(const ir::AssignStmt& assignStmt) {
 }
 
 std::vector<llvm::Value*>
-LLVMBackend::emitArgument(ir::Expr argument, bool includeVectorTypes=false) {
-  std::vector<llvm::Value*> args;
+LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
+  std::vector<llvm::Value*> argumentValues;
 
-  if (argument.type().isTensor() &&
-      argument.type().toTensor()->hasSystemDimensions()) {
+  if (argument.type().isTensor()) {
     auto type = argument.type().toTensor();
     vector<IndexDomain> dimensions = type->getDimensions();
 
-    // Dense vectors and matrices
-    if (!argument.type().toTensor()->isSparse()) {
-      if (includeVectorTypes) {
-        auto N = emitComputeLen(dimensions[0]);
-        args.push_back(N);
-      }
-    }
-    // Sparse matrix
-    else {
+    // Sparse matrices
+    if (type->order() == 2 && type->hasSystemDimensions()) {
       // we need to add additional arguments: rowPtr and colIdx pointers,
       // as well as the number of rows, columns and blocksize.
       tassert(isa<VarExpr>(argument));
@@ -702,32 +694,39 @@ LLVMBackend::emitArgument(ir::Expr argument, bool includeVectorTypes=false) {
       // - Type:    N, M, Nb, Mb,
       // - Indices: rowPtr, colIdx,
       // - Values:  vals
-      args.push_back(N);
-      args.push_back(M);
-      args.push_back(Nb);
-      args.push_back(Mb);
-      args.push_back(rowPtr);
-      args.push_back(colIdx);
+      argumentValues.push_back(N);
+      argumentValues.push_back(M);
+      argumentValues.push_back(Nb);
+      argumentValues.push_back(Mb);
+      argumentValues.push_back(rowPtr);
+      argumentValues.push_back(colIdx);
+    }
+    // Dense vectors and matrices
+    else if (type->order() == 1 || type->order() == 2) {
+      if (!excludeStaticTypes) {
+        auto N = emitComputeLen(dimensions[0]);
+        argumentValues.push_back(N);
+      }
     }
   }
+  argumentValues.push_back(compile(argument));
 
-  args.push_back(compile(argument));
-  return args;
+  return argumentValues;
 }
 
 std::vector<llvm::Value*>
 LLVMBackend::emitArguments(std::vector<ir::Expr> arguments,
-                           bool includeVectorTypes=false) {
+                           bool excludeStaticTypes) {
   std::vector<llvm::Value*> args;
   for (auto argument : arguments) {
-    auto arg = emitArgument(argument, includeVectorTypes);
+    auto arg = emitArgument(argument, excludeStaticTypes);
     args.insert(args.end(), arg.begin(), arg.end());
   }
   return args;
 }
 
 void LLVMBackend::emitInternalCall(const ir::CallStmt& callStmt) {
-  auto args = emitArguments(callStmt.actuals);
+  auto args = emitArguments(callStmt.actuals, true);
 
   if (module->getFunction(callStmt.callee.getName())) {
     for (Var r : callStmt.results) {
@@ -767,7 +766,7 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
       callStmt.callee.getArguments().size() << " arguments.";
 
   // Arguments
-  auto args = emitArguments(callStmt.actuals, true);
+  auto args = emitArguments(callStmt.actuals, false);
 
   // Results
   if (callStmt.results.size() > 0) {
@@ -775,7 +774,7 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
     for (auto resultVar : callStmt.results) {
       resultExprs.push_back(resultVar);
     }
-    auto results = emitArguments(resultExprs, true);
+    auto results = emitArguments(resultExprs, false);
     args.insert(args.end(), results.begin(), results.end());
   }
 
@@ -790,7 +789,7 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
 }
 
 void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
-  auto args = emitArguments(callStmt.actuals);
+  auto args = emitArguments(callStmt.actuals, true);
 
   llvm::Function *fun = nullptr;
   Func callee = callStmt.callee;
