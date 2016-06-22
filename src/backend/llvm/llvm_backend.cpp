@@ -725,6 +725,88 @@ LLVMBackend::emitArguments(std::vector<ir::Expr> arguments,
   return args;
 }
 
+std::vector<llvm::Value*> LLVMBackend::emitResult(ir::Var result,
+                                                  bool excludeStaticTypes) {
+  std::vector<llvm::Value*> resultValues;
+
+  if (result.getType().isTensor()) {
+    auto type = result.getType().toTensor();
+    vector<IndexDomain> dimensions = type->getDimensions();
+
+    // Sparse matrices
+    if (type->order() == 2 && type->hasSystemDimensions()) {
+      // we need to add additional arguments: rowPtr and colIdx pointers,
+      // as well as the number of rows, columns and blocksize.
+      tassert(isa<VarExpr>(result));
+
+      auto tensorStorage = storage.getStorage(to<VarExpr>(result)->var);
+      auto tensorIndex =
+      environment->getTensorIndex(tensorStorage.getPathExpression());
+
+      llvm::Value* rowPtrPtr = symtable.get(tensorIndex.getCoordArray());
+      llvm::Value* rowPtr = builder->CreateAlignedLoad(rowPtrPtr, 8);
+
+      llvm::Value* colIdxPtr = symtable.get(tensorIndex.getSinkArray());
+      llvm::Value* colIdx = builder->CreateAlignedLoad(colIdxPtr, 8);
+
+      auto N = emitComputeLen(dimensions[0]);
+      auto M = emitComputeLen(dimensions[1]);
+
+      // get block sizes
+      llvm::Value* Nb;
+      llvm::Value* Mb;
+      Type blockType = type->getBlockType();
+      if (isScalar(blockType)) {
+        Nb = llvmInt(1);
+        Mb = llvmInt(1);
+      }
+      else {
+        auto blockDimensions = blockType.toTensor()->getDimensions();
+        Nb = emitComputeLen(blockDimensions[0]);
+        Mb = emitComputeLen(blockDimensions[1]);
+      }
+
+      // Argument list::
+      // - Type:    N, M, Nb, Mb,
+      // - Indices: rowPtr, colIdx,
+      // - Values:  vals
+      resultValues.push_back(N);
+      resultValues.push_back(M);
+      resultValues.push_back(Nb);
+      resultValues.push_back(Mb);
+      resultValues.push_back(rowPtr);
+      resultValues.push_back(colIdx);
+    }
+    // Dense vectors and matrices
+    else if (type->order() == 1 || type->order() == 2) {
+      if (!excludeStaticTypes) {
+        auto N = emitComputeLen(dimensions[0]);
+        resultValues.push_back(N);
+      }
+    }
+  }
+
+  auto resultValue = compile(result);
+  auto resultPtr = builder->CreateAlloca(resultValue->getType(), llvmInt(1),
+                                         resultValue->getName()+PTR_SUFFIX);
+  //    std::cout << *result->getType() << std::endl;
+  //    std::cout << *resultPtr->getType() << std::endl;
+  //    builder->CreateStore(result, resultPtr);
+  resultValues.push_back(resultPtr);
+  //    val = symtable.get(varExpr.var);
+  return resultValues;
+}
+
+std::vector<llvm::Value*> LLVMBackend::emitResults(std::vector<ir::Var> results,
+                                                   bool excludeStaticTypes) {
+  std::vector<llvm::Value*> resultValues;
+  for (auto result : results) {
+    auto res = emitResult(result, excludeStaticTypes);
+    resultValues.insert(resultValues.end(), res.begin(), res.end());
+  }
+  return resultValues;
+}
+
 void LLVMBackend::emitInternalCall(const ir::CallStmt& callStmt) {
   auto args = emitArguments(callStmt.actuals, true);
 
@@ -775,6 +857,7 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
       resultExprs.push_back(resultVar);
     }
     auto results = emitArguments(resultExprs, false);
+//    auto results = emitResults(callStmt.results, false);
     args.insert(args.end(), results.begin(), results.end());
   }
 

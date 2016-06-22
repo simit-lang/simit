@@ -176,6 +176,14 @@ protected:
   std::vector<llvm::Value*> emitArguments(std::vector<ir::Expr> arguments,
                                           bool excludeStaticTypes);
 
+  /// Compile a single result and return its llvm values
+  std::vector<llvm::Value*> emitResult(ir::Var result,
+                                       bool excludeStaticTypes);
+
+  /// Compile several results and return their llvm values
+  std::vector<llvm::Value*> emitResults(std::vector<ir::Var> results,
+                                        bool excludeStaticTypes);
+
   void emitInternalCall(const ir::CallStmt& callStmt);
   void emitExternCall(const ir::CallStmt& callStmt);
   void emitIntrinsicCall(const ir::CallStmt& callStmt);
