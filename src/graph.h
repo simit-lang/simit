@@ -10,9 +10,9 @@
 #include <ostream>
 
 #include "tensor_type.h"
-#include "variadic.h"
 #include "error.h"
 #include "types.h"
+#include "util/variadic.h"
 #include "interfaces/comparable.h"
 
 namespace simit {
