@@ -34,6 +34,7 @@
 #include "llvm_codegen.h"
 #include "llvm_util.h"
 
+#include "macros.h"
 #include "types.h"
 #include "func.h"
 #include "ir.h"
@@ -172,7 +173,6 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
     symtable.unscope();
   }
   iassert(llvmFunc);
-
 
   // Declare malloc and free if necessary
   llvm::FunctionType *m =
@@ -725,15 +725,17 @@ LLVMBackend::emitArguments(std::vector<ir::Expr> arguments,
   return args;
 }
 
-std::vector<llvm::Value*> LLVMBackend::emitResult(ir::Var result,
-                                                  bool excludeStaticTypes) {
+vector<llvm::Value*>
+LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
+                        vector<std::pair<ir::Var, llvm::Value*>>* resVals) {
   std::vector<llvm::Value*> resultValues;
 
   if (result.getType().isTensor()) {
     auto type = result.getType().toTensor();
     vector<IndexDomain> dimensions = type->getDimensions();
 
-    // Sparse matrices
+    // Emit type arguments
+    // Sparse Matrices
     if (type->order() == 2 && type->hasSystemDimensions()) {
       // we need to add additional arguments: rowPtr and colIdx pointers,
       // as well as the number of rows, columns and blocksize.
@@ -784,24 +786,32 @@ std::vector<llvm::Value*> LLVMBackend::emitResult(ir::Var result,
         resultValues.push_back(N);
       }
     }
+
+    // Emit value argument
+    if (type->order() == 0) {
+      resultValues.push_back(compile(result));
+    }
+    else {
+      auto resultPtr = builder->CreateAlloca(llvmType(result.getType()),
+                                             llvmInt(1),
+                                             result.getName()+PTR_SUFFIX);
+      resultValues.push_back(resultPtr);
+      resVals->push_back(make_pair(result, resultPtr));
+    }
+  }
+  else {
+    terror << "Only tensor return values currently supported";
   }
 
-  auto resultValue = compile(result);
-  auto resultPtr = builder->CreateAlloca(resultValue->getType(), llvmInt(1),
-                                         resultValue->getName()+PTR_SUFFIX);
-  //    std::cout << *result->getType() << std::endl;
-  //    std::cout << *resultPtr->getType() << std::endl;
-  //    builder->CreateStore(result, resultPtr);
-  resultValues.push_back(resultPtr);
-  //    val = symtable.get(varExpr.var);
   return resultValues;
 }
 
-std::vector<llvm::Value*> LLVMBackend::emitResults(std::vector<ir::Var> results,
-                                                   bool excludeStaticTypes) {
+vector<llvm::Value*>
+LLVMBackend::emitResults(vector<ir::Var> results, bool excludeStaticTypes,
+                         vector<std::pair<ir::Var, llvm::Value*>>* resVals) {
   std::vector<llvm::Value*> resultValues;
   for (auto result : results) {
-    auto res = emitResult(result, excludeStaticTypes);
+    auto res = emitResult(result, excludeStaticTypes, resVals);
     resultValues.insert(resultValues.end(), res.begin(), res.end());
   }
   return resultValues;
@@ -851,13 +861,9 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
   auto args = emitArguments(callStmt.actuals, false);
 
   // Results
+  vector<std::pair<ir::Var, llvm::Value*>> resultVals;
   if (callStmt.results.size() > 0) {
-    std::vector<Expr> resultExprs;
-    for (auto resultVar : callStmt.results) {
-      resultExprs.push_back(resultVar);
-    }
-    auto results = emitArguments(resultExprs, false);
-//    auto results = emitResults(callStmt.results, false);
+    auto results = emitResults(callStmt.results, false, &resultVals);
     args.insert(args.end(), results.begin(), results.end());
   }
 
@@ -868,7 +874,16 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
     name = floatType + name;
   }
 
-  emitCall(name, args);
+  auto errorCode = emitCall(name, args);
+  UNUSED(errorCode);  // TODO: Accept and handle error code from extern func
+
+  // Load the results into llvm variables
+  for (auto resultVal : resultVals) {
+    auto var = resultVal.first;
+    auto llvmPtr = resultVal.second;
+    auto llvmVar = builder->CreateLoad(llvmPtr, var.getName());
+    symtable.insert(var, llvmVar);
+  }
 }
 
 void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {

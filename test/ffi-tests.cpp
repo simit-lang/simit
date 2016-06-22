@@ -61,7 +61,7 @@ TEST(ffi, scalar_add) {
 
   function.runSafe();
 
-  SIMIT_EXPECT_FLOAT_EQ(1.0+4.0, cRes);
+  SIMIT_EXPECT_FLOAT_EQ(5.0, cRes);
 }
 
 extern "C"
@@ -105,18 +105,19 @@ TEST(ffi, scalar_neg_two) {
 }
 
 template<typename Float>
-void vecadd(int aN, Float* a, int bN, Float* b, int cN, Float* c) {
+void vecadd(int aN, Float* a, int bN, Float* b, int cN, Float** c) {
   iassert(aN == bN && bN == cN);
+  *c = static_cast<Float*>(simit_malloc(cN * sizeof(Float)));
   for (int i=0; i<aN; ++i) {
-    c[i] = a[i] + b[i];
+    (*c)[i] = a[i] + b[i];
   }
 }
 extern "C"
-void svecadd(int aN, float* a, int bN, float* b, int cN, float* c) {
+void svecadd(int aN, float* a, int bN, float* b, int cN, float** c) {
   vecadd<float>(aN,a, bN,b, cN,c);
 }
 extern "C"
-void dvecadd(int aN, double* a, int bN, double* b, int cN, double* c) {
+void dvecadd(int aN, double* a, int bN, double* b, int cN, double** c) {
   vecadd<double>(aN,a, bN,b, cN,c);
 }
 
@@ -154,7 +155,10 @@ TEST(ffi, vector_add) {
 
 template<typename Float>
 void gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
-          int cN, Float* c, int aN, Float* a) {
+          int cN, Float* c, int aN, Float** a) {
+  iassert(BN == aN && BM == cN);
+  *a = static_cast<Float*>(simit_malloc(aN * BNN * sizeof(Float)));
+
   int* csrRowStart;
   int* csrColIdx;
   Float* csrVals;
@@ -164,23 +168,24 @@ void gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
 
   // spmv
   for (int i=0; i<BN; i++) {
-    a[i] = 0;
+    (*a)[i] = 0;
     for (int j=csrRowStart[i]; j<csrRowStart[i+1]; j++) {
-      a[i] += csrVals[j] * c[csrColIdx[j]];
+      (*a)[i] += csrVals[j] * c[csrColIdx[j]];
     }
   }
+
   free(csrRowStart);
   free(csrColIdx);
   free(csrVals);
 }
 extern "C"
 void sgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, float* B,
-           int cN, float* c, int aN, float* a) {
+           int cN, float* c, int aN, float** a) {
   gemv<float>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
 }
 extern "C"
 void dgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, double* B,
-           int cN, double* c, int aN, double* a) {
+           int cN, double* c, int aN, double** a) {
   gemv<double>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
 }
 

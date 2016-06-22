@@ -12,6 +12,6 @@ extern func vecadd(a: tensor[points](float), b: tensor[points](float))
 export func main()
   a = points.a;
   b = points.b;
-  tmp = vecadd(a, b);
-  points.c = tmp;
+  c = vecadd(a, b);
+  points.c = c;
 end

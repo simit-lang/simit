@@ -249,6 +249,64 @@ private:
     }
   }
 
+  void visit(const AssignStmt *op) {
+    Var var = op->var;
+    Type type = var.getType();
+    Type rhsType = op->value.type();
+
+    if (!isScalar(type)) {
+      iassert(type.isTensor());
+      const TensorType *ttype = type.toTensor();
+      
+      // Element tensor and system vectors are dense.
+      if (isElementTensorType(ttype) || ttype->order() <= 1) {
+        if (!storage->hasStorage(var)) {
+          determineStorage(var);
+        }
+      }
+      // System matrices
+      else {
+        determineStorage(var, op->value);
+
+        if (isa<IndexExpr>(op->value)) {
+          peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
+          pe::PathExpression pexpr = peBuilder.getPathExpression(var);
+          storage->getStorage(var).setPathExpression(pexpr);
+        } else if (isa<VarExpr>(op->value) && rhsType.isTensor()) {
+          pe::PathExpression pexpr = storage->getStorage(to<VarExpr>(op->value)->var).getPathExpression();
+          storage->getStorage(var).setPathExpression(pexpr);
+        }
+      }
+    }
+  }
+
+  void visit(const TensorWrite *op) {
+    if (isa<VarExpr>(op->tensor)) {
+      const Var &var = to<VarExpr>(op->tensor)->var;
+      Type type = var.getType();
+      if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
+        determineStorage(var);
+      }
+    }
+  }
+
+  void visit(const CallStmt* op) {
+    if (op->callee.getKind() == Func::External) {
+      for (auto& result : op->results) {
+        if (result.getType().isTensor()) {
+          auto type = result.getType().toTensor();
+          if (type->order() == 1 || !type->hasSystemDimensions()) {
+            storage->add(result, TensorStorage(TensorStorage::Kind::Dense));
+          }
+          else {
+            terror << "add support sparse matrix returns from extern funcs";
+//            storage->add(result, TensorStorage(TensorStorage::Indexed));
+          }
+        }
+      }
+    }
+  }
+
   void visit(const Map *op) {
     // If the map target set is not an edge set, then matrices are diagonal.
     // Otherwise, the matrices are indexed with a path expression
@@ -297,48 +355,6 @@ private:
           iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
           storage->add(var, tensorStorage);
         }
-      }
-    }
-  }
-
-  void visit(const AssignStmt *op) {
-    Var var = op->var;
-    Type type = var.getType();
-    Type rhsType = op->value.type();
-
-    if (!isScalar(type)) {
-      iassert(type.isTensor());
-      const TensorType *ttype = type.toTensor();
-      
-      // Element tensor and system vectors are dense.
-      if (isElementTensorType(ttype) || ttype->order() <= 1) {
-        if (!storage->hasStorage(var)) {
-          determineStorage(var);
-        }
-      }
-      // System matrices
-      else {
-        // assume system reduced storage
-        determineStorage(var, op->value);
-
-        if (isa<IndexExpr>(op->value)) {
-          peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
-          pe::PathExpression pexpr = peBuilder.getPathExpression(var);
-          storage->getStorage(var).setPathExpression(pexpr);
-        } else if (isa<VarExpr>(op->value) && rhsType.isTensor()) {
-          pe::PathExpression pexpr = storage->getStorage(to<VarExpr>(op->value)->var).getPathExpression();
-          storage->getStorage(var).setPathExpression(pexpr);
-        }
-      }
-    }
-  }
-
-  void visit(const TensorWrite *op) {
-    if (isa<VarExpr>(op->tensor)) {
-      const Var &var = to<VarExpr>(op->tensor)->var;
-      Type type = var.getType();
-      if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
-        determineStorage(var);
       }
     }
   }
