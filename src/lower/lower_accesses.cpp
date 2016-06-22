@@ -186,9 +186,9 @@ private:
           Expr coords = tensorIndex.getCoordArray();
           Expr sinks  = tensorIndex.getSinkArray();
 
-          Var locVar("@locVar", Int);
+          Var locVar(INTERNAL_PREFIX("locVar"), Int);
           spill(VarDecl::make(locVar));
-          spill(CallStmt::make({locVar}, intrinsics::loc(), {i,j,coords,sinks}));
+          spill(CallStmt::make({locVar}, intrinsics::loc(),{i,j,coords,sinks}));
           index = locVar;
         }
         break;

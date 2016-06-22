@@ -5,6 +5,7 @@
 #include <map>
 #include <ostream>
 #include "var.h"
+#include "macros.h"
 #include "util/name_generator.h"
 
 namespace simit {
@@ -109,7 +110,8 @@ public:
   void addTemporary(const Var& var);
   
   /// Create a temporary variable.
-  Var createTemporary(const Type &type, const std::string name="@tmp");
+  Var createTemporary(const Type &type,
+                      const std::string name=INTERNAL_PREFIX("tmp"));
 
   /// Add a tensor index described by the given path expression to the
   /// environment, and associate it with var.

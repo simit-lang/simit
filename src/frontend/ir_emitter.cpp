@@ -610,11 +610,12 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
     unsigned i = 0;
     for (auto &arg : indices) {
       if (expr->indices[i]->isSlice()) {
-        auto iv = ir::IndexVar("@tmpfree" + std::to_string(i), dimensions[i]);
+        auto iv = ir::IndexVar(INTERNAL_PREFIX("tmpfree") + std::to_string(i),
+                               dimensions[i]);
         allivars.push_back(iv);
         freeVars.push_back(iv);
       } else {
-        auto iv = ir::IndexVar("@tmpfixed" + std::to_string(i),
+        auto iv = ir::IndexVar(INTERNAL_PREFIX("tmpfixed") + std::to_string(i),
                                dimensions[i], new ir::Expr(arg));
         allivars.push_back(iv);
       }

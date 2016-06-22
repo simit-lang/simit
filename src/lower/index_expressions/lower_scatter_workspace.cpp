@@ -394,7 +394,8 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
         // Sparse output
         IndexDomain workspaceDomain = type->getDimensions()[1]; // Row workspace
         Type workspaceType = TensorType::make(workspaceCType,{workspaceDomain});
-        workspace = environment->createTemporary(workspaceType, "@workspace");
+        workspace = environment->createTemporary(workspaceType,
+                                                 INTERNAL_PREFIX("workspace"));
         environment->addTemporary(workspace);
         storage->add(workspace, TensorStorage::Kind::Dense);
       }

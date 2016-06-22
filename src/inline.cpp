@@ -154,22 +154,22 @@ Stmt inlineMapFunction(const Map *map, Var lv, MapFunctionRewriter &rewriter) {
     Var i("i", Int);
     Var j("j", Int);
 
-    Var eps("@eps", TensorType::make(ScalarType::Int,
-                                     {IndexDomain(cardinality)}));
+    Var eps(INTERNAL_PREFIX("eps"), TensorType::make(ScalarType::Int,
+                                                     {IndexDomain(cardinality)}));
     Expr endpoints = IndexRead::make(target, IndexRead::Endpoints);
     Expr epLoc = Add::make(Mul::make(lv, cardinality), i);
     Expr ep = Load::make(endpoints, epLoc);
     Stmt epsInit = TensorWrite::make(eps, {i}, ep);
     Stmt epsInitLoop = ForRange::make(i, 0, cardinality, epsInit);
 
-    Var locs("@locs", TensorType::make(ScalarType::Int,
-                                       {IndexDomain(cardinality),
-                                        IndexDomain(cardinality)}));
+    Var locs(INTERNAL_PREFIX("locs"), TensorType::make(ScalarType::Int,
+                                                       {IndexDomain(cardinality),
+                                                        IndexDomain(cardinality)}));
 
     Expr nbrs_start = IndexRead::make(target, IndexRead::NeighborsStart);
     Expr nbrs = IndexRead::make(target, IndexRead::Neighbors);
 
-    Var locVar("@locVar", Int);
+    Var locVar(INTERNAL_PREFIX("locVar"), Int);
     Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
                                   {Load::make(eps,i),
                                    Load::make(eps,j),
