@@ -184,7 +184,6 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   llvm::Function *free =
       llvm::cast<llvm::Function>(module->getOrInsertFunction("free", f));
 
-
   // Create initialization function
   emitEmptyFunction(func.getName()+"_init", func.getArguments(),
                     func.getResults(), true);

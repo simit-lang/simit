@@ -10,7 +10,6 @@ namespace ir {
 class ReductionOperator;
 struct ForDomain;
 
-// namespace {
 struct VarContent {
   std::string name;
   Type type;
@@ -19,7 +18,6 @@ struct VarContent {
   friend inline void aquire(VarContent *c) {++c->ref;}
   friend inline void release(VarContent *c) {if (--c->ref==0) delete c;}
 };
-// }
 
 /// A Simit variable.
 class Var : public util::IntrusivePtr<VarContent> {
