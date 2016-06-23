@@ -160,20 +160,20 @@ TEST(ffi, vector_add) {
 }
 
 template<typename Float>
-int gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
+int gemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, Float* B,
          int cN, Float* c, int aN, Float** a) {
-  iassert(BN == aN && BM == cN);
-  *a = static_cast<Float*>(simit_malloc(aN * BNN * sizeof(Float)));
+  iassert(Bn == aN && Bm == cN);
+  *a = static_cast<Float*>(simit_malloc(aN * Bnn * sizeof(Float)));
 
   int* csrRowStart;
   int* csrColIdx;
   Float* csrVals;
 
-  simit::ffi::convertToCSR(B, BrowPtr, BcolIdx, BN, BM, BNN, BMM,
+  simit::ffi::convertToCSR(B, BrowPtr, BcolIdx, Bn, Bm, Bnn, Bmm,
                            &csrRowStart, &csrColIdx, &csrVals);
 
   // spmv
-  for (int i=0; i<BN; i++) {
+  for (int i=0; i<Bn; i++) {
     (*a)[i] = 0;
     for (int j=csrRowStart[i]; j<csrRowStart[i+1]; j++) {
       (*a)[i] += csrVals[j] * c[csrColIdx[j]];
@@ -186,14 +186,14 @@ int gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
   return 0;
 }
 extern "C"
-int sgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, float* B,
+int sgemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, float* B,
           int cN, float* c, int aN, float** a) {
-  return gemv<float>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
+  return gemv<float>(Bn, Bm, BrowPtr, BcolIdx, Bnn, Bmm, B, cN, c, aN, a);
 }
 extern "C"
-int dgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, double* B,
+int dgemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, double* B,
           int cN, double* c, int aN, double** a) {
-  return gemv<double>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
+  return gemv<double>(Bn, Bm, BrowPtr, BcolIdx, Bnn, Bmm, B, cN, c, aN, a);
 }
 
 TEST(ffi, gemv) {
@@ -313,10 +313,11 @@ csr2eigen(int N, int M, int* rowPtr, int* colIdx, Float* vals) {
   return mat;
 }
 
-extern "C" void dmatrix_neg(int Bn,int Bm,int Bnn,int Bmm,
-                            int* BrowPtr, int* BcolIdx, double* B,
-                            int An,int Am,int Ann,int Amm,
-                            int** ArowPtr, int** AcolIdx, double** A) {
+extern "C" void
+dmatrix_neg(int Bn,  int Bm,  int* BrowPtr, int* BcolIdx,
+            int Bnn, int Bmm, double* B,
+            int An,  int Am,  int** ArowPtr, int** AcolIdx,
+            int Ann, int Amm, double** A) {
 
   auto mat = csr2eigen(Bn, Bm, BrowPtr, BcolIdx, B);
   mat = -mat;
@@ -355,14 +356,14 @@ TEST(DISABLED_ffi, matrix_neg) {
   func.runSafe();
 
   // Check that inputs are preserved
-  ASSERT_EQ(1.0, b(v0));
-  ASSERT_EQ(2.0, b(v1));
-  ASSERT_EQ(3.0, b(v2));
+  ASSERT_EQ(1.0, (double)b(v0));
+  ASSERT_EQ(2.0, (double)b(v1));
+  ASSERT_EQ(3.0, (double)b(v2));
 
   // Check that outputs are correct
-  ASSERT_EQ(-3.0, a(v0));
-  ASSERT_EQ(-11.0, a(v1));
-  ASSERT_EQ(-10.0, a(v2));
+  ASSERT_EQ(-3.0,  (double)a(v0));
+  ASSERT_EQ(-11.0, (double)a(v1));
+  ASSERT_EQ(-10.0, (double)a(v2));
 }
 
 #endif

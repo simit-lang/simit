@@ -672,33 +672,34 @@ LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
       llvm::Value* colIdxPtr = symtable.get(tensorIndex.getSinkArray());
       llvm::Value* colIdx = builder->CreateAlignedLoad(colIdxPtr, 8);
 
-      auto N = emitComputeLen(dimensions[0]);
-      auto M = emitComputeLen(dimensions[1]);
+      auto n = emitComputeLen(dimensions[0]);
+      auto m = emitComputeLen(dimensions[1]);
 
-      // get block sizes
-      llvm::Value* Nb;
-      llvm::Value* Mb;
+      // Argument list:
+      // - Top-level type:    n, m
+      // - Top-level indices: rowPtr, colIdx,
+      // - Block type:        nn, mm
+      // - Values:  vals
+      argumentValues.push_back(n);
+      argumentValues.push_back(m);
+      argumentValues.push_back(rowPtr);
+      argumentValues.push_back(colIdx);
+
+      // Emit block sizes.
+      llvm::Value* nn;
+      llvm::Value* mm;
       Type blockType = type->getBlockType();
       if (isScalar(blockType)) {
-        Nb = llvmInt(1);
-        Mb = llvmInt(1);
+        nn = llvmInt(1);
+        mm = llvmInt(1);
       }
       else {
         auto blockDimensions = blockType.toTensor()->getDimensions();
-        Nb = emitComputeLen(blockDimensions[0]);
-        Mb = emitComputeLen(blockDimensions[1]);
+        nn = emitComputeLen(blockDimensions[0]);
+        mm = emitComputeLen(blockDimensions[1]);
       }
-
-      // Argument list::
-      // - Type:    N, M, Nb, Mb,
-      // - Indices: rowPtr, colIdx,
-      // - Values:  vals
-      argumentValues.push_back(N);
-      argumentValues.push_back(M);
-      argumentValues.push_back(Nb);
-      argumentValues.push_back(Mb);
-      argumentValues.push_back(rowPtr);
-      argumentValues.push_back(colIdx);
+      argumentValues.push_back(nn);
+      argumentValues.push_back(mm);
     }
     // Dense vectors and matrices
     else if (type->order() == 1 || type->order() == 2) {
