@@ -135,7 +135,7 @@ void invInit() {
 static Func solveVar;
 void solveInit() {
   solveVar = Func("solve",
-                  {Var(), Var(), Var()},
+                  {Var("A", Type()), Var("b", Type()), Var("c", Type())},
                   {Var("r", Float)},
                   Func::Intrinsic);
 }

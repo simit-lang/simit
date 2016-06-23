@@ -507,6 +507,33 @@ void IREmitter::visit(DivExpr::Ptr expr) {
   retExpr = ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
 }
 
+void IREmitter::visit(LeftDivExpr::Ptr expr) {
+  // Ax = b
+  const ir::Expr lhs = emitExpr(expr->lhs);
+  const ir::Expr rhs = emitExpr(expr->rhs);
+
+  const ir::Func solve = ctx->getFunction("solve");
+
+  auto A = emitExpr(expr->lhs);
+  auto b = emitExpr(expr->rhs);
+
+  iassert(A.type().isTensor());
+  auto Atype = A.type().toTensor();
+  iassert(Atype->order() == 2);
+
+  // The type of x in $Ax = b$ is the same as the second dimension of A.
+  auto xtype = ir::TensorType::make(Atype->getComponentType(),
+                                    {Atype->getDimensions()[1]},
+                                    true);
+
+  const ir::Var x = ctx->getBuilder()->temporary(ir::Type(xtype), "x");
+  const ir::Stmt callStmt = ir::CallStmt::make({}, solve, {A, b, x});
+
+  ctx->addStatement(ir::VarDecl::make(x));
+  ctx->addStatement(callStmt);
+  retExpr = ir::VarExpr::make(x);
+}
+
 void IREmitter::visit(ElwiseMulExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);

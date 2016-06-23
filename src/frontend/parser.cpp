@@ -821,7 +821,7 @@ hir::Expr::Ptr Parser::parseAddExpr() {
   }
 }
 
-// mul_expr: neg_expr {('*' | '/' | '.*' | './') neg_expr}
+// mul_expr: neg_expr {('*' | '/' | '\' | '.*' | './') neg_expr}
 hir::Expr::Ptr Parser::parseMulExpr() {
   hir::Expr::Ptr expr = parseNegExpr();
   
@@ -835,6 +835,10 @@ hir::Expr::Ptr Parser::parseMulExpr() {
       case Token::Type::SLASH:
         consume(Token::Type::SLASH);
         mulExpr = std::make_shared<hir::DivExpr>();
+        break;
+      case Token::Type::BACKSLASH:
+        consume(Token::Type::BACKSLASH);
+        mulExpr = std::make_shared<hir::LeftDivExpr>();
         break;
       case Token::Type::DOTSTAR:
         consume(Token::Type::DOTSTAR);

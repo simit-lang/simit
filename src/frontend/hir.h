@@ -648,6 +648,14 @@ struct ElwiseDivExpr : public BinaryExpr {
   }
 };
 
+struct LeftDivExpr : public BinaryExpr {
+  typedef std::shared_ptr<LeftDivExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<LeftDivExpr>(shared_from_this()));
+  }
+};
+
 struct NegExpr : public UnaryExpr {
   bool negate;
   

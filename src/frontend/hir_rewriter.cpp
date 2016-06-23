@@ -196,6 +196,10 @@ void HIRRewriter::visit(DivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
+void HIRRewriter::visit(LeftDivExpr::Ptr expr) {
+  visitBinaryExpr(expr);
+}
+
 void HIRRewriter::visit(ElwiseMulExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }

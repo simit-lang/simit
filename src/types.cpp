@@ -253,6 +253,8 @@ bool operator!=(const ArrayType& l, const ArrayType& r) {
 }
 
 std::ostream& operator<<(std::ostream& os, const Type& type) {
+  if (!type.defined()) return os << "undefined type";
+
   switch (type.kind()) {
     case Type::Tensor:
       return os << *type.toTensor();

@@ -377,6 +377,10 @@ void HIRPrinter::visit(DivExpr::Ptr expr) {
   printBinaryExpr(expr, "/");
 }
 
+void HIRPrinter::visit(LeftDivExpr::Ptr expr) {
+  printBinaryExpr(expr, "\\");
+}
+
 void HIRPrinter::visit(ElwiseMulExpr::Ptr expr) {
   printBinaryExpr(expr, ".*");
 }
