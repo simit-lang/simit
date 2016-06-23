@@ -938,7 +938,14 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       } else {
         const ir::Var tmp = ctx->getBuilder()->temporary(retVals[i].getType());
         ctx->addSymbol(tmp);
-        ctx->addStatement(ir::VarDecl::make(tmp));
+
+        if (!isCallStmt ||
+            ir::to<ir::CallStmt>(topLevelStmt)->callee.getKind() !=
+            ir::Func::External) {
+          std::cout << tmp << std::endl;
+          ctx->addStatement(ir::VarDecl::make(tmp));
+        }
+
         results.push_back(tmp);
       }
     }
