@@ -186,12 +186,18 @@ protected:
   emitResults(std::vector<ir::Var> results, bool excludeStaticTypes,
               std::vector<std::pair<ir::Var, llvm::Value*>>* resVals);
 
+  /// Emit a call to a function defined in Simit
   void emitInternalCall(const ir::CallStmt& callStmt);
+
+  /// Emit a call to a function defined externally (e.g. C)
   void emitExternCall(const ir::CallStmt& callStmt);
+
+  /// Emit a call to an intrinsic
   void emitIntrinsicCall(const ir::CallStmt& callStmt);
 
   // TODO: Remove this function, once the old init system has been removed
   ir::Func makeSystemTensorsGlobalIfHasTensorIndex(ir::Func func);
+
 private:
   static bool llvmInitialized;
 };

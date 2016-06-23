@@ -942,7 +942,6 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
         if (!isCallStmt ||
             ir::to<ir::CallStmt>(topLevelStmt)->callee.getKind() !=
             ir::Func::External) {
-          std::cout << tmp << std::endl;
           ctx->addStatement(ir::VarDecl::make(tmp));
         }
 

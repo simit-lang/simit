@@ -18,8 +18,9 @@ using namespace simit::ir;
 using namespace simit::ffi;
 
 static bool noargsVisited = false;
-extern "C" void noargs() {
+extern "C" int noargs() {
   noargsVisited = true;
+  return 0;
 }
 
 TEST(ffi, noargs) {
@@ -31,12 +32,14 @@ TEST(ffi, noargs) {
 }
 
 extern "C"
-void sadd(float a, float b, float* c) {
+int sadd(float a, float b, float* c) {
   *c = a+b;
+  return 0;
 }
 extern "C"
-void dadd(double a, double b, double* c) {
+int dadd(double a, double b, double* c) {
   *c = a+b;
+  return 0;
 }
 
 TEST(ffi, scalar_add) {
@@ -65,14 +68,16 @@ TEST(ffi, scalar_add) {
 }
 
 extern "C"
-void snegtwo(float a, float b, float* c, float* d) {
+int snegtwo(float a, float b, float* c, float* d) {
   *c = -a;
   *d = -b;
+  return 0;
 }
 extern "C"
-void dnegtwo(double a, double b, double* c, double* d) {
+int dnegtwo(double a, double b, double* c, double* d) {
   *c = -a;
   *d = -b;
+  return 0;
 }
 
 TEST(ffi, scalar_neg_two) {
@@ -105,20 +110,21 @@ TEST(ffi, scalar_neg_two) {
 }
 
 template<typename Float>
-void vecadd(int aN, Float* a, int bN, Float* b, int cN, Float** c) {
+int vecadd(int aN, Float* a, int bN, Float* b, int cN, Float** c) {
   iassert(aN == bN && bN == cN);
   *c = static_cast<Float*>(simit_malloc(cN * sizeof(Float)));
   for (int i=0; i<aN; ++i) {
     (*c)[i] = a[i] + b[i];
   }
+  return 0;
 }
 extern "C"
-void svecadd(int aN, float* a, int bN, float* b, int cN, float** c) {
-  vecadd<float>(aN,a, bN,b, cN,c);
+int svecadd(int aN, float* a, int bN, float* b, int cN, float** c) {
+  return vecadd<float>(aN,a, bN,b, cN,c);
 }
 extern "C"
-void dvecadd(int aN, double* a, int bN, double* b, int cN, double** c) {
-  vecadd<double>(aN,a, bN,b, cN,c);
+int dvecadd(int aN, double* a, int bN, double* b, int cN, double** c) {
+  return vecadd<double>(aN,a, bN,b, cN,c);
 }
 
 TEST(ffi, vector_add) {
@@ -154,8 +160,8 @@ TEST(ffi, vector_add) {
 }
 
 template<typename Float>
-void gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
-          int cN, Float* c, int aN, Float** a) {
+int gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
+         int cN, Float* c, int aN, Float** a) {
   iassert(BN == aN && BM == cN);
   *a = static_cast<Float*>(simit_malloc(aN * BNN * sizeof(Float)));
 
@@ -177,16 +183,17 @@ void gemv(int BN,int BM, int BNN,int BMM, int* BrowPtr, int* BcolIdx, Float* B,
   free(csrRowStart);
   free(csrColIdx);
   free(csrVals);
+  return 0;
 }
 extern "C"
-void sgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, float* B,
-           int cN, float* c, int aN, float** a) {
-  gemv<float>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
+int sgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, float* B,
+          int cN, float* c, int aN, float** a) {
+  return gemv<float>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
 }
 extern "C"
-void dgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, double* B,
-           int cN, double* c, int aN, double** a) {
-  gemv<double>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
+int dgemv(int BN,int BM, int BNN,int BMM, int* BrowPtr,int* BcolIdx, double* B,
+          int cN, double* c, int aN, double** a) {
+  return gemv<double>(BN, BM, BNN, BMM, BrowPtr, BcolIdx, B, cN, c, aN, a);
 }
 
 TEST(ffi, gemv) {

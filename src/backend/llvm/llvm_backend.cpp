@@ -873,7 +873,7 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
     name = floatType + name;
   }
 
-  auto errorCode = emitCall(name, args);
+  auto errorCode = emitCall(name, args, LLVM_INT);
   UNUSED(errorCode);  // TODO: Accept and handle error code from extern func
 
   // Load the results into llvm variables
