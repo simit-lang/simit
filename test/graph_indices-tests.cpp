@@ -1,7 +1,7 @@
 #include "gtest/gtest.h"
 
 #include "graph.h"
-#include "indices.h"
+#include "graph_indices.h"
 
 using namespace std;
 using namespace simit;

@@ -21,7 +21,7 @@
 
 #include "backend/actual.h"
 #include "graph.h"
-#include "indices.h"
+#include "graph_indices.h"
 #include "tensor_index.h"
 #include "path_indices.h"
 #include "util/collections.h"
