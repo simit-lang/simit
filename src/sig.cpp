@@ -204,12 +204,20 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
       Expr setExpr;
       if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
         const Var &var = to<VarExpr>(op->tensor)->var;
-        iassert(storage.hasStorage(var)) << "No storage descriptor found for "
-                                         << var << " in "
-                                         << util::toString(*op);
+        iassert(var.getType().isTensor())
+            << "Index expression result must be a tensor";
+        iassert(storage.hasStorage(var))
+            << "No storage descriptor found for " << var << " in "
+            << util::toString(*op);
         if (storage.getStorage(var).isSystem()) {
           tensorVar = var;
-          setExpr = storage.getStorage(var).getSystemTargetSet();
+
+          // Assumes all matrices are (B)CSR
+          auto type = var.getType().toTensor();
+          IndexSet dimension = type->getOuterDimensions()[0];
+          iassert(dimension.getKind() == IndexSet::Set)
+              << "Assumes first dimension is sparse";
+          setExpr = dimension.getSet();
         }
       }
       sig = SIG(op->indexVars, tensorVar, setExpr);

@@ -254,6 +254,7 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
     }
     somethingPrinted = true;
   }
+  UNUSED(somethingPrinted);
 
   return os;
 }

@@ -42,9 +42,6 @@ public:
   /// Create a tensor storage descriptor.
   TensorStorage(Kind kind);
 
-  /// Create a diagonal or indexed storage descriptor.
-  TensorStorage(Kind kind, const Expr &targetSet);
-
   /// Retrieve the tensor storage type.
   Kind getKind() const;
 
@@ -63,9 +60,6 @@ public:
   bool hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
   const TensorIndex& getTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
   void addTensorIndex(Var tensor, unsigned sourceDim, unsigned sinkDim);
-
-  // TODO DEPRECATED: These should not be needed with the new TensorIndex system
-  const Expr &getSystemTargetSet() const;
 
 private:
   struct Content;

@@ -36,8 +36,9 @@ private:
 std::ostream& operator<<(std::ostream&, const VarMapping&);
 
 /// An Environment keeps track of global constants, externs and temporaries.
-/// It also keeps track of the data arrays and indices that implement tensors
-/// as the IR is lowered and tensors are replaced by arrays.
+/// It also keeps track of the data arrays and shared index arrays of tensors
+/// that have path expressions. (The latter are added to the environment as the
+/// IR is lowered tensors are replaced by arrays.)
 class Environment {
 public:
   Environment();
