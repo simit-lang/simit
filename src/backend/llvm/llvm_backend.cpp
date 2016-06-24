@@ -952,11 +952,11 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
   else if (callStmt.callee == ir::intrinsics::strcat()) {
     call = emitCall("strcat", args, LLVM_INT8_PTR);
   }
-  else if (callStmt.callee == ir::intrinsics::simitClock()) {
-    call = emitCall("simitClock", args, llvmFloatType());
+  else if (callStmt.callee == ir::intrinsics::clock()) {
+    call = emitCall("clock", args, llvmFloatType());
   }
-  else if (callStmt.callee == ir::intrinsics::simitStoreTime()) {
-    call = emitCall("simitStoreTime", args);
+  else if (callStmt.callee == ir::intrinsics::storeTime()) {
+    call = emitCall("storeTime", args);
   }
   else if (callee == ir::intrinsics::det()) {
     iassert(args.size() == 1);

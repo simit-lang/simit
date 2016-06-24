@@ -143,7 +143,7 @@ class InsertTimers : public IRRewriter {
     Var initTimer(string line, Stmt& stmt) {
       TimerStorage::getInstance().addTimedLine(line);
       Stmt timeStartStmt =
-          CallStmt::make({getTimeVar()}, intrinsics::simitClock(), {});
+          CallStmt::make({getTimeVar()}, intrinsics::clock(), {});
       stmt = Block::make(timeStartStmt, stmt);
       return timeStartVar;
     }
@@ -151,9 +151,9 @@ class InsertTimers : public IRRewriter {
     void storeTimer(Stmt& stmt, Var& timeStartVar) {
       Var clock("clock", Float);
       Stmt clockDecl = VarDecl::make(clock);
-      Stmt clockStmt = CallStmt::make({clock}, intrinsics::simitClock(), {});
+      Stmt clockStmt = CallStmt::make({clock}, intrinsics::clock(), {});
       Expr subtraction = Sub::make(clock, VarExpr::make(timeStartVar));
-      Stmt store = CallStmt::make({}, intrinsics::simitStoreTime(), 
+      Stmt store = CallStmt::make({}, intrinsics::storeTime(),
           {counter, subtraction});
       stmt = Block::make({clockDecl, clockStmt, stmt, store});
       counter++;

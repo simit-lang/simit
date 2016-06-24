@@ -512,7 +512,7 @@ void IREmitter::visit(LeftDivExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
 
-  const ir::Func solve = ctx->getFunction("solve");
+  const ir::Func solve = ctx->getFunction(ir::intrinsics::solve().getName());
 
   auto A = emitExpr(expr->lhs);
   auto b = emitExpr(expr->rhs);
