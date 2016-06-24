@@ -14,6 +14,7 @@
 #include "ir_printer.h"
 #include "ir_codegen.h"
 #include "substitute.h"
+#include "path_expressions.h"
 #include "util/util.h"
 #include "util/collections.h"
 

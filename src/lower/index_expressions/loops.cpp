@@ -2,6 +2,7 @@
 
 #include <stack>
 #include "ir_visitor.h"
+#include "path_expressions.h"
 #include "util/collections.h"
 
 using namespace std;

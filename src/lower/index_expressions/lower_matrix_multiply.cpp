@@ -5,6 +5,7 @@
 #include "loops.h"
 #include "lower_indexexprs.h"
 #include "lower_tensor_utils.h"
+#include "path_expressions.h"
 
 using namespace std;
 

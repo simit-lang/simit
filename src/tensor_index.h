@@ -5,32 +5,33 @@
 #include <ostream>
 #include <vector>
 
-#include "var.h"
-#include "path_expressions.h"
-
 namespace simit {
+namespace pe {
+class PathExpression;
+}
+
 namespace ir {
+class Var;
 
 /// A tensor index is a map source->coordinate->sink described by a path
 /// expression.
 class TensorIndex {
 public:
   TensorIndex() {}
-
   TensorIndex(std::string name, pe::PathExpression pexpr);
 
-  const std::string getName() const {return name;}
+  const std::string getName() const;
 
-  const pe::PathExpression& getPathExpression() const {return pexpr;}
+  const pe::PathExpression& getPathExpression() const;
 
-  const Var& getCoordArray() const {return coordArray;}
-  const Var& getSinkArray() const {return sinkArray;}
+  const Var& getCoordArray() const;
+  const Var& getSinkArray() const;
+
+  bool defined() const {return content != nullptr;}
 
 private:
-  std::string name;
-  pe::PathExpression pexpr;
-  Var coordArray;
-  Var sinkArray;
+  struct Content;
+  std::shared_ptr<Content> content;
 };
 
 std::ostream& operator<<(std::ostream&, const TensorIndex&);

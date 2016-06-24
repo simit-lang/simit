@@ -8,6 +8,8 @@
 #include "lower_scatter_workspace.h"
 #include "lower_matrix_multiply.h"
 
+#include "path_expressions.h"
+
 namespace simit {
 namespace ir {
 
