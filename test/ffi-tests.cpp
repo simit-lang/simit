@@ -318,15 +318,31 @@ dmatrix_neg(int Bn,  int Bm,  int* BrowPtr, int* BcolIdx,
             int Bnn, int Bmm, double* B,
             int An,  int Am,  int** ArowPtr, int** AcolIdx,
             int Ann, int Amm, double** A) {
-
+  assert(Bn == An && Bm == Am);
   auto mat = csr2eigen(Bn, Bm, BrowPtr, BcolIdx, B);
   mat = -mat;
   mat.makeCompressed();
 
   auto nnz = mat.nonZeros();
-  *ArowPtr = static_cast<int*>(ffi::simit_malloc((An+1) * sizeof(int)));
-  *AcolIdx = static_cast<int*>(ffi::simit_malloc(   nnz * sizeof(int)));
-  *A    = static_cast<double*>(ffi::simit_malloc(   nnz * sizeof(double)));
+  *ArowPtr =    static_cast<int*>(ffi::simit_malloc((An+1) * sizeof(int)));
+  *AcolIdx =    static_cast<int*>(ffi::simit_malloc(   nnz * sizeof(int)));
+  *A       = static_cast<double*>(ffi::simit_malloc(   nnz * sizeof(double)));
+
+  // copy rowptr
+  auto rowptr = mat.outerIndexPtr();
+  for (int i=0; i<An+1; ++i) {
+    (*ArowPtr)[i] = rowptr[i];
+    iassert((*ArowPtr)[i] == BrowPtr[i]);
+  }
+
+  // copy data and colidx
+  auto data = mat.data();
+  auto colidx = mat.innerIndexPtr();
+  for (int i=0; i<nnz; ++i) {
+    (*AcolIdx)[i] = colidx[i];
+    iassert((*AcolIdx)[i] == BcolIdx[i]);
+    (*A)[i] = data.value(i);
+  }
 }
 
 
@@ -362,7 +378,7 @@ TEST(DISABLED_ffi, matrix_neg) {
 
   // Check that outputs are correct
   ASSERT_EQ(-3.0,  (double)a(v0));
-  ASSERT_EQ(-11.0, (double)a(v1));
+  ASSERT_EQ(-13.0, (double)a(v1));
   ASSERT_EQ(-10.0, (double)a(v2));
 }
 
