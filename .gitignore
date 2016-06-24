@@ -5,3 +5,5 @@ doc
 debug
 release
 .*.swp
+*.node
+*.ele
