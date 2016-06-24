@@ -4,8 +4,6 @@
 #include <map>
 #include <memory>
 
-#include "intrusive_ptr.h"
-
 namespace simit {
 namespace pe {
 class PathExpression;

@@ -4,6 +4,7 @@
 #include <string>
 #include <ostream>
 #include <vector>
+#include <memory>
 
 namespace simit {
 namespace pe {
