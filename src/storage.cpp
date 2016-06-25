@@ -16,9 +16,9 @@ namespace ir {
 
 // class TensorStorage
 struct TensorStorage::Content {
-  Kind kind;
+  Kind               kind;
   pe::PathExpression pathExpression;
-  map<pair<unsigned,unsigned>, TensorIndex> tensorIndices;
+  TensorIndex        tensorIndex;
 };
 
 TensorStorage::TensorStorage() : TensorStorage(Kind::Undefined) {
@@ -61,23 +61,19 @@ void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
   content->pathExpression = pathExpression;
 }
 
-bool TensorStorage::hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const {
-  return util::contains(content->tensorIndices, {sourceDim, sinkDim});
+bool TensorStorage::hasTensorIndex() const {
+  return content->tensorIndex.defined();
 }
 
-const TensorIndex& TensorStorage::getTensorIndex(unsigned sourceDim,
-                                                 unsigned sinkDim) const {
-  iassert(hasTensorIndex(sourceDim,sinkDim));
-  tassert(sourceDim == 0 && sinkDim == 1)
-      << "Only currently support row->col indices";
-  return content->tensorIndices.at({sourceDim,sinkDim});
+const TensorIndex& TensorStorage::getTensorIndex() const {
+  iassert(getKind() == TensorStorage::Indexed);
+  iassert(content->tensorIndex.defined());
+  return content->tensorIndex;
 }
 
-void TensorStorage::addTensorIndex(Var tensor, unsigned srcDim,
-                                   unsigned sinkDim) {
-  iassert(!hasTensorIndex(srcDim, sinkDim));
-  content->tensorIndices.insert({{srcDim,sinkDim},
-      TensorIndex(tensor.getName()+"_index", pe::PathExpression())});
+void TensorStorage::setTensorIndex(Var tensor) {
+  content->tensorIndex =
+      TensorIndex(tensor.getName()+"_index", pe::PathExpression());
 }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {

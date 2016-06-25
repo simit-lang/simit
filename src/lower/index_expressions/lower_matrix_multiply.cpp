@@ -98,11 +98,10 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // First clear the workspace dense vector
   loopStatements.push_back(AssignStmt::make(workspace, Literal::make(0)));
 
-
   // Loop over the indices in this row in the first matrix
   TensorStorage& firstTs = storage->getStorage(firstTensorVar);
   TensorIndex firstTi;
-  if (!firstTs.hasTensorIndex(0,1)) { // Tensor index from rows to cols
+  if (!firstTs.hasTensorIndex()) {
     if (env->hasExtern(firstTensorVar.getName())) {
       terror << "Extern matrix multiply currently not supported";
     }
@@ -115,7 +114,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
     }
   }
   else {
-    firstTi = firstTs.getTensorIndex(0,1);
+    firstTi = firstTs.getTensorIndex();
   }
   TensorIndexVar firstIndex(inductionVar.getName(), firstTensorVar.getName(),
                             inductionVar, firstTi);
@@ -145,7 +144,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // and reducing into the workspace vectori
   TensorStorage& secondTs = storage->getStorage(secondTensorVar);
   TensorIndex secondTi;
-  if (!secondTs.hasTensorIndex(0,1)) { // Tensor index from rows to cols
+  if (!secondTs.hasTensorIndex()) {
     if (env->hasExtern(secondTensorVar.getName())) {
       terror << "Extern matrix multiply currently not supported";
     }
@@ -158,7 +157,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
     }
   }
   else {
-    secondTi = secondTs.getTensorIndex(0,1);
+    secondTi = secondTs.getTensorIndex();
   }
   TensorIndexVar secondIndex(firstIndex.getSinkVar().getName(),
                              secondTensorVar.getName(),
@@ -263,7 +262,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // Copy workspace into appropriate output row
   TensorStorage& outTs = storage->getStorage(target);
   TensorIndex outTi;
-  if (!outTs.hasTensorIndex(0,1)) { // Tensor index from rows to cols
+  if (!outTs.hasTensorIndex()) {
     if (env->hasExtern(target.getName())) {
       terror << "Extern matrix multiply currently not supported";
     }
@@ -276,7 +275,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
     }
   }
   else {
-    outTi = firstTs.getTensorIndex(0,1);
+    outTi = firstTs.getTensorIndex();
   }
   TensorIndexVar outIndex(indexExpression->resultVars[1].getName(),
                           target.getName(), inductionVar, outTi);

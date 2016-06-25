@@ -256,19 +256,16 @@ private:
   }
 
   void visit(const IndexedTensor *indexedTensor) {
-    const vector<IndexVar>& indexVars = indexedTensor->indexVars;
     iassert(isa<VarExpr>(indexedTensor->tensor))
         << "at this point the index expressions should have been flattened";
     Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
 
     TensorStorage& ts = storage->getStorage(tensor);
-    unsigned sourceDim = util::locate(indexVars,linkedIndexVar);
-    unsigned sinkDim   = util::locate(indexVars,indexVar);
     TensorIndex ti;
-    if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
+    if (!ts.hasTensorIndex()) {
       if (environment->hasExtern(tensor.getName())) {
-        ts.addTensorIndex(tensor, sourceDim, sinkDim);
-        ti = ts.getTensorIndex(sourceDim, sinkDim);
+        ts.setTensorIndex(tensor);
+        ti = ts.getTensorIndex();
         environment->addExternMapping(tensor, ti.getCoordArray());
         environment->addExternMapping(tensor, ti.getSinkArray());
       }
@@ -285,7 +282,7 @@ private:
       }
     }
     else {
-      ti = ts.getTensorIndex(sourceDim, sinkDim);
+      ti = ts.getTensorIndex();
     }
 
     TensorIndexVar tensorIndexVar(inductionVar.getName(), tensor.getName(),

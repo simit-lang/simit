@@ -423,13 +423,11 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       auto& resultVars = indexExpression->resultVars;
 
       TensorStorage& ts = storage->getStorage(target);
-      unsigned sourceDim = util::locate(resultVars, linkedIndexVar);
-      unsigned sinkDim   = util::locate(resultVars, indexVar);
       TensorIndex ti;
-      if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
+      if (!ts.hasTensorIndex()) {
         if (environment->hasExtern(target.getName())) {
-          ts.addTensorIndex(target, sourceDim, sinkDim);
-          ti = ts.getTensorIndex(sourceDim, sinkDim);
+          ts.setTensorIndex(target);
+          ti = ts.getTensorIndex();
           environment->addExternMapping(target, ti.getCoordArray());
           environment->addExternMapping(target, ti.getSinkArray());
         }
@@ -442,7 +440,7 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
         }
       }
       else {
-        ti = ts.getTensorIndex(sourceDim, sinkDim);
+        ti = ts.getTensorIndex();
       }
 
       TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),
