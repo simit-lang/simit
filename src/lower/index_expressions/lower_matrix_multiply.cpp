@@ -275,7 +275,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
     }
   }
   else {
-    outTi = firstTs.getTensorIndex();
+    outTi = outTs.getTensorIndex();
   }
   TensorIndexVar outIndex(indexExpression->resultVars[1].getName(),
                           target.getName(), inductionVar, outTi);
