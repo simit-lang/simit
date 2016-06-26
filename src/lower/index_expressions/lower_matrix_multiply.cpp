@@ -106,11 +106,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
       terror << "Extern matrix multiply currently not supported";
     }
     else {
-      const pe::PathExpression pexpr = firstTs.getPathExpression();
-      if (!env->hasTensorIndex(pexpr)) {
-        env->addTensorIndex(pexpr, firstTensorVar);
-      }
-      firstTi = env->getTensorIndex(pexpr);
+      firstTi = firstTs.getTensorIndex();
     }
   }
   else {
@@ -149,11 +145,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
       terror << "Extern matrix multiply currently not supported";
     }
     else {
-      const pe::PathExpression pexpr = secondTs.getPathExpression();
-      if (!env->hasTensorIndex(pexpr)) {
-        env->addTensorIndex(pexpr, secondTensorVar);
-      }
-      secondTi = env->getTensorIndex(pexpr);
+      secondTi = secondTs.getTensorIndex();
     }
   }
   else {
@@ -267,11 +259,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
       terror << "Extern matrix multiply currently not supported";
     }
     else {
-      const pe::PathExpression pexpr = outTs.getPathExpression();
-      if (!env->hasTensorIndex(pexpr)) {
-        env->addTensorIndex(pexpr, target);
-      }
-      outTi = env->getTensorIndex(pexpr);
+      outTi = outTs.getTensorIndex();
     }
   }
   else {

@@ -65,11 +65,16 @@ inline bool doesOperandsHaveSameStructureOrIsDiagonal(const IndexExpr* iexpr,
   match(iexpr->value,
     std::function<void(const VarExpr*)>([&](const VarExpr* op) {
       iassert(storage.hasStorage(op->var));
-      if (!pexpr.defined()) {
-        pexpr = storage.getStorage(op->var).getPathExpression();
-      }
-      else if (pexpr != storage.getStorage(op->var).getPathExpression()) {
-        result = false;
+      auto tensorStorage = storage.getStorage(op->var);
+    
+      if (tensorStorage.getKind() != TensorStorage::Diagonal) {
+        auto p = storage.getStorage(op->var).getTensorIndex().getPathExpression();
+        if (!pexpr.defined()) {
+          pexpr = p;
+        }
+        else if (pexpr != p) {
+          result = false;
+        }
       }
     })
   );

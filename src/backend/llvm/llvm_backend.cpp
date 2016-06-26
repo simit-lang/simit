@@ -663,8 +663,7 @@ LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
       tassert(isa<VarExpr>(argument));
 
       auto tensorStorage = storage.getStorage(to<VarExpr>(argument)->var);
-      auto tensorIndex =
-          environment->getTensorIndex(tensorStorage.getPathExpression());
+      auto tensorIndex = tensorStorage.getTensorIndex();
 
       llvm::Value* rowPtrPtr = symtable.get(tensorIndex.getCoordArray());
       llvm::Value* rowPtr = builder->CreateAlignedLoad(rowPtrPtr, 8);
@@ -742,8 +741,7 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
       tassert(isa<VarExpr>(result));
 
       auto tensorStorage = storage.getStorage(to<VarExpr>(result)->var);
-      auto tensorIndex =
-      environment->getTensorIndex(tensorStorage.getPathExpression());
+      auto tensorIndex = tensorStorage.getTensorIndex();
 
       llvm::Value* rowPtrPtr = symtable.get(tensorIndex.getCoordArray());
       llvm::Value* rowPtr = builder->CreateAlignedLoad(rowPtrPtr, 8);
@@ -1069,7 +1067,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
 
       // For now we'll assume fields are always dense row major
       llvm::Value *fieldLen =
-          emitComputeLen(tensorFieldType, TensorStorage::Kind::Dense);
+          emitComputeLen(tensorFieldType, TensorStorage::Dense);
       unsigned compSize = tensorFieldType->getComponentType().bytes();
       llvm::Value *fieldSize = builder->CreateMul(fieldLen,llvmInt(compSize));
 
@@ -1102,7 +1100,7 @@ void LLVMBackend::compile(const ir::FieldWrite& fieldWrite) {
 
     // For now we'll assume fields are always dense row major
     llvm::Value *fieldLen =
-        emitComputeLen(tensorFieldType, TensorStorage::Kind::Dense);
+        emitComputeLen(tensorFieldType, TensorStorage::Dense);
     unsigned elemSize = tensorFieldType->getComponentType().bytes();
     llvm::Value *fieldSize = builder->CreateMul(fieldLen, llvmInt(elemSize));
 
@@ -1367,7 +1365,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
 
   llvm::Value *len = nullptr;
   switch (tensorStorage.getKind()) {
-    case TensorStorage::Kind::Dense: {
+    case TensorStorage::Dense: {
       auto it = dimensions.begin();
       len = emitComputeLen(*it++);
       for (; it != dimensions.end(); ++it) {
@@ -1375,19 +1373,19 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       }
       break;
     }
-    case TensorStorage::Kind::Diagonal: {
+    case TensorStorage::Diagonal: {
       iassert(dimensions.size() > 0);
 
       // Just need one outer dimensions because diagonal implies square
       len = emitComputeLen(tensorType->getOuterDimensions()[0]);
 
       Type blockType = tensorType->getBlockType();
-      llvm::Value *blockLen =
-          emitComputeLen(blockType.toTensor(), TensorStorage::Kind::Dense);
+      llvm::Value *blockLen = emitComputeLen(blockType.toTensor(),
+                                             TensorStorage::Dense);
       len = builder->CreateMul(len, blockLen);
       break;
     }
-    case TensorStorage::Kind::Indexed: {
+    case TensorStorage::Indexed: {
       // We retrieve the number of non-zero blocks in the index, which is stored
       // in the last (sentinel) entry of the coords/rowptr index array.
 
@@ -1397,8 +1395,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       auto dimSize = emitComputeLen(tensorType->getOuterDimensions()[0]);
 
       // Retrieve the index of this tensor from the environment
-      auto tensorIndex =
-          environment->getTensorIndex(tensorStorage.getPathExpression());
+      auto tensorIndex = tensorStorage.getTensorIndex();
 
       llvm::Value* coordArrayPtr = symtable.get(tensorIndex.getCoordArray());
       llvm::Value* coordArray = builder->CreateAlignedLoad(coordArrayPtr, 8);
@@ -1413,13 +1410,13 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
         // TODO: The following assumes all blocks are dense row major. The right
         //       way to assign a storage order for every block in the tensor
         //       represented by a TensorStorage
-        llvm::Value *blockSize =
-            emitComputeLen(blockType.toTensor(), TensorStorage::Kind::Dense);
+        llvm::Value *blockSize = emitComputeLen(blockType.toTensor(),
+                                                TensorStorage::Dense);
         len = builder->CreateMul(len, blockSize);
       }
       break;
     }
-    case TensorStorage::Kind::Undefined:
+    case TensorStorage::Undefined:
       ierror << "Can't compute the size of tensor with undefined storage";
       break;
   }

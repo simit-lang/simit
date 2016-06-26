@@ -13,6 +13,7 @@ class Func;
 class Var;
 class Stmt;
 class Expr;
+class Environment;
 class TensorIndex;
 
 
@@ -40,6 +41,9 @@ public:
   /// Create a tensor storage descriptor.
   TensorStorage(Kind kind);
 
+  /// Create an indexed tensor storage descriptor.
+  TensorStorage(Kind kind, const TensorIndex& index);
+
   /// Retrieve the tensor storage type.
   Kind getKind() const;
 
@@ -50,10 +54,6 @@ public:
   /// True if the tensor is stored on a system, false otherwise.
   bool isSystem() const;
 
-  bool hasPathExpression() const;
-  const pe::PathExpression& getPathExpression() const;
-  void setPathExpression(const pe::PathExpression& pathExpression);
-
   bool hasTensorIndex() const;
   const TensorIndex& getTensorIndex() const;
   void setTensorIndex(Var tensor);
@@ -63,6 +63,7 @@ private:
   std::shared_ptr<Content> content;
 };
 std::ostream &operator<<(std::ostream&, const TensorStorage&);
+
 
 /// The storage of a set of tensors.
 class Storage {
@@ -110,19 +111,11 @@ private:
 };
 std::ostream &operator<<(std::ostream&, const Storage&);
 
-
-/// Retrieve a storage descriptor for each tensor used in `func`.
-Storage getStorage(const Func &func);
-
-/// Retrieve a storage descriptor for each tensor used in `stmt`.
-Storage getStorage(const Stmt &stmt);
-
 /// Adds storage descriptors for each tensor in `func` not already described.
-void updateStorage(const Func &func, Storage *storage);
+void updateStorage(const Func &func, Storage *storage, Environment* env);
 
 /// Adds storage descriptors for each tensor in `stmt` not already described.
-void updateStorage(const Stmt &stmt, Storage *storage);
-
+void updateStorage(const Stmt &stmt, Storage *storage, Environment* env);
 }}
 
 #endif

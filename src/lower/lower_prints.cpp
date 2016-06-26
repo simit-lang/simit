@@ -105,15 +105,9 @@ private:
         iassert(order == 2);
 
         Var tensorVar = to<VarExpr>(tensorExpr)->var;
-        const pe::PathExpression pexpr = tensorStorage.getPathExpression();
-        
-        // Create tensor index for tensor being printed, if necessary.
-        if (!environment.hasTensorIndex(pexpr)) {
-          environment.addTensorIndex(pexpr, tensorVar);
-        }
 
         // Get coord and sink arrays corresponding to indexed tensor.
-        TensorIndex tensorIndex = environment.getTensorIndex(pexpr);
+        TensorIndex tensorIndex = tensorStorage.getTensorIndex();
         Expr coordArray = tensorIndex.getCoordArray();
         Expr sinkArray = tensorIndex.getSinkArray();
 

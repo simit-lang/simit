@@ -16,9 +16,8 @@ namespace ir {
 
 // class TensorStorage
 struct TensorStorage::Content {
-  Kind               kind;
-  pe::PathExpression pathExpression;
-  TensorIndex        tensorIndex;
+  Kind        kind;
+  TensorIndex index;
 };
 
 TensorStorage::TensorStorage() : TensorStorage(Kind::Undefined) {
@@ -26,6 +25,12 @@ TensorStorage::TensorStorage() : TensorStorage(Kind::Undefined) {
 
 TensorStorage::TensorStorage(Kind kind) : content(new Content) {
   content->kind = kind;
+}
+
+TensorStorage::TensorStorage(Kind kind, const TensorIndex& index)
+    : content(new Content) {
+  content->kind = kind;
+  content->index = index;
 }
 
 TensorStorage::Kind TensorStorage::getKind() const {
@@ -49,46 +54,34 @@ bool TensorStorage::isSystem() const {
   return false;
 }
 
-bool TensorStorage::hasPathExpression() const {
-  return content->pathExpression.defined();
-}
-
-const pe::PathExpression& TensorStorage::getPathExpression() const {
-  return content->pathExpression;
-}
-
-void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
-  content->pathExpression = pathExpression;
-}
-
 bool TensorStorage::hasTensorIndex() const {
-  return content->tensorIndex.defined();
+  return content->index.defined();
 }
 
 const TensorIndex& TensorStorage::getTensorIndex() const {
-  iassert(getKind() == TensorStorage::Indexed);
-  iassert(content->tensorIndex.defined());
-  return content->tensorIndex;
+  iassert(getKind() == TensorStorage::Indexed)
+      << "Expected Indexed tensor, but was " << *this;
+  iassert(content->index.defined());
+  return content->index;
 }
 
 void TensorStorage::setTensorIndex(Var tensor) {
-  content->tensorIndex =
-      TensorIndex(tensor.getName()+"_index", pe::PathExpression());
+  content->index = TensorIndex(tensor.getName()+"_index", pe::PathExpression());
 }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
   switch (ts.getKind()) {
-    case TensorStorage::Kind::Undefined:
+    case TensorStorage::Undefined:
       os << "Undefined";
       break;
-    case TensorStorage::Kind::Dense:
+    case TensorStorage::Dense:
       os << "Dense";
       break;
-    case TensorStorage::Kind::Diagonal:
+    case TensorStorage::Diagonal:
       os << "Diagonal";
       break;
-    case TensorStorage::Kind::Indexed:
-      os << "Indexed";
+    case TensorStorage::Indexed:
+      os << "Indexed (" << ts.getTensorIndex().getPathExpression() << ")";
       break;
   }
   return os;
@@ -108,8 +101,6 @@ void Storage::add(const Var &tensor, TensorStorage tensorStorage) {
 
 void Storage::add(const Storage &other) {
   for (auto &var : other) {
-    // iassert(!hasStorage(var)) << "Variable " << var << " already has storage";
-    // TEMP: Hack to avoid issues with multiple copies of const global tensor
     if (!hasStorage(var)) {
       add(var, other.getStorage(var));
     }
@@ -187,7 +178,8 @@ Storage::Iterator Storage::end() const {
 // Free functions
 class GetStorageVisitor : public IRVisitor {
 public:
-  GetStorageVisitor(Storage *storage) : storage(storage) {}
+  GetStorageVisitor(Storage *storage, Environment* env)
+      : storage{storage}, env{env} {}
 
   void get(Func func) {
     for (auto &global : func.getEnvironment().getConstants()) {
@@ -216,8 +208,17 @@ public:
   }
 
 private:
-  Storage *storage;
+  Storage* storage;
+  Environment* env;
   PathExpressionBuilder peBuilder;
+
+  TensorIndex getTensorIndex(const Var& var) {
+    auto pexpr = peBuilder.getPathExpression(var);
+    if (!env->hasTensorIndex(pexpr)) {
+      env->addTensorIndex(pexpr, var);
+    }
+    return env->getTensorIndex(pexpr);
+  }
 
   using IRVisitor::visit;
 
@@ -247,16 +248,13 @@ private:
       }
       // System matrices
       else {
-        determineStorage(var, op->value);
+          pe::PathExpression pexpr;
+          if (isa<IndexExpr>(op->value)) {
+            peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
+            pexpr = peBuilder.getPathExpression(var);
+          }
 
-        if (isa<IndexExpr>(op->value)) {
-          peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
-          pe::PathExpression pexpr = peBuilder.getPathExpression(var);
-          storage->getStorage(var).setPathExpression(pexpr);
-        } else if (isa<VarExpr>(op->value) && rhsType.isTensor()) {
-          pe::PathExpression pexpr = storage->getStorage(to<VarExpr>(op->value)->var).getPathExpression();
-          storage->getStorage(var).setPathExpression(pexpr);
-        }
+          determineStorage(var, op->value);
       }
     }
   }
@@ -277,10 +275,11 @@ private:
         if (result.getType().isTensor()) {
           auto type = result.getType().toTensor();
           if (type->order() == 1 || !type->hasSystemDimensions()) {
-            storage->add(result, TensorStorage(TensorStorage::Kind::Dense));
+            storage->add(result, TensorStorage(TensorStorage::Dense));
           }
           else {
-            storage->add(result, TensorStorage(TensorStorage::Indexed));
+            storage->add(result, TensorStorage(TensorStorage::Indexed,
+                                               TensorIndex()));
           }
         }
       }
@@ -298,7 +297,7 @@ private:
         const TensorType* type = var.getType().toTensor();
 
         if (type->order() < 2) {
-          storage->add(var, TensorStorage(TensorStorage::Kind::Dense));
+          storage->add(var, TensorStorage(TensorStorage::Dense));
         }
         else {
           storage->add(var, TensorStorage(TensorStorage::Diagonal));
@@ -316,23 +315,23 @@ private:
           TensorStorage tensorStorage;
           const TensorType* tensorType = type.toTensor();
           if (tensorType->order() == 1) {
-            tensorStorage = TensorStorage(TensorStorage::Kind::Dense);
+            tensorStorage = TensorStorage(TensorStorage::Dense);
           }
           else {
-            if (op->neighbors.defined()) {
-              tensorStorage = TensorStorage(TensorStorage::Indexed);
+            if (!op->neighbors.defined()) {
+              tensorStorage = TensorStorage(TensorStorage::Diagonal);
+            }
+            else {
+              auto index = getTensorIndex(var);
+              tensorStorage = TensorStorage(TensorStorage::Indexed, index);
 
               // Add path expression
               tassert(tensorType->order() == 2)
-              << "tensor has order " << tensorType->order()
-              << ", while we only currently supports sparse matrices";
-              tensorStorage.setPathExpression(peBuilder.getPathExpression(var));
-            }
-            else {
-              tensorStorage = TensorStorage(TensorStorage::Diagonal);
+                  << "tensor has order " << tensorType->order()
+                  << ", while we only currently supports sparse matrices";
             }
           }
-          iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
+          iassert(tensorStorage.getKind() != TensorStorage::Undefined);
           storage->add(var, tensorStorage);
         }
       }
@@ -353,7 +352,7 @@ private:
 
     // Element tensor and system vectors are dense.
     if (isElementTensorType(ttype) || ttype->order() == 1 || !rhs.defined()) {
-      tensorStorage = TensorStorage(TensorStorage::Kind::Dense);
+      tensorStorage = TensorStorage(TensorStorage::Dense);
     }
     // System matrices
     else {
@@ -374,10 +373,10 @@ private:
       // E.g. if one of the input variables to the RHS expression is dense then
       // the output becomes dense.
       static map<TensorStorage::Kind, unsigned> priorities = {
-        {TensorStorage::Kind::Dense,      4},
-        {TensorStorage::Kind::Indexed,    3},
-        {TensorStorage::Kind::Diagonal,   2},
-        {TensorStorage::Kind::Undefined,  0}
+        {TensorStorage::Dense,     4},
+        {TensorStorage::Indexed,   3},
+        {TensorStorage::Diagonal,  2},
+        {TensorStorage::Undefined, 0}
       };
 
       for (Var operand : leafVars.vars) {
@@ -393,16 +392,19 @@ private:
         auto tensorStorageKind = tensorStorage.getKind();
         if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
           switch (operandStorage.getKind()) {
-            case TensorStorage::Kind::Dense:
+            case TensorStorage::Dense:
               tensorStorage = operandStorage.getKind();
               break;
-            case TensorStorage::Kind::Indexed:
-              tensorStorage= TensorStorage(TensorStorage::Indexed);
+            case TensorStorage::Indexed: {
+              tensorStorage = TensorStorage(TensorStorage::Indexed);
+              auto index = getTensorIndex(var);
+              tensorStorage = TensorStorage(TensorStorage::Indexed, index);
               break;
-            case TensorStorage::Kind::Diagonal:
+            }
+            case TensorStorage::Diagonal:
               tensorStorage = TensorStorage(TensorStorage::Diagonal);
               break;
-            case TensorStorage::Kind::Undefined:
+            case TensorStorage::Undefined:
               unreachable;
               break;
           }
@@ -410,30 +412,18 @@ private:
       }
     }
 
-    if (tensorStorage.getKind() != TensorStorage::Kind::Undefined) {
+    if (tensorStorage.getKind() != TensorStorage::Undefined) {
       storage->add(var, tensorStorage);
     }
   }
 };
 
-Storage getStorage(const Func &func) {
-  Storage storage;
-  updateStorage(func, &storage);
-  return storage;
+void updateStorage(const Func& func, Storage* storage, Environment* env) {
+  GetStorageVisitor(storage, env).get(func);
 }
 
-Storage getStorage(const Stmt &stmt) {
-  Storage storage;
-  updateStorage(stmt, &storage);
-  return storage;
-}
-
-void updateStorage(const Func &func, Storage *storage) {
-  GetStorageVisitor(storage).get(func);
-}
-
-void updateStorage(const Stmt &stmt, Storage *storage) {
-  GetStorageVisitor(storage).get(stmt);
+void updateStorage(const Stmt& stmt, Storage* storage, Environment* env) {
+  GetStorageVisitor(storage, env).get(stmt);
 }
 
 }}

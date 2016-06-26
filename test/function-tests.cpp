@@ -108,7 +108,7 @@ TEST(Function, bindSparseTensor) {
   env.addExtern(A);
 
   Storage storage;
-  storage.add(A, TensorStorage::Kind::Indexed);
+  storage.add(A, TensorStorage(TensorStorage::Indexed, TensorIndex()));
 
   Stmt neg = lowerScatterWorkspace(A, to<IndexExpr>(negExpr), &env, &storage);
   simit::Function function = getTestBackend()->compile(neg, env, storage);

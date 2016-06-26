@@ -376,11 +376,7 @@ TensorIndex getTensorIndexOfStatement(Stmt stmt, const Storage& storage,
         iassert(storage.hasStorage(var));
         const TensorStorage& tensorStorage = storage.getStorage(var);
         if (tensorStorage.getKind() == TensorStorage::Kind::Indexed) {
-          const pe::PathExpression pexpr = tensorStorage.getPathExpression();
-          if (!environment->hasTensorIndex(pexpr)) {
-            environment->addTensorIndex(pexpr, var);
-          }
-          tensorIndex = environment->getTensorIndex(pexpr);
+          tensorIndex = tensorStorage.getTensorIndex();
         }
       }
     })

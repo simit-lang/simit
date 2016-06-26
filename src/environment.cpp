@@ -122,11 +122,16 @@ const std::vector<TensorIndex>& Environment::getTensorIndices() const {
 }
 
 bool Environment::hasTensorIndex(const pe::PathExpression& pexpr) const {
+  if (!pexpr.defined()) {
+    return false;
+  }
   return util::contains(content->locationOfTensorIndex, pexpr);
 }
 
 const TensorIndex&
 Environment::getTensorIndex(const pe::PathExpression& pexpr) const {
+  iassert(pexpr.defined())
+      << "Tensors in the environment have defined path expressions";
   iassert(util::contains(content->locationOfTensorIndex, pexpr))
       << "Could not find " << pexpr << " in environment";
   return content->tensorIndices[content->locationOfTensorIndex.at(pexpr)];

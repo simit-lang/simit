@@ -168,7 +168,6 @@ private:
             << "index (flattened)";
 
         iassert(isa<VarExpr>(tensor));
-        const Var& var = to<VarExpr>(tensor)->var;
 
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
@@ -177,12 +176,7 @@ private:
           Expr i = rewrite(indices[0]);
           Expr j = rewrite(indices[1]);
 
-          const pe::PathExpression pexpr = tensorStorage.getPathExpression();
-          if (!environment.hasTensorIndex(pexpr)) {
-            environment.addTensorIndex(pexpr, var);
-          }
-          TensorIndex tensorIndex = environment.getTensorIndex(pexpr);
-
+          TensorIndex tensorIndex = tensorStorage.getTensorIndex();
           Expr coords = tensorIndex.getCoordArray();
           Expr sinks  = tensorIndex.getSinkArray();
 

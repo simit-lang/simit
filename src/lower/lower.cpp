@@ -98,7 +98,7 @@ Func lower(Func func, bool print, bool time) {
 
   // Determine Storage
   func = rewriteCallGraph(func, [](Func func) -> Func {
-    func.setStorage(getStorage(func));
+    updateStorage(func, &func.getStorage(), &func.getEnvironment());
     return func;
   });
   if (print) {

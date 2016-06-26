@@ -424,20 +424,11 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
 
       TensorStorage& ts = storage->getStorage(target);
       TensorIndex ti;
-      if (!ts.hasTensorIndex()) {
-        if (environment->hasExtern(target.getName())) {
-          ts.setTensorIndex(target);
-          ti = ts.getTensorIndex();
-          environment->addExternMapping(target, ti.getCoordArray());
-          environment->addExternMapping(target, ti.getSinkArray());
-        }
-        else {
-          const pe::PathExpression pexpr = ts.getPathExpression();
-          if (!environment->hasTensorIndex(pexpr)) {
-            environment->addTensorIndex(pexpr, target);
-          }
-          ti = environment->getTensorIndex(pexpr);
-        }
+      if (!ts.hasTensorIndex() && environment->hasExtern(target.getName())) {
+        ts.setTensorIndex(target);
+        ti = ts.getTensorIndex();
+        environment->addExternMapping(target, ti.getCoordArray());
+        environment->addExternMapping(target, ti.getSinkArray());
       }
       else {
         ti = ts.getTensorIndex();
