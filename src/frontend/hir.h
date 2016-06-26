@@ -101,10 +101,11 @@ struct StmtBlock : public Stmt {
 };
 
 struct Expr : public HIRNode {
-  typedef std::vector<ir::Type> Type;
+  typedef std::vector<ir::Type>    Type;
+  typedef internal::Symbol::Access Access;
 
-  Type                     type;
-  internal::Symbol::Access access;
+  Type   type;
+  Access access;
 
   typedef std::shared_ptr<Expr> Ptr;
 
@@ -405,6 +406,7 @@ struct FuncDecl : public HIRNode {
   StmtBlock::Ptr                    body;
   bool                              exported;
   bool                              external;
+  std::string                       originalName;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   

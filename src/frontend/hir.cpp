@@ -300,7 +300,7 @@ void FuncDecl::copy(HIRNode::Ptr node) {
   HIRNode::copy(funcDecl);
   name = funcDecl->name->clone<Identifier>();
   for (const auto &typeParam : funcDecl->typeParams) {
-    typeParams.push_back(typeParam->clone<GenericIndexSet>());
+    typeParams.push_back(typeParam->clone<Identifier>());
   }
   for (const auto &arg : funcDecl->args) {
     args.push_back(arg->clone<Argument>());
@@ -310,7 +310,7 @@ void FuncDecl::copy(HIRNode::Ptr node) {
   }
   body = funcDecl->body->clone<StmtBlock>();
   exported = funcDecl->exported;
-  doTypeCheck = funcDecl->doTypeCheck;
+  originalName = funcDecl->originalName;
 }
 
 HIRNode::Ptr FuncDecl::cloneImpl() {

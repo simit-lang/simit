@@ -43,8 +43,8 @@ public:
     scopes.front().insert(symVal);
   }
 
-  // True iff the symbol table contains the given symbol in the current scope 
-  // or an outer scope (and currentScopeOnly == false).
+  // True iff the symbol table contains the given symbol in the current scope, 
+  // or in an outer scope when currentScopeOnly == false.
   bool contains(const Key &symbol, bool currentScopeOnly = false) const {
     if (currentScopeOnly) {
       return (scopes.front().find(symbol) != scopes.front().end());

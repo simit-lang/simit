@@ -2,6 +2,7 @@
 #include <vector>
 #include <iostream>
 #include <algorithm>
+#include <exception>
 
 #include "type_checker.h"
 #include "program_context.h"
@@ -262,68 +263,12 @@ void TypeChecker::visit(ExternDecl::Ptr decl) {
 }
 
 void TypeChecker::visit(FuncDecl::Ptr decl) {
-  if (!decl->doTypeCheck) {
-    return;
+  const ir::Func func = typeCheckFuncDecl(decl);
+  if (decl->typeParams.size() > 0) {
+    genericFuncs[decl->name->ident] = decl;
+  } else if (func.defined()) {
+    ctx.addFunction(func);
   }
-
-  ctx.scope();
-  for (const auto typeParam : decl->typeParams) {
-    const auto genericElem = ir::ElementType::make(typeParam->setName, {});
-    const auto genericSet = ir::SetType::make(genericElem, {});
-    const auto genericVar = ir::Var(typeParam->setName, genericSet);
-    ctx.addSymbol(genericVar);
-  }
-
-  bool typeChecked = true;
-
-  std::vector<ir::Var> arguments;
-  for (const auto arg : decl->args) {
-    const ir::Var argVar = getVar(arg->arg);
-
-    if (!argVar.getType().defined()) {
-      typeChecked = false;
-    }
-
-    internal::Symbol::Access access = internal::Symbol::Read;
-    if (arg->isInOut()) {
-      access = internal::Symbol::ReadWrite;
-      writableArgs.insert(argVar);
-    }
-    
-    ctx.addSymbol(argVar.getName(), argVar, access);
-    arguments.push_back(argVar);
-  }
-  
-  std::vector<ir::Var> results;
-  for (const auto res : decl->results) {
-    const ir::Var result = getVar(res);
-
-    if (!result.getType().defined()) {
-      typeChecked = false;
-    }
-
-    ctx.addSymbol(result);
-    results.push_back(result);
-  }
-
-  if (decl->body != nullptr) {
-    decl->body->accept(this);
-  }
-  ctx.unscope();
-
-  if (!typeChecked) {
-    return;
-  }
-
-  const std::string name = decl->name->ident;
-  
-  // Check that function has not been previously declared.
-  if (ctx.containsFunction(name)) {
-    reportMultipleDefs("function or procedure", name, decl);
-    return;
-  }
-
-  ctx.addFunction(ir::Func(name, arguments, results, ir::Stmt()));
 }
 
 void TypeChecker::visit(VarDecl::Ptr decl) {
@@ -842,12 +787,43 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
   }
   
-  if (!ctx.containsFunction(expr->func->ident)) {
+  ir::Func func;
+
+  const std::string funcName = expr->func->ident;
+  const auto it = genericFuncs.find(funcName);
+
+  if (it != genericFuncs.end()) {
+    GenericCallTypeChecker checker;
+    FuncDecl::Ptr decl = it->second;
+
+    const unsigned numArgs = std::min(argTypes.size(), decl->args.size());
+    for (unsigned i = 0; i < numArgs; ++i) {
+      const Ptr<Expr::Type> argType = argTypes[i];
+      if (argType && argType->size() == 1) {
+        checker.unify(decl->args[i]->arg->type, argType->at(0));
+      }
+    }
+
+    for (const auto typeParam : decl->typeParams) {
+      const auto it = checker.specializedSets.find(typeParam->ident);
+      if (it == checker.specializedSets.end()) {
+        reportError("cannot infer all type parameters", expr);
+        return;
+      }
+    }
+  
+    decl->typeParams.clear();
+    ReplaceTypeParams(checker.specializedSets).rewrite(decl);
+    //std::cout << *decl << std::endl;
+    func = typeCheckFuncDecl(decl, true);
+  } else if (ctx.containsFunction(funcName)) {
+    func = ctx.getFunction(funcName);
+  }
+
+  if (!func.defined()) {
     return;
   }
 
-  const std::string funcName = expr->func->ident;
-  const ir::Func func = ctx.getFunction(funcName);
   const std::vector<ir::Var> funcArgs = func.getArguments();
 
   if (expr->args.size() != funcArgs.size()) {
@@ -1270,6 +1246,79 @@ TypeChecker::DenseTensorType
   return tensorType;
 }
 
+ir::Func TypeChecker::typeCheckFuncDecl(FuncDecl::Ptr decl, 
+                                        bool doCheckSpecialized) { 
+  // Specialized versions of generic functions should only be type-checked 
+  // when argument types can be inferred.
+  if (!decl->originalName.empty() && !doCheckSpecialized) {
+    return ir::Func();
+  }
+
+  ctx.scope();
+  skipReportError += (unsigned)doCheckSpecialized;
+
+  for (const auto typeParam : decl->typeParams) {
+    const auto genericElem = ir::ElementType::make(typeParam->ident, {});
+    const auto genericSet = ir::SetType::make(genericElem, {});
+    const auto genericVar = ir::Var(typeParam->ident, genericSet);
+    ctx.addSymbol(genericVar);
+  }
+
+  std::vector<ir::Var> arguments;
+  std::vector<ir::Var> results;
+  bool typeChecked = true;
+
+  // Infer types of arguments to function.
+  for (const auto arg : decl->args) {
+    const ir::Var argVar = getVar(arg->arg);
+
+    if (!argVar.getType().defined()) {
+      typeChecked = false;
+    }
+
+    Expr::Access access = internal::Symbol::Read;
+    if (arg->isInOut()) {
+      access = internal::Symbol::ReadWrite;
+      writableArgs.insert(argVar);
+    }
+    
+    ctx.addSymbol(argVar.getName(), argVar, access);
+    arguments.push_back(argVar);
+  }
+  
+  // Infer types of function return values.
+  for (const auto res : decl->results) {
+    const ir::Var result = getVar(res);
+
+    if (!result.getType().defined()) {
+      typeChecked = false;
+    }
+
+    ctx.addSymbol(result);
+    results.push_back(result);
+  }
+
+  // Type check function body.
+  decl->body->accept(this);
+  
+  ctx.unscope();
+  skipReportError -= (unsigned)doCheckSpecialized;
+
+  if (!typeChecked) {
+    return ir::Func();
+  }
+
+  const std::string name = decl->name->ident;
+
+  // Check that function has not been previously declared.
+  if (ctx.containsFunction(name)) {
+    reportMultipleDefs("function or procedure", name, decl);
+    return ir::Func();
+  }
+
+  return ir::Func(name, arguments, results, ir::Stmt());
+}
+
 void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst, 
                                           bool isGlobal) {
   const std::string varName = decl->name->ident;
@@ -1612,6 +1661,50 @@ void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
   retType->push_back(ir::Boolean);
 }
 
+void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType, 
+                                                ir::Type argType) {
+  //std::cout << "unifying " << *paramType << " with " << argType << std::endl;
+  if (isa<NDTensorType>(paramType) && argType.isTensor()) {
+    const auto paramTensorType = to<NDTensorType>(paramType);
+    const auto argTensorType = argType.toTensor();
+    const auto paramDomain = paramTensorType->indexSets;
+    const auto argDomain = argTensorType->getOuterDimensions();
+    const unsigned domainSize = std::min(paramDomain.size(), argDomain.size());
+    for (unsigned i = 0; i < domainSize; ++i) {
+      if (isa<GenericIndexSet>(paramDomain[i])) {
+        const auto genericName = to<GenericIndexSet>(paramDomain[i])->setName;
+        switch (argDomain[i].getKind()) {
+          case ir::IndexSet::Set:
+          {
+            auto indexSet = std::make_shared<SetIndexSet>();
+            indexSet->setLoc(paramDomain[i]);
+            indexSet->setName = 
+                to<ir::VarExpr>(argDomain[i].getSet())->var.getName();
+            specializedSets[genericName] = indexSet;
+            break;
+          }
+          case ir::IndexSet::Range:
+          {
+            auto indexSet = std::make_shared<RangeIndexSet>();
+            indexSet->setLoc(paramDomain[i]);
+            indexSet->range = (int)argDomain[i].getSize();
+            specializedSets[genericName] = indexSet;
+            break;
+          }
+          default:
+            unreachable;
+            break;
+        }
+      }
+    }
+    unify(paramTensorType->blockType, argTensorType->getBlockType());
+  }
+}
+    
+void TypeChecker::ReplaceTypeParams::visit(GenericIndexSet::Ptr set) {
+  node = specializedSets.at(set->setName);
+}
+
 void TypeChecker::DenseTensorType::addIntValues(unsigned len) {
   if (type != Type::INT && type != Type::UNKNOWN) {
     throw TypeError();
@@ -1701,9 +1794,11 @@ std::string TypeChecker::typeString(const Ptr<Expr::Type> &type) {
 }
 
 void TypeChecker::reportError(std::string msg, HIRNode::Ptr loc) {
-  const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
-                              loc->getLineEnd(), loc->getColEnd(), msg);
-  errors->push_back(err);
+  if (skipReportError == 0) {
+    const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
+                                loc->getLineEnd(), loc->getColEnd(), msg);
+    errors->push_back(err);
+  }
 }
 
 void TypeChecker::reportUndeclared(std::string type, std::string ident,

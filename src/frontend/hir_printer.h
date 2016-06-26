@@ -17,7 +17,6 @@ public:
   virtual void visit(StmtBlock::Ptr);
   virtual void visit(RangeIndexSet::Ptr);
   virtual void visit(SetIndexSet::Ptr);
-  virtual void visit(GenericIndexSet::Ptr);
   virtual void visit(DynamicIndexSet::Ptr);
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);

@@ -34,8 +34,7 @@ private:
   hir::FuncDecl::Ptr                     parseExternFuncDecl();
   hir::FuncDecl::Ptr                     parseFuncDecl();
   hir::FuncDecl::Ptr                     parseProcDecl();
-  std::vector<hir::GenericIndexSet::Ptr> parseTypeParams();
-  hir::GenericIndexSet::Ptr              parseTypeParam();
+  std::vector<hir::Identifier::Ptr>      parseTypeParams();
   std::vector<hir::Argument::Ptr>        parseArguments();
   hir::Argument::Ptr                     parseArgumentDecl();
   std::vector<hir::IdentDecl::Ptr>       parseResults();

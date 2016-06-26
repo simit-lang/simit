@@ -153,6 +153,10 @@ void IREmitter::visit(ExternDecl::Ptr decl) {
 }
 
 void IREmitter::visit(FuncDecl::Ptr decl) {
+  if (decl->typeParams.size() > 0 && decl->originalName.empty()) {
+    return;
+  }
+
   ctx->scope();
 
   std::vector<ir::Var> arguments;

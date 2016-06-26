@@ -12,16 +12,34 @@ namespace hir {
 
 class SpecializeGenericFunctions : public HIRVisitor {
 public:
+  SpecializeGenericFunctions() : count(0) {}
+
   void specialize(Program::Ptr);
 
 private:
+  virtual void visit(Program::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(CallExpr::Ptr);
   //virtual void visit(MapExpr::Ptr);
 
 private:
-  std::unordered_map<std::string, FuncDecl::Ptr> genericFuncs;
-  std::unordered_map<std::string, std::list<FuncDecl::Ptr>> specializedFuncs;
+  typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
+  typedef std::unordered_map<std::string, std::list<FuncDecl::Ptr>> FuncListMap;
+
+  struct FindGenericFuncs : public HIRVisitor {
+    FindGenericFuncs(FuncMap &genericFuncs) : genericFuncs(genericFuncs) {}
+
+    void find(Program::Ptr program) { program->accept(this); }
+
+    virtual void visit(FuncDecl::Ptr);
+
+    FuncMap &genericFuncs;
+  };
+
+private:
+  FuncMap     genericFuncs;
+  FuncListMap specializedFuncs;
+  unsigned    count;
 };
 
 }

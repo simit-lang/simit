@@ -39,10 +39,11 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   // hir::PadTensorBlocks().pad(program);
   hir::ConstChecker(errors).check(program);
   //hir::InferElementSets().check(program);
-  std::cout << *program << std::endl;
+  //std::cout << *program << std::endl;
   hir::SpecializeGenericFunctions().specialize(program);
-  std::cout << *program << std::endl;
+  //std::cout << *program << std::endl;
   hir::TypeChecker(errors).check(program);
+  //std::cout << *program << std::endl;
   program = hir::TupleReadRewriter().rewrite(program);
 
   // Only emit IR if no syntactic or semantic error was found.

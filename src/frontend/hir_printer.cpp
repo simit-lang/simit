@@ -28,10 +28,6 @@ void HIRPrinter::visit(SetIndexSet::Ptr set) {
   oss << set->setName;
 }
 
-void HIRPrinter::visit(GenericIndexSet::Ptr set) {
-  oss << set->setName << "'";
-}
-
 void HIRPrinter::visit(DynamicIndexSet::Ptr set) {
   oss << "*";
 }

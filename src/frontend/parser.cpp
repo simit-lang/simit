@@ -162,7 +162,6 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   const Token funcToken = peek();
   funcDecl->setBeginLoc(funcToken);
   funcDecl->exported = (funcToken.type == Token::Type::EXPORT);
-  funcDecl->doTypeCheck = true;
   
   tryconsume(Token::Type::EXPORT);
   consume(Token::Type::FUNC);
@@ -184,7 +183,6 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
 hir::FuncDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::FuncDecl>();
   procDecl->exported = true;
-  procDecl->doTypeCheck = true;
 
   const Token procToken = consume(Token::Type::PROC);
   procDecl->setBeginLoc(procToken);
@@ -214,30 +212,19 @@ hir::FuncDecl::Ptr Parser::parseProcDecl() {
   return procDecl;
 }
 
-// type_params: ['<' type_param {',' type_param} '>']
-std::vector<hir::GenericIndexSet::Ptr> Parser::parseTypeParams() {
-  std::vector<hir::GenericIndexSet::Ptr> typeParams;
+// type_params: ['<' ident {',' ident} '>']
+std::vector<hir::Identifier::Ptr> Parser::parseTypeParams() {
+  std::vector<hir::Identifier::Ptr> typeParams;
 
   if (tryconsume(Token::Type::LA)) {
     do {
-      const hir::GenericIndexSet::Ptr typeParam = parseTypeParam();
+      const hir::Identifier::Ptr typeParam = parseIdent();
       typeParams.push_back(typeParam);
     } while (tryconsume(Token::Type::COMMA));
     consume(Token::Type::RA);
   }
 
   return typeParams;
-}
-
-// type_param: ident
-hir::GenericIndexSet::Ptr Parser::parseTypeParam() {
-  auto typeParam = std::make_shared<hir::GenericIndexSet>();
-
-  const Token identToken = consume(Token::Type::IDENT);
-  typeParam->setLoc(identToken);
-  typeParam->setName = identToken.str;
-
-  return typeParam;
 }
 
 // arguments: '(' [argument_decl {',' argument_decl}] ')'

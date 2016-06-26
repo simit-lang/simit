@@ -6,9 +6,11 @@
 #include <string>
 #include <exception>
 #include <set>
+#include <unordered_map>
 
 #include "hir.h"
 #include "hir_visitor.h"
+#include "hir_rewriter.h"
 #include "types.h"
 #include "domain.h"
 #include "program_context.h"
@@ -23,9 +25,10 @@ namespace hir {
 class TypeChecker : public HIRVisitor {
 public:
   TypeChecker(std::vector<ParseError> *errors) : 
-    retField(ir::Field("", ir::Type())), 
-    skipCheckDeclared(false),
-    errors(errors) {}
+      retField(ir::Field("", ir::Type())), 
+      skipCheckDeclared(false),
+      skipReportError(0),
+      errors(errors) {}
 
   void check(Program::Ptr program) { program->accept(this); }
 
@@ -109,12 +112,31 @@ private:
     Type                      type;
   };
 
+  typedef std::unordered_map<std::string, IndexSet::Ptr> ReplacementMap;
+  typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
+
+  struct GenericCallTypeChecker {
+    void unify(Type::Ptr, ir::Type);
+
+    ReplacementMap specializedSets;
+  };
+    
+  struct ReplaceTypeParams : public HIRRewriter {
+    ReplaceTypeParams(ReplacementMap &specializedSets) : 
+        specializedSets(specializedSets) {}
+    
+    virtual void visit(GenericIndexSet::Ptr);
+
+    ReplacementMap &specializedSets;
+  };
+
 private:
-  void typeCheckVarOrConstDecl(VarDecl::Ptr, bool = false, bool = false);
-  void typeCheckMapOrApply(MapExpr::Ptr, bool = false);
-  void typeCheckBinaryElwise(BinaryExpr::Ptr, bool = false);
-  void typeCheckBinaryBoolean(BinaryExpr::Ptr);
-  void typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
+  ir::Func typeCheckFuncDecl(FuncDecl::Ptr, bool = false);
+  void     typeCheckVarOrConstDecl(VarDecl::Ptr, bool = false, bool = false);
+  void     typeCheckMapOrApply(MapExpr::Ptr, bool = false);
+  void     typeCheckBinaryElwise(BinaryExpr::Ptr, bool = false);
+  void     typeCheckBinaryBoolean(BinaryExpr::Ptr);
+  void     typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr);
 
   DenseTensorType getDenseTensorType(DenseTensorLiteral::Ptr);
 
@@ -182,7 +204,9 @@ private:
   ir::Var           retVar;
  
   bool                     skipCheckDeclared;
+  unsigned                 skipReportError;
   std::set<ir::Var>        writableArgs;
+  FuncMap                  genericFuncs;
   internal::ProgramContext ctx;
   std::vector<ParseError> *errors;
 };
