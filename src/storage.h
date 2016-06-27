@@ -41,8 +41,8 @@ public:
   /// Create a tensor storage descriptor.
   TensorStorage(Kind kind);
 
-  /// Create an indexed tensor storage descriptor.
-  TensorStorage(Kind kind, const TensorIndex& index);
+  /// Create an indexed tensor storage descriptor with an index.
+  TensorStorage(Kind kind, const TensorIndgex& index);
 
   /// Retrieve the tensor storage type.
   Kind getKind() const;

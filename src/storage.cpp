@@ -396,7 +396,6 @@ private:
               tensorStorage = operandStorage.getKind();
               break;
             case TensorStorage::Indexed: {
-              tensorStorage = TensorStorage(TensorStorage::Indexed);
               auto index = getTensorIndex(var);
               tensorStorage = TensorStorage(TensorStorage::Indexed, index);
               break;
