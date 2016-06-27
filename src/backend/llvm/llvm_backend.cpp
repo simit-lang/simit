@@ -674,17 +674,7 @@ LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
       auto n = emitComputeLen(dimensions[0]);
       auto m = emitComputeLen(dimensions[1]);
 
-      // Argument list:
-      // - Top-level type:    n, m
-      // - Top-level indices: rowPtr, colIdx,
-      // - Block type:        nn, mm
-      // - Values:  vals
-      argumentValues.push_back(n);
-      argumentValues.push_back(m);
-      argumentValues.push_back(rowptr);
-      argumentValues.push_back(colidx);
-
-      // Emit block sizes.
+      // get block sizes.
       llvm::Value* nn;
       llvm::Value* mm;
       Type blockType = type->getBlockType();
@@ -697,6 +687,16 @@ LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
         nn = emitComputeLen(blockDimensions[0]);
         mm = emitComputeLen(blockDimensions[1]);
       }
+
+      // Argument list:
+      // - Top-level type:    n, m
+      // - Top-level indices: rowPtr, colIdx,
+      // - Block type:        nn, mm
+      // - Values:  vals
+      argumentValues.push_back(n);
+      argumentValues.push_back(m);
+      argumentValues.push_back(rowptr);
+      argumentValues.push_back(colidx);
       argumentValues.push_back(nn);
       argumentValues.push_back(mm);
     }
@@ -743,39 +743,43 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
       auto tensorStorage = storage.getStorage(to<VarExpr>(result)->var);
       auto tensorIndex = tensorStorage.getTensorIndex();
 
-      llvm::Value* rowptrPtr = symtable.get(tensorIndex.getRowptrArray());
-      llvm::Value* rowptr = builder->CreateAlignedLoad(rowptrPtr, 8);
+      auto rowptr = tensorIndex.getRowptrArray();
+      auto rowptrPtr = builder->CreateAlloca(LLVM_INT_PTR, llvmInt(1),
+                                             rowptr.getName()+PTR_SUFFIX);
+      resVals->push_back(make_pair(rowptr, rowptrPtr));
 
-      llvm::Value* colidxPtr = symtable.get(tensorIndex.getColidxArray());
-      llvm::Value* colidx = builder->CreateAlignedLoad(colidxPtr, 8);
+      auto colidx = tensorIndex.getColidxArray();
+      auto colidxPtr = builder->CreateAlloca(LLVM_INT_PTR, llvmInt(1),
+                                             colidx.getName()+PTR_SUFFIX);
+      resVals->push_back(make_pair(colidx, colidxPtr));
 
-      auto N = emitComputeLen(dimensions[0]);
-      auto M = emitComputeLen(dimensions[1]);
+      auto n = emitComputeLen(dimensions[0]);
+      auto m = emitComputeLen(dimensions[1]);
 
       // get block sizes
-      llvm::Value* Nb;
-      llvm::Value* Mb;
+      llvm::Value* nn;
+      llvm::Value* mm;
       Type blockType = type->getBlockType();
       if (isScalar(blockType)) {
-        Nb = llvmInt(1);
-        Mb = llvmInt(1);
+        nn = llvmInt(1);
+        mm = llvmInt(1);
       }
       else {
         auto blockDimensions = blockType.toTensor()->getDimensions();
-        Nb = emitComputeLen(blockDimensions[0]);
-        Mb = emitComputeLen(blockDimensions[1]);
+        nn = emitComputeLen(blockDimensions[0]);
+        mm = emitComputeLen(blockDimensions[1]);
       }
 
       // Argument list::
       // - Type:    N, M, Nb, Mb,
       // - Indices: rowptr, colidx,
       // - Values:  vals
-      resultValues.push_back(N);
-      resultValues.push_back(M);
-      resultValues.push_back(Nb);
-      resultValues.push_back(Mb);
-      resultValues.push_back(rowptr);
-      resultValues.push_back(colidx);
+      resultValues.push_back(n);
+      resultValues.push_back(m);
+      resultValues.push_back(rowptrPtr);
+      resultValues.push_back(colidxPtr);
+      resultValues.push_back(nn);
+      resultValues.push_back(mm);
     }
     // Dense vectors and matrices
     else if (type->order() == 1 || type->order() == 2) {

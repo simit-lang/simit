@@ -264,8 +264,8 @@ private:
             storage->add(result, TensorStorage(TensorStorage::Dense));
           }
           else {
-            storage->add(result, TensorStorage(TensorStorage::Indexed,
-                                               TensorIndex()));
+            auto index = TensorIndex(result.getName(), pe::PathExpression());
+            storage->add(result, TensorStorage(TensorStorage::Indexed, index));
           }
         }
       }

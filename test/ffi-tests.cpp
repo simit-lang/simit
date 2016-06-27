@@ -346,7 +346,7 @@ dmatrix_neg(int Bn,  int Bm,  int* BrowPtr, int* BcolIdx,
 }
 
 
-TEST(DISABLED_ffi, matrix_neg) {
+TEST(ffi, matrix_neg) {
   Set V;
   FieldRef<simit_float> a = V.addField<simit_float>("a");
   FieldRef<simit_float> b = V.addField<simit_float>("b");

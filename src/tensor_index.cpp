@@ -23,7 +23,7 @@ TensorIndex::TensorIndex(std::string name, pe::PathExpression pexpr)
   content->name = name;
   content->pexpr = pexpr;
 
-  string prefix = (name == "") ? name : name + "_";
+  string prefix = (name == "") ? name : name + ".";
   content->coordArray = Var(prefix + "coords", ArrayType::make(ScalarType::Int));
   content->sinkArray  = Var(prefix + "sinks",  ArrayType::make(ScalarType::Int));
 }
