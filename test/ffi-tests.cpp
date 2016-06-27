@@ -313,36 +313,53 @@ csr2eigen(int N, int M, int* rowPtr, int* colIdx, Float* vals) {
   return mat;
 }
 
-extern "C" void
-dmatrix_neg(int Bn,  int Bm,  int* BrowPtr, int* BcolIdx,
-            int Bnn, int Bmm, double* B,
-            int An,  int Am,  int** ArowPtr, int** AcolIdx,
-            int Ann, int Amm, double** A) {
+template<typename Float>
+void matrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                int Bnn, int Bmm, Float* B,
+                int An,  int Am,  int** Arowptr, int** Acolidx,
+                int Ann, int Amm, Float** A) {
   assert(Bn == An && Bm == Am);
-  auto mat = csr2eigen(Bn, Bm, BrowPtr, BcolIdx, B);
+  auto mat = csr2eigen(Bn, Bm, Browptr, Bcolidx, B);
   mat = -mat;
   mat.makeCompressed();
 
   auto nnz = mat.nonZeros();
-  *ArowPtr =    static_cast<int*>(ffi::simit_malloc((An+1) * sizeof(int)));
-  *AcolIdx =    static_cast<int*>(ffi::simit_malloc(   nnz * sizeof(int)));
-  *A       = static_cast<double*>(ffi::simit_malloc(   nnz * sizeof(double)));
+  *Arowptr =   static_cast<int*>(ffi::simit_malloc((An+1) * sizeof(int)));
+  *Acolidx =   static_cast<int*>(ffi::simit_malloc(   nnz * sizeof(int)));
+  *A       = static_cast<Float*>(ffi::simit_malloc(   nnz * sizeof(Float)));
 
   // copy rowptr
   auto rowptr = mat.outerIndexPtr();
   for (int i=0; i<An+1; ++i) {
-    (*ArowPtr)[i] = rowptr[i];
-    iassert((*ArowPtr)[i] == BrowPtr[i]);
+    (*Arowptr)[i] = rowptr[i];
+    iassert((*Arowptr)[i] == Browptr[i]);
   }
 
   // copy data and colidx
   auto data = mat.data();
   auto colidx = mat.innerIndexPtr();
   for (int i=0; i<nnz; ++i) {
-    (*AcolIdx)[i] = colidx[i];
-    iassert((*AcolIdx)[i] == BcolIdx[i]);
+    (*Acolidx)[i] = colidx[i];
+    iassert((*Acolidx)[i] == Bcolidx[i]);
     (*A)[i] = data.value(i);
   }
+}
+extern "C" void
+smatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+            int Bnn, int Bmm, float* B,
+            int An,  int Am,  int** Arowptr, int** Acolidx,
+            int Ann, int Amm, float** A) {
+  return matrix_neg(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B,
+                    An, Am, Arowptr, Acolidx, Ann, Amm, A);
+}
+
+extern "C" void
+dmatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+            int Bnn, int Bmm, double* B,
+            int An,  int Am,  int** Arowptr, int** Acolidx,
+            int Ann, int Amm, double** A) {
+  return matrix_neg(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B,
+                    An, Am, Arowptr, Acolidx, Ann, Amm, A);
 }
 
 
