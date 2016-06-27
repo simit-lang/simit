@@ -48,6 +48,7 @@
 #include "llvm_function.h"
 #include "macros.h"
 #include "runtime.h"
+#include "path_expressions.h"
 #include "util/collections.h"
 
 using namespace std;
@@ -79,7 +80,7 @@ LLVMBackend::LLVMBackend() : builder(new SimitIRBuilder(LLVM_CTX)) {
 LLVMBackend::~LLVMBackend() {}
 
 // TODO: Remove this function, once the old init system has been removed
-Func LLVMBackend::makeSystemTensorsGlobalIfHasTensorIndex(Func func) {
+Func LLVMBackend::makeSystemTensorsGlobal(Func func) {
   class MakeSystemTensorsGlobalRewriter : public ir::IRRewriter {
   public:
     MakeSystemTensorsGlobalRewriter() {}
@@ -126,13 +127,9 @@ Function* LLVMBackend::compile(ir::Func func, const ir::Storage& storage) {
   this->globals.clear();
   this->storage = storage;
 
-  // This backend stores all system tensors as globals.
-  // TODO: Replace hacky makeSystemTensorsGlobalIfNoStorage with
-  //       makeSystemTensorsGlobal. The makeSystemTensorsGlobalIfNoStorage
-  //       function was used to make the old init system that relied on storage
-  //       work while transitioning to the new one based on pexprs
-//  func = makeSystemTensorsGlobal(func);
-  func = makeSystemTensorsGlobalIfHasTensorIndex(func);
+  // This backend stores dense tensors and sparse tensors with path expressions
+  // as globals.
+  func = makeSystemTensorsGlobal(func);
 
   this->environment = &func.getEnvironment();
   emitGlobals(*this->environment);
@@ -628,7 +625,30 @@ void LLVMBackend::compile(const ir::VarDecl& varDecl) {
     }
   }
   else {
-    llvmVar = makeGlobalTensor(varDecl.var);
+    if (var.getType().isTensor()) {
+      auto tensorStorage = storage.getStorage(varDecl.var);
+
+      // Sparse matrices with path expressions are stored globally
+      if (tensorStorage.getKind() != TensorStorage::Indexed ||
+          tensorStorage.getTensorIndex().getPathExpression().defined()) {
+        llvmVar = makeGlobalTensor(varDecl.var);
+      }
+      // Sparse matrices without path expressions are managed locally
+      else {
+        auto index = tensorStorage.getTensorIndex();
+        auto rowptr = index.getRowptrArray();
+        auto rowptrPtr = builder->CreateAlloca(LLVM_INT_PTR, llvmInt(1),
+                                               rowptr.getName()+PTR_SUFFIX);
+        auto colidx = index.getColidxArray();
+        auto colidxPtr = builder->CreateAlloca(LLVM_INT_PTR, llvmInt(1),
+                                               colidx.getName()+PTR_SUFFIX);
+        symtable.insert(rowptr, rowptrPtr);
+        symtable.insert(colidx, colidxPtr);
+
+        llvmVar = builder->CreateAlloca(llvmType(var.getType()), llvmInt(1),
+                                        var.getName()+PTR_SUFFIX);
+      }
+    }
   }
   iassert(llvmVar);
   symtable.insert(var, llvmVar);
@@ -744,13 +764,11 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
       auto tensorIndex = tensorStorage.getTensorIndex();
 
       auto rowptr = tensorIndex.getRowptrArray();
-      auto rowptrPtr = builder->CreateAlloca(LLVM_INT_PTR, llvmInt(1),
-                                             rowptr.getName()+PTR_SUFFIX);
+      auto rowptrPtr = symtable.get(rowptr);
       resVals->push_back(make_pair(rowptr, rowptrPtr));
 
       auto colidx = tensorIndex.getColidxArray();
-      auto colidxPtr = builder->CreateAlloca(LLVM_INT_PTR, llvmInt(1),
-                                             colidx.getName()+PTR_SUFFIX);
+      auto colidxPtr = symtable.get(colidx);
       resVals->push_back(make_pair(colidx, colidxPtr));
 
       auto n = emitComputeLen(dimensions[0]);
@@ -770,6 +788,9 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
         mm = emitComputeLen(blockDimensions[1]);
       }
 
+      auto resultPtr = symtable.get(result);
+      resVals->push_back(make_pair(result, resultPtr));
+
       // Argument list::
       // - Type:    N, M, Nb, Mb,
       // - Indices: rowptr, colidx,
@@ -780,6 +801,7 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
       resultValues.push_back(colidxPtr);
       resultValues.push_back(nn);
       resultValues.push_back(mm);
+      resultValues.push_back(resultPtr);
     }
     // Dense vectors and matrices
     else if (type->order() == 1 || type->order() == 2) {
@@ -787,18 +809,7 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
         auto N = emitComputeLen(dimensions[0]);
         resultValues.push_back(N);
       }
-    }
-
-    // Emit value argument
-    if (type->order() == 0) {
       resultValues.push_back(compile(result));
-    }
-    else {
-      auto resultPtr = builder->CreateAlloca(llvmType(result.getType()),
-                                             llvmInt(1),
-                                             result.getName()+PTR_SUFFIX);
-      resultValues.push_back(resultPtr);
-      resVals->push_back(make_pair(result, resultPtr));
     }
   }
   else {

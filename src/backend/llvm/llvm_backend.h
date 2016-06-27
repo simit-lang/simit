@@ -196,7 +196,7 @@ protected:
   void emitIntrinsicCall(const ir::CallStmt& callStmt);
 
   // TODO: Remove this function, once the old init system has been removed
-  ir::Func makeSystemTensorsGlobalIfHasTensorIndex(ir::Func func);
+  ir::Func makeSystemTensorsGlobal(ir::Func func);
 
 private:
   static bool llvmInitialized;

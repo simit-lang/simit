@@ -110,20 +110,19 @@ TEST(ffi, scalar_neg_two) {
 }
 
 template<typename Float>
-int vecadd(int aN, Float* a, int bN, Float* b, int cN, Float** c) {
+int vecadd(int aN, Float* a, int bN, Float* b, int cN, Float* c) {
   iassert(aN == bN && bN == cN);
-  *c = static_cast<Float*>(simit_malloc(cN * sizeof(Float)));
   for (int i=0; i<aN; ++i) {
-    (*c)[i] = a[i] + b[i];
+    c[i] = a[i] + b[i];
   }
   return 0;
 }
 extern "C"
-int svecadd(int aN, float* a, int bN, float* b, int cN, float** c) {
+int svecadd(int aN, float* a, int bN, float* b, int cN, float* c) {
   return vecadd<float>(aN,a, bN,b, cN,c);
 }
 extern "C"
-int dvecadd(int aN, double* a, int bN, double* b, int cN, double** c) {
+int dvecadd(int aN, double* a, int bN, double* b, int cN, double* c) {
   return vecadd<double>(aN,a, bN,b, cN,c);
 }
 
@@ -161,9 +160,8 @@ TEST(ffi, vector_add) {
 
 template<typename Float>
 int gemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, Float* B,
-         int cN, Float* c, int aN, Float** a) {
+         int cN, Float* c, int aN, Float* a) {
   iassert(Bn == aN && Bm == cN);
-  *a = static_cast<Float*>(simit_malloc(aN * Bnn * sizeof(Float)));
 
   int* csrRowStart;
   int* csrColIdx;
@@ -174,9 +172,9 @@ int gemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, Float* B,
 
   // spmv
   for (int i=0; i<Bn; i++) {
-    (*a)[i] = 0;
+    a[i] = 0;
     for (int j=csrRowStart[i]; j<csrRowStart[i+1]; j++) {
-      (*a)[i] += csrVals[j] * c[csrColIdx[j]];
+      a[i] += csrVals[j] * c[csrColIdx[j]];
     }
   }
 
@@ -187,12 +185,12 @@ int gemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, Float* B,
 }
 extern "C"
 int sgemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, float* B,
-          int cN, float* c, int aN, float** a) {
+          int cN, float* c, int aN, float* a) {
   return gemv<float>(Bn, Bm, BrowPtr, BcolIdx, Bnn, Bmm, B, cN, c, aN, a);
 }
 extern "C"
 int dgemv(int Bn,int Bm, int* BrowPtr,int* BcolIdx, int Bnn,int Bmm, double* B,
-          int cN, double* c, int aN, double** a) {
+          int cN, double* c, int aN, double* a) {
   return gemv<double>(Bn, Bm, BrowPtr, BcolIdx, Bnn, Bmm, B, cN, c, aN, a);
 }
 
@@ -344,24 +342,23 @@ void matrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
     (*A)[i] = data.value(i);
   }
 }
-extern "C" void
-smatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
-            int Bnn, int Bmm, float* B,
-            int An,  int Am,  int** Arowptr, int** Acolidx,
-            int Ann, int Amm, float** A) {
+extern "C"
+void smatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                 int Bnn, int Bmm, float* B,
+                 int An,  int Am,  int** Arowptr, int** Acolidx,
+                 int Ann, int Amm, float** A) {
   return matrix_neg(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B,
                     An, Am, Arowptr, Acolidx, Ann, Amm, A);
 }
 
-extern "C" void
-dmatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
-            int Bnn, int Bmm, double* B,
-            int An,  int Am,  int** Arowptr, int** Acolidx,
-            int Ann, int Amm, double** A) {
+extern "C"
+void dmatrix_neg(int Bn,  int Bm,  int* Browptr, int* Bcolidx,
+                 int Bnn, int Bmm, double* B,
+                 int An,  int Am,  int** Arowptr, int** Acolidx,
+                 int Ann, int Amm, double** A) {
   return matrix_neg(Bn, Bm, Browptr, Bcolidx, Bnn, Bmm, B,
                     An, Am, Arowptr, Acolidx, Ann, Amm, A);
 }
-
 
 TEST(ffi, matrix_neg) {
   Set V;

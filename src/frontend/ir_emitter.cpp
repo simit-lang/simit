@@ -950,15 +950,7 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
         if (!ctx->hasSymbol(varName)) {
           var = ir::Var(varName, retVals[i].getType());
           ctx->addSymbol(var);
-
-          // The statement is an extern function call then we don't declare
-          // the variable since the extern calling convention is for the the
-          // callee allocates memory
-          if (!isCallStmt ||
-              ir::to<ir::CallStmt>(topLevelStmt)->callee.getKind() !=
-              ir::Func::External) {
-            ctx->addStatement(ir::VarDecl::make(var));
-          }
+          ctx->addStatement(ir::VarDecl::make(var));
         }
 
         results.push_back(var);

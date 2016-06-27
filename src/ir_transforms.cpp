@@ -63,14 +63,12 @@ Func insertVarDecls(Func func) {
 
     void visit(const CallStmt *op) {
       stmt = op;
-      if (op->callee.getKind() != Func::External) {
         for (auto &var : op->results) {
           if (!util::contains(declared, var)) {
             stmt = Block::make(VarDecl::make(var), stmt);
             declared.insert(var);
           }
         }
-      }
     }
   };
   return InsertVarDeclsRewriter().rewrite(func);
