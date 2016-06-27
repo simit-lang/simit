@@ -655,7 +655,9 @@ void TupleReadExpr::copy(HIRNode::Ptr node) {
   const auto tupleReadExpr = to<TupleReadExpr>(node);
   Expr::copy(tupleReadExpr);
   tuple = tupleReadExpr->tuple->clone<Expr>();
-  index = tupleReadExpr->index->clone<Expr>();
+  if (tupleReadExpr->index) {
+    index = tupleReadExpr->index->clone<Expr>();
+  }
 }
 
 HIRNode::Ptr TupleReadExpr::cloneImpl() {

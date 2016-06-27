@@ -11,15 +11,13 @@
 #include "parser.h"
 #include "hir.h"
 
-#include "type_param_rewriter.h"
-#include "func_call_rewriter.h"
-#include "const_fold.h"
-#include "pad_tensor_blocks.h"
 #include "const_checker.h"
+#include "const_fold.h"
+#include "context_sensitive_rewriter.h"
+#include "ir_emitter.h"
+#include "pad_tensor_blocks.h"
 #include "specialize_generic_functions.h"
 #include "type_checker.h"
-#include "tuple_read_rewriter.h"
-#include "ir_emitter.h"
 
 using namespace simit::internal;
 
@@ -31,10 +29,7 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   hir::Program::Ptr program = Parser(errors).parse(tokens);
 
   // Semantic analyses.
-  program = hir::TypeParamRewriter().rewrite(program);
-  //std::cout << *program << std::endl;
-  //std::cout << *program->clone() << std::endl;
-  program = hir::FuncCallRewriter(errors).rewrite(program);
+  program = hir::ContextSensitiveRewriter(errors).rewrite(program);
   program = hir::ConstantFolding().rewrite(program);
   // hir::PadTensorBlocks().pad(program);
   hir::ConstChecker(errors).check(program);
@@ -44,7 +39,6 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   //std::cout << *program << std::endl;
   hir::TypeChecker(errors).check(program);
   //std::cout << *program << std::endl;
-  program = hir::TupleReadRewriter().rewrite(program);
 
   // Only emit IR if no syntactic or semantic error was found.
   if (!errors->empty()) {

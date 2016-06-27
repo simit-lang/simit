@@ -243,7 +243,9 @@ void HIRRewriter::visit(TensorReadExpr::Ptr expr) {
 
 void HIRRewriter::visit(TupleReadExpr::Ptr expr) {
   expr->tuple = rewrite<Expr>(expr->tuple);
-  expr->index = rewrite<Expr>(expr->index);
+  if (expr->index) {
+    expr->index = rewrite<Expr>(expr->index);
+  }
   node = expr;
 }
 

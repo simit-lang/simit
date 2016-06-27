@@ -946,120 +946,119 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     return;
   }
 
-  // Check that program only ever attempts to read from tensors or tuples.
-  if (lhsType->at(0).isTensor()) {
-    const ir::TensorType *tensorType = lhsType->at(0).toTensor();
-    const auto dimensions = tensorType->getDimensions();
-    const auto outerDims = tensorType->getOuterDimensions();
-
-    // Check that right number of indices is passed to tensor read.
-    if (tensorType->getDimensions().size() != expr->indices.size()) {
-      std::stringstream errMsg;
-      errMsg << "tensor access expected " << dimensions.size()
-             << " indices but got " << expr->indices.size();
-      reportError(errMsg.str(), expr);
-      return;
-    }
-
-    std::vector<ir::IndexDomain> dims;
-    for (unsigned i = 0; i < expr->indices.size(); ++i) {
-      const ReadParam::Ptr index = expr->indices[i];
-
-      if (index->isSlice()) {
-        dims.push_back(tensorType->getDimensions()[i]);
-        continue;
-      }
-
-      const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
-      const Ptr<Expr::Type> indexType = inferType(indexExpr);
-
-      if (!indexType) {
-        continue;
-      }
-      
-      // Check that index is a single value.
-      if (indexType->size() == 0) {
-        reportError("must pass a non-void value as index" , index);
-        continue;
-      } else if (indexType->size() != 1) {
-        std::stringstream errMsg;
-        errMsg << "cannot pass multiple values of types " 
-               << typeString(indexType) << " as a single index";
-        reportError(errMsg.str(), index);
-        continue;
-      }
-
-      // Check that index is of right type.
-      switch (outerDims[i].getKind()) {
-        case ir::IndexSet::Range:
-          if (!isInt(indexType->at(0))) {
-            std::stringstream errMsg;
-            errMsg << "expected an integral index but got an index of type " 
-                   << typeString(indexType);
-            reportError(errMsg.str(), index);
-          }
-          break;
-        case ir::IndexSet::Set:
-        {
-          const auto setType = outerDims[i].getSet().type().toSet();
-          if (!compareTypes(setType->elementType, indexType->at(0))) {
-            std::stringstream errMsg;
-            errMsg << "expected an index of type "
-                   << typeString(setType->elementType) << " but got an "
-                   << "index of type " << typeString(indexType);
-            reportError(errMsg.str(), index);
-          }
-          break;
-        }
-        default:
-          break;
-      }
-    }
-
-    retType = std::make_shared<Expr::Type>();
-    if (dims.empty()) {
-      retType->push_back(tensorType->getBlockType());
-    } else {
-      const bool isColumnVector = (dims.size() == 1 && 
-                                  !expr->indices.back()->isSlice());
-      const auto retTensorType = ir::TensorType::make(
-          tensorType->getComponentType(), dims, isColumnVector);
-      retType->push_back(retTensorType);
-    }
-  } else if (lhsType->at(0).isTuple()) {
-    // Check that tuple read is indexed by an integral index.
-    if (expr->indices.size() != 1) {
-      std::stringstream errMsg;
-      errMsg << "tuple access expects exactly one index but got " 
-             << expr->indices.size();
-      reportError(errMsg.str(), expr);
-    } else if (expr->indices[0]->isSlice()) {
-      reportError("tuple access expects an integral index", expr->indices[0]);
-    } else {
-      const Expr::Ptr indexExpr = to<ExprParam>(expr->indices[0])->expr;
-      const Ptr<Expr::Type> indexType = inferType(indexExpr);
-      
-      if (indexType->size() != 1 || !isInt(indexType->at(0))) {
-        std::stringstream errMsg;
-        errMsg << "tuple access expects an integral index but got an index " 
-               << "of type " << typeString(indexType);
-        reportError(errMsg.str(), expr->indices[0]);
-      }
-    }
-
-    retType = std::make_shared<Expr::Type>();
-    retType->push_back(lhsType->at(0).toTuple()->elementType);
-  } else {
+  // Check that left operand of tensor read is actually a tensor.
+  if (!lhsType->at(0).isTensor()) {
     std::stringstream errMsg;
     errMsg << "cannot access elements from objects of type " 
            << typeString(lhsType);
     reportError(errMsg.str(), expr->tensor);
+    return;
+  }
+
+  const ir::TensorType *tensorType = lhsType->at(0).toTensor();
+  const auto dimensions = tensorType->getDimensions();
+  const auto outerDims = tensorType->getOuterDimensions();
+
+  // Check that right number of indices is passed to tensor read.
+  if (tensorType->getDimensions().size() != expr->indices.size()) {
+    std::stringstream errMsg;
+    errMsg << "tensor access expected " << dimensions.size()
+           << " indices but got " << expr->indices.size();
+    reportError(errMsg.str(), expr);
+    return;
+  }
+
+  std::vector<ir::IndexDomain> dims;
+  for (unsigned i = 0; i < expr->indices.size(); ++i) {
+    const ReadParam::Ptr index = expr->indices[i];
+
+    if (index->isSlice()) {
+      dims.push_back(tensorType->getDimensions()[i]);
+      continue;
+    }
+
+    const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
+    const Ptr<Expr::Type> indexType = inferType(indexExpr);
+
+    if (!indexType) {
+      continue;
+    }
+    
+    // Check that index is a single value.
+    if (indexType->size() == 0) {
+      reportError("must pass a non-void value as index" , index);
+      continue;
+    } else if (indexType->size() != 1) {
+      std::stringstream errMsg;
+      errMsg << "cannot pass multiple values of types " 
+             << typeString(indexType) << " as a single index";
+      reportError(errMsg.str(), index);
+      continue;
+    }
+
+    // Check that index is of right type.
+    switch (outerDims[i].getKind()) {
+      case ir::IndexSet::Range:
+        if (!isInt(indexType->at(0))) {
+          std::stringstream errMsg;
+          errMsg << "expected an integral index but got an index of type " 
+                 << typeString(indexType);
+          reportError(errMsg.str(), index);
+        }
+        break;
+      case ir::IndexSet::Set:
+      {
+        const auto setType = outerDims[i].getSet().type().toSet();
+        if (!compareTypes(setType->elementType, indexType->at(0))) {
+          std::stringstream errMsg;
+          errMsg << "expected an index of type "
+                 << typeString(setType->elementType) << " but got an "
+                 << "index of type " << typeString(indexType);
+          reportError(errMsg.str(), index);
+        }
+        break;
+      }
+      default:
+        break;
+    }
+  }
+
+  retType = std::make_shared<Expr::Type>();
+  if (dims.empty()) {
+    retType->push_back(tensorType->getBlockType());
+  } else {
+    const bool isColumnVector = (dims.size() == 1 && 
+                                !expr->indices.back()->isSlice());
+    const auto retTensorType = ir::TensorType::make(
+        tensorType->getComponentType(), dims, isColumnVector);
+    retType->push_back(retTensorType);
   }
 }
 
 void TypeChecker::visit(TupleReadExpr::Ptr expr) {
-  // Tuple reads are parsed as tensor reads during parsing.
-  unreachable;
+  const Ptr<Expr::Type> lhsType = inferType(expr->tuple);
+  expr->access = expr->tuple->access;
+
+  if (!lhsType) {
+    return;
+  }
+
+  iassert(lhsType->size() == 1);
+  iassert(lhsType->at(0).isTuple());
+
+  if (expr->index) {
+    const Ptr<Expr::Type> indexType = inferType(expr->index);
+      
+    if (indexType && (indexType->size() != 1 || !isInt(indexType->at(0)))) {
+      std::stringstream errMsg;
+      errMsg << "tuple access expects an integral index but got an index " 
+             << "of type " << typeString(indexType);
+      reportError(errMsg.str(), expr->index);
+    }
+  }
+
+  retType = std::make_shared<Expr::Type>();
+  retType->push_back(lhsType->at(0).toTuple()->elementType);
 }
 
 void TypeChecker::visit(FieldReadExpr::Ptr expr) {
@@ -1673,27 +1672,29 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
     for (unsigned i = 0; i < domainSize; ++i) {
       if (isa<GenericIndexSet>(paramDomain[i])) {
         const auto genericName = to<GenericIndexSet>(paramDomain[i])->setName;
-        switch (argDomain[i].getKind()) {
-          case ir::IndexSet::Set:
-          {
-            auto indexSet = std::make_shared<SetIndexSet>();
-            indexSet->setLoc(paramDomain[i]);
-            indexSet->setName = 
-                to<ir::VarExpr>(argDomain[i].getSet())->var.getName();
-            specializedSets[genericName] = indexSet;
-            break;
+        if (specializedSets.find(genericName) == specializedSets.end()) {
+          switch (argDomain[i].getKind()) {
+            case ir::IndexSet::Set:
+            {
+              auto indexSet = std::make_shared<SetIndexSet>();
+              indexSet->setLoc(paramDomain[i]);
+              indexSet->setName = 
+                  to<ir::VarExpr>(argDomain[i].getSet())->var.getName();
+              specializedSets[genericName] = indexSet;
+              break;
+            }
+            case ir::IndexSet::Range:
+            {
+              auto indexSet = std::make_shared<RangeIndexSet>();
+              indexSet->setLoc(paramDomain[i]);
+              indexSet->range = (int)argDomain[i].getSize();
+              specializedSets[genericName] = indexSet;
+              break;
+            }
+            default:
+              unreachable;
+              break;
           }
-          case ir::IndexSet::Range:
-          {
-            auto indexSet = std::make_shared<RangeIndexSet>();
-            indexSet->setLoc(paramDomain[i]);
-            indexSet->range = (int)argDomain[i].getSize();
-            specializedSets[genericName] = indexSet;
-            break;
-          }
-          default:
-            unreachable;
-            break;
         }
       }
     }

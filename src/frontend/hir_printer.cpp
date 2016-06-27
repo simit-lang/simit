@@ -454,7 +454,11 @@ void HIRPrinter::visit(TensorReadExpr::Ptr expr) {
 void HIRPrinter::visit(TupleReadExpr::Ptr expr) {
   expr->tuple->accept(this);
   oss << "(";
-  expr->index->accept(this);
+  if (expr->index) {
+    expr->index->accept(this);
+  } else {
+    oss << "?";
+  }
   oss << ")";
 }
 
