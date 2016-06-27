@@ -36,21 +36,21 @@ const pe::PathExpression& TensorIndex::getPathExpression() const {
   return content->pexpr;
 }
 
-const Var& TensorIndex::getCoordArray() const {
+const Var& TensorIndex::getRowptrArray() const {
   return content->coordArray;
 }
 
-const Var& TensorIndex::getSinkArray() const {
+const Var& TensorIndex::getColidxArray() const {
   return content->sinkArray;
 }
 
 ostream &operator<<(ostream& os, const TensorIndex& ti) {
-  auto coords = ti.getCoordArray();
-  auto sinks = ti.getSinkArray();
+  auto rowptr = ti.getRowptrArray();
+  auto colidx = ti.getColidxArray();
   os << "tensor-index " << ti.getName() << ": " << ti.getPathExpression()
      << endl;
-  os << "  " << coords << " : " << coords.getType() << endl;
-  os << "  " << sinks << " : " << sinks.getType();
+  os << "  " << rowptr << " : " << rowptr.getType() << endl;
+  os << "  " << colidx << " : " << colidx.getType();
   return os;
 }
 

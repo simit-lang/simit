@@ -599,10 +599,10 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
       TensorIndex tensorIndex = getTensorIndexOfStatement(stmt, storage,
                                                           environment);
-      iassert(tensorIndex.getSinkArray().defined())
+      iassert(tensorIndex.getColidxArray().defined())
           << "Empty tensor index returned from: " << stmt;
 
-      Expr jRead = Load::make(tensorIndex.getSinkArray(), ij);
+      Expr jRead = Load::make(tensorIndex.getColidxArray(), ij);
 
       // for NeighborsOf, we need to check if this is the j we are looking for
       if (loopVar->getDomain().kind == ForDomain::NeighborsOf) {
@@ -612,8 +612,8 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
 
       loopNest = Block::make(AssignStmt::make(j, jRead), loopNest);
 
-      Expr start = Load::make(tensorIndex.getCoordArray(), i);
-      Expr stop = Load::make(tensorIndex.getCoordArray(), i+1);
+      Expr start = Load::make(tensorIndex.getRowptrArray(), i);
+      Expr stop = Load::make(tensorIndex.getRowptrArray(), i+1);
 
       // Rewrite accesses to any SystemDiagonal tensors & lift out ops
       DiagonalReadsRewriter drRewriter(storage, i, loopVars);

@@ -37,23 +37,6 @@ TensorStorage::Kind TensorStorage::getKind() const {
   return content->kind;
 }
 
-bool TensorStorage::isDense() const {
-  return getKind() == Kind::Dense;
-}
-
-bool TensorStorage::isSystem() const {
-  switch (getKind()) {
-    case Kind::Dense:
-      return false;
-    case Kind::Indexed:
-    case Kind::Diagonal:
-      return true;
-    case Kind::Undefined:
-      ierror;
-  }
-  return false;
-}
-
 bool TensorStorage::hasTensorIndex() const {
   return content->index.defined();
 }

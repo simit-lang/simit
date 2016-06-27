@@ -427,8 +427,8 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       if (!ts.hasTensorIndex() && environment->hasExtern(target.getName())) {
         ts.setTensorIndex(target);
         ti = ts.getTensorIndex();
-        environment->addExternMapping(target, ti.getCoordArray());
-        environment->addExternMapping(target, ti.getSinkArray());
+        environment->addExternMapping(target, ti.getRowptrArray());
+        environment->addExternMapping(target, ti.getColidxArray());
       }
       else {
         ti = ts.getTensorIndex();

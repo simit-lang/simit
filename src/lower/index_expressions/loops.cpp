@@ -68,11 +68,11 @@ TensorIndexVar::TensorIndexVar(string inductionVarName, string tensorName,
 
 Expr TensorIndexVar::loadCoord(int offset) const {
   Expr sourceExpr = (offset == 0) ? getSourceVar() : getSourceVar() + offset;
-  return Load::make(getTensorIndex().getCoordArray(), sourceExpr);
+  return Load::make(getTensorIndex().getRowptrArray(), sourceExpr);
 }
 
 Expr TensorIndexVar::loadSink() const {
-  return Load::make(getTensorIndex().getSinkArray(), getCoordVar());
+  return Load::make(getTensorIndex().getColidxArray(), getCoordVar());
 }
 
 Stmt TensorIndexVar::initCoordVar() const {
@@ -266,8 +266,8 @@ private:
       if (environment->hasExtern(tensor.getName())) {
         ts.setTensorIndex(tensor);
         ti = ts.getTensorIndex();
-        environment->addExternMapping(tensor, ti.getCoordArray());
-        environment->addExternMapping(tensor, ti.getSinkArray());
+        environment->addExternMapping(tensor, ti.getRowptrArray());
+        environment->addExternMapping(tensor, ti.getColidxArray());
       }
       else {
         // No subset loops to create?

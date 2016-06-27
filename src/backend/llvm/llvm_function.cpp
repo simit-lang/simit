@@ -85,18 +85,18 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
   for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
     uint64_t addr;
     
-    const Var& coords = tensorIndex.getCoordArray();
-    addr = executionEngine->getGlobalValueAddress(coords.getName());
-    const uint32_t** coordsPtr = (const uint32_t**)addr;
-    *coordsPtr = nullptr;
+    const Var& rowptr = tensorIndex.getRowptrArray();
+    addr = executionEngine->getGlobalValueAddress(rowptr.getName());
+    const uint32_t** rowptrPtr = (const uint32_t**)addr;
+    *rowptrPtr = nullptr;
 
-    const Var& sinks = tensorIndex.getSinkArray();
-    addr = executionEngine->getGlobalValueAddress(sinks.getName());
-    const uint32_t** sinksPtr = (const uint32_t**)addr;
-    *sinksPtr = nullptr;
+    const Var& colidx = tensorIndex.getColidxArray();
+    addr = executionEngine->getGlobalValueAddress(colidx.getName());
+    const uint32_t** colidxPtr = (const uint32_t**)addr;
+    *colidxPtr = nullptr;
 
     const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
-    tensorIndexPtrs.insert({pexpr, {coordsPtr, sinksPtr}});
+    tensorIndexPtrs.insert({pexpr, {rowptrPtr, colidxPtr}});
   }
 
 }

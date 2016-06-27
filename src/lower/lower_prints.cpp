@@ -108,9 +108,6 @@ private:
 
         // Get coord and sink arrays corresponding to indexed tensor.
         TensorIndex tensorIndex = tensorStorage.getTensorIndex();
-        Expr coordArray = tensorIndex.getCoordArray();
-        Expr sinkArray = tensorIndex.getSinkArray();
-
         tiVar = new TensorIndexVar(inductionVar.getName(), tensorVar.getName(), 
                                    inductionVar, tensorIndex);
         tensorReadIndices.push_back(VarExpr::make(inductionVar)); 

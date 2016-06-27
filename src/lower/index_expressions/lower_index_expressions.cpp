@@ -208,7 +208,7 @@ Func lowerIndexExpressions(Func func) {
       const TensorType* type = iexpr->type.toTensor();
 
       if (type->order()==0 || type->order()==1 ||
-          storage->getStorage(var).isDense()) {
+          storage->getStorage(var).getKind() == TensorStorage::Dense) {
         kind = DenseResult;
       }
       else if (isScale(iexpr)) {

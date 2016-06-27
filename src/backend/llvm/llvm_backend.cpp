@@ -665,11 +665,11 @@ LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
       auto tensorStorage = storage.getStorage(to<VarExpr>(argument)->var);
       auto tensorIndex = tensorStorage.getTensorIndex();
 
-      llvm::Value* rowPtrPtr = symtable.get(tensorIndex.getCoordArray());
-      llvm::Value* rowPtr = builder->CreateAlignedLoad(rowPtrPtr, 8);
+      llvm::Value* rowptrPtr = symtable.get(tensorIndex.getRowptrArray());
+      llvm::Value* rowptr = builder->CreateAlignedLoad(rowptrPtr, 8);
 
-      llvm::Value* colIdxPtr = symtable.get(tensorIndex.getSinkArray());
-      llvm::Value* colIdx = builder->CreateAlignedLoad(colIdxPtr, 8);
+      llvm::Value* colidxPtr = symtable.get(tensorIndex.getColidxArray());
+      llvm::Value* colidx = builder->CreateAlignedLoad(colidxPtr, 8);
 
       auto n = emitComputeLen(dimensions[0]);
       auto m = emitComputeLen(dimensions[1]);
@@ -681,8 +681,8 @@ LLVMBackend::emitArgument(ir::Expr argument, bool excludeStaticTypes) {
       // - Values:  vals
       argumentValues.push_back(n);
       argumentValues.push_back(m);
-      argumentValues.push_back(rowPtr);
-      argumentValues.push_back(colIdx);
+      argumentValues.push_back(rowptr);
+      argumentValues.push_back(colidx);
 
       // Emit block sizes.
       llvm::Value* nn;
@@ -743,11 +743,11 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
       auto tensorStorage = storage.getStorage(to<VarExpr>(result)->var);
       auto tensorIndex = tensorStorage.getTensorIndex();
 
-      llvm::Value* rowPtrPtr = symtable.get(tensorIndex.getCoordArray());
-      llvm::Value* rowPtr = builder->CreateAlignedLoad(rowPtrPtr, 8);
+      llvm::Value* rowptrPtr = symtable.get(tensorIndex.getRowptrArray());
+      llvm::Value* rowptr = builder->CreateAlignedLoad(rowptrPtr, 8);
 
-      llvm::Value* colIdxPtr = symtable.get(tensorIndex.getSinkArray());
-      llvm::Value* colIdx = builder->CreateAlignedLoad(colIdxPtr, 8);
+      llvm::Value* colidxPtr = symtable.get(tensorIndex.getColidxArray());
+      llvm::Value* colidx = builder->CreateAlignedLoad(colidxPtr, 8);
 
       auto N = emitComputeLen(dimensions[0]);
       auto M = emitComputeLen(dimensions[1]);
@@ -768,14 +768,14 @@ LLVMBackend::emitResult(ir::Var result, bool excludeStaticTypes,
 
       // Argument list::
       // - Type:    N, M, Nb, Mb,
-      // - Indices: rowPtr, colIdx,
+      // - Indices: rowptr, colidx,
       // - Values:  vals
       resultValues.push_back(N);
       resultValues.push_back(M);
       resultValues.push_back(Nb);
       resultValues.push_back(Mb);
-      resultValues.push_back(rowPtr);
-      resultValues.push_back(colIdx);
+      resultValues.push_back(rowptr);
+      resultValues.push_back(colidx);
     }
     // Dense vectors and matrices
     else if (type->order() == 1 || type->order() == 2) {
@@ -1397,7 +1397,7 @@ llvm::Value *LLVMBackend::emitComputeLen(const TensorType *tensorType,
       // Retrieve the index of this tensor from the environment
       auto tensorIndex = tensorStorage.getTensorIndex();
 
-      llvm::Value* coordArrayPtr = symtable.get(tensorIndex.getCoordArray());
+      llvm::Value* coordArrayPtr = symtable.get(tensorIndex.getRowptrArray());
       llvm::Value* coordArray = builder->CreateAlignedLoad(coordArrayPtr, 8);
       llvm::Value* coordArrayLast
           = builder->CreateInBoundsGEP(coordArray, dimSize,
@@ -1594,19 +1594,19 @@ void LLVMBackend::emitGlobals(const ir::Environment& env) {
 
   // Emit global tensor indices
   for (const TensorIndex& tensorIndex : env.getTensorIndices()) {
-    const Var& coordArray = tensorIndex.getCoordArray();
-    llvm::GlobalVariable* coordPtr =
-        createGlobal(module, coordArray, llvm::GlobalValue::ExternalLinkage,
+    const Var& rowptr = tensorIndex.getRowptrArray();
+    llvm::GlobalVariable* rowptrPtr =
+        createGlobal(module, rowptr, llvm::GlobalValue::ExternalLinkage,
                      globalAddrspace());
-    this->symtable.insert(coordArray, coordPtr);
-    this->globals.insert(coordArray);
+    this->symtable.insert(rowptr, rowptrPtr);
+    this->globals.insert(rowptr);
 
-    const Var& sinkArray  = tensorIndex.getSinkArray();
-    llvm::GlobalVariable* sinkPtr =
-        createGlobal(module, sinkArray, llvm::GlobalValue::ExternalLinkage,
+    const Var& colidx  = tensorIndex.getColidxArray();
+    llvm::GlobalVariable* colidxPtr =
+        createGlobal(module, colidx, llvm::GlobalValue::ExternalLinkage,
                      globalAddrspace());
-    this->symtable.insert(sinkArray, sinkPtr);
-    this->globals.insert(sinkArray);
+    this->symtable.insert(colidx, colidxPtr);
+    this->globals.insert(colidx);
   }
 }
 

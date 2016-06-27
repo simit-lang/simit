@@ -200,6 +200,9 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
           << "IndexExprs should have been flattened by now:"
           << util::toString(*op);
 
+      iassert(op->tensor.type().isTensor());
+      auto type = op->tensor.type().toTensor();
+
       Var tensorVar;
       Expr setExpr;
       if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
@@ -209,10 +212,11 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
         iassert(storage.hasStorage(var))
             << "No storage descriptor found for " << var << " in "
             << util::toString(*op);
-        if (storage.getStorage(var).isSystem()) {
+
+        if (type->order() == 2 && type->hasSystemDimensions()) {
           tensorVar = var;
 
-          // Assumes all matrices are (B)CSR
+          // Assumes all indexed matrices are (B)CSR
           auto type = var.getType().toTensor();
           IndexSet dimension = type->getOuterDimensions()[0];
           iassert(dimension.getKind() == IndexSet::Set)

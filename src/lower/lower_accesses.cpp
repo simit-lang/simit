@@ -177,12 +177,12 @@ private:
           Expr j = rewrite(indices[1]);
 
           TensorIndex tensorIndex = tensorStorage.getTensorIndex();
-          Expr coords = tensorIndex.getCoordArray();
-          Expr sinks  = tensorIndex.getSinkArray();
+          Expr rowptr = tensorIndex.getRowptrArray();
+          Expr colidx = tensorIndex.getColidxArray();
 
           Var locVar(INTERNAL_PREFIX("locVar"), Int);
           spill(VarDecl::make(locVar));
-          spill(CallStmt::make({locVar}, intrinsics::loc(),{i,j,coords,sinks}));
+          spill(CallStmt::make({locVar},intrinsics::loc(),{i,j,rowptr,colidx}));
           index = locVar;
         }
         break;

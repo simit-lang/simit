@@ -17,7 +17,9 @@ class Environment;
 class TensorIndex;
 
 
-/// The storage arrangement of a tensor (e.g. dense or stored on a set).
+/// The storage descriptor of a tensor. Tensors can be dense, diagonal or
+/// indexed (BCSR).  Indexed tensor descriptors stores a tensor index object
+/// that describes the index.
 class TensorStorage {
 public:
   enum Kind {
@@ -35,7 +37,7 @@ public:
     Indexed
   };
 
-  /// Create an undefined tensor storage
+  /// Create an undefined tensor storage.
   TensorStorage();
 
   /// Create a tensor storage descriptor.
@@ -47,15 +49,14 @@ public:
   /// Retrieve the tensor storage type.
   Kind getKind() const;
 
-  /// True if the tensor is dense, which means all values are stored without an
-  /// index.
-  bool isDense() const;
-
-  /// True if the tensor is stored on a system, false otherwise.
-  bool isSystem() const;
-
+  /// True if the storage descriptor has a tensor index, false otherwise.
   bool hasTensorIndex() const;
+
+  /// Return the storage descriptor's tensor index.  Assumes the tensor is an
+  /// indexed tensor.
   const TensorIndex& getTensorIndex() const;
+
+  /// Set the storage descriptor's tensor index.
   void setTensorIndex(Var tensor);
 
 private:
