@@ -223,7 +223,7 @@ int main(int argc, const char* argv[]) {
 
     if (emitSimit) {
       cout << endl << endl;
-      cout << "--- Compile " << function << endl;
+      cout << "% Compile " << function << endl;
     }
 
     // Call lower with print=emitSimit

@@ -64,7 +64,10 @@ std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
       os << "Diagonal";
       break;
     case TensorStorage::Indexed:
-      os << "Indexed (" << ts.getTensorIndex().getPathExpression() << ")";
+      os << "Indexed";
+      if (ts.hasTensorIndex()) {
+        os << " (" << ts.getTensorIndex().getPathExpression() << ")";
+      }
       break;
   }
   return os;

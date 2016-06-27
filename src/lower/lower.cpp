@@ -58,6 +58,9 @@ void visitCallGraph(Func func, const function<void(Func)>& visitRule) {
 
     using simit::ir::IRVisitor::visit;
     void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        return;
+      }
       simit::ir::IRVisitorCallGraph::visit(op);
       visitRule(*op);
     }
@@ -76,7 +79,7 @@ void printTimedCallGraph(string headerText, Func func, bool print) {
 static inline
 void printCallGraph(string headerText, Func func, bool print) {
   if (print) {
-    cout << "--- " << headerText << endl;
+    cout << "%% " << headerText << endl;
     simit::ir::IRPrinterCallGraph(cout).print(func);
     cout << endl;
   }
@@ -102,7 +105,7 @@ Func lower(Func func, bool print, bool time) {
     return func;
   });
   if (print) {
-    cout << "--- Tensor storage" << endl;
+    cout << "%% Tensor storage" << endl;
     visitCallGraph(func, [](Func func) {
       cout << "func " << func.getName() << ":" << endl;
       for (auto &var : func.getStorage()) {
@@ -114,10 +117,8 @@ Func lower(Func func, bool print, bool time) {
   }
 
   func = rewriteCallGraph(func, lowerStringOps);
-  printCallGraph("Lower String Operations", func, print);
-
   func = rewriteCallGraph(func, lowerPrints);
-  printCallGraph("Lower Prints", func, print);
+  printCallGraph("Lower String Operations and Prints", func, print);
 
   func = rewriteCallGraph(func, lowerFieldAccesses);
   printCallGraph("Lower Field Accesses", func, print);
