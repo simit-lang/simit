@@ -14,6 +14,7 @@
 #include "timers.h"
 #include "temps.h"
 #include "flatten.h"
+#include "insert_frees.h"
 #include "ir_rewriter.h"
 #include "ir_transforms.h"
 #include "ir_printer.h"
@@ -115,6 +116,9 @@ Func lower(Func func, bool print, bool time) {
     });
     cout << endl;
   }
+
+  func = rewriteCallGraph(func, insertFrees);
+  printCallGraph("Insert Frees", func, print);
 
   func = rewriteCallGraph(func, lowerStringOps);
   func = rewriteCallGraph(func, lowerPrints);

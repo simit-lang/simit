@@ -1,7 +1,7 @@
 #ifndef SIMIT_TEMPS_H
 #define SIMIT_TEMPS_H
 
-#include "ir.h"
+#include "func.h"
 
 namespace simit {
 namespace ir {
@@ -9,5 +9,4 @@ namespace ir {
 Func insertTemporaries(Func func);
 
 }}
-
 #endif

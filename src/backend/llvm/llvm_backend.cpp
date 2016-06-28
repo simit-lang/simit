@@ -948,7 +948,9 @@ void LLVMBackend::emitIntrinsicCall(const ir::CallStmt& callStmt) {
     call = emitCall("loc", args, LLVM_INT);
   }
   else if (callStmt.callee == ir::intrinsics::free()) {
-    call = emitCall("free", args, LLVM_VOID);
+    auto arg = args[args.size()-1];
+    arg = builder->CreateCast(llvm::Instruction::CastOps::BitCast, arg, LLVM_INT8_PTR);
+    call = emitCall("free", {arg}, LLVM_VOID);
   }
   else if (callStmt.callee == ir::intrinsics::malloc()) {
     call = emitCall("malloc", args, LLVM_INT8_PTR);
