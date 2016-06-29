@@ -347,6 +347,7 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
       loopVarType = indexSet->getSet().type().toSet()->elementType;
     }
   } else {
+    iassert(isa<RangeDomain>(stmt->domain));
     stmt->domain->accept(this);
     loopVarType = ir::Int;
   }
@@ -807,14 +808,18 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     for (const auto typeParam : decl->typeParams) {
       const auto it = checker.specializedSets.find(typeParam->ident);
       if (it == checker.specializedSets.end()) {
-        reportError("cannot infer all type parameters", expr);
+        reportError("unable to resolve all type parameters", expr);
         return;
       }
     }
-  
-    decl->typeParams.clear();
+ 
+    if (decl->originalName.empty()) {
+      decl = decl->clone<FuncDecl>();
+    } else {
+      decl->typeParams.clear();
+    }
+
     ReplaceTypeParams(checker.specializedSets).rewrite(decl);
-    //std::cout << *decl << std::endl;
     func = typeCheckFuncDecl(decl, true);
   } else if (ctx.containsFunction(funcName)) {
     func = ctx.getFunction(funcName);

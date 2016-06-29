@@ -142,10 +142,10 @@ void HIRRewriter::visit(ExprStmt::Ptr stmt) {
 }
 
 void HIRRewriter::visit(AssignStmt::Ptr stmt) {
+  stmt->expr = rewrite<Expr>(stmt->expr);
   for (auto &lhs : stmt->lhs) {
     lhs = rewrite<Expr>(lhs);
   }
-  stmt->expr = rewrite<Expr>(stmt->expr);
   node = stmt;
 }
 

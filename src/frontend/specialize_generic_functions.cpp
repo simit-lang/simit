@@ -48,7 +48,7 @@ void SpecializeGenericFunctions::visit(CallExpr::Ptr expr) {
   const auto it = genericFuncs.find(expr->func->ident);
   if (it != genericFuncs.end()) {
     std::stringstream newName;
-    newName << expr->func->ident << "_" << (++count);
+    newName << expr->func->ident << "@" << (++count);
     expr->func->ident = newName.str();
     
     const auto newFunc = it->second->clone<FuncDecl>();

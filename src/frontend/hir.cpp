@@ -124,7 +124,8 @@ void ElementType::copy(HIRNode::Ptr node) {
   const auto elementType = to<ElementType>(node);
   Type::copy(elementType);
   ident = elementType->ident;
-  setName = elementType->setName;
+  sourceSet = elementType->sourceSet;
+  sourceGenericSets = elementType->sourceGenericSets;
 }
 
 HIRNode::Ptr ElementType::cloneImpl() {

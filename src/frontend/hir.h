@@ -5,6 +5,7 @@
 #include <vector>
 #include <memory>
 #include <iostream>
+#include <unordered_set>
 
 #include "types.h"
 #include "scanner.h"
@@ -174,8 +175,9 @@ struct Type : public HIRNode {
 };
 
 struct ElementType : public Type {
-  std::string ident;
-  std::string setName;
+  std::string                     ident;
+  std::string                     sourceSet;
+  std::unordered_set<std::string> sourceGenericSets;
   
   typedef std::shared_ptr<ElementType> Ptr;
   

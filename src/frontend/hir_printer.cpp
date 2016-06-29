@@ -34,8 +34,21 @@ void HIRPrinter::visit(DynamicIndexSet::Ptr set) {
 
 void HIRPrinter::visit(ElementType::Ptr type) {
   oss << type->ident;
-  if (type->setName != "") {
-    oss << "{" << type->setName << "}";
+  if (!type->sourceGenericSets.empty() || !type->sourceSet.empty()) {
+    oss << "{";
+    bool printDelimiter = false;
+    if (!type->sourceSet.empty()) {
+      oss << type->sourceSet;
+      printDelimiter = true;
+    }
+    for (auto sourceGenericSet : type->sourceGenericSets) {
+      if (printDelimiter) {
+        oss << ",";
+      }
+      oss << sourceGenericSet;
+      printDelimiter = true;
+    }
+    oss << "}";
   }
 }
 

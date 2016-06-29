@@ -6,7 +6,6 @@
 #include "hir_rewriter.h"
 #include "intrinsics.h"
 #include "ir.h"
-#include "util/scopedmap.h"
 
 namespace simit {
 namespace hir {
@@ -86,6 +85,8 @@ void ContextSensitiveRewriter::visit(ForStmt::Ptr stmt) {
 }
 
 void ContextSensitiveRewriter::visit(AssignStmt::Ptr stmt) {
+  stmt->expr = rewrite<Expr>(stmt->expr);
+  
   for (auto &lhs : stmt->lhs) {
     lhs = rewrite<Expr>(lhs);
     if (isa<VarExpr>(lhs)) {
@@ -96,7 +97,6 @@ void ContextSensitiveRewriter::visit(AssignStmt::Ptr stmt) {
     }
   }
 
-  stmt->expr = rewrite<Expr>(stmt->expr);
   node = stmt;
 }
 
@@ -167,7 +167,6 @@ void ContextSensitiveRewriter::reportError(std::string msg, HIRNode::Ptr loc) {
                               loc->getLineEnd(), loc->getColEnd(), msg);
   errors->push_back(err);
 }
-
 
 }
 }
