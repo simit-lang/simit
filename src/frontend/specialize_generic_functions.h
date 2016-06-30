@@ -2,6 +2,7 @@
 #define SIMIT_SPECIALIZE_GENERIC_FUNCTIONS_H
 
 #include <list>
+#include <string>
 #include <unordered_map>
 
 #include "hir.h"
@@ -20,7 +21,9 @@ private:
   virtual void visit(Program::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(CallExpr::Ptr);
-  //virtual void visit(MapExpr::Ptr);
+  virtual void visit(MapExpr::Ptr);
+
+  void clone(FuncDecl::Ptr, const std::string &);
 
 private:
   typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;

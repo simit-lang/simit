@@ -50,16 +50,35 @@ void SpecializeGenericFunctions::visit(CallExpr::Ptr expr) {
     std::stringstream newName;
     newName << expr->func->ident << "@" << (++count);
     expr->func->ident = newName.str();
-    
-    const auto newFunc = it->second->clone<FuncDecl>();
-    if (newFunc->originalName.empty()) {
-      newFunc->originalName = newFunc->name->ident;
-    }
-    newFunc->name->ident = newName.str();
-    specializedFuncs[newFunc->originalName].push_back(newFunc);
-    genericFuncs[newName.str()] = newFunc;
-    newFunc->accept(this);
+    clone(it->second, newName.str());
   }
+}
+
+void SpecializeGenericFunctions::visit(MapExpr::Ptr expr) {
+  HIRVisitor::visit(expr);
+  
+  const auto it = genericFuncs.find(expr->func->ident);
+  if (it != genericFuncs.end()) {
+    std::stringstream newName;
+    newName << expr->func->ident << "@" << (++count);
+    expr->func->ident = newName.str();
+    clone(it->second, newName.str());
+  }
+}
+
+void SpecializeGenericFunctions::clone(FuncDecl::Ptr decl, 
+                                       const std::string &newName) {
+  const auto newFunc = decl->clone<FuncDecl>();
+
+  if (newFunc->originalName.empty()) {
+    newFunc->originalName = newFunc->name->ident;
+  }
+  newFunc->name->ident = newName;
+
+  specializedFuncs[newFunc->originalName].push_back(newFunc);
+  genericFuncs[newName] = newFunc;
+
+  newFunc->accept(this);
 }
 
 void SpecializeGenericFunctions::FindGenericFuncs::visit(FuncDecl::Ptr decl) {

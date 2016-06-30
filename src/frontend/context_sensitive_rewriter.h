@@ -20,6 +20,7 @@ private:
   virtual void visit(SetIndexSet::Ptr);
   virtual void visit(IdentDecl::Ptr);
   virtual void visit(FuncDecl::Ptr);
+  virtual void visit(VarDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
   virtual void visit(IfStmt::Ptr);
   virtual void visit(ForStmt::Ptr);

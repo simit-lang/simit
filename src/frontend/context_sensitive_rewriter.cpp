@@ -5,7 +5,6 @@
 #include "hir.h"
 #include "hir_rewriter.h"
 #include "intrinsics.h"
-#include "ir.h"
 
 namespace simit {
 namespace hir {
@@ -44,6 +43,11 @@ void ContextSensitiveRewriter::visit(FuncDecl::Ptr decl) {
   }
   HIRRewriter::visit(decl);
   decls.unscope();
+}
+
+void ContextSensitiveRewriter::visit(VarDecl::Ptr decl) {
+  HIRRewriter::visit(decl);
+  decls.insert(decl->name->ident, IdentType::OTHER);
 }
 
 void ContextSensitiveRewriter::visit(WhileStmt::Ptr stmt) {

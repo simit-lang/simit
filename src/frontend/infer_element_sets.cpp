@@ -4,8 +4,6 @@
 #include "infer_element_sets.h"
 #include "hir.h"
 #include "hir_rewriter.h"
-#include "intrinsics.h"
-#include "ir.h"
 
 namespace simit {
 namespace hir {
@@ -22,6 +20,10 @@ void InferElementSets::visit(FuncDecl::Ptr decl) {
   }
   HIRVisitor::visit(decl);
   decls.unscope();
+}
+
+void InferElementSets::visit(VarDecl::Ptr decl) {
+  decls.insert(decl->name->ident, Type::Ptr());
 }
 
 void InferElementSets::visit(WhileStmt::Ptr stmt) {
@@ -130,20 +132,9 @@ void InferElementSets::visit(TensorReadExpr::Ptr expr) {
         idxElemType->sourceGenericSets.insert(indexSetName);
       } else if (idxElemType->sourceSet.empty()) {
         idxElemType->sourceSet = indexSetName;
-      } else if (idxElemType->sourceSet != indexSetName) {
-        std::stringstream errMsg;
-        errMsg << idxVarName << " cannot be an element of distinct sets "
-               << idxElemType->sourceSet << " and " << indexSetName;
-        reportError(errMsg.str(), expr);
       }
     }
   }
-}
-
-void InferElementSets::reportError(std::string msg, HIRNode::Ptr loc) {
-  const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
-                              loc->getLineEnd(), loc->getColEnd(), msg);
-  errors->push_back(err);
 }
 
 }

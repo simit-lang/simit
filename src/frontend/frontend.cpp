@@ -34,10 +34,10 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   program = hir::ConstantFolding().rewrite(program);
   // hir::PadTensorBlocks().pad(program);
   hir::ConstChecker(errors).check(program);
-  hir::InferElementSets(errors).infer(program);
+  hir::InferElementSets().infer(program);
   std::cout << *program << std::endl;
   hir::SpecializeGenericFunctions().specialize(program);
-  //std::cout << *program << std::endl;
+  std::cout << *program << std::endl;
   hir::TypeChecker(errors).check(program);
   //std::cout << *program << std::endl;
 
