@@ -312,6 +312,7 @@ struct FuncDecl : public HIRNode {
   std::vector<IdentDecl::Ptr> results;
   StmtBlock::Ptr              body;
   bool                        exported;
+  bool                        external;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   
@@ -654,6 +655,14 @@ struct ElwiseDivExpr : public BinaryExpr {
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<ElwiseDivExpr>(shared_from_this()));
+  }
+};
+
+struct LeftDivExpr : public BinaryExpr {
+  typedef std::shared_ptr<LeftDivExpr> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<LeftDivExpr>(shared_from_this()));
   }
 };
 

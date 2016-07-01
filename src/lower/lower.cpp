@@ -15,6 +15,7 @@
 #include "timers.h"
 #include "temps.h"
 #include "flatten.h"
+#include "insert_frees.h"
 #include "ir_rewriter.h"
 #include "ir_transforms.h"
 #include "ir_printer.h"
@@ -59,6 +60,9 @@ void visitCallGraph(Func func, const function<void(Func)>& visitRule) {
 
     using simit::ir::IRVisitor::visit;
     void visit(const simit::ir::Func *op) {
+      if (op->getKind() != simit::ir::Func::Internal) {
+        return;
+      }
       simit::ir::IRVisitorCallGraph::visit(op);
       visitRule(*op);
     }
@@ -68,7 +72,7 @@ void visitCallGraph(Func func, const function<void(Func)>& visitRule) {
 }
 
 static inline
-void timingCallGraph(string headerText, Func func, bool print) {
+void printTimedCallGraph(string headerText, Func func, bool print) {
   stringstream ss;
   simit::ir::IRPrinterCallGraph(ss).print(func);
   TimerStorage::getInstance().addSourceLines(ss);
@@ -77,13 +81,13 @@ void timingCallGraph(string headerText, Func func, bool print) {
 static inline
 void printCallGraph(string headerText, Func func, bool print) {
   if (print) {
-    cout << "--- " << headerText << endl;
+    cout << "%% " << headerText << endl;
     simit::ir::IRPrinterCallGraph(cout).print(func);
     cout << endl;
   }
 }
 
-Func lower(Func func, bool print) {
+Func lower(Func func, bool print, bool time) {
 #ifdef GPU
   // Rewrite system assignments
   if (kBackend == "gpu") {
@@ -99,11 +103,11 @@ Func lower(Func func, bool print) {
 
   // Determine Storage
   func = rewriteCallGraph(func, [](Func func) -> Func {
-    func.setStorage(getStorage(func));
+    updateStorage(func, &func.getStorage(), &func.getEnvironment());
     return func;
   });
   if (print) {
-    cout << "--- Tensor storage" << endl;
+    cout << "%% Tensor storage" << endl;
     visitCallGraph(func, [](Func func) {
       cout << "func " << func.getName() << ":" << endl;
       for (auto &var : func.getStorage()) {
@@ -114,11 +118,12 @@ Func lower(Func func, bool print) {
     cout << endl;
   }
 
-  func = rewriteCallGraph(func, lowerStringOps);
-  printCallGraph("Lower String Operations", func, print);
+  func = rewriteCallGraph(func, insertFrees);
+  printCallGraph("Insert Frees", func, print);
 
+  func = rewriteCallGraph(func, lowerStringOps);
   func = rewriteCallGraph(func, lowerPrints);
-  printCallGraph("Lower Prints", func, print);
+  printCallGraph("Lower String Operations and Prints", func, print);
 
   func = rewriteCallGraph(func, lowerFieldAccesses);
   printCallGraph("Lower Field Accesses", func, print);
@@ -138,7 +143,13 @@ Func lower(Func func, bool print) {
   // Lower Tensor Reads and Writes
   func = rewriteCallGraph(func, lowerTensorAccesses);
   printCallGraph("Lower Tensor Reads and Writes", func, print);
-  
+
+  if (time) {
+    printTimedCallGraph("Insert Timers", func, print);
+    func = rewriteCallGraph(func, insertTimers);
+    printCallGraph("Insert Timers", func, print);
+  }
+
   // Lower to GPU Kernels
 #if GPU
   if (kBackend == "gpu") {
@@ -154,14 +165,6 @@ Func lower(Func func, bool print) {
     printCallGraph("Fuse Kernels", func, print);
   }
 #endif
-  return func;
-}
-
-Func lowerWithTimers(Func func, bool print) {
-  // Include Timers 
-  timingCallGraph("Insert Timers", func, print);
-  func = rewriteCallGraph(func, insertTimers);
-  printCallGraph("Insert Timers", func, print);
   return func;
 }
 

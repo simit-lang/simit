@@ -5,6 +5,7 @@
 #include "loops.h"
 #include "lower_indexexprs.h"
 #include "lower_tensor_utils.h"
+#include "path_expressions.h"
 
 using namespace std;
 
@@ -41,7 +42,7 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   ScalarType tensorCType = type->getComponentType();
   Type workspaceType = TensorType::make(tensorCType, workspaceDomains);
 
-  workspace = env->createTemporary(workspaceType, "@workspace");
+  workspace = env->createTemporary(workspaceType, INTERNAL_PREFIX("workspace"));
   env->addTemporary(workspace);
   storage->add(workspace, TensorStorage::Kind::Dense);
 
@@ -97,24 +98,19 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // First clear the workspace dense vector
   loopStatements.push_back(AssignStmt::make(workspace, Literal::make(0)));
 
-
   // Loop over the indices in this row in the first matrix
   TensorStorage& firstTs = storage->getStorage(firstTensorVar);
   TensorIndex firstTi;
-  if (!firstTs.hasTensorIndex(0,1)) { // Tensor index from rows to cols
+  if (!firstTs.hasTensorIndex()) {
     if (env->hasExtern(firstTensorVar.getName())) {
       terror << "Extern matrix multiply currently not supported";
     }
     else {
-      const pe::PathExpression pexpr = firstTs.getPathExpression();
-      if (!env->hasTensorIndex(pexpr)) {
-        env->addTensorIndex(pexpr, firstTensorVar);
-      }
-      firstTi = env->getTensorIndex(pexpr);
+      firstTi = firstTs.getTensorIndex();
     }
   }
   else {
-    firstTi = firstTs.getTensorIndex(0,1);
+    firstTi = firstTs.getTensorIndex();
   }
   TensorIndexVar firstIndex(inductionVar.getName(), firstTensorVar.getName(),
                             inductionVar, firstTi);
@@ -144,20 +140,16 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // and reducing into the workspace vectori
   TensorStorage& secondTs = storage->getStorage(secondTensorVar);
   TensorIndex secondTi;
-  if (!secondTs.hasTensorIndex(0,1)) { // Tensor index from rows to cols
+  if (!secondTs.hasTensorIndex()) {
     if (env->hasExtern(secondTensorVar.getName())) {
       terror << "Extern matrix multiply currently not supported";
     }
     else {
-      const pe::PathExpression pexpr = secondTs.getPathExpression();
-      if (!env->hasTensorIndex(pexpr)) {
-        env->addTensorIndex(pexpr, secondTensorVar);
-      }
-      secondTi = env->getTensorIndex(pexpr);
+      secondTi = secondTs.getTensorIndex();
     }
   }
   else {
-    secondTi = secondTs.getTensorIndex(0,1);
+    secondTi = secondTs.getTensorIndex();
   }
   TensorIndexVar secondIndex(firstIndex.getSinkVar().getName(),
                              secondTensorVar.getName(),
@@ -262,20 +254,16 @@ Stmt lowerMatrixMultiply(Var target, const IndexExpr* indexExpression,
   // Copy workspace into appropriate output row
   TensorStorage& outTs = storage->getStorage(target);
   TensorIndex outTi;
-  if (!outTs.hasTensorIndex(0,1)) { // Tensor index from rows to cols
+  if (!outTs.hasTensorIndex()) {
     if (env->hasExtern(target.getName())) {
       terror << "Extern matrix multiply currently not supported";
     }
     else {
-      const pe::PathExpression pexpr = outTs.getPathExpression();
-      if (!env->hasTensorIndex(pexpr)) {
-        env->addTensorIndex(pexpr, target);
-      }
-      outTi = env->getTensorIndex(pexpr);
+      outTi = outTs.getTensorIndex();
     }
   }
   else {
-    outTi = firstTs.getTensorIndex(0,1);
+    outTi = outTs.getTensorIndex();
   }
   TensorIndexVar outIndex(indexExpression->resultVars[1].getName(),
                           target.getName(), inductionVar, outTi);

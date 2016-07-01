@@ -9,7 +9,6 @@
 
 #include "backend/backend_impl.h"
 
-#include "environment.h"
 #include "storage.h"
 #include "var.h"
 #include "backend/backend_visitor.h"
@@ -33,6 +32,11 @@ class DataLayout;
 
 
 namespace simit {
+
+namespace ir {
+  class Environment;
+}
+
 namespace backend {
 
 class SimitIRBuilder;
@@ -56,8 +60,10 @@ protected:
 
   // Globally allocated buffers
   std::map<ir::Var, llvm::Value*> buffers;
-  ir::Storage storage;
+
   std::set<ir::Var> globals;
+  ir::Storage storage;
+  const ir::Environment* environment;
 
   llvm::Module *module;
   std::unique_ptr<llvm::DataLayout> dataLayout;
@@ -71,7 +77,6 @@ protected:
   virtual void compile(const ir::VarExpr&);
   virtual void compile(const ir::Load&);
   virtual void compile(const ir::FieldRead&);
-  virtual void compile(const ir::Call&);
   virtual void compile(const ir::Length&);
   virtual void compile(const ir::IndexRead&);
 
@@ -163,9 +168,37 @@ protected:
   /// Allocate a global pointer for a tensor, and add to the symtable
   /// and list of global buffers
   virtual llvm::Value *makeGlobalTensor(ir::Var var);
+  
+  /// Compile a single argument and return its llvm values
+  std::vector<llvm::Value*> emitArgument(ir::Expr argument,
+                                         bool excludeStaticTypes);
+
+  /// Compile several arguments and return their llvm values
+  std::vector<llvm::Value*> emitArguments(std::vector<ir::Expr> arguments,
+                                          bool excludeStaticTypes);
+
+  /// Compile a single result and return its llvm values
+  std::vector<llvm::Value*>
+  emitResult(ir::Var result, bool excludeStaticTypes,
+             std::vector<std::pair<ir::Var, llvm::Value*>>* resVals);
+
+  /// Compile several results and return their llvm values
+  std::vector<llvm::Value*>
+  emitResults(std::vector<ir::Var> results, bool excludeStaticTypes,
+              std::vector<std::pair<ir::Var, llvm::Value*>>* resVals);
+
+  /// Emit a call to a function defined in Simit
+  void emitInternalCall(const ir::CallStmt& callStmt);
+
+  /// Emit a call to a function defined externally (e.g. C)
+  void emitExternCall(const ir::CallStmt& callStmt);
+
+  /// Emit a call to an intrinsic
+  void emitIntrinsicCall(const ir::CallStmt& callStmt);
 
   // TODO: Remove this function, once the old init system has been removed
-  ir::Func makeSystemTensorsGlobalIfHasTensorIndex(ir::Func func);
+  ir::Func makeSystemTensorsGlobal(ir::Func func);
+
 private:
   static bool llvmInitialized;
 };

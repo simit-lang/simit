@@ -1,7 +1,7 @@
 #ifndef SIMIT_ACTUAL_H
 #define SIMIT_ACTUAL_H
 
-#include "uncopyable.h"
+#include "interfaces/uncopyable.h"
 
 namespace simit {
 class Set;

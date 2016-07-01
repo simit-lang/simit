@@ -80,23 +80,6 @@ void IRRewriter::visit(const FieldRead *op) {
   }
 }
 
-void IRRewriter::visit(const Call *op) {
-  std::vector<Expr> actuals(op->actuals.size());
-  bool actualsSame = true;
-  for (size_t i=0; i < op->actuals.size(); ++i) {
-    actuals[i] = rewrite(op->actuals[i]);
-    if (actuals[i] != op->actuals[i]) {
-      actualsSame = false;
-    }
-  }
-  if (actualsSame) {
-    expr = op;
-  }
-  else {
-    expr = Call::make(op->func, actuals);
-  }
-}
-
 void IRRewriter::visit(const Length *op) {
   if (op->indexSet.getKind() == IndexSet::Set) {
     Expr set = rewrite(op->indexSet.getSet());
@@ -540,24 +523,21 @@ void IRRewriter::visit(const GPUKernel *op) {
 }
 #endif
 
-
-// class IRRewriterCallGraph
-void IRRewriterCallGraph::visit(const Call *op) {
-  IRRewriter::visit(op);
-  op = to<Call>(expr);
-
-  Func func = op->func;
-  if (visited.find(op->func) == visited.end()) {
-    func = rewrite(op->func);
-    visited[op->func] = func;
-  }
-  else {
-    func = visited[op->func];
-  }
-
-  expr = (func != op->func) ? Call::make(func, op->actuals) : op;
+void IRRewriter::spill(Stmt stmt) {
+  spilledStmts.push_back(stmt);
 }
 
+Stmt IRRewriter::getSpilledStmts() {
+  Stmt spillBlock;
+  if (spilledStmts.size() > 0) {
+    spillBlock = Block::make(spilledStmts);
+    spilledStmts.clear();
+  }
+  return spillBlock;
+}
+
+
+// class IRRewriterCallGraph
 void IRRewriterCallGraph::visit(const CallStmt *op) {
   IRRewriter::visit(op);
   op = to<CallStmt>(stmt);

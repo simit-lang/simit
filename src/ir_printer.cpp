@@ -179,11 +179,6 @@ void IRPrinter::visit(const FieldRead *op) {
   os << "." << op->fieldName;
 }
 
-void IRPrinter::visit(const Call *op) {
-  clearSkipParen();
-  os << op->func.getName() << "(" << util::join(op->actuals) << ")";
-}
-
 void IRPrinter::visit(const Length *op) {
   clearSkipParen();
   os << "length(" << op->indexSet << ")";
@@ -421,7 +416,7 @@ void IRPrinter::visit(const IfThenElse *op) {
 
 void IRPrinter::visit(const ForRange *op) {
   indent();
-  os << "for " << op->var << " in " << op->start << " : " << op->end << endl;
+  os << "for " << op->var << " in " << op->start << ":" << op->end << endl;
   ++indentation;
   print(op->body);
   --indentation;
@@ -546,6 +541,10 @@ void IRPrinter::visit(const Func *func) {
     os << env << endl << endl;
   }
 
+  if (func->getKind() == Func::External) {
+    os << "extern ";
+  }
+
   os << "func " << func->getName() << "(";
   if (func->getArguments().size() > 0) {
     const Var &arg = func->getArguments()[0];
@@ -599,10 +598,6 @@ void IRPrinterCallGraph::print(const Func &func) {
   else {
     os << "Func()";
   }
-}
-
-void IRPrinterCallGraph::visit(const Call *op) {
-  op->func.accept(this);
 }
 
 void IRPrinterCallGraph::visit(const CallStmt *op) {

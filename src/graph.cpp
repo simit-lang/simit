@@ -1,11 +1,24 @@
 #include "graph.h"
 
 #include <iostream>
-#include "indices.h"
+#include "graph_indices.h"
 
 using namespace std;
 
 namespace simit {
+
+Set::~Set() {
+  for (auto f: fields) {
+    delete f;
+  }
+  free(endpoints);
+  free(latticePoints);
+  free(latticeLinks);
+
+  if (this->neighbors != nullptr) {
+    delete this->neighbors;
+  }
+}
 
 void Set::increaseCapacity() {
   for (auto f : fields) {

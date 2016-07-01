@@ -200,16 +200,28 @@ SIG createSIG(Stmt stmt, const Storage &storage) {
           << "IndexExprs should have been flattened by now:"
           << util::toString(*op);
 
+      iassert(op->tensor.type().isTensor());
+      auto type = op->tensor.type().toTensor();
+
       Var tensorVar;
       Expr setExpr;
       if (isa<VarExpr>(op->tensor) && !isScalar(op->tensor.type())) {
         const Var &var = to<VarExpr>(op->tensor)->var;
-        iassert(storage.hasStorage(var)) << "No storage descriptor found for "
-                                         << var << " in "
-                                         << util::toString(*op);
-        if (storage.getStorage(var).isSystem()) {
+        iassert(var.getType().isTensor())
+            << "Index expression result must be a tensor";
+        iassert(storage.hasStorage(var))
+            << "No storage descriptor found for " << var << " in "
+            << util::toString(*op);
+
+        if (type->order() == 2 && type->hasSystemDimensions()) {
           tensorVar = var;
-          setExpr = storage.getStorage(var).getSystemTargetSet();
+
+          // Assumes all indexed matrices are (B)CSR
+          auto type = var.getType().toTensor();
+          IndexSet dimension = type->getOuterDimensions()[0];
+          iassert(dimension.getKind() == IndexSet::Set)
+              << "Assumes first dimension is sparse";
+          setExpr = dimension.getSet();
         }
       }
       sig = SIG(op->indexVars, tensorVar, setExpr);
@@ -319,8 +331,10 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
         for (auto &e : v->connectors) {
           const TensorStorage& ts = storage.getStorage(e->tensor);
           auto storageKind = ts.getKind();
-          if (storageKind == TensorStorage::Kind::Stencil) {
-            latticeSet = ts.getSystemStorageSet();
+          if (storageKind == TensorStorage::Kind::Stencil &&
+              ts.hasTensorIndex()) {
+            const TensorIndex& ti = ts.getTensorIndex();
+            latticeSet = ti.getStencilLayout().getLatticeSet();
             break;
           }
         }
@@ -342,6 +356,7 @@ LoopVars LoopVars::create(const SIG &sig, const Storage &storage) {
           addVertexLoopVar(indexVar, LoopVar(var, domain, rop));
         }
         else {
+          iassert(latticeSet.type().isSet());
           int ndims = latticeSet.type().toSet()->dimensions;
           string varName = nameGenerator.getName(indexVar.getName());
           Var var(varName, Int);

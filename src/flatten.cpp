@@ -54,7 +54,7 @@ private:
       vector<IndexVar> afvars = getFreeVars(a);
       Expr spill = isa<IndexExpr>(a) ? a : IndexExpr::make(afvars, a);
       Var tmp(tmpNameGen(), spill.type());
-      stmts.push_back(AssignStmt::make(tmp, spill));
+      IRRewriter::spill(AssignStmt::make(tmp, spill));
       return IndexedTensor::make(VarExpr::make(tmp), afvars);
     }
     else if (!isScalar(a.type())) {
@@ -66,7 +66,7 @@ private:
       if (spill.type().isTensor()) {
         spill = builder.unaryElwiseExpr(IRBuilder::None, spill);
       }
-      stmts.push_back(AssignStmt::make(tmp, spill));
+      IRRewriter::spill(AssignStmt::make(tmp, spill));
       return VarExpr::make(tmp);
     }
     else {
@@ -189,7 +189,7 @@ private:
 
       if (containsReduction) {
         Var tmp(tmpNameGen(), tensor.type());
-        stmts.push_back(AssignStmt::make(tmp, tensor));
+        IRRewriter::spill(AssignStmt::make(tmp, tensor));
         expr = IndexedTensor::make(VarExpr::make(tmp), op->indexVars);
       } else {
         expr = substitute(substitutions, indexExpr->value);

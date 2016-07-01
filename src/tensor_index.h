@@ -4,55 +4,72 @@
 #include <string>
 #include <ostream>
 #include <vector>
+#include <memory>
 
-#include "var.h"
 #include "path_expressions.h"
 #include "stencils.h"
 
 namespace simit {
-namespace ir {
+namespace pe {
+class PathExpression;
+}
 
-/// A tensor index is a map source->coordinate->sink described by a path
-/// expression.
+namespace ir {
+class Var;
+
+/// A tensor index is a CSR index that describes the sparsity of a matrix.
+/// Tensor indices may have path expressions that describe their sparsity as a
+/// function of a Simit graph.  Such tensor indices are added to the
+/// environemnt, pre-assembled on function initialization and shared between
+/// tensors with the same sparsity.  Tensor indices without path expressions
+/// cannot be pre-assembled and must be assembled by the user if they come
+/// from an extern function, or by Simit as they are computed.
+/// Note: only sparse matrix CSR indices are supported for now.
 class TensorIndex {
 public:
   enum Kind {PExpr, Sten};
   
   TensorIndex() {}
-
   TensorIndex(std::string name, pe::PathExpression pexpr);
+  TensorIndex(std::string name, StencilLayout stencil);
 
-  TensorIndex(std::string name, Stencil stencil);
+  /// Get tensor index name
+  const std::string getName() const;
 
-  const std::string getName() const {return name;}
+  /// Get tensor index kind
+  const Kind getKind() const;
 
-  const Kind getKind() const {return kind;}
+  /// Get the tensor index's path expression.  Tensor indices with defined path
+  /// expressions are stored in the environment, pre-assembled and shared
+  /// between tensors with the same sparsity.  Tensors with undefined path
+  /// expressions are assembled by the user if they are returned from an extern
+  /// function, or by Simit as they are computed.
+  const pe::PathExpression& getPathExpression() const;
 
-  const pe::PathExpression& getPathExpression() const {
-    iassert(kind == PExpr);
-    return pexpr;
-  }
-  const Stencil& getStencil() const {
-    iassert(kind == Sten);
-    return stencil;
-  }
+  /// Return the tensor index's defining stencil.
+  const StencilLayout& getStencilLayout() const;
 
-  const Var& getCoordArray() const {
-    iassert(kind == PExpr);
-    return coordArray;
-  }
-  const Var& getSinkArray() const {
-    iassert(kind == PExpr);
-    return sinkArray;
-  }
+  /// Replace the StencilLayout of the TensorIndex. Used during compile to assign
+  /// the index locations of the stencil layout.
+  void setStencilLayout(StencilLayout);
+
+  /// Return the tensor index's rowptr array.  A rowptr array contains the
+  /// beginning and end of the column indices in the colidx array for each row
+  /// of the tensor index.
+  /// Note: only sparse matrix CSR indices are supported for now.
+  const Var& getRowptrArray() const;
+
+  /// Return the tensor index's colidx array.  A colidx array contains the
+  /// column index of every non-zero tensor value.
+  /// Note: only sparse matrix CSR indices are supported for now.
+  const Var& getColidxArray() const;
+
+  /// Defined if the tensor exists, false otherwise.
+  bool defined() const {return content != nullptr;}
 
 private:
-  Kind kind;
-  std::string name;
-  pe::PathExpression pexpr;
-  Stencil stencil;
-  Var coordArray;
-  Var sinkArray;
+  struct Content;
+  std::shared_ptr<Content> content;
 };
 
 std::ostream& operator<<(std::ostream&, const TensorIndex&);

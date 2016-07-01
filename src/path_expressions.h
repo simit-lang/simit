@@ -7,11 +7,11 @@
 #include <typeinfo>
 #include <typeindex>
 
-#include "printable.h"
 #include "intrusive_ptr.h"
-#include "comparable.h"
 #include "util/scopedmap.h"
 #include "util/name_generator.h"
+#include "interfaces/printable.h"
+#include "interfaces/comparable.h"
 
 /// \file
 /// Path Expressions describe a neighborhood of a vertex or edge in a graph.

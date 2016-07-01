@@ -33,7 +33,6 @@ private:
   virtual void visit(const VarExpr *op);
   virtual void visit(const Load *op);
   virtual void visit(const FieldRead *op);
-  virtual void visit(const Call *op);
   virtual void visit(const Length *op);
   virtual void visit(const IndexRead *op);
 
@@ -120,7 +119,6 @@ private:
   
   using IRVisitor::visit;
 
-  virtual void visit(const Call *);
   virtual void visit(const CallStmt *);
   virtual void visit(const Map *);
   virtual void visit(const Func *);

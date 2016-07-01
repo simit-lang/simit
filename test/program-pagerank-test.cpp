@@ -24,11 +24,11 @@ TEST(Program, DISABLED_pagerank) {
   ElementRef D = pages.add();
   ElementRef E = pages.add();
   
-  outlinks(A) = {0};
-  outlinks(B) = {0};
-  outlinks(C) = {0};
-  outlinks(D) = {0};
-  outlinks(E) = {0};
+  outlinks(A) = 0;
+  outlinks(B) = 0;
+  outlinks(C) = 0;
+  outlinks(D) = 0;
+  outlinks(E) = 0;
   
   links.add(A,E);
   links.add(B,A);

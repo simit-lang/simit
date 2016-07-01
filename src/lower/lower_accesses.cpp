@@ -168,7 +168,6 @@ private:
             << "index (flattened)";
 
         iassert(isa<VarExpr>(tensor));
-        const Var& var = to<VarExpr>(tensor)->var;
 
         if (indices.size() == 1) {
           index = rewrite(indices[0]);
@@ -177,15 +176,14 @@ private:
           Expr i = rewrite(indices[0]);
           Expr j = rewrite(indices[1]);
 
-          const pe::PathExpression pexpr = tensorStorage.getPathExpression();
-          if (!environment.hasTensorIndex(pexpr)) {
-            environment.addTensorIndex(pexpr, var);
-          }
-          TensorIndex tensorIndex = environment.getTensorIndex(pexpr);
+          TensorIndex tensorIndex = tensorStorage.getTensorIndex();
+          Expr rowptr = tensorIndex.getRowptrArray();
+          Expr colidx = tensorIndex.getColidxArray();
 
-          Expr coords = tensorIndex.getCoordArray();
-          Expr sinks  = tensorIndex.getSinkArray();
-          index = Call::make(intrinsics::loc(), {i, j, coords, sinks});
+          Var locVar(INTERNAL_PREFIX("locVar"), Int);
+          spill(VarDecl::make(locVar));
+          spill(CallStmt::make({locVar},intrinsics::loc(),{i,j,rowptr,colidx}));
+          index = locVar;
         }
         break;
       }
@@ -209,22 +207,17 @@ private:
           Expr i = rewrite(indices[0]);
           Expr j = rewrite(indices[1]);
 
-          iassert(tensorStorage.hasStencil());
-          const Stencil stencil = tensorStorage.getStencil();
-          if (!environment.hasTensorIndex(stencil)) {
-            environment.addTensorIndex(stencil, var);
-          }
-          TensorIndex tensorIndex = environment.getTensorIndex(stencil);
+          iassert(tensorStorage.hasTensorIndex());
+          TensorIndex tensorIndex = tensorStorage.getTensorIndex();
+          StencilLayout stencil = tensorIndex.getStencilLayout();
 
-          
+          // TODO: What happens in this case?
+          not_supported_yet;
         }
         break;
       }
       case TensorStorage::Kind::Diagonal:
         index = rewrite(indices[0]);
-        break;
-      case TensorStorage::Kind::MatrixFree:
-        ierror << "Can't store to a matrix-free tensor.";
         break;
       case TensorStorage::Kind::Undefined:
         ierror;

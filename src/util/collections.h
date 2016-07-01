@@ -1,7 +1,7 @@
 #ifndef SIMIT_UTIL_COLLECTIONS_H
 #define SIMIT_UTIL_COLLECTIONS_H
 
-#include "comparable.h"
+#include "interfaces/comparable.h"
 
 namespace simit {
 namespace util {

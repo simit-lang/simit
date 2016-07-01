@@ -1,23 +1,18 @@
 #ifndef SIMIT_RUNTIME_H
 #define SIMIT_RUNTIME_H
 
-#ifdef EIGEN
-#include <Eigen/Core>
-#include <Eigen/Dense>
-#include <Eigen/Sparse>
-#include <Eigen/IterativeLinearSolvers>
 #include <time.h>
 #include <vector>
 
 extern "C" {
 
 // appease GCC
-void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
-                 int* row_start, int* col_idx,
-                 int rows, int columns, int nnz, int bs_x, int bs_y);
-void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
-                 int* row_start, int* col_idx,
-                 int rows, int columns, int nnz, int bs_x, int bs_y);
+void cMatSolve_f64(int n,  int m,  int* rowPtr, int* colIdx,
+                   int nn, int mm, double* A,
+                   double* x, double* b);
+void cMatSolve_f32(int n,  int m,  int* rowPtr, int* colIdx,
+                   int nn, int mm, float* A,
+                   float* x, float* b);
 int loc(int v0, int v1, int *neighbors_start, int *neighbors);
 
 double atan2_f64(double y, double x);
@@ -35,32 +30,60 @@ void inv3_f32(float* a, float* inv);
 double complexNorm_f64(double r, double i);
 float complexNorm_f32(float r, float i);  
 
+
 void simitStoreTime(int i, double value);
 double simitClock();
 
+// If Eigen is not detected, make solves just do a noop.
+// This is not a #else because we will in the future support more
+// solver backends.
+#ifndef EIGEN
+void cMatSolve_f64(int n,  int m,  int* rowPtr, int* colIdx,
+                   int nn, int mm, double* A,
+                   double* x, double* b) {
+  return;
+}
 
+void cMatSolve_f32(int n, int m, int* rowPtr, int* colIdx,
+                   int nn, int mm, float* A,
+                   float* x, float* b) {
+  return;
+}
+#endif
+} // extern "C"
+
+
+#ifdef EIGEN
+#include <Eigen/Core>
+#include <Eigen/Dense>
+#include <Eigen/Sparse>
+#include <Eigen/IterativeLinearSolvers>
+
+extern "C" {
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f32
-void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
-                 int* row_start, int* col_idx,
-                 int rows, int columns, int nnz, int bs_x, int bs_y) {
+void cMatSolve_f64(int n,  int m,  int* rowPtr, int* colIdx,
+                   int nn, int mm, double* A,
+                   double* x, double* b) {
   using namespace Eigen;
+  int nnz = rowPtr[n/nn];
 
-  auto xvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferX, rows);
-  auto cvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(bufferC, rows);
+  auto xvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(x, m);
+  auto cvec = new Eigen::Map<Eigen::Matrix<double,Dynamic,1>>(b, n);
   
   // Construct the matrix
   std::vector<Triplet<double>> tripletList;
-  tripletList.reserve(nnz*bs_x*bs_y);
-  for (int i=0; i<rows/(bs_x); i++) {
-    for (int j=row_start[i]; j<row_start[i+1]; j++) {
-      for (int bi=0; bi<bs_x; bi++) {
-      for (int bj=0; bj<bs_y; bj++) {
-        tripletList.push_back(Triplet<double>(i*bs_x+bi, col_idx[j]*bs_y+bj,
-                                              bufferA[j*bs_x*bs_y+bi*bs_x+bj]));
-      }}
+  tripletList.reserve(nnz*nn*mm);
+  for (int i=0; i<n/(nn); i++) {
+    for (int j=rowPtr[i]; j<rowPtr[i+1]; j++) {
+      for (int bi=0; bi<nn; bi++) {
+        for (int bj=0; bj<mm; bj++) {
+          tripletList.push_back(Triplet<double>(i*nn+bi, colIdx[j]*mm+bj,
+                                                A[j*nn*mm+bi*nn+bj]));
+        }
+      }
     }
   }
-  SparseMatrix<double> mat(rows,columns);
+  SparseMatrix<double> mat(n, m);
   mat.setFromTriplets(tripletList.begin(), tripletList.end());
 
 #ifndef SIMIT_EXTERN_SOLVE_NOOP
@@ -72,27 +95,29 @@ void cMatSolve_f64(double* bufferA, double* bufferX, double* bufferC,
 }
 
 // NOTE: Implementation MUST stay synchronized with cMatSolve_f64
-void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
-                 int* row_start, int* col_idx,
-                 int rows, int columns, int nnz, int bs_x, int bs_y) {
+void cMatSolve_f32(int n,  int m,  int* rowPtr, int* colIdx,
+                   int nn, int mm, float* A,
+                   float* x, float* b) {
   using namespace Eigen;
+  int nnz = rowPtr[n/nn];
 
-  auto xvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferX, rows);
-  auto cvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(bufferC, rows);
+  auto xvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(x, m);
+  auto cvec = new Eigen::Map<Eigen::Matrix<float,Dynamic,1>>(b, n);
 
   // Construct the matrix
   std::vector<Triplet<float>> tripletList;
-  tripletList.reserve(nnz*bs_x*bs_y);
-  for (int i=0; i<rows/(bs_x); i++) {
-    for (int j=row_start[i]; j<row_start[i+1]; j++) {
-      for (int bi=0; bi<bs_x; bi++) {
-      for (int bj=0; bj<bs_y; bj++) {
-         tripletList.push_back(Triplet<float>(i*bs_x+bi, col_idx[j]*bs_y+bj,
-                                              bufferA[j*bs_x*bs_y+bi*bs_x+bj]));
-      }}
+  tripletList.reserve(nnz*nn*mm);
+  for (int i=0; i<n/(nn); i++) {
+    for (int j=rowPtr[i]; j<rowPtr[i+1]; j++) {
+      for (int bi=0; bi<nn; bi++) {
+        for (int bj=0; bj<mm; bj++) {
+          tripletList.push_back(Triplet<float>(i*nn+bi, colIdx[j]*mm+bj,
+                                               A[j*nn*mm+bi*nn+bj]));
+        }
+      }
     }
   }
-  SparseMatrix<float> mat(rows,columns);
+  SparseMatrix<float> mat(n, m);
   mat.setFromTriplets(tripletList.begin(), tripletList.end());
   
 #ifndef SIMIT_EXTERN_SOLVE_NOOP
@@ -103,13 +128,11 @@ void cMatSolve_f32(float* bufferA, float* bufferX, float* bufferC,
 #endif
   
 }
+} // extern "C"
+#endif // ifdef EIGEN
 
-
-}
-#endif
 
 extern "C" {
-
 
 int loc(int v0, int v1, int *neighbors_start, int *neighbors) {
   int l = neighbors_start[v0];

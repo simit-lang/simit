@@ -14,6 +14,7 @@
 #include "ir_printer.h"
 #include "ir_codegen.h"
 #include "substitute.h"
+#include "path_expressions.h"
 #include "util/util.h"
 #include "util/collections.h"
 
@@ -374,9 +375,6 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
     // Dense loops
     if (!loop.isLinked()) {
       const IndexSet &indexSet = indexVar.getDomain().getIndexSets()[0];
-      // TODO: Replace with Kernel
-//      loopNest = ForRange::make(inductionVar, 0,
-//                                Length::make(indexSet), loopNest);
       loopNest = For::make(inductionVar, indexSet, loopNest);
     }
     // Sparse/linked loops
@@ -397,7 +395,8 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
         // Sparse output
         IndexDomain workspaceDomain = type->getDimensions()[1]; // Row workspace
         Type workspaceType = TensorType::make(workspaceCType,{workspaceDomain});
-        workspace = environment->createTemporary(workspaceType, "@workspace");
+        workspace = environment->createTemporary(workspaceType,
+                                                 INTERNAL_PREFIX("workspace"));
         environment->addTemporary(workspace);
         storage->add(workspace, TensorStorage::Kind::Dense);
       }
@@ -424,26 +423,15 @@ Stmt lowerScatterWorkspace(Var target, const IndexExpr* indexExpression,
       auto& resultVars = indexExpression->resultVars;
 
       TensorStorage& ts = storage->getStorage(target);
-      unsigned sourceDim = util::locate(resultVars, linkedIndexVar);
-      unsigned sinkDim   = util::locate(resultVars, indexVar);
       TensorIndex ti;
-      if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
-        if (environment->hasExtern(target.getName())) {
-          ts.addTensorIndex(target, sourceDim, sinkDim);
-          ti = ts.getTensorIndex(sourceDim, sinkDim);
-          environment->addExternMapping(target, ti.getCoordArray());
-          environment->addExternMapping(target, ti.getSinkArray());
-        }
-        else {
-          const pe::PathExpression pexpr = ts.getPathExpression();
-          if (!environment->hasTensorIndex(pexpr)) {
-            environment->addTensorIndex(pexpr, target);
-          }
-          ti = environment->getTensorIndex(pexpr);
-        }
+      if (!ts.hasTensorIndex() && environment->hasExtern(target.getName())) {
+        ts.setTensorIndex(target);
+        ti = ts.getTensorIndex();
+        environment->addExternMapping(target, ti.getRowptrArray());
+        environment->addExternMapping(target, ti.getColidxArray());
       }
       else {
-        ti = ts.getTensorIndex(sourceDim, sinkDim);
+        ti = ts.getTensorIndex();
       }
 
       TensorIndexVar resultIndexVar(inductionVar.getName(), target.getName(),

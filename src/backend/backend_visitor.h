@@ -64,7 +64,6 @@ protected:
   virtual void compile(const ir::VarExpr&) = 0;
   virtual void compile(const ir::Load&) = 0;
   virtual void compile(const ir::FieldRead&) = 0;
-  virtual void compile(const ir::Call&) = 0;
   virtual void compile(const ir::Length&) = 0;
   virtual void compile(const ir::IndexRead&) = 0;
 
@@ -122,7 +121,6 @@ private:
   void visit(const ir::VarExpr* op)    {compile(*op);}
   void visit(const ir::Load* op)       {compile(*op);}
   void visit(const ir::FieldRead* op)  {compile(*op);}
-  void visit(const ir::Call* op)       {compile(*op);}
   void visit(const ir::Length* op)     {compile(*op);}
   void visit(const ir::IndexRead* op)  {compile(*op);}
   void visit(const ir::Neg* op)        {compile(*op);}

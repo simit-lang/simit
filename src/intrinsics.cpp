@@ -132,22 +132,6 @@ void invInit() {
                 Func::Intrinsic);
 }
 
-static Func solveVar;
-void solveInit() {
-  solveVar = Func("solve",
-                  {Var(), Var(), Var()},
-                  {Var("r", Float)},
-                  Func::Intrinsic);
-}
-
-static Func locVar;
-void locInit() {
-  locVar = Func("loc",
-                {},
-                {Var("r", Int)},
-                Func::Intrinsic);
-}
-
 static Func freeVar;
 void freeInit() {
   freeVar = Func("free",
@@ -236,20 +220,36 @@ void complexConjInit() {
                         Func::Intrinsic);
 }
 
-static Func simitClockVar;
-void simitClockInit() {
-  simitClockVar = Func("simitClock",
+static Func clockVar;
+void clockInit() {
+  clockVar = Func("clock",
                 {},
                 {Var("r", Float)},
                 Func::Intrinsic);
 }
 
-static Func simitStoreTimeVar;
-void simitStoreTimeInit() {
-  simitStoreTimeVar = Func("simitStoreTime",
+static Func storeTimeVar;
+void storeTimeInit() {
+  storeTimeVar = Func("storeTime",
                 {Var("i", Int), Var("val", Float)},
                 {Var("r", Float)},
                 Func::Intrinsic);
+}
+
+static Func locVar;
+void locInit() {
+  locVar = Func("__loc",
+                {},
+                {Var("r", Int)},
+                Func::Intrinsic);
+}
+
+static Func solveVar;
+void solveInit() {
+  solveVar = Func("__solve",
+                  {Var("A", Type()), Var("b", Type()), Var("c", Type())},
+                  {Var("r", Float)},
+                  Func::Intrinsic);
 }
 
 // We lazily initialize all the intrinsics. No need to call all the constructors
@@ -451,20 +451,19 @@ const Func& complexConj() {
   return complexConjVar;
 }
 
-const Func& simitClock() {
-  if (!simitClockVar.defined()) {
-    simitClockInit();
+const Func& clock() {
+  if (!clockVar.defined()) {
+    clockInit();
   }
-  return simitClockVar;
+  return clockVar;
 }
 
-const Func& simitStoreTime() {
-  if (!simitStoreTimeVar.defined()) {
-    simitStoreTimeInit();
+const Func& storeTime() {
+  if (!storeTimeVar.defined()) {
+    storeTimeInit();
   }
-  return simitStoreTimeVar;
+  return storeTimeVar;
 }
-
 
 const std::map<std::string,Func> &byNames() {
   static std::map<std::string,Func> byNameMap;
@@ -485,13 +484,20 @@ const std::map<std::string,Func> &byNames() {
     detInit();
     invInit();
     solveInit();
+    locInit();
+    freeInit();
+    mallocInit();
+    strcmpInit();
+    strlenInit();
+    strcpyInit();
+    strcatInit();
     createComplexInit();
     complexNormInit();
     complexGetRealInit();
     complexGetImagInit();
     complexConjInit();
-    simitClockInit();
-    simitStoreTimeInit();
+    clockInit();
+    storeTimeInit();
     byNameMap.insert({{"mod",modVar},
                       {"sin",sinVar},
                       {"cos",cosVar},
@@ -507,14 +513,21 @@ const std::map<std::string,Func> &byNames() {
                       {"dot",dotVar},
                       {"det",detVar},
                       {"inv",invVar},
-                      {"solve",solveVar},
+                      {"free", freeVar},
+                      {"malloc", mallocVar},
+                      {"strcmp", strcmpVar},
+                      {"strlen", strlenVar},
+                      {"strcpy", strcpyVar},
+                      {"strcat", strcatVar},
                       {"createComplex",createComplexVar},
                       {"complexNorm",complexNormVar},
                       {"complexGetReal",complexGetRealVar},
                       {"complexGetImag",complexGetImagVar},
                       {"complexConj",complexConjVar},
-                      {"simitClock",simitClockVar},
-                      {"simitStoreTime",simitStoreTimeVar}});
+                      {"clock",clockVar},
+                      {"storeTime",storeTimeVar},
+                      {"__loc", locVar},
+                      {"__solve",solveVar}});
   }
   return byNameMap;
 }

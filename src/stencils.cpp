@@ -8,16 +8,24 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-map<vector<int>, int> Stencil::getLayout() const {
+std::string StencilLayout::getStencilFunc() const {
+  return ptr->assemblyFunc;
+}
+
+std::string StencilLayout::getStencilVar() const {
+  return ptr->targetVar;
+}
+
+map<vector<int>, int> StencilLayout::getLayout() const {
   return ptr->layout;
 }
 
-Expr Stencil::getLatticeSet() const {
+Expr StencilLayout::getLatticeSet() const {
   iassert(ptr->latticeSet.defined());
   return ptr->latticeSet;
 }
 
-std::ostream& operator<<(std::ostream& os, const Stencil& stencil) {
+std::ostream& operator<<(std::ostream& os, const StencilLayout& stencil) {
   os << "stencil(" << stencil.getLatticeSet() << ")" << endl;
   if (stencil.defined()) {
     for (auto &kv : stencil.getLayout()) {

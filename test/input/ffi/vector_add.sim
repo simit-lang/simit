@@ -1,0 +1,17 @@
+element Point
+  a : float;
+  b : float;
+  c : float;
+end
+
+extern points : set{Point};
+
+extern func vecadd(a: tensor[points](float), b: tensor[points](float))
+    -> (c: tensor[points](float));
+
+export func main()
+  a = points.a;
+  b = points.b;
+  c = vecadd(a, b);
+  points.c = c;
+end

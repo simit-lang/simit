@@ -5,6 +5,7 @@
 
 #include "ir.h"
 #include "error.h"
+#include "macros.h"
 #include "util/name_generator.h"
 
 namespace simit {
@@ -56,7 +57,7 @@ public:
   Expr transposedMatrix(Expr mat);
 
   /// Create a temporary variable
-  Var temporary(Type type, std::string name="@tmp");
+  Var temporary(Type type, std::string name=INTERNAL_PREFIX("tmp"));
 
 
 private:

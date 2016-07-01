@@ -17,102 +17,81 @@ class Func;
 class Var;
 class Stmt;
 class Expr;
+class Environment;
 class TensorIndex;
 
-// TODO: Should we remove the whole system concept? This gives us Dense indices,
-//       PathExpression (reduced or unreduced) indices, Diagonal indices,
-//       Matrix-Free indices, ... .
 
-/// The storage arrangement of a tensor (e.g. dense or stored on a set).
+/// The storage descriptor of a tensor. Tensors can be dense, diagonal or
+/// indexed (BCSR).  Indexed tensor descriptors stores a tensor index object
+/// that describes the index.
 class TensorStorage {
 public:
-  enum class Kind {
+  enum Kind {
     /// Undefined storage.
     Undefined,
 
     /// The dense tensor stored row major.
-    /// TODO: Add a tensor layout object that describes the layout (row, z, ...)
     Dense,
-
-    /// A sparse matrix, whose non-empty (non-zero) components are accessible
-    /// through a tensor index.
-    Indexed,
 
     /// A diagonal matrix.
     Diagonal,
+
+    /// A sparse matrix whose non-zero components are accessible through a
+    /// tensor index.
+    Indexed,
 
     /// A stencil matrix, whose non-zeros lie on a fixed number of diagonals.
     /// The set of diagonals is based on the access pattern of the assembly
     /// kernel.
     Stencil,
-
-    /// A system tensor whose contributions are stored on the target set that it
-    /// was assembled from. That is, the tensor is stored prior to the map
-    /// reduction, and any expression that uses the tensor must reduce it.
-    // Unreduced,
-
-    /// A system tensor that is never stored. Any index expressions that use
-    /// this tensor must be fused with the tensor assembly.
-    MatrixFree
   };
 
-  /// Create an undefined tensor storage
+  /// Create an undefined tensor storage.
   TensorStorage();
 
   /// Create a tensor storage descriptor.
   TensorStorage(Kind kind);
 
-  /// Create a system diagonal storage descriptor.
-  TensorStorage(const Expr &targetSet);
+  /// Create an indexed tensor storage descriptor with an index.
+  TensorStorage(Kind kind, const TensorIndex& index);
 
-  /// Create a system tensor reduced storage descriptor. The 'targetSet'
-  /// argument is the the set that the system tensor was created by mapping
-  /// over. The 'storageSet' is the set the tensor is stored on.
-  TensorStorage(const Expr &targetSet, const Expr &storageSet);
-
-  /// Create a stencil based storage descriptor. `assemblyFunc' is the stencil
-  /// assembly kernel whose access pattern determines the sparsity. `targetVar'
-  /// is the output variable within the assembly func whose sparsity is being
-  /// determined here.
-  TensorStorage(string assemblyFunc, string targetVar,
-                const Expr &targetSet, const Expr &throughSet);
+  // TensorStorage(string assemblyFunc, string targetVar,
+  //               const Expr &targetSet, const Expr &throughSet);
 
   /// Retrieve the tensor storage type.
   Kind getKind() const;
 
-  /// True if the tensor is dense, which means all values are stored without an
-  /// index.
-  bool isDense() const;
+  /// True if the storage descriptor has a tensor index, false otherwise.
+  bool hasTensorIndex() const;
 
-  /// True if the tensor is stored on a system, false otherwise.
-  bool isSystem() const;
-
-  bool hasPathExpression() const;
-  const pe::PathExpression& getPathExpression() const;
-  void setPathExpression(const pe::PathExpression& pathExpression);
+  /// Return the storage descriptor's tensor index.  Assumes the tensor is an
+  /// indexed tensor.
+  const TensorIndex& getTensorIndex() const;
+  TensorIndex& getTensorIndex();
 
   /// Retrieve properties of the stencil storage
-  std::string getStencilFunc() const;
-  std::string getStencilVar() const;
+  // std::string getStencilFunc() const;
+  // std::string getStencilVar() const;
   /// Stencil structure (built during assembly map lowering)
-  bool hasStencil() const;
-  const Stencil& getStencil() const;
-  void setStencil(const Stencil& stencil);
+  // bool hasStencilLayout() const;
+  // const StencilLayout& getStencilLayout() const;
+  // void setStencilLayout(const StencilLayout& stencil);
 
-  // TODO DEPRECATED: These live in the environment now
-  bool hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
-  const TensorIndex& getTensorIndex(unsigned sourceDim, unsigned sinkDim) const;
-  void addTensorIndex(Var tensor, unsigned sourceDim, unsigned sinkDim);
+  /// Set the storage descriptor's tensor index.
+  void setTensorIndex(Var tensor);
 
-  // TODO DEPRECATED: These should not be needed with the new TensorIndex system
-  const Expr &getSystemTargetSet() const;
-  const Expr &getSystemStorageSet() const;
-
+  /// Create a stencil based tensor index. `assemblyFunc' is the stencil
+  /// assembly kernel whose access pattern determines the sparsity. `targetVar'
+  /// is the output variable within the assembly func whose sparsity is being
+  /// determined here.
+  // void setTensorIndex(Var tensor, std::string assemblyFunc,
+  //                     std::string targetVar);
 private:
   struct Content;
   std::shared_ptr<Content> content;
 };
 std::ostream &operator<<(std::ostream&, const TensorStorage&);
+
 
 /// The storage of a set of tensors.
 class Storage {
@@ -160,19 +139,11 @@ private:
 };
 std::ostream &operator<<(std::ostream&, const Storage&);
 
-
-/// Retrieve a storage descriptor for each tensor used in `func`.
-Storage getStorage(const Func &func);
-
-/// Retrieve a storage descriptor for each tensor used in `stmt`.
-Storage getStorage(const Stmt &stmt);
-
 /// Adds storage descriptors for each tensor in `func` not already described.
-void updateStorage(const Func &func, Storage *storage);
+void updateStorage(const Func &func, Storage *storage, Environment* env);
 
 /// Adds storage descriptors for each tensor in `stmt` not already described.
-void updateStorage(const Stmt &stmt, Storage *storage);
-
+void updateStorage(const Stmt &stmt, Storage *storage, Environment* env);
 }}
 
 #endif

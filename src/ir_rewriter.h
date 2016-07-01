@@ -27,15 +27,11 @@ protected:
   /// visit methods that take Func assign to this to return their value.
   Func func;
   
-  /// visit methods that take Exprs add to this to "spill" subexpressions.
-  std::vector<Stmt> stmts;
-  
   using IRVisitorStrict::visit;
   virtual void visit(const Literal *op);
   virtual void visit(const VarExpr *op);
   virtual void visit(const Load *op);
   virtual void visit(const FieldRead *op);
-  virtual void visit(const Call *op);
   virtual void visit(const Length *op);
   virtual void visit(const IndexRead *op);
 
@@ -88,14 +84,13 @@ protected:
   void visit(const GPUKernel *op);
 #endif
 
-  Stmt getSpilledStmts() {
-    Stmt spilledStmts;
-    if (stmts.size() > 0) {
-      spilledStmts = Block::make(stmts);
-      stmts.clear();
-    }
-    return spilledStmts;
-  }
+  void spill(Stmt stmt);
+  Stmt getSpilledStmts();
+
+private:
+  /// Visit methods that take Exprs can add to this to "spill" statements, i.e.
+  /// add a statement before the statement the expression is part of.
+  std::vector<Stmt> spilledStmts;
 };
 
 
@@ -107,7 +102,6 @@ protected:
 
   using IRRewriter::visit;
 
-  virtual void visit(const Call *op);
   virtual void visit(const CallStmt *op);
   virtual void visit(const Map *op);
 };

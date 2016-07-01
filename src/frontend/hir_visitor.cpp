@@ -204,6 +204,10 @@ void HIRVisitor::visit(DivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 
+void HIRVisitor::visit(LeftDivExpr::Ptr expr) {
+  visitBinaryExpr(expr);
+}
+
 void HIRVisitor::visit(ElwiseMulExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }

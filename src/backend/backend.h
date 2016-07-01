@@ -3,7 +3,7 @@
 
 #include <vector>
 #include <string>
-#include "uncopyable.h"
+#include "interfaces/uncopyable.h"
 
 namespace simit {
 namespace ir {

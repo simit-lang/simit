@@ -16,12 +16,10 @@ namespace ir {
 
 // class TensorStorage
 struct TensorStorage::Content {
-  Kind kind;
-
   /// The target set that was used to assemble the system if the tensor is
   /// stored on a system, undefined otherwise.
-  Expr systemTargetSet;
-  Expr systemStorageSet;
+  // Expr systemTargetSet;
+  // Expr systemStorageSet;
 
   /// The stencil assembly information for stencil-type storage
   // string-based ref to func, to avoid dangling references to a rewritten Func
@@ -31,11 +29,15 @@ struct TensorStorage::Content {
   // fully resolve stencil structure: map from list of offsets to
   // ``stencil index'', i.e. a labelling of the stencil offsets from 0 to
   // the total size, defining an ordering of matrix elements in memory
+  // TODO: MOVE THIS TO TENSOR INDEXx
   bool stencilDefined;
-  Stencil stencil;
+  StencilLayout stencil;
 
-  pe::PathExpression pathExpression;
-  map<pair<unsigned,unsigned>, TensorIndex> tensorIndices;
+  // pe::PathExpression pathExpression;
+  // map<pair<unsigned,unsigned>, TensorIndex> tensorIndices;
+
+  Kind        kind;
+  TensorIndex index;
 };
 
 TensorStorage::TensorStorage() : TensorStorage(Kind::Undefined) {
@@ -45,135 +47,107 @@ TensorStorage::TensorStorage(Kind kind) : content(new Content) {
   content->kind = kind;
 }
 
-TensorStorage::TensorStorage(const Expr &targetSet)
-    : TensorStorage(Kind::Diagonal) {
-  content->systemTargetSet = targetSet;
+TensorStorage::TensorStorage(Kind kind, const TensorIndex& index)
+    : content(new Content) {
+  content->kind = kind;
+  content->index = index;
 }
 
-TensorStorage::TensorStorage(const Expr &targetSet, const Expr &storageSet)
-    : TensorStorage(Kind::Indexed) {
-  content->systemTargetSet = targetSet;
-  content->systemStorageSet = storageSet;
-}
-
-TensorStorage::TensorStorage(string assemblyFunc, string targetVar,
-                             const Expr &targetSet,
-                             const Expr &throughSet)
-    : TensorStorage(Kind::Stencil) {
-  content->assemblyFunc = assemblyFunc;
-  content->targetVar = targetVar;
-  content->systemTargetSet = targetSet;
-  content->systemStorageSet = throughSet;
-}
+// TensorStorage::TensorStorage(string assemblyFunc, string targetVar,
+//                              const Expr &targetSet,
+//                              const Expr &throughSet)
+//     : TensorStorage(Kind::Stencil) {
+//   content->assemblyFunc = assemblyFunc;
+//   content->targetVar = targetVar;
+//   content->systemTargetSet = targetSet;
+//   content->systemStorageSet = throughSet;
+// }
 
 
 TensorStorage::Kind TensorStorage::getKind() const {
   return content->kind;
 }
 
-bool TensorStorage::isDense() const {
-  return getKind() == Kind::Dense;
+// TODO: MOVE TO TENSOR INDEX
+// std::string TensorStorage::getStencilFunc() const {
+//   iassert(content->kind == Kind::Stencil);
+//   return content->assemblyFunc;
+// }
+
+// std::string TensorStorage::getStencilVar() const {
+//   iassert(content->kind == Kind::Stencil);
+//   return content->targetVar;
+// }
+
+// bool TensorStorage::hasStencilLayout() const {
+//   return content->stencilDefined;
+// }
+
+// const StencilLayout& TensorStorage::getStencilLayout() const {
+//   return content->stencil;
+// }
+
+// void TensorStorage::setStencilLayout(const StencilLayout& stencil) {
+//   content->stencil = stencil;
+//   content->stencilDefined = true;
+// }
+
+bool TensorStorage::hasTensorIndex() const {
+  return content->index.defined();
 }
 
-bool TensorStorage::isSystem() const {
-  switch (getKind()) {
-    case Kind::Dense:
-      return false;
-    case Kind::Indexed:
-    case Kind::Diagonal:
-    case Kind::MatrixFree:
-    case Kind::Stencil:
-      return true;
-    case Kind::Undefined:
-      ierror;
-  }
-  return false;
+const TensorIndex& TensorStorage::getTensorIndex() const {
+  iassert((content->index.getKind() == TensorIndex::PExpr &&
+           getKind() == TensorStorage::Indexed) ||
+          (content->index.getKind() == TensorIndex::Sten &&
+           getKind() == TensorStorage::Stencil))
+      << "Expected Indexed tensor, but was " << *this;
+  iassert(content->index.defined());
+  return content->index;
 }
 
-bool TensorStorage::hasPathExpression() const {
-  return content->pathExpression.defined();
+TensorIndex& TensorStorage::getTensorIndex() {
+  iassert((content->index.getKind() == TensorIndex::PExpr &&
+           getKind() == TensorStorage::Indexed) ||
+          (content->index.getKind() == TensorIndex::Sten &&
+           getKind() == TensorStorage::Stencil))
+      << "Expected Indexed tensor, but was " << *this;
+  iassert(content->index.defined());
+  return content->index;
 }
 
-const pe::PathExpression& TensorStorage::getPathExpression() const {
-  return content->pathExpression;
+void TensorStorage::setTensorIndex(Var tensor) {
+  content->index = TensorIndex(tensor.getName()+"_index", pe::PathExpression());
 }
 
-void TensorStorage::setPathExpression(const pe::PathExpression& pathExpression){
-  content->pathExpression = pathExpression;
-}
-
-std::string TensorStorage::getStencilFunc() const {
-  iassert(content->kind == Kind::Stencil);
-  return content->assemblyFunc;
-}
-
-std::string TensorStorage::getStencilVar() const {
-  iassert(content->kind == Kind::Stencil);
-  return content->targetVar;
-}
-
-bool TensorStorage::hasStencil() const {
-  return content->stencilDefined;
-}
-
-const Stencil& TensorStorage::getStencil() const {
-  return content->stencil;
-}
-
-void TensorStorage::setStencil(const Stencil& stencil) {
-  content->stencil = stencil;
-  content->stencilDefined = true;
-}
-
-bool TensorStorage::hasTensorIndex(unsigned sourceDim, unsigned sinkDim) const {
-  return util::contains(content->tensorIndices, {sourceDim, sinkDim});
-}
-
-const TensorIndex& TensorStorage::getTensorIndex(unsigned sourceDim,
-                                                 unsigned sinkDim) const {
-  iassert(hasTensorIndex(sourceDim,sinkDim));
-  tassert(sourceDim == 0 && sinkDim == 1)
-      << "Only currently support row->col indices";
-  return content->tensorIndices.at({sourceDim,sinkDim});
-}
-
-void TensorStorage::addTensorIndex(Var tensor, unsigned srcDim,
-                                   unsigned sinkDim) {
-  iassert(!hasTensorIndex(srcDim, sinkDim));
-  content->tensorIndices.insert({{srcDim,sinkDim},
-      TensorIndex(tensor.getName()+"_index", pe::PathExpression())});
-
-}
-
-const Expr &TensorStorage::getSystemTargetSet() const {
-  iassert(isSystem()) << "System storages require the target set be provided";
-  return content->systemTargetSet;
-}
-
-const Expr &TensorStorage::getSystemStorageSet() const {
-  iassert(isSystem()) << "System storages require the storage set be provided";
-  return content->systemStorageSet;
-}
+// void TensorStorage::setTensorIndex(Var tensor, std::string assemblyFunc,
+//                                    std::string targetVar) {
+//   StencilContent *stencilContent = new StencilContent;
+//   stencilContent->assemblyFunc = assemblyFunc;
+//   stencilContent->targetVar = targetVar;
+//   content->index = TensorIndex(tensor.getName()+"_index",
+//                                StencilLayout(stencilContent));
+// }
 
 std::ostream &operator<<(std::ostream &os, const TensorStorage &ts) {
   switch (ts.getKind()) {
-    case TensorStorage::Kind::Undefined:
+    case TensorStorage::Undefined:
       os << "Undefined";
       break;
-    case TensorStorage::Kind::Dense:
+    case TensorStorage::Dense:
       os << "Dense";
       break;
-    case TensorStorage::Kind::Indexed:
+    case TensorStorage::Indexed:
       os << "Indexed";
+      if (ts.hasTensorIndex()) {
+        os << " (" << ts.getTensorIndex().getPathExpression() << ")";
+      }
       break;
-    case TensorStorage::Kind::Stencil:
+    case TensorStorage::Stencil:
       os << "Stencil";
       break;
-    case TensorStorage::Kind::Diagonal:
+    case TensorStorage::Diagonal:
       os << "Diagonal";
-      break;
-    case TensorStorage::Kind::MatrixFree:
-      os << "Matrix-Free";
       break;
     default:
       unreachable;
@@ -195,8 +169,6 @@ void Storage::add(const Var &tensor, TensorStorage tensorStorage) {
 
 void Storage::add(const Storage &other) {
   for (auto &var : other) {
-    // iassert(!hasStorage(var)) << "Variable " << var << " already has storage";
-    // TEMP: Hack to avoid issues with multiple copies of const global tensor
     if (!hasStorage(var)) {
       add(var, other.getStorage(var));
     }
@@ -274,7 +246,8 @@ Storage::Iterator Storage::end() const {
 // Free functions
 class GetStorageVisitor : public IRVisitor {
 public:
-  GetStorageVisitor(Storage *storage) : storage(storage) {}
+  GetStorageVisitor(Storage *storage, Environment* env)
+      : storage{storage}, env{env} {}
 
   void get(Func func) {
     for (auto &global : func.getEnvironment().getConstants()) {
@@ -303,8 +276,28 @@ public:
   }
 
 private:
-  Storage *storage;
+  Storage* storage;
+  Environment* env;
   PathExpressionBuilder peBuilder;
+
+  TensorIndex getTensorIndex(const Var& var) {
+    auto pexpr = peBuilder.getPathExpression(var);
+    if (!env->hasTensorIndex(pexpr)) {
+      env->addTensorIndex(pexpr, var);
+    }
+    return env->getTensorIndex(pexpr);
+  }
+
+  TensorIndex setStencilTensorIndex(const Var& var, std::string assemblyFunc,
+                                    std::string targetVar) {
+    iassert(!env->hasTensorIndex(var));
+    StencilContent *content = new StencilContent;
+    content->assemblyFunc = assemblyFunc;
+    content->targetVar = targetVar;
+    auto stencil = StencilLayout(content);
+    env->addTensorIndex(stencil, var);
+    return env->getTensorIndex(stencil);
+  }
 
   using IRVisitor::visit;
 
@@ -314,65 +307,6 @@ private:
     //iassert(!storage->hasStorage(var)) << "Redeclaration of variable " << var;
     if (type.isTensor() && !isScalar(type)) {
       determineStorage(var);
-    }
-  }
-
-  void visit(const Map *op) {
-    // If the map target set is not an edge set, then matrices are diagonal.
-    // Otherwise, the matrices are indexed with a path expression
-    Type targetType = op->target.type();
-    iassert(targetType.isSet());
-    if (targetType.toSet()->getCardinality() == 0) {
-      for (const Var& var : op->vars) {
-        iassert(var.getType().isTensor());
-        const TensorType* type = var.getType().toTensor();
-
-        if (type->order() < 2) {
-          // Dense
-          storage->add(var, TensorStorage(TensorStorage::Kind::Dense));
-        }
-        else if (op->through.defined()) {
-          // Stencil
-          storage->add(var, TensorStorage(
-              op->function.getName(), var.getName(), op->target, op->through));
-        }
-        else {
-          // Indexed
-          storage->add(var, TensorStorage(op->target));
-        }
-      }
-    }
-    else {
-      peBuilder.computePathExpression(op);
-
-      for (const Var& var : op->vars) {
-        Type type = var.getType();
-        if (type.isTensor() && !isScalar(type)) {
-          // For now we'll store all assembled vectors as dense and other tensors
-          // as system reduced
-          TensorStorage tensorStorage;
-          const TensorType* tensorType = type.toTensor();
-          if (tensorType->order() == 1) {
-            tensorStorage = TensorStorage(TensorStorage::Kind::Dense);
-          }
-          else {
-            if (op->neighbors.defined()) {
-              tensorStorage = TensorStorage(op->target, op->neighbors);
-
-              // Add path expression
-              tassert(tensorType->order() == 2)
-              << "tensor has order " << tensorType->order()
-              << ", while we only currently supports sparse matrices";
-              tensorStorage.setPathExpression(peBuilder.getPathExpression(var));
-            }
-            else {
-              tensorStorage = TensorStorage(op->target);
-            }
-          }
-          iassert(tensorStorage.getKind() != TensorStorage::Kind::Undefined);
-          storage->add(var, tensorStorage);
-        }
-      }
     }
   }
 
@@ -393,17 +327,13 @@ private:
       }
       // System matrices
       else {
-        // assume system reduced storage
-        determineStorage(var, op->value);
+          pe::PathExpression pexpr;
+          if (isa<IndexExpr>(op->value)) {
+            peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
+            pexpr = peBuilder.getPathExpression(var);
+          }
 
-        if (isa<IndexExpr>(op->value)) {
-          peBuilder.computePathExpression(var, to<IndexExpr>(op->value));
-          pe::PathExpression pexpr = peBuilder.getPathExpression(var);
-          storage->getStorage(var).setPathExpression(pexpr);
-        } else if (isa<VarExpr>(op->value) && rhsType.isTensor()) {
-          pe::PathExpression pexpr = storage->getStorage(to<VarExpr>(op->value)->var).getPathExpression();
-          storage->getStorage(var).setPathExpression(pexpr);
-        }
+          determineStorage(var, op->value);
       }
     }
   }
@@ -414,6 +344,84 @@ private:
       Type type = var.getType();
       if (type.isTensor() && !isScalar(type) && !storage->hasStorage(var)) {
         determineStorage(var);
+      }
+    }
+  }
+
+  void visit(const CallStmt* op) {
+    if (op->callee.getKind() == Func::External) {
+      for (auto& result : op->results) {
+        if (result.getType().isTensor()) {
+          auto type = result.getType().toTensor();
+          if (type->order() == 1 || !type->hasSystemDimensions()) {
+            storage->add(result, TensorStorage(TensorStorage::Dense));
+          }
+          else {
+            auto index = TensorIndex(result.getName(), pe::PathExpression());
+            storage->add(result, TensorStorage(TensorStorage::Indexed, index));
+          }
+        }
+      }
+    }
+  }
+
+  void visit(const Map *op) {
+    // If the map target set is not an edge set, then matrices are dense,
+    // stencil, or diagonal. Otherwise, the matrices are indexed with a path
+    // expression
+    Type targetType = op->target.type();
+    iassert(targetType.isSet());
+    if (targetType.toSet()->getCardinality() == 0) {
+      for (const Var& var : op->vars) {
+        iassert(var.getType().isTensor());
+        const TensorType* type = var.getType().toTensor();
+
+        if (type->order() < 2) {
+          // Dense
+          storage->add(var, TensorStorage(TensorStorage::Dense));
+        }
+        else if (op->through.defined()) {
+          // Stencil
+          auto index = setStencilTensorIndex(
+              var, op->function.getName(), var.getName());
+          storage->add(var, TensorStorage(TensorStorage::Stencil, index));
+        }
+        else {
+          // Diagonal
+          storage->add(var, TensorStorage(TensorStorage::Diagonal));
+        }
+      }
+    }
+    else {
+      peBuilder.computePathExpression(op);
+
+      for (const Var& var : op->vars) {
+        Type type = var.getType();
+        if (type.isTensor() && !isScalar(type)) {
+          // For now we'll store all assembled vectors as dense and other tensors
+          // as system reduced
+          TensorStorage tensorStorage;
+          const TensorType* tensorType = type.toTensor();
+          if (tensorType->order() == 1) {
+            tensorStorage = TensorStorage(TensorStorage::Dense);
+          }
+          else {
+            if (!op->neighbors.defined()) {
+              tensorStorage = TensorStorage(TensorStorage::Diagonal);
+            }
+            else {
+              auto index = getTensorIndex(var);
+              tensorStorage = TensorStorage(TensorStorage::Indexed, index);
+
+              // Add path expression
+              tassert(tensorType->order() == 2)
+                  << "tensor has order " << tensorType->order()
+                  << ", while we only currently supports sparse matrices";
+            }
+          }
+          iassert(tensorStorage.getKind() != TensorStorage::Undefined);
+          storage->add(var, tensorStorage);
+        }
       }
     }
   }
@@ -432,7 +440,7 @@ private:
 
     // Element tensor and system vectors are dense.
     if (isElementTensorType(ttype) || ttype->order() == 1 || !rhs.defined()) {
-      tensorStorage = TensorStorage(TensorStorage::Kind::Dense);
+      tensorStorage = TensorStorage(TensorStorage::Dense);
     }
     // System matrices
     else {
@@ -453,11 +461,10 @@ private:
       // E.g. if one of the input variables to the RHS expression is dense then
       // the output becomes dense.
       static map<TensorStorage::Kind, unsigned> priorities = {
-        {TensorStorage::Kind::Dense,      4},
-        {TensorStorage::Kind::Indexed,    3},
-        {TensorStorage::Kind::Diagonal,   2},
-        {TensorStorage::Kind::MatrixFree, 1},
-        {TensorStorage::Kind::Undefined,  0}
+        {TensorStorage::Dense,     4},
+        {TensorStorage::Indexed,   3},
+        {TensorStorage::Diagonal,  2},
+        {TensorStorage::Undefined, 0}
       };
 
       for (Var operand : leafVars.vars) {
@@ -473,30 +480,31 @@ private:
         auto tensorStorageKind = tensorStorage.getKind();
         if (priorities[operandStorageKind] > priorities[tensorStorageKind]) {
           switch (operandStorage.getKind()) {
-            case TensorStorage::Kind::Dense:
-            case TensorStorage::Kind::MatrixFree:
+            case TensorStorage::Dense:
               tensorStorage = operandStorage.getKind();
               break;
-            case TensorStorage::Kind::Indexed:
-              tensorStorage =
-                  TensorStorage(operandStorage.getSystemTargetSet(),
-                                operandStorage.getSystemStorageSet());
+            case TensorStorage::Indexed: {
+              auto index = getTensorIndex(var);
+              tensorStorage = TensorStorage(TensorStorage::Indexed, index);
               break;
-            case TensorStorage::Kind::Stencil:
-              tensorStorage =
-                  TensorStorage(operandStorage.getStencilFunc(),
-                                operandStorage.getStencilVar(),
-                                operandStorage.getSystemTargetSet(),
-                                operandStorage.getSystemStorageSet());
-              if (operandStorage.hasStencil()) {
-                tensorStorage.setStencil(operandStorage.getStencil());
-              }
+            }
+            case TensorStorage::Stencil: {
+              auto index = getTensorIndex(var);
+              tensorStorage = TensorStorage(TensorStorage::Stencil, index);
+              //     TensorStorage(operandStorage.getStencilFunc(),
+              //                   operandStorage.getStencilVar(),
+              //                   operandStorage.getSystemTargetSet(),
+              //                   operandStorage.getSystemStorageSet());
+              // if (operandStorage.hasStencilLayout()) {
+              //   tensorStorage.setStencilLayout(
+              //       operandStorage.getStencilLayout());
+              // }
               break;
-            case TensorStorage::Kind::Diagonal:
-              tensorStorage =
-                  TensorStorage(operandStorage.getSystemTargetSet());
+            }
+            case TensorStorage::Diagonal:
+              tensorStorage = TensorStorage(TensorStorage::Diagonal);
               break;
-            case TensorStorage::Kind::Undefined:
+            case TensorStorage::Undefined:
               unreachable;
               break;
             default:
@@ -506,30 +514,18 @@ private:
       }
     }
 
-    if (tensorStorage.getKind() != TensorStorage::Kind::Undefined) {
+    if (tensorStorage.getKind() != TensorStorage::Undefined) {
       storage->add(var, tensorStorage);
     }
   }
 };
 
-Storage getStorage(const Func &func) {
-  Storage storage;
-  updateStorage(func, &storage);
-  return storage;
+void updateStorage(const Func& func, Storage* storage, Environment* env) {
+  GetStorageVisitor(storage, env).get(func);
 }
 
-Storage getStorage(const Stmt &stmt) {
-  Storage storage;
-  updateStorage(stmt, &storage);
-  return storage;
-}
-
-void updateStorage(const Func &func, Storage *storage) {
-  GetStorageVisitor(storage).get(func);
-}
-
-void updateStorage(const Stmt &stmt, Storage *storage) {
-  GetStorageVisitor(storage).get(stmt);
+void updateStorage(const Stmt& stmt, Storage* storage, Environment* env) {
+  GetStorageVisitor(storage, env).get(stmt);
 }
 
 }}

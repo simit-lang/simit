@@ -464,17 +464,6 @@ Expr FieldRead::make(Expr elementOrSet, std::string fieldName) {
   return node;
 }
 
-// struct Call
-Expr Call::make(Func func, std::vector<Expr> actuals) {
-  iassert(func.getResults().size() == 1)
-      << "only calls of function with one results is currently supported.";
-  Call *node = new Call;
-  node->type = func.getResults()[0].getType();
-  node->func = func;
-  node->actuals = actuals;
-  return node;
-}
-
 // struct Length
 Expr Length::make(IndexSet indexSet) {
   Length *node = new Length;

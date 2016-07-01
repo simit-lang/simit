@@ -6,9 +6,9 @@
 #include <iomanip>
 
 #include "error.h"
-#include "util/compare.h"
-#include "variadic.h"
 #include "tensor_type.h"
+#include "util/compare.h"
+#include "util/variadic.h"
 
 namespace simit {
 

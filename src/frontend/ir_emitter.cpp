@@ -180,8 +180,11 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
     results.push_back(result);
   }
 
-  ir::Stmt body = emitStmt(decl->body);
-  body = ir::Scope::make(body);
+  ir::Stmt body;
+  if (decl->body != nullptr) {
+    body = emitStmt(decl->body);
+    body = ir::Scope::make(body);
+  }
 
   ctx->unscope();
 
@@ -191,9 +194,13 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
       arguments.push_back(ext);
     }
   }
-
+  
+  auto funcKind = decl->external ? ir::Func::Kind::External :
+    ir::Func::Kind::Internal;
+  
   iassert(!ctx->containsFunction(decl->name->ident));
-  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body));
+  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body,
+    funcKind));
 }
 
 void IREmitter::visit(VarDecl::Ptr decl) {
@@ -513,6 +520,33 @@ void IREmitter::visit(DivExpr::Ptr expr) {
   retExpr = ctx->getBuilder()->binaryElwiseExpr(lhs, ir::IRBuilder::Div, rhs);
 }
 
+void IREmitter::visit(LeftDivExpr::Ptr expr) {
+  // Ax = b
+  const ir::Expr lhs = emitExpr(expr->lhs);
+  const ir::Expr rhs = emitExpr(expr->rhs);
+
+  const ir::Func solve = ctx->getFunction(ir::intrinsics::solve().getName());
+
+  auto A = emitExpr(expr->lhs);
+  auto b = emitExpr(expr->rhs);
+
+  iassert(A.type().isTensor());
+  auto Atype = A.type().toTensor();
+  iassert(Atype->order() == 2);
+
+  // The type of x in $Ax = b$ is the same as the second dimension of A.
+  auto xtype = ir::TensorType::make(Atype->getComponentType(),
+                                    {Atype->getDimensions()[1]},
+                                    true);
+
+  const ir::Var x = ctx->getBuilder()->temporary(ir::Type(xtype), "x");
+  const ir::Stmt callStmt = ir::CallStmt::make({}, solve, {A, b, x});
+
+  ctx->addStatement(ir::VarDecl::make(x));
+  ctx->addStatement(callStmt);
+  retExpr = ir::VarExpr::make(x);
+}
+
 void IREmitter::visit(ElwiseMulExpr::Ptr expr) {
   const ir::Expr lhs = emitExpr(expr->lhs);
   const ir::Expr rhs = emitExpr(expr->rhs);
@@ -616,11 +650,12 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
     unsigned i = 0;
     for (auto &arg : indices) {
       if (expr->indices[i]->isSlice()) {
-        auto iv = ir::IndexVar("@tmpfree" + std::to_string(i), dimensions[i]);
+        auto iv = ir::IndexVar(INTERNAL_PREFIX("tmpfree") + std::to_string(i),
+                               dimensions[i]);
         allivars.push_back(iv);
         freeVars.push_back(iv);
       } else {
-        auto iv = ir::IndexVar("@tmpfixed" + std::to_string(i),
+        auto iv = ir::IndexVar(INTERNAL_PREFIX("tmpfixed") + std::to_string(i),
                                dimensions[i], new ir::Expr(arg));
         allivars.push_back(iv);
       }
@@ -948,7 +983,13 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       } else {
         const ir::Var tmp = ctx->getBuilder()->temporary(retVals[i].getType());
         ctx->addSymbol(tmp);
-        ctx->addStatement(ir::VarDecl::make(tmp));
+
+        if (!isCallStmt ||
+            ir::to<ir::CallStmt>(topLevelStmt)->callee.getKind() !=
+            ir::Func::External) {
+          ctx->addStatement(ir::VarDecl::make(tmp));
+        }
+
         results.push_back(tmp);
       }
     }
