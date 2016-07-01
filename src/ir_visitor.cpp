@@ -38,12 +38,6 @@ void IRVisitor::visit(const Load *op) {
   op->index.accept(this);
 }
 
-void IRVisitor::visit(const Call *op) {
-  for (auto &actual : op->actuals) {
-    actual.accept(this);
-  }
-}
-
 void IRVisitor::visit(const UnaryExpr* op) {
   op->a.accept(this);
 }
@@ -251,18 +245,8 @@ void IRVisitor::visit(const GPUKernel *op) {
 }
 #endif
 
+
 // class IRVisitorCallGraph
-void IRVisitorCallGraph::visit(const Call *op) {
-  if (visited.find(op->func) == visited.end()) {
-    op->func.accept(this);
-    visited.insert(op->func);
-  }
-
-  for (auto &actual : op->actuals) {
-    actual.accept(this);
-  }
-}
-
 void IRVisitorCallGraph::visit(const CallStmt *op) {
   if (visited.find(op->callee) == visited.end()) {
     op->callee.accept(this);

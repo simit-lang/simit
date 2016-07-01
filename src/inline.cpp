@@ -7,6 +7,8 @@
 #include "flatten.h"
 #include "intrinsics.h"
 #include "ir_codegen.h"
+#include "tensor_index.h"
+#include "stencils.h"
 
 using namespace std;
 
@@ -340,6 +342,9 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
   // Map over edge set to build matrix
   if (returnsMatrix && cardinality > 0) {
     iassert(ivs.size() == 0);
+    // Computes the return matrix locations of the endpoints of the edge being
+    // assembled.  These are stored in an array and used when storing values to
+    // the return matrix.
     /* Build IR for locs and eps:
        var i : int;
        var j : int;
@@ -359,24 +364,29 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
     Var i("i", Int);
     Var j("j", Int);
 
-    Var eps("eps", TensorType::make(ScalarType::Int,
-                                    {IndexDomain(cardinality)}));
+    Var eps(INTERNAL_PREFIX("eps"), TensorType::make(ScalarType::Int,
+                                                     {IndexDomain(cardinality)}));
     Expr endpoints = IndexRead::make(target, IndexRead::Endpoints);
     Expr epLoc = Add::make(Mul::make(lv, cardinality), i);
     Expr ep = Load::make(endpoints, epLoc);
     Stmt epsInit = TensorWrite::make(eps, {i}, ep);
     Stmt epsInitLoop = ForRange::make(i, 0, cardinality, epsInit);
 
-    Var locs("locs", TensorType::make(ScalarType::Int,
-                                      {IndexDomain(cardinality),
-                                       IndexDomain(cardinality)}));
+    Var locs(INTERNAL_PREFIX("locs"), TensorType::make(ScalarType::Int,
+                                                       {IndexDomain(cardinality),
+                                                        IndexDomain(cardinality)}));
 
     Expr nbrs_start = IndexRead::make(target, IndexRead::NeighborsStart);
     Expr nbrs = IndexRead::make(target, IndexRead::Neighbors);
-    Expr loc = Call::make(intrinsics::loc(), {Load::make(eps,i),
-                                              Load::make(eps,j),
-                                              nbrs_start, nbrs});
-    Stmt locsInit = TensorWrite::make(locs, {i,j}, loc);
+
+    Var locVar(INTERNAL_PREFIX("locVar"), Int);
+    Stmt locStmt = CallStmt::make({locVar}, intrinsics::loc(),
+                                  {Load::make(eps,i),
+                                   Load::make(eps,j),
+                                   nbrs_start, nbrs});
+
+    Stmt locsInit = Block::make({locStmt,
+                                TensorWrite::make(locs, {i,j}, locVar)});
 
     Stmt locsInitLoop = ForRange::make(j, 0, cardinality, locsInit);
     locsInitLoop      = ForRange::make(i, 0, cardinality, locsInitLoop);
@@ -406,10 +416,10 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
               storage->getStorage(var).getKind() == TensorStorage::Kind::Dense);
       if (storage->getStorage(var).getKind() == TensorStorage::Kind::Stencil) {
         iassert(!stencilVar.defined());
-        iassert(storage->getStorage(var).getStencilFunc() ==
-                map->function.getName());
-        iassert(storage->getStorage(var).getStencilVar() ==
-                var.getName());
+        iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
+                .getStencilFunc() == map->function.getName());
+        iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
+                .getStencilVar() == var.getName());
         mapVar = var;
         stencilVar = res;
       }
@@ -420,7 +430,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
     // Build compile-time locs
     StencilContent *s = buildStencilLocs(map->function, stencilVar, lv, clocs);
     s->latticeSet = to<VarExpr>(map->through)->var; // assumes VarExpr
-    storage->getStorage(mapVar).setStencil(s);
+    storage->getStorage(mapVar).getTensorIndex().setStencilLayout(s);
     iassert(ivs.size() > 0);
     return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs, ivs);
   }
@@ -494,10 +504,6 @@ Stmt inlineMap(const Map *map, MapFunctionRewriter &rewriter,
       inlinedMap = Block::make(init, inlinedMap);
     }
   }
-
-  // We flatten the statement after it has been inlined, since inlining may
-  // introduce additional nested index expressions
-  inlinedMap = flattenIndexExpressions(inlinedMap);
 
   return inlinedMap;
 }

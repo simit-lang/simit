@@ -7,8 +7,8 @@
 #include <functional>
 #include <set>
 
-#include "printable.h"
-#include "uncopyable.h"
+#include "interfaces/printable.h"
+#include "interfaces/uncopyable.h"
 
 namespace simit {
 class Set;

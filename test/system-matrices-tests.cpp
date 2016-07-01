@@ -12,21 +12,21 @@ TEST(System, add) {
   ElementRef v0 = V.add();
   ElementRef v1 = V.add();
   ElementRef v2 = V.add();
-  b.set(v0, 1.0);
-  b.set(v1, 2.0);
-  b.set(v2, 3.0);
+  b(v0) = 1.0;
+  b(v1) = 2.0;
+  b(v2) = 3.0;
 
   Set E(V,V);
   FieldRef<simit_float> e = E.addField<simit_float>("e");
   ElementRef e0 = E.add(v0,v1);
   ElementRef e1 = E.add(v1,v2);
-  e.set(e0, 1.0);
-  e.set(e1, 2.0);
+  e(e0) = 1.0;
+  e(e1) = 2.0;
 
   Set F(V,V);
   FieldRef<simit_float> f = F.addField<simit_float>("e");
   ElementRef f0 = F.add(v0,v2);
-  f.set(f0, 4.0);
+  f(f0) = 4.0;
 
   // Compile program and bind arguments
   Function func = loadFunction(TEST_FILE_NAME, "main");
@@ -39,14 +39,14 @@ TEST(System, add) {
   func.runSafe();
 
   // Check that outputs are correct
-  ASSERT_EQ(19.0, a.get(v0));
-  ASSERT_EQ(13.0, a.get(v1));
-  ASSERT_EQ(26.0, a.get(v2));
+  ASSERT_EQ(19.0, (double)a(v0));
+  ASSERT_EQ(13.0, (double)a(v1));
+  ASSERT_EQ(26.0, (double)a(v2));
 
   // Check that inputs are preserved
-  ASSERT_EQ(1.0, b.get(v0));
-  ASSERT_EQ(2.0, b.get(v1));
-  ASSERT_EQ(3.0, b.get(v2));
+  ASSERT_EQ(1.0, (double)b(v0));
+  ASSERT_EQ(2.0, (double)b(v1));
+  ASSERT_EQ(3.0, (double)b(v2));
 }
 
 TEST(System, add_blocked) {
@@ -206,14 +206,14 @@ TEST(System, gemm_simple) {
   func.runSafe();
 
   // Check that inputs are preserved
-  ASSERT_EQ(1.0, b.get(p0));
-  ASSERT_EQ(2.0, b.get(p1));
-  ASSERT_EQ(3.0, b.get(p2));
+  ASSERT_EQ(1.0, (double)b.get(p0));
+  ASSERT_EQ(2.0, (double)b.get(p1));
+  ASSERT_EQ(3.0, (double)b.get(p2));
 
   // Check that outputs are correct
-  ASSERT_EQ(18158.0, c.get(p0));
-  ASSERT_EQ(22674.0, c.get(p1));
-  ASSERT_EQ(25276.0, c.get(p2));
+  ASSERT_EQ(18158.0, (double)c.get(p0));
+  ASSERT_EQ(22674.0, (double)c.get(p1));
+  ASSERT_EQ(25276.0, (double)c.get(p2));
 }
 
 TEST(DISABLED_System, gemm_blocked) {

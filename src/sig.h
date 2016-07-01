@@ -13,6 +13,7 @@
 #include "usedef.h"
 #include "storage.h"
 #include "ir_builder.h"
+#include "tensor_index.h"
 
 namespace simit {
 namespace ir {

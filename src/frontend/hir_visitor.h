@@ -54,6 +54,7 @@ struct AddExpr;
 struct SubExpr;
 struct MulExpr;
 struct DivExpr;
+struct LeftDivExpr;
 struct ElwiseMulExpr;
 struct ElwiseDivExpr;
 struct NegExpr;
@@ -125,6 +126,7 @@ public:
   virtual void visit(std::shared_ptr<SubExpr>);
   virtual void visit(std::shared_ptr<MulExpr>);
   virtual void visit(std::shared_ptr<DivExpr>);
+  virtual void visit(std::shared_ptr<LeftDivExpr>);
   virtual void visit(std::shared_ptr<ElwiseMulExpr>);
   virtual void visit(std::shared_ptr<ElwiseDivExpr>);
   virtual void visit(std::shared_ptr<NegExpr>);

@@ -65,9 +65,10 @@ public:
         return scope.at(symbol);
       }
     }
+    assert(false);
     ierror << "Attempting to load symbol " << symbol
            << " which is not in the symbol table";
-    return scopes.begin()->begin()->second;
+    return scopes.begin()->begin()->second;  // silence warning
   }
 
   const Value &get(const Key &symbol) const {
@@ -76,7 +77,7 @@ public:
         return scope.at(symbol);
       }
     }
-    iassert(false) << "Attempting to get a symbol that is not in symbol table.";
+    ierror << "Attempting to get a symbol that is not in symbol table.";
     return scopes.begin()->at(symbol); // silence warning
   }
 

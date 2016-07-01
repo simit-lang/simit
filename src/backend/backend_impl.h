@@ -2,7 +2,7 @@
 #define SIMIT_BACKEND_IMPL_H
 
 #include <set>
-#include "uncopyable.h"
+#include "interfaces/uncopyable.h"
 
 namespace simit {
 namespace ir {

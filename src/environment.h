@@ -5,6 +5,7 @@
 #include <map>
 #include <ostream>
 #include "var.h"
+#include "macros.h"
 #include "util/name_generator.h"
 
 namespace simit {
@@ -14,7 +15,7 @@ class PathExpression;
 namespace ir {
 class Expr;
 class TensorIndex;
-class Stencil;
+class StencilLayout;
 
 /// A VarMapping is a mapping from a Var to a vector of Vars that implement it.
 /// For example, a dense tensor Var may be implemented by an array, while a
@@ -36,8 +37,9 @@ private:
 std::ostream& operator<<(std::ostream&, const VarMapping&);
 
 /// An Environment keeps track of global constants, externs and temporaries.
-/// It also keeps track of the data arrays and indices that implement tensors
-/// as the IR is lowered and tensors are replaced by arrays.
+/// It also keeps track of the data arrays and shared index arrays of tensors
+/// that have path expressions. (The latter are added to the environment as the
+/// IR is lowered tensors are replaced by arrays.)
 class Environment {
 public:
   Environment();
@@ -95,10 +97,10 @@ public:
   const TensorIndex& getTensorIndex(const Var& var) const;
 
   /// True if the environment has a tensor index for the given stencil.
-  bool hasTensorIndex(const Stencil& stencil) const;
+  bool hasTensorIndex(const StencilLayout& stencil) const;
 
   /// Retrieve the tensor index of the given stencil.
-  const TensorIndex& getTensorIndex(const Stencil& stencil) const;
+  const TensorIndex& getTensorIndex(const StencilLayout& stencil) const;
 
   /// Insert a constant into the environment.
   void addConstant(const Var& var, const Expr& initializer);
@@ -116,7 +118,8 @@ public:
   void addTemporary(const Var& var);
   
   /// Create a temporary variable.
-  Var createTemporary(const Type &type, const std::string name="@tmp");
+  Var createTemporary(const Type &type,
+                      const std::string name=INTERNAL_PREFIX("tmp"));
 
   /// Add a tensor index described by the given path expression to the
   /// environment, and associate it with var.
@@ -124,7 +127,7 @@ public:
 
   /// Add a tensor index described by the given stencil to the environment,
   /// and associate it with var.
-  void addTensorIndex(const Stencil& stencil, const Var& var);
+  void addTensorIndex(const StencilLayout& stencil, const Var& var);
 
 private:
   struct Content;

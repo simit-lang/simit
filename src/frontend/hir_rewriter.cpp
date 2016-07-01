@@ -84,7 +84,9 @@ void HIRRewriter::visit(FuncDecl::Ptr decl) {
   for (auto &result : decl->results) {
     result = rewrite<IdentDecl>(result);
   }
-  decl->body = rewrite<StmtBlock>(decl->body);
+  if (decl->body != nullptr) {
+    decl->body = rewrite<StmtBlock>(decl->body);
+  }
   node = decl;
 }
 
@@ -202,6 +204,10 @@ void HIRRewriter::visit(MulExpr::Ptr expr) {
 }
 
 void HIRRewriter::visit(DivExpr::Ptr expr) {
+  visitBinaryExpr(expr);
+}
+
+void HIRRewriter::visit(LeftDivExpr::Ptr expr) {
   visitBinaryExpr(expr);
 }
 

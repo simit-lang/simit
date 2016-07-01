@@ -28,7 +28,7 @@ class LowerStringOps : public IRRewriter {
     
     Var tmp("tmp", Int);
     Stmt cmpStmt = CallStmt::make({tmp}, intrinsics::strcmp(), {a, b});
-    stmts.push_back(cmpStmt);
+    IRRewriter::spill(cmpStmt);
 
     Expr tmpExpr = VarExpr::make(tmp);
     Expr zero = Literal::make(0);
@@ -130,26 +130,26 @@ class LowerStringOps : public IRRewriter {
     for (const auto opnd : operands) {
       Var len("len", Int);
       Stmt lenStmt = CallStmt::make({len}, intrinsics::strlen(), {opnd});
-      stmts.push_back(lenStmt);
+      IRRewriter::spill(lenStmt);
       
       lenExpr = Add::make(lenExpr, VarExpr::make(len));
     }
     
     Expr targetExpr = VarExpr::make(target);
     Stmt freeStmt = CallStmt::make({}, intrinsics::free(), {targetExpr});
-    stmts.push_back(freeStmt);
+    IRRewriter::spill(freeStmt);
 
     Stmt mallocStmt = CallStmt::make({target}, intrinsics::malloc(), {lenExpr});
-    stmts.push_back(mallocStmt);
+    IRRewriter::spill(mallocStmt);
 
     Stmt cpyStmt = CallStmt::make({target}, intrinsics::strcpy(), 
                                   {targetExpr, operands[0]});
-    stmts.push_back(cpyStmt);
+    IRRewriter::spill(cpyStmt);
 
     for (unsigned i = 1; i < operands.size(); ++i) {
       Stmt catStmt = CallStmt::make({target}, intrinsics::strcat(),
                                     {targetExpr, operands[i]});
-      stmts.push_back(catStmt);
+      IRRewriter::spill(catStmt);
     }
   }
 

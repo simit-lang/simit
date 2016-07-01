@@ -1,0 +1,5 @@
+extern func noargs();
+
+export func main()
+	noargs();
+end

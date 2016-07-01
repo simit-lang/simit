@@ -21,7 +21,7 @@
 
 #include "backend/actual.h"
 #include "graph.h"
-#include "indices.h"
+#include "graph_indices.h"
 #include "tensor_index.h"
 #include "path_indices.h"
 #include "util/collections.h"
@@ -86,18 +86,18 @@ LLVMFunction::LLVMFunction(ir::Func func, const ir::Storage &storage,
     uint64_t addr;
 
     if (tensorIndex.getKind() == TensorIndex::PExpr) {
-      const Var& coords = tensorIndex.getCoordArray();
-      addr = executionEngine->getGlobalValueAddress(coords.getName());
-      const uint32_t** coordsPtr = (const uint32_t**)addr;
-      *coordsPtr = nullptr;
+      const Var& rowptr = tensorIndex.getRowptrArray();
+      addr = executionEngine->getGlobalValueAddress(rowptr.getName());
+      const uint32_t** rowptrPtr = (const uint32_t**)addr;
+      *rowptrPtr = nullptr;
 
-      const Var& sinks = tensorIndex.getSinkArray();
-      addr = executionEngine->getGlobalValueAddress(sinks.getName());
-      const uint32_t** sinksPtr = (const uint32_t**)addr;
-      *sinksPtr = nullptr;
+      const Var& colidx = tensorIndex.getColidxArray();
+      addr = executionEngine->getGlobalValueAddress(colidx.getName());
+      const uint32_t** colidxPtr = (const uint32_t**)addr;
+      *colidxPtr = nullptr;
 
       const pe::PathExpression& pexpr = tensorIndex.getPathExpression();
-      tensorIndexPtrs.insert({pexpr, {coordsPtr, sinksPtr}});
+      tensorIndexPtrs.insert({pexpr, {rowptrPtr, colidxPtr}});
     }
     else if (tensorIndex.getKind() == TensorIndex::Sten) {
       // No need to build in-memory structures
@@ -117,6 +117,7 @@ LLVMFunction::~LLVMFunction() {
     free(*tmpPtr.second);
     *tmpPtr.second = nullptr;
   }
+
 }
 
 void LLVMFunction::bind(const std::string& name, simit::Set* set) {
@@ -307,7 +308,7 @@ Function::FuncType LLVMFunction::init() {
           iassert(iss[0] == iss[1])
               << "Stencil tensor index must be for a homogeneous matrix";
           size_t latticeSize = size(iss[0]);
-          const Stencil& stencil = ti.getStencil();
+          const StencilLayout& stencil = ti.getStencilLayout();
           size_t matSize = stencil.getLayout().size() *
               latticeSize * blockSize * componentSize;
           *temporaryPtrs.at(tmp.getName()) = malloc(matSize);

@@ -29,7 +29,7 @@ Func::Func(const std::string& name, const std::vector<Var>& arguments,
   ptr->env = environment;
   ptr->body = new Stmt();
   if (body.defined()) {
-    *ptr->body = Scope::make(body);
+    *ptr->body = body;
   }
 }
 
@@ -58,8 +58,7 @@ void Func::accept(IRVisitorStrict *visitor) const {
     visitor->visit(this);
   }
   catch (SimitException &ex) {
-    ex.addContext("... accepting: ");
-    ex.errStream << "func " << getName();
+    ex.addContext("func " + getName());
     throw;
   }
 }

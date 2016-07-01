@@ -5,6 +5,8 @@
 #include "ir_rewriter.h"
 #include "ir_transforms.h"
 #include "inline.h"
+#include "path_expressions.h"
+#include "tensor_index.h"
 
 using namespace std;
 
@@ -163,10 +165,21 @@ private:
     stmt = Comment::make(util::toString(*op), stmt, true);
 
     // Add storage descriptor for the new tensors in the inlined map
-    updateStorage(stmt, storage);
+    updateStorage(stmt, storage, env);
+
+    // Add result variable indices to the environment
+    for (auto result : op->vars) {
+      auto tensorStorage = storage->getStorage(result);
+      if (tensorStorage.getKind() == TensorStorage::Indexed) {
+        auto& pexpr = tensorStorage.getTensorIndex().getPathExpression();
+        env->addTensorIndex(pexpr, result);
+      }
+    }
+
     // Add storage from mapped Func's environment
     Func noBody(op->function, Pass::make());
-    updateStorage(noBody, storage);
+    updateStorage(noBody, storage, env);
+
     // Add constants from inlined map function into environment
     for (auto &c : op->function.getEnvironment().getConstants()) {
       env->addConstant(c.first, c.second);

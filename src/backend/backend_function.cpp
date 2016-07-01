@@ -7,7 +7,7 @@ using namespace std;
 
 #include "ir.h"
 #include "ir_visitor.h"
-#include "indices.h"
+#include "graph_indices.h"
 #include "util/collections.h"
 #include "error.h"
 

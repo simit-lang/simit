@@ -12,11 +12,12 @@
 using namespace std;
 
 namespace simit {
+namespace ir {
 
 void printTimes() {
   const int LINE_LIMIT = 80;
   double percentageSum = 0.0;
-  
+
   for (auto line: simit::ir::TimerStorage::getInstance().getSourceLines()) {
     size_t first = line.find_first_not_of(' ');
     size_t last = line.find_last_not_of('\n');
@@ -27,13 +28,12 @@ void printTimes() {
     }
     int index = simit::ir::TimerStorage::getInstance().getTimedLineIndex(test);
     if ( index >= 0) {
-      double percentage = 
-          simit::ir::TimerStorage::getInstance().getTimingPercentage(index);
+      double percentage= TimerStorage::getInstance().getTimingPercentage(index);
       percentageSum += percentage;
       unsigned long long int timerCount =
-          simit::ir::TimerStorage::getInstance().getCounter(index);
+          TimerStorage::getInstance().getCounter(index);
       if (line.length() < LINE_LIMIT) {
-        line.append(LINE_LIMIT - line.length(), ' '); 
+        line.append(LINE_LIMIT - line.length(), ' ');
         printf("%s (%f%s, %llu)\n", line.c_str(), percentage , "%", timerCount);
       } else {
         printf("%s (%f%s, %llu)\n", line.substr(0,LINE_LIMIT).c_str(),
@@ -44,7 +44,7 @@ void printTimes() {
       }
     } else {
       if (line.length() < LINE_LIMIT) {
-        line.append(LINE_LIMIT - line.length(), ' '); 
+        line.append(LINE_LIMIT - line.length(), ' ');
         printf("%s\n", line.c_str());
       } else {
         printf("%s\n", line.substr(0,LINE_LIMIT).c_str());
@@ -54,12 +54,10 @@ void printTimes() {
       }
     }
   }
- 
-  printf("Total Time: %f (seconds)\n", 
-      simit::ir::TimerStorage::getInstance().getTotalTime() / 1000000.0);
-}
 
-namespace ir {
+  printf("Total Time: %f (seconds)\n",
+         simit::ir::TimerStorage::getInstance().getTotalTime() / 1000000.0);
+}
 
 // Singleton
 class InsertTimers : public IRRewriter {
@@ -144,18 +142,20 @@ class InsertTimers : public IRRewriter {
 
     Var initTimer(string line, Stmt& stmt) {
       TimerStorage::getInstance().addTimedLine(line);
-      Expr timeStart = Call::make(intrinsics::simitClock(), {});
-      Stmt timeStartStmt = AssignStmt::make(getTimeVar(), timeStart);
+      Stmt timeStartStmt =
+          CallStmt::make({getTimeVar()}, intrinsics::clock(), {});
       stmt = Block::make(timeStartStmt, stmt);
       return timeStartVar;
     }
 
     void storeTimer(Stmt& stmt, Var& timeStartVar) {
-      Expr subtraction = Sub::make(Call::make(intrinsics::simitClock(), {}),
-          VarExpr::make(timeStartVar));
-      Stmt store = CallStmt::make({}, intrinsics::simitStoreTime(), 
+      Var clock("clock", Float);
+      Stmt clockDecl = VarDecl::make(clock);
+      Stmt clockStmt = CallStmt::make({clock}, intrinsics::clock(), {});
+      Expr subtraction = Sub::make(clock, VarExpr::make(timeStartVar));
+      Stmt store = CallStmt::make({}, intrinsics::storeTime(),
           {counter, subtraction});
-      stmt = Block::make(stmt, store);
+      stmt = Block::make({clockDecl, clockStmt, stmt, store});
       counter++;
     }
 };

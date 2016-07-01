@@ -55,6 +55,7 @@ public:
   virtual void visit(SubExpr::Ptr);
   virtual void visit(MulExpr::Ptr);
   virtual void visit(DivExpr::Ptr);
+  virtual void visit(LeftDivExpr::Ptr);
   virtual void visit(ElwiseMulExpr::Ptr);
   virtual void visit(ElwiseDivExpr::Ptr);
   virtual void visit(NegExpr::Ptr);

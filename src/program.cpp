@@ -10,6 +10,7 @@
 #include "program_context.h"
 #include "storage.h"
 #include "lower/lower.h"
+#include "timers.h"
 
 #include "backend/backend.h"
 
@@ -25,15 +26,13 @@ const std::vector<std::string> VALID_BACKENDS = {
 };
 std::string kBackend;
 
-static Function compile(ir::Func func, backend::Backend *backend, bool addTimers) {
+static
+Function compile(ir::Func func, backend::Backend *backend, bool addTimers) {
   ir::Storage storage;
   // Fill in storage path expressions, etc.
   /// map<Var,pe::PathExpressions> pes = assignPathExpressions(func);
   /// storage.addPathExpressions(pes);
-  func = lower(func);
-  if (addTimers) {
-    func = lowerWithTimers(func);
-  }
+  func = lower(func, false, addTimers);
   return Function(backend->compile(func, storage));
 }
 

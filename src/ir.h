@@ -4,13 +4,13 @@
 #include <string>
 
 #include "intrusive_ptr.h"
-#include "uncopyable.h"
 #include "var.h"
 #include "types.h"
 #include "func.h"
 #include "ir_visitor.h"
 #include "indexvar.h"
 #include "complex_types.h"
+#include "interfaces/uncopyable.h"
 
 namespace simit {
 namespace ir {
@@ -60,8 +60,7 @@ public:
       ptr->accept(v);
     }
     catch (SimitException &ex) {
-      ex.addContext("... accepting: ");
-      ex.errStream << *ptr;
+      ex.addContext(util::toString(*ptr));
       throw;
     }
   }
@@ -109,8 +108,7 @@ public:
     }
     catch (SimitException &ex) {
       if (!isa<Block>(*this) && !isa<Scope>(*this)) {
-        ex.addContext("... accepting: ");
-        ex.errStream << *ptr;
+        ex.addContext(util::toString(*ptr));
       }
       throw;
     }
@@ -196,13 +194,6 @@ struct FieldRead : public ExprNode {
   std::string fieldName;
   static Expr make(Expr elementOrSet, std::string fieldName);
   void accept(IRVisitorStrict *v) const {v->visit((const FieldRead*)this);}
-};
-
-struct Call : public ExprNode {
-  Func func;
-  std::vector<Expr> actuals;
-  static Expr make(Func func, std::vector<Expr> actuals);
-  void accept(IRVisitorStrict *v) const {v->visit((const Call*)this);}
 };
 
 struct Length : public ExprNode {
@@ -354,6 +345,9 @@ struct FieldWrite : public StmtNode {
   void accept(IRVisitorStrict *v) const {v->visit((const FieldWrite*)this);}
 };
 
+/// Calls a function that may any number of arguments.
+/// NB: The reason why we don't have Call expressions is that functions may
+///     have more than one result.
 struct CallStmt : public StmtNode {
   std::vector<Var> results;
   Func callee;

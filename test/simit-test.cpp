@@ -117,9 +117,9 @@ int main(int argc, char **argv) {
   simit::init(simitBackend, floatSize);
 
   int returnValue = RUN_ALL_TESTS();
-  
+
   if (PROFILE) {
-    simit::printTimes(); 
+    simit::ir::printTimes();
   }
   return returnValue;
 }
@@ -137,7 +137,7 @@ simit::Function loadFunction(std::string fileName, std::string funcName="main"){
   simit::Program program;
   int errorCode = program.loadFile(fileName);
   if (errorCode) {
-    std::cerr << program.getDiagnostics().getMessage();
+    std::cerr << program.getDiagnostics().getMessage() << std::endl;
     return simit::Function();
   }
   

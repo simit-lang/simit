@@ -33,7 +33,7 @@ struct Environment::Content {
 
   vector<TensorIndex>            tensorIndices;
   map<pe::PathExpression,size_t> locationOfTensorIndex;
-  map<Stencil,size_t>            locationOfTensorIndexStencil;
+  map<StencilLayout,size_t>      locationOfTensorIndexStencil;
 
   map<Var,TensorIndex>           tensorIndexOfVar;
 };
@@ -124,11 +124,16 @@ const std::vector<TensorIndex>& Environment::getTensorIndices() const {
 }
 
 bool Environment::hasTensorIndex(const pe::PathExpression& pexpr) const {
+  if (!pexpr.defined()) {
+    return false;
+  }
   return util::contains(content->locationOfTensorIndex, pexpr);
 }
 
 const TensorIndex&
 Environment::getTensorIndex(const pe::PathExpression& pexpr) const {
+  iassert(pexpr.defined())
+      << "Tensors in the environment have defined path expressions";
   iassert(util::contains(content->locationOfTensorIndex, pexpr))
       << "Could not find " << pexpr << " in environment";
   return content->tensorIndices[content->locationOfTensorIndex.at(pexpr)];
@@ -143,11 +148,12 @@ const TensorIndex& Environment::getTensorIndex(const Var& var) const {
   return content->tensorIndexOfVar.at(var);
 }
 
-bool Environment::hasTensorIndex(const Stencil& stencil) const {
+bool Environment::hasTensorIndex(const StencilLayout& stencil) const {
   return util::contains(content->locationOfTensorIndexStencil, stencil);
 }
 
-const TensorIndex& Environment::getTensorIndex(const Stencil& stencil) const {
+const TensorIndex& Environment::getTensorIndex(
+    const StencilLayout& stencil) const {
   iassert(util::contains(content->locationOfTensorIndexStencil, stencil))
       << "Could not find " << stencil << " in environment";
   return content->tensorIndices[
@@ -207,7 +213,7 @@ void Environment::addTensorIndex(const pe::PathExpression& pexpr,
   content->tensorIndexOfVar.insert({var, getTensorIndex(pexpr)});
 }
 
-void Environment::addTensorIndex(const Stencil& stencil, const Var& var) {
+void Environment::addTensorIndex(const StencilLayout& stencil, const Var& var) {
   iassert(var.defined())
       << "attempting to add a tensor index to an undefined var";
 
@@ -284,6 +290,7 @@ std::ostream& operator<<(std::ostream& os, const Environment& env) {
     }
     somethingPrinted = true;
   }
+  UNUSED(somethingPrinted);
 
   return os;
 }

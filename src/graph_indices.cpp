@@ -1,4 +1,4 @@
-#include "indices.h"
+#include "graph_indices.h"
 
 namespace simit {
 namespace internal {

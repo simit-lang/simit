@@ -1,6 +1,7 @@
 #include "ir_transforms.h"
 
 #include "ir_rewriter.h"
+#include "util/collections.h"
 
 using namespace std;
 
@@ -41,7 +42,7 @@ Func insertVarDecls(Func func) {
     }
 
     void visit(const AssignStmt *op) {
-      if (declared.find(op->var) == declared.end()) {
+      if (!util::contains(declared, op->var)) {
         stmt = Block::make(VarDecl::make(op->var), op);
         declared.insert(op->var);
       }
@@ -53,7 +54,7 @@ Func insertVarDecls(Func func) {
     void visit(const Map *op) {
       stmt = op;
       for (auto &var : op->vars) {
-        if (declared.find(var) == declared.end()) {
+        if (!util::contains(declared, var)) {
           stmt = Block::make(VarDecl::make(var), stmt);
           declared.insert(var);
         }
@@ -62,12 +63,12 @@ Func insertVarDecls(Func func) {
 
     void visit(const CallStmt *op) {
       stmt = op;
-      for (auto &var : op->results) {
-        if (declared.find(var) == declared.end()) {
-          stmt = Block::make(VarDecl::make(var), stmt);
-          declared.insert(var);
+        for (auto &var : op->results) {
+          if (!util::contains(declared, var)) {
+            stmt = Block::make(VarDecl::make(var), stmt);
+            declared.insert(var);
+          }
         }
-      }
     }
   };
   return InsertVarDeclsRewriter().rewrite(func);

@@ -226,12 +226,6 @@ std::vector<Func> getCallTree(Func func) {
       functionStack.pop();
     }
 
-    void visit(const Call *op) {
-      iassert(functionStack.size() > 0);
-      addReverseEdge(functionStack.top(), op->func);
-      op->func.accept(this);
-    }
-
     void visit(const CallStmt *op) {
       iassert(functionStack.size() > 0);
       addReverseEdge(functionStack.top(), op->callee);

@@ -2,6 +2,7 @@
 
 #include <stack>
 #include "ir_visitor.h"
+#include "path_expressions.h"
 #include "util/collections.h"
 
 using namespace std;
@@ -67,11 +68,11 @@ TensorIndexVar::TensorIndexVar(string inductionVarName, string tensorName,
 
 Expr TensorIndexVar::loadCoord(int offset) const {
   Expr sourceExpr = (offset == 0) ? getSourceVar() : getSourceVar() + offset;
-  return Load::make(getTensorIndex().getCoordArray(), sourceExpr);
+  return Load::make(getTensorIndex().getRowptrArray(), sourceExpr);
 }
 
 Expr TensorIndexVar::loadSink() const {
-  return Load::make(getTensorIndex().getSinkArray(), getCoordVar());
+  return Load::make(getTensorIndex().getColidxArray(), getCoordVar());
 }
 
 Stmt TensorIndexVar::initCoordVar() const {
@@ -259,28 +260,18 @@ private:
   }
 
   void visit(const IndexedTensor *indexedTensor) {
-    const vector<IndexVar>& indexVars = indexedTensor->indexVars;
     iassert(isa<VarExpr>(indexedTensor->tensor))
         << "at this point the index expressions should have been flattened";
     Var tensor = to<VarExpr>(indexedTensor->tensor)->var;
 
     TensorStorage& ts = storage->getStorage(tensor);
-    unsigned sourceDim = util::locate(indexVars,linkedIndexVar);
-    unsigned sinkDim   = util::locate(indexVars,indexVar);
     TensorIndex ti;
-    if (!ts.hasTensorIndex(sourceDim, sinkDim)) {
+    if (!ts.hasTensorIndex()) {
       if (environment->hasExtern(tensor.getName())) {
-        ts.addTensorIndex(tensor, sourceDim, sinkDim);
-        ti = ts.getTensorIndex(sourceDim, sinkDim);
-        environment->addExternMapping(tensor, ti.getCoordArray());
-        environment->addExternMapping(tensor, ti.getSinkArray());
-      }
-      else if (ts.hasPathExpression()) {
-        const pe::PathExpression pexpr = ts.getPathExpression();
-        if (!environment->hasTensorIndex(pexpr)) {
-          environment->addTensorIndex(pexpr, tensor);
-        }
-        ti = environment->getTensorIndex(pexpr);
+        ts.setTensorIndex(tensor);
+        ti = ts.getTensorIndex();
+        environment->addExternMapping(tensor, ti.getRowptrArray());
+        environment->addExternMapping(tensor, ti.getColidxArray());
       }
       else {
         // No subset loops to create?
@@ -288,7 +279,7 @@ private:
       }
     }
     else {
-      ti = ts.getTensorIndex(sourceDim, sinkDim);
+      ti = ts.getTensorIndex();
     }
 
     TensorIndexVar tensorIndexVar(inductionVar.getName(), tensor.getName(),
