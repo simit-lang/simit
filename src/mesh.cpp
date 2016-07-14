@@ -47,7 +47,6 @@ int openOfstream(ofstream & out, const char * filename)
   return 0;
 }
 
-
 int Mesh::load(const char * filename)
 {
   ifstream in;
@@ -58,6 +57,10 @@ int Mesh::load(const char * filename)
   status = load(in);
   in.close();
   return status;
+}
+
+int Mesh::load(std::string filename) {
+  return load(filename.c_str());
 }
 
 int Mesh::load(istream & in)
@@ -163,6 +166,10 @@ int MeshVol::load(const char * filename)
   return status;
 }
 
+int MeshVol::load(std::string filename) {
+  return load(filename.c_str());
+}
+
 int MeshVol::load(istream & in)
 {
   string token;
@@ -232,6 +239,10 @@ int MeshVol::loadTet(const char * nodeFile, const char * eleFile)
   nodeIn.close();
   eleIn.close();
   return status;
+}
+
+int MeshVol::loadTet(std::string nodeFile, std::string eleFile) {
+  return loadTet(nodeFile.c_str(), eleFile.c_str());
 }
 
 int MeshVol::loadTet(istream & nodeIn, istream & eleIn)
@@ -315,6 +326,10 @@ int MeshVol::loadTetEdge(const char * edgeFile)
   status = loadTetEdge(edgeIn);
   edgeIn.close();
   return status;
+}
+
+int MeshVol::loadTetEdge(std::string edgeFile) {
+  return loadTetEdge(edgeFile.c_str());
 }
 
 int MeshVol::loadTetEdge(istream & edgeIn)
