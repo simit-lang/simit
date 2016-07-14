@@ -94,21 +94,15 @@ std::vector<std::string> Program::getFunctionNames() const {
 
 Function Program::compile(const std::string &function) {
   ir::Func simitFunc = content->ctx.getFunction(function);
-  if (!simitFunc.defined()) {
-    content->diags.report() << "Attempting to compile an unknown function ("
-                            << function << ")";
-    return NULL;
-  }
+  uassert(simitFunc.defined()) << "Attempting to compile an unknown function "
+                               << "(" << function << ")";
   return simit::compile(simitFunc, content->backend);
 }
 
 Function Program::compileWithTimers(const std::string &function) {
   ir::Func simitFunc = content->ctx.getFunction(function);
-  if (!simitFunc.defined()) {
-    content->diags.report() << "Attempting to compile an unknown function ("
-                            << function << ")";
-    return NULL;
-  }
+  uassert(simitFunc.defined()) << "Attempting to compile an unknown function "
+                               << "(" << function << ")";
   return simit::compile(simitFunc, content->backend, true);
 }
 
