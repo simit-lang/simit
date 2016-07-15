@@ -57,33 +57,6 @@ HIRNode::Ptr StmtBlock::cloneImpl() {
   return node;
 }
 
-void Expr::copy(HIRNode::Ptr node) {
-  const auto expr = to<Expr>(node);
-  HIRNode::copy(expr);
-  type = expr->type;
-  access = expr->access;
-}
-
-bool Expr::isReadable() {
-  switch (access) {
-    case internal::Symbol::Read:
-    case internal::Symbol::ReadWrite:
-      return true;
-    default:
-      return false;
-  }
-}
-
-bool Expr::isWritable() {
-  switch (access) {
-    case internal::Symbol::Write:
-    case internal::Symbol::ReadWrite:
-      return true;
-    default:
-      return false;
-  }
-}
-
 void RangeIndexSet::copy(HIRNode::Ptr node) {
   const auto indexSet = to<RangeIndexSet>(node);
   IndexSet::copy(indexSet);
@@ -119,6 +92,18 @@ HIRNode::Ptr DynamicIndexSet::cloneImpl() {
   node->copy(shared_from_this());
   return node;
 }
+
+//ElementType::Ptr make(const std::string &ident, const std::string &sourceSet,
+//                      bool sourceSetIsGeneric) {
+//  auto ret = std::make_shared<ElementType>();
+//  ret->ident = ident;
+//  if (sourceSetIsGeneric) {
+//    ret->sourceGenericSets.insert(sourceSet);
+//  } else {
+//    ret->sourceSet = sourceSet;
+//  }
+//  return ret;
+//}
 
 void ElementType::copy(HIRNode::Ptr node) {
   const auto elementType = to<ElementType>(node);
@@ -186,6 +171,12 @@ HIRNode::Ptr TupleType::cloneImpl() {
   return node;
 }
 
+ScalarType::Ptr make(ScalarType::Type type) {
+  auto ret = std::make_shared<ScalarType>();
+  ret->type = type;
+  return ret;
+}
+
 void ScalarType::copy(HIRNode::Ptr node) {
   const auto scalarType = to<ScalarType>(node);
   TensorType::copy(scalarType);
@@ -226,6 +217,13 @@ HIRNode::Ptr Identifier::cloneImpl() {
   return node;
 }
 
+IdentDecl::Ptr make(Identifier::Ptr name, Type::Ptr type) {
+  const auto ret = std::make_shared<IdentDecl>();
+  ret->name = name;
+  ret->type = type;
+  return ret;
+}
+
 void IdentDecl::copy(HIRNode::Ptr node) {
   const auto identDecl = to<IdentDecl>(node);
   HIRNode::copy(identDecl);
@@ -264,6 +262,12 @@ HIRNode::Ptr ElementTypeDecl::cloneImpl() {
   const auto node = std::make_shared<ElementTypeDecl>();
   node->copy(shared_from_this());
   return node;
+}
+
+Argument::Ptr make(IdentDecl::Ptr arg) {
+  const auto ret = std::make_shared<Argument>();
+  ret->arg = arg;
+  return ret;
 }
 
 void Argument::copy(HIRNode::Ptr node) {

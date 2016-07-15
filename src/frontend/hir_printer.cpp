@@ -34,6 +34,7 @@ void HIRPrinter::visit(DynamicIndexSet::Ptr set) {
 
 void HIRPrinter::visit(ElementType::Ptr type) {
   oss << type->ident;
+#if 1
   if (!type->sourceGenericSets.empty() || !type->sourceSet.empty()) {
     oss << "{";
     bool printDelimiter = false;
@@ -50,6 +51,7 @@ void HIRPrinter::visit(ElementType::Ptr type) {
     }
     oss << "}";
   }
+#endif
 }
 
 void HIRPrinter::visit(Endpoint::Ptr end) {

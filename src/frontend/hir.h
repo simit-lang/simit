@@ -101,21 +101,12 @@ struct StmtBlock : public Stmt {
   }
 };
 
+struct Type : public HIRNode {
+  typedef std::shared_ptr<Type> Ptr;
+};
+
 struct Expr : public HIRNode {
-  typedef std::vector<ir::Type>    Type;
-  typedef internal::Symbol::Access Access;
-
-  Type   type;
-  Access access;
-
   typedef std::shared_ptr<Expr> Ptr;
-
-  Expr() : access(internal::Symbol::Read) {}
-
-  virtual void copy(HIRNode::Ptr);
-
-  bool isReadable();
-  bool isWritable();
 };
 
 struct IndexSet : public HIRNode {
@@ -170,17 +161,13 @@ struct DynamicIndexSet : public IndexSet {
   }
 };
 
-struct Type : public HIRNode {
-  typedef std::shared_ptr<Type> Ptr;
-};
-
 struct ElementType : public Type {
   std::string                     ident;
   std::string                     sourceSet;
   std::unordered_set<std::string> sourceGenericSets;
   
   typedef std::shared_ptr<ElementType> Ptr;
-  
+ 
   virtual void copy(HIRNode::Ptr);
 
   virtual HIRNode::Ptr cloneImpl();
@@ -258,7 +245,7 @@ struct ScalarType : public TensorType {
   Type type;
   
   typedef std::shared_ptr<ScalarType> Ptr;
-  
+ 
   virtual void copy(HIRNode::Ptr);
 
   virtual HIRNode::Ptr cloneImpl();
@@ -274,7 +261,7 @@ struct NDTensorType : public TensorType {
   bool                       transposed;
   
   typedef std::shared_ptr<NDTensorType> Ptr;
-  
+
   virtual void copy(HIRNode::Ptr);
 
   virtual HIRNode::Ptr cloneImpl();
@@ -303,7 +290,7 @@ struct IdentDecl : public HIRNode {
   Type::Ptr       type;
   
   typedef std::shared_ptr<IdentDecl> Ptr;
-  
+ 
   virtual void copy(HIRNode::Ptr);
 
   virtual HIRNode::Ptr cloneImpl();
@@ -354,7 +341,7 @@ struct Argument : public HIRNode {
   IdentDecl::Ptr arg;
   
   typedef std::shared_ptr<Argument> Ptr;
-  
+ 
   virtual void copy(HIRNode::Ptr);
 
   virtual HIRNode::Ptr cloneImpl();

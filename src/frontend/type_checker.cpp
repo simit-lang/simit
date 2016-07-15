@@ -4,271 +4,235 @@
 #include <algorithm>
 #include <exception>
 
-#include "type_checker.h"
-#include "program_context.h"
-#include "types.h"
-#include "domain.h"
 #include "error.h"
-#include "ir.h"
 #include "hir.h"
+#include "type_checker.h"
+#include "util/util.h"
 
 namespace simit {
 namespace hir {
+  
+TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
+    retTypeChecked(true),
+    skipCheckDeclared(false),
+    errors(errors) {
+//  const auto intType = makeTensorType(ScalarType::Type::INT);
+//  const auto floatType = makeTensorType(ScalarType::Type::FLOAT);
+//
+//  {
+//    const auto x = 
+//    const auto modDecl = std::make_shared<FuncDecl>();
+//    modDecl->name = "mod";
+//    modDecl->args = {intType->clone<ScalarType>(), intType->clone<ScalarType>()};
+//    modDecl->results = {intType->clone<ScalarType>()};
+//    env.addFunction("mod", modDecl);
+//  }
+}
 
 void TypeChecker::visit(Program::Ptr program) {
   for (auto elem : program->elems) {
     if (isa<ConstDecl>(elem)) {
-      typeCheckVarOrConstDecl(to<ConstDecl>(elem), true, true);
+      const auto decl = to<ConstDecl>(elem);
+      typeCheckGlobalConstDecl(decl);
     } else {
-      elem->accept(this);
+      typeCheck(elem);
     }
   }
 }
 
-void TypeChecker::visit(RangeIndexSet::Ptr set) {
-  retIndexSet = std::make_shared<ir::IndexSet>(set->range);
+void TypeChecker::visit(StmtBlock::Ptr stmtBlock) {
+  for (auto stmt : stmtBlock->stmts) {
+    typeCheck(stmt);
+  }
 }
 
 void TypeChecker::visit(SetIndexSet::Ptr set) {
   // Check that index set has been previously declared.
-  if (!ctx.hasSymbol(set->setName)) {
+  if (!env.hasSymbol(set->setName)) {
     reportUndeclared("set", set->setName, set);
     return;
   }
 
-  const ir::Expr setExpr = ctx.getSymbol(set->setName).getExpr();
-  
   // Check that index set pointed to by identifier is indeed of set type.
-  if (!setExpr.type().isSet()) {
-    reportError("index set must be a set, a range, or dynamic (*)", set);
-    return;
+  if (!isa<SetType>(env.getSymbolType(set->setName))) {
+    reportError("index set must be a set or a range", set);
   }
-
-  retIndexSet = std::make_shared<ir::IndexSet>(setExpr);
-}
-
-void TypeChecker::visit(DynamicIndexSet::Ptr set) {
-  retIndexSet = std::make_shared<ir::IndexSet>();
 }
 
 void TypeChecker::visit(ElementType::Ptr type) {
   // Check that element type has been previously declared.
-  if (!ctx.containsElementType(type->ident)) {
+  if (!env.hasElementType(type->ident)) {
     reportUndeclared("element type", type->ident, type);
-    return;
   }
-
-  retIRType = ctx.getElementType(type->ident);
 }
 
 void TypeChecker::visit(Endpoint::Ptr end) {
-  // Check that endpoint has been previously declared.
-  if (!ctx.hasSymbol(end->setName)) {
+  // Check that end point has been previously declared.
+  if (!env.hasSymbol(end->setName)) {
     reportUndeclared("set", end->setName, end);
     return;
   }
- 
-  retExpr = ctx.getSymbol(end->setName).getExpr();
+
+  // Check that end point is indeed of set type.
+  if (!isa<SetType>(env.getSymbolType(end->setName))) {
+    reportError("endpoint must be a set", end);
+  }
 }
 
 void TypeChecker::visit(SetType::Ptr type) {
-  const ir::Type elementType = getIRType(type->element);
-  bool typeChecked = elementType.defined();
+  retTypeChecked = typeCheck(type->element);
 
-  std::vector<ir::Expr> endpoints;
   for (auto end : type->endpoints) {
-    const ir::Expr endpoint = getExpr(end);
-    
-    if (!endpoint.defined()) {
-      typeChecked = false;
-      continue;
-    }
-
-    // Check that endpoint is of set type.
-    if (!endpoint.type().isSet()) {
-      std::stringstream errMsg;
-      errMsg << "expected endpoint to be of set type but got an endpoint of "
-             << "type " << typeString(endpoint.type());
-      reportError(errMsg.str(), end);
-      
-      typeChecked = false;
-      continue;
-    }
-      
-    endpoints.push_back(endpoint);
+    const bool typeChecked = typeCheck(end);
+    retTypeChecked = typeChecked && retTypeChecked;
   }
-
-  if (!typeChecked) {
-    return;
-  }
- 
-  retIRType = ir::SetType::make(elementType, endpoints);
 }
 
 void TypeChecker::visit(TupleType::Ptr type) {
-  const ir::Type elementType = getIRType(type->element);
+  retTypeChecked = typeCheck(type->element);
 
   // Check that tuple length is positive.
   if (type->length->val < 1) {
     const auto msg = "tuple must have length greater than or equal to one";
     reportError(msg, type->length);
-    return;
-  }
-
-  if (!elementType.defined()) {
-    return;
-  }
-  
-  retIRType = ir::TupleType::make(elementType, type->length->val);
-}
-
-void TypeChecker::visit(ScalarType::Ptr type) {
-  switch (type->type) {
-    case ScalarType::Type::INT:
-      retIRType = ir::Int;
-      break;
-    case ScalarType::Type::FLOAT:
-      retIRType = ir::Float;
-      break;
-    case ScalarType::Type::BOOL:
-      retIRType = ir::Boolean;
-      break;
-    case ScalarType::Type::COMPLEX:
-      retIRType = ir::Complex;
-      break;
-    case ScalarType::Type::STRING:
-      retIRType = ir::String;
-      break;
-    default:
-      unreachable;
-      break;
   }
 }
 
 void TypeChecker::visit(NDTensorType::Ptr type) {
-  const ir::Type blockType = getIRType(type->blockType);
-  bool typeChecked = blockType.defined();
+  retTypeChecked = typeCheck(type->blockType);
 
-  std::vector<ir::IndexSet> indexSets;
-  for (auto is : type->indexSets) {
-    const Ptr<ir::IndexSet> indexSet = getIndexSet(is);
-
-    if (!indexSet) {
-      typeChecked = false;
-      continue;
-    }
-    
-    indexSets.push_back(*indexSet);
+  for (auto indexSet : type->indexSets) {
+    retTypeChecked = typeCheck(indexSet) && retTypeChecked;
   }
 
-  if (!typeChecked) {
-    return;
+  if (isa<NDTensorType>(type->blockType) && type->indexSets.size() != 
+      to<NDTensorType>(type->blockType)->indexSets.size()) {
+    const auto msg = "blocked tensor type must contain same number "
+                     "of dimensions as its blocks";
+    reportError(msg, type);
   }
 
-  ir::Type ndTensorType;
-  if (indexSets.empty()) {
-    ndTensorType = blockType;
-  } else {
-    const auto blockTensorType = blockType.toTensor();
-    const auto componentType = blockTensorType->getComponentType();
-    const auto blockDimensions = blockTensorType->getDimensions();
- 
-    // Check that tensor type has same number of dimensions as inner block.
-    std::vector<ir::IndexDomain> dimensions;
-    if (blockTensorType->order() == 0) {
-      for (size_t i = 0; i< indexSets.size(); ++i) {
-        dimensions.push_back(ir::IndexDomain(indexSets[i]));
-      }
-    } else if (blockTensorType->order() == indexSets.size()) {
-      for (size_t i = 0; i < indexSets.size(); ++i) {
-        std::vector<ir::IndexSet> dimension;
-        dimension.push_back(indexSets[i]);
-        dimension.insert(dimension.end(),
-                         blockDimensions[i].getIndexSets().begin(),
-                         blockDimensions[i].getIndexSets().end());
-        dimensions.push_back(ir::IndexDomain(dimension));
-      }
-    } else {
-      const auto msg = "blocked tensor type must contain same number "
-                       "of dimensions as its blocks";
-      reportError(msg, type);
-      return;
-    }
- 
-    ndTensorType = ir::TensorType::make(componentType, dimensions,
-                                        dimensions.size() == 1);
+  if (type->transposed && type->indexSets.size() != 1) {
+    reportError("transposed type must be a vector", type);
   }
-
-  if (type->transposed) {
-    const auto tensorType = ndTensorType.toTensor();
-    const auto dimensions = tensorType->getDimensions();
-    const auto componentType = tensorType->getComponentType();
-
-    // Check that transposed type is a vector.
-    if (dimensions.size() != 1) {
-      reportError("transposed type must be a vector", type);
-      return;
-    }
-
-    ndTensorType = ir::TensorType::make(componentType, dimensions);
-  }
-
-  retIRType = ndTensorType;
 }
 
 void TypeChecker::visit(IdentDecl::Ptr decl) {
-  const ir::Type type = getIRType(decl->type);
-  retVar = ir::Var(decl->name->ident, type);
+  retTypeChecked = typeCheck(decl->type);
+
+  // If identifier is declared as an element and front end was able to infer 
+  // the source set, check that source set contains elements of same type.
+  if (isa<ElementType>(decl->type)) {
+    const auto type = to<ElementType>(decl->type);
+
+    if (!type->sourceSet.empty()) {
+      const Type::Ptr sourceType = 
+          env.getSymbolType(type->sourceSet, Environment::Scope::TopOnly);
+      const auto sourceSetType = to<SetType>(sourceType);
+      
+      if (sourceSetType->element->ident != type->ident) {
+        std::stringstream errMsg;
+        errMsg << "'" << decl->name->ident << "' declared as element of type '"
+               << type->ident << "' but inferred to be element of type '"
+               << sourceSetType->element->ident << "'";
+        reportError(errMsg.str(), decl);
+      }
+    }
+  }
 }
 
 void TypeChecker::visit(FieldDecl::Ptr decl) {
-  const IdentDecl::Ptr field = decl->field;
-  const ir::Type type = getIRType(field->type);
-  retField = ir::Field(field->name->ident, type);
+  retTypeChecked = typeCheck(decl->field);
 }
 
 void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
-  std::vector<ir::Field> fields;
-  for (auto f : decl->fields) {
-    const ir::Field field = getField(f);
+  Environment::ElementMap elemFields;
+  for (auto field : decl->fields) {
+    const std::string fieldName = field->field->name->ident;
+    const Type::Ptr fieldType = field->field->type;
 
-    if (!field.type.defined()) {
-      continue;
-    }
-
-    fields.push_back(field);
+    const bool typeChecked = typeCheck(field);
+    elemFields[fieldName] = typeChecked ? fieldType : Type::Ptr();
   }
 
-  const std::string name = decl->name->ident;
-  
   // Check that element type has not been previously declared.
-  if (ctx.containsElementType(name)) {
-    reportMultipleDefs("element type", name, decl);
+  if (env.hasElementType(decl->name->ident)) {
+    reportMultipleDefs("element type", decl->name->ident, decl);
     return;
   }
-  
-  ctx.addElementType(ir::ElementType::make(name, fields));
+
+  env.addElementType(decl->name->ident, elemFields);
+}
+
+void TypeChecker::visit(Argument::Ptr arg) {
+  retTypeChecked = typeCheck(arg->arg);
 }
 
 void TypeChecker::visit(ExternDecl::Ptr decl) {
-  const ir::Var externVar = getVar(decl->var);
+  retTypeChecked = typeCheck(decl->var);
+
+  const auto externName = decl->var->name->ident;
+  const auto externType = retTypeChecked ? decl->var->type : Type::Ptr();
 
   // Check that variable has not been previously declared.
-  if (ctx.hasSymbol(externVar.getName())) {
-    reportMultipleDefs("variable or constant", externVar.getName(), decl);
+  if (env.hasSymbol(externName, Environment::Scope::CurrentOnly)) {
+    reportMultipleDefs("variable or constant", externName, decl);
     return;
   }
   
-  ctx.addSymbol(externVar);
+  env.addSymbol(externName, externType, Access::READ_WRITE);
 }
 
 void TypeChecker::visit(FuncDecl::Ptr decl) {
-  const ir::Func func = typeCheckFuncDecl(decl);
-  if (decl->typeParams.size() > 0) {
-    genericFuncs[decl->name->ident] = decl;
-  } else if (func.defined()) {
-    ctx.addFunction(func);
+  const std::string name = decl->name->ident;
+  const bool specialized = !decl->originalName.empty();
+
+  // Skip type checking for specialized versions of generic functions.
+  if (specialized && !decl->typeParams.empty()) {
+    if (env.hasFunction(decl->originalName)) {
+      env.addFunction(name, decl);
+    }
+
+    return;
   }
+
+  env.scope();
+
+  // Check argument types.
+  for (const auto arg : decl->args) {
+    const bool typeChecked = typeCheck(arg);
+    retTypeChecked = typeChecked && retTypeChecked;
+
+    const Type::Ptr type = typeChecked ? arg->arg->type : Type::Ptr();
+    const Access access = arg->isInOut() ? Access::READ_WRITE : Access::READ;
+    env.addSymbol(arg->arg->name->ident, type, access);
+  }
+  
+  // Check return value types.
+  for (const auto res : decl->results) {
+    const bool typeChecked = typeCheck(res);
+    retTypeChecked = typeChecked && retTypeChecked;
+
+    const Type::Ptr type = typeChecked ? res->type : Type::Ptr();
+    env.addSymbol(res->name->ident, type, Access::READ_WRITE);
+  }
+
+  // Type check function body.
+  typeCheck(decl->body);
+
+  env.unscope();
+
+  if (!retTypeChecked) {
+    return;
+  }
+
+  // Check that function has not been previously declared.
+  if (env.hasFunction(name) && !specialized) {
+    reportMultipleDefs("function or procedure", name, decl);
+    return;
+  }
+
+  env.addFunction(name, decl);
 }
 
 void TypeChecker::visit(VarDecl::Ptr decl) {
@@ -280,158 +244,177 @@ void TypeChecker::visit(ConstDecl::Ptr decl) {
 }
 
 void TypeChecker::visit(WhileStmt::Ptr stmt) {
-  const Ptr<Expr::Type> condType = inferType(stmt->cond);
+  const ExprType condType = inferType(stmt->cond);
  
-  ctx.scope();
-  stmt->body->accept(this);
-  ctx.unscope();
+  env.scope();
+  typeCheck(stmt->body);
+  env.unscope();
 
   // Check that conditional expression is boolean.
-  if (condType && (condType->size() != 1 || !isBoolean(condType->at(0)))) {
+  if (condType.defined && !condType.isScalarBoolean()) {
     std::stringstream errMsg;
     errMsg << "expected a boolean conditional expression but got an "
-           << "expression of type " << typeString(condType);
+           << "expression of type " << toString(condType);
     reportError(errMsg.str(), stmt->cond);
   }
 }
 
 void TypeChecker::visit(IfStmt::Ptr stmt) {
-  const Ptr<Expr::Type> condType = inferType(stmt->cond);
+  const ExprType condType = inferType(stmt->cond);
   
-  ctx.scope();
-  stmt->ifBody->accept(this);
-  ctx.unscope();
+  env.scope();
+  typeCheck(stmt->ifBody);
+  env.unscope();
 
   if (stmt->elseBody) {
-    ctx.scope();
-    stmt->elseBody->accept(this);
-    ctx.unscope();
+    env.scope();
+    typeCheck(stmt->elseBody);
+    env.unscope();
   }
 
   // Check that conditional expression is boolean.
-  if (condType && (condType->size() != 1 || !isBoolean(condType->at(0)))) {
+  if (condType.defined && !condType.isScalarBoolean()) {
     std::stringstream errMsg;
     errMsg << "expected a boolean conditional expression but got an "
-           << "expression of type " << typeString(condType);
+           << "expression of type " << toString(condType);
     reportError(errMsg.str(), stmt->cond);
   }
 }
 
+void TypeChecker::visit(IndexSetDomain::Ptr domain) {
+  retTypeChecked = typeCheck(domain->set);
+}
+
 void TypeChecker::visit(RangeDomain::Ptr domain) {
-  const Ptr<Expr::Type> lowerType = inferType(domain->lower);
-  const Ptr<Expr::Type> upperType = inferType(domain->upper);
+  const ExprType lowerType = inferType(domain->lower);
+  const ExprType upperType = inferType(domain->upper);
 
   // Check that lower and upper bounds of for-loop range are integral.
-  if (lowerType && (lowerType->size() != 1 || !isInt(lowerType->at(0)))) {
+  if (lowerType.defined && !lowerType.isScalarInt()) {
     std::stringstream errMsg;
     errMsg << "expected lower bound of for-loop range to be integral but got "
-           << "an expression of type " << typeString(lowerType);
+           << "an expression of type " << toString(lowerType);
     reportError(errMsg.str(), domain->lower);
   }
-  if (upperType && (upperType->size() != 1 || !isInt(upperType->at(0)))) {
+  if (upperType.defined && !upperType.isScalarInt()) {
     std::stringstream errMsg;
     errMsg << "expected upper bound of for-loop range to be integral but got "
-           << "an expression of type " << typeString(upperType);
+           << "an expression of type " << toString(upperType);
     reportError(errMsg.str(), domain->upper);
   }
 }
 
 void TypeChecker::visit(ForStmt::Ptr stmt) {
-  ctx.scope();
+  env.scope();
+  
+  const bool typeChecked = typeCheck(stmt->domain);
  
-  ir::Type loopVarType;
-  if (isa<IndexSetDomain>(stmt->domain)) {
+  Type::Ptr loopVarType;
+  if (isa<RangeDomain>(stmt->domain)) {
+    loopVarType = makeTensorType(ScalarType::Type::INT);
+  } else if (isa<IndexSetDomain>(stmt->domain) && typeChecked) {
     const auto setDomain = to<IndexSetDomain>(stmt->domain);
-    const Ptr<ir::IndexSet> indexSet = getIndexSet(setDomain->set);
-    if (indexSet) {
-      loopVarType = indexSet->getSet().type().toSet()->elementType;
-    }
-  } else {
-    iassert(isa<RangeDomain>(stmt->domain));
-    stmt->domain->accept(this);
-    loopVarType = ir::Int;
+    const auto setName = setDomain->set->setName;
+    const auto setType = to<SetType>(env.getSymbolType(setName));
+    const auto elemType = setType->element->clone<ElementType>();
+    
+    elemType->sourceSet = setName;
+    loopVarType = elemType;
   }
 
-  const ir::Var loopVar = ir::Var(stmt->loopVar->ident, loopVarType);
-  ctx.addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
-  
-  stmt->body->accept(this);
-  ctx.unscope();
+  env.addSymbol(stmt->loopVar->ident, loopVarType, Access::READ);
+  typeCheck(stmt->body);
+
+  env.unscope();
 }
 
 void TypeChecker::visit(PrintStmt::Ptr stmt) {
   for (const auto arg : stmt->args) {
-    const Ptr<Expr::Type> argType = inferType(arg);
+    const ExprType argType = inferType(arg);
 
     // Check that print statement is printing a tensor.
-    if (argType && (argType->size() != 1 || !argType->at(0).isTensor())) {
+    if (argType.defined && !argType.isTensor()) {
       std::stringstream errMsg;
-      errMsg << "cannot print an expression of type " << typeString(argType);
+      errMsg << "cannot print an expression of type " << toString(argType);
       reportError(errMsg.str(), arg);
     }
   }
 }
 
-void TypeChecker::visit(AssignStmt::Ptr stmt) {
-  const Ptr<Expr::Type> exprType = inferType(stmt->expr);
-  bool typeChecked = (bool)exprType;
+void TypeChecker::visit(ExprStmt::Ptr stmt) {
+  inferType(stmt->expr);
+}
 
-  Expr::Type lhsType;
+void TypeChecker::visit(AssignStmt::Ptr stmt) {
+  const ExprType exprType = inferType(stmt->expr);
+  retTypeChecked = exprType.defined;
+
+  std::vector<ExprType> lhsTypes;
   for (auto lhs : stmt->lhs) {
     // If assigning directly to a variable, then the variable does not have to 
     // be declared beforehand, so skip that check later.
     skipCheckDeclared = isa<VarExpr>(lhs);
-    
-    const Ptr<Expr::Type> ltype = inferType(lhs);
-    if (ltype && ltype->size() == 1) {
-      lhsType.push_back(ltype->at(0));
-    } else {
-      lhsType.push_back(ir::Type());
-    }
-    
+    lhsTypes.push_back(inferType(lhs));
     skipCheckDeclared = false;
   }
 
   // Check that number of values returned by expression on right-hand side
   // (may not equal to one if it is a map operation or function call) is equal 
   // to number of assignment targets.
-  if (typeChecked && stmt->lhs.size() != exprType->size()) {
+  if (retTypeChecked && stmt->lhs.size() != exprType.type.size()) {
     std::stringstream errMsg;
-    errMsg << "cannot assign an expression returning " << exprType->size()
+    errMsg << "cannot assign an expression returning " << exprType.type.size()
            << " values to " << stmt->lhs.size() << " targets";
     reportError(errMsg.str(), stmt);
-    typeChecked = false;
   }
 
-  if (typeChecked) {
+  if (retTypeChecked) {
     for (unsigned i = 0; i < stmt->lhs.size(); ++i) {
       // Check that type of value returned by expression on right-hand side 
-      // corresponds to type of target on left-hand side.
-      if (lhsType[i].defined() && !compareTypes(lhsType[i], exprType->at(i))) {
-        // Allow initialization of tensors with scalars.
-        if (!lhsType[i].isTensor() || !isScalar(exprType->at(i)) || 
-            lhsType[i].toTensor()->getComponentType() != 
-            exprType->at(i).toTensor()->getComponentType()) {
-          std::stringstream errMsg;
-          errMsg << "cannot assign a value of type " 
-                 << typeString(exprType->at(i)) << " to a target of type " 
-                 << typeString(lhsType[i]);
-          reportError(errMsg.str(), stmt->lhs[i]);
-          typeChecked = false;
+      // is assignable and corresponds to type of target on left-hand side.
+      if (lhsTypes[i].defined) {
+        if (lhsTypes[i].isVoid()) {
+          reportError("cannot assign to a void target", stmt->lhs[i]);
+        } else if (!lhsTypes[i].isSingleValue()) {
+          const auto msg = "cannot assign a single value to multiple targets";
+          reportError(msg, stmt->lhs[i]);
+        } else if (!env.compareTypes(lhsTypes[i].type[0], exprType.type[i])) {
+          const bool rhsIsScalar = isa<ScalarType>(exprType.type[i]);
+          const bool lhsIsTensor = isa<TensorType>(lhsTypes[i].type[0]);
+          
+          // Check for assignment of a scalar to a non-scalar tensor.
+          bool invalidAssign = !rhsIsScalar || !lhsIsTensor;
+
+          if (!invalidAssign) {
+            const auto rhsScalarType = to<ScalarType>(exprType.type[i]);
+            const auto lhsTensorType = to<TensorType>(lhsTypes[i].type[0]);
+
+            if (rhsScalarType->type != getComponentType(lhsTensorType)) {
+              invalidAssign = true;
+            }
+          }
+
+          if (invalidAssign) {
+            std::stringstream errMsg;
+            errMsg << "cannot assign a value of type " 
+                   << toString(exprType.type[i]) << " to a target of type " 
+                   << toString(lhsTypes[i]);
+            reportError(errMsg.str(), stmt->lhs[i]);
+          }
         }
       }
 
       // Check that expression on right-hand side returns only tensors.
       // TODO: Remove once support for assignment of non-tensors is added.
-      if (!exprType->at(i).isTensor()) {
+      if (!isa<TensorType>(exprType.type[i])) {
         std::stringstream errMsg;
         errMsg << "cannot assign a non-tensor value of type "
-               << typeString(exprType->at(i)) << " to a variable";
+               << toString(exprType.type[i]) << " to a variable";
         reportError(errMsg.str(), stmt->expr);
       }
 
       // Check that target is writable.
-      if (!stmt->lhs[i]->isWritable()) {
+      if (!lhsTypes[i].isWritable()) {
         reportError("assignment target is not writable", stmt->lhs[i]);
       }
     }
@@ -441,13 +424,16 @@ void TypeChecker::visit(AssignStmt::Ptr stmt) {
     // Mark target variable as having been declared if necessary.
     if (isa<VarExpr>(stmt->lhs[i])) {
       const std::string varName = to<VarExpr>(stmt->lhs[i])->ident;
-      if (!ctx.hasSymbol(varName)) {
-        const ir::Type varType = typeChecked ? exprType->at(i) : ir::Type();
-        const auto var = ir::Var(varName, varType);
-        ctx.addSymbol(varName, var, internal::Symbol::Read);
+      if (!env.hasSymbol(varName)) {
+        const auto varType = exprType.defined ? exprType.type[i] : Type::Ptr();
+        env.addSymbol(varName, varType, Access::READ);
       }
     }
   }
+}
+
+void TypeChecker::visit(ExprParam::Ptr expr) {
+  retType = inferType(expr->expr);
 }
 
 void TypeChecker::visit(MapExpr::Ptr expr) {
@@ -467,51 +453,49 @@ void TypeChecker::visit(XorExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(EqExpr::Ptr expr) {
-  Ptr<Expr::Type> repType;
+  Type::Ptr repType;
   for (const auto operand : expr->operands) {
-    const Ptr<Expr::Type> opndType = inferType(operand);
+    const ExprType opndType = inferType(operand);
     
-    if (!opndType) {
+    if (!opndType.defined) {
       continue;
     }
     
     // Check that comparison operation is performed on scalar values.
-    if (opndType->size() != 1 || !isScalar(opndType->at(0))) {
+    if (!opndType.isScalar()) {
       std::stringstream errMsg;
       errMsg << "comparison operations can only be performed on scalar "
-             << "values, not values of type " << typeString(opndType);
+             << "values, not values of type " << toString(opndType);
       reportError(errMsg.str(), operand);
       continue;
     }
 
     // Check that operands of comparison operation are of the same type.
     if (!repType) {
-      repType = opndType;
-    } else if (!compareTypes(repType->at(0), opndType->at(0))) {
+      repType = opndType.type[0];
+    } else if (!env.compareTypes(repType, opndType.type[0])) {
       std::stringstream errMsg;
-      errMsg << "value of type " << typeString(opndType) << " cannot be "
-             << "compared to value of type " << typeString(repType);
+      errMsg << "value of type " << toString(opndType)
+             << "cannot be compared to value of type " << toString(repType);
       reportError(errMsg.str(), operand);
     }
   }
-  
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(ir::Boolean);
+ 
+  retType = ExprType(makeTensorType(ScalarType::Type::BOOL));
 }
 
 void TypeChecker::visit(NotExpr::Ptr expr) {
-  const Ptr<Expr::Type> opndType = inferType(expr->operand);
+  const ExprType opndType = inferType(expr->operand);
 
   // Check that operand of boolean not is boolean.
-  if (opndType && (opndType->size() != 1 || !isBoolean(opndType->at(0)))) {
+  if (opndType.defined && !opndType.isScalarBoolean()) {
     std::stringstream errMsg;
     errMsg << "expected a boolean operand but got an operand of type "
-           << typeString(opndType);
+           << toString(opndType);
     reportError(errMsg.str(), expr->operand);
   }
 
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(ir::Boolean);
+  retType = ExprType(makeTensorType(ScalarType::Type::BOOL));
 }
 
 void TypeChecker::visit(AddExpr::Ptr expr) {
@@ -523,183 +507,171 @@ void TypeChecker::visit(SubExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(MulExpr::Ptr expr) {
-  const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
-  const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
-  bool typeChecked = (bool)lhsType && (bool)rhsType;
+  const ExprType lhsType = inferType(expr->lhs);
+  const ExprType rhsType = inferType(expr->rhs);
+  retTypeChecked = lhsType.defined && rhsType.defined;
 
   // Check that operands of multiplication operation are numeric tensors.
-  if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      !lhsType->at(0).toTensor()->getComponentType().isNumeric())) {
+  if (lhsType.defined && !lhsType.isNumericTensor()) {
     std::stringstream errMsg;
     errMsg << "expected left operand of multiplication operation to be a "
            << "numeric tensor but got an operand of type " 
-           << typeString(lhsType);
+           << toString(lhsType);
     reportError(errMsg.str(), expr->lhs);
-    typeChecked = false;
   }
-  if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      !rhsType->at(0).toTensor()->getComponentType().isNumeric())) {
+  if (rhsType.defined && !rhsType.isNumericTensor()) {
     std::stringstream errMsg;
     errMsg << "expected right operand of multiplication operation to be a "
            << "numeric tensor but got an operand of type " 
-           << typeString(rhsType);
+           << toString(rhsType);
     reportError(errMsg.str(), expr->rhs);
-    typeChecked = false;
   }
- 
-  if (!typeChecked) {
+
+  if (!retTypeChecked) {
     return;
   }
 
-  const ir::TensorType *ltype = lhsType->at(0).toTensor();
-  const ir::TensorType *rtype = rhsType->at(0).toTensor();
-  const std::vector<ir::IndexDomain> ldimensions = ltype->getDimensions();
-  const std::vector<ir::IndexDomain> rdimensions = rtype->getDimensions();
-  const unsigned lhsOrder = ltype->order();
-  const unsigned rhsOrder = rtype->order();
+  const auto ltype = to<TensorType>(lhsType.type[0]);
+  const auto rtype = to<TensorType>(rhsType.type[0]);
+  const ScalarType::Type lhsComponent = getComponentType(ltype);
+  const ScalarType::Type rhsComponent = getComponentType(rtype);
 
-  // Check that operands of multiplication operation contain elements 
-  // of the same type.
-  if (ltype->getComponentType() != rtype->getComponentType()) {
+  // Check that operands of multiply contain elements of the same type.
+  if (lhsComponent != rhsComponent) {
     std::stringstream errMsg;
-    errMsg << "cannot multiply tensors containing elements of type '"
-           << ltype->getComponentType() << "' and type '"
-           << rtype->getComponentType() << "'";
+    errMsg << "cannot multiply a " << toString(lhsComponent) << " tensor by a "
+           << toString(rhsComponent) << " tensor";
     reportError(errMsg.str(), expr);
     return;
   }
+  
+  const TensorDimensions ldimensions = getDimensions(ltype);
+  const TensorDimensions rdimensions = getDimensions(rtype);
+  const unsigned lhsOrder = ldimensions.size();
+  const unsigned rhsOrder = rdimensions.size();
+  const bool lhsTransposed = getTransposed(ltype);
+  const bool rhsTransposed = getTransposed(rtype);
 
   if (lhsOrder == 0 || rhsOrder == 0) {
-    const auto tensorType = (lhsOrder > 0) ? lhsType->at(0) : rhsType->at(0); 
-    retType = std::make_shared<Expr::Type>();
-    retType->push_back(tensorType);
+    retType = ExprType(lhsOrder > 0 ? ltype : rtype); 
   } else if (lhsOrder == 1 && rhsOrder == 1) {
     // Check dimensions of operands for vector-vector multiplication.
-    if (ltype->isColumnVector && rtype->isColumnVector) {
-      reportError("cannot multiply two column vectors", expr);
-      return;
-    } else if (!ltype->isColumnVector && !rtype->isColumnVector) {
+    if (lhsTransposed && rhsTransposed) {
       reportError("cannot multiply two row vectors", expr);
       return;
-    } else if (ldimensions[0] != rdimensions[0]) {
+    } else if (!lhsTransposed && !rhsTransposed) {
+      reportError("cannot multiply two column vectors", expr);
+      return;
+    } else if (!env.compareDomains(ldimensions[0], rdimensions[0])) {
       std::stringstream errMsg;
-      errMsg << "cannot multiply vectors of type " << typeString(lhsType) 
-             << " and type " << typeString(rhsType);
+      errMsg << "cannot multiply a vector of type " << toString(ltype) 
+             << " by a vector of type " << toString(rtype);
       reportError(errMsg.str(), expr);
       return;
     }
     
-    std::vector<ir::IndexDomain> dom;
-    if (ltype->isColumnVector) {
-      dom.push_back(ldimensions[0]);
-      dom.push_back(rdimensions[0]);
+    TensorDimensions newDimensions;
+    if (!lhsTransposed) {
+      newDimensions.push_back(ldimensions[0]);
+      newDimensions.push_back(rdimensions[0]);
     }
 
-    retType = std::make_shared<Expr::Type>();
-    retType->push_back(ir::TensorType::make(ltype->getComponentType(), dom));
+    retType = ExprType(makeTensorType(lhsComponent, newDimensions));
   } else if (lhsOrder == 2 && rhsOrder == 1) {
     // Check dimensions of operands for matrix-vector multiplication.
-    if (ldimensions[1] != rdimensions[0]) {
+    if (!env.compareDomains(ldimensions[1], rdimensions[0])) {
       std::stringstream errMsg;
-      errMsg << "cannot multiply a matrix of type " << typeString(lhsType)
-             << " by a vector of type " << typeString(rhsType);
+      errMsg << "cannot multiply a matrix of type " << toString(ltype)
+             << " by a vector of type " << toString(rtype);
       reportError(errMsg.str(), expr);
       return;
-    } else if (!rtype->isColumnVector) {
-      reportError("Cannot multiply a matrix by a row vector", expr);
+    } else if (rhsTransposed) {
+      reportError("cannot multiply a matrix by a row vector", expr);
     }
-    
-    const auto tensorType = ir::TensorType::make(ltype->getComponentType(), 
-                                                 {ldimensions[0]}, true);
-    retType = std::make_shared<Expr::Type>();
-    retType->push_back(tensorType);
+   
+    retType = ExprType(makeTensorType(lhsComponent, {ldimensions[0]}));
   } else if (lhsOrder == 1 && rhsOrder == 2) {
     // Check dimensions of operands for vector-matrix multiplication.
-    if (ldimensions[0] != rdimensions[0] || 
-        ltype->getComponentType() != rtype->getComponentType()) {
+    if (!env.compareDomains(ldimensions[0], rdimensions[0])) { 
       std::stringstream errMsg;
-      errMsg << "cannot multiply a vector of type " << typeString(lhsType)
-             << " by a matrix of type " << typeString(rhsType);
+      errMsg << "cannot multiply a vector of type " << toString(ltype)
+             << " by a matrix of type " << toString(rtype);
       reportError(errMsg.str(), expr);
       return;
-    } else if (ltype->isColumnVector) {
-      reportError("Cannot multiply a column vector by a matrix", expr);
+    } else if (!lhsTransposed) {
+      reportError("cannot multiply a column vector by a matrix", expr);
     }
 
-    const auto tensorType = ir::TensorType::make(ltype->getComponentType(), 
-                                                 {rdimensions[1]});
-    retType = std::make_shared<Expr::Type>();
-    retType->push_back(tensorType);
+    retType = ExprType(makeTensorType(lhsComponent, {rdimensions[1]}, true));
   } else if (lhsOrder == 2 && rhsOrder == 2) {
     // Check dimensions of operands for matrix-matrix multiplication.
-    if (ldimensions[1] != rdimensions[0]) {
+    if (!env.compareDomains(ldimensions[1], rdimensions[0])) {
       std::stringstream errMsg;
-      errMsg << "cannot multiply matrices of type " << typeString(lhsType)
-             << " and type " << typeString(rhsType);
+      errMsg << "cannot multiply a matrix of type " << toString(ltype)
+             << " by a matrix of type " << toString(rtype);
       reportError(errMsg.str(), expr);
       return;
     }
-    
-    const std::vector<ir::IndexDomain> dom = {ldimensions[0], rdimensions[1]};
-    retType = std::make_shared<Expr::Type>();
-    retType->push_back(ir::TensorType::make(ltype->getComponentType(), dom));
+   
+    const TensorDimensions newDimensions = {ldimensions[0], rdimensions[1]};
+    retType = ExprType(makeTensorType(lhsComponent, newDimensions));
   } else {
     reportError("cannot multiply tensors of order 3 or greater using *", expr);
   }
 }
 
 void TypeChecker::visit(DivExpr::Ptr expr) {
-  const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
-  const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
-  bool typeChecked = (bool)lhsType && (bool)rhsType;
-
+  const ExprType lhsType = inferType(expr->lhs);
+  const ExprType rhsType = inferType(expr->rhs);
+  retTypeChecked = lhsType.defined && rhsType.defined;
+  
   // Check that operands of division operation are numeric tensors.
-  if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      !lhsType->at(0).toTensor()->getComponentType().isNumeric())) {
+  if (lhsType.defined && !lhsType.isNumericTensor()) {
     std::stringstream errMsg;
     errMsg << "expected left operand of division operation to be a numeric "
-           << "tensor but got an operand of type " << typeString(lhsType);
+           << "tensor but got an operand of type " << toString(lhsType);
     reportError(errMsg.str(), expr->lhs);
-    typeChecked = false;
   }
-  if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      !rhsType->at(0).toTensor()->getComponentType().isNumeric())) {
+  if (rhsType.defined && !rhsType.isNumericTensor()) {
     std::stringstream errMsg;
     errMsg << "expected right operand of division operation to be a numeric "
-           << "tensor but got an operand of type " << typeString(rhsType);
+           << "tensor but got an operand of type " << toString(rhsType);
     reportError(errMsg.str(), expr->rhs);
-    typeChecked = false;
   }
- 
-  if (!typeChecked) {
+
+  if (!retTypeChecked) {
     return;
   }
   
-  const ir::TensorType *ltype = lhsType->at(0).toTensor();
-  const ir::TensorType *rtype = rhsType->at(0).toTensor();
+  const auto ltype = to<TensorType>(lhsType.type[0]);
+  const auto rtype = to<TensorType>(rhsType.type[0]);
+  const ScalarType::Type lhsComponent = getComponentType(ltype);
+  const ScalarType::Type rhsComponent = getComponentType(rtype);
 
   // Check that operands of division operation contain elements of same type.
-  if (ltype->getComponentType() != rtype->getComponentType()) {
+  if (lhsComponent != rhsComponent) {
     std::stringstream errMsg;
-    errMsg << "cannot divide tensors containing elements of type '"
-           << ltype->getComponentType() << "' and type '"
-           << rtype->getComponentType() << "'";
+    errMsg << "cannot divide a " << toString(lhsComponent) << " tensor by a "
+           << toString(rhsComponent) << " tensor";
     reportError(errMsg.str(), expr);
     return;
   }
+  
+  const unsigned lhsOrder = getDimensions(ltype).size();
+  const unsigned rhsOrder = getDimensions(rtype).size();
 
   // Check for unsupported division of two non-scalar tensors.
   // Probably want to remove this constraint at some point.
-  if (ltype->order() > 0 && rtype->order() > 0) {
+  if (lhsOrder > 0 && rhsOrder > 0) {
     std::stringstream errMsg;
-    errMsg << "division of a non-scalar tensor of type " << typeString(lhsType)
-           << " by a non-scalar tensor of type " << typeString(rhsType)
+    errMsg << "division of a non-scalar tensor of type " << toString(ltype) 
+           << " by a non-scalar tensor of type " << toString(rtype)
            << " is not supported";
     reportError(errMsg.str(), expr);
     return;
   }
   
-  retType = (ltype->order() > 0) ? lhsType : rhsType;
+  retType = (lhsOrder > 0) ? ExprType(ltype) : ExprType(rtype);
 }
 
 void TypeChecker::visit(ElwiseMulExpr::Ptr expr) {
@@ -711,23 +683,22 @@ void TypeChecker::visit(ElwiseDivExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(NegExpr::Ptr expr) {
-  const Ptr<Expr::Type> opndType = inferType(expr->operand);
+  const ExprType opndType = inferType(expr->operand);
 
-  if (!opndType) {
+  if (!opndType.defined) {
     return;
   }
 
   // Check that operand of negation operation is a numeric tensor.
-  if (opndType->size() != 1 || !opndType->at(0).isTensor() ||
-      !opndType->at(0).toTensor()->getComponentType().isNumeric()) {
+  if (!opndType.isNumericTensor()) {
     std::stringstream errMsg;
     errMsg << "expected operand of tensor negation to be a numeric tensor but "
-           << "got an operand of type " << typeString(opndType);
+           << "got an operand of type " << toString(opndType);
     reportError(errMsg.str(), expr->operand);
     return;
   }
   
-  retType = opndType;
+  retType = ExprType(opndType.type[0]);
 }
 
 void TypeChecker::visit(ExpExpr::Ptr expr) {
@@ -736,42 +707,40 @@ void TypeChecker::visit(ExpExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(TransposeExpr::Ptr expr) {
-  const Ptr<Expr::Type> opndType = inferType(expr->operand);
+  const ExprType opndType = inferType(expr->operand);
 
-  if (!opndType) {
+  if (!opndType.defined) {
     return;
   }
+  
+  const auto tensorType = to<TensorType>(opndType.type[0]);
+  const ScalarType::Type componentType = getComponentType(tensorType);
+  const TensorDimensions dimensions = getDimensions(tensorType);
+  const unsigned order = dimensions.size();
 
   // Check that operand of transpose operation is tensor of order 2 or less.
-  if (opndType->size() != 1 || !opndType->at(0).isTensor() || 
-      opndType->at(0).toTensor()->order() > 2) {
+  if (!opndType.isTensor() || order > 2) {
     std::stringstream errMsg;
     errMsg << "operand of tensor transpose must be a tensor of order 2 or "
-           << "less, but got an operand of type " << typeString(opndType);
+           << "less, but got an operand of type " << toString(opndType);
     reportError(errMsg.str(), expr->operand);
     return;
   }
 
-  const ir::TensorType *tensorType = opndType->at(0).toTensor();
-  const std::vector<ir::IndexDomain> dimensions = tensorType->getDimensions();
-  switch (tensorType->order()) {
+  switch (order) {
     case 0:
-      retType = opndType;
+      retType = ExprType(opndType.type[0]);
       break;
     case 1:
     {
-      const auto exprType = ir::TensorType::make(tensorType->getComponentType(), 
-          dimensions, !tensorType->isColumnVector);
-      retType = std::make_shared<Expr::Type>();
-      retType->push_back(exprType);
+      const bool transposed = !getTransposed(tensorType);
+      retType = ExprType(makeTensorType(componentType, dimensions, transposed));
       break;
     }
     case 2:
     {
-      const auto exprType = ir::TensorType::make(
-          tensorType->getComponentType(), {dimensions[1], dimensions[0]});
-      retType = std::make_shared<Expr::Type>();
-      retType->push_back(exprType);
+      const TensorDimensions newDimensions = {dimensions[1], dimensions[0]};
+      retType = ExprType(makeTensorType(componentType, newDimensions));
       break;
     }
     default:
@@ -781,399 +750,412 @@ void TypeChecker::visit(TransposeExpr::Ptr expr) {
 }
 
 void TypeChecker::visit(CallExpr::Ptr expr) {
-  std::vector<Ptr<Expr::Type>> argTypes(expr->args.size());
+  std::vector<ExprType> argTypes(expr->args.size());
   for (unsigned i = 0; i < expr->args.size(); ++i) {
-    if (expr->args[i]) {
-      argTypes[i] = inferType(expr->args[i]);
+    const Expr::Ptr arg = expr->args[i];
+
+    if (arg) {
+      argTypes[i] = inferType(arg);
+    }
+   
+    if (!argTypes[i].defined) {
+      continue;
+    }
+
+    // Check that argument is a single non-void value.
+    if (argTypes[i].isVoid()) {
+      reportError("must pass a non-void value as argument", arg);
+      continue;
+    } else if (!argTypes[i].isSingleValue()) {
+      reportError("cannot pass multiple values as a single argument", arg);
+      continue;
+    }
+
+    // Check that argument is a tensor.
+    // TODO: Remove once support for passing non-tensor arguments is added.
+    if (!argTypes[i].isTensor()) {
+      std::stringstream errMsg;
+      errMsg << "expected argument to be a tensor but got an argument "
+             << "of type " << toString(argTypes[i]);
+      reportError(errMsg.str(), arg);
+      continue;
     }
   }
   
-  ir::Func func;
-
   const std::string funcName = expr->func->ident;
-  const auto it = genericFuncs.find(funcName);
 
-  if (it != genericFuncs.end()) {
+  // If callee type signature could not be determined, 
+  // then there's nothing more to do.
+  if (!env.hasFunction(funcName)) {
+    return;
+  }
+
+  FuncDecl::Ptr func = env.getFunction(funcName);
+
+  if (!func->typeParams.empty()) {
     GenericCallTypeChecker checker;
-    FuncDecl::Ptr decl = it->second;
+    const unsigned numArgs = std::min(argTypes.size(), func->args.size());
 
-    const unsigned numArgs = std::min(argTypes.size(), decl->args.size());
     for (unsigned i = 0; i < numArgs; ++i) {
-      const Ptr<Expr::Type> argType = argTypes[i];
-      if (argType && argType->size() == 1) {
-        checker.unify(decl->args[i]->arg->type, argType->at(0));
+      const ExprType argType = argTypes[i];
+      if (argType.defined && argType.isSingleValue()) {
+        checker.unify(func->args[i]->arg->type, argType.type[0]);
       }
     }
 
-    for (const auto typeParam : decl->typeParams) {
+    for (const auto typeParam : func->typeParams) {
       const auto it = checker.specializedSets.find(typeParam->ident);
       if (it == checker.specializedSets.end()) {
         reportError("unable to resolve all type parameters", expr);
         return;
       }
     }
- 
-    if (decl->originalName.empty()) {
-      decl = decl->clone<FuncDecl>();
-    } else {
-      decl->typeParams.clear();
+
+    if (func->originalName.empty() /* TODO: || is intrinsic */) {
+      // TODO: Optimize by just cloning type signature.
+      func = func->clone<FuncDecl>();
     }
 
-    ReplaceTypeParams(checker.specializedSets).rewrite(decl);
-    func = typeCheckFuncDecl(decl, true);
-  } else if (ctx.containsFunction(funcName)) {
-    func = ctx.getFunction(funcName);
+    ReplaceTypeParams(checker.specializedSets).rewrite(func);
+    func->typeParams.clear();
+
+    if (errors->empty() && !func->originalName.empty()) {
+      typeCheck(func);
+    }
   }
 
-  if (!func.defined()) {
+  auto getResType = [](IdentDecl::Ptr res) { return res->type; };
+
+  // Infer function call return type.
+  ExprType::TypeVector resultTypes(func->results.size());
+  std::transform(func->results.begin(), func->results.end(), 
+                 resultTypes.begin(), getResType);
+  retType = ExprType(resultTypes);
+
+  if (expr->args.size() != func->args.size()) {
+    std::stringstream errMsg;
+    errMsg << "passed in " << expr->args.size() << " arguments but function '"
+           << funcName << "' expects " << func->args.size();
+    reportError(errMsg.str(), expr);
     return;
   }
 
-  const std::vector<ir::Var> funcArgs = func.getArguments();
-
-  if (expr->args.size() != funcArgs.size()) {
-    std::stringstream errMsg;
-    errMsg << "passed in " << expr->args.size() << " arguments "
-           << "but function '" << funcName << "' expects " << funcArgs.size();
-    reportError(errMsg.str(), expr);
-  } else {
-    for (unsigned i = 0; i < expr->args.size(); ++i) {
-      const Expr::Ptr argument = expr->args[i];
-      const Ptr<Expr::Type> argType = argTypes[i];
-      
-      if (!argType) {
-        // Could not infer argument type.
-        continue;
-      }
+  for (unsigned i = 0; i < expr->args.size(); ++i) {
+    const Argument::Ptr funcArg = func->args[i];
+    const Expr::Ptr arg = expr->args[i];
+    const ExprType argType = argTypes[i];
+    
+    if (!argType.defined || !argType.isSingleValue()) {
+      continue;
+    }
   
-      // Check that argument is a single non-void value.
-      if (argType->size() == 0) {
-        reportError("must pass a non-void value as argument", argument);
-        continue;
-      } else if (argType->size() != 1) {
-        std::stringstream errMsg;
-        errMsg << "cannot pass multiple values of types "
-               << typeString(argType) << " as a single argument";
-        reportError(errMsg.str(), argument);
-        continue;
+#if 0
+    if (funcName == "norm") {
+      // Check that arg to norm intrinsic is a numeric vector.
+      if (!argType->at(0).isTensor() || 
+          argType->at(0).toTensor()->getDimensions().size() != 1 ||
+          !argType->at(0).toTensor()->getComponentType().isNumeric()) {
+        reportError("arg must be a numeric vector", arg);
       }
-
-      // Check that argument is a tensor.
-      // TODO: Remove once support for passing non-tensor arguments is added.
-      if (!argType->at(0).isTensor()) {
-        std::stringstream errMsg;
-        errMsg << "expected argument to be a tensor but got an argument "
-               << "of type " << typeString(argType->at(0));
-        reportError(errMsg.str(), argument);
-        continue;
-      }
-
-      if (funcName == "norm") {
-        // Check that argument to norm intrinsic is a numeric vector.
+    } else if (funcName == "dot") {
+      if (i == 0) {
+        // Check that first arg to dot intrinsic is a numeric vector.
         if (!argType->at(0).isTensor() || 
             argType->at(0).toTensor()->getDimensions().size() != 1 ||
             !argType->at(0).toTensor()->getComponentType().isNumeric()) {
-          reportError("argument must be a numeric vector", argument);
-        }
-      } else if (funcName == "dot") {
-        if (i == 0) {
-          // Check that first argument to dot intrinsic is a numeric vector.
-          if (!argType->at(0).isTensor() || 
-              argType->at(0).toTensor()->getDimensions().size() != 1 ||
-              !argType->at(0).toTensor()->getComponentType().isNumeric()) {
-            reportError("argument must be a numeric vector", argument);
-          }
-        } else {
-          // Check that second argument to dot intrinsic is a numeric vector of 
-          // same length as first argument.
-          if (argTypes[0] && argTypes[0]->size() == 1 && 
-              argType->at(0) != argTypes[0]->at(0)) {
-            std::stringstream errMsg;
-            errMsg << "cannot call function 'dot' on arguments of type "
-                   << typeString(argTypes[0]->at(0)) << " and type "
-                   << typeString(argType->at(0));
-            reportError(errMsg.str(), expr);
-          }
-        }
-      } else if (funcName == "solve") {
-        // TODO: Should check dimensions of arguments.
-        switch (i) {
-          case 0:
-          case 1:
-            break;
-          case 2:
-            // Check that third argument is writable.
-            if (!argument->isWritable()) {
-              reportError("inout argument must be writable", argument);
-            }
-            break;
-          default:
-            unreachable;
+          reportError("arg must be a numeric vector", arg);
         }
       } else {
-        // Check that argument is of type expected by callee.
-        if (!compareTypes(argType->at(0), funcArgs[i].getType())) {
+        // Check that second arg to dot intrinsic is a numeric vector of 
+        // same length as first arg.
+        if (argTypes[0] && argTypes[0]->size() == 1 && 
+            argType->at(0) != argTypes[0]->at(0)) {
           std::stringstream errMsg;
-          errMsg << "expected argument of type " 
-                 << typeString(funcArgs[i].getType()) << " but got an "
-                 << "argument of type " << typeString(argType);
-          reportError(errMsg.str(), argument);
-        }
-
-        // Check that inout argument is writable.
-        if (writableArgs.find(funcArgs[i]) != writableArgs.end() && 
-            !argument->isWritable()) {
-          reportError("inout argument must be writable", argument);
+          errMsg << "cannot call function 'dot' on args of type "
+                 << toString(argTypes[0]->at(0)) << " and type "
+                 << toString(argType->at(0));
+          reportError(errMsg.str(), expr);
         }
       }
+    } else if (funcName == "solve") {
+      // TODO: Should check dimensions of args.
+      switch (i) {
+        case 0:
+        case 1:
+          break;
+        case 2:
+          // Check that third arg is writable.
+          if (!arg->isWritable()) {
+            reportError("inout arg must be writable", arg);
+          }
+          break;
+        default:
+          unreachable;
+      }
+    } else {
     }
-  }
+#endif
 
-  retType = std::make_shared<Expr::Type>();
-  for (const auto &res : func.getResults()) {
-    retType->push_back(res.getType());
+    // Check that argument is of type expected by callee.
+    if (!env.compareTypes(argType.type[0], funcArg->arg->type)) {
+      std::stringstream errMsg;
+      errMsg << "expected argument of type " << toString(funcArg->arg->type) 
+             << " but got an argument of type " << toString(argType);
+      reportError(errMsg.str(), arg);
+    }
+
+    // Check that inout argument is writable.
+    if (funcArg->isInOut() && !argType.isWritable()) {
+      reportError("inout argument must be writable", arg);
+    }
   }
 }
 
 void TypeChecker::visit(TensorReadExpr::Ptr expr) {
-  const Ptr<Expr::Type> lhsType = inferType(expr->tensor);
-  expr->access = expr->tensor->access;
+  const ExprType lhsType = inferType(expr->tensor);
 
-  if (!lhsType) {
-    return;
-  }
-
-  // Check that program does not attempt to read from multiple values 
-  // simultaneously (e.g. output of function call returning two tensors).
-  if (lhsType->size() != 1) {
-    const auto msg = "can only access elements of a single tensor or tuple";
-    reportError(msg, expr->tensor);
+  if (!lhsType.defined) {
+    retType = lhsType;
     return;
   }
 
   // Check that left operand of tensor read is actually a tensor.
-  if (!lhsType->at(0).isTensor()) {
+  if (!lhsType.isTensor()) {
     std::stringstream errMsg;
     errMsg << "cannot access elements from objects of type " 
-           << typeString(lhsType);
+           << toString(lhsType);
     reportError(errMsg.str(), expr->tensor);
+    retType = lhsType;
     return;
   }
 
-  const ir::TensorType *tensorType = lhsType->at(0).toTensor();
-  const auto dimensions = tensorType->getDimensions();
-  const auto outerDims = tensorType->getOuterDimensions();
+  const unsigned numIndices = expr->indices.size();
+  const auto tensorType = to<TensorType>(lhsType.type[0]);
+  const ScalarType::Type componentType = getComponentType(tensorType);
+  const TensorDimensions dimensions = getDimensions(tensorType);
 
   // Check that right number of indices is passed to tensor read.
-  if (tensorType->getDimensions().size() != expr->indices.size()) {
+  if (numIndices != dimensions.size()) {
     std::stringstream errMsg;
-    errMsg << "tensor access expected " << dimensions.size()
-           << " indices but got " << expr->indices.size();
+    errMsg << "tensor access expected " << dimensions.size() 
+           << " indices but got " << numIndices;
     reportError(errMsg.str(), expr);
+    retType = lhsType;
     return;
   }
 
-  std::vector<ir::IndexDomain> dims;
-  for (unsigned i = 0; i < expr->indices.size(); ++i) {
+  TensorDimensions retDimensions;
+  for (unsigned i = 0; i < numIndices; ++i) {
     const ReadParam::Ptr index = expr->indices[i];
 
     if (index->isSlice()) {
-      dims.push_back(tensorType->getDimensions()[i]);
+      retDimensions.push_back(dimensions[i]);
       continue;
     }
 
     const Expr::Ptr indexExpr = to<ExprParam>(index)->expr;
-    const Ptr<Expr::Type> indexType = inferType(indexExpr);
+    const ExprType indexType = inferType(indexExpr);
 
-    if (!indexType) {
+    if (!indexType.defined) {
       continue;
     }
     
     // Check that index is a single value.
-    if (indexType->size() == 0) {
+    if (indexType.isVoid()) {
       reportError("must pass a non-void value as index" , index);
       continue;
-    } else if (indexType->size() != 1) {
+    } else if (!indexType.isSingleValue()) {
       std::stringstream errMsg;
-      errMsg << "cannot pass multiple values of types " 
-             << typeString(indexType) << " as a single index";
-      reportError(errMsg.str(), index);
+      reportError("cannot pass multiple values as a single index", index);
       continue;
     }
 
+    const IndexSet::Ptr indexSet = dimensions[i][0];
+
     // Check that index is of right type.
-    switch (outerDims[i].getKind()) {
-      case ir::IndexSet::Range:
-        if (!isInt(indexType->at(0))) {
-          std::stringstream errMsg;
-          errMsg << "expected an integral index but got an index of type " 
-                 << typeString(indexType);
-          reportError(errMsg.str(), index);
-        }
-        break;
-      case ir::IndexSet::Set:
-      {
-        const auto setType = outerDims[i].getSet().type().toSet();
-        if (!compareTypes(setType->elementType, indexType->at(0))) {
-          std::stringstream errMsg;
-          errMsg << "expected an index of type "
-                 << typeString(setType->elementType) << " but got an "
-                 << "index of type " << typeString(indexType);
-          reportError(errMsg.str(), index);
-        }
-        break;
+    if (isa<SetIndexSet>(indexSet)) {
+      if (!isa<ElementType>(indexType.type[0])) {
+        std::stringstream errMsg;
+        errMsg << "expected an element as index but got an index of type "
+               << toString(indexType);
+        reportError(errMsg.str(), index);
+        continue;
       }
-      default:
-        break;
+
+      const auto elemType = to<ElementType>(indexType.type[0]);
+      const std::string domain = to<SetIndexSet>(indexSet)->setName;
+
+      if (domain != elemType->sourceSet && 
+          elemType->sourceGenericSets.find(domain) == 
+          elemType->sourceGenericSets.end()) {
+        std::stringstream errMsg;
+        errMsg << "expected an element of set '" << domain << "' as index";
+        reportError(errMsg.str(), index);
+      }
+    } else if (isa<RangeIndexSet>(indexSet)) {
+      if (!indexType.isScalarInt()) {
+        std::stringstream errMsg;
+        errMsg << "expected an integral index but got an index of type " 
+               << toString(indexType);
+        reportError(errMsg.str(), index);
+      }
+    } else {
+      not_supported_yet;
     }
   }
 
-  retType = std::make_shared<Expr::Type>();
-  if (dims.empty()) {
-    retType->push_back(tensorType->getBlockType());
+  const auto ndTensorType = to<NDTensorType>(tensorType);
+
+  if (retDimensions.empty()) {
+    retType = ExprType(ndTensorType->blockType, lhsType.access);
   } else {
-    const bool isColumnVector = (dims.size() == 1 && 
-                                !expr->indices.back()->isSlice());
-    const auto retTensorType = ir::TensorType::make(
-        tensorType->getComponentType(), dims, isColumnVector);
-    retType->push_back(retTensorType);
+    bool isTransposed = false;
+    if (retDimensions.size() == 1) {
+      const unsigned blockDims = getDimensions(ndTensorType->blockType).size();
+      isTransposed = (blockDims == 1) ? ndTensorType->transposed :
+                     !expr->indices[numIndices - 2]->isSlice();
+    }
+
+    const auto retTensorType = makeTensorType(componentType, retDimensions, 
+                                              isTransposed);
+    retType = ExprType(retTensorType, lhsType.access);
   }
 }
 
 void TypeChecker::visit(TupleReadExpr::Ptr expr) {
-  const Ptr<Expr::Type> lhsType = inferType(expr->tuple);
-  expr->access = expr->tuple->access;
+  const ExprType lhsType = inferType(expr->tuple);
 
-  if (!lhsType) {
+  if (!lhsType.defined) {
+    retType = lhsType;
     return;
   }
 
-  iassert(lhsType->size() == 1);
-  iassert(lhsType->at(0).isTuple());
+  iassert(lhsType.isSingleValue());
 
   if (expr->index) {
-    const Ptr<Expr::Type> indexType = inferType(expr->index);
-      
-    if (indexType && (indexType->size() != 1 || !isInt(indexType->at(0)))) {
+    const ExprType indexType = inferType(expr->index);
+
+    if (indexType.defined && !indexType.isScalarInt()) {
       std::stringstream errMsg;
       errMsg << "tuple access expects an integral index but got an index " 
-             << "of type " << typeString(indexType);
+             << "of type " << toString(indexType);
       reportError(errMsg.str(), expr->index);
     }
   }
 
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(lhsType->at(0).toTuple()->elementType);
+  retType = ExprType(to<TupleType>(lhsType.type[0])->element, lhsType.access);
 }
 
 void TypeChecker::visit(FieldReadExpr::Ptr expr) {
-  const Ptr<Expr::Type> lhsType = inferType(expr->setOrElem);
-  expr->access = expr->setOrElem->access;
+  const ExprType lhsType = inferType(expr->setOrElem);
 
-  if (!lhsType) {
+  if (!lhsType.defined) {
+    retType = lhsType;
     return;
   }
 
   // Check that program does not attempt to read from multiple values 
   // simultaneously (e.g. output of function call returning two tensors).
-  if (lhsType->size() != 1) {
-    const auto msg = "can only access fields of a single set or element";
-    reportError(msg, expr->setOrElem);
+  if (lhsType.isVoid()) {
+    reportError("cannot access field of a void value", expr->setOrElem);
+    retType = lhsType;
+    return;
+  } else if (!lhsType.isSingleValue()) {
+    reportError("cannot access fields of multiple values", expr->setOrElem);
+    retType = lhsType;
     return;
   }
 
-  const ir::Type type = lhsType->at(0);
-  const ir::ElementType *elemType = nullptr;
-  if (type.isElement()) {
-    elemType = type.toElement();
-  } else if (type.isSet()) {
-    elemType = type.toSet()->elementType.toElement();
+  const Type::Ptr type = lhsType.type[0];
+
+  ElementType::Ptr elemType;
+  if (isa<ElementType>(type)) {
+    elemType = to<ElementType>(type);
+  } else if (isa<SetType>(type)) {
+    elemType = to<SetType>(type)->element;
   }
- 
+
   // Check that program only reads fields from sets and elements.
-  if (elemType == nullptr) {
-    const auto msg = "field accesses are only valid for sets and elements";
-    reportError(msg, expr->setOrElem);
+  if (!elemType) {
+    reportError("can only access fields of sets or elements", expr->setOrElem);
+    retType = lhsType;
     return;
   }
 
   const std::string fieldName = expr->field->ident;
 
   // Check that field is defined for set/element being read.
-  if (!elemType->hasField(fieldName)) {
+  if (!env.hasElementField(elemType->ident, fieldName)) {
     std::stringstream errMsg;
     errMsg << "undefined field '" << fieldName << "'";
     reportError(errMsg.str(), expr->field);
+    retType = lhsType;
     return;
   }
 
-  if (type.isElement()) {
-    retType = std::make_shared<Expr::Type>();
-    retType->push_back(elemType->field(fieldName).type);
-    return;
-  }
-  
-  const std::string varName = to<VarExpr>(expr->setOrElem)->ident;
-  const ir::Expr setExpr = ctx.getSymbol(varName).getExpr();
-  const ir::Type fieldType = getFieldType(setExpr, fieldName);
+  TensorType::Ptr retTensorType = 
+      to<TensorType>(env.getElementField(elemType->ident, fieldName));
 
-  // Check that set field is a scalar or vector.
-  if (fieldType.toTensor()->order() > 1) {
-    const auto msg = "cannot read from non-scalar and non-vector set fields";
-    reportError(msg, expr);
-    return;
+  if (isa<SetType>(type)) {
+    if (getDimensions(retTensorType).size() > 1) {
+      reportError("can only access scalar or vector set fields", expr);
+      retType = lhsType;
+      return;
+    }
+
+    const auto indexSet = std::make_shared<SetIndexSet>();
+    indexSet->setName = to<VarExpr>(expr->setOrElem)->ident;
+
+    const auto setReadTensorType = std::make_shared<NDTensorType>();
+    setReadTensorType->indexSets.push_back(indexSet);
+    setReadTensorType->transposed = getTransposed(retTensorType);
+    setReadTensorType->blockType = retTensorType;
+
+    retTensorType = setReadTensorType;
   }
 
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(fieldType);
+  retType = ExprType(retTensorType, lhsType.access);
+}
+
+void TypeChecker::visit(ParenExpr::Ptr expr) {
+  retType = inferType(expr->expr);
 }
 
 void TypeChecker::visit(VarExpr::Ptr expr) {
   // Check that variable has been declared.
-  if (!ctx.hasSymbol(expr->ident)) {
+  if (!env.hasSymbol(expr->ident)) {
     if (!skipCheckDeclared) {
       reportUndeclared("variable or constant", expr->ident, expr);
     }
 
-    expr->access = internal::Symbol::ReadWrite;
+    retType = ExprType(Access::READ_WRITE);
     return;
   }
-  
-  const internal::Symbol varSym = ctx.getSymbol(expr->ident);
-  const ir::Type varType = varSym.getExpr().type();
-  expr->access = varSym.getAccess();
+ 
+  const Type::Ptr varType = env.getSymbolType(expr->ident);
+  const Access varAccess = env.getSymbolAccess(expr->ident);
 
-  if (!varType.defined()) {
-    return;
-  }
-
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(varType);
+  retType = varType ? ExprType(varType, varAccess) : ExprType(varAccess);
 }
 
 void TypeChecker::visit(IntLiteral::Ptr lit) {
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(ir::Int);
+  retType = ExprType(makeTensorType(ScalarType::Type::INT));
 }
 
 void TypeChecker::visit(FloatLiteral::Ptr lit) {
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(ir::Float);
+  retType = ExprType(makeTensorType(ScalarType::Type::FLOAT));
 }
 
 void TypeChecker::visit(BoolLiteral::Ptr lit) {
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(ir::Boolean);
+  retType = ExprType(makeTensorType(ScalarType::Type::BOOL));
 }
 
 void TypeChecker::visit(ComplexLiteral::Ptr lit) {
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(ir::Complex);
+  retType = ExprType(makeTensorType(ScalarType::Type::COMPLEX));
 }
 
 void TypeChecker::visit(StringLiteral::Ptr lit) {
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(ir::String);
+  retType = ExprType(makeTensorType(ScalarType::Type::STRING));
 }
 
 void TypeChecker::visit(IntVectorLiteral::Ptr lit) {
@@ -1196,29 +1178,441 @@ void TypeChecker::visit(ApplyStmt::Ptr stmt) {
   typeCheckMapOrApply(stmt->map, true);
 }
 
+void TypeChecker::visit(Test::Ptr test) {
+  for (auto arg : test->args) {
+    inferType(arg);
+  }
+
+  inferType(test->expected);
+}
+
+void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst, 
+                                          bool isGlobal) {
+  const std::string varName = decl->name->ident;
+  const std::string varDeclType = isConst ? "constant" : "variable";
+
+  const bool typeChecked = decl->type ? typeCheck(decl->type) : false;
+  Type::Ptr varType = typeChecked ? decl->type : Type::Ptr();
+  
+  ExprType initType;
+  if (decl->initVal) {
+    initType = inferType(decl->initVal);
+
+    // Infer variable type from initial value if not explicitly specified.
+    if (!decl->type && initType.defined && initType.isSingleValue()) {
+      varType = initType.type[0];
+    }
+  }
+
+  // Check that variable/constant hasn't already been declared in current scope.
+  if (env.hasSymbol(varName, Environment::Scope::CurrentOnly)) {
+    reportMultipleDefs(varDeclType, varName, decl);
+    return;
+  }
+  
+  // Record declaration of variable/constant in symbol table.
+  const Access access = isConst ? Access::READ : Access::READ_WRITE;
+  env.addSymbol(varName, varType, access);
+
+  // If type signature is invalid or type signature is unspecified and we 
+  // cannot infer type from initial value, then there is nothing more to do. 
+  if (!varType) {
+    return;
+  }
+
+  // Check that variable is a tensor.
+  if (!isa<TensorType>(varType)) {
+    std::stringstream errMsg;
+    errMsg << "cannot declare a non-tensor " << varDeclType;
+    reportError(errMsg.str(), decl);
+    return;
+  }
+
+  // Check that initial value type matches declared variable/constant type.
+  // If this check completes successfully, then we are done. 
+  if (!initType.defined || (initType.isTensor() && 
+      env.compareTypes(varType, initType.type[0]))) {
+    return;
+  }
+
+  std::stringstream errMsg;
+  errMsg << "cannot initialize a " << varDeclType << " of type "
+         << toString(varType) << " with an expression of type "
+         << toString(initType);
+
+  // Check that initial value is of tensor type. If it is not, then there must 
+  // be an error since we require variables to be tensors (at least for the 
+  // time being). Otherwise, proceed to check legal special cases.
+  if (!initType.isTensor()) {
+    reportError(errMsg.str(), decl);
+    return;
+  }
+
+  const TensorType::Ptr varTensorType = to<TensorType>(varType);
+  const TensorType::Ptr initTensorType = to<TensorType>(initType.type[0]);
+  const ScalarType::Type varComponentType = getComponentType(varTensorType);
+  const ScalarType::Type initComponentType = getComponentType(initTensorType);
+
+  // Check if attempting to initialize a local tensor with a scalar.
+  if (isa<ScalarType>(initTensorType) && varComponentType == initComponentType) {
+    // TODO: It might be useful to be able to initialize non-scalar global 
+    //       tensors by scalar values. We prohibit this for now because it 
+    //       is not supported by the backend.
+    if (isGlobal) {
+      const auto msg = "cannot initialize a non-scalar global "
+                       "constant by a scalar value";
+      reportError(msg, decl);
+    }
+
+    return;
+  }
+
+  if (isa<NDTensorType>(varTensorType) && isa<NDTensorType>(initTensorType)) {
+    const auto varNDTensorType = to<NDTensorType>(varTensorType);
+    const auto initNDTensorType = to<NDTensorType>(initTensorType);
+    const auto varBlockType = varNDTensorType->blockType;
+    const auto initBlockType = initNDTensorType->blockType;
+    
+    // Check if initial value type is equivalent to declared constant type.
+    if (isConst && env.compareTypes(varBlockType, initBlockType)) {
+      const auto &varDimensions = varNDTensorType->indexSets;
+      const auto &initDimensions = initNDTensorType->indexSets;
+    
+      // Search for first "non-trivial" dimensions of both types.
+      auto varDimsIt = varDimensions.begin();
+      while (varDimsIt != varDimensions.end()) {
+        if (!isa<RangeIndexSet>(*varDimsIt) || 
+            (to<RangeIndexSet>(*varDimsIt)->range != 1)) {
+          break;
+        }
+        ++varDimsIt;
+      }
+      
+      auto initDimsIt = initDimensions.begin();
+      while (initDimsIt != initDimensions.end()) {
+        if (!isa<RangeIndexSet>(*initDimsIt) || 
+            (to<RangeIndexSet>(*initDimsIt)->range != 1)) {
+          break;
+        }
+        ++initDimsIt;
+      }
+
+      const IndexDomain varNonTrivialDims(varDimsIt, varDimensions.end());
+      const IndexDomain initNonTrivialDims(initDimsIt, initDimensions.end());
+      
+      if (env.compareDomains(varNonTrivialDims, initNonTrivialDims)) {
+        return;
+      }
+    }
+  }
+
+  // Initialization must be illegal, so report error.
+  reportError(errMsg.str(), decl);
+}
+
+void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
+  const std::string opString = isApply ? "apply" : "map";
+  const std::string funcName = expr->func->ident;
+  const std::string targetName = expr->target->ident;
+
+  std::vector<ExprType> actualsType(expr->partialActuals.size());
+  for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
+    const Expr::Ptr param = expr->partialActuals[i];
+   
+    // Infer argument type.
+    actualsType[i] = inferType(param);
+
+    if (!actualsType[i].defined) {
+      continue;
+    }
+
+    // Check that argument is a single non-void value.
+    if (actualsType[i].isVoid()) {
+      reportError("must pass a non-void value as argument", param);
+      continue;
+    } else if (!actualsType[i].isSingleValue()) {
+      reportError("cannot pass multiple values as a single argument", param);
+      continue;
+    }
+      
+    // Check that additional argument is a tensor.
+    // TODO: Remove once support for passing non-tensor arguments is added.
+    if (!actualsType[i].isTensor()) {
+      std::stringstream errMsg;
+      errMsg << "expected argument to be a tensor but got an argument "
+             << "of type " << toString(actualsType[i].type[0]);
+      reportError(errMsg.str(), param);
+    }
+  }
+
+  bool continueTypeChecking = true;
+  
+  FuncDecl::Ptr func;
+  Type::Ptr targetType;
+
+  // Check that assembly function has been declared.
+  if (!env.hasFunction(funcName)) {
+    reportUndeclared("function", funcName, expr->func);
+    continueTypeChecking = false;
+  } else {
+    func = env.getFunction(funcName);
+    
+    if (isApply && !func->results.empty()) {
+      reportError("cannot apply a non-void function", expr->func);
+    }
+  }
+
+  // Check that target set has been declared.
+  if (!env.hasSymbol(targetName)) {
+    reportUndeclared("set", targetName, expr->target);
+    continueTypeChecking = false;
+  } else {
+    targetType = env.getSymbolType(targetName);
+
+    // Check that map operation is applied to set.
+    if (!isa<SetType>(targetType)) {
+      std::stringstream errMsg;
+      errMsg << opString << " operation can only be applied to sets";
+      reportError(errMsg.str(), expr->target);
+      continueTypeChecking = false;
+    }
+  }
+  
+  auto getResType = [](IdentDecl::Ptr res) { return res->type; };
+
+  if (!continueTypeChecking) {
+    // Infer map operation return type if possible.
+    if (func && func->typeParams.empty()) {
+      ExprType::TypeVector resultTypes(func->results.size());
+      std::transform(func->results.begin(), func->results.end(), 
+                     resultTypes.begin(), getResType);
+      retType = ExprType(resultTypes);
+    }
+
+    return;
+  }
+
+  // Infer assembly function's required argument types.
+  const SetType::Ptr targetSetType = to<SetType>(targetType);
+  const auto targetElemType = targetSetType->element->clone<ElementType>();
+  targetElemType->sourceSet = targetName;
+  actualsType.push_back(ExprType(targetElemType, Access::READ_WRITE));
+  
+  if (!targetSetType->endpoints.empty()) {
+    const std::string neighborSet = targetSetType->endpoints[0]->setName;
+    const Type::Ptr neighborType = 
+        env.getSymbolType(neighborSet, Environment::Scope::TopOnly);
+    const auto neighborSetType = to<SetType>(neighborType);
+    
+    // Check for heterogeneous edge sets, which are currently unsupported.
+    // TODO: Should remove this once support for heterogeneous edge sets 
+    //       has been added.
+    for (unsigned i = 1; i < targetSetType->endpoints.size(); ++i) {
+      if (targetSetType->endpoints[i]->setName != neighborSet) {
+        std::stringstream errMsg;
+        errMsg << opString << " operation is currently unsupported for "
+               << "heterogeneous edge sets";
+        reportError(errMsg.str(), expr->target);
+        return;
+      }
+    }
+    
+    if (actualsType.size() != func->args.size()) {
+      const auto neighborElemType = 
+          neighborSetType->element->clone<ElementType>();
+      neighborElemType->sourceSet = neighborSet;
+     
+      const auto neighborsLength = std::make_shared<TupleLength>();
+      neighborsLength->val = targetSetType->endpoints.size();
+
+      const auto neighborsType = std::make_shared<TupleType>();
+      neighborsType->element = neighborElemType;
+      neighborsType->length = neighborsLength; 
+      actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
+    }
+  }
+
+#if 1
+  if (!func->typeParams.empty()) {
+    GenericCallTypeChecker checker;
+    const unsigned numArgs = std::min(actualsType.size(), func->args.size());
+
+    for (unsigned i = 0; i < numArgs; ++i) {
+      const ExprType paramType = actualsType[i];
+      if (paramType.defined && paramType.isSingleValue()) {
+        checker.unify(func->args[i]->arg->type, paramType.type[0]);
+      }
+    }
+
+    for (const auto typeParam : func->typeParams) {
+      const auto it = checker.specializedSets.find(typeParam->ident);
+      if (it == checker.specializedSets.end()) {
+        reportError("unable to resolve all type parameters", expr);
+        return;
+      }
+    }
+
+    if (func->originalName.empty()) {
+      // TODO: Optimize by just cloning type signature.
+      func = func->clone<FuncDecl>();
+    }
+
+    ReplaceTypeParams(checker.specializedSets).rewrite(func);
+    func->typeParams.clear();
+
+    if (errors->empty() && !func->originalName.empty()) {
+      typeCheck(func);
+    }
+  }
+#endif
+  
+  // Infer map operation return type.
+  ExprType::TypeVector resultTypes(func->results.size());
+  std::transform(func->results.begin(), func->results.end(), 
+                 resultTypes.begin(), getResType);
+  retType = ExprType(resultTypes);
+
+  // Check that assembly function accepts right number of arguments.
+  if (actualsType.size() != func->args.size()) {
+    std::stringstream errMsg;
+    errMsg << opString << " operation passes " << actualsType.size() 
+           << " arguments to assembly function but function '" << funcName
+           << "' expects " << func->args.size() << " arguments";
+    reportError(errMsg.str(), expr);
+    return;
+  }
+
+  for (unsigned i = 0; i < actualsType.size(); ++i) {
+    const ExprType paramType = actualsType[i];
+    const Argument::Ptr funcArg = func->args[i];
+
+    if (!paramType.defined || !paramType.isSingleValue()) {
+      continue;
+    }
+
+    // Check that argument is of type expected by callee.
+    if (!env.compareTypes(paramType.type[0], funcArg->arg->type)) {
+      std::stringstream errMsg;
+      errMsg << opString << " operation passes argument of type "
+             << toString(paramType.type[0]) << " to assembly function '"
+             << funcName << "' but function expects argument of type "
+             << toString(funcArg->arg->type);
+      if (i < expr->partialActuals.size()) {
+        reportError(errMsg.str(), expr->partialActuals[i]);
+      } else {
+        reportError(errMsg.str(), expr->target);
+      }
+    }
+
+    // Check that inout argument is writable.
+    if (funcArg->isInOut() && !paramType.isWritable()) {
+      reportError("inout argument must be writable", funcArg);
+    }
+  }
+}
+
+void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr, 
+                                        bool allowStringOperands) {
+  const ExprType lhsType = inferType(expr->lhs);
+  const ExprType rhsType = inferType(expr->rhs);
+  retTypeChecked = lhsType.defined && rhsType.defined;
+
+  // Check that operands of element-wise operation are numeric tensors 
+  // (or strings, if operation can be performed on strings).
+  if (lhsType.defined && !lhsType.isNumericTensor() && 
+      (!allowStringOperands || !lhsType.isString())) {
+    std::stringstream errMsg;
+    errMsg << "expected left operand of element-wise operation to be a "
+           << "numeric tensor " << (allowStringOperands ? "or string " : "")
+           << "but got an operand of type " << toString(lhsType);
+    reportError(errMsg.str(), expr->lhs);
+  }
+  if (rhsType.defined && !rhsType.isNumericTensor() && 
+      (!allowStringOperands || !rhsType.isString())) {
+    std::stringstream errMsg;
+    errMsg << "expected right operand of element-wise operation to be a "
+           << "numeric tensor " << (allowStringOperands ? "or string " : "")
+           << "but got an operand of type " << toString(rhsType);
+    reportError(errMsg.str(), expr->rhs);
+  }
+ 
+  if (!retTypeChecked) {
+    return;
+  }
+
+  const auto ltype = to<TensorType>(lhsType.type[0]);
+  const auto rtype = to<TensorType>(rhsType.type[0]);
+  const ScalarType::Type lhsComponent = getComponentType(ltype);
+  const ScalarType::Type rhsComponent = getComponentType(rtype);
+  const unsigned lhsOrder = getDimensions(ltype).size();
+  const unsigned rhsOrder = getDimensions(rtype).size();
+  const bool hasScalarOperand = (lhsOrder == 0 || rhsOrder == 0);
+
+  // Check that operands are compatible (i.e. contain elements of same type 
+  // if one operand is scalar, or also have same dimensions otherwise).
+  if (hasScalarOperand ? (lhsComponent != rhsComponent) : 
+      !env.compareTypes(ltype, rtype)) {
+    std::stringstream errMsg;
+    errMsg << "cannot perform element-wise operation on tensors of type "
+           << toString(ltype) << " and type " << toString(rtype);
+    reportError(errMsg.str(), expr);
+    return;
+  }
+  
+  retType = (lhsOrder > 0) ? ExprType(ltype) : ExprType(rtype);
+}
+
+void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
+  const ExprType lhsType = inferType(expr->lhs);
+  const ExprType rhsType = inferType(expr->rhs);
+
+  // Check that operands of boolean operation are of boolean type.
+  if (lhsType.defined && !lhsType.isScalarBoolean()) {
+    std::stringstream errMsg;
+    errMsg << "expected left operand of boolean operation to be a boolean "
+           << "but got an operand of type " << toString(lhsType);
+    reportError(errMsg.str(), expr->lhs);
+  }
+  if (rhsType.defined && !rhsType.isScalarBoolean()) {
+    std::stringstream errMsg;
+    errMsg << "expected right operand of boolean operation to be a boolean "
+           << "but got an operand of type " << toString(rhsType);
+    reportError(errMsg.str(), expr->rhs);
+  }
+
+  retType = ExprType(makeTensorType(ScalarType::Type::BOOL));
+}
+
 void TypeChecker::typeCheckDenseTensorLiteral(DenseTensorLiteral::Ptr lit) {
   try {
-    const DenseTensorType tensorType = getDenseTensorType(lit);
-    const std::vector<ir::IndexDomain> idoms(tensorType.dimSizes.rbegin(), 
-                                             tensorType.dimSizes.rend());
-    ir::ScalarType::Kind elemType;
-    switch (tensorType.type) {
+    const DenseTensorType tensor = getDenseTensorType(lit);
+    const auto &dimSizes = tensor.dimSizes;
+
+    const NDTensorType::Ptr tensorType = std::make_shared<NDTensorType>();
+    tensorType->transposed = (tensor.dimSizes.size() == 1) && !lit->transposed;
+
+    for (auto it = dimSizes.rbegin(); it != dimSizes.rend(); ++it) {
+      const auto indexSet = std::make_shared<RangeIndexSet>();
+      indexSet->range = *it;
+      tensorType->indexSets.push_back(indexSet);
+    }
+
+    switch (tensor.type) {
       case DenseTensorType::Type::INT:
-        elemType = ir::ScalarType::Int;
+        tensorType->blockType = makeTensorType(ScalarType::Type::INT);
         break;
       case DenseTensorType::Type::FLOAT:
-        elemType = ir::ScalarType::Float;
+        tensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
         break;
       case DenseTensorType::Type::COMPLEX:
-        elemType = ir::ScalarType::Complex;
+        tensorType->blockType = makeTensorType(ScalarType::Type::COMPLEX);
         break;
       default:
-        elemType = ir::ScalarType::Float;
+        unreachable;
+        break;
     }
-    iassert(idoms.size() == 1 || !lit->transposed);
 
-    retType = std::make_shared<Expr::Type>();
-    retType->push_back(ir::TensorType::make(elemType, idoms, lit->transposed));
+    retType = ExprType(tensorType);
   } catch (std::exception &err) {
     reportError(std::string(err.what()), lit);
   }
@@ -1248,467 +1642,6 @@ TypeChecker::DenseTensorType
   }
 
   return tensorType;
-}
-
-ir::Func TypeChecker::typeCheckFuncDecl(FuncDecl::Ptr decl, 
-                                        bool doCheckSpecialized) { 
-  // Specialized versions of generic functions should only be type-checked 
-  // when argument types can be inferred.
-  if (!decl->originalName.empty() && !doCheckSpecialized) {
-    return ir::Func();
-  }
-
-  ctx.scope();
-  skipReportError += (unsigned)doCheckSpecialized;
-
-  for (const auto typeParam : decl->typeParams) {
-    const auto genericElem = ir::ElementType::make(typeParam->ident, {});
-    const auto genericSet = ir::SetType::make(genericElem, {});
-    const auto genericVar = ir::Var(typeParam->ident, genericSet);
-    ctx.addSymbol(genericVar);
-  }
-
-  std::vector<ir::Var> arguments;
-  std::vector<ir::Var> results;
-  bool typeChecked = true;
-
-  // Infer types of arguments to function.
-  for (const auto arg : decl->args) {
-    const ir::Var argVar = getVar(arg->arg);
-
-    if (!argVar.getType().defined()) {
-      typeChecked = false;
-    }
-
-    Expr::Access access = internal::Symbol::Read;
-    if (arg->isInOut()) {
-      access = internal::Symbol::ReadWrite;
-      writableArgs.insert(argVar);
-    }
-    
-    ctx.addSymbol(argVar.getName(), argVar, access);
-    arguments.push_back(argVar);
-  }
-  
-  // Infer types of function return values.
-  for (const auto res : decl->results) {
-    const ir::Var result = getVar(res);
-
-    if (!result.getType().defined()) {
-      typeChecked = false;
-    }
-
-    ctx.addSymbol(result);
-    results.push_back(result);
-  }
-
-  // Type check function body.
-  decl->body->accept(this);
-  
-  ctx.unscope();
-  skipReportError -= (unsigned)doCheckSpecialized;
-
-  if (!typeChecked) {
-    return ir::Func();
-  }
-
-  const std::string name = decl->name->ident;
-
-  // Check that function has not been previously declared.
-  if (ctx.containsFunction(name)) {
-    reportMultipleDefs("function or procedure", name, decl);
-    return ir::Func();
-  }
-
-  return ir::Func(name, arguments, results, ir::Stmt());
-}
-
-void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst, 
-                                          bool isGlobal) {
-  const std::string varName = decl->name->ident;
-  const std::string varDeclType = isConst ? "constant" : "variable";
-  
-  ir::Type varType;
-  if (decl->type) {
-    varType = getIRType(decl->type);
-  }
-  
-  Ptr<Expr::Type> initType;
-  if (decl->initVal) {
-    initType = inferType(decl->initVal);
-
-    // Infer variable type from initial value if not explicitly specified.
-    if (!decl->type && initType && initType->size() == 1) {
-      varType = initType->at(0);
-    }
-  }
-
-  // Check that variable/constant hasn't already been declared in current scope.
-  if (ctx.hasSymbol(varName, true) && 
-      ctx.getSymbol(varName).getExpr().type().defined()) {
-    reportMultipleDefs(varDeclType, varName, decl);
-    return;
-  }
-  
-  // Record declaration of variable/constant in symbol table.
-  const auto access = isConst ? internal::Symbol::Read : 
-                      internal::Symbol::ReadWrite;
-  const auto var = ir::Var(varName, varType);
-  ctx.addSymbol(varName, var, access);
-
-  // If type signature is invalid or type signature is unspecified and we 
-  // cannot infer type, then we are done. 
-  if (!varType.defined()) {
-    return;
-  }
-
-  // Check that variable is a tensor.
-  if (!varType.isTensor()) {
-    std::stringstream errMsg;
-    errMsg << "cannot declare a non-tensor " << varDeclType;
-    reportError(errMsg.str(), decl);
-    return;
-  }
-
-  // Check that initial value type matches declared variable/constant type.
-  // If this check completes successfully, then we are done. 
-  if (!initType || (initType->size() == 1 && 
-      compareTypes(varType, initType->at(0)))) {
-    return;
-  }
-
-  std::stringstream errMsg;
-  errMsg << "cannot initialize a " << varDeclType << " of type "
-         << typeString(var.getType()) << " with an expression of type "
-         << typeString(initType);
-
-  // Check that initial value is of tensor type. If it is not, then there must 
-  // be an error since we require variables to be tensors (at least for the 
-  // time being). Otherwise, proceed to check legal special cases.
-  if (initType->size() != 1 || !initType->at(0).isTensor()) {
-    reportError(errMsg.str(), decl);
-    return;
-  }
-
-  const ir::Type initIRType = initType->at(0);
-  const ir::TensorType *varTensorType = varType.toTensor();
-  const ir::TensorType *initTensorType = initIRType.toTensor();
-  const ir::ScalarType varComponentType = varTensorType->getComponentType();
-  const ir::ScalarType initComponentType = initTensorType->getComponentType();
-  
-  // Check if attempting to initialize a local tensor with a scalar.
-  if (isScalar(initIRType) && varComponentType == initComponentType) {
-    // TODO: It might be useful to be able to initialize non-scalar global 
-    //       tensors by scalar values. We prohibit this for now because it 
-    //       is not supported by the backend.
-    if (isGlobal) {
-      const auto msg = "cannot initialize a non-scalar global constant "
-                       "by a scalar value";
-      reportError(msg, decl);
-    }
-    return;
-  }
-
-  const ir::Type varBlockType = varTensorType->getBlockType();
-  const ir::Type initBlockType = initTensorType->getBlockType();
-  
-  // Check if initial value type is equivalent to declared constant type.
-  if (isConst && compareTypes(varBlockType, initBlockType)) {
-    const auto varDims = varTensorType->getOuterDimensions();
-    const auto initDims = initTensorType->getOuterDimensions();
-
-    // Search for first "non-trivial" dimensions of both types.
-    std::vector<ir::IndexSet>::const_iterator varDimsIt = varDims.begin();
-    for (; varDimsIt != varDims.end(); ++varDimsIt) {
-      if (*varDimsIt != ir::IndexSet(1)) {
-        break;
-      }
-    }
-    std::vector<ir::IndexSet>::const_iterator initDimsIt = initDims.begin();
-    for (; initDimsIt != initDims.end(); ++initDimsIt) {
-      if (*initDimsIt != ir::IndexSet(1)) {
-        break;
-      }
-    }
-    
-    if (std::equal(varDimsIt, varDims.end(), initDimsIt)) {
-      return;
-    }
-  }
-
-  // Initialization must be illegal, so report error.
-  reportError(errMsg.str(), decl);
-}
-
-void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
-  const std::string opString = isApply ? "apply" : "map";
-
-  std::vector<ir::Type> actualsType(expr->partialActuals.size());
-  for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
-    const Expr::Ptr param = expr->partialActuals[i];
-    const Ptr<Expr::Type> paramType = inferType(param);
-
-    if (!paramType) {
-      continue;
-    }
-
-    // Check that argument is a single non-void value.
-    if (paramType->size() == 0) {
-      reportError("must pass a non-void value as argument", param);
-    } else if (paramType->size() != 1) {
-      std::stringstream errMsg;
-      errMsg << "cannot pass multiple values of types " 
-             << typeString(paramType) << " as a single argument";
-      reportError(errMsg.str(), param);
-    } else {
-      actualsType[i] = paramType->at(0);
-    }
-  }
-  
-  const std::string funcName = expr->func->ident;
-  const std::string targetName = expr->target->ident;
-  
-  ir::Func func;
-  ir::Expr target;
-  bool typeChecked = true;
-
-  // Check that assembly function has been declared.
-  if (!ctx.containsFunction(funcName)) {
-    reportUndeclared("function", funcName, expr->func);
-    typeChecked = false;
-  } else {
-    func = ctx.getFunction(funcName);
-    
-    if (isApply && func.getResults().size() > 0) {
-      reportError("cannot apply a non-void function", expr->func);
-      typeChecked = false;
-    }
-
-    // Infer map operation return type.
-    retType = std::make_shared<Expr::Type>();
-    for (const auto &res : func.getResults()) {
-      retType->push_back(res.getType());
-    }
-  }
-
-  // Check that target set has been declared.
-  if (!ctx.hasSymbol(targetName)) {
-    reportUndeclared("set", targetName, expr->target);
-    typeChecked = false;
-  } else {
-    target = ctx.getSymbol(expr->target->ident).getExpr();
-
-    // Check that map operation is applied to set.
-    if (!target.type().isSet()) {
-      std::stringstream errMsg;
-      errMsg << opString << " operation can only be applied to sets";
-      reportError(errMsg.str(), expr->target);
-      typeChecked = false;
-    }
-  }
-
-  if (!typeChecked) {
-    return;
-  }
-
-  // Infer assembly function's required argument types.
-  const ir::SetType *targetSetType = target.type().toSet();
-  actualsType.push_back(targetSetType->elementType);
-  
-  const auto funcArgs = func.getArguments();
-  
-  if (targetSetType->endpointSets.size() > 0) {
-    const auto neighborSetType = 
-        targetSetType->endpointSets[0]->type().toSet();
-    
-    // Check for heterogeneous edge sets.
-    for (unsigned i = 1; i < targetSetType->endpointSets.size(); ++i) {
-      if (targetSetType->endpointSets[i]->type().toSet() != neighborSetType) {
-        std::stringstream errMsg;
-        errMsg << opString << " operation is currently unsupported for "
-               << "heterogeneous edge sets";
-        reportError(errMsg.str(), expr->target);
-        return;
-      }
-    }
-    
-    if (actualsType.size() != funcArgs.size()) {
-      // TODO: Should eventually support heterogeneous edge sets.
-      const auto neighborsType = ir::TupleType::make(
-          neighborSetType->elementType, targetSetType->endpointSets.size());
-      actualsType.push_back(neighborsType);
-    }
-  }
- 
-  // Check that assembly function accepts right number of arguments.
-  if (actualsType.size() != funcArgs.size()) {
-    std::stringstream errMsg;
-    errMsg << opString << " operation passes " << actualsType.size() 
-           << " arguments to assembly function but function '" << func.getName()
-           << "' expects " << funcArgs.size() << " arguments";
-    reportError(errMsg.str(), expr);
-    return;
-  }
-
-  for (unsigned i = 0; i < actualsType.size(); ++i) {
-    if (!actualsType[i].defined() || !funcArgs[i].getType().defined()) {
-      continue;
-    }
-    
-    // Check that type of argument that will be passed to assembly function 
-    // is type expected by function.
-    if (!compareTypes(actualsType[i], funcArgs[i].getType())) {
-      std::stringstream errMsg;
-      errMsg << opString << " operation passes argument of type "
-             << typeString(actualsType[i]) << " to assembly function but "
-             << "function '" << func.getName() << "' expects argument of "
-             << "type " << typeString(funcArgs[i].getType());
-      if (i < expr->partialActuals.size()) {
-        reportError(errMsg.str(), expr->partialActuals[i]);
-      } else {
-        reportError(errMsg.str(), expr->target);
-      }
-    }
-    
-    if (i < expr->partialActuals.size()) { 
-      const Expr::Ptr param = expr->partialActuals[i];
-
-      // Check that inout argument is writable.
-      if (writableArgs.find(funcArgs[i]) != writableArgs.end() && 
-          !param->isWritable()) {
-        reportError("inout argument must be writable", param);
-      }
-
-      // Check that additional argument is a tensor.
-      // TODO: Remove once support for passing non-tensor arguments is added.
-      if (!actualsType[i].isTensor()) {
-        std::stringstream errMsg;
-        errMsg << "expected argument to be a tensor but got an argument "
-               << "of type " << typeString(actualsType[i]);
-        reportError(errMsg.str(), param);
-      }
-    }
-  }
-}
-
-void TypeChecker::typeCheckBinaryElwise(BinaryExpr::Ptr expr, 
-                                        bool allowStringOperands) {
-  const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
-  const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
-  bool typeChecked = (bool)lhsType && (bool)rhsType;
-
-  // Check that operands of element-wise operation are numeric tensors.
-  if (lhsType && (lhsType->size() != 1 || !lhsType->at(0).isTensor() || 
-      (!lhsType->at(0).toTensor()->getComponentType().isNumeric() && 
-      (!allowStringOperands || !isString(lhsType->at(0)))))) {
-    std::stringstream errMsg;
-    errMsg << "expected left operand of element-wise operation to be a "
-           << "numeric tensor " << (allowStringOperands ? "or string " : "")
-           << "but got an operand of type " << typeString(lhsType);
-    reportError(errMsg.str(), expr->lhs);
-    typeChecked = false;
-  }
-  if (rhsType && (rhsType->size() != 1 || !rhsType->at(0).isTensor() || 
-      (!rhsType->at(0).toTensor()->getComponentType().isNumeric() && 
-      (!allowStringOperands || !isString(rhsType->at(0)))))) {
-    std::stringstream errMsg;
-    errMsg << "expected right operand of element-wise operation to be a "
-           << "numeric tensor " << (allowStringOperands ? "or string " : "")
-           << "but got an operand of type " << typeString(rhsType);
-    reportError(errMsg.str(), expr->rhs);
-    typeChecked = false;
-  }
- 
-  if (!typeChecked) {
-    return;
-  }
-
-  const ir::TensorType *ltype = lhsType->at(0).toTensor();
-  const ir::TensorType *rtype = rhsType->at(0).toTensor();
-  const auto lComponentType = ltype->getComponentType();
-  const auto rComponentType = rtype->getComponentType();
-  const bool hasScalarOperand = (ltype->order() == 0 || rtype->order() == 0);
-
-  // Check that operands are compatible (i.e. contain elements of same type 
-  // if one operand is scalar, or also have same dimensions otherwise).
-  if (hasScalarOperand ? (lComponentType != rComponentType) : 
-      !compareTypes(lhsType->at(0), rhsType->at(0))) {
-    std::stringstream errMsg;
-    errMsg << "cannot perform element-wise operation on tensors of type "
-           << typeString(lhsType) << " and type " << typeString(rhsType);
-    reportError(errMsg.str(), expr);
-    return;
-  }
-  
-  retType = (ltype->order() > 0) ? lhsType : rhsType;
-}
-
-void TypeChecker::typeCheckBinaryBoolean(BinaryExpr::Ptr expr) {
-  const Ptr<Expr::Type> lhsType = inferType(expr->lhs);
-  const Ptr<Expr::Type> rhsType = inferType(expr->rhs);
-
-  // Check that operands of boolean operation are of boolean type.
-  if (lhsType && (lhsType->size() != 1 || !isBoolean(lhsType->at(0)))) {
-    std::stringstream errMsg;
-    errMsg << "expected left operand of boolean operation to be a boolean "
-           << "but got an operand of type " << typeString(lhsType);
-    reportError(errMsg.str(), expr->lhs);
-  }
-  if (rhsType && (rhsType->size() != 1 || !isBoolean(rhsType->at(0)))) {
-    std::stringstream errMsg;
-    errMsg << "expected right operand of boolean operation to be a boolean "
-           << "but got an operand of type " << typeString(rhsType);
-    reportError(errMsg.str(), expr->rhs);
-  }
-
-  retType = std::make_shared<Expr::Type>();
-  retType->push_back(ir::Boolean);
-}
-
-void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType, 
-                                                ir::Type argType) {
-  //std::cout << "unifying " << *paramType << " with " << argType << std::endl;
-  if (isa<NDTensorType>(paramType) && argType.isTensor()) {
-    const auto paramTensorType = to<NDTensorType>(paramType);
-    const auto argTensorType = argType.toTensor();
-    const auto paramDomain = paramTensorType->indexSets;
-    const auto argDomain = argTensorType->getOuterDimensions();
-    const unsigned domainSize = std::min(paramDomain.size(), argDomain.size());
-    for (unsigned i = 0; i < domainSize; ++i) {
-      if (isa<GenericIndexSet>(paramDomain[i])) {
-        const auto genericName = to<GenericIndexSet>(paramDomain[i])->setName;
-        if (specializedSets.find(genericName) == specializedSets.end()) {
-          switch (argDomain[i].getKind()) {
-            case ir::IndexSet::Set:
-            {
-              auto indexSet = std::make_shared<SetIndexSet>();
-              indexSet->setLoc(paramDomain[i]);
-              indexSet->setName = 
-                  to<ir::VarExpr>(argDomain[i].getSet())->var.getName();
-              specializedSets[genericName] = indexSet;
-              break;
-            }
-            case ir::IndexSet::Range:
-            {
-              auto indexSet = std::make_shared<RangeIndexSet>();
-              indexSet->setLoc(paramDomain[i]);
-              indexSet->range = (int)argDomain[i].getSize();
-              specializedSets[genericName] = indexSet;
-              break;
-            }
-            default:
-              unreachable;
-              break;
-          }
-        }
-      }
-    }
-    unify(paramTensorType->blockType, argTensorType->getBlockType());
-  }
-}
-    
-void TypeChecker::ReplaceTypeParams::visit(GenericIndexSet::Ptr set) {
-  node = specializedSets.at(set->setName);
 }
 
 void TypeChecker::DenseTensorType::addIntValues(unsigned len) {
@@ -1756,65 +1689,346 @@ void TypeChecker::DenseTensorType::merge(const DenseTensorType &other) {
   ++dimSizes[dimSizes.size() - 1];
 }
 
-bool TypeChecker::compareTypes(const ir::Type &l, const ir::Type &r) {
-  iassert(l.defined() && r.defined());
-
-  if (l.isTensor() && r.isTensor()) {
-    const auto ltype = l.toTensor();
-    const auto rtype = r.toTensor();
-    return (*ltype == *rtype && ltype->isColumnVector == rtype->isColumnVector);
+bool TypeChecker::ExprType::isNumericType(ScalarType::Type type) const {
+  switch (type) {
+    case ScalarType::Type::INT:
+    case ScalarType::Type::FLOAT:
+    case ScalarType::Type::COMPLEX:
+      return true;
+    default:
+      return false;
   }
-
-  return (l == r);
 }
 
-std::string TypeChecker::typeString(const ir::Type &type) {
-  std::stringstream oss;
-  oss << "'" << type << "'";
-  return oss.str();
-}
-
-std::string TypeChecker::typeString(const Ptr<Expr::Type> &type) {
-  if (type->size() == 0) {
-    return "void";
+bool TypeChecker::ExprType::isNumericTensor() const {
+  if (!isTensor()) {
+    return false;
   }
 
-  std::stringstream oss;
-  if (type->size() > 1) {
-    oss << "(";
+  TensorType::Ptr tensorType = to<TensorType>(type[0]);
+  while (isa<NDTensorType>(tensorType)) {
+    tensorType = to<NDTensorType>(tensorType)->blockType;
+  }
+
+  return isNumericType(to<ScalarType>(tensorType)->type);
+}
+
+bool TypeChecker::ExprType::isReadable() const {
+  switch (access) {
+    case Access::READ:
+    case Access::READ_WRITE:
+      return true;
+    default:
+      return false;
+  }
+}
+
+bool TypeChecker::ExprType::isWritable() const {
+  switch (access) {
+    case Access::WRITE:
+    case Access::READ_WRITE:
+      return true;
+    default:
+      return false;
+  }
+}
+
+void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType, 
+                                                Type::Ptr argType) {
+  if (isa<NDTensorType>(paramType) && isa<NDTensorType>(argType)) {
+    const auto paramTensorType = to<NDTensorType>(paramType);
+    const auto argTensorType = to<NDTensorType>(argType);
+    const auto paramDomain = paramTensorType->indexSets;
+    const auto argDomain = argTensorType->indexSets;
+    const unsigned domainSize = std::min(paramDomain.size(), argDomain.size());
+
+    for (unsigned i = 0; i < domainSize; ++i) {
+      if (isa<GenericIndexSet>(paramDomain[i])) {
+        const auto genericName = to<GenericIndexSet>(paramDomain[i])->setName;
+        if (specializedSets.find(genericName) == specializedSets.end()) {
+          if (isa<SetIndexSet>(argDomain[i])) {
+            //iassert(!isa<GenericIndexSet>(argDomain[i]));
+            
+            auto indexSet = std::make_shared<SetIndexSet>();
+            indexSet->setLoc(paramDomain[i]);
+            indexSet->setName = to<SetIndexSet>(argDomain[i])->setName;
+            specializedSets[genericName] = indexSet;
+          } else if (isa<RangeIndexSet>(argDomain[i])) {
+            auto indexSet = std::make_shared<RangeIndexSet>();
+            indexSet->setLoc(paramDomain[i]);
+            indexSet->range = to<RangeIndexSet>(argDomain[i])->range;
+            specializedSets[genericName] = indexSet;
+          } else {
+            not_supported_yet;
+          }
+        }
+      }
+    }
+    unify(paramTensorType->blockType, argTensorType->blockType);
+  } else if (isa<ElementType>(paramType) && isa<ElementType>(argType)) {
+  }
+}
+
+bool TypeChecker::Environment::compareIndexSets(IndexSet::Ptr l, 
+                                                IndexSet::Ptr r) {
+  if (isa<SetIndexSet>(l)) {
+    return isa<SetIndexSet>(r) && 
+           (to<SetIndexSet>(l)->setName == to<SetIndexSet>(r)->setName);
+  } else if (isa<RangeIndexSet>(l)) {
+    return isa<RangeIndexSet>(r) &&
+           (to<RangeIndexSet>(l)->range == to<RangeIndexSet>(r)->range);
+  }
+
+  return false;
+}
+
+bool TypeChecker::Environment::compareDomains(const IndexDomain &l,
+                                              const IndexDomain &r) {
+  if (l.size() != r.size()) {
+    return false;
+  }
+
+  for (unsigned i = 0; i < l.size(); ++i) {
+    if (!compareIndexSets(l[i], r[i])) {
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r) {
+  if (isa<ScalarType>(l)) {
+    return isa<ScalarType>(r) && 
+           (to<ScalarType>(l)->type == to<ScalarType>(r)->type);
+  } else if (isa<NDTensorType>(l)) {
+    if (!isa<NDTensorType>(r)) {
+      return false;
+    }
+
+    const auto ltype = to<NDTensorType>(l);
+    const auto rtype = to<NDTensorType>(r);
+
+    return (ltype->transposed == rtype->transposed) && 
+           compareDomains(ltype->indexSets, rtype->indexSets) && 
+           compareTypes(ltype->blockType, rtype->blockType);
+  } else if (isa<ElementType>(l)) {
+    if (!isa<ElementType>(r)) {
+      return false;
+    }
+
+    const auto ltype = to<ElementType>(l);
+    const auto rtype = to<ElementType>(r);
+
+    // TODO: Check for generic sets inferred as sources.
+    if (ltype->sourceSet.empty() || rtype->sourceSet.empty()) {
+      return ltype->ident == rtype->ident;
+    }
+
+    return ltype->sourceSet == rtype->sourceSet;
+  } else if (isa<SetType>(l)) {
+    if (!isa<SetType>(r)) {
+      return false;
+    }
+
+    const auto ltype = to<SetType>(l);
+    const auto rtype = to<SetType>(r);
+
+    if (ltype->endpoints.size() != rtype->endpoints.size()) {
+      return false;
+    }
+
+    for (unsigned i = 0; i < ltype->endpoints.size(); ++i) {
+      if (ltype->endpoints[i]->setName != rtype->endpoints[i]->setName) {
+        return false;
+      }
+    }
+
+    return compareTypes(ltype->element, rtype->element);
+  } else if (isa<TupleType>(l)) {
+    if (!isa<TupleType>(r)) {
+      return false;
+    }
+
+    const auto ltype = to<TupleType>(l);
+    const auto rtype = to<TupleType>(r);
+
+    return (ltype->length->val == rtype->length->val) && 
+           compareTypes(ltype->element, rtype->element);
+  }
+
+  return false;
+}
+
+TypeChecker::ExprType TypeChecker::inferType(Expr::Ptr ptr) {
+  const auto tmp = retType;
+  retType = ExprType();
+  
+  ptr->accept(this);
+  const auto ret = retType;
+  
+  retType = tmp;
+  return ret;
+}
+
+bool TypeChecker::typeCheck(HIRNode::Ptr ptr) {
+  iassert(!isa<Expr>(ptr));
+  
+  const bool tmp = retTypeChecked;
+  retTypeChecked = true;
+  
+  ptr->accept(this);
+  const bool ret = retTypeChecked;
+  
+  retTypeChecked = tmp;
+  return ret;
+}
+
+bool TypeChecker::typeCheckGlobalConstDecl(ConstDecl::Ptr ptr) {
+  const bool tmp = retTypeChecked;
+  retTypeChecked = true;
+  
+  typeCheckVarOrConstDecl(ptr, true, true);
+  const bool ret = retTypeChecked;
+  
+  retTypeChecked = tmp;
+  return ret;
+}
+
+void TypeChecker::getDimensions(TensorType::Ptr type, TensorDimensions &dims) {
+  if (isa<ScalarType>(type)) {
+    return;
+  }
+
+  const auto tensorType = to<NDTensorType>(type);
+
+  if (dims.empty()) {
+    dims.resize(tensorType->indexSets.size());
   }
   
+  iassert(dims.size() == tensorType->indexSets.size());
+
+  for (unsigned i = 0; i < dims.size(); ++i) {
+    dims[i].push_back(tensorType->indexSets[i]);
+  }
+
+  getDimensions(tensorType->blockType, dims);
+}
+
+ScalarType::Type TypeChecker::getComponentType(TensorType::Ptr type) {
+  while (isa<NDTensorType>(type)) {
+    type = to<NDTensorType>(type)->blockType;
+  }
+
+  return to<ScalarType>(type)->type;
+}
+
+TypeChecker::TensorDimensions TypeChecker::getDimensions(TensorType::Ptr type) {
+  TensorDimensions dimensions;
+  getDimensions(type, dimensions);
+  return dimensions;
+}
+
+bool TypeChecker::getTransposed(TensorType::Ptr type) {
+  return isa<NDTensorType>(type) && to<NDTensorType>(type)->transposed;
+}
+
+TensorType::Ptr TypeChecker::makeTensorType(ScalarType::Type componentType,
+                                            const TensorDimensions &dimensions,
+                                            bool transposed) {
+  const auto scalarType = std::make_shared<ScalarType>();
+  scalarType->type = componentType;
+
+  if (dimensions.empty()) {
+    return scalarType;
+  }
+
+  TensorType::Ptr retType = scalarType;
+  for (unsigned i = 0; i < dimensions[0].size(); ++i) {
+    const auto tensorType = std::make_shared<NDTensorType>();
+    tensorType->blockType = retType;
+    
+    const unsigned idx = dimensions[0].size() - i - 1; 
+    for (unsigned j = 0; j < dimensions.size(); ++j) {
+      tensorType->indexSets.push_back(dimensions[j][idx]);
+    }
+
+    retType = tensorType;
+  }
+  to<NDTensorType>(retType)->transposed = transposed;
+
+  return retType;
+}
+
+std::string TypeChecker::toString(ExprType type) {
+  if (type.isVoid()) {
+    return "'void'";
+  } else if (type.isSingleValue()) {
+    return toString(type.type[0]);
+  }
+
+  std::stringstream oss;
+  oss << "'(";
+  
   bool printDelimiter = false;
-  for (const auto compType : *type) {
+  for (const auto compType : type.type) {
     if (printDelimiter) {
       oss << ", ";
     }
-    oss << typeString(compType);
+    oss << *compType;
     printDelimiter = true;
   }
 
-  if (type->size() > 1) {
-    oss << ")";
+  oss << ")'";
+  return oss.str();
+}
+
+std::string TypeChecker::toString(Type::Ptr type) {
+  std::stringstream oss;
+  oss << "'" << *type << "'";
+  if (isa<ElementType>(type)) {
+    const auto elemType = to<ElementType>(type);
+    // TODO: print source sets
+    //if (
   }
   return oss.str();
 }
 
-void TypeChecker::reportError(std::string msg, HIRNode::Ptr loc) {
-  if (skipReportError == 0) {
-    const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
-                                loc->getLineEnd(), loc->getColEnd(), msg);
-    errors->push_back(err);
+std::string TypeChecker::toString(ScalarType::Type type) {
+  switch (type) {
+    case ScalarType::Type::INT:
+      return "integer";
+    case ScalarType::Type::FLOAT:
+      return "floating-point";
+    case ScalarType::Type::BOOL:
+      return "boolean";
+    case ScalarType::Type::COMPLEX:
+      return "complex";
+    case ScalarType::Type::STRING:
+      return "string";
+    default:
+      unreachable;
+      return "";
   }
 }
 
-void TypeChecker::reportUndeclared(std::string type, std::string ident,
+void TypeChecker::reportError(const std::string &msg, HIRNode::Ptr loc) {
+  const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
+                              loc->getLineEnd(), loc->getColEnd(), msg);
+  errors->push_back(err);
+  retTypeChecked = false;
+}
+
+void TypeChecker::reportUndeclared(const std::string &type, 
+                                   const std::string &ident,
                                    HIRNode::Ptr loc) {
   std::stringstream errMsg;
   errMsg << "undeclared " << type << " '" << ident << "'";
   reportError(errMsg.str(), loc);
 }
 
-void TypeChecker::reportMultipleDefs(std::string type, std::string ident, 
+void TypeChecker::reportMultipleDefs(const std::string &type, 
+                                     const std::string &ident, 
                                      HIRNode::Ptr loc) {
   std::stringstream errMsg;
   errMsg << "multiple definitions of " << type << " '" << ident << "'";
@@ -1823,3 +2037,4 @@ void TypeChecker::reportMultipleDefs(std::string type, std::string ident,
 
 }
 }
+

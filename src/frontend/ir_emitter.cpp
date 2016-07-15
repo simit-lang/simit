@@ -153,7 +153,7 @@ void IREmitter::visit(ExternDecl::Ptr decl) {
 }
 
 void IREmitter::visit(FuncDecl::Ptr decl) {
-  if (decl->typeParams.size() > 0 && decl->originalName.empty()) {
+  if (decl->typeParams.size() > 0) {
     return;
   }
 
@@ -485,7 +485,7 @@ void IREmitter::visit(MulExpr::Ptr expr) {
   } else if (ltype->order() == 1 && rtype->order() == 1) {
     // Vector-Vector Multiplication (inner and outer product)
     iassert(lhs.type() == rhs.type());
-    if (expr->lhs->type.at(0).toTensor()->isColumnVector) {
+    if (ltype->isColumnVector) {
       retExpr = builder->outerProduct(lhs, rhs);
     } else {
       retExpr = builder->innerProduct(lhs, rhs);
@@ -579,7 +579,7 @@ void IREmitter::visit(TransposeExpr::Ptr expr) {
       retExpr = builder->unaryElwiseExpr(ir::IRBuilder::None, operand);
       auto retExprNode = const_cast<ir::ExprNode *>(to<ir::ExprNode>(retExpr));
       
-      const bool isColumnVector = expr->type.at(0).toTensor()->isColumnVector;
+      const bool isColumnVector = !type->isColumnVector;
       retExprNode->type = ir::TensorType::make(type->getComponentType(), 
                                                type->getDimensions(), 
                                                isColumnVector);
@@ -618,7 +618,7 @@ void IREmitter::visit(CallExpr::Ptr expr) {
 
 void IREmitter::visit(TensorReadExpr::Ptr expr) {
   const ir::Expr tensor = emitExpr(expr->tensor);
-  iassert(tensor.type().isTensor());
+  const auto tensorType = tensor.type().toTensor();
 
   std::vector<ir::Expr> indices;
   bool containsSlices = false;
@@ -654,8 +654,20 @@ void IREmitter::visit(TensorReadExpr::Ptr expr) {
     }
 
     // Now construct an index expression.
-    retExpr = ir::IndexExpr::make(freeVars,
-                                  ir::IndexedTensor::make(tensor, allivars));
+    const auto retTensor = ir::IndexedTensor::make(tensor, allivars);
+    retExpr = ir::IndexExpr::make(freeVars, retTensor);
+    
+    // Convert to column vector if applicable.
+    const auto retTensorType = retExpr.type().toTensor();
+    if (retTensorType->order() == 1) {
+      const bool isColumnVector = (tensorType->order() < 2) ? 
+          tensorType->getBlockType().toTensor()->isColumnVector :
+          expr->indices[expr->indices.size() - 2]->isSlice();
+      auto retExprNode = const_cast<ir::ExprNode *>(to<ir::ExprNode>(retExpr));
+      retExprNode->type = ir::TensorType::make(
+          retTensorType->getComponentType(), 
+          retTensorType->getDimensions(), isColumnVector);
+    }
   } else {
     retExpr = ir::TensorRead::make(tensor, indices);
   }
@@ -738,7 +750,8 @@ void IREmitter::emitDenseTensorLiteral(DenseTensorLiteral::Ptr tensor) {
       dataSize = util::getVectorSize(tensorVals.intVals);
       const ir::Type tensorType = ir::TensorType::make(elemType, idoms, 
                                                        tensor->transposed);
-      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data), dataSize);
+      retExpr = ir::Literal::make(tensorType, const_cast<void *>(data), 
+                                  dataSize);
       return;
     }
     case DenseTensorValues::Type::FLOAT:
@@ -866,12 +879,10 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   
   const auto initExpr = decl->initVal ? emitExpr(decl->initVal) : ir::Expr();
   const auto varType = decl->type ? emitType(decl->type) : initExpr.type();
-  
   const auto var = ir::Var(decl->name->ident, varType);
-  iassert(!ctx->hasSymbol(var.getName(), true));
-
   const auto access = isConst ? internal::Symbol::Read : 
                       internal::Symbol::ReadWrite;
+  
   ctx->addSymbol(var.getName(), var, access);
 
   if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr) && 

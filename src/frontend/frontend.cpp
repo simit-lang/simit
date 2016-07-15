@@ -14,7 +14,7 @@
 #include "const_checker.h"
 #include "const_fold.h"
 #include "context_sensitive_rewriter.h"
-#include "infer_element_sets.h"
+#include "infer_element_sources.h"
 #include "ir_emitter.h"
 #include "pad_tensor_blocks.h"
 #include "specialize_generic_functions.h"
@@ -34,8 +34,8 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   program = hir::ConstantFolding().rewrite(program);
   // hir::PadTensorBlocks().pad(program);
   hir::ConstChecker(errors).check(program);
-  hir::InferElementSets().infer(program);
-  std::cout << *program << std::endl;
+  hir::InferElementSources().infer(program);
+  //std::cout << *program << std::endl;
   hir::SpecializeGenericFunctions().specialize(program);
   std::cout << *program << std::endl;
   hir::TypeChecker(errors).check(program);

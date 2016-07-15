@@ -1,18 +1,18 @@
 #include <memory>
 #include <string>
 
-#include "infer_element_sets.h"
+#include "infer_element_sources.h"
 #include "hir.h"
 #include "hir_rewriter.h"
 
 namespace simit {
 namespace hir {
 
-void InferElementSets::visit(IdentDecl::Ptr decl) {
+void InferElementSources::visit(IdentDecl::Ptr decl) {
   decls.insert(decl->name->ident, decl->type);
 }
 
-void InferElementSets::visit(FuncDecl::Ptr decl) {
+void InferElementSources::visit(FuncDecl::Ptr decl) {
   decls.insert(decl->name->ident, Type::Ptr());
   decls.scope();
   for (const auto typeParam : decl->typeParams) {
@@ -22,11 +22,11 @@ void InferElementSets::visit(FuncDecl::Ptr decl) {
   decls.unscope();
 }
 
-void InferElementSets::visit(VarDecl::Ptr decl) {
+void InferElementSources::visit(VarDecl::Ptr decl) {
   decls.insert(decl->name->ident, Type::Ptr());
 }
 
-void InferElementSets::visit(WhileStmt::Ptr stmt) {
+void InferElementSources::visit(WhileStmt::Ptr stmt) {
   stmt->cond->accept(this);
   
   decls.scope();
@@ -34,7 +34,7 @@ void InferElementSets::visit(WhileStmt::Ptr stmt) {
   decls.unscope();
 }
   
-void InferElementSets::visit(IfStmt::Ptr stmt) {
+void InferElementSources::visit(IfStmt::Ptr stmt) {
   stmt->cond->accept(this);
 
   decls.scope();
@@ -48,13 +48,13 @@ void InferElementSets::visit(IfStmt::Ptr stmt) {
   }
 }
 
-void InferElementSets::visit(ForStmt::Ptr stmt) {
+void InferElementSources::visit(ForStmt::Ptr stmt) {
   decls.scope();
   HIRVisitor::visit(stmt);
   decls.unscope();
 }
 
-void InferElementSets::visit(AssignStmt::Ptr stmt) {
+void InferElementSources::visit(AssignStmt::Ptr stmt) {
   stmt->expr->accept(this);
   for (auto &lhs : stmt->lhs) {
     lhs->accept(this);
@@ -67,7 +67,7 @@ void InferElementSets::visit(AssignStmt::Ptr stmt) {
   }
 }
 
-void InferElementSets::visit(TensorReadExpr::Ptr expr) {
+void InferElementSources::visit(TensorReadExpr::Ptr expr) {
   HIRVisitor::visit(expr);
 
   // TODO: For now, we don't consider nested tensor reads as sparse inner 

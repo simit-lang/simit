@@ -1,5 +1,5 @@
-#ifndef SIMIT_INFER_ELEMENT_SETS_H
-#define SIMIT_INFER_ELEMENT_SETS_H
+#ifndef SIMIT_INFER_ELEMENT_SOURCES_H
+#define SIMIT_INFER_ELEMENT_SOURCES_H
 
 #include "hir.h"
 #include "hir_visitor.h"
@@ -8,7 +8,7 @@
 namespace simit {
 namespace hir {
 
-class InferElementSets : public HIRVisitor {
+class InferElementSources : public HIRVisitor {
 public:
   void infer(Program::Ptr program) { program->accept(this); }
 
