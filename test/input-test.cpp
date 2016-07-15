@@ -125,20 +125,31 @@ void runTest(ProgramTestParam param, bool shouldFail) {
   ASSERT_FALSE(param.failedIO) << "failed to read file " + param.path;
 
   Program program;
-  bool success;
 
-  success = (program.loadString(param.source) == 0);
-  if (!success && !shouldFail) {
-    assert(program.hasErrors());
-    for (auto &diag : program.getDiagnostics()) {
-      ADD_FAILURE() << diag.getMessage();
+  if (!shouldFail) {
+    bool success = (program.loadString(param.source) == 0);
+    if (!success) {
+      assert(program.hasErrors());
+      for (auto &diag : program.getDiagnostics()) {
+        ADD_FAILURE() << diag.getMessage();
+      }
+      FAIL();
+      return;
     }
-    FAIL();
-    return;
-  } else if (success && shouldFail) {
-    assert(!program.hasErrors());
-    FAIL();
-    return;
+  }
+  else {
+    bool success = false;
+    try {
+      success = (program.loadString(param.source) == 0);
+    }
+    catch (SimitException& se) {
+      success = false;
+    }
+    if (success) {
+      assert(!program.hasErrors());
+      FAIL();
+      return;
+    }
   }
 
   if (program.verify() != 0) {
