@@ -702,8 +702,9 @@ class FieldRefBaseParameterized : public FieldRefBase {
       elemData[i++] = val;
     }
   }
-  
-  void set(ElementRef element, std::vector<float> values) {
+
+  template <typename Collection>
+  void set(ElementRef element, Collection values) {
     iassert(values.size() == (TensorRef<T,dimensions...>::getSize()))
         << "Incorrect number of init values : " << 
         (TensorRef<T,dimensions...>::getSize());
