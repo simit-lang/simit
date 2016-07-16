@@ -19,7 +19,7 @@ using namespace std;
 namespace simit {
 
 const std::vector<std::string> VALID_BACKENDS = {
-  "llvm",
+  "cpu",
 #ifdef GPU
   "gpu",
 #endif

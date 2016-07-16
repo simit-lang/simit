@@ -75,7 +75,7 @@ int main(int argc, char **argv) {
   ::testing::InitGoogleTest(&argc, argv);
 
   // Handle leftover flags
-  std::string simitBackend = "llvm";
+  std::string simitBackend = "cpu";
   for (int i = 0; i < argc; ++i) {
     std::string arg = argv[i];
     if (arg.substr(0,2) == "--") {
