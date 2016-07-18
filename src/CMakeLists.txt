@@ -1,4 +1,14 @@
 # Simit
+set(CMAKE_MACOSX_RPATH 1)
+
+if (SIMIT_SHARED_LIBRARY)
+  set(SIMIT_LIBRARY_TYPE SHARED)
+  message("-- Shared library")
+else()
+  set(SIMIT_LIBRARY_TYPE STATIC)
+  message("-- Static library")
+endif()
+
 set(SIMIT_SOURCE_DIRS . util)
 
 foreach(dir ${SIMIT_SOURCE_DIRS})

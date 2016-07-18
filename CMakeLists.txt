@@ -37,11 +37,7 @@ if ($ENV{SIMIT_ASSERTS})
   add_definitions(-DSIMIT_ASSERTS)
 endif ()
 
-if (SIMIT_SHARED_LIBRARY)
-  set(SIMIT_LIBRARY_TYPE SHARED)
-else()
-  set(SIMIT_LIBRARY_TYPE STATIC)
-endif()
+option(SIMIT_SHARED_LIBRARY "Build as a shared library" ON)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
