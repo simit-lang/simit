@@ -1,5 +1,6 @@
 Simit is a programming language designed to make it easier to write
-high-performance code to simulate sparse systems.
+high-performance code to simulate sparse systems.  For more information see
+[simit-lang.org](http://simit-lang.org).
 
 Building Simit
 ==============
@@ -22,7 +23,6 @@ Then build it:
 Then set the LLVM_CONFIG environment variable to point to llvm-config:
 
     export LLVM_CONFIG=<path to llvm>/Release+Asserts/bin/llvm-config
-
 
 To perform an out-of-tree build of Simit do:
 
@@ -62,6 +62,6 @@ Open doc/index.html in your browser.
 Simit Continuous Testing
 ========================
 Simit is currently tested on a Jenkins instance located at
-http://128.52.181.113/. A test build is triggered on every push to master and
-each pull request. The status of the test is marked on the pull request in
-Github.
+[builds.simit-lang.org](http://builds.simit-lang.org) . A test build is
+triggered on every push to master and each pull request. The status of the test
+is marked on the pull request in Github.

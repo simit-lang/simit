@@ -9,7 +9,7 @@ int main(int argc, const char* argv[]) {
     return 3;
   }
 
-  simit::init("llvm");
+  simit::init("cpu");
 
   simit::Program program;
   int status = program.loadFile(argv[1]);

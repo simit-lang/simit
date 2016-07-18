@@ -1,6 +1,10 @@
 " Vim syntax file
 " Language: Simit	
-" Last Change: 6 March 2016	
+" Last Change: 14 July 2016	
+"
+" Add the following lines to your ~/.vimrc to highlight .sim files:
+" syntax on
+" au BufNewFile,BufRead *.sim set filetype=simit 
 
 if version < 600
   syntax clear
