@@ -24,7 +24,6 @@ Then set the LLVM_CONFIG environment variable to point to llvm-config:
 
     export LLVM_CONFIG=<path to llvm>/Release+Asserts/bin/llvm-config
 
-
 To perform an out-of-tree build of Simit do:
 
     cd <simit-directory>

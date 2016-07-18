@@ -49,42 +49,36 @@ string(SUBSTRING ${LLVM_VERSION} 2 1 LLVM_MINOR_VERSION)
 add_definitions("-DLLVM_MAJOR_VERSION=${LLVM_MAJOR_VERSION}")
 add_definitions("-DLLVM_MINOR_VERSION=${LLVM_MINOR_VERSION}")
 
+string(SUBSTRING ${LLVM_VERSION} 0 3 LLVM_VERSION)
+string(REPLACE "." "" LLVM_VERSION "${LLVM_VERSION}")
+
 execute_process(COMMAND ${LLVM_CONFIG} --cppflags OUTPUT_VARIABLE LLVM_CPPFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
 set_property(TARGET ${PROJECT_NAME} PROPERTY COMPILE_FLAGS ${LLVM_CPPFLAGS})
 
 execute_process(COMMAND ${LLVM_CONFIG} --includedir OUTPUT_VARIABLE LLVM_INCLUDES OUTPUT_STRIP_TRAILING_WHITESPACE)
 include_directories("${LLVM_INCLUDES}")
 
-execute_process(COMMAND ${LLVM_CONFIG} --ldflags OUTPUT_VARIABLE LLVM_LDFLAGS OUTPUT_STRIP_TRAILING_WHITESPACE)
-if (DEFINED LLVM_CONFIG_GT_45)
-  execute_process(COMMAND ${LLVM_CONFIG} --system-libs OUTPUT_VARIABLE LLVM_SYSTEM_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
-  set(LLVM_LDFLAGS ${LLVM_LDFLAGS} ${LLVM_SYSTEM_LIBS})
+set(LLVM_COMPONENTS core mcjit bitwriter x86 ipo)
+if (LLVM_VERSION GREATER 36)
+ list(APPEND LLVM_COMPONENTS passes)
+else()
+ list(APPEND LLVM_COMPONENTS ipo)
 endif()
 
-set_property(TARGET ${PROJECT_NAME} PROPERTY LINK_FLAGS ${LLVM_LDFLAGS})
-
-set(LLVM_COMPONENTS core mcjit x86 bitwriter ipo)
-
-execute_process(COMMAND ${LLVM_CONFIG} --libnames ${LLVM_COMPONENTS} OUTPUT_VARIABLE LLVM_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND "${LLVM_CONFIG}" --libfiles ${LLVM_COMPONENTS} OUTPUT_VARIABLE LLVM_LIBS OUTPUT_STRIP_TRAILING_WHITESPACE)
 separate_arguments(LLVM_LIBS)  # Turn the space-separate string into a ;-separated list
-execute_process(COMMAND ${LLVM_CONFIG} --libdir OUTPUT_VARIABLE LLVM_LIBDIR OUTPUT_STRIP_TRAILING_WHITESPACE)
+target_link_libraries(${PROJECT_NAME} PRIVATE ${LLVM_LIBS})
 
-foreach(lib ${LLVM_LIBS})
-  find_library(libpath NAMES ${lib} NO_DEFAULT_PATH PATHS ${LLVM_LIBDIR} PATH_SUFFIXES Debug Release MinSizeRel RelWithDebInfo)
-  target_link_libraries(${PROJECT_NAME} ${libpath})
-  unset(libpath CACHE)
-endforeach()
-
-separate_arguments(LLVM_LDFLAGS)
-foreach(ldflag ${LLVM_LDFLAGS})
-  string(STRIP ${ldflag} ldflag)
-  if (${ldflag} MATCHES "^-l.*$")
-	 string(LENGTH ${ldflag} len)
-	 MATH(EXPR len ${len}-2)
-	 string(SUBSTRING ${ldflag} 2 ${len} ldflag)
-	 target_link_libraries(${PROJECT_NAME} ${ldflag})
-  endif()
-endforeach()
+if (${LLVM_VERSION} GREATER 34)
+  execute_process(COMMAND "${LLVM_CONFIG}" --system-libs ${LLVM_COMPONENTS} OUTPUT_VARIABLE EXTRA_LIBS)
+else()
+  execute_process(COMMAND "${LLVM_CONFIG}" --ldflags OUTPUT_VARIABLE EXTRA_LIBS)
+endif()
+string(STRIP EXTRA_LIBS "${EXTRA_LIBS}")
+string(REPLACE "-l" ";" EXTRA_LIBS "${EXTRA_LIBS}")
+string(REPLACE "\n" "" EXTRA_LIBS "${EXTRA_LIBS}")
+string(REPLACE " " "" EXTRA_LIBS "${EXTRA_LIBS}")
+target_link_libraries(${PROJECT_NAME} PUBLIC ${EXTRA_LIBS})
 
 
 # EIGEN
