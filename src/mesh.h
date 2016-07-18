@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 #include <array>
+#include <string>
 namespace simit{
 
 ///a triagular mesh data structure for loading
@@ -21,6 +22,8 @@ struct Mesh{
 
   ///return -1 if failed to load
   int load(const char * filename);
+  ///return -1 if failed to load
+  int load(std::string filename);
   ///return -1 if failed to load or format is unrecognized
   int load(std::istream & in);
   ///return -1 if failed to save
@@ -46,22 +49,33 @@ struct MeshVol{
   
   ///return -1 if failed to load
   int load(const char * filename);
+  ///return -1 if failed to load
+  int load(std::string filename);
   ///return -1 if failed to load or format is unrecognized
   int load(std::istream & in);
 
   ///return -1 if failed to load
   int loadTet(const char * nodeFile, const char * eleFile);
+  ///return -1 if failed to load
+  int loadTet(std::string nodeFile, std::string eleFile);
   int loadTet(std::istream & nodeIn, std::istream & eleIn);
   int loadTetEdge(const char * edgeFile);
+  int loadTetEdge(std::string edgeFile);
   int loadTetEdge(std::istream & edgeIn);
+
   ///return -1 if failed to save
   int save(const char * filename);
+  int save(std::string filename);
   int save(std::ostream & out);
   
   ///save surface mesh obj file. Only works for hexahedral mesh
   int saveHexObj(const char * filename);
+  int saveHexObj(std::string filename);
+
   ///save surface mesh obj file. Only works for tetrahedral mesh
   int saveTetObj(const char * filename);
+  int saveTetObj(std::string filename);
+
   ///for each vertex, what elements contain the vertex.
   void elementNeighbors(std::vector<std::vector<int> > & eleNeighbor);
   

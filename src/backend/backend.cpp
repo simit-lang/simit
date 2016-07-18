@@ -18,7 +18,7 @@ namespace simit {
 namespace backend {
 
 BackendImpl* getBackendImpl(const std::string &type) {
-  if (type == "llvm") {
+  if (type == "cpu") {
     return new backend::LLVMBackend();
   }
 #ifdef GPU

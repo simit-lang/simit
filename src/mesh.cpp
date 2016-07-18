@@ -47,7 +47,6 @@ int openOfstream(ofstream & out, const char * filename)
   return 0;
 }
 
-
 int Mesh::load(const char * filename)
 {
   ifstream in;
@@ -58,6 +57,10 @@ int Mesh::load(const char * filename)
   status = load(in);
   in.close();
   return status;
+}
+
+int Mesh::load(std::string filename) {
+  return load(filename.c_str());
 }
 
 int Mesh::load(istream & in)
@@ -163,6 +166,10 @@ int MeshVol::load(const char * filename)
   return status;
 }
 
+int MeshVol::load(std::string filename) {
+  return load(filename.c_str());
+}
+
 int MeshVol::load(istream & in)
 {
   string token;
@@ -196,6 +203,10 @@ int MeshVol::save(const char * filename)
   int status = save(out);
   out.close();
   return status;
+}
+
+int MeshVol::save(std::string filename) {
+  return save(filename.c_str());
 }
 
 int MeshVol::save(ostream & out)
@@ -232,6 +243,10 @@ int MeshVol::loadTet(const char * nodeFile, const char * eleFile)
   nodeIn.close();
   eleIn.close();
   return status;
+}
+
+int MeshVol::loadTet(std::string nodeFile, std::string eleFile) {
+  return loadTet(nodeFile.c_str(), eleFile.c_str());
 }
 
 int MeshVol::loadTet(istream & nodeIn, istream & eleIn)
@@ -317,6 +332,10 @@ int MeshVol::loadTetEdge(const char * edgeFile)
   return status;
 }
 
+int MeshVol::loadTetEdge(std::string edgeFile) {
+  return loadTetEdge(edgeFile.c_str());
+}
+
 int MeshVol::loadTetEdge(istream & edgeIn)
 {
   //load vertices
@@ -389,7 +408,6 @@ void MeshVol::updateSurfVert()
   }
 }
 
-///save surface mesh obj file. Only works for hexahedral mesh
 int MeshVol::saveHexObj(const char * filename)
 {
   if(surf.v.size()==0){
@@ -398,6 +416,12 @@ int MeshVol::saveHexObj(const char * filename)
   updateSurfVert();
   return surf.save(filename);
 }
+
+int MeshVol::saveHexObj(std::string filename) {
+  return saveHexObj(filename.c_str());
+}
+
+int saveTetObj(std::string filename);
 
 void MeshVol::makeHexSurf()
 {
@@ -493,7 +517,6 @@ int findTetFace(const IntMap & m, int ei, const MeshVol & vol)
   return 0;
 }
 
-///save surface mesh obj file. Only works for hexahedral mesh
 int MeshVol::saveTetObj(const char * filename)
 {
   if(surf.v.size()==0){
@@ -501,6 +524,10 @@ int MeshVol::saveTetObj(const char * filename)
   }
   updateSurfVert();
   return surf.save(filename);
+}
+
+int MeshVol::saveTetObj(std::string filename) {
+  return saveTetObj(filename.c_str());
 }
 
 void MeshVol::makeTetSurf()

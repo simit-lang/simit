@@ -122,7 +122,7 @@ int main(int argc, const char* argv[]) {
     gpuOutFile = sourceFile + ".out";
   }
 
-  std::string backend = emitGPU ? "gpu" : "llvm";
+  std::string backend = emitGPU ? "gpu" : "cpu";
 #ifdef F32
   simit::init(backend, sizeof(float));
 #else
@@ -232,7 +232,7 @@ int main(int argc, const char* argv[]) {
     // Emit and print llvm code
     // NB: The LLVM code gets further optimized at init time (OSR, etc.)
     if (emitLLVM || emitASM) {
-      backend::Backend backend("llvm");
+      backend::Backend backend("cpu");
       simit::Function  llvmFunc(backend.compile(func));
 
       if (emitLLVM) {
