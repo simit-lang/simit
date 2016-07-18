@@ -1,5 +1,6 @@
 Simit is a programming language designed to make it easier to write
-high-performance code to simulate sparse systems.
+high-performance code to simulate sparse systems.  For more information see
+[simit-lang.org](http://simit-lang.org).
 
 Building Simit
 ==============
