@@ -63,6 +63,6 @@ Open doc/index.html in your browser.
 Simit Continuous Testing
 ========================
 Simit is currently tested on a Jenkins instance located at
-http://128.52.181.113/. A test build is triggered on every push to master and
-each pull request. The status of the test is marked on the pull request in
-Github.
+[builds.simit-lang.org](http://builds.simit-lang.org) . A test build is
+triggered on every push to master and each pull request. The status of the test
+is marked on the pull request in Github.
