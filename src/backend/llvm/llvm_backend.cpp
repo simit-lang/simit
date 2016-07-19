@@ -33,6 +33,7 @@
 #include "llvm_types.h"
 #include "llvm_codegen.h"
 #include "llvm_util.h"
+#include "llvm_data_layouts.h"
 
 #include "macros.h"
 #include "types.h"
@@ -364,28 +365,25 @@ void LLVMBackend::compile(const ir::Length& length) {
 
 void LLVMBackend::compile(const ir::IndexRead& indexRead) {
   iassert(indexRead.edgeSet.type().isSet());
-  const SetType *setType = indexRead.edgeSet.type().toSet();
-  if (setType->kind == SetType::Unstructured) {
-    // TODO: Add support for different indices (contained in the Set type).
-    unsigned int indexLoc = 1 + indexRead.kind;
-
-    iassert(setType->endpointSets.size() > 0);
-
-    llvm::Value *edgesValue = compile(indexRead.edgeSet);
-    val = builder->CreateExtractValue(edgesValue,{indexLoc},util::toString(indexRead));
-  }
-  else if (setType->kind == SetType::LatticeLink) {
-    iassert(indexRead.kind == IndexRead::LatticeDim)
-        << "Only LatticeDim index read valid for lattice link sets";
-    iassert(indexRead.index < setType->dimensions)
-        << "Cannot read index " << indexRead.index << " for set with"
-        << "only dimensions " << setType->dimensions;
-    llvm::Value *edgesValue = compile(indexRead.edgeSet);
-    val = builder->CreateExtractValue(
-        edgesValue,{indexRead.index},util::toString(indexRead));
-  }
-  else {
-    not_supported_yet;
+  llvm::Value *edgesValue = compile(indexRead.edgeSet);
+  std::shared_ptr<SetLayout> layout =
+      getSetLayout(indexRead.edgeSet, edgesValue, builder.get());
+  switch (indexRead.kind) {
+    case ir::IndexRead::Endpoints:
+      val = layout->getEpsArray();
+      break;
+    case ir::IndexRead::NeighborsStart:
+      val = layout->getNbrsStartArray();
+      break;
+    case ir::IndexRead::Neighbors:
+      val = layout->getNbrsArray();
+      break;
+    case ir::IndexRead::LatticeDim:
+      iassert(indexRead.edgeSet.type().toSet()->kind == SetType::LatticeLink);
+      val = layout->getSize(indexRead.index);
+      break;
+    default:
+      unreachable;
   }
 }
 
@@ -1377,6 +1375,7 @@ llvm::Function *LLVMBackend::getBuiltIn(std::string name,
 llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
                                         std::string fieldName) {
   assert(elemOrSet.type().isElement() || elemOrSet.type().isSet());
+  llvm::Value *setOrElemValue = compile(elemOrSet);
   const ElementType *elemType = nullptr;
   int fieldsOffset = -1;
   if (elemOrSet.type().isElement()) {
@@ -1386,24 +1385,12 @@ llvm::Value *LLVMBackend::emitFieldRead(const Expr &elemOrSet,
   else {
     const SetType *setType = elemOrSet.type().toSet();
     elemType = setType->elementType.toElement();
-    if (setType->kind == SetType::Unstructured) {
-      fieldsOffset = 1; // jump over set size
-      if (setType->endpointSets.size() > 0) {
-        fieldsOffset += NUM_EDGE_INDEX_ELEMENTS; // jump over index pointers
-      }
-    }
-    else if (setType->kind == SetType::LatticeLink) {
-      // Jump over d sizes
-      fieldsOffset = setType->dimensions;
-    }
-    else {
-      not_supported_yet;
-    }
+    std::shared_ptr<SetLayout> layout =
+        getSetLayout(elemOrSet, setOrElemValue, builder.get());
+    fieldsOffset = layout->getFieldsOffset();
   }
   assert(fieldsOffset >= 0);
-
-  llvm::Value *setOrElemValue = compile(elemOrSet);
-
+  
   assert(elemType->hasField(fieldName));
   unsigned fieldLoc = fieldsOffset + elemType->fieldNames.at(fieldName);
   return builder->CreateExtractValue(setOrElemValue, {fieldLoc},

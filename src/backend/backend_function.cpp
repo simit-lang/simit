@@ -77,6 +77,7 @@ const std::vector<std::string>& Function::getArgs() const {
 }
 
 const ir::Type& Function::getArgType(std::string arg) const {
+  uassert(hasArg(arg)) << "No argument with name: " << arg;
   return argumentTypes.at(arg);
 }
 

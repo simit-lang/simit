@@ -174,7 +174,7 @@ public:
   inline int getSize() const { return numElements; }
 
   /// Returns the dimensions for a lattice link set
-  inline std::vector<int> getDimensions() const {
+  inline const std::vector<int>& getDimensions() const {
     uassert(kind == LatticeLink)
         << "Can only retrieve dimensions for a lattice link set";
     return dimensions;
