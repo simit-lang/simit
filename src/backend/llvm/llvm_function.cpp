@@ -18,6 +18,7 @@
 
 #include "llvm_types.h"
 #include "llvm_codegen.h"
+#include "llvm_data_layouts.h"
 
 #include "backend/actual.h"
 #include "graph.h"
@@ -145,46 +146,28 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
     globals[name] = std::unique_ptr<Actual>(new SetActual(set));
     const ir::SetType* setType = getGlobalType(name).toSet();
 
-    int *externSizePtr;
     if (setType->kind == ir::SetType::Unstructured) {
       uassert(set->getKind() == simit::Set::Unstructured)
           << "Must bind an unstructured set to " << name;
-      // Write set size to extern
-      iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
-      externSizePtr = (int*)externPtrs.at(name)[0];
-      *externSizePtr = set->getSize();
-      externSizePtr++;
     }
     else if (setType->kind == ir::SetType::LatticeLink) {
       uassert(set->getKind() == simit::Set::LatticeLink)
-          << "Must bind a lattie link set to " << name;
-      // Infer set sizes (TODO: add these to the runtime Set structure)
-      // We assume cubic for now.
+          << "Must bind a lattice link set to " << name;
       int ndims = setType->dimensions;
       vector<int> dimensions = set->getDimensions();
       uassert(dimensions.size() == ndims)
           << "Lattice link set with wrong number of dimensions: "
           << dimensions.size() << " passed, but " << ndims
           << " required";
-      
-      // Write sizes in all dimensions to extern
-      iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
-      externSizePtr = (int*)externPtrs.at(name)[0];
-      for (int i = 0; i < ndims; ++i) {
-        *externSizePtr = dimensions[i];
-        externSizePtr++;
-      }
     }
     else {
       not_supported_yet;
     }
 
-    // Write field pointers to extern
-    void** externFieldsPtr = (void**)(externSizePtr);
-    for (auto& field : setType->elementType.toElement()->fields) {
-      *externFieldsPtr = set->getFieldData(field.name);
-      ++externFieldsPtr;
-    }
+    // Write set values and pointers to the relevant extern
+    iassert(util::contains(externPtrs, name) && externPtrs.at(name).size()==1);
+    void *externPtr = externPtrs.at(name)[0];
+    writeSet(set, getGlobalType(name), externPtr);
   }
 }
 
@@ -367,56 +350,7 @@ Function::FuncType LLVMFunction::init() {
         }
 
         void visit(SetActual* actual) {
-          const ir::SetType *setType = type.toSet();
-          Set *set = actual->getSet();
-
-          llvm::StructType *llvmSetType = llvmType(*setType);
-
-          vector<llvm::Constant*> setData;
-
-          if (setType->kind == SetType::Unstructured) {
-            // Set size
-            setData.push_back(llvmInt(set->getSize()));
-
-            // Edge indices (if the set is an edge set)
-            if (setType->endpointSets.size() > 0) {
-              // Endpoints index
-              setData.push_back(llvmPtr(LLVM_INT_PTR, set->getEndpointsData()));
-
-              // Edges index
-              // TODO
-
-              // Neighbor index
-              const internal::NeighborIndex *nbrs = set->getNeighborIndex();
-              setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getStartIndex()));
-              setData.push_back(llvmPtr(LLVM_INT_PTR, nbrs->getNeighborIndex()));
-            }
-          }
-          else if (setType->kind == SetType::LatticeLink) {
-            int ndims = setType->dimensions;
-            vector<int> dimensions = set->getDimensions();
-            uassert(dimensions.size() == ndims)
-                << "Lattice link set with wrong number of dimensions: "
-                << dimensions.size() << " passed, but " << ndims
-                << " required";
-
-            // Add sizes in all dimensions to llvm set struct
-            for (int i = 0; i < ndims; ++i) {
-              setData.push_back(llvmInt(dimensions[i]));
-            }
-          }
-          else {
-            not_supported_yet;
-          }
-
-          // Fields
-          for (auto &field : setType->elementType.toElement()->fields) {
-            assert(field.type.isTensor());
-            setData.push_back(llvmPtr(*field.type.toTensor(),
-                                      set->getFieldData(field.name)));
-          }
-
-          result = llvm::ConstantStruct::get(llvmSetType, setData);
+          result = makeSet(actual->getSet(), type);
         }
 
         void visit(TensorActual* actual) {

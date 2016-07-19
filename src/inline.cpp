@@ -3,6 +3,7 @@
 #include <vector>
 #include <map>
 
+#include "init.h"
 #include "temps.h"
 #include "flatten.h"
 #include "intrinsics.h"
@@ -427,12 +428,18 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
     // Must have exactly one stencil-assembled output
     iassert(stencilVar.defined())
         << "map with through must assemble exactly one stencil-assembled var";
-    // Build compile-time locs
-    StencilContent *s = buildStencilLocs(map->function, stencilVar, lv, clocs);
-    s->latticeSet = to<VarExpr>(map->through)->var; // assumes VarExpr
-    storage->getStorage(mapVar).getTensorIndex().setStencilLayout(s);
-    iassert(ivs.size() > 0);
-    return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs, ivs);
+    if (kIndexlessStencils) {
+      // Build compile-time locs
+      StencilContent *s = buildStencilLocs(map->function, stencilVar, lv, clocs);
+      s->latticeSet = to<VarExpr>(map->through)->var; // assumes VarExpr
+      storage->getStorage(mapVar).getTensorIndex().setStencilLayout(s);
+      iassert(ivs.size() > 0);
+      return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs, ivs);
+    }
+    else {
+      // Replace storage with Indexed
+      unreachable;
+    }
   }
   else {
     return rewriter.inlineMapFunc(map, lv, storage);
