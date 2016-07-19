@@ -41,8 +41,6 @@ int main(int argc, char **argv)
   Set points;
   Set springs(points, points);
 
-  double t         = 0.0;               // time
-  double h         = 1e-2;              // time step
   double stiffness = 1e4;
   double density   = 1e3;
   double radius    = 0.01;
