@@ -1,7 +1,6 @@
 #include "graph.h"
 #include "program.h"
 #include "mesh.h"
-
 #include <cmath>
 
 using namespace simit;
