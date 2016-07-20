@@ -168,28 +168,29 @@ func precomputeTetMat(inout t : Tet, v : (Vert*4))
   end
 end
 
-export func initializeTet
+export func initializeTet()
   print 0;
   m = map precomputeTetMat to tets;
   verts.m = m;
 end
 
-export func main
- h=0.005;
+export func main()
+  h=0.005;
   
-  b = map compute_force(h) to tets reduce +;
+  var b = map compute_force(h) to tets reduce +;
+  b = b+h*verts.fe;
+
   A = map compute_stiffness(h) to tets reduce +; % was K
   xguess = verts.v;
-  b = b+h*verts.fe;
-% begin inlined CG
-  tol = 1e-12;
-  maxiters=100;
-  r = b - (A*xguess);
-  p = r;
-  iter = 0;
-  x = xguess;
 
-  normr2 = r' * r;
+% begin inlined CG
+  var tol = 1e-12;
+  var maxiters=100;
+  var r = b - (A*xguess);
+  var p = r;
+  var iter = 0;
+  var x = xguess;
+  var normr2 = r' * r;
   while (normr2 > tol) and (iter < maxiters)
     Ap = A * p;
     denom = p' * Ap;
