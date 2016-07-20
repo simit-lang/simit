@@ -1,0 +1,237 @@
+%linear elasticity
+element Tet
+  u : float;
+  l : float;
+  %precomputed element volume at rest pose
+  W : float;
+  %precomputed matrix
+  B : tensor[3,3](float);
+end
+
+element Vert
+  x  : tensor[3](float);
+  v  : tensor[3](float);
+  %constant external forces
+  fe : tensor[3](float);
+  c  : int;
+  m : float;
+end
+
+extern verts : set{Vert};
+extern tets : set{Tet}(verts, verts, verts, verts);
+
+%first Piola Kirchoff stress
+func PK1(u:float, l:float, F:tensor[3,3](float))->(P:tensor[3,3](float))
+I = [1.0,0.0,0.0;0.0,1.0,0.0;0.0,0.0,1.0];
+FI = F-I;
+t = FI(0,0) + FI(1,1)+ FI(2,2);
+P = u*(FI+FI') + l * t * I;
+end
+
+func dPdF(u:float, l:float, F:tensor[3,3](float), dF:tensor[3,3](float))->
+  (dP:tensor[3,3](float))
+I = [1.0,0.0,0.0;0.0,1.0,0.0;0.0,0.0,1.0];
+t = dF(0,0) + dF(1,1)+ dF(2,2);
+dP = u*(dF + dF') + l * t * I;
+end
+
+func compute_mass(v : Vert) ->
+    (M  : tensor[verts, verts](tensor[3,3](float)))
+  grav = [0.0, -10.0, 0.0];
+  eye3 = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 1.0, 0.0];
+  M(v,v) = v.m *eye3;
+end
+
+func columnOf(H:tensor[3,3](float), ii:int)->(f:tensor[3](float))
+  f(0) = H(0,ii);
+  f(1) = H(1,ii);
+  f(2) = H(2,ii);
+end
+
+func compute_force(h:float, e : Tet, v : (Vert*4)) -> (f : tensor[verts](tensor[3](float)))
+  var Ds :tensor[3,3](float);
+  %kg/m^3
+  rho = 1e3;
+  m = 0.25 * rho * e.W;
+  grav = [0.0, -10.0, 0.0]';
+  fg = m*grav;
+  for ii in 0:3
+    for jj in 0:3
+      Ds(jj,ii) = v(ii).x(jj)-v(3).x(jj);
+    end
+  end
+% println e.B;
+  F = Ds*e.B;
+%  println Ds;
+%  println F;
+  P = PK1(e.u, e.l, F);
+  H = -e.W * P * e.B';
+%  println H;
+  for ii in 0:3
+    fi = columnOf(H,ii);   
+    if (v(ii).c <= 0)
+      f(v(ii)) = h*fi ;
+    end
+
+    if (v(3).c <= 0)
+      f(v(3))  = -h*fi;
+    end
+  end
+  
+  for ii in 0:4
+    if(v(ii).c<=0)
+      f(v(ii)) = h*(fg) + m*v(ii).v;
+    end
+  end
+  
+end
+
+func sliceMat(Ke:tensor[12,12](float), i:int, j:int)->(K:tensor[3,3](float))
+  for l in 0:3
+    for m in 0:3
+      K(l,m) = Ke(i+l, j+m);
+    end
+  end
+end
+
+%Compute stiffness matrix for a single tet element.
+func compute_stiffness(h:float, e : Tet, v : (Vert*4)) ->
+     (K : tensor[verts,verts](tensor[3,3](float)))
+
+  %isotropic linear elasticity tensor
+   var E:tensor[6,6](float) = 0.0; 
+%%%%%%%%%%%%%%%%%
+%%Your code here
+%%%%%%%%%%%%%%%%%
+%%E(row, col) = ?;
+for i in 0:3
+    for j in 0:3
+      E(i,j) = e.l;
+    end
+   end
+  for i in 0:3
+    E(i,i) = e.l+2.0*e.u;
+  end
+  for i in 3:6
+    E(i, i) = e.u;
+  end
+%println E;
+
+  %shape function gradient
+  var dN : tensor[4, 3] (float) = 0.0;
+  for vi in 0:3
+    for di in 0:3
+      dN(vi, di) = e.B(vi, di);
+      dN(3, di) = dN(3, di) -e.B(vi,di);
+    end
+   end
+%   println dN;
+
+  %strain-displacement matrix
+  var B:tensor[6,12](float)=0.0;
+  %loop over 4 vertices
+%%%%%%%%%%%%%%%%%
+%%Your code here
+%%%%%%%%%%%%%%%%%
+%%B(row, col) = ?;
+%%Use entries in shape function gradient dN
+%loop over incident vertices
+for vi in 0:4
+    %loop over 3 dimensions
+    for di in 0:3
+      B(di, 3*vi+di) = dN(vi,di);
+    end
+    B(3, 3*vi) = dN(vi, 1);
+    B(3, 3*vi + 1) = dN(vi, 0);
+    B(4, 3*vi + 1) = dN(vi, 2);
+    B(4, 3*vi + 2) = dN(vi, 1);
+    B(5, 3*vi) = dN(vi, 2);
+    B(5, 3*vi + 2) = dN(vi, 0);
+  end
+%  println B;
+
+  %element stiffness matrix.
+  var Ke:tensor[12, 12](float) = 0.0;
+%%%%%%%%%%%%%%%%%
+%%Your code here
+%%%%%%%%%%%%%%%%%
+  Ke = e.W * B' * E * B;
+%%Write Ke using element volume e.W, and the matrices B, C.
+%  println Ke;
+  
+%assemble to global stiffness
+  for i in 0:4
+    for j in 0:4
+        if(v(i).c<=0) and (v(j).c<=0)
+          K(v(i) , v(j)) = h*h*sliceMat(Ke, 3*i, 3*j);
+        end
+    end
+  end
+  
+  rho = 1e3;
+  m = 0.25 * rho * e.W;
+  M = m*[1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+  for i in 0:4
+    K(v(i),v(i)) = M;
+  end
+end
+
+func precomputeTetMat(inout t : Tet, v : (Vert*4))
+    ->(m:tensor[verts](float))
+  var M:tensor[3,3](float);
+  for ii in 0:3
+    for jj in 0:3
+      M(jj,ii) = v(ii).x(jj) - v(3).x(jj);
+    end
+  end
+  t.B = inv(M);
+  %assume positive oriented tets.
+  vol = -(1.0/6.0) * det(M);
+  t.W = vol;
+  
+  %kg/m^3
+  rho = 1e3;
+  for ii in 0:4
+    m(v(ii))=0.25*rho*vol;
+  end
+end
+
+export func initializeTet
+  print 0;
+  m = map precomputeTetMat to tets;
+  verts.m = m;
+end
+
+export func main
+ h=0.005;
+  
+  b = map compute_force(h) to tets reduce +;
+  A = map compute_stiffness(h) to tets reduce +; % was K
+  xguess = verts.v;
+  b = b+h*verts.fe;
+% begin inlined CG
+  tol = 1e-12;
+  maxiters=100;
+  r = b - (A*xguess);
+  p = r;
+  iter = 0;
+  x = xguess;
+
+  normr2 = r' * r;
+  while (normr2 > tol) and (iter < maxiters)
+    Ap = A * p;
+    denom = p' * Ap;
+    alpha = normr2 / denom;
+    x = x + alpha * p;
+    normr2old = normr2;
+    r = r - alpha * Ap;
+    normr2 = r' * r;
+    beta = normr2 / normr2old;
+    p = r + beta * p;
+    iter = iter + 1;    
+  end
+% end inlined CG 
+  
+  verts.v = x;
+  verts.x = h * x + verts.x;
+end
