@@ -87,6 +87,7 @@ const Expr TensorIndex::computeRowptr(Expr source) const {
   }
   else {
     unreachable;
+    return Expr();
   }
 }
 
@@ -94,9 +95,11 @@ const Expr TensorIndex::computeColidx(Expr coord) const {
   iassert(isComputed());
   if (getKind() == Sten) {
     not_supported_yet;
+    return Expr();
   }
   else {
     unreachable;
+    return Expr();
   }
 }
 

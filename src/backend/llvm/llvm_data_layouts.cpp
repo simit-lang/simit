@@ -280,6 +280,7 @@ std::shared_ptr<SetLayout> getSetLayout(
   }
   else {
     unreachable;
+    return nullptr;
   }
 }
 
@@ -299,6 +300,7 @@ llvm::Value* makeSet(Set *actual, ir::Type type) {
   }
   else {
     unreachable;
+    return nullptr;
   }
 }
 
