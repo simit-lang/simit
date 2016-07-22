@@ -145,7 +145,7 @@ llvm::Value* LatticeEdgeSetLayout::getSize(unsigned i) {
 }
 
 llvm::Value* LatticeEdgeSetLayout::getTotalSize() {
-  int dims = set.type().toSet()->dimensions;
+  unsigned dims = set.type().toSet()->dimensions;
   // directional dimension
   llvm::Value *total = llvmInt(set.type().toSet()->dimensions);
   // lattice sites dimensions
@@ -190,7 +190,7 @@ llvm::Value* LatticeEdgeSetLayout::makeSet(Set *actual, ir::Type type) {
   vector<llvm::Constant*> setData;
 
   // Set sizes
-  int ndims = type.toSet()->dimensions;
+  unsigned ndims = type.toSet()->dimensions;
   const vector<int> &dimensions = actual->getDimensions();
   uassert(dimensions.size() == ndims)
       << "Lattice link set with wrong number of dimensions: "

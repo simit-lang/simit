@@ -198,7 +198,6 @@ private:
             << "index (flattened)";
 
         iassert(isa<VarExpr>(tensor));
-        const Var& var = to<VarExpr>(tensor)->var;
 
         if (indices.size() == 1) {
           index = rewrite(indices[0]);

@@ -47,7 +47,7 @@ TensorIndex::Kind TensorIndex::getKind() const {
   return content->kind;
 }
 
-const bool TensorIndex::isComputed() const {
+bool TensorIndex::isComputed() const {
   switch (content->kind) {
     case PExpr: return false;
     case Sten: return true;
