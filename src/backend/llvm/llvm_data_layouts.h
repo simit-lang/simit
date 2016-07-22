@@ -43,9 +43,9 @@ public:
   virtual llvm::Value* getSize(unsigned i);
   virtual llvm::Value* getTotalSize();
 
-  inline virtual llvm::Value* getEpsArray() {unreachable;}
-  inline virtual llvm::Value* getNbrsStartArray() {unreachable;}
-  inline virtual llvm::Value* getNbrsArray() {unreachable;}
+  inline virtual llvm::Value* getEpsArray() {unreachable; return nullptr;}
+  inline virtual llvm::Value* getNbrsStartArray() {unreachable; return nullptr;}
+  inline virtual llvm::Value* getNbrsArray() {unreachable; return nullptr;}
 
   virtual int getFieldsOffset();
 
