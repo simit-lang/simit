@@ -23,7 +23,7 @@ class SimitIRBuilder;
 class SetLayout {
 public:
   /// Get the size of the ith dimension
-  virtual llvm::Value* getSize(int i) = 0;
+  virtual llvm::Value* getSize(unsigned i) = 0;
   /// Get the total number of elements in the set
   virtual llvm::Value* getTotalSize() = 0;
   /// Get the endpoints array
@@ -40,7 +40,7 @@ public:
 /// <size> <f1> <f2> ...
 class UnstructuredSetLayout : public SetLayout {
 public:
-  virtual llvm::Value* getSize(int i);
+  virtual llvm::Value* getSize(unsigned i);
   virtual llvm::Value* getTotalSize();
 
   inline virtual llvm::Value* getEpsArray() {unreachable;}
@@ -94,7 +94,7 @@ private:
 /// <sizes_ptr> <eps_ptr> <nbrs_start_ptr> <nbrs_ptr> <f1> <f2> ...
 class LatticeEdgeSetLayout : public SetLayout {
 public:
-  virtual llvm::Value* getSize(int i);
+  virtual llvm::Value* getSize(unsigned i);
   virtual llvm::Value* getTotalSize();
   virtual llvm::Value* getEpsArray();
   virtual llvm::Value* getNbrsStartArray();

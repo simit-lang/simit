@@ -456,7 +456,7 @@ void HIRPrinter::visit(SetReadExpr::Ptr expr) {
     param->accept(this);
     printDelimiter = true;
   }
-  oss < "]";
+  oss << "]";
 }
 
 void HIRPrinter::visit(TupleReadExpr::Ptr expr) {

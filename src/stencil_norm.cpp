@@ -33,13 +33,13 @@ class NormalizeRowIndices : public IRRewriter {
     vector<int> litInds = getLitInds(op);
     vector<Expr> newInds;
     if (litInds.size() == rowNormOff.size()) { // point set
-      for (int i = 0; i < litInds.size(); ++i) {
+      for (unsigned i = 0; i < litInds.size(); ++i) {
         litInds[i] += rowNormOff[i];
         newInds.push_back(Literal::make(litInds[i]));
       }
     }
     else if (litInds.size() == rowNormOff.size()*2) { // link set
-      for (int i = 0; i < litInds.size(); ++i) {
+      for (unsigned i = 0; i < litInds.size(); ++i) {
         litInds[i] += rowNormOff[i%rowNormOff.size()];
         newInds.push_back(Literal::make(litInds[i]));
       }

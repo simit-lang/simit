@@ -14,7 +14,7 @@
 namespace simit {
 namespace backend {
 
-llvm::Value* UnstructuredSetLayout::getSize(int i) {
+llvm::Value* UnstructuredSetLayout::getSize(unsigned i) {
   iassert(i == 0) << "Only 1 explicit dimension for unstructured sets";
   return builder->CreateExtractValue(
       value, {0}, util::toString(set)+".size()");
@@ -136,7 +136,7 @@ void UnstructuredEdgeSetLayout::writeSet(
   }
 }
 
-llvm::Value* LatticeEdgeSetLayout::getSize(int i) {
+llvm::Value* LatticeEdgeSetLayout::getSize(unsigned i) {
   iassert(i < set.type().toSet()->dimensions);
   auto sizes = builder->CreateExtractValue(value, {0}, util::toString(set)+".sizes()");
   std::string name = string(sizes->getName()) + "[" + std::to_string(i) + "]";
@@ -149,7 +149,7 @@ llvm::Value* LatticeEdgeSetLayout::getTotalSize() {
   // directional dimension
   llvm::Value *total = llvmInt(set.type().toSet()->dimensions);
   // lattice sites dimensions
-  for (int i = 0; i < dims; ++i) {
+  for (unsigned i = 0; i < dims; ++i) {
     total = builder->CreateMul(
         total, getSize(i), util::toString(set)+".totalSize()");
   }
