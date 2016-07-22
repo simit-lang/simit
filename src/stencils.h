@@ -7,12 +7,14 @@
 
 #include "var.h"
 #include "intrusive_ptr.h"
+#include "util/collections.h"
 
 using namespace std;
 
 namespace simit {
 namespace ir {
 class Expr;
+class Func;
 
 struct StencilContent {
   map<vector<int>, int> layout;
@@ -40,10 +42,17 @@ public:
 
   /// Fully resolved form of layout
   map<vector<int>, int> getLayout() const;
-  Expr getLatticeSet() const;
+  map<int, vector<int>> getLayoutReversed() const;
+  Var getLatticeSet() const;
 };
 
 std::ostream& operator<<(std::ostream&, const StencilLayout&);
+
+/// Helper function for manipulating offset lists
+vector<int> getOffsets(vector<Expr> offsets);
+
+/// Analyze kernel function to build a stencil layout
+StencilContent* buildStencil(Func kernel, Var stencilVar, Var latticeSet);
 
 }} // namespace simit::ir
 

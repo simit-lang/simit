@@ -140,12 +140,15 @@ llvm::Value* LatticeEdgeSetLayout::getSize(int i) {
   iassert(i < set.type().toSet()->dimensions);
   auto sizes = builder->CreateExtractValue(value, {0}, util::toString(set)+".sizes()");
   std::string name = string(sizes->getName()) + "[" + std::to_string(i) + "]";
-  return builder->CreateInBoundsGEP(sizes, llvmInt(i), name);
+  auto out = builder->CreateInBoundsGEP(sizes, llvmInt(i), name);
+  return builder->CreateLoad(out);
 }
 
 llvm::Value* LatticeEdgeSetLayout::getTotalSize() {
   int dims = set.type().toSet()->dimensions;
-  llvm::Value *total = llvmInt(1);
+  // directional dimension
+  llvm::Value *total = llvmInt(set.type().toSet()->dimensions);
+  // lattice sites dimensions
   for (int i = 0; i < dims; ++i) {
     total = builder->CreateMul(
         total, getSize(i), util::toString(set)+".totalSize()");

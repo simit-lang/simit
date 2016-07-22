@@ -169,7 +169,8 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
 
   private:
     /// Pack neighbor vectors into a segmented vector (contiguous array).
-    PathIndex pack(const map<unsigned, set<unsigned>> &pathNeighbors) {
+    PathIndex pack(const map<unsigned, vector<unsigned>> &pathNeighbors,
+                   bool sorted=true) {
       unsigned numNeighbors = 0;
       for (auto &p : pathNeighbors) {
         numNeighbors += p.second.size();
@@ -187,7 +188,9 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
         unsigned pNeighborSize = p.second.size();
         if (pNeighborSize > 0) {
           vector<unsigned> pNeighbors(p.second.begin(), p.second.end());
-          sort(pNeighbors.begin(), pNeighbors.end());
+          if (sorted) {
+            sort(pNeighbors.begin(), pNeighbors.end());
+          }
 
           memcpy(&sinksData[currNbrsStart], pNeighbors.data(),
                  pNeighbors.size() * sizeof(uint32_t));
@@ -200,25 +203,27 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
     }
 
     void visit(const Link *link) {
-      const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
-
-      iassert(edgeSet.getCardinality() > 0)
-          << "not an edge set" << edgeSet.getName();
-
       switch (link->getType()) {
         case Link::ev: {
+          const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
+          iassert(edgeSet.getCardinality() > 0)
+              << "not an edge set" << edgeSet.getName();
           pi = new SetEndpointPathIndex(edgeSet);
           break;
         }
         case Link::ve: {
+          const simit::Set& edgeSet = *builder->getBinding(link->getEdgeSet());
+          iassert(edgeSet.getCardinality() > 0)
+              << "not an edge set" << edgeSet.getName();
+          
           // add each edge to the neighbor vectors of its endpoints
-          map<unsigned, set<unsigned>> pathNeighbors;
+          map<unsigned, vector<unsigned>> pathNeighbors;
 
           // create neighbor lists
           const simit::Set& vertexSet =
               *builder->getBinding(link->getVertexSet());
           for (auto &v : vertexSet) {
-            pathNeighbors.insert({v.getIdent(), set<unsigned>()});
+            pathNeighbors.insert({v.getIdent(), vector<unsigned>()});
           }
 
           // populate neighbor lists
@@ -226,12 +231,43 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
             iassert(e.getIdent() >= 0);
             for (auto &ep : edgeSet.getEndpoints(e)) {
               iassert(ep.getIdent() >= 0);
-              pathNeighbors.at(ep.getIdent()).insert(e.getIdent());
+              pathNeighbors.at(ep.getIdent()).push_back(e.getIdent());
             }
           }
           pi = pack(pathNeighbors);
           break;
         }
+        case Link::vv: {
+          const ir::StencilLayout& stencil = link->getStencil();
+          const simit::Set& throughSet =
+              *builder->getBinding(stencil.getLatticeSet());
+          
+          map<unsigned, vector<unsigned>> pathNeighbors;
+
+          // create neighbor lists
+          const simit::Set& sourceSet =
+              *builder->getBinding(link->getVertexSet(0));
+          const simit::Set& sinkSet =
+              *builder->getBinding(link->getVertexSet(1));
+          iassert(sourceSet.getName() == sinkSet.getName());
+          for (auto &v : sourceSet) {
+            pathNeighbors.insert({v.getIdent(), vector<unsigned>()});
+            for (auto &kv : stencil.getLayoutReversed()) {
+              const vector<int> &offsets = kv.second;
+              vector<int> base = throughSet.getLatticePointCoords(v);
+              iassert(offsets.size() == base.size());
+              for (int i = 0; i < base.size(); ++i) {
+                base[i] += offsets[i] + throughSet.getDimensions()[i];
+                base[i] = base[i] % throughSet.getDimensions()[i];
+              }
+              pathNeighbors.at(v.getIdent()).push_back(
+                  throughSet.getLatticePoint(base).getIdent());
+            }
+          }
+          pi = pack(pathNeighbors, false);
+          break;
+        }
+        default: unreachable;
       }
     }
 
@@ -347,7 +383,13 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           }
         }
       }
-      pi = pack(pathNeighbors);
+      // Convert path neighbors to vector values
+      map<unsigned, vector<unsigned>> pathNeighborsVec;
+      for (auto &kv : pathNeighbors) {
+        pathNeighborsVec[kv.first] =
+            vector<unsigned>(kv.second.begin(), kv.second.end());
+      }
+      pi = pack(pathNeighborsVec);
     }
 
     void visit(const Or *f) {
@@ -425,7 +467,13 @@ PathIndex PathIndexBuilder::buildSegmented(const PathExpression &pe,
           }
         }
       }
-      pi = pack(pathNeighbors);
+      // Convert path neighbors to vector values
+      map<unsigned, vector<unsigned>> pathNeighborsVec;
+      for (auto &kv : pathNeighbors) {
+        pathNeighborsVec[kv.first] =
+            vector<unsigned>(kv.second.begin(), kv.second.end());
+      }
+      pi = pack(pathNeighborsVec);
     }
 
     PathIndex pi;  // Path index returned from cases
@@ -453,6 +501,11 @@ void PathIndexBuilder::bind(std::string name, const simit::Set* set) {
 const simit::Set* PathIndexBuilder::getBinding(pe::Set pset) const {
   iassert(pset.defined());
   return bindings.at(pset.getName());
+}
+
+const simit::Set* PathIndexBuilder::getBinding(ir::Var var) const {
+  iassert(var.defined());
+  return bindings.at(var.getName());
 }
 
 }}

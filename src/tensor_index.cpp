@@ -3,6 +3,7 @@
 #include "error.h"
 #include "util/util.h"
 
+#include "ir.h"
 #include "path_expressions.h"
 #include "var.h"
 
@@ -46,6 +47,14 @@ const TensorIndex::Kind TensorIndex::getKind() const {
   return content->kind;
 }
 
+const bool TensorIndex::isComputed() const {
+  switch (content->kind) {
+    case PExpr: return false;
+    case Sten: return true;
+    default: unreachable;
+  }
+}
+
 const pe::PathExpression& TensorIndex::getPathExpression() const {
   iassert(content->kind == PExpr);
   return content->pexpr;
@@ -62,11 +71,33 @@ void TensorIndex::setStencilLayout(StencilLayout stencil) {
 }
 
 const Var& TensorIndex::getRowptrArray() const {
+  iassert(!isComputed());
   return content->coordArray;
 }
 
 const Var& TensorIndex::getColidxArray() const {
+  iassert(!isComputed());
   return content->sinkArray;
+}
+
+const Expr TensorIndex::computeRowptr(Expr source) const {
+  iassert(isComputed());
+  if (getKind() == Sten) {
+    return source * Expr((int)content->stencil.getLayout().size());
+  }
+  else {
+    unreachable;
+  }
+}
+
+const Expr TensorIndex::computeColidx(Expr coord) const {
+  iassert(isComputed());
+  if (getKind() == Sten) {
+    not_supported_yet;
+  }
+  else {
+    unreachable;
+  }
 }
 
 ostream &operator<<(ostream& os, const TensorIndex& ti) {

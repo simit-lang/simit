@@ -29,6 +29,26 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
   pe::Set E = getPathExpressionSet(targetSet);
   pe::Var e = pe::Var("e", E);
 
+  // Stencil map through a lattice link set
+  StencilLayout stencil;
+  Var stencilVar;
+  if (map->through.defined()) {
+    // Find stencil output: TODO - assumes first matrix output is stencil
+    int count = 0;
+    for (auto res : map->function.getResults()) {
+      if (!res.getType().isTensor()) continue;
+      const TensorType *ttype = res.getType().toTensor();
+      if (ttype->order() >= 2) {
+        tassert(!stencilVar.defined())
+            << "Cannot handle multiple matrix outputs from a stencil map";
+        stencilVar = map->vars[count];
+        stencil = buildStencil(map->function, res,
+                               to<VarExpr>(map->through)->var);
+      }
+      count++;
+    }
+  }
+
   for (const Var& var : map->vars) {
     iassert(var.getType().isTensor());
     const TensorType* type = var.getType().toTensor();
@@ -54,12 +74,19 @@ void PathExpressionBuilder::computePathExpression(const Map* map) {
       pe::Var u = peVars[0];
       pe::Var v = peVars[1];
 
-      pe::PathExpression ve = Link::make(u, e, Link::ve);
-      pe::PathExpression ev = Link::make(e, v, Link::ev);
+      // Make a stencil link if stencil is defined
+      if (stencil.defined()) {
+        PathExpression vv = Link::make(u, v, Link::vv, stencil);
+        addPathExpression(var, vv);
+      }
+      else {
+        pe::PathExpression ve = Link::make(u, e, Link::ve, stencil);
+        pe::PathExpression ev = Link::make(e, v, Link::ev);
 
-      PathExpression vev = pe::And::make({u,v}, {{QuantifiedVar::Exist,e}},
-                                         ve(u,e), ev(e,v));
-      addPathExpression(var, vev);
+        PathExpression vev = pe::And::make({u,v}, {{QuantifiedVar::Exist,e}},
+                                           ve(u,e), ev(e,v));
+        addPathExpression(var, vev);
+      }
     }
   }
 }
