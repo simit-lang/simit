@@ -280,7 +280,7 @@ private:
 
       bool compareIndexSets(IndexSet::Ptr, IndexSet::Ptr);
       bool compareDomains(const IndexDomain&, const IndexDomain&);
-      bool compareTypes(Type::Ptr, Type::Ptr);
+      bool compareTypes(Type::Ptr, Type::Ptr, bool = false);
       
     private:
       FuncMap          funcDecls;
@@ -338,10 +338,18 @@ private:
 
   static ScalarType::Type getComponentType(TensorType::Ptr);
   static TensorDimensions getDimensions(TensorType::Ptr);
+  static unsigned         getOrder(TensorType::Ptr);
   static bool             getTransposed(TensorType::Ptr);
 
   static TensorType::Ptr makeTensorType(ScalarType::Type, 
       const TensorDimensions& = TensorDimensions(), bool = false);
+
+  void addScalarIntrinsic(const std::string&,
+                          const std::vector<ScalarType::Type>&,
+                          const std::vector<ScalarType::Type>&);
+  void addIntrinsic(const std::string&, const std::vector<Type::Ptr>&,
+                    const std::vector<Type::Ptr>&,
+                    const std::vector<bool>& = {});
 
   static std::string toString(ExprType);
   static std::string toString(Type::Ptr, bool = true);

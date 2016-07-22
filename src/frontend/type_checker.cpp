@@ -6,6 +6,7 @@
 
 #include "error.h"
 #include "hir.h"
+#include "intrinsics.h"
 #include "type_checker.h"
 #include "util/util.h"
 
@@ -17,26 +18,62 @@ TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
     skipCheckDeclared(false),
     skipReportError(0),
     errors(errors) {
-  class ComputeSetDefinitions : public HIRVisitor {
-    virtual void visit(SetIndexSet::Ptr set) {
-    }
-  };
-//  const auto intType = makeTensorType(ScalarType::Type::INT);
-//  const auto floatType = makeTensorType(ScalarType::Type::FLOAT);
-//
-//  {
-//    const auto x = 
-//    const auto modDecl = std::make_shared<FuncDecl>();
-//    modDecl->name = "mod";
-//    modDecl->args = {intType->clone<ScalarType>(), intType->clone<ScalarType>()};
-//    modDecl->results = {intType->clone<ScalarType>()};
-//    env.addFunction("mod", modDecl);
-//  }
+  const auto threeDim = std::make_shared<RangeIndexSet>();
+  threeDim->range = 3;
+
+  const auto threeByThreeTensorType = std::make_shared<NDTensorType>();
+  threeByThreeTensorType->blockType = makeTensorType(ScalarType::Type::FLOAT);
+  threeByThreeTensorType->indexSets = {threeDim, threeDim};
+  
+  // Add type signatures for intrinsic functions.
+  addScalarIntrinsic("mod", {ScalarType::Type::INT, ScalarType::Type::INT}, 
+                     {ScalarType::Type::INT});
+  addScalarIntrinsic("sin", {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("cos", {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("tan", {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("asin", {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("acos", {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("atan2", {ScalarType::Type::FLOAT, 
+                     ScalarType::Type::FLOAT}, {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("sqrt", {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("log", {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("exp", {ScalarType::Type::FLOAT}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("pow", {ScalarType::Type::FLOAT, 
+                     ScalarType::Type::FLOAT}, {ScalarType::Type::FLOAT});
+  addIntrinsic("norm", {Type::Ptr()}, 
+               {makeTensorType(ScalarType::Type::FLOAT)});
+  addIntrinsic("dot", {Type::Ptr(), Type::Ptr()}, 
+               {makeTensorType(ScalarType::Type::FLOAT)});
+  addIntrinsic("det", {threeByThreeTensorType}, 
+               {makeTensorType(ScalarType::Type::FLOAT)});
+  addIntrinsic("inv", {threeByThreeTensorType}, {threeByThreeTensorType});
+  addIntrinsic("solve", {Type::Ptr(), Type::Ptr(), Type::Ptr()},
+               {makeTensorType(ScalarType::Type::FLOAT)}, {false, false, true});
+  addScalarIntrinsic("createComplex", {ScalarType::Type::FLOAT, 
+                     ScalarType::Type::FLOAT}, {ScalarType::Type::COMPLEX});
+  addScalarIntrinsic("complexNorm", {ScalarType::Type::COMPLEX}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("complexGetReal", {ScalarType::Type::COMPLEX}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("complexGetImag", {ScalarType::Type::COMPLEX}, 
+                     {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("complexConj", {ScalarType::Type::COMPLEX}, 
+                     {ScalarType::Type::COMPLEX});
+  addScalarIntrinsic("simitClock", {}, {ScalarType::Type::FLOAT});
+  addScalarIntrinsic("simitStoreTime", {ScalarType::Type::INT, 
+                     ScalarType::Type::FLOAT}, {ScalarType::Type::FLOAT});
 }
 
 void TypeChecker::check(Program::Ptr program) {
   ComputeSetDefinitions(env).compute(program);
-  env.hasSetDefinition(nullptr);
   typeCheck(program);
 }
 
@@ -819,6 +856,9 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
   // If callee type signature could not be determined, 
   // then there's nothing more to do.
   if (!env.hasFunction(funcName)) {
+    // Calls to intrinsics should always be type checked.
+    iassert(!util::contains(ir::intrinsics::byNames(), funcName)) 
+        << "could not type check intrinsic " << funcName;
     return;
   }
 
@@ -846,13 +886,16 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       if (it == checker.specializedSets.end()) {
         std::stringstream errMsg;
         errMsg << "unable to resolve type parameter '" 
-               << genericParam->name << "'";
+               << genericParam->name << "' for call to function '"
+               << (func->originalName.empty() ? funcName : func->originalName) 
+               << "'";
         reportError(errMsg.str(), expr);
         return;
       }
     }
 
-    if (func->originalName.empty() /* TODO: || is intrinsic */) {
+    if (func->originalName.empty() || 
+        util::contains(ir::intrinsics::byNames(), func->originalName)) {
       // TODO: Optimize by just cloning type signature.
       func = func->clone<FuncDecl>();
       func->body = std::make_shared<StmtBlock>();
@@ -882,6 +925,8 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     return;
   }
 
+  bool checkIntrinsic = true;
+
   for (unsigned i = 0; i < expr->args.size(); ++i) {
     const Argument::Ptr funcArg = func->args[i];
     const Expr::Ptr arg = expr->args[i];
@@ -890,56 +935,20 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     if (!argType.defined || !argType.isSingleValue()) {
       continue;
     }
-  
-#if 0
-    if (funcName == "norm") {
-      // Check that arg to norm intrinsic is a numeric vector.
-      if (!argType->at(0).isTensor() || 
-          argType->at(0).toTensor()->getDimensions().size() != 1 ||
-          !argType->at(0).toTensor()->getComponentType().isNumeric()) {
-        reportError("arg must be a numeric vector", arg);
-      }
-    } else if (funcName == "dot") {
-      if (i == 0) {
-        // Check that first arg to dot intrinsic is a numeric vector.
-        if (!argType->at(0).isTensor() || 
-            argType->at(0).toTensor()->getDimensions().size() != 1 ||
-            !argType->at(0).toTensor()->getComponentType().isNumeric()) {
-          reportError("arg must be a numeric vector", arg);
-        }
-      } else {
-        // Check that second arg to dot intrinsic is a numeric vector of 
-        // same length as first arg.
-        if (argTypes[0] && argTypes[0]->size() == 1 && 
-            argType->at(0) != argTypes[0]->at(0)) {
-          std::stringstream errMsg;
-          errMsg << "cannot call function 'dot' on args of type "
-                 << toString(argTypes[0]->at(0)) << " and type "
-                 << toString(argType->at(0));
-          reportError(errMsg.str(), expr);
-        }
-      }
-    } else if (funcName == "solve") {
-      // TODO: Should check dimensions of args.
-      switch (i) {
-        case 0:
-        case 1:
-          break;
-        case 2:
-          // Check that third arg is writable.
-          if (!arg->isWritable()) {
-            reportError("inout arg must be writable", arg);
-          }
-          break;
-        default:
-          unreachable;
-      }
-    } else {
-    }
-#endif
 
     // Check that argument is of type expected by callee.
-    if (!env.compareTypes(argType.type[0], funcArg->arg->type)) {
+    if (funcName == "norm" || funcName == "dot" || funcName == "solve") {
+      const unsigned requiredOrder = (funcName == "solve" && (i == 0)) ? 2 : 1;
+      const auto tensorTypeString = (requiredOrder == 2) ? "matrix" : "vector";
+      
+      // Check that argument is a numeric tensor of appropriate order.
+      if (!argType.isNumericTensor() || 
+          getOrder(to<TensorType>(argType.type[0])) != requiredOrder) {
+        std::stringstream errMsg;
+        errMsg << "argument must be a numeric " << tensorTypeString;
+        reportError(errMsg.str(), arg);
+      }
+    } else if (!env.compareTypes(argType.type[0], funcArg->arg->type)) {
       std::stringstream errMsg;
       errMsg << "expected argument of type " << toString(funcArg->arg->type) 
              << " but got an argument of type " << toString(argType);
@@ -949,6 +958,21 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     // Check that inout argument is writable.
     if (funcArg->isInOut() && !argType.isWritable()) {
       reportError("inout argument must be writable", arg);
+    }
+  }
+
+  if (checkIntrinsic) {
+    if (funcName == "dot") {
+      // Check that first and second arguments are vectors of same length.
+      if (!env.compareTypes(argTypes[0].type[0], argTypes[1].type[0], true)) {
+        std::stringstream errMsg;
+        errMsg << "cannot call function 'dot' on arguments of type "
+               << toString(argTypes[0]) << " and type " 
+               << toString(argTypes[1]);
+        reportError(errMsg.str(), expr);
+      }
+    } else if (funcName == "solve") {
+      // TODO: Should check that dimensions of arguments match.
     }
   }
 }
@@ -1477,8 +1501,10 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
       const auto it = checker.specializedSets.find(genericParam->name);
       if (it == checker.specializedSets.end()) {
         std::stringstream errMsg;
-        errMsg << "unable to resolve type parameter '" 
-               << genericParam->name << "'";
+        errMsg << "unable to resolve type parameter '" << genericParam->name 
+               << "' for " << opString << " operation with function '" 
+               << (func->originalName.empty() ? funcName : func->originalName) 
+               << "'";
         reportError(errMsg.str(), expr);
         return;
       }
@@ -1903,8 +1929,6 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
     const auto paramElemType = to<ElementType>(paramType);
     const auto argElemType = to<ElementType>(argType);
 
-    std::cout << *paramElemType << " " << *argElemType << std::endl;
-    std::cout << argElemType->source << " " << isa<GenericIndexSet>(paramElemType->source) << std::endl;
     if (argElemType->source && isa<GenericIndexSet>(paramElemType->source)) {
       const auto genericName = paramElemType->source->setName;
 
@@ -1982,7 +2006,8 @@ bool TypeChecker::Environment::compareDomains(const IndexDomain &l,
   return true;
 }
 
-bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r) {
+bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r, 
+                                            bool ignoreTranspose) {
   if (isa<ScalarType>(l)) {
     return isa<ScalarType>(r) && 
            (to<ScalarType>(l)->type == to<ScalarType>(r)->type);
@@ -1994,7 +2019,7 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r) {
     const auto ltype = to<NDTensorType>(l);
     const auto rtype = to<NDTensorType>(r);
 
-    return (ltype->transposed == rtype->transposed) && 
+    return ((ltype->transposed == rtype->transposed) || ignoreTranspose) && 
            compareDomains(ltype->indexSets, rtype->indexSets) && 
            compareTypes(ltype->blockType, rtype->blockType);
   } else if (isa<ElementType>(l)) {
@@ -2113,6 +2138,10 @@ TypeChecker::TensorDimensions TypeChecker::getDimensions(TensorType::Ptr type) {
   return dimensions;
 }
 
+unsigned TypeChecker::getOrder(TensorType::Ptr type) {
+  return isa<ScalarType>(type) ? 0 : to<NDTensorType>(type)->indexSets.size();
+}
+
 bool TypeChecker::getTransposed(TensorType::Ptr type) {
   return isa<NDTensorType>(type) && to<NDTensorType>(type)->transposed;
 }
@@ -2142,6 +2171,51 @@ TensorType::Ptr TypeChecker::makeTensorType(ScalarType::Type componentType,
   to<NDTensorType>(retType)->transposed = transposed;
 
   return retType;
+}
+
+void TypeChecker::addScalarIntrinsic(const std::string& name,
+    const std::vector<ScalarType::Type> &args,
+    const std::vector<ScalarType::Type> &results) {
+  std::vector<Type::Ptr> argTypes(args.size());
+  std::vector<Type::Ptr> resultTypes(results.size());
+
+  for (unsigned i = 0; i < args.size(); ++i) {
+    argTypes[i] = makeTensorType(args[i]);
+  }
+  for (unsigned i = 0; i < results.size(); ++i) {
+    resultTypes[i] = makeTensorType(results[i]);
+  }
+  
+  addIntrinsic(name, argTypes, resultTypes);
+}
+
+void TypeChecker::addIntrinsic(const std::string& name,
+    const std::vector<Type::Ptr> &args,
+    const std::vector<Type::Ptr> &results,
+    const std::vector<bool> &isInOut) {
+  const auto decl = std::make_shared<FuncDecl>();
+  decl->name = std::make_shared<Identifier>();
+
+  decl->name->ident = name;
+  decl->exported = false;
+  
+  for (unsigned i = 0; i < args.size(); ++i) {
+    const auto arg = (!isInOut.empty() && isInOut[i]) ? 
+                     std::make_shared<InOutArgument>() :
+                     std::make_shared<Argument>();
+    arg->arg = std::make_shared<IdentDecl>();
+    
+    arg->arg->type = args[i];
+    decl->args.push_back(arg);
+  }
+
+  for (const auto resType : results) {
+    const auto res = std::make_shared<IdentDecl>();
+    res->type = resType;
+    decl->results.push_back(res);
+  }
+
+  env.addFunction(name, decl);
 }
 
 std::string TypeChecker::toString(ExprType type) {
