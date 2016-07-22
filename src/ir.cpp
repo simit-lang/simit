@@ -215,7 +215,7 @@ double_complex Literal::getComplexVal(int index) const {
 }
 
 bool Literal::isAllZeros() const {
-  for (int i = 0; i < size; ++i) {
+  for (unsigned i = 0; i < size; ++i) {
     if (((uint8_t*)data)[i] != 0) {
       return false;
     }
@@ -883,10 +883,12 @@ Expr TupleRead::make(Expr tuple, Expr index) {
 
 // struct SetRead
 Expr SetRead::make(Expr set, std::vector<Expr> indices) {
+#ifdef SIMIT_ASSERTS
   iassert(set.type().isSet());
-  for (auto &index : indices) {
+  for (const Expr &index : indices) {
     iassert(isScalar(index.type()));
   }
+#endif
 
   if (set.type().toSet()->kind == SetType::Kind::Unstructured &&
       set.type().toSet()->getCardinality() == 0) {

@@ -234,7 +234,7 @@ public:
         << "Cannot retrieve lattice point coords of non-lattice set";
     int index = elt.getIdent();
     std::vector<int> coords;
-    for (int i = 0; i < dimensions.size(); ++i) {
+    for (unsigned i = 0; i < dimensions.size(); ++i) {
       int dimSize = dimensions[i];
       coords.push_back(index % dimSize);
       index /= dimSize;
