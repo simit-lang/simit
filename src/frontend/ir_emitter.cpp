@@ -42,25 +42,22 @@ void IREmitter::visit(Endpoint::Ptr end) {
   retExpr = ctx->getSymbol(end->setName).getExpr();
 }
 
-void IREmitter::visit(SetType::Ptr type) {
+void IREmitter::visit(UnstructuredSetType::Ptr type) {
   const ir::Type elementType = emitType(type->element);
 
-  if (type->type == SetType::Type::UNSTRUCTURED) {
-    std::vector<ir::Expr> endpoints;
-    for (auto end : type->endpoints) {
-      const ir::Expr endpoint = emitExpr(end);
-      endpoints.push_back(endpoint);
-    }
+  std::vector<ir::Expr> endpoints;
+  for (auto end : type->endpoints) {
+    const ir::Expr endpoint = emitExpr(end);
+    endpoints.push_back(endpoint);
+  }
 
-    retType = ir::SetType::make(elementType, endpoints);
-  }
-  else if (type->type == SetType::Type::LATTICE_LINK) {
-    const ir::Expr latticePointSet = emitExpr(type->latticePointSet);
-    retType = ir::SetType::make(elementType, latticePointSet, type->dimensions);
-  }
-  else {
-    unreachable;
-  }
+  retType = ir::SetType::make(elementType, endpoints);
+}
+
+void IREmitter::visit(LatticeLinkSetType::Ptr type) {
+  const ir::Type elementType = emitType(type->element);
+  const ir::Expr latticePointSet = emitExpr(type->latticePointSet);
+  retType = ir::SetType::make(elementType, latticePointSet, type->dimensions);
 }
 
 void IREmitter::visit(TupleType::Ptr type) {

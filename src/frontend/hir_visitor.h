@@ -13,7 +13,8 @@ struct SetIndexSet;
 struct DynamicIndexSet;
 struct ElementType;
 struct Endpoint;
-struct SetType;
+struct UnstructuredSetType;
+struct LatticeLinkSetType;
 struct TupleLength;
 struct TupleType;
 struct ScalarType;
@@ -88,7 +89,8 @@ public:
   virtual void visit(std::shared_ptr<DynamicIndexSet> op) {}
   virtual void visit(std::shared_ptr<ElementType> op) {}
   virtual void visit(std::shared_ptr<Endpoint> op) {}
-  virtual void visit(std::shared_ptr<SetType>);
+  virtual void visit(std::shared_ptr<UnstructuredSetType>);
+  virtual void visit(std::shared_ptr<LatticeLinkSetType>);
   virtual void visit(std::shared_ptr<TupleLength> op) {}
   virtual void visit(std::shared_ptr<TupleType>);
   virtual void visit(std::shared_ptr<ScalarType> op) {}

@@ -148,22 +148,28 @@ struct Endpoint : public HIRNode {
 };
 
 struct SetType : public Type {
-  enum class Type {UNSTRUCTURED, LATTICE_LINK};
-
-  Type type;
   ElementType::Ptr           element;
+  typedef std::shared_ptr<SetType> Ptr;
+};
 
-  /// UNSTRUCTURED type set
+struct UnstructuredSetType : public SetType {
   std::vector<Endpoint::Ptr> endpoints;
 
-  /// LATTICE_LINK type set
-  size_t dimensions;
+  typedef std::shared_ptr<UnstructuredSetType> Ptr;
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(to<UnstructuredSetType>(shared_from_this()));
+  }
+};
+
+struct LatticeLinkSetType : public SetType {
   Endpoint::Ptr latticePointSet;
+  size_t dimensions;
   
-  typedef std::shared_ptr<SetType> Ptr;
+  typedef std::shared_ptr<LatticeLinkSetType> Ptr;
   
   virtual void accept(HIRVisitor *visitor) {
-    visitor->visit(to<SetType>(shared_from_this()));
+    visitor->visit(to<LatticeLinkSetType>(shared_from_this()));
   }
 };
 

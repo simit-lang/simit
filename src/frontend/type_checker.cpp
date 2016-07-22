@@ -70,80 +70,79 @@ void TypeChecker::visit(Endpoint::Ptr end) {
   retExpr = ctx.getSymbol(end->setName).getExpr();
 }
 
-void TypeChecker::visit(SetType::Ptr type) {
+void TypeChecker::visit(UnstructuredSetType::Ptr type) {
   const ir::Type elementType = getIRType(type->element);
   bool typeChecked = elementType.defined();
 
-  if (type->type == SetType::Type::UNSTRUCTURED) {
-    std::vector<ir::Expr> endpoints;
-    for (auto end : type->endpoints) {
-      const ir::Expr endpoint = getExpr(end);
+  std::vector<ir::Expr> endpoints;
+  for (auto end : type->endpoints) {
+    const ir::Expr endpoint = getExpr(end);
     
-      if (!endpoint.defined()) {
-        typeChecked = false;
-        continue;
-      }
-
-      // Check that endpoint is of set type.
-      if (!endpoint.type().isSet()) {
-        std::stringstream errMsg;
-        errMsg << "expected endpoint to be of set type but got an endpoint of "
-               << "type " << typeString(endpoint.type());
-        reportError(errMsg.str(), end);
-      
-        typeChecked = false;
-        continue;
-      }
-      
-      endpoints.push_back(endpoint);
+    if (!endpoint.defined()) {
+      typeChecked = false;
+      continue;
     }
 
-    if (!typeChecked) {
-      return;
+    // Check that endpoint is of set type.
+    if (!endpoint.type().isSet()) {
+      std::stringstream errMsg;
+      errMsg << "expected endpoint to be of set type but got an endpoint of "
+             << "type " << typeString(endpoint.type());
+      reportError(errMsg.str(), end);
+      
+      typeChecked = false;
+      continue;
     }
+      
+    endpoints.push_back(endpoint);
+  }
+
+  if (!typeChecked) {
+    return;
+  }
  
-    retIRType = ir::SetType::make(elementType, endpoints);
-  }
-  else if (type->type == SetType::Type::LATTICE_LINK) {
-    const ir::Expr latticePointSet = getExpr(type->latticePointSet);
-    if (!latticePointSet.defined()) {
-      typeChecked = false;
-    }
-    // Check lattice point set is of set type.
-    else if (!latticePointSet.type().isSet()) {
-      std::stringstream errMsg;
-      errMsg << "expected lattice point type to be of set type but got "
-             << typeString(latticePointSet.type());
-      reportError(errMsg.str(), type->latticePointSet);
-      typeChecked = false;
-    }
-    // Check lattice point set is an unstructured set
-    else if (latticePointSet.type().toSet()->kind !=
-             ir::SetType::Kind::Unstructured) {
-      std::stringstream errMsg;
-      errMsg << "expected lattice point set of Unstructured kind but got "
-             << latticePointSet.type().toSet()->kind;
-      reportError(errMsg.str(), type->latticePointSet);
-      typeChecked = false;
-    }
-    // Check lattice point set is cardinality zero
-    else if (latticePointSet.type().toSet()->getCardinality() != 0) {
-      std::stringstream errMsg;
-      errMsg << "expected lattice point set of 0 cardinality, but got "
-             << latticePointSet.type().toSet()->getCardinality();
-      reportError(errMsg.str(), type->latticePointSet);
-      typeChecked = false;
-    }
+  retIRType = ir::SetType::make(elementType, endpoints);
+}
 
-    if (!typeChecked) {
-      return;
-    }
+void TypeChecker::visit(LatticeLinkSetType::Ptr type) {
+  const ir::Type elementType = getIRType(type->element);
+  bool typeChecked = elementType.defined();
+  
+  const ir::Expr latticePointSet = getExpr(type->latticePointSet);
+  if (!latticePointSet.defined()) {
+    typeChecked = false;
+  }
+  // Check lattice point set is of set type.
+  else if (!latticePointSet.type().isSet()) {
+    std::stringstream errMsg;
+    errMsg << "expected lattice point type to be of set type but got "
+           << typeString(latticePointSet.type());
+    reportError(errMsg.str(), type->latticePointSet);
+    typeChecked = false;
+  }
+  // Check lattice point set is an unstructured set
+  else if (latticePointSet.type().toSet()->kind !=
+           ir::SetType::Kind::Unstructured) {
+    std::stringstream errMsg;
+    errMsg << "expected lattice point set of Unstructured kind but got "
+           << latticePointSet.type().toSet()->kind;
+    reportError(errMsg.str(), type->latticePointSet);
+    typeChecked = false;
+  }
+  // Check lattice point set is cardinality zero
+  else if (latticePointSet.type().toSet()->getCardinality() != 0) {
+    std::stringstream errMsg;
+    errMsg << "expected lattice point set of 0 cardinality, but got "
+           << latticePointSet.type().toSet()->getCardinality();
+    reportError(errMsg.str(), type->latticePointSet);
+    typeChecked = false;
+  }
 
-    retIRType = ir::SetType::make(elementType, latticePointSet, type->dimensions);
+  if (!typeChecked) {
+    return;
   }
-  else {
-    unreachable;
-  }
+
+  retIRType = ir::SetType::make(elementType, latticePointSet, type->dimensions);
 }
 
 void TypeChecker::visit(TupleType::Ptr type) {

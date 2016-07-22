@@ -40,34 +40,30 @@ void HIRPrinter::visit(Endpoint::Ptr end) {
   oss << end->setName;
 }
 
-void HIRPrinter::visit(SetType::Ptr type) {
-  if (type->type == SetType::Type::UNSTRUCTURED) {
-    oss << "set{";
-    type->element->accept(this);
-    oss << "}";
-    if (type->endpoints.size() > 0) {
-      oss << "(";
-      bool printDelimiter = false;
-      for (auto endpoint : type->endpoints) {
-        if (printDelimiter) {
-          oss << ", ";
-        }
-        endpoint->accept(this);
-        printDelimiter = true;
+void HIRPrinter::visit(UnstructuredSetType::Ptr type) {
+  oss << "set{";
+  type->element->accept(this);
+  oss << "}";
+  if (type->endpoints.size() > 0) {
+    oss << "(";
+    bool printDelimiter = false;
+    for (auto endpoint : type->endpoints) {
+      if (printDelimiter) {
+        oss << ", ";
       }
-      oss << ")";
+      endpoint->accept(this);
+      printDelimiter = true;
     }
-  }
-  else if (type->type == SetType::Type::LATTICE_LINK) {
-    oss << "lattice[" << type->dimensions << "]{";
-    type->element->accept(this);
-    oss << "}(";
-    type->latticePointSet->accept(this);
     oss << ")";
   }
-  else {
-    unreachable;
-  }
+}
+
+void HIRPrinter::visit(LatticeLinkSetType::Ptr type) {
+  oss << "lattice[" << type->dimensions << "]{";
+  type->element->accept(this);
+  oss << "}(";
+  type->latticePointSet->accept(this);
+  oss << ")";
 }
 
 void HIRPrinter::visit(TupleLength::Ptr length) {

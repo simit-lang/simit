@@ -20,7 +20,8 @@ public:
   virtual void visit(DynamicIndexSet::Ptr);
   virtual void visit(ElementType::Ptr);
   virtual void visit(Endpoint::Ptr);
-  virtual void visit(SetType::Ptr);
+  virtual void visit(UnstructuredSetType::Ptr);
+  virtual void visit(LatticeLinkSetType::Ptr);
   virtual void visit(TupleLength::Ptr);
   virtual void visit(TupleType::Ptr);
   virtual void visit(ScalarType::Ptr);
