@@ -4,6 +4,7 @@
 #include "infer_element_sources.h"
 #include "hir.h"
 #include "hir_rewriter.h"
+#include "util/scopedmap.h"
 
 namespace simit {
 namespace hir {
@@ -13,11 +14,12 @@ void InferElementSources::visit(IdentDecl::Ptr decl) {
 }
 
 void InferElementSources::visit(FuncDecl::Ptr decl) {
-  decls.insert(decl->name->ident, Type::Ptr());
   decls.scope();
-  for (const auto typeParam : decl->typeParams) {
-    decls.insert(typeParam->ident, Type::Ptr());
+  
+  for (const auto genericParam : decl->genericParams) {
+    decls.insert(genericParam->name, Type::Ptr());
   }
+  
   HIRVisitor::visit(decl);
   decls.unscope();
 }
@@ -50,19 +52,26 @@ void InferElementSources::visit(IfStmt::Ptr stmt) {
 
 void InferElementSources::visit(ForStmt::Ptr stmt) {
   decls.scope();
-  HIRVisitor::visit(stmt);
+  decls.insert(stmt->loopVar->ident, Type::Ptr());
+ 
+  stmt->body->accept(this);
   decls.unscope();
 }
 
 void InferElementSources::visit(AssignStmt::Ptr stmt) {
   stmt->expr->accept(this);
-  for (auto &lhs : stmt->lhs) {
+  
+  for (auto lhs : stmt->lhs) {
     lhs->accept(this);
-    if (isa<VarExpr>(lhs)) {
-      const std::string varName = to<VarExpr>(lhs)->ident;
-      if (!decls.contains(varName)) {
-        decls.insert(varName, Type::Ptr());
-      }
+    
+    if (!isa<VarExpr>(lhs)) {
+      continue;
+    }
+    
+    const std::string varName = to<VarExpr>(lhs)->ident;
+    
+    if (!decls.contains(varName)) {
+      decls.insert(varName, Type::Ptr());
     }
   }
 }
@@ -126,13 +135,8 @@ void InferElementSources::visit(TensorReadExpr::Ptr expr) {
 
     const auto indexSet = tensorType->indexSets[i];
     
-    if (isa<SetIndexSet>(indexSet)) {
-      const auto indexSetName = to<SetIndexSet>(indexSet)->setName;
-      if (isa<GenericIndexSet>(indexSet)) {
-        idxElemType->sourceGenericSets.insert(indexSetName);
-      } else if (idxElemType->sourceSet.empty()) {
-        idxElemType->sourceSet = indexSetName;
-      }
+    if (!idxElemType->source && isa<SetIndexSet>(indexSet)) {
+      idxElemType->source = to<SetIndexSet>(indexSet);
     }
   }
 }

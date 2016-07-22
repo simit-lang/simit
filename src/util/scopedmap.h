@@ -16,7 +16,7 @@ namespace util {
 template <typename Key, typename Value>
 class ScopedMap {
 public:
-  enum class SearchScope {All, CurrentOnly, TopOnly};
+  enum class SearchScope {All, CurrentOnly};
 
   typedef std::map<Key, Value> Scope;
   typedef typename std::list<Scope>::const_iterator Iterator;
@@ -51,8 +51,6 @@ public:
     switch (searchScope) {
       case SearchScope::CurrentOnly:
         return scopes.front().find(symbol) != scopes.front().end();
-      case SearchScope::TopOnly:
-        return scopes.back().find(symbol) != scopes.back().end();
       default:
         break;
     }
@@ -74,10 +72,6 @@ public:
         iassert(scopes.front().find(symbol) != scopes.front().end()) <<
             "Attempting to load symbol (" << symbol << ") not in current scope";
         return scopes.front().at(symbol);
-      case SearchScope::TopOnly:
-        iassert(scopes.back().find(symbol) != scopes.back().end()) <<
-            "Attempting to load symbol (" << symbol << ") not in topmost scope";
-        return scopes.back().at(symbol);
       default:
         break;
     }
@@ -100,10 +94,6 @@ public:
         iassert(scopes.front().find(symbol) != scopes.front().end()) <<
             "Attempting to load symbol (" << symbol << ") not in current scope";
         return scopes.front().at(symbol);
-      case SearchScope::TopOnly:
-        iassert(scopes.back().find(symbol) != scopes.back().end()) <<
-            "Attempting to load symbol (" << symbol << ") not in topmost scope";
-        return scopes.back().at(symbol);
       default:
         break;
     }

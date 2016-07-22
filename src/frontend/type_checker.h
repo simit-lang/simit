@@ -25,7 +25,7 @@ class TypeChecker : public HIRVisitor {
 public:
   TypeChecker(std::vector<ParseError> *);
 
-  void check(Program::Ptr program) { typeCheck(program); }
+  void check(Program::Ptr);
 
 private:
   virtual void visit(Program::Ptr);
@@ -177,19 +177,12 @@ private:
   typedef std::vector<IndexSet::Ptr>                     IndexDomain;
   typedef std::vector<IndexDomain>                       TensorDimensions;
   
-  struct GenericCallTypeChecker {
-    void unify(Type::Ptr, Type::Ptr);
-
-    ReplacementMap specializedSets;
-  };
-    
   struct ReplaceTypeParams : public HIRRewriter {
     ReplaceTypeParams(ReplacementMap &specializedSets) : 
         specializedSets(specializedSets) {}
     
-    virtual void visit(GenericIndexSet::Ptr set) {
-      node = specializedSets.at(set->setName);
-    }
+    virtual void visit(GenericIndexSet::Ptr);
+    virtual void visit(RangeConst::Ptr);
 
     ReplacementMap &specializedSets;
   };
@@ -213,6 +206,7 @@ private:
     private:
       typedef std::unordered_map<std::string, FuncDecl::Ptr> FuncMap;
       typedef std::unordered_map<std::string, ElementMap>    ElementDeclMap;
+      typedef std::unordered_map<HIRNode::Ptr, SetType::Ptr> SetDefinitionMap;
 
     public:
       void scope() { symbolTable.scope(); }
@@ -252,9 +246,7 @@ private:
         return elementDecls.at(elemName).at(fieldName);
       }
 
-      void addSymbol(const std::string& name, Type::Ptr type, Access access) {
-        symbolTable.insert(name, SymbolType(type, access));
-      }
+      void addSymbol(const std::string&, Type::Ptr, Access);
 
       bool hasSymbol(const std::string& name, Scope scope = Scope::All) const {
         return symbolTable.contains(name, scope);
@@ -272,14 +264,61 @@ private:
         return symbolTable.get(name, scope).access;
       }
 
+      void addSetDefinition(const HIRNode::Ptr set, 
+                            const SetType::Ptr def) {
+        setDefs[set] = def;
+      }
+
+      bool hasSetDefinition(const HIRNode::Ptr set) const {
+        return setDefs.find(set) != setDefs.end();
+      }
+
+      SetType::Ptr getSetDefinition(const HIRNode::Ptr set) const {
+        iassert(hasSetDefinition(set));
+        return setDefs.at(set);
+      }
+
       bool compareIndexSets(IndexSet::Ptr, IndexSet::Ptr);
       bool compareDomains(const IndexDomain&, const IndexDomain&);
       bool compareTypes(Type::Ptr, Type::Ptr);
       
     private:
-      FuncMap        funcDecls;
-      ElementDeclMap elementDecls;
-      SymbolTable    symbolTable;
+      FuncMap          funcDecls;
+      ElementDeclMap   elementDecls;
+      SymbolTable      symbolTable;
+      SetDefinitionMap     setDefs;
+  };
+  
+  class ComputeSetDefinitions : public HIRVisitor {
+    public:
+      ComputeSetDefinitions(Environment& env) : env(env) {}
+
+      void compute(Program::Ptr program) { program->accept(this); }
+
+    private:
+      virtual void visit(SetIndexSet::Ptr);
+      virtual void visit(IdentDecl::Ptr);
+      virtual void visit(FieldDecl::Ptr op) { HIRVisitor::visit(op); }
+      virtual void visit(FuncDecl::Ptr);
+      virtual void visit(VarDecl::Ptr);
+      virtual void visit(WhileStmt::Ptr);
+      virtual void visit(IfStmt::Ptr);
+      virtual void visit(ForStmt::Ptr);
+      virtual void visit(AssignStmt::Ptr);
+
+      typedef util::ScopedMap<std::string, SetType::Ptr> SymbolTable;
+
+      SymbolTable  decls;
+      Environment &env;
+  };
+
+  struct GenericCallTypeChecker {
+    GenericCallTypeChecker(Environment& env) : env(env) {}
+
+    void unify(Type::Ptr, Type::Ptr);
+
+    ReplacementMap  specializedSets;
+    Environment    &env;
   };
 
 private:
@@ -305,7 +344,7 @@ private:
       const TensorDimensions& = TensorDimensions(), bool = false);
 
   static std::string toString(ExprType);
-  static std::string toString(Type::Ptr);
+  static std::string toString(Type::Ptr, bool = true);
   static std::string toString(ScalarType::Type);
   
   void reportError(const std::string&, HIRNode::Ptr);
@@ -313,11 +352,13 @@ private:
   void reportMultipleDefs(const std::string&, const std::string&, HIRNode::Ptr);
 
 private:
-  Environment env;
-  ExprType    retType;
-  bool        retTypeChecked; 
-  bool        skipCheckDeclared; 
+  ExprType retType;
+  bool     retTypeChecked; 
   
+  bool     skipCheckDeclared;
+  unsigned skipReportError;
+  
+  Environment              env;
   std::vector<ParseError> *errors;
 };
 

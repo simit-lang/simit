@@ -39,7 +39,7 @@ void IREmitter::visit(ElementType::Ptr set) {
 }
 
 void IREmitter::visit(Endpoint::Ptr end) {
-  retExpr = ctx->getSymbol(end->setName).getExpr();
+  retExpr = ctx->getSymbol(end->set->setName).getExpr();
 }
 
 void IREmitter::visit(SetType::Ptr type) {
@@ -153,7 +153,7 @@ void IREmitter::visit(ExternDecl::Ptr decl) {
 }
 
 void IREmitter::visit(FuncDecl::Ptr decl) {
-  if (decl->typeParams.size() > 0) {
+  if (decl->genericParams.size() > 0) {
     return;
   }
 
@@ -350,7 +350,7 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   const ir::Func func = ctx->getFunction(expr->func->ident);
   const std::vector<ir::Var> results = func.getResults();
 
-  const ir::Expr target = ctx->getSymbol(expr->target->ident).getExpr();
+  const ir::Expr target = ctx->getSymbol(expr->target->setName).getExpr();
  
   std::vector<ir::Expr> partialActuals;
   for (auto actual : expr->partialActuals) {

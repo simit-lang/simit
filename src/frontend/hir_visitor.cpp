@@ -20,6 +20,19 @@ void HIRVisitor::visit(GenericIndexSet::Ptr set) {
   visit(to<SetIndexSet>(set));
 }
 
+void HIRVisitor::visit(ElementType::Ptr type) {
+  if (type->source) {
+    type->source->accept(this);
+  }
+}
+
+void HIRVisitor::visit(Endpoint::Ptr end) {
+  end->set->accept(this);
+  if (end->element) {
+    end->element->accept(this);
+  }
+}
+
 void HIRVisitor::visit(SetType::Ptr type) {
   type->element->accept(this);
   for (auto endpoint : type->endpoints) {
@@ -69,8 +82,8 @@ void HIRVisitor::visit(ExternDecl::Ptr decl) {
 
 void HIRVisitor::visit(FuncDecl::Ptr decl) {
   decl->name->accept(this);
-  for (auto typeParam : decl->typeParams) {
-    typeParam->accept(this);
+  for (auto genericParam : decl->genericParams) {
+    genericParam->accept(this);
   }
   for (auto arg : decl->args) {
     arg->accept(this);
@@ -226,6 +239,9 @@ void HIRVisitor::visit(TransposeExpr::Ptr expr) {
 
 void HIRVisitor::visit(CallExpr::Ptr expr) {
   expr->func->accept(this);
+  for (auto genericArg : expr->genericArgs) {
+    genericArg->accept(this);
+  }
   for (auto arg : expr->args) {
     if (arg) {
       arg->accept(this);
@@ -254,6 +270,10 @@ void HIRVisitor::visit(FieldReadExpr::Ptr expr) {
 
 void HIRVisitor::visit(ParenExpr::Ptr expr) {
   expr->expr->accept(this);
+}
+
+void HIRVisitor::visit(RangeConst::Ptr expr) {
+  visit(to<VarExpr>(expr));
 }
 
 void HIRVisitor::visit(NDTensorLiteral::Ptr lit) {

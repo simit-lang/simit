@@ -34,7 +34,8 @@ private:
   hir::FuncDecl::Ptr                     parseExternFuncDecl();
   hir::FuncDecl::Ptr                     parseFuncDecl();
   hir::FuncDecl::Ptr                     parseProcDecl();
-  std::vector<hir::Identifier::Ptr>      parseTypeParams();
+  std::vector<hir::GenericParam::Ptr>    parseGenericParams();
+  hir::GenericParam::Ptr                 parseGenericParam();
   std::vector<hir::Argument::Ptr>        parseArguments();
   hir::Argument::Ptr                     parseArgumentDecl();
   std::vector<hir::IdentDecl::Ptr>       parseResults();
@@ -85,6 +86,7 @@ private:
   hir::ScalarType::Ptr                   parseScalarType();
   std::vector<hir::IndexSet::Ptr>        parseIndexSets();
   hir::IndexSet::Ptr                     parseIndexSet();
+  hir::SetIndexSet::Ptr                  parseSetIndexSet();
   hir::Expr::Ptr                         parseTensorLiteral();
   hir::DenseTensorLiteral::Ptr           parseDenseTensorLiteral();
   hir::DenseTensorLiteral::Ptr           parseDenseTensorLiteralInner();

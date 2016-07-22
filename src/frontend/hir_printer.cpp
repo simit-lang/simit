@@ -26,6 +26,7 @@ void HIRPrinter::visit(RangeIndexSet::Ptr set) {
 
 void HIRPrinter::visit(SetIndexSet::Ptr set) {
   oss << set->setName;
+  //oss << "(" << set << ")";
 }
 
 void HIRPrinter::visit(DynamicIndexSet::Ptr set) {
@@ -34,28 +35,24 @@ void HIRPrinter::visit(DynamicIndexSet::Ptr set) {
 
 void HIRPrinter::visit(ElementType::Ptr type) {
   oss << type->ident;
-#if 1
-  if (!type->sourceGenericSets.empty() || !type->sourceSet.empty()) {
+#if 0
+  if (type->source) {
     oss << "{";
-    bool printDelimiter = false;
-    if (!type->sourceSet.empty()) {
-      oss << type->sourceSet;
-      printDelimiter = true;
-    }
-    for (auto sourceGenericSet : type->sourceGenericSets) {
-      if (printDelimiter) {
-        oss << ",";
-      }
-      oss << sourceGenericSet;
-      printDelimiter = true;
-    }
+    type->source->accept(this);
     oss << "}";
   }
 #endif
 }
 
 void HIRPrinter::visit(Endpoint::Ptr end) {
-  oss << end->setName;
+  end->set->accept(this);
+#if 0
+  if (end->element) {
+    oss << "{";
+    end->element->accept(this);
+    oss << "}";
+  }
+#endif
 }
 
 void HIRPrinter::visit(SetType::Ptr type) {
@@ -74,6 +71,7 @@ void HIRPrinter::visit(SetType::Ptr type) {
     }
     oss << ")";
   }
+  //oss << "<" << type << ">";
 }
 
 void HIRPrinter::visit(TupleLength::Ptr length) {
@@ -175,20 +173,27 @@ void HIRPrinter::visit(ExternDecl::Ptr decl) {
   oss << ";";
 }
 
+void HIRPrinter::visit(GenericParam::Ptr param) {
+  if (param->type == GenericParam::Type::RANGE) {
+    oss << "0:";
+  }
+  oss << param->name;
+}
+
 void HIRPrinter::visit(FuncDecl::Ptr decl) {
   if (decl->exported) {
     oss << "export ";
   }
   oss << "func ";
   decl->name->accept(this);
-  if (decl->typeParams.size() > 0) {
+  if (decl->genericParams.size() > 0) {
     oss << "<";
     bool printDelimiter = false;
-    for (auto typeParam : decl->typeParams) {
+    for (auto genericParam : decl->genericParams) {
       if (printDelimiter) {
         oss << ", ";
       }
-      typeParam->accept(this);
+      genericParam->accept(this);
       printDelimiter = true;
     }
     oss << ">";

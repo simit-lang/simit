@@ -31,6 +31,7 @@ public:
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
+  virtual void visit(GenericParam::Ptr);
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(ConstDecl::Ptr);

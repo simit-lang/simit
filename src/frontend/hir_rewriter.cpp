@@ -17,6 +17,21 @@ void HIRRewriter::visit(StmtBlock::Ptr stmtBlock) {
   node = stmtBlock;
 }
 
+void HIRRewriter::visit(ElementType::Ptr type) {
+  if (type->source) {
+    type->source = rewrite<SetIndexSet>(type->source);
+  }
+  node = type;
+}
+
+void HIRRewriter::visit(Endpoint::Ptr end) {
+  end->set = rewrite<SetIndexSet>(end->set);
+  if (end->element) {
+    end->element = rewrite<ElementType>(end->element);
+  }
+  node = end;
+}
+
 void HIRRewriter::visit(SetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
   for (auto &endpoint : type->endpoints) {
@@ -70,8 +85,8 @@ void HIRRewriter::visit(ExternDecl::Ptr decl) {
 
 void HIRRewriter::visit(FuncDecl::Ptr decl) {
   decl->name = rewrite<Identifier>(decl->name);
-  for (auto &typeParam : decl->typeParams) {
-    typeParam = rewrite<Identifier>(typeParam);
+  for (auto &genericParam : decl->genericParams) {
+    genericParam = rewrite<GenericParam>(genericParam);
   }
   for (auto &arg : decl->args) {
     arg = rewrite<Argument>(arg);
@@ -159,7 +174,7 @@ void HIRRewriter::visit(MapExpr::Ptr expr) {
   for (auto &arg : expr->partialActuals) {
     arg = rewrite<Expr>(arg);
   }
-  expr->target = rewrite<Identifier>(expr->target);
+  expr->target = rewrite<SetIndexSet>(expr->target);
   node = expr;
 }
 
@@ -225,6 +240,9 @@ void HIRRewriter::visit(TransposeExpr::Ptr expr) {
 
 void HIRRewriter::visit(CallExpr::Ptr expr) {
   expr->func = rewrite<Identifier>(expr->func);
+  for (auto &genericArg : expr->genericArgs) {
+    genericArg = rewrite<Expr>(genericArg);
+  }
   for (auto &arg : expr->args) {
     if (arg) {
       arg = rewrite<Expr>(arg);
@@ -258,6 +276,10 @@ void HIRRewriter::visit(FieldReadExpr::Ptr expr) {
 void HIRRewriter::visit(ParenExpr::Ptr expr) {
   expr->expr = rewrite<Expr>(expr->expr);
   node = expr;
+}
+
+void HIRRewriter::visit(RangeConst::Ptr expr) {
+  HIRRewriter::visit(to<VarExpr>(expr));
 }
 
 void HIRRewriter::visit(NDTensorLiteral::Ptr lit) {

@@ -81,6 +81,12 @@ HIRNode::Ptr SetIndexSet::cloneImpl() {
   return node;
 }
 
+void GenericIndexSet::copy(HIRNode::Ptr node) {
+  const auto indexSet = to<GenericIndexSet>(node);
+  SetIndexSet::copy(indexSet);
+  type = indexSet->type;
+}
+
 HIRNode::Ptr GenericIndexSet::cloneImpl() {
   const auto node = std::make_shared<GenericIndexSet>();
   node->copy(shared_from_this());
@@ -93,24 +99,12 @@ HIRNode::Ptr DynamicIndexSet::cloneImpl() {
   return node;
 }
 
-//ElementType::Ptr make(const std::string &ident, const std::string &sourceSet,
-//                      bool sourceSetIsGeneric) {
-//  auto ret = std::make_shared<ElementType>();
-//  ret->ident = ident;
-//  if (sourceSetIsGeneric) {
-//    ret->sourceGenericSets.insert(sourceSet);
-//  } else {
-//    ret->sourceSet = sourceSet;
-//  }
-//  return ret;
-//}
-
 void ElementType::copy(HIRNode::Ptr node) {
+  // TODO: Note that we don't bother copying source index set node since it is 
+  // not needed for type checking, and doing so would only complicate things.
   const auto elementType = to<ElementType>(node);
   Type::copy(elementType);
   ident = elementType->ident;
-  sourceSet = elementType->sourceSet;
-  sourceGenericSets = elementType->sourceGenericSets;
 }
 
 HIRNode::Ptr ElementType::cloneImpl() {
@@ -122,7 +116,8 @@ HIRNode::Ptr ElementType::cloneImpl() {
 void Endpoint::copy(HIRNode::Ptr node) {
   const auto endpoint = to<Endpoint>(node);
   HIRNode::copy(endpoint);
-  setName = endpoint->setName;
+  set = endpoint->set->clone<SetIndexSet>();
+  element = endpoint->element->clone<ElementType>();
 }
 
 HIRNode::Ptr Endpoint::cloneImpl() {
@@ -300,12 +295,25 @@ HIRNode::Ptr ExternDecl::cloneImpl() {
   return node;
 }
 
+void GenericParam::copy(HIRNode::Ptr node) {
+  const auto genericParam = to<GenericParam>(node);
+  HIRNode::copy(genericParam);
+  name = genericParam->name;
+  type = genericParam->type;
+}
+
+HIRNode::Ptr GenericParam::cloneImpl() {
+  const auto node = std::make_shared<GenericParam>();
+  node->copy(shared_from_this());
+  return node;
+}
+
 void FuncDecl::copy(HIRNode::Ptr node) {
   const auto funcDecl = to<FuncDecl>(node);
   HIRNode::copy(funcDecl);
   name = funcDecl->name->clone<Identifier>();
-  for (const auto &typeParam : funcDecl->typeParams) {
-    typeParams.push_back(typeParam->clone<Identifier>());
+  for (const auto &genericParam : funcDecl->genericParams) {
+    genericParams.push_back(genericParam->clone<GenericParam>());
   }
   for (const auto &arg : funcDecl->args) {
     args.push_back(arg->clone<Argument>());
@@ -488,7 +496,7 @@ void MapExpr::copy(HIRNode::Ptr node) {
   for (const auto &arg : mapExpr->partialActuals) {
     partialActuals.push_back(arg->clone<Expr>());
   }
-  target = mapExpr->target->clone<Identifier>();
+  target = mapExpr->target->clone<SetIndexSet>();
 }
 
 void ReducedMapExpr::copy(HIRNode::Ptr node) {
@@ -630,6 +638,9 @@ void CallExpr::copy(HIRNode::Ptr node) {
   const auto callExpr = to<CallExpr>(node);
   Expr::copy(callExpr);
   func = callExpr->func->clone<Identifier>();
+  for (const auto &genericArg : callExpr->genericArgs) {
+    genericArgs.push_back(genericArg->clone<Expr>());
+  }
   for (const auto &arg : callExpr->args) {
     args.push_back(arg ? arg->clone<Expr>() : Expr::Ptr());
   }
@@ -704,6 +715,12 @@ void VarExpr::copy(HIRNode::Ptr node) {
 
 HIRNode::Ptr VarExpr::cloneImpl() {
   const auto node = std::make_shared<VarExpr>();
+  node->copy(shared_from_this());
+  return node;
+}
+
+HIRNode::Ptr RangeConst::cloneImpl() {
+  const auto node = std::make_shared<RangeConst>();
   node->copy(shared_from_this());
   return node;
 }

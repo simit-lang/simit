@@ -142,7 +142,13 @@ struct SetIndexSet : public IndexSet {
 };
 
 struct GenericIndexSet : public SetIndexSet {
+  enum class Type {UNKNOWN, RANGE};
+
+  Type type;
+  
   typedef std::shared_ptr<GenericIndexSet> Ptr;
+
+  virtual void copy(HIRNode::Ptr);
 
   virtual HIRNode::Ptr cloneImpl();
 
@@ -162,9 +168,8 @@ struct DynamicIndexSet : public IndexSet {
 };
 
 struct ElementType : public Type {
-  std::string                     ident;
-  std::string                     sourceSet;
-  std::unordered_set<std::string> sourceGenericSets;
+  std::string      ident;
+  SetIndexSet::Ptr source;
   
   typedef std::shared_ptr<ElementType> Ptr;
  
@@ -178,7 +183,8 @@ struct ElementType : public Type {
 };
 
 struct Endpoint : public HIRNode {
-  std::string setName;
+  SetIndexSet::Ptr set;
+  ElementType::Ptr element;
   
   typedef std::shared_ptr<Endpoint> Ptr;
   
@@ -387,15 +393,32 @@ struct ExternDecl : public HIRNode {
   }
 };
 
+struct GenericParam : public HIRNode {
+  enum class Type {UNKNOWN, RANGE};
+
+  std::string name;
+  Type        type;
+
+  typedef std::shared_ptr<GenericParam> Ptr;
+
+  virtual void copy(HIRNode::Ptr);
+
+  virtual HIRNode::Ptr cloneImpl();
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<GenericParam>());
+  }
+};
+
 struct FuncDecl : public HIRNode {
-  Identifier::Ptr                   name;
-  std::vector<GenericIndexSet::Ptr> typeParams;
-  std::vector<Argument::Ptr>        args;
-  std::vector<IdentDecl::Ptr>       results;
-  StmtBlock::Ptr                    body;
-  bool                              exported;
-  bool                              external;
-  std::string                       originalName;
+  Identifier::Ptr                name;
+  std::vector<GenericParam::Ptr> genericParams;
+  std::vector<Argument::Ptr>     args;
+  std::vector<IdentDecl::Ptr>    results;
+  StmtBlock::Ptr                 body;
+  bool                           exported;
+  bool                           external;
+  std::string                    originalName;
   
   typedef std::shared_ptr<FuncDecl> Ptr;
   
@@ -626,7 +649,7 @@ struct ExprParam : public ReadParam {
 struct MapExpr : public Expr {
   Identifier::Ptr        func;
   std::vector<Expr::Ptr> partialActuals;
-  Identifier::Ptr        target;
+  SetIndexSet::Ptr       target;
 
   typedef std::shared_ptr<MapExpr> Ptr;
 
@@ -877,6 +900,7 @@ struct TransposeExpr : public UnaryExpr {
 
 struct CallExpr : public Expr {
   Identifier::Ptr        func;
+  std::vector<Expr::Ptr> genericArgs;
   std::vector<Expr::Ptr> args;
   
   typedef std::shared_ptr<CallExpr> Ptr;
@@ -975,6 +999,16 @@ struct VarExpr : public Expr {
 
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(self<VarExpr>());
+  }
+};
+
+struct RangeConst : public VarExpr {
+  typedef std::shared_ptr<RangeConst> Ptr;
+
+  virtual HIRNode::Ptr cloneImpl();
+
+  virtual void accept(HIRVisitor *visitor) {
+    visitor->visit(self<RangeConst>());
   }
 };
 

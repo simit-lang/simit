@@ -15,7 +15,12 @@ namespace hir {
 TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
     retTypeChecked(true),
     skipCheckDeclared(false),
+    skipReportError(0),
     errors(errors) {
+  class ComputeSetDefinitions : public HIRVisitor {
+    virtual void visit(SetIndexSet::Ptr set) {
+    }
+  };
 //  const auto intType = makeTensorType(ScalarType::Type::INT);
 //  const auto floatType = makeTensorType(ScalarType::Type::FLOAT);
 //
@@ -27,6 +32,12 @@ TypeChecker::TypeChecker(std::vector<ParseError> *errors) :
 //    modDecl->results = {intType->clone<ScalarType>()};
 //    env.addFunction("mod", modDecl);
 //  }
+}
+
+void TypeChecker::check(Program::Ptr program) {
+  ComputeSetDefinitions(env).compute(program);
+  env.hasSetDefinition(nullptr);
+  typeCheck(program);
 }
 
 void TypeChecker::visit(Program::Ptr program) {
@@ -55,7 +66,7 @@ void TypeChecker::visit(SetIndexSet::Ptr set) {
 
   // Check that index set pointed to by identifier is indeed of set type.
   if (!isa<SetType>(env.getSymbolType(set->setName))) {
-    reportError("index set must be a set or a range", set);
+    reportError("expected a set", set);
   }
 }
 
@@ -63,19 +74,31 @@ void TypeChecker::visit(ElementType::Ptr type) {
   // Check that element type has been previously declared.
   if (!env.hasElementType(type->ident)) {
     reportUndeclared("element type", type->ident, type);
+    return;
+  }
+
+  // If source set inference was able to infer element source, check that the 
+  // source set actually contains element of the same type.
+  if (type->source && !isa<GenericIndexSet>(type->source) && 
+      env.hasSetDefinition(type->source)) {
+    const SetType::Ptr sourceType = env.getSetDefinition(type->source);
+    const std::string sourceElemType = sourceType->element->ident;
+
+    if (sourceElemType != type->ident) {
+      std::stringstream errMsg;
+      errMsg << "element declared to be of type '" << type->ident 
+             << "' but inferred to be of type '" << sourceElemType << "'";
+      reportError(errMsg.str(), type);
+    }
   }
 }
 
 void TypeChecker::visit(Endpoint::Ptr end) {
-  // Check that end point has been previously declared.
-  if (!env.hasSymbol(end->setName)) {
-    reportUndeclared("set", end->setName, end);
-    return;
-  }
-
-  // Check that end point is indeed of set type.
-  if (!isa<SetType>(env.getSymbolType(end->setName))) {
-    reportError("endpoint must be a set", end);
+  retTypeChecked = typeCheck(end->set);
+ 
+  if (retTypeChecked) {
+    const auto endSetType = env.getSetDefinition(end->set);
+    end->element = endSetType->element;
   }
 }
 
@@ -119,26 +142,6 @@ void TypeChecker::visit(NDTensorType::Ptr type) {
 
 void TypeChecker::visit(IdentDecl::Ptr decl) {
   retTypeChecked = typeCheck(decl->type);
-
-  // If identifier is declared as an element and front end was able to infer 
-  // the source set, check that source set contains elements of same type.
-  if (isa<ElementType>(decl->type)) {
-    const auto type = to<ElementType>(decl->type);
-
-    if (!type->sourceSet.empty()) {
-      const Type::Ptr sourceType = 
-          env.getSymbolType(type->sourceSet, Environment::Scope::TopOnly);
-      const auto sourceSetType = to<SetType>(sourceType);
-      
-      if (sourceSetType->element->ident != type->ident) {
-        std::stringstream errMsg;
-        errMsg << "'" << decl->name->ident << "' declared as element of type '"
-               << type->ident << "' but inferred to be element of type '"
-               << sourceSetType->element->ident << "'";
-        reportError(errMsg.str(), decl);
-      }
-    }
-  }
 }
 
 void TypeChecker::visit(FieldDecl::Ptr decl) {
@@ -152,13 +155,17 @@ void TypeChecker::visit(ElementTypeDecl::Ptr decl) {
     const Type::Ptr fieldType = field->field->type;
 
     const bool typeChecked = typeCheck(field);
+
+    if (elemFields.find(fieldName) != elemFields.end()) {
+      reportMultipleDefs("element field", fieldName, decl);
+    }
+
     elemFields[fieldName] = typeChecked ? fieldType : Type::Ptr();
   }
 
   // Check that element type has not been previously declared.
   if (env.hasElementType(decl->name->ident)) {
     reportMultipleDefs("element type", decl->name->ident, decl);
-    return;
   }
 
   env.addElementType(decl->name->ident, elemFields);
@@ -177,9 +184,8 @@ void TypeChecker::visit(ExternDecl::Ptr decl) {
   // Check that variable has not been previously declared.
   if (env.hasSymbol(externName, Environment::Scope::CurrentOnly)) {
     reportMultipleDefs("variable or constant", externName, decl);
-    return;
   }
-  
+ 
   env.addSymbol(externName, externType, Access::READ_WRITE);
 }
 
@@ -188,7 +194,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
   const bool specialized = !decl->originalName.empty();
 
   // Skip type checking for specialized versions of generic functions.
-  if (specialized && !decl->typeParams.empty()) {
+  if (specialized && !decl->genericParams.empty()) {
     if (env.hasFunction(decl->originalName)) {
       env.addFunction(name, decl);
     }
@@ -196,16 +202,40 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     return;
   }
 
+  if (decl->exported && !decl->genericParams.empty()) {
+    reportError("exported function cannot have generic parameters", decl);
+  }
+
   env.scope();
+  skipReportError += specialized;
+
+  for (const auto genericParam : decl->genericParams) {
+    const std::string name = genericParam->name;
+
+    if (env.hasSymbol(name, Environment::Scope::CurrentOnly)) {
+      reportMultipleDefs("function parameter", name, genericParam);
+    }
+
+    const Type::Ptr type = (genericParam->type == GenericParam::Type::RANGE) ?
+                           to<Type>(makeTensorType(ScalarType::Type::INT)) :
+                           to<Type>(env.getSetDefinition(genericParam));
+    env.addSymbol(name, type, Access::READ);
+  }
 
   // Check argument types.
   for (const auto arg : decl->args) {
     const bool typeChecked = typeCheck(arg);
     retTypeChecked = typeChecked && retTypeChecked;
 
+    const std::string name = arg->arg->name->ident;
     const Type::Ptr type = typeChecked ? arg->arg->type : Type::Ptr();
     const Access access = arg->isInOut() ? Access::READ_WRITE : Access::READ;
-    env.addSymbol(arg->arg->name->ident, type, access);
+    
+    if (env.hasSymbol(name, Environment::Scope::CurrentOnly)) {
+      reportMultipleDefs("function parameter", name, arg);
+    }
+
+    env.addSymbol(name, type, access);
   }
   
   // Check return value types.
@@ -213,13 +243,20 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     const bool typeChecked = typeCheck(res);
     retTypeChecked = typeChecked && retTypeChecked;
 
+    const std::string name = res->name->ident;
     const Type::Ptr type = typeChecked ? res->type : Type::Ptr();
-    env.addSymbol(res->name->ident, type, Access::READ_WRITE);
+    
+    if (env.hasSymbol(name, Environment::Scope::CurrentOnly)) {
+      reportMultipleDefs("function parameter", name, res);
+    }
+
+    env.addSymbol(name, type, Access::READ_WRITE);
   }
 
   // Type check function body.
   typeCheck(decl->body);
 
+  skipReportError -= specialized;
   env.unscope();
 
   if (!retTypeChecked) {
@@ -229,7 +266,6 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
   // Check that function has not been previously declared.
   if (env.hasFunction(name) && !specialized) {
     reportMultipleDefs("function or procedure", name, decl);
-    return;
   }
 
   env.addFunction(name, decl);
@@ -314,12 +350,8 @@ void TypeChecker::visit(ForStmt::Ptr stmt) {
     loopVarType = makeTensorType(ScalarType::Type::INT);
   } else if (isa<IndexSetDomain>(stmt->domain) && typeChecked) {
     const auto setDomain = to<IndexSetDomain>(stmt->domain);
-    const auto setName = setDomain->set->setName;
-    const auto setType = to<SetType>(env.getSymbolType(setName));
-    const auto elemType = setType->element->clone<ElementType>();
-    
-    elemType->sourceSet = setName;
-    loopVarType = elemType;
+    const auto setType = env.getSetDefinition(setDomain->set);
+    loopVarType = setType->element;
   }
 
   env.addSymbol(stmt->loopVar->ident, loopVarType, Access::READ);
@@ -792,21 +824,30 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
 
   FuncDecl::Ptr func = env.getFunction(funcName);
 
-  if (!func->typeParams.empty()) {
-    GenericCallTypeChecker checker;
-    const unsigned numArgs = std::min(argTypes.size(), func->args.size());
+  if (!func->genericParams.empty()) {
+    // Type parameter resolution needs to be done with information that is 
+    // stored only with the original version of the generic function (in 
+    // particular, input element sources).
+    const FuncDecl::Ptr funcSignature = func->originalName.empty() ? func :
+                                        env.getFunction(func->originalName);
+
+    GenericCallTypeChecker checker(env);
+    const auto numArgs = std::min(argTypes.size(), funcSignature->args.size());
 
     for (unsigned i = 0; i < numArgs; ++i) {
       const ExprType argType = argTypes[i];
       if (argType.defined && argType.isSingleValue()) {
-        checker.unify(func->args[i]->arg->type, argType.type[0]);
+        checker.unify(funcSignature->args[i]->arg->type, argType.type[0]);
       }
     }
 
-    for (const auto typeParam : func->typeParams) {
-      const auto it = checker.specializedSets.find(typeParam->ident);
+    for (const auto genericParam : funcSignature->genericParams) {
+      const auto it = checker.specializedSets.find(genericParam->name);
       if (it == checker.specializedSets.end()) {
-        reportError("unable to resolve all type parameters", expr);
+        std::stringstream errMsg;
+        errMsg << "unable to resolve type parameter '" 
+               << genericParam->name << "'";
+        reportError(errMsg.str(), expr);
         return;
       }
     }
@@ -814,10 +855,11 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     if (func->originalName.empty() /* TODO: || is intrinsic */) {
       // TODO: Optimize by just cloning type signature.
       func = func->clone<FuncDecl>();
+      func->body = std::make_shared<StmtBlock>();
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);
-    func->typeParams.clear();
+    func->genericParams.clear();
 
     if (errors->empty() && !func->originalName.empty()) {
       typeCheck(func);
@@ -973,7 +1015,15 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
     const IndexSet::Ptr indexSet = dimensions[i][0];
 
     // Check that index is of right type.
-    if (isa<SetIndexSet>(indexSet)) {
+    if (isa<RangeIndexSet>(indexSet) || (isa<GenericIndexSet>(indexSet) && 
+        to<GenericIndexSet>(indexSet)->type == GenericIndexSet::Type::RANGE)) {
+      if (!indexType.isScalarInt()) {
+        std::stringstream errMsg;
+        errMsg << "expected an integral index but got an index of type " 
+               << toString(indexType);
+        reportError(errMsg.str(), index);
+      }
+    } else if (isa<SetIndexSet>(indexSet)) {
       if (!isa<ElementType>(indexType.type[0])) {
         std::stringstream errMsg;
         errMsg << "expected an element as index but got an index of type "
@@ -985,18 +1035,9 @@ void TypeChecker::visit(TensorReadExpr::Ptr expr) {
       const auto elemType = to<ElementType>(indexType.type[0]);
       const std::string domain = to<SetIndexSet>(indexSet)->setName;
 
-      if (domain != elemType->sourceSet && 
-          elemType->sourceGenericSets.find(domain) == 
-          elemType->sourceGenericSets.end()) {
+      if (!env.compareIndexSets(indexSet, elemType->source)) {
         std::stringstream errMsg;
         errMsg << "expected an element of set '" << domain << "' as index";
-        reportError(errMsg.str(), index);
-      }
-    } else if (isa<RangeIndexSet>(indexSet)) {
-      if (!indexType.isScalarInt()) {
-        std::stringstream errMsg;
-        errMsg << "expected an integral index but got an index of type " 
-               << toString(indexType);
         reportError(errMsg.str(), index);
       }
     } else {
@@ -1105,6 +1146,7 @@ void TypeChecker::visit(FieldReadExpr::Ptr expr) {
 
     const auto indexSet = std::make_shared<SetIndexSet>();
     indexSet->setName = to<VarExpr>(expr->setOrElem)->ident;
+    env.addSetDefinition(indexSet, to<SetType>(type));
 
     const auto setReadTensorType = std::make_shared<NDTensorType>();
     setReadTensorType->indexSets.push_back(indexSet);
@@ -1207,7 +1249,6 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
   // Check that variable/constant hasn't already been declared in current scope.
   if (env.hasSymbol(varName, Environment::Scope::CurrentOnly)) {
     reportMultipleDefs(varDeclType, varName, decl);
-    return;
   }
   
   // Record declaration of variable/constant in symbol table.
@@ -1220,7 +1261,7 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
     return;
   }
 
-  // Check that variable is a tensor.
+  // Check that variable/constant is a tensor.
   if (!isa<TensorType>(varType)) {
     std::stringstream errMsg;
     errMsg << "cannot declare a non-tensor " << varDeclType;
@@ -1313,7 +1354,6 @@ void TypeChecker::typeCheckVarOrConstDecl(VarDecl::Ptr decl, bool isConst,
 void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   const std::string opString = isApply ? "apply" : "map";
   const std::string funcName = expr->func->ident;
-  const std::string targetName = expr->target->ident;
 
   std::vector<ExprType> actualsType(expr->partialActuals.size());
   for (unsigned i = 0; i < expr->partialActuals.size(); ++i) {
@@ -1345,15 +1385,12 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
   }
 
-  bool continueTypeChecking = true;
-  
   FuncDecl::Ptr func;
-  Type::Ptr targetType;
+  SetType::Ptr targetSetType;
 
   // Check that assembly function has been declared.
   if (!env.hasFunction(funcName)) {
     reportUndeclared("function", funcName, expr->func);
-    continueTypeChecking = false;
   } else {
     func = env.getFunction(funcName);
     
@@ -1362,27 +1399,22 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
   }
 
-  // Check that target set has been declared.
-  if (!env.hasSymbol(targetName)) {
-    reportUndeclared("set", targetName, expr->target);
-    continueTypeChecking = false;
+  // Check that target has been declared and is a (non-generic) set.
+  if (!typeCheck(expr->target)) {
+    retTypeChecked = false;
+  } else if (isa<GenericIndexSet>(expr->target)) {
+    std::stringstream errMsg;
+    errMsg << opString << " operation cannot be applied to generic sets";
+    reportError(errMsg.str(), expr->target);
   } else {
-    targetType = env.getSymbolType(targetName);
-
-    // Check that map operation is applied to set.
-    if (!isa<SetType>(targetType)) {
-      std::stringstream errMsg;
-      errMsg << opString << " operation can only be applied to sets";
-      reportError(errMsg.str(), expr->target);
-      continueTypeChecking = false;
-    }
+    targetSetType = env.getSetDefinition(expr->target);
   }
   
   auto getResType = [](IdentDecl::Ptr res) { return res->type; };
 
-  if (!continueTypeChecking) {
+  if (!retTypeChecked) {
     // Infer map operation return type if possible.
-    if (func && func->typeParams.empty()) {
+    if (func && func->genericParams.empty()) {
       ExprType::TypeVector resultTypes(func->results.size());
       std::transform(func->results.begin(), func->results.end(), 
                      resultTypes.begin(), getResType);
@@ -1393,22 +1425,17 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
   }
 
   // Infer assembly function's required argument types.
-  const SetType::Ptr targetSetType = to<SetType>(targetType);
-  const auto targetElemType = targetSetType->element->clone<ElementType>();
-  targetElemType->sourceSet = targetName;
-  actualsType.push_back(ExprType(targetElemType, Access::READ_WRITE));
+  actualsType.push_back(ExprType(targetSetType->element, Access::READ_WRITE));
   
   if (!targetSetType->endpoints.empty()) {
-    const std::string neighborSet = targetSetType->endpoints[0]->setName;
-    const Type::Ptr neighborType = 
-        env.getSymbolType(neighborSet, Environment::Scope::TopOnly);
-    const auto neighborSetType = to<SetType>(neighborType);
+    const auto endpoint = targetSetType->endpoints[0];
+    const auto neighborSet = endpoint->set->setName;
     
     // Check for heterogeneous edge sets, which are currently unsupported.
     // TODO: Should remove this once support for heterogeneous edge sets 
     //       has been added.
     for (unsigned i = 1; i < targetSetType->endpoints.size(); ++i) {
-      if (targetSetType->endpoints[i]->setName != neighborSet) {
+      if (targetSetType->endpoints[i]->set->setName != neighborSet) {
         std::stringstream errMsg;
         errMsg << opString << " operation is currently unsupported for "
                << "heterogeneous edge sets";
@@ -1418,36 +1445,41 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
     
     if (actualsType.size() != func->args.size()) {
-      const auto neighborElemType = 
-          neighborSetType->element->clone<ElementType>();
-      neighborElemType->sourceSet = neighborSet;
-     
       const auto neighborsLength = std::make_shared<TupleLength>();
       neighborsLength->val = targetSetType->endpoints.size();
 
       const auto neighborsType = std::make_shared<TupleType>();
-      neighborsType->element = neighborElemType;
+      neighborsType->element = endpoint->element;
       neighborsType->length = neighborsLength; 
       actualsType.push_back(ExprType(neighborsType, Access::READ_WRITE));
     }
   }
 
-#if 1
-  if (!func->typeParams.empty()) {
-    GenericCallTypeChecker checker;
-    const unsigned numArgs = std::min(actualsType.size(), func->args.size());
+  if (!func->genericParams.empty()) {
+    // Type parameter resolution needs to be done with information that is 
+    // stored only with the original version of the generic function (in 
+    // particular, input element sources).
+    const FuncDecl::Ptr funcSignature = func->originalName.empty() ? func :
+                                        env.getFunction(func->originalName);
+
+    GenericCallTypeChecker checker(env);
+    const unsigned numArgs = std::min(actualsType.size(), 
+                                      funcSignature->args.size());
 
     for (unsigned i = 0; i < numArgs; ++i) {
       const ExprType paramType = actualsType[i];
       if (paramType.defined && paramType.isSingleValue()) {
-        checker.unify(func->args[i]->arg->type, paramType.type[0]);
+        checker.unify(funcSignature->args[i]->arg->type, paramType.type[0]);
       }
     }
 
-    for (const auto typeParam : func->typeParams) {
-      const auto it = checker.specializedSets.find(typeParam->ident);
+    for (const auto genericParam : funcSignature->genericParams) {
+      const auto it = checker.specializedSets.find(genericParam->name);
       if (it == checker.specializedSets.end()) {
-        reportError("unable to resolve all type parameters", expr);
+        std::stringstream errMsg;
+        errMsg << "unable to resolve type parameter '" 
+               << genericParam->name << "'";
+        reportError(errMsg.str(), expr);
         return;
       }
     }
@@ -1455,16 +1487,17 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     if (func->originalName.empty()) {
       // TODO: Optimize by just cloning type signature.
       func = func->clone<FuncDecl>();
+      func->body = std::make_shared<StmtBlock>();
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);
-    func->typeParams.clear();
+    func->genericParams.clear();
 
+    // Generic functions that are called in the body need to be concretized.
     if (errors->empty() && !func->originalName.empty()) {
       typeCheck(func);
     }
   }
-#endif
   
   // Infer map operation return type.
   ExprType::TypeVector resultTypes(func->results.size());
@@ -1733,6 +1766,99 @@ bool TypeChecker::ExprType::isWritable() const {
   }
 }
 
+void TypeChecker::ComputeSetDefinitions::visit(SetIndexSet::Ptr set) {
+  if (!decls.contains(set->setName)) {
+    return;
+  }
+  
+  const SetType::Ptr type = decls.get(set->setName);
+  
+  if (type) {
+    env.addSetDefinition(set, type);
+  }
+}
+
+void TypeChecker::ComputeSetDefinitions::visit(IdentDecl::Ptr decl) {
+  HIRVisitor::visit(decl);
+  
+  const auto type = isa<SetType>(decl->type) ? 
+                    to<SetType>(decl->type) : SetType::Ptr();
+  decls.insert(decl->name->ident, type);
+}
+
+void TypeChecker::ComputeSetDefinitions::visit(FuncDecl::Ptr decl) {
+  decls.insert(decl->name->ident, SetType::Ptr());
+  decls.scope();
+  
+  for (const auto genericParam : decl->genericParams) {
+    const auto setType = std::make_shared<SetType>();
+    setType->element = std::make_shared<ElementType>();
+    
+    decls.insert(genericParam->name, setType);
+    env.addSetDefinition(genericParam, setType);
+  }
+  
+  HIRVisitor::visit(decl);
+  decls.unscope();
+}
+
+void TypeChecker::ComputeSetDefinitions::visit(VarDecl::Ptr decl) {
+  HIRVisitor::visit(decl);
+
+  const auto type = isa<SetType>(decl->type) ? 
+                    to<SetType>(decl->type) : SetType::Ptr();
+  decls.insert(decl->name->ident, type);
+}
+
+void TypeChecker::ComputeSetDefinitions::visit(WhileStmt::Ptr stmt) {
+  stmt->cond->accept(this);
+  
+  decls.scope();
+  stmt->body->accept(this);
+  decls.unscope();
+}
+  
+void TypeChecker::ComputeSetDefinitions::visit(IfStmt::Ptr stmt) {
+  stmt->cond->accept(this);
+
+  decls.scope();
+  stmt->ifBody->accept(this);
+  decls.unscope();
+
+  if (stmt->elseBody) {
+    decls.scope();
+    stmt->elseBody->accept(this);
+    decls.unscope();
+  }
+}
+
+void TypeChecker::ComputeSetDefinitions::visit(ForStmt::Ptr stmt) {
+  decls.scope();
+  stmt->domain->accept(this);
+  decls.insert(stmt->loopVar->ident, SetType::Ptr()); 
+  
+  stmt->body->accept(this);
+  decls.unscope();
+}
+
+void TypeChecker::ComputeSetDefinitions::visit(AssignStmt::Ptr stmt) {
+  stmt->expr->accept(this);
+  
+  for (auto lhs : stmt->lhs) {
+    lhs->accept(this);
+    
+    if (!isa<VarExpr>(lhs)) {
+      continue;
+    }
+    
+    const std::string varName = to<VarExpr>(lhs)->ident;
+    
+    if (!decls.contains(varName)) {
+      decls.insert(varName, SetType::Ptr());
+    }
+  }
+}
+
 void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType, 
                                                 Type::Ptr argType) {
   if (isa<NDTensorType>(paramType) && isa<NDTensorType>(argType)) {
@@ -1740,40 +1866,99 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
     const auto argTensorType = to<NDTensorType>(argType);
     const auto paramDomain = paramTensorType->indexSets;
     const auto argDomain = argTensorType->indexSets;
+    
     const unsigned domainSize = std::min(paramDomain.size(), argDomain.size());
 
     for (unsigned i = 0; i < domainSize; ++i) {
       if (isa<GenericIndexSet>(paramDomain[i])) {
         const auto genericName = to<GenericIndexSet>(paramDomain[i])->setName;
+        
         if (specializedSets.find(genericName) == specializedSets.end()) {
           if (isa<SetIndexSet>(argDomain[i])) {
-            //iassert(!isa<GenericIndexSet>(argDomain[i]));
+            auto indexSet = argDomain[i]->clone<SetIndexSet>();
+            env.addSetDefinition(indexSet, env.getSetDefinition(argDomain[i]));
+
+            const auto paramGenericType = isa<GenericIndexSet>(paramDomain[i]) ?
+                to<GenericIndexSet>(paramDomain[i])->type : 
+                GenericIndexSet::Type::UNKNOWN;
+            const auto argGenericType = isa<GenericIndexSet>(paramDomain[i]) ?
+                to<GenericIndexSet>(argDomain[i])->type : 
+                GenericIndexSet::Type::UNKNOWN;
             
-            auto indexSet = std::make_shared<SetIndexSet>();
-            indexSet->setLoc(paramDomain[i]);
-            indexSet->setName = to<SetIndexSet>(argDomain[i])->setName;
-            specializedSets[genericName] = indexSet;
+            if (paramGenericType != GenericIndexSet::Type::RANGE ||
+                argGenericType == GenericIndexSet::Type::RANGE) {
+              specializedSets[genericName] = indexSet;
+            }
           } else if (isa<RangeIndexSet>(argDomain[i])) {
-            auto indexSet = std::make_shared<RangeIndexSet>();
-            indexSet->setLoc(paramDomain[i]);
-            indexSet->range = to<RangeIndexSet>(argDomain[i])->range;
-            specializedSets[genericName] = indexSet;
+            specializedSets[genericName] = argDomain[i]->clone<RangeIndexSet>();
           } else {
             not_supported_yet;
           }
         }
       }
     }
+
     unify(paramTensorType->blockType, argTensorType->blockType);
   } else if (isa<ElementType>(paramType) && isa<ElementType>(argType)) {
+    const auto paramElemType = to<ElementType>(paramType);
+    const auto argElemType = to<ElementType>(argType);
+
+    std::cout << *paramElemType << " " << *argElemType << std::endl;
+    std::cout << argElemType->source << " " << isa<GenericIndexSet>(paramElemType->source) << std::endl;
+    if (argElemType->source && isa<GenericIndexSet>(paramElemType->source)) {
+      const auto genericName = paramElemType->source->setName;
+
+      if (specializedSets.find(genericName) == specializedSets.end()) {
+        specializedSets[genericName] = argElemType->source;
+      }
+    }
+  } else if (isa<TupleType>(paramType) && isa<TupleType>(argType)) {
+    const auto paramTupleType = to<TupleType>(paramType);
+    const auto argTupleType = to<TupleType>(argType);
+    unify(paramTupleType->element, argTupleType->element);
   }
+}
+
+void TypeChecker::ReplaceTypeParams::visit(GenericIndexSet::Ptr set) {
+  node = specializedSets.at(set->setName);
+}
+
+void TypeChecker::ReplaceTypeParams::visit(RangeConst::Ptr expr) {
+  const auto literal = std::make_shared<IntLiteral>();
+  literal->val = to<RangeIndexSet>(specializedSets.at(expr->ident))->range;
+
+  node = literal;
+}
+
+void TypeChecker::Environment::addSymbol(const std::string& name, 
+                                         Type::Ptr type, Access access) {
+  if (isa<SetType>(type)) {
+    const auto setType = to<SetType>(type);
+    
+    const SetIndexSet::Ptr set = (setType->element->ident == "") ? 
+                                 std::make_shared<GenericIndexSet>() : 
+                                 std::make_shared<SetIndexSet>();
+    set->setName = name;
+
+    setType->element->source = set;
+    addSetDefinition(set, setType);
+  }
+
+  symbolTable.insert(name, SymbolType(type, access));
 }
 
 bool TypeChecker::Environment::compareIndexSets(IndexSet::Ptr l, 
                                                 IndexSet::Ptr r) {
   if (isa<SetIndexSet>(l)) {
-    return isa<SetIndexSet>(r) && 
-           (to<SetIndexSet>(l)->setName == to<SetIndexSet>(r)->setName);
+    if (!isa<SetIndexSet>(r)) {
+      return false;
+    }
+
+    const auto lSet = to<SetIndexSet>(l);
+    const auto rSet = to<SetIndexSet>(r);
+
+    return hasSetDefinition(lSet) && hasSetDefinition(rSet) && 
+           (getSetDefinition(lSet) == getSetDefinition(rSet));
   } else if (isa<RangeIndexSet>(l)) {
     return isa<RangeIndexSet>(r) &&
            (to<RangeIndexSet>(l)->range == to<RangeIndexSet>(r)->range);
@@ -1820,12 +2005,8 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r) {
     const auto ltype = to<ElementType>(l);
     const auto rtype = to<ElementType>(r);
 
-    // TODO: Check for generic sets inferred as sources.
-    if (ltype->sourceSet.empty() || rtype->sourceSet.empty()) {
-      return ltype->ident == rtype->ident;
-    }
-
-    return ltype->sourceSet == rtype->sourceSet;
+    return (!ltype->source || !rtype->source) ? (ltype->ident == rtype->ident) :
+           compareIndexSets(ltype->source, rtype->source);
   } else if (isa<SetType>(l)) {
     if (!isa<SetType>(r)) {
       return false;
@@ -1839,7 +2020,10 @@ bool TypeChecker::Environment::compareTypes(Type::Ptr l, Type::Ptr r) {
     }
 
     for (unsigned i = 0; i < ltype->endpoints.size(); ++i) {
-      if (ltype->endpoints[i]->setName != rtype->endpoints[i]->setName) {
+      const auto lEndpointElem = ltype->endpoints[i]->element;
+      const auto rEndpointElem = rtype->endpoints[i]->element;
+      
+      if (!compareTypes(lEndpointElem, rEndpointElem)) {
         return false;
       }
     }
@@ -1975,7 +2159,7 @@ std::string TypeChecker::toString(ExprType type) {
     if (printDelimiter) {
       oss << ", ";
     }
-    oss << *compType;
+    oss << toString(compType, false);
     printDelimiter = true;
   }
 
@@ -1983,14 +2167,27 @@ std::string TypeChecker::toString(ExprType type) {
   return oss.str();
 }
 
-std::string TypeChecker::toString(Type::Ptr type) {
+std::string TypeChecker::toString(Type::Ptr type, bool printQuotes) {
+  const std::string quote = (printQuotes ? "'" : "");
+  
   std::stringstream oss;
-  oss << "'" << *type << "'";
+  oss << quote << *type << quote;
+  
   if (isa<ElementType>(type)) {
     const auto elemType = to<ElementType>(type);
-    // TODO: print source sets
-    //if (
+    
+    if (elemType->source) {
+      oss << " from '" << *elemType->source << "'";
+    }
+  } else if (isa<TupleType>(type)) {
+    const auto tupleType = to<TupleType>(type);
+
+    if (tupleType->element->source) {
+      oss << " from '(" << *tupleType->element->source << " * " 
+          << tupleType->length->val << ")'";
+    }
   }
+
   return oss.str();
 }
 
@@ -2015,8 +2212,10 @@ std::string TypeChecker::toString(ScalarType::Type type) {
 void TypeChecker::reportError(const std::string &msg, HIRNode::Ptr loc) {
   const auto err = ParseError(loc->getLineBegin(), loc->getColBegin(), 
                               loc->getLineEnd(), loc->getColEnd(), msg);
-  errors->push_back(err);
-  retTypeChecked = false;
+  if (skipReportError == 0) {
+    errors->push_back(err);
+    retTypeChecked = false;
+  }
 }
 
 void TypeChecker::reportUndeclared(const std::string &type, 

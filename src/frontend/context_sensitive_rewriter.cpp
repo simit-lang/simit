@@ -17,19 +17,36 @@ ContextSensitiveRewriter::ContextSensitiveRewriter(
 }
         
 void ContextSensitiveRewriter::visit(SetIndexSet::Ptr set) {
+  HIRRewriter::visit(set);
+
   const std::string setName = set->setName;
-  if (decls.contains(setName) && decls.get(setName) == IdentType::TYPE_PARAM) {
-    auto newSet = std::make_shared<GenericIndexSet>();
-    newSet->setLoc(set);
-    newSet->setName = setName;
-    node = newSet;
-  } else {
-    node = set;
+  
+  if (decls.contains(setName)) {
+    const auto type = decls.get(setName);
+
+    switch (type) {
+      case IdentType::GENERIC_PARAM:
+      case IdentType::RANGE_GENERIC_PARAM:
+      {
+        auto newSet = std::make_shared<GenericIndexSet>();
+        
+        newSet->setLoc(set);
+        newSet->setName = setName;
+        newSet->type = (type == IdentType::RANGE_GENERIC_PARAM) ? 
+                       GenericIndexSet::Type::RANGE :
+                       GenericIndexSet::Type::UNKNOWN;
+        
+        node = newSet;
+      }
+      default:
+        break;
+    }
   }
 }
 
 void ContextSensitiveRewriter::visit(IdentDecl::Ptr decl) {
   HIRRewriter::visit(decl);
+  
   const auto type = isa<TupleType>(decl->type) ? IdentType::TUPLE : 
                     IdentType::OTHER;
   decls.insert(decl->name->ident, type);
@@ -38,9 +55,13 @@ void ContextSensitiveRewriter::visit(IdentDecl::Ptr decl) {
 void ContextSensitiveRewriter::visit(FuncDecl::Ptr decl) {
   decls.insert(decl->name->ident, IdentType::FUNCTION);
   decls.scope();
-  for (const auto typeParam : decl->typeParams) {
-    decls.insert(typeParam->ident, IdentType::TYPE_PARAM);
+  
+  for (const auto genericParam : decl->genericParams) {
+    const auto type = (genericParam->type == GenericParam::Type::RANGE) ?
+                      IdentType::RANGE_GENERIC_PARAM : IdentType::GENERIC_PARAM;
+    decls.insert(genericParam->name, type);
   }
+  
   HIRRewriter::visit(decl);
   decls.unscope();
 }
@@ -93,11 +114,15 @@ void ContextSensitiveRewriter::visit(AssignStmt::Ptr stmt) {
   
   for (auto &lhs : stmt->lhs) {
     lhs = rewrite<Expr>(lhs);
-    if (isa<VarExpr>(lhs)) {
-      const std::string varName = to<VarExpr>(lhs)->ident;
-      if (!decls.contains(varName)) {
-        decls.insert(varName, IdentType::OTHER);
-      }
+    
+    if (!isa<VarExpr>(lhs)) {
+      continue;
+    }
+    
+    const std::string varName = to<VarExpr>(lhs)->ident;
+    
+    if (!decls.contains(varName)) {
+      decls.insert(varName, IdentType::OTHER);
     }
   }
 
@@ -163,6 +188,18 @@ void ContextSensitiveRewriter::visit(TensorReadExpr::Ptr expr) {
     }
     default:
       break;
+  }
+}
+
+void ContextSensitiveRewriter::visit(VarExpr::Ptr expr) {
+  HIRRewriter::visit(expr);
+
+  if (decls.contains(expr->ident) && 
+      decls.get(expr->ident) == IdentType::RANGE_GENERIC_PARAM) {
+    const auto rangeConst = std::make_shared<RangeConst>();
+    rangeConst->setLoc(expr);
+    rangeConst->ident = expr->ident;
+    node = rangeConst;
   }
 }
 

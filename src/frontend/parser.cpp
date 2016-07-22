@@ -145,7 +145,6 @@ hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
   externFuncDecl->name = parseIdent();
   externFuncDecl->args = parseArguments();
   externFuncDecl->results = parseResults();
-  externFuncDecl->body = nullptr;  // body is undefined (decls have no body)
   externFuncDecl->external = true;
   
   const Token endToken = consume(Token::Type::SEMICOL);
@@ -154,7 +153,7 @@ hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
   return externFuncDecl;
 }
 
-// func_decl: ['export'] 'func' ident type_params
+// func_decl: ['export'] 'func' ident generic_params
 //            arguments results stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   auto funcDecl = std::make_shared<hir::FuncDecl>();
@@ -167,7 +166,7 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   consume(Token::Type::FUNC);
   
   funcDecl->name = parseIdent();
-  funcDecl->typeParams = parseTypeParams();
+  funcDecl->genericParams = parseGenericParams();
   funcDecl->args = parseArguments();
   funcDecl->results = parseResults();
   funcDecl->body = parseStmtBlock();
@@ -196,7 +195,7 @@ hir::FuncDecl::Ptr Parser::parseProcDecl() {
         }
       case Token::Type::RP:
       case Token::Type::INOUT:
-        procDecl->typeParams = parseTypeParams();
+        procDecl->genericParams = parseGenericParams();
         procDecl->args = parseArguments();
         procDecl->results = parseResults();
         break;
@@ -212,19 +211,38 @@ hir::FuncDecl::Ptr Parser::parseProcDecl() {
   return procDecl;
 }
 
-// type_params: ['<' ident {',' ident} '>']
-std::vector<hir::Identifier::Ptr> Parser::parseTypeParams() {
-  std::vector<hir::Identifier::Ptr> typeParams;
+// generic_params: ['<' generic_param {',' generic_param} '>']
+std::vector<hir::GenericParam::Ptr> Parser::parseGenericParams() {
+  std::vector<hir::GenericParam::Ptr> genericParams;
 
   if (tryconsume(Token::Type::LA)) {
     do {
-      const hir::Identifier::Ptr typeParam = parseIdent();
-      typeParams.push_back(typeParam);
+      const hir::GenericParam::Ptr genericParam = parseGenericParam();
+      genericParams.push_back(genericParam);
     } while (tryconsume(Token::Type::COMMA));
     consume(Token::Type::RA);
   }
 
-  return typeParams;
+  return genericParams;
+}
+
+// generic_param: [INT_LITERAL(0) ':'] ident
+hir::GenericParam::Ptr Parser::parseGenericParam() {
+  auto param = std::make_shared<hir::GenericParam>();
+  param->type = hir::GenericParam::Type::UNKNOWN;
+
+  if (peek().type == Token::Type::INT_LITERAL && peek().num == 0) {
+    consume(Token::Type::INT_LITERAL);
+    consume(Token::Type::COL);
+    
+    param->type = hir::GenericParam::Type::RANGE;
+  }
+
+  const Token identToken = consume(Token::Type::IDENT);
+  param->setLoc(identToken);
+  param->name = identToken.str;
+
+  return param;
 }
 
 // arguments: '(' [argument_decl {',' argument_decl}] ')'
@@ -588,7 +606,7 @@ hir::PrintStmt::Ptr Parser::parsePrintStmt() {
   }
 }
 
-// apply_stmt: apply ident [call_params] 'to' ident ';'
+// apply_stmt: apply ident [call_params] 'to' set_index_set ';'
 hir::ApplyStmt::Ptr Parser::parseApplyStmt() {
   try {
     auto applyStmt = std::make_shared<hir::ApplyStmt>();
@@ -603,7 +621,7 @@ hir::ApplyStmt::Ptr Parser::parseApplyStmt() {
     }
     
     consume(Token::Type::TO);
-    applyStmt->map->target = parseIdent();
+    applyStmt->map->target = parseSetIndexSet();
     
     const Token endToken = consume(Token::Type::SEMICOL);
     applyStmt->setEndLoc(endToken);
@@ -668,7 +686,7 @@ hir::Expr::Ptr Parser::parseExpr() {
   return (peek().type == Token::Type::MAP) ? parseMapExpr() : parseOrExpr();
 }
 
-// map_expr: 'map' ident [call_params] 'to' ident ['reduce' '+']
+// map_expr: 'map' ident [call_params] 'to' set_index_set ['reduce' '+']
 hir::MapExpr::Ptr Parser::parseMapExpr() {
   const Token mapToken = consume(Token::Type::MAP);
   const hir::Identifier::Ptr func = parseIdent();
@@ -679,7 +697,7 @@ hir::MapExpr::Ptr Parser::parseMapExpr() {
   }
   
   consume(Token::Type::TO);
-  const hir::Identifier::Ptr target = parseIdent();
+  const hir::SetIndexSet::Ptr target = parseSetIndexSet();
  
   if (peek().type == Token::Type::REDUCE) {
     consume(Token::Type::REDUCE);
@@ -1146,17 +1164,13 @@ hir::SetType::Ptr Parser::parseSetType() {
   return setType;
 }
 
-// endpoints: ident {',' ident}
+// endpoints: set_index_set {',' set_index_set}
 std::vector<hir::Endpoint::Ptr> Parser::parseEndpoints() {
   std::vector<hir::Endpoint::Ptr> endpoints;
   
   do {
     auto endpoint = std::make_shared<hir::Endpoint>();
-    
-    const Token endpointToken = consume(Token::Type::IDENT);
-    endpoint->setLoc(endpointToken);
-    endpoint->setName = endpointToken.str;
-    
+    endpoint->set = parseSetIndexSet();
     endpoints.push_back(endpoint);
   } while (tryconsume(Token::Type::COMMA));
 
@@ -1374,7 +1388,7 @@ std::vector<hir::IndexSet::Ptr> Parser::parseIndexSets() {
   return indexSets;
 }
 
-// index_set: INT_LITERAL | IDENT | '*'
+// index_set: INT_LITERAL | set_index_set | '*'
 hir::IndexSet::Ptr Parser::parseIndexSet() {
   hir::IndexSet::Ptr indexSet;
   switch (peek().type) {
@@ -1390,16 +1404,8 @@ hir::IndexSet::Ptr Parser::parseIndexSet() {
       break;
     }
     case Token::Type::IDENT:
-    {
-      auto setIndexSet = std::make_shared<hir::SetIndexSet>();
-      
-      const Token identToken = consume(Token::Type::IDENT);
-      setIndexSet->setLoc(identToken);
-      setIndexSet->setName = identToken.str;
-      
-      indexSet = setIndexSet;
+      indexSet = parseSetIndexSet();
       break;
-    }
     case Token::Type::STAR:
     {
       indexSet = std::make_shared<hir::DynamicIndexSet>();
@@ -1415,6 +1421,17 @@ hir::IndexSet::Ptr Parser::parseIndexSet() {
   }
 
   return indexSet;
+}
+
+// set_index_set: ident
+hir::SetIndexSet::Ptr Parser::parseSetIndexSet() {
+  auto setIndexSet = std::make_shared<hir::SetIndexSet>();
+  
+  const Token identToken = consume(Token::Type::IDENT);
+  setIndexSet->setLoc(identToken);
+  setIndexSet->setName = identToken.str;
+
+  return setIndexSet;
 }
 
 // tensor_literal: INT_LITERAL | FLOAT_LITERAL | 'true' | 'false'

@@ -32,14 +32,12 @@ int Frontend::parseStream(std::istream &programStream, ProgramContext *ctx,
   // Semantic analyses.
   program = hir::ContextSensitiveRewriter(errors).rewrite(program);
   program = hir::ConstantFolding().rewrite(program);
-  // hir::PadTensorBlocks().pad(program);
   hir::ConstChecker(errors).check(program);
   hir::InferElementSources().infer(program);
-  //std::cout << *program << std::endl;
   hir::SpecializeGenericFunctions().specialize(program);
-  std::cout << *program << std::endl;
-  hir::TypeChecker(errors).check(program);
   //std::cout << *program << std::endl;
+  hir::TypeChecker(errors).check(program);
+  std::cout << *program << std::endl;
 
   // Only emit IR if no syntactic or semantic error was found.
   if (!errors->empty()) {

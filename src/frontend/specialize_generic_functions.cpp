@@ -37,7 +37,7 @@ void SpecializeGenericFunctions::visit(Program::Ptr program) {
 }
 
 void SpecializeGenericFunctions::visit(FuncDecl::Ptr decl) {
-  if (decl->typeParams.size() == 0 || !decl->originalName.empty()) {
+  if (decl->genericParams.size() == 0 || !decl->originalName.empty()) {
     HIRVisitor::visit(decl);
   }
 }
@@ -82,7 +82,7 @@ void SpecializeGenericFunctions::clone(FuncDecl::Ptr decl,
 }
 
 void SpecializeGenericFunctions::FindGenericFuncs::visit(FuncDecl::Ptr decl) {
-  if (decl->typeParams.size() > 0) {
+  if (decl->genericParams.size() > 0) {
     genericFuncs[decl->name->ident] = decl;
   }
 }

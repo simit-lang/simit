@@ -19,8 +19,8 @@ public:
   virtual void visit(SetIndexSet::Ptr op) { node = op; }
   virtual void visit(GenericIndexSet::Ptr op) { node = op; }
   virtual void visit(DynamicIndexSet::Ptr op) { node = op; }
-  virtual void visit(ElementType::Ptr op) { node = op; }
-  virtual void visit(Endpoint::Ptr op) { node = op; }
+  virtual void visit(ElementType::Ptr);
+  virtual void visit(Endpoint::Ptr);
   virtual void visit(SetType::Ptr);
   virtual void visit(TupleLength::Ptr op) { node = op; }
   virtual void visit(TupleType::Ptr);
@@ -32,6 +32,7 @@ public:
   virtual void visit(ElementTypeDecl::Ptr);
   virtual void visit(Argument::Ptr);
   virtual void visit(ExternDecl::Ptr);
+  virtual void visit(GenericParam::Ptr op) { node = op; }
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
@@ -66,6 +67,7 @@ public:
   virtual void visit(FieldReadExpr::Ptr);
   virtual void visit(ParenExpr::Ptr);
   virtual void visit(VarExpr::Ptr op) { node = op; }
+  virtual void visit(RangeConst::Ptr);
   virtual void visit(IntLiteral::Ptr op) { node = op; }
   virtual void visit(FloatLiteral::Ptr op) { node = op; }
   virtual void visit(BoolLiteral::Ptr op) { node = op; }

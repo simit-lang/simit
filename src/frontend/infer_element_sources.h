@@ -14,6 +14,8 @@ public:
 
 private:
   virtual void visit(IdentDecl::Ptr);
+  virtual void visit(FieldDecl::Ptr op) {}
+  virtual void visit(ExternDecl::Ptr op) {}
   virtual void visit(FuncDecl::Ptr);
   virtual void visit(VarDecl::Ptr);
   virtual void visit(WhileStmt::Ptr);
@@ -25,7 +27,9 @@ private:
   void reportError(std::string, HIRNode::Ptr);
 
 private:
-  util::ScopedMap<std::string, Type::Ptr> decls;
+  typedef util::ScopedMap<std::string, Type::Ptr> SymbolTable;
+
+  SymbolTable decls;
 };
 
 }
