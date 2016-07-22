@@ -89,6 +89,13 @@ std::ostream &operator<<(std::ostream &os, const ForDomain &d) {
     case ForDomain::Edges:
       os << d.set << ".edges[" << d.var << "]";
       break;
+    case ForDomain::Lattice:
+      os << "lattice[";
+      for (const Var& v : d.latticeVars) {
+        os << v << ",";
+      }
+      os << "]";
+      break;
     case ForDomain::NeighborsOf:
       os << d.set << ".neighborsOf[" << d.var << "]";
     case ForDomain::Neighbors:

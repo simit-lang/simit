@@ -153,7 +153,7 @@ void LLVMFunction::bind(const std::string& name, simit::Set* set) {
     else if (setType->kind == ir::SetType::LatticeLink) {
       uassert(set->getKind() == simit::Set::LatticeLink)
           << "Must bind a lattice link set to " << name;
-      int ndims = setType->dimensions;
+      unsigned ndims = setType->dimensions;
       vector<int> dimensions = set->getDimensions();
       uassert(dimensions.size() == ndims)
           << "Lattice link set with wrong number of dimensions: "

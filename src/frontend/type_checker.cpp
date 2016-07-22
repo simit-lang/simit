@@ -118,7 +118,7 @@ void TypeChecker::visit(SetType::Ptr type) {
       typeChecked = false;
     }
     // Check lattice point set is an unstructured set
-    else if (!latticePointSet.type().toSet()->kind ==
+    else if (latticePointSet.type().toSet()->kind !=
              ir::SetType::Kind::Unstructured) {
       std::stringstream errMsg;
       errMsg << "expected lattice point set of Unstructured kind but got "
@@ -127,7 +127,7 @@ void TypeChecker::visit(SetType::Ptr type) {
       typeChecked = false;
     }
     // Check lattice point set is cardinality zero
-    else if (!latticePointSet.type().toSet()->getCardinality() == 0) {
+    else if (latticePointSet.type().toSet()->getCardinality() != 0) {
       std::stringstream errMsg;
       errMsg << "expected lattice point set of 0 cardinality, but got "
              << latticePointSet.type().toSet()->getCardinality();
@@ -1155,7 +1155,7 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
           }
         }
       }
-      if (typeChecked && !lhsType->at(0).toSet()->getCardinality() == 0) {
+      if (typeChecked && lhsType->at(0).toSet()->getCardinality() != 0) {
         reportError("lattice point set cannot have non-zero cardinality",
                     expr->set);
         typeChecked = false;
@@ -1167,7 +1167,7 @@ void TypeChecker::visit(SetReadExpr::Ptr expr) {
     // Case 2: Lattice edge set, double set of indices (#indices = 2*dim)
     else if (lhsType->at(0).toSet()->kind == ir::SetType::Kind::LatticeLink) {
       // Check number of indices = 2*dim and all integral
-      int dims = lhsType->at(0).toSet()->dimensions;
+      unsigned dims = lhsType->at(0).toSet()->dimensions;
       if (expr->indices.size() != 2*dims) {
         std::stringstream errMsg;
         errMsg << "lattice edge set access expects number of indices to equal "
@@ -1603,7 +1603,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
         reportError(errMsg.str(), expr->through);
         typeChecked = false;
       }
-      else if (!through.type().toSet()->kind == ir::SetType::LatticeLink) {
+      else if (through.type().toSet()->kind != ir::SetType::LatticeLink) {
         std::stringstream errMsg;
         errMsg << opString << " operation can only be applied through lattice "
                << "link sets";

@@ -49,6 +49,7 @@ std::ostream& operator<<(std::ostream& os, const StencilLayout& stencil) {
     }
   }
   os << "DONE" << endl;
+  return os;
 }
 
 vector<int> getOffsets(vector<Expr> offsets) {

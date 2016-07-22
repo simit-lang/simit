@@ -677,7 +677,7 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
         // Use canonical memory ordering to infer j from stencil offsets
         Expr latticeSet = stencil.getLatticeSet();
         iassert(latticeSet.type().isSet());
-        int dims = latticeSet.type().toSet()->dimensions;
+        unsigned dims = latticeSet.type().toSet()->dimensions;
 
         // Fetch the full LoopVar corresponding to the i lattice loop
         iassert(latticeLoopVars.count(i));
@@ -696,12 +696,10 @@ Stmt lowerIndexStatement(Stmt stmt, Environment* environment, Storage storage) {
           Expr totalInd = Literal::make(0);
           for (int d = dims-1; d >= 0; --d) {
             Expr dimSize = IndexRead::make(latticeSet, IndexRead::LatticeDim, d);
+            // Periodic boundary conditions
             Expr ind = ((latticeVars[d]+offsets[d])%dimSize+dimSize)%dimSize;
             totalInd = totalInd * dimSize + ind;
           }
-          // Make total off positive modulo totalSize
-          // totalOff = (totalOff % totalSize)+totalSize;
-          // Compute j modulo totalSize to ensure periodic boundary conditions
           ijLoop.push_back(AssignStmt::make(j, totalInd));
           // Perform inner loop
           ijLoop.push_back(loopNest);

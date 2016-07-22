@@ -43,7 +43,7 @@ const std::string TensorIndex::getName() const {
   return content->name;
 }
 
-const TensorIndex::Kind TensorIndex::getKind() const {
+TensorIndex::Kind TensorIndex::getKind() const {
   return content->kind;
 }
 

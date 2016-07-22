@@ -83,7 +83,6 @@ void MapFunctionRewriter::visit(const FieldWrite *op) {
   // Write a field from the target set
   if (isa<VarExpr>(op->elementOrSet) &&
       to<VarExpr>(op->elementOrSet)->var == target) {
-    //iassert(false) << "field from target set";
     Expr setFieldRead = FieldRead::make(targetSet, op->fieldName);
     stmt = TensorWrite::make(setFieldRead, {targetLoopVar}, rewrite(op->value));
   }
@@ -170,7 +169,7 @@ void MapFunctionRewriter::visit(const TupleRead *op) {
 void MapFunctionRewriter::visit(const SetRead *op) {
   iassert(isa<VarExpr>(op->set)) << "Set read set must be a variable";
   const Var& setVar = to<VarExpr>(op->set)->var;
-  int dims = throughEdges.getType().toSet()->dimensions;
+  unsigned dims = throughEdges.getType().toSet()->dimensions;
   if (setVar == throughEdges) {
     iassert(op->indices.size() == dims*2);
     iassert(latticeIndexVars.size() == dims);
@@ -179,7 +178,7 @@ void MapFunctionRewriter::visit(const SetRead *op) {
     vector<int> srcOff, sinkOff;
     int dir = -1;
     bool srcBase;
-    for (int i = 0; i < dims; ++i) {
+    for (unsigned i = 0; i < dims; ++i) {
       srcOff.push_back(offsets[i]);
       sinkOff.push_back(offsets[dims+i]);
       if (srcOff.back() != sinkOff.back()) {
@@ -340,7 +339,7 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
     std::map<vector<int>, Expr> clocs;
     Var stencilVar, mapVar;
     iassert(map->vars.size() == map->function.getResults().size());
-    for (int i = 0; i < map->vars.size(); ++i) {
+    for (unsigned i = 0; i < map->vars.size(); ++i) {
       auto var = map->vars[i];
       auto res = map->function.getResults()[i];
       if (storage->getStorage(var).getKind() == TensorStorage::Kind::Stencil) {

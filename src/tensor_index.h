@@ -37,7 +37,7 @@ public:
   const std::string getName() const;
 
   /// Get tensor index kind
-  const Kind getKind() const;
+  Kind getKind() const;
 
   /// Get whether the tensor index has computed (vs. stored) row and
   /// coord indices.

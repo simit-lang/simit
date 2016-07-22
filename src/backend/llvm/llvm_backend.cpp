@@ -1245,6 +1245,9 @@ void LLVMBackend::compile(const ir::For& forLoop) {
     case ForDomain::Edges:
       not_supported_yet;
       break;
+    case ForDomain::Lattice:
+      not_supported_yet;
+      break;
     case ForDomain::NeighborsOf:
     case ForDomain::Neighbors:
       not_supported_yet;
