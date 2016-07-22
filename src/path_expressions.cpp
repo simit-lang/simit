@@ -122,12 +122,13 @@ PathExpression PathExpression::operator()(Var v0, Var v1) {
 
 
 // class Link
-Link::Link(const Var &lhs, const Var &rhs, Type type)
-    : type(type), lhs(lhs), rhs(rhs) {
+Link::Link(const Var &lhs, const Var &rhs, Type type, ir::StencilLayout stencil)
+    : type(type), lhs(lhs), rhs(rhs), stencil(stencil) {
 }
 
-PathExpression Link::make(const Var &lhs, const Var &rhs, Type type) {
-  return new Link(lhs, rhs, type);
+PathExpression Link::make(const Var &lhs, const Var &rhs,
+                          Type type, ir::StencilLayout stencil) {
+  return new Link(lhs, rhs, type, stencil);
 }
 
 Set Link::getLhsSet() const {
@@ -138,12 +139,12 @@ Set Link::getRhsSet() const {
   return rhs.getSet();
 }
 
-Set Link::getVertexSet() const {
-  return (type==ev) ? rhs.getSet() : lhs.getSet();
+Set Link::getVertexSet(int i) const {
+  return getVertexVar(i).getSet();
 }
 
 Set Link::getEdgeSet() const   {
-  return (type==ev) ? lhs.getSet() : rhs.getSet();
+  return getEdgeVar().getSet();
 }
 
 const Var &Link::getPathEndpoint(unsigned i) const {
@@ -158,11 +159,25 @@ void Link::accept(PathExpressionVisitor *visitor) const {
 bool Link::eq(const PathExpressionImpl &o) const {
   auto optr = static_cast<const Link*>(&o);
   return this->getLhs().getSet() == optr->getLhs().getSet() &&
-         this->getRhs().getSet() == optr->getRhs().getSet();
+         this->getRhs().getSet() == optr->getRhs().getSet() &&
+         this->hasStencil() == optr->hasStencil() &&
+         (!this->hasStencil() ||
+          this->getStencil() == optr->getStencil());
 }
 
 bool Link::lt(const PathExpressionImpl &o) const {
   auto optr = static_cast<const Link*>(&o);
+  if (!hasStencil() && optr->hasStencil()) {
+    return true;
+  }
+  else if (hasStencil() && !optr->hasStencil()) {
+    return false;
+  }
+  else if (hasStencil() && optr->hasStencil()) {
+    if (getStencil() != optr->getStencil())
+      return getStencil() < optr->getStencil();
+  }
+  
   return (getLhs().getSet() != optr->getLhs().getSet())
          ? getLhs().getSet() < optr->getLhs().getSet()
          : getRhs().getSet() < optr->getRhs().getSet();
@@ -395,6 +410,10 @@ void PathExpressionPrinter::print(Set binding) {
   os << setName;
 }
 
+void PathExpressionPrinter::print(const ir::StencilLayout &s) {
+  os << s;
+}
+
 void PathExpressionPrinter::print(const QuantifiedVar &v) {
   switch (v.getQuantifier()) {
     case QuantifiedVar::Quantifier::Exist:
@@ -426,6 +445,11 @@ void PathExpressionPrinter::visit(const Link *pe) {
   print(rename(pe->getLhs()));
   os << "-";
   print(rename(pe->getRhs()));
+  if (pe->hasStencil()) {
+    os << "(";
+    print(pe->getStencil());
+    os << ")";
+  }
 }
 
 void PathExpressionPrinter::printConnective(const QuantifiedConnective *pe) {

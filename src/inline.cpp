@@ -8,6 +8,7 @@
 #include "flatten.h"
 #include "intrinsics.h"
 #include "ir_codegen.h"
+#include "lattice_ops.h"
 #include "tensor_index.h"
 #include "stencils.h"
 
@@ -191,40 +192,38 @@ void MapFunctionRewriter::visit(const SetRead *op) {
       }
     }
     iassert(dir != -1) << "Must have an offset in lattice link indexing";
-    vector<int> index = srcBase ? srcOff : sinkOff;
-    index.push_back(dir); // Directional index outermost
+    
     // Convert index offsets to a single offset expr
-    // Expr totalSize(dims);
-    Expr totalInd = index.back();
-    for (int i = dims-1; i >= 0; --i) {
-      Expr dimSize = IndexRead::make(throughSet, IndexRead::LatticeDim, i);
-      // TODO: Double modulus required by truncating style of mod semantics
-      Expr ind = ((latticeIndexVars[i] + index[i]) % dimSize + dimSize) % dimSize;
-      // totalSize = totalSize * dimSize;
-      totalInd = totalInd * dimSize + ind;
+    vector<Expr> indices, base;
+    indices.push_back(dir); // Directional index innermost
+    for (int ind : (srcBase ? srcOff : sinkOff)) {
+      indices.push_back(ind);
     }
-    // Make totalOff positive modulo totalSize
-    // totalOff = (totalOff%totalSize)+totalSize;
-    expr = totalInd;
+    base.push_back(Expr(0)); // Add directional base 0 value
+    for (const Var& v : latticeIndexVars) {
+      base.push_back(v);
+    }
+    iassert(indices.size() == dims+1);
+    iassert(base.size() == dims+1);
+    
+    vector<Expr> finalIndices = getLatticeLinkOffsetIndices(
+        base, indices, throughSet);
+    expr = getLatticeLinkCoord(finalIndices, throughSet);
   }
   else if (setVar == throughPoints) {
-    iassert(op->indices.size() == dims);
-    iassert(latticeIndexVars.size() == dims);
-    vector<int> offsets = getOffsets(op->indices);
-    // Convert index offsets to a single offset expr
-    Expr totalSize(1);
-    Expr totalInd = Literal::make(0);
-    for (int i = dims-1; i >= 0; --i) {
-      Expr dimSize = IndexRead::make(throughSet, IndexRead::LatticeDim, i);
-      // TODO: Double modulus required by truncating style of mod semantics
-      Expr ind = ((latticeIndexVars[i] + offsets[i]) % dimSize
-                  + dimSize) % dimSize;
-      totalInd = totalInd * dimSize + ind;
+    vector<Expr> indices, base;
+    for (int ind : getOffsets(op->indices)) {
+      indices.emplace_back(ind);
     }
-    // Make totalOff positive modulo totalSize
-    // totalOff = (totalOff%totalSize)+totalSize;
-    // Rewrite into a bare index, modulo the set size (periodic boundary conditions)
-    expr = totalInd; //(targetLoopVar + totalOff) % totalSize;
+    for (const Var& v : latticeIndexVars) {
+      base.emplace_back(v);
+    }
+    iassert(indices.size() == dims);
+    iassert(base.size() == dims);
+    
+    vector<Expr> finalIndices = getLatticeOffsetIndices(
+        base, indices, throughSet);
+    expr = getLatticeCoord(finalIndices, throughSet);
   }
   else {
     not_supported_yet;
@@ -243,82 +242,14 @@ void MapFunctionRewriter::visit(const VarExpr *op) {
   }
 }
 
-bool isAllZeros(vector<int> offsets) {
-  for (int off : offsets) {
-    if (off != 0) return false;
-  }
-  return true;
-}
-
-vector<int> getOffsets(vector<Expr> offsets) {
-  vector<int> out;
-  for (Expr off : offsets) {
-    iassert(isa<Literal>(off));
-    out.push_back(to<Literal>(off)->getIntVal(0));
-  }
-  return out;
-}
-
 StencilContent* buildStencilLocs(Func kernel, Var stencilVar, Var loopVar,
+                                 Var latticeSet,
                                  std::map<vector<int>, Expr> &clocs) {
-  std::map<vector<int>, int> layout; // layout of stencil for the storage
-  int stencilSize = 0;
-  Var tensorVar;
-  match(kernel,
-        function< void(const TensorWrite*,Matcher*) >(
-            [&](const TensorWrite* op, Matcher* ctx) {
-              tensorVar = Var();
-              ctx->match(op->tensor);
-              // Found a write to the stencil-assembled variable
-              if (tensorVar.defined() && tensorVar == stencilVar) {
-                tassert(op->indices.size() == 2)
-                    << "Stencil assembly must be of matrix";
-                auto row = op->indices[0];
-                auto col = op->indices[1];
-                iassert(row.type().isElement() &&
-                        col.type().isElement());
-                iassert(kernel.getArguments().size() >= 3)
-                    << "Kernel must have element, and two sets as arguments";
-                // The first argument to the kernel is an alias for points[0,0,...]
-                Var origin = kernel.getArguments()[0];
-                Var points = kernel.getArguments()[kernel.getArguments().size()-1];
-                Var links = kernel.getArguments()[kernel.getArguments().size()-2];
-                iassert(points.getType().isSet());
-                iassert(links.getType().isSet());
-                iassert(links.getType().toSet()->kind == SetType::LatticeLink);
-                int dims = links.getType().toSet()->dimensions;
-                // We assume row index normalization has been performed already
-                iassert((isa<VarExpr>(row) && to<VarExpr>(row)->var == origin) ||
-                        (isa<SetRead>(row) &&
-                         isAllZeros(getOffsets(to<SetRead>(row)->indices))));
-                // col index determines stencil structure
-                vector<int> offsets;
-                if (isa<VarExpr>(col)) {
-                  iassert(to<VarExpr>(col)->var == origin);
-                  offsets = vector<int>(dims);
-                }
-                else {
-                  iassert(isa<SetRead>(col));
-                  offsets = getOffsets(to<SetRead>(col)->indices);
-                }
-                // Add new offset to stencil
-                if (!layout.count(offsets)) {
-                  layout[offsets] = stencilSize;
-                  stencilSize++;
-                }
-              }
-            }),
-        function< void(const VarExpr*) >(
-            [&tensorVar](const VarExpr* v) {
-              tensorVar = v->var;
-            })
-        );
-  // Make locs relative to loop var
-  for (auto &kv : layout) {
-    clocs[kv.first] = loopVar*stencilSize + kv.second;
+  StencilContent *content = buildStencil(kernel, stencilVar, latticeSet);
+  // Build clocs relative to loop var
+  for (auto &kv : content->layout) {
+    clocs[kv.first] = loopVar*Expr((int)content->layout.size()) + kv.second;
   }
-  StencilContent *content = new StencilContent;
-  content->layout = layout;
   return content;
 }
 
@@ -412,9 +343,6 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
     for (int i = 0; i < map->vars.size(); ++i) {
       auto var = map->vars[i];
       auto res = map->function.getResults()[i];
-      iassert(storage->getStorage(var).getKind() == TensorStorage::Kind::Stencil ||
-              storage->getStorage(var).getKind() == TensorStorage::Kind::Diagonal ||
-              storage->getStorage(var).getKind() == TensorStorage::Kind::Dense);
       if (storage->getStorage(var).getKind() == TensorStorage::Kind::Stencil) {
         iassert(!stencilVar.defined());
         iassert(storage->getStorage(var).getTensorIndex().getStencilLayout()
@@ -424,22 +352,25 @@ Stmt inlineMapFunction(const Map *map, Var lv, vector<Var> ivs,
         mapVar = var;
         stencilVar = res;
       }
+      else if (storage->getStorage(var).getKind()
+               == TensorStorage::Kind::Indexed) {
+        iassert(!stencilVar.defined());
+        mapVar = var;
+        stencilVar = res;
+      }
     }
     // Must have exactly one stencil-assembled output
     iassert(stencilVar.defined())
         << "map with through must assemble exactly one stencil-assembled var";
+    // Build compile-time locs
+    StencilLayout s = buildStencilLocs(
+        map->function, stencilVar, lv, to<VarExpr>(map->through)->var, clocs);
     if (kIndexlessStencils) {
-      // Build compile-time locs
-      StencilContent *s = buildStencilLocs(map->function, stencilVar, lv, clocs);
-      s->latticeSet = to<VarExpr>(map->through)->var; // assumes VarExpr
+      // Resolve StencilLayout in storage
       storage->getStorage(mapVar).getTensorIndex().setStencilLayout(s);
-      iassert(ivs.size() > 0);
-      return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs, ivs);
     }
-    else {
-      // Replace storage with Indexed
-      unreachable;
-    }
+    iassert(ivs.size() > 0);
+    return rewriter.inlineMapFunc(map, lv, storage, Var(), Var(), clocs, ivs);
   }
   else {
     return rewriter.inlineMapFunc(map, lv, storage);

@@ -12,10 +12,6 @@ using namespace std;
 namespace simit {
 namespace ir {
 
-/// Utilities for working with offset indices
-bool isAllZeros(vector<int> offsets);
-vector<int> getOffsets(vector<Expr> offsets);
-
 /// Rewrites a mapped function body to compute on sets w.r.t. a loop variable,
 /// instead of arguments.
 class MapFunctionRewriter : protected IRRewriter {

@@ -347,6 +347,10 @@ void IRPrinter::visit(const Map *op) {
   if (op->reduction.getKind() != ReductionOperator::Undefined) {
     os << " reduce " << op->reduction;
   }
+  if (op->through.defined()) {
+    os << " through ";
+    print(op->through);
+  }
   os << ";";
 }
 

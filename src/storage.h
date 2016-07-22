@@ -40,9 +40,11 @@ public:
     /// tensor index.
     Indexed,
 
-    /// A stencil matrix, whose non-zeros lie on a fixed number of diagonals.
-    /// The set of diagonals is based on the access pattern of the assembly
-    /// kernel.
+    /// A sparse matrix, whose non-zeros components are accessible through a
+    /// *computable* tensor index (i.e. no memory-based structures).
+    /// Stencil-assembled matrices can be stored this way, since all
+    /// non-zeros appear on a fixed number of diagonals determined when
+    /// compiling the assembly function.
     Stencil,
   };
 

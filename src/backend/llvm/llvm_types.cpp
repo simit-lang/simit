@@ -81,12 +81,20 @@ llvm::StructType *llvmType(const ir::SetType& setType, unsigned addrspace,
     }
   }
   else if (setType.kind == SetType::LatticeLink) {
-    int dims = setType.dimensions;
-    // Dimension sizes
-    for (int i = 0; i < dims; ++i) {
-      llvmFieldTypes.push_back(LLVM_INT);
-    }
-    // NO edge indices
+    // Pointer to array of sizes
+    llvmFieldTypes.push_back(
+        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+
+    // Endpoints
+    llvmFieldTypes.push_back(
+        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+    // Neighbor Index
+    // row starts (block row)
+    llvmFieldTypes.push_back(
+        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
+    // col indexes (block column)
+    llvmFieldTypes.push_back(
+        llvm::Type::getInt32PtrTy(LLVM_CTX, addrspace));
   }
   else {
     not_supported_yet;

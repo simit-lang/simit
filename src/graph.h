@@ -188,7 +188,7 @@ public:
   inline int getCardinality() const { return endpointSets.size(); }
 
   /// Return the lattice point at the given location.
-  inline ElementRef getLatticePoint(std::vector<int> coords) {
+  inline ElementRef getLatticePoint(std::vector<int> coords) const {
     uassert(kind == LatticeLink)
         << "Cannot retrieve lattice point of non-lattice set";
     uassert(coords.size() == dimensions.size())
@@ -207,22 +207,40 @@ public:
   }
 
   /// Return the lattice link at the given location and direction.
-  inline ElementRef getLatticeLink(std::vector<int> coords, int dir) {
+  inline ElementRef getLatticeLink(std::vector<int> coords, int dir) const {
     uassert(kind == LatticeLink)
         << "Cannot retrieve lattice link of non-lattice set";
     uassert(coords.size() == dimensions.size())
         << "Must provide number of coords equal to dimensions";
-    int index = dir;
-    int totalSize = dimensions.size();
+    int index = 0;
+    int totalSize = 1;
     for (int i = dimensions.size()-1; i >= 0; --i) {
       index *= dimensions[i];
       index += coords[i];
       totalSize *= dimensions[i];
     }
+    // Add directional index innermost
+    index *= dimensions.size();
+    index += dir;
+    totalSize *= dimensions.size();
     uassert(index >= 0 && index < totalSize)
         << "Coordinates must not be negative and must fall within the "
         << "lattice dimensions";
     return latticeLinks[index];
+  }
+
+  inline std::vector<int> getLatticePointCoords(ElementRef elt) const {
+    uassert(kind == LatticeLink)
+        << "Cannot retrieve lattice point coords of non-lattice set";
+    int index = elt.getIdent();
+    std::vector<int> coords;
+    for (int i = 0; i < dimensions.size(); ++i) {
+      int dimSize = dimensions[i];
+      coords.push_back(index % dimSize);
+      index /= dimSize;
+    }
+    iassert(coords.size() == dimensions.size());
+    return coords;
   }
 
   /// Add a tensor field to the set.  Use the template parameters to specify the

@@ -2,6 +2,7 @@
 
 #include <memory>
 
+#include "init.h"
 #include "ir.h"
 #include "ir_visitor.h"
 #include "path_expressions.h"
@@ -381,10 +382,18 @@ private:
           storage->add(var, TensorStorage(TensorStorage::Dense));
         }
         else if (op->through.defined()) {
-          // Stencil
-          auto index = setStencilTensorIndex(
-              var, op->function.getName(), var.getName());
-          storage->add(var, TensorStorage(TensorStorage::Stencil, index));
+          if (kIndexlessStencils) {
+            // Indexless Stencil
+            auto index = setStencilTensorIndex(
+                var, op->function.getName(), var.getName());
+            storage->add(var, TensorStorage(TensorStorage::Stencil, index));
+          }
+          else {
+            peBuilder.computePathExpression(op);
+            // Indexed Stencil
+            auto index = getTensorIndex(var);
+            storage->add(var, TensorStorage(TensorStorage::Indexed, index));
+          }
         }
         else {
           // Diagonal

@@ -39,6 +39,10 @@ public:
   /// Get tensor index kind
   const Kind getKind() const;
 
+  /// Get whether the tensor index has computed (vs. stored) row and
+  /// coord indices.
+  const bool isComputed() const;
+
   /// Get the tensor index's path expression.  Tensor indices with defined path
   /// expressions are stored in the environment, pre-assembled and shared
   /// between tensors with the same sparsity.  Tensors with undefined path
@@ -63,6 +67,12 @@ public:
   /// column index of every non-zero tensor value.
   /// Note: only sparse matrix CSR indices are supported for now.
   const Var& getColidxArray() const;
+
+  /// Compute the tensor index's rowptr value for a given source.
+  const Expr computeRowptr(Expr base) const;
+
+  /// Compute the tensor index's colidx value for a given coord.
+  const Expr computeColidx(Expr coord) const;
 
   /// Defined if the tensor exists, false otherwise.
   bool defined() const {return content != nullptr;}
