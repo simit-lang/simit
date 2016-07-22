@@ -17,19 +17,17 @@ void HIRRewriter::visit(StmtBlock::Ptr stmtBlock) {
   node = stmtBlock;
 }
 
-void HIRRewriter::visit(SetType::Ptr type) {
+void HIRRewriter::visit(UnstructuredSetType::Ptr type) {
   type->element = rewrite<ElementType>(type->element);
-  if (type->type == SetType::Type::UNSTRUCTURED) {
-    for (auto &endpoint : type->endpoints) {
-      endpoint = rewrite<Endpoint>(endpoint);
-    }
+  for (auto &endpoint : type->endpoints) {
+    endpoint = rewrite<Endpoint>(endpoint);
   }
-  else if (type->type == SetType::Type::LATTICE_LINK) {
-    type->latticePointSet = rewrite<Endpoint>(type->latticePointSet);
-  }
-  else {
-    unreachable;
-  }
+  node = type;
+}
+
+void HIRRewriter::visit(LatticeLinkSetType::Ptr type) {
+  type->element = rewrite<ElementType>(type->element);
+  type->latticePointSet = rewrite<Endpoint>(type->latticePointSet);
   node = type;
 }
 

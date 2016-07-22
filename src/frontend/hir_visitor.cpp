@@ -16,19 +16,16 @@ void HIRVisitor::visit(StmtBlock::Ptr stmtBlock) {
   }
 }
 
-void HIRVisitor::visit(SetType::Ptr type) {
+void HIRVisitor::visit(UnstructuredSetType::Ptr type) {
   type->element->accept(this);
-  if (type->type == SetType::Type::UNSTRUCTURED) {
-    for (auto endpoint : type->endpoints) {
-      endpoint->accept(this);
-    }
+  for (auto endpoint : type->endpoints) {
+    endpoint->accept(this);
   }
-  else if (type->type == SetType::Type::LATTICE_LINK) {
-    type->latticePointSet->accept(this);
-  }
-  else {
-    unreachable;
-  }
+}
+
+void HIRVisitor::visit(LatticeLinkSetType::Ptr type) {
+  type->element->accept(this);
+  type->latticePointSet->accept(this);
 }
 
 void HIRVisitor::visit(TupleType::Ptr type) {
