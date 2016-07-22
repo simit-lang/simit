@@ -1,0 +1,95 @@
+element Point
+  x     : vector[3](float);
+  v     : vector[3](float);
+  m     : float;
+  fixed : bool;
+end
+
+element Spring
+  k  : float;
+  l0 : float;
+end
+
+extern points  : set{Point};
+extern springs : set{Spring}(points,points);
+
+const h       = 1.0e-2;
+const viscous = 2.0e0;
+const grav    = [0.0, -9.81, 0.0]';
+const I       = [1.0, 0.0, 0.0; 0.0, 1.0, 0.0; 0.0, 0.0, 1.0];
+
+func compute_mass_damping(p : Point)
+-> (MD  : matrix[points,points](matrix[3,3](float)),
+    fmg : vector[points](vector[3](float)))
+  mass = p.m;
+  if p.fixed
+    MD(p,p) = 1.0;
+  else
+    MD(p,p) = (mass + h*viscous)*I;
+    fmg(p) = mass*p.v + h*mass*grav;
+  end
+end
+
+func compute_elasticity(s: Spring, p : (Point*2))
+-> (K  : matrix[points,points](matrix[3,3](float)),
+    fe : vector[points](vector[3](float)))
+  stiffness = s.k;
+
+  % Spring force
+  dx = p(1).x - p(0).x;
+  l = norm(dx);
+  U = dx/l;
+  l0 = s.l0;
+  f = stiffness*(l-l0);
+  fe0 = h*f*U;
+  if not p(0).fixed
+    fe(p(0)) = fe0;
+  end
+  if not p(1).fixed
+    fe(p(1)) = -fe0;
+  end
+
+  % Stiffness matrix
+  UUt = U*U';
+  k = h*h*((stiffness-f/l)*UUt + f/l*I);
+  if not p(0).fixed and not p(1).fixed
+    K(p(0),p(0)) =  k;
+    K(p(0),p(1)) = -k;
+    K(p(1),p(0)) = -k;
+    K(p(1),p(1)) =  k;
+  else
+    if not p(0).fixed
+      K(p(0),p(0)) = k;
+    end
+    if not p(1).fixed
+      K(p(1),p(1)) = k;
+    end
+  end
+end
+
+export func timestep()
+  MD, fmg = map compute_mass_damping to points reduce +;
+  K, fe = map compute_elasticity to springs reduce +;
+
+  MDK = MD + K;
+  f = fmg + fe;
+
+  % Inlined conjugate gradient (CG) method
+  var r = f - (MDK*points.v);
+  var p = r;
+  var iter = 0;
+  var normr2 = r'*r;
+  while (normr2 > 1e-12) and (iter < 50)
+    Ap = MDK * p;
+    denom = p'*Ap;
+    alpha = normr2 / denom;
+    points.v = points.v + alpha * p;
+    normr2old = normr2;
+    r = r - alpha * Ap;
+    normr2 = r'*r;
+    beta = normr2 / normr2old;
+    p = r + beta * p;
+    iter = iter + 1;
+  end
+  points.x = points.x + h * points.v;
+end
