@@ -91,7 +91,9 @@ void HIRVisitor::visit(FuncDecl::Ptr decl) {
   for (auto result : decl->results) {
     result->accept(this);
   }
-  decl->body->accept(this);
+  if (decl->body) {
+    decl->body->accept(this);
+  }
 }
 
 void HIRVisitor::visit(VarDecl::Ptr decl) {

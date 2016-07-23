@@ -610,6 +610,12 @@ HIRNode::Ptr ElwiseDivExpr::cloneImpl() {
   return node;
 }
 
+HIRNode::Ptr LeftDivExpr::cloneImpl() {
+  const auto node = std::make_shared<LeftDivExpr>();
+  node->copy(shared_from_this());
+  return node;
+}
+
 void NegExpr::copy(HIRNode::Ptr node) {
   const auto negExpr = to<NegExpr>(node);
   UnaryExpr::copy(negExpr);

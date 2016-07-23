@@ -291,7 +291,9 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
   }
 
   // Type check function body.
-  typeCheck(decl->body);
+  if (decl->body) {
+    typeCheck(decl->body);
+  }
 
   skipReportError -= specialized;
   env.unscope();

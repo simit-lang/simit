@@ -94,7 +94,7 @@ void HIRRewriter::visit(FuncDecl::Ptr decl) {
   for (auto &result : decl->results) {
     result = rewrite<IdentDecl>(result);
   }
-  if (decl->body != nullptr) {
+  if (decl->body) {
     decl->body = rewrite<StmtBlock>(decl->body);
   }
   node = decl;

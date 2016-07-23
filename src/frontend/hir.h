@@ -853,6 +853,8 @@ struct ElwiseDivExpr : public BinaryExpr {
 struct LeftDivExpr : public BinaryExpr {
   typedef std::shared_ptr<LeftDivExpr> Ptr;
 
+  virtual HIRNode::Ptr cloneImpl();
+
   virtual void accept(HIRVisitor *visitor) {
     visitor->visit(to<LeftDivExpr>(shared_from_this()));
   }
