@@ -190,7 +190,7 @@ void NDTensorType::copy(HIRNode::Ptr node) {
   for (const auto &indexSet : ndTensorType->indexSets) {
     indexSets.push_back(indexSet->clone<IndexSet>());
   }
-  blockType = ndTensorType->blockType;
+  blockType = ndTensorType->blockType->clone<TensorType>();
   transposed = ndTensorType->transposed;
 }
 

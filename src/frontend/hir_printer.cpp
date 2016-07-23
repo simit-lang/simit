@@ -183,6 +183,8 @@ void HIRPrinter::visit(GenericParam::Ptr param) {
 void HIRPrinter::visit(FuncDecl::Ptr decl) {
   if (decl->exported) {
     oss << "export ";
+  } else if (decl->external) {
+    oss << "extern ";
   }
   oss << "func ";
   decl->name->accept(this);

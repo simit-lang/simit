@@ -896,16 +896,16 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
       }
     }
 
-    if (func->originalName.empty() || 
-        util::contains(ir::intrinsics::byNames(), func->originalName)) {
+    if (func->originalName.empty()) { 
       // TODO: Optimize by just cloning type signature.
       func = func->clone<FuncDecl>();
-      func->body = std::make_shared<StmtBlock>();
+      func->body = StmtBlock::Ptr();
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);
     func->genericParams.clear();
 
+    // Generic functions that are called in the body need to be concretized.
     if (errors->empty() && !func->originalName.empty()) {
       typeCheck(func);
     }
@@ -1515,7 +1515,7 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     if (func->originalName.empty()) {
       // TODO: Optimize by just cloning type signature.
       func = func->clone<FuncDecl>();
-      func->body = std::make_shared<StmtBlock>();
+      func->body = StmtBlock::Ptr();
     }
 
     ReplaceTypeParams(checker.specializedSets).rewrite(func);

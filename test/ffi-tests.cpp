@@ -321,25 +321,21 @@ TEST(ffi, gemv_generics) {
     
   ElementRef particle0 = particles.add();
   ElementRef particle1 = particles.add();
-  ElementRef particle2 = particles.add();
   
   bParticles.set(particle0, 1.0);
   bParticles.set(particle1, 2.0);
-  bParticles.set(particle2, 3.0);
   
   // Taint cParticles
   cParticles.set(particle0, 42.0);
-  cParticles.set(particle2, 42.0);
+  cParticles.set(particle1, 42.0);
 
   // Connections
   Set connections(particles,particles);
   FieldRef<simit_float> aConnections = connections.addField<simit_float>("a");
   
   ElementRef connection0 = connections.add(particle0,particle1);
-  ElementRef connection1 = connections.add(particle1,particle2);
   
   aConnections.set(connection0, 1.0);
-  aConnections.set(connection1, 2.0);
 
   // Compile program and bind arguments
   Function func = loadFunction(TEST_FILE_NAME, "main");
@@ -357,10 +353,92 @@ TEST(ffi, gemv_generics) {
   SIMIT_EXPECT_FLOAT_EQ(10.0, cPoints.get(point2));
   
   SIMIT_EXPECT_FLOAT_EQ(3.0, cParticles.get(particle0));
-  SIMIT_EXPECT_FLOAT_EQ(13.0, cParticles.get(particle1));
-  SIMIT_EXPECT_FLOAT_EQ(10.0, cParticles.get(particle2));
+  SIMIT_EXPECT_FLOAT_EQ(3.0, cParticles.get(particle1));
 }
 
+TEST(ffi, gemv_blocked_generics) {
+  // Points
+  Set points;
+  FieldRef<simit_float,2> bPoints = points.addField<simit_float,2>("b");
+  FieldRef<simit_float,2> cPoints = points.addField<simit_float,2>("c");
+
+  ElementRef point0 = points.add();
+  ElementRef point1 = points.add();
+  ElementRef point2 = points.add();
+
+  bPoints.set(point0, {1.0, 2.0});
+  bPoints.set(point1, {3.0, 4.0});
+  bPoints.set(point2, {5.0, 6.0});
+
+  // Taint c
+  cPoints.set(point0, {42.0, 42.0});
+  cPoints.set(point2, {42.0, 42.0});
+
+  // Springs
+  Set springs(points,points);
+  FieldRef<simit_float,2,2> aSprings = springs.addField<simit_float,2,2>("a");
+
+  ElementRef spring0 = springs.add(point0,point1);
+  ElementRef spring1 = springs.add(point1,point2);
+
+  aSprings.set(spring0, {1.0, 2.0, 3.0, 4.0});
+  aSprings.set(spring1, {5.0, 6.0, 7.0, 8.0});
+
+  // Particles
+  Set particles;
+  FieldRef<simit_float,2> bParticles = particles.addField<simit_float,2>("b");
+  FieldRef<simit_float,2> cParticles = particles.addField<simit_float,2>("c");
+
+  ElementRef particle0 = particles.add();
+  ElementRef particle1 = particles.add();
+
+  bParticles.set(particle0, {1.0, 2.0});
+  bParticles.set(particle1, {3.0, 4.0});
+
+  // Taint c
+  cParticles.set(particle0, {42.0, 42.0});
+  cParticles.set(particle1, {42.0, 42.0});
+
+  // Connections
+  Set connections(particles,particles);
+  FieldRef<simit_float,2,2> aConnections = connections.addField<simit_float,2,2>("a");
+
+  ElementRef connection0 = connections.add(particle0,particle1);
+
+  aConnections.set(connection0, {1.0, 2.0, 3.0, 4.0});
+
+  // Compile program and bind arguments
+  Function func = loadFunction(TEST_FILE_NAME, "main");
+  if (!func.defined()) FAIL();
+  func.bind("points", &points);
+  func.bind("springs", &springs);
+  func.bind("particles", &particles);
+  func.bind("connections", &connections);
+  func.runSafe();
+
+  // Check that outputs are correct
+  // TODO: add support for comparing a tensorref like so: b0 == {1.0, 2.0, 3.0}
+  TensorRef<simit_float,2> cPoints0 = cPoints.get(point0);
+  SIMIT_EXPECT_FLOAT_EQ(16.0, cPoints0(0));
+  SIMIT_EXPECT_FLOAT_EQ(36.0, cPoints0(1));
+
+  TensorRef<simit_float,2> cPoints1 = cPoints.get(point1);
+  SIMIT_EXPECT_FLOAT_EQ(116.0, cPoints1(0));
+  SIMIT_EXPECT_FLOAT_EQ(172.0, cPoints1(1));
+
+  TensorRef<simit_float,2> cPoints2 = cPoints.get(point2);
+  SIMIT_EXPECT_FLOAT_EQ(100.0, cPoints2(0));
+  SIMIT_EXPECT_FLOAT_EQ(136.0, cPoints2(1));
+  
+  TensorRef<simit_float,2> cParticles0 = cParticles.get(particle0);
+  SIMIT_EXPECT_FLOAT_EQ(16.0, cParticles0(0));
+  SIMIT_EXPECT_FLOAT_EQ(36.0, cParticles0(1));
+
+  TensorRef<simit_float,2> cParticles1 = cParticles.get(particle1);
+  SIMIT_EXPECT_FLOAT_EQ(16.0, cParticles1(0));
+  SIMIT_EXPECT_FLOAT_EQ(36.0, cParticles1(1));
+
+}
 
 // Tests that use Eigen
 #ifdef EIGEN
