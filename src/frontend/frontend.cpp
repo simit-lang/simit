@@ -16,7 +16,6 @@
 #include "context_sensitive_rewriter.h"
 #include "infer_element_sources.h"
 #include "ir_emitter.h"
-#include "pad_tensor_blocks.h"
 #include "specialize_generic_functions.h"
 #include "type_checker.h"
 
