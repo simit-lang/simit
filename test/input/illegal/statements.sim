@@ -1,3 +1,30 @@
+%%% bad-generic-1
+func foo<N>(v : vector[N](float))
+end
+
+func bar()
+  i = 1;
+  foo(i);
+end
+
+%%% bad-generic-2
+func foo<N>(M : matrix[N,N](float))
+end
+
+func bar()
+  M = [1.0; 2.0];
+  foo(M);
+end
+
+%%% bad-generic-3
+func foo<N>(M : tensor[N,N,N](float))
+end
+
+func bar()
+  M = [1.0 2.0; 3.0 4.0];
+  foo(M);
+end
+
 %%% bad-call-1
 func foo(i : int)
 end

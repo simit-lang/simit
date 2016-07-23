@@ -177,6 +177,21 @@ export func main()
   end
 end
 
+%%% bad-map-7
+element E
+end
+
+extern A : set{E};
+extern B : set{E};
+
+func foo(e : E) -> (v : vector[A](float))
+  v(e) = 1.0;
+end
+
+export func main()
+  map foo to B;
+end
+
 %%% bad-and
 proc main
   1 and 2;

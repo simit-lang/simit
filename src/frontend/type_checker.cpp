@@ -2278,13 +2278,13 @@ std::string TypeChecker::toString(Type::Ptr type, bool printQuotes) {
     const auto elemType = to<ElementType>(type);
     
     if (elemType->source) {
-      oss << " from '" << *elemType->source << "'";
+      oss << " from set '" << *elemType->source << "'";
     }
   } else if (isa<TupleType>(type)) {
     const auto tupleType = to<TupleType>(type);
 
     if (tupleType->element->source) {
-      oss << " from '(" << *tupleType->element->source << " * " 
+      oss << " from set '(" << *tupleType->element->source << " * " 
           << tupleType->length->val << ")'";
     }
   }
