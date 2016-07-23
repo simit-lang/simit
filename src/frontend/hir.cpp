@@ -321,8 +321,11 @@ void FuncDecl::copy(HIRNode::Ptr node) {
   for (const auto &result : funcDecl->results) {
     results.push_back(result->clone<IdentDecl>());
   }
-  body = funcDecl->body->clone<StmtBlock>();
+  if (funcDecl->body) {
+    body = funcDecl->body->clone<StmtBlock>();
+  }
   exported = funcDecl->exported;
+  external = funcDecl->external;
   originalName = funcDecl->originalName;
 }
 

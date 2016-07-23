@@ -220,14 +220,14 @@ void HIRPrinter::visit(FuncDecl::Ptr decl) {
     }
     oss << ")";
   }
-  if (decl->exported) {
-    oss << ";";
-  } else {
+  if (decl->body) {
     oss << std::endl;
     indent();
     decl->body->accept(this);
     dedent();
     oss << "end";
+  } else {
+    oss << ";";
   }
 }
 

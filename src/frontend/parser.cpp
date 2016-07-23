@@ -134,7 +134,7 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
   return externDecl;
 }
 
-// extern_func_decl: 'extern' 'func' ident arguments results ';'
+// extern_func_decl: 'extern' 'func' ident generic_params arguments results ';'
 hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
   auto externFuncDecl = std::make_shared<hir::FuncDecl>();
   
@@ -143,6 +143,7 @@ hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
   consume(Token::Type::FUNC);
   
   externFuncDecl->name = parseIdent();
+  externFuncDecl->genericParams = parseGenericParams();
   externFuncDecl->args = parseArguments();
   externFuncDecl->results = parseResults();
   externFuncDecl->external = true;

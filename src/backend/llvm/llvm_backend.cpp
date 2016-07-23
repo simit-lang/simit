@@ -882,6 +882,7 @@ void LLVMBackend::emitExternCall(const ir::CallStmt& callStmt) {
 
   // Function name
   std::string name = callStmt.callee.getName();
+  name = name.substr(0, name.find("@"));
   if (hasFloatArgs(callStmt.callee)) {
     std::string floatType = ir::ScalarType::singleFloat() ? "s" : "d";
     name = floatType + name;

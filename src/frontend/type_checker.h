@@ -182,6 +182,7 @@ private:
         specializedSets(specializedSets) {}
     
     virtual void visit(GenericIndexSet::Ptr);
+    virtual void visit(IndexSetDomain::Ptr);
     virtual void visit(RangeConst::Ptr);
 
     ReplacementMap &specializedSets;

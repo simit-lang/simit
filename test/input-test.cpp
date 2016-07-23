@@ -207,6 +207,7 @@ SIM_TEST(declarations, strings);
 SIM_TEST_SUITE(controlflow, false)
 SIM_TEST(controlflow, map);
 SIM_TEST(controlflow, calls);
+SIM_TEST(controlflow, generics);
 SIM_TEST(controlflow, if_stmt);
 SIM_TEST(controlflow, loops);
 SIM_TEST(controlflow, boolean);

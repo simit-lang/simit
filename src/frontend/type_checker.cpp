@@ -1909,7 +1909,7 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
             const auto paramGenericType = isa<GenericIndexSet>(paramDomain[i]) ?
                 to<GenericIndexSet>(paramDomain[i])->type : 
                 GenericIndexSet::Type::UNKNOWN;
-            const auto argGenericType = isa<GenericIndexSet>(paramDomain[i]) ?
+            const auto argGenericType = isa<GenericIndexSet>(argDomain[i]) ?
                 to<GenericIndexSet>(argDomain[i])->type : 
                 GenericIndexSet::Type::UNKNOWN;
             
@@ -1947,6 +1947,24 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
 
 void TypeChecker::ReplaceTypeParams::visit(GenericIndexSet::Ptr set) {
   node = specializedSets.at(set->setName);
+}
+
+void TypeChecker::ReplaceTypeParams::visit(IndexSetDomain::Ptr domain) {
+  HIRRewriter::visit(domain);
+
+  if (isa<RangeIndexSet>(domain->set)) {
+    const auto lowerBound = std::make_shared<IntLiteral>();
+    lowerBound->val = 0;
+
+    const auto upperBound = std::make_shared<IntLiteral>();
+    upperBound->val = to<RangeIndexSet>(domain->set)->range;
+
+    const auto rangeDomain = std::make_shared<RangeDomain>();
+    rangeDomain->lower = lowerBound;
+    rangeDomain->upper = upperBound;
+
+    node = rangeDomain;
+  }
 }
 
 void TypeChecker::ReplaceTypeParams::visit(RangeConst::Ptr expr) {
@@ -2245,9 +2263,16 @@ std::string TypeChecker::toString(ExprType type) {
 
 std::string TypeChecker::toString(Type::Ptr type, bool printQuotes) {
   const std::string quote = (printQuotes ? "'" : "");
-  
+ 
+  std::stringstream typeOut;
+  typeOut << *type;
+
   std::stringstream oss;
-  oss << quote << *type << quote;
+  if (typeOut.str() == "") {
+    oss << "unknown";
+  } else {
+    oss << quote << typeOut.str() << quote;
+  }
   
   if (isa<ElementType>(type)) {
     const auto elemType = to<ElementType>(type);
