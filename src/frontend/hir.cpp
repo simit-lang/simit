@@ -100,8 +100,6 @@ HIRNode::Ptr DynamicIndexSet::cloneImpl() {
 }
 
 void ElementType::copy(HIRNode::Ptr node) {
-  // TODO: Note that we don't bother copying source index set node since it is 
-  // not needed for type checking, and doing so would only complicate things.
   const auto elementType = to<ElementType>(node);
   Type::copy(elementType);
   ident = elementType->ident;

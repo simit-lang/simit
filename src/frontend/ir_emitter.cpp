@@ -23,7 +23,7 @@ void IREmitter::visit(RangeIndexSet::Ptr set) {
 }
 
 void IREmitter::visit(SetIndexSet::Ptr set) {
-  const ir::Expr setExpr = ctx->getSymbol(set->setName).getExpr();
+  const ir::Expr setExpr = setExprs[set->setDef];
   
   iassert(setExpr.type().isSet());
   retIndexSet = ir::IndexSet(setExpr);
@@ -39,7 +39,7 @@ void IREmitter::visit(ElementType::Ptr set) {
 }
 
 void IREmitter::visit(Endpoint::Ptr end) {
-  retExpr = ctx->getSymbol(end->set->setName).getExpr();
+  retExpr = setExprs[end->set->setDef];
 }
 
 void IREmitter::visit(SetType::Ptr type) {
@@ -151,7 +151,7 @@ void IREmitter::visit(ExternDecl::Ptr decl) {
   const auto externVar = ir::Var(decl->name->ident, type);
   
   ctx->addExtern(externVar);
-  ctx->addSymbol(externVar);
+  addSymbol(externVar, decl);
 }
 
 void IREmitter::visit(FuncDecl::Ptr decl) {
@@ -166,14 +166,14 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
     const ir::Var argVar = emitVar(arg);
     const auto access = arg->isInOut() ? internal::Symbol::ReadWrite : 
                         internal::Symbol::Read;
-    ctx->addSymbol(argVar.getName(), argVar, access);
+    addSymbol(argVar.getName(), argVar, access, arg);
     arguments.push_back(argVar);
   }
   
   std::vector<ir::Var> results;
   for (auto res : decl->results) {
     const ir::Var result = emitVar(res);
-    ctx->addSymbol(result);
+    addSymbol(result, res);
     results.push_back(result);
   }
 
@@ -293,7 +293,7 @@ void IREmitter::visit(ForStmt::Ptr stmt) {
 
   // If we need to write to loop variables, then that should be added as a
   // separate loop structure (that can't be vectorized easily)
-  ctx->addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
+  addSymbol(stmt->loopVar->ident, loopVar, internal::Symbol::Read);
  
   const ir::Stmt body = emitStmt(stmt->body);
   ctx->unscope();
@@ -374,7 +374,6 @@ void IREmitter::visit(MapExpr::Ptr expr) {
   }
   
   std::vector<ir::Expr> endpoints;
-  iassert(target.type().isSet());
   for (const ir::Expr *endpoint : target.type().toSet()->endpointSets) {
     endpoints.push_back(*endpoint);
   }
@@ -886,7 +885,7 @@ void IREmitter::addVarOrConst(VarDecl::Ptr decl, bool isConst) {
   const auto access = isConst ? internal::Symbol::Read : 
                       internal::Symbol::ReadWrite;
   
-  ctx->addSymbol(var.getName(), var, access);
+  addSymbol(var.getName(), var, access);
 
   if (isConst && initExpr.defined() && ir::isa<ir::Literal>(initExpr) && 
       (isScalar(var.getType()) || !isScalar(initExpr.type()))) {
@@ -967,14 +966,14 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
 
         if (!ctx->hasSymbol(varName)) {
           var = ir::Var(varName, retVals[i].getType());
-          ctx->addSymbol(var);
+          addSymbol(var);
           ctx->addStatement(ir::VarDecl::make(var));
         }
 
         results.push_back(var);
       } else {
         const ir::Var tmp = ctx->getBuilder()->temporary(retVals[i].getType());
-        ctx->addSymbol(tmp);
+        addSymbol(tmp);
 
         if (!isCallStmt ||
             ir::to<ir::CallStmt>(topLevelStmt)->callee.getKind() !=
@@ -1043,13 +1042,27 @@ void IREmitter::addAssign(const std::vector<ir::Expr> &lhs, ir::Expr expr) {
       // Target variable might not have been declared.
       if (!ctx->hasSymbol(varName)) {
         var = ir::Var(varName, expr.type());
-        ctx->addSymbol(varName, var, internal::Symbol::Read);
+        addSymbol(varName, var, internal::Symbol::Read);
       }
   
       ctx->addStatement(ir::AssignStmt::make(var, expr));
     }
   } else {
     iassert(lhs.size() == 0);
+  }
+}
+
+void IREmitter::addSymbol(ir::Var var, IdentDecl::Ptr decl) {
+  addSymbol(var.getName(), var, internal::Symbol::ReadWrite, decl);
+}
+
+void IREmitter::addSymbol(const std::string& name, ir::Var var, 
+                          internal::Symbol::Access access, 
+                          IdentDecl::Ptr decl) {
+  ctx->addSymbol(name, var, access);
+
+  if (decl && isa<SetType>(decl->type)) {
+    setExprs[to<SetType>(decl->type)] = ctx->getSymbol(name).getExpr();
   }
 }
 

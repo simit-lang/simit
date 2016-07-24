@@ -987,7 +987,6 @@ void TypeChecker::visit(CallExpr::Ptr expr) {
     }
 
     if (func->originalName.empty()) { 
-      // TODO: Optimize by just cloning type signature.
       func = func->clone<FuncDecl>();
       func->body = StmtBlock::Ptr();
     }
@@ -1602,7 +1601,6 @@ void TypeChecker::typeCheckMapOrApply(MapExpr::Ptr expr, const bool isApply) {
     }
 
     if (func->originalName.empty()) {
-      // TODO: Optimize by just cloning type signature.
       func = func->clone<FuncDecl>();
       func->body = StmtBlock::Ptr();
     }
@@ -1992,8 +1990,9 @@ void TypeChecker::GenericCallTypeChecker::unify(Type::Ptr paramType,
         
         if (specializedSets.find(genericName) == specializedSets.end()) {
           if (isa<SetIndexSet>(argDomain[i])) {
-            auto indexSet = argDomain[i]->clone<SetIndexSet>();
-            env.addSetDefinition(indexSet, env.getSetDefinition(argDomain[i]));
+            const auto indexSet = argDomain[i]->clone<SetIndexSet>();
+            const auto argIndexSet = to<SetIndexSet>(argDomain[i]);
+            env.addSetDefinition(indexSet, env.getSetDefinition(argIndexSet));
 
             const auto paramGenericType = isa<GenericIndexSet>(paramDomain[i]) ?
                 to<GenericIndexSet>(paramDomain[i])->type : 

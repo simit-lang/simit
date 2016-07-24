@@ -266,16 +266,28 @@ private:
         return symbolTable.get(name, scope).access;
       }
 
-      void addSetDefinition(const HIRNode::Ptr set, 
-                            const SetType::Ptr def) {
+      void addSetDefinition(SetIndexSet::Ptr set, SetType::Ptr def) {
+        set->setDef = def;
+      }
+
+      void addSetDefinition(GenericParam::Ptr set, SetType::Ptr def) {
         setDefs[set] = def;
       }
 
-      bool hasSetDefinition(const HIRNode::Ptr set) const {
+      bool hasSetDefinition(SetIndexSet::Ptr set) const {
+        return (bool)(set->setDef);
+      }
+
+      bool hasSetDefinition(GenericParam::Ptr set) const {
         return setDefs.find(set) != setDefs.end();
       }
 
-      SetType::Ptr getSetDefinition(const HIRNode::Ptr set) const {
+      SetType::Ptr getSetDefinition(SetIndexSet::Ptr set) const {
+        iassert(hasSetDefinition(set));
+        return set->setDef;
+      }
+
+      SetType::Ptr getSetDefinition(GenericParam::Ptr set) const {
         iassert(hasSetDefinition(set));
         return setDefs.at(set);
       }
@@ -288,7 +300,7 @@ private:
       FuncMap          funcDecls;
       ElementDeclMap   elementDecls;
       SymbolTable      symbolTable;
-      SetDefinitionMap     setDefs;
+      SetDefinitionMap setDefs;
   };
   
   class ComputeSetDefinitions : public HIRVisitor {

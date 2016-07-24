@@ -16,6 +16,7 @@ namespace simit {
 namespace hir {
 
 struct HIRNode;
+struct SetType;
 
 template <typename T>
 inline bool isa(std::shared_ptr<HIRNode> ptr) {
@@ -128,7 +129,8 @@ struct RangeIndexSet : public IndexSet {
 };
 
 struct SetIndexSet : public IndexSet {
-  std::string setName;
+  std::string              setName;
+  std::shared_ptr<SetType> setDef;
   
   typedef std::shared_ptr<SetIndexSet> Ptr;
   
