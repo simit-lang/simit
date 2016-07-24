@@ -324,8 +324,7 @@ void FuncDecl::copy(HIRNode::Ptr node) {
   if (funcDecl->body) {
     body = funcDecl->body->clone<StmtBlock>();
   }
-  exported = funcDecl->exported;
-  external = funcDecl->external;
+  type = funcDecl->type;
   originalName = funcDecl->originalName;
 }
 

@@ -137,6 +137,7 @@ hir::ExternDecl::Ptr Parser::parseExternDecl() {
 // extern_func_decl: 'extern' 'func' ident generic_params arguments results ';'
 hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
   auto externFuncDecl = std::make_shared<hir::FuncDecl>();
+  externFuncDecl->type = hir::FuncDecl::Type::EXTERNAL;
   
   const Token externToken = consume(Token::Type::EXTERN);
   externFuncDecl->setBeginLoc(externToken);
@@ -146,7 +147,6 @@ hir::FuncDecl::Ptr Parser::parseExternFuncDecl() {
   externFuncDecl->genericParams = parseGenericParams();
   externFuncDecl->args = parseArguments();
   externFuncDecl->results = parseResults();
-  externFuncDecl->external = true;
   
   const Token endToken = consume(Token::Type::SEMICOL);
   externFuncDecl->setEndLoc(endToken);
@@ -161,7 +161,9 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
 
   const Token funcToken = peek();
   funcDecl->setBeginLoc(funcToken);
-  funcDecl->exported = (funcToken.type == Token::Type::EXPORT);
+  funcDecl->type = (funcToken.type == Token::Type::EXPORT) ? 
+                   hir::FuncDecl::Type::EXPORTED : 
+                   hir::FuncDecl::Type::INTERNAL;
   
   tryconsume(Token::Type::EXPORT);
   consume(Token::Type::FUNC);
@@ -171,7 +173,6 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
   funcDecl->args = parseArguments();
   funcDecl->results = parseResults();
   funcDecl->body = parseStmtBlock();
-  funcDecl->external = false;
   
   const Token endToken = consume(Token::Type::BLOCKEND);
   funcDecl->setEndLoc(endToken);
@@ -182,7 +183,7 @@ hir::FuncDecl::Ptr Parser::parseFuncDecl() {
 // proc_decl: 'proc' ident [type_params arguments results] stmt_block 'end'
 hir::FuncDecl::Ptr Parser::parseProcDecl() {
   auto procDecl = std::make_shared<hir::FuncDecl>();
-  procDecl->exported = true;
+  procDecl->type = hir::FuncDecl::Type::EXPORTED;
 
   const Token procToken = consume(Token::Type::PROC);
   procDecl->setBeginLoc(procToken);

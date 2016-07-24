@@ -411,13 +411,14 @@ struct GenericParam : public HIRNode {
 };
 
 struct FuncDecl : public HIRNode {
+  enum class Type {INTERNAL, EXPORTED, EXTERNAL};
+
   Identifier::Ptr                name;
   std::vector<GenericParam::Ptr> genericParams;
   std::vector<Argument::Ptr>     args;
   std::vector<IdentDecl::Ptr>    results;
   StmtBlock::Ptr                 body;
-  bool                           exported;
-  bool                           external;
+  Type                           type;
   std::string                    originalName;
   
   typedef std::shared_ptr<FuncDecl> Ptr;

@@ -183,19 +183,20 @@ void IREmitter::visit(FuncDecl::Ptr decl) {
 
   ctx->unscope();
 
-  if (decl->exported) {
+  if (decl->type == FuncDecl::Type::EXPORTED) {
     for (auto &extPair : ctx->getExterns()) {
       const ir::Var ext = ctx->getExtern(extPair.first);
       arguments.push_back(ext);
     }
   }
-  
-  auto funcKind = decl->external ? ir::Func::Kind::External :
-    ir::Func::Kind::Internal;
-  
-  iassert(!ctx->containsFunction(decl->name->ident));
-  ctx->addFunction(ir::Func(decl->name->ident, arguments, results, body,
-    funcKind));
+
+  const auto funcName = decl->name->ident;
+  const auto funcKind = (decl->type == FuncDecl::Type::EXTERNAL) ? 
+                        ir::Func::Kind::External : ir::Func::Kind::Internal;
+  const auto func = ir::Func(funcName, arguments, results, body, funcKind);
+
+  iassert(!ctx->containsFunction(funcName));
+  ctx->addFunction(func);
 }
 
 void IREmitter::visit(VarDecl::Ptr decl) {

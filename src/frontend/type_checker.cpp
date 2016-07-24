@@ -260,7 +260,7 @@ void TypeChecker::visit(FuncDecl::Ptr decl) {
     return;
   }
 
-  if (decl->exported && !decl->genericParams.empty()) {
+  if (decl->type == FuncDecl::Type::EXPORTED && !decl->genericParams.empty()) {
     reportError("exported function cannot have generic parameters", decl);
   }
 
@@ -2313,7 +2313,7 @@ void TypeChecker::addIntrinsic(const std::string& name,
   decl->name = std::make_shared<Identifier>();
 
   decl->name->ident = name;
-  decl->exported = false;
+  decl->type = FuncDecl::Type::INTERNAL;
   
   for (unsigned i = 0; i < args.size(); ++i) {
     const auto arg = std::make_shared<Argument>();
